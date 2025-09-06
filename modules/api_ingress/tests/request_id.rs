@@ -128,6 +128,6 @@ async fn error_handler(
             "error": "Test error",
             "code": 500,
             "request_id": request_id
-        }))
+        })),
     )
 }

@@ -7,8 +7,8 @@ use tokio_util::sync::CancellationToken;
 use thiserror::Error;
 
 // Re-exported contracts are referenced but not defined here.
-use crate::contracts;
 use crate::context;
+use crate::contracts;
 use db;
 
 pub struct ModuleEntry {
@@ -76,7 +76,10 @@ impl ModuleRegistry {
             e.core
                 .init(&ctx)
                 .await
-                .map_err(|source| RegistryError::Init { module: e.name, source: source.into() })?;
+                .map_err(|source| RegistryError::Init {
+                    module: e.name,
+                    source: source.into(),
+                })?;
         }
         Ok(())
     }
@@ -88,7 +91,10 @@ impl ModuleRegistry {
                 // let _lock = db.lock(e.name, "migration").await?;
                 dbm.migrate(db)
                     .await
-                    .map_err(|source| RegistryError::DbMigrate { module: e.name, source: source.into() })?;
+                    .map_err(|source| RegistryError::DbMigrate {
+                        module: e.name,
+                        source: source.into(),
+                    })?;
             }
         }
         Ok(())
@@ -134,9 +140,12 @@ impl ModuleRegistry {
         let registry: &dyn contracts::OpenApiRegistry = host.as_registry();
 
         // 1) Host prepare: base Router / global middlewares / basic OAS meta
-        router = host
-            .rest_prepare(&host_ctx, router)
-            .map_err(|source| RegistryError::RestPrepare { module: host_entry.name, source: source.into() })?;
+        router =
+            host.rest_prepare(&host_ctx, router)
+                .map_err(|source| RegistryError::RestPrepare {
+                    module: host_entry.name,
+                    source: source.into(),
+                })?;
 
         // 2) Register all REST providers (in the current discovery order)
         for e in &self.modules {
@@ -144,14 +153,20 @@ impl ModuleRegistry {
                 let ctx = base_ctx.clone().for_module(e.name);
                 router = rest
                     .register_rest(&ctx, router, registry)
-                    .map_err(|source| RegistryError::RestRegister { module: e.name, source: source.into() })?;
+                    .map_err(|source| RegistryError::RestRegister {
+                        module: e.name,
+                        source: source.into(),
+                    })?;
             }
         }
 
         // 3) Host finalize: attach /openapi.json and /docs, persist Router if needed (no server start)
-        router = host
-            .rest_finalize(&host_ctx, router)
-            .map_err(|source| RegistryError::RestFinalize { module: host_entry.name, source: source.into() })?;
+        router = host.rest_finalize(&host_ctx, router).map_err(|source| {
+            RegistryError::RestFinalize {
+                module: host_entry.name,
+                source: source.into(),
+            }
+        })?;
 
         Ok(router)
     }
@@ -161,7 +176,10 @@ impl ModuleRegistry {
             if let Some(s) = &e.stateful {
                 s.start(cancel.clone())
                     .await
-                    .map_err(|source| RegistryError::Start { module: e.name, source: source.into() })?;
+                    .map_err(|source| RegistryError::Start {
+                        module: e.name,
+                        source: source.into(),
+                    })?;
             }
         }
         Ok(())
@@ -239,11 +257,7 @@ impl RegistryBuilder {
         self.rest_host = Some((name, m));
     }
 
-    pub fn register_db_with_meta(
-        &mut self,
-        name: &'static str,
-        m: Arc<dyn contracts::DbModule>,
-    ) {
+    pub fn register_db_with_meta(&mut self, name: &'static str, m: Arc<dyn contracts::DbModule>) {
         self.db.insert(name, m);
     }
 
@@ -263,7 +277,9 @@ impl RegistryBuilder {
             }
         }
         if !self.errors.is_empty() {
-            return Err(RegistryError::InvalidRegistryConfiguration { errors: self.errors });
+            return Err(RegistryError::InvalidRegistryConfiguration {
+                errors: self.errors,
+            });
         }
 
         // 1) ensure every capability references a known core
@@ -303,9 +319,10 @@ impl RegistryBuilder {
                 .get(n)
                 .ok_or_else(|| RegistryError::UnknownModule(n.to_string()))?;
             for &d in deps {
-                let v = *idx
-                    .get(d)
-                    .ok_or_else(|| RegistryError::UnknownDependency { module: n.to_string(), depends_on: d.to_string() })?;
+                let v = *idx.get(d).ok_or_else(|| RegistryError::UnknownDependency {
+                    module: n.to_string(),
+                    depends_on: d.to_string(),
+                })?;
                 // edge d -> n (dep before module)
                 adj[v].push(u);
                 indeg[u] += 1;
@@ -492,18 +509,10 @@ mod tests {
         fn as_registry(&self) -> &dyn contracts::OpenApiRegistry {
             &self.reg
         }
-        fn rest_prepare(
-            &self,
-            _ctx: &ModuleCtx,
-            router: Router,
-        ) -> Result<Router, anyhow::Error> {
+        fn rest_prepare(&self, _ctx: &ModuleCtx, router: Router) -> Result<Router, anyhow::Error> {
             Ok(router)
         }
-        fn rest_finalize(
-            &self,
-            _ctx: &ModuleCtx,
-            router: Router,
-        ) -> Result<Router, anyhow::Error> {
+        fn rest_finalize(&self, _ctx: &ModuleCtx, router: Router) -> Result<Router, anyhow::Error> {
             Ok(router)
         }
     }

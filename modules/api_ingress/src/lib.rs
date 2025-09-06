@@ -14,21 +14,23 @@ use parking_lot::Mutex;
 use std::net::SocketAddr;
 use std::time::Duration;
 use tokio_util::sync::CancellationToken;
-use utoipa::openapi::{
-    OpenApi, OpenApiBuilder,
-    info::InfoBuilder,
-    path::{PathsBuilder, PathItemBuilder, OperationBuilder as UOperationBuilder, ParameterBuilder, ParameterIn, HttpMethod},
-    request_body::RequestBodyBuilder,
-    response::{ResponseBuilder, ResponsesBuilder},
-    content::ContentBuilder,
-    schema::{ComponentsBuilder, Schema, ObjectBuilder, SchemaType, SchemaFormat},
-    RefOr, Ref, Required,
-};
 use tower_http::{
     cors::CorsLayer,
     limit::RequestBodyLimitLayer,
     request_id::{PropagateRequestIdLayer, SetRequestIdLayer},
     timeout::TimeoutLayer,
+};
+use utoipa::openapi::{
+    content::ContentBuilder,
+    info::InfoBuilder,
+    path::{
+        HttpMethod, OperationBuilder as UOperationBuilder, ParameterBuilder, ParameterIn,
+        PathItemBuilder, PathsBuilder,
+    },
+    request_body::RequestBodyBuilder,
+    response::{ResponseBuilder, ResponsesBuilder},
+    schema::{ComponentsBuilder, ObjectBuilder, Schema, SchemaFormat, SchemaType},
+    OpenApi, OpenApiBuilder, Ref, RefOr, Required,
 };
 
 mod assets;
@@ -173,7 +175,6 @@ impl ApiIngress {
         Ok(router)
     }
 
-
     /// Build OpenAPI specification from registered routes and components using utoipa.
     pub fn build_openapi(&self) -> Result<OpenApi> {
         // Log operation count for visibility
@@ -201,17 +202,18 @@ impl ApiIngress {
                     modkit::api::ParamLocation::Header => ParameterIn::Header,
                     modkit::api::ParamLocation::Cookie => ParameterIn::Cookie,
                 };
-                let required = if matches!(p.location, modkit::api::ParamLocation::Path) || p.required {
-                    Required::True
-                } else {
-                    Required::False
-                };
+                let required =
+                    if matches!(p.location, modkit::api::ParamLocation::Path) || p.required {
+                        Required::True
+                    } else {
+                        Required::False
+                    };
 
                 let schema_type = match p.param_type.as_str() {
                     "integer" => SchemaType::Type(utoipa::openapi::schema::Type::Integer),
-                    "number"  => SchemaType::Type(utoipa::openapi::schema::Type::Number),
+                    "number" => SchemaType::Type(utoipa::openapi::schema::Type::Number),
                     "boolean" => SchemaType::Type(utoipa::openapi::schema::Type::Boolean),
-                    _         => SchemaType::Type(utoipa::openapi::schema::Type::String),
+                    _ => SchemaType::Type(utoipa::openapi::schema::Type::String),
                 };
                 let schema = Schema::Object(ObjectBuilder::new().schema_type(schema_type).build());
 
@@ -240,22 +242,25 @@ impl ApiIngress {
                 let mut rbld = RequestBodyBuilder::new()
                     .description(rb.description.clone())
                     .content(rb.content_type.to_string(), content);
-                if rb.required { rbld = rbld.required(Some(Required::True)); }
+                if rb.required {
+                    rbld = rbld.required(Some(Required::True));
+                }
                 op = op.request_body(Some(rbld.build()));
             }
 
             // Responses
             let mut responses = ResponsesBuilder::new();
             for r in &spec.responses {
-                let is_json_like = r.content_type == "application/json" 
+                let is_json_like = r.content_type == "application/json"
                     || r.content_type == problem::APPLICATION_PROBLEM_JSON;
                 let resp = if is_json_like {
                     if let Some(name) = &r.schema_name {
                         // Manually build content to preserve the correct content type
                         let content = ContentBuilder::new()
-                            .schema(Some(RefOr::Ref(
-                                Ref::new(format!("#/components/schemas/{}", name))
-                            )))
+                            .schema(Some(RefOr::Ref(Ref::new(format!(
+                                "#/components/schemas/{}",
+                                name
+                            )))))
                             .build();
                         ResponseBuilder::new()
                             .description(&r.description)
@@ -275,7 +280,7 @@ impl ApiIngress {
                         ObjectBuilder::new()
                             .schema_type(SchemaType::Type(utoipa::openapi::schema::Type::String))
                             .format(Some(SchemaFormat::Custom(r.content_type.into())))
-                            .build()
+                            .build(),
                     );
                     let content = ContentBuilder::new().schema(Some(schema)).build();
                     ResponseBuilder::new()
@@ -288,11 +293,11 @@ impl ApiIngress {
             op = op.responses(responses.build());
 
             let method = match spec.method {
-                Method::GET    => HttpMethod::Get,
-                Method::POST   => HttpMethod::Post,
-                Method::PUT    => HttpMethod::Put,
+                Method::GET => HttpMethod::Get,
+                Method::POST => HttpMethod::Post,
+                Method::PUT => HttpMethod::Put,
                 Method::DELETE => HttpMethod::Delete,
-                Method::PATCH  => HttpMethod::Patch,
+                Method::PATCH => HttpMethod::Patch,
                 _ => HttpMethod::Get,
             };
 
@@ -424,19 +429,19 @@ mod tests {
         }
     }
 
-    #[test] 
+    #[test]
     fn test_openapi_generation() {
         let api_ingress = ApiIngress::default();
-        
+
         // Test that we can build OpenAPI without any operations
         let doc = api_ingress.build_openapi().unwrap();
         let json = serde_json::to_value(&doc).unwrap();
-        
+
         // Verify it's valid OpenAPI document structure
         assert!(json.get("openapi").is_some());
         assert!(json.get("info").is_some());
         assert!(json.get("paths").is_some());
-        
+
         // Verify info section
         let info = json.get("info").unwrap();
         assert_eq!(info.get("title").unwrap(), "HyperSpot API");
@@ -483,7 +488,8 @@ impl modkit::contracts::RestHostModule for ApiIngress {
                         use axum::{http::header, response::IntoResponse, Json};
                         let doc = openapi_doc.clone();
                         move || async move {
-                            ([(header::CACHE_CONTROL, "no-store")], Json(doc.as_ref())).into_response()
+                            ([(header::CACHE_CONTROL, "no-store")], Json(doc.as_ref()))
+                                .into_response()
                         }
                     }),
                 )
@@ -597,8 +603,8 @@ impl OpenApiRegistry for ApiIngress {
 mod problem_openapi_tests {
     use super::*;
     use axum::Json;
+    use modkit::api::{Missing, OperationBuilder};
     use serde_json::Value;
-    use modkit::api::{OperationBuilder, Missing};
 
     async fn dummy_handler() -> Json<Value> {
         Json(serde_json::json!({"ok": true}))
@@ -620,25 +626,35 @@ mod problem_openapi_tests {
         let v = serde_json::to_value(&doc).expect("json");
 
         // 1) Problem exists in components.schemas
-        let problem = v.pointer("/components/schemas/Problem")
+        let problem = v
+            .pointer("/components/schemas/Problem")
             .expect("Problem schema missing");
-        assert!(problem.get("$ref").is_none(), "Problem must be a real object, not a self-ref");
+        assert!(
+            problem.get("$ref").is_none(),
+            "Problem must be a real object, not a self-ref"
+        );
 
         // 2) Response under /paths/... references Problem and has correct media type
-        let path_obj = v.pointer("/paths/~1problem-demo/get/responses/400")
+        let path_obj = v
+            .pointer("/paths/~1problem-demo/get/responses/400")
             .expect("400 response missing");
-        
+
         // Check what content types exist
         let content_obj = path_obj.get("content").expect("content object missing");
         if !content_obj.get("application/problem+json").is_some() {
             // Print available content types for debugging
-            panic!("application/problem+json content missing. Available content: {}", serde_json::to_string_pretty(content_obj).unwrap());
+            panic!(
+                "application/problem+json content missing. Available content: {}",
+                serde_json::to_string_pretty(content_obj).unwrap()
+            );
         }
-        
-        let content = path_obj.pointer("/content/application~1problem+json")
+
+        let content = path_obj
+            .pointer("/content/application~1problem+json")
             .expect("application/problem+json content missing");
         // $ref to Problem
-        let schema_ref = content.pointer("/schema/$ref")
+        let schema_ref = content
+            .pointer("/schema/$ref")
             .and_then(|r| r.as_str())
             .unwrap_or("");
         assert_eq!(schema_ref, "#/components/schemas/Problem");

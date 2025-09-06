@@ -68,10 +68,7 @@ impl Service {
             .await
             .map_err(|e| DomainError::database(e.to_string()))?;
 
-        let users: Vec<User> = entities
-            .into_iter()
-            .map(Into::into)
-            .collect();
+        let users: Vec<User> = entities.into_iter().map(Into::into).collect();
 
         debug!("Successfully listed {} users", users.len());
         Ok(users)

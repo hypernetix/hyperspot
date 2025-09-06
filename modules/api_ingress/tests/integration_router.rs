@@ -11,8 +11,8 @@ use axum::{
     Router,
 };
 use modkit::{contracts::OpenApiRegistry, Module, RestfulModule};
-use utoipa::ToSchema;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 /// Test user structure
 #[derive(Serialize, Deserialize, ToSchema, Debug, Clone)]

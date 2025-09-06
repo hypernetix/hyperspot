@@ -28,7 +28,6 @@ pub mod state {
     pub struct Present;
 }
 
-
 /// Internal trait mapping handler state to the concrete router slot type.
 /// For `Missing` there is no router slot; for `Present` it is `MethodRouter<S>`.
 /// Private sealed trait to enforce the implementation is only visible within this module.
@@ -119,7 +118,10 @@ pub trait OpenApiRegistry {
     fn ensure_schema_raw(
         &self,
         name: &str,
-        schemas: Vec<(String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>,
+        schemas: Vec<(
+            String,
+            utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>,
+        )>,
     ) -> String;
 
     /// Downcast support for accessing the concrete implementation if needed.
@@ -147,7 +149,6 @@ pub fn ensure_schema<T: utoipa::ToSchema + utoipa::PartialSchema + 'static>(
     // 4) Pass to registry for insertion
     registry.ensure_schema_raw(&root_name, collected)
 }
-
 
 /// Type-safe operation builder with compile-time guarantees.
 ///
@@ -327,7 +328,11 @@ where
 
     /// Attach a JSON request body and auto-register its schema using `utoipa`.
     /// This variant sets a description (`Some(desc)`) and marks the body as **required**.
-    pub fn json_request<T>(mut self, registry: &dyn OpenApiRegistry, desc: impl Into<String>) -> Self
+    pub fn json_request<T>(
+        mut self,
+        registry: &dyn OpenApiRegistry,
+        desc: impl Into<String>,
+    ) -> Self
     where
         T: utoipa::ToSchema + utoipa::PartialSchema + 'static,
     {
@@ -677,7 +682,10 @@ mod tests {
         fn ensure_schema_raw(
             &self,
             name: &str,
-            _schemas: Vec<(String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>,
+            _schemas: Vec<(
+                String,
+                utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>,
+            )>,
         ) -> String {
             let name = name.to_string();
             if let Ok(mut s) = self.schemas.lock() {

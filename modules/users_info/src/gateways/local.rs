@@ -52,4 +52,3 @@ impl UsersInfoApi for UsersInfoLocalClient {
         self.service.delete_user(id).await.map_err(Into::into)
     }
 }
-

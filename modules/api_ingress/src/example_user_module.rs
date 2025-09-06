@@ -8,8 +8,8 @@ use axum::{
     routing::get,
     Router,
 };
-use utoipa::ToSchema;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 use modkit::contracts::{Module, OpenApiRegistry, RestfulModule};
 

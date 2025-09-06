@@ -7,6 +7,6 @@
 pub mod operation_builder;
 
 pub use operation_builder::{
-    state, Missing, OpenApiRegistry, OperationBuilder, OperationSpec, ParamLocation, ParamSpec,
-    Present, ResponseSpec, ensure_schema,
+    ensure_schema, state, Missing, OpenApiRegistry, OperationBuilder, OperationSpec, ParamLocation,
+    ParamSpec, Present, ResponseSpec,
 };

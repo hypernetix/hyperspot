@@ -27,7 +27,14 @@ struct TestOpenApiRegistry;
 
 impl OpenApiRegistry for TestOpenApiRegistry {
     fn register_operation(&self, _spec: &modkit::api::OperationSpec) {}
-    fn ensure_schema_raw(&self, root_name: &str, _schemas: Vec<(String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>) -> String {
+    fn ensure_schema_raw(
+        &self,
+        root_name: &str,
+        _schemas: Vec<(
+            String,
+            utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>,
+        )>,
+    ) -> String {
         root_name.to_string()
     }
     fn as_any(&self) -> &dyn std::any::Any {

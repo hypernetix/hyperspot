@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
-use utoipa::ToSchema;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::contract::model::{NewUser, User, UserPatch};

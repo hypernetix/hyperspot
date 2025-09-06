@@ -11,7 +11,7 @@ pub fn register_routes(
     service: Arc<Service>,
 ) -> anyhow::Result<Router> {
     // Schemas should be auto-registered via ToSchema when used in operations
-    
+
     // GET /users - List all users
     router = OperationBuilder::<modkit::api::Missing, modkit::api::Missing, ()>::get("/users")
         .operation_id("users_info.list_users")

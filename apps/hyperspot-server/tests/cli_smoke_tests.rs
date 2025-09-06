@@ -100,7 +100,10 @@ fn test_cli_config_validation_missing_file() {
 
     // The application gracefully falls back to defaults when config file is missing
     // This is actually good UX behavior, so the check should succeed
-    assert!(output.status.success(), "Should succeed with default config fallback");
+    assert!(
+        output.status.success(),
+        "Should succeed with default config fallback"
+    );
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
@@ -200,7 +203,11 @@ logging:
 server:
   home_dir: "{}"
 "#,
-        temp_dir.path().join("test.log").to_string_lossy().replace('\\', "/"),
+        temp_dir
+            .path()
+            .join("test.log")
+            .to_string_lossy()
+            .replace('\\', "/"),
         temp_dir.path().to_string_lossy().replace('\\', "/")
     );
 
@@ -218,7 +225,9 @@ server:
         Err(err) => {
             // Timeout is expected - server was running
             if err.to_string().contains("elapsed") {
-                println!("✓ Server started successfully with mock database (timed out as expected)");
+                println!(
+                    "✓ Server started successfully with mock database (timed out as expected)"
+                );
             } else {
                 eprintln!("Server failed to start: {}", err);
                 panic!("Server should start successfully with mock database");

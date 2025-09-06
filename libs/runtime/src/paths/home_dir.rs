@@ -209,12 +209,12 @@ mod tests {
         env::remove_var("HOME");
 
         let result = resolve_home_dir(None, ".hyperspot", false);
-        
+
         // Restore original HOME before asserting to avoid affecting other tests
         if let Some(home) = original_home {
             env::set_var("HOME", home);
         }
-        
+
         let err = result.unwrap_err();
         match err {
             HomeDirError::HomeMissing => {}

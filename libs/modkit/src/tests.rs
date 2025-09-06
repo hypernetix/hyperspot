@@ -13,7 +13,14 @@ mod module_tests {
     // Minimal OpenAPI mock for REST phase
     struct MockOpenApi;
     impl OpenApiRegistry for MockOpenApi {
-        fn ensure_schema_raw(&self, name: &str, _schemas: Vec<(String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>) -> String {
+        fn ensure_schema_raw(
+            &self,
+            name: &str,
+            _schemas: Vec<(
+                String,
+                utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>,
+            )>,
+        ) -> String {
             name.to_string()
         }
         fn register_operation(&self, _op: &crate::api::OperationSpec) {}
@@ -229,7 +236,9 @@ mod module_tests {
         match err {
             RegistryError::InvalidRegistryConfiguration { errors } => {
                 assert!(
-                    errors.iter().any(|e| e.contains("Multiple REST host modules detected")),
+                    errors
+                        .iter()
+                        .any(|e| e.contains("Multiple REST host modules detected")),
                     "expected multiple host configuration error, got {errors:?}"
                 );
             }

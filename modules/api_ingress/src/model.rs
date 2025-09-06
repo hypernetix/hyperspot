@@ -1,5 +1,5 @@
 use indexmap::IndexMap;
-use utoipa::openapi::{RefOr, schema::Schema};
+use utoipa::openapi::{schema::Schema, RefOr};
 
 #[derive(Default, Clone)]
 pub struct ComponentsRegistry {
@@ -31,6 +31,10 @@ impl ComponentsRegistry {
     pub fn iter(&self) -> impl Iterator<Item = (&String, &RefOr<Schema>)> {
         self.schemas.iter()
     }
-    pub fn len(&self) -> usize { self.schemas.len() }
-    pub fn is_empty(&self) -> bool { self.schemas.is_empty() }    
+    pub fn len(&self) -> usize {
+        self.schemas.len()
+    }
+    pub fn is_empty(&self) -> bool {
+        self.schemas.is_empty()
+    }
 }

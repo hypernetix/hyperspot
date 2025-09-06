@@ -15,12 +15,7 @@
 //! - For testing, just register a mock under the same trait type.
 
 use parking_lot::RwLock;
-use std::{
-    any::Any,
-    collections::HashMap,
-    fmt,
-    sync::Arc,
-};
+use std::{any::Any, collections::HashMap, fmt, sync::Arc};
 
 /// Global scope constant.
 pub const GLOBAL_SCOPE: &str = "global";
@@ -48,8 +43,14 @@ pub struct ScopeKey(Option<Arc<str>>);
 
 impl ScopeKey {
     #[allow(dead_code)]
-    #[inline] fn global() -> Self { ScopeKey(None) }
-    #[inline] fn named(s: impl Into<Arc<str>>) -> Self { ScopeKey(Some(s.into())) }
+    #[inline]
+    fn global() -> Self {
+        ScopeKey(None)
+    }
+    #[inline]
+    fn named(s: impl Into<Arc<str>>) -> Self {
+        ScopeKey(Some(s.into()))
+    }
 }
 
 impl fmt::Debug for ScopeKey {
@@ -80,12 +81,16 @@ pub struct ClientHub {
 impl ClientHub {
     #[inline]
     pub fn new() -> Self {
-        Self { map: RwLock::new(HashMap::new()) }
+        Self {
+            map: RwLock::new(HashMap::new()),
+        }
     }
 }
 
 impl Default for ClientHub {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ClientHub {
@@ -126,14 +131,21 @@ impl ClientHub {
         let scope_key = ScopeKey::named(scope);
         let r = self.map.read();
 
-        let boxed = r.get(&(type_key.clone(), scope_key.clone()))
-            .ok_or(ClientHubError::NotFound { type_key: type_key.clone(), scope: scope_key.clone() })?;
+        let boxed =
+            r.get(&(type_key.clone(), scope_key.clone()))
+                .ok_or(ClientHubError::NotFound {
+                    type_key: type_key.clone(),
+                    scope: scope_key.clone(),
+                })?;
 
         // Stored value is exactly `Arc<T>`; downcast is safe and cheap.
         if let Some(arc_t) = boxed.downcast_ref::<Arc<T>>() {
             return Ok(arc_t.clone());
         }
-        Err(ClientHubError::TypeMismatch { type_key, scope: scope_key })
+        Err(ClientHubError::TypeMismatch {
+            type_key,
+            scope: scope_key,
+        })
     }
 
     /// Remove a client; returns the removed client if it was present.
@@ -164,12 +176,16 @@ mod tests {
     use super::*;
 
     #[async_trait::async_trait]
-    trait TestApi: Send + Sync { async fn id(&self) -> usize; }
+    trait TestApi: Send + Sync {
+        async fn id(&self) -> usize;
+    }
 
     struct ImplA(usize);
     #[async_trait::async_trait]
     impl TestApi for ImplA {
-        async fn id(&self) -> usize { self.0 }
+        async fn id(&self) -> usize {
+            self.0
+        }
     }
 
     #[tokio::test]
@@ -189,8 +205,20 @@ mod tests {
         hub.register_scoped::<dyn TestApi>("tenant-1", Arc::new(ImplA(1)));
         hub.register_scoped::<dyn TestApi>("tenant-2", Arc::new(ImplA(2)));
 
-        assert_eq!(hub.get_scoped::<dyn TestApi>("tenant-1").unwrap().id().await, 1);
-        assert_eq!(hub.get_scoped::<dyn TestApi>("tenant-2").unwrap().id().await, 2);
+        assert_eq!(
+            hub.get_scoped::<dyn TestApi>("tenant-1")
+                .unwrap()
+                .id()
+                .await,
+            1
+        );
+        assert_eq!(
+            hub.get_scoped::<dyn TestApi>("tenant-2")
+                .unwrap()
+                .id()
+                .await,
+            2
+        );
         assert!(hub.get::<dyn TestApi>().is_err()); // global not set
     }
 }

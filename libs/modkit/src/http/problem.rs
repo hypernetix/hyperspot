@@ -10,7 +10,10 @@ pub const APPLICATION_PROBLEM_JSON: &str = "application/problem+json";
 
 /// RFC 9457 Problem Details for HTTP APIs.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-#[schema(title = "Problem", description = "RFC 9457 Problem Details for HTTP APIs")]
+#[schema(
+    title = "Problem",
+    description = "RFC 9457 Problem Details for HTTP APIs"
+)]
 pub struct Problem {
     /// A URI reference that identifies the problem type.
     /// When dereferenced, it might provide human-readable documentation.
@@ -53,30 +56,30 @@ impl Problem {
             errors: None,
         }
     }
-    
-    pub fn with_type(mut self, type_url: impl Into<String>) -> Self { 
-        self.type_url = type_url.into(); 
-        self 
+
+    pub fn with_type(mut self, type_url: impl Into<String>) -> Self {
+        self.type_url = type_url.into();
+        self
     }
-    
-    pub fn with_instance(mut self, uri: impl Into<String>) -> Self { 
-        self.instance = uri.into(); 
-        self 
+
+    pub fn with_instance(mut self, uri: impl Into<String>) -> Self {
+        self.instance = uri.into();
+        self
     }
-    
-    pub fn with_code(mut self, code: impl Into<String>) -> Self { 
-        self.code = code.into(); 
-        self 
+
+    pub fn with_code(mut self, code: impl Into<String>) -> Self {
+        self.code = code.into();
+        self
     }
-    
-    pub fn with_request_id(mut self, id: impl Into<String>) -> Self { 
-        self.request_id = Some(id.into()); 
-        self 
+
+    pub fn with_request_id(mut self, id: impl Into<String>) -> Self {
+        self.request_id = Some(id.into());
+        self
     }
-    
-    pub fn with_errors(mut self, errors: Vec<ValidationError>) -> Self { 
-        self.errors = Some(errors); 
-        self 
+
+    pub fn with_errors(mut self, errors: Vec<ValidationError>) -> Self {
+        self.errors = Some(errors);
+        self
     }
 }
 
@@ -85,13 +88,15 @@ impl Problem {
 pub struct ProblemResponse(pub Problem);
 
 impl From<Problem> for ProblemResponse {
-    fn from(p: Problem) -> Self { Self(p) }
+    fn from(p: Problem) -> Self {
+        Self(p)
+    }
 }
 
 impl IntoResponse for ProblemResponse {
     fn into_response(self) -> Response {
-        let status = StatusCode::from_u16(self.0.status)
-            .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+        let status =
+            StatusCode::from_u16(self.0.status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
         let mut resp = axum::Json(self.0).into_response();
         *resp.status_mut() = status;
         resp.headers_mut().insert(
@@ -116,7 +121,12 @@ pub fn conflict(detail: impl Into<String>) -> ProblemResponse {
 }
 
 pub fn internal_error(detail: impl Into<String>) -> ProblemResponse {
-    Problem::new(StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error", detail).into()
+    Problem::new(
+        StatusCode::INTERNAL_SERVER_ERROR,
+        "Internal Server Error",
+        detail,
+    )
+    .into()
 }
 
 #[cfg(test)]
@@ -139,16 +149,18 @@ mod tests {
 
     #[test]
     fn problem_builder_pattern() {
-        let p = Problem::new(StatusCode::UNPROCESSABLE_ENTITY, "Validation Failed", "Input validation errors")
-            .with_code("VALIDATION_ERROR")
-            .with_instance("/users/123")
-            .with_request_id("req-456")
-            .with_errors(vec![
-                ValidationError {
-                    detail: "Email is required".to_string(),
-                    pointer: "/email".to_string(),
-                }
-            ]);
+        let p = Problem::new(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "Validation Failed",
+            "Input validation errors",
+        )
+        .with_code("VALIDATION_ERROR")
+        .with_instance("/users/123")
+        .with_request_id("req-456")
+        .with_errors(vec![ValidationError {
+            detail: "Email is required".to_string(),
+            pointer: "/email".to_string(),
+        }]);
 
         assert_eq!(p.status, 422);
         assert_eq!(p.code, "VALIDATION_ERROR");

@@ -1,5 +1,3 @@
-
-
 use axum::{
     extract::{Path, Query},
     http::{StatusCode, Uri},
@@ -11,9 +9,8 @@ use uuid::Uuid;
 
 use crate::api::rest::dto::{CreateUserReq, ListUsersQuery, UpdateUserReq, UserDto, UserListDto};
 use crate::api::rest::error::map_domain_error;
-use modkit::http::problem::ProblemResponse;
 use crate::domain::service::Service;
-
+use modkit::http::problem::ProblemResponse;
 
 /// List users with optional pagination
 pub async fn list_users(
@@ -113,4 +110,3 @@ pub async fn delete_user(
         }
     }
 }
-

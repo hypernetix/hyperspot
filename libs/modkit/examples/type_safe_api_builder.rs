@@ -38,7 +38,14 @@ impl OpenApiRegistry for ExampleRegistry {
         let _ = spec;
     }
 
-    fn ensure_schema_raw(&self, root_name: &str, _schemas: Vec<(String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>) -> String {
+    fn ensure_schema_raw(
+        &self,
+        root_name: &str,
+        _schemas: Vec<(
+            String,
+            utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>,
+        )>,
+    ) -> String {
         // Example implementation - schemas not tracked, just return the name
         root_name.to_string()
     }
