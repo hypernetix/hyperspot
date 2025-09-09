@@ -29,6 +29,7 @@ fn _ensure_modules_linked() {
     let _ = std::any::type_name::<api_ingress::ApiIngress>();
     #[cfg(feature = "users-info-example")]
     let _ = std::any::type_name::<users_info::UsersInfo>();
+    let _ = std::any::type_name::<settings::Settings>();
 }
 
 // Force SQLx driver registration for Any driver (workaround for SQLx 0.8)

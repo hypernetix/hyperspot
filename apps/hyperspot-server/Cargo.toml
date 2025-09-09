@@ -14,12 +14,13 @@ name = "hyperspot-server"
 path = "src/main.rs"
 
 [dependencies]
-mimalloc = { version="0.1" }
+mimalloc = { version = "0.1" }
 # Local crates
 runtime = { path = "../../libs/runtime" }
 modkit = { path = "../../libs/modkit" }
 db = { path = "../../libs/db", features = ["sqlite"] }
 api_ingress = { path = "../../modules/api_ingress"}
+settings = { path = "../../modules/settings" }
 
 anyhow = { workspace = true }
 tokio = { workspace = true }

@@ -1,0 +1,53 @@
+[package]
+name = "settings"
+version = "0.1.0"
+edition = "2024"
+
+[lints]
+workspace = true
+
+[dependencies]
+# Core dependencies
+anyhow = "1.0"
+async-trait = "0.1"
+tokio = { version = "1.47", features = ["full"] }
+tracing = "0.1"
+inventory = "0.3"
+
+# Serde and JSON schema
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+utoipa = { workspace = true }
+
+# HTTP and REST
+axum = { workspace = true, features = ["macros"] }
+
+# Time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# UUID support
+uuid = { version = "1.18", features = ["v4", "serde"] }
+
+# Lock-free atomic swaps
+arc-swap = "1.7"
+
+# Database - SeaORM
+sea-orm = { version = "1.1", features = [
+    "sqlx-sqlite",
+    "runtime-tokio-rustls",
+    "macros",
+    "with-chrono",
+    "with-uuid"
+] }
+sea-orm-migration = "1.0"
+
+# Error handling
+thiserror = "2.0"
+
+# Local dependencies
+modkit = { path = "../../libs/modkit" }
+db = { path = "../../libs/db" }
+log = "0.4.28"
+
+[dev-dependencies]
+tower = { version = "0.5", features = ["util"] }
