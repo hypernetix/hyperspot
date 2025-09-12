@@ -13,7 +13,8 @@ members = [
  "libs/modkit/macros",
  "libs/db",
  "modules/api_ingress",
- "examples/modkit/users_info"
+ "examples/modkit/users_info",
+ "modules/settings"
 ]
 resolver = "2"
 
