@@ -20,10 +20,10 @@ This guide explains how to build production-grade modules on **ModKit**: how to 
 
 ## Canonical layout (DDD-light)
 
-Place each module under `modules/rust/<name>/`:
+Place each module under `modules/<name>/`:
 
 ```
-modules/rust/<name>/
+modules/<name>/
   ├─ src/
   │  ├─ lib.rs                       # module declaration, exports
   │  ├─ module.rs                    # main struct + Module/Db/Rest/Stateful impls
@@ -449,13 +449,13 @@ pub struct UserService {
 impl UserService {
     pub async fn create_user(&self, data: NewUser) -> Result<User, DomainError> {
         let user = self.repo.create(data).await?;
-        
+
         // Publish domain event
         self.events.publish(&UserDomainEvent::Created {
             id: user.id,
             at: user.created_at,
         });
-        
+
         Ok(user)
     }
 }
@@ -501,11 +501,11 @@ pub struct UsersModule {
 impl Module for UsersModule {
     async fn init(&self, ctx: &ModuleCtx) -> anyhow::Result<()> {
         let repo = Arc::new(SqlUsersRepository::new(ctx.db.clone()));
-        
+
         // Create SSE adapter that implements domain port
         let event_publisher: Arc<dyn EventPublisher<UserDomainEvent>> =
             Arc::new(SseUserEventPublisher::new(self.sse_broadcaster.clone()));
-        
+
         let service = UserService::new(repo, event_publisher);
         self.service.store(Some(Arc::new(service)));
         Ok(())
