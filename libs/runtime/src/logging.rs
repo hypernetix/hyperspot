@@ -512,7 +512,9 @@ server:
   port: 8088
 
 database:
-  url: "sqlite://test.db"
+  servers:
+    test_sqlite:
+      dsn: "sqlite://test.db"
 
 logging:
   default:
@@ -528,7 +530,8 @@ logging:
 
 modules:
   api_ingress:
-    bind_addr: "127.0.0.1:8088"
+    config:
+      bind_addr: "127.0.0.1:8088"
 "#;
 
         fs::write(&config_path, yaml_content).unwrap();

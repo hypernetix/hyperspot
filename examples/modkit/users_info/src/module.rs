@@ -54,15 +54,15 @@ impl Module for UsersInfo {
     async fn init(&self, ctx: &ModuleCtx) -> anyhow::Result<()> {
         info!("Initializing users_info module");
 
-        // Load module configuration
-        let cfg: UsersInfoConfig = ctx.module_config();
+        // Load module configuration using new API
+        let cfg: UsersInfoConfig = ctx.config()?;
         debug!(
             "Loaded users_info config: default_page_size={}, max_page_size={}",
             cfg.default_page_size, cfg.max_page_size
         );
 
         // Acquire DB (SeaORM connection handle)
-        let db = ctx.db().ok_or_else(|| anyhow::anyhow!("DB required"))?;
+        let db = ctx.db_required()?;
         let db_conn = db.sea(); // DatabaseConnection (cheap cloneable handle)
 
         // Wire repository (infra) to domain service (port)

@@ -566,7 +566,7 @@ pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
                         }
                     }
                 } else {
-                    // Legacy path: the type itself must implement StatefulModule
+                    // Alternative path: the type itself must implement StatefulModule
                     quote! {
                         b.register_stateful_with_meta(#name_lit,
                             module.clone() as ::std::sync::Arc<dyn ::modkit::contracts::StatefulModule>);

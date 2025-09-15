@@ -136,7 +136,7 @@ Ok(found.map(Into::into))
 }
 
 ```
-- `infra/storage/entity.rs`, `mapper.rs` — stобы (map DB ↔ contract models) with `From`/`Into`.
+- `infra/storage/entity.rs`, `mapper.rs` — stubs (map DB ↔ contract models) with `From`/`Into`.
 - `infra/storage/migrations/` — create a SeaORM migrator skeleton.
 
 STEP 5 — CONFIG + INIT + DB CAPABILITY

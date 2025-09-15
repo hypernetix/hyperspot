@@ -4,11 +4,15 @@
 server:
   home_dir: "~/.hyperspot"
 
-# Database configuration (global section)
+# Database configuration (simplified structure)
 database:
-  url: "sqlite://database/database.db?mode=rwc"
-  max_conns: 10
-  busy_timeout_ms: 5000
+  servers:
+    # SQLite server for users_info module
+    sqlite_users:
+      dsn: "sqlite://users_info.db?WAL=true&synchronous=NORMAL&busy_timeout=5000"
+      pool:
+        max_conns: 5
+        acquire_timeout: "30s"
 
 # Logging configuration (global section)
 logging:
@@ -30,13 +34,21 @@ logging:
     max_size_mb: 10000
 
 
-# Per-module configurations moved under modules section
+# Per-module configurations using new structure
 modules:
   api_ingress:
-    bind_addr: "127.0.0.1:8088"
-    enable_docs: true
-    cors_enabled: false
+    # No database needed for api_ingress
+    config:
+      bind_addr: "127.0.0.1:8088"
+      enable_docs: true
+      cors_enabled: false
+  
   users_info:
-    default_page_size: 5
-    max_page_size: 100
+    # SQLite database for user information
+    database:
+      server: "sqlite_users"
+      dbname: "users_info.db"
+    config:
+      default_page_size: 5
+      max_page_size: 100
 

@@ -15,9 +15,11 @@ logging:
     max_backups: 3
     max_size_mb: 1000
 
-# Per-module configurations moved under modules section
+# Per-module configurations using new structure
 modules:
   api_ingress:
-    bind_addr: "127.0.0.1:8087"
-    enable_docs: true
-    cors_enabled: true
+    # No database configuration needed for api_ingress
+    config:
+      bind_addr: "127.0.0.1:8087"
+      enable_docs: true
+      cors_enabled: true

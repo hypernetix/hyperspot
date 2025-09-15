@@ -379,7 +379,7 @@ impl ApiIngress {
 impl modkit::Module for ApiIngress {
     async fn init(&self, ctx: &modkit::ModuleCtx) -> anyhow::Result<()> {
         tracing::debug!(module = "api_ingress", "Module initialized with context");
-        let cfg = ctx.module_config::<crate::config::ApiIngressConfig>();
+        let cfg = ctx.config::<crate::config::ApiIngressConfig>()?;
         self.config.store(Arc::new(cfg));
         Ok(())
     }

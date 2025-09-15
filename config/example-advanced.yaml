@@ -1,0 +1,161 @@
+# Example configuration demonstrating the ModKit DB Handling features
+# This config shows all the new capabilities including:
+# - Global database servers with field-based and DSN configuration
+# - Module-specific database configuration with precedence rules  
+# - SQLite @file() syntax for flexible path resolution
+# - Environment variable expansion with ${VAR} syntax
+# - PRAGMA configuration via DSN query parameters
+
+# Server configuration
+server:
+  home_dir: "~/.hyperspot"
+  bind: "127.0.0.1:8080"
+  base_dir: "/opt/hyperspot"
+
+# Global database configuration with server-based configuration
+database:
+  servers:
+    # Primary PostgreSQL server using DSN + field overrides
+    postgres_main:
+      dsn: "postgresql://hyperspot:${DB_PASSWORD}@localhost:5432/hyperspot"
+      # Field-based overrides (highest precedence)
+      host: "prod-db.example.com"    # Overrides DSN host
+      port: 5433                     # Overrides DSN port
+      user: "prod_user"              # Overrides DSN user
+      params:
+        sslmode: "require"
+        application_name: "hyperspot-server"
+      pool:
+        max_conns: 25
+        acquire_timeout: "30s"
+        idle_timeout: "10m"
+
+    # Analytics PostgreSQL server with field-based config only
+    postgres_analytics:
+      host: "analytics-db.example.com"
+      port: 5432
+      user: "analytics_reader"
+      password: "${ANALYTICS_DB_PASSWORD}"
+      dbname: "analytics"
+      params:
+        sslmode: "prefer"
+        connect_timeout: "10"
+      pool:
+        max_conns: 10
+        acquire_timeout: "15s"
+
+    # Global SQLite server with PRAGMA configuration via DSN
+    sqlite_default:
+      dsn: "sqlite://@file(default.db)?wal=true&synchronous=NORMAL&busy_timeout=5000"
+      pool:
+        max_conns: 5
+
+    # SQLite server for user data with custom PRAGMAs
+    sqlite_users:
+      dsn: "sqlite://@file(/var/lib/hyperspot/users.db)?wal=true&synchronous=FULL&busy_timeout=10000"
+      pool:
+        max_conns: 8
+
+  # Auto-provision databases in development
+  auto_provision: true
+
+# Logging configuration  
+logging:
+  level: "info"
+  console_level: "debug"
+  file_level: "info"
+  file_path: "logs/hyperspot.log"
+
+# Module-specific configuration demonstrating precedence rules
+modules:
+  # Module using global server with no overrides
+  api_ingress:
+    database:
+      server: "postgres_main"      # Uses global server as-is
+    config:
+      rate_limit_rpm: 1000
+      cors_origins: ["https://app.example.com"]
+
+  # Module with field-based overrides of global server  
+  user_management:
+    database:
+      server: "postgres_main"      # Base configuration from global server
+      dbname: "users"              # Override: use different database name
+      pool:
+        max_conns: 15              # Override: reduce connection pool
+    config:
+      password_policy:
+        min_length: 12
+        require_symbols: true
+      session_timeout: "24h"
+
+  # Module with full DSN override
+  analytics:
+    database:
+      dsn: "postgresql://readonly:${ANALYTICS_PASSWORD}@analytics.internal:5432/metrics?sslmode=require"
+      pool:
+        max_conns: 5
+        acquire_timeout: "10s"
+    config:
+      batch_size: 1000
+      export_interval: "1h"
+
+  # Module using SQLite with @file() relative path
+  local_cache:
+    database:
+      dsn: "sqlite://@file(cache.db)?wal=true&synchronous=NORMAL"
+    config:
+      cache_size_mb: 100
+      eviction_policy: "lru"
+
+  # Module using SQLite with @file() absolute path
+  audit_logs:
+    database:
+      dsn: "sqlite://@file(/var/log/hyperspot/audit.db)?wal=true&synchronous=FULL&busy_timeout=15000"
+      pool:
+        max_conns: 3
+    config:
+      retention_days: 365
+      compression: true
+
+  # Module using field-based SQLite configuration
+  temp_storage:
+    database:
+      file: "temp.db"              # Relative to home_dir/temp_storage/
+      pool:
+        max_conns: 2
+    config:
+      cleanup_interval: "6h"
+
+  # Module with no database capability
+  health_check:
+    config:
+      check_interval: "30s"
+      endpoints:
+        - "/health"
+        - "/ready"
+
+  # Module using default SQLite (empty DSN = default to module_name.sqlite)
+  simple_storage:
+    database:
+      dsn: "sqlite://"             # Resolves to home_dir/simple_storage/simple_storage.sqlite
+    config:
+      auto_backup: true
+
+# Precedence demonstration:
+# 1. Global DSN:        postgres_main.dsn = "postgresql://hyperspot:${DB_PASSWORD}@localhost:5432/hyperspot"
+# 2. Global fields:     postgres_main.host = "prod-db.example.com", port = 5433, user = "prod_user"  
+# 3. Module DSN:        user_management has no DSN override (uses global)
+# 4. Module fields:     user_management.dbname = "users" (highest precedence)
+#
+# Final result for user_management module:
+# "postgresql://prod_user:${DB_PASSWORD}@prod-db.example.com:5433/users?sslmode=require&application_name=hyperspot-server"
+
+# SQLite @file() examples:
+# - sqlite://@file(cache.db)           → home_dir/local_cache/cache.db
+# - sqlite://@file(/var/log/audit.db)  → /var/log/audit.db (absolute)
+# - sqlite://                         → home_dir/simple_storage/simple_storage.sqlite (default)
+
+# Environment variable expansion:
+# - ${DB_PASSWORD}         → Expands to value of DB_PASSWORD env var
+# - ${ANALYTICS_PASSWORD}  → Expands to value of ANALYTICS_PASSWORD env var

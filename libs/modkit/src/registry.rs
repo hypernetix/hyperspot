@@ -87,6 +87,51 @@ impl ModuleRegistry {
         Ok(())
     }
 
+    /// Run init phase with per-module database factory
+    pub async fn run_init_phase_with_factory(
+        &self,
+        base_ctx: &context::ModuleCtx,
+        db_factory: &crate::runtime::PerModuleDbFactory,
+    ) -> Result<(), RegistryError> {
+        for e in &self.modules {
+            let mut ctx_builder =
+                context::ModuleCtxBuilder::new(base_ctx.cancellation_token().clone())
+                    .with_client_hub(base_ctx.client_hub());
+
+            // Add config provider if available
+            if let Some(provider) = base_ctx.config_provider.clone() {
+                ctx_builder = ctx_builder.with_config_provider(provider);
+            }
+
+            // Get module-specific DB handle using factory
+            match (db_factory)(e.name).await {
+                Ok(Some(db_handle)) => {
+                    ctx_builder = ctx_builder.with_db(db_handle);
+                }
+                Ok(None) => {
+                    tracing::debug!("Module '{}' has no database configuration", e.name);
+                }
+                Err(err) => {
+                    return Err(RegistryError::Init {
+                        module: e.name,
+                        source: err,
+                    });
+                }
+            }
+
+            let ctx = ctx_builder.build().for_module(e.name);
+
+            e.core
+                .init(&ctx)
+                .await
+                .map_err(|source| RegistryError::Init {
+                    module: e.name,
+                    source,
+                })?;
+        }
+        Ok(())
+    }
+
     pub async fn run_db_phase(&self, db: &db::DbHandle) -> Result<(), RegistryError> {
         for e in &self.modules {
             if let Some(dbm) = &e.db {
@@ -98,6 +143,42 @@ impl ModuleRegistry {
                         module: e.name,
                         source,
                     })?;
+            }
+        }
+        Ok(())
+    }
+
+    /// Run DB migration phase with per-module database factory
+    pub async fn run_db_phase_with_factory(
+        &self,
+        db_factory: &crate::runtime::PerModuleDbFactory,
+    ) -> Result<(), RegistryError> {
+        for e in &self.modules {
+            if let Some(dbm) = &e.db {
+                match (db_factory)(e.name).await {
+                    Ok(Some(db_handle)) => {
+                        // If you want advisory locks, do it here (kept minimal for portability):
+                        // let _lock = db_handle.lock(e.name, "migration").await?;
+                        dbm.migrate(&db_handle).await.map_err(|source| {
+                            RegistryError::DbMigrate {
+                                module: e.name,
+                                source,
+                            }
+                        })?;
+                    }
+                    Ok(None) => {
+                        tracing::warn!(
+                            "Module '{}' has DbModule trait but no database configured",
+                            e.name
+                        );
+                    }
+                    Err(err) => {
+                        return Err(RegistryError::DbMigrate {
+                            module: e.name,
+                            source: err,
+                        });
+                    }
+                }
             }
         }
         Ok(())

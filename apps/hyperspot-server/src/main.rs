@@ -1,13 +1,19 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use clap::{Parser, Subcommand};
-use db::{ConnectOpts, DbHandle};
 use mimalloc::MiMalloc;
-use runtime::{AppConfig, AppConfigProvider, CliArgs, ConfigProvider, DatabaseConfig};
+use runtime::{AppConfig, AppConfigProvider, CliArgs, ConfigProvider};
+
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+
+// Keep sqlx drivers linked (sqlx::any quirk)
+#[allow(unused_imports)]
+use sqlx::{postgres::Postgres, sqlite::Sqlite};
 
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
 
-// Adapter to make AppConfigProvider implement modkit::ConfigProvider
+/// Adapter to make `AppConfigProvider` implement `modkit::ConfigProvider`.
 struct ModkitConfigAdapter(std::sync::Arc<AppConfigProvider>);
 
 impl modkit::ConfigProvider for ModkitConfigAdapter {
@@ -15,12 +21,6 @@ impl modkit::ConfigProvider for ModkitConfigAdapter {
         self.0.get_module_config(module_name)
     }
 }
-
-use modkit::runtime::{run, DbFactory, DbOptions, RunOptions, ShutdownOptions};
-use std::path::{Path, PathBuf};
-use std::sync::Arc;
-use std::time::Duration;
-use url::Url;
 
 // Ensure modules are linked and registered via inventory
 #[allow(dead_code)]
@@ -31,56 +31,15 @@ fn _ensure_modules_linked() {
     let _ = std::any::type_name::<users_info::UsersInfo>();
 }
 
-// Force SQLx driver registration for Any driver (workaround for SQLx 0.8)
-#[allow(unused_imports)]
-use sqlx::{postgres::Postgres, sqlite::Sqlite};
+// Bring runner types & our per-module DB factory
+use modkit::runtime::{run, DbOptions, RunOptions, ShutdownOptions};
+mod db_factory;
 
 #[allow(dead_code)]
 fn _ensure_drivers_linked() {
-    // Make sure database drivers are linked for sqlx::any
+    // Ensure database drivers are linked for sqlx::any
     let _ = std::any::type_name::<Sqlite>();
     let _ = std::any::type_name::<Postgres>();
-}
-
-/// Expand a sqlite DSN into an absolute-path DSN using a base directory.
-/// - Keeps "sqlite::memory:" as-is.
-/// - Normalizes backslashes into forward slashes (important on Windows).
-fn absolutize_sqlite_dsn(dsn: &str, base_dir: &Path, create_dirs: bool) -> Result<String> {
-    if dsn.eq_ignore_ascii_case("sqlite::memory:") || dsn.eq_ignore_ascii_case("sqlite://:memory:")
-    {
-        return Ok("sqlite::memory:".to_string());
-    }
-    let db_path = dsn
-        .strip_prefix("sqlite://")
-        .ok_or_else(|| anyhow!("DSN must start with sqlite:// (got: {})", dsn))?;
-
-    let (path_str, query) = match db_path.split_once('?') {
-        Some((p, q)) => (p, Some(q)),
-        None => (db_path, None),
-    };
-
-    let mut p = PathBuf::from(path_str);
-    if p.as_os_str().is_empty() {
-        return Err(anyhow!("Empty SQLite path in DSN"));
-    }
-    if p.is_relative() {
-        p = base_dir.join(p);
-    }
-
-    if let Some(dir) = p.parent() {
-        if create_dirs {
-            std::fs::create_dir_all(dir)?;
-        }
-    }
-
-    // Rebuild DSN with absolute path and normalized slashes
-    let mut out = String::from("sqlite://");
-    out.push_str(&p.to_string_lossy().replace('\\', "/"));
-    if let Some(q) = query {
-        out.push('?');
-        out.push_str(q);
-    }
-    Ok(out)
 }
 
 /// HyperSpot Server - modular platform for AI services
@@ -93,11 +52,11 @@ struct Cli {
     #[arg(short, long)]
     config: Option<PathBuf>,
 
-    /// Port for HTTP server (overrides config)
+    /// Port override for HTTP server (overrides config)
     #[arg(short, long)]
     port: Option<u16>,
 
-    /// Print current configuration and exit
+    /// Print effective configuration (YAML) and exit
     #[arg(long)]
     print_config: bool,
 
@@ -105,7 +64,7 @@ struct Cli {
     #[arg(short, long, action = clap::ArgAction::Count)]
     verbose: u8,
 
-    /// Use mock database
+    /// Use mock database (sqlite::memory:) for all modules
     #[arg(long)]
     mock: bool,
 
@@ -117,18 +76,17 @@ struct Cli {
 enum Commands {
     /// Start the server
     Run,
-    /// Check configuration
+    /// Validate configuration and exit
     Check,
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Link SQLx drivers (Any driver quirk in 0.8)
     _ensure_drivers_linked();
 
     let cli = Cli::parse();
 
-    // CLI args passed down to config/app
+    // Prepare CLI args that flow into runtime::AppConfig merge logic.
     let args = CliArgs {
         config: cli.config.as_ref().map(|p| p.to_string_lossy().to_string()),
         port: cli.port,
@@ -137,113 +95,60 @@ async fn main() -> Result<()> {
         mock: cli.mock,
     };
 
-    // Load configuration (normalized home_dir is applied inside)
+    // Layered config:
+    // 1) defaults -> 2) YAML (if provided) -> 3) env (APP__*) -> 4) CLI overrides
+    // Also normalizes + creates server.home_dir.
     let mut config = AppConfig::load_or_default(cli.config.as_deref())?;
-
-    // Apply CLI overrides (port / verbosity)
     config.apply_cli_overrides(&args);
 
-    // Initialize logging
+    // Init logging as early as possible.
     let logging_config = config.logging.as_ref().cloned().unwrap_or_default();
     runtime::logging::init_logging_from_config(&logging_config, Path::new(&config.server.home_dir));
-    tracing::info!("HyperSpot Server starting");
-    println!("Effective configuration:\n{:#?}", config.server);
 
-    // Print config and exit if requested
+    tracing::info!("HyperSpot Server starting");
+
     if cli.print_config {
         println!("{}", config.to_yaml()?);
         return Ok(());
     }
 
-    // Execute command
+    // Dispatch subcommands (default: run)
     match cli.command.unwrap_or(Commands::Run) {
         Commands::Run => run_server(config, args).await,
         Commands::Check => check_config(config).await,
     }
 }
 
-/// Detect DB backend from URL scheme (sqlite/postgres/mysql).
-fn detect_from_dsn(cfg: &DatabaseConfig) -> anyhow::Result<&'static str> {
-    let raw = cfg.url.trim().to_owned();
-    if raw.is_empty() {
-        return Err(anyhow!("Database URL not configured"));
-    }
-
-    let url = Url::parse(&raw).map_err(|e| anyhow!("Invalid database DSN '{}': {}", raw, e))?;
-
-    match url.scheme() {
-        "sqlite" | "sqlite3" => Ok("sqlite"),
-        "postgres" | "postgresql" => Ok("postgres"),
-        "mysql" | "mariadb" => Ok("mysql"),
-        other => Err(anyhow!("Unsupported database type: {}", other)),
-    }
-}
-
 async fn run_server(config: AppConfig, args: CliArgs) -> Result<()> {
-    tracing::info!("Initializing modules...");
+    tracing::info!("Initializing modules…");
 
-    // Provide module configs to modkit
+    // Bridge AppConfig into ModKit’s ConfigProvider (per-module JSON bag).
     let config_provider = Arc::new(ModkitConfigAdapter(Arc::new(AppConfigProvider::new(
         config.clone(),
     ))));
 
-    // Base dir for resolving relative sqlite paths (already absolute & created)
-    let base_dir = PathBuf::from(&config.server.home_dir);
+    // Base dir used by DB factory for file-based SQLite resolution
+    let home_dir = PathBuf::from(&config.server.home_dir);
 
-    // Prepare DB factory if database config exists
-    let db_options = if let Some(db_config) = config.database.clone() {
-        let factory: DbFactory = Box::new(move || {
-            let args = args.clone();
-            let db_config = db_config.clone();
-            let base_dir = base_dir.clone();
-
-            Box::pin(async move {
-                let _backend = detect_from_dsn(&db_config)?;
-
-                // Use URL from config; override with in-memory SQLite when --mock is set
-                let config_dsn = db_config.url.trim().to_owned();
-                if config_dsn.is_empty() {
-                    return Err(anyhow!("Database URL not configured"));
-                }
-
-                let mut final_dsn = if args.mock {
-                    "sqlite://:memory:".to_string()
-                } else {
-                    config_dsn
-                };
-
-                // Absolutize sqlite DSNs to avoid cwd issues
-                if final_dsn.starts_with("sqlite://") {
-                    final_dsn = absolutize_sqlite_dsn(&final_dsn, &base_dir, true)?;
-                }
-
-                let connect_opts = ConnectOpts {
-                    max_conns: db_config.max_conns,
-                    acquire_timeout: Some(Duration::from_secs(5)),
-                    sqlite_busy_timeout: db_config
-                        .busy_timeout_ms
-                        .map(|ms| Duration::from_millis(ms as u64)),
-                    create_sqlite_dirs: true,
-                    ..Default::default()
-                };
-
-                tracing::info!("Connecting to database: {}", final_dsn);
-                let db = DbHandle::connect(&final_dsn, connect_opts).await?;
-                let backend = db.engine();
-                tracing::info!("Connected DB backend: {:?}", backend);
-
-                Ok(Arc::new(db))
-            })
-        });
-
-        DbOptions::Auto(factory)
+    // Configure DB options: per-module factory or no-DB.
+    let db_options = if config.database.is_some() {
+        if args.mock {
+            tracing::info!("Mock mode enabled: using in-memory SQLite for all modules");
+            DbOptions::PerModuleFactory(db_factory::create_mock_per_module_db_factory())
+        } else {
+            tracing::info!("Using per-module database configuration");
+            DbOptions::PerModuleFactory(db_factory::create_per_module_db_factory(
+                Arc::new(config.clone()),
+                home_dir,
+            ))
+        }
     } else {
-        tracing::warn!("No database configuration found, running without database");
+        tracing::warn!("No global database section found; running without databases");
         DbOptions::None
     };
 
-    // Run the server via modkit
-    let run_options: RunOptions = RunOptions {
+    // Run the ModKit runtime (signals-driven shutdown).
+    let run_options = RunOptions {
         modules_cfg: config_provider,
         db: db_options,
         shutdown: ShutdownOptions::Signals,
@@ -253,13 +158,9 @@ async fn run_server(config: AppConfig, args: CliArgs) -> Result<()> {
 }
 
 async fn check_config(config: AppConfig) -> Result<()> {
-    tracing::info!("Checking configuration...");
-
-    // AppConfig::load_* already normalized & created home_dir
-    tracing::info!("Configuration is valid");
-    println!("Configuration check passed");
-    println!("Server config:");
+    tracing::info!("Checking configuration…");
+    // If load_layered/load_or_default succeeded and home_dir normalized, we’re good.
+    println!("Configuration is valid");
     println!("{}", config.to_yaml()?);
-
     Ok(())
 }

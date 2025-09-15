@@ -2,6 +2,8 @@ use serde::de::DeserializeOwned;
 use std::sync::Arc;
 use tokio_util::sync::CancellationToken;
 
+// Note: runtime-dependent features are conditionally compiled
+
 /// Provider of module-specific configuration (raw JSON sections only).
 pub trait ConfigProvider: Send + Sync {
     /// Returns raw JSON section for the module, if any.
@@ -64,8 +66,14 @@ impl ModuleCtx {
     }
 
     // ---- public read-only API for modules ----
-    pub fn db(&self) -> Option<Arc<db::DbHandle>> {
-        self.db.clone()
+    pub fn db(&self) -> Option<&db::DbHandle> {
+        self.db.as_deref()
+    }
+
+    pub fn db_required(&self) -> db::Result<&db::DbHandle> {
+        self.db
+            .as_deref()
+            .ok_or_else(|| db::DbError::FeatureDisabled("Database not configured for this module"))
     }
 
     pub fn client_hub(&self) -> Arc<crate::client_hub::ClientHub> {
@@ -80,20 +88,9 @@ impl ModuleCtx {
         self.module_name.as_deref()
     }
 
-    /// Best-effort: deserialize the module's config into `T`, fallback to `T::default()`
-    /// if section is missing or invalid.
-    pub fn module_config<T: DeserializeOwned + Default>(&self) -> T {
-        match (&self.module_name, &self.config_provider) {
-            (Some(name), Some(p)) => p
-                .get_module_config(name)
-                .and_then(|v| serde_json::from_value::<T>(v.clone()).ok())
-                .unwrap_or_default(),
-            _ => T::default(),
-        }
-    }
-
-    /// Strict: deserialize the module's config into `T`, returning a pathful error on failure.
-    pub fn module_config_required<T: serde::de::DeserializeOwned>(&self) -> anyhow::Result<T> {
+    /// Deserialize the module's config section into T.
+    /// Extracts the 'config' field from the module entry: modules.<name> = { database: ..., config: ... }
+    pub fn config<T: DeserializeOwned>(&self) -> anyhow::Result<T> {
         let name = self
             .module_name
             .as_deref()
@@ -104,12 +101,70 @@ impl ModuleCtx {
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("no ConfigProvider"))?;
 
-        let val = prov
+        let module_raw = prov
             .get_module_config(name)
             .ok_or_else(|| anyhow::anyhow!("missing module config: {name}"))?;
 
-        let out: T = serde_json::from_value(val.clone())
-            .map_err(|e| anyhow::anyhow!("invalid {name} config: {}", e))?;
-        Ok(out)
+        // Extract config section from: modules.<name> = { database: ..., config: ... }
+        let obj = module_raw
+            .as_object()
+            .ok_or_else(|| anyhow::anyhow!("module config for '{name}' must be an object"))?;
+
+        let config_section = obj
+            .get("config")
+            .ok_or_else(|| anyhow::anyhow!("missing 'config' section in module '{name}'"))?;
+
+        let config: T = serde_json::from_value(config_section.clone())
+            .map_err(|e| anyhow::anyhow!("invalid {name} config section: {}", e))?;
+
+        Ok(config)
+    }
+
+    /// Get the raw JSON value of the module's config section.
+    /// Returns the 'config' field from: modules.<name> = { database: ..., config: ... }
+    pub fn raw_config(&self) -> &serde_json::Value {
+        use std::sync::LazyLock;
+
+        static EMPTY: LazyLock<serde_json::Value> =
+            LazyLock::new(|| serde_json::Value::Object(serde_json::Map::new()));
+
+        match (&self.module_name, &self.config_provider) {
+            (Some(name), Some(prov)) => {
+                if let Some(module_raw) = prov.get_module_config(name) {
+                    // Try new structure first: modules.<name> = { database: ..., config: ... }
+                    if let Some(obj) = module_raw.as_object() {
+                        if let Some(config_section) = obj.get("config") {
+                            return config_section;
+                        }
+                    }
+                }
+                &EMPTY
+            }
+            _ => &EMPTY,
+        }
+    }
+
+    /// Create a derivative context with the same references but a different DB handle.
+    /// This allows reusing the stable base context while providing per-module DB access.
+    pub fn with_db(&self, db: Arc<db::DbHandle>) -> ModuleCtx {
+        ModuleCtx {
+            db: Some(db),
+            config_provider: self.config_provider.clone(),
+            client_hub: self.client_hub.clone(),
+            cancellation_token: self.cancellation_token.clone(),
+            module_name: self.module_name.clone(),
+        }
+    }
+
+    /// Create a derivative context with the same references but no DB handle.
+    /// Useful for modules that don't require database access.
+    pub fn without_db(&self) -> ModuleCtx {
+        ModuleCtx {
+            db: None,
+            config_provider: self.config_provider.clone(),
+            client_hub: self.client_hub.clone(),
+            cancellation_token: self.cancellation_token.clone(),
+            module_name: self.module_name.clone(),
+        }
     }
 }

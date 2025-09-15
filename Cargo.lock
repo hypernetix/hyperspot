@@ -712,6 +712,7 @@ dependencies = [
  "thiserror",
  "tokio",
  "tracing",
+ "url",
  "xxhash-rust",
 ]
 
@@ -785,6 +786,15 @@ name = "dotenvy"
 version = "0.15.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1aaf95b3e5c8f23aa320147307562d361db0ae0d51242340f558153b4eb2439b"
+
+[[package]]
+name = "dsn"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bc09a2fc6dc02a60b3294ffc80039b2fdfc92c1bb9a2e46d7924d6bb68953ab2"
+dependencies = [
+ "percent-encoding",
+]
 
 [[package]]
 name = "either"
@@ -1234,6 +1244,22 @@ name = "httpdate"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "df3b46402a9d5adb4c86a0cf463f42e19994e3ee891101b1841f30a545cb49a9"
+
+[[package]]
+name = "humantime"
+version = "2.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "135b12329e5e3ce057a9f972339ea52bc954fe1e9358ef27f95e89716fbc5424"
+
+[[package]]
+name = "humantime-serde"
+version = "1.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "57a3db5ea5923d99402c94e9feb261dc5ee9b4efa158b0315f788cf549cc200c"
+dependencies = [
+ "humantime",
+ "serde",
+]
 
 [[package]]
 name = "hyper"
@@ -1764,6 +1790,7 @@ dependencies = [
  "tokio-util",
  "tracing",
  "trybuild",
+ "url",
  "utoipa",
 ]
 
@@ -2544,8 +2571,11 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "chrono",
+ "dsn",
  "figment",
  "file-rotate",
+ "humantime-serde",
+ "regex",
  "serde",
  "serde_json",
  "serde_yaml",
@@ -2555,6 +2585,8 @@ dependencies = [
  "tracing",
  "tracing-log",
  "tracing-subscriber",
+ "url",
+ "urlencoding",
 ]
 
 [[package]]
@@ -3910,6 +3942,12 @@ dependencies = [
  "percent-encoding",
  "serde",
 ]
+
+[[package]]
+name = "urlencoding"
+version = "2.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "daf8dba3b7eb870caf1ddeed7bc9d2a049f3cfdfae7cb521b087cc33ae4c49da"
 
 [[package]]
 name = "users_info"
