@@ -51,6 +51,12 @@ parking_lot = "0.12"
 thiserror    = "2.0"
 odata-params = "0.4"
 
+# For filter hashing
+sha2 = "0.10"
+hex = "0.4"
+uuid = { version = "1", features = ["v4"] }
+urlencoding = "2.1"
+
 [dev-dependencies]
 tokio        = { workspace = true }
 trybuild     = "1.0"

@@ -3,6 +3,7 @@ use std::sync::Arc;
 use crate::contract::model::{NewUser, User, UserPatch};
 use crate::domain::error::DomainError;
 use crate::domain::events::UserDomainEvent;
+use crate::domain::pagination::{LimitCfg, Page};
 use crate::domain::ports::EventPublisher;
 use crate::domain::repo::UsersRepository;
 use chrono::Utc;
@@ -25,6 +26,7 @@ pub struct ServiceConfig {
     pub max_display_name_length: usize,
     pub default_page_size: u32,
     pub max_page_size: u32,
+    pub limit_cfg: LimitCfg,
 }
 
 impl Default for ServiceConfig {
@@ -33,6 +35,7 @@ impl Default for ServiceConfig {
             max_display_name_length: 100,
             default_page_size: 50,
             max_page_size: 1000,
+            limit_cfg: LimitCfg::default(),
         }
     }
 }
@@ -64,39 +67,18 @@ impl Service {
         Ok(user)
     }
 
-    pub async fn list_users(
+    /// List users with cursor-based pagination
+    pub async fn list_users_page(
         &self,
-        od_query: ODataQuery,
-        limit: Option<u32>,
-        offset: Option<u32>,
-    ) -> Result<Vec<User>, DomainError> {
-        // Keep your paging policy and clamp
-        let limit = limit
-            .unwrap_or(self.config.default_page_size)
-            .min(self.config.max_page_size);
-        let offset = offset.unwrap_or(0);
+        query: ODataQuery,
+    ) -> Result<Page<User>, odata_core::ODataPageError> {
+        debug!("Listing users with cursor pagination");
 
-        // Cast once at the seam to the type sea-orm expects
-        let limit64 = limit as u64;
-        let offset64 = offset as u64;
+        // All validation is now handled centrally in paginate_with_odata
+        let page = self.repo.list_users_page(&query).await?;
 
-        debug!("Listing users with limit={limit64}, offset={offset64}");
-
-        let users = self
-            .repo
-            .list_paginated(od_query, limit64, offset64)
-            .await
-            .map_err(|e| {
-                // Check if this is an OData build error and convert appropriately
-                if let Some(odata_err) = e.downcast_ref::<db::odata::ODataBuildError>() {
-                    DomainError::InvalidFilter(odata_err.clone())
-                } else {
-                    DomainError::database(e.to_string())
-                }
-            })?;
-
-        debug!("Successfully listed {} users", users.len());
-        Ok(users)
+        debug!("Successfully listed {} users in page", page.items.len());
+        Ok(page)
     }
 
     #[instrument(skip(self), fields(email = %new_user.email, display_name = %new_user.display_name))]

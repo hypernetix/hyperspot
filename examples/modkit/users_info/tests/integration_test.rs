@@ -127,11 +127,11 @@ async fn test_domain_service_crud() -> Result<()> {
     assert_eq!(retrieved_user.email, created_user.email);
 
     // list
-    let users = service
-        .list_users(modkit::api::odata::ODataQuery::none(), None, None)
+    let page = service
+        .list_users_page(modkit::api::odata::ODataQuery::none())
         .await?;
-    assert_eq!(users.len(), 1);
-    assert_eq!(users[0].id, created_user.id);
+    assert_eq!(page.items.len(), 1);
+    assert_eq!(page.items[0].id, created_user.id);
 
     // update
     let patch = users_info::contract::model::UserPatch {
@@ -212,8 +212,10 @@ async fn test_local_client() -> Result<()> {
     assert_eq!(retrieved_user.id, created_user.id);
 
     // list
-    let users = client.list_users(Some(10), Some(0)).await?;
-    assert!(!users.is_empty());
+    let page = client
+        .list_users(modkit::api::odata::ODataQuery::none())
+        .await?;
+    assert!(!page.items.is_empty());
 
     // update
     let patch = users_info::contract::model::UserPatch {
@@ -270,11 +272,11 @@ async fn test_rest_api_list_users() -> Result<()> {
     assert_eq!(response.status(), StatusCode::OK);
 
     let body = axum::body::to_bytes(response.into_body(), usize::MAX).await?;
-    let user_list: users_info::api::rest::dto::UserListDto = serde_json::from_slice(&body)?;
+    let user_page: users_info::api::rest::dto::UserPageDto = serde_json::from_slice(&body)?;
 
-    // default paging is defined by ServiceConfig::default()
-    assert_eq!(user_list.limit, 50);
-    assert_eq!(user_list.offset, 0);
+    // default paging is defined by pagination LimitCfg::default()
+    assert_eq!(user_page.page_info.limit, 25);
+    assert!(user_page.page_info.next_cursor.is_none()); // No more pages
 
     Ok(())
 }

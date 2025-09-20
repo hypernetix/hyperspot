@@ -24,6 +24,24 @@ pub enum DomainError {
     #[error("invalid $filter: {0}")]
     InvalidFilter(#[from] odata::ODataBuildError),
 
+    /// Semantic error in $orderby (unknown field, etc.)
+    #[error("invalid $orderby: {0}")]
+    InvalidOrderBy(String),
+
+    #[error(
+        "Order mismatch: cursor order '{cursor_order}' doesn't match query order '{query_order}'"
+    )]
+    OrderMismatch {
+        cursor_order: String,
+        query_order: String,
+    },
+
+    #[error("Filter mismatch: cursor filter hash '{cursor_hash}' doesn't match query filter hash '{query_hash}'")]
+    FilterMismatch {
+        cursor_hash: String,
+        query_hash: String,
+    },
+
     #[error("Database error: {message}")]
     Database { message: String },
 
@@ -50,6 +68,27 @@ impl DomainError {
 
     pub fn display_name_too_long(len: usize, max: usize) -> Self {
         Self::DisplayNameTooLong { len, max }
+    }
+
+    pub fn order_mismatch(
+        cursor_order: impl std::fmt::Display,
+        query_order: impl std::fmt::Display,
+    ) -> Self {
+        Self::OrderMismatch {
+            cursor_order: cursor_order.to_string(),
+            query_order: query_order.to_string(),
+        }
+    }
+
+    pub fn filter_mismatch(cursor_hash: String, query_hash: String) -> Self {
+        Self::FilterMismatch {
+            cursor_hash,
+            query_hash,
+        }
+    }
+
+    pub fn invalid_orderby(message: String) -> Self {
+        Self::InvalidOrderBy(message)
     }
 
     pub fn database(message: impl Into<String>) -> Self {

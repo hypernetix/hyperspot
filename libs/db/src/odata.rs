@@ -4,10 +4,18 @@
 use std::collections::HashMap;
 
 use bigdecimal::{BigDecimal, ToPrimitive};
-use odata_core::{ast as core, ODataQuery};
+use chrono::{NaiveDate, NaiveTime, Utc};
+use odata_core::{ast as core, CursorV1, ODataOrderBy, ODataPageError, ODataQuery, SortDir};
 use rust_decimal::Decimal;
-use sea_orm::{sea_query::Expr, ColumnTrait, Condition, EntityTrait, QueryFilter};
+use sea_orm::{
+    sea_query::{Expr, Order},
+    ColumnTrait, Condition, ConnectionTrait, EntityTrait, QueryFilter, QueryOrder, QuerySelect,
+};
+use serde::Serialize;
 use thiserror::Error;
+
+/// Type alias for cursor extraction function to reduce type complexity
+type CursorExtractor<E> = fn(&<E as EntityTrait>::Model) -> String;
 
 /// Whitelisted field kind → used to coerce `core::Value` into `sea_orm::Value`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -27,6 +35,7 @@ pub enum FieldKind {
 pub struct Field<E: EntityTrait> {
     pub col: E::Column,
     pub kind: FieldKind,
+    pub to_string_for_cursor: Option<CursorExtractor<E>>,
 }
 
 #[derive(Clone)]
@@ -47,9 +56,38 @@ impl<E: EntityTrait> FieldMap<E> {
         }
     }
     pub fn insert(mut self, api_name: impl Into<String>, col: E::Column, kind: FieldKind) -> Self {
-        self.map
-            .insert(api_name.into().to_lowercase(), Field { col, kind });
+        self.map.insert(
+            api_name.into().to_lowercase(),
+            Field {
+                col,
+                kind,
+                to_string_for_cursor: None,
+            },
+        );
         self
+    }
+
+    pub fn insert_with_extractor(
+        mut self,
+        api_name: impl Into<String>,
+        col: E::Column,
+        kind: FieldKind,
+        to_string_for_cursor: CursorExtractor<E>,
+    ) -> Self {
+        self.map.insert(
+            api_name.into().to_lowercase(),
+            Field {
+                col,
+                kind,
+                to_string_for_cursor: Some(to_string_for_cursor),
+            },
+        );
+        self
+    }
+
+    pub fn encode_model_key(&self, model: &E::Model, field_name: &str) -> Option<String> {
+        let f = self.get(field_name)?;
+        f.to_string_for_cursor.map(|f| f(model))
     }
     pub fn get(&self, name: &str) -> Option<&Field<E>> {
         self.map.get(&name.to_lowercase())
@@ -234,6 +272,187 @@ fn ensure_string_field<E: EntityTrait>(f: &Field<E>, _field_name: &str) -> OData
     Ok(())
 }
 
+/* ---------- cursor value encoding/decoding ---------- */
+
+/// Encode a cursor value to string based on field kind
+pub fn encode_cursor_value(kind: FieldKind, value: &sea_orm::Value) -> ODataBuildResult<String> {
+    use sea_orm::Value as V;
+
+    let result = match (kind, value) {
+        (FieldKind::String, V::String(Some(s))) => s.to_string(),
+        (FieldKind::I64, V::BigInt(Some(i))) => i.to_string(),
+        (FieldKind::F64, V::Double(Some(f))) => ryu::Buffer::new().format(*f).to_string(),
+        (FieldKind::Bool, V::Bool(Some(b))) => b.to_string(),
+        (FieldKind::Uuid, V::Uuid(Some(u))) => u.to_string(),
+        (FieldKind::DateTimeUtc, V::ChronoDateTimeUtc(Some(dt))) => dt.to_rfc3339(),
+        (FieldKind::Date, V::ChronoDate(Some(d))) => d.to_string(),
+        (FieldKind::Time, V::ChronoTime(Some(t))) => t.to_string(),
+        (FieldKind::Decimal, V::Decimal(Some(d))) => d.to_string(),
+        _ => return Err(ODataBuildError::Other("unsupported cursor value type")),
+    };
+
+    Ok(result)
+}
+
+/// Parse a cursor value from string based on field kind
+pub fn parse_cursor_value(kind: FieldKind, s: &str) -> ODataBuildResult<sea_orm::Value> {
+    use sea_orm::Value as V;
+
+    let result = match kind {
+        FieldKind::String => V::String(Some(Box::new(s.to_string()))),
+        FieldKind::I64 => {
+            let i = s
+                .parse::<i64>()
+                .map_err(|_| ODataBuildError::Other("invalid i64 in cursor"))?;
+            V::BigInt(Some(i))
+        }
+        FieldKind::F64 => {
+            let f = s
+                .parse::<f64>()
+                .map_err(|_| ODataBuildError::Other("invalid f64 in cursor"))?;
+            V::Double(Some(f))
+        }
+        FieldKind::Bool => {
+            let b = s
+                .parse::<bool>()
+                .map_err(|_| ODataBuildError::Other("invalid bool in cursor"))?;
+            V::Bool(Some(b))
+        }
+        FieldKind::Uuid => {
+            let u = s
+                .parse::<uuid::Uuid>()
+                .map_err(|_| ODataBuildError::Other("invalid uuid in cursor"))?;
+            V::Uuid(Some(Box::new(u)))
+        }
+        FieldKind::DateTimeUtc => {
+            let dt = chrono::DateTime::parse_from_rfc3339(s)
+                .map_err(|_| ODataBuildError::Other("invalid datetime in cursor"))?
+                .with_timezone(&Utc);
+            V::ChronoDateTimeUtc(Some(Box::new(dt)))
+        }
+        FieldKind::Date => {
+            let d = s
+                .parse::<NaiveDate>()
+                .map_err(|_| ODataBuildError::Other("invalid date in cursor"))?;
+            V::ChronoDate(Some(Box::new(d)))
+        }
+        FieldKind::Time => {
+            let t = s
+                .parse::<NaiveTime>()
+                .map_err(|_| ODataBuildError::Other("invalid time in cursor"))?;
+            V::ChronoTime(Some(Box::new(t)))
+        }
+        FieldKind::Decimal => {
+            let d = s
+                .parse::<Decimal>()
+                .map_err(|_| ODataBuildError::Other("invalid decimal in cursor"))?;
+            V::Decimal(Some(Box::new(d)))
+        }
+    };
+
+    Ok(result)
+}
+
+/* ---------- cursor predicate building ---------- */
+
+/// Build a cursor predicate for pagination
+/// This builds the lexicographic OR-chain condition for cursor-based pagination
+pub fn build_cursor_predicate<E: EntityTrait>(
+    cursor: &CursorV1,
+    order: &ODataOrderBy,
+    fmap: &FieldMap<E>,
+) -> ODataBuildResult<Condition>
+where
+    E::Column: ColumnTrait + Copy,
+{
+    if cursor.k.len() != order.0.len() {
+        return Err(ODataBuildError::Other(
+            "cursor keys count mismatch with order fields",
+        ));
+    }
+
+    // Parse cursor values
+    let mut cursor_values = Vec::new();
+    for (i, key_str) in cursor.k.iter().enumerate() {
+        let order_key = &order.0[i];
+        let field = fmap
+            .get(&order_key.field)
+            .ok_or_else(|| ODataBuildError::UnknownField(order_key.field.clone()))?;
+        let value = parse_cursor_value(field.kind, key_str)?;
+        cursor_values.push((field, value, order_key.dir));
+    }
+
+    // Build lexicographic condition
+    // For ASC: (k0 > v0) OR (k0 = v0 AND k1 > v1) OR ...
+    // For DESC: (k0 < v0) OR (k0 = v0 AND k1 < v1) OR ...
+    let mut main_condition = Condition::any();
+
+    for i in 0..cursor_values.len() {
+        let mut prefix_condition = Condition::all();
+
+        // Add equality conditions for all previous fields
+        for (field, value, _) in cursor_values.iter().take(i) {
+            prefix_condition = prefix_condition.add(Expr::col(field.col).eq(value.clone()));
+        }
+
+        // Add the comparison condition for current field
+        let (field, value, dir) = &cursor_values[i];
+        let comparison = match dir {
+            SortDir::Asc => Expr::col(field.col).gt(value.clone()),
+            SortDir::Desc => Expr::col(field.col).lt(value.clone()),
+        };
+        prefix_condition = prefix_condition.add(comparison);
+
+        main_condition = main_condition.add(prefix_condition);
+    }
+
+    Ok(main_condition)
+}
+
+/* ---------- error mapping helpers ---------- */
+
+/// Resolve a field by name, converting UnknownField errors to InvalidOrderByField
+fn resolve_field<'a, E: EntityTrait>(
+    fld_map: &'a FieldMap<E>,
+    name: &str,
+) -> Result<&'a Field<E>, ODataPageError> {
+    fld_map
+        .get(name)
+        .ok_or_else(|| ODataPageError::InvalidOrderByField(name.to_string()))
+}
+
+/* ---------- tiebreaker handling ---------- */
+
+/// Ensure a tiebreaker field is present in the order
+pub fn ensure_tiebreaker(order: ODataOrderBy, tiebreaker: &str, dir: SortDir) -> ODataOrderBy {
+    order.ensure_tiebreaker(tiebreaker, dir)
+}
+
+/* ---------- cursor building ---------- */
+
+/// Build a cursor from a model using the effective order and field map extractors
+pub fn build_cursor_for_model<E: EntityTrait>(
+    model: &E::Model,
+    order: &ODataOrderBy,
+    fmap: &FieldMap<E>,
+    primary_dir: SortDir,
+    filter_hash: Option<String>,
+) -> Result<CursorV1, ODataPageError> {
+    let mut k = Vec::with_capacity(order.0.len());
+    for key in &order.0 {
+        let s = fmap
+            .encode_model_key(model, &key.field)
+            .ok_or_else(|| ODataPageError::InvalidOrderByField(key.field.clone()))?;
+        k.push(s);
+    }
+    Ok(CursorV1 {
+        k,
+        o: primary_dir,
+        s: order.to_signed_tokens(),
+        f: filter_hash,
+    })
+}
+
 /* ---------- Expr (AST) -> Condition ---------- */
 
 pub fn expr_to_condition<E: EntityTrait>(
@@ -385,3 +604,302 @@ where
         }
     }
 }
+
+/// Extension trait for applying cursor-based pagination
+pub trait CursorApplyExt<E: EntityTrait>: Sized {
+    fn apply_cursor_forward(
+        self,
+        cursor: &CursorV1,
+        order: &ODataOrderBy,
+        fld_map: &FieldMap<E>,
+    ) -> ODataBuildResult<Self>;
+}
+
+impl<E> CursorApplyExt<E> for sea_orm::Select<E>
+where
+    E: EntityTrait,
+    E::Column: ColumnTrait + Copy,
+{
+    fn apply_cursor_forward(
+        self,
+        cursor: &CursorV1,
+        order: &ODataOrderBy,
+        fld_map: &FieldMap<E>,
+    ) -> ODataBuildResult<Self> {
+        let cond = build_cursor_predicate(cursor, order, fld_map)?;
+        Ok(self.filter(cond))
+    }
+}
+
+/// Extension trait for applying ordering (legacy version with ODataBuildError)
+pub trait ODataOrderExt<E: EntityTrait>: Sized {
+    fn apply_odata_order(
+        self,
+        order: &ODataOrderBy,
+        fld_map: &FieldMap<E>,
+    ) -> ODataBuildResult<Self>;
+}
+
+impl<E> ODataOrderExt<E> for sea_orm::Select<E>
+where
+    E: EntityTrait,
+    E::Column: ColumnTrait + Copy,
+{
+    fn apply_odata_order(
+        self,
+        order: &ODataOrderBy,
+        fld_map: &FieldMap<E>,
+    ) -> ODataBuildResult<Self> {
+        let mut query = self;
+
+        for order_key in &order.0 {
+            let field = fld_map
+                .get(&order_key.field)
+                .ok_or_else(|| ODataBuildError::UnknownField(order_key.field.clone()))?;
+
+            let sea_order = match order_key.dir {
+                SortDir::Asc => Order::Asc,
+                SortDir::Desc => Order::Desc,
+            };
+
+            query = query.order_by(field.col, sea_order);
+        }
+
+        Ok(query)
+    }
+}
+
+/// Extension trait for applying ordering with centralized error handling
+pub trait ODataOrderPageExt<E: EntityTrait>: Sized {
+    fn apply_odata_order_page(
+        self,
+        order: &ODataOrderBy,
+        fld_map: &FieldMap<E>,
+    ) -> Result<Self, ODataPageError>;
+}
+
+impl<E> ODataOrderPageExt<E> for sea_orm::Select<E>
+where
+    E: EntityTrait,
+    E::Column: ColumnTrait + Copy,
+{
+    fn apply_odata_order_page(
+        self,
+        order: &ODataOrderBy,
+        fld_map: &FieldMap<E>,
+    ) -> Result<Self, ODataPageError> {
+        let mut query = self;
+
+        for order_key in &order.0 {
+            let field = resolve_field(fld_map, &order_key.field)?;
+
+            let sea_order = match order_key.dir {
+                SortDir::Asc => Order::Asc,
+                SortDir::Desc => Order::Desc,
+            };
+
+            query = query.order_by(field.col, sea_order);
+        }
+
+        Ok(query)
+    }
+}
+
+/// Extension trait for applying full OData query (filter + cursor + order)
+pub trait ODataQueryExt<E: EntityTrait>: Sized {
+    fn apply_odata_query(
+        self,
+        query: &ODataQuery,
+        fld_map: &FieldMap<E>,
+        tiebreaker: (&str, SortDir),
+    ) -> ODataBuildResult<Self>;
+}
+
+impl<E> ODataQueryExt<E> for sea_orm::Select<E>
+where
+    E: EntityTrait,
+    E::Column: ColumnTrait + Copy,
+{
+    fn apply_odata_query(
+        self,
+        query: &ODataQuery,
+        fld_map: &FieldMap<E>,
+        tiebreaker: (&str, SortDir),
+    ) -> ODataBuildResult<Self> {
+        let mut select = self;
+
+        // Apply filter first
+        if let Some(ast) = query.filter.as_deref() {
+            let cond = expr_to_condition::<E>(ast, fld_map)?;
+            select = select.filter(cond);
+        }
+
+        // Ensure tiebreaker is present in order
+        let effective_order = ensure_tiebreaker(query.order.clone(), tiebreaker.0, tiebreaker.1);
+
+        // Apply cursor if present
+        if let Some(cursor) = &query.cursor {
+            select = select.apply_cursor_forward(cursor, &effective_order, fld_map)?;
+        }
+
+        // Apply ordering
+        select = select.apply_odata_order(&effective_order, fld_map)?;
+
+        Ok(select)
+    }
+}
+
+/* ---------- pagination combiner ---------- */
+
+#[derive(Serialize)]
+pub struct PageInfo {
+    pub next_cursor: Option<String>,
+    pub prev_cursor: Option<String>,
+    pub limit: u64,
+}
+
+#[derive(Serialize)]
+pub struct Page<T> {
+    pub items: Vec<T>,
+    pub page_info: PageInfo,
+}
+
+#[derive(Clone, Copy)]
+pub struct LimitCfg {
+    pub default: u64,
+    pub max: u64,
+}
+
+pub fn clamp_limit(req: Option<u64>, cfg: LimitCfg) -> Result<u64, ODataPageError> {
+    let mut l = req.unwrap_or(cfg.default);
+    if l == 0 {
+        l = 1;
+    }
+    if l > cfg.max {
+        l = cfg.max;
+    }
+    Ok(l)
+}
+
+/// One-shot pagination combiner that handles filter → cursor predicate → order → overfetch/trim → build cursors
+pub async fn paginate_with_odata<E, D, F, C>(
+    select: sea_orm::Select<E>,
+    conn: &C,
+    q: &ODataQuery,
+    fmap: &FieldMap<E>,
+    tiebreaker: (&str, SortDir), // e.g. ("id", SortDir::Desc)
+    limit_cfg: LimitCfg,         // e.g. { default: 25, max: 1000 }
+    model_to_domain: F,
+) -> Result<Page<D>, ODataPageError>
+where
+    E: EntityTrait,
+    E::Column: ColumnTrait + Copy,
+    F: Fn(E::Model) -> D + Copy,
+    C: ConnectionTrait + Send + Sync,
+{
+    let limit = clamp_limit(q.limit, limit_cfg)?;
+    let fetch = limit + 1;
+
+    // Effective order derivation based on new policy
+    let effective_order = if let Some(cur) = &q.cursor {
+        // Derive order from the cursor's signed tokens
+        odata_core::ODataOrderBy::from_signed_tokens(&cur.s)
+            .map_err(|_| ODataPageError::InvalidCursor)?
+    } else {
+        // Use client order; ensure tiebreaker
+        q.order
+            .clone()
+            .ensure_tiebreaker(tiebreaker.0, tiebreaker.1)
+    };
+
+    // Validate cursor consistency (filter hash only) if cursor present
+    if let Some(cur) = &q.cursor {
+        // Only filter hash validation is necessary now
+        if let (Some(h), Some(cf)) = (q.filter_hash.as_deref(), cur.f.as_deref()) {
+            if h != cf {
+                return Err(ODataPageError::FilterMismatch);
+            }
+        }
+    }
+
+    // Compose: filter → cursor predicate → order; apply limit+1 at the end
+    let mut s = select;
+
+    // Apply filter
+    if let Some(ast) = q.filter.as_deref() {
+        let cond = expr_to_condition::<E>(ast, fmap)
+            .map_err(|e| ODataPageError::InvalidFilter(e.to_string()))?;
+        s = s.filter(cond);
+    }
+
+    // Apply cursor if present
+    if let Some(cursor) = &q.cursor {
+        let cond = build_cursor_predicate(cursor, &effective_order, fmap)
+            .map_err(|_| ODataPageError::InvalidCursor)?; // normalize db-level errors
+        s = s.filter(cond);
+    }
+
+    // Apply order
+    s = s.apply_odata_order_page(&effective_order, fmap)?;
+
+    // Apply limit
+    s = s.limit(fetch);
+
+    let mut rows = s
+        .all(conn)
+        .await
+        .map_err(|e| ODataPageError::Db(e.to_string()))?;
+
+    let has_more = (rows.len() as u64) > limit;
+    if has_more {
+        rows.truncate(limit as usize);
+    }
+
+    // Build cursors
+    let next_cursor = if has_more {
+        rows.last()
+            .map(|m| {
+                build_cursor_for_model::<E>(
+                    m,
+                    &effective_order,
+                    fmap,
+                    tiebreaker.1,
+                    q.filter_hash.clone(),
+                )
+                .map(|c| c.encode())
+            })
+            .transpose()?
+    } else {
+        None
+    };
+
+    let prev_cursor = rows
+        .first()
+        .map(|m| {
+            build_cursor_for_model::<E>(
+                m,
+                &effective_order,
+                fmap,
+                tiebreaker.1,
+                q.filter_hash.clone(),
+            )
+            .map(|c| c.encode())
+        })
+        .transpose()?; // optional; keep if you want
+
+    let items = rows.into_iter().map(model_to_domain).collect();
+
+    Ok(Page {
+        items,
+        page_info: PageInfo {
+            next_cursor,
+            prev_cursor,
+            limit,
+        },
+    })
+}
+
+// Temporarily disabled due to SeaORM entity setup complexity
+// #[cfg(test)]
+// #[path = "odata_tests.rs"]
+// mod odata_tests;

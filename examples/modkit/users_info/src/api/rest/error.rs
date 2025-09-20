@@ -75,6 +75,39 @@ pub fn map_domain_error(e: &DomainError, instance: &str) -> ProblemResponse {
                 instance,
             )
         }
+        DomainError::InvalidOrderBy(msg) => from_parts(
+            StatusCode::BAD_REQUEST,
+            "ODATA_ORDERBY_INVALID",
+            "Orderby error",
+            format!("invalid $orderby: {}", msg),
+            instance,
+        ),
+        DomainError::OrderMismatch {
+            cursor_order,
+            query_order,
+        } => from_parts(
+            StatusCode::BAD_REQUEST,
+            "ORDER_MISMATCH",
+            "Order mismatch",
+            format!(
+                "Cursor order '{}' doesn't match query order '{}'",
+                cursor_order, query_order
+            ),
+            instance,
+        ),
+        DomainError::FilterMismatch {
+            cursor_hash,
+            query_hash,
+        } => from_parts(
+            StatusCode::BAD_REQUEST,
+            "FILTER_MISMATCH",
+            "Filter mismatch",
+            format!(
+                "Cursor filter hash '{}' doesn't match query filter hash '{}'",
+                cursor_hash, query_hash
+            ),
+            instance,
+        ),
         DomainError::Database { .. } => {
             // Log the internal error details but don't expose them to the client
             tracing::error!(error = ?e, "Database error occurred");

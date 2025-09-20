@@ -51,9 +51,11 @@ thiserror = "2.0"
 # Local dependencies
 modkit = { path = "../../../libs/modkit" }
 db = { path = "../../../libs/db" }
+odata-core = { path = "../../../libs/odata-core" }
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }
 api_ingress = { path = "../../../modules/api_ingress" }
 serde_json = "1.0"
+urlencoding = "2.1"
 

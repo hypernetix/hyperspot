@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Path, Query},
+    extract::Path,
     http::{StatusCode, Uri},
     response::IntoResponse,
     response::Json,
@@ -8,9 +8,7 @@ use axum::{
 use tracing::{error, info};
 use uuid::Uuid;
 
-use crate::api::rest::dto::{
-    CreateUserReq, ListUsersQuery, UpdateUserReq, UserDto, UserEvent, UserListDto,
-};
+use crate::api::rest::dto::{CreateUserReq, UpdateUserReq, UserDto, UserEvent, UserPageDto};
 
 use modkit::api::odata::OData;
 
@@ -18,28 +16,23 @@ use crate::api::rest::error::map_domain_error;
 use crate::domain::service::Service;
 use modkit::{api::problem::ProblemResponse, SseBroadcaster};
 
+/// List users with cursor-based pagination
 pub async fn list_users(
     Extension(svc): Extension<std::sync::Arc<Service>>,
-    Query(query): Query<ListUsersQuery>,
-    OData(filter): OData,
+    OData(query): OData,
     uri: Uri,
-) -> Result<axum::Json<UserListDto>, ProblemResponse> {
-    info!("Listing users with query: {:?}", query);
+) -> Result<axum::Json<UserPageDto>, ProblemResponse> {
+    info!("Listing users with cursor pagination");
 
-    match svc.list_users(filter, query.limit, query.offset).await {
-        Ok(users) => {
-            let dto_users: Vec<UserDto> = users.into_iter().map(UserDto::from).collect();
-            let response = UserListDto {
-                total: dto_users.len(),
-                limit: query.limit.unwrap_or(50),
-                offset: query.offset.unwrap_or(0),
-                users: dto_users,
-            };
-            Ok(axum::Json(response))
+    match svc.list_users_page(query).await {
+        Ok(page) => {
+            let dto_page = UserPageDto::from(page);
+            Ok(axum::Json(dto_page))
         }
         Err(e) => {
-            error!("Failed to list users: {}", e);
-            Err(map_domain_error(&e, uri.path()))
+            error!("Failed to list users page: {}", e);
+            // Use the new centralized OData error mapping!
+            Err(modkit::api::odata_page_error_to_problem(&e, uri.path()))
         }
     }
 }

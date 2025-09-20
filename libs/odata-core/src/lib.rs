@@ -38,27 +38,350 @@ pub mod ast {
     }
 }
 
+// Ordering primitives
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum SortDir {
+    #[serde(rename = "asc")]
+    Asc,
+    #[serde(rename = "desc")]
+    Desc,
+}
+
+#[derive(Clone, Debug)]
+pub struct OrderKey {
+    pub field: String,
+    pub dir: SortDir,
+}
+
 #[derive(Clone, Debug, Default)]
-pub struct ODataQuery(pub Option<Box<ast::Expr>>);
+pub struct ODataOrderBy(pub Vec<OrderKey>);
+
+impl ODataOrderBy {
+    pub fn empty() -> Self {
+        Self(vec![])
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    /// Render as "+f1,-f2" for cursor.s
+    pub fn to_signed_tokens(&self) -> String {
+        self.0
+            .iter()
+            .map(|k| {
+                if matches!(k.dir, SortDir::Asc) {
+                    format!("+{}", k.field)
+                } else {
+                    format!("-{}", k.field)
+                }
+            })
+            .collect::<Vec<_>>()
+            .join(",")
+    }
+
+    /// Parse signed tokens back to ODataOrderBy (e.g. "+a,-b" -> ODataOrderBy)
+    /// Returns ODataPageError for stricter validation used in cursor processing
+    pub fn from_signed_tokens(signed: &str) -> Result<Self, ODataPageError> {
+        let mut out = Vec::new();
+        for seg in signed.split(',') {
+            let seg = seg.trim();
+            if seg.is_empty() {
+                continue;
+            }
+            let (dir, name) = match seg.as_bytes()[0] {
+                b'+' => (SortDir::Asc, &seg[1..]),
+                b'-' => (SortDir::Desc, &seg[1..]),
+                _ => (SortDir::Asc, seg), // default '+'
+            };
+            if name.is_empty() {
+                return Err(ODataPageError::InvalidOrderByField(seg.to_string()));
+            }
+            out.push(OrderKey {
+                field: name.to_string(),
+                dir,
+            });
+        }
+        if out.is_empty() {
+            return Err(ODataPageError::InvalidOrderByField("empty order".into()));
+        }
+        Ok(ODataOrderBy(out))
+    }
+
+    /// Check equality against signed token list (e.g. "+a,-b")
+    pub fn equals_signed_tokens(&self, signed: &str) -> bool {
+        let parse = |t: &str| -> Option<(String, SortDir)> {
+            let t = t.trim();
+            if t.is_empty() {
+                return None;
+            }
+            let (dir, name) = match t.as_bytes()[0] {
+                b'+' => (SortDir::Asc, &t[1..]),
+                b'-' => (SortDir::Desc, &t[1..]),
+                _ => (SortDir::Asc, t),
+            };
+            if name.is_empty() {
+                return None;
+            }
+            Some((name.to_string(), dir))
+        };
+        let theirs: Vec<_> = signed.split(',').filter_map(parse).collect();
+        if theirs.len() != self.0.len() {
+            return false;
+        }
+        self.0
+            .iter()
+            .zip(theirs.iter())
+            .all(|(a, (n, d))| a.field == *n && a.dir == *d)
+    }
+
+    /// Append tiebreaker if missing
+    pub fn ensure_tiebreaker(mut self, tiebreaker: &str, dir: SortDir) -> Self {
+        if !self.0.iter().any(|k| k.field == tiebreaker) {
+            self.0.push(OrderKey {
+                field: tiebreaker.to_string(),
+                dir,
+            });
+        }
+        self
+    }
+}
+
+// Display trait for human-readable orderby representation
+impl std::fmt::Display for ODataOrderBy {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.0.is_empty() {
+            return write!(f, "(none)");
+        }
+
+        let formatted: Vec<String> = self
+            .0
+            .iter()
+            .map(|key| {
+                let dir_str = match key.dir {
+                    SortDir::Asc => "asc",
+                    SortDir::Desc => "desc",
+                };
+                format!("{} {}", key.field, dir_str)
+            })
+            .collect();
+
+        write!(f, "{}", formatted.join(", "))
+    }
+}
+
+/// Central error enum for OData pagination and sorting operations
+#[derive(thiserror::Error, Debug, Clone)]
+pub enum ODataPageError {
+    #[error("invalid $filter: {0}")]
+    InvalidFilter(String),
+
+    #[error("unsupported $orderby field: {0}")]
+    InvalidOrderByField(String),
+
+    #[error("ORDER_MISMATCH")]
+    OrderMismatch,
+
+    #[error("FILTER_MISMATCH")]
+    FilterMismatch,
+
+    #[error("INVALID_CURSOR")]
+    InvalidCursor,
+
+    #[error("INVALID_LIMIT")]
+    InvalidLimit,
+
+    #[error("ORDER_WITH_CURSOR")]
+    OrderWithCursor,
+
+    #[error("DB: {0}")]
+    Db(String),
+}
+
+/// Validate cursor consistency against effective order and filter hash
+pub fn validate_cursor_against(
+    cursor: &CursorV1,
+    effective_order: &ODataOrderBy,
+    effective_filter_hash: Option<&str>,
+) -> Result<(), ODataPageError> {
+    if !effective_order.equals_signed_tokens(&cursor.s) {
+        return Err(ODataPageError::OrderMismatch);
+    }
+    if let (Some(h), Some(cf)) = (effective_filter_hash, cursor.f.as_deref()) {
+        if h != cf {
+            return Err(ODataPageError::FilterMismatch);
+        }
+    }
+    Ok(())
+}
+
+// Cursor v1
+#[derive(Clone, Debug)]
+pub struct CursorV1 {
+    pub k: Vec<String>,
+    pub o: SortDir,
+    pub s: String,
+    pub f: Option<String>,
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum CursorError {
+    #[error("invalid base64url")]
+    InvalidBase64,
+    #[error("invalid json")]
+    InvalidJson,
+    #[error("invalid version")]
+    InvalidVersion,
+    #[error("invalid keys")]
+    InvalidKeys,
+    #[error("invalid fields")]
+    InvalidFields,
+    #[error("invalid direction")]
+    InvalidDirection,
+}
+
+impl CursorV1 {
+    pub fn encode(&self) -> String {
+        #[derive(serde::Serialize)]
+        struct Wire<'a> {
+            v: u8,
+            k: &'a [String],
+            o: &'a str,
+            s: &'a str,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            f: &'a Option<String>,
+        }
+        let o = match self.o {
+            SortDir::Asc => "asc",
+            SortDir::Desc => "desc",
+        };
+        let w = Wire {
+            v: 1,
+            k: &self.k,
+            o,
+            s: &self.s,
+            f: &self.f,
+        };
+        let json = serde_json::to_vec(&w).expect("encode cursor json");
+        base64_url::encode(&json)
+    }
+
+    pub fn decode(token: &str) -> Result<Self, CursorError> {
+        #[derive(serde::Deserialize)]
+        struct Wire {
+            v: u8,
+            k: Vec<String>,
+            o: String,
+            s: String,
+            #[serde(default)]
+            f: Option<String>,
+        }
+        let bytes = base64_url::decode(token).map_err(|_| CursorError::InvalidBase64)?;
+        let w: Wire = serde_json::from_slice(&bytes).map_err(|_| CursorError::InvalidJson)?;
+        if w.v != 1 {
+            return Err(CursorError::InvalidVersion);
+        }
+        let o = match w.o.as_str() {
+            "asc" => SortDir::Asc,
+            "desc" => SortDir::Desc,
+            _ => return Err(CursorError::InvalidDirection),
+        };
+        if w.k.is_empty() {
+            return Err(CursorError::InvalidKeys);
+        }
+        if w.s.trim().is_empty() {
+            return Err(CursorError::InvalidFields);
+        }
+        Ok(CursorV1 {
+            k: w.k,
+            o,
+            s: w.s,
+            f: w.f,
+        })
+    }
+}
+
+// base64url helpers (no padding)
+mod base64_url {
+    use base64::Engine;
+
+    pub fn encode(bytes: &[u8]) -> String {
+        base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(bytes)
+    }
+
+    pub fn decode(s: &str) -> Result<Vec<u8>, base64::DecodeError> {
+        base64::engine::general_purpose::URL_SAFE_NO_PAD.decode(s)
+    }
+}
+
+// The unified ODataQuery struct as single source of truth
+#[derive(Clone, Debug, Default)]
+pub struct ODataQuery {
+    pub filter: Option<Box<ast::Expr>>,
+    pub order: ODataOrderBy,
+    pub limit: Option<u64>,
+    pub cursor: Option<CursorV1>,
+    pub filter_hash: Option<String>,
+}
 
 impl ODataQuery {
-    pub fn none() -> Self {
-        Self(None)
+    pub fn new() -> Self {
+        Self::default()
     }
-    pub fn some(expr: ast::Expr) -> Self {
-        Self(Some(Box::new(expr)))
+
+    pub fn with_filter(mut self, expr: ast::Expr) -> Self {
+        self.filter = Some(Box::new(expr));
+        self
     }
+
+    pub fn with_order(mut self, order: ODataOrderBy) -> Self {
+        self.order = order;
+        self
+    }
+
+    pub fn with_limit(mut self, limit: u64) -> Self {
+        self.limit = Some(limit);
+        self
+    }
+
+    pub fn with_cursor(mut self, cursor: CursorV1) -> Self {
+        self.cursor = Some(cursor);
+        self
+    }
+
+    pub fn with_filter_hash(mut self, hash: String) -> Self {
+        self.filter_hash = Some(hash);
+        self
+    }
+
+    /// Legacy compatibility - get filter as AST
     pub fn as_ast(&self) -> Option<&ast::Expr> {
-        self.0.as_deref()
+        self.filter.as_deref()
     }
-    pub fn into_ast(self) -> Option<ast::Expr> {
-        self.0.map(|b| *b)
-    }
+
+    /// Legacy compatibility - check if filter is present
     pub fn is_some(&self) -> bool {
-        self.0.is_some()
+        self.filter.is_some()
     }
+
+    /// Legacy compatibility - check if filter is empty
     pub fn is_none(&self) -> bool {
-        self.0.is_none()
+        self.filter.is_none()
+    }
+
+    /// Legacy compatibility - create from filter only
+    pub fn none() -> Self {
+        Self::default()
+    }
+
+    /// Legacy compatibility - create from filter only
+    pub fn some(expr: ast::Expr) -> Self {
+        Self::default().with_filter(expr)
+    }
+
+    /// Legacy compatibility - extract filter
+    pub fn into_ast(self) -> Option<ast::Expr> {
+        self.filter.map(|b| *b)
     }
 }
 
@@ -70,6 +393,8 @@ impl From<Option<ast::Expr>> for ODataQuery {
         }
     }
 }
+
+mod tests;
 
 #[cfg(feature = "with-odata-params")]
 mod convert_odata_params {

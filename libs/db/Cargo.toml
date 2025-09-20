@@ -27,6 +27,8 @@ uuid = { version = "1.18.1", features = ["v4", "serde"] }
 odata-core = { path = "../odata-core" }
 bigdecimal = "0.4"
 rust_decimal = { version = "1", features = ["serde"] }
+ryu = "1"
+serde = { version = "1", features = ["derive"] }
 
 [dev-dependencies]
 tempfile = "3"

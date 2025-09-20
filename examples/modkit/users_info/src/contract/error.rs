@@ -51,7 +51,42 @@ impl From<crate::domain::error::DomainError> for UsersInfoError {
             )),
             Validation { field, message } => Self::validation(format!("{}: {}", field, message)),
             InvalidFilter { .. } => Self::validation("Invalid filter".to_string()),
+            InvalidOrderBy(msg) => Self::validation(format!("Invalid orderby: {}", msg)),
             Database { .. } => Self::internal(),
+            OrderMismatch {
+                cursor_order,
+                query_order,
+            } => Self::validation(format!(
+                "Order mismatch: cursor order '{}' doesn't match query order '{}'",
+                cursor_order, query_order
+            )),
+            FilterMismatch {
+                cursor_hash,
+                query_hash,
+            } => Self::validation(format!(
+                "Filter mismatch: cursor filter hash '{}' doesn't match query filter hash '{}'",
+                cursor_hash, query_hash
+            )),
+        }
+    }
+}
+
+impl From<odata_core::ODataPageError> for UsersInfoError {
+    fn from(page_error: odata_core::ODataPageError) -> Self {
+        use odata_core::ODataPageError::*;
+        match page_error {
+            InvalidFilter(msg) => Self::validation(format!("Invalid filter: {}", msg)),
+            InvalidOrderByField(field) => {
+                Self::validation(format!("Invalid orderby field: {}", field))
+            }
+            OrderMismatch => Self::validation("Order mismatch".to_string()),
+            FilterMismatch => Self::validation("Filter mismatch".to_string()),
+            InvalidCursor => Self::validation("Invalid cursor".to_string()),
+            InvalidLimit => Self::validation("Invalid limit".to_string()),
+            OrderWithCursor => {
+                Self::validation("Cannot specify both orderby and cursor".to_string())
+            }
+            Db(_) => Self::internal(),
         }
     }
 }

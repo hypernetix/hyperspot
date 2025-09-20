@@ -218,6 +218,7 @@ fn test_domain_service_config() {
         max_display_name_length: 200,
         default_page_size: 25,
         max_page_size: 500,
+        limit_cfg: users_info::domain::pagination::LimitCfg::default(),
     };
 
     assert_eq!(custom_config.max_display_name_length, 200);
@@ -238,4 +239,38 @@ fn test_users_info_config() {
 
     assert_eq!(config.default_page_size, 25);
     assert_eq!(config.max_page_size, 500);
+}
+
+#[test]
+fn test_order_mismatch_error_formatting() {
+    use odata_core::{ODataOrderBy, OrderKey, SortDir};
+    use users_info::domain::error::DomainError;
+
+    // Create cursor order (what was in the cursor)
+    let cursor_order = ODataOrderBy(vec![OrderKey {
+        field: "id".to_string(),
+        dir: SortDir::Desc,
+    }]);
+
+    // Create query order (what the current query expects)
+    let query_order = ODataOrderBy(vec![
+        OrderKey {
+            field: "email".to_string(),
+            dir: SortDir::Asc,
+        },
+        OrderKey {
+            field: "id".to_string(),
+            dir: SortDir::Desc,
+        },
+    ]);
+
+    // Create the error
+    let error = DomainError::order_mismatch(cursor_order, query_order);
+    let error_msg = format!("{}", error);
+
+    // Should contain human-readable format, not signed tokens
+    assert!(error_msg.contains("id desc"));
+    assert!(error_msg.contains("email asc, id desc"));
+    assert!(!error_msg.contains("-id"));
+    assert!(!error_msg.contains("+email,-id"));
 }

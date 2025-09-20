@@ -14,17 +14,18 @@ pub fn register_routes(
 ) -> anyhow::Result<Router> {
     // Schemas should be auto-registered via ToSchema when used in operations
 
-    // GET /users - List all users
+    // GET /users - List users with cursor-based pagination
     router = OperationBuilder::<modkit::api::Missing, modkit::api::Missing, ()>::get("/users")
         .operation_id("users_info.list_users")
-        .summary("List all users")
-        .description("Retrieve a paginated list of all users in the system")
+        .summary("List users with cursor pagination")
+        .description("Retrieve a paginated list of users using cursor-based pagination")
         .tag("users")
-        .query_param("limit", false, "Maximum number of users to return")
-        .query_param("offset", false, "Number of users to skip")
+        .query_param_typed("limit", false, "Maximum number of users to return", "integer")
+        .query_param("cursor", false, "Cursor for pagination")
         .handler(handlers::list_users)
-        .json_response_with_schema::<dto::UserListDto>(openapi, 200, "List of users")
+        .json_response_with_schema::<dto::UserPageDto>(openapi, 200, "Paginated list of users")
         .with_odata_filter_doc("OData v4 filter. Allowed fields: email, created_at. Examples: `email eq 'test@example.com'`, `contains(email,'@acme.com')`")
+        .query_param("$orderby", false, "OData orderby clause. Example: 'created_at desc, id desc'")
         .problem_response(openapi, 400, "Bad Request")
         .problem_response(openapi, 500, "Internal Server Error")
         .register(router, openapi);

@@ -4,6 +4,7 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::contract::model::{NewUser, User, UserPatch};
+use crate::domain::pagination::{Page, PageInfo};
 
 /// REST DTO for user representation with serde/utoipa
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -29,20 +30,19 @@ pub struct UpdateUserReq {
     pub display_name: Option<String>,
 }
 
-/// REST DTO for user list response
+/// REST DTO for cursor-based paginated user list response
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct UserListDto {
+pub struct UserPageDto {
     pub users: Vec<UserDto>,
-    pub total: usize,
-    pub limit: u32,
-    pub offset: u32,
+    pub page_info: PageInfoDto,
 }
 
-/// REST DTO for query parameters
-#[derive(Debug, Clone, Deserialize, ToSchema)]
-pub struct ListUsersQuery {
-    pub limit: Option<u32>,
-    pub offset: Option<u32>,
+/// REST DTO for pagination metadata
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct PageInfoDto {
+    pub next_cursor: Option<String>,
+    pub prev_cursor: Option<String>,
+    pub limit: u64,
 }
 
 // Conversion implementations between REST DTOs and contract models
@@ -73,6 +73,25 @@ impl From<UpdateUserReq> for UserPatch {
         Self {
             email: req.email,
             display_name: req.display_name,
+        }
+    }
+}
+
+impl From<Page<User>> for UserPageDto {
+    fn from(page: Page<User>) -> Self {
+        Self {
+            users: page.items.into_iter().map(UserDto::from).collect(),
+            page_info: PageInfoDto::from(page.page_info),
+        }
+    }
+}
+
+impl From<PageInfo> for PageInfoDto {
+    fn from(info: PageInfo) -> Self {
+        Self {
+            next_cursor: info.next_cursor,
+            prev_cursor: info.prev_cursor,
+            limit: info.limit,
         }
     }
 }

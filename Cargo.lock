@@ -731,7 +731,9 @@ dependencies = [
  "dirs",
  "odata-core",
  "rust_decimal",
+ "ryu",
  "sea-orm",
+ "serde",
  "sqlx",
  "tempfile",
  "thiserror 2.0.16",
@@ -1777,6 +1779,7 @@ dependencies = [
  "axum 0.8.4",
  "db",
  "futures",
+ "hex",
  "http",
  "inventory",
  "modkit-macros",
@@ -1786,13 +1789,16 @@ dependencies = [
  "runtime",
  "serde",
  "serde_json",
+ "sha2",
  "thiserror 2.0.16",
  "tokio",
  "tokio-stream",
  "tokio-util",
  "tracing",
  "trybuild",
+ "urlencoding",
  "utoipa",
+ "uuid",
 ]
 
 [[package]]
@@ -1932,9 +1938,13 @@ dependencies = [
 name = "odata-core"
 version = "0.1.0"
 dependencies = [
+ "base64",
  "bigdecimal",
  "chrono",
  "odata-params",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
  "uuid",
 ]
 
@@ -4064,6 +4074,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "urlencoding"
+version = "2.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "daf8dba3b7eb870caf1ddeed7bc9d2a049f3cfdfae7cb521b087cc33ae4c49da"
+
+[[package]]
 name = "users_info"
 version = "0.1.0"
 dependencies = [
@@ -4077,6 +4093,7 @@ dependencies = [
  "futures",
  "inventory",
  "modkit",
+ "odata-core",
  "once_cell",
  "rust_decimal",
  "sea-orm",
@@ -4088,6 +4105,7 @@ dependencies = [
  "tower 0.5.2",
  "tower-http",
  "tracing",
+ "urlencoding",
  "utoipa",
  "uuid",
 ]

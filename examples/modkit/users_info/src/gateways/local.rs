@@ -7,8 +7,9 @@ use crate::contract::{
     error::UsersInfoError,
     model::{NewUser, User, UserPatch},
 };
+use crate::domain::pagination::Page;
 use crate::domain::service::Service;
-use modkit::api::odata::ODataQuery;
+use odata_core::ODataQuery;
 
 /// Local implementation of the UsersInfoApi trait that delegates to the domain service
 pub struct UsersInfoLocalClient {
@@ -27,13 +28,9 @@ impl UsersInfoApi for UsersInfoLocalClient {
         self.service.get_user(id).await.map_err(Into::into)
     }
 
-    async fn list_users(
-        &self,
-        limit: Option<u32>,
-        offset: Option<u32>,
-    ) -> Result<Vec<User>, UsersInfoError> {
+    async fn list_users(&self, query: ODataQuery) -> Result<Page<User>, UsersInfoError> {
         self.service
-            .list_users(ODataQuery::none(), limit, offset)
+            .list_users_page(query)
             .await
             .map_err(Into::into)
     }

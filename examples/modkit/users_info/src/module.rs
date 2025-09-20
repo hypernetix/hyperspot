@@ -76,6 +76,7 @@ impl Module for UsersInfo {
             max_display_name_length: 100,
             default_page_size: cfg.default_page_size,
             max_page_size: cfg.max_page_size,
+            limit_cfg: crate::domain::pagination::LimitCfg::default(),
         };
         let service = Service::new(Arc::new(repo), publisher, service_config);
 

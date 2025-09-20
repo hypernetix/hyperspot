@@ -331,6 +331,24 @@ where
         self
     }
 
+    /// Add a typed query parameter with explicit OpenAPI type
+    pub fn query_param_typed(
+        mut self,
+        name: impl Into<String>,
+        required: bool,
+        description: impl Into<String>,
+        param_type: impl Into<String>,
+    ) -> Self {
+        self.spec.params.push(ParamSpec {
+            name: name.into(),
+            location: ParamLocation::Query,
+            required,
+            description: Some(description.into()),
+            param_type: param_type.into(),
+        });
+        self
+    }
+
     /// Attach a JSON request body by *schema name* that you've already registered.
     /// This variant sets a description (`Some(desc)`) and marks the body as **required**.
     pub fn json_request_schema(
