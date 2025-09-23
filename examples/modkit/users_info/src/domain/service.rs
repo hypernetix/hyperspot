@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::contract::model::{NewUser, User, UserPatch};
 use crate::domain::error::DomainError;
 use crate::domain::events::UserDomainEvent;
-use crate::domain::ports::EventPublisher;
+use crate::domain::ports::{AuditPort, EventPublisher};
 use crate::domain::repo::UsersRepository;
 use chrono::Utc;
 use odata_core::{ODataQuery, Page};
@@ -16,6 +16,7 @@ use uuid::Uuid;
 pub struct Service {
     repo: Arc<dyn UsersRepository>,
     events: Arc<dyn EventPublisher<UserDomainEvent>>,
+    audit: Arc<dyn AuditPort>,
     config: ServiceConfig,
 }
 
@@ -38,22 +39,31 @@ impl Default for ServiceConfig {
 }
 
 impl Service {
-    /// Create a service with production defaults (real time & UUID).
+    /// Create a service with dependencies.
     pub fn new(
         repo: Arc<dyn UsersRepository>,
         events: Arc<dyn EventPublisher<UserDomainEvent>>,
+        audit: Arc<dyn AuditPort>,
         config: ServiceConfig,
     ) -> Self {
         Self {
             repo,
             events,
+            audit,
             config,
         }
     }
 
-    #[instrument(skip(self), fields(user_id = %id))]
+    #[instrument(name = "users_info.service.get_user", skip(self), fields(user_id = %id))]
     pub async fn get_user(&self, id: Uuid) -> Result<User, DomainError> {
         debug!("Getting user by id");
+
+        // Call audit service to log user access
+        let audit_result = self.audit.get_user_access(id).await;
+        if let Err(e) = audit_result {
+            debug!("Audit service call failed (continuing): {}", e);
+        }
+
         let user = self
             .repo
             .find_by_id(id)
@@ -65,6 +75,7 @@ impl Service {
     }
 
     /// List users with cursor-based pagination
+    #[instrument(name = "users_info.service.list_users_page", skip(self, query))]
     pub async fn list_users_page(
         &self,
         query: ODataQuery,
@@ -78,7 +89,11 @@ impl Service {
         Ok(page)
     }
 
-    #[instrument(skip(self), fields(email = %new_user.email, display_name = %new_user.display_name))]
+    #[instrument(
+        name = "users_info.service.create_user",
+        skip(self),
+        fields(email = %new_user.email, display_name = %new_user.display_name)
+    )]
     pub async fn create_user(&self, new_user: NewUser) -> Result<User, DomainError> {
         info!("Creating new user");
 
@@ -110,6 +125,12 @@ impl Service {
             .await
             .map_err(|e| DomainError::database(e.to_string()))?;
 
+        // Notify external systems about user creation
+        let notification_result = self.audit.notify_user_created().await;
+        if let Err(e) = notification_result {
+            debug!("Notification service call failed (continuing): {}", e);
+        }
+
         // Publish domain event
         self.events.publish(&UserDomainEvent::Created {
             id: user.id,
@@ -120,7 +141,11 @@ impl Service {
         Ok(user)
     }
 
-    #[instrument(skip(self), fields(user_id = %id))]
+    #[instrument(
+        name = "users_info.service.update_user",
+        skip(self),
+        fields(user_id = %id)
+    )]
     pub async fn update_user(&self, id: Uuid, patch: UserPatch) -> Result<User, DomainError> {
         info!("Updating user");
 
@@ -173,7 +198,11 @@ impl Service {
         Ok(current)
     }
 
-    #[instrument(skip(self), fields(user_id = %id))]
+    #[instrument(
+        name = "users_info.service.delete_user",
+        skip(self),
+        fields(user_id = %id)
+    )]
     pub async fn delete_user(&self, id: Uuid) -> Result<(), DomainError> {
         info!("Deleting user");
 

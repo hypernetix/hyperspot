@@ -26,8 +26,9 @@ use users_info::{
     api::rest::sse_adapter::SseUserEventPublisher,
     contract::client::UsersInfoApi,
     domain::{
+        error::DomainError,
         events::UserDomainEvent,
-        ports::EventPublisher,
+        ports::{AuditPort, EventPublisher},
         service::{Service, ServiceConfig},
     },
     gateways::local::UsersInfoLocalClient,
@@ -53,14 +54,29 @@ async fn create_test_service() -> Arc<Service> {
     let db = create_test_db().await;
     let repo = SeaOrmUsersRepository::new(db);
     let events: Arc<dyn EventPublisher<UserDomainEvent>> = Arc::new(MockEventPublisher);
+    let audit: Arc<dyn AuditPort> = Arc::new(MockAuditPort);
     let config = ServiceConfig::default();
-    Arc::new(Service::new(Arc::new(repo), events, config))
+    Arc::new(Service::new(Arc::new(repo), events, audit, config))
 }
 
 /// Build a local in-process client on top of the Service.
 async fn create_test_client() -> Arc<dyn UsersInfoApi> {
     let service = create_test_service().await;
     Arc::new(UsersInfoLocalClient::new(service))
+}
+
+/// Mock audit port for tests - always succeeds
+struct MockAuditPort;
+
+#[async_trait::async_trait]
+impl AuditPort for MockAuditPort {
+    async fn get_user_access(&self, _id: Uuid) -> Result<(), DomainError> {
+        Ok(())
+    }
+
+    async fn notify_user_created(&self) -> Result<(), DomainError> {
+        Ok(())
+    }
 }
 
 /// Mock event publisher for tests - just ignores events
@@ -463,8 +479,9 @@ async fn test_end_to_end_sse_events() -> Result<()> {
     // Create service with SSE event publisher
     let db = create_test_db().await;
     let repo = SeaOrmUsersRepository::new(db);
+    let audit: Arc<dyn AuditPort> = Arc::new(MockAuditPort);
     let config = ServiceConfig::default();
-    let service = Arc::new(Service::new(Arc::new(repo), event_publisher, config));
+    let service = Arc::new(Service::new(Arc::new(repo), event_publisher, audit, config));
 
     // Subscribe to SSE stream
     let mut event_stream = Box::pin(sse_broadcaster.subscribe_stream());

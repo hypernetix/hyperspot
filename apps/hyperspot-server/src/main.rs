@@ -101,12 +101,40 @@ async fn main() -> Result<()> {
     let mut config = AppConfig::load_or_default(cli.config.as_deref())?;
     config.apply_cli_overrides(&args);
 
-    // Init logging as early as possible.
+    // Build OpenTelemetry layer before logging
+    #[cfg(feature = "otel")]
+    let otel_layer = config
+        .tracing
+        .as_ref()
+        .and_then(modkit::telemetry::init::init_tracing);
+    #[cfg(not(feature = "otel"))]
+    let otel_layer = None;
+
+    // Initialize logging + otel in one Registry
     let logging_config = config.logging.as_ref().cloned().unwrap_or_default();
-    runtime::logging::init_logging_from_config(&logging_config, Path::new(&config.server.home_dir));
+    runtime::logging::init_logging_from_config_with_otel(
+        &logging_config,
+        Path::new(&config.server.home_dir),
+        otel_layer,
+    );
+
+    // One-time connectivity probe
+    #[cfg(feature = "otel")]
+    if let Some(tc) = config.tracing.as_ref() {
+        if let Err(e) = modkit::telemetry::init::otel_connectivity_probe(tc).await {
+            tracing::error!(error = %e, "OTLP connectivity probe failed");
+        }
+    }
+
+    // Smoke test span to confirm traces flow to Jaeger
+    tracing::info_span!("startup_check", app = "hyperspot").in_scope(|| {
+        tracing::info!("startup span alive - traces should be visible in Jaeger");
+    });
 
     tracing::info!("HyperSpot Server starting");
+    println!("Effective configuration:\n{:#?}", config.server);
 
+    // Print config and exit if requested
     if cli.print_config {
         println!("{}", config.to_yaml()?);
         return Ok(());
@@ -161,7 +189,13 @@ async fn run_server(config: AppConfig, args: CliArgs) -> Result<()> {
         shutdown: ShutdownOptions::Signals,
     };
 
-    run(run_options).await
+    let result = run(run_options).await;
+
+    // Graceful shutdown - flush any remaining traces
+    #[cfg(feature = "otel")]
+    modkit::telemetry::init::shutdown_tracing();
+
+    result
 }
 
 async fn check_config(config: AppConfig) -> Result<()> {

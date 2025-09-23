@@ -2,9 +2,10 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use modkit::api::OpenApiRegistry;
-use modkit::{DbModule, Module, ModuleCtx, RestfulModule, SseBroadcaster};
+use modkit::{DbModule, Module, ModuleCtx, RestfulModule, SseBroadcaster, TracedClient};
 use sea_orm_migration::MigratorTrait;
 use tracing::{debug, info};
+use url::Url;
 
 use crate::api::rest::dto::UserEvent;
 use crate::api::rest::routes;
@@ -12,10 +13,10 @@ use crate::api::rest::sse_adapter::SseUserEventPublisher;
 use crate::config::UsersInfoConfig;
 use crate::contract::client::UsersInfoApi;
 use crate::domain::events::UserDomainEvent;
-use crate::domain::ports::EventPublisher;
+use crate::domain::ports::{AuditPort, EventPublisher};
 use crate::domain::service::{Service, ServiceConfig};
 use crate::gateways::local::UsersInfoLocalClient;
-// NEW: repo impl
+use crate::infra::audit::HttpAuditClient;
 use crate::infra::storage::sea_orm_repo::SeaOrmUsersRepository;
 
 /// Main module struct with DDD-light layout and proper ClientHub integration
@@ -72,12 +73,25 @@ impl Module for UsersInfo {
         let publisher: Arc<dyn EventPublisher<UserDomainEvent>> =
             Arc::new(SseUserEventPublisher::new(self.sse.clone()));
 
+        // Build traced HTTP client
+        let traced_client = TracedClient::default();
+
+        // Parse audit service URLs from config
+        let audit_base = Url::parse(&cfg.audit_base_url)
+            .map_err(|e| anyhow::anyhow!("invalid audit_base_url: {}", e))?;
+        let notify_base = Url::parse(&cfg.notifications_base_url)
+            .map_err(|e| anyhow::anyhow!("invalid notifications_base_url: {}", e))?;
+
+        // Create audit adapter
+        let audit_adapter: Arc<dyn AuditPort> =
+            Arc::new(HttpAuditClient::new(traced_client, audit_base, notify_base));
+
         let service_config = ServiceConfig {
             max_display_name_length: 100,
             default_page_size: cfg.default_page_size,
             max_page_size: cfg.max_page_size,
         };
-        let service = Service::new(Arc::new(repo), publisher, service_config);
+        let service = Service::new(Arc::new(repo), publisher, audit_adapter, service_config);
 
         // Store service for REST and local client
         self.service.store(Some(Arc::new(service.clone())));

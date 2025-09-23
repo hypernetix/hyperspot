@@ -104,10 +104,9 @@ fn test_app() -> Router {
 
     Router::new()
         .merge(routes)
+        .layer(from_fn(api_ingress::request_id::push_req_id_to_extensions))
         .layer(PropagateRequestIdLayer::new(x_request_id.clone()))
         .layer(SetRequestIdLayer::new(x_request_id.clone(), MakeReqId))
-        .layer(from_fn(api_ingress::request_id::push_req_id_to_extensions))
-        .layer(api_ingress::request_id::create_trace_layer())
 }
 
 async fn success_handler(
