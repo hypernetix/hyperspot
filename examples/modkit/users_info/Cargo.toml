@@ -26,6 +26,7 @@ utoipa = { workspace = true }
 axum = { workspace = true, features = ["macros"] }
 tower-http = { version = "0.6", features = ["timeout"] }
 futures = "0.3"
+http = "1"
 
 # Time handling
 chrono = { version = "0.4", features = ["serde"] }
@@ -54,6 +55,8 @@ thiserror = "2.0"
 # Local dependencies
 modkit = { path = "../../../libs/modkit" }
 modkit-db = { path = "../../../libs/modkit-db", default-features = false, features = ["pg", "sea-orm"] }
+modkit-errors = { path = "../../../libs/modkit-errors" }
+modkit-errors-macro = { path = "../../../libs/modkit-errors-macro" }
 odata-core = { path = "../../../libs/odata-core", features = ["with-utoipa"] }
 
 [dev-dependencies]

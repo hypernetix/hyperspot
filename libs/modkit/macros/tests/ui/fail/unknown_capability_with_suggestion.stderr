@@ -1,0 +1,6 @@
+error: unknown capability 'rst'
+              = help: did you mean one of: rest, rest_host?
+ --> tests/ui/fail/unknown_capability_with_suggestion.rs:3:34
+  |
+3 | #[module(name="x", capabilities=[rst])]
+  |                                  ^^^

@@ -27,33 +27,64 @@ enum Capability {
 }
 
 impl Capability {
+    const VALID_CAPABILITIES: &'static [&'static str] = &["db", "rest", "rest_host", "stateful"];
+
+    fn suggest_similar(input: &str) -> Vec<&'static str> {
+        let mut suggestions: Vec<(&str, f64)> = Self::VALID_CAPABILITIES
+            .iter()
+            .map(|&cap| (cap, strsim::jaro_winkler(input, cap)))
+            .filter(|(_, score)| *score > 0.6) // Only suggest if reasonably similar
+            .collect();
+
+        suggestions.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+        suggestions
+            .into_iter()
+            .take(2)
+            .map(|(cap, _)| cap)
+            .collect()
+    }
+
     fn from_ident(ident: &Ident) -> syn::Result<Self> {
-        match ident.to_string().as_str() {
+        let input = ident.to_string();
+        match input.as_str() {
             "db" => Ok(Capability::Db),
             "rest" => Ok(Capability::Rest),
             "rest_host" => Ok(Capability::RestHost),
             "stateful" => Ok(Capability::Stateful),
-            other => Err(syn::Error::new_spanned(
-                ident,
-                format!(
-                    "unknown capability '{other}', expected one of: db, rest, rest_host, stateful"
-                ),
-            )),
+            other => {
+                let suggestions = Self::suggest_similar(other);
+                let error_msg = if suggestions.is_empty() {
+                    format!("unknown capability '{other}', expected one of: db, rest, rest_host, stateful")
+                } else {
+                    format!(
+                        "unknown capability '{other}'\n       = help: did you mean one of: {}?",
+                        suggestions.join(", ")
+                    )
+                };
+                Err(syn::Error::new_spanned(ident, error_msg))
+            }
         }
     }
 
     fn from_str_lit(lit: &LitStr) -> syn::Result<Self> {
-        match lit.value().as_str() {
+        let input = lit.value();
+        match input.as_str() {
             "db" => Ok(Capability::Db),
             "rest" => Ok(Capability::Rest),
             "rest_host" => Ok(Capability::RestHost),
             "stateful" => Ok(Capability::Stateful),
-            other => Err(syn::Error::new_spanned(
-                lit,
-                format!(
-                    "unknown capability '{other}', expected one of: db, rest, rest_host, stateful"
-                ),
-            )),
+            other => {
+                let suggestions = Self::suggest_similar(other);
+                let error_msg = if suggestions.is_empty() {
+                    format!("unknown capability '{other}', expected one of: db, rest, rest_host, stateful")
+                } else {
+                    format!(
+                        "unknown capability '{other}'\n       = help: did you mean one of: {}?",
+                        suggestions.join(", ")
+                    )
+                };
+                Err(syn::Error::new_spanned(lit, error_msg))
+            }
         }
     }
 }

@@ -33,15 +33,37 @@ pub struct Problem {
     #[serde(rename = "traceId")]
     pub trace_id: Option<String>,
     /// Optional validation errors for 4xx problems.
-    pub errors: Option<Vec<ValidationError>>,
+    pub errors: Option<Vec<ValidationViolation>>,
 }
 
+/// Individual validation violation for a specific field or property.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[schema(title = "ValidationViolation")]
+pub struct ValidationViolation {
+    /// JSON Pointer or field path, e.g. "/email" or "user.email"
+    pub pointer: String,
+    /// Human-readable message describing the validation error
+    pub message: String,
+    /// Optional machine-readable error code
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub code: Option<String>,
+}
+
+/// Collection of validation errors for 422 responses.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[schema(title = "ValidationError")]
 pub struct ValidationError {
-    pub detail: String,
-    /// JSON Pointer to the invalid location (e.g., "/user/email").
-    pub pointer: String,
+    /// List of individual validation violations
+    pub errors: Vec<ValidationViolation>,
+}
+
+/// Wrapper for ValidationError that can be used as a standalone response.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[schema(title = "ValidationErrorResponse")]
+pub struct ValidationErrorResponse {
+    /// The validation errors
+    #[serde(flatten)]
+    pub validation: ValidationError,
 }
 
 impl Problem {
@@ -78,7 +100,7 @@ impl Problem {
         self
     }
 
-    pub fn with_errors(mut self, errors: Vec<ValidationError>) -> Self {
+    pub fn with_errors(mut self, errors: Vec<ValidationViolation>) -> Self {
         self.errors = Some(errors);
         self
     }
@@ -158,9 +180,10 @@ mod tests {
         .with_code("VALIDATION_ERROR")
         .with_instance("/users/123")
         .with_trace_id("req-456")
-        .with_errors(vec![ValidationError {
-            detail: "Email is required".to_string(),
+        .with_errors(vec![ValidationViolation {
+            message: "Email is required".to_string(),
             pointer: "/email".to_string(),
+            code: None,
         }]);
 
         assert_eq!(p.status, 422);

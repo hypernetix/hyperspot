@@ -2064,6 +2064,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "modkit-errors"
+version = "0.1.0"
+dependencies = [
+ "http",
+ "modkit",
+]
+
+[[package]]
+name = "modkit-errors-macro"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "serde",
+ "serde_json",
+ "syn 2.0.106",
+]
+
+[[package]]
 name = "modkit-macros"
 version = "0.1.0"
 dependencies = [
@@ -2074,6 +2093,7 @@ dependencies = [
  "modkit",
  "proc-macro2",
  "quote",
+ "strsim",
  "syn 2.0.106",
  "tokio",
  "tokio-util",
@@ -4714,9 +4734,12 @@ dependencies = [
  "axum 0.8.4",
  "chrono",
  "futures",
+ "http",
  "inventory",
  "modkit",
  "modkit-db",
+ "modkit-errors",
+ "modkit-errors-macro",
  "odata-core",
  "once_cell",
  "rust_decimal",

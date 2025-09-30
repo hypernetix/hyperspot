@@ -1,5 +1,8 @@
+use modkit::api::problem::ProblemResponse;
 use thiserror::Error;
 use uuid::Uuid;
+
+use crate::errors::ErrorCode;
 
 /// Errors that are safe to expose to other modules
 #[derive(Error, Debug, Clone)]
@@ -35,6 +38,33 @@ impl UsersInfoError {
     pub fn internal() -> Self {
         Self::Internal
     }
+
+    /// Convert to ProblemResponse using the catalog
+    pub fn to_problem(&self, instance: &str, trace_id: Option<String>) -> ProblemResponse {
+        use UsersInfoError as E;
+        match self {
+            E::NotFound { id } => ErrorCode::users_info_user_not_found_v1.to_response(
+                format!("User with id {} was not found", id),
+                instance,
+                trace_id,
+            ),
+            E::Conflict { email } => ErrorCode::users_info_user_email_conflict_v1.to_response(
+                format!("Email '{}' is already in use", email),
+                instance,
+                trace_id,
+            ),
+            E::Validation { message } => ErrorCode::users_info_user_validation_v1.to_response(
+                message.clone(),
+                instance,
+                trace_id,
+            ),
+            E::Internal => ErrorCode::users_info_internal_database_v1.to_response(
+                "An internal error occurred",
+                instance,
+                trace_id,
+            ),
+        }
+    }
 }
 
 impl From<crate::domain::error::DomainError> for UsersInfoError {
@@ -55,7 +85,7 @@ impl From<crate::domain::error::DomainError> for UsersInfoError {
     }
 }
 
-// Convert OData errors to contract-safe errors
+// Convert OData errors to contract-safe errors using catalog
 impl From<odata_core::Error> for UsersInfoError {
     fn from(odata_error: odata_core::Error) -> Self {
         use odata_core::Error::*;

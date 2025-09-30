@@ -84,7 +84,7 @@ pub fn map_error_to_problem(
     }
 
     if let Some(config_err) = error.downcast_ref::<ConfigError>() {
-        let problem = match config_err {
+        let mut problem = match config_err {
             ConfigError::ModuleNotFound { module } => Problem::new(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Configuration Error",
@@ -118,7 +118,7 @@ pub fn map_error_to_problem(
             .with_type("https://errors.example.com/CONFIG_INVALID"),
         };
 
-        let mut problem = problem.with_instance(instance);
+        problem = problem.with_instance(instance);
         if let Some(tid) = trace_id {
             problem = problem.with_trace_id(tid);
         }
@@ -133,9 +133,9 @@ pub fn map_error_to_problem(
             "An internal error occurred",
         )
         .with_code("INTERNAL_ERROR")
-        .with_type("https://errors.example.com/INTERNAL_ERROR")
-        .with_instance(instance);
+        .with_type("https://errors.example.com/INTERNAL_ERROR");
 
+        problem = problem.with_instance(instance);
         if let Some(tid) = trace_id {
             problem = problem.with_trace_id(tid);
         }
@@ -152,9 +152,9 @@ pub fn map_error_to_problem(
         "An unknown error occurred",
     )
     .with_code("UNKNOWN_ERROR")
-    .with_type("https://errors.example.com/UNKNOWN_ERROR")
-    .with_instance(instance);
+    .with_type("https://errors.example.com/UNKNOWN_ERROR");
 
+    problem = problem.with_instance(instance);
     if let Some(tid) = trace_id {
         problem = problem.with_trace_id(tid);
     }
