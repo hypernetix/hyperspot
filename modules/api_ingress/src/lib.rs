@@ -139,7 +139,7 @@ impl ApiIngress {
         let mut router = Router::new().route("/health", get(web::health_check));
 
         // Correct middleware order (outermost to innermost):
-        // PropagateRequestId -> SetRequestId -> push_req_id_to_extensions -> Trace -> Timeout -> CORS -> BodyLimit
+        // PropagateRequestId -> SetRequestId -> Trace -> push_req_id_to_extensions -> Timeout -> CORS -> BodyLimit
         let x_request_id = crate::request_id::header();
 
         // 1. If client sent x-request-id, propagate it; otherwise we will set it
@@ -151,11 +151,66 @@ impl ApiIngress {
             crate::request_id::MakeReqId,
         ));
 
-        // 3. Put request_id into extensions and span
-        router = router.layer(from_fn(crate::request_id::push_req_id_to_extensions));
+        // 3. Create the http span with request_id/status/latency
+        router = router.layer({
+            use crate::request_id::header;
+            use modkit::http::otel;
+            use tower_http::trace::TraceLayer;
+            use tracing::field::Empty;
 
-        // 4. Trace with request_id/status/latency
-        router = router.layer(crate::request_id::create_trace_layer());
+            TraceLayer::new_for_http()
+                .make_span_with(move |req: &axum::http::Request<axum::body::Body>| {
+                    let hdr = header();
+                    let rid = req
+                        .headers()
+                        .get(&hdr)
+                        .and_then(|v| v.to_str().ok())
+                        .unwrap_or("n/a");
+
+                    let span = tracing::info_span!(
+                        "http_request",
+                        method = %req.method(),
+                        uri = %req.uri().path(),
+                        version = ?req.version(),
+                        module = "api_ingress",
+                        endpoint = %req.uri().path(),
+                        request_id = %rid,
+                        status = Empty,
+                        latency_ms = Empty,
+                        // OpenTelemetry semantic conventions
+                        "http.method" = %req.method(),
+                        "http.target" = %req.uri().path(),
+                        "http.scheme" = req.uri().scheme_str().unwrap_or("http"),
+                        "http.host" = req.headers().get("host")
+                            .and_then(|h| h.to_str().ok())
+                            .unwrap_or("unknown"),
+                        "user_agent.original" = req.headers().get("user-agent")
+                            .and_then(|h| h.to_str().ok())
+                            .unwrap_or("unknown"),
+                        // Trace context placeholders (for log correlation)
+                        trace_id = Empty,
+                        parent.trace_id = Empty
+                    );
+
+                    // Set parent OTel trace context (W3C traceparent), if any
+                    // This also populates trace_id and parent.trace_id from headers
+                    otel::set_parent_from_headers(&span, req.headers());
+
+                    span
+                })
+                .on_response(
+                    |res: &axum::http::Response<axum::body::Body>,
+                     latency: std::time::Duration,
+                     span: &tracing::Span| {
+                        let ms = (latency.as_secs_f64() * 1000.0) as u64;
+                        span.record("status", res.status().as_u16());
+                        span.record("latency_ms", ms);
+                    },
+                )
+        });
+
+        // 4. Record request_id into span + extensions (span must exist first)
+        router = router.layer(from_fn(crate::request_id::push_req_id_to_extensions));
 
         // 5. Timeout layer - 30 second timeout for handlers
         router = router.layer(TimeoutLayer::new(Duration::from_secs(30)));

@@ -145,10 +145,3 @@ pub async fn run(opts: RunOptions) -> anyhow::Result<()> {
     registry.run_stop_phase(cancel).await?;
     Ok(())
 }
-
-#[cfg(feature = "hs-runtime")]
-#[allow(dead_code)]
-pub async fn run_with_hyperspot_signals(mut opts: RunOptions) -> anyhow::Result<()> {
-    opts.shutdown = ShutdownOptions::Signals;
-    run(opts).await
-}

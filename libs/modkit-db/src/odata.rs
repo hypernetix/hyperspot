@@ -155,17 +155,17 @@ fn coerce(kind: FieldKind, v: &core::Value) -> ODataBuildResult<sea_orm::Value> 
             sea_orm::Value::Double(Some(f))
         }
 
-        // 🔧 Box the Decimal
+        // Box the Decimal
         (FieldKind::Decimal, V::Number(n)) => {
             sea_orm::Value::Decimal(Some(Box::new(bigdecimal_to_decimal(n)?)))
         }
 
         (FieldKind::Bool, V::Bool(b)) => sea_orm::Value::Bool(Some(*b)),
 
-        // 🔧 Box the Uuid
+        // Box the Uuid
         (FieldKind::Uuid, V::Uuid(u)) => sea_orm::Value::Uuid(Some(Box::new(*u))),
 
-        // 🔧 Box chrono types
+        // Box chrono types
         (FieldKind::DateTimeUtc, V::DateTime(dt)) => {
             sea_orm::Value::ChronoDateTimeUtc(Some(Box::new(*dt)))
         }
