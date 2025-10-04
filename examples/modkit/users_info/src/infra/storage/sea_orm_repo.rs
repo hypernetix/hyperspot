@@ -10,6 +10,7 @@ use once_cell::sync::Lazy;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, ConnectionTrait, EntityTrait, PaginatorTrait, QueryFilter, Set,
 };
+use tracing::{debug, instrument};
 use uuid::Uuid;
 
 use crate::contract::User;
@@ -61,7 +62,17 @@ impl<C> UsersRepository for SeaOrmUsersRepository<C>
 where
     C: ConnectionTrait + Send + Sync + 'static,
 {
+    #[instrument(
+        name = "users_info.repo.find_by_id",
+        skip(self),
+        fields(
+            db.system = "sqlite",
+            db.operation = "SELECT",
+            user.id = %id
+        )
+    )]
     async fn find_by_id(&self, id: Uuid) -> anyhow::Result<Option<User>> {
+        debug!("Finding user by id");
         let found = UserEntity::find_by_id(id)
             .one(&self.conn)
             .await
@@ -69,7 +80,17 @@ where
         Ok(found.map(Into::into))
     }
 
+    #[instrument(
+        name = "users_info.repo.email_exists",
+        skip(self),
+        fields(
+            db.system = "sqlite",
+            db.operation = "SELECT COUNT",
+            user.email = %email
+        )
+    )]
     async fn email_exists(&self, email: &str) -> anyhow::Result<bool> {
+        debug!("Checking if email exists");
         let count = UserEntity::find()
             .filter(Column::Email.eq(email))
             .count(&self.conn)
@@ -78,7 +99,18 @@ where
         Ok(count > 0)
     }
 
+    #[instrument(
+        name = "users_info.repo.insert",
+        skip(self, u),
+        fields(
+            db.system = "sqlite",
+            db.operation = "INSERT",
+            user.id = %u.id,
+            user.email = %u.email
+        )
+    )]
     async fn insert(&self, u: User) -> anyhow::Result<()> {
+        debug!("Inserting new user");
         let m = UserAM {
             id: Set(u.id),
             email: Set(u.email),
@@ -90,7 +122,18 @@ where
         Ok(())
     }
 
+    #[instrument(
+        name = "users_info.repo.update",
+        skip(self, u),
+        fields(
+            db.system = "sqlite",
+            db.operation = "UPDATE",
+            user.id = %u.id,
+            user.email = %u.email
+        )
+    )]
     async fn update(&self, u: User) -> anyhow::Result<()> {
+        debug!("Updating user");
         // Minimal upsert-by-PK via ActiveModel::update
         let m = UserAM {
             id: Set(u.id),
@@ -103,7 +146,17 @@ where
         Ok(())
     }
 
+    #[instrument(
+        name = "users_info.repo.delete",
+        skip(self),
+        fields(
+            db.system = "sqlite",
+            db.operation = "DELETE",
+            user.id = %id
+        )
+    )]
     async fn delete(&self, id: Uuid) -> anyhow::Result<bool> {
+        debug!("Deleting user");
         let res = UserEntity::delete_by_id(id)
             .exec(&self.conn)
             .await
@@ -111,6 +164,14 @@ where
         Ok(res.rows_affected > 0)
     }
 
+    #[instrument(
+        name = "users_info.repo.list_users_page",
+        skip(self, query),
+        fields(
+            db.system = "sqlite",
+            db.operation = "SELECT"
+        )
+    )]
     async fn list_users_page(&self, query: &ODataQuery) -> Result<Page<User>, odata_core::Error> {
         modkit_db::odata::paginate_with_odata::<UserEntity, User, _, _>(
             UserEntity::find(),

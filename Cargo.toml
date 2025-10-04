@@ -7,14 +7,14 @@ description = "HyperSpot Server"
 
 [workspace]
 members = [
- "apps/hyperspot-server",
- "libs/runtime",
- "libs/modkit",
- "libs/modkit/macros",
- "libs/modkit-db",
- "libs/odata-core",
- "modules/api_ingress",
- "examples/modkit/users_info"
+    "apps/hyperspot-server",
+    "libs/runtime",
+    "libs/modkit",
+    "libs/modkit/macros",
+    "libs/modkit-db",
+    "libs/odata-core",
+    "modules/api_ingress",
+    "examples/modkit/users_info"
 ]
 resolver = "2"
 
@@ -70,7 +70,7 @@ file-rotate = "0.8"
 chrono = { version = "0.4", features = ["serde"] }
 
 # DSN parsing
-dsn = "0.2"
+dsn = "1.1.1"
 humantime-serde = "1.1"
 
 # URL parsing

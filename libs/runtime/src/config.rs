@@ -32,6 +32,8 @@ pub struct AppConfig {
     pub database: Option<GlobalDatabaseConfig>,
     /// Logging configuration (optional, uses defaults if None).
     pub logging: Option<LoggingConfig>,
+    /// Tracing configuration (optional, disabled if None).
+    pub tracing: Option<TracingConfig>,
     /// Directory containing per-module YAML files (optional).
     #[serde(default)]
     pub modules_dir: Option<String>,
@@ -53,6 +55,50 @@ pub struct ServerConfig {
 /// Logging configuration - maps subsystem names to their logging settings.
 /// Key "default" is the catch-all for logs that don't match explicit subsystems.
 pub type LoggingConfig = HashMap<String, Section>;
+
+/// Tracing configuration for OpenTelemetry distributed tracing
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+pub struct TracingConfig {
+    pub enabled: bool,
+    pub service_name: Option<String>,
+    pub exporter: Option<Exporter>,
+    pub sampler: Option<Sampler>,
+    pub propagation: Option<Propagation>,
+    pub resource: Option<HashMap<String, String>>,
+    pub http: Option<HttpOpts>,
+    pub logs_correlation: Option<LogsCorrelation>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct Exporter {
+    pub kind: Option<String>, // "otlp_grpc" | "otlp_http"
+    pub endpoint: Option<String>,
+    pub headers: Option<HashMap<String, String>>,
+    pub timeout_ms: Option<u64>,
+    // tls fields omitted for brevity; add later if needed
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct Sampler {
+    pub strategy: Option<String>, // "parentbased_always_on" | "parentbased_ratio" | "always_on" | "always_off"
+    pub ratio: Option<f64>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct Propagation {
+    pub w3c_trace_context: Option<bool>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct HttpOpts {
+    pub inject_request_id_header: Option<String>,
+    pub record_headers: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct LogsCorrelation {
+    pub inject_trace_ids_into_logs: Option<bool>,
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Section {
@@ -108,6 +154,7 @@ impl Default for AppConfig {
                 auto_provision: None,
             }),
             logging: Some(default_logging_config()),
+            tracing: None, // Disabled by default
             modules_dir: None,
             modules: HashMap::new(),
         }
@@ -129,6 +176,7 @@ impl AppConfig {
             server: ServerConfig::default(),
             database: None,
             logging: None,
+            tracing: None,
             modules_dir: None,
             modules: HashMap::new(),
         };
@@ -830,6 +878,10 @@ pub fn get_module_db_config(app: &AppConfig, module_name: &str) -> Option<DbConn
 pub fn module_home(app: &AppConfig, module_name: &str) -> PathBuf {
     PathBuf::from(&app.server.home_dir).join(module_name)
 }
+
+// Include tracing config tests
+#[cfg(test)]
+mod tracing_tests;
 
 #[cfg(test)]
 mod tests {

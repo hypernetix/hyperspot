@@ -30,6 +30,9 @@ futures = "0.3"
 # Time handling
 chrono = { version = "0.4", features = ["serde"] }
 
+# URL parsing
+url = "2.5"
+
 # UUID support
 uuid = { version = "1.18", features = ["v4", "serde"] }
 
@@ -56,10 +59,19 @@ modkit = { path = "../../../libs/modkit" }
 modkit-db = { path = "../../../libs/modkit-db", default-features = false, features = ["pg", "sea-orm"] }
 odata-core = { path = "../../../libs/odata-core", features = ["with-utoipa"] }
 
+# HTTP client for outgoing requests
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }
 api_ingress = { path = "../../../modules/api_ingress" }
 serde_json = "1.0"
 testcontainers = "0.25"
 testcontainers-modules = { version = "0.13", features = ["postgres"] }
+# Testing dependencies for tracing verification
+tracing-test = "0.2"
+httpmock = "0.8.0"
+tokio-test = "0.4"
+opentelemetry = "0.31.0"
+opentelemetry_sdk = "0.31.0"
 

@@ -31,7 +31,7 @@ nanoid = "0.4"
 axum = { workspace = true }
 tower = { workspace = true }
 tower-http = { workspace = true }
-tonic = { version = "0.12", optional = true }
+tonic = { version = "0.14.2", optional = true }
 
 # Time handling
 chrono = { workspace = true }
@@ -50,6 +50,7 @@ futures = "0.3"
 grpc = ["tonic"]
 debug-errors = []
 embed_elements = []
+otel = []
 
 [build-dependencies]
 reqwest = { version = "0.12", features = ["blocking", "rustls-tls"] }

@@ -67,15 +67,18 @@ logging:
     file_level: info
     max_age_days: 28
     max_backups: 3
-    max_size_mb: 1000
-  # api_ingress section
+    max_size_mb: 10
+  sqlx:
+    console_level: debug
+    file: "logs/sql.log"
+    file_level: debug
   api_ingress:
-    console_level: info
+    console_level: debug
     file: "logs/api.log"
-    file_level: info
+    file_level: debug
     max_age_days: 28
     max_backups: 3
-    max_size_mb: 10000
+    max_size_mb: 100
 
 
 # Per-module configurations using new structure
@@ -118,6 +121,46 @@ modules:
     config:
       default_page_size: 5
       max_page_size: 100
+
+# OpenTelemetry tracing configuration
+tracing:
+  enabled: false
+  service_name: "hyperspot-api"
+
+  # OTLP exporter configuration
+  exporter:
+    kind: "otlp_grpc"  # or "otlp_http"
+    endpoint: "http://127.0.0.1:14317"  # Jaeger OTLP gRPC endpoint
+    # For HTTP: endpoint: "http://127.0.0.1:4318/v1/traces"
+    headers:
+      # Add any required headers, e.g., for authentication
+      # authorization: "Bearer your-token"
+      uptrace-dsn: "http://project1_secret@localhost:14318?grpc=14317"
+    timeout_ms: 5000
+
+  # Sampling configuration
+  sampler:
+    strategy: "parentbased_ratio"  # parentbased_always_on | parentbased_ratio | always_on | always_off
+    ratio: 1.0  # Sample 20% of traces (only used with ratio strategies)
+
+  # Propagation configuration
+  propagation:
+    w3c_trace_context: true  # Enable W3C Trace Context propagation
+
+  # Resource attributes (added to all spans)
+  resource:
+    service.version: "1.3.7"
+    deployment.environment: "dev"
+    service.namespace: "hyperspot"
+
+  # HTTP-specific options
+  http:
+    inject_request_id_header: "x-request-id"
+    record_headers: [ "user-agent", "x-forwarded-for", "authorization" ]
+
+  # Log correlation (future feature)
+  logs_correlation:
+    inject_trace_ids_into_logs: true
 
 # Example configurations for different database scenarios:
 #

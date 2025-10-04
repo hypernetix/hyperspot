@@ -57,3 +57,7 @@ where
         }
     }
 }
+
+/// Generic Result type for API handlers.
+/// Each module typically defines its own alias: `type UsersResult<T> = ApiResult<T, DomainError>;`
+pub type ApiResult<T, D> = Result<T, ApiError<D>>;

@@ -11,6 +11,7 @@ pub mod odata_policy_tests;
 pub mod operation_builder;
 pub mod pagination;
 pub mod problem;
+pub mod response;
 
 pub use error::ApiError;
 pub use error_layer::{
@@ -25,3 +26,15 @@ pub use problem::{
     bad_request, conflict, internal_error, not_found, Problem, ProblemResponse, ValidationError,
     APPLICATION_PROBLEM_JSON,
 };
+
+/// Prelude module that re-exports common API types and utilities for module authors
+pub mod prelude {
+    // Errors + Result
+    pub use super::error::{ApiError, ApiResult};
+
+    // Response sugar
+    pub use super::response::{created_json, no_content, ok_json, to_response, JsonBody, JsonPage};
+
+    // Useful axum bits (common in handlers)
+    pub use axum::{http::StatusCode, response::IntoResponse, Json};
+}

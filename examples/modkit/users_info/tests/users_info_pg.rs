@@ -121,10 +121,26 @@ async fn test_repository_operations(db_conn: &sea_orm::DatabaseConnection) -> Re
 async fn test_service_operations(db_conn: &sea_orm::DatabaseConnection) -> Result<()> {
     use std::sync::Arc;
     use users_info::contract::model::NewUser;
+    use users_info::domain::error::DomainError;
     use users_info::domain::events::UserDomainEvent;
-    use users_info::domain::ports::EventPublisher;
+    use users_info::domain::ports::{AuditPort, EventPublisher};
     use users_info::domain::service::{Service, ServiceConfig};
     use users_info::infra::storage::sea_orm_repo::SeaOrmUsersRepository;
+    use uuid::Uuid;
+
+    // Mock audit port for tests - always succeeds
+    struct MockAuditPort;
+
+    #[async_trait::async_trait]
+    impl AuditPort for MockAuditPort {
+        async fn get_user_access(&self, _id: Uuid) -> Result<(), DomainError> {
+            Ok(())
+        }
+
+        async fn notify_user_created(&self) -> Result<(), DomainError> {
+            Ok(())
+        }
+    }
 
     // Mock event publisher for tests - just ignores events
     struct MockEventPublisher;
@@ -137,8 +153,9 @@ async fn test_service_operations(db_conn: &sea_orm::DatabaseConnection) -> Resul
 
     let repo = Arc::new(SeaOrmUsersRepository::new(db_conn.clone()));
     let events: Arc<dyn EventPublisher<UserDomainEvent>> = Arc::new(MockEventPublisher);
+    let audit: Arc<dyn AuditPort> = Arc::new(MockAuditPort);
     let config = ServiceConfig::default();
-    let service = Service::new(repo, events, config);
+    let service = Service::new(repo, events, audit, config);
 
     // Test create user through service
     let new_user = NewUser {
