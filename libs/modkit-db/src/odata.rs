@@ -1,11 +1,11 @@
 //! OData (filters) → sea_orm::Condition compiler (AST in, SQL out).
-//! Parsing belongs to API/ingress. This module only consumes `odata_core::ast::Expr`.
+//! Parsing belongs to API/ingress. This module only consumes `modkit_odata::ast::Expr`.
 
 use std::collections::HashMap;
 
 use bigdecimal::{BigDecimal, ToPrimitive};
 use chrono::{NaiveDate, NaiveTime, Utc};
-use odata_core::{ast as core, CursorV1, Error as ODataError, ODataOrderBy, ODataQuery, SortDir};
+use modkit_odata::{ast as core, CursorV1, Error as ODataError, ODataOrderBy, ODataQuery, SortDir};
 use rust_decimal::Decimal;
 use sea_orm::{
     sea_query::{Expr, Order},
@@ -575,7 +575,7 @@ where
 /// Apply an optional OData filter (via wrapper) to a plain SeaORM Select<E>.
 ///
 /// This extension does NOT parse the filter string — it only consumes a parsed AST
-/// (`odata_core::ast::Expr`) and translates it into a `sea_orm::Condition`.
+/// (`modkit_odata::ast::Expr`) and translates it into a `sea_orm::Condition`.
 pub trait ODataExt<E: EntityTrait>: Sized {
     fn apply_odata_filter(
         self,
@@ -750,8 +750,8 @@ where
 
 /* ---------- pagination combiner ---------- */
 
-// Use unified pagination types from odata-core
-pub use odata_core::{Page, PageInfo};
+// Use unified pagination types from modkit-odata
+pub use modkit_odata::{Page, PageInfo};
 
 #[derive(Clone, Copy)]
 pub struct LimitCfg {
@@ -792,7 +792,7 @@ where
     // Effective order derivation based on new policy
     let effective_order = if let Some(cur) = &q.cursor {
         // Derive order from the cursor's signed tokens
-        odata_core::ODataOrderBy::from_signed_tokens(&cur.s)
+        modkit_odata::ODataOrderBy::from_signed_tokens(&cur.s)
             .map_err(|_| ODataError::InvalidCursor)?
     } else {
         // Use client order; ensure tiebreaker

@@ -17,10 +17,10 @@ use crate::contract::User;
 use crate::domain::repo::UsersRepository;
 use crate::infra::storage::entity::{ActiveModel as UserAM, Column, Entity as UserEntity};
 use modkit_db::odata;
-use odata_core::ODataQuery;
-use odata_core::Page;
+use modkit_odata::ODataQuery;
+use modkit_odata::Page;
 
-use odata_core::SortDir;
+use modkit_odata::SortDir;
 
 /// SeaORM repository impl.
 /// Holds a connection object; its lifetime/ownership is up to the caller.
@@ -172,7 +172,7 @@ where
             db.operation = "SELECT"
         )
     )]
-    async fn list_users_page(&self, query: &ODataQuery) -> Result<Page<User>, odata_core::Error> {
+    async fn list_users_page(&self, query: &ODataQuery) -> Result<Page<User>, modkit_odata::Error> {
         modkit_db::odata::paginate_with_odata::<UserEntity, User, _, _>(
             UserEntity::find(),
             &self.conn,

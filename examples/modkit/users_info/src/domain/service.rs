@@ -6,7 +6,7 @@ use crate::domain::events::UserDomainEvent;
 use crate::domain::ports::{AuditPort, EventPublisher};
 use crate::domain::repo::UsersRepository;
 use chrono::Utc;
-use odata_core::{ODataQuery, Page};
+use modkit_odata::{ODataQuery, Page};
 use tracing::{debug, info, instrument};
 use uuid::Uuid;
 
@@ -79,7 +79,7 @@ impl Service {
     pub async fn list_users_page(
         &self,
         query: ODataQuery,
-    ) -> Result<Page<User>, odata_core::Error> {
+    ) -> Result<Page<User>, modkit_odata::Error> {
         debug!("Listing users with cursor pagination");
 
         // All validation is now handled centrally in paginate_with_odata

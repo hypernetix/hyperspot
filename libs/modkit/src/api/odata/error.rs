@@ -1,128 +1,165 @@
-use crate::api::problem::{Problem, ProblemResponse};
-use axum::http::StatusCode;
-use odata_core::Error as ODataError;
+//! Centralized OData error mapping using OData catalog
+//!
+//! This module provides a single source of truth for mapping modkit_odata::Error
+//! to RFC 9457 Problem+JSON responses using the OData error catalog.
 
-/// Map OData errors to RFC 9457 Problem responses
+use crate::api::problem::Problem;
+use modkit_odata::errors::ErrorCode;
+use modkit_odata::Error as ODataError;
+
+/// Extract trace ID from current tracing span
+#[inline]
+fn current_trace_id() -> Option<String> {
+    tracing::Span::current()
+        .id()
+        .map(|id| id.into_u64().to_string())
+}
+
+/// Helper to convert ErrorCode to Problem with context
+#[inline]
+fn to_problem(
+    code: ErrorCode,
+    detail: impl Into<String>,
+    instance: &str,
+    trace_id: Option<String>,
+) -> Problem {
+    let mut problem = code.to_problem(detail);
+    problem = problem.with_instance(instance);
+    if let Some(tid) = trace_id {
+        problem = problem.with_trace_id(tid);
+    }
+    problem
+}
+
+/// Returns a fully contextualized Problem for OData errors.
 ///
-/// This function handles the unified `Error` type for all OData-related errors.
-/// It provides consistent Problem+JSON responses for all OData-related errors.
-pub fn odata_error_to_problem(e: &ODataError, instance: &str) -> ProblemResponse {
-    match e {
-        // Pagination and cursor validation errors
-        ODataError::OrderMismatch => {
-            Problem::new(StatusCode::BAD_REQUEST, "Order Mismatch", "ORDER_MISMATCH")
-                .with_code("ORDER_MISMATCH")
-                .with_instance(instance)
-                .into()
-        }
-        ODataError::FilterMismatch => Problem::new(
-            StatusCode::BAD_REQUEST,
-            "Filter Mismatch",
-            "FILTER_MISMATCH",
-        )
-        .with_code("FILTER_MISMATCH")
-        .with_instance(instance)
-        .into(),
-        ODataError::InvalidCursor => {
-            Problem::new(StatusCode::BAD_REQUEST, "Invalid Cursor", "INVALID_CURSOR")
-                .with_code("INVALID_CURSOR")
-                .with_instance(instance)
-                .into()
-        }
-        ODataError::InvalidLimit => Problem::new(
-            StatusCode::UNPROCESSABLE_ENTITY,
-            "Invalid Limit",
-            "INVALID_LIMIT",
-        )
-        .with_code("INVALID_LIMIT")
-        .with_instance(instance)
-        .into(),
-        ODataError::OrderWithCursor => Problem::new(
-            StatusCode::BAD_REQUEST,
-            "Order With Cursor",
+/// This function maps all modkit_odata::Error variants to appropriate system
+/// error codes from the framework catalog. The `instance` parameter should
+/// be the request path.
+///
+/// # Arguments
+/// * `err` - The OData error to convert
+/// * `instance` - The request path (e.g., "/api/users")
+/// * `trace_id` - Optional trace ID (uses current span if None)
+pub fn odata_error_to_problem(
+    err: &ODataError,
+    instance: &str,
+    trace_id: Option<String>,
+) -> Problem {
+    let trace_id = trace_id.or_else(current_trace_id);
+
+    use modkit_odata::Error as OE;
+    match err {
+        // Filter parsing errors
+        OE::InvalidFilter(msg) => to_problem(
+            ErrorCode::odata_errors_invalid_filter_v1(),
+            format!("Invalid $filter: {}", msg),
+            instance,
+            trace_id,
+        ),
+
+        // OrderBy parsing and validation errors
+        OE::InvalidOrderByField(field) => to_problem(
+            ErrorCode::odata_errors_invalid_orderby_v1(),
+            format!("Unsupported $orderby field: {}", field),
+            instance,
+            trace_id,
+        ),
+
+        // All cursor-related errors map to invalid_cursor
+        OE::InvalidCursor
+        | OE::CursorInvalidBase64
+        | OE::CursorInvalidJson
+        | OE::CursorInvalidVersion
+        | OE::CursorInvalidKeys
+        | OE::CursorInvalidFields
+        | OE::CursorInvalidDirection => to_problem(
+            ErrorCode::odata_errors_invalid_cursor_v1(),
+            err.to_string(), // Use the specific error message
+            instance,
+            trace_id,
+        ),
+
+        // Pagination validation errors
+        OE::OrderMismatch => to_problem(
+            ErrorCode::odata_errors_invalid_orderby_v1(),
+            "Order mismatch between cursor and query",
+            instance,
+            trace_id,
+        ),
+        OE::FilterMismatch => to_problem(
+            ErrorCode::odata_errors_invalid_filter_v1(),
+            "Filter mismatch between cursor and query",
+            instance,
+            trace_id,
+        ),
+        OE::InvalidLimit => to_problem(
+            ErrorCode::odata_errors_invalid_filter_v1(),
+            "Invalid limit parameter",
+            instance,
+            trace_id,
+        ),
+        OE::OrderWithCursor => to_problem(
+            ErrorCode::odata_errors_invalid_cursor_v1(),
             "Cannot specify both $orderby and cursor parameters",
-        )
-        .with_code("ORDER_WITH_CURSOR")
-        .with_instance(instance)
-        .into(),
+            instance,
+            trace_id,
+        ),
 
-        // Filter and OrderBy parsing errors
-        ODataError::InvalidFilter(msg) => Problem::new(
-            StatusCode::BAD_REQUEST,
-            "Filter error",
-            format!("invalid $filter: {}", msg),
-        )
-        .with_type("https://errors.example.com/ODATA_FILTER_INVALID")
-        .with_code("ODATA_FILTER_INVALID")
-        .with_instance(instance)
-        .into(),
-        ODataError::InvalidOrderByField(f) => Problem::new(
-            StatusCode::BAD_REQUEST,
-            "Unsupported OrderBy Field",
-            format!("unsupported $orderby field: {}", f),
-        )
-        .with_code("UNSUPPORTED_ORDERBY_FIELD")
-        .with_instance(instance)
-        .into(),
+        // Database errors should not happen at OData layer in production,
+        // but if they do, map to filter error (422) as a safe default
+        OE::Db(msg) => {
+            tracing::error!(error = %msg, "Unexpected database error in OData layer");
+            to_problem(
+                ErrorCode::odata_errors_invalid_filter_v1(),
+                "An internal error occurred while processing the query",
+                instance,
+                trace_id,
+            )
+        }
+    }
+}
 
-        // Cursor parsing errors (all map to BAD_REQUEST with specific codes)
-        ODataError::CursorInvalidBase64 => Problem::new(
-            StatusCode::BAD_REQUEST,
-            "Invalid Cursor",
-            "Cursor contains invalid base64url encoding",
-        )
-        .with_code("CURSOR_INVALID_BASE64")
-        .with_instance(instance)
-        .into(),
-        ODataError::CursorInvalidJson => Problem::new(
-            StatusCode::BAD_REQUEST,
-            "Invalid Cursor",
-            "Cursor contains malformed JSON",
-        )
-        .with_code("CURSOR_INVALID_JSON")
-        .with_instance(instance)
-        .into(),
-        ODataError::CursorInvalidVersion => Problem::new(
-            StatusCode::BAD_REQUEST,
-            "Invalid Cursor",
-            "Cursor version is not supported",
-        )
-        .with_code("CURSOR_INVALID_VERSION")
-        .with_instance(instance)
-        .into(),
-        ODataError::CursorInvalidKeys => Problem::new(
-            StatusCode::BAD_REQUEST,
-            "Invalid Cursor",
-            "Cursor contains empty or invalid keys",
-        )
-        .with_code("CURSOR_INVALID_KEYS")
-        .with_instance(instance)
-        .into(),
-        ODataError::CursorInvalidFields => Problem::new(
-            StatusCode::BAD_REQUEST,
-            "Invalid Cursor",
-            "Cursor contains empty or invalid fields",
-        )
-        .with_code("CURSOR_INVALID_FIELDS")
-        .with_instance(instance)
-        .into(),
-        ODataError::CursorInvalidDirection => Problem::new(
-            StatusCode::BAD_REQUEST,
-            "Invalid Cursor",
-            "Cursor contains invalid sort direction",
-        )
-        .with_code("CURSOR_INVALID_DIRECTION")
-        .with_instance(instance)
-        .into(),
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-        // Database and low-level errors
-        ODataError::Db(_) => Problem::new(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Internal Database Error",
-            "An internal database error occurred",
-        )
-        .with_code("INTERNAL_DB")
-        .with_instance(instance)
-        .into(),
+    #[test]
+    fn test_filter_error_mapping() {
+        let error = ODataError::InvalidFilter("malformed expression".to_string());
+        let problem = odata_error_to_problem(&error, "/api/users", None);
+
+        assert_eq!(problem.status, 422);
+        assert!(problem.code.contains("invalid_filter"));
+        assert_eq!(problem.instance, "/api/users");
+    }
+
+    #[test]
+    fn test_orderby_error_mapping() {
+        let error = ODataError::InvalidOrderByField("unknown_field".to_string());
+        let problem = odata_error_to_problem(&error, "/api/users", None);
+
+        assert_eq!(problem.status, 422);
+        assert!(problem.code.contains("invalid_orderby"));
+    }
+
+    #[test]
+    fn test_cursor_error_mapping() {
+        let error = ODataError::CursorInvalidBase64;
+        let problem = odata_error_to_problem(&error, "/api/users", Some("trace123".to_string()));
+
+        assert_eq!(problem.status, 422);
+        assert!(problem.code.contains("invalid_cursor"));
+        assert_eq!(problem.trace_id, Some("trace123".to_string()));
+    }
+
+    #[test]
+    fn test_gts_code_format() {
+        let error = ODataError::InvalidFilter("test".to_string());
+        let problem = odata_error_to_problem(&error, "/api/test", None);
+
+        // Verify the code follows GTS format
+        assert!(problem.code.starts_with("gts.hx.core.errors.err.v1~"));
+        assert!(problem.code.contains("odata"));
     }
 }

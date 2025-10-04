@@ -5,7 +5,7 @@ use tracing_test::traced_test;
 use uuid::Uuid;
 
 use anyhow::Result;
-use odata_core::{ODataQuery, Page};
+use modkit_odata::{ODataQuery, Page};
 use users_info::contract::model::{NewUser, User};
 use users_info::domain::error::DomainError;
 use users_info::domain::events::UserDomainEvent;
@@ -70,10 +70,13 @@ impl UsersRepository for MockUsersRepository {
         Ok(true)
     }
 
-    async fn list_users_page(&self, _query: &ODataQuery) -> Result<Page<User>, odata_core::Error> {
+    async fn list_users_page(
+        &self,
+        _query: &ODataQuery,
+    ) -> Result<Page<User>, modkit_odata::Error> {
         Ok(Page::new(
             self.users.clone(),
-            odata_core::PageInfo {
+            modkit_odata::PageInfo {
                 next_cursor: None,
                 prev_cursor: None,
                 limit: 10,

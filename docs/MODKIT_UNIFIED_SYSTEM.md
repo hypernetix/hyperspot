@@ -11,7 +11,7 @@ This guide explains how to build production-grade modules on **ModKit**: how to 
 * **Type-safe REST** via an operation builder that prevents half-wired routes at compile time.
 * **Server-Sent Events (SSE)** with type-safe broadcasters and domain event integration.
 * **OpenAPI 3.1** generation using `utoipa` with automatic schema registration for DTOs.
-* **Standardized HTTP errors** with RFC-9457 `Problem` and `ProblemResponse`.
+* **Standardized HTTP errors** with RFC-9457 `Problem` (implements `IntoResponse` directly).
 * **Typed ClientHub** for in-process clients (resolve by interface type + optional scope).
 * **Lifecycle** helpers and wrappers for long-running tasks and graceful shutdown.
 * **Lock-free hot paths** via atomic `Arc` swaps for read-mostly state.
@@ -284,21 +284,20 @@ Pass a state once via `Router::with_state(S)`. Handlers are free functions takin
 
 ModKit provides centralized types in `modkit::api::problem`:
 
-* `Problem` — RFC-9457 Problem Details
+* `Problem` — RFC-9457 Problem Details (implements `IntoResponse` directly)
 * `ValidationError` — itemized validation error
-* `ProblemResponse` — Axum response wrapper setting status & `application/problem+json`
 
 **Handler example**
 
 ```rust
-use modkit::api::problem::{ProblemResponse, bad_request, conflict, internal_error};
+use modkit::api::problem::{Problem, bad_request, conflict, internal_error};
 use axum::{extract::State, Json};
 use http::StatusCode;
 
 async fn create_user_handler(
     State(state): State<ApiState>,
     Json(req): Json<CreateUserReq>
-) -> Result<(StatusCode, Json<UserDto>), ProblemResponse> {
+) -> Result<(StatusCode, Json<UserDto>), Problem> {
     if req.email.is_empty() {
         return Err(bad_request("Email is required"));
     }
@@ -336,7 +335,7 @@ OperationBuilder::post("/users")
 # Modkit Unified Pagination/OData System
 
 ## Layers
-- `odata-core`: AST, ODataQuery, CursorV1, ODataOrderBy, SortDir, ODataPageError, **Page<T>/PageInfo**.
+- `modkit-odata`: AST, ODataQuery, CursorV1, ODataOrderBy, SortDir, ODataPageError, **Page<T>/PageInfo**.
 - `modkit`: HTTP extractor for OData (`$filter`, `$orderby`, `limit`, `cursor`) with budgets + Problem mapper.
 - `db`: OData AST → SeaORM Condition; order, cursor predicate, paginator `paginate_with_odata`.
 

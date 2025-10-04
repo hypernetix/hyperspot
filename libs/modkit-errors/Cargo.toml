@@ -1,0 +1,14 @@
+[package]
+name = "modkit-errors"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+default = []
+utoipa = ["dep:utoipa"]
+axum = ["dep:axum"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+utoipa = { version = "5", optional = true }
+axum = { version = "0.8", optional = true }

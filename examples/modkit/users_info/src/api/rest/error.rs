@@ -1,87 +1,55 @@
-use axum::http::StatusCode;
-use modkit::api::problem::{Problem, ProblemResponse};
-
-/// Helper to create a ProblemResponse with less boilerplate
-pub fn from_parts(
-    status: StatusCode,
-    code: &str,
-    title: &str,
-    detail: impl Into<String>,
-    instance: &str,
-) -> ProblemResponse {
-    let problem = Problem::new(status, title, detail)
-        .with_type(format!("https://errors.example.com/{}", code))
-        .with_code(code)
-        .with_instance(instance);
-
-    // Add request ID from current tracing span if available
-    let problem = if let Some(id) = tracing::Span::current().id() {
-        problem.with_trace_id(id.into_u64().to_string())
-    } else {
-        problem
-    };
-
-    ProblemResponse(problem)
-}
+use modkit::api::problem::Problem;
 
 use crate::domain::error::DomainError;
+use crate::errors::ErrorCode;
 
-/// Map domain error to RFC9457 ProblemResponse
-/// This is now only used for domain-specific business logic errors.
-/// Pagination errors are handled directly by the unified ApiError system.
-pub fn domain_error_to_problem(e: DomainError, instance: &str) -> ProblemResponse {
+/// Map domain error to RFC9457 Problem using the catalog
+pub fn domain_error_to_problem(e: DomainError, instance: &str) -> Problem {
+    // Extract trace ID from current tracing span if available
+    let trace_id = tracing::Span::current()
+        .id()
+        .map(|id| id.into_u64().to_string());
+
     match &e {
-        DomainError::UserNotFound { id } => from_parts(
-            StatusCode::NOT_FOUND,
-            "USERS_NOT_FOUND",
-            "User not found",
+        DomainError::UserNotFound { id } => ErrorCode::example1_user_not_found_v1().with_context(
             format!("User with id {} was not found", id),
             instance,
+            trace_id,
         ),
-        DomainError::EmailAlreadyExists { email } => from_parts(
-            StatusCode::CONFLICT,
-            "USERS_EMAIL_CONFLICT",
-            "Email already exists",
-            format!("Email '{}' is already in use", email),
-            instance,
-        ),
-        DomainError::InvalidEmail { email } => from_parts(
-            StatusCode::BAD_REQUEST,
-            "USERS_INVALID_EMAIL",
-            "Invalid email",
-            format!("Email '{}' is invalid", email),
-            instance,
-        ),
-        DomainError::EmptyDisplayName => from_parts(
-            StatusCode::BAD_REQUEST,
-            "USERS_VALIDATION",
-            "Validation error",
+        DomainError::EmailAlreadyExists { email } => ErrorCode::example1_user_invalid_email_v1()
+            .with_context(
+                format!("Email '{}' is already in use", email),
+                instance,
+                trace_id,
+            ),
+        DomainError::InvalidEmail { email } => ErrorCode::example1_user_invalid_email_v1()
+            .with_context(format!("Email '{}' is invalid", email), instance, trace_id),
+        DomainError::EmptyDisplayName => ErrorCode::example1_user_validation_v1().with_context(
             "Display name cannot be empty",
             instance,
+            trace_id,
         ),
-        DomainError::DisplayNameTooLong { .. } | DomainError::Validation { .. } => from_parts(
-            StatusCode::BAD_REQUEST,
-            "USERS_VALIDATION",
-            "Validation error",
-            format!("{}", e),
-            instance,
-        ),
+        DomainError::DisplayNameTooLong { .. } | DomainError::Validation { .. } => {
+            ErrorCode::example1_user_validation_v1().with_context(
+                format!("{}", e),
+                instance,
+                trace_id,
+            )
+        }
         DomainError::Database { .. } => {
             // Log the internal error details but don't expose them to the client
             tracing::error!(error = ?e, "Database error occurred");
-            from_parts(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "INTERNAL_DB",
-                "Internal error",
+            ErrorCode::example1_user_internal_database_v1().with_context(
                 "An internal database error occurred",
                 instance,
+                trace_id,
             )
         }
     }
 }
 
-/// Implement Into<ProblemResponse> for DomainError so it works with ApiError
-impl From<DomainError> for modkit::api::problem::ProblemResponse {
+/// Implement Into<Problem> for DomainError so it works with ApiError
+impl From<DomainError> for Problem {
     fn from(e: DomainError) -> Self {
         domain_error_to_problem(e, "/")
     }

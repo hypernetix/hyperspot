@@ -1,7 +1,6 @@
 //! Filter hashing utilities for OData pagination
 
-use hex;
-use odata_core::ast;
+use crate::ast;
 use sha2::{Digest, Sha256};
 
 /// Normalize filter AST for consistent hashing
@@ -88,7 +87,7 @@ pub fn short_filter_hash(expr: Option<&ast::Expr>) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use odata_core::ast::{CompareOperator, Expr, Value};
+    use crate::ast::{CompareOperator, Expr, Value};
 
     #[test]
     fn test_normalize_filter_consistency() {

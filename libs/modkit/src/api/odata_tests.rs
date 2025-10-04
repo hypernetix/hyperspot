@@ -2,7 +2,7 @@
 mod tests {
     use crate::api::odata::*;
     use axum::extract::FromRequestParts;
-    use axum::http::{Request, StatusCode};
+    use axum::http::Request;
 
     #[test]
     fn test_parse_orderby_simple() {
@@ -53,7 +53,7 @@ mod tests {
         assert!(result.is_err());
         assert!(matches!(
             result.unwrap_err(),
-            odata_core::Error::InvalidOrderByField(_)
+            modkit_odata::Error::InvalidOrderByField(_)
         ));
     }
 
@@ -68,7 +68,7 @@ mod tests {
         assert!(result.is_err());
         assert!(matches!(
             result.unwrap_err(),
-            odata_core::Error::InvalidOrderByField(_)
+            modkit_odata::Error::InvalidOrderByField(_)
         ));
     }
 
@@ -78,7 +78,7 @@ mod tests {
         assert!(result.is_err());
         assert!(matches!(
             result.unwrap_err(),
-            odata_core::Error::InvalidOrderByField(_)
+            modkit_odata::Error::InvalidOrderByField(_)
         ));
     }
 
@@ -103,9 +103,10 @@ mod tests {
 
         let result = extract_odata_query(&mut parts, &()).await;
         assert!(result.is_err());
-        let problem_response = result.unwrap_err();
-        // Extract status from the problem response for testing
-        assert_eq!(problem_response.0.status, StatusCode::BAD_REQUEST);
+        let problem = result.unwrap_err();
+        // Extract status from the problem for testing
+        // OData errors return 422 (Unprocessable Entity) per GTS catalog
+        assert_eq!(problem.status, 422);
 
         // Should have cursor (even if decode fails, it should try)
         // Note: The cursor in the test is not a valid base64url, but that's OK for this test
@@ -241,7 +242,7 @@ mod tests {
 
     #[test]
     fn test_odata_deref() {
-        use odata_core::ast::*;
+        use modkit_odata::ast::*;
 
         let expr = Expr::Identifier("test".to_string());
         let query = ODataQuery::default().with_filter(expr);

@@ -1,7 +1,7 @@
 use crate::contract::model::User;
 use async_trait::async_trait;
-use odata_core::Error as ODataError;
-use odata_core::{ODataQuery, Page};
+use modkit_odata::Error as ODataError;
+use modkit_odata::{ODataQuery, Page};
 use uuid::Uuid;
 
 /// Port for the domain layer: persistence operations the domain needs.

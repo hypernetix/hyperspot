@@ -721,6 +721,85 @@ where
         });
         self
     }
+
+    /// Add standard error responses (400, 401, 403, 404, 409, 422, 429, 500).
+    ///
+    /// All responses reference the shared Problem schema (RFC 9457) for consistent
+    /// error handling across your API. This is the recommended way to declare
+    /// common error responses without repeating boilerplate.
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// let op = OperationBuilder::get("/users")
+    ///     .handler(list_users)
+    ///     .json_response(200, "List of users")
+    ///     .standard_errors(&registry);
+    /// ```
+    ///
+    /// This adds the following error responses:
+    /// - 400 Bad Request
+    /// - 401 Unauthorized  
+    /// - 403 Forbidden
+    /// - 404 Not Found
+    /// - 409 Conflict
+    /// - 422 Unprocessable Entity
+    /// - 429 Too Many Requests
+    /// - 500 Internal Server Error
+    pub fn standard_errors(mut self, registry: &dyn OpenApiRegistry) -> Self {
+        let problem_name = ensure_schema::<crate::api::problem::Problem>(registry);
+
+        let standard_errors = [
+            (400, "Bad Request"),
+            (401, "Unauthorized"),
+            (403, "Forbidden"),
+            (404, "Not Found"),
+            (409, "Conflict"),
+            (422, "Unprocessable Entity"),
+            (429, "Too Many Requests"),
+            (500, "Internal Server Error"),
+        ];
+
+        for (status, description) in standard_errors {
+            self.spec.responses.push(ResponseSpec {
+                status,
+                content_type: problem::APPLICATION_PROBLEM_JSON,
+                description: description.to_string(),
+                schema_name: Some(problem_name.clone()),
+            });
+        }
+
+        self
+    }
+
+    /// Add 422 validation error response using ValidationError schema.
+    ///
+    /// This method adds a specific 422 Unprocessable Entity response that uses
+    /// the ValidationError schema instead of the generic Problem schema. Use this
+    /// for endpoints that perform input validation and need structured error details.
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// let op = OperationBuilder::post("/users")
+    ///     .handler(create_user)
+    ///     .json_request::<CreateUserRequest>(&registry, "User data")
+    ///     .json_response(201, "User created")
+    ///     .with_422_validation_error(&registry);
+    /// ```
+    pub fn with_422_validation_error(mut self, registry: &dyn OpenApiRegistry) -> Self {
+        let validation_error_name =
+            ensure_schema::<crate::api::problem::ValidationErrorResponse>(registry);
+
+        self.spec.responses.push(ResponseSpec {
+            status: 422,
+            content_type: problem::APPLICATION_PROBLEM_JSON,
+            description: "Validation Error".to_string(),
+            schema_name: Some(validation_error_name),
+        });
+
+        self
+    }
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -863,5 +942,71 @@ mod tests {
 
         let patch_builder = OperationBuilder::<Missing, Missing, ()>::patch("/patch");
         assert_eq!(patch_builder.spec.method, Method::PATCH);
+    }
+
+    #[test]
+    fn test_standard_errors() {
+        let registry = MockRegistry::new();
+        let builder = OperationBuilder::<Missing, Missing, ()>::get("/test")
+            .handler(test_handler)
+            .json_response(200, "Success")
+            .standard_errors(&registry);
+
+        // Should have 1 success response + 8 standard error responses
+        assert_eq!(builder.spec.responses.len(), 9);
+
+        // Check that all standard error status codes are present
+        let statuses: Vec<u16> = builder.spec.responses.iter().map(|r| r.status).collect();
+        assert!(statuses.contains(&200)); // success response
+        assert!(statuses.contains(&400));
+        assert!(statuses.contains(&401));
+        assert!(statuses.contains(&403));
+        assert!(statuses.contains(&404));
+        assert!(statuses.contains(&409));
+        assert!(statuses.contains(&422));
+        assert!(statuses.contains(&429));
+        assert!(statuses.contains(&500));
+
+        // All error responses should use Problem content type
+        let error_responses: Vec<_> = builder
+            .spec
+            .responses
+            .iter()
+            .filter(|r| r.status >= 400)
+            .collect();
+
+        for resp in error_responses {
+            assert_eq!(
+                resp.content_type,
+                crate::api::problem::APPLICATION_PROBLEM_JSON
+            );
+            assert!(resp.schema_name.is_some());
+        }
+    }
+
+    #[test]
+    fn test_with_422_validation_error() {
+        let registry = MockRegistry::new();
+        let builder = OperationBuilder::<Missing, Missing, ()>::post("/test")
+            .handler(test_handler)
+            .json_response(201, "Created")
+            .with_422_validation_error(&registry);
+
+        // Should have success response + validation error response
+        assert_eq!(builder.spec.responses.len(), 2);
+
+        let validation_response = builder
+            .spec
+            .responses
+            .iter()
+            .find(|r| r.status == 422)
+            .expect("Should have 422 response");
+
+        assert_eq!(validation_response.description, "Validation Error");
+        assert_eq!(
+            validation_response.content_type,
+            crate::api::problem::APPLICATION_PROBLEM_JSON
+        );
+        assert!(validation_response.schema_name.is_some());
     }
 }

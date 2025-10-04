@@ -1,11 +1,11 @@
 use axum::extract::{FromRequestParts, Query};
 use axum::http::request::Parts;
-use odata_core::{ast, CursorV1, Error as ODataError, ODataOrderBy, OrderKey, SortDir};
+use modkit_odata::{ast, CursorV1, Error as ODataError, ODataOrderBy, OrderKey, SortDir};
 use odata_params::filters as od;
 use serde::Deserialize;
 
-// Re-export types from odata-core for convenience and better DX
-pub use odata_core::ODataQuery;
+// Re-export types from modkit-odata for convenience and better DX
+pub use modkit_odata::ODataQuery;
 // CursorV1 is available through the private import above for internal use
 
 // Re-export error mapping from the error module
@@ -30,14 +30,14 @@ pub const MAX_ORDER_FIELDS: usize = 10;
 /// Parse $orderby string into ODataOrderBy
 /// Format: "field1 [asc|desc], field2 [asc|desc], ..."
 /// Default direction is asc if not specified
-pub fn parse_orderby(raw: &str) -> Result<ODataOrderBy, odata_core::Error> {
+pub fn parse_orderby(raw: &str) -> Result<ODataOrderBy, modkit_odata::Error> {
     let raw = raw.trim();
     if raw.is_empty() {
         return Ok(ODataOrderBy::empty());
     }
 
     if raw.len() > MAX_ORDERBY_LEN {
-        return Err(odata_core::Error::InvalidOrderByField(
+        return Err(modkit_odata::Error::InvalidOrderByField(
             "orderby too long".into(),
         ));
     }
@@ -56,7 +56,7 @@ pub fn parse_orderby(raw: &str) -> Result<ODataOrderBy, odata_core::Error> {
             [field, "asc"] => (*field, SortDir::Asc),
             [field, "desc"] => (*field, SortDir::Desc),
             _ => {
-                return Err(odata_core::Error::InvalidOrderByField(format!(
+                return Err(modkit_odata::Error::InvalidOrderByField(format!(
                     "invalid orderby clause: {}",
                     part
                 )))
@@ -64,7 +64,7 @@ pub fn parse_orderby(raw: &str) -> Result<ODataOrderBy, odata_core::Error> {
         };
 
         if field.is_empty() {
-            return Err(odata_core::Error::InvalidOrderByField(
+            return Err(modkit_odata::Error::InvalidOrderByField(
                 "empty field name in orderby".into(),
             ));
         }
@@ -76,7 +76,7 @@ pub fn parse_orderby(raw: &str) -> Result<ODataOrderBy, odata_core::Error> {
     }
 
     if keys.len() > MAX_ORDER_FIELDS {
-        return Err(odata_core::Error::InvalidOrderByField(
+        return Err(modkit_odata::Error::InvalidOrderByField(
             "too many order fields".into(),
         ));
     }
@@ -91,7 +91,7 @@ pub fn parse_orderby(raw: &str) -> Result<ODataOrderBy, odata_core::Error> {
 pub async fn extract_odata_query<S>(
     parts: &mut Parts,
     state: &S,
-) -> Result<ODataQuery, crate::api::problem::ProblemResponse>
+) -> Result<ODataQuery, crate::api::problem::Problem>
 where
     S: Send + Sync,
 {
@@ -133,7 +133,7 @@ where
             let core_expr: ast::Expr = ast_src.into();
 
             // Generate filter hash for cursor consistency
-            let filter_hash = crate::api::pagination::short_filter_hash(Some(&core_expr));
+            let filter_hash = modkit_odata::pagination::short_filter_hash(Some(&core_expr));
 
             query = query.with_filter(core_expr);
             if let Some(hash) = filter_hash {
@@ -147,13 +147,14 @@ where
         return Err(crate::api::odata::odata_error_to_problem(
             &ODataError::OrderWithCursor,
             "/",
+            None,
         ));
     }
 
     // Parse cursor first (if present, skip orderby)
     if let Some(cursor_str) = params.cursor.as_ref() {
         let cursor = CursorV1::decode(cursor_str).map_err(|_| {
-            crate::api::odata::odata_error_to_problem(&ODataError::InvalidCursor, "/")
+            crate::api::odata::odata_error_to_problem(&ODataError::InvalidCursor, "/", None)
         })?;
         query = query.with_cursor(cursor);
         // When cursor is present, order is empty (derived from cursor.s later)
@@ -162,7 +163,7 @@ where
         // Parse orderby only when cursor is absent
         if let Some(raw_orderby) = params.orderby.as_ref() {
             let order = parse_orderby(raw_orderby)
-                .map_err(|e| crate::api::odata::odata_error_to_problem(&e, "/"))?;
+                .map_err(|e| crate::api::odata::odata_error_to_problem(&e, "/", None))?;
             query = query.with_order(order);
         }
     }
@@ -173,6 +174,7 @@ where
             return Err(crate::api::odata::odata_error_to_problem(
                 &ODataError::InvalidLimit,
                 "/",
+                None,
             ));
         }
         query = query.with_limit(limit);
@@ -223,7 +225,7 @@ impl<S> FromRequestParts<S> for OData
 where
     S: Send + Sync,
 {
-    type Rejection = crate::api::problem::ProblemResponse;
+    type Rejection = crate::api::problem::Problem;
 
     #[allow(clippy::manual_async_fn)]
     fn from_request_parts(

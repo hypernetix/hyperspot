@@ -13,6 +13,7 @@ proc-macro2 = "1.0"
 quote = "1.0"
 syn = { version = "2.0", features = ["full", "parsing", "printing", "derive"] }
 heck = "0.5"
+strsim = "0.11"
 
 [dev-dependencies]
 trybuild = "1"

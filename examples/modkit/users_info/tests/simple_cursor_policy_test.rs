@@ -1,6 +1,6 @@
 //! Simple test to verify cursor+orderby policy enforcement
 
-use odata_core::{CursorV1, SortDir};
+use modkit_odata::{CursorV1, SortDir};
 
 #[tokio::test]
 async fn test_cursor_orderby_policy_validation() {
@@ -21,7 +21,7 @@ async fn test_cursor_orderby_policy_validation() {
     assert_eq!(decoded.k, vec!["test-value"]);
 
     // Test the from_signed_tokens functionality
-    let order_from_cursor = odata_core::ODataOrderBy::from_signed_tokens(&decoded.s)
+    let order_from_cursor = modkit_odata::ODataOrderBy::from_signed_tokens(&decoded.s)
         .expect("Failed to parse order from cursor");
 
     assert_eq!(order_from_cursor.0.len(), 2);
@@ -36,18 +36,16 @@ async fn test_cursor_orderby_policy_validation() {
 }
 
 #[test]
-fn test_order_with_cursor_error_mapping() {
-    use odata_core::Error as ODataError;
-    use users_info::contract::error::UsersInfoError;
+fn test_order_with_cursor_error_converts_to_problem() {
+    use modkit_errors::problem::Problem;
+    use modkit_odata::Error as ODataError;
 
-    // Test that OrderWithCursor error maps properly
-    let page_error = ODataError::OrderWithCursor;
-    let users_error: UsersInfoError = page_error.into();
+    // Test that OrderWithCursor error converts to Problem properly
+    let odata_error = ODataError::OrderWithCursor;
+    let problem: Problem = odata_error.into();
 
-    match users_error {
-        UsersInfoError::Validation { message } => {
-            assert_eq!(message, "Cannot specify both orderby and cursor");
-        }
-        _ => panic!("Expected validation error"),
-    }
+    // Verify the problem has the correct properties
+    assert_eq!(problem.status, 422);
+    assert!(problem.code.contains("odata"));
+    assert!(problem.code.contains("invalid_cursor"));
 }

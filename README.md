@@ -2,7 +2,7 @@
 
 HyperSpot Server is a modular, high-performance platform for AI services built in Rust. It provides a comprehensive framework for building scalable AI applications with automatic REST API generation, comprehensive OpenAPI documentation, and a flexible modular architecture.
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -184,7 +184,7 @@ impl RestfulModule for MyModule {
     }
 }
 
-async fn list_resources_handler() -> Result<Json<Vec<MyResource>>, modkit::ProblemResponse> {
+async fn list_resources_handler() -> Result<Json<Vec<MyResource>>, modkit::Problem> {
     // Simulate potential error conditions
     let resources = vec![
         MyResource { 
@@ -202,13 +202,13 @@ async fn list_resources_handler() -> Result<Json<Vec<MyResource>>, modkit::Probl
 }
 ```
 
-## 📖 Documentation
+## Documentation
 
 - **[Module Development Guide](docs/MODKIT_UNIFIED_SYSTEM.md)** - How to create modules with the ModKit framework
 - **[Module Creation Prompt](docs/MODULE_CREATION_PROMT.md)** - Prompt for LLM-editor to generate a module from OpenAPI specification
 - **[Contributing](CONTRIBUTING.md)** - Development workflow and coding standards
 
-## 🏗️ Key Features
+## Key Features
 
 ### Modular Architecture
 - **Auto-discovery**: Modules register automatically via the `#[modkit::module]` macro
@@ -225,7 +225,7 @@ async fn list_resources_handler() -> Result<Json<Vec<MyResource>>, modkit::Probl
 ### Type-Safe API Development
 - **Type-Safe Builder**: Compile-time guarantees with `OperationBuilder`
 - **Automatic OpenAPI**: Generate documentation from Rust types with `utoipa`
-- **RFC-9457 Error Handling**: Standardized HTTP problem details with `ProblemResponse`
+- **RFC-9457 Error Handling**: Standardized HTTP problem details with `Problem` (implements `IntoResponse`)
 - **Schema Components**: Reusable type definitions with automatic registration
 - **Handler Integration**: Direct Axum handler attachment with `.problem_response()` helpers
 
@@ -241,28 +241,26 @@ async fn list_resources_handler() -> Result<Json<Vec<MyResource>>, modkit::Probl
 - **Health Checks**: Built-in `/health` endpoints
 - **Type Safety**: Compile-time guarantees for API contracts
 
-## 🚨 RFC-9457 Error Handling
+## RFC-9457 Error Handling
 
 HyperSpot implements standardized HTTP error responses using RFC-9457 Problem Details:
 
 ### Built-in Problem Types
 
 ```rust
-use modkit::{ProblemResponse, Problem, bad_request, not_found, conflict, internal_error};
+use modkit::{Problem, bad_request, not_found, conflict, internal_error};
 
-// Convenience constructors
+// Convenience constructors return Problem directly
 let error = bad_request("Invalid email format");
 let error = not_found("User not found");
 let error = conflict("Email already exists");
 let error = internal_error("Database connection failed");
 
 // Custom problem with full control
-let error = ProblemResponse::from(
-    Problem::new(StatusCode::UNPROCESSABLE_ENTITY, "Validation Failed", "Input validation errors")
-        .with_code("VALIDATION_ERROR")
-        .with_instance("/users/create")
-        .with_errors(validation_errors)
-);
+let error = Problem::new(StatusCode::UNPROCESSABLE_ENTITY, "Validation Failed", "Input validation errors")
+    .with_code("VALIDATION_ERROR")
+    .with_instance("/users/create")
+    .with_errors(validation_errors);
 ```
 
 ### OpenAPI Integration
@@ -287,7 +285,7 @@ OperationBuilder::post("/users")
 
 TBD
 
-## 🔧 Configuration
+## Configuration
 
 ### YAML Configuration Structure
 
@@ -332,7 +330,7 @@ export HYPERSPOT_MODULES_API_INGRESS_BIND_ADDR="0.0.0.0:8080"
 export HYPERSPOT_LOGGING_DEFAULT_CONSOLE_LEVEL="debug"
 ```
 
-## 🧪 Testing
+## Testing
 
 ```bash
 # Run all tests
@@ -349,7 +347,7 @@ cargo test --test integration
 cargo check
 ```
 
-## 📦 Project Structure
+## Project Structure
 
 ```
 ├── apps/
@@ -366,7 +364,7 @@ cargo check
     └── no-db.yaml                # No-database mode configuration
 ```
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -378,11 +376,11 @@ cargo check
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🎯 Roadmap
+## Roadmap
 
 - [ ] gRPC support for module communication
 - [ ] Distributed tracing integration
@@ -391,7 +389,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [ ] Module marketplace and registry
 - [ ] Out-of-process module support
 
-## 🏃‍♂️ Performance
+## Performance
 
 HyperSpot is designed for high performance:
 
@@ -403,7 +401,7 @@ HyperSpot is designed for high performance:
 
 Benchmarks show excellent performance for production workloads with minimal resource overhead.
 
-## 🌟 Getting Started Tutorial
+## Getting Started Tutorial
 
 1. **Clone and Setup**:
    ```bash

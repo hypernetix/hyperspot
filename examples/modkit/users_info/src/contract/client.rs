@@ -5,7 +5,7 @@ use crate::contract::{
     error::UsersInfoError,
     model::{NewUser, User, UserPatch},
 };
-use odata_core::{ODataQuery, Page};
+use modkit_odata::{ODataQuery, Page};
 
 /// Public API trait for the users_info module that other modules can use
 #[async_trait]

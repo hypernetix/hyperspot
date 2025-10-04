@@ -1,5 +1,12 @@
+pub mod errors;
+pub mod limits;
 pub mod page;
+pub mod pagination;
+pub mod problem_mapping;
+
+pub use limits::ODataLimits;
 pub use page::{Page, PageInfo};
+pub use pagination::{normalize_filter_for_hash, short_filter_hash};
 
 pub mod ast {
     use bigdecimal::BigDecimal;
@@ -177,6 +184,13 @@ impl std::fmt::Display for ODataOrderBy {
 ///
 /// This centralizes all OData-related errors including parsing, validation,
 /// pagination, and cursor operations into a single error type using thiserror.
+///
+/// ## HTTP Mapping
+///
+/// These errors map to RFC 9457 Problem responses via the catalog in `modkit`:
+/// - `InvalidFilter` → 422 `gts...~hx.odata.errors.invalid_filter.v1`
+/// - `InvalidOrderByField` → 422 `gts...~hx.odata.errors.invalid_orderby.v1`
+/// - Cursor errors → 422 `gts...~hx.odata.errors.invalid_cursor.v1`
 #[derive(thiserror::Error, Debug, Clone)]
 pub enum Error {
     // Filter parsing and validation errors

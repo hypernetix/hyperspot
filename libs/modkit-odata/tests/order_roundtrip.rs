@@ -1,4 +1,4 @@
-use odata_core::{ODataOrderBy, OrderKey, SortDir};
+use modkit_odata::{ODataOrderBy, OrderKey, SortDir};
 
 #[test]
 fn signed_tokens_roundtrip() {

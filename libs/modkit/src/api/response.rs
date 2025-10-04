@@ -6,7 +6,7 @@ use axum::{
 
 /// Short aliases for JSON responses
 pub type JsonBody<T> = Json<T>;
-pub type JsonPage<T> = Json<odata_core::Page<T>>;
+pub type JsonPage<T> = Json<modkit_odata::Page<T>>;
 
 /// 200 OK + JSON
 pub fn ok_json<T: serde::Serialize>(value: T) -> impl IntoResponse {

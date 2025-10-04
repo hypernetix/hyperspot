@@ -1,0 +1,27 @@
+[
+  {
+    "status": 404,
+    "title": "User Not Found",
+    "code": "gts.hx.core.errors.err.v1~hx.example1.user.not_found.v1"
+  },
+  {
+    "status": 409,
+    "title": "Email Already Exists",
+    "code": "gts.hx.core.errors.err.v1~hx.example1.user.email_conflict.v1"
+  },
+  {
+    "status": 400,
+    "title": "Invalid Email",
+    "code": "gts.hx.core.errors.err.v1~hx.example1.user.invalid_email.v1"
+  },
+  {
+    "status": 422,
+    "title": "Validation Error",
+    "code": "gts.hx.core.errors.err.v1~hx.example1.user.validation.v1"
+  },
+  {
+    "status": 500,
+    "title": "Internal Database Error",
+    "code": "gts.hx.core.errors.err.v1~hx.example1.user.internal_database.v1"
+  }
+]

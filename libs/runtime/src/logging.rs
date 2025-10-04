@@ -15,7 +15,6 @@ pub type OtelLayer = tracing_opentelemetry::OpenTelemetryLayer<
 >;
 #[cfg(not(feature = "otel"))]
 pub type OtelLayer = ();
-pub type OtelLayerOpt = Option<OtelLayer>;
 
 // Keep a guard for non-blocking console to avoid being dropped.
 static CONSOLE_GUARD: std::sync::OnceLock<tracing_appender::non_blocking::WorkerGuard> =
@@ -199,13 +198,13 @@ pub fn init_logging_from_config(cfg: &LoggingConfig, base_dir: &Path) {
 pub fn init_logging_from_config_with_otel(
     cfg: &LoggingConfig,
     base_dir: &Path,
-    otel_layer: OtelLayerOpt,
+    otel_layer: Option<OtelLayer>,
 ) {
     init_logging_unified(cfg, base_dir, otel_layer)
 }
 
 /// Unified initializer used by both functions above.
-fn init_logging_unified(cfg: &LoggingConfig, base_dir: &Path, otel_layer: OtelLayerOpt) {
+fn init_logging_unified(cfg: &LoggingConfig, base_dir: &Path, otel_layer: Option<OtelLayer>) {
     // Bridge `log` → `tracing` *before* installing the subscriber
     if let Err(e) = tracing_log::LogTracer::init() {
         eprintln!("LogTracer init skipped: {e}");
@@ -384,7 +383,7 @@ fn install_subscriber(
     console_targets: tracing_subscriber::filter::Targets,
     file_targets: tracing_subscriber::filter::Targets,
     file_router: MultiFileRouter,
-    _otel_layer: OtelLayerOpt,
+    _otel_layer: Option<OtelLayer>,
 ) {
     use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter, Registry};
 
@@ -444,7 +443,7 @@ fn install_subscriber(
     let _ = subscriber.try_init();
 }
 
-fn init_minimal(_otel: OtelLayerOpt) {
+fn init_minimal(_otel: Option<OtelLayer>) {
     use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter, Registry};
 
     // If RUST_LOG is set, it will cap fmt output; otherwise don't clamp here.
