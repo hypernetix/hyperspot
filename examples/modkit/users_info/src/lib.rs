@@ -5,6 +5,10 @@ pub mod contract;
 // Re-export the public contract components
 pub use contract::{client, error, model};
 
+// === ERROR CATALOG ===
+// Generated error catalog from gts/errors.json
+pub mod errors;
+
 // === MODULE DEFINITION ===
 // ModKit needs access to the module struct for instantiation
 pub mod module;

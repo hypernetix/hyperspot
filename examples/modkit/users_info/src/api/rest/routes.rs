@@ -23,7 +23,7 @@ pub fn register_routes(
         .query_param_typed("limit", false, "Maximum number of users to return", "integer")
         .query_param("cursor", false, "Cursor for pagination")
         .handler(handlers::list_users)
-        .json_response_with_schema::<odata_core::Page<dto::UserDto>>(openapi, 200, "Paginated list of users")
+        .json_response_with_schema::<modkit_odata::Page<dto::UserDto>>(openapi, 200, "Paginated list of users")
         .with_odata_filter_doc("OData v4 filter. Examples: `email eq 'test@example.com'`, `contains(email,'@acme.com')`")
         .query_param("$orderby", false, "OData orderby clause. Example: 'created_at desc, id desc'")
         .problem_response(openapi, 400, "Bad Request")

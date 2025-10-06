@@ -242,7 +242,7 @@ fn test_users_info_config() {
 
 #[test]
 fn test_order_mismatch_error_formatting() {
-    use odata_core::{ODataOrderBy, OrderKey, SortDir};
+    use modkit_odata::{ODataOrderBy, OrderKey, SortDir};
     use users_info::domain::error::DomainError;
 
     // Create cursor order (what was in the cursor)

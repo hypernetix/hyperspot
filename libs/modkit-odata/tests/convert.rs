@@ -1,6 +1,6 @@
 #[cfg(feature = "with-odata-params")]
 mod tests {
-    use odata_core::ast::*;
+    use modkit_odata::ast::*;
     use odata_params::filters as od;
 
     #[test]

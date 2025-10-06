@@ -288,7 +288,7 @@ async fn test_rest_api_list_users() -> Result<()> {
     assert_eq!(response.status(), StatusCode::OK);
 
     let body = axum::body::to_bytes(response.into_body(), usize::MAX).await?;
-    let user_page: odata_core::Page<users_info::api::rest::dto::UserDto> =
+    let user_page: modkit_odata::Page<users_info::api::rest::dto::UserDto> =
         serde_json::from_slice(&body)?;
 
     // default paging is defined by pagination LimitCfg::default()
@@ -349,21 +349,22 @@ async fn test_rest_api_invalid_odata_filter() -> Result<()> {
         .unwrap();
 
     let response = router.clone().oneshot(request).await.unwrap();
-    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    // OData errors return 422 (Unprocessable Entity) per GTS catalog
+    assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
 
     let body = axum::body::to_bytes(response.into_body(), usize::MAX).await?;
     let problem: serde_json::Value = serde_json::from_slice(&body)?;
 
-    // Verify it's the correct error type for invalid filter
+    // Verify it's the correct error type for invalid filter (GTS catalog format)
     assert_eq!(
         problem["type"],
-        "https://errors.example.com/ODATA_FILTER_INVALID"
+        "https://errors.example.com/gts.hx.core.errors.err.v1~hx.odata.errors.invalid_filter.v1"
     );
-    assert_eq!(problem["title"], "Filter error");
+    assert_eq!(problem["title"], "Invalid Filter");
     assert!(problem["detail"]
         .as_str()
         .unwrap()
-        .contains("unknown field"));
+        .contains("Invalid $filter"));
 
     // Test with another type of invalid filter - type mismatch
     let request = Request::builder()
@@ -373,17 +374,18 @@ async fn test_rest_api_invalid_odata_filter() -> Result<()> {
         .unwrap();
 
     let response = router.oneshot(request).await.unwrap();
-    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    // OData errors return 422 (Unprocessable Entity) per GTS catalog
+    assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
 
     let body = axum::body::to_bytes(response.into_body(), usize::MAX).await?;
     let problem: serde_json::Value = serde_json::from_slice(&body)?;
 
-    // Should still be the same error type
+    // Should still be the same error type (GTS catalog format)
     assert_eq!(
         problem["type"],
-        "https://errors.example.com/ODATA_FILTER_INVALID"
+        "https://errors.example.com/gts.hx.core.errors.err.v1~hx.odata.errors.invalid_filter.v1"
     );
-    assert_eq!(problem["title"], "Filter error");
+    assert_eq!(problem["title"], "Invalid Filter");
 
     Ok(())
 }

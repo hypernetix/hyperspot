@@ -2064,8 +2064,10 @@ dependencies = [
  "hyper",
  "inventory",
  "modkit-db",
+ "modkit-errors",
+ "modkit-errors-macro",
  "modkit-macros",
- "odata-core",
+ "modkit-odata",
  "odata-params",
  "opentelemetry",
  "opentelemetry-otlp",
@@ -2107,7 +2109,7 @@ dependencies = [
  "dsn",
  "figment",
  "humantime-serde",
- "odata-core",
+ "modkit-odata",
  "regex",
  "rust_decimal",
  "ryu",
@@ -2128,6 +2130,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "modkit-errors"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "serde",
+ "utoipa",
+]
+
+[[package]]
+name = "modkit-errors-macro"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "serde",
+ "serde_json",
+ "syn 2.0.106",
+ "trybuild",
+]
+
+[[package]]
 name = "modkit-macros"
 version = "0.1.0"
 dependencies = [
@@ -2138,10 +2161,31 @@ dependencies = [
  "modkit",
  "proc-macro2",
  "quote",
+ "strsim",
  "syn 2.0.106",
  "tokio",
  "tokio-util",
  "trybuild",
+]
+
+[[package]]
+name = "modkit-odata"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "bigdecimal",
+ "chrono",
+ "hex",
+ "http",
+ "modkit-errors",
+ "modkit-errors-macro",
+ "odata-params",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror 1.0.69",
+ "utoipa",
+ "uuid",
 ]
 
 [[package]]
@@ -2292,21 +2336,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ff76201f031d8863c38aa7f905eca4f53abbfa15f609db4277d44cd8938f33fe"
 dependencies = [
  "memchr",
-]
-
-[[package]]
-name = "odata-core"
-version = "0.1.0"
-dependencies = [
- "base64 0.22.1",
- "bigdecimal",
- "chrono",
- "odata-params",
- "serde",
- "serde_json",
- "thiserror 1.0.69",
- "utoipa",
- "uuid",
 ]
 
 [[package]]
@@ -4991,11 +5020,14 @@ dependencies = [
  "axum",
  "chrono",
  "futures",
+ "http",
  "httpmock",
  "inventory",
  "modkit",
  "modkit-db",
- "odata-core",
+ "modkit-errors",
+ "modkit-errors-macro",
+ "modkit-odata",
  "once_cell",
  "opentelemetry",
  "opentelemetry_sdk",

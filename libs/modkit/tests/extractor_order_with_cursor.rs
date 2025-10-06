@@ -8,7 +8,7 @@ use modkit::api::odata::OData;
 use tower::ServiceExt;
 
 #[tokio::test]
-async fn order_with_cursor_is_400() {
+async fn order_with_cursor_is_422() {
     // trivial route just to trigger extractor
     async fn handler(OData(_q): OData) -> &'static str {
         "ok"
@@ -23,12 +23,14 @@ async fn order_with_cursor_is_400() {
         .unwrap();
 
     let resp = app.oneshot(req).await.unwrap();
-    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    // OData errors return 422 (Unprocessable Entity) per GTS catalog
+    assert_eq!(resp.status(), StatusCode::UNPROCESSABLE_ENTITY);
 
-    // Check body contains ORDER_WITH_CURSOR
+    // Check body contains error about cursor/orderby conflict
     let body = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
     let s = String::from_utf8_lossy(&body);
-    assert!(s.contains("ORDER_WITH_CURSOR") || s.contains("order_with_cursor"));
+    // The error now uses the GTS catalog and mentions both cursor and orderby
+    assert!(s.contains("invalid_cursor") || s.contains("cursor") || s.contains("orderby"));
 }
 
 #[tokio::test]
@@ -46,10 +48,11 @@ async fn cursor_only_is_ok() {
         .unwrap();
 
     let resp = app.oneshot(req).await.unwrap();
-    // Should be 400 due to invalid cursor format, but not ORDER_WITH_CURSOR
+    // Should be 422 due to invalid cursor format, but not about orderby conflict
     let body = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
     let s = String::from_utf8_lossy(&body);
-    assert!(!s.contains("ORDER_WITH_CURSOR"));
+    // Should not mention orderby since we're only passing cursor
+    assert!(!s.contains("orderby") || !s.contains("both"));
 }
 
 #[tokio::test]

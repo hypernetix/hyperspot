@@ -4,7 +4,7 @@
 mod tests {
     use super::super::odata::*;
     use axum::http::{request::Parts, Uri};
-    use odata_core::{CursorV1, SortDir};
+    use modkit_odata::{CursorV1, SortDir};
 
     fn mock_parts(query_string: &str) -> Parts {
         let uri: Uri = format!("http://example.com/test?{}", query_string)

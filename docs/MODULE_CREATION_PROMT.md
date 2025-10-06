@@ -11,7 +11,7 @@ From an OpenAPI 3.x spec, generate a Hyperspot module that:
 (2) Implements ModKit "rest" + "db" capabilities with DbModule::migrate(),
 (3) Wires typed config, Service, Repository (SeaORM) and native Client trait,
 (4) Registers ALL routes in ONE function via OperationBuilder,
-(5) Uses Problem/ProblemResponse + centralized error mapping,
+(5) Uses Problem (implements IntoResponse) + centralized error mapping,
 (6) Keeps contract models clean (no serde).
 
 INPUTS
@@ -34,9 +34,9 @@ Scan REF_MODULE_PATH and mirror EXACTLY:
   `router = router.layer(Extension(service.clone()));`
 - OperationBuilder call order (match reference): describe params → `.handler(...)` → success/error responses → `.register(...)`.
 - Handler returns:
-  - GET/200 with body → `Result<Json<T>, ProblemResponse>`
-  - POST/201 with body → `Result<(StatusCode, Json<T>), ProblemResponse>`
-  - 204 → `Result<StatusCode, ProblemResponse>` (NO body)
+  - GET/200 with body → `Result<Json<T>, Problem>`
+  - POST/201 with body → `Result<(StatusCode, Json<T>), Problem>`
+  - 204 → `Result<StatusCode, Problem>` (NO body)
 - Imports/visibilities: public exports in lib.rs exactly like reference; internal modules `#[doc(hidden)]`.
 - Cargo deps/feature flags (serde/uuid/chrono features etc.) — mirror the reference.
 - operation_id naming style — replicate reference (e.g., `<crate>.<resource>.<action>`).
@@ -216,13 +216,13 @@ STEP 8 — HANDLERS (api/rest/handlers.rs)
 - Query → `Query<TParams>`.
 - Body (application/json) → `Json<ReqDto>`.
 - Returns:
-- GET/200 with body → `Result<Json<RespDto>, ProblemResponse>`
-- POST/201 with body → `Result<(StatusCode, Json<RespDto>), ProblemResponse>`
-- 204 → `Result<StatusCode, ProblemResponse>`
+- GET/200 with body → `Result<Json<RespDto>, Problem>`
+- POST/201 with body → `Result<(StatusCode, Json<RespDto>), Problem>`
+- 204 → `Result<StatusCode, Problem>`
 - Map domain errors via centralized `api/rest/error.rs`:
 ````
 
-pub fn map\_domain\_error(e: \&contract::error::<...>Error, instance: \&str) -> ProblemResponse
+pub fn map\_domain\_error(e: \&contract::error::<...>Error, instance: \&str) -> Problem
 
 ```
 - NEVER invent response DTOs when OpenAPI response has NO `content`. Return `StatusCode` only.
@@ -240,8 +240,8 @@ STEP 10 — ERROR MAPPING (api/rest/error.rs)
 
 \#\[derive(thiserror::Error, Debug, Clone)]
 pub enum RestError { ... } // optional, if reference has it
-pub fn from\_parts(status: StatusCode, code: \&str, title: \&str, detail: impl Into<String>, instance: \&str) -> ProblemResponse
-pub fn map\_domain\_error(e: \&contract::error::<...>Error, instance: \&str) -> ProblemResponse
+pub fn from\_parts(status: StatusCode, code: \&str, title: \&str, detail: impl Into<String>, instance: \&str) -> Problem
+pub fn map\_domain\_error(e: \&contract::error::<...>Error, instance: \&str) -> Problem
 
 ```
 - Use `instance` = the request path; include meaningful `title/detail`.

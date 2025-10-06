@@ -8,7 +8,7 @@ use crate::contract::{
     model::{NewUser, User, UserPatch},
 };
 use crate::domain::service::Service;
-use odata_core::{ODataQuery, Page};
+use modkit_odata::{ODataQuery, Page};
 
 /// Local implementation of the UsersInfoApi trait that delegates to the domain service
 pub struct UsersInfoLocalClient {
@@ -28,10 +28,12 @@ impl UsersInfoApi for UsersInfoLocalClient {
     }
 
     async fn list_users(&self, query: ODataQuery) -> Result<Page<User>, UsersInfoError> {
-        self.service
-            .list_users_page(query)
-            .await
-            .map_err(Into::into)
+        self.service.list_users_page(query).await.map_err(|e| {
+            // OData errors at this layer are unexpected (query construction errors)
+            // Log and convert to internal error
+            tracing::error!(error = ?e, "Unexpected OData error in gateway");
+            UsersInfoError::internal()
+        })
     }
 
     async fn create_user(&self, new_user: NewUser) -> Result<User, UsersInfoError> {

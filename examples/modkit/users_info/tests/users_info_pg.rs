@@ -90,7 +90,7 @@ async fn test_repository_operations(db_conn: &sea_orm::DatabaseConnection) -> Re
     assert_eq!(found_updated.display_name, "Updated Name");
 
     // Test list users with pagination
-    let query = odata_core::ODataQuery::default();
+    let query = modkit_odata::ODataQuery::default();
     let page = repo
         .list_users_page(&query)
         .await
@@ -180,7 +180,7 @@ async fn test_service_operations(db_conn: &sea_orm::DatabaseConnection) -> Resul
     assert_eq!(found_user.id, user.id);
 
     // Test list users through service
-    let query = odata_core::ODataQuery::default();
+    let query = modkit_odata::ODataQuery::default();
     let page = service
         .list_users_page(query)
         .await

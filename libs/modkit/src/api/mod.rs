@@ -7,25 +7,27 @@
 pub mod error;
 pub mod error_layer;
 pub mod odata;
-pub mod odata_policy_tests;
 pub mod operation_builder;
-pub mod pagination;
 pub mod problem;
 pub mod response;
+pub mod trace_layer;
+
+#[cfg(test)]
+mod odata_policy_tests;
 
 pub use error::ApiError;
 pub use error_layer::{
-    error_mapping_middleware, extract_trace_id, map_error_to_problem, IntoProblemResponse,
+    error_mapping_middleware, extract_trace_id, map_error_to_problem, IntoProblem,
 };
 pub use operation_builder::{
     ensure_schema, state, Missing, OpenApiRegistry, OperationBuilder, OperationSpec, ParamLocation,
     ParamSpec, Present, ResponseSpec,
 };
-pub use pagination::{normalize_filter_for_hash, short_filter_hash};
 pub use problem::{
-    bad_request, conflict, internal_error, not_found, Problem, ProblemResponse, ValidationError,
+    bad_request, conflict, internal_error, not_found, Problem, ValidationError,
     APPLICATION_PROBLEM_JSON,
 };
+pub use trace_layer::{WithRequestContext, WithTraceContext};
 
 /// Prelude module that re-exports common API types and utilities for module authors
 pub mod prelude {

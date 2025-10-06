@@ -1,0 +1,22 @@
+[
+  {
+    "status": 422,
+    "title": "Invalid Filter",
+    "code": "gts.hx.core.errors.err.v1~hx.odata.errors.invalid_filter.v1"
+  },
+  {
+    "status": 422,
+    "title": "Invalid OrderBy",
+    "code": "gts.hx.core.errors.err.v1~hx.odata.errors.invalid_orderby.v1"
+  },
+  {
+    "status": 422,
+    "title": "Invalid Cursor",
+    "code": "gts.hx.core.errors.err.v1~hx.odata.errors.invalid_cursor.v1"
+  },
+  {
+    "status": 500,
+    "title": "Internal OData Error",
+    "code": "gts.hx.core.errors.err.v1~hx.odata.errors.internal.v1"
+  }
+]

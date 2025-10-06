@@ -27,7 +27,7 @@ sea-orm = { version = "1", optional = true, default-features = false, features =
 thiserror = "2.0"
 tracing = "0.1"
 uuid = { version = "1.18.1", features = ["v4", "serde"] }
-odata-core = { path = "../odata-core" }
+modkit-odata = { path = "../modkit-odata" }
 bigdecimal = "0.4"
 rust_decimal = { version = "1", features = ["serde"] }
 ryu = "1"

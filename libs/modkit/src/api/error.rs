@@ -1,6 +1,6 @@
-use crate::api::problem::ProblemResponse;
+use crate::api::problem::Problem;
 use axum::response::IntoResponse;
-use odata_core::Error as ODataError;
+use modkit_odata::Error as ODataError;
 
 /// Unified API error type that handles all errors at the API boundary
 ///
@@ -41,17 +41,17 @@ impl<D> From<ODataError> for ApiError<D> {
 
 impl<D> IntoResponse for ApiError<D>
 where
-    D: Into<ProblemResponse>,
+    D: Into<Problem>,
 {
     fn into_response(self) -> axum::response::Response {
         match self {
             ApiError::OData(e) => {
                 // Use fallback instance "/" if no request context available
                 // In real apps, this could be improved to get actual request path
-                crate::api::odata::odata_error_to_problem(&e, "/").into_response()
+                crate::api::odata::error::odata_error_to_problem(&e, "/", None).into_response()
             }
             ApiError::Domain(e) => {
-                // Convert the domain error to a ProblemResponse
+                // Convert the domain error to a Problem, which then becomes a response
                 e.into().into_response()
             }
         }

@@ -12,7 +12,9 @@ members = [
     "libs/modkit",
     "libs/modkit/macros",
     "libs/modkit-db",
-    "libs/odata-core",
+    "libs/modkit-errors",
+    "libs/modkit-errors-macro",
+    "libs/modkit-odata",
     "modules/api_ingress",
     "examples/modkit/users_info"
 ]
