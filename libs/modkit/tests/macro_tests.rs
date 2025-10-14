@@ -5,11 +5,30 @@ use async_trait::async_trait;
 use tokio_util::sync::CancellationToken;
 
 use modkit::{
-    context::ModuleCtxBuilder,
+    context::{ConfigProvider, ModuleCtx},
     contracts::{DbModule, Module, OpenApiRegistry, RestHostModule, RestfulModule, StatefulModule},
     module,
     registry::ModuleRegistry,
 };
+use std::sync::Arc;
+
+// Helper for tests
+struct EmptyConfigProvider;
+impl ConfigProvider for EmptyConfigProvider {
+    fn get_module_config(&self, _module_name: &str) -> Option<&serde_json::Value> {
+        None
+    }
+}
+
+fn test_module_ctx(cancel: tokio_util::sync::CancellationToken) -> ModuleCtx {
+    ModuleCtx::new(
+        "test",
+        Arc::new(EmptyConfigProvider),
+        Arc::new(modkit::client_hub::ClientHub::default()),
+        cancel,
+        None,
+    )
+}
 
 /// Minimal OpenAPI registry mock
 #[derive(Default)]
@@ -229,7 +248,7 @@ impl StatefulModule for StatefulOnlyModule {
 #[tokio::test]
 async fn test_basic_macro_and_init() {
     assert_eq!(BasicModule::MODULE_NAME, "basic");
-    let ctx = ModuleCtxBuilder::new(CancellationToken::new()).build();
+    let ctx = test_module_ctx(CancellationToken::new());
     BasicModule.init(&ctx).await.unwrap();
 }
 
@@ -244,7 +263,7 @@ async fn test_custom_ctor_name_and_value() {
 async fn test_full_capabilities() {
     assert_eq!(FullFeaturedModule::MODULE_NAME, "full_featured");
 
-    let ctx = ModuleCtxBuilder::new(CancellationToken::new()).build();
+    let ctx = test_module_ctx(CancellationToken::new());
     FullFeaturedModule.init(&ctx).await.unwrap();
 
     // REST sync phase
@@ -267,7 +286,7 @@ async fn test_registry_discovery_and_phases() {
 
     // Build ctx
     let cancel = CancellationToken::new();
-    let ctx = ModuleCtxBuilder::new(cancel.clone()).build();
+    let ctx = test_module_ctx(cancel.clone());
 
     // init → REST → start → stop
     registry.run_init_phase(&ctx).await.unwrap();

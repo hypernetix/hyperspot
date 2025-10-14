@@ -1,14 +1,24 @@
-# Clippy configuration for style enforcement
-# Keep thresholds reasonable for a modular workspace
-too-many-arguments-threshold = 8
-type-complexity-threshold = 120
-cognitive-complexity-threshold = 30
+# Clippy configuration for enforcing secure ORM usage
+#
+# These rules help prevent accidental bypasses of the secure ORM layer
+# by disallowing direct execution of SeaORM queries without scoping.
 
-# Treat warnings as errors in CI; allow opting out per lint below
-warn-on-all-wildcard-imports = true
+# Disallow direct execution methods that bypass secure wrappers
+disallowed-methods = [
+    # Select operations - must use SecureSelect
+    { path = "sea_orm::Select::all", reason = "Use SecureSelect::all() after .secure().scope_with()" },
+    { path = "sea_orm::Select::one", reason = "Use SecureSelect::one() after .secure().scope_with()" },
+    { path = "sea_orm::Select::count", reason = "Use SecureSelect::count() after .secure().scope_with()" },
+    
+    # Update operations - must use SecureUpdateMany
+    { path = "sea_orm::UpdateMany::exec", reason = "Use SecureUpdateMany::exec() after .secure().scope_with()" },
+    
+    # Delete operations - must use SecureDeleteMany
+    { path = "sea_orm::DeleteMany::exec", reason = "Use SecureDeleteMany::exec() after .secure().scope_with()" },
+]
 
-# You can allow specific lints here if they get too noisy across the workspace
-# For example:
-# allow = [
-#   "module_name_repetitions",
-# ]
+# Note: To enable these checks in a crate, add to the crate root:
+# #![deny(clippy::disallowed_methods)]
+#
+# Or enable warnings instead:
+# #![warn(clippy::disallowed_methods)]

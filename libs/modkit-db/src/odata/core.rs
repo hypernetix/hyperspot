@@ -834,6 +834,7 @@ where
     // Apply limit
     s = s.limit(fetch);
 
+    #[allow(clippy::disallowed_methods)]
     let mut rows = s
         .all(conn)
         .await

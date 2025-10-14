@@ -5,10 +5,28 @@ mod module_tests {
     use tokio_util::sync::CancellationToken;
 
     use crate::{
-        context::ModuleCtxBuilder,
+        context::{ConfigProvider, ModuleCtx},
         contracts::{Module, OpenApiRegistry, RestHostModule, RestfulModule},
         registry::{ModuleRegistry, RegistryBuilder, RegistryError},
     };
+
+    // Helper to create a test ModuleCtx
+    struct EmptyConfigProvider;
+    impl ConfigProvider for EmptyConfigProvider {
+        fn get_module_config(&self, _module_name: &str) -> Option<&serde_json::Value> {
+            None
+        }
+    }
+
+    fn test_module_ctx(cancel: CancellationToken) -> ModuleCtx {
+        ModuleCtx::new(
+            "test",
+            Arc::new(EmptyConfigProvider),
+            Arc::new(crate::client_hub::ClientHub::default()),
+            cancel,
+            None,
+        )
+    }
 
     // Minimal OpenAPI mock for REST phase
     struct MockOpenApi;
@@ -135,9 +153,9 @@ mod module_tests {
         // Build empty registry (no inventory modules in this unit test)
         let registry = ModuleRegistry::discover_and_build().expect("registry builds");
 
-        // Build scoped context via crate-private builder
+        // Build scoped context
         let cancel = CancellationToken::new();
-        let ctx = ModuleCtxBuilder::new(cancel.clone()).build();
+        let ctx = test_module_ctx(cancel.clone());
 
         // init
         registry
@@ -174,7 +192,7 @@ mod module_tests {
         let registry = builder.build_topo_sorted().expect("registry should build");
 
         let cancel = CancellationToken::new();
-        let ctx = ModuleCtxBuilder::new(cancel).build();
+        let ctx = test_module_ctx(cancel);
 
         let router = Router::new();
         // Should fail with specific error type
@@ -203,7 +221,7 @@ mod module_tests {
         let registry = builder.build_topo_sorted().expect("registry should build");
 
         let cancel = CancellationToken::new();
-        let ctx = ModuleCtxBuilder::new(cancel).build();
+        let ctx = test_module_ctx(cancel);
 
         let router = Router::new();
         // Should succeed
@@ -281,7 +299,7 @@ mod module_tests {
         let registry = builder.build_topo_sorted().expect("registry should build");
 
         let cancel = CancellationToken::new();
-        let ctx = ModuleCtxBuilder::new(cancel).build();
+        let ctx = test_module_ctx(cancel);
 
         let router = Router::new();
         // Should succeed and return router unchanged
@@ -313,7 +331,7 @@ mod module_tests {
         let registry = builder.build_topo_sorted().expect("registry should build");
 
         let cancel = CancellationToken::new();
-        let ctx = ModuleCtxBuilder::new(cancel).build();
+        let ctx = test_module_ctx(cancel);
 
         let router = Router::new();
         // Run REST phase

@@ -72,8 +72,8 @@ pub use inventory;
 pub use crate::contracts::*;
 pub mod context;
 pub use context::{
-    module_config_typed, ConfigError, ConfigProvider, ConfigProviderExt, ModuleCtx,
-    ModuleCtxBuilder,
+    module_config_typed, ConfigError, ConfigProvider, ConfigProviderExt, ModuleContextBuilder,
+    ModuleCtx,
 };
 
 // Module system implementations for macro code

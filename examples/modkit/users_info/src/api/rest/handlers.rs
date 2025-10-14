@@ -10,10 +10,39 @@ use modkit::api::prelude::*;
 use crate::domain::service::Service;
 use modkit::SseBroadcaster;
 
+// Import SecurityCtx from modkit_db
+use modkit_db::secure::SecurityCtx;
+
 // Type aliases for our specific API with DomainError
 use crate::domain::error::DomainError;
 type UsersResult<T> = ApiResult<T, DomainError>;
 type UsersApiError = ApiError<DomainError>;
+
+/// Create a fake security context for demonstration purposes.
+///
+/// In a real application, this would be extracted from:
+/// - JWT claims (tenant_id, user_id)
+/// - Session cookies
+/// - API key headers
+/// - OAuth tokens
+///
+/// For now, we simulate a single-tenant context with a fake subject ID.
+///
+/// # TODO
+/// - Integrate with actual auth middleware
+/// - Extract tenant from JWT claims
+/// - Handle multi-tenant scenarios
+/// - Add role-based access control
+fn fake_ctx_from_request() -> SecurityCtx {
+    // In production: extract from JWT, session, or auth middleware
+    // For now: simulate access for a default tenant
+    let fake_tenant_id = Uuid::parse_str("00000000-0000-0000-0000-000000000001")
+        .expect("valid UUID for fake tenant");
+    let fake_user_id =
+        Uuid::parse_str("00000000-0000-0000-0000-000000000002").expect("valid UUID for fake user");
+
+    SecurityCtx::for_tenant(fake_tenant_id, fake_user_id)
+}
 
 /// List users with cursor-based pagination
 #[tracing::instrument(
@@ -30,7 +59,11 @@ pub async fn list_users(
 ) -> UsersResult<JsonPage<UserDto>> {
     info!("Listing users with cursor pagination");
 
-    let page = svc.list_users_page(query).await?.map_items(UserDto::from);
+    let ctx = fake_ctx_from_request();
+    let page = svc
+        .list_users_page(&ctx, query)
+        .await?
+        .map_items(UserDto::from);
     Ok(Json(page))
 }
 
@@ -49,7 +82,11 @@ pub async fn get_user(
 ) -> UsersResult<JsonBody<UserDto>> {
     info!("Getting user with id: {}", id);
 
-    let user = svc.get_user(id).await.map_err(UsersApiError::from_domain)?;
+    let ctx = fake_ctx_from_request();
+    let user = svc
+        .get_user(&ctx, id)
+        .await
+        .map_err(UsersApiError::from_domain)?;
     Ok(Json(UserDto::from(user)))
 }
 
@@ -69,9 +106,10 @@ pub async fn create_user(
 ) -> UsersResult<impl IntoResponse> {
     info!("Creating user: {:?}", req_body);
 
+    let ctx = fake_ctx_from_request();
     let new_user = req_body.into();
     let user = svc
-        .create_user(new_user)
+        .create_user(&ctx, new_user)
         .await
         .map_err(UsersApiError::from_domain)?;
     Ok(created_json(UserDto::from(user)))
@@ -93,9 +131,10 @@ pub async fn update_user(
 ) -> UsersResult<JsonBody<UserDto>> {
     info!("Updating user {} with: {:?}", id, req_body);
 
+    let ctx = fake_ctx_from_request();
     let patch = req_body.into();
     let user = svc
-        .update_user(id, patch)
+        .update_user(&ctx, id, patch)
         .await
         .map_err(UsersApiError::from_domain)?;
     Ok(Json(UserDto::from(user)))
@@ -116,7 +155,8 @@ pub async fn delete_user(
 ) -> UsersResult<impl IntoResponse> {
     info!("Deleting user: {}", id);
 
-    svc.delete_user(id)
+    let ctx = fake_ctx_from_request();
+    svc.delete_user(&ctx, id)
         .await
         .map_err(UsersApiError::from_domain)?;
     Ok(no_content())

@@ -96,7 +96,7 @@ pub struct MyModuleConfig { /* fields */ }
 **DB access (SeaORM / SQLx)**
 
 ```rust
-let sea = db.seaorm();      // SeaORM connection
+let sea = db.sea();      // SeaORM connection
 let pool = db.sqlx_pool();  // SQLx pool
 ```
 

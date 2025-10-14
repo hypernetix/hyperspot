@@ -2109,7 +2109,9 @@ dependencies = [
  "dsn",
  "figment",
  "humantime-serde",
+ "modkit-db-macros",
  "modkit-odata",
+ "modkit-security",
  "regex",
  "rust_decimal",
  "ryu",
@@ -2127,6 +2129,18 @@ dependencies = [
  "url",
  "uuid",
  "xxhash-rust",
+]
+
+[[package]]
+name = "modkit-db-macros"
+version = "0.1.0"
+dependencies = [
+ "heck 0.5.0",
+ "proc-macro-error",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.106",
+ "trybuild",
 ]
 
 [[package]]
@@ -2185,6 +2199,14 @@ dependencies = [
  "sha2",
  "thiserror 1.0.69",
  "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "modkit-security"
+version = "0.1.0"
+dependencies = [
+ "serde",
  "uuid",
 ]
 
@@ -2797,6 +2819,30 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "219cb19e96be00ab2e37d6e299658a0cfa83e52429179969b0f0121b4ac46983"
 dependencies = [
  "toml_edit",
+]
+
+[[package]]
+name = "proc-macro-error"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "da25490ff9892aab3fcf7c36f08cfb902dd3e71ca0f9f9517bea02a73a5ce38c"
+dependencies = [
+ "proc-macro-error-attr",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+ "version_check",
+]
+
+[[package]]
+name = "proc-macro-error-attr"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a1be40180e52ecc98ad80b184934baf3d0d29f979574e439af5a55274b35f869"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "version_check",
 ]
 
 [[package]]
@@ -3522,6 +3568,8 @@ dependencies = [
  "dotenvy",
  "glob",
  "regex",
+ "sea-schema",
+ "sqlx",
  "tracing",
  "tracing-subscriber",
  "url",
@@ -3612,7 +3660,9 @@ checksum = "2239ff574c04858ca77485f112afea1a15e53135d3097d0c86509cef1def1338"
 dependencies = [
  "futures",
  "sea-query",
+ "sea-query-binder",
  "sea-schema-derive",
+ "sqlx",
 ]
 
 [[package]]

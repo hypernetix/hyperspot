@@ -9,11 +9,16 @@ authors.workspace = true
 pg = ["sqlx/postgres", "sea-orm?/sqlx-postgres"]
 mysql = ["sqlx/mysql", "sea-orm?/sqlx-mysql"]
 sqlite = ["sqlx/sqlite", "sea-orm?/sqlx-sqlite"]
-sea-orm = ["dep:sea-orm"]
+sea-orm = ["dep:sea-orm", "dep:modkit-db-macros"]
 integration = []
 
 # Default: sqlite + sea-orm for local development
 default = ["sqlite", "sea-orm"]
+
+# SECURITY: Escape hatch for administrative operations (OFF by default)
+# NEVER enable in production builds
+# Requires INSECURE_ESCAPE_ALLOW=1 environment variable at runtime
+insecure-escape = []
 
 [dependencies]
 anyhow = "1"
@@ -24,9 +29,11 @@ dirs = "6"
 chrono = { version = "0.4", features = ["serde", "clock"] }
 # optional ORM
 sea-orm = { version = "1", optional = true, default-features = false, features = ["runtime-tokio-rustls", "with-uuid", "with-chrono", "with-rust_decimal", "macros"] }
+modkit-db-macros = { path = "../modkit-db-macros", optional = true }
 thiserror = "2.0"
 tracing = "0.1"
 uuid = { version = "1.18.1", features = ["v4", "serde"] }
+modkit-security = { path = "../modkit-security", features = ["serde"] }
 modkit-odata = { path = "../modkit-odata" }
 bigdecimal = "0.4"
 rust_decimal = { version = "1", features = ["serde"] }

@@ -167,7 +167,7 @@ lifecycle(entry = "serve", stop\_timeout = "30s", await\_ready)
 - `impl Module::init` MUST:
 1) Read typed config: `let cfg = ctx.module_config::<crate::config::Config>()?;`
 2) Check DB presence: `let db = ctx.db().ok_or_else(|| anyhow::anyhow!("Database required"))?;`
-3) Build repos with SeaORM conn: `let conn = db.seaorm().clone(); let products_repo = Arc::new(SeaOrmProductsRepository::new(conn));`
+3) Build repos with SeaORM conn: `let conn = db.sea(); let products_repo = Arc::new(SeaOrmProductsRepository::new(conn));`
 4) Build `Service::new(...)` with repos, store it in `OnceCell<Arc<Service>>`.
 5) Publish NATIVE client to ClientHub (NOT REST): convert `Arc<Service>` into `Arc<dyn contract::client::<...>Api>` via a small `gateways::local` adapter, then call the auto-generated `expose_<module>_client(ctx, &api)?;`
 
@@ -175,7 +175,7 @@ lifecycle(entry = "serve", stop\_timeout = "30s", await\_ready)
 ```
 
 async fn migrate(\&self, db: \&db::DbHandle) -> anyhow::Result<()> {
-infra::storage::migrations::Migrator::up(db.seaorm(), None).await?;
+infra::storage::migrations::Migrator::up(db.sea(), None).await?;
 Ok(())
 }
 

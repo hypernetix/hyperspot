@@ -1,0 +1,19 @@
+[package]
+name = "modkit-db-macros"
+version = "0.1.0"
+edition = "2021"
+description = "Proc-macro derives for modkit-db secure ORM layer"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = { version = "2", features = ["full", "extra-traits"] }
+quote = "1"
+proc-macro2 = "1"
+heck = "0.5"
+proc-macro-error = "1"
+
+[dev-dependencies]
+trybuild = "1"
+

@@ -122,119 +122,117 @@ pub fn module_config_typed<T: DeserializeOwned>(
 
 #[derive(Clone)]
 pub struct ModuleCtx {
-    pub(crate) db: Option<Arc<modkit_db::DbHandle>>,
-    pub(crate) db_manager: Option<Arc<modkit_db::DbManager>>,
-    pub(crate) config_provider: Option<Arc<dyn ConfigProvider>>,
-    pub(crate) client_hub: Arc<crate::client_hub::ClientHub>,
-    pub(crate) cancellation_token: CancellationToken,
-    pub(crate) module_name: Option<Arc<str>>,
+    module_name: Arc<str>,
+    config_provider: Arc<dyn ConfigProvider>,
+    client_hub: Arc<crate::client_hub::ClientHub>,
+    cancellation_token: CancellationToken,
+    db_handle: Option<Arc<modkit_db::DbHandle>>,
 }
 
-// ---- construction/scoping (crate-private) ----
-// TODO: make it private (but need to fix test crate visibility issues)
-pub struct ModuleCtxBuilder {
-    inner: ModuleCtx,
+/// Builder for creating module-scoped contexts with resolved database handles.
+///
+/// This builder internally uses DbManager to resolve per-module DbHandle instances
+/// at build time, ensuring ModuleCtx contains only the final, ready-to-use handle.
+pub struct ModuleContextBuilder {
+    config_provider: Arc<dyn ConfigProvider>,
+    client_hub: Arc<crate::client_hub::ClientHub>,
+    root_token: CancellationToken,
+    db_manager: Option<Arc<modkit_db::DbManager>>, // internal only, never exposed to modules
 }
 
-impl ModuleCtxBuilder {
-    pub fn new(token: CancellationToken) -> Self {
+impl ModuleContextBuilder {
+    pub fn new(
+        config_provider: Arc<dyn ConfigProvider>,
+        client_hub: Arc<crate::client_hub::ClientHub>,
+        root_token: CancellationToken,
+        db_manager: Option<Arc<modkit_db::DbManager>>,
+    ) -> Self {
         Self {
-            inner: ModuleCtx::from_token(token),
+            config_provider,
+            client_hub,
+            root_token,
+            db_manager,
         }
     }
-    pub fn with_db(mut self, db: Arc<modkit_db::DbHandle>) -> Self {
-        self.inner.db = Some(db);
-        self
-    }
-    pub fn with_db_manager(mut self, db_manager: Arc<modkit_db::DbManager>) -> Self {
-        self.inner.db_manager = Some(db_manager);
-        self
-    }
-    pub fn with_config_provider(mut self, p: Arc<dyn ConfigProvider>) -> Self {
-        self.inner.config_provider = Some(p);
-        self
-    }
-    pub(crate) fn with_client_hub(mut self, hub: Arc<crate::client_hub::ClientHub>) -> Self {
-        self.inner.client_hub = hub;
-        self
-    }
-    pub fn build(self) -> ModuleCtx {
-        self.inner
+
+    /// Build a module-scoped context, resolving the DbHandle for the given module.
+    pub async fn for_module(&self, module_name: &str) -> anyhow::Result<ModuleCtx> {
+        let db_handle = if let Some(mgr) = &self.db_manager {
+            mgr.get(module_name).await?
+        } else {
+            None
+        };
+
+        Ok(ModuleCtx::new(
+            Arc::<str>::from(module_name),
+            self.config_provider.clone(),
+            self.client_hub.clone(),
+            self.root_token.child_token(),
+            db_handle,
+        ))
     }
 }
 
 impl ModuleCtx {
-    pub(crate) fn from_token(token: CancellationToken) -> Self {
+    /// Create a new module-scoped context with all required fields.
+    pub fn new(
+        module_name: impl Into<Arc<str>>,
+        config_provider: Arc<dyn ConfigProvider>,
+        client_hub: Arc<crate::client_hub::ClientHub>,
+        cancellation_token: CancellationToken,
+        db_handle: Option<Arc<modkit_db::DbHandle>>,
+    ) -> Self {
         Self {
-            db: None,
-            db_manager: None,
-            config_provider: None,
-            client_hub: Arc::new(crate::client_hub::ClientHub::default()),
-            cancellation_token: token,
-            module_name: None,
+            module_name: module_name.into(),
+            config_provider,
+            client_hub,
+            cancellation_token,
+            db_handle,
         }
-    }
-
-    /// Scope context to a specific module name (used by the registry).
-    pub(crate) fn for_module(mut self, name: &str) -> Self {
-        self.module_name = Some(Arc::<str>::from(name));
-        self
     }
 
     // ---- public read-only API for modules ----
-    pub fn db(&self) -> Option<&modkit_db::DbHandle> {
-        self.db.as_deref()
+
+    #[inline]
+    pub fn module_name(&self) -> &str {
+        &self.module_name
     }
 
-    pub fn db_required(&self) -> modkit_db::Result<&modkit_db::DbHandle> {
-        self.db.as_deref().ok_or_else(|| {
-            modkit_db::DbError::FeatureDisabled("Database not configured for this module")
-        })
+    #[inline]
+    pub fn config_provider(&self) -> &dyn ConfigProvider {
+        &*self.config_provider
     }
 
-    /// Get a database handle for this module using the DbManager.
-    /// Returns None if the module has no database configuration.
-    pub async fn db_async(&self) -> anyhow::Result<Option<Arc<modkit_db::DbHandle>>> {
-        match (&self.db_manager, &self.module_name) {
-            (Some(manager), Some(module_name)) => {
-                manager.get(module_name).await.map_err(anyhow::Error::from)
-            }
-            _ => Ok(None),
-        }
+    #[inline]
+    pub fn client_hub(&self) -> &crate::client_hub::ClientHub {
+        &self.client_hub
     }
 
-    /// Get a required database handle for this module using the DbManager.
-    /// Returns an error if the module has no database configuration.
-    pub async fn db_required_async(&self) -> anyhow::Result<Arc<modkit_db::DbHandle>> {
-        let module_name = self
-            .module_name
-            .as_deref()
-            .ok_or_else(|| anyhow::anyhow!("Module name not set in context"))?;
-
-        let manager = self
-            .db_manager
-            .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("Database manager not available"))?;
-
-        manager
-            .get(module_name)
-            .await
-            .map_err(anyhow::Error::from)?
-            .ok_or_else(|| {
-                anyhow::anyhow!("Database is not configured for module '{}'", module_name)
-            })
-    }
-
-    pub fn client_hub(&self) -> Arc<crate::client_hub::ClientHub> {
-        self.client_hub.clone()
-    }
-
+    #[inline]
     pub fn cancellation_token(&self) -> &CancellationToken {
         &self.cancellation_token
     }
 
+    pub fn db_optional(&self) -> Option<Arc<modkit_db::DbHandle>> {
+        self.db_handle.clone()
+    }
+
+    pub fn db_required(&self) -> anyhow::Result<Arc<modkit_db::DbHandle>> {
+        self.db_handle.clone().ok_or_else(|| {
+            anyhow::anyhow!(
+                "Database is not configured for module '{}'",
+                self.module_name
+            )
+        })
+    }
+
+    // Legacy compatibility methods
+    pub fn db(&self) -> Option<&modkit_db::DbHandle> {
+        self.db_handle.as_deref()
+    }
+
     pub fn current_module(&self) -> Option<&str> {
-        self.module_name.as_deref()
+        Some(&self.module_name)
     }
 
     /// Deserialize the module's config section into T.
@@ -254,21 +252,7 @@ impl ModuleCtx {
     /// let config: MyConfig = ctx.config()?;
     /// ```
     pub fn config<T: DeserializeOwned>(&self) -> Result<T, ConfigError> {
-        let name = self
-            .module_name
-            .as_deref()
-            .ok_or_else(|| ConfigError::ModuleNotFound {
-                module: "unknown".to_string(),
-            })?;
-
-        let prov = self
-            .config_provider
-            .as_ref()
-            .ok_or_else(|| ConfigError::ModuleNotFound {
-                module: name.to_string(),
-            })?;
-
-        module_config_typed(prov.as_ref(), name)
+        module_config_typed(self.config_provider.as_ref(), &self.module_name)
     }
 
     /// Get the raw JSON value of the module's config section.
@@ -279,32 +263,26 @@ impl ModuleCtx {
         static EMPTY: LazyLock<serde_json::Value> =
             LazyLock::new(|| serde_json::Value::Object(serde_json::Map::new()));
 
-        match (&self.module_name, &self.config_provider) {
-            (Some(name), Some(prov)) => {
-                if let Some(module_raw) = prov.get_module_config(name) {
-                    // Try new structure first: modules.<name> = { database: ..., config: ... }
-                    if let Some(obj) = module_raw.as_object() {
-                        if let Some(config_section) = obj.get("config") {
-                            return config_section;
-                        }
-                    }
+        if let Some(module_raw) = self.config_provider.get_module_config(&self.module_name) {
+            // Try new structure first: modules.<name> = { database: ..., config: ... }
+            if let Some(obj) = module_raw.as_object() {
+                if let Some(config_section) = obj.get("config") {
+                    return config_section;
                 }
-                &EMPTY
             }
-            _ => &EMPTY,
         }
+        &EMPTY
     }
 
     /// Create a derivative context with the same references but a different DB handle.
     /// This allows reusing the stable base context while providing per-module DB access.
     pub fn with_db(&self, db: Arc<modkit_db::DbHandle>) -> ModuleCtx {
         ModuleCtx {
-            db: Some(db),
-            db_manager: self.db_manager.clone(),
+            module_name: self.module_name.clone(),
             config_provider: self.config_provider.clone(),
             client_hub: self.client_hub.clone(),
             cancellation_token: self.cancellation_token.clone(),
-            module_name: self.module_name.clone(),
+            db_handle: Some(db),
         }
     }
 
@@ -312,12 +290,11 @@ impl ModuleCtx {
     /// Useful for modules that don't require database access.
     pub fn without_db(&self) -> ModuleCtx {
         ModuleCtx {
-            db: None,
-            db_manager: self.db_manager.clone(),
+            module_name: self.module_name.clone(),
             config_provider: self.config_provider.clone(),
             client_hub: self.client_hub.clone(),
             cancellation_token: self.cancellation_token.clone(),
-            module_name: self.module_name.clone(),
+            db_handle: None,
         }
     }
 }
@@ -462,10 +439,13 @@ mod tests {
     #[test]
     fn test_module_ctx_config() {
         let provider = Arc::new(MockConfigProvider::new());
-        let ctx = ModuleCtxBuilder::new(CancellationToken::new())
-            .with_config_provider(provider)
-            .build()
-            .for_module("test_module");
+        let ctx = ModuleCtx::new(
+            "test_module",
+            provider,
+            Arc::new(crate::client_hub::ClientHub::default()),
+            CancellationToken::new(),
+            None,
+        );
 
         let result: Result<TestConfig, ConfigError> = ctx.config();
         assert!(result.is_ok());

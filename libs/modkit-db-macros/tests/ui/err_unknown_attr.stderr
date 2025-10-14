@@ -1,0 +1,11 @@
+error: Unknown attribute 'does_not_exist'. Valid attributes: tenant_col, resource_col, owner_col, entity, unrestricted
+ --> tests/ui/err_unknown_attr.rs:6:10
+  |
+6 | #[secure(does_not_exist = "oops")]
+  |          ^^^^^^^^^^^^^^
+
+error[E0601]: `main` function not found in crate `$CRATE`
+ --> tests/ui/err_unknown_attr.rs:7:14
+  |
+7 | struct Model;
+  |              ^ consider adding a `main` function to `$DIR/tests/ui/err_unknown_attr.rs`

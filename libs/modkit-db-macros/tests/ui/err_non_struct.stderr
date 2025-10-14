@@ -1,0 +1,11 @@
+error: #[derive(Scopable)] can only be applied to structs
+ --> tests/ui/err_non_struct.rs:6:1
+  |
+6 | enum NotAStruct {
+  | ^^^^
+
+error[E0601]: `main` function not found in crate `$CRATE`
+ --> tests/ui/err_non_struct.rs:9:2
+  |
+9 | }
+  |  ^ consider adding a `main` function to `$DIR/tests/ui/err_non_struct.rs`

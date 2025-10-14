@@ -9,6 +9,7 @@ use crate::contract::model::{NewUser, User, UserPatch};
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct UserDto {
     pub id: Uuid,
+    pub tenant_id: Uuid,
     pub email: String,
     pub display_name: String,
     pub created_at: DateTime<Utc>,
@@ -34,6 +35,7 @@ impl From<User> for UserDto {
     fn from(user: User) -> Self {
         Self {
             id: user.id,
+            tenant_id: user.tenant_id,
             email: user.email,
             display_name: user.display_name,
             created_at: user.created_at,

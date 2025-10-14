@@ -10,9 +10,31 @@ use axum::{
     routing::get,
     Router,
 };
-use modkit::{contracts::OpenApiRegistry, Module, RestfulModule};
+use modkit::{
+    context::ConfigProvider, contracts::OpenApiRegistry, Module, ModuleCtx, RestfulModule,
+};
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use utoipa::ToSchema;
+
+/// Helper to create a test ModuleCtx
+struct EmptyConfigProvider;
+
+impl ConfigProvider for EmptyConfigProvider {
+    fn get_module_config(&self, _module: &str) -> Option<&serde_json::Value> {
+        None
+    }
+}
+
+fn create_test_module_ctx() -> ModuleCtx {
+    ModuleCtx::new(
+        "test_module",
+        Arc::new(EmptyConfigProvider),
+        Arc::new(modkit::ClientHub::new()),
+        tokio_util::sync::CancellationToken::new(),
+        None, // No database handle for these tests
+    )
+}
 
 /// Test user structure
 #[derive(Serialize, Deserialize, ToSchema, Debug, Clone)]
@@ -138,8 +160,8 @@ async fn test_operation_builder_integration() {
     let router = Router::new();
 
     let test_module = TestUsersModule;
-    let ctx =
-        modkit::context::ModuleCtxBuilder::new(tokio_util::sync::CancellationToken::new()).build();
+    // Create a test ModuleCtx directly for testing
+    let ctx = create_test_module_ctx();
     let _final_router = test_module
         .register_rest(&ctx, router, &registry)
         .expect("Failed to register routes");
@@ -155,8 +177,7 @@ async fn test_schema_registration() {
     let router = Router::new();
 
     let test_module = TestUsersModule;
-    let ctx =
-        modkit::context::ModuleCtxBuilder::new(tokio_util::sync::CancellationToken::new()).build();
+    let ctx = create_test_module_ctx();
     let _final_router = test_module
         .register_rest(&ctx, router, &registry)
         .expect("Failed to register routes");

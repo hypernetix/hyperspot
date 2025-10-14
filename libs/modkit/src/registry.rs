@@ -71,13 +71,12 @@ impl ModuleRegistry {
         b.build_topo_sorted()
     }
 
-    // ---- Ordered phases: init → DB → REST (sync) → start → stop ----
+    // ---- Ordered phases: DB → init → REST (sync) → start → stop ----
 
     pub async fn run_init_phase(&self, base_ctx: &context::ModuleCtx) -> Result<(), RegistryError> {
         for e in &self.modules {
-            let ctx = base_ctx.clone().for_module(e.name);
             e.core
-                .init(&ctx)
+                .init(base_ctx)
                 .await
                 .map_err(|source| RegistryError::Init {
                     module: e.name,
@@ -103,6 +102,89 @@ impl ModuleRegistry {
         Ok(())
     }
 
+    /// Run REST phase using ModuleContextBuilder to create per-module contexts.
+    pub async fn run_rest_phase_with_builder(
+        &self,
+        ctx_builder: &context::ModuleContextBuilder,
+        mut router: Router,
+    ) -> Result<Router, RegistryError> {
+        // Find host(s) and whether any rest modules exist
+        let hosts: Vec<_> = self
+            .modules
+            .iter()
+            .filter(|e| e.rest_host.is_some())
+            .collect();
+
+        match hosts.len() {
+            0 => {
+                return if self.modules.iter().any(|e| e.rest.is_some()) {
+                    Err(RegistryError::RestRequiresHost)
+                } else {
+                    Ok(router)
+                }
+            }
+            1 => { /* proceed */ }
+            _ => return Err(RegistryError::MultipleRestHosts),
+        }
+
+        // Resolve the single host entry and its module context
+        let host_idx = self
+            .modules
+            .iter()
+            .position(|e| e.rest_host.is_some())
+            .ok_or(RegistryError::RestHostNotFoundAfterValidation)?;
+        let host_entry = &self.modules[host_idx];
+        let Some(host) = host_entry.rest_host.as_ref() else {
+            return Err(RegistryError::RestHostMissingFromEntry);
+        };
+        let host_ctx = ctx_builder.for_module(host_entry.name).await.map_err(|e| {
+            RegistryError::RestPrepare {
+                module: host_entry.name,
+                source: e,
+            }
+        })?;
+
+        // use host as the registry
+        let registry: &dyn contracts::OpenApiRegistry = host.as_registry();
+
+        // 1) Host prepare: base Router / global middlewares / basic OAS meta
+        router =
+            host.rest_prepare(&host_ctx, router)
+                .map_err(|source| RegistryError::RestPrepare {
+                    module: host_entry.name,
+                    source,
+                })?;
+
+        // 2) Register all REST providers (in the current discovery order)
+        for e in &self.modules {
+            if let Some(rest) = &e.rest {
+                let ctx = ctx_builder.for_module(e.name).await.map_err(|err| {
+                    RegistryError::RestRegister {
+                        module: e.name,
+                        source: err,
+                    }
+                })?;
+                router = rest
+                    .register_rest(&ctx, router, registry)
+                    .map_err(|source| RegistryError::RestRegister {
+                        module: e.name,
+                        source,
+                    })?;
+            }
+        }
+
+        // 3) Host finalize: attach /openapi.json and /docs, persist Router if needed (no server start)
+        router = host.rest_finalize(&host_ctx, router).map_err(|source| {
+            RegistryError::RestFinalize {
+                module: host_entry.name,
+                source,
+            }
+        })?;
+
+        Ok(router)
+    }
+
+    /// Legacy sync REST phase for backward compatibility (used by tests).
     pub fn run_rest_phase(
         &self,
         base_ctx: &context::ModuleCtx,
@@ -137,14 +219,13 @@ impl ModuleRegistry {
         let Some(host) = host_entry.rest_host.as_ref() else {
             return Err(RegistryError::RestHostMissingFromEntry);
         };
-        let host_ctx = base_ctx.clone().for_module(host_entry.name);
 
         // use host as the registry
         let registry: &dyn contracts::OpenApiRegistry = host.as_registry();
 
         // 1) Host prepare: base Router / global middlewares / basic OAS meta
         router =
-            host.rest_prepare(&host_ctx, router)
+            host.rest_prepare(base_ctx, router)
                 .map_err(|source| RegistryError::RestPrepare {
                     module: host_entry.name,
                     source,
@@ -153,9 +234,8 @@ impl ModuleRegistry {
         // 2) Register all REST providers (in the current discovery order)
         for e in &self.modules {
             if let Some(rest) = &e.rest {
-                let ctx = base_ctx.clone().for_module(e.name);
                 router = rest
-                    .register_rest(&ctx, router, registry)
+                    .register_rest(base_ctx, router, registry)
                     .map_err(|source| RegistryError::RestRegister {
                         module: e.name,
                         source,
@@ -164,12 +244,12 @@ impl ModuleRegistry {
         }
 
         // 3) Host finalize: attach /openapi.json and /docs, persist Router if needed (no server start)
-        router = host.rest_finalize(&host_ctx, router).map_err(|source| {
-            RegistryError::RestFinalize {
-                module: host_entry.name,
-                source,
-            }
-        })?;
+        router =
+            host.rest_finalize(base_ctx, router)
+                .map_err(|source| RegistryError::RestFinalize {
+                    module: host_entry.name,
+                    source,
+                })?;
 
         Ok(router)
     }
@@ -542,8 +622,26 @@ mod tests {
 
     // Use the real contracts/context APIs from the crate to avoid type mismatches.
     use crate::api::OpenApiRegistry;
-    use crate::context::{ModuleCtx, ModuleCtxBuilder};
+    use crate::context::{ConfigProvider, ModuleCtx};
     use crate::contracts;
+
+    // Helper for tests
+    struct EmptyConfigProvider;
+    impl ConfigProvider for EmptyConfigProvider {
+        fn get_module_config(&self, _module_name: &str) -> Option<&serde_json::Value> {
+            None
+        }
+    }
+
+    fn test_module_ctx(cancel: CancellationToken) -> ModuleCtx {
+        ModuleCtx::new(
+            "test",
+            Arc::new(EmptyConfigProvider),
+            Arc::new(crate::client_hub::ClientHub::default()),
+            cancel,
+            None,
+        )
+    }
 
     /* --------------------------- Test helpers ------------------------- */
     #[derive(Default)]
@@ -712,7 +810,7 @@ mod tests {
         let reg = b.build_topo_sorted().unwrap();
 
         let router = Router::new();
-        let base_ctx = ModuleCtxBuilder::new(CancellationToken::new()).build();
+        let base_ctx = test_module_ctx(CancellationToken::new());
         let err = reg.run_rest_phase(&base_ctx, router).unwrap_err();
         matches!(err, RegistryError::RestRequiresHost);
     }
@@ -730,7 +828,7 @@ mod tests {
         let reg = b.build_topo_sorted().unwrap();
 
         let router = Router::new();
-        let base_ctx = ModuleCtxBuilder::new(CancellationToken::new()).build();
+        let base_ctx = test_module_ctx(CancellationToken::new());
         let router = reg.run_rest_phase(&base_ctx, router).unwrap();
 
         // The DummyRest adds /dummy endpoint during register_rest
@@ -747,7 +845,7 @@ mod tests {
         let reg = b.build_topo_sorted().unwrap();
 
         // init
-        let ctx = ModuleCtxBuilder::new(CancellationToken::new()).build();
+        let ctx = test_module_ctx(CancellationToken::new());
         reg.run_init_phase(&ctx).await.unwrap();
 
         // db phase skipped because no modules implement DbModule

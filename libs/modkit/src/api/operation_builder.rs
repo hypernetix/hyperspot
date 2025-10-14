@@ -150,7 +150,7 @@ where
 }
 
 /// Registry trait for OpenAPI operations and schemas
-pub trait OpenApiRegistry {
+pub trait OpenApiRegistry: Send + Sync {
     /// Register an API operation specification
     fn register_operation(&self, spec: &OperationSpec);
 

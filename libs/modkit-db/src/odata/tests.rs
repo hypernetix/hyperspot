@@ -1,8 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::odata::*;
     use modkit_odata::{ast::*, CursorV1, ODataOrderBy, OrderKey, SortDir};
-    use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult};
 
     // Mock entity for testing
     #[derive(Debug, Clone, PartialEq, sea_orm::EntityTrait)]
