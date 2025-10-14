@@ -189,7 +189,7 @@ pub fn ensure_schema<T: utoipa::ToSchema + utoipa::PartialSchema + 'static>(
 /// - `H`: Handler state (Missing | Present)
 /// - `R`: Response state (Missing | Present)
 /// - `S`: Router state type (what you put into `Router::with_state(S)`).
-pub struct OperationBuilder<H, R, S>
+pub struct OperationBuilder<H = Missing, R = Missing, S = ()>
 where
     H: HandlerSlot<S>,
 {
