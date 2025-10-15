@@ -15,7 +15,7 @@ pub fn register_routes(
     // Schemas should be auto-registered via ToSchema when used in operations
 
     // GET /users - List users with cursor-based pagination
-    router = OperationBuilder::<modkit::api::Missing, modkit::api::Missing, ()>::get("/users")
+    router = OperationBuilder::get("/users")
         .operation_id("users_info.list_users")
         .summary("List users with cursor pagination")
         .description("Retrieve a paginated list of users using cursor-based pagination")
@@ -31,7 +31,7 @@ pub fn register_routes(
         .register(router, openapi);
 
     // GET /users/{id} - Get a specific user
-    router = OperationBuilder::<modkit::api::Missing, modkit::api::Missing, ()>::get("/users/{id}")
+    router = OperationBuilder::get("/users/{id}")
         .operation_id("users_info.get_user")
         .summary("Get user by ID")
         .description("Retrieve a specific user by their UUID")
@@ -44,7 +44,7 @@ pub fn register_routes(
         .register(router, openapi);
 
     // POST /users - Create a new user
-    router = OperationBuilder::<modkit::api::Missing, modkit::api::Missing, ()>::post("/users")
+    router = OperationBuilder::post("/users")
         .operation_id("users_info.create_user")
         .summary("Create a new user")
         .description("Create a new user with the provided information")
@@ -58,7 +58,7 @@ pub fn register_routes(
         .register(router, openapi);
 
     // PUT /users/{id} - Update a user
-    router = OperationBuilder::<modkit::api::Missing, modkit::api::Missing, ()>::put("/users/{id}")
+    router = OperationBuilder::put("/users/{id}")
         .operation_id("users_info.update_user")
         .summary("Update user")
         .description("Update a user with partial data")
@@ -74,18 +74,17 @@ pub fn register_routes(
         .register(router, openapi);
 
     // DELETE /users/{id} - Delete a user
-    router =
-        OperationBuilder::<modkit::api::Missing, modkit::api::Missing, ()>::delete("/users/{id}")
-            .operation_id("users_info.delete_user")
-            .summary("Delete user")
-            .description("Delete a user by their UUID")
-            .tag("users")
-            .path_param("id", "User UUID")
-            .handler(handlers::delete_user)
-            .json_response(204, "User deleted successfully")
-            .problem_response(openapi, 404, "Not Found")
-            .problem_response(openapi, 500, "Internal Server Error")
-            .register(router, openapi);
+    router = OperationBuilder::delete("/users/{id}")
+        .operation_id("users_info.delete_user")
+        .summary("Delete user")
+        .description("Delete a user by their UUID")
+        .tag("users")
+        .path_param("id", "User UUID")
+        .handler(handlers::delete_user)
+        .json_response(204, "User deleted successfully")
+        .problem_response(openapi, 404, "Not Found")
+        .problem_response(openapi, 500, "Internal Server Error")
+        .register(router, openapi);
 
     router = router.layer(Extension(service.clone()));
 
@@ -102,15 +101,14 @@ where
     S: Clone + Send + Sync + 'static,
 {
     // First register the route, then add layers
-    let router =
-        OperationBuilder::<modkit::api::Missing, modkit::api::Missing, S>::get("/users/events")
-            .operation_id("users_info.events")
-            .summary("User events stream (SSE)")
-            .description("Real-time stream of user events as Server-Sent Events")
-            .tag("users")
-            .handler(handlers::users_events)
-            .sse_json::<dto::UserEvent>(openapi, "SSE stream of UserEvent")
-            .register(router, openapi);
+    let router = OperationBuilder::get("/users/events")
+        .operation_id("users_info.events")
+        .summary("User events stream (SSE)")
+        .description("Real-time stream of user events as Server-Sent Events")
+        .tag("users")
+        .handler(handlers::users_events)
+        .sse_json::<dto::UserEvent>(openapi, "SSE stream of UserEvent")
+        .register(router, openapi);
 
     // Apply layers to the specific route using Router::layer
     router
