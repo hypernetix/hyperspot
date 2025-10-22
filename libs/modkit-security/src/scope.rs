@@ -65,8 +65,6 @@ impl AccessScope {
 
     /// True if this scope explicitly includes the root tenant.
     pub fn includes_root_tenant(&self) -> bool {
-        self.tenant_ids
-            .iter()
-            .any(|&t| t == crate::constants::ROOT_TENANT_ID)
+        self.tenant_ids.contains(&crate::constants::ROOT_TENANT_ID)
     }
 }

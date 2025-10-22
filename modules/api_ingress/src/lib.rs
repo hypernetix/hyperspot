@@ -30,10 +30,12 @@ use utoipa::openapi::{
     request_body::RequestBodyBuilder,
     response::{ResponseBuilder, ResponsesBuilder},
     schema::{ComponentsBuilder, ObjectBuilder, Schema, SchemaFormat, SchemaType},
+    security::{HttpAuthScheme, HttpBuilder, SecurityRequirement, SecurityScheme},
     OpenApi, OpenApiBuilder, Ref, RefOr, Required,
 };
 
 mod assets;
+mod auth;
 
 mod config;
 pub mod error;
@@ -125,21 +127,59 @@ impl ApiIngress {
         Ok(())
     }
 
-    /// Build the HTTP router from registered routes and operations
-    pub async fn build_router(&self) -> Result<Router> {
-        // If the cached router is currently held elsewhere (e.g., by the running server),
-        // return it without rebuilding to avoid unnecessary allocations.
-        let cached_router = self.router_cache.load();
-        if Arc::strong_count(&cached_router) > 1 {
-            tracing::debug!("Using cached router");
-            return Ok((*cached_router).clone());
+    /// Build auth state from operation specs
+    fn build_auth_state_from_specs(&self) -> Result<auth::AuthState> {
+        let mut req_map = std::collections::HashMap::new();
+        let mut public_routes = std::collections::HashSet::new();
+        
+        // 🔹 Always mark built-in health check routes as public
+        public_routes.insert((Method::GET, "/health".to_string()));
+        public_routes.insert((Method::GET, "/healthz".to_string()));
+        public_routes.insert((Method::GET, "/docs".to_string()));
+        public_routes.insert((Method::GET, "/openapi.json".to_string()));
+        
+        for spec in self.operation_specs.iter() {
+            let spec = spec.value();
+            let route_key = (spec.method.clone(), spec.path.clone());
+            
+            // Collect explicit security requirements
+            if let Some(ref sec) = spec.sec_requirement {
+                req_map.insert(
+                    route_key.clone(),
+                    auth::Requirement {
+                        resource: sec.resource.clone(),
+                        action: sec.action.clone(),
+                    },
+                );
+            }
+            
+            // Track explicitly public routes
+            if spec.is_public {
+                public_routes.insert(route_key);
+            }
         }
 
-        tracing::debug!("Building new router");
-        let mut router = Router::new().route("/health", get(web::health_check));
+        let config = self.get_cached_config();
+        let auth_state = auth::build_auth_state(&config, req_map, public_routes)?;
+        
+        tracing::info!(
+            auth_disabled = config.auth_disabled,
+            require_auth_by_default = config.require_auth_by_default,
+            requirements_count = auth_state.requirements.len(),
+            public_routes_count = auth_state.public_routes.len(),
+            "Auth state built from operation specs"
+        );
+
+        Ok(auth_state)
+    }
+
+    /// Apply all middleware layers to a router (request ID, tracing, timeout, CORS, body limit, auth)
+    fn apply_middleware_stack(&self, mut router: Router) -> Result<Router> {
+        // Build auth state once
+        let auth_state = self.build_auth_state_from_specs()?;
 
         // Correct middleware order (outermost to innermost):
-        // PropagateRequestId -> SetRequestId -> Trace -> push_req_id_to_extensions -> Timeout -> CORS -> BodyLimit
+        // PropagateRequestId -> SetRequestId -> Trace -> push_req_id_to_extensions -> Timeout -> CORS -> BodyLimit -> Auth
         let x_request_id = crate::request_id::header();
 
         // 1. If client sent x-request-id, propagate it; otherwise we will set it
@@ -223,6 +263,31 @@ impl ApiIngress {
 
         // 7. Body limit layer - 16MB default limit
         router = router.layer(RequestBodyLimitLayer::new(16 * 1024 * 1024));
+
+        // 8. Auth middleware - MUST be after body limit but before route handlers
+        router = router.layer(from_fn(move |req: axum::extract::Request, next: axum::middleware::Next| {
+            let state = auth_state.clone();
+            auth::auth_middleware(state, req, next)
+        }));
+
+        Ok(router)
+    }
+
+    /// Build the HTTP router from registered routes and operations
+    pub async fn build_router(&self) -> Result<Router> {
+        // If the cached router is currently held elsewhere (e.g., by the running server),
+        // return it without rebuilding to avoid unnecessary allocations.
+        let cached_router = self.router_cache.load();
+        if Arc::strong_count(&cached_router) > 1 {
+            tracing::debug!("Using cached router");
+            return Ok((*cached_router).clone());
+        }
+
+        tracing::debug!("Building new router");
+        let mut router = Router::new().route("/health", get(web::health_check));
+
+        // Apply all middleware layers including auth
+        router = self.apply_middleware_stack(router)?;
 
         // Cache the built router for future use
         self.router_cache.store(router.clone());
@@ -348,6 +413,12 @@ impl ApiIngress {
             }
             op = op.responses(responses.build());
 
+            // 🔹 Add security requirement if operation has explicit auth metadata
+            if spec.sec_requirement.is_some() {
+                let sec_req = SecurityRequirement::new("bearerAuth", Vec::<String>::new());
+                op = op.security(sec_req);
+            }
+
             let method = match spec.method {
                 Method::GET => HttpMethod::Get,
                 Method::POST => HttpMethod::Post,
@@ -366,6 +437,17 @@ impl ApiIngress {
         for (name, schema) in self.components_registry.load().iter() {
             components = components.schema(name.clone(), schema.clone());
         }
+
+        // 🔹 Add bearer auth security scheme
+        components = components.security_scheme(
+            "bearerAuth",
+            SecurityScheme::Http(
+                HttpBuilder::new()
+                    .scheme(HttpAuthScheme::Bearer)
+                    .bearer_format("JWT")
+                    .build(),
+            ),
+        );
 
         // 3) Info & final OpenAPI doc
         let info = InfoBuilder::new()
@@ -557,10 +639,14 @@ impl modkit::contracts::RestHostModule for ApiIngress {
             }
         }
 
+        // 🔹 Apply middleware stack (including auth) to the final router
+        tracing::debug!("Applying middleware stack to finalized router");
+        router = self.apply_middleware_stack(router)?;
+
         // Keep the finalized router to be used by `serve()`
         *self.final_router.lock() = Some(router.clone());
 
-        tracing::debug!("REST host finalized router with OpenAPI endpoints");
+        tracing::info!("REST host finalized router with OpenAPI endpoints and auth middleware");
         Ok(router)
     }
 

@@ -20,6 +20,7 @@ pub fn register_routes(
         .summary("List users with cursor pagination")
         .description("Retrieve a paginated list of users using cursor-based pagination")
         .tag("users")
+        .require_auth("users", "read")
         .query_param_typed("limit", false, "Maximum number of users to return", "integer")
         .query_param("cursor", false, "Cursor for pagination")
         .handler(handlers::list_users)
@@ -33,12 +34,15 @@ pub fn register_routes(
     // GET /users/{id} - Get a specific user
     router = OperationBuilder::get("/users/{id}")
         .operation_id("users_info.get_user")
+        .require_auth("users", "read")  // ← Explicit auth requirement
         .summary("Get user by ID")
         .description("Retrieve a specific user by their UUID")
         .tag("users")
         .path_param("id", "User UUID")
         .handler(handlers::get_user)
         .json_response_with_schema::<dto::UserDto>(openapi, 200, "User found")
+        .problem_response(openapi, 401, "Unauthorized")
+        .problem_response(openapi, 403, "Forbidden")
         .problem_response(openapi, 404, "Not Found")
         .problem_response(openapi, 500, "Internal Server Error")
         .register(router, openapi);
@@ -46,6 +50,7 @@ pub fn register_routes(
     // POST /users - Create a new user
     router = OperationBuilder::post("/users")
         .operation_id("users_info.create_user")
+        .require_auth("users", "create")  // ← Explicit auth requirement
         .summary("Create a new user")
         .description("Create a new user with the provided information")
         .tag("users")
@@ -53,6 +58,8 @@ pub fn register_routes(
         .handler(handlers::create_user)
         .json_response_with_schema::<dto::UserDto>(openapi, 201, "Created user")
         .problem_response(openapi, 400, "Bad Request")
+        .problem_response(openapi, 401, "Unauthorized")
+        .problem_response(openapi, 403, "Forbidden")
         .problem_response(openapi, 409, "Conflict")
         .problem_response(openapi, 500, "Internal Server Error")
         .register(router, openapi);
@@ -60,6 +67,7 @@ pub fn register_routes(
     // PUT /users/{id} - Update a user
     router = OperationBuilder::put("/users/{id}")
         .operation_id("users_info.update_user")
+        .require_auth("users", "update")  // ← Explicit auth requirement
         .summary("Update user")
         .description("Update a user with partial data")
         .tag("users")
@@ -68,6 +76,8 @@ pub fn register_routes(
         .handler(handlers::update_user)
         .json_response_with_schema::<dto::UserDto>(openapi, 200, "Updated user")
         .problem_response(openapi, 400, "Bad Request")
+        .problem_response(openapi, 401, "Unauthorized")
+        .problem_response(openapi, 403, "Forbidden")
         .problem_response(openapi, 404, "Not Found")
         .problem_response(openapi, 409, "Conflict")
         .problem_response(openapi, 500, "Internal Server Error")
@@ -76,12 +86,15 @@ pub fn register_routes(
     // DELETE /users/{id} - Delete a user
     router = OperationBuilder::delete("/users/{id}")
         .operation_id("users_info.delete_user")
+        .require_auth("users", "delete")  // ← Explicit auth requirement
         .summary("Delete user")
         .description("Delete a user by their UUID")
         .tag("users")
         .path_param("id", "User UUID")
         .handler(handlers::delete_user)
         .json_response(204, "User deleted successfully")
+        .problem_response(openapi, 401, "Unauthorized")
+        .problem_response(openapi, 403, "Forbidden")
         .problem_response(openapi, 404, "Not Found")
         .problem_response(openapi, 500, "Internal Server Error")
         .register(router, openapi);
@@ -103,6 +116,7 @@ where
     // First register the route, then add layers
     let router = OperationBuilder::get("/users/events")
         .operation_id("users_info.events")
+        .require_auth("users", "read")  // ← Explicit auth requirement for event stream
         .summary("User events stream (SSE)")
         .description("Real-time stream of user events as Server-Sent Events")
         .tag("users")

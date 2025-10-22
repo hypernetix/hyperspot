@@ -59,6 +59,8 @@ thiserror = "2.0"
 modkit = { path = "../../../libs/modkit" }
 # NOTE: insecure-escape enabled for migrations and example infrastructure code
 modkit-db = { path = "../../../libs/modkit-db", default-features = false, features = ["pg", "sea-orm", "insecure-escape"] }
+modkit-auth = { path = "../../../libs/modkit-auth" }
+modkit-security = { path = "../../../libs/modkit-security" }
 modkit-errors = { path = "../../../libs/modkit-errors" }
 modkit-errors-macro = { path = "../../../libs/modkit-errors-macro" }
 modkit-odata = { path = "../../../libs/modkit-odata", features = ["with-utoipa"] }

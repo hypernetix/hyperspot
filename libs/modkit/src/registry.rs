@@ -184,7 +184,7 @@ impl ModuleRegistry {
         Ok(router)
     }
 
-    /// Legacy sync REST phase for backward compatibility (used by tests).
+    /// Sync REST phase for tests
     pub fn run_rest_phase(
         &self,
         base_ctx: &context::ModuleCtx,
