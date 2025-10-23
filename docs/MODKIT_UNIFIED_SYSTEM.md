@@ -198,7 +198,7 @@ impl ApiIngress {
 **States & transitions**
 
 ```
-Stopped ── start() ─▶ Starting ──(await_ready? then ready.notify())──▶ Running
+Stopped ── start() ── Starting ──(await_ready? then ready.notify())──▶ Running
    ▲                                  │
    │                                  └─ if await_ready = false → Running immediately
    └──────────── stop()/cancel ────────────────────────────────────────────────┘

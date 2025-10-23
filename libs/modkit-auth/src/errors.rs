@@ -56,4 +56,3 @@ impl axum::response::IntoResponse for AuthError {
         (status, body).into_response()
     }
 }
-

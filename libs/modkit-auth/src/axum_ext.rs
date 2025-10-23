@@ -1,10 +1,7 @@
 //! Axum extractors for auth-related types
 
 use crate::errors::AuthError;
-use axum::{
-    extract::FromRequestParts,
-    http::request::Parts,
-};
+use axum::{extract::FromRequestParts, http::request::Parts};
 use modkit_security::SecurityCtx;
 
 /// Extractor for SecurityCtx - validates that auth middleware has run
@@ -37,4 +34,3 @@ where
 
 /// Re-export Claims for convenience
 pub use crate::claims::Claims;
-

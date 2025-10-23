@@ -10,4 +10,3 @@ impl SecRequirement {
         Self { resource, action }
     }
 }
-

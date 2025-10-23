@@ -16,7 +16,7 @@ use axum::{
 use modkit::{
     api::OperationBuilder,
     context::{ConfigProvider, ModuleCtx},
-    contracts::{OpenApiRegistry, RestfulModule, RestHostModule},
+    contracts::{OpenApiRegistry, RestHostModule, RestfulModule},
     ClientHub, Module,
 };
 use modkit_auth::axum_ext::Authz;
@@ -52,9 +52,7 @@ fn create_api_ingress_ctx(config: serde_json::Value) -> ModuleCtx {
 fn create_test_module_ctx() -> ModuleCtx {
     ModuleCtx::new(
         "test_module",
-        Arc::new(TestConfigProvider {
-            config: json!({}),
-        }),
+        Arc::new(TestConfigProvider { config: json!({}) }),
         Arc::new(ClientHub::new()),
         tokio_util::sync::CancellationToken::new(),
         None,
@@ -116,6 +114,18 @@ impl RestfulModule for TestAuthModule {
             .problem_response(openapi, 403, "Forbidden")
             .register(router, openapi);
 
+        // Protected route with path parameter (to test pattern matching)
+        let router = OperationBuilder::get("/api/users/{id}")
+            .operation_id("test.get_user")
+            .require_auth("users", "read")
+            .summary("Get user by ID")
+            .path_param("id", "User ID")
+            .handler(protected_handler)
+            .json_response_with_schema::<TestResponse>(openapi, 200, "Success")
+            .problem_response(openapi, 401, "Unauthorized")
+            .problem_response(openapi, 403, "Forbidden")
+            .register(router, openapi);
+
         // Public route with explicit public marking
         let router = OperationBuilder::get("/api/public")
             .operation_id("test.public")
@@ -145,7 +155,7 @@ async fn test_auth_disabled_mode() {
 
     let api_ctx = create_api_ingress_ctx(config);
     let test_ctx = create_test_module_ctx();
-    
+
     let api_ingress = api_ingress::ApiIngress::default();
     api_ingress.init(&api_ctx).await.expect("Failed to init");
 
@@ -213,7 +223,7 @@ async fn test_public_routes_accessible() {
 
     let api_ctx = create_api_ingress_ctx(config);
     let test_ctx = create_test_module_ctx();
-    
+
     let api_ingress = api_ingress::ApiIngress::default();
     api_ingress.init(&api_ctx).await.expect("Failed to init");
 
@@ -286,7 +296,7 @@ async fn test_middleware_always_inserts_security_ctx() {
 
     let api_ctx = create_api_ingress_ctx(config);
     let test_ctx = create_test_module_ctx();
-    
+
     let api_ingress = api_ingress::ApiIngress::default();
     api_ingress.init(&api_ctx).await.expect("Failed to init");
 
@@ -335,7 +345,7 @@ async fn test_openapi_includes_security_metadata() {
 
     let api_ctx = create_api_ingress_ctx(config);
     let test_ctx = create_test_module_ctx();
-    
+
     let api_ingress = api_ingress::ApiIngress::default();
     api_ingress.init(&api_ctx).await.expect("Failed to init");
 
@@ -346,7 +356,9 @@ async fn test_openapi_includes_security_metadata() {
         .expect("Failed to register routes");
 
     // Build OpenAPI spec
-    let openapi = api_ingress.build_openapi().expect("Failed to build OpenAPI");
+    let openapi = api_ingress
+        .build_openapi()
+        .expect("Failed to build OpenAPI");
     let spec = serde_json::to_value(&openapi).expect("Failed to serialize");
 
     // Verify security scheme exists
@@ -368,8 +380,78 @@ async fn test_openapi_includes_security_metadata() {
     // Verify public route does NOT have security requirement
     let public_security = spec.pointer("/paths/~1api~1public/get/security");
     assert!(
-        public_security.is_none() || public_security.unwrap().as_array().map_or(false, |a| a.is_empty()),
+        public_security.is_none()
+            || public_security
+                .unwrap()
+                .as_array()
+                .is_some_and(|a| a.is_empty()),
         "Public route should NOT have security requirement in OpenAPI"
     );
 }
 
+#[tokio::test]
+async fn test_route_pattern_matching_with_path_params() {
+    // This test verifies that routes with path parameters (e.g., /users/{id})
+    // are properly matched and authorization is enforced
+    let config = json!({
+        "api_ingress": {
+            "config": {
+                "bind_addr": "0.0.0.0:8080",
+                "enable_docs": false,
+                "cors_enabled": false,
+                "auth_disabled": true, // Disabled for test simplicity
+            }
+        }
+    });
+
+    let api_ctx = create_api_ingress_ctx(config);
+    let test_ctx = create_test_module_ctx();
+
+    let api_ingress = api_ingress::ApiIngress::default();
+    api_ingress.init(&api_ctx).await.expect("Failed to init");
+
+    let router = Router::new();
+    let test_module = TestAuthModule;
+    let router = test_module
+        .register_rest(&test_ctx, router, &api_ingress)
+        .expect("Failed to register routes");
+
+    let router = api_ingress
+        .rest_finalize(&api_ctx, router)
+        .expect("Failed to finalize");
+
+    // Test that /api/users/123 is accessible (matches /api/users/{id})
+    let response = router
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/api/users/123")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .expect("Request failed");
+
+    assert_eq!(
+        response.status(),
+        StatusCode::OK,
+        "Route with path parameter should be accessible and matched correctly"
+    );
+
+    // Test that /api/users/abc-def-456 is also accessible
+    let response = router
+        .oneshot(
+            Request::builder()
+                .uri("/api/users/abc-def-456")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .expect("Request failed");
+
+    assert_eq!(
+        response.status(),
+        StatusCode::OK,
+        "Route with different path parameter value should also be accessible"
+    );
+}

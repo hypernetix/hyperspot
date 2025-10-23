@@ -21,4 +21,3 @@ pub trait PrimaryAuthorizer: Send + Sync {
     /// Check if the claims satisfy the required resource:action
     async fn check(&self, claims: &Claims, requirement: &SecRequirement) -> Result<(), AuthError>;
 }
-

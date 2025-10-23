@@ -42,7 +42,11 @@ fn test_keycloak_token_format() {
         ),
         _ => None,
     };
-    assert_eq!(aud, Some(vec!["account".to_string()]), "String aud should convert to array");
+    assert_eq!(
+        aud,
+        Some(vec!["account".to_string()]),
+        "String aud should convert to array"
+    );
 
     // Test realm_access.roles extraction
     let mut roles: Vec<String> = Vec::new();
@@ -186,4 +190,3 @@ fn test_both_roles_locations() {
         "Top-level roles should take precedence over realm_access.roles"
     );
 }
-

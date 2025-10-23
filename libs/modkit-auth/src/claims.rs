@@ -66,4 +66,3 @@ impl Claims {
         self.roles.iter().any(|r| r == role)
     }
 }
-

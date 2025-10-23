@@ -1,10 +1,10 @@
 ````markdown
-# 🔧 Distributed Tracing Setup
+# Distributed Tracing Setup
 
 This guide walks you through setting up **OpenTelemetry distributed tracing** with **Jaeger** or **Uptrace** for the
 hyperspot framework for testing purposes.
 
-## 🎯 Overview
+## Overview
 
 The hyperspot framework includes first-class support for distributed tracing with:
 
@@ -14,7 +14,7 @@ The hyperspot framework includes first-class support for distributed tracing wit
 - **TracedClient** for instrumented HTTP calls
 - **Integration with existing logging**
 
-## 🚀 Quick Start with Jaeger
+## Quick Start with Jaeger
 
 ### 1. Start Jaeger (Local Development)
 
@@ -77,7 +77,7 @@ Open [http://localhost:16686](http://localhost:16686) and search for service `hy
 
 ---
 
-## 🚀 Quick Start with Uptrace
+## Quick Start with Uptrace
 
 [Uptrace](https://uptrace.dev) is a modern tracing UI that works with OpenTelemetry and ClickHouse/Postgres.
 
@@ -148,7 +148,7 @@ Open [http://localhost:14318](http://localhost:14318) and search for service `hy
 
 ---
 
-## 📁 Configuration Reference
+## Configuration Reference
 
 ### Basic Configuration
 
@@ -249,7 +249,7 @@ tracing:
       - "authorization"  # Be careful with sensitive headers
 ```
 
-## 🛠️ Using TracedClient
+## Using TracedClient
 
 ### In Your Module
 
@@ -301,7 +301,7 @@ let request = client.inner()
 let response = client.execute(request).await?;
 ```
 
-## 🕵️ Manual Span Creation
+## Manual Span Creation
 
 Create custom spans for business logic:
 
@@ -325,7 +325,7 @@ async fn process_user_data(user_id: u64) -> Result<()> {
 }
 ```
 
-## 🐳 Production Deployment
+## Production Deployment
 
 ### Docker Compose with Jaeger
 
@@ -365,7 +365,7 @@ export APP__TRACING__SAMPLER__STRATEGY=parentbased_ratio
 export APP__TRACING__SAMPLER__RATIO=0.01  # 1% sampling in prod
 ```
 
-## 🔧 Troubleshooting
+## Troubleshooting
 
 ### No Traces Appearing
 
@@ -386,7 +386,7 @@ export APP__TRACING__SAMPLER__RATIO=0.01  # 1% sampling in prod
 2. **Verify propagation**: Set `propagation.w3c_trace_context: true`
 3. **Use TracedClient**: Ensure outgoing calls use `TracedClient`
 
-## 📊 Observability Best Practices
+## Observability Best Practices
 
 ### Structured Attributes
 

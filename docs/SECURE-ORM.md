@@ -406,7 +406,7 @@ modkit-db = { path = "...", features = ["insecure-escape"] }
 #[cfg(feature = "insecure-escape")]
 async fn admin_migration(db: &DbHandle) {
     // Raw access with security warning logged
-    let raw_conn = db.sea();  // ⚠️ Logs tracing::warn!
+    let raw_conn = db.sea();  // Logs tracing::warn!
     
     // Direct SeaORM access for migrations
     sqlx::query("CREATE TABLE ...").execute(raw_conn).await?;

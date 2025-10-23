@@ -32,6 +32,7 @@ mod tests {
             o: SortDir::Desc,
             s: "-id".to_string(),
             f: None,
+            d: "fwd".to_string(),
         };
         let cursor_encoded = cursor.encode();
 

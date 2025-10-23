@@ -217,6 +217,7 @@ modules:
       bind_addr: "127.0.0.1:8087"
       enable_docs: false
       cors_enabled: false
+      auth_disabled: true
 "#,
         temp_dir
             .path()

@@ -184,11 +184,11 @@ cargo build -p modkit-db --features sea-orm,sqlite
 
 ## Acceptance Criteria
 
-✅ New builder compiles and is fully generic over `E` and `C`  
-✅ No new dependencies, no macros, no repo traits  
-✅ Does not change any existing behavior of OData or Secure ORM  
-✅ Default behavior: tiebreaker ("id", Desc), limits { default: 25, max: 1000 }  
-✅ Builder returns `modkit_odata::Page<D>` and `modkit_odata::Error` on failure  
-✅ Public API surface is small and discoverable  
-✅ Entire workspace builds successfully  
+New builder compiles and is fully generic over `E` and `C`  
+No new dependencies, no macros, no repo traits  
+Does not change any existing behavior of OData or Secure ORM  
+Default behavior: tiebreaker ("id", Desc), limits { default: 25, max: 1000 }  
+Builder returns `modkit_odata::Page<D>` and `modkit_odata::Error` on failure  
+Public API surface is small and discoverable  
+Entire workspace builds successfully  
 

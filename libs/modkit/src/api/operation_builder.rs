@@ -122,6 +122,19 @@ pub struct OperationSpec {
     pub sec_requirement: Option<OperationSecRequirement>,
     /// Explicitly mark route as public (no auth required)
     pub is_public: bool,
+    /// Optional rate & concurrency limits for this operation
+    pub rate_limit: Option<RateLimitSpec>,
+}
+
+/// Per-operation rate & concurrency limit specification
+#[derive(Clone, Debug, Default)]
+pub struct RateLimitSpec {
+    /// Target steady-state requests per second
+    pub rps: u32,
+    /// Maximum burst size (token bucket capacity)
+    pub burst: u32,
+    /// Maximum number of in-flight requests for this route
+    pub in_flight: u32,
 }
 
 //
@@ -239,6 +252,7 @@ impl<S> OperationBuilder<Missing, Missing, S> {
                 handler_id,
                 sec_requirement: None,
                 is_public: false,
+                rate_limit: None,
             },
             method_router: (), // no router in Missing state
             _has_handler: PhantomData,
@@ -288,6 +302,17 @@ where
     /// Set the operation ID
     pub fn operation_id(mut self, id: impl Into<String>) -> Self {
         self.spec.operation_id = Some(id.into());
+        self
+    }
+
+    /// Require per-route rate and concurrency limits.
+    /// Stores metadata for the ingress to enforce.
+    pub fn require_rate_limit(&mut self, rps: u32, burst: u32, in_flight: u32) -> &mut Self {
+        self.spec.rate_limit = Some(RateLimitSpec {
+            rps,
+            burst,
+            in_flight,
+        });
         self
     }
 

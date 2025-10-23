@@ -29,7 +29,7 @@ type UsersApiError = ApiError<DomainError>;
     )
 )]
 pub async fn list_users(
-    Authz(ctx): Authz,                         // ← Validated SecurityCtx from middleware
+    Authz(ctx): Authz, // ← Validated SecurityCtx from middleware
     Extension(svc): Extension<std::sync::Arc<Service>>,
     OData(query): OData,
 ) -> UsersResult<JsonPage<UserDto>> {
@@ -57,7 +57,7 @@ pub async fn list_users(
     )
 )]
 pub async fn get_user(
-    Authz(ctx): Authz,                         // ← Validated SecurityCtx
+    Authz(ctx): Authz, // ← Validated SecurityCtx
     Extension(svc): Extension<std::sync::Arc<Service>>,
     Path(id): Path<Uuid>,
 ) -> UsersResult<JsonBody<UserDto>> {
@@ -86,7 +86,7 @@ pub async fn get_user(
     )
 )]
 pub async fn create_user(
-    Authz(ctx): Authz,                         // ← Validated SecurityCtx
+    Authz(ctx): Authz, // ← Validated SecurityCtx
     Extension(svc): Extension<std::sync::Arc<Service>>,
     Json(req_body): Json<CreateUserReq>,
 ) -> UsersResult<impl IntoResponse> {
@@ -116,7 +116,7 @@ pub async fn create_user(
     )
 )]
 pub async fn update_user(
-    Authz(ctx): Authz,                         // ← Validated SecurityCtx
+    Authz(ctx): Authz, // ← Validated SecurityCtx
     Extension(svc): Extension<std::sync::Arc<Service>>,
     Path(id): Path<Uuid>,
     Json(req_body): Json<UpdateUserReq>,
@@ -146,7 +146,7 @@ pub async fn update_user(
     )
 )]
 pub async fn delete_user(
-    Authz(ctx): Authz,                         // ← Validated SecurityCtx
+    Authz(ctx): Authz, // ← Validated SecurityCtx
     Extension(svc): Extension<std::sync::Arc<Service>>,
     Path(id): Path<Uuid>,
 ) -> UsersResult<impl IntoResponse> {

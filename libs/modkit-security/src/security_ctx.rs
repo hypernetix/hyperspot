@@ -42,10 +42,7 @@ impl SecurityCtx {
 
     /// Root subject operating within the root tenant (system context).
     pub fn root_ctx() -> Self {
-        Self::new(
-            AccessScope::root_tenant(),
-            Subject::root(),
-        )
+        Self::new(AccessScope::root_tenant(), Subject::root())
     }
 
     #[inline]

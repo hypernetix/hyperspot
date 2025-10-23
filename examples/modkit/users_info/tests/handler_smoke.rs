@@ -5,9 +5,11 @@ mod support;
 use axum::{
     body::Body,
     http::{Request, StatusCode},
+    middleware::{self, Next},
     Extension, Router,
 };
 use modkit_db::secure::SecureConn;
+use modkit_security::SecurityCtx;
 use std::sync::Arc;
 use support::{inmem_db, seed_user, MockAuditPort, MockEventPublisher};
 use tower::ServiceExt;
@@ -17,6 +19,15 @@ use users_info::{
     infra::storage::sea_orm_repo::SeaOrmUsersRepository,
 };
 use uuid::Uuid;
+
+/// Middleware to inject a fake SecurityCtx for testing
+async fn inject_fake_security_ctx(mut req: Request<Body>, next: Next) -> axum::response::Response {
+    let fake_tenant = Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
+    let fake_subject = Uuid::parse_str("00000000-0000-0000-0000-000000000002").unwrap();
+    let ctx = SecurityCtx::for_tenant(fake_tenant, fake_subject);
+    req.extensions_mut().insert(ctx);
+    next.run(req).await
+}
 
 /// Create a test router with real database and service
 async fn create_test_router() -> Router {
@@ -34,6 +45,7 @@ async fn create_test_router() -> Router {
         .route("/users/{id}", axum::routing::get(handlers::get_user))
         .route("/users", axum::routing::get(handlers::list_users))
         .layer(Extension(service))
+        .layer(middleware::from_fn(inject_fake_security_ctx))
 }
 
 #[tokio::test]
@@ -62,7 +74,8 @@ async fn get_user_handler_returns_json() {
 
     let app = Router::new()
         .route("/users/{id}", axum::routing::get(handlers::get_user))
-        .layer(Extension(service));
+        .layer(Extension(service))
+        .layer(middleware::from_fn(inject_fake_security_ctx));
 
     // Act: Call GET /users/:id
     let request = Request::builder()
@@ -133,7 +146,8 @@ async fn list_users_returns_json_page() {
 
     let app = Router::new()
         .route("/users", axum::routing::get(handlers::list_users))
-        .layer(Extension(service));
+        .layer(Extension(service))
+        .layer(middleware::from_fn(inject_fake_security_ctx));
 
     // Act: Call GET /users
     let request = Request::builder()

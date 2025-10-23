@@ -1,5 +1,5 @@
-use uuid::Uuid;
 use uuid::uuid;
+use uuid::Uuid;
 
 /// Root (bootstrap) tenant and subject.
 /// These are used only for system-level operations or bootstrap contexts.

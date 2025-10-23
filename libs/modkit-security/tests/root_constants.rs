@@ -1,6 +1,4 @@
-use modkit_security::{
-    AccessScope, SecurityCtx, Subject, ROOT_SUBJECT_ID, ROOT_TENANT_ID,
-};
+use modkit_security::{AccessScope, SecurityCtx, Subject, ROOT_SUBJECT_ID, ROOT_TENANT_ID};
 
 #[test]
 fn root_constants_and_helpers() {
@@ -16,4 +14,3 @@ fn root_constants_and_helpers() {
     let subj = Subject::root();
     assert!(subj.is_root());
 }
-

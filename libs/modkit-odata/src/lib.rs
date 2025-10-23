@@ -57,6 +57,16 @@ pub enum SortDir {
     Desc,
 }
 
+impl SortDir {
+    /// Reverse the sort direction (Asc <-> Desc)
+    pub fn reverse(self) -> Self {
+        match self {
+            SortDir::Asc => SortDir::Desc,
+            SortDir::Desc => SortDir::Asc,
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct OrderKey {
     pub field: String,
@@ -152,6 +162,14 @@ impl ODataOrderBy {
                 field: tiebreaker.to_string(),
                 dir,
             });
+        }
+        self
+    }
+
+    /// Reverse all sort directions (for backward pagination)
+    pub fn reverse_directions(mut self) -> Self {
+        for key in &mut self.0 {
+            key.dir = key.dir.reverse();
         }
         self
     }
@@ -265,6 +283,7 @@ pub struct CursorV1 {
     pub o: SortDir,
     pub s: String,
     pub f: Option<String>,
+    pub d: String, // Direction: "fwd" (forward) or "bwd" (backward)
 }
 
 impl CursorV1 {
@@ -277,6 +296,7 @@ impl CursorV1 {
             s: &'a str,
             #[serde(skip_serializing_if = "Option::is_none")]
             f: &'a Option<String>,
+            d: &'a str,
         }
         let o = match self.o {
             SortDir::Asc => "asc",
@@ -288,6 +308,7 @@ impl CursorV1 {
             o,
             s: &self.s,
             f: &self.f,
+            d: &self.d,
         };
         let json = serde_json::to_vec(&w).expect("encode cursor json");
         base64_url::encode(&json)
@@ -303,7 +324,14 @@ impl CursorV1 {
             s: String,
             #[serde(default)]
             f: Option<String>,
+            #[serde(default = "default_direction")]
+            d: String,
         }
+
+        fn default_direction() -> String {
+            "fwd".to_string()
+        }
+
         let bytes = base64_url::decode(token).map_err(|_| Error::CursorInvalidBase64)?;
         let w: Wire = serde_json::from_slice(&bytes).map_err(|_| Error::CursorInvalidJson)?;
         if w.v != 1 {
@@ -320,11 +348,16 @@ impl CursorV1 {
         if w.s.trim().is_empty() {
             return Err(Error::CursorInvalidFields);
         }
+        // Validate direction
+        if w.d != "fwd" && w.d != "bwd" {
+            return Err(Error::CursorInvalidDirection);
+        }
         Ok(CursorV1 {
             k: w.k,
             o,
             s: w.s,
             f: w.f,
+            d: w.d,
         })
     }
 }

@@ -13,6 +13,7 @@ mod tests {
             o: SortDir::Desc,
             s: "+created_at,-id".to_string(),
             f: Some("abc123".to_string()),
+            d: "fwd".to_string(),
         };
 
         let encoded = cursor.encode();
@@ -22,6 +23,7 @@ mod tests {
         assert_eq!(decoded.o, cursor.o);
         assert_eq!(decoded.s, cursor.s);
         assert_eq!(decoded.f, cursor.f);
+        assert_eq!(decoded.d, cursor.d);
     }
 
     #[test]
@@ -31,6 +33,7 @@ mod tests {
             o: SortDir::Asc,
             s: "+field1,+field2".to_string(),
             f: None,
+            d: "fwd".to_string(),
         };
 
         let encoded = cursor.encode();
@@ -220,6 +223,7 @@ mod tests {
             o: SortDir::Desc,
             s: "-created_at".to_string(),
             f: None,
+            d: "fwd".to_string(),
         };
 
         let query = ODataQuery::new()

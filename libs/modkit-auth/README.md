@@ -164,10 +164,10 @@ Checks if claims satisfy security requirements.
 
 ## Security Guarantees
 
-✅ **No bypass** - Only `api_ingress` can disable auth via config
-✅ **Centralized** - All routes go through the same middleware
-✅ **Type-safe** - Handlers extract `SecurityCtx`, not raw tokens
-✅ **Auditable** - All auth decisions logged
+**No bypass** - Only `api_ingress` can disable auth via config
+**Centralized** - All routes go through the same middleware
+**Type-safe** - Handlers extract `SecurityCtx`, not raw tokens
+**Auditable** - All auth decisions logged
 
 ## Testing
 

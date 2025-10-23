@@ -34,7 +34,7 @@ pub fn register_routes(
     // GET /users/{id} - Get a specific user
     router = OperationBuilder::get("/users/{id}")
         .operation_id("users_info.get_user")
-        .require_auth("users", "read")  // ← Explicit auth requirement
+        .require_auth("users", "read")
         .summary("Get user by ID")
         .description("Retrieve a specific user by their UUID")
         .tag("users")
@@ -50,7 +50,7 @@ pub fn register_routes(
     // POST /users - Create a new user
     router = OperationBuilder::post("/users")
         .operation_id("users_info.create_user")
-        .require_auth("users", "create")  // ← Explicit auth requirement
+        .require_auth("users", "create")
         .summary("Create a new user")
         .description("Create a new user with the provided information")
         .tag("users")
@@ -67,7 +67,7 @@ pub fn register_routes(
     // PUT /users/{id} - Update a user
     router = OperationBuilder::put("/users/{id}")
         .operation_id("users_info.update_user")
-        .require_auth("users", "update")  // ← Explicit auth requirement
+        .require_auth("users", "update")
         .summary("Update user")
         .description("Update a user with partial data")
         .tag("users")
@@ -86,7 +86,7 @@ pub fn register_routes(
     // DELETE /users/{id} - Delete a user
     router = OperationBuilder::delete("/users/{id}")
         .operation_id("users_info.delete_user")
-        .require_auth("users", "delete")  // ← Explicit auth requirement
+        .require_auth("users", "delete") // ← Explicit auth requirement
         .summary("Delete user")
         .description("Delete a user by their UUID")
         .tag("users")
@@ -116,7 +116,7 @@ where
     // First register the route, then add layers
     let router = OperationBuilder::get("/users/events")
         .operation_id("users_info.events")
-        .require_auth("users", "read")  // ← Explicit auth requirement for event stream
+        .require_auth("users", "read") // ← Explicit auth requirement for event stream
         .summary("User events stream (SSE)")
         .description("Real-time stream of user events as Server-Sent Events")
         .tag("users")

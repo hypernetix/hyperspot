@@ -35,6 +35,27 @@ pub struct Requirement {
     pub action: String,
 }
 
+/// Route matcher for a specific HTTP method
+struct RouteMatcher {
+    matcher: matchit::Router<Requirement>,
+}
+
+impl RouteMatcher {
+    fn new() -> Self {
+        Self {
+            matcher: matchit::Router::new(),
+        }
+    }
+
+    fn insert(&mut self, path: &str, requirement: Requirement) -> Result<(), matchit::InsertError> {
+        self.matcher.insert(path, requirement)
+    }
+
+    fn find(&self, path: &str) -> Option<&Requirement> {
+        self.matcher.at(path).ok().map(|m| m.value)
+    }
+}
+
 /// Global state for the auth middleware.
 #[derive(Clone)]
 pub struct AuthState {
@@ -42,9 +63,9 @@ pub struct AuthState {
     pub validator: Arc<dyn TokenValidator>,
     pub scope_builder: Arc<dyn ScopeBuilder>,
     pub authorizer: Arc<dyn PrimaryAuthorizer>,
-    /// Map (METHOD, PATH) → role requirement.
-    pub requirements: Arc<HashMap<(Method, String), Requirement>>,
-    /// Set of routes explicitly marked as public (no auth required).
+    /// Route matchers per HTTP method for efficient pattern matching
+    route_matchers: Arc<HashMap<Method, RouteMatcher>>,
+    /// Set of route patterns explicitly marked as public (no auth required).
     pub public_routes: Arc<std::collections::HashSet<(Method, String)>>,
 }
 
@@ -54,16 +75,26 @@ pub async fn auth_middleware(
     mut req: Request,
     next: Next,
 ) -> Result<Response, AuthError> {
-    // 🔹 Disabled mode: inject root SecurityCtx and continue
+    // Disabled mode: inject root SecurityCtx and continue
     if state.cfg.mode == AuthMode::Disabled {
         let sec = SecurityCtx::root_ctx(); // subject=root, scope=all tenants
         req.extensions_mut().insert(sec);
         return Ok(next.run(req).await);
     }
 
-    // 🔹 Enabled mode
-    let key = (req.method().clone(), req.uri().path().to_string());
-    let requirement = state.requirements.get(&key).cloned();
+    // Enabled mode - use route pattern matching
+    let method = req.method();
+    let path = req.uri().path();
+
+    // Find requirement using pattern matching
+    let requirement = state
+        .route_matchers
+        .get(method)
+        .and_then(|matcher| matcher.find(path))
+        .cloned();
+
+    // Check if route pattern is explicitly public
+    let key = (method.clone(), path.to_string());
     let is_public = state.public_routes.contains(&key);
     let needs_authn = requirement.is_some() || (state.cfg.require_auth_by_default && !is_public);
 
@@ -81,7 +112,7 @@ pub async fn auth_middleware(
         None
     };
 
-    // 🔹 Role-based authorization
+    // Role-based authorization
     if let (Some(claims_ref), Some(reqm)) = (claims.as_ref(), requirement.as_ref()) {
         let sec_req = SecRequirement {
             resource: Box::leak(reqm.resource.clone().into_boxed_str()),
@@ -90,7 +121,7 @@ pub async fn auth_middleware(
         state.authorizer.check(claims_ref, &sec_req).await?;
     }
 
-    // 🔹 Build and attach SecurityCtx
+    // Build and attach SecurityCtx
     if let Some(claims) = claims {
         let scope = state.scope_builder.tenants_to_scope(&claims);
         let sec = SecurityCtx::new(scope, Subject::new(claims.sub));
@@ -104,7 +135,6 @@ pub async fn auth_middleware(
 
     Ok(next.run(req).await)
 }
-
 
 /// Create a noop validator for disabled auth mode
 pub struct NoopValidator;
@@ -145,6 +175,18 @@ pub fn build_auth_state(
     let scope_builder: Arc<dyn ScopeBuilder> = Arc::new(SimpleScopeBuilder);
     let authorizer: Arc<dyn PrimaryAuthorizer> = Arc::new(RoleAuthorizer);
 
+    // Build route matchers per HTTP method
+    let mut route_matchers_map: HashMap<Method, RouteMatcher> = HashMap::new();
+
+    for ((method, path), requirement) in requirements {
+        let matcher = route_matchers_map
+            .entry(method)
+            .or_insert_with(RouteMatcher::new);
+        matcher
+            .insert(&path, requirement)
+            .map_err(|e| anyhow::anyhow!("Failed to insert route pattern '{}': {}", path, e))?;
+    }
+
     Ok(AuthState {
         cfg: AuthConfig {
             mode,
@@ -153,8 +195,7 @@ pub fn build_auth_state(
         validator,
         scope_builder,
         authorizer,
-        requirements: Arc::new(requirements),
+        route_matchers: Arc::new(route_matchers_map),
         public_routes: Arc::new(public_routes),
     })
 }
-

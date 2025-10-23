@@ -13,9 +13,11 @@ struct Jwk {
     kid: String,
     kty: String,
     #[serde(rename = "use")]
+    #[allow(dead_code)]
     use_: Option<String>,
     n: String,
     e: String,
+    #[allow(dead_code)]
     alg: Option<String>,
 }
 
@@ -99,37 +101,40 @@ impl TokenValidator for JwksValidator {
         // Decode header and pick correct key
         let header = decode_header(token)
             .map_err(|e| AuthError::InvalidToken(format!("Invalid header: {}", e)))?;
-        
-        let kid = header.kid.clone()
+
+        let kid = header
+            .kid
+            .clone()
             .ok_or_else(|| AuthError::InvalidToken("Missing kid".into()))?;
-        
+
         let key = self.get_key(&kid).await?;
 
         // Prepare validation
         let mut validation = Validation::new(header.alg);
-        
+
         // Keep expiration validation
         validation.validate_exp = true;
-        
+
         // Optional: disable nbf unless needed
         validation.validate_nbf = false;
-        
+
         // Disable built-in audience validation (causes InvalidAudience with Keycloak)
         validation.validate_aud = false;
-        
+
         // Keep issuer validation if configured
         if let Some(iss) = &self.expected_issuer {
             validation.set_issuer(&[iss]);
         }
-        
+
         // Decode raw claims into JSON (to handle flexible aud field)
         let data = decode::<Value>(token, &key, &validation)
             .map_err(|e| AuthError::InvalidToken(format!("JWT decode failed: {}", e)))?;
-        
+
         let v = data.claims;
 
         // --- Normalize standard fields ---
-        let sub = v.get("sub")
+        let sub = v
+            .get("sub")
             .and_then(|x| x.as_str())
             .and_then(|s| Uuid::parse_str(s).ok())
             .ok_or_else(|| AuthError::InvalidToken("Missing or invalid sub".into()))?;
@@ -174,7 +179,10 @@ impl TokenValidator for JwksValidator {
             }
         }
 
-        let email = v.get("email").and_then(|x| x.as_str()).map(|s| s.to_string());
+        let email = v
+            .get("email")
+            .and_then(|x| x.as_str())
+            .map(|s| s.to_string());
 
         // --- Construct Claims ---
         let claims = Claims {
@@ -196,7 +204,7 @@ impl TokenValidator for JwksValidator {
                 return Err(AuthError::TokenExpired);
             }
         }
-        
+
         if let Some(nbf_ts) = claims.nbf {
             let now = chrono::Utc::now().timestamp();
             if now < nbf_ts {
@@ -278,4 +286,3 @@ impl TokenValidator for MockValidator {
         })
     }
 }
-
