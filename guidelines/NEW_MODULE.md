@@ -574,7 +574,7 @@ impl Module for UsersInfo {
 #[async_trait::async_trait]
 impl DbModule for UsersInfo {
     async fn migrate(&self, db: &db::DbHandle) -> anyhow::Result<()> {
-        crate::infra::storage::migrations::Migrator::up(db.seaorm(), None).await?;
+        crate::infra::storage::migrations::Migrator::up(db.sea(), None).await?;
         Ok(())
     }
 }

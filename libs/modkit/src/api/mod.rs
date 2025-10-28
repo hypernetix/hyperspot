@@ -21,7 +21,7 @@ pub use error_layer::{
 };
 pub use operation_builder::{
     ensure_schema, state, Missing, OpenApiRegistry, OperationBuilder, OperationSpec, ParamLocation,
-    ParamSpec, Present, ResponseSpec,
+    ParamSpec, Present, RateLimitSpec, ResponseSpec,
 };
 pub use problem::{
     bad_request, conflict, internal_error, not_found, Problem, ValidationError,

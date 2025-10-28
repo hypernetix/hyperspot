@@ -62,12 +62,13 @@ impl Module for UsersInfo {
             cfg.default_page_size, cfg.max_page_size
         );
 
-        // Acquire DB (SeaORM connection handle)
-        let db = ctx.db_required_async().await?;
-        let db_conn = db.sea(); // DatabaseConnection (cheap cloneable handle)
+        // Acquire DB (SeaORM connection handle with security enforcement)
+        let db = ctx.db_required()?;
+        let sec_conn = db.sea_secure(); // SecureConn - enforces access control on all queries
 
         // Wire repository (infra) to domain service (port)
-        let repo = SeaOrmUsersRepository::new(db_conn);
+        // Repository now uses SecureConn to automatically apply security filtering
+        let repo = SeaOrmUsersRepository::new(sec_conn);
 
         // Create event publisher adapter that bridges domain events to SSE
         let publisher: Arc<dyn EventPublisher<UserDomainEvent>> =
@@ -112,8 +113,8 @@ impl Module for UsersInfo {
 impl DbModule for UsersInfo {
     async fn migrate(&self, db: &modkit_db::DbHandle) -> anyhow::Result<()> {
         info!("Running users_info database migrations");
-        let conn = db.seaorm();
-        crate::infra::storage::migrations::Migrator::up(conn, None).await?;
+        let conn = db.sea();
+        crate::infra::storage::migrations::Migrator::up(&conn, None).await?;
         info!("Users database migrations completed successfully");
         Ok(())
     }

@@ -96,7 +96,7 @@ pub struct MyModuleConfig { /* fields */ }
 **DB access (SeaORM / SQLx)**
 
 ```rust
-let sea = db.seaorm();      // SeaORM connection
+let sea = db.sea();      // SeaORM connection
 let pool = db.sqlx_pool();  // SQLx pool
 ```
 
@@ -198,7 +198,7 @@ impl ApiIngress {
 **States & transitions**
 
 ```
-Stopped ── start() ─▶ Starting ──(await_ready? then ready.notify())──▶ Running
+Stopped ── start() ── Starting ──(await_ready? then ready.notify())──▶ Running
    ▲                                  │
    │                                  └─ if await_ready = false → Running immediately
    └──────────── stop()/cancel ────────────────────────────────────────────────┘

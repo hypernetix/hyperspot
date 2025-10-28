@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use modkit_db::secure::ScopableEntity;
 use sea_orm::entity::prelude::*;
 use uuid::Uuid;
 
@@ -7,7 +8,7 @@ use uuid::Uuid;
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: Uuid,
-    #[sea_orm(unique)]
+    pub tenant_id: Uuid,
     pub email: String,
     pub display_name: String,
     pub created_at: DateTime<Utc>,
@@ -18,3 +19,16 @@ pub struct Model {
 pub enum Relation {}
 
 impl ActiveModelBehavior for ActiveModel {}
+
+// Implement ScopableEntity for secure ORM support
+// This is a multi-tenant entity with tenant isolation
+impl ScopableEntity for Entity {
+    fn tenant_col() -> Option<Self::Column> {
+        // Multi-tenant entity - scope by tenant_id
+        Some(Column::TenantId)
+    }
+
+    fn id_col() -> Self::Column {
+        Column::Id
+    }
+}

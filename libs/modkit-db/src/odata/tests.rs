@@ -1,8 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::odata::*;
     use modkit_odata::{ast::*, CursorV1, ODataOrderBy, OrderKey, SortDir};
-    use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult};
 
     // Mock entity for testing
     #[derive(Debug, Clone, PartialEq, sea_orm::EntityTrait)]
@@ -194,6 +193,7 @@ mod tests {
             o: SortDir::Asc,
             s: "+name".to_string(),
             f: None,
+            d: "fwd".to_string(),
         };
 
         let order = ODataOrderBy(vec![OrderKey {
@@ -213,6 +213,7 @@ mod tests {
             o: SortDir::Desc,
             s: "-name".to_string(),
             f: None,
+            d: "fwd".to_string(),
         };
 
         let order = ODataOrderBy(vec![OrderKey {
@@ -232,6 +233,7 @@ mod tests {
             o: SortDir::Desc,
             s: "-created_at,-id".to_string(),
             f: None,
+            d: "fwd".to_string(),
         };
 
         let order = ODataOrderBy(vec![
@@ -257,6 +259,7 @@ mod tests {
             o: SortDir::Asc,
             s: "+field1".to_string(),
             f: None,
+            d: "fwd".to_string(),
         };
 
         let order = ODataOrderBy(vec![
@@ -286,6 +289,7 @@ mod tests {
             o: SortDir::Asc,
             s: "+unknown_field".to_string(),
             f: None,
+            d: "fwd".to_string(),
         };
 
         let order = ODataOrderBy(vec![OrderKey {

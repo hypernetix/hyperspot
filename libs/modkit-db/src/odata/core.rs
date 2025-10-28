@@ -356,6 +356,9 @@ pub fn parse_cursor_value(kind: FieldKind, s: &str) -> ODataBuildResult<sea_orm:
 
 /// Build a cursor predicate for pagination
 /// This builds the lexicographic OR-chain condition for cursor-based pagination
+///
+/// For backward pagination (cursor.d == "bwd"), the comparison operators are reversed
+/// to fetch items before the cursor, but the order remains the same for display consistency.
 pub fn build_cursor_predicate<E: EntityTrait>(
     cursor: &CursorV1,
     order: &ODataOrderBy,
@@ -381,9 +384,16 @@ where
         cursor_values.push((field, value, order_key.dir));
     }
 
+    // Determine if we're going backward
+    let is_backward = cursor.d == "bwd";
+
     // Build lexicographic condition
-    // For ASC: (k0 > v0) OR (k0 = v0 AND k1 > v1) OR ...
-    // For DESC: (k0 < v0) OR (k0 = v0 AND k1 < v1) OR ...
+    // Forward (fwd):
+    //   For ASC: (k0 > v0) OR (k0 = v0 AND k1 > v1) OR ...
+    //   For DESC: (k0 < v0) OR (k0 = v0 AND k1 < v1) OR ...
+    // Backward (bwd): Reverse the comparisons
+    //   For ASC: (k0 < v0) OR (k0 = v0 AND k1 < v1) OR ...
+    //   For DESC: (k0 > v0) OR (k0 = v0 AND k1 > v1) OR ...
     let mut main_condition = Condition::any();
 
     for i in 0..cursor_values.len() {
@@ -396,9 +406,18 @@ where
 
         // Add the comparison condition for current field
         let (field, value, dir) = &cursor_values[i];
-        let comparison = match dir {
-            SortDir::Asc => Expr::col(field.col).gt(value.clone()),
-            SortDir::Desc => Expr::col(field.col).lt(value.clone()),
+        let comparison = if is_backward {
+            // Backward: reverse the comparison
+            match dir {
+                SortDir::Asc => Expr::col(field.col).lt(value.clone()),
+                SortDir::Desc => Expr::col(field.col).gt(value.clone()),
+            }
+        } else {
+            // Forward: normal comparison
+            match dir {
+                SortDir::Asc => Expr::col(field.col).gt(value.clone()),
+                SortDir::Desc => Expr::col(field.col).lt(value.clone()),
+            }
         };
         prefix_condition = prefix_condition.add(comparison);
 
@@ -436,6 +455,7 @@ pub fn build_cursor_for_model<E: EntityTrait>(
     fmap: &FieldMap<E>,
     primary_dir: SortDir,
     filter_hash: Option<String>,
+    direction: &str, // "fwd" or "bwd"
 ) -> Result<CursorV1, ODataError> {
     let mut k = Vec::with_capacity(order.0.len());
     for key in &order.0 {
@@ -449,6 +469,7 @@ pub fn build_cursor_for_model<E: EntityTrait>(
         o: primary_dir,
         s: order.to_signed_tokens(),
         f: filter_hash,
+        d: direction.to_string(),
     })
 }
 
@@ -821,6 +842,9 @@ where
         s = s.filter(cond);
     }
 
+    // Check if we're paginating backward
+    let is_backward = q.cursor.as_ref().map(|c| c.d == "bwd").unwrap_or(false);
+
     // Apply cursor if present
     if let Some(cursor) = &q.cursor {
         let cond = build_cursor_predicate(cursor, &effective_order, fmap)
@@ -828,24 +852,60 @@ where
         s = s.filter(cond);
     }
 
-    // Apply order
-    s = s.apply_odata_order_page(&effective_order, fmap)?;
+    // Apply order (reverse it for backward pagination)
+    let query_order = if is_backward {
+        effective_order.clone().reverse_directions()
+    } else {
+        effective_order.clone()
+    };
+    s = s.apply_odata_order_page(&query_order, fmap)?;
 
     // Apply limit
     s = s.limit(fetch);
 
+    #[allow(clippy::disallowed_methods)]
     let mut rows = s
         .all(conn)
         .await
         .map_err(|e| ODataError::Db(e.to_string()))?;
 
     let has_more = (rows.len() as u64) > limit;
-    if has_more {
-        rows.truncate(limit as usize);
+
+    // For backward pagination with reversed ORDER BY:
+    // - DB returns items in opposite order
+    // - We fetch limit+1 to detect has_more
+    // - We need to: 1) trim, 2) reverse back to original order
+    if is_backward {
+        // Remove the extra item (furthest back in time, which is at the END after reversed query)
+        if has_more {
+            rows.pop();
+        }
+        // Reverse to restore original display order
+        rows.reverse();
+    } else {
+        // Forward pagination: just truncate the end
+        if has_more {
+            rows.truncate(limit as usize);
+        }
     }
 
     // Build cursors
-    let next_cursor = if has_more {
+    // After all the reversals, rows are in the display order (DESC)
+    // - rows.first() = newest item
+    // - rows.last() = oldest item
+    //
+    // For backward pagination:
+    //   - has_more means "more items backward" (older)
+    //   - next_cursor should always be present (we came from forward)
+    //   - prev_cursor based on has_more
+    // For forward pagination:
+    //   - has_more means "more items forward" (older in DESC)
+    //   - next_cursor based on has_more
+    //   - prev_cursor always present (unless at start)
+
+    let next_cursor = if is_backward {
+        // Going backward: always have items forward (unless this was the initial query)
+        // Build cursor from last item to go forward
         rows.last()
             .map(|m| {
                 build_cursor_for_model::<E>(
@@ -854,27 +914,72 @@ where
                     fmap,
                     tiebreaker.1,
                     q.filter_hash.clone(),
+                    "fwd",
                 )
                 .map(|c| c.encode())
             })
             .transpose()?
     } else {
-        None
+        // Going forward: only have more if has_more is true
+        if has_more {
+            rows.last()
+                .map(|m| {
+                    build_cursor_for_model::<E>(
+                        m,
+                        &effective_order,
+                        fmap,
+                        tiebreaker.1,
+                        q.filter_hash.clone(),
+                        "fwd",
+                    )
+                    .map(|c| c.encode())
+                })
+                .transpose()?
+        } else {
+            None
+        }
     };
 
-    let prev_cursor = rows
-        .first()
-        .map(|m| {
-            build_cursor_for_model::<E>(
-                m,
-                &effective_order,
-                fmap,
-                tiebreaker.1,
-                q.filter_hash.clone(),
-            )
-            .map(|c| c.encode())
-        })
-        .transpose()?; // optional; keep if you want
+    let prev_cursor = if is_backward {
+        // Going backward: only have more backward if has_more is true
+        if has_more {
+            rows.first()
+                .map(|m| {
+                    build_cursor_for_model::<E>(
+                        m,
+                        &effective_order,
+                        fmap,
+                        tiebreaker.1,
+                        q.filter_hash.clone(),
+                        "bwd",
+                    )
+                    .map(|c| c.encode())
+                })
+                .transpose()?
+        } else {
+            None
+        }
+    } else {
+        // Going forward: have items backward only if this is NOT the initial query
+        // If q.cursor is None, we're at the start of the dataset
+        if q.cursor.is_some() {
+            rows.first()
+                .map(|m| {
+                    build_cursor_for_model::<E>(
+                        m,
+                        &effective_order,
+                        fmap,
+                        tiebreaker.1,
+                        q.filter_hash.clone(),
+                        "bwd",
+                    )
+                    .map(|c| c.encode())
+                })
+                .transpose()?
+        } else {
+            None
+        }
+    };
 
     let items = rows.into_iter().map(model_to_domain).collect();
 

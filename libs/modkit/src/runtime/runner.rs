@@ -2,16 +2,16 @@
 //!
 //! Supported DB modes:
 //!   - `DbOptions::None` — modules get no DB in their contexts.
-//!   - `DbOptions::Manager` — modules use async DB access through DbManager.
+//!   - `DbOptions::Manager` — modules use ModuleContextBuilder to resolve per-module DbHandles.
 //!
 //! Design notes:
-//! - We build **one stable ModuleCtx** (`base_ctx`) and reuse it across all phases
-//!   (init → db → rest → start → wait → stop). When using DbManager, modules
-//!   access databases asynchronously through the shared manager context.
+//! - We use **ModuleContextBuilder** to resolve per-module DbHandles at runtime.
+//! - Phase order: **DB → init → REST → start → wait → stop**.
+//! - Modules receive a fully-scoped ModuleCtx with a resolved Option<DbHandle>.
 //! - Shutdown can be driven by OS signals, an external `CancellationToken`,
 //!   or an arbitrary future.
 
-use crate::context::{ConfigProvider, ModuleCtxBuilder};
+use crate::context::{ConfigProvider, ModuleContextBuilder};
 use crate::runtime::shutdown;
 use std::{future::Future, pin::Pin, sync::Arc};
 use tokio_util::sync::CancellationToken;
@@ -44,7 +44,7 @@ pub struct RunOptions {
     pub shutdown: ShutdownOptions,
 }
 
-/// Full cycle: init → db → rest (sync) → start → wait → stop.
+/// Full cycle: DB → init → rest (sync) → start → wait → stop.
 pub async fn run(opts: RunOptions) -> anyhow::Result<()> {
     // Stable components shared across all phases.
     let hub = Arc::new(crate::client_hub::ClientHub::default());
@@ -91,47 +91,58 @@ pub async fn run(opts: RunOptions) -> anyhow::Result<()> {
     // Discover modules upfront.
     let registry = crate::registry::ModuleRegistry::discover_and_build()?;
 
-    // Build ONE stable base context used across all phases.
-    let mut ctx_builder = ModuleCtxBuilder::new(cancel.clone())
-        .with_client_hub(hub.clone())
-        .with_config_provider(opts.modules_cfg.clone());
+    // Build the context builder that will resolve per-module DbHandles.
+    let db_manager = match &opts.db {
+        DbOptions::Manager(mgr) => Some(mgr.clone()),
+        DbOptions::None => None,
+    };
 
-    // Add DbManager if using the new approach
-    if let DbOptions::Manager(ref manager) = opts.db {
-        ctx_builder = ctx_builder.with_db_manager(manager.clone());
+    let ctx_builder = ModuleContextBuilder::new(
+        opts.modules_cfg.clone(),
+        hub.clone(),
+        cancel.clone(),
+        db_manager,
+    );
+
+    // DB MIGRATION phase
+    tracing::info!("Phase: db (before init)");
+    for entry in registry.modules() {
+        let ctx = ctx_builder.for_module(entry.name).await?;
+        if let (Some(db), Some(dbm)) = (ctx.db_optional(), entry.db.as_ref()) {
+            tracing::debug!(module = entry.name, "Running DB migration");
+            dbm.migrate(&db)
+                .await
+                .map_err(|e| crate::registry::RegistryError::DbMigrate {
+                    module: entry.name,
+                    source: e,
+                })?;
+        } else if entry.db.is_some() {
+            tracing::debug!(
+                module = entry.name,
+                "Module has DbModule trait but no DB handle (no config)"
+            );
+        }
     }
-
-    let base_ctx = ctx_builder.build();
 
     // INIT phase
     tracing::info!("Phase: init");
-    match &opts.db {
-        DbOptions::Manager(_) => {
-            // DbManager: modules use async DB access through the manager.
-            registry.run_init_phase(&base_ctx).await?;
-        }
-        DbOptions::None => {
-            // No DB at all — just run init with the shared base context.
-            registry.run_init_phase(&base_ctx).await?;
-        }
-    }
-
-    // DB MIGRATION phase
-    match &opts.db {
-        DbOptions::Manager(_) => {
-            tracing::info!("Phase: db (manager)");
-            // DbManager approach: modules will handle their own DB migration
-            // during their lifecycle using async DB access
-            // No centralized migration phase needed
-        }
-        DbOptions::None => {
-            // No DB — nothing to migrate.
-        }
+    for entry in registry.modules() {
+        let ctx = ctx_builder.for_module(entry.name).await?;
+        entry
+            .core
+            .init(&ctx)
+            .await
+            .map_err(|e| crate::registry::RegistryError::Init {
+                module: entry.name,
+                source: e,
+            })?;
     }
 
     // REST phase (synchronous router composition against ingress).
     tracing::info!("Phase: rest (sync)");
-    let _ = registry.run_rest_phase(&base_ctx, axum::Router::new())?;
+    let _router = registry
+        .run_rest_phase_with_builder(&ctx_builder, axum::Router::new())
+        .await?;
 
     // START phase
     tracing::info!("Phase: start");

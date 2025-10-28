@@ -97,6 +97,13 @@ pub struct ResponseSpec {
     pub schema_name: Option<String>,
 }
 
+/// Security requirement for an operation (resource:action pattern)
+#[derive(Clone, Debug)]
+pub struct OperationSecRequirement {
+    pub resource: String,
+    pub action: String,
+}
+
 /// Simplified operation specification for the type-safe builder
 #[derive(Clone, Debug)]
 pub struct OperationSpec {
@@ -111,6 +118,23 @@ pub struct OperationSpec {
     pub responses: Vec<ResponseSpec>,
     /// Internal handler id; can be used by registry/generator to map a handler identity
     pub handler_id: String,
+    /// Security requirement for this operation (if any)
+    pub sec_requirement: Option<OperationSecRequirement>,
+    /// Explicitly mark route as public (no auth required)
+    pub is_public: bool,
+    /// Optional rate & concurrency limits for this operation
+    pub rate_limit: Option<RateLimitSpec>,
+}
+
+/// Per-operation rate & concurrency limit specification
+#[derive(Clone, Debug, Default)]
+pub struct RateLimitSpec {
+    /// Target steady-state requests per second
+    pub rps: u32,
+    /// Maximum burst size (token bucket capacity)
+    pub burst: u32,
+    /// Maximum number of in-flight requests for this route
+    pub in_flight: u32,
 }
 
 //
@@ -150,7 +174,7 @@ where
 }
 
 /// Registry trait for OpenAPI operations and schemas
-pub trait OpenApiRegistry {
+pub trait OpenApiRegistry: Send + Sync {
     /// Register an API operation specification
     fn register_operation(&self, spec: &OperationSpec);
 
@@ -226,6 +250,9 @@ impl<S> OperationBuilder<Missing, Missing, S> {
                 request_body: None,
                 responses: Vec::new(),
                 handler_id,
+                sec_requirement: None,
+                is_public: false,
+                rate_limit: None,
             },
             method_router: (), // no router in Missing state
             _has_handler: PhantomData,
@@ -275,6 +302,17 @@ where
     /// Set the operation ID
     pub fn operation_id(mut self, id: impl Into<String>) -> Self {
         self.spec.operation_id = Some(id.into());
+        self
+    }
+
+    /// Require per-route rate and concurrency limits.
+    /// Stores metadata for the ingress to enforce.
+    pub fn require_rate_limit(&mut self, rps: u32, burst: u32, in_flight: u32) -> &mut Self {
+        self.spec.rate_limit = Some(RateLimitSpec {
+            rps,
+            burst,
+            in_flight,
+        });
         self
     }
 
@@ -418,6 +456,43 @@ where
         if let Some(rb) = &mut self.spec.request_body {
             rb.required = false;
         }
+        self
+    }
+
+    /// Require authentication with a specific resource:action permission.
+    ///
+    /// # Example
+    /// ```rust,ignore
+    /// OperationBuilder::get("/users")
+    ///     .require_auth("users", "read")
+    ///     .handler(list_users)
+    ///     .json_response(200, "List of users")
+    ///     .register(router, &api);
+    /// ```
+    pub fn require_auth(mut self, resource: impl Into<String>, action: impl Into<String>) -> Self {
+        self.spec.sec_requirement = Some(OperationSecRequirement {
+            resource: resource.into(),
+            action: action.into(),
+        });
+        self.spec.is_public = false;
+        self
+    }
+
+    /// Mark this route as public (no authentication required).
+    ///
+    /// This explicitly opts out of the `require_auth_by_default` setting.
+    ///
+    /// # Example
+    /// ```rust,ignore
+    /// OperationBuilder::get("/health")
+    ///     .public()
+    ///     .handler(health_check)
+    ///     .json_response(200, "OK")
+    ///     .register(router, &api);
+    /// ```
+    pub fn public(mut self) -> Self {
+        self.spec.is_public = true;
+        self.spec.sec_requirement = None;
         self
     }
 }

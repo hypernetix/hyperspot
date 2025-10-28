@@ -11,6 +11,8 @@ path = "src/lib.rs"
 
 [dependencies]
 modkit = { path = "../../libs/modkit" }
+modkit-auth = { path = "../../libs/modkit-auth" }
+modkit-security = { path = "../../libs/modkit-security" }
 inventory = "0.3"
 anyhow = { workspace = true }
 async-trait = { workspace = true }
@@ -32,6 +34,7 @@ axum = { workspace = true }
 tower = { workspace = true }
 tower-http = { workspace = true }
 tonic = { version = "0.14.2", optional = true }
+matchit = "0.8"  # Route pattern matching for auth middleware
 
 # Time handling
 chrono = { workspace = true }

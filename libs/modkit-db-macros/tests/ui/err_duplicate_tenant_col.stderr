@@ -1,0 +1,14 @@
+error: duplicate attribute 'tenant_col'
+
+         = note: first defined here
+
+ --> tests/ui/err_duplicate_tenant_col.rs:7:10
+  |
+7 | #[secure(tenant_col = "tenant2_id")]
+  |          ^^^^^^^^^^
+
+error[E0601]: `main` function not found in crate `$CRATE`
+ --> tests/ui/err_duplicate_tenant_col.rs:8:14
+  |
+8 | struct Model;
+  |              ^ consider adding a `main` function to `$DIR/tests/ui/err_duplicate_tenant_col.rs`

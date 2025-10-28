@@ -6,6 +6,7 @@ use crate::domain::events::UserDomainEvent;
 use crate::domain::ports::{AuditPort, EventPublisher};
 use crate::domain::repo::UsersRepository;
 use chrono::Utc;
+use modkit_db::secure::SecurityCtx;
 use modkit_odata::{ODataQuery, Page};
 use tracing::{debug, info, instrument};
 use uuid::Uuid;
@@ -54,8 +55,8 @@ impl Service {
         }
     }
 
-    #[instrument(name = "users_info.service.get_user", skip(self), fields(user_id = %id))]
-    pub async fn get_user(&self, id: Uuid) -> Result<User, DomainError> {
+    #[instrument(name = "users_info.service.get_user", skip(self, ctx), fields(user_id = %id))]
+    pub async fn get_user(&self, ctx: &SecurityCtx, id: Uuid) -> Result<User, DomainError> {
         debug!("Getting user by id");
 
         // Call audit service to log user access
@@ -66,7 +67,7 @@ impl Service {
 
         let user = self
             .repo
-            .find_by_id(id)
+            .find_by_id(ctx, id)
             .await
             .map_err(|e| DomainError::database(e.to_string()))?
             .ok_or_else(|| DomainError::user_not_found(id))?;
@@ -75,15 +76,16 @@ impl Service {
     }
 
     /// List users with cursor-based pagination
-    #[instrument(name = "users_info.service.list_users_page", skip(self, query))]
+    #[instrument(name = "users_info.service.list_users_page", skip(self, ctx, query))]
     pub async fn list_users_page(
         &self,
+        ctx: &SecurityCtx,
         query: ODataQuery,
     ) -> Result<Page<User>, modkit_odata::Error> {
         debug!("Listing users with cursor pagination");
 
         // All validation is now handled centrally in paginate_with_odata
-        let page = self.repo.list_users_page(&query).await?;
+        let page = self.repo.list_users_page(ctx, &query).await?;
 
         debug!("Successfully listed {} users in page", page.items.len());
         Ok(page)
@@ -91,19 +93,29 @@ impl Service {
 
     #[instrument(
         name = "users_info.service.create_user",
-        skip(self),
+        skip(self, ctx),
         fields(email = %new_user.email, display_name = %new_user.display_name)
     )]
-    pub async fn create_user(&self, new_user: NewUser) -> Result<User, DomainError> {
+    pub async fn create_user(
+        &self,
+        ctx: &SecurityCtx,
+        new_user: NewUser,
+    ) -> Result<User, DomainError> {
         info!("Creating new user");
 
         // Validate input
         self.validate_new_user(&new_user)?;
 
+        // Get tenant_id from security context
+        let tenant_id =
+            ctx.scope().tenant_ids().first().ok_or_else(|| {
+                DomainError::validation("tenant", "No tenant in security context")
+            })?;
+
         // Check uniqueness
         if self
             .repo
-            .email_exists(&new_user.email)
+            .email_exists(ctx, &new_user.email)
             .await
             .map_err(|e| DomainError::database(e.to_string()))?
         {
@@ -114,6 +126,7 @@ impl Service {
         let id = Uuid::new_v4();
         let user = User {
             id,
+            tenant_id: *tenant_id,
             email: new_user.email,
             display_name: new_user.display_name,
             created_at: now,
@@ -121,7 +134,7 @@ impl Service {
         };
 
         self.repo
-            .insert(user.clone())
+            .insert(ctx, user.clone())
             .await
             .map_err(|e| DomainError::database(e.to_string()))?;
 
@@ -143,10 +156,15 @@ impl Service {
 
     #[instrument(
         name = "users_info.service.update_user",
-        skip(self),
+        skip(self, ctx),
         fields(user_id = %id)
     )]
-    pub async fn update_user(&self, id: Uuid, patch: UserPatch) -> Result<User, DomainError> {
+    pub async fn update_user(
+        &self,
+        ctx: &SecurityCtx,
+        id: Uuid,
+        patch: UserPatch,
+    ) -> Result<User, DomainError> {
         info!("Updating user");
 
         // Validate patch
@@ -155,7 +173,7 @@ impl Service {
         // Load current
         let mut current = self
             .repo
-            .find_by_id(id)
+            .find_by_id(ctx, id)
             .await
             .map_err(|e| DomainError::database(e.to_string()))?
             .ok_or_else(|| DomainError::user_not_found(id))?;
@@ -165,7 +183,7 @@ impl Service {
             if new_email != &current.email
                 && self
                     .repo
-                    .email_exists(new_email)
+                    .email_exists(ctx, new_email)
                     .await
                     .map_err(|e| DomainError::database(e.to_string()))?
             {
@@ -184,7 +202,7 @@ impl Service {
 
         // Persist
         self.repo
-            .update(current.clone())
+            .update(ctx, current.clone())
             .await
             .map_err(|e| DomainError::database(e.to_string()))?;
 
@@ -200,15 +218,15 @@ impl Service {
 
     #[instrument(
         name = "users_info.service.delete_user",
-        skip(self),
+        skip(self, ctx),
         fields(user_id = %id)
     )]
-    pub async fn delete_user(&self, id: Uuid) -> Result<(), DomainError> {
+    pub async fn delete_user(&self, ctx: &SecurityCtx, id: Uuid) -> Result<(), DomainError> {
         info!("Deleting user");
 
         let deleted = self
             .repo
-            .delete(id)
+            .delete(ctx, id)
             .await
             .map_err(|e| DomainError::database(e.to_string()))?;
 

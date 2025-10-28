@@ -1,5 +1,7 @@
 //! Tests for configuration precedence and merge behavior.
 
+mod common;
+
 use figment::{providers::Serialized, Figment};
 use modkit_db::{config::*, manager::DbManager, DbError};
 use std::collections::HashMap;
@@ -73,16 +75,17 @@ async fn test_precedence_module_fields_override_server() {
 /// Test that module DSN completely overrides server DSN using SQLite.
 #[tokio::test]
 async fn test_precedence_module_dsn_override_server() {
+    let test_data = common::test_data_dir();
+    let server_db = test_data.join(format!("server_{}.db", std::process::id()));
+    let module_db = test_data.join(format!("module_{}.db", std::process::id()));
+
     let global_config = GlobalDatabaseConfig {
         servers: {
             let mut servers = HashMap::new();
             servers.insert(
                 "sqlite_server".to_string(),
                 DbConnConfig {
-                    dsn: Some(format!(
-                        "sqlite:file:server_{}.db?synchronous=FULL",
-                        std::process::id()
-                    )),
+                    dsn: Some(format!("sqlite://{}?synchronous=FULL", server_db.display())),
                     ..Default::default()
                 },
             );
@@ -97,7 +100,7 @@ async fn test_precedence_module_dsn_override_server() {
             "test_module": {
                 "database": {
                     "server": "sqlite_server",
-                    "dsn": format!("sqlite:file:module_{}.db?synchronous=NORMAL", std::process::id())  // Should completely override server DSN
+                    "dsn": format!("sqlite://{}?synchronous=NORMAL", module_db.display())  // Should completely override server DSN
                 }
             }
         }

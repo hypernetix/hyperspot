@@ -89,6 +89,15 @@ modules:
       bind_addr: "127.0.0.1:8088"
       enable_docs: true
       cors_enabled: false
+      # Authentication Configuration
+      auth_disabled: false
+      require_auth_by_default: true
+      
+      # JWKS Configuration (replace with your OIDC provider)
+      jwks_uri: "http://localhost:8080/realms/dev/protocol/openid-connect/certs"
+      issuer: "http://localhost:8080/realms/dev"
+      audience: "api-ingress"
+
   
   users_info:
     # Module-specific database configuration

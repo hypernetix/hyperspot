@@ -1,9 +1,27 @@
 #![allow(dead_code)]
 use anyhow::Result;
+use std::path::PathBuf;
 use std::time::Duration;
 
 #[cfg(any(feature = "pg", feature = "mysql"))]
 use testcontainers::{runners::AsyncRunner, ImageExt};
+
+/// Returns a test data directory under target/test_data/modkit-db/
+/// Creates the directory if it doesn't exist.
+pub fn test_data_dir() -> PathBuf {
+    let project_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .to_path_buf();
+    let test_dir = project_root
+        .join("target")
+        .join("test_data")
+        .join("modkit-db");
+    std::fs::create_dir_all(&test_dir).unwrap();
+    test_dir
+}
 
 pub struct DbUnderTest {
     pub url: String,

@@ -200,7 +200,7 @@ impl DbManager {
                 .global
                 .as_ref()
                 .and_then(|g| g.auto_provision)
-                .unwrap_or(true); // Default to true for backward compatibility
+                .unwrap_or(true);
 
             if auto_provision {
                 // Create all necessary directories

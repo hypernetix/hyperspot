@@ -74,6 +74,10 @@ pub mod manager;
 pub mod odata;
 pub mod options;
 
+// Secure ORM layer (requires sea-orm feature)
+#[cfg(feature = "sea-orm")]
+pub mod secure;
+
 // Internal modules
 mod pool_opts;
 #[cfg(feature = "sqlite")]
@@ -278,6 +282,18 @@ pub struct DbHandle {
     sea: DatabaseConnection,
 }
 
+impl Clone for DbHandle {
+    fn clone(&self) -> Self {
+        Self {
+            engine: self.engine,
+            pool: self.pool.clone(),
+            dsn: self.dsn.clone(),
+            #[cfg(feature = "sea-orm")]
+            sea: self.sea.clone(),
+        }
+    }
+}
+
 const DEFAULT_SQLITE_BUSY_TIMEOUT: i32 = 5000;
 
 impl DbHandle {
@@ -464,16 +480,64 @@ impl DbHandle {
     }
 
     // --- SeaORM accessor ---
+
+    /// Create a secure database connection for scoped operations.
+    ///
+    /// Returns a `SecureConn` wrapper that requires `SecurityCtx` for each operation.
+    /// This is the **recommended** way to access the database from application code.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// use modkit_db::secure::{SecurityCtx, AccessScope};
+    ///
+    /// let secure_conn = db_handle.sea_secure();
+    ///
+    /// // Security context from API request
+    /// let ctx = SecurityCtx::for_tenants(vec![tenant_id], user_id);
+    ///
+    /// // All queries require context and are automatically scoped
+    /// let users = secure_conn.find::<user::Entity>(&ctx)?
+    ///     .all(secure_conn.conn())
+    ///     .await?;
+    /// ```
     #[cfg(feature = "sea-orm")]
-    /// Get SeaORM connection (clone; cheap handle).
-    pub fn sea(&self) -> DatabaseConnection {
-        self.sea.clone()
+    pub fn sea_secure(&self) -> crate::secure::SecureConn {
+        crate::secure::SecureConn::new(self.sea.clone())
     }
 
-    #[cfg(feature = "sea-orm")]
-    /// Backward-compatible alias; not async (no await inside).
-    pub fn seaorm(&self) -> &DatabaseConnection {
-        &self.sea
+    /// **INSECURE**: Get raw SeaORM connection (bypasses all security).
+    ///
+    /// This method is **only available** when compiled with `--features insecure-escape`.
+    /// It provides direct access to the database connection, bypassing all tenant
+    /// isolation and access control.
+    ///
+    /// # Security Warning
+    ///
+    /// This completely bypasses the secure ORM layer. Use only for:
+    /// - Administrative maintenance tools
+    /// - Database migrations
+    /// - Emergency data recovery
+    /// - Internal infrastructure code
+    ///
+    /// **Never use in application/business logic code.**
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// #[cfg(feature = "insecure-escape")]
+    /// async fn admin_operation(db: &DbHandle) {
+    ///     let raw_conn = db.sea();  // No security!
+    ///     // Direct database access...
+    /// }
+    /// ```
+    #[cfg(all(feature = "sea-orm", feature = "insecure-escape"))]
+    pub fn sea(&self) -> DatabaseConnection {
+        tracing::warn!(
+            target: "security",
+            "DbHandle::sea() called - bypassing secure ORM layer"
+        );
+        self.sea.clone()
     }
 
     // --- Transaction helpers (engine-specific) ---
@@ -595,8 +659,6 @@ impl DbHandle {
         }
     }
 }
-
-// ===================== helpers =====================
 
 // ===================== tests =====================
 
@@ -755,10 +817,22 @@ mod tests {
 
     #[cfg(all(feature = "sea-orm", feature = "sqlite"))]
     #[tokio::test]
-    async fn test_seaorm_connection() -> Result<()> {
+    async fn test_secure_conn() -> Result<()> {
         let dsn = "sqlite::memory:";
         let db = DbHandle::connect(dsn, ConnectOpts::default()).await?;
-        let _conn = db.sea();
+
+        let _secure_conn = db.sea_secure();
+        Ok(())
+    }
+
+    #[cfg(all(feature = "sea-orm", feature = "sqlite", feature = "insecure-escape"))]
+    #[tokio::test]
+    async fn test_insecure_sea_access() -> Result<()> {
+        let dsn = "sqlite::memory:";
+        let db = DbHandle::connect(dsn, ConnectOpts::default()).await?;
+
+        // Only available with insecure-escape feature
+        let _raw = db.sea();
         Ok(())
     }
 }

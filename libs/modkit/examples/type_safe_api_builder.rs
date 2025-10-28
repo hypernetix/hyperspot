@@ -138,26 +138,26 @@ async fn main() {
     println!("\nType Safety Demonstrations:");
     println!("===========================");
 
-    println!("✅ VALID: Both handler and response are provided");
+    println!("VALID: Both handler and response are provided");
     println!("   OperationBuilder::get(\"/example\")");
     println!("     .json_response(200, \"OK\")");
     println!("     .handler(some_handler)");
     println!("     .register(router, registry) // ← This compiles!");
 
     println!();
-    println!("❌ INVALID: Missing handler (compile-time error)");
+    println!("INVALID: Missing handler (compile-time error)");
     println!("   OperationBuilder::get(\"/example\")");
     println!("     .json_response(200, \"OK\")");
     println!("     .register(router, registry) // ← Compilation error!");
 
     println!();
-    println!("❌ INVALID: Missing response (compile-time error)");
+    println!("INVALID: Missing response (compile-time error)");
     println!("   OperationBuilder::get(\"/example\")");
     println!("     .handler(some_handler)");
     println!("     .register(router, registry) // ← Compilation error!");
 
     println!();
-    println!("✅ FLEXIBLE: Descriptive methods can be called in any order");
+    println!("FLEXIBLE: Descriptive methods can be called in any order");
     println!("   OperationBuilder::get(\"/example\")");
     println!("     .summary(\"Example\")        // ← Can be anywhere");
     println!("     .handler(some_handler)      // ← Can be anywhere");

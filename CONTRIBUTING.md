@@ -2,7 +2,7 @@
 
 Thank you for your interest in contributing to HyperSpot Server! This document provides guidelines and information for contributors.
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -50,7 +50,7 @@ hyperspot/
 └── docs/                     # Documentation
 ```
 
-## 📝 Development Workflow
+## Development Workflow
 
 ### 1. Create a Feature Branch
 
@@ -158,7 +158,7 @@ Then create a Pull Request on GitHub with:
 - Test coverage information
 - Breaking changes (if any)
 
-## 🏗️ Architecture Guidelines
+## Architecture Guidelines
 
 ### Module Development
 
@@ -216,7 +216,7 @@ TBD
 
 TBD
 
-## 🧪 Testing Standards
+## Testing Standards
 
 ### Unit Tests
 
@@ -239,7 +239,7 @@ cargo install cargo-tarpaulin
 cargo tarpaulin --out html
 ```
 
-## 🎨 Code Style
+## Code Style
 
 ### Formatting
 
@@ -362,12 +362,12 @@ pub async fn process_user(id: u64) -> Result<User> {
 
 1. **Avoid blocking operations** in async context:
    ```rust
-   // ❌ Bad: blocking in async
+   // Bad: blocking in async
    async fn bad_handler() {
        let data = std::fs::read_to_string("file.txt").unwrap();
    }
    
-   // ✅ Good: use async I/O
+   // Good: use async I/O
    async fn good_handler() {
        let data = tokio::fs::read_to_string("file.txt").await?;
    }
@@ -375,12 +375,12 @@ pub async fn process_user(id: u64) -> Result<User> {
 
 2. **Use efficient data structures**:
    ```rust
-   // ❌ Bad: unnecessary allocations
+   // Bad: unnecessary allocations
    fn process_items(items: &[Item]) -> Vec<String> {
        items.iter().map(|item| item.name.clone()).collect()
    }
    
-   // ✅ Good: avoid clones when possible
+   // Good: avoid clones when possible
    fn process_items(items: &[Item]) -> Vec<&str> {
        items.iter().map(|item| item.name.as_str()).collect()
    }
@@ -395,7 +395,7 @@ pub async fn process_user(id: u64) -> Result<User> {
    use tokio::sync::{RwLock as AsyncRwLock, Mutex as AsyncMutex};
    ```
 
-## 🐛 Debugging
+## Debugging
 
 ### Logging
 
@@ -450,7 +450,7 @@ cargo test -- --test-threads=1
 cargo test -- --ignored
 ```
 
-## 📋 Pull Request Guidelines
+## Pull Request Guidelines
 
 ### PR Description Template
 
@@ -499,7 +499,7 @@ Closes #issue_number
 - **Rebase and merge** for simple fixes
 - **Merge commit** for release branches
 
-## 🚨 Security Guidelines
+## Security Guidelines
 
 ### Input Validation
 
@@ -534,22 +534,22 @@ fn validate_password(password: &str) -> Result<(), ValidationError> {
 - **Use secure random generation** for tokens
 
 ```rust
-// ❌ Bad: hardcoded secret
+// Bad: hardcoded secret
 const API_KEY: &str = "sk-1234567890abcdef";
 
-// ✅ Good: environment variable
+// Good: environment variable
 let api_key = std::env::var("API_KEY")
     .context("API_KEY environment variable not set")?;
 ```
 
-## 📞 Getting Help
+## Getting Help
 
 - **GitHub Issues**: For bug reports and feature requests
 - **GitHub Discussions**: For questions and general discussion
 - **Documentation**: Check existing docs first
 - **Code Examples**: Look at existing modules for patterns
 
-## 🎯 Contribution Areas
+## Contribution Areas
 
 We welcome contributions in:
 
@@ -560,4 +560,4 @@ We welcome contributions in:
 - **Performance**: Optimize critical paths
 - **Developer experience**: Improve tooling and workflows
 
-Thank you for contributing to HyperSpot Server! 🚀
+Thank you for contributing to HyperSpot Server!

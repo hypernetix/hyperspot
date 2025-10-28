@@ -6,6 +6,7 @@ impl From<UserEntity> for User {
     fn from(e: UserEntity) -> Self {
         Self {
             id: e.id,
+            tenant_id: e.tenant_id,
             email: e.email,
             display_name: e.display_name,
             created_at: e.created_at,
@@ -19,6 +20,7 @@ impl From<&UserEntity> for User {
     fn from(e: &UserEntity) -> Self {
         Self {
             id: e.id,
+            tenant_id: e.tenant_id,
             email: e.email.clone(),
             display_name: e.display_name.clone(),
             created_at: e.created_at,

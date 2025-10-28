@@ -49,7 +49,7 @@ sea-orm = { version = "1.1", features = [
     "with-chrono",
     "with-uuid"
 ] }
-sea-orm-migration = "1.1"
+sea-orm-migration = { version = "1.1", features = ["sqlx-sqlite"] }
 rust_decimal = "1.38.0"
 
 # Error handling
@@ -57,7 +57,10 @@ thiserror = "2.0"
 
 # Local dependencies
 modkit = { path = "../../../libs/modkit" }
-modkit-db = { path = "../../../libs/modkit-db", default-features = false, features = ["pg", "sea-orm"] }
+# NOTE: insecure-escape enabled for migrations and example infrastructure code
+modkit-db = { path = "../../../libs/modkit-db", default-features = false, features = ["pg", "sea-orm", "insecure-escape"] }
+modkit-auth = { path = "../../../libs/modkit-auth" }
+modkit-security = { path = "../../../libs/modkit-security" }
 modkit-errors = { path = "../../../libs/modkit-errors" }
 modkit-errors-macro = { path = "../../../libs/modkit-errors-macro" }
 modkit-odata = { path = "../../../libs/modkit-odata", features = ["with-utoipa"] }

@@ -107,27 +107,6 @@ async fn run_common_suite(database_url: &str) -> Result<()> {
         }
     }
 
-    // Test transaction functionality - temporarily disabled due to lifetime issues
-    // test_transaction(&db).await?;
-
-    #[cfg(feature = "sea-orm")]
-    {
-        // Test SeaORM connection
-        let _sea = db.sea();
-        // Basic ping to verify connection works
-        db.seaorm()
-            .ping()
-            .await
-            .map_err(|e| anyhow::anyhow!("SeaORM ping failed: {}", e))?;
-    }
-
-    // Clean up
     db.close().await;
     Ok(())
 }
-
-// Transaction tests temporarily disabled due to lifetime issues with async closures
-// async fn test_transaction(db: &modkit_db::DbHandle) -> Result<()> {
-//     // Implementation would go here
-//     Ok(())
-// }
