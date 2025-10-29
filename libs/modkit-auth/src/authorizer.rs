@@ -56,14 +56,13 @@ mod tests {
     fn mock_claims(roles: Vec<String>) -> Claims {
         Claims {
             sub: Uuid::new_v4(),
-            iss: None,
-            aud: None,
-            exp: None,
-            iat: None,
-            nbf: None,
+            issuer: "test".to_string(),
+            audiences: vec![],
+            expires_at: None,
+            not_before: None,
             tenants: vec![],
             roles,
-            email: None,
+            extras: serde_json::Map::new(),
         }
     }
 

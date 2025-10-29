@@ -15,6 +15,9 @@ async-trait = { workspace = true }
 anyhow = { workspace = true }
 chrono = { workspace = true }
 tokio = { workspace = true }
+time = { version = "0.3", features = ["serde", "formatting", "parsing"] }
+arc-swap = "1.7"
+tracing = { workspace = true }
 
 # JWT and crypto
 jsonwebtoken = "9"
@@ -32,4 +35,8 @@ modkit-security = { path = "../modkit-security" }
 [features]
 default = ["axum-ext"]
 axum-ext = ["axum", "tower", "http"]
+
+[dev-dependencies]
+serde_yaml = "0.9"
+tracing-subscriber = { workspace = true }
 

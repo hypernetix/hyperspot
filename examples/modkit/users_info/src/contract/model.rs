@@ -14,6 +14,8 @@ pub struct User {
 /// Data for creating a new user
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NewUser {
+    pub id: Option<Uuid>,
+    pub tenant_id: Uuid,
     pub email: String,
     pub display_name: String,
 }

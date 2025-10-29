@@ -106,12 +106,6 @@ impl Service {
         // Validate input
         self.validate_new_user(&new_user)?;
 
-        // Get tenant_id from security context
-        let tenant_id =
-            ctx.scope().tenant_ids().first().ok_or_else(|| {
-                DomainError::validation("tenant", "No tenant in security context")
-            })?;
-
         // Check uniqueness
         if self
             .repo
@@ -123,10 +117,15 @@ impl Service {
         }
 
         let now = Utc::now();
-        let id = Uuid::new_v4();
+        // Use provided ID or generate a new UUID v7
+        let id = new_user.id.unwrap_or_else(|| {
+            // Generate UUID v7 (time-ordered)
+            uuid::Uuid::now_v7()
+        });
+
         let user = User {
             id,
-            tenant_id: *tenant_id,
+            tenant_id: new_user.tenant_id,
             email: new_user.email,
             display_name: new_user.display_name,
             created_at: now,

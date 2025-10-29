@@ -97,7 +97,22 @@ pub async fn create_user(
         "Creating new user"
     );
 
-    let new_user = req_body.into();
+    // Get tenant_id from the security context
+    let tenant_id = *ctx.scope().tenant_ids().first().ok_or_else(|| {
+        UsersApiError::from_domain(crate::domain::error::DomainError::validation(
+            "tenant",
+            "No tenant in security context",
+        ))
+    })?;
+
+    // Construct NewUser with tenant_id from context
+    let new_user = crate::contract::model::NewUser {
+        id: req_body.id,
+        tenant_id,
+        email: req_body.email,
+        display_name: req_body.display_name,
+    };
+
     let user = svc
         .create_user(&ctx, new_user)
         .await

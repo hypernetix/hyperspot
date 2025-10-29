@@ -6,12 +6,12 @@ use axum::{
 };
 use modkit_auth::{
     authorizer::RoleAuthorizer,
+    build_auth_dispatcher,
     errors::AuthError,
-    jwks::JwksValidator,
     scope_builder::SimpleScopeBuilder,
-    traits::{PrimaryAuthorizer, ScopeBuilder, TokenValidator},
+    traits::{PrimaryAuthorizer, ScopeBuilder},
     types::SecRequirement,
-    Claims,
+    AuthConfig as ModkitAuthConfig, AuthDispatcher, AuthModeConfig, JwksConfig, PluginConfig,
 };
 use modkit_security::{SecurityCtx, Subject};
 use std::{collections::HashMap, sync::Arc};
@@ -60,7 +60,8 @@ impl RouteMatcher {
 #[derive(Clone)]
 pub struct AuthState {
     pub cfg: AuthConfig,
-    pub validator: Arc<dyn TokenValidator>,
+    /// New AuthDispatcher (None when auth is disabled)
+    pub dispatcher: Option<Arc<AuthDispatcher>>,
     pub scope_builder: Arc<dyn ScopeBuilder>,
     pub authorizer: Arc<dyn PrimaryAuthorizer>,
     /// Route matchers per HTTP method for efficient pattern matching
@@ -107,7 +108,23 @@ pub async fn auth_middleware(
 
     let claims = if needs_authn {
         let token = bearer.ok_or(AuthError::Unauthenticated)?;
-        Some(state.validator.validate_and_parse(&token).await?)
+
+        // Strip "Bearer " prefix if present
+        let token = token.strip_prefix("Bearer ").unwrap_or(&token);
+
+        // Get dispatcher (should always exist in enabled mode)
+        let dispatcher = state
+            .dispatcher
+            .as_ref()
+            .ok_or_else(|| AuthError::ValidationFailed("Auth dispatcher not configured".into()))?;
+
+        // Validate JWT using dispatcher
+        let normalized = dispatcher
+            .validate_jwt(token)
+            .await
+            .map_err(|e| AuthError::ValidationFailed(e.to_string()))?;
+
+        Some(normalized)
     } else {
         None
     };
@@ -136,16 +153,6 @@ pub async fn auth_middleware(
     Ok(next.run(req).await)
 }
 
-/// Create a noop validator for disabled auth mode
-pub struct NoopValidator;
-
-#[async_trait::async_trait]
-impl TokenValidator for NoopValidator {
-    async fn validate_and_parse(&self, _token: &str) -> Result<Claims, AuthError> {
-        unreachable!("NoopValidator should never be called")
-    }
-}
-
 /// Helper to build AuthState from config
 pub fn build_auth_state(
     cfg: &crate::config::ApiIngressConfig,
@@ -158,18 +165,52 @@ pub fn build_auth_state(
         AuthMode::Enabled
     };
 
-    let validator: Arc<dyn TokenValidator> = if mode == AuthMode::Enabled {
-        let jwks = cfg
+    let dispatcher = if mode == AuthMode::Enabled {
+        // Build AuthConfig for new dispatcher system
+        let jwks_uri = cfg
             .jwks_uri
             .clone()
             .ok_or_else(|| anyhow::anyhow!("jwks_uri required when auth is enabled"))?;
-        Arc::new(JwksValidator::new(
-            jwks,
-            cfg.issuer.clone(),
-            cfg.audience.clone(),
-        ))
+
+        let mut plugins = HashMap::new();
+        plugins.insert(
+            "default-oidc".to_string(),
+            PluginConfig::Oidc {
+                tenant_claim: "tenants".to_string(),
+                roles_claim: "roles".to_string(),
+            },
+        );
+
+        let auth_config = ModkitAuthConfig {
+            mode: AuthModeConfig {
+                provider: "default-oidc".to_string(),
+            },
+            leeway_seconds: 60,
+            issuers: cfg
+                .issuer
+                .as_ref()
+                .map(|i| vec![i.clone()])
+                .unwrap_or_default(),
+            audiences: cfg
+                .audience
+                .as_ref()
+                .map(|a| vec![a.clone()])
+                .unwrap_or_default(),
+            jwks: Some(JwksConfig {
+                uri: jwks_uri,
+                refresh_interval_seconds: 300,
+                max_backoff_seconds: 3600,
+            }),
+            plugins,
+        };
+
+        // Build dispatcher
+        let dispatcher = build_auth_dispatcher(&auth_config)
+            .map_err(|e| anyhow::anyhow!("Failed to build auth dispatcher: {}", e))?;
+
+        Some(Arc::new(dispatcher))
     } else {
-        Arc::new(NoopValidator)
+        None
     };
 
     let scope_builder: Arc<dyn ScopeBuilder> = Arc::new(SimpleScopeBuilder);
@@ -192,7 +233,7 @@ pub fn build_auth_state(
             mode,
             require_auth_by_default: cfg.require_auth_by_default,
         },
-        validator,
+        dispatcher,
         scope_builder,
         authorizer,
         route_matchers: Arc::new(route_matchers_map),

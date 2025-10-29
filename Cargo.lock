@@ -2120,6 +2120,7 @@ name = "modkit-auth"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "arc-swap",
  "async-trait",
  "axum",
  "base64 0.22.1",
@@ -2130,9 +2131,13 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
+ "serde_yaml",
  "thiserror 2.0.17",
+ "time",
  "tokio",
  "tower",
+ "tracing",
+ "tracing-subscriber",
  "uuid",
 ]
 

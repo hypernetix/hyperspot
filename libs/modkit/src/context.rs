@@ -226,11 +226,6 @@ impl ModuleCtx {
         })
     }
 
-    // Legacy compatibility methods
-    pub fn db(&self) -> Option<&modkit_db::DbHandle> {
-        self.db_handle.as_deref()
-    }
-
     pub fn current_module(&self) -> Option<&str> {
         Some(&self.module_name)
     }
