@@ -36,7 +36,7 @@ dev-test:
 	cargo test --workspace
 
 # Quick start helpers
-quickstart: 
+quickstart:
 	mkdir -p data
 	cargo run --bin hyperspot-server -- --config config/quickstart.yaml run
 
@@ -61,3 +61,7 @@ test-all: test-sqlite test-pg test-mysql
 # example module (Postgres only)
 test-users-info-pg:
 	cargo test -p users_info --features "integration" -- --nocapture
+
+coverage:
+	@echo "Code coverage is not implemented yet"
+	@exit -1
