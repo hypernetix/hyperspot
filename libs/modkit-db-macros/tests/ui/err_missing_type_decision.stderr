@@ -1,0 +1,6 @@
+error: secure: missing explicit decision for type:
+         use `type_col = "column_name"` or `no_type`
+ --> tests/ui/err_missing_type_decision.rs:6:1
+  |
+6 | #[secure(
+  | ^

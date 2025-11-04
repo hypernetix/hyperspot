@@ -5137,6 +5137,7 @@ dependencies = [
  "modkit",
  "modkit-auth",
  "modkit-db",
+ "modkit-db-macros",
  "modkit-errors",
  "modkit-errors-macro",
  "modkit-odata",

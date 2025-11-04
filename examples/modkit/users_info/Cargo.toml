@@ -35,7 +35,7 @@ chrono = { version = "0.4", features = ["serde"] }
 url = "2.5"
 
 # UUID support
-uuid = { version = "1.18", features = ["v4", "serde"] }
+uuid = { version = "1.18", features = ["v4", "v7", "serde"] }
 
 # Lock-free atomic swaps
 arc-swap = "1.7"
@@ -59,6 +59,7 @@ thiserror = "2.0"
 modkit = { path = "../../../libs/modkit" }
 # NOTE: insecure-escape enabled for migrations and example infrastructure code
 modkit-db = { path = "../../../libs/modkit-db", default-features = false, features = ["pg", "sea-orm", "insecure-escape"] }
+modkit-db-macros = { path = "../../../libs/modkit-db-macros" }
 modkit-auth = { path = "../../../libs/modkit-auth" }
 modkit-security = { path = "../../../libs/modkit-security" }
 modkit-errors = { path = "../../../libs/modkit-errors" }

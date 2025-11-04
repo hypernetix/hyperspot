@@ -382,14 +382,22 @@ impl SecureConn {
     ///
     /// - `Ok(true)` if entity was deleted
     /// - `Ok(false)` if entity not found in scope
+    ///
+    /// # Errors
+    ///
+    /// Returns `ScopeError::Invalid` if the entity does not have a resource_col defined.
     pub async fn delete_by_id<E>(&self, ctx: &SecurityCtx, id: Uuid) -> Result<bool, ScopeError>
     where
         E: ScopableEntity + EntityTrait,
         E::Column: ColumnTrait + Copy,
     {
+        let resource_col = E::resource_col().ok_or_else(|| {
+            ScopeError::Invalid("Entity must have a resource_col to use delete_by_id()")
+        })?;
+
         // Filter by ID first, then scope
         let result = E::delete_many()
-            .filter(sea_orm::Condition::all().add(Expr::col(E::id_col()).eq(id)))
+            .filter(sea_orm::Condition::all().add(Expr::col(resource_col).eq(id)))
             .secure()
             .scope_with(ctx.scope())?
             .exec(&self.conn)

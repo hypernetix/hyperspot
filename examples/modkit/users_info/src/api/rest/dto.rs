@@ -8,7 +8,7 @@ use crate::contract::model::{NewUser, User, UserPatch};
 /// REST DTO for user representation with serde/utoipa
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct UserDto {
-    pub id: Uuid,
+    pub id: Option<Uuid>,
     pub tenant_id: Uuid,
     pub email: String,
     pub display_name: String,
@@ -34,7 +34,7 @@ pub struct UpdateUserReq {
 impl From<User> for UserDto {
     fn from(user: User) -> Self {
         Self {
-            id: user.id,
+            id: Some(user.id),
             tenant_id: user.tenant_id,
             email: user.email,
             display_name: user.display_name,
@@ -47,6 +47,7 @@ impl From<User> for UserDto {
 impl From<CreateUserReq> for NewUser {
     fn from(req: CreateUserReq) -> Self {
         Self {
+            id: None,
             email: req.email,
             display_name: req.display_name,
         }

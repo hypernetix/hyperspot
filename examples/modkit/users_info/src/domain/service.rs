@@ -112,6 +112,22 @@ impl Service {
                 DomainError::validation("tenant", "No tenant in security context")
             })?;
 
+        let id = new_user.id.unwrap_or_else(|| Uuid::now_v7());
+
+        if new_user.id.is_some()
+            && self
+                .repo
+                .find_by_id(ctx, id)
+                .await
+                .map_err(|e| DomainError::database(e.to_string()))?
+                .is_some()
+        {
+            return Err(DomainError::validation(
+                "id",
+                "User with this ID already exists",
+            ));
+        }
+
         // Check uniqueness
         if self
             .repo
@@ -123,7 +139,6 @@ impl Service {
         }
 
         let now = Utc::now();
-        let id = Uuid::new_v4();
         let user = User {
             id,
             tenant_id: *tenant_id,

@@ -1,0 +1,6 @@
+error: secure: missing explicit decision for resource:
+         use `resource_col = "column_name"` or `no_resource`
+ --> tests/ui/err_missing_resource_decision.rs:6:1
+  |
+6 | #[secure(
+  | ^

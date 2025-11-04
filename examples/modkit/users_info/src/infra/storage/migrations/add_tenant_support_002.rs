@@ -18,7 +18,7 @@ impl MigrationTrait for Migration {
         let uk_tenant_email = "uk_users_tenant_email";
         let idx_tenant = "idx_users_tenant";
 
-        let root_tenant = "00000000-0000-0000-0000-000000000001";
+        let root_tenant = modkit_security::constants::ROOT_TENANT_ID;
 
         // 1) Add tenant_id column if it doesn't exist
         if !manager

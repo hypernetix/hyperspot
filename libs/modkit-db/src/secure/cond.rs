@@ -10,8 +10,8 @@ use crate::secure::{AccessScope, ScopableEntity};
 /// 1. **Empty scope** (no tenants, no resources) → deny all (`false`)
 /// 2. **Tenants only** → filter by `tenant_col IN tenant_ids` (via provider)
 ///    - If entity has no tenant_col but tenant_ids provided → deny all
-/// 3. **Resources only** → filter by `id_col IN resource_ids`
-/// 4. **Both present** → AND them: `(tenant_col IN ...) AND (id_col IN ...)`
+/// 3. **Resources only** → filter by `resource_col IN resource_ids`
+/// 4. **Both present** → AND them: `(tenant_col IN ...) AND (resource_col IN ...)`
 ///
 /// # Provider Pattern
 ///
@@ -44,10 +44,14 @@ where
 
     // Build resource ID filter
     if !scope.resource_ids().is_empty() {
-        let id_col = E::id_col();
-        let id_filter =
-            Condition::all().add(Expr::col(id_col).is_in(scope.resource_ids().to_vec()));
-        parts.push(id_filter);
+        if let Some(resource_col) = E::resource_col() {
+            let id_filter =
+                Condition::all().add(Expr::col(resource_col).is_in(scope.resource_ids().to_vec()));
+            parts.push(id_filter);
+        } else {
+            // Entity has no resource_col but scope requires resource filtering → deny all
+            return Ok(deny_all());
+        }
     }
 
     // Combine parts
