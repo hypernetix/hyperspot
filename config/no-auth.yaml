@@ -1,0 +1,50 @@
+# Configuration for running HyperSpot with authentication disabled
+# This mode automatically injects SecurityCtx::root_ctx() for all requests
+# WARNING: Only use for single-user on-premise installations
+
+# Module configurations
+api_ingress:
+  bind_addr: "0.0.0.0:8080"
+  enable_docs: true
+  cors_enabled: true
+  
+  # DISABLE AUTHENTICATION - All requests get root tenant context
+  # This bypasses all tenant isolation and provides full system-level access
+  auth_disabled: true
+  
+  # When auth is disabled, these JWT settings are ignored
+  # jwks_uri: "https://auth.example.com/.well-known/jwks.json"
+  # issuer: "https://auth.example.com"
+  # audience: "hyperspot-api"
+  
+  # Routes without explicit role annotations will not require authentication
+  # (irrelevant when auth_disabled is true, but kept for reference)
+  require_auth_by_default: false
+  
+  defaults:
+    rate_limit:
+      rps: 100
+      burst: 200
+      in_flight: 128
+    body_limit_bytes: 16777216  # 16 MB
+
+  cors:
+    allowed_origins:
+      - "*"
+    allowed_methods:
+      - "GET"
+      - "POST"
+      - "PUT"
+      - "PATCH"
+      - "DELETE"
+      - "OPTIONS"
+    allowed_headers:
+      - "*"
+    allow_credentials: false
+    max_age_seconds: 600
+
+# Example module with database access - will use root context
+users_info:
+  # Module-specific configuration
+  log_level: "info"
+

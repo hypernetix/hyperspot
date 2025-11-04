@@ -1,15 +1,15 @@
 use sea_orm::EntityTrait;
 
-/// Defines the contract for entities that can be scoped by tenant and resource ID.
+/// Defines the contract for entities that can be scoped by tenant, resource, owner, and type.
 ///
-/// Each entity implementing this trait declares:
-/// - Which column (if any) represents the tenant identifier
-/// - Which column represents the primary resource identifier
-/// - Which column (if any) represents the resource owner
+/// Each entity implementing this trait must explicitly declare all four scope dimensions:
+/// - `tenant_col()`: Column for tenant-based isolation (multi-tenancy)
+/// - `resource_col()`: Column for resource-level access (typically the primary key)
+/// - `owner_col()`: Column for owner-based filtering
+/// - `type_col()`: Column for type-based filtering
 ///
-/// # Multi-tenant vs Global Entities
-/// - Multi-tenant entities return `Some(Column::TenantId)` from `tenant_col()`
-/// - Global/system entities return `None` to indicate no tenant scoping
+/// **Important**: No implicit defaults are allowed. Every scope dimension must be explicitly
+/// specified as `Some(Column::...)` or `None` to enforce compile-time safety in secure systems.
 ///
 /// # Example (Manual Implementation)
 /// ```rust,ignore
@@ -17,10 +17,15 @@ use sea_orm::EntityTrait;
 ///     fn tenant_col() -> Option<Self::Column> {
 ///         Some(user::Column::TenantId)
 ///     }
-///     fn id_col() -> Self::Column {
-///         user::Column::Id
+///     fn resource_col() -> Option<Self::Column> {
+///         Some(user::Column::Id)
 ///     }
-///     // owner_col() uses default (returns None)
+///     fn owner_col() -> Option<Self::Column> {
+///         None
+///     }
+///     fn type_col() -> Option<Self::Column> {
+///         None
+///     }
 /// }
 /// ```
 ///
@@ -30,12 +35,29 @@ use sea_orm::EntityTrait;
 ///
 /// #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Scopable)]
 /// #[sea_orm(table_name = "users")]
-/// #[secure(tenant_col = "tenant_id")]
+/// #[secure(
+///     tenant_col = "tenant_id",
+///     resource_col = "id",
+///     no_owner,
+///     no_type
+/// )]
 /// pub struct Model {
 ///     #[sea_orm(primary_key)]
 ///     pub id: Uuid,
 ///     pub tenant_id: Uuid,
 ///     pub email: String,
+/// }
+/// ```
+///
+/// # Unrestricted Entities
+/// ```rust,ignore
+/// #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Scopable)]
+/// #[sea_orm(table_name = "system_config")]
+/// #[secure(unrestricted)]
+/// pub struct Model {
+///     #[sea_orm(primary_key)]
+///     pub id: Uuid,
+///     pub config_key: String,
 /// }
 /// ```
 pub trait ScopableEntity: EntityTrait {
@@ -44,28 +66,37 @@ pub trait ScopableEntity: EntityTrait {
     /// This is a compile-time flag set via `#[secure(unrestricted)]` that documents
     /// the entity's global nature (e.g., system configuration, lookup tables).
     ///
-    /// Default: `false` (entity participates in scoping logic)
+    /// When `IS_UNRESTRICTED` is true, all column methods return `None`.
     ///
-    /// # Note
-    /// This constant is **expressive only** and does not affect runtime behavior.
-    /// The actual scoping is determined by `tenant_col()` returning `None`.
+    /// Default: `false` (entity participates in scoping logic)
     const IS_UNRESTRICTED: bool = false;
 
     /// Returns the column that stores the tenant identifier.
-    /// Return `None` for global entities that don't have tenant scoping.
+    ///
+    /// - Multi-tenant entities: `Some(Column::TenantId)`
+    /// - Global/system entities: `None`
+    ///
+    /// Must be explicitly specified via `tenant_col = "..."` or `no_tenant`.
     fn tenant_col() -> Option<Self::Column>;
 
     /// Returns the column that stores the primary resource identifier.
-    /// Typically this is the primary key column (e.g., `Column::Id`).
-    fn id_col() -> Self::Column;
+    ///
+    /// Typically the primary key column (e.g., `Column::Id`).
+    ///
+    /// Must be explicitly specified via `resource_col = "..."` or `no_resource`.
+    fn resource_col() -> Option<Self::Column>;
 
     /// Returns the column that stores the resource owner identifier.
-    /// Return `None` if owner-based scoping is not used.
     ///
-    /// # Future Use
-    /// This is reserved for future owner-based access control policies.
-    /// Currently not used by the scoping logic.
-    fn owner_col() -> Option<Self::Column> {
-        None
-    }
+    /// Used for owner-based access control policies.
+    ///
+    /// Must be explicitly specified via `owner_col = "..."` or `no_owner`.
+    fn owner_col() -> Option<Self::Column>;
+
+    /// Returns the column that stores the resource type identifier.
+    ///
+    /// Used for type-based filtering in polymorphic scenarios.
+    ///
+    /// Must be explicitly specified via `type_col = "..."` or `no_type`.
+    fn type_col() -> Option<Self::Column>;
 }

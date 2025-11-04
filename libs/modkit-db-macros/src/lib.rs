@@ -8,6 +8,8 @@
 //!
 //! Automatically implements `ScopableEntity` for a SeaORM entity based on attributes.
 //!
+//! **IMPORTANT**: All four scope dimensions must be explicitly specified. No implicit defaults.
+//!
 //! ### Example
 //!
 //! ```ignore
@@ -16,7 +18,12 @@
 //!
 //! #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Scopable)]
 //! #[sea_orm(table_name = "users")]
-//! #[secure(tenant_col = "tenant_id")]
+//! #[secure(
+//!     tenant_col = "tenant_id",
+//!     resource_col = "id",
+//!     no_owner,
+//!     no_type
+//! )]
 //! pub struct Model {
 //!     #[sea_orm(primary_key)]
 //!     pub id: Uuid,
@@ -27,10 +34,12 @@
 //!
 //! ### Attributes
 //!
-//! - `tenant_col = "column_name"` - Optional. The column containing tenant ID.
-//! - `resource_col = "column_name"` - Optional. The primary resource ID column (defaults to "id").
-//! - `owner_col = "column_name"` - Optional. The column containing owner ID.
-//! - `entity = "EntityName"` - Optional. Override the entity type name (defaults to "Entity").
+//! Each scope dimension requires exactly one declaration:
+//! - **Tenant**: `tenant_col = "column_name"` OR `no_tenant`
+//! - **Resource**: `resource_col = "column_name"` OR `no_resource`
+//! - **Owner**: `owner_col = "column_name"` OR `no_owner`
+//! - **Type**: `type_col = "column_name"` OR `no_type`
+//! - **Unrestricted**: `unrestricted` (forbids all other attributes)
 
 use proc_macro::TokenStream;
 use proc_macro_error::proc_macro_error;
@@ -44,18 +53,25 @@ mod scopable;
 ///
 /// # Attributes
 ///
-/// - `#[secure(tenant_col = "tenant_id")]` - Specify tenant column name
-/// - `#[secure(resource_col = "custom_id")]` - Override default resource ID column
-/// - `#[secure(owner_col = "owner_id")]` - Specify owner column name
-/// - `#[secure(entity = "CustomEntity")]` - Override entity type name
-/// - `#[secure(unrestricted)]` - Mark entity as unrestricted (global entity)
+/// **All four scope dimensions must be explicitly specified:**
+///
+/// - `tenant_col = "column_name"` OR `no_tenant` - Tenant isolation column
+/// - `resource_col = "column_name"` OR `no_resource` - Primary resource ID column
+/// - `owner_col = "column_name"` OR `no_owner` - Owner-based filtering column
+/// - `type_col = "column_name"` OR `no_type` - Type-based filtering column
+/// - `unrestricted` - Mark as global entity (forbids all other attributes)
 ///
 /// # Example
 ///
 /// ```ignore
 /// #[derive(DeriveEntityModel, Scopable)]
 /// #[sea_orm(table_name = "users")]
-/// #[secure(tenant_col = "tenant_id")]
+/// #[secure(
+///     tenant_col = "tenant_id",
+///     resource_col = "id",
+///     no_owner,
+///     no_type
+/// )]
 /// pub struct Model {
 ///     #[sea_orm(primary_key)]
 ///     pub id: Uuid,

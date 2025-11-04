@@ -26,7 +26,10 @@ pub struct ApiIngressConfig {
     pub defaults: Defaults,
 
     /// Disable authentication and authorization completely.
-    /// When true, middleware injects SecurityCtx::root_ctx() (full access).
+    /// When true, middleware automatically injects SecurityCtx::root_ctx() for all requests,
+    /// providing full system-level access with no tenant filtering (scope.is_root() == true).
+    /// This bypasses all tenant isolation and should only be used for single-user on-premise installations.
+    /// Default: false (authentication required).
     #[serde(default)]
     pub auth_disabled: bool,
 

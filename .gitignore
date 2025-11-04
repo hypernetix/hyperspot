@@ -27,3 +27,4 @@ logs
 /hapig/
 
 .cargo/advisory-db
+.DS_Store

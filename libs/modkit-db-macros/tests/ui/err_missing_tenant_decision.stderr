@@ -1,0 +1,6 @@
+error: secure: missing explicit decision for tenant:
+         use `tenant_col = "column_name"` or `no_tenant`
+ --> tests/ui/err_missing_tenant_decision.rs:6:1
+  |
+6 | #[secure(
+  | ^

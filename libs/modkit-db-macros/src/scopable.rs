@@ -7,10 +7,23 @@ use syn::{spanned::Spanned, Data, DeriveInput};
 /// Configuration parsed from `#[secure(...)]` attributes
 #[derive(Default)]
 struct SecureConfig {
+    // Tenant dimension
     tenant_col: Option<(String, Span)>,
+    no_tenant: Option<Span>,
+
+    // Resource dimension
     resource_col: Option<(String, Span)>,
+    no_resource: Option<Span>,
+
+    // Owner dimension
     owner_col: Option<(String, Span)>,
-    entity: Option<(String, Span)>,
+    no_owner: Option<Span>,
+
+    // Type dimension
+    type_col: Option<(String, Span)>,
+    no_type: Option<Span>,
+
+    // Unrestricted flag
     unrestricted: Option<Span>,
 }
 
@@ -26,92 +39,218 @@ pub fn expand_derive_scopable(input: DeriveInput) -> TokenStream {
     // Parse #[secure(...)] attributes
     let config = parse_secure_attrs(&input);
 
-    // Determine entity type name (default: "Entity")
-    let entity_name = config
-        .entity
-        .as_ref()
-        .map(|(s, _)| s.as_str())
-        .unwrap_or("Entity");
-    let entity_ident = syn::Ident::new(entity_name, input.ident.span());
+    // Validate configuration
+    validate_config(&config, &input);
 
-    // Check for conflicting flags
-    if config.unrestricted.is_some() && config.tenant_col.is_some() {
-        emit_error!(
-            config.unrestricted.unwrap(),
-            "Cannot use both 'unrestricted' and 'tenant_col' attributes";
-            note = config.tenant_col.as_ref().unwrap().1 => "tenant_col defined here"
-        );
+    let entity_ident = syn::Ident::new("Entity", input.ident.span());
+
+    // If unrestricted, generate simple implementation with all None
+    if config.unrestricted.is_some() {
+        return quote! {
+            impl ::modkit_db::secure::ScopableEntity for #entity_ident {
+                const IS_UNRESTRICTED: bool = true;
+
+                fn tenant_col() -> ::core::option::Option<Self::Column> {
+                    ::core::option::Option::None
+                }
+
+                fn resource_col() -> ::core::option::Option<Self::Column> {
+                    ::core::option::Option::None
+                }
+
+                fn owner_col() -> ::core::option::Option<Self::Column> {
+                    ::core::option::Option::None
+                }
+
+                fn type_col() -> ::core::option::Option<Self::Column> {
+                    ::core::option::Option::None
+                }
+            }
+        };
     }
 
-    // Determine column names with defaults
-    let resource_col = config
-        .resource_col
-        .as_ref()
-        .map(|(s, _)| s.as_str())
-        .unwrap_or("id");
-
-    // Convert column names from snake_case to UpperCamelCase for enum variants
-    let resource_variant = snake_to_upper_camel(resource_col);
-    let tenant_variant = config
-        .tenant_col
-        .as_ref()
-        .map(|(s, _)| snake_to_upper_camel(s));
-    let owner_variant = config
-        .owner_col
-        .as_ref()
-        .map(|(s, _)| snake_to_upper_camel(s));
-
-    // Generate column identifiers
-    let resource_col_ident = syn::Ident::new(&resource_variant, input.ident.span());
-
     // Generate tenant_col implementation
-    let tenant_col_impl = if let Some(tenant_var) = tenant_variant {
-        let tenant_col_ident = syn::Ident::new(&tenant_var, input.ident.span());
-        quote! {
-            fn tenant_col() -> ::core::option::Option<Self::Column> {
-                ::core::option::Option::Some(Self::Column::#tenant_col_ident)
-            }
-        }
-    } else {
-        quote! {
-            fn tenant_col() -> ::core::option::Option<Self::Column> {
-                ::core::option::Option::None
-            }
-        }
-    };
+    let tenant_col_impl = generate_col_impl("tenant_col", &config.tenant_col, &input.ident.span());
+
+    // Generate resource_col implementation
+    let resource_col_impl =
+        generate_col_impl("resource_col", &config.resource_col, &input.ident.span());
 
     // Generate owner_col implementation
-    let owner_col_impl = if let Some(owner_var) = owner_variant {
-        let owner_col_ident = syn::Ident::new(&owner_var, input.ident.span());
-        quote! {
-            fn owner_col() -> ::core::option::Option<Self::Column> {
-                ::core::option::Option::Some(Self::Column::#owner_col_ident)
-            }
-        }
-    } else {
-        quote! {
-            // Use default implementation (returns None)
-        }
-    };
+    let owner_col_impl = generate_col_impl("owner_col", &config.owner_col, &input.ident.span());
 
-    // Generate IS_UNRESTRICTED constant
-    let is_unrestricted = config.unrestricted.is_some();
-    let is_unrestricted_impl = quote! {
-        const IS_UNRESTRICTED: bool = #is_unrestricted;
-    };
+    // Generate type_col implementation
+    let type_col_impl = generate_col_impl("type_col", &config.type_col, &input.ident.span());
 
     // Generate the implementation
     quote! {
         impl ::modkit_db::secure::ScopableEntity for #entity_ident {
-            #is_unrestricted_impl
-
-            fn id_col() -> Self::Column {
-                Self::Column::#resource_col_ident
-            }
+            const IS_UNRESTRICTED: bool = false;
 
             #tenant_col_impl
 
+            #resource_col_impl
+
             #owner_col_impl
+
+            #type_col_impl
+        }
+    }
+}
+
+/// Generate a column method implementation
+fn generate_col_impl(
+    method_name: &str,
+    col: &Option<(String, Span)>,
+    default_span: &Span,
+) -> TokenStream {
+    let method_ident = syn::Ident::new(method_name, *default_span);
+
+    if let Some((col_name, _)) = col {
+        let col_variant = snake_to_upper_camel(col_name);
+        let col_ident = syn::Ident::new(&col_variant, *default_span);
+        quote! {
+            fn #method_ident() -> ::core::option::Option<Self::Column> {
+                ::core::option::Option::Some(Self::Column::#col_ident)
+            }
+        }
+    } else {
+        quote! {
+            fn #method_ident() -> ::core::option::Option<Self::Column> {
+                ::core::option::Option::None
+            }
+        }
+    }
+}
+
+/// Validate the configuration for strict compile-time checks
+fn validate_config(config: &SecureConfig, input: &DeriveInput) {
+    let struct_span = input.span();
+
+    // If unrestricted is set, no other attributes should be present
+    if let Some(unrestricted_span) = config.unrestricted {
+        let mut has_error = false;
+
+        if let Some((_, span)) = &config.tenant_col {
+            emit_error!(
+                unrestricted_span,
+                "Cannot use 'unrestricted' with 'tenant_col'";
+                note = *span => "tenant_col defined here"
+            );
+            has_error = true;
+        }
+        if let Some(span) = &config.no_tenant {
+            emit_error!(
+                unrestricted_span,
+                "Cannot use 'unrestricted' with 'no_tenant'";
+                note = *span => "no_tenant defined here"
+            );
+            has_error = true;
+        }
+        if let Some((_, span)) = &config.resource_col {
+            emit_error!(
+                unrestricted_span,
+                "Cannot use 'unrestricted' with 'resource_col'";
+                note = *span => "resource_col defined here"
+            );
+            has_error = true;
+        }
+        if let Some(span) = &config.no_resource {
+            emit_error!(
+                unrestricted_span,
+                "Cannot use 'unrestricted' with 'no_resource'";
+                note = *span => "no_resource defined here"
+            );
+            has_error = true;
+        }
+        if let Some((_, span)) = &config.owner_col {
+            emit_error!(
+                unrestricted_span,
+                "Cannot use 'unrestricted' with 'owner_col'";
+                note = *span => "owner_col defined here"
+            );
+            has_error = true;
+        }
+        if let Some(span) = &config.no_owner {
+            emit_error!(
+                unrestricted_span,
+                "Cannot use 'unrestricted' with 'no_owner'";
+                note = *span => "no_owner defined here"
+            );
+            has_error = true;
+        }
+        if let Some((_, span)) = &config.type_col {
+            emit_error!(
+                unrestricted_span,
+                "Cannot use 'unrestricted' with 'type_col'";
+                note = *span => "type_col defined here"
+            );
+            has_error = true;
+        }
+        if let Some(span) = &config.no_type {
+            emit_error!(
+                unrestricted_span,
+                "Cannot use 'unrestricted' with 'no_type'";
+                note = *span => "no_type defined here"
+            );
+            has_error = true;
+        }
+
+        if has_error {
+            abort!(
+                unrestricted_span,
+                "When using 'unrestricted', no other column attributes are allowed"
+            );
+        }
+        return; // Valid unrestricted config
+    }
+
+    // Check each scope dimension has exactly one option
+    validate_dimension("tenant", &config.tenant_col, &config.no_tenant, struct_span);
+    validate_dimension(
+        "resource",
+        &config.resource_col,
+        &config.no_resource,
+        struct_span,
+    );
+    validate_dimension("owner", &config.owner_col, &config.no_owner, struct_span);
+    validate_dimension("type", &config.type_col, &config.no_type, struct_span);
+}
+
+/// Validate a single dimension has exactly one specification
+fn validate_dimension(
+    name: &str,
+    col: &Option<(String, Span)>,
+    no_col: &Option<Span>,
+    struct_span: Span,
+) {
+    match (col, no_col) {
+        (None, None) => {
+            // Missing explicit decision
+            let msg = format!(
+                "secure: missing explicit decision for {}:\n  \
+                 use `{}_col = \"column_name\"` or `no_{}`",
+                name, name, name
+            );
+            abort!(struct_span, msg);
+        }
+        (Some((_, col_span)), Some(no_span)) => {
+            // Both specified
+            let msg = format!("secure: conflicting attributes for {}", name);
+            let note_msg = format!("no_{} also defined here", name);
+            emit_error!(
+                *col_span,
+                msg;
+                note = *no_span => note_msg
+            );
+            let abort_msg = format!(
+                "secure: specify either `{}_col` or `no_{}`, not both",
+                name, name
+            );
+            abort!(struct_span, abort_msg);
+        }
+        _ => {
+            // Valid: exactly one is specified
         }
     }
 }
@@ -126,9 +265,10 @@ fn parse_secure_attrs(input: &DeriveInput) -> SecureConfig {
         }
 
         let result = attr.parse_nested_meta(|meta| {
-            // Check if this is a flag (unrestricted) or key-value pair
+            let span = meta.path.span();
+
+            // Check if this is a flag (no_* or unrestricted)
             if meta.path.is_ident("unrestricted") {
-                let span = meta.path.span();
                 if let Some(prev_span) = config.unrestricted {
                     abort!(
                         span,
@@ -140,13 +280,60 @@ fn parse_secure_attrs(input: &DeriveInput) -> SecureConfig {
                 return Ok(());
             }
 
+            if meta.path.is_ident("no_tenant") {
+                if let Some(prev_span) = config.no_tenant {
+                    abort!(
+                        span,
+                        "duplicate attribute 'no_tenant'";
+                        note = prev_span => "first defined here"
+                    );
+                }
+                config.no_tenant = Some(span);
+                return Ok(());
+            }
+
+            if meta.path.is_ident("no_resource") {
+                if let Some(prev_span) = config.no_resource {
+                    abort!(
+                        span,
+                        "duplicate attribute 'no_resource'";
+                        note = prev_span => "first defined here"
+                    );
+                }
+                config.no_resource = Some(span);
+                return Ok(());
+            }
+
+            if meta.path.is_ident("no_owner") {
+                if let Some(prev_span) = config.no_owner {
+                    abort!(
+                        span,
+                        "duplicate attribute 'no_owner'";
+                        note = prev_span => "first defined here"
+                    );
+                }
+                config.no_owner = Some(span);
+                return Ok(());
+            }
+
+            if meta.path.is_ident("no_type") {
+                if let Some(prev_span) = config.no_type {
+                    abort!(
+                        span,
+                        "duplicate attribute 'no_type'";
+                        note = prev_span => "first defined here"
+                    );
+                }
+                config.no_type = Some(span);
+                return Ok(());
+            }
+
             // Key-value pair
             let key = meta
                 .path
                 .get_ident()
                 .map(|i| i.to_string())
                 .unwrap_or_default();
-            let span = meta.path.span();
 
             if key.is_empty() {
                 abort!(span, "Expected attribute name");
@@ -191,20 +378,20 @@ fn parse_secure_attrs(input: &DeriveInput) -> SecureConfig {
                     }
                     config.owner_col = Some((value, span));
                 }
-                "entity" => {
-                    if let Some((_, prev_span)) = config.entity {
+                "type_col" => {
+                    if let Some((_, prev_span)) = config.type_col {
                         abort!(
                             span,
-                            "duplicate attribute 'entity'";
+                            "duplicate attribute 'type_col'";
                             note = prev_span => "first defined here"
                         );
                     }
-                    config.entity = Some((value, span));
+                    config.type_col = Some((value, span));
                 }
                 _ => {
                     abort!(
                         span,
-                        "Unknown attribute '{}'. Valid attributes: tenant_col, resource_col, owner_col, entity, unrestricted",
+                        "Unknown attribute '{}'. Valid attributes: tenant_col, no_tenant, resource_col, no_resource, owner_col, no_owner, type_col, no_type, unrestricted",
                         key
                     );
                 }

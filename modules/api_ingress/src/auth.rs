@@ -154,6 +154,21 @@ impl modkit_auth::RoutePolicy for IngressRoutePolicy {
 // Use modkit_auth::axum_ext::auth_with_policy via IngressRoutePolicy instead.
 
 /// Helper to build AuthState and IngressRoutePolicy from config
+///
+/// # Note on auth_disabled mode
+///
+/// When `cfg.auth_disabled == true`:
+/// - This function is still called to build the auth components for type consistency
+/// - A `NoopValidator` is created as a **defensive fallback only**
+/// - In normal flow, `lib.rs` bypasses `auth_with_policy` entirely when auth is disabled
+/// - The router-level middleware injects `SecurityCtx::root_ctx()` directly
+/// - The `NoopValidator` exists only as a safety net in case someone accidentally
+///   wires `auth_with_policy` while `auth_disabled == true`
+/// - If the `NoopValidator` is ever called, it will panic with a clear error message
+///
+/// When `cfg.auth_disabled == false`:
+/// - This function builds the real OIDC/JWKS validator and associated auth components
+/// - `auth_with_policy` is wired into the router to validate tokens and build security contexts
 pub fn build_auth_state(
     cfg: &crate::config::ApiIngressConfig,
     requirements: HashMap<(Method, String), Requirement>,
@@ -161,9 +176,9 @@ pub fn build_auth_state(
 ) -> Result<(AuthState, IngressRoutePolicy), anyhow::Error> {
     // Build validator (TokenValidator trait implementation)
     let validator: Arc<dyn TokenValidator> = if cfg.auth_disabled {
-        // When auth is disabled, we should never reach the validator
-        // (the middleware will inject root_ctx before calling it)
-        // But we still need a validator instance for the type system
+        // Defensive fallback: NoopValidator should never be called in normal flow.
+        // When auth_disabled=true, lib.rs bypasses auth_with_policy and injects root_ctx directly.
+        // This validator exists only for type consistency and as a safety net.
         Arc::new(NoopValidator)
     } else {
         // Build AuthConfig for new dispatcher system

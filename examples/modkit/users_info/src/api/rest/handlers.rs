@@ -29,7 +29,7 @@ type UsersApiError = ApiError<DomainError>;
     )
 )]
 pub async fn list_users(
-    Authz(ctx): Authz, // ← Validated SecurityCtx from middleware
+    Authz(ctx): Authz,
     Extension(svc): Extension<std::sync::Arc<Service>>,
     OData(query): OData,
 ) -> UsersResult<JsonPage<UserDto>> {
@@ -38,7 +38,6 @@ pub async fn list_users(
         "Listing users with cursor pagination"
     );
 
-    // Pass the validated SecurityCtx to service; secure-ORM will apply tenant scope
     let page = svc
         .list_users_page(&ctx, query)
         .await?
@@ -57,7 +56,7 @@ pub async fn list_users(
     )
 )]
 pub async fn get_user(
-    Authz(ctx): Authz, // ← Validated SecurityCtx
+    Authz(ctx): Authz,
     Extension(svc): Extension<std::sync::Arc<Service>>,
     Path(id): Path<Uuid>,
 ) -> UsersResult<JsonBody<UserDto>> {
@@ -81,36 +80,55 @@ pub async fn get_user(
     fields(
         user.email = %req_body.email,
         user.display_name = %req_body.display_name,
+        user.tenant_id = %req_body.tenant_id,
         request_id = Empty,
         creator.id = %ctx.subject_id()
     )
 )]
 pub async fn create_user(
-    Authz(ctx): Authz, // ← Validated SecurityCtx
+    Authz(ctx): Authz,
     Extension(svc): Extension<std::sync::Arc<Service>>,
     Json(req_body): Json<CreateUserReq>,
 ) -> UsersResult<impl IntoResponse> {
     info!(
         email = %req_body.email,
         display_name = %req_body.display_name,
+        tenant_id = %req_body.tenant_id,
         creator_id = %ctx.subject_id(),
         "Creating new user"
     );
 
-    // Get tenant_id from the security context
-    let tenant_id = *ctx.scope().tenant_ids().first().ok_or_else(|| {
-        UsersApiError::from_domain(crate::domain::error::DomainError::validation(
-            "tenant",
-            "No tenant in security context",
-        ))
-    })?;
-
-    // Construct NewUser with tenant_id from context
-    let new_user = crate::contract::model::NewUser {
-        id: req_body.id,
+    let CreateUserReq {
+        id,
         tenant_id,
-        email: req_body.email,
-        display_name: req_body.display_name,
+        email,
+        display_name,
+    } = req_body;
+
+    // Authorization check:
+    // - root scope: allow any tenant_id
+    // - non-root: tenant_id must be present in scope.tenant_ids()
+    let scope = ctx.scope();
+    if !scope.is_root() {
+        let allowed = scope.tenant_ids().iter().any(|t| t == &tenant_id);
+        if !allowed {
+            return Err(UsersApiError::from_domain(
+                crate::domain::error::DomainError::validation(
+                    "tenant_id",
+                    format!(
+                        "Tenant {} is not allowed in current security scope",
+                        tenant_id
+                    ),
+                ),
+            ));
+        }
+    }
+
+    let new_user = crate::contract::model::NewUser {
+        id,
+        tenant_id,
+        email,
+        display_name,
     };
 
     let user = svc
@@ -131,7 +149,7 @@ pub async fn create_user(
     )
 )]
 pub async fn update_user(
-    Authz(ctx): Authz, // ← Validated SecurityCtx
+    Authz(ctx): Authz,
     Extension(svc): Extension<std::sync::Arc<Service>>,
     Path(id): Path<Uuid>,
     Json(req_body): Json<UpdateUserReq>,
@@ -161,7 +179,7 @@ pub async fn update_user(
     )
 )]
 pub async fn delete_user(
-    Authz(ctx): Authz, // ← Validated SecurityCtx
+    Authz(ctx): Authz,
     Extension(svc): Extension<std::sync::Arc<Service>>,
     Path(id): Path<Uuid>,
 ) -> UsersResult<impl IntoResponse> {
