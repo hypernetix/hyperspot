@@ -130,8 +130,8 @@ impl ApiIngress {
         Ok(())
     }
 
-    /// Build auth state from operation specs
-    fn build_auth_state_from_specs(&self) -> Result<auth::AuthState> {
+    /// Build auth state and route policy from operation specs
+    fn build_auth_state_from_specs(&self) -> Result<(auth::AuthState, auth::IngressRoutePolicy)> {
         let mut req_map = std::collections::HashMap::new();
         let mut public_routes = std::collections::HashSet::new();
 
@@ -147,12 +147,13 @@ impl ApiIngress {
 
             // Collect explicit security requirements
             if let Some(ref sec) = spec.sec_requirement {
+                // Leak strings once per route to create 'static references
+                // This is acceptable as routes are registered once at startup
+                let resource: &'static str = Box::leak(sec.resource.clone().into_boxed_str());
+                let action: &'static str = Box::leak(sec.action.clone().into_boxed_str());
                 req_map.insert(
                     route_key.clone(),
-                    auth::Requirement {
-                        resource: sec.resource.clone(),
-                        action: sec.action.clone(),
-                    },
+                    modkit_auth::types::SecRequirement::new(resource, action),
                 );
             }
 
@@ -164,23 +165,24 @@ impl ApiIngress {
 
         let config = self.get_cached_config();
         let requirements_count = req_map.len();
-        let auth_state = auth::build_auth_state(&config, req_map, public_routes)?;
+        let public_routes_count = public_routes.len();
+        let (auth_state, route_policy) = auth::build_auth_state(&config, req_map, public_routes)?;
 
         tracing::info!(
             auth_disabled = config.auth_disabled,
             require_auth_by_default = config.require_auth_by_default,
             requirements_count = requirements_count,
-            public_routes_count = auth_state.public_routes.len(),
-            "Auth state built from operation specs"
+            public_routes_count = public_routes_count,
+            "Auth state and route policy built from operation specs"
         );
 
-        Ok(auth_state)
+        Ok((auth_state, route_policy))
     }
 
     /// Apply all middleware layers to a router (request ID, tracing, timeout, body limit, CORS, rate limiting, error mapping, auth)
     fn apply_middleware_stack(&self, mut router: Router) -> Result<Router> {
-        // Build auth state once
-        let auth_state = self.build_auth_state_from_specs()?;
+        // Build auth state and route policy once
+        let (auth_state, route_policy) = self.build_auth_state_from_specs()?;
 
         // Correct middleware order (outermost to innermost):
         // RequestId(Propagate -> Set) -> Trace -> push_req_id_to_extensions -> Timeout -> BodyLimit -> CORS -> RateLimit -> ErrorMapping -> Auth -> Router
@@ -291,12 +293,47 @@ impl ApiIngress {
         router = router.layer(from_fn(modkit::api::error_layer::error_mapping_middleware));
 
         // 10. Auth middleware - MUST be after CORS; preflight short-circuits before this.
-        router = router.layer(from_fn(
-            move |req: axum::extract::Request, next: axum::middleware::Next| {
-                let state = auth_state.clone();
-                auth::auth_middleware(state, req, next)
-            },
-        ));
+        let config = self.get_cached_config();
+        if config.auth_disabled {
+            // DANGEROUS: When auth is disabled, inject root SecurityCtx for all routes
+            tracing::warn!(
+                "API Ingress auth is DISABLED: all requests will run with root SecurityCtx. \
+                 This mode is for development only and MUST NOT be used in production."
+            );
+            router = router.layer(from_fn(
+                |mut req: axum::extract::Request, next: axum::middleware::Next| async move {
+                    let sec = modkit_security::SecurityCtx::root_ctx();
+                    req.extensions_mut().insert(sec);
+                    Ok::<_, std::convert::Infallible>(next.run(req).await)
+                },
+            ));
+        } else {
+            // When auth is enabled, use the unified auth_with_policy middleware
+            let validator = auth_state.validator.clone();
+            let scope_builder = auth_state.scope_builder.clone();
+            let authorizer = auth_state.authorizer.clone();
+            let policy = Arc::new(route_policy) as Arc<dyn modkit_auth::RoutePolicy>;
+
+            router = router.layer(from_fn(
+                move |req: axum::extract::Request, next: axum::middleware::Next| {
+                    let validator = validator.clone();
+                    let scope_builder = scope_builder.clone();
+                    let authorizer = authorizer.clone();
+                    let policy = policy.clone();
+                    async move {
+                        modkit_auth::axum_ext::auth_with_policy(
+                            axum::extract::State(validator),
+                            axum::extract::State(scope_builder),
+                            axum::extract::State(authorizer),
+                            axum::extract::State(policy),
+                            req,
+                            next,
+                        )
+                        .await
+                    }
+                },
+            ));
+        }
 
         Ok(router)
     }

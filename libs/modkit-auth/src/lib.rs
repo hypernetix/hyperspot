@@ -16,4 +16,4 @@ pub mod axum_ext;
 
 pub use claims::Claims;
 pub use errors::AuthError;
-pub use types::SecRequirement;
+pub use types::{AuthRequirement, RoutePolicy, SecRequirement};

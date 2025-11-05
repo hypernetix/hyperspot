@@ -1,9 +1,4 @@
-use axum::{
-    extract::Request,
-    http::{header, Method},
-    middleware::Next,
-    response::Response,
-};
+use axum::http::Method;
 use modkit_auth::{
     authorizer::RoleAuthorizer,
     errors::AuthError,
@@ -11,33 +6,14 @@ use modkit_auth::{
     scope_builder::SimpleScopeBuilder,
     traits::{PrimaryAuthorizer, ScopeBuilder, TokenValidator},
     types::SecRequirement,
-    Claims,
+    AuthRequirement, Claims, RoutePolicy,
 };
-use modkit_security::{SecurityCtx, Subject};
 use std::{collections::HashMap, sync::Arc};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum AuthMode {
-    Enabled,
-    Disabled,
-}
-
-#[derive(Clone)]
-pub struct AuthConfig {
-    pub mode: AuthMode,
-    /// Whether routes without explicit role still require a valid token.
-    pub require_auth_by_default: bool,
-}
-
-#[derive(Clone)]
-pub struct Requirement {
-    pub resource: String,
-    pub action: String,
-}
-
 /// Route matcher for a specific HTTP method
-struct RouteMatcher {
-    matcher: matchit::Router<Requirement>,
+#[derive(Clone)]
+pub(crate) struct RouteMatcher {
+    matcher: matchit::Router<SecRequirement>,
 }
 
 impl RouteMatcher {
@@ -47,93 +23,99 @@ impl RouteMatcher {
         }
     }
 
-    fn insert(&mut self, path: &str, requirement: Requirement) -> Result<(), matchit::InsertError> {
+    fn insert(
+        &mut self,
+        path: &str,
+        requirement: SecRequirement,
+    ) -> Result<(), matchit::InsertError> {
         self.matcher.insert(path, requirement)
     }
 
-    fn find(&self, path: &str) -> Option<&Requirement> {
+    fn find(&self, path: &str) -> Option<&SecRequirement> {
         self.matcher.at(path).ok().map(|m| m.value)
     }
 }
 
-/// Global state for the auth middleware.
+/// Public route matcher for a specific HTTP method (pattern-based)
+#[derive(Clone)]
+pub(crate) struct PublicRouteMatcher {
+    matcher: matchit::Router<()>,
+}
+
+impl PublicRouteMatcher {
+    fn new() -> Self {
+        Self {
+            matcher: matchit::Router::new(),
+        }
+    }
+
+    fn insert(&mut self, path: &str) -> Result<(), matchit::InsertError> {
+        self.matcher.insert(path, ())
+    }
+
+    fn find(&self, path: &str) -> bool {
+        self.matcher.at(path).is_ok()
+    }
+}
+
+/// Simplified auth state containing only what's needed for the unified middleware
 #[derive(Clone)]
 pub struct AuthState {
-    pub cfg: AuthConfig,
     pub validator: Arc<dyn TokenValidator>,
     pub scope_builder: Arc<dyn ScopeBuilder>,
     pub authorizer: Arc<dyn PrimaryAuthorizer>,
-    /// Route matchers per HTTP method for efficient pattern matching
-    route_matchers: Arc<HashMap<Method, RouteMatcher>>,
-    /// Set of route patterns explicitly marked as public (no auth required).
-    pub public_routes: Arc<std::collections::HashSet<(Method, String)>>,
 }
 
-/// Auth middleware implementation
-pub async fn auth_middleware(
-    state: AuthState,
-    mut req: Request,
-    next: Next,
-) -> Result<Response, AuthError> {
-    // Disabled mode: inject root SecurityCtx and continue
-    if state.cfg.mode == AuthMode::Disabled {
-        let sec = SecurityCtx::root_ctx(); // subject=root, scope=all tenants
-        req.extensions_mut().insert(sec);
-        return Ok(next.run(req).await);
+/// Implementation of RoutePolicy for api_ingress that uses operation specs
+#[derive(Clone)]
+pub struct IngressRoutePolicy {
+    route_matchers: Arc<HashMap<Method, RouteMatcher>>,
+    public_matchers: Arc<HashMap<Method, PublicRouteMatcher>>,
+    require_auth_by_default: bool,
+}
+
+impl IngressRoutePolicy {
+    pub fn new(
+        route_matchers: Arc<HashMap<Method, RouteMatcher>>,
+        public_matchers: Arc<HashMap<Method, PublicRouteMatcher>>,
+        require_auth_by_default: bool,
+    ) -> Self {
+        Self {
+            route_matchers,
+            public_matchers,
+            require_auth_by_default,
+        }
     }
+}
 
-    // Enabled mode - use route pattern matching
-    let method = req.method();
-    let path = req.uri().path();
+#[async_trait::async_trait]
+impl RoutePolicy for IngressRoutePolicy {
+    async fn resolve(&self, method: &Method, path: &str) -> AuthRequirement {
+        // Find requirement using pattern matching (returns SecRequirement directly now)
+        let requirement = self
+            .route_matchers
+            .get(method)
+            .and_then(|matcher| matcher.find(path))
+            .cloned();
 
-    // Find requirement using pattern matching
-    let requirement = state
-        .route_matchers
-        .get(method)
-        .and_then(|matcher| matcher.find(path))
-        .cloned();
+        // Check if route is explicitly public using pattern matching
+        let is_public = self
+            .public_matchers
+            .get(method)
+            .map(|matcher| matcher.find(path))
+            .unwrap_or(false);
 
-    // Check if route pattern is explicitly public
-    let key = (method.clone(), path.to_string());
-    let is_public = state.public_routes.contains(&key);
-    let needs_authn = requirement.is_some() || (state.cfg.require_auth_by_default && !is_public);
+        // Determine if authentication is needed
+        // Public routes should NEVER require auth, even if require_auth_by_default is true
+        let needs_authn = requirement.is_some() || (self.require_auth_by_default && !is_public);
 
-    // Extract Bearer token if required
-    let bearer = req
-        .headers()
-        .get(header::AUTHORIZATION)
-        .and_then(|v| v.to_str().ok())
-        .map(|s| s.to_string());
-
-    let claims = if needs_authn {
-        let token = bearer.ok_or(AuthError::Unauthenticated)?;
-        Some(state.validator.validate_and_parse(&token).await?)
-    } else {
-        None
-    };
-
-    // Role-based authorization
-    if let (Some(claims_ref), Some(reqm)) = (claims.as_ref(), requirement.as_ref()) {
-        let sec_req = SecRequirement {
-            resource: Box::leak(reqm.resource.clone().into_boxed_str()),
-            action: Box::leak(reqm.action.clone().into_boxed_str()),
-        };
-        state.authorizer.check(claims_ref, &sec_req).await?;
+        if !needs_authn {
+            AuthRequirement::None
+        } else {
+            // SecRequirement is already properly typed, just wrap it
+            AuthRequirement::Required(requirement)
+        }
     }
-
-    // Build and attach SecurityCtx
-    if let Some(claims) = claims {
-        let scope = state.scope_builder.tenants_to_scope(&claims);
-        let sec = SecurityCtx::new(scope, Subject::new(claims.sub));
-        req.extensions_mut().insert(sec);
-        req.extensions_mut().insert(claims);
-    } else {
-        // No token required: attach root context (for public routes)
-        let sec = SecurityCtx::root_ctx();
-        req.extensions_mut().insert(sec);
-    }
-
-    Ok(next.run(req).await)
 }
 
 /// Create a noop validator for disabled auth mode
@@ -146,19 +128,14 @@ impl TokenValidator for NoopValidator {
     }
 }
 
-/// Helper to build AuthState from config
+/// Helper to build AuthState and IngressRoutePolicy from config
 pub fn build_auth_state(
     cfg: &crate::config::ApiIngressConfig,
-    requirements: HashMap<(Method, String), Requirement>,
+    requirements: HashMap<(Method, String), SecRequirement>,
     public_routes: std::collections::HashSet<(Method, String)>,
-) -> Result<AuthState, anyhow::Error> {
-    let mode = if cfg.auth_disabled {
-        AuthMode::Disabled
-    } else {
-        AuthMode::Enabled
-    };
-
-    let validator: Arc<dyn TokenValidator> = if mode == AuthMode::Enabled {
+) -> Result<(AuthState, IngressRoutePolicy), anyhow::Error> {
+    // Build validator based on whether auth is enabled
+    let validator: Arc<dyn TokenValidator> = if !cfg.auth_disabled {
         let jwks = cfg
             .jwks_uri
             .clone()
@@ -187,15 +164,29 @@ pub fn build_auth_state(
             .map_err(|e| anyhow::anyhow!("Failed to insert route pattern '{}': {}", path, e))?;
     }
 
-    Ok(AuthState {
-        cfg: AuthConfig {
-            mode,
-            require_auth_by_default: cfg.require_auth_by_default,
-        },
+    // Build public route matchers per HTTP method (pattern-based)
+    let mut public_matchers_map: HashMap<Method, PublicRouteMatcher> = HashMap::new();
+
+    for (method, path) in &public_routes {
+        let matcher = public_matchers_map
+            .entry(method.clone())
+            .or_insert_with(PublicRouteMatcher::new);
+        matcher.insert(path).map_err(|e| {
+            anyhow::anyhow!("Failed to insert public route pattern '{}': {}", path, e)
+        })?;
+    }
+
+    let route_matchers = Arc::new(route_matchers_map);
+    let public_matchers = Arc::new(public_matchers_map);
+
+    let auth_state = AuthState {
         validator,
         scope_builder,
         authorizer,
-        route_matchers: Arc::new(route_matchers_map),
-        public_routes: Arc::new(public_routes),
-    })
+    };
+
+    let route_policy =
+        IngressRoutePolicy::new(route_matchers, public_matchers, cfg.require_auth_by_default);
+
+    Ok((auth_state, route_policy))
 }
