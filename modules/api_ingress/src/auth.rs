@@ -1,33 +1,13 @@
-use axum::{
-    extract::Request,
-    http::{header, Method},
-    middleware::Next,
-    response::Response,
-};
+use axum::http::Method;
 use modkit_auth::{
     authorizer::RoleAuthorizer,
     build_auth_dispatcher,
-    errors::AuthError,
     scope_builder::SimpleScopeBuilder,
-    traits::{PrimaryAuthorizer, ScopeBuilder},
-    types::SecRequirement,
-    AuthConfig as ModkitAuthConfig, AuthDispatcher, AuthModeConfig, JwksConfig, PluginConfig,
+    traits::{PrimaryAuthorizer, ScopeBuilder, TokenValidator},
+    types::{AuthRequirement, SecRequirement},
+    AuthConfig as ModkitAuthConfig, AuthModeConfig, JwksConfig, PluginConfig,
 };
-use modkit_security::{SecurityCtx, Subject};
 use std::{collections::HashMap, sync::Arc};
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum AuthMode {
-    Enabled,
-    Disabled,
-}
-
-#[derive(Clone)]
-pub struct AuthConfig {
-    pub mode: AuthMode,
-    /// Whether routes without explicit role still require a valid token.
-    pub require_auth_by_default: bool,
-}
 
 #[derive(Clone)]
 pub struct Requirement {
@@ -35,9 +15,10 @@ pub struct Requirement {
     pub action: String,
 }
 
-/// Route matcher for a specific HTTP method
-struct RouteMatcher {
-    matcher: matchit::Router<Requirement>,
+/// Route matcher for a specific HTTP method (secured routes with requirements)
+#[derive(Clone)]
+pub(crate) struct RouteMatcher {
+    matcher: matchit::Router<SecRequirement>,
 }
 
 impl RouteMatcher {
@@ -47,125 +28,144 @@ impl RouteMatcher {
         }
     }
 
-    fn insert(&mut self, path: &str, requirement: Requirement) -> Result<(), matchit::InsertError> {
+    fn insert(
+        &mut self,
+        path: &str,
+        requirement: SecRequirement,
+    ) -> Result<(), matchit::InsertError> {
         self.matcher.insert(path, requirement)
     }
 
-    fn find(&self, path: &str) -> Option<&Requirement> {
+    fn find(&self, path: &str) -> Option<&SecRequirement> {
         self.matcher.at(path).ok().map(|m| m.value)
     }
 }
 
-/// Global state for the auth middleware.
+/// Public route matcher for explicitly public routes
+#[derive(Clone)]
+pub(crate) struct PublicRouteMatcher {
+    matcher: matchit::Router<()>,
+}
+
+impl PublicRouteMatcher {
+    fn new() -> Self {
+        Self {
+            matcher: matchit::Router::new(),
+        }
+    }
+
+    fn insert(&mut self, path: &str) -> Result<(), matchit::InsertError> {
+        self.matcher.insert(path, ())
+    }
+
+    fn find(&self, path: &str) -> bool {
+        self.matcher.at(path).is_ok()
+    }
+}
+
+/// Convert Axum path syntax `:param` to matchit syntax `{param}`
+///
+/// Axum uses `:id` for path parameters, but matchit 0.8 uses `{id}`.
+/// This function converts between the two syntaxes.
+fn convert_axum_path_to_matchit(path: &str) -> String {
+    // Simple regex-free approach: find :word and replace with {word}
+    let mut result = String::with_capacity(path.len());
+    let mut chars = path.chars().peekable();
+
+    while let Some(ch) = chars.next() {
+        if ch == ':' {
+            // Start of a parameter - collect the parameter name
+            result.push('{');
+            while let Some(&next_ch) = chars.peek() {
+                if next_ch.is_alphanumeric() || next_ch == '_' {
+                    result.push(chars.next().unwrap());
+                } else {
+                    break;
+                }
+            }
+            result.push('}');
+        } else {
+            result.push(ch);
+        }
+    }
+
+    result
+}
+
+/// Simplified auth state containing only the core auth components
 #[derive(Clone)]
 pub struct AuthState {
-    pub cfg: AuthConfig,
-    /// New AuthDispatcher (None when auth is disabled)
-    pub dispatcher: Option<Arc<AuthDispatcher>>,
+    pub validator: Arc<dyn TokenValidator>,
     pub scope_builder: Arc<dyn ScopeBuilder>,
     pub authorizer: Arc<dyn PrimaryAuthorizer>,
-    /// Route matchers per HTTP method for efficient pattern matching
+}
+
+/// Ingress-specific route policy implementation
+#[derive(Clone)]
+pub struct IngressRoutePolicy {
     route_matchers: Arc<HashMap<Method, RouteMatcher>>,
-    /// Set of route patterns explicitly marked as public (no auth required).
-    pub public_routes: Arc<std::collections::HashSet<(Method, String)>>,
+    public_matchers: Arc<HashMap<Method, PublicRouteMatcher>>,
+    require_auth_by_default: bool,
 }
 
-/// Auth middleware implementation
-pub async fn auth_middleware(
-    state: AuthState,
-    mut req: Request,
-    next: Next,
-) -> Result<Response, AuthError> {
-    // Disabled mode: inject root SecurityCtx and continue
-    if state.cfg.mode == AuthMode::Disabled {
-        let sec = SecurityCtx::root_ctx(); // subject=root, scope=all tenants
-        req.extensions_mut().insert(sec);
-        return Ok(next.run(req).await);
+impl IngressRoutePolicy {
+    pub fn new(
+        route_matchers: Arc<HashMap<Method, RouteMatcher>>,
+        public_matchers: Arc<HashMap<Method, PublicRouteMatcher>>,
+        require_auth_by_default: bool,
+    ) -> Self {
+        Self {
+            route_matchers,
+            public_matchers,
+            require_auth_by_default,
+        }
     }
-
-    // Enabled mode - use route pattern matching
-    let method = req.method();
-    let path = req.uri().path();
-
-    // Find requirement using pattern matching
-    let requirement = state
-        .route_matchers
-        .get(method)
-        .and_then(|matcher| matcher.find(path))
-        .cloned();
-
-    // Check if route pattern is explicitly public
-    let key = (method.clone(), path.to_string());
-    let is_public = state.public_routes.contains(&key);
-    let needs_authn = requirement.is_some() || (state.cfg.require_auth_by_default && !is_public);
-
-    // Extract Bearer token if required
-    let bearer = req
-        .headers()
-        .get(header::AUTHORIZATION)
-        .and_then(|v| v.to_str().ok())
-        .map(|s| s.to_string());
-
-    let claims = if needs_authn {
-        let token = bearer.ok_or(AuthError::Unauthenticated)?;
-
-        // Strip "Bearer " prefix if present
-        let token = token.strip_prefix("Bearer ").unwrap_or(&token);
-
-        // Get dispatcher (should always exist in enabled mode)
-        let dispatcher = state
-            .dispatcher
-            .as_ref()
-            .ok_or_else(|| AuthError::ValidationFailed("Auth dispatcher not configured".into()))?;
-
-        // Validate JWT using dispatcher
-        let normalized = dispatcher
-            .validate_jwt(token)
-            .await
-            .map_err(|e| AuthError::ValidationFailed(e.to_string()))?;
-
-        Some(normalized)
-    } else {
-        None
-    };
-
-    // Role-based authorization
-    if let (Some(claims_ref), Some(reqm)) = (claims.as_ref(), requirement.as_ref()) {
-        let sec_req = SecRequirement {
-            resource: Box::leak(reqm.resource.clone().into_boxed_str()),
-            action: Box::leak(reqm.action.clone().into_boxed_str()),
-        };
-        state.authorizer.check(claims_ref, &sec_req).await?;
-    }
-
-    // Build and attach SecurityCtx
-    if let Some(claims) = claims {
-        let scope = state.scope_builder.tenants_to_scope(&claims);
-        let sec = SecurityCtx::new(scope, Subject::new(claims.sub));
-        req.extensions_mut().insert(sec);
-        req.extensions_mut().insert(claims);
-    } else {
-        // No token required: attach root context (for public routes)
-        let sec = SecurityCtx::root_ctx();
-        req.extensions_mut().insert(sec);
-    }
-
-    Ok(next.run(req).await)
 }
 
-/// Helper to build AuthState from config
+#[async_trait::async_trait]
+impl modkit_auth::RoutePolicy for IngressRoutePolicy {
+    async fn resolve(&self, method: &Method, path: &str) -> AuthRequirement {
+        // Find requirement using pattern matching
+        let requirement = self
+            .route_matchers
+            .get(method)
+            .and_then(|matcher| matcher.find(path))
+            .cloned();
+
+        // Check if route is explicitly public using pattern matching
+        let is_public = self
+            .public_matchers
+            .get(method)
+            .map(|matcher| matcher.find(path))
+            .unwrap_or(false);
+
+        // Public routes should not be forced to auth by default
+        let needs_authn = requirement.is_some() || (self.require_auth_by_default && !is_public);
+
+        if !needs_authn {
+            AuthRequirement::None
+        } else {
+            AuthRequirement::Required(requirement)
+        }
+    }
+}
+
+// Old auth_middleware has been removed.
+// Use modkit_auth::axum_ext::auth_with_policy via IngressRoutePolicy instead.
+
+/// Helper to build AuthState and IngressRoutePolicy from config
 pub fn build_auth_state(
     cfg: &crate::config::ApiIngressConfig,
     requirements: HashMap<(Method, String), Requirement>,
     public_routes: std::collections::HashSet<(Method, String)>,
-) -> Result<AuthState, anyhow::Error> {
-    let mode = if cfg.auth_disabled {
-        AuthMode::Disabled
+) -> Result<(AuthState, IngressRoutePolicy), anyhow::Error> {
+    // Build validator (TokenValidator trait implementation)
+    let validator: Arc<dyn TokenValidator> = if cfg.auth_disabled {
+        // When auth is disabled, we should never reach the validator
+        // (the middleware will inject root_ctx before calling it)
+        // But we still need a validator instance for the type system
+        Arc::new(NoopValidator)
     } else {
-        AuthMode::Enabled
-    };
-
-    let dispatcher = if mode == AuthMode::Enabled {
         // Build AuthConfig for new dispatcher system
         let jwks_uri = cfg
             .jwks_uri
@@ -204,39 +204,256 @@ pub fn build_auth_state(
             plugins,
         };
 
-        // Build dispatcher
+        // Build dispatcher and use it as validator
         let dispatcher = build_auth_dispatcher(&auth_config)
             .map_err(|e| anyhow::anyhow!("Failed to build auth dispatcher: {}", e))?;
 
-        Some(Arc::new(dispatcher))
-    } else {
-        None
+        Arc::new(dispatcher) as Arc<dyn TokenValidator>
     };
 
     let scope_builder: Arc<dyn ScopeBuilder> = Arc::new(SimpleScopeBuilder);
     let authorizer: Arc<dyn PrimaryAuthorizer> = Arc::new(RoleAuthorizer);
 
-    // Build route matchers per HTTP method
+    // Build route matchers per HTTP method (secured routes with requirements)
     let mut route_matchers_map: HashMap<Method, RouteMatcher> = HashMap::new();
 
     for ((method, path), requirement) in requirements {
+        let sec_req = SecRequirement::new(requirement.resource, requirement.action);
         let matcher = route_matchers_map
             .entry(method)
             .or_insert_with(RouteMatcher::new);
+        // Convert Axum path syntax (:param) to matchit syntax ({param})
+        let matchit_path = convert_axum_path_to_matchit(&path);
         matcher
-            .insert(&path, requirement)
+            .insert(&matchit_path, sec_req)
             .map_err(|e| anyhow::anyhow!("Failed to insert route pattern '{}': {}", path, e))?;
     }
 
-    Ok(AuthState {
-        cfg: AuthConfig {
-            mode,
-            require_auth_by_default: cfg.require_auth_by_default,
-        },
-        dispatcher,
+    // Build public matchers per HTTP method
+    let mut public_matchers_map: HashMap<Method, PublicRouteMatcher> = HashMap::new();
+
+    for (method, path) in public_routes {
+        let matcher = public_matchers_map
+            .entry(method)
+            .or_insert_with(PublicRouteMatcher::new);
+        // Convert Axum path syntax (:param) to matchit syntax ({param})
+        let matchit_path = convert_axum_path_to_matchit(&path);
+        matcher.insert(&matchit_path).map_err(|e| {
+            anyhow::anyhow!("Failed to insert public route pattern '{}': {}", path, e)
+        })?;
+    }
+
+    let auth_state = AuthState {
+        validator,
         scope_builder,
         authorizer,
-        route_matchers: Arc::new(route_matchers_map),
-        public_routes: Arc::new(public_routes),
-    })
+    };
+
+    let route_policy = IngressRoutePolicy::new(
+        Arc::new(route_matchers_map),
+        Arc::new(public_matchers_map),
+        cfg.require_auth_by_default,
+    );
+
+    Ok((auth_state, route_policy))
+}
+
+/// No-op validator for auth_disabled mode (should never be called)
+struct NoopValidator;
+
+#[async_trait::async_trait]
+impl TokenValidator for NoopValidator {
+    async fn validate_and_parse(
+        &self,
+        _token: &str,
+    ) -> Result<modkit_auth::Claims, modkit_auth::AuthError> {
+        panic!(
+            "NoopValidator should never be called - auth_disabled mode should bypass validation"
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::http::Method;
+    use modkit_auth::types::RoutePolicy;
+
+    /// Helper to build IngressRoutePolicy with given matchers
+    fn build_test_policy(
+        route_matchers: HashMap<Method, RouteMatcher>,
+        public_matchers: HashMap<Method, PublicRouteMatcher>,
+        require_auth_by_default: bool,
+    ) -> IngressRoutePolicy {
+        IngressRoutePolicy::new(
+            Arc::new(route_matchers),
+            Arc::new(public_matchers),
+            require_auth_by_default,
+        )
+    }
+
+    #[test]
+    fn test_convert_axum_path_to_matchit() {
+        assert_eq!(convert_axum_path_to_matchit("/users/:id"), "/users/{id}");
+        assert_eq!(
+            convert_axum_path_to_matchit("/posts/:post_id/comments/:comment_id"),
+            "/posts/{post_id}/comments/{comment_id}"
+        );
+        assert_eq!(convert_axum_path_to_matchit("/health"), "/health"); // No params
+        assert_eq!(
+            convert_axum_path_to_matchit("/api/v1/:resource/:id/status"),
+            "/api/v1/{resource}/{id}/status"
+        );
+    }
+
+    #[test]
+    fn test_matchit_router_with_params() {
+        // matchit 0.8 uses {param} syntax for path parameters (NOT :param)
+        let mut router = matchit::Router::new();
+        router.insert("/users/{id}", "user_route").unwrap();
+
+        let result = router.at("/users/42");
+        assert!(
+            result.is_ok(),
+            "matchit should match /users/{{id}} against /users/42"
+        );
+        assert_eq!(*result.unwrap().value, "user_route");
+    }
+
+    #[tokio::test]
+    async fn explicit_public_route_with_path_params_returns_none() {
+        let mut public_matchers = HashMap::new();
+        let mut matcher = PublicRouteMatcher::new();
+        // matchit 0.8 uses {param} syntax (Axum uses :param, so conversion needed in production)
+        matcher.insert("/users/{id}").unwrap();
+
+        public_matchers.insert(Method::GET, matcher);
+
+        let policy = build_test_policy(HashMap::new(), public_matchers, true);
+
+        // Path parameters should match concrete values
+        let result = policy.resolve(&Method::GET, "/users/42").await;
+        assert_eq!(result, AuthRequirement::None);
+    }
+
+    #[tokio::test]
+    async fn explicit_public_route_exact_match_returns_none() {
+        let mut public_matchers = HashMap::new();
+        let mut matcher = PublicRouteMatcher::new();
+        matcher.insert("/health").unwrap();
+        public_matchers.insert(Method::GET, matcher);
+
+        let policy = build_test_policy(HashMap::new(), public_matchers, true);
+
+        let result = policy.resolve(&Method::GET, "/health").await;
+        assert_eq!(result, AuthRequirement::None);
+    }
+
+    #[tokio::test]
+    async fn explicit_secured_route_with_requirement_returns_required() {
+        let mut route_matchers = HashMap::new();
+        let mut matcher = RouteMatcher::new();
+        let sec_req = SecRequirement::new("admin", "access");
+        matcher.insert("/admin/metrics", sec_req.clone()).unwrap();
+        route_matchers.insert(Method::GET, matcher);
+
+        let policy = build_test_policy(route_matchers, HashMap::new(), false);
+
+        let result = policy.resolve(&Method::GET, "/admin/metrics").await;
+        match result {
+            AuthRequirement::Required(Some(req)) => {
+                assert_eq!(req.resource, "admin");
+                assert_eq!(req.action, "access");
+            }
+            _ => panic!("Expected Required with SecRequirement"),
+        }
+    }
+
+    #[tokio::test]
+    async fn route_without_requirement_with_require_auth_by_default_returns_required_none() {
+        let policy = build_test_policy(HashMap::new(), HashMap::new(), true);
+
+        let result = policy.resolve(&Method::GET, "/profile").await;
+        assert_eq!(result, AuthRequirement::Required(None));
+    }
+
+    #[tokio::test]
+    async fn route_without_requirement_without_require_auth_by_default_returns_none() {
+        let policy = build_test_policy(HashMap::new(), HashMap::new(), false);
+
+        let result = policy.resolve(&Method::GET, "/profile").await;
+        assert_eq!(result, AuthRequirement::None);
+    }
+
+    #[tokio::test]
+    async fn unknown_route_with_require_auth_by_default_true_returns_required() {
+        let policy = build_test_policy(HashMap::new(), HashMap::new(), true);
+
+        let result = policy.resolve(&Method::POST, "/unknown").await;
+        assert_eq!(result, AuthRequirement::Required(None));
+    }
+
+    #[tokio::test]
+    async fn unknown_route_with_require_auth_by_default_false_returns_none() {
+        let policy = build_test_policy(HashMap::new(), HashMap::new(), false);
+
+        let result = policy.resolve(&Method::POST, "/unknown").await;
+        assert_eq!(result, AuthRequirement::None);
+    }
+
+    #[tokio::test]
+    async fn public_route_overrides_require_auth_by_default() {
+        let mut public_matchers = HashMap::new();
+        let mut matcher = PublicRouteMatcher::new();
+        matcher.insert("/public").unwrap();
+        public_matchers.insert(Method::GET, matcher);
+
+        let policy = build_test_policy(HashMap::new(), public_matchers, true);
+
+        let result = policy.resolve(&Method::GET, "/public").await;
+        assert_eq!(result, AuthRequirement::None);
+    }
+
+    #[tokio::test]
+    async fn secured_route_has_priority_over_default() {
+        let mut route_matchers = HashMap::new();
+        let mut matcher = RouteMatcher::new();
+        let sec_req = SecRequirement::new("users", "read");
+        // matchit 0.8 uses {param} syntax
+        matcher.insert("/users/{id}", sec_req).unwrap();
+        route_matchers.insert(Method::GET, matcher);
+
+        let policy = build_test_policy(route_matchers, HashMap::new(), false);
+
+        let result = policy.resolve(&Method::GET, "/users/123").await;
+        match result {
+            AuthRequirement::Required(Some(req)) => {
+                assert_eq!(req.resource, "users");
+                assert_eq!(req.action, "read");
+            }
+            _ => panic!("Expected Required with SecRequirement"),
+        }
+    }
+
+    #[tokio::test]
+    async fn different_methods_resolve_independently() {
+        let mut route_matchers = HashMap::new();
+
+        // GET /users is secured
+        let mut get_matcher = RouteMatcher::new();
+        let sec_req = SecRequirement::new("users", "read");
+        get_matcher.insert("/users", sec_req).unwrap();
+        route_matchers.insert(Method::GET, get_matcher);
+
+        // POST /users is not in matchers
+        let policy = build_test_policy(route_matchers, HashMap::new(), false);
+
+        // GET should be secured
+        let get_result = policy.resolve(&Method::GET, "/users").await;
+        assert!(matches!(get_result, AuthRequirement::Required(Some(_))));
+
+        // POST should be public (no requirement, require_auth_by_default=false)
+        let post_result = policy.resolve(&Method::POST, "/users").await;
+        assert_eq!(post_result, AuthRequirement::None);
+    }
 }

@@ -4,9 +4,12 @@ use crate::{
     claims_error::ClaimsError,
     config::AuthConfig,
     config_error::ConfigError,
+    errors::AuthError,
     plugin_traits::{ClaimsPlugin, IntrospectionProvider, KeyProvider},
+    traits::TokenValidator,
     validation::{validate_claims, ValidationConfig},
 };
+use async_trait::async_trait;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -281,6 +284,34 @@ impl AuthDispatcher {
         } else {
             Err(errors)
         }
+    }
+}
+
+/// Implement TokenValidator trait for AuthDispatcher
+#[async_trait]
+impl TokenValidator for AuthDispatcher {
+    async fn validate_and_parse(&self, token: &str) -> Result<Claims, AuthError> {
+        self.validate_jwt(token).await.map_err(|e| match e {
+            // All JWT validation errors should result in 401 Unauthenticated
+            ClaimsError::InvalidSignature => AuthError::Unauthenticated,
+            ClaimsError::Expired => AuthError::Unauthenticated,
+            ClaimsError::NotYetValid => AuthError::Unauthenticated,
+            ClaimsError::InvalidIssuer { .. } => AuthError::Unauthenticated,
+            ClaimsError::InvalidAudience { .. } => AuthError::Unauthenticated,
+            ClaimsError::Malformed(_) => AuthError::Unauthenticated,
+            ClaimsError::Provider(_) => AuthError::Unauthenticated,
+            ClaimsError::MissingClaim(_) => AuthError::Unauthenticated,
+            ClaimsError::InvalidClaimFormat { .. } => AuthError::Unauthenticated,
+            ClaimsError::NoMatchingPlugin => AuthError::Unauthenticated,
+            ClaimsError::NoValidatingKey => AuthError::Unauthenticated,
+            ClaimsError::NoMatchingProvider => AuthError::Unauthenticated,
+            ClaimsError::UnknownKidAfterRefresh => AuthError::Unauthenticated,
+            ClaimsError::IntrospectionDenied => AuthError::Unauthenticated,
+            ClaimsError::ConfigError(_) => AuthError::Unauthenticated,
+            ClaimsError::DecodeFailed(_) => AuthError::Unauthenticated,
+            ClaimsError::JwksFetchFailed(_) => AuthError::Unauthenticated,
+            ClaimsError::UnknownKeyId(_) => AuthError::Unauthenticated,
+        })
     }
 }
 

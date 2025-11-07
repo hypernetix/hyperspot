@@ -1,9 +1,14 @@
 //! Axum extractors and middleware for auth
 
-use crate::{claims::Claims, dispatcher::AuthDispatcher, errors::AuthError};
+use crate::{
+    claims::Claims,
+    errors::AuthError,
+    traits::{PrimaryAuthorizer, ScopeBuilder, TokenValidator},
+    types::{AuthRequirement, RoutePolicy},
+};
 use axum::{
     extract::{FromRequestParts, Request, State},
-    http::{request::Parts, Method, StatusCode},
+    http::{request::Parts, HeaderMap, Method},
     middleware::Next,
     response::{IntoResponse, Response},
 };
@@ -66,104 +71,198 @@ where
     }
 }
 
-/// Axum middleware that validates JWT tokens using AuthDispatcher
+/// Unified auth middleware with route policy support
 ///
 /// This middleware:
-/// 1. Skips authentication for CORS preflight requests (OPTIONS with Origin header)
-/// 2. Extracts the Bearer token from the Authorization header
-/// 3. Validates it using the AuthDispatcher
-/// 4. Inserts Claims and SecurityCtx into request extensions
-/// 5. Returns 401 if validation fails
+/// 1. Skips authentication for CORS preflight requests
+/// 2. Resolves the route's authentication requirement using RoutePolicy
+/// 3. For public routes (AuthRequirement::None): inserts anonymous SecurityCtx
+/// 4. For required routes: validates JWT, enforces RBAC if needed, inserts SecurityCtx
+/// 5. For optional routes: validates JWT if present, otherwise inserts anonymous SecurityCtx
+///
+/// Returns Response directly (Axum 0.8 style) with errors converted via IntoResponse.
+pub async fn auth_with_policy(
+    State(validator): State<Arc<dyn TokenValidator>>,
+    State(scope_builder): State<Arc<dyn ScopeBuilder>>,
+    State(authorizer): State<Arc<dyn PrimaryAuthorizer>>,
+    State(policy): State<Arc<dyn RoutePolicy>>,
+    mut request: Request,
+    next: Next,
+) -> Response {
+    // 1. Preflight: skip auth
+    if is_preflight_request(request.method(), request.headers()) {
+        return next.run(request).await;
+    }
+
+    // 2. Resolve route policy
+    let method = request.method().clone();
+    let path = request.uri().path().to_string();
+    let auth_requirement = policy.resolve(&method, &path).await;
+
+    match auth_requirement {
+        AuthRequirement::None => {
+            // Public: anonymous SecurityCtx
+            let sec = SecurityCtx::anonymous();
+            request.extensions_mut().insert(sec);
+            next.run(request).await
+        }
+        AuthRequirement::Required(sec_requirement) => {
+            // Auth required: token must be present & valid.
+            let token = match extract_bearer_token(request.headers()) {
+                Some(token) => token,
+                None => {
+                    return AuthError::Unauthenticated.into_response();
+                }
+            };
+
+            let claims = match validator.validate_and_parse(token).await {
+                Ok(claims) => claims,
+                Err(err) => {
+                    return err.into_response();
+                }
+            };
+
+            // Optional RBAC requirement
+            if let Some(sec_req) = sec_requirement {
+                if let Err(err) = authorizer.check(&claims, &sec_req).await {
+                    return err.into_response();
+                }
+            }
+
+            // Build SecurityCtx from validated claims
+            let scope = scope_builder.tenants_to_scope(&claims);
+            let sec = SecurityCtx::new(scope, modkit_security::Subject::new(claims.sub));
+
+            request.extensions_mut().insert(claims);
+            request.extensions_mut().insert(sec);
+            next.run(request).await
+        }
+        AuthRequirement::Optional => {
+            // If token present: validate, else anonymous.
+            if let Some(token) = extract_bearer_token(request.headers()) {
+                match validator.validate_and_parse(token).await {
+                    Ok(claims) => {
+                        let scope = scope_builder.tenants_to_scope(&claims);
+                        let sec =
+                            SecurityCtx::new(scope, modkit_security::Subject::new(claims.sub));
+                        request.extensions_mut().insert(claims);
+                        request.extensions_mut().insert(sec);
+                    }
+                    Err(err) => {
+                        tracing::debug!("Optional auth: invalid token: {err}");
+                        request.extensions_mut().insert(SecurityCtx::anonymous());
+                    }
+                }
+            } else {
+                request.extensions_mut().insert(SecurityCtx::anonymous());
+            }
+            next.run(request).await
+        }
+    }
+}
+
+/// Static route policy implementation for simple use cases
+#[derive(Clone)]
+struct StaticRoutePolicy {
+    requirement: AuthRequirement,
+}
+
+impl StaticRoutePolicy {
+    fn new(requirement: AuthRequirement) -> Self {
+        Self { requirement }
+    }
+}
+
+#[async_trait::async_trait]
+impl RoutePolicy for StaticRoutePolicy {
+    async fn resolve(&self, _method: &Method, _path: &str) -> AuthRequirement {
+        self.requirement.clone()
+    }
+}
+
+/// Internal helper that builds Axum middleware for a given AuthRequirement
+///
+/// This is the shared implementation used by both `auth_required` and `auth_optional`.
+fn auth_with_requirement(
+    validator: Arc<dyn TokenValidator>,
+    scope_builder: Arc<dyn ScopeBuilder>,
+    authorizer: Arc<dyn PrimaryAuthorizer>,
+    requirement: AuthRequirement,
+) -> impl Clone {
+    let policy = Arc::new(StaticRoutePolicy::new(requirement)) as Arc<dyn RoutePolicy>;
+    axum::middleware::from_fn::<_, ()>(move |req: Request, next: Next| {
+        let validator = validator.clone();
+        let scope_builder = scope_builder.clone();
+        let authorizer = authorizer.clone();
+        let policy = policy.clone();
+        async move {
+            auth_with_policy(
+                State(validator),
+                State(scope_builder),
+                State(authorizer),
+                State(policy),
+                req,
+                next,
+            )
+            .await
+        }
+    })
+}
+
+/// Axum middleware that requires valid JWT tokens
+///
+/// This is a thin wrapper around auth_with_policy with a static "required" policy.
 ///
 /// # Usage
 ///
 /// ```rust,ignore
 /// use axum::{Router, routing::get, middleware};
-/// use modkit_auth::{build_auth_dispatcher, AuthConfig, axum_ext::auth_required};
+/// use modkit_auth::axum_ext::auth_required;
 /// use std::sync::Arc;
 ///
-/// let config = AuthConfig::default();
-/// let dispatcher = Arc::new(build_auth_dispatcher(&config)?);
+/// let validator = Arc::new(my_validator) as Arc<dyn TokenValidator>;
+/// let scope_builder = Arc::new(SimpleScopeBuilder);
+/// let authorizer = Arc::new(RoleAuthorizer);
 ///
 /// let app = Router::new()
 ///     .route("/protected", get(|| async { "OK" }))
-///     .layer(middleware::from_fn_with_state(dispatcher, auth_required));
+///     .layer(auth_required(validator, scope_builder, authorizer));
 /// ```
-pub async fn auth_required(
-    State(dispatcher): State<Arc<AuthDispatcher>>,
-    mut request: Request,
-    next: Next,
-) -> Result<Response, Response> {
-    // Skip auth for CORS preflight requests
-    if is_preflight_request(&request) {
-        return Ok(next.run(request).await);
-    }
-
-    // Extract token from Authorization header
-    let token = extract_bearer_token(request.headers()).ok_or_else(|| {
-        tracing::debug!("Missing or invalid Authorization header");
-        (
-            StatusCode::UNAUTHORIZED,
-            "Missing or invalid Authorization header",
-        )
-            .into_response()
-    })?;
-
-    // Validate token using dispatcher
-    let claims = dispatcher.validate_jwt(token).await.map_err(|e| {
-        tracing::warn!(error_type = e.to_string(), "Token validation failed");
-        (StatusCode::UNAUTHORIZED, format!("Invalid token: {}", e)).into_response()
-    })?;
-
-    // Convert to SecurityCtx
-    let security_ctx = SecurityCtx::for_tenants(claims.tenants.clone(), claims.sub);
-
-    // Insert into request extensions
-    request.extensions_mut().insert(claims);
-    request.extensions_mut().insert(security_ctx);
-
-    Ok(next.run(request).await)
+pub fn auth_required(
+    validator: Arc<dyn TokenValidator>,
+    scope_builder: Arc<dyn ScopeBuilder>,
+    authorizer: Arc<dyn PrimaryAuthorizer>,
+) -> impl Clone {
+    auth_with_requirement(
+        validator,
+        scope_builder,
+        authorizer,
+        AuthRequirement::Required(None),
+    )
 }
 
-/// Axum middleware that validates JWT tokens but doesn't fail on missing/invalid tokens
+/// Axum middleware that validates JWT tokens optionally
 ///
-/// This is useful for endpoints that have optional authentication.
+/// This is a thin wrapper around auth_with_policy with a static "optional" policy.
 /// If a valid token is present, Claims and SecurityCtx are added to extensions.
 /// If not, an anonymous SecurityCtx is inserted.
 ///
 /// CORS preflight requests are always allowed through.
-pub async fn auth_optional(
-    State(dispatcher): State<Arc<AuthDispatcher>>,
-    mut request: Request,
-    next: Next,
-) -> Response {
-    // Skip auth for CORS preflight requests
-    if is_preflight_request(&request) {
-        return next.run(request).await;
-    }
-
-    // Try to extract and validate token
-    if let Some(token) = extract_bearer_token(request.headers()) {
-        if let Ok(claims) = dispatcher.validate_jwt(token).await {
-            let security_ctx = SecurityCtx::for_tenants(claims.tenants.clone(), claims.sub);
-
-            request.extensions_mut().insert(claims);
-            request.extensions_mut().insert(security_ctx);
-
-            return next.run(request).await;
-        }
-    }
-
-    // No valid token - insert anonymous context
-    request
-        .extensions_mut()
-        .insert(SecurityCtx::deny_all(uuid::Uuid::nil()));
-
-    next.run(request).await
+pub fn auth_optional(
+    validator: Arc<dyn TokenValidator>,
+    scope_builder: Arc<dyn ScopeBuilder>,
+    authorizer: Arc<dyn PrimaryAuthorizer>,
+) -> impl Clone {
+    auth_with_requirement(
+        validator,
+        scope_builder,
+        authorizer,
+        AuthRequirement::Optional,
+    )
 }
 
 /// Extract Bearer token from Authorization header
-fn extract_bearer_token(headers: &axum::http::HeaderMap) -> Option<&str> {
+fn extract_bearer_token(headers: &HeaderMap) -> Option<&str> {
     headers
         .get(axum::http::header::AUTHORIZATION)
         .and_then(|v| v.to_str().ok())
@@ -175,10 +274,11 @@ fn extract_bearer_token(headers: &axum::http::HeaderMap) -> Option<&str> {
 /// Preflight requests are OPTIONS requests with:
 /// - Origin header present
 /// - Access-Control-Request-Method header present
-fn is_preflight_request(request: &Request) -> bool {
-    request.method() == Method::OPTIONS
-        && request.headers().contains_key(axum::http::header::ORIGIN)
-        && request
-            .headers()
-            .contains_key(axum::http::header::ACCESS_CONTROL_REQUEST_METHOD)
+fn is_preflight_request(method: &Method, headers: &HeaderMap) -> bool {
+    method == Method::OPTIONS
+        && headers.contains_key(axum::http::header::ORIGIN)
+        && headers.contains_key(axum::http::header::ACCESS_CONTROL_REQUEST_METHOD)
 }
+
+// Note: Unit tests for auth_with_policy are in tests/auth_integration.rs
+// Direct unit testing requires the full Axum middleware stack, so integration tests are more appropriate.
