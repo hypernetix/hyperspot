@@ -241,30 +241,6 @@ mod tests {
     }
 
     #[test]
-    fn test_odata_query_legacy_compatibility() {
-        use crate::ast::*;
-
-        let expr = Expr::Compare(
-            Box::new(Expr::Identifier("name".to_string())),
-            CompareOperator::Eq,
-            Box::new(Expr::Value(Value::String("test".to_string()))),
-        );
-
-        // Test new API
-        let query = ODataQuery::default().with_filter(expr.clone());
-        assert!(query.has_filter());
-        assert!(query.filter().is_some());
-
-        let empty = ODataQuery::default();
-        assert!(!empty.has_filter());
-        assert!(empty.filter().is_none());
-
-        // Test conversion
-        let from_option = ODataQuery::from(Some(expr));
-        assert!(from_option.has_filter());
-    }
-
-    #[test]
     fn test_orderby_from_signed_tokens() {
         // Test basic parsing
         let result = ODataOrderBy::from_signed_tokens("+name,-created_at").unwrap();

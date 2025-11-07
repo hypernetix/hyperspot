@@ -1,18 +1,45 @@
 use axum::{
     body::Body,
     http::{Request, StatusCode},
-    middleware,
+    middleware::from_fn,
     response::IntoResponse,
     routing::get,
     Router,
 };
 use modkit_auth::{
-    axum_ext::{auth_optional, auth_required, Authz},
-    build_auth_dispatcher, AuthConfig, AuthModeConfig, Claims, PluginConfig, ValidationConfig,
+    authorizer::RoleAuthorizer,
+    axum_ext::Authz,
+    build_auth_dispatcher,
+    scope_builder::SimpleScopeBuilder,
+    traits::{PrimaryAuthorizer, ScopeBuilder, TokenValidator},
+    types::{AuthRequirement, RoutePolicy},
+    AuthConfig, AuthModeConfig, Claims, PluginConfig, ValidationConfig,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
 use tower::ServiceExt; // for `call`, `oneshot`, and `ready`
+
+/// Static policy that always requires auth
+#[derive(Clone)]
+struct AlwaysRequiredPolicy;
+
+#[async_trait::async_trait]
+impl RoutePolicy for AlwaysRequiredPolicy {
+    async fn resolve(&self, _method: &axum::http::Method, _path: &str) -> AuthRequirement {
+        AuthRequirement::Required(None)
+    }
+}
+
+/// Static policy for optional auth
+#[derive(Clone)]
+struct AlwaysOptionalPolicy;
+
+#[async_trait::async_trait]
+impl RoutePolicy for AlwaysOptionalPolicy {
+    async fn resolve(&self, _method: &axum::http::Method, _path: &str) -> AuthRequirement {
+        AuthRequirement::Optional
+    }
+}
 
 /// Helper to create a minimal test configuration (single mode)
 fn create_test_config() -> AuthConfig {
@@ -50,11 +77,31 @@ async fn test_middleware_returns_401_for_missing_token() {
     let config = create_test_config();
     let dispatcher = Arc::new(build_auth_dispatcher(&config).unwrap());
 
+    let validator: Arc<dyn TokenValidator> = dispatcher;
+    let scope_builder: Arc<dyn ScopeBuilder> = Arc::new(SimpleScopeBuilder);
+    let authorizer: Arc<dyn PrimaryAuthorizer> = Arc::new(RoleAuthorizer);
+    let policy: Arc<dyn RoutePolicy> = Arc::new(AlwaysRequiredPolicy);
+
     let app = Router::new()
         .route("/protected", get(protected_handler))
-        .layer(middleware::from_fn_with_state(
-            dispatcher.clone(),
-            auth_required,
+        .layer(from_fn(
+            move |req: axum::extract::Request, next: axum::middleware::Next| {
+                let validator = validator.clone();
+                let scope_builder = scope_builder.clone();
+                let authorizer = authorizer.clone();
+                let policy = policy.clone();
+                async move {
+                    modkit_auth::axum_ext::auth_with_policy(
+                        axum::extract::State(validator),
+                        axum::extract::State(scope_builder),
+                        axum::extract::State(authorizer),
+                        axum::extract::State(policy),
+                        req,
+                        next,
+                    )
+                    .await
+                }
+            },
         ));
 
     let response = app
@@ -75,11 +122,31 @@ async fn test_middleware_returns_401_for_invalid_token() {
     let config = create_test_config();
     let dispatcher = Arc::new(build_auth_dispatcher(&config).unwrap());
 
+    let validator: Arc<dyn TokenValidator> = dispatcher;
+    let scope_builder: Arc<dyn ScopeBuilder> = Arc::new(SimpleScopeBuilder);
+    let authorizer: Arc<dyn PrimaryAuthorizer> = Arc::new(RoleAuthorizer);
+    let policy: Arc<dyn RoutePolicy> = Arc::new(AlwaysRequiredPolicy);
+
     let app = Router::new()
         .route("/protected", get(protected_handler))
-        .layer(middleware::from_fn_with_state(
-            dispatcher.clone(),
-            auth_required,
+        .layer(from_fn(
+            move |req: axum::extract::Request, next: axum::middleware::Next| {
+                let validator = validator.clone();
+                let scope_builder = scope_builder.clone();
+                let authorizer = authorizer.clone();
+                let policy = policy.clone();
+                async move {
+                    modkit_auth::axum_ext::auth_with_policy(
+                        axum::extract::State(validator),
+                        axum::extract::State(scope_builder),
+                        axum::extract::State(authorizer),
+                        axum::extract::State(policy),
+                        req,
+                        next,
+                    )
+                    .await
+                }
+            },
         ));
 
     let response = app
@@ -101,11 +168,31 @@ async fn test_middleware_allows_options_preflight() {
     let config = create_test_config();
     let dispatcher = Arc::new(build_auth_dispatcher(&config).unwrap());
 
+    let validator: Arc<dyn TokenValidator> = dispatcher;
+    let scope_builder: Arc<dyn ScopeBuilder> = Arc::new(SimpleScopeBuilder);
+    let authorizer: Arc<dyn PrimaryAuthorizer> = Arc::new(RoleAuthorizer);
+    let policy: Arc<dyn RoutePolicy> = Arc::new(AlwaysRequiredPolicy);
+
     let app = Router::new()
         .route("/protected", get(protected_handler))
-        .layer(middleware::from_fn_with_state(
-            dispatcher.clone(),
-            auth_required,
+        .layer(from_fn(
+            move |req: axum::extract::Request, next: axum::middleware::Next| {
+                let validator = validator.clone();
+                let scope_builder = scope_builder.clone();
+                let authorizer = authorizer.clone();
+                let policy = policy.clone();
+                async move {
+                    modkit_auth::axum_ext::auth_with_policy(
+                        axum::extract::State(validator),
+                        axum::extract::State(scope_builder),
+                        axum::extract::State(authorizer),
+                        axum::extract::State(policy),
+                        req,
+                        next,
+                    )
+                    .await
+                }
+            },
         ));
 
     // OPTIONS request with CORS headers
@@ -133,11 +220,31 @@ async fn test_optional_auth_inserts_anonymous_context() {
     let config = create_test_config();
     let dispatcher = Arc::new(build_auth_dispatcher(&config).unwrap());
 
+    let validator: Arc<dyn TokenValidator> = dispatcher;
+    let scope_builder: Arc<dyn ScopeBuilder> = Arc::new(SimpleScopeBuilder);
+    let authorizer: Arc<dyn PrimaryAuthorizer> = Arc::new(RoleAuthorizer);
+    let policy: Arc<dyn RoutePolicy> = Arc::new(AlwaysOptionalPolicy);
+
     let app = Router::new()
         .route("/optional", get(optional_handler))
-        .layer(middleware::from_fn_with_state(
-            dispatcher.clone(),
-            auth_optional,
+        .layer(from_fn(
+            move |req: axum::extract::Request, next: axum::middleware::Next| {
+                let validator = validator.clone();
+                let scope_builder = scope_builder.clone();
+                let authorizer = authorizer.clone();
+                let policy = policy.clone();
+                async move {
+                    modkit_auth::axum_ext::auth_with_policy(
+                        axum::extract::State(validator),
+                        axum::extract::State(scope_builder),
+                        axum::extract::State(authorizer),
+                        axum::extract::State(policy),
+                        req,
+                        next,
+                    )
+                    .await
+                }
+            },
         ));
 
     let response = app

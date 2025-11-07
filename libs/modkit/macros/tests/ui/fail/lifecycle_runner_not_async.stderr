@@ -10,4 +10,4 @@ warning: unused import: `tokio_util::sync::CancellationToken`
 2 | use tokio_util::sync::CancellationToken;
   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   |
-  = note: `#[warn(unused_imports)]` on by default
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
