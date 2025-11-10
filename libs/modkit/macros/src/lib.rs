@@ -24,10 +24,21 @@ enum Capability {
     Rest,
     RestHost,
     Stateful,
+    System,
+    GrpcHub,
+    Grpc,
 }
 
 impl Capability {
-    const VALID_CAPABILITIES: &'static [&'static str] = &["db", "rest", "rest_host", "stateful"];
+    const VALID_CAPABILITIES: &'static [&'static str] = &[
+        "db",
+        "rest",
+        "rest_host",
+        "stateful",
+        "system",
+        "grpc_hub",
+        "grpc",
+    ];
 
     fn suggest_similar(input: &str) -> Vec<&'static str> {
         let mut suggestions: Vec<(&str, f64)> = Self::VALID_CAPABILITIES
@@ -51,10 +62,13 @@ impl Capability {
             "rest" => Ok(Capability::Rest),
             "rest_host" => Ok(Capability::RestHost),
             "stateful" => Ok(Capability::Stateful),
+            "system" => Ok(Capability::System),
+            "grpc_hub" => Ok(Capability::GrpcHub),
+            "grpc" => Ok(Capability::Grpc),
             other => {
                 let suggestions = Self::suggest_similar(other);
                 let error_msg = if suggestions.is_empty() {
-                    format!("unknown capability '{other}', expected one of: db, rest, rest_host, stateful")
+                    format!("unknown capability '{other}', expected one of: db, rest, rest_host, stateful, system, grpc_hub, grpc")
                 } else {
                     format!(
                         "unknown capability '{other}'\n       = help: did you mean one of: {}?",
@@ -73,10 +87,13 @@ impl Capability {
             "rest" => Ok(Capability::Rest),
             "rest_host" => Ok(Capability::RestHost),
             "stateful" => Ok(Capability::Stateful),
+            "system" => Ok(Capability::System),
+            "grpc_hub" => Ok(Capability::GrpcHub),
+            "grpc" => Ok(Capability::Grpc),
             other => {
                 let suggestions = Self::suggest_similar(other);
                 let error_msg = if suggestions.is_empty() {
-                    format!("unknown capability '{other}', expected one of: db, rest, rest_host, stateful")
+                    format!("unknown capability '{other}', expected one of: db, rest, rest_host, stateful, system, grpc_hub, grpc")
                 } else {
                     format!(
                         "unknown capability '{other}'\n       = help: did you mean one of: {}?",
@@ -473,6 +490,28 @@ pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
                     quote! {}
                 }
             }
+            Capability::System => {
+                // System is a flag, no trait required
+                quote! {}
+            }
+            Capability::GrpcHub => quote! {
+                const _: () = {
+                    #[allow(dead_code)]
+                    fn __modkit_require_GrpcHubModule_impl()
+                    where
+                        #struct_ident #ty_generics: ::modkit::contracts::GrpcHubModule,
+                    {}
+                };
+            },
+            Capability::Grpc => quote! {
+                const _: () = {
+                    #[allow(dead_code)]
+                    fn __modkit_require_GrpcServiceModule_impl()
+                    where
+                        #struct_ident #ty_generics: ::modkit::contracts::GrpcServiceModule,
+                    {}
+                };
+            },
         };
         cap_asserts.push(q);
     }
@@ -603,6 +642,17 @@ pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
                             module.clone() as ::std::sync::Arc<dyn ::modkit::contracts::StatefulModule>);
                     }
                 }
+            },
+            Capability::System => quote! {
+                b.register_system_with_meta(#name_lit);
+            },
+            Capability::GrpcHub => quote! {
+                b.register_grpc_hub_with_meta(#name_lit,
+                    module.clone() as ::std::sync::Arc<dyn ::modkit::contracts::GrpcHubModule>);
+            },
+            Capability::Grpc => quote! {
+                b.register_grpc_service_with_meta(#name_lit,
+                    module.clone() as ::std::sync::Arc<dyn ::modkit::contracts::GrpcServiceModule>);
             },
         }
     });

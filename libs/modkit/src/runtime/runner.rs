@@ -104,9 +104,9 @@ pub async fn run(opts: RunOptions) -> anyhow::Result<()> {
         db_manager,
     );
 
-    // DB MIGRATION phase
+    // DB MIGRATION phase (system modules first)
     tracing::info!("Phase: db (before init)");
-    for entry in registry.modules() {
+    for entry in registry.modules_by_system_priority() {
         let ctx = ctx_builder.for_module(entry.name).await?;
         if let (Some(db), Some(dbm)) = (ctx.db_optional(), entry.db.as_ref()) {
             tracing::debug!(module = entry.name, "Running DB migration");
@@ -124,9 +124,9 @@ pub async fn run(opts: RunOptions) -> anyhow::Result<()> {
         }
     }
 
-    // INIT phase
+    // INIT phase (system modules first)
     tracing::info!("Phase: init");
-    for entry in registry.modules() {
+    for entry in registry.modules_by_system_priority() {
         let ctx = ctx_builder.for_module(entry.name).await?;
         entry
             .core
@@ -143,6 +143,10 @@ pub async fn run(opts: RunOptions) -> anyhow::Result<()> {
     let _router = registry
         .run_rest_phase_with_builder(&ctx_builder, axum::Router::new())
         .await?;
+
+    // GRPC registration phase
+    tracing::info!("Phase: grpc (registration)");
+    registry.run_grpc_phase(&ctx_builder).await?;
 
     // START phase
     tracing::info!("Phase: start");

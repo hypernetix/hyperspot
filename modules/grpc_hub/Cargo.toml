@@ -1,0 +1,29 @@
+[package]
+name = "grpc_hub"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[lib]
+name = "grpc_hub"
+path = "src/lib.rs"
+
+[dependencies]
+modkit = { path = "../../libs/modkit" }
+inventory = "0.3"
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+tokio = { workspace = true }
+tokio-util = { version = "0.7", features = ["rt"] }
+tracing = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+parking_lot = { workspace = true }
+
+# gRPC server
+tonic = "0.14.2"
+
+[dev-dependencies]
+tokio = { workspace = true }
+

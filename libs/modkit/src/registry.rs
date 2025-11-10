@@ -22,6 +22,9 @@ pub struct ModuleEntry {
     pub rest_host: Option<Arc<dyn contracts::RestHostModule>>,
     pub db: Option<Arc<dyn contracts::DbModule>>,
     pub stateful: Option<Arc<dyn contracts::StatefulModule>>,
+    pub is_system: bool,
+    pub grpc_hub: Option<Arc<dyn contracts::GrpcHubModule>>,
+    pub grpc_service: Option<Arc<dyn contracts::GrpcServiceModule>>,
 }
 
 impl std::fmt::Debug for ModuleEntry {
@@ -33,6 +36,9 @@ impl std::fmt::Debug for ModuleEntry {
             .field("is_rest_host", &self.rest_host.is_some())
             .field("has_db", &self.db.is_some())
             .field("has_stateful", &self.stateful.is_some())
+            .field("is_system", &self.is_system)
+            .field("has_grpc_hub", &self.grpc_hub.is_some())
+            .field("has_grpc_service", &self.grpc_service.is_some())
             .finish()
     }
 }
@@ -46,6 +52,8 @@ inventory::collect!(Registrator);
 /// The final, topo-sorted runtime registry.
 pub struct ModuleRegistry {
     modules: Vec<ModuleEntry>, // topo-sorted
+    pub grpc_hub: Option<(String, Arc<dyn contracts::GrpcHubModule>)>,
+    pub grpc_services: Vec<(String, Arc<dyn contracts::GrpcServiceModule>)>,
 }
 
 impl std::fmt::Debug for ModuleRegistry {
@@ -53,6 +61,8 @@ impl std::fmt::Debug for ModuleRegistry {
         let names: Vec<&'static str> = self.modules.iter().map(|m| m.name).collect();
         f.debug_struct("ModuleRegistry")
             .field("modules", &names)
+            .field("has_grpc_hub", &self.grpc_hub.is_some())
+            .field("grpc_services_count", &self.grpc_services.len())
             .finish()
     }
 }
@@ -60,6 +70,25 @@ impl std::fmt::Debug for ModuleRegistry {
 impl ModuleRegistry {
     pub fn modules(&self) -> &[ModuleEntry] {
         &self.modules
+    }
+
+    /// Returns modules ordered by system priority.
+    /// System modules come first, followed by non-system modules.
+    /// Within each group, the original topological order is preserved.
+    pub fn modules_by_system_priority(&self) -> Vec<&ModuleEntry> {
+        let mut system_mods = Vec::new();
+        let mut non_system_mods = Vec::new();
+
+        for entry in &self.modules {
+            if entry.is_system {
+                system_mods.push(entry);
+            } else {
+                non_system_mods.push(entry);
+            }
+        }
+
+        system_mods.extend(non_system_mods);
+        system_mods
     }
 
     /// Discover via inventory, have registrators fill the builder, then build & topo-sort.
@@ -71,10 +100,11 @@ impl ModuleRegistry {
         b.build_topo_sorted()
     }
 
-    // ---- Ordered phases: DB → init → REST (sync) → start → stop ----
+    // ---- Ordered phases: DB → init → REST (sync) → gRPC → start → stop ----
 
     pub async fn run_init_phase(&self, base_ctx: &context::ModuleCtx) -> Result<(), RegistryError> {
-        for e in &self.modules {
+        // Use system priority: system modules initialize first
+        for e in self.modules_by_system_priority() {
             e.core
                 .init(base_ctx)
                 .await
@@ -254,8 +284,72 @@ impl ModuleRegistry {
         Ok(router)
     }
 
+    /// gRPC registration phase: collects services from all grpc modules and passes them to the hub.
+    /// This phase runs after REST but before start.
+    pub async fn run_grpc_phase(
+        &self,
+        ctx_builder: &context::ModuleContextBuilder,
+    ) -> Result<(), RegistryError> {
+        // If no grpc_hub and no grpc_services, skip the phase
+        if self.grpc_hub.is_none() && self.grpc_services.is_empty() {
+            return Ok(());
+        }
+
+        // If there are grpc_services but no hub, that's an error
+        if self.grpc_hub.is_none() && !self.grpc_services.is_empty() {
+            return Err(RegistryError::GrpcRequiresHub);
+        }
+
+        // If there's a hub, collect all services and call run_grpc_host
+        if let Some((hub_name, hub_module)) = &self.grpc_hub {
+            let mut all_handles = Vec::new();
+
+            // Collect services from all grpc modules
+            for (module_name, service_module) in &self.grpc_services {
+                let ctx = ctx_builder.for_module(module_name).await.map_err(|err| {
+                    RegistryError::GrpcRegister {
+                        module: module_name.clone(),
+                        source: err,
+                    }
+                })?;
+
+                let handles =
+                    service_module
+                        .export_grpc_services(&ctx)
+                        .await
+                        .map_err(|source| RegistryError::GrpcRegister {
+                            module: module_name.clone(),
+                            source,
+                        })?;
+
+                all_handles.extend(handles);
+            }
+
+            // Call run_grpc_host on the hub
+            let hub_ctx = ctx_builder.for_module(hub_name).await.map_err(|err| {
+                RegistryError::GrpcRegister {
+                    module: hub_name.clone(),
+                    source: err,
+                }
+            })?;
+
+            // Clone the hub module for the async call
+            let hub_clone = hub_module.clone();
+            hub_clone
+                .run_grpc_host(&hub_ctx, all_handles)
+                .await
+                .map_err(|source| RegistryError::GrpcRegister {
+                    module: hub_name.clone(),
+                    source,
+                })?;
+        }
+
+        Ok(())
+    }
+
     pub async fn run_start_phase(&self, cancel: CancellationToken) -> Result<(), RegistryError> {
-        for e in &self.modules {
+        // Use system priority: system modules start first
+        for e in self.modules_by_system_priority() {
             if let Some(s) = &e.stateful {
                 s.start(cancel.clone())
                     .await
@@ -298,6 +392,9 @@ pub struct RegistryBuilder {
     rest_host: Option<RestHostEntry>,
     db: HashMap<&'static str, Arc<dyn contracts::DbModule>>,
     stateful: HashMap<&'static str, Arc<dyn contracts::StatefulModule>>,
+    system_modules: std::collections::HashSet<&'static str>,
+    grpc_hub: Option<(&'static str, Arc<dyn contracts::GrpcHubModule>)>,
+    grpc_services: HashMap<&'static str, Arc<dyn contracts::GrpcServiceModule>>,
     errors: Vec<String>,
 }
 
@@ -350,6 +447,33 @@ impl RegistryBuilder {
         m: Arc<dyn contracts::StatefulModule>,
     ) {
         self.stateful.insert(name, m);
+    }
+
+    pub fn register_system_with_meta(&mut self, name: &'static str) {
+        self.system_modules.insert(name);
+    }
+
+    pub fn register_grpc_hub_with_meta(
+        &mut self,
+        name: &'static str,
+        m: Arc<dyn contracts::GrpcHubModule>,
+    ) {
+        if let Some((existing, _)) = &self.grpc_hub {
+            self.errors.push(format!(
+                "Multiple gRPC hub modules detected: '{}' and '{}'. Only one gRPC hub is allowed.",
+                existing, name
+            ));
+            return;
+        }
+        self.grpc_hub = Some((name, m));
+    }
+
+    pub fn register_grpc_service_with_meta(
+        &mut self,
+        name: &'static str,
+        m: Arc<dyn contracts::GrpcServiceModule>,
+    ) {
+        self.grpc_services.insert(name, m);
     }
 
     /// Detect cycles in the dependency graph using DFS with path tracking.
@@ -453,6 +577,16 @@ impl RegistryBuilder {
                 return Err(RegistryError::UnknownModule((*n).to_string()));
             }
         }
+        if let Some((n, _)) = &self.grpc_hub {
+            if !self.core.contains_key(n) {
+                return Err(RegistryError::UnknownModule((*n).to_string()));
+            }
+        }
+        for (n, _) in self.grpc_services.iter() {
+            if !self.core.contains_key(n) {
+                return Err(RegistryError::UnknownModule((*n).to_string()));
+            }
+        }
 
         // 2) build graph over core modules and detect cycles
         let names: Vec<&'static str> = self.core.keys().copied().collect();
@@ -535,16 +669,39 @@ impl RegistryBuilder {
                     .map(|(_, module)| module.clone()),
                 db: self.db.get(name).cloned(),
                 stateful: self.stateful.get(name).cloned(),
+                is_system: self.system_modules.contains(name),
+                grpc_hub: self
+                    .grpc_hub
+                    .as_ref()
+                    .filter(|(hub_name, _)| *hub_name == name)
+                    .map(|(_, module)| module.clone()),
+                grpc_service: self.grpc_services.get(name).cloned(),
             };
             entries.push(entry);
         }
+
+        // Collect grpc_hub and grpc_services for the final registry
+        let grpc_hub = self
+            .grpc_hub
+            .as_ref()
+            .map(|(name, module)| (name.to_string(), module.clone()));
+
+        let grpc_services: Vec<(String, Arc<dyn contracts::GrpcServiceModule>)> = self
+            .grpc_services
+            .iter()
+            .map(|(name, module)| (name.to_string(), module.clone()))
+            .collect();
 
         tracing::info!(
             modules = ?entries.iter().map(|e| e.name).collect::<Vec<_>>(),
             "Module dependency order resolved (topo)"
         );
 
-        Ok(ModuleRegistry { modules: entries })
+        Ok(ModuleRegistry {
+            modules: entries,
+            grpc_hub,
+            grpc_services,
+        })
     }
 }
 
@@ -597,6 +754,18 @@ pub enum RegistryError {
     RestHostNotFoundAfterValidation,
     #[error("REST host missing from entry")]
     RestHostMissingFromEntry,
+
+    // gRPC-related errors
+    #[error("gRPC registration failed for module '{module}'")]
+    GrpcRegister {
+        module: String,
+        #[source]
+        source: anyhow::Error,
+    },
+    #[error("gRPC phase requires a hub: modules with capability 'grpc' found, but no module with capability 'grpc_hub'")]
+    GrpcRequiresHub,
+    #[error("multiple 'grpc_hub' modules detected; exactly one is allowed")]
+    MultipleGrpcHubs,
 
     // Build/topo-sort errors
     #[error("unknown module '{0}'")]

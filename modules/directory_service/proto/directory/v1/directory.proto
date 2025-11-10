@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package modkit.directory.v1;
+
+service DirectoryService {
+  rpc ResolveGrpcService(ResolveGrpcServiceRequest) returns (ResolveGrpcServiceResponse);
+  rpc ListInstances(ListInstancesRequest) returns (ListInstancesResponse);
+}
+
+message ResolveGrpcServiceRequest {
+  string service_name = 1;
+}
+
+message ResolveGrpcServiceResponse {
+  string endpoint_uri = 1;
+}
+
+message ListInstancesRequest {
+  string module_name = 1;
+}
+
+message InstanceInfo {
+  string module_name = 1;
+  string instance_id = 2;
+  string endpoint_uri = 3;
+  string version = 4;
+}
+
+message ListInstancesResponse {
+  repeated InstanceInfo instances = 1;
+}
+
