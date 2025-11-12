@@ -132,12 +132,17 @@ where
     ///     .one(conn)
     ///     .await?;
     /// ```
+    ///
+    /// # Panics
+    /// Panics if the entity does not have a resource_col defined.
     pub fn and_id(self, id: uuid::Uuid) -> Self
     where
         E: ScopableEntity,
         E::Column: ColumnTrait + Copy,
     {
-        let cond = sea_orm::Condition::all().add(Expr::col(E::id_col()).eq(id));
+        let resource_col =
+            E::resource_col().expect("Entity must have a resource_col to use and_id()");
+        let cond = sea_orm::Condition::all().add(Expr::col(resource_col).eq(id));
         self.filter(cond)
     }
 

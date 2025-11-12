@@ -1,10 +1,20 @@
 use chrono::{DateTime, Utc};
-use modkit_db::secure::ScopableEntity;
+use modkit_db_macros::Scopable;
 use sea_orm::entity::prelude::*;
 use uuid::Uuid;
 
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+/// User entity with multi-tenant isolation.
+///
+/// This entity demonstrates the use of the `#[derive(Scopable)]` macro
+/// for automatic implementation of secure ORM scoping.
+#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Scopable)]
 #[sea_orm(table_name = "users")]
+#[secure(
+    tenant_col = "tenant_id",  // Multi-tenant entity - scope by tenant_id
+    resource_col = "id",        // Primary resource identifier
+    no_owner,                   // No owner-based filtering
+    no_type                     // No type-based filtering
+)]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: Uuid,
@@ -19,16 +29,3 @@ pub struct Model {
 pub enum Relation {}
 
 impl ActiveModelBehavior for ActiveModel {}
-
-// Implement ScopableEntity for secure ORM support
-// This is a multi-tenant entity with tenant isolation
-impl ScopableEntity for Entity {
-    fn tenant_col() -> Option<Self::Column> {
-        // Multi-tenant entity - scope by tenant_id
-        Some(Column::TenantId)
-    }
-
-    fn id_col() -> Self::Column {
-        Column::Id
-    }
-}

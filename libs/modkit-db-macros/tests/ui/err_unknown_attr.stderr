@@ -1,4 +1,4 @@
-error: Unknown attribute 'does_not_exist'. Valid attributes: tenant_col, resource_col, owner_col, entity, unrestricted
+error: Unknown attribute 'does_not_exist'. Valid attributes: tenant_col, no_tenant, resource_col, no_resource, owner_col, no_owner, type_col, no_type, unrestricted
  --> tests/ui/err_unknown_attr.rs:6:10
   |
 6 | #[secure(does_not_exist = "oops")]

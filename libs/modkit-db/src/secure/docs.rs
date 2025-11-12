@@ -41,8 +41,14 @@
 //!     fn tenant_col() -> Option<Self::Column> {
 //!         Some(user::Column::TenantId)  // Multi-tenant entity
 //!     }
-//!     fn id_col() -> Self::Column {
-//!         user::Column::Id
+//!     fn resource_col() -> Option<Self::Column> {
+//!         Some(user::Column::Id)
+//!     }
+//!     fn owner_col() -> Option<Self::Column> {
+//!         None
+//!     }
+//!     fn type_col() -> Option<Self::Column> {
+//!         None
 //!     }
 //! }
 //!
@@ -51,8 +57,14 @@
 //!     fn tenant_col() -> Option<Self::Column> {
 //!         None  // Global entity
 //!     }
-//!     fn id_col() -> Self::Column {
-//!         system_config::Column::Id
+//!     fn resource_col() -> Option<Self::Column> {
+//!         Some(system_config::Column::Id)
+//!     }
+//!     fn owner_col() -> Option<Self::Column> {
+//!         None
+//!     }
+//!     fn type_col() -> Option<Self::Column> {
+//!         None
 //!     }
 //! }
 //! ```
@@ -87,8 +99,8 @@
 //! | Empty (no tenant, no resource) | `WHERE 1=0` (deny all) |
 //! | Tenants only | `WHERE tenant_id IN (...)` |
 //! | Tenants only + entity has no tenant_col | `WHERE 1=0` (deny all) |
-//! | Resources only | `WHERE id IN (...)` |
-//! | Both tenants and resources | `WHERE tenant_id IN (...) AND id IN (...)` |
+//! | Resources only | `WHERE resource_col IN (...)` |
+//! | Both tenants and resources | `WHERE tenant_col IN (...) AND resource_col IN (...)` |
 //!
 //! ## Usage Examples
 //!

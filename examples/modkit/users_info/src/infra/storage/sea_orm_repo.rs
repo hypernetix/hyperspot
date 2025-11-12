@@ -73,7 +73,6 @@ impl UsersRepository for SeaOrmUsersRepository {
     async fn find_by_id(&self, ctx: &SecurityCtx, id: Uuid) -> anyhow::Result<Option<User>> {
         debug!("Finding user by id with security context");
 
-        // Use SecureConn to automatically apply security filtering
         let found = self
             .sec
             .find_by_id::<UserEntity>(ctx, id)
@@ -97,7 +96,6 @@ impl UsersRepository for SeaOrmUsersRepository {
     async fn email_exists(&self, ctx: &SecurityCtx, email: &str) -> anyhow::Result<bool> {
         debug!("Checking if email exists within security scope");
 
-        // Use SecureConn to ensure we only check within accessible scope
         use sea_orm::sea_query::Expr;
         let secure_query = self
             .sec
@@ -105,7 +103,6 @@ impl UsersRepository for SeaOrmUsersRepository {
             .context("Failed to create secure query")?
             .filter(sea_orm::Condition::all().add(Expr::col(Column::Email).eq(email)));
 
-        // Get the underlying Select and execute count
         let count = secure_query
             .into_inner()
             .count(self.sec.conn())
@@ -137,7 +134,6 @@ impl UsersRepository for SeaOrmUsersRepository {
             updated_at: Set(u.updated_at),
         };
 
-        // Secure insert validates that tenant_id matches the security context
         let _ = self
             .sec
             .insert::<UserEntity>(ctx, m)
@@ -160,7 +156,6 @@ impl UsersRepository for SeaOrmUsersRepository {
     async fn update(&self, ctx: &SecurityCtx, u: User) -> anyhow::Result<()> {
         debug!("Updating user with security validation");
 
-        // Build ActiveModel for update
         let m = UserAM {
             id: Set(u.id),
             tenant_id: Set(u.tenant_id),
@@ -170,7 +165,6 @@ impl UsersRepository for SeaOrmUsersRepository {
             updated_at: Set(u.updated_at),
         };
 
-        // update_with_ctx validates the entity is in scope before updating
         let _ = self
             .sec
             .update_with_ctx::<UserEntity>(ctx, u.id, m)
@@ -192,7 +186,6 @@ impl UsersRepository for SeaOrmUsersRepository {
     async fn delete(&self, ctx: &SecurityCtx, id: Uuid) -> anyhow::Result<bool> {
         debug!("Deleting user with security validation");
 
-        // Use SecureConn's delete_by_id which validates the entity is in scope
         let deleted = self
             .sec
             .delete_by_id::<UserEntity>(ctx, id)
@@ -217,17 +210,13 @@ impl UsersRepository for SeaOrmUsersRepository {
     ) -> Result<Page<User>, modkit_odata::Error> {
         debug!("Listing users with security filtering");
 
-        // Create a secure base query that automatically applies scoping
         let secure_query = self.sec.find::<UserEntity>(ctx).map_err(|e| {
-            // Convert ScopeError to ODataError
             tracing::error!(error = %e, "Failed to create secure query");
             modkit_odata::Error::Db(format!("Failed to create secure query: {}", e))
         })?;
 
-        // Extract the underlying Select query (which has security filters already applied)
         let base_query = secure_query.into_inner();
 
-        // Use the OData pagination helper with the secure base query
         modkit_db::odata::paginate_with_odata::<UserEntity, User, _, _>(
             base_query,
             self.sec.conn(),

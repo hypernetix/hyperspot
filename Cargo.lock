@@ -2119,12 +2119,9 @@ dependencies = [
 name = "modkit-auth"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "arc-swap",
  "async-trait",
  "axum",
- "base64 0.22.1",
- "chrono",
  "http",
  "jsonwebtoken",
  "modkit-security",
@@ -5142,6 +5139,7 @@ dependencies = [
  "modkit",
  "modkit-auth",
  "modkit-db",
+ "modkit-db-macros",
  "modkit-errors",
  "modkit-errors-macro",
  "modkit-odata",

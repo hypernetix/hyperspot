@@ -59,7 +59,6 @@ impl Service {
     pub async fn get_user(&self, ctx: &SecurityCtx, id: Uuid) -> Result<User, DomainError> {
         debug!("Getting user by id");
 
-        // Call audit service to log user access
         let audit_result = self.audit.get_user_access(id).await;
         if let Err(e) = audit_result {
             debug!("Audit service call failed (continuing): {}", e);
@@ -84,7 +83,6 @@ impl Service {
     ) -> Result<Page<User>, modkit_odata::Error> {
         debug!("Listing users with cursor pagination");
 
-        // All validation is now handled centrally in paginate_with_odata
         let page = self.repo.list_users_page(ctx, &query).await?;
 
         debug!("Successfully listed {} users in page", page.items.len());
@@ -103,10 +101,24 @@ impl Service {
     ) -> Result<User, DomainError> {
         info!("Creating new user");
 
-        // Validate input
         self.validate_new_user(&new_user)?;
 
-        // Check uniqueness
+        let id = new_user.id.unwrap_or_else(Uuid::now_v7);
+
+        if new_user.id.is_some()
+            && self
+                .repo
+                .find_by_id(ctx, id)
+                .await
+                .map_err(|e| DomainError::database(e.to_string()))?
+                .is_some()
+        {
+            return Err(DomainError::validation(
+                "id",
+                "User with this ID already exists",
+            ));
+        }
+
         if self
             .repo
             .email_exists(ctx, &new_user.email)
@@ -117,11 +129,7 @@ impl Service {
         }
 
         let now = Utc::now();
-        // Use provided ID or generate a new UUID v7
-        let id = new_user.id.unwrap_or_else(|| {
-            // Generate UUID v7 (time-ordered)
-            uuid::Uuid::now_v7()
-        });
+        let id = new_user.id.unwrap_or_else(uuid::Uuid::now_v7);
 
         let user = User {
             id,
@@ -137,13 +145,11 @@ impl Service {
             .await
             .map_err(|e| DomainError::database(e.to_string()))?;
 
-        // Notify external systems about user creation
         let notification_result = self.audit.notify_user_created().await;
         if let Err(e) = notification_result {
             debug!("Notification service call failed (continuing): {}", e);
         }
 
-        // Publish domain event
         self.events.publish(&UserDomainEvent::Created {
             id: user.id,
             at: user.created_at,
@@ -166,10 +172,8 @@ impl Service {
     ) -> Result<User, DomainError> {
         info!("Updating user");
 
-        // Validate patch
         self.validate_user_patch(&patch)?;
 
-        // Load current
         let mut current = self
             .repo
             .find_by_id(ctx, id)
@@ -177,7 +181,6 @@ impl Service {
             .map_err(|e| DomainError::database(e.to_string()))?
             .ok_or_else(|| DomainError::user_not_found(id))?;
 
-        // Uniqueness for email change
         if let Some(ref new_email) = patch.email {
             if new_email != &current.email
                 && self
@@ -190,7 +193,6 @@ impl Service {
             }
         }
 
-        // Apply patch
         if let Some(email) = patch.email {
             current.email = email;
         }
@@ -199,13 +201,11 @@ impl Service {
         }
         current.updated_at = Utc::now();
 
-        // Persist
         self.repo
             .update(ctx, current.clone())
             .await
             .map_err(|e| DomainError::database(e.to_string()))?;
 
-        // Publish domain event
         self.events.publish(&UserDomainEvent::Updated {
             id: current.id,
             at: current.updated_at,
@@ -233,15 +233,12 @@ impl Service {
             return Err(DomainError::user_not_found(id));
         }
 
-        // Publish domain event
         self.events
             .publish(&UserDomainEvent::Deleted { id, at: Utc::now() });
 
         info!("Successfully deleted user");
         Ok(())
     }
-
-    // --- validation helpers ---
 
     fn validate_new_user(&self, new_user: &NewUser) -> Result<(), DomainError> {
         self.validate_email(&new_user.email)?;

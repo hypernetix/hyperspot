@@ -1,0 +1,14 @@
+error: secure: conflicting attributes for resource
+
+         = note: no_resource also defined here
+
+ --> tests/ui/err_conflicting_resource.rs:8:5
+  |
+8 |     resource_col = "id",
+  |     ^^^^^^^^^^^^
+
+error: secure: specify either `resource_col` or `no_resource`, not both
+ --> tests/ui/err_conflicting_resource.rs:6:1
+  |
+6 | #[secure(
+  | ^

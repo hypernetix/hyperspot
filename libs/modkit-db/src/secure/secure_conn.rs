@@ -350,7 +350,6 @@ impl SecureConn {
         E::ActiveModel: sea_orm::ActiveModelTrait<Entity = E> + Send,
         E::Model: sea_orm::IntoActiveModel<E::ActiveModel>,
     {
-        // Verify the entity exists and is in scope before updating
         let exists = self
             .find_by_id::<E>(ctx, id)?
             .one(&self.conn)
@@ -363,7 +362,6 @@ impl SecureConn {
             ));
         }
 
-        // Entity is in scope, perform the update
         Ok(am.update(&self.conn).await?)
     }
 
@@ -382,14 +380,21 @@ impl SecureConn {
     ///
     /// - `Ok(true)` if entity was deleted
     /// - `Ok(false)` if entity not found in scope
+    ///
+    /// # Errors
+    ///
+    /// Returns `ScopeError::Invalid` if the entity does not have a resource_col defined.
     pub async fn delete_by_id<E>(&self, ctx: &SecurityCtx, id: Uuid) -> Result<bool, ScopeError>
     where
         E: ScopableEntity + EntityTrait,
         E::Column: ColumnTrait + Copy,
     {
-        // Filter by ID first, then scope
+        let resource_col = E::resource_col().ok_or_else(|| {
+            ScopeError::Invalid("Entity must have a resource_col to use delete_by_id()")
+        })?;
+
         let result = E::delete_many()
-            .filter(sea_orm::Condition::all().add(Expr::col(E::id_col()).eq(id)))
+            .filter(sea_orm::Condition::all().add(Expr::col(resource_col).eq(id)))
             .secure()
             .scope_with(ctx.scope())?
             .exec(&self.conn)

@@ -59,7 +59,6 @@ impl Default for AuthConfig {
 impl AuthConfig {
     /// Validate the configuration for consistency
     pub fn validate(&self) -> Result<(), ConfigError> {
-        // Check that the provider exists
         if !self.plugins.contains_key(&self.mode.provider) {
             return Err(ConfigError::UnknownPlugin(self.mode.provider.clone()));
         }
@@ -126,10 +125,8 @@ fn default_roles_claim() -> String {
 
 /// Build an AuthDispatcher from configuration
 pub fn build_auth_dispatcher(config: &AuthConfig) -> Result<AuthDispatcher, ConfigError> {
-    // Validate configuration first
     config.validate()?;
 
-    // Build validation config
     let validation_config = ValidationConfig {
         allowed_issuers: config.issuers.clone(),
         allowed_audiences: config.audiences.clone(),
@@ -138,7 +135,6 @@ pub fn build_auth_dispatcher(config: &AuthConfig) -> Result<AuthDispatcher, Conf
         require_uuid_tenants: true,
     };
 
-    // Build plugin registry
     let mut registry = PluginRegistry::new();
     for (name, plugin_config) in &config.plugins {
         let plugin: Arc<dyn crate::plugin_traits::ClaimsPlugin> = match plugin_config {
@@ -171,10 +167,8 @@ pub fn build_auth_dispatcher(config: &AuthConfig) -> Result<AuthDispatcher, Conf
         );
     }
 
-    // Build dispatcher with single mode
     let dispatcher = AuthDispatcher::new(validation_config, config, &registry)?;
 
-    // Add JWKS key provider if configured
     let dispatcher = if let Some(jwks_config) = &config.jwks {
         let provider = JwksKeyProvider::new(jwks_config.uri.clone())
             .with_refresh_interval(Duration::from_secs(jwks_config.refresh_interval_seconds))
@@ -185,7 +179,6 @@ pub fn build_auth_dispatcher(config: &AuthConfig) -> Result<AuthDispatcher, Conf
         dispatcher
     };
 
-    // Log startup info
     tracing::info!(
         plugin = %config.mode.provider,
         "Authentication dispatcher initialized (single mode)"

@@ -145,7 +145,6 @@ impl ApiIngress {
             let spec = spec.value();
             let route_key = (spec.method.clone(), spec.path.clone());
 
-            // Collect explicit security requirements
             if let Some(ref sec) = spec.sec_requirement {
                 req_map.insert(
                     route_key.clone(),
@@ -156,7 +155,6 @@ impl ApiIngress {
                 );
             }
 
-            // Track explicitly public routes
             if spec.is_public {
                 public_routes.insert(route_key);
             }
@@ -296,8 +294,9 @@ impl ApiIngress {
         let config = self.get_cached_config();
         if config.auth_disabled {
             tracing::warn!(
-                "API Ingress auth is DISABLED: all requests will run with root SecurityCtx. \
-                 This mode is for development only and MUST NOT be used in production."
+                "API Ingress auth is DISABLED: all requests will run with root SecurityCtx (SecurityCtx::root_ctx()). \
+                 This mode bypasses authentication and is intended ONLY for single-user on-premises deployments without an IdP. \
+                 Permission checks and secure ORM still apply. DO NOT use this mode in multi-tenant or production environments."
             );
             router = router.layer(from_fn(
                 |mut req: axum::extract::Request, next: axum::middleware::Next| async move {
@@ -773,12 +772,10 @@ impl OpenApiRegistry for ApiIngress {
             return;
         }
 
-        // Store the operation spec for OpenAPI generation
         let operation_key = format!("{}:{}", spec.method.as_str(), spec.path);
         self.operation_specs
             .insert(operation_key.clone(), spec.clone());
 
-        // Debug: Log the operation registration with current count
         let current_count = self.operation_specs.len();
         tracing::debug!(
             handler_id = %spec.handler_id,

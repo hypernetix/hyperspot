@@ -36,7 +36,12 @@
 //! // 1. Derive Scopable for your entity (or implement manually)
 //! #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Scopable)]
 //! #[sea_orm(table_name = "users")]
-//! #[secure(tenant_col = "tenant_id")]
+//! #[secure(
+//!     tenant_col = "tenant_id",
+//!     resource_col = "id",
+//!     no_owner,
+//!     no_type
+//! )]
 //! pub struct Model {
 //!     #[sea_orm(primary_key)]
 //!     pub id: Uuid,
@@ -66,8 +71,14 @@
 //!     fn tenant_col() -> Option<Self::Column> {
 //!         Some(Column::TenantId)
 //!     }
-//!     fn id_col() -> Self::Column {
-//!         Column::Id
+//!     fn resource_col() -> Option<Self::Column> {
+//!         Some(Column::Id)
+//!     }
+//!     fn owner_col() -> Option<Self::Column> {
+//!         None
+//!     }
+//!     fn type_col() -> Option<Self::Column> {
+//!         None
 //!     }
 //! }
 //! ```

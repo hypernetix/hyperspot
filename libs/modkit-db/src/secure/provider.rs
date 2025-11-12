@@ -46,6 +46,11 @@ impl TenantFilterProvider for SimpleTenantFilter {
         E: ScopableEntity + EntityTrait,
         E::Column: ColumnTrait + Copy,
     {
+        // Root scope: skip tenant filtering entirely
+        if scope.is_root() {
+            return None;
+        }
+
         // No tenant IDs in scope → no tenant filter
         if scope.tenant_ids().is_empty() {
             return None;
@@ -68,8 +73,6 @@ mod tests {
     // Note: Full integration tests with SeaORM entities should be written in actual
     // application code where real entities are defined. These are basic unit tests
     // for the provider trait pattern.
-    //
-    // See USAGE_EXAMPLE.md for complete usage examples with real SeaORM entities.
 
     #[test]
     fn test_provider_trait_compiles() {

@@ -82,8 +82,8 @@ All methods require `&SecurityCtx` parameter:
 | Empty (no tenant, no resource) | `WHERE 1=0` (deny all) |
 | Tenants only | `WHERE tenant_col IN (...)` |
 | Tenants only + entity has no tenant_col | `WHERE 1=0` (deny all) |
-| Resources only | `WHERE id IN (...)` |
-| Both tenants and resources | `WHERE tenant_col IN (...) AND id IN (...)` |
+| Resources only | `WHERE resource_col IN (...)` |
+| Both tenants and resources | `WHERE tenant_col IN (...) AND resource_col IN (...)` |
 
 ## Quick Start
 
@@ -98,7 +98,12 @@ use modkit_db_macros::Scopable;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Scopable)]
 #[sea_orm(table_name = "users")]
-#[secure(tenant_col = "tenant_id")]
+#[secure(
+    tenant_col = "tenant_id",
+    resource_col = "id",
+    no_owner,
+    no_type
+)]
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: Uuid,
@@ -117,8 +122,16 @@ impl ScopableEntity for user::Entity {
         Some(user::Column::TenantId)  // Multi-tenant entity
     }
     
-    fn id_col() -> Self::Column {
-        user::Column::Id
+    fn resource_col() -> Option<Self::Column> {
+        Some(user::Column::Id)
+    }
+    
+    fn owner_col() -> Option<Self::Column> {
+        None
+    }
+    
+    fn type_col() -> Option<Self::Column> {
+        None
     }
 }
 ```
@@ -171,15 +184,55 @@ let users = user::Entity::find()
 
 ## Scopable Macro Attributes
 
-The `#[derive(Scopable)]` macro supports the following attributes:
+The `#[derive(Scopable)]` macro requires explicit declarations for all scope dimensions.
 
-- `#[secure(tenant_col = "column_name")]` - Specify the tenant ID column for multi-tenant entities
-- `#[secure(resource_col = "column_name")]` - Override the default resource ID column (defaults to "id")
-- `#[secure(owner_col = "column_name")]` - Specify an owner ID column for future owner-based policies
-- `#[secure(entity = "EntityName")]` - Override the entity type name (defaults to "Entity")
-- `#[secure(unrestricted)]` - Mark entity as unrestricted (no tenant isolation, for global tables)
+### Required Attributes (must specify one for each dimension)
 
-**Note**: The `unrestricted` flag cannot be combined with `tenant_col` - this is enforced at compile time.
+**Tenant dimension:**
+- `tenant_col = "column_name"` - Specify the tenant ID column for multi-tenant entities
+- `no_tenant` - Explicitly declare this entity has no tenant isolation
+
+**Resource dimension:**
+- `resource_col = "column_name"` - Specify the resource ID column (typically the primary key)
+- `no_resource` - Explicitly declare this entity has no resource-level filtering
+
+**Owner dimension:**
+- `owner_col = "column_name"` - Specify an owner ID column for owner-based access control
+- `no_owner` - Explicitly declare this entity has no owner-based filtering
+
+**Type dimension:**
+- `type_col = "column_name"` - Specify a type ID column for type-based filtering (polymorphic scenarios)
+- `no_type` - Explicitly declare this entity has no type-based filtering
+
+### Unrestricted Entities
+
+- `unrestricted` - Mark entity as unrestricted (no scoping at all, for global system tables)
+
+**Important Rules:**
+- All four dimensions (tenant, resource, owner, type) must be explicitly specified using either `*_col = "..."` or `no_*`
+- The `unrestricted` flag cannot be combined with any other attributes
+- No implicit defaults are allowed - this enforces compile-time safety
+
+### Examples
+
+**Multi-tenant entity with explicit decisions:**
+```rust
+#[derive(Scopable)]
+#[secure(
+    tenant_col = "tenant_id",
+    resource_col = "id",
+    no_owner,
+    no_type
+)]
+struct Model { /* ... */ }
+```
+
+**Global/system entity:**
+```rust
+#[derive(Scopable)]
+#[secure(unrestricted)]
+struct SystemConfig { /* ... */ }
+```
 
 ## Files
 

@@ -5,63 +5,66 @@ use crate::secure::cond::build_scope_condition;
 use crate::secure::error::ScopeError;
 use crate::secure::{AccessScope, ScopableEntity, Scoped, Unscoped};
 
-/// Secure insert helper with tenant scope validation.
+/// Secure insert helper for Scopable entities.
 ///
-/// This function validates that entities with tenant columns can only be inserted
-/// when the security context includes valid tenant scope. It does not automatically
-/// populate fields - callers must set all required fields before calling.
+/// This helper performs a standard `INSERT` through SeaORM but wraps database
+/// errors into a unified `ScopeError` type for consistent error handling across
+/// secure data-access code. It does **not** enforce any authorization or tenant
+/// checks on its own.
+///
+/// # Responsibilities
+///
+/// - Does **not** inspect the `SecurityCtx` or enforce tenant scoping rules.
+/// - Does **not** automatically populate any entity fields.
+/// - Callers are responsible for:
+///   - Setting all required fields before calling.
+///   - Validating that the operation is authorized within the current
+///     `SecurityCtx` (e.g., verifying tenant_id or resource ownership).
 ///
 /// # Behavior by Entity Type
 ///
 /// ## Tenant-scoped entities (have `tenant_col`)
-/// - **Requires**: Non-empty `scope.tenant_ids`
-/// - **Validates**: At least one tenant is in scope
-/// - **Does NOT**: Automatically set `tenant_id` field
-/// - **Caller MUST**: Set `tenant_id` from `ctx.scope().tenant_ids`
+/// - Must have a valid, non-empty `tenant_id` set in the ActiveModel before insert.
+/// - The `tenant_id` should come from the request payload or be validated against
+///   `SecurityCtx` by the service layer before calling this helper.
 ///
 /// ## Global entities (no `tenant_col`)
-/// - **Allows**: Insert without tenant scope validation
-/// - **Use case**: System-wide entities like global settings
+/// - May be inserted freely without tenant validation.
+/// - Typical examples include system-wide configuration or audit logs.
 ///
 /// # Recommended Field Population
 ///
-/// When inserting entities, populate these fields from `SecurityCtx`:
-/// - `tenant_id`: From `ctx.scope().tenant_ids[0]` (after validation)
-/// - `owner_id`: From `ctx.subject_id()` for audit trails
-/// - `created_by`: From `ctx.subject_id()` if applicable
+/// When inserting entities, populate these fields from `SecurityCtx` in service code:
+/// - `tenant_id`: from payload or validated via `ctx.scope()`
+/// - `owner_id`: from `ctx.subject_id()`
+/// - `created_by`: from `ctx.subject_id()` if applicable
 ///
 /// # Example
 ///
 /// ```ignore
 /// use modkit_db::secure::{secure_insert, SecurityCtx};
 ///
-/// // Validate tenant scope before creating ActiveModel
-/// let tenant_id = ctx.scope().tenant_ids().first()
-///     .ok_or(ScopeError::Invalid("no tenant in scope"))?;
-///
+/// // Domain/service layer validates tenant_id beforehand
 /// let am = user::ActiveModel {
 ///     id: Set(Uuid::new_v4()),
-///     tenant_id: Set(*tenant_id),           // Set from scope
-///     owner_id: Set(ctx.subject_id()),      // Set from subject
+///     tenant_id: Set(tenant_id),
+///     owner_id: Set(ctx.subject_id()),
 ///     email: Set("user@example.com".to_string()),
 ///     ..Default::default()
 /// };
 ///
+/// // Simple secure insert wrapper
 /// let user = secure_insert::<user::Entity>(am, &ctx, conn).await?;
 /// ```
 ///
-/// # Future Enhancement
-///
-/// A `#[derive(SecureInsert)]` macro could auto-populate `tenant_id` and `owner_id`
-/// based on column names and security context.
-///
 /// # Errors
 ///
-/// - `ScopeError::Invalid` if entity requires tenant but scope has no tenant_ids
-/// - `ScopeError::Db` if database insert fails
+/// - Returns `ScopeError::Db` if the database insert fails.
+/// - Does **not** return scope or authorization errors; these must be handled
+///   in higher layers (e.g., service logic or request handlers).
 pub async fn secure_insert<E>(
     am: E::ActiveModel,
-    sec: &crate::secure::SecurityCtx,
+    _sec: &crate::secure::SecurityCtx,
     conn: &impl ConnectionTrait,
 ) -> Result<E::Model, ScopeError>
 where
@@ -70,20 +73,7 @@ where
     E::ActiveModel: ActiveModelTrait<Entity = E> + Send,
     E::Model: sea_orm::IntoActiveModel<E::ActiveModel>,
 {
-    // Validate: if entity has tenant column, scope must provide at least one tenant_id
-    if E::tenant_col().is_some() && sec.scope().tenant_ids().is_empty() {
-        return Err(ScopeError::Invalid(
-            "entity requires tenant_id but scope has none",
-        ));
-    }
-
-    // Note: We cannot generically verify that tenant_id/owner_id fields are set correctly
-    // without per-entity knowledge. Callers are responsible for:
-    // 1. Setting tenant_id from ctx.scope().tenant_ids (for tenant-scoped entities)
-    // 2. Setting owner_id from ctx.subject_id() (for audit trails)
-    // 3. Using ActiveModelBehavior hooks for automatic field population
-
-    // Execute insert
+    // No tenant validation is performed here — caller is responsible.
     Ok(am.insert(conn).await?)
 }
 

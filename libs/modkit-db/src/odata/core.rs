@@ -748,21 +748,17 @@ where
     ) -> ODataBuildResult<Self> {
         let mut select = self;
 
-        // Apply filter first
         if let Some(ast) = query.filter.as_deref() {
             let cond = expr_to_condition::<E>(ast, fld_map)?;
             select = select.filter(cond);
         }
 
-        // Ensure tiebreaker is present in order
         let effective_order = ensure_tiebreaker(query.order.clone(), tiebreaker.0, tiebreaker.1);
 
-        // Apply cursor if present
         if let Some(cursor) = &query.cursor {
             select = select.apply_cursor_forward(cursor, &effective_order, fld_map)?;
         }
 
-        // Apply ordering
         select = select.apply_odata_order(&effective_order, fld_map)?;
 
         Ok(select)
