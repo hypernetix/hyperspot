@@ -1,0 +1,6 @@
+error: secure: missing explicit decision for owner:
+         use `owner_col = "column_name"` or `no_owner`
+ --> tests/ui/err_missing_owner_decision.rs:6:1
+  |
+6 | #[secure(
+  | ^

@@ -51,6 +51,13 @@ pub fn ctx_deny_all() -> SecurityCtx {
     SecurityCtx::new(AccessScope::default(), subject)
 }
 
+/// Create a root security context (system-level access).
+///
+/// This context bypasses all tenant filtering and allows access to all data.
+pub fn ctx_root() -> SecurityCtx {
+    SecurityCtx::root_ctx()
+}
+
 /// Create a fresh in-memory SQLite database with migrations applied.
 ///
 /// Each call creates a new isolated database for testing.

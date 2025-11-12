@@ -90,7 +90,7 @@ modules:
       enable_docs: true
       cors_enabled: false
       # Authentication Configuration
-      auth_disabled: false
+      auth_disabled: true
       require_auth_by_default: true
       
       # JWKS Configuration (replace with your OIDC provider)

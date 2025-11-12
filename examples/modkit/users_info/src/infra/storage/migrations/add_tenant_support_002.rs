@@ -18,7 +18,7 @@ impl MigrationTrait for Migration {
         let uk_tenant_email = "uk_users_tenant_email";
         let idx_tenant = "idx_users_tenant";
 
-        let root_tenant = "00000000-0000-0000-0000-000000000001";
+        let root_tenant = modkit_security::constants::ROOT_TENANT_ID;
 
         // 1) Add tenant_id column if it doesn't exist
         if !manager
@@ -190,22 +190,14 @@ impl MigrationTrait for Migration {
         }
 
         // 4) Drop the tenant_id column
-        match backend {
-            DB::Postgres | DB::MySql => {
-                manager
-                    .alter_table(
-                        Table::alter()
-                            .table(users)
-                            .drop_column(tenant_id)
-                            .to_owned(),
-                    )
-                    .await?;
-            }
-            DB::Sqlite => {
-                // SQLite does not support DROP COLUMN in all builds.
-                // You could rebuild the table if absolutely necessary, but skipping is safe for down migration.
-            }
-        }
+        manager
+            .alter_table(
+                Table::alter()
+                    .table(users)
+                    .drop_column(tenant_id)
+                    .to_owned(),
+            )
+            .await?;
 
         Ok(())
     }

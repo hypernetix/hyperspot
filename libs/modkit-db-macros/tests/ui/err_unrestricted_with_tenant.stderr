@@ -1,7 +1,13 @@
-error: Cannot use both 'unrestricted' and 'tenant_col' attributes
+error: Cannot use 'unrestricted' with 'tenant_col'
 
          = note: tenant_col defined here
 
+ --> tests/ui/err_unrestricted_with_tenant.rs:6:10
+  |
+6 | #[secure(unrestricted, tenant_col = "tenant_id")]
+  |          ^^^^^^^^^^^^
+
+error: When using 'unrestricted', no other column attributes are allowed
  --> tests/ui/err_unrestricted_with_tenant.rs:6:10
   |
 6 | #[secure(unrestricted, tenant_col = "tenant_id")]

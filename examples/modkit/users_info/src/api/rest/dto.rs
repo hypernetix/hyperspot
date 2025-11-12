@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-use crate::contract::model::{User, UserPatch};
+use crate::contract::model::{NewUser, User, UserPatch};
 
 /// REST DTO for user representation with serde/utoipa
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -22,6 +22,7 @@ pub struct CreateUserReq {
     /// Optional ID for the user. If not provided, a UUID v7 will be generated
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<Uuid>,
+    pub tenant_id: Uuid,
     pub email: String,
     pub display_name: String,
 }
@@ -47,9 +48,16 @@ impl From<User> for UserDto {
     }
 }
 
-// Note: NewUser conversion requires tenant_id from SecurityCtx,
-// so we can't implement a simple From trait here.
-// The handler will construct NewUser manually.
+impl From<CreateUserReq> for NewUser {
+    fn from(req: CreateUserReq) -> Self {
+        Self {
+            id: req.id,
+            tenant_id: req.tenant_id,
+            email: req.email,
+            display_name: req.display_name,
+        }
+    }
+}
 
 impl From<UpdateUserReq> for UserPatch {
     fn from(req: UpdateUserReq) -> Self {

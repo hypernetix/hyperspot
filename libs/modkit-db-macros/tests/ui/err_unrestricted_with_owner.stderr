@@ -1,0 +1,18 @@
+error: Cannot use 'unrestricted' with 'owner_col'
+ --> tests/ui/err_unrestricted_with_owner.rs:6:9
+  |
+6 | #[secure(unrestricted, owner_col = "owner_id")]
+  |         ^^^^^^^^^^^^
+  |
+note: owner_col defined here
+ --> tests/ui/err_unrestricted_with_owner.rs:6:24
+  |
+6 | #[secure(unrestricted, owner_col = "owner_id")]
+  |                        ^^^^^^^^^
+
+error: When using 'unrestricted', no other column attributes are allowed
+ --> tests/ui/err_unrestricted_with_owner.rs:6:9
+  |
+6 | #[secure(unrestricted, owner_col = "owner_id")]
+  |         ^^^^^^^^^^^^
+

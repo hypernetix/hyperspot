@@ -1,4 +1,4 @@
-use crate::{AccessScope, Subject};
+use crate::{constants, AccessScope, Subject};
 use uuid::Uuid;
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -38,6 +38,12 @@ impl SecurityCtx {
             scope: AccessScope::default(),
             subject: Subject::new(subject_id),
         }
+    }
+
+    /// Anonymous/unauthenticated context with no access to any resources.
+    /// Use this for public routes where no authentication is required.
+    pub fn anonymous() -> Self {
+        Self::deny_all(constants::ANONYMOUS_SUBJECT_ID)
     }
 
     /// Root subject operating within the root tenant (system context).

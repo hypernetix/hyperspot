@@ -8,7 +8,6 @@ pub fn build_cors_layer(cfg: &ApiIngressConfig) -> Option<CorsLayer> {
 
     let mut layer = CorsLayer::new();
 
-    // Allowed origins
     if cors_cfg.allowed_origins.iter().any(|o| o == "*") {
         layer = layer.allow_origin(tower_http::cors::Any);
     } else {
@@ -22,7 +21,6 @@ pub fn build_cors_layer(cfg: &ApiIngressConfig) -> Option<CorsLayer> {
         }
     }
 
-    // Methods
     if cors_cfg.allowed_methods.iter().any(|m| m == "*") {
         layer = layer.allow_methods(tower_http::cors::Any);
     } else {
@@ -36,7 +34,6 @@ pub fn build_cors_layer(cfg: &ApiIngressConfig) -> Option<CorsLayer> {
         }
     }
 
-    // Headers
     if cors_cfg.allowed_headers.iter().any(|h| h == "*") {
         layer = layer.allow_headers(tower_http::cors::Any);
     } else {
@@ -50,12 +47,10 @@ pub fn build_cors_layer(cfg: &ApiIngressConfig) -> Option<CorsLayer> {
         }
     }
 
-    // Credentials
     if cors_cfg.allow_credentials {
         layer = layer.allow_credentials(true);
     }
 
-    // Max Age
     if cors_cfg.max_age_seconds > 0 {
         layer = layer.max_age(std::time::Duration::from_secs(cors_cfg.max_age_seconds));
     }

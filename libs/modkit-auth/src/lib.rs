@@ -30,7 +30,8 @@ pub mod axum_ext;
 // Core exports
 pub use claims::Claims;
 pub use errors::AuthError;
-pub use types::SecRequirement;
+pub use traits::TokenValidator;
+pub use types::{AuthRequirement, RoutePolicy, SecRequirement};
 
 // Plugin system exports
 pub use auth_mode::{AuthModeConfig, PluginRegistry};
