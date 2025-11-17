@@ -322,6 +322,65 @@ Instead of requiring explicit policy configuration, the layer enforces a simple,
 3. **AND composition**: Multiple constraints are combined with AND
 4. **No bypass**: Cannot opt-out of scoping once enabled
 
+## Integration with OData Pagination
+
+The secure ORM layer works seamlessly with ModKit's type-safe OData pagination system. Security scoping is applied **before** OData filters, ensuring users can only filter within their authorized scope.
+
+### Combined Usage Pattern
+
+```rust
+use modkit_db::odata::sea_orm_filter::{paginate_odata, LimitCfg};
+use modkit_db::secure::{SecurityCtx, SecureConn};
+
+pub struct UserRepository<'a> {
+    conn: &'a SecureConn,
+}
+
+impl<'a> UserRepository<'a> {
+    pub async fn list_paginated(
+        &self,
+        ctx: &SecurityCtx,
+        odata_query: &ODataQuery,
+    ) -> Result<Page<User>, RepoError> {
+        // 1. Start with security-scoped query
+        let base_query = self.conn
+            .find::<user::Entity>(ctx)?;  // Applies tenant/resource scope
+        
+        // 2. Apply OData filtering and pagination on top
+        let page = paginate_odata::<UserDtoFilterField, UserODataMapper, _, _, _, _>(
+            base_query.into_inner(),  // Extract underlying Select<E>
+            self.conn.conn(),
+            odata_query,
+            ("id", SortDir::Desc),
+            LimitCfg { default: 25, max: 1000 },
+            |model| model.into(),
+        ).await?;
+        
+        Ok(page)
+    }
+}
+```
+
+### Security + OData Flow
+
+```
+1. SecurityCtx created from request auth
+   ↓
+2. SecureConn applies tenant/resource scope
+   ↓ WHERE tenant_id IN (...) AND ...
+3. OData filters applied on scoped data
+   ↓ AND (email LIKE '...' OR ...)
+4. OData ordering and cursor pagination
+   ↓ ORDER BY created_at DESC, id DESC LIMIT 26
+5. Results returned (Page<T>)
+```
+
+**Key Benefits:**
+- **Defense in depth**: Security scope applied first, OData filters second
+- **Type safety**: Both layers use compile-time checked types
+- **Composable**: Security and filtering are orthogonal concerns
+- **Performance**: Single query with combined WHERE clause
+
 ## Usage Patterns
 
 ### Service Layer with Request-Scoped Context

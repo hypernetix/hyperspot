@@ -2,22 +2,28 @@
 //!
 //! Uses `SecureConn` to automatically enforce security scoping on all database operations.
 //! All queries are filtered by the security context provided at the request level.
+//!
+//! # Type-Safe OData Implementation
+//!
+//! This module demonstrates the complete type-safe OData approach:
+//! - Uses generated `UserDtoFilterField` enum for all field references
+//! - No string-based field names anywhere
+//! - No exposure of SeaORM Column types to API/domain layers
+//! - All filtering, ordering, and cursor extraction is type-safe
 
 use anyhow::Context;
-use once_cell::sync::Lazy;
 use sea_orm::{PaginatorTrait, Set};
 use tracing::{debug, instrument};
 use uuid::Uuid;
 
+use crate::api::rest::dto::UserDtoFilterField;
 use crate::contract::User;
 use crate::domain::repo::UsersRepository;
 use crate::infra::storage::entity::{ActiveModel as UserAM, Column, Entity as UserEntity};
-use modkit_db::odata;
+use crate::infra::storage::odata_mapper::UserODataMapper;
+use modkit_db::odata::{paginate_odata, LimitCfg};
 use modkit_db::secure::{SecureConn, SecurityCtx};
-use modkit_odata::ODataQuery;
-use modkit_odata::Page;
-
-use modkit_odata::SortDir;
+use modkit_odata::{ODataQuery, Page, SortDir};
 
 /// SeaORM repository implementation with automatic security scoping.
 ///
@@ -42,30 +48,13 @@ impl SeaOrmUsersRepository {
     }
 }
 
-// Whitelist of fields available in $filter (API name -> DB column) with extractors
-static USER_FMAP: Lazy<odata::FieldMap<UserEntity>> = Lazy::new(|| {
-    odata::FieldMap::<UserEntity>::new()
-        .insert_with_extractor("id", Column::Id, odata::FieldKind::Uuid, |m| {
-            m.id.to_string()
-        })
-        .insert_with_extractor("email", Column::Email, odata::FieldKind::String, |m| {
-            m.email.clone()
-        })
-        .insert_with_extractor(
-            "created_at",
-            Column::CreatedAt,
-            odata::FieldKind::DateTimeUtc,
-            |m| m.created_at.to_rfc3339(),
-        )
-});
-
 #[async_trait::async_trait]
 impl UsersRepository for SeaOrmUsersRepository {
     #[instrument(
         name = "users_info.repo.find_by_id",
         skip(self, ctx),
         fields(
-            db.system = "sqlite",
+            db.system = %self.sec.db_engine(),
             db.operation = "SELECT",
             user.id = %id
         )
@@ -88,7 +77,7 @@ impl UsersRepository for SeaOrmUsersRepository {
         name = "users_info.repo.email_exists",
         skip(self, ctx),
         fields(
-            db.system = "sqlite",
+            db.system = %self.sec.db_engine(),
             db.operation = "SELECT COUNT",
             user.email = %email
         )
@@ -116,7 +105,7 @@ impl UsersRepository for SeaOrmUsersRepository {
         name = "users_info.repo.insert",
         skip(self, ctx, u),
         fields(
-            db.system = "sqlite",
+            db.system = %self.sec.db_engine(),
             db.operation = "INSERT",
             user.id = %u.id,
             user.email = %u.email
@@ -147,7 +136,7 @@ impl UsersRepository for SeaOrmUsersRepository {
         name = "users_info.repo.update",
         skip(self, ctx, u),
         fields(
-            db.system = "sqlite",
+            db.system = %self.sec.db_engine(),
             db.operation = "UPDATE",
             user.id = %u.id,
             user.email = %u.email
@@ -178,7 +167,7 @@ impl UsersRepository for SeaOrmUsersRepository {
         name = "users_info.repo.delete",
         skip(self, ctx),
         fields(
-            db.system = "sqlite",
+            db.system = %self.sec.db_engine(),
             db.operation = "DELETE",
             user.id = %id
         )
@@ -199,7 +188,7 @@ impl UsersRepository for SeaOrmUsersRepository {
         name = "users_info.repo.list_users_page",
         skip(self, ctx, query),
         fields(
-            db.system = "sqlite",
+            db.system = %self.sec.db_engine(),
             db.operation = "SELECT"
         )
     )]
@@ -208,8 +197,9 @@ impl UsersRepository for SeaOrmUsersRepository {
         ctx: &SecurityCtx,
         query: &ODataQuery,
     ) -> Result<Page<User>, modkit_odata::Error> {
-        debug!("Listing users with security filtering");
+        debug!("Listing users with fully type-safe OData");
 
+        // Apply security scope first
         let secure_query = self.sec.find::<UserEntity>(ctx).map_err(|e| {
             tracing::error!(error = %e, "Failed to create secure query");
             modkit_odata::Error::Db(format!("Failed to create secure query: {}", e))
@@ -217,13 +207,13 @@ impl UsersRepository for SeaOrmUsersRepository {
 
         let base_query = secure_query.into_inner();
 
-        modkit_db::odata::paginate_with_odata::<UserEntity, User, _, _>(
+        // Use the new type-safe pagination - it handles filters, ordering, and cursors
+        paginate_odata::<UserDtoFilterField, UserODataMapper, _, _, _, _>(
             base_query,
             self.sec.conn(),
             query,
-            &USER_FMAP,
-            ("id", SortDir::Desc),
-            modkit_db::odata::LimitCfg {
+            ("id", SortDir::Desc), // Default tiebreaker
+            LimitCfg {
                 default: 25,
                 max: 1000,
             },

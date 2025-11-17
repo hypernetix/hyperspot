@@ -62,6 +62,7 @@ src/
       entity.rs
       mapper.rs
       repositories.rs   # SeaORM implementations live here
+      odata_mapper.rs   # (if OData filtering needed) FilterField → Column mapping
       migrations/       # SeaORM migrator skeleton
   api/
     rest/
@@ -139,6 +140,43 @@ Ok(found.map(Into::into))
 - `infra/storage/entity.rs`, `mapper.rs` — mappers (map DB ↔ contract models) with `From`/`Into`.
 - `infra/storage/migrations/` — create a SeaORM migrator skeleton.
 
+**OData Mapper (required if list endpoints support filtering/pagination):**
+- Create `infra/storage/odata_mapper.rs` implementing `FieldToColumn` and `ODataFieldMapping` traits.
+- This is the ONLY place where FilterField → SeaORM Column mapping happens.
+- Example:
+```
+
+use modkit\_db::odata::sea\_orm\_filter::{FieldToColumn, ODataFieldMapping};
+use crate::api::rest::dto::ProductDtoFilterField;
+use crate::infra::storage::entity::{Column, Entity, Model};
+
+pub struct ProductODataMapper;
+
+impl FieldToColumn<ProductDtoFilterField> for ProductODataMapper {
+    type Column = Column;
+    fn map\_field(field: ProductDtoFilterField) -> Column {
+        match field {
+            ProductDtoFilterField::Id => Column::Id,
+            ProductDtoFilterField::Name => Column::Name,
+            ProductDtoFilterField::CreatedAt => Column::CreatedAt,
+        }
+    }
+}
+
+impl ODataFieldMapping<ProductDtoFilterField> for ProductODataMapper {
+    type Entity = Entity;
+    fn extract\_cursor\_value(model: \&Model, field: ProductDtoFilterField) -> sea\_orm::Value {
+        match field {
+            ProductDtoFilterField::Id => sea\_orm::Value::Uuid(Some(Box::new(model.id))),
+            ProductDtoFilterField::Name => sea\_orm::Value::String(Some(Box::new(model.name.clone()))),
+            ProductDtoFilterField::CreatedAt => sea\_orm::Value::ChronoDateTimeUtc(Some(Box::new(model.created\_at))),
+        }
+    }
+}
+
+```
+- Use `paginate_odata::<FilterField, Mapper, _, _, _, _>(...)` in repository methods for paginated queries.
+
 STEP 5 — CONFIG + INIT + DB CAPABILITY
 - `src/config.rs`: define a typed config with safe defaults:
 ```
@@ -209,6 +247,32 @@ STEP 7 — OPENAPI → DTOs (api/rest/dto.rs)
 - number float → `f32`; double → `f64`
 - Provide `From` conversions between REST DTOs and `contract::model` (by value and by &ref). REST layer handles these conversions; domain & contract never depend on REST DTOs.
 
+**OData Filtering (for list/paginated endpoints):**
+- Add `#[derive(ODataFilterable)]` from `modkit_db_macros` to the primary resource DTO.
+- Annotate filterable fields with `#[odata(filter(kind = "..."))]`:
+  - `kind = "Uuid"` for `uuid::Uuid`
+  - `kind = "String"` for `String`
+  - `kind = "DateTimeUtc"` for `chrono::DateTime<Utc>`
+  - `kind = "I64"` for `i64`, `kind = "F64"` for `f64`
+  - `kind = "Bool"` for `bool`
+  - Other supported: `Date`, `Time`, `Decimal`
+- This auto-generates a `<DtoName>FilterField` enum used throughout the stack.
+- Example:
+```
+
+\#\[derive(Serialize, Deserialize, ToSchema, ODataFilterable)]
+pub struct UserDto {
+    \#\[odata(filter(kind = "Uuid"))]
+    pub id: Uuid,
+    \#\[odata(filter(kind = "String"))]
+    pub email: String,
+    \#\[odata(filter(kind = "DateTimeUtc"))]
+    pub created\_at: DateTime<Utc>,
+    pub display\_name: String, // no \#\[odata] = not filterable
+}
+
+```
+
 STEP 8 — HANDLERS (api/rest/handlers.rs)
 - DI: use `Extension(Arc<Service>)` (NO Router state).
 - Extractors:
@@ -248,6 +312,7 @@ pub fn map\_domain\_error(e: \&contract::error::<...>Error, instance: \&str) -> 
 
 STEP 11 — CARGO + LIB EXPORTS
 - Clone deps & features from REF_MODULE_PATH/Cargo.toml (serde with derive; chrono+serde; uuid+serde; utoipa; axum; http; anyhow; async-trait; tokio; modkit; tracing; sea-orm).
+- If using OData filtering, add `modkit-db-macros` to dependencies for `#[derive(ODataFilterable)]`.
 - lib.rs:
 ```
 
