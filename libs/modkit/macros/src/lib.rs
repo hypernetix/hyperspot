@@ -8,6 +8,10 @@ use syn::{
     TypePath,
 };
 
+mod generate_clients;
+mod grpc_client;
+mod utils;
+
 /// Configuration parsed from #[module(...)] attribute
 struct ModuleConfig {
     name: String,
@@ -1060,4 +1064,97 @@ fn path_last_is(path: &syn::Path, want: &str) -> bool {
         .last()
         .map(|s| s.ident == want)
         .unwrap_or(false)
+}
+
+// ============================================================================
+// Client Generation Macros
+// ============================================================================
+
+/// Generate a gRPC client that wraps a tonic-generated service client
+///
+/// This macro generates a client struct that implements an API trait by delegating
+/// to a tonic gRPC client, converting between domain types and protobuf messages.
+///
+/// # Example
+///
+/// ```ignore
+/// #[modkit::grpc_client(
+///     api = "crate::contracts::UsersApi",
+///     tonic = "modkit_users_v1::users_service_client::UsersServiceClient<tonic::transport::Channel>",
+///     package = "modkit.users.v1"
+/// )]
+/// pub struct UsersGrpcClient;
+/// ```
+///
+/// This generates:
+/// - A struct wrapping the tonic client
+/// - An async `connect(uri)` method
+/// - A `from_channel(Channel)` constructor
+/// - Validation that the client implements the API trait
+///
+/// Note: The actual trait implementation must be provided manually, as procedural
+/// macros cannot introspect trait methods from external modules at compile time.
+/// Each method should convert requests/responses using `.into()`.
+#[proc_macro_attribute]
+pub fn grpc_client(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let config = parse_macro_input!(attr as grpc_client::GrpcClientConfig);
+    let input = parse_macro_input!(item as DeriveInput);
+
+    match grpc_client::expand_grpc_client(config, input) {
+        Ok(expanded) => TokenStream::from(expanded),
+        Err(e) => TokenStream::from(e.to_compile_error()),
+    }
+}
+
+/// Generate a gRPC client implementation from an API trait definition (RECOMMENDED)
+///
+/// This is the recommended way to generate gRPC clients. Apply this macro to your API trait
+/// definition, and it will automatically generate a strongly-typed gRPC client with
+/// automatic conversion between domain types and protobuf messages.
+///
+/// # Example
+///
+/// ```ignore
+/// #[modkit::generate_clients(
+///     grpc_client = "modkit_users_v1::users_service_client::UsersServiceClient<tonic::transport::Channel>"
+/// )]
+/// #[async_trait::async_trait]
+/// pub trait UsersApi: Send + Sync {
+///     async fn get_user(&self, req: GetUserReq) -> anyhow::Result<UserDto>;
+///     async fn list_users(&self, req: ListUsersReq) -> anyhow::Result<Vec<UserDto>>;
+/// }
+/// ```
+///
+/// This generates:
+/// - The original trait definition (unchanged)
+/// - `UsersApiGrpcClient` struct that wraps the tonic client
+/// - Full trait implementation with automatic conversions
+/// - Helper methods: `connect()`, `connect_with_config()`, `from_channel()`
+///
+/// # Parameters
+///
+/// - `grpc_client` (required): The fully-qualified tonic client type, e.g.,
+///   `"package::ServiceClient<tonic::transport::Channel>"`
+///
+/// # Requirements
+///
+/// For each method in the trait, the following conversions must be implemented:
+/// - Request type must implement `Into<ProtoRequest>` where `ProtoRequest` is the
+///   corresponding tonic request message type
+/// - Response type must be constructible `From<ProtoResponse>` where `ProtoResponse`
+///   is the tonic response message type
+///
+/// # Note
+///
+/// For local (in-process) communication, register your service directly in `ClientHub`
+/// as `Arc<dyn YourTrait>` without needing a generated client wrapper.
+#[proc_macro_attribute]
+pub fn generate_clients(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let config = parse_macro_input!(attr as generate_clients::GenerateClientsConfig);
+    let trait_def = parse_macro_input!(item as syn::ItemTrait);
+
+    match generate_clients::expand_generate_clients(config, trait_def) {
+        Ok(expanded) => TokenStream::from(expanded),
+        Err(e) => TokenStream::from(e.to_compile_error()),
+    }
 }

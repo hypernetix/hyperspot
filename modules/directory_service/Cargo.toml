@@ -8,6 +8,7 @@ build = "build.rs"
 
 [dependencies]
 modkit = { path = "../../libs/modkit" }
+modkit-transport-grpc = { path = "../../libs/modkit-transport-grpc" }
 tokio = { workspace = true }
 tokio-util = "0.7"
 tonic = { version = "0.12", features = ["transport"] }

@@ -322,7 +322,7 @@ mod tests {
         let picked2 = dir.pick_instance_round_robin("test_module").unwrap();
         let picked3 = dir.pick_instance_round_robin("test_module").unwrap();
 
-        let ids = vec![
+        let ids = [
             picked1.instance_id.as_str(),
             picked2.instance_id.as_str(),
             picked3.instance_id.as_str(),

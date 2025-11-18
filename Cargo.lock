@@ -960,6 +960,7 @@ dependencies = [
  "async-trait",
  "inventory",
  "modkit",
+ "modkit-transport-grpc",
  "prost 0.13.5",
  "serde",
  "tokio",
@@ -2315,13 +2316,17 @@ dependencies = [
  "heck 0.5.0",
  "inventory",
  "modkit",
+ "modkit-security",
+ "modkit-transport-grpc",
  "proc-macro2",
  "quote",
  "strsim",
  "syn 2.0.110",
  "tokio",
  "tokio-util",
+ "tonic 0.14.2",
  "trybuild",
+ "uuid",
 ]
 
 [[package]]
@@ -2358,8 +2363,12 @@ dependencies = [
 name = "modkit-transport-grpc"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "modkit-security",
+ "tokio",
  "tonic 0.14.2",
+ "tower 0.5.2",
+ "tracing",
 ]
 
 [[package]]

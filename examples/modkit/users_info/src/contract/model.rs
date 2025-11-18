@@ -26,3 +26,10 @@ pub struct UserPatch {
     pub email: Option<String>,
     pub display_name: Option<String>,
 }
+
+/// Request to update a user
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UpdateUserRequest {
+    pub id: Uuid,
+    pub patch: UserPatch,
+}

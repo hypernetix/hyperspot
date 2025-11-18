@@ -12,16 +12,20 @@ use modkit::DirectoryApi;
 
 mod client;
 mod config;
+mod grpc_client;
 mod server;
 
 use client::DirectoryLocalClient;
+
+// Re-export the gRPC client for use by other modules
 use config::DirectoryServiceConfig;
+pub use grpc_client::DirectoryGrpcClient;
 use server::make_directory_service;
 
 /// Directory service module - hosts the gRPC DirectoryService
 #[modkit::module(
     name = "directory_service",
-    capabilities = [stateful],
+    capabilities = [stateful, system],
     client = modkit::DirectoryApi
 )]
 pub struct DirectoryServiceModule {

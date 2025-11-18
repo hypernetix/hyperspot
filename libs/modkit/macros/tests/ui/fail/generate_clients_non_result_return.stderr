@@ -1,0 +1,5 @@
+error: Return type must be Result<T, E> with two generic type parameters
+ --> tests/ui/fail/generate_clients_non_result_return.rs:6:46
+  |
+6 |     async fn get_item(&self, req: String) -> String;
+  |                                              ^^^^^^

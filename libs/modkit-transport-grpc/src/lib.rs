@@ -1,6 +1,8 @@
 #![forbid(unsafe_code)]
 #![deny(rust_2018_idioms)]
 
+pub mod client;
+
 pub const SECCTX_METADATA_KEY: &str = "x-secctx-bin";
 
 use modkit_security::{decode_bin, encode_bin, SecurityCtx};

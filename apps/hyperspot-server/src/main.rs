@@ -112,7 +112,7 @@ async fn main() -> Result<()> {
 
     // Initialize logging + otel in one Registry
     let logging_config = config.logging.as_ref().cloned().unwrap_or_default();
-    runtime::logging::init_logging_from_config_with_otel(
+    runtime::logging::init_logging_unified(
         &logging_config,
         Path::new(&config.server.home_dir),
         otel_layer,

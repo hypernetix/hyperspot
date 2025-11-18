@@ -1,0 +1,5 @@
+error: API methods must be async
+ --> tests/ui/fail/generate_clients_not_async.rs:6:5
+  |
+6 |     fn get_item(&self, req: String) -> Result<String, anyhow::Error>;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
