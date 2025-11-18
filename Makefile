@@ -35,13 +35,8 @@ dev-clippy:
 dev-test:
 	cargo test --workspace
 
-# Quick start helpers
-quickstart: 
-	mkdir -p data
-	cargo run --bin hyperspot-server -- --config config/quickstart.yaml run
-
 example:
-	cargo run --bin hyperspot-server --features users-info-example -- --config config/quickstart.yaml run
+	cargo run --bin hyperspot-server --features users-info-example -- --config config/quickstart.yaml
 
 # Integration testing with testcontainers
 .PHONY: test-sqlite test-pg test-mysql test-all test-users-info-pg

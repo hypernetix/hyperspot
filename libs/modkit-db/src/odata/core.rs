@@ -13,22 +13,10 @@ use sea_orm::{
 };
 use thiserror::Error;
 
+use crate::odata::{FieldKind, LimitCfg};
+
 /// Type alias for cursor extraction function to reduce type complexity
 type CursorExtractor<E> = fn(&<E as EntityTrait>::Model) -> String;
-
-/// Whitelisted field kind → used to coerce `core::Value` into `sea_orm::Value`.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum FieldKind {
-    String,
-    I64,
-    F64,
-    Bool,
-    Uuid,
-    DateTimeUtc,
-    Date,
-    Time,
-    Decimal,
-}
 
 #[derive(Clone)]
 pub struct Field<E: EntityTrait> {
@@ -273,26 +261,6 @@ fn ensure_string_field<E: EntityTrait>(f: &Field<E>, _field_name: &str) -> OData
 
 /* ---------- cursor value encoding/decoding ---------- */
 
-/// Encode a cursor value to string based on field kind
-pub fn encode_cursor_value(kind: FieldKind, value: &sea_orm::Value) -> ODataBuildResult<String> {
-    use sea_orm::Value as V;
-
-    let result = match (kind, value) {
-        (FieldKind::String, V::String(Some(s))) => s.to_string(),
-        (FieldKind::I64, V::BigInt(Some(i))) => i.to_string(),
-        (FieldKind::F64, V::Double(Some(f))) => ryu::Buffer::new().format(*f).to_string(),
-        (FieldKind::Bool, V::Bool(Some(b))) => b.to_string(),
-        (FieldKind::Uuid, V::Uuid(Some(u))) => u.to_string(),
-        (FieldKind::DateTimeUtc, V::ChronoDateTimeUtc(Some(dt))) => dt.to_rfc3339(),
-        (FieldKind::Date, V::ChronoDate(Some(d))) => d.to_string(),
-        (FieldKind::Time, V::ChronoTime(Some(t))) => t.to_string(),
-        (FieldKind::Decimal, V::Decimal(Some(d))) => d.to_string(),
-        _ => return Err(ODataBuildError::Other("unsupported cursor value type")),
-    };
-
-    Ok(result)
-}
-
 /// Parse a cursor value from string based on field kind
 pub fn parse_cursor_value(kind: FieldKind, s: &str) -> ODataBuildResult<sea_orm::Value> {
     use sea_orm::Value as V;
@@ -498,8 +466,7 @@ where
         }
         X::Not(x) => {
             let inner = expr_to_condition::<E>(x, fmap)?;
-            // Use `all()` for consistency; semantically NOT ( ... )
-            Condition::all().not().add(inner)
+            Condition::all().add(inner).not()
         }
 
         // Identifier op Value
@@ -770,13 +737,9 @@ where
 // Use unified pagination types from modkit-odata
 pub use modkit_odata::{Page, PageInfo};
 
-#[derive(Clone, Copy)]
-pub struct LimitCfg {
-    pub default: u64,
-    pub max: u64,
-}
+// Note: LimitCfg is imported at the top and re-exported from odata/mod.rs
 
-pub fn clamp_limit(req: Option<u64>, cfg: LimitCfg) -> Result<u64, ODataError> {
+fn clamp_limit(req: Option<u64>, cfg: LimitCfg) -> Result<u64, ODataError> {
     let mut l = req.unwrap_or(cfg.default);
     if l == 0 {
         l = 1;

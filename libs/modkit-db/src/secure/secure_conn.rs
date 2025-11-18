@@ -50,7 +50,8 @@
 //! ```
 
 use sea_orm::{
-    sea_query::Expr, ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter,
+    sea_query::Expr, ActiveModelTrait, ColumnTrait, ConnectionTrait, DatabaseConnection,
+    EntityTrait, QueryFilter,
 };
 use uuid::Uuid;
 
@@ -116,6 +117,17 @@ impl SecureConn {
     /// - Internal infrastructure code (not module business logic)
     pub fn conn(&self) -> &DatabaseConnection {
         &self.conn
+    }
+
+    /// Return database engine identifier for tracing / logging.
+    pub fn db_engine(&self) -> &'static str {
+        use sea_orm::DatabaseBackend;
+
+        match self.conn.get_database_backend() {
+            DatabaseBackend::Postgres => "postgres",
+            DatabaseBackend::MySql => "mysql",
+            DatabaseBackend::Sqlite => "sqlite",
+        }
     }
 
     /// Create a scoped select query for the given entity.

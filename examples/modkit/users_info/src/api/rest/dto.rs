@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use modkit_db_macros::ODataFilterable;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -6,12 +7,15 @@ use uuid::Uuid;
 use crate::contract::model::{NewUser, User, UserPatch};
 
 /// REST DTO for user representation with serde/utoipa
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, ODataFilterable)]
 pub struct UserDto {
+    #[odata(filter(kind = "Uuid"))]
     pub id: Uuid,
     pub tenant_id: Uuid,
+    #[odata(filter(kind = "String"))]
     pub email: String,
     pub display_name: String,
+    #[odata(filter(kind = "DateTimeUtc"))]
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
