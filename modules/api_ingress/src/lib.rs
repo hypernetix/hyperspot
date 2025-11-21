@@ -39,11 +39,10 @@ mod auth;
 
 mod config;
 mod cors;
-mod rate_limit;
+pub mod middleware;
 
 pub mod error;
 mod model;
-pub mod request_id;
 mod router_cache;
 mod web;
 
@@ -59,7 +58,7 @@ use model::ComponentsRegistry;
 /// typed operation specs to emit a single OpenAPI document.
 #[modkit::module(
 	name = "api_ingress",
-	capabilities = [rest_host, rest, stateful],
+	capabilities = [rest_host, rest, stateful, system],
 	lifecycle(entry = "serve", stop_timeout = "30s", await_ready)
 )]
 pub struct ApiIngress {
@@ -185,7 +184,7 @@ impl ApiIngress {
         // Correct middleware order (outermost to innermost):
         // RequestId(Propagate -> Set) -> Trace -> push_req_id_to_extensions -> Timeout -> BodyLimit -> CORS -> RateLimit -> ErrorMapping -> Auth -> Router
         // Note: CORS must short-circuit OPTIONS before Auth/limits; tower-http does this when the layer is present above them.
-        let x_request_id = crate::request_id::header();
+        let x_request_id = crate::middleware::request_id::header();
 
         // 1. If client sent x-request-id, propagate it; otherwise we will set it
         router = router.layer(PropagateRequestIdLayer::new(x_request_id.clone()));
@@ -193,19 +192,18 @@ impl ApiIngress {
         // 2. Generate x-request-id when missing
         router = router.layer(SetRequestIdLayer::new(
             x_request_id.clone(),
-            crate::request_id::MakeReqId,
+            crate::middleware::request_id::MakeReqId,
         ));
 
         // 3. Create the http span with request_id/status/latency
         router = router.layer({
-            use crate::request_id::header;
             use modkit::http::otel;
             use tower_http::trace::TraceLayer;
             use tracing::field::Empty;
 
             TraceLayer::new_for_http()
                 .make_span_with(move |req: &axum::http::Request<axum::body::Body>| {
-                    let hdr = header();
+                    let hdr = middleware::request_id::header();
                     let rid = req
                         .headers()
                         .get(&hdr)
@@ -255,7 +253,7 @@ impl ApiIngress {
         });
 
         // 4. Record request_id into span + extensions (span must exist first)
-        router = router.layer(from_fn(crate::request_id::push_req_id_to_extensions));
+        router = router.layer(from_fn(middleware::request_id::push_req_id_to_extensions));
 
         // 5. Timeout layer - 30 second timeout for handlers
         router = router.layer(TimeoutLayer::new(Duration::from_secs(30)));
@@ -279,11 +277,11 @@ impl ApiIngress {
             .iter()
             .map(|e| e.value().clone())
             .collect();
-        let rate_map = crate::rate_limit::RateLimiterMap::from_specs(&specs, &config);
+        let rate_map = middleware::rate_limit::RateLimiterMap::from_specs(&specs, &config);
         router = router.layer(from_fn(
             move |req: axum::extract::Request, next: axum::middleware::Next| {
                 let map = rate_map.clone();
-                crate::rate_limit::rate_limit_middleware(map, req, next)
+                middleware::rate_limit::rate_limit_middleware(map, req, next)
             },
         ));
 

@@ -52,6 +52,9 @@ jobs:
         with:
           clean: 'true'
 
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -124,6 +127,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
@@ -158,6 +164,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
 
       - name: Install Rust toolchain (with llvm-tools)
         uses: dtolnay/rust-toolchain@stable
@@ -221,7 +230,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        backend: [sqlite, pg]   # mysql stays local-only
+        backend: [ sqlite, pg ]   # mysql stays local-only
     env:
       CARGO_TERM_COLOR: always
       RUST_BACKTRACE: 1
@@ -232,6 +241,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           clean: 'true'
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -304,6 +316,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           clean: 'true'
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable

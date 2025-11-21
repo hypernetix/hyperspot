@@ -1,0 +1,395 @@
+//! gRPC Hub Module
+//!
+//! This module builds and hosts the single tonic::Server instance for the process.
+
+use anyhow::Context;
+use async_trait::async_trait;
+use modkit::{
+    context::ModuleCtx,
+    contracts::{Module, RegisterGrpcServiceFn, SystemModule},
+    lifecycle::ReadySignal,
+    runtime::GrpcInstallerStore,
+};
+use parking_lot::RwLock;
+use std::{collections::HashSet, net::SocketAddr, sync::Arc};
+use tokio_util::sync::CancellationToken;
+use tonic::{service::RoutesBuilder, transport::Server};
+
+const DEFAULT_LISTEN_ADDR: &str = "0.0.0.0:50051";
+
+/// The gRPC Hub module.
+/// This module is responsible for hosting the gRPC server and managing the gRPC services.
+/// Declared with capabilities: [stateful, system, grpc_hub].
+#[modkit::module(
+    name = "grpc_hub",
+    capabilities = [stateful, system, grpc_hub],
+    lifecycle(entry = "serve", await_ready)
+)]
+pub struct GrpcHub {
+    listen_addr: RwLock<SocketAddr>,
+    installer_store: RwLock<Option<Arc<GrpcInstallerStore>>>,
+}
+
+impl Default for GrpcHub {
+    fn default() -> Self {
+        let addr = DEFAULT_LISTEN_ADDR
+            .parse()
+            .expect("default gRPC listen address is valid");
+        Self {
+            listen_addr: RwLock::new(addr),
+            installer_store: RwLock::new(None),
+        }
+    }
+}
+
+impl GrpcHub {
+    /// Update the listen address (primarily used by tests/config).
+    pub fn set_listen_addr(&self, addr: SocketAddr) {
+        *self.listen_addr.write() = addr;
+    }
+
+    /// Current listen address.
+    pub fn listen_addr(&self) -> SocketAddr {
+        *self.listen_addr.read()
+    }
+
+    /// Run the tonic server with the provided installers.
+    pub async fn run_with_installers(
+        &self,
+        installers: Vec<RegisterGrpcServiceFn>,
+        addr: SocketAddr,
+        cancel: CancellationToken,
+        ready: ReadySignal,
+    ) -> anyhow::Result<()> {
+        let mut seen = HashSet::new();
+        for installer in &installers {
+            if !seen.insert(installer.service_name) {
+                anyhow::bail!(
+                    "Duplicate gRPC service detected: {}",
+                    installer.service_name
+                );
+            }
+        }
+
+        let mut routes_builder = RoutesBuilder::default();
+        let mut has_services = false;
+
+        for installer in installers {
+            (installer.register)(&mut routes_builder);
+            has_services = true;
+        }
+
+        if !has_services {
+            ready.notify();
+            cancel.cancelled().await;
+            return Ok(());
+        }
+
+        let routes = routes_builder.routes();
+
+        // NOTE: With tonic 0.14.2's API, serve_with_shutdown binds internally.
+        // We notify ready after building routes but before serve starts.
+        // This is better than notifying before route building, but not as strict as binding first.
+        // For stricter control, consider using a lower-level API or upgrading tonic.
+        ready.notify();
+
+        Server::builder()
+            .add_routes(routes)
+            .serve_with_shutdown(addr, async move {
+                cancel.cancelled().await;
+            })
+            .await?;
+
+        Ok(())
+    }
+
+    async fn serve(
+        self: Arc<Self>,
+        cancel: CancellationToken,
+        ready: ReadySignal,
+    ) -> anyhow::Result<()> {
+        let installers = {
+            let store_guard = self.installer_store.read();
+            let store = store_guard
+                .as_ref()
+                .ok_or_else(|| anyhow::anyhow!("GrpcInstallerStore not wired into GrpcHub"))?;
+            store.take()
+        };
+
+        let addr = self.listen_addr();
+        self.run_with_installers(installers, addr, cancel, ready)
+            .await
+    }
+}
+
+impl SystemModule for GrpcHub {
+    fn wire_system(&self, sys: &modkit::runtime::SystemContext) {
+        let mut guard = self.installer_store.write();
+        *guard = Some(Arc::clone(&sys.grpc_installers));
+    }
+}
+
+impl modkit::contracts::GrpcHubModule for GrpcHub {}
+
+#[async_trait]
+impl Module for GrpcHub {
+    async fn init(&self, ctx: &ModuleCtx) -> anyhow::Result<()> {
+        if let Some(addr_value) = ctx.raw_config().get("listen_addr") {
+            if let Some(addr) = addr_value.as_str().map(|s| {
+                s.parse::<SocketAddr>()
+                    .with_context(|| format!("invalid listen_addr '{s}'"))
+            }) {
+                let parsed = addr?;
+                *self.listen_addr.write() = parsed;
+                tracing::info!(%parsed, "gRPC hub listen address configured");
+            } else {
+                tracing::warn!("gRPC hub config found but was not a valid string; using previous listen address");
+            }
+        }
+
+        Ok(())
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_system_module(&self) -> Option<&dyn SystemModule> {
+        Some(self)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use http::{Request, Response};
+    use modkit::{
+        client_hub::ClientHub,
+        context::{ConfigProvider, ModuleCtx},
+        registry::ModuleRegistry,
+    };
+    use std::{
+        convert::Infallible,
+        future,
+        sync::Arc,
+        task::{Context as TaskContext, Poll},
+    };
+    use tokio::time::{sleep, Duration};
+    use tonic::{body::Body, server::NamedService};
+    use tower::Service;
+
+    #[tokio::test]
+    async fn test_grpc_hub_is_discoverable() {
+        let registry = ModuleRegistry::discover_and_build().expect("registry build failed");
+
+        let has_grpc_hub = registry
+            .modules()
+            .iter()
+            .any(|e| e.name == "grpc_hub" && e.is_system && e.is_grpc_hub);
+
+        assert!(
+            has_grpc_hub,
+            "grpc_hub module should be registered with system and grpc_hub capabilities"
+        );
+    }
+
+    const SERVICE_A: &str = "grpc_hub.test.ServiceA";
+    const SERVICE_B: &str = "grpc_hub.test.ServiceB";
+
+    #[derive(Clone)]
+    struct ServiceAImpl;
+
+    #[derive(Clone)]
+    struct ServiceBImpl;
+
+    impl NamedService for ServiceAImpl {
+        const NAME: &'static str = SERVICE_A;
+    }
+
+    impl NamedService for ServiceBImpl {
+        const NAME: &'static str = SERVICE_B;
+    }
+
+    impl Service<Request<Body>> for ServiceAImpl {
+        type Response = Response<Body>;
+        type Error = Infallible;
+        type Future = future::Ready<Result<Self::Response, Self::Error>>;
+
+        fn poll_ready(&mut self, _cx: &mut TaskContext<'_>) -> Poll<Result<(), Self::Error>> {
+            Poll::Ready(Ok(()))
+        }
+
+        fn call(&mut self, _req: Request<Body>) -> Self::Future {
+            future::ready(Ok(Response::new(Body::empty())))
+        }
+    }
+
+    impl Service<Request<Body>> for ServiceBImpl {
+        type Response = Response<Body>;
+        type Error = Infallible;
+        type Future = future::Ready<Result<Self::Response, Self::Error>>;
+
+        fn poll_ready(&mut self, _cx: &mut TaskContext<'_>) -> Poll<Result<(), Self::Error>> {
+            Poll::Ready(Ok(()))
+        }
+
+        fn call(&mut self, _req: Request<Body>) -> Self::Future {
+            future::ready(Ok(Response::new(Body::empty())))
+        }
+    }
+
+    fn installer_a() -> RegisterGrpcServiceFn {
+        RegisterGrpcServiceFn {
+            service_name: SERVICE_A,
+            register: Box::new(|routes| {
+                routes.add_service(ServiceAImpl);
+            }),
+        }
+    }
+
+    fn installer_b() -> RegisterGrpcServiceFn {
+        RegisterGrpcServiceFn {
+            service_name: SERVICE_B,
+            register: Box::new(|routes| {
+                routes.add_service(ServiceBImpl);
+            }),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_run_with_installers_rejects_duplicates() {
+        let hub = GrpcHub::default();
+        let installers = vec![installer_a(), installer_a()];
+        let cancel = CancellationToken::new();
+        let (tx, _rx) = tokio::sync::oneshot::channel();
+        let ready = ReadySignal::from_sender(tx);
+        let addr: SocketAddr = "127.0.0.1:0".parse().unwrap();
+
+        let result = hub
+            .run_with_installers(installers, addr, cancel, ready)
+            .await;
+
+        assert!(result.is_err(), "duplicate services should error");
+    }
+
+    #[tokio::test]
+    async fn test_run_with_installers_starts_server() {
+        let hub = Arc::new(GrpcHub::default());
+        let installers = vec![installer_a(), installer_b()];
+        let cancel = CancellationToken::new();
+        let cancel_clone = cancel.clone();
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        let ready = ReadySignal::from_sender(tx);
+        let addr: SocketAddr = "127.0.0.1:0".parse().unwrap();
+
+        let hub_task = {
+            let hub = hub.clone();
+            tokio::spawn(async move {
+                hub.run_with_installers(installers, addr, cancel, ready)
+                    .await
+            })
+        };
+
+        tokio::spawn(async move {
+            sleep(Duration::from_millis(50)).await;
+            cancel_clone.cancel();
+        });
+
+        tokio::time::timeout(Duration::from_secs(1), rx)
+            .await
+            .expect("ready signal should fire")
+            .expect("ready channel should complete");
+
+        hub_task
+            .await
+            .expect("task should join successfully")
+            .expect("server should exit cleanly");
+    }
+
+    #[tokio::test]
+    async fn test_serve_with_system_context() {
+        let hub = Arc::new(GrpcHub::default());
+        hub.set_listen_addr("127.0.0.1:0".parse().unwrap());
+
+        // Wire system context with installers
+        let installer_store = Arc::new(GrpcInstallerStore::new());
+        installer_store
+            .set(vec![installer_a()])
+            .expect("store should accept installers");
+
+        let module_manager = Arc::new(modkit::runtime::ModuleManager::new());
+        let sys_ctx =
+            modkit::runtime::SystemContext::new(module_manager, Arc::clone(&installer_store));
+
+        hub.wire_system(&sys_ctx);
+
+        let cancel = CancellationToken::new();
+        let cancel_clone = cancel.clone();
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        let ready = ReadySignal::from_sender(tx);
+
+        let serve_task = {
+            let hub = hub.clone();
+            tokio::spawn(async move { hub.serve(cancel, ready).await })
+        };
+
+        tokio::spawn(async move {
+            sleep(Duration::from_millis(50)).await;
+            cancel_clone.cancel();
+        });
+
+        tokio::time::timeout(Duration::from_secs(1), rx)
+            .await
+            .expect("ready signal should fire")
+            .expect("ready signal should complete");
+
+        serve_task
+            .await
+            .expect("task should join")
+            .expect("serve should complete without error");
+
+        // After serve completes, installer_store should be empty (consumed)
+        assert!(
+            installer_store.is_empty(),
+            "installers should be consumed after serve completes"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_init_parses_listen_addr() {
+        let hub = GrpcHub::default();
+        let cancel = CancellationToken::new();
+
+        #[derive(Default)]
+        struct ConfigProviderWithAddr;
+        impl ConfigProvider for ConfigProviderWithAddr {
+            fn get_module_config(&self, module_name: &str) -> Option<&serde_json::Value> {
+                if module_name == "grpc_hub" {
+                    use std::sync::OnceLock;
+                    static CONFIG: OnceLock<serde_json::Value> = OnceLock::new();
+                    Some(CONFIG.get_or_init(|| {
+                        serde_json::json!({
+                            "config": {
+                                "listen_addr": "127.0.0.1:10"
+                            }
+                        })
+                    }))
+                } else {
+                    None
+                }
+            }
+        }
+
+        let ctx = ModuleCtx::new(
+            "grpc_hub",
+            Arc::new(ConfigProviderWithAddr),
+            Arc::new(ClientHub::default()),
+            cancel,
+            None,
+        );
+
+        hub.init(&ctx).await.expect("init should succeed");
+
+        assert_eq!(hub.listen_addr(), "127.0.0.1:10".parse().unwrap());
+    }
+}

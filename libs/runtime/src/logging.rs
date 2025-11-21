@@ -189,22 +189,8 @@ fn create_rotating_writer_at_path(
 
 // ================= public init (drop-in API kept) =================
 
-/// Old entry-point kept for backward compatibility (no OTEL).
-pub fn init_logging_from_config(cfg: &LoggingConfig, base_dir: &Path) {
-    init_logging_unified(cfg, base_dir, None)
-}
-
-/// Old entry-point kept for backward compatibility (with optional OTEL layer).
-pub fn init_logging_from_config_with_otel(
-    cfg: &LoggingConfig,
-    base_dir: &Path,
-    otel_layer: Option<OtelLayer>,
-) {
-    init_logging_unified(cfg, base_dir, otel_layer)
-}
-
 /// Unified initializer used by both functions above.
-fn init_logging_unified(cfg: &LoggingConfig, base_dir: &Path, otel_layer: Option<OtelLayer>) {
+pub fn init_logging_unified(cfg: &LoggingConfig, base_dir: &Path, otel_layer: Option<OtelLayer>) {
     // Bridge `log` → `tracing` *before* installing the subscriber
     if let Err(e) = tracing_log::LogTracer::init() {
         eprintln!("LogTracer init skipped: {e}");
