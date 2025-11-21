@@ -92,15 +92,22 @@ impl Module for UsersInfo {
             default_page_size: cfg.default_page_size,
             max_page_size: cfg.max_page_size,
         };
-        let service = Service::new(Arc::new(repo), publisher, audit_adapter, service_config);
+        let domain_service = Arc::new(Service::new(
+            Arc::new(repo),
+            publisher,
+            audit_adapter,
+            service_config,
+        ));
 
-        // Store service for REST and local client
-        self.service.store(Some(Arc::new(service.clone())));
+        // Store service for REST and internal usage
+        self.service.store(Some(domain_service.clone()));
 
-        // Local in-process client implementation published to ClientHub
-        let api: Arc<dyn UsersInfoApi> = Arc::new(UsersInfoLocalClient::new(Arc::new(service)));
+        // Create local client adapter that implements UsersInfoApi
+        // This adapter handles SecurityCtx internally for inter-module calls
+        let local_client = UsersInfoLocalClient::new(domain_service);
+        let api: Arc<dyn UsersInfoApi> = Arc::new(local_client);
         expose_users_info_client(ctx, &api)?;
-        info!("UsersInfo API exposed to ClientHub");
+        info!("UsersInfo API exposed to ClientHub via local adapter");
         Ok(())
     }
 

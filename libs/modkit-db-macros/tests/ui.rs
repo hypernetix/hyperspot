@@ -6,7 +6,7 @@
 // importing the modkit-db crate. The macro is tested in actual usage in the main codebase.
 
 #[test]
-fn trybuild_tests() {
+fn ui() {
     let t = trybuild::TestCases::new();
 
     // Error cases: Basic validation
