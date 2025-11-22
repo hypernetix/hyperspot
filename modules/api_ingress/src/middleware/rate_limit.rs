@@ -27,6 +27,7 @@ impl RateLimiterMap {
     pub fn from_specs(specs: &Vec<modkit::api::OperationSpec>, cfg: &ApiIngressConfig) -> Self {
         let mut buckets = HashMap::new();
         let mut inflight = HashMap::new();
+        // TODO: Add support for per-route rate limiting
         for spec in specs {
             let (rps, burst, in_flight) = spec
                 .rate_limit
@@ -51,6 +52,7 @@ impl RateLimiterMap {
     }
 }
 
+// TODO: Use tower-governor instead of own implementation
 pub async fn rate_limit_middleware(map: RateLimiterMap, req: Request, next: Next) -> Response {
     let method = req.method().clone();
     let path = req.uri().path().to_string();

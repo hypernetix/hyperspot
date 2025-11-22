@@ -52,6 +52,11 @@ jobs:
         with:
           clean: 'true'
 
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -109,20 +114,72 @@ jobs:
         run: cargo clippy --workspace --all-targets --all-features -- -D warnings
 
       # Unit tests (excluding integration tests)
-      - name: cargo test
-        run: cargo test --workspace --no-fail-fast
-
+      - name: cargo test (no ui)
+        run: cargo test --workspace --no-fail-fast --exclude modkit-macros --exclude modkit-db-macros
       # Print sccache stats when active
       - name: sccache stats
         if: env.SCCACHE_OK == '1'
         run: sccache --show-stats
+  ui_tests:
+    name: UI macro tests (trybuild)
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TERM_COLOR: always
+      RUST_BACKTRACE: 1
+      # separate target in tmp
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          clean: 'true'
 
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      # Cache ~/.cargo only w/o target
+      - name: Cache Cargo (no target)
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ui-tests
+          cache-targets: false
+
+      - name: Show disk usage before UI tests
+        run: |
+          df -h
+          du -sh ./* || true
+
+      - name: Clean before UI tests
+        run: cargo clean
+
+      - name: UI tests for modkit-db-macros
+        run: cargo test -p modkit-db-macros --test ui -- --nocapture
+
+      - name: UI tests for modkit-macros
+        run: cargo test -p modkit-macros --test ui -- --nocapture
+
+      - name: Show disk usage after UI tests
+        run: |
+          df -h
+          du -sh $CARGO_TARGET_DIR || true
   security:
     name: Security (cargo-deny & cargo-audit on Ubuntu)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -158,6 +215,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install Rust toolchain (with llvm-tools)
         uses: dtolnay/rust-toolchain@stable
@@ -221,7 +283,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        backend: [sqlite, pg]   # mysql stays local-only
+        backend: [ sqlite, pg ]   # mysql stays local-only
     env:
       CARGO_TERM_COLOR: always
       RUST_BACKTRACE: 1
@@ -232,6 +294,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           clean: 'true'
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -304,6 +371,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           clean: 'true'
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable

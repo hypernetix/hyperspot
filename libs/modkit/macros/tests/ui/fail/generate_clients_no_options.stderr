@@ -1,0 +1,7 @@
+error: generate_clients: you must specify grpc_client = "..."
+ --> tests/ui/fail/generate_clients_no_options.rs:3:1
+  |
+3 | #[generate_clients]
+  | ^^^^^^^^^^^^^^^^^^^
+  |
+  = note: this error originates in the attribute macro `generate_clients` (in Nightly builds, run with -Z macro-backtrace for more info)

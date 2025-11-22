@@ -138,7 +138,7 @@ Attach the attribute to your main struct. The macro:
     name = "my_module",
     deps = ["foo", "bar"], // api_ingress dependency will be added automatically for rest module capability
     capabilities = [db, rest, stateful, /* rest_host if you own the HTTP server */],
-    client = "contract::client::MyModuleApi",
+    client = contract::client::MyModuleApi,
     ctor = MyModule::new(),
     lifecycle(entry = "serve", stop_timeout = "30s", await_ready)
 )]

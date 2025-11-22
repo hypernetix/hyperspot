@@ -1,0 +1,5 @@
+error: API methods must begin with &self (not self or &mut self)
+ --> tests/ui/fail/generate_clients_no_self_receiver.rs:6:23
+  |
+6 |     async fn get_item(req: String) -> Result<String, anyhow::Error>;
+  |                       ^^^^^^^^^^^
