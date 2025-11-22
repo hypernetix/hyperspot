@@ -8,7 +8,7 @@ authors.workspace = true
 [features]
 default = []
 users-info-example = ["dep:users_info"]
-otel = ["modkit/otel", "runtime/otel"]
+otel = ["modkit/otel", "modkit-bootstrap/otel"]
 
 [[bin]]
 name = "hyperspot-server"
@@ -17,7 +17,7 @@ path = "src/main.rs"
 [dependencies]
 mimalloc = { version = "0.1" }
 # Local crates
-runtime = { path = "../../libs/runtime" }
+modkit-bootstrap = { path = "../../libs/modkit-bootstrap" }
 modkit = { path = "../../libs/modkit", features = ["otel"] }
 modkit-db = { path = "../../libs/modkit-db", features = ["sqlite"] }
 

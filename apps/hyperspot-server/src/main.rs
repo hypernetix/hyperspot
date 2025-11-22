@@ -2,7 +2,7 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 use figment::Figment;
 use mimalloc::MiMalloc;
-use runtime::{AppConfig, AppConfigProvider, CliArgs, ConfigProvider};
+use modkit_bootstrap::{AppConfig, AppConfigProvider, CliArgs, ConfigProvider};
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -115,7 +115,7 @@ async fn main() -> Result<()> {
 
     // Initialize logging + otel in one Registry
     let logging_config = config.logging.as_ref().cloned().unwrap_or_default();
-    runtime::logging::init_logging_unified(
+    modkit_bootstrap::logging::init_logging_unified(
         &logging_config,
         Path::new(&config.server.home_dir),
         otel_layer,

@@ -1714,8 +1714,8 @@ dependencies = [
  "grpc_hub",
  "mimalloc",
  "modkit",
+ "modkit-bootstrap",
  "modkit-db",
- "runtime",
  "serde_json",
  "sqlx",
  "tempfile",
@@ -2136,6 +2136,7 @@ dependencies = [
  "httpmock",
  "hyper",
  "inventory",
+ "modkit-bootstrap",
  "modkit-db",
  "modkit-errors",
  "modkit-errors-macro",
@@ -2148,7 +2149,6 @@ dependencies = [
  "parking_lot",
  "rand 0.9.2",
  "reqwest",
- "runtime",
  "serde",
  "serde_json",
  "serde_yaml",
@@ -2191,6 +2191,34 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "uuid",
+]
+
+[[package]]
+name = "modkit-bootstrap"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "dsn",
+ "figment",
+ "file-rotate",
+ "modkit-db",
+ "opentelemetry_sdk",
+ "regex",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "tempfile",
+ "thiserror 2.0.17",
+ "tokio",
+ "tracing",
+ "tracing-appender",
+ "tracing-error",
+ "tracing-log",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
+ "url",
+ "urlencoding",
 ]
 
 [[package]]
@@ -3451,34 +3479,6 @@ dependencies = [
  "spki",
  "subtle",
  "zeroize",
-]
-
-[[package]]
-name = "runtime"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "chrono",
- "dsn",
- "figment",
- "file-rotate",
- "modkit-db",
- "opentelemetry_sdk",
- "regex",
- "serde",
- "serde_json",
- "serde_yaml",
- "tempfile",
- "thiserror 2.0.17",
- "tokio",
- "tracing",
- "tracing-appender",
- "tracing-error",
- "tracing-log",
- "tracing-opentelemetry",
- "tracing-subscriber",
- "url",
- "urlencoding",
 ]
 
 [[package]]

@@ -82,10 +82,11 @@ jobs:
           mkdir -p "$RUNNER_TEMP/sccache"
 
       - name: Cache sccache artifacts
+        if: runner.os != 'macOS'
         uses: actions/cache@v4
         with:
           path: ${{ runner.temp }}/sccache
-          key: sccache-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          key: sccache-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
             sccache-${{ runner.os }}-
 
@@ -239,10 +240,11 @@ jobs:
           mkdir -p "$RUNNER_TEMP/sccache"
 
       - name: Cache sccache artifacts
+        if: runner.os != 'macOS'
         uses: actions/cache@v4
         with:
           path: ${{ runner.temp }}/sccache
-          key: sccache-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          key: sccache-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
             sccache-${{ runner.os }}-
 
@@ -320,10 +322,11 @@ jobs:
           mkdir -p "$RUNNER_TEMP/sccache"
 
       - name: Cache sccache artifacts
+        if: runner.os != 'macOS'
         uses: actions/cache@v4
         with:
           path: ${{ runner.temp }}/sccache
-          key: sccache-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          key: sccache-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
             sccache-${{ runner.os }}-
 
@@ -397,10 +400,11 @@ jobs:
           mkdir -p "$RUNNER_TEMP/sccache"
 
       - name: Cache sccache artifacts
+        if: runner.os != 'macOS'
         uses: actions/cache@v4
         with:
           path: ${{ runner.temp }}/sccache
-          key: sccache-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          key: sccache-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
             sccache-${{ runner.os }}-
 

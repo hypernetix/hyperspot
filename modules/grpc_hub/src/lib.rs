@@ -202,28 +202,28 @@ impl Module for GrpcHub {
         if let Some(addr_value) = ctx.raw_config().get("listen_addr") {
             if let Some(s) = addr_value.as_str() {
                 // 1) Windows named pipes: pipe:// or npipe://
+                #[cfg(windows)]
                 if let Some(pipe_name) = s
                     .strip_prefix("pipe://")
                     .or_else(|| s.strip_prefix("npipe://"))
                 {
-                    #[cfg(windows)]
-                    {
-                        let pipe_name = pipe_name.to_string();
-                        *self.listen_cfg.write() = ListenConfig::NamedPipe(pipe_name.clone());
-                        tracing::info!(
-                            name = %pipe_name,
-                            "gRPC hub listen address configured for Windows named pipe"
-                        );
-                        return Ok(());
-                    }
-                    #[cfg(not(windows))]
-                    {
-                        tracing::warn!(
-                            listen_addr = %s,
-                            "Named pipe listen_addr is configured but named pipes are not supported on this platform; keeping previous listen address"
-                        );
-                        return Ok(());
-                    }
+                    let pipe_name = pipe_name.to_string();
+                    *self.listen_cfg.write() = ListenConfig::NamedPipe(pipe_name.clone());
+                    tracing::info!(
+                        name = %pipe_name,
+                        "gRPC hub listen address configured for Windows named pipe"
+                    );
+                    return Ok(());
+                }
+
+                // Non-Windows branch
+                #[cfg(not(windows))]
+                if s.starts_with("pipe://") || s.starts_with("npipe://") {
+                    tracing::warn!(
+                        listen_addr = %s,
+                        "Named pipe listen_addr is configured but named pipes are not supported on this platform; keeping previous listen address"
+                    );
+                    return Ok(());
                 }
 
                 // 2) Unix UDS: uds://
