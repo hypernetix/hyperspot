@@ -3,6 +3,12 @@
 
 pub mod client;
 
+#[cfg(windows)]
+pub mod windows_named_pipe;
+
+#[cfg(windows)]
+pub use windows_named_pipe::{create_named_pipe_incoming, NamedPipeConnection, NamedPipeIncoming};
+
 pub const SECCTX_METADATA_KEY: &str = "x-secctx-bin";
 
 use modkit_security::{decode_bin, encode_bin, SecurityCtx};

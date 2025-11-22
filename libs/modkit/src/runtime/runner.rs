@@ -12,7 +12,7 @@
 //!   or an arbitrary future.
 
 use crate::client_hub::ClientHub;
-use crate::context::ConfigProvider;
+use crate::config::ConfigProvider;
 use crate::registry::ModuleRegistry;
 use crate::runtime::shutdown;
 use crate::runtime::{DbOptions, HostRuntime};

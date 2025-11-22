@@ -11,7 +11,7 @@ use axum::{
     Router,
 };
 use modkit::{
-    context::ConfigProvider, contracts::OpenApiRegistry, Module, ModuleCtx, RestfulModule,
+    config::ConfigProvider, contracts::OpenApiRegistry, Module, ModuleCtx, RestfulModule,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;

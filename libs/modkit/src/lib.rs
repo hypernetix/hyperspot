@@ -71,11 +71,14 @@ pub use inventory;
 // Module system exports
 pub use crate::contracts::*;
 pub use crate::contracts::{GrpcServiceModule, RegisterGrpcServiceFn};
+
+// Configuration module
+pub mod config;
+pub use config::{module_config_or_default, module_config_required, ConfigError, ConfigProvider};
+
+// Context module
 pub mod context;
-pub use context::{
-    module_config_typed, ConfigError, ConfigProvider, ConfigProviderExt, ModuleContextBuilder,
-    ModuleCtx,
-};
+pub use context::{ModuleContextBuilder, ModuleCtx};
 
 // Module system implementations for macro code
 pub mod client_hub;

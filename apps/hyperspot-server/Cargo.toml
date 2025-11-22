@@ -20,7 +20,11 @@ mimalloc = { version = "0.1" }
 runtime = { path = "../../libs/runtime" }
 modkit = { path = "../../libs/modkit", features = ["otel"] }
 modkit-db = { path = "../../libs/modkit-db", features = ["sqlite"] }
+
+# System modules
 api_ingress = { path = "../../modules/api_ingress" }
+grpc_hub = { path = "../../modules/grpc_hub" }
+directory_service = { path = "../../modules/directory_service" }
 
 anyhow = { workspace = true }
 tokio = { workspace = true }

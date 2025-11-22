@@ -28,6 +28,9 @@ impl modkit::ConfigProvider for ModkitConfigAdapter {
 fn _ensure_modules_linked() {
     // Make sure all modules are linked
     let _ = std::any::type_name::<api_ingress::ApiIngress>();
+    let _ = std::any::type_name::<grpc_hub::GrpcHub>();
+    let _ = std::any::type_name::<directory_service::DirectoryServiceModule>();
+
     #[cfg(feature = "users-info-example")]
     let _ = std::any::type_name::<users_info::UsersInfo>();
 }

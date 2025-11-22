@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use axum::{extract::Json, routing::post, Router};
 use modkit::{
     api::OperationBuilder,
-    context::ConfigProvider,
+    config::ConfigProvider,
     contracts::{OpenApiRegistry, RestHostModule},
     Module, ModuleCtx, RestfulModule,
 };
