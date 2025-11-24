@@ -22,6 +22,7 @@ members = [
     "modules/api_ingress",
     "modules/directory_service",
     "modules/grpc_hub",
+    "modules/file_parser",
     "examples/modkit/users_info"
 ]
 resolver = "2"

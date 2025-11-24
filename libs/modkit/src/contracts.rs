@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use axum::Router;
 use tokio_util::sync::CancellationToken;
 
-pub use crate::api::OpenApiRegistry;
+pub use crate::api::openapi_registry::OpenApiRegistry;
 
 /// System module: receives runtime internals before init.
 ///

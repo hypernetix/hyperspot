@@ -6,9 +6,8 @@ use dashmap::DashMap;
 
 use anyhow::Result;
 use axum::http::Method;
-use axum::{middleware::from_fn, routing::get, Router};
-use modkit::api::problem;
-use modkit::api::OpenApiRegistry;
+use axum::{extract::DefaultBodyLimit, middleware::from_fn, routing::get, Router};
+use modkit::api::{OpenApiRegistry, OpenApiRegistryImpl};
 use modkit::lifecycle::ReadySignal;
 use parking_lot::Mutex;
 use std::net::SocketAddr;
@@ -20,19 +19,7 @@ use tower_http::{
     request_id::{PropagateRequestIdLayer, SetRequestIdLayer},
     timeout::TimeoutLayer,
 };
-use utoipa::openapi::{
-    content::ContentBuilder,
-    info::InfoBuilder,
-    path::{
-        HttpMethod, OperationBuilder as UOperationBuilder, ParameterBuilder, ParameterIn,
-        PathItemBuilder, PathsBuilder,
-    },
-    request_body::RequestBodyBuilder,
-    response::{ResponseBuilder, ResponsesBuilder},
-    schema::{ComponentsBuilder, ObjectBuilder, Schema, SchemaFormat, SchemaType},
-    security::{HttpAuthScheme, HttpBuilder, SecurityRequirement, SecurityScheme},
-    OpenApi, OpenApiBuilder, Ref, RefOr, Required,
-};
+use tracing::debug;
 
 mod assets;
 mod auth;
@@ -42,17 +29,11 @@ mod cors;
 pub mod middleware;
 
 pub mod error;
-mod model;
 mod router_cache;
 mod web;
 
 pub use config::{ApiIngressConfig, CorsConfig};
 use router_cache::RouterCache;
-
-#[cfg(test)]
-pub mod example_user_module;
-
-use model::ComponentsRegistry;
 
 /// Main API Ingress module — owns the HTTP server (rest_host) and collects
 /// typed operation specs to emit a single OpenAPI document.
@@ -64,8 +45,8 @@ use model::ComponentsRegistry;
 pub struct ApiIngress {
     // Lock-free config using arc-swap for read-mostly access
     config: ArcSwap<ApiIngressConfig>,
-    // Lock-free components registry for read-mostly access
-    components_registry: ArcSwap<ComponentsRegistry>,
+    // OpenAPI registry for operations and schemas
+    openapi_registry: Arc<OpenApiRegistryImpl>,
     // Built router cache for zero-lock hot path access
     router_cache: RouterCache<axum::Router>,
     // Store the finalized router from REST phase for serving
@@ -74,9 +55,6 @@ pub struct ApiIngress {
     // Duplicate detection (per (method, path) and per handler id)
     registered_routes: DashMap<(Method, String), ()>,
     registered_handlers: DashMap<String, ()>,
-
-    // Store operation specs for OpenAPI generation
-    operation_specs: DashMap<String, modkit::api::OperationSpec>,
 }
 
 impl Default for ApiIngress {
@@ -84,12 +62,11 @@ impl Default for ApiIngress {
         let default_router = Router::new();
         Self {
             config: ArcSwap::from_pointee(ApiIngressConfig::default()),
-            components_registry: ArcSwap::from_pointee(ComponentsRegistry::default()),
+            openapi_registry: Arc::new(OpenApiRegistryImpl::new()),
             router_cache: RouterCache::new(default_router),
             final_router: Mutex::new(None),
             registered_routes: DashMap::new(),
             registered_handlers: DashMap::new(),
-            operation_specs: DashMap::new(),
         }
     }
 }
@@ -100,10 +77,11 @@ impl ApiIngress {
         let default_router = Router::new();
         Self {
             config: ArcSwap::from_pointee(config),
+            openapi_registry: Arc::new(OpenApiRegistryImpl::new()),
             router_cache: RouterCache::new(default_router),
             final_router: Mutex::new(None),
-            operation_specs: DashMap::new(),
-            ..Default::default()
+            registered_routes: DashMap::new(),
+            registered_handlers: DashMap::new(),
         }
     }
 
@@ -140,7 +118,7 @@ impl ApiIngress {
         public_routes.insert((Method::GET, "/docs".to_string()));
         public_routes.insert((Method::GET, "/openapi.json".to_string()));
 
-        for spec in self.operation_specs.iter() {
+        for spec in self.openapi_registry.operation_specs.iter() {
             let spec = spec.value();
             let route_key = (spec.method.clone(), spec.path.clone());
 
@@ -256,11 +234,15 @@ impl ApiIngress {
         router = router.layer(from_fn(middleware::request_id::push_req_id_to_extensions));
 
         // 5. Timeout layer - 30 second timeout for handlers
-        router = router.layer(TimeoutLayer::new(Duration::from_secs(30)));
+        router = router.layer(TimeoutLayer::with_status_code(
+            axum::http::StatusCode::GATEWAY_TIMEOUT,
+            Duration::from_secs(30),
+        ));
 
         // 6. Body limit layer - from config default
         let config = self.get_cached_config();
         router = router.layer(RequestBodyLimitLayer::new(config.defaults.body_limit_bytes));
+        router = router.layer(DefaultBodyLimit::max(config.defaults.body_limit_bytes));
 
         // 7. CORS layer (if enabled). Place after BodyLimit so preflight returns early.
         if config.cors_enabled {
@@ -271,12 +253,22 @@ impl ApiIngress {
             }
         }
 
-        // 8. Per-route rate limiting & in-flight limits (after CORS, before auth)
+        // 8. MIME type validation (after CORS, before rate limiting)
         let specs: Vec<_> = self
+            .openapi_registry
             .operation_specs
             .iter()
             .map(|e| e.value().clone())
             .collect();
+        let mime_map = middleware::mime_validation::build_mime_validation_map(&specs);
+        router = router.layer(from_fn(
+            move |req: axum::extract::Request, next: axum::middleware::Next| {
+                let map = mime_map.clone();
+                middleware::mime_validation::mime_validation_middleware(map, req, next)
+            },
+        ));
+
+        // 9. Per-route rate limiting & in-flight limits (after MIME validation, before auth)
         let rate_map = middleware::rate_limit::RateLimiterMap::from_specs(&specs, &config);
         router = router.layer(from_fn(
             move |req: axum::extract::Request, next: axum::middleware::Next| {
@@ -285,10 +277,10 @@ impl ApiIngress {
             },
         ));
 
-        // 9. Error mapping layer (no-op converter for now; keeps order explicit)
+        // 10. Error mapping layer (no-op converter for now; keeps order explicit)
         router = router.layer(from_fn(modkit::api::error_layer::error_mapping_middleware));
 
-        // 10. Auth middleware - MUST be after CORS; preflight short-circuits before this.
+        // 11. Auth middleware - MUST be after CORS; preflight short-circuits before this.
         let config = self.get_cached_config();
         if config.auth_disabled {
             tracing::warn!(
@@ -355,189 +347,15 @@ impl ApiIngress {
         Ok(router)
     }
 
-    /// Build OpenAPI specification from registered routes and components using utoipa.
-    pub fn build_openapi(&self) -> Result<OpenApi> {
-        // Log operation count for visibility
-        let op_count = self.operation_specs.len();
-        tracing::info!("Building OpenAPI: found {op_count} registered operations");
-
-        // 1) Paths
-        let mut paths = PathsBuilder::new();
-
-        for spec in self.operation_specs.iter().map(|e| e.value().clone()) {
-            let mut op = UOperationBuilder::new()
-                .operation_id(spec.operation_id.clone().or(Some(spec.handler_id.clone())))
-                .summary(spec.summary.clone())
-                .description(spec.description.clone());
-
-            for tag in &spec.tags {
-                op = op.tag(tag.clone());
-            }
-
-            // Vendor extensions for rate limit, if present (string values)
-            if let Some(rl) = spec.rate_limit.as_ref() {
-                let mut ext = utoipa::openapi::extensions::Extensions::default();
-                ext.insert("x-rate-limit-rps".to_string(), serde_json::json!(rl.rps));
-                ext.insert(
-                    "x-rate-limit-burst".to_string(),
-                    serde_json::json!(rl.burst),
-                );
-                ext.insert(
-                    "x-in-flight-limit".to_string(),
-                    serde_json::json!(rl.in_flight),
-                );
-                op = op.extensions(Some(ext));
-            }
-
-            // Parameters
-            for p in &spec.params {
-                let in_ = match p.location {
-                    modkit::api::ParamLocation::Path => ParameterIn::Path,
-                    modkit::api::ParamLocation::Query => ParameterIn::Query,
-                    modkit::api::ParamLocation::Header => ParameterIn::Header,
-                    modkit::api::ParamLocation::Cookie => ParameterIn::Cookie,
-                };
-                let required =
-                    if matches!(p.location, modkit::api::ParamLocation::Path) || p.required {
-                        Required::True
-                    } else {
-                        Required::False
-                    };
-
-                let schema_type = match p.param_type.as_str() {
-                    "integer" => SchemaType::Type(utoipa::openapi::schema::Type::Integer),
-                    "number" => SchemaType::Type(utoipa::openapi::schema::Type::Number),
-                    "boolean" => SchemaType::Type(utoipa::openapi::schema::Type::Boolean),
-                    _ => SchemaType::Type(utoipa::openapi::schema::Type::String),
-                };
-                let schema = Schema::Object(ObjectBuilder::new().schema_type(schema_type).build());
-
-                let param = ParameterBuilder::new()
-                    .name(&p.name)
-                    .parameter_in(in_)
-                    .required(required)
-                    .description(p.description.clone())
-                    .schema(Some(schema))
-                    .build();
-
-                op = op.parameter(param);
-            }
-
-            // Request body
-            if let Some(rb) = &spec.request_body {
-                let content = if let Some(name) = &rb.schema_name {
-                    ContentBuilder::new()
-                        .schema(Some(RefOr::Ref(Ref::from_schema_name(name.clone()))))
-                        .build()
-                } else {
-                    ContentBuilder::new()
-                        .schema(Some(Schema::Object(ObjectBuilder::new().build())))
-                        .build()
-                };
-                let mut rbld = RequestBodyBuilder::new()
-                    .description(rb.description.clone())
-                    .content(rb.content_type.to_string(), content);
-                if rb.required {
-                    rbld = rbld.required(Some(Required::True));
-                }
-                op = op.request_body(Some(rbld.build()));
-            }
-
-            // Responses
-            let mut responses = ResponsesBuilder::new();
-            for r in &spec.responses {
-                let is_json_like = r.content_type == "application/json"
-                    || r.content_type == problem::APPLICATION_PROBLEM_JSON
-                    || r.content_type == "text/event-stream";
-                let resp = if is_json_like {
-                    if let Some(name) = &r.schema_name {
-                        // Manually build content to preserve the correct content type
-                        let content = ContentBuilder::new()
-                            .schema(Some(RefOr::Ref(Ref::new(format!(
-                                "#/components/schemas/{}",
-                                name
-                            )))))
-                            .build();
-                        ResponseBuilder::new()
-                            .description(&r.description)
-                            .content(r.content_type, content)
-                            .build()
-                    } else {
-                        let content = ContentBuilder::new()
-                            .schema(Some(Schema::Object(ObjectBuilder::new().build())))
-                            .build();
-                        ResponseBuilder::new()
-                            .description(&r.description)
-                            .content(r.content_type, content)
-                            .build()
-                    }
-                } else {
-                    let schema = Schema::Object(
-                        ObjectBuilder::new()
-                            .schema_type(SchemaType::Type(utoipa::openapi::schema::Type::String))
-                            .format(Some(SchemaFormat::Custom(r.content_type.into())))
-                            .build(),
-                    );
-                    let content = ContentBuilder::new().schema(Some(schema)).build();
-                    ResponseBuilder::new()
-                        .description(&r.description)
-                        .content(r.content_type, content)
-                        .build()
-                };
-                responses = responses.response(r.status.to_string(), resp);
-            }
-            op = op.responses(responses.build());
-
-            // Add security requirement if operation has explicit auth metadata
-            if spec.sec_requirement.is_some() {
-                let sec_req = SecurityRequirement::new("bearerAuth", Vec::<String>::new());
-                op = op.security(sec_req);
-            }
-
-            let method = match spec.method {
-                Method::GET => HttpMethod::Get,
-                Method::POST => HttpMethod::Post,
-                Method::PUT => HttpMethod::Put,
-                Method::DELETE => HttpMethod::Delete,
-                Method::PATCH => HttpMethod::Patch,
-                _ => HttpMethod::Get,
-            };
-
-            let item = PathItemBuilder::new().operation(method, op.build()).build();
-            paths = paths.path(spec.path.clone(), item);
-        }
-
-        // 2) Components (from our registry)
-        let mut components = ComponentsBuilder::new();
-        for (name, schema) in self.components_registry.load().iter() {
-            components = components.schema(name.clone(), schema.clone());
-        }
-
-        // Add bearer auth security scheme
-        components = components.security_scheme(
-            "bearerAuth",
-            SecurityScheme::Http(
-                HttpBuilder::new()
-                    .scheme(HttpAuthScheme::Bearer)
-                    .bearer_format("JWT")
-                    .build(),
-            ),
-        );
-
-        // 3) Info & final OpenAPI doc
-        let info = InfoBuilder::new()
-            .title("HyperSpot API")
-            .version("0.1.0")
-            .description(Some("HyperSpot Server API Documentation"))
-            .build();
-
-        let openapi = OpenApiBuilder::new()
-            .info(info)
-            .paths(paths.build())
-            .components(Some(components.build()))
-            .build();
-
-        Ok(openapi)
+    /// Build OpenAPI specification from registered routes and components.
+    pub fn build_openapi(&self) -> Result<utoipa::openapi::OpenApi> {
+        let config = self.get_cached_config();
+        let info = modkit::api::OpenApiInfo {
+            title: config.openapi.title.clone(),
+            version: config.openapi.version.clone(),
+            description: config.openapi.description.clone(),
+        };
+        self.openapi_registry.build_openapi(&info)
     }
 
     /// Background HTTP server: bind, notify ready, serve until cancelled.
@@ -590,9 +408,14 @@ impl ApiIngress {
 #[async_trait]
 impl modkit::Module for ApiIngress {
     async fn init(&self, ctx: &modkit::context::ModuleCtx) -> anyhow::Result<()> {
-        tracing::debug!(module = "api_ingress", "Module initialized with context");
+        debug!("Module initialized with context");
         let cfg = ctx.config::<crate::config::ApiIngressConfig>()?;
         self.config.store(Arc::new(cfg));
+
+        debug!(
+            "Effective api_ingress configuration:\n{:#?}",
+            self.config.load()
+        );
         Ok(())
     }
 
@@ -644,7 +467,11 @@ mod tests {
 
     #[test]
     fn test_openapi_generation() {
-        let api = ApiIngress::default();
+        let mut config = ApiIngressConfig::default();
+        config.openapi.title = "Test API".to_string();
+        config.openapi.version = "1.0.0".to_string();
+        config.openapi.description = Some("Test Description".to_string());
+        let api = ApiIngress::new(config);
 
         // Test that we can build OpenAPI without any operations
         let doc = api.build_openapi().unwrap();
@@ -657,8 +484,9 @@ mod tests {
 
         // Verify info section
         let info = json.get("info").unwrap();
-        assert_eq!(info.get("title").unwrap(), "HyperSpot API");
-        assert_eq!(info.get("version").unwrap(), "0.1.0");
+        assert_eq!(info.get("title").unwrap(), "Test API");
+        assert_eq!(info.get("version").unwrap(), "1.0.0");
+        assert_eq!(info.get("description").unwrap(), "Test Description");
     }
 }
 
@@ -686,7 +514,7 @@ impl modkit::contracts::RestHostModule for ApiIngress {
 
         if config.enable_docs {
             // Build once, serve as static JSON (no per-request parsing)
-            let op_count = self.operation_specs.len();
+            let op_count = self.openapi_registry.operation_specs.len();
             tracing::info!(
                 "rest_finalize: emitting OpenAPI with {} operations",
                 op_count
@@ -770,43 +598,30 @@ impl OpenApiRegistry for ApiIngress {
             return;
         }
 
-        let operation_key = format!("{}:{}", spec.method.as_str(), spec.path);
-        self.operation_specs
-            .insert(operation_key.clone(), spec.clone());
+        // Delegate to the internal registry
+        self.openapi_registry.register_operation(spec);
 
-        let current_count = self.operation_specs.len();
+        let current_count = self.openapi_registry.operation_specs.len();
         tracing::debug!(
             handler_id = %spec.handler_id,
             method = %spec.method.as_str(),
             path = %spec.path,
             summary = %spec.summary.as_deref().unwrap_or("No summary"),
-            operation_key = %operation_key,
             total_operations = current_count,
             "Registered API operation"
         );
     }
 
-    fn ensure_schema_raw(&self, root_name: &str, schemas: Vec<(String, RefOr<Schema>)>) -> String {
-        // Snapshot & copy-on-write
-        let current = self.components_registry.load();
-        let mut reg = (**current).clone();
-
-        for (name, schema) in schemas {
-            // Conflict policy: identical → no-op; different → warn & override
-            if let Some(existing) = reg.get(&name) {
-                let a = serde_json::to_value(existing).ok();
-                let b = serde_json::to_value(&schema).ok();
-                if a == b {
-                    continue; // Skip identical schemas
-                } else {
-                    tracing::warn!(%name, "Schema content conflict; overriding with latest");
-                }
-            }
-            reg.insert_schema(name, schema);
-        }
-
-        self.components_registry.store(Arc::new(reg));
-        root_name.to_string()
+    fn ensure_schema_raw(
+        &self,
+        root_name: &str,
+        schemas: Vec<(
+            String,
+            utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>,
+        )>,
+    ) -> String {
+        // Delegate to the internal registry
+        self.openapi_registry.ensure_schema_raw(root_name, schemas)
     }
 
     fn as_any(&self) -> &dyn std::any::Any {
@@ -832,8 +647,9 @@ mod problem_openapi_tests {
 
         // Build a route with a problem+json response
         let _router = OperationBuilder::<Missing, Missing, ()>::get("/problem-demo")
+            .public()
             .summary("Problem demo")
-            .problem_response(&api, 400, "Bad Request") // <-- registers Problem + sets content type
+            .problem_response(&api, http::StatusCode::BAD_REQUEST, "Bad Request") // <-- registers Problem + sets content type
             .handler(dummy_handler)
             .register(router, &api);
 
@@ -904,6 +720,7 @@ mod sse_openapi_tests {
         let _router = OperationBuilder::<Missing, Missing, ()>::get("/demo/sse")
             .summary("Demo SSE")
             .handler(sse_handler)
+            .public()
             .sse_json::<UserEvent>(&api, "SSE of UserEvent")
             .register(router, &api);
 
@@ -935,8 +752,9 @@ mod sse_openapi_tests {
 
         let _router = OperationBuilder::<Missing, Missing, ()>::get("/demo/mixed")
             .summary("Mixed responses")
+            .public()
             .handler(mixed_handler)
-            .json_response(200, "Success response")
+            .json_response(http::StatusCode::OK, "Success response")
             .sse_json::<UserEvent>(&api, "Additional SSE stream")
             .register(router, &api);
 
@@ -960,5 +778,182 @@ mod sse_openapi_tests {
             .pointer("/components/schemas/UserEvent")
             .expect("UserEvent missing");
         assert!(schema.get("$ref").is_none());
+    }
+
+    #[tokio::test]
+    async fn test_axum_to_openapi_path_conversion() {
+        let api = ApiIngress::default();
+        let router = axum::Router::new();
+
+        // Define a route with path parameters using Axum 0.8+ style {id}
+        async fn user_handler() -> Json<Value> {
+            Json(serde_json::json!({"user_id": "123"}))
+        }
+
+        let _router = OperationBuilder::<Missing, Missing, ()>::get("/users/{id}")
+            .summary("Get user by ID")
+            .public()
+            .path_param("id", "User ID")
+            .handler(user_handler)
+            .json_response(http::StatusCode::OK, "User details")
+            .register(router, &api);
+
+        // Verify the operation was stored with {id} path (same for Axum 0.8 and OpenAPI)
+        let ops: Vec<_> = api
+            .openapi_registry
+            .operation_specs
+            .iter()
+            .map(|e| e.value().clone())
+            .collect();
+        assert_eq!(ops.len(), 1);
+        assert_eq!(ops[0].path, "/users/{id}");
+
+        // Verify OpenAPI doc also has {id} (no conversion needed for regular params)
+        let doc = api.build_openapi().expect("openapi");
+        let v = serde_json::to_value(&doc).expect("json");
+
+        let paths = v.get("paths").expect("paths");
+        assert!(
+            paths.get("/users/{id}").is_some(),
+            "OpenAPI should use {{id}} placeholder"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_multiple_path_params_conversion() {
+        let api = ApiIngress::default();
+        let router = axum::Router::new();
+
+        async fn item_handler() -> Json<Value> {
+            Json(serde_json::json!({"ok": true}))
+        }
+
+        let _router =
+            OperationBuilder::<Missing, Missing, ()>::get("/projects/{project_id}/items/{item_id}")
+                .summary("Get project item")
+                .public()
+                .path_param("project_id", "Project ID")
+                .path_param("item_id", "Item ID")
+                .handler(item_handler)
+                .json_response(http::StatusCode::OK, "Item details")
+                .register(router, &api);
+
+        // Verify storage and OpenAPI both use {param} syntax
+        let ops: Vec<_> = api
+            .openapi_registry
+            .operation_specs
+            .iter()
+            .map(|e| e.value().clone())
+            .collect();
+        assert_eq!(ops[0].path, "/projects/{project_id}/items/{item_id}");
+
+        let doc = api.build_openapi().expect("openapi");
+        let v = serde_json::to_value(&doc).expect("json");
+        let paths = v.get("paths").expect("paths");
+        assert!(paths
+            .get("/projects/{project_id}/items/{item_id}")
+            .is_some());
+    }
+
+    #[tokio::test]
+    async fn test_wildcard_path_conversion() {
+        let api = ApiIngress::default();
+        let router = axum::Router::new();
+
+        async fn static_handler() -> Json<Value> {
+            Json(serde_json::json!({"ok": true}))
+        }
+
+        // Axum 0.8 uses {*path} for wildcards
+        let _router = OperationBuilder::<Missing, Missing, ()>::get("/static/{*path}")
+            .summary("Serve static files")
+            .public()
+            .handler(static_handler)
+            .json_response(http::StatusCode::OK, "File content")
+            .register(router, &api);
+
+        // Verify internal storage keeps Axum wildcard syntax {*path}
+        let ops: Vec<_> = api
+            .openapi_registry
+            .operation_specs
+            .iter()
+            .map(|e| e.value().clone())
+            .collect();
+        assert_eq!(ops[0].path, "/static/{*path}");
+
+        // Verify OpenAPI converts wildcard to {path} (without asterisk)
+        let doc = api.build_openapi().expect("openapi");
+        let v = serde_json::to_value(&doc).expect("json");
+        let paths = v.get("paths").expect("paths");
+        assert!(
+            paths.get("/static/{path}").is_some(),
+            "Wildcard {{*path}} should be converted to {{path}} in OpenAPI"
+        );
+        assert!(
+            paths.get("/static/{*path}").is_none(),
+            "OpenAPI should not have Axum-style {{*path}}"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_multipart_file_upload_openapi() {
+        let api = ApiIngress::default();
+        let router = axum::Router::new();
+
+        async fn upload_handler() -> Json<Value> {
+            Json(serde_json::json!({"uploaded": true}))
+        }
+
+        let _router = OperationBuilder::<Missing, Missing, ()>::post("/upload")
+            .operation_id("upload_file")
+            .public()
+            .summary("Upload a file")
+            .multipart_file_request("file", Some("File to upload"))
+            .handler(upload_handler)
+            .json_response(http::StatusCode::OK, "Upload successful")
+            .register(router, &api);
+
+        // Build OpenAPI and verify multipart schema
+        let doc = api.build_openapi().expect("openapi");
+        let v = serde_json::to_value(&doc).expect("json");
+
+        let paths = v.get("paths").expect("paths");
+        let upload_path = paths.get("/upload").expect("/upload path");
+        let post_op = upload_path.get("post").expect("POST operation");
+
+        // Verify request body exists
+        let request_body = post_op.get("requestBody").expect("requestBody");
+        let content = request_body.get("content").expect("content");
+        let multipart = content
+            .get("multipart/form-data")
+            .expect("multipart/form-data content type");
+
+        // Verify schema structure
+        let schema = multipart.get("schema").expect("schema");
+        assert_eq!(
+            schema.get("type").and_then(|v| v.as_str()),
+            Some("object"),
+            "Schema should be of type object"
+        );
+
+        // Verify properties
+        let properties = schema.get("properties").expect("properties");
+        let file_prop = properties.get("file").expect("file property");
+        assert_eq!(
+            file_prop.get("type").and_then(|v| v.as_str()),
+            Some("string"),
+            "File field should be of type string"
+        );
+        assert_eq!(
+            file_prop.get("format").and_then(|v| v.as_str()),
+            Some("binary"),
+            "File field should have format binary"
+        );
+
+        // Verify required fields
+        let required = schema.get("required").expect("required");
+        let required_arr = required.as_array().expect("required should be array");
+        assert_eq!(required_arr.len(), 1);
+        assert_eq!(required_arr[0].as_str(), Some("file"));
     }
 }

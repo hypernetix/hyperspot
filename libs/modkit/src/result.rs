@@ -34,7 +34,13 @@ mod tests {
 
     #[test]
     fn test_api_result_err() {
-        let result: ApiResult<i32> = Err(Problem::new(400, "Bad Request", "Invalid input"));
+        use http::StatusCode;
+
+        let result: ApiResult<i32> = Err(Problem::new(
+            StatusCode::BAD_REQUEST,
+            "Bad Request",
+            "Invalid input",
+        ));
         assert!(result.is_err());
     }
 }

@@ -95,7 +95,10 @@ pub use modkit_macros::{lifecycle, module};
 pub mod contracts;
 // Type-safe API operation builder
 pub mod api;
-pub use api::{error_mapping_middleware, IntoProblem, OpenApiRegistry, OperationBuilder};
+pub use api::{
+    error_mapping_middleware, IntoProblem, OpenApiInfo, OpenApiRegistry, OpenApiRegistryImpl,
+    OperationBuilder,
+};
 pub use modkit_odata::{Page, PageInfo};
 
 // HTTP utilities

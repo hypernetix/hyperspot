@@ -1,6 +1,7 @@
 //! Error catalog support (ErrDef for use with declare_errors! macro)
 
 use crate::problem::Problem;
+use http::StatusCode;
 
 /// Static error definition from catalog
 #[derive(Debug, Clone, Copy)]
@@ -15,7 +16,9 @@ impl ErrDef {
     /// Convert this error definition into a Problem with the given detail
     #[inline]
     pub fn to_problem(&self, detail: impl Into<String>) -> Problem {
-        Problem::new(self.status, self.title, detail.into())
+        // Convert u16 to StatusCode, using INTERNAL_SERVER_ERROR as fallback for invalid codes
+        let status = StatusCode::from_u16(self.status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+        Problem::new(status, self.title, detail.into())
             .with_code(self.code)
             .with_type(self.type_url)
     }
@@ -27,15 +30,17 @@ mod tests {
 
     #[test]
     fn err_def_to_problem_works() {
+        use http::StatusCode;
+
         let def = ErrDef {
-            status: 404,
+            status: StatusCode::NOT_FOUND.as_u16(),
             title: "Not Found",
             code: "TEST_NOT_FOUND",
             type_url: "https://errors.example.com/TEST_NOT_FOUND",
         };
 
         let problem = def.to_problem("Resource missing");
-        assert_eq!(problem.status, 404);
+        assert_eq!(problem.status, StatusCode::NOT_FOUND);
         assert_eq!(problem.title, "Not Found");
         assert_eq!(problem.detail, "Resource missing");
         assert_eq!(problem.code, "TEST_NOT_FOUND");

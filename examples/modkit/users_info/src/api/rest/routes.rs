@@ -24,11 +24,11 @@ pub fn register_routes(
         .query_param_typed("limit", false, "Maximum number of users to return", "integer")
         .query_param("cursor", false, "Cursor for pagination")
         .handler(handlers::list_users)
-        .json_response_with_schema::<modkit_odata::Page<dto::UserDto>>(openapi, 200, "Paginated list of users")
+        .json_response_with_schema::<modkit_odata::Page<dto::UserDto>>(openapi, http::StatusCode::OK, "Paginated list of users")
         .with_odata_filter_doc("OData v4 filter. Examples: `email eq 'test@example.com'`, `contains(email,'@acme.com')`")
         .query_param("$orderby", false, "OData orderby clause. Example: 'created_at desc, id desc'")
-        .problem_response(openapi, 400, "Bad Request")
-        .problem_response(openapi, 500, "Internal Server Error")
+        .problem_response(openapi, http::StatusCode::BAD_REQUEST, "Bad Request")
+        .problem_response(openapi, http::StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error")
         .register(router, openapi);
 
     // GET /users/{id} - Get a specific user
@@ -40,11 +40,15 @@ pub fn register_routes(
         .tag("users")
         .path_param("id", "User UUID")
         .handler(handlers::get_user)
-        .json_response_with_schema::<dto::UserDto>(openapi, 200, "User found")
-        .problem_response(openapi, 401, "Unauthorized")
-        .problem_response(openapi, 403, "Forbidden")
-        .problem_response(openapi, 404, "Not Found")
-        .problem_response(openapi, 500, "Internal Server Error")
+        .json_response_with_schema::<dto::UserDto>(openapi, http::StatusCode::OK, "User found")
+        .problem_response(openapi, http::StatusCode::UNAUTHORIZED, "Unauthorized")
+        .problem_response(openapi, http::StatusCode::FORBIDDEN, "Forbidden")
+        .problem_response(openapi, http::StatusCode::NOT_FOUND, "Not Found")
+        .problem_response(
+            openapi,
+            http::StatusCode::INTERNAL_SERVER_ERROR,
+            "Internal Server Error",
+        )
         .register(router, openapi);
 
     // POST /users - Create a new user
@@ -56,12 +60,20 @@ pub fn register_routes(
         .tag("users")
         .json_request::<dto::CreateUserReq>(openapi, "User creation data")
         .handler(handlers::create_user)
-        .json_response_with_schema::<dto::UserDto>(openapi, 201, "Created user")
-        .problem_response(openapi, 400, "Bad Request")
-        .problem_response(openapi, 401, "Unauthorized")
-        .problem_response(openapi, 403, "Forbidden")
-        .problem_response(openapi, 409, "Conflict")
-        .problem_response(openapi, 500, "Internal Server Error")
+        .json_response_with_schema::<dto::UserDto>(
+            openapi,
+            http::StatusCode::CREATED,
+            "Created user",
+        )
+        .problem_response(openapi, http::StatusCode::BAD_REQUEST, "Bad Request")
+        .problem_response(openapi, http::StatusCode::UNAUTHORIZED, "Unauthorized")
+        .problem_response(openapi, http::StatusCode::FORBIDDEN, "Forbidden")
+        .problem_response(openapi, http::StatusCode::CONFLICT, "Conflict")
+        .problem_response(
+            openapi,
+            http::StatusCode::INTERNAL_SERVER_ERROR,
+            "Internal Server Error",
+        )
         .register(router, openapi);
 
     // PUT /users/{id} - Update a user
@@ -74,13 +86,17 @@ pub fn register_routes(
         .path_param("id", "User UUID")
         .json_request::<dto::UpdateUserReq>(openapi, "User update data")
         .handler(handlers::update_user)
-        .json_response_with_schema::<dto::UserDto>(openapi, 200, "Updated user")
-        .problem_response(openapi, 400, "Bad Request")
-        .problem_response(openapi, 401, "Unauthorized")
-        .problem_response(openapi, 403, "Forbidden")
-        .problem_response(openapi, 404, "Not Found")
-        .problem_response(openapi, 409, "Conflict")
-        .problem_response(openapi, 500, "Internal Server Error")
+        .json_response_with_schema::<dto::UserDto>(openapi, http::StatusCode::OK, "Updated user")
+        .problem_response(openapi, http::StatusCode::BAD_REQUEST, "Bad Request")
+        .problem_response(openapi, http::StatusCode::UNAUTHORIZED, "Unauthorized")
+        .problem_response(openapi, http::StatusCode::FORBIDDEN, "Forbidden")
+        .problem_response(openapi, http::StatusCode::NOT_FOUND, "Not Found")
+        .problem_response(openapi, http::StatusCode::CONFLICT, "Conflict")
+        .problem_response(
+            openapi,
+            http::StatusCode::INTERNAL_SERVER_ERROR,
+            "Internal Server Error",
+        )
         .register(router, openapi);
 
     // DELETE /users/{id} - Delete a user
@@ -92,11 +108,15 @@ pub fn register_routes(
         .tag("users")
         .path_param("id", "User UUID")
         .handler(handlers::delete_user)
-        .json_response(204, "User deleted successfully")
-        .problem_response(openapi, 401, "Unauthorized")
-        .problem_response(openapi, 403, "Forbidden")
-        .problem_response(openapi, 404, "Not Found")
-        .problem_response(openapi, 500, "Internal Server Error")
+        .json_response(http::StatusCode::NO_CONTENT, "User deleted successfully")
+        .problem_response(openapi, http::StatusCode::UNAUTHORIZED, "Unauthorized")
+        .problem_response(openapi, http::StatusCode::FORBIDDEN, "Forbidden")
+        .problem_response(openapi, http::StatusCode::NOT_FOUND, "Not Found")
+        .problem_response(
+            openapi,
+            http::StatusCode::INTERNAL_SERVER_ERROR,
+            "Internal Server Error",
+        )
         .register(router, openapi);
 
     router = router.layer(Extension(service.clone()));
@@ -127,7 +147,10 @@ where
     // Apply layers to the specific route using Router::layer
     router
         .layer(axum::Extension(sse))
-        .layer(TimeoutLayer::new(Duration::from_secs(60 * 60)))
+        .layer(TimeoutLayer::with_status_code(
+            axum::http::StatusCode::GATEWAY_TIMEOUT,
+            Duration::from_secs(60 * 60),
+        ))
 }
 
 #[cfg(test)]

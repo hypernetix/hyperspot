@@ -86,9 +86,22 @@ modules:
   api_ingress:
     # No database needed for api_ingress
     config:
-      bind_addr: "127.0.0.1:8088"
+      bind_addr: "127.0.0.1:8087"
       enable_docs: true
       cors_enabled: false
+      
+      # OpenAPI Documentation Configuration
+      openapi:
+        title: "HyperSpot API"
+        version: "0.1.0"
+        description: "HyperSpot Server API Documentation"
+      defaults:
+        body_limit_bytes: 64000000
+        rate_limit:
+          rps: 1000
+          burst: 200
+          in_flight: 64
+
       # Authentication Configuration
       auth_disabled: true
       require_auth_by_default: true
@@ -100,8 +113,8 @@ modules:
 
   grpc_hub:
     config:
-      listen_addr: "pipe://\\\\.\\pipe\\hyperspot-grpc"
-      
+      listen_addr: "uds:///tmp/hyperspot-grpc"
+
   users_info:
     # Module-specific database configuration
     database:

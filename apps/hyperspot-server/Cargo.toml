@@ -26,6 +26,9 @@ api_ingress = { path = "../../modules/api_ingress" }
 grpc_hub = { path = "../../modules/grpc_hub" }
 directory_service = { path = "../../modules/directory_service" }
 
+# user modules
+file_parser = { path = "../../modules/file_parser" }
+
 anyhow = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }

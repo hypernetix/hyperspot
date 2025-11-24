@@ -7,6 +7,7 @@
 pub mod error;
 pub mod error_layer;
 pub mod odata;
+pub mod openapi_registry;
 pub mod operation_builder;
 pub mod problem;
 pub mod response;
@@ -19,9 +20,10 @@ pub use error::ApiError;
 pub use error_layer::{
     error_mapping_middleware, extract_trace_id, map_error_to_problem, IntoProblem,
 };
+pub use openapi_registry::{ensure_schema, OpenApiInfo, OpenApiRegistry, OpenApiRegistryImpl};
 pub use operation_builder::{
-    ensure_schema, state, Missing, OpenApiRegistry, OperationBuilder, OperationSpec, ParamLocation,
-    ParamSpec, Present, RateLimitSpec, ResponseSpec,
+    state, Missing, OperationBuilder, OperationSpec, ParamLocation, ParamSpec, Present,
+    RateLimitSpec, ResponseSpec,
 };
 pub use problem::{
     bad_request, conflict, internal_error, not_found, Problem, ValidationError,

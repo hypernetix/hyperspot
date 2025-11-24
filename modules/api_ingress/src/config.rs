@@ -21,6 +21,10 @@ pub struct ApiIngressConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cors: Option<CorsConfig>,
 
+    /// OpenAPI document metadata
+    #[serde(default)]
+    pub openapi: OpenApiConfig,
+
     /// Global defaults
     #[serde(default)]
     pub defaults: Defaults,
@@ -116,6 +120,29 @@ impl Default for CorsConfig {
             allowed_headers: vec!["*".to_string()],
             allow_credentials: false,
             max_age_seconds: 600,
+        }
+    }
+}
+
+/// OpenAPI document metadata configuration
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields, default)]
+pub struct OpenApiConfig {
+    /// API title shown in OpenAPI documentation
+    pub title: String,
+    /// API version
+    pub version: String,
+    /// API description (optional)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+}
+
+impl Default for OpenApiConfig {
+    fn default() -> Self {
+        Self {
+            title: "API Documentation".to_string(),
+            version: "0.1.0".to_string(),
+            description: None,
         }
     }
 }

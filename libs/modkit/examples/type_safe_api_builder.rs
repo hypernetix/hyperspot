@@ -100,10 +100,14 @@ async fn main() {
         .tag("users")
         .query_param("limit", false, "Maximum number of users to return")
         .query_param("offset", false, "Number of users to skip for pagination")
-        .json_response(200, "Successfully retrieved user list")
-        .json_response(500, "Internal server error")
+        .public() // <- Required: must explicitly set auth requirement
+        .json_response(http::StatusCode::OK, "Successfully retrieved user list")
+        .json_response(
+            http::StatusCode::INTERNAL_SERVER_ERROR,
+            "Internal server error",
+        )
         .handler(get_users) // <- Required: handler must be set
-        .register(router, &registry); // <- Only works when both handler and response are present
+        .register(router, &registry); // <- Only works when handler, response, and auth are all set
 
     println!("Building POST /users endpoint...");
     router = OperationBuilder::<Missing, Missing, ()>::post("/users")
@@ -111,10 +115,14 @@ async fn main() {
         .summary("Create a new user")
         .description("Creates a new user account in the system")
         .tag("users")
-        .json_response(201, "User created successfully") // <- Required: at least one response
-        .json_response(400, "Invalid user data")
-        .json_response(409, "User already exists")
-        .json_response(500, "Internal server error")
+        .public() // <- Required: must explicitly set auth requirement
+        .json_response(http::StatusCode::CREATED, "User created successfully") // <- Required: at least one response
+        .json_response(http::StatusCode::BAD_REQUEST, "Invalid user data")
+        .json_response(http::StatusCode::CONFLICT, "User already exists")
+        .json_response(
+            http::StatusCode::INTERNAL_SERVER_ERROR,
+            "Internal server error",
+        )
         .handler(create_user) // <- Required: handler must be set
         .register(router, &registry);
 
@@ -125,9 +133,13 @@ async fn main() {
         .description("Retrieves detailed information about a specific user")
         .tag("users")
         .path_param("id", "Unique identifier for the user")
-        .json_response(200, "User details retrieved successfully")
-        .json_response(404, "User not found")
-        .json_response(500, "Internal server error")
+        .public() // <- Required: must explicitly set auth requirement
+        .json_response(http::StatusCode::OK, "User details retrieved successfully")
+        .json_response(http::StatusCode::NOT_FOUND, "User not found")
+        .json_response(
+            http::StatusCode::INTERNAL_SERVER_ERROR,
+            "Internal server error",
+        )
         .handler(get_user)
         .register(router, &registry);
 
@@ -140,14 +152,14 @@ async fn main() {
 
     println!("VALID: Both handler and response are provided");
     println!("   OperationBuilder::get(\"/example\")");
-    println!("     .json_response(200, \"OK\")");
+    println!("     .json_response(StatusCode::OK, \"OK\")");
     println!("     .handler(some_handler)");
     println!("     .register(router, registry) // ← This compiles!");
 
     println!();
     println!("INVALID: Missing handler (compile-time error)");
     println!("   OperationBuilder::get(\"/example\")");
-    println!("     .json_response(200, \"OK\")");
+    println!("     .json_response(StatusCode::OK, \"OK\")");
     println!("     .register(router, registry) // ← Compilation error!");
 
     println!();
@@ -162,7 +174,7 @@ async fn main() {
     println!("     .summary(\"Example\")        // ← Can be anywhere");
     println!("     .handler(some_handler)      // ← Can be anywhere");
     println!("     .description(\"Details\")     // ← Can be anywhere");
-    println!("     .json_response(200, \"OK\")   // ← Can be anywhere");
+    println!("     .json_response(StatusCode::OK, \"OK\")   // ← Can be anywhere");
     println!("     .tag(\"example\")             // ← Can be anywhere");
     println!("     .register(router, registry) // ← Always at the end");
 

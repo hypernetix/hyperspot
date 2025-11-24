@@ -23,7 +23,7 @@ use sea_orm::{
 /// ```ignore
 /// use modkit_db::odata::sea_orm_filter::FieldToColumn;
 /// use crate::api::rest::dto::UserDtoFilterField;
-/// use crate::infra::storage::entity::Column;
+/// use crate::testing::storage::entity::Column;
 ///
 /// struct UserFieldMapper;
 ///

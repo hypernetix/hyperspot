@@ -133,16 +133,42 @@ impl GrpcHub {
             }
             #[cfg(unix)]
             ListenConfig::Uds(path) => {
+                use std::io;
                 use tokio::net::UnixListener;
                 use tokio_stream::wrappers::UnixListenerStream;
 
                 // Remove existing file if present
                 if path.exists() {
-                    let _ = std::fs::remove_file(&path);
+                    match std::fs::remove_file(&path) {
+                        Ok(_) => {
+                            tracing::debug!(
+                                path = %path.display(),
+                                "removed existing UDS socket file before bind"
+                            );
+                        }
+                        Err(e) if e.kind() == io::ErrorKind::NotFound => {
+                            // Lost the race, somebody else removed it. Not fatal.
+                        }
+                        Err(e) => {
+                            tracing::warn!(
+                                path = %path.display(),
+                                error = %e,
+                                "failed to remove existing UDS socket file before bind"
+                            );
+                        }
+                    }
                 }
 
-                tracing::info!(path = %path.display(), transport = "uds", "gRPC hub listening");
-                let uds = UnixListener::bind(&path)?;
+                tracing::info!(
+                    path = %path.display(),
+                    transport = "uds",
+                    "gRPC hub listening"
+                );
+
+                let uds = UnixListener::bind(&path).with_context(|| {
+                    format!("failed to bind UDS listener at '{}'", path.display())
+                })?;
+
                 let incoming = UnixListenerStream::new(uds);
 
                 Server::builder()

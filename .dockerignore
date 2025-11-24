@@ -1,0 +1,34 @@
+# Build artifacts
+target
+**/target
+*.rlib
+
+# Venvs and Python garbage
+.venv
+**/.venv
+**/__pycache__
+*.pyc
+
+# Node and frontend
+node_modules
+dist
+.build
+
+# VCS
+.git
+.gitignore
+.github
+
+# Local data and logs
+data
+logs
+*.log
+
+# IDE
+.vscode
+.idea
+*.iml
+
+# Test artifacts
+testing/e2e/.pytest_cache
+.testing-cache

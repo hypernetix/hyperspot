@@ -98,18 +98,17 @@ fn test_cli_invalid_command() {
 fn test_cli_config_validation_missing_file() {
     let output = run_hyperspot_server(&["--config", "/nonexistent/config.yaml", "check"]);
 
-    // The application gracefully falls back to defaults when config file is missing
-    // This is actually good UX behavior, so the check should succeed
+    // The application should fail when an explicitly specified config file doesn't exist
     assert!(
-        output.status.success(),
-        "Should succeed with default config fallback"
+        !output.status.success(),
+        "Should fail when config file doesn't exist"
     );
 
-    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stdout.contains("Configuration check passed") || stdout.contains("valid"),
-        "Should indicate successful validation with defaults: {}",
-        stdout
+        stderr.contains("does not exist") || stderr.contains("not found") || stderr.contains("config"),
+        "Should indicate config file not found: {}",
+        stderr
     );
 }
 
@@ -209,12 +208,11 @@ logging:
 
 server:
   home_dir: "{}"
-  port: {}
 
 modules:
   api_ingress:
     config:
-      bind_addr: "127.0.0.1:8087"
+      bind_addr: "127.0.0.1:{}"
       enable_docs: false
       cors_enabled: false
       auth_disabled: true
@@ -354,20 +352,20 @@ fn test_cli_verbose_flag() {
 
 #[test]
 fn test_cli_config_flag_short_form() {
-    // Test short form of config flag with missing file (should gracefully fall back to defaults)
+    // Test short form of config flag with missing file
     let output = run_hyperspot_server(&["-c", "/nonexistent/config.yaml", "check"]);
 
-    // The application gracefully falls back to defaults when config file is missing
+    // The application should fail when an explicitly specified config file doesn't exist
     assert!(
-        output.status.success(),
-        "Should succeed with default config fallback using short flag"
+        !output.status.success(),
+        "Should fail when config file doesn't exist using short flag"
     );
 
-    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stdout.contains("Configuration check passed") || stdout.contains("valid"),
-        "Should indicate successful validation with defaults using short flag: {}",
-        stdout
+        stderr.contains("does not exist") || stderr.contains("not found") || stderr.contains("config"),
+        "Should indicate config file not found using short flag: {}",
+        stderr
     );
 }
 

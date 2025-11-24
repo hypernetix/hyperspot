@@ -86,8 +86,16 @@ impl RestfulModule for TestUsersModule {
             .tag("Users")
             .query_param("limit", false, "Maximum number of users to return")
             .query_param("offset", false, "Number of users to skip")
-            .json_response_with_schema::<Vec<User>>(openapi, 200, "Users retrieved successfully")
-            .json_response(500, "Internal server error")
+            .public()
+            .json_response_with_schema::<Vec<User>>(
+                openapi,
+                http::StatusCode::OK,
+                "Users retrieved successfully",
+            )
+            .json_response(
+                http::StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal server error",
+            )
             .handler(get(list_users_handler))
             .register(router, openapi);
 
@@ -98,9 +106,13 @@ impl RestfulModule for TestUsersModule {
             .description("Retrieve a specific user by their ID")
             .tag("Users")
             .path_param("id", "User ID")
-            .json_response_with_schema::<User>(openapi, 200, "User found")
-            .json_response(404, "User not found")
-            .json_response(500, "Internal server error")
+            .public()
+            .json_response_with_schema::<User>(openapi, http::StatusCode::OK, "User found")
+            .json_response(http::StatusCode::NOT_FOUND, "User not found")
+            .json_response(
+                http::StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal server error",
+            )
             .handler(get(get_user_handler))
             .register(router, openapi);
 
@@ -111,9 +123,17 @@ impl RestfulModule for TestUsersModule {
             .description("Create a new user with the provided data")
             .tag("Users")
             .json_request::<CreateUserRequest>(openapi, "User creation data")
-            .json_response_with_schema::<User>(openapi, 201, "User created successfully")
-            .json_response(400, "Invalid input data")
-            .json_response(500, "Internal server error")
+            .public()
+            .json_response_with_schema::<User>(
+                openapi,
+                http::StatusCode::CREATED,
+                "User created successfully",
+            )
+            .json_response(http::StatusCode::BAD_REQUEST, "Invalid input data")
+            .json_response(
+                http::StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal server error",
+            )
             .handler(axum::routing::post(create_user_handler))
             .register(router, openapi);
 

@@ -80,7 +80,8 @@ impl RestfulModule for RateLimitedModule {
         let router = builder
             .operation_id("test:limited")
             .summary("Strictly rate-limited endpoint")
-            .json_response(200, "Success")
+            .public()
+            .json_response(http::StatusCode::OK, "Success")
             .handler(get(limited_handler))
             .register(router, openapi);
 
@@ -90,7 +91,8 @@ impl RestfulModule for RateLimitedModule {
         let router = builder
             .operation_id("test:slow")
             .summary("Slow endpoint with low in-flight limit")
-            .json_response(200, "Success")
+            .public()
+            .json_response(http::StatusCode::OK, "Success")
             .handler(get(slow_handler))
             .register(router, openapi);
 
@@ -98,7 +100,8 @@ impl RestfulModule for RateLimitedModule {
         let router = OperationBuilder::get("/normal")
             .operation_id("test:normal")
             .summary("Normal endpoint")
-            .json_response(200, "Success")
+            .public()
+            .json_response(http::StatusCode::OK, "Success")
             .handler(get(normal_handler))
             .register(router, openapi);
 
@@ -228,7 +231,8 @@ async fn test_rate_limit_metadata_stored() {
     // Register and verify it's stored
     let _router = builder
         .operation_id("test")
-        .json_response(200, "OK")
+        .public()
+        .json_response(http::StatusCode::OK, "OK")
         .handler(get(normal_handler))
         .register(router, &api_ingress);
 

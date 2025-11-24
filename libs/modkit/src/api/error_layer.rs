@@ -5,6 +5,7 @@
 //! per-route boilerplate.
 
 use axum::{extract::Request, http::HeaderMap, middleware::Next, response::Response};
+use http::StatusCode;
 use std::any::Any;
 
 use crate::api::problem::Problem;
@@ -73,7 +74,7 @@ pub fn map_error_to_problem(error: &dyn Any, instance: &str, trace_id: Option<St
     if let Some(config_err) = error.downcast_ref::<ConfigError>() {
         let mut problem = match config_err {
             ConfigError::ModuleNotFound { module } => Problem::new(
-                500,
+                StatusCode::INTERNAL_SERVER_ERROR,
                 "Configuration Error",
                 format!("Module '{}' configuration not found", module),
             )
@@ -81,7 +82,7 @@ pub fn map_error_to_problem(error: &dyn Any, instance: &str, trace_id: Option<St
             .with_type("https://errors.example.com/CONFIG_MODULE_NOT_FOUND"),
 
             ConfigError::InvalidModuleStructure { module } => Problem::new(
-                500,
+                StatusCode::INTERNAL_SERVER_ERROR,
                 "Configuration Error",
                 format!("Module '{}' has invalid configuration structure", module),
             )
@@ -89,7 +90,7 @@ pub fn map_error_to_problem(error: &dyn Any, instance: &str, trace_id: Option<St
             .with_type("https://errors.example.com/CONFIG_INVALID_STRUCTURE"),
 
             ConfigError::MissingConfigSection { module } => Problem::new(
-                500,
+                StatusCode::INTERNAL_SERVER_ERROR,
                 "Configuration Error",
                 format!("Module '{}' is missing required config section", module),
             )
@@ -97,7 +98,7 @@ pub fn map_error_to_problem(error: &dyn Any, instance: &str, trace_id: Option<St
             .with_type("https://errors.example.com/CONFIG_MISSING_SECTION"),
 
             ConfigError::InvalidConfig { module, .. } => Problem::new(
-                500,
+                StatusCode::INTERNAL_SERVER_ERROR,
                 "Configuration Error",
                 format!("Module '{}' has invalid configuration", module),
             )
@@ -114,9 +115,13 @@ pub fn map_error_to_problem(error: &dyn Any, instance: &str, trace_id: Option<St
 
     // Handle anyhow::Error
     if let Some(anyhow_err) = error.downcast_ref::<anyhow::Error>() {
-        let mut problem = Problem::new(500, "Internal Server Error", "An internal error occurred")
-            .with_code("INTERNAL_ERROR")
-            .with_type("https://errors.example.com/INTERNAL_ERROR");
+        let mut problem = Problem::new(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Internal Server Error",
+            "An internal error occurred",
+        )
+        .with_code("INTERNAL_ERROR")
+        .with_type("https://errors.example.com/INTERNAL_ERROR");
 
         problem = problem.with_instance(instance);
         if let Some(tid) = trace_id {
@@ -129,9 +134,13 @@ pub fn map_error_to_problem(error: &dyn Any, instance: &str, trace_id: Option<St
     }
 
     // Fallback for unknown error types
-    let mut problem = Problem::new(500, "Unknown Error", "An unknown error occurred")
-        .with_code("UNKNOWN_ERROR")
-        .with_type("https://errors.example.com/UNKNOWN_ERROR");
+    let mut problem = Problem::new(
+        StatusCode::INTERNAL_SERVER_ERROR,
+        "Unknown Error",
+        "An unknown error occurred",
+    )
+    .with_code("UNKNOWN_ERROR")
+    .with_type("https://errors.example.com/UNKNOWN_ERROR");
 
     problem = problem.with_instance(instance);
     if let Some(tid) = trace_id {
@@ -174,7 +183,7 @@ mod tests {
         let error = ODataError::InvalidFilter("malformed".to_string());
         let problem = error.into_problem("/test", Some("trace123".to_string()));
 
-        assert_eq!(problem.status, 422);
+        assert_eq!(problem.status, StatusCode::UNPROCESSABLE_ENTITY);
         assert!(problem.code.contains("invalid_filter"));
         assert_eq!(problem.instance, "/test");
         assert_eq!(problem.trace_id, Some("trace123".to_string()));
@@ -187,7 +196,7 @@ mod tests {
         };
         let problem = error.into_problem("/api/test", None);
 
-        assert_eq!(problem.status, 500);
+        assert_eq!(problem.status, StatusCode::INTERNAL_SERVER_ERROR);
         assert_eq!(problem.code, "CONFIG_MODULE_NOT_FOUND");
         assert_eq!(problem.instance, "/api/test");
         assert!(problem.detail.contains("test_module"));
@@ -198,7 +207,7 @@ mod tests {
         let error = anyhow::anyhow!("Something went wrong");
         let problem = error.into_problem("/api/test", Some("trace456".to_string()));
 
-        assert_eq!(problem.status, 500);
+        assert_eq!(problem.status, StatusCode::INTERNAL_SERVER_ERROR);
         assert_eq!(problem.code, "INTERNAL_ERROR");
         assert_eq!(problem.instance, "/api/test");
         assert_eq!(problem.trace_id, Some("trace456".to_string()));
