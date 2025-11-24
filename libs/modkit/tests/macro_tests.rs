@@ -5,9 +5,9 @@ use async_trait::async_trait;
 use tokio_util::sync::CancellationToken;
 
 use modkit::{
-    context::{ConfigProvider, ModuleCtx},
+    config::ConfigProvider,
     contracts::{DbModule, Module, OpenApiRegistry, RestHostModule, RestfulModule, StatefulModule},
-    module,
+    module, ModuleCtx,
 };
 use std::sync::Arc;
 

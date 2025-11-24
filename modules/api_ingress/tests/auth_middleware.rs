@@ -15,7 +15,8 @@ use axum::{
 };
 use modkit::{
     api::OperationBuilder,
-    context::{ConfigProvider, ModuleCtx},
+    config::ConfigProvider,
+    context::ModuleCtx,
     contracts::{OpenApiRegistry, RestHostModule, RestfulModule},
     ClientHub, Module,
 };
@@ -23,7 +24,8 @@ use modkit_auth::axum_ext::Authz;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::sync::Arc;
-use tower::ServiceExt; // for oneshot
+use tower::ServiceExt;
+// for oneshot
 use utoipa::ToSchema;
 
 /// Test configuration provider

@@ -98,7 +98,10 @@ modules:
       issuer: "http://localhost:8080/realms/dev"
       audience: "api-ingress"
 
-  
+  grpc_hub:
+    config:
+      listen_addr: "pipe://\\\\.\\pipe\\hyperspot-grpc"
+      
   users_info:
     # Module-specific database configuration
     database:

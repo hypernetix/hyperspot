@@ -17,8 +17,8 @@ otel = ["opentelemetry", "opentelemetry_sdk", "tracing-opentelemetry", "tracing-
 
 [dependencies]
 # Project-local crates
-runtime = { path = "../runtime" }
-modkit-macros = { path = "./macros" }
+modkit-bootstrap = { path = "../modkit-bootstrap" }
+modkit-macros = { path = "../modkit-macros" }
 modkit-errors = { path = "../modkit-errors", features = ["utoipa", "axum"] }
 modkit-errors-macro = { path = "../modkit-errors-macro" }
 modkit-db = { path = "../modkit-db" }

@@ -11,11 +11,13 @@ path = "src/lib.rs"
 
 [dependencies]
 modkit = { path = "../../libs/modkit" }
+modkit-transport-grpc = { path = "../../libs/modkit-transport-grpc" }
 inventory = "0.3"
 anyhow = { workspace = true }
 async-trait = { workspace = true }
 tokio = { workspace = true }
 tokio-util = { version = "0.7", features = ["rt"] }
+tokio-stream = { version = "0.1", features = ["net"] }
 tower = "0.5"
 tracing = { workspace = true }
 serde = { workspace = true }
@@ -28,4 +30,5 @@ tonic = "0.14.2"
 
 [dev-dependencies]
 tokio = { workspace = true }
+tempfile = "3.8"
 

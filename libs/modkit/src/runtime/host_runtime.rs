@@ -9,7 +9,7 @@ use std::sync::Arc;
 use tokio_util::sync::CancellationToken;
 
 use crate::client_hub::ClientHub;
-use crate::context::ConfigProvider;
+use crate::config::ConfigProvider;
 use crate::context::ModuleContextBuilder;
 use crate::contracts::RegisterGrpcServiceFn;
 use crate::registry::{ModuleRegistry, RegistryError};
@@ -335,6 +335,7 @@ impl HostRuntime {
                         module: e.name,
                         source,
                     })?;
+                tracing::info!(module = e.name, "Started module");
             }
         }
 
@@ -352,6 +353,7 @@ impl HostRuntime {
                 if let Err(err) = s.stop(self.cancel.clone()).await {
                     tracing::warn!(module = e.name, error = %err, "Failed to stop module");
                 }
+                tracing::info!(module = e.name, "Stopped module");
             }
         }
 

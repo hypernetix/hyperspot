@@ -8,9 +8,9 @@ description = "HyperSpot Server"
 [workspace]
 members = [
     "apps/hyperspot-server",
-    "libs/runtime",
+    "libs/modkit-bootstrap",
     "libs/modkit",
-    "libs/modkit/macros",
+    "libs/modkit-macros",
     "libs/modkit-db",
     "libs/modkit-db-macros",
     "libs/modkit-auth",
