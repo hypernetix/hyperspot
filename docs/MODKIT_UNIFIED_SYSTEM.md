@@ -138,7 +138,7 @@ Attach the attribute to your main struct. The macro:
     name = "my_module",
     deps = ["foo", "bar"], // api_ingress dependency will be added automatically for rest module capability
     capabilities = [db, rest, stateful, /* rest_host if you own the HTTP server */],
-    client = "contract::client::MyModuleApi",
+    client = contract::client::MyModuleApi,
     ctor = MyModule::new(),
     lifecycle(entry = "serve", stop_timeout = "30s", await_ready)
 )]
@@ -337,17 +337,134 @@ OperationBuilder::post("/users")
 ## Layers
 - `modkit-odata`: AST, ODataQuery, CursorV1, ODataOrderBy, SortDir, ODataPageError, **Page<T>/PageInfo**.
 - `modkit`: HTTP extractor for OData (`$filter`, `$orderby`, `limit`, `cursor`) with budgets + Problem mapper.
-- `db`: OData AST → SeaORM Condition; order, cursor predicate, paginator `paginate_with_odata`.
+- `modkit-db`: Type-safe OData filter system with `FilterField` trait, `FilterNode<F>` AST, and SeaORM integration.
 
-## Usage (3 steps)
-1. In the handler: `OData(q)` extractor (Axum) → pass `q` down to service.
-2. In repo/service: call `paginate_with_odata(...)` and return `Page<T>`.
-3. In REST: map `ODataPageError` to Problem once via `odata_page_error_to_problem`.
+## Architecture (Type-Safe OData)
+
+The OData system uses a **three-layer architecture** for type safety:
+
+### 1. DTO Layer (REST)
+Use `#[derive(ODataFilterable)]` on your REST DTOs to auto-generate a `FilterField` enum:
+
+```rust
+use modkit_db_macros::ODataFilterable;
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, ODataFilterable)]
+pub struct UserDto {
+    #[odata(filter(kind = "Uuid"))]
+    pub id: Uuid,
+    #[odata(filter(kind = "String"))]
+    pub email: String,
+    #[odata(filter(kind = "DateTimeUtc"))]
+    pub created_at: DateTime<Utc>,
+    pub display_name: String,  // no #[odata] = not filterable
+}
+```
+
+This generates a `UserDtoFilterField` enum automatically with variants for each filterable field.
+
+**Supported field kinds**: `String`, `I64`, `F64`, `Bool`, `Uuid`, `DateTimeUtc`, `Date`, `Time`, `Decimal`
+
+### 2. Domain/Service Layer
+Work with transport-agnostic `FilterNode<F>` AST - no HTTP or SeaORM dependencies:
+
+```rust
+use modkit_db::odata::filter::FilterNode;
+use crate::api::rest::dto::UserDtoFilterField;
+
+pub struct UserService { /* ... */ }
+
+impl UserService {
+    pub async fn list_users(
+        &self,
+        filter: Option<FilterNode<UserDtoFilterField>>,
+        order: ODataOrderBy,
+        limit: u64,
+    ) -> Result<Page<User>, DomainError> {
+        self.repo.list_with_odata(filter, order, limit).await
+    }
+}
+```
+
+### 3. Infrastructure Layer
+Map FilterField to SeaORM columns via `ODataFieldMapping` trait:
+
+```rust
+use modkit_db::odata::sea_orm_filter::{FieldToColumn, ODataFieldMapping};
+
+pub struct UserODataMapper;
+
+impl FieldToColumn<UserDtoFilterField> for UserODataMapper {
+    type Column = Column;  // SeaORM Column enum
+    
+    fn map_field(field: UserDtoFilterField) -> Column {
+        match field {
+            UserDtoFilterField::Id => Column::Id,
+            UserDtoFilterField::Email => Column::Email,
+            UserDtoFilterField::CreatedAt => Column::CreatedAt,
+        }
+    }
+}
+
+impl ODataFieldMapping<UserDtoFilterField> for UserODataMapper {
+    type Entity = Entity;
+    
+    fn extract_cursor_value(model: &Model, field: UserDtoFilterField) -> sea_orm::Value {
+        match field {
+            UserDtoFilterField::Id => sea_orm::Value::Uuid(Some(Box::new(model.id))),
+            UserDtoFilterField::Email => sea_orm::Value::String(Some(Box::new(model.email.clone()))),
+            UserDtoFilterField::CreatedAt => sea_orm::Value::ChronoDateTimeUtc(Some(Box::new(model.created_at))),
+        }
+    }
+}
+```
+
+### Repository Usage
+
+```rust
+use modkit_db::odata::sea_orm_filter::{paginate_odata, LimitCfg};
+
+pub async fn list_with_odata(
+    &self,
+    filter: Option<FilterNode<UserDtoFilterField>>,
+    order: ODataOrderBy,
+    limit: u64,
+) -> Result<Page<User>, RepoError> {
+    let odata_query = ODataQuery {
+        filter: filter.map(|f| /* convert to AST string if needed */),
+        order: Some(order),
+        limit: Some(limit),
+        cursor: None,
+        filter_hash: None,
+    };
+    
+    let page = paginate_odata::<UserDtoFilterField, UserODataMapper, _, _, _, _>(
+        base_query,
+        conn,
+        &odata_query,
+        ("id", SortDir::Desc),  // tiebreaker
+        LimitCfg { default: 25, max: 1000 },
+        |model| model.into(),  // map to domain
+    ).await?;
+    
+    Ok(page)
+}
+```
+
+## Usage (4 steps)
+1. In REST DTO: `#[derive(ODataFilterable)]` with `#[odata(filter(kind = "..."))]` on filterable fields.
+2. In the handler: `OData(q)` extractor (Axum) → pass `q` down to service.
+3. In repo/infra: implement `ODataFieldMapping<F>` mapper, call `paginate_odata(...)` and return `Page<T>`.
+4. In REST: map `ODataError` to Problem via `odata_page_error_to_problem`.
 
 ### Notes
 - If `cursor` present, `$orderby` must be omitted (400 ORDER_WITH_CURSOR).
 - Cursors are opaque, Base64URL v1; include signed order `s` and filter hash `f`.
 - Order must include a unique tiebreaker (e.g., `id`), enforced via helper.
+- The `#[odata(filter(kind = "..."))]` attribute is required for each filterable field.
+- Non-annotated fields are automatically excluded from filtering.
 
 
 ---

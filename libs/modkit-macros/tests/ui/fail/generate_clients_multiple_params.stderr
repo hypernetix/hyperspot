@@ -1,0 +1,5 @@
+error: Second parameter must be &SecurityCtx (a reference)
+ --> tests/ui/fail/generate_clients_multiple_params.rs:6:34
+  |
+6 |     async fn get_item(&self, id: String, name: String) -> Result<String, anyhow::Error>;
+  |                                  ^^^^^^

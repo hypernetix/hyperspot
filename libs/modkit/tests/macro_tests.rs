@@ -5,10 +5,9 @@ use async_trait::async_trait;
 use tokio_util::sync::CancellationToken;
 
 use modkit::{
-    context::{ConfigProvider, ModuleCtx},
+    config::ConfigProvider,
     contracts::{DbModule, Module, OpenApiRegistry, RestHostModule, RestfulModule, StatefulModule},
-    module,
-    registry::ModuleRegistry,
+    module, ModuleCtx,
 };
 use std::sync::Arc;
 
@@ -277,27 +276,6 @@ async fn test_full_capabilities() {
     let token = CancellationToken::new();
     FullFeaturedModule.start(token.clone()).await.unwrap();
     FullFeaturedModule.stop(token).await.unwrap();
-}
-
-#[tokio::test]
-async fn test_registry_discovery_and_phases() {
-    // inventory sees the modules above (module-scope)
-    let registry = ModuleRegistry::discover_and_build().expect("registry builds");
-
-    // Build ctx
-    let cancel = CancellationToken::new();
-    let ctx = test_module_ctx(cancel.clone());
-
-    // init → REST → start → stop
-    registry.run_init_phase(&ctx).await.unwrap();
-
-    let app = registry.run_rest_phase(&ctx, axum::Router::new()).unwrap();
-
-    // app is a Router; just ensure type compiles
-    let _ = app;
-
-    registry.run_start_phase(cancel.clone()).await.unwrap();
-    registry.run_stop_phase(cancel).await.unwrap();
 }
 
 #[test]

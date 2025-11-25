@@ -8,9 +8,9 @@ description = "HyperSpot Server"
 [workspace]
 members = [
     "apps/hyperspot-server",
-    "libs/runtime",
+    "libs/modkit-bootstrap",
     "libs/modkit",
-    "libs/modkit/macros",
+    "libs/modkit-macros",
     "libs/modkit-db",
     "libs/modkit-db-macros",
     "libs/modkit-auth",
@@ -18,7 +18,10 @@ members = [
     "libs/modkit-errors",
     "libs/modkit-errors-macro",
     "libs/modkit-odata",
+    "libs/modkit-transport-grpc",
     "modules/api_ingress",
+    "modules/directory_service",
+    "modules/grpc_hub",
     "examples/modkit/users_info"
 ]
 resolver = "2"

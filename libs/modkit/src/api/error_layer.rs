@@ -8,7 +8,7 @@ use axum::{extract::Request, http::HeaderMap, middleware::Next, response::Respon
 use std::any::Any;
 
 use crate::api::problem::Problem;
-use crate::context::ConfigError;
+use crate::config::ConfigError;
 use modkit_odata::Error as ODataError;
 
 /// Middleware function that provides centralized error mapping

@@ -1,5 +1,0 @@
-error: duplicate `name` parameter
- --> tests/ui/fail/duplicate_name.rs:3:20
-  |
-3 | #[module(name="a", name="b", capabilities=[stateful])]
-  |                    ^^^^

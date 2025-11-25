@@ -1,0 +1,19 @@
+[package]
+name = "modkit-transport-grpc"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+tonic = { version = "0.14", features = ["transport"] }
+modkit-security = { path = "../modkit-security", features = ["serde"] }
+tower = "0.5"
+anyhow = "1.0"
+tracing = "0.1"
+tokio = { workspace = true }
+tokio-util = { version = "0.7", features = ["rt"] }
+tokio-stream = { version = "0.1", features = ["net"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt", "macros", "time"] }
+

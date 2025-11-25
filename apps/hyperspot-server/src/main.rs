@@ -2,7 +2,7 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 use figment::Figment;
 use mimalloc::MiMalloc;
-use runtime::{AppConfig, AppConfigProvider, CliArgs, ConfigProvider};
+use modkit_bootstrap::{AppConfig, AppConfigProvider, CliArgs, ConfigProvider};
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -28,6 +28,9 @@ impl modkit::ConfigProvider for ModkitConfigAdapter {
 fn _ensure_modules_linked() {
     // Make sure all modules are linked
     let _ = std::any::type_name::<api_ingress::ApiIngress>();
+    let _ = std::any::type_name::<grpc_hub::GrpcHub>();
+    let _ = std::any::type_name::<directory_service::DirectoryServiceModule>();
+
     #[cfg(feature = "users-info-example")]
     let _ = std::any::type_name::<users_info::UsersInfo>();
 }
@@ -112,7 +115,7 @@ async fn main() -> Result<()> {
 
     // Initialize logging + otel in one Registry
     let logging_config = config.logging.as_ref().cloned().unwrap_or_default();
-    runtime::logging::init_logging_from_config_with_otel(
+    modkit_bootstrap::logging::init_logging_unified(
         &logging_config,
         Path::new(&config.server.home_dir),
         otel_layer,

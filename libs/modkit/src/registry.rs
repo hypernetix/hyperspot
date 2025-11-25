@@ -1,15 +1,11 @@
 // modkit/src/registry/mod.rs
-use axum::Router;
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
-use tokio_util::sync::CancellationToken;
 
 use thiserror::Error;
 
 // Re-exported contracts are referenced but not defined here.
-use crate::context;
 use crate::contracts;
-use modkit_db;
 
 /// Type alias for REST host module configuration.
 type RestHostEntry = (&'static str, Arc<dyn contracts::RestHostModule>);
@@ -22,6 +18,9 @@ pub struct ModuleEntry {
     pub rest_host: Option<Arc<dyn contracts::RestHostModule>>,
     pub db: Option<Arc<dyn contracts::DbModule>>,
     pub stateful: Option<Arc<dyn contracts::StatefulModule>>,
+    pub is_system: bool,
+    pub is_grpc_hub: bool,
+    pub grpc_service: Option<Arc<dyn contracts::GrpcServiceModule>>,
 }
 
 impl std::fmt::Debug for ModuleEntry {
@@ -33,6 +32,9 @@ impl std::fmt::Debug for ModuleEntry {
             .field("is_rest_host", &self.rest_host.is_some())
             .field("has_db", &self.db.is_some())
             .field("has_stateful", &self.stateful.is_some())
+            .field("is_system", &self.is_system)
+            .field("is_grpc_hub", &self.is_grpc_hub)
+            .field("has_grpc_service", &self.grpc_service.is_some())
             .finish()
     }
 }
@@ -46,6 +48,8 @@ inventory::collect!(Registrator);
 /// The final, topo-sorted runtime registry.
 pub struct ModuleRegistry {
     modules: Vec<ModuleEntry>, // topo-sorted
+    pub grpc_hub: Option<String>,
+    pub grpc_services: Vec<(String, Arc<dyn contracts::GrpcServiceModule>)>,
 }
 
 impl std::fmt::Debug for ModuleRegistry {
@@ -53,6 +57,8 @@ impl std::fmt::Debug for ModuleRegistry {
         let names: Vec<&'static str> = self.modules.iter().map(|m| m.name).collect();
         f.debug_struct("ModuleRegistry")
             .field("modules", &names)
+            .field("has_grpc_hub", &self.grpc_hub.is_some())
+            .field("grpc_services_count", &self.grpc_services.len())
             .finish()
     }
 }
@@ -62,6 +68,25 @@ impl ModuleRegistry {
         &self.modules
     }
 
+    /// Returns modules ordered by system priority.
+    /// System modules come first, followed by non-system modules.
+    /// Within each group, the original topological order is preserved.
+    pub fn modules_by_system_priority(&self) -> Vec<&ModuleEntry> {
+        let mut system_mods = Vec::new();
+        let mut non_system_mods = Vec::new();
+
+        for entry in &self.modules {
+            if entry.is_system {
+                system_mods.push(entry);
+            } else {
+                non_system_mods.push(entry);
+            }
+        }
+
+        system_mods.extend(non_system_mods);
+        system_mods
+    }
+
     /// Discover via inventory, have registrators fill the builder, then build & topo-sort.
     pub fn discover_and_build() -> Result<Self, RegistryError> {
         let mut b = RegistryBuilder::default();
@@ -69,214 +94,6 @@ impl ModuleRegistry {
             r.0(&mut b);
         }
         b.build_topo_sorted()
-    }
-
-    // ---- Ordered phases: DB → init → REST (sync) → start → stop ----
-
-    pub async fn run_init_phase(&self, base_ctx: &context::ModuleCtx) -> Result<(), RegistryError> {
-        for e in &self.modules {
-            e.core
-                .init(base_ctx)
-                .await
-                .map_err(|source| RegistryError::Init {
-                    module: e.name,
-                    source,
-                })?;
-        }
-        Ok(())
-    }
-
-    pub async fn run_db_phase(&self, db: &modkit_db::DbHandle) -> Result<(), RegistryError> {
-        for e in &self.modules {
-            if let Some(dbm) = &e.db {
-                // If you want advisory locks, do it here (kept minimal for portability):
-                // let _lock = db.lock(e.name, "migration").await?;
-                dbm.migrate(db)
-                    .await
-                    .map_err(|source| RegistryError::DbMigrate {
-                        module: e.name,
-                        source,
-                    })?;
-            }
-        }
-        Ok(())
-    }
-
-    /// Run REST phase using ModuleContextBuilder to create per-module contexts.
-    pub async fn run_rest_phase_with_builder(
-        &self,
-        ctx_builder: &context::ModuleContextBuilder,
-        mut router: Router,
-    ) -> Result<Router, RegistryError> {
-        // Find host(s) and whether any rest modules exist
-        let hosts: Vec<_> = self
-            .modules
-            .iter()
-            .filter(|e| e.rest_host.is_some())
-            .collect();
-
-        match hosts.len() {
-            0 => {
-                return if self.modules.iter().any(|e| e.rest.is_some()) {
-                    Err(RegistryError::RestRequiresHost)
-                } else {
-                    Ok(router)
-                }
-            }
-            1 => { /* proceed */ }
-            _ => return Err(RegistryError::MultipleRestHosts),
-        }
-
-        // Resolve the single host entry and its module context
-        let host_idx = self
-            .modules
-            .iter()
-            .position(|e| e.rest_host.is_some())
-            .ok_or(RegistryError::RestHostNotFoundAfterValidation)?;
-        let host_entry = &self.modules[host_idx];
-        let Some(host) = host_entry.rest_host.as_ref() else {
-            return Err(RegistryError::RestHostMissingFromEntry);
-        };
-        let host_ctx = ctx_builder.for_module(host_entry.name).await.map_err(|e| {
-            RegistryError::RestPrepare {
-                module: host_entry.name,
-                source: e,
-            }
-        })?;
-
-        // use host as the registry
-        let registry: &dyn contracts::OpenApiRegistry = host.as_registry();
-
-        // 1) Host prepare: base Router / global middlewares / basic OAS meta
-        router =
-            host.rest_prepare(&host_ctx, router)
-                .map_err(|source| RegistryError::RestPrepare {
-                    module: host_entry.name,
-                    source,
-                })?;
-
-        // 2) Register all REST providers (in the current discovery order)
-        for e in &self.modules {
-            if let Some(rest) = &e.rest {
-                let ctx = ctx_builder.for_module(e.name).await.map_err(|err| {
-                    RegistryError::RestRegister {
-                        module: e.name,
-                        source: err,
-                    }
-                })?;
-                router = rest
-                    .register_rest(&ctx, router, registry)
-                    .map_err(|source| RegistryError::RestRegister {
-                        module: e.name,
-                        source,
-                    })?;
-            }
-        }
-
-        // 3) Host finalize: attach /openapi.json and /docs, persist Router if needed (no server start)
-        router = host.rest_finalize(&host_ctx, router).map_err(|source| {
-            RegistryError::RestFinalize {
-                module: host_entry.name,
-                source,
-            }
-        })?;
-
-        Ok(router)
-    }
-
-    /// Sync REST phase for tests
-    pub fn run_rest_phase(
-        &self,
-        base_ctx: &context::ModuleCtx,
-        mut router: Router,
-    ) -> Result<Router, RegistryError> {
-        // Find host(s) and whether any rest modules exist
-        let hosts: Vec<_> = self
-            .modules
-            .iter()
-            .filter(|e| e.rest_host.is_some())
-            .collect();
-
-        match hosts.len() {
-            0 => {
-                return if self.modules.iter().any(|e| e.rest.is_some()) {
-                    Err(RegistryError::RestRequiresHost)
-                } else {
-                    Ok(router)
-                }
-            }
-            1 => { /* proceed */ }
-            _ => return Err(RegistryError::MultipleRestHosts),
-        }
-
-        // Resolve the single host entry and its module context
-        let host_idx = self
-            .modules
-            .iter()
-            .position(|e| e.rest_host.is_some())
-            .ok_or(RegistryError::RestHostNotFoundAfterValidation)?;
-        let host_entry = &self.modules[host_idx];
-        let Some(host) = host_entry.rest_host.as_ref() else {
-            return Err(RegistryError::RestHostMissingFromEntry);
-        };
-
-        // use host as the registry
-        let registry: &dyn contracts::OpenApiRegistry = host.as_registry();
-
-        // 1) Host prepare: base Router / global middlewares / basic OAS meta
-        router =
-            host.rest_prepare(base_ctx, router)
-                .map_err(|source| RegistryError::RestPrepare {
-                    module: host_entry.name,
-                    source,
-                })?;
-
-        // 2) Register all REST providers (in the current discovery order)
-        for e in &self.modules {
-            if let Some(rest) = &e.rest {
-                router = rest
-                    .register_rest(base_ctx, router, registry)
-                    .map_err(|source| RegistryError::RestRegister {
-                        module: e.name,
-                        source,
-                    })?;
-            }
-        }
-
-        // 3) Host finalize: attach /openapi.json and /docs, persist Router if needed (no server start)
-        router =
-            host.rest_finalize(base_ctx, router)
-                .map_err(|source| RegistryError::RestFinalize {
-                    module: host_entry.name,
-                    source,
-                })?;
-
-        Ok(router)
-    }
-
-    pub async fn run_start_phase(&self, cancel: CancellationToken) -> Result<(), RegistryError> {
-        for e in &self.modules {
-            if let Some(s) = &e.stateful {
-                s.start(cancel.clone())
-                    .await
-                    .map_err(|source| RegistryError::Start {
-                        module: e.name,
-                        source,
-                    })?;
-            }
-        }
-        Ok(())
-    }
-
-    pub async fn run_stop_phase(&self, cancel: CancellationToken) -> Result<(), RegistryError> {
-        for e in self.modules.iter().rev() {
-            if let Some(s) = &e.stateful {
-                if let Err(err) = s.stop(cancel.clone()).await {
-                    tracing::warn!(module = e.name, error = %err, "Failed to stop module");
-                }
-            }
-        }
-        Ok(())
     }
 
     /// (Optional) quick lookup if you need it.
@@ -298,6 +115,9 @@ pub struct RegistryBuilder {
     rest_host: Option<RestHostEntry>,
     db: HashMap<&'static str, Arc<dyn contracts::DbModule>>,
     stateful: HashMap<&'static str, Arc<dyn contracts::StatefulModule>>,
+    system_modules: std::collections::HashSet<&'static str>,
+    grpc_hub: Option<&'static str>,
+    grpc_services: HashMap<&'static str, Arc<dyn contracts::GrpcServiceModule>>,
     errors: Vec<String>,
 }
 
@@ -350,6 +170,29 @@ impl RegistryBuilder {
         m: Arc<dyn contracts::StatefulModule>,
     ) {
         self.stateful.insert(name, m);
+    }
+
+    pub fn register_system_with_meta(&mut self, name: &'static str) {
+        self.system_modules.insert(name);
+    }
+
+    pub fn register_grpc_hub_with_meta(&mut self, name: &'static str) {
+        if let Some(existing) = &self.grpc_hub {
+            self.errors.push(format!(
+                "Multiple gRPC hub modules detected: '{}' and '{}'. Only one gRPC hub is allowed.",
+                existing, name
+            ));
+            return;
+        }
+        self.grpc_hub = Some(name);
+    }
+
+    pub fn register_grpc_service_with_meta(
+        &mut self,
+        name: &'static str,
+        m: Arc<dyn contracts::GrpcServiceModule>,
+    ) {
+        self.grpc_services.insert(name, m);
     }
 
     /// Detect cycles in the dependency graph using DFS with path tracking.
@@ -453,6 +296,16 @@ impl RegistryBuilder {
                 return Err(RegistryError::UnknownModule((*n).to_string()));
             }
         }
+        if let Some(n) = &self.grpc_hub {
+            if !self.core.contains_key(n) {
+                return Err(RegistryError::UnknownModule((*n).to_string()));
+            }
+        }
+        for (n, _) in self.grpc_services.iter() {
+            if !self.core.contains_key(n) {
+                return Err(RegistryError::UnknownModule((*n).to_string()));
+            }
+        }
 
         // 2) build graph over core modules and detect cycles
         let names: Vec<&'static str> = self.core.keys().copied().collect();
@@ -535,16 +388,35 @@ impl RegistryBuilder {
                     .map(|(_, module)| module.clone()),
                 db: self.db.get(name).cloned(),
                 stateful: self.stateful.get(name).cloned(),
+                is_system: self.system_modules.contains(name),
+                is_grpc_hub: self
+                    .grpc_hub
+                    .map(|hub_name| hub_name == name)
+                    .unwrap_or(false),
+                grpc_service: self.grpc_services.get(name).cloned(),
             };
             entries.push(entry);
         }
+
+        // Collect grpc_hub and grpc_services for the final registry
+        let grpc_hub = self.grpc_hub.map(|name| name.to_string());
+
+        let grpc_services: Vec<(String, Arc<dyn contracts::GrpcServiceModule>)> = self
+            .grpc_services
+            .iter()
+            .map(|(name, module)| (name.to_string(), module.clone()))
+            .collect();
 
         tracing::info!(
             modules = ?entries.iter().map(|e| e.name).collect::<Vec<_>>(),
             "Module dependency order resolved (topo)"
         );
 
-        Ok(ModuleRegistry { modules: entries })
+        Ok(ModuleRegistry {
+            modules: entries,
+            grpc_hub,
+            grpc_services,
+        })
     }
 }
 
@@ -598,6 +470,18 @@ pub enum RegistryError {
     #[error("REST host missing from entry")]
     RestHostMissingFromEntry,
 
+    // gRPC-related errors
+    #[error("gRPC registration failed for module '{module}'")]
+    GrpcRegister {
+        module: String,
+        #[source]
+        source: anyhow::Error,
+    },
+    #[error("gRPC phase requires a hub: modules with capability 'grpc' found, but no module with capability 'grpc_hub'")]
+    GrpcRequiresHub,
+    #[error("multiple 'grpc_hub' modules detected; exactly one is allowed")]
+    MultipleGrpcHubs,
+
     // Build/topo-sort errors
     #[error("unknown module '{0}'")]
     UnknownModule(String),
@@ -616,32 +500,11 @@ pub enum RegistryError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::Router;
     use std::sync::Arc;
-    use tokio_util::sync::CancellationToken;
 
     // Use the real contracts/context APIs from the crate to avoid type mismatches.
-    use crate::api::OpenApiRegistry;
-    use crate::context::{ConfigProvider, ModuleCtx};
+    use crate::context::ModuleCtx;
     use crate::contracts;
-
-    // Helper for tests
-    struct EmptyConfigProvider;
-    impl ConfigProvider for EmptyConfigProvider {
-        fn get_module_config(&self, _module_name: &str) -> Option<&serde_json::Value> {
-            None
-        }
-    }
-
-    fn test_module_ctx(cancel: CancellationToken) -> ModuleCtx {
-        ModuleCtx::new(
-            "test",
-            Arc::new(EmptyConfigProvider),
-            Arc::new(crate::client_hub::ClientHub::default()),
-            cancel,
-            None,
-        )
-    }
 
     /* --------------------------- Test helpers ------------------------- */
     #[derive(Default)]
@@ -653,56 +516,6 @@ mod tests {
         }
         fn as_any(&self) -> &dyn std::any::Any {
             self
-        }
-    }
-
-    #[derive(Default)]
-    struct DummyRegistry;
-    impl OpenApiRegistry for DummyRegistry {
-        fn register_operation(&self, _spec: &crate::api::OperationSpec) {}
-        fn ensure_schema_raw(
-            &self,
-            name: &str,
-            _schemas: Vec<(
-                String,
-                utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>,
-            )>,
-        ) -> String {
-            name.to_string()
-        }
-        fn as_any(&self) -> &dyn std::any::Any {
-            self
-        }
-    }
-
-    #[derive(Default)]
-    struct DummyRestHost {
-        reg: DummyRegistry,
-    }
-    #[async_trait::async_trait]
-    impl contracts::RestHostModule for DummyRestHost {
-        fn rest_prepare(&self, _ctx: &ModuleCtx, router: Router) -> Result<Router, anyhow::Error> {
-            Ok(router)
-        }
-        fn rest_finalize(&self, _ctx: &ModuleCtx, router: Router) -> Result<Router, anyhow::Error> {
-            Ok(router)
-        }
-        fn as_registry(&self) -> &dyn OpenApiRegistry {
-            &self.reg
-        }
-    }
-
-    #[derive(Default)]
-    struct DummyRest;
-    #[async_trait::async_trait]
-    impl contracts::RestfulModule for DummyRest {
-        fn register_rest(
-            &self,
-            _ctx: &ModuleCtx,
-            router: Router,
-            _registry: &dyn OpenApiRegistry,
-        ) -> Result<Router, anyhow::Error> {
-            Ok(router.route("/dummy", axum::routing::get(|| async { "ok" })))
         }
     }
 
@@ -799,60 +612,5 @@ mod tests {
             }
             other => panic!("unexpected error: {other:?}"),
         }
-    }
-
-    #[test]
-    fn rest_requires_host_if_rest_modules_exist() {
-        // Build with 1 core that has REST capability, but no rest host.
-        let mut b = RegistryBuilder::default();
-        b.register_core_with_meta("svc", &[], Arc::new(DummyCore));
-        b.register_rest_with_meta("svc", Arc::new(DummyRest));
-        let reg = b.build_topo_sorted().unwrap();
-
-        let router = Router::new();
-        let base_ctx = test_module_ctx(CancellationToken::new());
-        let err = reg.run_rest_phase(&base_ctx, router).unwrap_err();
-        matches!(err, RegistryError::RestRequiresHost);
-    }
-
-    #[test]
-    fn rest_single_host_and_provider_happy_path() {
-        // Build with one host and one REST provider
-        let mut b = RegistryBuilder::default();
-        b.register_core_with_meta("host", &[], Arc::new(DummyCore));
-        b.register_rest_host_with_meta("host", Arc::new(DummyRestHost::default()));
-
-        b.register_core_with_meta("svc", &[], Arc::new(DummyCore));
-        b.register_rest_with_meta("svc", Arc::new(DummyRest));
-
-        let reg = b.build_topo_sorted().unwrap();
-
-        let router = Router::new();
-        let base_ctx = test_module_ctx(CancellationToken::new());
-        let router = reg.run_rest_phase(&base_ctx, router).unwrap();
-
-        // The DummyRest adds /dummy endpoint during register_rest
-        // (We don't spin a server; just ensure Router returned successfully.)
-        let _ = router;
-    }
-
-    #[tokio::test]
-    async fn phases_run_without_errors_with_empty_implementations() {
-        // No REST, DB, or stateful modules; only init/start/stop with defaults.
-        let mut b = RegistryBuilder::default();
-        b.register_core_with_meta("a", &[], Arc::new(DummyCore));
-        b.register_core_with_meta("b", &["a"], Arc::new(DummyCore));
-        let reg = b.build_topo_sorted().unwrap();
-
-        // init
-        let ctx = test_module_ctx(CancellationToken::new());
-        reg.run_init_phase(&ctx).await.unwrap();
-
-        // db phase skipped because no modules implement DbModule
-
-        // start/stop
-        let cancel = CancellationToken::new();
-        reg.run_start_phase(cancel.child_token()).await.unwrap();
-        reg.run_stop_phase(cancel.child_token()).await.unwrap();
     }
 }

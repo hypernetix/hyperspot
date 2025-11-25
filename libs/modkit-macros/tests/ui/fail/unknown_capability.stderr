@@ -1,0 +1,5 @@
+error: unknown capability 'foo', expected one of: db, rest, rest_host, stateful, system, grpc_hub, grpc
+ --> tests/ui/fail/unknown_capability.rs:3:34
+  |
+3 | #[module(name="x", capabilities=[foo])]
+  |                                  ^^^

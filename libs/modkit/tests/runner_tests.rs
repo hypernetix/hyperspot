@@ -12,10 +12,11 @@ use tokio::time::timeout;
 use tokio_util::sync::CancellationToken;
 
 use modkit::{
-    context::{ConfigProvider, ModuleCtx},
+    config::ConfigProvider,
     contracts::{DbModule, Module, OpenApiRegistry, RestfulModule, StatefulModule},
     registry::{ModuleRegistry, RegistryBuilder},
     runtime::{run, DbOptions, RunOptions, ShutdownOptions},
+    ModuleCtx,
 };
 
 // Test tracking infrastructure

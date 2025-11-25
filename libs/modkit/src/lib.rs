@@ -70,11 +70,15 @@ pub use inventory;
 
 // Module system exports
 pub use crate::contracts::*;
+pub use crate::contracts::{GrpcServiceModule, RegisterGrpcServiceFn};
+
+// Configuration module
+pub mod config;
+pub use config::{module_config_or_default, module_config_required, ConfigError, ConfigProvider};
+
+// Context module
 pub mod context;
-pub use context::{
-    module_config_typed, ConfigError, ConfigProvider, ConfigProviderExt, ModuleContextBuilder,
-    ModuleCtx,
-};
+pub use context::{ModuleContextBuilder, ModuleCtx};
 
 // Module system implementations for macro code
 pub mod client_hub;
@@ -115,8 +119,15 @@ pub mod errors;
 pub mod result;
 pub use result::ApiResult;
 
+// Directory API for service discovery
+pub mod directory;
+pub use directory::{DirectoryApi, ServiceInstanceInfo};
+
 pub use lifecycle::{Lifecycle, Runnable, Status, StopReason, WithLifecycle};
-pub use runtime::{run, DbOptions, RunOptions, ShutdownOptions};
+pub use runtime::{
+    run, BackendKind, DbOptions, Endpoint, InstanceHandle, LocalProcessBackend, ModuleInstance,
+    ModuleManager, ModuleName, ModuleRuntimeBackend, OopModuleConfig, RunOptions, ShutdownOptions,
+};
 
 #[cfg(test)]
 mod tests;
