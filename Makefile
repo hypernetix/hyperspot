@@ -67,6 +67,13 @@ dev-test:
 
 example:
 	cargo run --bin hyperspot-server --features users-info-example -- --config config/quickstart.yaml
+# Quick start helpers
+quickstart:
+	mkdir -p data
+	cargo run --bin hyperspot-server -- --config config/quickstart.yaml run
+
+example:
+	cargo run --bin hyperspot-server --features users-info-example -- --config config/quickstart.yaml run
 
 # Integration testing with testcontainers
 .PHONY: test-sqlite test-pg test-mysql test-all test-users-info-pg
@@ -100,3 +107,6 @@ e2e-local:
 # Run E2E tests in Docker environment
 e2e-docker:
 	python3 scripts/ci.py e2e --docker
+coverage:
+	@echo "Code coverage is not implemented yet"
+	@exit -1

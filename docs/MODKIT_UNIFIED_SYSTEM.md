@@ -28,6 +28,11 @@ modules/<name>/
   │  ├─ lib.rs                       # module declaration, exports
   │  ├─ module.rs                    # main struct + Module/Db/Rest/Stateful impls
   │  ├─ config.rs                    # typed config (optional)
+  │  ├─ api/
+  │  │  └─ rest/
+  │  │     ├─ dto.rs                 # HTTP DTOs (serde/utoipa) — REST-only types
+  │  │     ├─ handlers.rs            # Axum handlers (web controllers)
+  │  │     └─ routes.rs              # route & OpenAPI registration (OperationBuilder)
   │  ├─ contract/                    # public API surface (for other modules)
   │  │  ├─ mod.rs
   │  │  ├─ client.rs                 # traits for ClientHub and DTOs
@@ -38,19 +43,14 @@ modules/<name>/
   │  │  ├─ model.rs                  # rich domain models
   │  │  ├─ error.rs
   │  │  └─ service.rs                # orchestration/business rules
-  │  ├─ infra/                       # “low-level”: DB, system, IO, adapters
-  │  │  ├─ storage/
-  │  │  │  ├─ entity.rs              # e.g., SeaORM entities / SQL mappings
-  │  │  │  ├─ mapper.rs              # entity <-> contract conversions (From impls)
-  │  │  │  └─ migrations/
-  │  │  │     ├─ mod.rs
-  │  │  │     └─ initial_001.rs
-  │  │  └─ (other platform adapters)
-  │  └─ api/
-  │     └─ rest/
-  │        ├─ dto.rs                 # HTTP DTOs (serde/utoipa) — REST-only types
-  │        ├─ handlers.rs            # Axum handlers (web controllers)
-  │        └─ routes.rs              # route & OpenAPI registration (OperationBuilder)
+  │  └─ infra/                       # “low-level”: DB, system, IO, adapters
+  │     ├─ storage/
+  │     │  ├─ entity.rs              # e.g., SeaORM entities / SQL mappings
+  │     │  ├─ mapper.rs              # entity <-> contract conversions (From impls)
+  │     │  └─ migrations/
+  │     │     ├─ mod.rs
+  │     │     └─ initial_001.rs
+  │     └─ (other platform adapters)
   ├─ spec/
   │  └─ proto/                       # proto files (if present)
   └─ Cargo.toml
