@@ -106,7 +106,9 @@ fn test_cli_config_validation_missing_file() {
 
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("does not exist") || stderr.contains("not found") || stderr.contains("config"),
+        stderr.contains("does not exist")
+            || stderr.contains("not found")
+            || stderr.contains("config"),
         "Should indicate config file not found: {}",
         stderr
     );
@@ -363,7 +365,9 @@ fn test_cli_config_flag_short_form() {
 
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("does not exist") || stderr.contains("not found") || stderr.contains("config"),
+        stderr.contains("does not exist")
+            || stderr.contains("not found")
+            || stderr.contains("config"),
         "Should indicate config file not found using short flag: {}",
         stderr
     );
