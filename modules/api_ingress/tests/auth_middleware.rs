@@ -112,8 +112,8 @@ impl RestfulModule for TestAuthModule {
             .summary("Protected endpoint")
             .handler(protected_handler)
             .json_response_with_schema::<TestResponse>(openapi, http::StatusCode::OK, "Success")
-            .problem_response(openapi, http::StatusCode::UNAUTHORIZED, "Unauthorized")
-            .problem_response(openapi, http::StatusCode::FORBIDDEN, "Forbidden")
+            .error_401(openapi)
+            .error_403(openapi)
             .register(router, openapi);
 
         // Protected route with path parameter (to test pattern matching)
@@ -124,8 +124,8 @@ impl RestfulModule for TestAuthModule {
             .path_param("id", "User ID")
             .handler(protected_handler)
             .json_response_with_schema::<TestResponse>(openapi, http::StatusCode::OK, "Success")
-            .problem_response(openapi, http::StatusCode::UNAUTHORIZED, "Unauthorized")
-            .problem_response(openapi, http::StatusCode::FORBIDDEN, "Forbidden")
+            .error_401(openapi)
+            .error_403(openapi)
             .register(router, openapi);
 
         // Public route with explicit public marking

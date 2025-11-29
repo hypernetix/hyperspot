@@ -27,8 +27,8 @@ pub fn register_routes(
         .json_response_with_schema::<modkit_odata::Page<dto::UserDto>>(openapi, http::StatusCode::OK, "Paginated list of users")
         .with_odata_filter_doc("OData v4 filter. Examples: `email eq 'test@example.com'`, `contains(email,'@acme.com')`")
         .query_param("$orderby", false, "OData orderby clause. Example: 'created_at desc, id desc'")
-        .problem_response(openapi, http::StatusCode::BAD_REQUEST, "Bad Request")
-        .problem_response(openapi, http::StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error")
+        .error_400(openapi)
+        .error_500(openapi)
         .register(router, openapi);
 
     // GET /users/{id} - Get a specific user
@@ -41,14 +41,10 @@ pub fn register_routes(
         .path_param("id", "User UUID")
         .handler(handlers::get_user)
         .json_response_with_schema::<dto::UserDto>(openapi, http::StatusCode::OK, "User found")
-        .problem_response(openapi, http::StatusCode::UNAUTHORIZED, "Unauthorized")
-        .problem_response(openapi, http::StatusCode::FORBIDDEN, "Forbidden")
-        .problem_response(openapi, http::StatusCode::NOT_FOUND, "Not Found")
-        .problem_response(
-            openapi,
-            http::StatusCode::INTERNAL_SERVER_ERROR,
-            "Internal Server Error",
-        )
+        .error_401(openapi)
+        .error_403(openapi)
+        .error_404(openapi)
+        .error_500(openapi)
         .register(router, openapi);
 
     // POST /users - Create a new user
@@ -65,15 +61,11 @@ pub fn register_routes(
             http::StatusCode::CREATED,
             "Created user",
         )
-        .problem_response(openapi, http::StatusCode::BAD_REQUEST, "Bad Request")
-        .problem_response(openapi, http::StatusCode::UNAUTHORIZED, "Unauthorized")
-        .problem_response(openapi, http::StatusCode::FORBIDDEN, "Forbidden")
-        .problem_response(openapi, http::StatusCode::CONFLICT, "Conflict")
-        .problem_response(
-            openapi,
-            http::StatusCode::INTERNAL_SERVER_ERROR,
-            "Internal Server Error",
-        )
+        .error_400(openapi)
+        .error_401(openapi)
+        .error_403(openapi)
+        .error_409(openapi)
+        .error_500(openapi)
         .register(router, openapi);
 
     // PUT /users/{id} - Update a user
@@ -87,16 +79,12 @@ pub fn register_routes(
         .json_request::<dto::UpdateUserReq>(openapi, "User update data")
         .handler(handlers::update_user)
         .json_response_with_schema::<dto::UserDto>(openapi, http::StatusCode::OK, "Updated user")
-        .problem_response(openapi, http::StatusCode::BAD_REQUEST, "Bad Request")
-        .problem_response(openapi, http::StatusCode::UNAUTHORIZED, "Unauthorized")
-        .problem_response(openapi, http::StatusCode::FORBIDDEN, "Forbidden")
-        .problem_response(openapi, http::StatusCode::NOT_FOUND, "Not Found")
-        .problem_response(openapi, http::StatusCode::CONFLICT, "Conflict")
-        .problem_response(
-            openapi,
-            http::StatusCode::INTERNAL_SERVER_ERROR,
-            "Internal Server Error",
-        )
+        .error_400(openapi)
+        .error_401(openapi)
+        .error_403(openapi)
+        .error_404(openapi)
+        .error_409(openapi)
+        .error_500(openapi)
         .register(router, openapi);
 
     // DELETE /users/{id} - Delete a user
@@ -109,14 +97,10 @@ pub fn register_routes(
         .path_param("id", "User UUID")
         .handler(handlers::delete_user)
         .json_response(http::StatusCode::NO_CONTENT, "User deleted successfully")
-        .problem_response(openapi, http::StatusCode::UNAUTHORIZED, "Unauthorized")
-        .problem_response(openapi, http::StatusCode::FORBIDDEN, "Forbidden")
-        .problem_response(openapi, http::StatusCode::NOT_FOUND, "Not Found")
-        .problem_response(
-            openapi,
-            http::StatusCode::INTERNAL_SERVER_ERROR,
-            "Internal Server Error",
-        )
+        .error_401(openapi)
+        .error_403(openapi)
+        .error_404(openapi)
+        .error_500(openapi)
         .register(router, openapi);
 
     router = router.layer(Extension(service.clone()));

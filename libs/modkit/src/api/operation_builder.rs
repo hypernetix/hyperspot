@@ -1150,6 +1150,13 @@ where
         self.problem_response(registry, http::StatusCode::NOT_FOUND, "Not Found")
     }
 
+    /// Add a 409 Conflict error response.
+    ///
+    /// This is a convenience wrapper around `problem_response`.
+    pub fn error_409(self, registry: &dyn OpenApiRegistry) -> Self {
+        self.problem_response(registry, http::StatusCode::CONFLICT, "Conflict")
+    }
+
     /// Add a 415 Unsupported Media Type error response.
     ///
     /// This is a convenience wrapper around `problem_response`.
@@ -1169,6 +1176,17 @@ where
             registry,
             http::StatusCode::UNPROCESSABLE_ENTITY,
             "Unprocessable Entity",
+        )
+    }
+
+    /// Add a 429 Too Many Requests error response.
+    ///
+    /// This is a convenience wrapper around `problem_response`.
+    pub fn error_429(self, registry: &dyn OpenApiRegistry) -> Self {
+        self.problem_response(
+            registry,
+            http::StatusCode::TOO_MANY_REQUESTS,
+            "Too Many Requests",
         )
     }
 

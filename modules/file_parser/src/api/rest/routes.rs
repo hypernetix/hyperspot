@@ -45,11 +45,7 @@ pub fn register_routes(
             "Parsed document with optional markdown",
         )
         .standard_errors(openapi)
-        .problem_response(
-            openapi,
-            http::StatusCode::UNSUPPORTED_MEDIA_TYPE,
-            "Unsupported Media Type",
-        )
+        .error_415(openapi)
         .register(router, openapi);
 
     // POST /file-parser/upload - Upload and parse a file
@@ -78,11 +74,7 @@ pub fn register_routes(
             "Parsed document with optional markdown",
         )
         .standard_errors(openapi)
-        .problem_response(
-            openapi,
-            http::StatusCode::UNSUPPORTED_MEDIA_TYPE,
-            "Unsupported Media Type",
-        )
+        .error_415(openapi)
         .register(router, openapi);
 
     // POST /file-parser/parse-url - Parse a file from a URL
@@ -106,11 +98,7 @@ pub fn register_routes(
             "Parsed document with optional markdown",
         )
         .standard_errors(openapi)
-        .problem_response(
-            openapi,
-            http::StatusCode::UNSUPPORTED_MEDIA_TYPE,
-            "Unsupported Media Type",
-        )
+        .error_415(openapi)
         .register(router, openapi);
 
     // POST /file-parser/parse-local/markdown - Parse a local file and stream Markdown
@@ -136,11 +124,7 @@ pub fn register_routes(
         .handler(handlers::upload_and_parse_markdown)
         .text_response(http::StatusCode::OK, "Markdown stream", "text/markdown")
         .standard_errors(openapi)
-        .problem_response(
-            openapi,
-            http::StatusCode::UNSUPPORTED_MEDIA_TYPE,
-            "Unsupported Media Type",
-        )
+        .error_415(openapi)
         .register(router, openapi);
 
     // POST /file-parser/parse-url/markdown - Parse a file from a URL and stream Markdown
@@ -154,11 +138,7 @@ pub fn register_routes(
         .handler(handlers::parse_url_markdown)
         .text_response(http::StatusCode::OK, "Markdown stream", "text/markdown")
         .standard_errors(openapi)
-        .problem_response(
-            openapi,
-            http::StatusCode::UNSUPPORTED_MEDIA_TYPE,
-            "Unsupported Media Type",
-        )
+        .error_415(openapi)
         .register(router, openapi);
 
     router = router.layer(Extension(service.clone()));
