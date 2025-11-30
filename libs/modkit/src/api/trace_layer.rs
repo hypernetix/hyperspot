@@ -62,7 +62,9 @@ mod tests {
 
     #[test]
     fn test_with_trace_context() {
-        let problem = Problem::new(404, "Not Found", "Resource not found")
+        use http::StatusCode;
+
+        let problem = Problem::new(StatusCode::NOT_FOUND, "Not Found", "Resource not found")
             .with_trace_context("/api/users/123");
 
         assert_eq!(problem.instance, "/api/users/123");
@@ -72,10 +74,11 @@ mod tests {
     #[test]
     fn test_with_request_context() {
         use axum::http::Uri;
+        use http::StatusCode;
 
         let uri: Uri = "/api/users/123".parse().unwrap();
-        let problem =
-            Problem::new(404, "Not Found", "Resource not found").with_request_context(&uri);
+        let problem = Problem::new(StatusCode::NOT_FOUND, "Not Found", "Resource not found")
+            .with_request_context(&uri);
 
         assert_eq!(problem.instance, "/api/users/123");
     }

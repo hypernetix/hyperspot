@@ -66,7 +66,7 @@ impl Module for UsersInfo {
         let db = ctx.db_required()?;
         let sec_conn = db.sea_secure(); // SecureConn - enforces access control on all queries
 
-        // Wire repository (infra) to domain service (port)
+        // Wire repository (testing) to domain service (port)
         // Repository now uses SecureConn to automatically apply security filtering
         let repo = SeaOrmUsersRepository::new(sec_conn);
 

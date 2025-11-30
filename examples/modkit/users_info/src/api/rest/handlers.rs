@@ -20,7 +20,6 @@ type UsersApiError = ApiError<DomainError>;
 
 /// List users with cursor-based pagination
 #[tracing::instrument(
-    name = "users_info.list_users",
     skip(svc, query, ctx),
     fields(
         limit = query.limit,
@@ -47,7 +46,6 @@ pub async fn list_users(
 
 /// Get a specific user by ID
 #[tracing::instrument(
-    name = "users_info.get_user",
     skip(svc, ctx),
     fields(
         user.id = %id,
@@ -75,7 +73,6 @@ pub async fn get_user(
 
 /// Create a new user
 #[tracing::instrument(
-    name = "users_info.create_user",
     skip(svc, req_body, ctx),
     fields(
         user.email = %req_body.email,
@@ -140,7 +137,6 @@ pub async fn create_user(
 
 /// Update an existing user
 #[tracing::instrument(
-    name = "users_info.update_user",
     skip(svc, req_body, ctx),
     fields(
         user.id = %id,
@@ -170,7 +166,6 @@ pub async fn update_user(
 
 /// Delete a user by ID
 #[tracing::instrument(
-    name = "users_info.delete_user",
     skip(svc, ctx),
     fields(
         user.id = %id,
@@ -197,7 +192,6 @@ pub async fn delete_user(
 
 /// SSE endpoint returning a live stream of `UserEvent`.
 #[tracing::instrument(
-    name = "users_info.users_events",
     skip(sse),
     fields(request_id = Empty)
 )]

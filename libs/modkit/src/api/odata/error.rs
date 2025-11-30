@@ -126,29 +126,35 @@ mod tests {
 
     #[test]
     fn test_filter_error_mapping() {
+        use http::StatusCode;
+
         let error = ODataError::InvalidFilter("malformed expression".to_string());
         let problem = odata_error_to_problem(&error, "/api/users", None);
 
-        assert_eq!(problem.status, 422);
+        assert_eq!(problem.status, StatusCode::UNPROCESSABLE_ENTITY);
         assert!(problem.code.contains("invalid_filter"));
         assert_eq!(problem.instance, "/api/users");
     }
 
     #[test]
     fn test_orderby_error_mapping() {
+        use http::StatusCode;
+
         let error = ODataError::InvalidOrderByField("unknown_field".to_string());
         let problem = odata_error_to_problem(&error, "/api/users", None);
 
-        assert_eq!(problem.status, 422);
+        assert_eq!(problem.status, StatusCode::UNPROCESSABLE_ENTITY);
         assert!(problem.code.contains("invalid_orderby"));
     }
 
     #[test]
     fn test_cursor_error_mapping() {
+        use http::StatusCode;
+
         let error = ODataError::CursorInvalidBase64;
         let problem = odata_error_to_problem(&error, "/api/users", Some("trace123".to_string()));
 
-        assert_eq!(problem.status, 422);
+        assert_eq!(problem.status, StatusCode::UNPROCESSABLE_ENTITY);
         assert!(problem.code.contains("invalid_cursor"));
         assert_eq!(problem.trace_id, Some("trace123".to_string()));
     }

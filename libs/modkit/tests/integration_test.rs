@@ -63,13 +63,17 @@ async fn test_complete_api_builder_flow() {
     // Test GET endpoint with all features
     router = OperationBuilder::<Missing, Missing, ()>::get("/users")
         .operation_id("users.list")
+        .public()
         .summary("List all users")
         .description("Returns a paginated list of users in the system")
         .tag("users")
         .query_param("limit", false, "Maximum number of users to return")
         .query_param("offset", false, "Number of users to skip")
-        .json_response(200, "List of users")
-        .json_response(500, "Internal server error")
+        .json_response(http::StatusCode::OK, "List of users")
+        .json_response(
+            http::StatusCode::INTERNAL_SERVER_ERROR,
+            "Internal server error",
+        )
         .handler(get_users_handler)
         .register(router, &registry);
 
@@ -77,11 +81,15 @@ async fn test_complete_api_builder_flow() {
     router = OperationBuilder::<Missing, Missing, ()>::post("/users")
         .operation_id("users.create")
         .summary("Create a new user")
+        .require_auth("users", "write")
         .description("Creates a new user in the system")
         .tag("users")
-        .json_response(201, "User created successfully")
-        .json_response(400, "Invalid user data")
-        .json_response(500, "Internal server error")
+        .json_response(http::StatusCode::CREATED, "User created successfully")
+        .json_response(http::StatusCode::BAD_REQUEST, "Invalid user data")
+        .json_response(
+            http::StatusCode::INTERNAL_SERVER_ERROR,
+            "Internal server error",
+        )
         .handler(create_user_handler)
         .register(router, &registry);
 
@@ -89,12 +97,16 @@ async fn test_complete_api_builder_flow() {
     let _router = OperationBuilder::<Missing, Missing, ()>::get("/users/{id}")
         .operation_id("users.get")
         .summary("Get user by ID")
+        .require_auth("users", "read")
         .description("Retrieves a specific user by their unique identifier")
         .tag("users")
         .path_param("id", "User unique identifier")
-        .json_response(200, "User details")
-        .json_response(404, "User not found")
-        .json_response(500, "Internal server error")
+        .json_response(http::StatusCode::OK, "User details")
+        .json_response(http::StatusCode::NOT_FOUND, "User not found")
+        .json_response(
+            http::StatusCode::INTERNAL_SERVER_ERROR,
+            "Internal server error",
+        )
         .handler(get_user_handler)
         .register(router, &registry);
 
@@ -179,9 +191,10 @@ fn test_response_types() {
     }
 
     let _router = OperationBuilder::<Missing, Missing, ()>::get("/text")
-        .text_response(200, "Plain text response")
-        .html_response(200, "HTML response")
-        .json_response(500, "Error response")
+        .require_auth("users", "read")
+        .text_response(http::StatusCode::OK, "Plain text response", "text/plain")
+        .html_response(http::StatusCode::OK, "HTML response")
+        .json_response(http::StatusCode::INTERNAL_SERVER_ERROR, "Error response")
         .handler(text_handler)
         .register(router, &registry);
 

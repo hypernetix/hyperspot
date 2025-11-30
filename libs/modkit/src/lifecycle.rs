@@ -111,6 +111,7 @@ pub enum LifecycleError {
 /// - `handle` / `cancel` are protected by `Mutex`, and their locking scope is kept minimal.
 /// - All public start methods are thin wrappers around `start_core`.
 pub struct Lifecycle {
+    name: &'static str,
     status: Arc<AtomicU8>,
     handle: Mutex<Option<JoinHandle<()>>>,
     cancel: Mutex<Option<CancellationToken>>,
@@ -123,8 +124,9 @@ pub struct Lifecycle {
 }
 
 impl Lifecycle {
-    pub fn new() -> Self {
+    pub fn new_named(name: &'static str) -> Self {
         Self {
+            name,
             status: Arc::new(AtomicU8::new(Status::Stopped.as_u8())),
             handle: Mutex::new(None),
             cancel: Mutex::new(None),
@@ -132,6 +134,15 @@ impl Lifecycle {
             was_cancelled: Arc::new(AtomicBool::new(false)),
             finished_notify: Arc::new(Notify::new()),
         }
+    }
+
+    pub fn new() -> Self {
+        Self::new_named("lifecycle")
+    }
+
+    #[inline]
+    pub fn name(&self) -> &'static str {
+        self.name
     }
 
     // --- small helpers for atomics (keeps Ordering unified and code concise) ---
@@ -261,19 +272,20 @@ impl Lifecycle {
         let status_on_finish = self.status.clone();
 
         // Spawn the actual task with descriptive logging
-        let task_id = format!("lifecycle-{:p}", self);
+        let module_name = self.name;
+        let task_id = format!("{module_name}-{:p}", self);
         let handle = tokio::spawn({
             let task_id = task_id.clone();
             async move {
-                tracing::debug!(task_id = %task_id, "lifecycle task starting");
+                tracing::debug!(task_id = %task_id, module = %module_name, "lifecycle task starting");
                 let res = make(token, ready_mode.then(|| ReadySignal(ready_tx))).await;
                 if let Err(e) = res {
-                    tracing::error!(error=%e, task_id=%task_id, "lifecycle task error");
+                    tracing::error!(error=%e, task_id=%task_id, module = %module_name, "lifecycle task error");
                 }
                 finished_flag.store(true, Ordering::Release);
                 finished_notify.notify_waiters();
                 status_on_finish.store(Status::Stopped.as_u8(), Ordering::Release);
-                tracing::debug!(task_id=%task_id, "lifecycle task finished");
+                tracing::debug!(task_id=%task_id, module = %module_name, "lifecycle task finished");
             }
         });
 
@@ -289,7 +301,8 @@ impl Lifecycle {
     /// Request graceful shutdown and wait up to `timeout`.
     #[tracing::instrument(skip(self, timeout), level = "debug")]
     pub async fn stop(&self, timeout: Duration) -> LcResult<StopReason> {
-        let task_id = format!("lifecycle-{:p}", self);
+        let module_name = self.name;
+        let task_id = format!("{module_name}-{:p}", self);
         let st = self.load_status();
         if !matches!(st, Status::Starting | Status::Running | Status::Stopping) {
             // Not running => already finished.
@@ -335,10 +348,10 @@ impl Lifecycle {
 
             match handle.await {
                 Ok(_) => {
-                    tracing::debug!(task_id = %task_id, "lifecycle task completed successfully");
+                    tracing::debug!(task_id = %task_id, module = %module_name, "lifecycle task completed successfully");
                 }
                 Err(e) if e.is_cancelled() => {
-                    tracing::debug!(task_id = %task_id, "lifecycle task was cancelled/aborted");
+                    tracing::debug!(task_id = %task_id, module = %module_name, "lifecycle task was cancelled/aborted");
                 }
                 Err(e) if e.is_panic() => {
                     // Extract panic information if possible
@@ -351,18 +364,20 @@ impl Lifecycle {
 
                         tracing::error!(
                             task_id = %task_id,
+                            module = %module_name,
                             panic_message = %panic_msg,
                             "lifecycle task panicked - this indicates a serious bug"
                         );
                     } else {
                         tracing::error!(
                             task_id = %task_id,
+                            module = %module_name,
                             "lifecycle task panicked (could not extract panic message)"
                         );
                     }
                 }
                 Err(e) => {
-                    tracing::warn!(task_id = %task_id, error = %e, "lifecycle task join error");
+                    tracing::warn!(task_id = %task_id, module = %module_name, error = %e, "lifecycle task join error");
                 }
             }
 
@@ -443,7 +458,7 @@ impl<T: Runnable> WithLifecycle<T> {
     pub fn new(inner: T) -> Self {
         Self {
             inner: Arc::new(inner),
-            lc: Arc::new(Lifecycle::new()),
+            lc: Arc::new(Lifecycle::new_named(std::any::type_name::<T>())),
             stop_timeout: Duration::from_secs(30),
             await_ready: false,
             has_ready_handler: false,
@@ -454,7 +469,29 @@ impl<T: Runnable> WithLifecycle<T> {
     pub fn from_arc(inner: Arc<T>) -> Self {
         Self {
             inner,
-            lc: Arc::new(Lifecycle::new()),
+            lc: Arc::new(Lifecycle::new_named(std::any::type_name::<T>())),
+            stop_timeout: Duration::from_secs(30),
+            await_ready: false,
+            has_ready_handler: false,
+            run_ready_fn: None,
+        }
+    }
+
+    pub fn new_with_name(inner: T, name: &'static str) -> Self {
+        Self {
+            inner: Arc::new(inner),
+            lc: Arc::new(Lifecycle::new_named(name)),
+            stop_timeout: Duration::from_secs(30),
+            await_ready: false,
+            has_ready_handler: false,
+            run_ready_fn: None,
+        }
+    }
+
+    pub fn from_arc_with_name(inner: Arc<T>, name: &'static str) -> Self {
+        Self {
+            inner,
+            lc: Arc::new(Lifecycle::new_named(name)),
             stop_timeout: Duration::from_secs(30),
             await_ready: false,
             has_ready_handler: false,

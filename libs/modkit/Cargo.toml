@@ -49,6 +49,7 @@ url = { workspace = true }
 # Performance / lock-free structures
 parking_lot = "0.12"
 dashmap = { workspace = true }
+arc-swap = "1.7"
 thiserror = "2.0"
 odata-params = "0.4"
 

@@ -12,7 +12,7 @@ use tracing::{debug, info, instrument};
 use uuid::Uuid;
 
 /// Domain service with business rules for user management.
-/// Depends only on the repository port, not on infra types.
+/// Depends only on the repository port, not on testing types.
 #[derive(Clone)]
 pub struct Service {
     repo: Arc<dyn UsersRepository>,
@@ -55,7 +55,7 @@ impl Service {
         }
     }
 
-    #[instrument(name = "users_info.service.get_user", skip(self, ctx), fields(user_id = %id))]
+    #[instrument(skip(self, ctx), fields(user_id = %id))]
     pub async fn get_user(&self, ctx: &SecurityCtx, id: Uuid) -> Result<User, DomainError> {
         debug!("Getting user by id");
 
@@ -75,7 +75,7 @@ impl Service {
     }
 
     /// List users with cursor-based pagination
-    #[instrument(name = "users_info.service.list_users_page", skip(self, ctx, query))]
+    #[instrument(skip(self, ctx, query))]
     pub async fn list_users_page(
         &self,
         ctx: &SecurityCtx,
@@ -90,7 +90,6 @@ impl Service {
     }
 
     #[instrument(
-        name = "users_info.service.create_user",
         skip(self, ctx),
         fields(email = %new_user.email, display_name = %new_user.display_name)
     )]
@@ -160,7 +159,6 @@ impl Service {
     }
 
     #[instrument(
-        name = "users_info.service.update_user",
         skip(self, ctx),
         fields(user_id = %id)
     )]
@@ -216,7 +214,6 @@ impl Service {
     }
 
     #[instrument(
-        name = "users_info.service.delete_user",
         skip(self, ctx),
         fields(user_id = %id)
     )]

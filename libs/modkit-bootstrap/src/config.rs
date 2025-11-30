@@ -42,14 +42,10 @@ pub struct AppConfig {
     pub modules: HashMap<String, serde_json::Value>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
 #[serde(deny_unknown_fields)]
 pub struct ServerConfig {
     pub home_dir: String, // will be normalized to absolute path
-    pub host: String,
-    pub port: u16,
-    #[serde(default)]
-    pub timeout_sec: u64,
 }
 
 /// Logging configuration - maps subsystem names to their logging settings.
@@ -111,20 +107,6 @@ pub struct Section {
     pub max_backups: Option<usize>, // How many files to keep
     #[serde(default)]
     pub max_size_mb: Option<u64>, // Max size of the file in MB
-}
-
-impl Default for ServerConfig {
-    fn default() -> Self {
-        Self {
-            // Empty => use platform default resolved by resolve_home_dir():
-            // Windows: %APPDATA%/.hyperspot
-            // Unix/macOS: $HOME/.hyperspot
-            home_dir: String::new(),
-            host: "127.0.0.1".to_string(),
-            port: 8087,
-            timeout_sec: 0,
-        }
-    }
 }
 
 /// Create a default logging configuration.
@@ -224,10 +206,6 @@ impl AppConfig {
 
     /// Apply overrides from command line arguments.
     pub fn apply_cli_overrides(&mut self, args: &CliArgs) {
-        if let Some(port) = args.port {
-            self.server.port = port;
-        }
-
         // Set logging level based on verbose flags for "default" section.
         let logging = self.logging.get_or_insert_with(default_logging_config);
         if let Some(default_section) = logging.get_mut("default") {
@@ -244,7 +222,6 @@ impl AppConfig {
 #[derive(Debug, Clone)]
 pub struct CliArgs {
     pub config: Option<String>,
-    pub port: Option<u16>,
     pub print_config: bool,
     pub verbose: u8,
     pub mock: bool,
@@ -316,7 +293,7 @@ pub fn expand_env_in_dsn(dsn: &str) -> anyhow::Result<String> {
     use std::env;
 
     let mut result = dsn.to_string();
-    let re = regex::Regex::new(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}").unwrap();
+    let re = regex::Regex::new(r"\$\{([A-Za-z_][A-Za-z0-9_]*)}")?;
 
     for cap in re.captures_iter(dsn) {
         let full_match = &cap[0];
@@ -904,13 +881,6 @@ mod tests {
     fn test_default_config_structure() {
         let config = AppConfig::default();
 
-        // Server defaults
-        assert_eq!(config.server.host, "127.0.0.1");
-        assert_eq!(config.server.port, 8087);
-        // raw (not yet normalized)
-        assert_eq!(config.server.home_dir, "");
-        assert_eq!(config.server.timeout_sec, 0);
-
         // Database defaults (simplified structure)
         assert!(config.database.is_some());
         let db = config.database.as_ref().unwrap();
@@ -939,9 +909,6 @@ mod tests {
         let yaml = r#"
 server:
   home_dir: "~/.test_hyperspot"
-  host: "0.0.0.0"
-  port: 9090
-  timeout_sec: 30
 
 database:
   servers:
@@ -962,9 +929,6 @@ logging:
         // home_dir should be normalized immediately
         assert!(is_normalized_path(&config.server.home_dir));
         assert!(config.server.home_dir.ends_with(".test_hyperspot"));
-        assert_eq!(config.server.host, "0.0.0.0");
-        assert_eq!(config.server.port, 9090);
-        assert_eq!(config.server.timeout_sec, 30);
 
         // database parsed (TODO: update test to use new config format)
         // For now, since this test uses old format YAML, we skip DB assertions
@@ -989,7 +953,6 @@ logging:
         let config = AppConfig::load_or_default(None::<&str>).unwrap();
         assert!(is_normalized_path(&config.server.home_dir));
         assert!(config.server.home_dir.ends_with(default_subdir()));
-        assert_eq!(config.server.port, 8087);
     }
 
     #[test]
@@ -1006,8 +969,6 @@ logging:
         let yaml = r#"
 server:
   home_dir: "~/.minimal"
-  host: "localhost"
-  port: 8080
 "#;
         fs::write(&cfg_path, yaml).unwrap();
 
@@ -1016,9 +977,6 @@ server:
         // Required fields are parsed; home_dir normalized
         assert!(is_normalized_path(&config.server.home_dir));
         assert!(config.server.home_dir.ends_with(".minimal"));
-        assert_eq!(config.server.host, "localhost");
-        assert_eq!(config.server.port, 8080);
-        assert_eq!(config.server.timeout_sec, 0);
 
         // Optional sections default to None
         assert!(config.database.is_none());
@@ -1032,7 +990,6 @@ server:
 
         let args = super::CliArgs {
             config: None,
-            port: Some(3000),
             print_config: false,
             verbose: 2, // trace
             mock: false,
@@ -1041,7 +998,6 @@ server:
         config.apply_cli_overrides(&args);
 
         // Port override
-        assert_eq!(config.server.port, 3000);
 
         // Verbose override affects logging
         let logging = config.logging.as_ref().unwrap();
@@ -1060,7 +1016,6 @@ server:
             let mut config = AppConfig::default();
             let args = super::CliArgs {
                 config: None,
-                port: None,
                 print_config: false,
                 verbose: verbose_level,
                 mock: false,
@@ -1102,8 +1057,6 @@ setting2: 42
             r#"
 server:
   home_dir: "~/.modules_test"
-  host: "127.0.0.1"
-  port: 8087
 
 modules_dir: "{}"
 
@@ -1131,31 +1084,6 @@ modules:
     }
 
     #[test]
-    fn test_to_yaml_roundtrip_basic() {
-        let config = AppConfig::default();
-        let yaml = config.to_yaml().unwrap();
-        assert!(yaml.contains("server:"));
-        assert!(yaml.contains("database:"));
-        assert!(yaml.contains("logging:"));
-
-        let roundtrip: AppConfig = serde_yaml::from_str(&yaml).unwrap();
-        assert_eq!(roundtrip.server.port, config.server.port);
-    }
-
-    #[test]
-    fn test_invalid_yaml_missing_required_field() {
-        let invalid_yaml = r#"
-server:
-  home_dir: "~/.test"
-  # Missing required host field
-  port: 8087
-"#;
-
-        let result: Result<AppConfig, _> = serde_yaml::from_str(invalid_yaml);
-        assert!(result.is_err());
-    }
-
-    #[test]
     fn test_load_and_init_logging_smoke() {
         // Just verifies structure is acceptable for logging init path.
         let tmp = tempdir().unwrap();
@@ -1163,8 +1091,6 @@ server:
         let yaml = r#"
 server:
   home_dir: "~/.logging_test"
-  host: "127.0.0.1"
-  port: 8088
 
 logging:
   default:

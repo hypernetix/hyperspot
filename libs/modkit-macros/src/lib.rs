@@ -565,7 +565,7 @@ pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
                 impl #impl_generics #struct_ident #ty_generics #where_clause {
                     /// Wrap this instance into a stateful module with lifecycle configuration.
                     pub fn into_module(self) -> ::modkit::lifecycle::WithLifecycle<Self> {
-                        ::modkit::lifecycle::WithLifecycle::new(self)
+                        ::modkit::lifecycle::WithLifecycle::new_with_name(self, #name_lit)
                             .with_stop_timeout(#timeout_ts)
                             .with_ready_mode(true, true, Some(#ready_shim_ident))
                     }
@@ -584,7 +584,7 @@ pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
                 impl #impl_generics #struct_ident #ty_generics #where_clause {
                     /// Wrap this instance into a stateful module with lifecycle configuration.
                     pub fn into_module(self) -> ::modkit::lifecycle::WithLifecycle<Self> {
-                        ::modkit::lifecycle::WithLifecycle::new(self)
+                        ::modkit::lifecycle::WithLifecycle::new_with_name(self, #name_lit)
                             .with_stop_timeout(#timeout_ts)
                             .with_ready_mode(false, false, None)
                     }
@@ -618,7 +618,10 @@ pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
 
                     if await_ready_bool {
                         quote! {
-                            let wl = ::modkit::lifecycle::WithLifecycle::from_arc(module.clone())
+                            let wl = ::modkit::lifecycle::WithLifecycle::from_arc_with_name(
+                                    module.clone(),
+                                    #name_lit,
+                                )
                                 .with_stop_timeout(#timeout_ts)
                                 .with_ready_mode(true, true, Some(#ready_shim_ident));
 
@@ -629,7 +632,10 @@ pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
                         }
                     } else {
                         quote! {
-                            let wl = ::modkit::lifecycle::WithLifecycle::from_arc(module.clone())
+                            let wl = ::modkit::lifecycle::WithLifecycle::from_arc_with_name(
+                                    module.clone(),
+                                    #name_lit,
+                                )
                                 .with_stop_timeout(#timeout_ts)
                                 .with_ready_mode(false, false, None);
 

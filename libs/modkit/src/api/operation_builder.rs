@@ -17,11 +17,44 @@ use std::marker::PhantomData;
 
 use crate::api::problem;
 
-/// Type alias for schema collections used in API operations.
-type SchemaCollection = Vec<(
-    String,
-    utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>,
-)>;
+/// Convert OpenAPI-style path placeholders to Axum 0.8+ style path parameters.
+///
+/// Axum 0.8+ uses `{id}` for path parameters and `{*path}` for wildcards, which is the same as OpenAPI.
+/// However, OpenAPI wildcards are just `{path}` without the asterisk.
+/// This function converts OpenAPI wildcards to Axum wildcards by detecting common wildcard names.
+///
+/// # Examples
+///
+/// ```
+/// # use modkit::api::operation_builder::normalize_to_axum_path;
+/// assert_eq!(normalize_to_axum_path("/users/{id}"), "/users/{id}");
+/// assert_eq!(normalize_to_axum_path("/projects/{project_id}/items/{item_id}"), "/projects/{project_id}/items/{item_id}");
+/// // Note: Most paths don't need normalization in Axum 0.8+
+/// ```
+pub fn normalize_to_axum_path(path: &str) -> String {
+    // In Axum 0.8+, the path syntax is {param} for parameters and {*wildcard} for wildcards
+    // which is the same as OpenAPI except wildcards need the asterisk prefix.
+    // For now, we just pass through the path as-is since OpenAPI and Axum 0.8 use the same syntax
+    // for regular parameters. Wildcards need special handling if used.
+    path.to_string()
+}
+
+/// Convert Axum 0.8+ style path parameters to OpenAPI-style placeholders.
+///
+/// Removes the asterisk prefix from Axum wildcards `{*path}` to make them OpenAPI-compatible `{path}`.
+///
+/// # Examples
+///
+/// ```
+/// # use modkit::api::operation_builder::axum_to_openapi_path;
+/// assert_eq!(axum_to_openapi_path("/users/{id}"), "/users/{id}");
+/// assert_eq!(axum_to_openapi_path("/static/{*path}"), "/static/{path}");
+/// ```
+pub fn axum_to_openapi_path(path: &str) -> String {
+    // In Axum 0.8+, wildcards are {*name} but OpenAPI expects {name}
+    // Regular parameters are the same in both
+    path.replace("{*", "{")
+}
 
 /// Type-state markers for compile-time enforcement
 pub mod state {
@@ -32,6 +65,14 @@ pub mod state {
     /// Marker for present required components
     #[derive(Debug, Clone, Copy)]
     pub struct Present;
+
+    /// Marker for auth requirement not yet set
+    #[derive(Debug, Clone, Copy)]
+    pub struct AuthNotSet;
+
+    /// Marker for auth requirement set (either require_auth or public)
+    #[derive(Debug, Clone, Copy)]
+    pub struct AuthSet;
 }
 
 /// Internal trait mapping handler state to the concrete router slot type.
@@ -39,14 +80,24 @@ pub mod state {
 /// Private sealed trait to enforce the implementation is only visible within this module.
 mod sealed {
     pub trait Sealed {}
+    pub trait SealedAuth {}
 }
 
 pub trait HandlerSlot<S>: sealed::Sealed {
     type Slot;
 }
 
+/// Sealed trait for auth state markers
+pub trait AuthState: sealed::SealedAuth {}
+
 impl sealed::Sealed for Missing {}
 impl sealed::Sealed for Present {}
+
+impl sealed::SealedAuth for state::AuthNotSet {}
+impl sealed::SealedAuth for state::AuthSet {}
+
+impl AuthState for state::AuthNotSet {}
+impl AuthState for state::AuthSet {}
 
 impl<S> HandlerSlot<S> for Missing {
     type Slot = ();
@@ -55,7 +106,7 @@ impl<S> HandlerSlot<S> for Present {
     type Slot = MethodRouter<S>;
 }
 
-pub use state::{Missing, Present};
+pub use state::{AuthNotSet, AuthSet, Missing, Present};
 
 /// Parameter specification for API operations
 #[derive(Clone, Debug)]
@@ -75,14 +126,27 @@ pub enum ParamLocation {
     Cookie,
 }
 
+/// Request body schema variants for different kinds of request bodies
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum RequestBodySchema {
+    /// Reference to a component schema in `#/components/schemas/{schema_name}`
+    Ref { schema_name: String },
+    /// Multipart form with a single file field
+    MultipartFile { field_name: String },
+    /// Raw binary body (e.g. application/octet-stream), represented as
+    /// type: string, format: binary in OpenAPI.
+    Binary,
+    /// A generic inline object schema with no predefined properties
+    InlineObject,
+}
+
 /// Request body specification for API operations
 #[derive(Clone, Debug)]
 pub struct RequestBodySpec {
     pub content_type: &'static str,
     pub description: Option<String>,
-    /// Name of a registered component schema (if any). The OpenAPI generator
-    /// will reference it by $ref. If `None`, generator may inline or skip.
-    pub schema_name: Option<String>,
+    /// The schema for this request body
+    pub schema: RequestBodySchema,
     /// Whether request body is required (OpenAPI default is `false`).
     pub required: bool,
 }
@@ -124,6 +188,12 @@ pub struct OperationSpec {
     pub is_public: bool,
     /// Optional rate & concurrency limits for this operation
     pub rate_limit: Option<RateLimitSpec>,
+    /// Optional whitelist of allowed request Content-Type values (without parameters).
+    /// Example: Some(vec!["application/json", "multipart/form-data", "application/pdf"])
+    /// When set, ingress middleware will enforce these types and return HTTP 415 for
+    /// requests with disallowed Content-Type headers. This is independent of the
+    /// request body schema and should not be used to create synthetic request bodies.
+    pub allowed_request_content_types: Option<Vec<&'static str>>,
 }
 
 /// Per-operation rate & concurrency limit specification
@@ -146,9 +216,10 @@ pub trait OperationBuilderODataExt<S, H, R> {
     fn with_odata_filter_doc(self, description: impl Into<String>) -> Self;
 }
 
-impl<S, H, R> OperationBuilderODataExt<S, H, R> for OperationBuilder<H, R, S>
+impl<S, H, R, A> OperationBuilderODataExt<S, H, R> for OperationBuilder<H, R, S, A>
 where
     H: HandlerSlot<S>,
+    A: AuthState,
 {
     fn with_odata_filter(mut self) -> Self {
         self.spec.params.push(ParamSpec {
@@ -173,39 +244,8 @@ where
     }
 }
 
-/// Registry trait for OpenAPI operations and schemas
-pub trait OpenApiRegistry: Send + Sync {
-    /// Register an API operation specification
-    fn register_operation(&self, spec: &OperationSpec);
-
-    /// Ensure schema for `T` (including transitive dependencies) is registered
-    /// under components and return the canonical component name for `$ref`.
-    /// This is a type-erased version for dyn compatibility.
-    fn ensure_schema_raw(&self, name: &str, schemas: SchemaCollection) -> String;
-
-    /// Downcast support for accessing the concrete implementation if needed.
-    fn as_any(&self) -> &dyn std::any::Any;
-}
-
-/// Helper function to call ensure_schema with proper type information
-pub fn ensure_schema<T: utoipa::ToSchema + utoipa::PartialSchema + 'static>(
-    registry: &dyn OpenApiRegistry,
-) -> String {
-    use utoipa::PartialSchema;
-
-    // 1) Canonical component name for T as seen by utoipa
-    let root_name = T::name().to_string();
-
-    // 2) Always insert T's own schema first (actual object, not a ref)
-    //    This avoids self-referential components.
-    let mut collected: SchemaCollection = vec![(root_name.clone(), <T as PartialSchema>::schema())];
-
-    // 3) Collect and append all referenced schemas (dependencies) of T
-    T::schemas(&mut collected);
-
-    // 4) Pass to registry for insertion
-    registry.ensure_schema_raw(&root_name, collected)
-}
+// Re-export from openapi_registry for backward compatibility
+pub use crate::api::openapi_registry::{ensure_schema, OpenApiRegistry};
 
 /// Type-safe operation builder with compile-time guarantees.
 ///
@@ -213,9 +253,11 @@ pub fn ensure_schema<T: utoipa::ToSchema + utoipa::PartialSchema + 'static>(
 /// - `H`: Handler state (Missing | Present)
 /// - `R`: Response state (Missing | Present)
 /// - `S`: Router state type (what you put into `Router::with_state(S)`).
-pub struct OperationBuilder<H = Missing, R = Missing, S = ()>
+/// - `A`: Auth state (AuthNotSet | AuthSet)
+pub struct OperationBuilder<H = Missing, R = Missing, S = (), A = AuthNotSet>
 where
     H: HandlerSlot<S>,
+    A: AuthState,
 {
     spec: OperationSpec,
     method_router: <H as HandlerSlot<S>>::Slot,
@@ -223,12 +265,13 @@ where
     _has_response: PhantomData<R>,
     #[allow(clippy::type_complexity)]
     _state: PhantomData<fn() -> S>, // Zero-sized marker for type-state pattern
+    _auth_state: PhantomData<A>,
 }
 
 // -------------------------------------------------------------------------------------------------
-// Constructors — starts with both handler and response missing
+// Constructors — starts with both handler and response missing, auth not set
 // -------------------------------------------------------------------------------------------------
-impl<S> OperationBuilder<Missing, Missing, S> {
+impl<S> OperationBuilder<Missing, Missing, S, AuthNotSet> {
     /// Create a new operation builder with an HTTP method and path
     pub fn new(method: Method, path: impl Into<String>) -> Self {
         let path_str = path.into();
@@ -253,46 +296,54 @@ impl<S> OperationBuilder<Missing, Missing, S> {
                 sec_requirement: None,
                 is_public: false,
                 rate_limit: None,
+                allowed_request_content_types: None,
             },
             method_router: (), // no router in Missing state
             _has_handler: PhantomData,
             _has_response: PhantomData,
             _state: PhantomData,
+            _auth_state: PhantomData,
         }
     }
 
     /// Convenience constructor for GET requests
     pub fn get(path: impl Into<String>) -> Self {
-        Self::new(Method::GET, path)
+        let path_str = path.into();
+        Self::new(Method::GET, normalize_to_axum_path(&path_str))
     }
 
     /// Convenience constructor for POST requests
     pub fn post(path: impl Into<String>) -> Self {
-        Self::new(Method::POST, path)
+        let path_str = path.into();
+        Self::new(Method::POST, normalize_to_axum_path(&path_str))
     }
 
     /// Convenience constructor for PUT requests
     pub fn put(path: impl Into<String>) -> Self {
-        Self::new(Method::PUT, path)
+        let path_str = path.into();
+        Self::new(Method::PUT, normalize_to_axum_path(&path_str))
     }
 
     /// Convenience constructor for DELETE requests
     pub fn delete(path: impl Into<String>) -> Self {
-        Self::new(Method::DELETE, path)
+        let path_str = path.into();
+        Self::new(Method::DELETE, normalize_to_axum_path(&path_str))
     }
 
     /// Convenience constructor for PATCH requests
     pub fn patch(path: impl Into<String>) -> Self {
-        Self::new(Method::PATCH, path)
+        let path_str = path.into();
+        Self::new(Method::PATCH, normalize_to_axum_path(&path_str))
     }
 }
 
 // -------------------------------------------------------------------------------------------------
 // Descriptive methods — available at any stage
 // -------------------------------------------------------------------------------------------------
-impl<H, R, S> OperationBuilder<H, R, S>
+impl<H, R, S, A> OperationBuilder<H, R, S, A>
 where
     H: HandlerSlot<S>,
+    A: AuthState,
 {
     /// Inspect the spec (primarily for tests)
     pub fn spec(&self) -> &OperationSpec {
@@ -397,7 +448,9 @@ where
         self.spec.request_body = Some(RequestBodySpec {
             content_type: "application/json",
             description: Some(desc.into()),
-            schema_name: Some(schema_name.into()),
+            schema: RequestBodySchema::Ref {
+                schema_name: schema_name.into(),
+            },
             required: true,
         });
         self
@@ -409,7 +462,9 @@ where
         self.spec.request_body = Some(RequestBodySpec {
             content_type: "application/json",
             description: None,
-            schema_name: Some(schema_name.into()),
+            schema: RequestBodySchema::Ref {
+                schema_name: schema_name.into(),
+            },
             required: true,
         });
         self
@@ -429,7 +484,7 @@ where
         self.spec.request_body = Some(RequestBodySpec {
             content_type: "application/json",
             description: Some(desc.into()),
-            schema_name: Some(name),
+            schema: RequestBodySchema::Ref { schema_name: name },
             required: true,
         });
         self
@@ -445,7 +500,7 @@ where
         self.spec.request_body = Some(RequestBodySpec {
             content_type: "application/json",
             description: None,
-            schema_name: Some(name),
+            schema: RequestBodySchema::Ref { schema_name: name },
             required: true,
         });
         self
@@ -459,7 +514,130 @@ where
         self
     }
 
+    /// Configure a multipart/form-data file upload request.
+    ///
+    /// This is a convenience helper for file upload endpoints that:
+    /// - Sets the request body content type to "multipart/form-data"
+    /// - Sets a description for the request body
+    /// - Configures an inline object schema with a binary file field
+    /// - Restricts allowed Content-Type to only "multipart/form-data"
+    ///
+    /// The file field will be documented in OpenAPI as a binary string with the
+    /// given field name. This generates the correct OpenAPI schema for UI tools
+    /// like Stoplight to display a file upload control.
+    ///
+    /// # Arguments
+    /// * `field_name` - Name of the multipart form field (e.g., "file")
+    /// * `description` - Optional description for the request body
+    ///
+    /// # Example
+    /// ```rust,ignore
+    /// OperationBuilder::post("/upload")
+    ///     .operation_id("upload_file")
+    ///     .summary("Upload a file")
+    ///     .multipart_file_request("file", Some("File to upload"))
+    ///     .handler(upload_handler)
+    ///     .json_response(200, "Upload successful")
+    ///     .register(router, &api);
+    /// ```
+    pub fn multipart_file_request(mut self, field_name: &str, description: Option<&str>) -> Self {
+        // Set request body with multipart/form-data content type
+        self.spec.request_body = Some(RequestBodySpec {
+            content_type: "multipart/form-data",
+            description: description
+                .map(|s| format!("{} (expects field '{}' with file data)", s, field_name)),
+            schema: RequestBodySchema::MultipartFile {
+                field_name: field_name.to_string(),
+            },
+            required: true,
+        });
+
+        // Also configure MIME type validation
+        self.spec.allowed_request_content_types = Some(vec!["multipart/form-data"]);
+
+        self
+    }
+
+    /// Configure the request body as raw binary (application/octet-stream).
+    ///
+    /// This is intended for endpoints that accept the entire request body
+    /// as a file or arbitrary bytes, without multipart form encoding.
+    ///
+    /// The OpenAPI schema will be:
+    /// ```yaml
+    /// requestBody:
+    ///   required: true
+    ///   content:
+    ///     application/octet-stream:
+    ///       schema:
+    ///         type: string
+    ///         format: binary
+    /// ```
+    ///
+    /// Tools like Stoplight will render this as a single file upload control
+    /// for the entire body.
+    ///
+    /// # Arguments
+    /// * `description` - Optional description for the request body
+    ///
+    /// # Example
+    /// ```rust,ignore
+    /// OperationBuilder::post("/upload")
+    ///     .operation_id("upload_file")
+    ///     .summary("Upload a file")
+    ///     .octet_stream_request(Some("Raw file bytes to parse"))
+    ///     .handler(upload_handler)
+    ///     .json_response(200, "Upload successful")
+    ///     .register(router, &api);
+    /// ```
+    pub fn octet_stream_request(mut self, description: Option<&str>) -> Self {
+        self.spec.request_body = Some(RequestBodySpec {
+            content_type: "application/octet-stream",
+            description: description.map(|s| s.to_string()),
+            schema: RequestBodySchema::Binary,
+            required: true,
+        });
+
+        // Also configure MIME type validation
+        self.spec.allowed_request_content_types = Some(vec!["application/octet-stream"]);
+
+        self
+    }
+
+    /// Configure allowed request MIME types for this operation.
+    ///
+    /// This attaches a whitelist of allowed Content-Type values (without parameters),
+    /// which will be enforced by ingress middleware. If a request arrives with a
+    /// Content-Type that is not in this list, ingress will return HTTP 415.
+    ///
+    /// This is independent of the request body schema - it only configures ingress
+    /// validation and does not affect OpenAPI request body specifications.
+    ///
+    /// # Example
+    /// ```rust,ignore
+    /// OperationBuilder::post("/upload")
+    ///     .operation_id("upload_file")
+    ///     .allow_content_types(&["multipart/form-data", "application/pdf"])
+    ///     .handler(upload_handler)
+    ///     .json_response(200, "Upload successful")
+    ///     .register(router, &api);
+    /// ```
+    pub fn allow_content_types(mut self, types: &[&'static str]) -> Self {
+        self.spec.allowed_request_content_types = Some(types.to_vec());
+        self
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+// Auth requirement setting — transitions AuthNotSet -> AuthSet
+// -------------------------------------------------------------------------------------------------
+impl<H, R, S> OperationBuilder<H, R, S, AuthNotSet>
+where
+    H: HandlerSlot<S>,
+{
     /// Require authentication with a specific resource:action permission.
+    ///
+    /// This method transitions from AuthNotSet to AuthSet state.
     ///
     /// # Example
     /// ```rust,ignore
@@ -469,18 +647,30 @@ where
     ///     .json_response(200, "List of users")
     ///     .register(router, &api);
     /// ```
-    pub fn require_auth(mut self, resource: impl Into<String>, action: impl Into<String>) -> Self {
+    pub fn require_auth(
+        mut self,
+        resource: impl Into<String>,
+        action: impl Into<String>,
+    ) -> OperationBuilder<H, R, S, AuthSet> {
         self.spec.sec_requirement = Some(OperationSecRequirement {
             resource: resource.into(),
             action: action.into(),
         });
         self.spec.is_public = false;
-        self
+        OperationBuilder {
+            spec: self.spec,
+            method_router: self.method_router,
+            _has_handler: self._has_handler,
+            _has_response: self._has_response,
+            _state: self._state,
+            _auth_state: PhantomData,
+        }
     }
 
     /// Mark this route as public (no authentication required).
     ///
     /// This explicitly opts out of the `require_auth_by_default` setting.
+    /// This method transitions from AuthNotSet to AuthSet state.
     ///
     /// # Example
     /// ```rust,ignore
@@ -490,24 +680,32 @@ where
     ///     .json_response(200, "OK")
     ///     .register(router, &api);
     /// ```
-    pub fn public(mut self) -> Self {
+    pub fn public(mut self) -> OperationBuilder<H, R, S, AuthSet> {
         self.spec.is_public = true;
         self.spec.sec_requirement = None;
-        self
+        OperationBuilder {
+            spec: self.spec,
+            method_router: self.method_router,
+            _has_handler: self._has_handler,
+            _has_response: self._has_response,
+            _state: self._state,
+            _auth_state: PhantomData,
+        }
     }
 }
 
 // -------------------------------------------------------------------------------------------------
 // Handler setting — transitions Missing -> Present for handler
 // -------------------------------------------------------------------------------------------------
-impl<R, S> OperationBuilder<Missing, R, S>
+impl<R, S, A> OperationBuilder<Missing, R, S, A>
 where
     S: Clone + Send + Sync + 'static,
+    A: AuthState,
 {
     /// Set the handler for this operation (function handlers are recommended).
     ///
     /// This transitions the builder from `Missing` to `Present` handler state.
-    pub fn handler<F, T>(self, h: F) -> OperationBuilder<Present, R, S>
+    pub fn handler<F, T>(self, h: F) -> OperationBuilder<Present, R, S, A>
     where
         F: Handler<T, S> + Clone + Send + 'static,
         T: 'static,
@@ -527,18 +725,20 @@ where
             _has_handler: PhantomData::<Present>,
             _has_response: self._has_response,
             _state: self._state,
+            _auth_state: self._auth_state,
         }
     }
 
     /// Alternative path: provide a pre-composed `MethodRouter<S>` yourself
     /// (useful to attach per-route middleware/layers).
-    pub fn method_router(self, mr: MethodRouter<S>) -> OperationBuilder<Present, R, S> {
+    pub fn method_router(self, mr: MethodRouter<S>) -> OperationBuilder<Present, R, S, A> {
         OperationBuilder {
             spec: self.spec,
             method_router: mr, // concrete MethodRouter<S> in Present state
             _has_handler: PhantomData::<Present>,
             _has_response: self._has_response,
             _state: self._state,
+            _auth_state: self._auth_state,
         }
     }
 }
@@ -546,12 +746,13 @@ where
 // -------------------------------------------------------------------------------------------------
 // Response setting — transitions Missing -> Present for response (first response)
 // -------------------------------------------------------------------------------------------------
-impl<H, S> OperationBuilder<H, Missing, S>
+impl<H, S, A> OperationBuilder<H, Missing, S, A>
 where
     H: HandlerSlot<S>,
+    A: AuthState,
 {
     /// Add a raw response spec (transitions from Missing to Present).
-    pub fn response(mut self, resp: ResponseSpec) -> OperationBuilder<H, Present, S> {
+    pub fn response(mut self, resp: ResponseSpec) -> OperationBuilder<H, Present, S, A> {
         self.spec.responses.push(resp);
         OperationBuilder {
             spec: self.spec,
@@ -559,17 +760,18 @@ where
             _has_handler: self._has_handler,
             _has_response: PhantomData::<Present>,
             _state: self._state,
+            _auth_state: self._auth_state,
         }
     }
 
     /// Add a JSON response (transitions from Missing to Present).
     pub fn json_response(
         mut self,
-        status: u16,
+        status: http::StatusCode,
         description: impl Into<String>,
-    ) -> OperationBuilder<H, Present, S> {
+    ) -> OperationBuilder<H, Present, S, A> {
         self.spec.responses.push(ResponseSpec {
-            status,
+            status: status.as_u16(),
             content_type: "application/json",
             description: description.into(),
             schema_name: None,
@@ -580,6 +782,7 @@ where
             _has_handler: self._has_handler,
             _has_response: PhantomData::<Present>,
             _state: self._state,
+            _auth_state: self._auth_state,
         }
     }
 
@@ -587,15 +790,15 @@ where
     pub fn json_response_with_schema<T>(
         mut self,
         registry: &dyn OpenApiRegistry,
-        status: u16,
+        status: http::StatusCode,
         description: impl Into<String>,
-    ) -> OperationBuilder<H, Present, S>
+    ) -> OperationBuilder<H, Present, S, A>
     where
         T: utoipa::ToSchema + utoipa::PartialSchema + 'static,
     {
         let name = ensure_schema::<T>(registry);
         self.spec.responses.push(ResponseSpec {
-            status,
+            status: status.as_u16(),
             content_type: "application/json",
             description: description.into(),
             schema_name: Some(name),
@@ -606,18 +809,31 @@ where
             _has_handler: self._has_handler,
             _has_response: PhantomData::<Present>,
             _state: self._state,
+            _auth_state: self._auth_state,
         }
     }
 
-    /// Add a text response (transitions from Missing to Present).
+    /// Add a text response with a custom content type (transitions from Missing to Present).
+    ///
+    /// # Arguments
+    /// * `status` - HTTP status code
+    /// * `description` - Description of the response
+    /// * `content_type` - **Pure media type without parameters** (e.g., `"text/plain"`, `"text/markdown"`)
+    ///
+    /// # Important
+    /// The `content_type` must be a pure media type **without parameters** like `; charset=utf-8`.
+    /// OpenAPI media type keys cannot include parameters. Use `"text/markdown"` instead of
+    /// `"text/markdown; charset=utf-8"`. Actual HTTP response headers in handlers should still
+    /// include the charset parameter.
     pub fn text_response(
         mut self,
-        status: u16,
+        status: http::StatusCode,
         description: impl Into<String>,
-    ) -> OperationBuilder<H, Present, S> {
+        content_type: &'static str,
+    ) -> OperationBuilder<H, Present, S, A> {
         self.spec.responses.push(ResponseSpec {
-            status,
-            content_type: "text/plain",
+            status: status.as_u16(),
+            content_type,
             description: description.into(),
             schema_name: None,
         });
@@ -627,17 +843,18 @@ where
             _has_handler: self._has_handler,
             _has_response: PhantomData::<Present>,
             _state: self._state,
+            _auth_state: self._auth_state,
         }
     }
 
     /// Add an HTML response (transitions from Missing to Present).
     pub fn html_response(
         mut self,
-        status: u16,
+        status: http::StatusCode,
         description: impl Into<String>,
-    ) -> OperationBuilder<H, Present, S> {
+    ) -> OperationBuilder<H, Present, S, A> {
         self.spec.responses.push(ResponseSpec {
-            status,
+            status: status.as_u16(),
             content_type: "text/html",
             description: description.into(),
             schema_name: None,
@@ -648,6 +865,7 @@ where
             _has_handler: self._has_handler,
             _has_response: PhantomData::<Present>,
             _state: self._state,
+            _auth_state: self._auth_state,
         }
     }
 
@@ -655,13 +873,13 @@ where
     pub fn problem_response(
         mut self,
         registry: &dyn OpenApiRegistry,
-        status: u16,
+        status: http::StatusCode,
         description: impl Into<String>,
-    ) -> OperationBuilder<H, Present, S> {
+    ) -> OperationBuilder<H, Present, S, A> {
         // Ensure `Problem` schema is registered in components
         let problem_name = ensure_schema::<crate::api::problem::Problem>(registry);
         self.spec.responses.push(ResponseSpec {
-            status,
+            status: status.as_u16(),
             content_type: problem::APPLICATION_PROBLEM_JSON,
             description: description.into(),
             schema_name: Some(problem_name),
@@ -672,6 +890,7 @@ where
             _has_handler: self._has_handler,
             _has_response: PhantomData::<Present>,
             _state: self._state,
+            _auth_state: self._auth_state,
         }
     }
 
@@ -680,13 +899,13 @@ where
         mut self,
         openapi: &dyn OpenApiRegistry,
         description: impl Into<String>,
-    ) -> OperationBuilder<H, Present, S>
+    ) -> OperationBuilder<H, Present, S, A>
     where
         T: utoipa::ToSchema + utoipa::PartialSchema + 'static,
     {
         let name = ensure_schema::<T>(openapi);
         self.spec.responses.push(ResponseSpec {
-            status: 200,
+            status: http::StatusCode::OK.as_u16(),
             content_type: "text/event-stream",
             description: description.into(),
             schema_name: Some(name),
@@ -697,6 +916,7 @@ where
             _has_handler: self._has_handler,
             _has_response: PhantomData::<Present>,
             _state: self._state,
+            _auth_state: self._auth_state,
         }
     }
 }
@@ -704,14 +924,19 @@ where
 // -------------------------------------------------------------------------------------------------
 // Additional responses — for Present response state (additional responses)
 // -------------------------------------------------------------------------------------------------
-impl<H, S> OperationBuilder<H, Present, S>
+impl<H, S, A> OperationBuilder<H, Present, S, A>
 where
     H: HandlerSlot<S>,
+    A: AuthState,
 {
     /// Add a JSON response (additional).
-    pub fn json_response(mut self, status: u16, description: impl Into<String>) -> Self {
+    pub fn json_response(
+        mut self,
+        status: http::StatusCode,
+        description: impl Into<String>,
+    ) -> Self {
         self.spec.responses.push(ResponseSpec {
-            status,
+            status: status.as_u16(),
             content_type: "application/json",
             description: description.into(),
             schema_name: None,
@@ -723,7 +948,7 @@ where
     pub fn json_response_with_schema<T>(
         mut self,
         registry: &dyn OpenApiRegistry,
-        status: u16,
+        status: http::StatusCode,
         description: impl Into<String>,
     ) -> Self
     where
@@ -731,7 +956,7 @@ where
     {
         let name = ensure_schema::<T>(registry);
         self.spec.responses.push(ResponseSpec {
-            status,
+            status: status.as_u16(),
             content_type: "application/json",
             description: description.into(),
             schema_name: Some(name),
@@ -739,11 +964,27 @@ where
         self
     }
 
-    /// Add a text response (additional).
-    pub fn text_response(mut self, status: u16, description: impl Into<String>) -> Self {
+    /// Add a text response with a custom content type (additional).
+    ///
+    /// # Arguments
+    /// * `status` - HTTP status code
+    /// * `description` - Description of the response
+    /// * `content_type` - **Pure media type without parameters** (e.g., `"text/plain"`, `"text/markdown"`)
+    ///
+    /// # Important
+    /// The `content_type` must be a pure media type **without parameters** like `; charset=utf-8`.
+    /// OpenAPI media type keys cannot include parameters. Use `"text/markdown"` instead of
+    /// `"text/markdown; charset=utf-8"`. Actual HTTP response headers in handlers should still
+    /// include the charset parameter.
+    pub fn text_response(
+        mut self,
+        status: http::StatusCode,
+        description: impl Into<String>,
+        content_type: &'static str,
+    ) -> Self {
         self.spec.responses.push(ResponseSpec {
-            status,
-            content_type: "text/plain",
+            status: status.as_u16(),
+            content_type,
             description: description.into(),
             schema_name: None,
         });
@@ -751,9 +992,13 @@ where
     }
 
     /// Add an HTML response (additional).
-    pub fn html_response(mut self, status: u16, description: impl Into<String>) -> Self {
+    pub fn html_response(
+        mut self,
+        status: http::StatusCode,
+        description: impl Into<String>,
+    ) -> Self {
         self.spec.responses.push(ResponseSpec {
-            status,
+            status: status.as_u16(),
             content_type: "text/html",
             description: description.into(),
             schema_name: None,
@@ -765,12 +1010,12 @@ where
     pub fn problem_response(
         mut self,
         registry: &dyn OpenApiRegistry,
-        status: u16,
+        status: http::StatusCode,
         description: impl Into<String>,
     ) -> Self {
         let problem_name = ensure_schema::<crate::api::problem::Problem>(registry);
         self.spec.responses.push(ResponseSpec {
-            status,
+            status: status.as_u16(),
             content_type: problem::APPLICATION_PROBLEM_JSON,
             description: description.into(),
             schema_name: Some(problem_name),
@@ -789,7 +1034,7 @@ where
     {
         let name = ensure_schema::<T>(openapi);
         self.spec.responses.push(ResponseSpec {
-            status: 200,
+            status: http::StatusCode::OK.as_u16(),
             content_type: "text/event-stream",
             description: description.into(),
             schema_name: Some(name),
@@ -808,7 +1053,7 @@ where
     /// ```rust,ignore
     /// let op = OperationBuilder::get("/users")
     ///     .handler(list_users)
-    ///     .json_response(200, "List of users")
+    ///     .json_response(StatusCode::OK, "List of users")
     ///     .standard_errors(&registry);
     /// ```
     ///
@@ -822,22 +1067,23 @@ where
     /// - 429 Too Many Requests
     /// - 500 Internal Server Error
     pub fn standard_errors(mut self, registry: &dyn OpenApiRegistry) -> Self {
+        use http::StatusCode;
         let problem_name = ensure_schema::<crate::api::problem::Problem>(registry);
 
         let standard_errors = [
-            (400, "Bad Request"),
-            (401, "Unauthorized"),
-            (403, "Forbidden"),
-            (404, "Not Found"),
-            (409, "Conflict"),
-            (422, "Unprocessable Entity"),
-            (429, "Too Many Requests"),
-            (500, "Internal Server Error"),
+            (StatusCode::BAD_REQUEST, "Bad Request"),
+            (StatusCode::UNAUTHORIZED, "Unauthorized"),
+            (StatusCode::FORBIDDEN, "Forbidden"),
+            (StatusCode::NOT_FOUND, "Not Found"),
+            (StatusCode::CONFLICT, "Conflict"),
+            (StatusCode::UNPROCESSABLE_ENTITY, "Unprocessable Entity"),
+            (StatusCode::TOO_MANY_REQUESTS, "Too Many Requests"),
+            (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error"),
         ];
 
         for (status, description) in standard_errors {
             self.spec.responses.push(ResponseSpec {
-                status,
+                status: status.as_u16(),
                 content_type: problem::APPLICATION_PROBLEM_JSON,
                 description: description.to_string(),
                 schema_name: Some(problem_name.clone()),
@@ -859,7 +1105,7 @@ where
     /// let op = OperationBuilder::post("/users")
     ///     .handler(create_user)
     ///     .json_request::<CreateUserRequest>(&registry, "User data")
-    ///     .json_response(201, "User created")
+    ///     .json_response(StatusCode::CREATED, "User created")
     ///     .with_422_validation_error(&registry);
     /// ```
     pub fn with_422_validation_error(mut self, registry: &dyn OpenApiRegistry) -> Self {
@@ -867,7 +1113,7 @@ where
             ensure_schema::<crate::api::problem::ValidationErrorResponse>(registry);
 
         self.spec.responses.push(ResponseSpec {
-            status: 422,
+            status: http::StatusCode::UNPROCESSABLE_ENTITY.as_u16(),
             content_type: problem::APPLICATION_PROBLEM_JSON,
             description: "Validation Error".to_string(),
             schema_name: Some(validation_error_name),
@@ -875,19 +1121,102 @@ where
 
         self
     }
+
+    /// Add a 400 Bad Request error response.
+    ///
+    /// This is a convenience wrapper around `problem_response`.
+    pub fn error_400(self, registry: &dyn OpenApiRegistry) -> Self {
+        self.problem_response(registry, http::StatusCode::BAD_REQUEST, "Bad Request")
+    }
+
+    /// Add a 401 Unauthorized error response.
+    ///
+    /// This is a convenience wrapper around `problem_response`.
+    pub fn error_401(self, registry: &dyn OpenApiRegistry) -> Self {
+        self.problem_response(registry, http::StatusCode::UNAUTHORIZED, "Unauthorized")
+    }
+
+    /// Add a 403 Forbidden error response.
+    ///
+    /// This is a convenience wrapper around `problem_response`.
+    pub fn error_403(self, registry: &dyn OpenApiRegistry) -> Self {
+        self.problem_response(registry, http::StatusCode::FORBIDDEN, "Forbidden")
+    }
+
+    /// Add a 404 Not Found error response.
+    ///
+    /// This is a convenience wrapper around `problem_response`.
+    pub fn error_404(self, registry: &dyn OpenApiRegistry) -> Self {
+        self.problem_response(registry, http::StatusCode::NOT_FOUND, "Not Found")
+    }
+
+    /// Add a 409 Conflict error response.
+    ///
+    /// This is a convenience wrapper around `problem_response`.
+    pub fn error_409(self, registry: &dyn OpenApiRegistry) -> Self {
+        self.problem_response(registry, http::StatusCode::CONFLICT, "Conflict")
+    }
+
+    /// Add a 415 Unsupported Media Type error response.
+    ///
+    /// This is a convenience wrapper around `problem_response`.
+    pub fn error_415(self, registry: &dyn OpenApiRegistry) -> Self {
+        self.problem_response(
+            registry,
+            http::StatusCode::UNSUPPORTED_MEDIA_TYPE,
+            "Unsupported Media Type",
+        )
+    }
+
+    /// Add a 422 Unprocessable Entity error response.
+    ///
+    /// This is a convenience wrapper around `problem_response`.
+    pub fn error_422(self, registry: &dyn OpenApiRegistry) -> Self {
+        self.problem_response(
+            registry,
+            http::StatusCode::UNPROCESSABLE_ENTITY,
+            "Unprocessable Entity",
+        )
+    }
+
+    /// Add a 429 Too Many Requests error response.
+    ///
+    /// This is a convenience wrapper around `problem_response`.
+    pub fn error_429(self, registry: &dyn OpenApiRegistry) -> Self {
+        self.problem_response(
+            registry,
+            http::StatusCode::TOO_MANY_REQUESTS,
+            "Too Many Requests",
+        )
+    }
+
+    /// Add a 500 Internal Server Error response.
+    ///
+    /// This is a convenience wrapper around `problem_response`.
+    pub fn error_500(self, registry: &dyn OpenApiRegistry) -> Self {
+        self.problem_response(
+            registry,
+            http::StatusCode::INTERNAL_SERVER_ERROR,
+            "Internal Server Error",
+        )
+    }
 }
 
 // -------------------------------------------------------------------------------------------------
-// Registration — only available when both handler AND response are present
+// Registration — only available when handler, response, AND auth are all set
 // -------------------------------------------------------------------------------------------------
-impl<S> OperationBuilder<Present, Present, S>
+impl<S> OperationBuilder<Present, Present, S, AuthSet>
 where
     S: Clone + Send + Sync + 'static,
 {
     /// Register the operation with the router and OpenAPI registry.
     ///
-    /// This method is only available when both handler and response are present,
-    /// enforced at compile time by the type system.
+    /// This method is only available when:
+    /// - Handler is present
+    /// - Response is present
+    /// - Auth requirement is set (either `require_auth` or `public`)
+    ///
+    /// All conditions are enforced at compile time by the type system.
     pub fn register(self, router: Router<S>, openapi: &dyn OpenApiRegistry) -> Router<S> {
         // Inform the OpenAPI registry (the implementation will translate OperationSpec
         // into an OpenAPI Operation + RequestBody + Responses with component refs).
@@ -954,7 +1283,7 @@ mod tests {
 
     #[test]
     fn test_builder_descriptive_methods() {
-        let builder = OperationBuilder::<Missing, Missing, ()>::get("/test")
+        let builder = OperationBuilder::<Missing, Missing, (), AuthNotSet>::get("/test")
             .operation_id("test.get")
             .summary("Test endpoint")
             .description("A test endpoint for validation")
@@ -981,8 +1310,13 @@ mod tests {
         let _router = OperationBuilder::<Missing, Missing, ()>::post("/test")
             .summary("Test endpoint")
             .json_request::<serde_json::Value>(&registry, "optional body") // registers schema
+            .public()
             .handler(test_handler)
-            .json_response_with_schema::<serde_json::Value>(&registry, 200, "Success response") // registers schema
+            .json_response_with_schema::<serde_json::Value>(
+                &registry,
+                http::StatusCode::OK,
+                "Success response",
+            ) // registers schema
             .register(router, &registry);
 
         // Verify that the operation was registered
@@ -1003,28 +1337,83 @@ mod tests {
 
     #[test]
     fn test_convenience_constructors() {
-        let get_builder = OperationBuilder::<Missing, Missing, ()>::get("/get");
+        let get_builder = OperationBuilder::<Missing, Missing, (), AuthNotSet>::get("/get");
         assert_eq!(get_builder.spec.method, Method::GET);
+        assert_eq!(get_builder.spec.path, "/get");
 
-        let post_builder = OperationBuilder::<Missing, Missing, ()>::post("/post");
+        let post_builder = OperationBuilder::<Missing, Missing, (), AuthNotSet>::post("/post");
         assert_eq!(post_builder.spec.method, Method::POST);
+        assert_eq!(post_builder.spec.path, "/post");
 
-        let put_builder = OperationBuilder::<Missing, Missing, ()>::put("/put");
+        let put_builder = OperationBuilder::<Missing, Missing, (), AuthNotSet>::put("/put");
         assert_eq!(put_builder.spec.method, Method::PUT);
+        assert_eq!(put_builder.spec.path, "/put");
 
-        let delete_builder = OperationBuilder::<Missing, Missing, ()>::delete("/delete");
+        let delete_builder =
+            OperationBuilder::<Missing, Missing, (), AuthNotSet>::delete("/delete");
         assert_eq!(delete_builder.spec.method, Method::DELETE);
+        assert_eq!(delete_builder.spec.path, "/delete");
 
-        let patch_builder = OperationBuilder::<Missing, Missing, ()>::patch("/patch");
+        let patch_builder = OperationBuilder::<Missing, Missing, (), AuthNotSet>::patch("/patch");
         assert_eq!(patch_builder.spec.method, Method::PATCH);
+        assert_eq!(patch_builder.spec.path, "/patch");
+    }
+
+    #[test]
+    fn test_normalize_to_axum_path() {
+        // Axum 0.8+ uses {param} syntax, same as OpenAPI
+        assert_eq!(normalize_to_axum_path("/users/{id}"), "/users/{id}");
+        assert_eq!(
+            normalize_to_axum_path("/projects/{project_id}/items/{item_id}"),
+            "/projects/{project_id}/items/{item_id}"
+        );
+        assert_eq!(normalize_to_axum_path("/simple"), "/simple");
+        assert_eq!(
+            normalize_to_axum_path("/users/{id}/edit"),
+            "/users/{id}/edit"
+        );
+    }
+
+    #[test]
+    fn test_axum_to_openapi_path() {
+        // Regular parameters stay the same
+        assert_eq!(axum_to_openapi_path("/users/{id}"), "/users/{id}");
+        assert_eq!(
+            axum_to_openapi_path("/projects/{project_id}/items/{item_id}"),
+            "/projects/{project_id}/items/{item_id}"
+        );
+        assert_eq!(axum_to_openapi_path("/simple"), "/simple");
+        // Wildcards: Axum uses {*path}, OpenAPI uses {path}
+        assert_eq!(axum_to_openapi_path("/static/{*path}"), "/static/{path}");
+        assert_eq!(
+            axum_to_openapi_path("/files/{*filepath}"),
+            "/files/{filepath}"
+        );
+    }
+
+    #[test]
+    fn test_path_normalization_in_constructors() {
+        // Test that paths are kept as-is (Axum 0.8+ uses same {param} syntax)
+        let builder = OperationBuilder::<Missing, Missing, ()>::get("/users/{id}");
+        assert_eq!(builder.spec.path, "/users/{id}");
+
+        let builder = OperationBuilder::<Missing, Missing, ()>::post(
+            "/projects/{project_id}/items/{item_id}",
+        );
+        assert_eq!(builder.spec.path, "/projects/{project_id}/items/{item_id}");
+
+        // Simple paths remain unchanged
+        let builder = OperationBuilder::<Missing, Missing, ()>::get("/simple");
+        assert_eq!(builder.spec.path, "/simple");
     }
 
     #[test]
     fn test_standard_errors() {
         let registry = MockRegistry::new();
         let builder = OperationBuilder::<Missing, Missing, ()>::get("/test")
+            .public()
             .handler(test_handler)
-            .json_response(200, "Success")
+            .json_response(http::StatusCode::OK, "Success")
             .standard_errors(&registry);
 
         // Should have 1 success response + 8 standard error responses
@@ -1063,8 +1452,9 @@ mod tests {
     fn test_with_422_validation_error() {
         let registry = MockRegistry::new();
         let builder = OperationBuilder::<Missing, Missing, ()>::post("/test")
+            .public()
             .handler(test_handler)
-            .json_response(201, "Created")
+            .json_response(http::StatusCode::CREATED, "Created")
             .with_422_validation_error(&registry);
 
         // Should have success response + validation error response
@@ -1083,5 +1473,209 @@ mod tests {
             crate::api::problem::APPLICATION_PROBLEM_JSON
         );
         assert!(validation_response.schema_name.is_some());
+    }
+
+    #[test]
+    fn test_allow_content_types_with_existing_request_body() {
+        let registry = MockRegistry::new();
+        let builder = OperationBuilder::<Missing, Missing, ()>::post("/test")
+            .json_request::<serde_json::Value>(&registry, "Test request")
+            .allow_content_types(&["application/json", "application/xml"])
+            .public()
+            .handler(test_handler)
+            .json_response(http::StatusCode::OK, "Success");
+
+        // allowed_content_types should be on OperationSpec, not RequestBodySpec
+        assert!(builder.spec.request_body.is_some());
+        assert!(builder.spec.allowed_request_content_types.is_some());
+        let allowed = builder.spec.allowed_request_content_types.as_ref().unwrap();
+        assert_eq!(allowed.len(), 2);
+        assert!(allowed.contains(&"application/json"));
+        assert!(allowed.contains(&"application/xml"));
+    }
+
+    #[test]
+    fn test_allow_content_types_without_existing_request_body() {
+        let builder = OperationBuilder::<Missing, Missing, ()>::post("/test")
+            .allow_content_types(&["multipart/form-data"])
+            .public()
+            .handler(test_handler)
+            .json_response(http::StatusCode::OK, "Success");
+
+        // Should NOT create synthetic request body, only set allowed_request_content_types
+        assert!(builder.spec.request_body.is_none());
+        assert!(builder.spec.allowed_request_content_types.is_some());
+        let allowed = builder.spec.allowed_request_content_types.as_ref().unwrap();
+        assert_eq!(allowed.len(), 1);
+        assert!(allowed.contains(&"multipart/form-data"));
+    }
+
+    #[test]
+    fn test_allow_content_types_can_be_chained() {
+        let registry = MockRegistry::new();
+        let builder = OperationBuilder::<Missing, Missing, ()>::post("/test")
+            .operation_id("test.post")
+            .summary("Test endpoint")
+            .json_request::<serde_json::Value>(&registry, "Test request")
+            .allow_content_types(&["application/json"])
+            .public()
+            .handler(test_handler)
+            .json_response(http::StatusCode::OK, "Success")
+            .problem_response(
+                &registry,
+                http::StatusCode::UNSUPPORTED_MEDIA_TYPE,
+                "Unsupported Media Type",
+            );
+
+        assert_eq!(builder.spec.operation_id, Some("test.post".to_string()));
+        assert!(builder.spec.request_body.is_some());
+        assert!(builder.spec.allowed_request_content_types.is_some());
+        assert_eq!(builder.spec.responses.len(), 2);
+    }
+
+    #[test]
+    fn test_multipart_file_request() {
+        let builder = OperationBuilder::<Missing, Missing, ()>::post("/upload")
+            .operation_id("test.upload")
+            .summary("Upload file")
+            .multipart_file_request("file", Some("Upload a file"))
+            .public()
+            .handler(test_handler)
+            .json_response(http::StatusCode::OK, "Success");
+
+        // Should set request body with multipart/form-data
+        assert!(builder.spec.request_body.is_some());
+        let rb = builder.spec.request_body.as_ref().unwrap();
+        assert_eq!(rb.content_type, "multipart/form-data");
+        assert!(rb.description.is_some());
+        assert!(rb.description.as_ref().unwrap().contains("file"));
+        assert!(rb.required);
+
+        // Should use MultipartFile schema variant
+        assert_eq!(
+            rb.schema,
+            RequestBodySchema::MultipartFile {
+                field_name: "file".to_string()
+            }
+        );
+
+        // Should also set allowed_request_content_types
+        assert!(builder.spec.allowed_request_content_types.is_some());
+        let allowed = builder.spec.allowed_request_content_types.as_ref().unwrap();
+        assert_eq!(allowed.len(), 1);
+        assert!(allowed.contains(&"multipart/form-data"));
+    }
+
+    #[test]
+    fn test_multipart_file_request_without_description() {
+        let builder = OperationBuilder::<Missing, Missing, ()>::post("/upload")
+            .multipart_file_request("file", None)
+            .public()
+            .handler(test_handler)
+            .json_response(http::StatusCode::OK, "Success");
+
+        assert!(builder.spec.request_body.is_some());
+        let rb = builder.spec.request_body.as_ref().unwrap();
+        assert_eq!(rb.content_type, "multipart/form-data");
+        assert!(rb.description.is_none());
+        assert_eq!(
+            rb.schema,
+            RequestBodySchema::MultipartFile {
+                field_name: "file".to_string()
+            }
+        );
+    }
+
+    #[test]
+    fn test_octet_stream_request() {
+        let builder = OperationBuilder::<Missing, Missing, ()>::post("/upload")
+            .operation_id("test.upload")
+            .summary("Upload raw file")
+            .octet_stream_request(Some("Raw file bytes"))
+            .public()
+            .handler(test_handler)
+            .json_response(http::StatusCode::OK, "Success");
+
+        // Should set request body with application/octet-stream
+        assert!(builder.spec.request_body.is_some());
+        let rb = builder.spec.request_body.as_ref().unwrap();
+        assert_eq!(rb.content_type, "application/octet-stream");
+        assert_eq!(rb.description, Some("Raw file bytes".to_string()));
+        assert!(rb.required);
+
+        // Should use Binary schema variant
+        assert_eq!(rb.schema, RequestBodySchema::Binary);
+
+        // Should also set allowed_request_content_types
+        assert!(builder.spec.allowed_request_content_types.is_some());
+        let allowed = builder.spec.allowed_request_content_types.as_ref().unwrap();
+        assert_eq!(allowed.len(), 1);
+        assert!(allowed.contains(&"application/octet-stream"));
+    }
+
+    #[test]
+    fn test_octet_stream_request_without_description() {
+        let builder = OperationBuilder::<Missing, Missing, ()>::post("/upload")
+            .octet_stream_request(None)
+            .public()
+            .handler(test_handler)
+            .json_response(http::StatusCode::OK, "Success");
+
+        assert!(builder.spec.request_body.is_some());
+        let rb = builder.spec.request_body.as_ref().unwrap();
+        assert_eq!(rb.content_type, "application/octet-stream");
+        assert!(rb.description.is_none());
+        assert_eq!(rb.schema, RequestBodySchema::Binary);
+    }
+
+    #[test]
+    fn test_json_request_uses_ref_schema() {
+        let registry = MockRegistry::new();
+        let builder = OperationBuilder::<Missing, Missing, ()>::post("/test")
+            .json_request::<serde_json::Value>(&registry, "Test request body")
+            .public()
+            .handler(test_handler)
+            .json_response(http::StatusCode::OK, "Success");
+
+        assert!(builder.spec.request_body.is_some());
+        let rb = builder.spec.request_body.as_ref().unwrap();
+        assert_eq!(rb.content_type, "application/json");
+
+        // Should use Ref schema variant with the registered schema name
+        match &rb.schema {
+            RequestBodySchema::Ref { schema_name } => {
+                assert!(!schema_name.is_empty());
+            }
+            _ => panic!("Expected RequestBodySchema::Ref for JSON request"),
+        }
+    }
+
+    #[test]
+    fn test_response_content_types_must_not_contain_parameters() {
+        // This test ensures OpenAPI correctness: media type keys cannot include
+        // parameters like "; charset=utf-8"
+        let registry = MockRegistry::new();
+        let builder = OperationBuilder::<Missing, Missing, ()>::post("/test")
+            .operation_id("test.content_type_purity")
+            .summary("Test response content types")
+            .json_request::<serde_json::Value>(&registry, "Test")
+            .public()
+            .handler(test_handler)
+            .text_response(http::StatusCode::OK, "Text", "text/plain")
+            .text_response(http::StatusCode::OK, "Markdown", "text/markdown")
+            .html_response(http::StatusCode::OK, "HTML")
+            .json_response(http::StatusCode::OK, "JSON")
+            .problem_response(&registry, http::StatusCode::BAD_REQUEST, "Error");
+
+        // Verify no response content_type contains semicolon (parameter separator)
+        for response in &builder.spec.responses {
+            assert!(
+                !response.content_type.contains(';'),
+                "Response content_type '{}' must not contain parameters. \
+                 Use pure media type without charset or other parameters. \
+                 OpenAPI media type keys cannot include parameters.",
+                response.content_type
+            );
+        }
     }
 }

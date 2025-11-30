@@ -1,0 +1,24 @@
+# test_file_1table_multilingual.docx
+
+---
+filename: test_file_1table_multilingual.docx
+content-type: application/vnd.openxmlformats-officedocument.wordprocessingml.document
+---
+
+Multilingual Table Example
+
+| Language | Text | Direction |
+| --- | --- | --- |
+| Language | Text | Direction |
+| English | The quick brown fox jumps over the lazy dog. | LTR |
+| Français | Le renard brun rapide saute par-dessus le chien paresseux. | LTR |
+| Deutsch | Der schnelle braune Fuchs springt über den faulen Hund. | LTR |
+| Español | El rápido zorro marrón salta sobre el perro perezoso. | LTR |
+| 中文 | 敏捷的棕色狐狸跳过了懒狗。 | LTR |
+| Русский | Быстрая коричневая лисица перепрыгнула через ленивую собаку. | LTR |
+| العربية | الثعلب البني السريع يقفز فوق الكلب الكسول. | RTL |
+| 日本語 | 素早い茶色の狐が怠け者の犬を飛び越えた。 | LTR |
+| עברית | השועל החום הזריז קפץ מעל הכלב העצלן. | RTL |
+| हिन्दी | तेज़ भूरे रंग की लोमड़ी सुस्त कुत्ते के ऊपर कूद गई। | LTR |
+
+

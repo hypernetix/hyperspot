@@ -12,3 +12,7 @@ axum = ["dep:axum"]
 serde = { version = "1", features = ["derive"] }
 utoipa = { version = "5", optional = true }
 axum = { version = "0.8", optional = true }
+http = "1"
+
+[dev-dependencies]
+serde_json = "1"

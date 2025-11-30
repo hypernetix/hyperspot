@@ -86,8 +86,9 @@ impl RestfulModule for BodyLimitTestModule {
             .operation_id("test:upload")
             .summary("Upload endpoint with body limit")
             .json_request::<LargePayload>(openapi, "Large payload")
-            .json_response(200, "Success")
-            .json_response(413, "Payload too large")
+            .public()
+            .json_response(http::StatusCode::OK, "Success")
+            .json_response(http::StatusCode::PAYLOAD_TOO_LARGE, "Payload too large")
             .handler(post(upload_handler))
             .register(router, openapi);
 

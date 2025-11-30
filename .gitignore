@@ -28,3 +28,5 @@ logs
 
 .cargo/advisory-db
 .DS_Store
+/.venv/*
+**/__pycache__

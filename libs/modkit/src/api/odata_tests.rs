@@ -106,7 +106,7 @@ mod tests {
         let problem = result.unwrap_err();
         // Extract status from the problem for testing
         // OData errors return 422 (Unprocessable Entity) per GTS catalog
-        assert_eq!(problem.status, 422);
+        assert_eq!(problem.status, http::StatusCode::UNPROCESSABLE_ENTITY);
 
         // Should have cursor (even if decode fails, it should try)
         // Note: The cursor in the test is not a valid base64url, but that's OK for this test

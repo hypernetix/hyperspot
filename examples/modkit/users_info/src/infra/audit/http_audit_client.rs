@@ -31,7 +31,6 @@ impl HttpAuditClient {
 #[async_trait]
 impl AuditPort for HttpAuditClient {
     #[instrument(
-        name = "users_info.http.audit.get_user_access",
         skip_all,
         fields(audit_base = %self.audit_base, user_id = %id)
     )]
@@ -60,7 +59,6 @@ impl AuditPort for HttpAuditClient {
     }
 
     #[instrument(
-        name = "users_info.http.notifications.user_created",
         skip_all,
         fields(notify_base = %self.notify_base)
     )]

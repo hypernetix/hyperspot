@@ -51,7 +51,6 @@ impl SeaOrmUsersRepository {
 #[async_trait::async_trait]
 impl UsersRepository for SeaOrmUsersRepository {
     #[instrument(
-        name = "users_info.repo.find_by_id",
         skip(self, ctx),
         fields(
             db.system = %self.sec.db_engine(),
@@ -74,7 +73,6 @@ impl UsersRepository for SeaOrmUsersRepository {
     }
 
     #[instrument(
-        name = "users_info.repo.email_exists",
         skip(self, ctx),
         fields(
             db.system = %self.sec.db_engine(),
@@ -102,7 +100,6 @@ impl UsersRepository for SeaOrmUsersRepository {
     }
 
     #[instrument(
-        name = "users_info.repo.insert",
         skip(self, ctx, u),
         fields(
             db.system = %self.sec.db_engine(),
@@ -133,7 +130,6 @@ impl UsersRepository for SeaOrmUsersRepository {
     }
 
     #[instrument(
-        name = "users_info.repo.update",
         skip(self, ctx, u),
         fields(
             db.system = %self.sec.db_engine(),
@@ -164,7 +160,6 @@ impl UsersRepository for SeaOrmUsersRepository {
     }
 
     #[instrument(
-        name = "users_info.repo.delete",
         skip(self, ctx),
         fields(
             db.system = %self.sec.db_engine(),
@@ -185,7 +180,6 @@ impl UsersRepository for SeaOrmUsersRepository {
     }
 
     #[instrument(
-        name = "users_info.repo.list_users_page",
         skip(self, ctx, query),
         fields(
             db.system = %self.sec.db_engine(),

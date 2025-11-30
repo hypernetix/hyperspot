@@ -111,9 +111,9 @@ impl RestfulModule for TestAuthModule {
             .require_auth("test", "read")
             .summary("Protected endpoint")
             .handler(protected_handler)
-            .json_response_with_schema::<TestResponse>(openapi, 200, "Success")
-            .problem_response(openapi, 401, "Unauthorized")
-            .problem_response(openapi, 403, "Forbidden")
+            .json_response_with_schema::<TestResponse>(openapi, http::StatusCode::OK, "Success")
+            .error_401(openapi)
+            .error_403(openapi)
             .register(router, openapi);
 
         // Protected route with path parameter (to test pattern matching)
@@ -123,9 +123,9 @@ impl RestfulModule for TestAuthModule {
             .summary("Get user by ID")
             .path_param("id", "User ID")
             .handler(protected_handler)
-            .json_response_with_schema::<TestResponse>(openapi, 200, "Success")
-            .problem_response(openapi, 401, "Unauthorized")
-            .problem_response(openapi, 403, "Forbidden")
+            .json_response_with_schema::<TestResponse>(openapi, http::StatusCode::OK, "Success")
+            .error_401(openapi)
+            .error_403(openapi)
             .register(router, openapi);
 
         // Public route with explicit public marking
@@ -134,7 +134,7 @@ impl RestfulModule for TestAuthModule {
             .public()
             .summary("Public endpoint")
             .handler(public_handler)
-            .json_response_with_schema::<TestResponse>(openapi, 200, "Success")
+            .json_response_with_schema::<TestResponse>(openapi, http::StatusCode::OK, "Success")
             .register(router, openapi);
 
         Ok(router)

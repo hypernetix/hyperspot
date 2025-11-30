@@ -210,7 +210,7 @@ Stopped ── start() ── Starting ──(await_ready? then ready.notify())�
 
 ## REST with `OperationBuilder`
 
-`OperationBuilder` is a type-state builder that **won’t compile** unless you set both a **handler** and at least one **response** before calling `register()`. It also attaches request bodies and component schemas using `utoipa`.
+`OperationBuilder` is a type-state builder that **won't compile** unless you set both a **handler** and at least one **response** before calling `register()`. It also attaches request bodies and component schemas using `utoipa`.
 
 ### Quick reference
 
@@ -231,6 +231,7 @@ OperationBuilder::<Missing, Missing, S>::post("/path")
 .tag("group")
 .path_param("id", "ID description")
 .query_param("q", /*required=*/false, "Query description")
+.query_param_typed("limit", false, "Max results", "integer")
 ```
 
 **Request body (JSON)**
@@ -239,26 +240,66 @@ OperationBuilder::<Missing, Missing, S>::post("/path")
 // Auto-register schema for T with utoipa::ToSchema; with/without description:
 .json_request::<T>(openapi, "body description")
 .json_request_no_desc::<T>(openapi)
+
+// Or use pre-registered schema by name:
+.json_request_schema("SchemaName", "body description")
+.json_request_schema_no_desc("SchemaName")
+
+// Make request body optional (default is required):
+.request_optional()
+```
+
+**Request body (file uploads)**
+
+```rust
+// Multipart form file upload (single file field):
+.multipart_file_request("file", Some("File to upload"))
+
+// Raw binary body (application/octet-stream):
+.octet_stream_request(Some("Raw file bytes"))
+```
+
+**MIME type validation**
+
+```rust
+// Configure allowed Content-Type values (enforced by ingress middleware):
+.allow_content_types(&["application/json", "application/xml"])
 ```
 
 **Responses**
 
 ```rust
 // First response (Missing -> Present):
-.json_response(200, "OK")
-.text_response(400, "Bad request")
-.html_response(200, "HTML")
+.json_response(StatusCode::OK, "OK")
+.text_response(StatusCode::OK, "OK", "text/plain")
+.html_response(StatusCode::OK, "HTML")
 
 // Schema-aware JSON responses (auto-register T):
-.json_response_with_schema::<T>(openapi, 200, "Success")
+.json_response_with_schema::<T>(openapi, StatusCode::OK, "Success")
 
 // RFC-9457 problem responses:
-.problem_response(openapi, 400, "Bad request")
-.problem_response(openapi, 409, "Conflict")
-.problem_response(openapi, 500, "Internal error")
+.problem_response(openapi, StatusCode::BAD_REQUEST, "Bad request")
+.problem_response(openapi, StatusCode::CONFLICT, "Conflict")
+.problem_response(openapi, StatusCode::INTERNAL_SERVER_ERROR, "Internal error")
 
 // Server-Sent Events (SSE) responses:
 .sse_json::<T>(openapi, "Real-time event stream")
+
+// Add all standard error responses (400, 401, 403, 404, 409, 422, 429, 500):
+.standard_errors(openapi)
+
+// Add 422 validation error with structured ValidationError schema:
+.with_422_validation_error(openapi)
+```
+
+**Authentication**
+
+```rust
+// Require authentication with resource:action permission:
+.require_auth("users", "read")
+
+// Or mark as public (no auth required):
+.public()
 ```
 
 **Handler / method router**
@@ -276,7 +317,7 @@ OperationBuilder::<Missing, Missing, S>::post("/path")
 
 ### Using Router state (`S`)
 
-Pass a state once via `Router::with_state(S)`. Handlers are free functions taking `State<S>`, so you don’t capture/clone your service per route.
+Pass a state once via `Router::with_state(S)`. Handlers are free functions taking `State<S>`, so you don't capture/clone your service per route.
 
 ---
 
@@ -322,11 +363,22 @@ OperationBuilder::post("/users")
     .operation_id("users.create")
     .summary("Create user")
     .json_request::<CreateUserReq>(openapi, "User creation data")
-    .json_response_with_schema::<UserDto>(openapi, 201, "User created")
-    .problem_response(openapi, 400, "Invalid input")
-    .problem_response(openapi, 409, "Email already exists")
-    .problem_response(openapi, 500, "Internal server error")
     .handler(create_user_handler)
+    .json_response_with_schema::<UserDto>(openapi, StatusCode::CREATED, "User created")
+    .standard_errors(openapi)  // Adds 400, 401, 403, 404, 409, 422, 429, 500
+    .register(router, openapi);
+
+// Or for more specific error responses:
+OperationBuilder::post("/users")
+    .operation_id("users.create")
+    .summary("Create user")
+    .json_request::<CreateUserReq>(openapi, "User creation data")
+    .handler(create_user_handler)
+    .json_response_with_schema::<UserDto>(openapi, StatusCode::CREATED, "User created")
+    .problem_response(openapi, StatusCode::BAD_REQUEST, "Invalid input")
+    .problem_response(openapi, StatusCode::CONFLICT, "Email already exists")
+    .with_422_validation_error(openapi)  // Structured validation errors
+    .problem_response(openapi, StatusCode::INTERNAL_SERVER_ERROR, "Internal error")
     .register(router, openapi);
 ```
 
@@ -706,6 +758,105 @@ paths:
 
 ---
 
+## File upload endpoints
+
+ModKit provides convenient helpers for file upload endpoints with proper OpenAPI documentation.
+
+### Multipart form file upload
+
+For traditional HTML form uploads with a single file field:
+
+```rust
+use axum::{extract::Multipart, Extension};
+use modkit::api::problem::{Problem, internal_error};
+
+async fn upload_handler(
+    Extension(service): Extension<Arc<MyService>>,
+    mut multipart: Multipart,
+) -> Result<Json<UploadResponse>, Problem> {
+    // Extract file from multipart form
+    while let Some(field) = multipart.next_field().await.map_err(|e| internal_error(e))? {
+        if field.name() == Some("file") {
+            let filename = field.file_name().map(|s| s.to_string());
+            let bytes = field.bytes().await.map_err(|e| internal_error(e))?;
+            
+            let result = service.process_file(filename, bytes).await?;
+            return Ok(Json(result));
+        }
+    }
+    Err(bad_request("Missing 'file' field in multipart form"))
+}
+
+// Register with type-safe builder
+OperationBuilder::post("/upload")
+    .operation_id("files.upload")
+    .summary("Upload a file")
+    .multipart_file_request("file", Some("File to upload"))
+    .handler(upload_handler)
+    .json_response_with_schema::<UploadResponse>(openapi, StatusCode::OK, "Upload successful")
+    .standard_errors(openapi)
+    .register(router, openapi);
+```
+
+The `.multipart_file_request()` method:
+- Sets `multipart/form-data` content type
+- Generates proper OpenAPI schema with binary file field
+- Restricts allowed Content-Type to `multipart/form-data` only
+- Produces UI-friendly documentation for tools like Stoplight Elements
+
+### Raw binary upload (octet-stream)
+
+For endpoints that accept the entire request body as raw bytes:
+
+```rust
+use axum::{body::Bytes, Extension};
+
+async fn upload_binary_handler(
+    Extension(service): Extension<Arc<MyService>>,
+    body: Bytes,
+) -> Result<Json<ParseResponse>, Problem> {
+    let result = service.parse_bytes(body).await?;
+    Ok(Json(result))
+}
+
+// Register with type-safe builder
+OperationBuilder::post("/upload")
+    .operation_id("files.upload_binary")
+    .summary("Upload raw file bytes")
+    .octet_stream_request(Some("Raw file bytes"))
+    .handler(upload_binary_handler)
+    .json_response_with_schema::<ParseResponse>(openapi, StatusCode::OK, "Parse successful")
+    .standard_errors(openapi)
+    .register(router, openapi);
+```
+
+The `.octet_stream_request()` method:
+- Sets `application/octet-stream` content type
+- Generates OpenAPI schema: `type: string, format: binary`
+- Restricts allowed Content-Type to `application/octet-stream` only
+- Tools render this as a single file upload control for the entire body
+
+### MIME type validation
+
+Both helpers automatically configure MIME type validation via the ingress middleware. If a request arrives with a different Content-Type, it will receive HTTP 415 (Unsupported Media Type).
+
+You can also manually configure allowed types:
+
+```rust
+OperationBuilder::post("/upload")
+    .operation_id("files.upload_custom")
+    .summary("Upload with custom validation")
+    .allow_content_types(&["application/pdf", "image/png", "image/jpeg"])
+    .handler(upload_handler)
+    .json_response(StatusCode::OK, "Upload successful")
+    .problem_response(openapi, StatusCode::UNSUPPORTED_MEDIA_TYPE, "Unsupported file type")
+    .register(router, openapi);
+```
+
+**Important**: `.allow_content_types()` is independent of the request body schema. It only configures ingress validation and doesn't create OpenAPI request body specs. Use it when you want to enforce MIME types but handle the body parsing manually in your handler.
+
+---
+
 ## Idiomatic conversions
 
 Prefer `From` over ad-hoc mapper functions.
@@ -746,9 +897,50 @@ let users: Vec<User> = entities.into_iter().map(Into::into).collect();
 
 ## OpenAPI integration (utoipa)
 
-* DTOs derive `utoipa::ToSchema`.
-* `OperationBuilder` methods call your OpenAPI registry to ensure component schemas exist.
-* `application/problem+json` is treated like JSON; responses reference `#/components/schemas/Problem`.
+ModKit provides a standalone OpenAPI registry system that collects operation specs and schemas, then builds a complete OpenAPI 3.1 document.
+
+### OpenApiRegistry trait
+
+The `OpenApiRegistry` trait provides:
+
+* `register_operation(&self, spec: &OperationSpec)` - Register API operations
+* `ensure_schema_raw(&self, name: &str, schemas: SchemaCollection) -> String` - Register component schemas
+* Helper function `ensure_schema::<T>()` - Type-safe schema registration with transitive dependencies
+
+### Implementation
+
+The `OpenApiRegistryImpl` uses lock-free data structures for high performance:
+
+```rust
+use modkit::api::{OpenApiRegistry, OpenApiRegistryImpl, OpenApiInfo};
+
+// Create registry
+let registry = OpenApiRegistryImpl::new();
+
+// Register operations (done automatically by OperationBuilder)
+// ...
+
+// Build OpenAPI document
+let info = OpenApiInfo {
+    title: "My API".to_string(),
+    version: "1.0.0".to_string(),
+    description: Some("API documentation".to_string()),
+};
+let openapi = registry.build_openapi(&info)?;
+
+// Serialize to JSON
+let json = serde_json::to_string_pretty(&openapi)?;
+```
+
+### Schema registration
+
+DTOs derive `utoipa::ToSchema`. The `OperationBuilder` methods automatically register schemas when you use:
+
+* `.json_request::<T>()` - Registers request body schema
+* `.json_response_with_schema::<T>()` - Registers response schema
+* `.sse_json::<T>()` - Registers SSE event schema
+* `.problem_response()` - Registers Problem schema
+* `.with_422_validation_error()` - Registers ValidationError schema
 
 **DTO example**
 
@@ -768,6 +960,18 @@ pub struct UserDto {
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 ```
+
+### Security schemes
+
+The registry automatically adds a `bearerAuth` security scheme (HTTP Bearer with JWT format). Operations using `.require_auth()` will reference this scheme in OpenAPI.
+
+### Content type handling
+
+* `application/json` and `application/problem+json` reference component schemas
+* `text/event-stream` (SSE) references event schemas
+* `multipart/form-data` generates object schemas with binary file fields
+* `application/octet-stream` generates string schemas with binary format
+* Other content types use string schemas with custom formats
 
 ---
 
@@ -872,6 +1076,154 @@ pub trait StatefulModule: Send + Sync {
 
 ---
 
+## Complete example: Modern REST module
+
+Here's a complete example showing all the latest features:
+
+```rust
+use axum::{body::Bytes, extract::{Multipart, Query, State}, Json, Router};
+use http::StatusCode;
+use modkit::api::{OpenApiRegistry, OperationBuilder, problem::{Problem, bad_request, internal_error}};
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
+use std::sync::Arc;
+
+// DTOs with utoipa schemas
+#[derive(Serialize, Deserialize, ToSchema)]
+pub struct CreateItemRequest {
+    pub name: String,
+    pub description: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, ToSchema)]
+pub struct ItemDto {
+    pub id: uuid::Uuid,
+    pub name: String,
+    pub description: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct RenderQuery {
+    #[serde(default)]
+    pub render_markdown: bool,
+}
+
+// State for handlers
+#[derive(Clone)]
+struct ApiState {
+    service: Arc<ItemService>,
+}
+
+// Handlers (free functions using State)
+async fn list_items(State(state): State<ApiState>) -> Result<Json<Vec<ItemDto>>, Problem> {
+    let items = state.service.list_items().await
+        .map_err(|e| internal_error(e))?;
+    Ok(Json(items))
+}
+
+async fn create_item(
+    State(state): State<ApiState>,
+    Json(req): Json<CreateItemRequest>,
+) -> Result<Json<ItemDto>, Problem> {
+    if req.name.is_empty() {
+        return Err(bad_request("Name is required"));
+    }
+    let item = state.service.create_item(req).await
+        .map_err(|e| internal_error(e))?;
+    Ok(Json(item))
+}
+
+async fn upload_file(
+    State(state): State<ApiState>,
+    Query(query): Query<RenderQuery>,
+    mut multipart: Multipart,
+) -> Result<Json<ItemDto>, Problem> {
+    while let Some(field) = multipart.next_field().await.map_err(|e| internal_error(e))? {
+        if field.name() == Some("file") {
+            let filename = field.file_name().map(|s| s.to_string());
+            let bytes = field.bytes().await.map_err(|e| internal_error(e))?;
+            
+            let item = state.service.process_upload(filename, bytes, query.render_markdown).await
+                .map_err(|e| internal_error(e))?;
+            return Ok(Json(item));
+        }
+    }
+    Err(bad_request("Missing 'file' field"))
+}
+
+async fn upload_binary(
+    State(state): State<ApiState>,
+    body: Bytes,
+) -> Result<Json<ItemDto>, Problem> {
+    let item = state.service.process_binary(body).await
+        .map_err(|e| internal_error(e))?;
+    Ok(Json(item))
+}
+
+// Register routes using the type-safe builder
+pub fn register_routes(
+    mut router: Router,
+    openapi: &dyn OpenApiRegistry,
+    service: Arc<ItemService>,
+) -> anyhow::Result<Router> {
+    // GET /items - List items
+    router = OperationBuilder::get("/items")
+        .operation_id("items.list")
+        .summary("List all items")
+        .tag("Items")
+        .require_auth("items", "read")
+        .handler(list_items)
+        .json_response_with_schema::<Vec<ItemDto>>(openapi, StatusCode::OK, "List of items")
+        .standard_errors(openapi)
+        .register(router, openapi);
+
+    // POST /items - Create item
+    router = OperationBuilder::post("/items")
+        .operation_id("items.create")
+        .summary("Create a new item")
+        .tag("Items")
+        .require_auth("items", "write")
+        .json_request::<CreateItemRequest>(openapi, "Item data")
+        .handler(create_item)
+        .json_response_with_schema::<ItemDto>(openapi, StatusCode::CREATED, "Item created")
+        .with_422_validation_error(openapi)
+        .standard_errors(openapi)
+        .register(router, openapi);
+
+    // POST /items/upload - Upload file (multipart)
+    router = OperationBuilder::post("/items/upload")
+        .operation_id("items.upload")
+        .summary("Upload a file")
+        .tag("Items")
+        .require_auth("items", "write")
+        .query_param_typed("render_markdown", false, "Render markdown output", "boolean")
+        .multipart_file_request("file", Some("File to process"))
+        .handler(upload_file)
+        .json_response_with_schema::<ItemDto>(openapi, StatusCode::OK, "File processed")
+        .standard_errors(openapi)
+        .problem_response(openapi, StatusCode::UNSUPPORTED_MEDIA_TYPE, "Unsupported file type")
+        .register(router, openapi);
+
+    // POST /items/upload-binary - Upload raw binary
+    router = OperationBuilder::post("/items/upload-binary")
+        .operation_id("items.upload_binary")
+        .summary("Upload raw binary data")
+        .tag("Items")
+        .require_auth("items", "write")
+        .octet_stream_request(Some("Raw file bytes"))
+        .handler(upload_binary)
+        .json_response_with_schema::<ItemDto>(openapi, StatusCode::OK, "Binary processed")
+        .standard_errors(openapi)
+        .register(router, openapi);
+
+    // Add state
+    let state = ApiState { service };
+    Ok(router.with_state(state))
+}
+```
+
+---
+
 ## Best practices
 
 * Handlers are thin; domain services are cohesive and testable.
@@ -880,3 +1232,7 @@ pub trait StatefulModule: Send + Sync {
 * Use `tracing` with module/operation fields.
 * Keep migrations in `infra/storage/migrations/` and run them in `DbModule::migrate`.
 * For SSE: use bounded channels, domain events with adapters, and per-route injection.
+* Use `.standard_errors(openapi)` for consistent error responses across your API.
+* Use `.multipart_file_request()` for HTML form uploads, `.octet_stream_request()` for raw binary.
+* Use `.require_auth()` for protected endpoints, `.public()` for public endpoints.
+* Use `.with_422_validation_error()` for endpoints with input validation.

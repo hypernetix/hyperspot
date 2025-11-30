@@ -55,7 +55,12 @@ impl RateLimiterMap {
 // TODO: Use tower-governor instead of own implementation
 pub async fn rate_limit_middleware(map: RateLimiterMap, req: Request, next: Next) -> Response {
     let method = req.method().clone();
-    let path = req.uri().path().to_string();
+    // Use MatchedPath extension (set by Axum router) for accurate route matching
+    let path = req
+        .extensions()
+        .get::<axum::extract::MatchedPath>()
+        .map(|p| p.as_str().to_string())
+        .unwrap_or_else(|| req.uri().path().to_string());
     let key = (method, path);
 
     if let Some(bucket) = map.buckets.get(&key) {
