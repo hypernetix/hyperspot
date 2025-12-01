@@ -42,7 +42,7 @@ build:
 
 # Show this help message
 help:
-	@awk '/^# / { desc=substr($$0, 3) } /^[a-zA-Z0-9_-]+:/ && desc { printf "%-20s - %s\n", $$1, desc; desc="" }' Makefile
+	@awk '/^# / { desc=substr($$0, 3) } /^[a-zA-Z0-9_-]+:/ && desc { printf "%-20s - %s\n", $$1, desc; desc="" }' Makefile | sort
 
 # Generate OpenAPI spec from running hyperspot-server
 openapi:
