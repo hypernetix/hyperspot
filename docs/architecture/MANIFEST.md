@@ -123,7 +123,7 @@ The diagram above shows HyperSpot's component architecture. Components are organ
 
 ### 2.1. Phase 1 - Core Foundation
 
-- [ ] Ingress API
+- [ ] API ingress gateway
 - [ ] Process manager
 - [ ] Types registry
 - [ ] Chat engine
@@ -135,14 +135,16 @@ The diagram above shows HyperSpot's component architecture. Components are organ
 - [ ] License enforcer gateway
 - [ ] Tenant resolver gateway
 - [ ] LLM gateway
+- [ ] LLM gateway - abstract OpenAI API
 - [ ] LLM gateway - VLLM connector
-- [ ] LLM gateway - LM Studio connector
 - [ ] LLM gateway - OpenAI connector
 - [ ] LLM gateway - Gemini connector
 - [ ] LLM gateway - Anthropic connector
 - [ ] LLM manager
 - [ ] LLM manager - VLLM
-- [ ] LLM manager - LM Studio
+- [ ] Models registry
+- [ ] Model downloader - Huggingface
+- [ ] Model downloader - Ollama
 
 ### 2.2. Phase 2 - Extended Capabilities
 
@@ -151,6 +153,10 @@ The diagram above shows HyperSpot's component architecture. Components are organ
 - [ ] LLM benchmarks gateway
 - [ ] LLM benchmarks gateway - HumanEval
 - [ ] LLM benchmarks gateway - MBPP
+- [ ] LLM gateway - LM Studio connector
+- [ ] LLM manager - local llama.cpp
+- [ ] LLM manager - LM Studio
+- [ ] LLM manager - Ollama
 - [ ] Event Manager
 - [ ] Audit
 
@@ -162,6 +168,8 @@ The diagram above shows HyperSpot's component architecture. Components are organ
 - [ ] Settings service
 - [ ] Credentials Store
 - [ ] License Enforcement
+- [ ] LLM manager - local MLX
+- [ ] LLM manager - local ONNX
 - [ ] Email gateway
 - [ ] Flowcharts
 
