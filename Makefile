@@ -5,28 +5,44 @@ OPENAPI_OUT ?= docs/api/api.json
 
 .PHONY: check fmt clippy test audit deny security ci
 
+# Check code formatting
 fmt:
 	cargo fmt --all -- --check
 
+# Run clippy linter
 clippy:
 	cargo clippy --workspace --all-targets -- -D warnings
 
+# Run all tests
 test:
 	cargo test --workspace
 
+# Check for security vulnerabilities
 audit:
 	@command -v cargo-audit >/dev/null || (echo "Installing cargo-audit..." && cargo install cargo-audit)
 	cargo audit
 
+# Check licenses and dependencies
 deny:
 	@command -v cargo-deny >/dev/null || (echo "Installing cargo-deny..." && cargo install cargo-deny)
 	cargo deny check
 
+# Run all security checks
 security: audit deny
 
+# Run all quality checks
 check: fmt clippy test security
 
+# Run CI pipeline
 ci: check
+
+# Make a release build
+build:
+	cargo build --release
+
+# Show this help message
+help:
+	@awk '/^# / { desc=substr($$0, 3) } /^[a-zA-Z0-9_-]+:/ && desc { printf "%-20s - %s\n", $$1, desc; desc="" }' Makefile | sort
 
 # Generate OpenAPI spec from running hyperspot-server
 openapi:
@@ -55,58 +71,62 @@ openapi:
 	kill $$SERVER_PID >/dev/null 2>&1 || true; \
 	wait $$SERVER_PID 2>/dev/null || true
 
-# Development commands
+# Auto-fix code formatting
 dev-fmt:
 	cargo fmt --all
 
+# Auto-fix clippy warnings
 dev-clippy:
 	cargo clippy --workspace --all-targets --fix --allow-dirty
 
+# Run tests in development mode
 dev-test:
 	cargo test --workspace
 
-example:
-	cargo run --bin hyperspot-server --features users-info-example -- --config config/quickstart.yaml
-# Quick start helpers
+# Start server with quickstart config
 quickstart:
 	mkdir -p data
 	cargo run --bin hyperspot-server -- --config config/quickstart.yaml run
 
+# Run server with example module
 example:
 	cargo run --bin hyperspot-server --features users-info-example -- --config config/quickstart.yaml run
 
-# Integration testing with testcontainers
 .PHONY: test-sqlite test-pg test-mysql test-all test-users-info-pg
 
-# modkit-db only
+# Run SQLite integration tests
 test-sqlite:
 	cargo test -p modkit-db --features "sqlite,integration" -- --nocapture
 
+# Run PostgreSQL integration tests
 test-pg:
 	cargo test -p modkit-db --features "pg,integration" -- --nocapture
 
+# Run MySQL integration tests
 test-mysql:
 	cargo test -p modkit-db --features "mysql,integration" -- --nocapture
 
+# Run all database integration tests
 test-all: test-sqlite test-pg test-mysql
 
-# example module (Postgres only)
+# Run users_info module integration tests
 test-users-info-pg:
 	cargo test -p users_info --features "integration" -- --nocapture
 
-# E2E testing
 .PHONY: e2e e2e-local e2e-docker
 
-# Run E2E tests against server in Docker  (default mode)
+# Run E2E tests in Docker (default)
 e2e: e2e-docker
 
-# Explicit local mode (same as default e2e)
+# Run E2E tests locally
 e2e-local:
 	python3 scripts/ci.py e2e
 
 # Run E2E tests in Docker environment
 e2e-docker:
 	python3 scripts/ci.py e2e --docker
+
+# Generate code coverage report
 coverage:
 	@echo "Code coverage is not implemented yet"
 	@exit -1

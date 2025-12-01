@@ -915,7 +915,55 @@ Implement the local client that bridges the domain service to the contract API.
    }
    ```
 
-### Step 11: Testing
+### Step 11: Register Module in HyperSpot Server
+
+**CRITICAL:** After creating your module, you MUST register it in the HyperSpot server application to make it discoverable and include its API endpoints in the OpenAPI documentation.
+
+**Rule:** Every new module MUST be registered in TWO places:
+
+1. **Add dependency in `apps/hyperspot-server/Cargo.toml`:**
+
+   ```toml
+   # user modules
+   file_parser = { path = "../../modules/file_parser" }
+   syscap = { path = "../../modules/syscap" }
+   your_module = { path = "../../modules/your_module" }  # ADD THIS LINE
+   ```
+
+2. **Import module in `apps/hyperspot-server/src/registered_modules.rs`:**
+
+   ```rust
+   // This file ensures all modules are linked and registered via inventory
+   #![allow(unused_imports)]
+
+   use api_ingress as _;
+   use directory_service as _;
+   use file_parser as _;
+   use grpc_hub as _;
+   use syscap as _;
+   use your_module as _;  // ADD THIS LINE
+   #[cfg(feature = "users-info-example")]
+   use users_info as _;
+   ```
+
+**Why this is required:**
+- The `inventory` crate discovers modules at link time
+- Without importing the module, it won't be linked into the binary
+- This results in missing API endpoints in OpenAPI documentation
+- The module won't be initialized or available at runtime
+
+**Verification:**
+After registration, rebuild and run the server:
+```bash
+cargo build
+cargo run --bin hyperspot-server -- --config config/quickstart.yaml run
+```
+
+Then check the OpenAPI documentation at `http://127.0.0.1:8087/docs` to verify your module's endpoints appear.
+
+---
+
+### Step 12: Testing
 
 - **Unit Tests:** Place next to the code being tested. Mock repository traits to test domain service logic in isolation.
 - **Integration/REST Tests:** Place in the `tests/` directory. Use `Router::oneshot` with a stubbed service or a real
