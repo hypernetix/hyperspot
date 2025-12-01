@@ -1,8 +1,17 @@
 # HyperSpot Server
 
-HyperSpot Server is a modular, high-performance platform for AI services built in Rust. It provides a comprehensive
-framework for building scalable AI applications with automatic REST API generation, comprehensive OpenAPI documentation,
-and a flexible modular architecture.
+**HyperSpot Server** is a modular, high-performance platform for building AI services built in Rust. It provides a comprehensive framework for building scalable AI applications with automatic REST API generation, comprehensive OpenAPI documentation, and a flexible modular architecture.
+
+**Key Philosophy:**
+- **Modular by Design**: Everything is a Module - composable, independent units with gateway patterns for pluggable workers
+- **Extensible at Every Level**: [GTS](https://github.com/globaltypesystem/gts-spec)-powered extension points for custom data types, business logic, and third-party integrations
+- **SaaS Ready**: Multi-tenancy, granular access control, usage tracking, and tenant customization built-in
+- **Cloud Operations Excellence**: Production-grade observability, database agnostic design, API best practices, and resilience patterns via ModKit
+- **Quality First**: 90%+ test coverage target with unit, integration, E2E, performance, and security testing
+- **Universal Deployment**: Single codebase runs on cloud, on-prem Windows/Linux workstation, or mobile
+- **Developer Friendly**: AI-assisted code generation, automatic OpenAPI docs, DDD-light structure, and type-safe APIs
+
+See the full [ARCHITECTURE](docs/architecture/ARCHITECTURE.md) document for more details.
 
 ## Quick Start
 
@@ -63,7 +72,7 @@ curl http://127.0.0.1:8087/health
 ```yaml
 # HyperSpot Server Configuration
 
-# Core server configuration (global section)  
+# Core server configuration (global section)
 server:
   home_dir: "~/.hyperspot"
 
