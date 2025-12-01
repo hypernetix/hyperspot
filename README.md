@@ -11,7 +11,7 @@
 - **Universal Deployment**: Single codebase runs on cloud, on-prem Windows/Linux workstation, or mobile
 - **Developer Friendly**: AI-assisted code generation, automatic OpenAPI docs, DDD-light structure, and type-safe APIs
 
-See the full [ARCHITECTURE](docs/architecture/ARCHITECTURE.md) document for more details.
+See the full architecture [MANIFEST](docs/architecture/MANIFEST.md) for more details.
 
 ## Quick Start
 
