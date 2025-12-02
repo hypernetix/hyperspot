@@ -23,6 +23,8 @@ members = [
     "modules/directory_service",
     "modules/grpc_hub",
     "modules/file_parser",
+    "modules/nodes_registry",
+    "libs/modkit-node-info",
     "examples/modkit/users_info"
 ]
 resolver = "2"
