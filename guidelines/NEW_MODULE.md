@@ -930,7 +930,7 @@ Implement the local client that bridges the domain service to the contract API.
    your_module = { path = "../../modules/your_module" }  # ADD THIS LINE
    ```
 
-2. **Import module in `apps/hyperspot-server/src/re_gistered_modules.rs`:**
+2. **Import module in `apps/hyperspot-server/src/registered_modules.rs`:**
 
    ```rust
    // This file ensures all modules are linked and registered via inventory
