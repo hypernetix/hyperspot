@@ -1,7 +1,11 @@
 use crate::error::NodeInfoError;
 use crate::model::GpuInfo;
+use once_cell::sync::Lazy;
 use regex::Regex;
 use std::process::Command;
+
+static MODEL_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"Chipset Model: (.+)").unwrap());
+static VRAM_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"VRAM \(.*\): (\d+) MB").unwrap());
 
 /// Collect GPU information on macOS using system_profiler
 pub fn collect_gpu_info() -> Result<Vec<GpuInfo>, NodeInfoError> {
@@ -20,13 +24,8 @@ pub fn collect_gpu_info() -> Result<Vec<GpuInfo>, NodeInfoError> {
     let mut gpus = Vec::new();
 
     // Parse GPU model names
-    let model_regex = Regex::new(r"Chipset Model: (.+)")
-        .map_err(|e| NodeInfoError::Internal(format!("Regex error: {}", e)))?;
-    let vram_regex = Regex::new(r"VRAM \(.*\): (\d+) MB")
-        .map_err(|e| NodeInfoError::Internal(format!("Regex error: {}", e)))?;
-
-    let model_matches: Vec<_> = model_regex.captures_iter(&output_str).collect();
-    let vram_matches: Vec<_> = vram_regex.captures_iter(&output_str).collect();
+    let model_matches: Vec<_> = MODEL_REGEX.captures_iter(&output_str).collect();
+    let vram_matches: Vec<_> = VRAM_REGEX.captures_iter(&output_str).collect();
 
     for (i, model_cap) in model_matches.iter().enumerate() {
         if let Some(model) = model_cap.get(1) {
