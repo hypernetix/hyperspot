@@ -1,8 +1,8 @@
 use crate::contract::{Node, NodeSysCap, NodeSysInfo, SysCap};
 use std::collections::HashMap;
 use std::sync::RwLock;
-use uuid::Uuid;
 use tracing::warn;
+use uuid::Uuid;
 
 /// Cached node data with timestamps
 #[derive(Debug, Clone)]
@@ -221,7 +221,8 @@ impl NodeStorage {
             Ok(nodes) => {
                 if let Some(data) = nodes.get(&node_id) {
                     if let Some(ref syscap_system) = data.syscap_system {
-                        if let Some(cap) = syscap_system.capabilities.iter().find(|c| c.key == key) {
+                        if let Some(cap) = syscap_system.capabilities.iter().find(|c| c.key == key)
+                        {
                             let now = chrono::Utc::now().timestamp();
                             let age_secs = (now - cap.fetched_at_secs).max(0);
                             return age_secs as u64 >= cap.cache_ttl_secs;
