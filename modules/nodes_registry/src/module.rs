@@ -6,7 +6,6 @@ use modkit::context::ModuleCtx;
 use modkit::contracts::{OpenApiRegistry, RestfulModule};
 use modkit::Module;
 
-use crate::config::NodesRegistryConfig;
 use crate::contract::client::NodesRegistryApi;
 use crate::domain::service::Service;
 use crate::gateways::local::NodesRegistryLocalClient;
@@ -39,7 +38,7 @@ impl Default for NodesRegistry {
 #[async_trait]
 impl Module for NodesRegistry {
     async fn init(&self, ctx: &ModuleCtx) -> Result<()> {
-        let _cfg: NodesRegistryConfig = ctx.config()?;
+        // let cfg: NodesRegistryConfig = ctx.config()?; not needed for now
 
         // Create the service
         let service = Service::new();
