@@ -8,11 +8,11 @@ disallowed-methods = [
     # Select operations - must use SecureSelect
     { path = "sea_orm::Select::all", reason = "Use SecureSelect::all() after .secure().scope_with()" },
     { path = "sea_orm::Select::one", reason = "Use SecureSelect::one() after .secure().scope_with()" },
-    { path = "sea_orm::Select::count", reason = "Use SecureSelect::count() after .secure().scope_with()" },
-    
+    { path = "sea_orm::Select::count", reason = "Use SecureSelect::count() after .secure().scope_with()", allow-invalid = true },
+
     # Update operations - must use SecureUpdateMany
     { path = "sea_orm::UpdateMany::exec", reason = "Use SecureUpdateMany::exec() after .secure().scope_with()" },
-    
+
     # Delete operations - must use SecureDeleteMany
     { path = "sea_orm::DeleteMany::exec", reason = "Use SecureDeleteMany::exec() after .secure().scope_with()" },
 ]
