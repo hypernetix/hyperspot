@@ -1,6 +1,9 @@
 use machine_uid;
 use uuid::Uuid;
 
+/// Neutral namespace identifier for hardware-based UUIDs
+const NAMESPACE_BYTES: &[u8] = b"node-hardware-id";
+
 /// Get a permanent hardware-based UUID for this machine.
 /// This UUID is the actual hardware identifier and will remain consistent
 /// across reboots and application restarts.
@@ -34,11 +37,9 @@ pub fn get_hardware_uuid() -> Uuid {
                     );
 
                     // Use UUID v5 to create a deterministic UUID from the machine ID
-                    const HYPERSPOT_NAMESPACE: Uuid = Uuid::from_bytes([
-                        0x6b, 0xa7, 0xb8, 0x10, 0x9d, 0xad, 0x11, 0xd1, 0x80, 0xb4, 0x00, 0xc0,
-                        0x4f, 0xd4, 0x30, 0xc8,
-                    ]);
-                    Uuid::new_v5(&HYPERSPOT_NAMESPACE, machine_id.as_bytes())
+                    // Combine namespace identifier with machine ID for hashing
+                    let combined = [NAMESPACE_BYTES, b":", machine_id.as_bytes()].concat();
+                    Uuid::new_v5(&uuid::Uuid::NAMESPACE_DNS, &combined)
                 }
             }
         }
