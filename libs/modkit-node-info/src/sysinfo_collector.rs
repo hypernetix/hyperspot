@@ -26,11 +26,11 @@ impl SysInfoCollector {
         sys.refresh_cpu_all();
         sys.refresh_memory();
 
-        let os_info = self.collect_os_info(&sys)?;
-        let cpu_info = self.collect_cpu_info(&sys)?;
-        let memory_info = self.collect_memory_info(&sys)?;
-        let host_info = self.collect_host_info()?;
-        let gpus = self.collect_gpu_info()?;
+        let os_info = self.collect_os_info();
+        let cpu_info = self.collect_cpu_info(&sys);
+        let memory_info = self.collect_memory_info(&sys);
+        let host_info = self.collect_host_info();
+        let gpus = self.collect_gpu_info();
         let battery = self.collect_battery_info();
 
         Ok(NodeSysInfo {
@@ -45,19 +45,19 @@ impl SysInfoCollector {
         })
     }
 
-    fn collect_os_info(&self, _sys: &System) -> Result<OsInfo, NodeInfoError> {
+    fn collect_os_info(&self) -> OsInfo {
         let name = System::name().unwrap_or_else(|| std::env::consts::OS.to_string());
         let version = System::os_version().unwrap_or_else(|| "unknown".to_string());
         let arch = std::env::consts::ARCH.to_string();
 
-        Ok(OsInfo {
+        OsInfo {
             name,
             version,
             arch,
-        })
+        }
     }
 
-    fn collect_cpu_info(&self, sys: &System) -> Result<CpuInfo, NodeInfoError> {
+    fn collect_cpu_info(&self, sys: &System) -> CpuInfo {
         let cpus = sys.cpus();
         let num_cpus = cpus.len() as u32;
 
@@ -77,15 +77,15 @@ impl SysInfoCollector {
             0.0
         };
 
-        Ok(CpuInfo {
+        CpuInfo {
             model,
             num_cpus,
             cores,
             frequency_mhz,
-        })
+        }
     }
 
-    fn collect_memory_info(&self, sys: &System) -> Result<MemoryInfo, NodeInfoError> {
+    fn collect_memory_info(&self, sys: &System) -> MemoryInfo {
         let total_bytes = sys.total_memory();
         let available_bytes = sys.available_memory();
         let used_bytes = sys.used_memory();
@@ -95,15 +95,15 @@ impl SysInfoCollector {
             0
         };
 
-        Ok(MemoryInfo {
+        MemoryInfo {
             total_bytes,
             available_bytes,
             used_bytes,
             used_percent,
-        })
+        }
     }
 
-    fn collect_host_info(&self) -> Result<HostInfo, NodeInfoError> {
+    fn collect_host_info(&self) -> HostInfo {
         let hostname = hostname::get()
             .map(|h| h.to_string_lossy().to_string())
             .unwrap_or_else(|_| "unknown".to_string());
@@ -132,14 +132,14 @@ impl SysInfoCollector {
             }
         }
 
-        Ok(HostInfo {
+        HostInfo {
             hostname,
             uptime_seconds,
             ip_addresses,
-        })
+        }
     }
 
-    fn collect_gpu_info(&self) -> Result<Vec<GpuInfo>, NodeInfoError> {
+    fn collect_gpu_info(&self) -> Vec<GpuInfo> {
         // Use platform-specific GPU detection
         #[cfg(target_os = "macos")]
         {
@@ -155,7 +155,7 @@ impl SysInfoCollector {
         }
         #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
         {
-            Ok(Vec::new())
+            Vec::new()
         }
     }
 

@@ -1,4 +1,3 @@
-use crate::error::NodeInfoError;
 use crate::model::GpuInfo;
 use once_cell::sync::Lazy;
 use regex::Regex;
@@ -8,16 +7,17 @@ static MODEL_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"Chipset Model: (.+)"
 static VRAM_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"VRAM \(.*\): (\d+) MB").unwrap());
 
 /// Collect GPU information on macOS using system_profiler
-pub fn collect_gpu_info() -> Result<Vec<GpuInfo>, NodeInfoError> {
-    let output = Command::new("system_profiler")
+pub fn collect_gpu_info() -> Vec<GpuInfo> {
+    let output = match Command::new("system_profiler")
         .arg("SPDisplaysDataType")
         .output()
-        .map_err(|e| {
-            NodeInfoError::SysInfoCollectionFailed(format!("Failed to run system_profiler: {}", e))
-        })?;
+    {
+        Ok(output) => output,
+        Err(_) => return Vec::new(),
+    };
 
     if !output.status.success() {
-        return Ok(Vec::new());
+        return Vec::new();
     }
 
     let output_str = String::from_utf8_lossy(&output.stdout);
@@ -49,5 +49,5 @@ pub fn collect_gpu_info() -> Result<Vec<GpuInfo>, NodeInfoError> {
         }
     }
 
-    Ok(gpus)
+    gpus
 }

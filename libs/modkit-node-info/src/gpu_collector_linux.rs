@@ -1,14 +1,13 @@
-use crate::error::NodeInfoError;
 use crate::model::GpuInfo;
 use std::process::Command;
 
 /// Collect GPU information on Linux using NVML for NVIDIA GPUs, fallback to lspci
-pub fn collect_gpu_info() -> Result<Vec<GpuInfo>, NodeInfoError> {
+pub fn collect_gpu_info() -> Vec<GpuInfo> {
     // Try NVML first for NVIDIA GPUs
     if let Ok(nvidia_gpus) = collect_nvidia_gpus() {
         if !nvidia_gpus.is_empty() {
             tracing::debug!("Found {} NVIDIA GPU(s) via NVML", nvidia_gpus.len());
-            return Ok(nvidia_gpus);
+            return nvidia_gpus;
         }
     }
 
@@ -18,17 +17,19 @@ pub fn collect_gpu_info() -> Result<Vec<GpuInfo>, NodeInfoError> {
 }
 
 /// Collect NVIDIA GPU information using NVML
-fn collect_nvidia_gpus() -> Result<Vec<GpuInfo>, NodeInfoError> {
+fn collect_nvidia_gpus() -> Option<Vec<GpuInfo>> {
     use nvml_wrapper::Nvml;
 
     // Initialize NVML
-    let nvml = Nvml::init().map_err(|e| {
-        NodeInfoError::SysInfoCollectionFailed(format!("NVML initialization failed: {}", e))
-    })?;
+    let nvml = match Nvml::init() {
+        Ok(nvml) => nvml,
+        Err(_) => return None,
+    };
 
-    let device_count = nvml.device_count().map_err(|e| {
-        NodeInfoError::SysInfoCollectionFailed(format!("Failed to get NVML device count: {}", e))
-    })?;
+    let device_count = match nvml.device_count() {
+        Ok(count) => count,
+        Err(_) => return None,
+    };
 
     let mut gpus = Vec::new();
 
@@ -72,11 +73,11 @@ fn collect_nvidia_gpus() -> Result<Vec<GpuInfo>, NodeInfoError> {
         }
     }
 
-    Ok(gpus)
+    Some(gpus)
 }
 
 /// Collect GPU information using lspci (fallback for non-NVIDIA GPUs)
-fn collect_gpus_via_lspci() -> Result<Vec<GpuInfo>, NodeInfoError> {
+fn collect_gpus_via_lspci() -> Vec<GpuInfo> {
     let output = Command::new("lspci").output();
 
     if let Ok(output) = output {
@@ -108,11 +109,11 @@ fn collect_gpus_via_lspci() -> Result<Vec<GpuInfo>, NodeInfoError> {
 
             if !gpus.is_empty() {
                 tracing::debug!("Found {} GPU(s) via lspci", gpus.len());
-                return Ok(gpus);
+                return gpus;
             }
         }
     }
 
     // If lspci fails or finds nothing, return empty list
-    Ok(Vec::new())
+    Vec::new()
 }
