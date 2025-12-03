@@ -35,6 +35,28 @@ A **Module** is a logical component that provides a specific set of functionalit
 - `file_parser` - Document parsing and extraction
 - `grpc_hub` - gRPC communication gateway
 
+**Module categories**
+
+- **Generic Module** - Generic modules are typically independent, expose their own Public API and responsible for their own domain
+- **Gateway Module** - Gateways are normally exposing Public REST API (e.g. search, file parsing, etc.) and routing requests to real executors (workers) based on some context, such tenant ID, or request parameters/body/headers, etc
+- **Worker Module** - Workers typically do not expose their own Public REST API, depend on Gateways and just implement certain contract defined by their Gateway module.
+
+**Module structure:**
+
+| Module type | Generic | Gateway | Worker |
+| --- | --- | --- | --- |
+| API layer @ api/ | Yes | Yes | No |
+| Business logic layer @ domain/ | Yes | Yes (router) | Yes |
+| Infrastructure layer @ infrastructure/ | Likely | Rare | Depends |
+| Gateway layer @ gateways/ | Yes, if depends on other modules | Yes, workers connectors | Yes, clients to some service |
+| Examples | Any CRUD module (TODO) | file_parser, (TODO) | file_parser_tika, (TODO) |
+
+See below typical modules categories, internal layout and typical modules relationship:
+
+![module_structure.png](img/module_categories.drawio.png)
+
+See more in [MODKIT_UNIFIED_SYSTEM.md](MODKIT_UNIFIED_SYSTEM.md)
+
 ### 1.2. Deployment Units
 
 A **Deployment Unit** is a physical component that bundles one or more modules for deployment:
@@ -117,11 +139,11 @@ HyperSpot is designed from the ground up for **Software-as-a-Service (SaaS)** de
 
 ## 3. System Components
 
-![architecture.drawio.png](architecture.drawio.png)
+![architecture.drawio.png](img/architecture.drawio.png)
 
-The diagram above shows HyperSpot's component architecture. Components are organized in phases based on development priority and dependencies.
+The diagram above illustrates principal HyperSpot's modules architecture. Deployment and components list depends on the target environment and build configuration, for example it could be single executable for a desktop version or multiple containers for a cloud server.
 
-### 2.1. Phase 1 - Core Foundation
+### 3.1. Phase 1 - Core Foundation
 
 - [ ] API ingress gateway
 - [ ] Process manager
@@ -147,7 +169,7 @@ The diagram above shows HyperSpot's component architecture. Components are organ
 - [ ] Model downloader - Huggingface
 - [ ] Model downloader - Ollama
 
-### 2.2. Phase 2 - Extended Capabilities
+### 3.2. Phase 2 - Extended Capabilities
 
 - [ ] MCP gateway
 - [ ] File parser - Apache Tika parser
@@ -161,7 +183,7 @@ The diagram above shows HyperSpot's component architecture. Components are organ
 - [ ] Event Manager
 - [ ] Audit
 
-### 2.3. Phase 3 - Advanced Features
+### 3.3. Phase 3 - Advanced Features
 
 - [ ] Agents gateway
 - [ ] Server side scripting (FaaS, Workflows)
@@ -176,20 +198,20 @@ The diagram above shows HyperSpot's component architecture. Components are organ
 
 ---
 
-## 3. Deployment Targets
+## 4. Deployment Targets
 
 HyperSpot supports multiple deployment scenarios to meet different operational needs:
 
-- [ ] 3.1. Desktop Application - local AI resaerchers, offline processing
-- [ ] 3.2. Cloud Server - multi-tenant SaaS, scalable AI services
-- [ ] 3.3. On-premises Server - enterprise deployments, air-gapped environments
-- [ ] 3.4. Mobile Application - AI on mobile devices
+- [ ] 4.1. Desktop Application - local AI researchers, offline processing
+- [ ] 4.2. Cloud Server - multi-tenant SaaS, scalable AI services
+- [ ] 4.3. On-premises Server - enterprise deployments, air-gapped environments
+- [ ] 4.4. Mobile Application - AI on mobile devices
 
 ---
 
-## 4. Code Organization
+## 5. Code Organization
 
-### 4.1. Monorepo Structure
+### 5.1. Monorepo Structure
 
 HyperSpot uses a **monorepo** approach with multiple crates:
 
@@ -205,14 +227,14 @@ hyperspot/
 └── config/            # Configuration files
 ```
 
-### 4.2. External Integration
+### 5.2. External Integration
 
 The 'main' crates can be located in separate repositories and use HyperSpot modules as dependencies via Cargo. This allows:
 - Custom applications built on HyperSpot
 - Private modules not in the main repo
 - Vendor-specific extensions
 
-### 4.3. Module Layout (DDD-Light)
+### 5.3. Module Layout (DDD-Light)
 
 Every module follows a **Domain-Driven Design (DDD-light)** structure:
 
@@ -242,7 +264,7 @@ modules/<module-name>/
 - **Domain**: Core business logic, independent of infrastructure
 - **Infra**: Database, external services, system interactions
 
-### 4.4. ModKit - The Foundation
+### 5.4. ModKit - The Foundation
 
 Every HyperSpot module uses the **ModKit** framework, which provides:
 - **Module lifecycle**: Initialization, configuration, shutdown
@@ -262,11 +284,11 @@ Every HyperSpot module uses the **ModKit** framework, which provides:
 
 ---
 
-## 5. Quality Gateways
+## 6. Quality Gateways
 
 HyperSpot maintains high code quality through automated checks and comprehensive testing.
 
-### 5.1. Testing Strategy
+### 6.1. Testing Strategy
 
 **Target: 90%+ code coverage**
 
@@ -286,13 +308,17 @@ HyperSpot maintains high code quality through automated checks and comprehensive
   make e2e-docker  # Run in Docker environment
   ```
 
-- **Performance tests**: Test module interactions with databases
-  TODO
+- **Performance tests**: Benchmark API response times, throughput, and resource usage
+  ```bash
+  # TODO: Add performance test commands
+  ```
 
-- **Security tests**: API fuzzing testing
-  TODO
+- **Security tests**: API fuzzing and security vulnerability scanning
+  ```bash
+  # TODO: Add security test commands
+  ```
 
-### 5.2. Static Analysis
+### 6.2. Static Analysis
 
 All code must pass these checks before merging:
 
@@ -319,9 +345,9 @@ python scripts/ci.py check  # Cross-platform
 
 ---
 
-## 6. Dependencies and Standards
+## 7. Dependencies and Standards
 
-### 6.1. DNA - Development Guidelines
+### 7.1. DNA - Development Guidelines
 
 [DNA](https://github.com/hypernetix/DNA) is HyperSpot's collection of development standards and best practices:
 - **REST API design**: Status codes, pagination, error handling
@@ -334,7 +360,7 @@ python scripts/ci.py check  # Cross-platform
 - `guidelines/DNA/languages/RUST.md` - Rust coding standards
 - `guidelines/SECURITY.md` - Security requirements
 
-### 6.2. Extension Points (Type System)
+### 7.2. Extension Points (Type System)
 
 HyperSpot uses the [Global Type System](https://github.com/GlobalTypeSystem/gts-rust) ([specification](https://github.com/GlobalTypeSystem/gts-spec)) to implement a powerful **extension point architecture** where virtually everything in the system can be extended without modifying core code.
 
@@ -368,7 +394,7 @@ An **extension point** is a well-defined interface where new functionality can b
 
 **Benefits:**
 
-- **High customization**: Hyperspot modules can be used as a building blocks for custom AI applications or platforms
+- **High customization**: HyperSpot modules can be used as building blocks for custom AI applications or platforms
 - **No Core Modifications**: Add new functionality without changing HyperSpot core
 - **Type Safety**: Compile-time checks for extension implementations
 - **Version Compatibility**: Graceful handling of schema evolution
@@ -386,11 +412,11 @@ This extension point architecture makes HyperSpot truly modular and adaptable to
 
 ---
 
-## 7. Cloud Operations Excellence
+## 8. Cloud Operations Excellence
 
 HyperSpot modules are built on **ModKit**, which provides enterprise-grade operational capabilities out of the box. Every module automatically inherits these cloud-native patterns without additional implementation effort.
 
-### 7.1. Observability
+### 8.1. Observability
 
 **Structured Logging:**
 - [ ] **Unified Logging**: All modules use `tracing` for structured, contextual logging
@@ -415,7 +441,7 @@ HyperSpot modules are built on **ModKit**, which provides enterprise-grade opera
 - [ ] **Performance Metrics**: Request latency, throughput, error rates
 - [ ] **Resource Metrics**: Memory usage, connection pool stats, queue depths
 
-### 7.2. Database Excellence
+### 8.2. Database Excellence
 
 **Database Agnostic:**
 - [ ] **Multiple Backends**: PostgreSQL, MySQL, SQLite support via SQLx
@@ -438,7 +464,7 @@ HyperSpot modules are built on **ModKit**, which provides enterprise-grade opera
 - [ ] **Busy Handling**: SQLite busy timeout configuration
 - [ ] **Mock Support**: In-memory database for testing
 
-### 7.3. API Excellence
+### 8.3. API Excellence
 
 **HTTP Best Practices:**
 - [ ] **RESTful Design**: Consistent REST API patterns across all modules
@@ -461,7 +487,7 @@ HyperSpot modules are built on **ModKit**, which provides enterprise-grade opera
 - [ ] **Timeout Protection**: Request timeout enforcement
 - [ ] **Authentication Middleware**: Automatic token validation
 
-### 7.4. Resilience & Reliability
+### 8.4. Resilience & Reliability
 
 **Error Handling:**
 - [ ] **Typed Errors**: Strongly-typed error handling with `anyhow` and `thiserror`
@@ -481,7 +507,7 @@ HyperSpot modules are built on **ModKit**, which provides enterprise-grade opera
 - [ ] **Zero-Downtime Deploys**: Support for rolling updates
 - [ ] **Retry Mechanisms**: Automatic retry for transient failures
 
-### 7.5. Configuration Management
+### 8.5. Configuration Management
 
 **Flexible Configuration:**
 - [ ] **YAML Configuration**: Human-readable configuration files
@@ -495,7 +521,7 @@ HyperSpot modules are built on **ModKit**, which provides enterprise-grade opera
 - [ ] **Secrets Integration**: Support for HashiCorp Vault, AWS Secrets Manager
 - [ ] **Credential Rotation**: Support for zero-downtime credential rotation
 
-### 7.6. Development Experience
+### 8.6. Development Experience
 
 **Developer Productivity:**
 - [ ] **Hot Reload**: Fast development iteration with cargo watch
@@ -510,7 +536,7 @@ HyperSpot modules are built on **ModKit**, which provides enterprise-grade opera
 - [ ] **Stack Traces**: Full stack traces with source locations
 - [ ] **Request Replay**: Ability to replay requests for debugging
 
-### 7.7. Performance Optimization
+### 8.7. Performance Optimization
 
 **Efficient Resource Usage:**
 - [ ] **Async Runtime**: Tokio-based async runtime for high concurrency
