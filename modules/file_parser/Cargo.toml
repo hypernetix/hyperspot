@@ -8,60 +8,58 @@ authors.workspace = true
 
 [dependencies]
 # Core dependencies
-anyhow = "1.0"
-async-trait = "0.1"
-tokio = { version = "1.47", features = ["full"] }
-tracing = "0.1"
-inventory = "0.3"
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+inventory = { workspace = true }
 
 # Serde and JSON schema
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+serde = { workspace = true }
+serde_json = { workspace = true }
 utoipa = { workspace = true }
 
 # HTTP and REST
 axum = { workspace = true, features = ["macros", "multipart"] }
-tower-http = { version = "0.6" }
-http = "1"
+tower-http = { workspace = true }
+http = { workspace = true }
 
 # Time handling
-chrono = { version = "0.4", features = ["serde"] }
+chrono = { workspace = true, features = ["serde"] }
 
 # URL parsing and HTTP client
-url = "2.5"
-reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+url = { workspace = true }
+reqwest = { workspace = true }
 
 # UUID support
-uuid = { version = "1.18", features = ["v4", "v7", "serde"] }
+uuid = { workspace = true }
 
 # Lock-free atomic swaps
-arc-swap = "1.7"
+arc-swap = { workspace = true }
 
 # Error handling
-thiserror = "2.0"
+thiserror = { workspace = true }
 
 # Bytes handling
-bytes = "1.5"
+bytes = { workspace = true }
 
 # Futures and async streaming
-futures = "0.3"
+futures = { workspace = true }
 
 # Base64 encoding (used by stub parser)
-base64 = "0.22"
+base64 = { workspace = true }
 
 # Temp file handling
-tempfile = "3"
+tempfile = { workspace = true }
 
 # Document parsing libraries
-tl = "0.7"
-# Note: ferrules requires a lib target; using pdf-extract as alternative for now
-# ferrules = { git = "https://github.com/aminediro/ferrules.git", default-features = false }
-pdf-extract = "0.10"
+tl = { workspace = true }
+pdf-extract = { workspace = true }
 # Using local docx-rust with fixes for XML parsing issues
 docx-rust = { git = "https://github.com/modcrafter77/docx-rs", branch = "master" }
 
 # MIME type parsing
-mime = "0.3"
+mime = { workspace = true }
 
 # Local dependencies
 modkit = { path = "../../libs/modkit" }
@@ -70,7 +68,6 @@ modkit-security = { path = "../../libs/modkit-security" }
 modkit-errors = { path = "../../libs/modkit-errors" }
 
 [dev-dependencies]
-tower = { version = "0.5", features = ["util"] }
+tower = { workspace = true, features = ["util"] }
 api_ingress = { path = "../../modules/api_ingress" }
-tokio-test = "0.4"
-
+tokio-test = { workspace = true }

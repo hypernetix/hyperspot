@@ -13,47 +13,41 @@ path = "src/lib.rs"
 modkit = { path = "../../libs/modkit" }
 modkit-auth = { path = "../../libs/modkit-auth" }
 modkit-security = { path = "../../libs/modkit-security" }
-inventory = "0.3"
+inventory = { workspace = true }
 anyhow = { workspace = true }
 async-trait = { workspace = true }
 tokio = { workspace = true }
-tokio-util = { version = "0.7", features = ["rt"] }
+tokio-util = { workspace = true }
 tracing = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 parking_lot = { workspace = true }
 thiserror = { workspace = true }
 
-# High-performance data structures
 dashmap = { workspace = true }
 arc-swap = { workspace = true }
-nanoid = "0.4"
+nanoid = { workspace = true }
 
-# Web framework dependencies (only for this module)
 axum = { workspace = true }
 tower = { workspace = true }
 tower-http = { workspace = true }
-tonic = { version = "0.14.2", optional = true }
-matchit = "0.8"  # Route pattern matching for auth middleware
+matchit = { workspace = true }
 
-# Time handling
 chrono = { workspace = true }
 
-# OpenAPI and embedded assets
 utoipa = { workspace = true }
-indexmap = "2.11"
-http = "1.3"
-rust-embed = "8"
+http = { workspace = true }
+rust-embed = { workspace = true }
 
 [dev-dependencies]
 async-trait = { workspace = true }
-futures = "0.3"
+futures = { workspace = true }
 
 [features]
-grpc = ["tonic"]
+grpc = []
 debug-errors = []
 embed_elements = []
 otel = []
 
 [build-dependencies]
-reqwest = { version = "0.12", features = ["blocking", "rustls-tls"] }
+reqwest = { workspace = true, features = ["blocking", "rustls-tls"] }

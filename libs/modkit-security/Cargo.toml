@@ -9,8 +9,8 @@ default = []
 serde = ["dep:serde"]
 
 [dependencies]
-uuid = { version = "1.7", features = ["v4", "serde"] }
-serde = { version = "1", features = ["derive"], optional = true }
-bincode = { version = "2.0", features = ["serde"] }
-thiserror = { version = "2.0" }
+uuid = { workspace = true }
+serde = { workspace = true, optional = true }
+bincode = { workspace = true }
+thiserror = { workspace = true }
 

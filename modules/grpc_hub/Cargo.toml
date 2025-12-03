@@ -12,23 +12,23 @@ path = "src/lib.rs"
 [dependencies]
 modkit = { path = "../../libs/modkit" }
 modkit-transport-grpc = { path = "../../libs/modkit-transport-grpc" }
-inventory = "0.3"
+inventory = { workspace = true }
 anyhow = { workspace = true }
 async-trait = { workspace = true }
 tokio = { workspace = true }
-tokio-util = { version = "0.7", features = ["rt"] }
-tokio-stream = { version = "0.1", features = ["net"] }
-tower = "0.5"
+tokio-util = { workspace = true }
+tokio-stream = { workspace = true }
+tower = { workspace = true }
 tracing = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 parking_lot = { workspace = true }
-http = "1.3"
+http = { workspace = true }
 
 # gRPC server
-tonic = "0.14.2"
+tonic = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true }
-tempfile = "3.8"
+tempfile = { workspace = true }
 
