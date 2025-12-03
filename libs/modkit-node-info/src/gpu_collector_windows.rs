@@ -79,7 +79,7 @@ fn collect_nvidia_gpus() -> Option<Vec<GpuInfo>> {
 /// Collect GPU information using WMIC (fallback for non-NVIDIA GPUs)
 fn collect_gpus_via_wmic() -> Vec<GpuInfo> {
     let output = Command::new("wmic")
-        .args(&[
+        .args([
             "path",
             "win32_VideoController",
             "get",
