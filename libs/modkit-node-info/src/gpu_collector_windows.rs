@@ -4,7 +4,7 @@ use std::process::Command;
 /// Collect GPU information on Windows using NVML for NVIDIA GPUs, fallback to WMIC
 pub fn collect_gpu_info() -> Vec<GpuInfo> {
     // Try NVML first for NVIDIA GPUs
-    if let Ok(nvidia_gpus) = collect_nvidia_gpus() {
+    if let Some(nvidia_gpus) = collect_nvidia_gpus() {
         if !nvidia_gpus.is_empty() {
             tracing::debug!("Found {} NVIDIA GPU(s) via NVML", nvidia_gpus.len());
             return nvidia_gpus;
