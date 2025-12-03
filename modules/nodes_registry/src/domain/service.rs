@@ -71,7 +71,7 @@ impl Service {
         let sysinfo = self
             .node_info_collector
             .collect_sysinfo(node_id)
-            .map_err(|e| DomainError::SysInfoCollectionFailed(e.to_string()))?;
+            .map_err(DomainError::from)?;
 
         // Cache it
         self.storage.update_sysinfo(node_id, sysinfo.clone());
@@ -100,7 +100,7 @@ impl Service {
             let syscap_system = self
                 .node_info_collector
                 .collect_syscap(node_id)
-                .map_err(|e| DomainError::SysCapCollectionFailed(e.to_string()))?;
+                .map_err(DomainError::from)?;
 
             // Update system capabilities in storage
             self.storage.update_syscap_system(node_id, syscap_system);
