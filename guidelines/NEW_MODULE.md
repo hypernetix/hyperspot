@@ -926,7 +926,7 @@ Implement the local client that bridges the domain service to the contract API.
    ```toml
    # user modules
    file_parser = { path = "../../modules/file_parser" }
-   syscap = { path = "../../modules/syscap" }
+   nodes_registry = { path = "../../modules/nodes_registry" }
    your_module = { path = "../../modules/your_module" }  # ADD THIS LINE
    ```
 
@@ -940,7 +940,7 @@ Implement the local client that bridges the domain service to the contract API.
    use directory_service as _;
    use file_parser as _;
    use grpc_hub as _;
-   use syscap as _;
+   use nodes_registry as _;
    use your_module as _;  // ADD THIS LINE
    #[cfg(feature = "users-info-example")]
    use users_info as _;

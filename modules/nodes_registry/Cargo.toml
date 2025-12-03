@@ -1,0 +1,29 @@
+[package]
+name = "nodes_registry"
+version = "0.1.0"
+publish = false
+edition.workspace = true
+
+[dependencies]
+anyhow = "1.0"
+async-trait = "0.1"
+tokio = { version = "1.47", features = ["full"] }
+tracing = "0.1"
+inventory = "0.3"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+utoipa = { workspace = true }
+axum = { workspace = true, features = ["macros"] }
+tower-http = { version = "0.6", features = ["timeout"] }
+futures = "0.3"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.18", features = ["v4", "serde"] }
+arc-swap = "1.7"
+thiserror = "2.0"
+
+modkit = { path = "../../libs/modkit" }
+modkit-node-info = { path = "../../libs/modkit-node-info" }
+
+[dev-dependencies]
+tower = { version = "0.5", features = ["util"] }
+api_ingress = { path = "../../modules/api_ingress" }

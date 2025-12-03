@@ -28,6 +28,7 @@ directory_service = { path = "../../modules/directory_service" }
 
 # user modules
 file_parser = { path = "../../modules/file_parser" }
+nodes_registry = { path = "../../modules/nodes_registry" }
 
 anyhow = { workspace = true }
 tokio = { workspace = true }

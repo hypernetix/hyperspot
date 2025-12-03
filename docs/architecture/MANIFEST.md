@@ -134,6 +134,7 @@ The diagram above shows HyperSpot's component architecture. Components are organ
 - [ ] Usage tracker
 - [ ] License enforcer gateway
 - [ ] Tenant resolver gateway
+- [ ] Nodes registry
 - [ ] LLM gateway
 - [ ] LLM gateway - abstract OpenAI API
 - [ ] LLM gateway - VLLM connector
