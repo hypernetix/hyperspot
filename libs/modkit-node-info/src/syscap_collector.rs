@@ -81,10 +81,9 @@ pub struct SysCapCollector {
 }
 
 impl SysCapCollector {
-    pub fn new() -> Self {
-        Self {
-            sysinfo_collector: Arc::new(SysInfoCollector::new()),
-        }
+    /// Create a new SysCapCollector with a shared SysInfoCollector reference
+    pub fn new(sysinfo_collector: Arc<SysInfoCollector>) -> Self {
+        Self { sysinfo_collector }
     }
 
     /// Collect current system capabilities using sysinfo data
@@ -291,6 +290,6 @@ impl SysCapCollector {
 
 impl Default for SysCapCollector {
     fn default() -> Self {
-        Self::new()
+        Self::new(Arc::new(SysInfoCollector::new()))
     }
 }

@@ -12,9 +12,10 @@ pub struct NodeInfoCollector {
 
 impl NodeInfoCollector {
     pub fn new() -> Self {
+        let sysinfo_collector = Arc::new(SysInfoCollector::new());
         Self {
-            sysinfo_collector: Arc::new(SysInfoCollector::new()),
-            syscap_collector: Arc::new(SysCapCollector::new()),
+            syscap_collector: Arc::new(SysCapCollector::new(Arc::clone(&sysinfo_collector))),
+            sysinfo_collector,
         }
     }
 
