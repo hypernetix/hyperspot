@@ -1,4 +1,3 @@
-use machine_uid;
 use uuid::Uuid;
 
 /// Neutral namespace identifier for hardware-based UUIDs
