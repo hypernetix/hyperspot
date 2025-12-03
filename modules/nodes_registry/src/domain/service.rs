@@ -4,6 +4,13 @@ use crate::domain::node_storage::NodeStorage;
 use modkit_node_info::NodeInfoCollector;
 use std::sync::Arc;
 
+/// Check if a UUID is a fallback UUID (hardware detection failed)
+/// Fallback UUIDs have zeros in the first 8 bytes: 00000000-0000-0000-xxxx-xxxxxxxxxxxx
+fn is_fallback_uuid(id: &uuid::Uuid) -> bool {
+    let bytes = id.as_bytes();
+    bytes[..8] == [0u8; 8]
+}
+
 /// Service for managing nodes and their metadata
 #[derive(Clone)]
 pub struct Service {
@@ -18,8 +25,7 @@ impl Service {
         let storage = Arc::new(NodeStorage::new());
 
         // Check if hardware detection failed (hybrid UUID with zeros on left)
-        let uuid_bytes = current_node.id.as_bytes();
-        let is_fallback = uuid_bytes[0..8].iter().all(|&b| b == 0);
+        let is_fallback = is_fallback_uuid(&current_node.id);
 
         if is_fallback {
             tracing::warn!(
