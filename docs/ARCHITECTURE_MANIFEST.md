@@ -38,7 +38,7 @@ A **Module** is a logical component that provides a specific set of functionalit
 **Module categories**
 
 - **Generic Module** - Generic modules are typically independent, expose their own Public API and responsible for their own domain
-- **Gateway Module** - Gateways are normally exposing Public REST API (e.g. search, file parsing, etc.) and routing requests to real executors (workers) based on some context, such tenant ID, or request parameters/body/headers, etc
+- **Gateway Module** - Gateways are normally exposing Public REST API (e.g. search, file parsing, etc.) and routing requests to real executors (workers) based on some context, such as tenant ID, or request parameters/body/headers, etc
 - **Worker Module** - Workers typically do not expose their own Public REST API, depend on Gateways and just implement certain contract defined by their Gateway module.
 
 **Module structure:**
