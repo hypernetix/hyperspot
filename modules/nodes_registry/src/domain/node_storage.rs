@@ -223,7 +223,7 @@ impl NodeStorage {
                     if let Some(ref syscap_system) = data.syscap_system {
                         if let Some(cap) = syscap_system.capabilities.iter().find(|c| c.key == key) {
                             let now = chrono::Utc::now().timestamp();
-                            let age_secs = now - cap.fetched_at_secs;
+                            let age_secs = (now - cap.fetched_at_secs).max(0);
                             return age_secs as u64 >= cap.cache_ttl_secs;
                         }
                     }
@@ -248,7 +248,7 @@ impl NodeStorage {
                     if let Some(ref syscap_system) = data.syscap_system {
                         let now = chrono::Utc::now().timestamp();
                         for cap in &syscap_system.capabilities {
-                            let age_secs = now - cap.fetched_at_secs;
+                            let age_secs = (now - cap.fetched_at_secs).max(0);
                             if age_secs as u64 >= cap.cache_ttl_secs {
                                 expired_keys.push(cap.key.clone());
                             }
