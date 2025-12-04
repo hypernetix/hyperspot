@@ -130,6 +130,10 @@ e2e-local:
 e2e-docker:
 	python3 scripts/ci.py e2e --docker
 
+# Ensure needed packages and programs installed for local e2e testing
+check-prereq-e2e-local:
+	python scripts/check_local_env.py --mode e2e-local
+
 # Generate code coverage report (unit + e2e-local tests)
 coverage:
 	@command -v cargo-llvm-cov >/dev/null || (echo "Installing cargo-llvm-cov..." && cargo install cargo-llvm-cov)
@@ -141,6 +145,6 @@ coverage-unit:
 	python3 scripts/coverage.py unit
 
 # Generate code coverage report (e2e-local tests only)
-coverage-e2e-local:
+coverage-e2e-local: check-prereq-e2e-local
 	@command -v cargo-llvm-cov >/dev/null || (echo "Installing cargo-llvm-cov..." && cargo install cargo-llvm-cov)
 	python3 scripts/coverage.py e2e-local

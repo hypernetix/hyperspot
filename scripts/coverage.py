@@ -18,6 +18,9 @@ from urllib.error import URLError, HTTPError
 
 import yaml
 
+# Import prereq module for environment validation
+from lib.prereq import check_environment_ready
+
 PROJECT_ROOT = Path(__file__).parent.parent.absolute()
 COVERAGE_DIR = PROJECT_ROOT / "coverage"
 PYTHON = sys.executable or "python3"
@@ -1051,6 +1054,41 @@ def cmd_coverage_combined(args):
     )
 
 
+def validate_environment(command):
+    """
+    Validate that the environment has the necessary
+    prerequisites for the given command.
+
+    Args:
+        command: The coverage command being run
+        ('unit', 'e2e-local', 'combined')
+
+    Raises:
+        SystemExit: If environment validation fails
+    """
+    step("Validating test environment")
+
+    if command == "unit":
+        env_type = "core"
+    elif command in ["e2e-local", "combined"]:
+        env_type = "e2e"
+    else:
+        env_type = "core"
+
+    print(f"Checking {env_type} prerequisites for {command} coverage...")
+
+    if not check_environment_ready(env_type):
+        print("\nERROR: Environment validation failed for "
+              "{} coverage.".format(command))
+        print("Please install missing prerequisites and try again.")
+        print("You can run 'python scripts/check_test_env.py --mode core' "
+              "or 'python scripts/check_test_env.py --mode e2e' "
+              "to see detailed requirements.")
+        sys.exit(1)
+
+    print("Environment validation passed!")
+
+
 def main():
     """Main entry point."""
     # Ensure we're in the project root
@@ -1113,6 +1151,11 @@ Examples:
         help="Coverage threshold percentage for warnings (default: %s)" %
              COVERAGE_THRESHOLD
     )
+    p_unit.add_argument(
+        "--skip-env-check",
+        action="store_true",
+        help="Skip environment prerequisite validation (not recommended)"
+    )
     p_unit.set_defaults(func=cmd_coverage_unit)
 
     # E2E coverage
@@ -1145,6 +1188,11 @@ Examples:
         help="Coverage threshold percentage for warnings (default: %s)" %
              COVERAGE_THRESHOLD
     )
+    p_e2e.add_argument(
+        "--skip-env-check",
+        action="store_true",
+        help="Skip environment prerequisite validation (not recommended)"
+    )
     p_e2e.set_defaults(func=cmd_coverage_e2e)
 
     # Combined coverage
@@ -1164,9 +1212,22 @@ Examples:
         help="Coverage threshold percentage for warnings (default: %s)" %
              COVERAGE_THRESHOLD
     )
+    p_combined.add_argument(
+        "--skip-env-check",
+        action="store_true",
+        help="Skip environment prerequisite validation (not recommended)"
+    )
     p_combined.set_defaults(func=cmd_coverage_combined)
 
     args = parser.parse_args()
+
+    # Validate environment prerequisites before proceeding (unless skipped)
+    if not hasattr(args, 'skip_env_check') or not args.skip_env_check:
+        validate_environment(args.command)
+    else:
+        print("WARNING: Skipping environment prerequisite validation")
+        print("This may cause failures if required tools are not installed.")
+
     args.func(args)
 
 
