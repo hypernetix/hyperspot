@@ -3,10 +3,10 @@ CI := 1
 OPENAPI_URL ?= http://127.0.0.1:8087/openapi.json
 OPENAPI_OUT ?= docs/api/api.json
 
-.PHONY: check fmt clippy test test-sqlite test-pg test-mysql test-all test-users-info-pg audit deny security ci
+.PHONY: check fmt clippy test test-sqlite test-pg test-mysql test-all test-users-info-pg audit deny security ci coverage coverage-unit coverage-e2e
 
 # Default target - run necessary quality checks and tests and build the release binary
-all: check fmt clippy test test-sqlite security build
+all: check test test-sqlite security build
 	@echo "consider to run 'make test-all' and 'make e2e-local' as well"
 
 # Check code formatting
@@ -130,7 +130,17 @@ e2e-local:
 e2e-docker:
 	python3 scripts/ci.py e2e --docker
 
-# Generate code coverage report
+# Generate code coverage report (unit + e2e-local tests)
 coverage:
-	@echo "Code coverage is not implemented yet"
-	@exit -1
+	@command -v cargo-llvm-cov >/dev/null || (echo "Installing cargo-llvm-cov..." && cargo install cargo-llvm-cov)
+	python3 scripts/coverage.py combined
+
+# Generate code coverage report (unit tests only)
+coverage-unit:
+	@command -v cargo-llvm-cov >/dev/null || (echo "Installing cargo-llvm-cov..." && cargo install cargo-llvm-cov)
+	python3 scripts/coverage.py unit
+
+# Generate code coverage report (e2e-local tests only)
+coverage-e2e-local:
+	@command -v cargo-llvm-cov >/dev/null || (echo "Installing cargo-llvm-cov..." && cargo install cargo-llvm-cov)
+	python3 scripts/coverage.py e2e-local

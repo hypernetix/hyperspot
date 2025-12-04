@@ -30,3 +30,6 @@ logs
 .DS_Store
 /.venv/*
 **/__pycache__
+
+# Code coverage reports
+/coverage/
