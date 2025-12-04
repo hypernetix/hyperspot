@@ -6,6 +6,7 @@ This module provides classes to check various prerequisites needed for testing,
 including services, tools, and dependencies.
 """
 
+from abc import ABC, abstractmethod
 import subprocess
 import logging
 import json
@@ -20,25 +21,27 @@ PRECHECK_WARNING = "WARNING"
 PRECHECK_ERROR = "ERROR"
 
 
-class Prereq:
-    def __init__(self):
-        self.name = ""
-        self.remediation = ""
+class Prereq(ABC):
+    def __init__(self, name: str, remediation: str):
+        self.name = name
+        self.remediation = remediation
 
     def __str__(self):
         return self.name
 
+    @abstractmethod
     def check(self) -> str:
-        return PRECHECK_OK
+        pass
 
 
 class PrereqOllama(Prereq):
     def __init__(self):
-        super().__init__()
-        self.name = "ollama service is running"
-        self.remediation = (
-            "Install Ollama from https://ollama.ai/download and run "
-            "'ollama serve' to start the service"
+        super().__init__(
+            name="ollama service is running",
+            remediation=(
+                "Install Ollama from https://ollama.ai/download and run "
+                "'ollama serve' to start the service"
+            )
         )
 
     def check(self):
@@ -92,11 +95,12 @@ class PrereqOllamaQwen2505b(PrereqOllama):
 
 class PrereqLMStudio(Prereq):
     def __init__(self):
-        super().__init__()
-        self.name = "LM Studio service is running"
-        self.remediation = (
-            "Install LM Studio from https://lmstudio.ai/, download a "
-            "qwen2.5 0.5B model, and start the local server"
+        super().__init__(
+            name="LM Studio service is running",
+            remediation=(
+                "Install LM Studio from https://lmstudio.ai/, download a "
+                "qwen2.5 0.5B model, and start the local server"
+            )
         )
 
     def check(self) -> str:
@@ -132,11 +136,12 @@ class PrereqLMStudio(Prereq):
 
 class PrereqHSSrvMock(Prereq):
     def __init__(self):
-        super().__init__()
-        self.name = "HyperSpot server is running with mock mode enabled"
-        self.remediation = (
-            "Start the HyperSpot server with mock mode enabled "
-            "(use -mock option)"
+        super().__init__(
+            name="HyperSpot server is running with mock mode enabled",
+            remediation=(
+                "Start the HyperSpot server with mock mode enabled "
+                "(use -mock option)"
+            )
         )
 
     def check(self) -> bool:
@@ -240,7 +245,8 @@ class PrereqHSSrvMock(Prereq):
                 )
         elif status == PRECHECK_ERROR:
             logging.error(
-                f"HyperSpot server communication failed after {attempt + 1} attempts"
+                f"HyperSpot server communication failed after "
+                f"{attempt + 1} attempts"
             )
 
         if status != PRECHECK_OK:
@@ -251,11 +257,12 @@ class PrereqHSSrvMock(Prereq):
 
 class PrereqDocker(Prereq):
     def __init__(self):
-        super().__init__()
-        self.name = "Docker is running"
-        self.remediation = (
-            "Install Docker from https://docs.docker.com/"
-            "get-docker/ and run it"
+        super().__init__(
+            name="Docker is running",
+            remediation=(
+                "Install Docker from https://docs.docker.com/"
+                "get-docker/ and run it"
+            )
         )
 
     def check(self) -> str:
@@ -274,11 +281,12 @@ class PrereqDocker(Prereq):
 
 class PrereqDredd(Prereq):
     def __init__(self):
-        super().__init__()
-        self.name = "dredd API testing tool is installed"
-        self.remediation = (
-            "Install dredd using 'npm install -g dredd' "
-            "(requires Node.js and npm)"
+        super().__init__(
+            name="dredd API testing tool is installed",
+            remediation=(
+                "Install dredd using 'npm install -g dredd' "
+                "(requires Node.js and npm)"
+            )
         )
 
     def check(self) -> str:
@@ -304,11 +312,12 @@ class PrereqDredd(Prereq):
 
 class PrereqRustPackages(Prereq):
     def __init__(self):
-        super().__init__()
-        self.name = "required Rust packages are installed"
-        self.remediation = (
-            "Install missing Rust packages using: "
-            "cargo install cargo-llvm-cov"
+        super().__init__(
+            name="required Rust packages are installed",
+            remediation=(
+                "Install missing Rust packages using: "
+                "cargo install cargo-llvm-cov"
+            )
         )
 
     def check(self) -> str:
@@ -340,12 +349,13 @@ class PrereqRustPackages(Prereq):
 
 class PrereqNpm(Prereq):
     def __init__(self):
-        super().__init__()
-        self.name = "npm is installed"
-        self.remediation = (
-            "Install Node.js and npm from https://nodejs.org/ "
-            "or using a package manager like Homebrew: "
-            "'brew install node'"
+        super().__init__(
+            name="npm is installed",
+            remediation=(
+                "Install Node.js and npm from https://nodejs.org/ "
+                "or using a package manager like Homebrew: "
+                "'brew install node'"
+            )
         )
 
     def check(self):
@@ -371,12 +381,13 @@ class PrereqNpm(Prereq):
 
 class PrereqCargo(Prereq):
     def __init__(self):
-        super().__init__()
-        self.name = "cargo is installed"
-        self.remediation = (
-            "Install Rust and cargo from https://rustup.rs/ "
-            "or using a package manager like Homebrew: "
-            "'brew install rust'"
+        super().__init__(
+            name="cargo is installed",
+            remediation=(
+                "Install Rust and cargo from https://rustup.rs/ "
+                "or using a package manager like Homebrew: "
+                "'brew install rust'"
+            )
         )
 
     def check(self):
@@ -402,12 +413,13 @@ class PrereqCargo(Prereq):
 
 class PrereqPython(Prereq):
     def __init__(self):
-        super().__init__()
-        self.name = "python3 is installed"
-        self.remediation = (
-            "Install Python 3 from https://python.org/ "
-            "or using a package manager like Homebrew: "
-            "'brew install python3'"
+        super().__init__(
+            name="python3 is installed",
+            remediation=(
+                "Install Python 3 from https://python.org/ "
+                "or using a package manager like Homebrew: "
+                "'brew install python3'"
+            )
         )
 
     def check(self):
@@ -433,11 +445,12 @@ class PrereqPython(Prereq):
 
 class PrereqPytest(Prereq):
     def __init__(self):
-        super().__init__()
-        self.name = "pytest is installed"
-        self.remediation = (
-            "Install pytest using 'pip install pytest' "
-            "or 'pip install -r testing/e2e/requirements.txt'"
+        super().__init__(
+            name="pytest is installed",
+            remediation=(
+                "Install pytest using 'pip install pytest' "
+                "or 'pip install -r testing/e2e/requirements.txt'"
+            )
         )
 
     def check(self):
@@ -463,11 +476,12 @@ class PrereqPytest(Prereq):
 
 class PrereqCargoLlvmCov(Prereq):
     def __init__(self):
-        super().__init__()
-        self.name = "cargo-llvm-cov is installed"
-        self.remediation = (
-            "Install cargo-llvm-cov using "
-            "'cargo install cargo-llvm-cov'"
+        super().__init__(
+            name="cargo-llvm-cov is installed",
+            remediation=(
+                "Install cargo-llvm-cov using "
+                "'cargo install cargo-llvm-cov'"
+            )
         )
 
     def check(self):
