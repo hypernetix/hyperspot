@@ -4,13 +4,9 @@ version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 
-[features]
-default = []
-serde = ["dep:serde"]
-
 [dependencies]
-uuid = { workspace = true }
-serde = { workspace = true, optional = true }
+uuid = { workspace = true, features = ["v4"]}
+serde = { workspace = true }
 bincode = { workspace = true }
 thiserror = { workspace = true }
 

@@ -52,7 +52,7 @@ async-trait = "0.1"
 
 # High-performance data structures
 dashmap = "6.1"
-arc-swap = "1"
+arc-swap = "1.7"
 
 # Logging
 tracing = "0.1"
@@ -69,10 +69,10 @@ opentelemetry-otlp = { version = "0.31", features = ["grpc-tonic", "http-proto"]
 axum = "0.8"
 tower = "0.5"
 tower-http = { version = "0.6", features = ["trace", "request-id", "cors", "limit", "util", "timeout"] }
-uuid = { version = "1.18", features = ["serde"] }
+uuid = { version = "1.19", features = ["serde"] }
 
 # OpenAPI documentation (only for api_ingress)
-utoipa = { version = "5", features = ["macros", "openapi_extensions", "chrono", "uuid"] }
+utoipa = { version = "5.4", features = ["macros", "openapi_extensions", "chrono", "uuid"] }
 
 # Synchronous locks for better performance
 parking_lot = "0.12"
@@ -84,8 +84,8 @@ clap = { version = "4.5", features = ["derive"] }
 sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "sqlite", "any", "migrate"] }
 
 # Database utilities
-sea-orm = { version = "1", default-features = false, features = ["runtime-tokio-rustls", "with-uuid", "with-chrono", "with-rust_decimal", "macros"] }
-sea-orm-migration = { version = "1", default-features = false, features = ["runtime-tokio-rustls"] }
+sea-orm = { version = "1.1", default-features = false, features = ["runtime-tokio-rustls", "with-uuid", "with-chrono", "with-rust_decimal", "macros"] }
+sea-orm-migration = { version = "1.1", default-features = false, features = ["runtime-tokio-rustls"] }
 xxhash-rust = { version = "0.8", features = ["xxh3"] }
 
 # File rotation for logging
@@ -125,7 +125,7 @@ sha2 = "0.10"
 hex = "0.4"
 
 # JWT and authentication
-jsonwebtoken = "9"
+jsonwebtoken = { version = "10.2", features = ["rust_crypto"] }
 
 # Configuration management
 figment = { version = "0.10", features = ["yaml", "env"] }
@@ -137,16 +137,16 @@ dirs = "6"
 
 # Decimal handling
 bigdecimal = "0.4"
-rust_decimal = { version = "1", features = ["serde"] }
-ryu = "1"
+rust_decimal = { version = "1.39", features = ["serde"] }
+ryu = "1.0"
 
 # System information
-sysinfo = "0.33"
+sysinfo = "0.37"
 hostname = "0.4"
 starship-battery = "0.10"
 local-ip-address = "0.6"
 machine-uid = "0.5"
-nvml-wrapper = "0.10"
+nvml-wrapper = "0.11"
 
 # Text processing
 base64 = "0.22"
@@ -165,9 +165,9 @@ proc-macro-error = "1"
 
 # Testing utilities
 trybuild = "1"
-testcontainers = "0.25"
-testcontainers-modules = { version = "0.13", features = ["postgres", "mysql"] }
-httpmock = "0.8.0"
+testcontainers = "0.26"
+testcontainers-modules = { version = "0.14", features = ["postgres", "mysql"] }
+httpmock = "0.8"
 hyper = "1.3"
 
 # Other utilities
@@ -176,8 +176,8 @@ once_cell = "1.20"
 
 # HTTP types and web utilities
 http = "1.3"
-matchit = "0.8"
-indexmap = "2.11"
+matchit = "0.9"
+indexmap = "2.12"
 
 # Document and file handling
 rust-embed = "8"

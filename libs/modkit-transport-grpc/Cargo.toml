@@ -6,7 +6,7 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 tonic = { workspace = true }
-modkit-security = { path = "../modkit-security", features = ["serde"] }
+modkit-security = { path = "../modkit-security" }
 anyhow = { workspace = true }
 tracing = { workspace = true }
 tokio = { workspace = true }

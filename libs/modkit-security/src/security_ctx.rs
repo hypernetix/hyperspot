@@ -1,8 +1,7 @@
 use crate::{constants, AccessScope, Subject};
 use uuid::Uuid;
 
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct SecurityCtx {
     scope: AccessScope,
     subject: Subject,

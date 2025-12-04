@@ -31,8 +31,8 @@ sea-orm = { workspace = true, optional = true }
 modkit-db-macros = { path = "../modkit-db-macros", optional = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
-uuid = { workspace = true }
-modkit-security = { path = "../modkit-security", features = ["serde"] }
+uuid = { workspace = true, features = ["v4"]}
+modkit-security = { path = "../modkit-security" }
 modkit-odata = { path = "../modkit-odata" }
 bigdecimal = { workspace = true }
 rust_decimal = { workspace = true }

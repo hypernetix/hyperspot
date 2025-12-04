@@ -68,7 +68,7 @@ impl SysInfoCollector {
         };
 
         // Get physical core count
-        let cores = sys.physical_core_count().unwrap_or(num_cpus as usize) as u32;
+        let cores = System::physical_core_count().unwrap_or(num_cpus as usize) as u32;
 
         // Get average frequency
         let frequency_mhz = if !cpus.is_empty() {
