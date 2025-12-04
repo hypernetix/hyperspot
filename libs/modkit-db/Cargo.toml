@@ -21,38 +21,37 @@ default = ["sqlite", "sea-orm"]
 insecure-escape = []
 
 [dependencies]
-anyhow = "1"
-tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "time"] }
+anyhow = { workspace = true }
+tokio = { workspace = true }
 sqlx = { workspace = true, features = ["runtime-tokio", "tls-rustls", "macros", "uuid", "chrono"] }
-xxhash-rust = { version = "0.8", features = ["xxh3"] }
-dirs = "6"
-chrono = { version = "0.4", features = ["serde", "clock"] }
-# optional ORM
-sea-orm = { version = "1", optional = true, default-features = false, features = ["runtime-tokio-rustls", "with-uuid", "with-chrono", "with-rust_decimal", "macros"] }
+xxhash-rust = { workspace = true }
+dirs = { workspace = true }
+chrono = { workspace = true, features = ["serde", "clock"] }
+sea-orm = { workspace = true, optional = true }
 modkit-db-macros = { path = "../modkit-db-macros", optional = true }
-thiserror = "2.0"
-tracing = "0.1"
-uuid = { version = "1.18.1", features = ["v4", "serde"] }
-modkit-security = { path = "../modkit-security", features = ["serde"] }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+uuid = { workspace = true, features = ["v4"]}
+modkit-security = { path = "../modkit-security" }
 modkit-odata = { path = "../modkit-odata" }
-bigdecimal = "0.4"
-rust_decimal = { version = "1", features = ["serde"] }
-ryu = "1"
+bigdecimal = { workspace = true }
+rust_decimal = { workspace = true }
+ryu = { workspace = true }
 url = { workspace = true }
-dsn = "1.0"
-humantime-serde = "1.1"
-regex = "1.10"
+dsn = { workspace = true }
+humantime-serde = { workspace = true }
+regex = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-dashmap = "6.1"
-figment = { version = "0.10", features = ["yaml", "env"] }
+dashmap = { workspace = true }
+figment = { workspace = true }
 
 [dev-dependencies]
-tempfile = "3"
-dirs = "6"
-serde_yaml = "0.9"
-testcontainers = "0.25"
-testcontainers-modules = { version = "0.13", features = ["postgres", "mysql"] }
-tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
-anyhow = "1"
+tempfile = { workspace = true }
+dirs = { workspace = true }
+serde_yaml = { workspace = true }
+testcontainers = { workspace = true }
+testcontainers-modules = { workspace = true }
+tokio = { workspace = true }
+anyhow = { workspace = true }
 

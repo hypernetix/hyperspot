@@ -1,7 +1,6 @@
 use uuid::Uuid;
 
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[derive(Clone, Debug, PartialEq, Eq, Default)]
+#[derive(Clone, Debug, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub struct AccessScope {
     /// True if this is a root scope (system-level access with no tenant filtering)
     pub(crate) is_root: bool,

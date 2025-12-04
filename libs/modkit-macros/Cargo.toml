@@ -9,21 +9,21 @@ authors.workspace = true
 proc-macro = true
 
 [dependencies]
-proc-macro2 = "1.0"
-quote = "1.0"
-syn = { version = "2.0", features = ["full", "parsing", "printing", "derive"] }
-heck = "0.5"
-strsim = "0.11"
+proc-macro2 = { workspace = true }
+quote = { workspace = true }
+syn = { workspace = true }
+heck = { workspace = true }
+strsim = { workspace = true }
 
 [dev-dependencies]
-trybuild = "1"
-tokio        = { workspace = true, features = ["full"] }
-tokio-util   = { version = "0.7", features = ["rt"] }
-anyhow = "1.0"
-async-trait = "0.1"
-inventory = "0.3"
+trybuild = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
+tokio-util = { workspace = true }
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+inventory = { workspace = true }
 modkit = { path = "../modkit", default-features = false }
 modkit-security = { path = "../modkit-security" }
 modkit-transport-grpc = { path = "../modkit-transport-grpc" }
-uuid = { version = "1.0", features = ["v4"] }
-tonic = { version = "0.14", features = ["transport"] }
+uuid = { workspace = true }
+tonic = { workspace = true }
