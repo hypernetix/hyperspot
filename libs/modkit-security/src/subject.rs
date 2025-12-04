@@ -1,7 +1,6 @@
 use uuid::Uuid;
 
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Subject {
     pub(crate) id: Uuid,
     // future: kind (user/service), realm, display, etc.

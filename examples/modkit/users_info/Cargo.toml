@@ -11,47 +11,47 @@ integration = []   # gate integration tests
 
 [dependencies]
 # Core dependencies
-anyhow = "1.0"
-async-trait = "0.1"
-tokio = { version = "1.47", features = ["full"] }
-tracing = "0.1"
-inventory = "0.3"
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+inventory = { workspace = true }
 
 # Serde and JSON schema
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+serde = { workspace = true }
+serde_json = { workspace = true }
 utoipa = { workspace = true }
 
 # HTTP and REST
 axum = { workspace = true, features = ["macros"] }
-tower-http = { version = "0.6", features = ["timeout"] }
-futures = "0.3"
-http = "1"
+tower-http = { workspace = true, features = ["timeout"] }
+futures = { workspace = true }
+http = { workspace = true }
 
 # Time handling
-chrono = { version = "0.4", features = ["serde"] }
+chrono = { workspace = true, features = ["serde"] }
 
 # URL parsing
-url = "2.5"
+url = { workspace = true }
 
 # UUID support
-uuid = { version = "1.18", features = ["v4", "v7", "serde"] }
+uuid = { workspace = true }
 
 # Lock-free atomic swaps
-arc-swap = "1.7"
+arc-swap = { workspace = true }
 
 # Database - SeaORM
-sea-orm = { version = "1.1", features = [
+sea-orm = { workspace = true, features = [
     "sqlx-sqlite",
     "runtime-tokio-rustls",
     "macros",
     "with-chrono",
     "with-uuid"
 ] }
-sea-orm-migration = { version = "1.1", features = ["sqlx-sqlite"] }
+sea-orm-migration = { workspace = true, features = ["sqlx-sqlite"] }
 
 # Error handling
-thiserror = "2.0"
+thiserror = { workspace = true }
 
 # Local dependencies
 modkit = { path = "../../../libs/modkit" }
@@ -65,14 +65,14 @@ modkit-errors-macro = { path = "../../../libs/modkit-errors-macro" }
 modkit-odata = { path = "../../../libs/modkit-odata", features = ["with-utoipa"] }
 
 [dev-dependencies]
-tower = { version = "0.5", features = ["util"] }
+tower = { workspace = true, features = ["util"] }
 api_ingress = { path = "../../../modules/api_ingress" }
-serde_json = "1.0"
-testcontainers = "0.25"
-testcontainers-modules = { version = "0.13", features = ["postgres"] }
+serde_json = { workspace = true }
+testcontainers = { workspace = true }
+testcontainers-modules = { workspace = true, features = ["postgres"] }
 # Testing dependencies for tracing verification
 tracing-test = "0.2"
-httpmock = "0.8.0"
-tokio-test = "0.4"
-opentelemetry = "0.31.0"
-opentelemetry_sdk = "0.31.0"
+httpmock = { workspace = true }
+tokio-test = { workspace = true }
+opentelemetry = { workspace = true }
+opentelemetry_sdk = { workspace = true }
