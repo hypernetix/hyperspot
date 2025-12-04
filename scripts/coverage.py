@@ -640,11 +640,11 @@ def start_instrumented_server(config_file, output_dir, port=None):
     # Set up environment for coverage
     env2 = os.environ.copy()
     env2["LLVM_PROFILE_FILE"] = (
-        f"target/llvm-cov-target/hyperspot-%p-%m.profraw"
+        "target/llvm-cov-target/hyperspot-%p-%m.profraw"
     )
 
     # Build server command
-    server_cmd = [
+    cmd = [
         "cargo", "llvm-cov", "run",
         "--bin", "hyperspot-server",
         "--features", "users-info-example",
@@ -655,23 +655,14 @@ def start_instrumented_server(config_file, output_dir, port=None):
     ]
 
     # Log the exact command for debugging
-    printable_cmd = [
-        "cargo", "llvm-cov", "run",
-        "--bin", "hyperspot-server",
-        "--features", "users-info-example",
-        "--no-report",
-        "--",
-        "--config", config_file,
-        "run"
-    ]
     print(
         f"[INFO] Running: LLVM_PROFILE_FILE={env2['LLVM_PROFILE_FILE']} "
-        f"{' '.join(printable_cmd)}"
+        f"{' '.join(cmd)}"
     )
 
     # Start server
     server_process = subprocess.Popen(
-        server_cmd,
+        cmd,
         env=env2,
         cwd=PROJECT_ROOT,
         stdout=open(log_file, "w"),
