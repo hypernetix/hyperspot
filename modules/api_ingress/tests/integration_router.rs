@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Integration tests for the API Ingress router and new OperationBuilder
 //!
 //! This test demonstrates that the new type-safe OperationBuilder works

@@ -1,3 +1,5 @@
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
+
 // === PUBLIC CONTRACT ===
 // Only the contract module should be public for other modules to consume
 pub mod contract;

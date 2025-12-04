@@ -5,6 +5,9 @@ edition.workspace = true
 license.workspace = true
 authors.workspace = true
 
+[lints]
+workspace = true
+
 [lib]
 name = "modkit"
 
@@ -67,12 +70,8 @@ opentelemetry-otlp = { workspace = true, optional = true }
 tonic = { workspace = true, optional = true }
 
 [dev-dependencies]
-tokio = { workspace = true }
-hyper = { workspace = true }
 tower = { workspace = true }
 trybuild = { workspace = true }
-serde_json = { workspace = true }
-serde_yaml = { workspace = true }
 httpmock = { workspace = true }
 
 

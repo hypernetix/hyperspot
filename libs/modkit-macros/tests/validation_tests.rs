@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Validation and error handling tests for client macros (gRPC only)
 
 use tonic::transport::Channel;

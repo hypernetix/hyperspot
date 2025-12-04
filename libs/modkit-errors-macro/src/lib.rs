@@ -1,3 +1,5 @@
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
+
 //! Proc-macro for generating strongly-typed error catalogs from JSON.
 //!
 //! This macro reads a JSON file at compile time, validates error definitions,

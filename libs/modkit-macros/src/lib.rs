@@ -1,3 +1,5 @@
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
+
 use heck::ToSnakeCase;
 use proc_macro::TokenStream;
 use proc_macro2::Span;

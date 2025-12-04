@@ -1,7 +1,11 @@
 [package]
 name = "modkit-odata"
-version = "0.1.0"
+version.workspace = true
 edition = "2021"
+license.workspace = true
+
+[lints]
+workspace = true
 
 [features]
 with-odata-params = ["dep:odata-params"]

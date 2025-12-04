@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Integration tests for CORS preflight and actual request handling
 
 use anyhow::Result;

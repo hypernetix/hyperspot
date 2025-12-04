@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Test that repository operations work with root scope (system-level access).
 
 mod support;

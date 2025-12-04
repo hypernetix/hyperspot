@@ -1,3 +1,5 @@
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
+
 //! Core error types for the modkit framework
 //!
 //! This crate provides pure data types for error handling, with no dependencies

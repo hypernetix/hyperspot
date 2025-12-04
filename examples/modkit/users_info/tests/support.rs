@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Test support utilities for users_info integration tests.
 //!
 //! Provides helper functions for creating security contexts, test databases,

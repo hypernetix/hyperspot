@@ -132,18 +132,16 @@ where
     ///     .one(conn)
     ///     .await?;
     /// ```
-    ///
-    /// # Panics
-    /// Panics if the entity does not have a resource_col defined.
-    pub fn and_id(self, id: uuid::Uuid) -> Self
+    pub fn and_id(self, id: uuid::Uuid) -> Result<Self, ScopeError>
     where
         E: ScopableEntity,
         E::Column: ColumnTrait + Copy,
     {
-        let resource_col =
-            E::resource_col().expect("Entity must have a resource_col to use and_id()");
+        let resource_col = E::resource_col().ok_or(ScopeError::Invalid(
+            "Entity must have a resource_col to use and_id()",
+        ))?;
         let cond = sea_orm::Condition::all().add(Expr::col(resource_col).eq(id));
-        self.filter(cond)
+        Ok(self.filter(cond))
     }
 
     /// Unwrap the inner SeaORM `Select` for advanced use cases.

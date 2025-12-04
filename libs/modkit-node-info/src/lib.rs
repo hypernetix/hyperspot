@@ -1,3 +1,5 @@
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
+
 //! Node Information Library
 //!
 //! This library provides system information collection for the current node

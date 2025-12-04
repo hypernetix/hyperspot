@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 #[cfg(feature = "sea-orm")]
 mod tests {
     use bigdecimal::BigDecimal;

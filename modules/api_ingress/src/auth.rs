@@ -76,11 +76,9 @@ fn convert_axum_path_to_matchit(path: &str) -> String {
         if ch == ':' {
             // Start of a parameter - collect the parameter name
             result.push('{');
-            while let Some(&next_ch) = chars.peek() {
-                if next_ch.is_alphanumeric() || next_ch == '_' {
-                    result.push(chars.next().unwrap());
-                } else {
-                    break;
+            while matches!(chars.peek(), Some(c) if c.is_alphanumeric() || *c == '_') {
+                if let Some(c) = chars.next() {
+                    result.push(c);
                 }
             }
             result.push('}');

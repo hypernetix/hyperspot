@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Compile-time tests for GTS validation in declare_errors! macro
 //!
 //! These tests verify that the macro correctly rejects invalid GTS codes

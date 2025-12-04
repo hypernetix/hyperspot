@@ -101,6 +101,8 @@ pub fn init_tracing(
         if let Some(hmap) = build_headers_from_cfg_and_env(cfg) {
             b = b.with_headers(hmap);
         }
+        #[allow(clippy::expect_used)]
+        // We should panic during the initialization if the builder fails
         b.build().expect("build OTLP HTTP exporter")
     } else {
         let mut b = opentelemetry_otlp::SpanExporter::builder().with_tonic();
@@ -111,6 +113,8 @@ pub fn init_tracing(
         if let Some(md) = build_metadata_from_cfg_and_env(cfg) {
             b = b.with_metadata(md);
         }
+        #[allow(clippy::expect_used)]
+        // We should panic during the initialization if the builder fails
         b.build().expect("build OTLP gRPC exporter")
     };
 

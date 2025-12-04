@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Smoke test for HTTP handlers - verifies the full stack works.
 
 mod support;

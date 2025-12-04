@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Integration tests verifying that generated gRPC clients use the transport stack
 
 use modkit_macros::generate_clients;

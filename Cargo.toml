@@ -1,4 +1,5 @@
 [workspace.package]
+version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
 authors = ["Hypernetix"]
@@ -30,8 +31,12 @@ members = [
 resolver = "2"
 
 [workspace.lints.rust]
-unsafe_code = "deny"
+unsafe_code = "forbid"
 unused_mut = "warn"
+
+[workspace.lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
 
 [workspace.dependencies]
 # Serialization
@@ -161,7 +166,7 @@ proc-macro2 = "1.0"
 quote = "1.0"
 syn = { version = "2.0", features = ["full", "parsing", "printing", "derive", "extra-traits"] }
 heck = "0.5"
-proc-macro-error = "1"
+proc-macro-error2 = "2.0"
 
 # Testing utilities
 trybuild = "1"

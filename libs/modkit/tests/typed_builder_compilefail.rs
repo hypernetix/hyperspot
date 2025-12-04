@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Compile-fail tests to verify type-safe API builder enforcement
 //!
 //! These tests ensure that the type-state pattern correctly prevents

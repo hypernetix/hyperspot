@@ -70,6 +70,7 @@ impl JwksKeyProvider {
             jwks_uri: jwks_uri.into(),
             keys: Arc::new(ArcSwap::from_pointee(HashMap::new())),
             refresh_state: Arc::new(RwLock::new(RefreshState::default())),
+            #[allow(clippy::expect_used)] // it shouldn't fail with just a timeout specified
             client: reqwest::Client::builder()
                 .timeout(Duration::from_secs(10))
                 .build()

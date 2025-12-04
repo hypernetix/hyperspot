@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Integration tests for gRPC client transport stack
 
 use modkit_transport_grpc::client::{connect_with_stack, GrpcClientConfig};

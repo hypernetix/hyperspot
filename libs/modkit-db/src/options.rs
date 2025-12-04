@@ -458,9 +458,13 @@ fn build_server_options(cfg: &DbConnConfig) -> Result<DbConnectOptions> {
 /// Parse SQLite path from DSN.
 fn parse_sqlite_path_from_dsn(dsn: &str) -> Result<std::path::PathBuf> {
     if dsn.starts_with("sqlite:") {
-        let path_part = dsn.strip_prefix("sqlite:").unwrap();
+        let path_part = dsn
+            .strip_prefix("sqlite:")
+            .ok_or_else(|| DbError::InvalidParameter("Invalid SQLite DSN".to_string()))?;
         let path_part = if path_part.starts_with("//") {
-            path_part.strip_prefix("//").unwrap()
+            path_part
+                .strip_prefix("//")
+                .ok_or_else(|| DbError::InvalidParameter("Invalid SQLite DSN".to_string()))?
         } else {
             path_part
         };
@@ -483,7 +487,8 @@ fn parse_sqlite_path_from_dsn(dsn: &str) -> Result<std::path::PathBuf> {
 
 /// Expand environment variables in a string.
 fn expand_env_vars(input: &str) -> Result<String> {
-    let re = regex::Regex::new(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}").unwrap();
+    let re = regex::Regex::new(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
+        .map_err(|e| DbError::InvalidParameter(e.to_string()))?;
     let mut result = input.to_string();
 
     for caps in re.captures_iter(input) {

@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 use modkit_security::{
     decode_bin, encode_bin, AccessScope, SecurityCtx, Subject, SECCTX_BIN_VERSION,
 };

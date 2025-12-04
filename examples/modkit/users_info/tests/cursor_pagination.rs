@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Integration tests for OData cursor pagination.
 //!
 //! These tests verify end-to-end cursor pagination behavior using an in-memory

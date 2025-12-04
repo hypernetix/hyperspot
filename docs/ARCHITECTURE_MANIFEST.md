@@ -143,58 +143,7 @@ HyperSpot is designed from the ground up for **Software-as-a-Service (SaaS)** de
 
 The diagram above illustrates principal HyperSpot's modules architecture. Deployment and components list depends on the target environment and build configuration, for example it could be single executable for a desktop version or multiple containers for a cloud server.
 
-### 3.1. Phase 1 - Core Foundation
-
-- [ ] API ingress gateway
-- [ ] Process manager
-- [ ] Types registry
-- [ ] Chat engine
-- [ ] File parser gateway
-- [ ] File parser - embedded parser
-- [ ] Search gateway
-- [ ] Search gateway - Qdrant connector
-- [ ] Usage tracker
-- [ ] License enforcer gateway
-- [ ] Tenant resolver gateway
-- [ ] Nodes registry
-- [ ] LLM gateway
-- [ ] LLM gateway - abstract OpenAI API
-- [ ] LLM gateway - VLLM connector
-- [ ] LLM gateway - OpenAI connector
-- [ ] LLM gateway - Gemini connector
-- [ ] LLM gateway - Anthropic connector
-- [ ] LLM manager
-- [ ] LLM manager - VLLM
-- [ ] Models registry
-- [ ] Model downloader - Huggingface
-- [ ] Model downloader - Ollama
-
-### 3.2. Phase 2 - Extended Capabilities
-
-- [ ] MCP gateway
-- [ ] File parser - Apache Tika parser
-- [ ] LLM benchmarks gateway
-- [ ] LLM benchmarks gateway - HumanEval
-- [ ] LLM benchmarks gateway - MBPP
-- [ ] LLM gateway - LM Studio connector
-- [ ] LLM manager - local llama.cpp
-- [ ] LLM manager - LM Studio
-- [ ] LLM manager - Ollama
-- [ ] Event Manager
-- [ ] Audit
-
-### 3.3. Phase 3 - Advanced Features
-
-- [ ] Agents gateway
-- [ ] Server side scripting (FaaS, Workflows)
-- [ ] Outbound API callback gateway
-- [ ] Settings service
-- [ ] Credentials Store
-- [ ] License Enforcement
-- [ ] LLM manager - local MLX
-- [ ] LLM manager - local ONNX
-- [ ] Email gateway
-- [ ] Flowcharts
+Check [ROADMAP.md](ROADMAP.md) for more details.
 
 ---
 
@@ -330,6 +279,8 @@ All code must pass these checks before merging:
 - **Linting**: `cargo clippy --workspace --all-targets -- -D warnings`
   - Deny all warnings
   - Deny unsafe code (workspace-wide)
+  - Deny unwraps (no panics)
+  - Deny expect (no panics)
 
 - **Security audit**: `cargo audit`
   - Check for known vulnerabilities
@@ -409,6 +360,17 @@ An **extension point** is a well-defined interface where new functionality can b
 - An enterprise integrates a custom search engine for compliance requirements
 
 This extension point architecture makes HyperSpot truly modular and adaptable to diverse use cases while maintaining type safety and system integrity.
+
+# 7.3. Rust dependencies
+
+All dependencies are specified in the root `Cargo.toml` file and are shared across all modules. This ensures consistency and ease of dependency management.
+Each member of the workspace will inherit the dependencies from the root `Cargo.toml` file and specify the features it needs.
+
+That follows what's specified in [Rust documentation](https://doc.rust-lang.org/cargo/reference/manifest.html#the-dependencies-section).
+
+`[dev-dependencies]` section is used for dependencies that are only required for development and testing.
+
+`[build-dependencies]` section is used for dependencies that are required for building the member.
 
 ---
 

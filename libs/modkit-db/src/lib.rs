@@ -1,3 +1,4 @@
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
 #![cfg_attr(
     not(any(feature = "pg", feature = "mysql", feature = "sqlite")),
     allow(

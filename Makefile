@@ -3,7 +3,7 @@ CI := 1
 OPENAPI_URL ?= http://127.0.0.1:8087/openapi.json
 OPENAPI_OUT ?= docs/api/api.json
 
-.PHONY: check fmt clippy test test-sqlite test-pg test-mysql test-all test-users-info-pg audit deny security ci
+.PHONY: check fmt clippy test test-sqlite test-pg test-mysql test-all test-users-info-pg deny security ci
 
 # Default target - run necessary quality checks and tests and build the release binary
 all: check fmt clippy test test-sqlite security build
@@ -21,18 +21,13 @@ clippy:
 test:
 	cargo test --workspace
 
-# Check for security vulnerabilities
-audit:
-	@command -v cargo-audit >/dev/null || (echo "Installing cargo-audit..." && cargo install cargo-audit)
-	cargo audit
-
 # Check licenses and dependencies
 deny:
 	@command -v cargo-deny >/dev/null || (echo "Installing cargo-deny..." && cargo install cargo-deny)
 	cargo deny check
 
 # Run all security checks
-security: audit deny
+security: deny
 
 # Run all quality checks
 check: fmt clippy test security

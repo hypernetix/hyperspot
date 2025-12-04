@@ -61,6 +61,7 @@ impl<'a> fmt::MakeWriter<'a> for RotWriter {
 #[derive(Clone)]
 struct RotWriterHandle(Arc<Mutex<FileRotate<AppendTimestamp>>>);
 
+#[allow(clippy::unwrap_used)] // Locks are always held
 impl Write for RotWriterHandle {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         self.0.lock().unwrap().write(buf)

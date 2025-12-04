@@ -1,3 +1,5 @@
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
+
 pub mod errors;
 pub mod limits;
 pub mod page;
@@ -287,7 +289,7 @@ pub struct CursorV1 {
 }
 
 impl CursorV1 {
-    pub fn encode(&self) -> String {
+    pub fn encode(&self) -> serde_json::Result<String> {
         #[derive(serde::Serialize)]
         struct Wire<'a> {
             v: u8,
@@ -310,8 +312,7 @@ impl CursorV1 {
             f: &self.f,
             d: &self.d,
         };
-        let json = serde_json::to_vec(&w).expect("encode cursor json");
-        base64_url::encode(&json)
+        serde_json::to_vec(&w).map(|x| base64_url::encode(&x))
     }
 
     /// Decode cursor from base64url token
