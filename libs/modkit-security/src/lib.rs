@@ -1,7 +1,3 @@
-#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
-#![forbid(unsafe_code)]
-#![deny(rust_2018_idioms, warnings)]
-
 pub mod bin_codec;
 pub mod constants;
 pub mod prelude;

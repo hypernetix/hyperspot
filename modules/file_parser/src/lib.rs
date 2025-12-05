@@ -1,5 +1,3 @@
-#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
-
 // === MODULE DEFINITION ===
 // ModKit needs access to the module struct for instantiation
 pub mod module;

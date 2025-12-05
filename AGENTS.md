@@ -11,3 +11,5 @@ Always open `@/docs/MODKIT_UNIFIED_SYSTEM.md` to learn about the project's `@/li
 Always open `@/docs/MODULE_CREATION_PROMPT.md` to learn about how to create a new module.
 
 Always open `@/docs/SECURE-ORM.md` to learn about the project's database interactions with ORM.
+
+Always follow the guidelines specified in `@/guidelines/README.md`.

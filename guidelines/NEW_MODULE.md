@@ -88,33 +88,35 @@ modules/<your-module>/
    ```toml
    [package]
    name = "<your-module-name>"
-   version = "0.1.0"
+   version.workspace = true
    publish = false
    edition.workspace = true
+   license.workspace = true
+   authors.workspace = true
 
    [dependencies]
-   anyhow = "1.0"
-   async-trait = "0.1"
-   tokio = { version = "1.47", features = ["full"] }
-   tracing = "0.1"
-   inventory = "0.3"
-   serde = { version = "1.0", features = ["derive"] }
-   serde_json = "1.0"
+   anyhow = { workspace = true }
+   async-trait = { workspace = true }
+   tokio = { workspace = true }
+   tracing = { workspace = true }
+   inventory = { workspace = true }
+   serde = { workspace = true }
+   serde_json = { workspace = true }
    utoipa = { workspace = true }
    axum = { workspace = true, features = ["macros"] }
-   tower-http = { version = "0.6", features = ["timeout"] }
-   futures = "0.3"
-   chrono = { version = "0.4", features = ["serde"] }
-   uuid = { version = "1.18", features = ["v4", "serde"] }
-   arc-swap = "1.7"
-   sea-orm = { version = "1.1", features = ["sqlx-sqlite", "runtime-tokio-rustls", "macros", "with-chrono", "with-uuid"] }
-   sea-orm-migration = "1.1"
-   thiserror = "2.0"
+   tower-http = { workspace = true, features = ["timeout"] }
+   futures = { workspace = true }
+   chrono = { workspace = true, features = ["serde"] }
+   uuid = { workspace = true, features = ["v4", "serde"] }
+   arc-swap = { workspace = true }
+   sea-orm = { workspace = true, features = ["sqlx-sqlite", "runtime-tokio-rustls", "macros", "with-chrono", "with-uuid"] }
+   sea-orm-migration = { workspace = true }
+   thiserror = { workspace = true }
    modkit = { path = "../../../libs/modkit" }
    db = { path = "../../../libs/db" }
 
    [dev-dependencies]
-   tower = { version = "0.5", features = ["util"] }
+   tower = { workspace = true, features = ["util"] }
    api_ingress = { path = "../../../modules/api_ingress" }
    ```
 
@@ -1022,6 +1024,8 @@ async fn test_example_endpoint() {
 ### A. Rust Best Practices
 
 - **Panic Policy**: Panics mean "stop the program". Use for programming errors only, never for recoverable conditions.
+  - `unwrap()` is forbidden
+  - `expect()` is forbidden
 
 - **Type Safety**:
     - All public types must be `Send` (especially futures)
@@ -1064,8 +1068,7 @@ cargo test --manifest-path modules/your-module/Cargo.toml
 **Rule:** Fix common issues: missing test imports (`OpenApiRegistry`, `OperationSpec`, `Schema`), type inference
 errors (add explicit types), missing `chrono::Utc`, handler/service name mismatches.
 
-**Rule:** make and CI should run: `clippy --all-targets --all-features`, `fmt --check`, `audit`, `cargo-hack`,
-`cargo-udeps`, `miri`.
+**Rule:** make and CI should run: `clippy --all-targets --all-features`, `fmt --check`, `deny check`.
 
 ---
 

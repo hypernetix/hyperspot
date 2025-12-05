@@ -124,7 +124,8 @@ async fn test_dbmanager_server_merge() {
             path: None,
             pool: Some(PoolCfg {
                 max_conns: Some(20),
-                acquire_timeout: Some(Duration::from_secs(30)),
+                // tests were hanging 30s, reduced to 1s as we expect an error
+                acquire_timeout: Some(Duration::from_secs(1)),
                 ..Default::default()
             }),
             server: None,

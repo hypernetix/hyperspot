@@ -1,5 +1,3 @@
-#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
-
 pub mod errors;
 pub mod limits;
 pub mod page;

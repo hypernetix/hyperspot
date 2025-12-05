@@ -1,5 +1,3 @@
-#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
-
 //! Directory Service - gRPC service for module instance discovery
 
 use anyhow::Result;

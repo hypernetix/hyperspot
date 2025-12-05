@@ -1,4 +1,3 @@
-#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
 // Proc-macro crate for modkit-db secure ORM derives
 //
 //! # modkit-db-macros

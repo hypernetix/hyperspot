@@ -1,5 +1,3 @@
-#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
-
 //! gRPC Hub Module
 //!
 //! This module builds and hosts the single tonic::Server instance for the process.

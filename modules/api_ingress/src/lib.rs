@@ -1,5 +1,3 @@
-#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
-
 use async_trait::async_trait;
 use std::sync::Arc;
 

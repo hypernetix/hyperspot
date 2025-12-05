@@ -62,7 +62,7 @@ fn collect_nvidia_gpus() -> Option<Vec<GpuInfo>> {
                 tracing::debug!(
                     "NVIDIA GPU {}: {} (Memory: {:.0} MB / {:.0} MB)",
                     i,
-                    gpus.last().unwrap().model,
+                    gpus.last()?.model,
                     used_memory_mb.unwrap_or(0.0),
                     total_memory_mb.unwrap_or(0.0)
                 );

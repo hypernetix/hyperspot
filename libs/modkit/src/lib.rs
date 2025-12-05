@@ -1,5 +1,3 @@
-#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
-
 //! # ModKit - Declarative Module System
 //!
 //! A unified crate for building modular applications with declarative module definitions.

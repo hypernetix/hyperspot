@@ -1,5 +1,3 @@
-#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
-
 //! Nodes Registry Module
 //!
 //! This module manages node information in the Hyperspot deployment.
