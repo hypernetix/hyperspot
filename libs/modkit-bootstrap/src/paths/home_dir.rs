@@ -81,11 +81,10 @@ pub fn resolve_home_dir(
         let path = if let Some(raw) = config_home {
             // Allow ~ expansion at the beginning
             let expanded = if let Some(stripped) = raw.strip_prefix("~/") {
-                let home = env::var("HOME").map_err(|_| HomeDirError::HomeMissing)?;
+                let home = env::home_dir().ok_or(HomeDirError::HomeMissing)?;
                 Path::new(&home).join(stripped)
             } else if raw == "~" {
-                let home = env::var("HOME").map_err(|_| HomeDirError::HomeMissing)?;
-                PathBuf::from(home)
+                env::home_dir().ok_or(HomeDirError::HomeMissing)?
             } else {
                 PathBuf::from(raw.clone())
             };
@@ -98,7 +97,7 @@ pub fn resolve_home_dir(
             expanded
         } else {
             // Default to $HOME/<default_subdir>
-            let home = env::var("HOME").map_err(|_| HomeDirError::HomeMissing)?;
+            let home = env::home_dir().ok_or(HomeDirError::HomeMissing)?;
             Path::new(&home).join(default_subdir)
         };
 
@@ -203,7 +202,7 @@ mod tests {
 
     #[test]
     #[cfg(not(target_os = "windows"))]
-    fn unix_error_when_home_missing() {
+    fn unix_will_fallback_when_home_missing() {
         // Save and restore original HOME to isolate this test
         let original_home = env::var("HOME").ok();
         env::remove_var("HOME");
@@ -215,11 +214,7 @@ mod tests {
             env::set_var("HOME", home);
         }
 
-        let err = result.unwrap_err();
-        match err {
-            HomeDirError::HomeMissing => {}
-            _ => panic!("Expected HomeMissing, got {:?}", err),
-        }
+        assert!(result.is_ok());
     }
 
     // -------------------------

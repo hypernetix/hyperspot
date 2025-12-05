@@ -178,7 +178,7 @@ impl AppConfig {
             .context("Failed to resolve server.home_dir")?;
 
         // Merge module files if modules_dir is specified.
-        if let Some(dir) = config.modules_dir.clone() {
+        if let Some(dir) = config.modules_dir.as_ref() {
             merge_module_files(&mut config.modules, dir)?;
         }
 
