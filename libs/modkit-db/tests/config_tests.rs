@@ -89,15 +89,15 @@ fn test_globaldatabaseconfig_serialization() {
         auto_provision: Some(true),
     };
 
-    // Test serialization to YAML (more readable for config files)
-    let yaml = serde_yaml::to_string(&global_config).expect("Failed to serialize to YAML");
-    assert!(yaml.contains("postgres_main"));
-    assert!(yaml.contains("db.example.com"));
-    assert!(yaml.contains("${DB_PASSWORD}"));
+    // Test serialization to TOML (more readable for config files)
+    let toml_str = toml::to_string(&global_config).expect("Failed to serialize to TOML");
+    assert!(toml_str.contains("postgres_main"));
+    assert!(toml_str.contains("db.example.com"));
+    assert!(toml_str.contains("${DB_PASSWORD}"));
 
-    // Test deserialization from YAML
+    // Test deserialization from TOML
     let deserialized: GlobalDatabaseConfig =
-        serde_yaml::from_str(&yaml).expect("Failed to deserialize from YAML");
+        toml::from_str(&toml_str).expect("Failed to deserialize from TOML");
     assert_eq!(deserialized.auto_provision, Some(true));
     assert!(deserialized.servers.contains_key("postgres_main"));
 

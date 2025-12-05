@@ -53,7 +53,7 @@ openapi:
 	@command -v curl >/dev/null || (echo "curl is required to generate OpenAPI spec" && exit 1)
 	@echo "Starting hyperspot-server to generate OpenAPI spec..."
 	# Запускаем сервер в фоне
-	cargo run --bin hyperspot-server --features users-info-example -- --config config/quickstart.yaml &
+	cargo run --bin hyperspot-server --features users-info-example -- --config config/quickstart.toml &
 	@SERVER_PID=$$!; \
 	echo "hyperspot-server PID: $$SERVER_PID"; \
 	echo "Waiting for $(OPENAPI_URL) to become ready..."; \
@@ -90,11 +90,11 @@ dev-test:
 # Start server with quickstart config
 quickstart:
 	mkdir -p data
-	cargo run --bin hyperspot-server -- --config config/quickstart.yaml run
+	cargo run --bin hyperspot-server -- --config config/quickstart.toml run
 
 # Run server with example module
 example:
-	cargo run --bin hyperspot-server --features users-info-example -- --config config/quickstart.yaml run
+	cargo run --bin hyperspot-server --features users-info-example -- --config config/quickstart.toml run
 
 .PHONY: test-sqlite test-pg test-mysql test-all test-users-info-pg
 

@@ -510,7 +510,7 @@ HyperSpot modules are built on **ModKit**, which provides enterprise-grade opera
 ### 8.5. Configuration Management
 
 **Flexible Configuration:**
-- [ ] **YAML Configuration**: Human-readable configuration files
+- [ ] **TOML Configuration**: Human-readable configuration files
 - [ ] **Environment Overrides**: Environment variable support with `HYPERSPOT_` prefix
 - [ ] **Type-Safe Config**: Strongly-typed configuration structs with validation
 - [ ] **Defaults**: Sensible defaults for all configuration options

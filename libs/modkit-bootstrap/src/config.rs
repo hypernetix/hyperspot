@@ -34,10 +34,10 @@ pub struct AppConfig {
     pub logging: Option<LoggingConfig>,
     /// Tracing configuration (optional, disabled if None).
     pub tracing: Option<TracingConfig>,
-    /// Directory containing per-module YAML files (optional).
+    /// Directory containing per-module TOML files (optional).
     #[serde(default)]
     pub modules_dir: Option<String>,
-    /// Per-module configuration bag: module_name → arbitrary JSON/YAML value.
+    /// Per-module configuration bag: module_name → arbitrary JSON/TOML value.
     #[serde(default)]
     pub modules: HashMap<String, serde_json::Value>,
 }
@@ -144,16 +144,16 @@ impl Default for AppConfig {
 }
 
 impl AppConfig {
-    /// Load configuration with layered loading: defaults → YAML file → environment variables.
+    /// Load configuration with layered loading: defaults → TOML file → environment variables.
     /// Also normalizes `server.home_dir` into an absolute path and creates the directory.
     pub fn load_layered<P: AsRef<Path>>(config_path: P) -> Result<Self> {
         use figment::{
-            providers::{Env, Format, Serialized, Yaml},
+            providers::{Env, Format, Serialized, Toml},
             Figment,
         };
 
         // For layered loading, start from a minimal base where optional sections are None,
-        // so they remain None unless explicitly provided by YAML/ENV.
+        // so they remain None unless explicitly provided by TOML/ENV.
         let base = AppConfig {
             server: ServerConfig::default(),
             database: None,
@@ -165,7 +165,7 @@ impl AppConfig {
 
         let figment = Figment::new()
             .merge(Serialized::defaults(base))
-            .merge(Yaml::file(config_path.as_ref()))
+            .merge(Toml::file(config_path.as_ref()))
             // Example: APP__SERVER__PORT=8087 maps to server.port
             .merge(Env::prefixed("APP__").split("__"));
 
@@ -199,9 +199,9 @@ impl AppConfig {
         }
     }
 
-    /// Serialize configuration to YAML.
-    pub fn to_yaml(&self) -> Result<String> {
-        serde_yaml::to_string(self).context("Failed to serialize config to YAML")
+    /// Serialize configuration to TOML.
+    pub fn to_toml(&self) -> Result<String> {
+        toml::to_string(self).context("Failed to serialize config to TOML")
     }
 
     /// Apply overrides from command line arguments.
@@ -268,7 +268,7 @@ fn merge_module_files(
             .and_then(|s| s.to_str())
             .unwrap_or("")
             .to_ascii_lowercase();
-        if ext != "yml" && ext != "yaml" {
+        if ext != "toml" {
             continue;
         }
         let name = path
@@ -277,7 +277,7 @@ fn merge_module_files(
             .unwrap_or("")
             .to_string();
         let raw = fs::read_to_string(&path)?;
-        let val: serde_yaml::Value = serde_yaml::from_str(&raw)?;
+        let val: toml::Value = toml::from_str(&raw)?;
         let json = serde_json::to_value(val)?;
         bag.insert(name, json);
     }
@@ -903,26 +903,24 @@ mod tests {
     #[test]
     fn test_load_layered_normalizes_home_dir() {
         let tmp = tempdir().unwrap();
-        let cfg_path = tmp.path().join("cfg.yaml");
+        let cfg_path = tmp.path().join("cfg.toml");
 
         // Provide a user path with "~" to ensure expansion and normalization.
-        let yaml = r#"
-server:
-  home_dir: "~/.test_hyperspot"
+        let toml_cfg = r#"
+[server]
+home_dir = "~/.test_hyperspot"
 
-database:
-  servers:
-    test_postgres:
-      dsn: "postgres://user:pass@localhost/db"
-      pool:
-        max_conns: 20
+[database.servers.test_postgres]
+dsn = "postgres://user:pass@localhost/db"
 
-logging:
-  default:
-    console_level: debug
-    file: "logs/default.log"
+[database.servers.test_postgres.pool]
+max_conns = 20
+
+[logging.default]
+console_level = "debug"
+file = "logs/default.log"
 "#;
-        fs::write(&cfg_path, yaml).unwrap();
+        fs::write(&cfg_path, toml_cfg).unwrap();
 
         let config = AppConfig::load_layered(&cfg_path).unwrap();
 
@@ -931,7 +929,7 @@ logging:
         assert!(config.server.home_dir.ends_with(".test_hyperspot"));
 
         // database parsed (TODO: update test to use new config format)
-        // For now, since this test uses old format YAML, we skip DB assertions
+        // For now, since this test uses old format, we skip DB assertions
         // let db = config.database.as_ref().unwrap();
 
         // logging parsed
@@ -956,9 +954,9 @@ logging:
     }
 
     #[test]
-    fn test_minimal_yaml_config() {
+    fn test_minimal_toml_config() {
         let tmp = tempdir().unwrap();
-        let cfg_path = tmp.path().join("cfg.yaml");
+        let cfg_path = tmp.path().join("cfg.toml");
 
         // Set up environment variables for home directory resolution
         #[cfg(target_os = "windows")]
@@ -966,11 +964,11 @@ logging:
         #[cfg(not(target_os = "windows"))]
         env::set_var("HOME", tmp.path());
 
-        let yaml = r#"
-server:
-  home_dir: "~/.minimal"
+        let toml_cfg = r#"
+[server]
+home_dir = "~/.minimal"
 "#;
-        fs::write(&cfg_path, yaml).unwrap();
+        fs::write(&cfg_path, toml_cfg).unwrap();
 
         let config = AppConfig::load_layered(&cfg_path).unwrap();
 
@@ -1037,37 +1035,37 @@ server:
     #[test]
     fn test_layered_config_loading_with_modules_dir() {
         let tmp = tempdir().unwrap();
-        let cfg_path = tmp.path().join("modules_dir.yaml");
+        let cfg_path = tmp.path().join("modules_dir.toml");
         let modules_dir = tmp.path().join("modules");
 
         fs::create_dir_all(&modules_dir).unwrap();
-        let module_cfg = modules_dir.join("test_module.yaml");
+        let module_cfg = modules_dir.join("test_module.toml");
         fs::write(
             &module_cfg,
             r#"
-setting1: "value1"
-setting2: 42
+setting1 = "value1"
+setting2 = 42
 "#,
         )
         .unwrap();
 
-        // Convert Windows paths to forward slashes for YAML compatibility
+        // Convert Windows paths to forward slashes for TOML compatibility
         let modules_dir_str = modules_dir.to_string_lossy().replace('\\', "/");
-        let yaml = format!(
+        // Note: modules_dir must come before [server] table since it's a root-level field
+        let toml_cfg = format!(
             r#"
-server:
-  home_dir: "~/.modules_test"
+modules_dir = "{}"
 
-modules_dir: "{}"
+[server]
+home_dir = "~/.modules_test"
 
-modules:
-  existing_module:
-    key: "value"
+[modules.existing_module]
+key = "value"
 "#,
             modules_dir_str
         );
 
-        fs::write(&cfg_path, yaml).unwrap();
+        fs::write(&cfg_path, toml_cfg).unwrap();
 
         let config = AppConfig::load_layered(&cfg_path).unwrap();
 
@@ -1087,18 +1085,17 @@ modules:
     fn test_load_and_init_logging_smoke() {
         // Just verifies structure is acceptable for logging init path.
         let tmp = tempdir().unwrap();
-        let cfg_path = tmp.path().join("logging.yaml");
-        let yaml = r#"
-server:
-  home_dir: "~/.logging_test"
+        let cfg_path = tmp.path().join("logging.toml");
+        let toml_cfg = r#"
+[server]
+home_dir = "~/.logging_test"
 
-logging:
-  default:
-    console_level: debug
-    file: ""
-    file_level: info
+[logging.default]
+console_level = "debug"
+file = ""
+file_level = "info"
 "#;
-        fs::write(&cfg_path, yaml).unwrap();
+        fs::write(&cfg_path, toml_cfg).unwrap();
 
         let config = AppConfig::load_layered(&cfg_path).unwrap();
         assert!(config.logging.is_some());
