@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Integration tests for per-route rate limiting and in-flight concurrency limits
 
 use anyhow::Result;

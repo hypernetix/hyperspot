@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 use anyhow::Result;
 use modkit::{lifecycle as lifecycle_attr, lifecycle::*, StatefulModule};
 use std::time::Duration;

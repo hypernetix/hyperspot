@@ -13,14 +13,19 @@ use modkit::{
 use parking_lot::RwLock;
 #[cfg(unix)]
 use std::path::PathBuf;
-use std::{collections::HashSet, net::SocketAddr, sync::Arc};
+use std::{
+    collections::HashSet,
+    net::{Ipv4Addr, SocketAddr, SocketAddrV4},
+    sync::Arc,
+};
 use tokio_util::sync::CancellationToken;
 use tonic::{service::RoutesBuilder, transport::Server};
 
 #[cfg(windows)]
 use modkit_transport_grpc::create_named_pipe_incoming;
 
-const DEFAULT_LISTEN_ADDR: &str = "0.0.0.0:50051";
+const DEFAULT_LISTEN_ADDR: SocketAddr =
+    SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 50051));
 
 /// Configuration for the listen address
 #[derive(Clone)]
@@ -47,11 +52,8 @@ pub struct GrpcHub {
 
 impl Default for GrpcHub {
     fn default() -> Self {
-        let addr = DEFAULT_LISTEN_ADDR
-            .parse()
-            .expect("default gRPC listen address is valid");
         Self {
-            listen_cfg: RwLock::new(ListenConfig::Tcp(addr)),
+            listen_cfg: RwLock::new(ListenConfig::Tcp(DEFAULT_LISTEN_ADDR)),
             installer_store: RwLock::new(None),
         }
     }

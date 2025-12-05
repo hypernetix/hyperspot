@@ -194,20 +194,9 @@ jobs:
         with:
           tool: cargo-deny
 
-      - name: Install cargo-audit
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-audit
-
       # Run deny checks but do not fail CI (as requested).
       - name: cargo deny check
         run: cargo deny check
-        continue-on-error: true
-
-      # Run audit but do not fail CI (as requested).
-      - name: cargo audit
-        run: cargo audit
-        continue-on-error: true
 
   coverage:
     if: false

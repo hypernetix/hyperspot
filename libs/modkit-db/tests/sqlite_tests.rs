@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Tests for SQLite-specific functionality.
 
 use figment::{providers::Serialized, Figment};

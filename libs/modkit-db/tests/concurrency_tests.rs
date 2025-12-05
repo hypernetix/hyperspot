@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Tests for concurrency and caching behavior of DbManager.
 
 use figment::{providers::Serialized, Figment};

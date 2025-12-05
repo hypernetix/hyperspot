@@ -1,4 +1,5 @@
 [workspace.package]
+version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
 authors = ["Hypernetix"]
@@ -18,20 +19,24 @@ members = [
     "libs/modkit-errors",
     "libs/modkit-errors-macro",
     "libs/modkit-odata",
+    "libs/modkit-node-info",
     "libs/modkit-transport-grpc",
     "modules/api_ingress",
     "modules/directory_service",
     "modules/grpc_hub",
     "modules/file_parser",
     "modules/nodes_registry",
-    "libs/modkit-node-info",
     "examples/modkit/users_info"
 ]
 resolver = "2"
 
 [workspace.lints.rust]
-unsafe_code = "deny"
+unsafe_code = "forbid"
 unused_mut = "warn"
+
+[workspace.lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
 
 [workspace.dependencies]
 # Serialization
@@ -161,7 +166,7 @@ proc-macro2 = "1.0"
 quote = "1.0"
 syn = { version = "2.0", features = ["full", "parsing", "printing", "derive", "extra-traits"] }
 heck = "0.5"
-proc-macro-error = "1"
+proc-macro-error2 = "2.0"
 
 # Testing utilities
 trybuild = "1"

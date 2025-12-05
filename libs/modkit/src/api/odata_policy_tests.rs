@@ -34,7 +34,7 @@ mod tests {
             f: None,
             d: "fwd".to_string(),
         };
-        let cursor_encoded = cursor.encode();
+        let cursor_encoded = cursor.encode().unwrap();
 
         let mut parts = mock_parts(&format!("cursor={}", urlencoding::encode(&cursor_encoded)));
         let result = extract_odata_query(&mut parts, &()).await;

@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Tests for SecurityCtx-aware API generation
 
 use modkit_macros::generate_clients;

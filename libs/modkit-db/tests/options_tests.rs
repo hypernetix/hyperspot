@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Tests for options module functionality.
 
 use modkit_db::{build_db_handle, DbConnConfig, DbEngine, PoolCfg};

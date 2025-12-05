@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 #[cfg(feature = "with-odata-params")]
 mod tests {
     use modkit_odata::ast::*;

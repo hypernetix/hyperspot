@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Tests for Keycloak JWT token compatibility
 //!
 //! This test demonstrates that the JWT validator can handle:

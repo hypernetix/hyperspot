@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 use modkit_security::{AccessScope, SecurityCtx, Subject, ROOT_SUBJECT_ID};
 
 #[test]

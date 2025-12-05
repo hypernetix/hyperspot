@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! CLI smoke tests for hyperspot-server binary
 //!
 //! These tests verify that the CLI commands work correctly, including

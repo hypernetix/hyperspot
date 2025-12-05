@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 use modkit_odata::{ODataOrderBy, OrderKey, SortDir};
 
 #[test]

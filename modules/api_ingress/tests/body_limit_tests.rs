@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Integration tests for request body size limits and compatibility with CORS
 
 use anyhow::Result;

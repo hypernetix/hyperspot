@@ -57,7 +57,7 @@ pub fn resolve_home_dir(
                     Path::new(&user_home).join(rest)
                 }
             } else {
-                PathBuf::from(raw.clone())
+                PathBuf::from(&raw)
             };
 
             if !expanded.is_absolute() {
@@ -81,11 +81,10 @@ pub fn resolve_home_dir(
         let path = if let Some(raw) = config_home {
             // Allow ~ expansion at the beginning
             let expanded = if let Some(stripped) = raw.strip_prefix("~/") {
-                let home = env::var("HOME").map_err(|_| HomeDirError::HomeMissing)?;
+                let home = env::home_dir().ok_or(HomeDirError::HomeMissing)?;
                 Path::new(&home).join(stripped)
             } else if raw == "~" {
-                let home = env::var("HOME").map_err(|_| HomeDirError::HomeMissing)?;
-                PathBuf::from(home)
+                env::home_dir().ok_or(HomeDirError::HomeMissing)?
             } else {
                 PathBuf::from(raw.clone())
             };
@@ -98,7 +97,7 @@ pub fn resolve_home_dir(
             expanded
         } else {
             // Default to $HOME/<default_subdir>
-            let home = env::var("HOME").map_err(|_| HomeDirError::HomeMissing)?;
+            let home = env::home_dir().ok_or(HomeDirError::HomeMissing)?;
             Path::new(&home).join(default_subdir)
         };
 
@@ -114,6 +113,28 @@ mod tests {
     use super::*;
     use std::env;
     use tempfile::tempdir;
+    #[test]
+    fn tests_secuential() {
+        // we can't run this in parallel as they interfere with each other
+        #[cfg(target_os = "windows")]
+        {
+            windows_absolute_path_ok();
+            windows_relative_path_error();
+            windows_default_uses_appdata();
+            windows_error_when_appdata_missing();
+            windows_creates_directory_when_flag_true();
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            unix_resolve_with_tilde();
+            unix_resolve_with_only_tilde();
+            unix_resolve_default_home_dir();
+            unix_resolve_absolute_path_ok();
+            unix_resolve_relative_path_error();
+            unix_resolve_creates_directory();
+            unix_will_fallback_when_home_missing();
+        }
+    }
 
     /// Helper: path must be absolute and not start with '~'.
     #[cfg(not(target_os = "windows"))]
@@ -124,7 +145,6 @@ mod tests {
     // -------------------------
     // Unix/macOS test suite
     // -------------------------
-    #[test]
     #[cfg(not(target_os = "windows"))]
     fn unix_resolve_with_tilde() {
         // Fake HOME for the test
@@ -137,7 +157,6 @@ mod tests {
         assert!(result.ends_with("myapp"));
     }
 
-    #[test]
     #[cfg(not(target_os = "windows"))]
     fn unix_resolve_with_only_tilde() {
         let tmp = tempdir().unwrap();
@@ -149,7 +168,6 @@ mod tests {
         assert_eq!(result, tmp.path());
     }
 
-    #[test]
     #[cfg(not(target_os = "windows"))]
     fn unix_resolve_default_home_dir() {
         let tmp = tempdir().unwrap();
@@ -161,7 +179,6 @@ mod tests {
         assert!(result.ends_with(".hyperspot"));
     }
 
-    #[test]
     #[cfg(not(target_os = "windows"))]
     fn unix_resolve_absolute_path_ok() {
         let tmp = tempdir().unwrap();
@@ -177,7 +194,6 @@ mod tests {
         assert_eq!(result, abs_path);
     }
 
-    #[test]
     #[cfg(not(target_os = "windows"))]
     fn unix_resolve_relative_path_error() {
         // Relative path is not allowed on Unix after expansion
@@ -188,7 +204,6 @@ mod tests {
         }
     }
 
-    #[test]
     #[cfg(not(target_os = "windows"))]
     fn unix_resolve_creates_directory() {
         let tmp = tempdir().unwrap();
@@ -201,9 +216,8 @@ mod tests {
         assert_eq!(result, target);
     }
 
-    #[test]
     #[cfg(not(target_os = "windows"))]
-    fn unix_error_when_home_missing() {
+    fn unix_will_fallback_when_home_missing() {
         // Save and restore original HOME to isolate this test
         let original_home = env::var("HOME").ok();
         env::remove_var("HOME");
@@ -215,17 +229,12 @@ mod tests {
             env::set_var("HOME", home);
         }
 
-        let err = result.unwrap_err();
-        match err {
-            HomeDirError::HomeMissing => {}
-            _ => panic!("Expected HomeMissing, got {:?}", err),
-        }
+        assert!(result.is_ok());
     }
 
     // -------------------------
     // Windows test suite
     // -------------------------
-    #[test]
     #[cfg(target_os = "windows")]
     fn windows_absolute_path_ok() {
         // On Windows, only absolute paths are accepted when provided.
@@ -243,7 +252,6 @@ mod tests {
         assert!(result.is_absolute());
     }
 
-    #[test]
     #[cfg(target_os = "windows")]
     fn windows_relative_path_error() {
         // On Windows, a provided path must be absolute (no ~, no relative).
@@ -256,7 +264,6 @@ mod tests {
         }
     }
 
-    #[test]
     #[cfg(target_os = "windows")]
     fn windows_default_uses_appdata() {
         // When not provided, it must use %APPDATA%\<default_subdir>.
@@ -270,7 +277,6 @@ mod tests {
         assert!(result.starts_with(tmp.path()));
     }
 
-    #[test]
     #[cfg(target_os = "windows")]
     fn windows_error_when_appdata_missing() {
         env::remove_var("APPDATA");
@@ -282,7 +288,6 @@ mod tests {
         }
     }
 
-    #[test]
     #[cfg(target_os = "windows")]
     fn windows_creates_directory_when_flag_true() {
         let tmp = tempdir().unwrap();

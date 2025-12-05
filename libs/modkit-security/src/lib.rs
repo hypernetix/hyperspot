@@ -1,6 +1,3 @@
-#![forbid(unsafe_code)]
-#![deny(rust_2018_idioms, warnings)]
-
 pub mod bin_codec;
 pub mod constants;
 pub mod prelude;

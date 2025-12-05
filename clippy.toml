@@ -22,3 +22,6 @@ disallowed-methods = [
 #
 # Or enable warnings instead:
 # #![warn(clippy::disallowed_methods)]
+
+allow-expect-in-tests = true
+allow-unwrap-in-tests = true

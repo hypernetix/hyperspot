@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Test that auth_disabled mode properly injects root context
 
 use axum::{

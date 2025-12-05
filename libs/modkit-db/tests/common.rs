@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 #![allow(dead_code)]
 use anyhow::Result;
 use std::path::PathBuf;

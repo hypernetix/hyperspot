@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 use file_parser::domain::parser::FileParserBackend;
 use file_parser::domain::parsers::docx_parser::DocxParser;
 use std::path::PathBuf;

@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Comprehensive tests for the #[module] macro with the new registry/builder
 
 use anyhow::Result;

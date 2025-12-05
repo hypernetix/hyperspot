@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Integration tests for the unified authentication system
 //!
 //! These tests verify end-to-end behavior with a real Axum Router

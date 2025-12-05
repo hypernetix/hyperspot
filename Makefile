@@ -3,7 +3,8 @@ CI := 1
 OPENAPI_URL ?= http://127.0.0.1:8087/openapi.json
 OPENAPI_OUT ?= docs/api/api.json
 
-.PHONY: check fmt clippy test test-sqlite test-pg test-mysql test-all test-users-info-pg audit deny security ci coverage coverage-unit coverage-e2e
+
+.PHONY: check fmt clippy test test-sqlite test-pg test-mysql test-all test-users-info-pg deny security ci coverage coverage-unit coverage-e2e
 
 # Default target - run necessary quality checks and tests and build the release binary
 all: check test test-sqlite security build
@@ -15,16 +16,11 @@ fmt:
 
 # Run clippy linter
 clippy:
-	cargo clippy --workspace --all-targets -- -D warnings
+	cargo clippy --workspace --all-targets --all-features -- -D warnings
 
 # Run all tests
 test:
 	cargo test --workspace
-
-# Check for security vulnerabilities
-audit:
-	@command -v cargo-audit >/dev/null || (echo "Installing cargo-audit..." && cargo install cargo-audit)
-	cargo audit
 
 # Check licenses and dependencies
 deny:
@@ -32,7 +28,7 @@ deny:
 	cargo deny check
 
 # Run all security checks
-security: audit deny
+security: deny
 
 # Run all quality checks
 check: fmt clippy test security

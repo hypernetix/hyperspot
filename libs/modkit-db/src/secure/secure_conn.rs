@@ -182,7 +182,7 @@ impl SecureConn {
         E: ScopableEntity + EntityTrait,
         E::Column: ColumnTrait + Copy,
     {
-        Ok(self.find::<E>(ctx)?.and_id(id))
+        self.find::<E>(ctx)?.and_id(id)
     }
 
     /// Create a scoped update query for the given entity.

@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 use modkit_security::SecurityCtx;
 use uuid::Uuid;
 

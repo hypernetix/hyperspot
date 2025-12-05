@@ -42,7 +42,7 @@
 //! - **Unrestricted**: `unrestricted` (forbids all other attributes)
 
 use proc_macro::TokenStream;
-use proc_macro_error::proc_macro_error;
+use proc_macro_error2::proc_macro_error;
 use syn::{parse_macro_input, DeriveInput};
 
 mod odata_filterable;

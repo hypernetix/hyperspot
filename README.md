@@ -34,7 +34,6 @@ make clippy     # Lint (deny warnings). Use 'make dev-clippy' to attempt auto-fi
 make test       # Run tests
 make example    # Run modkit example module
 make check      # All checks (fmt-check + clippy + test + audit + deny)
-make audit      # Security audit
 make deny       # License and dependency checks
 
 # Windows (using PowerShell script)
@@ -44,7 +43,6 @@ make deny       # License and dependency checks
 ./scripts/ci.ps1 clippy       # Run linter
 ./scripts/ci.ps1 clippy -Fix  # Auto-fix linter issues
 ./scripts/ci.ps1 test         # Run tests
-./scripts/ci.ps1 audit        # Security audit
 ./scripts/ci.ps1 deny         # License and dependency checks
 ```
 

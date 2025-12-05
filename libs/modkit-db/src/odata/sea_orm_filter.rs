@@ -504,62 +504,38 @@ where
     }
 
     // Build cursors
-    let next_cursor = if is_backward {
-        rows.last()
-            .map(|m| {
-                build_cursor_from_model::<F, M>(
-                    m,
-                    &effective_order,
-                    query.filter_hash.as_deref(),
-                    "fwd",
-                )
-            })
-            .transpose()?
-            .map(|c| c.encode())
-    } else if has_more {
-        rows.last()
-            .map(|m| {
-                build_cursor_from_model::<F, M>(
-                    m,
-                    &effective_order,
-                    query.filter_hash.as_deref(),
-                    "fwd",
-                )
-            })
-            .transpose()?
-            .map(|c| c.encode())
+    let next_cursor = if is_backward || has_more {
+        build_cursor_from_rows::<E, F, M>(
+            &rows,
+            &effective_order,
+            query.filter_hash.as_deref(),
+            "fwd",
+            true,
+        )?
     } else {
         None
     };
 
     let prev_cursor = if is_backward {
         if has_more {
-            rows.first()
-                .map(|m| {
-                    build_cursor_from_model::<F, M>(
-                        m,
-                        &effective_order,
-                        query.filter_hash.as_deref(),
-                        "bwd",
-                    )
-                })
-                .transpose()?
-                .map(|c| c.encode())
+            build_cursor_from_rows::<E, F, M>(
+                &rows,
+                &effective_order,
+                query.filter_hash.as_deref(),
+                "bwd",
+                false,
+            )?
         } else {
             None
         }
     } else if query.cursor.is_some() {
-        rows.first()
-            .map(|m| {
-                build_cursor_from_model::<F, M>(
-                    m,
-                    &effective_order,
-                    query.filter_hash.as_deref(),
-                    "bwd",
-                )
-            })
-            .transpose()?
-            .map(|c| c.encode())
+        build_cursor_from_rows::<E, F, M>(
+            &rows,
+            &effective_order,
+            query.filter_hash.as_deref(),
+            "bwd",
+            false,
+        )?
     } else {
         None
     };
@@ -574,6 +550,28 @@ where
             limit,
         },
     })
+}
+
+/// Build a cursor from rows, using either the first or last row
+fn build_cursor_from_rows<E, F, M: ODataFieldMapping<F, Entity = E>>(
+    rows: &[<E as EntityTrait>::Model],
+    effective_order: &ODataOrderBy,
+    filter_hash: Option<&str>,
+    direction: &str,
+    use_last: bool,
+) -> Result<Option<String>, ODataError>
+where
+    F: FilterField,
+    E: EntityTrait,
+{
+    let row = if use_last { rows.last() } else { rows.first() };
+
+    row.map(|m| build_cursor_from_model::<F, M>(m, effective_order, filter_hash, direction))
+        .transpose()
+        .and_then(|opt| match opt {
+            Some(c) => c.encode().map(Some).map_err(|_| ODataError::InvalidCursor),
+            None => Ok(None),
+        })
 }
 
 /// Build a cursor predicate for pagination

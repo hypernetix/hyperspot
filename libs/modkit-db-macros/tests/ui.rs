@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 // Compile-fail tests for the Scopable derive macro.
 // IMPORTANT: These files must not import external crates like sea_orm or uuid.
 // We only validate macro input diagnostics here.

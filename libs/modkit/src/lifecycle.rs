@@ -191,7 +191,12 @@ impl Lifecycle {
     {
         self.start_core(
             CancellationToken::new(),
-            move |tok, rdy| make(tok, rdy.expect("ReadySignal must be present")),
+            move |tok, rdy| async move {
+                let Some(rdy) = rdy else {
+                    return Err(anyhow::anyhow!("ReadySignal must be present"));
+                };
+                make(tok, rdy).await
+            },
             true,
         )
     }
@@ -205,7 +210,12 @@ impl Lifecycle {
     {
         self.start_core(
             token,
-            move |tok, rdy| make(tok, rdy.expect("ReadySignal must be present")),
+            move |tok, rdy| async move {
+                let Some(rdy) = rdy else {
+                    return Err(anyhow::anyhow!("ReadySignal must be present"));
+                };
+                make(tok, rdy).await
+            },
             true,
         )
     }
@@ -552,9 +562,9 @@ impl<T: Runnable> crate::contracts::StatefulModule for WithLifecycle<T> {
                 .start_with_token(composed, move |cancel| inner.run(cancel))
                 .map_err(anyhow::Error::from)
         } else if self.has_ready_handler {
-            let f = self
-                .run_ready_fn
-                .expect("run_ready_fn must be set when has_ready_handler");
+            let f = self.run_ready_fn.ok_or_else(|| {
+                anyhow::anyhow!("run_ready_fn must be set when has_ready_handler")
+            })?;
             self.lc
                 .start_with_ready_and_token(composed, move |cancel, ready| f(inner, cancel, ready))
                 .map_err(anyhow::Error::from)

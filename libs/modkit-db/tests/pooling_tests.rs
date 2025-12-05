@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Tests for pool configuration and inheritance.
 
 use figment::{providers::Serialized, Figment};

@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Comprehensive tests for the generate_clients macro (gRPC only)
 
 use modkit_macros::generate_clients;

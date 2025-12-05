@@ -1,6 +1,6 @@
 use heck::ToUpperCamelCase;
 use proc_macro2::{Span, TokenStream};
-use proc_macro_error::{abort, emit_error};
+use proc_macro_error2::{abort, emit_error};
 use quote::quote;
 use syn::{spanned::Spanned, Data, DeriveInput, Fields, Ident, Lit};
 

@@ -1,10 +1,13 @@
 [package]
 name = "users_info"
-version = "0.1.0"
+version.workspace = true
 publish = false
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
+
+[lints]
+workspace = true
 
 [features]
 integration = []   # gate integration tests

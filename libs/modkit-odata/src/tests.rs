@@ -16,7 +16,7 @@ mod tests {
             d: "fwd".to_string(),
         };
 
-        let encoded = cursor.encode();
+        let encoded = cursor.encode().expect("encode should succeed");
         let decoded = CursorV1::decode(&encoded).expect("decode should succeed");
 
         assert_eq!(decoded.k, cursor.k);
@@ -36,7 +36,7 @@ mod tests {
             d: "fwd".to_string(),
         };
 
-        let encoded = cursor.encode();
+        let encoded = cursor.encode().expect("encode should succeed");
         let decoded = CursorV1::decode(&encoded).expect("decode should succeed");
 
         assert_eq!(decoded.k, cursor.k);

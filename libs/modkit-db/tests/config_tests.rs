@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Tests for configuration types and serialization.
 
 use modkit_db::{DbConnConfig, GlobalDatabaseConfig, PoolCfg};

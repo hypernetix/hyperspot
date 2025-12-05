@@ -1,8 +1,12 @@
 [package]
 name = "modkit-node-info"
-version = "0.1.0"
+version.workspace = true
 publish = false
 edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
 
 [dependencies]
 anyhow = { workspace = true }

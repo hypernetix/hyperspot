@@ -76,7 +76,6 @@ impl Parse for GenerateClientsConfig {
 #[derive(Clone)]
 pub struct MethodSig {
     pub name: syn::Ident,
-    pub has_ctx: bool,
     pub ctx_type: Option<syn::Type>,
     pub request_type: syn::Type,
     pub response_type: syn::Type,
@@ -166,11 +165,11 @@ fn extract_methods(trait_def: &ItemTrait) -> syn::Result<Vec<MethodSig>> {
             // Count non-self parameters
             let non_self_params: Vec<_> = inputs[1..].iter().collect();
 
-            let (has_ctx, ctx_type, request_type) = match non_self_params.len() {
+            let (ctx_type, request_type) = match non_self_params.len() {
                 1 => {
                     // Case A: Only request parameter
                     if let FnArg::Typed(pat_type) = non_self_params[0] {
-                        (false, None, (*pat_type.ty).clone())
+                        (None, (*pat_type.ty).clone())
                     } else {
                         return Err(syn::Error::new_spanned(
                             non_self_params[0],
@@ -212,7 +211,7 @@ fn extract_methods(trait_def: &ItemTrait) -> syn::Result<Vec<MethodSig>> {
                             }
                         }
 
-                        (true, Some(ctx_ref_type.clone()), (*req_param.ty).clone())
+                        (Some(ctx_ref_type.clone()), (*req_param.ty).clone())
                     } else {
                         return Err(syn::Error::new_spanned(
                             &method.sig.inputs,
@@ -247,7 +246,6 @@ fn extract_methods(trait_def: &ItemTrait) -> syn::Result<Vec<MethodSig>> {
 
             methods.push(MethodSig {
                 name: method.sig.ident.clone(),
-                has_ctx,
                 ctx_type,
                 request_type,
                 response_type,
@@ -274,10 +272,8 @@ fn generate_grpc_client(
         let resp_type = &method.response_type;
         let err_type = &method.error_type;
 
-        if method.has_ctx {
+        if let Some(ctx_type) = method.ctx_type.as_ref() {
             // Case A: Method has SecurityCtx
-            let ctx_type = method.ctx_type.as_ref().unwrap();
-
             quote! {
                 async fn #name(
                     &self,
