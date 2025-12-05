@@ -374,7 +374,7 @@ fn install_subscriber(
     use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter, Registry};
 
     // RUST_LOG acts as a global upper-bound for console/file if present.
-    // If not set, we don't clamp here — YAML targets drive levels.
+    // If not set, we don't clamp here — TOML config targets drive levels.
     let env: Option<EnvFilter> = EnvFilter::try_from_default_env().ok();
 
     // Console writer (non-blocking stderr)
@@ -408,7 +408,7 @@ fn install_subscriber(
 
     // Build subscriber:
     // 1) OTEL first (because your OtelLayer is bound to `Registry`);
-    //    also filter OTEL by the SAME console targets from YAML.
+    //    also filter OTEL by the SAME console targets from TOML config.
     // 2) Then EnvFilter (caps console/file if RUST_LOG is set).
     // 3) Then console + file fmt layers.
     let subscriber = {

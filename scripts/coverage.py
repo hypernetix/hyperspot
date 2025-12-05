@@ -16,7 +16,10 @@ from typing import Optional
 from urllib.request import urlopen
 from urllib.error import URLError, HTTPError
 
-import yaml
+try:
+    import tomllib  # Python 3.11+
+except ImportError:
+    import tomli as tomllib  # Python < 3.11
 
 # Import prereq module for environment validation
 from lib.prereq import check_environment_ready
@@ -567,14 +570,14 @@ def parse_bind_addr_port(config_file):
     """Parse the bind_addr from config file and extract port number.
 
     Args:
-        config_file: Path to YAML config file
+        config_file: Path to TOML config file
 
     Returns:
         int: Port number from api_ingress.bind_addr
     """
     config_path = PROJECT_ROOT / config_file
-    with open(config_path, 'r') as f:
-        config = yaml.safe_load(f)
+    with open(config_path, 'rb') as f:
+        config = tomllib.load(f)
 
     bind_addr = config.get('modules', {}).get('api_ingress', {}).get(
         'config', {}).get('bind_addr', '127.0.0.1:8080'
@@ -755,7 +758,7 @@ def stop_server(server_process, port, log_file):
 
 def collect_e2e_local_coverage(
     output_dir,
-    config_file="config/e2e-local.yaml",
+    config_file="config/e2e-local.toml",
     test_filter=None,
     skip_build=False
 ):
@@ -969,7 +972,7 @@ def cmd_coverage_unit(args):
 def cmd_coverage_e2e(args):
     """Generate coverage for e2e tests only."""
     output_dir = COVERAGE_DIR / "e2e-local"
-    config_file = args.config if args.config else "config/e2e-local.yaml"
+    config_file = args.config if args.config else "config/e2e-local.toml"
     test_filter = args.filter if hasattr(args, 'filter') else None
     skip_build = args.no_build if hasattr(args, 'no_build') else False
     threshold = args.threshold if hasattr(args, 'threshold') else COVERAGE_THRESHOLD
@@ -980,7 +983,7 @@ def cmd_coverage_e2e(args):
 def cmd_coverage_combined(args):
     """Generate combined coverage from both unit and e2e tests."""
     output_dir = COVERAGE_DIR / "combined"
-    config_file = args.config if args.config else "config/e2e-local.yaml"
+    config_file = args.config if args.config else "config/e2e-local.toml"
     threshold = args.threshold if hasattr(args, 'threshold') else COVERAGE_THRESHOLD
     use_color = supports_color()  # Auto-detect color support
 
@@ -1121,7 +1124,7 @@ Examples:
         "--config",
         help=(
             "Config file to use (relative to project root, "
-            "e.g., config/e2e-local.yaml)"
+            "e.g., config/e2e-local.toml)"
         ),
         default=None
     )
@@ -1157,7 +1160,7 @@ Examples:
     p_e2e.add_argument(
         "--config",
         help="Config file to use (relative to project root)",
-        default="config/e2e-local.yaml"
+        default="config/e2e-local.toml"
     )
     p_e2e.add_argument(
         "--filter",
@@ -1194,7 +1197,7 @@ Examples:
     p_combined.add_argument(
         "--config",
         help="Config file to use (relative to project root)",
-        default="config/e2e-local.yaml"
+        default="config/e2e-local.toml"
     )
     p_combined.add_argument(
         "--threshold",

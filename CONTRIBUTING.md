@@ -40,10 +40,10 @@ cargo build
 cargo test
 
 # Start the development server (SQLite quickstart)
-cargo run --bin hyperspot-server -- --config config/quickstart.yaml
+cargo run --bin hyperspot-server -- --config config/quickstart.toml
 
 # Start the development server with the example users_info module
-cargo run --bin hyperspot-server --features=users-info-example -- --config config/quickstart.yaml
+cargo run --bin hyperspot-server --features=users-info-example -- --config config/quickstart.toml
 ```
 
 ## 2. Development Workflow

@@ -110,7 +110,7 @@ def cmd_quickstart(_args):
     if not os.path.isdir(data_dir):
         os.makedirs(data_dir, exist_ok=True)
         print(f"Created data directory: {data_dir}")
-    run_cmd(["cargo", "run", "--bin", "hyperspot-server", "--", "--config", "config/quickstart.yaml", "run"])
+    run_cmd(["cargo", "run", "--bin", "hyperspot-server", "--", "--config", "config/quickstart.toml", "run"])
 
 
 def wait_for_health(base_url, timeout_secs=30):
@@ -189,7 +189,7 @@ def cmd_e2e(args):
             print("Please start hyperspot-server before running E2E tests, for example:")
             print("  make example")
             print("  OR")
-            print("  cargo run --bin hyperspot-server --features users-info-example -- --config config/quickstart.yaml")
+            print("  cargo run --bin hyperspot-server --features users-info-example -- --config config/quickstart.toml")
             print("")
             print("To use Docker environment instead, run:")
             print("  python scripts/ci.py e2e --docker")

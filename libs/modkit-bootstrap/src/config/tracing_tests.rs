@@ -3,16 +3,15 @@
 #[cfg(test)]
 mod tests {
     use super::super::{Exporter, HttpOpts, LogsCorrelation, Propagation, Sampler, TracingConfig};
-    use serde_yaml;
     use std::collections::HashMap;
 
     #[test]
     fn test_parse_minimal_tracing_config() {
-        let yaml = r#"
-enabled: true
-service_name: "test-service"
+        let toml_str = r#"
+enabled = true
+service_name = "test-service"
 "#;
-        let cfg: TracingConfig = serde_yaml::from_str(yaml).unwrap();
+        let cfg: TracingConfig = toml::from_str(toml_str).unwrap();
         assert!(cfg.enabled);
         assert_eq!(cfg.service_name.as_deref(), Some("test-service"));
         assert!(cfg.exporter.is_none());
@@ -21,32 +20,39 @@ service_name: "test-service"
 
     #[test]
     fn test_parse_full_tracing_config() {
-        let yaml = r#"
-enabled: true
-service_name: "hyperspot-api"
-exporter:
-  kind: "otlp_grpc"
-  endpoint: "http://127.0.0.1:4317"
-  headers:
-    authorization: "Bearer token123"
-    x-custom: "value"
-  timeout_ms: 5000
-sampler:
-  strategy: "parentbased_ratio"
-  ratio: 0.2
-propagation:
-  w3c_trace_context: true
-resource:
-  service.version: "1.2.3"
-  deployment.environment: "dev"
-  service.namespace: "hyperspot"
-http:
-  inject_request_id_header: "x-request-id"
-  record_headers: ["user-agent", "x-forwarded-for"]
-logs_correlation:
-  inject_trace_ids_into_logs: true
+        let toml_str = r#"
+enabled = true
+service_name = "hyperspot-api"
+
+[exporter]
+kind = "otlp_grpc"
+endpoint = "http://127.0.0.1:4317"
+timeout_ms = 5000
+
+[exporter.headers]
+authorization = "Bearer token123"
+x-custom = "value"
+
+[sampler]
+strategy = "parentbased_ratio"
+ratio = 0.2
+
+[propagation]
+w3c_trace_context = true
+
+[resource]
+"service.version" = "1.2.3"
+"deployment.environment" = "dev"
+"service.namespace" = "hyperspot"
+
+[http]
+inject_request_id_header = "x-request-id"
+record_headers = ["user-agent", "x-forwarded-for"]
+
+[logs_correlation]
+inject_trace_ids_into_logs = true
 "#;
-        let cfg: TracingConfig = serde_yaml::from_str(yaml).unwrap();
+        let cfg: TracingConfig = toml::from_str(toml_str).unwrap();
 
         // Basic config
         assert!(cfg.enabled);
@@ -95,13 +101,14 @@ logs_correlation:
 
     #[test]
     fn test_parse_otlp_http_exporter() {
-        let yaml = r#"
-enabled: true
-exporter:
-  kind: "otlp_http"
-  endpoint: "http://127.0.0.1:4318/v1/traces"
+        let toml_str = r#"
+enabled = true
+
+[exporter]
+kind = "otlp_http"
+endpoint = "http://127.0.0.1:4318/v1/traces"
 "#;
-        let cfg: TracingConfig = serde_yaml::from_str(yaml).unwrap();
+        let cfg: TracingConfig = toml::from_str(toml_str).unwrap();
         let exporter = cfg.exporter.as_ref().unwrap();
         assert_eq!(exporter.kind.as_deref(), Some("otlp_http"));
         assert_eq!(
@@ -113,34 +120,37 @@ exporter:
     #[test]
     fn test_parse_different_sampler_strategies() {
         // Test always_on
-        let yaml = r#"
-enabled: true
-sampler:
-  strategy: "always_on"
+        let toml_str = r#"
+enabled = true
+
+[sampler]
+strategy = "always_on"
 "#;
-        let cfg: TracingConfig = serde_yaml::from_str(yaml).unwrap();
+        let cfg: TracingConfig = toml::from_str(toml_str).unwrap();
         let sampler = cfg.sampler.as_ref().unwrap();
         assert_eq!(sampler.strategy.as_deref(), Some("always_on"));
         assert!(sampler.ratio.is_none());
 
         // Test always_off
-        let yaml = r#"
-enabled: true
-sampler:
-  strategy: "always_off"
+        let toml_str = r#"
+enabled = true
+
+[sampler]
+strategy = "always_off"
 "#;
-        let cfg: TracingConfig = serde_yaml::from_str(yaml).unwrap();
+        let cfg: TracingConfig = toml::from_str(toml_str).unwrap();
         let sampler = cfg.sampler.as_ref().unwrap();
         assert_eq!(sampler.strategy.as_deref(), Some("always_off"));
 
         // Test ratio
-        let yaml = r#"
-enabled: true
-sampler:
-  strategy: "ratio"
-  ratio: 0.5
+        let toml_str = r#"
+enabled = true
+
+[sampler]
+strategy = "ratio"
+ratio = 0.5
 "#;
-        let cfg: TracingConfig = serde_yaml::from_str(yaml).unwrap();
+        let cfg: TracingConfig = toml::from_str(toml_str).unwrap();
         let sampler = cfg.sampler.as_ref().unwrap();
         assert_eq!(sampler.strategy.as_deref(), Some("ratio"));
         assert_eq!(sampler.ratio, Some(0.5));
@@ -148,14 +158,15 @@ sampler:
 
     #[test]
     fn test_disabled_tracing_config() {
-        let yaml = r#"
-enabled: false
-service_name: "test-service"
-exporter:
-  kind: "otlp_grpc"
-  endpoint: "http://127.0.0.1:4317"
+        let toml_str = r#"
+enabled = false
+service_name = "test-service"
+
+[exporter]
+kind = "otlp_grpc"
+endpoint = "http://127.0.0.1:4317"
 "#;
-        let cfg: TracingConfig = serde_yaml::from_str(yaml).unwrap();
+        let cfg: TracingConfig = toml::from_str(toml_str).unwrap();
         assert!(!cfg.enabled);
         // Even when disabled, other config should still parse
         assert_eq!(cfg.service_name.as_deref(), Some("test-service"));
@@ -209,11 +220,11 @@ exporter:
             }),
         };
 
-        // Serialize to YAML
-        let yaml = serde_yaml::to_string(&original).unwrap();
+        // Serialize to TOML
+        let toml_str = toml::to_string(&original).unwrap();
 
         // Deserialize back
-        let roundtrip: TracingConfig = serde_yaml::from_str(&yaml).unwrap();
+        let roundtrip: TracingConfig = toml::from_str(&toml_str).unwrap();
 
         // Compare
         assert_eq!(original.enabled, roundtrip.enabled);
@@ -233,16 +244,17 @@ exporter:
     }
 
     #[test]
-    fn test_invalid_yaml_graceful_failure() {
-        let invalid_yaml = r#"
-enabled: true
-sampler:
-  strategy: "invalid_strategy"
-  ratio: "not_a_number"
+    fn test_invalid_toml_graceful_failure() {
+        let invalid_toml = r#"
+enabled = true
+
+[sampler]
+strategy = "invalid_strategy"
+ratio = "not_a_number"
 "#;
 
         // This should fail to parse due to invalid ratio type
-        let result: Result<TracingConfig, _> = serde_yaml::from_str(invalid_yaml);
+        let result: Result<TracingConfig, _> = toml::from_str(invalid_toml);
         assert!(result.is_err());
     }
 }

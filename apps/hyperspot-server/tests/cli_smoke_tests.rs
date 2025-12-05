@@ -96,7 +96,7 @@ fn test_cli_invalid_command() {
 
 #[test]
 fn test_cli_config_validation_missing_file() {
-    let output = run_hyperspot_server(&["--config", "/nonexistent/config.yaml", "check"]);
+    let output = run_hyperspot_server(&["--config", "/nonexistent/config.toml", "check"]);
 
     // The application should fail when an explicitly specified config file doesn't exist
     assert!(
@@ -115,22 +115,21 @@ fn test_cli_config_validation_missing_file() {
 }
 
 #[test]
-fn test_cli_config_validation_invalid_yaml() {
+fn test_cli_config_validation_invalid_toml() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
-    let config_path = temp_dir.path().join("invalid.yaml");
+    let config_path = temp_dir.path().join("invalid.toml");
 
-    // Write invalid YAML
-    std::fs::write(&config_path, "invalid: yaml: content: [unclosed")
-        .expect("Failed to write file");
+    // Write invalid TOML
+    std::fs::write(&config_path, "invalid = = = content").expect("Failed to write file");
 
     let output = run_hyperspot_server(&["--config", config_path.to_str().unwrap(), "check"]);
 
-    assert!(!output.status.success(), "Should fail with invalid YAML");
+    assert!(!output.status.success(), "Should fail with invalid TOML");
 
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("yaml") || stderr.contains("parse") || stderr.contains("format"),
-        "Should mention YAML parsing issue: {}",
+        stderr.contains("TOML") || stderr.contains("parse") || stderr.contains("format"),
+        "Should mention TOML parsing issue: {}",
         stderr
     );
 }
@@ -138,24 +137,20 @@ fn test_cli_config_validation_invalid_yaml() {
 #[test]
 fn test_cli_config_validation_valid_config() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
-    let config_path = temp_dir.path().join("valid.yaml");
+    let config_path = temp_dir.path().join("valid.toml");
 
     // Write valid configuration
     let config_content = r#"
-database:
-  servers:
-    test_sqlite:
-      dsn: "sqlite:///tmp/test.db"
+[database.servers.test_sqlite]
+dsn = "sqlite:///tmp/test.db"
 
-logging:
-  # global section
-  default:
-    console_level: info
-    file: "logs/hyperspot.log"
-    file_level: info
-    max_age_days: 28
-    max_backups: 3
-    max_size_mb: 1000
+[logging.default]
+console_level = "info"
+file = "logs/hyperspot.log"
+file_level = "info"
+max_age_days = 28
+max_backups = 3
+max_size_mb = 1000
 "#;
 
     std::fs::write(&config_path, config_content).expect("Failed to write config file");
@@ -186,7 +181,7 @@ logging:
 #[tokio::test]
 async fn test_cli_run_command_with_mock_database() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
-    let config_path = temp_dir.path().join("test.yaml");
+    let config_path = temp_dir.path().join("test.toml");
 
     // Use a random port to avoid conflicts with other tests
     let test_port = 8900 + (std::process::id() % 100) as u16;
@@ -194,30 +189,25 @@ async fn test_cli_run_command_with_mock_database() {
     // Write minimal test configuration - the --mock flag will override the database
     let config_content = format!(
         r#"
-database:
-  servers:
-    test_postgres:
-      dsn: "postgresql://localhost/nonexistent"
+[database.servers.test_postgres]
+dsn = "postgresql://localhost/nonexistent"
 
-logging:
-  default:
-    console_level: error
-    file: "{}"
-    file_level: error
-    max_age_days: 1
-    max_backups: 1
-    max_size_mb: 10
+[logging.default]
+console_level = "error"
+file = "{}"
+file_level = "error"
+max_age_days = 1
+max_backups = 1
+max_size_mb = 10
 
-server:
-  home_dir: "{}"
+[server]
+home_dir = "{}"
 
-modules:
-  api_ingress:
-    config:
-      bind_addr: "127.0.0.1:{}"
-      enable_docs: false
-      cors_enabled: false
-      auth_disabled: true
+[modules.api_ingress.config]
+bind_addr = "127.0.0.1:{}"
+enable_docs = false
+cors_enabled = false
+auth_disabled = true
 "#,
         temp_dir
             .path()
@@ -270,17 +260,15 @@ modules:
 #[test]
 fn test_cli_run_command_config_validation() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
-    let config_path = temp_dir.path().join("invalid.yaml");
+    let config_path = temp_dir.path().join("invalid.toml");
 
-    // Write configuration with invalid bind address
+    // Write configuration with invalid structure
     let config_content = r#"
-database:
-  servers:
-    test_sqlite:
-      dsn: "sqlite:///tmp/test.db"
+[database.servers.test_sqlite]
+dsn = "sqlite:///tmp/test.db"
 
-logging:
-  level: "info"
+[logging]
+level = "info"
 "#;
 
     std::fs::write(&config_path, config_content).expect("Failed to write config file");
@@ -303,20 +291,17 @@ logging:
 #[test]
 fn test_cli_mock_flag() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
-    let config_path = temp_dir.path().join("mock.yaml");
+    let config_path = temp_dir.path().join("mock.toml");
 
     // Write configuration with PostgreSQL (which should be overridden by --mock)
     let config_content = r#"
-database:
-  servers:
-    test_postgres:
-      dsn: "postgresql://localhost/nonexistent"
+[database.servers.test_postgres]
+dsn = "postgresql://localhost/nonexistent"
 
-logging:
-  default:
-    console_level: error
-    file: "logs/hyperspot.log"
-    file_level: error
+[logging.default]
+console_level = "error"
+file = "logs/hyperspot.log"
+file_level = "error"
 "#;
 
     std::fs::write(&config_path, config_content).expect("Failed to write config file");
@@ -355,7 +340,7 @@ fn test_cli_verbose_flag() {
 #[test]
 fn test_cli_config_flag_short_form() {
     // Test short form of config flag with missing file
-    let output = run_hyperspot_server(&["-c", "/nonexistent/config.yaml", "check"]);
+    let output = run_hyperspot_server(&["-c", "/nonexistent/config.toml", "check"]);
 
     // The application should fail when an explicitly specified config file doesn't exist
     assert!(
@@ -407,20 +392,17 @@ fn test_cli_subcommand_help() {
 #[test]
 fn test_cli_config_precedence() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
-    let config_path = temp_dir.path().join("precedence.yaml");
+    let config_path = temp_dir.path().join("precedence.toml");
 
     // Write minimal valid configuration
     let config_content = r#"
-database:
-  servers:
-    test_sqlite:
-      dsn: "sqlite:///tmp/test.db"
+[database.servers.test_sqlite]
+dsn = "sqlite:///tmp/test.db"
 
-logging:
-  default:
-    console_level: debug
-    file: "logs/hyperspot.log"
-    file_level: debug
+[logging.default]
+console_level = "debug"
+file = "logs/hyperspot.log"
+file_level = "debug"
 "#;
 
     std::fs::write(&config_path, config_content).expect("Failed to write config file");

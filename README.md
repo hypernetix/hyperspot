@@ -55,49 +55,48 @@ make deny       # License and dependency checks
 make quickstart
 
 # Option 1: Run with SQLite database (recommended for development)
-cargo run --bin hyperspot-server -- --config config/quickstart.yaml run
+cargo run --bin hyperspot-server -- --config config/quickstart.toml run
 
 # Option 2: Run without database (no-db mode)
-cargo run --bin hyperspot-server -- --config config/no-db.yaml run
+cargo run --bin hyperspot-server -- --config config/no-db.toml run
 
 # Option 3: Run with mock in-memory database for testing
-cargo run --bin hyperspot-server -- --config config/quickstart.yaml --mock run
+cargo run --bin hyperspot-server -- --config config/quickstart.toml --mock run
 
 # Check if server is ready
 curl http://127.0.0.1:8087/health
 ```
 
-### Example Configuration (config/quickstart.yaml)
+### Example Configuration (config/quickstart.toml)
 
-```yaml
+```toml
 # HyperSpot Server Configuration
 
 # Core server configuration (global section)
-server:
-  home_dir: "~/.hyperspot"
+[server]
+home_dir = "~/.hyperspot"
 
 # Database configuration (global section)
-database:
-  url: "sqlite://database/database.db"
-  max_conns: 10
-  busy_timeout_ms: 5000
+[database.servers.sqlite_main]
+dsn = "sqlite://database.db"
+
+[database.servers.sqlite_main.pool]
+max_conns = 10
 
 # Logging configuration (global section)
-logging:
-  default:
-    console_level: info
-    file: "logs/hyperspot.log"
-    file_level: warn
-    max_age_days: 28
-    max_backups: 3
-    max_size_mb: 1000
+[logging.default]
+console_level = "info"
+file = "logs/hyperspot.log"
+file_level = "warn"
+max_age_days = 28
+max_backups = 3
+max_size_mb = 1000
 
 # Per-module configurations moved under modules section
-modules:
-  api_ingress:
-    bind_addr: "127.0.0.1:8087"
-    enable_docs: true
-    cors_enabled: false
+[modules.api_ingress.config]
+bind_addr = "127.0.0.1:8087"
+enable_docs = true
+cors_enabled = false
 ```
 
 ### Creating Your First Module
@@ -190,37 +189,36 @@ async fn list_resources_handler() -> Result<Json<Vec<MyResource>>, modkit::Probl
 
 ## Configuration
 
-### YAML Configuration Structure
+### TOML Configuration Structure
 
-```yaml
-# config/server.yaml
+```toml
+# config/server.toml
 
 # Global server configuration
-server:
-  home_dir: "~/.hyperspot"
+[server]
+home_dir = "~/.hyperspot"
 
 # Database configuration
-database:
-  url: "sqlite://database/database.db"
-  max_conns: 10
-  busy_timeout_ms: 5000
+[database.servers.sqlite_main]
+dsn = "sqlite://database.db"
+
+[database.servers.sqlite_main.pool]
+max_conns = 10
 
 # Logging configuration
-logging:
-  default:
-    console_level: info
-    file: "logs/hyperspot.log"
-    file_level: warn
-    max_age_days: 28
-    max_backups: 3
-    max_size_mb: 1000
+[logging.default]
+console_level = "info"
+file = "logs/hyperspot.log"
+file_level = "warn"
+max_age_days = 28
+max_backups = 3
+max_size_mb = 1000
 
 # Module-specific configuration
-modules:
-  api_ingress:
-    bind_addr: "127.0.0.1:8087"
-    enable_docs: true
-    cors_enabled: true
+[modules.api_ingress.config]
+bind_addr = "127.0.0.1:8087"
+enable_docs = true
+cors_enabled = true
 ```
 
 ### Environment Variable Overrides
@@ -368,11 +366,11 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
 2. **Run Development Server**:
    ```bash
-   cargo run --bin hyperspot-server -- --config config/quickstart.yaml run
+   cargo run --bin hyperspot-server -- --config config/quickstart.toml run
    ```
 
    ```cmd
-   cargo run --bin hyperspot-server -- --config config/quickstart-windows.yaml run
+   cargo run --bin hyperspot-server -- --config config/quickstart-windows.toml run
    ```
 
 3. **Explore the API**:
@@ -381,7 +379,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
 4. **Create Your First Module**: Follow the module creation example above
 
-5. **Add to Configuration**: Update `config/quickstart.yaml` to include your module
+5. **Add to Configuration**: Update `config/quickstart.toml` to include your module
 
 ## License
 

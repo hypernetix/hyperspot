@@ -273,12 +273,11 @@ let syscap = client.get_node_syscap(node_id).await?;
 
 ## Configuration
 
-Add to your `config.yaml`:
+Add to your `config.toml`:
 
-```yaml
-modules:
-  nodes_registry:
-    enabled: true
+```toml
+[modules.nodes_registry]
+enabled = true
 ```
 
 ## Design Decisions

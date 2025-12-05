@@ -39,5 +39,5 @@ EXPOSE 8087
 
 # Run the binary with minimal config suitable for E2E tests
 # Using --mock flag to use in-memory SQLite for any modules that need DB
-CMD ["/app/hyperspot-server", "--config", "/app/config/quickstart.yaml"]
+CMD ["/app/hyperspot-server", "--config", "/app/config/quickstart.toml"]
 

@@ -49,9 +49,8 @@ figment = { workspace = true }
 [dev-dependencies]
 tempfile = { workspace = true }
 dirs = { workspace = true }
-serde_yaml = { workspace = true }
+toml = { workspace = true }
 testcontainers = { workspace = true }
 testcontainers-modules = { workspace = true }
 tokio = { workspace = true }
 anyhow = { workspace = true }
-

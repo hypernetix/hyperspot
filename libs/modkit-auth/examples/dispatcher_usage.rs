@@ -20,8 +20,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Example 2: Setting up with generic OIDC
     setup_oidc_auth()?;
 
-    // Example 3: YAML configuration example
-    show_yaml_config();
+    // Example 3: TOML configuration example
+    show_toml_config();
 
     Ok(())
 }
@@ -114,73 +114,71 @@ fn setup_oidc_auth() -> Result<(), String> {
     Ok(())
 }
 
-/// Example: Show YAML configuration
-fn show_yaml_config() {
-    println!("\n=== Example 3: YAML Configuration ===");
+/// Example: Show TOML configuration
+fn show_toml_config() {
+    println!("\n=== Example 3: TOML Configuration ===");
 
-    let yaml = r#"
+    let toml_str = r#"
 # Keycloak configuration (single mode)
-provider: "keycloak"
-leeway_seconds: 60
-issuers:
-  - "https://keycloak.example.com/realms/my-realm"
-audiences:
-  - "modkit-api"
-jwks:
-  uri: "https://keycloak.example.com/realms/my-realm/protocol/openid-connect/certs"
-  refresh_interval_seconds: 300
-  max_backoff_seconds: 3600
-plugins:
-  keycloak:
-    type: keycloak
-    tenant_claim: "tenants"
-    client_roles: "modkit-api"
-    role_prefix: "kc_"
+provider = "keycloak"
+leeway_seconds = 60
+issuers = ["https://keycloak.example.com/realms/my-realm"]
+audiences = ["modkit-api"]
+
+[jwks]
+uri = "https://keycloak.example.com/realms/my-realm/protocol/openid-connect/certs"
+refresh_interval_seconds = 300
+max_backoff_seconds = 3600
+
+[plugins.keycloak]
+type = "keycloak"
+tenant_claim = "tenants"
+client_roles = "modkit-api"
+role_prefix = "kc_"
 "#;
 
-    println!("{}", yaml);
+    println!("{}", toml_str);
 
     // Try to parse it
-    match serde_yaml::from_str::<AuthConfig>(yaml) {
+    match toml::from_str::<AuthConfig>(toml_str) {
         Ok(config) => {
-            println!("✅ YAML parsed successfully");
+            println!("✅ TOML parsed successfully");
             println!("   Provider: {}", config.mode.provider);
             println!("   Number of plugins: {}", config.plugins.len());
         }
         Err(e) => {
-            println!("❌ YAML parsing failed: {}", e);
+            println!("❌ TOML parsing failed: {}", e);
         }
     }
 
     println!("\n=== Generic OIDC Configuration ===");
-    let yaml = r#"
-provider: "generic-oidc"
-leeway_seconds: 60
-issuers:
-  - "https://auth.example.com"
-audiences:
-  - "my-api"
-jwks:
-  uri: "https://auth.example.com/.well-known/jwks.json"
-  refresh_interval_seconds: 300
-  max_backoff_seconds: 3600
-plugins:
-  generic-oidc:
-    type: oidc
-    tenant_claim: "tenants"
-    roles_claim: "roles"
+    let toml_str = r#"
+provider = "generic-oidc"
+leeway_seconds = 60
+issuers = ["https://auth.example.com"]
+audiences = ["my-api"]
+
+[jwks]
+uri = "https://auth.example.com/.well-known/jwks.json"
+refresh_interval_seconds = 300
+max_backoff_seconds = 3600
+
+[plugins.generic-oidc]
+type = "oidc"
+tenant_claim = "tenants"
+roles_claim = "roles"
 "#;
 
-    println!("{}", yaml);
+    println!("{}", toml_str);
 
-    match serde_yaml::from_str::<AuthConfig>(yaml) {
+    match toml::from_str::<AuthConfig>(toml_str) {
         Ok(config) => {
-            println!("✅ YAML parsed successfully");
+            println!("✅ TOML parsed successfully");
             println!("   Provider: {}", config.mode.provider);
             println!("   Number of issuers: {}", config.issuers.len());
         }
         Err(e) => {
-            println!("❌ YAML parsing failed: {}", e);
+            println!("❌ TOML parsing failed: {}", e);
         }
     }
 }

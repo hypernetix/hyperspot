@@ -49,7 +49,7 @@ struct Cli {
     #[arg(short, long)]
     port: Option<u16>,
 
-    /// Print effective configuration (YAML) and exit
+    /// Print effective configuration (TOML) and exit
     #[arg(long)]
     print_config: bool,
 
@@ -95,7 +95,7 @@ async fn main() -> Result<()> {
     };
 
     // Layered config:
-    // 1) defaults -> 2) YAML (if provided) -> 3) env (APP__*) -> 4) CLI overrides
+    // 1) defaults -> 2) TOML (if provided) -> 3) env (APP__*) -> 4) CLI overrides
     // Also normalizes + creates server.home_dir.
     let mut config = AppConfig::load_or_default(cli.config.as_deref())?;
     config.apply_cli_overrides(&args);
@@ -135,7 +135,7 @@ async fn main() -> Result<()> {
 
     // Print config and exit if requested
     if cli.print_config {
-        println!("{}", config.to_yaml()?);
+        println!("{}", config.to_toml()?);
         return Ok(());
     }
 
@@ -201,7 +201,7 @@ async fn check_config(config: AppConfig) -> Result<()> {
     tracing::info!("Checking configuration…");
     // If load_layered/load_or_default succeeded and home_dir normalized, we're good.
     println!("Configuration is valid");
-    println!("{}", config.to_yaml()?);
+    println!("{}", config.to_toml()?);
     Ok(())
 }
 

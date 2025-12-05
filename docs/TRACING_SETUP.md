@@ -10,7 +10,7 @@ The hyperspot framework includes first-class support for distributed tracing wit
 
 - **Automatic trace context extraction** from incoming HTTP requests (W3C Trace Context)
 - **Automatic trace context injection** for outgoing HTTP requests
-- **Centralized configuration** via YAML
+- **Centralized configuration** via TOML
 - **TracedClient** for instrumented HTTP calls
 - **Integration with existing logging**
 
@@ -30,45 +30,42 @@ docker run -d --name jaeger \
 
 ### 2. Configure Tracing
 
-Create a configuration file (e.g., `config/with-tracing.yaml`):
+Create a configuration file (e.g., `config/with-tracing.toml`):
 
-```yaml
-server:
-  home_dir: "~/.hyperspot"
-  host: "127.0.0.1"
-  port: 8087
+```toml
+[server]
+home_dir = "~/.hyperspot"
 
 # Enable OpenTelemetry tracing
-tracing:
-  enabled: true
-  service_name: "hyperspot-api"
+[tracing]
+enabled = true
+service_name = "hyperspot-api"
 
-  exporter:
-    kind: "otlp_grpc"
-    endpoint: "http://127.0.0.1:4317"
-    timeout_ms: 5000
+[tracing.exporter]
+kind = "otlp_grpc"
+endpoint = "http://127.0.0.1:4317"
+timeout_ms = 5000
 
-  sampler:
-    strategy: "parentbased_ratio"
-    ratio: 0.1  # Sample 10% of traces
+[tracing.sampler]
+strategy = "parentbased_ratio"
+ratio = 0.1  # Sample 10% of traces
 
-  propagation:
-    w3c_trace_context: true
+[tracing.propagation]
+w3c_trace_context = true
 
-  resource:
-    service.version: "1.0.0"
-    deployment.environment: "dev"
+[tracing.resource]
+"service.version" = "1.0.0"
+"deployment.environment" = "dev"
 
-logging:
-  default:
-    console_level: "info"
-    file: "logs/hyperspot.log"
+[logging.default]
+console_level = "info"
+file = "logs/hyperspot.log"
 ```
 
 ### 3. Run the Server
 
 ```bash
-cargo run --bin hyperspot-server -- --config config/with-tracing.yaml
+cargo run --bin hyperspot-server -- --config config/with-tracing.toml
 ```
 
 ### 4. View Traces
@@ -115,31 +112,32 @@ services:
 
 ### 2. Configure Tracing with Uptrace DSN
 
-```yaml
-tracing:
-  enabled: true
-  service_name: "hyperspot-api"
+```toml
+[tracing]
+enabled = true
+service_name = "hyperspot-api"
 
-  exporter:
-    kind: "otlp_grpc"
-    endpoint: "http://127.0.0.1:14317"
-    timeout_ms: 5000
-    headers:
-      uptrace-dsn: "http://project1_secret@localhost:14318?grpc=14317"
+[tracing.exporter]
+kind = "otlp_grpc"
+endpoint = "http://127.0.0.1:14317"
+timeout_ms = 5000
 
-  sampler:
-    strategy: "always_on"
+[tracing.exporter.headers]
+uptrace-dsn = "http://project1_secret@localhost:14318?grpc=14317"
 
-  resource:
-    service.version: "1.3.7"
-    deployment.environment: "dev"
-    service.namespace: "hyperspot"
+[tracing.sampler]
+strategy = "always_on"
+
+[tracing.resource]
+"service.version" = "1.3.7"
+"deployment.environment" = "dev"
+"service.namespace" = "hyperspot"
 ```
 
 ### 3. Run the Server
 
 ```bash
-cargo run --bin hyperspot-server -- --config config/with-tracing.yaml
+cargo run --bin hyperspot-server -- --config config/with-tracing.toml
 ```
 
 ### 4. View Traces
@@ -152,34 +150,33 @@ Open [http://localhost:14318](http://localhost:14318) and search for service `hy
 
 ### Basic Configuration
 
-```yaml
-tracing:
-  enabled: true                    # Enable/disable tracing
-  service_name: "my-service"       # Service name in traces
+```toml
+[tracing]
+enabled = true                    # Enable/disable tracing
+service_name = "my-service"       # Service name in traces
 ```
 
 ### Exporter Configuration
 
 #### OTLP gRPC (Default)
 
-```yaml
-tracing:
-  exporter:
-    kind: "otlp_grpc"
-    endpoint: "http://127.0.0.1:4317"
-    timeout_ms: 5000
-    headers: # Optional auth headers
-      authorization: "Bearer token"
+```toml
+[tracing.exporter]
+kind = "otlp_grpc"
+endpoint = "http://127.0.0.1:4317"
+timeout_ms = 5000
+
+[tracing.exporter.headers]  # Optional auth headers
+authorization = "Bearer token"
 ```
 
 #### OTLP HTTP
 
-```yaml
-tracing:
-  exporter:
-    kind: "otlp_http"
-    endpoint: "http://127.0.0.1:4318/v1/traces"
-    timeout_ms: 5000
+```toml
+[tracing.exporter]
+kind = "otlp_http"
+endpoint = "http://127.0.0.1:4318/v1/traces"
+timeout_ms = 5000
 ```
 
 ---
@@ -191,62 +188,53 @@ tracing:
 ### Sampling Strategies
 
 #### Always Sample
-```yaml
-tracing:
-  sampler:
-    strategy: "always_on"
+```toml
+[tracing.sampler]
+strategy = "always_on"
 ```
 
 #### Never Sample
 
-```yaml
-tracing:
-  sampler:
-    strategy: "always_off"
+```toml
+[tracing.sampler]
+strategy = "always_off"
 ```
 
 #### Ratio-Based Sampling
 
-```yaml
-tracing:
-  sampler:
-    strategy: "parentbased_ratio"
-    ratio: 0.1  # Sample 10% of traces
+```toml
+[tracing.sampler]
+strategy = "parentbased_ratio"
+ratio = 0.1  # Sample 10% of traces
 ```
 
 #### Simple Ratio (No Parent Context)
 
-```yaml
-tracing:
-  sampler:
-    strategy: "ratio"
-    ratio: 0.05  # Sample 5% of traces
+```toml
+[tracing.sampler]
+strategy = "ratio"
+ratio = 0.05  # Sample 5% of traces
 ```
 
 ### Resource Attributes
 
 Add metadata to all spans:
 
-```yaml
-tracing:
-  resource:
-    service.version: "1.2.3"
-    deployment.environment: "production"
-    service.namespace: "hyperspot"
-    k8s.cluster.name: "prod-cluster"
-    k8s.namespace.name: "hyperspot-ns"
+```toml
+[tracing.resource]
+"service.version" = "1.2.3"
+"deployment.environment" = "production"
+"service.namespace" = "hyperspot"
+"k8s.cluster.name" = "prod-cluster"
+"k8s.namespace.name" = "hyperspot-ns"
 ```
 
 ### HTTP Options
 
-```yaml
-tracing:
-  http:
-    inject_request_id_header: "x-request-id"
-    record_headers:
-      - "user-agent"
-      - "x-forwarded-for"
-      - "authorization"  # Be careful with sensitive headers
+```toml
+[tracing.http]
+inject_request_id_header = "x-request-id"
+record_headers = ["user-agent", "x-forwarded-for", "authorization"]  # Be careful with sensitive headers
 ```
 
 ## Using TracedClient

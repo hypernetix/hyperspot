@@ -956,7 +956,7 @@ Implement the local client that bridges the domain service to the contract API.
 After registration, rebuild and run the server:
 ```bash
 cargo build
-cargo run --bin hyperspot-server -- --config config/quickstart.yaml run
+cargo run --bin hyperspot-server -- --config config/quickstart.toml run
 ```
 
 Then check the OpenAPI documentation at `http://127.0.0.1:8087/docs` to verify your module's endpoints appear.

@@ -22,7 +22,7 @@ This approach runs tests against a locally running hyperspot-server:
 # First, start the server in a separate terminal
 make example
 # OR
-cargo run --bin hyperspot-server --features users-info-example -- --config config/quickstart.yaml
+cargo run --bin hyperspot-server --features users-info-example -- --config config/quickstart.toml
 
 # Then, in another terminal, run the tests
 make e2e          # or make e2e-local

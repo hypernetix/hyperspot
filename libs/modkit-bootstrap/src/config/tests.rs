@@ -39,44 +39,44 @@ fn test_default_config() {
 }
 
 #[test]
-fn test_yaml_serialization() {
+fn test_toml_serialization() {
     let config = AppConfig::default();
-    let yaml = config.to_yaml().expect("Failed to serialize to YAML");
+    let toml = config.to_toml().expect("Failed to serialize to TOML");
 
     // Basic smoke test - should contain key sections
-    assert!(yaml.contains("api:"));
-    assert!(yaml.contains("server:"));
-    assert!(yaml.contains("database:"));
-    assert!(yaml.contains("logging:"));
-    assert!(yaml.contains("modules:"));
+    assert!(toml.contains("[api]"));
+    assert!(toml.contains("[server]"));
+    assert!(toml.contains("[database]"));
+    assert!(toml.contains("[logging]"));
+    assert!(toml.contains("[modules]"));
 }
 
 #[test]
-fn test_layered_loading_yaml_only() {
+fn test_layered_loading_toml_only() {
     let temp_dir = tempdir().expect("Failed to create temp dir");
-    let config_path = temp_dir.path().join("test-config.yaml");
+    let config_path = temp_dir.path().join("test-config.toml");
 
-    let yaml_content = r#"
-server:
-  host: "0.0.0.0"
-  port: 9999
-  home_dir: "/tmp/test"
-  timeout_sec: 60
+    let toml_content = r#"
+[server]
+host = "0.0.0.0"
+port = 9999
+home_dir = "/tmp/test"
+timeout_sec = 60
 
-api:
-  bind_addr: "0.0.0.0:9999"
-  enable_docs: false
-  cors_enabled: false
+[api]
+bind_addr = "0.0.0.0:9999"
+enable_docs = false
+cors_enabled = false
 
-modules:
-  sysinfo:
-    persist: false
-    pruning_days: 7
-  test_module:
-    custom_setting: "test_value"
+[modules.sysinfo]
+persist = false
+pruning_days = 7
+
+[modules.test_module]
+custom_setting = "test_value"
 "#;
 
-    fs::write(&config_path, yaml_content).expect("Failed to write config file");
+    fs::write(&config_path, toml_content).expect("Failed to write config file");
 
     let config = AppConfig::load_layered(&config_path).expect("Failed to load config");
 
@@ -233,17 +233,17 @@ fn test_module_ctx_global_access() {
 #[test]
 fn test_deny_unknown_fields() {
     let temp_dir = tempdir().expect("Failed to create temp dir");
-    let config_path = temp_dir.path().join("invalid-config.yaml");
+    let config_path = temp_dir.path().join("invalid-config.toml");
 
     // Config with unknown field in server section
-    let yaml_content = r#"
-server:
-  host: "127.0.0.1"
-  port: 8087
-  unknown_field: "should_fail"
+    let toml_content = r#"
+[server]
+host = "127.0.0.1"
+port = 8087
+unknown_field = "should_fail"
 "#;
 
-    fs::write(&config_path, yaml_content).expect("Failed to write config file");
+    fs::write(&config_path, toml_content).expect("Failed to write config file");
 
     let result = AppConfig::load_layered(&config_path);
 
@@ -266,33 +266,33 @@ server:
 #[test]
 fn test_api_config_derivation() {
     let temp_dir = tempdir().expect("Failed to create temp dir");
-    let config_path = temp_dir.path().join("no-api-config.yaml");
+    let config_path = temp_dir.path().join("no-api-config.toml");
 
     // Config without api section
-    let yaml_content = r#"
-server:
-  host: "192.168.1.100"
-  port: 3000
+    let toml_content = r#"
+[server]
+host = "192.168.1.100"
+port = 3000
 "#;
 
-    fs::write(&config_path, yaml_content).expect("Failed to write config file");
+    fs::write(&config_path, toml_content).expect("Failed to write config file");
 
-    // For this test, let's use direct YAML parsing instead of layered loading
+    // For this test, let's use direct TOML parsing instead of layered loading
     // since layered loading includes defaults which would set api config
-    let yaml_content_with_server = r#"
-server:
-  home_dir: "/tmp/test"
-  host: "192.168.1.100"
-  port: 3000
-  timeout_sec: 0
+    let toml_content_with_server = r#"
+[server]
+home_dir = "/tmp/test"
+host = "192.168.1.100"
+port = 3000
+timeout_sec = 0
 "#.to_string();
-    fs::write(&config_path, yaml_content_with_server).expect("Failed to write config file");
+    fs::write(&config_path, toml_content_with_server).expect("Failed to write config file");
 
     use figment::{
-        providers::{Format, Yaml},
+        providers::{Format, Toml},
         Figment,
     };
-    let figment = Figment::new().merge(Yaml::file(&config_path));
+    let figment = Figment::new().merge(Toml::file(&config_path));
     let mut config: AppConfig = figment.extract().expect("Failed to extract config");
 
     // Manually apply the API derivation logic
@@ -345,19 +345,18 @@ mod integration_tests {
     #[test]
     fn test_full_layered_loading_with_defaults() {
         let temp_dir = tempdir().expect("Failed to create temp dir");
-        let config_path = temp_dir.path().join("minimal-config.yaml");
+        let config_path = temp_dir.path().join("minimal-config.toml");
 
         // Minimal config - should use defaults for most values
-        let yaml_content = r#"
-server:
-  port: 8080
+        let toml_content = r#"
+[server]
+port = 8080
 
-modules:
-  sysinfo:
-    persist: true
+[modules.sysinfo]
+persist = true
 "#;
 
-        fs::write(&config_path, yaml_content).expect("Failed to write config file");
+        fs::write(&config_path, toml_content).expect("Failed to write config file");
 
         let config = AppConfig::load_layered(&config_path).expect("Failed to load config");
 
