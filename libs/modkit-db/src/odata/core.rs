@@ -865,11 +865,11 @@ where
     let next_cursor = if is_backward {
         // Going backward: always have items forward (unless this was the initial query)
         // Build cursor from last item to go forward
-        build_cursor(&rows, &effective_order, fmap, tiebreaker, q, "fwd")?
+        build_cursor(&rows, &effective_order, fmap, tiebreaker, q, true, "fwd")?
     } else {
         // Going forward: only have more if has_more is true
         if has_more {
-            build_cursor(&rows, &effective_order, fmap, tiebreaker, q, "fwd")?
+            build_cursor(&rows, &effective_order, fmap, tiebreaker, q, true, "fwd")?
         } else {
             None
         }
@@ -878,7 +878,7 @@ where
     let prev_cursor = if is_backward {
         // Going backward: only have more backward if has_more is true
         if has_more {
-            build_cursor(&rows, &effective_order, fmap, tiebreaker, q, "bwd")?
+            build_cursor(&rows, &effective_order, fmap, tiebreaker, q, false, "bwd")?
         } else {
             None
         }
@@ -886,7 +886,7 @@ where
         // Going forward: have items backward only if this is NOT the initial query
         // If q.cursor is None, we're at the start of the dataset
         if q.cursor.is_some() {
-            build_cursor(&rows, &effective_order, fmap, tiebreaker, q, "bwd")?
+            build_cursor(&rows, &effective_order, fmap, tiebreaker, q, false, "bwd")?
         } else {
             None
         }
@@ -910,9 +910,10 @@ fn build_cursor<E: EntityTrait>(
     fmap: &FieldMap<E>,
     tiebreaker: (&str, SortDir),
     q: &ODataQuery,
+    last: bool,
     direction: &str,
 ) -> Result<Option<String>, ODataError> {
-    rows.first()
+    if last { rows.last() } else { rows.first() }
         .map(|m| {
             build_cursor_for_model::<E>(
                 m,
@@ -922,16 +923,7 @@ fn build_cursor<E: EntityTrait>(
                 q.filter_hash.clone(),
                 direction,
             )
-            .map(|c| c.encode().map_err(|_| ODataError::InvalidCursor))
+            .and_then(|c| c.encode().map_err(|_| ODataError::InvalidCursor))
         })
         .transpose()
-        .and_then(|opt| match opt {
-            Some(c) => c.map(Some),
-            None => Ok(None),
-        })
 }
-
-// Temporarily disabled due to SeaORM entity setup complexity
-// #[cfg(test)]
-// #[path = "odata_tests.rs"]
-// mod odata_tests;
