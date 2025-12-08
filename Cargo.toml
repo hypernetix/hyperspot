@@ -62,6 +62,8 @@ regex_creation_in_loops = "deny"
 type_complexity = "warn"
 unwrap_used = "deny"
 unused_self = "warn"
+wildcard_imports = "warn"
+
 
 [workspace.dependencies]
 # Serialization
