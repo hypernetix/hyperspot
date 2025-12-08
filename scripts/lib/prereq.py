@@ -310,10 +310,10 @@ class PrereqDredd(Prereq):
             return PRECHECK_ERROR
 
 
-class PrereqRustPackages(Prereq):
+class PrereqRustCargoLlvmCov(Prereq):
     def __init__(self):
         super().__init__(
-            name="required Rust packages are installed",
+            name="Rust cargo-llvm-cov is installed",
             remediation=(
                 "Install missing Rust packages using: "
                 "cargo install cargo-llvm-cov"
@@ -532,7 +532,7 @@ ALL_PREREQS = [
     PrereqPython,
     PrereqPytest,
     PrereqCargoLlvmCov,
-    PrereqRustPackages,
+    PrereqRustCargoLlvmCov,
 ] + CORE_PREREQS
 
 
