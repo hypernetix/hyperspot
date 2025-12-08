@@ -35,6 +35,8 @@ unsafe_code = "forbid"
 unused_mut = "warn"
 
 [workspace.lints.clippy]
+# See clippy rules details https://rust-lang.github.io/rust-clippy/master/index.html
+# Here will be workspace global rules
 unwrap_used = "deny"
 expect_used = "deny"
 

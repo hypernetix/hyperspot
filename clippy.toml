@@ -1,7 +1,10 @@
-# Clippy configuration for enforcing secure ORM usage
+# Clippy configuration for HyperSpot
 #
-# These rules help prevent accidental bypasses of the secure ORM layer
-# by disallowing direct execution of SeaORM queries without scoping.
+# Workspace-level lints are configured in Cargo.toml [workspace.lints.clippy]:
+#
+# The rules below enforce secure ORM usage and help prevent accidental
+# bypasses of the secure ORM layer by disallowing direct execution of
+# SeaORM queries without scoping.
 
 # Disallow direct execution methods that bypass secure wrappers
 disallowed-methods = [
