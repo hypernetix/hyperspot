@@ -63,11 +63,11 @@ impl IntoResponse for AppError {
                 "rate_limited",
                 "rate limited",
             ),
-            Internal(_err) => {
+            Internal(err) => {
                 #[cfg(feature = "debug-errors")]
                 {
                     // Save error details as String, later exposed as Option<&str>
-                    dbg_details = Some(_err.to_string());
+                    dbg_details = Some(err.to_string());
                 }
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,

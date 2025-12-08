@@ -370,7 +370,7 @@ fn install_subscriber(
     console_targets: tracing_subscriber::filter::Targets,
     file_targets: tracing_subscriber::filter::Targets,
     file_router: MultiFileRouter,
-    _otel_layer: Option<OtelLayer>,
+    #[cfg_attr(not(feature = "otel"), allow(unused_variables))] otel_layer: Option<OtelLayer>,
 ) {
     use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter, Registry};
 
@@ -417,7 +417,7 @@ fn install_subscriber(
 
         #[cfg(feature = "otel")]
         let base = {
-            let otel_opt = _otel_layer.map(|otel| otel.with_filter(console_targets.clone()));
+            let otel_opt = otel_layer.map(|otel| otel.with_filter(console_targets.clone()));
             base.with(otel_opt)
         };
         #[cfg(not(feature = "otel"))]
@@ -430,7 +430,9 @@ fn install_subscriber(
     let _ = subscriber.try_init();
 }
 
-fn init_minimal(_otel: Option<OtelLayer>) {
+fn init_minimal(
+    #[cfg_attr(not(feature = "otel"), allow(unused_variables))] otel: Option<OtelLayer>,
+) {
     use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter, Registry};
 
     // If RUST_LOG is set, it will cap fmt output; otherwise don't clamp here.
@@ -445,7 +447,7 @@ fn init_minimal(_otel: Option<OtelLayer>) {
         let base = Registry::default();
 
         #[cfg(feature = "otel")]
-        let base = base.with(_otel);
+        let base = base.with(otel);
         #[cfg(not(feature = "otel"))]
         let base = base;
 
