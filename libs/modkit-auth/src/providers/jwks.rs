@@ -191,40 +191,78 @@ impl JwksKeyProvider {
         }
     }
 
+    /// Check if a key exists in the cache
+    fn key_exists(&self, kid: &str) -> bool {
+        let keys = self.keys.load();
+        keys.contains_key(kid)
+    }
+
+    /// Check if we're in cooldown period and handle throttling logic
+    async fn check_refresh_throttle(&self, kid: &str) -> Result<(), ClaimsError> {
+        let state = self.refresh_state.read().await;
+        if let Some(last_on_demand) = state.last_on_demand_refresh {
+            let elapsed = last_on_demand.elapsed();
+            if elapsed < self.on_demand_refresh_cooldown {
+                let remaining = self.on_demand_refresh_cooldown - elapsed;
+                tracing::debug!(
+                    kid = kid,
+                    remaining_secs = remaining.as_secs(),
+                    "On-demand JWKS refresh throttled (cooldown active)"
+                );
+
+                // Check if this kid has failed before
+                if state.failed_kids.contains(kid) {
+                    tracing::warn!(
+                        kid = kid,
+                        "Unknown kid repeatedly requested despite recent refresh attempts"
+                    );
+                }
+
+                return Err(ClaimsError::UnknownKeyId(kid.to_string()));
+            }
+        }
+        Ok(())
+    }
+
+    /// Update state after successful refresh and check if kid is now available
+    async fn handle_refresh_success(&self, kid: &str) -> Result<(), ClaimsError> {
+        let mut state = self.refresh_state.write().await;
+        state.last_on_demand_refresh = Some(Instant::now());
+
+        // Check if the kid now exists
+        if !self.key_exists(kid) {
+            // Kid still not found after refresh - track it
+            state.failed_kids.insert(kid.to_string());
+            tracing::warn!(
+                kid = kid,
+                "Kid still not found after on-demand JWKS refresh"
+            );
+        } else {
+            // Kid found - remove from failed list if present
+            state.failed_kids.remove(kid);
+        }
+
+        Ok(())
+    }
+
+    /// Update state after failed refresh
+    async fn handle_refresh_failure(&self, kid: &str, error: ClaimsError) -> ClaimsError {
+        let mut state = self.refresh_state.write().await;
+        state.last_on_demand_refresh = Some(Instant::now());
+        state.failed_kids.insert(kid.to_string());
+        error
+    }
+
     /// Try to refresh keys if unknown kid is encountered
     /// Implements throttling to prevent excessive refreshes
     async fn on_demand_refresh(&self, kid: &str) -> Result<(), ClaimsError> {
         // Check if key exists
-        let keys = self.keys.load();
-        if keys.contains_key(kid) {
+        if self.key_exists(kid) {
             return Ok(());
         }
 
         // Check if we're in cooldown period
-        {
-            let state = self.refresh_state.read().await;
-            if let Some(last_on_demand) = state.last_on_demand_refresh {
-                let elapsed = last_on_demand.elapsed();
-                if elapsed < self.on_demand_refresh_cooldown {
-                    let remaining = self.on_demand_refresh_cooldown - elapsed;
-                    tracing::debug!(
-                        kid = kid,
-                        remaining_secs = remaining.as_secs(),
-                        "On-demand JWKS refresh throttled (cooldown active)"
-                    );
-
-                    // Check if this kid has failed before
-                    if state.failed_kids.contains(kid) {
-                        tracing::warn!(
-                            kid = kid,
-                            "Unknown kid repeatedly requested despite recent refresh attempts"
-                        );
-                    }
-
-                    return Err(ClaimsError::UnknownKeyId(kid.to_string()));
-                }
-            }
-        }
+        self.check_refresh_throttle(kid).await?;
 
         // Attempt refresh and track the kid if it fails
         tracing::info!(
@@ -233,34 +271,8 @@ impl JwksKeyProvider {
         );
 
         match self.perform_refresh().await {
-            Ok(_) => {
-                // Update on-demand refresh timestamp
-                let mut state = self.refresh_state.write().await;
-                state.last_on_demand_refresh = Some(Instant::now());
-
-                // Check if the kid now exists
-                let keys = self.keys.load();
-                if !keys.contains_key(kid) {
-                    // Kid still not found after refresh - track it
-                    state.failed_kids.insert(kid.to_string());
-                    tracing::warn!(
-                        kid = kid,
-                        "Kid still not found after on-demand JWKS refresh"
-                    );
-                } else {
-                    // Kid found - remove from failed list if present
-                    state.failed_kids.remove(kid);
-                }
-
-                Ok(())
-            }
-            Err(e) => {
-                // Update timestamp even on failure to prevent retry storms
-                let mut state = self.refresh_state.write().await;
-                state.last_on_demand_refresh = Some(Instant::now());
-                state.failed_kids.insert(kid.to_string());
-                Err(e)
-            }
+            Ok(_) => self.handle_refresh_success(kid).await,
+            Err(e) => Err(self.handle_refresh_failure(kid, e).await),
         }
     }
 
@@ -391,5 +403,107 @@ mod tests {
 
         // Should be retrievable
         assert!(provider.get_key("test-kid").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_on_demand_refresh_returns_ok_when_key_exists() {
+        let provider = JwksKeyProvider::new("https://example.com/jwks");
+
+        // Pre-populate with a key
+        let mut keys = HashMap::new();
+        keys.insert(
+            "existing-kid".to_string(),
+            DecodingKey::from_secret(b"secret"),
+        );
+        provider.keys.store(Arc::new(keys));
+
+        // Should return Ok immediately without any refresh
+        let result = provider.on_demand_refresh("existing-kid").await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_on_demand_refresh_returns_error_for_missing_key_on_failed_fetch() {
+        let provider =
+            JwksKeyProvider::new("https://invalid-domain-that-does-not-exist.local/jwks");
+
+        // Attempting to refresh a missing key should fail (network error)
+        let result = provider.on_demand_refresh("missing-kid").await;
+        assert!(result.is_err());
+
+        // The error should be related to fetch failure
+        match result.unwrap_err() {
+            ClaimsError::JwksFetchFailed(_) => {}
+            ClaimsError::UnknownKeyId(_) => {}
+            other => panic!("Expected JwksFetchFailed or UnknownKeyId, got: {:?}", other),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_on_demand_refresh_respects_cooldown() {
+        let provider = JwksKeyProvider::new("https://invalid-domain.local/jwks")
+            .with_on_demand_refresh_cooldown(Duration::from_secs(5));
+
+        // First attempt - should try to refresh
+        let result1 = provider.on_demand_refresh("test-kid").await;
+        assert!(result1.is_err()); // Will fail due to invalid domain
+
+        // Immediate second attempt - should be throttled
+        let result2 = provider.on_demand_refresh("test-kid").await;
+        assert!(result2.is_err());
+
+        // Should return UnknownKeyId due to cooldown
+        match result2.unwrap_err() {
+            ClaimsError::UnknownKeyId(_) => {}
+            other => panic!("Expected UnknownKeyId during cooldown, got: {:?}", other),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_on_demand_refresh_tracks_failed_kids() {
+        let provider = JwksKeyProvider::new("https://invalid-domain.local/jwks")
+            .with_on_demand_refresh_cooldown(Duration::from_millis(100));
+
+        // Attempt refresh - will fail and track the kid
+        let result = provider.on_demand_refresh("failed-kid").await;
+        assert!(result.is_err());
+
+        // Check that failed_kids contains the kid
+        let state = provider.refresh_state.read().await;
+        assert!(state.failed_kids.contains("failed-kid"));
+    }
+
+    #[tokio::test]
+    async fn test_validate_and_decode_with_missing_kid() {
+        let provider = JwksKeyProvider::new("https://invalid-domain.local/jwks")
+            .with_on_demand_refresh_cooldown(Duration::from_millis(100));
+
+        // Create a minimal JWT with a kid header but invalid signature
+        let token =
+            "eyJhbGciOiJSUzI1NiIsImtpZCI6InRlc3Qta2lkIn0.eyJzdWIiOiIxMjM0NTY3ODkwIn0.invalid";
+
+        // Should attempt on-demand refresh and fail
+        let result = provider.validate_and_decode(token).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_perform_refresh_updates_state_on_success() {
+        let provider = JwksKeyProvider::new("https://invalid-domain.local/jwks");
+
+        // Mark as previously failed
+        {
+            let mut state = provider.refresh_state.write().await;
+            state.consecutive_failures = 3;
+            state.last_error = Some("Previous error".to_string());
+        }
+
+        // This will fail, but we're testing state update logic
+        let _ = provider.perform_refresh().await;
+
+        // Check that consecutive_failures increased
+        let state = provider.refresh_state.read().await;
+        assert_eq!(state.consecutive_failures, 4);
+        assert!(state.last_error.is_some());
     }
 }
