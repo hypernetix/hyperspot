@@ -109,6 +109,41 @@ impl GrpcHub {
         Some(routes_builder.routes())
     }
 
+    /// Prepare Unix Domain Socket path by removing existing socket file if present.
+    ///
+    /// This handles the cleanup of stale socket files that may exist from previous
+    /// server instances. Logs appropriate messages for different scenarios.
+    #[cfg(unix)]
+    fn prepare_uds_socket_path(path: &std::path::Path) -> std::io::Result<()> {
+        use std::io;
+
+        if !path.exists() {
+            return Ok(());
+        }
+
+        match std::fs::remove_file(path) {
+            Ok(_) => {
+                tracing::debug!(
+                    path = %path.display(),
+                    "removed existing UDS socket file before bind"
+                );
+                Ok(())
+            }
+            Err(e) if e.kind() == io::ErrorKind::NotFound => {
+                // Lost the race, somebody else removed it. Not fatal.
+                Ok(())
+            }
+            Err(e) => {
+                tracing::warn!(
+                    path = %path.display(),
+                    error = %e,
+                    "failed to remove existing UDS socket file before bind"
+                );
+                Err(e)
+            }
+        }
+    }
+
     /// Serve gRPC over TCP.
     async fn serve_tcp(
         addr: SocketAddr,
@@ -132,31 +167,11 @@ impl GrpcHub {
         routes: Routes,
         cancel: CancellationToken,
     ) -> anyhow::Result<()> {
-        use std::io;
         use tokio::net::UnixListener;
         use tokio_stream::wrappers::UnixListenerStream;
 
-        // Remove existing file if present
-        if path.exists() {
-            match std::fs::remove_file(&path) {
-                Ok(_) => {
-                    tracing::debug!(
-                        path = %path.display(),
-                        "removed existing UDS socket file before bind"
-                    );
-                }
-                Err(e) if e.kind() == io::ErrorKind::NotFound => {
-                    // Lost the race, somebody else removed it. Not fatal.
-                }
-                Err(e) => {
-                    tracing::warn!(
-                        path = %path.display(),
-                        error = %e,
-                        "failed to remove existing UDS socket file before bind"
-                    );
-                }
-            }
-        }
+        // Cleanup any existing socket file
+        Self::prepare_uds_socket_path(&path)?;
 
         tracing::info!(
             path = %path.display(),
