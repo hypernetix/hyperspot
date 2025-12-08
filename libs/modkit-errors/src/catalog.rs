@@ -15,7 +15,7 @@ pub struct ErrDef {
 impl ErrDef {
     /// Convert this error definition into a Problem with the given detail
     #[inline]
-    pub fn to_problem(&self, detail: impl Into<String>) -> Problem {
+    pub fn as_problem(&self, detail: impl Into<String>) -> Problem {
         // Convert u16 to StatusCode, using INTERNAL_SERVER_ERROR as fallback for invalid codes
         let status = StatusCode::from_u16(self.status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
         Problem::new(status, self.title, detail.into())
@@ -39,7 +39,7 @@ mod tests {
             type_url: "https://errors.example.com/TEST_NOT_FOUND",
         };
 
-        let problem = def.to_problem("Resource missing");
+        let problem = def.as_problem("Resource missing");
         assert_eq!(problem.status, StatusCode::NOT_FOUND);
         assert_eq!(problem.title, "Not Found");
         assert_eq!(problem.detail, "Resource missing");

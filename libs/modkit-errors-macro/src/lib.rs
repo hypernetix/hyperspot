@@ -173,8 +173,8 @@ fn generate_errors(input: &DeclareErrorsInput) -> syn::Result<TokenStream2> {
             }
 
             /// Convert to Problem with detail (without instance/trace)
-            pub fn to_problem(&self, detail: impl Into<String>) -> Problem {
-                self.def().to_problem(detail)
+            pub fn as_problem(&self, detail: impl Into<String>) -> Problem {
+                self.def().as_problem(detail)
             }
 
             /// Create a Problem with `instance` and optional `trace_id` context.
@@ -184,7 +184,7 @@ fn generate_errors(input: &DeclareErrorsInput) -> syn::Result<TokenStream2> {
                 instance: &str,
                 trace_id: Option<String>,
             ) -> Problem {
-                let mut p = self.to_problem(detail);
+                let mut p = self.as_problem(detail);
                 p = p.with_instance(instance);
                 if let Some(tid) = trace_id {
                     p = p.with_trace_id(tid);
@@ -457,7 +457,7 @@ fn generate_macro_rules_single(
 
             quote! {
                 (#code_lit) => {
-                    $crate::#namespace::ErrorCode::#variant.to_problem("")
+                    $crate::#namespace::ErrorCode::#variant.as_problem("")
                 };
             }
         })
@@ -476,7 +476,7 @@ fn generate_macro_rules_double(
 
             quote! {
                 (#code_lit, $detail:expr) => {
-                    $crate::#namespace::ErrorCode::#variant.to_problem($detail)
+                    $crate::#namespace::ErrorCode::#variant.as_problem($detail)
                 };
             }
         })

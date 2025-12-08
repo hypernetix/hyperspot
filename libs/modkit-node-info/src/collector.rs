@@ -21,7 +21,7 @@ impl NodeInfoCollector {
 
     /// Create a Node instance for the current machine
     /// Uses hardware UUID for node ID and collects hostname and local IP
-    pub fn create_current_node(&self) -> Node {
+    pub fn create_current_node() -> Node {
         let id = crate::get_hardware_uuid();
         let hostname = sysinfo::System::host_name().unwrap_or_else(|| "unknown".to_string());
         let ip_address = Self::detect_local_ip();

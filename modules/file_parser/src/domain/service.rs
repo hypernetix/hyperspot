@@ -254,7 +254,7 @@ impl FileParserService {
     }
 
     /// Extract file extension from Content-Type header
-    pub fn extension_from_content_type(&self, ct: &str) -> Option<String> {
+    pub fn extension_from_content_type(ct: &str) -> Option<String> {
         let mime: mime::Mime = ct.parse().ok()?;
         let essence = mime.essence_str();
 
