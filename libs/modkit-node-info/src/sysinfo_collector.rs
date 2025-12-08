@@ -2,6 +2,18 @@ use crate::error::NodeInfoError;
 use crate::model::*;
 use sysinfo::System;
 
+/// Calculate percentage as u32 (0-100) from used/total values.
+/// Returns 0 if total is 0 to avoid division by zero.
+fn calculate_percent(used: u64, total: u64) -> u32 {
+    if total == 0 {
+        return 0;
+    }
+    // Use f64 for division to satisfy clippy::integer_division
+    let percent = (used as f64 / total as f64) * 100.0;
+    // Clamp to 0-100 range - percent is always positive here
+    (percent.clamp(0.0, 100.0)) as u32
+}
+
 /// Collects system information for the current node
 pub struct SysInfoCollector {
     system: std::sync::Mutex<System>,
@@ -59,7 +71,8 @@ impl SysInfoCollector {
 
     fn collect_cpu_info(&self, sys: &System) -> CpuInfo {
         let cpus = sys.cpus();
-        let num_cpus = cpus.len() as u32;
+        // CPU count is always small, safe to truncate
+        let num_cpus = u32::try_from(cpus.len()).unwrap_or(u32::MAX);
 
         let model = if let Some(cpu) = cpus.first() {
             cpu.brand().to_string()
@@ -67,8 +80,10 @@ impl SysInfoCollector {
             "Unknown".to_string()
         };
 
-        // Get physical core count
-        let cores = System::physical_core_count().unwrap_or(num_cpus as usize) as u32;
+        // Get physical core count - always small, safe to truncate
+        let cores = u32::try_from(
+            System::physical_core_count().unwrap_or(cpus.len())
+        ).unwrap_or(u32::MAX);
 
         // Get average frequency
         let frequency_mhz = if !cpus.is_empty() {
@@ -89,11 +104,8 @@ impl SysInfoCollector {
         let total_bytes = sys.total_memory();
         let available_bytes = sys.available_memory();
         let used_bytes = sys.used_memory();
-        let used_percent = if total_bytes > 0 {
-            ((used_bytes as f64 / total_bytes as f64) * 100.0) as u32
-        } else {
-            0
-        };
+        // Calculate percentage (0-100) using integer math to avoid float precision issues
+        let used_percent = calculate_percent(used_bytes, total_bytes);
 
         MemoryInfo {
             total_bytes,
@@ -170,7 +182,9 @@ impl SysInfoCollector {
             use starship_battery::State;
 
             let on_battery = matches!(battery.state(), State::Discharging);
-            let percentage = (battery.state_of_charge().value * 100.0) as u32;
+            // Battery percentage is 0.0-1.0, multiply by 100 and clamp to valid range
+            let charge = f64::from(battery.state_of_charge().value) * 100.0;
+            let percentage = charge.clamp(0.0, 100.0) as u32;
 
             Some(BatteryInfo {
                 on_battery,
