@@ -62,6 +62,7 @@ regex_creation_in_loops = "deny"
 type_complexity = "warn"
 unwrap_used = "deny"
 unused_self = "warn"
+useless_let_if_seq = "warn"
 wildcard_imports = "warn"
 wildcard_dependencies = "warn"
 
