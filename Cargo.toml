@@ -61,6 +61,7 @@ needless_lifetimes = "deny"
 regex_creation_in_loops = "deny"
 type_complexity = "warn"
 unwrap_used = "deny"
+unused_self = "warn"
 
 [workspace.dependencies]
 # Serialization
