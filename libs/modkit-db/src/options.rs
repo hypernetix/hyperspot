@@ -532,17 +532,16 @@ fn validate_config_consistency(cfg: &DbConnConfig) -> Result<()> {
         }
 
         // Check for server vs non-server DSN conflicts
-        if !is_sqlite_dsn && cfg.server.is_some() {
-            // This is actually allowed - server provides base config, DSN can override
-            // But let's check for meaningful conflicts
-            if cfg.host.is_some()
+        if !is_sqlite_dsn
+            && cfg.server.is_some()
+            && (cfg.host.is_some()
                 || cfg.port.is_some()
                 || cfg.user.is_some()
                 || cfg.password.is_some()
-                || cfg.dbname.is_some()
-            {
-                // This is fine - fields override DSN parts
-            }
+                || cfg.dbname.is_some())
+        {
+            // This is actually allowed - server provides base config, DSN can override
+            // Fields here override DSN parts intentionally.
         }
     }
 

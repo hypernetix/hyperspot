@@ -133,12 +133,9 @@ impl SysInfoCollector {
         if let Ok(all_ips) = local_ip_address::list_afinet_netifas() {
             for (_name, ip) in all_ips {
                 let ip_str = ip.to_string();
-                // Skip if already added as primary
-                if !ip_addresses.contains(&ip_str) {
-                    // Skip loopback addresses
-                    if !ip.is_loopback() {
-                        ip_addresses.push(ip_str);
-                    }
+                // Skip if already added as primary and avoid loopback addresses
+                if !ip_addresses.contains(&ip_str) && !ip.is_loopback() {
+                    ip_addresses.push(ip_str);
                 }
             }
         }

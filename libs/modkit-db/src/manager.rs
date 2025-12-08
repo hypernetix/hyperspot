@@ -206,18 +206,16 @@ impl DbManager {
                 if let Some(parent) = absolute_path.parent() {
                     std::fs::create_dir_all(parent).map_err(DbError::Io)?;
                 }
-            } else {
+            } else if let Some(parent) = absolute_path.parent() {
                 // When auto_provision is false, check if the directory exists
-                if let Some(parent) = absolute_path.parent() {
-                    if !parent.exists() {
-                        return Err(DbError::Io(std::io::Error::new(
-                            std::io::ErrorKind::NotFound,
-                            format!(
-                                "Directory does not exist and auto_provision is disabled: {:?}",
-                                parent
-                            ),
-                        )));
-                    }
+                if !parent.exists() {
+                    return Err(DbError::Io(std::io::Error::new(
+                        std::io::ErrorKind::NotFound,
+                        format!(
+                            "Directory does not exist and auto_provision is disabled: {:?}",
+                            parent
+                        ),
+                    )));
                 }
             }
 

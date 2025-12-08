@@ -841,11 +841,9 @@ where
         }
         // Reverse to restore original display order
         rows.reverse();
-    } else {
+    } else if has_more {
         // Forward pagination: just truncate the end
-        if has_more {
-            rows.truncate(limit as usize);
-        }
+        rows.truncate(limit as usize);
     }
 
     // Build cursors
@@ -866,13 +864,11 @@ where
         // Going backward: always have items forward (unless this was the initial query)
         // Build cursor from last item to go forward
         build_cursor(&rows, &effective_order, fmap, tiebreaker, q, true, "fwd")?
-    } else {
+    } else if has_more {
         // Going forward: only have more if has_more is true
-        if has_more {
-            build_cursor(&rows, &effective_order, fmap, tiebreaker, q, true, "fwd")?
-        } else {
-            None
-        }
+        build_cursor(&rows, &effective_order, fmap, tiebreaker, q, true, "fwd")?
+    } else {
+        None
     };
 
     let prev_cursor = if is_backward {
@@ -882,14 +878,12 @@ where
         } else {
             None
         }
-    } else {
+    } else if q.cursor.is_some() {
         // Going forward: have items backward only if this is NOT the initial query
         // If q.cursor is None, we're at the start of the dataset
-        if q.cursor.is_some() {
-            build_cursor(&rows, &effective_order, fmap, tiebreaker, q, false, "bwd")?
-        } else {
-            None
-        }
+        build_cursor(&rows, &effective_order, fmap, tiebreaker, q, false, "bwd")?
+    } else {
+        None
     };
 
     let items = rows.into_iter().map(model_to_domain).collect();

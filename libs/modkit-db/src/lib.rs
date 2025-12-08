@@ -374,13 +374,11 @@ impl DbHandle {
                             } else {
                                 "DELETE"
                             }
-                        } else {
+                        } else if is_memory {
                             // Default: DELETE for memory, WAL for file
-                            if is_memory {
-                                "DELETE"
-                            } else {
-                                "WAL"
-                            }
+                            "DELETE"
+                        } else {
+                            "WAL"
                         };
 
                         let stmt = format!("PRAGMA journal_mode = {}", journal_mode);
