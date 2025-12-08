@@ -19,7 +19,7 @@ use std::{
     sync::Arc,
 };
 use tokio_util::sync::CancellationToken;
-use tonic::{service::RoutesBuilder, transport::Server};
+use tonic::{service::Routes, service::RoutesBuilder, transport::Server};
 
 #[cfg(windows)]
 use modkit_transport_grpc::create_named_pipe_incoming;
@@ -82,15 +82,10 @@ impl GrpcHub {
         *self.listen_cfg.write() = ListenConfig::NamedPipe(name.into());
     }
 
-    /// Run the tonic server with the provided installers.
-    pub async fn run_with_installers(
-        &self,
-        installers: Vec<RegisterGrpcServiceFn>,
-        cancel: CancellationToken,
-        ready: ReadySignal,
-    ) -> anyhow::Result<()> {
+    /// Validate that all service names are unique.
+    fn validate_unique_services(installers: &[RegisterGrpcServiceFn]) -> anyhow::Result<()> {
         let mut seen = HashSet::new();
-        for installer in &installers {
+        for installer in installers {
             if !seen.insert(installer.service_name) {
                 anyhow::bail!(
                     "Duplicate gRPC service detected: {}",
@@ -98,22 +93,129 @@ impl GrpcHub {
                 );
             }
         }
+        Ok(())
+    }
+
+    /// Build routes from installers. Returns None if no services were registered.
+    fn build_routes(installers: Vec<RegisterGrpcServiceFn>) -> Option<Routes> {
+        if installers.is_empty() {
+            return None;
+        }
 
         let mut routes_builder = RoutesBuilder::default();
-        let mut has_services = false;
-
         for installer in installers {
             (installer.register)(&mut routes_builder);
-            has_services = true;
+        }
+        Some(routes_builder.routes())
+    }
+
+    /// Serve gRPC over TCP.
+    async fn serve_tcp(
+        addr: SocketAddr,
+        routes: Routes,
+        cancel: CancellationToken,
+    ) -> anyhow::Result<()> {
+        tracing::info!(%addr, transport = "tcp", "gRPC hub listening");
+        Server::builder()
+            .add_routes(routes)
+            .serve_with_shutdown(addr, async move {
+                cancel.cancelled().await;
+            })
+            .await?;
+        Ok(())
+    }
+
+    /// Serve gRPC over Unix Domain Socket.
+    #[cfg(unix)]
+    async fn serve_uds(
+        path: PathBuf,
+        routes: Routes,
+        cancel: CancellationToken,
+    ) -> anyhow::Result<()> {
+        use std::io;
+        use tokio::net::UnixListener;
+        use tokio_stream::wrappers::UnixListenerStream;
+
+        // Remove existing file if present
+        if path.exists() {
+            match std::fs::remove_file(&path) {
+                Ok(_) => {
+                    tracing::debug!(
+                        path = %path.display(),
+                        "removed existing UDS socket file before bind"
+                    );
+                }
+                Err(e) if e.kind() == io::ErrorKind::NotFound => {
+                    // Lost the race, somebody else removed it. Not fatal.
+                }
+                Err(e) => {
+                    tracing::warn!(
+                        path = %path.display(),
+                        error = %e,
+                        "failed to remove existing UDS socket file before bind"
+                    );
+                }
+            }
         }
 
-        if !has_services {
-            ready.notify();
-            cancel.cancelled().await;
-            return Ok(());
-        }
+        tracing::info!(
+            path = %path.display(),
+            transport = "uds",
+            "gRPC hub listening"
+        );
 
-        let routes = routes_builder.routes();
+        let uds = UnixListener::bind(&path)
+            .with_context(|| format!("failed to bind UDS listener at '{}'", path.display()))?;
+
+        let incoming = UnixListenerStream::new(uds);
+
+        Server::builder()
+            .add_routes(routes)
+            .serve_with_incoming_shutdown(incoming, async move {
+                cancel.cancelled().await;
+            })
+            .await?;
+        Ok(())
+    }
+
+    /// Serve gRPC over Windows named pipe.
+    #[cfg(windows)]
+    async fn serve_named_pipe(
+        pipe_name: String,
+        routes: Routes,
+        cancel: CancellationToken,
+    ) -> anyhow::Result<()> {
+        tracing::info!(name = %pipe_name, transport = "named_pipe", "gRPC hub listening");
+
+        let incoming = create_named_pipe_incoming(pipe_name, cancel.clone());
+
+        Server::builder()
+            .add_routes(routes)
+            .serve_with_incoming_shutdown(incoming, async move {
+                cancel.cancelled().await;
+            })
+            .await?;
+        Ok(())
+    }
+
+    /// Run the tonic server with the provided installers.
+    pub async fn run_with_installers(
+        &self,
+        installers: Vec<RegisterGrpcServiceFn>,
+        cancel: CancellationToken,
+        ready: ReadySignal,
+    ) -> anyhow::Result<()> {
+        Self::validate_unique_services(&installers)?;
+
+        let routes = match Self::build_routes(installers) {
+            Some(r) => r,
+            None => {
+                // No services to serve, notify ready and wait for cancellation
+                ready.notify();
+                cancel.cancelled().await;
+                return Ok(());
+            }
+        };
 
         // NOTE: With tonic 0.14.2's API, serve_with_shutdown binds internally.
         // We notify ready after building routes but before serve starts.
@@ -124,74 +226,12 @@ impl GrpcHub {
         let listen_cfg = self.listen_cfg.read().clone();
 
         match listen_cfg {
-            ListenConfig::Tcp(addr) => {
-                tracing::info!(%addr, transport = "tcp", "gRPC hub listening");
-                Server::builder()
-                    .add_routes(routes)
-                    .serve_with_shutdown(addr, async move {
-                        cancel.cancelled().await;
-                    })
-                    .await?;
-            }
+            ListenConfig::Tcp(addr) => Self::serve_tcp(addr, routes, cancel).await?,
             #[cfg(unix)]
-            ListenConfig::Uds(path) => {
-                use std::io;
-                use tokio::net::UnixListener;
-                use tokio_stream::wrappers::UnixListenerStream;
-
-                // Remove existing file if present
-                if path.exists() {
-                    match std::fs::remove_file(&path) {
-                        Ok(_) => {
-                            tracing::debug!(
-                                path = %path.display(),
-                                "removed existing UDS socket file before bind"
-                            );
-                        }
-                        Err(e) if e.kind() == io::ErrorKind::NotFound => {
-                            // Lost the race, somebody else removed it. Not fatal.
-                        }
-                        Err(e) => {
-                            tracing::warn!(
-                                path = %path.display(),
-                                error = %e,
-                                "failed to remove existing UDS socket file before bind"
-                            );
-                        }
-                    }
-                }
-
-                tracing::info!(
-                    path = %path.display(),
-                    transport = "uds",
-                    "gRPC hub listening"
-                );
-
-                let uds = UnixListener::bind(&path).with_context(|| {
-                    format!("failed to bind UDS listener at '{}'", path.display())
-                })?;
-
-                let incoming = UnixListenerStream::new(uds);
-
-                Server::builder()
-                    .add_routes(routes)
-                    .serve_with_incoming_shutdown(incoming, async move {
-                        cancel.cancelled().await;
-                    })
-                    .await?;
-            }
+            ListenConfig::Uds(path) => Self::serve_uds(path, routes, cancel).await?,
             #[cfg(windows)]
-            ListenConfig::NamedPipe(ref pipe_name) => {
-                tracing::info!(name = %pipe_name, transport = "named_pipe", "gRPC hub listening");
-
-                let incoming = create_named_pipe_incoming(pipe_name.clone(), cancel.clone());
-
-                Server::builder()
-                    .add_routes(routes)
-                    .serve_with_incoming_shutdown(incoming, async move {
-                        cancel.cancelled().await;
-                    })
-                    .await?;
+            ListenConfig::NamedPipe(pipe_name) => {
+                Self::serve_named_pipe(pipe_name, routes, cancel).await?
             }
         }
 
@@ -710,5 +750,37 @@ mod tests {
             .await
             .expect("task should join successfully")
             .expect("server should exit cleanly");
+    }
+
+    #[tokio::test]
+    async fn test_run_with_no_installers_exits_gracefully() {
+        let hub = GrpcHub::default();
+        hub.set_listen_addr_tcp("127.0.0.1:0".parse().unwrap());
+        let installers = vec![];
+        let cancel = CancellationToken::new();
+        let cancel_clone = cancel.clone();
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        let ready = ReadySignal::from_sender(tx);
+
+        let hub_task =
+            tokio::spawn(async move { hub.run_with_installers(installers, cancel, ready).await });
+
+        // Schedule cancellation
+        tokio::spawn(async move {
+            sleep(Duration::from_millis(50)).await;
+            cancel_clone.cancel();
+        });
+
+        // Should receive ready signal immediately
+        tokio::time::timeout(Duration::from_secs(1), rx)
+            .await
+            .expect("ready signal should fire")
+            .expect("ready channel should complete");
+
+        // Task should complete successfully
+        hub_task
+            .await
+            .expect("task should join successfully")
+            .expect("should exit cleanly with no services");
     }
 }
