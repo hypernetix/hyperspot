@@ -98,6 +98,47 @@ impl HostRuntime {
         Ok(())
     }
 
+    /// Helper: resolve context for a module with error mapping.
+    async fn module_context(
+        &self,
+        module_name: &'static str,
+    ) -> Result<crate::context::ModuleCtx, RegistryError> {
+        self.ctx_builder
+            .for_module(module_name)
+            .await
+            .map_err(|e| RegistryError::DbMigrate {
+                module: module_name,
+                source: e,
+            })
+    }
+
+    /// Helper: extract DB handle and module if both exist.
+    fn db_migration_target<'a>(
+        ctx: &'a crate::context::ModuleCtx,
+        db_module: Option<&'a Arc<dyn crate::contracts::DbModule>>,
+    ) -> Option<(Arc<modkit_db::DbHandle>, &'a dyn crate::contracts::DbModule)> {
+        match (ctx.db_optional(), db_module) {
+            (Some(db), Some(dbm)) => Some((db, dbm.as_ref())),
+            _ => None,
+        }
+    }
+
+    /// Helper: run migration for a single module.
+    async fn migrate_module(
+        module_name: &'static str,
+        db: &modkit_db::DbHandle,
+        db_module: &dyn crate::contracts::DbModule,
+    ) -> Result<(), RegistryError> {
+        tracing::debug!(module = module_name, "Running DB migration");
+        db_module
+            .migrate(db)
+            .await
+            .map_err(|source| RegistryError::DbMigrate {
+                module: module_name,
+                source,
+            })
+    }
+
     /// DB MIGRATION phase: run migrations for all modules with DB capability.
     ///
     /// Runs before init, with system modules processed first.
@@ -105,26 +146,19 @@ impl HostRuntime {
         tracing::info!("Phase: db (before init)");
 
         for entry in self.registry.modules_by_system_priority() {
-            let ctx = self.ctx_builder.for_module(entry.name).await.map_err(|e| {
-                RegistryError::DbMigrate {
-                    module: entry.name,
-                    source: e,
-                }
-            })?;
+            let ctx = self.module_context(entry.name).await?;
 
-            if let (Some(db), Some(dbm)) = (ctx.db_optional(), entry.db.as_ref()) {
-                tracing::debug!(module = entry.name, "Running DB migration");
-                dbm.migrate(&db)
-                    .await
-                    .map_err(|e| RegistryError::DbMigrate {
-                        module: entry.name,
-                        source: e,
-                    })?;
-            } else if entry.db.is_some() {
-                tracing::debug!(
-                    module = entry.name,
-                    "Module has DbModule trait but no DB handle (no config)"
-                );
+            match Self::db_migration_target(&ctx, entry.db.as_ref()) {
+                Some((db, dbm)) => {
+                    Self::migrate_module(entry.name, &db, dbm).await?;
+                }
+                None if entry.db.is_some() => {
+                    tracing::debug!(
+                        module = entry.name,
+                        "Module has DbModule trait but no DB handle (no config)"
+                    );
+                }
+                None => {}
             }
         }
 
