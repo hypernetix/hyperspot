@@ -26,6 +26,57 @@ pub fn build_mime_validation_map(specs: &[OperationSpec]) -> MimeValidationMap {
     Arc::new(map)
 }
 
+/// Extract and normalize the Content-Type header value.
+///
+/// Strips parameters like charset from "application/json; charset=utf-8"
+/// to just "application/json".
+fn extract_content_type(req: &Request) -> Option<String> {
+    let ct_header = req.headers().get(http::header::CONTENT_TYPE)?;
+    let ct_str = ct_header.to_str().ok()?;
+    let ct_main = ct_str.split(';').next().map(str::trim).unwrap_or(ct_str);
+    Some(ct_main.to_string())
+}
+
+/// Create an Unsupported Media Type error response.
+fn create_unsupported_media_type_error(detail: String) -> Response {
+    Problem::new(
+        StatusCode::UNSUPPORTED_MEDIA_TYPE,
+        "Unsupported Media Type",
+        detail,
+    )
+    .into_response()
+}
+
+/// Validate that the content type is in the allowed list.
+///
+/// Returns Ok(()) if allowed, Err(Response) with error details if not.
+fn validate_content_type(
+    content_type: &str,
+    allowed_types: &[&str],
+    method: &Method,
+    path: &str,
+) -> Result<(), Box<Response>> {
+    if allowed_types.contains(&content_type) {
+        return Ok(());
+    }
+
+    tracing::warn!(
+        method = %method,
+        path = %path,
+        content_type = content_type,
+        allowed_types = ?allowed_types,
+        "MIME type not allowed for this endpoint"
+    );
+
+    let detail = format!(
+        "Content-Type '{}' is not allowed for this endpoint. Allowed types: {}",
+        content_type,
+        allowed_types.join(", ")
+    );
+
+    Err(Box::new(create_unsupported_media_type_error(detail)))
+}
+
 /// MIME validation middleware
 ///
 /// Checks the Content-Type header against the allowed types configured
@@ -45,76 +96,35 @@ pub async fn mime_validation_middleware(
         .unwrap_or_else(|| req.uri().path().to_string());
 
     // Check if this operation has MIME validation configured
-    if let Some(allowed_types) = validation_map.get(&(method.clone(), path.clone())) {
-        // Extract Content-Type header
-        if let Some(ct_header) = req.headers().get(http::header::CONTENT_TYPE) {
-            match ct_header.to_str() {
-                Ok(ct_str) => {
-                    // Strip parameters: "type/subtype; charset=utf-8" -> "type/subtype"
-                    let ct_main = ct_str.split(';').next().map(str::trim).unwrap_or(ct_str);
+    let Some(allowed_types) = validation_map.get(&(method.clone(), path.clone())) else {
+        // No validation configured - proceed
+        return next.run(req).await;
+    };
 
-                    // Check if content type is allowed
-                    let allowed_match = allowed_types.contains(&ct_main);
+    // Extract and validate Content-Type header
+    let Some(content_type) = extract_content_type(&req) else {
+        tracing::warn!(
+            method = %method,
+            path = %path,
+            allowed_types = ?allowed_types.value(),
+            "Missing Content-Type header for endpoint with MIME validation"
+        );
 
-                    if !allowed_match {
-                        tracing::warn!(
-                            method = %method,
-                            path = %path,
-                            content_type = ct_main,
-                            allowed_types = ?allowed_types.value(),
-                            "MIME type not allowed for this endpoint"
-                        );
+        let detail = format!(
+            "Missing Content-Type header. Allowed types: {}",
+            allowed_types.join(", ")
+        );
+        return create_unsupported_media_type_error(detail);
+    };
 
-                        let problem = Problem::new(
-                            StatusCode::UNSUPPORTED_MEDIA_TYPE,
-                            "Unsupported Media Type",
-                            format!(
-                                "Content-Type '{}' is not allowed for this endpoint. Allowed types: {}",
-                                ct_main,
-                                allowed_types.join(", ")
-                            ),
-                        );
-                        return problem.into_response();
-                    }
-                }
-                Err(_) => {
-                    // Invalid header value - treat as unsupported
-                    tracing::warn!(
-                        method = %method,
-                        path = %path,
-                        "Invalid Content-Type header value"
-                    );
-
-                    let problem = Problem::new(
-                        StatusCode::UNSUPPORTED_MEDIA_TYPE,
-                        "Unsupported Media Type",
-                        "Invalid Content-Type header",
-                    );
-                    return problem.into_response();
-                }
-            }
-        } else {
-            // No Content-Type header but validation is configured
-            tracing::warn!(
-                method = %method,
-                path = %path,
-                allowed_types = ?allowed_types.value(),
-                "Missing Content-Type header for endpoint with MIME validation"
-            );
-
-            let problem = Problem::new(
-                StatusCode::UNSUPPORTED_MEDIA_TYPE,
-                "Unsupported Media Type",
-                format!(
-                    "Missing Content-Type header. Allowed types: {}",
-                    allowed_types.join(", ")
-                ),
-            );
-            return problem.into_response();
-        }
+    // Validate the content type
+    if let Err(error_response) =
+        validate_content_type(&content_type, &allowed_types, &method, &path)
+    {
+        return *error_response;
     }
 
-    // No validation configured or validation passed - proceed
+    // Validation passed - proceed
     next.run(req).await
 }
 
