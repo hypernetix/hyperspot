@@ -585,6 +585,250 @@ fn build_sqlite_dsn(
 /// Type alias for the complex return type of build_final_db_for_module
 type DbConfigResult = anyhow::Result<Option<(String /* final_dsn */, PoolCfg)>>;
 
+/// Builder for accumulating database configuration from multiple sources
+#[derive(Default)]
+struct DbConfigBuilder {
+    dsn: Option<String>,
+    host: Option<String>,
+    port: Option<u16>,
+    user: Option<String>,
+    password: Option<String>,
+    dbname: Option<String>,
+    params: HashMap<String, String>,
+    pool: PoolCfg,
+}
+
+impl DbConfigBuilder {
+    fn new() -> Self {
+        Self::default()
+    }
+
+    /// Apply global server configuration
+    fn apply_global_server(
+        &mut self,
+        global_server: &DbConnConfig,
+        home_dir: &Path,
+        module_name: &str,
+    ) -> anyhow::Result<()> {
+        // Apply global server DSN
+        if let Some(global_dsn) = &global_server.dsn {
+            let expanded_dsn = expand_env_in_dsn(global_dsn)?;
+            // For SQLite, resolve @file() syntax before validation
+            let resolved_dsn = if expanded_dsn.starts_with("sqlite") {
+                resolve_sqlite_dsn(&expanded_dsn, home_dir, module_name)?
+            } else {
+                expanded_dsn
+            };
+            validate_dsn(&resolved_dsn)?;
+            self.dsn = Some(resolved_dsn);
+        }
+
+        // Apply global server fields (override DSN parts)
+        if let Some(host) = &global_server.host {
+            self.host = Some(host.clone());
+        }
+        if let Some(port) = global_server.port {
+            self.port = Some(port);
+        }
+        if let Some(user) = &global_server.user {
+            self.user = Some(user.clone());
+        }
+        if let Some(password) = resolve_password(global_server.password.as_deref())? {
+            self.password = Some(password);
+        }
+        if let Some(dbname) = &global_server.dbname {
+            self.dbname = Some(dbname.clone());
+        }
+        if let Some(params) = &global_server.params {
+            self.params.extend(params.clone());
+        }
+        if let Some(pool) = &global_server.pool {
+            self.pool = pool.clone();
+        }
+
+        Ok(())
+    }
+
+    /// Apply module DSN (overrides global DSN)
+    fn apply_module_dsn(
+        &mut self,
+        module_dsn: &str,
+        home_dir: &Path,
+        module_name: &str,
+    ) -> anyhow::Result<()> {
+        // For SQLite, resolve @file() syntax before validation
+        let resolved_dsn = if module_dsn.starts_with("sqlite") {
+            resolve_sqlite_dsn(module_dsn, home_dir, module_name)?
+        } else {
+            module_dsn.to_string()
+        };
+        validate_dsn(&resolved_dsn)?;
+        self.dsn = Some(resolved_dsn);
+        Ok(())
+    }
+
+    /// Apply module fields (override everything)
+    fn apply_module_fields(&mut self, module_db_config: &DbConnConfig) -> anyhow::Result<()> {
+        if let Some(host) = &module_db_config.host {
+            self.host = Some(host.clone());
+        }
+        if let Some(port) = module_db_config.port {
+            self.port = Some(port);
+        }
+        if let Some(user) = &module_db_config.user {
+            self.user = Some(user.clone());
+        }
+        if let Some(password) = resolve_password(module_db_config.password.as_deref())? {
+            self.password = Some(password);
+        }
+        if let Some(dbname) = &module_db_config.dbname {
+            self.dbname = Some(dbname.clone());
+        }
+        if let Some(params) = &module_db_config.params {
+            self.params.extend(params.clone());
+        }
+        if let Some(pool) = &module_db_config.pool {
+            // Module pool settings override global ones
+            if let Some(max_conns) = pool.max_conns {
+                self.pool.max_conns = Some(max_conns);
+            }
+            if let Some(acquire_timeout) = pool.acquire_timeout {
+                self.pool.acquire_timeout = Some(acquire_timeout);
+            }
+        }
+        Ok(())
+    }
+
+    /// Check if we have any field overrides that require rebuilding the DSN
+    fn has_field_overrides(&self) -> bool {
+        self.host.is_some()
+            || self.port.is_some()
+            || self.user.is_some()
+            || self.password.is_some()
+            || !self.params.is_empty()
+    }
+}
+
+/// Determines the database backend type (SQLite or server-based)
+fn decide_backend(builder: &DbConfigBuilder, module_db_config: &DbConnConfig) -> bool {
+    // Always treat as SQLite if DSN starts with "sqlite", regardless of server reference
+    // Also treat as SQLite if no server reference and no explicit DSN (default case)
+    module_db_config.file.is_some()
+        || module_db_config.path.is_some()
+        || builder
+            .dsn
+            .as_ref()
+            .is_some_and(|dsn| dsn.starts_with("sqlite"))
+        || (module_db_config.server.is_none() && builder.dsn.is_none())
+}
+
+/// Finalize SQLite DSN from builder state
+fn finalize_sqlite_dsn(
+    builder: &DbConfigBuilder,
+    module_db_config: &DbConnConfig,
+    module_name: &str,
+    home_dir: &Path,
+) -> anyhow::Result<String> {
+    build_sqlite_dsn(
+        builder.dsn.as_deref(),
+        module_db_config.file.as_deref(),
+        module_db_config.path.as_ref(),
+        builder.dbname.as_deref(),
+        module_name,
+        home_dir,
+    )
+}
+
+/// Finalize server-based DSN from builder state
+fn finalize_server_dsn(builder: &DbConfigBuilder, module_name: &str) -> anyhow::Result<String> {
+    // Extract dbname from DSN if not provided separately
+    let dbname = if let Some(dbname) = builder.dbname.as_deref() {
+        dbname.to_string()
+    } else if let Some(dsn) = builder.dsn.as_ref() {
+        // Try to extract dbname from DSN path
+        if let Ok(parsed) = url::Url::parse(dsn) {
+            let path = parsed.path();
+            if path.len() > 1 {
+                // Remove leading slash and return the path as dbname
+                path[1..].to_string()
+            } else {
+                return Err(anyhow::anyhow!(
+                    "Server-based database config for module '{}' missing required 'dbname'",
+                    module_name
+                ));
+            }
+        } else {
+            return Err(anyhow::anyhow!(
+                "Server-based database config for module '{}' missing required 'dbname'",
+                module_name
+            ));
+        }
+    } else {
+        return Err(anyhow::anyhow!(
+            "Server-based database config for module '{}' missing required 'dbname'",
+            module_name
+        ));
+    };
+
+    if builder.has_field_overrides() || builder.dsn.is_none() {
+        // Build DSN from fields when we have overrides or no original DSN
+        let scheme = if let Some(dsn) = &builder.dsn {
+            let parsed = url::Url::parse(dsn)?;
+            parsed.scheme().to_string()
+        } else {
+            "postgresql".to_string() // default
+        };
+
+        build_server_dsn(
+            &scheme,
+            builder.host.as_deref(),
+            builder.port,
+            builder.user.as_deref(),
+            builder.password.as_deref(),
+            Some(&dbname),
+            &builder.params,
+        )
+    } else if let Some(original_dsn) = &builder.dsn {
+        // Use original DSN when no field overrides (but update dbname if needed)
+        if let Ok(mut parsed) = url::Url::parse(original_dsn) {
+            // Update the path with the final dbname if it's different
+            let original_dbname = parsed.path().trim_start_matches('/');
+            if original_dbname != dbname {
+                parsed.set_path(&format!("/{}", dbname));
+            }
+            Ok(parsed.to_string())
+        } else {
+            // Fallback to building from fields if URL parsing fails
+            build_server_dsn(
+                "postgresql",
+                builder.host.as_deref(),
+                builder.port,
+                builder.user.as_deref(),
+                builder.password.as_deref(),
+                Some(&dbname),
+                &builder.params,
+            )
+        }
+    } else {
+        // This branch should not be reachable due to the condition above
+        unreachable!("final_dsn should not be None when has_field_overrides is false")
+    }
+}
+
+/// Redacts password from DSN for logging
+fn redact_dsn_for_logging(dsn: &str) -> anyhow::Result<String> {
+    if dsn.contains('@') {
+        let parsed = url::Url::parse(dsn)?;
+        let mut log_url = parsed.clone();
+        if log_url.password().is_some() {
+            log_url.set_password(Some("***")).ok();
+        }
+        Ok(log_url.to_string())
+    } else {
+        Ok(dsn.to_string())
+    }
+}
+
 /// Merges global + module DB configs into a final, validated DSN and pool config.
 /// Precedence: Global DSN -> Global fields -> Module DSN -> Module fields (fields always win).
 /// For server-based, returns error if final dbname is missing.
@@ -617,15 +861,8 @@ pub fn build_final_db_for_module(
     // Global database config
     let global_db_config = app.database.as_ref();
 
-    // Start building final config
-    let mut final_dsn: Option<String> = None;
-    let mut final_host: Option<String> = None;
-    let mut final_port: Option<u16> = None;
-    let mut final_user: Option<String> = None;
-    let mut final_password: Option<String> = None;
-    let mut final_dbname: Option<String> = None;
-    let mut final_params: HashMap<String, String> = HashMap::new();
-    let mut final_pool = PoolCfg::default();
+    // Build configuration using the builder pattern
+    let mut builder = DbConfigBuilder::new();
 
     // Step 1: Apply global server config if referenced
     if let Some(server_name) = &module_db_config.server {
@@ -638,200 +875,31 @@ pub fn build_final_db_for_module(
                 )
             })?;
 
-        // Apply global server DSN
-        if let Some(global_dsn) = &global_server.dsn {
-            let expanded_dsn = expand_env_in_dsn(global_dsn)?;
-            // For SQLite, resolve @file() syntax before validation
-            let resolved_dsn = if expanded_dsn.starts_with("sqlite") {
-                resolve_sqlite_dsn(&expanded_dsn, home_dir, module_name)?
-            } else {
-                expanded_dsn
-            };
-            validate_dsn(&resolved_dsn)?;
-            final_dsn = Some(resolved_dsn);
-        }
-
-        // Apply global server fields (override DSN parts)
-        if let Some(host) = &global_server.host {
-            final_host = Some(host.clone());
-        }
-        if let Some(port) = global_server.port {
-            final_port = Some(port);
-        }
-        if let Some(user) = &global_server.user {
-            final_user = Some(user.clone());
-        }
-        if let Some(password) = resolve_password(global_server.password.as_deref())? {
-            final_password = Some(password);
-        }
-        if let Some(dbname) = &global_server.dbname {
-            final_dbname = Some(dbname.clone());
-        }
-        if let Some(params) = &global_server.params {
-            final_params.extend(params.clone());
-        }
-        if let Some(pool) = &global_server.pool {
-            final_pool = pool.clone();
-        }
+        builder.apply_global_server(global_server, home_dir, module_name)?;
     }
 
     // Step 2: Apply module DSN (override global)
     if let Some(module_dsn) = &module_db_config.dsn {
-        // For SQLite, resolve @file() syntax before validation
-        let resolved_dsn = if module_dsn.starts_with("sqlite") {
-            resolve_sqlite_dsn(module_dsn, home_dir, module_name)?
-        } else {
-            module_dsn.to_string()
-        };
-        validate_dsn(&resolved_dsn)?;
-        final_dsn = Some(resolved_dsn);
+        builder.apply_module_dsn(module_dsn, home_dir, module_name)?;
     }
 
     // Step 3: Apply module fields (override everything)
-    if let Some(host) = &module_db_config.host {
-        final_host = Some(host.clone());
-    }
-    if let Some(port) = module_db_config.port {
-        final_port = Some(port);
-    }
-    if let Some(user) = &module_db_config.user {
-        final_user = Some(user.clone());
-    }
-    if let Some(password) = resolve_password(module_db_config.password.as_deref())? {
-        final_password = Some(password);
-    }
-    if let Some(dbname) = &module_db_config.dbname {
-        final_dbname = Some(dbname.clone());
-    }
-    if let Some(params) = &module_db_config.params {
-        final_params.extend(params.clone());
-    }
-    if let Some(pool) = &module_db_config.pool {
-        // Module pool settings override global ones
-        if let Some(max_conns) = pool.max_conns {
-            final_pool.max_conns = Some(max_conns);
-        }
-        if let Some(acquire_timeout) = pool.acquire_timeout {
-            final_pool.acquire_timeout = Some(acquire_timeout);
-        }
-    }
+    builder.apply_module_fields(&module_db_config)?;
 
-    // Determine if this is SQLite or server-based
-    // Always treat as SQLite if DSN starts with "sqlite", regardless of server reference
-    // Also treat as SQLite if no server reference and no explicit DSN (default case)
-    let is_sqlite = module_db_config.file.is_some()
-        || module_db_config.path.is_some()
-        || final_dsn
-            .as_ref()
-            .is_some_and(|dsn| dsn.starts_with("sqlite"))
-        || (module_db_config.server.is_none() && final_dsn.is_none());
+    // Determine backend type and finalize DSN
+    let is_sqlite = decide_backend(&builder, &module_db_config);
 
     let result_dsn = if is_sqlite {
-        // SQLite: build from file/path or use DSN as-is
-        build_sqlite_dsn(
-            final_dsn.as_deref(),
-            module_db_config.file.as_deref(),
-            module_db_config.path.as_ref(),
-            final_dbname.as_deref(),
-            module_name,
-            home_dir,
-        )?
+        finalize_sqlite_dsn(&builder, &module_db_config, module_name, home_dir)?
     } else {
-        // Server-based: extract dbname from DSN if not provided separately
-        let dbname = if let Some(dbname) = final_dbname.as_deref() {
-            dbname.to_string()
-        } else if let Some(dsn) = final_dsn.as_ref() {
-            // Try to extract dbname from DSN path
-            if let Ok(parsed) = url::Url::parse(dsn) {
-                let path = parsed.path();
-                if path.len() > 1 {
-                    // Remove leading slash and return the path as dbname
-                    path[1..].to_string()
-                } else {
-                    return Err(anyhow::anyhow!(
-                        "Server-based database config for module '{}' missing required 'dbname'",
-                        module_name
-                    ));
-                }
-            } else {
-                return Err(anyhow::anyhow!(
-                    "Server-based database config for module '{}' missing required 'dbname'",
-                    module_name
-                ));
-            }
-        } else {
-            return Err(anyhow::anyhow!(
-                "Server-based database config for module '{}' missing required 'dbname'",
-                module_name
-            ));
-        };
-
-        // Check if we have any field overrides that require rebuilding the DSN
-        let has_field_overrides = final_host.is_some()
-            || final_port.is_some()
-            || final_user.is_some()
-            || final_password.is_some()
-            || !final_params.is_empty();
-
-        if has_field_overrides || final_dsn.is_none() {
-            // Build DSN from fields when we have overrides or no original DSN
-            let scheme = if let Some(dsn) = &final_dsn {
-                let parsed = url::Url::parse(dsn)?;
-                parsed.scheme().to_string()
-            } else {
-                "postgresql".to_string() // default
-            };
-
-            build_server_dsn(
-                &scheme,
-                final_host.as_deref(),
-                final_port,
-                final_user.as_deref(),
-                final_password.as_deref(),
-                Some(&dbname),
-                &final_params,
-            )?
-        } else if let Some(original_dsn) = &final_dsn {
-            // Use original DSN when no field overrides (but update dbname if needed)
-            if let Ok(mut parsed) = url::Url::parse(original_dsn) {
-                // Update the path with the final dbname if it's different
-                let original_dbname = parsed.path().trim_start_matches('/');
-                if original_dbname != dbname {
-                    parsed.set_path(&format!("/{}", dbname));
-                }
-                parsed.to_string()
-            } else {
-                // Fallback to building from fields if URL parsing fails
-                build_server_dsn(
-                    "postgresql",
-                    final_host.as_deref(),
-                    final_port,
-                    final_user.as_deref(),
-                    final_password.as_deref(),
-                    Some(&dbname),
-                    &final_params,
-                )?
-            }
-        } else {
-            // This branch should not be reachable due to the condition above
-            unreachable!("final_dsn should not be None when has_field_overrides is false")
-        }
+        finalize_server_dsn(&builder, module_name)?
     };
 
     // Validate final DSN
     validate_dsn(&result_dsn)?;
 
     // Redact password for logging
-    let log_dsn = if result_dsn.contains('@') {
-        let parsed = url::Url::parse(&result_dsn)?;
-        let mut log_url = parsed.clone();
-        if log_url.password().is_some() {
-            log_url.set_password(Some("***")).ok();
-        }
-        log_url.to_string()
-    } else {
-        result_dsn.clone()
-    };
+    let log_dsn = redact_dsn_for_logging(&result_dsn)?;
 
     tracing::info!(
         "Built final DB config for module '{}': {}",
@@ -839,7 +907,7 @@ pub fn build_final_db_for_module(
         log_dsn
     );
 
-    Ok(Some((result_dsn, final_pool)))
+    Ok(Some((result_dsn, builder.pool)))
 }
 
 /// Helper function to get module database configuration from AppConfig.
@@ -2031,6 +2099,97 @@ logging:
 
         // Verify DSN is parseable
         validate_dsn(&dsn).expect("DSN with encoded query parameters should be valid");
+    }
+
+    #[test]
+    fn test_pool_config_merging() {
+        use std::time::Duration;
+
+        let tmp = tempdir().unwrap();
+        let home_dir = tmp.path();
+
+        // Global server with pool config
+        let mut app = create_app_with_server(
+            "test_server",
+            DbConnConfig {
+                host: Some("localhost".to_string()),
+                dbname: Some("testdb".to_string()),
+                pool: Some(PoolCfg {
+                    max_conns: Some(10),
+                    min_conns: None,
+                    acquire_timeout: Some(Duration::from_secs(5)),
+                    idle_timeout: None,
+                    max_lifetime: None,
+                    test_before_acquire: None,
+                }),
+                ..Default::default()
+            },
+        );
+
+        // Module overrides only max_conns
+        add_module_to_app(
+            &mut app,
+            "test_module",
+            serde_json::json!({
+                "server": "test_server",
+                "pool": {
+                    "max_conns": 20
+                }
+            }),
+        );
+
+        let result = build_final_db_for_module(&app, "test_module", home_dir).unwrap();
+        assert!(result.is_some());
+
+        let (_dsn, pool) = result.unwrap();
+        assert_eq!(pool.max_conns, Some(20)); // Module override wins
+        assert_eq!(pool.acquire_timeout, Some(Duration::from_secs(5))); // Global value preserved
+    }
+
+    #[test]
+    fn test_pool_config_module_overrides_all() {
+        use std::time::Duration;
+
+        let tmp = tempdir().unwrap();
+        let home_dir = tmp.path();
+
+        // Global server with pool config
+        let mut app = create_app_with_server(
+            "test_server",
+            DbConnConfig {
+                host: Some("localhost".to_string()),
+                dbname: Some("testdb".to_string()),
+                pool: Some(PoolCfg {
+                    max_conns: Some(10),
+                    min_conns: None,
+                    acquire_timeout: Some(Duration::from_secs(5)),
+                    idle_timeout: None,
+                    max_lifetime: None,
+                    test_before_acquire: None,
+                }),
+                ..Default::default()
+            },
+        );
+
+        // Module overrides both pool settings
+        add_module_to_app(
+            &mut app,
+            "test_module",
+            serde_json::json!({
+                "server": "test_server",
+                "pool": {
+                    "max_conns": 30,
+                    "acquire_timeout": "10s"
+                }
+            }),
+        );
+
+        let result = build_final_db_for_module(&app, "test_module", home_dir).unwrap();
+        assert!(result.is_some());
+
+        let (_dsn, pool) = result.unwrap();
+        assert_eq!(pool.max_conns, Some(30));
+        assert_eq!(pool.acquire_timeout, Some(Duration::from_secs(10)));
     }
 }
 
