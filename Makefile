@@ -63,7 +63,7 @@ fmt:
 # Run clippy linter
 clippy:
 	$(call ensure_tool,cargo-clippy)
-	cargo clippy --workspace --all-targets --all-features -- -D warnings
+	cargo clippy --workspace --all-targets --all-features -- -D warnings -D clippy::perf
 
 ## The Kani Rust Verifier for checking safety of the code
 kani:
