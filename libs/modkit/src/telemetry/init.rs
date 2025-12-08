@@ -207,37 +207,50 @@ fn build_headers_from_cfg_and_env(
 }
 
 #[cfg(feature = "otel")]
+fn extend_metadata_from_source<'a, I>(md: &mut MetadataMap, source: I, context: &'static str)
+where
+    I: Iterator<Item = (&'a str, &'a str)>,
+{
+    for (k, v) in source {
+        match MetadataKey::from_bytes(k.as_bytes()) {
+            Ok(key) => match MetadataValue::try_from(v) {
+                Ok(val) => {
+                    md.insert(key, val);
+                }
+                Err(_) => {
+                    tracing::warn!(header = %k, context, "Skipping invalid gRPC metadata value");
+                }
+            },
+            Err(_) => {
+                tracing::warn!(header = %k, context, "Skipping invalid gRPC metadata header name");
+            }
+        }
+    }
+}
+
+#[cfg(feature = "otel")]
 fn build_metadata_from_cfg_and_env(cfg: &TracingConfig) -> Option<MetadataMap> {
     let mut md = MetadataMap::new();
 
     // From config file
     if let Some(exp) = &cfg.exporter {
         if let Some(hdrs) = &exp.headers {
-            for (k, v) in hdrs {
-                if let Ok(key) = MetadataKey::from_bytes(k.as_bytes()) {
-                    if let Ok(val) = MetadataValue::try_from(v.as_str()) {
-                        md.insert(key, val);
-                    }
-                } else {
-                    tracing::warn!(%k, "Skipping invalid gRPC metadata header name");
-                }
-            }
+            let iter = hdrs.iter().map(|(k, v)| (k.as_str(), v.as_str()));
+            extend_metadata_from_source(&mut md, iter, "config");
         }
     }
 
     // From ENV OTEL_EXPORTER_OTLP_HEADERS (format: k=v,k2=v2)
     if let Ok(env_hdrs) = std::env::var("OTEL_EXPORTER_OTLP_HEADERS") {
-        for part in env_hdrs.split(',').map(str::trim).filter(|s| !s.is_empty()) {
-            if let Some((k, v)) = part.split_once('=') {
-                if let Ok(key) = MetadataKey::from_bytes(k.trim().as_bytes()) {
-                    if let Ok(val) = MetadataValue::try_from(v.trim()) {
-                        md.insert(key, val);
-                    }
-                } else {
-                    tracing::warn!(header = %k, "Skipping invalid gRPC metadata header name from ENV");
-                }
+        let iter = env_hdrs.split(',').filter_map(|part| {
+            let part = part.trim();
+            if part.is_empty() {
+                None
+            } else {
+                part.split_once('=').map(|(k, v)| (k.trim(), v.trim()))
             }
-        }
+        });
+        extend_metadata_from_source(&mut md, iter, "env");
     }
 
     if md.is_empty() {
@@ -585,6 +598,58 @@ mod tests {
         assert!(result.is_some());
         let metadata = result.unwrap();
         assert!(!metadata.is_empty());
+    }
+
+    #[test]
+    #[cfg(feature = "otel")]
+    fn test_build_metadata_multiple_headers() {
+        let mut headers = HashMap::new();
+        headers.insert("authorization".to_string(), "Bearer token".to_string());
+        headers.insert("x-custom-header".to_string(), "custom-value".to_string());
+
+        let cfg = TracingConfig {
+            enabled: true,
+            exporter: Some(Exporter {
+                kind: Some("otlp_grpc".to_string()),
+                endpoint: Some("http://localhost:4317".to_string()),
+                headers: Some(headers.clone()),
+                timeout_ms: None,
+            }),
+            ..Default::default()
+        };
+
+        let result = build_metadata_from_cfg_and_env(&cfg);
+        assert!(result.is_some());
+        let metadata = result.unwrap();
+        assert_eq!(metadata.len(), 2);
+    }
+
+    #[test]
+    #[cfg(feature = "otel")]
+    fn test_build_metadata_invalid_header_name_skipped() {
+        let mut headers = HashMap::new();
+        headers.insert("valid-header".to_string(), "value1".to_string());
+        headers.insert(
+            "invalid header with spaces".to_string(),
+            "value2".to_string(),
+        );
+
+        let cfg = TracingConfig {
+            enabled: true,
+            exporter: Some(Exporter {
+                kind: Some("otlp_grpc".to_string()),
+                endpoint: Some("http://localhost:4317".to_string()),
+                headers: Some(headers.clone()),
+                timeout_ms: None,
+            }),
+            ..Default::default()
+        };
+
+        let result = build_metadata_from_cfg_and_env(&cfg);
+        assert!(result.is_some());
+        let metadata = result.unwrap();
+        // Should only have the valid header
+        assert_eq!(metadata.len(), 1);
     }
 
     #[test]
