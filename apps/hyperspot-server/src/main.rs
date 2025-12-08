@@ -146,57 +146,6 @@ async fn main() -> Result<()> {
     }
 }
 
-async fn run_server(config: AppConfig, args: CliArgs) -> Result<()> {
-    tracing::info!("Initializing modules…");
-
-    // Bridge AppConfig into ModKit’s ConfigProvider (per-module JSON bag).
-    let config_provider = Arc::new(ModkitConfigAdapter(Arc::new(AppConfigProvider::new(
-        config.clone(),
-    ))));
-
-    // Base dir used by DB factory for file-based SQLite resolution
-    let _home_dir = PathBuf::from(&config.server.home_dir);
-
-    // Configure DB options: DbManager or no-DB.
-    let db_options = if config.database.is_some() {
-        if args.mock {
-            tracing::info!("Mock mode enabled: using in-memory SQLite for all modules");
-            // For mock mode, create a simple figment with mock database config
-            let mock_figment = create_mock_figment(&config);
-            let home_dir = PathBuf::from(&config.server.home_dir);
-            let db_manager = Arc::new(modkit_db::DbManager::from_figment(mock_figment, home_dir)?);
-            DbOptions::Manager(db_manager)
-        } else {
-            tracing::info!("Using DbManager with Figment-based configuration");
-
-            // Create Figment from the current configuration
-            let figment = create_figment_from_config(&config)?;
-            let home_dir = PathBuf::from(&config.server.home_dir);
-            let db_manager = Arc::new(modkit_db::DbManager::from_figment(figment, home_dir)?);
-
-            DbOptions::Manager(db_manager)
-        }
-    } else {
-        tracing::warn!("No global database section found; running without databases");
-        DbOptions::None
-    };
-
-    // Run the ModKit runtime (signals-driven shutdown).
-    let run_options = RunOptions {
-        modules_cfg: config_provider,
-        db: db_options,
-        shutdown: ShutdownOptions::Signals,
-    };
-
-    let result = run(run_options).await;
-
-    // Graceful shutdown - flush any remaining traces
-    #[cfg(feature = "otel")]
-    modkit::telemetry::init::shutdown_tracing();
-
-    result
-}
-
 async fn check_config(config: AppConfig) -> Result<()> {
     tracing::info!("Checking configuration…");
     // If load_layered/load_or_default succeeded and home_dir normalized, we're good.
@@ -220,11 +169,15 @@ fn create_figment_from_config(config: &AppConfig) -> Result<Figment> {
 fn create_mock_figment(config: &AppConfig) -> Figment {
     use figment::providers::Serialized;
 
-    // Create a mock configuration where all modules get in-memory SQLite
     let mut mock_config = config.clone();
+    override_modules_with_mock_db(&mut mock_config);
 
-    // Override all module database configurations to use in-memory SQLite
-    for module_value in mock_config.modules.values_mut() {
+    Figment::new().merge(Serialized::defaults(mock_config))
+}
+
+/// Override all module database configurations with in-memory SQLite
+fn override_modules_with_mock_db(config: &mut AppConfig) {
+    for module_value in config.modules.values_mut() {
         if let Some(obj) = module_value.as_object_mut() {
             obj.insert(
                 "database".to_string(),
@@ -237,6 +190,56 @@ fn create_mock_figment(config: &AppConfig) -> Figment {
             );
         }
     }
+}
 
-    Figment::new().merge(Serialized::defaults(mock_config))
+/// Build config provider from AppConfig
+fn build_config_provider(config: AppConfig) -> Arc<dyn modkit::ConfigProvider> {
+    Arc::new(ModkitConfigAdapter(Arc::new(AppConfigProvider::new(
+        config,
+    ))))
+}
+
+/// Resolve database options based on configuration and args
+fn resolve_db_options(config: &AppConfig, args: &CliArgs) -> Result<DbOptions> {
+    if config.database.is_none() {
+        tracing::warn!("No global database section found; running without databases");
+        return Ok(DbOptions::None);
+    }
+
+    if args.mock {
+        tracing::info!("Mock mode enabled: using in-memory SQLite for all modules");
+        let mock_figment = create_mock_figment(config);
+        let home_dir = PathBuf::from(&config.server.home_dir);
+        let db_manager = Arc::new(modkit_db::DbManager::from_figment(mock_figment, home_dir)?);
+        return Ok(DbOptions::Manager(db_manager));
+    }
+
+    tracing::info!("Using DbManager with Figment-based configuration");
+    let figment = create_figment_from_config(config)?;
+    let home_dir = PathBuf::from(&config.server.home_dir);
+    let db_manager = Arc::new(modkit_db::DbManager::from_figment(figment, home_dir)?);
+    Ok(DbOptions::Manager(db_manager))
+}
+
+async fn run_server(config: AppConfig, args: CliArgs) -> Result<()> {
+    tracing::info!("Initializing modules…");
+
+    // Build config provider and resolve database options
+    let config_provider = build_config_provider(config.clone());
+    let db_options = resolve_db_options(&config, &args)?;
+
+    // Run the ModKit runtime with signal-driven shutdown
+    let run_options = RunOptions {
+        modules_cfg: config_provider,
+        db: db_options,
+        shutdown: ShutdownOptions::Signals,
+    };
+
+    let result = run(run_options).await;
+
+    // Graceful shutdown - flush any remaining traces
+    #[cfg(feature = "otel")]
+    modkit::telemetry::init::shutdown_tracing();
+
+    result
 }
