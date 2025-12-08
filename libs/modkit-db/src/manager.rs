@@ -110,7 +110,7 @@ impl DbManager {
                     ))
                 })?;
 
-            cfg = self.merge_server_into_module(cfg, server_cfg.clone());
+            cfg = Self::merge_server_into_module(cfg, server_cfg.clone());
         }
 
         // Finalize SQLite paths if needed
@@ -133,7 +133,6 @@ impl DbManager {
     /// Merge global server configuration into module configuration.
     /// Module fields override server fields. Params maps are merged with module taking precedence.
     fn merge_server_into_module(
-        &self,
         mut module_cfg: DbConnConfig,
         server_cfg: DbConnConfig,
     ) -> DbConnConfig {

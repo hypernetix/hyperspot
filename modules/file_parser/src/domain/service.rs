@@ -219,7 +219,7 @@ impl FileParserService {
 
         // Validate MIME type if present
         if let Some(ref ct) = content_type {
-            self.validate_mime_type(extension, ct)?;
+            Self::validate_mime_type(extension, ct)?;
         }
 
         let bytes = response.bytes().await.map_err(|e| {
@@ -269,7 +269,7 @@ impl FileParserService {
     }
 
     /// Validate MIME type against expected type for extension
-    fn validate_mime_type(&self, extension: &str, content_type: &str) -> Result<(), DomainError> {
+    fn validate_mime_type(extension: &str, content_type: &str) -> Result<(), DomainError> {
         // Parse MIME type
         let mime: mime::Mime = content_type.parse().map_err(|_| {
             DomainError::invalid_request(format!("Invalid content-type: {}", content_type))

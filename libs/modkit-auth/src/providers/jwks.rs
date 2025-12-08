@@ -272,7 +272,6 @@ impl JwksKeyProvider {
 
     /// Validate JWT and decode into header + raw claims
     fn validate_token(
-        &self,
         token: &str,
         key: &DecodingKey,
         header: &Header,
@@ -328,7 +327,7 @@ impl KeyProvider for JwksKeyProvider {
         };
 
         // Validate signature and decode claims
-        let claims = self.validate_token(token, &key, &header)?;
+        let claims = Self::validate_token(token, &key, &header)?;
 
         Ok((header, claims))
     }

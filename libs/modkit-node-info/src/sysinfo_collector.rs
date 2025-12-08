@@ -38,12 +38,12 @@ impl SysInfoCollector {
         sys.refresh_cpu_all();
         sys.refresh_memory();
 
-        let os_info = self.collect_os_info();
-        let cpu_info = self.collect_cpu_info(&sys);
-        let memory_info = self.collect_memory_info(&sys);
-        let host_info = self.collect_host_info();
-        let gpus = self.collect_gpu_info();
-        let battery = self.collect_battery_info();
+        let os_info = Self::collect_os_info();
+        let cpu_info = Self::collect_cpu_info(&sys);
+        let memory_info = Self::collect_memory_info(&sys);
+        let host_info = Self::collect_host_info();
+        let gpus = Self::collect_gpu_info();
+        let battery = Self::collect_battery_info();
 
         Ok(NodeSysInfo {
             node_id,
@@ -57,7 +57,7 @@ impl SysInfoCollector {
         })
     }
 
-    fn collect_os_info(&self) -> OsInfo {
+    fn collect_os_info() -> OsInfo {
         let name = System::name().unwrap_or_else(|| std::env::consts::OS.to_string());
         let version = System::os_version().unwrap_or_else(|| "unknown".to_string());
         let arch = std::env::consts::ARCH.to_string();
@@ -69,7 +69,7 @@ impl SysInfoCollector {
         }
     }
 
-    fn collect_cpu_info(&self, sys: &System) -> CpuInfo {
+    fn collect_cpu_info(sys: &System) -> CpuInfo {
         let cpus = sys.cpus();
         // CPU count is always small, safe to truncate
         let num_cpus = u32::try_from(cpus.len()).unwrap_or(u32::MAX);
@@ -99,7 +99,7 @@ impl SysInfoCollector {
         }
     }
 
-    fn collect_memory_info(&self, sys: &System) -> MemoryInfo {
+    fn collect_memory_info(sys: &System) -> MemoryInfo {
         let total_bytes = sys.total_memory();
         let available_bytes = sys.available_memory();
         let used_bytes = sys.used_memory();
@@ -114,7 +114,7 @@ impl SysInfoCollector {
         }
     }
 
-    fn collect_host_info(&self) -> HostInfo {
+    fn collect_host_info() -> HostInfo {
         let hostname = hostname::get()
             .map(|h| h.to_string_lossy().to_string())
             .unwrap_or_else(|_| "unknown".to_string());
@@ -150,7 +150,7 @@ impl SysInfoCollector {
         }
     }
 
-    fn collect_gpu_info(&self) -> Vec<GpuInfo> {
+    fn collect_gpu_info() -> Vec<GpuInfo> {
         // Use platform-specific GPU detection
         #[cfg(target_os = "macos")]
         {
@@ -170,7 +170,7 @@ impl SysInfoCollector {
         }
     }
 
-    fn collect_battery_info(&self) -> Option<BatteryInfo> {
+    fn collect_battery_info() -> Option<BatteryInfo> {
         // Use starship-battery for cross-platform battery detection
         use starship_battery::Manager;
 

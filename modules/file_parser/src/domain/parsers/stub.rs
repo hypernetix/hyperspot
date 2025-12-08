@@ -45,7 +45,7 @@ impl FileParserBackend for StubParser {
             .and_then(|s| s.to_str())
             .unwrap_or("unknown");
 
-        Ok(self.parse_bytes_internal(
+        Ok(Self::parse_bytes_internal(
             file_name,
             bytes,
             ParsedSource::LocalPath(path.display().to_string()),
@@ -59,7 +59,7 @@ impl FileParserBackend for StubParser {
         bytes: bytes::Bytes,
     ) -> Result<crate::domain::ir::ParsedDocument, DomainError> {
         let file_name = filename_hint.unwrap_or("unknown");
-        Ok(self.parse_bytes_internal(
+        Ok(Self::parse_bytes_internal(
             file_name,
             bytes,
             ParsedSource::Uploaded {
@@ -71,7 +71,6 @@ impl FileParserBackend for StubParser {
 
 impl StubParser {
     fn parse_bytes_internal(
-        &self,
         file_name: &str,
         bytes: bytes::Bytes,
         source: ParsedSource,
