@@ -1,4 +1,5 @@
 # Clippy configuration for HyperSpot
+avoid-breaking-exported-api = false
 lint-commented-code = true
 
 #
