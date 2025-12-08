@@ -1,4 +1,6 @@
 # Clippy configuration for HyperSpot
+lint-commented-code = true
+
 #
 # Workspace-level lints are configured in Cargo.toml [workspace.lints.clippy]:
 #
