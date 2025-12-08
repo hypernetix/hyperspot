@@ -1,5 +1,5 @@
 use crate::error::NodeInfoError;
-use crate::model::*;
+use crate::model::{NodeSysCap, NodeSysInfo, SysCap};
 use crate::sysinfo_collector::SysInfoCollector;
 use std::sync::Arc;
 

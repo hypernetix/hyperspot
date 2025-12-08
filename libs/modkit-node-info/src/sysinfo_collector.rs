@@ -1,5 +1,5 @@
 use crate::error::NodeInfoError;
-use crate::model::*;
+use crate::model::{BatteryInfo, CpuInfo, GpuInfo, HostInfo, MemoryInfo, NodeSysInfo, OsInfo};
 use sysinfo::System;
 
 /// Calculate percentage as u32 (0-100) from used/total values.

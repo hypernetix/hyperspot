@@ -132,7 +132,7 @@ impl FileParserService {
             ext
         } else if let Some(ct) = content_type {
             // Priority 2: Try to infer from Content-Type
-            if let Some(ext) = self.extension_from_content_type(ct) {
+            if let Some(ext) = Self::extension_from_content_type(ct) {
                 ext
             } else {
                 return Err(DomainError::unsupported_file_type(

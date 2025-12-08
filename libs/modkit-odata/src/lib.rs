@@ -443,7 +443,7 @@ mod tests;
 
 #[cfg(feature = "with-odata-params")]
 mod convert_odata_params {
-    use super::ast::*;
+    use super::ast::{CompareOperator, Expr, Value};
     use odata_params::filters as od;
 
     impl From<od::CompareOperator> for CompareOperator {
