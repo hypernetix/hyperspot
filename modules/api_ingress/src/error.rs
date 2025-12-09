@@ -63,6 +63,7 @@ impl IntoResponse for AppError {
                 "rate_limited",
                 "rate limited",
             ),
+            #[cfg_attr(not(feature = "debug-errors"), allow(unused_variables))]
             Internal(err) => {
                 #[cfg(feature = "debug-errors")]
                 {
