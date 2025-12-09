@@ -1,0 +1,7 @@
+# Modkit allowed to have more complex logic than modules
+cognitive-complexity-threshold = 55
+type-complexity-threshold = 220
+
+# Allow unwrap/expect in tests and doctests (they should panic on failure)
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true

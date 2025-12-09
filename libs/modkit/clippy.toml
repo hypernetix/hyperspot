@@ -1,5 +1,0 @@
-# Modkit allowed to have more complex logic than modules
-type-complexity-threshold = 220
-
-allow-expect-in-tests = true
-allow-unwrap-in-tests = true
