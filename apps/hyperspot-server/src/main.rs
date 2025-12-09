@@ -131,11 +131,10 @@ async fn main() -> Result<()> {
     });
 
     tracing::info!("HyperSpot Server starting");
-    println!("Effective configuration:\n{:#?}", config.server);
 
     // Print config and exit if requested
     if cli.print_config {
-        println!("{}", config.to_yaml()?);
+        println!("Effective configuration:\n{}", config.to_yaml()?);
         return Ok(());
     }
 

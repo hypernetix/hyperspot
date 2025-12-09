@@ -1,3 +1,5 @@
+#![allow(clippy::use_debug)]
+
 /// Example of using the new AuthDispatcher plugin system
 ///
 /// This example demonstrates:

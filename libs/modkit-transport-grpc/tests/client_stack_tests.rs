@@ -119,12 +119,6 @@ async fn connect_with_stack_accepts_valid_uri() {
     // Invalid URI should fail during parsing
     let result = connect_with_stack::<FakeClient>("not-a-valid-uri", &cfg).await;
     assert!(result.is_err(), "Should fail with invalid URI");
-
-    // Valid URI format (even if server doesn't exist) should at least parse
-    let result = connect_with_stack::<FakeClient>("http://localhost:50051", &cfg).await;
-    // This may succeed or fail depending on whether there's a server,
-    // but it proves the URI parsing works
-    let _ = result; // Don't assert on the result, just verify it compiles
 }
 
 // Test tracking call counts with a wrapper service

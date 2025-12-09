@@ -6,4 +6,3 @@ use serde::Deserialize;
 // Future: could add service-level config here (timeouts, etc.)
 #[derive(Clone, Debug, Deserialize, Default)]
 pub struct DirectoryServiceConfig;
-
