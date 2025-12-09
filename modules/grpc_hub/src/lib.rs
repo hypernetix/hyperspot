@@ -246,7 +246,7 @@ impl GrpcHub {
             ListenConfig::Uds(path) => Self::serve_uds(path, routes, cancel).await?,
             #[cfg(windows)]
             ListenConfig::NamedPipe(pipe_name) => {
-                Self::serve_named_pipe(pipe_name, routes, cancel).await?
+                Self::serve_named_pipe(pipe_name, routes, cancel).await?;
             }
         }
 
