@@ -35,7 +35,7 @@ disallowed-methods = [
 # Type complexity threshold (default is 250)
 type-complexity-threshold = 190
 # Type complexity threshold (default is 25)
-cognitive-complexity-threshold = 38
+cognitive-complexity-threshold = 25
 
 allow-expect-in-tests = true
 allow-unwrap-in-tests = true
