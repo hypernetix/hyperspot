@@ -30,13 +30,37 @@ members = [
 ]
 resolver = "2"
 
+# Note: dylint_lints is a separate workspace for custom linters
+# See dylint_lints/README.md for usage instructions
+
 [workspace.lints.rust]
+deprecated = "deny"
 unsafe_code = "forbid"
 unused_mut = "warn"
 
 [workspace.lints.clippy]
-unwrap_used = "deny"
+# See clippy rules details https://rust-lang.github.io/rust-clippy/master/index.html
+# Here will be workspace global rules
+async_yields_async = "deny"
+await_holding_lock = "deny"
+await_holding_refcell_ref = "deny"
+# cast_possible_truncation = "deny"
+# cast_possible_wrap = "deny"
+# cast_precision_loss = "deny"
+# cast_sign_loss = "deny"
+cognitive_complexity = "warn"
 expect_used = "deny"
+float_cmp = "deny"
+float_cmp_const = "deny"
+integer_division = "deny"
+lossy_float_literal = "deny"
+mutex_atomic = "deny"
+needless_borrow = "deny"
+needless_lifetimes = "deny"
+# needless_pass_by_value = "deny"
+regex_creation_in_loops = "deny"
+type_complexity = "warn"
+unwrap_used = "deny"
 
 [workspace.dependencies]
 # Serialization

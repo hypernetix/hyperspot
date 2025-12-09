@@ -94,6 +94,9 @@ modules/<your-module>/
    license.workspace = true
    authors.workspace = true
 
+   [lints]
+   workspace = true
+
    [dependencies]
    anyhow = { workspace = true }
    async-trait = { workspace = true }

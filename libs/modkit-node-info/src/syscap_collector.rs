@@ -3,6 +3,15 @@ use crate::model::*;
 use crate::sysinfo_collector::SysInfoCollector;
 use std::sync::Arc;
 
+const BYTES_PER_GB: f64 = 1024.0 * 1024.0 * 1024.0;
+
+/// Convert bytes to gigabytes as f64.
+/// Note: For very large values (>2^53 bytes = 8 PB), precision loss occurs,
+/// but this is acceptable for practical memory sizes.
+fn bytes_to_gb(bytes: u64) -> f64 {
+    bytes as f64 / BYTES_PER_GB
+}
+
 /// Builder for creating SysCap instances with reduced parameter count
 struct SysCapBuilder {
     key: String,
@@ -132,8 +141,8 @@ impl SysCapCollector {
             .build(),
         );
 
-        // RAM detection from sysinfo
-        let total_gb = sysinfo.memory.total_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
+        // RAM detection from sysinfo - convert bytes to GB
+        let total_gb = bytes_to_gb(sysinfo.memory.total_bytes);
         caps.push(
             SysCapBuilder::new(
                 "hardware:ram".to_string(),

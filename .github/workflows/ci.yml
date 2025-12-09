@@ -112,7 +112,7 @@ jobs:
 
       # Clippy lints across workspace and all targets; fail on warnings
       - name: cargo clippy
-        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings -D clippy::perf
 
       # Unit tests (excluding integration tests)
       - name: cargo test (no ui)
