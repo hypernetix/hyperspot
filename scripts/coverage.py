@@ -519,10 +519,13 @@ def collect_unit_coverage(
         config_file: Optional config file path
         test_filter: Optional package filter (e.g., 'modkit-db')
         skip_build: If True, skip clean and test execution
+
+    Returns:
+        bool: True if tests failed, False otherwise
     """
     if skip_build:
         print("Skipping test execution, using existing coverage data")
-        return
+        return False
 
     step("Collecting unit test coverage")
 
@@ -559,8 +562,10 @@ def collect_unit_coverage(
             "WARNING: Some unit tests failed, "
             "but coverage was still collected"
         )
+        return True
     else:
         print("OK. Unit test coverage collected")
+        return False
 
 
 def parse_bind_addr_port(config_file):
@@ -940,9 +945,10 @@ def run_coverage_workflow(mode, output_dir, config_file, test_filter, skip_build
         threshold: Coverage threshold percentage
     """
     use_color = supports_color()  # Auto-detect color support
+    tests_failed = False
 
     if mode == "unit":
-        collect_unit_coverage(output_dir, config_file, test_filter, skip_build)
+        tests_failed = collect_unit_coverage(output_dir, config_file, test_filter, skip_build)
         report_mode = "unit tests"
     elif mode == "e2e-local":
         collect_e2e_local_coverage(output_dir, config_file, test_filter, skip_build)
@@ -952,7 +958,11 @@ def run_coverage_workflow(mode, output_dir, config_file, test_filter, skip_build
 
     generate_reports(output_dir, report_mode, threshold, use_color)
 
-    print(f"\n[OK] {report_mode.capitalize()} coverage reports generated in: {output_dir}")
+    # Display appropriate message based on test results
+    if mode == "unit" and tests_failed:
+        print(f"\nERROR: unit test failed, coverage reports generated in: {output_dir}")
+    else:
+        print(f"\n[OK] {report_mode.capitalize()} coverage reports generated in: {output_dir}")
 
 
 def cmd_coverage_unit(args):
