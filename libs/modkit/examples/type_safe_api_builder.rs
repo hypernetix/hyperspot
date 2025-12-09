@@ -3,6 +3,8 @@
 //! This example shows how to use the type-safe OperationBuilder to create
 //! API operations with compile-time guarantees.
 
+#![allow(clippy::non_ascii_literal)]
+
 use axum::{response::IntoResponse, Json, Router};
 use modkit::api::{Missing, OpenApiRegistry, OperationBuilder, OperationSpec};
 use serde_json::Value;

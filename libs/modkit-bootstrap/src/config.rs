@@ -2022,6 +2022,7 @@ logging:
     }
 
     #[test]
+    #[allow(clippy::non_ascii_literal)]
     fn test_dsn_unicode_characters() {
         let tmp = tempdir().unwrap();
         let home_dir = tmp.path();

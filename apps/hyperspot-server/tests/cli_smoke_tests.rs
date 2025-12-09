@@ -1,4 +1,4 @@
-#![allow(clippy::unwrap_used, clippy::expect_used)]
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::non_ascii_literal)]
 
 //! CLI smoke tests for hyperspot-server binary
 //!

@@ -146,7 +146,7 @@ async fn main() -> Result<()> {
 }
 
 async fn check_config(config: AppConfig) -> Result<()> {
-    tracing::info!("Checking configuration…");
+    tracing::info!("Checking configuration...");
     // If load_layered/load_or_default succeeded and home_dir normalized, we're good.
     println!("Configuration is valid");
     println!("{}", config.to_yaml()?);
@@ -221,7 +221,7 @@ fn resolve_db_options(config: &AppConfig, args: &CliArgs) -> Result<DbOptions> {
 }
 
 async fn run_server(config: AppConfig, args: CliArgs) -> Result<()> {
-    tracing::info!("Initializing modules…");
+    tracing::info!("Initializing modules...");
 
     // Build config provider and resolve database options
     let config_provider = build_config_provider(config.clone());
