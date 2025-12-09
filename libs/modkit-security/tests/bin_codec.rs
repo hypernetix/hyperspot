@@ -19,7 +19,7 @@ fn round_trips_security_ctx_binary_payload() {
 
     let scope = AccessScope::both(tenant_ids.clone(), resource_ids.clone());
     let subject = Subject::new(subject_id);
-    let ctx = SecurityCtx::new(scope.clone(), subject.clone());
+    let ctx = SecurityCtx::new(scope, subject.clone());
 
     let encoded = encode_bin(&ctx).expect("security context encodes");
     let decoded = decode_bin(&encoded).expect("security context decodes");

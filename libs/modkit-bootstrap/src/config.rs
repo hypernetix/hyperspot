@@ -819,7 +819,7 @@ fn finalize_server_dsn(builder: &DbConfigBuilder, module_name: &str) -> anyhow::
 fn redact_dsn_for_logging(dsn: &str) -> anyhow::Result<String> {
     if dsn.contains('@') {
         let parsed = url::Url::parse(dsn)?;
-        let mut log_url = parsed.clone();
+        let mut log_url = parsed;
         if log_url.password().is_some() {
             log_url.set_password(Some("***")).ok();
         }
