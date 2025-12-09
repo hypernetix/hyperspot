@@ -9,10 +9,7 @@ const BYTES_PER_GB: f64 = 1024.0 * 1024.0 * 1024.0;
 /// Note: For very large values (>2^53 bytes = 8 PB), precision loss occurs,
 /// but this is acceptable for practical memory sizes.
 fn bytes_to_gb(bytes: u64) -> f64 {
-    // Split into high and low parts to maintain precision for large values
-    let high = (bytes >> 32) as f64 * (1u64 << 32) as f64;
-    let low = (bytes & 0xFFFF_FFFF) as f64;
-    (high + low) / BYTES_PER_GB
+    bytes as f64 / BYTES_PER_GB
 }
 
 /// Builder for creating SysCap instances with reduced parameter count
