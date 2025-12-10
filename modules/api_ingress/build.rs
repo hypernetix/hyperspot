@@ -44,14 +44,31 @@ fn main() {
     }
 }
 
-fn download_to(url: &str, dest: &Path) -> Result<(), Box<dyn std::error::Error>> {
+/// Downloads the file only if it doesn't already exist.
+/// Returns Ok(true) if the file was downloaded, Ok(false) if it already existed.
+///
+/// Note: We skip downloading if the file exists because `@latest` URLs can return
+/// subtly different content on each request (build timestamps, minification variations),
+/// causing unnecessary file changes. 
+// 
+// To force an update provide CARGO_FEATURE_EMBED_ELEMENTS_UPDATE
+fn download_to(url: &str, dest: &Path) -> Result<bool, Box<dyn std::error::Error>> {
     println!("cargo:rerun-if-changed={}", dest.display());
+
+    let embed_update = env::var("CARGO_FEATURE_EMBED_ELEMENTS_UPDATE").is_ok();
+
+    // Skip download if file already exists
+    if dest.exists() && !embed_update {
+        return Ok(false);
+    }
+
     let resp = reqwest::blocking::get(url)?;
     if !resp.status().is_success() {
         return Err(format!("HTTP {} for {}", resp.status(), url).into());
     }
-    let bytes = resp.bytes()?;
+    let new_bytes = resp.bytes()?;
+
     let mut f = fs::File::create(dest)?;
-    f.write_all(&bytes)?;
-    Ok(())
+    f.write_all(&new_bytes)?;
+    Ok(true)
 }
