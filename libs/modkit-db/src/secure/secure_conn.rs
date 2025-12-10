@@ -149,6 +149,7 @@ impl SecureConn {
     /// # Errors
     ///
     /// Returns `ScopeError` if the scope cannot be applied to the entity.
+    #[allow(clippy::unused_self)] // Keep fluent &SecureConn API even when method only delegates
     pub fn find<E>(&self, ctx: &SecurityCtx) -> Result<SecureSelect<E, Scoped>, ScopeError>
     where
         E: ScopableEntity + EntityTrait,
@@ -206,6 +207,7 @@ impl SecureConn {
     /// # Errors
     ///
     /// Returns `ScopeError` if the scope cannot be applied to the entity.
+    #[allow(clippy::unused_self)] // Delegates but matches the rest of the connection API
     pub fn update_many<E>(
         &self,
         ctx: &SecurityCtx,
@@ -235,6 +237,7 @@ impl SecureConn {
     /// # Errors
     ///
     /// Returns `ScopeError` if the scope cannot be applied to the entity.
+    #[allow(clippy::unused_self)] // Retain method-style ergonomics for callers of SecureConn
     pub fn delete_many<E>(
         &self,
         ctx: &SecurityCtx,

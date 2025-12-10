@@ -1,5 +1,11 @@
-use super::dto::*;
-use crate::contract::*;
+use super::dto::{
+    BatteryInfoDto, CpuInfoDto, GpuInfoDto, HostInfoDto, MemoryInfoDto, NodeDto, NodeSysCapDto,
+    NodeSysInfoDto, OsInfoDto, SysCapDto,
+};
+use crate::contract::{
+    BatteryInfo, CpuInfo, GpuInfo, HostInfo, MemoryInfo, Node, NodeSysCap, NodeSysInfo, OsInfo,
+    SysCap,
+};
 
 // Node mappings
 impl From<Node> for NodeDto {

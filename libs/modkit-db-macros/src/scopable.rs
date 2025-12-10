@@ -129,72 +129,66 @@ fn validate_config(config: &SecureConfig, input: &DeriveInput) {
 
     // If unrestricted is set, no other attributes should be present
     if let Some(unrestricted_span) = config.unrestricted {
-        let mut has_error = false;
-
-        if let Some((_, span)) = &config.tenant_col {
-            emit_error!(
-                unrestricted_span,
-                "Cannot use 'unrestricted' with 'tenant_col'";
-                note = *span => "tenant_col defined here"
-            );
-            has_error = true;
-        }
-        if let Some(span) = &config.no_tenant {
-            emit_error!(
-                unrestricted_span,
-                "Cannot use 'unrestricted' with 'no_tenant'";
-                note = *span => "no_tenant defined here"
-            );
-            has_error = true;
-        }
-        if let Some((_, span)) = &config.resource_col {
-            emit_error!(
-                unrestricted_span,
-                "Cannot use 'unrestricted' with 'resource_col'";
-                note = *span => "resource_col defined here"
-            );
-            has_error = true;
-        }
-        if let Some(span) = &config.no_resource {
-            emit_error!(
-                unrestricted_span,
-                "Cannot use 'unrestricted' with 'no_resource'";
-                note = *span => "no_resource defined here"
-            );
-            has_error = true;
-        }
-        if let Some((_, span)) = &config.owner_col {
-            emit_error!(
-                unrestricted_span,
-                "Cannot use 'unrestricted' with 'owner_col'";
-                note = *span => "owner_col defined here"
-            );
-            has_error = true;
-        }
-        if let Some(span) = &config.no_owner {
-            emit_error!(
-                unrestricted_span,
-                "Cannot use 'unrestricted' with 'no_owner'";
-                note = *span => "no_owner defined here"
-            );
-            has_error = true;
-        }
-        if let Some((_, span)) = &config.type_col {
-            emit_error!(
-                unrestricted_span,
-                "Cannot use 'unrestricted' with 'type_col'";
-                note = *span => "type_col defined here"
-            );
-            has_error = true;
-        }
-        if let Some(span) = &config.no_type {
-            emit_error!(
-                unrestricted_span,
-                "Cannot use 'unrestricted' with 'no_type'";
-                note = *span => "no_type defined here"
-            );
-            has_error = true;
-        }
+        let has_error = [
+            config.tenant_col.as_ref().map(|(_, span)| {
+                emit_error!(
+                    unrestricted_span,
+                    "Cannot use 'unrestricted' with 'tenant_col'";
+                    note = *span => "tenant_col defined here"
+                );
+            }),
+            config.no_tenant.as_ref().map(|span| {
+                emit_error!(
+                    unrestricted_span,
+                    "Cannot use 'unrestricted' with 'no_tenant'";
+                    note = *span => "no_tenant defined here"
+                );
+            }),
+            config.resource_col.as_ref().map(|(_, span)| {
+                emit_error!(
+                    unrestricted_span,
+                    "Cannot use 'unrestricted' with 'resource_col'";
+                    note = *span => "resource_col defined here"
+                );
+            }),
+            config.no_resource.as_ref().map(|span| {
+                emit_error!(
+                    unrestricted_span,
+                    "Cannot use 'unrestricted' with 'no_resource'";
+                    note = *span => "no_resource defined here"
+                );
+            }),
+            config.owner_col.as_ref().map(|(_, span)| {
+                emit_error!(
+                    unrestricted_span,
+                    "Cannot use 'unrestricted' with 'owner_col'";
+                    note = *span => "owner_col defined here"
+                );
+            }),
+            config.no_owner.as_ref().map(|span| {
+                emit_error!(
+                    unrestricted_span,
+                    "Cannot use 'unrestricted' with 'no_owner'";
+                    note = *span => "no_owner defined here"
+                );
+            }),
+            config.type_col.as_ref().map(|(_, span)| {
+                emit_error!(
+                    unrestricted_span,
+                    "Cannot use 'unrestricted' with 'type_col'";
+                    note = *span => "type_col defined here"
+                );
+            }),
+            config.no_type.as_ref().map(|span| {
+                emit_error!(
+                    unrestricted_span,
+                    "Cannot use 'unrestricted' with 'no_type'";
+                    note = *span => "no_type defined here"
+                );
+            }),
+        ]
+        .iter()
+        .any(|x| x.is_some());
 
         if has_error {
             abort!(

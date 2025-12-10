@@ -1,3 +1,6 @@
+#![allow(clippy::use_debug)]
+#![allow(clippy::non_ascii_literal)]
+
 /// Example of using the new AuthDispatcher plugin system
 ///
 /// This example demonstrates:

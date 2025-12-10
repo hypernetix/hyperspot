@@ -6,7 +6,7 @@ use modkit::api::prelude::*;
 use serde::Deserialize;
 use std::sync::Arc;
 
-use super::dto::*;
+use super::dto::{NodeDto, NodeSysCapDto, NodeSysInfoDto};
 use crate::domain::error::DomainError;
 use crate::domain::service::Service;
 

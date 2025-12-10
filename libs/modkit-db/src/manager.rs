@@ -110,7 +110,7 @@ impl DbManager {
                     ))
                 })?;
 
-            cfg = self.merge_server_into_module(cfg, server_cfg.clone());
+            cfg = Self::merge_server_into_module(cfg, server_cfg.clone());
         }
 
         // Finalize SQLite paths if needed
@@ -133,7 +133,6 @@ impl DbManager {
     /// Merge global server configuration into module configuration.
     /// Module fields override server fields. Params maps are merged with module taking precedence.
     fn merge_server_into_module(
-        &self,
         mut module_cfg: DbConnConfig,
         server_cfg: DbConnConfig,
     ) -> DbConnConfig {
@@ -207,18 +206,16 @@ impl DbManager {
                 if let Some(parent) = absolute_path.parent() {
                     std::fs::create_dir_all(parent).map_err(DbError::Io)?;
                 }
-            } else {
+            } else if let Some(parent) = absolute_path.parent() {
                 // When auto_provision is false, check if the directory exists
-                if let Some(parent) = absolute_path.parent() {
-                    if !parent.exists() {
-                        return Err(DbError::Io(std::io::Error::new(
-                            std::io::ErrorKind::NotFound,
-                            format!(
-                                "Directory does not exist and auto_provision is disabled: {:?}",
-                                parent
-                            ),
-                        )));
-                    }
+                if !parent.exists() {
+                    return Err(DbError::Io(std::io::Error::new(
+                        std::io::ErrorKind::NotFound,
+                        format!(
+                            "Directory does not exist and auto_provision is disabled: {:?}",
+                            parent
+                        ),
+                    )));
                 }
             }
 

@@ -1,3 +1,6 @@
+#![allow(clippy::use_debug)]
+#![allow(clippy::non_ascii_literal)]
+
 //! Demo of the enhanced advisory locks with namespacing and try_lock functionality.
 
 use modkit_db::{ConnectOpts, DbHandle, LockConfig};

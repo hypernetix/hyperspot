@@ -132,7 +132,7 @@ impl FileParserService {
             ext
         } else if let Some(ct) = content_type {
             // Priority 2: Try to infer from Content-Type
-            if let Some(ext) = self.extension_from_content_type(ct) {
+            if let Some(ext) = Self::extension_from_content_type(ct) {
                 ext
             } else {
                 return Err(DomainError::unsupported_file_type(
@@ -219,7 +219,7 @@ impl FileParserService {
 
         // Validate MIME type if present
         if let Some(ref ct) = content_type {
-            self.validate_mime_type(extension, ct)?;
+            Self::validate_mime_type(extension, ct)?;
         }
 
         let bytes = response.bytes().await.map_err(|e| {
@@ -254,7 +254,7 @@ impl FileParserService {
     }
 
     /// Extract file extension from Content-Type header
-    pub fn extension_from_content_type(&self, ct: &str) -> Option<String> {
+    pub fn extension_from_content_type(ct: &str) -> Option<String> {
         let mime: mime::Mime = ct.parse().ok()?;
         let essence = mime.essence_str();
 
@@ -269,7 +269,7 @@ impl FileParserService {
     }
 
     /// Validate MIME type against expected type for extension
-    fn validate_mime_type(&self, extension: &str, content_type: &str) -> Result<(), DomainError> {
+    fn validate_mime_type(extension: &str, content_type: &str) -> Result<(), DomainError> {
         // Parse MIME type
         let mime: mime::Mime = content_type.parse().map_err(|_| {
             DomainError::invalid_request(format!("Invalid content-type: {}", content_type))

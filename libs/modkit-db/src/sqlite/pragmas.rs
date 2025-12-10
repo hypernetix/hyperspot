@@ -90,34 +90,17 @@ impl Pragmas {
         for (key, value) in pairs {
             match key.to_lowercase().as_str() {
                 "journal_mode" => {
-                    if let Some(mode) = JournalMode::from_str(value) {
-                        pragmas.journal_mode = Some(mode);
-                    } else {
-                        tracing::warn!("Invalid 'journal_mode' PRAGMA value '{}', ignoring", value);
-                    }
+                    pragmas.journal_mode = Self::parse_journal_mode(value);
                 }
                 "synchronous" => {
-                    if let Some(mode) = SyncMode::from_str(value) {
-                        pragmas.synchronous = Some(mode);
-                    } else {
-                        tracing::warn!("Invalid 'synchronous' PRAGMA value '{}', ignoring", value);
-                    }
+                    pragmas.synchronous = Self::parse_synchronous(value);
                 }
-                "busy_timeout" => match value.parse::<i64>() {
-                    Ok(timeout) if timeout >= 0 => {
-                        pragmas.busy_timeout_ms = Some(timeout);
-                    }
-                    _ => {
-                        tracing::warn!("Invalid 'busy_timeout' PRAGMA value '{}', ignoring", value);
-                    }
-                },
-                "wal" => match value.to_lowercase().as_str() {
-                    "true" | "1" => pragmas.wal_toggle = Some(true),
-                    "false" | "0" => pragmas.wal_toggle = Some(false),
-                    _ => {
-                        tracing::warn!("Invalid 'wal' PRAGMA value '{}', ignoring", value);
-                    }
-                },
+                "busy_timeout" => {
+                    pragmas.busy_timeout_ms = Self::parse_busy_timeout(value);
+                }
+                "wal" => {
+                    pragmas.wal_toggle = Self::parse_wal_toggle(value);
+                }
                 _ => {
                     tracing::debug!("Unknown SQLite PRAGMA parameter: {}", key);
                 }
@@ -125,6 +108,51 @@ impl Pragmas {
         }
 
         pragmas
+    }
+
+    /// Parse journal_mode PRAGMA value.
+    fn parse_journal_mode(value: &str) -> Option<JournalMode> {
+        match JournalMode::from_str(value) {
+            Some(mode) => Some(mode),
+            None => {
+                tracing::warn!("Invalid 'journal_mode' PRAGMA value '{}', ignoring", value);
+                None
+            }
+        }
+    }
+
+    /// Parse synchronous PRAGMA value.
+    fn parse_synchronous(value: &str) -> Option<SyncMode> {
+        match SyncMode::from_str(value) {
+            Some(mode) => Some(mode),
+            None => {
+                tracing::warn!("Invalid 'synchronous' PRAGMA value '{}', ignoring", value);
+                None
+            }
+        }
+    }
+
+    /// Parse busy_timeout PRAGMA value.
+    fn parse_busy_timeout(value: &str) -> Option<i64> {
+        match value.parse::<i64>() {
+            Ok(timeout) if timeout >= 0 => Some(timeout),
+            _ => {
+                tracing::warn!("Invalid 'busy_timeout' PRAGMA value '{}', ignoring", value);
+                None
+            }
+        }
+    }
+
+    /// Parse wal PRAGMA value (legacy compatibility).
+    fn parse_wal_toggle(value: &str) -> Option<bool> {
+        match value.to_lowercase().as_str() {
+            "true" | "1" => Some(true),
+            "false" | "0" => Some(false),
+            _ => {
+                tracing::warn!("Invalid 'wal' PRAGMA value '{}', ignoring", value);
+                None
+            }
+        }
     }
 }
 
@@ -204,5 +232,61 @@ mod tests {
 
         assert_eq!(pragmas.journal_mode, Some(JournalMode::Wal));
         // Unknown params should be ignored without error
+    }
+
+    #[test]
+    fn test_pragmas_wal_numeric_toggle() {
+        let mut pairs = HashMap::new();
+        pairs.insert("wal".to_string(), "1".to_string());
+
+        let pragmas = Pragmas::from_pairs(&pairs);
+        assert_eq!(pragmas.wal_toggle, Some(true));
+
+        let mut pairs = HashMap::new();
+        pairs.insert("wal".to_string(), "0".to_string());
+
+        let pragmas = Pragmas::from_pairs(&pairs);
+        assert_eq!(pragmas.wal_toggle, Some(false));
+    }
+
+    #[test]
+    fn test_pragmas_busy_timeout_zero() {
+        let mut pairs = HashMap::new();
+        pairs.insert("busy_timeout".to_string(), "0".to_string());
+
+        let pragmas = Pragmas::from_pairs(&pairs);
+        assert_eq!(pragmas.busy_timeout_ms, Some(0));
+    }
+
+    #[test]
+    fn test_pragmas_busy_timeout_invalid() {
+        let mut pairs = HashMap::new();
+        pairs.insert("busy_timeout".to_string(), "not_a_number".to_string());
+
+        let pragmas = Pragmas::from_pairs(&pairs);
+        assert_eq!(pragmas.busy_timeout_ms, None);
+    }
+
+    #[test]
+    fn test_pragmas_partial_map() {
+        let mut pairs = HashMap::new();
+        pairs.insert("synchronous".to_string(), "FULL".to_string());
+
+        let pragmas = Pragmas::from_pairs(&pairs);
+        assert_eq!(pragmas.journal_mode, None);
+        assert_eq!(pragmas.synchronous, Some(SyncMode::Full));
+        assert_eq!(pragmas.busy_timeout_ms, None);
+        assert_eq!(pragmas.wal_toggle, None);
+    }
+
+    #[test]
+    fn test_pragmas_empty_map() {
+        let pairs = HashMap::new();
+
+        let pragmas = Pragmas::from_pairs(&pairs);
+        assert_eq!(pragmas.journal_mode, None);
+        assert_eq!(pragmas.synchronous, None);
+        assert_eq!(pragmas.busy_timeout_ms, None);
+        assert_eq!(pragmas.wal_toggle, None);
     }
 }

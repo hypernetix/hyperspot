@@ -121,6 +121,13 @@ pub struct RegistryBuilder {
     errors: Vec<String>,
 }
 
+/// Type alias for dependency graph: (names, adjacency list, index map)
+type DependencyGraph = (
+    Vec<&'static str>,
+    Vec<Vec<usize>>,
+    HashMap<&'static str, usize>,
+);
+
 impl RegistryBuilder {
     pub fn register_core_with_meta(
         &mut self,
@@ -262,52 +269,69 @@ impl RegistryBuilder {
         None
     }
 
-    /// Finalize & topo-sort; verify deps & capability binding to known cores.
-    pub fn build_topo_sorted(self) -> Result<ModuleRegistry, RegistryError> {
+    /// Validate that all capabilities reference known core modules.
+    fn validate_capabilities(&self) -> Result<(), RegistryError> {
+        // Check rest_host early
         if let Some((host_name, _)) = &self.rest_host {
             if !self.core.contains_key(host_name) {
                 return Err(RegistryError::UnknownModule(host_name.to_string()));
             }
         }
+
+        // Check for configuration errors
         if !self.errors.is_empty() {
             return Err(RegistryError::InvalidRegistryConfiguration {
-                errors: self.errors,
+                errors: self.errors.clone(),
             });
         }
 
-        // 1) ensure every capability references a known core
+        // Validate rest capabilities
         for (n, _) in self.rest.iter() {
             if !self.core.contains_key(n) {
                 return Err(RegistryError::UnknownModule((*n).to_string()));
             }
         }
+
+        // Validate rest_host again (redundant but explicit)
         if let Some((n, _)) = &self.rest_host {
             if !self.core.contains_key(n) {
                 return Err(RegistryError::UnknownModule((*n).to_string()));
             }
         }
+
+        // Validate db capabilities
         for (n, _) in self.db.iter() {
             if !self.core.contains_key(n) {
                 return Err(RegistryError::UnknownModule((*n).to_string()));
             }
         }
+
+        // Validate stateful capabilities
         for (n, _) in self.stateful.iter() {
             if !self.core.contains_key(n) {
                 return Err(RegistryError::UnknownModule((*n).to_string()));
             }
         }
+
+        // Validate grpc_hub
         if let Some(n) = &self.grpc_hub {
             if !self.core.contains_key(n) {
                 return Err(RegistryError::UnknownModule((*n).to_string()));
             }
         }
+
+        // Validate grpc_services
         for (n, _) in self.grpc_services.iter() {
             if !self.core.contains_key(n) {
                 return Err(RegistryError::UnknownModule((*n).to_string()));
             }
         }
 
-        // 2) build graph over core modules and detect cycles
+        Ok(())
+    }
+
+    /// Build dependency graph and return module names, adjacency list, and index mapping.
+    fn build_dependency_graph(&self) -> Result<DependencyGraph, RegistryError> {
         let names: Vec<&'static str> = self.core.keys().copied().collect();
         let mut idx: HashMap<&'static str, usize> = HashMap::new();
         for (i, &n) in names.iter().enumerate() {
@@ -330,40 +354,17 @@ impl RegistryBuilder {
             }
         }
 
-        // 3) Cycle detection using DFS with path tracking
-        if let Some(cycle_path) = Self::detect_cycle_with_path(&names, &adj) {
-            return Err(RegistryError::CycleDetected { path: cycle_path });
-        }
+        Ok((names, adj, idx))
+    }
 
-        // 4) Kahn's algorithm for topological sorting (we know there are no cycles)
-        let mut indeg = vec![0usize; names.len()];
-        for adj_list in &adj {
-            for &target in adj_list {
-                indeg[target] += 1;
-            }
-        }
-
-        let mut q = VecDeque::new();
-        for (i, &degree) in indeg.iter().enumerate() {
-            if degree == 0 {
-                q.push_back(i);
-            }
-        }
-
-        let mut order = Vec::with_capacity(names.len());
-        while let Some(u) = q.pop_front() {
-            order.push(u);
-            for &w in &adj[u] {
-                indeg[w] -= 1;
-                if indeg[w] == 0 {
-                    q.push_back(w);
-                }
-            }
-        }
-
-        // 4) Build final entries in topo order
+    /// Assemble final module entries in topological order.
+    fn assemble_entries(
+        &self,
+        order: &[usize],
+        names: &[&'static str],
+    ) -> Result<Vec<ModuleEntry>, RegistryError> {
         let mut entries = Vec::with_capacity(order.len());
-        for i in order {
+        for &i in order {
             let name = names[i];
             let deps = *self
                 .deps
@@ -397,6 +398,50 @@ impl RegistryBuilder {
             };
             entries.push(entry);
         }
+        Ok(entries)
+    }
+
+    /// Finalize & topo-sort; verify deps & capability binding to known cores.
+    pub fn build_topo_sorted(self) -> Result<ModuleRegistry, RegistryError> {
+        // 1) Validate all capabilities
+        self.validate_capabilities()?;
+
+        // 2) Build dependency graph
+        let (names, adj, _idx) = self.build_dependency_graph()?;
+
+        // 3) Cycle detection using DFS with path tracking
+        if let Some(cycle_path) = Self::detect_cycle_with_path(&names, &adj) {
+            return Err(RegistryError::CycleDetected { path: cycle_path });
+        }
+
+        // 4) Kahn's algorithm for topological sorting
+        let mut indeg = vec![0usize; names.len()];
+        for adj_list in &adj {
+            for &target in adj_list {
+                indeg[target] += 1;
+            }
+        }
+
+        let mut q = VecDeque::new();
+        for (i, &degree) in indeg.iter().enumerate() {
+            if degree == 0 {
+                q.push_back(i);
+            }
+        }
+
+        let mut order = Vec::with_capacity(names.len());
+        while let Some(u) = q.pop_front() {
+            order.push(u);
+            for &w in &adj[u] {
+                indeg[w] -= 1;
+                if indeg[w] == 0 {
+                    q.push_back(w);
+                }
+            }
+        }
+
+        // 5) Assemble final entries
+        let entries = self.assemble_entries(&order, &names)?;
 
         // Collect grpc_hub and grpc_services for the final registry
         let grpc_hub = self.grpc_hub.map(|name| name.to_string());
@@ -611,6 +656,127 @@ mod tests {
                 );
             }
             other => panic!("unexpected error: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn rest_capability_without_core_fails() {
+        let mut b = RegistryBuilder::default();
+        b.register_core_with_meta("core_a", &[], Arc::new(DummyCore));
+        // Register a rest capability for a module that doesn't exist
+        b.register_rest_with_meta("unknown_module", Arc::new(DummyRest));
+
+        let err = b.build_topo_sorted().unwrap_err();
+        match err {
+            RegistryError::UnknownModule(name) => {
+                assert_eq!(name, "unknown_module");
+            }
+            other => panic!("expected UnknownModule, got: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn db_capability_without_core_fails() {
+        let mut b = RegistryBuilder::default();
+        b.register_core_with_meta("core_a", &[], Arc::new(DummyCore));
+        // Register a db capability for a module that doesn't exist
+        b.register_db_with_meta("unknown_module", Arc::new(DummyDb));
+
+        let err = b.build_topo_sorted().unwrap_err();
+        match err {
+            RegistryError::UnknownModule(name) => {
+                assert_eq!(name, "unknown_module");
+            }
+            other => panic!("expected UnknownModule, got: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn stateful_capability_without_core_fails() {
+        let mut b = RegistryBuilder::default();
+        b.register_core_with_meta("core_a", &[], Arc::new(DummyCore));
+        // Register a stateful capability for a module that doesn't exist
+        b.register_stateful_with_meta("unknown_module", Arc::new(DummyStateful));
+
+        let err = b.build_topo_sorted().unwrap_err();
+        match err {
+            RegistryError::UnknownModule(name) => {
+                assert_eq!(name, "unknown_module");
+            }
+            other => panic!("expected UnknownModule, got: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn rest_host_capability_without_core_fails() {
+        let mut b = RegistryBuilder::default();
+        b.register_core_with_meta("core_a", &[], Arc::new(DummyCore));
+        // Set rest_host to a module that doesn't exist
+        b.register_rest_host_with_meta("unknown_host", Arc::new(DummyRestHost));
+
+        let err = b.build_topo_sorted().unwrap_err();
+        match err {
+            RegistryError::UnknownModule(name) => {
+                assert_eq!(name, "unknown_host");
+            }
+            other => panic!("expected UnknownModule, got: {other:?}"),
+        }
+    }
+
+    /* Test helper implementations */
+    #[derive(Default)]
+    struct DummyRest;
+    impl contracts::RestfulModule for DummyRest {
+        fn register_rest(
+            &self,
+            _ctx: &crate::context::ModuleCtx,
+            _router: axum::Router,
+            _openapi: &dyn crate::api::OpenApiRegistry,
+        ) -> anyhow::Result<axum::Router> {
+            Ok(axum::Router::new())
+        }
+    }
+
+    #[derive(Default)]
+    struct DummyDb;
+    #[async_trait::async_trait]
+    impl contracts::DbModule for DummyDb {
+        async fn migrate(&self, _db: &modkit_db::DbHandle) -> anyhow::Result<()> {
+            Ok(())
+        }
+    }
+
+    #[derive(Default)]
+    struct DummyStateful;
+    #[async_trait::async_trait]
+    impl contracts::StatefulModule for DummyStateful {
+        async fn start(&self, _cancel: tokio_util::sync::CancellationToken) -> anyhow::Result<()> {
+            Ok(())
+        }
+        async fn stop(&self, _cancel: tokio_util::sync::CancellationToken) -> anyhow::Result<()> {
+            Ok(())
+        }
+    }
+
+    #[derive(Default)]
+    struct DummyRestHost;
+    impl contracts::RestHostModule for DummyRestHost {
+        fn rest_prepare(
+            &self,
+            _ctx: &crate::context::ModuleCtx,
+            router: axum::Router,
+        ) -> anyhow::Result<axum::Router> {
+            Ok(router)
+        }
+        fn rest_finalize(
+            &self,
+            _ctx: &crate::context::ModuleCtx,
+            router: axum::Router,
+        ) -> anyhow::Result<axum::Router> {
+            Ok(router)
+        }
+        fn as_registry(&self) -> &dyn crate::contracts::OpenApiRegistry {
+            panic!("DummyRestHost::as_registry should not be called in tests")
         }
     }
 }

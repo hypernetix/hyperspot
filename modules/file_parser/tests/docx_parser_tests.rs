@@ -1,4 +1,4 @@
-#![allow(clippy::unwrap_used, clippy::expect_used)]
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::use_debug)]
 
 use file_parser::domain::parser::FileParserBackend;
 use file_parser::domain::parsers::docx_parser::DocxParser;

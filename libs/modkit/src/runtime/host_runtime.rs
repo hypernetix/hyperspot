@@ -12,7 +12,7 @@ use crate::client_hub::ClientHub;
 use crate::config::ConfigProvider;
 use crate::context::ModuleContextBuilder;
 use crate::contracts::RegisterGrpcServiceFn;
-use crate::registry::{ModuleRegistry, RegistryError};
+use crate::registry::{ModuleEntry, ModuleRegistry, RegistryError};
 use crate::runtime::{GrpcInstallerStore, ModuleManager, SystemContext};
 
 /// How the runtime should provide DBs to modules.
@@ -98,6 +98,47 @@ impl HostRuntime {
         Ok(())
     }
 
+    /// Helper: resolve context for a module with error mapping.
+    async fn module_context(
+        &self,
+        module_name: &'static str,
+    ) -> Result<crate::context::ModuleCtx, RegistryError> {
+        self.ctx_builder
+            .for_module(module_name)
+            .await
+            .map_err(|e| RegistryError::DbMigrate {
+                module: module_name,
+                source: e,
+            })
+    }
+
+    /// Helper: extract DB handle and module if both exist.
+    fn db_migration_target<'a>(
+        ctx: &'a crate::context::ModuleCtx,
+        db_module: Option<&'a Arc<dyn crate::contracts::DbModule>>,
+    ) -> Option<(Arc<modkit_db::DbHandle>, &'a dyn crate::contracts::DbModule)> {
+        match (ctx.db_optional(), db_module) {
+            (Some(db), Some(dbm)) => Some((db, dbm.as_ref())),
+            _ => None,
+        }
+    }
+
+    /// Helper: run migration for a single module.
+    async fn migrate_module(
+        module_name: &'static str,
+        db: &modkit_db::DbHandle,
+        db_module: &dyn crate::contracts::DbModule,
+    ) -> Result<(), RegistryError> {
+        tracing::debug!(module = module_name, "Running DB migration");
+        db_module
+            .migrate(db)
+            .await
+            .map_err(|source| RegistryError::DbMigrate {
+                module: module_name,
+                source,
+            })
+    }
+
     /// DB MIGRATION phase: run migrations for all modules with DB capability.
     ///
     /// Runs before init, with system modules processed first.
@@ -105,26 +146,19 @@ impl HostRuntime {
         tracing::info!("Phase: db (before init)");
 
         for entry in self.registry.modules_by_system_priority() {
-            let ctx = self.ctx_builder.for_module(entry.name).await.map_err(|e| {
-                RegistryError::DbMigrate {
-                    module: entry.name,
-                    source: e,
-                }
-            })?;
+            let ctx = self.module_context(entry.name).await?;
 
-            if let (Some(db), Some(dbm)) = (ctx.db_optional(), entry.db.as_ref()) {
-                tracing::debug!(module = entry.name, "Running DB migration");
-                dbm.migrate(&db)
-                    .await
-                    .map_err(|e| RegistryError::DbMigrate {
-                        module: entry.name,
-                        source: e,
-                    })?;
-            } else if entry.db.is_some() {
-                tracing::debug!(
-                    module = entry.name,
-                    "Module has DbModule trait but no DB handle (no config)"
-                );
+            match Self::db_migration_target(&ctx, entry.db.as_ref()) {
+                Some((db, dbm)) => {
+                    Self::migrate_module(entry.name, &db, dbm).await?;
+                }
+                None if entry.db.is_some() => {
+                    tracing::debug!(
+                        module = entry.name,
+                        "Module has DbModule trait but no DB handle (no config)"
+                    );
+                }
+                None => {}
             }
         }
 
@@ -342,6 +376,17 @@ impl HostRuntime {
         Ok(())
     }
 
+    /// Stop a single module, logging errors but continuing execution.
+    async fn stop_one_module(entry: &ModuleEntry, cancel: CancellationToken) {
+        if let Some(s) = &entry.stateful {
+            if let Err(err) = s.stop(cancel).await {
+                tracing::warn!(module = entry.name, error = %err, "Failed to stop module");
+            } else {
+                tracing::info!(module = entry.name, "Stopped module");
+            }
+        }
+    }
+
     /// STOP phase: stop all stateful modules in reverse order.
     ///
     /// Errors are logged but do not fail the shutdown process.
@@ -349,12 +394,7 @@ impl HostRuntime {
         tracing::info!("Phase: stop");
 
         for e in self.registry.modules().iter().rev() {
-            if let Some(s) = &e.stateful {
-                if let Err(err) = s.stop(self.cancel.clone()).await {
-                    tracing::warn!(module = e.name, error = %err, "Failed to stop module");
-                }
-                tracing::info!(module = e.name, "Stopped module");
-            }
+            Self::stop_one_module(e, self.cancel.clone()).await;
         }
 
         Ok(())
@@ -389,5 +429,196 @@ impl HostRuntime {
         self.run_stop_phase().await?;
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::context::ModuleCtx;
+    use crate::contracts::{Module, StatefulModule};
+    use crate::registry::RegistryBuilder;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
+
+    #[derive(Default)]
+    #[allow(dead_code)]
+    struct DummyCore;
+    #[async_trait::async_trait]
+    impl Module for DummyCore {
+        async fn init(&self, _ctx: &ModuleCtx) -> anyhow::Result<()> {
+            Ok(())
+        }
+        fn as_any(&self) -> &dyn std::any::Any {
+            self
+        }
+    }
+
+    struct StopOrderTracker {
+        my_order: usize,
+        stop_order: Arc<AtomicUsize>,
+    }
+
+    impl StopOrderTracker {
+        fn new(counter: Arc<AtomicUsize>, stop_order: Arc<AtomicUsize>) -> Self {
+            let my_order = counter.fetch_add(1, Ordering::SeqCst);
+            Self {
+                my_order,
+                stop_order,
+            }
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl Module for StopOrderTracker {
+        async fn init(&self, _ctx: &ModuleCtx) -> anyhow::Result<()> {
+            Ok(())
+        }
+        fn as_any(&self) -> &dyn std::any::Any {
+            self
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl StatefulModule for StopOrderTracker {
+        async fn start(&self, _cancel: CancellationToken) -> anyhow::Result<()> {
+            Ok(())
+        }
+        async fn stop(&self, _cancel: CancellationToken) -> anyhow::Result<()> {
+            let order = self.stop_order.fetch_add(1, Ordering::SeqCst);
+            tracing::info!(
+                my_order = self.my_order,
+                stop_order = order,
+                "Module stopped"
+            );
+            Ok(())
+        }
+    }
+
+    #[tokio::test]
+    async fn test_stop_phase_reverse_order() {
+        let counter = Arc::new(AtomicUsize::new(0));
+        let stop_order = Arc::new(AtomicUsize::new(0));
+
+        let module_a = Arc::new(StopOrderTracker::new(counter.clone(), stop_order.clone()));
+        let module_b = Arc::new(StopOrderTracker::new(counter.clone(), stop_order.clone()));
+        let module_c = Arc::new(StopOrderTracker::new(counter.clone(), stop_order.clone()));
+
+        let mut builder = RegistryBuilder::default();
+        builder.register_core_with_meta("a", &[], module_a.clone() as Arc<dyn Module>);
+        builder.register_core_with_meta("b", &["a"], module_b.clone() as Arc<dyn Module>);
+        builder.register_core_with_meta("c", &["b"], module_c.clone() as Arc<dyn Module>);
+
+        builder.register_stateful_with_meta("a", module_a.clone() as Arc<dyn StatefulModule>);
+        builder.register_stateful_with_meta("b", module_b.clone() as Arc<dyn StatefulModule>);
+        builder.register_stateful_with_meta("c", module_c.clone() as Arc<dyn StatefulModule>);
+
+        let registry = builder.build_topo_sorted().unwrap();
+
+        // Verify module order is a -> b -> c
+        let module_names: Vec<_> = registry.modules().iter().map(|m| m.name).collect();
+        assert_eq!(module_names, vec!["a", "b", "c"]);
+
+        let client_hub = Arc::new(ClientHub::new());
+        let cancel = CancellationToken::new();
+        let config_provider: Arc<dyn ConfigProvider> = Arc::new(EmptyConfigProvider);
+
+        let runtime = HostRuntime::new(
+            registry,
+            config_provider,
+            DbOptions::None,
+            client_hub,
+            cancel.clone(),
+        );
+
+        // Run stop phase
+        runtime.run_stop_phase().await.unwrap();
+
+        // Verify modules stopped in reverse order: c (stop_order=0), b (stop_order=1), a (stop_order=2)
+        // Module order is: a=0, b=1, c=2
+        // Stop order should be: c=0, b=1, a=2
+        assert_eq!(stop_order.load(Ordering::SeqCst), 3);
+    }
+
+    #[tokio::test]
+    async fn test_stop_phase_continues_on_error() {
+        struct FailingModule {
+            should_fail: bool,
+            stopped: Arc<AtomicUsize>,
+        }
+
+        #[async_trait::async_trait]
+        impl Module for FailingModule {
+            async fn init(&self, _ctx: &ModuleCtx) -> anyhow::Result<()> {
+                Ok(())
+            }
+            fn as_any(&self) -> &dyn std::any::Any {
+                self
+            }
+        }
+
+        #[async_trait::async_trait]
+        impl StatefulModule for FailingModule {
+            async fn start(&self, _cancel: CancellationToken) -> anyhow::Result<()> {
+                Ok(())
+            }
+            async fn stop(&self, _cancel: CancellationToken) -> anyhow::Result<()> {
+                self.stopped.fetch_add(1, Ordering::SeqCst);
+                if self.should_fail {
+                    anyhow::bail!("Intentional failure")
+                }
+                Ok(())
+            }
+        }
+
+        let stopped = Arc::new(AtomicUsize::new(0));
+        let module_a = Arc::new(FailingModule {
+            should_fail: false,
+            stopped: stopped.clone(),
+        });
+        let module_b = Arc::new(FailingModule {
+            should_fail: true,
+            stopped: stopped.clone(),
+        });
+        let module_c = Arc::new(FailingModule {
+            should_fail: false,
+            stopped: stopped.clone(),
+        });
+
+        let mut builder = RegistryBuilder::default();
+        builder.register_core_with_meta("a", &[], module_a.clone() as Arc<dyn Module>);
+        builder.register_core_with_meta("b", &["a"], module_b.clone() as Arc<dyn Module>);
+        builder.register_core_with_meta("c", &["b"], module_c.clone() as Arc<dyn Module>);
+
+        builder.register_stateful_with_meta("a", module_a.clone() as Arc<dyn StatefulModule>);
+        builder.register_stateful_with_meta("b", module_b.clone() as Arc<dyn StatefulModule>);
+        builder.register_stateful_with_meta("c", module_c.clone() as Arc<dyn StatefulModule>);
+
+        let registry = builder.build_topo_sorted().unwrap();
+
+        let client_hub = Arc::new(ClientHub::new());
+        let cancel = CancellationToken::new();
+        let config_provider: Arc<dyn ConfigProvider> = Arc::new(EmptyConfigProvider);
+
+        let runtime = HostRuntime::new(
+            registry,
+            config_provider,
+            DbOptions::None,
+            client_hub,
+            cancel.clone(),
+        );
+
+        // Run stop phase - should not fail even though module_b fails
+        runtime.run_stop_phase().await.unwrap();
+
+        // All modules should have attempted to stop
+        assert_eq!(stopped.load(Ordering::SeqCst), 3);
+    }
+
+    struct EmptyConfigProvider;
+    impl ConfigProvider for EmptyConfigProvider {
+        fn get_module_config(&self, _module_name: &str) -> Option<&serde_json::Value> {
+            None
+        }
     }
 }

@@ -159,13 +159,11 @@ where
         query = query.with_cursor(cursor);
         // When cursor is present, order is empty (derived from cursor.s later)
         query = query.with_order(ODataOrderBy::empty());
-    } else {
+    } else if let Some(raw_orderby) = params.orderby.as_ref() {
         // Parse orderby only when cursor is absent
-        if let Some(raw_orderby) = params.orderby.as_ref() {
-            let order = parse_orderby(raw_orderby)
-                .map_err(|e| crate::api::odata::odata_error_to_problem(&e, "/", None))?;
-            query = query.with_order(order);
-        }
+        let order = parse_orderby(raw_orderby)
+            .map_err(|e| crate::api::odata::odata_error_to_problem(&e, "/", None))?;
+        query = query.with_order(order);
     }
 
     // Parse limit

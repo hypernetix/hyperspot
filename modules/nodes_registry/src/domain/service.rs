@@ -21,7 +21,7 @@ pub struct Service {
 impl Service {
     pub fn new() -> Self {
         let node_info_collector = Arc::new(NodeInfoCollector::new());
-        let current_node = node_info_collector.create_current_node();
+        let current_node = NodeInfoCollector::create_current_node();
         let storage = Arc::new(NodeStorage::new());
 
         // Check if hardware detection failed (hybrid UUID with zeros on left)
