@@ -131,6 +131,7 @@ mod imp {
 pub use imp::{inject_current_span, set_parent_from_headers};
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use tracing::info_span;

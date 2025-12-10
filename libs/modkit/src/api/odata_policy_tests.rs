@@ -1,6 +1,7 @@
 //! Tests for cursor+orderby policy enforcement
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::super::odata::*;
     use axum::http::{request::Parts, Uri};

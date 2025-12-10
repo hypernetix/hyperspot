@@ -370,6 +370,7 @@ pub async fn otel_connectivity_probe(_cfg: &serde_json::Value) -> anyhow::Result
 // ===== tests ==================================================================
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use modkit_bootstrap::config::{Exporter, Sampler, TracingConfig};

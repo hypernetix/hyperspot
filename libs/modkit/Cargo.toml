@@ -14,6 +14,7 @@ name = "modkit"
 [features]
 # Enable the runner and the runtime integration by default.
 default = ["otel"]
+coverage_nightly = []
 
 # OpenTelemetry support for distributed tracing
 otel = ["opentelemetry", "opentelemetry_sdk", "tracing-opentelemetry", "tracing-subscriber", "opentelemetry-otlp", "tonic"]

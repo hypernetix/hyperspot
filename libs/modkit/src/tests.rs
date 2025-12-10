@@ -1,4 +1,5 @@
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod module_tests {
     use crate::registry::ModuleRegistry;
 

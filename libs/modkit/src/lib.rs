@@ -1,3 +1,5 @@
+#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
+
 //! # ModKit - Declarative Module System
 //!
 //! A unified crate for building modular applications with declarative module definitions.
@@ -133,4 +135,5 @@ pub use runtime::{
 };
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests;

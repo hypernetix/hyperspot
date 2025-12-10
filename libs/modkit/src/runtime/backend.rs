@@ -59,6 +59,7 @@ impl std::fmt::Debug for InstanceHandle {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use std::path::PathBuf;
