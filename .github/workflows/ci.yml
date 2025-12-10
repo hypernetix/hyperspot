@@ -11,6 +11,8 @@ on:
     paths-ignore:
       - '**/*.md'
       - 'docs/**'
+  workflow_dispatch:
+
 
 # Cancel previous runs for the same ref to save CI minutes.
 concurrency:
@@ -199,7 +201,8 @@ jobs:
         run: cargo deny check
 
   coverage:
-    if: false
+    # if: github.event_name == 'workflow_dispatch'
+    if: true
     name: Code Coverage (cargo-llvm-cov)
     runs-on: ubuntu-latest
     steps:
@@ -212,53 +215,27 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install Rust toolchain (with llvm-tools)
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@nightly
         with:
           components: llvm-tools-preview
-
-      - name: Cache Cargo/target
-        uses: Swatinem/rust-cache@v2
-
-      - name: Install sccache
-        uses: mozilla-actions/sccache-action@v0.0.5
-
-      - name: Prepare sccache dir
-        shell: bash
-        run: |
-          echo "SCCACHE_DIR=$RUNNER_TEMP/sccache" >> "$GITHUB_ENV"
-          mkdir -p "$RUNNER_TEMP/sccache"
-
-      - name: Cache sccache artifacts
-        if: runner.os != 'macOS'
-        uses: actions/cache@v4
-        with:
-          path: ${{ runner.temp }}/sccache
-          key: sccache-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
-          restore-keys: |
-            sccache-${{ runner.os }}-
-
-      - name: Probe sccache & set RUSTC_WRAPPER
-        shell: bash
-        run: |
-          if sccache --start-server >/dev/null 2>&1; then
-            echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
-            echo "SCCACHE_OK=1" >> "$GITHUB_ENV"
-          else
-            echo "sccache failed, falling back to plain rustc"
-            echo "RUSTC_WRAPPER=" >> "$GITHUB_ENV"
-            echo "SCCACHE_OK=0" >> "$GITHUB_ENV"
-          fi
 
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@v2
         with:
           tool: cargo-llvm-cov
 
+      - name: Inspect free disk space before coverage
+        run: df -h
+
       # Generate lcov.info for upload. Customize flags/features as needed.
       - name: Coverage (lcov)
+        env:
+          RUSTFLAGS: "-C debuginfo=0"
+          CARGO_LLVM_COV_TARGET_DIR: llvm-cov-target
+          CARGO_LLVM_COV_BUILD_DIR: llvm-cov-build
         run: |
           cargo llvm-cov clean --workspace
-          cargo llvm-cov --workspace --all-features --lcov --output-path lcov.info
+          cargo +nightly llvm-cov --workspace --lcov --output-path lcov.info
 
       # Upload to Codecov; do not fail CI if Codecov is down/misconfigured.
       - name: Upload to Codecov
