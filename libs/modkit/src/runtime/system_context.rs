@@ -1,6 +1,7 @@
 //! System Context - runtime internals exposed to system modules
 
 use std::sync::Arc;
+use uuid::Uuid;
 
 use crate::runtime::{GrpcInstallerStore, ModuleManager};
 
@@ -11,6 +12,9 @@ use crate::runtime::{GrpcInstallerStore, ModuleManager};
 ///
 /// Normal user modules do not see SystemContext - they only get ModuleCtx during init.
 pub struct SystemContext {
+    /// Process-level instance ID (shared by all modules in this process)
+    instance_id: Uuid,
+
     /// Module instance registry and manager
     pub module_manager: Arc<ModuleManager>,
 
@@ -21,12 +25,23 @@ pub struct SystemContext {
 impl SystemContext {
     /// Create a new system context from runtime components
     pub fn new(
+        instance_id: Uuid,
         module_manager: Arc<ModuleManager>,
         grpc_installers: Arc<GrpcInstallerStore>,
     ) -> Self {
         Self {
+            instance_id,
             module_manager,
             grpc_installers,
         }
+    }
+
+    /// Returns the process-level instance ID.
+    ///
+    /// This is a unique identifier for this process instance, shared by all modules
+    /// in the same process. It is generated once at bootstrap.
+    #[inline]
+    pub fn instance_id(&self) -> Uuid {
+        self.instance_id
     }
 }

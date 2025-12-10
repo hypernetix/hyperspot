@@ -1,6 +1,7 @@
 use serde::de::DeserializeOwned;
 use std::sync::Arc;
 use tokio_util::sync::CancellationToken;
+use uuid::Uuid;
 
 // Import configuration types from the config module
 use crate::config::{module_config_or_default, ConfigError, ConfigProvider};
@@ -10,6 +11,7 @@ use crate::config::{module_config_or_default, ConfigError, ConfigProvider};
 #[derive(Clone)]
 pub struct ModuleCtx {
     module_name: Arc<str>,
+    instance_id: Uuid,
     config_provider: Arc<dyn ConfigProvider>,
     client_hub: Arc<crate::client_hub::ClientHub>,
     cancellation_token: CancellationToken,
@@ -21,6 +23,7 @@ pub struct ModuleCtx {
 /// This builder internally uses DbManager to resolve per-module DbHandle instances
 /// at build time, ensuring ModuleCtx contains only the final, ready-to-use handle.
 pub struct ModuleContextBuilder {
+    instance_id: Uuid,
     config_provider: Arc<dyn ConfigProvider>,
     client_hub: Arc<crate::client_hub::ClientHub>,
     root_token: CancellationToken,
@@ -29,17 +32,24 @@ pub struct ModuleContextBuilder {
 
 impl ModuleContextBuilder {
     pub fn new(
+        instance_id: Uuid,
         config_provider: Arc<dyn ConfigProvider>,
         client_hub: Arc<crate::client_hub::ClientHub>,
         root_token: CancellationToken,
         db_manager: Option<Arc<modkit_db::DbManager>>,
     ) -> Self {
         Self {
+            instance_id,
             config_provider,
             client_hub,
             root_token,
             db_manager,
         }
+    }
+
+    /// Returns the process-level instance ID.
+    pub fn instance_id(&self) -> Uuid {
+        self.instance_id
     }
 
     /// Build a module-scoped context, resolving the DbHandle for the given module.
@@ -52,6 +62,7 @@ impl ModuleContextBuilder {
 
         Ok(ModuleCtx::new(
             Arc::<str>::from(module_name),
+            self.instance_id,
             self.config_provider.clone(),
             self.client_hub.clone(),
             self.root_token.child_token(),
@@ -64,6 +75,7 @@ impl ModuleCtx {
     /// Create a new module-scoped context with all required fields.
     pub fn new(
         module_name: impl Into<Arc<str>>,
+        instance_id: Uuid,
         config_provider: Arc<dyn ConfigProvider>,
         client_hub: Arc<crate::client_hub::ClientHub>,
         cancellation_token: CancellationToken,
@@ -71,6 +83,7 @@ impl ModuleCtx {
     ) -> Self {
         Self {
             module_name: module_name.into(),
+            instance_id,
             config_provider,
             client_hub,
             cancellation_token,
@@ -85,14 +98,24 @@ impl ModuleCtx {
         &self.module_name
     }
 
+    /// Returns the process-level instance ID.
+    ///
+    /// This is a unique identifier for this process instance, shared by all modules
+    /// in the same process. It is generated once at bootstrap.
+    #[inline]
+    pub fn instance_id(&self) -> Uuid {
+        self.instance_id
+    }
+
     #[inline]
     pub fn config_provider(&self) -> &dyn ConfigProvider {
         &*self.config_provider
     }
 
+    /// Get the ClientHub for dependency resolution.
     #[inline]
-    pub fn client_hub(&self) -> &crate::client_hub::ClientHub {
-        &self.client_hub
+    pub fn client_hub(&self) -> Arc<crate::client_hub::ClientHub> {
+        self.client_hub.clone()
     }
 
     #[inline]
@@ -164,6 +187,7 @@ impl ModuleCtx {
     pub fn with_db(&self, db: Arc<modkit_db::DbHandle>) -> ModuleCtx {
         ModuleCtx {
             module_name: self.module_name.clone(),
+            instance_id: self.instance_id,
             config_provider: self.config_provider.clone(),
             client_hub: self.client_hub.clone(),
             cancellation_token: self.cancellation_token.clone(),
@@ -176,6 +200,7 @@ impl ModuleCtx {
     pub fn without_db(&self) -> ModuleCtx {
         ModuleCtx {
             module_name: self.module_name.clone(),
+            instance_id: self.instance_id,
             config_provider: self.config_provider.clone(),
             client_hub: self.client_hub.clone(),
             cancellation_token: self.cancellation_token.clone(),
@@ -239,6 +264,7 @@ mod tests {
         let provider = Arc::new(MockConfigProvider::new());
         let ctx = ModuleCtx::new(
             "test_module",
+            Uuid::new_v4(),
             provider,
             Arc::new(crate::client_hub::ClientHub::default()),
             CancellationToken::new(),
@@ -259,6 +285,7 @@ mod tests {
         let provider = Arc::new(MockConfigProvider::new());
         let ctx = ModuleCtx::new(
             "nonexistent_module",
+            Uuid::new_v4(),
             provider,
             Arc::new(crate::client_hub::ClientHub::default()),
             CancellationToken::new(),
@@ -270,5 +297,21 @@ mod tests {
 
         let config = result.unwrap();
         assert_eq!(config, TestConfig::default());
+    }
+
+    #[test]
+    fn test_module_ctx_instance_id() {
+        let provider = Arc::new(MockConfigProvider::new());
+        let instance_id = Uuid::new_v4();
+        let ctx = ModuleCtx::new(
+            "test_module",
+            instance_id,
+            provider,
+            Arc::new(crate::client_hub::ClientHub::default()),
+            CancellationToken::new(),
+            None,
+        );
+
+        assert_eq!(ctx.instance_id(), instance_id);
     }
 }

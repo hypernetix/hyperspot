@@ -5,6 +5,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use tokio_util::sync::CancellationToken;
+use uuid::Uuid;
 
 use modkit::{
     config::ConfigProvider,
@@ -24,6 +25,7 @@ impl ConfigProvider for EmptyConfigProvider {
 fn test_module_ctx(cancel: tokio_util::sync::CancellationToken) -> ModuleCtx {
     ModuleCtx::new(
         "test",
+        Uuid::new_v4(),
         Arc::new(EmptyConfigProvider),
         Arc::new(modkit::client_hub::ClientHub::default()),
         cancel,

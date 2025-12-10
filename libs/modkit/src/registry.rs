@@ -11,16 +11,16 @@ use crate::contracts;
 type RestHostEntry = (&'static str, Arc<dyn contracts::RestHostModule>);
 
 pub struct ModuleEntry {
-    pub name: &'static str,
-    pub deps: &'static [&'static str],
-    pub core: Arc<dyn contracts::Module>,
-    pub rest: Option<Arc<dyn contracts::RestfulModule>>,
-    pub rest_host: Option<Arc<dyn contracts::RestHostModule>>,
-    pub db: Option<Arc<dyn contracts::DbModule>>,
-    pub stateful: Option<Arc<dyn contracts::StatefulModule>>,
-    pub is_system: bool,
-    pub is_grpc_hub: bool,
-    pub grpc_service: Option<Arc<dyn contracts::GrpcServiceModule>>,
+    pub(crate) name: &'static str,
+    pub(crate) deps: &'static [&'static str],
+    pub(crate) core: Arc<dyn contracts::Module>,
+    pub(crate) rest: Option<Arc<dyn contracts::RestfulModule>>,
+    pub(crate) rest_host: Option<Arc<dyn contracts::RestHostModule>>,
+    pub(crate) db: Option<Arc<dyn contracts::DbModule>>,
+    pub(crate) stateful: Option<Arc<dyn contracts::StatefulModule>>,
+    pub(crate) is_system: bool,
+    pub(crate) grpc_hub: Option<Arc<dyn contracts::GrpcHubModule>>,
+    pub(crate) grpc_service: Option<Arc<dyn contracts::GrpcServiceModule>>,
 }
 
 impl std::fmt::Debug for ModuleEntry {
@@ -33,7 +33,7 @@ impl std::fmt::Debug for ModuleEntry {
             .field("has_db", &self.db.is_some())
             .field("has_stateful", &self.stateful.is_some())
             .field("is_system", &self.is_system)
-            .field("is_grpc_hub", &self.is_grpc_hub)
+            .field("is_grpc_hub", &self.grpc_hub.is_some())
             .field("has_grpc_service", &self.grpc_service.is_some())
             .finish()
     }
@@ -105,6 +105,9 @@ impl ModuleRegistry {
     }
 }
 
+/// Type alias for gRPC hub module configuration.
+type GrpcHubEntry = (&'static str, Arc<dyn contracts::GrpcHubModule>);
+
 /// Internal builder that macro registrators will feed.
 /// Keys are module **names**; uniqueness enforced at build time.
 #[derive(Default)]
@@ -116,7 +119,7 @@ pub struct RegistryBuilder {
     db: HashMap<&'static str, Arc<dyn contracts::DbModule>>,
     stateful: HashMap<&'static str, Arc<dyn contracts::StatefulModule>>,
     system_modules: std::collections::HashSet<&'static str>,
-    grpc_hub: Option<&'static str>,
+    grpc_hub: Option<GrpcHubEntry>,
     grpc_services: HashMap<&'static str, Arc<dyn contracts::GrpcServiceModule>>,
     errors: Vec<String>,
 }
@@ -183,15 +186,19 @@ impl RegistryBuilder {
         self.system_modules.insert(name);
     }
 
-    pub fn register_grpc_hub_with_meta(&mut self, name: &'static str) {
-        if let Some(existing) = &self.grpc_hub {
+    pub fn register_grpc_hub_with_meta(
+        &mut self,
+        name: &'static str,
+        m: Arc<dyn contracts::GrpcHubModule>,
+    ) {
+        if let Some((existing, _)) = &self.grpc_hub {
             self.errors.push(format!(
                 "Multiple gRPC hub modules detected: '{}' and '{}'. Only one gRPC hub is allowed.",
                 existing, name
             ));
             return;
         }
-        self.grpc_hub = Some(name);
+        self.grpc_hub = Some((name, m));
     }
 
     pub fn register_grpc_service_with_meta(
@@ -314,9 +321,9 @@ impl RegistryBuilder {
         }
 
         // Validate grpc_hub
-        if let Some(n) = &self.grpc_hub {
-            if !self.core.contains_key(n) {
-                return Err(RegistryError::UnknownModule((*n).to_string()));
+        if let Some((name, _)) = &self.grpc_hub {
+            if !self.core.contains_key(name) {
+                return Err(RegistryError::UnknownModule((*name).to_string()));
             }
         }
 
@@ -390,10 +397,10 @@ impl RegistryBuilder {
                 db: self.db.get(name).cloned(),
                 stateful: self.stateful.get(name).cloned(),
                 is_system: self.system_modules.contains(name),
-                is_grpc_hub: self
+                grpc_hub: self
                     .grpc_hub
-                    .map(|hub_name| hub_name == name)
-                    .unwrap_or(false),
+                    .as_ref()
+                    .and_then(|(hub_name, module)| (*hub_name == name).then(|| module.clone())),
                 grpc_service: self.grpc_services.get(name).cloned(),
             };
             entries.push(entry);
@@ -444,7 +451,7 @@ impl RegistryBuilder {
         let entries = self.assemble_entries(&order, &names)?;
 
         // Collect grpc_hub and grpc_services for the final registry
-        let grpc_hub = self.grpc_hub.map(|name| name.to_string());
+        let grpc_hub = self.grpc_hub.as_ref().map(|(name, _)| name.to_string());
 
         let grpc_services: Vec<(String, Arc<dyn contracts::GrpcServiceModule>)> = self
             .grpc_services
@@ -526,6 +533,14 @@ pub enum RegistryError {
     GrpcRequiresHub,
     #[error("multiple 'grpc_hub' modules detected; exactly one is allowed")]
     MultipleGrpcHubs,
+
+    // OoP spawn errors
+    #[error("OoP spawn failed for module '{module}'")]
+    OopSpawn {
+        module: String,
+        #[source]
+        source: anyhow::Error,
+    },
 
     // Build/topo-sort errors
     #[error("unknown module '{0}'")]

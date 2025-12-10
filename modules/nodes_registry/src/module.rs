@@ -47,7 +47,9 @@ impl Module for NodesRegistry {
         // Expose the client to the ClientHub
         let api: Arc<dyn NodesRegistryApi> =
             Arc::new(NodesRegistryLocalClient::new(Arc::new(service)));
-        expose_nodes_registry_client(ctx, &api)?;
+
+        // Register in ClientHub directly
+        ctx.client_hub().register::<dyn NodesRegistryApi>(api);
 
         tracing::info!("Nodes registry module initialized");
         Ok(())

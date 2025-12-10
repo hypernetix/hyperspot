@@ -44,6 +44,7 @@ rust-embed = { workspace = true }
 
 [dev-dependencies]
 futures = { workspace = true }
+uuid = { workspace = true }
 
 [features]
 grpc = []

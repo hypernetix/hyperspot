@@ -1,4 +1,5 @@
 pub mod client;
+pub mod rpc_retry;
 
 #[cfg(windows)]
 pub mod windows_named_pipe;

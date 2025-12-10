@@ -23,7 +23,7 @@ use opentelemetry_sdk::{
 use tonic::metadata::{MetadataKey, MetadataMap, MetadataValue};
 
 #[cfg(feature = "otel")]
-use modkit_bootstrap::config::TracingConfig;
+use super::config::TracingConfig;
 
 // ===== init_tracing (feature = "otel") ========================================
 
@@ -289,9 +289,7 @@ pub fn shutdown_tracing() {
 /// Build a tiny, separate OTLP pipeline and export a single span to verify connectivity.
 /// This does *not* depend on tracing_subscriber; it uses SDK directly.
 #[cfg(feature = "otel")]
-pub async fn otel_connectivity_probe(
-    cfg: &modkit_bootstrap::config::TracingConfig,
-) -> anyhow::Result<()> {
+pub async fn otel_connectivity_probe(cfg: &super::config::TracingConfig) -> anyhow::Result<()> {
     use opentelemetry::trace::{Span, Tracer as _};
 
     let service_name = cfg
@@ -372,7 +370,7 @@ pub async fn otel_connectivity_probe(_cfg: &serde_json::Value) -> anyhow::Result
 #[cfg(test)]
 mod tests {
     use super::*;
-    use modkit_bootstrap::config::{Exporter, Sampler, TracingConfig};
+    use crate::telemetry::config::{Exporter, Sampler, TracingConfig};
     use std::collections::HashMap;
 
     #[test]

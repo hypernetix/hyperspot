@@ -1,0 +1,26 @@
+server:
+  home_dir: "~/.hyperspot"
+
+# OoP modules receive this config via --config CLI arg or MODULE_CONFIG_PATH env var from master host.
+# Directory endpoint is read from the shared config file.
+
+modules:
+  grpc_hub:
+    config:
+      # Ephemeral TCP port for OoP module; actual bound port is registered in Directory by grpc_hub.
+      listen_addr: "127.0.0.1:0"
+
+  calculator:
+    # Note: In OoP config, runtime.execution is not needed - it's configured in master config.
+    config:
+      some_setting: "value"
+
+logging:
+  default:
+    console_level: debug
+    file_level: info
+    file: "logs/calculator-oop.log"
+    max_age_days: 28
+    max_backups: 3
+    max_size_mb: 100
+

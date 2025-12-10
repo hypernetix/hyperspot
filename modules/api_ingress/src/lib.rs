@@ -40,6 +40,7 @@ use router_cache::RouterCache;
 #[modkit::module(
 	name = "api_ingress",
 	capabilities = [rest_host, rest, stateful, system],
+    deps = ["grpc_hub"],
 	lifecycle(entry = "serve", stop_timeout = "30s", await_ready)
 )]
 pub struct ApiIngress {
@@ -419,46 +420,9 @@ impl modkit::Module for ApiIngress {
     }
 }
 
-// Test that the module is properly registered via inventory
 #[cfg(test)]
 mod tests {
     use super::*;
-    use modkit::ModuleRegistry;
-
-    #[test]
-    fn test_module_registration() {
-        // Ensure the module is discoverable via inventory
-        let registry = ModuleRegistry::discover_and_build().expect("Failed to build registry");
-        let module = registry.modules().iter().find(|m| m.name == "api_ingress");
-        assert!(
-            module.is_some(),
-            "api_ingress module should be registered via inventory"
-        );
-    }
-
-    #[test]
-    fn test_module_capabilities() {
-        let registry = ModuleRegistry::discover_and_build().expect("Failed to build registry");
-        let module = registry
-            .modules()
-            .iter()
-            .find(|m| m.name == "api_ingress")
-            .expect("api_ingress should be registered");
-
-        // Verify module properties
-        assert_eq!(module.name, "api_ingress");
-
-        // Downcast to verify the actual type behind the module
-        if let Some(_api_module) = module.core.as_any().downcast_ref::<ApiIngress>() {
-            // With lifecycle(...) on the type, stateful capability is provided via WithLifecycle
-            assert!(
-                module.stateful.is_some(),
-                "Module should have stateful capability"
-            );
-        } else {
-            panic!("Failed to downcast to ApiIngress - module not registered correctly");
-        }
-    }
 
     #[test]
     fn test_openapi_generation() {

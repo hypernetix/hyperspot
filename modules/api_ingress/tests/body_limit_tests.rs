@@ -14,6 +14,7 @@ use modkit::{
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use utoipa::ToSchema;
+use uuid::Uuid;
 
 struct TestConfigProvider {
     config: serde_json::Value,
@@ -52,6 +53,7 @@ fn create_test_module_ctx_with_body_limit(limit_bytes: usize) -> ModuleCtx {
 
     ModuleCtx::new(
         "api_ingress",
+        Uuid::new_v4(),
         Arc::new(TestConfigProvider { config }),
         Arc::new(modkit::ClientHub::new()),
         tokio_util::sync::CancellationToken::new(),
@@ -164,6 +166,7 @@ async fn test_default_body_limit() {
 
     let ctx = ModuleCtx::new(
         "api_ingress",
+        Uuid::new_v4(),
         Arc::new(TestConfigProvider { config }),
         Arc::new(modkit::ClientHub::new()),
         tokio_util::sync::CancellationToken::new(),

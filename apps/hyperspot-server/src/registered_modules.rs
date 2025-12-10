@@ -4,9 +4,13 @@
 #![allow(unused_imports)]
 
 use api_ingress as _;
-use directory_service as _;
 use file_parser as _;
 use grpc_hub as _;
+use module_orchestrator as _;
 use nodes_registry as _;
+
 #[cfg(feature = "users-info-example")]
 use users_info as _;
+
+#[cfg(feature = "oop-example")]
+use calculator_gateway as _;
