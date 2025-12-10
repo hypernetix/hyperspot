@@ -280,23 +280,12 @@ async fn test_full_capabilities() {
     FullFeaturedModule.stop(token).await.unwrap();
 }
 
-#[test]
-fn test_capability_trait_markers() {
-    fn assert_module<T: Module>(_: &T) {}
-    fn assert_db<T: DbModule>(_: &T) {}
-    fn assert_rest<T: RestfulModule>(_: &T) {}
-    fn assert_stateful<T: StatefulModule>(_: &T) {}
+// Compile-time assertions that modules implement the expected traits
+static_assertions::assert_impl_all!(BasicModule: Module);
+static_assertions::assert_impl_all!(DependentModule: Module);
+static_assertions::assert_impl_all!(CustomCtorModule: Module);
 
-    assert_module(&BasicModule);
-    assert_module(&DependentModule);
-    assert_module(&CustomCtorModule::default());
-
-    assert_db(&FullFeaturedModule);
-    assert_db(&DbOnlyModule);
-
-    assert_rest(&FullFeaturedModule);
-    assert_rest(&RestOnlyModule);
-
-    assert_stateful(&FullFeaturedModule);
-    assert_stateful(&StatefulOnlyModule);
-}
+static_assertions::assert_impl_all!(FullFeaturedModule: Module, DbModule, RestfulModule, StatefulModule);
+static_assertions::assert_impl_all!(DbOnlyModule: Module, DbModule);
+static_assertions::assert_impl_all!(RestOnlyModule: Module, RestfulModule);
+static_assertions::assert_impl_all!(StatefulOnlyModule: Module, StatefulModule);

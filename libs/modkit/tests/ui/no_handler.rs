@@ -19,6 +19,6 @@ fn main() {
     // This should fail to compile - missing handler
     let _ = OperationBuilder::<_, _, ()>::get("/test")
         .summary("Test endpoint")
-        .json_response(200, "Success")
+        .json_response(http::StatusCode::OK, "Success")
         .register(router, &registry);
 }

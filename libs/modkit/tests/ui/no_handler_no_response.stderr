@@ -1,4 +1,4 @@
-error[E0599]: no method named `register` found for struct `modkit::OperationBuilder<Missing, Missing, ()>` in the current scope
+error[E0599]: no method named `register` found for struct `modkit::OperationBuilder` in the current scope
   --> tests/ui/no_handler_no_response.rs:23:10
    |
 20 |       let _ = OperationBuilder::<_, _, ()>::get("/test")
@@ -6,9 +6,9 @@ error[E0599]: no method named `register` found for struct `modkit::OperationBuil
 21 | |         .summary("Test endpoint")
 22 | |         .description("A test endpoint")
 23 | |         .register(router, &registry);
-   | |         -^^^^^^^^ method not found in `OperationBuilder<Missing, Missing, ()>`
+   | |         -^^^^^^^^ method not found in `modkit::OperationBuilder`
    | |_________|
    |
    |
    = note: the method was found for
-           - `modkit::OperationBuilder<Present, Present, S>`
+           - `modkit::OperationBuilder<Present, Present, S, AuthSet>`

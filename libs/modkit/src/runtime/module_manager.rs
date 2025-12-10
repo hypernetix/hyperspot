@@ -80,7 +80,7 @@ pub struct ModuleInstance {
     pub control: Option<Endpoint>,
     pub grpc_services: HashMap<String, Endpoint>,
     pub version: Option<String>,
-    inner: Arc<parking_lot::RwLock<InstanceRuntimeState>>,
+    inner: parking_lot::RwLock<InstanceRuntimeState>,
 }
 
 impl Clone for ModuleInstance {
@@ -91,7 +91,7 @@ impl Clone for ModuleInstance {
             control: self.control.clone(),
             grpc_services: self.grpc_services.clone(),
             version: self.version.clone(),
-            inner: Arc::clone(&self.inner),
+            inner: parking_lot::RwLock::new(self.inner.read().clone()),
         }
     }
 }
@@ -104,10 +104,10 @@ impl ModuleInstance {
             control: None,
             grpc_services: HashMap::new(),
             version: None,
-            inner: Arc::new(parking_lot::RwLock::new(InstanceRuntimeState {
+            inner: parking_lot::RwLock::new(InstanceRuntimeState {
                 last_heartbeat: Instant::now(),
                 state: InstanceState::Registered,
-            })),
+            }),
         }
     }
 
@@ -137,8 +137,24 @@ impl ModuleInstance {
     }
 }
 
-/// Central registry that tracks all running module instances in the system.
-/// Provides discovery, health tracking, and round-robin load balancing.
+/// Central registry for all live module instances in the runtime.
+///
+/// # Main use cases
+///
+/// - **Instance registration**: modules register themselves (or are registered by
+///   the host) via [`register_instance`], optionally with control and gRPC
+///   endpoints.
+/// - **Discovery**: callers resolve available instances with
+///   [`instances_of`]/[`instances_of_static`] or pick a single target via
+///   [`pick_instance_round_robin`].
+/// - **Service routing**: gRPC services exposed by modules are discovered and
+///   balanced with [`pick_service_round_robin`].
+/// - **Health tracking**: instances periodically call [`update_heartbeat`] and
+///   can be marked ready or quarantined; [`evict_stale`] applies the
+///   heartbeat-based policy.
+///
+/// The manager is intended to be shared (`Arc<ModuleManager>`) inside a node
+/// or process and is internally concurrency-safe via `DashMap`.
 #[derive(Clone)]
 pub struct ModuleManager {
     inner: DashMap<ModuleName, Vec<Arc<ModuleInstance>>>,
@@ -388,7 +404,7 @@ mod tests {
     use std::time::Duration;
 
     #[test]
-    fn test_register_and_retrieve_instances() {
+    fn register_and_retrieve_instances() {
         let dir = ModuleManager::new();
         let instance = Arc::new(
             ModuleInstance::new("test_module", "instance1")
@@ -406,7 +422,7 @@ mod tests {
     }
 
     #[test]
-    fn test_register_multiple_instances() {
+    fn register_multiple_instances() {
         let dir = ModuleManager::new();
 
         let instance1 = Arc::new(ModuleInstance::new("test_module", "instance1"));
@@ -424,7 +440,7 @@ mod tests {
     }
 
     #[test]
-    fn test_update_existing_instance() {
+    fn update_existing_instance() {
         let dir = ModuleManager::new();
 
         let instance1 =
@@ -441,7 +457,7 @@ mod tests {
     }
 
     #[test]
-    fn test_mark_ready() {
+    fn mark_ready() {
         let dir = ModuleManager::new();
         let instance = Arc::new(ModuleInstance::new("test_module", "instance1"));
 
@@ -455,7 +471,7 @@ mod tests {
     }
 
     #[test]
-    fn test_update_heartbeat() {
+    fn update_heartbeat() {
         let dir = ModuleManager::new();
         let instance = Arc::new(ModuleInstance::new("test_module", "instance1"));
         let initial_heartbeat = instance.last_heartbeat();
@@ -474,7 +490,7 @@ mod tests {
     }
 
     #[test]
-    fn test_all_instances() {
+    fn all_instances() {
         let dir = ModuleManager::new();
 
         let instance1 = Arc::new(ModuleInstance::new("module_a", "instance1"));
@@ -494,7 +510,7 @@ mod tests {
     }
 
     #[test]
-    fn test_pick_instance_round_robin() {
+    fn pick_instance_round_robin() {
         let dir = ModuleManager::new();
 
         let instance1 = Arc::new(ModuleInstance::new("test_module", "instance1"));
@@ -525,14 +541,14 @@ mod tests {
     }
 
     #[test]
-    fn test_pick_instance_none_available() {
+    fn pick_instance_none_available() {
         let dir = ModuleManager::new();
         let picked = dir.pick_instance_round_robin("nonexistent_module");
         assert!(picked.is_none());
     }
 
     #[test]
-    fn test_endpoint_creation() {
+    fn endpoint_creation() {
         let tcp_ep = Endpoint::tcp("localhost", 8080);
         assert_eq!(tcp_ep.uri, "http://localhost:8080");
 
@@ -545,7 +561,7 @@ mod tests {
     }
 
     #[test]
-    fn test_endpoint_kind() {
+    fn endpoint_kind() {
         let tcp_ep = Endpoint::tcp("127.0.0.1", 8080);
         match tcp_ep.kind() {
             EndpointKind::Tcp(addr) => {
@@ -573,7 +589,7 @@ mod tests {
     }
 
     #[test]
-    fn test_module_instance_builder() {
+    fn module_instance_builder() {
         let instance = ModuleInstance::new("test_module", "instance1")
             .with_control(Endpoint::tcp("localhost", 8080))
             .with_version("1.2.3")
@@ -591,7 +607,7 @@ mod tests {
     }
 
     #[test]
-    fn test_quarantine_and_evict() {
+    fn quarantine_and_evict() {
         let ttl = Duration::from_millis(50);
         let grace = Duration::from_millis(50);
         let dir = ModuleManager::new().with_heartbeat_policy(ttl, grace);
@@ -616,14 +632,14 @@ mod tests {
     }
 
     #[test]
-    fn test_instances_of_empty() {
+    fn instances_of_empty() {
         let dir = ModuleManager::new();
         let instances = dir.instances_of("nonexistent");
         assert!(instances.is_empty());
     }
 
     #[test]
-    fn test_rr_prefers_healthy() {
+    fn rr_prefers_healthy() {
         let dir = ModuleManager::new();
 
         // Create two instances: one healthy, one quarantined
@@ -643,7 +659,7 @@ mod tests {
     }
 
     #[test]
-    fn test_pick_service_round_robin() {
+    fn pick_service_round_robin() {
         let dir = ModuleManager::new();
 
         // Register two instances providing the same service
@@ -682,5 +698,115 @@ mod tests {
         assert_ne!(inst1.instance_id, inst2.instance_id);
         // Endpoints should differ
         assert_ne!(ep1, ep2);
+    }
+
+    #[test]
+    fn instances_of_static_with_multiple_modules() {
+        let dir = ModuleManager::new();
+
+        let a1 = Arc::new(ModuleInstance::new("module_a", "a1"));
+        let a2 = Arc::new(ModuleInstance::new("module_a", "a2"));
+        let b1 = Arc::new(ModuleInstance::new("module_b", "b1"));
+
+        dir.register_instance(a1);
+        dir.register_instance(a2);
+        dir.register_instance(b1);
+
+        let a_instances = dir.instances_of_static("module_a");
+        let b_instances = dir.instances_of_static("module_b");
+
+        assert_eq!(a_instances.len(), 2);
+        assert_eq!(b_instances.len(), 1);
+
+        let a_ids: Vec<_> = a_instances.iter().map(|i| i.instance_id.as_str()).collect();
+        assert!(a_ids.contains(&"a1"));
+        assert!(a_ids.contains(&"a2"));
+        assert_eq!(b_instances[0].instance_id, "b1");
+    }
+
+    #[test]
+    fn deregister_one_of_multiple_instances() {
+        let dir = ModuleManager::new();
+
+        let i1 = Arc::new(ModuleInstance::new("test_module", "i1"));
+        let i2 = Arc::new(ModuleInstance::new("test_module", "i2"));
+
+        dir.register_instance(i1.clone());
+        dir.register_instance(i2.clone());
+
+        dir.deregister("test_module", "i1");
+
+        let instances = dir.instances_of("test_module");
+        assert_eq!(instances.len(), 1);
+        assert_eq!(instances[0].instance_id, "i2");
+    }
+
+    #[test]
+    fn deregister_last_instance_removes_module() {
+        let dir = ModuleManager::new();
+
+        let i1 = Arc::new(ModuleInstance::new("test_module", "i1"));
+        dir.register_instance(i1);
+
+        // Touch round-robin to ensure internal counters may be created
+        let _ = dir.pick_instance_round_robin("test_module");
+
+        dir.deregister("test_module", "i1");
+
+        // Module should no longer have instances, and RR should yield None
+        assert!(dir.instances_of("test_module").is_empty());
+        assert!(dir.pick_instance_round_robin("test_module").is_none());
+    }
+
+    #[test]
+    fn evict_stale_keeps_fresh_and_quarantines_old() {
+        let ttl = Duration::from_millis(50);
+        let grace = Duration::from_millis(50);
+        let dir = ModuleManager::new().with_heartbeat_policy(ttl, grace);
+
+        let now = Instant::now();
+
+        let fresh = ModuleInstance::new("test_module", "fresh");
+        let stale = ModuleInstance::new("test_module", "stale");
+        stale.inner.write().last_heartbeat = now - ttl - Duration::from_millis(10);
+
+        dir.register_instance(Arc::new(fresh));
+        dir.register_instance(Arc::new(stale));
+
+        dir.evict_stale(now);
+        let instances = dir.instances_of("test_module");
+        assert_eq!(instances.len(), 2);
+
+        let mut fresh_state = None;
+        let mut stale_state = None;
+        for inst in instances {
+            match inst.instance_id.as_str() {
+                "fresh" => fresh_state = Some(inst.state()),
+                "stale" => stale_state = Some(inst.state()),
+                _ => {}
+            }
+        }
+
+        assert!(matches!(stale_state, Some(InstanceState::Quarantined)));
+        assert!(matches!(
+            fresh_state,
+            Some(InstanceState::Registered | InstanceState::Healthy | InstanceState::Ready)
+        ));
+    }
+
+    #[test]
+    fn pick_service_round_robin_skips_quarantined_only_instances() {
+        let dir = ModuleManager::new();
+
+        let inst = Arc::new(
+            ModuleInstance::new("test_module", "instance1")
+                .with_grpc_service("test.Service", Endpoint::tcp("127.0.0.1", 8001)),
+        );
+
+        dir.register_instance(inst);
+        dir.mark_quarantined("test_module", "instance1");
+
+        let picked = dir.pick_service_round_robin("test.Service");
+        assert!(picked.is_none());
     }
 }

@@ -2,8 +2,16 @@
 //!
 //! Design goals:
 //! - Providers register an implementation once (local or remote).
-//! - Consumers fetch by *interface type* (trait object): `get::<dyn my::Api>()`.
-//! - Optional scopes (e.g., multi-tenant): `register_scoped / get_scoped`.
+//! - Consumers fetch by *interface type* (trait object) without knowing transport.
+//! - Optional scopes (e.g., multi-tenant): register and resolve per tenant, user, or environment.
+//!
+//! Typical flows:
+//! - During module initialization, a provider module exposes its client interface in the hub.
+//! - Consumer modules resolve those interfaces from their `ModuleCtx` and keep an `Arc` for reuse.
+//! - Scopes are used to keep separate client instances per tenant or deployment variant while
+//!   still addressing them by the same interface type.
+//! - In tests, you can clear the hub and register in-memory or mocked implementations under
+//!   the same interface types to drive end-to-end module interactions.
 //!
 //! Implementation details:
 //! - Key = (type name, scope). We use `type_name::<T>()`, which works for `T = dyn Trait`.
@@ -11,8 +19,8 @@
 //! - Sync hot path: `get()` is non-async; no hidden per-entry cells or lazy slots.
 //!
 //! Notes:
-//! - Re-registering overwrites the previous value atomically; existing Arcs held by consumers remain valid.
-//! - For testing, just register a mock under the same trait type.
+//! - Re-registering overwrites the previous value atomically; existing `Arc`s held by consumers remain valid.
+//! - Explicit removal and `clear` are intended mainly for tests and one-off reconfiguration flows.
 
 use parking_lot::RwLock;
 use std::{any::Any, collections::HashMap, fmt, sync::Arc};
@@ -229,5 +237,256 @@ mod tests {
             2
         );
         assert!(hub.get::<dyn TestApi>().is_err()); // global not set
+    }
+
+    #[tokio::test]
+    async fn re_registering_overwrites_previous_client() {
+        let hub = ClientHub::new();
+        hub.register::<dyn TestApi>(Arc::new(ImplA(10)));
+        hub.register::<dyn TestApi>(Arc::new(ImplA(20)));
+
+        let client = hub.get::<dyn TestApi>().unwrap();
+        assert_eq!(
+            client.id().await,
+            20,
+            "Second registration should overwrite the first"
+        );
+    }
+
+    #[tokio::test]
+    async fn existing_arcs_remain_valid_after_re_registration() {
+        let hub = ClientHub::new();
+        hub.register::<dyn TestApi>(Arc::new(ImplA(100)));
+
+        let client1 = hub.get::<dyn TestApi>().unwrap();
+
+        // Re-register with a different implementation
+        hub.register::<dyn TestApi>(Arc::new(ImplA(200)));
+
+        let client2 = hub.get::<dyn TestApi>().unwrap();
+
+        // First Arc should still work with original value
+        assert_eq!(
+            client1.id().await,
+            100,
+            "Original Arc should retain its value"
+        );
+        // New get should return new value
+        assert_eq!(
+            client2.id().await,
+            200,
+            "New registration should be retrievable"
+        );
+    }
+
+    #[test]
+    fn get_returns_not_found_for_unregistered_client() {
+        let hub = ClientHub::new();
+
+        let result = hub.get::<dyn TestApi>();
+
+        assert!(result.is_err(), "Should fail when client not registered");
+        match result {
+            Err(ClientHubError::NotFound { type_key, scope }) => {
+                assert!(
+                    format!("{:?}", type_key).contains("TestApi"),
+                    "Error should reference the trait type"
+                );
+                assert_eq!(
+                    format!("{:?}", scope),
+                    "global",
+                    "Error should reference global scope"
+                );
+            }
+            _ => panic!("Expected NotFound error"),
+        }
+    }
+
+    #[test]
+    fn get_scoped_returns_not_found_for_wrong_scope() {
+        let hub = ClientHub::new();
+        hub.register_scoped::<dyn TestApi>("tenant-1", Arc::new(ImplA(5)));
+
+        let result = hub.get_scoped::<dyn TestApi>("tenant-2");
+
+        assert!(result.is_err(), "Should fail for unregistered scope");
+        match result {
+            Err(ClientHubError::NotFound { scope, .. }) => {
+                assert_eq!(
+                    format!("{:?}", scope),
+                    "tenant-2",
+                    "Error should reference the requested scope"
+                );
+            }
+            _ => panic!("Expected NotFound error"),
+        }
+    }
+
+    #[tokio::test]
+    async fn remove_returns_client_and_makes_it_unavailable() {
+        let hub = ClientHub::new();
+        hub.register_scoped::<dyn TestApi>("temp-scope", Arc::new(ImplA(42)));
+
+        let removed = hub.remove::<dyn TestApi>("temp-scope");
+
+        assert!(removed.is_some(), "Remove should return the client");
+        assert_eq!(
+            removed.unwrap().id().await,
+            42,
+            "Removed client should be usable"
+        );
+
+        let get_result = hub.get_scoped::<dyn TestApi>("temp-scope");
+        assert!(
+            get_result.is_err(),
+            "Client should no longer be retrievable after removal"
+        );
+    }
+
+    #[test]
+    fn remove_returns_none_for_unregistered_client() {
+        let hub = ClientHub::new();
+
+        let removed = hub.remove::<dyn TestApi>("nonexistent");
+
+        assert!(
+            removed.is_none(),
+            "Remove should return None for unregistered client"
+        );
+    }
+
+    #[tokio::test]
+    async fn clear_removes_all_clients() {
+        let hub = ClientHub::new();
+        hub.register::<dyn TestApi>(Arc::new(ImplA(1)));
+        hub.register_scoped::<dyn TestApi>("tenant-1", Arc::new(ImplA(2)));
+        hub.register_scoped::<dyn TestApi>("tenant-2", Arc::new(ImplA(3)));
+
+        assert_eq!(hub.len(), 3, "Should have 3 registered clients");
+
+        hub.clear();
+
+        assert_eq!(hub.len(), 0, "All clients should be removed");
+        assert!(hub.is_empty(), "Hub should be empty");
+        assert!(
+            hub.get::<dyn TestApi>().is_err(),
+            "Global client should be unavailable"
+        );
+        assert!(
+            hub.get_scoped::<dyn TestApi>("tenant-1").is_err(),
+            "Scoped clients should be unavailable"
+        );
+    }
+
+    #[tokio::test]
+    async fn multiple_trait_types_coexist_independently() {
+        #[async_trait::async_trait]
+        trait AnotherApi: Send + Sync {
+            async fn name(&self) -> &str;
+        }
+
+        struct ImplB(&'static str);
+        #[async_trait::async_trait]
+        impl AnotherApi for ImplB {
+            async fn name(&self) -> &str {
+                self.0
+            }
+        }
+
+        let hub = ClientHub::new();
+        hub.register::<dyn TestApi>(Arc::new(ImplA(99)));
+        hub.register::<dyn AnotherApi>(Arc::new(ImplB("service-x")));
+
+        let api1 = hub.get::<dyn TestApi>().unwrap();
+        let api2 = hub.get::<dyn AnotherApi>().unwrap();
+
+        assert_eq!(api1.id().await, 99, "First trait should be retrievable");
+        assert_eq!(
+            api2.name().await,
+            "service-x",
+            "Second trait should be retrievable independently"
+        );
+    }
+
+    #[tokio::test]
+    async fn same_trait_type_in_global_and_scoped_are_independent() {
+        let hub = ClientHub::new();
+        hub.register::<dyn TestApi>(Arc::new(ImplA(10)));
+        hub.register_scoped::<dyn TestApi>("scope-a", Arc::new(ImplA(20)));
+
+        let global = hub.get::<dyn TestApi>().unwrap();
+        let scoped = hub.get_scoped::<dyn TestApi>("scope-a").unwrap();
+
+        assert_eq!(global.id().await, 10, "Global should have its own value");
+        assert_eq!(scoped.id().await, 20, "Scoped should have its own value");
+    }
+
+    #[test]
+    fn len_and_is_empty_reflect_registration_state() {
+        let hub = ClientHub::new();
+        assert_eq!(hub.len(), 0);
+        assert!(hub.is_empty());
+
+        hub.register::<dyn TestApi>(Arc::new(ImplA(1)));
+        assert_eq!(hub.len(), 1);
+        assert!(!hub.is_empty());
+
+        hub.register_scoped::<dyn TestApi>("tenant-1", Arc::new(ImplA(2)));
+        assert_eq!(hub.len(), 2);
+
+        hub.remove::<dyn TestApi>(GLOBAL_SCOPE);
+        assert_eq!(hub.len(), 1);
+
+        hub.clear();
+        assert_eq!(hub.len(), 0);
+        assert!(hub.is_empty());
+    }
+
+    #[tokio::test]
+    async fn hub_is_thread_safe_under_concurrent_access() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+
+        let hub = Arc::new(ClientHub::new());
+        let success_count = Arc::new(AtomicUsize::new(0));
+
+        // Register initial client
+        hub.register::<dyn TestApi>(Arc::new(ImplA(0)));
+
+        let mut handles = vec![];
+
+        // Spawn multiple tasks doing concurrent reads and writes
+        for i in 0..10 {
+            let hub_clone = hub.clone();
+            let success_clone = success_count.clone();
+            handles.push(tokio::spawn(async move {
+                // Register
+                hub_clone.register::<dyn TestApi>(Arc::new(ImplA(i)));
+
+                // Read
+                if let Ok(client) = hub_clone.get::<dyn TestApi>() {
+                    let _ = client.id().await;
+                    success_clone.fetch_add(1, Ordering::SeqCst);
+                }
+            }));
+        }
+
+        for handle in handles {
+            handle.await.unwrap();
+        }
+
+        // All operations should have succeeded without panics
+        assert_eq!(
+            success_count.load(Ordering::SeqCst),
+            10,
+            "All concurrent reads should succeed"
+        );
+
+        // Final state should be consistent
+        let final_client = hub.get::<dyn TestApi>().unwrap();
+        let final_id = final_client.id().await;
+        assert!(
+            final_id < 10,
+            "Final registered client should be one of the registered values"
+        );
     }
 }
