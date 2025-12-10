@@ -8,6 +8,7 @@
 // importing the modkit-db crate. The macro is tested in actual usage in the main codebase.
 
 #[test]
+#[cfg(not(coverage_nightly))]
 fn ui() {
     let t = trybuild::TestCases::new();
 
