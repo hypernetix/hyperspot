@@ -51,7 +51,7 @@ impl Default for AuthConfig {
             issuers: Vec::new(),
             audiences: Vec::new(),
             jwks: None,
-            plugins: HashMap::new(),
+            plugins: HashMap::default(),
         }
     }
 }
@@ -135,42 +135,43 @@ pub fn build_auth_dispatcher(config: &AuthConfig) -> Result<AuthDispatcher, Conf
         require_uuid_tenants: true,
     };
 
-    let mut registry = PluginRegistry::new();
-    for (name, plugin_config) in &config.plugins {
-        let plugin: Arc<dyn crate::plugin_traits::ClaimsPlugin> = match plugin_config {
-            PluginConfig::Keycloak {
-                tenant_claim,
-                client_roles,
-                role_prefix,
-            } => {
-                let plugin = KeycloakClaimsPlugin::new(
-                    tenant_claim.clone(),
+    let registry = config
+        .plugins
+        .iter()
+        .map(|(name, plugin_config)| {
+            let plugin: Arc<dyn crate::plugin_traits::ClaimsPlugin> = match plugin_config {
+                PluginConfig::Keycloak {
+                    tenant_claim,
+                    client_roles,
+                    role_prefix,
+                } => Arc::new(KeycloakClaimsPlugin::new(
+                    tenant_claim,
                     client_roles.clone(),
                     role_prefix.clone(),
-                );
-                Arc::new(plugin)
-            }
-            PluginConfig::Oidc {
-                tenant_claim,
-                roles_claim,
-            } => {
-                let plugin = GenericOidcPlugin::new(tenant_claim.clone(), roles_claim.clone());
-                Arc::new(plugin)
-            }
-        };
+                )),
+                PluginConfig::Oidc {
+                    tenant_claim,
+                    roles_claim,
+                } => Arc::new(GenericOidcPlugin::new(tenant_claim, roles_claim)),
+            };
 
-        registry.register(name.clone(), plugin);
-        tracing::debug!(
-            plugin_name = %name,
-            plugin_type = ?plugin_config,
-            "Registered claims plugin"
-        );
-    }
+            tracing::debug!(
+                plugin_name = %name,
+                plugin_type = ?plugin_config,
+                "Registered claims plugin"
+            );
+
+            (name, plugin)
+        })
+        .fold(PluginRegistry::default(), |mut registry, (name, plugin)| {
+            registry.register(name, plugin);
+            registry
+        });
 
     let dispatcher = AuthDispatcher::new(validation_config, config, &registry)?;
 
     let dispatcher = if let Some(jwks_config) = &config.jwks {
-        let provider = JwksKeyProvider::new(jwks_config.uri.clone())
+        let provider = JwksKeyProvider::new(&jwks_config.uri)
             .with_refresh_interval(Duration::from_secs(jwks_config.refresh_interval_seconds))
             .with_max_backoff(Duration::from_secs(jwks_config.max_backoff_seconds));
 

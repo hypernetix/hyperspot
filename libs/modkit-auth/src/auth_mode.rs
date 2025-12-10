@@ -24,13 +24,6 @@ pub struct PluginRegistry {
 }
 
 impl PluginRegistry {
-    /// Create a new empty registry
-    pub fn new() -> Self {
-        Self {
-            plugins: HashMap::new(),
-        }
-    }
-
     /// Register a plugin with a name
     pub fn register(&mut self, name: impl Into<String>, plugin: Arc<dyn ClaimsPlugin>) {
         self.plugins.insert(name.into(), plugin);
@@ -84,7 +77,7 @@ mod tests {
 
     #[test]
     fn test_registry_basic_operations() {
-        let mut registry = PluginRegistry::new();
+        let mut registry = PluginRegistry::default();
         assert!(registry.is_empty());
 
         registry.register("mock", Arc::new(MockPlugin));

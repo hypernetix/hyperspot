@@ -3,11 +3,11 @@
 use axum::{
     body::Body,
     http::{Request, StatusCode},
-    middleware::from_fn,
     response::IntoResponse,
     routing::get,
     Router,
 };
+use modkit_auth::axum_ext::auth_with_policy;
 use modkit_auth::{
     authorizer::RoleAuthorizer,
     axum_ext::Authz,
@@ -19,7 +19,7 @@ use modkit_auth::{
 };
 use std::collections::HashMap;
 use std::sync::Arc;
-use tower::ServiceExt; // for `call`, `oneshot`, and `ready`
+use tower::ServiceExt;
 
 /// Static policy that always requires auth
 #[derive(Clone)]
@@ -74,6 +74,25 @@ async fn optional_handler() -> impl IntoResponse {
     "OK"
 }
 
+fn create_app(
+    policy: Arc<dyn RoutePolicy>,
+    validator: Arc<dyn TokenValidator>,
+    scope_builder: Arc<dyn ScopeBuilder>,
+    authorizer: Arc<dyn PrimaryAuthorizer>,
+) -> Router {
+    Router::new()
+        .route("/protected", get(protected_handler))
+        .layer(axum::middleware::from_fn_with_state(
+            modkit_auth::axum_ext::AuthPolicyState::new(
+                validator,
+                scope_builder,
+                authorizer,
+                policy,
+            ),
+            auth_with_policy,
+        ))
+}
+
 #[tokio::test]
 async fn test_middleware_returns_401_for_missing_token() {
     let config = create_test_config();
@@ -84,27 +103,7 @@ async fn test_middleware_returns_401_for_missing_token() {
     let authorizer: Arc<dyn PrimaryAuthorizer> = Arc::new(RoleAuthorizer);
     let policy: Arc<dyn RoutePolicy> = Arc::new(AlwaysRequiredPolicy);
 
-    let app = Router::new()
-        .route("/protected", get(protected_handler))
-        .layer(from_fn(
-            move |req: axum::extract::Request, next: axum::middleware::Next| {
-                let validator = validator.clone();
-                let scope_builder = scope_builder.clone();
-                let authorizer = authorizer.clone();
-                let policy = policy.clone();
-                async move {
-                    modkit_auth::axum_ext::auth_with_policy(
-                        axum::extract::State(validator),
-                        axum::extract::State(scope_builder),
-                        axum::extract::State(authorizer),
-                        axum::extract::State(policy),
-                        req,
-                        next,
-                    )
-                    .await
-                }
-            },
-        ));
+    let app = create_app(policy, validator, scope_builder, authorizer);
 
     let response = app
         .oneshot(
@@ -129,27 +128,7 @@ async fn test_middleware_returns_401_for_invalid_token() {
     let authorizer: Arc<dyn PrimaryAuthorizer> = Arc::new(RoleAuthorizer);
     let policy: Arc<dyn RoutePolicy> = Arc::new(AlwaysRequiredPolicy);
 
-    let app = Router::new()
-        .route("/protected", get(protected_handler))
-        .layer(from_fn(
-            move |req: axum::extract::Request, next: axum::middleware::Next| {
-                let validator = validator.clone();
-                let scope_builder = scope_builder.clone();
-                let authorizer = authorizer.clone();
-                let policy = policy.clone();
-                async move {
-                    modkit_auth::axum_ext::auth_with_policy(
-                        axum::extract::State(validator),
-                        axum::extract::State(scope_builder),
-                        axum::extract::State(authorizer),
-                        axum::extract::State(policy),
-                        req,
-                        next,
-                    )
-                    .await
-                }
-            },
-        ));
+    let app = create_app(policy, validator, scope_builder, authorizer);
 
     let response = app
         .oneshot(
@@ -175,27 +154,7 @@ async fn test_middleware_allows_options_preflight() {
     let authorizer: Arc<dyn PrimaryAuthorizer> = Arc::new(RoleAuthorizer);
     let policy: Arc<dyn RoutePolicy> = Arc::new(AlwaysRequiredPolicy);
 
-    let app = Router::new()
-        .route("/protected", get(protected_handler))
-        .layer(from_fn(
-            move |req: axum::extract::Request, next: axum::middleware::Next| {
-                let validator = validator.clone();
-                let scope_builder = scope_builder.clone();
-                let authorizer = authorizer.clone();
-                let policy = policy.clone();
-                async move {
-                    modkit_auth::axum_ext::auth_with_policy(
-                        axum::extract::State(validator),
-                        axum::extract::State(scope_builder),
-                        axum::extract::State(authorizer),
-                        axum::extract::State(policy),
-                        req,
-                        next,
-                    )
-                    .await
-                }
-            },
-        ));
+    let app = create_app(policy, validator, scope_builder, authorizer);
 
     // OPTIONS request with CORS headers
     let response = app
@@ -229,24 +188,14 @@ async fn test_optional_auth_inserts_anonymous_context() {
 
     let app = Router::new()
         .route("/optional", get(optional_handler))
-        .layer(from_fn(
-            move |req: axum::extract::Request, next: axum::middleware::Next| {
-                let validator = validator.clone();
-                let scope_builder = scope_builder.clone();
-                let authorizer = authorizer.clone();
-                let policy = policy.clone();
-                async move {
-                    modkit_auth::axum_ext::auth_with_policy(
-                        axum::extract::State(validator),
-                        axum::extract::State(scope_builder),
-                        axum::extract::State(authorizer),
-                        axum::extract::State(policy),
-                        req,
-                        next,
-                    )
-                    .await
-                }
-            },
+        .layer(axum::middleware::from_fn_with_state(
+            modkit_auth::axum_ext::AuthPolicyState::new(
+                validator,
+                scope_builder,
+                authorizer,
+                policy,
+            ),
+            auth_with_policy,
         ));
 
     let response = app
