@@ -2,10 +2,9 @@
 //!
 //! This crate provides gRPC transport for the module orchestrator.
 //! It includes generated protobuf types and client/server implementations.
-
 #![forbid(unsafe_code)]
 #![deny(rust_2018_idioms)]
-
+#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 mod client;
 
 // Generated protobuf types for DirectoryService

@@ -7,6 +7,7 @@
 
 #[test]
 #[ignore] //TODO: Need to turn it on after fix issue with CR/LF
+#[cfg(not(coverage_nightly))]
 fn compile_fail_tests() {
     // On MinGW (windows-gnu), native deps like `ring` may fail to build in trybuild sandboxes.
     // Skip these compile-fail tests in that environment.

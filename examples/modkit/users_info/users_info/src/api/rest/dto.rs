@@ -105,6 +105,7 @@ impl From<&crate::domain::events::UserDomainEvent> for UserEvent {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use crate::domain::events::UserDomainEvent;

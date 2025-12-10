@@ -1,4 +1,5 @@
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use crate::odata::*;
     use modkit_odata::{ast::*, CursorV1, ODataOrderBy, OrderKey, SortDir};

@@ -1,3 +1,4 @@
+#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 use heck::ToSnakeCase;
 use proc_macro::TokenStream;
 use proc_macro2::Span;

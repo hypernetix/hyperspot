@@ -38,3 +38,6 @@ inventory = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true }
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage_nightly)'] }

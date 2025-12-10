@@ -49,6 +49,7 @@ impl PrimaryAuthorizer for RoleAuthorizer {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use uuid::Uuid;

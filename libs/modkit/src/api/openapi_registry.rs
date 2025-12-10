@@ -381,6 +381,7 @@ impl OpenApiRegistry for OpenApiRegistryImpl {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use crate::api::operation_builder::{OperationSpec, ParamLocation, ParamSpec, ResponseSpec};

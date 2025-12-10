@@ -376,6 +376,7 @@ impl TokenValidator for AuthDispatcher {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use crate::auth_mode::AuthModeConfig;

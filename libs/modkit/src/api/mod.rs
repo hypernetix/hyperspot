@@ -14,6 +14,7 @@ pub mod response;
 pub mod trace_layer;
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod odata_policy_tests;
 
 pub use error::ApiError;

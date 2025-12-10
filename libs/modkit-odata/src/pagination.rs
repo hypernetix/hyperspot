@@ -85,6 +85,7 @@ pub fn short_filter_hash(expr: Option<&ast::Expr>) -> Option<String> {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use crate::ast::{CompareOperator, Expr, Value};

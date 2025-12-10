@@ -464,6 +464,7 @@ fn validate_value_type<F: FilterField>(field: F, value: &odata_ast::Value) -> Fi
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 

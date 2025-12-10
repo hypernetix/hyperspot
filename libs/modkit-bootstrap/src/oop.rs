@@ -599,5 +599,6 @@ pub async fn run_oop_with_options(opts: OopRunOptions) -> Result<()> {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 #[path = "oop_tests.rs"]
 mod tests;

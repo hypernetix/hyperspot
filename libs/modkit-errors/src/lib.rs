@@ -4,6 +4,7 @@
 //! on HTTP frameworks. It includes:
 //! - RFC 9457 Problem Details (`Problem`)
 //! - Error catalog support (`ErrDef`)
+#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 
 pub mod catalog;
 pub mod problem;
