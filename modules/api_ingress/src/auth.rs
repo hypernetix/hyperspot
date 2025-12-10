@@ -286,6 +286,7 @@ impl TokenValidator for NoopValidator {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use axum::http::Method;

@@ -189,6 +189,7 @@ pub fn build_auth_dispatcher(config: &AuthConfig) -> Result<AuthDispatcher, Conf
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 

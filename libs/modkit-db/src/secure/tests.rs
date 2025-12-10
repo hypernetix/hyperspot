@@ -7,6 +7,7 @@
 //! See USAGE_EXAMPLE.md for complete usage examples with real SeaORM entities.
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 #[allow(clippy::disallowed_methods)]
 mod integration_tests {
     use crate::secure::AccessScope;

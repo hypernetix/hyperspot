@@ -6,6 +6,7 @@
 //! invalid API operations from compiling.
 
 #[test]
+#[cfg(not(coverage_nightly))]
 #[ignore = "TODO: Need to turn it on after fix issue with CR/LF"]
 fn compile_fail_tests() {
     // On MinGW (windows-gnu), native deps like `ring` may fail to build in trybuild sandboxes.

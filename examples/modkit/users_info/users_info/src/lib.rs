@@ -11,7 +11,7 @@
 //! - `UsersInfoError` - error types
 //!
 //! Other modules should use `hub.get::<dyn UsersInfoApi>()?` to obtain the client.
-
+#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 // === PUBLIC API (from SDK) ===
 pub use user_info_sdk::{
     NewUser, UpdateUserRequest, User, UserPatch, UsersInfoApi, UsersInfoError,

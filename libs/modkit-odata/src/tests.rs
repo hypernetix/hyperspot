@@ -1,4 +1,5 @@
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 #[allow(clippy::module_inception)]
 mod tests {
     use crate::{base64_url, CursorV1, Error, ODataOrderBy, ODataQuery, OrderKey, SortDir};

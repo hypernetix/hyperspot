@@ -1,3 +1,4 @@
+#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 //! Node Information Library
 //!
 //! This library provides system information collection for the current node

@@ -429,6 +429,7 @@ fn snake_to_upper_camel(s: &str) -> String {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 

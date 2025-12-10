@@ -369,6 +369,7 @@ pub async fn run_jwks_refresh_task(provider: Arc<JwksKeyProvider>) {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 

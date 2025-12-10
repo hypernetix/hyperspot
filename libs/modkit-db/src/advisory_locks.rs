@@ -536,6 +536,7 @@ pub enum DbLockError {
 // --------------------------- Tests -------------------------------------------
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use anyhow::Result;

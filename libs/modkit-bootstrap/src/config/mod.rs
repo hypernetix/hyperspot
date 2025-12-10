@@ -1077,6 +1077,7 @@ pub fn module_home(app: &AppConfig, module_name: &str) -> PathBuf {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use std::{env, fs};

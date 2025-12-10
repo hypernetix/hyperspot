@@ -11,7 +11,7 @@
 //!
 //! External consumers should use `calculator-sdk` crate which provides
 //! the gRPC client and `wire_client()` for ClientHub integration.
-
+#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 // === MODULE DEFINITION ===
 mod module;
 pub use module::CalculatorModule;

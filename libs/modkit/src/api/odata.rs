@@ -237,5 +237,6 @@ where
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 #[path = "odata_tests.rs"]
 mod odata_tests;

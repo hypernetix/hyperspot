@@ -1,3 +1,4 @@
+#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 //! gRPC Hub Module
 //!
 //! This module builds and hosts the single tonic::Server instance for the process.
@@ -547,6 +548,7 @@ impl Module for GrpcHub {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use http::{Request, Response};
