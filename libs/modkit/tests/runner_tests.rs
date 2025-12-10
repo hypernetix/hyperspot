@@ -14,12 +14,69 @@ use tokio::time::timeout;
 use tokio_util::sync::CancellationToken;
 
 use modkit::{
+    client_hub::ClientHub,
     config::ConfigProvider,
-    contracts::{DbModule, Module, OpenApiRegistry, RestfulModule, StatefulModule},
+    contracts::{DbModule, Module, OpenApiRegistry, RestHostModule, RestfulModule, StatefulModule},
     registry::{ModuleRegistry, RegistryBuilder},
-    runtime::{run, DbOptions, RunOptions, ShutdownOptions},
+    runtime::{run, DbOptions, HostRuntime, RunOptions, ShutdownOptions},
     ModuleCtx,
 };
+
+// Probe state for runtime lifecycle test (inventory-discovered module)
+#[derive(Debug, Default)]
+struct ProbeState {
+    init: AtomicBool,
+    start: AtomicBool,
+    stop: AtomicBool,
+}
+
+fn probe_state() -> Arc<ProbeState> {
+    static STATE: std::sync::OnceLock<Arc<ProbeState>> = std::sync::OnceLock::new();
+    STATE
+        .get_or_init(|| Arc::new(ProbeState::default()))
+        .clone()
+}
+
+#[derive(Clone)]
+#[modkit::module(name = "runtime_lifecycle_probe", capabilities = [stateful])]
+pub struct RuntimeLifecycleProbe {
+    state: Arc<ProbeState>,
+}
+
+impl Default for RuntimeLifecycleProbe {
+    fn default() -> Self {
+        Self {
+            state: probe_state(),
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl Module for RuntimeLifecycleProbe {
+    async fn init(&self, _ctx: &ModuleCtx) -> anyhow::Result<()> {
+        self.state.init.store(true, Ordering::SeqCst);
+        Ok(())
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+}
+
+#[async_trait::async_trait]
+impl StatefulModule for RuntimeLifecycleProbe {
+    async fn start(&self, cancel: CancellationToken) -> anyhow::Result<()> {
+        self.state.start.store(true, Ordering::SeqCst);
+        // Wait until the test cancels to exercise wait -> stop
+        cancel.cancelled().await;
+        Ok(())
+    }
+
+    async fn stop(&self, _cancel: CancellationToken) -> anyhow::Result<()> {
+        self.state.stop.store(true, Ordering::SeqCst);
+        Ok(())
+    }
+}
 
 // Test tracking infrastructure
 #[allow(dead_code)]
@@ -233,17 +290,39 @@ fn create_test_registry(modules: Vec<TestModule>) -> anyhow::Result<ModuleRegist
     Ok(builder.build_topo_sorted()?)
 }
 
+// Helper to create a registry with test modules without REST capability
+fn create_test_registry_no_rest(modules: Vec<TestModule>) -> anyhow::Result<ModuleRegistry> {
+    let mut builder = RegistryBuilder::default();
+
+    for module in modules {
+        let module_name = module.name.clone();
+        let module_name_str: &'static str = Box::leak(module_name.into_boxed_str());
+        let module = Arc::new(module);
+
+        builder.register_core_with_meta(module_name_str, &[], module.clone() as Arc<dyn Module>);
+        builder.register_db_with_meta(module_name_str, module.clone() as Arc<dyn DbModule>);
+        builder.register_stateful_with_meta(
+            module_name_str,
+            module.clone() as Arc<dyn StatefulModule>,
+        );
+    }
+
+    Ok(builder.build_topo_sorted()?)
+}
+
 // Helper function to create a mock DbManager for testing
 fn create_mock_db_manager() -> Arc<modkit_db::DbManager> {
     use figment::{providers::Serialized, Figment};
 
     // Create a simple figment with mock database configuration
     let figment = Figment::new().merge(Serialized::defaults(serde_json::json!({
-        "test_module": {
-            "database": {
-                "dsn": "sqlite::memory:",
-                "params": {
-                    "journal_mode": "WAL"
+        "modules": {
+            "test_module": {
+                "database": {
+                    "dsn": "sqlite::memory:",
+                    "params": {
+                        "journal_mode": "WAL"
+                    }
                 }
             }
         }
@@ -255,59 +334,7 @@ fn create_mock_db_manager() -> Arc<modkit_db::DbManager> {
 }
 
 #[tokio::test]
-async fn test_db_options_none() {
-    // Mock the registry to avoid inventory dependency in tests
-    let cancel = CancellationToken::new();
-    cancel.cancel(); // Immediate shutdown for test
-
-    let opts = RunOptions {
-        modules_cfg: Arc::new(MockConfigProvider::new()),
-        db: DbOptions::None,
-        shutdown: ShutdownOptions::Token(cancel),
-    };
-
-    // This test requires registry discovery to work, which won't work in isolation
-    // For now, let's test the individual components we can test
-    let result = timeout(Duration::from_millis(100), run(opts)).await;
-
-    // Should complete quickly due to immediate cancellation
-    assert!(result.is_ok());
-}
-
-#[tokio::test]
-async fn test_db_options_manager() {
-    let cancel = CancellationToken::new();
-
-    // Cancel after a brief delay
-    let cancel_clone = cancel.clone();
-    tokio::spawn(async move {
-        tokio::time::sleep(Duration::from_millis(50)).await;
-        cancel_clone.cancel();
-    });
-
-    let opts = RunOptions {
-        modules_cfg: Arc::new(MockConfigProvider::new().with_config(
-            "test_module",
-            serde_json::json!({
-                "database": {
-                    "dsn": "sqlite::memory:"
-                },
-                "config": {}
-            }),
-        )),
-        db: DbOptions::Manager(create_mock_db_manager()),
-        shutdown: ShutdownOptions::Token(cancel),
-    };
-
-    let result = timeout(Duration::from_millis(1000), run(opts)).await;
-    assert!(result.is_ok());
-    let run_result = result.unwrap();
-    // Should succeed with DbManager approach
-    assert!(run_result.is_ok());
-}
-
-#[tokio::test]
-async fn test_shutdown_options_token() {
+async fn shutdown_options_token() {
     let cancel = CancellationToken::new();
 
     let opts = RunOptions {
@@ -333,7 +360,7 @@ async fn test_shutdown_options_token() {
 }
 
 #[tokio::test]
-async fn test_shutdown_options_future() {
+async fn shutdown_options_future() {
     let (tx, rx) = tokio::sync::oneshot::channel();
 
     let opts = RunOptions {
@@ -361,7 +388,7 @@ async fn test_shutdown_options_future() {
 }
 
 #[tokio::test]
-async fn test_runner_with_config_provider() {
+async fn runner_with_config_provider() {
     let cancel = CancellationToken::new();
     cancel.cancel(); // Immediate shutdown
 
@@ -385,7 +412,7 @@ async fn test_runner_with_config_provider() {
 
 // Integration test for complete lifecycle (will work once we have proper module discovery mock)
 #[tokio::test]
-async fn test_complete_lifecycle_success() {
+async fn complete_lifecycle_success() {
     // This test is a placeholder for when we can properly mock the module discovery
     // For now, we test that the runner doesn't panic with minimal setup
     let cancel = CancellationToken::new();
@@ -401,30 +428,8 @@ async fn test_complete_lifecycle_success() {
     assert!(result.is_ok());
 }
 
-#[test]
-fn test_run_options_construction() {
-    let cancel = CancellationToken::new();
-
-    let opts = RunOptions {
-        modules_cfg: Arc::new(MockConfigProvider::new()),
-        db: DbOptions::None,
-        shutdown: ShutdownOptions::Token(cancel),
-    };
-
-    // Test that we can construct RunOptions with all variants
-    match opts.db {
-        DbOptions::None => {}
-        _ => panic!("Expected DbOptions::None"),
-    }
-
-    match opts.shutdown {
-        ShutdownOptions::Token(_) => {}
-        _ => panic!("Expected ShutdownOptions::Token"),
-    }
-}
-
 #[tokio::test]
-async fn test_cancellation_during_startup() {
+async fn cancellation_during_startup() {
     let cancel = CancellationToken::new();
 
     let opts = RunOptions {
@@ -454,7 +459,7 @@ async fn test_cancellation_during_startup() {
 }
 
 #[tokio::test]
-async fn test_multiple_config_provider_scenarios() {
+async fn multiple_config_provider_scenarios() {
     let cancel = CancellationToken::new();
     cancel.cancel(); // Immediate shutdown
 
@@ -503,7 +508,481 @@ async fn test_multiple_config_provider_scenarios() {
 }
 
 #[tokio::test]
-async fn test_runner_timeout_scenarios() {
+async fn db_options_none_skips_migrations() {
+    let calls = Arc::new(Mutex::new(Vec::new()));
+    let test_module = TestModule::new("test_module", calls.clone());
+
+    let registry = create_test_registry_no_rest(vec![test_module]).unwrap();
+
+    let cancel = CancellationToken::new();
+    let host = HostRuntime::new(
+        registry,
+        Arc::new(MockConfigProvider::new()),
+        DbOptions::None,
+        Arc::new(ClientHub::default()),
+        cancel.clone(),
+    );
+
+    // Cancel immediately to prevent waiting
+    cancel.cancel();
+
+    let result = host.run_full_cycle().await;
+    assert!(
+        result.is_ok(),
+        "Lifecycle should complete successfully: {:?}",
+        result.err()
+    );
+
+    let call_log = calls.lock().unwrap();
+
+    assert!(
+        call_log.contains(&"test_module.init".to_string()),
+        "Module init should be called even with DbOptions::None"
+    );
+    assert!(
+        !call_log.contains(&"test_module.migrate".to_string()),
+        "Module migrate should NOT be called with DbOptions::None"
+    );
+    assert!(
+        call_log.contains(&"test_module.start".to_string()),
+        "Module start should be called"
+    );
+}
+
+#[tokio::test]
+async fn db_options_manager_calls_migrations() {
+    let calls = Arc::new(Mutex::new(Vec::new()));
+    let test_module = TestModule::new("test_module", calls.clone());
+
+    let registry = create_test_registry_no_rest(vec![test_module]).unwrap();
+
+    let config_provider = MockConfigProvider::new().with_config(
+        "test_module",
+        serde_json::json!({
+            "database": {
+                "dsn": "sqlite::memory:",
+                "params": {
+                    "journal_mode": "WAL"
+                }
+            }
+        }),
+    );
+
+    let cancel = CancellationToken::new();
+    let db_manager = create_mock_db_manager();
+    let host = HostRuntime::new(
+        registry,
+        Arc::new(config_provider),
+        DbOptions::Manager(db_manager),
+        Arc::new(ClientHub::default()),
+        cancel.clone(),
+    );
+
+    // Cancel immediately to prevent waiting
+    cancel.cancel();
+
+    let result = host.run_full_cycle().await;
+    assert!(
+        result.is_ok(),
+        "Lifecycle should complete successfully: {:?}",
+        result.err()
+    );
+
+    let call_log = calls.lock().unwrap();
+    assert!(
+        call_log.contains(&"test_module.init".to_string()),
+        "Module init should be called"
+    );
+    assert!(
+        call_log.contains(&"test_module.migrate".to_string()),
+        "Module migrate SHOULD be called with DbOptions::Manager"
+    );
+    assert!(
+        call_log.contains(&"test_module.start".to_string()),
+        "Module start should be called"
+    );
+}
+
+#[tokio::test]
+async fn db_options_manager_skips_modules_without_db_config() {
+    let calls = Arc::new(Mutex::new(Vec::new()));
+    let test_module = TestModule::new("module_without_db_config", calls.clone());
+
+    let registry = create_test_registry_no_rest(vec![test_module]).unwrap();
+
+    let cancel = CancellationToken::new();
+    let host = HostRuntime::new(
+        registry,
+        Arc::new(MockConfigProvider::new()),
+        DbOptions::Manager(create_mock_db_manager()),
+        Arc::new(ClientHub::default()),
+        cancel.clone(),
+    );
+
+    cancel.cancel();
+
+    let result = host.run_full_cycle().await;
+    assert!(
+        result.is_ok(),
+        "Lifecycle should complete successfully when DB config is missing: {:?}",
+        result.err()
+    );
+
+    let call_log = calls.lock().unwrap();
+    assert!(
+        call_log.contains(&"module_without_db_config.init".to_string()),
+        "Module init should run even when db config is absent"
+    );
+    assert!(
+        !call_log.contains(&"module_without_db_config.migrate".to_string()),
+        "Module migrate should be skipped when no db config exists"
+    );
+    assert!(
+        call_log.contains(&"module_without_db_config.start".to_string()),
+        "Module start should still execute"
+    );
+}
+
+#[tokio::test]
+async fn db_options_manager_propagates_migration_errors() {
+    let calls = Arc::new(Mutex::new(Vec::new()));
+    let test_module = TestModule::new("test_module", calls.clone()).fail_db();
+
+    let registry = create_test_registry_no_rest(vec![test_module]).unwrap();
+
+    let config_provider = MockConfigProvider::new().with_config(
+        "test_module",
+        serde_json::json!({
+            "database": {
+                "dsn": "sqlite::memory:",
+                "params": {
+                    "journal_mode": "WAL"
+                }
+            }
+        }),
+    );
+
+    let host = HostRuntime::new(
+        registry,
+        Arc::new(config_provider),
+        DbOptions::Manager(create_mock_db_manager()),
+        Arc::new(ClientHub::default()),
+        CancellationToken::new(),
+    );
+
+    let err = host
+        .run_full_cycle()
+        .await
+        .expect_err("Migration failure should propagate to caller");
+
+    let call_log = calls.lock().unwrap();
+    assert!(
+        call_log.contains(&"test_module.migrate".to_string()),
+        "Migration attempt should be recorded"
+    );
+    assert!(
+        !call_log.contains(&"test_module.start".to_string()),
+        "Start phase must not run after migration failure"
+    );
+
+    let err_str = format!("{err:#?}");
+    assert!(
+        err_str.contains("test_module"),
+        "Error should mention the failing module: {err_str}"
+    );
+}
+
+// Mock REST host module for testing REST phase
+#[derive(Clone)]
+struct MockRestHost {
+    calls: CallTracker,
+}
+
+impl MockRestHost {
+    fn new(calls: CallTracker) -> Self {
+        Self { calls }
+    }
+}
+
+impl RestHostModule for MockRestHost {
+    fn rest_prepare(&self, _ctx: &ModuleCtx, router: axum::Router) -> anyhow::Result<axum::Router> {
+        self.calls
+            .lock()
+            .unwrap()
+            .push("rest_host.prepare".to_string());
+        Ok(router)
+    }
+
+    fn rest_finalize(
+        &self,
+        _ctx: &ModuleCtx,
+        router: axum::Router,
+    ) -> anyhow::Result<axum::Router> {
+        self.calls
+            .lock()
+            .unwrap()
+            .push("rest_host.finalize".to_string());
+        Ok(router)
+    }
+
+    fn as_registry(&self) -> &dyn OpenApiRegistry {
+        &TestOpenApiRegistry
+    }
+}
+
+// Helper to create a registry with REST modules and a REST host
+fn create_test_registry_with_rest_host(
+    modules: Vec<TestModule>,
+    host: MockRestHost,
+) -> anyhow::Result<ModuleRegistry> {
+    let mut builder = RegistryBuilder::default();
+
+    let host_name: &'static str = Box::leak("rest_host".to_string().into_boxed_str());
+    let host_arc = Arc::new(host);
+    #[derive(Clone)]
+    struct RestHostAsModule {
+        calls: CallTracker,
+    }
+
+    #[async_trait::async_trait]
+    impl Module for RestHostAsModule {
+        async fn init(&self, _ctx: &ModuleCtx) -> anyhow::Result<()> {
+            self.calls
+                .lock()
+                .unwrap()
+                .push("rest_host.init".to_string());
+            Ok(())
+        }
+        fn as_any(&self) -> &dyn std::any::Any {
+            self
+        }
+    }
+
+    let host_core = Arc::new(RestHostAsModule {
+        calls: host_arc.calls.clone(),
+    });
+    builder.register_core_with_meta(host_name, &[], host_core);
+    builder.register_rest_host_with_meta(host_name, host_arc);
+
+    for module in modules {
+        let module_name = module.name.clone();
+        let module_name_str: &'static str = Box::leak(module_name.into_boxed_str());
+        let module = Arc::new(module);
+
+        builder.register_core_with_meta(module_name_str, &[], module.clone() as Arc<dyn Module>);
+        builder.register_rest_with_meta(module_name_str, module.clone() as Arc<dyn RestfulModule>);
+        builder.register_stateful_with_meta(
+            module_name_str,
+            module.clone() as Arc<dyn StatefulModule>,
+        );
+    }
+
+    Ok(builder.build_topo_sorted()?)
+}
+
+#[tokio::test]
+async fn rest_phase_with_rest_modules() {
+    let calls = Arc::new(Mutex::new(Vec::new()));
+    let test_module = TestModule::new("test_module", calls.clone());
+    let rest_host = MockRestHost::new(calls.clone());
+
+    let registry = create_test_registry_with_rest_host(vec![test_module], rest_host).unwrap();
+
+    let cancel = CancellationToken::new();
+    let host = HostRuntime::new(
+        registry,
+        Arc::new(MockConfigProvider::new()),
+        DbOptions::None,
+        Arc::new(ClientHub::default()),
+        cancel.clone(),
+    );
+
+    // Cancel immediately to prevent waiting
+    cancel.cancel();
+
+    let result = host.run_full_cycle().await;
+    assert!(
+        result.is_ok(),
+        "Lifecycle should complete successfully: {:?}",
+        result.err()
+    );
+
+    let call_log = calls.lock().unwrap();
+
+    assert!(
+        call_log.contains(&"rest_host.init".to_string()),
+        "REST host init should be called"
+    );
+    assert!(
+        call_log.contains(&"rest_host.prepare".to_string()),
+        "REST host prepare should be called"
+    );
+    assert!(
+        call_log.contains(&"test_module.register_rest".to_string()),
+        "Module register_rest should be called"
+    );
+    assert!(
+        call_log.contains(&"rest_host.finalize".to_string()),
+        "REST host finalize should be called"
+    );
+
+    // Verify order: prepare -> register -> finalize
+    let prepare_idx = call_log
+        .iter()
+        .position(|s| s == "rest_host.prepare")
+        .unwrap();
+    let register_idx = call_log
+        .iter()
+        .position(|s| s == "test_module.register_rest")
+        .unwrap();
+    let finalize_idx = call_log
+        .iter()
+        .position(|s| s == "rest_host.finalize")
+        .unwrap();
+
+    assert!(
+        prepare_idx < register_idx,
+        "REST host prepare should come before module registration"
+    );
+    assert!(
+        register_idx < finalize_idx,
+        "Module registration should come before REST host finalize"
+    );
+}
+
+// Mock gRPC service module for testing gRPC phase
+#[derive(Clone)]
+struct MockGrpcServiceModule {
+    calls: CallTracker,
+    service_name: &'static str,
+}
+
+impl MockGrpcServiceModule {
+    fn new(calls: CallTracker, service_name: &'static str) -> Self {
+        Self {
+            calls,
+            service_name,
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl modkit::contracts::GrpcServiceModule for MockGrpcServiceModule {
+    async fn get_grpc_services(
+        &self,
+        _ctx: &ModuleCtx,
+    ) -> anyhow::Result<Vec<modkit::contracts::RegisterGrpcServiceFn>> {
+        self.calls
+            .lock()
+            .unwrap()
+            .push(format!("{}.get_grpc_services", self.service_name));
+
+        Ok(vec![modkit::contracts::RegisterGrpcServiceFn {
+            service_name: self.service_name,
+            register: Box::new(|_routes| {
+                // Mock registration - no actual service added
+            }),
+        }])
+    }
+}
+
+// Helper to create a registry with gRPC modules
+fn create_test_registry_with_grpc(
+    grpc_modules: Vec<(&'static str, MockGrpcServiceModule)>,
+) -> anyhow::Result<ModuleRegistry> {
+    let mut builder = RegistryBuilder::default();
+
+    // Register a mock grpc_hub
+    let hub_name: &'static str = "grpc_hub";
+
+    #[derive(Clone)]
+    struct MockGrpcHub;
+
+    #[async_trait::async_trait]
+    impl Module for MockGrpcHub {
+        async fn init(&self, _ctx: &ModuleCtx) -> anyhow::Result<()> {
+            Ok(())
+        }
+        fn as_any(&self) -> &dyn std::any::Any {
+            self
+        }
+    }
+
+    impl modkit::contracts::GrpcHubModule for MockGrpcHub {}
+
+    let hub_core = Arc::new(MockGrpcHub);
+    builder.register_core_with_meta(hub_name, &[], hub_core);
+    builder.register_grpc_hub_with_meta(hub_name);
+
+    // Register grpc service modules
+    for (module_name, grpc_module) in grpc_modules {
+        #[derive(Clone)]
+        struct GrpcModuleCore;
+
+        #[async_trait::async_trait]
+        impl Module for GrpcModuleCore {
+            async fn init(&self, _ctx: &ModuleCtx) -> anyhow::Result<()> {
+                Ok(())
+            }
+            fn as_any(&self) -> &dyn std::any::Any {
+                self
+            }
+        }
+
+        let core = Arc::new(GrpcModuleCore);
+
+        builder.register_core_with_meta(module_name, &[], core);
+        builder.register_grpc_service_with_meta(module_name, Arc::new(grpc_module));
+    }
+
+    Ok(builder.build_topo_sorted()?)
+}
+
+#[tokio::test]
+async fn grpc_phase_with_grpc_modules() {
+    let calls = Arc::new(Mutex::new(Vec::new()));
+    let grpc_module_a = MockGrpcServiceModule::new(calls.clone(), "test.ServiceA");
+    let grpc_module_b = MockGrpcServiceModule::new(calls.clone(), "test.ServiceB");
+
+    let registry = create_test_registry_with_grpc(vec![
+        ("grpc_module_a", grpc_module_a),
+        ("grpc_module_b", grpc_module_b),
+    ])
+    .unwrap();
+
+    let cancel = CancellationToken::new();
+    let host = HostRuntime::new(
+        registry,
+        Arc::new(MockConfigProvider::new()),
+        DbOptions::None,
+        Arc::new(ClientHub::default()),
+        cancel.clone(),
+    );
+
+    // Cancel immediately to prevent waiting
+    cancel.cancel();
+
+    let result = host.run_full_cycle().await;
+    assert!(
+        result.is_ok(),
+        "Lifecycle should complete successfully: {:?}",
+        result.err()
+    );
+
+    let call_log = calls.lock().unwrap();
+
+    assert!(
+        call_log.contains(&"test.ServiceA.get_grpc_services".to_string()),
+        "Module A get_grpc_services should be called"
+    );
+    assert!(
+        call_log.contains(&"test.ServiceB.get_grpc_services".to_string()),
+        "Module B get_grpc_services should be called"
+    );
+}
+
+#[tokio::test]
+async fn runner_timeout_scenarios() {
     // Test that runner doesn't hang indefinitely
     let cancel = CancellationToken::new();
 
@@ -531,7 +1010,7 @@ async fn test_runner_timeout_scenarios() {
 
 // Test configuration scenarios
 #[test]
-fn test_config_provider_edge_cases() {
+fn config_provider_edge_cases() {
     let provider = MockConfigProvider::new()
         .with_config("test", serde_json::json!(null))
         .with_config("empty", serde_json::json!({}))
@@ -566,43 +1045,46 @@ fn test_config_provider_edge_cases() {
     assert!(missing_config.is_none());
 }
 
-// Placeholder tests for comprehensive lifecycle testing
-// These would work with additional runner infrastructure that allows
-// injecting test registries instead of using inventory discovery
-
-/*
 #[tokio::test]
-async fn test_lifecycle_init_failure() {
-    // This test demonstrates how we would test init phase failures
-    // if the runner supported dependency injection of the registry
+async fn run_drives_full_lifecycle_for_stateful_module() {
+    let state = probe_state();
+    state.init.store(false, Ordering::SeqCst);
+    state.start.store(false, Ordering::SeqCst);
+    state.stop.store(false, Ordering::SeqCst);
 
-    let calls = Arc::new(Mutex::new(Vec::new()));
-    let failing_module = TestModule::new("failing_module", calls.clone()).fail_init();
+    let cancel = CancellationToken::new();
 
-    // Would need a version of run() that accepts a pre-built registry
-    // let registry = create_test_registry(vec![failing_module]).unwrap();
-    // let result = run_with_registry(opts, registry).await;
-    // assert!(result.is_err());
-    // assert!(result.unwrap_err().to_string().contains("Init failed"));
+    let opts = RunOptions {
+        modules_cfg: Arc::new(MockConfigProvider::new()),
+        db: DbOptions::None,
+        shutdown: ShutdownOptions::Token(cancel.clone()),
+    };
+
+    let runner = tokio::spawn(run(opts));
+
+    let test_timeout = Duration::from_millis(200);
+
+    let started = timeout(test_timeout, async {
+        while !state.start.load(Ordering::SeqCst) {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await;
+
+    assert!(started.is_ok(), "start should be observed");
+
+    // Trigger shutdown and wait for completion
+    cancel.cancel();
+
+    let run_result = timeout(Duration::from_secs(2), runner)
+        .await
+        .expect("runner should finish")
+        .expect("runner task should not panic");
+
+    assert!(run_result.is_ok(), "run should complete successfully");
+
+    // THEN: all lifecycle flags should be flipped
+    assert!(state.init.load(Ordering::SeqCst), "init should run");
+    assert!(state.start.load(Ordering::SeqCst), "start should run");
+    assert!(state.stop.load(Ordering::SeqCst), "stop should run");
 }
-
-#[tokio::test]
-async fn test_lifecycle_complete_success() {
-    // Demonstrates testing a complete successful lifecycle
-    let calls = Arc::new(Mutex::new(Vec::new()));
-    let modules = vec![
-        TestModule::new("module1", calls.clone()),
-        TestModule::new("module2", calls.clone()),
-    ];
-
-    // Would need runner API changes to support this
-    // let registry = create_test_registry(modules).unwrap();
-    // let result = run_with_registry(opts, registry).await;
-    // assert!(result.is_ok());
-
-    // Verify lifecycle call order
-    // let call_log = calls.lock().unwrap();
-    // assert!(call_log.contains(&"module1.init".to_string()));
-    // assert!(call_log.contains(&"module2.init".to_string()));
-}
-*/

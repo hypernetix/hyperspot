@@ -1,15 +1,24 @@
 //! Type-safe API operation builder with compile-time guarantees
 //!
-//! This module implements a type-state builder pattern that ensures:
-//! - `register()` cannot be called unless a handler is set
-//! - `register()` cannot be called unless at least one response is declared
-//! - Descriptive methods remain available at any stage
-//! - No panics or unwraps in production hot paths
-//! - Request body support (`json_request`, `json_request_schema`) so POST/PUT calls are invokable in UI
-//! - Schema-aware responses (`json_response_with_schema`)
-//! - Typed Router state `S` usage pattern: pass a state type once via `Router::with_state`,
-//!   then use plain function handlers (no per-route closures that capture/clones).
-//! - Optional `method_router(...)` for advanced use (layers/middleware on route level).
+//! This module provides a builder for defining API operations that enforces correctness at compile time.
+//! It uses the type-state pattern to ensure that all required components (handler, response, auth) are present
+//! before the operation can be registered.
+//!
+//! # Usage Flow
+//!
+//! 1. **Start**: Create a builder using `OperationBuilder::new` or convenience methods like `get`, `post`.
+//! 2. **Describe**: Add metadata like summary, description, tags, and parameters.
+//! 3. **Auth**: Set authentication requirements using `require_auth` or `public`.
+//! 4. **Request/Response**: Define request body (if any) and response schemas.
+//! 5. **Handler**: Attach the implementation handler.
+//! 6. **Register**: Finalize and register the operation with the router and OpenAPI registry.
+//!
+//! # Key Features
+//!
+//! - **Compile-time Safety**: `register()` is only callable when handler, response, and auth are set.
+//! - **Schema Integration**: Seamlessly registers request/response schemas with OpenAPI.
+//! - **Typed State**: Supports typed Router state `S` for handlers.
+//! - **No Panics**: Designed to avoid panics in production paths.
 
 use axum::{handler::Handler, routing::MethodRouter, Router};
 use http::Method;
@@ -42,6 +51,8 @@ pub fn normalize_to_axum_path(path: &str) -> String {
 /// Convert Axum 0.8+ style path parameters to OpenAPI-style placeholders.
 ///
 /// Removes the asterisk prefix from Axum wildcards `{*path}` to make them OpenAPI-compatible `{path}`.
+/// This helper expects Axum-style `{param}` syntax and intentionally does **not** try to
+/// normalize legacy `:param` routes—callers should handle that conversion upstream if needed.
 ///
 /// # Examples
 ///
@@ -1678,5 +1689,874 @@ mod tests {
                 response.content_type
             );
         }
+    }
+
+    // -------------------------
+    // Flow Tests - Testing Main Use Cases
+    // -------------------------
+
+    #[test]
+    fn flow_secured_operation_with_auth_requirement() {
+        let registry = MockRegistry::new();
+        let builder = OperationBuilder::<Missing, Missing, ()>::get("/invoices/{id}/approve")
+            .summary("Approve an invoice")
+            .path_param("id", "Invoice ID")
+            .require_auth("invoices", "approve")
+            .handler(test_handler)
+            .json_response(http::StatusCode::OK, "Invoice approved");
+
+        // Verify auth requirement is correctly set
+        assert!(
+            !builder.spec.is_public,
+            "Secured operation should not be public"
+        );
+        let sec = builder
+            .spec
+            .sec_requirement
+            .as_ref()
+            .expect("Security requirement should be set");
+        assert_eq!(sec.resource, "invoices");
+        assert_eq!(sec.action, "approve");
+
+        // Verify operation can be registered (all required parts present)
+        let _router = builder.register(axum::Router::new(), &registry);
+        let ops = registry.operations.lock().unwrap();
+        assert_eq!(ops.len(), 1);
+    }
+
+    #[test]
+    fn flow_public_operation_without_auth() {
+        let registry = MockRegistry::new();
+        let builder = OperationBuilder::<Missing, Missing, ()>::get("/health")
+            .summary("Health check endpoint")
+            .public()
+            .handler(test_handler)
+            .json_response(http::StatusCode::OK, "OK");
+
+        // Verify public flag is set
+        assert!(
+            builder.spec.is_public,
+            "Public operation should have is_public flag set"
+        );
+        assert!(
+            builder.spec.sec_requirement.is_none(),
+            "Public operation should not have security requirement"
+        );
+
+        // Verify operation can be registered
+        let _router = builder.register(axum::Router::new(), &registry);
+        let ops = registry.operations.lock().unwrap();
+        assert_eq!(ops.len(), 1);
+    }
+
+    #[test]
+    fn flow_rate_limited_operation() {
+        let registry = MockRegistry::new();
+        let mut builder = OperationBuilder::<Missing, Missing, ()>::post("/compute")
+            .summary("Heavy computation endpoint")
+            .json_request::<serde_json::Value>(&registry, "Computation parameters")
+            .public()
+            .handler(test_handler)
+            .json_response(http::StatusCode::OK, "Result");
+
+        builder.require_rate_limit(10, 20, 5); // 10 rps, 20 burst, 5 in-flight
+
+        // Verify rate limit is correctly attached
+        let limit = builder
+            .spec
+            .rate_limit
+            .as_ref()
+            .expect("Rate limit should be set");
+        assert_eq!(limit.rps, 10, "Rate limit RPS should match");
+        assert_eq!(limit.burst, 20, "Rate limit burst should match");
+        assert_eq!(limit.in_flight, 5, "Rate limit in-flight should match");
+
+        // Verify operation can be registered
+        let _router = builder.register(axum::Router::new(), &registry);
+        let ops = registry.operations.lock().unwrap();
+        assert_eq!(ops.len(), 1);
+        assert!(ops[0].rate_limit.is_some());
+    }
+
+    #[test]
+    fn flow_odata_list_operation() {
+        use crate::api::operation_builder::OperationBuilderODataExt;
+
+        let registry = MockRegistry::new();
+        let builder = OperationBuilder::<Missing, Missing, ()>::get("/items")
+            .summary("List items with OData filtering")
+            .with_odata_filter()
+            .public()
+            .handler(test_handler)
+            .json_response(http::StatusCode::OK, "List of items");
+
+        // Verify $filter parameter is added
+        let filter_param = builder
+            .spec
+            .params
+            .iter()
+            .find(|p| p.name == "$filter")
+            .expect("$filter parameter should be added");
+
+        assert_eq!(
+            filter_param.location,
+            ParamLocation::Query,
+            "$filter should be a query parameter"
+        );
+        assert!(!filter_param.required, "$filter should be optional");
+        assert_eq!(
+            filter_param.param_type, "string",
+            "$filter should be string type"
+        );
+        assert!(
+            filter_param.description.is_some(),
+            "$filter should have description"
+        );
+
+        // Verify operation can be registered
+        let _router = builder.register(axum::Router::new(), &registry);
+        let ops = registry.operations.lock().unwrap();
+        assert_eq!(ops.len(), 1);
+    }
+
+    #[test]
+    fn flow_odata_list_with_custom_description() {
+        use crate::api::operation_builder::OperationBuilderODataExt;
+
+        let custom_desc = "Filter by name, status, or created_date";
+        let builder = OperationBuilder::<Missing, Missing, ()>::get("/users")
+            .with_odata_filter_doc(custom_desc)
+            .public()
+            .handler(test_handler)
+            .json_response(http::StatusCode::OK, "List of users");
+
+        let filter_param = builder
+            .spec
+            .params
+            .iter()
+            .find(|p| p.name == "$filter")
+            .expect("$filter parameter should be added");
+
+        assert_eq!(
+            filter_param.description.as_deref(),
+            Some(custom_desc),
+            "Custom description should be preserved"
+        );
+    }
+
+    #[test]
+    fn flow_optional_request_body() {
+        let registry = MockRegistry::new();
+        let builder = OperationBuilder::<Missing, Missing, ()>::post("/search")
+            .summary("Search with optional criteria")
+            .json_request::<serde_json::Value>(&registry, "Search criteria")
+            .request_optional()
+            .public()
+            .handler(test_handler)
+            .json_response(http::StatusCode::OK, "Search results");
+
+        // Verify request body is marked as optional
+        let rb = builder
+            .spec
+            .request_body
+            .as_ref()
+            .expect("Request body should be present");
+        assert!(!rb.required, "Request body should be marked as optional");
+
+        // Verify operation can be registered
+        let _router = builder.register(axum::Router::new(), &registry);
+        let ops = registry.operations.lock().unwrap();
+        assert_eq!(ops.len(), 1);
+    }
+
+    #[test]
+    fn flow_json_request_no_desc_auto_registers_schema() {
+        let registry = MockRegistry::new();
+
+        let builder = OperationBuilder::<Missing, Missing, ()>::post("/create")
+            .json_request_no_desc::<serde_json::Value>(&registry)
+            .public()
+            .handler(test_handler)
+            .json_response(http::StatusCode::OK, "Created");
+
+        let rb = builder.spec.request_body.as_ref().unwrap();
+        assert_eq!(rb.content_type, "application/json");
+        assert!(rb.description.is_none(), "Should have no description");
+        assert!(rb.required, "Should be required by default");
+
+        if let RequestBodySchema::Ref { schema_name } = &rb.schema {
+            assert!(!schema_name.is_empty(), "Schema name should be populated");
+        } else {
+            panic!("Expected Ref schema for auto-registered type");
+        }
+    }
+
+    #[test]
+    fn flow_json_request_schema_uses_preregistered_name_with_description() {
+        let builder = OperationBuilder::<Missing, Missing, ()>::post("/create")
+            .json_request_schema("MyCustomSchema", "Request payload description")
+            .public()
+            .handler(test_handler)
+            .json_response(http::StatusCode::OK, "Created");
+
+        let rb = builder.spec.request_body.as_ref().unwrap();
+        assert_eq!(rb.content_type, "application/json");
+        assert_eq!(
+            rb.description,
+            Some("Request payload description".to_string())
+        );
+        assert!(rb.required);
+
+        if let RequestBodySchema::Ref { schema_name } = &rb.schema {
+            assert_eq!(schema_name, "MyCustomSchema");
+        } else {
+            panic!("Expected Ref schema with pre-registered name");
+        }
+    }
+
+    #[test]
+    fn flow_json_request_schema_no_desc_uses_preregistered_name_without_description() {
+        let builder = OperationBuilder::<Missing, Missing, ()>::post("/create")
+            .json_request_schema_no_desc("MyCustomSchema")
+            .public()
+            .handler(test_handler)
+            .json_response(http::StatusCode::OK, "Created");
+
+        let rb = builder.spec.request_body.as_ref().unwrap();
+        assert_eq!(rb.content_type, "application/json");
+        assert!(rb.description.is_none(), "Should have no description");
+        assert!(rb.required);
+
+        if let RequestBodySchema::Ref { schema_name } = &rb.schema {
+            assert_eq!(schema_name, "MyCustomSchema");
+        } else {
+            panic!("Expected Ref schema with pre-registered name");
+        }
+    }
+
+    #[test]
+    fn flow_complex_query_parameters() {
+        let builder = OperationBuilder::<Missing, Missing, ()>::get("/reports")
+            .summary("Generate report with filters")
+            .query_param("start_date", true, "Report start date (ISO 8601)")
+            .query_param("end_date", true, "Report end date (ISO 8601)")
+            .query_param_typed("limit", false, "Maximum results", "integer")
+            .query_param_typed("offset", false, "Results offset", "integer")
+            .public()
+            .handler(test_handler)
+            .json_response(http::StatusCode::OK, "Report data");
+
+        // Verify required parameters
+        let start_date = builder
+            .spec
+            .params
+            .iter()
+            .find(|p| p.name == "start_date")
+            .expect("start_date should be present");
+        assert!(start_date.required, "start_date should be required");
+        assert_eq!(
+            start_date.param_type, "string",
+            "start_date should be string type"
+        );
+
+        // Verify optional typed parameters
+        let limit = builder
+            .spec
+            .params
+            .iter()
+            .find(|p| p.name == "limit")
+            .expect("limit should be present");
+        assert!(!limit.required, "limit should be optional");
+        assert_eq!(limit.param_type, "integer", "limit should be integer type");
+
+        let offset = builder
+            .spec
+            .params
+            .iter()
+            .find(|p| p.name == "offset")
+            .expect("offset should be present");
+        assert!(!offset.required, "offset should be optional");
+        assert_eq!(
+            offset.param_type, "integer",
+            "offset should be integer type"
+        );
+
+        // Verify all parameters are present
+        assert_eq!(builder.spec.params.len(), 4, "Should have 4 parameters");
+    }
+
+    #[test]
+    fn flow_complete_crud_operation_with_all_responses() {
+        let registry = MockRegistry::new();
+        let builder = OperationBuilder::<Missing, Missing, ()>::put("/users/{id}")
+            .operation_id("users.update")
+            .summary("Update user")
+            .tag("users")
+            .path_param("id", "User ID")
+            .json_request::<serde_json::Value>(&registry, "Updated user data")
+            .require_auth("users", "write")
+            .handler(test_handler)
+            .json_response_with_schema::<serde_json::Value>(
+                &registry,
+                http::StatusCode::OK,
+                "User updated successfully",
+            )
+            .standard_errors(&registry);
+
+        // Verify path parameter
+        let id_param = builder
+            .spec
+            .params
+            .iter()
+            .find(|p| p.name == "id")
+            .expect("id parameter should be present");
+        assert_eq!(id_param.location, ParamLocation::Path);
+        assert!(id_param.required);
+
+        // Verify request body
+        let rb = builder.spec.request_body.as_ref().unwrap();
+        assert_eq!(rb.content_type, "application/json");
+        assert!(rb.required);
+
+        // Verify auth
+        assert!(!builder.spec.is_public);
+        let sec = builder.spec.sec_requirement.as_ref().unwrap();
+        assert_eq!(sec.resource, "users");
+        assert_eq!(sec.action, "write");
+
+        // Verify responses (1 success + 8 standard errors)
+        assert_eq!(
+            builder.spec.responses.len(),
+            9,
+            "Should have 1 success + 8 error responses"
+        );
+
+        let success_response = builder
+            .spec
+            .responses
+            .iter()
+            .find(|r| r.status == 200)
+            .expect("200 response should be present");
+        assert!(success_response.schema_name.is_some());
+
+        // Verify standard error responses are present
+        let error_codes = [400, 401, 403, 404, 409, 422, 429, 500];
+        for code in error_codes {
+            assert!(
+                builder.spec.responses.iter().any(|r| r.status == code),
+                "Should have {} error response",
+                code
+            );
+        }
+
+        // Verify operation can be registered
+        let _router = builder.register(axum::Router::new(), &registry);
+    }
+
+    #[test]
+    fn flow_file_upload_with_multipart() {
+        let registry = MockRegistry::new();
+        let builder = OperationBuilder::<Missing, Missing, ()>::post("/upload")
+            .operation_id("files.upload")
+            .summary("Upload a file")
+            .multipart_file_request("file", Some("File to upload"))
+            .require_auth("files", "write")
+            .handler(test_handler)
+            .json_response(http::StatusCode::CREATED, "File uploaded")
+            .error_400(&registry)
+            .error_415(&registry);
+
+        // Verify request body
+        let rb = builder.spec.request_body.as_ref().unwrap();
+        assert_eq!(rb.content_type, "multipart/form-data");
+        assert!(rb.required);
+        match &rb.schema {
+            RequestBodySchema::MultipartFile { field_name } => {
+                assert_eq!(field_name, "file");
+            }
+            _ => panic!("Expected MultipartFile schema"),
+        }
+
+        // Verify MIME type validation is configured
+        let allowed = builder.spec.allowed_request_content_types.as_ref().unwrap();
+        assert!(allowed.contains(&"multipart/form-data"));
+
+        // Verify responses
+        assert!(builder.spec.responses.iter().any(|r| r.status == 201));
+        assert!(builder.spec.responses.iter().any(|r| r.status == 400));
+        assert!(builder.spec.responses.iter().any(|r| r.status == 415));
+    }
+
+    #[test]
+    fn flow_binary_upload_with_octet_stream() {
+        let registry = MockRegistry::new();
+        let builder = OperationBuilder::<Missing, Missing, ()>::post("/parse")
+            .operation_id("files.parse")
+            .summary("Parse raw file")
+            .octet_stream_request(Some("Raw file bytes to parse"))
+            .public()
+            .handler(test_handler)
+            .json_response(http::StatusCode::OK, "Parse results")
+            .error_422(&registry);
+
+        // Verify request body
+        let rb = builder.spec.request_body.as_ref().unwrap();
+        assert_eq!(rb.content_type, "application/octet-stream");
+        assert_eq!(rb.schema, RequestBodySchema::Binary);
+
+        // Verify MIME type validation
+        let allowed = builder.spec.allowed_request_content_types.as_ref().unwrap();
+        assert!(allowed.contains(&"application/octet-stream"));
+    }
+
+    #[test]
+    fn flow_sse_stream_endpoint() {
+        let registry = MockRegistry::new();
+        let builder = OperationBuilder::<Missing, Missing, ()>::get("/events")
+            .operation_id("events.stream")
+            .summary("Stream events via SSE")
+            .public()
+            .handler(test_handler)
+            .sse_json::<serde_json::Value>(&registry, "Stream of events");
+
+        // Verify SSE response
+        let sse_response = builder
+            .spec
+            .responses
+            .iter()
+            .find(|r| r.content_type == "text/event-stream")
+            .expect("Should have SSE response");
+        assert_eq!(sse_response.status, 200);
+        assert!(sse_response.schema_name.is_some());
+    }
+
+    #[test]
+    fn flow_json_response_with_schema_registers_and_references_schema() {
+        let registry = MockRegistry::new();
+        let builder = OperationBuilder::<Missing, Missing, ()>::get("/user")
+            .public()
+            .handler(test_handler)
+            .json_response_with_schema::<serde_json::Value>(
+                &registry,
+                http::StatusCode::OK,
+                "User details",
+            );
+
+        let response = builder
+            .spec
+            .responses
+            .iter()
+            .find(|r| r.status == 200)
+            .expect("200 response should be present");
+
+        assert_eq!(response.content_type, "application/json");
+        assert_eq!(response.description, "User details");
+        assert!(
+            response.schema_name.is_some(),
+            "Should have schema reference"
+        );
+    }
+
+    #[test]
+    fn flow_problem_response_as_first_response_transitions_state() {
+        let registry = MockRegistry::new();
+        let builder = OperationBuilder::<Missing, Missing, ()>::post("/action")
+            .public()
+            .handler(test_handler)
+            .problem_response(&registry, http::StatusCode::BAD_REQUEST, "Invalid input");
+
+        // Verify this transitions from Missing to Present response state
+        let problem_response = builder
+            .spec
+            .responses
+            .iter()
+            .find(|r| r.status == 400)
+            .expect("400 response should be present");
+
+        assert_eq!(
+            problem_response.content_type,
+            crate::api::problem::APPLICATION_PROBLEM_JSON
+        );
+        assert_eq!(problem_response.description, "Invalid input");
+        assert!(
+            problem_response.schema_name.is_some(),
+            "Problem response should reference Problem schema"
+        );
+
+        // Verify operation can be registered (has handler, response, and auth)
+        let _router = builder.register(axum::Router::new(), &registry);
+    }
+
+    #[test]
+    fn flow_problem_response_as_additional_response() {
+        let registry = MockRegistry::new();
+        let builder = OperationBuilder::<Missing, Missing, ()>::post("/action")
+            .public()
+            .handler(test_handler)
+            .json_response(http::StatusCode::OK, "Success")
+            .problem_response(&registry, http::StatusCode::BAD_REQUEST, "Invalid input");
+
+        // Should have both success and error responses
+        assert_eq!(builder.spec.responses.len(), 2);
+
+        let problem_response = builder
+            .spec
+            .responses
+            .iter()
+            .find(|r| r.status == 400)
+            .expect("400 response should be present");
+
+        assert_eq!(
+            problem_response.content_type,
+            crate::api::problem::APPLICATION_PROBLEM_JSON
+        );
+    }
+
+    #[test]
+    fn flow_sse_json_as_additional_response() {
+        let registry = MockRegistry::new();
+        let builder = OperationBuilder::<Missing, Missing, ()>::get("/events")
+            .public()
+            .handler(test_handler)
+            .json_response(http::StatusCode::OK, "Fallback response")
+            .sse_json::<serde_json::Value>(&registry, "Stream of events");
+
+        // Should have both responses
+        assert_eq!(builder.spec.responses.len(), 2);
+
+        let sse_response = builder
+            .spec
+            .responses
+            .iter()
+            .find(|r| r.content_type == "text/event-stream")
+            .expect("SSE response should be present");
+
+        assert_eq!(sse_response.status, 200);
+        assert!(sse_response.schema_name.is_some());
+    }
+
+    #[test]
+    fn flow_unsupported_http_method_creates_fallback_handler() {
+        use http::Method;
+
+        let registry = MockRegistry::new();
+
+        // Create a builder with a custom HTTP method and chain through type transitions
+        let builder = OperationBuilder::<Missing, Missing, ()>::new(
+            Method::from_bytes(b"OPTIONS").unwrap(),
+            "/custom",
+        )
+        .public()
+        .handler(test_handler)
+        .json_response(http::StatusCode::OK, "Success");
+
+        // Should register successfully with fallback handler
+        let _router = builder.register(axum::Router::new(), &registry);
+        let ops = registry.operations.lock().unwrap();
+        assert_eq!(ops.len(), 1);
+    }
+
+    #[test]
+    fn flow_html_response_sets_correct_content_type() {
+        let builder = OperationBuilder::<Missing, Missing, ()>::get("/page")
+            .public()
+            .handler(test_handler)
+            .html_response(http::StatusCode::OK, "HTML page");
+
+        let html_response = builder
+            .spec
+            .responses
+            .iter()
+            .find(|r| r.status == 200)
+            .expect("200 response should be present");
+
+        assert_eq!(html_response.content_type, "text/html");
+        assert_eq!(html_response.description, "HTML page");
+        assert!(
+            html_response.schema_name.is_none(),
+            "HTML response should not have schema"
+        );
+    }
+
+    #[test]
+    fn flow_text_response_sets_custom_content_type() {
+        let builder = OperationBuilder::<Missing, Missing, ()>::get("/readme")
+            .public()
+            .handler(test_handler)
+            .text_response(http::StatusCode::OK, "Markdown content", "text/markdown");
+
+        let text_response = builder
+            .spec
+            .responses
+            .iter()
+            .find(|r| r.status == 200)
+            .expect("200 response should be present");
+
+        assert_eq!(text_response.content_type, "text/markdown");
+        assert_eq!(text_response.description, "Markdown content");
+        assert!(text_response.schema_name.is_none());
+    }
+
+    #[test]
+    fn flow_raw_response_spec_can_be_added() {
+        let builder = OperationBuilder::<Missing, Missing, ()>::get("/custom")
+            .public()
+            .handler(test_handler)
+            .response(ResponseSpec {
+                status: 206,
+                content_type: "application/octet-stream",
+                description: "Partial content".to_string(),
+                schema_name: None,
+            });
+
+        let response = builder
+            .spec
+            .responses
+            .iter()
+            .find(|r| r.status == 206)
+            .expect("206 response should be present");
+
+        assert_eq!(response.content_type, "application/octet-stream");
+        assert_eq!(response.description, "Partial content");
+    }
+
+    #[test]
+    fn flow_method_router_allows_custom_middleware() {
+        use axum::routing::MethodRouter;
+
+        let custom_router: MethodRouter<()> = axum::routing::get(test_handler);
+
+        let registry = MockRegistry::new();
+        let builder = OperationBuilder::<Missing, Missing, ()>::get("/custom")
+            .public()
+            .method_router(custom_router)
+            .json_response(http::StatusCode::OK, "Success");
+
+        // Verify operation can be registered with custom method router
+        let _router = builder.register(axum::Router::new(), &registry);
+        let ops = registry.operations.lock().unwrap();
+        assert_eq!(ops.len(), 1);
+    }
+
+    #[test]
+    fn flow_delete_operation() {
+        let registry = MockRegistry::new();
+        let builder = OperationBuilder::<Missing, Missing, ()>::delete("/resources/{id}")
+            .operation_id("resources.delete")
+            .summary("Delete a resource")
+            .path_param("id", "Resource ID")
+            .require_auth("resources", "delete")
+            .handler(test_handler)
+            .json_response(http::StatusCode::NO_CONTENT, "Deleted");
+
+        assert_eq!(builder.spec.method, Method::DELETE);
+        assert_eq!(builder.spec.path, "/resources/{id}");
+
+        let _router = builder.register(axum::Router::new(), &registry);
+        let ops = registry.operations.lock().unwrap();
+        assert_eq!(ops.len(), 1);
+        assert_eq!(ops[0].method, Method::DELETE);
+    }
+
+    #[test]
+    fn flow_patch_operation() {
+        let registry = MockRegistry::new();
+        let builder = OperationBuilder::<Missing, Missing, ()>::patch("/resources/{id}")
+            .operation_id("resources.patch")
+            .summary("Partially update a resource")
+            .path_param("id", "Resource ID")
+            .json_request::<serde_json::Value>(&registry, "Partial update")
+            .require_auth("resources", "write")
+            .handler(test_handler)
+            .json_response(http::StatusCode::OK, "Updated");
+
+        assert_eq!(builder.spec.method, Method::PATCH);
+        assert_eq!(builder.spec.path, "/resources/{id}");
+
+        let _router = builder.register(axum::Router::new(), &registry);
+        let ops = registry.operations.lock().unwrap();
+        assert_eq!(ops.len(), 1);
+        assert_eq!(ops[0].method, Method::PATCH);
+    }
+
+    #[test]
+    fn flow_error_400_adds_bad_request_response() {
+        let registry = MockRegistry::new();
+        let builder = OperationBuilder::<Missing, Missing, ()>::post("/action")
+            .public()
+            .handler(test_handler)
+            .json_response(http::StatusCode::OK, "Success")
+            .error_400(&registry);
+
+        let error_response = builder
+            .spec
+            .responses
+            .iter()
+            .find(|r| r.status == 400)
+            .expect("400 response should be present");
+
+        assert_eq!(
+            error_response.content_type,
+            crate::api::problem::APPLICATION_PROBLEM_JSON
+        );
+        assert_eq!(error_response.description, "Bad Request");
+    }
+
+    #[test]
+    fn flow_error_401_adds_unauthorized_response() {
+        let registry = MockRegistry::new();
+        let builder = OperationBuilder::<Missing, Missing, ()>::get("/secure")
+            .require_auth("resource", "read")
+            .handler(test_handler)
+            .json_response(http::StatusCode::OK, "Data")
+            .error_401(&registry);
+
+        let error_response = builder
+            .spec
+            .responses
+            .iter()
+            .find(|r| r.status == 401)
+            .expect("401 response should be present");
+
+        assert_eq!(error_response.description, "Unauthorized");
+    }
+
+    #[test]
+    fn flow_error_403_adds_forbidden_response() {
+        let registry = MockRegistry::new();
+        let builder = OperationBuilder::<Missing, Missing, ()>::get("/admin")
+            .require_auth("admin", "read")
+            .handler(test_handler)
+            .json_response(http::StatusCode::OK, "Admin data")
+            .error_403(&registry);
+
+        let error_response = builder
+            .spec
+            .responses
+            .iter()
+            .find(|r| r.status == 403)
+            .expect("403 response should be present");
+
+        assert_eq!(error_response.description, "Forbidden");
+    }
+
+    #[test]
+    fn flow_error_404_adds_not_found_response() {
+        let registry = MockRegistry::new();
+        let builder = OperationBuilder::<Missing, Missing, ()>::get("/items/{id}")
+            .path_param("id", "Item ID")
+            .public()
+            .handler(test_handler)
+            .json_response(http::StatusCode::OK, "Item")
+            .error_404(&registry);
+
+        let error_response = builder
+            .spec
+            .responses
+            .iter()
+            .find(|r| r.status == 404)
+            .expect("404 response should be present");
+
+        assert_eq!(error_response.description, "Not Found");
+    }
+
+    #[test]
+    fn flow_error_409_adds_conflict_response() {
+        let registry = MockRegistry::new();
+        let builder = OperationBuilder::<Missing, Missing, ()>::post("/users")
+            .json_request::<serde_json::Value>(&registry, "User data")
+            .public()
+            .handler(test_handler)
+            .json_response(http::StatusCode::CREATED, "Created")
+            .error_409(&registry);
+
+        let error_response = builder
+            .spec
+            .responses
+            .iter()
+            .find(|r| r.status == 409)
+            .expect("409 response should be present");
+
+        assert_eq!(error_response.description, "Conflict");
+    }
+
+    #[test]
+    fn flow_error_415_adds_unsupported_media_type_response() {
+        let registry = MockRegistry::new();
+        let builder = OperationBuilder::<Missing, Missing, ()>::post("/upload")
+            .allow_content_types(&["image/jpeg", "image/png"])
+            .public()
+            .handler(test_handler)
+            .json_response(http::StatusCode::OK, "Uploaded")
+            .error_415(&registry);
+
+        let error_response = builder
+            .spec
+            .responses
+            .iter()
+            .find(|r| r.status == 415)
+            .expect("415 response should be present");
+
+        assert_eq!(error_response.description, "Unsupported Media Type");
+    }
+
+    #[test]
+    fn flow_error_422_adds_unprocessable_entity_response() {
+        let registry = MockRegistry::new();
+        let builder = OperationBuilder::<Missing, Missing, ()>::post("/validate")
+            .json_request::<serde_json::Value>(&registry, "Data to validate")
+            .public()
+            .handler(test_handler)
+            .json_response(http::StatusCode::OK, "Valid")
+            .error_422(&registry);
+
+        let error_response = builder
+            .spec
+            .responses
+            .iter()
+            .find(|r| r.status == 422)
+            .expect("422 response should be present");
+
+        assert_eq!(error_response.description, "Unprocessable Entity");
+    }
+
+    #[test]
+    fn flow_error_429_adds_too_many_requests_response() {
+        let registry = MockRegistry::new();
+        let mut builder = OperationBuilder::<Missing, Missing, ()>::post("/limited")
+            .public()
+            .handler(test_handler)
+            .json_response(http::StatusCode::OK, "Success")
+            .error_429(&registry);
+
+        builder.require_rate_limit(5, 10, 2);
+
+        let error_response = builder
+            .spec
+            .responses
+            .iter()
+            .find(|r| r.status == 429)
+            .expect("429 response should be present");
+
+        assert_eq!(error_response.description, "Too Many Requests");
+    }
+
+    #[test]
+    fn flow_error_500_adds_internal_server_error_response() {
+        let registry = MockRegistry::new();
+        let builder = OperationBuilder::<Missing, Missing, ()>::get("/data")
+            .public()
+            .handler(test_handler)
+            .json_response(http::StatusCode::OK, "Data")
+            .error_500(&registry);
+
+        let error_response = builder
+            .spec
+            .responses
+            .iter()
+            .find(|r| r.status == 500)
+            .expect("500 response should be present");
+
+        assert_eq!(error_response.description, "Internal Server Error");
     }
 }

@@ -74,5 +74,6 @@ tonic = { workspace = true, optional = true }
 tower = { workspace = true }
 trybuild = { workspace = true }
 httpmock = { workspace = true }
+static_assertions = { workspace = true }
 
 

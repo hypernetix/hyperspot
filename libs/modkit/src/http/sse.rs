@@ -7,6 +7,18 @@ use tokio::sync::broadcast;
 use tokio_stream::wrappers::BroadcastStream;
 
 /// Small typed SSE broadcaster built on `tokio::sync::broadcast`.
+///
+/// Use this broadcaster to fan-out real-time updates to multiple HTTP clients via Server-Sent Events.
+/// It is designed for scenarios where:
+/// - You have a single source of truth or event stream (e.g., database changes, system notifications).
+/// - Multiple clients need to receive these updates in real-time.
+/// - It is acceptable to drop older messages if a client is too slow (bounded buffer).
+///
+/// Typical usage flow:
+/// 1. Create a shared `SseBroadcaster` instance (e.g., in application state).
+/// 2. Call `send` to publish events from your business logic.
+/// 3. In your HTTP handlers, call `sse_response` (or variants) to return an SSE stream to the client.
+///
 /// - T must be `Clone` so multiple subscribers can receive the same payload.
 /// - Bounded channel drops oldest events when subscribers lag (by design).
 #[derive(Clone)]
@@ -337,6 +349,152 @@ mod tests {
             elapsed < Duration::from_millis(100),
             "Send operations took too long: {:?}",
             elapsed
+        );
+    }
+
+    #[tokio::test]
+    async fn sse_response_formats_json_payload() {
+        #[derive(Clone, Serialize)]
+        struct TestMsg {
+            msg: String,
+            id: i32,
+        }
+
+        let b = SseBroadcaster::<TestMsg>::new(10);
+        let response = b.sse_response().into_response();
+
+        b.send(TestMsg {
+            msg: "hello".into(),
+            id: 99,
+        });
+
+        // Drop the broadcaster to close the channel and end the stream
+        drop(b);
+
+        // Read the body
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let text = String::from_utf8(body.to_vec()).unwrap();
+
+        assert!(
+            text.contains(r#"data: {"msg":"hello","id":99}"#),
+            "SSE response should contain JSON-formatted data field"
+        );
+    }
+
+    #[tokio::test]
+    async fn sse_response_named_includes_event_field() {
+        let b = SseBroadcaster::<i32>::new(10);
+        let response = b.sse_response_named("update_event").into_response();
+
+        b.send(123);
+        drop(b);
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let text = String::from_utf8(body.to_vec()).unwrap();
+
+        // Verify event name and data are both present
+        assert!(
+            text.contains("event: update_event"),
+            "SSE response should include event name field"
+        );
+        assert!(
+            text.contains("data: 123"),
+            "SSE response should include data field"
+        );
+    }
+
+    #[tokio::test]
+    async fn sse_response_with_headers_applies_custom_headers() {
+        let b = SseBroadcaster::<i32>::new(10);
+        let headers = vec![(
+            axum::http::header::HeaderName::from_static("x-custom-header"),
+            axum::http::HeaderValue::from_static("test-value"),
+        )];
+
+        let response = b.sse_response_with_headers(headers);
+
+        assert_eq!(
+            response.headers().get("x-custom-header").unwrap(),
+            "test-value",
+            "Custom headers should be applied to SSE response"
+        );
+    }
+
+    #[tokio::test]
+    async fn sse_response_named_with_headers_applies_both() {
+        let b = SseBroadcaster::<String>::new(10);
+        let headers = vec![(
+            axum::http::header::HeaderName::from_static("x-test"),
+            axum::http::HeaderValue::from_static("value"),
+        )];
+
+        let response = b.sse_response_named_with_headers("my_event", headers);
+
+        // Verify header is present
+        assert_eq!(
+            response.headers().get("x-test").unwrap(),
+            "value",
+            "Custom headers should be applied"
+        );
+
+        // Send data and verify event name in body
+        b.send("test_data".into());
+        drop(b);
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let text = String::from_utf8(body.to_vec()).unwrap();
+
+        assert!(
+            text.contains("event: my_event"),
+            "Event name should be in response body"
+        );
+    }
+
+    #[tokio::test]
+    async fn sse_response_handles_multiple_events() {
+        let b = SseBroadcaster::<i32>::new(10);
+        let response = b.sse_response().into_response();
+
+        // Send multiple events
+        b.send(1);
+        b.send(2);
+        b.send(3);
+        drop(b);
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let text = String::from_utf8(body.to_vec()).unwrap();
+
+        // All events should be in the response
+        assert!(text.contains("data: 1"), "First event should be present");
+        assert!(text.contains("data: 2"), "Second event should be present");
+        assert!(text.contains("data: 3"), "Third event should be present");
+    }
+
+    #[tokio::test]
+    async fn sse_response_includes_content_type_header() {
+        let b = SseBroadcaster::<i32>::new(10);
+        let response = b.sse_response().into_response();
+
+        let content_type = response.headers().get(axum::http::header::CONTENT_TYPE);
+        assert!(
+            content_type.is_some(),
+            "SSE response should have Content-Type header"
+        );
+        assert!(
+            content_type
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .contains("text/event-stream"),
+            "Content-Type should be text/event-stream"
         );
     }
 }
