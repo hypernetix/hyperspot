@@ -201,7 +201,7 @@ impl AppConfig {
 
     /// Serialize configuration to YAML.
     pub fn to_yaml(&self) -> Result<String> {
-        serde_yaml::to_string(self).context("Failed to serialize config to YAML")
+        serde_saphyr::to_string(self).context("Failed to serialize config to YAML")
     }
 
     /// Apply overrides from command line arguments.
@@ -277,8 +277,7 @@ fn merge_module_files(
             .unwrap_or("")
             .to_string();
         let raw = fs::read_to_string(&path)?;
-        let val: serde_yaml::Value = serde_yaml::from_str(&raw)?;
-        let json = serde_json::to_value(val)?;
+        let json: serde_json::Value = serde_saphyr::from_str(&raw)?;
         bag.insert(name, json);
     }
     Ok(())

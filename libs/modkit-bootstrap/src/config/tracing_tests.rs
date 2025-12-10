@@ -3,7 +3,7 @@
 #[cfg(test)]
 mod tests {
     use super::super::{Exporter, HttpOpts, LogsCorrelation, Propagation, Sampler, TracingConfig};
-    use serde_yaml;
+    use serde_saphyr;
     use std::collections::HashMap;
 
     #[test]
@@ -12,7 +12,7 @@ mod tests {
 enabled: true
 service_name: "test-service"
 "#;
-        let cfg: TracingConfig = serde_yaml::from_str(yaml).unwrap();
+        let cfg: TracingConfig = serde_saphyr::from_str(yaml).unwrap();
         assert!(cfg.enabled);
         assert_eq!(cfg.service_name.as_deref(), Some("test-service"));
         assert!(cfg.exporter.is_none());
@@ -46,7 +46,7 @@ http:
 logs_correlation:
   inject_trace_ids_into_logs: true
 "#;
-        let cfg: TracingConfig = serde_yaml::from_str(yaml).unwrap();
+        let cfg: TracingConfig = serde_saphyr::from_str(yaml).unwrap();
 
         // Basic config
         assert!(cfg.enabled);
@@ -101,7 +101,7 @@ exporter:
   kind: "otlp_http"
   endpoint: "http://127.0.0.1:4318/v1/traces"
 "#;
-        let cfg: TracingConfig = serde_yaml::from_str(yaml).unwrap();
+        let cfg: TracingConfig = serde_saphyr::from_str(yaml).unwrap();
         let exporter = cfg.exporter.as_ref().unwrap();
         assert_eq!(exporter.kind.as_deref(), Some("otlp_http"));
         assert_eq!(
@@ -118,7 +118,7 @@ enabled: true
 sampler:
   strategy: "always_on"
 "#;
-        let cfg: TracingConfig = serde_yaml::from_str(yaml).unwrap();
+        let cfg: TracingConfig = serde_saphyr::from_str(yaml).unwrap();
         let sampler = cfg.sampler.as_ref().unwrap();
         assert_eq!(sampler.strategy.as_deref(), Some("always_on"));
         assert!(sampler.ratio.is_none());
@@ -129,7 +129,7 @@ enabled: true
 sampler:
   strategy: "always_off"
 "#;
-        let cfg: TracingConfig = serde_yaml::from_str(yaml).unwrap();
+        let cfg: TracingConfig = serde_saphyr::from_str(yaml).unwrap();
         let sampler = cfg.sampler.as_ref().unwrap();
         assert_eq!(sampler.strategy.as_deref(), Some("always_off"));
 
@@ -140,7 +140,7 @@ sampler:
   strategy: "ratio"
   ratio: 0.5
 "#;
-        let cfg: TracingConfig = serde_yaml::from_str(yaml).unwrap();
+        let cfg: TracingConfig = serde_saphyr::from_str(yaml).unwrap();
         let sampler = cfg.sampler.as_ref().unwrap();
         assert_eq!(sampler.strategy.as_deref(), Some("ratio"));
         assert_eq!(sampler.ratio, Some(0.5));
@@ -155,7 +155,7 @@ exporter:
   kind: "otlp_grpc"
   endpoint: "http://127.0.0.1:4317"
 "#;
-        let cfg: TracingConfig = serde_yaml::from_str(yaml).unwrap();
+        let cfg: TracingConfig = serde_saphyr::from_str(yaml).unwrap();
         assert!(!cfg.enabled);
         // Even when disabled, other config should still parse
         assert_eq!(cfg.service_name.as_deref(), Some("test-service"));
@@ -210,10 +210,10 @@ exporter:
         };
 
         // Serialize to YAML
-        let yaml = serde_yaml::to_string(&original).unwrap();
+        let yaml = serde_saphyr::to_string(&original).unwrap();
 
         // Deserialize back
-        let roundtrip: TracingConfig = serde_yaml::from_str(&yaml).unwrap();
+        let roundtrip: TracingConfig = serde_saphyr::from_str(&yaml).unwrap();
 
         // Compare
         assert_eq!(original.enabled, roundtrip.enabled);
@@ -242,7 +242,7 @@ sampler:
 "#;
 
         // This should fail to parse due to invalid ratio type
-        let result: Result<TracingConfig, _> = serde_yaml::from_str(invalid_yaml);
+        let result: Result<TracingConfig, _> = serde_saphyr::from_str(invalid_yaml);
         assert!(result.is_err());
     }
 }

@@ -31,6 +31,6 @@ default = ["axum-ext"]
 axum-ext = ["axum", "tower", "http"]
 
 [dev-dependencies]
-serde_yaml = { workspace = true }
+serde-saphyr = { workspace = true }
 tracing-subscriber = { workspace = true }
 

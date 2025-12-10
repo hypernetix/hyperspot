@@ -18,7 +18,7 @@ name = "modkit_bootstrap"
 [dependencies]
 anyhow = { workspace = true }
 serde = { workspace = true }
-serde_yaml = { workspace = true }
+serde-saphyr = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 tracing-log = { workspace = true }
