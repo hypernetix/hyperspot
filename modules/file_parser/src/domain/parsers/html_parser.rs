@@ -162,7 +162,8 @@ fn extract_blocks_from_node(
                 .chars()
                 .nth(1)
                 .and_then(|c| c.to_digit(10))
-                .unwrap_or(1) as u8;
+                .and_then(|d| u8::try_from(d).ok())
+                .unwrap_or(1);
             let text = tag.inner_text(parser).trim().to_string();
             if !text.is_empty() {
                 // TODO: Parse inline styles from HTML

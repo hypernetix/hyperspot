@@ -1,7 +1,7 @@
 use crate::config::{LoggingConfig, Section};
 use std::collections::HashMap;
-use std::io::IsTerminal;
-use std::io::Write;
+use std::io;
+use std::io::{IsTerminal, Write};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use tracing::Level;
@@ -61,13 +61,22 @@ impl<'a> fmt::MakeWriter<'a> for RotWriter {
 #[derive(Clone)]
 struct RotWriterHandle(Arc<Mutex<FileRotate<AppendTimestamp>>>);
 
-#[allow(clippy::unwrap_used)] // Locks are always held
+impl RotWriterHandle {
+    fn try_lock(
+        &mut self,
+    ) -> std::io::Result<std::sync::MutexGuard<'_, FileRotate<AppendTimestamp>>> {
+        self.0
+            .try_lock()
+            .map_err(|e| io::Error::other(format!("Lock failed: {}", e)))
+    }
+}
+
 impl Write for RotWriterHandle {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        self.0.lock().unwrap().write(buf)
+        self.try_lock()?.write(buf)
     }
     fn flush(&mut self) -> std::io::Result<()> {
-        self.0.lock().unwrap().flush()
+        self.try_lock()?.flush()
     }
 }
 
@@ -308,12 +317,27 @@ fn build_file_router(config: &ConfigData, base_dir: &Path) -> MultiFileRouter {
     router
 }
 
+trait HasMaxSizeBytes {
+    fn max_size_bytes(&self) -> usize;
+}
+
+const DEFAULT_SECTION_MAX_SIZE_MB: usize = 100;
+
+impl HasMaxSizeBytes for Section {
+    fn max_size_bytes(&self) -> usize {
+        self.max_size_mb
+            .map(|mb| mb * 1024 * 1024)
+            .and_then(|b| usize::try_from(b).ok())
+            .unwrap_or(DEFAULT_SECTION_MAX_SIZE_MB * 1024 * 1024)
+    }
+}
+
 fn create_default_file_writer(section: &Section, base_dir: &Path) -> Option<RotWriter> {
     if section.file.trim().is_empty() {
         return None;
     }
 
-    let max_bytes = section.max_size_mb.unwrap_or(100) as usize * 1024 * 1024;
+    let max_bytes = section.max_size_bytes();
     let log_path = resolve_log_path(&section.file, base_dir);
 
     match create_rotating_writer_at_path(
@@ -342,7 +366,7 @@ fn create_crate_file_writer(
         return None;
     }
 
-    let max_bytes = section.max_size_mb.unwrap_or(100) as usize * 1024 * 1024;
+    let max_bytes = section.max_size_bytes();
     let log_path = resolve_log_path(&section.file, base_dir);
 
     match create_rotating_writer_at_path(

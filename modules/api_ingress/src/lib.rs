@@ -223,7 +223,7 @@ impl ApiIngress {
                     |res: &axum::http::Response<axum::body::Body>,
                      latency: std::time::Duration,
                      span: &tracing::Span| {
-                        let ms = (latency.as_secs_f64() * 1000.0) as u64;
+                        let ms = latency.as_millis();
                         span.record("status", res.status().as_u16());
                         span.record("latency_ms", ms);
                     },
