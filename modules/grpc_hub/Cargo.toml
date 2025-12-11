@@ -23,7 +23,6 @@ tokio-util = { workspace = true }
 tokio-stream = { workspace = true }
 tower = { workspace = true }
 tracing = { workspace = true }
-serde = { workspace = true }
 serde_json = { workspace = true }
 parking_lot = { workspace = true }
 http = { workspace = true }
@@ -32,6 +31,5 @@ http = { workspace = true }
 tonic = { workspace = true }
 
 [dev-dependencies]
-tokio = { workspace = true }
 tempfile = { workspace = true }
 

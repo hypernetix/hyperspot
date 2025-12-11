@@ -19,12 +19,10 @@ inventory = { workspace = true }
 
 # Serde and JSON schema
 serde = { workspace = true }
-serde_json = { workspace = true }
 utoipa = { workspace = true }
 
 # HTTP and REST
 axum = { workspace = true, features = ["macros", "multipart"] }
-tower-http = { workspace = true }
 http = { workspace = true }
 
 # Time handling
@@ -67,10 +65,3 @@ mime = { workspace = true }
 # Local dependencies
 modkit = { path = "../../libs/modkit" }
 modkit-auth = { path = "../../libs/modkit-auth" }
-modkit-security = { path = "../../libs/modkit-security" }
-modkit-errors = { path = "../../libs/modkit-errors" }
-
-[dev-dependencies]
-tower = { workspace = true, features = ["util"] }
-api_ingress = { path = "../../modules/api_ingress" }
-tokio-test = { workspace = true }
