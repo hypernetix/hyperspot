@@ -247,13 +247,14 @@ impl LockManager {
                         return Ok(None);
                     }
 
+                    #[allow(clippy::cast_precision_loss)]
                     let jitter_factor = {
                         let pct = config.jitter_pct.clamp(0.0, 1.0) as f64;
                         let lo = 1.0 - pct;
                         let hi = 1.0 + pct;
                         // Deterministic jitter from key hash (no rand dep).
-                        let h = xxh3_64(namespaced_key.as_bytes());
-                        let frac = h as f64 / u64::MAX as f64; // 0..1
+                        let h = xxh3_64(namespaced_key.as_bytes()) as f64;
+                        let frac = h / u64::MAX as f64; // 0..1
                         lo + frac * (hi - lo)
                     };
 
@@ -278,6 +279,11 @@ impl LockManager {
             ));
         };
         let mut conn = pool.acquire().await?; // sqlx::Error via #[from]
+
+        #[allow(
+            clippy::cast_possible_wrap,
+            reason = "intentional wrapping of hash into i64 advisory lock key"
+        )]
         let key_hash = xxh3_64(namespaced_key.as_bytes()) as i64;
 
         sqlx::query("SELECT pg_advisory_lock($1)")
@@ -299,6 +305,11 @@ impl LockManager {
             ));
         };
         let mut conn = pool.acquire().await?; // sqlx::Error via #[from]
+
+        #[allow(
+            clippy::cast_possible_wrap,
+            reason = "intentional wrapping of hash into i64 advisory lock key"
+        )]
         let key_hash = xxh3_64(namespaced_key.as_bytes()) as i64;
 
         let (ok,): (bool,) = sqlx::query_as("SELECT pg_try_advisory_lock($1)")

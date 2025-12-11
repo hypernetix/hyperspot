@@ -37,6 +37,7 @@ impl Clone for FileParserModule {
 
 #[async_trait]
 impl Module for FileParserModule {
+    #[allow(clippy::cast_possible_truncation)]
     async fn init(&self, ctx: &ModuleCtx) -> anyhow::Result<()> {
         info!("Initializing file_parser module");
 
@@ -59,8 +60,10 @@ impl Module for FileParserModule {
         info!("Registered {} parser backends", parsers.len());
 
         // Create service config from module config
+        const BYTES_IN_MB: u64 = 1024_u64 * 1024;
         let service_config = ServiceConfig {
-            max_file_size_bytes: (cfg.max_file_size_mb * 1024 * 1024) as usize,
+            max_file_size_bytes: usize::try_from(cfg.max_file_size_mb * BYTES_IN_MB)
+                .unwrap_or(usize::MAX),
             download_timeout_secs: cfg.download_timeout_secs,
         };
 

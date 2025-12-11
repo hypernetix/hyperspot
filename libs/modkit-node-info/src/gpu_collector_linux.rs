@@ -17,6 +17,7 @@ pub fn collect_gpu_info() -> Vec<GpuInfo> {
 }
 
 /// Collect NVIDIA GPU information using NVML
+#[allow(clippy::cast_precision_loss)]
 fn collect_nvidia_gpus() -> Option<Vec<GpuInfo>> {
     use nvml_wrapper::Nvml;
 
