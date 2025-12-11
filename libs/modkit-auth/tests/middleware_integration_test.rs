@@ -7,7 +7,7 @@ use axum::{
     routing::get,
     Router,
 };
-use modkit_auth::axum_ext::auth_with_policy;
+use modkit_auth::axum_ext::AuthPolicyLayer;
 use modkit_auth::{
     authorizer::RoleAuthorizer,
     axum_ext::Authz,
@@ -82,14 +82,11 @@ fn create_app(
 ) -> Router {
     Router::new()
         .route("/protected", get(protected_handler))
-        .layer(axum::middleware::from_fn_with_state(
-            modkit_auth::axum_ext::AuthPolicyState::new(
-                validator,
-                scope_builder,
-                authorizer,
-                policy,
-            ),
-            auth_with_policy,
+        .layer(AuthPolicyLayer::new(
+            validator,
+            scope_builder,
+            authorizer,
+            policy,
         ))
 }
 
@@ -188,14 +185,11 @@ async fn test_optional_auth_inserts_anonymous_context() {
 
     let app = Router::new()
         .route("/optional", get(optional_handler))
-        .layer(axum::middleware::from_fn_with_state(
-            modkit_auth::axum_ext::AuthPolicyState::new(
-                validator,
-                scope_builder,
-                authorizer,
-                policy,
-            ),
-            auth_with_policy,
+        .layer(AuthPolicyLayer::new(
+            validator,
+            scope_builder,
+            authorizer,
+            policy,
         ));
 
     let response = app

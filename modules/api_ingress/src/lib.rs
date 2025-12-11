@@ -301,14 +301,11 @@ impl ApiIngress {
             let authorizer = auth_state.authorizer.clone();
             let policy = Arc::new(route_policy) as Arc<dyn modkit_auth::RoutePolicy>;
 
-            router = router.layer(axum::middleware::from_fn_with_state(
-                modkit_auth::axum_ext::AuthPolicyState::new(
-                    validator,
-                    scope_builder,
-                    authorizer,
-                    policy,
-                ),
-                modkit_auth::axum_ext::auth_with_policy,
+            router = router.layer(modkit_auth::axum_ext::AuthPolicyLayer::new(
+                validator,
+                scope_builder,
+                authorizer,
+                policy,
             ));
         }
 

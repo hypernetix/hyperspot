@@ -13,7 +13,7 @@ use axum::{
     Router,
 };
 use modkit_auth::{
-    axum_ext::auth_with_policy,
+    axum_ext::AuthPolicyLayer,
     errors::AuthError,
     traits::{PrimaryAuthorizer, ScopeBuilder, TokenValidator},
     types::{AuthRequirement, RoutePolicy, SecRequirement},
@@ -138,14 +138,11 @@ fn build_test_router(
         .route("/secured", get(test_handler))
         .route("/public", get(test_handler))
         .route("/optional", get(test_handler))
-        .layer(axum::middleware::from_fn_with_state(
-            modkit_auth::axum_ext::AuthPolicyState::new(
-                validator,
-                scope_builder,
-                authorizer,
-                policy,
-            ),
-            auth_with_policy,
+        .layer(AuthPolicyLayer::new(
+            validator,
+            scope_builder,
+            authorizer,
+            policy,
         ))
 }
 
