@@ -156,14 +156,15 @@ impl DbConnectOptions {
 pub mod sqlite_pragma {
     use crate::DbError;
     use std::collections::HashMap;
+    use std::hash::BuildHasher;
 
     /// Whitelisted SQLite PRAGMA parameters.
     const ALLOWED_PRAGMAS: &[&str] = &["wal", "synchronous", "busy_timeout", "journal_mode"];
 
     /// Validate and apply SQLite PRAGMA parameters to connection options.
-    pub fn apply_pragmas(
+    pub fn apply_pragmas<S: BuildHasher>(
         mut opts: sqlx::sqlite::SqliteConnectOptions,
-        params: &HashMap<String, String>,
+        params: &HashMap<String, String, S>,
     ) -> crate::Result<sqlx::sqlite::SqliteConnectOptions> {
         for (key, value) in params {
             let key_lower = key.to_lowercase();

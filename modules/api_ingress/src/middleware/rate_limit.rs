@@ -97,8 +97,8 @@ impl TokenBucket {
         let cap = burst.max(rps).max(1);
         Self {
             capacity: cap,
-            tokens: cap as f64,
-            refill_per_sec: rps.max(1) as f64,
+            tokens: f64::from(cap),
+            refill_per_sec: f64::from(rps.max(1)),
             last: Instant::now(),
         }
     }
@@ -107,7 +107,7 @@ impl TokenBucket {
         let now = Instant::now();
         let elapsed = now.duration_since(self.last).as_secs_f64();
         self.last = now;
-        self.tokens = (self.tokens + elapsed * self.refill_per_sec).min(self.capacity as f64);
+        self.tokens = (self.tokens + elapsed * self.refill_per_sec).min(f64::from(self.capacity));
         if self.tokens >= 1.0 {
             self.tokens -= 1.0;
             true

@@ -248,7 +248,7 @@ impl LockManager {
                     }
 
                     let jitter_factor = {
-                        let pct = config.jitter_pct.clamp(0.0, 1.0) as f64;
+                        let pct = f64::from(config.jitter_pct.clamp(0.0, 1.0));
                         let lo = 1.0 - pct;
                         let hi = 1.0 + pct;
                         // Deterministic jitter from key hash (no rand dep).

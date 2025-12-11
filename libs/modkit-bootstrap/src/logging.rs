@@ -170,7 +170,7 @@ fn create_rotating_writer_at_path(
     }
 
     // Respect retention policy: prefer MaxFiles if provided, else Age
-    let age = chrono::Duration::days(max_age_days.unwrap_or(1) as i64);
+    let age = chrono::Duration::days(i64::from(max_age_days.unwrap_or(1)));
     let limit = if let Some(n) = max_backups {
         FileLimit::MaxFiles(n)
     } else {

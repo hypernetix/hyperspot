@@ -110,7 +110,7 @@ async fn main() -> Result<()> {
     let otel_layer = None;
 
     // Initialize logging + otel in one Registry
-    let logging_config = config.logging.as_ref().cloned().unwrap_or_default();
+    let logging_config = config.logging.clone().unwrap_or_default();
     modkit_bootstrap::logging::init_logging_unified(
         &logging_config,
         Path::new(&config.server.home_dir),

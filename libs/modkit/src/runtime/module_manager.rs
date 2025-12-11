@@ -321,7 +321,7 @@ impl ModuleManager {
             .collect();
 
         let candidates: Vec<_> = if healthy.is_empty() {
-            instances.to_vec()
+            instances.clone()
         } else {
             healthy
         };
@@ -597,8 +597,10 @@ mod tests {
 
         let now = Instant::now();
         let instance = ModuleInstance::new("test_module", "instance1");
-        // Set the last heartbeat to be stale
-        instance.inner.write().last_heartbeat = now - ttl - Duration::from_millis(10);
+        // Set the last heartbeat to be stale (use saturating_sub to avoid potential panic)
+        instance.inner.write().last_heartbeat = now
+            .checked_sub(ttl + Duration::from_millis(10))
+            .unwrap_or(now);
 
         dir.register_instance(Arc::new(instance));
 

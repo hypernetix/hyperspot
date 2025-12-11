@@ -470,9 +470,9 @@ where
         }
 
         // Identifier op Value
-        X::Compare(l, op, r) => {
-            let (name, rhs) = match (&**l, &**r) {
-                (X::Identifier(name), X::Value(v)) => (name, v),
+        X::Compare(lhs, op, rhs) => {
+            let (name, rhs_val) = match (&**lhs, &**rhs) {
+                (X::Identifier(name), X::Value(val)) => (name, val),
                 (X::Identifier(_), X::Identifier(_)) => {
                     return Err(ODataBuildError::Other(
                         "field-to-field comparison is not supported",
@@ -480,13 +480,13 @@ where
                 }
                 _ => return Err(ODataBuildError::Other("unsupported comparison form")),
             };
-            let f = fmap
+            let field = fmap
                 .get(name)
                 .ok_or_else(|| ODataBuildError::UnknownField(name.clone()))?;
-            let col = f.col;
+            let col = field.col;
 
             // null handling
-            if matches!(rhs, core::Value::Null) {
+            if matches!(rhs_val, core::Value::Null) {
                 return Ok(match op {
                     Op::Eq => Condition::all().add(Expr::col(col).is_null()),
                     Op::Ne => Condition::all().add(Expr::col(col).is_not_null()),
@@ -494,16 +494,16 @@ where
                 });
             }
 
-            let v = coerce(f.kind, rhs)?;
-            let e = match op {
-                Op::Eq => Expr::col(col).eq(v),
-                Op::Ne => Expr::col(col).ne(v),
-                Op::Gt => Expr::col(col).gt(v),
-                Op::Ge => Expr::col(col).gte(v),
-                Op::Lt => Expr::col(col).lt(v),
-                Op::Le => Expr::col(col).lte(v),
+            let value = coerce(field.kind, rhs_val)?;
+            let expr = match op {
+                Op::Eq => Expr::col(col).eq(value),
+                Op::Ne => Expr::col(col).ne(value),
+                Op::Gt => Expr::col(col).gt(value),
+                Op::Ge => Expr::col(col).gte(value),
+                Op::Lt => Expr::col(col).lt(value),
+                Op::Le => Expr::col(col).lte(value),
             };
-            Condition::all().add(e)
+            Condition::all().add(expr)
         }
 
         // Identifier IN (value, value, ...)

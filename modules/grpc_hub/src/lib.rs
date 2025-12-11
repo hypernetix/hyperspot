@@ -25,7 +25,7 @@ use tonic::{service::Routes, service::RoutesBuilder, transport::Server};
 use modkit_transport_grpc::create_named_pipe_incoming;
 
 const DEFAULT_LISTEN_ADDR: SocketAddr =
-    SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 50051));
+    SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, 50051));
 
 /// Configuration for the listen address
 #[derive(Clone)]

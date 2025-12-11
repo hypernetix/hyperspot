@@ -667,13 +667,11 @@ mod problem_openapi_tests {
 
         // Check what content types exist
         let content_obj = path_obj.get("content").expect("content object missing");
-        if content_obj.get("application/problem+json").is_none() {
-            // Print available content types for debugging
-            panic!(
-                "application/problem+json content missing. Available content: {}",
-                serde_json::to_string_pretty(content_obj).unwrap()
-            );
-        }
+        assert!(
+            content_obj.get("application/problem+json").is_some(),
+            "application/problem+json content missing. Available content: {}",
+            serde_json::to_string_pretty(content_obj).unwrap()
+        );
 
         let content = path_obj
             .pointer("/content/application~1problem+json")

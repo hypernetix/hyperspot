@@ -133,7 +133,7 @@ impl SysCapCollector {
             SysCapBuilder::new(
                 format!("hardware:{}", arch),
                 "hardware".to_string(),
-                arch.to_string(),
+                arch.clone(),
                 arch.to_uppercase(),
             )
             .details(Some(format!("{} architecture detected", arch)))
@@ -169,7 +169,7 @@ impl SysCapCollector {
                 "CPU".to_string(),
             )
             .version(Some(sysinfo.cpu.model.clone()))
-            .amount(Some(sysinfo.cpu.cores as f64))
+            .amount(Some(f64::from(sysinfo.cpu.cores)))
             .amount_dimension(Some("cores".to_string()))
             .details(Some(format!(
                 "{} with {} cores @ {:.0} MHz",
@@ -236,7 +236,7 @@ impl SysCapCollector {
                     format!(
                         "gpu{}",
                         if i == 0 {
-                            "".to_string()
+                            String::new()
                         } else {
                             i.to_string()
                         }
@@ -276,7 +276,7 @@ impl SysCapCollector {
                     "battery".to_string(),
                     "Battery".to_string(),
                 )
-                .amount(Some(battery.percentage as f64))
+                .amount(Some(f64::from(battery.percentage)))
                 .amount_dimension(Some("percent".to_string()))
                 .details(Some(format!(
                     "Status: {}, Level: {}%",
