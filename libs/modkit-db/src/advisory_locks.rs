@@ -278,6 +278,11 @@ impl LockManager {
             ));
         };
         let mut conn = pool.acquire().await?; // sqlx::Error via #[from]
+
+        #[allow(
+            clippy::cast_possible_wrap,
+            reason = "intentional wrapping of hash into i64 advisory lock key"
+        )]
         let key_hash = xxh3_64(namespaced_key.as_bytes()) as i64;
 
         sqlx::query("SELECT pg_advisory_lock($1)")
@@ -299,6 +304,11 @@ impl LockManager {
             ));
         };
         let mut conn = pool.acquire().await?; // sqlx::Error via #[from]
+
+        #[allow(
+            clippy::cast_possible_wrap,
+            reason = "intentional wrapping of hash into i64 advisory lock key"
+        )]
         let key_hash = xxh3_64(namespaced_key.as_bytes()) as i64;
 
         let (ok,): (bool,) = sqlx::query_as("SELECT pg_try_advisory_lock($1)")

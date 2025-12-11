@@ -221,12 +221,12 @@ impl NodeStorage {
             Ok(nodes) => {
                 if let Some(data) = nodes.get(&node_id) {
                     if let Some(ref syscap_system) = data.syscap_system {
-                        if let Some(cap) = syscap_system.capabilities.iter().find(|c| c.key == key)
-                        {
-                            let now = chrono::Utc::now().timestamp();
-                            let age_secs = (now - cap.fetched_at_secs).max(0);
-                            return age_secs as u64 >= cap.cache_ttl_secs;
-                        }
+                        let now = chrono::Utc::now();
+
+                        return syscap_system
+                            .capabilities
+                            .iter()
+                            .any(|c| c.key == key && c.cache_is_expired(now));
                     }
                 }
                 // If not found or no syscap, needs refresh
@@ -247,13 +247,12 @@ impl NodeStorage {
 
                 if let Some(data) = nodes.get(&node_id) {
                     if let Some(ref syscap_system) = data.syscap_system {
-                        let now = chrono::Utc::now().timestamp();
-                        for cap in &syscap_system.capabilities {
-                            let age_secs = (now - cap.fetched_at_secs).max(0);
-                            if age_secs as u64 >= cap.cache_ttl_secs {
-                                expired_keys.push(cap.key.clone());
-                            }
-                        }
+                        let now = chrono::Utc::now();
+                        syscap_system
+                            .capabilities
+                            .iter()
+                            .filter(|cap| cap.cache_is_expired(now))
+                            .for_each(|cap| expired_keys.push(cap.key.clone()));
                     }
                 }
 
@@ -267,8 +266,89 @@ impl NodeStorage {
     }
 }
 
+trait CacheableCapability {
+    fn cache_is_expired(&self, now: chrono::DateTime<chrono::Utc>) -> bool;
+}
+
+impl CacheableCapability for SysCap {
+    fn cache_is_expired(&self, now: chrono::DateTime<chrono::Utc>) -> bool {
+        let now_secs = now.timestamp();
+        #[allow(clippy::cast_sign_loss)]
+        let age_secs = (now_secs - self.fetched_at_secs).max(0) as u64;
+        age_secs >= self.cache_ttl_secs
+    }
+}
+
 impl Default for NodeStorage {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::contract::SysCap;
+    use chrono::Utc;
+
+    fn make_syscap_with(fetched_at_secs: i64, cache_ttl_secs: u64) -> SysCap {
+        SysCap {
+            key: "k".to_string(),
+            category: "c".to_string(),
+            name: "n".to_string(),
+            display_name: "d".to_string(),
+            present: true,
+            version: None,
+            amount: None,
+            amount_dimension: None,
+            details: None,
+            cache_ttl_secs,
+            fetched_at_secs,
+        }
+    }
+
+    #[test]
+    fn cache_not_expired_before_ttl() {
+        let now = Utc::now();
+        let ttl = 10u64;
+        let fetched_at = now.timestamp() - 9; // 9 seconds ago
+
+        let cap = make_syscap_with(fetched_at, ttl);
+
+        assert!(!cap.cache_is_expired(now));
+    }
+
+    #[test]
+    fn cache_expired_at_ttl_boundary() {
+        let now = Utc::now();
+        let ttl = 10u64;
+        let fetched_at = now.timestamp() - 10; // exactly ttl seconds ago
+
+        let cap = make_syscap_with(fetched_at, ttl);
+
+        assert!(cap.cache_is_expired(now));
+    }
+
+    #[test]
+    fn future_fetched_at_counts_as_fresh_when_ttl_positive() {
+        let now = Utc::now();
+        let ttl = 5u64;
+        let fetched_at = now.timestamp() + 60; // fetched in the future
+
+        let cap = make_syscap_with(fetched_at, ttl);
+
+        // age is treated as 0, so not expired for positive ttl
+        assert!(!cap.cache_is_expired(now));
+    }
+
+    #[test]
+    fn zero_ttl_always_expired() {
+        let now = Utc::now();
+        let ttl = 0u64;
+        let fetched_at = now.timestamp();
+
+        let cap = make_syscap_with(fetched_at, ttl);
+
+        assert!(cap.cache_is_expired(now));
     }
 }

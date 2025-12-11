@@ -168,7 +168,7 @@ impl SysInfoCollector {
         }
     }
 
-    #[allow(clippy::cast_possible_truncation)]
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     fn collect_battery_info() -> Option<BatteryInfo> {
         // Use starship-battery for cross-platform battery detection
         use starship_battery::Manager;
