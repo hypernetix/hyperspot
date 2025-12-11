@@ -41,7 +41,6 @@ bigdecimal = { workspace = true }
 rust_decimal = { workspace = true }
 ryu = { workspace = true }
 url = { workspace = true }
-dsn = { workspace = true }
 humantime-serde = { workspace = true }
 regex = { workspace = true }
 serde = { workspace = true }
@@ -51,7 +50,6 @@ figment = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }
-dirs = { workspace = true }
 serde-saphyr = { workspace = true }
 testcontainers = { workspace = true }
 testcontainers-modules = { workspace = true }

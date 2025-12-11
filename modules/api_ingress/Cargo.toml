@@ -43,7 +43,6 @@ http = { workspace = true }
 rust-embed = { workspace = true }
 
 [dev-dependencies]
-async-trait = { workspace = true }
 futures = { workspace = true }
 
 [features]

@@ -1073,7 +1073,6 @@ dependencies = [
  "tonic",
  "tonic-prost",
  "tonic-prost-build",
- "tracing",
 ]
 
 [[package]]
@@ -1376,7 +1375,6 @@ name = "file_parser"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "api_ingress",
  "arc-swap",
  "async-trait",
  "axum",
@@ -1390,19 +1388,13 @@ dependencies = [
  "mime",
  "modkit",
  "modkit-auth",
- "modkit-errors",
- "modkit-security",
  "pdf-extract",
  "reqwest",
  "serde",
- "serde_json",
  "tempfile",
  "thiserror 2.0.17",
  "tl",
  "tokio",
- "tokio-test",
- "tower",
- "tower-http",
  "tracing",
  "url",
  "utoipa",
@@ -1654,7 +1646,6 @@ dependencies = [
  "modkit",
  "modkit-transport-grpc",
  "parking_lot",
- "serde",
  "serde_json",
  "tempfile",
  "tokio",
@@ -2668,7 +2659,6 @@ dependencies = [
  "chrono",
  "dashmap",
  "dirs",
- "dsn",
  "figment",
  "humantime-serde",
  "modkit-db-macros",
@@ -2725,7 +2715,6 @@ dependencies = [
  "serde",
  "serde_json",
  "syn 2.0.111",
- "trybuild",
 ]
 
 [[package]]
@@ -2747,7 +2736,6 @@ dependencies = [
  "tokio-util",
  "tonic",
  "trybuild",
- "uuid",
 ]
 
 [[package]]
@@ -2886,21 +2874,15 @@ name = "nodes_registry"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "api_ingress",
  "arc-swap",
  "async-trait",
  "axum",
  "chrono",
- "futures",
  "inventory",
  "modkit",
  "modkit-node-info",
  "serde",
- "serde_json",
  "thiserror 2.0.17",
- "tokio",
- "tower",
- "tower-http",
  "tracing",
  "utoipa",
  "uuid",

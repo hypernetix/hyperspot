@@ -28,5 +28,4 @@ inventory = { workspace = true }
 modkit = { path = "../modkit", default-features = false }
 modkit-security = { path = "../modkit-security" }
 modkit-transport-grpc = { path = "../modkit-transport-grpc" }
-uuid = { workspace = true }
 tonic = { workspace = true }
