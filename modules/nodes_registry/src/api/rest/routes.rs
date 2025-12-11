@@ -3,7 +3,7 @@ use axum::{Extension, Router};
 use modkit::api::{Missing, OpenApiRegistry, OperationBuilder};
 use std::sync::Arc;
 
-use super::dto::*;
+use super::dto::{NodeDto, NodeSysCapDto, NodeSysInfoDto};
 use super::handlers;
 use crate::domain::service::Service;
 

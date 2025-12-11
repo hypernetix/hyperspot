@@ -35,7 +35,7 @@ impl From<DecodeError> for SecCtxDecodeError {
     }
 }
 
-fn secctx_config() -> impl Config {
+const fn secctx_config() -> impl Config {
     standard().with_fixed_int_encoding().with_little_endian()
 }
 

@@ -7,7 +7,7 @@ pub struct RoleAuthorizer;
 
 impl RoleAuthorizer {
     /// Check if any role matches the requirement pattern
-    fn check_role(&self, claims: &Claims, requirement: &SecRequirement) -> bool {
+    fn check_role(claims: &Claims, requirement: &SecRequirement) -> bool {
         let required_role = format!("{}:{}", requirement.resource, requirement.action);
 
         // Check for exact match or wildcard patterns
@@ -40,7 +40,7 @@ impl RoleAuthorizer {
 #[async_trait]
 impl PrimaryAuthorizer for RoleAuthorizer {
     async fn check(&self, claims: &Claims, requirement: &SecRequirement) -> Result<(), AuthError> {
-        if self.check_role(claims, requirement) {
+        if Self::check_role(claims, requirement) {
             Ok(())
         } else {
             Err(AuthError::Forbidden)

@@ -1,3 +1,6 @@
+#![allow(clippy::use_debug)]
+#![allow(clippy::non_ascii_literal)]
+
 /// Example of using the new AuthDispatcher plugin system
 ///
 /// This example demonstrates:
@@ -141,7 +144,7 @@ plugins:
     println!("{}", yaml);
 
     // Try to parse it
-    match serde_yaml::from_str::<AuthConfig>(yaml) {
+    match serde_saphyr::from_str::<AuthConfig>(yaml) {
         Ok(config) => {
             println!("✅ YAML parsed successfully");
             println!("   Provider: {}", config.mode.provider);
@@ -173,7 +176,7 @@ plugins:
 
     println!("{}", yaml);
 
-    match serde_yaml::from_str::<AuthConfig>(yaml) {
+    match serde_saphyr::from_str::<AuthConfig>(yaml) {
         Ok(config) => {
             println!("✅ YAML parsed successfully");
             println!("   Provider: {}", config.mode.provider);

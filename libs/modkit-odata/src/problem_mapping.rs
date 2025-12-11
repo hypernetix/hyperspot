@@ -15,11 +15,11 @@ impl From<Error> for Problem {
         match err {
             // Filter parsing errors → 422
             InvalidFilter(msg) => ErrorCode::odata_errors_invalid_filter_v1()
-                .to_problem(format!("Invalid $filter: {}", msg)),
+                .as_problem(format!("Invalid $filter: {}", msg)),
 
             // OrderBy parsing and validation errors → 422
             InvalidOrderByField(field) => ErrorCode::odata_errors_invalid_orderby_v1()
-                .to_problem(format!("Unsupported $orderby field: {}", field)),
+                .as_problem(format!("Unsupported $orderby field: {}", field)),
 
             // All cursor-related errors → 422
             InvalidCursor
@@ -29,28 +29,28 @@ impl From<Error> for Problem {
             | CursorInvalidKeys
             | CursorInvalidFields
             | CursorInvalidDirection => {
-                ErrorCode::odata_errors_invalid_cursor_v1().to_problem(err.to_string())
+                ErrorCode::odata_errors_invalid_cursor_v1().as_problem(err.to_string())
             }
 
             // Pagination validation errors → 422
             OrderMismatch => ErrorCode::odata_errors_invalid_orderby_v1()
-                .to_problem("Order mismatch between cursor and query"),
+                .as_problem("Order mismatch between cursor and query"),
 
             FilterMismatch => ErrorCode::odata_errors_invalid_filter_v1()
-                .to_problem("Filter mismatch between cursor and query"),
+                .as_problem("Filter mismatch between cursor and query"),
 
             InvalidLimit => {
-                ErrorCode::odata_errors_invalid_filter_v1().to_problem("Invalid limit parameter")
+                ErrorCode::odata_errors_invalid_filter_v1().as_problem("Invalid limit parameter")
             }
 
             OrderWithCursor => ErrorCode::odata_errors_invalid_cursor_v1()
-                .to_problem("Cannot specify both $orderby and cursor parameters"),
+                .as_problem("Cannot specify both $orderby and cursor parameters"),
 
             // Database errors → 500 (should be caught earlier)
             Db(_msg) => {
                 // Use filter error as safe default for unexpected DB errors
                 ErrorCode::odata_errors_internal_v1()
-                    .to_problem("An internal error occurred while processing the OData query")
+                    .as_problem("An internal error occurred while processing the OData query")
             }
         }
     }

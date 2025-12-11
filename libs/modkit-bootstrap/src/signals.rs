@@ -1,54 +1,46 @@
 use anyhow::Result;
 use tokio::signal;
 
+/// Signals that can trigger shutdown.
+enum ShutdownSignal {
+    CtrlC,
+    #[cfg(unix)]
+    Sigterm,
+}
+
 /// Wait for termination signals (Ctrl+C, SIGTERM)
 pub async fn wait_for_shutdown() -> Result<()> {
-    let ctrl_c = async {
-        if let Err(e) = signal::ctrl_c().await {
-            tracing::error!(%e, "Failed to install Ctrl+C handler");
-            return Err(e);
-        }
-        Ok(())
+    let _signal = tokio::select! {
+        result = wait_ctrl_c() => result?,
+        result = wait_sigterm() => result?,
     };
-
-    #[cfg(unix)]
-    let terminate = async {
-        match signal::unix::signal(signal::unix::SignalKind::terminate()) {
-            Ok(mut signal_handler) => {
-                signal_handler.recv().await;
-                Ok(())
-            }
-            Err(e) => {
-                tracing::error!(%e, "Failed to install SIGTERM handler");
-                Err(e)
-            }
-        }
-    };
-
-    #[cfg(not(unix))]
-    let terminate = async { Ok::<(), std::io::Error>(()) };
-
-    tokio::select! {
-        result = ctrl_c => {
-            match result {
-                Ok(_) => tracing::info!("Received Ctrl+C signal"),
-                Err(e) => {
-                    tracing::error!(%e, "Error handling Ctrl+C signal");
-                    return Err(e.into());
-                }
-            }
-        },
-        result = terminate => {
-            match result {
-                Ok(_) => tracing::info!("Received SIGTERM signal"),
-                Err(e) => {
-                    tracing::error!(%e, "Error handling SIGTERM signal");
-                    return Err(e.into());
-                }
-            }
-        },
-    }
 
     tracing::info!("Shutdown signal received, initiating graceful shutdown");
     Ok(())
+}
+
+async fn wait_ctrl_c() -> Result<ShutdownSignal> {
+    signal::ctrl_c().await.map_err(|e| {
+        tracing::error!(%e, "Error handling Ctrl+C signal");
+        e
+    })?;
+    tracing::info!("Received Ctrl+C signal");
+    Ok(ShutdownSignal::CtrlC)
+}
+
+#[cfg(unix)]
+async fn wait_sigterm() -> Result<ShutdownSignal> {
+    let mut signal_handler =
+        signal::unix::signal(signal::unix::SignalKind::terminate()).map_err(|e| {
+            tracing::error!(%e, "Failed to install SIGTERM handler");
+            e
+        })?;
+    signal_handler.recv().await;
+    tracing::info!("Received SIGTERM signal");
+    Ok(ShutdownSignal::Sigterm)
+}
+
+#[cfg(not(unix))]
+async fn wait_sigterm() -> Result<ShutdownSignal> {
+    std::future::pending::<Result<ShutdownSignal>>().await
 }

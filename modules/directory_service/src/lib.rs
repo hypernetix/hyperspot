@@ -33,7 +33,7 @@ pub struct DirectoryServiceModule {
 impl Default for DirectoryServiceModule {
     fn default() -> Self {
         Self {
-            config: RwLock::new(DirectoryServiceConfig::default()),
+            config: RwLock::new(DirectoryServiceConfig),
             directory_api: RwLock::new(None),
             module_manager: BlockingRwLock::new(None),
         }

@@ -27,6 +27,13 @@ pub enum AuthRequirement {
     Optional,
 }
 
+#[async_trait::async_trait]
+impl RoutePolicy for AuthRequirement {
+    async fn resolve(&self, _method: &http::Method, _path: &str) -> AuthRequirement {
+        self.clone()
+    }
+}
+
 /// Route policy that determines authentication requirements for routes
 #[async_trait::async_trait]
 pub trait RoutePolicy: Send + Sync {

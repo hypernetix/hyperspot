@@ -238,14 +238,14 @@ impl Service {
     }
 
     fn validate_new_user(&self, new_user: &NewUser) -> Result<(), DomainError> {
-        self.validate_email(&new_user.email)?;
+        Self::validate_email(&new_user.email)?;
         self.validate_display_name(&new_user.display_name)?;
         Ok(())
     }
 
     fn validate_user_patch(&self, patch: &UserPatch) -> Result<(), DomainError> {
         if let Some(ref email) = patch.email {
-            self.validate_email(email)?;
+            Self::validate_email(email)?;
         }
         if let Some(ref display_name) = patch.display_name {
             self.validate_display_name(display_name)?;
@@ -253,7 +253,7 @@ impl Service {
         Ok(())
     }
 
-    fn validate_email(&self, email: &str) -> Result<(), DomainError> {
+    fn validate_email(email: &str) -> Result<(), DomainError> {
         if email.is_empty() || !email.contains('@') || !email.contains('.') {
             return Err(DomainError::invalid_email(email.to_string()));
         }

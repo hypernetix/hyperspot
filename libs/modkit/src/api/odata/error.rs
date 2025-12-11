@@ -23,7 +23,7 @@ fn to_problem(
     instance: &str,
     trace_id: Option<String>,
 ) -> Problem {
-    let mut problem = code.to_problem(detail);
+    let mut problem = code.as_problem(detail);
     problem = problem.with_instance(instance);
     if let Some(tid) = trace_id {
         problem = problem.with_trace_id(tid);

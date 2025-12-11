@@ -418,7 +418,7 @@ pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
     let caps_for_regs: Vec<Capability> = config.caps.clone();
     let ctor_expr_opt: Option<Expr> = config.ctor.clone();
     let client_trait_opt: Option<Path> = config.client.clone();
-    let lifecycle_cfg_opt: Option<LcModuleCfg> = config.lifecycle.clone();
+    let lifecycle_cfg_opt: Option<LcModuleCfg> = config.lifecycle;
 
     // Prepare string literals for name/deps
     let name_lit = LitStr::new(&name_owned, Span::call_site());

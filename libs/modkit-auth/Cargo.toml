@@ -5,6 +5,10 @@ edition.workspace = true
 license.workspace = true
 authors.workspace = true
 
+[[example]]
+name = "dispatcher_usage"
+path = "examples/dispatcher_usage.rs"
+
 [lints]
 workspace = true
 
@@ -31,6 +35,6 @@ default = ["axum-ext"]
 axum-ext = ["axum", "tower", "http"]
 
 [dev-dependencies]
-serde_yaml = { workspace = true }
+serde-saphyr = { workspace = true }
 tracing-subscriber = { workspace = true }
 

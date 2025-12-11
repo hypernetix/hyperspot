@@ -84,7 +84,7 @@ impl MarkdownRenderer {
     }
 
     /// Render a document using this renderer instance
-    pub fn render_doc(&self, doc: &ParsedDocument) -> String {
+    pub fn render_doc(doc: &ParsedDocument) -> String {
         Self::render(doc)
     }
 

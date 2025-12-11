@@ -1,3 +1,5 @@
+#![allow(clippy::use_debug)]
+
 use anyhow::Result;
 use async_trait::async_trait;
 use modkit::contracts::StatefulModule;

@@ -1,4 +1,4 @@
-#![allow(clippy::unwrap_used, clippy::expect_used)]
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::non_ascii_literal)]
 
 //! CLI smoke tests for hyperspot-server binary
 //!
@@ -372,6 +372,95 @@ fn test_cli_config_flag_short_form() {
             || stderr.contains("config"),
         "Should indicate config file not found using short flag: {}",
         stderr
+    );
+}
+
+#[test]
+fn test_cli_check_with_database_config() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let config_path = temp_dir.path().join("db_config.yaml");
+
+    // Write configuration with database servers
+    let config_content = format!(
+        r#"
+database:
+  servers:
+    test_sqlite:
+      dsn: "sqlite://{}/test.db"
+      params:
+        journal_mode: "WAL"
+
+logging:
+  default:
+    console_level: error
+    file: "{}"
+    file_level: error
+"#,
+        temp_dir.path().to_string_lossy().replace('\\', "/"),
+        temp_dir
+            .path()
+            .join("test.log")
+            .to_string_lossy()
+            .replace('\\', "/")
+    );
+
+    std::fs::write(&config_path, config_content).expect("Failed to write config file");
+
+    let output = run_hyperspot_server(&["--config", config_path.to_str().unwrap(), "check"]);
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        eprintln!("STDERR: {}", stderr);
+        eprintln!("STDOUT: {}", stdout);
+    }
+
+    assert!(
+        output.status.success(),
+        "Should succeed with valid database config"
+    );
+}
+
+#[test]
+fn test_cli_check_without_database_config() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let config_path = temp_dir.path().join("no_db_config.yaml");
+
+    // Write configuration without database section
+    let config_content = format!(
+        r#"
+logging:
+  default:
+    console_level: error
+    file: "{}"
+    file_level: error
+
+server:
+  home_dir: "{}"
+"#,
+        temp_dir
+            .path()
+            .join("test.log")
+            .to_string_lossy()
+            .replace('\\', "/"),
+        temp_dir.path().to_string_lossy().replace('\\', "/")
+    );
+
+    std::fs::write(&config_path, config_content).expect("Failed to write config file");
+
+    let output = run_hyperspot_server(&["--config", config_path.to_str().unwrap(), "check"]);
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        eprintln!("STDERR: {}", stderr);
+        eprintln!("STDOUT: {}", stdout);
+    }
+
+    // Should succeed even without database config (modules can run without DB)
+    assert!(
+        output.status.success(),
+        "Should succeed without database config"
     );
 }
 

@@ -34,7 +34,7 @@ pub fn parse_trace_id(traceparent: &str) -> Option<String> {
 
 #[cfg(feature = "otel")]
 mod imp {
-    use super::*;
+    use super::{get_traceparent, parse_trace_id};
     use http::{HeaderMap, HeaderName, HeaderValue};
     use opentelemetry::{
         global,
@@ -102,7 +102,7 @@ mod imp {
 
 #[cfg(not(feature = "otel"))]
 mod imp {
-    use super::*;
+    use super::{get_traceparent, parse_trace_id};
     use http::HeaderMap;
     use tracing::Span;
 

@@ -1,4 +1,10 @@
 # Clippy configuration for HyperSpot
+avoid-breaking-exported-api = false
+
+check-inconsistent-struct-field-initializers = true
+
+lint-commented-code = true
+
 #
 # Workspace-level lints are configured in Cargo.toml [workspace.lints.clippy]:
 #
@@ -29,7 +35,7 @@ disallowed-methods = [
 # Type complexity threshold (default is 250)
 type-complexity-threshold = 190
 # Type complexity threshold (default is 25)
-cognitive-complexity-threshold = 38
+cognitive-complexity-threshold = 25
 
 allow-expect-in-tests = true
 allow-unwrap-in-tests = true

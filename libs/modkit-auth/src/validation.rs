@@ -79,15 +79,13 @@ pub fn validate_claims(claims: &Claims, config: &ValidationConfig) -> Result<(),
     }
 
     // 5. Validate subject is UUID (already validated during normalization, but double-check)
-    if config.require_uuid_subject {
+    if config.require_uuid_subject && claims.sub.is_nil() {
         // sub is already a Uuid type, so this is guaranteed
         // Just a safety check for future-proofing
-        if claims.sub.is_nil() {
-            return Err(ClaimsError::InvalidClaimFormat {
-                field: "sub".to_string(),
-                reason: "subject cannot be nil UUID".to_string(),
-            });
-        }
+        return Err(ClaimsError::InvalidClaimFormat {
+            field: "sub".to_string(),
+            reason: "subject cannot be nil UUID".to_string(),
+        });
     }
 
     // 6. Validate tenants are UUIDs (already validated during normalization)
@@ -129,14 +127,13 @@ pub fn parse_uuid_array_from_value(
     value: &serde_json::Value,
     field_name: &str,
 ) -> Result<Vec<Uuid>, ClaimsError> {
-    let arr = value
+    value
         .as_array()
         .ok_or_else(|| ClaimsError::InvalidClaimFormat {
             field: field_name.to_string(),
             reason: "must be an array".to_string(),
-        })?;
-
-    arr.iter()
+        })?
+        .iter()
         .map(|v| parse_uuid_from_value(v, field_name))
         .collect()
 }

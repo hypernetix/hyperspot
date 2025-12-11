@@ -92,14 +92,14 @@ fn test_globaldatabaseconfig_serialization() {
     };
 
     // Test serialization to YAML (more readable for config files)
-    let yaml = serde_yaml::to_string(&global_config).expect("Failed to serialize to YAML");
+    let yaml = serde_saphyr::to_string(&global_config).expect("Failed to serialize to YAML");
     assert!(yaml.contains("postgres_main"));
     assert!(yaml.contains("db.example.com"));
     assert!(yaml.contains("${DB_PASSWORD}"));
 
     // Test deserialization from YAML
     let deserialized: GlobalDatabaseConfig =
-        serde_yaml::from_str(&yaml).expect("Failed to deserialize from YAML");
+        serde_saphyr::from_str(&yaml).expect("Failed to deserialize from YAML");
     assert_eq!(deserialized.auto_provision, Some(true));
     assert!(deserialized.servers.contains_key("postgres_main"));
 
