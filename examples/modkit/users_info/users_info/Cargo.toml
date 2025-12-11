@@ -13,6 +13,9 @@ workspace = true
 integration = []   # gate integration tests
 
 [dependencies]
+# SDK - public API, models, and errors
+user_info-sdk = { path = "../user_info-sdk" }
+
 # Core dependencies
 anyhow = { workspace = true }
 async-trait = { workspace = true }
@@ -57,24 +60,24 @@ sea-orm-migration = { workspace = true, features = ["sqlx-sqlite"] }
 thiserror = { workspace = true }
 
 # Local dependencies
-modkit = { path = "../../../libs/modkit" }
+modkit = { path = "../../../../libs/modkit" }
 # NOTE: insecure-escape enabled for migrations and example infrastructure code
-modkit-db = { path = "../../../libs/modkit-db", default-features = false, features = ["pg", "sea-orm", "insecure-escape"] }
-modkit-db-macros = { path = "../../../libs/modkit-db-macros" }
-modkit-auth = { path = "../../../libs/modkit-auth" }
-modkit-security = { path = "../../../libs/modkit-security" }
-modkit-errors = { path = "../../../libs/modkit-errors" }
-modkit-errors-macro = { path = "../../../libs/modkit-errors-macro" }
-modkit-odata = { path = "../../../libs/modkit-odata", features = ["with-utoipa"] }
+modkit-db = { path = "../../../../libs/modkit-db", default-features = false, features = ["pg", "sea-orm", "insecure-escape"] }
+modkit-db-macros = { path = "../../../../libs/modkit-db-macros" }
+modkit-auth = { path = "../../../../libs/modkit-auth" }
+modkit-security = { path = "../../../../libs/modkit-security" }
+modkit-errors = { path = "../../../../libs/modkit-errors" }
+modkit-errors-macro = { path = "../../../../libs/modkit-errors-macro" }
+modkit-odata = { path = "../../../../libs/modkit-odata", features = ["with-utoipa"] }
 
 [dev-dependencies]
 tower = { workspace = true, features = ["util"] }
-api_ingress = { path = "../../../modules/api_ingress" }
+api_ingress = { path = "../../../../modules/api_ingress" }
 serde_json = { workspace = true }
 testcontainers = { workspace = true }
 testcontainers-modules = { workspace = true, features = ["postgres"] }
 # Testing dependencies for tracing verification
-tracing-test = "0.2"
+tracing-test = { workspace = true }
 httpmock = { workspace = true }
 tokio-test = { workspace = true }
 opentelemetry = { workspace = true }

@@ -1,10 +1,9 @@
 use chrono::{DateTime, Utc};
 use modkit_db_macros::ODataFilterable;
 use serde::{Deserialize, Serialize};
+use user_info_sdk::{NewUser, User, UserPatch};
 use utoipa::ToSchema;
 use uuid::Uuid;
-
-use crate::contract::model::{NewUser, User, UserPatch};
 
 /// REST DTO for user representation with serde/utoipa
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, ODataFilterable)]

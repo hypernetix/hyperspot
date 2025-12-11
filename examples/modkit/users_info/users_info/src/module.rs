@@ -7,23 +7,24 @@ use sea_orm_migration::MigratorTrait;
 use tracing::{debug, info};
 use url::Url;
 
+// Import the API trait from SDK
+use user_info_sdk::UsersInfoApi;
+
 use crate::api::rest::dto::UserEvent;
 use crate::api::rest::routes;
 use crate::api::rest::sse_adapter::SseUserEventPublisher;
 use crate::config::UsersInfoConfig;
-use crate::contract::client::UsersInfoApi;
 use crate::domain::events::UserDomainEvent;
 use crate::domain::ports::{AuditPort, EventPublisher};
 use crate::domain::service::{Service, ServiceConfig};
-use crate::gateways::local::UsersInfoLocalClient;
 use crate::infra::audit::HttpAuditClient;
 use crate::infra::storage::sea_orm_repo::SeaOrmUsersRepository;
+use crate::local_client::UsersInfoLocalClient;
 
 /// Main module struct with DDD-light layout and proper ClientHub integration
 #[modkit::module(
     name = "users_info",
-    capabilities = [db, rest],
-    client = crate::contract::client::UsersInfoApi
+    capabilities = [db, rest]
 )]
 pub struct UsersInfo {
     // Keep the domain service behind ArcSwap for cheap read-mostly access.
@@ -103,13 +104,12 @@ impl Module for UsersInfo {
         self.service.store(Some(domain_service.clone()));
 
         // Create local client adapter that implements UsersInfoApi
-        // This adapter handles SecurityCtx internally for inter-module calls
-        let local_client = UsersInfoLocalClient::new(domain_service);
-        let api: Arc<dyn UsersInfoApi> = Arc::new(local_client);
+        let local = UsersInfoLocalClient::new(domain_service);
+        let api: Arc<dyn UsersInfoApi> = Arc::new(local);
 
-        // Register in ClientHub directly
+        // Register in ClientHub directly - consumers use hub.get::<dyn UsersInfoApi>()?
         ctx.client_hub().register::<dyn UsersInfoApi>(api);
-        info!("UsersInfo API exposed to ClientHub via local adapter");
+        info!("UsersInfo local client registered into ClientHub");
         Ok(())
     }
 

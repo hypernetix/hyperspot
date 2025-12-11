@@ -17,13 +17,13 @@ use tracing::{debug, instrument};
 use uuid::Uuid;
 
 use crate::api::rest::dto::UserDtoFilterField;
-use crate::contract::User;
 use crate::domain::repo::UsersRepository;
 use crate::infra::storage::entity::{ActiveModel as UserAM, Column, Entity as UserEntity};
 use crate::infra::storage::odata_mapper::UserODataMapper;
 use modkit_db::odata::{paginate_odata, LimitCfg};
 use modkit_db::secure::{SecureConn, SecurityCtx};
 use modkit_odata::{ODataQuery, Page, SortDir};
+use user_info_sdk::User;
 
 /// SeaORM repository implementation with automatic security scoping.
 ///

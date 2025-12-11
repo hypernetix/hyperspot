@@ -1,8 +1,8 @@
-use crate::contract::model::User;
 use async_trait::async_trait;
 use modkit_db::secure::SecurityCtx;
 use modkit_odata::Error as ODataError;
 use modkit_odata::{ODataQuery, Page};
+use user_info_sdk::User;
 use uuid::Uuid;
 
 /// Port for the domain layer: persistence operations the domain needs.

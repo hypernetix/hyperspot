@@ -1,5 +1,5 @@
-use crate::contract::model::User;
 use crate::infra::storage::entity::Model as UserEntity;
+use user_info_sdk::User;
 
 /// Convert a database entity to a contract model (owned version)
 impl From<UserEntity> for User {

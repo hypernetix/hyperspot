@@ -1,6 +1,12 @@
+//! Public models for the user_info module.
+//!
+//! These are transport-agnostic data structures that define the contract
+//! between the user_info module and its consumers.
+
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
+/// A user entity.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct User {
     pub id: Uuid,
@@ -11,7 +17,7 @@ pub struct User {
     pub updated_at: DateTime<Utc>,
 }
 
-/// Data for creating a new user
+/// Data for creating a new user.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NewUser {
     pub id: Option<Uuid>,
@@ -20,14 +26,14 @@ pub struct NewUser {
     pub display_name: String,
 }
 
-/// Partial update data for a user
+/// Partial update data for a user.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct UserPatch {
     pub email: Option<String>,
     pub display_name: Option<String>,
 }
 
-/// Request to update a user
+/// Request to update a user.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UpdateUserRequest {
     pub id: Uuid,
