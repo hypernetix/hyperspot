@@ -39,7 +39,7 @@ impl AuthEvent {
 }
 
 /// Labels for auth metrics
-#[derive(Debug, Clone)]
+#[derive(Default, Debug, Clone)]
 pub struct AuthMetricLabels {
     /// Provider name (e.g., "keycloak", "oidc_default")
     pub provider: Option<String>,
@@ -55,15 +55,6 @@ pub struct AuthMetricLabels {
 }
 
 impl AuthMetricLabels {
-    pub fn new() -> Self {
-        Self {
-            provider: None,
-            issuer: None,
-            kid: None,
-            error_type: None,
-        }
-    }
-
     pub fn with_provider(mut self, provider: impl Into<String>) -> Self {
         self.provider = Some(provider.into());
         self
@@ -82,12 +73,6 @@ impl AuthMetricLabels {
     pub fn with_error_type(mut self, error_type: impl Into<String>) -> Self {
         self.error_type = Some(error_type.into());
         self
-    }
-}
-
-impl Default for AuthMetricLabels {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
@@ -161,7 +146,7 @@ mod tests {
 
     #[test]
     fn test_metric_labels_builder() {
-        let labels = AuthMetricLabels::new()
+        let labels = AuthMetricLabels::default()
             .with_provider("keycloak")
             .with_issuer("https://kc.example.com")
             .with_kid("key-123");
@@ -175,7 +160,7 @@ mod tests {
     #[test]
     fn test_noop_metrics() {
         let metrics = NoOpMetrics;
-        let labels = AuthMetricLabels::new();
+        let labels = AuthMetricLabels::default();
 
         // Should not panic
         metrics.record_event(AuthEvent::JwtValid, &labels);
@@ -185,7 +170,7 @@ mod tests {
     #[test]
     fn test_logging_metrics() {
         let metrics = LoggingMetrics;
-        let labels = AuthMetricLabels::new()
+        let labels = AuthMetricLabels::default()
             .with_provider("test")
             .with_issuer("https://test.example.com");
 

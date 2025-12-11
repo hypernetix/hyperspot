@@ -127,14 +127,13 @@ pub fn parse_uuid_array_from_value(
     value: &serde_json::Value,
     field_name: &str,
 ) -> Result<Vec<Uuid>, ClaimsError> {
-    let arr = value
+    value
         .as_array()
         .ok_or_else(|| ClaimsError::InvalidClaimFormat {
             field: field_name.to_string(),
             reason: "must be an array".to_string(),
-        })?;
-
-    arr.iter()
+        })?
+        .iter()
         .map(|v| parse_uuid_from_value(v, field_name))
         .collect()
 }

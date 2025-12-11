@@ -25,21 +25,15 @@ where
 {
     type Rejection = AuthError;
 
-    #[allow(clippy::manual_async_fn)]
-    fn from_request_parts(
-        parts: &mut Parts,
-        _state: &S,
-    ) -> impl core::future::Future<Output = Result<Self, Self::Rejection>> + Send {
-        async move {
-            parts
-                .extensions
-                .get::<SecurityCtx>()
-                .cloned()
-                .map(Authz)
-                .ok_or(AuthError::Internal(
-                    "SecurityCtx not found - auth middleware not configured".to_string(),
-                ))
-        }
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        parts
+            .extensions
+            .get::<SecurityCtx>()
+            .cloned() // TODO: drop this clone
+            .map(Authz)
+            .ok_or(AuthError::Internal(
+                "SecurityCtx not found - auth middleware not configured".to_string(),
+            ))
     }
 }
 
@@ -53,20 +47,38 @@ where
 {
     type Rejection = AuthError;
 
-    #[allow(clippy::manual_async_fn)]
-    fn from_request_parts(
-        parts: &mut Parts,
-        _state: &S,
-    ) -> impl core::future::Future<Output = Result<Self, Self::Rejection>> + Send {
-        async move {
-            parts
-                .extensions
-                .get::<Claims>()
-                .cloned()
-                .map(AuthClaims)
-                .ok_or(AuthError::Internal(
-                    "Claims not found - auth middleware not configured".to_string(),
-                ))
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        parts
+            .extensions
+            .get::<Claims>()
+            .cloned() // TODO: drop this clone
+            .map(AuthClaims)
+            .ok_or(AuthError::Internal(
+                "Claims not found - auth middleware not configured".to_string(),
+            ))
+    }
+}
+
+#[derive(Clone)]
+pub struct AuthPolicyState {
+    validator: Arc<dyn TokenValidator>,
+    scope_builder: Arc<dyn ScopeBuilder>,
+    authorizer: Arc<dyn PrimaryAuthorizer>,
+    policy: Arc<dyn RoutePolicy>,
+}
+
+impl AuthPolicyState {
+    pub fn new(
+        validator: Arc<dyn TokenValidator>,
+        scope_builder: Arc<dyn ScopeBuilder>,
+        authorizer: Arc<dyn PrimaryAuthorizer>,
+        policy: Arc<dyn RoutePolicy>,
+    ) -> Self {
+        Self {
+            validator,
+            scope_builder,
+            authorizer,
+            policy,
         }
     }
 }
@@ -82,10 +94,12 @@ where
 ///
 /// Returns Response directly (Axum 0.8 style) with errors converted via IntoResponse.
 pub async fn auth_with_policy(
-    State(validator): State<Arc<dyn TokenValidator>>,
-    State(scope_builder): State<Arc<dyn ScopeBuilder>>,
-    State(authorizer): State<Arc<dyn PrimaryAuthorizer>>,
-    State(policy): State<Arc<dyn RoutePolicy>>,
+    State(AuthPolicyState {
+        validator,
+        scope_builder,
+        authorizer,
+        policy,
+    }): State<AuthPolicyState>,
     mut request: Request,
     next: Next,
 ) -> Response {
@@ -159,106 +173,6 @@ pub async fn auth_with_policy(
             next.run(request).await
         }
     }
-}
-
-/// Static route policy implementation for simple use cases
-#[derive(Clone)]
-struct StaticRoutePolicy {
-    requirement: AuthRequirement,
-}
-
-impl StaticRoutePolicy {
-    fn new(requirement: AuthRequirement) -> Self {
-        Self { requirement }
-    }
-}
-
-#[async_trait::async_trait]
-impl RoutePolicy for StaticRoutePolicy {
-    async fn resolve(&self, _method: &Method, _path: &str) -> AuthRequirement {
-        self.requirement.clone()
-    }
-}
-
-/// Internal helper that builds Axum middleware for a given AuthRequirement
-///
-/// This is the shared implementation used by both `auth_required` and `auth_optional`.
-fn auth_with_requirement(
-    validator: Arc<dyn TokenValidator>,
-    scope_builder: Arc<dyn ScopeBuilder>,
-    authorizer: Arc<dyn PrimaryAuthorizer>,
-    requirement: AuthRequirement,
-) -> impl Clone {
-    let policy = Arc::new(StaticRoutePolicy::new(requirement)) as Arc<dyn RoutePolicy>;
-    axum::middleware::from_fn::<_, ()>(move |req: Request, next: Next| {
-        let validator = validator.clone();
-        let scope_builder = scope_builder.clone();
-        let authorizer = authorizer.clone();
-        let policy = policy.clone();
-        async move {
-            auth_with_policy(
-                State(validator),
-                State(scope_builder),
-                State(authorizer),
-                State(policy),
-                req,
-                next,
-            )
-            .await
-        }
-    })
-}
-
-/// Axum middleware that requires valid JWT tokens
-///
-/// This is a thin wrapper around auth_with_policy with a static "required" policy.
-///
-/// # Usage
-///
-/// ```rust,ignore
-/// use axum::{Router, routing::get, middleware};
-/// use modkit_auth::axum_ext::auth_required;
-/// use std::sync::Arc;
-///
-/// let validator = Arc::new(my_validator) as Arc<dyn TokenValidator>;
-/// let scope_builder = Arc::new(SimpleScopeBuilder);
-/// let authorizer = Arc::new(RoleAuthorizer);
-///
-/// let app = Router::new()
-///     .route("/protected", get(|| async { "OK" }))
-///     .layer(auth_required(validator, scope_builder, authorizer));
-/// ```
-pub fn auth_required(
-    validator: Arc<dyn TokenValidator>,
-    scope_builder: Arc<dyn ScopeBuilder>,
-    authorizer: Arc<dyn PrimaryAuthorizer>,
-) -> impl Clone {
-    auth_with_requirement(
-        validator,
-        scope_builder,
-        authorizer,
-        AuthRequirement::Required(None),
-    )
-}
-
-/// Axum middleware that validates JWT tokens optionally
-///
-/// This is a thin wrapper around auth_with_policy with a static "optional" policy.
-/// If a valid token is present, Claims and SecurityCtx are added to extensions.
-/// If not, an anonymous SecurityCtx is inserted.
-///
-/// CORS preflight requests are always allowed through.
-pub fn auth_optional(
-    validator: Arc<dyn TokenValidator>,
-    scope_builder: Arc<dyn ScopeBuilder>,
-    authorizer: Arc<dyn PrimaryAuthorizer>,
-) -> impl Clone {
-    auth_with_requirement(
-        validator,
-        scope_builder,
-        authorizer,
-        AuthRequirement::Optional,
-    )
 }
 
 /// Extract Bearer token from Authorization header
