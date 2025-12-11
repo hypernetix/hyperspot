@@ -70,6 +70,7 @@ impl SysInfoCollector {
         }
     }
 
+    #[allow(clippy::cast_precision_loss)]
     fn collect_cpu_info(sys: &System) -> CpuInfo {
         let cpus = sys.cpus();
         // CPU count is always small, safe to truncate
