@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="106" height="20">
+	<linearGradient id="b" x2="0" y2="100%">
+		<stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
+		<stop offset="1" stop-opacity=".1"/>
+	</linearGradient>
+	<clipPath id="a">
+		<rect width="106" height="20" rx="3" fill="#fff"/>
+	</clipPath>
+	<g clip-path="url(#a)">
+		<path fill="#555" d="M0 0h85v20H0z"/>
+		<path fill="#6B9FD8" d="M85 0h21v20H85z"/>
+		<path fill="url(#b)" d="M0 0h106v20H0z"/>
+	</g>
+	<g fill="#fff" text-anchor="middle" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="110"> 
+		<text x="435" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="750">Developed by</text>
+		<text x="435" y="140" transform="scale(.1)" textLength="750">Developed by</text>
+		
+		<!-- Логотип компании -->
+		<g transform="translate(88, 3) scale(0.07)">
+			<g transform="translate(0, 210) scale(0.1, -0.1)">
+				<path d="M926 2078 c11 -14 204 -249 429 -522 226 -274 412 -502 414 -508 6
+-17 -532 -4 -594 14 -80 24 -173 76 -228 126 -36 34 -564 671 -662 799 -8 10
+-21 4 -62 -29 -98 -81 -172 -203 -199 -326 -26 -126 -31 -115 142 -358 l155
+-219 -160 -3 -161 -2 0 -196 c0 -390 37 -529 181 -673 152 -151 293 -185 753
+-179 l248 3 -427 520 -428 520 246 3 c282 3 348 -6 463 -63 40 -19 94 -57 125
+-87 38 -37 533 -639 655 -797 5 -6 66 43 116 94 52 53 114 162 134 239 8 28
+14 81 14 117 l0 66 -150 210 c-82 116 -150 213 -150 217 0 3 68 6 150 6 l150
+0 0 284 c0 250 -2 292 -19 344 -46 149 -148 272 -280 340 -129 67 -182 75
+-550 80 l-324 4 19 -24z" fill="#F0FFFF"/>
+			</g>
+		</g>
+	</g>
+</svg>
