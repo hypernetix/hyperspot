@@ -1,4 +1,5 @@
 # HyperSpot Server
+![Badge](./.github/badgeHN.svg)
 
 **HyperSpot Server** is a modular, high-performance platform for building AI services built in Rust. It provides a comprehensive framework for building scalable AI applications with automatic REST API generation, comprehensive OpenAPI documentation, and a flexible modular architecture.
 
