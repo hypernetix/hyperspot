@@ -23,6 +23,7 @@ use crate::api::problem::Problem;
 pub type ApiResult<T = ()> = Result<T, Problem>;
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 

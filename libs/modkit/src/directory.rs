@@ -67,6 +67,7 @@ impl DirectoryApi for LocalDirectoryApi {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use crate::runtime::{Endpoint, ModuleInstance, ModuleManager};

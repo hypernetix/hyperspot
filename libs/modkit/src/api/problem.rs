@@ -29,6 +29,7 @@ pub fn internal_error(detail: impl Into<String>) -> Problem {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use axum::response::IntoResponse;

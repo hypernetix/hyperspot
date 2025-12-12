@@ -1,4 +1,5 @@
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use crate::api::odata::*;
     use axum::extract::FromRequestParts;
