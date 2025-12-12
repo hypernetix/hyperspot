@@ -45,7 +45,7 @@ impl Runnable for ExampleServer {
                         println!("Processed {} requests", count);
                     }
                 }
-                _ = cancel.cancelled() => {
+                () = cancel.cancelled() => {
                     println!("Shutdown signal received, stopping server");
                     break;
                 }

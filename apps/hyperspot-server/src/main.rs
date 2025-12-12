@@ -28,8 +28,7 @@ impl modkit::ConfigProvider for ModkitConfigAdapter {
 // Bring runner types & our per-module DB factory
 use modkit::runtime::{run, DbOptions, RunOptions, ShutdownOptions};
 
-#[allow(dead_code)]
-fn _ensure_drivers_linked() {
+fn ensure_drivers_linked() {
     // Ensure database drivers are linked for sqlx::any
     let _ = std::any::type_name::<Sqlite>();
     let _ = std::any::type_name::<Postgres>();
@@ -75,7 +74,7 @@ enum Commands {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    _ensure_drivers_linked();
+    ensure_drivers_linked();
 
     let cli = Cli::parse();
 
@@ -120,7 +119,7 @@ async fn main() -> Result<()> {
     // One-time connectivity probe
     #[cfg(feature = "otel")]
     if let Some(tc) = config.tracing.as_ref() {
-        if let Err(e) = modkit::telemetry::init::otel_connectivity_probe(tc).await {
+        if let Err(e) = modkit::telemetry::init::otel_connectivity_probe(tc) {
             tracing::error!(error = %e, "OTLP connectivity probe failed");
         }
     }
@@ -141,11 +140,11 @@ async fn main() -> Result<()> {
     // Dispatch subcommands (default: run)
     match cli.command.unwrap_or(Commands::Run) {
         Commands::Run => run_server(config, args).await,
-        Commands::Check => check_config(config).await,
+        Commands::Check => check_config(config),
     }
 }
 
-async fn check_config(config: AppConfig) -> Result<()> {
+fn check_config(config: AppConfig) -> Result<()> {
     tracing::info!("Checking configuration...");
     // If load_layered/load_or_default succeeded and home_dir normalized, we're good.
     println!("Configuration is valid");

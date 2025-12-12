@@ -802,7 +802,7 @@ where
     }
 
     // Check if we're paginating backward
-    let is_backward = q.cursor.as_ref().map(|c| c.d == "bwd").unwrap_or(false);
+    let is_backward = q.cursor.as_ref().is_some_and(|c| c.d == "bwd");
 
     // Apply cursor if present
     if let Some(cursor) = &q.cursor {

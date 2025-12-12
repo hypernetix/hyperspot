@@ -1,4 +1,10 @@
-#![allow(clippy::unwrap_used, clippy::expect_used)]
+#![allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::unused_async,
+    clippy::no_effect_underscore_binding,
+    clippy::used_underscore_items
+)]
 
 //! Integration tests verifying that generated gRPC clients use the transport stack
 

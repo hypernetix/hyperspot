@@ -1065,10 +1065,7 @@ fn parse_duration_tokens(s: &str) -> syn::Result<proc_macro2::TokenStream> {
 }
 
 fn path_last_is(path: &syn::Path, want: &str) -> bool {
-    path.segments
-        .last()
-        .map(|s| s.ident == want)
-        .unwrap_or(false)
+    path.segments.last().is_some_and(|s| s.ident == want)
 }
 
 // ============================================================================

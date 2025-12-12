@@ -274,7 +274,7 @@ impl RegistryBuilder {
         // Check rest_host early
         if let Some((host_name, _)) = &self.rest_host {
             if !self.core.contains_key(host_name) {
-                return Err(RegistryError::UnknownModule(host_name.to_string()));
+                return Err(RegistryError::UnknownModule((*host_name).to_string()));
             }
         }
 
@@ -390,10 +390,7 @@ impl RegistryBuilder {
                 db: self.db.get(name).cloned(),
                 stateful: self.stateful.get(name).cloned(),
                 is_system: self.system_modules.contains(name),
-                is_grpc_hub: self
-                    .grpc_hub
-                    .map(|hub_name| hub_name == name)
-                    .unwrap_or(false),
+                is_grpc_hub: self.grpc_hub.is_some_and(|hub_name| hub_name == name),
                 grpc_service: self.grpc_services.get(name).cloned(),
             };
             entries.push(entry);
@@ -449,7 +446,7 @@ impl RegistryBuilder {
         let grpc_services: Vec<(String, Arc<dyn contracts::GrpcServiceModule>)> = self
             .grpc_services
             .iter()
-            .map(|(name, module)| (name.to_string(), module.clone()))
+            .map(|(name, module)| ((*name).to_string(), module.clone()))
             .collect();
 
         tracing::info!(

@@ -56,14 +56,20 @@ clone_on_copy = "warn"
 cognitive_complexity = "warn"
 dbg_macro = "warn"
 debug_assert_with_mut_call = "warn"
+default_trait_access = "warn"
+elidable_lifetime_names = "warn"
 empty_line_after_outer_attr = "warn"
 empty_structs_with_brackets = "warn"
 expect_used = "deny"
 float_cmp = "deny"
 float_cmp_const = "deny"
+format_push_string = "warn"
+if_not_else = "warn"
 ignore_without_reason = "deny"
+ignored_unit_patterns = "deny"
 implicit_clone = "deny"
 implicit_hasher = "deny"
+inefficient_to_string = "deny"
 integer_division = "deny"
 ip_constant = "deny"
 lossy_float_literal = "deny"
@@ -71,22 +77,32 @@ manual_assert = "deny"
 manual_string_new = "deny"
 many_single_char_names = "deny"
 map_clone = "warn"
+map_unwrap_or = "deny"
+match_same_arms = "warn"
+match_wildcard_for_single_variants = "warn"
 mutex_atomic = "deny"
 needless_borrow = "deny"
 needless_lifetimes = "deny"
+no_effect_underscore_binding = "deny"
 non_ascii_literal = "warn"
+non_std_lazy_statics = "warn"
 option_as_ref_cloned = "deny"
-# needless_pass_by_value = "deny"
+redundant_else = "warn"
 regex_creation_in_loops = "deny"
 semicolon_if_nothing_returned = "warn"
+single_char_pattern = "warn"
 suspicious_operation_groupings = "warn"
 trivially_copy_pass_by_ref = "deny"
 type_complexity = "warn"
 unchecked_duration_subtraction = "deny"
-unwrap_used = "deny"
+unnecessary_debug_formatting = "warn"
+unnested_or_patterns = "warn"
+unused_async = "deny"
 unused_self = "warn"
+unwrap_used = "deny"
 use_debug = "warn"
 used_underscore_binding = "warn"
+used_underscore_items = "deny"
 useless_let_if_seq = "warn"
 wildcard_dependencies = "warn"
 wildcard_imports = "warn"
@@ -103,7 +119,7 @@ doc_link_with_quotes = "allow"                # 5 - use backticks instead of quo
 missing_panics_doc = "allow"                  # 4 - missing # Panics section
 missing_fields_in_debug = "allow"             # 2 - Debug impl missing fields
 
-# Style lints (445 total)
+# Style lints (436 total)
 uninlined_format_args = "allow"               # 302 - use format!("{x}") instead of format!("{}", x)
 redundant_closure_for_method_calls = "allow"  # 57 - use method reference instead of closure
 single_match_else = "allow"                   # 23 - use if let instead of match
@@ -112,14 +128,6 @@ unreadable_literal = "allow"                  # 14 - use underscores in large nu
 explicit_iter_loop = "allow"                  # 10 - use for x in &collection
 enum_glob_use = "allow"                       # 8 - avoid use Enum::*
 manual_let_else = "allow"                     # 7 - use let else pattern
-match_same_arms = "allow"                     # 6 - combine identical match arms
-redundant_else = "allow"                      # 5 - unnecessary else after return
-format_push_string = "allow"                  # 5 - use write! instead of push_str(format!)
-if_not_else = "allow"                         # 4 - use if else instead of if !
-match_wildcard_for_single_variants = "allow"  # 4 - match specific variant instead of _
-single_char_pattern = "allow"                 # 2 - use char instead of &str for single char
-default_trait_access = "allow"                # 2 - use Type::default() instead of Default::default()
-unnested_or_patterns = "allow"                # 1 - use A | B instead of A | B in patterns
 
 # API Design lints (359 total)
 must_use_candidate = "allow"                  # 221 - add #[must_use] to pure functions
@@ -129,33 +137,16 @@ unnecessary_wraps = "allow"                   # 15 - Result that never errors
 unnecessary_literal_bound = "allow"           # 6 - unnecessary lifetime bound
 ref_option = "allow"                          # 3 - use Option<&T> instead of &Option<T>
 
-# Async/Unused lints (71 total)
-unused_async = "allow"                        # 28 - async fn with no await
-no_effect_underscore_binding = "allow"        # 22 - let _ = has no effect
-ignored_unit_patterns = "allow"               # 19 - use () instead of _ for unit
-used_underscore_items = "allow"               # 2 - using _prefixed items
-
 # Cast lints - CRITICAL (21 total) ⚠️
 cast_possible_truncation = "allow"            # 9 - may truncate value
 cast_sign_loss = "allow"                      # 4 - casting to unsigned loses sign
 cast_precision_loss = "allow"                 # 6 - casting float loses precision
 cast_possible_wrap = "allow"                  # 2 - casting may wrap around
 
-# Performance lints (41 total)
-map_unwrap_or = "allow"                       # 36 - use is_some_and or map_or
-inefficient_to_string = "allow"               # 5 - use to_owned() for &str
-
 # Complexity lints (23 total)
 too_many_lines = "allow"                      # 11 - function too long
 similar_names = "allow"                       # 9 - variable names too similar
 struct_excessive_bools = "allow"              # 3 - too many bools in struct
-
-# Lifetime lints (4 total)
-elidable_lifetime_names = "allow"             # 4 - lifetime can be elided
-
-# Misc lints (10 total)
-unnecessary_debug_formatting = "allow"        # 8 - unnecessary {:?}
-non_std_lazy_statics = "allow"                # 2 - use std::sync::LazyLock
 
 [workspace.dependencies]
 # Serialization

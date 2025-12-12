@@ -78,10 +78,10 @@ async fn test_cancel_before_ready() {
         let cancel_received = cancel_received_clone.clone();
         async move {
             tokio::select! {
-                _ = tokio::time::sleep(Duration::from_millis(100)) => {
+                () = tokio::time::sleep(Duration::from_millis(100)) => {
                     ready.notify();
                 }
-                _ = cancel.cancelled() => {
+                () = cancel.cancelled() => {
                     cancel_received.store(true, Ordering::SeqCst);
                 }
             }

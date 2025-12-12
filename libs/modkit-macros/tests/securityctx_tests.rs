@@ -17,6 +17,7 @@ impl MockSecuredClient<Channel> {
         Self { _inner: inner }
     }
 
+    #[allow(clippy::unused_async)]
     pub async fn get_user(
         &mut self,
         _req: tonic::Request<GetUserRequest>,
@@ -24,6 +25,7 @@ impl MockSecuredClient<Channel> {
         unimplemented!("mock")
     }
 
+    #[allow(clippy::unused_async)]
     pub async fn list_users(
         &mut self,
         _req: tonic::Request<ListUsersRequest>,
@@ -92,19 +94,22 @@ pub trait SecuredApi: Send + Sync {
 #[test]
 fn test_secured_api_generates_grpc_client() {
     // Compile-time test: verify the generated struct exists
-    let _type_check = |_: SecuredApiGrpcClient| {};
+    let type_check = |_: SecuredApiGrpcClient| {};
+    let _ = type_check;
 }
 
 #[test]
 fn test_secured_api_client_has_connect_method() {
     // Verify connect method signature exists
-    let _fn_check: fn(String) -> _ = SecuredApiGrpcClient::connect;
+    let fn_check: fn(String) -> _ = SecuredApiGrpcClient::connect;
+    let _ = fn_check;
 }
 
 #[test]
 fn test_secured_api_client_has_from_channel_method() {
     // Verify from_channel method exists
-    let _fn_check: fn(Channel) -> SecuredApiGrpcClient = SecuredApiGrpcClient::from_channel;
+    let fn_check: fn(Channel) -> SecuredApiGrpcClient = SecuredApiGrpcClient::from_channel;
+    let _ = fn_check;
 }
 
 #[tokio::test]
@@ -131,6 +136,7 @@ impl MockUnsecuredClient<Channel> {
         Self { _inner: inner }
     }
 
+    #[allow(clippy::unused_async)]
     pub async fn ping(
         &mut self,
         _req: tonic::Request<String>,
@@ -142,5 +148,6 @@ impl MockUnsecuredClient<Channel> {
 #[test]
 fn test_unsecured_api_generates_grpc_client() {
     // Compile-time test: verify APIs without SecurityCtx still work
-    let _type_check = |_: UnsecuredApiGrpcClient| {};
+    let type_check = |_: UnsecuredApiGrpcClient| {};
+    let _ = type_check;
 }

@@ -149,7 +149,7 @@ pub struct ModuleManager {
 
 impl std::fmt::Debug for ModuleManager {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let modules: Vec<String> = self.inner.iter().map(|e| e.key().to_string()).collect();
+        let modules: Vec<String> = self.inner.iter().map(|e| (*e.key()).to_string()).collect();
         f.debug_struct("ModuleManager")
             .field("instances_count", &self.inner.len())
             .field("modules", &modules)

@@ -359,7 +359,10 @@ fn resolve_sqlite_dsn(dsn: &str, home_dir: &Path, module_name: &str) -> anyhow::
                     // Relative path - resolve under module directory
                     let module_dir = home_dir.join(module_name);
                     std::fs::create_dir_all(&module_dir).with_context(|| {
-                        format!("Failed to create module directory: {:?}", module_dir)
+                        format!(
+                            "Failed to create module directory: {}",
+                            module_dir.display()
+                        )
                     })?;
                     module_dir.join(file_path)
                 };
@@ -370,10 +373,9 @@ fn resolve_sqlite_dsn(dsn: &str, home_dir: &Path, module_name: &str) -> anyhow::
                 if normalized_path.len() > 1 && normalized_path.chars().nth(1) == Some(':') {
                     // Windows absolute path like C:/...
                     return Ok(format!("sqlite:{}", normalized_path));
-                } else {
-                    // Unix absolute path or relative path
-                    return Ok(format!("sqlite://{}", normalized_path));
                 }
+                // Unix absolute path or relative path
+                return Ok(format!("sqlite://{}", normalized_path));
             }
         }
         return Err(anyhow::anyhow!(
@@ -385,8 +387,12 @@ fn resolve_sqlite_dsn(dsn: &str, home_dir: &Path, module_name: &str) -> anyhow::
     // Handle empty DSN or just sqlite:// - default to module.sqlite
     if dsn == "sqlite://" || dsn == "sqlite:///" || dsn == "sqlite:" {
         let module_dir = home_dir.join(module_name);
-        std::fs::create_dir_all(&module_dir)
-            .with_context(|| format!("Failed to create module directory: {:?}", module_dir))?;
+        std::fs::create_dir_all(&module_dir).with_context(|| {
+            format!(
+                "Failed to create module directory: {}",
+                module_dir.display()
+            )
+        })?;
         let db_path = module_dir.join(format!("{}.sqlite", module_name));
         let normalized_path = db_path.to_string_lossy().replace('\\', "/");
         // For Windows absolute paths (C:/...), use sqlite:path format
@@ -394,10 +400,9 @@ fn resolve_sqlite_dsn(dsn: &str, home_dir: &Path, module_name: &str) -> anyhow::
         if normalized_path.len() > 1 && normalized_path.chars().nth(1) == Some(':') {
             // Windows absolute path like C:/...
             return Ok(format!("sqlite:{}", normalized_path));
-        } else {
-            // Unix absolute path or relative path
-            return Ok(format!("sqlite://{}", normalized_path));
         }
+        // Unix absolute path or relative path
+        return Ok(format!("sqlite://{}", normalized_path));
     }
 
     // Return DSN as-is for normal cases
@@ -432,17 +437,17 @@ fn build_server_dsn(
     // Set port if provided
     if let Some(port) = port {
         url.set_port(Some(port))
-            .map_err(|_| anyhow::anyhow!("Invalid port: {}", port))?;
+            .map_err(|()| anyhow::anyhow!("Invalid port: {}", port))?;
     }
 
     // Set username
     url.set_username(user)
-        .map_err(|_| anyhow::anyhow!("Failed to set username: {}", user))?;
+        .map_err(|()| anyhow::anyhow!("Failed to set username: {}", user))?;
 
     // Set password if provided
     if let Some(password) = password {
         url.set_password(Some(password))
-            .map_err(|_| anyhow::anyhow!("Failed to set password"))?;
+            .map_err(|()| anyhow::anyhow!("Failed to set password"))?;
     }
 
     // Set database name as path (with leading slash)
@@ -482,8 +487,12 @@ fn build_sqlite_dsn_with_dbname_override(
 
     // Build the correct path for the database file
     let module_dir = home_dir.join(module_name);
-    std::fs::create_dir_all(&module_dir)
-        .with_context(|| format!("Failed to create module directory: {:?}", module_dir))?;
+    std::fs::create_dir_all(&module_dir).with_context(|| {
+        format!(
+            "Failed to create module directory: {}",
+            module_dir.display()
+        )
+    })?;
     let db_path = module_dir.join(dbname);
     let normalized_path = db_path.to_string_lossy().replace('\\', "/");
 
@@ -540,17 +549,20 @@ fn build_sqlite_dsn(
         if normalized_path.len() > 1 && normalized_path.chars().nth(1) == Some(':') {
             // Windows absolute path like C:/...
             return Ok(format!("sqlite:{}", normalized_path));
-        } else {
-            // Unix absolute path or relative path
-            return Ok(format!("sqlite://{}", normalized_path));
         }
+        // Unix absolute path or relative path
+        return Ok(format!("sqlite://{}", normalized_path));
     }
 
     // Build from file (relative under module dir)
     if let Some(file) = file {
         let module_dir = home_dir.join(module_name);
-        std::fs::create_dir_all(&module_dir)
-            .with_context(|| format!("Failed to create module directory: {:?}", module_dir))?;
+        std::fs::create_dir_all(&module_dir).with_context(|| {
+            format!(
+                "Failed to create module directory: {}",
+                module_dir.display()
+            )
+        })?;
         let db_path = module_dir.join(file);
         let normalized_path = db_path.to_string_lossy().replace('\\', "/");
         // For Windows absolute paths (C:/...), use sqlite:path format
@@ -558,16 +570,19 @@ fn build_sqlite_dsn(
         if normalized_path.len() > 1 && normalized_path.chars().nth(1) == Some(':') {
             // Windows absolute path like C:/...
             return Ok(format!("sqlite:{}", normalized_path));
-        } else {
-            // Unix absolute path or relative path
-            return Ok(format!("sqlite://{}", normalized_path));
         }
+        // Unix absolute path or relative path
+        return Ok(format!("sqlite://{}", normalized_path));
     }
 
     // Default to module.sqlite
     let module_dir = home_dir.join(module_name);
-    std::fs::create_dir_all(&module_dir)
-        .with_context(|| format!("Failed to create module directory: {:?}", module_dir))?;
+    std::fs::create_dir_all(&module_dir).with_context(|| {
+        format!(
+            "Failed to create module directory: {}",
+            module_dir.display()
+        )
+    })?;
     let db_path = module_dir.join(format!("{}.sqlite", module_name));
     let normalized_path = db_path.to_string_lossy().replace('\\', "/");
     // For Windows absolute paths (C:/...), use sqlite:path format
@@ -2054,7 +2069,7 @@ logging:
         // Verify DSN is properly encoded with Unicode
         assert!(dsn.starts_with("postgresql://"));
         // Unicode characters should be percent-encoded
-        assert!(dsn.contains("%")); // Should contain encoded characters
+        assert!(dsn.contains('%')); // Should contain encoded characters
 
         // Verify DSN is parseable
         validate_dsn(&dsn).expect("DSN with Unicode characters should be valid");

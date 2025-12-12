@@ -59,18 +59,17 @@ fn build_sampler(cfg: &TracingConfig) -> Sampler {
 /// Extract exporter kind and endpoint from configuration
 #[cfg(feature = "otel")]
 fn extract_exporter_config(cfg: &TracingConfig) -> (String, String, Option<std::time::Duration>) {
-    let (kind, endpoint) = cfg
-        .exporter
-        .as_ref()
-        .map(|e| {
+    let (kind, endpoint) = cfg.exporter.as_ref().map_or_else(
+        || ("otlp_grpc".to_string(), "http://127.0.0.1:4317".into()),
+        |e| {
             (
                 e.kind.as_deref().unwrap_or("otlp_grpc").to_string(),
                 e.endpoint
                     .clone()
                     .unwrap_or_else(|| "http://127.0.0.1:4317".into()),
             )
-        })
-        .unwrap_or_else(|| ("otlp_grpc".to_string(), "http://127.0.0.1:4317".into()));
+        },
+    );
 
     let timeout = cfg
         .exporter
@@ -289,7 +288,7 @@ pub fn shutdown_tracing() {
 /// Build a tiny, separate OTLP pipeline and export a single span to verify connectivity.
 /// This does *not* depend on tracing_subscriber; it uses SDK directly.
 #[cfg(feature = "otel")]
-pub async fn otel_connectivity_probe(
+pub fn otel_connectivity_probe(
     cfg: &modkit_bootstrap::config::TracingConfig,
 ) -> anyhow::Result<()> {
     use opentelemetry::trace::{Span, Tracer as _};
@@ -299,16 +298,15 @@ pub async fn otel_connectivity_probe(
         .clone()
         .unwrap_or_else(|| "hyperspot".into());
 
-    let (kind, endpoint) = cfg
-        .exporter
-        .as_ref()
-        .map(|e| {
-            (
-                e.kind.as_deref().unwrap_or("otlp_grpc"),
-                e.endpoint.clone().unwrap_or_default(),
-            )
-        })
-        .unwrap_or(("otlp_grpc", "http://127.0.0.1:4317".into()));
+    let (kind, endpoint) =
+        cfg.exporter
+            .as_ref()
+            .map_or(("otlp_grpc", "http://127.0.0.1:4317".into()), |e| {
+                (
+                    e.kind.as_deref().unwrap_or("otlp_grpc"),
+                    e.endpoint.clone().unwrap_or_default(),
+                )
+            });
 
     // Resource
     let resource = Resource::builder_empty()
@@ -362,7 +360,7 @@ pub async fn otel_connectivity_probe(
 }
 
 #[cfg(not(feature = "otel"))]
-pub async fn otel_connectivity_probe(_cfg: &serde_json::Value) -> anyhow::Result<()> {
+pub fn otel_connectivity_probe(_cfg: &serde_json::Value) -> anyhow::Result<()> {
     tracing::info!("OTLP connectivity probe skipped (otel feature disabled)");
     Ok(())
 }

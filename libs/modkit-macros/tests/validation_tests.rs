@@ -1,4 +1,9 @@
-#![allow(clippy::unwrap_used, clippy::expect_used)]
+#![allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::unused_async,
+    clippy::no_effect_underscore_binding
+)]
 
 //! Validation and error handling tests for client macros (gRPC only)
 

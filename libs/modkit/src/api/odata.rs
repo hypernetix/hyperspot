@@ -52,8 +52,7 @@ pub fn parse_orderby(raw: &str) -> Result<ODataOrderBy, modkit_odata::Error> {
 
         let tokens: Vec<&str> = part.split_whitespace().collect();
         let (field, dir) = match tokens.as_slice() {
-            [field] => (*field, SortDir::Asc),
-            [field, "asc"] => (*field, SortDir::Asc),
+            [field] | [field, "asc"] => (*field, SortDir::Asc),
             [field, "desc"] => (*field, SortDir::Desc),
             _ => {
                 return Err(modkit_odata::Error::InvalidOrderByField(format!(

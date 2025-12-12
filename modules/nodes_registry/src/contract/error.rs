@@ -28,7 +28,7 @@ impl From<crate::domain::error::DomainError> for NodesRegistryError {
                 Self::SysCapCollectionFailed(msg)
             }
             crate::domain::error::DomainError::InvalidInput(msg) => Self::Validation(msg),
-            _ => Self::Internal,
+            crate::domain::error::DomainError::Internal(_) => Self::Internal,
         }
     }
 }

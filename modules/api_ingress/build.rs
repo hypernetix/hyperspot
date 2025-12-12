@@ -35,7 +35,10 @@ fn main() {
 
     for (url, dest) in files.iter() {
         if let Err(e) = download_to(url, dest) {
-            println!("cargo:warning=Failed to download {url} -> {dest:?}: {e}");
+            println!(
+                "cargo:warning=Failed to download {url} -> {}: {e}",
+                dest.display()
+            );
             panic!(
                 "Failed to download Stoplight Elements assets.\n\
                  To proceed: either build without --features embed_elements (external mode),\n\

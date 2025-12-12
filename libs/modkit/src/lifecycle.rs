@@ -338,14 +338,14 @@ impl Lifecycle {
         };
 
         let reason = tokio::select! {
-            _ = finished_wait => {
+            () = finished_wait => {
                 if self.was_cancelled.load(Ordering::Acquire) {
                     StopReason::Cancelled
                 } else {
                     StopReason::Finished
                 }
             }
-            _ = tokio::time::sleep(timeout) => StopReason::Timeout,
+            () = tokio::time::sleep(timeout) => StopReason::Timeout,
         };
 
         // Join and ensure we notify waiters even if the task was aborted/panicked.
@@ -357,7 +357,7 @@ impl Lifecycle {
             }
 
             match handle.await {
-                Ok(_) => {
+                Ok(()) => {
                     tracing::debug!(task_id = %task_id, module = %module_name, "lifecycle task completed successfully");
                 }
                 Err(e) if e.is_cancelled() => {
@@ -368,7 +368,7 @@ impl Lifecycle {
                     if let Ok(panic_payload) = e.try_into_panic() {
                         let panic_msg = panic_payload
                             .downcast_ref::<&str>()
-                            .map(|s| s.to_string())
+                            .map(|s| (*s).to_string())
                             .or_else(|| panic_payload.downcast_ref::<String>().cloned())
                             .unwrap_or_else(|| "unknown panic".to_string());
 
@@ -586,7 +586,7 @@ impl<T: Runnable> crate::contracts::StatefulModule for WithLifecycle<T> {
                 let _ = res.map_err(anyhow::Error::from)?;
                 Ok(())
             }
-            _ = external_cancel.cancelled() => {
+            () = external_cancel.cancelled() => {
                 let _ = self.lc.stop(Duration::from_millis(0)).await?;
                 Ok(())
             }
@@ -638,7 +638,7 @@ mod tests {
             loop {
                 tokio::select! {
                     _ = interval.tick() => { self.counter.fetch_add(1, AOrd::Relaxed); }
-                    _ = cancel.cancelled() => break,
+                    () = cancel.cancelled() => break,
                 }
             }
             Ok(())

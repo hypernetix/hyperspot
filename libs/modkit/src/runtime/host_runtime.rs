@@ -78,7 +78,7 @@ impl HostRuntime {
     /// SYSTEM WIRING phase: wire runtime internals into system modules.
     ///
     /// This phase runs before init and only for modules with the "system" capability.
-    pub async fn wire_system(&self) -> Result<(), RegistryError> {
+    pub fn wire_system(&self) -> Result<(), RegistryError> {
         tracing::info!("Phase: system_wire");
 
         let sys_ctx = SystemContext::new(
@@ -405,7 +405,7 @@ impl HostRuntime {
     /// This is the main entry point for orchestrating the complete module lifecycle.
     pub async fn run_full_cycle(self) -> anyhow::Result<()> {
         // 1. System wiring phase (before init, only for system modules)
-        self.wire_system().await?;
+        self.wire_system()?;
 
         // 2. DB migration phase (system modules first)
         self.run_db_phase().await?;

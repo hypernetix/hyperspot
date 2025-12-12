@@ -242,7 +242,7 @@ pub enum DbTransaction<'a> {
     _Phantom(std::marker::PhantomData<&'a ()>),
 }
 
-impl<'a> DbTransaction<'a> {
+impl DbTransaction<'_> {
     /// Commit the transaction.
     pub async fn commit(self) -> Result<()> {
         match self {
@@ -388,8 +388,7 @@ impl DbHandle {
                         let sync_mode = pragmas
                             .synchronous
                             .as_ref()
-                            .map(|s| s.as_sql())
-                            .unwrap_or("NORMAL");
+                            .map_or("NORMAL", |s| s.as_sql());
                         let stmt = format!("PRAGMA synchronous = {}", sync_mode);
                         sqlx::query(&stmt).execute(&mut *conn).await?;
 
@@ -635,7 +634,7 @@ impl DbHandle {
     // --- Generic transaction begin (returns proper enum with lifetime) ---
 
     /// Begin a transaction (returns appropriate transaction type based on backend).
-    pub async fn begin<'a>(&'a self) -> Result<DbTransaction<'a>> {
+    pub async fn begin(&self) -> Result<DbTransaction<'_>> {
         match &self.pool {
             #[cfg(feature = "pg")]
             DbPool::Postgres(pool) => {
@@ -733,9 +732,7 @@ mod tests {
 
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .ok()
-            .map(|d| d.as_nanos())
-            .unwrap_or(0);
+            .map_or(0, |d| d.as_nanos());
         let test_id = format!("test_basic_{now}");
 
         let guard1 = db.lock("test_module", &format!("{}_key1", test_id)).await?;
@@ -758,9 +755,7 @@ mod tests {
 
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .ok()
-            .map(|d| d.as_nanos())
-            .unwrap_or(0);
+            .map_or(0, |d| d.as_nanos());
         let test_id = format!("test_diff_{now}");
 
         let _guard1 = db.lock("test_module", &format!("{}_key1", test_id)).await?;
@@ -779,9 +774,7 @@ mod tests {
 
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .ok()
-            .map(|d| d.as_nanos())
-            .unwrap_or(0);
+            .map_or(0, |d| d.as_nanos());
         let test_id = format!("test_config_{now}");
 
         let _guard1 = db.lock("test_module", &format!("{}_key", test_id)).await?;

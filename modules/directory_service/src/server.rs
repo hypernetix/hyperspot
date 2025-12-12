@@ -6,6 +6,7 @@ use tonic::{Request, Response, Status};
 use modkit::DirectoryApi;
 
 /// Generated protobuf types
+#[allow(clippy::default_trait_access)]
 pub mod proto {
     pub mod directory {
         pub mod v1 {

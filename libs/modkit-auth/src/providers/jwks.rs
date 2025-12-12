@@ -230,16 +230,16 @@ impl JwksKeyProvider {
         state.last_on_demand_refresh = Some(Instant::now());
 
         // Check if the kid now exists
-        if !self.key_exists(kid) {
+        if self.key_exists(kid) {
+            // Kid found - remove from failed list if present
+            state.failed_kids.remove(kid);
+        } else {
             // Kid still not found after refresh - track it
             state.failed_kids.insert(kid.to_string());
             tracing::warn!(
                 kid = kid,
                 "Kid still not found after on-demand JWKS refresh"
             );
-        } else {
-            // Kid found - remove from failed list if present
-            state.failed_kids.remove(kid);
         }
 
         Ok(())
@@ -271,7 +271,7 @@ impl JwksKeyProvider {
         );
 
         match self.perform_refresh().await {
-            Ok(_) => self.handle_refresh_success(kid).await,
+            Ok(()) => self.handle_refresh_success(kid).await,
             Err(e) => Err(self.handle_refresh_failure(kid, e).await),
         }
     }
@@ -433,8 +433,7 @@ mod tests {
 
         // The error should be related to fetch failure
         match result.unwrap_err() {
-            ClaimsError::JwksFetchFailed(_) => {}
-            ClaimsError::UnknownKeyId(_) => {}
+            ClaimsError::JwksFetchFailed(_) | ClaimsError::UnknownKeyId(_) => {}
             other => panic!("Expected JwksFetchFailed or UnknownKeyId, got: {:?}", other),
         }
     }

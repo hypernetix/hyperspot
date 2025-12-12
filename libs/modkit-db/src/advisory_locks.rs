@@ -240,8 +240,7 @@ impl LockManager {
                     // Sleep with jitter, capped by remaining time if any.
                     let remaining = config
                         .max_wait
-                        .map(|mw| mw.saturating_sub(start.elapsed()))
-                        .unwrap_or(backoff);
+                        .map_or(backoff, |mw| mw.saturating_sub(start.elapsed()));
 
                     if remaining.is_zero() {
                         return Ok(None);

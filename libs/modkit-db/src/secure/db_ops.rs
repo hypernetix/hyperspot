@@ -307,7 +307,9 @@ mod tests {
     #[test]
     fn test_typestate_compile_check() {
         // This test verifies the typestate markers compile
-        let _unscoped: PhantomData<Unscoped> = PhantomData;
-        let _scoped: PhantomData<Scoped> = PhantomData;
+        let unscoped: PhantomData<Unscoped> = PhantomData;
+        let scoped: PhantomData<Scoped> = PhantomData;
+        // Use the variables to avoid unused warnings
+        let _ = (unscoped, scoped);
     }
 }

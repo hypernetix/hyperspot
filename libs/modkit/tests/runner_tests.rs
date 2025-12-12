@@ -414,7 +414,7 @@ fn test_run_options_construction() {
     // Test that we can construct RunOptions with all variants
     match opts.db {
         DbOptions::None => {}
-        _ => panic!("Expected DbOptions::None"),
+        DbOptions::Manager(_) => panic!("Expected DbOptions::None"),
     }
 
     match opts.shutdown {

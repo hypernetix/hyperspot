@@ -122,7 +122,7 @@ impl GrpcHub {
         }
 
         match std::fs::remove_file(path) {
-            Ok(_) => {
+            Ok(()) => {
                 tracing::debug!(
                     path = %path.display(),
                     "removed existing UDS socket file before bind"

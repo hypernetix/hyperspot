@@ -29,15 +29,14 @@ impl RateLimiterMap {
         let mut inflight = HashMap::new();
         // TODO: Add support for per-route rate limiting
         for spec in specs {
-            let (rps, burst, in_flight) = spec
-                .rate_limit
-                .as_ref()
-                .map(|r| (r.rps, r.burst, r.in_flight))
-                .unwrap_or((
+            let (rps, burst, in_flight) = spec.rate_limit.as_ref().map_or(
+                (
                     cfg.defaults.rate_limit.rps,
                     cfg.defaults.rate_limit.burst,
                     cfg.defaults.rate_limit.in_flight,
-                ));
+                ),
+                |r| (r.rps, r.burst, r.in_flight),
+            );
             let key = (spec.method.clone(), spec.path.clone());
             buckets.insert(
                 key.clone(),
@@ -59,8 +58,7 @@ pub async fn rate_limit_middleware(map: RateLimiterMap, req: Request, next: Next
     let path = req
         .extensions()
         .get::<axum::extract::MatchedPath>()
-        .map(|p| p.as_str().to_string())
-        .unwrap_or_else(|| req.uri().path().to_string());
+        .map_or_else(|| req.uri().path().to_string(), |p| p.as_str().to_string());
     let key = (method, path);
 
     if let Some(bucket) = map.buckets.get(&key) {

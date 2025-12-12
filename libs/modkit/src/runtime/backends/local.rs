@@ -65,7 +65,7 @@ impl ModuleRuntimeBackend for LocalProcessBackend {
         // Spawn the process
         let child = cmd
             .spawn()
-            .context(format!("failed to spawn process: {:?}", binary))?;
+            .context(format!("failed to spawn process: {}", binary.display()))?;
 
         // Get PID
         let pid = child.id();
