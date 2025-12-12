@@ -12,10 +12,10 @@
 //!   or an arbitrary future.
 
 use crate::client_hub::ClientHub;
-use crate::config::ConfigProvider;
 use crate::registry::ModuleRegistry;
 use crate::runtime::shutdown;
 use crate::runtime::{DbOptions, HostRuntime};
+use modkit_bootstrap::ConfigProvider;
 use std::{future::Future, pin::Pin, sync::Arc};
 use tokio_util::sync::CancellationToken;
 
@@ -90,13 +90,7 @@ pub async fn run(opts: RunOptions) -> anyhow::Result<()> {
     let hub = Arc::new(ClientHub::default());
 
     // 5. Instantiate HostRuntime
-    let host = HostRuntime::new(
-        registry,
-        opts.modules_cfg.clone(),
-        opts.db,
-        hub,
-        cancel.clone(),
-    );
+    let host = HostRuntime::new(registry, opts.modules_cfg, opts.db, hub, cancel.clone());
 
     // 6. Run full lifecycle
     host.run_full_cycle().await

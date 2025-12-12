@@ -12,9 +12,7 @@ use axum::{
     routing::get,
     Router,
 };
-use modkit::{
-    config::ConfigProvider, contracts::OpenApiRegistry, Module, ModuleCtx, RestfulModule,
-};
+use modkit::{contracts::OpenApiRegistry, ConfigProvider, Module, ModuleCtx, RestfulModule};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use utoipa::ToSchema;

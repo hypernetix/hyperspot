@@ -7,9 +7,8 @@ use async_trait::async_trait;
 use tokio_util::sync::CancellationToken;
 
 use modkit::{
-    config::ConfigProvider,
     contracts::{DbModule, Module, OpenApiRegistry, RestHostModule, RestfulModule, StatefulModule},
-    module, ModuleCtx,
+    module, ConfigProvider, ModuleCtx,
 };
 use std::sync::Arc;
 
