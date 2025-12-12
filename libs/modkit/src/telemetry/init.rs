@@ -123,7 +123,6 @@ fn build_grpc_exporter(
     if let Some(md) = build_metadata_from_cfg_and_env(cfg) {
         b = b.with_metadata(md);
     }
-    #[allow(clippy::expect_used)]
     b.build().context("build OTLP gRPC exporter")
 }
 
