@@ -6,11 +6,14 @@ use anyhow::Context;
 use async_trait::async_trait;
 use modkit::{
     context::ModuleCtx,
-    contracts::{Module, RegisterGrpcServiceFn, SystemModule},
+    contracts::{Module, SystemModule},
     lifecycle::ReadySignal,
-    runtime::GrpcInstallerStore,
+    runtime::{GrpcInstallerData, GrpcInstallerStore, ModuleInstallers},
+    DirectoryApi,
 };
+
 use parking_lot::RwLock;
+use serde::Deserialize;
 #[cfg(unix)]
 use std::path::PathBuf;
 use std::{
@@ -18,14 +21,38 @@ use std::{
     net::{Ipv4Addr, SocketAddr, SocketAddrV4},
     sync::Arc,
 };
+use tokio::net::TcpListener;
+use tokio_stream::wrappers::TcpListenerStream;
 use tokio_util::sync::CancellationToken;
-use tonic::{service::Routes, service::RoutesBuilder, transport::Server};
+use tonic::{service::RoutesBuilder, transport::Server};
 
 #[cfg(windows)]
 use modkit_transport_grpc::create_named_pipe_incoming;
 
 const DEFAULT_LISTEN_ADDR: SocketAddr =
     SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 50051));
+
+/// Configuration for the gRPC Hub module.
+///
+/// Supports multiple transport types via `listen_addr`:
+/// - TCP: `"127.0.0.1:50051"` or `"0.0.0.0:0"` for ephemeral port
+/// - Unix Domain Socket (Unix only): `"uds:///path/to/socket.sock"`
+/// - Named Pipe (Windows only): `"pipe://\\.\pipe\my_pipe"` or `"npipe://\\.\pipe\my_pipe"`
+#[derive(Debug, Clone, Deserialize)]
+#[serde(default)]
+pub struct GrpcHubConfig {
+    /// Listen address for the gRPC server.
+    /// Defaults to `0.0.0.0:50051` if not specified.
+    pub listen_addr: String,
+}
+
+impl Default for GrpcHubConfig {
+    fn default() -> Self {
+        Self {
+            listen_addr: DEFAULT_LISTEN_ADDR.to_string(),
+        }
+    }
+}
 
 /// Configuration for the listen address
 #[derive(Clone)]
@@ -39,7 +66,6 @@ enum ListenConfig {
 
 /// The gRPC Hub module.
 /// This module is responsible for hosting the gRPC server and managing the gRPC services.
-/// Declared with capabilities: [stateful, system, grpc_hub].
 #[modkit::module(
     name = "grpc_hub",
     capabilities = [stateful, system, grpc_hub],
@@ -48,6 +74,10 @@ enum ListenConfig {
 pub struct GrpcHub {
     listen_cfg: RwLock<ListenConfig>,
     installer_store: RwLock<Option<Arc<GrpcInstallerStore>>>,
+    directory: RwLock<Option<Arc<dyn DirectoryApi>>>,
+    /// Process-level instance ID (set from SystemContext during wire_system phase)
+    instance_id: RwLock<String>,
+    bound_endpoint: RwLock<Option<String>>,
 }
 
 impl Default for GrpcHub {
@@ -55,6 +85,9 @@ impl Default for GrpcHub {
         Self {
             listen_cfg: RwLock::new(ListenConfig::Tcp(DEFAULT_LISTEN_ADDR)),
             installer_store: RwLock::new(None),
+            directory: RwLock::new(None),
+            instance_id: RwLock::new(String::new()), // Set from SystemContext during wire_system
+            bound_endpoint: RwLock::new(None),
         }
     }
 }
@@ -82,43 +115,147 @@ impl GrpcHub {
         *self.listen_cfg.write() = ListenConfig::NamedPipe(name.into());
     }
 
-    /// Validate that all service names are unique.
-    fn validate_unique_services(installers: &[RegisterGrpcServiceFn]) -> anyhow::Result<()> {
+    /// Get the actual bound endpoint after the server has started.
+    ///
+    /// Returns the full endpoint URL (e.g., `http://127.0.0.1:50652` for TCP,
+    /// `unix:///path/to/socket` for UDS, or `pipe://\\.\pipe\name` for named pipes).
+    /// Returns `None` if the server hasn't started yet.
+    fn get_bound_endpoint(&self) -> Option<String> {
+        self.bound_endpoint.read().clone()
+    }
+
+    /// Set the bound endpoint after the server has started listening.
+    fn set_bound_endpoint(&self, endpoint: String) {
+        *self.bound_endpoint.write() = Some(endpoint);
+    }
+
+    /// Parse and apply listen address configuration.
+    ///
+    /// Supports:
+    /// - TCP: `"127.0.0.1:50051"` or `"0.0.0.0:0"` for ephemeral port
+    /// - Unix Domain Socket (Unix only): `"uds:///path/to/socket.sock"`
+    /// - Named Pipe (Windows only): `"pipe://\\.\pipe\my_pipe"` or `"npipe://\\.\pipe\my_pipe"`
+    pub fn apply_listen_config(&self, listen_addr: &str) -> anyhow::Result<()> {
+        // First, try platform-specific parsing
+        if self.apply_platform_specific(listen_addr)? {
+            return Ok(());
+        }
+
+        // Fall back to TCP SocketAddr parsing
+        let addr = listen_addr
+            .parse::<SocketAddr>()
+            .with_context(|| format!("invalid listen_addr '{}'", listen_addr))?;
+        *self.listen_cfg.write() = ListenConfig::Tcp(addr);
+        tracing::info!(%addr, "gRPC hub listen address configured for TCP");
+
+        Ok(())
+    }
+
+    /// Platform-specific address parsing.
+    ///
+    /// Returns `Ok(true)` if the address was fully handled by this method,
+    /// `Ok(false)` if the caller should fall back to TCP parsing.
+    #[cfg(windows)]
+    fn apply_platform_specific(&self, listen_addr: &str) -> anyhow::Result<bool> {
+        // Handle Windows named pipes: pipe:// or npipe://
+        if let Some(pipe_name) = listen_addr
+            .strip_prefix("pipe://")
+            .or_else(|| listen_addr.strip_prefix("npipe://"))
+        {
+            let pipe_name = pipe_name.to_string();
+            *self.listen_cfg.write() = ListenConfig::NamedPipe(pipe_name.clone());
+            tracing::info!(
+                name = %pipe_name,
+                "gRPC hub listen address configured for Windows named pipe"
+            );
+            return Ok(true);
+        }
+
+        // Explicitly reject UDS on Windows
+        if listen_addr.starts_with("uds://") {
+            anyhow::bail!(
+                "UDS listen_addr is not supported on Windows: '{}'",
+                listen_addr
+            );
+        }
+
+        // Not a platform-specific address, fall back to TCP
+        Ok(false)
+    }
+
+    /// Platform-specific address parsing.
+    ///
+    /// Returns `Ok(true)` if the address was fully handled by this method,
+    /// `Ok(false)` if the caller should fall back to TCP parsing.
+    #[cfg(unix)]
+    fn apply_platform_specific(&self, listen_addr: &str) -> anyhow::Result<bool> {
+        // Explicitly reject named pipes on Unix
+        if listen_addr.starts_with("pipe://") || listen_addr.starts_with("npipe://") {
+            tracing::warn!(
+                listen_addr = %listen_addr,
+                "Named pipe listen_addr is configured but named pipes are not supported on this platform"
+            );
+            anyhow::bail!(
+                "Named pipe listen_addr is not supported on this platform: '{}'",
+                listen_addr
+            );
+        }
+
+        // Handle Unix Domain Sockets: uds://
+        if let Some(uds_path) = listen_addr.strip_prefix("uds://") {
+            let path = std::path::PathBuf::from(uds_path);
+            *self.listen_cfg.write() = ListenConfig::Uds(path.clone());
+            tracing::info!(
+                path = %path.display(),
+                "gRPC hub listen address configured for UDS"
+            );
+            return Ok(true);
+        }
+
+        // Not a platform-specific address, fall back to TCP
+        Ok(false)
+    }
+
+    /// Validate that all service names are unique across all modules.
+    fn validate_unique_services(modules: &[ModuleInstallers]) -> anyhow::Result<()> {
         let mut seen = HashSet::new();
-        for installer in installers {
-            if !seen.insert(installer.service_name) {
-                anyhow::bail!(
-                    "Duplicate gRPC service detected: {}",
-                    installer.service_name
-                );
+        for module in modules {
+            for installer in &module.installers {
+                if !seen.insert(installer.service_name) {
+                    anyhow::bail!(
+                        "Duplicate gRPC service detected: {}",
+                        installer.service_name
+                    );
+                }
             }
         }
         Ok(())
     }
 
-    /// Build routes from installers. Returns None if no services were registered.
-    fn build_routes(installers: Vec<RegisterGrpcServiceFn>) -> Option<Routes> {
-        if installers.is_empty() {
-            return None;
-        }
-
+    /// Build routes from module installers. Returns None if no services registered.
+    fn build_routes_from_modules(modules: &[ModuleInstallers]) -> Option<tonic::service::Routes> {
         let mut routes_builder = RoutesBuilder::default();
-        for installer in installers {
-            (installer.register)(&mut routes_builder);
+        let mut has_services = false;
+        for module in modules {
+            for installer in &module.installers {
+                (installer.register)(&mut routes_builder);
+                has_services = true;
+            }
         }
-        Some(routes_builder.routes())
+        if has_services {
+            Some(routes_builder.routes())
+        } else {
+            None
+        }
     }
 
     /// Prepare Unix Domain Socket path by removing existing socket file if present.
-    ///
-    /// This handles the cleanup of stale socket files that may exist from previous
-    /// server instances. Logs appropriate messages for different scenarios.
     #[cfg(unix)]
-    fn prepare_uds_socket_path(path: &std::path::Path) -> std::io::Result<()> {
+    fn prepare_uds_socket_path(path: &std::path::Path) {
         use std::io;
 
         if !path.exists() {
-            return Ok(());
+            return;
         }
 
         match std::fs::remove_file(path) {
@@ -127,51 +264,124 @@ impl GrpcHub {
                     path = %path.display(),
                     "removed existing UDS socket file before bind"
                 );
-                Ok(())
             }
-            Err(e) if e.kind() == io::ErrorKind::NotFound => {
-                // Lost the race, somebody else removed it. Not fatal.
-                Ok(())
-            }
+            Err(e) if e.kind() == io::ErrorKind::NotFound => {}
             Err(e) => {
                 tracing::warn!(
                     path = %path.display(),
                     error = %e,
                     "failed to remove existing UDS socket file before bind"
                 );
-                Err(e)
             }
         }
     }
 
-    /// Serve gRPC over TCP.
-    async fn serve_tcp(
-        addr: SocketAddr,
-        routes: Routes,
+    /// Deregister modules from Directory on shutdown.
+    async fn deregister_modules(&self, modules: &[ModuleInstallers]) {
+        let directory = {
+            let guard = self.directory.read();
+            guard.as_ref().cloned()
+        };
+        let instance_id = self.instance_id.read().clone();
+
+        if let Some(directory) = directory {
+            for module_data in modules {
+                if let Err(e) = directory
+                    .deregister_instance(&module_data.module_name, &instance_id)
+                    .await
+                {
+                    tracing::warn!(
+                        module = %module_data.module_name,
+                        error = %e,
+                        "Failed to deregister module from Directory"
+                    );
+                }
+            }
+        }
+    }
+
+    /// Run the tonic server with the provided installers.
+    pub async fn run_with_installers(
+        &self,
+        data: GrpcInstallerData,
         cancel: CancellationToken,
+        ready: ReadySignal,
     ) -> anyhow::Result<()> {
-        tracing::info!(%addr, transport = "tcp", "gRPC hub listening");
+        Self::validate_unique_services(&data.modules)?;
+
+        let routes = match Self::build_routes_from_modules(&data.modules) {
+            Some(r) => r,
+            None => {
+                ready.notify();
+                cancel.cancelled().await;
+                return Ok(());
+            }
+        };
+
+        let listen_cfg = self.listen_cfg.read().clone();
+        let serve_result = match listen_cfg {
+            ListenConfig::Tcp(addr) => {
+                self.serve_tcp(addr, routes, &data.modules, cancel, ready)
+                    .await
+            }
+            #[cfg(unix)]
+            ListenConfig::Uds(path) => {
+                self.serve_uds(path, routes, &data.modules, cancel, ready)
+                    .await
+            }
+            #[cfg(windows)]
+            ListenConfig::NamedPipe(ref pipe_name) => {
+                self.serve_named_pipe(pipe_name.clone(), routes, &data.modules, cancel, ready)
+                    .await
+            }
+        };
+
+        self.deregister_modules(&data.modules).await;
+        serve_result
+    }
+
+    /// Serve gRPC over TCP with Directory registration.
+    async fn serve_tcp(
+        &self,
+        addr: SocketAddr,
+        routes: tonic::service::Routes,
+        modules: &[ModuleInstallers],
+        cancel: CancellationToken,
+        ready: ReadySignal,
+    ) -> anyhow::Result<()> {
+        let listener = TcpListener::bind(addr).await?;
+        let bound_addr = listener.local_addr()?;
+        let endpoint = format!("http://{}", bound_addr);
+        tracing::info!(%bound_addr, transport = "tcp", "gRPC hub listening");
+
+        self.set_bound_endpoint(endpoint.clone());
+        self.register_modules(modules, &endpoint).await?;
+        ready.notify();
+
+        let incoming = TcpListenerStream::new(listener);
         Server::builder()
             .add_routes(routes)
-            .serve_with_shutdown(addr, async move {
+            .serve_with_incoming_shutdown(incoming, async move {
                 cancel.cancelled().await;
             })
             .await?;
         Ok(())
     }
 
-    /// Serve gRPC over Unix Domain Socket.
+    /// Serve gRPC over Unix Domain Socket with Directory registration.
     #[cfg(unix)]
     async fn serve_uds(
-        path: PathBuf,
-        routes: Routes,
+        &self,
+        path: std::path::PathBuf,
+        routes: tonic::service::Routes,
+        modules: &[ModuleInstallers],
         cancel: CancellationToken,
+        ready: ReadySignal,
     ) -> anyhow::Result<()> {
         use tokio::net::UnixListener;
         use tokio_stream::wrappers::UnixListenerStream;
 
-        // Cleanup any existing socket file
-        Self::prepare_uds_socket_path(&path)?;
+        Self::prepare_uds_socket_path(&path);
 
         tracing::info!(
             path = %path.display(),
@@ -182,8 +392,12 @@ impl GrpcHub {
         let uds = UnixListener::bind(&path)
             .with_context(|| format!("failed to bind UDS listener at '{}'", path.display()))?;
 
-        let incoming = UnixListenerStream::new(uds);
+        let endpoint = format!("unix://{}", path.display());
+        self.set_bound_endpoint(endpoint.clone());
+        self.register_modules(modules, &endpoint).await?;
+        ready.notify();
 
+        let incoming = UnixListenerStream::new(uds);
         Server::builder()
             .add_routes(routes)
             .serve_with_incoming_shutdown(incoming, async move {
@@ -193,61 +407,76 @@ impl GrpcHub {
         Ok(())
     }
 
-    /// Serve gRPC over Windows named pipe.
+    /// Serve gRPC over Windows named pipe with Directory registration.
     #[cfg(windows)]
     async fn serve_named_pipe(
-        pipe_name: String,
-        routes: Routes,
-        cancel: CancellationToken,
-    ) -> anyhow::Result<()> {
-        tracing::info!(name = %pipe_name, transport = "named_pipe", "gRPC hub listening");
-
-        let incoming = create_named_pipe_incoming(pipe_name, cancel.clone());
-
-        Server::builder()
-            .add_routes(routes)
-            .serve_with_incoming_shutdown(incoming, async move {
-                cancel.cancelled().await;
-            })
-            .await?;
-        Ok(())
-    }
-
-    /// Run the tonic server with the provided installers.
-    pub async fn run_with_installers(
         &self,
-        installers: Vec<RegisterGrpcServiceFn>,
+        pipe_name: String,
+        routes: tonic::service::Routes,
+        modules: &[ModuleInstallers],
         cancel: CancellationToken,
         ready: ReadySignal,
     ) -> anyhow::Result<()> {
-        Self::validate_unique_services(&installers)?;
+        tracing::info!(name = %pipe_name, transport = "named_pipe", "gRPC hub listening");
 
-        let routes = match Self::build_routes(installers) {
-            Some(r) => r,
-            None => {
-                // No services to serve, notify ready and wait for cancellation
-                ready.notify();
-                cancel.cancelled().await;
-                return Ok(());
-            }
-        };
-
-        // NOTE: With tonic 0.14.2's API, serve_with_shutdown binds internally.
-        // We notify ready after building routes but before serve starts.
-        // This is better than notifying before route building, but not as strict as binding first.
-        // For stricter control, consider using a lower-level API or upgrading tonic.
+        let endpoint = format!("pipe://{}", pipe_name);
+        self.set_bound_endpoint(endpoint.clone());
+        self.register_modules(modules, &endpoint).await?;
         ready.notify();
 
-        let listen_cfg = self.listen_cfg.read().clone();
+        let incoming = create_named_pipe_incoming(pipe_name, cancel.clone());
+        Server::builder()
+            .add_routes(routes)
+            .serve_with_incoming_shutdown(incoming, async move {
+                cancel.cancelled().await;
+            })
+            .await?;
+        Ok(())
+    }
 
-        match listen_cfg {
-            ListenConfig::Tcp(addr) => Self::serve_tcp(addr, routes, cancel).await?,
-            #[cfg(unix)]
-            ListenConfig::Uds(path) => Self::serve_uds(path, routes, cancel).await?,
-            #[cfg(windows)]
-            ListenConfig::NamedPipe(pipe_name) => {
-                Self::serve_named_pipe(pipe_name, routes, cancel).await?;
+    async fn register_modules(
+        &self,
+        modules: &[ModuleInstallers],
+        endpoint: &str,
+    ) -> anyhow::Result<()> {
+        let directory = {
+            let guard = self.directory.read();
+            guard.as_ref().cloned()
+        };
+        let instance_id = self.instance_id.read().clone();
+
+        if let Some(directory) = directory {
+            for module_data in modules {
+                let service_names: Vec<String> = module_data
+                    .installers
+                    .iter()
+                    .map(|i| i.service_name.to_string())
+                    .collect();
+
+                let info = module_orchestrator_contracts::RegisterInstanceInfo {
+                    module: module_data.module_name.clone(),
+                    instance_id: instance_id.clone(),
+                    grpc_services: service_names
+                        .iter()
+                        .map(|n| {
+                            (
+                                n.clone(),
+                                module_orchestrator_contracts::ServiceEndpoint::new(endpoint),
+                            )
+                        })
+                        .collect(),
+                    version: Some(env!("CARGO_PKG_VERSION").to_string()),
+                };
+
+                directory.register_instance(info).await?;
+                tracing::info!(
+                    module = %module_data.module_name,
+                    endpoint = %endpoint,
+                    "Registered module in Directory"
+                );
             }
+        } else {
+            tracing::info!("DirectoryApi not available; skipping Directory registration");
         }
 
         Ok(())
@@ -258,7 +487,7 @@ impl GrpcHub {
         cancel: CancellationToken,
         ready: ReadySignal,
     ) -> anyhow::Result<()> {
-        let installers = {
+        let data = {
             let store_guard = self.installer_store.read();
             let store = store_guard
                 .as_ref()
@@ -266,78 +495,46 @@ impl GrpcHub {
             store.take()
         };
 
-        self.run_with_installers(installers, cancel, ready).await
+        let data = data.ok_or_else(|| anyhow::anyhow!("GrpcInstallerStore is empty"))?;
+
+        self.run_with_installers(data, cancel, ready).await
     }
 }
 
 impl SystemModule for GrpcHub {
     fn wire_system(&self, sys: &modkit::runtime::SystemContext) {
-        let mut guard = self.installer_store.write();
-        *guard = Some(Arc::clone(&sys.grpc_installers));
+        // Store gRPC installer store reference
+        {
+            let mut guard = self.installer_store.write();
+            *guard = Some(Arc::clone(&sys.grpc_installers));
+        }
+        // Store process-level instance_id from SystemContext
+        {
+            let mut guard = self.instance_id.write();
+            *guard = sys.instance_id().to_string();
+        }
     }
 }
 
-impl modkit::contracts::GrpcHubModule for GrpcHub {}
+impl modkit::contracts::GrpcHubModule for GrpcHub {
+    fn bound_endpoint(&self) -> Option<String> {
+        self.get_bound_endpoint()
+    }
+}
 
 #[async_trait]
 impl Module for GrpcHub {
     async fn init(&self, ctx: &ModuleCtx) -> anyhow::Result<()> {
-        if let Some(addr_value) = ctx.raw_config().get("listen_addr") {
-            if let Some(s) = addr_value.as_str() {
-                // 1) Windows named pipes: pipe:// or npipe://
-                #[cfg(windows)]
-                if let Some(pipe_name) = s
-                    .strip_prefix("pipe://")
-                    .or_else(|| s.strip_prefix("npipe://"))
-                {
-                    let pipe_name = pipe_name.to_string();
-                    *self.listen_cfg.write() = ListenConfig::NamedPipe(pipe_name.clone());
-                    tracing::info!(
-                        name = %pipe_name,
-                        "gRPC hub listen address configured for Windows named pipe"
-                    );
-                    return Ok(());
-                }
+        // Load typed configuration
+        let cfg: GrpcHubConfig = ctx.config()?;
+        tracing::debug!(listen_addr = %cfg.listen_addr, "Loaded gRPC hub configuration");
 
-                // Non-Windows branch
-                #[cfg(not(windows))]
-                if s.starts_with("pipe://") || s.starts_with("npipe://") {
-                    tracing::warn!(
-                        listen_addr = %s,
-                        "Named pipe listen_addr is configured but named pipes are not supported on this platform; keeping previous listen address"
-                    );
-                    return Ok(());
-                }
+        // Parse listen_addr into appropriate transport type
+        self.apply_listen_config(&cfg.listen_addr)?;
 
-                // 2) Unix UDS: uds://
-                if let Some(_uds_path) = s.strip_prefix("uds://") {
-                    #[cfg(unix)]
-                    {
-                        let path = std::path::PathBuf::from(_uds_path);
-                        *self.listen_cfg.write() = ListenConfig::Uds(path.clone());
-                        tracing::info!(
-                            path = %path.display(),
-                            "gRPC hub listen address configured for UDS"
-                        );
-                        return Ok(());
-                    }
-                    #[cfg(not(unix))]
-                    {
-                        anyhow::bail!("UDS listen_addr is not supported on this platform: '{}'", s);
-                    }
-                }
-
-                // 3) Default: TCP SocketAddr
-                let addr = s
-                    .parse::<SocketAddr>()
-                    .with_context(|| format!("invalid listen_addr '{s}'"))?;
-                *self.listen_cfg.write() = ListenConfig::Tcp(addr);
-                tracing::info!(%addr, "gRPC hub listen address configured for TCP");
-            } else {
-                tracing::warn!(
-                    "gRPC hub config 'listen_addr' found but was not a valid string; using previous listen address"
-                );
-            }
+        // Fetch DirectoryApi from ClientHub if available
+        if let Ok(dir) = ctx.client_hub().get::<dyn DirectoryApi>() {
+            *self.directory.write() = Some(dir);
         }
 
         Ok(())
@@ -356,9 +553,8 @@ impl Module for GrpcHub {
 mod tests {
     use super::*;
     use http::{Request, Response};
-    use modkit::{
-        client_hub::ClientHub, config::ConfigProvider, context::ModuleCtx, registry::ModuleRegistry,
-    };
+    use modkit::runtime::ModuleInstallers;
+    use modkit::{client_hub::ClientHub, config::ConfigProvider, context::ModuleCtx};
     use std::{
         convert::Infallible,
         future,
@@ -368,21 +564,7 @@ mod tests {
     use tokio::time::{sleep, Duration};
     use tonic::{body::Body, server::NamedService};
     use tower::Service;
-
-    #[tokio::test]
-    async fn test_grpc_hub_is_discoverable() {
-        let registry = ModuleRegistry::discover_and_build().expect("registry build failed");
-
-        let has_grpc_hub = registry
-            .modules()
-            .iter()
-            .any(|e| e.name == "grpc_hub" && e.is_system && e.is_grpc_hub);
-
-        assert!(
-            has_grpc_hub,
-            "grpc_hub module should be registered with system and grpc_hub capabilities"
-        );
-    }
+    use uuid::Uuid;
 
     const SERVICE_A: &str = "grpc_hub.test.ServiceA";
     const SERVICE_B: &str = "grpc_hub.test.ServiceB";
@@ -429,8 +611,8 @@ mod tests {
         }
     }
 
-    fn installer_a() -> RegisterGrpcServiceFn {
-        RegisterGrpcServiceFn {
+    fn installer_a() -> modkit::contracts::RegisterGrpcServiceFn {
+        modkit::contracts::RegisterGrpcServiceFn {
             service_name: SERVICE_A,
             register: Box::new(|routes| {
                 routes.add_service(ServiceAImpl);
@@ -438,8 +620,8 @@ mod tests {
         }
     }
 
-    fn installer_b() -> RegisterGrpcServiceFn {
-        RegisterGrpcServiceFn {
+    fn installer_b() -> modkit::contracts::RegisterGrpcServiceFn {
+        modkit::contracts::RegisterGrpcServiceFn {
             service_name: SERVICE_B,
             register: Box::new(|routes| {
                 routes.add_service(ServiceBImpl);
@@ -451,12 +633,17 @@ mod tests {
     async fn test_run_with_installers_rejects_duplicates() {
         let hub = GrpcHub::default();
         hub.set_listen_addr_tcp("127.0.0.1:0".parse().unwrap());
-        let installers = vec![installer_a(), installer_a()];
+        let data = GrpcInstallerData {
+            modules: vec![ModuleInstallers {
+                module_name: "test".to_string(),
+                installers: vec![installer_a(), installer_a()],
+            }],
+        };
         let cancel = CancellationToken::new();
         let (tx, _rx) = tokio::sync::oneshot::channel();
         let ready = ReadySignal::from_sender(tx);
 
-        let result = hub.run_with_installers(installers, cancel, ready).await;
+        let result = hub.run_with_installers(data, cancel, ready).await;
 
         assert!(result.is_err(), "duplicate services should error");
     }
@@ -465,7 +652,12 @@ mod tests {
     async fn test_run_with_installers_starts_server() {
         let hub = Arc::new(GrpcHub::default());
         hub.set_listen_addr_tcp("127.0.0.1:0".parse().unwrap());
-        let installers = vec![installer_a(), installer_b()];
+        let data = GrpcInstallerData {
+            modules: vec![ModuleInstallers {
+                module_name: "test".to_string(),
+                installers: vec![installer_a(), installer_b()],
+            }],
+        };
         let cancel = CancellationToken::new();
         let cancel_clone = cancel.clone();
         let (tx, rx) = tokio::sync::oneshot::channel();
@@ -473,7 +665,7 @@ mod tests {
 
         let hub_task = {
             let hub = hub.clone();
-            tokio::spawn(async move { hub.run_with_installers(installers, cancel, ready).await })
+            tokio::spawn(async move { hub.run_with_installers(data, cancel, ready).await })
         };
 
         tokio::spawn(async move {
@@ -500,12 +692,20 @@ mod tests {
         // Wire system context with installers
         let installer_store = Arc::new(GrpcInstallerStore::new());
         installer_store
-            .set(vec![installer_a()])
+            .set(GrpcInstallerData {
+                modules: vec![ModuleInstallers {
+                    module_name: "test".to_string(),
+                    installers: vec![installer_a()],
+                }],
+            })
             .expect("store should accept installers");
 
         let module_manager = Arc::new(modkit::runtime::ModuleManager::new());
-        let sys_ctx =
-            modkit::runtime::SystemContext::new(module_manager, Arc::clone(&installer_store));
+        let sys_ctx = modkit::runtime::SystemContext::new(
+            Uuid::new_v4(),
+            module_manager,
+            Arc::clone(&installer_store),
+        );
 
         hub.wire_system(&sys_ctx);
 
@@ -568,6 +768,7 @@ mod tests {
 
         let ctx = ModuleCtx::new(
             "grpc_hub",
+            Uuid::new_v4(),
             Arc::new(ConfigProviderWithAddr),
             Arc::new(ClientHub::default()),
             cancel,
@@ -610,6 +811,7 @@ mod tests {
 
         let ctx = ModuleCtx::new(
             "grpc_hub",
+            Uuid::new_v4(),
             Arc::new(ConfigProviderWithUds),
             Arc::new(ClientHub::default()),
             cancel,
@@ -661,6 +863,7 @@ mod tests {
 
         let ctx = ModuleCtx::new(
             "grpc_hub",
+            Uuid::new_v4(),
             Arc::new(config_provider),
             Arc::new(ClientHub::default()),
             cancel.clone(),
@@ -670,13 +873,19 @@ mod tests {
         hub.init(&ctx).await.expect("init should succeed");
 
         let installers = vec![installer_a()];
+        let data = GrpcInstallerData {
+            modules: vec![ModuleInstallers {
+                module_name: "test".to_string(),
+                installers,
+            }],
+        };
         let cancel_clone = cancel.clone();
         let (tx, rx) = tokio::sync::oneshot::channel();
         let ready = ReadySignal::from_sender(tx);
 
         let hub_task = {
             let hub = hub.clone();
-            tokio::spawn(async move { hub.run_with_installers(installers, cancel, ready).await })
+            tokio::spawn(async move { hub.run_with_installers(data, cancel, ready).await })
         };
 
         tokio::spawn(async move {
@@ -726,6 +935,7 @@ mod tests {
 
         let ctx = ModuleCtx::new(
             "grpc_hub",
+            Uuid::new_v4(),
             Arc::new(ConfigProviderWithNamedPipe),
             Arc::new(ClientHub::default()),
             cancel.clone(),
@@ -741,13 +951,19 @@ mod tests {
         );
 
         let installers = vec![installer_a()];
+        let data = GrpcInstallerData {
+            modules: vec![ModuleInstallers {
+                module_name: "test".to_string(),
+                installers,
+            }],
+        };
         let cancel_clone = cancel.clone();
         let (tx, rx) = tokio::sync::oneshot::channel();
         let ready = ReadySignal::from_sender(tx);
 
         let hub_task = {
             let hub = hub.clone();
-            tokio::spawn(async move { hub.run_with_installers(installers, cancel, ready).await })
+            tokio::spawn(async move { hub.run_with_installers(data, cancel, ready).await })
         };
 
         // Give the server a moment to start, then cancel
@@ -771,14 +987,14 @@ mod tests {
     async fn test_run_with_no_installers_exits_gracefully() {
         let hub = GrpcHub::default();
         hub.set_listen_addr_tcp("127.0.0.1:0".parse().unwrap());
-        let installers = vec![];
+        let data = GrpcInstallerData { modules: vec![] };
         let cancel = CancellationToken::new();
         let cancel_clone = cancel.clone();
         let (tx, rx) = tokio::sync::oneshot::channel();
         let ready = ReadySignal::from_sender(tx);
 
         let hub_task =
-            tokio::spawn(async move { hub.run_with_installers(installers, cancel, ready).await });
+            tokio::spawn(async move { hub.run_with_installers(data, cancel, ready).await });
 
         // Schedule cancellation
         tokio::spawn(async move {

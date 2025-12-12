@@ -1,86 +1,110 @@
-#![allow(clippy::use_debug)]
-#![allow(clippy::non_ascii_literal)]
-
-/// Example of using the new AuthDispatcher plugin system
-///
-/// This example demonstrates:
-/// 1. Setting up an AuthDispatcher with Keycloak plugin (single mode)
-/// 2. Configuring JWKS key provider
-/// 3. Validating JWT tokens
-/// 4. Using normalized claims
-///
-/// Run with: cargo run --example dispatcher_usage
-use modkit_auth::{build_auth_dispatcher, AuthConfig, AuthModeConfig, JwksConfig, PluginConfig};
+use async_trait::async_trait;
+use jsonwebtoken::Header;
+use modkit_auth::plugin_traits::{ClaimsPlugin, KeyProvider};
+use modkit_auth::validation::{
+    extract_audiences, extract_string, parse_timestamp, parse_uuid_array_from_value,
+    parse_uuid_from_value,
+};
+use modkit_auth::{
+    AuthConfig, AuthDispatcher, AuthModeConfig, Claims, ClaimsError, PluginConfig, PluginRegistry,
+    ValidationConfig,
+};
+use serde_json::Value;
 use std::collections::HashMap;
+use std::sync::Arc;
+use time::{Duration, OffsetDateTime};
+use uuid::Uuid;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Initialize tracing
-    tracing_subscriber::fmt::init();
+/// Minimal claims plugin that converts raw JSON into strongly typed `Claims`.
+struct DemoClaimsPlugin;
 
-    // Example 1: Setting up an AuthDispatcher with Keycloak (Single Mode)
-    setup_keycloak_auth()?;
+impl ClaimsPlugin for DemoClaimsPlugin {
+    fn name(&self) -> &str {
+        "demo"
+    }
 
-    // Example 2: Setting up with generic OIDC
-    setup_oidc_auth()?;
+    fn normalize(&self, raw: &Value) -> Result<Claims, ClaimsError> {
+        let issuer_value = raw
+            .get("iss")
+            .ok_or_else(|| ClaimsError::MissingClaim("iss".to_string()))?;
+        let issuer = extract_string(issuer_value, "iss")?;
 
-    // Example 3: YAML configuration example
-    show_yaml_config();
+        let sub_value = raw
+            .get("sub")
+            .ok_or_else(|| ClaimsError::MissingClaim("sub".to_string()))?;
+        let sub = parse_uuid_from_value(sub_value, "sub")?;
 
-    Ok(())
+        let audiences = raw.get("aud").map(extract_audiences).unwrap_or_default();
+
+        let expires_at = raw
+            .get("exp")
+            .map(|value| parse_timestamp(value, "exp"))
+            .transpose()?;
+
+        let not_before = raw
+            .get("nbf")
+            .map(|value| parse_timestamp(value, "nbf"))
+            .transpose()?;
+
+        let tenants = raw
+            .get("tenants")
+            .map(|value| parse_uuid_array_from_value(value, "tenants"))
+            .transpose()?
+            .unwrap_or_default();
+
+        let roles = raw
+            .get("roles")
+            .and_then(Value::as_array)
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|value| value.as_str().map(ToString::to_string))
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        Ok(Claims {
+            sub,
+            issuer,
+            audiences,
+            expires_at,
+            not_before,
+            tenants,
+            roles,
+            extras: serde_json::Map::new(),
+        })
+    }
 }
 
-/// Example: Setting up an AuthDispatcher with Keycloak
-fn setup_keycloak_auth() -> Result<(), String> {
-    println!("\n=== Example 1: Keycloak Configuration ===");
-
-    let mut plugins = HashMap::new();
-    plugins.insert(
-        "keycloak".to_string(),
-        PluginConfig::Keycloak {
-            tenant_claim: "tenants".to_string(),
-            client_roles: Some("modkit-api".to_string()),
-            role_prefix: Some("kc_".to_string()),
-        },
-    );
-
-    let config = AuthConfig {
-        mode: AuthModeConfig {
-            provider: "keycloak".to_string(),
-        },
-        leeway_seconds: 60,
-        issuers: vec!["https://keycloak.example.com/realms/my-realm".to_string()],
-        audiences: vec!["modkit-api".to_string()],
-        jwks: Some(JwksConfig {
-            uri: "https://keycloak.example.com/realms/my-realm/protocol/openid-connect/certs"
-                .to_string(),
-            refresh_interval_seconds: 300,
-            max_backoff_seconds: 3600,
-        }),
-        plugins,
-    };
-
-    let dispatcher = build_auth_dispatcher(&config).map_err(|e| e.to_string())?;
-
-    println!("✅ Keycloak dispatcher created successfully");
-    println!(
-        "   Allowed issuers: {:?}",
-        dispatcher.validation_config().allowed_issuers
-    );
-    println!(
-        "   Allowed audiences: {:?}",
-        dispatcher.validation_config().allowed_audiences
-    );
-
-    Ok(())
+/// Static key provider that skips signature validation for demonstration purposes.
+struct StaticKeyProvider {
+    claims: Value,
 }
 
-/// Example: Setting up with Generic OIDC
-fn setup_oidc_auth() -> Result<(), String> {
-    println!("\n=== Example 2: Generic OIDC Configuration ===");
+impl StaticKeyProvider {
+    fn new(claims: Value) -> Self {
+        Self { claims }
+    }
+}
 
-    let mut plugins = HashMap::new();
-    plugins.insert(
-        "generic-oidc".to_string(),
+#[async_trait]
+impl KeyProvider for StaticKeyProvider {
+    fn name(&self) -> &str {
+        "static"
+    }
+
+    async fn validate_and_decode(&self, _token: &str) -> Result<(Header, Value), ClaimsError> {
+        Ok((Header::default(), self.claims.clone()))
+    }
+}
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut plugins = PluginRegistry::default();
+    plugins.register("demo", Arc::new(DemoClaimsPlugin));
+
+    let mut plugin_configs = HashMap::new();
+    plugin_configs.insert(
+        "demo".to_string(),
         PluginConfig::Oidc {
             tenant_claim: "tenants".to_string(),
             roles_claim: "roles".to_string(),
@@ -89,101 +113,48 @@ fn setup_oidc_auth() -> Result<(), String> {
 
     let config = AuthConfig {
         mode: AuthModeConfig {
-            provider: "generic-oidc".to_string(),
+            provider: "demo".to_string(),
         },
-        leeway_seconds: 120, // 2 minutes leeway
-        issuers: vec!["https://auth.example.com".to_string()],
-        audiences: vec!["my-api".to_string(), "my-app".to_string()],
-        jwks: Some(JwksConfig {
-            uri: "https://auth.example.com/.well-known/jwks.json".to_string(),
-            refresh_interval_seconds: 600, // 10 minutes
-            max_backoff_seconds: 7200,     // 2 hours
-        }),
-        plugins,
+        issuers: vec!["https://issuer.local".to_string()],
+        audiences: vec!["demo-api".to_string()],
+        plugins: plugin_configs,
+        ..AuthConfig::default()
     };
 
-    let dispatcher = build_auth_dispatcher(&config).map_err(|e| e.to_string())?;
+    let validation = ValidationConfig {
+        allowed_issuers: config.issuers.clone(),
+        allowed_audiences: config.audiences.clone(),
+        leeway_seconds: config.leeway_seconds,
+        require_uuid_subject: true,
+        require_uuid_tenants: true,
+    };
 
-    println!("✅ OIDC dispatcher created successfully");
+    let subject = Uuid::new_v4();
+    let tenant = Uuid::new_v4();
+    let expires_at = OffsetDateTime::now_utc() + Duration::minutes(15);
+
+    let raw_claims = serde_json::json!({
+        "iss": "https://issuer.local",
+        "sub": subject.to_string(),
+        "aud": ["demo-api"],
+        "exp": expires_at.unix_timestamp(),
+        "tenants": [tenant.to_string()],
+        "roles": ["viewer"]
+    });
+
+    let dispatcher = AuthDispatcher::new(validation, &config, &plugins)?
+        .with_key_provider(Arc::new(StaticKeyProvider::new(raw_claims)));
+
+    let claims = dispatcher.validate_jwt("demo-token").await?;
+    let role_list = if claims.roles.is_empty() {
+        "none".to_string()
+    } else {
+        claims.roles.join(", ")
+    };
     println!(
-        "   Leeway: {} seconds",
-        dispatcher.validation_config().leeway_seconds
-    );
-    println!(
-        "   Allowed audiences: {:?}",
-        dispatcher.validation_config().allowed_audiences
+        "Validated token for subject {} with roles {}",
+        claims.sub, role_list
     );
 
     Ok(())
-}
-
-/// Example: Show YAML configuration
-fn show_yaml_config() {
-    println!("\n=== Example 3: YAML Configuration ===");
-
-    let yaml = r#"
-# Keycloak configuration (single mode)
-provider: "keycloak"
-leeway_seconds: 60
-issuers:
-  - "https://keycloak.example.com/realms/my-realm"
-audiences:
-  - "modkit-api"
-jwks:
-  uri: "https://keycloak.example.com/realms/my-realm/protocol/openid-connect/certs"
-  refresh_interval_seconds: 300
-  max_backoff_seconds: 3600
-plugins:
-  keycloak:
-    type: keycloak
-    tenant_claim: "tenants"
-    client_roles: "modkit-api"
-    role_prefix: "kc_"
-"#;
-
-    println!("{}", yaml);
-
-    // Try to parse it
-    match serde_saphyr::from_str::<AuthConfig>(yaml) {
-        Ok(config) => {
-            println!("✅ YAML parsed successfully");
-            println!("   Provider: {}", config.mode.provider);
-            println!("   Number of plugins: {}", config.plugins.len());
-        }
-        Err(e) => {
-            println!("❌ YAML parsing failed: {}", e);
-        }
-    }
-
-    println!("\n=== Generic OIDC Configuration ===");
-    let yaml = r#"
-provider: "generic-oidc"
-leeway_seconds: 60
-issuers:
-  - "https://auth.example.com"
-audiences:
-  - "my-api"
-jwks:
-  uri: "https://auth.example.com/.well-known/jwks.json"
-  refresh_interval_seconds: 300
-  max_backoff_seconds: 3600
-plugins:
-  generic-oidc:
-    type: oidc
-    tenant_claim: "tenants"
-    roles_claim: "roles"
-"#;
-
-    println!("{}", yaml);
-
-    match serde_saphyr::from_str::<AuthConfig>(yaml) {
-        Ok(config) => {
-            println!("✅ YAML parsed successfully");
-            println!("   Provider: {}", config.mode.provider);
-            println!("   Number of issuers: {}", config.issuers.len());
-        }
-        Err(e) => {
-            println!("❌ YAML parsing failed: {}", e);
-        }
-    }
 }

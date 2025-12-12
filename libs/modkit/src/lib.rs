@@ -112,6 +112,7 @@ pub use http::sse::SseBroadcaster;
 // Telemetry utilities
 pub mod telemetry;
 
+pub mod backends;
 pub mod lifecycle;
 pub mod runtime;
 
@@ -124,12 +125,18 @@ pub use result::ApiResult;
 
 // Directory API for service discovery
 pub mod directory;
-pub use directory::{DirectoryApi, ServiceInstanceInfo};
+pub use directory::{
+    DirectoryApi, LocalDirectoryApi, RegisterInstanceInfo, ServiceEndpoint, ServiceInstanceInfo,
+};
 
+pub use backends::{
+    BackendKind, InstanceHandle, LocalProcessBackend, ModuleRuntimeBackend, OopBackend,
+    OopModuleConfig, OopSpawnConfig,
+};
 pub use lifecycle::{Lifecycle, Runnable, Status, StopReason, WithLifecycle};
 pub use runtime::{
-    run, BackendKind, DbOptions, Endpoint, InstanceHandle, LocalProcessBackend, ModuleInstance,
-    ModuleManager, ModuleName, ModuleRuntimeBackend, OopModuleConfig, RunOptions, ShutdownOptions,
+    run, DbOptions, Endpoint, ModuleInstance, ModuleManager, OopModuleSpawnConfig, OopSpawnOptions,
+    RunOptions, ShutdownOptions,
 };
 
 #[cfg(test)]

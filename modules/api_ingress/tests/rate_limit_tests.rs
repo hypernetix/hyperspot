@@ -15,6 +15,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::time::{sleep, Duration};
 use utoipa::ToSchema;
+use uuid::Uuid;
 
 /// Helper to create a test ModuleCtx
 struct TestConfigProvider {
@@ -41,6 +42,7 @@ fn create_test_module_ctx_with_config(config: serde_json::Value) -> ModuleCtx {
     let wrapped_config = wrap_config(config);
     ModuleCtx::new(
         "api_ingress",
+        Uuid::new_v4(),
         Arc::new(TestConfigProvider {
             config: wrapped_config,
         }),

@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package oop.calculator.v1;
+
+// CalculatorService provides simple arithmetic operations.
+service CalculatorService {
+  // Add two numbers and return the sum.
+  rpc Add(AddRequest) returns (AddResponse);
+}
+
+message AddRequest {
+  int64 a = 1;
+  int64 b = 2;
+}
+
+message AddResponse {
+  int64 sum = 1;
+}
+

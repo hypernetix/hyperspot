@@ -39,3 +39,4 @@ cognitive-complexity-threshold = 25
 
 allow-expect-in-tests = true
 allow-unwrap-in-tests = true
+

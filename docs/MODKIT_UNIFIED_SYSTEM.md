@@ -80,8 +80,11 @@ pub struct ModuleCtx {
     pub(crate) client_hub: std::sync::Arc<crate::client_hub::ClientHub>,
     pub(crate) cancellation_token: tokio_util::sync::CancellationToken,
     pub(crate) module_name: Option<std::sync::Arc<str>>,
+    pub(crate) instance_id: uuid::Uuid,  // Process-level unique instance ID
 }
 ```
+
+**Note:** The `instance_id` is generated once at process startup and shared by all modules in the same process. OoP modules receive their own unique instance ID.
 
 ### Common usage
 
@@ -205,6 +208,447 @@ Stopped ── start() ── Starting ──(await_ready? then ready.notify())�
 ```
 
 `WithLifecycle::stop()` waits up to `stop_timeout`, then aborts the task if needed.
+
+---
+
+## Out-of-Process Modules (OoP)
+
+ModKit supports running modules as separate processes with gRPC-based inter-process communication. This enables:
+
+* **Process isolation** — modules run in separate processes for fault isolation
+* **Language flexibility** — OoP modules can be implemented in any language (with gRPC support)
+* **Independent scaling** — modules can be scaled independently
+* **Gradual migration** — existing modules can be moved out-of-process without code changes
+
+### RuntimeKind
+
+Modules can run in two modes:
+
+```rust
+#[derive(Debug, Clone, Default, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum RuntimeKind {
+    #[default]
+    Local,  // In-process (default)
+    Oop,    // Out-of-process
+}
+```
+
+### OoP Module Configuration
+
+Configure OoP modules in your YAML config:
+
+```yaml
+modules:
+  calculator:
+    runtime:
+      type: oop
+      execution:
+        executable_path: "~/.hyperspot/bin/calculator-oop.exe"
+        args: []
+        working_directory: null
+        environment:
+          RUST_LOG: "info"
+    config:
+      some_setting: "value"
+```
+
+**Configuration fields:**
+
+* `type: oop` — marks the module as out-of-process
+* `executable_path` — path to the module binary (supports `~` expansion)
+* `args` — command-line arguments passed to the executable
+* `working_directory` — optional working directory for the process
+* `environment` — environment variables to set for the process
+
+### OoP Bootstrap Library
+
+Use `modkit_bootstrap::oop` to bootstrap OoP modules:
+
+```rust
+use modkit_bootstrap::oop::{OopRunOptions, run_oop_with_options};
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    let opts = OopRunOptions {
+        module_name: "my_module".to_string(),
+        instance_id: None,  // Auto-generated UUID
+        directory_endpoint: "http://127.0.0.1:50051".to_string(),
+        config_path: None,
+        verbose: 0,
+        print_config: false,
+        heartbeat_interval_secs: 5,
+    };
+    
+    run_oop_with_options(opts).await
+}
+```
+
+**`OopRunOptions` fields:**
+
+| Field | Description |
+|-------|-------------|
+| `module_name` | Logical module name (e.g., "file_parser") |
+| `instance_id` | Instance ID (defaults to random UUID) |
+| `directory_endpoint` | DirectoryService gRPC endpoint |
+| `config_path` | Path to configuration file |
+| `verbose` | Log verbosity (0=default, 1=info, 2=debug, 3=trace) |
+| `print_config` | Print effective config and exit |
+| `heartbeat_interval_secs` | Heartbeat interval (default: 5) |
+
+### OoP Lifecycle
+
+When an OoP module starts:
+
+1. **Configuration loading** — loads config from file or `MODKIT_MODULE_CONFIG` env var
+2. **Logging initialization** — sets up tracing with optional OTEL
+3. **DirectoryService connection** — connects to the master host's directory service
+4. **Instance registration** — registers with DirectoryService for discovery
+5. **Heartbeat loop** — starts background heartbeat task
+6. **Module lifecycle** — runs the normal module lifecycle (init → migrate → start)
+7. **Graceful shutdown** — deregisters from DirectoryService on exit
+
+### Shutdown Model
+
+Shutdown is driven by a single root `CancellationToken` per process:
+
+* OS signals (SIGTERM, SIGINT, Ctrl+C) are hooked at bootstrap level
+* The root token is passed to `RunOptions::Token` for module runtime shutdown
+* Background tasks (like heartbeat) use child tokens derived from the root
+* On shutdown, the module deregisters itself from DirectoryService before exiting
+
+---
+
+## Module Orchestrator & Directory API
+
+The **Module Orchestrator** provides service discovery and instance management for both in-process and OoP modules.
+
+### DirectoryApi Trait
+
+```rust
+#[async_trait]
+pub trait DirectoryApi: Send + Sync {
+    /// Resolve a gRPC service by its logical name to an endpoint
+    async fn resolve_grpc_service(&self, service_name: &str) -> Result<ServiceEndpoint>;
+
+    /// List all service instances for a given module
+    async fn list_instances(&self, module: &str) -> Result<Vec<ServiceInstanceInfo>>;
+
+    /// Register a new module instance with the directory
+    async fn register_instance(&self, info: RegisterInstanceInfo) -> Result<()>;
+
+    /// Deregister a module instance (for graceful shutdown)
+    async fn deregister_instance(&self, module: &str, instance_id: &str) -> Result<()>;
+
+    /// Send a heartbeat for a module instance to indicate it's still alive
+    async fn send_heartbeat(&self, module: &str, instance_id: &str) -> Result<()>;
+}
+```
+
+### Service Endpoint Types
+
+```rust
+/// Represents an endpoint where a service can be reached
+pub struct ServiceEndpoint {
+    pub uri: String,
+}
+
+impl ServiceEndpoint {
+    pub fn tcp(host: &str, port: u16) -> Self;  // "http://host:port"
+    pub fn uds(path: impl AsRef<Path>) -> Self; // "unix:///path/to/socket"
+}
+
+/// Information about a service instance
+pub struct ServiceInstanceInfo {
+    pub module: String,
+    pub instance_id: String,
+    pub endpoint: ServiceEndpoint,
+    pub version: Option<String>,
+}
+
+/// Information for registering a new module instance
+pub struct RegisterInstanceInfo {
+    pub module: String,
+    pub instance_id: String,
+    pub grpc_services: Vec<(String, ServiceEndpoint)>,
+    pub version: Option<String>,
+}
+```
+
+### Using DirectoryApi
+
+**From an OoP module** — the DirectoryApi client is injected into the ClientHub:
+
+```rust
+async fn init(&self, ctx: &ModuleCtx) -> anyhow::Result<()> {
+    // DirectoryApi is available via ClientHub in OoP modules
+    let directory = ctx.client_hub.get::<dyn DirectoryApi>()?;
+    
+    // Resolve another service's endpoint
+    let endpoint = directory.resolve_grpc_service("my.package.MyService").await?;
+    
+    Ok(())
+}
+```
+
+**From the master host** — the Module Orchestrator registers itself as the DirectoryApi implementation.
+
+---
+
+## Backends
+
+Backends manage the lifecycle of out-of-process module instances.
+
+### BackendKind
+
+```rust
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BackendKind {
+    LocalProcess,  // Spawn as local child process
+    K8s,           // Deploy to Kubernetes (future)
+    Static,        // Pre-configured static endpoints
+    Mock,          // For testing
+}
+```
+
+### OopBackend Trait
+
+```rust
+#[async_trait]
+pub trait OopBackend: Send + Sync {
+    /// Spawn an OoP module instance
+    async fn spawn(&self, config: OopSpawnConfig) -> Result<()>;
+    
+    /// Shutdown all spawned instances
+    async fn shutdown_all(&self);
+}
+```
+
+### LocalProcessBackend
+
+Spawns modules as local child processes with managed lifecycle:
+
+```rust
+use modkit::LocalProcessBackend;
+use tokio_util::sync::CancellationToken;
+
+let cancel = CancellationToken::new();
+let backend = LocalProcessBackend::new(cancel.clone());
+
+// Backend automatically:
+// - Spawns child processes with proper environment
+// - Forwards stdout/stderr to parent process logs
+// - Gracefully stops all processes when token is cancelled
+// - Force-kills processes after 5-second grace period
+```
+
+**Features:**
+
+* **CancellationToken integration** — coordinated shutdown across all processes
+* **Log forwarding** — child process output forwarded with module context
+* **Process group management** — clean termination of process trees
+* **Graceful shutdown** — 5-second grace period before force-kill
+
+### Log Forwarding
+
+Child process output is captured and re-emitted with module context:
+
+```rust
+// Child process logs appear as:
+// INFO calculator: Starting service...
+// DEBUG calculator: Handling request id=123
+```
+
+---
+
+## SDK Pattern for Inter-Module Communication
+
+For OoP modules, use the **SDK pattern** to define typed APIs that work across process boundaries.
+The SDK crate combines API traits, types, gRPC stubs, client implementation, and wiring helpers.
+
+### Module Structure with SDK
+
+```
+modules/my_module/
+  ├── my_module-sdk/              # SDK for consumers (everything in one place)
+  │   ├── Cargo.toml
+  │   ├── build.rs                # Proto compilation
+  │   ├── proto/
+  │   │   └── my_module.proto     # gRPC service definition
+  │   └── src/
+  │       ├── lib.rs              # Re-exports everything
+  │       ├── api.rs              # API trait + types + errors
+  │       ├── client.rs           # gRPC client impl (using modkit-transport-grpc)
+  │       └── wiring.rs           # wire_client() helper function
+  └── my_module/                  # Module implementation + SERVER
+      ├── Cargo.toml
+      └── src/
+          ├── lib.rs              # Module definition, re-exports SDK
+          ├── module.rs           # Module struct + traits
+          ├── grpc_server.rs      # gRPC server implementation
+          └── main.rs             # OoP binary entry point
+```
+
+**Key points:**
+- The `-sdk` crate contains everything consumers need: API trait, types, gRPC client, and wiring helpers
+- Server implementations are owned by the module itself, not the SDK
+- Consumers only need one dependency: `my_module-sdk`
+
+### SDK Crate Structure
+
+```rust
+// my_module-sdk/src/lib.rs
+#![forbid(unsafe_code)]
+
+// API trait and types
+mod api;
+pub use api::{MyModuleApi, MyModuleError, Input, Output};
+
+// gRPC proto stubs
+pub mod proto {
+    tonic::include_proto!("my_module.v1");
+}
+pub use proto::my_module_service_client::MyModuleServiceClient;
+pub use proto::my_module_service_server::{MyModuleService, MyModuleServiceServer};
+
+// gRPC client
+mod client;
+pub use client::MyModuleGrpcClient;
+
+// Wiring helpers
+mod wiring;
+pub use wiring::{wire_client, build_client};
+
+/// Service name for discovery
+pub const SERVICE_NAME: &str = "my_module.v1.MyModuleService";
+```
+
+### API Trait (in SDK)
+
+```rust
+// my_module-sdk/src/api.rs
+use async_trait::async_trait;
+
+/// API trait for MyModule
+#[async_trait]
+pub trait MyModuleApi: Send + Sync {
+    async fn do_something(&self, input: Input) -> Result<Output, MyModuleError>;
+}
+
+/// Error type for MyModule operations
+#[derive(thiserror::Error, Debug)]
+pub enum MyModuleError {
+    #[error("gRPC transport error: {0}")]
+    Transport(String),
+    #[error("internal error: {0}")]
+    Internal(String),
+}
+
+#[derive(Clone, Debug)]
+pub struct Input { pub value: String }
+
+#[derive(Clone, Debug)]
+pub struct Output { pub result: String }
+```
+
+### gRPC Client (in SDK)
+
+All clients MUST use `modkit_transport_grpc::client` utilities for consistent
+timeouts, keepalive, retry logic, and tracing integration:
+
+```rust
+// my_module-sdk/src/client.rs
+use anyhow::Result;
+use async_trait::async_trait;
+use tonic::transport::Channel;
+use modkit_transport_grpc::client::{connect_with_retry, GrpcClientConfig};
+use crate::api::{MyModuleApi, MyModuleError, Input, Output};
+use crate::proto::{MyModuleServiceClient, DoSomethingRequest};
+
+pub struct MyModuleGrpcClient {
+    inner: MyModuleServiceClient<Channel>,
+}
+
+impl MyModuleGrpcClient {
+    pub async fn connect(endpoint: &str) -> Result<Self> {
+        let cfg = GrpcClientConfig::new("my_module");
+        Self::connect_with_retry(endpoint, &cfg).await
+    }
+
+    pub async fn connect_with_retry(
+        endpoint: impl Into<String>,
+        cfg: &GrpcClientConfig,
+    ) -> Result<Self> {
+        let channel: Channel = connect_with_retry(endpoint, cfg).await?;
+        Ok(Self { inner: MyModuleServiceClient::new(channel) })
+    }
+}
+
+#[async_trait]
+impl MyModuleApi for MyModuleGrpcClient {
+    async fn do_something(&self, input: Input) -> Result<Output, MyModuleError> {
+        let request = DoSomethingRequest { value: input.value };
+        let response = self.inner.clone()
+            .do_something(tonic::Request::new(request))
+            .await
+            .map_err(|e| MyModuleError::Transport(e.to_string()))?;
+        Ok(Output { result: response.into_inner().result })
+    }
+}
+```
+
+### Wiring Helper (in SDK)
+
+```rust
+// my_module-sdk/src/wiring.rs
+use std::sync::Arc;
+use anyhow::Result;
+use modkit::client_hub::ClientHub;
+use module_orchestrator_contracts::DirectoryApi;
+use crate::{MyModuleApi, MyModuleGrpcClient, SERVICE_NAME};
+
+/// Wire the gRPC client into ClientHub
+pub async fn wire_client(hub: &ClientHub, resolver: &dyn DirectoryApi) -> Result<()> {
+    let endpoint = resolver.resolve_grpc_service(SERVICE_NAME).await?;
+    let client = MyModuleGrpcClient::connect(&endpoint.uri).await?;
+    hub.register::<dyn MyModuleApi>(Arc::new(client));
+    tracing::info!(service = SERVICE_NAME, "client wired into ClientHub");
+    Ok(())
+}
+
+/// Build client directly (without registering in hub)
+pub async fn build_client(resolver: &dyn DirectoryApi) -> Result<Arc<dyn MyModuleApi>> {
+    let endpoint = resolver.resolve_grpc_service(SERVICE_NAME).await?;
+    let client = MyModuleGrpcClient::connect(&endpoint.uri).await?;
+    Ok(Arc::new(client))
+}
+```
+
+### Usage Example
+
+```rust
+// Consumer module
+use my_module_sdk::{MyModuleApi, wire_client};
+
+async fn init(&self, ctx: &ModuleCtx) -> Result<()> {
+    let directory = ctx.client_hub().get::<dyn DirectoryApi>()?;
+    
+    // Wire the client into ClientHub
+    wire_client(ctx.client_hub(), directory.as_ref()).await?;
+    
+    // Later, get client from ClientHub
+    let client = ctx.client_hub().get::<dyn MyModuleApi>()?;
+    let result = client.do_something(Input { value: "test".into() }).await?;
+    Ok(())
+}
+```
+
+### Example: calculator
+
+See `examples/oop-modules/calculator/` for a complete working example:
+
+* **calculator-sdk** — API trait, types, gRPC client, proto stubs, and `wire_client()` helper
+* **calculator** — OoP module with gRPC server implementation
 
 ---
 
@@ -977,9 +1421,27 @@ The registry automatically adds a `bearerAuth` security scheme (HTTP Bearer with
 
 ## Typed ClientHub
 
+The **ClientHub** provides type-safe client resolution for inter-module communication. It supports both in-process and remote clients:
+
+* **In-process clients** — direct function calls within the same process
+* **Remote clients** — gRPC clients for OoP modules (resolved via DirectoryApi)
+
+**Client types:**
+
 * **`contract::client`** defines the trait & DTOs exposed to other modules.
-* **`gateways/local.rs`** implements that trait and is published in `init`.
+* **`gateways/local.rs`** implements that trait for in-process communication.
+* **`*-grpc/src/client.rs`** implements the trait for remote gRPC communication.
 * Consumers resolve the typed client from ClientHub by interface type (+ optional scope).
+
+### In-Process vs Remote Clients
+
+| Aspect | In-Process | Remote (OoP) |
+|--------|------------|--------------|
+| Transport | Direct call | gRPC |
+| Latency | Nanoseconds | Milliseconds |
+| Isolation | Shared process | Separate process |
+| Contract | Trait in `contract/` | Trait in `*-contracts/` crate |
+| Registration | `expose_*_client()` | DirectoryApi + gRPC client |
 
 **Publish in `init`**
 
@@ -1076,151 +1538,213 @@ pub trait StatefulModule: Send + Sync {
 
 ---
 
-## Complete example: Modern REST module
+## OoP Configuration: How It Works
 
-Here's a complete example showing all the latest features:
+This section describes the complete configuration flow for Out-of-Process modules, from master host preparation to final merged configuration in the OoP process.
 
-```rust
-use axum::{body::Bytes, extract::{Multipart, Query, State}, Json, Router};
-use http::StatusCode;
-use modkit::api::{OpenApiRegistry, OperationBuilder, problem::{Problem, bad_request, internal_error}};
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
-use std::sync::Arc;
+### Configuration Flow Diagram
 
-// DTOs with utoipa schemas
-#[derive(Serialize, Deserialize, ToSchema)]
-pub struct CreateItemRequest {
-    pub name: String,
-    pub description: Option<String>,
-}
-
-#[derive(Serialize, Deserialize, ToSchema)]
-pub struct ItemDto {
-    pub id: uuid::Uuid,
-    pub name: String,
-    pub description: Option<String>,
-}
-
-#[derive(Deserialize)]
-pub struct RenderQuery {
-    #[serde(default)]
-    pub render_markdown: bool,
-}
-
-// State for handlers
-#[derive(Clone)]
-struct ApiState {
-    service: Arc<ItemService>,
-}
-
-// Handlers (free functions using State)
-async fn list_items(State(state): State<ApiState>) -> Result<Json<Vec<ItemDto>>, Problem> {
-    let items = state.service.list_items().await
-        .map_err(|e| internal_error(e))?;
-    Ok(Json(items))
-}
-
-async fn create_item(
-    State(state): State<ApiState>,
-    Json(req): Json<CreateItemRequest>,
-) -> Result<Json<ItemDto>, Problem> {
-    if req.name.is_empty() {
-        return Err(bad_request("Name is required"));
-    }
-    let item = state.service.create_item(req).await
-        .map_err(|e| internal_error(e))?;
-    Ok(Json(item))
-}
-
-async fn upload_file(
-    State(state): State<ApiState>,
-    Query(query): Query<RenderQuery>,
-    mut multipart: Multipart,
-) -> Result<Json<ItemDto>, Problem> {
-    while let Some(field) = multipart.next_field().await.map_err(|e| internal_error(e))? {
-        if field.name() == Some("file") {
-            let filename = field.file_name().map(|s| s.to_string());
-            let bytes = field.bytes().await.map_err(|e| internal_error(e))?;
-            
-            let item = state.service.process_upload(filename, bytes, query.render_markdown).await
-                .map_err(|e| internal_error(e))?;
-            return Ok(Json(item));
-        }
-    }
-    Err(bad_request("Missing 'file' field"))
-}
-
-async fn upload_binary(
-    State(state): State<ApiState>,
-    body: Bytes,
-) -> Result<Json<ItemDto>, Problem> {
-    let item = state.service.process_binary(body).await
-        .map_err(|e| internal_error(e))?;
-    Ok(Json(item))
-}
-
-// Register routes using the type-safe builder
-pub fn register_routes(
-    mut router: Router,
-    openapi: &dyn OpenApiRegistry,
-    service: Arc<ItemService>,
-) -> anyhow::Result<Router> {
-    // GET /items - List items
-    router = OperationBuilder::get("/items")
-        .operation_id("items.list")
-        .summary("List all items")
-        .tag("Items")
-        .require_auth("items", "read")
-        .handler(list_items)
-        .json_response_with_schema::<Vec<ItemDto>>(openapi, StatusCode::OK, "List of items")
-        .standard_errors(openapi)
-        .register(router, openapi);
-
-    // POST /items - Create item
-    router = OperationBuilder::post("/items")
-        .operation_id("items.create")
-        .summary("Create a new item")
-        .tag("Items")
-        .require_auth("items", "write")
-        .json_request::<CreateItemRequest>(openapi, "Item data")
-        .handler(create_item)
-        .json_response_with_schema::<ItemDto>(openapi, StatusCode::CREATED, "Item created")
-        .with_422_validation_error(openapi)
-        .standard_errors(openapi)
-        .register(router, openapi);
-
-    // POST /items/upload - Upload file (multipart)
-    router = OperationBuilder::post("/items/upload")
-        .operation_id("items.upload")
-        .summary("Upload a file")
-        .tag("Items")
-        .require_auth("items", "write")
-        .query_param_typed("render_markdown", false, "Render markdown output", "boolean")
-        .multipart_file_request("file", Some("File to process"))
-        .handler(upload_file)
-        .json_response_with_schema::<ItemDto>(openapi, StatusCode::OK, "File processed")
-        .standard_errors(openapi)
-        .problem_response(openapi, StatusCode::UNSUPPORTED_MEDIA_TYPE, "Unsupported file type")
-        .register(router, openapi);
-
-    // POST /items/upload-binary - Upload raw binary
-    router = OperationBuilder::post("/items/upload-binary")
-        .operation_id("items.upload_binary")
-        .summary("Upload raw binary data")
-        .tag("Items")
-        .require_auth("items", "write")
-        .octet_stream_request(Some("Raw file bytes"))
-        .handler(upload_binary)
-        .json_response_with_schema::<ItemDto>(openapi, StatusCode::OK, "Binary processed")
-        .standard_errors(openapi)
-        .register(router, openapi);
-
-    // Add state
-    let state = ApiState { service };
-    Ok(router.with_state(state))
-}
 ```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                           MASTER HOST                                   │
+├─────────────────────────────────────────────────────────────────────────┤
+│  quickstart.yaml                                                        │
+│  ┌──────────────────────────────────────────────────────────────────┐   │
+│  │ database:                                                        │   │
+│  │   servers:                                                       │   │
+│  │     sqlite_main: { params: { WAL: true }, pool: { max_conns: 5 }}│   │
+│  │                                                                  │   │
+│  │ modules:                                                         │   │
+│  │   calculator:                                                  │   │
+│  │     runtime: { type: oop, execution: { ... } }                   │   │
+│  │     database: { server: sqlite_main, file: accum.db }            │   │
+│  │     config: { setting: "master_value" }                          │   │
+│  │                                                                  │   │
+│  │ logging:                                                         │   │
+│  │   calculator: { console_level: info, file: logs/accum.log }    │   │
+│  │                                                                  │   │
+│  │ tracing: { enabled: true, ... }                                  │   │
+│  └──────────────────────────────────────────────────────────────────┘   │
+│                              │                                          │
+│                              ▼                                          │
+│               render_module_config_for_oop()                            │
+│                              │                                          │
+│                              ▼                                          │
+│  ┌──────────────────────────────────────────────────────────────────┐   │
+│  │ RenderedModuleConfig (JSON):                                     │   │
+│  │   database: { global: {...}, module: {...} }  ← structured       │   │
+│  │   config: { setting: "master_value" }                            │   │
+│  │   logging: { calculator: {...}, default: {...} }               │   │
+│  │   tracing: { enabled: true, ... }                                │   │
+│  └──────────────────────────────────────────────────────────────────┘   │
+│                              │                                          │
+│                              ▼                                          │
+│         MODKIT_MODULE_CONFIG env var + spawn OoP process                │
+└─────────────────────────────────────────────────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                           OoP PROCESS                                   │
+├─────────────────────────────────────────────────────────────────────────┤
+│  1. Load local --config file (oop-example.yaml)                         │
+│  2. Parse MODKIT_MODULE_CONFIG env var                                  │
+│  3. Merge configs: master (base) + local (override)                     │
+│                                                                         │
+│  ┌──────────────────────┐    ┌──────────────────────┐                   │
+│  │ Master (from env)    │ +  │ Local (from --config)│                   │
+│  │ database: {...}      │    │ database:            │                   │
+│  │ config: {...}        │    │   pool: { max: 10 }  │                   │
+│  │ logging: {...}       │    │ config: { x: "y" }   │                   │
+│  │ tracing: {...}       │    │ logging: {...}       │                   │
+│  └──────────────────────┘    └──────────────────────┘                   │
+│                │                       │                                │
+│                └───────────┬───────────┘                                │
+│                            ▼                                            │
+│                   build_oop_config_and_db()                             │
+│                            │                                            │
+│                            ▼                                            │
+│  ┌──────────────────────────────────────────────────────────────────┐   │
+│  │ Final merged configuration:                                      │   │
+│  │   database: field-by-field merge → DbManager                     │   │
+│  │   config: local replaces master (if present)                     │   │
+│  │   logging: key-by-key merge → init_logging_unified()             │   │
+│  │   tracing: from master only → OTEL layer                         │   │
+│  └──────────────────────────────────────────────────────────────────┘   │
+│                            │                                            │
+│                            ▼                                            │
+│                 Module lifecycle starts                                 │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Bootstrap Sequence in OoP Process
+
+When an OoP module starts via `run_oop_with_options()`:
+
+1. **Load local config file** — `AppConfig::load_or_default(opts.config_path)`
+2. **Parse rendered config from master** — `MODKIT_MODULE_CONFIG` env var → `RenderedModuleConfig`
+3. **Merge configurations** — `build_oop_config_and_db()` merges all sections
+4. **Initialize logging** — Uses merged logging config (master + local)
+5. **Initialize OTEL tracing** — Uses master's tracing config
+6. **Create DbManager** — Uses merged database config via Figment
+7. **Connect to DirectoryService** — Uses `MODKIT_DIRECTORY_ENDPOINT`
+8. **Start module lifecycle** — Normal `init → migrate → start` flow
+
+### Environment Variables
+
+OoP modules receive configuration from the master host via environment variables:
+
+| Variable | Description |
+|----------|-------------|
+| `MODKIT_MODULE_CONFIG` | JSON blob with rendered module config (database, config, logging, tracing) |
+| `MODKIT_DIRECTORY_ENDPOINT` | DirectoryService gRPC endpoint (e.g., `http://127.0.0.1:50051`) |
+| `MODKIT_CONFIG_PATH` | Path to config file (fallback if `MODKIT_MODULE_CONFIG` not set) |
+
+### Merge Strategies by Section
+
+For each configuration section, master config serves as **base** and local `--config` serves as **override**:
+
+| Section | Merge Strategy | Description |
+|---------|---------------|-------------|
+| **database** | Field-by-field merge | Local fields override master fields (dsn, host, port, user, password, dbname, params, pool) |
+| **logging** | Key-by-key merge | Local subsystem keys override master keys (e.g., "default", "calculator") |
+| **config** | Full replacement | If local has `config` section, it completely replaces master |
+| **tracing** | From master only | OoP modules use master's OTEL settings |
+
+**Database configuration merge (3 levels):**
+
+```
+1. database.servers.*           (global templates in master)
+        ↓ merge
+2. modules.<name>.database      (module section in master)
+        ↓ merge
+3. modules.<name>.database      (module section in local --config)
+        ↓
+   Final database configuration
+```
+
+Each level uses field-by-field merge (same logic as `DbManager::merge_server_into_module`).
+
+**Example:**
+
+Master config (`quickstart.yaml`):
+```yaml
+database:
+  servers:
+    sqlite_main:
+      params:
+        WAL: "true"
+      pool:
+        max_conns: 5
+
+modules:
+  calculator:
+    database:
+      server: "sqlite_main"
+      file: "accum.db"
+    config:
+      some_setting: "from_master"
+
+logging:
+  calculator:
+    console_level: info
+    file: "logs/calculator.log"
+```
+
+Local OoP config (`oop-example.yaml`):
+```yaml
+modules:
+  calculator:
+    database:
+      pool:
+        max_conns: 10  # Overrides master's 5
+    config:
+      some_setting: "from_local"  # Replaces master entirely
+
+logging:
+  calculator:
+    console_level: debug  # Overrides master's info
+    file: "logs/calculator-oop.log"  # Overrides master's file
+```
+
+**Result:**
+- Database: Uses `sqlite_main` server with `max_conns: 10` (local override)
+- Config: `some_setting: "from_local"` (local replaces master)
+- Logging: `console_level: debug`, `file: "logs/calculator-oop.log"` (local overrides)
+
+### Standalone Mode
+
+When `MODKIT_MODULE_CONFIG` is not set (e.g., running OoP module manually for debugging):
+
+- OoP module uses **only** local `--config` file
+- No merge happens — local config is the complete configuration
+- Useful for local development and testing
+
+```bash
+# Standalone mode - no master host
+./calculator-oop --config config/oop-example.yaml
+```
+
+### Log Forwarding from OoP to Master
+
+When master host spawns an OoP module:
+
+1. Master captures OoP's stdout/stderr
+2. `detect_log_level()` parses log level from each line (supports both plain text and JSON formats)
+3. Logs are re-emitted via master's tracing with `oop_module` and `oop_instance_id` context
+
+**Supported log formats:**
+
+```
+# Plain text (tracing-subscriber default)
+2025-12-09T10:00:00Z  INFO calculator: Starting...
+2025-12-09T10:00:00Z DEBUG calculator: Processing...
+
+# JSON format (tracing-subscriber json layer)
+{"timestamp":"2025-12-09T10:00:00Z","level":"INFO","message":"Starting..."}
+{"timestamp":"2025-12-09T10:00:00Z","level":"DEBUG","message":"Processing..."}
+```
+
+Both formats are detected and forwarded with the correct log level.
 
 ---
 
@@ -1236,3 +1760,7 @@ pub fn register_routes(
 * Use `.multipart_file_request()` for HTML form uploads, `.octet_stream_request()` for raw binary.
 * Use `.require_auth()` for protected endpoints, `.public()` for public endpoints.
 * Use `.with_422_validation_error()` for endpoints with input validation.
+* For OoP modules: use the SDK pattern with a single `*-sdk` crate containing API trait, types, gRPC client, and wiring helpers.
+* For gRPC: server implementations live in the module itself; the SDK crate provides only the client.
+* For gRPC clients: always use `modkit_transport_grpc::client` utilities (`connect_with_stack`, `connect_with_retry`).
+* Use `CancellationToken` for coordinated shutdown across the entire process tree.

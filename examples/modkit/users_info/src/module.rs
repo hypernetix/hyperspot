@@ -106,7 +106,9 @@ impl Module for UsersInfo {
         // This adapter handles SecurityCtx internally for inter-module calls
         let local_client = UsersInfoLocalClient::new(domain_service);
         let api: Arc<dyn UsersInfoApi> = Arc::new(local_client);
-        expose_users_info_client(ctx, &api)?;
+
+        // Register in ClientHub directly
+        ctx.client_hub().register::<dyn UsersInfoApi>(api);
         info!("UsersInfo API exposed to ClientHub via local adapter");
         Ok(())
     }

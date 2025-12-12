@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package module_orchestrator.v1.directory;
+
+import "google/protobuf/empty.proto";
+
+// DirectoryService provides service discovery for gRPC services.
+// OoP modules use this to register themselves and discover other services.
+service DirectoryService {
+  // Resolve a gRPC service name to an endpoint URI
+  rpc ResolveGrpcService(ResolveGrpcServiceRequest) returns (ResolveGrpcServiceResponse);
+  
+  // List all instances of a specific module
+  rpc ListInstances(ListInstancesRequest) returns (ListInstancesResponse);
+  
+  // Register a new module instance with the directory
+  rpc RegisterInstance(RegisterInstanceRequest) returns (google.protobuf.Empty);
+  
+  // Deregister a module instance (for graceful shutdown)
+  rpc DeregisterInstance(DeregisterInstanceRequest) returns (google.protobuf.Empty);
+  
+  // Send a heartbeat to indicate an instance is still alive
+  rpc Heartbeat(HeartbeatRequest) returns (google.protobuf.Empty);
+}
+
+message ResolveGrpcServiceRequest {
+  string service_name = 1;
+}
+
+message ResolveGrpcServiceResponse {
+  string endpoint_uri = 1;
+}
+
+message ListInstancesRequest {
+  string module_name = 1;
+}
+
+message InstanceInfo {
+  string module_name = 1;
+  string instance_id = 2;
+  string endpoint_uri = 3;
+  string version = 4;
+}
+
+message ListInstancesResponse {
+  repeated InstanceInfo instances = 1;
+}
+
+// Represents a gRPC service endpoint with its name and URI
+message GrpcServiceEndpoint {
+  string service_name = 1;
+  string endpoint_uri = 2;
+}
+
+message RegisterInstanceRequest {
+  string module_name = 1;
+  string instance_id = 2;
+  repeated GrpcServiceEndpoint grpc_services = 3;
+  string version = 4;
+}
+
+message DeregisterInstanceRequest {
+  string module_name = 1;
+  string instance_id = 2;
+}
+
+message HeartbeatRequest {
+  string module_name = 1;
+  string instance_id = 2;
+}

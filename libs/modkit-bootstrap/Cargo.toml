@@ -10,10 +10,11 @@ workspace = true
 
 [features]
 default = []
-otel = ["tracing-opentelemetry", "opentelemetry_sdk"]
+otel = ["tracing-opentelemetry", "tracing-error", "opentelemetry_sdk"]
 
 [lib]
 name = "modkit_bootstrap"
+path = "src/lib.rs"
 
 [dependencies]
 anyhow = { workspace = true }
@@ -34,6 +35,22 @@ url = { workspace = true }
 urlencoding = { workspace = true }
 regex = { workspace = true }
 modkit-db = { path = "../modkit-db" }
+
+# Backend dependencies
+uuid = { workspace = true, features = ["v7"] }
+tokio-util = { workspace = true, features = ["rt"] }
+
+# OpenTelemetry support (optional)
 tracing-opentelemetry = { workspace = true, optional = true }
+tracing-error = { workspace = true, optional = true }
 tracing-appender = { workspace = true }
-opentelemetry_sdk = { workspace = true, optional = true }
+opentelemetry_sdk = { workspace = true, features = ["trace", "rt-tokio"], optional = true }
+
+# OoP bootstrap dependencies
+modkit = { path = "../modkit" }
+modkit-transport-grpc = { path = "../modkit-transport-grpc" }
+module_orchestrator-grpc = { path = "../../modules/module_orchestrator/module_orchestrator-grpc" }
+module_orchestrator-contracts = { path = "../../modules/module_orchestrator/module_orchestrator-contracts" }
+
+[dev-dependencies]
+temp-env = { workspace = true }

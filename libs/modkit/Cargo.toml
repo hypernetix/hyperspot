@@ -20,11 +20,11 @@ otel = ["opentelemetry", "opentelemetry_sdk", "tracing-opentelemetry", "tracing-
 
 [dependencies]
 # Project-local crates
-modkit-bootstrap = { path = "../modkit-bootstrap" }
 modkit-macros = { path = "../modkit-macros" }
 modkit-errors = { path = "../modkit-errors", features = ["utoipa", "axum"] }
 modkit-db = { path = "../modkit-db" }
 modkit-odata = { path = "../modkit-odata", features = ["with-odata-params"] }
+module_orchestrator-contracts = { path = "../../modules/module_orchestrator/module_orchestrator-contracts" } # TODO: probably we need remove this dependency at the future
 
 # Core deps
 anyhow = { workspace = true }
@@ -68,6 +68,10 @@ opentelemetry-otlp = { workspace = true, optional = true }
 
 # gRPC support only for otel (optional)
 tonic = { workspace = true, optional = true }
+
+# Unix-specific dependencies for graceful process termination
+[target.'cfg(unix)'.dependencies]
+nix = { version = "0.29", default-features = false, features = ["signal"] }
 
 [dev-dependencies]
 tower = { workspace = true }

@@ -27,6 +27,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::sync::Arc;
 use tower::ServiceExt;
+use uuid::Uuid;
 // for oneshot
 use utoipa::ToSchema;
 
@@ -45,6 +46,7 @@ impl ConfigProvider for TestConfigProvider {
 fn create_api_ingress_ctx(config: serde_json::Value) -> ModuleCtx {
     ModuleCtx::new(
         "api_ingress",
+        Uuid::new_v4(),
         Arc::new(TestConfigProvider { config }),
         Arc::new(ClientHub::new()),
         tokio_util::sync::CancellationToken::new(),
@@ -56,6 +58,7 @@ fn create_api_ingress_ctx(config: serde_json::Value) -> ModuleCtx {
 fn create_test_module_ctx() -> ModuleCtx {
     ModuleCtx::new(
         "test_module",
+        Uuid::new_v4(),
         Arc::new(TestConfigProvider { config: json!({}) }),
         Arc::new(ClientHub::new()),
         tokio_util::sync::CancellationToken::new(),

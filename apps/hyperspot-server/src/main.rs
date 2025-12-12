@@ -4,7 +4,12 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 use figment::Figment;
 use mimalloc::MiMalloc;
-use modkit_bootstrap::{AppConfig, AppConfigProvider, CliArgs, ConfigProvider};
+use modkit::LocalProcessBackend;
+use modkit_bootstrap::config::{
+    get_module_runtime_config, render_module_config_for_oop, AppConfig, CliArgs, RuntimeKind,
+};
+use modkit_bootstrap::host::{normalize_executable_path, AppConfigProvider, ConfigProvider};
+use tokio_util::sync::CancellationToken;
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -26,7 +31,9 @@ impl modkit::ConfigProvider for ModkitConfigAdapter {
 }
 
 // Bring runner types & our per-module DB factory
-use modkit::runtime::{run, DbOptions, RunOptions, ShutdownOptions};
+use modkit::runtime::{
+    run, shutdown, DbOptions, OopModuleSpawnConfig, OopSpawnOptions, RunOptions, ShutdownOptions,
+};
 
 #[allow(dead_code)]
 fn _ensure_drivers_linked() {
@@ -101,9 +108,15 @@ async fn main() -> Result<()> {
     config.apply_cli_overrides(&args);
 
     // Build OpenTelemetry layer before logging
+    // Convert TracingConfig from modkit_bootstrap to modkit's type (they have identical structure)
     #[cfg(feature = "otel")]
-    let otel_layer = config
+    let modkit_tracing_config: Option<modkit::telemetry::TracingConfig> = config
         .tracing
+        .as_ref()
+        .and_then(|tc| serde_json::to_value(tc).ok())
+        .and_then(|v| serde_json::from_value(v).ok());
+    #[cfg(feature = "otel")]
+    let otel_layer = modkit_tracing_config
         .as_ref()
         .and_then(modkit::telemetry::init::init_tracing);
     #[cfg(not(feature = "otel"))]
@@ -111,7 +124,7 @@ async fn main() -> Result<()> {
 
     // Initialize logging + otel in one Registry
     let logging_config = config.logging.as_ref().cloned().unwrap_or_default();
-    modkit_bootstrap::logging::init_logging_unified(
+    modkit_bootstrap::host::logging::init_logging_unified(
         &logging_config,
         Path::new(&config.server.home_dir),
         otel_layer,
@@ -119,7 +132,7 @@ async fn main() -> Result<()> {
 
     // One-time connectivity probe
     #[cfg(feature = "otel")]
-    if let Some(tc) = config.tracing.as_ref() {
+    if let Some(tc) = modkit_tracing_config.as_ref() {
         if let Err(e) = modkit::telemetry::init::otel_connectivity_probe(tc).await {
             tracing::error!(error = %e, "OTLP connectivity probe failed");
         }
@@ -223,15 +236,55 @@ fn resolve_db_options(config: &AppConfig, args: &CliArgs) -> Result<DbOptions> {
 async fn run_server(config: AppConfig, args: CliArgs) -> Result<()> {
     tracing::info!("Initializing modules...");
 
+    // Generate process-level instance ID once at startup.
+    // This is shared by all modules in this process.
+    let instance_id = uuid::Uuid::new_v4();
+    tracing::info!(instance_id = %instance_id, "Generated process instance ID");
+
+    // Create root cancellation token for the entire process.
+    // This token drives shutdown for the module runtime and all lifecycle/stateful modules.
+    let cancel = CancellationToken::new();
+
+    // Hook OS signals to the root token at the host level.
+    // This replaces the use of ShutdownOptions::Signals inside the runtime.
+    let cancel_for_signals = cancel.clone();
+    tokio::spawn(async move {
+        match shutdown::wait_for_shutdown().await {
+            Ok(()) => {
+                tracing::info!("shutdown: signal received in master host");
+            }
+            Err(e) => {
+                tracing::warn!(
+                    error = %e,
+                    "shutdown: primary waiter failed in master host, falling back to ctrl_c()"
+                );
+                let _ = tokio::signal::ctrl_c().await;
+            }
+        }
+        cancel_for_signals.cancel();
+    });
+
     // Build config provider and resolve database options
     let config_provider = build_config_provider(config.clone());
     let db_options = resolve_db_options(&config, &args)?;
 
-    // Run the ModKit runtime with signal-driven shutdown
+    // Create OoP backend with cancellation token - it will auto-shutdown all processes on cancel
+    let oop_backend = LocalProcessBackend::new(cancel.clone());
+
+    // Build OoP spawn configuration
+    let oop_options = build_oop_spawn_options(&config, &args, oop_backend)?;
+
+    // Run the ModKit runtime with the root cancellation token.
+    // Shutdown is driven by the signal handler spawned above, not by ShutdownOptions::Signals.
+    // Note: DirectoryApi is registered by the ModuleOrchestrator system module, not here.
+    // OoP modules are spawned after the start phase (once grpc_hub has bound its port).
     let run_options = RunOptions {
         modules_cfg: config_provider,
         db: db_options,
-        shutdown: ShutdownOptions::Signals,
+        shutdown: ShutdownOptions::Token(cancel.clone()),
+        clients: vec![],
+        instance_id,
+        oop: oop_options,
     };
 
     let result = run(run_options).await;
@@ -241,4 +294,67 @@ async fn run_server(config: AppConfig, args: CliArgs) -> Result<()> {
     modkit::telemetry::init::shutdown_tracing();
 
     result
+}
+
+/// Build OoP spawn configuration from AppConfig.
+///
+/// This collects all modules with `type=oop` and prepares their spawn configuration.
+/// The actual spawning happens in the HostRuntime after the start phase.
+fn build_oop_spawn_options(
+    config: &AppConfig,
+    _args: &CliArgs,
+    backend: LocalProcessBackend,
+) -> Result<Option<OopSpawnOptions>> {
+    let home_dir = PathBuf::from(&config.server.home_dir);
+    let mut modules = Vec::new();
+
+    for module_name in config.modules.keys() {
+        if let Some(runtime_cfg) = get_module_runtime_config(config, module_name)? {
+            if runtime_cfg.mod_type == RuntimeKind::Oop {
+                let exec_cfg = runtime_cfg.execution.as_ref().ok_or_else(|| {
+                    anyhow::anyhow!(
+                        "module '{}' is type=oop but execution config is missing",
+                        module_name
+                    )
+                })?;
+
+                let binary = normalize_executable_path(&exec_cfg.executable_path)?;
+
+                // Copy args from execution config as-is
+                // User controls --config via execution.args in master config
+                let spawn_args = exec_cfg.args.clone();
+
+                // Copy environment from execution config
+                let env = exec_cfg.environment.clone();
+
+                // Render the complete module config (with resolved DB)
+                let rendered_config = render_module_config_for_oop(config, module_name, &home_dir)?;
+                let rendered_json = rendered_config.to_json()?;
+                tracing::debug!(
+                    module = %module_name,
+                    "Prepared OoP module config: db={}",
+                    rendered_config.database.is_some()
+                );
+
+                modules.push(OopModuleSpawnConfig {
+                    module_name: module_name.clone(),
+                    binary,
+                    args: spawn_args,
+                    env,
+                    working_directory: exec_cfg.working_directory.clone(),
+                    rendered_config_json: rendered_json,
+                });
+            }
+        }
+    }
+
+    if modules.is_empty() {
+        Ok(None)
+    } else {
+        tracing::info!(count = modules.len(), "Prepared OoP modules for spawning");
+        Ok(Some(OopSpawnOptions {
+            modules,
+            backend: Box::new(backend),
+        }))
+    }
 }

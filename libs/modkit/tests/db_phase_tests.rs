@@ -17,6 +17,7 @@ use modkit::{
     config::ConfigProvider,
     runtime::{run, DbOptions, RunOptions, ShutdownOptions},
 };
+use uuid::Uuid;
 
 // Mock config provider for DB tests
 #[derive(Clone)]
@@ -89,6 +90,9 @@ async fn test_db_phase_with_manager_succeeds() {
         modules_cfg: Arc::new(DbTestConfigProvider::new().with_db_config("test_db_module")),
         db: DbOptions::Manager(create_test_db_manager()),
         shutdown: ShutdownOptions::Token(cancel),
+        clients: Vec::new(),
+        instance_id: Uuid::new_v4(),
+        oop: None,
     };
 
     let result = timeout(Duration::from_millis(500), run(opts)).await;
@@ -116,6 +120,9 @@ async fn test_db_phase_without_config_skips_migration() {
         modules_cfg: Arc::new(DbTestConfigProvider::new()), // No DB config for any module
         db: DbOptions::Manager(create_test_db_manager()),
         shutdown: ShutdownOptions::Token(cancel),
+        clients: Vec::new(),
+        instance_id: Uuid::new_v4(),
+        oop: None,
     };
 
     let result = timeout(Duration::from_millis(500), run(opts)).await;
@@ -143,6 +150,9 @@ async fn test_db_phase_with_none_option() {
         modules_cfg: Arc::new(DbTestConfigProvider::new()),
         db: DbOptions::None,
         shutdown: ShutdownOptions::Token(cancel),
+        clients: Vec::new(),
+        instance_id: Uuid::new_v4(),
+        oop: None,
     };
 
     let result = timeout(Duration::from_millis(500), run(opts)).await;
@@ -192,6 +202,9 @@ async fn test_db_phase_error_propagation() {
         modules_cfg: Arc::new(DbTestConfigProvider::new().with_db_config("test_module")),
         db: DbOptions::Manager(Arc::new(db_manager_result.unwrap())),
         shutdown: ShutdownOptions::Token(cancel),
+        clients: Vec::new(),
+        instance_id: Uuid::new_v4(),
+        oop: None,
     };
 
     // Run should either succeed (if no modules try to use bad config)
@@ -215,6 +228,9 @@ async fn test_db_phase_completes_before_init() {
         modules_cfg: Arc::new(DbTestConfigProvider::new().with_db_config("test_db_module")),
         db: DbOptions::Manager(create_test_db_manager()),
         shutdown: ShutdownOptions::Token(cancel),
+        clients: Vec::new(),
+        instance_id: Uuid::new_v4(),
+        oop: None,
     };
 
     let start = std::time::Instant::now();
