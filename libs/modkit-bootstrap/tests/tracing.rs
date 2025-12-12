@@ -228,8 +228,8 @@ fn test_invalid_yaml_graceful_failure() {
     let invalid_yaml = r#"
 enabled: true
 sampler:
-  strategy: "invalid_strategy"
-  ratio: "not_a_number"
+  invalid_strategy:
+    ratio: "not_a_number"
 "#;
 
     // This should fail to parse due to invalid ratio type

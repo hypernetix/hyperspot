@@ -159,8 +159,8 @@ tracing:
 
   # Sampling configuration
   sampler:
-    strategy: "parentbased_ratio"  # parentbased_always_on | parentbased_ratio | always_on | always_off
-    ratio: 1.0  # Sample 20% of traces (only used with ratio strategies)
+    parent_based_ratio: # parentbased_always_on | parentbased_ratio | always_on | always_off
+      ratio: 1.0  # Sample 20% of traces (only used with ratio strategies)
 
   # Propagation configuration
   propagation:
