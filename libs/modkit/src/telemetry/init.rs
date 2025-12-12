@@ -3,6 +3,7 @@
 //! This module sets up OpenTelemetry tracing and exports spans via OTLP
 //! (gRPC or HTTP) to collectors such as Jaeger, Uptrace, or the OTel Collector.
 
+use anyhow::Context;
 #[cfg(feature = "otel")]
 use opentelemetry::{global, trace::TracerProvider as _, KeyValue};
 
@@ -23,7 +24,7 @@ use opentelemetry_sdk::{
 use tonic::metadata::{MetadataKey, MetadataMap, MetadataValue};
 
 #[cfg(feature = "otel")]
-use modkit_bootstrap::config::TracingConfig;
+use modkit_bootstrap::config::{ExporterKind, TracingConfig};
 
 // ===== init_tracing (feature = "otel") ========================================
 
@@ -45,11 +46,11 @@ fn build_resource(cfg: &TracingConfig) -> Resource {
 /// Build sampler from configuration
 #[cfg(feature = "otel")]
 fn build_sampler(cfg: &TracingConfig) -> Sampler {
-    match cfg.sampler.as_ref().and_then(|s| s.strategy.as_deref()) {
-        Some("always_off") => Sampler::AlwaysOff,
-        Some("always_on") => Sampler::AlwaysOn,
-        Some("parentbased_ratio") => {
-            let ratio = cfg.sampler.as_ref().and_then(|s| s.ratio).unwrap_or(0.1);
+    match cfg.sampler.as_ref() {
+        Some(modkit_bootstrap::Sampler::AlwaysOff {}) => Sampler::AlwaysOff,
+        Some(modkit_bootstrap::Sampler::AlwaysOn {}) => Sampler::AlwaysOn,
+        Some(modkit_bootstrap::Sampler::ParentBasedRatio { ratio }) => {
+            let ratio = ratio.unwrap_or(0.1);
             Sampler::ParentBased(Box::new(Sampler::TraceIdRatioBased(ratio)))
         }
         _ => Sampler::ParentBased(Box::new(Sampler::AlwaysOn)),
@@ -63,8 +64,13 @@ fn extract_exporter_config(cfg: &TracingConfig) -> (String, String, Option<std::
         .exporter
         .as_ref()
         .map(|e| {
+            let kind_str = match &e.kind {
+                Some(ExporterKind::OtlpGrpc) => "otlp_grpc".to_string(),
+                Some(ExporterKind::OtlpHttp) => "otlp_http".to_string(),
+                None => "otlp_grpc".to_string(),
+            };
             (
-                e.kind.as_deref().unwrap_or("otlp_grpc").to_string(),
+                kind_str,
                 e.endpoint
                     .clone()
                     .unwrap_or_else(|| "http://127.0.0.1:4317".into()),
@@ -87,9 +93,9 @@ fn build_http_exporter(
     cfg: &TracingConfig,
     endpoint: String,
     timeout: Option<std::time::Duration>,
-) -> opentelemetry_otlp::SpanExporter {
-    let mut b = opentelemetry_otlp::SpanExporter::builder().with_http();
-    b = b
+) -> anyhow::Result<opentelemetry_otlp::SpanExporter> {
+    let mut b = opentelemetry_otlp::SpanExporter::builder()
+        .with_http()
         .with_protocol(Protocol::HttpBinary)
         .with_endpoint(endpoint);
     if let Some(t) = timeout {
@@ -98,8 +104,7 @@ fn build_http_exporter(
     if let Some(hmap) = build_headers_from_cfg_and_env(cfg) {
         b = b.with_headers(hmap);
     }
-    #[allow(clippy::expect_used)]
-    b.build().expect("build OTLP HTTP exporter")
+    b.build().context("build OTLP HTTP exporter")
 }
 
 /// Build gRPC OTLP exporter
@@ -108,7 +113,7 @@ fn build_grpc_exporter(
     cfg: &TracingConfig,
     endpoint: String,
     timeout: Option<std::time::Duration>,
-) -> opentelemetry_otlp::SpanExporter {
+) -> anyhow::Result<opentelemetry_otlp::SpanExporter> {
     let mut b = opentelemetry_otlp::SpanExporter::builder().with_tonic();
     b = b.with_endpoint(endpoint);
     if let Some(t) = timeout {
@@ -118,7 +123,7 @@ fn build_grpc_exporter(
         b = b.with_metadata(md);
     }
     #[allow(clippy::expect_used)]
-    b.build().expect("build OTLP gRPC exporter")
+    b.build().context("build OTLP gRPC exporter")
 }
 
 /// Initialize OpenTelemetry tracing from configuration and return a layer
@@ -126,14 +131,14 @@ fn build_grpc_exporter(
 #[cfg(feature = "otel")]
 pub fn init_tracing(
     cfg: &TracingConfig,
-) -> Option<
+) -> anyhow::Result<
     tracing_opentelemetry::OpenTelemetryLayer<
         tracing_subscriber::Registry,
         opentelemetry_sdk::trace::Tracer,
     >,
 > {
     if !cfg.enabled {
-        return None;
+        return Err(anyhow::anyhow!("tracing is not enabled"));
     }
 
     // Set W3C propagator for trace-context propagation
@@ -154,7 +159,7 @@ pub fn init_tracing(
         build_http_exporter(cfg, endpoint, timeout)
     } else {
         build_grpc_exporter(cfg, endpoint, timeout)
-    };
+    }?;
 
     // Build tracer provider with batch processor
     let provider = SdkTracerProvider::builder()
@@ -171,7 +176,7 @@ pub fn init_tracing(
     let otel_layer = tracing_opentelemetry::OpenTelemetryLayer::new(tracer);
 
     tracing::info!("OpenTelemetry layer created successfully");
-    Some(otel_layer)
+    Ok(otel_layer)
 }
 
 #[cfg(feature = "otel")]
@@ -303,10 +308,12 @@ pub async fn otel_connectivity_probe(
         .exporter
         .as_ref()
         .map(|e| {
-            (
-                e.kind.as_deref().unwrap_or("otlp_grpc"),
-                e.endpoint.clone().unwrap_or_default(),
-            )
+            let kind_str = match &e.kind {
+                Some(ExporterKind::OtlpGrpc) => "otlp_grpc",
+                Some(ExporterKind::OtlpHttp) => "otlp_http",
+                None => "otlp_grpc",
+            };
+            (kind_str, e.endpoint.clone().unwrap_or_default())
         })
         .unwrap_or(("otlp_grpc", "http://127.0.0.1:4317".into()));
 
@@ -384,7 +391,7 @@ mod tests {
         };
 
         let result = init_tracing(&cfg);
-        assert!(result.is_none());
+        assert!(result.is_err());
     }
 
     #[tokio::test]
@@ -397,7 +404,7 @@ mod tests {
         };
 
         let result = init_tracing(&cfg);
-        assert!(result.is_some());
+        assert!(result.is_ok());
     }
 
     #[test]
@@ -418,7 +425,7 @@ mod tests {
         };
 
         let result = init_tracing(&cfg);
-        assert!(result.is_some());
+        assert!(result.is_ok());
     }
 
     #[test]
@@ -430,15 +437,12 @@ mod tests {
         let cfg = TracingConfig {
             enabled: true,
             service_name: Some("test-service".to_string()),
-            sampler: Some(Sampler {
-                strategy: Some("always_on".to_string()),
-                ratio: None,
-            }),
+            sampler: Some(Sampler::AlwaysOn {}),
             ..Default::default()
         };
 
         let result = init_tracing(&cfg);
-        assert!(result.is_some());
+        assert!(result.is_ok());
     }
 
     #[test]
@@ -450,15 +454,12 @@ mod tests {
         let cfg = TracingConfig {
             enabled: true,
             service_name: Some("test-service".to_string()),
-            sampler: Some(Sampler {
-                strategy: Some("always_off".to_string()),
-                ratio: None,
-            }),
+            sampler: Some(Sampler::AlwaysOff {}),
             ..Default::default()
         };
 
         let result = init_tracing(&cfg);
-        assert!(result.is_some());
+        assert!(result.is_ok());
     }
 
     #[test]
@@ -470,15 +471,12 @@ mod tests {
         let cfg = TracingConfig {
             enabled: true,
             service_name: Some("test-service".to_string()),
-            sampler: Some(Sampler {
-                strategy: Some("parentbased_ratio".to_string()),
-                ratio: Some(0.5),
-            }),
+            sampler: Some(Sampler::ParentBasedRatio { ratio: Some(0.5) }),
             ..Default::default()
         };
 
         let result = init_tracing(&cfg);
-        assert!(result.is_some());
+        assert!(result.is_ok());
     }
 
     #[test]
@@ -490,7 +488,7 @@ mod tests {
             enabled: true,
             service_name: Some("test-service".to_string()),
             exporter: Some(Exporter {
-                kind: Some("otlp_http".to_string()),
+                kind: Some(ExporterKind::OtlpHttp),
                 endpoint: Some("http://localhost:4318".to_string()),
                 headers: None,
                 timeout_ms: Some(5000),
@@ -499,7 +497,7 @@ mod tests {
         };
 
         let result = init_tracing(&cfg);
-        assert!(result.is_some());
+        assert!(result.is_ok());
     }
 
     #[test]
@@ -512,7 +510,7 @@ mod tests {
             enabled: true,
             service_name: Some("test-service".to_string()),
             exporter: Some(Exporter {
-                kind: Some("otlp_grpc".to_string()),
+                kind: Some(ExporterKind::OtlpGrpc),
                 endpoint: Some("http://localhost:4317".to_string()),
                 headers: None,
                 timeout_ms: Some(5000),
@@ -521,7 +519,7 @@ mod tests {
         };
 
         let result = init_tracing(&cfg);
-        assert!(result.is_some());
+        assert!(result.is_ok());
     }
 
     #[test]
@@ -547,7 +545,7 @@ mod tests {
         let cfg = TracingConfig {
             enabled: true,
             exporter: Some(Exporter {
-                kind: Some("otlp_http".to_string()),
+                kind: Some(ExporterKind::OtlpHttp),
                 endpoint: Some("http://localhost:4318".to_string()),
                 headers: Some(headers.clone()),
                 timeout_ms: None,
@@ -586,7 +584,7 @@ mod tests {
         let cfg = TracingConfig {
             enabled: true,
             exporter: Some(Exporter {
-                kind: Some("otlp_grpc".to_string()),
+                kind: Some(ExporterKind::OtlpGrpc),
                 endpoint: Some("http://localhost:4317".to_string()),
                 headers: Some(headers.clone()),
                 timeout_ms: None,
@@ -610,7 +608,7 @@ mod tests {
         let cfg = TracingConfig {
             enabled: true,
             exporter: Some(Exporter {
-                kind: Some("otlp_grpc".to_string()),
+                kind: Some(ExporterKind::OtlpGrpc),
                 endpoint: Some("http://localhost:4317".to_string()),
                 headers: Some(headers.clone()),
                 timeout_ms: None,
@@ -637,7 +635,7 @@ mod tests {
         let cfg = TracingConfig {
             enabled: true,
             exporter: Some(Exporter {
-                kind: Some("otlp_grpc".to_string()),
+                kind: Some(ExporterKind::OtlpGrpc),
                 endpoint: Some("http://localhost:4317".to_string()),
                 headers: Some(headers.clone()),
                 timeout_ms: None,

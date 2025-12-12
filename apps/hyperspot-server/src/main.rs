@@ -102,10 +102,11 @@ async fn main() -> Result<()> {
 
     // Build OpenTelemetry layer before logging
     #[cfg(feature = "otel")]
-    let otel_layer = config
-        .tracing
-        .as_ref()
-        .and_then(modkit::telemetry::init::init_tracing);
+    let otel_layer = if let Some(layer) = config.tracing.as_ref() {
+        Some(modkit::telemetry::init::init_tracing(layer)?)
+    } else {
+        None
+    };
     #[cfg(not(feature = "otel"))]
     let otel_layer = None;
 

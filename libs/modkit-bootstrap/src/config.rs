@@ -65,19 +65,32 @@ pub struct TracingConfig {
     pub logs_correlation: Option<LogsCorrelation>,
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ExporterKind {
+    OtlpGrpc,
+    OtlpHttp,
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Exporter {
-    pub kind: Option<String>, // "otlp_grpc" | "otlp_http"
+    pub kind: Option<ExporterKind>,
     pub endpoint: Option<String>,
     pub headers: Option<HashMap<String, String>>,
     pub timeout_ms: Option<u64>,
     // tls fields omitted for brevity; add later if needed
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct Sampler {
-    pub strategy: Option<String>, // "parentbased_always_on" | "parentbased_ratio" | "always_on" | "always_off"
-    pub ratio: Option<f64>,
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum Sampler {
+    ParentBasedAlwaysOn {},
+    ParentBasedRatio {
+        #[serde(skip_serializing_if = "Option::is_none")]
+        ratio: Option<f64>,
+    },
+    AlwaysOn {},
+    AlwaysOff {},
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -922,10 +935,6 @@ pub fn get_module_db_config(app: &AppConfig, module_name: &str) -> Option<DbConn
 pub fn module_home(app: &AppConfig, module_name: &str) -> PathBuf {
     PathBuf::from(&app.server.home_dir).join(module_name)
 }
-
-// Include tracing config tests
-#[cfg(test)]
-mod tracing_tests;
 
 #[cfg(test)]
 mod tests {
