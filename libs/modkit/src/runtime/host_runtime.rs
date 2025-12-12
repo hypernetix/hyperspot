@@ -9,11 +9,11 @@ use std::sync::Arc;
 use tokio_util::sync::CancellationToken;
 
 use crate::client_hub::ClientHub;
-use crate::config::ConfigProvider;
 use crate::context::ModuleContextBuilder;
 use crate::contracts::RegisterGrpcServiceFn;
 use crate::registry::{ModuleEntry, ModuleRegistry, RegistryError};
 use crate::runtime::{GrpcInstallerStore, ModuleManager, SystemContext};
+use modkit_bootstrap::ConfigProvider;
 
 /// How the runtime should provide DBs to modules.
 #[derive(Clone)]

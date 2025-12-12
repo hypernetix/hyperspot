@@ -3,6 +3,7 @@
 //! This module sets up OpenTelemetry tracing and exports spans via OTLP
 //! (gRPC or HTTP) to collectors such as Jaeger, Uptrace, or the OTel Collector.
 
+#[cfg(feature = "otel")]
 use anyhow::Context;
 #[cfg(feature = "otel")]
 use opentelemetry::{global, trace::TracerProvider as _, KeyValue};

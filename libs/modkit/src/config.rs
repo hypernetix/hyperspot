@@ -10,6 +10,7 @@
 //!    - Used by `module_config_required`
 //!    - Returns errors when configuration is missing or invalid
 
+use modkit_bootstrap::ConfigProvider;
 use serde::de::DeserializeOwned;
 
 /// Configuration error for typed config operations
@@ -27,12 +28,6 @@ pub enum ConfigError {
         #[source]
         source: serde_json::Error,
     },
-}
-
-/// Provider of module-specific configuration (raw JSON sections only).
-pub trait ConfigProvider: Send + Sync {
-    /// Returns raw JSON section for the module, if any.
-    fn get_module_config(&self, module_name: &str) -> Option<&serde_json::Value>;
 }
 
 /// Lenient configuration loader that falls back to defaults.

@@ -4,7 +4,7 @@ use std::io;
 use std::io::{IsTerminal, Write};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
-use tracing::Level;
+use tracing_subscriber::filter::LevelFilter;
 use tracing_subscriber::{fmt, util::SubscriberInitExt, Layer};
 
 // ========== OTEL-agnostic layer type (compiles with/without the feature) ==========
@@ -21,18 +21,6 @@ static CONSOLE_GUARD: std::sync::OnceLock<tracing_appender::non_blocking::Worker
     std::sync::OnceLock::new();
 
 // ================= level helpers =================
-
-fn parse_tracing_level(s: &str) -> Option<tracing::Level> {
-    match s.to_ascii_lowercase().as_str() {
-        "trace" => Some(Level::TRACE),
-        "debug" => Some(Level::DEBUG),
-        "info" => Some(Level::INFO),
-        "warn" => Some(Level::WARN),
-        "error" => Some(Level::ERROR),
-        "off" | "none" => None,
-        _ => Some(Level::INFO),
-    }
-}
 
 /// Returns true if target == crate_name or target starts with "crate_name::"
 fn matches_crate_prefix(target: &str, crate_name: &str) -> bool {
@@ -230,7 +218,6 @@ pub fn init_logging_unified(cfg: &LoggingConfig, base_dir: &Path, otel_layer: Op
 
 // ================= generic targets builder =================
 
-use tracing::level_filters::LevelFilter;
 use tracing_subscriber::filter::Targets;
 
 /// Different "sinks" (destinations) for which we build Targets.
@@ -246,8 +233,7 @@ fn build_targets(config: &ConfigData, kind: SinkKind) -> Targets {
             // default level
             let default_level = config
                 .default_section
-                .and_then(|s| parse_tracing_level(s.console_level.as_str()))
-                .map(LevelFilter::from_level)
+                .and_then(|s| s.console_level.map(LevelFilter::from_level))
                 .unwrap_or(LevelFilter::INFO);
 
             // start with default
@@ -255,9 +241,7 @@ fn build_targets(config: &ConfigData, kind: SinkKind) -> Targets {
 
             // per-crate rules (console sink is always "active")
             for (crate_name, section) in &config.crate_sections {
-                if let Some(level) =
-                    parse_tracing_level(section.console_level.as_str()).map(LevelFilter::from_level)
-                {
+                if let Some(level) = section.console_level {
                     targets = targets.with_target(crate_name.clone(), level);
                 }
             }
@@ -269,12 +253,13 @@ fn build_targets(config: &ConfigData, kind: SinkKind) -> Targets {
             // default level depends on whether there is a default file sink
             let default_level = config
                 .default_section
-                .and_then(|s| parse_tracing_level(s.file_level.as_str()))
-                .map(LevelFilter::from_level)
-                .unwrap_or(if has_default_file {
-                    LevelFilter::INFO
-                } else {
-                    LevelFilter::OFF
+                .and_then(|s| s.file_level.map(LevelFilter::from_level))
+                .unwrap_or({
+                    if has_default_file {
+                        LevelFilter::INFO
+                    } else {
+                        LevelFilter::OFF
+                    }
                 });
 
             let mut targets = Targets::new().with_default(default_level);
@@ -284,9 +269,7 @@ fn build_targets(config: &ConfigData, kind: SinkKind) -> Targets {
                 if section.file.trim().is_empty() {
                     continue;
                 }
-                if let Some(level) =
-                    parse_tracing_level(section.file_level.as_str()).map(LevelFilter::from_level)
-                {
+                if let Some(level) = section.file_level {
                     targets = targets.with_target(crate_name.clone(), level);
                 }
             }

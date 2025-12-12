@@ -14,8 +14,8 @@ use tokio::time::timeout;
 use tokio_util::sync::CancellationToken;
 
 use modkit::{
-    config::ConfigProvider,
     runtime::{run, DbOptions, RunOptions, ShutdownOptions},
+    ConfigProvider,
 };
 
 // Mock config provider for DB tests

@@ -7,9 +7,8 @@ use async_trait::async_trait;
 use axum::{extract::Json, routing::post, Router};
 use modkit::{
     api::OperationBuilder,
-    config::ConfigProvider,
     contracts::{OpenApiRegistry, RestHostModule},
-    Module, ModuleCtx, RestfulModule,
+    ConfigProvider, Module, ModuleCtx, RestfulModule,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;

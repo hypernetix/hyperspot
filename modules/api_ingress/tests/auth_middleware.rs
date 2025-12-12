@@ -17,10 +17,9 @@ use axum::{
 };
 use modkit::{
     api::OperationBuilder,
-    config::ConfigProvider,
     context::ModuleCtx,
     contracts::{OpenApiRegistry, RestHostModule, RestfulModule},
-    ClientHub, Module,
+    ClientHub, ConfigProvider, Module,
 };
 use modkit_auth::axum_ext::Authz;
 use serde::{Deserialize, Serialize};

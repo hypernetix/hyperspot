@@ -357,7 +357,7 @@ mod tests {
     use super::*;
     use http::{Request, Response};
     use modkit::{
-        client_hub::ClientHub, config::ConfigProvider, context::ModuleCtx, registry::ModuleRegistry,
+        client_hub::ClientHub, context::ModuleCtx, registry::ModuleRegistry, ConfigProvider,
     };
     use std::{
         convert::Infallible,

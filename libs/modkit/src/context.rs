@@ -1,9 +1,10 @@
+use modkit_bootstrap::ConfigProvider;
 use serde::de::DeserializeOwned;
 use std::sync::Arc;
 use tokio_util::sync::CancellationToken;
 
 // Import configuration types from the config module
-use crate::config::{module_config_or_default, ConfigError, ConfigProvider};
+use crate::config::{module_config_or_default, ConfigError};
 
 // Note: runtime-dependent features are conditionally compiled
 

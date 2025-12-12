@@ -4,7 +4,7 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 use figment::Figment;
 use mimalloc::MiMalloc;
-use modkit_bootstrap::{AppConfig, AppConfigProvider, CliArgs, ConfigProvider};
+use modkit_bootstrap::AppConfig;
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -15,15 +15,6 @@ use sqlx::{postgres::Postgres, sqlite::Sqlite};
 
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
-
-/// Adapter to make `AppConfigProvider` implement `modkit::ConfigProvider`.
-struct ModkitConfigAdapter(std::sync::Arc<AppConfigProvider>);
-
-impl modkit::ConfigProvider for ModkitConfigAdapter {
-    fn get_module_config(&self, module_name: &str) -> Option<&serde_json::Value> {
-        self.0.get_module_config(module_name)
-    }
-}
 
 // Bring runner types & our per-module DB factory
 use modkit::runtime::{run, DbOptions, RunOptions, ShutdownOptions};
@@ -86,19 +77,11 @@ async fn main() -> Result<()> {
         }
     }
 
-    // Prepare CLI args that flow into runtime::AppConfig merge logic.
-    let args = CliArgs {
-        config: cli.config.as_ref().map(|p| p.to_string_lossy().to_string()),
-        print_config: cli.print_config,
-        verbose: cli.verbose,
-        mock: cli.mock,
-    };
-
     // Layered config:
     // 1) defaults -> 2) YAML (if provided) -> 3) env (APP__*) -> 4) CLI overrides
     // Also normalizes + creates server.home_dir.
     let mut config = AppConfig::load_or_default(cli.config.as_deref())?;
-    config.apply_cli_overrides(&args);
+    config.apply_cli_overrides(cli.verbose);
 
     // Build OpenTelemetry layer before logging
     #[cfg(feature = "otel")]
@@ -140,13 +123,13 @@ async fn main() -> Result<()> {
     }
 
     // Dispatch subcommands (default: run)
-    match cli.command.unwrap_or(Commands::Run) {
-        Commands::Run => run_server(config, args).await,
-        Commands::Check => check_config(config).await,
+    match cli.command.as_ref().unwrap_or(&Commands::Run) {
+        Commands::Run => run_server(config, &cli).await,
+        Commands::Check => check_config(&config).await,
     }
 }
 
-async fn check_config(config: AppConfig) -> Result<()> {
+async fn check_config(config: &AppConfig) -> Result<()> {
     tracing::info!("Checking configuration...");
     // If load_layered/load_or_default succeeded and home_dir normalized, we're good.
     println!("Configuration is valid");
@@ -192,15 +175,8 @@ fn override_modules_with_mock_db(config: &mut AppConfig) {
     }
 }
 
-/// Build config provider from AppConfig
-fn build_config_provider(config: AppConfig) -> Arc<dyn modkit::ConfigProvider> {
-    Arc::new(ModkitConfigAdapter(Arc::new(AppConfigProvider::new(
-        config,
-    ))))
-}
-
 /// Resolve database options based on configuration and args
-fn resolve_db_options(config: &AppConfig, args: &CliArgs) -> Result<DbOptions> {
+fn resolve_db_options(config: &AppConfig, args: &Cli) -> Result<DbOptions> {
     if config.database.is_none() {
         tracing::warn!("No global database section found; running without databases");
         return Ok(DbOptions::None);
@@ -221,12 +197,12 @@ fn resolve_db_options(config: &AppConfig, args: &CliArgs) -> Result<DbOptions> {
     Ok(DbOptions::Manager(db_manager))
 }
 
-async fn run_server(config: AppConfig, args: CliArgs) -> Result<()> {
+async fn run_server(config: AppConfig, args: &Cli) -> Result<()> {
     tracing::info!("Initializing modules...");
 
     // Build config provider and resolve database options
-    let config_provider = build_config_provider(config.clone());
-    let db_options = resolve_db_options(&config, &args)?;
+    let db_options = resolve_db_options(&config, args)?;
+    let config_provider = Arc::new(config);
 
     // Run the ModKit runtime with signal-driven shutdown
     let run_options = RunOptions {

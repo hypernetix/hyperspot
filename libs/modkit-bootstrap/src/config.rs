@@ -2,12 +2,48 @@ use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-
-// Use DB config types from modkit-db
-pub use modkit_db::{DbConnConfig, GlobalDatabaseConfig, PoolCfg};
+use tracing::Level;
 
 // Uses your module: crate::home_dirs::resolve_home_dir
 use crate::paths::home_dir::resolve_home_dir;
+// Use DB config types from modkit-db
+pub use modkit_db::{DbConnConfig, GlobalDatabaseConfig, PoolCfg};
+
+// ================= Custom serde module for optional Level (supports "off") =================
+mod optional_level_serde {
+    use serde::{Deserialize, Deserializer, Serializer};
+    use tracing::Level;
+
+    pub fn serialize<S>(level: &Option<Level>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match level {
+            Some(l) => serializer.serialize_str(l.as_str()),
+            None => serializer.serialize_str("off"),
+        }
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<Level>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        match s.to_lowercase().as_str() {
+            "trace" => Ok(Some(Level::TRACE)),
+            "debug" => Ok(Some(Level::DEBUG)),
+            "info" => Ok(Some(Level::INFO)),
+            "warn" => Ok(Some(Level::WARN)),
+            "error" => Ok(Some(Level::ERROR)),
+            "off" | "none" => Ok(None),
+            _ => Err(serde::de::Error::custom(format!("invalid level: {}", s))),
+        }
+    }
+
+    pub fn default() -> Option<Level> {
+        Some(Level::INFO)
+    }
+}
 
 // DB config types are now imported from modkit-db
 
@@ -19,6 +55,12 @@ pub struct ModuleEntry {
     pub database: Option<DbConnConfig>,
     #[serde(default)]
     pub config: serde_json::Value,
+}
+
+/// Configuration provider trait for modules
+pub trait ConfigProvider: Send + Sync {
+    /// Get the configuration for a specific module
+    fn get_module_config(&self, module_name: &str) -> Option<&serde_json::Value>;
 }
 
 /// Main application configuration with strongly-typed global sections
@@ -40,6 +82,12 @@ pub struct AppConfig {
     /// Per-module configuration bag: module_name → arbitrary JSON/YAML value.
     #[serde(default)]
     pub modules: HashMap<String, serde_json::Value>,
+}
+
+impl ConfigProvider for AppConfig {
+    fn get_module_config(&self, module_name: &str) -> Option<&serde_json::Value> {
+        self.modules.get(module_name)
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
@@ -111,10 +159,17 @@ pub struct LogsCorrelation {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Section {
-    pub console_level: String, // "info", "debug", "error", "off"
-    pub file: String,          // "logs/api.log"
-    #[serde(default)]
-    pub file_level: String,
+    #[serde(
+        default = "optional_level_serde::default",
+        with = "optional_level_serde"
+    )]
+    pub console_level: Option<Level>,
+    pub file: String, // "logs/api.log"
+    #[serde(
+        default = "optional_level_serde::default",
+        with = "optional_level_serde"
+    )]
+    pub file_level: Option<Level>,
     pub max_age_days: Option<u32>, // Not implemented yet
     #[serde(default)]
     pub max_backups: Option<usize>, // How many files to keep
@@ -124,19 +179,17 @@ pub struct Section {
 
 /// Create a default logging configuration.
 pub fn default_logging_config() -> LoggingConfig {
-    let mut logging = HashMap::new();
-    logging.insert(
+    HashMap::from([(
         "default".to_string(),
         Section {
-            console_level: "info".to_string(),
+            console_level: Some(Level::INFO),
             file: "logs/hyperspot.log".to_string(),
-            file_level: "debug".to_string(),
+            file_level: Some(Level::DEBUG),
             max_age_days: Some(7),
             max_backups: Some(3),
             max_size_mb: Some(100),
         },
-    );
-    logging
+    )])
 }
 
 impl Default for AppConfig {
@@ -218,26 +271,17 @@ impl AppConfig {
     }
 
     /// Apply overrides from command line arguments.
-    pub fn apply_cli_overrides(&mut self, args: &CliArgs) {
+    pub fn apply_cli_overrides(&mut self, verbosity: u8) {
         // Set logging level based on verbose flags for "default" section.
         let logging = self.logging.get_or_insert_with(default_logging_config);
         if let Some(default_section) = logging.get_mut("default") {
-            default_section.console_level = match args.verbose {
-                0 => default_section.console_level.clone(), // keep
-                1 => "debug".to_string(),
-                _ => "trace".to_string(),
+            default_section.console_level = match verbosity {
+                0 => default_section.console_level, // keep
+                1 => Some(Level::DEBUG),
+                _ => Some(Level::TRACE),
             };
         }
     }
-}
-
-/// Command line arguments structure.
-#[derive(Debug, Clone)]
-pub struct CliArgs {
-    pub config: Option<String>,
-    pub print_config: bool,
-    pub verbose: u8,
-    pub mock: bool,
 }
 
 // TODO: should be pass from outside
@@ -969,7 +1013,7 @@ mod tests {
         assert!(logging.contains_key("default"));
 
         let default_section = &logging["default"];
-        assert_eq!(default_section.console_level, "info");
+        assert_eq!(default_section.console_level, Some(Level::INFO));
         assert_eq!(default_section.file, "logs/hyperspot.log");
 
         // Modules bag is empty by default
@@ -1013,7 +1057,7 @@ logging:
         // logging parsed
         let logging = config.logging.as_ref().unwrap();
         let def = &logging["default"];
-        assert_eq!(def.console_level, "debug");
+        assert_eq!(def.console_level, Some(Level::DEBUG));
         assert_eq!(def.file, "logs/default.log");
     }
 
@@ -1064,21 +1108,14 @@ server:
     fn test_cli_overrides() {
         let mut config = AppConfig::default();
 
-        let args = super::CliArgs {
-            config: None,
-            print_config: false,
-            verbose: 2, // trace
-            mock: false,
-        };
-
-        config.apply_cli_overrides(&args);
+        config.apply_cli_overrides(2);
 
         // Port override
 
         // Verbose override affects logging
         let logging = config.logging.as_ref().unwrap();
         let default_section = &logging["default"];
-        assert_eq!(default_section.console_level, "trace");
+        assert_eq!(default_section.console_level, Some(Level::TRACE));
     }
 
     #[test]
@@ -1090,22 +1127,21 @@ server:
             (3, "trace"), // cap at trace
         ] {
             let mut config = AppConfig::default();
-            let args = super::CliArgs {
-                config: None,
-                print_config: false,
-                verbose: verbose_level,
-                mock: false,
-            };
 
-            config.apply_cli_overrides(&args);
+            config.apply_cli_overrides(verbose_level);
 
             let logging = config.logging.as_ref().unwrap();
             let default_section = &logging["default"];
 
             if verbose_level == 0 {
-                assert_eq!(default_section.console_level, "info");
+                assert_eq!(default_section.console_level, Some(Level::INFO));
             } else {
-                assert_eq!(default_section.console_level, expected_log_level);
+                let expected_level = match expected_log_level {
+                    "debug" => Some(Level::DEBUG),
+                    "trace" => Some(Level::TRACE),
+                    _ => Some(Level::INFO),
+                };
+                assert_eq!(default_section.console_level, expected_level);
             }
         }
     }
@@ -1182,8 +1218,8 @@ logging:
         assert!(logging.contains_key("default"));
 
         let default_section = &logging["default"];
-        assert_eq!(default_section.console_level, "debug");
-        assert_eq!(default_section.file_level, "info");
+        assert_eq!(default_section.console_level, Some(Level::DEBUG));
+        assert_eq!(default_section.file_level, Some(Level::INFO));
         // not calling init to avoid side effects in tests
     }
 

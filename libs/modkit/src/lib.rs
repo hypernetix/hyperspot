@@ -74,8 +74,8 @@ pub use crate::contracts::{GrpcServiceModule, RegisterGrpcServiceFn};
 
 // Configuration module
 pub mod config;
-pub use config::{module_config_or_default, module_config_required, ConfigError, ConfigProvider};
-
+pub use config::{module_config_or_default, module_config_required, ConfigError};
+pub use modkit_bootstrap::ConfigProvider;
 // Context module
 pub mod context;
 pub use context::{ModuleContextBuilder, ModuleCtx};
