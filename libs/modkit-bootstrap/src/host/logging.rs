@@ -26,10 +26,10 @@ fn parse_tracing_level(s: &str) -> Option<tracing::Level> {
     match s.to_ascii_lowercase().as_str() {
         "trace" => Some(Level::TRACE),
         "debug" => Some(Level::DEBUG),
-        "info" => Some(Level::INFO),
         "warn" => Some(Level::WARN),
         "error" => Some(Level::ERROR),
         "off" | "none" => None,
+        // "info" and any unrecognized value default to INFO
         _ => Some(Level::INFO),
     }
 }
@@ -179,7 +179,7 @@ fn create_rotating_writer_at_path(
     }
 
     // Respect retention policy: prefer MaxFiles if provided, else Age
-    let age = chrono::Duration::days(max_age_days.unwrap_or(1) as i64);
+    let age = chrono::Duration::days(i64::from(max_age_days.unwrap_or(1)));
     let limit = if let Some(n) = max_backups {
         FileLimit::MaxFiles(n)
     } else {
@@ -250,8 +250,7 @@ fn build_targets(config: &ConfigData, kind: SinkKind) -> Targets {
             let default_level = config
                 .default_section
                 .and_then(|s| parse_tracing_level(s.console_level.as_str()))
-                .map(LevelFilter::from_level)
-                .unwrap_or(LevelFilter::INFO);
+                .map_or(LevelFilter::INFO, LevelFilter::from_level);
 
             // start with default
             let mut targets = Targets::new().with_default(default_level);
@@ -278,12 +277,14 @@ fn build_targets(config: &ConfigData, kind: SinkKind) -> Targets {
             let default_level = config
                 .default_section
                 .and_then(|s| parse_tracing_level(s.file_level.as_str()))
-                .map(LevelFilter::from_level)
-                .unwrap_or(if has_default_file {
-                    LevelFilter::INFO
-                } else {
-                    LevelFilter::OFF
-                });
+                .map_or(
+                    if has_default_file {
+                        LevelFilter::INFO
+                    } else {
+                        LevelFilter::OFF
+                    },
+                    LevelFilter::from_level,
+                );
 
             let mut targets = Targets::new().with_default(default_level);
 
@@ -424,7 +425,9 @@ fn install_subscriber(
         .with_filter(console_targets.clone());
 
     // File fmt layer (JSON) if router is not empty
-    let file_layer_opt = if !file_router.is_empty() {
+    let file_layer_opt = if file_router.is_empty() {
+        None
+    } else {
         Some(
             fmt::layer()
                 .json()
@@ -435,8 +438,6 @@ fn install_subscriber(
                 .with_writer(file_router)
                 .with_filter(file_targets),
         )
-    } else {
-        None
     };
 
     // Build subscriber:

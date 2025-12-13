@@ -33,7 +33,7 @@ pub fn build_mime_validation_map(specs: &[OperationSpec]) -> MimeValidationMap {
 fn extract_content_type(req: &Request) -> Option<String> {
     let ct_header = req.headers().get(http::header::CONTENT_TYPE)?;
     let ct_str = ct_header.to_str().ok()?;
-    let ct_main = ct_str.split(';').next().map(str::trim).unwrap_or(ct_str);
+    let ct_main = ct_str.split(';').next().map_or(ct_str, str::trim);
     Some(ct_main.to_string())
 }
 
@@ -92,8 +92,7 @@ pub async fn mime_validation_middleware(
     let path = req
         .extensions()
         .get::<axum::extract::MatchedPath>()
-        .map(|p| p.as_str().to_string())
-        .unwrap_or_else(|| req.uri().path().to_string());
+        .map_or_else(|| req.uri().path().to_string(), |p| p.as_str().to_string());
 
     // Check if this operation has MIME validation configured
     let Some(allowed_types) = validation_map.get(&(method.clone(), path.clone())) else {
@@ -176,28 +175,19 @@ mod tests {
         let ct_main = ct_with_charset
             .split(';')
             .next()
-            .map(str::trim)
-            .unwrap_or(ct_with_charset);
+            .map_or(ct_with_charset, str::trim);
 
         assert_eq!(ct_main, "application/json");
 
         // Test with multiple parameters
         let ct_complex = "multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW";
-        let ct_main2 = ct_complex
-            .split(';')
-            .next()
-            .map(str::trim)
-            .unwrap_or(ct_complex);
+        let ct_main2 = ct_complex.split(';').next().map_or(ct_complex, str::trim);
 
         assert_eq!(ct_main2, "multipart/form-data");
 
         // Test without parameters
         let ct_simple = "application/pdf";
-        let ct_main3 = ct_simple
-            .split(';')
-            .next()
-            .map(str::trim)
-            .unwrap_or(ct_simple);
+        let ct_main3 = ct_simple.split(';').next().map_or(ct_simple, str::trim);
 
         assert_eq!(ct_main3, "application/pdf");
     }

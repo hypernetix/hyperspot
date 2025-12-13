@@ -47,7 +47,7 @@ mod imp {
     /// Adapter for extracting W3C Trace Context from HTTP headers
     struct HeadersExtractor<'a>(&'a HeaderMap);
 
-    impl<'a> Extractor for HeadersExtractor<'a> {
+    impl Extractor for HeadersExtractor<'_> {
         fn get(&self, key: &str) -> Option<&str> {
             self.0.get(key).and_then(|v| v.to_str().ok())
         }
@@ -60,7 +60,7 @@ mod imp {
     /// Adapter for injecting W3C Trace Context into HTTP headers
     struct HeadersInjector<'a>(&'a mut HeaderMap);
 
-    impl<'a> Injector for HeadersInjector<'a> {
+    impl Injector for HeadersInjector<'_> {
         fn set(&mut self, key: &str, value: String) {
             if let Ok(name) = HeaderName::from_bytes(key.as_bytes()) {
                 if let Ok(val) = HeaderValue::from_str(&value) {

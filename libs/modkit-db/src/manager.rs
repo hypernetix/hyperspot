@@ -212,8 +212,8 @@ impl DbManager {
                     return Err(DbError::Io(std::io::Error::new(
                         std::io::ErrorKind::NotFound,
                         format!(
-                            "Directory does not exist and auto_provision is disabled: {:?}",
-                            parent
+                            "Directory does not exist and auto_provision is disabled: {}",
+                            parent.display()
                         ),
                     )));
                 }

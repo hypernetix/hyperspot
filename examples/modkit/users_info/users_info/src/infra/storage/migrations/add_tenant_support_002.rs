@@ -47,7 +47,7 @@ impl MigrationTrait for Migration {
                             "UPDATE `users` SET `tenant_id`='{}' WHERE `tenant_id` IS NULL",
                             root_tenant
                         ),
-                        _ => unreachable!(),
+                        DB::Sqlite => unreachable!(),
                     };
                     manager.get_connection().execute_unprepared(&upd).await?;
 
@@ -219,6 +219,8 @@ fn tenant_col_def(backend: sea_orm::DatabaseBackend, col: Users) -> ColumnDef {
     match backend {
         sea_orm::DatabaseBackend::Postgres => ColumnDef::new(col).uuid().to_owned(),
         sea_orm::DatabaseBackend::MySql => ColumnDef::new(col).string_len(36).to_owned(),
-        _ => unreachable!("tenant_col_def is only used for Postgres/MySQL paths"),
+        sea_orm::DatabaseBackend::Sqlite => {
+            unreachable!("tenant_col_def is only used for Postgres/MySQL paths")
+        }
     }
 }

@@ -134,7 +134,7 @@ impl SysCapCollector {
             SysCapBuilder::new(
                 format!("hardware:{}", arch),
                 "hardware".to_string(),
-                arch.to_string(),
+                arch.clone(),
                 arch.to_uppercase(),
             )
             .details(Some(format!("{} architecture detected", arch)))
@@ -170,7 +170,7 @@ impl SysCapCollector {
                 "CPU".to_string(),
             )
             .version(Some(sysinfo.cpu.model.clone()))
-            .amount(Some(sysinfo.cpu.cores as f64))
+            .amount(Some(f64::from(sysinfo.cpu.cores)))
             .amount_dimension(Some("cores".to_string()))
             .details(Some(format!(
                 "{} with {} cores @ {:.0} MHz",
@@ -224,24 +224,19 @@ impl SysCapCollector {
 
             let mut details = format!("Model: {}", gpu.model);
             if let Some(vram) = gpu.total_memory_mb {
-                details.push_str(&format!(", VRAM: {:.0} MB", vram));
+                use std::fmt::Write;
+                let _ = write!(details, ", VRAM: {:.0} MB", vram);
             }
             if let Some(cores) = gpu.cores {
-                details.push_str(&format!(", Cores: {}", cores));
+                use std::fmt::Write;
+                let _ = write!(details, ", Cores: {}", cores);
             }
 
             caps.push(
                 SysCapBuilder::new(
                     gpu_key,
                     "hardware".to_string(),
-                    format!(
-                        "gpu{}",
-                        if i == 0 {
-                            "".to_string()
-                        } else {
-                            i.to_string()
-                        }
-                    ),
+                    format!("gpu{}", if i == 0 { String::new() } else { i.to_string() }),
                     "GPU".to_string(),
                 )
                 .version(Some(gpu.model.clone()))
@@ -277,7 +272,7 @@ impl SysCapCollector {
                     "battery".to_string(),
                     "Battery".to_string(),
                 )
-                .amount(Some(battery.percentage as f64))
+                .amount(Some(f64::from(battery.percentage)))
                 .amount_dimension(Some("percent".to_string()))
                 .details(Some(format!(
                     "Status: {}, Level: {}%",

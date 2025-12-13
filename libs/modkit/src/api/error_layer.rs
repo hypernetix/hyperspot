@@ -40,8 +40,7 @@ fn is_problem_response(response: &Response) -> bool {
         .headers()
         .get(axum::http::header::CONTENT_TYPE)
         .and_then(|v| v.to_str().ok())
-        .map(|ct| ct.contains("application/problem+json"))
-        .unwrap_or(false)
+        .is_some_and(|ct| ct.contains("application/problem+json"))
 }
 
 /// Extract trace ID from headers or generate one

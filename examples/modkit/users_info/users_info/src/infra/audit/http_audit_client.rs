@@ -37,7 +37,7 @@ impl AuditPort for HttpAuditClient {
     async fn get_user_access(&self, id: Uuid) -> Result<(), DomainError> {
         let mut url = self.audit_base.clone();
         url.path_segments_mut()
-            .map_err(|_| DomainError::validation("user_access", "invalid audit base URL"))?
+            .map_err(|()| DomainError::validation("user_access", "invalid audit base URL"))?
             .extend(&["api", "user-access", &id.to_string()]);
 
         let response = self
@@ -65,7 +65,7 @@ impl AuditPort for HttpAuditClient {
     async fn notify_user_created(&self) -> Result<(), DomainError> {
         let mut url = self.notify_base.clone();
         url.path_segments_mut()
-            .map_err(|_| {
+            .map_err(|()| {
                 DomainError::validation("notifications", "invalid notifications base URL")
             })?
             .extend(&["api", "user-created"]);

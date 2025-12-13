@@ -51,6 +51,7 @@ unused_import_braces = "warn"
 [workspace.lints.clippy]
 # See clippy rules details https://rust-lang.github.io/rust-clippy/master/index.html
 # Here will be workspace global rules
+pedantic = { level = "deny", priority = -1 }
 async_yields_async = "deny"
 await_holding_lock = "deny"
 await_holding_refcell_ref = "deny"
@@ -62,30 +63,91 @@ clone_on_copy = "warn"
 cognitive_complexity = "warn"
 dbg_macro = "warn"
 debug_assert_with_mut_call = "warn"
+default_trait_access = "warn"
+elidable_lifetime_names = "warn"
 empty_line_after_outer_attr = "warn"
 empty_structs_with_brackets = "warn"
 expect_used = "deny"
-integer_division = "deny"
 float_cmp = "deny"
 float_cmp_const = "deny"
+format_push_string = "warn"
+if_not_else = "warn"
+ignore_without_reason = "deny"
+ignored_unit_patterns = "deny"
+implicit_clone = "deny"
+implicit_hasher = "deny"
+inefficient_to_string = "deny"
+integer_division = "deny"
+ip_constant = "deny"
 lossy_float_literal = "deny"
+manual_assert = "deny"
+manual_string_new = "deny"
+many_single_char_names = "deny"
 map_clone = "warn"
+map_unwrap_or = "deny"
+match_same_arms = "warn"
+match_wildcard_for_single_variants = "warn"
 mutex_atomic = "deny"
 needless_borrow = "deny"
 needless_lifetimes = "deny"
+no_effect_underscore_binding = "deny"
 non_ascii_literal = "warn"
-# needless_pass_by_value = "deny"
+non_std_lazy_statics = "warn"
+option_as_ref_cloned = "deny"
+redundant_else = "warn"
 regex_creation_in_loops = "deny"
 semicolon_if_nothing_returned = "warn"
+single_char_pattern = "warn"
 suspicious_operation_groupings = "warn"
+trivially_copy_pass_by_ref = "deny"
 type_complexity = "warn"
-unwrap_used = "deny"
+unchecked_duration_subtraction = "deny"
+unnecessary_debug_formatting = "warn"
+unnested_or_patterns = "warn"
+unused_async = "deny"
 unused_self = "warn"
+unwrap_used = "deny"
 use_debug = "warn"
-useless_let_if_seq = "warn"
 used_underscore_binding = "warn"
-wildcard_imports = "warn"
+used_underscore_items = "deny"
+useless_let_if_seq = "warn"
 wildcard_dependencies = "warn"
+wildcard_imports = "warn"
+
+# =============================================================================
+# PEDANTIC LINTS - Temporarily allowed until fixed
+# After fixing each lint, change "allow" to "warn" or "deny" as appropriate or remove the lint from the list
+# =============================================================================
+
+# Documentation lints (648 total)
+doc_markdown = "allow"                        # 511 - backticks missing in docs
+missing_errors_doc = "allow"                  # 126 - missing # Errors section
+doc_link_with_quotes = "allow"                # 5 - use backticks instead of quotes
+missing_panics_doc = "allow"                  # 4 - missing # Panics section
+missing_fields_in_debug = "allow"             # 2 - Debug impl missing fields
+
+# Style lints (436 total)
+uninlined_format_args = "allow"               # 302 - use format!("{x}") instead of format!("{}", x)
+redundant_closure_for_method_calls = "allow"  # 57 - use method reference instead of closure
+single_match_else = "allow"                   # 23 - use if let instead of match
+items_after_statements = "allow"              # 15 - items should be before statements
+unreadable_literal = "allow"                  # 14 - use underscores in large numbers
+explicit_iter_loop = "allow"                  # 10 - use for x in &collection
+enum_glob_use = "allow"                       # 8 - avoid use Enum::*
+manual_let_else = "allow"                     # 7 - use let else pattern
+
+# API Design lints (359 total)
+must_use_candidate = "allow"                  # 221 - add #[must_use] to pure functions
+return_self_not_must_use = "allow"            # 95 - builder methods should have #[must_use]
+needless_pass_by_value = "allow"              # 19 - take reference instead of value
+unnecessary_wraps = "allow"                   # 15 - Result that never errors
+unnecessary_literal_bound = "allow"           # 6 - unnecessary lifetime bound
+ref_option = "allow"                          # 3 - use Option<&T> instead of &Option<T>
+
+# Complexity lints (23 total)
+too_many_lines = "allow"                      # 11 - function too long
+similar_names = "allow"                       # 9 - variable names too similar
+struct_excessive_bools = "allow"              # 3 - too many bools in struct
 
 [workspace.dependencies]
 # Serialization

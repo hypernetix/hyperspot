@@ -297,16 +297,15 @@ pub async fn otel_connectivity_probe(cfg: &super::config::TracingConfig) -> anyh
         .clone()
         .unwrap_or_else(|| "hyperspot".into());
 
-    let (kind, endpoint) = cfg
-        .exporter
-        .as_ref()
-        .map(|e| {
-            (
-                e.kind.as_deref().unwrap_or("otlp_grpc"),
-                e.endpoint.clone().unwrap_or_default(),
-            )
-        })
-        .unwrap_or(("otlp_grpc", "http://127.0.0.1:4317".into()));
+    let (kind, endpoint) =
+        cfg.exporter
+            .as_ref()
+            .map_or(("otlp_grpc", "http://127.0.0.1:4317".into()), |e| {
+                (
+                    e.kind.as_deref().unwrap_or("otlp_grpc"),
+                    e.endpoint.clone().unwrap_or_default(),
+                )
+            });
 
     // Resource
     let resource = Resource::builder_empty()

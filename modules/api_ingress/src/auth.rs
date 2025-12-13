@@ -134,16 +134,15 @@ impl modkit_auth::RoutePolicy for IngressRoutePolicy {
         let is_public = self
             .public_matchers
             .get(method)
-            .map(|matcher| matcher.find(path))
-            .unwrap_or(false);
+            .is_some_and(|matcher| matcher.find(path));
 
         // Public routes should not be forced to auth by default
         let needs_authn = requirement.is_some() || (self.require_auth_by_default && !is_public);
 
-        if !needs_authn {
-            AuthRequirement::None
-        } else {
+        if needs_authn {
             AuthRequirement::Required(requirement)
+        } else {
+            AuthRequirement::None
         }
     }
 }

@@ -102,8 +102,8 @@ impl ApiIngress {
     }
 
     /// Force rebuild and cache of the router
-    pub async fn rebuild_and_cache_router(&self) -> Result<()> {
-        let new_router = self.build_router().await?;
+    pub fn rebuild_and_cache_router(&self) -> Result<()> {
+        let new_router = self.build_router()?;
         self.router_cache.store(new_router);
         Ok(())
     }
@@ -314,7 +314,7 @@ impl ApiIngress {
     }
 
     /// Build the HTTP router from registered routes and operations
-    pub async fn build_router(&self) -> Result<Router> {
+    pub fn build_router(&self) -> Result<Router> {
         // If the cached router is currently held elsewhere (e.g., by the running server),
         // return it without rebuilding to avoid unnecessary allocations.
         let cached_router = self.router_cache.load();
@@ -354,7 +354,7 @@ impl ApiIngress {
     }
 
     /// Get the finalized router or build a default one.
-    async fn get_or_build_router(self: &Arc<Self>) -> anyhow::Result<Router> {
+    fn get_or_build_router(self: &Arc<Self>) -> anyhow::Result<Router> {
         let stored = { self.final_router.lock().take() };
 
         if let Some(router) = stored {
@@ -362,7 +362,7 @@ impl ApiIngress {
             Ok(router)
         } else {
             tracing::debug!("No router from REST phase, building default router");
-            self.build_router().await
+            self.build_router()
         }
     }
 
@@ -377,7 +377,7 @@ impl ApiIngress {
     ) -> anyhow::Result<()> {
         let cfg = self.get_cached_config();
         let addr = Self::parse_bind_address(&cfg.bind_addr)?;
-        let router = self.get_or_build_router().await?;
+        let router = self.get_or_build_router()?;
 
         // Bind the socket, only now consider the service "ready"
         let listener = tokio::net::TcpListener::bind(addr).await?;
@@ -631,13 +631,11 @@ mod problem_openapi_tests {
 
         // Check what content types exist
         let content_obj = path_obj.get("content").expect("content object missing");
-        if content_obj.get("application/problem+json").is_none() {
-            // Print available content types for debugging
-            panic!(
-                "application/problem+json content missing. Available content: {}",
-                serde_json::to_string_pretty(content_obj).unwrap()
-            );
-        }
+        assert!(
+            content_obj.get("application/problem+json").is_some(),
+            "application/problem+json content missing. Available content: {}",
+            serde_json::to_string_pretty(content_obj).unwrap()
+        );
 
         let content = path_obj
             .pointer("/content/application~1problem+json")

@@ -160,7 +160,7 @@ where
             tokio::select! {
                 biased;
 
-                _ = cancel.cancelled() => {
+                () = cancel.cancelled() => {
                     tracing::debug!(
                         oop_module = %module,
                         oop_instance_id = %instance_id,

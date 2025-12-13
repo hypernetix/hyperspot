@@ -282,11 +282,11 @@ impl OpenApiRegistryImpl {
             }
 
             let method = match spec.method {
-                Method::GET => HttpMethod::Get,
                 Method::POST => HttpMethod::Post,
                 Method::PUT => HttpMethod::Put,
                 Method::DELETE => HttpMethod::Delete,
                 Method::PATCH => HttpMethod::Patch,
+                // GET and any other method default to Get
                 _ => HttpMethod::Get,
             };
 
@@ -364,9 +364,8 @@ impl OpenApiRegistry for OpenApiRegistryImpl {
                 let b = serde_json::to_value(&schema).ok();
                 if a == b {
                     continue; // Skip identical schemas
-                } else {
-                    tracing::warn!(%name, "Schema content conflict; overriding with latest");
                 }
+                tracing::warn!(%name, "Schema content conflict; overriding with latest");
             }
             reg.insert(name, schema);
         }

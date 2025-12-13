@@ -172,7 +172,7 @@ fn detect_heading_level(paragraph: &docx_rust::document::Paragraph) -> Option<u8
             .and_then(|style_id| style_id.chars().nth(7))
             .and_then(|d| d.to_digit(10))
             .map(|lvl| lvl.clamp(1, 6))
-            .and_then(|lvl| to_level_u8(lvl as i64))
+            .and_then(|lvl| to_level_u8(i64::from(lvl)))
             .and_then(|_| fallback())
     })
 }

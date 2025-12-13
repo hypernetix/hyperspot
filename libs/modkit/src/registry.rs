@@ -281,7 +281,7 @@ impl RegistryBuilder {
         // Check rest_host early
         if let Some((host_name, _)) = &self.rest_host {
             if !self.core.contains_key(host_name) {
-                return Err(RegistryError::UnknownModule(host_name.to_string()));
+                return Err(RegistryError::UnknownModule((*host_name).to_string()));
             }
         }
 
@@ -451,12 +451,12 @@ impl RegistryBuilder {
         let entries = self.assemble_entries(&order, &names)?;
 
         // Collect grpc_hub and grpc_services for the final registry
-        let grpc_hub = self.grpc_hub.as_ref().map(|(name, _)| name.to_string());
+        let grpc_hub = self.grpc_hub.as_ref().map(|(name, _)| (*name).to_string());
 
         let grpc_services: Vec<(String, Arc<dyn contracts::GrpcServiceModule>)> = self
             .grpc_services
             .iter()
-            .map(|(name, module)| (name.to_string(), module.clone()))
+            .map(|(name, module)| ((*name).to_string(), module.clone()))
             .collect();
 
         tracing::info!(

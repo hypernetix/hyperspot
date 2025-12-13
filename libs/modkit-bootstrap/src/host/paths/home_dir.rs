@@ -82,7 +82,10 @@ pub fn normalize_executable_path(raw: &str) -> Result<PathBuf, HomeDirError> {
     // Check if it's just a filename (no path separators)
     let has_separator = raw.contains('/') || raw.contains('\\');
 
-    if !has_separator {
+    if has_separator {
+        // Relative path with separators - not allowed
+        Err(HomeDirError::RelativePathNotAllowed(raw.to_string()))
+    } else {
         // Filename only - prepend directory where main executable lives
         let exe_path =
             env::current_exe().map_err(|e| HomeDirError::ExecutablePathError(e.to_string()))?;
@@ -90,9 +93,6 @@ pub fn normalize_executable_path(raw: &str) -> Result<PathBuf, HomeDirError> {
             HomeDirError::ExecutablePathError("executable has no parent directory".to_string())
         })?;
         Ok(exe_dir.join(&expanded))
-    } else {
-        // Relative path with separators - not allowed
-        Err(HomeDirError::RelativePathNotAllowed(raw.to_string()))
     }
 }
 

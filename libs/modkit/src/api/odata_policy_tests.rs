@@ -11,7 +11,7 @@ mod tests {
             .parse()
             .unwrap();
         let request = axum::http::Request::builder().uri(uri).body(()).unwrap();
-        let (parts, _) = request.into_parts();
+        let (parts, ()) = request.into_parts();
         parts
     }
 

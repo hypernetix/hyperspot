@@ -10,6 +10,7 @@ use utoipa::ToSchema;
 pub const APPLICATION_PROBLEM_JSON: &str = "application/problem+json";
 
 /// Custom serializer for StatusCode to u16
+#[allow(clippy::trivially_copy_pass_by_ref)] // serde requires &T signature
 fn serialize_status_code<S>(status: &StatusCode, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,

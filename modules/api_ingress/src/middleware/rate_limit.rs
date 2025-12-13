@@ -29,15 +29,14 @@ impl RateLimiterMap {
         let mut inflight = HashMap::new();
         // TODO: Add support for per-route rate limiting
         for spec in specs {
-            let (rps, burst, in_flight) = spec
-                .rate_limit
-                .as_ref()
-                .map(|r| (r.rps, r.burst, r.in_flight))
-                .unwrap_or((
+            let (rps, burst, in_flight) = spec.rate_limit.as_ref().map_or(
+                (
                     cfg.defaults.rate_limit.rps,
                     cfg.defaults.rate_limit.burst,
                     cfg.defaults.rate_limit.in_flight,
-                ));
+                ),
+                |r| (r.rps, r.burst, r.in_flight),
+            );
             let key = (spec.method.clone(), spec.path.clone());
             buckets.insert(
                 key.clone(),
@@ -59,8 +58,7 @@ pub async fn rate_limit_middleware(map: RateLimiterMap, req: Request, next: Next
     let path = req
         .extensions()
         .get::<axum::extract::MatchedPath>()
-        .map(|p| p.as_str().to_string())
-        .unwrap_or_else(|| req.uri().path().to_string());
+        .map_or_else(|| req.uri().path().to_string(), |p| p.as_str().to_string());
     let key = (method, path);
 
     if let Some(bucket) = map.buckets.get(&key) {
@@ -97,8 +95,8 @@ impl TokenBucket {
         let cap = burst.max(rps).max(1);
         Self {
             capacity: cap,
-            tokens: cap as f64,
-            refill_per_sec: rps.max(1) as f64,
+            tokens: f64::from(cap),
+            refill_per_sec: f64::from(rps.max(1)),
             last: Instant::now(),
         }
     }
@@ -107,7 +105,7 @@ impl TokenBucket {
         let now = Instant::now();
         let elapsed = now.duration_since(self.last).as_secs_f64();
         self.last = now;
-        self.tokens = (self.tokens + elapsed * self.refill_per_sec).min(self.capacity as f64);
+        self.tokens = (self.tokens + elapsed * self.refill_per_sec).min(f64::from(self.capacity));
         if self.tokens >= 1.0 {
             self.tokens -= 1.0;
             true

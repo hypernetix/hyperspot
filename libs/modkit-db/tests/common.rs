@@ -31,7 +31,7 @@ pub struct DbUnderTest {
 }
 
 #[cfg(feature = "sqlite")]
-pub async fn bring_up_sqlite() -> Result<DbUnderTest> {
+pub fn bring_up_sqlite() -> Result<DbUnderTest> {
     Ok(DbUnderTest {
         url: "sqlite::memory:".into(),
         _cleanup: None,

@@ -547,16 +547,16 @@ pub async fn run_oop_with_options(opts: OopRunOptions) -> Result<()> {
 
         loop {
             tokio::select! {
-                _ = heartbeat_cancel.cancelled() => {
+                () = heartbeat_cancel.cancelled() => {
                     info!("Heartbeat loop stopping due to cancellation");
                     break;
                 }
-                _ = sleep(heartbeat_interval) => {
+                () = sleep(heartbeat_interval) => {
                     match heartbeat_directory
                         .send_heartbeat(&heartbeat_module, &heartbeat_instance_id_str)
                         .await
                     {
-                        Ok(_) => {
+                        Ok(()) => {
                             tracing::debug!("Heartbeat sent successfully");
                         }
                         Err(e) => {

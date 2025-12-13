@@ -35,8 +35,7 @@ use modkit::runtime::{
     run, shutdown, DbOptions, OopModuleSpawnConfig, OopSpawnOptions, RunOptions, ShutdownOptions,
 };
 
-#[allow(dead_code)]
-fn _ensure_drivers_linked() {
+fn ensure_drivers_linked() {
     // Ensure database drivers are linked for sqlx::any
     let _ = std::any::type_name::<Sqlite>();
     let _ = std::any::type_name::<Postgres>();
@@ -82,7 +81,7 @@ enum Commands {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    _ensure_drivers_linked();
+    ensure_drivers_linked();
 
     let cli = Cli::parse();
 
@@ -123,7 +122,7 @@ async fn main() -> Result<()> {
     let otel_layer = None;
 
     // Initialize logging + otel in one Registry
-    let logging_config = config.logging.as_ref().cloned().unwrap_or_default();
+    let logging_config = config.logging.clone().unwrap_or_default();
     modkit_bootstrap::host::logging::init_logging_unified(
         &logging_config,
         Path::new(&config.server.home_dir),
