@@ -23,7 +23,7 @@ use opentelemetry_sdk::{
 use tonic::metadata::{MetadataKey, MetadataMap, MetadataValue};
 
 #[cfg(feature = "otel")]
-use modkit_bootstrap::config::TracingConfig;
+use super::config::TracingConfig;
 
 // ===== init_tracing (feature = "otel") ========================================
 
@@ -59,17 +59,18 @@ fn build_sampler(cfg: &TracingConfig) -> Sampler {
 /// Extract exporter kind and endpoint from configuration
 #[cfg(feature = "otel")]
 fn extract_exporter_config(cfg: &TracingConfig) -> (String, String, Option<std::time::Duration>) {
-    let (kind, endpoint) = cfg.exporter.as_ref().map_or_else(
-        || ("otlp_grpc".to_string(), "http://127.0.0.1:4317".into()),
-        |e| {
+    let (kind, endpoint) = cfg
+        .exporter
+        .as_ref()
+        .map(|e| {
             (
                 e.kind.as_deref().unwrap_or("otlp_grpc").to_string(),
                 e.endpoint
                     .clone()
                     .unwrap_or_else(|| "http://127.0.0.1:4317".into()),
             )
-        },
-    );
+        })
+        .unwrap_or_else(|| ("otlp_grpc".to_string(), "http://127.0.0.1:4317".into()));
 
     let timeout = cfg
         .exporter
@@ -288,9 +289,7 @@ pub fn shutdown_tracing() {
 /// Build a tiny, separate OTLP pipeline and export a single span to verify connectivity.
 /// This does *not* depend on tracing_subscriber; it uses SDK directly.
 #[cfg(feature = "otel")]
-pub fn otel_connectivity_probe(
-    cfg: &modkit_bootstrap::config::TracingConfig,
-) -> anyhow::Result<()> {
+pub async fn otel_connectivity_probe(cfg: &super::config::TracingConfig) -> anyhow::Result<()> {
     use opentelemetry::trace::{Span, Tracer as _};
 
     let service_name = cfg
@@ -360,7 +359,7 @@ pub fn otel_connectivity_probe(
 }
 
 #[cfg(not(feature = "otel"))]
-pub fn otel_connectivity_probe(_cfg: &serde_json::Value) -> anyhow::Result<()> {
+pub async fn otel_connectivity_probe(_cfg: &serde_json::Value) -> anyhow::Result<()> {
     tracing::info!("OTLP connectivity probe skipped (otel feature disabled)");
     Ok(())
 }
@@ -370,7 +369,7 @@ pub fn otel_connectivity_probe(_cfg: &serde_json::Value) -> anyhow::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use modkit_bootstrap::config::{Exporter, Sampler, TracingConfig};
+    use crate::telemetry::config::{Exporter, Sampler, TracingConfig};
     use std::collections::HashMap;
 
     #[test]

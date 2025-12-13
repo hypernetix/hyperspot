@@ -1,0 +1,31 @@
+[package]
+name = "calculator-sdk"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "SDK for calculator module: API trait, types, gRPC client, and wiring helpers"
+build = "build.rs"
+
+[dependencies]
+# Core dependencies for API trait
+async-trait = { workspace = true }
+thiserror = { workspace = true }
+modkit-security = { path = "../../../../libs/modkit-security" }
+
+# gRPC transport dependencies
+modkit-transport-grpc = { path = "../../../../libs/modkit-transport-grpc" }
+modkit = { path = "../../../../libs/modkit" }
+module_orchestrator-contracts = { path = "../../../../modules/module_orchestrator/module_orchestrator-contracts" }
+tonic = { workspace = true, features = ["transport"] }
+tonic-prost = { workspace = true }
+prost = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+
+[build-dependencies]
+tonic-prost-build = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }
+

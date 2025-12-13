@@ -1,4 +1,5 @@
 # HyperSpot Server
+![Badge](./.github/badgeHN.svg)
 
 **HyperSpot Server** is a modular, high-performance platform for building AI services built in Rust. It provides a comprehensive framework for building scalable AI applications with automatic REST API generation, comprehensive OpenAPI documentation, and a flexible modular architecture.
 
@@ -182,8 +183,7 @@ async fn list_resources_handler() -> Result<Json<Vec<MyResource>>, modkit::Probl
 ## Documentation
 
 - **[Module Development Guide](docs/MODKIT_UNIFIED_SYSTEM.md)** - How to create modules with the ModKit framework
-- **[Module Creation Prompt](docs/MODULE_CREATION_PROMT.md)** - Prompt for LLM-editor to generate a module from OpenAPI
-  specification
+- **[New Module Guideline](guidelines/NEW_MODULE.md)** - Step-by-step guide for creating production-grade modules
 - **[Contributing](CONTRIBUTING.md)** - Development workflow and coding standards
 
 ## Configuration

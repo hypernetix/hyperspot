@@ -149,28 +149,32 @@ fn extract_paragraph_block(paragraph: &docx_rust::document::Paragraph) -> Option
 }
 
 fn detect_heading_level(paragraph: &docx_rust::document::Paragraph) -> Option<u8> {
-    if let Some(ref property) = paragraph.property {
-        // Check paragraph style for heading markers
-        if let Some(ref style_id) = property.style_id {
-            let style_lower = style_id.value.to_lowercase();
-            if style_lower.starts_with("heading") {
-                // Extract number from "Heading1", "Heading2", etc.
-                if let Some(level_char) = style_lower.chars().nth(7) {
-                    if let Some(level) = level_char.to_digit(10) {
-                        return Some((level as u8).clamp(1, 6));
-                    }
-                }
-            }
-        }
-
-        // Check outline level as fallback
-        if let Some(ref outline_lvl) = property.outline_lvl {
-            let level = (outline_lvl.value + 1).clamp(1, 6) as u8;
-            return Some(level);
-        }
+    fn to_level_u8(lvl: i64) -> Option<u8> {
+        u8::try_from(lvl.clamp(1, 6)).ok()
     }
 
-    None
+    paragraph.property.as_ref().and_then(|property| {
+        let fallback = || {
+            property
+                .outline_lvl
+                .as_ref()
+                .map(|lvl| lvl.value + 1)
+                .map(|lvl| lvl.clamp(1, 6))
+                .and_then(|lvl| to_level_u8(lvl as i64))
+        };
+
+        // Check paragraph style for heading markers
+        property
+            .style_id
+            .as_ref()
+            .map(|style_id| style_id.value.to_lowercase())
+            .filter(|style_id| style_id.starts_with("heading"))
+            .and_then(|style_id| style_id.chars().nth(7))
+            .and_then(|d| d.to_digit(10))
+            .map(|lvl| lvl.clamp(1, 6))
+            .and_then(|lvl| to_level_u8(i64::from(lvl)))
+            .and_then(|_| fallback())
+    })
 }
 
 fn extract_inlines_from_paragraph(

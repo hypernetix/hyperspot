@@ -2,12 +2,14 @@ use crate::model::GpuInfo;
 use regex::Regex;
 use std::process::Command;
 
-#[allow(clippy::unwrap_used, clippy::expect_used)] // good regex, it doesn't panic
-static MODEL_REGEX: std::sync::LazyLock<Regex> =
-    std::sync::LazyLock::new(|| Regex::new(r"Chipset Model: (.+)").unwrap());
-#[allow(clippy::unwrap_used, clippy::expect_used)] // good regex, it doesn't panic
-static VRAM_REGEX: std::sync::LazyLock<Regex> =
-    std::sync::LazyLock::new(|| Regex::new(r"VRAM \(.*\): (\d+) MB").unwrap());
+#[allow(clippy::expect_used)] // good regex, it doesn't panic
+static MODEL_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+    Regex::new(r"Chipset Model: (.+)").expect("static regex should not panic")
+});
+#[allow(clippy::expect_used)] // good regex, it doesn't panic
+static VRAM_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+    Regex::new(r"VRAM \(.*\): (\d+) MB").expect("static regex should not panic")
+});
 
 /// Collect GPU information on macOS using system_profiler
 pub fn collect_gpu_info() -> Vec<GpuInfo> {

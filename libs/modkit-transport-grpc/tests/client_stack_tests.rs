@@ -3,6 +3,8 @@
 //! Integration tests for gRPC client transport stack
 
 use modkit_transport_grpc::client::{connect_with_stack, GrpcClientConfig};
+use modkit_transport_grpc::rpc_retry::{call_with_retry, RpcRetryConfig};
+use std::sync::Arc;
 use std::time::Duration;
 
 #[test]
@@ -174,7 +176,7 @@ fn service_name_is_captured() {
     }
 }
 
-// Mock tests for retry behavior (conceptual - actual retry layer not yet implemented)
+// Test retry config is accessible and can be converted
 #[test]
 fn retry_config_is_accessible() {
     let cfg = GrpcClientConfig::default();
@@ -214,4 +216,263 @@ fn config_has_debug_impl() {
 
     // Should contain key fields
     assert!(debug_str.contains("GrpcClientConfig"));
+}
+
+// ============================================================================
+// RpcRetryConfig Tests
+// ============================================================================
+
+#[test]
+fn rpc_retry_config_from_grpc_config() {
+    let grpc_cfg = GrpcClientConfig::new("test_service").with_max_retries(7);
+
+    let retry_cfg = RpcRetryConfig::from(&grpc_cfg);
+
+    assert_eq!(retry_cfg.max_retries, 7);
+    assert_eq!(retry_cfg.base_backoff, grpc_cfg.base_backoff);
+    assert_eq!(retry_cfg.max_backoff, grpc_cfg.max_backoff);
+}
+
+#[test]
+fn rpc_retry_config_default() {
+    let cfg = RpcRetryConfig::default();
+
+    assert_eq!(cfg.max_retries, 3);
+    assert!(cfg.base_backoff > Duration::from_millis(0));
+    assert!(cfg.max_backoff >= cfg.base_backoff);
+}
+
+#[test]
+fn rpc_retry_config_builder() {
+    let cfg = RpcRetryConfig::new(5)
+        .with_base_backoff(Duration::from_millis(50))
+        .with_max_backoff(Duration::from_secs(2));
+
+    assert_eq!(cfg.max_retries, 5);
+    assert_eq!(cfg.base_backoff, Duration::from_millis(50));
+    assert_eq!(cfg.max_backoff, Duration::from_secs(2));
+}
+
+#[test]
+fn rpc_retry_config_cloning() {
+    let cfg1 = RpcRetryConfig::new(3);
+    let cfg2 = cfg1.clone();
+
+    assert_eq!(cfg1.max_retries, cfg2.max_retries);
+    assert_eq!(cfg1.base_backoff, cfg2.base_backoff);
+}
+
+#[test]
+fn rpc_retry_config_debug() {
+    let cfg = RpcRetryConfig::default();
+    let debug_str = format!("{:?}", cfg);
+
+    assert!(debug_str.contains("RpcRetryConfig"));
+}
+
+// ============================================================================
+// call_with_retry Integration Tests
+// ============================================================================
+
+#[tokio::test]
+async fn call_with_retry_success_first_try() {
+    struct MockClient;
+
+    let mut client = MockClient;
+    let cfg = Arc::new(RpcRetryConfig::default());
+
+    let result = call_with_retry(
+        &mut client,
+        cfg,
+        42i32,
+        |_c, req| async move { Ok::<_, tonic::Status>(req * 2) },
+        "test.double",
+    )
+    .await;
+
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap(), 84);
+}
+
+#[tokio::test]
+async fn call_with_retry_non_retryable_error_fails_immediately() {
+    use std::sync::atomic::{AtomicU32, Ordering};
+
+    struct MockClient {
+        call_count: Arc<AtomicU32>,
+    }
+
+    let call_count = Arc::new(AtomicU32::new(0));
+    let mut client = MockClient {
+        call_count: call_count.clone(),
+    };
+    let cfg = Arc::new(RpcRetryConfig::new(5));
+
+    let result = call_with_retry(
+        &mut client,
+        cfg,
+        (),
+        |c, _req| {
+            c.call_count.fetch_add(1, Ordering::SeqCst);
+            async move { Err::<(), _>(tonic::Status::invalid_argument("bad")) }
+        },
+        "test.invalid",
+    )
+    .await;
+
+    assert!(result.is_err());
+    assert_eq!(result.unwrap_err().code(), tonic::Code::InvalidArgument);
+    // Should only be called once since InvalidArgument is not retryable
+    assert_eq!(call_count.load(Ordering::SeqCst), 1);
+}
+
+#[tokio::test]
+async fn call_with_retry_recovers_from_unavailable() {
+    use std::sync::atomic::{AtomicU32, Ordering};
+
+    struct MockClient {
+        call_count: Arc<AtomicU32>,
+    }
+
+    let call_count = Arc::new(AtomicU32::new(0));
+    let mut client = MockClient {
+        call_count: call_count.clone(),
+    };
+    let cfg = Arc::new(
+        RpcRetryConfig::new(5)
+            .with_base_backoff(Duration::from_millis(1))
+            .with_max_backoff(Duration::from_millis(5)),
+    );
+
+    let result = call_with_retry(
+        &mut client,
+        cfg,
+        "data".to_string(),
+        |c, req| {
+            let count = c.call_count.fetch_add(1, Ordering::SeqCst) + 1;
+            async move {
+                if count < 3 {
+                    Err(tonic::Status::unavailable("server overloaded"))
+                } else {
+                    Ok(format!("processed: {}", req))
+                }
+            }
+        },
+        "test.process",
+    )
+    .await;
+
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap(), "processed: data");
+    assert_eq!(call_count.load(Ordering::SeqCst), 3);
+}
+
+#[tokio::test]
+async fn call_with_retry_exhausts_retries() {
+    use std::sync::atomic::{AtomicU32, Ordering};
+
+    struct MockClient {
+        call_count: Arc<AtomicU32>,
+    }
+
+    let call_count = Arc::new(AtomicU32::new(0));
+    let mut client = MockClient {
+        call_count: call_count.clone(),
+    };
+    let cfg = Arc::new(
+        RpcRetryConfig::new(2)
+            .with_base_backoff(Duration::from_millis(1))
+            .with_max_backoff(Duration::from_millis(5)),
+    );
+
+    let result = call_with_retry(
+        &mut client,
+        cfg,
+        (),
+        |c, _req| {
+            c.call_count.fetch_add(1, Ordering::SeqCst);
+            async move { Err::<String, _>(tonic::Status::deadline_exceeded("timeout")) }
+        },
+        "test.timeout",
+    )
+    .await;
+
+    assert!(result.is_err());
+    assert_eq!(result.unwrap_err().code(), tonic::Code::DeadlineExceeded);
+    // Initial + 2 retries = 3 total
+    assert_eq!(call_count.load(Ordering::SeqCst), 3);
+}
+
+#[tokio::test]
+async fn call_with_retry_zero_retries_means_single_attempt() {
+    use std::sync::atomic::{AtomicU32, Ordering};
+
+    struct MockClient {
+        call_count: Arc<AtomicU32>,
+    }
+
+    let call_count = Arc::new(AtomicU32::new(0));
+    let mut client = MockClient {
+        call_count: call_count.clone(),
+    };
+    let cfg = Arc::new(RpcRetryConfig::new(0));
+
+    let result = call_with_retry(
+        &mut client,
+        cfg,
+        (),
+        |c, _req| {
+            c.call_count.fetch_add(1, Ordering::SeqCst);
+            async move { Err::<String, _>(tonic::Status::unavailable("down")) }
+        },
+        "test.no_retry",
+    )
+    .await;
+
+    assert!(result.is_err());
+    // Only 1 attempt with max_retries = 0
+    assert_eq!(call_count.load(Ordering::SeqCst), 1);
+}
+
+#[tokio::test]
+async fn call_with_retry_clones_request() {
+    use std::sync::atomic::{AtomicU32, Ordering};
+
+    #[derive(Clone)]
+    struct Request {
+        value: i32,
+    }
+
+    struct MockClient {
+        call_count: Arc<AtomicU32>,
+    }
+
+    let call_count = Arc::new(AtomicU32::new(0));
+    let mut client = MockClient {
+        call_count: call_count.clone(),
+    };
+    let cfg = Arc::new(RpcRetryConfig::new(2).with_base_backoff(Duration::from_millis(1)));
+
+    let result = call_with_retry(
+        &mut client,
+        cfg,
+        Request { value: 100 },
+        |c, req| {
+            let count = c.call_count.fetch_add(1, Ordering::SeqCst) + 1;
+            async move {
+                if count < 2 {
+                    Err(tonic::Status::unavailable("retry"))
+                } else {
+                    let count_i32 = i32::try_from(count).unwrap_or(i32::MAX);
+                    // Verify we got a clone with correct value
+                    Ok(req.value + count_i32)
+                }
+            }
+        },
+        "test.clone",
+    )
+    .await;
+
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap(), 102); // 100 + 2 (second attempt)
 }

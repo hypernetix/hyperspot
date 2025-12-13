@@ -17,6 +17,7 @@ pub fn collect_gpu_info() -> Vec<GpuInfo> {
 }
 
 /// Collect NVIDIA GPU information using NVML
+#[allow(clippy::cast_precision_loss)]
 fn collect_nvidia_gpus() -> Option<Vec<GpuInfo>> {
     use nvml_wrapper::Nvml;
 
@@ -77,6 +78,7 @@ fn collect_nvidia_gpus() -> Option<Vec<GpuInfo>> {
 }
 
 /// Collect GPU information using WMIC (fallback for non-NVIDIA GPUs)
+#[allow(clippy::cast_precision_loss)]
 fn collect_gpus_via_wmic() -> Vec<GpuInfo> {
     let output = Command::new("wmic")
         .args([

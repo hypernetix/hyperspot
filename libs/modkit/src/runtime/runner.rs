@@ -6,18 +6,59 @@
 //!
 //! Design notes:
 //! - We use **ModuleContextBuilder** to resolve per-module DbHandles at runtime.
-//! - Phase order: **system_wire → DB → init → REST → gRPC → start → wait → stop**.
+//! - Phase order: **system_wire → DB → init → REST → gRPC → start → OoP spawn → wait → stop**.
 //! - Modules receive a fully-scoped ModuleCtx with a resolved Option<DbHandle>.
 //! - Shutdown can be driven by OS signals, an external `CancellationToken`,
 //!   or an arbitrary future.
+//! - Pre-registered clients can be injected into the ClientHub via `RunOptions::clients`.
+//! - OoP modules are spawned after the start phase so that grpc_hub is already running
+//!   and the real directory endpoint is known.
 
+use crate::backends::OopBackend;
 use crate::client_hub::ClientHub;
 use crate::config::ConfigProvider;
 use crate::registry::ModuleRegistry;
 use crate::runtime::shutdown;
 use crate::runtime::{DbOptions, HostRuntime};
+use std::collections::HashMap;
+use std::path::PathBuf;
 use std::{future::Future, pin::Pin, sync::Arc};
 use tokio_util::sync::CancellationToken;
+use uuid::Uuid;
+
+/// A type-erased client registration for injecting clients into the ClientHub.
+///
+/// This is used to pass pre-created clients (like gRPC clients) from bootstrap code
+/// into the runtime's ClientHub before modules are initialized.
+pub struct ClientRegistration {
+    /// Callback that registers the client into the hub.
+    register_fn: Box<dyn FnOnce(&ClientHub) + Send>,
+}
+
+impl ClientRegistration {
+    /// Create a new client registration for a trait object type.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let api: Arc<dyn DirectoryApi> = Arc::new(client);
+    /// ClientRegistration::new::<dyn DirectoryApi>(api)
+    /// ```
+    pub fn new<T>(client: Arc<T>) -> Self
+    where
+        T: ?Sized + Send + Sync + 'static,
+    {
+        Self {
+            register_fn: Box::new(move |hub| {
+                hub.register::<T>(client);
+            }),
+        }
+    }
+
+    /// Execute the registration against the given hub.
+    pub(crate) fn apply(self, hub: &ClientHub) {
+        (self.register_fn)(hub);
+    }
+}
 
 /// How the runtime should decide when to stop.
 pub enum ShutdownOptions {
@@ -29,6 +70,31 @@ pub enum ShutdownOptions {
     Future(Pin<Box<dyn Future<Output = ()> + Send>>),
 }
 
+/// Configuration for a single OoP module to be spawned.
+#[derive(Clone)]
+pub struct OopModuleSpawnConfig {
+    /// Module name (e.g., "calculator")
+    pub module_name: String,
+    /// Path to the executable
+    pub binary: PathBuf,
+    /// Command-line arguments (user controls --config via execution.args in master config)
+    pub args: Vec<String>,
+    /// Environment variables to set
+    pub env: HashMap<String, String>,
+    /// Working directory for the process
+    pub working_directory: Option<String>,
+    /// Rendered module config JSON (for MODKIT_MODULE_CONFIG env var)
+    pub rendered_config_json: String,
+}
+
+/// Options for spawning OoP modules.
+pub struct OopSpawnOptions {
+    /// List of OoP modules to spawn after the start phase
+    pub modules: Vec<OopModuleSpawnConfig>,
+    /// Backend for spawning OoP modules (e.g., LocalProcessBackend)
+    pub backend: Box<dyn OopBackend>,
+}
+
 /// Options for running the ModKit runner.
 pub struct RunOptions {
     /// Provider of module config sections (raw JSON by module name).
@@ -37,6 +103,22 @@ pub struct RunOptions {
     pub db: DbOptions,
     /// Shutdown strategy.
     pub shutdown: ShutdownOptions,
+    /// Pre-registered clients to inject into the ClientHub before module initialization.
+    ///
+    /// This is useful for OoP bootstrap where clients (like `DirectoryGrpcClient`)
+    /// are created before calling `run()` and need to be available in the ClientHub.
+    pub clients: Vec<ClientRegistration>,
+    /// Process-level instance ID.
+    ///
+    /// This is a unique identifier for this process instance, generated once at bootstrap
+    /// (either in `run_oop_with_options` for OoP modules or in the main host).
+    /// It is propagated to all modules via `ModuleCtx::instance_id()` and `SystemContext::instance_id()`.
+    pub instance_id: Uuid,
+    /// OoP module spawn configuration.
+    ///
+    /// These modules are spawned after the start phase, once grpc_hub is running
+    /// and the real directory endpoint is known.
+    pub oop: Option<OopSpawnOptions>,
 }
 
 /// Full cycle: system_wire → DB → init → REST → gRPC → start → wait → stop.
@@ -89,6 +171,11 @@ pub async fn run(opts: RunOptions) -> anyhow::Result<()> {
     // 4. Build shared ClientHub
     let hub = Arc::new(ClientHub::default());
 
+    // 4b. Apply pre-registered clients from RunOptions
+    for registration in opts.clients {
+        registration.apply(&hub);
+    }
+
     // 5. Instantiate HostRuntime
     let host = HostRuntime::new(
         registry,
@@ -96,8 +183,10 @@ pub async fn run(opts: RunOptions) -> anyhow::Result<()> {
         opts.db,
         hub,
         cancel.clone(),
+        opts.instance_id,
+        opts.oop,
     );
 
     // 6. Run full lifecycle
-    host.run_full_cycle().await
+    host.run_module_phases().await
 }

@@ -8,6 +8,7 @@ const BYTES_PER_GB: f64 = 1024.0 * 1024.0 * 1024.0;
 /// Convert bytes to gigabytes as f64.
 /// Note: For very large values (>2^53 bytes = 8 PB), precision loss occurs,
 /// but this is acceptable for practical memory sizes.
+#[allow(clippy::cast_precision_loss)]
 fn bytes_to_gb(bytes: u64) -> f64 {
     bytes as f64 / BYTES_PER_GB
 }

@@ -8,7 +8,6 @@ use syn::{
     TypePath,
 };
 
-mod generate_clients;
 mod grpc_client;
 mod utils;
 
@@ -657,7 +656,8 @@ pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
                 b.register_system_with_meta(#name_lit);
             },
             Capability::GrpcHub => quote! {
-                b.register_grpc_hub_with_meta(#name_lit);
+                b.register_grpc_hub_with_meta(#name_lit,
+                    module.clone() as ::std::sync::Arc<dyn ::modkit::contracts::GrpcHubModule>);
             },
             Capability::Grpc => quote! {
                 b.register_grpc_service_with_meta(#name_lit,
@@ -667,14 +667,10 @@ pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
     });
 
     // ClientHub DX helpers (optional)
+    // Note: The `client` parameter now only triggers compile-time trait checks.
+    // For client registration/access, use `hub.register::<dyn Trait>(client)` and
+    // `hub.get::<dyn Trait>()` directly, or provide helpers in your *-contracts crate.
     let client_code = if let Some(client_trait_path) = &client_trait_opt {
-        let snake = name_owned.to_lowercase().replace('-', "_");
-        let expose_fn = format_ident!("expose_{}_client", snake);
-        let expose_in_fn = format_ident!("expose_{}_client_in", snake);
-        let accessor_fn = format_ident!("{}_client", snake);
-        let accessor_in_fn = format_ident!("{}_client_in", snake);
-        let publish_mock_fn = format_ident!("publish_mock_{}_client", snake);
-
         quote! {
             // Compile-time trait checks: object-safe + Send + Sync + 'static
             const _: () = {
@@ -684,58 +680,6 @@ pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
 
             impl #impl_generics #struct_ident #ty_generics #where_clause {
                 pub const MODULE_NAME: &'static str = #name_lit;
-                pub const DEFAULT_SCOPE: &'static str = "global";
-            }
-
-            /// Publish this module's typed client under the DEFAULT_SCOPE.
-            #[inline]
-            pub fn #expose_fn(
-                ctx: &::modkit::context::ModuleCtx,
-                client: &::std::sync::Arc<dyn #client_trait_path>,
-            ) -> ::anyhow::Result<()> {
-                ctx.client_hub().register::<dyn #client_trait_path>(client.clone());
-                Ok(())
-            }
-
-            /// Publish this module's typed client under a custom scope (e.g., tenant).
-            #[inline]
-            pub fn #expose_in_fn(
-                ctx: &::modkit::context::ModuleCtx,
-                scope: &str,
-                client: &::std::sync::Arc<dyn #client_trait_path>,
-            ) -> ::anyhow::Result<()> {
-                ctx.client_hub().register_scoped::<dyn #client_trait_path>(scope, client.clone());
-                Ok(())
-            }
-
-            /// Fetch typed client under DEFAULT_SCOPE (panics with a helpful message if missing).
-            #[inline]
-            pub fn #accessor_fn(
-                hub: &::modkit::client_hub::ClientHub
-            ) -> ::std::sync::Arc<dyn #client_trait_path> {
-                hub.get::<dyn #client_trait_path>()
-                    .expect(concat!(#name_lit, " client not registered; call ",
-                                    stringify!(#expose_fn), "(ctx, &client) in provider init()"))
-            }
-
-            /// Fetch typed client in custom scope (panics if missing).
-            #[inline]
-            pub fn #accessor_in_fn(
-                hub: &::modkit::client_hub::ClientHub,
-                scope: &str
-            ) -> ::std::sync::Arc<dyn #client_trait_path> {
-                hub.get_scoped::<dyn #client_trait_path>(scope)
-                    .expect(concat!(#name_lit, " client (scoped) not registered; call ",
-                                    stringify!(#expose_in_fn), "(ctx, scope, &client) in provider init()"))
-            }
-
-            /// Dev-only helper to inject mocks quickly.
-            #[cfg(test)]
-            pub fn #publish_mock_fn(
-                hub: &::modkit::client_hub::ClientHub,
-                client: ::std::sync::Arc<dyn #client_trait_path>
-            ) {
-                hub.register::<dyn #client_trait_path>(client);
             }
         }
     } else {
@@ -1103,59 +1047,6 @@ pub fn grpc_client(attr: TokenStream, item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);
 
     match grpc_client::expand_grpc_client(config, input) {
-        Ok(expanded) => TokenStream::from(expanded),
-        Err(e) => TokenStream::from(e.to_compile_error()),
-    }
-}
-
-/// Generate a gRPC client implementation from an API trait definition (RECOMMENDED)
-///
-/// This is the recommended way to generate gRPC clients. Apply this macro to your API trait
-/// definition, and it will automatically generate a strongly-typed gRPC client with
-/// automatic conversion between domain types and protobuf messages.
-///
-/// # Example
-///
-/// ```ignore
-/// #[modkit::generate_clients(
-///     grpc_client = "modkit_users_v1::users_service_client::UsersServiceClient<tonic::transport::Channel>"
-/// )]
-/// #[async_trait::async_trait]
-/// pub trait UsersApi: Send + Sync {
-///     async fn get_user(&self, req: GetUserReq) -> anyhow::Result<UserDto>;
-///     async fn list_users(&self, req: ListUsersReq) -> anyhow::Result<Vec<UserDto>>;
-/// }
-/// ```
-///
-/// This generates:
-/// - The original trait definition (unchanged)
-/// - `UsersApiGrpcClient` struct that wraps the tonic client
-/// - Full trait implementation with automatic conversions
-/// - Helper methods: `connect()`, `connect_with_config()`, `from_channel()`
-///
-/// # Parameters
-///
-/// - `grpc_client` (required): The fully-qualified tonic client type, e.g.,
-///   `"package::ServiceClient<tonic::transport::Channel>"`
-///
-/// # Requirements
-///
-/// For each method in the trait, the following conversions must be implemented:
-/// - Request type must implement `Into<ProtoRequest>` where `ProtoRequest` is the
-///   corresponding tonic request message type
-/// - Response type must be constructible `From<ProtoResponse>` where `ProtoResponse`
-///   is the tonic response message type
-///
-/// # Note
-///
-/// For local (in-process) communication, register your service directly in `ClientHub`
-/// as `Arc<dyn YourTrait>` without needing a generated client wrapper.
-#[proc_macro_attribute]
-pub fn generate_clients(attr: TokenStream, item: TokenStream) -> TokenStream {
-    let config = parse_macro_input!(attr as generate_clients::GenerateClientsConfig);
-    let trait_def = parse_macro_input!(item as syn::ItemTrait);
-
-    match generate_clients::expand_generate_clients(config, trait_def) {
         Ok(expanded) => TokenStream::from(expanded),
         Err(e) => TokenStream::from(e.to_compile_error()),
     }

@@ -1,0 +1,40 @@
+[package]
+name = "calculator"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Calculator module - example OoP gRPC service"
+
+[features]
+default = []
+oop_module = ["tokio"]
+oop_example = ["oop_module"]
+
+[[bin]]
+name = "calculator-oop"
+path = "src/main.rs"
+required-features = ["oop_module"]
+
+[dependencies]
+# SDK contains API trait, gRPC client, and proto stubs
+calculator-sdk = { path = "../calculator-sdk" }
+
+# ModKit dependencies
+modkit = { path = "../../../../libs/modkit" }
+modkit-security = { path = "../../../../libs/modkit-security" }
+modkit-bootstrap = { path = "../../../../libs/modkit-bootstrap" }
+modkit-transport-grpc = { path = "../../../../libs/modkit-transport-grpc" }
+grpc_hub = { path = "../../../../modules/grpc_hub" }
+
+# Runtime dependencies
+tonic = { workspace = true }
+tokio = { workspace = true, optional = true }
+async-trait = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+clap = { workspace = true }
+inventory = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }

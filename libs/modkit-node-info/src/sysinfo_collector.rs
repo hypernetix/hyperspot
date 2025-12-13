@@ -4,14 +4,15 @@ use sysinfo::System;
 
 /// Calculate percentage as u32 (0-100) from used/total values.
 /// Returns 0 if total is 0 to avoid division by zero.
+#[allow(clippy::integer_division)]
 fn calculate_percent(used: u64, total: u64) -> u32 {
     if total == 0 {
         return 0;
     }
     // Use f64 for division to satisfy clippy::integer_division
-    let percent = (used as f64 / total as f64) * 100.0;
+    let percent = (used * 100) / total;
     // Clamp to 0-100 range - percent is always positive here
-    (percent.clamp(0.0, 100.0)) as u32
+    percent.min(100).try_into().unwrap_or(0)
 }
 
 /// Collects system information for the current node
@@ -69,6 +70,7 @@ impl SysInfoCollector {
         }
     }
 
+    #[allow(clippy::cast_precision_loss)]
     fn collect_cpu_info(sys: &System) -> CpuInfo {
         let cpus = sys.cpus();
         // CPU count is always small, safe to truncate
@@ -168,6 +170,7 @@ impl SysInfoCollector {
         }
     }
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     fn collect_battery_info() -> Option<BatteryInfo> {
         // Use starship-battery for cross-platform battery detection
         use starship_battery::Manager;

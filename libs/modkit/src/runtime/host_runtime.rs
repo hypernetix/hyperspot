@@ -1,19 +1,20 @@
 //! Host Runtime - orchestrates the full ModKit lifecycle
 //!
 //! This module contains the HostRuntime type that owns and coordinates
-//! the execution of all lifecycle phases: system_wire → DB → init → REST → gRPC → start → wait → stop.
+//! the execution of all lifecycle phases: system_wire → DB → init → REST → gRPC → start → OoP spawn → wait → stop.
 
 use axum::Router;
 use std::collections::HashSet;
 use std::sync::Arc;
 use tokio_util::sync::CancellationToken;
+use uuid::Uuid;
 
+use crate::backends::OopSpawnConfig;
 use crate::client_hub::ClientHub;
 use crate::config::ConfigProvider;
 use crate::context::ModuleContextBuilder;
-use crate::contracts::RegisterGrpcServiceFn;
 use crate::registry::{ModuleEntry, ModuleRegistry, RegistryError};
-use crate::runtime::{GrpcInstallerStore, ModuleManager, SystemContext};
+use crate::runtime::{GrpcInstallerStore, ModuleManager, OopSpawnOptions, SystemContext};
 
 /// How the runtime should provide DBs to modules.
 #[derive(Clone)]
@@ -24,13 +25,20 @@ pub enum DbOptions {
     Manager(Arc<modkit_db::DbManager>),
 }
 
+/// Environment variable name for passing directory endpoint to OoP modules.
+pub const MODKIT_DIRECTORY_ENDPOINT_ENV: &str = "MODKIT_DIRECTORY_ENDPOINT";
+
+/// Environment variable name for passing rendered module config to OoP modules.
+pub const MODKIT_MODULE_CONFIG_ENV: &str = "MODKIT_MODULE_CONFIG";
+
 /// HostRuntime owns the lifecycle orchestration for ModKit.
 ///
 /// It encapsulates all runtime state and drives modules through the full lifecycle:
-/// system_wire → DB → init → REST → gRPC → start → wait → stop.
+/// system_wire → DB → init → REST → gRPC → start → OoP spawn → wait → stop.
 pub struct HostRuntime {
     registry: ModuleRegistry,
     ctx_builder: ModuleContextBuilder,
+    instance_id: Uuid,
     module_manager: Arc<ModuleManager>,
     grpc_installers: Arc<GrpcInstallerStore>,
     #[allow(dead_code)]
@@ -38,6 +46,8 @@ pub struct HostRuntime {
     cancel: CancellationToken,
     #[allow(dead_code)]
     db_options: DbOptions,
+    /// OoP module spawn configuration and backend
+    oop_options: Option<OopSpawnOptions>,
 }
 
 impl HostRuntime {
@@ -50,6 +60,8 @@ impl HostRuntime {
         db_options: DbOptions,
         client_hub: Arc<ClientHub>,
         cancel: CancellationToken,
+        instance_id: Uuid,
+        oop_options: Option<OopSpawnOptions>,
     ) -> Self {
         // Create runtime-owned components for system modules
         let module_manager = Arc::new(ModuleManager::new());
@@ -61,17 +73,24 @@ impl HostRuntime {
             DbOptions::None => None,
         };
 
-        let ctx_builder =
-            ModuleContextBuilder::new(modules_cfg, client_hub.clone(), cancel.clone(), db_manager);
+        let ctx_builder = ModuleContextBuilder::new(
+            instance_id,
+            modules_cfg,
+            client_hub.clone(),
+            cancel.clone(),
+            db_manager,
+        );
 
         Self {
             registry,
             ctx_builder,
+            instance_id,
             module_manager,
             grpc_installers,
             client_hub,
             cancel,
             db_options,
+            oop_options,
         }
     }
 
@@ -82,6 +101,7 @@ impl HostRuntime {
         tracing::info!("Phase: system_wire");
 
         let sys_ctx = SystemContext::new(
+            self.instance_id,
             Arc::clone(&self.module_manager),
             Arc::clone(&self.grpc_installers),
         );
@@ -300,9 +320,9 @@ impl HostRuntime {
             return Err(RegistryError::GrpcRequiresHub);
         }
 
-        // If there's a hub, collect all services and hand them off to the installer store
+        // If there's a hub, collect all services grouped by module and hand them off to the installer store
         if let Some(hub_name) = &self.registry.grpc_hub {
-            let mut all_installers = Vec::<RegisterGrpcServiceFn>::new();
+            let mut modules_data = Vec::new();
             let mut seen = HashSet::new();
 
             // Collect services from all grpc modules
@@ -325,7 +345,7 @@ impl HostRuntime {
                             source,
                         })?;
 
-                for reg in installers {
+                for reg in &installers {
                     if !seen.insert(reg.service_name) {
                         return Err(RegistryError::GrpcRegister {
                             module: module_name.clone(),
@@ -335,16 +355,22 @@ impl HostRuntime {
                             ),
                         });
                     }
-                    all_installers.push(reg);
                 }
+
+                modules_data.push(crate::runtime::ModuleInstallers {
+                    module_name: module_name.clone(),
+                    installers,
+                });
             }
 
-            self.grpc_installers.set(all_installers).map_err(|source| {
-                RegistryError::GrpcRegister {
+            self.grpc_installers
+                .set(crate::runtime::GrpcInstallerData {
+                    modules: modules_data,
+                })
+                .map_err(|source| RegistryError::GrpcRegister {
                     module: hub_name.clone(),
                     source,
-                }
-            })?;
+                })?;
         }
 
         Ok(())
@@ -390,6 +416,8 @@ impl HostRuntime {
     /// STOP phase: stop all stateful modules in reverse order.
     ///
     /// Errors are logged but do not fail the shutdown process.
+    /// Note: OoP modules are stopped automatically by the backend when the
+    /// cancellation token is triggered.
     async fn run_stop_phase(&self) -> Result<(), RegistryError> {
         tracing::info!("Phase: stop");
 
@@ -400,10 +428,108 @@ impl HostRuntime {
         Ok(())
     }
 
-    /// Run the full lifecycle: system_wire → DB → init → REST → gRPC → start → wait → stop.
+    /// OoP SPAWN phase: spawn out-of-process modules after start phase.
+    ///
+    /// This phase runs after grpc_hub is already listening, so we can pass
+    /// the real directory endpoint to OoP modules.
+    async fn run_oop_spawn_phase(&self) -> Result<(), RegistryError> {
+        let oop_opts = match &self.oop_options {
+            Some(opts) if !opts.modules.is_empty() => opts,
+            _ => return Ok(()),
+        };
+
+        tracing::info!("Phase: oop_spawn");
+
+        // Wait for grpc_hub to publish its endpoint (it runs async in start phase)
+        let directory_endpoint = self.wait_for_grpc_hub_endpoint().await;
+
+        for module_cfg in &oop_opts.modules {
+            // Build environment with directory endpoint and rendered config
+            // Note: User controls --config via execution.args in master config
+            let mut env = module_cfg.env.clone();
+            env.insert(
+                MODKIT_MODULE_CONFIG_ENV.to_string(),
+                module_cfg.rendered_config_json.clone(),
+            );
+            if let Some(ref endpoint) = directory_endpoint {
+                env.insert(MODKIT_DIRECTORY_ENDPOINT_ENV.to_string(), endpoint.clone());
+            }
+
+            // Use args from execution config as-is (user controls --config via args)
+            let args = module_cfg.args.clone();
+
+            let spawn_config = OopSpawnConfig {
+                module_name: module_cfg.module_name.clone(),
+                binary: module_cfg.binary.clone(),
+                args,
+                env,
+                working_directory: module_cfg.working_directory.clone(),
+            };
+
+            oop_opts
+                .backend
+                .spawn(spawn_config)
+                .await
+                .map_err(|e| RegistryError::OopSpawn {
+                    module: module_cfg.module_name.clone(),
+                    source: e,
+                })?;
+
+            tracing::info!(
+                module = %module_cfg.module_name,
+                directory_endpoint = ?directory_endpoint,
+                "Spawned OoP module via backend"
+            );
+        }
+
+        Ok(())
+    }
+
+    /// Wait for grpc_hub to publish its bound endpoint.
+    ///
+    /// Polls the GrpcHubModule::bound_endpoint() with a short interval until available or timeout.
+    /// Returns None if no grpc_hub is running or if it times out.
+    async fn wait_for_grpc_hub_endpoint(&self) -> Option<String> {
+        const POLL_INTERVAL: std::time::Duration = std::time::Duration::from_millis(10);
+        const MAX_WAIT: std::time::Duration = std::time::Duration::from_secs(5);
+
+        // Find grpc_hub in registry
+        let grpc_hub = self
+            .registry
+            .modules()
+            .iter()
+            .find_map(|e| e.grpc_hub.as_ref());
+
+        let hub = match grpc_hub {
+            Some(h) => h,
+            None => return None, // No grpc_hub registered
+        };
+
+        let start = std::time::Instant::now();
+
+        loop {
+            if let Some(endpoint) = hub.bound_endpoint() {
+                tracing::debug!(
+                    endpoint = %endpoint,
+                    elapsed_ms = start.elapsed().as_millis(),
+                    "gRPC hub endpoint available"
+                );
+                return Some(endpoint);
+            }
+
+            if start.elapsed() > MAX_WAIT {
+                tracing::warn!("Timed out waiting for gRPC hub to bind");
+                return None;
+            }
+
+            tokio::time::sleep(POLL_INTERVAL).await;
+        }
+    }
+
+    /// Run the full lifecycle: system_wire → DB → init → REST → gRPC → start → OoP spawn → wait → stop.
     ///
     /// This is the main entry point for orchestrating the complete module lifecycle.
-    pub async fn run_full_cycle(self) -> anyhow::Result<()> {
+    pub async fn run_module_phases(self) -> anyhow::Result<()> {
         // 1. System wiring phase (before init, only for system modules)
         self.wire_system()?;
 
@@ -422,10 +548,13 @@ impl HostRuntime {
         // 6. Start phase
         self.run_start_phase().await?;
 
-        // 7. Wait for cancellation
+        // 7. OoP spawn phase (after grpc_hub is running)
+        self.run_oop_spawn_phase().await?;
+
+        // 8. Wait for cancellation
         self.cancel.cancelled().await;
 
-        // 8. Stop phase
+        // 9. Stop phase
         self.run_stop_phase().await?;
 
         Ok(())
@@ -529,6 +658,8 @@ mod tests {
             DbOptions::None,
             client_hub,
             cancel.clone(),
+            Uuid::new_v4(),
+            None,
         );
 
         // Run stop phase
@@ -606,6 +737,8 @@ mod tests {
             DbOptions::None,
             client_hub,
             cancel.clone(),
+            Uuid::new_v4(),
+            None,
         );
 
         // Run stop phase - should not fail even though module_b fails

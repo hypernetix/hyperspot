@@ -173,7 +173,7 @@ mod tests {
         // Send more events than capacity
         let num_events = capacity * 2;
         for i in 0..num_events {
-            broadcaster.send(i as u32);
+            broadcaster.send(u32::try_from(i).unwrap());
         }
 
         // The subscriber should only receive the most recent events
@@ -284,7 +284,7 @@ mod tests {
 
         // Send many large events
         for i in 0..100 {
-            let large_event = vec![i as u8; 1024]; // 1KB per event
+            let large_event = vec![u8::try_from(i).unwrap(); 1024]; // 1KB per event
             broadcaster.send(large_event);
         }
 

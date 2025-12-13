@@ -11,6 +11,7 @@ workspace = true
 [features]
 default = []
 users-info-example = ["dep:users_info"]
+oop-example = ["dep:calculator_gateway"]
 otel = ["modkit/otel", "modkit-bootstrap/otel"]
 
 [[bin]]
@@ -27,7 +28,7 @@ modkit-db = { path = "../../libs/modkit-db", features = ["sqlite"] }
 # System modules
 api_ingress = { path = "../../modules/api_ingress" }
 grpc_hub = { path = "../../modules/grpc_hub" }
-directory_service = { path = "../../modules/directory_service" }
+module_orchestrator = { path = "../../modules/module_orchestrator/module_orchestrator" }
 
 # user modules
 file_parser = { path = "../../modules/file_parser" }
@@ -35,16 +36,19 @@ nodes_registry = { path = "../../modules/nodes_registry" }
 
 anyhow = { workspace = true }
 tokio = { workspace = true }
+tokio-util = { workspace = true, features = ["rt"] }
 tracing = { workspace = true }
 clap = { workspace = true }
 serde_json = { workspace = true }
 figment = { workspace = true, features = ["yaml", "env"] }
+uuid = { workspace = true }
 
 # SQLx for driver registration workaround
 sqlx = { workspace = true, features = ["postgres", "sqlite"] }
 
 # Optional example module
-users_info = { path = "../../examples/modkit/users_info", optional = true }
+users_info = { path = "../../examples/modkit/users_info/users_info", optional = true }
+calculator_gateway = { path = "../../examples/oop-modules/calculator_gateway/calculator_gateway", optional = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }

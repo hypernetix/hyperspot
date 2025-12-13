@@ -107,6 +107,16 @@ pub trait GrpcServiceModule: Send + Sync {
 
 /// Trait for the gRPC hub module that hosts the gRPC server.
 ///
-/// This is a marker trait for the single module responsible for hosting
+/// This trait is implemented by the single module responsible for hosting
 /// the tonic::Server instance. Only one module per process should implement this.
-pub trait GrpcHubModule: Send + Sync {}
+pub trait GrpcHubModule: Send + Sync {
+    /// Returns the bound endpoint after the server starts listening.
+    ///
+    /// Examples:
+    /// - TCP: `http://127.0.0.1:50652`
+    /// - Unix socket: `unix:///path/to/socket`
+    /// - Named pipe: `pipe://\\.\pipe\name`
+    ///
+    /// Returns `None` if the server hasn't started listening yet.
+    fn bound_endpoint(&self) -> Option<String>;
+}

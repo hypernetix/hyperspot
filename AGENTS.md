@@ -8,7 +8,7 @@ Always open `@/docs/TRACING_SETUP.md` to learn about the project's tracing setup
 
 Always open `@/docs/MODKIT_UNIFIED_SYSTEM.md` to learn about the project's `@/lib/modkit*` unified system.
 
-Always open `@/docs/MODULE_CREATION_PROMPT.md` to learn about how to create a new module.
+Always open `@/guidelines/NEW_MODULE.md` to learn about how to create a new module.
 
 Always open `@/docs/SECURE-ORM.md` to learn about the project's database interactions with ORM.
 

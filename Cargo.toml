@@ -22,11 +22,18 @@ members = [
     "libs/modkit-node-info",
     "libs/modkit-transport-grpc",
     "modules/api_ingress",
-    "modules/directory_service",
     "modules/grpc_hub",
     "modules/file_parser",
     "modules/nodes_registry",
-    "examples/modkit/users_info"
+    "modules/module_orchestrator/module_orchestrator-contracts",
+    "modules/module_orchestrator/module_orchestrator-grpc",
+    "modules/module_orchestrator/module_orchestrator",
+    "examples/modkit/users_info/user_info-sdk",
+    "examples/modkit/users_info/users_info",
+    "examples/oop-modules/calculator_gateway/calculator_gateway-sdk",
+    "examples/oop-modules/calculator_gateway/calculator_gateway",
+    "examples/oop-modules/calculator/calculator-sdk",
+    "examples/oop-modules/calculator/calculator"
 ]
 resolver = "2"
 
@@ -48,10 +55,10 @@ pedantic = { level = "deny", priority = -1 }
 async_yields_async = "deny"
 await_holding_lock = "deny"
 await_holding_refcell_ref = "deny"
-# cast_possible_truncation = "deny"
-# cast_possible_wrap = "deny"
-# cast_precision_loss = "deny"
-# cast_sign_loss = "deny"
+cast_possible_truncation = "deny"
+cast_possible_wrap = "deny"
+cast_precision_loss = "deny"
+cast_sign_loss = "deny"
 clone_on_copy = "warn"
 cognitive_complexity = "warn"
 dbg_macro = "warn"
@@ -137,12 +144,6 @@ unnecessary_wraps = "allow"                   # 15 - Result that never errors
 unnecessary_literal_bound = "allow"           # 6 - unnecessary lifetime bound
 ref_option = "allow"                          # 3 - use Option<&T> instead of &Option<T>
 
-# Cast lints - CRITICAL (21 total) ⚠️
-cast_possible_truncation = "allow"            # 9 - may truncate value
-cast_sign_loss = "allow"                      # 4 - casting to unsigned loses sign
-cast_precision_loss = "allow"                 # 6 - casting float loses precision
-cast_possible_wrap = "allow"                  # 2 - casting may wrap around
-
 # Complexity lints (23 total)
 too_many_lines = "allow"                      # 11 - function too long
 similar_names = "allow"                       # 9 - variable names too similar
@@ -176,6 +177,7 @@ tracing-log = "0.2"
 tracing-opentelemetry = "0.32"
 tracing-error = "0.2"
 tracing-appender = "0.2"
+tracing-test = "0.2"
 opentelemetry = { version = "0.31", features = ["trace"] }
 opentelemetry_sdk = { version = "0.31", features = ["trace", "rt-tokio"] }
 opentelemetry-otlp = { version = "0.31", features = ["grpc-tonic", "http-proto"] }
@@ -283,16 +285,13 @@ trybuild = "1"
 testcontainers = "0.26"
 testcontainers-modules = { version = "0.14", features = ["postgres", "mysql"] }
 httpmock = "0.8"
-hyper = "1.3"
 
 # Other utilities
-rand = "0.9"
 once_cell = "1.20"
 
 # HTTP types and web utilities
 http = "1.3"
 matchit = "0.9"
-indexmap = "2.12"
 
 # Document and file handling
 rust-embed = "8"
@@ -305,6 +304,7 @@ pdf-extract = "0.10"
 
 # Additional testing utilities
 tokio-test = "0.4"
+temp-env = "0.3"
 
 # Additional utilities
 nanoid = "0.4"

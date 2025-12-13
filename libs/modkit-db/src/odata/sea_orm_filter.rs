@@ -500,7 +500,7 @@ where
         }
         rows.reverse();
     } else if has_more {
-        rows.truncate(limit as usize);
+        rows.truncate(usize::try_from(limit).unwrap_or(usize::MAX));
     }
 
     // Build cursors

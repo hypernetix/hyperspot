@@ -18,6 +18,7 @@ use modkit::{
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use utoipa::ToSchema;
+use uuid::Uuid;
 
 /// Helper to create a test ModuleCtx
 struct EmptyConfigProvider;
@@ -31,6 +32,7 @@ impl ConfigProvider for EmptyConfigProvider {
 fn create_test_module_ctx() -> ModuleCtx {
     ModuleCtx::new(
         "test_module",
+        Uuid::new_v4(),
         Arc::new(EmptyConfigProvider),
         Arc::new(modkit::ClientHub::new()),
         tokio_util::sync::CancellationToken::new(),

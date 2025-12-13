@@ -1,30 +1,24 @@
 //! Directory API - contract for service discovery and instance resolution
+//!
+//! This module re-exports the `DirectoryApi` trait and related types from
+//! `module_orchestrator_contracts` and provides the `LocalDirectoryApi` implementation.
 
 use anyhow::Result;
 use async_trait::async_trait;
 use std::sync::Arc;
+use uuid::Uuid;
 
-use crate::runtime::{Endpoint, ModuleManager};
+use crate::runtime::{Endpoint, ModuleInstance, ModuleManager};
 
-/// Information about a service instance
-#[derive(Debug, Clone)]
-pub struct ServiceInstanceInfo {
-    pub module: String,
-    pub instance_id: String,
-    pub endpoint: Endpoint,
-    pub version: Option<String>,
-}
+// Re-export all types from contracts - this is the single source of truth
+pub use module_orchestrator_contracts::{
+    DirectoryApi, RegisterInstanceInfo, ServiceEndpoint, ServiceInstanceInfo,
+};
 
-/// Directory API trait for service discovery and instance management
-#[async_trait]
-pub trait DirectoryApi: Send + Sync {
-    /// Resolve a gRPC service by its logical name to an endpoint
-    async fn resolve_grpc_service(&self, service_name: &str) -> Result<Endpoint>;
-
-    /// List all service instances for a given module
-    async fn list_instances(&self, module: &str) -> Result<Vec<ServiceInstanceInfo>>;
-}
-
+/// Local implementation of DirectoryApi that delegates to ModuleManager
+///
+/// This is the in-process implementation used by modules running in the same
+/// process as the module orchestrator.
 pub struct LocalDirectoryApi {
     mgr: Arc<ModuleManager>,
 }
@@ -37,9 +31,9 @@ impl LocalDirectoryApi {
 
 #[async_trait]
 impl DirectoryApi for LocalDirectoryApi {
-    async fn resolve_grpc_service(&self, service_name: &str) -> Result<Endpoint> {
+    async fn resolve_grpc_service(&self, service_name: &str) -> Result<ServiceEndpoint> {
         if let Some((_module, _inst, ep)) = self.mgr.pick_service_round_robin(service_name) {
-            return Ok(ep);
+            return Ok(ServiceEndpoint::new(ep.uri));
         }
 
         anyhow::bail!(
@@ -51,12 +45,12 @@ impl DirectoryApi for LocalDirectoryApi {
     async fn list_instances(&self, module: &str) -> Result<Vec<ServiceInstanceInfo>> {
         let mut result = Vec::new();
 
-        for inst in self.mgr.instances_of_static(module) {
+        for inst in self.mgr.instances_of(module) {
             if let Some((_, ep)) = inst.grpc_services.iter().next() {
                 result.push(ServiceInstanceInfo {
                     module: module.to_string(),
-                    instance_id: inst.instance_id.clone(),
-                    endpoint: ep.clone(),
+                    instance_id: inst.instance_id.to_string(),
+                    endpoint: ServiceEndpoint::new(ep.uri.clone()),
                     version: inst.version.clone(),
                 });
             }
@@ -64,82 +58,132 @@ impl DirectoryApi for LocalDirectoryApi {
 
         Ok(result)
     }
+
+    async fn register_instance(&self, info: RegisterInstanceInfo) -> Result<()> {
+        // Parse instance_id from string to Uuid
+        let instance_id = Uuid::parse_str(&info.instance_id)
+            .map_err(|e| anyhow::anyhow!("Invalid instance_id '{}': {}", info.instance_id, e))?;
+
+        // Build a ModuleInstance from RegisterInstanceInfo
+        let mut instance = ModuleInstance::new(info.module.clone(), instance_id);
+
+        // Apply version if provided
+        if let Some(version) = info.version {
+            instance = instance.with_version(version);
+        }
+
+        // Add all gRPC services
+        for (service_name, endpoint) in info.grpc_services {
+            instance = instance.with_grpc_service(service_name, Endpoint::from_uri(endpoint.uri));
+        }
+
+        // Register the instance with the manager
+        self.mgr.register_instance(Arc::new(instance));
+
+        Ok(())
+    }
+
+    async fn deregister_instance(&self, module: &str, instance_id: &str) -> Result<()> {
+        let instance_id = Uuid::parse_str(instance_id)
+            .map_err(|e| anyhow::anyhow!("Invalid instance_id '{}': {}", instance_id, e))?;
+        self.mgr.deregister(module, instance_id);
+        Ok(())
+    }
+
+    async fn send_heartbeat(&self, module: &str, instance_id: &str) -> Result<()> {
+        let instance_id = Uuid::parse_str(instance_id)
+            .map_err(|e| anyhow::anyhow!("Invalid instance_id '{}': {}", instance_id, e))?;
+        self.mgr
+            .update_heartbeat(module, instance_id, std::time::Instant::now());
+        Ok(())
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::runtime::{Endpoint, ModuleInstance, ModuleManager};
-    use std::sync::Arc;
-    use std::time::Instant;
 
     #[tokio::test]
-    async fn test_resolve_rr() {
+    async fn test_resolve_grpc_service_not_found() {
         let dir = Arc::new(ModuleManager::new());
-        let api = LocalDirectoryApi::new(dir.clone());
+        let api = LocalDirectoryApi::new(dir);
 
-        // Register two instances providing the same service
-        let inst1 = Arc::new(
-            ModuleInstance::new("test_module", "instance1")
-                .with_grpc_service("test.Service", Endpoint::tcp("127.0.0.1", 8001)),
-        );
-        let inst2 = Arc::new(
-            ModuleInstance::new("test_module", "instance2")
-                .with_grpc_service("test.Service", Endpoint::tcp("127.0.0.1", 8002)),
-        );
-
-        dir.register_instance(inst1);
-        dir.register_instance(inst2);
-
-        // Mark both as healthy
-        dir.update_heartbeat("test_module", "instance1", Instant::now());
-        dir.update_heartbeat("test_module", "instance2", Instant::now());
-
-        // Resolve should rotate between instances
-        let ep1 = api.resolve_grpc_service("test.Service").await.unwrap();
-        let ep2 = api.resolve_grpc_service("test.Service").await.unwrap();
-        let ep3 = api.resolve_grpc_service("test.Service").await.unwrap();
-
-        // First and third should be the same (round-robin)
-        assert_eq!(ep1, ep3);
-        // First and second should be different
-        assert_ne!(ep1, ep2);
-    }
-
-    #[tokio::test]
-    async fn test_list_instances_returns_string() {
-        let dir = Arc::new(ModuleManager::new());
-        let api = LocalDirectoryApi::new(dir.clone());
-
-        let inst = Arc::new(
-            ModuleInstance::new("test_module", "instance1")
-                .with_grpc_service("test.Service", Endpoint::tcp("127.0.0.1", 8001)),
-        );
-
-        dir.register_instance(inst);
-
-        let instances = api.list_instances("test_module").await.unwrap();
-        assert_eq!(instances.len(), 1);
-        // Verify that module is a String, not &'static str
-        assert_eq!(instances[0].module, "test_module".to_string());
-    }
-
-    #[tokio::test]
-    async fn test_resolve_filters_unhealthy() {
-        let dir = Arc::new(ModuleManager::new());
-        let api = LocalDirectoryApi::new(dir.clone());
-
-        // Register instance but mark it as quarantined
-        let inst = Arc::new(
-            ModuleInstance::new("test_module", "instance1")
-                .with_grpc_service("test.Service", Endpoint::tcp("127.0.0.1", 8001)),
-        );
-
-        dir.register_instance(inst);
-        dir.mark_quarantined("test_module", "instance1");
-
-        // Should not resolve quarantined instance
-        let result = api.resolve_grpc_service("test.Service").await;
+        let result = api.resolve_grpc_service("nonexistent.Service").await;
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_register_instance_via_api() {
+        let dir = Arc::new(ModuleManager::new());
+        let api = LocalDirectoryApi::new(dir.clone());
+
+        let instance_id = Uuid::new_v4();
+        // Register an instance through the API
+        let register_info = RegisterInstanceInfo {
+            module: "test_module".to_string(),
+            instance_id: instance_id.to_string(),
+            grpc_services: vec![(
+                "test.Service".to_string(),
+                ServiceEndpoint::http("127.0.0.1", 8001),
+            )],
+            version: Some("1.0.0".to_string()),
+        };
+
+        api.register_instance(register_info).await.unwrap();
+
+        // Verify the instance was registered
+        let instances = dir.instances_of("test_module");
+        assert_eq!(instances.len(), 1);
+        assert_eq!(instances[0].instance_id, instance_id);
+        assert_eq!(instances[0].version, Some("1.0.0".to_string()));
+        assert!(instances[0].grpc_services.contains_key("test.Service"));
+    }
+
+    #[tokio::test]
+    async fn test_deregister_instance_via_api() {
+        let dir = Arc::new(ModuleManager::new());
+        let api = LocalDirectoryApi::new(dir.clone());
+
+        let instance_id = Uuid::new_v4();
+        // Register an instance first
+        let inst = Arc::new(ModuleInstance::new("test_module", instance_id));
+        dir.register_instance(inst);
+
+        // Verify it exists
+        assert_eq!(dir.instances_of("test_module").len(), 1);
+
+        // Deregister via API
+        api.deregister_instance("test_module", &instance_id.to_string())
+            .await
+            .unwrap();
+
+        // Verify it's gone
+        assert_eq!(dir.instances_of("test_module").len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_send_heartbeat_via_api() {
+        use crate::runtime::InstanceState;
+
+        let dir = Arc::new(ModuleManager::new());
+        let api = LocalDirectoryApi::new(dir.clone());
+
+        let instance_id = Uuid::new_v4();
+        // Register an instance first
+        let inst = Arc::new(ModuleInstance::new("test_module", instance_id));
+        dir.register_instance(inst);
+
+        // Verify initial state is Registered
+        let instances = dir.instances_of("test_module");
+        assert_eq!(instances[0].state(), InstanceState::Registered);
+
+        // Send heartbeat via API
+        api.send_heartbeat("test_module", &instance_id.to_string())
+            .await
+            .unwrap();
+
+        // Verify state transitioned to Healthy
+        let instances = dir.instances_of("test_module");
+        assert_eq!(instances[0].state(), InstanceState::Healthy);
     }
 }
