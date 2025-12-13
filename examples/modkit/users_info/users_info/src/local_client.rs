@@ -1,15 +1,17 @@
+//! Local implementation of UsersInfoApi.
+//!
+//! This client is used for inter-module communication within the same process.
+//! It delegates to the domain service and converts errors to SDK error types.
+
 use async_trait::async_trait;
+use modkit_odata::{ODataQuery, Page};
+use modkit_security::SecurityCtx;
 use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::contract::{
-    client::UsersInfoApi,
-    error::UsersInfoError,
-    model::{NewUser, UpdateUserRequest, User},
-};
+use user_info_sdk::{NewUser, UpdateUserRequest, User, UsersInfoApi, UsersInfoError};
+
 use crate::domain::service::Service;
-use modkit_odata::{ODataQuery, Page};
-use modkit_security::SecurityCtx;
 
 /// Local implementation of the UsersInfoApi trait that delegates to the domain service.
 ///
@@ -21,6 +23,7 @@ pub struct UsersInfoLocalClient {
 }
 
 impl UsersInfoLocalClient {
+    /// Create a new local client wrapping the domain service.
     pub fn new(service: Arc<Service>) -> Self {
         Self { service }
     }

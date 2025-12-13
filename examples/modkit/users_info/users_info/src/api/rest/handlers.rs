@@ -121,7 +121,7 @@ pub async fn create_user(
         }
     }
 
-    let new_user = crate::contract::model::NewUser {
+    let new_user = user_info_sdk::NewUser {
         id,
         tenant_id,
         email,

@@ -28,7 +28,8 @@ members = [
     "modules/module_orchestrator/module_orchestrator-contracts",
     "modules/module_orchestrator/module_orchestrator-grpc",
     "modules/module_orchestrator/module_orchestrator",
-    "examples/modkit/users_info",
+    "examples/modkit/users_info/user_info-sdk",
+    "examples/modkit/users_info/users_info",
     "examples/oop-modules/calculator_gateway/calculator_gateway-sdk",
     "examples/oop-modules/calculator_gateway/calculator_gateway",
     "examples/oop-modules/calculator/calculator-sdk",
@@ -114,6 +115,7 @@ tracing-log = "0.2"
 tracing-opentelemetry = "0.32"
 tracing-error = "0.2"
 tracing-appender = "0.2"
+tracing-test = "0.2"
 opentelemetry = { version = "0.31", features = ["trace"] }
 opentelemetry_sdk = { version = "0.31", features = ["trace", "rt-tokio"] }
 opentelemetry-otlp = { version = "0.31", features = ["grpc-tonic", "http-proto"] }

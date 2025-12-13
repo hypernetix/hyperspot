@@ -1,4 +1,5 @@
 use thiserror::Error;
+use user_info_sdk::UsersInfoError;
 use uuid::Uuid;
 
 /// Domain-specific errors using thiserror
@@ -57,6 +58,30 @@ impl DomainError {
         Self::Validation {
             field: field.into(),
             message: message.into(),
+        }
+    }
+}
+
+/// Convert domain errors to SDK errors for public API consumption.
+impl From<DomainError> for UsersInfoError {
+    fn from(domain_error: DomainError) -> Self {
+        match domain_error {
+            DomainError::UserNotFound { id } => UsersInfoError::not_found(id),
+            DomainError::EmailAlreadyExists { email } => UsersInfoError::conflict(email),
+            DomainError::InvalidEmail { email } => {
+                UsersInfoError::validation(format!("Invalid email: {}", email))
+            }
+            DomainError::EmptyDisplayName => {
+                UsersInfoError::validation("Display name cannot be empty")
+            }
+            DomainError::DisplayNameTooLong { len, max } => UsersInfoError::validation(format!(
+                "Display name too long: {} characters (max: {})",
+                len, max
+            )),
+            DomainError::Validation { field, message } => {
+                UsersInfoError::validation(format!("{}: {}", field, message))
+            }
+            DomainError::Database { .. } => UsersInfoError::internal(),
         }
     }
 }

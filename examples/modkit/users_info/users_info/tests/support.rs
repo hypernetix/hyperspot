@@ -12,13 +12,11 @@ use sea_orm::{Database, DatabaseConnection};
 use sea_orm_migration::MigratorTrait;
 use uuid::Uuid;
 
-use users_info::{
-    contract::model::User,
-    domain::{
-        error::DomainError,
-        events::UserDomainEvent,
-        ports::{AuditPort, EventPublisher},
-    },
+use user_info_sdk::User;
+use users_info::domain::{
+    error::DomainError,
+    events::UserDomainEvent,
+    ports::{AuditPort, EventPublisher},
 };
 
 /// Create a security context that allows access to specific tenants.

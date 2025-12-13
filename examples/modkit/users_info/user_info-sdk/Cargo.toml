@@ -1,0 +1,27 @@
+[package]
+name = "user_info-sdk"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "SDK for user_info module: API trait, types, and error definitions"
+
+[lints]
+workspace = true
+
+[dependencies]
+# Core dependencies for API trait
+async-trait = { workspace = true }
+thiserror = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true, features = ["serde"] }
+
+# Security context for API methods
+modkit-security = { path = "../../../../libs/modkit-security" }
+
+# OData support for pagination
+modkit-odata = { path = "../../../../libs/modkit-odata" }
+
+[dev-dependencies]
+tokio = { workspace = true }
+

@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use crate::contract::model::{NewUser, User, UserPatch};
 use crate::domain::error::DomainError;
 use crate::domain::events::UserDomainEvent;
 use crate::domain::ports::{AuditPort, EventPublisher};
@@ -9,6 +8,7 @@ use chrono::Utc;
 use modkit_db::secure::SecurityCtx;
 use modkit_odata::{ODataQuery, Page};
 use tracing::{debug, info, instrument};
+use user_info_sdk::{NewUser, User, UserPatch};
 use uuid::Uuid;
 
 /// Domain service with business rules for user management.

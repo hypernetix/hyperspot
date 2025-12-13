@@ -47,7 +47,7 @@ uuid = { workspace = true }
 sqlx = { workspace = true, features = ["postgres", "sqlite"] }
 
 # Optional example module
-users_info = { path = "../../examples/modkit/users_info", optional = true }
+users_info = { path = "../../examples/modkit/users_info/users_info", optional = true }
 calculator_gateway = { path = "../../examples/oop-modules/calculator_gateway/calculator_gateway", optional = true }
 
 [dev-dependencies]
