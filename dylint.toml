@@ -1,0 +1,7 @@
+# Dylint Configuration for Hyperspot
+
+[workspace.metadata.dylint]
+# Path to the local dylint linters
+libraries = [
+    { path = "dylint_lints/contract_lints" }
+]
