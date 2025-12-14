@@ -1,0 +1,16 @@
+coverage:
+  range: "85...100" # Set the color range in Codecov's UI
+  status:
+    patch:
+      default:
+        # Sets the required coverage for lines changed in the PR
+        target: 85%
+        # Allows for a small drop from the target to still pass (e.g. 0.1% drop allowed)
+        threshold: 0%
+    project:
+      default:
+        # 'auto' means the PR must maintain or increase the overall project coverage
+        # You can replace 'auto' with a fixed percentage, e.g., '75%'
+        target: auto
+        # Allows the overall project coverage to drop by up to 1% and still pass
+        threshold: 1%
