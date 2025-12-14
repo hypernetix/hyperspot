@@ -2,8 +2,8 @@ use tower_http::cors::CorsLayer;
 
 use crate::config::{ApiIngressConfig, CorsConfig};
 
-/// Build a CORS layer from config. Returns None if config has no cors section.
-pub fn build_cors_layer(cfg: &ApiIngressConfig) -> Option<CorsLayer> {
+/// Build a CORS layer from config.
+pub fn build_cors_layer(cfg: &ApiIngressConfig) -> CorsLayer {
     let cors_cfg: CorsConfig = cfg.cors.clone().unwrap_or_default();
 
     let mut layer = CorsLayer::new();
@@ -55,5 +55,5 @@ pub fn build_cors_layer(cfg: &ApiIngressConfig) -> Option<CorsLayer> {
         layer = layer.max_age(std::time::Duration::from_secs(cors_cfg.max_age_seconds));
     }
 
-    Some(layer)
+    layer
 }

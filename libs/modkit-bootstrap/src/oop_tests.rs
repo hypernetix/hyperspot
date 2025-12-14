@@ -623,7 +623,7 @@ mod full_oop_config {
             tracing: None,
         };
 
-        let result = build_oop_config_and_db(&local_config, "test_module", Some(rendered));
+        let result = build_oop_config_and_db(&local_config, "test_module", Some(&rendered));
 
         assert!(result.is_ok());
         let (final_config, merged_logging, _) = result.unwrap();
@@ -659,7 +659,7 @@ mod full_oop_config {
             tracing: None,
         };
 
-        let result = build_oop_config_and_db(&local_config, "test_module", Some(rendered));
+        let result = build_oop_config_and_db(&local_config, "test_module", Some(&rendered));
 
         assert!(result.is_ok());
         let (final_config, _, _) = result.unwrap();
@@ -705,7 +705,7 @@ mod full_oop_config {
             tracing: None,
         };
 
-        let result = build_oop_config_and_db(&local_config, "test_module", Some(rendered));
+        let result = build_oop_config_and_db(&local_config, "test_module", Some(&rendered));
 
         assert!(result.is_ok());
         let (_, merged_logging, _) = result.unwrap();
@@ -751,7 +751,7 @@ mod full_oop_config {
             tracing: None,
         };
 
-        let result = build_oop_config_and_db(&local_config, "test_module", Some(rendered));
+        let result = build_oop_config_and_db(&local_config, "test_module", Some(&rendered));
 
         assert!(result.is_ok());
         let (final_config, _, _) = result.unwrap();
@@ -779,7 +779,7 @@ mod full_oop_config {
             tracing: None,
         };
 
-        let result = build_oop_config_and_db(&local_config, "test_module", Some(rendered));
+        let result = build_oop_config_and_db(&local_config, "test_module", Some(&rendered));
 
         assert!(result.is_ok());
         let (final_config, _, _) = result.unwrap();

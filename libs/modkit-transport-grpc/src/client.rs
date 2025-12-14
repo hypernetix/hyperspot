@@ -343,7 +343,7 @@ mod tests {
     #[test]
     fn test_build_endpoint_empty_uri() {
         let cfg = GrpcClientConfig::default();
-        let result = build_endpoint("".to_string(), &cfg);
+        let result = build_endpoint(String::new(), &cfg);
         assert!(result.is_err(), "build_endpoint should fail with empty URI");
     }
 }

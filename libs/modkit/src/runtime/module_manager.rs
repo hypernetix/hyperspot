@@ -164,7 +164,7 @@ impl std::fmt::Debug for ModuleManager {
             .field("modules", &modules)
             .field("heartbeat_ttl", &self.hb_ttl)
             .field("heartbeat_grace", &self.hb_grace)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -278,7 +278,7 @@ impl ModuleManager {
 
     /// Quarantine or evict stale instances based on heartbeat policy
     pub fn evict_stale(&self, now: Instant) {
-        use InstanceState::*;
+        use InstanceState::{Draining, Quarantined};
         let mut empty_modules = Vec::new();
 
         for mut entry in self.inner.iter_mut() {
@@ -356,9 +356,9 @@ impl ModuleManager {
     ) -> Option<(String, Arc<ModuleInstance>, Endpoint)> {
         // Collect all instances that provide this service
         let mut candidates = Vec::new();
-        for entry in self.inner.iter() {
+        for entry in &self.inner {
             let module = entry.key().clone();
-            for inst in entry.value().iter() {
+            for inst in entry.value() {
                 if let Some(ep) = inst.grpc_services.get(service_name) {
                     let state = inst.state();
                     if matches!(state, InstanceState::Healthy | InstanceState::Ready) {
@@ -628,7 +628,10 @@ mod tests {
         let now = Instant::now();
         let instance = ModuleInstance::new("test_module", Uuid::new_v4());
         // Set the last heartbeat to be stale
-        instance.inner.write().last_heartbeat = now - ttl - Duration::from_millis(10);
+        instance.inner.write().last_heartbeat = now
+            .checked_sub(ttl)
+            .and_then(|t| t.checked_sub(Duration::from_millis(10)))
+            .expect("test duration subtraction should not underflow");
 
         dir.register_instance(Arc::new(instance));
 

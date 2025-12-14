@@ -80,6 +80,7 @@ impl Parse for GrpcClientConfig {
 }
 
 /// Generate the gRPC client implementation
+#[allow(clippy::needless_pass_by_value)] // DeriveInput/config consumed by proc-macro pattern
 pub fn expand_grpc_client(
     config: GrpcClientConfig,
     input: DeriveInput,

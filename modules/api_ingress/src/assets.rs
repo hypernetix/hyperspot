@@ -14,16 +14,13 @@ pub struct ElementsAssets;
 pub async fn serve_elements_asset(
     axum::extract::Path(file): axum::extract::Path<String>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    match ElementsAssets::get(&file) {
-        Some(content) => {
-            let mime_type = content_type_for(&file);
-            let body = content.data.into_owned();
-            Ok(([(axum::http::header::CONTENT_TYPE, mime_type)], body))
-        }
-        None => {
-            tracing::warn!("Elements asset not found: {}", file);
-            Err(StatusCode::NOT_FOUND)
-        }
+    if let Some(content) = ElementsAssets::get(&file) {
+        let mime_type = content_type_for(&file);
+        let body = content.data.into_owned();
+        Ok(([(axum::http::header::CONTENT_TYPE, mime_type)], body))
+    } else {
+        tracing::warn!("Elements asset not found: {}", file);
+        Err(StatusCode::NOT_FOUND)
     }
 }
 

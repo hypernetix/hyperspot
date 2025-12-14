@@ -12,19 +12,19 @@ pub struct TraitMethodInfo {
 
 /// Parse a trait and extract all async methods with their signatures
 #[allow(dead_code)]
-pub fn parse_trait_methods(_trait_path: &Path) -> syn::Result<Vec<TraitMethodInfo>> {
+pub fn parse_trait_methods(_trait_path: &Path) -> Vec<TraitMethodInfo> {
     // In a procedural macro context, we can't directly load and parse the trait
     // at compile time from another module. Instead, we expect the trait to be
     // in scope and we'll generate code that will fail to compile if methods don't match.
     //
-    // For validation purposes in this implementation, we'll return Ok with a note
+    // For validation purposes in this implementation, we return empty with a note
     // that actual validation happens at compile time when the generated code is checked.
     //
     // A more sophisticated approach would use a build-time analysis or require
     // the trait definition to be provided inline, but that's beyond scope here.
 
     // Return empty - validation will happen when generated code compiles
-    Ok(vec![])
+    vec![]
 }
 
 /// Parse the api attribute from macro arguments

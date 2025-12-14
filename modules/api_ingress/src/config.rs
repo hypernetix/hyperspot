@@ -93,11 +93,11 @@ impl Default for RateLimitDefaults {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields, default)]
 pub struct CorsConfig {
-    /// Allowed origins: ["*"] means any
+    /// Allowed origins: `["*"]` means any
     pub allowed_origins: Vec<String>,
-    /// Allowed HTTP methods, e.g. ["GET","POST","OPTIONS","PUT","DELETE","PATCH"]
+    /// Allowed HTTP methods, e.g. `["GET","POST","OPTIONS","PUT","DELETE","PATCH"]`
     pub allowed_methods: Vec<String>,
-    /// Allowed request headers; ["*"] means any
+    /// Allowed request headers; `["*"]` means any
     pub allowed_headers: Vec<String>,
     /// Whether to allow credentials
     pub allow_credentials: bool,

@@ -22,7 +22,7 @@ impl NodesRegistryApi for NodesRegistryLocalClient {
     }
 
     async fn list_nodes(&self) -> Result<Vec<Node>, NodesRegistryError> {
-        self.service.list_nodes().map_err(|e| e.into())
+        Ok(self.service.list_nodes())
     }
 
     async fn get_node_sysinfo(

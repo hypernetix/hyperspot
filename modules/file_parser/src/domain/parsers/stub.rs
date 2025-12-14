@@ -47,7 +47,7 @@ impl FileParserBackend for StubParser {
 
         Ok(Self::parse_bytes_internal(
             file_name,
-            bytes,
+            &bytes,
             ParsedSource::LocalPath(path.display().to_string()),
         ))
     }
@@ -61,7 +61,7 @@ impl FileParserBackend for StubParser {
         let file_name = filename_hint.unwrap_or("unknown");
         Ok(Self::parse_bytes_internal(
             file_name,
-            bytes,
+            &bytes,
             ParsedSource::Uploaded {
                 original_name: file_name.to_string(),
             },
@@ -72,29 +72,28 @@ impl FileParserBackend for StubParser {
 impl StubParser {
     fn parse_bytes_internal(
         file_name: &str,
-        bytes: bytes::Bytes,
+        bytes: &bytes::Bytes,
         source: ParsedSource,
     ) -> crate::domain::ir::ParsedDocument {
         // Try UTF-8 decode, fall back to base64 if that fails
-        let text = match String::from_utf8(bytes.to_vec()) {
-            Ok(s) => format!(
+        let text = if let Ok(s) = String::from_utf8(bytes.to_vec()) {
+            format!(
                 "[STUB PARSER] Content extracted from {} ({} bytes)\n\nRaw text preview:\n{}",
                 file_name,
                 bytes.len(),
                 s.chars().take(500).collect::<String>()
-            ),
-            Err(_) => {
-                // Binary file, provide base64 preview
-                use base64::Engine;
-                let b64 = base64::engine::general_purpose::STANDARD
-                    .encode(&bytes[..bytes.len().min(300)]);
-                format!(
-                    "[STUB PARSER] Binary content from {} ({} bytes)\n\nBase64 preview (first 300 bytes):\n{}",
-                    file_name,
-                    bytes.len(),
-                    b64
-                )
-            }
+            )
+        } else {
+            // Binary file, provide base64 preview
+            use base64::Engine;
+            let b64 =
+                base64::engine::general_purpose::STANDARD.encode(&bytes[..bytes.len().min(300)]);
+            format!(
+                "[STUB PARSER] Binary content from {} ({} bytes)\n\nBase64 preview (first 300 bytes):\n{}",
+                file_name,
+                bytes.len(),
+                b64
+            )
         };
 
         let blocks = vec![ParsedBlock::Paragraph {

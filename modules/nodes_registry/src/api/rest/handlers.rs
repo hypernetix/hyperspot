@@ -32,7 +32,7 @@ pub async fn list_nodes(
     Extension(svc): Extension<Arc<Service>>,
     Query(query): Query<DetailsQuery>,
 ) -> NodesResult<Json<Vec<NodeDto>>> {
-    let nodes = svc.list_nodes()?;
+    let nodes = svc.list_nodes();
 
     if query.details {
         // Include sysinfo and syscap for each node

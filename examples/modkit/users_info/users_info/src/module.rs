@@ -145,7 +145,7 @@ impl RestfulModule for UsersInfo {
             .ok_or_else(|| anyhow::anyhow!("Service not initialized"))?
             .clone();
 
-        let router = routes::register_routes(router, openapi, service)?;
+        let router = routes::register_routes(router, openapi, service);
 
         // Register SSE route with per-route Extension
         let router = routes::register_users_sse_route(router, openapi, self.sse.clone());

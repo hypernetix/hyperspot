@@ -13,12 +13,11 @@ static VRAM_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
 
 /// Collect GPU information on macOS using system_profiler
 pub fn collect_gpu_info() -> Vec<GpuInfo> {
-    let output = match Command::new("system_profiler")
+    let Ok(output) = Command::new("system_profiler")
         .arg("SPDisplaysDataType")
         .output()
-    {
-        Ok(output) => output,
-        Err(_) => return Vec::new(),
+    else {
+        return Vec::new();
     };
 
     if !output.status.success() {

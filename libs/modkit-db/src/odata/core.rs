@@ -508,9 +508,8 @@ where
 
         // Identifier IN (value, value, ...)
         X::In(l, list) => {
-            let name = match &**l {
-                X::Identifier(n) => n,
-                _ => return Err(ODataBuildError::Other("left side of IN must be a field")),
+            let X::Identifier(name) = &**l else {
+                return Err(ODataBuildError::Other("left side of IN must be a field"));
             };
             let f = fmap
                 .get(name)
@@ -739,7 +738,7 @@ pub use modkit_odata::{Page, PageInfo};
 
 // Note: LimitCfg is imported at the top and re-exported from odata/mod.rs
 
-fn clamp_limit(req: Option<u64>, cfg: LimitCfg) -> Result<u64, ODataError> {
+fn clamp_limit(req: Option<u64>, cfg: LimitCfg) -> u64 {
     let mut l = req.unwrap_or(cfg.default);
     if l == 0 {
         l = 1;
@@ -747,7 +746,7 @@ fn clamp_limit(req: Option<u64>, cfg: LimitCfg) -> Result<u64, ODataError> {
     if l > cfg.max {
         l = cfg.max;
     }
-    Ok(l)
+    l
 }
 
 /// One-shot pagination combiner that handles filter → cursor predicate → order → overfetch/trim → build cursors
@@ -766,7 +765,7 @@ where
     F: Fn(E::Model) -> D + Copy,
     C: ConnectionTrait + Send + Sync,
 {
-    let limit = clamp_limit(q.limit, limit_cfg)?;
+    let limit = clamp_limit(q.limit, limit_cfg);
     let fetch = limit + 1;
 
     // Effective order derivation based on new policy

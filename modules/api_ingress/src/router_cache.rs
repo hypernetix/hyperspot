@@ -127,7 +127,7 @@ impl<T> RouterCache<T> {
     /// # Returns
     ///
     /// `Ok(())` if the swap succeeded, `Err(current)` if it failed
-    #[allow(dead_code)]
+    #[allow(dead_code, clippy::needless_pass_by_value)] // Arc is used for pointer comparison
     pub fn compare_and_swap(&self, expected: Arc<T>, new_router: T) -> Result<(), Arc<T>>
     where
         T: PartialEq,

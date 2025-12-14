@@ -9,7 +9,7 @@ use sqlx::Row;
 #[cfg(feature = "sqlite")]
 #[tokio::test]
 async fn generic_sqlite() -> Result<()> {
-    let dut = common::bring_up_sqlite()?;
+    let dut = common::bring_up_sqlite();
     run_common_suite(&dut.url).await
 }
 

@@ -150,7 +150,7 @@ impl AuthDispatcher {
     }
 
     /// Log successful JWT validation
-    fn log_jwt_success(claims: &Claims, plugin_name: &str, kid: &Option<String>) {
+    fn log_jwt_success(claims: &Claims, plugin_name: &str, kid: Option<&String>) {
         tracing::debug!(
             sub_prefix = %truncate_uuid(&claims.sub),
             issuer = %claims.issuer,
@@ -184,7 +184,7 @@ impl AuthDispatcher {
         Self::validate_claims_with_logging(&normalized, &self.validation_config)?;
 
         // Step 5: Log success and return
-        Self::log_jwt_success(&normalized, self.plugin.name(), &header.kid);
+        Self::log_jwt_success(&normalized, self.plugin.name(), header.kid.as_ref());
 
         Ok(normalized)
     }

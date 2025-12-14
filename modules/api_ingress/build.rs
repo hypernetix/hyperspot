@@ -33,7 +33,7 @@ fn main() {
         ),
     ];
 
-    for (url, dest) in files.iter() {
+    for (url, dest) in &files {
         if let Err(e) = download_to(url, dest) {
             println!(
                 "cargo:warning=Failed to download {url} -> {}: {e}",

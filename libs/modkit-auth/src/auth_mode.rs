@@ -66,7 +66,7 @@ mod tests {
     struct MockPlugin;
 
     impl ClaimsPlugin for MockPlugin {
-        fn name(&self) -> &str {
+        fn name(&self) -> &'static str {
             "mock"
         }
 

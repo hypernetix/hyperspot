@@ -104,19 +104,19 @@ impl SysCapCollector {
         let mut capabilities = Vec::new();
 
         // Collect hardware capabilities using sysinfo data
-        capabilities.extend(Self::collect_hardware_caps(&sysinfo)?);
+        capabilities.extend(Self::collect_hardware_caps(&sysinfo));
 
         // Collect OS capabilities using sysinfo data
-        capabilities.extend(Self::collect_os_caps(&sysinfo)?);
+        capabilities.extend(Self::collect_os_caps(&sysinfo));
 
         // Collect GPU capabilities using sysinfo data
-        capabilities.extend(Self::collect_gpu_caps(&sysinfo)?);
+        capabilities.extend(Self::collect_gpu_caps(&sysinfo));
 
         // Collect battery capabilities using sysinfo data
-        capabilities.extend(Self::collect_battery_caps(&sysinfo)?);
+        capabilities.extend(Self::collect_battery_caps(&sysinfo));
 
         // Collect software capabilities
-        capabilities.extend(Self::collect_software_caps()?);
+        capabilities.extend(Self::collect_software_caps());
 
         Ok(NodeSysCap {
             node_id,
@@ -125,7 +125,7 @@ impl SysCapCollector {
         })
     }
 
-    fn collect_hardware_caps(sysinfo: &NodeSysInfo) -> Result<Vec<SysCap>, NodeInfoError> {
+    fn collect_hardware_caps(sysinfo: &NodeSysInfo) -> Vec<SysCap> {
         let mut caps = Vec::new();
 
         // Architecture detection from sysinfo
@@ -180,10 +180,10 @@ impl SysCapCollector {
             .build(),
         );
 
-        Ok(caps)
+        caps
     }
 
-    fn collect_os_caps(sysinfo: &NodeSysInfo) -> Result<Vec<SysCap>, NodeInfoError> {
+    fn collect_os_caps(sysinfo: &NodeSysInfo) -> Vec<SysCap> {
         let mut caps = Vec::new();
 
         let os = std::env::consts::OS;
@@ -209,10 +209,10 @@ impl SysCapCollector {
             .build(),
         );
 
-        Ok(caps)
+        caps
     }
 
-    fn collect_gpu_caps(sysinfo: &NodeSysInfo) -> Result<Vec<SysCap>, NodeInfoError> {
+    fn collect_gpu_caps(sysinfo: &NodeSysInfo) -> Vec<SysCap> {
         let mut caps = Vec::new();
 
         for (i, gpu) in sysinfo.gpus.iter().enumerate() {
@@ -252,10 +252,10 @@ impl SysCapCollector {
             );
         }
 
-        Ok(caps)
+        caps
     }
 
-    fn collect_battery_caps(sysinfo: &NodeSysInfo) -> Result<Vec<SysCap>, NodeInfoError> {
+    fn collect_battery_caps(sysinfo: &NodeSysInfo) -> Vec<SysCap> {
         let mut caps = Vec::new();
 
         if let Some(battery) = &sysinfo.battery {
@@ -283,13 +283,13 @@ impl SysCapCollector {
             );
         }
 
-        Ok(caps)
+        caps
     }
 
-    fn collect_software_caps() -> Result<Vec<SysCap>, NodeInfoError> {
+    fn collect_software_caps() -> Vec<SysCap> {
         // Software capability detection can be extended here
         // For now, return empty list
-        Ok(Vec::new())
+        Vec::new()
     }
 }
 

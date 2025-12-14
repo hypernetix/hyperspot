@@ -57,8 +57,8 @@ impl Service {
     }
 
     /// List all nodes
-    pub fn list_nodes(&self) -> Result<Vec<Node>, DomainError> {
-        Ok(self.storage.list_nodes())
+    pub fn list_nodes(&self) -> Vec<Node> {
+        self.storage.list_nodes()
     }
 
     /// Get system information for a node (with caching)

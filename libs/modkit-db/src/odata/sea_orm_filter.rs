@@ -358,7 +358,7 @@ pub struct LimitCfg {
 }
 
 /// Clamp the requested limit to configured bounds
-fn clamp_limit(req: Option<u64>, cfg: LimitCfg) -> Result<u64, ODataError> {
+fn clamp_limit(req: Option<u64>, cfg: LimitCfg) -> u64 {
     let mut l = req.unwrap_or(cfg.default);
     if l == 0 {
         l = 1;
@@ -366,7 +366,7 @@ fn clamp_limit(req: Option<u64>, cfg: LimitCfg) -> Result<u64, ODataError> {
     if l > cfg.max {
         l = cfg.max;
     }
-    Ok(l)
+    l
 }
 
 /// Type-safe OData pagination with filters, ordering, and cursors.
@@ -424,7 +424,7 @@ where
     Mapper: Fn(E::Model) -> D,
     C: ConnectionTrait + Send + Sync,
 {
-    let limit = clamp_limit(query.limit, limit_cfg)?;
+    let limit = clamp_limit(query.limit, limit_cfg);
     let fetch = limit + 1;
 
     // Effective order derivation

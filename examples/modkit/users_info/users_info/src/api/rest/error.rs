@@ -4,7 +4,7 @@ use crate::domain::error::DomainError;
 use crate::errors::ErrorCode;
 
 /// Map domain error to RFC9457 Problem using the catalog
-pub fn domain_error_to_problem(e: DomainError, instance: &str) -> Problem {
+pub fn domain_error_to_problem(e: &DomainError, instance: &str) -> Problem {
     // Extract trace ID from current tracing span if available
     let trace_id = tracing::Span::current()
         .id()
@@ -51,6 +51,6 @@ pub fn domain_error_to_problem(e: DomainError, instance: &str) -> Problem {
 /// Implement Into<Problem> for DomainError so it works with ApiError
 impl From<DomainError> for Problem {
     fn from(e: DomainError) -> Self {
-        domain_error_to_problem(e, "/")
+        domain_error_to_problem(&e, "/")
     }
 }

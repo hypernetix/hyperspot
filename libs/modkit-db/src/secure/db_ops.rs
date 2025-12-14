@@ -149,17 +149,12 @@ where
     /// - Resources only → update only specified resource IDs
     /// - Both → AND them together
     ///
-    /// # Errors
-    /// Returns `ScopeError` if the scope cannot be applied.
-    pub fn scope_with(
-        self,
-        scope: &AccessScope,
-    ) -> Result<SecureUpdateMany<E, Scoped>, ScopeError> {
-        let cond = build_scope_condition::<E>(scope)?;
-        Ok(SecureUpdateMany {
+    pub fn scope_with(self, scope: &AccessScope) -> SecureUpdateMany<E, Scoped> {
+        let cond = build_scope_condition::<E>(scope);
+        SecureUpdateMany {
             inner: self.inner.filter(cond),
             _state: PhantomData,
-        })
+        }
     }
 }
 
@@ -245,17 +240,12 @@ where
     /// - Resources only → delete only specified resource IDs
     /// - Both → AND them together
     ///
-    /// # Errors
-    /// Returns `ScopeError` if the scope cannot be applied.
-    pub fn scope_with(
-        self,
-        scope: &AccessScope,
-    ) -> Result<SecureDeleteMany<E, Scoped>, ScopeError> {
-        let cond = build_scope_condition::<E>(scope)?;
-        Ok(SecureDeleteMany {
+    pub fn scope_with(self, scope: &AccessScope) -> SecureDeleteMany<E, Scoped> {
+        let cond = build_scope_condition::<E>(scope);
+        SecureDeleteMany {
             inner: self.inner.filter(cond),
             _state: PhantomData,
-        })
+        }
     }
 }
 

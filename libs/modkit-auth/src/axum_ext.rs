@@ -158,11 +158,8 @@ where
                 }
                 AuthRequirement::Required(sec_requirement) => {
                     // 4. For required routes: validates JWT, enforces RBAC if needed, inserts SecurityCtx
-                    let token = match extract_bearer_token(request.headers()) {
-                        Some(token) => token,
-                        None => {
-                            return Ok(AuthError::Unauthenticated.into_response());
-                        }
+                    let Some(token) = extract_bearer_token(request.headers()) else {
+                        return Ok(AuthError::Unauthenticated.into_response());
                     };
 
                     let claims = match state.validator.validate_and_parse(token).await {

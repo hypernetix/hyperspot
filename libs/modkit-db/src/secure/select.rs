@@ -74,14 +74,12 @@ where
     /// - Resources only → filter by resource IDs
     /// - Both → AND them together
     ///
-    /// # Errors
-    /// Returns `ScopeError` if the scope cannot be applied (rarely happens).
-    pub fn scope_with(self, scope: &AccessScope) -> Result<SecureSelect<E, Scoped>, ScopeError> {
-        let cond = build_scope_condition::<E>(scope)?;
-        Ok(SecureSelect {
+    pub fn scope_with(self, scope: &AccessScope) -> SecureSelect<E, Scoped> {
+        let cond = build_scope_condition::<E>(scope);
+        SecureSelect {
             inner: self.inner.filter(cond),
             _state: PhantomData,
-        })
+        }
     }
 }
 

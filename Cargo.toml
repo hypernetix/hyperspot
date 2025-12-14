@@ -59,19 +59,22 @@ cast_possible_truncation = "deny"
 cast_possible_wrap = "deny"
 cast_precision_loss = "deny"
 cast_sign_loss = "deny"
-clone_on_copy = "warn"
-cognitive_complexity = "warn"
-dbg_macro = "warn"
-debug_assert_with_mut_call = "warn"
-default_trait_access = "warn"
-elidable_lifetime_names = "warn"
-empty_line_after_outer_attr = "warn"
-empty_structs_with_brackets = "warn"
+clone_on_copy = "deny"
+cognitive_complexity = "deny"
+dbg_macro = "deny"
+debug_assert_with_mut_call = "deny"
+default_trait_access = "deny"
+doc_link_with_quotes = "deny"
+elidable_lifetime_names = "deny"
+empty_line_after_outer_attr = "deny"
+empty_structs_with_brackets = "deny"
+enum_glob_use = "deny"
 expect_used = "deny"
+explicit_iter_loop = "deny"
 float_cmp = "deny"
 float_cmp_const = "deny"
-format_push_string = "warn"
-if_not_else = "warn"
+format_push_string = "deny"
+if_not_else = "deny"
 ignore_without_reason = "deny"
 ignored_unit_patterns = "deny"
 implicit_clone = "deny"
@@ -81,68 +84,65 @@ integer_division = "deny"
 ip_constant = "deny"
 lossy_float_literal = "deny"
 manual_assert = "deny"
+manual_let_else = "deny"
 manual_string_new = "deny"
 many_single_char_names = "deny"
-map_clone = "warn"
+map_clone = "deny"
 map_unwrap_or = "deny"
-match_same_arms = "warn"
-match_wildcard_for_single_variants = "warn"
+match_same_arms = "deny"
+match_wildcard_for_single_variants = "deny"
+missing_fields_in_debug = "deny"
+missing_panics_doc = "deny"
 mutex_atomic = "deny"
 needless_borrow = "deny"
 needless_lifetimes = "deny"
+needless_pass_by_value = "deny"
 no_effect_underscore_binding = "deny"
-non_ascii_literal = "warn"
-non_std_lazy_statics = "warn"
+non_ascii_literal = "deny"
+non_std_lazy_statics = "deny"
 option_as_ref_cloned = "deny"
-redundant_else = "warn"
+redundant_else = "deny"
+ref_option = "deny"
 regex_creation_in_loops = "deny"
-semicolon_if_nothing_returned = "warn"
-single_char_pattern = "warn"
-suspicious_operation_groupings = "warn"
+semicolon_if_nothing_returned = "deny"
+single_char_pattern = "deny"
+single_match_else = "deny"
+suspicious_operation_groupings = "deny"
 trivially_copy_pass_by_ref = "deny"
-type_complexity = "warn"
-unchecked_duration_subtraction = "deny"
-unnecessary_debug_formatting = "warn"
-unnested_or_patterns = "warn"
+type_complexity = "deny"
+unchecked_time_subtraction = "deny"
+unnecessary_debug_formatting = "deny"
+unnecessary_literal_bound = "deny"
+unnecessary_wraps = "deny"
+unnested_or_patterns = "deny"
 unused_async = "deny"
-unused_self = "warn"
+unused_self = "deny"
 unwrap_used = "deny"
-use_debug = "warn"
-used_underscore_binding = "warn"
+use_debug = "deny"
+used_underscore_binding = "deny"
 used_underscore_items = "deny"
-useless_let_if_seq = "warn"
-wildcard_dependencies = "warn"
-wildcard_imports = "warn"
+useless_let_if_seq = "deny"
+wildcard_dependencies = "deny"
+wildcard_imports = "deny"
 
 # =============================================================================
 # PEDANTIC LINTS - Temporarily allowed until fixed
-# After fixing each lint, change "allow" to "warn" or "deny" as appropriate or remove the lint from the list
+# After fixing each lint, change "allow" to "deny" as appropriate or remove the lint from the list
 # =============================================================================
 
-# Documentation lints (648 total)
+# Documentation lints (637 total)
 doc_markdown = "allow"                        # 511 - backticks missing in docs
 missing_errors_doc = "allow"                  # 126 - missing # Errors section
-doc_link_with_quotes = "allow"                # 5 - use backticks instead of quotes
-missing_panics_doc = "allow"                  # 4 - missing # Panics section
-missing_fields_in_debug = "allow"             # 2 - Debug impl missing fields
 
-# Style lints (436 total)
+# Style lints (388 total)
 uninlined_format_args = "allow"               # 302 - use format!("{x}") instead of format!("{}", x)
 redundant_closure_for_method_calls = "allow"  # 57 - use method reference instead of closure
-single_match_else = "allow"                   # 23 - use if let instead of match
 items_after_statements = "allow"              # 15 - items should be before statements
 unreadable_literal = "allow"                  # 14 - use underscores in large numbers
-explicit_iter_loop = "allow"                  # 10 - use for x in &collection
-enum_glob_use = "allow"                       # 8 - avoid use Enum::*
-manual_let_else = "allow"                     # 7 - use let else pattern
 
-# API Design lints (359 total)
+# API Design lints (316 total)
 must_use_candidate = "allow"                  # 221 - add #[must_use] to pure functions
 return_self_not_must_use = "allow"            # 95 - builder methods should have #[must_use]
-needless_pass_by_value = "allow"              # 19 - take reference instead of value
-unnecessary_wraps = "allow"                   # 15 - Result that never errors
-unnecessary_literal_bound = "allow"           # 6 - unnecessary lifetime bound
-ref_option = "allow"                          # 3 - use Option<&T> instead of &Option<T>
 
 # Complexity lints (23 total)
 too_many_lines = "allow"                      # 11 - function too long

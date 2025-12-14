@@ -112,7 +112,7 @@ use modkit_odata::{Error as ODataError, ODataQuery, Page, SortDir};
 use sea_orm::{ColumnTrait, ConnectionTrait, EntityTrait};
 
 use crate::odata::{paginate_with_odata, FieldMap, LimitCfg};
-use crate::secure::{ScopableEntity, ScopeError, SecureConn, SecurityCtx};
+use crate::secure::{ScopableEntity, SecureConn, SecurityCtx};
 
 /// Minimal fluent builder for Secure + OData pagination.
 ///
@@ -285,11 +285,7 @@ where
         F: Fn(E::Model) -> D + Copy,
     {
         // Apply security scope first - this enforces tenant isolation
-        let select = self
-            .db
-            .find::<E>(self.ctx)
-            .map_err(|e: ScopeError| ODataError::Db(format!("secure scope failed: {e}")))?
-            .into_inner();
+        let select = self.db.find::<E>(self.ctx).into_inner();
 
         // Now apply OData filters, cursor, order, and limits
         paginate_with_odata::<E, D, _, _>(

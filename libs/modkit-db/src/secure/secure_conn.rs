@@ -148,9 +148,8 @@ impl SecureConn {
     ///
     /// # Errors
     ///
-    /// Returns `ScopeError` if the scope cannot be applied to the entity.
     #[allow(clippy::unused_self)] // Keep fluent &SecureConn API even when method only delegates
-    pub fn find<E>(&self, ctx: &SecurityCtx) -> Result<SecureSelect<E, Scoped>, ScopeError>
+    pub fn find<E>(&self, ctx: &SecurityCtx) -> SecureSelect<E, Scoped>
     where
         E: ScopableEntity + EntityTrait,
         E::Column: ColumnTrait + Copy,
@@ -171,9 +170,6 @@ impl SecureConn {
     ///     .await?;
     /// ```
     ///
-    /// # Errors
-    ///
-    /// Returns `ScopeError` if the scope cannot be applied to the entity.
     pub fn find_by_id<E>(
         &self,
         ctx: &SecurityCtx,
@@ -183,7 +179,7 @@ impl SecureConn {
         E: ScopableEntity + EntityTrait,
         E::Column: ColumnTrait + Copy,
     {
-        self.find::<E>(ctx)?.and_id(id)
+        self.find::<E>(ctx).and_id(id)
     }
 
     /// Create a scoped update query for the given entity.
@@ -204,14 +200,8 @@ impl SecureConn {
     /// println!("Updated {} rows", result.rows_affected);
     /// ```
     ///
-    /// # Errors
-    ///
-    /// Returns `ScopeError` if the scope cannot be applied to the entity.
     #[allow(clippy::unused_self)] // Delegates but matches the rest of the connection API
-    pub fn update_many<E>(
-        &self,
-        ctx: &SecurityCtx,
-    ) -> Result<SecureUpdateMany<E, Scoped>, ScopeError>
+    pub fn update_many<E>(&self, ctx: &SecurityCtx) -> SecureUpdateMany<E, Scoped>
     where
         E: ScopableEntity + EntityTrait,
         E::Column: ColumnTrait + Copy,
@@ -234,14 +224,8 @@ impl SecureConn {
     /// println!("Deleted {} rows", result.rows_affected);
     /// ```
     ///
-    /// # Errors
-    ///
-    /// Returns `ScopeError` if the scope cannot be applied to the entity.
     #[allow(clippy::unused_self)] // Retain method-style ergonomics for callers of SecureConn
-    pub fn delete_many<E>(
-        &self,
-        ctx: &SecurityCtx,
-    ) -> Result<SecureDeleteMany<E, Scoped>, ScopeError>
+    pub fn delete_many<E>(&self, ctx: &SecurityCtx) -> SecureDeleteMany<E, Scoped>
     where
         E: ScopableEntity + EntityTrait,
         E::Column: ColumnTrait + Copy,
@@ -411,7 +395,7 @@ impl SecureConn {
         let result = E::delete_many()
             .filter(sea_orm::Condition::all().add(Expr::col(resource_col).eq(id)))
             .secure()
-            .scope_with(ctx.scope())?
+            .scope_with(ctx.scope())
             .exec(&self.conn)
             .await?;
 

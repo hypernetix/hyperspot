@@ -234,37 +234,36 @@ impl LockManager {
                 }
             }
 
-            match self.try_acquire_once(&namespaced_key).await? {
-                Some(guard) => return Ok(Some(guard)),
-                None => {
-                    // Sleep with jitter, capped by remaining time if any.
-                    let remaining = config
-                        .max_wait
-                        .map_or(backoff, |mw| mw.saturating_sub(start.elapsed()));
-
-                    if remaining.is_zero() {
-                        return Ok(None);
-                    }
-
-                    #[allow(clippy::cast_precision_loss)]
-                    let jitter_factor = {
-                        let pct = f64::from(config.jitter_pct.clamp(0.0, 1.0));
-                        let lo = 1.0 - pct;
-                        let hi = 1.0 + pct;
-                        // Deterministic jitter from key hash (no rand dep).
-                        let h = xxh3_64(namespaced_key.as_bytes()) as f64;
-                        let frac = h / u64::MAX as f64; // 0..1
-                        lo + frac * (hi - lo)
-                    };
-
-                    let sleep_for = std::cmp::min(backoff, remaining);
-                    tokio::time::sleep(sleep_for.mul_f64(jitter_factor)).await;
-
-                    // Exponential backoff
-                    let next = backoff.mul_f64(config.backoff_multiplier);
-                    backoff = std::cmp::min(next, config.max_backoff);
-                }
+            if let Some(guard) = self.try_acquire_once(&namespaced_key).await? {
+                return Ok(Some(guard));
             }
+
+            // Sleep with jitter, capped by remaining time if any.
+            let remaining = config
+                .max_wait
+                .map_or(backoff, |mw| mw.saturating_sub(start.elapsed()));
+
+            if remaining.is_zero() {
+                return Ok(None);
+            }
+
+            #[allow(clippy::cast_precision_loss)]
+            let jitter_factor = {
+                let pct = f64::from(config.jitter_pct.clamp(0.0, 1.0));
+                let lo = 1.0 - pct;
+                let hi = 1.0 + pct;
+                // Deterministic jitter from key hash (no rand dep).
+                let h = xxh3_64(namespaced_key.as_bytes()) as f64;
+                let frac = h / u64::MAX as f64; // 0..1
+                lo + frac * (hi - lo)
+            };
+
+            let sleep_for = std::cmp::min(backoff, remaining);
+            tokio::time::sleep(sleep_for.mul_f64(jitter_factor)).await;
+
+            // Exponential backoff
+            let next = backoff.mul_f64(config.backoff_multiplier);
+            backoff = std::cmp::min(next, config.max_backoff);
         }
     }
 
@@ -387,7 +386,7 @@ impl LockManager {
     }
 
     async fn lock_file(&self, namespaced_key: &str) -> Result<DbLockGuard, DbLockError> {
-        let path = self.get_lock_file_path(namespaced_key)?;
+        let path = self.get_lock_file_path(namespaced_key);
         if let Some(parent) = path.parent() {
             tokio::fs::create_dir_all(parent).await?;
         }
@@ -435,7 +434,7 @@ impl LockManager {
         &self,
         namespaced_key: &str,
     ) -> Result<Option<DbLockGuard>, DbLockError> {
-        let path = self.get_lock_file_path(namespaced_key)?;
+        let path = self.get_lock_file_path(namespaced_key);
         if let Some(parent) = path.parent() {
             tokio::fs::create_dir_all(parent).await?;
         }
@@ -496,7 +495,7 @@ impl LockManager {
     }
 
     /// Generate lock file path for SQLite (or when using file-based locks).
-    fn get_lock_file_path(&self, namespaced_key: &str) -> Result<PathBuf, DbLockError> {
+    fn get_lock_file_path(&self, namespaced_key: &str) -> PathBuf {
         // For ephemeral DSNs (like `memdb`) or tests, use temp dir to avoid global pollution.
         let base_dir = if self.dsn.contains("memdb") || cfg!(test) {
             std::env::temp_dir().join("hyperspot_test_locks")
@@ -508,7 +507,7 @@ impl LockManager {
 
         let dsn_hash = format!("{:x}", xxh3_64(self.dsn.as_bytes()));
         let key_hash = format!("{:x}", xxh3_64(namespaced_key.as_bytes()));
-        Ok(base_dir.join(dsn_hash).join(format!("{key_hash}.lock")))
+        base_dir.join(dsn_hash).join(format!("{key_hash}.lock"))
     }
 }
 

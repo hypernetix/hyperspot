@@ -9,6 +9,9 @@ use testcontainers::{runners::AsyncRunner, ImageExt};
 
 /// Returns a test data directory under target/test_data/modkit-db/
 /// Creates the directory if it doesn't exist.
+///
+/// # Panics
+/// Panics if the parent directories cannot be resolved or the directory cannot be created.
 pub fn test_data_dir() -> PathBuf {
     let project_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .parent()
@@ -31,11 +34,11 @@ pub struct DbUnderTest {
 }
 
 #[cfg(feature = "sqlite")]
-pub fn bring_up_sqlite() -> Result<DbUnderTest> {
-    Ok(DbUnderTest {
+pub fn bring_up_sqlite() -> DbUnderTest {
+    DbUnderTest {
         url: "sqlite::memory:".into(),
         _cleanup: None,
-    })
+    }
 }
 
 #[cfg(feature = "pg")]

@@ -225,7 +225,7 @@ pub fn init_logging_unified(cfg: &LoggingConfig, base_dir: &Path, otel_layer: Op
         },
     );
 
-    install_subscriber(console_targets, file_targets, file_router, otel_layer);
+    install_subscriber(&console_targets, &file_targets, file_router, otel_layer);
 }
 
 // ================= generic targets builder =================
@@ -235,6 +235,7 @@ use tracing_subscriber::filter::Targets;
 
 /// Different "sinks" (destinations) for which we build Targets.
 /// Only differences: which level field we read, whether the sink is active, and default fallback.
+#[derive(Clone, Copy)]
 enum SinkKind {
     Console,
     File { has_default_file: bool },
@@ -349,20 +350,19 @@ fn create_default_file_writer(section: &Section, base_dir: &Path) -> Option<RotW
     let max_bytes = section.max_size_bytes();
     let log_path = resolve_log_path(&section.file, base_dir);
 
-    match create_rotating_writer_at_path(
+    if let Ok(writer) = create_rotating_writer_at_path(
         &log_path,
         max_bytes,
         section.max_age_days,
         section.max_backups,
     ) {
-        Ok(writer) => Some(writer),
-        Err(_) => {
-            eprintln!(
-                "Failed to initialize default log file '{}'",
-                log_path.to_string_lossy()
-            );
-            None
-        }
+        Some(writer)
+    } else {
+        eprintln!(
+            "Failed to initialize default log file '{}'",
+            log_path.to_string_lossy()
+        );
+        None
     }
 }
 
@@ -400,8 +400,8 @@ fn create_crate_file_writer(
 // ================= registry & layers =================
 
 fn install_subscriber(
-    console_targets: tracing_subscriber::filter::Targets,
-    file_targets: tracing_subscriber::filter::Targets,
+    console_targets: &tracing_subscriber::filter::Targets,
+    file_targets: &tracing_subscriber::filter::Targets,
     file_router: MultiFileRouter,
     #[cfg_attr(not(feature = "otel"), allow(unused_variables))] otel_layer: Option<OtelLayer>,
 ) {
@@ -436,7 +436,7 @@ fn install_subscriber(
                 .with_level(true)
                 .with_timer(fmt::time::UtcTime::rfc_3339())
                 .with_writer(file_router)
-                .with_filter(file_targets),
+                .with_filter(file_targets.clone()),
         )
     };
 

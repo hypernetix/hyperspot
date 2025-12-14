@@ -309,13 +309,10 @@ impl GrpcHub {
     ) -> anyhow::Result<()> {
         Self::validate_unique_services(&data.modules)?;
 
-        let routes = match Self::build_routes_from_modules(&data.modules) {
-            Some(r) => r,
-            None => {
-                ready.notify();
-                cancel.cancelled().await;
-                return Ok(());
-            }
+        let Some(routes) = Self::build_routes_from_modules(&data.modules) else {
+            ready.notify();
+            cancel.cancelled().await;
+            return Ok(());
         };
 
         let listen_cfg = self.listen_cfg.read().clone();

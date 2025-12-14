@@ -61,6 +61,9 @@ pub fn ctx_root() -> SecurityCtx {
 /// Create a fresh in-memory SQLite database with migrations applied.
 ///
 /// Each call creates a new isolated database for testing.
+///
+/// # Panics
+/// Panics if the database connection or migrations fail.
 pub async fn inmem_db() -> DatabaseConnection {
     let db = Database::connect("sqlite::memory:")
         .await
@@ -92,6 +95,9 @@ pub async fn inmem_secure_db() -> SecureConn {
 /// This function requires access to the raw DatabaseConnection for test seeding.
 /// Use `inmem_db()` to get the connection, then wrap it with `SecureConn::new()`
 /// after seeding is complete.
+///
+/// # Panics
+/// Panics if the database insert fails.
 pub async fn seed_user(
     db: &DatabaseConnection,
     id: Uuid,

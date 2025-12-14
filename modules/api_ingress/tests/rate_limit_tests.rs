@@ -32,13 +32,13 @@ impl ConfigProvider for TestConfigProvider {
     }
 }
 
-fn wrap_config(config: serde_json::Value) -> serde_json::Value {
+fn wrap_config(config: &serde_json::Value) -> serde_json::Value {
     serde_json::json!({
         "config": config
     })
 }
 
-fn create_test_module_ctx_with_config(config: serde_json::Value) -> ModuleCtx {
+fn create_test_module_ctx_with_config(config: &serde_json::Value) -> ModuleCtx {
     let wrapped_config = wrap_config(config);
     ModuleCtx::new(
         "api_ingress",
@@ -150,7 +150,7 @@ async fn test_rate_limit_enforcement() {
     });
 
     let api_ingress = api_ingress::ApiIngress::default();
-    let ctx = create_test_module_ctx_with_config(config);
+    let ctx = create_test_module_ctx_with_config(&config);
     api_ingress.init(&ctx).await.expect("Failed to init");
 
     let module = RateLimitedModule;
@@ -177,7 +177,7 @@ async fn test_openapi_includes_rate_limit_extensions() {
     });
 
     let api_ingress = api_ingress::ApiIngress::default();
-    let ctx = create_test_module_ctx_with_config(config);
+    let ctx = create_test_module_ctx_with_config(&config);
     api_ingress.init(&ctx).await.expect("Failed to init");
 
     let module = RateLimitedModule;

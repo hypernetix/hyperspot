@@ -41,7 +41,9 @@ struct ErrorBody<'a> {
 
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
-        use AppError::*;
+        use AppError::{
+            BadRequest, Conflict, Forbidden, Internal, NotFound, TooManyRequests, Unauthorized,
+        };
 
         // Extract request_id from current span context if available
         // Note: In real handlers we will get request_id from extensions

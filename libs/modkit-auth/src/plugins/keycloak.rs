@@ -96,7 +96,7 @@ impl KeycloakClaimsPlugin {
 }
 
 impl ClaimsPlugin for KeycloakClaimsPlugin {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "keycloak"
     }
 

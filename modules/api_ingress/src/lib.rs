@@ -14,7 +14,6 @@ use std::net::SocketAddr;
 use std::time::Duration;
 use tokio_util::sync::CancellationToken;
 use tower_http::{
-    cors::CorsLayer,
     limit::RequestBodyLimitLayer,
     request_id::{PropagateRequestIdLayer, SetRequestIdLayer},
     timeout::TimeoutLayer,
@@ -119,7 +118,7 @@ impl ApiIngress {
         public_routes.insert((Method::GET, "/docs".to_string()));
         public_routes.insert((Method::GET, "/openapi.json".to_string()));
 
-        for spec in self.openapi_registry.operation_specs.iter() {
+        for spec in &self.openapi_registry.operation_specs {
             let spec = spec.value();
             let route_key = (spec.method.clone(), spec.path.clone());
 
@@ -247,11 +246,7 @@ impl ApiIngress {
 
         // 7. CORS layer (if enabled). Place after BodyLimit so preflight returns early.
         if config.cors_enabled {
-            if let Some(layer) = crate::cors::build_cors_layer(&config) {
-                router = router.layer(layer);
-            } else {
-                router = router.layer(CorsLayer::permissive());
-            }
+            router = router.layer(crate::cors::build_cors_layer(&config));
         }
 
         // 8. MIME type validation (after CORS, before rate limiting)

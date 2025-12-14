@@ -12,7 +12,7 @@ pub fn register_routes(
     mut router: Router,
     openapi: &dyn OpenApiRegistry,
     service: Arc<Service>,
-) -> anyhow::Result<Router> {
+) -> Router {
     // GET /nodes - List all nodes
     router = OperationBuilder::<Missing, Missing, ()>::get("/nodes")
         .operation_id("nodes_registry.list_nodes")
@@ -79,5 +79,5 @@ pub fn register_routes(
     // Attach service to router as extension
     router = router.layer(Extension(service));
 
-    Ok(router)
+    router
 }

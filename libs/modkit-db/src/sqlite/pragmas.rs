@@ -112,23 +112,21 @@ impl Pragmas {
 
     /// Parse journal_mode PRAGMA value.
     fn parse_journal_mode(value: &str) -> Option<JournalMode> {
-        match JournalMode::from_str(value) {
-            Some(mode) => Some(mode),
-            None => {
-                tracing::warn!("Invalid 'journal_mode' PRAGMA value '{}', ignoring", value);
-                None
-            }
+        if let Some(mode) = JournalMode::from_str(value) {
+            Some(mode)
+        } else {
+            tracing::warn!("Invalid 'journal_mode' PRAGMA value '{}', ignoring", value);
+            None
         }
     }
 
     /// Parse synchronous PRAGMA value.
     fn parse_synchronous(value: &str) -> Option<SyncMode> {
-        match SyncMode::from_str(value) {
-            Some(mode) => Some(mode),
-            None => {
-                tracing::warn!("Invalid 'synchronous' PRAGMA value '{}', ignoring", value);
-                None
-            }
+        if let Some(mode) = SyncMode::from_str(value) {
+            Some(mode)
+        } else {
+            tracing::warn!("Invalid 'synchronous' PRAGMA value '{}', ignoring", value);
+            None
         }
     }
 

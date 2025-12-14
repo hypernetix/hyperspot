@@ -187,40 +187,38 @@ fn extract_inlines_from_paragraph(
     let mut current_style = InlineStyle::default();
 
     for content in &paragraph.content {
-        match content {
-            docx_rust::document::ParagraphContent::Run(run) => {
-                let run_style = extract_style_from_run(run);
+        // TODO: Handle hyperlinks when docx-rust supports them
+        // For now, hyperlinks are not in the ParagraphContent enum
+        let docx_rust::document::ParagraphContent::Run(run) = content else {
+            // Handle other paragraph content types as needed
+            continue;
+        };
 
-                for run_content in &run.content {
-                    match run_content {
-                        docx_rust::document::RunContent::Text(text_elem) => {
-                            // If style changed, flush current text
-                            if run_style != current_style && !current_text.is_empty() {
-                                inlines.push(Inline::Text {
-                                    text: std::mem::take(&mut current_text),
-                                    style: current_style.clone(),
-                                });
-                            }
+        let run_style = extract_style_from_run(run);
 
-                            current_style = run_style.clone();
-                            current_text.push_str(&text_elem.text);
-                        }
-                        docx_rust::document::RunContent::Tab(_) => {
-                            current_text.push('\t');
-                        }
-                        docx_rust::document::RunContent::Break(_) => {
-                            current_text.push('\n');
-                        }
-                        _ => {
-                            // Handle other run content types as needed
-                        }
+        for run_content in &run.content {
+            match run_content {
+                docx_rust::document::RunContent::Text(text_elem) => {
+                    // If style changed, flush current text
+                    if run_style != current_style && !current_text.is_empty() {
+                        inlines.push(Inline::Text {
+                            text: std::mem::take(&mut current_text),
+                            style: current_style.clone(),
+                        });
                     }
+
+                    current_style = run_style.clone();
+                    current_text.push_str(&text_elem.text);
                 }
-            }
-            // TODO: Handle hyperlinks when docx-rust supports them
-            // For now, hyperlinks are not in the ParagraphContent enum
-            _ => {
-                // Handle other paragraph content types as needed
+                docx_rust::document::RunContent::Tab(_) => {
+                    current_text.push('\t');
+                }
+                docx_rust::document::RunContent::Break(_) => {
+                    current_text.push('\n');
+                }
+                _ => {
+                    // Handle other run content types as needed
+                }
             }
         }
     }
@@ -278,7 +276,7 @@ fn extract_table_block(table: &docx_rust::document::Table) -> ParsedBlock {
     let mut rows = Vec::new();
     let mut total_cells = 0;
 
-    for row in table.rows.iter() {
+    for row in &table.rows {
         // Check if this is a header row
         // OnOffOnlyType::On indicates a header row
         let is_header = match &row.property.table_header {

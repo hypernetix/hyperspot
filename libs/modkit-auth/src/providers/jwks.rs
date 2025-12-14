@@ -65,6 +65,9 @@ struct RefreshState {
 
 impl JwksKeyProvider {
     /// Create a new JWKS key provider
+    ///
+    /// # Panics
+    /// Panics if the HTTP client fails to build (should not happen with default settings).
     pub fn new(jwks_uri: impl Into<String>) -> Self {
         Self {
             jwks_uri: jwks_uri.into(),
@@ -203,7 +206,7 @@ impl JwksKeyProvider {
         if let Some(last_on_demand) = state.last_on_demand_refresh {
             let elapsed = last_on_demand.elapsed();
             if elapsed < self.on_demand_refresh_cooldown {
-                let remaining = self.on_demand_refresh_cooldown - elapsed;
+                let remaining = self.on_demand_refresh_cooldown.saturating_sub(elapsed);
                 tracing::debug!(
                     kid = kid,
                     remaining_secs = remaining.as_secs(),
@@ -308,7 +311,7 @@ impl JwksKeyProvider {
 
 #[async_trait]
 impl KeyProvider for JwksKeyProvider {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "jwks"
     }
 
@@ -326,16 +329,15 @@ impl KeyProvider for JwksKeyProvider {
             .ok_or_else(|| ClaimsError::DecodeFailed("Missing kid in JWT header".into()))?;
 
         // Try to get key from cache
-        let key = match self.get_key(kid) {
-            Some(k) => k,
-            None => {
-                // Key not in cache, try on-demand refresh
-                self.on_demand_refresh(kid).await?;
+        let key = if let Some(k) = self.get_key(kid) {
+            k
+        } else {
+            // Key not in cache, try on-demand refresh
+            self.on_demand_refresh(kid).await?;
 
-                // Try again after refresh
-                self.get_key(kid)
-                    .ok_or_else(|| ClaimsError::UnknownKeyId(kid.clone()))?
-            }
+            // Try again after refresh
+            self.get_key(kid)
+                .ok_or_else(|| ClaimsError::UnknownKeyId(kid.clone()))?
         };
 
         // Validate signature and decode claims

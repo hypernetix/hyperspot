@@ -192,14 +192,13 @@ impl AppConfig {
     /// Load configuration from file or create with default values.
     /// Also normalizes `server.home_dir` into an absolute path and creates the directory.
     pub fn load_or_default<P: AsRef<Path>>(config_path: Option<P>) -> Result<Self> {
-        match config_path {
-            Some(path) => Self::load_layered(path),
-            None => {
-                let mut c = Self::default();
-                normalize_home_dir_inplace(&mut c.server)
-                    .context("Failed to resolve server.home_dir (defaults)")?;
-                Ok(c)
-            }
+        if let Some(path) = config_path {
+            Self::load_layered(path)
+        } else {
+            let mut c = Self::default();
+            normalize_home_dir_inplace(&mut c.server)
+                .context("Failed to resolve server.home_dir (defaults)")?;
+            Ok(c)
         }
     }
 
@@ -996,23 +995,19 @@ pub fn build_final_db_for_module(
     home_dir: &Path,
 ) -> DbConfigResult {
     // Parse module entry from raw JSON
-    let module_raw = match app.modules.get(module_name) {
-        Some(raw) => raw,
-        None => return Ok(None), // No module config
+    let Some(module_raw) = app.modules.get(module_name) else {
+        return Ok(None); // No module config
     };
 
     let module_entry: ModuleConfig = serde_json::from_value(module_raw.clone())
         .with_context(|| format!("Invalid module config structure for '{}'", module_name))?;
 
-    let module_db_config = match module_entry.database {
-        Some(config) => config,
-        None => {
-            tracing::warn!(
-                "Module '{}' has no database configuration; DB capability disabled",
-                module_name
-            );
-            return Ok(None);
-        }
+    let Some(module_db_config) = module_entry.database else {
+        tracing::warn!(
+            "Module '{}' has no database configuration; DB capability disabled",
+            module_name
+        );
+        return Ok(None);
     };
 
     // Global database config
@@ -1352,7 +1347,7 @@ logging:
     fn add_module_to_app(
         app: &mut AppConfig,
         module_name: &str,
-        database_config: serde_json::Value,
+        database_config: &serde_json::Value,
     ) {
         app.modules.insert(
             module_name.to_string(),
@@ -1382,7 +1377,7 @@ logging:
         add_module_to_app(
             &mut app,
             "test_module",
-            serde_json::json!({
+            &serde_json::json!({
                 "server": "test_server"
             }),
         );
@@ -1416,7 +1411,7 @@ logging:
         add_module_to_app(
             &mut app,
             "test_module",
-            serde_json::json!({
+            &serde_json::json!({
                 "server": "test_server"
             }),
         );
@@ -1516,7 +1511,7 @@ logging:
         add_module_to_app(
             &mut app,
             "test_module",
-            serde_json::json!({
+            &serde_json::json!({
                 "server": "test_server",
                 "port": 5434  // Module field should override global field
             }),
@@ -1561,7 +1556,7 @@ logging:
         add_module_to_app(
             &mut app,
             "test_module",
-            serde_json::json!({
+            &serde_json::json!({
                 "server": "test_server"
             }),
         );
@@ -1596,7 +1591,7 @@ logging:
         add_module_to_app(
             &mut app,
             "test_module",
-            serde_json::json!({
+            &serde_json::json!({
                 "server": "test_server"
             }),
         );
@@ -1719,8 +1714,8 @@ logging:
         let (dsn, _) = result.unwrap();
 
         // On Windows, paths should be normalized to forward slashes in DSN
-        assert!(!dsn.contains("\\"));
-        assert!(dsn.contains("/"));
+        assert!(!dsn.contains('\\'));
+        assert!(dsn.contains('/'));
     }
 
     #[test]
@@ -1843,7 +1838,7 @@ logging:
         add_module_to_app(
             &mut app,
             "test_module",
-            serde_json::json!({
+            &serde_json::json!({
                 "server": "test_server"
             }),
         );
@@ -1980,7 +1975,7 @@ logging:
         add_module_to_app(
             &mut app,
             "test_module",
-            serde_json::json!({
+            &serde_json::json!({
                 "server": "test_server"
             }),
         );
@@ -2145,7 +2140,7 @@ logging:
         add_module_to_app(
             &mut app,
             "test_module",
-            serde_json::json!({
+            &serde_json::json!({
                 "server": "test_server"
             }),
         );
@@ -2194,7 +2189,7 @@ logging:
         add_module_to_app(
             &mut app,
             "test_module",
-            serde_json::json!({
+            &serde_json::json!({
                 "server": "test_server"
             }),
         );
@@ -2236,7 +2231,7 @@ logging:
         add_module_to_app(
             &mut app,
             "test_module",
-            serde_json::json!({
+            &serde_json::json!({
                 "server": "test_server"
             }),
         );
@@ -2283,7 +2278,7 @@ logging:
         add_module_to_app(
             &mut app,
             "test_module",
-            serde_json::json!({
+            &serde_json::json!({
                 "server": "test_server",
                 "pool": {
                     "max_conns": 20
@@ -2328,7 +2323,7 @@ logging:
         add_module_to_app(
             &mut app,
             "test_module",
-            serde_json::json!({
+            &serde_json::json!({
                 "server": "test_server",
                 "pool": {
                     "max_conns": 30,

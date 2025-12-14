@@ -31,14 +31,14 @@ impl ConfigProvider for TestConfigProvider {
     }
 }
 
-fn wrap_config(config: serde_json::Value) -> serde_json::Value {
+fn wrap_config(config: &serde_json::Value) -> serde_json::Value {
     serde_json::json!({
         "config": config
     })
 }
 
 fn create_test_module_ctx_with_cors() -> ModuleCtx {
-    let config = wrap_config(serde_json::json!({
+    let config = wrap_config(&serde_json::json!({
         "bind_addr": "127.0.0.1:0",
         "cors_enabled": true,
         "cors": {
@@ -62,7 +62,7 @@ fn create_test_module_ctx_with_cors() -> ModuleCtx {
 }
 
 fn create_test_module_ctx_permissive_cors() -> ModuleCtx {
-    let config = wrap_config(serde_json::json!({
+    let config = wrap_config(&serde_json::json!({
         "bind_addr": "127.0.0.1:0",
         "cors_enabled": true,
         "auth_disabled": true
@@ -176,7 +176,7 @@ async fn test_cors_permissive_mode() {
 
 #[tokio::test]
 async fn test_cors_disabled() {
-    let config = wrap_config(serde_json::json!({
+    let config = wrap_config(&serde_json::json!({
         "bind_addr": "127.0.0.1:0",
         "cors_enabled": false,
         "auth_disabled": true
@@ -210,7 +210,7 @@ async fn test_cors_disabled() {
 #[tokio::test]
 async fn test_cors_config_validation() {
     // Test that CORS config is properly loaded
-    let config = wrap_config(serde_json::json!({
+    let config = wrap_config(&serde_json::json!({
         "bind_addr": "127.0.0.1:0",
         "cors_enabled": true,
         "cors": {

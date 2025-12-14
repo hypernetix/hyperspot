@@ -115,7 +115,7 @@ where
 
             // Complexity budget (node count)
             fn count_nodes(e: &od::Expr) -> usize {
-                use od::Expr::*;
+                use od::Expr::{And, Compare, Function, Identifier, In, Not, Or, Value};
                 match e {
                     Value(_) | Identifier(_) => 1,
                     Not(x) => 1 + count_nodes(x),

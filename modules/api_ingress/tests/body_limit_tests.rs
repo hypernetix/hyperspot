@@ -30,14 +30,14 @@ impl ConfigProvider for TestConfigProvider {
     }
 }
 
-fn wrap_config(config: serde_json::Value) -> serde_json::Value {
+fn wrap_config(config: &serde_json::Value) -> serde_json::Value {
     serde_json::json!({
         "config": config
     })
 }
 
 fn create_test_module_ctx_with_body_limit(limit_bytes: usize) -> ModuleCtx {
-    let config = wrap_config(serde_json::json!({
+    let config = wrap_config(&serde_json::json!({
         "bind_addr": "127.0.0.1:0",
         "cors_enabled": true,
         "auth_disabled": true,
@@ -159,7 +159,7 @@ async fn test_body_limit_with_cors() {
 
 #[tokio::test]
 async fn test_default_body_limit() {
-    let config = wrap_config(serde_json::json!({
+    let config = wrap_config(&serde_json::json!({
         "bind_addr": "127.0.0.1:0",
         "auth_disabled": true
     }));
