@@ -104,19 +104,19 @@ impl SysCapCollector {
         let mut capabilities = Vec::new();
 
         // Collect hardware capabilities using sysinfo data
-        capabilities.extend(Self::collect_hardware_caps(&sysinfo)?);
+        capabilities.extend(Self::collect_hardware_caps(&sysinfo));
 
         // Collect OS capabilities using sysinfo data
-        capabilities.extend(Self::collect_os_caps(&sysinfo)?);
+        capabilities.extend(Self::collect_os_caps(&sysinfo));
 
         // Collect GPU capabilities using sysinfo data
-        capabilities.extend(Self::collect_gpu_caps(&sysinfo)?);
+        capabilities.extend(Self::collect_gpu_caps(&sysinfo));
 
         // Collect battery capabilities using sysinfo data
-        capabilities.extend(Self::collect_battery_caps(&sysinfo)?);
+        capabilities.extend(Self::collect_battery_caps(&sysinfo));
 
         // Collect software capabilities
-        capabilities.extend(Self::collect_software_caps()?);
+        capabilities.extend(Self::collect_software_caps());
 
         Ok(NodeSysCap {
             node_id,
@@ -125,7 +125,7 @@ impl SysCapCollector {
         })
     }
 
-    fn collect_hardware_caps(sysinfo: &NodeSysInfo) -> Result<Vec<SysCap>, NodeInfoError> {
+    fn collect_hardware_caps(sysinfo: &NodeSysInfo) -> Vec<SysCap> {
         let mut caps = Vec::new();
 
         // Architecture detection from sysinfo
@@ -134,7 +134,7 @@ impl SysCapCollector {
             SysCapBuilder::new(
                 format!("hardware:{}", arch),
                 "hardware".to_string(),
-                arch.to_string(),
+                arch.clone(),
                 arch.to_uppercase(),
             )
             .details(Some(format!("{} architecture detected", arch)))
@@ -170,7 +170,7 @@ impl SysCapCollector {
                 "CPU".to_string(),
             )
             .version(Some(sysinfo.cpu.model.clone()))
-            .amount(Some(sysinfo.cpu.cores as f64))
+            .amount(Some(f64::from(sysinfo.cpu.cores)))
             .amount_dimension(Some("cores".to_string()))
             .details(Some(format!(
                 "{} with {} cores @ {:.0} MHz",
@@ -180,10 +180,10 @@ impl SysCapCollector {
             .build(),
         );
 
-        Ok(caps)
+        caps
     }
 
-    fn collect_os_caps(sysinfo: &NodeSysInfo) -> Result<Vec<SysCap>, NodeInfoError> {
+    fn collect_os_caps(sysinfo: &NodeSysInfo) -> Vec<SysCap> {
         let mut caps = Vec::new();
 
         let os = std::env::consts::OS;
@@ -209,10 +209,10 @@ impl SysCapCollector {
             .build(),
         );
 
-        Ok(caps)
+        caps
     }
 
-    fn collect_gpu_caps(sysinfo: &NodeSysInfo) -> Result<Vec<SysCap>, NodeInfoError> {
+    fn collect_gpu_caps(sysinfo: &NodeSysInfo) -> Vec<SysCap> {
         let mut caps = Vec::new();
 
         for (i, gpu) in sysinfo.gpus.iter().enumerate() {
@@ -224,24 +224,19 @@ impl SysCapCollector {
 
             let mut details = format!("Model: {}", gpu.model);
             if let Some(vram) = gpu.total_memory_mb {
-                details.push_str(&format!(", VRAM: {:.0} MB", vram));
+                use std::fmt::Write;
+                let _ = write!(details, ", VRAM: {:.0} MB", vram);
             }
             if let Some(cores) = gpu.cores {
-                details.push_str(&format!(", Cores: {}", cores));
+                use std::fmt::Write;
+                let _ = write!(details, ", Cores: {}", cores);
             }
 
             caps.push(
                 SysCapBuilder::new(
                     gpu_key,
                     "hardware".to_string(),
-                    format!(
-                        "gpu{}",
-                        if i == 0 {
-                            "".to_string()
-                        } else {
-                            i.to_string()
-                        }
-                    ),
+                    format!("gpu{}", if i == 0 { String::new() } else { i.to_string() }),
                     "GPU".to_string(),
                 )
                 .version(Some(gpu.model.clone()))
@@ -257,10 +252,10 @@ impl SysCapCollector {
             );
         }
 
-        Ok(caps)
+        caps
     }
 
-    fn collect_battery_caps(sysinfo: &NodeSysInfo) -> Result<Vec<SysCap>, NodeInfoError> {
+    fn collect_battery_caps(sysinfo: &NodeSysInfo) -> Vec<SysCap> {
         let mut caps = Vec::new();
 
         if let Some(battery) = &sysinfo.battery {
@@ -277,7 +272,7 @@ impl SysCapCollector {
                     "battery".to_string(),
                     "Battery".to_string(),
                 )
-                .amount(Some(battery.percentage as f64))
+                .amount(Some(f64::from(battery.percentage)))
                 .amount_dimension(Some("percent".to_string()))
                 .details(Some(format!(
                     "Status: {}, Level: {}%",
@@ -288,13 +283,13 @@ impl SysCapCollector {
             );
         }
 
-        Ok(caps)
+        caps
     }
 
-    fn collect_software_caps() -> Result<Vec<SysCap>, NodeInfoError> {
+    fn collect_software_caps() -> Vec<SysCap> {
         // Software capability detection can be extended here
         // For now, return empty list
-        Ok(Vec::new())
+        Vec::new()
     }
 }
 

@@ -10,7 +10,11 @@ use modkit_errors::problem::Problem;
 
 impl From<Error> for Problem {
     fn from(err: Error) -> Self {
-        use Error::*;
+        use Error::{
+            CursorInvalidBase64, CursorInvalidDirection, CursorInvalidFields, CursorInvalidJson,
+            CursorInvalidKeys, CursorInvalidVersion, Db, FilterMismatch, InvalidCursor,
+            InvalidFilter, InvalidLimit, InvalidOrderByField, OrderMismatch, OrderWithCursor,
+        };
 
         match err {
             // Filter parsing errors → 422

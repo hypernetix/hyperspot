@@ -74,14 +74,12 @@ where
     /// - Resources only → filter by resource IDs
     /// - Both → AND them together
     ///
-    /// # Errors
-    /// Returns `ScopeError` if the scope cannot be applied (rarely happens).
-    pub fn scope_with(self, scope: &AccessScope) -> Result<SecureSelect<E, Scoped>, ScopeError> {
-        let cond = build_scope_condition::<E>(scope)?;
-        Ok(SecureSelect {
+    pub fn scope_with(self, scope: &AccessScope) -> SecureSelect<E, Scoped> {
+        let cond = build_scope_condition::<E>(scope);
+        SecureSelect {
             inner: self.inner.filter(cond),
             _state: PhantomData,
-        })
+        }
     }
 }
 
@@ -277,7 +275,9 @@ mod tests {
     fn test_typestate_markers_exist() {
         // This test verifies the typestate markers compile
         // The actual enforcement happens at compile time
-        let _unscoped: std::marker::PhantomData<Unscoped> = std::marker::PhantomData;
-        let _scoped: std::marker::PhantomData<Scoped> = std::marker::PhantomData;
+        let unscoped: std::marker::PhantomData<Unscoped> = std::marker::PhantomData;
+        let scoped: std::marker::PhantomData<Scoped> = std::marker::PhantomData;
+        // Use the variables to avoid unused warnings
+        let _ = (unscoped, scoped);
     }
 }

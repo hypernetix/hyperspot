@@ -448,7 +448,9 @@ mod convert_odata_params {
 
     impl From<od::CompareOperator> for CompareOperator {
         fn from(op: od::CompareOperator) -> Self {
-            use od::CompareOperator::*;
+            use od::CompareOperator::{
+                Equal, GreaterOrEqual, GreaterThan, LessOrEqual, LessThan, NotEqual,
+            };
             match op {
                 Equal => CompareOperator::Eq,
                 NotEqual => CompareOperator::Ne,
@@ -477,7 +479,7 @@ mod convert_odata_params {
 
     impl From<od::Expr> for Expr {
         fn from(e: od::Expr) -> Self {
-            use od::Expr::*;
+            use od::Expr::{And, Compare, Function, Identifier, In, Not, Or, Value};
             match e {
                 And(a, b) => Expr::And(Box::new((*a).into()), Box::new((*b).into())),
                 Or(a, b) => Expr::Or(Box::new((*a).into()), Box::new((*b).into())),

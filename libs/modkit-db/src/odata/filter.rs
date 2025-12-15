@@ -442,9 +442,10 @@ fn validate_value_type<F: FilterField>(field: F, value: &odata_ast::Value) -> Fi
     let matches = matches!(
         (kind, value),
         (FieldKind::String, V::String(_))
-            | (FieldKind::I64, V::Number(_))
-            | (FieldKind::F64, V::Number(_))
-            | (FieldKind::Decimal, V::Number(_))
+            | (
+                FieldKind::I64 | FieldKind::F64 | FieldKind::Decimal,
+                V::Number(_)
+            )
             | (FieldKind::Bool, V::Bool(_))
             | (FieldKind::Uuid, V::Uuid(_))
             | (FieldKind::DateTimeUtc, V::DateTime(_))

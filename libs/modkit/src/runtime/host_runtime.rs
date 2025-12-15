@@ -97,7 +97,7 @@ impl HostRuntime {
     /// SYSTEM WIRING phase: wire runtime internals into system modules.
     ///
     /// This phase runs before init and only for modules with the "system" capability.
-    pub async fn wire_system(&self) -> Result<(), RegistryError> {
+    pub fn wire_system(&self) -> Result<(), RegistryError> {
         tracing::info!("Phase: system_wire");
 
         let sys_ctx = SystemContext::new(
@@ -500,9 +500,8 @@ impl HostRuntime {
             .iter()
             .find_map(|e| e.grpc_hub.as_ref());
 
-        let hub = match grpc_hub {
-            Some(h) => h,
-            None => return None, // No grpc_hub registered
+        let Some(hub) = grpc_hub else {
+            return None; // No grpc_hub registered
         };
 
         let start = std::time::Instant::now();
@@ -531,7 +530,7 @@ impl HostRuntime {
     /// This is the main entry point for orchestrating the complete module lifecycle.
     pub async fn run_module_phases(self) -> anyhow::Result<()> {
         // 1. System wiring phase (before init, only for system modules)
-        self.wire_system().await?;
+        self.wire_system()?;
 
         // 2. DB migration phase (system modules first)
         self.run_db_phase().await?;
@@ -589,7 +588,7 @@ mod tests {
     }
 
     impl StopOrderTracker {
-        fn new(counter: Arc<AtomicUsize>, stop_order: Arc<AtomicUsize>) -> Self {
+        fn new(counter: &Arc<AtomicUsize>, stop_order: Arc<AtomicUsize>) -> Self {
             let my_order = counter.fetch_add(1, Ordering::SeqCst);
             Self {
                 my_order,
@@ -629,9 +628,9 @@ mod tests {
         let counter = Arc::new(AtomicUsize::new(0));
         let stop_order = Arc::new(AtomicUsize::new(0));
 
-        let module_a = Arc::new(StopOrderTracker::new(counter.clone(), stop_order.clone()));
-        let module_b = Arc::new(StopOrderTracker::new(counter.clone(), stop_order.clone()));
-        let module_c = Arc::new(StopOrderTracker::new(counter.clone(), stop_order.clone()));
+        let module_a = Arc::new(StopOrderTracker::new(&counter, stop_order.clone()));
+        let module_b = Arc::new(StopOrderTracker::new(&counter, stop_order.clone()));
+        let module_c = Arc::new(StopOrderTracker::new(&counter, stop_order.clone()));
 
         let mut builder = RegistryBuilder::default();
         builder.register_core_with_meta("a", &[], module_a.clone() as Arc<dyn Module>);

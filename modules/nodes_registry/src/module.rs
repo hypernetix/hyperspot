@@ -74,7 +74,7 @@ impl RestfulModule for NodesRegistry {
             .ok_or_else(|| anyhow::anyhow!("Service not initialized"))?
             .clone();
 
-        let router = crate::api::rest::routes::register_routes(router, openapi, service)?;
+        let router = crate::api::rest::routes::register_routes(router, openapi, service);
 
         tracing::info!("Nodes registry REST routes registered");
         Ok(router)

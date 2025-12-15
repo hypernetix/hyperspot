@@ -1,23 +1,23 @@
 use crate::model::GpuInfo;
-use once_cell::sync::Lazy;
 use regex::Regex;
 use std::process::Command;
 
 #[allow(clippy::expect_used)] // good regex, it doesn't panic
-static MODEL_REGEX: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"Chipset Model: (.+)").expect("static regex should not panic"));
+static MODEL_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+    Regex::new(r"Chipset Model: (.+)").expect("static regex should not panic")
+});
 #[allow(clippy::expect_used)] // good regex, it doesn't panic
-static VRAM_REGEX: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"VRAM \(.*\): (\d+) MB").expect("static regex should not panic"));
+static VRAM_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+    Regex::new(r"VRAM \(.*\): (\d+) MB").expect("static regex should not panic")
+});
 
 /// Collect GPU information on macOS using system_profiler
 pub fn collect_gpu_info() -> Vec<GpuInfo> {
-    let output = match Command::new("system_profiler")
+    let Ok(output) = Command::new("system_profiler")
         .arg("SPDisplaysDataType")
         .output()
-    {
-        Ok(output) => output,
-        Err(_) => return Vec::new(),
+    else {
+        return Vec::new();
     };
 
     if !output.status.success() {

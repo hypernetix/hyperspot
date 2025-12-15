@@ -87,7 +87,6 @@ impl UsersRepository for SeaOrmUsersRepository {
         let secure_query = self
             .sec
             .find::<UserEntity>(ctx)
-            .context("Failed to create secure query")?
             .filter(sea_orm::Condition::all().add(Expr::col(Column::Email).eq(email)));
 
         let count = secure_query
@@ -194,10 +193,7 @@ impl UsersRepository for SeaOrmUsersRepository {
         debug!("Listing users with fully type-safe OData");
 
         // Apply security scope first
-        let secure_query = self.sec.find::<UserEntity>(ctx).map_err(|e| {
-            tracing::error!(error = %e, "Failed to create secure query");
-            modkit_odata::Error::Db(format!("Failed to create secure query: {}", e))
-        })?;
+        let secure_query = self.sec.find::<UserEntity>(ctx);
 
         let base_query = secure_query.into_inner();
 

@@ -52,8 +52,7 @@ pub fn parse_orderby(raw: &str) -> Result<ODataOrderBy, modkit_odata::Error> {
 
         let tokens: Vec<&str> = part.split_whitespace().collect();
         let (field, dir) = match tokens.as_slice() {
-            [field] => (*field, SortDir::Asc),
-            [field, "asc"] => (*field, SortDir::Asc),
+            [field] | [field, "asc"] => (*field, SortDir::Asc),
             [field, "desc"] => (*field, SortDir::Desc),
             _ => {
                 return Err(modkit_odata::Error::InvalidOrderByField(format!(
@@ -116,7 +115,7 @@ where
 
             // Complexity budget (node count)
             fn count_nodes(e: &od::Expr) -> usize {
-                use od::Expr::*;
+                use od::Expr::{And, Compare, Function, Identifier, In, Not, Or, Value};
                 match e {
                     Value(_) | Identifier(_) => 1,
                     Not(x) => 1 + count_nodes(x),

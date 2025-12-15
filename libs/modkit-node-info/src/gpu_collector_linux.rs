@@ -22,14 +22,12 @@ fn collect_nvidia_gpus() -> Option<Vec<GpuInfo>> {
     use nvml_wrapper::Nvml;
 
     // Initialize NVML
-    let nvml = match Nvml::init() {
-        Ok(nvml) => nvml,
-        Err(_) => return None,
+    let Ok(nvml) = Nvml::init() else {
+        return None;
     };
 
-    let device_count = match nvml.device_count() {
-        Ok(count) => count,
-        Err(_) => return None,
+    let Ok(device_count) = nvml.device_count() else {
+        return None;
     };
 
     let mut gpus = Vec::new();

@@ -184,8 +184,7 @@ mod tests {
         for _ in 0..num_events {
             match timeout(Duration::from_millis(10), subscriber.next()).await {
                 Ok(Some(event)) => received.push(event),
-                Ok(None) => break,
-                Err(_) => break, // timeout
+                Ok(None) | Err(_) => break, // None or timeout
             }
         }
 

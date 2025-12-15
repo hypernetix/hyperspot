@@ -488,12 +488,7 @@ fn code_to_ident(code: &str) -> syn::Ident {
     let mut sanitized = code.replace(['.', '-', '/', '~'], "_");
 
     // Prefix with underscore if it starts with a digit
-    if sanitized
-        .chars()
-        .next()
-        .map(|c| c.is_ascii_digit())
-        .unwrap_or(false)
-    {
+    if sanitized.chars().next().is_some_and(|c| c.is_ascii_digit()) {
         sanitized = format!("_{}", sanitized);
     }
 
@@ -535,12 +530,7 @@ fn derive_alias_from_gts(code: &str) -> syn::Result<String> {
 
     // Ensure valid Rust identifier (lowercase is already per spec)
     let mut ident = alias_raw.replace(['-', '/', '~'], "_"); // just in case
-    if ident
-        .chars()
-        .next()
-        .map(|c| c.is_ascii_digit())
-        .unwrap_or(false)
-    {
+    if ident.chars().next().is_some_and(|c| c.is_ascii_digit()) {
         ident = format!("_{}", ident);
     }
     Ok(ident)

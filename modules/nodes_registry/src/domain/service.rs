@@ -50,19 +50,19 @@ impl Service {
     }
 
     /// Get a node by ID
-    pub async fn get_node(&self, id: uuid::Uuid) -> Result<Node, DomainError> {
+    pub fn get_node(&self, id: uuid::Uuid) -> Result<Node, DomainError> {
         self.storage
             .get_node(id)
             .ok_or(DomainError::NodeNotFound(id))
     }
 
     /// List all nodes
-    pub async fn list_nodes(&self) -> Result<Vec<Node>, DomainError> {
-        Ok(self.storage.list_nodes())
+    pub fn list_nodes(&self) -> Vec<Node> {
+        self.storage.list_nodes()
     }
 
     /// Get system information for a node (with caching)
-    pub async fn get_node_sysinfo(&self, node_id: uuid::Uuid) -> Result<NodeSysInfo, DomainError> {
+    pub fn get_node_sysinfo(&self, node_id: uuid::Uuid) -> Result<NodeSysInfo, DomainError> {
         // Check if node exists
         if self.storage.get_node(node_id).is_none() {
             return Err(DomainError::NodeNotFound(node_id));
@@ -86,7 +86,7 @@ impl Service {
     }
 
     /// Get system capabilities for a node (with caching and merging)
-    pub async fn get_node_syscap(
+    pub fn get_node_syscap(
         &self,
         node_id: uuid::Uuid,
         force_refresh: bool,
@@ -121,7 +121,7 @@ impl Service {
     }
 
     /// Set custom syscap entries for a node
-    pub async fn set_custom_syscap(
+    pub fn set_custom_syscap(
         &self,
         node_id: uuid::Uuid,
         caps: Vec<SysCap>,
@@ -133,7 +133,7 @@ impl Service {
     }
 
     /// Remove custom syscap entries by key
-    pub async fn remove_custom_syscap(
+    pub fn remove_custom_syscap(
         &self,
         node_id: uuid::Uuid,
         keys: Vec<String>,
@@ -145,7 +145,7 @@ impl Service {
     }
 
     /// Clear all custom syscap entries for a node
-    pub async fn clear_custom_syscap(&self, node_id: uuid::Uuid) -> Result<(), DomainError> {
+    pub fn clear_custom_syscap(&self, node_id: uuid::Uuid) -> Result<(), DomainError> {
         if !self.storage.clear_custom_syscap(node_id) {
             return Err(DomainError::NodeNotFound(node_id));
         }

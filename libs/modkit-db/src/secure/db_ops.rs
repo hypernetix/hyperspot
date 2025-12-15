@@ -149,17 +149,12 @@ where
     /// - Resources only → update only specified resource IDs
     /// - Both → AND them together
     ///
-    /// # Errors
-    /// Returns `ScopeError` if the scope cannot be applied.
-    pub fn scope_with(
-        self,
-        scope: &AccessScope,
-    ) -> Result<SecureUpdateMany<E, Scoped>, ScopeError> {
-        let cond = build_scope_condition::<E>(scope)?;
-        Ok(SecureUpdateMany {
+    pub fn scope_with(self, scope: &AccessScope) -> SecureUpdateMany<E, Scoped> {
+        let cond = build_scope_condition::<E>(scope);
+        SecureUpdateMany {
             inner: self.inner.filter(cond),
             _state: PhantomData,
-        })
+        }
     }
 }
 
@@ -245,17 +240,12 @@ where
     /// - Resources only → delete only specified resource IDs
     /// - Both → AND them together
     ///
-    /// # Errors
-    /// Returns `ScopeError` if the scope cannot be applied.
-    pub fn scope_with(
-        self,
-        scope: &AccessScope,
-    ) -> Result<SecureDeleteMany<E, Scoped>, ScopeError> {
-        let cond = build_scope_condition::<E>(scope)?;
-        Ok(SecureDeleteMany {
+    pub fn scope_with(self, scope: &AccessScope) -> SecureDeleteMany<E, Scoped> {
+        let cond = build_scope_condition::<E>(scope);
+        SecureDeleteMany {
             inner: self.inner.filter(cond),
             _state: PhantomData,
-        })
+        }
     }
 }
 
@@ -307,7 +297,9 @@ mod tests {
     #[test]
     fn test_typestate_compile_check() {
         // This test verifies the typestate markers compile
-        let _unscoped: PhantomData<Unscoped> = PhantomData;
-        let _scoped: PhantomData<Scoped> = PhantomData;
+        let unscoped: PhantomData<Unscoped> = PhantomData;
+        let scoped: PhantomData<Scoped> = PhantomData;
+        // Use the variables to avoid unused warnings
+        let _ = (unscoped, scoped);
     }
 }

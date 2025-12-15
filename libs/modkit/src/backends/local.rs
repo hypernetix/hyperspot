@@ -242,13 +242,13 @@ impl ModuleRuntimeBackend for LocalProcessBackend {
         // Spawn the process
         let mut child = cmd
             .spawn()
-            .with_context(|| format!("failed to spawn process: {:?}", binary))?;
+            .with_context(|| format!("failed to spawn process: {}", binary.display()))?;
 
         // Get PID
         let pid = child.id();
 
         // Spawn log forwarder tasks for stdout/stderr with cancellation support
-        let module_name = cfg.name.to_string();
+        let module_name = cfg.name.clone();
         let cancel = self.cancel.clone();
         let stdout_forwarder = child.stdout.take().map(|stdout| {
             spawn_stream_forwarder(
@@ -278,7 +278,7 @@ impl ModuleRuntimeBackend for LocalProcessBackend {
 
         // Create handle
         let handle = InstanceHandle {
-            module: cfg.name.to_string(),
+            module: cfg.name.clone(),
             instance_id,
             backend: BackendKind::LocalProcess,
             pid,

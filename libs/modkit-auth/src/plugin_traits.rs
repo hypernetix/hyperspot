@@ -65,7 +65,7 @@ mod tests {
     struct TestPlugin;
 
     impl ClaimsPlugin for TestPlugin {
-        fn name(&self) -> &str {
+        fn name(&self) -> &'static str {
             "test"
         }
 

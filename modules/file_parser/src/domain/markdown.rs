@@ -60,15 +60,16 @@ impl MarkdownRenderIter {
             || doc.meta.original_filename.is_some()
             || doc.meta.content_type.is_some()
         {
+            use std::fmt::Write;
             header.push_str("---\n");
             if let Some(ref lang) = doc.language {
-                header.push_str(&format!("language: {}\n", lang));
+                let _ = writeln!(header, "language: {}", lang);
             }
             if let Some(ref filename) = doc.meta.original_filename {
-                header.push_str(&format!("filename: {}\n", filename));
+                let _ = writeln!(header, "filename: {}", filename);
             }
             if let Some(ref content_type) = doc.meta.content_type {
-                header.push_str(&format!("content-type: {}\n", content_type));
+                let _ = writeln!(header, "content-type: {}", content_type);
             }
             header.push_str("---\n\n");
         }
@@ -292,7 +293,7 @@ impl MarkdownRenderer {
         let num_cols = table.rows[0].cells.len();
 
         // Check if we have a header row
-        let has_header = table.rows.first().map(|r| r.is_header).unwrap_or(false);
+        let has_header = table.rows.first().is_some_and(|r| r.is_header);
 
         let (header_row, data_rows) = if has_header {
             (&table.rows[0], &table.rows[1..])
@@ -448,7 +449,7 @@ mod tests {
         };
 
         let markdown = MarkdownRenderer::render(&doc);
-        assert!(markdown.contains("**") && markdown.contains("*"));
+        assert!(markdown.contains("**") && markdown.contains('*'));
     }
 
     #[test]

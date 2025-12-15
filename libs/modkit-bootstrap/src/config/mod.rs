@@ -192,14 +192,13 @@ impl AppConfig {
     /// Load configuration from file or create with default values.
     /// Also normalizes `server.home_dir` into an absolute path and creates the directory.
     pub fn load_or_default<P: AsRef<Path>>(config_path: Option<P>) -> Result<Self> {
-        match config_path {
-            Some(path) => Self::load_layered(path),
-            None => {
-                let mut c = Self::default();
-                normalize_home_dir_inplace(&mut c.server)
-                    .context("Failed to resolve server.home_dir (defaults)")?;
-                Ok(c)
-            }
+        if let Some(path) = config_path {
+            Self::load_layered(path)
+        } else {
+            let mut c = Self::default();
+            normalize_home_dir_inplace(&mut c.server)
+                .context("Failed to resolve server.home_dir (defaults)")?;
+            Ok(c)
         }
     }
 
@@ -363,7 +362,10 @@ fn resolve_sqlite_dsn(dsn: &str, home_dir: &Path, module_name: &str) -> anyhow::
                     // Relative path - resolve under module directory
                     let module_dir = home_dir.join(module_name);
                     std::fs::create_dir_all(&module_dir).with_context(|| {
-                        format!("Failed to create module directory: {:?}", module_dir)
+                        format!(
+                            "Failed to create module directory: {}",
+                            module_dir.display()
+                        )
                     })?;
                     module_dir.join(file_path)
                 };
@@ -374,10 +376,9 @@ fn resolve_sqlite_dsn(dsn: &str, home_dir: &Path, module_name: &str) -> anyhow::
                 if normalized_path.len() > 1 && normalized_path.chars().nth(1) == Some(':') {
                     // Windows absolute path like C:/...
                     return Ok(format!("sqlite:{}", normalized_path));
-                } else {
-                    // Unix absolute path or relative path
-                    return Ok(format!("sqlite://{}", normalized_path));
                 }
+                // Unix absolute path or relative path
+                return Ok(format!("sqlite://{}", normalized_path));
             }
         }
         return Err(anyhow::anyhow!(
@@ -389,8 +390,12 @@ fn resolve_sqlite_dsn(dsn: &str, home_dir: &Path, module_name: &str) -> anyhow::
     // Handle empty DSN or just sqlite:// - default to module.sqlite
     if dsn == "sqlite://" || dsn == "sqlite:///" || dsn == "sqlite:" {
         let module_dir = home_dir.join(module_name);
-        std::fs::create_dir_all(&module_dir)
-            .with_context(|| format!("Failed to create module directory: {:?}", module_dir))?;
+        std::fs::create_dir_all(&module_dir).with_context(|| {
+            format!(
+                "Failed to create module directory: {}",
+                module_dir.display()
+            )
+        })?;
         let db_path = module_dir.join(format!("{}.sqlite", module_name));
         let normalized_path = db_path.to_string_lossy().replace('\\', "/");
         // For Windows absolute paths (C:/...), use sqlite:path format
@@ -398,10 +403,9 @@ fn resolve_sqlite_dsn(dsn: &str, home_dir: &Path, module_name: &str) -> anyhow::
         if normalized_path.len() > 1 && normalized_path.chars().nth(1) == Some(':') {
             // Windows absolute path like C:/...
             return Ok(format!("sqlite:{}", normalized_path));
-        } else {
-            // Unix absolute path or relative path
-            return Ok(format!("sqlite://{}", normalized_path));
         }
+        // Unix absolute path or relative path
+        return Ok(format!("sqlite://{}", normalized_path));
     }
 
     // Return DSN as-is for normal cases
@@ -436,17 +440,17 @@ fn build_server_dsn(
     // Set port if provided
     if let Some(port) = port {
         url.set_port(Some(port))
-            .map_err(|_| anyhow::anyhow!("Invalid port: {}", port))?;
+            .map_err(|()| anyhow::anyhow!("Invalid port: {}", port))?;
     }
 
     // Set username
     url.set_username(user)
-        .map_err(|_| anyhow::anyhow!("Failed to set username: {}", user))?;
+        .map_err(|()| anyhow::anyhow!("Failed to set username: {}", user))?;
 
     // Set password if provided
     if let Some(password) = password {
         url.set_password(Some(password))
-            .map_err(|_| anyhow::anyhow!("Failed to set password"))?;
+            .map_err(|()| anyhow::anyhow!("Failed to set password"))?;
     }
 
     // Set database name as path (with leading slash)
@@ -486,8 +490,12 @@ fn build_sqlite_dsn_with_dbname_override(
 
     // Build the correct path for the database file
     let module_dir = home_dir.join(module_name);
-    std::fs::create_dir_all(&module_dir)
-        .with_context(|| format!("Failed to create module directory: {:?}", module_dir))?;
+    std::fs::create_dir_all(&module_dir).with_context(|| {
+        format!(
+            "Failed to create module directory: {}",
+            module_dir.display()
+        )
+    })?;
     let db_path = module_dir.join(dbname);
     let normalized_path = db_path.to_string_lossy().replace('\\', "/");
 
@@ -544,17 +552,20 @@ fn build_sqlite_dsn(
         if normalized_path.len() > 1 && normalized_path.chars().nth(1) == Some(':') {
             // Windows absolute path like C:/...
             return Ok(format!("sqlite:{}", normalized_path));
-        } else {
-            // Unix absolute path or relative path
-            return Ok(format!("sqlite://{}", normalized_path));
         }
+        // Unix absolute path or relative path
+        return Ok(format!("sqlite://{}", normalized_path));
     }
 
     // Build from file (relative under module dir)
     if let Some(file) = file {
         let module_dir = home_dir.join(module_name);
-        std::fs::create_dir_all(&module_dir)
-            .with_context(|| format!("Failed to create module directory: {:?}", module_dir))?;
+        std::fs::create_dir_all(&module_dir).with_context(|| {
+            format!(
+                "Failed to create module directory: {}",
+                module_dir.display()
+            )
+        })?;
         let db_path = module_dir.join(file);
         let normalized_path = db_path.to_string_lossy().replace('\\', "/");
         // For Windows absolute paths (C:/...), use sqlite:path format
@@ -562,16 +573,19 @@ fn build_sqlite_dsn(
         if normalized_path.len() > 1 && normalized_path.chars().nth(1) == Some(':') {
             // Windows absolute path like C:/...
             return Ok(format!("sqlite:{}", normalized_path));
-        } else {
-            // Unix absolute path or relative path
-            return Ok(format!("sqlite://{}", normalized_path));
         }
+        // Unix absolute path or relative path
+        return Ok(format!("sqlite://{}", normalized_path));
     }
 
     // Default to module.sqlite
     let module_dir = home_dir.join(module_name);
-    std::fs::create_dir_all(&module_dir)
-        .with_context(|| format!("Failed to create module directory: {:?}", module_dir))?;
+    std::fs::create_dir_all(&module_dir).with_context(|| {
+        format!(
+            "Failed to create module directory: {}",
+            module_dir.display()
+        )
+    })?;
     let db_path = module_dir.join(format!("{}.sqlite", module_name));
     let normalized_path = db_path.to_string_lossy().replace('\\', "/");
     // For Windows absolute paths (C:/...), use sqlite:path format
@@ -981,23 +995,19 @@ pub fn build_final_db_for_module(
     home_dir: &Path,
 ) -> DbConfigResult {
     // Parse module entry from raw JSON
-    let module_raw = match app.modules.get(module_name) {
-        Some(raw) => raw,
-        None => return Ok(None), // No module config
+    let Some(module_raw) = app.modules.get(module_name) else {
+        return Ok(None); // No module config
     };
 
     let module_entry: ModuleConfig = serde_json::from_value(module_raw.clone())
         .with_context(|| format!("Invalid module config structure for '{}'", module_name))?;
 
-    let module_db_config = match module_entry.database {
-        Some(config) => config,
-        None => {
-            tracing::warn!(
-                "Module '{}' has no database configuration; DB capability disabled",
-                module_name
-            );
-            return Ok(None);
-        }
+    let Some(module_db_config) = module_entry.database else {
+        tracing::warn!(
+            "Module '{}' has no database configuration; DB capability disabled",
+            module_name
+        );
+        return Ok(None);
     };
 
     // Global database config
@@ -1337,7 +1347,7 @@ logging:
     fn add_module_to_app(
         app: &mut AppConfig,
         module_name: &str,
-        database_config: serde_json::Value,
+        database_config: &serde_json::Value,
     ) {
         app.modules.insert(
             module_name.to_string(),
@@ -1367,7 +1377,7 @@ logging:
         add_module_to_app(
             &mut app,
             "test_module",
-            serde_json::json!({
+            &serde_json::json!({
                 "server": "test_server"
             }),
         );
@@ -1401,7 +1411,7 @@ logging:
         add_module_to_app(
             &mut app,
             "test_module",
-            serde_json::json!({
+            &serde_json::json!({
                 "server": "test_server"
             }),
         );
@@ -1501,7 +1511,7 @@ logging:
         add_module_to_app(
             &mut app,
             "test_module",
-            serde_json::json!({
+            &serde_json::json!({
                 "server": "test_server",
                 "port": 5434  // Module field should override global field
             }),
@@ -1546,7 +1556,7 @@ logging:
         add_module_to_app(
             &mut app,
             "test_module",
-            serde_json::json!({
+            &serde_json::json!({
                 "server": "test_server"
             }),
         );
@@ -1581,7 +1591,7 @@ logging:
         add_module_to_app(
             &mut app,
             "test_module",
-            serde_json::json!({
+            &serde_json::json!({
                 "server": "test_server"
             }),
         );
@@ -1704,8 +1714,8 @@ logging:
         let (dsn, _) = result.unwrap();
 
         // On Windows, paths should be normalized to forward slashes in DSN
-        assert!(!dsn.contains("\\"));
-        assert!(dsn.contains("/"));
+        assert!(!dsn.contains('\\'));
+        assert!(dsn.contains('/'));
     }
 
     #[test]
@@ -1828,7 +1838,7 @@ logging:
         add_module_to_app(
             &mut app,
             "test_module",
-            serde_json::json!({
+            &serde_json::json!({
                 "server": "test_server"
             }),
         );
@@ -1965,7 +1975,7 @@ logging:
         add_module_to_app(
             &mut app,
             "test_module",
-            serde_json::json!({
+            &serde_json::json!({
                 "server": "test_server"
             }),
         );
@@ -2130,7 +2140,7 @@ logging:
         add_module_to_app(
             &mut app,
             "test_module",
-            serde_json::json!({
+            &serde_json::json!({
                 "server": "test_server"
             }),
         );
@@ -2179,7 +2189,7 @@ logging:
         add_module_to_app(
             &mut app,
             "test_module",
-            serde_json::json!({
+            &serde_json::json!({
                 "server": "test_server"
             }),
         );
@@ -2192,7 +2202,7 @@ logging:
         // Verify DSN is properly encoded with Unicode
         assert!(dsn.starts_with("postgresql://"));
         // Unicode characters should be percent-encoded
-        assert!(dsn.contains("%")); // Should contain encoded characters
+        assert!(dsn.contains('%')); // Should contain encoded characters
 
         // Verify DSN is parseable
         validate_dsn(&dsn).expect("DSN with Unicode characters should be valid");
@@ -2221,7 +2231,7 @@ logging:
         add_module_to_app(
             &mut app,
             "test_module",
-            serde_json::json!({
+            &serde_json::json!({
                 "server": "test_server"
             }),
         );
@@ -2268,7 +2278,7 @@ logging:
         add_module_to_app(
             &mut app,
             "test_module",
-            serde_json::json!({
+            &serde_json::json!({
                 "server": "test_server",
                 "pool": {
                     "max_conns": 20
@@ -2313,7 +2323,7 @@ logging:
         add_module_to_app(
             &mut app,
             "test_module",
-            serde_json::json!({
+            &serde_json::json!({
                 "server": "test_server",
                 "pool": {
                     "max_conns": 30,

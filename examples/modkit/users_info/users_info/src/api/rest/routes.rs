@@ -7,11 +7,12 @@ use std::sync::Arc;
 use std::time::Duration;
 use tower_http::timeout::TimeoutLayer;
 
+#[allow(clippy::needless_pass_by_value)] // Arc is intentionally passed by value for Extension layer
 pub fn register_routes(
     mut router: Router,
     openapi: &dyn OpenApiRegistry,
     service: Arc<Service>,
-) -> anyhow::Result<Router> {
+) -> Router {
     // Schemas should be auto-registered via ToSchema when used in operations
 
     // GET /users - List users with cursor-based pagination
@@ -105,7 +106,7 @@ pub fn register_routes(
 
     router = router.layer(Extension(service.clone()));
 
-    Ok(router)
+    router
 }
 
 /// Register SSE route for user events. The broadcaster is injected per-route via `Extension`.

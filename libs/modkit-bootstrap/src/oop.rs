@@ -141,12 +141,12 @@ impl modkit::ConfigProvider for ModkitConfigAdapter {
 fn build_oop_config_and_db(
     local_config: &AppConfig,
     module_name: &str,
-    rendered_config: Option<RenderedModuleConfig>,
+    rendered_config: Option<&RenderedModuleConfig>,
 ) -> Result<(AppConfig, crate::config::LoggingConfig, DbOptions)> {
     let home_dir = PathBuf::from(&local_config.server.home_dir);
 
     // Build final_config for module's "config" section
-    let final_config = if let Some(ref rendered) = rendered_config {
+    let final_config = if let Some(rendered) = rendered_config {
         // MODKIT_MODULE_CONFIG exists: use rendered config as BASE, local config as OVERRIDE
         let mut config = local_config.clone();
 
@@ -467,7 +467,7 @@ pub async fn run_oop_with_options(opts: OopRunOptions) -> Result<()> {
     // 2. Local config file (override)
     // This also merges logging configuration for proper initialization
     let (final_config, merged_logging, db_options) =
-        build_oop_config_and_db(&config, &opts.module_name, rendered_config.clone())?;
+        build_oop_config_and_db(&config, &opts.module_name, rendered_config.as_ref())?;
 
     // Initialize OTEL layer from rendered config's tracing settings (if available)
     // OoP modules use master's tracing config, not their own local config
@@ -547,16 +547,16 @@ pub async fn run_oop_with_options(opts: OopRunOptions) -> Result<()> {
 
         loop {
             tokio::select! {
-                _ = heartbeat_cancel.cancelled() => {
+                () = heartbeat_cancel.cancelled() => {
                     info!("Heartbeat loop stopping due to cancellation");
                     break;
                 }
-                _ = sleep(heartbeat_interval) => {
+                () = sleep(heartbeat_interval) => {
                     match heartbeat_directory
                         .send_heartbeat(&heartbeat_module, &heartbeat_instance_id_str)
                         .await
                     {
-                        Ok(_) => {
+                        Ok(()) => {
                             tracing::debug!("Heartbeat sent successfully");
                         }
                         Err(e) => {

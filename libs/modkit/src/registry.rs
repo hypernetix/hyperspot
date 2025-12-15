@@ -35,7 +35,7 @@ impl std::fmt::Debug for ModuleEntry {
             .field("is_system", &self.is_system)
             .field("is_grpc_hub", &self.grpc_hub.is_some())
             .field("has_grpc_service", &self.grpc_service.is_some())
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -281,7 +281,7 @@ impl RegistryBuilder {
         // Check rest_host early
         if let Some((host_name, _)) = &self.rest_host {
             if !self.core.contains_key(host_name) {
-                return Err(RegistryError::UnknownModule(host_name.to_string()));
+                return Err(RegistryError::UnknownModule((*host_name).to_string()));
             }
         }
 
@@ -293,7 +293,7 @@ impl RegistryBuilder {
         }
 
         // Validate rest capabilities
-        for (n, _) in self.rest.iter() {
+        for n in self.rest.keys() {
             if !self.core.contains_key(n) {
                 return Err(RegistryError::UnknownModule((*n).to_string()));
             }
@@ -307,14 +307,14 @@ impl RegistryBuilder {
         }
 
         // Validate db capabilities
-        for (n, _) in self.db.iter() {
+        for n in self.db.keys() {
             if !self.core.contains_key(n) {
                 return Err(RegistryError::UnknownModule((*n).to_string()));
             }
         }
 
         // Validate stateful capabilities
-        for (n, _) in self.stateful.iter() {
+        for n in self.stateful.keys() {
             if !self.core.contains_key(n) {
                 return Err(RegistryError::UnknownModule((*n).to_string()));
             }
@@ -328,7 +328,7 @@ impl RegistryBuilder {
         }
 
         // Validate grpc_services
-        for (n, _) in self.grpc_services.iter() {
+        for n in self.grpc_services.keys() {
             if !self.core.contains_key(n) {
                 return Err(RegistryError::UnknownModule((*n).to_string()));
             }
@@ -347,7 +347,7 @@ impl RegistryBuilder {
 
         let mut adj = vec![Vec::<usize>::new(); names.len()];
 
-        for (&n, &deps) in self.deps.iter() {
+        for (&n, &deps) in &self.deps {
             let u = *idx
                 .get(n)
                 .ok_or_else(|| RegistryError::UnknownModule(n.to_string()))?;
@@ -451,12 +451,12 @@ impl RegistryBuilder {
         let entries = self.assemble_entries(&order, &names)?;
 
         // Collect grpc_hub and grpc_services for the final registry
-        let grpc_hub = self.grpc_hub.as_ref().map(|(name, _)| name.to_string());
+        let grpc_hub = self.grpc_hub.as_ref().map(|(name, _)| (*name).to_string());
 
         let grpc_services: Vec<(String, Arc<dyn contracts::GrpcServiceModule>)> = self
             .grpc_services
             .iter()
-            .map(|(name, module)| (name.to_string(), module.clone()))
+            .map(|(name, module)| ((*name).to_string(), module.clone()))
             .collect();
 
         tracing::info!(

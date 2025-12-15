@@ -4,11 +4,12 @@ use axum::{Extension, Router};
 use modkit::api::{OpenApiRegistry, OperationBuilder};
 use std::sync::Arc;
 
+#[allow(clippy::needless_pass_by_value)] // Arc is intentionally passed by value for Extension layer
 pub fn register_routes(
     mut router: Router,
     openapi: &dyn OpenApiRegistry,
     service: Arc<FileParserService>,
-) -> anyhow::Result<Router> {
+) -> Router {
     // GET /file-parser/info - Get information about available file parsers
     router = OperationBuilder::get("/file-parser/info")
         .operation_id("file_parser.get_parser_info")
@@ -143,5 +144,5 @@ pub fn register_routes(
 
     router = router.layer(Extension(service.clone()));
 
-    Ok(router)
+    router
 }

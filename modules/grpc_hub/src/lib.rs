@@ -30,7 +30,7 @@ use tonic::{service::RoutesBuilder, transport::Server};
 use modkit_transport_grpc::create_named_pipe_incoming;
 
 const DEFAULT_LISTEN_ADDR: SocketAddr =
-    SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 50051));
+    SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, 50051));
 
 /// Configuration for the gRPC Hub module.
 ///
@@ -259,7 +259,7 @@ impl GrpcHub {
         }
 
         match std::fs::remove_file(path) {
-            Ok(_) => {
+            Ok(()) => {
                 tracing::debug!(
                     path = %path.display(),
                     "removed existing UDS socket file before bind"
@@ -309,13 +309,10 @@ impl GrpcHub {
     ) -> anyhow::Result<()> {
         Self::validate_unique_services(&data.modules)?;
 
-        let routes = match Self::build_routes_from_modules(&data.modules) {
-            Some(r) => r,
-            None => {
-                ready.notify();
-                cancel.cancelled().await;
-                return Ok(());
-            }
+        let Some(routes) = Self::build_routes_from_modules(&data.modules) else {
+            ready.notify();
+            cancel.cancelled().await;
+            return Ok(());
         };
 
         let listen_cfg = self.listen_cfg.read().clone();

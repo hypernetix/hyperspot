@@ -55,7 +55,7 @@ impl FileParserService {
             let extensions: Vec<String> = parser
                 .supported_extensions()
                 .iter()
-                .map(|s| s.to_string())
+                .map(|s| (*s).to_string())
                 .collect();
             supported_extensions.insert(id.to_string(), extensions);
         }

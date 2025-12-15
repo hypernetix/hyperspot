@@ -26,10 +26,10 @@ fn parse_tracing_level(s: &str) -> Option<tracing::Level> {
     match s.to_ascii_lowercase().as_str() {
         "trace" => Some(Level::TRACE),
         "debug" => Some(Level::DEBUG),
-        "info" => Some(Level::INFO),
         "warn" => Some(Level::WARN),
         "error" => Some(Level::ERROR),
         "off" | "none" => None,
+        // "info" and any unrecognized value default to INFO
         _ => Some(Level::INFO),
     }
 }
@@ -179,7 +179,7 @@ fn create_rotating_writer_at_path(
     }
 
     // Respect retention policy: prefer MaxFiles if provided, else Age
-    let age = chrono::Duration::days(max_age_days.unwrap_or(1) as i64);
+    let age = chrono::Duration::days(i64::from(max_age_days.unwrap_or(1)));
     let limit = if let Some(n) = max_backups {
         FileLimit::MaxFiles(n)
     } else {
@@ -225,7 +225,7 @@ pub fn init_logging_unified(cfg: &LoggingConfig, base_dir: &Path, otel_layer: Op
         },
     );
 
-    install_subscriber(console_targets, file_targets, file_router, otel_layer);
+    install_subscriber(&console_targets, &file_targets, file_router, otel_layer);
 }
 
 // ================= generic targets builder =================
@@ -235,6 +235,7 @@ use tracing_subscriber::filter::Targets;
 
 /// Different "sinks" (destinations) for which we build Targets.
 /// Only differences: which level field we read, whether the sink is active, and default fallback.
+#[derive(Clone, Copy)]
 enum SinkKind {
     Console,
     File { has_default_file: bool },
@@ -250,8 +251,7 @@ fn build_targets(config: &ConfigData, kind: SinkKind) -> Targets {
             let default_level = config
                 .default_section
                 .and_then(|s| parse_tracing_level(s.console_level.as_str()))
-                .map(LevelFilter::from_level)
-                .unwrap_or(LevelFilter::INFO);
+                .map_or(LevelFilter::INFO, LevelFilter::from_level);
 
             // start with default
             let mut targets = Targets::new().with_default(default_level);
@@ -278,12 +278,14 @@ fn build_targets(config: &ConfigData, kind: SinkKind) -> Targets {
             let default_level = config
                 .default_section
                 .and_then(|s| parse_tracing_level(s.file_level.as_str()))
-                .map(LevelFilter::from_level)
-                .unwrap_or(if has_default_file {
-                    LevelFilter::INFO
-                } else {
-                    LevelFilter::OFF
-                });
+                .map_or(
+                    if has_default_file {
+                        LevelFilter::INFO
+                    } else {
+                        LevelFilter::OFF
+                    },
+                    LevelFilter::from_level,
+                );
 
             let mut targets = Targets::new().with_default(default_level);
 
@@ -348,20 +350,19 @@ fn create_default_file_writer(section: &Section, base_dir: &Path) -> Option<RotW
     let max_bytes = section.max_size_bytes();
     let log_path = resolve_log_path(&section.file, base_dir);
 
-    match create_rotating_writer_at_path(
+    if let Ok(writer) = create_rotating_writer_at_path(
         &log_path,
         max_bytes,
         section.max_age_days,
         section.max_backups,
     ) {
-        Ok(writer) => Some(writer),
-        Err(_) => {
-            eprintln!(
-                "Failed to initialize default log file '{}'",
-                log_path.to_string_lossy()
-            );
-            None
-        }
+        Some(writer)
+    } else {
+        eprintln!(
+            "Failed to initialize default log file '{}'",
+            log_path.to_string_lossy()
+        );
+        None
     }
 }
 
@@ -399,8 +400,8 @@ fn create_crate_file_writer(
 // ================= registry & layers =================
 
 fn install_subscriber(
-    console_targets: tracing_subscriber::filter::Targets,
-    file_targets: tracing_subscriber::filter::Targets,
+    console_targets: &tracing_subscriber::filter::Targets,
+    file_targets: &tracing_subscriber::filter::Targets,
     file_router: MultiFileRouter,
     #[cfg_attr(not(feature = "otel"), allow(unused_variables))] otel_layer: Option<OtelLayer>,
 ) {
@@ -424,7 +425,9 @@ fn install_subscriber(
         .with_filter(console_targets.clone());
 
     // File fmt layer (JSON) if router is not empty
-    let file_layer_opt = if !file_router.is_empty() {
+    let file_layer_opt = if file_router.is_empty() {
+        None
+    } else {
         Some(
             fmt::layer()
                 .json()
@@ -433,10 +436,8 @@ fn install_subscriber(
                 .with_level(true)
                 .with_timer(fmt::time::UtcTime::rfc_3339())
                 .with_writer(file_router)
-                .with_filter(file_targets),
+                .with_filter(file_targets.clone()),
         )
-    } else {
-        None
     };
 
     // Build subscriber:

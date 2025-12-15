@@ -86,15 +86,12 @@ impl DbManager {
             .and_then(|m| m.get("database"))
             .and_then(|db| serde_json::from_value(db.clone()).ok());
 
-        let mut cfg = match module_cfg {
-            Some(cfg) => cfg,
-            None => {
-                tracing::debug!(
-                    module = %module,
-                    "Module has no database configuration; skipping"
-                );
-                return Ok(None);
-            }
+        let Some(mut cfg) = module_cfg else {
+            tracing::debug!(
+                module = %module,
+                "Module has no database configuration; skipping"
+            );
+            return Ok(None);
         };
 
         // If module references a global server, merge configurations
@@ -212,8 +209,8 @@ impl DbManager {
                     return Err(DbError::Io(std::io::Error::new(
                         std::io::ErrorKind::NotFound,
                         format!(
-                            "Directory does not exist and auto_provision is disabled: {:?}",
-                            parent
+                            "Directory does not exist and auto_provision is disabled: {}",
+                            parent.display()
                         ),
                     )));
                 }

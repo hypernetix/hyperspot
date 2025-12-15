@@ -83,7 +83,7 @@ pub struct UserEvent {
 
 impl From<&crate::domain::events::UserDomainEvent> for UserEvent {
     fn from(e: &crate::domain::events::UserDomainEvent) -> Self {
-        use crate::domain::events::UserDomainEvent::*;
+        use crate::domain::events::UserDomainEvent::{Created, Deleted, Updated};
         match e {
             Created { id, at } => Self {
                 kind: "created".into(),

@@ -87,10 +87,10 @@ impl SysInfoCollector {
             u32::try_from(System::physical_core_count().unwrap_or(cpus.len())).unwrap_or(u32::MAX);
 
         // Get average frequency
-        let frequency_mhz = if !cpus.is_empty() {
-            cpus.iter().map(|cpu| cpu.frequency() as f64).sum::<f64>() / cpus.len() as f64
-        } else {
+        let frequency_mhz = if cpus.is_empty() {
             0.0
+        } else {
+            cpus.iter().map(|cpu| cpu.frequency() as f64).sum::<f64>() / cpus.len() as f64
         };
 
         CpuInfo {
@@ -117,9 +117,10 @@ impl SysInfoCollector {
     }
 
     fn collect_host_info() -> HostInfo {
-        let hostname = hostname::get()
-            .map(|h| h.to_string_lossy().to_string())
-            .unwrap_or_else(|_| "unknown".to_string());
+        let hostname = hostname::get().map_or_else(
+            |_| "unknown".to_string(),
+            |h| h.to_string_lossy().to_string(),
+        );
 
         let uptime_seconds = System::uptime();
 

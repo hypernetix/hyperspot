@@ -68,6 +68,7 @@ fn parse_field_attrs(field: &syn::Field) -> Option<FilterableField> {
     })
 }
 
+#[allow(clippy::needless_pass_by_value)] // DeriveInput is consumed by proc-macro pattern
 pub fn expand_derive_odata_filterable(input: DeriveInput) -> TokenStream {
     // Verify this is a struct with named fields
     let fields = match &input.data {

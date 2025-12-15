@@ -27,6 +27,7 @@ struct SecureConfig {
     unrestricted: Option<Span>,
 }
 
+#[allow(clippy::needless_pass_by_value)] // DeriveInput is consumed by proc-macro pattern
 pub fn expand_derive_scopable(input: DeriveInput) -> TokenStream {
     // Verify this is a struct
     if !matches!(&input.data, Data::Struct(_)) {
@@ -70,17 +71,22 @@ pub fn expand_derive_scopable(input: DeriveInput) -> TokenStream {
     }
 
     // Generate tenant_col implementation
-    let tenant_col_impl = generate_col_impl("tenant_col", &config.tenant_col, &input.ident.span());
+    let tenant_col_impl =
+        generate_col_impl("tenant_col", config.tenant_col.as_ref(), input.ident.span());
 
     // Generate resource_col implementation
-    let resource_col_impl =
-        generate_col_impl("resource_col", &config.resource_col, &input.ident.span());
+    let resource_col_impl = generate_col_impl(
+        "resource_col",
+        config.resource_col.as_ref(),
+        input.ident.span(),
+    );
 
     // Generate owner_col implementation
-    let owner_col_impl = generate_col_impl("owner_col", &config.owner_col, &input.ident.span());
+    let owner_col_impl =
+        generate_col_impl("owner_col", config.owner_col.as_ref(), input.ident.span());
 
     // Generate type_col implementation
-    let type_col_impl = generate_col_impl("type_col", &config.type_col, &input.ident.span());
+    let type_col_impl = generate_col_impl("type_col", config.type_col.as_ref(), input.ident.span());
 
     // Generate the implementation
     quote! {
@@ -101,14 +107,14 @@ pub fn expand_derive_scopable(input: DeriveInput) -> TokenStream {
 /// Generate a column method implementation
 fn generate_col_impl(
     method_name: &str,
-    col: &Option<(String, Span)>,
-    default_span: &Span,
+    col: Option<&(String, Span)>,
+    default_span: Span,
 ) -> TokenStream {
-    let method_ident = syn::Ident::new(method_name, *default_span);
+    let method_ident = syn::Ident::new(method_name, default_span);
 
     if let Some((col_name, _)) = col {
         let col_variant = snake_to_upper_camel(col_name);
-        let col_ident = syn::Ident::new(&col_variant, *default_span);
+        let col_ident = syn::Ident::new(&col_variant, default_span);
         quote! {
             fn #method_ident() -> ::core::option::Option<Self::Column> {
                 ::core::option::Option::Some(Self::Column::#col_ident)
@@ -200,25 +206,40 @@ fn validate_config(config: &SecureConfig, input: &DeriveInput) {
     }
 
     // Check each scope dimension has exactly one option
-    validate_dimension("tenant", &config.tenant_col, &config.no_tenant, struct_span);
     validate_dimension(
-        "resource",
-        &config.resource_col,
-        &config.no_resource,
+        "tenant",
+        config.tenant_col.as_ref(),
+        config.no_tenant,
         struct_span,
     );
-    validate_dimension("owner", &config.owner_col, &config.no_owner, struct_span);
-    validate_dimension("type", &config.type_col, &config.no_type, struct_span);
+    validate_dimension(
+        "resource",
+        config.resource_col.as_ref(),
+        config.no_resource,
+        struct_span,
+    );
+    validate_dimension(
+        "owner",
+        config.owner_col.as_ref(),
+        config.no_owner,
+        struct_span,
+    );
+    validate_dimension(
+        "type",
+        config.type_col.as_ref(),
+        config.no_type,
+        struct_span,
+    );
 }
 
 /// Validate a single dimension has exactly one specification
 fn validate_dimension(
     name: &str,
-    col: &Option<(String, Span)>,
-    no_col: &Option<Span>,
+    col: Option<&(String, Span)>,
+    no_col: Option<Span>,
     struct_span: Span,
 ) {
-    match (col, no_col) {
+    match (col, &no_col) {
         (None, None) => {
             // Missing explicit decision
             let msg = format!(

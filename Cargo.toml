@@ -51,6 +51,7 @@ unused_import_braces = "warn"
 [workspace.lints.clippy]
 # See clippy rules details https://rust-lang.github.io/rust-clippy/master/index.html
 # Here will be workspace global rules
+pedantic = { level = "deny", priority = -1 }
 async_yields_async = "deny"
 await_holding_lock = "deny"
 await_holding_refcell_ref = "deny"
@@ -58,34 +59,95 @@ cast_possible_truncation = "deny"
 cast_possible_wrap = "deny"
 cast_precision_loss = "deny"
 cast_sign_loss = "deny"
-clone_on_copy = "warn"
-cognitive_complexity = "warn"
-dbg_macro = "warn"
-debug_assert_with_mut_call = "warn"
-empty_line_after_outer_attr = "warn"
-empty_structs_with_brackets = "warn"
+clone_on_copy = "deny"
+cognitive_complexity = "deny"
+dbg_macro = "deny"
+debug_assert_with_mut_call = "deny"
+default_trait_access = "deny"
+doc_link_with_quotes = "deny"
+elidable_lifetime_names = "deny"
+empty_line_after_outer_attr = "deny"
+empty_structs_with_brackets = "deny"
+enum_glob_use = "deny"
 expect_used = "deny"
-integer_division = "deny"
+explicit_iter_loop = "deny"
 float_cmp = "deny"
 float_cmp_const = "deny"
+format_push_string = "deny"
+if_not_else = "deny"
+ignore_without_reason = "deny"
+ignored_unit_patterns = "deny"
+implicit_clone = "deny"
+implicit_hasher = "deny"
+inefficient_to_string = "deny"
+integer_division = "deny"
+ip_constant = "deny"
 lossy_float_literal = "deny"
-map_clone = "warn"
+manual_assert = "deny"
+manual_let_else = "deny"
+manual_string_new = "deny"
+many_single_char_names = "deny"
+map_clone = "deny"
+map_unwrap_or = "deny"
+match_same_arms = "deny"
+match_wildcard_for_single_variants = "deny"
+missing_fields_in_debug = "deny"
+missing_panics_doc = "deny"
 mutex_atomic = "deny"
 needless_borrow = "deny"
 needless_lifetimes = "deny"
-non_ascii_literal = "warn"
-# needless_pass_by_value = "deny"
+needless_pass_by_value = "deny"
+no_effect_underscore_binding = "deny"
+non_ascii_literal = "deny"
+non_std_lazy_statics = "deny"
+option_as_ref_cloned = "deny"
+redundant_else = "deny"
+ref_option = "deny"
 regex_creation_in_loops = "deny"
-semicolon_if_nothing_returned = "warn"
-suspicious_operation_groupings = "warn"
-type_complexity = "warn"
+semicolon_if_nothing_returned = "deny"
+single_char_pattern = "deny"
+single_match_else = "deny"
+suspicious_operation_groupings = "deny"
+trivially_copy_pass_by_ref = "deny"
+type_complexity = "deny"
+unchecked_time_subtraction = "deny"
+unnecessary_debug_formatting = "deny"
+unnecessary_literal_bound = "deny"
+unnecessary_wraps = "deny"
+unnested_or_patterns = "deny"
+unused_async = "deny"
+unused_self = "deny"
 unwrap_used = "deny"
-unused_self = "warn"
-use_debug = "warn"
-useless_let_if_seq = "warn"
-used_underscore_binding = "warn"
-wildcard_imports = "warn"
-wildcard_dependencies = "warn"
+use_debug = "deny"
+used_underscore_binding = "deny"
+used_underscore_items = "deny"
+useless_let_if_seq = "deny"
+wildcard_dependencies = "deny"
+wildcard_imports = "deny"
+
+# =============================================================================
+# PEDANTIC LINTS - Temporarily allowed until fixed
+# After fixing each lint, change "allow" to "deny" as appropriate or remove the lint from the list
+# =============================================================================
+
+# Documentation lints (637 total)
+doc_markdown = "allow"                        # 511 - backticks missing in docs
+missing_errors_doc = "allow"                  # 126 - missing # Errors section
+
+# Style lints (388 total)
+uninlined_format_args = "allow"               # 302 - use format!("{x}") instead of format!("{}", x)
+redundant_closure_for_method_calls = "allow"  # 57 - use method reference instead of closure
+items_after_statements = "allow"              # 15 - items should be before statements
+unreadable_literal = "allow"                  # 14 - use underscores in large numbers
+
+# API Design lints (316 total)
+must_use_candidate = "allow"                  # 221 - add #[must_use] to pure functions
+return_self_not_must_use = "allow"            # 95 - builder methods should have #[must_use]
+
+# Complexity lints (23 total)
+too_many_lines = "allow"                      # 11 - function too long
+similar_names = "allow"                       # 9 - variable names too similar
+struct_excessive_bools = "allow"              # 3 - too many bools in struct
 
 [workspace.dependencies]
 # Serialization

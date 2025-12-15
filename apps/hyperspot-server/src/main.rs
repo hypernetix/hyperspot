@@ -35,8 +35,7 @@ use modkit::runtime::{
     run, shutdown, DbOptions, OopModuleSpawnConfig, OopSpawnOptions, RunOptions, ShutdownOptions,
 };
 
-#[allow(dead_code)]
-fn _ensure_drivers_linked() {
+fn ensure_drivers_linked() {
     // Ensure database drivers are linked for sqlx::any
     let _ = std::any::type_name::<Sqlite>();
     let _ = std::any::type_name::<Postgres>();
@@ -82,7 +81,7 @@ enum Commands {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    _ensure_drivers_linked();
+    ensure_drivers_linked();
 
     let cli = Cli::parse();
 
@@ -123,7 +122,7 @@ async fn main() -> Result<()> {
     let otel_layer = None;
 
     // Initialize logging + otel in one Registry
-    let logging_config = config.logging.as_ref().cloned().unwrap_or_default();
+    let logging_config = config.logging.clone().unwrap_or_default();
     modkit_bootstrap::host::logging::init_logging_unified(
         &logging_config,
         Path::new(&config.server.home_dir),
@@ -133,7 +132,7 @@ async fn main() -> Result<()> {
     // One-time connectivity probe
     #[cfg(feature = "otel")]
     if let Some(tc) = modkit_tracing_config.as_ref() {
-        if let Err(e) = modkit::telemetry::init::otel_connectivity_probe(tc).await {
+        if let Err(e) = modkit::telemetry::init::otel_connectivity_probe(tc) {
             tracing::error!(error = %e, "OTLP connectivity probe failed");
         }
     }
@@ -154,11 +153,11 @@ async fn main() -> Result<()> {
     // Dispatch subcommands (default: run)
     match cli.command.unwrap_or(Commands::Run) {
         Commands::Run => run_server(config, args).await,
-        Commands::Check => check_config(config).await,
+        Commands::Check => check_config(&config),
     }
 }
 
-async fn check_config(config: AppConfig) -> Result<()> {
+fn check_config(config: &AppConfig) -> Result<()> {
     tracing::info!("Checking configuration...");
     // If load_layered/load_or_default succeeded and home_dir normalized, we're good.
     println!("Configuration is valid");
@@ -167,14 +166,12 @@ async fn check_config(config: AppConfig) -> Result<()> {
 }
 
 /// Create a Figment from the loaded AppConfig for use with DbManager.
-fn create_figment_from_config(config: &AppConfig) -> Result<Figment> {
+fn create_figment_from_config(config: &AppConfig) -> Figment {
     use figment::providers::Serialized;
 
     // Convert the AppConfig back to a Figment that DbManager can use
     // We serialize the config and then parse it back as a Figment
-    let figment = Figment::new().merge(Serialized::defaults(config));
-
-    Ok(figment)
+    Figment::new().merge(Serialized::defaults(config))
 }
 
 /// Create a mock Figment for testing with in-memory SQLite databases.
@@ -227,7 +224,7 @@ fn resolve_db_options(config: &AppConfig, args: &CliArgs) -> Result<DbOptions> {
     }
 
     tracing::info!("Using DbManager with Figment-based configuration");
-    let figment = create_figment_from_config(config)?;
+    let figment = create_figment_from_config(config);
     let home_dir = PathBuf::from(&config.server.home_dir);
     let db_manager = Arc::new(modkit_db::DbManager::from_figment(figment, home_dir)?);
     Ok(DbOptions::Manager(db_manager))

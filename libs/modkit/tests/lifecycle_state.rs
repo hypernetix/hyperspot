@@ -16,7 +16,7 @@ impl Runnable for Tick {
         loop {
             tokio::select! {
                 _ = interval.tick() => {},
-                _ = cancel.cancelled() => break,
+                () = cancel.cancelled() => break,
             }
         }
         Ok(())
@@ -29,7 +29,7 @@ async fn status_transitions_plain_start() {
     assert_eq!(lc.status(), Status::Stopped);
 
     lc.start(|cancel| async move {
-        let _ = cancel.cancelled().await;
+        cancel.cancelled().await;
         Ok(())
     })
     .unwrap();

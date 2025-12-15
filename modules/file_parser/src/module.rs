@@ -98,7 +98,7 @@ impl RestfulModule for FileParserModule {
             .ok_or_else(|| anyhow::anyhow!("Service not initialized"))?
             .clone();
 
-        let router = crate::api::rest::routes::register_routes(router, openapi, service)?;
+        let router = crate::api::rest::routes::register_routes(router, openapi, service);
 
         info!("File parser REST routes registered successfully");
         Ok(router)

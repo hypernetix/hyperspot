@@ -358,7 +358,7 @@ pub struct LimitCfg {
 }
 
 /// Clamp the requested limit to configured bounds
-fn clamp_limit(req: Option<u64>, cfg: LimitCfg) -> Result<u64, ODataError> {
+fn clamp_limit(req: Option<u64>, cfg: LimitCfg) -> u64 {
     let mut l = req.unwrap_or(cfg.default);
     if l == 0 {
         l = 1;
@@ -366,7 +366,7 @@ fn clamp_limit(req: Option<u64>, cfg: LimitCfg) -> Result<u64, ODataError> {
     if l > cfg.max {
         l = cfg.max;
     }
-    Ok(l)
+    l
 }
 
 /// Type-safe OData pagination with filters, ordering, and cursors.
@@ -424,7 +424,7 @@ where
     Mapper: Fn(E::Model) -> D,
     C: ConnectionTrait + Send + Sync,
 {
-    let limit = clamp_limit(query.limit, limit_cfg)?;
+    let limit = clamp_limit(query.limit, limit_cfg);
     let fetch = limit + 1;
 
     // Effective order derivation
@@ -457,7 +457,7 @@ where
         s = s.filter(cond);
     }
 
-    let is_backward = query.cursor.as_ref().map(|c| c.d == "bwd").unwrap_or(false);
+    let is_backward = query.cursor.as_ref().is_some_and(|c| c.d == "bwd");
 
     // Apply cursor predicate
     if let Some(cursor) = &query.cursor {
@@ -655,7 +655,7 @@ where
     }
 
     // Determine primary sort direction from first order key
-    let primary_dir = order.0.first().map(|k| k.dir).unwrap_or(SortDir::Desc);
+    let primary_dir = order.0.first().map_or(SortDir::Desc, |k| k.dir);
 
     Ok(CursorV1 {
         k: cursor_keys,

@@ -150,7 +150,7 @@ impl AuthDispatcher {
     }
 
     /// Log successful JWT validation
-    fn log_jwt_success(claims: &Claims, plugin_name: &str, kid: &Option<String>) {
+    fn log_jwt_success(claims: &Claims, plugin_name: &str, kid: Option<&String>) {
         tracing::debug!(
             sub_prefix = %truncate_uuid(&claims.sub),
             issuer = %claims.issuer,
@@ -184,7 +184,7 @@ impl AuthDispatcher {
         Self::validate_claims_with_logging(&normalized, &self.validation_config)?;
 
         // Step 5: Log success and return
-        Self::log_jwt_success(&normalized, self.plugin.name(), &header.kid);
+        Self::log_jwt_success(&normalized, self.plugin.name(), header.kid.as_ref());
 
         Ok(normalized)
     }
@@ -351,27 +351,10 @@ impl AuthDispatcher {
 #[async_trait]
 impl TokenValidator for AuthDispatcher {
     async fn validate_and_parse(&self, token: &str) -> Result<Claims, AuthError> {
-        self.validate_jwt(token).await.map_err(|e| match e {
-            // All JWT validation errors should result in 401 Unauthenticated
-            ClaimsError::InvalidSignature => AuthError::Unauthenticated,
-            ClaimsError::Expired => AuthError::Unauthenticated,
-            ClaimsError::NotYetValid => AuthError::Unauthenticated,
-            ClaimsError::InvalidIssuer { .. } => AuthError::Unauthenticated,
-            ClaimsError::InvalidAudience { .. } => AuthError::Unauthenticated,
-            ClaimsError::Malformed(_) => AuthError::Unauthenticated,
-            ClaimsError::Provider(_) => AuthError::Unauthenticated,
-            ClaimsError::MissingClaim(_) => AuthError::Unauthenticated,
-            ClaimsError::InvalidClaimFormat { .. } => AuthError::Unauthenticated,
-            ClaimsError::NoMatchingPlugin => AuthError::Unauthenticated,
-            ClaimsError::NoValidatingKey => AuthError::Unauthenticated,
-            ClaimsError::NoMatchingProvider => AuthError::Unauthenticated,
-            ClaimsError::UnknownKidAfterRefresh => AuthError::Unauthenticated,
-            ClaimsError::IntrospectionDenied => AuthError::Unauthenticated,
-            ClaimsError::ConfigError(_) => AuthError::Unauthenticated,
-            ClaimsError::DecodeFailed(_) => AuthError::Unauthenticated,
-            ClaimsError::JwksFetchFailed(_) => AuthError::Unauthenticated,
-            ClaimsError::UnknownKeyId(_) => AuthError::Unauthenticated,
-        })
+        // All JWT validation errors should result in 401 Unauthenticated
+        self.validate_jwt(token)
+            .await
+            .map_err(|_| AuthError::Unauthenticated)
     }
 }
 

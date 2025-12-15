@@ -19,7 +19,7 @@ use uuid::Uuid;
 struct DemoClaimsPlugin;
 
 impl ClaimsPlugin for DemoClaimsPlugin {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "demo"
     }
 
@@ -88,7 +88,7 @@ impl StaticKeyProvider {
 
 #[async_trait]
 impl KeyProvider for StaticKeyProvider {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "static"
     }
 

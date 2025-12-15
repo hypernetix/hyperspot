@@ -1,6 +1,5 @@
 use sea_orm::{sea_query::Expr, ColumnTrait, Condition, EntityTrait};
 
-use crate::secure::error::ScopeError;
 use crate::secure::provider::{SimpleTenantFilter, TenantFilterProvider};
 use crate::secure::{AccessScope, ScopableEntity};
 
@@ -27,7 +26,7 @@ use crate::secure::{AccessScope, ScopableEntity};
 /// - Root scope explicitly bypasses all tenant filtering for system-level access
 /// - Explicit resource IDs provide fine-grained access
 /// - Empty scopes are explicitly denied rather than returning all data
-pub fn build_scope_condition<E>(scope: &AccessScope) -> Result<Condition, ScopeError>
+pub fn build_scope_condition<E>(scope: &AccessScope) -> Condition
 where
     E: ScopableEntity + EntityTrait,
     E::Column: ColumnTrait + Copy,
@@ -36,7 +35,7 @@ where
 
     // Rule 1: Nothing supplied → deny all
     if scope.is_empty() {
-        return Ok(deny_all());
+        return deny_all();
     }
 
     let mut parts: Vec<Condition> = Vec::new();
@@ -52,7 +51,7 @@ where
             parts.push(id_filter);
         } else {
             // Entity has no resource_col but scope requires resource filtering → deny all
-            return Ok(deny_all());
+            return deny_all();
         }
     }
 
@@ -64,7 +63,7 @@ where
         _ => unreachable!(),
     };
 
-    Ok(cond)
+    cond
 }
 
 #[cfg(test)]
