@@ -1,7 +1,7 @@
 //! Module Orchestrator
 //!
 //! System module for service discovery.
-//! This module provides DirectoryService for gRPC service registration and discovery.
+//! This module provides `DirectoryService` for gRPC service registration and discovery.
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -99,7 +99,7 @@ impl modkit::Module for ModuleOrchestrator {
     }
 }
 
-/// Export gRPC services to grpc_hub
+/// Export gRPC services to `grpc_hub`
 #[async_trait]
 impl GrpcServiceModule for ModuleOrchestrator {
     async fn get_grpc_services(&self, _ctx: &ModuleCtx) -> Result<Vec<RegisterGrpcServiceFn>> {

@@ -136,7 +136,7 @@
 //!
 //! # Global (Non-Tenant) Entities
 //!
-//! For global entities (no tenant isolation), omit the tenant_id column
+//! For global entities (no tenant isolation), omit the `tenant_id` column
 //! but still include audit fields:
 //!
 //! ```ignore
@@ -153,11 +153,11 @@
 //!
 //! # Best Practices
 //!
-//! 1. **Always index tenant_id** - Critical for query performance
-//! 2. **Use composite indexes** - tenant_id should be the first column
-//! 3. **Unique constraints include tenant_id** - Prevents cross-tenant collisions
+//! 1. **Always index `tenant_id`** - Critical for query performance
+//! 2. **Use composite indexes** - `tenant_id` should be the first column
+//! 3. **Unique constraints include `tenant_id`** - Prevents cross-tenant collisions
 //! 4. **Set NOT NULL where appropriate** - Enforce data integrity
-//! 5. **Use default for created_at** - Automatic timestamp
+//! 5. **Use default for `created_at`** - Automatic timestamp
 //! 6. **UUID for all IDs** - Consistent type across security columns
 
 // Note: Migration helper traits could be added here if needed, but keeping

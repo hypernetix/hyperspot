@@ -57,6 +57,7 @@ impl Service {
     }
 
     /// List all nodes
+    #[must_use]
     pub fn list_nodes(&self) -> Vec<Node> {
         self.storage.list_nodes()
     }

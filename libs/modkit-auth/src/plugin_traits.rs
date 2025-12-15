@@ -18,6 +18,9 @@ pub trait ClaimsPlugin: Send + Sync {
     /// - tenants (must be UUIDs)
     /// - roles
     /// - any extra provider-specific fields
+    ///
+    /// # Errors
+    /// Returns `ClaimsError` if required claims are missing or have invalid format.
     fn normalize(&self, raw: &Value) -> Result<Claims, ClaimsError>;
 }
 

@@ -1,7 +1,7 @@
 //! Users Info Module
 //!
 //! This module provides user management functionality with REST API,
-//! database storage, and inter-module communication via ClientHub.
+//! database storage, and inter-module communication via `ClientHub`.
 //!
 //! ## Public API
 //!

@@ -1,7 +1,7 @@
-//! Host Runtime - orchestrates the full ModKit lifecycle
+//! Host Runtime - orchestrates the full `ModKit` lifecycle
 //!
-//! This module contains the HostRuntime type that owns and coordinates
-//! the execution of all lifecycle phases: system_wire → DB → init → REST → gRPC → start → OoP spawn → wait → stop.
+//! This module contains the `HostRuntime` type that owns and coordinates
+//! the execution of all lifecycle phases: `system_wire` → DB → init → REST → gRPC → start → `OoP` spawn → wait → stop.
 
 use axum::Router;
 use std::collections::HashSet;
@@ -21,20 +21,20 @@ use crate::runtime::{GrpcInstallerStore, ModuleManager, OopSpawnOptions, SystemC
 pub enum DbOptions {
     /// No database integration. `ModuleCtx::db()` will be `None`, `db_required()` will error.
     None,
-    /// Use a DbManager to handle database connections with Figment-based configuration.
+    /// Use a `DbManager` to handle database connections with Figment-based configuration.
     Manager(Arc<modkit_db::DbManager>),
 }
 
-/// Environment variable name for passing directory endpoint to OoP modules.
+/// Environment variable name for passing directory endpoint to `OoP` modules.
 pub const MODKIT_DIRECTORY_ENDPOINT_ENV: &str = "MODKIT_DIRECTORY_ENDPOINT";
 
-/// Environment variable name for passing rendered module config to OoP modules.
+/// Environment variable name for passing rendered module config to `OoP` modules.
 pub const MODKIT_MODULE_CONFIG_ENV: &str = "MODKIT_MODULE_CONFIG";
 
-/// HostRuntime owns the lifecycle orchestration for ModKit.
+/// `HostRuntime` owns the lifecycle orchestration for `ModKit`.
 ///
 /// It encapsulates all runtime state and drives modules through the full lifecycle:
-/// system_wire → DB → init → REST → gRPC → start → OoP spawn → wait → stop.
+/// `system_wire` → DB → init → REST → gRPC → start → `OoP` spawn → wait → stop.
 pub struct HostRuntime {
     registry: ModuleRegistry,
     ctx_builder: ModuleContextBuilder,
@@ -46,12 +46,12 @@ pub struct HostRuntime {
     cancel: CancellationToken,
     #[allow(dead_code)]
     db_options: DbOptions,
-    /// OoP module spawn configuration and backend
+    /// `OoP` module spawn configuration and backend
     oop_options: Option<OopSpawnOptions>,
 }
 
 impl HostRuntime {
-    /// Create a new HostRuntime instance.
+    /// Create a new `HostRuntime` instance.
     ///
     /// This prepares all runtime components but does not start any lifecycle phases.
     pub fn new(
@@ -97,6 +97,9 @@ impl HostRuntime {
     /// SYSTEM WIRING phase: wire runtime internals into system modules.
     ///
     /// This phase runs before init and only for modules with the "system" capability.
+    ///
+    /// # Errors
+    /// Returns `RegistryError` if system wiring fails.
     pub fn wire_system(&self) -> Result<(), RegistryError> {
         tracing::info!("Phase: system_wire");
 
@@ -218,7 +221,7 @@ impl HostRuntime {
     /// This is a synchronous phase that builds the final Router by:
     /// 1. Preparing the host module
     /// 2. Registering all REST providers
-    /// 3. Finalizing with OpenAPI endpoints
+    /// 3. Finalizing with `OpenAPI` endpoints
     async fn run_rest_phase(&self) -> Result<Router, RegistryError> {
         tracing::info!("Phase: rest (sync)");
 
@@ -306,7 +309,7 @@ impl HostRuntime {
 
     /// gRPC registration phase: collect services from all grpc modules.
     ///
-    /// Services are stored in the installer store for the grpc_hub to consume during start.
+    /// Services are stored in the installer store for the `grpc_hub` to consume during start.
     async fn run_grpc_phase(&self) -> Result<(), RegistryError> {
         tracing::info!("Phase: grpc (registration)");
 
@@ -416,7 +419,7 @@ impl HostRuntime {
     /// STOP phase: stop all stateful modules in reverse order.
     ///
     /// Errors are logged but do not fail the shutdown process.
-    /// Note: OoP modules are stopped automatically by the backend when the
+    /// Note: `OoP` modules are stopped automatically by the backend when the
     /// cancellation token is triggered.
     async fn run_stop_phase(&self) -> Result<(), RegistryError> {
         tracing::info!("Phase: stop");
@@ -428,10 +431,10 @@ impl HostRuntime {
         Ok(())
     }
 
-    /// OoP SPAWN phase: spawn out-of-process modules after start phase.
+    /// `OoP` SPAWN phase: spawn out-of-process modules after start phase.
     ///
-    /// This phase runs after grpc_hub is already listening, so we can pass
-    /// the real directory endpoint to OoP modules.
+    /// This phase runs after `grpc_hub` is already listening, so we can pass
+    /// the real directory endpoint to `OoP` modules.
     async fn run_oop_spawn_phase(&self) -> Result<(), RegistryError> {
         let oop_opts = match &self.oop_options {
             Some(opts) if !opts.modules.is_empty() => opts,
@@ -485,10 +488,10 @@ impl HostRuntime {
         Ok(())
     }
 
-    /// Wait for grpc_hub to publish its bound endpoint.
+    /// Wait for `grpc_hub` to publish its bound endpoint.
     ///
-    /// Polls the GrpcHubModule::bound_endpoint() with a short interval until available or timeout.
-    /// Returns None if no grpc_hub is running or if it times out.
+    /// Polls the `GrpcHubModule::bound_endpoint()` with a short interval until available or timeout.
+    /// Returns None if no `grpc_hub` is running or if it times out.
     async fn wait_for_grpc_hub_endpoint(&self) -> Option<String> {
         const POLL_INTERVAL: std::time::Duration = std::time::Duration::from_millis(10);
         const MAX_WAIT: std::time::Duration = std::time::Duration::from_secs(5);
@@ -525,9 +528,12 @@ impl HostRuntime {
         }
     }
 
-    /// Run the full lifecycle: system_wire → DB → init → REST → gRPC → start → OoP spawn → wait → stop.
+    /// Run the full lifecycle: `system_wire` → DB → init → REST → gRPC → start → `OoP` spawn → wait → stop.
     ///
     /// This is the main entry point for orchestrating the complete module lifecycle.
+    ///
+    /// # Errors
+    /// Returns an error if any lifecycle phase fails.
     pub async fn run_module_phases(self) -> anyhow::Result<()> {
         // 1. System wiring phase (before init, only for system modules)
         self.wire_system()?;

@@ -1,6 +1,6 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::use_debug)]
 
-//! Tests for concurrency and caching behavior of DbManager.
+//! Tests for concurrency and caching behavior of `DbManager`.
 
 use figment::{providers::Serialized, Figment};
 use modkit_db::manager::DbManager;
@@ -9,7 +9,7 @@ use std::time::Duration;
 use tempfile::TempDir;
 use tokio::time::timeout;
 
-/// Test race condition: two concurrent get() calls for the same module.
+/// Test race condition: two concurrent `get()` calls for the same module.
 /// Only one handle should be built, both callers should get the same Arc.
 #[tokio::test]
 #[cfg(feature = "sqlite")]
@@ -47,7 +47,7 @@ async fn test_concurrent_get_same_module() {
     );
 }
 
-/// Test concurrent get() calls for different modules.
+/// Test concurrent `get()` calls for different modules.
 #[tokio::test]
 #[cfg(feature = "sqlite")]
 async fn test_concurrent_get_different_modules() {
@@ -158,7 +158,7 @@ async fn test_unknown_module_behavior() {
             panic!("Expected None for unknown module, got Some(handle)");
         }
         Err(err) => {
-            panic!("Expected Ok(None) for unknown module, got error: {:?}", err);
+            panic!("Expected Ok(None) for unknown module, got error: {err:?}");
         }
     }
 }
@@ -375,9 +375,8 @@ async fn test_concurrent_slow_initialization() {
     // Should complete in reasonable time (not 3x slower due to concurrency)
     assert!(
         elapsed < Duration::from_secs(10),
-        "Concurrent initialization took too long: {:?}",
-        elapsed
+        "Concurrent initialization took too long: {elapsed:?}"
     );
 
-    println!("Concurrent slow initialization completed in {:?}", elapsed);
+    println!("Concurrent slow initialization completed in {elapsed:?}");
 }

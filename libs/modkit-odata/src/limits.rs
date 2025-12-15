@@ -1,4 +1,4 @@
-//! Input validation and safety limits for OData parsing
+//! Input validation and safety limits for `OData` parsing
 //!
 //! This module enforces sane caps to prevent abuse and resource exhaustion:
 //! - Maximum `$top` value
@@ -8,8 +8,9 @@
 
 use crate::Error;
 
-/// Default configuration for OData input limits
+/// Default configuration for `OData` input limits
 #[derive(Debug, Clone)]
+#[must_use]
 pub struct ODataLimits {
     /// Maximum value for $top (default: 1000)
     pub max_top: usize,
@@ -66,7 +67,10 @@ impl ODataLimits {
         self
     }
 
-    /// Validate a $top value against limits
+    /// Validate a $top value against limits.
+    ///
+    /// # Errors
+    /// Returns `Error::InvalidLimit` if the top value exceeds the maximum allowed.
     pub fn validate_top(&self, top: usize) -> Result<(), Error> {
         if top > self.max_top {
             return Err(Error::InvalidLimit);
@@ -74,7 +78,10 @@ impl ODataLimits {
         Ok(())
     }
 
-    /// Validate a $filter expression length
+    /// Validate a $filter expression length.
+    ///
+    /// # Errors
+    /// Returns `Error::InvalidFilter` if the filter expression exceeds the maximum length.
     pub fn validate_filter(&self, filter: &str) -> Result<(), Error> {
         if filter.len() > self.max_filter_length {
             return Err(Error::InvalidFilter(format!(
@@ -85,7 +92,10 @@ impl ODataLimits {
         Ok(())
     }
 
-    /// Validate number of $orderby fields
+    /// Validate number of $orderby fields.
+    ///
+    /// # Errors
+    /// Returns `Error::InvalidOrderByField` if the count exceeds the maximum allowed fields.
     pub fn validate_orderby_count(&self, count: usize) -> Result<(), Error> {
         if count > self.max_orderby_fields {
             return Err(Error::InvalidOrderByField(format!(

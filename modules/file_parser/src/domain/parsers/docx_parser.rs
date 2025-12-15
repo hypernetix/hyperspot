@@ -9,6 +9,7 @@ use crate::domain::parser::FileParserBackend;
 pub struct DocxParser;
 
 impl DocxParser {
+    #[must_use]
     pub fn new() -> Self {
         Self
     }
@@ -39,17 +40,17 @@ impl FileParserBackend for DocxParser {
         let blocks =
             tokio::task::spawn_blocking(move || -> Result<Vec<ParsedBlock>, DomainError> {
                 let docx_file = docx_rust::DocxFile::from_file(&path_buf).map_err(|e| {
-                    DomainError::parse_error(format!("Failed to open DOCX file: {}", e))
+                    DomainError::parse_error(format!("Failed to open DOCX file: {e}"))
                 })?;
 
-                let docx = docx_file.parse().map_err(|e| {
-                    DomainError::parse_error(format!("Failed to parse DOCX: {}", e))
-                })?;
+                let docx = docx_file
+                    .parse()
+                    .map_err(|e| DomainError::parse_error(format!("Failed to parse DOCX: {e}")))?;
 
                 Ok(extract_blocks_from_docx(&docx))
             })
             .await
-            .map_err(|e| DomainError::parse_error(format!("Task join error: {}", e)))??;
+            .map_err(|e| DomainError::parse_error(format!("Task join error: {e}")))??;
 
         let mut builder = DocumentBuilder::new(ParsedSource::LocalPath(path.display().to_string()))
             .content_type("application/vnd.openxmlformats-officedocument.wordprocessingml.document")
@@ -72,26 +73,26 @@ impl FileParserBackend for DocxParser {
             tokio::task::spawn_blocking(move || -> Result<Vec<ParsedBlock>, DomainError> {
                 // docx-rust requires file path or Read trait, so we use a temporary file
                 let mut temp_file = tempfile::NamedTempFile::new().map_err(|e| {
-                    DomainError::io_error(format!("Failed to create temp file: {}", e))
+                    DomainError::io_error(format!("Failed to create temp file: {e}"))
                 })?;
 
                 std::io::Write::write_all(&mut temp_file, &bytes).map_err(|e| {
-                    DomainError::io_error(format!("Failed to write to temp file: {}", e))
+                    DomainError::io_error(format!("Failed to write to temp file: {e}"))
                 })?;
 
                 let temp_path = temp_file.path();
                 let docx_file = docx_rust::DocxFile::from_file(temp_path).map_err(|e| {
-                    DomainError::parse_error(format!("Failed to open DOCX file: {}", e))
+                    DomainError::parse_error(format!("Failed to open DOCX file: {e}"))
                 })?;
 
-                let docx = docx_file.parse().map_err(|e| {
-                    DomainError::parse_error(format!("Failed to parse DOCX: {}", e))
-                })?;
+                let docx = docx_file
+                    .parse()
+                    .map_err(|e| DomainError::parse_error(format!("Failed to parse DOCX: {e}")))?;
 
                 Ok(extract_blocks_from_docx(&docx))
             })
             .await
-            .map_err(|e| DomainError::parse_error(format!("Task join error: {}", e)))??;
+            .map_err(|e| DomainError::parse_error(format!("Task join error: {e}")))??;
 
         let source = ParsedSource::Uploaded {
             original_name: filename_hint.unwrap_or("unknown.docx").to_string(),

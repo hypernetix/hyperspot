@@ -6,6 +6,7 @@ use modkit_security::{
 use uuid::Uuid;
 
 #[test]
+#[allow(clippy::unreadable_literal)] // UUID hex patterns are intentionally repeating
 fn round_trips_security_ctx_binary_payload() {
     let tenant_ids = vec![
         Uuid::from_u128(0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa),
@@ -32,6 +33,7 @@ fn round_trips_security_ctx_binary_payload() {
 }
 
 #[test]
+#[allow(clippy::unreadable_literal)] // UUID hex patterns are intentionally repeating
 fn decode_rejects_unknown_version() {
     let tenant_ids = vec![Uuid::from_u128(0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa)];
     let subject_id = Uuid::from_u128(0x33333333333333333333333333333333);

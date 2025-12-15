@@ -41,7 +41,7 @@ pub fn parse_path_attribute(attr_name: &str, meta: &syn::Meta) -> syn::Result<Op
             } else {
                 Err(syn::Error::new_spanned(
                     &nv.value,
-                    format!("{} must be a string literal path", attr_name),
+                    format!("{attr_name} must be a string literal path"),
                 ))
             }
         }
@@ -62,7 +62,7 @@ pub fn parse_string_attribute(attr_name: &str, meta: &syn::Meta) -> syn::Result<
             } else {
                 Err(syn::Error::new_spanned(
                     &nv.value,
-                    format!("{} must be a string literal", attr_name),
+                    format!("{attr_name} must be a string literal"),
                 ))
             }
         }
@@ -75,7 +75,7 @@ pub fn validate_path(path: &Path, context: &str) -> syn::Result<()> {
     if path.segments.is_empty() {
         return Err(syn::Error::new_spanned(
             path,
-            format!("Invalid path for {}", context),
+            format!("Invalid path for {context}"),
         ));
     }
     Ok(())

@@ -27,7 +27,7 @@ use std::sync::{
 use tower::ServiceExt;
 use uuid::Uuid;
 
-/// Fake TokenValidator for integration testing
+/// Fake `TokenValidator` for integration testing
 struct IntegrationValidator {
     should_succeed: AtomicBool,
     claims: Claims,
@@ -60,7 +60,7 @@ impl TokenValidator for IntegrationValidator {
     }
 }
 
-/// Fake ScopeBuilder for integration testing
+/// Fake `ScopeBuilder` for integration testing
 struct IntegrationScopeBuilder;
 
 impl ScopeBuilder for IntegrationScopeBuilder {
@@ -117,7 +117,7 @@ fn fake_claims(sub_id: Uuid) -> Claims {
     }
 }
 
-/// Handler that returns SecurityCtx information
+/// Handler that returns `SecurityCtx` information
 async fn test_handler(ctx: axum::Extension<SecurityCtx>) -> impl IntoResponse {
     let ctx = ctx.0;
     if ctx.is_denied() {
@@ -151,7 +151,7 @@ fn build_request(method: Method, path: &str, token: Option<&str>) -> Request {
     let mut builder = axum::http::Request::builder().method(method).uri(path);
 
     if let Some(t) = token {
-        builder = builder.header("Authorization", format!("Bearer {}", t));
+        builder = builder.header("Authorization", format!("Bearer {t}"));
     }
 
     builder.body(Body::empty()).unwrap()

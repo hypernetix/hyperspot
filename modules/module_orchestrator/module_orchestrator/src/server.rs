@@ -1,6 +1,6 @@
-//! gRPC server implementation for DirectoryService
+//! gRPC server implementation for `DirectoryService`
 //!
-//! This module provides the gRPC service implementation that wraps DirectoryApi.
+//! This module provides the gRPC service implementation that wraps `DirectoryApi`.
 
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
@@ -12,7 +12,7 @@ use module_orchestrator_grpc::{
     ResolveGrpcServiceRequest, ResolveGrpcServiceResponse,
 };
 
-/// gRPC service implementation that wraps DirectoryApi
+/// gRPC service implementation that wraps `DirectoryApi`
 #[derive(Clone)]
 pub struct DirectoryServiceImpl {
     api: Arc<dyn DirectoryApi>,
@@ -97,7 +97,7 @@ impl DirectoryService for DirectoryServiceImpl {
         self.api
             .register_instance(info)
             .await
-            .map_err(|e| Status::internal(format!("Failed to register instance: {}", e)))?;
+            .map_err(|e| Status::internal(format!("Failed to register instance: {e}")))?;
 
         Ok(Response::new(()))
     }
@@ -111,7 +111,7 @@ impl DirectoryService for DirectoryServiceImpl {
         self.api
             .deregister_instance(&req.module_name, &req.instance_id)
             .await
-            .map_err(|e| Status::internal(format!("Failed to deregister instance: {}", e)))?;
+            .map_err(|e| Status::internal(format!("Failed to deregister instance: {e}")))?;
 
         Ok(Response::new(()))
     }
@@ -122,13 +122,13 @@ impl DirectoryService for DirectoryServiceImpl {
         self.api
             .send_heartbeat(&req.module_name, &req.instance_id)
             .await
-            .map_err(|e| Status::internal(format!("Failed to send heartbeat: {}", e)))?;
+            .map_err(|e| Status::internal(format!("Failed to send heartbeat: {e}")))?;
 
         Ok(Response::new(()))
     }
 }
 
-/// Create a DirectoryService server with the given API implementation
+/// Create a `DirectoryService` server with the given API implementation
 pub fn make_directory_service(
     api: Arc<dyn DirectoryApi>,
 ) -> DirectoryServiceServer<DirectoryServiceImpl> {

@@ -1,15 +1,15 @@
-//! SQLite DSN parsing and cleaning utilities.
+//! `SQLite` DSN parsing and cleaning utilities.
 
 use std::collections::HashMap;
 
-/// Extract SQLite PRAGMA parameters from DSN and return cleaned DSN.
+/// Extract `SQLite` PRAGMA parameters from DSN and return cleaned DSN.
 ///
 /// Parses the DSN as a URL and extracts whitelisted SQLite-specific parameters:
 /// - `wal`, `synchronous`, `busy_timeout`, `journal_mode` (case-insensitive)
 ///
 /// Returns:
-/// - `clean_dsn`: original DSN with SQLite PRAGMA parameters removed
-/// - `pairs`: HashMap of extracted PRAGMA parameters (normalized lowercase keys)
+/// - `clean_dsn`: original DSN with `SQLite` PRAGMA parameters removed
+/// - `pairs`: `HashMap` of extracted PRAGMA parameters (normalized lowercase keys)
 ///
 /// If URL parsing fails (e.g., plain file path), returns the original DSN unchanged
 /// with an empty parameters map.
@@ -40,7 +40,7 @@ pub(crate) fn extract_sqlite_pragmas(dsn: &str) -> (String, HashMap<String, Stri
         if !remaining_pairs.is_empty() {
             let query_string = remaining_pairs
                 .into_iter()
-                .map(|(k, v)| format!("{}={}", k, v))
+                .map(|(k, v)| format!("{k}={v}"))
                 .collect::<Vec<_>>()
                 .join("&");
             url.set_query(Some(&query_string));
@@ -53,7 +53,7 @@ pub(crate) fn extract_sqlite_pragmas(dsn: &str) -> (String, HashMap<String, Stri
     }
 }
 
-/// Check if the DSN represents an in-memory SQLite database.
+/// Check if the DSN represents an in-memory `SQLite` database.
 ///
 /// Returns `true` for:
 /// - `sqlite::memory:` or `sqlite://memory:`

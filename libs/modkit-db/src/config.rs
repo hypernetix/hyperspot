@@ -26,15 +26,15 @@
 //! 2. **DSN Precedence**: Module DSN overrides server DSN completely
 //! 3. **Params Merging**: `params` maps are merged, with module params taking precedence
 //! 4. **Pool Configuration**: Module pool config overrides server pool config entirely
-//! 5. **SQLite Paths**: `file`/`path` fields are module-only and never inherited from servers
+//! 5. **`SQLite` Paths**: `file`/`path` fields are module-only and never inherited from servers
 //!
 //! ## Conflict Detection
 //!
 //! The system validates configurations and returns [`DbError::ConfigConflict`] for:
-//! - SQLite DSN with server fields (`host`/`port`)
-//! - Non-SQLite DSN with SQLite fields (`file`/`path`)
-//! - Both `file` and `path` specified for SQLite
-//! - SQLite fields mixed with server connection fields
+//! - `SQLite` DSN with server fields (`host`/`port`)
+//! - Non-SQLite DSN with `SQLite` fields (`file`/`path`)
+//! - Both `file` and `path` specified for `SQLite`
+//! - `SQLite` fields mixed with server connection fields
 //!
 //! ## Test Coverage
 //!
@@ -109,8 +109,9 @@ pub struct PoolCfg {
 }
 
 impl PoolCfg {
-    /// Apply pool configuration to PostgreSQL pool options.
+    /// Apply pool configuration to `PostgreSQL` pool options.
     #[cfg(feature = "pg")]
+    #[must_use]
     pub fn apply_pg(
         &self,
         mut opts: sqlx::postgres::PgPoolOptions,
@@ -163,8 +164,9 @@ impl PoolCfg {
         opts
     }
 
-    /// Apply pool configuration to SQLite pool options.
+    /// Apply pool configuration to `SQLite` pool options.
     #[cfg(feature = "sqlite")]
+    #[must_use]
     pub fn apply_sqlite(
         &self,
         mut opts: sqlx::sqlite::SqlitePoolOptions,

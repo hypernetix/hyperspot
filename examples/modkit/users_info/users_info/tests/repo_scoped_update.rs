@@ -43,8 +43,7 @@ async fn update_with_scoped_ctx_denies_out_of_scope() {
         err_msg.contains("not accessible")
             || err_msg.contains("denied")
             || err_msg.contains("Secure update"),
-        "Error should indicate access denial: {}",
-        err_msg
+        "Error should indicate access denial: {err_msg}"
     );
 }
 

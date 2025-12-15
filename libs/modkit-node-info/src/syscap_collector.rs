@@ -13,7 +13,7 @@ fn bytes_to_gb(bytes: u64) -> f64 {
     bytes as f64 / BYTES_PER_GB
 }
 
-/// Builder for creating SysCap instances with reduced parameter count
+/// Builder for creating `SysCap` instances with reduced parameter count
 struct SysCapBuilder {
     key: String,
     category: String,
@@ -91,7 +91,7 @@ pub struct SysCapCollector {
 }
 
 impl SysCapCollector {
-    /// Create a new SysCapCollector with a shared SysInfoCollector reference
+    /// Create a new `SysCapCollector` with a shared `SysInfoCollector` reference
     pub fn new(sysinfo_collector: Arc<SysInfoCollector>) -> Self {
         Self { sysinfo_collector }
     }
@@ -132,12 +132,12 @@ impl SysCapCollector {
         let arch = &sysinfo.os.arch;
         caps.push(
             SysCapBuilder::new(
-                format!("hardware:{}", arch),
+                format!("hardware:{arch}"),
                 "hardware".to_string(),
                 arch.clone(),
                 arch.to_uppercase(),
             )
-            .details(Some(format!("{} architecture detected", arch)))
+            .details(Some(format!("{arch} architecture detected")))
             .cache_ttl_secs(3600) // 1 hour cache (never changes)
             .build(),
         );
@@ -189,7 +189,7 @@ impl SysCapCollector {
         let os = std::env::consts::OS;
         caps.push(
             SysCapBuilder::new(
-                format!("os:{}", os),
+                format!("os:{os}"),
                 "os".to_string(),
                 os.to_string(),
                 match os {
@@ -219,17 +219,17 @@ impl SysCapCollector {
             let gpu_key = if i == 0 {
                 "hardware:gpu".to_string()
             } else {
-                format!("hardware:gpu{}", i)
+                format!("hardware:gpu{i}")
             };
 
             let mut details = format!("Model: {}", gpu.model);
             if let Some(vram) = gpu.total_memory_mb {
                 use std::fmt::Write;
-                let _ = write!(details, ", VRAM: {:.0} MB", vram);
+                let _ = write!(details, ", VRAM: {vram:.0} MB");
             }
             if let Some(cores) = gpu.cores {
                 use std::fmt::Write;
-                let _ = write!(details, ", Cores: {}", cores);
+                let _ = write!(details, ", Cores: {cores}");
             }
 
             caps.push(

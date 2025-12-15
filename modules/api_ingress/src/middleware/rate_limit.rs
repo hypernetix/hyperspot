@@ -24,12 +24,13 @@ pub struct RateLimiterMap {
 }
 
 impl RateLimiterMap {
+    #[must_use]
     pub fn from_specs(specs: &Vec<modkit::api::OperationSpec>, cfg: &ApiIngressConfig) -> Self {
         let mut buckets = HashMap::new();
         let mut inflight = HashMap::new();
         // TODO: Add support for per-route rate limiting
         for spec in specs {
-            let (rps, burst, in_flight) = spec.rate_limit.as_ref().map_or(
+            let (rps, burst, max_in_flight) = spec.rate_limit.as_ref().map_or(
                 (
                     cfg.defaults.rate_limit.rps,
                     cfg.defaults.rate_limit.burst,
@@ -42,7 +43,7 @@ impl RateLimiterMap {
                 key.clone(),
                 Arc::new(Mutex::new(TokenBucket::new(rps, burst))),
             );
-            inflight.insert(key, Arc::new(Semaphore::new(in_flight as usize)));
+            inflight.insert(key, Arc::new(Semaphore::new(max_in_flight as usize)));
         }
         Self {
             buckets: Arc::new(buckets),

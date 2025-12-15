@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-/// Configuration for the users_info module
+/// Configuration for the `users_info` module
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct UsersInfoConfig {

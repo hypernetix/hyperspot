@@ -15,7 +15,7 @@ pub use module_orchestrator_contracts::{
     DirectoryApi, RegisterInstanceInfo, ServiceEndpoint, ServiceInstanceInfo,
 };
 
-/// Local implementation of DirectoryApi that delegates to ModuleManager
+/// Local implementation of `DirectoryApi` that delegates to `ModuleManager`
 ///
 /// This is the in-process implementation used by modules running in the same
 /// process as the module orchestrator.
@@ -24,6 +24,7 @@ pub struct LocalDirectoryApi {
 }
 
 impl LocalDirectoryApi {
+    #[must_use]
     pub fn new(mgr: Arc<ModuleManager>) -> Self {
         Self { mgr }
     }
@@ -36,10 +37,7 @@ impl DirectoryApi for LocalDirectoryApi {
             return Ok(ServiceEndpoint::new(ep.uri));
         }
 
-        anyhow::bail!(
-            "Service not found or no healthy instances: {}",
-            service_name
-        )
+        anyhow::bail!("Service not found or no healthy instances: {service_name}")
     }
 
     async fn list_instances(&self, module: &str) -> Result<Vec<ServiceInstanceInfo>> {
@@ -85,14 +83,14 @@ impl DirectoryApi for LocalDirectoryApi {
 
     async fn deregister_instance(&self, module: &str, instance_id: &str) -> Result<()> {
         let instance_id = Uuid::parse_str(instance_id)
-            .map_err(|e| anyhow::anyhow!("Invalid instance_id '{}': {}", instance_id, e))?;
+            .map_err(|e| anyhow::anyhow!("Invalid instance_id '{instance_id}': {e}"))?;
         self.mgr.deregister(module, instance_id);
         Ok(())
     }
 
     async fn send_heartbeat(&self, module: &str, instance_id: &str) -> Result<()> {
         let instance_id = Uuid::parse_str(instance_id)
-            .map_err(|e| anyhow::anyhow!("Invalid instance_id '{}': {}", instance_id, e))?;
+            .map_err(|e| anyhow::anyhow!("Invalid instance_id '{instance_id}': {e}"))?;
         self.mgr
             .update_heartbeat(module, instance_id, std::time::Instant::now());
         Ok(())

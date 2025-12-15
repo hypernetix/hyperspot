@@ -13,6 +13,7 @@ use modkit::api::{OperationSpec, Problem};
 pub type MimeValidationMap = Arc<DashMap<(Method, String), Vec<&'static str>>>;
 
 /// Build MIME validation map from operation specs
+#[must_use]
 pub fn build_mime_validation_map(specs: &[OperationSpec]) -> MimeValidationMap {
     let map = DashMap::new();
 

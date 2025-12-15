@@ -1,7 +1,7 @@
-//! Public models for the user_info module.
+//! Public models for the `user_info` module.
 //!
 //! These are transport-agnostic data structures that define the contract
-//! between the user_info module and its consumers.
+//! between the `user_info` module and its consumers.
 
 use chrono::{DateTime, Utc};
 use uuid::Uuid;

@@ -1,6 +1,6 @@
 //! Configuration module for modkit-bootstrap
 //!
-//! This module provides configuration types and utilities for both host and OoP modules.
+//! This module provides configuration types and utilities for both host and `OoP` modules.
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
@@ -33,7 +33,7 @@ pub struct ModuleConfig {
 pub struct ModuleRuntime {
     #[serde(default, rename = "type")]
     pub mod_type: RuntimeKind,
-    /// Execution configuration for OoP modules.
+    /// Execution configuration for `OoP` modules.
     #[serde(default)]
     pub execution: Option<ExecutionConfig>,
 }
@@ -80,7 +80,7 @@ pub struct AppConfig {
     /// Directory containing per-module YAML files (optional).
     #[serde(default)]
     pub modules_dir: Option<String>,
-    /// Per-module configuration bag: module_name → arbitrary JSON/YAML value.
+    /// Per-module configuration bag: `module_name` → arbitrary JSON/YAML value.
     #[serde(default)]
     pub modules: HashMap<String, serde_json::Value>,
 }
@@ -114,6 +114,7 @@ pub struct Section {
 }
 
 /// Create a default logging configuration.
+#[must_use]
 pub fn default_logging_config() -> LoggingConfig {
     let mut logging = HashMap::new();
     logging.insert(
@@ -150,6 +151,9 @@ impl Default for AppConfig {
 impl AppConfig {
     /// Load configuration with layered loading: defaults → YAML file → environment variables.
     /// Also normalizes `server.home_dir` into an absolute path and creates the directory.
+    ///
+    /// # Errors
+    /// Returns an error if configuration loading or `home_dir` resolution fails.
     pub fn load_layered<P: AsRef<Path>>(config_path: P) -> Result<Self> {
         use figment::{
             providers::{Env, Format, Serialized, Yaml},
@@ -191,6 +195,9 @@ impl AppConfig {
 
     /// Load configuration from file or create with default values.
     /// Also normalizes `server.home_dir` into an absolute path and creates the directory.
+    ///
+    /// # Errors
+    /// Returns an error if configuration loading or `home_dir` resolution fails.
     pub fn load_or_default<P: AsRef<Path>>(config_path: Option<P>) -> Result<Self> {
         if let Some(path) = config_path {
             Self::load_layered(path)
@@ -203,6 +210,9 @@ impl AppConfig {
     }
 
     /// Serialize configuration to YAML.
+    ///
+    /// # Errors
+    /// Returns an error if serialization fails.
     pub fn to_yaml(&self) -> Result<String> {
         serde_saphyr::to_string(self).context("Failed to serialize config to YAML")
     }
@@ -290,7 +300,9 @@ fn merge_module_files(
 
 /// Expands environment variables in a DSN string.
 /// Replaces `${VARNAME}` with the actual environment variable value.
-/// Returns error if any referenced env var is missing.
+///
+/// # Errors
+/// Returns an error if any referenced env var is missing.
 pub fn expand_env_in_dsn(dsn: &str) -> anyhow::Result<String> {
     use std::env;
 
@@ -302,7 +314,7 @@ pub fn expand_env_in_dsn(dsn: &str) -> anyhow::Result<String> {
         let var_name = &cap[1];
 
         let value = env::var(var_name)
-            .with_context(|| format!("Environment variable '{}' not found in DSN", var_name))?;
+            .with_context(|| format!("Environment variable '{var_name}' not found in DSN"))?;
 
         result = result.replace(full_match, &value);
     }
@@ -311,13 +323,16 @@ pub fn expand_env_in_dsn(dsn: &str) -> anyhow::Result<String> {
 }
 
 /// Resolves password: if it contains ${VAR}, expands from environment variable; otherwise returns as-is.
+///
+/// # Errors
+/// Returns an error if the referenced environment variable is not found.
 pub fn resolve_password(password: Option<&str>) -> anyhow::Result<Option<String>> {
     if let Some(pwd) = password {
         if pwd.starts_with("${") && pwd.ends_with('}') {
             // Extract variable name from ${VAR_NAME}
             let var_name = &pwd[2..pwd.len() - 1];
             let resolved = std::env::var(var_name).with_context(|| {
-                format!("Environment variable '{}' not found for password", var_name)
+                format!("Environment variable '{var_name}' not found for password")
             })?;
             Ok(Some(resolved))
         } else {
@@ -330,19 +345,22 @@ pub fn resolve_password(password: Option<&str>) -> anyhow::Result<Option<String>
 }
 
 /// Validates that a DSN string is parseable by the dsn crate.
-/// Note: SQLite DSNs have special formats that dsn crate doesn't recognize, so we skip validation for them.
+/// Note: `SQLite` DSNs have special formats that dsn crate doesn't recognize, so we skip validation for them.
+///
+/// # Errors
+/// Returns an error if the DSN is invalid.
 pub fn validate_dsn(dsn: &str) -> anyhow::Result<()> {
     // Skip validation for SQLite DSNs as they use special syntax not recognized by dsn crate
     if dsn.starts_with("sqlite:") {
         return Ok(());
     }
 
-    let _parsed = dsn::parse(dsn).map_err(|e| anyhow::anyhow!("Invalid DSN '{}': {}", dsn, e))?;
+    let _parsed = dsn::parse(dsn).map_err(|e| anyhow::anyhow!("Invalid DSN '{dsn}': {e}"))?;
 
     Ok(())
 }
 
-/// Resolves SQLite @file() syntax in DSN to actual file paths.
+/// Resolves `SQLite` @`file()` syntax in DSN to actual file paths.
 /// - `sqlite://@file(users.sqlite)` → `$HOME/.hyperspot/<module>/users.sqlite`
 /// - `sqlite://@file(/abs/path/file.db)` → use absolute path
 /// - `sqlite://` or `sqlite:///` → `$HOME/.hyperspot/<module>/<module>.sqlite`
@@ -375,15 +393,14 @@ fn resolve_sqlite_dsn(dsn: &str, home_dir: &Path, module_name: &str) -> anyhow::
                 // For Unix absolute paths (/...), use sqlite://path format
                 if normalized_path.len() > 1 && normalized_path.chars().nth(1) == Some(':') {
                     // Windows absolute path like C:/...
-                    return Ok(format!("sqlite:{}", normalized_path));
+                    return Ok(format!("sqlite:{normalized_path}"));
                 }
                 // Unix absolute path or relative path
-                return Ok(format!("sqlite://{}", normalized_path));
+                return Ok(format!("sqlite://{normalized_path}"));
             }
         }
         return Err(anyhow::anyhow!(
-            "Invalid @file() syntax in SQLite DSN: {}",
-            dsn
+            "Invalid @file() syntax in SQLite DSN: {dsn}"
         ));
     }
 
@@ -396,16 +413,16 @@ fn resolve_sqlite_dsn(dsn: &str, home_dir: &Path, module_name: &str) -> anyhow::
                 module_dir.display()
             )
         })?;
-        let db_path = module_dir.join(format!("{}.sqlite", module_name));
+        let db_path = module_dir.join(format!("{module_name}.sqlite"));
         let normalized_path = db_path.to_string_lossy().replace('\\', "/");
         // For Windows absolute paths (C:/...), use sqlite:path format
         // For Unix absolute paths (/...), use sqlite://path format
         if normalized_path.len() > 1 && normalized_path.chars().nth(1) == Some(':') {
             // Windows absolute path like C:/...
-            return Ok(format!("sqlite:{}", normalized_path));
+            return Ok(format!("sqlite:{normalized_path}"));
         }
         // Unix absolute path or relative path
-        return Ok(format!("sqlite://{}", normalized_path));
+        return Ok(format!("sqlite://{normalized_path}"));
     }
 
     // Return DSN as-is for normal cases
@@ -414,7 +431,7 @@ fn resolve_sqlite_dsn(dsn: &str, home_dir: &Path, module_name: &str) -> anyhow::
 
 /// Builds a server-based DSN from individual fields.
 /// Used when no base DSN is provided or when overriding DSN components.
-/// Uses url::Url to properly handle percent-encoding of special characters.
+/// Uses `url::Url` to properly handle percent-encoding of special characters.
 fn build_server_dsn(
     scheme: &str,
     host: Option<&str>,
@@ -430,22 +447,22 @@ fn build_server_dsn(
     let user = user.unwrap_or("postgres"); // reasonable default for server-based DBs
 
     // Start with base URL
-    let mut url = Url::parse(&format!("{}://dummy/", scheme))
-        .with_context(|| format!("Invalid scheme: {}", scheme))?;
+    let mut url = Url::parse(&format!("{scheme}://dummy/"))
+        .with_context(|| format!("Invalid scheme: {scheme}"))?;
 
     // Set host (required)
     url.set_host(Some(host))
-        .with_context(|| format!("Invalid host: {}", host))?;
+        .with_context(|| format!("Invalid host: {host}"))?;
 
     // Set port if provided
     if let Some(port) = port {
         url.set_port(Some(port))
-            .map_err(|()| anyhow::anyhow!("Invalid port: {}", port))?;
+            .map_err(|()| anyhow::anyhow!("Invalid port: {port}"))?;
     }
 
     // Set username
     url.set_username(user)
-        .map_err(|()| anyhow::anyhow!("Failed to set username: {}", user))?;
+        .map_err(|()| anyhow::anyhow!("Failed to set username: {user}"))?;
 
     // Set password if provided
     if let Some(password) = password {
@@ -457,7 +474,7 @@ fn build_server_dsn(
     if let Some(dbname) = dbname {
         // Manually encode the dbname to handle special characters
         let encoded_dbname = urlencoding::encode(dbname);
-        url.set_path(&format!("/{}", encoded_dbname));
+        url.set_path(&format!("/{encoded_dbname}"));
     } else {
         url.set_path("/");
     }
@@ -474,7 +491,7 @@ fn build_server_dsn(
     Ok(url.to_string())
 }
 
-/// Builds a SQLite DSN by replacing the database file path while preserving query parameters.
+/// Builds a `SQLite` DSN by replacing the database file path while preserving query parameters.
 fn build_sqlite_dsn_with_dbname_override(
     original_dsn: &str,
     dbname: &str,
@@ -502,16 +519,16 @@ fn build_sqlite_dsn_with_dbname_override(
     // Build the new DSN with correct format for the platform
     let dsn_base = if normalized_path.len() > 1 && normalized_path.chars().nth(1) == Some(':') {
         // Windows absolute path like C:/...
-        format!("sqlite:{}", normalized_path)
+        format!("sqlite:{normalized_path}")
     } else {
         // Unix absolute path or relative path
-        format!("sqlite://{}", normalized_path)
+        format!("sqlite://{normalized_path}")
     };
 
-    Ok(format!("{}{}", dsn_base, query_params))
+    Ok(format!("{dsn_base}{query_params}"))
 }
 
-/// Builds a SQLite DSN from file/path or validates existing DSN.
+/// Builds a `SQLite` DSN from file/path or validates existing DSN.
 /// If dbname is provided, it overrides the database file in the DSN.
 fn build_sqlite_dsn(
     dsn: Option<&str>,
@@ -551,10 +568,10 @@ fn build_sqlite_dsn(
         // For Unix absolute paths (/...), use sqlite://path format
         if normalized_path.len() > 1 && normalized_path.chars().nth(1) == Some(':') {
             // Windows absolute path like C:/...
-            return Ok(format!("sqlite:{}", normalized_path));
+            return Ok(format!("sqlite:{normalized_path}"));
         }
         // Unix absolute path or relative path
-        return Ok(format!("sqlite://{}", normalized_path));
+        return Ok(format!("sqlite://{normalized_path}"));
     }
 
     // Build from file (relative under module dir)
@@ -572,10 +589,10 @@ fn build_sqlite_dsn(
         // For Unix absolute paths (/...), use sqlite://path format
         if normalized_path.len() > 1 && normalized_path.chars().nth(1) == Some(':') {
             // Windows absolute path like C:/...
-            return Ok(format!("sqlite:{}", normalized_path));
+            return Ok(format!("sqlite:{normalized_path}"));
         }
         // Unix absolute path or relative path
-        return Ok(format!("sqlite://{}", normalized_path));
+        return Ok(format!("sqlite://{normalized_path}"));
     }
 
     // Default to module.sqlite
@@ -586,20 +603,20 @@ fn build_sqlite_dsn(
             module_dir.display()
         )
     })?;
-    let db_path = module_dir.join(format!("{}.sqlite", module_name));
+    let db_path = module_dir.join(format!("{module_name}.sqlite"));
     let normalized_path = db_path.to_string_lossy().replace('\\', "/");
     // For Windows absolute paths (C:/...), use sqlite:path format
     // For Unix absolute paths (/...), use sqlite://path format
     if normalized_path.len() > 1 && normalized_path.chars().nth(1) == Some(':') {
         // Windows absolute path like C:/...
-        Ok(format!("sqlite:{}", normalized_path))
+        Ok(format!("sqlite:{normalized_path}"))
     } else {
         // Unix absolute path or relative path
-        Ok(format!("sqlite://{}", normalized_path))
+        Ok(format!("sqlite://{normalized_path}"))
     }
 }
 
-/// Type alias for the complex return type of build_final_db_for_module
+/// Type alias for the complex return type of `build_final_db_for_module`
 type DbConfigResult = anyhow::Result<Option<(String /* final_dsn */, PoolCfg)>>;
 
 /// Builder for accumulating database configuration from multiple sources
@@ -726,7 +743,7 @@ impl DbConfigBuilder {
     }
 }
 
-/// Determines the database backend type (SQLite or server-based)
+/// Determines the database backend type (`SQLite` or server-based)
 fn decide_backend(builder: &DbConfigBuilder, module_db_config: &DbConnConfig) -> bool {
     // Always treat as SQLite if DSN starts with "sqlite", regardless of server reference
     // Also treat as SQLite if no server reference and no explicit DSN (default case)
@@ -739,7 +756,7 @@ fn decide_backend(builder: &DbConfigBuilder, module_db_config: &DbConnConfig) ->
         || (module_db_config.server.is_none() && builder.dsn.is_none())
 }
 
-/// Finalize SQLite DSN from builder state
+/// Finalize `SQLite` DSN from builder state
 fn finalize_sqlite_dsn(
     builder: &DbConfigBuilder,
     module_db_config: &DbConnConfig,
@@ -770,20 +787,17 @@ fn finalize_server_dsn(builder: &DbConfigBuilder, module_name: &str) -> anyhow::
                 path[1..].to_string()
             } else {
                 return Err(anyhow::anyhow!(
-                    "Server-based database config for module '{}' missing required 'dbname'",
-                    module_name
+                    "Server-based database config for module '{module_name}' missing required 'dbname'"
                 ));
             }
         } else {
             return Err(anyhow::anyhow!(
-                "Server-based database config for module '{}' missing required 'dbname'",
-                module_name
+                "Server-based database config for module '{module_name}' missing required 'dbname'"
             ));
         }
     } else {
         return Err(anyhow::anyhow!(
-            "Server-based database config for module '{}' missing required 'dbname'",
-            module_name
+            "Server-based database config for module '{module_name}' missing required 'dbname'"
         ));
     };
 
@@ -811,7 +825,7 @@ fn finalize_server_dsn(builder: &DbConfigBuilder, module_name: &str) -> anyhow::
             // Update the path with the final dbname if it's different
             let original_dbname = parsed.path().trim_start_matches('/');
             if original_dbname != dbname {
-                parsed.set_path(&format!("/{}", dbname));
+                parsed.set_path(&format!("/{dbname}"));
             }
             Ok(parsed.to_string())
         } else {
@@ -848,15 +862,15 @@ fn redact_dsn_for_logging(dsn: &str) -> anyhow::Result<String> {
 
 // ---- OoP Module Configuration Support ----
 
-/// Environment variable name for passing rendered module config to OoP modules.
+/// Environment variable name for passing rendered module config to `OoP` modules.
 pub const MODKIT_MODULE_CONFIG_ENV: &str = "MODKIT_MODULE_CONFIG";
 
-/// Rendered database configuration for OoP modules.
+/// Rendered database configuration for `OoP` modules.
 /// Contains both global server templates and module-specific config.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RenderedDbConfig {
     /// Global database configuration with server templates.
-    /// OoP module can use these servers for reference.
+    /// `OoP` module can use these servers for reference.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub global: Option<GlobalDatabaseConfig>,
     /// Module-specific database configuration (already merged with server reference in master).
@@ -866,32 +880,33 @@ pub struct RenderedDbConfig {
 }
 
 impl RenderedDbConfig {
-    /// Create a new RenderedDbConfig from global and module database configurations.
+    /// Create a new `RenderedDbConfig` from global and module database configurations.
+    #[must_use]
     pub fn new(global: Option<GlobalDatabaseConfig>, module: Option<DbConnConfig>) -> Self {
         Self { global, module }
     }
 }
 
-/// Rendered module configuration passed to OoP modules via environment variable.
+/// Rendered module configuration passed to `OoP` modules via environment variable.
 ///
-/// This struct contains everything an OoP module needs to initialize:
-/// - Database configuration (structured, for field-by-field merge in OoP)
+/// This struct contains everything an `OoP` module needs to initialize:
+/// - Database configuration (structured, for field-by-field merge in `OoP`)
 /// - Module config section
-/// - Logging configuration (for key-by-key merge in OoP)
+/// - Logging configuration (for key-by-key merge in `OoP`)
 /// - Tracing configuration for OTEL
 ///
 /// The runtime section is excluded as it's only relevant for the master host.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RenderedModuleConfig {
     /// Rendered database configuration (structured, not resolved DSN).
-    /// OoP module will merge this with local --config using field-by-field merge.
+    /// `OoP` module will merge this with local --config using field-by-field merge.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub database: Option<RenderedDbConfig>,
     /// Module-specific config section (passed as-is)
     #[serde(default)]
     pub config: serde_json::Value,
     /// Logging configuration from master host.
-    /// OoP module will merge this with local --config (local keys override master keys).
+    /// `OoP` module will merge this with local --config (local keys override master keys).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub logging: Option<LoggingConfig>,
     /// Tracing configuration from master host for OTEL initialization
@@ -901,29 +916,38 @@ pub struct RenderedModuleConfig {
 
 impl RenderedModuleConfig {
     /// Deserialize from JSON string (used when reading from env var).
+    ///
+    /// # Errors
+    /// Returns an error if JSON parsing fails.
     pub fn from_json(json: &str) -> anyhow::Result<Self> {
         serde_json::from_str(json).context("Failed to parse RenderedModuleConfig from JSON")
     }
 
-    /// Serialize to JSON string (used when passing to OoP modules via env var).
+    /// Serialize to JSON string (used when passing to `OoP` modules via env var).
+    ///
+    /// # Errors
+    /// Returns an error if serialization fails.
     pub fn to_json(&self) -> anyhow::Result<String> {
         serde_json::to_string(self).context("Failed to serialize RenderedModuleConfig to JSON")
     }
 }
 
-/// Render module configuration for passing to OoP module via environment variable.
+/// Render module configuration for passing to `OoP` module via environment variable.
 ///
-/// This function prepares a structured configuration that an OoP module can use
+/// This function prepares a structured configuration that an `OoP` module can use
 /// to initialize itself. The configuration includes:
-/// - Database configuration (structured, for field-by-field merge in OoP)
+/// - Database configuration (structured, for field-by-field merge in `OoP`)
 /// - Module config section
-/// - Logging configuration (for key-by-key merge in OoP)
+/// - Logging configuration (for key-by-key merge in `OoP`)
 /// - Tracing configuration for OTEL
 ///
 /// The runtime section is excluded as it's only relevant for the master host.
 ///
-/// OoP modules receive this via MODKIT_MODULE_CONFIG env var and can override
+/// `OoP` modules receive this via `MODKIT_MODULE_CONFIG` env var and can override
 /// any section with their local --config file.
+///
+/// # Errors
+/// Returns an error if module configuration parsing fails.
 pub fn render_module_config_for_oop(
     app: &AppConfig,
     module_name: &str,
@@ -965,18 +989,24 @@ pub fn render_module_config_for_oop(
 }
 
 /// Parse a module config from the config bag.
+///
+/// # Errors
+/// Returns an error if the module is not found or config parsing fails.
 pub fn parse_module_config(app: &AppConfig, module_name: &str) -> anyhow::Result<ModuleConfig> {
     let module_raw = app
         .modules
         .get(module_name)
         .cloned()
-        .ok_or_else(|| anyhow::anyhow!("Module '{}' not found in config", module_name))?;
+        .ok_or_else(|| anyhow::anyhow!("Module '{module_name}' not found in config"))?;
 
     let module_config: ModuleConfig = serde_json::from_value(module_raw)?;
     Ok(module_config)
 }
 
 /// Helper to get runtime config for a module (if present).
+///
+/// # Errors
+/// Returns an error if module config parsing fails.
 pub fn get_module_runtime_config(
     app: &AppConfig,
     module_name: &str,
@@ -988,7 +1018,10 @@ pub fn get_module_runtime_config(
 /// Merges global + module DB configs into a final, validated DSN and pool config.
 /// Precedence: Global DSN -> Global fields -> Module DSN -> Module fields (fields always win).
 /// For server-based, returns error if final dbname is missing.
-/// For SQLite, builds/normalizes sqlite DSN from file/path or uses a full DSN as-is.
+/// For `SQLite`, builds/normalizes sqlite DSN from file/path or uses a full DSN as-is.
+///
+/// # Errors
+/// Returns an error if database configuration is invalid or resolution fails.
 pub fn build_final_db_for_module(
     app: &AppConfig,
     module_name: &str,
@@ -1000,7 +1033,7 @@ pub fn build_final_db_for_module(
     };
 
     let module_entry: ModuleConfig = serde_json::from_value(module_raw.clone())
-        .with_context(|| format!("Invalid module config structure for '{}'", module_name))?;
+        .with_context(|| format!("Invalid module config structure for '{module_name}'"))?;
 
     let Some(module_db_config) = module_entry.database else {
         tracing::warn!(
@@ -1021,10 +1054,7 @@ pub fn build_final_db_for_module(
         let global_server = global_db_config
             .and_then(|gc| gc.servers.get(server_name))
             .ok_or_else(|| {
-                anyhow::anyhow!(
-                    "Referenced server '{}' not found in global config",
-                    server_name
-                )
+                anyhow::anyhow!("Referenced server '{server_name}' not found in global config")
             })?;
 
         builder.apply_global_server(global_server, home_dir, module_name)?;
@@ -1062,8 +1092,9 @@ pub fn build_final_db_for_module(
     Ok(Some((result_dsn, builder.pool)))
 }
 
-/// Helper function to get module database configuration from AppConfig.
-/// Returns the DbConnConfig for a module, or None if the module has no database config.
+/// Helper function to get module database configuration from `AppConfig`.
+/// Returns the `DbConnConfig` for a module, or None if the module has no database config.
+#[must_use]
 pub fn get_module_db_config(app: &AppConfig, module_name: &str) -> Option<DbConnConfig> {
     let module_raw = app.modules.get(module_name)?;
     let module_entry: ModuleConfig = serde_json::from_value(module_raw.clone()).ok()?;
@@ -1071,7 +1102,8 @@ pub fn get_module_db_config(app: &AppConfig, module_name: &str) -> Option<DbConn
 }
 
 /// Helper function to resolve module home directory.
-/// Returns the path where module-specific files (like SQLite databases) should be stored.
+/// Returns the path where module-specific files (like `SQLite` databases) should be stored.
+#[must_use]
 pub fn module_home(app: &AppConfig, module_name: &str) -> PathBuf {
     PathBuf::from(&app.server.home_dir).join(module_name)
 }
@@ -1082,7 +1114,7 @@ mod tests {
     use std::{env, fs};
     use tempfile::tempdir;
 
-    /// Helper: a normalized home_dir should be absolute and not start with '~'.
+    /// Helper: a normalized `home_dir` should be absolute and not start with '~'.
     fn is_normalized_path(p: &str) -> bool {
         let pb = PathBuf::from(p);
         pb.is_absolute() && !p.starts_with('~')
@@ -1274,13 +1306,12 @@ setting2: 42
 server:
   home_dir: "~/.modules_test"
 
-modules_dir: "{}"
+modules_dir: "{modules_dir_str}"
 
 modules:
   existing_module:
     key: "value"
-"#,
-            modules_dir_str
+"#
         );
 
         fs::write(&cfg_path, yaml).unwrap();
@@ -1329,7 +1360,7 @@ logging:
 
     // ===================== DB Configuration Precedence Tests =====================
 
-    /// Helper function to create AppConfig with database server configuration
+    /// Helper function to create `AppConfig` with database server configuration
     fn create_app_with_server(server_name: &str, db_config: DbConnConfig) -> AppConfig {
         let mut servers = HashMap::new();
         servers.insert(server_name.to_string(), db_config);
@@ -1343,7 +1374,7 @@ logging:
         }
     }
 
-    /// Helper function to add a module to AppConfig
+    /// Helper function to add a module to `AppConfig`
     fn add_module_to_app(
         app: &mut AppConfig,
         module_name: &str,

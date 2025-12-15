@@ -1,11 +1,11 @@
-//! Public error types for the user_info module.
+//! Public error types for the `user_info` module.
 //!
 //! These errors are safe to expose to other modules and consumers.
 
 use thiserror::Error;
 use uuid::Uuid;
 
-/// Errors that can be returned by the UsersInfoApi.
+/// Errors that can be returned by the `UsersInfoApi`.
 #[derive(Error, Debug, Clone)]
 pub enum UsersInfoError {
     /// User with the specified ID was not found.
@@ -26,7 +26,8 @@ pub enum UsersInfoError {
 }
 
 impl UsersInfoError {
-    /// Create a NotFound error.
+    /// Create a `NotFound` error.
+    #[must_use]
     pub fn not_found(id: Uuid) -> Self {
         Self::NotFound { id }
     }
@@ -46,6 +47,7 @@ impl UsersInfoError {
     }
 
     /// Create an Internal error.
+    #[must_use]
     pub fn internal() -> Self {
         Self::Internal
     }

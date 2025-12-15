@@ -1,6 +1,6 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-//! Test support utilities for users_info integration tests.
+//! Test support utilities for `users_info` integration tests.
 //!
 //! Provides helper functions for creating security contexts, test databases,
 //! and seeding test data.
@@ -22,6 +22,7 @@ use users_info::domain::{
 /// Create a security context that allows access to specific tenants.
 ///
 /// Uses a random subject ID for testing purposes.
+#[must_use]
 pub fn ctx_allow_tenants(tenants: &[Uuid]) -> SecurityCtx {
     let subject = Subject::new(Uuid::new_v4());
     SecurityCtx::new(AccessScope::tenants_only(tenants.to_vec()), subject)
@@ -30,6 +31,7 @@ pub fn ctx_allow_tenants(tenants: &[Uuid]) -> SecurityCtx {
 /// Create a security context that allows access to specific resources.
 ///
 /// Uses a random subject ID for testing purposes.
+#[must_use]
 pub fn ctx_allow_resources(resources: &[Uuid]) -> SecurityCtx {
     let subject = Subject::new(Uuid::new_v4());
     SecurityCtx::new(AccessScope::resources_only(resources.to_vec()), subject)
@@ -37,7 +39,8 @@ pub fn ctx_allow_resources(resources: &[Uuid]) -> SecurityCtx {
 
 /// Create a security context with a specific subject ID and tenant access.
 ///
-/// Useful when you need to test owner_id or subject-specific behavior.
+/// Useful when you need to test `owner_id` or subject-specific behavior.
+#[must_use]
 pub fn ctx_with_subject(subject_id: Uuid, tenants: &[Uuid]) -> SecurityCtx {
     let subject = Subject::new(subject_id);
     SecurityCtx::new(AccessScope::tenants_only(tenants.to_vec()), subject)
@@ -46,6 +49,7 @@ pub fn ctx_with_subject(subject_id: Uuid, tenants: &[Uuid]) -> SecurityCtx {
 /// Create a deny-all security context.
 ///
 /// This context will deny access to all data (empty scope).
+#[must_use]
 pub fn ctx_deny_all() -> SecurityCtx {
     let subject = Subject::new(Uuid::new_v4());
     SecurityCtx::new(AccessScope::default(), subject)
@@ -54,11 +58,12 @@ pub fn ctx_deny_all() -> SecurityCtx {
 /// Create a root security context (system-level access).
 ///
 /// This context bypasses all tenant filtering and allows access to all data.
+#[must_use]
 pub fn ctx_root() -> SecurityCtx {
     SecurityCtx::root_ctx()
 }
 
-/// Create a fresh in-memory SQLite database with migrations applied.
+/// Create a fresh in-memory `SQLite` database with migrations applied.
 ///
 /// Each call creates a new isolated database for testing.
 ///
@@ -76,7 +81,7 @@ pub async fn inmem_db() -> DatabaseConnection {
     db
 }
 
-/// Create a SecureConn wrapped around an in-memory database.
+/// Create a `SecureConn` wrapped around an in-memory database.
 ///
 /// This is the primary interface for secure database operations in tests.
 pub async fn inmem_secure_db() -> SecureConn {
@@ -88,11 +93,11 @@ pub async fn inmem_secure_db() -> SecureConn {
 /// Returns the created user for use in tests.
 ///
 /// # Note
-/// This uses the raw DatabaseConnection to bypass security for test setup.
-/// In production code, all inserts should go through SecureConn.
+/// This uses the raw `DatabaseConnection` to bypass security for test setup.
+/// In production code, all inserts should go through `SecureConn`.
 ///
 /// # Safety
-/// This function requires access to the raw DatabaseConnection for test seeding.
+/// This function requires access to the raw `DatabaseConnection` for test seeding.
 /// Use `inmem_db()` to get the connection, then wrap it with `SecureConn::new()`
 /// after seeding is complete.
 ///
@@ -130,11 +135,11 @@ pub async fn seed_user(
     }
 }
 
-/// Create a test database, seed data, and return both the SecureConn and raw connection.
+/// Create a test database, seed data, and return both the `SecureConn` and raw connection.
 ///
 /// Use this when you need to seed data and then create a repository.
 /// The raw connection can be used for seeding (bypassing security), then wrap
-/// it with SecureConn for the repository.
+/// it with `SecureConn` for the repository.
 pub async fn setup_test_db_with_users(
     users: Vec<(Uuid, Uuid, &str, &str)>,
 ) -> (DatabaseConnection, SecureConn) {

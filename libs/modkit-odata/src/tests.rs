@@ -266,14 +266,14 @@ mod tests {
     fn test_orderby_display_formatting() {
         // Test empty order
         let order = ODataOrderBy::empty();
-        assert_eq!(format!("{}", order), "(none)");
+        assert_eq!(format!("{order}"), "(none)");
 
         // Test single field
         let order = ODataOrderBy(vec![OrderKey {
             field: "name".to_string(),
             dir: SortDir::Asc,
         }]);
-        assert_eq!(format!("{}", order), "name asc");
+        assert_eq!(format!("{order}"), "name asc");
 
         // Test multiple fields
         let order = ODataOrderBy(vec![
@@ -286,7 +286,7 @@ mod tests {
                 dir: SortDir::Desc,
             },
         ]);
-        assert_eq!(format!("{}", order), "created_at desc, id desc");
+        assert_eq!(format!("{order}"), "created_at desc, id desc");
 
         // Test mixed directions
         let order = ODataOrderBy(vec![
@@ -303,7 +303,7 @@ mod tests {
                 dir: SortDir::Desc,
             },
         ]);
-        assert_eq!(format!("{}", order), "email asc, created_at desc, id desc");
+        assert_eq!(format!("{order}"), "email asc, created_at desc, id desc");
     }
 
     #[test]
@@ -311,7 +311,7 @@ mod tests {
         // Test that we can parse signed tokens and get readable display
         let signed = "+email,-created_at,-id";
         let order = ODataOrderBy::from_signed_tokens(signed).unwrap();
-        let display = format!("{}", order);
+        let display = format!("{order}");
         assert_eq!(display, "email asc, created_at desc, id desc");
 
         // Test roundtrip back to signed tokens

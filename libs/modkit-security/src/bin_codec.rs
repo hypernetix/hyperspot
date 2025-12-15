@@ -39,8 +39,11 @@ const fn secctx_config() -> impl Config {
     standard().with_fixed_int_encoding().with_little_endian()
 }
 
-/// Encode SecurityCtx into a versioned binary blob.
+/// Encode `SecurityCtx` into a versioned binary blob.
 /// This does not do any signing or encryption, it is just a transport format.
+///
+/// # Errors
+/// Returns `SecCtxEncodeError` if bincode serialization fails.
 pub fn encode_bin(ctx: &SecurityCtx) -> Result<Vec<u8>, SecCtxEncodeError> {
     let mut buf = Vec::with_capacity(64);
     buf.push(SECCTX_BIN_VERSION);
@@ -52,7 +55,12 @@ pub fn encode_bin(ctx: &SecurityCtx) -> Result<Vec<u8>, SecCtxEncodeError> {
     Ok(buf)
 }
 
-/// Decode SecurityCtx from a versioned binary blob produced by encode_bin().
+/// Decode `SecurityCtx` from a versioned binary blob produced by `encode_bin()`.
+///
+/// # Errors
+/// Returns `SecCtxDecodeError::Empty` if the input is empty.
+/// Returns `SecCtxDecodeError::UnsupportedVersion` if the version byte is not supported.
+/// Returns `SecCtxDecodeError::Bincode` if bincode deserialization fails.
 pub fn decode_bin(bytes: &[u8]) -> Result<SecurityCtx, SecCtxDecodeError> {
     if bytes.is_empty() {
         return Err(SecCtxDecodeError::Empty);

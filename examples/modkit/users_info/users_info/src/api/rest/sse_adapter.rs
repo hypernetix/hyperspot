@@ -10,6 +10,7 @@ pub struct SseUserEventPublisher {
 }
 
 impl SseUserEventPublisher {
+    #[must_use]
     pub fn new(out: SseBroadcaster<UserEvent>) -> Self {
         Self { out }
     }

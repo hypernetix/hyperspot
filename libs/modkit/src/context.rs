@@ -9,6 +9,7 @@ use crate::config::{module_config_or_default, ConfigError, ConfigProvider};
 // Note: runtime-dependent features are conditionally compiled
 
 #[derive(Clone)]
+#[must_use]
 pub struct ModuleCtx {
     module_name: Arc<str>,
     instance_id: Uuid,
@@ -20,8 +21,8 @@ pub struct ModuleCtx {
 
 /// Builder for creating module-scoped contexts with resolved database handles.
 ///
-/// This builder internally uses DbManager to resolve per-module DbHandle instances
-/// at build time, ensuring ModuleCtx contains only the final, ready-to-use handle.
+/// This builder internally uses `DbManager` to resolve per-module `DbHandle` instances
+/// at build time, ensuring `ModuleCtx` contains only the final, ready-to-use handle.
 pub struct ModuleContextBuilder {
     instance_id: Uuid,
     config_provider: Arc<dyn ConfigProvider>,
@@ -48,11 +49,15 @@ impl ModuleContextBuilder {
     }
 
     /// Returns the process-level instance ID.
+    #[must_use]
     pub fn instance_id(&self) -> Uuid {
         self.instance_id
     }
 
-    /// Build a module-scoped context, resolving the DbHandle for the given module.
+    /// Build a module-scoped context, resolving the `DbHandle` for the given module.
+    ///
+    /// # Errors
+    /// Returns an error if database resolution fails.
     pub async fn for_module(&self, module_name: &str) -> anyhow::Result<ModuleCtx> {
         let db_handle = if let Some(mgr) = &self.db_manager {
             mgr.get(module_name).await?
@@ -94,6 +99,7 @@ impl ModuleCtx {
     // ---- public read-only API for modules ----
 
     #[inline]
+    #[must_use]
     pub fn module_name(&self) -> &str {
         &self.module_name
     }
@@ -103,30 +109,39 @@ impl ModuleCtx {
     /// This is a unique identifier for this process instance, shared by all modules
     /// in the same process. It is generated once at bootstrap.
     #[inline]
+    #[must_use]
     pub fn instance_id(&self) -> Uuid {
         self.instance_id
     }
 
     #[inline]
+    #[must_use]
     pub fn config_provider(&self) -> &dyn ConfigProvider {
         &*self.config_provider
     }
 
-    /// Get the ClientHub for dependency resolution.
+    /// Get the `ClientHub` for dependency resolution.
     #[inline]
+    #[must_use]
     pub fn client_hub(&self) -> Arc<crate::client_hub::ClientHub> {
         self.client_hub.clone()
     }
 
     #[inline]
+    #[must_use]
     pub fn cancellation_token(&self) -> &CancellationToken {
         &self.cancellation_token
     }
 
+    #[must_use]
     pub fn db_optional(&self) -> Option<Arc<modkit_db::DbHandle>> {
         self.db_handle.clone()
     }
 
+    /// Get the database handle, returning an error if not configured.
+    ///
+    /// # Errors
+    /// Returns an error if the database is not configured for this module.
     pub fn db_required(&self) -> anyhow::Result<Arc<modkit_db::DbHandle>> {
         self.db_handle.clone().ok_or_else(|| {
             anyhow::anyhow!(
@@ -136,6 +151,7 @@ impl ModuleCtx {
         })
     }
 
+    #[must_use]
     pub fn current_module(&self) -> Option<&str> {
         Some(&self.module_name)
     }
@@ -159,12 +175,16 @@ impl ModuleCtx {
     ///
     /// let config: MyConfig = ctx.config()?;
     /// ```
+    ///
+    /// # Errors
+    /// Returns `ConfigError` if deserialization fails.
     pub fn config<T: DeserializeOwned + Default>(&self) -> Result<T, ConfigError> {
         module_config_or_default(self.config_provider.as_ref(), &self.module_name)
     }
 
     /// Get the raw JSON value of the module's config section.
     /// Returns the 'config' field from: modules.<name> = { database: ..., config: ... }
+    #[must_use]
     pub fn raw_config(&self) -> &serde_json::Value {
         use std::sync::LazyLock;
 

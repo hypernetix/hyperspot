@@ -402,6 +402,7 @@ fn parse_lifecycle_list(list: &MetaList) -> syn::Result<LcModuleCfg> {
 /// `ctor` must be a Rust expression that evaluates to the module instance,
 /// e.g. `ctor = MyModule::new()` or `ctor = Default::default()`.
 #[proc_macro_attribute]
+#[allow(clippy::too_many_lines)]
 pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
     let config = parse_macro_input!(attr as ModuleConfig);
     let input = parse_macro_input!(item as DeriveInput);
@@ -772,8 +773,8 @@ pub fn lifecycle(attr: TokenStream, item: TokenStream) -> TokenStream {
                         .to_compile_error()
                         .into();
                 }
-                let argc = f.sig.inputs.len();
-                match argc {
+                let input_count = f.sig.inputs.len();
+                match input_count {
                     2 => {}
                     3 => {
                         if let Some(syn::FnArg::Typed(pat_ty)) = f.sig.inputs.iter().nth(2) {

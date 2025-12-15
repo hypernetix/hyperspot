@@ -27,9 +27,12 @@ pub const MAX_NODES: usize = 2000;
 pub const MAX_ORDERBY_LEN: usize = 1024;
 pub const MAX_ORDER_FIELDS: usize = 10;
 
-/// Parse $orderby string into ODataOrderBy
+/// Parse $orderby string into `ODataOrderBy`.
 /// Format: "field1 [asc|desc], field2 [asc|desc], ..."
-/// Default direction is asc if not specified
+/// Default direction is asc if not specified.
+///
+/// # Errors
+/// Returns `modkit_odata::Error::InvalidOrderByField` if the orderby string is invalid.
 pub fn parse_orderby(raw: &str) -> Result<ODataOrderBy, modkit_odata::Error> {
     let raw = raw.trim();
     if raw.is_empty() {
@@ -56,8 +59,7 @@ pub fn parse_orderby(raw: &str) -> Result<ODataOrderBy, modkit_odata::Error> {
             [field, "desc"] => (*field, SortDir::Desc),
             _ => {
                 return Err(modkit_odata::Error::InvalidOrderByField(format!(
-                    "invalid orderby clause: {}",
-                    part
+                    "invalid orderby clause: {part}"
                 )))
             }
         };
@@ -83,10 +85,13 @@ pub fn parse_orderby(raw: &str) -> Result<ODataOrderBy, modkit_odata::Error> {
     Ok(ODataOrderBy(keys))
 }
 
-/// Extract and validate full OData query from request parts
+/// Extract and validate full `OData` query from request parts.
 /// - Parses $filter, $orderby, limit, cursor
 /// - Enforces budgets and validates formats
-/// - Returns unified ODataQuery
+/// - Returns unified `ODataQuery`
+///
+/// # Errors
+/// Returns `Problem` if any `OData` parameter is invalid.
 pub async fn extract_odata_query<S>(
     parts: &mut Parts,
     state: &S,
@@ -94,6 +99,18 @@ pub async fn extract_odata_query<S>(
 where
     S: Send + Sync,
 {
+    // Complexity budget (node count)
+    fn count_nodes(e: &od::Expr) -> usize {
+        use od::Expr::{And, Compare, Function, Identifier, In, Not, Or, Value};
+        match e {
+            Value(_) | Identifier(_) => 1,
+            Not(x) => 1 + count_nodes(x),
+            And(a, b) | Or(a, b) | Compare(a, _, b) => 1 + count_nodes(a) + count_nodes(b),
+            In(a, list) => 1 + count_nodes(a) + list.iter().map(count_nodes).sum::<usize>(),
+            Function(_, args) => 1 + args.iter().map(count_nodes).sum::<usize>(),
+        }
+    }
+
     // Parse query; default if missing
     let Query(params) = Query::<ODataParams>::from_request_parts(parts, state)
         .await
@@ -111,19 +128,8 @@ where
 
             // Parse into odata_params AST
             let ast_src = od::parse_str(raw)
-                .map_err(|e| crate::api::bad_request(format!("invalid $filter: {:?}", e)))?;
+                .map_err(|e| crate::api::bad_request(format!("invalid $filter: {e:?}")))?;
 
-            // Complexity budget (node count)
-            fn count_nodes(e: &od::Expr) -> usize {
-                use od::Expr::{And, Compare, Function, Identifier, In, Not, Or, Value};
-                match e {
-                    Value(_) | Identifier(_) => 1,
-                    Not(x) => 1 + count_nodes(x),
-                    And(a, b) | Or(a, b) | Compare(a, _, b) => 1 + count_nodes(a) + count_nodes(b),
-                    In(a, list) => 1 + count_nodes(a) + list.iter().map(count_nodes).sum::<usize>(),
-                    Function(_, args) => 1 + args.iter().map(count_nodes).sum::<usize>(),
-                }
-            }
             if count_nodes(&ast_src) > MAX_NODES {
                 return Err(crate::api::bad_request("Filter too complex"));
             }
@@ -182,10 +188,10 @@ where
 
 use std::ops::Deref;
 
-/// Simple Axum extractor for full OData query parameters.
+/// Simple Axum extractor for full `OData` query parameters.
 /// Parses $filter, $orderby, limit, and cursor parameters.
 /// Usage in handlers:
-///   async fn list_users(OData(query): OData, /* ... */) { /* use `query` */ }
+///   async fn `list_users(OData(query)`: `OData`, /* ... */) { /* use `query` */ }
 #[derive(Debug, Clone)]
 pub struct OData(pub ODataQuery);
 

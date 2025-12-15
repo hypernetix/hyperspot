@@ -44,7 +44,7 @@ pub trait UsersRepository: Send + Sync {
     /// List with cursor-based pagination and security filtering.
     ///
     /// Returns only users within the accessible security scope.
-    /// Uses unified OData error type for all pagination/sorting errors.
+    /// Uses unified `OData` error type for all pagination/sorting errors.
     async fn list_users_page(
         &self,
         ctx: &SecurityCtx,

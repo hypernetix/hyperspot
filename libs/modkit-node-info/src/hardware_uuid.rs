@@ -8,9 +8,9 @@ const NAMESPACE_BYTES: &[u8] = b"node-hardware-id";
 /// across reboots and application restarts.
 ///
 /// Platform-specific implementations:
-/// - macOS: Uses IOPlatformUUID from IOKit (already a UUID)
+/// - macOS: Uses `IOPlatformUUID` from `IOKit` (already a UUID)
 /// - Linux: Uses /etc/machine-id or /var/lib/dbus/machine-id (converted to UUID)
-/// - Windows: Uses MachineGuid from registry (already a UUID)
+/// - Windows: Uses `MachineGuid` from registry (already a UUID)
 ///
 /// Returns a hybrid UUID (00000000-0000-0000-xxxx-xxxxxxxxxxxx) if detection fails,
 /// where the left part is all zeros and the right part is random for uniqueness.

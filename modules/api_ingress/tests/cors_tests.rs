@@ -16,7 +16,7 @@ use std::sync::Arc;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-/// Helper to create a test ModuleCtx with CORS config
+/// Helper to create a test `ModuleCtx` with CORS config
 struct TestConfigProvider {
     config: serde_json::Value,
 }

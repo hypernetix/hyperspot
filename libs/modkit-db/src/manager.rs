@@ -1,6 +1,6 @@
 //! Database manager for per-module database connections.
 //!
-//! The DbManager is responsible for:
+//! The `DbManager` is responsible for:
 //! - Loading global database configuration from Figment
 //! - Building and caching database handles per module
 //! - Merging global server configurations with module-specific settings
@@ -26,7 +26,10 @@ pub struct DbManager {
 }
 
 impl DbManager {
-    /// Create a new DbManager from a Figment configuration.
+    /// Create a new `DbManager` from a Figment configuration.
+    ///
+    /// # Errors
+    /// Returns an error if the configuration cannot be parsed.
     pub fn from_figment(figment: Figment, home_dir: PathBuf) -> Result<Self> {
         // Parse global database configuration from "db.*" section
         let all_data: serde_json::Value = figment
@@ -47,6 +50,9 @@ impl DbManager {
 
     /// Get a database handle for the specified module.
     /// Returns cached handle if available, otherwise builds a new one.
+    ///
+    /// # Errors
+    /// Returns an error if the database connection cannot be established.
     pub async fn get(&self, module: &str) -> Result<Option<Arc<DbHandle>>> {
         // Check cache first
         if let Some(handle) = self.cache.get(module) {
@@ -102,8 +108,7 @@ impl DbManager {
                 .and_then(|g| g.servers.get(server_name))
                 .ok_or_else(|| {
                     DbError::InvalidConfig(format!(
-                        "Referenced server '{}' not found in global database configuration",
-                        server_name
+                        "Referenced server '{server_name}' not found in global database configuration"
                     ))
                 })?;
 
@@ -181,7 +186,7 @@ impl DbManager {
         module_cfg
     }
 
-    /// Finalize SQLite paths by resolving relative file paths to absolute paths.
+    /// Finalize `SQLite` paths by resolving relative file paths to absolute paths.
     fn finalize_sqlite_paths(
         &self,
         mut cfg: DbConnConfig,

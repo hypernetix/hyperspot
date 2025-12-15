@@ -31,7 +31,7 @@ async fn test_docx_parser_with_working_file() {
 
     // Skip test if file doesn't exist (not all test files may be available)
     if !test_file.exists() {
-        eprintln!("Skipping test: test file not found at {:?}", test_file);
+        eprintln!("Skipping test: test file not found at {test_file:?}");
         return;
     }
 
@@ -60,7 +60,7 @@ async fn test_docx_parser_with_two_page_file() {
     let test_file = get_test_file_path("test_file_2pages_multilingual.docx");
 
     if !test_file.exists() {
-        eprintln!("Skipping test: test file not found at {:?}", test_file);
+        eprintln!("Skipping test: test file not found at {test_file:?}");
         return;
     }
 
@@ -72,13 +72,10 @@ async fn test_docx_parser_with_two_page_file() {
         let error = result.err().unwrap();
         let error_msg = error.to_string();
         if error_msg.contains("malformed XML") || error_msg.contains("rotate_with_shape") {
-            eprintln!(
-                "Known docx-rust limitation with gradient fills: {}",
-                error_msg
-            );
+            eprintln!("Known docx-rust limitation with gradient fills: {error_msg}");
             return; // Skip test due to known limitation
         }
-        panic!("Unexpected error: {:?}", error_msg);
+        panic!("Unexpected error: {error_msg:?}");
     }
 
     let document = result.unwrap();
@@ -91,7 +88,7 @@ async fn test_docx_parser_with_big_english_file() {
     let test_file = get_test_file_path("test_file_big_english.docx");
 
     if !test_file.exists() {
-        eprintln!("Skipping test: test file not found at {:?}", test_file);
+        eprintln!("Skipping test: test file not found at {test_file:?}");
         return;
     }
 
@@ -103,13 +100,10 @@ async fn test_docx_parser_with_big_english_file() {
         let error = result.err().unwrap();
         let error_msg = error.to_string();
         if error_msg.contains("malformed XML") || error_msg.contains("rotate_with_shape") {
-            eprintln!(
-                "Known docx-rust limitation with gradient fills: {}",
-                error_msg
-            );
+            eprintln!("Known docx-rust limitation with gradient fills: {error_msg}");
             return; // Skip test due to known limitation
         }
-        panic!("Unexpected error: {:?}", error_msg);
+        panic!("Unexpected error: {error_msg:?}");
     }
 
     let document = result.unwrap();
@@ -122,7 +116,7 @@ async fn test_docx_parser_with_edge_cases_file_returns_error() {
     let test_file = get_test_file_path("test_file_1table_edge_cases.docx");
 
     if !test_file.exists() {
-        eprintln!("Skipping test: test file not found at {:?}", test_file);
+        eprintln!("Skipping test: test file not found at {test_file:?}");
         return;
     }
 
@@ -147,7 +141,7 @@ async fn test_docx_parser_with_image_multilingual_file() {
     let test_file = get_test_file_path("test_file_1table_image_multilingual.docx");
 
     if !test_file.exists() {
-        eprintln!("Skipping test: test file not found at {:?}", test_file);
+        eprintln!("Skipping test: test file not found at {test_file:?}");
         return;
     }
 
@@ -175,7 +169,7 @@ async fn test_docx_parser_parse_bytes() {
     let test_file = get_test_file_path("test_file_1table_multilingual.docx");
 
     if !test_file.exists() {
-        eprintln!("Skipping test: test file not found at {:?}", test_file);
+        eprintln!("Skipping test: test file not found at {test_file:?}");
         return;
     }
 
@@ -209,7 +203,7 @@ async fn test_docx_parser_parse_bytes_without_filename() {
     let test_file = get_test_file_path("test_file_1table_multilingual.docx");
 
     if !test_file.exists() {
-        eprintln!("Skipping test: test file not found at {:?}", test_file);
+        eprintln!("Skipping test: test file not found at {test_file:?}");
         return;
     }
 
@@ -249,8 +243,7 @@ async fn test_docx_parser_nonexistent_file() {
             || error_msg.contains("No such file")
             || error_msg.contains("Failed to open DOCX file")
             || error_msg.contains("cannot find the path"),
-        "Error should mention file reading issue, got: {}",
-        error_msg
+        "Error should mention file reading issue, got: {error_msg}"
     );
 }
 
@@ -270,8 +263,7 @@ async fn test_docx_parser_invalid_docx_bytes() {
     assert!(
         error_msg.contains("Failed to parse DOCX")
             || error_msg.contains("Failed to open DOCX file"),
-        "Error should mention DOCX parsing failure, got: {}",
-        error_msg
+        "Error should mention DOCX parsing failure, got: {error_msg}"
     );
 }
 
@@ -283,7 +275,7 @@ async fn test_docx_parser_extracts_tables() {
     let test_file = get_test_file_path("test_file_1table_multilingual.docx");
 
     if !test_file.exists() {
-        eprintln!("Skipping test: test file not found at {:?}", test_file);
+        eprintln!("Skipping test: test file not found at {test_file:?}");
         return;
     }
 
@@ -319,16 +311,13 @@ async fn test_docx_parser_extracts_tables() {
             for (row_idx, row) in table_block.rows.iter().enumerate() {
                 assert!(
                     !row.cells.is_empty(),
-                    "Row {} should have at least one cell",
-                    row_idx
+                    "Row {row_idx} should have at least one cell"
                 );
 
                 for (cell_idx, cell) in row.cells.iter().enumerate() {
                     assert!(
                         !cell.blocks.is_empty(),
-                        "Cell ({}, {}) should have at least one block",
-                        row_idx,
-                        cell_idx
+                        "Cell ({row_idx}, {cell_idx}) should have at least one block"
                     );
                 }
             }
@@ -350,7 +339,7 @@ async fn test_docx_parser_table_edge_cases() {
     let test_file = get_test_file_path("test_file_1table_edge_cases.docx");
 
     if !test_file.exists() {
-        eprintln!("Skipping test: test file not found at {:?}", test_file);
+        eprintln!("Skipping test: test file not found at {test_file:?}");
         return;
     }
 

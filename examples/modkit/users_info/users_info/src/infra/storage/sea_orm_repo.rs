@@ -3,15 +3,16 @@
 //! Uses `SecureConn` to automatically enforce security scoping on all database operations.
 //! All queries are filtered by the security context provided at the request level.
 //!
-//! # Type-Safe OData Implementation
+//! # Type-Safe `OData` Implementation
 //!
-//! This module demonstrates the complete type-safe OData approach:
+//! This module demonstrates the complete type-safe `OData` approach:
 //! - Uses generated `UserDtoFilterField` enum for all field references
 //! - No string-based field names anywhere
-//! - No exposure of SeaORM Column types to API/domain layers
+//! - No exposure of `SeaORM` Column types to API/domain layers
 //! - All filtering, ordering, and cursor extraction is type-safe
 
 use anyhow::Context;
+use sea_orm::sea_query::Expr;
 use sea_orm::{PaginatorTrait, Set};
 use tracing::{debug, instrument};
 use uuid::Uuid;
@@ -25,7 +26,7 @@ use modkit_db::secure::{SecureConn, SecurityCtx};
 use modkit_odata::{ODataQuery, Page, SortDir};
 use user_info_sdk::User;
 
-/// SeaORM repository implementation with automatic security scoping.
+/// `SeaORM` repository implementation with automatic security scoping.
 ///
 /// This repository uses `SecureConn` to ensure all database operations
 /// respect the security context provided by the caller. Queries are automatically
@@ -34,7 +35,7 @@ use user_info_sdk::User;
 /// # Security Model
 ///
 /// The users table is tenant-scoped via the `tenant_id` column:
-/// - **Tenant isolation**: Users are automatically filtered by tenant_id from the security context
+/// - **Tenant isolation**: Users are automatically filtered by `tenant_id` from the security context
 /// - **Email uniqueness**: Email addresses must be unique within a tenant (not globally)
 /// - **Deny-by-default**: Empty security context denies all access
 pub struct SeaOrmUsersRepository {
@@ -43,6 +44,7 @@ pub struct SeaOrmUsersRepository {
 
 impl SeaOrmUsersRepository {
     /// Create a new repository with a secure database connection.
+    #[must_use]
     pub fn new(sec: SecureConn) -> Self {
         Self { sec }
     }
@@ -83,7 +85,6 @@ impl UsersRepository for SeaOrmUsersRepository {
     async fn email_exists(&self, ctx: &SecurityCtx, email: &str) -> anyhow::Result<bool> {
         debug!("Checking if email exists within security scope");
 
-        use sea_orm::sea_query::Expr;
         let secure_query = self
             .sec
             .find::<UserEntity>(ctx)
@@ -207,7 +208,7 @@ impl UsersRepository for SeaOrmUsersRepository {
                 default: 25,
                 max: 1000,
             },
-            |model| model.into(),
+            Into::into,
         )
         .await
     }

@@ -3,7 +3,7 @@
 //! This module contains SQLite-specific functionality including:
 //! - DSN parsing and cleaning
 //! - PRAGMA parameter handling with typed enums
-//! - Path preparation for SQLite databases
+//! - Path preparation for `SQLite` databases
 
 pub(crate) mod dsn;
 pub(crate) mod path;

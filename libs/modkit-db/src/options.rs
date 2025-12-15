@@ -6,7 +6,7 @@ use thiserror::Error;
 
 // Pool configuration moved to config.rs
 
-/// Database connection options using typed sqlx ConnectOptions.
+/// Database connection options using typed sqlx `ConnectOptions`.
 #[derive(Debug, Clone)]
 pub enum DbConnectOptions {
     #[cfg(feature = "sqlite")]
@@ -51,7 +51,7 @@ impl std::fmt::Display for DbConnectOptions {
                 if filename.is_empty() {
                     write!(f, "sqlite://memory")
                 } else {
-                    write!(f, "sqlite://{}", filename)
+                    write!(f, "sqlite://{filename}")
                 }
             }
             #[cfg(feature = "pg")]
@@ -78,6 +78,9 @@ impl std::fmt::Display for DbConnectOptions {
 
 impl DbConnectOptions {
     /// Connect to the database using the configured options.
+    ///
+    /// # Errors
+    /// Returns an error if the database connection fails.
     pub async fn connect(&self, pool: PoolCfg) -> Result<crate::DbHandle> {
         match self {
             #[cfg(feature = "sqlite")]
@@ -93,7 +96,7 @@ impl DbConnectOptions {
                 let handle = crate::DbHandle {
                     engine: crate::DbEngine::Sqlite,
                     pool: crate::DbPool::Sqlite(sqlx_pool),
-                    dsn: format!("sqlite://{}", filename),
+                    dsn: format!("sqlite://{filename}"),
                     #[cfg(feature = "sea-orm")]
                     sea,
                 };
@@ -152,16 +155,20 @@ impl DbConnectOptions {
     }
 }
 
-/// SQLite PRAGMA whitelist and validation.
+/// `SQLite` PRAGMA whitelist and validation.
 pub mod sqlite_pragma {
     use crate::DbError;
     use std::collections::HashMap;
     use std::hash::BuildHasher;
 
-    /// Whitelisted SQLite PRAGMA parameters.
+    /// Whitelisted `SQLite` PRAGMA parameters.
     const ALLOWED_PRAGMAS: &[&str] = &["wal", "synchronous", "busy_timeout", "journal_mode"];
 
-    /// Validate and apply SQLite PRAGMA parameters to connection options.
+    /// Validate and apply `SQLite` PRAGMA parameters to connection options.
+    ///
+    /// # Errors
+    /// Returns `DbError::UnknownSqlitePragma` if an unsupported pragma is provided.
+    /// Returns `DbError::InvalidSqlitePragmaValue` if a pragma value is invalid.
     pub fn apply_pragmas<S: BuildHasher>(
         mut opts: sqlx::sqlite::SqliteConnectOptions,
         params: &HashMap<String, String, S>,
@@ -204,7 +211,7 @@ pub mod sqlite_pragma {
             "false" | "0" => Ok("DELETE"),
             _ => Err(DbError::InvalidSqlitePragma {
                 key: "wal".to_string(),
-                message: format!("must be true/false/1/0, got '{}'", value),
+                message: format!("must be true/false/1/0, got '{value}'"),
             }),
         }
     }
@@ -215,31 +222,31 @@ pub mod sqlite_pragma {
             "OFF" | "NORMAL" | "FULL" | "EXTRA" => Ok(value.to_uppercase()),
             _ => Err(DbError::InvalidSqlitePragma {
                 key: "synchronous".to_string(),
-                message: format!("must be OFF/NORMAL/FULL/EXTRA, got '{}'", value),
+                message: format!("must be OFF/NORMAL/FULL/EXTRA, got '{value}'"),
             }),
         }
     }
 
-    /// Validate busy_timeout PRAGMA value.
+    /// Validate `busy_timeout` PRAGMA value.
     fn validate_busy_timeout_pragma(value: &str) -> crate::Result<i64> {
         let timeout = value
             .parse::<i64>()
             .map_err(|_| DbError::InvalidSqlitePragma {
                 key: "busy_timeout".to_string(),
-                message: format!("must be a non-negative integer, got '{}'", value),
+                message: format!("must be a non-negative integer, got '{value}'"),
             })?;
 
         if timeout < 0 {
             return Err(DbError::InvalidSqlitePragma {
                 key: "busy_timeout".to_string(),
-                message: format!("must be non-negative, got '{}'", timeout),
+                message: format!("must be non-negative, got '{timeout}'"),
             });
         }
 
         Ok(timeout)
     }
 
-    /// Validate journal_mode PRAGMA value.
+    /// Validate `journal_mode` PRAGMA value.
     fn validate_journal_mode_pragma(value: &str) -> crate::Result<String> {
         match value.to_uppercase().as_str() {
             "DELETE" | "WAL" | "MEMORY" | "TRUNCATE" | "PERSIST" | "OFF" => {
@@ -247,10 +254,7 @@ pub mod sqlite_pragma {
             }
             _ => Err(DbError::InvalidSqlitePragma {
                 key: "journal_mode".to_string(),
-                message: format!(
-                    "must be DELETE/WAL/MEMORY/TRUNCATE/PERSIST/OFF, got '{}'",
-                    value
-                ),
+                message: format!("must be DELETE/WAL/MEMORY/TRUNCATE/PERSIST/OFF, got '{value}'"),
             }),
         }
     }
@@ -258,6 +262,9 @@ pub mod sqlite_pragma {
 
 /// Build a database handle from configuration.
 /// This is the unified entry point for building database handles from configuration.
+///
+/// # Errors
+/// Returns an error if the database connection fails or configuration is invalid.
 pub async fn build_db_handle(
     mut cfg: DbConnConfig,
     _global: Option<&GlobalDatabaseConfig>,
@@ -314,7 +321,7 @@ pub async fn build_db_handle(
     Ok(handle)
 }
 
-/// Build SQLite connection options from configuration.
+/// Build `SQLite` connection options from configuration.
 fn build_sqlite_options(cfg: &DbConnConfig) -> Result<DbConnectOptions> {
     #[cfg(feature = "sqlite")]
     {
@@ -450,13 +457,12 @@ fn build_server_options(cfg: &DbConnConfig) -> Result<DbConnectOptions> {
             }
         }
         _ => Err(DbError::InvalidParameter(format!(
-            "Unsupported database scheme: {}",
-            scheme
+            "Unsupported database scheme: {scheme}"
         ))),
     }
 }
 
-/// Parse SQLite path from DSN.
+/// Parse `SQLite` path from DSN.
 fn parse_sqlite_path_from_dsn(dsn: &str) -> Result<std::path::PathBuf> {
     if dsn.starts_with("sqlite:") {
         let path_part = dsn
@@ -480,8 +486,7 @@ fn parse_sqlite_path_from_dsn(dsn: &str) -> Result<std::path::PathBuf> {
         Ok(std::path::PathBuf::from(path_part))
     } else {
         Err(DbError::InvalidParameter(format!(
-            "Invalid SQLite DSN: {}",
-            dsn
+            "Invalid SQLite DSN: {dsn}"
         )))
     }
 }
@@ -563,6 +568,7 @@ fn validate_config_consistency(cfg: &DbConnConfig) -> Result<()> {
 }
 
 /// Redact credentials from DSN for logging.
+#[must_use]
 pub fn redact_credentials_in_dsn(dsn: Option<&str>) -> String {
     match dsn {
         Some(dsn) if dsn.contains('@') => {

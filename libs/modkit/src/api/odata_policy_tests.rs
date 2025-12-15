@@ -7,7 +7,7 @@ mod tests {
     use modkit_odata::{CursorV1, SortDir};
 
     fn mock_parts(query_string: &str) -> Parts {
-        let uri: Uri = format!("http://example.com/test?{}", query_string)
+        let uri: Uri = format!("http://example.com/test?{query_string}")
             .parse()
             .unwrap();
         let request = axum::http::Request::builder().uri(uri).body(()).unwrap();

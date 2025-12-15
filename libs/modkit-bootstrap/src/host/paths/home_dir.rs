@@ -27,6 +27,9 @@ pub enum HomeDirError {
 /// Returns the path unchanged if no tilde prefix is present.
 /// On Windows, uses `USERPROFILE` or `HOME` environment variable.
 /// On Unix, uses `HOME` environment variable.
+///
+/// # Errors
+/// Returns `HomeDirError::HomeMissing` if the home directory cannot be determined.
 pub fn expand_tilde(raw: &str) -> Result<PathBuf, HomeDirError> {
     #[cfg(target_os = "windows")]
     {
@@ -63,13 +66,16 @@ pub fn expand_tilde(raw: &str) -> Result<PathBuf, HomeDirError> {
     }
 }
 
-/// Normalize an executable path for OoP modules.
+/// Normalize an executable path for `OoP` modules.
 ///
 /// Rules:
 /// - `~` prefix: expand to user home directory
 /// - Absolute path: use as-is
 /// - Filename only (no path separators): prepend directory where executable of current process lives
 /// - Relative path with separators: error (ambiguous)
+///
+/// # Errors
+/// Returns `HomeDirError` if path normalization fails.
 pub fn normalize_executable_path(raw: &str) -> Result<PathBuf, HomeDirError> {
     // First, expand tilde if present
     let expanded = expand_tilde(raw)?;
@@ -109,6 +115,9 @@ pub fn normalize_executable_path(raw: &str) -> Result<PathBuf, HomeDirError> {
 /// If `create` is true, the directory is created if missing.
 ///
 /// `default_subdir` is usually ".hyperspot", but can be customized by the caller.
+///
+/// # Errors
+/// Returns `HomeDirError` if the home directory cannot be resolved or created.
 pub fn resolve_home_dir(
     config_home: Option<String>,
     default_subdir: &str,
@@ -240,7 +249,7 @@ mod tests {
         let err = resolve_home_dir(Some("relative/path".into()), ".hyperspot", false).unwrap_err();
         match err {
             HomeDirError::AbsoluteRequired(_) => {}
-            _ => panic!("Expected AbsoluteRequired, got {:?}", err),
+            _ => panic!("Expected AbsoluteRequired, got {err:?}"),
         }
     }
 
@@ -265,7 +274,7 @@ mod tests {
             let err = resolve_home_dir(None, ".hyperspot", false).unwrap_err();
             match err {
                 HomeDirError::HomeMissing => {}
-                _ => panic!("Expected HomeMissing, got {:?}", err),
+                _ => panic!("Expected HomeMissing, got {err:?}"),
             }
         });
     }
@@ -439,7 +448,7 @@ mod tests {
             HomeDirError::RelativePathNotAllowed(s) => {
                 assert!(s.contains("./bin/myapp"));
             }
-            _ => panic!("Expected RelativePathNotAllowed, got {:?}", err),
+            _ => panic!("Expected RelativePathNotAllowed, got {err:?}"),
         }
     }
 

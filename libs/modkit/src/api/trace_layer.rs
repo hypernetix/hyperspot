@@ -9,16 +9,17 @@
 
 use crate::api::problem::Problem;
 
-/// Extract trace_id from the current tracing span
+/// Extract `trace_id` from the current tracing span
 fn extract_trace_id() -> Option<String> {
     // Try to extract from the current span's trace_id field
     // This requires coordination with the tracing subscriber
-    tracing::Span::current().id().map(|id| format!("{:?}", id))
+    tracing::Span::current().id().map(|id| format!("{id:?}"))
 }
 
 /// Helper trait for enriching Problem with trace context
 pub trait WithTraceContext {
-    /// Enrich this Problem with trace_id and instance from the current request context
+    /// Enrich this Problem with `trace_id` and instance from the current request context
+    #[must_use]
     fn with_trace_context(self, instance: impl Into<String>) -> Self;
 }
 
@@ -46,7 +47,8 @@ impl WithTraceContext for Problem {
 /// }
 /// ```
 pub trait WithRequestContext {
-    /// Add trace_id and instance from the current request
+    /// Add `trace_id` and instance from the current request
+    #[must_use]
     fn with_request_context(self, uri: &axum::http::Uri) -> Self;
 }
 

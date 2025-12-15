@@ -23,6 +23,7 @@ fn truncate_uuid(uuid: &Uuid) -> String {
 ///
 /// Orchestrates key providers and claims plugins to validate tokens
 /// using a single configured plugin.
+#[must_use]
 pub struct AuthDispatcher {
     /// Registered key providers (JWKS, etc.)
     key_providers: Vec<Arc<dyn KeyProvider>>,
@@ -38,7 +39,10 @@ pub struct AuthDispatcher {
 }
 
 impl AuthDispatcher {
-    /// Create a new dispatcher with validation config and plugin
+    /// Create a new dispatcher with validation config and plugin.
+    ///
+    /// # Errors
+    /// Returns `ConfigError::UnknownPlugin` if the configured provider is not in the registry.
     pub fn new(
         validation_config: ValidationConfig,
         config: &AuthConfig,
@@ -162,14 +166,17 @@ impl AuthDispatcher {
         );
     }
 
-    /// Validate a JWT token
+    /// Validate a JWT token.
     ///
     /// Workflow:
-    /// 1. Try each KeyProvider until one successfully validates the signature
+    /// 1. Try each `KeyProvider` until one successfully validates the signature
     /// 2. Extract issuer from token
     /// 3. Use the configured plugin to normalize claims
     /// 4. Run common validation (issuer, audience, exp, nbf, UUIDs)
     /// 5. Return normalized claims
+    ///
+    /// # Errors
+    /// Returns `ClaimsError` if signature validation, claim normalization, or validation fails.
     pub async fn validate_jwt(&self, token: &str) -> Result<Claims, ClaimsError> {
         // Step 1: Try to validate signature with each key provider
         let (header, raw_claims) = self.try_validate_with_providers(token).await?;
@@ -227,7 +234,10 @@ impl AuthDispatcher {
 
     /// Verify that an introspection response indicates an active token
     fn verify_token_active(introspection_result: &serde_json::Value) -> Result<(), ClaimsError> {
-        if let Some(active) = introspection_result.get("active").and_then(|v| v.as_bool()) {
+        if let Some(active) = introspection_result
+            .get("active")
+            .and_then(serde_json::Value::as_bool)
+        {
             if !active {
                 return Err(ClaimsError::IntrospectionDenied);
             }
@@ -280,11 +290,14 @@ impl AuthDispatcher {
     /// Validate an opaque token via introspection
     ///
     /// Workflow:
-    /// 1. Try each IntrospectionProvider until one succeeds
+    /// 1. Try each `IntrospectionProvider` until one succeeds
     /// 2. Extract issuer from introspection response
     /// 3. Use the configured plugin to normalize claims
     /// 4. Run common validation
     /// 5. Return normalized claims
+    ///
+    /// # Errors
+    /// Returns `ClaimsError` if introspection, claim normalization, or validation fails.
     pub async fn validate_opaque(&self, token: &str) -> Result<Claims, ClaimsError> {
         // Step 1: Try to introspect with each provider
         let introspection_result = self.try_introspect_with_providers(token).await?;
@@ -315,16 +328,21 @@ impl AuthDispatcher {
     }
 
     /// Get validation config (for inspection/testing)
+    #[must_use]
     pub fn validation_config(&self) -> &ValidationConfig {
         &self.validation_config
     }
 
     /// Get the configured authentication plugin (for inspection/testing)
+    #[must_use]
     pub fn plugin(&self) -> &Arc<dyn ClaimsPlugin> {
         &self.plugin
     }
 
-    /// Trigger key refresh for all key providers
+    /// Trigger key refresh for all key providers.
+    ///
+    /// # Errors
+    /// Returns a vector of `ClaimsError` if any provider fails to refresh keys.
     pub async fn refresh_keys(&self) -> Result<(), Vec<ClaimsError>> {
         let mut errors = Vec::new();
 
@@ -347,7 +365,7 @@ impl AuthDispatcher {
     }
 }
 
-/// Implement TokenValidator trait for AuthDispatcher
+/// Implement `TokenValidator` trait for `AuthDispatcher`
 #[async_trait]
 impl TokenValidator for AuthDispatcher {
     async fn validate_and_parse(&self, token: &str) -> Result<Claims, AuthError> {
@@ -392,7 +410,7 @@ mod tests {
 
     // ===== Test Mocks =====
 
-    /// Mock KeyProvider for testing
+    /// Mock `KeyProvider` for testing
     struct MockKeyProvider {
         name: String,
         response: Option<(jsonwebtoken::Header, serde_json::Value)>,
@@ -439,7 +457,7 @@ mod tests {
         }
     }
 
-    /// Mock IntrospectionProvider for testing
+    /// Mock `IntrospectionProvider` for testing
     struct MockIntrospectionProvider {
         response: Option<serde_json::Value>,
         error_msg: Option<String>,
@@ -479,7 +497,7 @@ mod tests {
         }
     }
 
-    /// Mock ClaimsPlugin for testing
+    /// Mock `ClaimsPlugin` for testing
     struct MockClaimsPlugin {
         name: String,
         normalized: Option<Claims>,

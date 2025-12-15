@@ -1,4 +1,4 @@
-//! OData (filters) → sea_orm::Condition compiler (AST in, SQL out).
+//! `OData` (filters) → `sea_orm::Condition` compiler (AST in, SQL out).
 //! Parsing belongs to API/ingress. This module only consumes `modkit_odata::ast::Expr`.
 
 use std::collections::HashMap;
@@ -26,6 +26,7 @@ pub struct Field<E: EntityTrait> {
 }
 
 #[derive(Clone)]
+#[must_use]
 pub struct FieldMap<E: EntityTrait> {
     map: HashMap<String, Field<E>>,
 }
@@ -76,6 +77,7 @@ impl<E: EntityTrait> FieldMap<E> {
         let f = self.get(field_name)?;
         f.to_string_for_cursor.map(|f| f(model))
     }
+    #[must_use]
     pub fn get(&self, name: &str) -> Option<&Field<E>> {
         self.map.get(&name.to_lowercase())
     }
@@ -322,11 +324,14 @@ pub fn parse_cursor_value(kind: FieldKind, s: &str) -> ODataBuildResult<sea_orm:
 
 /* ---------- cursor predicate building ---------- */
 
-/// Build a cursor predicate for pagination
-/// This builds the lexicographic OR-chain condition for cursor-based pagination
+/// Build a cursor predicate for pagination.
+/// This builds the lexicographic OR-chain condition for cursor-based pagination.
 ///
 /// For backward pagination (cursor.d == "bwd"), the comparison operators are reversed
 /// to fetch items before the cursor, but the order remains the same for display consistency.
+///
+/// # Errors
+/// Returns `ODataBuildError` if cursor keys don't match order fields or field resolution fails.
 pub fn build_cursor_predicate<E: EntityTrait>(
     cursor: &CursorV1,
     order: &ODataOrderBy,
@@ -397,7 +402,7 @@ where
 
 /* ---------- error mapping helpers ---------- */
 
-/// Resolve a field by name, converting UnknownField errors to InvalidOrderByField
+/// Resolve a field by name, converting `UnknownField` errors to `InvalidOrderByField`
 fn resolve_field<'a, E: EntityTrait>(
     fld_map: &'a FieldMap<E>,
     name: &str,
@@ -416,7 +421,10 @@ pub fn ensure_tiebreaker(order: ODataOrderBy, tiebreaker: &str, dir: SortDir) ->
 
 /* ---------- cursor building ---------- */
 
-/// Build a cursor from a model using the effective order and field map extractors
+/// Build a cursor from a model using the effective order and field map extractors.
+///
+/// # Errors
+/// Returns `ODataError::InvalidOrderByField` if a field cannot be encoded.
 pub fn build_cursor_for_model<E: EntityTrait>(
     model: &E::Model,
     order: &ODataOrderBy,
@@ -443,6 +451,10 @@ pub fn build_cursor_for_model<E: EntityTrait>(
 
 /* ---------- Expr (AST) -> Condition ---------- */
 
+/// Convert an `OData` filter expression AST to a `SeaORM` Condition.
+///
+/// # Errors
+/// Returns `ODataBuildError` if the expression contains unknown fields or unsupported operations.
 pub fn expr_to_condition<E: EntityTrait>(
     expr: &core::Expr,
     fmap: &FieldMap<E>,
@@ -559,11 +571,15 @@ where
     })
 }
 
-/// Apply an optional OData filter (via wrapper) to a plain SeaORM Select<E>.
+/// Apply an optional `OData` filter (via wrapper) to a plain `SeaORM` Select<E>.
 ///
 /// This extension does NOT parse the filter string — it only consumes a parsed AST
 /// (`modkit_odata::ast::Expr`) and translates it into a `sea_orm::Condition`.
 pub trait ODataExt<E: EntityTrait>: Sized {
+    /// Apply `OData` filter to the query.
+    ///
+    /// # Errors
+    /// Returns `ODataBuildError` if the filter contains unknown fields or invalid expressions.
     fn apply_odata_filter(
         self,
         od_query: ODataQuery,
@@ -593,6 +609,10 @@ where
 
 /// Extension trait for applying cursor-based pagination
 pub trait CursorApplyExt<E: EntityTrait>: Sized {
+    /// Apply cursor-based forward pagination.
+    ///
+    /// # Errors
+    /// Returns `ODataBuildError` if cursor validation fails.
     fn apply_cursor_forward(
         self,
         cursor: &CursorV1,
@@ -617,8 +637,12 @@ where
     }
 }
 
-/// Extension trait for applying ordering (legacy version with ODataBuildError)
+/// Extension trait for applying ordering (legacy version with `ODataBuildError`)
 pub trait ODataOrderExt<E: EntityTrait>: Sized {
+    /// Apply `OData` ordering to the query.
+    ///
+    /// # Errors
+    /// Returns `ODataBuildError` if an unknown field is referenced.
     fn apply_odata_order(
         self,
         order: &ODataOrderBy,
@@ -657,6 +681,10 @@ where
 
 /// Extension trait for applying ordering with centralized error handling
 pub trait ODataOrderPageExt<E: EntityTrait>: Sized {
+    /// Apply `OData` ordering with page-level error handling.
+    ///
+    /// # Errors
+    /// Returns `ODataError` if an unknown field is referenced.
     fn apply_odata_order_page(
         self,
         order: &ODataOrderBy,
@@ -691,8 +719,12 @@ where
     }
 }
 
-/// Extension trait for applying full OData query (filter + cursor + order)
+/// Extension trait for applying full `OData` query (filter + cursor + order)
 pub trait ODataQueryExt<E: EntityTrait>: Sized {
+    /// Apply full `OData` query including filter, cursor, and ordering.
+    ///
+    /// # Errors
+    /// Returns `ODataBuildError` if any part of the query application fails.
     fn apply_odata_query(
         self,
         query: &ODataQuery,
@@ -749,7 +781,10 @@ fn clamp_limit(req: Option<u64>, cfg: LimitCfg) -> u64 {
     l
 }
 
-/// One-shot pagination combiner that handles filter → cursor predicate → order → overfetch/trim → build cursors
+/// One-shot pagination combiner that handles filter → cursor predicate → order → overfetch/trim → build cursors.
+///
+/// # Errors
+/// Returns `ODataError` if filter application, cursor validation, or database query fails.
 pub async fn paginate_with_odata<E, D, F, C>(
     select: sea_orm::Select<E>,
     conn: &C,
@@ -795,9 +830,10 @@ where
 
     // Apply filter
     if let Some(ast) = q.filter.as_deref() {
-        let cond = expr_to_condition::<E>(ast, fmap)
-            .map_err(|e| ODataError::InvalidFilter(e.to_string()))?;
-        s = s.filter(cond);
+        s = s.filter(
+            expr_to_condition::<E>(ast, fmap)
+                .map_err(|e| ODataError::InvalidFilter(e.to_string()))?,
+        );
     }
 
     // Check if we're paginating backward
@@ -805,9 +841,10 @@ where
 
     // Apply cursor if present
     if let Some(cursor) = &q.cursor {
-        let cond = build_cursor_predicate(cursor, &effective_order, fmap)
-            .map_err(|_| ODataError::InvalidCursor)?; // normalize db-level errors
-        s = s.filter(cond);
+        s = s.filter(
+            build_cursor_predicate(cursor, &effective_order, fmap)
+                .map_err(|_| ODataError::InvalidCursor)?,
+        );
     }
 
     // Apply order (reverse it for backward pagination)

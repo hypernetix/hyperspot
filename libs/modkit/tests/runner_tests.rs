@@ -1,6 +1,6 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-//! Comprehensive tests for the ModKit runner functionality
+//! Comprehensive tests for the `ModKit` runner functionality
 //!
 //! Tests the core orchestration logic including lifecycle phases,
 //! database strategies, shutdown options, and error handling.

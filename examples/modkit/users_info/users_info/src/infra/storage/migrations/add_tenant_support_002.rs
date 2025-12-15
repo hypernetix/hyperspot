@@ -40,12 +40,10 @@ impl MigrationTrait for Migration {
                     // Step 2: Backfill all rows with the root tenant UUID
                     let upd = match backend {
                         DB::Postgres => format!(
-                            "UPDATE \"users\" SET \"tenant_id\"='{}' WHERE \"tenant_id\" IS NULL",
-                            root_tenant
+                            "UPDATE \"users\" SET \"tenant_id\"='{root_tenant}' WHERE \"tenant_id\" IS NULL"
                         ),
                         DB::MySql => format!(
-                            "UPDATE `users` SET `tenant_id`='{}' WHERE `tenant_id` IS NULL",
-                            root_tenant
+                            "UPDATE `users` SET `tenant_id`='{root_tenant}' WHERE `tenant_id` IS NULL"
                         ),
                         DB::Sqlite => unreachable!(),
                     };
@@ -64,8 +62,7 @@ impl MigrationTrait for Migration {
                 DB::Sqlite => {
                     // SQLite cannot modify columns; add directly with NOT NULL + DEFAULT
                     let sql = format!(
-                        "ALTER TABLE \"users\" ADD COLUMN \"tenant_id\" TEXT NOT NULL DEFAULT '{}'",
-                        root_tenant
+                        "ALTER TABLE \"users\" ADD COLUMN \"tenant_id\" TEXT NOT NULL DEFAULT '{root_tenant}'"
                     );
                     manager.get_connection().execute_unprepared(&sql).await?;
                 }
@@ -100,8 +97,7 @@ impl MigrationTrait for Migration {
                 }
                 DB::Sqlite => {
                     let sql = format!(
-                        "CREATE UNIQUE INDEX IF NOT EXISTS \"{}\" ON \"users\" (\"tenant_id\", \"email\")",
-                        uk_tenant_email
+                        "CREATE UNIQUE INDEX IF NOT EXISTS \"{uk_tenant_email}\" ON \"users\" (\"tenant_id\", \"email\")"
                     );
                     manager.get_connection().execute_unprepared(&sql).await?;
                 }
@@ -124,8 +120,7 @@ impl MigrationTrait for Migration {
                 }
                 DB::Sqlite => {
                     let sql = format!(
-                        "CREATE INDEX IF NOT EXISTS \"{}\" ON \"users\" (\"tenant_id\")",
-                        idx_tenant
+                        "CREATE INDEX IF NOT EXISTS \"{idx_tenant}\" ON \"users\" (\"tenant_id\")"
                     );
                     manager.get_connection().execute_unprepared(&sql).await?;
                 }
@@ -174,8 +169,7 @@ impl MigrationTrait for Migration {
                 }
                 DB::Sqlite => {
                     let sql = format!(
-                        "CREATE UNIQUE INDEX IF NOT EXISTS \"{}\" ON \"users\" (\"email\")",
-                        idx_old_email
+                        "CREATE UNIQUE INDEX IF NOT EXISTS \"{idx_old_email}\" ON \"users\" (\"email\")"
                     );
                     manager.get_connection().execute_unprepared(&sql).await?;
                 }
@@ -214,7 +208,7 @@ enum Users {
 
 /// Helper to generate the correct column type for Postgres/MySQL
 /// - Postgres: native UUID
-/// - MySQL: VARCHAR(36)
+/// - `MySQL`: VARCHAR(36)
 fn tenant_col_def(backend: sea_orm::DatabaseBackend, col: Users) -> ColumnDef {
     match backend {
         sea_orm::DatabaseBackend::Postgres => ColumnDef::new(col).uuid().to_owned(),

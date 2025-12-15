@@ -17,7 +17,7 @@ use tokio::time::{sleep, Duration};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-/// Helper to create a test ModuleCtx
+/// Helper to create a test `ModuleCtx`
 struct TestConfigProvider {
     config: serde_json::Value,
 }

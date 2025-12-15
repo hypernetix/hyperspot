@@ -3,7 +3,7 @@ use sea_orm::{sea_query::Expr, ColumnTrait, Condition, EntityTrait};
 use crate::secure::provider::{SimpleTenantFilter, TenantFilterProvider};
 use crate::secure::{AccessScope, ScopableEntity};
 
-/// Builds a SeaORM `Condition` based on the implicit security policy.
+/// Builds a `SeaORM` `Condition` based on the implicit security policy.
 ///
 /// # Policy Rules
 /// 1. **Empty scope** (no tenants, no resources, not root) → deny all (`false`)
@@ -11,7 +11,7 @@ use crate::secure::{AccessScope, ScopableEntity};
 ///    - If no resource filters either → return `Condition::all()` (no filters)
 ///    - If resource filters present → apply only resource filters
 /// 3. **Tenants only** → filter by `tenant_col IN tenant_ids` (via provider)
-///    - If entity has no tenant_col but tenant_ids provided → deny all
+///    - If entity has no `tenant_col` but `tenant_ids` provided → deny all
 /// 4. **Resources only** → filter by `resource_col IN resource_ids`
 /// 5. **Both present** → AND them: `(tenant_col IN ...) AND (resource_col IN ...)`
 ///

@@ -5,6 +5,7 @@ use tower_http::request_id::{MakeRequestId, RequestId};
 #[derive(Clone, Debug)]
 pub struct XRequestId(pub String);
 
+#[must_use]
 pub fn header() -> HeaderName {
     HeaderName::from_static("x-request-id")
 }
@@ -20,14 +21,14 @@ impl MakeRequestId for MakeReqId {
     }
 }
 
-/// Middleware that stores request_id in Request.extensions and records it in the current span
+/// Middleware that stores `request_id` in Request.extensions and records it in the current span
 pub async fn push_req_id_to_extensions(mut req: Request<Body>, next: Next) -> Response {
     let hdr = header();
     if let Some(rid) = req
         .headers()
         .get(&hdr)
         .and_then(|v| v.to_str().ok())
-        .map(|s| s.to_string())
+        .map(ToString::to_string)
     {
         // Save for business logic usage
         req.extensions_mut().insert(XRequestId(rid.clone()));

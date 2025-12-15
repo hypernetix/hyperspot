@@ -1,5 +1,9 @@
 use anyhow::Result;
 
+/// Wait for a shutdown signal (SIGTERM, SIGINT, or Ctrl+C).
+///
+/// # Errors
+/// Returns an error if signal handling fails.
 pub async fn wait_for_shutdown() -> Result<()> {
     #[cfg(unix)]
     {

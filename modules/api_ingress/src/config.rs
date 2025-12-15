@@ -8,9 +8,10 @@ fn default_body_limit_bytes() -> usize {
     16 * 1024 * 1024
 }
 
-/// API ingress configuration - reused from api_ingress module
+/// API ingress configuration - reused from `api_ingress` module
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 #[serde(deny_unknown_fields)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct ApiIngressConfig {
     pub bind_addr: String,
     #[serde(default)]
@@ -21,7 +22,7 @@ pub struct ApiIngressConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cors: Option<CorsConfig>,
 
-    /// OpenAPI document metadata
+    /// `OpenAPI` document metadata
     #[serde(default)]
     pub openapi: OpenApiConfig,
 
@@ -30,8 +31,8 @@ pub struct ApiIngressConfig {
     pub defaults: Defaults,
 
     /// Disable authentication and authorization completely.
-    /// When true, middleware automatically injects SecurityCtx::root_ctx() for all requests,
-    /// providing full system-level access with no tenant filtering (scope.is_root() == true).
+    /// When true, middleware automatically injects `SecurityCtx::root_ctx()` for all requests,
+    /// providing full system-level access with no tenant filtering (`scope.is_root()` == true).
     /// This bypasses all tenant isolation and should only be used for single-user on-premise installations.
     /// Default: false (authentication required).
     #[serde(default)]
@@ -124,11 +125,11 @@ impl Default for CorsConfig {
     }
 }
 
-/// OpenAPI document metadata configuration
+/// `OpenAPI` document metadata configuration
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields, default)]
 pub struct OpenApiConfig {
-    /// API title shown in OpenAPI documentation
+    /// API title shown in `OpenAPI` documentation
     pub title: String,
     /// API version
     pub version: String,

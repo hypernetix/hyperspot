@@ -4,7 +4,7 @@
 //!
 //! These tests verify that:
 //! 1. Auth middleware is properly attached to the router
-//! 2. SecurityCtx is always inserted by middleware
+//! 2. `SecurityCtx` is always inserted by middleware
 //! 3. Public routes work without authentication
 //! 4. Protected routes enforce authentication when enabled
 
@@ -42,7 +42,7 @@ impl ConfigProvider for TestConfigProvider {
     }
 }
 
-/// Create test context for api_ingress module
+/// Create test context for `api_ingress` module
 fn create_api_ingress_ctx(config: serde_json::Value) -> ModuleCtx {
     ModuleCtx::new(
         "api_ingress",
@@ -73,7 +73,7 @@ struct TestResponse {
     user_id: String,
 }
 
-/// Handler that requires SecurityCtx (via Authz extractor)
+/// Handler that requires `SecurityCtx` (via Authz extractor)
 async fn protected_handler(Authz(ctx): Authz) -> Json<TestResponse> {
     Json(TestResponse {
         message: "Protected resource accessed".to_string(),
@@ -391,7 +391,7 @@ async fn test_openapi_includes_security_metadata() {
             || public_security
                 .unwrap()
                 .as_array()
-                .is_some_and(|a| a.is_empty()),
+                .is_some_and(Vec::is_empty),
         "Public route should NOT have security requirement in OpenAPI"
     );
 }

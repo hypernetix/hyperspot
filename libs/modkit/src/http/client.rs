@@ -1,6 +1,6 @@
 //! Traced HTTP client that automatically injects OpenTelemetry context
 //!
-//! This module provides a wrapper around reqwest::Client that automatically
+//! This module provides a wrapper around `reqwest::Client` that automatically
 //! injects trace context headers (traceparent, tracestate) for distributed tracing.
 
 use crate::http::otel;
@@ -14,13 +14,17 @@ pub struct TracedClient {
 }
 
 impl TracedClient {
-    /// Create a new TracedClient wrapping the provided reqwest::Client
+    /// Create a new `TracedClient` wrapping the provided `reqwest::Client`
+    #[must_use]
     pub fn new(inner: reqwest::Client) -> Self {
         Self { inner }
     }
 
-    /// Execute a built reqwest::Request, injecting trace headers from the current span.
+    /// Execute a built `reqwest::Request`, injecting trace headers from the current span.
     /// Creates a span for the outgoing HTTP request and injects the current trace context.
+    ///
+    /// # Errors
+    /// Returns a reqwest error if the request fails.
     pub async fn execute(&self, req: reqwest::Request) -> reqwest::Result<reqwest::Response> {
         let url = req.url().clone();
         let method = req.method().clone();
@@ -51,37 +55,53 @@ impl TracedClient {
         Ok(response)
     }
 
-    /// Convenience method for GET requests
+    /// Convenience method for GET requests.
+    ///
+    /// # Errors
+    /// Returns a reqwest error if the request fails.
     pub async fn get(&self, url: &str) -> reqwest::Result<reqwest::Response> {
         let req = self.inner.get(url).build()?;
         self.execute(req).await
     }
 
-    /// Convenience method for POST requests
+    /// Convenience method for POST requests.
+    ///
+    /// # Errors
+    /// Returns a reqwest error if the request fails.
     pub async fn post(&self, url: &str) -> reqwest::Result<reqwest::Response> {
         let req = self.inner.post(url).build()?;
         self.execute(req).await
     }
 
-    /// Convenience method for PUT requests
+    /// Convenience method for PUT requests.
+    ///
+    /// # Errors
+    /// Returns a reqwest error if the request fails.
     pub async fn put(&self, url: &str) -> reqwest::Result<reqwest::Response> {
         let req = self.inner.put(url).build()?;
         self.execute(req).await
     }
 
-    /// Convenience method for PATCH requests
+    /// Convenience method for PATCH requests.
+    ///
+    /// # Errors
+    /// Returns a reqwest error if the request fails.
     pub async fn patch(&self, url: &str) -> reqwest::Result<reqwest::Response> {
         let req = self.inner.patch(url).build()?;
         self.execute(req).await
     }
 
-    /// Convenience method for DELETE requests
+    /// Convenience method for DELETE requests.
+    ///
+    /// # Errors
+    /// Returns a reqwest error if the request fails.
     pub async fn delete(&self, url: &str) -> reqwest::Result<reqwest::Response> {
         let req = self.inner.delete(url).build()?;
         self.execute(req).await
     }
 
-    /// Get a reference to the underlying reqwest::Client for advanced usage
+    /// Get a reference to the underlying `reqwest::Client` for advanced usage
+    #[must_use]
     pub fn inner(&self) -> &reqwest::Client {
         &self.inner
     }

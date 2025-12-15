@@ -1,13 +1,13 @@
 //! Out-of-process module bootstrap library
 //!
-//! This module provides reusable functionality for bootstrapping OoP (out-of-process)
+//! This module provides reusable functionality for bootstrapping `OoP` (out-of-process)
 //! modkit modules in local (non-k8s) environments.
 //!
 //! ## Features
 //!
 //! - Configuration loading using `modkit-bootstrap`
 //! - Logging initialization with tracing
-//! - gRPC connection to DirectoryService
+//! - gRPC connection to `DirectoryService`
 //! - Module instance registration
 //! - Heartbeat management
 //! - Module lifecycle execution
@@ -19,7 +19,7 @@
 //! - The root token is passed to `RunOptions::Token` for module runtime shutdown
 //! - Background tasks (like heartbeat) use child tokens derived from the root
 //!
-//! On shutdown, the module deregisters itself from the DirectoryService before exiting.
+//! On shutdown, the module deregisters itself from the `DirectoryService` before exiting.
 //!
 //! ## Example
 //!
@@ -61,16 +61,16 @@ use modkit::runtime::{
 use module_orchestrator_contracts::DirectoryApi;
 use module_orchestrator_grpc::DirectoryGrpcClient;
 
-/// Configuration options for OoP module bootstrap
+/// Configuration options for `OoP` module bootstrap
 #[derive(Debug, Clone)]
 pub struct OopRunOptions {
-    /// Logical module name (e.g., "file_parser")
+    /// Logical module name (e.g., "`file_parser`")
     pub module_name: String,
 
     /// Instance ID (defaults to a random UUID if None)
     pub instance_id: Option<Uuid>,
 
-    /// Directory service gRPC endpoint (e.g., "http://127.0.0.1:50051")
+    /// Directory service gRPC endpoint (e.g., "<http://127.0.0.1:50051>")
     pub directory_endpoint: String,
 
     /// Path to configuration file
@@ -117,14 +117,14 @@ impl modkit::ConfigProvider for ModkitConfigAdapter {
     }
 }
 
-/// Builds the final configuration and DbOptions for an OoP module.
+/// Builds the final configuration and `DbOptions` for an `OoP` module.
 ///
 /// Configuration merge strategy (for each section):
-/// - **Database**: field-by-field merge using DbManager (master as base, local as override)
+/// - **Database**: field-by-field merge using `DbManager` (master as base, local as override)
 /// - **Logging**: key-by-key merge (each subsystem key is overridden by local)
 /// - **Config**: local completely replaces master if present
 ///
-/// The local config file (--config) can override any settings from master's MODKIT_MODULE_CONFIG.
+/// The local config file (--config) can override any settings from master's `MODKIT_MODULE_CONFIG`.
 ///
 /// For database, the merge happens at 3 levels:
 /// 1. Global database.servers.* from master
@@ -203,7 +203,7 @@ fn build_oop_config_and_db(
 
 /// Merges logging configurations: master as base, local as override (by key).
 ///
-/// Each key in the logging HashMap (e.g., "default", "calculator", "sqlx")
+/// Each key in the logging `HashMap` (e.g., "default", "calculator", "sqlx")
 /// is overridden by local if present.
 fn merge_logging_configs(
     master: Option<&crate::config::LoggingConfig>,
@@ -221,9 +221,9 @@ fn merge_logging_configs(
     result
 }
 
-/// Builds DbOptions by merging rendered config from master with local config.
+/// Builds `DbOptions` by merging rendered config from master with local config.
 ///
-/// Uses Figment to merge configurations and DbManager to handle the actual
+/// Uses Figment to merge configurations and `DbManager` to handle the actual
 /// database connection setup with field-by-field merge logic.
 fn build_merged_db_options(
     home_dir: &Path,
@@ -363,11 +363,11 @@ fn merge_json_objects(target: &mut serde_json::Value, source: &serde_json::Value
 /// 1. Creates a root `CancellationToken` for the process
 /// 2. Hooks OS signals (SIGTERM, SIGINT, Ctrl+C) to trigger cancellation
 /// 3. Loads configuration and initializes logging
-/// 4. Connects to the DirectoryService
+/// 4. Connects to the `DirectoryService`
 /// 5. Registers the module instance
 /// 6. Starts a background heartbeat loop (using a child token)
 /// 7. Runs the module lifecycle with `ShutdownOptions::Token`
-/// 8. Deregisters from DirectoryService on shutdown
+/// 8. Deregisters from `DirectoryService` on shutdown
 ///
 /// ## Shutdown Model
 ///
@@ -413,6 +413,8 @@ fn merge_json_objects(target: &mut serde_json::Value, source: &serde_json::Value
         directory = %opts.directory_endpoint
     )
 )]
+/// # Errors
+/// Returns an error if the `OoP` module fails to start or run.
 pub async fn run_oop_with_options(opts: OopRunOptions) -> Result<()> {
     // Generate instance ID if not provided
     let instance_id = opts.instance_id.unwrap_or_else(Uuid::new_v4);

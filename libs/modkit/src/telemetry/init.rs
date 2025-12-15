@@ -1,7 +1,7 @@
 //! OpenTelemetry tracing initialization utilities
 //!
 //! This module sets up OpenTelemetry tracing and exports spans via OTLP
-//! (gRPC or HTTP) to collectors such as Jaeger, Uptrace, or the OTel Collector.
+//! (gRPC or HTTP) to collectors such as Jaeger, Uptrace, or the `OTel` Collector.
 
 #[cfg(feature = "otel")]
 use opentelemetry::{global, trace::TracerProvider as _, KeyValue};
@@ -286,7 +286,10 @@ pub fn shutdown_tracing() {
 // ===== connectivity probe =====================================================
 
 /// Build a tiny, separate OTLP pipeline and export a single span to verify connectivity.
-/// This does *not* depend on tracing_subscriber; it uses SDK directly.
+/// This does *not* depend on `tracing_subscriber`; it uses SDK directly.
+///
+/// # Errors
+/// Returns an error if the OTLP exporter cannot be built or the probe fails.
 #[cfg(feature = "otel")]
 pub fn otel_connectivity_probe(cfg: &super::config::TracingConfig) -> anyhow::Result<()> {
     use opentelemetry::trace::{Span, Tracer as _};
@@ -357,6 +360,10 @@ pub fn otel_connectivity_probe(cfg: &super::config::TracingConfig) -> anyhow::Re
     Ok(())
 }
 
+/// OTLP connectivity probe (no-op when otel feature is disabled).
+///
+/// # Errors
+/// This function always succeeds when the otel feature is disabled.
 #[cfg(not(feature = "otel"))]
 pub fn otel_connectivity_probe(_cfg: &serde_json::Value) -> anyhow::Result<()> {
     tracing::info!("OTLP connectivity probe skipped (otel feature disabled)");

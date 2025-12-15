@@ -9,6 +9,7 @@ use crate::domain::parser::FileParserBackend;
 pub struct HtmlParser;
 
 impl HtmlParser {
+    #[must_use]
     pub fn new() -> Self {
         Self
     }
@@ -36,16 +37,16 @@ impl FileParserBackend for HtmlParser {
     ) -> Result<crate::domain::ir::ParsedDocument, DomainError> {
         let content = tokio::fs::read(path)
             .await
-            .map_err(|e| DomainError::io_error(format!("Failed to read file: {}", e)))?;
+            .map_err(|e| DomainError::io_error(format!("Failed to read file: {e}")))?;
 
         let filename = path
             .file_name()
             .and_then(|s| s.to_str())
-            .map(|s| s.to_string());
+            .map(ToString::to_string);
         let (blocks, title) =
             tokio::task::spawn_blocking(move || parse_html_bytes(&content, filename.as_deref()))
                 .await
-                .map_err(|e| DomainError::parse_error(format!("Task join error: {}", e)))??;
+                .map_err(|e| DomainError::parse_error(format!("Task join error: {e}")))??;
 
         let mut builder = DocumentBuilder::new(ParsedSource::LocalPath(path.display().to_string()))
             .content_type("text/html")
@@ -68,12 +69,12 @@ impl FileParserBackend for HtmlParser {
         _content_type: Option<&str>,
         bytes: bytes::Bytes,
     ) -> Result<crate::domain::ir::ParsedDocument, DomainError> {
-        let filename_owned = filename_hint.map(|s| s.to_string());
+        let filename_owned = filename_hint.map(ToString::to_string);
         let (blocks, title) = tokio::task::spawn_blocking(move || {
             parse_html_bytes(&bytes, filename_owned.as_deref())
         })
         .await
-        .map_err(|e| DomainError::parse_error(format!("Task join error: {}", e)))??;
+        .map_err(|e| DomainError::parse_error(format!("Task join error: {e}")))??;
 
         let source = ParsedSource::Uploaded {
             original_name: filename_hint.unwrap_or("unknown.html").to_string(),
@@ -102,7 +103,7 @@ fn parse_html_bytes(
     let html_str = String::from_utf8_lossy(bytes);
 
     let dom = tl::parse(&html_str, tl::ParserOptions::default())
-        .map_err(|e| DomainError::parse_error(format!("Failed to parse HTML: {}", e)))?;
+        .map_err(|e| DomainError::parse_error(format!("Failed to parse HTML: {e}")))?;
 
     let parser = dom.parser();
     let mut blocks = Vec::new();
@@ -118,7 +119,7 @@ fn parse_html_bytes(
 
     // Fall back to filename if no title found
     if title.is_none() {
-        title = filename.map(|s| s.to_string());
+        title = filename.map(ToString::to_string);
     }
 
     // Extract body content

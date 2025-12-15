@@ -39,6 +39,7 @@ pub enum Status {
 
 impl Status {
     #[inline]
+    #[must_use]
     pub const fn as_u8(self) -> u8 {
         match self {
             Status::Stopped => 0,
@@ -48,6 +49,7 @@ impl Status {
         }
     }
     #[inline]
+    #[must_use]
     pub const fn from_u8(x: u8) -> Self {
         match x {
             1 => Status::Starting,
@@ -76,8 +78,9 @@ impl ReadySignal {
     pub fn notify(self) {
         let _ = self.0.send(());
     }
-    /// Construct a ReadySignal from a oneshot sender (used by macro-generated shims).
+    /// Construct a `ReadySignal` from a oneshot sender (used by macro-generated shims).
     #[inline]
+    #[must_use]
     pub fn from_sender(sender: tokio::sync::oneshot::Sender<()>) -> Self {
         ReadySignal(sender)
     }
@@ -124,6 +127,7 @@ pub struct Lifecycle {
 }
 
 impl Lifecycle {
+    #[must_use]
     pub fn new_named(name: &'static str) -> Self {
         Self {
             name,
@@ -136,6 +140,7 @@ impl Lifecycle {
         }
     }
 
+    #[must_use]
     pub fn new() -> Self {
         Self::new_named("lifecycle")
     }
@@ -163,6 +168,9 @@ impl Lifecycle {
     ///
     /// The future is constructed inside the task to avoid leaving the lifecycle in `Starting`
     /// if `make` panics.
+    ///
+    /// # Errors
+    /// Returns `LcError` if the lifecycle is not in a startable state.
     #[tracing::instrument(skip(self, make), level = "debug")]
     pub fn start<F, Fut>(&self, make: F) -> LcResult
     where
@@ -173,6 +181,9 @@ impl Lifecycle {
     }
 
     /// Spawn the job using a provided `CancellationToken` and `make(cancel)`.
+    ///
+    /// # Errors
+    /// Returns `LcError` if the lifecycle is not in a startable state.
     #[tracing::instrument(skip(self, make, token), level = "debug")]
     pub fn start_with_token<F, Fut>(&self, token: CancellationToken, make: F) -> LcResult
     where
@@ -183,6 +194,9 @@ impl Lifecycle {
     }
 
     /// Spawn the job using `make(cancel, ready)`. Status becomes `Running` only after `ready.notify()`.
+    ///
+    /// # Errors
+    /// Returns `LcError` if the lifecycle is not in a startable state.
     #[tracing::instrument(skip(self, make), level = "debug")]
     pub fn start_with_ready<F, Fut>(&self, make: F) -> LcResult
     where
@@ -202,6 +216,9 @@ impl Lifecycle {
     }
 
     /// Ready-aware start variant that uses a provided `CancellationToken`.
+    ///
+    /// # Errors
+    /// Returns `LcError` if the lifecycle is not in a startable state.
     #[tracing::instrument(skip(self, make, token), level = "debug")]
     pub fn start_with_ready_and_token<F, Fut>(&self, token: CancellationToken, make: F) -> LcResult
     where
@@ -222,7 +239,7 @@ impl Lifecycle {
 
     /// Unified start core
     ///
-    /// `ready_mode = true`   => we expect a ReadySignal to flip `Starting -> Running` (upon notify).
+    /// `ready_mode = true`   => we expect a `ReadySignal` to flip `Starting -> Running` (upon notify).
     /// `ready_mode = false`  => we flip to `Running` immediately after spawn.
     fn start_core<F, Fut>(&self, token: CancellationToken, make: F, ready_mode: bool) -> LcResult
     where
@@ -283,7 +300,7 @@ impl Lifecycle {
 
         // Spawn the actual task with descriptive logging
         let module_name = self.name;
-        let task_id = format!("{module_name}-{:p}", self);
+        let task_id = format!("{module_name}-{self:p}");
         let handle = tokio::spawn({
             let task_id = task_id.clone();
             async move {
@@ -309,10 +326,13 @@ impl Lifecycle {
     }
 
     /// Request graceful shutdown and wait up to `timeout`.
+    ///
+    /// # Errors
+    /// Returns `LcError` if the stop operation fails.
     #[tracing::instrument(skip(self, timeout), level = "debug")]
     pub async fn stop(&self, timeout: Duration) -> LcResult<StopReason> {
         let module_name = self.name;
-        let task_id = format!("{module_name}-{:p}", self);
+        let task_id = format!("{module_name}-{self:p}");
         let st = self.load_status();
         if !matches!(st, Status::Starting | Status::Running | Status::Stopping) {
             // Not running => already finished.
@@ -440,7 +460,7 @@ impl Default for Lifecycle {
 }
 
 impl Drop for Lifecycle {
-    /// Best-effort cleanup to avoid orphaned background tasks if caller forgets to call stop().
+    /// Best-effort cleanup to avoid orphaned background tasks if caller forgets to call `stop()`.
     fn drop(&mut self) {
         if let Some(tok) = self.cancel.get_mut().take() {
             tok.cancel();
@@ -454,6 +474,7 @@ impl Drop for Lifecycle {
 // ----- WithLifecycle wrapper -------------------------------------------------
 
 /// Wrapper that implements `StatefulModule` for any `T: Runnable`.
+#[must_use]
 pub struct WithLifecycle<T: Runnable> {
     inner: Arc<T>,
     lc: Arc<Lifecycle>,
@@ -515,17 +536,20 @@ impl<T: Runnable> WithLifecycle<T> {
     }
 
     #[inline]
+    #[must_use]
     pub fn status(&self) -> Status {
         self.lc.status()
     }
 
     #[inline]
+    #[must_use]
     pub fn inner(&self) -> &T {
         self.inner.as_ref()
     }
 
     /// Sometimes callers need to hold an `Arc` to the inner runnable.
     #[inline]
+    #[must_use]
     pub fn inner_arc(&self) -> Arc<T> {
         self.inner.clone()
     }

@@ -1,6 +1,6 @@
 //! Secure ORM layer for scoped database access.
 //!
-//! This module provides a type-safe wrapper around SeaORM that enforces
+//! This module provides a type-safe wrapper around `SeaORM` that enforces
 //! access control scoping at compile time using the typestate pattern.
 //!
 //! # Basic Example
@@ -27,7 +27,7 @@
 //! assert!(resource_scope.has_resources());
 //! ```
 //!
-//! # Quick Start with SeaORM
+//! # Quick Start with `SeaORM`
 //!
 //! ```rust,ignore
 //! use modkit_db::secure::{AccessScope, SecureEntityExt, Scopable};

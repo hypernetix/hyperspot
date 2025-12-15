@@ -26,6 +26,7 @@ fn duration_to_u64_ms(duration: Duration) -> u64 {
 /// Retry-related fields (`max_retries`, `base_backoff`, `max_backoff`) are stored here
 /// for convenience but are used by the [`crate::rpc_retry`] module, not by the transport layer.
 #[derive(Debug, Clone)]
+#[must_use]
 pub struct GrpcClientConfig {
     /// Timeout for establishing the initial connection.
     pub connect_timeout: Duration,
@@ -173,6 +174,9 @@ fn build_endpoint(
 ///     "my_service.my_method",
 /// ).await?;
 /// ```
+///
+/// # Errors
+/// Returns an error if the connection cannot be established.
 pub async fn connect_with_stack<TClient>(
     uri: impl Into<String>,
     cfg: &GrpcClientConfig,
@@ -229,6 +233,9 @@ where
 ///     &config
 /// ).await?;
 /// ```
+///
+/// # Errors
+/// Returns an error if the connection fails after all retry attempts.
 pub async fn connect_with_retry<TClient>(
     uri: impl Into<String>,
     cfg: &GrpcClientConfig,
@@ -288,6 +295,9 @@ where
 /// Uses default configuration with the provided service name.
 /// This only sets up the transport connection; retries and backoff
 /// for RPC calls should be handled using [`crate::rpc_retry::call_with_retry`].
+///
+/// # Errors
+/// Returns an error if the connection cannot be established.
 pub async fn connect<TClient>(
     uri: impl Into<String>,
     service_name: &'static str,

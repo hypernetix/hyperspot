@@ -1,9 +1,9 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-//! Integration tests for the API Ingress router and new OperationBuilder
+//! Integration tests for the API Ingress router and new `OperationBuilder`
 //!
-//! This test demonstrates that the new type-safe OperationBuilder works
-//! correctly with the API Ingress module for routing and OpenAPI generation.
+//! This test demonstrates that the new type-safe `OperationBuilder` works
+//! correctly with the API Ingress module for routing and `OpenAPI` generation.
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -20,7 +20,7 @@ use std::sync::Arc;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-/// Helper to create a test ModuleCtx
+/// Helper to create a test `ModuleCtx`
 struct EmptyConfigProvider;
 
 impl ConfigProvider for EmptyConfigProvider {
@@ -57,7 +57,7 @@ pub struct CreateUserRequest {
     pub email: String,
 }
 
-/// Test module that demonstrates the new OperationBuilder API
+/// Test module that demonstrates the new `OperationBuilder` API
 pub struct TestUsersModule;
 
 #[async_trait]

@@ -19,9 +19,9 @@ use crate::api::problem;
 
 /// Convert OpenAPI-style path placeholders to Axum 0.8+ style path parameters.
 ///
-/// Axum 0.8+ uses `{id}` for path parameters and `{*path}` for wildcards, which is the same as OpenAPI.
-/// However, OpenAPI wildcards are just `{path}` without the asterisk.
-/// This function converts OpenAPI wildcards to Axum wildcards by detecting common wildcard names.
+/// Axum 0.8+ uses `{id}` for path parameters and `{*path}` for wildcards, which is the same as `OpenAPI`.
+/// However, `OpenAPI` wildcards are just `{path}` without the asterisk.
+/// This function converts `OpenAPI` wildcards to Axum wildcards by detecting common wildcard names.
 ///
 /// # Examples
 ///
@@ -31,6 +31,7 @@ use crate::api::problem;
 /// assert_eq!(normalize_to_axum_path("/projects/{project_id}/items/{item_id}"), "/projects/{project_id}/items/{item_id}");
 /// // Note: Most paths don't need normalization in Axum 0.8+
 /// ```
+#[must_use]
 pub fn normalize_to_axum_path(path: &str) -> String {
     // In Axum 0.8+, the path syntax is {param} for parameters and {*wildcard} for wildcards
     // which is the same as OpenAPI except wildcards need the asterisk prefix.
@@ -50,6 +51,7 @@ pub fn normalize_to_axum_path(path: &str) -> String {
 /// assert_eq!(axum_to_openapi_path("/users/{id}"), "/users/{id}");
 /// assert_eq!(axum_to_openapi_path("/static/{*path}"), "/static/{path}");
 /// ```
+#[must_use]
 pub fn axum_to_openapi_path(path: &str) -> String {
     // In Axum 0.8+, wildcards are {*name} but OpenAPI expects {name}
     // Regular parameters are the same in both
@@ -70,7 +72,7 @@ pub mod state {
     #[derive(Debug, Clone, Copy)]
     pub struct AuthNotSet;
 
-    /// Marker for auth requirement set (either require_auth or public)
+    /// Marker for auth requirement set (either `require_auth` or public)
     #[derive(Debug, Clone, Copy)]
     pub struct AuthSet;
 }
@@ -134,7 +136,7 @@ pub enum RequestBodySchema {
     /// Multipart form with a single file field
     MultipartFile { field_name: String },
     /// Raw binary body (e.g. application/octet-stream), represented as
-    /// type: string, format: binary in OpenAPI.
+    /// type: string, format: binary in `OpenAPI`.
     Binary,
     /// A generic inline object schema with no predefined properties
     InlineObject,
@@ -147,7 +149,7 @@ pub struct RequestBodySpec {
     pub description: Option<String>,
     /// The schema for this request body
     pub schema: RequestBodySchema,
-    /// Whether request body is required (OpenAPI default is `false`).
+    /// Whether request body is required (`OpenAPI` default is `false`).
     pub required: bool,
 }
 
@@ -209,10 +211,12 @@ pub struct RateLimitSpec {
 
 //
 pub trait OperationBuilderODataExt<S, H, R> {
-    /// Adds optional `$filter` query parameter to OpenAPI.
+    /// Adds optional `$filter` query parameter to `OpenAPI`.
+    #[must_use]
     fn with_odata_filter(self) -> Self;
 
     /// Same as above but with explicit description (e.g., allowed fields).
+    #[must_use]
     fn with_odata_filter_doc(self, description: impl Into<String>) -> Self;
 }
 
@@ -253,7 +257,8 @@ pub use crate::api::openapi_registry::{ensure_schema, OpenApiRegistry};
 /// - `H`: Handler state (Missing | Present)
 /// - `R`: Response state (Missing | Present)
 /// - `S`: Router state type (what you put into `Router::with_state(S)`).
-/// - `A`: Auth state (AuthNotSet | AuthSet)
+/// - `A`: Auth state (`AuthNotSet` | `AuthSet`)
+#[must_use]
 pub struct OperationBuilder<H = Missing, R = Missing, S = (), A = AuthNotSet>
 where
     H: HandlerSlot<S>,
@@ -420,7 +425,7 @@ where
         self
     }
 
-    /// Add a typed query parameter with explicit OpenAPI type
+    /// Add a typed query parameter with explicit `OpenAPI` type
     pub fn query_param_typed(
         mut self,
         name: impl Into<String>,
@@ -522,8 +527,8 @@ where
     /// - Configures an inline object schema with a binary file field
     /// - Restricts allowed Content-Type to only "multipart/form-data"
     ///
-    /// The file field will be documented in OpenAPI as a binary string with the
-    /// given field name. This generates the correct OpenAPI schema for UI tools
+    /// The file field will be documented in `OpenAPI` as a binary string with the
+    /// given field name. This generates the correct `OpenAPI` schema for UI tools
     /// like Stoplight to display a file upload control.
     ///
     /// # Arguments
@@ -545,7 +550,7 @@ where
         self.spec.request_body = Some(RequestBodySpec {
             content_type: "multipart/form-data",
             description: description
-                .map(|s| format!("{} (expects field '{}' with file data)", s, field_name)),
+                .map(|s| format!("{s} (expects field '{field_name}' with file data)")),
             schema: RequestBodySchema::MultipartFile {
                 field_name: field_name.to_string(),
             },
@@ -563,7 +568,7 @@ where
     /// This is intended for endpoints that accept the entire request body
     /// as a file or arbitrary bytes, without multipart form encoding.
     ///
-    /// The OpenAPI schema will be:
+    /// The `OpenAPI` schema will be:
     /// ```yaml
     /// requestBody:
     ///   required: true
@@ -593,7 +598,7 @@ where
     pub fn octet_stream_request(mut self, description: Option<&str>) -> Self {
         self.spec.request_body = Some(RequestBodySpec {
             content_type: "application/octet-stream",
-            description: description.map(|s| s.to_string()),
+            description: description.map(ToString::to_string),
             schema: RequestBodySchema::Binary,
             required: true,
         });
@@ -611,7 +616,7 @@ where
     /// Content-Type that is not in this list, ingress will return HTTP 415.
     ///
     /// This is independent of the request body schema - it only configures ingress
-    /// validation and does not affect OpenAPI request body specifications.
+    /// validation and does not affect `OpenAPI` request body specifications.
     ///
     /// # Example
     /// ```rust,ignore
@@ -637,7 +642,7 @@ where
 {
     /// Require authentication with a specific resource:action permission.
     ///
-    /// This method transitions from AuthNotSet to AuthSet state.
+    /// This method transitions from `AuthNotSet` to `AuthSet` state.
     ///
     /// # Example
     /// ```rust,ignore
@@ -670,7 +675,7 @@ where
     /// Mark this route as public (no authentication required).
     ///
     /// This explicitly opts out of the `require_auth_by_default` setting.
-    /// This method transitions from AuthNotSet to AuthSet state.
+    /// This method transitions from `AuthNotSet` to `AuthSet` state.
     ///
     /// # Example
     /// ```rust,ignore
@@ -822,7 +827,7 @@ where
     ///
     /// # Important
     /// The `content_type` must be a pure media type **without parameters** like `; charset=utf-8`.
-    /// OpenAPI media type keys cannot include parameters. Use `"text/markdown"` instead of
+    /// `OpenAPI` media type keys cannot include parameters. Use `"text/markdown"` instead of
     /// `"text/markdown; charset=utf-8"`. Actual HTTP response headers in handlers should still
     /// include the charset parameter.
     pub fn text_response(
@@ -973,7 +978,7 @@ where
     ///
     /// # Important
     /// The `content_type` must be a pure media type **without parameters** like `; charset=utf-8`.
-    /// OpenAPI media type keys cannot include parameters. Use `"text/markdown"` instead of
+    /// `OpenAPI` media type keys cannot include parameters. Use `"text/markdown"` instead of
     /// `"text/markdown; charset=utf-8"`. Actual HTTP response headers in handlers should still
     /// include the charset parameter.
     pub fn text_response(
@@ -1093,10 +1098,10 @@ where
         self
     }
 
-    /// Add 422 validation error response using ValidationError schema.
+    /// Add 422 validation error response using `ValidationError` schema.
     ///
     /// This method adds a specific 422 Unprocessable Entity response that uses
-    /// the ValidationError schema instead of the generic Problem schema. Use this
+    /// the `ValidationError` schema instead of the generic Problem schema. Use this
     /// for endpoints that perform input validation and need structured error details.
     ///
     /// # Example
@@ -1209,7 +1214,7 @@ impl<S> OperationBuilder<Present, Present, S, AuthSet>
 where
     S: Clone + Send + Sync + 'static,
 {
-    /// Register the operation with the router and OpenAPI registry.
+    /// Register the operation with the router and `OpenAPI` registry.
     ///
     /// This method is only available when:
     /// - Handler is present

@@ -1,8 +1,8 @@
-//! Minimal fluent builder for combining Secure ORM scoping with OData pagination.
+//! Minimal fluent builder for combining Secure ORM scoping with `OData` pagination.
 //!
 //! This module provides `OPager`, a small ergonomic builder that:
 //! - Applies security scope via `SecureConn::find::<E>(&SecurityCtx)`
-//! - Applies OData filter + cursor + order + limit via `paginate_with_odata`
+//! - Applies `OData` filter + cursor + order + limit via `paginate_with_odata`
 //! - Keeps all existing types without introducing facades or macros
 //!
 //! # Quick Start
@@ -114,16 +114,16 @@ use sea_orm::{ColumnTrait, ConnectionTrait, EntityTrait};
 use crate::odata::{paginate_with_odata, FieldMap, LimitCfg};
 use crate::secure::{ScopableEntity, SecureConn, SecurityCtx};
 
-/// Minimal fluent builder for Secure + OData pagination.
+/// Minimal fluent builder for Secure + `OData` pagination.
 ///
-/// This builder combines security-scoped queries with OData pagination
+/// This builder combines security-scoped queries with `OData` pagination
 /// in a single, ergonomic interface. It enforces tenant isolation and
 /// access control while providing cursor-based pagination with filtering
 /// and ordering.
 ///
 /// # Type Parameters
 ///
-/// - `E`: The SeaORM entity type (must implement `ScopableEntity`)
+/// - `E`: The `SeaORM` entity type (must implement `ScopableEntity`)
 /// - `C`: The database connection type (any `ConnectionTrait`)
 ///
 /// # Usage
@@ -140,6 +140,7 @@ use crate::secure::{ScopableEntity, SecureConn, SecurityCtx};
 ///
 /// - Tiebreaker: `("id", SortDir::Desc)` - ensures stable pagination
 /// - Limits: `{ default: 25, max: 1000 }` - reasonable defaults for most APIs
+#[must_use]
 pub struct OPager<'a, E, C>
 where
     E: EntityTrait,
@@ -167,7 +168,7 @@ where
     /// - `db`: Secure database connection wrapper
     /// - `ctx`: Security context defining access scope (tenant/resource boundaries)
     /// - `conn`: Raw connection for executing queries
-    /// - `fmap`: Field map defining OData field → entity column mappings
+    /// - `fmap`: Field map defining `OData` field → entity column mappings
     ///
     /// # Example
     ///
@@ -206,7 +207,7 @@ where
     ///
     /// # Parameters
     ///
-    /// - `field`: The field name (as defined in the FieldMap) to use as tiebreaker
+    /// - `field`: The field name (as defined in the `FieldMap`) to use as tiebreaker
     /// - `dir`: Sort direction for the tiebreaker field
     ///
     /// # Example
@@ -244,7 +245,7 @@ where
     ///
     /// This is the terminal operation that:
     /// 1. Applies security scope (tenant/resource filtering)
-    /// 2. Applies OData filter (if present in query)
+    /// 2. Applies `OData` filter (if present in query)
     /// 3. Applies cursor-based pagination
     /// 4. Fetches limit+1 rows (to detect "has more")
     /// 5. Maps entity models to domain DTOs
@@ -257,14 +258,14 @@ where
     ///
     /// # Parameters
     ///
-    /// - `q`: OData query containing filter, order, cursor, and limit
+    /// - `q`: `OData` query containing filter, order, cursor, and limit
     /// - `map`: Function to convert entity models to domain DTOs
     ///
     /// # Errors
     ///
     /// Returns `ODataError` if:
     /// - Security scope cannot be applied
-    /// - OData filter is invalid
+    /// - `OData` filter is invalid
     /// - Database query fails
     /// - Cursor is malformed or inconsistent
     ///

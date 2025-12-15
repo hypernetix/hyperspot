@@ -1,8 +1,8 @@
 //! Advisory locks implementation with namespacing and retry policies.
 //!
 //! Cross-database advisory locking with proper namespacing and configurable
-//! retry/backoff. For PostgreSQL and MySQL we use native DB advisory locks and
-//! **hold the same connection** inside the guard; for SQLite (or when native
+//! retry/backoff. For `PostgreSQL` and `MySQL` we use native DB advisory locks and
+//! **hold the same connection** inside the guard; for `SQLite` (or when native
 //! locks aren't available) we fall back to file-based locks held by an open
 //! file descriptor.
 //!
@@ -176,6 +176,7 @@ pub struct LockManager {
 }
 
 impl LockManager {
+    #[must_use]
     pub fn new(engine: DbEngine, pool: DbPool, dsn: String) -> Self {
         Self { engine, pool, dsn }
     }
@@ -184,6 +185,9 @@ impl LockManager {
     ///
     /// Returns a guard that releases the lock when dropped (best-effort) or
     /// deterministically when `release().await` is called.
+    ///
+    /// # Errors
+    /// Returns `DbLockError` if the lock cannot be acquired.
     pub async fn lock(&self, module: &str, key: &str) -> Result<DbLockGuard, DbLockError> {
         let namespaced_key = format!("{module}:{key}");
         match self.engine {
@@ -209,6 +213,9 @@ impl LockManager {
     /// - `Ok(Some(guard))` if lock acquired
     /// - `Ok(None)` if timed out or attempts exceeded
     /// - `Err(e)` on unrecoverable error
+    ///
+    /// # Errors
+    /// Returns `DbLockError` on unrecoverable lock errors.
     pub async fn try_lock(
         &self,
         module: &str,
@@ -494,7 +501,7 @@ impl LockManager {
         }
     }
 
-    /// Generate lock file path for SQLite (or when using file-based locks).
+    /// Generate lock file path for `SQLite` (or when using file-based locks).
     fn get_lock_file_path(&self, namespaced_key: &str) -> PathBuf {
         // For ephemeral DSNs (like `memdb`) or tests, use temp dir to avoid global pollution.
         let base_dir = if self.dsn.contains("memdb") || cfg!(test) {
@@ -562,10 +569,10 @@ mod tests {
         );
 
         let guard1 = lock_manager
-            .lock("module1", &format!("{}_key", test_id))
+            .lock("module1", &format!("{test_id}_key"))
             .await?;
         let guard2 = lock_manager
-            .lock("module2", &format!("{}_key", test_id))
+            .lock("module2", &format!("{test_id}_key"))
             .await?;
 
         assert!(!guard1.key().is_empty());
@@ -596,7 +603,7 @@ mod tests {
         );
 
         let _guard1 = lock_manager
-            .lock("test_module", &format!("{}_key", test_id))
+            .lock("test_module", &format!("{test_id}_key"))
             .await?;
 
         // Different key should succeed quickly even with retries/timeouts
@@ -608,7 +615,7 @@ mod tests {
         };
 
         let result = lock_manager
-            .try_lock("test_module", &format!("{}_different_key", test_id), config)
+            .try_lock("test_module", &format!("{test_id}_different_key"), config)
             .await?;
         assert!(result.is_some(), "expected successful lock acquisition");
         Ok(())
@@ -633,7 +640,7 @@ mod tests {
         let result = lock_manager
             .try_lock(
                 "test_module",
-                &format!("{}_key", test_id),
+                &format!("{test_id}_key"),
                 LockConfig::default(),
             )
             .await?;

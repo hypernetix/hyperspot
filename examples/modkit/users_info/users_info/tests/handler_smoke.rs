@@ -22,7 +22,7 @@ use users_info::{
 };
 use uuid::Uuid;
 
-/// Middleware to inject a fake SecurityCtx for testing
+/// Middleware to inject a fake `SecurityCtx` for testing
 async fn inject_fake_security_ctx(mut req: Request<Body>, next: Next) -> axum::response::Response {
     let fake_tenant = Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
     let fake_subject = Uuid::parse_str("00000000-0000-0000-0000-000000000002").unwrap();
@@ -82,7 +82,7 @@ async fn get_user_handler_returns_json() {
     // Act: Call GET /users/:id
     let request = Request::builder()
         .method("GET")
-        .uri(format!("/users/{}", user_id))
+        .uri(format!("/users/{user_id}"))
         .body(Body::empty())
         .unwrap();
 
@@ -105,7 +105,7 @@ async fn get_nonexistent_user_returns_404() {
     // Act: Call GET /users/:id for non-existent user
     let request = Request::builder()
         .method("GET")
-        .uri(format!("/users/{}", random_id))
+        .uri(format!("/users/{random_id}"))
         .body(Body::empty())
         .unwrap();
 

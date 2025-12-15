@@ -33,7 +33,10 @@ impl Default for ValidationConfig {
     }
 }
 
-/// Perform common validation checks on claims
+/// Perform common validation checks on claims.
+///
+/// # Errors
+/// Returns `ClaimsError` if any validation check fails (issuer, audience, expiration, etc.).
 pub fn validate_claims(claims: &Claims, config: &ValidationConfig) -> Result<(), ClaimsError> {
     // 1. Validate issuer
     if !config.allowed_issuers.is_empty() && !config.allowed_issuers.contains(&claims.issuer) {
@@ -103,7 +106,10 @@ pub fn validate_claims(claims: &Claims, config: &ValidationConfig) -> Result<(),
     Ok(())
 }
 
-/// Helper to parse a UUID from a JSON value
+/// Helper to parse a UUID from a JSON value.
+///
+/// # Errors
+/// Returns `ClaimsError::InvalidClaimFormat` if the value is not a valid UUID string.
 pub fn parse_uuid_from_value(
     value: &serde_json::Value,
     field_name: &str,
@@ -122,7 +128,10 @@ pub fn parse_uuid_from_value(
         })
 }
 
-/// Helper to parse an array of UUIDs from a JSON value
+/// Helper to parse an array of UUIDs from a JSON value.
+///
+/// # Errors
+/// Returns `ClaimsError::InvalidClaimFormat` if the value is not an array of valid UUID strings.
 pub fn parse_uuid_array_from_value(
     value: &serde_json::Value,
     field_name: &str,
@@ -138,7 +147,10 @@ pub fn parse_uuid_array_from_value(
         .collect()
 }
 
-/// Helper to parse timestamp (seconds since epoch) into OffsetDateTime
+/// Helper to parse timestamp (seconds since epoch) into `OffsetDateTime`.
+///
+/// # Errors
+/// Returns `ClaimsError::InvalidClaimFormat` if the value is not a valid unix timestamp.
 pub fn parse_timestamp(
     value: &serde_json::Value,
     field_name: &str,
@@ -156,21 +168,25 @@ pub fn parse_timestamp(
     })
 }
 
-/// Helper to extract string from JSON value
+/// Helper to extract string from JSON value.
+///
+/// # Errors
+/// Returns `ClaimsError::MissingClaim` if the value is not a string.
 pub fn extract_string(value: &serde_json::Value, field_name: &str) -> Result<String, ClaimsError> {
     value
         .as_str()
-        .map(|s| s.to_string())
+        .map(ToString::to_string)
         .ok_or_else(|| ClaimsError::MissingClaim(field_name.to_string()))
 }
 
 /// Helper to extract string array from JSON value (handles both string and array)
+#[must_use]
 pub fn extract_audiences(value: &serde_json::Value) -> Vec<String> {
     match value {
         serde_json::Value::String(s) => vec![s.clone()],
         serde_json::Value::Array(arr) => arr
             .iter()
-            .filter_map(|v| v.as_str().map(|s| s.to_string()))
+            .filter_map(|v| v.as_str().map(ToString::to_string))
             .collect(),
         _ => vec![],
     }

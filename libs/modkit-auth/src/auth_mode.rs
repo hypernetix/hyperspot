@@ -29,7 +29,10 @@ impl PluginRegistry {
         self.plugins.insert(name.into(), plugin);
     }
 
-    /// Get a plugin by name
+    /// Get a plugin by name.
+    ///
+    /// # Errors
+    /// Returns `ConfigError::UnknownPlugin` if no plugin with the given name exists.
     pub fn get(&self, name: &str) -> Result<&Arc<dyn ClaimsPlugin>, ConfigError> {
         self.plugins
             .get(name)
@@ -37,21 +40,25 @@ impl PluginRegistry {
     }
 
     /// Check if a plugin exists
+    #[must_use]
     pub fn contains(&self, name: &str) -> bool {
         self.plugins.contains_key(name)
     }
 
     /// Get all plugin names
+    #[must_use]
     pub fn plugin_names(&self) -> Vec<String> {
         self.plugins.keys().cloned().collect()
     }
 
     /// Number of registered plugins
+    #[must_use]
     pub fn len(&self) -> usize {
         self.plugins.len()
     }
 
     /// Check if registry is empty
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.plugins.is_empty()
     }

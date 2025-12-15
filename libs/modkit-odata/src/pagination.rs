@@ -1,4 +1,4 @@
-//! Filter hashing utilities for OData pagination
+//! Filter hashing utilities for `OData` pagination
 
 use crate::ast;
 use sha2::{Digest, Sha256};
@@ -55,7 +55,7 @@ pub fn normalize_filter_for_hash(expr: &ast::Expr) -> String {
             }
             ast::Expr::Value(value) => match value {
                 ast::Value::Null => "NULL".to_string(),
-                ast::Value::Bool(b) => format!("BOOL({})", b),
+                ast::Value::Bool(b) => format!("BOOL({b})"),
                 ast::Value::Number(n) => format!("NUM({})", n.normalized()),
                 ast::Value::Uuid(u) => {
                     format!("UUID({})", u.as_hyphenated().to_string().to_lowercase())
@@ -63,7 +63,7 @@ pub fn normalize_filter_for_hash(expr: &ast::Expr) -> String {
                 ast::Value::DateTime(dt) => format!("DATETIME({})", dt.to_rfc3339()),
                 ast::Value::Date(d) => format!("DATE({})", d.format("%Y-%m-%d")),
                 ast::Value::Time(t) => format!("TIME({})", t.format("%H:%M:%S%.f")),
-                ast::Value::String(s) => format!("STR({})", s),
+                ast::Value::String(s) => format!("STR({s})"),
             },
         }
     }

@@ -17,11 +17,13 @@ pub struct Page<T> {
 
 impl<T> Page<T> {
     /// Create a new page with items and page info
+    #[must_use]
     pub fn new(items: Vec<T>, page_info: PageInfo) -> Self {
         Self { items, page_info }
     }
 
     /// Create an empty page with the given limit
+    #[must_use]
     pub fn empty(limit: u64) -> Self {
         Self {
             items: Vec::new(),
@@ -33,7 +35,7 @@ impl<T> Page<T> {
         }
     }
 
-    /// Map items while preserving page_info (Domain->DTO mapping convenience)
+    /// Map items while preserving `page_info` (Domain->DTO mapping convenience)
     pub fn map_items<U>(self, mut f: impl FnMut(T) -> U) -> Page<U> {
         Page {
             items: self.items.into_iter().map(&mut f).collect(),

@@ -1,17 +1,17 @@
-//! ModKit runtime runner.
+//! `ModKit` runtime runner.
 //!
 //! Supported DB modes:
 //!   - `DbOptions::None` — modules get no DB in their contexts.
-//!   - `DbOptions::Manager` — modules use ModuleContextBuilder to resolve per-module DbHandles.
+//!   - `DbOptions::Manager` — modules use `ModuleContextBuilder` to resolve per-module `DbHandles`.
 //!
 //! Design notes:
-//! - We use **ModuleContextBuilder** to resolve per-module DbHandles at runtime.
-//! - Phase order: **system_wire → DB → init → REST → gRPC → start → OoP spawn → wait → stop**.
-//! - Modules receive a fully-scoped ModuleCtx with a resolved Option<DbHandle>.
+//! - We use **`ModuleContextBuilder`** to resolve per-module `DbHandles` at runtime.
+//! - Phase order: **`system_wire` → DB → init → REST → gRPC → start → `OoP` spawn → wait → stop**.
+//! - Modules receive a fully-scoped `ModuleCtx` with a resolved Option<DbHandle>.
 //! - Shutdown can be driven by OS signals, an external `CancellationToken`,
 //!   or an arbitrary future.
-//! - Pre-registered clients can be injected into the ClientHub via `RunOptions::clients`.
-//! - OoP modules are spawned after the start phase so that grpc_hub is already running
+//! - Pre-registered clients can be injected into the `ClientHub` via `RunOptions::clients`.
+//! - `OoP` modules are spawned after the start phase so that `grpc_hub` is already running
 //!   and the real directory endpoint is known.
 
 use crate::backends::OopBackend;
@@ -26,10 +26,10 @@ use std::{future::Future, pin::Pin, sync::Arc};
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
-/// A type-erased client registration for injecting clients into the ClientHub.
+/// A type-erased client registration for injecting clients into the `ClientHub`.
 ///
 /// This is used to pass pre-created clients (like gRPC clients) from bootstrap code
-/// into the runtime's ClientHub before modules are initialized.
+/// into the runtime's `ClientHub` before modules are initialized.
 pub struct ClientRegistration {
     /// Callback that registers the client into the hub.
     register_fn: Box<dyn FnOnce(&ClientHub) + Send>,
@@ -70,7 +70,7 @@ pub enum ShutdownOptions {
     Future(Pin<Box<dyn Future<Output = ()> + Send>>),
 }
 
-/// Configuration for a single OoP module to be spawned.
+/// Configuration for a single `OoP` module to be spawned.
 #[derive(Clone)]
 pub struct OopModuleSpawnConfig {
     /// Module name (e.g., "calculator")
@@ -83,48 +83,51 @@ pub struct OopModuleSpawnConfig {
     pub env: HashMap<String, String>,
     /// Working directory for the process
     pub working_directory: Option<String>,
-    /// Rendered module config JSON (for MODKIT_MODULE_CONFIG env var)
+    /// Rendered module config JSON (for `MODKIT_MODULE_CONFIG` env var)
     pub rendered_config_json: String,
 }
 
-/// Options for spawning OoP modules.
+/// Options for spawning `OoP` modules.
 pub struct OopSpawnOptions {
-    /// List of OoP modules to spawn after the start phase
+    /// List of `OoP` modules to spawn after the start phase
     pub modules: Vec<OopModuleSpawnConfig>,
-    /// Backend for spawning OoP modules (e.g., LocalProcessBackend)
+    /// Backend for spawning `OoP` modules (e.g., `LocalProcessBackend`)
     pub backend: Box<dyn OopBackend>,
 }
 
-/// Options for running the ModKit runner.
+/// Options for running the `ModKit` runner.
 pub struct RunOptions {
     /// Provider of module config sections (raw JSON by module name).
     pub modules_cfg: Arc<dyn ConfigProvider>,
-    /// DB strategy: none, or DbManager.
+    /// DB strategy: none, or `DbManager`.
     pub db: DbOptions,
     /// Shutdown strategy.
     pub shutdown: ShutdownOptions,
-    /// Pre-registered clients to inject into the ClientHub before module initialization.
+    /// Pre-registered clients to inject into the `ClientHub` before module initialization.
     ///
-    /// This is useful for OoP bootstrap where clients (like `DirectoryGrpcClient`)
-    /// are created before calling `run()` and need to be available in the ClientHub.
+    /// This is useful for `OoP` bootstrap where clients (like `DirectoryGrpcClient`)
+    /// are created before calling `run()` and need to be available in the `ClientHub`.
     pub clients: Vec<ClientRegistration>,
     /// Process-level instance ID.
     ///
     /// This is a unique identifier for this process instance, generated once at bootstrap
-    /// (either in `run_oop_with_options` for OoP modules or in the main host).
+    /// (either in `run_oop_with_options` for `OoP` modules or in the main host).
     /// It is propagated to all modules via `ModuleCtx::instance_id()` and `SystemContext::instance_id()`.
     pub instance_id: Uuid,
-    /// OoP module spawn configuration.
+    /// `OoP` module spawn configuration.
     ///
-    /// These modules are spawned after the start phase, once grpc_hub is running
+    /// These modules are spawned after the start phase, once `grpc_hub` is running
     /// and the real directory endpoint is known.
     pub oop: Option<OopSpawnOptions>,
 }
 
-/// Full cycle: system_wire → DB → init → REST → gRPC → start → wait → stop.
+/// Full cycle: `system_wire` → DB → init → REST → gRPC → start → wait → stop.
 ///
-/// This function is a thin wrapper around HostRuntime that handles shutdown signal setup
-/// and then delegates all lifecycle orchestration to the HostRuntime.
+/// This function is a thin wrapper around `HostRuntime` that handles shutdown signal setup
+/// and then delegates all lifecycle orchestration to the `HostRuntime`.
+///
+/// # Errors
+/// Returns an error if any lifecycle phase fails.
 pub async fn run(opts: RunOptions) -> anyhow::Result<()> {
     // 1. Prepare cancellation token based on shutdown options
     let cancel = match &opts.shutdown {

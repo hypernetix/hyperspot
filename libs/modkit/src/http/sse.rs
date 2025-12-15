@@ -16,6 +16,7 @@ pub struct SseBroadcaster<T> {
 
 impl<T: Clone + Send + 'static> SseBroadcaster<T> {
     /// Create a broadcaster with bounded buffer capacity.
+    #[must_use]
     pub fn new(capacity: usize) -> Self {
         let (tx, _rx) = broadcast::channel(capacity);
         Self { tx }
@@ -214,7 +215,7 @@ mod tests {
         // Producer task - sends events rapidly
         let producer = tokio::spawn(async move {
             for i in 0..50 {
-                broadcaster.send(format!("event_{}", i));
+                broadcaster.send(format!("event_{i}"));
                 events_sent_clone.fetch_add(1, Ordering::SeqCst);
                 tokio::task::yield_now().await; // Allow other tasks to run
             }
@@ -268,8 +269,7 @@ mod tests {
         // Due to bounded channel, neither consumer necessarily receives all events
         // but the system should remain stable
         println!(
-            "Sent: {}, Fast received: {}, Slow received: {}",
-            total_sent, fast_received, slow_received
+            "Sent: {total_sent}, Fast received: {fast_received}, Slow received: {slow_received}"
         );
     }
 
@@ -333,8 +333,7 @@ mod tests {
         // Should complete very quickly since send() doesn't block
         assert!(
             elapsed < Duration::from_millis(100),
-            "Send operations took too long: {:?}",
-            elapsed
+            "Send operations took too long: {elapsed:?}"
         );
     }
 }

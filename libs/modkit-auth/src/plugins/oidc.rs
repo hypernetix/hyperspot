@@ -48,7 +48,7 @@ impl GenericOidcPlugin {
             .map(|arr| {
                 arr.iter()
                     .filter_map(|v| v.as_str())
-                    .map(|s| s.to_string())
+                    .map(ToString::to_string)
                     .collect()
             })
             .unwrap_or_default()
@@ -148,6 +148,7 @@ impl ClaimsPlugin for GenericOidcPlugin {
 }
 
 #[cfg(test)]
+#[allow(clippy::unreadable_literal)]
 mod tests {
     use super::*;
     use serde_json::json;

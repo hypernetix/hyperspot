@@ -1,11 +1,11 @@
-//! Infrastructure layer mapping from type-safe FilterNode to SeaORM Conditions.
+//! Infrastructure layer mapping from type-safe `FilterNode` to `SeaORM` Conditions.
 //!
 //! This module is the ONLY place where we map from DTO-level filter fields to
-//! SeaORM Column types. The API and domain layers work exclusively with FilterNode
-//! and do not know about SeaORM Column enums.
+//! `SeaORM` Column types. The API and domain layers work exclusively with `FilterNode`
+//! and do not know about `SeaORM` Column enums.
 //!
-//! This module provides the complete OData mapping including filtering, ordering,
-//! and cursor extraction - all using the type-safe FilterField approach.
+//! This module provides the complete `OData` mapping including filtering, ordering,
+//! and cursor extraction - all using the type-safe `FilterField` approach.
 
 use modkit_db::odata::filter::FilterNode;
 use modkit_db::odata::sea_orm_filter::{
@@ -16,10 +16,10 @@ use sea_orm::Condition;
 use crate::api::rest::dto::UserDtoFilterField;
 use crate::infra::storage::entity::{Column, Entity, Model};
 
-/// Complete OData mapper for users_info.
+/// Complete `OData` mapper for `users_info`.
 ///
-/// This is the only users_info-specific code needed for OData operations.
-/// It maps UserDtoFilterField to database columns and extracts cursor values.
+/// This is the only users_info-specific code needed for `OData` operations.
+/// It maps `UserDtoFilterField` to database columns and extracts cursor values.
 pub struct UserODataMapper;
 
 impl FieldToColumn<UserDtoFilterField> for UserODataMapper {
@@ -50,7 +50,7 @@ impl ODataFieldMapping<UserDtoFilterField> for UserODataMapper {
     }
 }
 
-/// Map a FilterNode<UserDtoFilterField> to a SeaORM Condition.
+/// Map a `FilterNode`<UserDtoFilterField> to a `SeaORM` Condition.
 ///
 /// This function is provided for compatibility but is no longer needed
 /// if you use `paginate_odata` directly, which handles filtering internally.
@@ -61,7 +61,7 @@ impl ODataFieldMapping<UserDtoFilterField> for UserODataMapper {
 ///
 /// # Returns
 ///
-/// A SeaORM Condition that can be applied to a query
+/// A `SeaORM` Condition that can be applied to a query
 pub fn filter_to_condition(filter: &FilterNode<UserDtoFilterField>) -> Result<Condition, String> {
     filter_node_to_condition::<UserDtoFilterField, UserODataMapper>(filter)
 }

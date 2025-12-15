@@ -1,6 +1,6 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::use_debug)]
 
-//! Tests for DbManager functionality.
+//! Tests for `DbManager` functionality.
 
 use figment::{providers::Serialized, Figment};
 use modkit_db::{DbConnConfig, DbEngine, DbManager, GlobalDatabaseConfig, PoolCfg};
@@ -225,7 +225,7 @@ async fn test_dbmanager_missing_server_reference() {
 
     // Should fail with error about missing server
     let result = manager.get("test_module").await;
-    println!("Result: {:?}", result);
+    println!("Result: {result:?}");
     assert!(result.is_err());
     let error = result.unwrap_err();
     assert!(error
@@ -289,8 +289,7 @@ async fn test_dbmanager_sqlite_server_without_dsn() {
     let module_dir = home_dir.join("test_module");
     assert!(
         module_dir.exists(),
-        "Module directory should be created at {:?}",
-        module_dir
+        "Module directory should be created at {module_dir:?}"
     );
     // Check if any .db file exists in the module directory
     let db_files: Vec<_> = std::fs::read_dir(&module_dir)
@@ -307,7 +306,6 @@ async fn test_dbmanager_sqlite_server_without_dsn() {
         .collect();
     assert!(
         !db_files.is_empty(),
-        "At least one .db file should be created in {:?}",
-        module_dir
+        "At least one .db file should be created in {module_dir:?}"
     );
 }

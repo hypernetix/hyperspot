@@ -30,12 +30,13 @@ struct JwksResponse {
 
 /// JWKS-based key provider with lock-free reads
 ///
-/// Uses ArcSwap for lock-free key lookups and background refresh with exponential backoff.
+/// Uses `ArcSwap` for lock-free key lookups and background refresh with exponential backoff.
+#[must_use]
 pub struct JwksKeyProvider {
     /// JWKS endpoint URL
     jwks_uri: String,
 
-    /// Keys stored in ArcSwap for lock-free reads
+    /// Keys stored in `ArcSwap` for lock-free reads
     keys: Arc<ArcSwap<HashMap<String, DecodingKey>>>,
 
     /// Last refresh time and error tracking for backoff
@@ -66,22 +67,20 @@ struct RefreshState {
 impl JwksKeyProvider {
     /// Create a new JWKS key provider
     ///
-    /// # Panics
-    /// Panics if the HTTP client fails to build (should not happen with default settings).
-    pub fn new(jwks_uri: impl Into<String>) -> Self {
-        Self {
+    /// # Errors
+    /// Returns an error if the HTTP client fails to build.
+    pub fn new(jwks_uri: impl Into<String>) -> Result<Self, reqwest::Error> {
+        Ok(Self {
             jwks_uri: jwks_uri.into(),
             keys: Arc::new(ArcSwap::from_pointee(HashMap::new())),
             refresh_state: Arc::new(RwLock::new(RefreshState::default())),
-            #[allow(clippy::expect_used)] // it shouldn't fail with just a timeout specified
             client: reqwest::Client::builder()
                 .timeout(Duration::from_secs(10))
-                .build()
-                .expect("Failed to build HTTP client"),
+                .build()?,
             refresh_interval: Duration::from_secs(300), // 5 minutes
             max_backoff: Duration::from_secs(3600),     // 1 hour
             on_demand_refresh_cooldown: Duration::from_secs(60), // 1 minute
-        }
+        })
     }
 
     /// Create with custom refresh interval
@@ -109,7 +108,7 @@ impl JwksKeyProvider {
             .get(&self.jwks_uri)
             .send()
             .await
-            .map_err(|e| ClaimsError::JwksFetchFailed(format!("HTTP request failed: {}", e)))?;
+            .map_err(|e| ClaimsError::JwksFetchFailed(format!("HTTP request failed: {e}")))?;
 
         if !response.status().is_success() {
             return Err(ClaimsError::JwksFetchFailed(format!(
@@ -121,13 +120,13 @@ impl JwksKeyProvider {
         let jwks: JwksResponse = response
             .json()
             .await
-            .map_err(|e| ClaimsError::JwksFetchFailed(format!("Failed to parse JWKS: {}", e)))?;
+            .map_err(|e| ClaimsError::JwksFetchFailed(format!("Failed to parse JWKS: {e}")))?;
 
         let mut keys = HashMap::new();
         for jwk in jwks.keys {
             if jwk.kty == "RSA" {
                 let key = DecodingKey::from_rsa_components(&jwk.n, &jwk.e)
-                    .map_err(|e| ClaimsError::JwksFetchFailed(format!("Invalid RSA key: {}", e)))?;
+                    .map_err(|e| ClaimsError::JwksFetchFailed(format!("Invalid RSA key: {e}")))?;
                 keys.insert(jwk.kid, key);
             }
         }
@@ -303,7 +302,7 @@ impl JwksKeyProvider {
         validation.set_required_spec_claims(empty_claims);
 
         let token_data = decode::<Value>(token, key, &validation)
-            .map_err(|e| ClaimsError::DecodeFailed(format!("JWT validation failed: {}", e)))?;
+            .map_err(|e| ClaimsError::DecodeFailed(format!("JWT validation failed: {e}")))?;
 
         Ok(token_data.claims)
     }
@@ -321,7 +320,7 @@ impl KeyProvider for JwksKeyProvider {
 
         // Decode header to get kid and algorithm
         let header = decode_header(token)
-            .map_err(|e| ClaimsError::DecodeFailed(format!("Invalid JWT header: {}", e)))?;
+            .map_err(|e| ClaimsError::DecodeFailed(format!("Invalid JWT header: {e}")))?;
 
         let kid = header
             .kid
@@ -373,8 +372,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_calculate_backoff() {
-        let provider = JwksKeyProvider::new("https://example.com/jwks");
+    fn test_calculate_backoff() -> Result<(), reqwest::Error> {
+        let provider = JwksKeyProvider::new("https://example.com/jwks")?;
 
         assert_eq!(provider.calculate_backoff(0), Duration::from_secs(60));
         assert_eq!(provider.calculate_backoff(1), Duration::from_secs(120));
@@ -383,17 +382,19 @@ mod tests {
 
         // Should cap at max_backoff
         assert_eq!(provider.calculate_backoff(100), provider.max_backoff);
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_should_refresh_on_first_call() {
-        let provider = JwksKeyProvider::new("https://example.com/jwks");
+    async fn test_should_refresh_on_first_call() -> Result<(), reqwest::Error> {
+        let provider = JwksKeyProvider::new("https://example.com/jwks")?;
         assert!(provider.should_refresh().await);
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_key_storage() {
-        let provider = JwksKeyProvider::new("https://example.com/jwks");
+    async fn test_key_storage() -> Result<(), reqwest::Error> {
+        let provider = JwksKeyProvider::new("https://example.com/jwks")?;
 
         // Initially empty
         assert!(provider.get_key("test-kid").is_none());
@@ -405,11 +406,12 @@ mod tests {
 
         // Should be retrievable
         assert!(provider.get_key("test-kid").is_some());
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_on_demand_refresh_returns_ok_when_key_exists() {
-        let provider = JwksKeyProvider::new("https://example.com/jwks");
+    async fn test_on_demand_refresh_returns_ok_when_key_exists() -> Result<(), reqwest::Error> {
+        let provider = JwksKeyProvider::new("https://example.com/jwks")?;
 
         // Pre-populate with a key
         let mut keys = HashMap::new();
@@ -422,27 +424,30 @@ mod tests {
         // Should return Ok immediately without any refresh
         let result = provider.on_demand_refresh("existing-kid").await;
         assert!(result.is_ok());
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_on_demand_refresh_returns_error_for_missing_key_on_failed_fetch() {
+    async fn test_on_demand_refresh_returns_error_for_missing_key_on_failed_fetch(
+    ) -> Result<(), reqwest::Error> {
         let provider =
-            JwksKeyProvider::new("https://invalid-domain-that-does-not-exist.local/jwks");
+            JwksKeyProvider::new("https://invalid-domain-that-does-not-exist.local/jwks")?;
 
         // Attempting to refresh a missing key should fail (network error)
         let result = provider.on_demand_refresh("missing-kid").await;
         assert!(result.is_err());
 
         // The error should be related to fetch failure
-        match result.unwrap_err() {
+        match result.expect_err("expected error for missing key") {
             ClaimsError::JwksFetchFailed(_) | ClaimsError::UnknownKeyId(_) => {}
-            other => panic!("Expected JwksFetchFailed or UnknownKeyId, got: {:?}", other),
+            other => panic!("Expected JwksFetchFailed or UnknownKeyId, got: {other:?}"),
         }
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_on_demand_refresh_respects_cooldown() {
-        let provider = JwksKeyProvider::new("https://invalid-domain.local/jwks")
+    async fn test_on_demand_refresh_respects_cooldown() -> Result<(), reqwest::Error> {
+        let provider = JwksKeyProvider::new("https://invalid-domain.local/jwks")?
             .with_on_demand_refresh_cooldown(Duration::from_secs(5));
 
         // First attempt - should try to refresh
@@ -454,15 +459,16 @@ mod tests {
         assert!(result2.is_err());
 
         // Should return UnknownKeyId due to cooldown
-        match result2.unwrap_err() {
+        match result2.expect_err("expected throttle error") {
             ClaimsError::UnknownKeyId(_) => {}
-            other => panic!("Expected UnknownKeyId during cooldown, got: {:?}", other),
+            other => panic!("Expected UnknownKeyId during cooldown, got: {other:?}"),
         }
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_on_demand_refresh_tracks_failed_kids() {
-        let provider = JwksKeyProvider::new("https://invalid-domain.local/jwks")
+    async fn test_on_demand_refresh_tracks_failed_kids() -> Result<(), reqwest::Error> {
+        let provider = JwksKeyProvider::new("https://invalid-domain.local/jwks")?
             .with_on_demand_refresh_cooldown(Duration::from_millis(100));
 
         // Attempt refresh - will fail and track the kid
@@ -472,11 +478,12 @@ mod tests {
         // Check that failed_kids contains the kid
         let state = provider.refresh_state.read().await;
         assert!(state.failed_kids.contains("failed-kid"));
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_validate_and_decode_with_missing_kid() {
-        let provider = JwksKeyProvider::new("https://invalid-domain.local/jwks")
+    async fn test_validate_and_decode_with_missing_kid() -> Result<(), reqwest::Error> {
+        let provider = JwksKeyProvider::new("https://invalid-domain.local/jwks")?
             .with_on_demand_refresh_cooldown(Duration::from_millis(100));
 
         // Create a minimal JWT with a kid header but invalid signature
@@ -486,11 +493,12 @@ mod tests {
         // Should attempt on-demand refresh and fail
         let result = provider.validate_and_decode(token).await;
         assert!(result.is_err());
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_perform_refresh_updates_state_on_success() {
-        let provider = JwksKeyProvider::new("https://invalid-domain.local/jwks");
+    async fn test_perform_refresh_updates_state_on_success() -> Result<(), reqwest::Error> {
+        let provider = JwksKeyProvider::new("https://invalid-domain.local/jwks")?;
 
         // Mark as previously failed
         {
@@ -506,5 +514,6 @@ mod tests {
         let state = provider.refresh_state.read().await;
         assert_eq!(state.consecutive_failures, 4);
         assert!(state.last_error.is_some());
+        Ok(())
     }
 }

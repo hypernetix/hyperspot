@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use std::time::Duration;
 use tempfile::TempDir;
 
-/// Test that all PoolCfg options are applied correctly.
+/// Test that all `PoolCfg` options are applied correctly.
 #[tokio::test]
 #[cfg(feature = "sqlite")]
 async fn test_pool_cfg_options_applied() {
@@ -42,10 +42,7 @@ async fn test_pool_cfg_options_applied() {
             // but for now we just verify the connection works with custom pool settings
         }
         Err(err) => {
-            panic!(
-                "Expected successful connection with custom pool settings, got: {:?}",
-                err
-            );
+            panic!("Expected successful connection with custom pool settings, got: {err:?}");
         }
     }
 }
@@ -104,10 +101,7 @@ async fn test_module_pool_overrides_server_pool() {
             // The pool should have max_conns=25 and acquire_timeout=60s from module config
         }
         Err(err) => {
-            panic!(
-                "Expected successful connection with overridden pool settings, got: {:?}",
-                err
-            );
+            panic!("Expected successful connection with overridden pool settings, got: {err:?}");
         }
     }
 }
@@ -161,10 +155,7 @@ async fn test_pool_config_inheritance() {
             // Connection succeeded - server pool config was inherited
         }
         Err(err) => {
-            panic!(
-                "Expected successful connection with inherited pool settings, got: {:?}",
-                err
-            );
+            panic!("Expected successful connection with inherited pool settings, got: {err:?}");
         }
     }
 }
@@ -194,15 +185,12 @@ async fn test_default_pool_configuration() {
             // Connection succeeded with default pool settings
         }
         Err(err) => {
-            panic!(
-                "Expected successful connection with default pool settings, got: {:?}",
-                err
-            );
+            panic!("Expected successful connection with default pool settings, got: {err:?}");
         }
     }
 }
 
-/// Test PoolCfg helper methods for different database engines.
+/// Test `PoolCfg` helper methods for different database engines.
 #[test]
 fn test_pool_cfg_helper_methods() {
     let pool_cfg = PoolCfg {
@@ -276,10 +264,7 @@ async fn test_partial_pool_configuration() {
             // Connection succeeded with partial pool config
         }
         Err(err) => {
-            panic!(
-                "Expected successful connection with partial pool config, got: {:?}",
-                err
-            );
+            panic!("Expected successful connection with partial pool config, got: {err:?}");
         }
     }
 }
@@ -299,7 +284,7 @@ fn test_humantime_parsing() {
 
     for case in test_cases {
         let result: Result<PoolCfg, _> = serde_json::from_str(case);
-        assert!(result.is_ok(), "Failed to parse: {}", case);
+        assert!(result.is_ok(), "Failed to parse: {case}");
     }
 
     // Test invalid humantime format
@@ -308,7 +293,7 @@ fn test_humantime_parsing() {
     assert!(result.is_err());
 }
 
-/// Test PoolCfg serialization and deserialization roundtrip.
+/// Test `PoolCfg` serialization and deserialization roundtrip.
 #[test]
 fn test_pool_cfg_serde_roundtrip() {
     let original = PoolCfg {
@@ -330,7 +315,7 @@ fn test_pool_cfg_serde_roundtrip() {
     assert_eq!(original, deserialized);
 }
 
-/// Test PoolCfg default values.
+/// Test `PoolCfg` default values.
 #[test]
 fn test_pool_cfg_defaults() {
     let default_cfg = PoolCfg::default();

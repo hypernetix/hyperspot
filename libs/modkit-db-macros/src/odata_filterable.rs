@@ -10,7 +10,7 @@ struct FilterableField {
     field_ident: Ident,
     /// The field name as a string (for API)
     field_name: String,
-    /// The FieldKind variant name (e.g., "String", "Uuid", "DateTimeUtc")
+    /// The `FieldKind` variant name (e.g., "String", "Uuid", "`DateTimeUtc`")
     kind: String,
     /// Span for error reporting
     span: Span,
@@ -107,7 +107,7 @@ pub fn expand_derive_odata_filterable(input: DeriveInput) -> TokenStream {
 
     // Generate the filter field enum name
     let dto_name = &input.ident;
-    let filter_enum_name = Ident::new(&format!("{}FilterField", dto_name), input.span());
+    let filter_enum_name = Ident::new(&format!("{dto_name}FilterField"), input.span());
 
     // Generate enum variants
     let enum_variants: Vec<_> = filterable_fields

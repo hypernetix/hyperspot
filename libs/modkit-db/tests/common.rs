@@ -12,6 +12,7 @@ use testcontainers::{runners::AsyncRunner, ImageExt};
 ///
 /// # Panics
 /// Panics if the parent directories cannot be resolved or the directory cannot be created.
+#[must_use]
 pub fn test_data_dir() -> PathBuf {
     let project_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .parent()
@@ -34,6 +35,7 @@ pub struct DbUnderTest {
 }
 
 #[cfg(feature = "sqlite")]
+#[must_use]
 pub fn bring_up_sqlite() -> DbUnderTest {
     DbUnderTest {
         url: "sqlite::memory:".into(),
@@ -41,6 +43,10 @@ pub fn bring_up_sqlite() -> DbUnderTest {
     }
 }
 
+/// Bring up a `PostgreSQL` test container.
+///
+/// # Errors
+/// Returns an error if the container fails to start or become ready.
 #[cfg(feature = "pg")]
 pub async fn bring_up_postgres() -> Result<DbUnderTest> {
     use testcontainers::ContainerRequest;

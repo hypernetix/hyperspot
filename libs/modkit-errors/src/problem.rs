@@ -9,7 +9,7 @@ use utoipa::ToSchema;
 /// Content type for Problem Details as per RFC 9457.
 pub const APPLICATION_PROBLEM_JSON: &str = "application/problem+json";
 
-/// Custom serializer for StatusCode to u16
+/// Custom serializer for `StatusCode` to u16
 #[allow(clippy::trivially_copy_pass_by_ref)] // serde requires &T signature
 fn serialize_status_code<S>(status: &StatusCode, serializer: S) -> Result<S::Ok, S::Error>
 where
@@ -18,7 +18,7 @@ where
     serializer.serialize_u16(status.as_u16())
 }
 
-/// Custom deserializer for StatusCode from u16
+/// Custom deserializer for `StatusCode` from u16
 fn deserialize_status_code<'de, D>(deserializer: D) -> Result<StatusCode, D::Error>
 where
     D: Deserializer<'de>,
@@ -37,6 +37,7 @@ where
         description = "RFC 9457 Problem Details for HTTP APIs"
     )
 )]
+#[must_use]
 pub struct Problem {
     /// A URI reference that identifies the problem type.
     /// When dereferenced, it might provide human-readable documentation.
@@ -88,7 +89,7 @@ pub struct ValidationError {
     pub errors: Vec<ValidationViolation>,
 }
 
-/// Wrapper for ValidationError that can be used as a standalone response.
+/// Wrapper for `ValidationError` that can be used as a standalone response.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "utoipa", schema(title = "ValidationErrorResponse"))]

@@ -133,7 +133,7 @@ type InstanceMap = HashMap<Uuid, LocalInstance>;
 /// Backend that spawns modules as local child processes and manages their lifecycle.
 ///
 /// When the cancellation token is triggered, the backend will:
-/// 1. Send termination signal to all processes (SIGTERM on Unix, TerminateProcess on Windows)
+/// 1. Send termination signal to all processes (SIGTERM on Unix, `TerminateProcess` on Windows)
 /// 2. Wait up to 5 seconds for graceful shutdown
 /// 3. Force kill any remaining processes
 pub struct LocalProcessBackend {
@@ -142,9 +142,10 @@ pub struct LocalProcessBackend {
 }
 
 impl LocalProcessBackend {
-    /// Create a new LocalProcessBackend with the given cancellation token.
+    /// Create a new `LocalProcessBackend` with the given cancellation token.
     ///
     /// When the token is cancelled, all spawned processes will be gracefully stopped.
+    #[must_use]
     pub fn new(cancel: CancellationToken) -> Self {
         let backend = Self {
             instances: Arc::new(RwLock::new(HashMap::new())),

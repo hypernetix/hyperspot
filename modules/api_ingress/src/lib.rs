@@ -34,8 +34,8 @@ mod web;
 pub use config::{ApiIngressConfig, CorsConfig};
 use router_cache::RouterCache;
 
-/// Main API Ingress module — owns the HTTP server (rest_host) and collects
-/// typed operation specs to emit a single OpenAPI document.
+/// Main API Ingress module — owns the HTTP server (`rest_host`) and collects
+/// typed operation specs to emit a single `OpenAPI` document.
 #[modkit::module(
 	name = "api_ingress",
 	capabilities = [rest_host, rest, stateful, system],
@@ -72,7 +72,8 @@ impl Default for ApiIngress {
 }
 
 impl ApiIngress {
-    /// Create a new ApiIngress instance with the given configuration
+    /// Create a new `ApiIngress` instance with the given configuration
+    #[must_use]
     pub fn new(config: ApiIngressConfig) -> Self {
         let default_router = Router::new();
         Self {
@@ -85,12 +86,12 @@ impl ApiIngress {
         }
     }
 
-    /// Get the current configuration (cheap clone from ArcSwap)
+    /// Get the current configuration (cheap clone from `ArcSwap`)
     pub fn get_config(&self) -> ApiIngressConfig {
         (**self.config.load()).clone()
     }
 
-    /// Get cached configuration (lock-free with ArcSwap)
+    /// Get cached configuration (lock-free with `ArcSwap`)
     pub fn get_cached_config(&self) -> ApiIngressConfig {
         (**self.config.load()).clone()
     }
@@ -100,7 +101,10 @@ impl ApiIngress {
         self.router_cache.load()
     }
 
-    /// Force rebuild and cache of the router
+    /// Force rebuild and cache of the router.
+    ///
+    /// # Errors
+    /// Returns an error if router building fails.
     pub fn rebuild_and_cache_router(&self) -> Result<()> {
         let new_router = self.build_router()?;
         self.router_cache.store(new_router);
@@ -308,7 +312,10 @@ impl ApiIngress {
         Ok(router)
     }
 
-    /// Build the HTTP router from registered routes and operations
+    /// Build the HTTP router from registered routes and operations.
+    ///
+    /// # Errors
+    /// Returns an error if router building or middleware setup fails.
     pub fn build_router(&self) -> Result<Router> {
         // If the cached router is currently held elsewhere (e.g., by the running server),
         // return it without rebuilding to avoid unnecessary allocations.
@@ -330,7 +337,10 @@ impl ApiIngress {
         Ok(router)
     }
 
-    /// Build OpenAPI specification from registered routes and components.
+    /// Build `OpenAPI` specification from registered routes and components.
+    ///
+    /// # Errors
+    /// Returns an error if `OpenAPI` specification building fails.
     pub fn build_openapi(&self) -> Result<utoipa::openapi::OpenApi> {
         let config = self.get_cached_config();
         let info = modkit::api::OpenApiInfo {
@@ -345,7 +355,7 @@ impl ApiIngress {
     fn parse_bind_address(bind_addr: &str) -> anyhow::Result<SocketAddr> {
         bind_addr
             .parse()
-            .map_err(|e| anyhow::anyhow!("Invalid bind address '{}': {}", bind_addr, e))
+            .map_err(|e| anyhow::anyhow!("Invalid bind address '{bind_addr}': {e}"))
     }
 
     /// Get the finalized router or build a default one.
@@ -695,12 +705,12 @@ mod sse_openapi_tests {
 
     #[tokio::test]
     async fn openapi_sse_additional_response() {
-        let api = ApiIngress::default();
-        let router = axum::Router::new();
-
         async fn mixed_handler() -> Json<Value> {
             Json(serde_json::json!({"ok": true}))
         }
+
+        let api = ApiIngress::default();
+        let router = axum::Router::new();
 
         let _router = OperationBuilder::<Missing, Missing, ()>::get("/demo/mixed")
             .summary("Mixed responses")
@@ -734,13 +744,13 @@ mod sse_openapi_tests {
 
     #[tokio::test]
     async fn test_axum_to_openapi_path_conversion() {
-        let api = ApiIngress::default();
-        let router = axum::Router::new();
-
         // Define a route with path parameters using Axum 0.8+ style {id}
         async fn user_handler() -> Json<Value> {
             Json(serde_json::json!({"user_id": "123"}))
         }
+
+        let api = ApiIngress::default();
+        let router = axum::Router::new();
 
         let _router = OperationBuilder::<Missing, Missing, ()>::get("/users/{id}")
             .summary("Get user by ID")
@@ -773,12 +783,12 @@ mod sse_openapi_tests {
 
     #[tokio::test]
     async fn test_multiple_path_params_conversion() {
-        let api = ApiIngress::default();
-        let router = axum::Router::new();
-
         async fn item_handler() -> Json<Value> {
             Json(serde_json::json!({"ok": true}))
         }
+
+        let api = ApiIngress::default();
+        let router = axum::Router::new();
 
         let _router =
             OperationBuilder::<Missing, Missing, ()>::get("/projects/{project_id}/items/{item_id}")
@@ -809,12 +819,12 @@ mod sse_openapi_tests {
 
     #[tokio::test]
     async fn test_wildcard_path_conversion() {
-        let api = ApiIngress::default();
-        let router = axum::Router::new();
-
         async fn static_handler() -> Json<Value> {
             Json(serde_json::json!({"ok": true}))
         }
+
+        let api = ApiIngress::default();
+        let router = axum::Router::new();
 
         // Axum 0.8 uses {*path} for wildcards
         let _router = OperationBuilder::<Missing, Missing, ()>::get("/static/{*path}")
@@ -849,12 +859,12 @@ mod sse_openapi_tests {
 
     #[tokio::test]
     async fn test_multipart_file_upload_openapi() {
-        let api = ApiIngress::default();
-        let router = axum::Router::new();
-
         async fn upload_handler() -> Json<Value> {
             Json(serde_json::json!({"uploaded": true}))
         }
+
+        let api = ApiIngress::default();
+        let router = axum::Router::new();
 
         let _router = OperationBuilder::<Missing, Missing, ()>::post("/upload")
             .operation_id("upload_file")

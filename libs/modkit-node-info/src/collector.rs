@@ -11,6 +11,7 @@ pub struct NodeInfoCollector {
 }
 
 impl NodeInfoCollector {
+    #[must_use]
     pub fn new() -> Self {
         let sysinfo_collector = Arc::new(SysInfoCollector::new());
         Self {
@@ -21,6 +22,7 @@ impl NodeInfoCollector {
 
     /// Create a Node instance for the current machine
     /// Uses hardware UUID for node ID and collects hostname and local IP
+    #[must_use]
     pub fn create_current_node() -> Node {
         let id = crate::get_hardware_uuid();
         let hostname = sysinfo::System::host_name().unwrap_or_else(|| "unknown".to_string());
@@ -53,21 +55,31 @@ impl NodeInfoCollector {
         }
     }
 
-    /// Collect system information for the current node
+    /// Collect system information for the current node.
+    ///
+    /// # Errors
+    /// Returns `NodeInfoError::SysInfoCollectionFailed` if system info collection fails.
     pub fn collect_sysinfo(&self, node_id: uuid::Uuid) -> Result<NodeSysInfo, NodeInfoError> {
         self.sysinfo_collector
             .collect(node_id)
             .map_err(|e| NodeInfoError::SysInfoCollectionFailed(e.to_string()))
     }
 
-    /// Collect system capabilities for the current node
+    /// Collect system capabilities for the current node.
+    ///
+    /// # Errors
+    /// Returns `NodeInfoError::SysCapCollectionFailed` if capability collection fails.
     pub fn collect_syscap(&self, node_id: uuid::Uuid) -> Result<NodeSysCap, NodeInfoError> {
         self.syscap_collector
             .collect(node_id)
             .map_err(|e| NodeInfoError::SysCapCollectionFailed(e.to_string()))
     }
 
-    /// Collect both sysinfo and syscap
+    /// Collect both sysinfo and syscap.
+    ///
+    /// # Errors
+    /// Returns `NodeInfoError::SysInfoCollectionFailed` if system info collection fails.
+    /// Returns `NodeInfoError::SysCapCollectionFailed` if capability collection fails.
     pub fn collect_all(
         &self,
         node_id: uuid::Uuid,

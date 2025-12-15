@@ -43,6 +43,7 @@ pub struct Claims {
 
 impl Claims {
     /// Check if the token has expired
+    #[must_use]
     pub fn is_expired(&self) -> bool {
         if let Some(exp) = self.expires_at {
             OffsetDateTime::now_utc() >= exp
@@ -52,6 +53,7 @@ impl Claims {
     }
 
     /// Check if the token is valid yet (nbf check)
+    #[must_use]
     pub fn is_valid_yet(&self) -> bool {
         if let Some(nbf) = self.not_before {
             OffsetDateTime::now_utc() >= nbf
@@ -61,11 +63,13 @@ impl Claims {
     }
 
     /// Check if user has a specific role
+    #[must_use]
     pub fn has_role(&self, role: &str) -> bool {
         self.roles.iter().any(|r| r == role)
     }
 
     /// Check if user has access to a specific tenant
+    #[must_use]
     pub fn has_tenant(&self, tenant_id: &Uuid) -> bool {
         self.tenants.contains(tenant_id)
     }

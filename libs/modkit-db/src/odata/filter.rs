@@ -1,15 +1,15 @@
-//! Type-safe OData filter representation that operates on DTO-level field identifiers.
+//! Type-safe `OData` filter representation that operates on DTO-level field identifiers.
 //!
 //! This module provides:
 //! - `FilterField` trait for defining filterable fields on DTOs
 //! - `FilterOp` enum for filter operations (eq, ne, contains, etc.)
 //! - `FilterNode<F>` AST for representing filters in a DB-agnostic way
-//! - Parsing from OData filter strings to `FilterNode<F>`
+//! - Parsing from `OData` filter strings to `FilterNode<F>`
 //!
 //! # Design Goals
 //!
 //! 1. **Type Safety**: Use generated enums instead of raw strings for field names
-//! 2. **Separation of Concerns**: Keep DB infrastructure details (SeaORM, Column enums)
+//! 2. **Separation of Concerns**: Keep DB infrastructure details (`SeaORM`, Column enums)
 //!    out of API and domain layers
 //! 3. **Flexibility**: Enable mapping from DTO-level filters to any backend in the infrastructure layer
 
@@ -19,7 +19,7 @@ use thiserror::Error;
 
 use crate::odata::FieldKind;
 
-/// Re-export ODataValue from modkit_odata for use in filters
+/// Re-export `ODataValue` from `modkit_odata` for use in filters
 pub use modkit_odata::ast::Value as ODataValue;
 
 /// Trait representing a set of filterable fields for a DTO.
@@ -52,8 +52,8 @@ pub trait FilterField: Copy + Eq + std::hash::Hash + fmt::Debug + 'static {
     /// All allowed fields for this DTO.
     const FIELDS: &'static [Self];
 
-    /// API-visible name for this field (e.g., "email", "created_at").
-    /// This is the name used in OData filter strings.
+    /// API-visible name for this field (e.g., "email", "`created_at`").
+    /// This is the name used in `OData` filter strings.
     fn name(&self) -> &'static str;
 
     /// Logical type of the field for value coercion and validation.
@@ -68,7 +68,7 @@ pub trait FilterField: Copy + Eq + std::hash::Hash + fmt::Debug + 'static {
     }
 }
 
-/// Filter operations supported in OData filters.
+/// Filter operations supported in `OData` filters.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FilterOp {
     /// Equality: field eq value
@@ -113,14 +113,14 @@ impl fmt::Display for FilterOp {
     }
 }
 
-/// Type-safe filter AST node parameterized by a FilterField implementation.
+/// Type-safe filter AST node parameterized by a `FilterField` implementation.
 ///
 /// This represents a filter expression in a database-agnostic way, using only
 /// DTO-level field identifiers and logical operations.
 ///
 /// # Type Parameters
 ///
-/// - `F`: The FilterField implementation (typically a generated enum)
+/// - `F`: The `FilterField` implementation (typically a generated enum)
 ///
 /// # Example
 ///
@@ -160,6 +160,7 @@ impl<F: FilterField> FilterNode<F> {
     }
 
     /// Create an AND composite node
+    #[must_use]
     pub fn and(children: Vec<FilterNode<F>>) -> Self {
         FilterNode::Composite {
             op: FilterOp::And,
@@ -168,6 +169,7 @@ impl<F: FilterField> FilterNode<F> {
     }
 
     /// Create an OR composite node
+    #[must_use]
     pub fn or(children: Vec<FilterNode<F>>) -> Self {
         FilterNode::Composite {
             op: FilterOp::Or,
@@ -213,10 +215,10 @@ pub enum FilterError {
 
 pub type FilterResult<T> = Result<T, FilterError>;
 
-/// Parse an OData filter string into a FilterNode<F>.
+/// Parse an `OData` filter string into a `FilterNode`<F>.
 ///
-/// This function takes a raw OData filter string (e.g., from a query parameter)
-/// and converts it into a type-safe FilterNode using the provided FilterField implementation.
+/// This function takes a raw `OData` filter string (e.g., from a query parameter)
+/// and converts it into a type-safe `FilterNode` using the provided `FilterField` implementation.
 ///
 /// **Note**: This function requires the `with-odata-params` feature to be enabled
 /// on the `modkit-odata` crate for actual parsing. If you're working with an
@@ -224,15 +226,15 @@ pub type FilterResult<T> = Result<T, FilterError>;
 ///
 /// # Type Parameters
 ///
-/// - `F`: The FilterField implementation that defines available fields
+/// - `F`: The `FilterField` implementation that defines available fields
 ///
 /// # Arguments
 ///
-/// - `raw`: The raw OData filter string (e.g., "email eq 'test@example.com'")
+/// - `raw`: The raw `OData` filter string (e.g., "email eq 'test@example.com'")
 ///
 /// # Returns
 ///
-/// A FilterNode<F> representing the parsed filter, or a FilterError if parsing fails.
+/// A `FilterNode`<F> representing the parsed filter, or a `FilterError` if parsing fails.
 ///
 /// # Example
 ///
@@ -241,6 +243,9 @@ pub type FilterResult<T> = Result<T, FilterError>;
 ///     "email eq 'test@example.com' and contains(display_name, 'John')"
 /// )?;
 /// ```
+///
+/// # Errors
+/// Returns `FilterError` if the filter expression is invalid or parsing fails.
 #[allow(unexpected_cfgs)]
 pub fn parse_odata_filter<F: FilterField>(raw: &str) -> FilterResult<FilterNode<F>> {
     // Parse using odata-params (requires with-odata-params feature)
@@ -263,10 +268,10 @@ pub fn parse_odata_filter<F: FilterField>(raw: &str) -> FilterResult<FilterNode<
     }
 }
 
-/// Convert modkit_odata AST expression to our FilterNode.
+/// Convert `modkit_odata` AST expression to our `FilterNode`.
 ///
 /// This function is useful when you already have a parsed AST (e.g., from `ODataQuery.filter`)
-/// and want to convert it to a type-safe FilterNode.
+/// and want to convert it to a type-safe `FilterNode`.
 ///
 /// # Example
 ///
@@ -276,6 +281,9 @@ pub fn parse_odata_filter<F: FilterField>(raw: &str) -> FilterResult<FilterNode<
 ///     // Use filter_node...
 /// }
 /// ```
+///
+/// # Errors
+/// Returns `FilterError` if the expression contains unknown fields or unsupported operations.
 pub fn convert_expr_to_filter_node<F: FilterField>(
     expr: &odata_ast::Expr,
 ) -> FilterResult<FilterNode<F>> {
@@ -402,8 +410,7 @@ pub fn convert_expr_to_filter_node<F: FilterField>(
                     ))
                 }
                 _ => Err(FilterError::UnsupportedOperation(format!(
-                    "Function '{}'",
-                    func_name
+                    "Function '{func_name}'"
                 ))),
             }
         }

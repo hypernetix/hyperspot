@@ -33,7 +33,7 @@ impl From<modkit_node_info::NodeInfoError> for DomainError {
                 Self::SysCapCollectionFailed(msg)
             }
             modkit_node_info::NodeInfoError::HardwareUuidFailed(msg) => {
-                Self::Internal(format!("Hardware UUID failed: {}", msg))
+                Self::Internal(format!("Hardware UUID failed: {msg}"))
             }
             modkit_node_info::NodeInfoError::Internal(msg) => Self::Internal(msg),
         }

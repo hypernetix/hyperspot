@@ -1,16 +1,16 @@
-//! OData integration for SeaORM with security-scoped pagination.
+//! `OData` integration for `SeaORM` with security-scoped pagination.
 //!
 //! This module provides:
-//! - Type-safe OData filter representation via `FilterField` trait and `FilterNode<F>` AST
-//! - OData filter compilation to SeaORM conditions (legacy `FieldMap` and new `FilterNode`)
-//! - Cursor-based pagination with OData ordering
+//! - Type-safe `OData` filter representation via `FilterField` trait and `FilterNode<F>` AST
+//! - `OData` filter compilation to `SeaORM` conditions (legacy `FieldMap` and new `FilterNode`)
+//! - Cursor-based pagination with `OData` ordering
 //! - Security-scoped pagination via `OPager` builder
 //!
 //! # Modules
 //!
-//! - `core`: Core OData to SeaORM translation (filters, cursors, ordering) - legacy FieldMap based
+//! - `core`: Core `OData` to `SeaORM` translation (filters, cursors, ordering) - legacy `FieldMap` based
 //! - `filter`: Type-safe filter representation using `FilterField` trait and `FilterNode<F>` AST
-//! - `pager`: Fluent builder for secure + OData pagination
+//! - `pager`: Fluent builder for secure + `OData` pagination
 //! - `tests`: Integration tests (when compiled with `#[cfg(test)]`)
 
 // Shared FieldKind enum for both legacy and new code

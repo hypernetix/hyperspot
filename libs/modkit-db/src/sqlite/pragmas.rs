@@ -1,8 +1,8 @@
-//! SQLite PRAGMA parameter handling with typed enums.
+//! `SQLite` PRAGMA parameter handling with typed enums.
 
 use std::collections::HashMap;
 
-/// SQLite journal mode options.
+/// `SQLite` journal mode options.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum JournalMode {
     Delete,
@@ -40,7 +40,7 @@ impl JournalMode {
     }
 }
 
-/// SQLite synchronous mode options.
+/// `SQLite` synchronous mode options.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum SyncMode {
     Off,
@@ -72,7 +72,7 @@ impl SyncMode {
     }
 }
 
-/// Parsed SQLite PRAGMA parameters.
+/// Parsed `SQLite` PRAGMA parameters.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub(crate) struct Pragmas {
     pub journal_mode: Option<JournalMode>,
@@ -110,7 +110,7 @@ impl Pragmas {
         pragmas
     }
 
-    /// Parse journal_mode PRAGMA value.
+    /// Parse `journal_mode` PRAGMA value.
     fn parse_journal_mode(value: &str) -> Option<JournalMode> {
         if let Some(mode) = JournalMode::from_str(value) {
             Some(mode)
@@ -130,7 +130,7 @@ impl Pragmas {
         }
     }
 
-    /// Parse busy_timeout PRAGMA value.
+    /// Parse `busy_timeout` PRAGMA value.
     fn parse_busy_timeout(value: &str) -> Option<i64> {
         match value.parse::<i64>() {
             Ok(timeout) if timeout >= 0 => Some(timeout),

@@ -19,11 +19,12 @@ pub fn created_json<T: serde::Serialize>(value: T) -> impl IntoResponse {
 }
 
 /// 204 No Content
+#[must_use]
 pub fn no_content() -> impl IntoResponse {
     StatusCode::NO_CONTENT
 }
 
-/// Convert any IntoResponse into a concrete Response (useful for unified signatures)
+/// Convert any `IntoResponse` into a concrete Response (useful for unified signatures)
 pub fn to_response<R: IntoResponse>(r: R) -> Response {
     r.into_response()
 }

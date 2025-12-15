@@ -1,4 +1,4 @@
-//! Tests for OoP configuration merge logic
+//! Tests for `OoP` configuration merge logic
 //!
 //! Tests cover all merge scenarios:
 //! - Database: field-by-field merge (global.servers → module.database in master → module.database in local)
@@ -14,7 +14,7 @@ use modkit_db::{DbConnConfig, PoolCfg};
 use std::collections::HashMap;
 use std::time::Duration;
 
-/// Helper to create a minimal AppConfig for testing
+/// Helper to create a minimal `AppConfig` for testing
 fn minimal_app_config() -> AppConfig {
     AppConfig {
         server: ServerConfig {

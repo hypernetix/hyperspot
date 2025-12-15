@@ -33,7 +33,7 @@ fn test_module_ctx(cancel: tokio_util::sync::CancellationToken) -> ModuleCtx {
     )
 }
 
-/// Minimal OpenAPI registry mock
+/// Minimal `OpenAPI` registry mock
 #[derive(Default)]
 struct TestOpenApiRegistry;
 impl OpenApiRegistry for TestOpenApiRegistry {

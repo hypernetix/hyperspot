@@ -159,7 +159,7 @@ async fn test_build_db_handle_postgres_missing_dbname() {
     assert!(result.is_err());
 
     let error = result.unwrap_err();
-    println!("Actual error: {}", error);
+    println!("Actual error: {error}");
     assert!(error
         .to_string()
         .contains("dbname is required for PostgreSQL connections"));

@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use std::io::Write;
 use std::path::Path;
 
 use crate::domain::error::DomainError;
@@ -10,6 +11,7 @@ use crate::domain::parser::FileParserBackend;
 pub struct PdfParser;
 
 impl PdfParser {
+    #[must_use]
     pub fn new() -> Self {
         Self
     }
@@ -39,7 +41,7 @@ impl FileParserBackend for PdfParser {
 
         let blocks = tokio::task::spawn_blocking(move || parse_pdf_from_path(&path_buf))
             .await
-            .map_err(|e| DomainError::parse_error(format!("Task join error: {}", e)))??;
+            .map_err(|e| DomainError::parse_error(format!("Task join error: {e}")))??;
 
         let mut builder = DocumentBuilder::new(ParsedSource::LocalPath(path.display().to_string()))
             .content_type("application/pdf")
@@ -60,7 +62,7 @@ impl FileParserBackend for PdfParser {
     ) -> Result<crate::domain::ir::ParsedDocument, DomainError> {
         let blocks = tokio::task::spawn_blocking(move || parse_pdf_bytes(&bytes))
             .await
-            .map_err(|e| DomainError::parse_error(format!("Task join error: {}", e)))??;
+            .map_err(|e| DomainError::parse_error(format!("Task join error: {e}")))??;
 
         let source = ParsedSource::Uploaded {
             original_name: filename_hint.unwrap_or("unknown.pdf").to_string(),
@@ -81,7 +83,7 @@ impl FileParserBackend for PdfParser {
 fn parse_pdf_from_path(path: &Path) -> Result<Vec<ParsedBlock>, DomainError> {
     // Use pdf-extract for now; TODO: migrate to ferrules when available
     let text = pdf_extract::extract_text(path)
-        .map_err(|e| DomainError::parse_error(format!("Failed to extract text from PDF: {}", e)))?;
+        .map_err(|e| DomainError::parse_error(format!("Failed to extract text from PDF: {e}")))?;
 
     Ok(text_to_blocks(&text))
 }
@@ -89,15 +91,14 @@ fn parse_pdf_from_path(path: &Path) -> Result<Vec<ParsedBlock>, DomainError> {
 fn parse_pdf_bytes(bytes: &[u8]) -> Result<Vec<ParsedBlock>, DomainError> {
     // Create a temporary file for pdf-extract (it requires a path)
     let mut temp_file = tempfile::NamedTempFile::new()
-        .map_err(|e| DomainError::io_error(format!("Failed to create temp file: {}", e)))?;
+        .map_err(|e| DomainError::io_error(format!("Failed to create temp file: {e}")))?;
 
-    use std::io::Write;
     temp_file
         .write_all(bytes)
-        .map_err(|e| DomainError::io_error(format!("Failed to write to temp file: {}", e)))?;
+        .map_err(|e| DomainError::io_error(format!("Failed to write to temp file: {e}")))?;
 
     let text = pdf_extract::extract_text(temp_file.path())
-        .map_err(|e| DomainError::parse_error(format!("Failed to extract text from PDF: {}", e)))?;
+        .map_err(|e| DomainError::parse_error(format!("Failed to extract text from PDF: {e}")))?;
 
     Ok(text_to_blocks(&text))
 }

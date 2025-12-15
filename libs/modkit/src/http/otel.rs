@@ -14,11 +14,13 @@ pub const TRACEPARENT: &str = "traceparent";
 // ========================================
 
 /// Extract traceparent header value from HTTP headers
+#[must_use]
 pub fn get_traceparent(headers: &HeaderMap) -> Option<&str> {
     headers.get(TRACEPARENT)?.to_str().ok()
 }
 
 /// Parse trace ID from W3C traceparent header (format: "00-{trace_id}-{span_id}-{flags}")
+#[must_use]
 pub fn parse_trace_id(traceparent: &str) -> Option<String> {
     let parts: Vec<&str> = traceparent.split('-').collect();
     if parts.len() >= 4 && parts[0] == "00" {
@@ -53,7 +55,7 @@ mod imp {
         }
 
         fn keys(&self) -> Vec<&str> {
-            self.0.keys().map(|k| k.as_str()).collect()
+            self.0.keys().map(http::HeaderName::as_str).collect()
         }
     }
 

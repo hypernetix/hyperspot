@@ -1,6 +1,6 @@
 //! Backend abstraction for out-of-process module management
 //!
-//! This module provides traits and types for spawning and managing OoP module instances.
+//! This module provides traits and types for spawning and managing `OoP` module instances.
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -73,7 +73,7 @@ pub trait ModuleRuntimeBackend: Send + Sync {
     async fn list_instances(&self, module: &str) -> Result<Vec<InstanceHandle>>;
 }
 
-/// Configuration passed to OopBackend::spawn
+/// Configuration passed to `OopBackend::spawn`
 pub struct OopSpawnConfig {
     pub module_name: String,
     pub binary: PathBuf,
@@ -82,12 +82,12 @@ pub struct OopSpawnConfig {
     pub working_directory: Option<String>,
 }
 
-/// A type-erased backend for spawning OoP modules.
+/// A type-erased backend for spawning `OoP` modules.
 ///
-/// This trait is used by HostRuntime to spawn OoP modules after the start phase.
+/// This trait is used by `HostRuntime` to spawn `OoP` modules after the start phase.
 #[async_trait]
 pub trait OopBackend: Send + Sync {
-    /// Spawn an OoP module instance.
+    /// Spawn an `OoP` module instance.
     async fn spawn(&self, config: OopSpawnConfig) -> Result<()>;
 
     /// Shutdown all spawned instances (called during stop phase).
@@ -99,9 +99,9 @@ pub mod log_forwarder;
 
 pub use local::LocalProcessBackend;
 
-/// Adapter that implements OopBackend trait for LocalProcessBackend.
+/// Adapter that implements `OopBackend` trait for `LocalProcessBackend`.
 ///
-/// This allows LocalProcessBackend to be used by HostRuntime for spawning OoP modules.
+/// This allows `LocalProcessBackend` to be used by `HostRuntime` for spawning `OoP` modules.
 #[async_trait]
 impl OopBackend for LocalProcessBackend {
     async fn spawn(&self, config: OopSpawnConfig) -> Result<()> {
@@ -162,7 +162,7 @@ mod tests {
             created_at: Instant::now(),
         };
 
-        let debug_str = format!("{:?}", handle);
+        let debug_str = format!("{handle:?}");
         assert!(debug_str.contains("test_module"));
         assert!(debug_str.contains(&instance_id.to_string()));
         assert!(debug_str.contains("LocalProcess"));

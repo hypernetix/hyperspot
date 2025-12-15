@@ -1,4 +1,4 @@
-//! # ModKit - Declarative Module System
+//! # `ModKit` - Declarative Module System
 //!
 //! A unified crate for building modular applications with declarative module definitions.
 //!

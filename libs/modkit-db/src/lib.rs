@@ -9,25 +9,25 @@
     )
 )]
 
-//! ModKit Database abstraction crate.
+//! `ModKit` Database abstraction crate.
 //!
 //! This crate provides a unified interface for working with different databases
-//! (SQLite, PostgreSQL, MySQL) through SQLx, with optional SeaORM integration.
+//! (`SQLite`, `PostgreSQL`, `MySQL`) through `SQLx`, with optional `SeaORM` integration.
 //! It emphasizes typed connection options over DSN string manipulation and
-//! implements strict security controls (e.g., SQLite PRAGMA whitelist).
+//! implements strict security controls (e.g., `SQLite` PRAGMA whitelist).
 //!
 //! # Features
-//! - `pg`, `mysql`, `sqlite`: enable SQLx backends
-//! - `sea-orm`: add SeaORM integration for type-safe operations
+//! - `pg`, `mysql`, `sqlite`: enable `SQLx` backends
+//! - `sea-orm`: add `SeaORM` integration for type-safe operations
 //!
 //! # New Architecture
 //! The crate now supports:
-//! - Typed `DbConnectOptions` using sqlx ConnectOptions (no DSN string building)
+//! - Typed `DbConnectOptions` using sqlx `ConnectOptions` (no DSN string building)
 //! - Per-module database factories with configuration merging
-//! - SQLite PRAGMA whitelist for security
+//! - `SQLite` PRAGMA whitelist for security
 //! - Environment variable expansion in passwords and DSNs
 //!
-//! # Example (DbManager API)
+//! # Example (`DbManager` API)
 //! ```rust,no_run
 //! use modkit_db::{DbManager, GlobalDatabaseConfig, DbConnConfig};
 //! use figment::{Figment, providers::Serialized};
@@ -199,7 +199,7 @@ pub struct ConnectOpts {
     pub max_lifetime: Option<Duration>,
     /// Test connection health before acquire.
     pub test_before_acquire: bool,
-    /// For SQLite file DSNs, create parent directories if missing.
+    /// For `SQLite` file DSNs, create parent directories if missing.
     pub create_sqlite_dirs: bool,
 }
 impl Default for ConnectOpts {
@@ -244,6 +244,9 @@ pub enum DbTransaction<'a> {
 
 impl DbTransaction<'_> {
     /// Commit the transaction.
+    ///
+    /// # Errors
+    /// Returns an error if the commit operation fails.
     pub async fn commit(self) -> Result<()> {
         match self {
             #[cfg(feature = "pg")]
@@ -258,6 +261,9 @@ impl DbTransaction<'_> {
     }
 
     /// Roll back the transaction.
+    ///
+    /// # Errors
+    /// Returns an error if the rollback operation fails.
     pub async fn rollback(self) -> Result<()> {
         match self {
             #[cfg(feature = "pg")]
@@ -300,6 +306,9 @@ impl DbHandle {
     /// Detect engine by DSN.
     ///
     /// Note: we only check scheme prefixes and don't mutate the tail (credentials etc.).
+    ///
+    /// # Errors
+    /// Returns `DbError::UnknownDsn` if the DSN scheme is not recognized.
     pub fn detect(dsn: &str) -> Result<DbEngine> {
         // Trim only leading spaces/newlines to be forgiving with env files.
         let s = dsn.trim_start();
@@ -318,6 +327,9 @@ impl DbHandle {
     }
 
     /// Connect and build handle.
+    ///
+    /// # Errors
+    /// Returns an error if the connection fails or the DSN is invalid.
     pub async fn connect(dsn: &str, opts: ConnectOpts) -> Result<Self> {
         let engine = Self::detect(dsn)?;
         match engine {
@@ -381,7 +393,7 @@ impl DbHandle {
                             "WAL"
                         };
 
-                        let stmt = format!("PRAGMA journal_mode = {}", journal_mode);
+                        let stmt = format!("PRAGMA journal_mode = {journal_mode}");
                         sqlx::query(&stmt).execute(&mut *conn).await?;
 
                         // Apply synchronous mode
@@ -389,7 +401,7 @@ impl DbHandle {
                             .synchronous
                             .as_ref()
                             .map_or("NORMAL", |s| s.as_sql());
-                        let stmt = format!("PRAGMA synchronous = {}", sync_mode);
+                        let stmt = format!("PRAGMA synchronous = {sync_mode}");
                         sqlx::query(&stmt).execute(&mut *conn).await?;
 
                         // Apply busy timeout (skip for in-memory databases)
@@ -441,17 +453,20 @@ impl DbHandle {
     }
 
     /// Get the backend.
+    #[must_use]
     pub fn engine(&self) -> DbEngine {
         self.engine
     }
 
     /// Get the DSN used for this connection.
+    #[must_use]
     pub fn dsn(&self) -> &str {
         &self.dsn
     }
 
     // --- sqlx accessors ---
     #[cfg(feature = "pg")]
+    #[must_use]
     pub fn sqlx_postgres(&self) -> Option<&PgPool> {
         match self.pool {
             DbPool::Postgres(ref p) => Some(p),
@@ -468,6 +483,7 @@ impl DbHandle {
         }
     }
     #[cfg(feature = "sqlite")]
+    #[must_use]
     pub fn sqlx_sqlite(&self) -> Option<&SqlitePool> {
         match self.pool {
             DbPool::Sqlite(ref p) => Some(p),
@@ -499,11 +515,12 @@ impl DbHandle {
     ///     .await?;
     /// ```
     #[cfg(feature = "sea-orm")]
+    #[must_use]
     pub fn sea_secure(&self) -> crate::secure::SecureConn {
         crate::secure::SecureConn::new(self.sea.clone())
     }
 
-    /// **INSECURE**: Get raw SeaORM connection (bypasses all security).
+    /// **INSECURE**: Get raw `SeaORM` connection (bypasses all security).
     ///
     /// This method is **only available** when compiled with `--features insecure-escape`.
     /// It provides direct access to the database connection, bypassing all tenant
@@ -538,6 +555,11 @@ impl DbHandle {
     }
 
     // --- Transaction helpers (engine-specific) ---
+
+    /// Execute a closure within a `PostgreSQL` transaction.
+    ///
+    /// # Errors
+    /// Returns an error if the transaction fails or the closure returns an error.
     #[cfg(feature = "pg")]
     pub async fn with_pg_tx<F, Fut, T>(&self, f: F) -> Result<T>
     where
@@ -562,6 +584,10 @@ impl DbHandle {
         }
     }
 
+    /// Execute a closure within a MySQL transaction.
+    ///
+    /// # Errors
+    /// Returns an error if the transaction fails or the closure returns an error.
     #[cfg(feature = "mysql")]
     pub async fn with_mysql_tx<F, Fut, T>(&self, f: F) -> Result<T>
     where
@@ -585,6 +611,10 @@ impl DbHandle {
         }
     }
 
+    /// Execute a closure within a `SQLite` transaction.
+    ///
+    /// # Errors
+    /// Returns an error if the transaction fails or the closure returns an error.
     #[cfg(feature = "sqlite")]
     pub async fn with_sqlite_tx<F, Fut, T>(&self, f: F) -> Result<T>
     where
@@ -611,6 +641,9 @@ impl DbHandle {
     // --- Advisory locks ---
 
     /// Acquire an advisory lock with the given key and module namespace.
+    ///
+    /// # Errors
+    /// Returns an error if the lock cannot be acquired.
     pub async fn lock(&self, module: &str, key: &str) -> Result<DbLockGuard> {
         let lock_manager =
             advisory_locks::LockManager::new(self.engine, self.pool.clone(), self.dsn.clone());
@@ -619,6 +652,9 @@ impl DbHandle {
     }
 
     /// Try to acquire an advisory lock with configurable retry/backoff policy.
+    ///
+    /// # Errors
+    /// Returns an error if an unrecoverable lock error occurs.
     pub async fn try_lock(
         &self,
         module: &str,
@@ -634,6 +670,9 @@ impl DbHandle {
     // --- Generic transaction begin (returns proper enum with lifetime) ---
 
     /// Begin a transaction (returns appropriate transaction type based on backend).
+    ///
+    /// # Errors
+    /// Returns an error if the transaction cannot be started.
     pub async fn begin(&self) -> Result<DbTransaction<'_>> {
         match &self.pool {
             #[cfg(feature = "pg")]
@@ -735,15 +774,15 @@ mod tests {
             .map_or(0, |d| d.as_nanos());
         let test_id = format!("test_basic_{now}");
 
-        let guard1 = db.lock("test_module", &format!("{}_key1", test_id)).await?;
-        let _guard2 = db.lock("test_module", &format!("{}_key2", test_id)).await?;
+        let guard1 = db.lock("test_module", &format!("{test_id}_key1")).await?;
+        let _guard2 = db.lock("test_module", &format!("{test_id}_key2")).await?;
         let _guard3 = db
-            .lock("different_module", &format!("{}_key1", test_id))
+            .lock("different_module", &format!("{test_id}_key1"))
             .await?;
 
         // Deterministic unlock to avoid races with async Drop cleanup
         guard1.release().await;
-        let _guard4 = db.lock("test_module", &format!("{}_key1", test_id)).await?;
+        let _guard4 = db.lock("test_module", &format!("{test_id}_key1")).await?;
         Ok(())
     }
 
@@ -758,11 +797,9 @@ mod tests {
             .map_or(0, |d| d.as_nanos());
         let test_id = format!("test_diff_{now}");
 
-        let _guard1 = db.lock("test_module", &format!("{}_key1", test_id)).await?;
-        let _guard2 = db.lock("test_module", &format!("{}_key2", test_id)).await?;
-        let _guard3 = db
-            .lock("other_module", &format!("{}_key1", test_id))
-            .await?;
+        let _guard1 = db.lock("test_module", &format!("{test_id}_key1")).await?;
+        let _guard2 = db.lock("test_module", &format!("{test_id}_key2")).await?;
+        let _guard3 = db.lock("other_module", &format!("{test_id}_key1")).await?;
         Ok(())
     }
 
@@ -777,7 +814,7 @@ mod tests {
             .map_or(0, |d| d.as_nanos());
         let test_id = format!("test_config_{now}");
 
-        let _guard1 = db.lock("test_module", &format!("{}_key", test_id)).await?;
+        let _guard1 = db.lock("test_module", &format!("{test_id}_key")).await?;
 
         let config = LockConfig {
             max_wait: Some(Duration::from_millis(200)),
@@ -787,7 +824,7 @@ mod tests {
         };
 
         let result = db
-            .try_lock("test_module", &format!("{}_different_key", test_id), config)
+            .try_lock("test_module", &format!("{test_id}_different_key"), config)
             .await?;
         assert!(
             result.is_some(),

@@ -1,4 +1,4 @@
-//! Log forwarding for OoP module stdout/stderr
+//! Log forwarding for `OoP` module stdout/stderr
 //!
 //! This module provides utilities for capturing stdout/stderr from child processes
 //! and forwarding each line to the parent's tracing system with proper context.

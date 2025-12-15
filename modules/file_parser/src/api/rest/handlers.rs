@@ -1,3 +1,6 @@
+// False positives from #[axum::debug_handler] macro expansion
+#![allow(clippy::items_after_statements)]
+
 use axum::body::Body;
 use axum::extract::{Extension, Query};
 use axum::http::HeaderMap;
@@ -11,20 +14,17 @@ use crate::api::rest::dto::{
     FileParserInfoDto, ParseLocalFileRequest, ParseUrlRequest, ParsedDocResponseDto,
     ParsedDocumentDto, UploadQuery,
 };
+use crate::domain::error::DomainError;
 use crate::domain::markdown::MarkdownRenderer;
-use modkit::api::prelude::*;
-
 use crate::domain::service::FileParserService;
-
-// Import auth extractors
+use modkit::api::prelude::*;
 use modkit_auth::axum_ext::Authz;
 
 // Type aliases for our specific API with DomainError
-use crate::domain::error::DomainError;
 type FileParserResult<T> = ApiResult<T, DomainError>;
 type FileParserApiError = ApiError<DomainError>;
 
-/// Query parameter for render_markdown flag
+/// Query parameter for `render_markdown` flag
 #[derive(Debug, serde::Deserialize)]
 pub struct RenderMarkdownQuery {
     #[serde(default)]
@@ -120,7 +120,7 @@ pub async fn upload_and_parse(
     let content_type_str = headers
         .get(axum::http::header::CONTENT_TYPE)
         .and_then(|v| v.to_str().ok())
-        .map(|s| s.to_string());
+        .map(ToString::to_string);
 
     info!(
         filename = ?filename_opt,
@@ -266,17 +266,15 @@ pub async fn upload_and_parse_markdown(
 
     while let Some(field) = multipart.next_field().await.map_err(|e| {
         FileParserApiError::from_domain(DomainError::invalid_request(format!(
-            "Multipart error: {}",
-            e
+            "Multipart error: {e}"
         )))
     })? {
         let field_name = field.name().unwrap_or("").to_string();
         if field_name == "file" {
-            file_name = field.file_name().map(|s| s.to_string());
+            file_name = field.file_name().map(ToString::to_string);
             file_bytes = Some(field.bytes().await.map_err(|e| {
                 FileParserApiError::from_domain(DomainError::io_error(format!(
-                    "Failed to read file: {}",
-                    e
+                    "Failed to read file: {e}"
                 )))
             })?);
             break;

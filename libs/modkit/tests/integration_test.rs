@@ -188,16 +188,12 @@ fn test_response_types() {
     let registry = TestRegistry::default();
     let router = Router::new();
 
-    async fn text_handler() -> &'static str {
-        "Hello"
-    }
-
     let _router = OperationBuilder::<Missing, Missing, ()>::get("/text")
         .require_auth("users", "read")
         .text_response(http::StatusCode::OK, "Plain text response", "text/plain")
         .html_response(http::StatusCode::OK, "HTML response")
         .json_response(http::StatusCode::INTERNAL_SERVER_ERROR, "Error response")
-        .handler(text_handler)
+        .handler(|| async { "Hello" })
         .register(router, &registry);
 
     let operations = registry.get_operations();

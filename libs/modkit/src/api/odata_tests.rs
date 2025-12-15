@@ -60,7 +60,7 @@ mod tests {
     #[test]
     fn test_parse_orderby_too_many_fields() {
         let many_fields: Vec<String> = (0..=MAX_ORDER_FIELDS)
-            .map(|i| format!("field{}", i))
+            .map(|i| format!("field{i}"))
             .collect();
         let orderby = many_fields.join(", ");
 

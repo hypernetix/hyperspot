@@ -1,7 +1,7 @@
-//! OpenAPI registry for schema and operation management
+//! `OpenAPI` registry for schema and operation management
 //!
-//! This module provides a standalone OpenAPI registry that collects operation specs
-//! and schemas, and builds a complete OpenAPI document from them.
+//! This module provides a standalone `OpenAPI` registry that collects operation specs
+//! and schemas, and builds a complete `OpenAPI` document from them.
 
 use anyhow::Result;
 use arc_swap::ArcSwap;
@@ -27,7 +27,7 @@ use crate::api::{operation_builder, problem};
 /// Type alias for schema collections used in API operations.
 type SchemaCollection = Vec<(String, RefOr<Schema>)>;
 
-/// OpenAPI document metadata (title, version, description)
+/// `OpenAPI` document metadata (title, version, description)
 #[derive(Debug, Clone)]
 pub struct OpenApiInfo {
     pub title: String,
@@ -45,7 +45,7 @@ impl Default for OpenApiInfo {
     }
 }
 
-/// OpenAPI registry trait for operation and schema registration
+/// `OpenAPI` registry trait for operation and schema registration
 pub trait OpenApiRegistry: Send + Sync {
     /// Register an API operation specification
     fn register_operation(&self, spec: &operation_builder::OperationSpec);
@@ -59,7 +59,7 @@ pub trait OpenApiRegistry: Send + Sync {
     fn as_any(&self) -> &dyn std::any::Any;
 }
 
-/// Helper function to call ensure_schema with proper type information
+/// Helper function to call `ensure_schema` with proper type information
 pub fn ensure_schema<T: utoipa::ToSchema + utoipa::PartialSchema + 'static>(
     registry: &dyn OpenApiRegistry,
 ) -> String {
@@ -79,7 +79,7 @@ pub fn ensure_schema<T: utoipa::ToSchema + utoipa::PartialSchema + 'static>(
     registry.ensure_schema_raw(&root_name, collected)
 }
 
-/// Implementation of OpenAPI registry with lock-free data structures
+/// Implementation of `OpenAPI` registry with lock-free data structures
 pub struct OpenApiRegistryImpl {
     /// Store operation specs keyed by "METHOD:path"
     pub operation_specs: DashMap<String, operation_builder::OperationSpec>,
@@ -89,6 +89,7 @@ pub struct OpenApiRegistryImpl {
 
 impl OpenApiRegistryImpl {
     /// Create a new empty registry
+    #[must_use]
     pub fn new() -> Self {
         Self {
             operation_specs: DashMap::new(),
@@ -96,10 +97,13 @@ impl OpenApiRegistryImpl {
         }
     }
 
-    /// Build OpenAPI specification from registered operations and components
+    /// Build `OpenAPI` specification from registered operations and components.
     ///
     /// # Arguments
-    /// * `info` - OpenAPI document metadata (title, version, description)
+    /// * `info` - `OpenAPI` document metadata (title, version, description)
+    ///
+    /// # Errors
+    /// Returns an error if the `OpenAPI` specification cannot be built.
     pub fn build_openapi(&self, info: &OpenApiInfo) -> Result<OpenApi> {
         use http::Method;
 
@@ -238,8 +242,7 @@ impl OpenApiRegistryImpl {
                         // Manually build content to preserve the correct content type
                         let content = ContentBuilder::new()
                             .schema(Some(RefOr::Ref(Ref::new(format!(
-                                "#/components/schemas/{}",
-                                name
+                                "#/components/schemas/{name}"
                             )))))
                             .build();
                         ResponseBuilder::new()

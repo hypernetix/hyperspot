@@ -8,4 +8,7 @@ pub enum ConfigError {
 
     #[error("invalid auth mode configuration: {0}")]
     InvalidMode(String),
+
+    #[error("HTTP client error: {0}")]
+    HttpClient(#[from] reqwest::Error),
 }

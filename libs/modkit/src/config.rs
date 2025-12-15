@@ -44,6 +44,9 @@ pub trait ConfigProvider: Send + Sync {
 /// - If "config" is present but invalid → returns `Err(ConfigError::InvalidConfig)`
 ///
 /// Use this for modules that can operate with default configuration.
+///
+/// # Errors
+/// Returns `ConfigError::InvalidConfig` if the config section exists but cannot be deserialized.
 pub fn module_config_or_default<T: DeserializeOwned + Default>(
     provider: &dyn ConfigProvider,
     module_name: &str,
@@ -82,6 +85,9 @@ pub fn module_config_or_default<T: DeserializeOwned + Default>(
 /// - If "config" is present but invalid → returns `Err(ConfigError::InvalidConfig)`
 ///
 /// Use this for modules that cannot operate without explicit configuration.
+///
+/// # Errors
+/// Returns `ConfigError` if the module is not found, has invalid structure, or config is invalid.
 pub fn module_config_required<T: DeserializeOwned>(
     provider: &dyn ConfigProvider,
     module_name: &str,

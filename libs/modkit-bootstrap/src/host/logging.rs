@@ -34,7 +34,7 @@ fn parse_tracing_level(s: &str) -> Option<tracing::Level> {
     }
 }
 
-/// Returns true if target == crate_name or target starts with "crate_name::"
+/// Returns true if target == `crate_name` or target starts with "`crate_name::`"
 fn matches_crate_prefix(target: &str, crate_name: &str) -> bool {
     target == crate_name
         || (target.starts_with(crate_name) && target[crate_name.len()..].starts_with("::"))
@@ -67,7 +67,7 @@ impl RotWriterHandle {
     ) -> std::io::Result<std::sync::MutexGuard<'_, FileRotate<AppendTimestamp>>> {
         self.0
             .try_lock()
-            .map_err(|e| io::Error::other(format!("Lock failed: {}", e)))
+            .map_err(|e| io::Error::other(format!("Lock failed: {e}")))
     }
 }
 
@@ -102,7 +102,7 @@ impl Write for RoutedWriterHandle {
 }
 
 /// Route log records to different files by target prefix:
-/// keys are *full* prefixes like "hyperspot::api_ingress"
+/// keys are *full* prefixes like "`hyperspot::api_ingress`"
 #[derive(Clone)]
 struct MultiFileRouter {
     default: Option<RotWriter>, // default file (from "default" section), optional

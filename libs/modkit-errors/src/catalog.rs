@@ -1,4 +1,4 @@
-//! Error catalog support (ErrDef for use with declare_errors! macro)
+//! Error catalog support (`ErrDef` for use with `declare_errors`! macro)
 
 use crate::problem::Problem;
 use http::StatusCode;

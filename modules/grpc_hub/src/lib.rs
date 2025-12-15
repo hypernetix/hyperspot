@@ -1,6 +1,6 @@
 //! gRPC Hub Module
 //!
-//! This module builds and hosts the single tonic::Server instance for the process.
+//! This module builds and hosts the single `tonic::Server` instance for the process.
 
 use anyhow::Context;
 use async_trait::async_trait;
@@ -75,7 +75,7 @@ pub struct GrpcHub {
     listen_cfg: RwLock<ListenConfig>,
     installer_store: RwLock<Option<Arc<GrpcInstallerStore>>>,
     directory: RwLock<Option<Arc<dyn DirectoryApi>>>,
-    /// Process-level instance ID (set from SystemContext during wire_system phase)
+    /// Process-level instance ID (set from `SystemContext` during `wire_system` phase)
     instance_id: RwLock<String>,
     bound_endpoint: RwLock<Option<String>>,
 }
@@ -135,6 +135,9 @@ impl GrpcHub {
     /// - TCP: `"127.0.0.1:50051"` or `"0.0.0.0:0"` for ephemeral port
     /// - Unix Domain Socket (Unix only): `"uds:///path/to/socket.sock"`
     /// - Named Pipe (Windows only): `"pipe://\\.\pipe\my_pipe"` or `"npipe://\\.\pipe\my_pipe"`
+    ///
+    /// # Errors
+    /// Returns an error if the address format is invalid or unsupported on the platform.
     pub fn apply_listen_config(&self, listen_addr: &str) -> anyhow::Result<()> {
         // First, try platform-specific parsing
         if self.apply_platform_specific(listen_addr)? {
@@ -144,7 +147,7 @@ impl GrpcHub {
         // Fall back to TCP SocketAddr parsing
         let addr = listen_addr
             .parse::<SocketAddr>()
-            .with_context(|| format!("invalid listen_addr '{}'", listen_addr))?;
+            .with_context(|| format!("invalid listen_addr '{listen_addr}'"))?;
         *self.listen_cfg.write() = ListenConfig::Tcp(addr);
         tracing::info!(%addr, "gRPC hub listen address configured for TCP");
 
@@ -196,8 +199,7 @@ impl GrpcHub {
                 "Named pipe listen_addr is configured but named pipes are not supported on this platform"
             );
             anyhow::bail!(
-                "Named pipe listen_addr is not supported on this platform: '{}'",
-                listen_addr
+                "Named pipe listen_addr is not supported on this platform: '{listen_addr}'"
             );
         }
 
@@ -301,6 +303,9 @@ impl GrpcHub {
     }
 
     /// Run the tonic server with the provided installers.
+    ///
+    /// # Errors
+    /// Returns an error if server startup or execution fails.
     pub async fn run_with_installers(
         &self,
         data: GrpcInstallerData,
@@ -348,7 +353,7 @@ impl GrpcHub {
     ) -> anyhow::Result<()> {
         let listener = TcpListener::bind(addr).await?;
         let bound_addr = listener.local_addr()?;
-        let endpoint = format!("http://{}", bound_addr);
+        let endpoint = format!("http://{bound_addr}");
         tracing::info!(%bound_addr, transport = "tcp", "gRPC hub listening");
 
         self.set_bound_endpoint(endpoint.clone());
@@ -740,9 +745,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_init_parses_listen_addr() {
-        let hub = GrpcHub::default();
-        let cancel = CancellationToken::new();
-
         #[derive(Default)]
         struct ConfigProviderWithAddr;
         impl ConfigProvider for ConfigProviderWithAddr {
@@ -762,6 +764,9 @@ mod tests {
                 }
             }
         }
+
+        let hub = GrpcHub::default();
+        let cancel = CancellationToken::new();
 
         let ctx = ModuleCtx::new(
             "grpc_hub",
@@ -783,9 +788,6 @@ mod tests {
     #[tokio::test]
     #[cfg(unix)]
     async fn test_init_parses_uds_addr() {
-        let hub = GrpcHub::default();
-        let cancel = CancellationToken::new();
-
         #[derive(Default)]
         struct ConfigProviderWithUds;
         impl ConfigProvider for ConfigProviderWithUds {
@@ -805,6 +807,9 @@ mod tests {
                 }
             }
         }
+
+        let hub = GrpcHub::default();
+        let cancel = CancellationToken::new();
 
         let ctx = ModuleCtx::new(
             "grpc_hub",
@@ -829,13 +834,6 @@ mod tests {
     async fn test_init_parses_uds_listen_addr_and_serves() {
         use tempfile::TempDir;
 
-        let temp_dir = TempDir::new().expect("failed to create temp dir");
-        let socket_path = temp_dir.path().join("test_grpc_hub.sock");
-        let socket_path_str = format!("uds://{}", socket_path.display());
-
-        let hub = Arc::new(GrpcHub::default());
-        let cancel = CancellationToken::new();
-
         // Custom ConfigProvider returning uds:// path
         struct ConfigProviderWithUds {
             config_value: serde_json::Value,
@@ -849,6 +847,13 @@ mod tests {
                 }
             }
         }
+
+        let temp_dir = TempDir::new().expect("failed to create temp dir");
+        let socket_path = temp_dir.path().join("test_grpc_hub.sock");
+        let socket_path_str = format!("uds://{}", socket_path.display());
+
+        let hub = Arc::new(GrpcHub::default());
+        let cancel = CancellationToken::new();
 
         let config_provider = ConfigProviderWithUds {
             config_value: serde_json::json!({

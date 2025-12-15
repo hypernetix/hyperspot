@@ -112,10 +112,7 @@ pub async fn create_user(
             return Err(UsersApiError::from_domain(
                 crate::domain::error::DomainError::validation(
                     "tenant_id",
-                    format!(
-                        "Tenant {} is not allowed in current security scope",
-                        tenant_id
-                    ),
+                    format!("Tenant {tenant_id} is not allowed in current security scope"),
                 ),
             ));
         }

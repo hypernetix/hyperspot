@@ -57,7 +57,10 @@ impl Default for AuthConfig {
 }
 
 impl AuthConfig {
-    /// Validate the configuration for consistency
+    /// Validate the configuration for consistency.
+    ///
+    /// # Errors
+    /// Returns `ConfigError::UnknownPlugin` if the configured provider is not registered.
     pub fn validate(&self) -> Result<(), ConfigError> {
         if !self.plugins.contains_key(&self.mode.provider) {
             return Err(ConfigError::UnknownPlugin(self.mode.provider.clone()));
@@ -98,7 +101,7 @@ pub enum PluginConfig {
         #[serde(default = "default_tenant_claim")]
         tenant_claim: String,
 
-        /// Client ID for resource_access roles
+        /// Client ID for `resource_access` roles
         client_roles: Option<String>,
 
         /// Role prefix to add to all roles
@@ -123,7 +126,10 @@ fn default_roles_claim() -> String {
     "roles".to_string()
 }
 
-/// Build an AuthDispatcher from configuration
+/// Build an `AuthDispatcher` from configuration.
+///
+/// # Errors
+/// Returns `ConfigError` if the configuration is invalid or plugin initialization fails.
 pub fn build_auth_dispatcher(config: &AuthConfig) -> Result<AuthDispatcher, ConfigError> {
     config.validate()?;
 
@@ -171,7 +177,7 @@ pub fn build_auth_dispatcher(config: &AuthConfig) -> Result<AuthDispatcher, Conf
     let dispatcher = AuthDispatcher::new(validation_config, config, &registry)?;
 
     let dispatcher = if let Some(jwks_config) = &config.jwks {
-        let provider = JwksKeyProvider::new(&jwks_config.uri)
+        let provider = JwksKeyProvider::new(&jwks_config.uri)?
             .with_refresh_interval(Duration::from_secs(jwks_config.refresh_interval_seconds))
             .with_max_backoff(Duration::from_secs(jwks_config.max_backoff_seconds));
 
@@ -270,7 +276,7 @@ mod tests {
         };
 
         let json = serde_json::to_string_pretty(&config).unwrap();
-        println!("{}", json);
+        println!("{json}");
 
         let deserialized: AuthConfig = serde_json::from_str(&json).unwrap();
         assert_eq!(deserialized.leeway_seconds, 120);

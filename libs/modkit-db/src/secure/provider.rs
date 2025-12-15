@@ -20,7 +20,7 @@ pub trait TenantFilterProvider {
     /// Build a condition for tenant filtering based on the scope.
     ///
     /// Returns:
-    /// - `None` if no tenant filtering needed (empty tenant_ids)
+    /// - `None` if no tenant filtering needed (empty `tenant_ids`)
     /// - `Some(deny_all)` if entity has no tenant column but tenants requested
     /// - `Some(filter)` with appropriate tenant IN clause
     fn tenant_condition<E>(scope: &AccessScope) -> Option<Condition>
@@ -37,7 +37,7 @@ pub trait TenantFilterProvider {
 /// # Future
 ///
 /// Can be replaced with a hierarchical provider that expands
-/// tenant_ids to include child tenants.
+/// `tenant_ids` to include child tenants.
 pub struct SimpleTenantFilter;
 
 impl TenantFilterProvider for SimpleTenantFilter {

@@ -64,6 +64,7 @@ impl std::fmt::Debug for ModuleRegistry {
 }
 
 impl ModuleRegistry {
+    #[must_use]
     pub fn modules(&self) -> &[ModuleEntry] {
         &self.modules
     }
@@ -71,6 +72,7 @@ impl ModuleRegistry {
     /// Returns modules ordered by system priority.
     /// System modules come first, followed by non-system modules.
     /// Within each group, the original topological order is preserved.
+    #[must_use]
     pub fn modules_by_system_priority(&self) -> Vec<&ModuleEntry> {
         let mut system_mods = Vec::new();
         let mut non_system_mods = Vec::new();
@@ -88,6 +90,9 @@ impl ModuleRegistry {
     }
 
     /// Discover via inventory, have registrators fill the builder, then build & topo-sort.
+    ///
+    /// # Errors
+    /// Returns `RegistryError` if module discovery or dependency resolution fails.
     pub fn discover_and_build() -> Result<Self, RegistryError> {
         let mut b = RegistryBuilder::default();
         for r in ::inventory::iter::<Registrator> {
@@ -97,6 +102,7 @@ impl ModuleRegistry {
     }
 
     /// (Optional) quick lookup if you need it.
+    #[must_use]
     pub fn get_module(&self, name: &str) -> Option<Arc<dyn contracts::Module>> {
         self.modules
             .iter()
@@ -162,8 +168,7 @@ impl RegistryBuilder {
     ) {
         if let Some((existing, _)) = &self.rest_host {
             self.errors.push(format!(
-                "Multiple REST host modules detected: '{}' and '{}'. Only one REST host is allowed.",
-                existing, name
+                "Multiple REST host modules detected: '{existing}' and '{name}'. Only one REST host is allowed."
             ));
             return;
         }
@@ -193,8 +198,7 @@ impl RegistryBuilder {
     ) {
         if let Some((existing, _)) = &self.grpc_hub {
             self.errors.push(format!(
-                "Multiple gRPC hub modules detected: '{}' and '{}'. Only one gRPC hub is allowed.",
-                existing, name
+                "Multiple gRPC hub modules detected: '{existing}' and '{name}'. Only one gRPC hub is allowed."
             ));
             return;
         }
@@ -221,9 +225,6 @@ impl RegistryBuilder {
             Gray,  // visiting (on current path)
             Black, // visited (finished)
         }
-
-        let mut colors = vec![Color::White; names.len()];
-        let mut path = Vec::new();
 
         fn dfs(
             node: usize,
@@ -264,6 +265,9 @@ impl RegistryBuilder {
             colors[node] = Color::Black;
             None
         }
+
+        let mut colors = vec![Color::White; names.len()];
+        let mut path = Vec::new();
 
         for i in 0..names.len() {
             if colors[i] == Color::White {
@@ -409,6 +413,9 @@ impl RegistryBuilder {
     }
 
     /// Finalize & topo-sort; verify deps & capability binding to known cores.
+    ///
+    /// # Errors
+    /// Returns `RegistryError` if validation fails or a dependency cycle is detected.
     pub fn build_topo_sorted(self) -> Result<ModuleRegistry, RegistryError> {
         // 1) Validate all capabilities
         self.validate_capabilities()?;

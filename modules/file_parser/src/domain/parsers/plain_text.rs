@@ -9,6 +9,7 @@ use crate::domain::parser::FileParserBackend;
 pub struct PlainTextParser;
 
 impl PlainTextParser {
+    #[must_use]
     pub fn new() -> Self {
         Self
     }
@@ -36,10 +37,10 @@ impl FileParserBackend for PlainTextParser {
     ) -> Result<crate::domain::ir::ParsedDocument, DomainError> {
         let content = tokio::fs::read(path)
             .await
-            .map_err(|e| DomainError::io_error(format!("Failed to read file: {}", e)))?;
+            .map_err(|e| DomainError::io_error(format!("Failed to read file: {e}")))?;
 
         let text = String::from_utf8(content)
-            .map_err(|e| DomainError::parse_error(format!("Failed to decode UTF-8: {}", e)))?;
+            .map_err(|e| DomainError::parse_error(format!("Failed to decode UTF-8: {e}")))?;
 
         let blocks = text_to_blocks(&text);
 
@@ -61,7 +62,7 @@ impl FileParserBackend for PlainTextParser {
         bytes: bytes::Bytes,
     ) -> Result<crate::domain::ir::ParsedDocument, DomainError> {
         let text = String::from_utf8(bytes.to_vec())
-            .map_err(|e| DomainError::parse_error(format!("Failed to decode UTF-8: {}", e)))?;
+            .map_err(|e| DomainError::parse_error(format!("Failed to decode UTF-8: {e}")))?;
 
         let blocks = text_to_blocks(&text);
 

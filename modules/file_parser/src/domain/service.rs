@@ -39,6 +39,7 @@ pub struct FileParserInfo {
 
 impl FileParserService {
     /// Create a new service with the given parsers
+    #[must_use]
     pub fn new(parsers: Vec<Arc<dyn FileParserBackend>>, config: ServiceConfig) -> Self {
         Self { parsers, config }
     }
@@ -55,7 +56,7 @@ impl FileParserService {
             let extensions: Vec<String> = parser
                 .supported_extensions()
                 .iter()
-                .map(|s| (*s).to_string())
+                .map(ToString::to_string)
                 .collect();
             supported_extensions.insert(id.to_string(), extensions);
         }
@@ -125,7 +126,7 @@ impl FileParserService {
         let extension_from_name = filename_hint
             .and_then(|name| Path::new(name).extension())
             .and_then(|s| s.to_str())
-            .map(|s| s.to_string());
+            .map(ToString::to_string);
 
         let extension = if let Some(ext) = extension_from_name {
             // Priority 1: Use extension from filename
@@ -194,28 +195,25 @@ impl FileParserService {
             .build()
             .map_err(|e| {
                 tracing::error!(?e, "FileParserService: failed to create HTTP client");
-                DomainError::download_error(format!("Failed to create HTTP client: {}", e))
+                DomainError::download_error(format!("Failed to create HTTP client: {e}"))
             })?;
 
         let response = client.get(url.as_str()).send().await.map_err(|e| {
             tracing::error!(?e, "FileParserService: failed to download file");
-            DomainError::download_error(format!("Failed to download file: {}", e))
+            DomainError::download_error(format!("Failed to download file: {e}"))
         })?;
 
         if !response.status().is_success() {
             let status = response.status();
             tracing::error!(?status, "FileParserService: HTTP error during download");
-            return Err(DomainError::download_error(format!(
-                "HTTP error: {}",
-                status
-            )));
+            return Err(DomainError::download_error(format!("HTTP error: {status}")));
         }
 
         let content_type = response
             .headers()
             .get("content-type")
             .and_then(|v| v.to_str().ok())
-            .map(|s| s.to_string());
+            .map(ToString::to_string);
 
         // Validate MIME type if present
         if let Some(ref ct) = content_type {
@@ -224,7 +222,7 @@ impl FileParserService {
 
         let bytes = response.bytes().await.map_err(|e| {
             tracing::error!(?e, "FileParserService: failed to read response bytes");
-            DomainError::download_error(format!("Failed to read response: {}", e))
+            DomainError::download_error(format!("Failed to read response: {e}"))
         })?;
 
         // Check file size
@@ -240,7 +238,7 @@ impl FileParserService {
         let file_name = path
             .file_name()
             .and_then(|s| s.to_str())
-            .map(|s| s.to_string());
+            .map(ToString::to_string);
         let document = parser
             .parse_bytes(file_name.as_deref(), content_type.as_deref(), bytes)
             .await
@@ -254,6 +252,7 @@ impl FileParserService {
     }
 
     /// Extract file extension from Content-Type header
+    #[must_use]
     pub fn extension_from_content_type(ct: &str) -> Option<String> {
         let mime: mime::Mime = ct.parse().ok()?;
         let essence = mime.essence_str();
@@ -272,7 +271,7 @@ impl FileParserService {
     fn validate_mime_type(extension: &str, content_type: &str) -> Result<(), DomainError> {
         // Parse MIME type
         let mime: mime::Mime = content_type.parse().map_err(|_| {
-            DomainError::invalid_request(format!("Invalid content-type: {}", content_type))
+            DomainError::invalid_request(format!("Invalid content-type: {content_type}"))
         })?;
 
         let expected = match extension.to_lowercase().as_str() {
@@ -301,8 +300,7 @@ impl FileParserService {
                     "MIME type mismatch"
                 );
                 return Err(DomainError::invalid_request(format!(
-                    "Content-Type {} does not match expected type {} for .{}",
-                    mime_str, expected_type, extension
+                    "Content-Type {mime_str} does not match expected type {expected_type} for .{extension}"
                 )));
             }
         }

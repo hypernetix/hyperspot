@@ -21,7 +21,7 @@ pub struct KeycloakClaimsPlugin {
     /// Name of the tenant claim field (default: "tenants")
     pub tenant_claim: String,
 
-    /// Optional: client ID to extract roles from resource_access
+    /// Optional: client ID to extract roles from `resource_access`
     pub client_roles: Option<String>,
 
     /// Optional: prefix to add to all roles
@@ -58,13 +58,21 @@ impl KeycloakClaimsPlugin {
 
         // 1. Check for top-level "roles" array (simplified format)
         if let Some(Value::Array(arr)) = raw.get("roles") {
-            roles.extend(arr.iter().filter_map(|v| v.as_str()).map(|s| s.to_string()));
+            roles.extend(
+                arr.iter()
+                    .filter_map(|v| v.as_str())
+                    .map(ToString::to_string),
+            );
         }
 
         // 2. Extract from realm_access.roles
         if let Some(Value::Object(realm)) = raw.get("realm_access") {
             if let Some(Value::Array(arr)) = realm.get("roles") {
-                roles.extend(arr.iter().filter_map(|v| v.as_str()).map(|s| s.to_string()));
+                roles.extend(
+                    arr.iter()
+                        .filter_map(|v| v.as_str())
+                        .map(ToString::to_string),
+                );
             }
         }
 
@@ -73,7 +81,11 @@ impl KeycloakClaimsPlugin {
             if let Some(Value::Object(resource_access)) = raw.get("resource_access") {
                 if let Some(Value::Object(client)) = resource_access.get(client_id) {
                     if let Some(Value::Array(arr)) = client.get("roles") {
-                        roles.extend(arr.iter().filter_map(|v| v.as_str()).map(|s| s.to_string()));
+                        roles.extend(
+                            arr.iter()
+                                .filter_map(|v| v.as_str())
+                                .map(ToString::to_string),
+                        );
                     }
                 }
             }
@@ -81,10 +93,7 @@ impl KeycloakClaimsPlugin {
 
         // Apply role prefix if configured
         if let Some(prefix) = &self.role_prefix {
-            roles = roles
-                .into_iter()
-                .map(|r| format!("{}:{}", prefix, r))
-                .collect();
+            roles = roles.into_iter().map(|r| format!("{prefix}:{r}")).collect();
         }
 
         // Deduplicate
@@ -192,6 +201,7 @@ impl ClaimsPlugin for KeycloakClaimsPlugin {
 }
 
 #[cfg(test)]
+#[allow(clippy::unreadable_literal)]
 mod tests {
     use super::*;
     use serde_json::json;

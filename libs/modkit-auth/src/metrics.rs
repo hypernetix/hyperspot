@@ -1,7 +1,7 @@
 /// Metrics tracking for auth events
 ///
 /// This module provides a trait-based approach to metrics that can be
-/// implemented with various backends (Prometheus, StatsD, etc.)
+/// implemented with various backends (Prometheus, `StatsD`, etc.)
 /// Auth event types for metrics tracking
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AuthEvent {
@@ -26,6 +26,7 @@ pub enum AuthEvent {
 
 impl AuthEvent {
     /// Get the metric name for this event
+    #[must_use]
     pub fn metric_name(&self) -> &'static str {
         match self {
             AuthEvent::JwtValid => "auth.jwt.valid",
@@ -40,8 +41,9 @@ impl AuthEvent {
 
 /// Labels for auth metrics
 #[derive(Default, Debug, Clone)]
+#[must_use]
 pub struct AuthMetricLabels {
-    /// Provider name (e.g., "keycloak", "oidc_default")
+    /// Provider name (e.g., "keycloak", "`oidc_default`")
     pub provider: Option<String>,
 
     /// Issuer URL

@@ -12,7 +12,7 @@ pub fn domain_error_to_problem(err: DomainError, instance: &str) -> Problem {
         DomainError::NodeNotFound(id) => Problem::new(
             StatusCode::NOT_FOUND,
             "Node not found",
-            format!("No node with id {}", id),
+            format!("No node with id {id}"),
         )
         .with_type("https://errors.hyperspot.com/NODES_NOT_FOUND")
         .with_code("NODES_NOT_FOUND")
