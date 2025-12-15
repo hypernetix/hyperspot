@@ -77,6 +77,7 @@ pub(crate) fn is_memory_dsn(dsn: &str) -> bool {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 

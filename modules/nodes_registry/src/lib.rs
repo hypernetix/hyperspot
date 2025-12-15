@@ -13,6 +13,7 @@
 //! - Get node information by ID
 //! - Access node sysinfo via /nodes/{id}/sysinfo
 //! - Access node syscap via /nodes/{id}/syscap
+#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 
 // === PUBLIC CONTRACT ===
 pub mod contract;

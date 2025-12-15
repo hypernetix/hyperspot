@@ -177,6 +177,7 @@ pub fn extract_audiences(value: &serde_json::Value) -> Vec<String> {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use serde_json::json;

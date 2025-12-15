@@ -1,3 +1,4 @@
+#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 #![cfg_attr(
     not(any(feature = "pg", feature = "mysql", feature = "sqlite")),
     allow(
@@ -660,6 +661,7 @@ impl DbHandle {
 // ===================== tests =====================
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use tokio::time::Duration;

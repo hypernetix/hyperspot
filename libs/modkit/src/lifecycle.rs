@@ -611,6 +611,7 @@ impl<T: Runnable> Drop for WithLifecycle<T> {
 // ----- Tests -----------------------------------------------------------------
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use std::sync::atomic::{AtomicU32, Ordering as AOrd};

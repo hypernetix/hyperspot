@@ -366,6 +366,7 @@ pub fn otel_connectivity_probe(_cfg: &serde_json::Value) -> anyhow::Result<()> {
 // ===== tests ==================================================================
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use crate::telemetry::config::{Exporter, Sampler, TracingConfig};

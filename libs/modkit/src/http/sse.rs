@@ -141,6 +141,7 @@ impl<T: Clone + Send + 'static> SseBroadcaster<T> {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use futures::StreamExt;

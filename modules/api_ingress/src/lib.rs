@@ -1,3 +1,4 @@
+#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 use async_trait::async_trait;
 use std::sync::Arc;
 
@@ -416,6 +417,7 @@ impl modkit::Module for ApiIngress {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 
@@ -584,6 +586,7 @@ impl OpenApiRegistry for ApiIngress {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod problem_openapi_tests {
     use super::*;
     use axum::Json;
@@ -645,6 +648,7 @@ mod problem_openapi_tests {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod sse_openapi_tests {
     use super::*;
     use axum::Json;

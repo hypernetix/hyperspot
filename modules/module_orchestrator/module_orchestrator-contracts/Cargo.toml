@@ -10,6 +10,9 @@ description = "Domain contracts and client interfaces for module orchestrator"
 async-trait = { workspace = true }
 anyhow = { workspace = true }
 
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage_nightly)'] }
+
 
 
 
