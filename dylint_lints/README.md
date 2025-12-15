@@ -6,8 +6,9 @@ Custom [dylint](https://github.com/trailofbits/dylint) linters enforcing Hypersp
 
 ```bash
 # From workspace root
-make dylint              # Run lints (auto-rebuilds if changed)
+make dylint              # Run lints on workspace (auto-rebuilds if changed)
 make dylint-list         # Show all available lints
+make dylint-test         # Test UI cases (compile & verify violations)
 ```
 
 ## What This Checks
@@ -62,12 +63,18 @@ Example output:
 ```
 dylint_lints/
 ├── contract_lints/           # Main lint crate
-│   └── src/
-│       ├── de01_contract_layer/
-│       ├── de02_api_layer/
-│       ├── de08_rest_api_conventions/
-│       ├── lib.rs            # Lint registration
-│       └── utils.rs          # Helper functions
+│   ├── src/
+│   │   ├── de01_contract_layer/
+│   │   ├── de02_api_layer/
+│   │   ├── de08_rest_api_conventions/
+│   │   ├── lib.rs            # Lint registration
+│   │   └── utils.rs          # Helper functions
+│   └── ui/                   # Test cases
+│       ├── de0101_contract_serde.rs
+│       ├── de0203_dto_serde_derives.rs
+│       ├── de0801_api_versioning.rs
+│       ├── good_contract.rs  # Correct patterns
+│       └── ... (see ui/README.md)
 ├── Cargo.toml
 ├── rust-toolchain.toml       # Nightly required
 └── README.md
@@ -116,10 +123,25 @@ impl<'tcx> LateLintPass<'tcx> for ContractLints {
 }
 ```
 
-4. Test:
+4. Add test case in `ui/` directory (optional but recommended):
+
+```rust
+// ui/de0205_my_lint.rs
+mod api {
+    // Should trigger - violation example
+    pub struct BadPattern { }
+
+    // Should NOT trigger - correct pattern
+    pub struct GoodPattern { }
+}
+fn main() {}
+```
+
+5. Test:
 
 ```bash
-make dylint    # Should catch violations
+make dylint       # Run on workspace code
+make dylint-test  # List test cases - compare with your violations
 ```
 
 ### Useful Patterns

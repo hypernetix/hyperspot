@@ -1,7 +1,7 @@
 //! DE0201: DTOs Only in API Rest Folder
 //!
 //! Types with `*Dto` suffixes MUST be defined only in `*/api/rest/*.rs` files.
-//! DTOs are transport-specific and should not leak into domain or contract.
+//! DTOs are transport-specific and should not leak into domain or contract or repository.
 //!
 //! NOTE: This lint only applies to module crates in the `modules/` folder.
 //! Library crates (libs/) are exempt as they may legitimately define shared response types.
@@ -46,7 +46,7 @@
 use rustc_hir::{Item, ItemKind};
 use rustc_lint::{LateContext, LintContext};
 
-use crate::utils::{get_item_name, is_in_api_rest_folder, is_in_module_crate};
+use crate::utils::{get_item_name, is_in_api_rest_folder};
 
 rustc_session::declare_lint! {
     /// DE0201: DTOs only in API rest folder
@@ -77,11 +77,6 @@ pub fn check<'tcx>(cx: &LateContext<'tcx>, item: &'tcx Item<'tcx>) {
         .any(|suffix| item_name_lower.ends_with(suffix));
 
     if !is_dto {
-        return;
-    }
-
-    // Skip if not in a module crate (exempt library crates)
-    if !is_in_module_crate(cx, item.owner_id.def_id) {
         return;
     }
 

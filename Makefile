@@ -66,7 +66,7 @@ fmt:
 # |             | - Use 'make dylint-list' to see all available custom lints          |
 # +-------------+----------------------------------------------------------------------+
 
-.PHONY: clippy kani geiger safety lint dylint dylint-list
+.PHONY: clippy kani geiger safety lint dylint dylint-list dylint-test
 
 # Run clippy linter
 clippy:
@@ -89,7 +89,7 @@ geiger:
 lint:
 	RUSTFLAGS="-D warnings" cargo check --workspace --all-targets --all-features
 
-## List all custom dylint lints
+## List all custom project compliance lints (see dylint_lints/README.md)
 dylint-list:
 	@cd dylint_lints && \
 	DYLINT_LIB=$$(find target/release -maxdepth 1 \( -name "libcontract_lints@*.so" -o -name "libcontract_lints@*.dylib" -o -name "contract_lints@*.dll" -o -name "libcontract_lints.so" -o -name "libcontract_lints.dylib" -o -name "contract_lints.dll" \) -type f | head -n 1); \
@@ -98,6 +98,10 @@ dylint-list:
 		exit 1; \
 	fi; \
 	cargo dylint list --lib-path "$$DYLINT_LIB"
+
+## Test dylint lints on UI test cases (compile and verify violations)
+dylint-test:
+	@python3 dylint_lints/test_ui.py
 
 # Run project compliance dylint lints on the workspace (see `make dylint-list`)
 dylint:
@@ -270,7 +274,7 @@ example:
 	cargo run --bin hyperspot-server --features users-info-example -- --config config/quickstart.yaml run
 
 # Run all quality checks
-check: fmt clippy test security
+check: fmt clippy test security dylint
 
 # Run CI pipeline
 ci: check

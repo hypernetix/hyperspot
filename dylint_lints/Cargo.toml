@@ -1,5 +1,6 @@
 [workspace]
 members = ["contract_lints"]
+exclude = ["contract_lints/ui"]
 resolver = "2"
 
 [workspace.package]

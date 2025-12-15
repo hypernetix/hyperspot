@@ -41,7 +41,6 @@
 
 use rustc_hir::{Item, ItemKind};
 use rustc_lint::{LateContext, LintContext};
-use rustc_span::symbol::Symbol;
 
 use crate::utils::{get_item_name, is_in_contract_module};
 
@@ -68,28 +67,42 @@ pub fn check<'tcx>(cx: &LateContext<'tcx>, item: &'tcx Item<'tcx>) {
     }
 
     let item_name = get_item_name(cx, item);
-    let attrs = cx.tcx.hir_attrs(item.hir_id());
 
-    for attr in attrs {
-        if attr.has_name(Symbol::intern("derive")) {
-            if let Some(list) = attr.meta_item_list() {
-                for meta in list {
-                    if let Some(ident) = meta.ident() {
-                        let name = ident.name.as_str();
-                        if name == "Serialize" || name == "Deserialize" {
-                            cx.span_lint(
-                                DE0101_NO_SERDE_IN_CONTRACT,
-                                attr.span(),
-                                |diag| {
-                                    diag.primary_message(format!(
-                                        "contract type `{}` should not derive `{}` (DE0101)",
-                                        item_name, name
-                                    ));
-                                    diag.help("remove serde derives from contract models; use DTOs in the API layer for serialization");
-                                },
-                            );
-                        }
-                    }
+    // Use source text scanning for reliability with dylint
+    let source_map = cx.sess().source_map();
+    let item_span = item.span;
+    let source_file = source_map.lookup_source_file(item_span.lo());
+
+    if let Some(src) = source_file.src.as_ref() {
+        let file_start_pos = source_file.start_pos;
+        let item_byte_pos = item_span.lo();
+        let item_offset = (item_byte_pos - file_start_pos).0 as usize;
+        let lookback_start = item_offset.saturating_sub(500);
+        let src_str: &str = src.as_ref();
+
+        if let Some(text) = src_str.get(lookback_start..item_offset.min(src_str.len())) {
+            // Find the closest derive attribute before this item
+            if let Some(derive_pos) = text.rfind("#[derive(") {
+                let derive_end = text[derive_pos..].find(")]").map(|p| derive_pos + p + 2).unwrap_or(text.len());
+                let derive_text = &text[derive_pos..derive_end];
+
+                if derive_text.contains("Serialize") {
+                    cx.span_lint(DE0101_NO_SERDE_IN_CONTRACT, item.span, |diag| {
+                        diag.primary_message(format!(
+                            "contract type `{}` should not derive `Serialize` (DE0101)",
+                            item_name
+                        ));
+                        diag.help("remove serde derives from contract models; use DTOs in the API layer");
+                    });
+                }
+                if derive_text.contains("Deserialize") {
+                    cx.span_lint(DE0101_NO_SERDE_IN_CONTRACT, item.span, |diag| {
+                        diag.primary_message(format!(
+                            "contract type `{}` should not derive `Deserialize` (DE0101)",
+                            item_name
+                        ));
+                        diag.help("remove serde derives from contract models; use DTOs in the API layer");
+                    });
                 }
             }
         }
