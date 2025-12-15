@@ -21,7 +21,7 @@ use std::{
 };
 use tower::{Layer, Service};
 
-/// Extractor for SecurityCtx - validates that auth middleware has run
+/// Extractor for `SecurityCtx` - validates that auth middleware has run
 #[derive(Debug, Clone)]
 pub struct Authz(pub SecurityCtx);
 
@@ -38,7 +38,7 @@ where
             .cloned() // TODO: drop this clone
             .map(Authz)
             .ok_or(AuthError::Internal(
-                "SecurityCtx not found - auth middleware not configured".to_string(),
+                "SecurityCtx not found - auth middleware not configured".to_owned(),
             ))
     }
 }
@@ -60,7 +60,7 @@ where
             .cloned() // TODO: drop this clone
             .map(AuthClaims)
             .ok_or(AuthError::Internal(
-                "Claims not found - auth middleware not configured".to_string(),
+                "Claims not found - auth middleware not configured".to_owned(),
             ))
     }
 }
@@ -217,7 +217,7 @@ fn extract_bearer_token(headers: &HeaderMap) -> Option<&str> {
     headers
         .get(axum::http::header::AUTHORIZATION)
         .and_then(|v| v.to_str().ok())
-        .and_then(|s| s.strip_prefix("Bearer ").map(|t| t.trim()))
+        .and_then(|s| s.strip_prefix("Bearer ").map(str::trim))
 }
 
 /// Check if this is a CORS preflight request

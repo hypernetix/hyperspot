@@ -28,7 +28,7 @@ async fn generic_mysql() -> Result<()> {
 }
 
 /// Runs the same assertions for any backend.
-/// Tests basic DbHandle functionality without requiring migrations.
+/// Tests basic `DbHandle` functionality without requiring migrations.
 async fn run_common_suite(database_url: &str) -> Result<()> {
     // Test basic connection
     let db = modkit_db::DbHandle::connect(database_url, modkit_db::ConnectOpts::default()).await?;

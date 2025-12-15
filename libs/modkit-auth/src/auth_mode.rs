@@ -12,7 +12,7 @@ pub struct AuthModeConfig {
 impl Default for AuthModeConfig {
     fn default() -> Self {
         AuthModeConfig {
-            provider: "default".to_string(),
+            provider: "default".to_owned(),
         }
     }
 }
@@ -29,29 +29,36 @@ impl PluginRegistry {
         self.plugins.insert(name.into(), plugin);
     }
 
-    /// Get a plugin by name
+    /// Get a plugin by name.
+    ///
+    /// # Errors
+    /// Returns `ConfigError::UnknownPlugin` if no plugin with the given name exists.
     pub fn get(&self, name: &str) -> Result<&Arc<dyn ClaimsPlugin>, ConfigError> {
         self.plugins
             .get(name)
-            .ok_or_else(|| ConfigError::UnknownPlugin(name.to_string()))
+            .ok_or_else(|| ConfigError::UnknownPlugin(name.to_owned()))
     }
 
     /// Check if a plugin exists
+    #[must_use]
     pub fn contains(&self, name: &str) -> bool {
         self.plugins.contains_key(name)
     }
 
     /// Get all plugin names
+    #[must_use]
     pub fn plugin_names(&self) -> Vec<String> {
         self.plugins.keys().cloned().collect()
     }
 
     /// Number of registered plugins
+    #[must_use]
     pub fn len(&self) -> usize {
         self.plugins.len()
     }
 
     /// Check if registry is empty
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.plugins.is_empty()
     }
@@ -96,7 +103,7 @@ mod tests {
     #[test]
     fn test_auth_mode_config_serialization() {
         let config = AuthModeConfig {
-            provider: "keycloak".to_string(),
+            provider: "keycloak".to_owned(),
         };
         let json = serde_json::to_string(&config).unwrap();
         assert!(json.contains("\"provider\":\"keycloak\""));

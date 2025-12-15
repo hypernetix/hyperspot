@@ -43,6 +43,7 @@ pub struct Claims {
 
 impl Claims {
     /// Check if the token has expired
+    #[must_use]
     pub fn is_expired(&self) -> bool {
         if let Some(exp) = self.expires_at {
             OffsetDateTime::now_utc() >= exp
@@ -52,6 +53,7 @@ impl Claims {
     }
 
     /// Check if the token is valid yet (nbf check)
+    #[must_use]
     pub fn is_valid_yet(&self) -> bool {
         if let Some(nbf) = self.not_before {
             OffsetDateTime::now_utc() >= nbf
@@ -61,11 +63,13 @@ impl Claims {
     }
 
     /// Check if user has a specific role
+    #[must_use]
     pub fn has_role(&self, role: &str) -> bool {
         self.roles.iter().any(|r| r == role)
     }
 
     /// Check if user has access to a specific tenant
+    #[must_use]
     pub fn has_tenant(&self, tenant_id: &Uuid) -> bool {
         self.tenants.contains(tenant_id)
     }
@@ -80,8 +84,8 @@ mod tests {
     fn test_expiration_check() {
         let mut claims = Claims {
             sub: Uuid::new_v4(),
-            issuer: "test".to_string(),
-            audiences: vec!["api".to_string()],
+            issuer: "test".to_owned(),
+            audiences: vec!["api".to_owned()],
             expires_at: Some(OffsetDateTime::now_utc() + time::Duration::hours(1)),
             not_before: None,
             tenants: vec![],
@@ -99,8 +103,8 @@ mod tests {
     fn test_nbf_check() {
         let mut claims = Claims {
             sub: Uuid::new_v4(),
-            issuer: "test".to_string(),
-            audiences: vec!["api".to_string()],
+            issuer: "test".to_owned(),
+            audiences: vec!["api".to_owned()],
             expires_at: None,
             not_before: Some(OffsetDateTime::now_utc() - time::Duration::hours(1)),
             tenants: vec![],
@@ -118,12 +122,12 @@ mod tests {
     fn test_role_check() {
         let claims = Claims {
             sub: Uuid::new_v4(),
-            issuer: "test".to_string(),
-            audiences: vec!["api".to_string()],
+            issuer: "test".to_owned(),
+            audiences: vec!["api".to_owned()],
             expires_at: None,
             not_before: None,
             tenants: vec![],
-            roles: vec!["admin".to_string(), "user".to_string()],
+            roles: vec!["admin".to_owned(), "user".to_owned()],
             extras: serde_json::Map::new(),
         };
 

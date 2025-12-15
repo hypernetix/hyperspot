@@ -1,7 +1,7 @@
 //! OpenTelemetry tracing initialization utilities
 //!
 //! This module sets up OpenTelemetry tracing and exports spans via OTLP
-//! (gRPC or HTTP) to collectors such as Jaeger, Uptrace, or the OTel Collector.
+//! (gRPC or HTTP) to collectors such as Jaeger, Uptrace, or the `OTel` Collector.
 
 #[cfg(feature = "otel")]
 use opentelemetry::{global, trace::TracerProvider as _, KeyValue};
@@ -31,7 +31,7 @@ use super::config::TracingConfig;
 #[cfg(feature = "otel")]
 fn build_resource(cfg: &TracingConfig) -> Resource {
     let service_name = cfg.service_name.as_deref().unwrap_or("hyperspot");
-    let mut attrs = vec![KeyValue::new("service.name", service_name.to_string())];
+    let mut attrs = vec![KeyValue::new("service.name", service_name.to_owned())];
 
     if let Some(resource_map) = &cfg.resource {
         for (k, v) in resource_map {
@@ -60,10 +60,10 @@ fn build_sampler(cfg: &TracingConfig) -> Sampler {
 #[cfg(feature = "otel")]
 fn extract_exporter_config(cfg: &TracingConfig) -> (String, String, Option<std::time::Duration>) {
     let (kind, endpoint) = cfg.exporter.as_ref().map_or_else(
-        || ("otlp_grpc".to_string(), "http://127.0.0.1:4317".into()),
+        || ("otlp_grpc".to_owned(), "http://127.0.0.1:4317".into()),
         |e| {
             (
-                e.kind.as_deref().unwrap_or("otlp_grpc").to_string(),
+                e.kind.as_deref().unwrap_or("otlp_grpc").to_owned(),
                 e.endpoint
                     .clone()
                     .unwrap_or_else(|| "http://127.0.0.1:4317".into()),
@@ -193,7 +193,7 @@ fn build_headers_from_cfg_and_env(
     if let Ok(env_hdrs) = std::env::var("OTEL_EXPORTER_OTLP_HEADERS") {
         for part in env_hdrs.split(',').map(str::trim).filter(|s| !s.is_empty()) {
             if let Some((k, v)) = part.split_once('=') {
-                out.insert(k.trim().to_string(), v.trim().to_string());
+                out.insert(k.trim().to_owned(), v.trim().to_owned());
             }
         }
     }
@@ -286,7 +286,10 @@ pub fn shutdown_tracing() {
 // ===== connectivity probe =====================================================
 
 /// Build a tiny, separate OTLP pipeline and export a single span to verify connectivity.
-/// This does *not* depend on tracing_subscriber; it uses SDK directly.
+/// This does *not* depend on `tracing_subscriber`; it uses SDK directly.
+///
+/// # Errors
+/// Returns an error if the OTLP exporter cannot be built or the probe fails.
 #[cfg(feature = "otel")]
 pub fn otel_connectivity_probe(cfg: &super::config::TracingConfig) -> anyhow::Result<()> {
     use opentelemetry::trace::{Span, Tracer as _};
@@ -308,7 +311,7 @@ pub fn otel_connectivity_probe(cfg: &super::config::TracingConfig) -> anyhow::Re
 
     // Resource
     let resource = Resource::builder_empty()
-        .with_attributes([KeyValue::new("service.name", service_name.clone())])
+        .with_attributes([KeyValue::new("service.name", service_name)])
         .build();
 
     // Exporter (type-state branches again)
@@ -316,7 +319,7 @@ pub fn otel_connectivity_probe(cfg: &super::config::TracingConfig) -> anyhow::Re
         let mut b = opentelemetry_otlp::SpanExporter::builder()
             .with_http()
             .with_protocol(Protocol::HttpBinary)
-            .with_endpoint(endpoint.clone());
+            .with_endpoint(endpoint);
         if let Some(h) = build_headers_from_cfg_and_env(cfg) {
             b = b.with_headers(h);
         }
@@ -325,7 +328,7 @@ pub fn otel_connectivity_probe(cfg: &super::config::TracingConfig) -> anyhow::Re
     } else {
         let mut b = opentelemetry_otlp::SpanExporter::builder()
             .with_tonic()
-            .with_endpoint(endpoint.clone());
+            .with_endpoint(endpoint);
         if let Some(md) = build_metadata_from_cfg_and_env(cfg) {
             b = b.with_metadata(md);
         }
@@ -357,6 +360,10 @@ pub fn otel_connectivity_probe(cfg: &super::config::TracingConfig) -> anyhow::Re
     Ok(())
 }
 
+/// OTLP connectivity probe (no-op when otel feature is disabled).
+///
+/// # Errors
+/// This function always succeeds when the otel feature is disabled.
 #[cfg(not(feature = "otel"))]
 pub fn otel_connectivity_probe(_cfg: &serde_json::Value) -> anyhow::Result<()> {
     tracing::info!("OTLP connectivity probe skipped (otel feature disabled)");
@@ -389,7 +396,7 @@ mod tests {
     async fn test_init_tracing_enabled() {
         let cfg = TracingConfig {
             enabled: true,
-            service_name: Some("test-service".to_string()),
+            service_name: Some("test-service".to_owned()),
             ..Default::default()
         };
 
@@ -404,12 +411,12 @@ mod tests {
         let _guard = rt.enter();
 
         let mut resource_map = HashMap::new();
-        resource_map.insert("service.version".to_string(), "1.0.0".to_string());
-        resource_map.insert("deployment.environment".to_string(), "test".to_string());
+        resource_map.insert("service.version".to_owned(), "1.0.0".to_owned());
+        resource_map.insert("deployment.environment".to_owned(), "test".to_owned());
 
         let cfg = TracingConfig {
             enabled: true,
-            service_name: Some("test-service".to_string()),
+            service_name: Some("test-service".to_owned()),
             resource: Some(resource_map),
             ..Default::default()
         };
@@ -426,9 +433,9 @@ mod tests {
 
         let cfg = TracingConfig {
             enabled: true,
-            service_name: Some("test-service".to_string()),
+            service_name: Some("test-service".to_owned()),
             sampler: Some(Sampler {
-                strategy: Some("always_on".to_string()),
+                strategy: Some("always_on".to_owned()),
                 ratio: None,
             }),
             ..Default::default()
@@ -446,9 +453,9 @@ mod tests {
 
         let cfg = TracingConfig {
             enabled: true,
-            service_name: Some("test-service".to_string()),
+            service_name: Some("test-service".to_owned()),
             sampler: Some(Sampler {
-                strategy: Some("always_off".to_string()),
+                strategy: Some("always_off".to_owned()),
                 ratio: None,
             }),
             ..Default::default()
@@ -466,9 +473,9 @@ mod tests {
 
         let cfg = TracingConfig {
             enabled: true,
-            service_name: Some("test-service".to_string()),
+            service_name: Some("test-service".to_owned()),
             sampler: Some(Sampler {
-                strategy: Some("parentbased_ratio".to_string()),
+                strategy: Some("parentbased_ratio".to_owned()),
                 ratio: Some(0.5),
             }),
             ..Default::default()
@@ -485,10 +492,10 @@ mod tests {
 
         let cfg = TracingConfig {
             enabled: true,
-            service_name: Some("test-service".to_string()),
+            service_name: Some("test-service".to_owned()),
             exporter: Some(Exporter {
-                kind: Some("otlp_http".to_string()),
-                endpoint: Some("http://localhost:4318".to_string()),
+                kind: Some("otlp_http".to_owned()),
+                endpoint: Some("http://localhost:4318".to_owned()),
                 headers: None,
                 timeout_ms: Some(5000),
             }),
@@ -507,10 +514,10 @@ mod tests {
 
         let cfg = TracingConfig {
             enabled: true,
-            service_name: Some("test-service".to_string()),
+            service_name: Some("test-service".to_owned()),
             exporter: Some(Exporter {
-                kind: Some("otlp_grpc".to_string()),
-                endpoint: Some("http://localhost:4317".to_string()),
+                kind: Some("otlp_grpc".to_owned()),
+                endpoint: Some("http://localhost:4317".to_owned()),
                 headers: None,
                 timeout_ms: Some(5000),
             }),
@@ -539,13 +546,13 @@ mod tests {
     #[cfg(feature = "otel")]
     fn test_build_headers_from_cfg_with_headers() {
         let mut headers = HashMap::new();
-        headers.insert("authorization".to_string(), "Bearer token".to_string());
+        headers.insert("authorization".to_owned(), "Bearer token".to_owned());
 
         let cfg = TracingConfig {
             enabled: true,
             exporter: Some(Exporter {
-                kind: Some("otlp_http".to_string()),
-                endpoint: Some("http://localhost:4318".to_string()),
+                kind: Some("otlp_http".to_owned()),
+                endpoint: Some("http://localhost:4318".to_owned()),
                 headers: Some(headers.clone()),
                 timeout_ms: None,
             }),
@@ -557,7 +564,7 @@ mod tests {
         let result_headers = result.unwrap();
         assert_eq!(
             result_headers.get("authorization"),
-            Some(&"Bearer token".to_string())
+            Some(&"Bearer token".to_owned())
         );
     }
 
@@ -578,13 +585,13 @@ mod tests {
     #[cfg(feature = "otel")]
     fn test_build_metadata_from_cfg_with_headers() {
         let mut headers = HashMap::new();
-        headers.insert("authorization".to_string(), "Bearer token".to_string());
+        headers.insert("authorization".to_owned(), "Bearer token".to_owned());
 
         let cfg = TracingConfig {
             enabled: true,
             exporter: Some(Exporter {
-                kind: Some("otlp_grpc".to_string()),
-                endpoint: Some("http://localhost:4317".to_string()),
+                kind: Some("otlp_grpc".to_owned()),
+                endpoint: Some("http://localhost:4317".to_owned()),
                 headers: Some(headers.clone()),
                 timeout_ms: None,
             }),
@@ -601,14 +608,14 @@ mod tests {
     #[cfg(feature = "otel")]
     fn test_build_metadata_multiple_headers() {
         let mut headers = HashMap::new();
-        headers.insert("authorization".to_string(), "Bearer token".to_string());
-        headers.insert("x-custom-header".to_string(), "custom-value".to_string());
+        headers.insert("authorization".to_owned(), "Bearer token".to_owned());
+        headers.insert("x-custom-header".to_owned(), "custom-value".to_owned());
 
         let cfg = TracingConfig {
             enabled: true,
             exporter: Some(Exporter {
-                kind: Some("otlp_grpc".to_string()),
-                endpoint: Some("http://localhost:4317".to_string()),
+                kind: Some("otlp_grpc".to_owned()),
+                endpoint: Some("http://localhost:4317".to_owned()),
                 headers: Some(headers.clone()),
                 timeout_ms: None,
             }),
@@ -625,17 +632,14 @@ mod tests {
     #[cfg(feature = "otel")]
     fn test_build_metadata_invalid_header_name_skipped() {
         let mut headers = HashMap::new();
-        headers.insert("valid-header".to_string(), "value1".to_string());
-        headers.insert(
-            "invalid header with spaces".to_string(),
-            "value2".to_string(),
-        );
+        headers.insert("valid-header".to_owned(), "value1".to_owned());
+        headers.insert("invalid header with spaces".to_owned(), "value2".to_owned());
 
         let cfg = TracingConfig {
             enabled: true,
             exporter: Some(Exporter {
-                kind: Some("otlp_grpc".to_string()),
-                endpoint: Some("http://localhost:4317".to_string()),
+                kind: Some("otlp_grpc".to_owned()),
+                endpoint: Some("http://localhost:4317".to_owned()),
                 headers: Some(headers.clone()),
                 timeout_ms: None,
             }),

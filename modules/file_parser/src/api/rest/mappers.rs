@@ -20,7 +20,7 @@ impl From<ir::ParsedDocument> for ParsedDocumentDto {
             title: doc.title,
             language: doc.language,
             meta: doc.meta.into(),
-            blocks: doc.blocks.into_iter().map(|b| b.into()).collect(),
+            blocks: doc.blocks.into_iter().map(Into::into).collect(),
         }
     }
 }
@@ -89,7 +89,7 @@ impl From<ir::Inline> for InlineDto {
 impl From<ir::TableCell> for TableCellDto {
     fn from(cell: ir::TableCell) -> Self {
         TableCellDto {
-            blocks: cell.blocks.into_iter().map(|b| b.into()).collect(),
+            blocks: cell.blocks.into_iter().map(Into::into).collect(),
         }
     }
 }
@@ -98,7 +98,7 @@ impl From<ir::TableRow> for TableRowDto {
     fn from(row: ir::TableRow) -> Self {
         TableRowDto {
             is_header: row.is_header,
-            cells: row.cells.into_iter().map(|c| c.into()).collect(),
+            cells: row.cells.into_iter().map(Into::into).collect(),
         }
     }
 }
@@ -106,7 +106,7 @@ impl From<ir::TableRow> for TableRowDto {
 impl From<ir::TableBlock> for TableBlockDto {
     fn from(table: ir::TableBlock) -> Self {
         TableBlockDto {
-            rows: table.rows.into_iter().map(|r| r.into()).collect(),
+            rows: table.rows.into_iter().map(Into::into).collect(),
         }
     }
 }
@@ -116,10 +116,10 @@ impl From<ir::ParsedBlock> for ParsedBlockDto {
         match block {
             ir::ParsedBlock::Heading { level, inlines } => ParsedBlockDto::Heading {
                 level,
-                inlines: inlines.into_iter().map(|i| i.into()).collect(),
+                inlines: inlines.into_iter().map(Into::into).collect(),
             },
             ir::ParsedBlock::Paragraph { inlines } => ParsedBlockDto::Paragraph {
-                inlines: inlines.into_iter().map(|i| i.into()).collect(),
+                inlines: inlines.into_iter().map(Into::into).collect(),
             },
             ir::ParsedBlock::ListItem {
                 level,
@@ -128,7 +128,7 @@ impl From<ir::ParsedBlock> for ParsedBlockDto {
             } => ParsedBlockDto::ListItem {
                 level,
                 ordered,
-                blocks: blocks.into_iter().map(|b| b.into()).collect(),
+                blocks: blocks.into_iter().map(Into::into).collect(),
             },
             ir::ParsedBlock::CodeBlock { language, code } => {
                 ParsedBlockDto::CodeBlock { language, code }
@@ -137,7 +137,7 @@ impl From<ir::ParsedBlock> for ParsedBlockDto {
                 table: table.into(),
             },
             ir::ParsedBlock::Quote { blocks } => ParsedBlockDto::Quote {
-                blocks: blocks.into_iter().map(|b| b.into()).collect(),
+                blocks: blocks.into_iter().map(Into::into).collect(),
             },
             ir::ParsedBlock::HorizontalRule => ParsedBlockDto::HorizontalRule,
             ir::ParsedBlock::Image { alt, title, src } => ParsedBlockDto::Image { alt, title, src },

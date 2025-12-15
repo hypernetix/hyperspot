@@ -255,7 +255,7 @@ impl Service {
 
     fn validate_email(email: &str) -> Result<(), DomainError> {
         if email.is_empty() || !email.contains('@') || !email.contains('.') {
-            return Err(DomainError::invalid_email(email.to_string()));
+            return Err(DomainError::invalid_email(email.to_owned()));
         }
         Ok(())
     }

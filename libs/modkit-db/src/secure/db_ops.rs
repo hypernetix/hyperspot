@@ -7,7 +7,7 @@ use crate::secure::{AccessScope, ScopableEntity, Scoped, Unscoped};
 
 /// Secure insert helper for Scopable entities.
 ///
-/// This helper performs a standard `INSERT` through SeaORM but wraps database
+/// This helper performs a standard `INSERT` through `SeaORM` but wraps database
 /// errors into a unified `ScopeError` type for consistent error handling across
 /// secure data-access code. It does **not** enforce any authorization or tenant
 /// checks on its own.
@@ -19,12 +19,12 @@ use crate::secure::{AccessScope, ScopableEntity, Scoped, Unscoped};
 /// - Callers are responsible for:
 ///   - Setting all required fields before calling.
 ///   - Validating that the operation is authorized within the current
-///     `SecurityCtx` (e.g., verifying tenant_id or resource ownership).
+///     `SecurityCtx` (e.g., verifying `tenant_id` or resource ownership).
 ///
 /// # Behavior by Entity Type
 ///
 /// ## Tenant-scoped entities (have `tenant_col`)
-/// - Must have a valid, non-empty `tenant_id` set in the ActiveModel before insert.
+/// - Must have a valid, non-empty `tenant_id` set in the `ActiveModel` before insert.
 /// - The `tenant_id` should come from the request payload or be validated against
 ///   `SecurityCtx` by the service layer before calling this helper.
 ///
@@ -79,11 +79,14 @@ where
 
 /// Helper to validate a tenant ID is in the scope.
 ///
-/// Use this when manually setting tenant_id in ActiveModels to ensure
+/// Use this when manually setting `tenant_id` in `ActiveModels` to ensure
 /// the value matches the security scope.
+///
+/// # Errors
+/// Returns `ScopeError::Invalid` if the tenant ID is not in the scope.
 pub fn validate_tenant_in_scope(
     tenant_id: uuid::Uuid,
-    scope: &crate::secure::AccessScope,
+    scope: &AccessScope,
 ) -> Result<(), ScopeError> {
     if scope.tenant_ids().contains(&tenant_id) {
         Ok(())
@@ -94,7 +97,7 @@ pub fn validate_tenant_in_scope(
     }
 }
 
-/// A type-safe wrapper around SeaORM's `UpdateMany` that enforces scoping.
+/// A type-safe wrapper around `SeaORM`'s `UpdateMany` that enforces scoping.
 ///
 /// This wrapper uses the typestate pattern to ensure that update operations
 /// cannot be executed without first applying access control via `.scope_with()`.
@@ -116,7 +119,7 @@ pub struct SecureUpdateMany<E: EntityTrait, S> {
     pub(crate) _state: PhantomData<S>,
 }
 
-/// Extension trait to convert a regular SeaORM `UpdateMany` into a `SecureUpdateMany`.
+/// Extension trait to convert a regular `SeaORM` `UpdateMany` into a `SecureUpdateMany`.
 pub trait SecureUpdateExt<E: EntityTrait>: Sized {
     /// Convert this update operation into a secure (unscoped) update.
     /// You must call `.scope_with()` before executing.
@@ -149,6 +152,7 @@ where
     /// - Resources only → update only specified resource IDs
     /// - Both → AND them together
     ///
+    #[must_use]
     pub fn scope_with(self, scope: &AccessScope) -> SecureUpdateMany<E, Scoped> {
         let cond = build_scope_condition::<E>(scope);
         SecureUpdateMany {
@@ -175,17 +179,18 @@ where
         Ok(self.inner.exec(conn).await?)
     }
 
-    /// Unwrap the inner SeaORM `UpdateMany` for advanced use cases.
+    /// Unwrap the inner `SeaORM` `UpdateMany` for advanced use cases.
     ///
     /// # Safety
     /// The caller must ensure they don't remove or bypass the security
     /// conditions that were applied during `.scope_with()`.
+    #[must_use]
     pub fn into_inner(self) -> sea_orm::UpdateMany<E> {
         self.inner
     }
 }
 
-/// A type-safe wrapper around SeaORM's `DeleteMany` that enforces scoping.
+/// A type-safe wrapper around `SeaORM`'s `DeleteMany` that enforces scoping.
 ///
 /// This wrapper uses the typestate pattern to ensure that delete operations
 /// cannot be executed without first applying access control via `.scope_with()`.
@@ -207,7 +212,7 @@ pub struct SecureDeleteMany<E: EntityTrait, S> {
     pub(crate) _state: PhantomData<S>,
 }
 
-/// Extension trait to convert a regular SeaORM `DeleteMany` into a `SecureDeleteMany`.
+/// Extension trait to convert a regular `SeaORM` `DeleteMany` into a `SecureDeleteMany`.
 pub trait SecureDeleteExt<E: EntityTrait>: Sized {
     /// Convert this delete operation into a secure (unscoped) delete.
     /// You must call `.scope_with()` before executing.
@@ -240,6 +245,7 @@ where
     /// - Resources only → delete only specified resource IDs
     /// - Both → AND them together
     ///
+    #[must_use]
     pub fn scope_with(self, scope: &AccessScope) -> SecureDeleteMany<E, Scoped> {
         let cond = build_scope_condition::<E>(scope);
         SecureDeleteMany {
@@ -266,11 +272,12 @@ where
         Ok(self.inner.exec(conn).await?)
     }
 
-    /// Unwrap the inner SeaORM `DeleteMany` for advanced use cases.
+    /// Unwrap the inner `SeaORM` `DeleteMany` for advanced use cases.
     ///
     /// # Safety
     /// The caller must ensure they don't remove or bypass the security
     /// conditions that were applied during `.scope_with()`.
+    #[must_use]
     pub fn into_inner(self) -> sea_orm::DeleteMany<E> {
         self.inner
     }

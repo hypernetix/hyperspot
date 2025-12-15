@@ -10,6 +10,7 @@ use crate::domain::parser::FileParserBackend;
 pub struct StubParser;
 
 impl StubParser {
+    #[must_use]
     pub fn new() -> Self {
         Self
     }
@@ -37,7 +38,7 @@ impl FileParserBackend for StubParser {
     ) -> Result<crate::domain::ir::ParsedDocument, DomainError> {
         let content = tokio::fs::read(path)
             .await
-            .map_err(|e| DomainError::io_error(format!("Failed to read file: {}", e)))?;
+            .map_err(|e| DomainError::io_error(format!("Failed to read file: {e}")))?;
 
         let bytes = bytes::Bytes::from(content);
         let file_name = path
@@ -63,7 +64,7 @@ impl FileParserBackend for StubParser {
             file_name,
             &bytes,
             ParsedSource::Uploaded {
-                original_name: file_name.to_string(),
+                original_name: file_name.to_owned(),
             },
         ))
     }

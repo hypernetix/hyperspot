@@ -32,6 +32,7 @@ pub enum ParsedSource {
 
 /// Inline-level text styling
 #[derive(Debug, Clone, PartialEq, Default)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct InlineStyle {
     pub bold: bool,
     pub italic: bool,
@@ -144,7 +145,8 @@ pub enum ParsedBlock {
     PageBreak,
 }
 
-/// Builder for constructing ParsedDocument in a fluent style
+/// Builder for constructing `ParsedDocument` in a fluent style
+#[must_use]
 pub struct DocumentBuilder {
     id: Option<Uuid>,
     title: Option<String>,
@@ -229,7 +231,8 @@ impl DocumentBuilder {
         self
     }
 
-    /// Build the ParsedDocument
+    /// Build the `ParsedDocument`
+    #[must_use]
     pub fn build(self) -> ParsedDocument {
         ParsedDocument {
             id: self.id.or_else(|| Some(Uuid::now_v7())),

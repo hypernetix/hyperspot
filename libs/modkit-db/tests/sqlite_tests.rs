@@ -33,12 +33,11 @@ async fn test_sqlite_relative_path_resolution() {
             let expected_path = temp_dir.path().join("test_module").join(&db_filename);
             assert!(
                 expected_path.exists(),
-                "Database file should be created at {:?}",
-                expected_path
+                "Database file should be created at {expected_path:?}"
             );
         }
         Err(err) => {
-            panic!("Expected successful SQLite connection, got: {:?}", err);
+            panic!("Expected successful SQLite connection, got: {err:?}");
         }
     }
 }
@@ -69,12 +68,11 @@ async fn test_sqlite_absolute_path() {
             // Verify the database file was created at the absolute path
             assert!(
                 db_path.exists(),
-                "Database file should be created at {:?}",
-                db_path
+                "Database file should be created at {db_path:?}"
             );
         }
         Err(err) => {
-            panic!("Expected successful SQLite connection, got: {:?}", err);
+            panic!("Expected successful SQLite connection, got: {err:?}");
         }
     }
 }
@@ -118,8 +116,7 @@ async fn test_pragma_precedence() {
             // Should not be a PRAGMA error if precedence worked correctly
             assert!(
                 !error_msg.contains("PRAGMA"),
-                "PRAGMA error suggests precedence failed: {}",
-                error_msg
+                "PRAGMA error suggests precedence failed: {error_msg}"
             );
         }
     }
@@ -154,7 +151,7 @@ async fn test_invalid_pragma_values() {
         assert_eq!(key, "synchronous");
         assert!(message.contains("must be OFF/NORMAL/FULL/EXTRA"));
     } else {
-        panic!("Expected InvalidSqlitePragma error, got: {:?}", result);
+        panic!("Expected InvalidSqlitePragma error, got: {result:?}");
     }
 }
 
@@ -186,7 +183,7 @@ async fn test_unknown_pragma_parameters() {
     if let Err(DbError::UnknownSqlitePragma(key)) = result {
         assert_eq!(key, "unknown_pragma");
     } else {
-        panic!("Expected UnknownSqlitePragma error, got: {:?}", result);
+        panic!("Expected UnknownSqlitePragma error, got: {result:?}");
     }
 }
 
@@ -219,8 +216,7 @@ async fn test_auto_provision_creates_directories() {
             // Verify the nested directories were created
             assert!(
                 nested_path.exists(),
-                "Nested directories should be auto-created: {:?}",
-                nested_path
+                "Nested directories should be auto-created: {nested_path:?}"
             );
             assert!(
                 nested_path.join("test.db").exists(),
@@ -228,10 +224,7 @@ async fn test_auto_provision_creates_directories() {
             );
         }
         Err(err) => {
-            panic!(
-                "Expected successful connection with auto-provision, got: {:?}",
-                err
-            );
+            panic!("Expected successful connection with auto-provision, got: {err:?}");
         }
     }
 }
@@ -269,13 +262,12 @@ async fn test_auto_provision_disabled() {
                 || error_msg.contains("directory")
                 || error_msg.contains("system cannot find the path")
                 || error_msg.contains("Directory does not exist and auto_provision is disabled"),
-            "Expected I/O error, got: {}",
-            error_msg
+            "Expected I/O error, got: {error_msg}"
         );
     }
 }
 
-/// Test special SQLite DSN formats (:memory:, mode=memory).
+/// Test special `SQLite` DSN formats (:memory:, mode=memory).
 #[tokio::test]
 #[cfg(feature = "sqlite")]
 async fn test_sqlite_memory_database() {
@@ -304,10 +296,7 @@ async fn test_sqlite_memory_database() {
             panic!("Expected database handle for in-memory SQLite");
         }
         Err(err) => {
-            panic!(
-                "Expected successful in-memory SQLite connection, got: {:?}",
-                err
-            );
+            panic!("Expected successful in-memory SQLite connection, got: {err:?}");
         }
     }
 }
@@ -340,10 +329,7 @@ async fn test_sqlite_shared_memory_database() {
             panic!("Expected database handle for shared memory SQLite");
         }
         Err(err) => {
-            panic!(
-                "Expected successful shared memory SQLite connection, got: {:?}",
-                err
-            );
+            panic!("Expected successful shared memory SQLite connection, got: {err:?}");
         }
     }
 }
@@ -379,10 +365,7 @@ async fn test_wal_pragma_validation() {
                 // Valid WAL value - connection should succeed
             }
             Err(err) => {
-                panic!(
-                    "Expected successful connection with WAL value '{}', got: {:?}",
-                    wal_value, err
-                );
+                panic!("Expected successful connection with WAL value '{wal_value}', got: {err:?}");
             }
         }
     }
@@ -413,11 +396,11 @@ async fn test_wal_pragma_validation() {
         assert_eq!(key, "wal");
         assert!(message.contains("true/false/1/0"));
     } else {
-        panic!("Expected InvalidSqlitePragma error, got: {:?}", result);
+        panic!("Expected InvalidSqlitePragma error, got: {result:?}");
     }
 }
 
-/// Test busy_timeout pragma validation.
+/// Test `busy_timeout` pragma validation.
 #[tokio::test]
 #[cfg(feature = "sqlite")]
 async fn test_busy_timeout_pragma_validation() {
@@ -449,8 +432,7 @@ async fn test_busy_timeout_pragma_validation() {
             }
             Err(err) => {
                 panic!(
-                    "Expected successful connection with timeout '{}', got: {:?}",
-                    timeout_value, err
+                    "Expected successful connection with timeout '{timeout_value}', got: {err:?}"
                 );
             }
         }
@@ -482,7 +464,7 @@ async fn test_busy_timeout_pragma_validation() {
         assert_eq!(key, "busy_timeout");
         assert!(message.contains("non-negative"));
     } else {
-        panic!("Expected InvalidSqlitePragma error, got: {:?}", result);
+        panic!("Expected InvalidSqlitePragma error, got: {result:?}");
     }
 
     // Test non-numeric timeout value
@@ -511,6 +493,6 @@ async fn test_busy_timeout_pragma_validation() {
         assert_eq!(key, "busy_timeout");
         assert!(message.contains("integer"));
     } else {
-        panic!("Expected InvalidSqlitePragma error, got: {:?}", result);
+        panic!("Expected InvalidSqlitePragma error, got: {result:?}");
     }
 }

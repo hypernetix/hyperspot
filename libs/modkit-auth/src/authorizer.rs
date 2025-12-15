@@ -57,7 +57,7 @@ mod tests {
     fn mock_claims(roles: Vec<String>) -> Claims {
         Claims {
             sub: Uuid::new_v4(),
-            issuer: "test".to_string(),
+            issuer: "test".to_owned(),
             audiences: vec![],
             expires_at: None,
             not_before: None,
@@ -70,7 +70,7 @@ mod tests {
     #[tokio::test]
     async fn test_exact_role_match() {
         let auth = RoleAuthorizer;
-        let claims = mock_claims(vec!["users:read".to_string()]);
+        let claims = mock_claims(vec!["users:read".to_owned()]);
         let req = SecRequirement::new("users", "read");
 
         assert!(auth.check(&claims, &req).await.is_ok());
@@ -79,7 +79,7 @@ mod tests {
     #[tokio::test]
     async fn test_resource_wildcard() {
         let auth = RoleAuthorizer;
-        let claims = mock_claims(vec!["users:*".to_string()]);
+        let claims = mock_claims(vec!["users:*".to_owned()]);
         let req = SecRequirement::new("users", "write");
 
         assert!(auth.check(&claims, &req).await.is_ok());
@@ -88,7 +88,7 @@ mod tests {
     #[tokio::test]
     async fn test_action_wildcard() {
         let auth = RoleAuthorizer;
-        let claims = mock_claims(vec!["*:read".to_string()]);
+        let claims = mock_claims(vec!["*:read".to_owned()]);
         let req = SecRequirement::new("posts", "read");
 
         assert!(auth.check(&claims, &req).await.is_ok());
@@ -97,7 +97,7 @@ mod tests {
     #[tokio::test]
     async fn test_full_wildcard() {
         let auth = RoleAuthorizer;
-        let claims = mock_claims(vec!["*:*".to_string()]);
+        let claims = mock_claims(vec!["*:*".to_owned()]);
         let req = SecRequirement::new("anything", "everything");
 
         assert!(auth.check(&claims, &req).await.is_ok());
@@ -106,7 +106,7 @@ mod tests {
     #[tokio::test]
     async fn test_no_matching_role() {
         let auth = RoleAuthorizer;
-        let claims = mock_claims(vec!["posts:read".to_string()]);
+        let claims = mock_claims(vec!["posts:read".to_owned()]);
         let req = SecRequirement::new("users", "read");
 
         assert!(matches!(

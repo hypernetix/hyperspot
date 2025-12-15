@@ -11,7 +11,7 @@ static VRAM_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
     Regex::new(r"VRAM \(.*\): (\d+) MB").expect("static regex should not panic")
 });
 
-/// Collect GPU information on macOS using system_profiler
+/// Collect GPU information on macOS using `system_profiler`
 pub fn collect_gpu_info() -> Vec<GpuInfo> {
     let Ok(output) = Command::new("system_profiler")
         .arg("SPDisplaysDataType")
@@ -34,7 +34,7 @@ pub fn collect_gpu_info() -> Vec<GpuInfo> {
     for (i, model_cap) in model_matches.iter().enumerate() {
         if let Some(model) = model_cap.get(1) {
             let mut gpu = GpuInfo {
-                model: model.as_str().trim().to_string(),
+                model: model.as_str().trim().to_owned(),
                 cores: None,
                 total_memory_mb: None,
                 used_memory_mb: None,

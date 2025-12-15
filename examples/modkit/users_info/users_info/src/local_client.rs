@@ -1,4 +1,4 @@
-//! Local implementation of UsersInfoApi.
+//! Local implementation of `UsersInfoApi`.
 //!
 //! This client is used for inter-module communication within the same process.
 //! It delegates to the domain service and converts errors to SDK error types.
@@ -13,10 +13,10 @@ use user_info_sdk::{NewUser, UpdateUserRequest, User, UsersInfoApi, UsersInfoErr
 
 use crate::domain::service::Service;
 
-/// Local implementation of the UsersInfoApi trait that delegates to the domain service.
+/// Local implementation of the `UsersInfoApi` trait that delegates to the domain service.
 ///
 /// This client is used for inter-module communication within the same process.
-/// It accepts a SecurityCtx from the caller and forwards it directly to the domain service,
+/// It accepts a `SecurityCtx` from the caller and forwards it directly to the domain service,
 /// ensuring proper authorization and access control throughout the call chain.
 pub struct UsersInfoLocalClient {
     service: Arc<Service>,
@@ -24,6 +24,7 @@ pub struct UsersInfoLocalClient {
 
 impl UsersInfoLocalClient {
     /// Create a new local client wrapping the domain service.
+    #[must_use]
     pub fn new(service: Arc<Service>) -> Self {
         Self { service }
     }

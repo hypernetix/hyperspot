@@ -1,9 +1,9 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-//! Integration tests for the API Ingress router and new OperationBuilder
+//! Integration tests for the API Ingress router and new `OperationBuilder`
 //!
-//! This test demonstrates that the new type-safe OperationBuilder works
-//! correctly with the API Ingress module for routing and OpenAPI generation.
+//! This test demonstrates that the new type-safe `OperationBuilder` works
+//! correctly with the API Ingress module for routing and `OpenAPI` generation.
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -20,7 +20,7 @@ use std::sync::Arc;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-/// Helper to create a test ModuleCtx
+/// Helper to create a test `ModuleCtx`
 struct EmptyConfigProvider;
 
 impl ConfigProvider for EmptyConfigProvider {
@@ -57,7 +57,7 @@ pub struct CreateUserRequest {
     pub email: String,
 }
 
-/// Test module that demonstrates the new OperationBuilder API
+/// Test module that demonstrates the new `OperationBuilder` API
 pub struct TestUsersModule;
 
 #[async_trait]
@@ -150,13 +150,13 @@ async fn list_users_handler() -> Json<Vec<User>> {
     Json(vec![
         User {
             id: 1,
-            name: "Alice Test".to_string(),
-            email: "alice@test.com".to_string(),
+            name: "Alice Test".to_owned(),
+            email: "alice@test.com".to_owned(),
         },
         User {
             id: 2,
-            name: "Bob Test".to_string(),
-            email: "bob@test.com".to_string(),
+            name: "Bob Test".to_owned(),
+            email: "bob@test.com".to_owned(),
         },
     ])
 }
@@ -164,8 +164,8 @@ async fn list_users_handler() -> Json<Vec<User>> {
 async fn get_user_handler(Path(id): Path<u32>) -> Json<User> {
     Json(User {
         id,
-        name: "Test User".to_string(),
-        email: "test@example.com".to_string(),
+        name: "Test User".to_owned(),
+        email: "test@example.com".to_owned(),
     })
 }
 

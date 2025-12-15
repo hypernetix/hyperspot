@@ -13,7 +13,7 @@ fn bytes_to_gb(bytes: u64) -> f64 {
     bytes as f64 / BYTES_PER_GB
 }
 
-/// Builder for creating SysCap instances with reduced parameter count
+/// Builder for creating `SysCap` instances with reduced parameter count
 struct SysCapBuilder {
     key: String,
     category: String,
@@ -91,7 +91,7 @@ pub struct SysCapCollector {
 }
 
 impl SysCapCollector {
-    /// Create a new SysCapCollector with a shared SysInfoCollector reference
+    /// Create a new `SysCapCollector` with a shared `SysInfoCollector` reference
     pub fn new(sysinfo_collector: Arc<SysInfoCollector>) -> Self {
         Self { sysinfo_collector }
     }
@@ -132,12 +132,12 @@ impl SysCapCollector {
         let arch = &sysinfo.os.arch;
         caps.push(
             SysCapBuilder::new(
-                format!("hardware:{}", arch),
-                "hardware".to_string(),
+                format!("hardware:{arch}"),
+                "hardware".to_owned(),
                 arch.clone(),
                 arch.to_uppercase(),
             )
-            .details(Some(format!("{} architecture detected", arch)))
+            .details(Some(format!("{arch} architecture detected")))
             .cache_ttl_secs(3600) // 1 hour cache (never changes)
             .build(),
         );
@@ -146,13 +146,13 @@ impl SysCapCollector {
         let total_gb = bytes_to_gb(sysinfo.memory.total_bytes);
         caps.push(
             SysCapBuilder::new(
-                "hardware:ram".to_string(),
-                "hardware".to_string(),
-                "ram".to_string(),
-                "RAM".to_string(),
+                "hardware:ram".to_owned(),
+                "hardware".to_owned(),
+                "ram".to_owned(),
+                "RAM".to_owned(),
             )
             .amount(Some(total_gb))
-            .amount_dimension(Some("GB".to_string()))
+            .amount_dimension(Some("GB".to_owned()))
             .details(Some(format!(
                 "Total: {:.2} GB, Used: {}%",
                 total_gb, sysinfo.memory.used_percent
@@ -164,14 +164,14 @@ impl SysCapCollector {
         // CPU capability from sysinfo
         caps.push(
             SysCapBuilder::new(
-                "hardware:cpu".to_string(),
-                "hardware".to_string(),
-                "cpu".to_string(),
-                "CPU".to_string(),
+                "hardware:cpu".to_owned(),
+                "hardware".to_owned(),
+                "cpu".to_owned(),
+                "CPU".to_owned(),
             )
             .version(Some(sysinfo.cpu.model.clone()))
             .amount(Some(f64::from(sysinfo.cpu.cores)))
-            .amount_dimension(Some("cores".to_string()))
+            .amount_dimension(Some("cores".to_owned()))
             .details(Some(format!(
                 "{} with {} cores @ {:.0} MHz",
                 sysinfo.cpu.model, sysinfo.cpu.cores, sysinfo.cpu.frequency_mhz
@@ -189,16 +189,16 @@ impl SysCapCollector {
         let os = std::env::consts::OS;
         caps.push(
             SysCapBuilder::new(
-                format!("os:{}", os),
-                "os".to_string(),
-                os.to_string(),
+                format!("os:{os}"),
+                "os".to_owned(),
+                os.to_owned(),
                 match os {
                     "macos" => "macOS",
                     "linux" => "Linux",
                     "windows" => "Windows",
                     _ => os,
                 }
-                .to_string(),
+                .to_owned(),
             )
             .version(Some(sysinfo.os.version.clone()))
             .details(Some(format!(
@@ -217,32 +217,32 @@ impl SysCapCollector {
 
         for (i, gpu) in sysinfo.gpus.iter().enumerate() {
             let gpu_key = if i == 0 {
-                "hardware:gpu".to_string()
+                "hardware:gpu".to_owned()
             } else {
-                format!("hardware:gpu{}", i)
+                format!("hardware:gpu{i}")
             };
 
             let mut details = format!("Model: {}", gpu.model);
             if let Some(vram) = gpu.total_memory_mb {
                 use std::fmt::Write;
-                let _ = write!(details, ", VRAM: {:.0} MB", vram);
+                let _ = write!(details, ", VRAM: {vram:.0} MB");
             }
             if let Some(cores) = gpu.cores {
                 use std::fmt::Write;
-                let _ = write!(details, ", Cores: {}", cores);
+                let _ = write!(details, ", Cores: {cores}");
             }
 
             caps.push(
                 SysCapBuilder::new(
                     gpu_key,
-                    "hardware".to_string(),
+                    "hardware".to_owned(),
                     format!("gpu{}", if i == 0 { String::new() } else { i.to_string() }),
-                    "GPU".to_string(),
+                    "GPU".to_owned(),
                 )
                 .version(Some(gpu.model.clone()))
                 .amount(gpu.total_memory_mb)
                 .amount_dimension(if gpu.total_memory_mb.is_some() {
-                    Some("MB".to_string())
+                    Some("MB".to_owned())
                 } else {
                     None
                 })
@@ -267,13 +267,13 @@ impl SysCapCollector {
 
             caps.push(
                 SysCapBuilder::new(
-                    "hardware:battery".to_string(),
-                    "hardware".to_string(),
-                    "battery".to_string(),
-                    "Battery".to_string(),
+                    "hardware:battery".to_owned(),
+                    "hardware".to_owned(),
+                    "battery".to_owned(),
+                    "Battery".to_owned(),
                 )
                 .amount(Some(f64::from(battery.percentage)))
-                .amount_dimension(Some("percent".to_string()))
+                .amount_dimension(Some("percent".to_owned()))
                 .details(Some(format!(
                     "Status: {}, Level: {}%",
                     status, battery.percentage

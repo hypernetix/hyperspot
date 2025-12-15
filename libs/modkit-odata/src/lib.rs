@@ -60,6 +60,7 @@ pub enum SortDir {
 
 impl SortDir {
     /// Reverse the sort direction (Asc <-> Desc)
+    #[must_use]
     pub fn reverse(self) -> Self {
         match self {
             SortDir::Asc => SortDir::Desc,
@@ -75,6 +76,7 @@ pub struct OrderKey {
 }
 
 #[derive(Clone, Debug, Default)]
+#[must_use]
 pub struct ODataOrderBy(pub Vec<OrderKey>);
 
 impl ODataOrderBy {
@@ -82,11 +84,13 @@ impl ODataOrderBy {
         Self(vec![])
     }
 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
 
     /// Render as "+f1,-f2" for cursor.s
+    #[must_use]
     pub fn to_signed_tokens(&self) -> String {
         self.0
             .iter()
@@ -101,8 +105,11 @@ impl ODataOrderBy {
             .join(",")
     }
 
-    /// Parse signed tokens back to ODataOrderBy (e.g. "+a,-b" -> ODataOrderBy)
+    /// Parse signed tokens back to `ODataOrderBy` (e.g. "+a,-b" -> `ODataOrderBy`)
     /// Returns Error for stricter validation used in cursor processing
+    ///
+    /// # Errors
+    /// Returns `Error::InvalidOrderByField` if the input is empty or contains invalid field names.
     pub fn from_signed_tokens(signed: &str) -> Result<Self, Error> {
         let mut out = Vec::new();
         for seg in signed.split(',') {
@@ -116,10 +123,10 @@ impl ODataOrderBy {
                 _ => (SortDir::Asc, seg), // default '+'
             };
             if name.is_empty() {
-                return Err(Error::InvalidOrderByField(seg.to_string()));
+                return Err(Error::InvalidOrderByField(seg.to_owned()));
             }
             out.push(OrderKey {
-                field: name.to_string(),
+                field: name.to_owned(),
                 dir,
             });
         }
@@ -130,6 +137,7 @@ impl ODataOrderBy {
     }
 
     /// Check equality against signed token list (e.g. "+a,-b")
+    #[must_use]
     pub fn equals_signed_tokens(&self, signed: &str) -> bool {
         let parse = |t: &str| -> Option<(String, SortDir)> {
             let t = t.trim();
@@ -144,7 +152,7 @@ impl ODataOrderBy {
             if name.is_empty() {
                 return None;
             }
-            Some((name.to_string(), dir))
+            Some((name.to_owned(), dir))
         };
         let theirs: Vec<_> = signed.split(',').filter_map(parse).collect();
         if theirs.len() != self.0.len() {
@@ -160,7 +168,7 @@ impl ODataOrderBy {
     pub fn ensure_tiebreaker(mut self, tiebreaker: &str, dir: SortDir) -> Self {
         if !self.0.iter().any(|k| k.field == tiebreaker) {
             self.0.push(OrderKey {
-                field: tiebreaker.to_string(),
+                field: tiebreaker.to_owned(),
                 dir,
             });
         }
@@ -199,7 +207,7 @@ impl std::fmt::Display for ODataOrderBy {
     }
 }
 
-/// Unified error type for all OData operations
+/// Unified error type for all `OData` operations
 ///
 /// This centralizes all OData-related errors including parsing, validation,
 /// pagination, and cursor operations into a single error type using thiserror.
@@ -260,7 +268,11 @@ pub enum Error {
     Db(String),
 }
 
-/// Validate cursor consistency against effective order and filter hash
+/// Validate cursor consistency against effective order and filter hash.
+///
+/// # Errors
+/// Returns `Error::OrderMismatch` if the cursor's sort order doesn't match the effective order.
+/// Returns `Error::FilterMismatch` if the cursor's filter hash doesn't match the effective filter.
 pub fn validate_cursor_against(
     cursor: &CursorV1,
     effective_order: &ODataOrderBy,
@@ -288,6 +300,10 @@ pub struct CursorV1 {
 }
 
 impl CursorV1 {
+    /// Encode cursor to a base64url string.
+    ///
+    /// # Errors
+    /// Returns a JSON serialization error if encoding fails.
     pub fn encode(&self) -> serde_json::Result<String> {
         #[derive(serde::Serialize)]
         struct Wire<'a> {
@@ -314,7 +330,13 @@ impl CursorV1 {
         serde_json::to_vec(&w).map(|x| base64_url::encode(&x))
     }
 
-    /// Decode cursor from base64url token
+    /// Decode cursor from base64url token.
+    ///
+    /// # Errors
+    /// Returns `Error::CursorInvalidBase64` if base64 decoding fails.
+    /// Returns `Error::CursorInvalidJson` if JSON parsing fails.
+    /// Returns `Error::CursorInvalidVersion` if the version is unsupported.
+    /// Returns `Error::CursorInvalidDirection` if the direction field is invalid.
     pub fn decode(token: &str) -> Result<Self, Error> {
         #[derive(serde::Deserialize)]
         struct Wire {
@@ -329,7 +351,7 @@ impl CursorV1 {
         }
 
         fn default_direction() -> String {
-            "fwd".to_string()
+            "fwd".to_owned()
         }
 
         let bytes = base64_url::decode(token).map_err(|_| Error::CursorInvalidBase64)?;
@@ -377,6 +399,7 @@ mod base64_url {
 
 // The unified ODataQuery struct as single source of truth
 #[derive(Clone, Debug, Default)]
+#[must_use]
 pub struct ODataQuery {
     pub filter: Option<Box<ast::Expr>>,
     pub order: ODataOrderBy,
@@ -416,16 +439,19 @@ impl ODataQuery {
     }
 
     /// Get filter as AST
+    #[must_use]
     pub fn filter(&self) -> Option<&ast::Expr> {
         self.filter.as_deref()
     }
 
     /// Check if filter is present
+    #[must_use]
     pub fn has_filter(&self) -> bool {
         self.filter.is_some()
     }
 
     /// Extract filter into AST
+    #[must_use]
     pub fn into_filter(self) -> Option<ast::Expr> {
         self.filter.map(|b| *b)
     }
@@ -490,11 +516,9 @@ mod convert_odata_params {
                 }
                 In(l, list) => Expr::In(
                     Box::new((*l).into()),
-                    list.into_iter().map(|x| x.into()).collect(),
+                    list.into_iter().map(Into::into).collect(),
                 ),
-                Function(n, args) => {
-                    Expr::Function(n, args.into_iter().map(|x| x.into()).collect())
-                }
+                Function(n, args) => Expr::Function(n, args.into_iter().map(Into::into).collect()),
                 Identifier(s) => Expr::Identifier(s),
                 Value(v) => Expr::Value(v.into()),
             }

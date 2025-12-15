@@ -1,16 +1,16 @@
-//! Shared FieldKind enum for OData type system.
+//! Shared `FieldKind` enum for `OData` type system.
 //!
 //! This enum represents the logical types of fields that can be used in
-//! OData filters, orderby, and pagination. It is used by both the legacy
+//! `OData` filters, orderby, and pagination. It is used by both the legacy
 //! FieldMap-based code and the new type-safe FilterField-based code.
 
 use std::fmt;
 
-/// Logical field types supported in OData operations.
+/// Logical field types supported in `OData` operations.
 ///
 /// This enum describes the data type of a field for the purpose of:
-/// - Value coercion in filters (converting OData values to SeaORM values)
-/// - Type validation in the FilterField trait
+/// - Value coercion in filters (converting `OData` values to `SeaORM` values)
+/// - Type validation in the `FilterField` trait
 /// - Cursor value encoding/decoding
 ///
 /// # Example

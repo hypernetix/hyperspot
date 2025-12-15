@@ -10,7 +10,7 @@ use crate::runtime::{GrpcInstallerStore, ModuleManager};
 /// This gives system modules access to runtime internals like the module manager
 /// and gRPC installer store. Only modules with the "system" capability receive this.
 ///
-/// Normal user modules do not see SystemContext - they only get ModuleCtx during init.
+/// Normal user modules do not see `SystemContext` - they only get `ModuleCtx` during init.
 pub struct SystemContext {
     /// Process-level instance ID (shared by all modules in this process)
     instance_id: Uuid,
@@ -41,6 +41,7 @@ impl SystemContext {
     /// This is a unique identifier for this process instance, shared by all modules
     /// in the same process. It is generated once at bootstrap.
     #[inline]
+    #[must_use]
     pub fn instance_id(&self) -> Uuid {
         self.instance_id
     }

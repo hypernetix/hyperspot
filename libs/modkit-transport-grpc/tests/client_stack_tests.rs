@@ -212,7 +212,7 @@ fn feature_flags_work() {
 #[test]
 fn config_has_debug_impl() {
     let cfg = GrpcClientConfig::default();
-    let debug_str = format!("{:?}", cfg);
+    let debug_str = format!("{cfg:?}");
 
     // Should contain key fields
     assert!(debug_str.contains("GrpcClientConfig"));
@@ -265,7 +265,7 @@ fn rpc_retry_config_cloning() {
 #[test]
 fn rpc_retry_config_debug() {
     let cfg = RpcRetryConfig::default();
-    let debug_str = format!("{:?}", cfg);
+    let debug_str = format!("{cfg:?}");
 
     assert!(debug_str.contains("RpcRetryConfig"));
 }
@@ -347,14 +347,14 @@ async fn call_with_retry_recovers_from_unavailable() {
     let result = call_with_retry(
         &mut client,
         cfg,
-        "data".to_string(),
+        "data".to_owned(),
         |c, req| {
             let count = c.call_count.fetch_add(1, Ordering::SeqCst) + 1;
             async move {
                 if count < 3 {
                     Err(tonic::Status::unavailable("server overloaded"))
                 } else {
-                    Ok(format!("processed: {}", req))
+                    Ok(format!("processed: {req}"))
                 }
             }
         },

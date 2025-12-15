@@ -34,7 +34,7 @@ impl DbTestConfigProvider {
 
     fn with_db_config(mut self, module_name: &str) -> Self {
         self.configs.insert(
-            module_name.to_string(),
+            module_name.to_owned(),
             serde_json::json!({
                 "database": {
                     "dsn": "sqlite::memory:",

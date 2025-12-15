@@ -10,10 +10,10 @@ use tempfile::TempDir;
 #[tokio::test]
 async fn test_build_db_handle_sqlite_memory() {
     let config = DbConnConfig {
-        dsn: Some("sqlite::memory:".to_string()),
+        dsn: Some("sqlite::memory:".to_owned()),
         params: Some({
             let mut params = HashMap::new();
-            params.insert("journal_mode".to_string(), "WAL".to_string());
+            params.insert("journal_mode".to_owned(), "WAL".to_owned());
             params
         }),
         ..Default::default()
@@ -35,8 +35,8 @@ async fn test_build_db_handle_sqlite_file() {
         path: Some(db_path),
         params: Some({
             let mut params = HashMap::new();
-            params.insert("journal_mode".to_string(), "DELETE".to_string());
-            params.insert("synchronous".to_string(), "NORMAL".to_string());
+            params.insert("journal_mode".to_owned(), "DELETE".to_owned());
+            params.insert("synchronous".to_owned(), "NORMAL".to_owned());
             params
         }),
         ..Default::default()
@@ -55,8 +55,8 @@ async fn test_build_db_handle_env_expansion() {
     std::env::set_var("TEST_DB_PASSWORD", "secret123");
 
     let config = DbConnConfig {
-        dsn: Some("sqlite::memory:".to_string()),
-        password: Some("${TEST_DB_PASSWORD}".to_string()),
+        dsn: Some("sqlite::memory:".to_owned()),
+        password: Some("${TEST_DB_PASSWORD}".to_owned()),
         ..Default::default()
     };
 
@@ -70,8 +70,8 @@ async fn test_build_db_handle_env_expansion() {
 #[tokio::test]
 async fn test_build_db_handle_invalid_env_var() {
     let config = DbConnConfig {
-        dsn: Some("sqlite::memory:".to_string()),
-        password: Some("${NONEXISTENT_VAR}".to_string()),
+        dsn: Some("sqlite::memory:".to_owned()),
+        password: Some("${NONEXISTENT_VAR}".to_owned()),
         ..Default::default()
     };
 
@@ -85,10 +85,10 @@ async fn test_build_db_handle_invalid_env_var() {
 #[tokio::test]
 async fn test_build_db_handle_invalid_sqlite_pragma() {
     let config = DbConnConfig {
-        dsn: Some("sqlite::memory:".to_string()),
+        dsn: Some("sqlite::memory:".to_owned()),
         params: Some({
             let mut params = HashMap::new();
-            params.insert("invalid_pragma".to_string(), "some_value".to_string());
+            params.insert("invalid_pragma".to_owned(), "some_value".to_owned());
             params
         }),
         ..Default::default()
@@ -104,10 +104,10 @@ async fn test_build_db_handle_invalid_sqlite_pragma() {
 #[tokio::test]
 async fn test_build_db_handle_invalid_journal_mode() {
     let config = DbConnConfig {
-        dsn: Some("sqlite::memory:".to_string()),
+        dsn: Some("sqlite::memory:".to_owned()),
         params: Some({
             let mut params = HashMap::new();
-            params.insert("journal_mode".to_string(), "INVALID_MODE".to_string());
+            params.insert("journal_mode".to_owned(), "INVALID_MODE".to_owned());
             params
         }),
         ..Default::default()
@@ -126,7 +126,7 @@ async fn test_build_db_handle_invalid_journal_mode() {
 #[tokio::test]
 async fn test_build_db_handle_pool_config() {
     let config = DbConnConfig {
-        dsn: Some("sqlite::memory:".to_string()),
+        dsn: Some("sqlite::memory:".to_owned()),
         pool: Some(PoolCfg {
             max_conns: Some(5),
             acquire_timeout: Some(Duration::from_secs(10)),
@@ -146,11 +146,11 @@ async fn test_build_db_handle_pool_config() {
 #[tokio::test]
 async fn test_build_db_handle_postgres_missing_dbname() {
     let config = DbConnConfig {
-        server: Some("postgres".to_string()),
-        host: Some("localhost".to_string()),
+        server: Some("postgres".to_owned()),
+        host: Some("localhost".to_owned()),
         port: Some(5432),
-        user: Some("testuser".to_string()),
-        password: Some("testpass".to_string()),
+        user: Some("testuser".to_owned()),
+        password: Some("testpass".to_owned()),
         // Missing dbname
         ..Default::default()
     };
@@ -159,7 +159,7 @@ async fn test_build_db_handle_postgres_missing_dbname() {
     assert!(result.is_err());
 
     let error = result.unwrap_err();
-    println!("Actual error: {}", error);
+    println!("Actual error: {error}");
     assert!(error
         .to_string()
         .contains("dbname is required for PostgreSQL connections"));

@@ -21,7 +21,7 @@ pub struct KeycloakClaimsPlugin {
     /// Name of the tenant claim field (default: "tenants")
     pub tenant_claim: String,
 
-    /// Optional: client ID to extract roles from resource_access
+    /// Optional: client ID to extract roles from `resource_access`
     pub client_roles: Option<String>,
 
     /// Optional: prefix to add to all roles
@@ -31,7 +31,7 @@ pub struct KeycloakClaimsPlugin {
 impl Default for KeycloakClaimsPlugin {
     fn default() -> Self {
         Self {
-            tenant_claim: "tenants".to_string(),
+            tenant_claim: "tenants".to_owned(),
             client_roles: None,
             role_prefix: None,
         }
@@ -58,13 +58,21 @@ impl KeycloakClaimsPlugin {
 
         // 1. Check for top-level "roles" array (simplified format)
         if let Some(Value::Array(arr)) = raw.get("roles") {
-            roles.extend(arr.iter().filter_map(|v| v.as_str()).map(|s| s.to_string()));
+            roles.extend(
+                arr.iter()
+                    .filter_map(|v| v.as_str())
+                    .map(ToString::to_string),
+            );
         }
 
         // 2. Extract from realm_access.roles
         if let Some(Value::Object(realm)) = raw.get("realm_access") {
             if let Some(Value::Array(arr)) = realm.get("roles") {
-                roles.extend(arr.iter().filter_map(|v| v.as_str()).map(|s| s.to_string()));
+                roles.extend(
+                    arr.iter()
+                        .filter_map(|v| v.as_str())
+                        .map(ToString::to_string),
+                );
             }
         }
 
@@ -73,7 +81,11 @@ impl KeycloakClaimsPlugin {
             if let Some(Value::Object(resource_access)) = raw.get("resource_access") {
                 if let Some(Value::Object(client)) = resource_access.get(client_id) {
                     if let Some(Value::Array(arr)) = client.get("roles") {
-                        roles.extend(arr.iter().filter_map(|v| v.as_str()).map(|s| s.to_string()));
+                        roles.extend(
+                            arr.iter()
+                                .filter_map(|v| v.as_str())
+                                .map(ToString::to_string),
+                        );
                     }
                 }
             }
@@ -81,10 +93,7 @@ impl KeycloakClaimsPlugin {
 
         // Apply role prefix if configured
         if let Some(prefix) = &self.role_prefix {
-            roles = roles
-                .into_iter()
-                .map(|r| format!("{}:{}", prefix, r))
-                .collect();
+            roles = roles.into_iter().map(|r| format!("{prefix}:{r}")).collect();
         }
 
         // Deduplicate
@@ -104,13 +113,13 @@ impl ClaimsPlugin for KeycloakClaimsPlugin {
         // 1. Extract subject (required, must be UUID)
         let sub = raw
             .get("sub")
-            .ok_or_else(|| ClaimsError::MissingClaim("sub".to_string()))
+            .ok_or_else(|| ClaimsError::MissingClaim("sub".to_owned()))
             .and_then(|v| parse_uuid_from_value(v, "sub"))?;
 
         // 2. Extract issuer (required)
         let issuer = raw
             .get("iss")
-            .ok_or_else(|| ClaimsError::MissingClaim("iss".to_string()))
+            .ok_or_else(|| ClaimsError::MissingClaim("iss".to_owned()))
             .and_then(|v| extract_string(v, "iss"))?;
 
         // 3. Extract audiences (handle string or array)
@@ -165,17 +174,17 @@ impl ClaimsPlugin for KeycloakClaimsPlugin {
 
         // Add email if present
         if let Some(email) = raw.get("email") {
-            extras.insert("email".to_string(), email.clone());
+            extras.insert("email".to_owned(), email.clone());
         }
 
         // Add preferred_username if present
         if let Some(username) = raw.get("preferred_username") {
-            extras.insert("preferred_username".to_string(), username.clone());
+            extras.insert("preferred_username".to_owned(), username.clone());
         }
 
         // Add name if present
         if let Some(name) = raw.get("name") {
-            extras.insert("name".to_string(), name.clone());
+            extras.insert("name".to_owned(), name.clone());
         }
 
         Ok(Claims {
@@ -192,6 +201,7 @@ impl ClaimsPlugin for KeycloakClaimsPlugin {
 }
 
 #[cfg(test)]
+#[allow(clippy::unreadable_literal)]
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
@@ -232,7 +242,7 @@ mod tests {
 
     #[test]
     fn test_keycloak_extract_roles_with_client() {
-        let plugin = KeycloakClaimsPlugin::new("tenants", Some("modkit-api".to_string()), None);
+        let plugin = KeycloakClaimsPlugin::new("tenants", Some("modkit-api".to_owned()), None);
 
         let claims = json!({
             "realm_access": {
@@ -246,13 +256,13 @@ mod tests {
         });
 
         let roles = plugin.extract_roles(&claims);
-        assert!(roles.contains(&"realm-role".to_string()));
-        assert!(roles.contains(&"api-role".to_string()));
+        assert!(roles.contains(&"realm-role".to_owned()));
+        assert!(roles.contains(&"api-role".to_owned()));
     }
 
     #[test]
     fn test_keycloak_extract_roles_with_prefix() {
-        let plugin = KeycloakClaimsPlugin::new("tenants", None, Some("kc".to_string()));
+        let plugin = KeycloakClaimsPlugin::new("tenants", None, Some("kc".to_owned()));
 
         let claims = json!({
             "realm_access": {

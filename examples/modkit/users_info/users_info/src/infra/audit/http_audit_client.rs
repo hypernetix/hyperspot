@@ -8,10 +8,10 @@ use crate::domain::error::DomainError;
 use crate::domain::ports::AuditPort;
 use modkit::TracedClient;
 
-/// Single HTTP adapter implementing the AuditPort.
+/// Single HTTP adapter implementing the `AuditPort`.
 /// Holds two base URLs:
-///  - audit_base (e.g., http://audit.local)
-///  - notify_base (e.g., http://notifications.local)
+///  - `audit_base` (e.g., <http://audit.local>)
+///  - `notify_base` (e.g., <http://notifications.local>)
 pub struct HttpAuditClient {
     client: TracedClient,
     audit_base: Url,
@@ -19,6 +19,7 @@ pub struct HttpAuditClient {
 }
 
 impl HttpAuditClient {
+    #[must_use]
     pub fn new(client: TracedClient, audit_base: Url, notify_base: Url) -> Self {
         Self {
             client,
@@ -44,7 +45,7 @@ impl AuditPort for HttpAuditClient {
             .client
             .get(url.as_str())
             .await
-            .with_context(|| format!("GET /api/user-access/{}", id))
+            .with_context(|| format!("GET /api/user-access/{id}"))
             .map_err(|e| DomainError::validation("user_access", e.to_string()))?;
 
         // Check HTTP status

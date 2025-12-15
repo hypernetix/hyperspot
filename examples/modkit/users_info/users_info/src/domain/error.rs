@@ -28,22 +28,27 @@ pub enum DomainError {
 }
 
 impl DomainError {
+    #[must_use]
     pub fn user_not_found(id: Uuid) -> Self {
         Self::UserNotFound { id }
     }
 
+    #[must_use]
     pub fn email_already_exists(email: String) -> Self {
         Self::EmailAlreadyExists { email }
     }
 
+    #[must_use]
     pub fn invalid_email(email: String) -> Self {
         Self::InvalidEmail { email }
     }
 
+    #[must_use]
     pub fn empty_display_name() -> Self {
         Self::EmptyDisplayName
     }
 
+    #[must_use]
     pub fn display_name_too_long(len: usize, max: usize) -> Self {
         Self::DisplayNameTooLong { len, max }
     }
@@ -69,17 +74,16 @@ impl From<DomainError> for UsersInfoError {
             DomainError::UserNotFound { id } => UsersInfoError::not_found(id),
             DomainError::EmailAlreadyExists { email } => UsersInfoError::conflict(email),
             DomainError::InvalidEmail { email } => {
-                UsersInfoError::validation(format!("Invalid email: {}", email))
+                UsersInfoError::validation(format!("Invalid email: {email}"))
             }
             DomainError::EmptyDisplayName => {
                 UsersInfoError::validation("Display name cannot be empty")
             }
             DomainError::DisplayNameTooLong { len, max } => UsersInfoError::validation(format!(
-                "Display name too long: {} characters (max: {})",
-                len, max
+                "Display name too long: {len} characters (max: {max})"
             )),
             DomainError::Validation { field, message } => {
-                UsersInfoError::validation(format!("{}: {}", field, message))
+                UsersInfoError::validation(format!("{field}: {message}"))
             }
             DomainError::Database { .. } => UsersInfoError::internal(),
         }

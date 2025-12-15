@@ -12,17 +12,14 @@ use std::time::Duration;
 async fn test_ready_signal_success() {
     let lc = Lifecycle::new();
     let ready_signaled = Arc::new(AtomicBool::new(false));
-    let ready_signaled_clone = ready_signaled.clone();
+    let ready_signaled_inner = ready_signaled.clone();
 
-    lc.start_with_ready(move |cancel, ready| {
-        let ready_signaled = ready_signaled_clone.clone();
-        async move {
-            tokio::time::sleep(Duration::from_millis(10)).await;
-            ready.notify();
-            ready_signaled.store(true, Ordering::SeqCst);
-            cancel.cancelled().await;
-            Ok(())
-        }
+    lc.start_with_ready(move |cancel, ready| async move {
+        tokio::time::sleep(Duration::from_millis(10)).await;
+        ready.notify();
+        ready_signaled_inner.store(true, Ordering::SeqCst);
+        cancel.cancelled().await;
+        Ok(())
     })
     .unwrap();
 
@@ -73,21 +70,18 @@ async fn test_ready_timeout() {
 async fn test_cancel_before_ready() {
     let lc = Lifecycle::new();
     let cancel_received = Arc::new(AtomicBool::new(false));
-    let cancel_received_clone = cancel_received.clone();
+    let cancel_received_inner = cancel_received.clone();
 
-    lc.start_with_ready(move |cancel, ready| {
-        let cancel_received = cancel_received_clone.clone();
-        async move {
-            tokio::select! {
-                () = tokio::time::sleep(Duration::from_millis(100)) => {
-                    ready.notify();
-                }
-                () = cancel.cancelled() => {
-                    cancel_received.store(true, Ordering::SeqCst);
-                }
+    lc.start_with_ready(move |cancel, ready| async move {
+        tokio::select! {
+            () = tokio::time::sleep(Duration::from_millis(100)) => {
+                ready.notify();
             }
-            Ok(())
+            () = cancel.cancelled() => {
+                cancel_received_inner.store(true, Ordering::SeqCst);
+            }
         }
+        Ok(())
     })
     .unwrap();
 
@@ -125,10 +119,9 @@ async fn test_timeout_during_stop() {
 async fn test_graceful_cancel_with_cleanup() {
     let lc = Lifecycle::new();
     let cleanup_done = Arc::new(AtomicBool::new(false));
-    let cleanup_done_clone = cleanup_done.clone();
+    let cleanup_done_inner = cleanup_done.clone();
 
     lc.start_with_ready(move |cancel, ready| {
-        let cleanup_done = cleanup_done_clone.clone();
         async move {
             ready.notify();
 
@@ -137,7 +130,7 @@ async fn test_graceful_cancel_with_cleanup() {
 
             // Simulate cleanup work
             tokio::time::sleep(Duration::from_millis(10)).await;
-            cleanup_done.store(true, Ordering::SeqCst);
+            cleanup_done_inner.store(true, Ordering::SeqCst);
 
             Ok(())
         }
@@ -168,17 +161,16 @@ async fn test_graceful_cancel_with_cleanup() {
 async fn test_ready_signal_single_use() {
     let lc = Lifecycle::new();
     let ready_count = Arc::new(std::sync::atomic::AtomicUsize::new(0));
-    let ready_count_clone = ready_count.clone();
+    let ready_count_inner = ready_count.clone();
 
     lc.start_with_ready(move |cancel, ready| {
-        let ready_count = ready_count_clone.clone();
         async move {
             // Signal ready once (ReadySignal can only be used once)
             ready.notify();
-            ready_count.fetch_add(1, Ordering::SeqCst);
+            ready_count_inner.fetch_add(1, Ordering::SeqCst);
 
             tokio::time::sleep(Duration::from_millis(10)).await;
-            ready_count.fetch_add(1, Ordering::SeqCst);
+            ready_count_inner.fetch_add(1, Ordering::SeqCst);
 
             cancel.cancelled().await;
             Ok(())

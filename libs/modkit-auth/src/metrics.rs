@@ -1,7 +1,7 @@
 /// Metrics tracking for auth events
 ///
 /// This module provides a trait-based approach to metrics that can be
-/// implemented with various backends (Prometheus, StatsD, etc.)
+/// implemented with various backends (Prometheus, `StatsD`, etc.)
 /// Auth event types for metrics tracking
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AuthEvent {
@@ -26,6 +26,7 @@ pub enum AuthEvent {
 
 impl AuthEvent {
     /// Get the metric name for this event
+    #[must_use]
     pub fn metric_name(&self) -> &'static str {
         match self {
             AuthEvent::JwtValid => "auth.jwt.valid",
@@ -40,8 +41,9 @@ impl AuthEvent {
 
 /// Labels for auth metrics
 #[derive(Default, Debug, Clone)]
+#[must_use]
 pub struct AuthMetricLabels {
-    /// Provider name (e.g., "keycloak", "oidc_default")
+    /// Provider name (e.g., "keycloak", "`oidc_default`")
     pub provider: Option<String>,
 
     /// Issuer URL
@@ -152,9 +154,9 @@ mod tests {
             .with_issuer("https://kc.example.com")
             .with_kid("key-123");
 
-        assert_eq!(labels.provider, Some("keycloak".to_string()));
-        assert_eq!(labels.issuer, Some("https://kc.example.com".to_string()));
-        assert_eq!(labels.kid, Some("key-123".to_string()));
+        assert_eq!(labels.provider, Some("keycloak".to_owned()));
+        assert_eq!(labels.issuer, Some("https://kc.example.com".to_owned()));
+        assert_eq!(labels.kid, Some("key-123".to_owned()));
         assert_eq!(labels.error_type, None);
     }
 

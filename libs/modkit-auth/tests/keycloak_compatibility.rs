@@ -12,6 +12,7 @@ use serde_json::json;
 use uuid::Uuid;
 
 #[test]
+#[allow(clippy::unreadable_literal)]
 fn test_keycloak_token_format() {
     // Simulate Keycloak token structure
     let keycloak_token = json!({
@@ -39,24 +40,30 @@ fn test_keycloak_token_format() {
         Some(serde_json::Value::String(s)) => Some(vec![s.clone()]),
         Some(serde_json::Value::Array(arr)) => Some(
             arr.iter()
-                .filter_map(|x| x.as_str().map(|s| s.to_string()))
+                .filter_map(|x| x.as_str().map(ToString::to_string))
                 .collect::<Vec<_>>(),
         ),
         _ => None,
     };
     assert_eq!(
         aud,
-        Some(vec!["account".to_string()]),
+        Some(vec!["account".to_owned()]),
         "String aud should convert to array"
     );
 
     // Test realm_access.roles extraction
     let mut roles: Vec<String> = Vec::new();
     if let Some(serde_json::Value::Array(arr)) = keycloak_token.get("roles") {
-        roles.extend(arr.iter().filter_map(|x| x.as_str().map(|s| s.to_string())));
+        roles.extend(
+            arr.iter()
+                .filter_map(|x| x.as_str().map(ToString::to_string)),
+        );
     } else if let Some(serde_json::Value::Object(realm)) = keycloak_token.get("realm_access") {
         if let Some(serde_json::Value::Array(arr)) = realm.get("roles") {
-            roles.extend(arr.iter().filter_map(|x| x.as_str().map(|s| s.to_string())));
+            roles.extend(
+                arr.iter()
+                    .filter_map(|x| x.as_str().map(ToString::to_string)),
+            );
         }
     }
     assert_eq!(
@@ -80,6 +87,7 @@ fn test_keycloak_token_format() {
 }
 
 #[test]
+#[allow(clippy::unreadable_literal)]
 fn test_custom_token_format() {
     // Custom token with array aud and top-level roles
     let custom_token = json!({
@@ -96,24 +104,30 @@ fn test_custom_token_format() {
         Some(serde_json::Value::String(s)) => Some(vec![s.clone()]),
         Some(serde_json::Value::Array(arr)) => Some(
             arr.iter()
-                .filter_map(|x| x.as_str().map(|s| s.to_string()))
+                .filter_map(|x| x.as_str().map(ToString::to_string))
                 .collect::<Vec<_>>(),
         ),
         _ => None,
     };
     assert_eq!(
         aud,
-        Some(vec!["api".to_string(), "web".to_string()]),
+        Some(vec!["api".to_owned(), "web".to_owned()]),
         "Array aud should remain as array"
     );
 
     // Test top-level roles extraction
     let mut roles: Vec<String> = Vec::new();
     if let Some(serde_json::Value::Array(arr)) = custom_token.get("roles") {
-        roles.extend(arr.iter().filter_map(|x| x.as_str().map(|s| s.to_string())));
+        roles.extend(
+            arr.iter()
+                .filter_map(|x| x.as_str().map(ToString::to_string)),
+        );
     } else if let Some(serde_json::Value::Object(realm)) = custom_token.get("realm_access") {
         if let Some(serde_json::Value::Array(arr)) = realm.get("roles") {
-            roles.extend(arr.iter().filter_map(|x| x.as_str().map(|s| s.to_string())));
+            roles.extend(
+                arr.iter()
+                    .filter_map(|x| x.as_str().map(ToString::to_string)),
+            );
         }
     }
     assert_eq!(
@@ -124,6 +138,7 @@ fn test_custom_token_format() {
 }
 
 #[test]
+#[allow(clippy::unreadable_literal)]
 fn test_minimal_token_format() {
     // Minimal token with only required fields
     let minimal_token = json!({
@@ -136,7 +151,7 @@ fn test_minimal_token_format() {
         Some(serde_json::Value::String(s)) => Some(vec![s.clone()]),
         Some(serde_json::Value::Array(arr)) => Some(
             arr.iter()
-                .filter_map(|x| x.as_str().map(|s| s.to_string()))
+                .filter_map(|x| x.as_str().map(ToString::to_string))
                 .collect::<Vec<_>>(),
         ),
         _ => None,
@@ -145,10 +160,16 @@ fn test_minimal_token_format() {
 
     let mut roles: Vec<String> = Vec::new();
     if let Some(serde_json::Value::Array(arr)) = minimal_token.get("roles") {
-        roles.extend(arr.iter().filter_map(|x| x.as_str().map(|s| s.to_string())));
+        roles.extend(
+            arr.iter()
+                .filter_map(|x| x.as_str().map(ToString::to_string)),
+        );
     } else if let Some(serde_json::Value::Object(realm)) = minimal_token.get("realm_access") {
         if let Some(serde_json::Value::Array(arr)) = realm.get("roles") {
-            roles.extend(arr.iter().filter_map(|x| x.as_str().map(|s| s.to_string())));
+            roles.extend(
+                arr.iter()
+                    .filter_map(|x| x.as_str().map(ToString::to_string)),
+            );
         }
     }
     assert!(roles.is_empty(), "Missing roles should be empty array");
@@ -180,10 +201,16 @@ fn test_both_roles_locations() {
 
     let mut roles: Vec<String> = Vec::new();
     if let Some(serde_json::Value::Array(arr)) = token.get("roles") {
-        roles.extend(arr.iter().filter_map(|x| x.as_str().map(|s| s.to_string())));
+        roles.extend(
+            arr.iter()
+                .filter_map(|x| x.as_str().map(ToString::to_string)),
+        );
     } else if let Some(serde_json::Value::Object(realm)) = token.get("realm_access") {
         if let Some(serde_json::Value::Array(arr)) = realm.get("roles") {
-            roles.extend(arr.iter().filter_map(|x| x.as_str().map(|s| s.to_string())));
+            roles.extend(
+                arr.iter()
+                    .filter_map(|x| x.as_str().map(ToString::to_string)),
+            );
         }
     }
     assert_eq!(

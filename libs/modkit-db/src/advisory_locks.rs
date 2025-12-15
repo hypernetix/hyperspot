@@ -1,8 +1,8 @@
 //! Advisory locks implementation with namespacing and retry policies.
 //!
 //! Cross-database advisory locking with proper namespacing and configurable
-//! retry/backoff. For PostgreSQL and MySQL we use native DB advisory locks and
-//! **hold the same connection** inside the guard; for SQLite (or when native
+//! retry/backoff. For `PostgreSQL` and `MySQL` we use native DB advisory locks and
+//! **hold the same connection** inside the guard; for `SQLite` (or when native
 //! locks aren't available) we fall back to file-based locks held by an open
 //! file descriptor.
 //!
@@ -176,6 +176,7 @@ pub struct LockManager {
 }
 
 impl LockManager {
+    #[must_use]
     pub fn new(engine: DbEngine, pool: DbPool, dsn: String) -> Self {
         Self { engine, pool, dsn }
     }
@@ -184,6 +185,9 @@ impl LockManager {
     ///
     /// Returns a guard that releases the lock when dropped (best-effort) or
     /// deterministically when `release().await` is called.
+    ///
+    /// # Errors
+    /// Returns `DbLockError` if the lock cannot be acquired.
     pub async fn lock(&self, module: &str, key: &str) -> Result<DbLockGuard, DbLockError> {
         let namespaced_key = format!("{module}:{key}");
         match self.engine {
@@ -191,13 +195,13 @@ impl LockManager {
             DbEngine::Postgres => self.lock_pg(&namespaced_key).await,
             #[cfg(not(feature = "pg"))]
             DbEngine::Postgres => Err(DbLockError::InvalidState(
-                "PostgreSQL feature not enabled".to_string(),
+                "PostgreSQL feature not enabled".to_owned(),
             )),
             #[cfg(feature = "mysql")]
             DbEngine::MySql => self.lock_mysql(&namespaced_key).await,
             #[cfg(not(feature = "mysql"))]
             DbEngine::MySql => Err(DbLockError::InvalidState(
-                "MySQL feature not enabled".to_string(),
+                "MySQL feature not enabled".to_owned(),
             )),
             DbEngine::Sqlite => self.lock_file(&namespaced_key).await,
         }
@@ -209,6 +213,9 @@ impl LockManager {
     /// - `Ok(Some(guard))` if lock acquired
     /// - `Ok(None)` if timed out or attempts exceeded
     /// - `Err(e)` on unrecoverable error
+    ///
+    /// # Errors
+    /// Returns `DbLockError` on unrecoverable lock errors.
     pub async fn try_lock(
         &self,
         module: &str,
@@ -273,7 +280,7 @@ impl LockManager {
     async fn lock_pg(&self, namespaced_key: &str) -> Result<DbLockGuard, DbLockError> {
         let DbPool::Postgres(ref pool) = self.pool else {
             return Err(DbLockError::InvalidState(
-                "not a PostgreSQL pool".to_string(),
+                "not a PostgreSQL pool".to_owned(),
             ));
         };
         let mut conn = pool.acquire().await?; // sqlx::Error via #[from]
@@ -290,7 +297,7 @@ impl LockManager {
             .await?; // sqlx::Error via #[from]
 
         Ok(DbLockGuard {
-            namespaced_key: namespaced_key.to_string(),
+            namespaced_key: namespaced_key.to_owned(),
             inner: Some(GuardInner::Postgres { conn, key_hash }),
         })
     }
@@ -299,7 +306,7 @@ impl LockManager {
     async fn try_lock_pg(&self, namespaced_key: &str) -> Result<Option<DbLockGuard>, DbLockError> {
         let DbPool::Postgres(ref pool) = self.pool else {
             return Err(DbLockError::InvalidState(
-                "not a PostgreSQL pool".to_string(),
+                "not a PostgreSQL pool".to_owned(),
             ));
         };
         let mut conn = pool.acquire().await?; // sqlx::Error via #[from]
@@ -317,7 +324,7 @@ impl LockManager {
 
         if ok {
             Ok(Some(DbLockGuard {
-                namespaced_key: namespaced_key.to_string(),
+                namespaced_key: namespaced_key.to_owned(),
                 inner: Some(GuardInner::Postgres { conn, key_hash }),
             }))
         } else {
@@ -329,7 +336,7 @@ impl LockManager {
     #[cfg(feature = "mysql")]
     async fn lock_mysql(&self, namespaced_key: &str) -> Result<DbLockGuard, DbLockError> {
         let DbPool::MySql(ref pool) = self.pool else {
-            return Err(DbLockError::InvalidState("not a MySQL pool".to_string()));
+            return Err(DbLockError::InvalidState("not a MySQL pool".to_owned()));
         };
         let mut conn = pool.acquire().await?; // sqlx::Error via #[from]
 
@@ -342,15 +349,15 @@ impl LockManager {
 
         if ok != 1 {
             return Err(DbLockError::InvalidState(
-                "failed to acquire MySQL lock".to_string(),
+                "failed to acquire MySQL lock".to_owned(),
             ));
         }
 
         Ok(DbLockGuard {
-            namespaced_key: namespaced_key.to_string(),
+            namespaced_key: namespaced_key.to_owned(),
             inner: Some(GuardInner::MySql {
                 conn,
-                lock_name: namespaced_key.to_string(),
+                lock_name: namespaced_key.to_owned(),
             }),
         })
     }
@@ -361,7 +368,7 @@ impl LockManager {
         namespaced_key: &str,
     ) -> Result<Option<DbLockGuard>, DbLockError> {
         let DbPool::MySql(ref pool) = self.pool else {
-            return Err(DbLockError::InvalidState("not a MySQL pool".to_string()));
+            return Err(DbLockError::InvalidState("not a MySQL pool".to_owned()));
         };
         let mut conn = pool.acquire().await?; // sqlx::Error via #[from]
 
@@ -373,10 +380,10 @@ impl LockManager {
 
         if ok == 1 {
             Ok(Some(DbLockGuard {
-                namespaced_key: namespaced_key.to_string(),
+                namespaced_key: namespaced_key.to_owned(),
                 inner: Some(GuardInner::MySql {
                     conn,
-                    lock_name: namespaced_key.to_string(),
+                    lock_name: namespaced_key.to_owned(),
                 }),
             }))
         } else {
@@ -401,7 +408,7 @@ impl LockManager {
             Ok(f) => f,
             Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {
                 return Err(DbLockError::AlreadyHeld {
-                    lock_name: namespaced_key.to_string(),
+                    lock_name: namespaced_key.to_owned(),
                 });
             }
             Err(e) => return Err(e.into()),
@@ -425,7 +432,7 @@ impl LockManager {
         }
 
         Ok(DbLockGuard {
-            namespaced_key: namespaced_key.to_string(),
+            namespaced_key: namespaced_key.to_owned(),
             inner: Some(GuardInner::File { path, file }),
         })
     }
@@ -464,7 +471,7 @@ impl LockManager {
                 }
 
                 Ok(Some(DbLockGuard {
-                    namespaced_key: namespaced_key.to_string(),
+                    namespaced_key: namespaced_key.to_owned(),
                     inner: Some(GuardInner::File { path, file }),
                 }))
             }
@@ -482,19 +489,19 @@ impl LockManager {
             DbEngine::Postgres => self.try_lock_pg(namespaced_key).await,
             #[cfg(not(feature = "pg"))]
             DbEngine::Postgres => Err(DbLockError::InvalidState(
-                "PostgreSQL feature not enabled".to_string(),
+                "PostgreSQL feature not enabled".to_owned(),
             )),
             #[cfg(feature = "mysql")]
             DbEngine::MySql => self.try_lock_mysql(namespaced_key).await,
             #[cfg(not(feature = "mysql"))]
             DbEngine::MySql => Err(DbLockError::InvalidState(
-                "MySQL feature not enabled".to_string(),
+                "MySQL feature not enabled".to_owned(),
             )),
             DbEngine::Sqlite => self.try_lock_file(namespaced_key).await,
         }
     }
 
-    /// Generate lock file path for SQLite (or when using file-based locks).
+    /// Generate lock file path for `SQLite` (or when using file-based locks).
     fn get_lock_file_path(&self, namespaced_key: &str) -> PathBuf {
         // For ephemeral DSNs (like `memdb`) or tests, use temp dir to avoid global pollution.
         let base_dir = if self.dsn.contains("memdb") || cfg!(test) {
@@ -550,7 +557,7 @@ mod tests {
         let lock_manager = LockManager::new(
             crate::DbEngine::Sqlite,
             crate::DbPool::Sqlite(pool),
-            dsn.to_string(),
+            dsn.to_owned(),
         );
 
         // Unique key suffix (avoid conflicts in parallel)
@@ -563,10 +570,10 @@ mod tests {
         );
 
         let guard1 = lock_manager
-            .lock("module1", &format!("{}_key", test_id))
+            .lock("module1", &format!("{test_id}_key"))
             .await?;
         let guard2 = lock_manager
-            .lock("module2", &format!("{}_key", test_id))
+            .lock("module2", &format!("{test_id}_key"))
             .await?;
 
         assert!(!guard1.key().is_empty());
@@ -585,7 +592,7 @@ mod tests {
         let lock_manager = Arc::new(LockManager::new(
             DbEngine::Sqlite,
             DbPool::Sqlite(pool),
-            dsn.to_string(),
+            dsn.to_owned(),
         ));
 
         let test_id = format!(
@@ -597,7 +604,7 @@ mod tests {
         );
 
         let _guard1 = lock_manager
-            .lock("test_module", &format!("{}_key", test_id))
+            .lock("test_module", &format!("{test_id}_key"))
             .await?;
 
         // Different key should succeed quickly even with retries/timeouts
@@ -609,7 +616,7 @@ mod tests {
         };
 
         let result = lock_manager
-            .try_lock("test_module", &format!("{}_different_key", test_id), config)
+            .try_lock("test_module", &format!("{test_id}_different_key"), config)
             .await?;
         assert!(result.is_some(), "expected successful lock acquisition");
         Ok(())
@@ -620,8 +627,7 @@ mod tests {
     async fn test_try_lock_success() -> Result<()> {
         let dsn = "sqlite:file:memdb5?mode=memory&cache=shared";
         let pool = sqlx::SqlitePool::connect(dsn).await?;
-        let lock_manager =
-            LockManager::new(DbEngine::Sqlite, DbPool::Sqlite(pool), dsn.to_string());
+        let lock_manager = LockManager::new(DbEngine::Sqlite, DbPool::Sqlite(pool), dsn.to_owned());
 
         let test_id = format!(
             "test_success_{}",
@@ -634,7 +640,7 @@ mod tests {
         let result = lock_manager
             .try_lock(
                 "test_module",
-                &format!("{}_key", test_id),
+                &format!("{test_id}_key"),
                 LockConfig::default(),
             )
             .await?;
@@ -647,8 +653,7 @@ mod tests {
     async fn test_double_lock_same_key_errors() -> Result<()> {
         let dsn = "sqlite:file:memdb6?mode=memory&cache=shared";
         let pool = sqlx::SqlitePool::connect(dsn).await?;
-        let lock_manager =
-            LockManager::new(DbEngine::Sqlite, DbPool::Sqlite(pool), dsn.to_string());
+        let lock_manager = LockManager::new(DbEngine::Sqlite, DbPool::Sqlite(pool), dsn.to_owned());
 
         let test_id = format!(
             "test_double_{}",
@@ -679,8 +684,7 @@ mod tests {
     async fn test_try_lock_conflict_returns_none() -> Result<()> {
         let dsn = "sqlite:file:memdb7?mode=memory&cache=shared";
         let pool = sqlx::SqlitePool::connect(dsn).await?;
-        let lock_manager =
-            LockManager::new(DbEngine::Sqlite, DbPool::Sqlite(pool), dsn.to_string());
+        let lock_manager = LockManager::new(DbEngine::Sqlite, DbPool::Sqlite(pool), dsn.to_owned());
 
         let key = format!(
             "test_conflict_{}",

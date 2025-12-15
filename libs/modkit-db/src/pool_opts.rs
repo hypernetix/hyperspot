@@ -6,7 +6,7 @@ use crate::ConnectOpts;
 ///
 /// This trait eliminates code duplication across different database backends
 /// by providing a common interface for applying connection pool configuration.
-pub(crate) trait ApplyPoolOpts<T> {
+pub trait ApplyPoolOpts<T> {
     /// Apply connection options to the pool builder.
     fn apply(self, opts: &ConnectOpts) -> Self;
 }

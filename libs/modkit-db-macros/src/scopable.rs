@@ -194,7 +194,7 @@ fn validate_config(config: &SecureConfig, input: &DeriveInput) {
             }),
         ]
         .iter()
-        .any(|x| x.is_some());
+        .any(Option::is_some);
 
         if has_error {
             abort!(
@@ -243,25 +243,21 @@ fn validate_dimension(
         (None, None) => {
             // Missing explicit decision
             let msg = format!(
-                "secure: missing explicit decision for {}:\n  \
-                 use `{}_col = \"column_name\"` or `no_{}`",
-                name, name, name
+                "secure: missing explicit decision for {name}:\n  \
+                 use `{name}_col = \"column_name\"` or `no_{name}`"
             );
             abort!(struct_span, msg);
         }
         (Some((_, col_span)), Some(no_span)) => {
             // Both specified
-            let msg = format!("secure: conflicting attributes for {}", name);
-            let note_msg = format!("no_{} also defined here", name);
+            let msg = format!("secure: conflicting attributes for {name}");
+            let note_msg = format!("no_{name} also defined here");
             emit_error!(
                 *col_span,
                 msg;
                 note = *no_span => note_msg
             );
-            let abort_msg = format!(
-                "secure: specify either `{}_col` or `no_{}`, not both",
-                name, name
-            );
+            let abort_msg = format!("secure: specify either `{name}_col` or `no_{name}`, not both");
             abort!(struct_span, abort_msg);
         }
         _ => {
@@ -347,7 +343,7 @@ fn parse_secure_attrs(input: &DeriveInput) -> SecureConfig {
             let key = meta
                 .path
                 .get_ident()
-                .map(|i| i.to_string())
+                .map(ToString::to_string)
                 .unwrap_or_default();
 
             if key.is_empty() {
@@ -423,7 +419,7 @@ fn parse_secure_attrs(input: &DeriveInput) -> SecureConfig {
     config
 }
 
-/// Convert snake_case to UpperCamelCase for enum variant names
+/// Convert `snake_case` to `UpperCamelCase` for enum variant names
 fn snake_to_upper_camel(s: &str) -> String {
     s.to_upper_camel_case()
 }

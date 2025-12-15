@@ -16,7 +16,7 @@ use std::sync::Arc;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-/// Helper to create a test ModuleCtx with CORS config
+/// Helper to create a test `ModuleCtx` with CORS config
 struct TestConfigProvider {
     config: serde_json::Value,
 }
@@ -126,7 +126,7 @@ impl RestfulModule for CorsTestModule {
 
 async fn test_handler() -> Json<TestData> {
     Json(TestData {
-        value: "cors-test".to_string(),
+        value: "cors-test".to_owned(),
     })
 }
 

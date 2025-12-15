@@ -7,7 +7,7 @@ use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_util::sync::CancellationToken;
 
-/// Wrapper for NamedPipeServer that implements the Connected trait for Tonic.
+/// Wrapper for `NamedPipeServer` that implements the `Connected` trait for `Tonic`.
 pub struct NamedPipeConnection(pub(crate) tokio::net::windows::named_pipe::NamedPipeServer);
 
 impl tokio::io::AsyncRead for NamedPipeConnection {
@@ -72,6 +72,7 @@ pub type NamedPipeIncoming = ReceiverStream<std::io::Result<NamedPipeConnection>
 ///
 /// A stream of `Result<NamedPipeConnection, std::io::Error>` that can be used
 /// with Tonic's `serve_with_incoming_shutdown`.
+#[must_use]
 pub fn create_named_pipe_incoming(
     pipe_name: String,
     cancel: CancellationToken,

@@ -110,7 +110,7 @@ fn test_app() -> Router {
             api_ingress::middleware::request_id::push_req_id_to_extensions,
         ))
         .layer(PropagateRequestIdLayer::new(x_request_id.clone()))
-        .layer(SetRequestIdLayer::new(x_request_id.clone(), MakeReqId))
+        .layer(SetRequestIdLayer::new(x_request_id, MakeReqId))
 }
 
 async fn success_handler(

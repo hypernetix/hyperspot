@@ -57,6 +57,7 @@ pub enum ParsedDocSourceDto {
 
 /// REST DTO for inline text styling
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Default)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct InlineStyleDto {
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub bold: bool,
@@ -165,7 +166,7 @@ pub struct ParsedDocumentDto {
 pub struct ParsedDocResponseDto {
     /// The parsed document in intermediate representation
     pub document: ParsedDocumentDto,
-    /// Rendered markdown (only present when render_markdown=true)
+    /// Rendered markdown (only present when `render_markdown=true`)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub markdown: Option<String>,
 }

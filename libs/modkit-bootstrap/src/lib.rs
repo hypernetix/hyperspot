@@ -1,18 +1,18 @@
 //! Unified bootstrap library for Modkit modules
 //!
 //! This crate provides bootstrap functionality for both host (in-process) and
-//! OoP (out-of-process) Modkit modules.
+//! `OoP` (out-of-process) Modkit modules.
 //!
 //! ## Modules
 //!
 //! - [`config`]: Configuration types and utilities
 //! - [`host`]: Host/in-process bootstrap - logging, signals, and paths
-//! - [`oop`]: Out-of-process module bootstrap - lifecycle management with DirectoryService
+//! - [`oop`]: Out-of-process module bootstrap - lifecycle management with `DirectoryService`
 //!   (requires the `oop` feature)
 //!
 //! ## Backends
 //!
-//! Backend types for spawning OoP modules have been moved to `modkit::backends`.
+//! Backend types for spawning `OoP` modules have been moved to `modkit::backends`.
 #![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 
 pub mod config;

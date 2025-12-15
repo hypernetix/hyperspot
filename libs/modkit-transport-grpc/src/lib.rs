@@ -15,6 +15,9 @@ use tonic::metadata::{MetadataMap, MetadataValue};
 use tonic::Status;
 
 /// Encode `SecurityCtx` into gRPC metadata.
+///
+/// # Errors
+/// Returns `Status::internal` if encoding fails.
 pub fn attach_secctx(meta: &mut MetadataMap, ctx: &SecurityCtx) -> Result<(), Status> {
     let encoded = encode_bin(ctx).map_err(|e| Status::internal(format!("secctx encode: {e}")))?;
 
@@ -23,6 +26,9 @@ pub fn attach_secctx(meta: &mut MetadataMap, ctx: &SecurityCtx) -> Result<(), St
 }
 
 /// Decode `SecurityCtx` from gRPC metadata.
+///
+/// # Errors
+/// Returns `Status::unauthenticated` if the metadata is missing or decoding fails.
 pub fn extract_secctx(meta: &MetadataMap) -> Result<SecurityCtx, Status> {
     let raw = meta
         .get_bin(SECCTX_METADATA_KEY)

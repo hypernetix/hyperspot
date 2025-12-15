@@ -51,7 +51,7 @@ pub fn extract_trace_id(headers: &HeaderMap) -> Option<String> {
         .or_else(|| headers.get("x-request-id"))
         .or_else(|| headers.get("traceparent"))
         .and_then(|v| v.to_str().ok())
-        .map(|s| s.to_string())
+        .map(ToString::to_string)
         .or_else(|| {
             // Try to get from current tracing span
             tracing::Span::current()
@@ -75,7 +75,7 @@ pub fn map_error_to_problem(error: &dyn Any, instance: &str, trace_id: Option<St
             ConfigError::ModuleNotFound { module } => Problem::new(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Configuration Error",
-                format!("Module '{}' configuration not found", module),
+                format!("Module '{module}' configuration not found"),
             )
             .with_code("CONFIG_MODULE_NOT_FOUND")
             .with_type("https://errors.example.com/CONFIG_MODULE_NOT_FOUND"),
@@ -83,7 +83,7 @@ pub fn map_error_to_problem(error: &dyn Any, instance: &str, trace_id: Option<St
             ConfigError::InvalidModuleStructure { module } => Problem::new(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Configuration Error",
-                format!("Module '{}' has invalid configuration structure", module),
+                format!("Module '{module}' has invalid configuration structure"),
             )
             .with_code("CONFIG_INVALID_STRUCTURE")
             .with_type("https://errors.example.com/CONFIG_INVALID_STRUCTURE"),
@@ -91,7 +91,7 @@ pub fn map_error_to_problem(error: &dyn Any, instance: &str, trace_id: Option<St
             ConfigError::MissingConfigSection { module } => Problem::new(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Configuration Error",
-                format!("Module '{}' is missing required config section", module),
+                format!("Module '{module}' is missing required config section"),
             )
             .with_code("CONFIG_MISSING_SECTION")
             .with_type("https://errors.example.com/CONFIG_MISSING_SECTION"),
@@ -99,7 +99,7 @@ pub fn map_error_to_problem(error: &dyn Any, instance: &str, trace_id: Option<St
             ConfigError::InvalidConfig { module, .. } => Problem::new(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Configuration Error",
-                format!("Module '{}' has invalid configuration", module),
+                format!("Module '{module}' has invalid configuration"),
             )
             .with_code("CONFIG_INVALID")
             .with_type("https://errors.example.com/CONFIG_INVALID"),
@@ -180,19 +180,19 @@ mod tests {
 
     #[test]
     fn test_odata_error_mapping() {
-        let error = ODataError::InvalidFilter("malformed".to_string());
-        let problem = error.into_problem("/test", Some("trace123".to_string()));
+        let error = ODataError::InvalidFilter("malformed".to_owned());
+        let problem = error.into_problem("/test", Some("trace123".to_owned()));
 
         assert_eq!(problem.status, StatusCode::UNPROCESSABLE_ENTITY);
         assert!(problem.code.contains("invalid_filter"));
         assert_eq!(problem.instance, "/test");
-        assert_eq!(problem.trace_id, Some("trace123".to_string()));
+        assert_eq!(problem.trace_id, Some("trace123".to_owned()));
     }
 
     #[test]
     fn test_config_error_mapping() {
         let error = ConfigError::ModuleNotFound {
-            module: "test_module".to_string(),
+            module: "test_module".to_owned(),
         };
         let problem = error.into_problem("/api/test", None);
 
@@ -205,12 +205,12 @@ mod tests {
     #[test]
     fn test_anyhow_error_mapping() {
         let error = anyhow::anyhow!("Something went wrong");
-        let problem = error.into_problem("/api/test", Some("trace456".to_string()));
+        let problem = error.into_problem("/api/test", Some("trace456".to_owned()));
 
         assert_eq!(problem.status, StatusCode::INTERNAL_SERVER_ERROR);
         assert_eq!(problem.code, "INTERNAL_ERROR");
         assert_eq!(problem.instance, "/api/test");
-        assert_eq!(problem.trace_id, Some("trace456".to_string()));
+        assert_eq!(problem.trace_id, Some("trace456".to_owned()));
     }
 
     #[test]
@@ -219,6 +219,6 @@ mod tests {
         headers.insert("x-trace-id", "test-trace-123".parse().unwrap());
 
         let trace_id = extract_trace_id(&headers);
-        assert_eq!(trace_id, Some("test-trace-123".to_string()));
+        assert_eq!(trace_id, Some("test-trace-123".to_owned()));
     }
 }

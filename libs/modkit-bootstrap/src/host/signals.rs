@@ -8,7 +8,10 @@ enum ShutdownSignal {
     Sigterm,
 }
 
-/// Wait for termination signals (Ctrl+C, SIGTERM)
+/// Wait for termination signals (Ctrl+C, SIGTERM).
+///
+/// # Errors
+/// Returns an error if signal handling fails.
 pub async fn wait_for_shutdown() -> Result<()> {
     let _signal = tokio::select! {
         result = wait_ctrl_c() => result?,

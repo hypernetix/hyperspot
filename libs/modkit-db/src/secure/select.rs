@@ -16,13 +16,13 @@ pub struct Unscoped;
 /// Can now execute queries safely.
 pub struct Scoped;
 
-/// A type-safe wrapper around SeaORM's `Select` that enforces scoping.
+/// A type-safe wrapper around `SeaORM`'s `Select` that enforces scoping.
 ///
 /// This wrapper uses the typestate pattern to ensure that queries cannot
 /// be executed without first applying access control via `.scope_with()`.
 ///
 /// # Type Parameters
-/// - `E`: The SeaORM entity type
+/// - `E`: The `SeaORM` entity type
 /// - `S`: The typestate (`Unscoped` or `Scoped`)
 ///
 /// # Example
@@ -36,12 +36,13 @@ pub struct Scoped;
 ///     .all(conn)          // Now can execute
 ///     .await?;
 /// ```
+#[must_use]
 pub struct SecureSelect<E: EntityTrait, S> {
     pub(crate) inner: sea_orm::Select<E>,
     pub(crate) _state: PhantomData<S>,
 }
 
-/// Extension trait to convert a regular SeaORM `Select` into a `SecureSelect`.
+/// Extension trait to convert a regular `SeaORM` `Select` into a `SecureSelect`.
 pub trait SecureEntityExt<E: EntityTrait>: Sized {
     /// Convert this select query into a secure (unscoped) select.
     /// You must call `.scope_with()` before executing the query.
@@ -130,6 +131,9 @@ where
     ///     .one(conn)
     ///     .await?;
     /// ```
+    ///
+    /// # Errors
+    /// Returns `ScopeError::Invalid` if the entity doesn't have a resource column.
     pub fn and_id(self, id: uuid::Uuid) -> Result<Self, ScopeError>
     where
         E: ScopableEntity,
@@ -142,7 +146,7 @@ where
         Ok(self.filter(cond))
     }
 
-    /// Unwrap the inner SeaORM `Select` for advanced use cases.
+    /// Unwrap the inner `SeaORM` `Select` for advanced use cases.
     ///
     /// This is an escape hatch if you need to add additional filters,
     /// joins, or ordering after scoping has been applied.
@@ -150,6 +154,7 @@ where
     /// # Safety
     /// The caller must ensure they don't remove or bypass the security
     /// conditions that were applied during `.scope_with()`.
+    #[must_use]
     pub fn into_inner(self) -> sea_orm::Select<E> {
         self.inner
     }

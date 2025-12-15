@@ -1,39 +1,39 @@
-//! SQLite path preparation utilities.
+//! `SQLite` path preparation utilities.
 
 use std::io;
 
-/// Prepare SQLite database path by ensuring parent directories exist.
+/// Prepare `SQLite` database path by ensuring parent directories exist.
 ///
-/// This function handles SQLite DSN path preparation:
+/// This function handles `SQLite` DSN path preparation:
 /// - For file-based databases, ensures parent directories exist if `create_dirs` is true
 /// - For memory databases, returns the DSN unchanged
 /// - Returns the original DSN if no path manipulation is needed
 ///
 /// # Arguments
-/// * `dsn` - The SQLite DSN (e.g., "sqlite:///path/to/db.sqlite" or "sqlite::memory:")
+/// * `dsn` - The `SQLite` DSN (e.g., "<sqlite:///path/to/db.sqlite>" or "`sqlite::memory`:")
 /// * `create_dirs` - Whether to create parent directories for file-based databases
 ///
 /// # Returns
 /// * `Ok(String)` - The prepared DSN (may be unchanged)
 /// * `Err(io::Error)` - If directory creation fails
-pub(crate) fn prepare_sqlite_path(dsn: &str, create_dirs: bool) -> io::Result<String> {
+pub fn prepare_sqlite_path(dsn: &str, create_dirs: bool) -> io::Result<String> {
     // Handle memory databases - no path preparation needed
     if dsn == "sqlite::memory:" || dsn == "sqlite://memory:" {
-        return Ok(dsn.to_string());
+        return Ok(dsn.to_owned());
     }
 
     // Check for mode=memory in query parameters
     if let Ok(url) = url::Url::parse(dsn) {
         for (key, value) in url.query_pairs() {
             if key.to_lowercase() == "mode" && value.to_lowercase() == "memory" {
-                return Ok(dsn.to_string());
+                return Ok(dsn.to_owned());
             }
         }
     }
 
     // Only create directories if requested
     if !create_dirs {
-        return Ok(dsn.to_string());
+        return Ok(dsn.to_owned());
     }
 
     // Extract file path from DSN for directory creation
@@ -45,12 +45,12 @@ pub(crate) fn prepare_sqlite_path(dsn: &str, create_dirs: bool) -> io::Result<St
         }
     }
 
-    Ok(dsn.to_string())
+    Ok(dsn.to_owned())
 }
 
-/// Extract the file path from a SQLite DSN.
+/// Extract the file path from a `SQLite` DSN.
 ///
-/// Handles various SQLite DSN formats:
+/// Handles various `SQLite` DSN formats:
 /// - `sqlite:///absolute/path/to/db.sqlite`
 /// - `sqlite://./relative/path/to/db.sqlite`
 /// - `sqlite:relative/path/to/db.sqlite`

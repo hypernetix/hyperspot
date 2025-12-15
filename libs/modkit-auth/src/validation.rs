@@ -33,7 +33,10 @@ impl Default for ValidationConfig {
     }
 }
 
-/// Perform common validation checks on claims
+/// Perform common validation checks on claims.
+///
+/// # Errors
+/// Returns `ClaimsError` if any validation check fails (issuer, audience, expiration, etc.).
 pub fn validate_claims(claims: &Claims, config: &ValidationConfig) -> Result<(), ClaimsError> {
     // 1. Validate issuer
     if !config.allowed_issuers.is_empty() && !config.allowed_issuers.contains(&claims.issuer) {
@@ -83,8 +86,8 @@ pub fn validate_claims(claims: &Claims, config: &ValidationConfig) -> Result<(),
         // sub is already a Uuid type, so this is guaranteed
         // Just a safety check for future-proofing
         return Err(ClaimsError::InvalidClaimFormat {
-            field: "sub".to_string(),
-            reason: "subject cannot be nil UUID".to_string(),
+            field: "sub".to_owned(),
+            reason: "subject cannot be nil UUID".to_owned(),
         });
     }
 
@@ -93,8 +96,8 @@ pub fn validate_claims(claims: &Claims, config: &ValidationConfig) -> Result<(),
         for tenant in &claims.tenants {
             if tenant.is_nil() {
                 return Err(ClaimsError::InvalidClaimFormat {
-                    field: "tenants".to_string(),
-                    reason: "tenant ID cannot be nil UUID".to_string(),
+                    field: "tenants".to_owned(),
+                    reason: "tenant ID cannot be nil UUID".to_owned(),
                 });
             }
         }
@@ -103,7 +106,10 @@ pub fn validate_claims(claims: &Claims, config: &ValidationConfig) -> Result<(),
     Ok(())
 }
 
-/// Helper to parse a UUID from a JSON value
+/// Helper to parse a UUID from a JSON value.
+///
+/// # Errors
+/// Returns `ClaimsError::InvalidClaimFormat` if the value is not a valid UUID string.
 pub fn parse_uuid_from_value(
     value: &serde_json::Value,
     field_name: &str,
@@ -111,18 +117,21 @@ pub fn parse_uuid_from_value(
     value
         .as_str()
         .ok_or_else(|| ClaimsError::InvalidClaimFormat {
-            field: field_name.to_string(),
-            reason: "must be a string".to_string(),
+            field: field_name.to_owned(),
+            reason: "must be a string".to_owned(),
         })
         .and_then(|s| {
             Uuid::parse_str(s).map_err(|_| ClaimsError::InvalidClaimFormat {
-                field: field_name.to_string(),
-                reason: "must be a valid UUID".to_string(),
+                field: field_name.to_owned(),
+                reason: "must be a valid UUID".to_owned(),
             })
         })
 }
 
-/// Helper to parse an array of UUIDs from a JSON value
+/// Helper to parse an array of UUIDs from a JSON value.
+///
+/// # Errors
+/// Returns `ClaimsError::InvalidClaimFormat` if the value is not an array of valid UUID strings.
 pub fn parse_uuid_array_from_value(
     value: &serde_json::Value,
     field_name: &str,
@@ -130,15 +139,18 @@ pub fn parse_uuid_array_from_value(
     value
         .as_array()
         .ok_or_else(|| ClaimsError::InvalidClaimFormat {
-            field: field_name.to_string(),
-            reason: "must be an array".to_string(),
+            field: field_name.to_owned(),
+            reason: "must be an array".to_owned(),
         })?
         .iter()
         .map(|v| parse_uuid_from_value(v, field_name))
         .collect()
 }
 
-/// Helper to parse timestamp (seconds since epoch) into OffsetDateTime
+/// Helper to parse timestamp (seconds since epoch) into `OffsetDateTime`.
+///
+/// # Errors
+/// Returns `ClaimsError::InvalidClaimFormat` if the value is not a valid unix timestamp.
 pub fn parse_timestamp(
     value: &serde_json::Value,
     field_name: &str,
@@ -146,31 +158,35 @@ pub fn parse_timestamp(
     let ts = value
         .as_i64()
         .ok_or_else(|| ClaimsError::InvalidClaimFormat {
-            field: field_name.to_string(),
-            reason: "must be a number (unix timestamp)".to_string(),
+            field: field_name.to_owned(),
+            reason: "must be a number (unix timestamp)".to_owned(),
         })?;
 
     OffsetDateTime::from_unix_timestamp(ts).map_err(|_| ClaimsError::InvalidClaimFormat {
-        field: field_name.to_string(),
-        reason: "invalid unix timestamp".to_string(),
+        field: field_name.to_owned(),
+        reason: "invalid unix timestamp".to_owned(),
     })
 }
 
-/// Helper to extract string from JSON value
+/// Helper to extract string from JSON value.
+///
+/// # Errors
+/// Returns `ClaimsError::MissingClaim` if the value is not a string.
 pub fn extract_string(value: &serde_json::Value, field_name: &str) -> Result<String, ClaimsError> {
     value
         .as_str()
-        .map(|s| s.to_string())
-        .ok_or_else(|| ClaimsError::MissingClaim(field_name.to_string()))
+        .map(ToString::to_string)
+        .ok_or_else(|| ClaimsError::MissingClaim(field_name.to_owned()))
 }
 
 /// Helper to extract string array from JSON value (handles both string and array)
+#[must_use]
 pub fn extract_audiences(value: &serde_json::Value) -> Vec<String> {
     match value {
         serde_json::Value::String(s) => vec![s.clone()],
         serde_json::Value::Array(arr) => arr
             .iter()
-            .filter_map(|v| v.as_str().map(|s| s.to_string()))
+            .filter_map(|v| v.as_str().map(ToString::to_string))
             .collect(),
         _ => vec![],
     }
@@ -185,12 +201,12 @@ mod tests {
     fn create_test_claims() -> Claims {
         Claims {
             sub: Uuid::new_v4(),
-            issuer: "https://test.example.com".to_string(),
-            audiences: vec!["api".to_string()],
+            issuer: "https://test.example.com".to_owned(),
+            audiences: vec!["api".to_owned()],
             expires_at: Some(OffsetDateTime::now_utc() + time::Duration::hours(1)),
             not_before: None,
             tenants: vec![Uuid::new_v4()],
-            roles: vec!["user".to_string()],
+            roles: vec!["user".to_owned()],
             extras: serde_json::Map::new(),
         }
     }
@@ -199,8 +215,8 @@ mod tests {
     fn test_valid_claims_pass() {
         let claims = create_test_claims();
         let config = ValidationConfig {
-            allowed_issuers: vec!["https://test.example.com".to_string()],
-            allowed_audiences: vec!["api".to_string()],
+            allowed_issuers: vec!["https://test.example.com".to_owned()],
+            allowed_audiences: vec!["api".to_owned()],
             ..Default::default()
         };
 
@@ -211,7 +227,7 @@ mod tests {
     fn test_invalid_issuer_fails() {
         let claims = create_test_claims();
         let config = ValidationConfig {
-            allowed_issuers: vec!["https://other.example.com".to_string()],
+            allowed_issuers: vec!["https://other.example.com".to_owned()],
             allowed_audiences: vec![],
             ..Default::default()
         };
@@ -225,7 +241,7 @@ mod tests {
         let claims = create_test_claims();
         let config = ValidationConfig {
             allowed_issuers: vec![],
-            allowed_audiences: vec!["other-api".to_string()],
+            allowed_audiences: vec!["other-api".to_owned()],
             ..Default::default()
         };
 

@@ -44,6 +44,9 @@ pub trait ConfigProvider: Send + Sync {
 /// - If "config" is present but invalid → returns `Err(ConfigError::InvalidConfig)`
 ///
 /// Use this for modules that can operate with default configuration.
+///
+/// # Errors
+/// Returns `ConfigError::InvalidConfig` if the config section exists but cannot be deserialized.
 pub fn module_config_or_default<T: DeserializeOwned + Default>(
     provider: &dyn ConfigProvider,
     module_name: &str,
@@ -66,7 +69,7 @@ pub fn module_config_or_default<T: DeserializeOwned + Default>(
     // Config section exists, try to parse it
     let config: T =
         serde_json::from_value(config_section.clone()).map_err(|e| ConfigError::InvalidConfig {
-            module: module_name.to_string(),
+            module: module_name.to_owned(),
             source: e,
         })?;
 
@@ -82,6 +85,9 @@ pub fn module_config_or_default<T: DeserializeOwned + Default>(
 /// - If "config" is present but invalid → returns `Err(ConfigError::InvalidConfig)`
 ///
 /// Use this for modules that cannot operate without explicit configuration.
+///
+/// # Errors
+/// Returns `ConfigError` if the module is not found, has invalid structure, or config is invalid.
 pub fn module_config_required<T: DeserializeOwned>(
     provider: &dyn ConfigProvider,
     module_name: &str,
@@ -90,25 +96,25 @@ pub fn module_config_required<T: DeserializeOwned>(
         provider
             .get_module_config(module_name)
             .ok_or_else(|| ConfigError::ModuleNotFound {
-                module: module_name.to_string(),
+                module: module_name.to_owned(),
             })?;
 
     // Extract config section from: modules.<name> = { database: ..., config: ... }
     let obj = module_raw
         .as_object()
         .ok_or_else(|| ConfigError::InvalidModuleStructure {
-            module: module_name.to_string(),
+            module: module_name.to_owned(),
         })?;
 
     let config_section = obj
         .get("config")
         .ok_or_else(|| ConfigError::MissingConfigSection {
-            module: module_name.to_string(),
+            module: module_name.to_owned(),
         })?;
 
     let config: T =
         serde_json::from_value(config_section.clone()).map_err(|e| ConfigError::InvalidConfig {
-            module: module_name.to_string(),
+            module: module_name.to_owned(),
             source: e,
         })?;
 
@@ -143,7 +149,7 @@ mod tests {
 
             // Valid module config
             modules.insert(
-                "test_module".to_string(),
+                "test_module".to_owned(),
                 json!({
                     "database": {
                         "url": "postgres://localhost/test"
@@ -158,7 +164,7 @@ mod tests {
 
             // Module without config section
             modules.insert(
-                "no_config_module".to_string(),
+                "no_config_module".to_owned(),
                 json!({
                     "database": {
                         "url": "postgres://localhost/test"
@@ -167,7 +173,7 @@ mod tests {
             );
 
             // Module with invalid structure (not an object)
-            modules.insert("invalid_module".to_string(), json!("not an object"));
+            modules.insert("invalid_module".to_owned(), json!("not an object"));
 
             Self { modules }
         }
@@ -232,7 +238,7 @@ mod tests {
         let mut provider = MockConfigProvider::new();
         // Add module with invalid config structure
         provider.modules.insert(
-            "bad_config_module".to_string(),
+            "bad_config_module".to_owned(),
             json!({
                 "config": {
                     "api_key": "secret123",
@@ -331,7 +337,7 @@ mod tests {
         let mut provider = MockConfigProvider::new();
         // Add module with invalid config structure
         provider.modules.insert(
-            "bad_config_module".to_string(),
+            "bad_config_module".to_owned(),
             json!({
                 "config": {
                     "api_key": "secret123",
@@ -355,12 +361,12 @@ mod tests {
     #[test]
     fn test_config_error_messages() {
         let module_not_found = ConfigError::ModuleNotFound {
-            module: "test".to_string(),
+            module: "test".to_owned(),
         };
         assert_eq!(module_not_found.to_string(), "module 'test' not found");
 
         let invalid_structure = ConfigError::InvalidModuleStructure {
-            module: "test".to_string(),
+            module: "test".to_owned(),
         };
         assert_eq!(
             invalid_structure.to_string(),
@@ -368,7 +374,7 @@ mod tests {
         );
 
         let missing_config = ConfigError::MissingConfigSection {
-            module: "test".to_string(),
+            module: "test".to_owned(),
         };
         assert_eq!(
             missing_config.to_string(),

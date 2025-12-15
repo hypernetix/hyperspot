@@ -17,7 +17,7 @@ pub struct Requirement {
 
 /// Route matcher for a specific HTTP method (secured routes with requirements)
 #[derive(Clone)]
-pub(crate) struct RouteMatcher {
+pub struct RouteMatcher {
     matcher: matchit::Router<SecRequirement>,
 }
 
@@ -43,7 +43,7 @@ impl RouteMatcher {
 
 /// Public route matcher for explicitly public routes
 #[derive(Clone)]
-pub(crate) struct PublicRouteMatcher {
+pub struct PublicRouteMatcher {
     matcher: matchit::Router<()>,
 }
 
@@ -150,9 +150,9 @@ impl modkit_auth::RoutePolicy for IngressRoutePolicy {
 // Old auth_middleware has been removed.
 // Use modkit_auth::axum_ext::auth_with_policy via IngressRoutePolicy instead.
 
-/// Helper to build AuthState and IngressRoutePolicy from config
+/// Helper to build `AuthState` and `IngressRoutePolicy` from config
 ///
-/// # Note on auth_disabled mode
+/// # Note on `auth_disabled` mode
 ///
 /// When `cfg.auth_disabled == true`:
 /// - This function is still called to build the auth components for type consistency
@@ -186,16 +186,16 @@ pub fn build_auth_state(
 
         let mut plugins = HashMap::new();
         plugins.insert(
-            "default-oidc".to_string(),
+            "default-oidc".to_owned(),
             PluginConfig::Oidc {
-                tenant_claim: "tenants".to_string(),
-                roles_claim: "roles".to_string(),
+                tenant_claim: "tenants".to_owned(),
+                roles_claim: "roles".to_owned(),
             },
         );
 
         let auth_config = ModkitAuthConfig {
             mode: AuthModeConfig {
-                provider: "default-oidc".to_string(),
+                provider: "default-oidc".to_owned(),
             },
             leeway_seconds: 60,
             issuers: cfg
@@ -218,7 +218,7 @@ pub fn build_auth_state(
 
         // Build dispatcher and use it as validator
         let dispatcher = build_auth_dispatcher(&auth_config)
-            .map_err(|e| anyhow::anyhow!("Failed to build auth dispatcher: {}", e))?;
+            .map_err(|e| anyhow::anyhow!("Failed to build auth dispatcher: {e}"))?;
 
         Arc::new(dispatcher) as Arc<dyn TokenValidator>
     };
@@ -238,7 +238,7 @@ pub fn build_auth_state(
         let matchit_path = convert_axum_path_to_matchit(&path);
         matcher
             .insert(&matchit_path, sec_req)
-            .map_err(|e| anyhow::anyhow!("Failed to insert route pattern '{}': {}", path, e))?;
+            .map_err(|e| anyhow::anyhow!("Failed to insert route pattern '{path}': {e}"))?;
     }
 
     // Build public matchers per HTTP method
@@ -250,9 +250,9 @@ pub fn build_auth_state(
             .or_insert_with(PublicRouteMatcher::new);
         // Convert Axum path syntax (:param) to matchit syntax ({param})
         let matchit_path = convert_axum_path_to_matchit(&path);
-        matcher.insert(&matchit_path).map_err(|e| {
-            anyhow::anyhow!("Failed to insert public route pattern '{}': {}", path, e)
-        })?;
+        matcher
+            .insert(&matchit_path)
+            .map_err(|e| anyhow::anyhow!("Failed to insert public route pattern '{path}': {e}"))?;
     }
 
     let auth_state = AuthState {
@@ -270,7 +270,7 @@ pub fn build_auth_state(
     Ok((auth_state, route_policy))
 }
 
-/// No-op validator for auth_disabled mode (should never be called)
+/// No-op validator for `auth_disabled` mode (should never be called)
 struct NoopValidator;
 
 #[async_trait::async_trait]
@@ -292,7 +292,7 @@ mod tests {
     use axum::http::Method;
     use modkit_auth::types::RoutePolicy;
 
-    /// Helper to build IngressRoutePolicy with given matchers
+    /// Helper to build `IngressRoutePolicy` with given matchers
     fn build_test_policy(
         route_matchers: HashMap<Method, RouteMatcher>,
         public_matchers: HashMap<Method, PublicRouteMatcher>,

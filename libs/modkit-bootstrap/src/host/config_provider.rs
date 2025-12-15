@@ -10,18 +10,21 @@ pub trait ConfigProvider: Send + Sync {
     fn get_config_raw(&self, key: &str) -> Option<serde_json::Value>;
 }
 
-/// Implementation of ConfigProvider that uses AppConfig
+/// Implementation of `ConfigProvider` that uses `AppConfig`
 pub struct AppConfigProvider(Arc<AppConfig>);
 
 impl AppConfigProvider {
+    #[must_use]
     pub fn new(config: AppConfig) -> Self {
         Self(Arc::new(config))
     }
 
+    #[must_use]
     pub fn from_arc(config: Arc<AppConfig>) -> Self {
         Self(config)
     }
 
+    #[must_use]
     pub fn inner(&self) -> &AppConfig {
         &self.0
     }

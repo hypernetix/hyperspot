@@ -1,6 +1,6 @@
 //! High-level secure database wrapper for ergonomic, type-safe access.
 //!
-//! This module provides `SecureConn`, a wrapper around SeaORM's `DatabaseConnection`
+//! This module provides `SecureConn`, a wrapper around `SeaORM`'s `DatabaseConnection`
 //! that enforces access control policies on all operations.
 //!
 //! # Design Philosophy
@@ -100,6 +100,7 @@ impl SecureConn {
     /// Create a new secure database connection wrapper.
     ///
     /// Typically created via `DbHandle::sea_secure()` rather than directly.
+    #[must_use]
     pub fn new(conn: DatabaseConnection) -> Self {
         Self { conn }
     }
@@ -113,13 +114,15 @@ impl SecureConn {
     ///
     /// Valid use cases:
     /// - Executing already-scoped queries (`.one()`, `.all()`, `.exec()`)
-    /// - Complex joins that need custom SeaORM building
+    /// - Complex joins that need custom `SeaORM` building
     /// - Internal infrastructure code (not module business logic)
+    #[must_use]
     pub fn conn(&self) -> &DatabaseConnection {
         &self.conn
     }
 
     /// Return database engine identifier for tracing / logging.
+    #[must_use]
     pub fn db_engine(&self) -> &'static str {
         use sea_orm::DatabaseBackend;
 
@@ -170,6 +173,8 @@ impl SecureConn {
     ///     .await?;
     /// ```
     ///
+    /// # Errors
+    /// Returns `ScopeError` if the entity doesn't have a resource column or scoping fails.
     pub fn find_by_id<E>(
         &self,
         ctx: &SecurityCtx,
@@ -185,7 +190,7 @@ impl SecureConn {
     /// Create a scoped update query for the given entity.
     ///
     /// Returns a `SecureUpdateMany<E, Scoped>` that automatically applies
-    /// tenant/resource filtering. Use `.col_expr()` or other SeaORM methods
+    /// tenant/resource filtering. Use `.col_expr()` or other `SeaORM` methods
     /// to specify what to update.
     ///
     /// # Example
@@ -201,6 +206,7 @@ impl SecureConn {
     /// ```
     ///
     #[allow(clippy::unused_self)] // Delegates but matches the rest of the connection API
+    #[must_use]
     pub fn update_many<E>(&self, ctx: &SecurityCtx) -> SecureUpdateMany<E, Scoped>
     where
         E: ScopableEntity + EntityTrait,
@@ -225,6 +231,7 @@ impl SecureConn {
     /// ```
     ///
     #[allow(clippy::unused_self)] // Retain method-style ergonomics for callers of SecureConn
+    #[must_use]
     pub fn delete_many<E>(&self, ctx: &SecurityCtx) -> SecureDeleteMany<E, Scoped>
     where
         E: ScopableEntity + EntityTrait,
@@ -293,6 +300,9 @@ impl SecureConn {
     ///
     /// let updated = db.update_one(user).await?;
     /// ```
+    ///
+    /// # Errors
+    /// Returns `ScopeError::Db` if the database update fails.
     pub async fn update_one<E>(&self, am: E::ActiveModel) -> Result<E::Model, ScopeError>
     where
         E: EntityTrait,
@@ -382,7 +392,7 @@ impl SecureConn {
     ///
     /// # Errors
     ///
-    /// Returns `ScopeError::Invalid` if the entity does not have a resource_col defined.
+    /// Returns `ScopeError::Invalid` if the entity does not have a `resource_col` defined.
     pub async fn delete_by_id<E>(&self, ctx: &SecurityCtx, id: Uuid) -> Result<bool, ScopeError>
     where
         E: ScopableEntity + EntityTrait,

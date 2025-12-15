@@ -1,4 +1,4 @@
-//! Tests for OoP configuration merge logic
+//! Tests for `OoP` configuration merge logic
 //!
 //! Tests cover all merge scenarios:
 //! - Database: field-by-field merge (global.servers → module.database in master → module.database in local)
@@ -14,7 +14,7 @@ use modkit_db::{DbConnConfig, PoolCfg};
 use std::collections::HashMap;
 use std::time::Duration;
 
-/// Helper to create a minimal AppConfig for testing
+/// Helper to create a minimal `AppConfig` for testing
 fn minimal_app_config() -> AppConfig {
     AppConfig {
         server: ServerConfig {
@@ -34,9 +34,9 @@ fn minimal_app_config() -> AppConfig {
 /// Helper to create a logging section
 fn logging_section(console_level: &str, file: &str) -> Section {
     Section {
-        console_level: console_level.to_string(),
-        file: file.to_string(),
-        file_level: "debug".to_string(),
+        console_level: console_level.to_owned(),
+        file: file.to_owned(),
+        file_level: "debug".to_owned(),
         max_age_days: Some(7),
         max_backups: Some(3),
         max_size_mb: Some(100),
@@ -55,11 +55,11 @@ mod logging_merge {
         // When only master has logging, result should be master's logging
         let master_logging: LoggingConfig = [
             (
-                "default".to_string(),
+                "default".to_owned(),
                 logging_section("info", "logs/default.log"),
             ),
             (
-                "module_a".to_string(),
+                "module_a".to_owned(),
                 logging_section("debug", "logs/a.log"),
             ),
         ]
@@ -76,7 +76,7 @@ mod logging_merge {
     fn test_merge_logging_local_only() {
         // When only local has logging, result should be local's logging
         let local_logging: LoggingConfig = [(
-            "default".to_string(),
+            "default".to_owned(),
             logging_section("debug", "logs/local.log"),
         )]
         .into();
@@ -93,18 +93,18 @@ mod logging_merge {
         // Local key should override master key
         let master_logging: LoggingConfig = [
             (
-                "default".to_string(),
+                "default".to_owned(),
                 logging_section("info", "logs/master.log"),
             ),
             (
-                "module_a".to_string(),
+                "module_a".to_owned(),
                 logging_section("info", "logs/a-master.log"),
             ),
         ]
         .into();
 
         let local_logging: LoggingConfig = [(
-            "default".to_string(),
+            "default".to_owned(),
             logging_section("debug", "logs/local.log"),
         )]
         .into();
@@ -124,13 +124,13 @@ mod logging_merge {
     fn test_merge_logging_local_adds_new_key() {
         // Local can add new keys that don't exist in master
         let master_logging: LoggingConfig = [(
-            "default".to_string(),
+            "default".to_owned(),
             logging_section("info", "logs/default.log"),
         )]
         .into();
 
         let local_logging: LoggingConfig = [(
-            "new_module".to_string(),
+            "new_module".to_owned(),
             logging_section("trace", "logs/new.log"),
         )]
         .into();
@@ -154,21 +154,21 @@ mod logging_merge {
         // Multiple keys can be overridden
         let master_logging: LoggingConfig = [
             (
-                "default".to_string(),
+                "default".to_owned(),
                 logging_section("info", "logs/default.log"),
             ),
-            ("sqlx".to_string(), logging_section("warn", "logs/sql.log")),
-            ("api".to_string(), logging_section("info", "logs/api.log")),
+            ("sqlx".to_owned(), logging_section("warn", "logs/sql.log")),
+            ("api".to_owned(), logging_section("info", "logs/api.log")),
         ]
         .into();
 
         let local_logging: LoggingConfig = [
             (
-                "default".to_string(),
+                "default".to_owned(),
                 logging_section("debug", "logs/local-default.log"),
             ),
             (
-                "sqlx".to_string(),
+                "sqlx".to_owned(),
                 logging_section("debug", "logs/local-sql.log"),
             ),
         ]
@@ -323,7 +323,7 @@ mod database_merge {
     fn create_global_db_config() -> GlobalDatabaseConfig {
         let mut servers = HashMap::new();
         servers.insert(
-            "sqlite_main".to_string(),
+            "sqlite_main".to_owned(),
             DbConnConfig {
                 server: None,
                 dsn: None,
@@ -334,7 +334,7 @@ mod database_merge {
                 dbname: None,
                 file: None,
                 path: None,
-                params: Some([("WAL".to_string(), "true".to_string())].into()),
+                params: Some([("WAL".to_owned(), "true".to_owned())].into()),
                 pool: Some(PoolCfg {
                     max_conns: Some(5),
                     min_conns: None,
@@ -353,14 +353,14 @@ mod database_merge {
 
     fn create_module_db_config() -> DbConnConfig {
         DbConnConfig {
-            server: Some("sqlite_main".to_string()),
+            server: Some("sqlite_main".to_owned()),
             dsn: None,
             host: None,
             port: None,
             user: None,
             password: None,
             dbname: None,
-            file: Some("module.db".to_string()),
+            file: Some("module.db".to_owned()),
             path: None,
             params: None,
             pool: None,
@@ -408,7 +408,7 @@ mod database_merge {
         let mut local_config = minimal_app_config();
         local_config.database = Some(create_global_db_config());
         local_config.modules.insert(
-            "test_module".to_string(),
+            "test_module".to_owned(),
             json!({
                 "database": {
                     "server": "sqlite_main",
@@ -437,7 +437,7 @@ mod database_merge {
         let mut local_config = minimal_app_config();
         // Local overrides pool.max_conns
         local_config.modules.insert(
-            "test_module".to_string(),
+            "test_module".to_owned(),
             json!({
                 "database": {
                     "pool": {
@@ -468,7 +468,7 @@ mod database_merge {
         let mut local_config = minimal_app_config();
         // Local overrides file
         local_config.modules.insert(
-            "test_module".to_string(),
+            "test_module".to_owned(),
             json!({
                 "database": {
                     "file": "local_override.db"
@@ -497,7 +497,7 @@ mod database_merge {
         let mut local_config = minimal_app_config();
         // Local adds new params
         local_config.modules.insert(
-            "test_module".to_string(),
+            "test_module".to_owned(),
             json!({
                 "database": {
                     "params": {
@@ -529,10 +529,10 @@ mod database_merge {
         // Local adds a new server to global database config
         let mut new_servers = HashMap::new();
         new_servers.insert(
-            "new_server".to_string(),
+            "new_server".to_owned(),
             DbConnConfig {
                 server: None,
-                dsn: Some("sqlite://new.db".to_string()),
+                dsn: Some("sqlite://new.db".to_owned()),
                 host: None,
                 port: None,
                 user: None,
@@ -571,13 +571,13 @@ mod full_oop_config {
         let mut local_config = minimal_app_config();
         local_config.logging = Some(
             [(
-                "default".to_string(),
+                "default".to_owned(),
                 logging_section("debug", "logs/standalone.log"),
             )]
             .into(),
         );
         local_config.modules.insert(
-            "test_module".to_string(),
+            "test_module".to_owned(),
             json!({
                 "config": {
                     "setting": "local_value"
@@ -615,7 +615,7 @@ mod full_oop_config {
             config: json!({"master_setting": "value"}),
             logging: Some(
                 [(
-                    "default".to_string(),
+                    "default".to_owned(),
                     logging_section("info", "logs/master.log"),
                 )]
                 .into(),
@@ -641,7 +641,7 @@ mod full_oop_config {
         // Local config section completely replaces master
         let mut local_config = minimal_app_config();
         local_config.modules.insert(
-            "test_module".to_string(),
+            "test_module".to_owned(),
             json!({
                 "config": {
                     "local_setting": "local_value"
@@ -678,11 +678,11 @@ mod full_oop_config {
         local_config.logging = Some(
             [
                 (
-                    "default".to_string(),
+                    "default".to_owned(),
                     logging_section("debug", "logs/local-default.log"),
                 ),
                 (
-                    "new_key".to_string(),
+                    "new_key".to_owned(),
                     logging_section("trace", "logs/new.log"),
                 ),
             ]
@@ -695,10 +695,10 @@ mod full_oop_config {
             logging: Some(
                 [
                     (
-                        "default".to_string(),
+                        "default".to_owned(),
                         logging_section("info", "logs/master-default.log"),
                     ),
-                    ("sqlx".to_string(), logging_section("warn", "logs/sql.log")),
+                    ("sqlx".to_owned(), logging_section("warn", "logs/sql.log")),
                 ]
                 .into(),
             ),
@@ -738,7 +738,7 @@ mod full_oop_config {
         // When local has empty config section (null), use master's
         let mut local_config = minimal_app_config();
         local_config.modules.insert(
-            "test_module".to_string(),
+            "test_module".to_owned(),
             json!({
                 "config": null
             }),
@@ -766,7 +766,7 @@ mod full_oop_config {
         // When local has no config section at all, use master's
         let mut local_config = minimal_app_config();
         local_config.modules.insert(
-            "test_module".to_string(),
+            "test_module".to_owned(),
             json!({
                 "database": {}  // has database but no config
             }),

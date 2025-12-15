@@ -47,20 +47,20 @@ impl RoutePolicy for AlwaysOptionalPolicy {
 fn create_test_config() -> AuthConfig {
     let mut plugins = HashMap::new();
     plugins.insert(
-        "test-oidc".to_string(),
+        "test-oidc".to_owned(),
         PluginConfig::Oidc {
-            tenant_claim: "tenants".to_string(),
-            roles_claim: "roles".to_string(),
+            tenant_claim: "tenants".to_owned(),
+            roles_claim: "roles".to_owned(),
         },
     );
 
     AuthConfig {
         mode: AuthModeConfig {
-            provider: "test-oidc".to_string(),
+            provider: "test-oidc".to_owned(),
         },
         leeway_seconds: 60,
-        issuers: vec!["https://test.example.com".to_string()],
-        audiences: vec!["test-api".to_string()],
+        issuers: vec!["https://test.example.com".to_owned()],
+        audiences: vec!["test-api".to_owned()],
         jwks: None,
         plugins,
     }
@@ -209,20 +209,20 @@ async fn test_optional_auth_inserts_anonymous_context() {
 async fn test_single_mode_dispatcher_created() {
     let mut plugins = HashMap::new();
     plugins.insert(
-        "plugin-a".to_string(),
+        "plugin-a".to_owned(),
         PluginConfig::Oidc {
-            tenant_claim: "tenants".to_string(),
-            roles_claim: "roles".to_string(),
+            tenant_claim: "tenants".to_owned(),
+            roles_claim: "roles".to_owned(),
         },
     );
 
     let config = AuthConfig {
         mode: AuthModeConfig {
-            provider: "plugin-a".to_string(),
+            provider: "plugin-a".to_owned(),
         },
         leeway_seconds: 60,
-        issuers: vec!["https://test.example.com".to_string()],
-        audiences: vec!["api".to_string()],
+        issuers: vec!["https://test.example.com".to_owned()],
+        audiences: vec!["api".to_owned()],
         jwks: None,
         plugins,
     };
@@ -241,8 +241,8 @@ async fn test_claims_uuid_validation() {
     use uuid::Uuid;
 
     let config = ValidationConfig {
-        allowed_issuers: vec!["https://test.example.com".to_string()],
-        allowed_audiences: vec!["api".to_string()],
+        allowed_issuers: vec!["https://test.example.com".to_owned()],
+        allowed_audiences: vec!["api".to_owned()],
         leeway_seconds: 60,
         require_uuid_subject: true,
         require_uuid_tenants: true,
@@ -250,12 +250,12 @@ async fn test_claims_uuid_validation() {
 
     let claims = Claims {
         sub: Uuid::new_v4(),
-        issuer: "https://test.example.com".to_string(),
-        audiences: vec!["api".to_string()],
+        issuer: "https://test.example.com".to_owned(),
+        audiences: vec!["api".to_owned()],
         expires_at: Some(time::OffsetDateTime::now_utc() + time::Duration::hours(1)),
         not_before: None,
         tenants: vec![Uuid::new_v4()],
-        roles: vec!["user".to_string()],
+        roles: vec!["user".to_owned()],
         extras: serde_json::Map::new(),
     };
 
@@ -268,8 +268,8 @@ async fn test_expired_token_fails_validation() {
     use uuid::Uuid;
 
     let config = ValidationConfig {
-        allowed_issuers: vec!["https://test.example.com".to_string()],
-        allowed_audiences: vec!["api".to_string()],
+        allowed_issuers: vec!["https://test.example.com".to_owned()],
+        allowed_audiences: vec!["api".to_owned()],
         leeway_seconds: 5, // Short leeway
         require_uuid_subject: true,
         require_uuid_tenants: true,
@@ -277,8 +277,8 @@ async fn test_expired_token_fails_validation() {
 
     let claims = Claims {
         sub: Uuid::new_v4(),
-        issuer: "https://test.example.com".to_string(),
-        audiences: vec!["api".to_string()],
+        issuer: "https://test.example.com".to_owned(),
+        audiences: vec!["api".to_owned()],
         expires_at: Some(time::OffsetDateTime::now_utc() - time::Duration::hours(1)),
         not_before: None,
         tenants: vec![],
@@ -295,8 +295,8 @@ async fn test_invalid_issuer_fails_validation() {
     use uuid::Uuid;
 
     let config = ValidationConfig {
-        allowed_issuers: vec!["https://allowed.example.com".to_string()],
-        allowed_audiences: vec!["api".to_string()],
+        allowed_issuers: vec!["https://allowed.example.com".to_owned()],
+        allowed_audiences: vec!["api".to_owned()],
         leeway_seconds: 60,
         require_uuid_subject: true,
         require_uuid_tenants: true,
@@ -304,8 +304,8 @@ async fn test_invalid_issuer_fails_validation() {
 
     let claims = Claims {
         sub: Uuid::new_v4(),
-        issuer: "https://invalid.example.com".to_string(),
-        audiences: vec!["api".to_string()],
+        issuer: "https://invalid.example.com".to_owned(),
+        audiences: vec!["api".to_owned()],
         expires_at: Some(time::OffsetDateTime::now_utc() + time::Duration::hours(1)),
         not_before: None,
         tenants: vec![],

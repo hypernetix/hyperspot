@@ -34,19 +34,22 @@ impl Endpoint {
         }
     }
 
+    #[must_use]
     pub fn http(host: &str, port: u16) -> Self {
         Self {
-            uri: format!("http://{}:{}", host, port),
+            uri: format!("http://{host}:{port}"),
         }
     }
 
+    #[must_use]
     pub fn https(host: &str, port: u16) -> Self {
         Self {
-            uri: format!("https://{}:{}", host, port),
+            uri: format!("https://{host}:{port}"),
         }
     }
 
     /// Parse the endpoint URI into a typed view
+    #[must_use]
     pub fn kind(&self) -> EndpointKind {
         if let Some(rest) = self.uri.strip_prefix("unix://") {
             return EndpointKind::Uds(std::path::PathBuf::from(rest));
@@ -74,7 +77,7 @@ pub enum InstanceState {
     Draining,
 }
 
-/// Runtime state of an instance (guarded by RwLock for safe mutation)
+/// Runtime state of an instance (guarded by `RwLock` for safe mutation)
 #[derive(Clone, Debug)]
 pub struct InstanceRuntimeState {
     pub last_heartbeat: Instant,
@@ -83,6 +86,7 @@ pub struct InstanceRuntimeState {
 
 /// Represents a single instance of a module
 #[derive(Debug)]
+#[must_use]
 pub struct ModuleInstance {
     pub module: String,
     pub instance_id: Uuid,
@@ -136,11 +140,13 @@ impl ModuleInstance {
     }
 
     /// Get the current state of this instance
+    #[must_use]
     pub fn state(&self) -> InstanceState {
         self.inner.read().state
     }
 
     /// Get the last heartbeat timestamp
+    #[must_use]
     pub fn last_heartbeat(&self) -> Instant {
         self.inner.read().last_heartbeat
     }
@@ -149,6 +155,7 @@ impl ModuleInstance {
 /// Central registry that tracks all running module instances in the system.
 /// Provides discovery, health tracking, and round-robin load balancing.
 #[derive(Clone)]
+#[must_use]
 pub struct ModuleManager {
     inner: DashMap<String, Vec<Arc<ModuleInstance>>>,
     rr_counters: DashMap<String, usize>,
@@ -261,6 +268,7 @@ impl ModuleManager {
     }
 
     /// Get all instances of a specific module
+    #[must_use]
     pub fn instances_of(&self, module: &str) -> Vec<Arc<ModuleInstance>> {
         self.inner
             .get(module)
@@ -269,6 +277,7 @@ impl ModuleManager {
     }
 
     /// Get all instances across all modules
+    #[must_use]
     pub fn all_instances(&self) -> Vec<Arc<ModuleInstance>> {
         self.inner
             .iter()
@@ -315,6 +324,7 @@ impl ModuleManager {
     }
 
     /// Pick an instance using round-robin selection, preferring healthy instances
+    #[must_use]
     pub fn pick_instance_round_robin(&self, module: &str) -> Option<Arc<ModuleInstance>> {
         let instances_entry = self.inner.get(module)?;
         let instances = instances_entry.value();
@@ -341,7 +351,7 @@ impl ModuleManager {
         }
 
         let len = candidates.len();
-        let mut counter = self.rr_counters.entry(module.to_string()).or_insert(0);
+        let mut counter = self.rr_counters.entry(module.to_owned()).or_insert(0);
         let idx = *counter % len;
         *counter = (*counter + 1) % len;
 
@@ -350,6 +360,7 @@ impl ModuleManager {
 
     /// Pick a service endpoint using round-robin, returning (module, instance, endpoint).
     /// Prefers healthy/ready instances and automatically rotates among them.
+    #[must_use]
     pub fn pick_service_round_robin(
         &self,
         service_name: &str,
@@ -374,7 +385,7 @@ impl ModuleManager {
 
         // Use a counter keyed by service name for round-robin
         let len = candidates.len();
-        let service_key = service_name.to_string();
+        let service_key = service_name.to_owned();
         let mut counter = self.rr_counters.entry(service_key).or_insert(0);
         let idx = *counter % len;
         *counter = (*counter + 1) % len;
@@ -406,13 +417,13 @@ mod tests {
                 .with_version("1.0.0"),
         );
 
-        dir.register_instance(instance.clone());
+        dir.register_instance(instance);
 
         let instances = dir.instances_of("test_module");
         assert_eq!(instances.len(), 1);
         assert_eq!(instances[0].instance_id, instance_id);
         assert_eq!(instances[0].module, "test_module");
-        assert_eq!(instances[0].version, Some("1.0.0".to_string()));
+        assert_eq!(instances[0].version, Some("1.0.0".to_owned()));
     }
 
     #[test]
@@ -427,10 +438,10 @@ mod tests {
         dir.register_instance(instance1);
         dir.register_instance(instance2);
 
-        let instances = dir.instances_of("test_module");
-        assert_eq!(instances.len(), 2);
+        let registered = dir.instances_of("test_module");
+        assert_eq!(registered.len(), 2);
 
-        let ids: Vec<_> = instances.iter().map(|i| i.instance_id).collect();
+        let ids: Vec<_> = registered.iter().map(|i| i.instance_id).collect();
         assert!(ids.contains(&id1));
         assert!(ids.contains(&id2));
     }
@@ -440,17 +451,17 @@ mod tests {
         let dir = ModuleManager::new();
         let instance_id = Uuid::new_v4();
 
-        let instance1 =
+        let initial_instance =
             Arc::new(ModuleInstance::new("test_module", instance_id).with_version("1.0.0"));
-        dir.register_instance(instance1);
+        dir.register_instance(initial_instance);
 
-        let instance1_updated =
+        let updated_instance =
             Arc::new(ModuleInstance::new("test_module", instance_id).with_version("2.0.0"));
-        dir.register_instance(instance1_updated);
+        dir.register_instance(updated_instance);
 
-        let instances = dir.instances_of("test_module");
-        assert_eq!(instances.len(), 1, "Should not duplicate instance");
-        assert_eq!(instances[0].version, Some("2.0.0".to_string()));
+        let registered = dir.instances_of("test_module");
+        assert_eq!(registered.len(), 1, "Should not duplicate instance");
+        assert_eq!(registered[0].version, Some("2.0.0".to_owned()));
     }
 
     #[test]
@@ -550,11 +561,11 @@ mod tests {
 
     #[test]
     fn test_endpoint_creation() {
-        let http_ep = Endpoint::http("localhost", 8080);
-        assert_eq!(http_ep.uri, "http://localhost:8080");
+        let plain_ep = Endpoint::http("localhost", 8080);
+        assert_eq!(plain_ep.uri, "http://localhost:8080");
 
-        let https_ep = Endpoint::https("localhost", 8443);
-        assert_eq!(https_ep.uri, "https://localhost:8443");
+        let secure_ep = Endpoint::https("localhost", 8443);
+        assert_eq!(secure_ep.uri, "https://localhost:8443");
 
         let uds_ep = Endpoint::uds("/tmp/socket.sock");
         assert!(uds_ep.uri.starts_with("unix://"));
@@ -566,8 +577,8 @@ mod tests {
 
     #[test]
     fn test_endpoint_kind() {
-        let http_ep = Endpoint::http("127.0.0.1", 8080);
-        match http_ep.kind() {
+        let plain_ep = Endpoint::http("127.0.0.1", 8080);
+        match plain_ep.kind() {
             EndpointKind::Tcp(addr) => {
                 assert_eq!(addr.ip().to_string(), "127.0.0.1");
                 assert_eq!(addr.port(), 8080);
@@ -575,8 +586,8 @@ mod tests {
             _ => panic!("Expected TCP endpoint for http"),
         }
 
-        let https_ep = Endpoint::https("127.0.0.1", 8443);
-        match https_ep.kind() {
+        let secure_ep = Endpoint::https("127.0.0.1", 8443);
+        match secure_ep.kind() {
             EndpointKind::Tcp(addr) => {
                 assert_eq!(addr.ip().to_string(), "127.0.0.1");
                 assert_eq!(addr.port(), 8443);
@@ -613,7 +624,7 @@ mod tests {
         assert_eq!(instance.module, "test_module");
         assert_eq!(instance.instance_id, instance_id);
         assert!(instance.control.is_some());
-        assert_eq!(instance.version, Some("1.2.3".to_string()));
+        assert_eq!(instance.version, Some("1.2.3".to_owned()));
         assert_eq!(instance.grpc_services.len(), 2);
         assert!(instance.grpc_services.contains_key("service1"));
         assert!(instance.grpc_services.contains_key("service2"));
@@ -662,12 +673,12 @@ mod tests {
         // Create two instances: one healthy, one quarantined
         let healthy_id = Uuid::new_v4();
         let healthy = Arc::new(ModuleInstance::new("test_module", healthy_id));
-        dir.register_instance(healthy.clone());
+        dir.register_instance(healthy);
         dir.update_heartbeat("test_module", healthy_id, Instant::now());
 
         let quarantined_id = Uuid::new_v4();
         let quarantined = Arc::new(ModuleInstance::new("test_module", quarantined_id));
-        dir.register_instance(quarantined.clone());
+        dir.register_instance(quarantined);
         dir.mark_quarantined("test_module", quarantined_id);
 
         // RR should only pick the healthy instance

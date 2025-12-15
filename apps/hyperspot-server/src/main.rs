@@ -41,7 +41,7 @@ fn ensure_drivers_linked() {
     let _ = std::any::type_name::<Postgres>();
 }
 
-/// HyperSpot Server - modular platform for AI services
+/// `HyperSpot` Server - modular platform for AI services
 #[derive(Parser)]
 #[command(name = "hyperspot-server")]
 #[command(about = "HyperSpot Server - modular platform for AI services")]
@@ -63,7 +63,7 @@ struct Cli {
     #[arg(short, long, action = clap::ArgAction::Count)]
     verbose: u8,
 
-    /// Use mock database (sqlite::memory:) for all modules
+    /// Use mock database (`sqlite::memory`:) for all modules
     #[arg(long)]
     mock: bool,
 
@@ -88,7 +88,7 @@ async fn main() -> Result<()> {
     if let Some(ref path) = cli.config {
         let path_str = path.to_string_lossy();
         if !Path::new(path).is_file() {
-            anyhow::bail!("config file does not exist: {}", path_str);
+            anyhow::bail!("config file does not exist: {path_str}");
         }
     }
 
@@ -165,7 +165,7 @@ fn check_config(config: &AppConfig) -> Result<()> {
     Ok(())
 }
 
-/// Create a Figment from the loaded AppConfig for use with DbManager.
+/// Create a Figment from the loaded `AppConfig` for use with `DbManager`.
 fn create_figment_from_config(config: &AppConfig) -> Figment {
     use figment::providers::Serialized;
 
@@ -174,7 +174,7 @@ fn create_figment_from_config(config: &AppConfig) -> Figment {
     Figment::new().merge(Serialized::defaults(config))
 }
 
-/// Create a mock Figment for testing with in-memory SQLite databases.
+/// Create a mock Figment for testing with in-memory `SQLite` databases.
 fn create_mock_figment(config: &AppConfig) -> Figment {
     use figment::providers::Serialized;
 
@@ -184,12 +184,12 @@ fn create_mock_figment(config: &AppConfig) -> Figment {
     Figment::new().merge(Serialized::defaults(mock_config))
 }
 
-/// Override all module database configurations with in-memory SQLite
+/// Override all module database configurations with in-memory `SQLite`
 fn override_modules_with_mock_db(config: &mut AppConfig) {
     for module_value in config.modules.values_mut() {
         if let Some(obj) = module_value.as_object_mut() {
             obj.insert(
-                "database".to_string(),
+                "database".to_owned(),
                 serde_json::json!({
                     "dsn": "sqlite::memory:",
                     "params": {
@@ -201,7 +201,7 @@ fn override_modules_with_mock_db(config: &mut AppConfig) {
     }
 }
 
-/// Build config provider from AppConfig
+/// Build config provider from `AppConfig`
 fn build_config_provider(config: AppConfig) -> Arc<dyn modkit::ConfigProvider> {
     Arc::new(ModkitConfigAdapter(Arc::new(AppConfigProvider::new(
         config,
@@ -293,10 +293,10 @@ async fn run_server(config: AppConfig, args: CliArgs) -> Result<()> {
     result
 }
 
-/// Build OoP spawn configuration from AppConfig.
+/// Build `OoP` spawn configuration from `AppConfig`.
 ///
 /// This collects all modules with `type=oop` and prepares their spawn configuration.
-/// The actual spawning happens in the HostRuntime after the start phase.
+/// The actual spawning happens in the `HostRuntime` after the start phase.
 fn build_oop_spawn_options(
     config: &AppConfig,
     _args: &CliArgs,
@@ -310,8 +310,7 @@ fn build_oop_spawn_options(
             if runtime_cfg.mod_type == RuntimeKind::Oop {
                 let exec_cfg = runtime_cfg.execution.as_ref().ok_or_else(|| {
                     anyhow::anyhow!(
-                        "module '{}' is type=oop but execution config is missing",
-                        module_name
+                        "module '{module_name}' is type=oop but execution config is missing"
                     )
                 })?;
 

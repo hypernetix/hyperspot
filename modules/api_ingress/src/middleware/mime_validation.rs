@@ -13,6 +13,7 @@ use modkit::api::{OperationSpec, Problem};
 pub type MimeValidationMap = Arc<DashMap<(Method, String), Vec<&'static str>>>;
 
 /// Build MIME validation map from operation specs
+#[must_use]
 pub fn build_mime_validation_map(specs: &[OperationSpec]) -> MimeValidationMap {
     let map = DashMap::new();
 
@@ -34,7 +35,7 @@ fn extract_content_type(req: &Request) -> Option<String> {
     let ct_header = req.headers().get(http::header::CONTENT_TYPE)?;
     let ct_str = ct_header.to_str().ok()?;
     let ct_main = ct_str.split(';').next().map_or(ct_str, str::trim);
-    Some(ct_main.to_string())
+    Some(ct_main.to_owned())
 }
 
 /// Create an Unsupported Media Type error response.
@@ -92,7 +93,7 @@ pub async fn mime_validation_middleware(
     let path = req
         .extensions()
         .get::<axum::extract::MatchedPath>()
-        .map_or_else(|| req.uri().path().to_string(), |p| p.as_str().to_string());
+        .map_or_else(|| req.uri().path().to_owned(), |p| p.as_str().to_owned());
 
     // Check if this operation has MIME validation configured
     let Some(allowed_types) = validation_map.get(&(method.clone(), path.clone())) else {
@@ -138,7 +139,7 @@ mod tests {
 
         let specs = vec![OperationSpec {
             method: Method::POST,
-            path: "/upload".to_string(),
+            path: "/upload".to_owned(),
             operation_id: None,
             summary: None,
             description: None,
@@ -148,12 +149,12 @@ mod tests {
                 content_type: "multipart/form-data",
                 description: None,
                 schema: RequestBodySchema::MultipartFile {
-                    field_name: "file".to_string(),
+                    field_name: "file".to_owned(),
                 },
                 required: true,
             }),
             responses: vec![],
-            handler_id: "test".to_string(),
+            handler_id: "test".to_owned(),
             sec_requirement: None,
             is_public: false,
             rate_limit: None,
@@ -162,8 +163,8 @@ mod tests {
 
         let map = build_mime_validation_map(&specs);
 
-        assert!(map.contains_key(&(Method::POST, "/upload".to_string())));
-        let allowed = map.get(&(Method::POST, "/upload".to_string())).unwrap();
+        assert!(map.contains_key(&(Method::POST, "/upload".to_owned())));
+        let allowed = map.get(&(Method::POST, "/upload".to_owned())).unwrap();
         assert_eq!(allowed.len(), 2);
         assert!(allowed.contains(&"multipart/form-data"));
         assert!(allowed.contains(&"application/pdf"));

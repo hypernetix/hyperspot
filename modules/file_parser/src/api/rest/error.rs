@@ -9,19 +9,19 @@ pub fn domain_error_to_problem(err: DomainError) -> Problem {
         DomainError::FileNotFound { path } => Problem::new(
             StatusCode::NOT_FOUND,
             "File Not Found",
-            format!("File not found: {}", path),
+            format!("File not found: {path}"),
         ),
 
         DomainError::UnsupportedFileType { extension } => Problem::new(
             StatusCode::BAD_REQUEST,
             "Unsupported File Type",
-            format!("Unsupported file type: {}", extension),
+            format!("Unsupported file type: {extension}"),
         ),
 
         DomainError::NoParserAvailable { extension } => Problem::new(
             StatusCode::UNSUPPORTED_MEDIA_TYPE,
             "No Parser Available",
-            format!("No parser available for extension: {}", extension),
+            format!("No parser available for extension: {extension}"),
         ),
 
         DomainError::ParseError { message } => {
@@ -35,7 +35,7 @@ pub fn domain_error_to_problem(err: DomainError) -> Problem {
         DomainError::InvalidUrl { url } => Problem::new(
             StatusCode::BAD_REQUEST,
             "Invalid URL",
-            format!("Invalid URL: {}", url),
+            format!("Invalid URL: {url}"),
         ),
 
         DomainError::DownloadError { message } => {
@@ -48,7 +48,7 @@ pub fn domain_error_to_problem(err: DomainError) -> Problem {
     }
 }
 
-/// Implement From<DomainError> for Problem so it works with ApiError
+/// Implement From<DomainError> for Problem so it works with `ApiError`
 impl From<DomainError> for Problem {
     fn from(e: DomainError) -> Self {
         domain_error_to_problem(e)

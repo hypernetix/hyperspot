@@ -1,6 +1,6 @@
 //! User Info SDK
 //!
-//! This crate provides the public API for the user_info module:
+//! This crate provides the public API for the `user_info` module:
 //! - `UsersInfoApi` trait
 //! - Model types (`User`, `NewUser`, `UserPatch`, `UpdateUserRequest`)
 //! - Error type (`UsersInfoError`)

@@ -34,7 +34,7 @@ async fn run_hyperspot_server_with_timeout(
     let child = cmd.spawn()?;
 
     match timeout(timeout_duration, child.wait_with_output()).await {
-        Ok(result) => result.map_err(|e| e.into()),
+        Ok(result) => result.map_err(Into::into),
         Err(_elapsed) => {
             // Timeout occurred - this is actually expected for server runs
             Err("elapsed".into())
@@ -111,8 +111,7 @@ fn test_cli_config_validation_missing_file() {
         stderr.contains("does not exist")
             || stderr.contains("not found")
             || stderr.contains("config"),
-        "Should indicate config file not found: {}",
-        stderr
+        "Should indicate config file not found: {stderr}"
     );
 }
 
@@ -132,8 +131,7 @@ fn test_cli_config_validation_invalid_yaml() {
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
         stderr.contains("yaml") || stderr.contains("parse") || stderr.contains("format"),
-        "Should mention YAML parsing issue: {}",
-        stderr
+        "Should mention YAML parsing issue: {stderr}"
     );
 }
 
@@ -167,8 +165,8 @@ logging:
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        eprintln!("STDERR: {}", stderr);
-        eprintln!("STDOUT: {}", stdout);
+        eprintln!("STDERR: {stderr}");
+        eprintln!("STDOUT: {stdout}");
     }
 
     assert!(output.status.success(), "Should succeed with valid config");
@@ -180,8 +178,7 @@ logging:
             || stdout.contains("OK")
             || stdout.contains("success")
             || stdout.is_empty(),
-        "Should indicate successful validation or be empty: {}",
-        stdout
+        "Should indicate successful validation or be empty: {stdout}"
     );
 }
 
@@ -248,7 +245,7 @@ modules:
                     "✓ Server started successfully with mock database (timed out as expected)"
                 );
             } else {
-                eprintln!("Server failed to start: {}", err);
+                eprintln!("Server failed to start: {err}");
                 panic!("Server should start successfully with mock database");
             }
         }
@@ -261,8 +258,8 @@ modules:
                 println!("✓ Server completed successfully with mock database");
             } else {
                 eprintln!("Server failed to start:");
-                eprintln!("STDOUT: {}", stdout);
-                eprintln!("STDERR: {}", stderr);
+                eprintln!("STDOUT: {stdout}");
+                eprintln!("STDERR: {stderr}");
                 panic!("Server should start successfully with mock database");
             }
         }
@@ -297,8 +294,7 @@ logging:
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
         stderr.contains("address") || stderr.contains("parse") || stderr.contains("invalid"),
-        "Should mention address parsing issue: {}",
-        stderr
+        "Should mention address parsing issue: {stderr}"
     );
 }
 
@@ -330,8 +326,8 @@ logging:
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        eprintln!("STDERR: {}", stderr);
-        eprintln!("STDOUT: {}", stdout);
+        eprintln!("STDERR: {stderr}");
+        eprintln!("STDOUT: {stdout}");
     }
 
     assert!(
@@ -370,8 +366,7 @@ fn test_cli_config_flag_short_form() {
         stderr.contains("does not exist")
             || stderr.contains("not found")
             || stderr.contains("config"),
-        "Should indicate config file not found using short flag: {}",
-        stderr
+        "Should indicate config file not found using short flag: {stderr}"
     );
 }
 
@@ -411,8 +406,8 @@ logging:
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        eprintln!("STDERR: {}", stderr);
-        eprintln!("STDOUT: {}", stdout);
+        eprintln!("STDERR: {stderr}");
+        eprintln!("STDOUT: {stdout}");
     }
 
     assert!(
@@ -453,8 +448,8 @@ server:
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        eprintln!("STDERR: {}", stderr);
-        eprintln!("STDOUT: {}", stdout);
+        eprintln!("STDERR: {stderr}");
+        eprintln!("STDOUT: {stdout}");
     }
 
     // Should succeed even without database config (modules can run without DB)

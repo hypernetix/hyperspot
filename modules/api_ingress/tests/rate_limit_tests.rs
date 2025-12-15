@@ -17,7 +17,7 @@ use tokio::time::{sleep, Duration};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-/// Helper to create a test ModuleCtx
+/// Helper to create a test `ModuleCtx`
 struct TestConfigProvider {
     config: serde_json::Value,
 }
@@ -115,7 +115,7 @@ impl RestfulModule for RateLimitedModule {
 
 async fn limited_handler() -> Json<TestResponse> {
     Json(TestResponse {
-        message: "limited".to_string(),
+        message: "limited".to_owned(),
     })
 }
 
@@ -123,13 +123,13 @@ async fn slow_handler() -> Json<TestResponse> {
     // Simulate slow processing
     sleep(Duration::from_millis(200)).await;
     Json(TestResponse {
-        message: "slow".to_string(),
+        message: "slow".to_owned(),
     })
 }
 
 async fn normal_handler() -> Json<TestResponse> {
     Json(TestResponse {
-        message: "normal".to_string(),
+        message: "normal".to_owned(),
     })
 }
 

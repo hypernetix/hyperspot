@@ -18,12 +18,13 @@ pub struct GrpcInstallerData {
 /// Runtime-owned store for gRPC service installers.
 ///
 /// This replaces the previous global static storage with a proper
-/// runtime-scoped type that gets injected into the grpc_hub module.
+/// runtime-scoped type that gets injected into the `grpc_hub` module.
 pub struct GrpcInstallerStore {
     inner: Mutex<Option<GrpcInstallerData>>,
 }
 
 impl GrpcInstallerStore {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             inner: Mutex::new(None),
@@ -31,6 +32,9 @@ impl GrpcInstallerStore {
     }
 
     /// Set installers once. Fails if already initialized.
+    ///
+    /// # Errors
+    /// Returns an error if installers have already been initialized.
     pub fn set(&self, data: GrpcInstallerData) -> anyhow::Result<()> {
         let mut guard = self.inner.lock();
         if guard.is_some() {

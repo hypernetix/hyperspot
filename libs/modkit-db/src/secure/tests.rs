@@ -1,10 +1,10 @@
 //! Integration tests for the secure ORM layer.
 //!
-//! Note: Full integration tests with SeaORM entities should be written in actual
+//! Note: Full integration tests with `SeaORM` entities should be written in actual
 //! application code where real entities are defined. These are basic unit tests
 //! for the core condition building logic.
 //!
-//! See USAGE_EXAMPLE.md for complete usage examples with real SeaORM entities.
+//! See `USAGE_EXAMPLE.md` for complete usage examples with real `SeaORM` entities.
 
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]

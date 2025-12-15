@@ -9,19 +9,19 @@ use modkit_db::{config::*, manager::DbManager, DbError};
 use std::collections::HashMap;
 use tempfile::TempDir;
 
-/// Test that module fields override server fields using SQLite for reliable testing.
+/// Test that module fields override server fields using `SQLite` for reliable testing.
 #[tokio::test]
 async fn test_precedence_module_fields_override_server() {
     let global_config = GlobalDatabaseConfig {
         servers: {
             let mut servers = HashMap::new();
             servers.insert(
-                "sqlite_server".to_string(),
+                "sqlite_server".to_owned(),
                 DbConnConfig {
                     params: Some({
                         let mut params = HashMap::new();
-                        params.insert("synchronous".to_string(), "FULL".to_string());
-                        params.insert("journal_mode".to_string(), "DELETE".to_string());
+                        params.insert("synchronous".to_owned(), "FULL".to_owned());
+                        params.insert("journal_mode".to_owned(), "DELETE".to_owned());
                         params
                     }),
                     ..Default::default()
@@ -67,14 +67,13 @@ async fn test_precedence_module_fields_override_server() {
             let error_msg = err.to_string();
             assert!(
                 !error_msg.contains("Unknown SQLite"),
-                "Config merging failed: {}",
-                error_msg
+                "Config merging failed: {error_msg}"
             );
         }
     }
 }
 
-/// Test that module DSN completely overrides server DSN using SQLite.
+/// Test that module DSN completely overrides server DSN using `SQLite`.
 #[tokio::test]
 async fn test_precedence_module_dsn_override_server() {
     let test_data = common::test_data_dir();
@@ -85,7 +84,7 @@ async fn test_precedence_module_dsn_override_server() {
         servers: {
             let mut servers = HashMap::new();
             servers.insert(
-                "sqlite_server".to_string(),
+                "sqlite_server".to_owned(),
                 DbConnConfig {
                     dsn: Some(format!("sqlite://{}?synchronous=FULL", server_db.display())),
                     ..Default::default()
@@ -117,25 +116,17 @@ async fn test_precedence_module_dsn_override_server() {
         Ok(Some(handle)) => {
             // Verify that the module DSN was used, not the server DSN
             let dsn = handle.dsn();
-            assert!(
-                dsn.contains("module_"),
-                "Should use module DSN, got: {}",
-                dsn
-            );
+            assert!(dsn.contains("module_"), "Should use module DSN, got: {dsn}");
             assert!(
                 !dsn.contains("server_"),
-                "Should not use server DSN, got: {}",
-                dsn
+                "Should not use server DSN, got: {dsn}"
             );
         }
         Ok(None) => {
             panic!("Expected database handle for module");
         }
         Err(err) => {
-            panic!(
-                "Expected successful connection with module DSN override, got: {:?}",
-                err
-            );
+            panic!("Expected successful connection with module DSN override, got: {err:?}");
         }
     }
 }
@@ -147,12 +138,12 @@ async fn test_precedence_params_merging() {
         servers: {
             let mut servers = HashMap::new();
             servers.insert(
-                "sqlite_server".to_string(),
+                "sqlite_server".to_owned(),
                 DbConnConfig {
                     params: Some({
                         let mut params = HashMap::new();
-                        params.insert("synchronous".to_string(), "FULL".to_string());
-                        params.insert("journal_mode".to_string(), "DELETE".to_string());
+                        params.insert("synchronous".to_owned(), "FULL".to_owned());
+                        params.insert("journal_mode".to_owned(), "DELETE".to_owned());
                         params
                     }),
                     ..Default::default()
@@ -200,7 +191,7 @@ async fn test_precedence_params_merging() {
     }
 }
 
-/// Test conflict detection: SQLite DSN with server fields.
+/// Test conflict detection: `SQLite` DSN with server fields.
 #[tokio::test]
 async fn test_conflict_detection_sqlite_dsn_with_server_fields() {
     let figment = Figment::new().merge(Serialized::defaults(serde_json::json!({
@@ -224,11 +215,11 @@ async fn test_conflict_detection_sqlite_dsn_with_server_fields() {
     if let Err(DbError::ConfigConflict(msg)) = result {
         assert!(msg.contains("SQLite DSN cannot be used with host/port fields"));
     } else {
-        panic!("Expected ConfigConflict error, got: {:?}", result);
+        panic!("Expected ConfigConflict error, got: {result:?}");
     }
 }
 
-/// Test conflict detection: Non-SQLite DSN with SQLite fields.
+/// Test conflict detection: Non-SQLite DSN with `SQLite` fields.
 #[tokio::test]
 async fn test_conflict_detection_nonsqlite_dsn_with_sqlite_fields() {
     let figment = Figment::new().merge(Serialized::defaults(serde_json::json!({
@@ -251,7 +242,7 @@ async fn test_conflict_detection_nonsqlite_dsn_with_sqlite_fields() {
     if let Err(DbError::ConfigConflict(msg)) = result {
         assert!(msg.contains("Non-SQLite DSN cannot be used with file/path fields"));
     } else {
-        panic!("Expected ConfigConflict error, got: {:?}", result);
+        panic!("Expected ConfigConflict error, got: {result:?}");
     }
 }
 
@@ -286,15 +277,14 @@ async fn test_file_and_path_handling() {
             // Check that it uses the file path under module directory, not the ignored absolute path
             assert!(
                 dsn.contains("file_path_test_") && !dsn.contains("ignored_"),
-                "Should use file path, not ignored path. DSN: {}",
-                dsn
+                "Should use file path, not ignored path. DSN: {dsn}"
             );
         }
         Ok(None) => {
             panic!("Expected database handle");
         }
         Err(err) => {
-            panic!("Expected successful connection, got: {:?}", err);
+            panic!("Expected successful connection, got: {err:?}");
         }
     }
 }
@@ -321,7 +311,7 @@ async fn test_unknown_server_reference() {
     if let Err(DbError::InvalidConfig(msg)) = result {
         assert!(msg.contains("Referenced server 'nonexistent_server' not found"));
     } else {
-        panic!("Expected InvalidConfig error, got: {:?}", result);
+        panic!("Expected InvalidConfig error, got: {result:?}");
     }
 }
 

@@ -1,5 +1,5 @@
 #![cfg_attr(coverage_nightly, feature(coverage_attribute))]
-//! # ModKit - Declarative Module System
+//! # `ModKit` - Declarative Module System
 //!
 //! A unified crate for building modular applications with declarative module definitions.
 //!

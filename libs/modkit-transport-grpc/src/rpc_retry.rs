@@ -57,6 +57,7 @@ fn duration_to_i64_ms(duration: Duration) -> i64 {
 /// This struct extracts retry-related settings from [`crate::client::GrpcClientConfig`]
 /// for use with [`call_with_retry`].
 #[derive(Debug, Clone)]
+#[must_use]
 pub struct RpcRetryConfig {
     /// Maximum number of retry attempts (not including the initial call).
     pub max_retries: u32,
@@ -150,6 +151,9 @@ impl RpcRetryConfig {
 ///     "users.get_user",
 /// ).await?;
 /// ```
+///
+/// # Errors
+/// Returns `Status` error if the RPC fails after all retry attempts.
 pub async fn call_with_retry<TClient, F, Fut, Req, Res>(
     client: &mut TClient,
     cfg: Arc<RpcRetryConfig>,
@@ -271,8 +275,8 @@ mod tests {
         let result = call_with_retry(
             &mut client,
             cfg,
-            "test_request".to_string(),
-            |_c, req| async move { Ok::<_, Status>(format!("response: {}", req)) },
+            "test_request".to_owned(),
+            |_c, req| async move { Ok::<_, Status>(format!("response: {req}")) },
             "test.op",
         )
         .await;
@@ -330,7 +334,7 @@ mod tests {
                     if count < 3 {
                         Err(Status::unavailable("temporarily unavailable"))
                     } else {
-                        Ok("success".to_string())
+                        Ok("success".to_owned())
                     }
                 }
             },
@@ -421,8 +425,7 @@ mod tests {
         // Without cap: 100ms + 200ms = 300ms
         assert!(
             elapsed < Duration::from_millis(200),
-            "Backoff should be capped; elapsed: {:?}",
-            elapsed
+            "Backoff should be capped; elapsed: {elapsed:?}"
         );
     }
 }

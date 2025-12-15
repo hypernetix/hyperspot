@@ -142,7 +142,7 @@ pub fn register_routes(
         .error_415(openapi)
         .register(router, openapi);
 
-    router = router.layer(Extension(service.clone()));
+    router = router.layer(Extension(service));
 
     router
 }

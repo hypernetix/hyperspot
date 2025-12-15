@@ -21,7 +21,7 @@ use crate::infra::audit::HttpAuditClient;
 use crate::infra::storage::sea_orm_repo::SeaOrmUsersRepository;
 use crate::local_client::UsersInfoLocalClient;
 
-/// Main module struct with DDD-light layout and proper ClientHub integration
+/// Main module struct with DDD-light layout and proper `ClientHub` integration
 #[modkit::module(
     name = "users_info",
     capabilities = [db, rest]
@@ -45,7 +45,7 @@ impl Default for UsersInfo {
 impl Clone for UsersInfo {
     fn clone(&self) -> Self {
         Self {
-            service: arc_swap::ArcSwapOption::new(self.service.load().as_ref().map(|s| s.clone())),
+            service: arc_swap::ArcSwapOption::new(self.service.load().as_ref().map(Clone::clone)),
             sse: self.sse.clone(),
         }
     }
@@ -80,9 +80,9 @@ impl Module for UsersInfo {
 
         // Parse audit service URLs from config
         let audit_base = Url::parse(&cfg.audit_base_url)
-            .map_err(|e| anyhow::anyhow!("invalid audit_base_url: {}", e))?;
+            .map_err(|e| anyhow::anyhow!("invalid audit_base_url: {e}"))?;
         let notify_base = Url::parse(&cfg.notifications_base_url)
-            .map_err(|e| anyhow::anyhow!("invalid notifications_base_url: {}", e))?;
+            .map_err(|e| anyhow::anyhow!("invalid notifications_base_url: {e}"))?;
 
         // Create audit adapter
         let audit_adapter: Arc<dyn AuditPort> =

@@ -16,7 +16,7 @@ pub use problem::{
     APPLICATION_PROBLEM_JSON,
 };
 
-/// Helper to attach instance and trace_id to a Problem
+/// Helper to attach instance and `trace_id` to a Problem
 ///
 /// This is a convenience function for enriching Problem instances with
 /// request-specific context before returning them as HTTP responses.

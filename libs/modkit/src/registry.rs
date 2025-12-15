@@ -64,6 +64,7 @@ impl std::fmt::Debug for ModuleRegistry {
 }
 
 impl ModuleRegistry {
+    #[must_use]
     pub fn modules(&self) -> &[ModuleEntry] {
         &self.modules
     }
@@ -71,6 +72,7 @@ impl ModuleRegistry {
     /// Returns modules ordered by system priority.
     /// System modules come first, followed by non-system modules.
     /// Within each group, the original topological order is preserved.
+    #[must_use]
     pub fn modules_by_system_priority(&self) -> Vec<&ModuleEntry> {
         let mut system_mods = Vec::new();
         let mut non_system_mods = Vec::new();
@@ -88,6 +90,9 @@ impl ModuleRegistry {
     }
 
     /// Discover via inventory, have registrators fill the builder, then build & topo-sort.
+    ///
+    /// # Errors
+    /// Returns `RegistryError` if module discovery or dependency resolution fails.
     pub fn discover_and_build() -> Result<Self, RegistryError> {
         let mut b = RegistryBuilder::default();
         for r in ::inventory::iter::<Registrator> {
@@ -97,6 +102,7 @@ impl ModuleRegistry {
     }
 
     /// (Optional) quick lookup if you need it.
+    #[must_use]
     pub fn get_module(&self, name: &str) -> Option<Arc<dyn contracts::Module>> {
         self.modules
             .iter()
@@ -162,8 +168,7 @@ impl RegistryBuilder {
     ) {
         if let Some((existing, _)) = &self.rest_host {
             self.errors.push(format!(
-                "Multiple REST host modules detected: '{}' and '{}'. Only one REST host is allowed.",
-                existing, name
+                "Multiple REST host modules detected: '{existing}' and '{name}'. Only one REST host is allowed."
             ));
             return;
         }
@@ -193,8 +198,7 @@ impl RegistryBuilder {
     ) {
         if let Some((existing, _)) = &self.grpc_hub {
             self.errors.push(format!(
-                "Multiple gRPC hub modules detected: '{}' and '{}'. Only one gRPC hub is allowed.",
-                existing, name
+                "Multiple gRPC hub modules detected: '{existing}' and '{name}'. Only one gRPC hub is allowed."
             ));
             return;
         }
@@ -221,9 +225,6 @@ impl RegistryBuilder {
             Gray,  // visiting (on current path)
             Black, // visited (finished)
         }
-
-        let mut colors = vec![Color::White; names.len()];
-        let mut path = Vec::new();
 
         fn dfs(
             node: usize,
@@ -265,6 +266,9 @@ impl RegistryBuilder {
             None
         }
 
+        let mut colors = vec![Color::White; names.len()];
+        let mut path = Vec::new();
+
         for i in 0..names.len() {
             if colors[i] == Color::White {
                 if let Some(cycle) = dfs(i, names, adj, &mut colors, &mut path) {
@@ -281,7 +285,7 @@ impl RegistryBuilder {
         // Check rest_host early
         if let Some((host_name, _)) = &self.rest_host {
             if !self.core.contains_key(host_name) {
-                return Err(RegistryError::UnknownModule((*host_name).to_string()));
+                return Err(RegistryError::UnknownModule((*host_name).to_owned()));
             }
         }
 
@@ -295,42 +299,42 @@ impl RegistryBuilder {
         // Validate rest capabilities
         for n in self.rest.keys() {
             if !self.core.contains_key(n) {
-                return Err(RegistryError::UnknownModule((*n).to_string()));
+                return Err(RegistryError::UnknownModule((*n).to_owned()));
             }
         }
 
         // Validate rest_host again (redundant but explicit)
         if let Some((n, _)) = &self.rest_host {
             if !self.core.contains_key(n) {
-                return Err(RegistryError::UnknownModule((*n).to_string()));
+                return Err(RegistryError::UnknownModule((*n).to_owned()));
             }
         }
 
         // Validate db capabilities
         for n in self.db.keys() {
             if !self.core.contains_key(n) {
-                return Err(RegistryError::UnknownModule((*n).to_string()));
+                return Err(RegistryError::UnknownModule((*n).to_owned()));
             }
         }
 
         // Validate stateful capabilities
         for n in self.stateful.keys() {
             if !self.core.contains_key(n) {
-                return Err(RegistryError::UnknownModule((*n).to_string()));
+                return Err(RegistryError::UnknownModule((*n).to_owned()));
             }
         }
 
         // Validate grpc_hub
         if let Some((name, _)) = &self.grpc_hub {
             if !self.core.contains_key(name) {
-                return Err(RegistryError::UnknownModule((*name).to_string()));
+                return Err(RegistryError::UnknownModule((*name).to_owned()));
             }
         }
 
         // Validate grpc_services
         for n in self.grpc_services.keys() {
             if !self.core.contains_key(n) {
-                return Err(RegistryError::UnknownModule((*n).to_string()));
+                return Err(RegistryError::UnknownModule((*n).to_owned()));
             }
         }
 
@@ -350,11 +354,11 @@ impl RegistryBuilder {
         for (&n, &deps) in &self.deps {
             let u = *idx
                 .get(n)
-                .ok_or_else(|| RegistryError::UnknownModule(n.to_string()))?;
+                .ok_or_else(|| RegistryError::UnknownModule(n.to_owned()))?;
             for &d in deps {
                 let v = *idx.get(d).ok_or_else(|| RegistryError::UnknownDependency {
-                    module: n.to_string(),
-                    depends_on: d.to_string(),
+                    module: n.to_owned(),
+                    depends_on: d.to_owned(),
                 })?;
                 // edge d -> n (dep before module)
                 adj[v].push(u);
@@ -376,13 +380,13 @@ impl RegistryBuilder {
             let deps = *self
                 .deps
                 .get(name)
-                .ok_or_else(|| RegistryError::MissingDeps(name.to_string()))?;
+                .ok_or_else(|| RegistryError::MissingDeps(name.to_owned()))?;
 
             let core = self
                 .core
                 .get(name)
                 .cloned()
-                .ok_or_else(|| RegistryError::CoreNotFound(name.to_string()))?;
+                .ok_or_else(|| RegistryError::CoreNotFound(name.to_owned()))?;
 
             let entry = ModuleEntry {
                 name,
@@ -409,6 +413,9 @@ impl RegistryBuilder {
     }
 
     /// Finalize & topo-sort; verify deps & capability binding to known cores.
+    ///
+    /// # Errors
+    /// Returns `RegistryError` if validation fails or a dependency cycle is detected.
     pub fn build_topo_sorted(self) -> Result<ModuleRegistry, RegistryError> {
         // 1) Validate all capabilities
         self.validate_capabilities()?;
@@ -451,12 +458,12 @@ impl RegistryBuilder {
         let entries = self.assemble_entries(&order, &names)?;
 
         // Collect grpc_hub and grpc_services for the final registry
-        let grpc_hub = self.grpc_hub.as_ref().map(|(name, _)| (*name).to_string());
+        let grpc_hub = self.grpc_hub.as_ref().map(|(name, _)| (*name).to_owned());
 
         let grpc_services: Vec<(String, Arc<dyn contracts::GrpcServiceModule>)> = self
             .grpc_services
             .iter()
-            .map(|(name, module)| ((*name).to_string(), module.clone()))
+            .map(|(name, module)| ((*name).to_owned(), module.clone()))
             .collect();
 
         tracing::info!(

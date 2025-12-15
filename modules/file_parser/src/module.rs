@@ -30,7 +30,7 @@ impl Default for FileParserModule {
 impl Clone for FileParserModule {
     fn clone(&self) -> Self {
         Self {
-            service: arc_swap::ArcSwapOption::new(self.service.load().as_ref().map(|s| s.clone())),
+            service: arc_swap::ArcSwapOption::new(self.service.load().as_ref().map(Clone::clone)),
         }
     }
 }
@@ -39,6 +39,8 @@ impl Clone for FileParserModule {
 impl Module for FileParserModule {
     #[allow(clippy::cast_possible_truncation)]
     async fn init(&self, ctx: &ModuleCtx) -> anyhow::Result<()> {
+        const BYTES_IN_MB: u64 = 1024_u64 * 1024;
+
         info!("Initializing file_parser module");
 
         // Load module configuration
@@ -60,7 +62,6 @@ impl Module for FileParserModule {
         info!("Registered {} parser backends", parsers.len());
 
         // Create service config from module config
-        const BYTES_IN_MB: u64 = 1024_u64 * 1024;
         let service_config = ServiceConfig {
             max_file_size_bytes: usize::try_from(cfg.max_file_size_mb * BYTES_IN_MB)
                 .unwrap_or(usize::MAX),

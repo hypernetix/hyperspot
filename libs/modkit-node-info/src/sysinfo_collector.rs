@@ -59,9 +59,9 @@ impl SysInfoCollector {
     }
 
     fn collect_os_info() -> OsInfo {
-        let name = System::name().unwrap_or_else(|| std::env::consts::OS.to_string());
-        let version = System::os_version().unwrap_or_else(|| "unknown".to_string());
-        let arch = std::env::consts::ARCH.to_string();
+        let name = System::name().unwrap_or_else(|| std::env::consts::OS.to_owned());
+        let version = System::os_version().unwrap_or_else(|| "unknown".to_owned());
+        let arch = std::env::consts::ARCH.to_owned();
 
         OsInfo {
             name,
@@ -77,9 +77,9 @@ impl SysInfoCollector {
         let num_cpus = u32::try_from(cpus.len()).unwrap_or(u32::MAX);
 
         let model = if let Some(cpu) = cpus.first() {
-            cpu.brand().to_string()
+            cpu.brand().to_owned()
         } else {
-            "Unknown".to_string()
+            "Unknown".to_owned()
         };
 
         // Get physical core count - always small, safe to truncate
@@ -118,7 +118,7 @@ impl SysInfoCollector {
 
     fn collect_host_info() -> HostInfo {
         let hostname = hostname::get().map_or_else(
-            |_| "unknown".to_string(),
+            |_| "unknown".to_owned(),
             |h| h.to_string_lossy().to_string(),
         );
 

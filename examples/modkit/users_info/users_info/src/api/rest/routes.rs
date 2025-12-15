@@ -104,7 +104,7 @@ pub fn register_routes(
         .error_500(openapi)
         .register(router, openapi);
 
-    router = router.layer(Extension(service.clone()));
+    router = router.layer(Extension(service));
 
     router
 }
@@ -185,7 +185,7 @@ mod sse_tests {
         let mut stream = Box::pin(broadcaster.subscribe_stream());
 
         let test_event = dto::UserEvent {
-            kind: "created".to_string(),
+            kind: "created".to_owned(),
             id: Uuid::new_v4(),
             at: Utc::now(),
         };
@@ -281,7 +281,7 @@ mod sse_tests {
         let mut stream2 = Box::pin(broadcaster.subscribe_stream());
 
         let test_event = dto::UserEvent {
-            kind: "created".to_string(),
+            kind: "created".to_owned(),
             id: Uuid::new_v4(),
             at: Utc::now(),
         };

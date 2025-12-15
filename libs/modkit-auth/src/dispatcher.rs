@@ -23,6 +23,7 @@ fn truncate_uuid(uuid: &Uuid) -> String {
 ///
 /// Orchestrates key providers and claims plugins to validate tokens
 /// using a single configured plugin.
+#[must_use]
 pub struct AuthDispatcher {
     /// Registered key providers (JWKS, etc.)
     key_providers: Vec<Arc<dyn KeyProvider>>,
@@ -38,7 +39,10 @@ pub struct AuthDispatcher {
 }
 
 impl AuthDispatcher {
-    /// Create a new dispatcher with validation config and plugin
+    /// Create a new dispatcher with validation config and plugin.
+    ///
+    /// # Errors
+    /// Returns `ConfigError::UnknownPlugin` if the configured provider is not in the registry.
     pub fn new(
         validation_config: ValidationConfig,
         config: &AuthConfig,
@@ -162,14 +166,17 @@ impl AuthDispatcher {
         );
     }
 
-    /// Validate a JWT token
+    /// Validate a JWT token.
     ///
     /// Workflow:
-    /// 1. Try each KeyProvider until one successfully validates the signature
+    /// 1. Try each `KeyProvider` until one successfully validates the signature
     /// 2. Extract issuer from token
     /// 3. Use the configured plugin to normalize claims
     /// 4. Run common validation (issuer, audience, exp, nbf, UUIDs)
     /// 5. Return normalized claims
+    ///
+    /// # Errors
+    /// Returns `ClaimsError` if signature validation, claim normalization, or validation fails.
     pub async fn validate_jwt(&self, token: &str) -> Result<Claims, ClaimsError> {
         // Step 1: Try to validate signature with each key provider
         let (header, raw_claims) = self.try_validate_with_providers(token).await?;
@@ -227,7 +234,10 @@ impl AuthDispatcher {
 
     /// Verify that an introspection response indicates an active token
     fn verify_token_active(introspection_result: &serde_json::Value) -> Result<(), ClaimsError> {
-        if let Some(active) = introspection_result.get("active").and_then(|v| v.as_bool()) {
+        if let Some(active) = introspection_result
+            .get("active")
+            .and_then(serde_json::Value::as_bool)
+        {
             if !active {
                 return Err(ClaimsError::IntrospectionDenied);
             }
@@ -280,11 +290,14 @@ impl AuthDispatcher {
     /// Validate an opaque token via introspection
     ///
     /// Workflow:
-    /// 1. Try each IntrospectionProvider until one succeeds
+    /// 1. Try each `IntrospectionProvider` until one succeeds
     /// 2. Extract issuer from introspection response
     /// 3. Use the configured plugin to normalize claims
     /// 4. Run common validation
     /// 5. Return normalized claims
+    ///
+    /// # Errors
+    /// Returns `ClaimsError` if introspection, claim normalization, or validation fails.
     pub async fn validate_opaque(&self, token: &str) -> Result<Claims, ClaimsError> {
         // Step 1: Try to introspect with each provider
         let introspection_result = self.try_introspect_with_providers(token).await?;
@@ -315,16 +328,21 @@ impl AuthDispatcher {
     }
 
     /// Get validation config (for inspection/testing)
+    #[must_use]
     pub fn validation_config(&self) -> &ValidationConfig {
         &self.validation_config
     }
 
     /// Get the configured authentication plugin (for inspection/testing)
+    #[must_use]
     pub fn plugin(&self) -> &Arc<dyn ClaimsPlugin> {
         &self.plugin
     }
 
-    /// Trigger key refresh for all key providers
+    /// Trigger key refresh for all key providers.
+    ///
+    /// # Errors
+    /// Returns a vector of `ClaimsError` if any provider fails to refresh keys.
     pub async fn refresh_keys(&self) -> Result<(), Vec<ClaimsError>> {
         let mut errors = Vec::new();
 
@@ -347,7 +365,7 @@ impl AuthDispatcher {
     }
 }
 
-/// Implement TokenValidator trait for AuthDispatcher
+/// Implement `TokenValidator` trait for `AuthDispatcher`
 #[async_trait]
 impl TokenValidator for AuthDispatcher {
     async fn validate_and_parse(&self, token: &str) -> Result<Claims, AuthError> {
@@ -371,16 +389,16 @@ mod tests {
     fn test_dispatcher_creation() {
         let mut plugins = HashMap::new();
         plugins.insert(
-            "oidc".to_string(),
+            "oidc".to_owned(),
             PluginConfig::Oidc {
-                tenant_claim: "tenants".to_string(),
-                roles_claim: "roles".to_string(),
+                tenant_claim: "tenants".to_owned(),
+                roles_claim: "roles".to_owned(),
             },
         );
 
         let config = AuthConfig {
             mode: AuthModeConfig {
-                provider: "oidc".to_string(),
+                provider: "oidc".to_owned(),
             },
             plugins,
             ..Default::default()
@@ -393,7 +411,7 @@ mod tests {
 
     // ===== Test Mocks =====
 
-    /// Mock KeyProvider for testing
+    /// Mock `KeyProvider` for testing
     struct MockKeyProvider {
         name: String,
         response: Option<(jsonwebtoken::Header, serde_json::Value)>,
@@ -403,7 +421,7 @@ mod tests {
     impl MockKeyProvider {
         fn success(header: jsonwebtoken::Header, claims: serde_json::Value) -> Self {
             Self {
-                name: "mock-key-provider".to_string(),
+                name: "mock-key-provider".to_owned(),
                 response: Some((header, claims)),
                 error_msg: None,
             }
@@ -411,7 +429,7 @@ mod tests {
 
         fn failure(error_msg: String) -> Self {
             Self {
-                name: "mock-key-provider".to_string(),
+                name: "mock-key-provider".to_owned(),
                 response: None,
                 error_msg: Some(error_msg),
             }
@@ -440,7 +458,7 @@ mod tests {
         }
     }
 
-    /// Mock IntrospectionProvider for testing
+    /// Mock `IntrospectionProvider` for testing
     struct MockIntrospectionProvider {
         response: Option<serde_json::Value>,
         error_msg: Option<String>,
@@ -452,7 +470,7 @@ mod tests {
             Self {
                 response: Some(response),
                 error_msg: None,
-                name: "mock-introspection".to_string(),
+                name: "mock-introspection".to_owned(),
             }
         }
 
@@ -460,7 +478,7 @@ mod tests {
             Self {
                 response: None,
                 error_msg: Some(error_msg),
-                name: "mock-introspection".to_string(),
+                name: "mock-introspection".to_owned(),
             }
         }
     }
@@ -480,7 +498,7 @@ mod tests {
         }
     }
 
-    /// Mock ClaimsPlugin for testing
+    /// Mock `ClaimsPlugin` for testing
     struct MockClaimsPlugin {
         name: String,
         normalized: Option<Claims>,
@@ -490,7 +508,7 @@ mod tests {
     impl MockClaimsPlugin {
         fn success(normalized: Claims) -> Self {
             Self {
-                name: "mock-plugin".to_string(),
+                name: "mock-plugin".to_owned(),
                 normalized: Some(normalized),
                 error_msg: None,
             }
@@ -498,7 +516,7 @@ mod tests {
 
         fn failure(error_msg: String) -> Self {
             Self {
-                name: "mock-plugin".to_string(),
+                name: "mock-plugin".to_owned(),
                 normalized: None,
                 error_msg: Some(error_msg),
             }
@@ -523,12 +541,12 @@ mod tests {
     fn test_claims() -> Claims {
         Claims {
             sub: Uuid::new_v4(),
-            issuer: "https://test.example.com".to_string(),
-            audiences: vec!["test-api".to_string()],
+            issuer: "https://test.example.com".to_owned(),
+            audiences: vec!["test-api".to_owned()],
             expires_at: Some(time::OffsetDateTime::now_utc() + time::Duration::hours(1)),
             not_before: None,
             tenants: vec![Uuid::new_v4()],
-            roles: vec!["user".to_string()],
+            roles: vec!["user".to_owned()],
             extras: serde_json::Map::new(),
         }
     }
@@ -551,8 +569,8 @@ mod tests {
         let plugin = Arc::new(MockClaimsPlugin::success(claims.clone()));
 
         let validation_config = ValidationConfig {
-            allowed_issuers: vec!["https://test.example.com".to_string()],
-            allowed_audiences: vec!["test-api".to_string()],
+            allowed_issuers: vec!["https://test.example.com".to_owned()],
+            allowed_audiences: vec!["test-api".to_owned()],
             leeway_seconds: 60,
             require_uuid_subject: true,
             require_uuid_tenants: true,
@@ -609,16 +627,15 @@ mod tests {
             "exp": claims.expires_at.unwrap().unix_timestamp()
         });
 
-        let failing_provider = Arc::new(MockKeyProvider::failure(
-            "First provider failed".to_string(),
-        ));
+        let failing_provider =
+            Arc::new(MockKeyProvider::failure("First provider failed".to_owned()));
         let header = jsonwebtoken::Header::default();
         let success_provider = Arc::new(MockKeyProvider::success(header, raw_claims));
         let plugin = Arc::new(MockClaimsPlugin::success(claims.clone()));
 
         let validation_config = ValidationConfig {
-            allowed_issuers: vec!["https://test.example.com".to_string()],
-            allowed_audiences: vec!["test-api".to_string()],
+            allowed_issuers: vec!["https://test.example.com".to_owned()],
+            allowed_audiences: vec!["test-api".to_owned()],
             leeway_seconds: 60,
             require_uuid_subject: true,
             require_uuid_tenants: true,
@@ -678,9 +695,7 @@ mod tests {
 
         let header = jsonwebtoken::Header::default();
         let key_provider = Arc::new(MockKeyProvider::success(header, raw_claims));
-        let plugin = Arc::new(MockClaimsPlugin::failure(
-            "Normalization failed".to_string(),
-        ));
+        let plugin = Arc::new(MockClaimsPlugin::failure("Normalization failed".to_owned()));
 
         let validation_config = ValidationConfig::default();
 
@@ -703,7 +718,7 @@ mod tests {
     async fn test_validate_jwt_validation_failure() {
         // Given: Claims that fail common validation (wrong issuer)
         let mut claims = test_claims();
-        claims.issuer = "https://wrong.example.com".to_string();
+        claims.issuer = "https://wrong.example.com".to_owned();
 
         let raw_claims = json!({
             "iss": "https://wrong.example.com",
@@ -717,8 +732,8 @@ mod tests {
         let plugin = Arc::new(MockClaimsPlugin::success(claims));
 
         let validation_config = ValidationConfig {
-            allowed_issuers: vec!["https://test.example.com".to_string()],
-            allowed_audiences: vec!["test-api".to_string()],
+            allowed_issuers: vec!["https://test.example.com".to_owned()],
+            allowed_audiences: vec!["test-api".to_owned()],
             leeway_seconds: 60,
             require_uuid_subject: true,
             require_uuid_tenants: true,
@@ -758,8 +773,8 @@ mod tests {
         let plugin = Arc::new(MockClaimsPlugin::success(claims.clone()));
 
         let validation_config = ValidationConfig {
-            allowed_issuers: vec!["https://test.example.com".to_string()],
-            allowed_audiences: vec!["test-api".to_string()],
+            allowed_issuers: vec!["https://test.example.com".to_owned()],
+            allowed_audiences: vec!["test-api".to_owned()],
             leeway_seconds: 60,
             require_uuid_subject: true,
             require_uuid_tenants: true,
@@ -793,8 +808,8 @@ mod tests {
         let plugin = Arc::new(MockClaimsPlugin::success(test_claims()));
 
         let validation_config = ValidationConfig {
-            allowed_issuers: vec!["https://test.example.com".to_string()],
-            allowed_audiences: vec!["test-api".to_string()],
+            allowed_issuers: vec!["https://test.example.com".to_owned()],
+            allowed_audiences: vec!["test-api".to_owned()],
             leeway_seconds: 60,
             require_uuid_subject: true,
             require_uuid_tenants: true,
@@ -850,7 +865,7 @@ mod tests {
     async fn test_validate_opaque_provider_failure() {
         // Given: A provider that fails
         let provider = Arc::new(MockIntrospectionProvider::failure(
-            "Provider error".to_string(),
+            "Provider error".to_owned(),
         ));
         let plugin = Arc::new(MockClaimsPlugin::success(test_claims()));
 
@@ -901,9 +916,7 @@ mod tests {
         });
 
         let provider = Arc::new(MockIntrospectionProvider::success(introspection_response));
-        let plugin = Arc::new(MockClaimsPlugin::failure(
-            "Normalization failed".to_string(),
-        ));
+        let plugin = Arc::new(MockClaimsPlugin::failure("Normalization failed".to_owned()));
 
         let validation_config = ValidationConfig::default();
 
@@ -932,14 +945,14 @@ mod tests {
         });
 
         let mut claims = test_claims();
-        claims.issuer = "https://wrong.example.com".to_string();
+        claims.issuer = "https://wrong.example.com".to_owned();
 
         let provider = Arc::new(MockIntrospectionProvider::success(introspection_response));
         let plugin = Arc::new(MockClaimsPlugin::success(claims));
 
         let validation_config = ValidationConfig {
-            allowed_issuers: vec!["https://test.example.com".to_string()],
-            allowed_audiences: vec!["test-api".to_string()],
+            allowed_issuers: vec!["https://test.example.com".to_owned()],
+            allowed_audiences: vec!["test-api".to_owned()],
             leeway_seconds: 60,
             require_uuid_subject: true,
             require_uuid_tenants: true,
@@ -967,7 +980,7 @@ mod tests {
     async fn test_validate_opaque_provider_fallback() {
         // Given: Two providers, first fails, second succeeds
         let failing_provider = Arc::new(MockIntrospectionProvider::failure(
-            "First provider failed".to_string(),
+            "First provider failed".to_owned(),
         ));
 
         let introspection_response = json!({
@@ -981,8 +994,8 @@ mod tests {
         let plugin = Arc::new(MockClaimsPlugin::success(claims.clone()));
 
         let validation_config = ValidationConfig {
-            allowed_issuers: vec!["https://test.example.com".to_string()],
-            allowed_audiences: vec!["test-api".to_string()],
+            allowed_issuers: vec!["https://test.example.com".to_owned()],
+            allowed_audiences: vec!["test-api".to_owned()],
             leeway_seconds: 60,
             require_uuid_subject: true,
             require_uuid_tenants: true,

@@ -9,7 +9,7 @@ use utoipa::ToSchema;
 /// Content type for Problem Details as per RFC 9457.
 pub const APPLICATION_PROBLEM_JSON: &str = "application/problem+json";
 
-/// Custom serializer for StatusCode to u16
+/// Custom serializer for `StatusCode` to u16
 #[allow(clippy::trivially_copy_pass_by_ref)] // serde requires &T signature
 fn serialize_status_code<S>(status: &StatusCode, serializer: S) -> Result<S::Ok, S::Error>
 where
@@ -18,7 +18,7 @@ where
     serializer.serialize_u16(status.as_u16())
 }
 
-/// Custom deserializer for StatusCode from u16
+/// Custom deserializer for `StatusCode` from u16
 fn deserialize_status_code<'de, D>(deserializer: D) -> Result<StatusCode, D::Error>
 where
     D: Deserializer<'de>,
@@ -37,6 +37,7 @@ where
         description = "RFC 9457 Problem Details for HTTP APIs"
     )
 )]
+#[must_use]
 pub struct Problem {
     /// A URI reference that identifies the problem type.
     /// When dereferenced, it might provide human-readable documentation.
@@ -88,7 +89,7 @@ pub struct ValidationError {
     pub errors: Vec<ValidationViolation>,
 }
 
-/// Wrapper for ValidationError that can be used as a standalone response.
+/// Wrapper for `ValidationError` that can be used as a standalone response.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "utoipa", schema(title = "ValidationErrorResponse"))]
@@ -105,7 +106,7 @@ impl Problem {
     /// The status is serialized as `u16` for RFC 9457 compatibility.
     pub fn new(status: StatusCode, title: impl Into<String>, detail: impl Into<String>) -> Self {
         Self {
-            type_url: "about:blank".to_string(),
+            type_url: "about:blank".to_owned(),
             title: title.into(),
             status,
             detail: detail.into(),
@@ -175,15 +176,15 @@ mod tests {
         .with_instance("/users/123")
         .with_trace_id("req-456")
         .with_errors(vec![ValidationViolation {
-            message: "Email is required".to_string(),
-            pointer: "/email".to_string(),
+            message: "Email is required".to_owned(),
+            pointer: "/email".to_owned(),
             code: None,
         }]);
 
         assert_eq!(p.status, StatusCode::UNPROCESSABLE_ENTITY);
         assert_eq!(p.code, "VALIDATION_ERROR");
         assert_eq!(p.instance, "/users/123");
-        assert_eq!(p.trace_id, Some("req-456".to_string()));
+        assert_eq!(p.trace_id, Some("req-456".to_owned()));
         assert!(p.errors.is_some());
         assert_eq!(p.errors.as_ref().unwrap().len(), 1);
     }

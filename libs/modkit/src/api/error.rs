@@ -11,7 +11,7 @@ use modkit_odata::Error as ODataError;
 /// while still getting unified error handling at the API boundary.
 #[derive(thiserror::Error, Debug)]
 pub enum ApiError<D> {
-    /// OData pagination errors (filter, orderby, cursor issues)
+    /// `OData` pagination errors (filter, orderby, cursor issues)
     #[error(transparent)]
     OData(ODataError),
 
@@ -22,12 +22,13 @@ pub enum ApiError<D> {
 
 // Manual implementations to avoid conflicts with generic From trait
 impl<D> ApiError<D> {
-    /// Create an ApiError from an OData error
+    /// Create an `ApiError` from an `OData` error
+    #[must_use]
     pub fn from_odata(e: ODataError) -> Self {
         ApiError::OData(e)
     }
 
-    /// Create an ApiError from a domain error
+    /// Create an `ApiError` from a domain error
     pub fn from_domain(e: D) -> Self {
         ApiError::Domain(e)
     }

@@ -1,6 +1,6 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-//! Test that auth_disabled mode properly injects root context
+//! Test that `auth_disabled` mode properly injects root context
 
 use axum::{
     body::Body,
@@ -14,7 +14,7 @@ use axum::{
 use modkit_security::SecurityCtx;
 use tower::ServiceExt;
 
-/// Test handler that extracts SecurityCtx and returns its properties as JSON
+/// Test handler that extracts `SecurityCtx` and returns its properties as JSON
 async fn test_handler(Extension(ctx): Extension<SecurityCtx>) -> impl IntoResponse {
     let is_root = ctx.scope().is_root();
     let is_empty = ctx.scope().is_empty();
@@ -28,7 +28,7 @@ async fn test_handler(Extension(ctx): Extension<SecurityCtx>) -> impl IntoRespon
     }))
 }
 
-/// Middleware that simulates auth_disabled mode by injecting root context
+/// Middleware that simulates `auth_disabled` mode by injecting root context
 async fn inject_root_context(mut req: Request, next: Next) -> Response {
     req.extensions_mut().insert(SecurityCtx::root_ctx());
     next.run(req).await

@@ -1,15 +1,15 @@
-//! Type-safe OData filter representation that operates on DTO-level field identifiers.
+//! Type-safe `OData` filter representation that operates on DTO-level field identifiers.
 //!
 //! This module provides:
 //! - `FilterField` trait for defining filterable fields on DTOs
 //! - `FilterOp` enum for filter operations (eq, ne, contains, etc.)
 //! - `FilterNode<F>` AST for representing filters in a DB-agnostic way
-//! - Parsing from OData filter strings to `FilterNode<F>`
+//! - Parsing from `OData` filter strings to `FilterNode<F>`
 //!
 //! # Design Goals
 //!
 //! 1. **Type Safety**: Use generated enums instead of raw strings for field names
-//! 2. **Separation of Concerns**: Keep DB infrastructure details (SeaORM, Column enums)
+//! 2. **Separation of Concerns**: Keep DB infrastructure details (`SeaORM`, Column enums)
 //!    out of API and domain layers
 //! 3. **Flexibility**: Enable mapping from DTO-level filters to any backend in the infrastructure layer
 
@@ -19,7 +19,7 @@ use thiserror::Error;
 
 use crate::odata::FieldKind;
 
-/// Re-export ODataValue from modkit_odata for use in filters
+/// Re-export `ODataValue` from `modkit_odata` for use in filters
 pub use modkit_odata::ast::Value as ODataValue;
 
 /// Trait representing a set of filterable fields for a DTO.
@@ -52,8 +52,8 @@ pub trait FilterField: Copy + Eq + std::hash::Hash + fmt::Debug + 'static {
     /// All allowed fields for this DTO.
     const FIELDS: &'static [Self];
 
-    /// API-visible name for this field (e.g., "email", "created_at").
-    /// This is the name used in OData filter strings.
+    /// API-visible name for this field (e.g., "email", "`created_at`").
+    /// This is the name used in `OData` filter strings.
     fn name(&self) -> &'static str;
 
     /// Logical type of the field for value coercion and validation.
@@ -68,7 +68,7 @@ pub trait FilterField: Copy + Eq + std::hash::Hash + fmt::Debug + 'static {
     }
 }
 
-/// Filter operations supported in OData filters.
+/// Filter operations supported in `OData` filters.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FilterOp {
     /// Equality: field eq value
@@ -113,14 +113,14 @@ impl fmt::Display for FilterOp {
     }
 }
 
-/// Type-safe filter AST node parameterized by a FilterField implementation.
+/// Type-safe filter AST node parameterized by a `FilterField` implementation.
 ///
 /// This represents a filter expression in a database-agnostic way, using only
 /// DTO-level field identifiers and logical operations.
 ///
 /// # Type Parameters
 ///
-/// - `F`: The FilterField implementation (typically a generated enum)
+/// - `F`: The `FilterField` implementation (typically a generated enum)
 ///
 /// # Example
 ///
@@ -160,6 +160,7 @@ impl<F: FilterField> FilterNode<F> {
     }
 
     /// Create an AND composite node
+    #[must_use]
     pub fn and(children: Vec<FilterNode<F>>) -> Self {
         FilterNode::Composite {
             op: FilterOp::And,
@@ -168,6 +169,7 @@ impl<F: FilterField> FilterNode<F> {
     }
 
     /// Create an OR composite node
+    #[must_use]
     pub fn or(children: Vec<FilterNode<F>>) -> Self {
         FilterNode::Composite {
             op: FilterOp::Or,
@@ -213,10 +215,10 @@ pub enum FilterError {
 
 pub type FilterResult<T> = Result<T, FilterError>;
 
-/// Parse an OData filter string into a FilterNode<F>.
+/// Parse an `OData` filter string into a `FilterNode`<F>.
 ///
-/// This function takes a raw OData filter string (e.g., from a query parameter)
-/// and converts it into a type-safe FilterNode using the provided FilterField implementation.
+/// This function takes a raw `OData` filter string (e.g., from a query parameter)
+/// and converts it into a type-safe `FilterNode` using the provided `FilterField` implementation.
 ///
 /// **Note**: This function requires the `with-odata-params` feature to be enabled
 /// on the `modkit-odata` crate for actual parsing. If you're working with an
@@ -224,15 +226,15 @@ pub type FilterResult<T> = Result<T, FilterError>;
 ///
 /// # Type Parameters
 ///
-/// - `F`: The FilterField implementation that defines available fields
+/// - `F`: The `FilterField` implementation that defines available fields
 ///
 /// # Arguments
 ///
-/// - `raw`: The raw OData filter string (e.g., "email eq 'test@example.com'")
+/// - `raw`: The raw `OData` filter string (e.g., "email eq 'test@example.com'")
 ///
 /// # Returns
 ///
-/// A FilterNode<F> representing the parsed filter, or a FilterError if parsing fails.
+/// A `FilterNode`<F> representing the parsed filter, or a `FilterError` if parsing fails.
 ///
 /// # Example
 ///
@@ -241,6 +243,9 @@ pub type FilterResult<T> = Result<T, FilterError>;
 ///     "email eq 'test@example.com' and contains(display_name, 'John')"
 /// )?;
 /// ```
+///
+/// # Errors
+/// Returns `FilterError` if the filter expression is invalid or parsing fails.
 #[allow(unexpected_cfgs)]
 pub fn parse_odata_filter<F: FilterField>(raw: &str) -> FilterResult<FilterNode<F>> {
     // Parse using odata-params (requires with-odata-params feature)
@@ -258,15 +263,15 @@ pub fn parse_odata_filter<F: FilterField>(raw: &str) -> FilterResult<FilterNode<
     {
         let _ = raw; // Suppress unused variable warning
         Err(FilterError::InvalidExpression(
-            "OData filter parsing requires 'with-odata-params' feature".to_string(),
+            "OData filter parsing requires 'with-odata-params' feature".to_owned(),
         ))
     }
 }
 
-/// Convert modkit_odata AST expression to our FilterNode.
+/// Convert `modkit_odata` AST expression to our `FilterNode`.
 ///
 /// This function is useful when you already have a parsed AST (e.g., from `ODataQuery.filter`)
-/// and want to convert it to a type-safe FilterNode.
+/// and want to convert it to a type-safe `FilterNode`.
 ///
 /// # Example
 ///
@@ -276,6 +281,9 @@ pub fn parse_odata_filter<F: FilterField>(raw: &str) -> FilterResult<FilterNode<
 ///     // Use filter_node...
 /// }
 /// ```
+///
+/// # Errors
+/// Returns `FilterError` if the expression contains unknown fields or unsupported operations.
 pub fn convert_expr_to_filter_node<F: FilterField>(
     expr: &odata_ast::Expr,
 ) -> FilterResult<FilterNode<F>> {
@@ -308,14 +316,14 @@ pub fn convert_expr_to_filter_node<F: FilterField>(
                 }
                 _ => {
                     return Err(FilterError::InvalidExpression(
-                        "Comparison must be between field and value".to_string(),
+                        "Comparison must be between field and value".to_owned(),
                     ));
                 }
             };
 
             // Resolve field
             let field = F::from_name(field_name)
-                .ok_or_else(|| FilterError::UnknownField(field_name.to_string()))?;
+                .ok_or_else(|| FilterError::UnknownField(field_name.to_owned()))?;
 
             // Validate value type matches field kind
             validate_value_type(field, &value)?;
@@ -402,8 +410,7 @@ pub fn convert_expr_to_filter_node<F: FilterField>(
                     ))
                 }
                 _ => Err(FilterError::UnsupportedOperation(format!(
-                    "Function '{}'",
-                    func_name
+                    "Function '{func_name}'"
                 ))),
             }
         }
@@ -413,7 +420,7 @@ pub fn convert_expr_to_filter_node<F: FilterField>(
             // For now, we don't support IN in the simplified API
             // It can be added later if needed
             Err(FilterError::UnsupportedOperation(
-                "IN operator not yet supported in typed filters".to_string(),
+                "IN operator not yet supported in typed filters".to_owned(),
             ))
         }
 
@@ -457,7 +464,7 @@ fn validate_value_type<F: FilterField>(field: F, value: &odata_ast::Value) -> Fi
         Ok(())
     } else {
         Err(FilterError::TypeMismatch {
-            field: field.name().to_string(),
+            field: field.name().to_owned(),
             expected: kind,
             got: got_type,
         })
@@ -516,10 +523,10 @@ mod tests {
     fn test_convert_simple_eq_filter() {
         // Create an AST manually (simulating what would come from parsed OData)
         let ast = odata_ast::Expr::Compare(
-            Box::new(odata_ast::Expr::Identifier("email".to_string())),
+            Box::new(odata_ast::Expr::Identifier("email".to_owned())),
             odata_ast::CompareOperator::Eq,
             Box::new(odata_ast::Expr::Value(odata_ast::Value::String(
-                "test@example.com".to_string(),
+                "test@example.com".to_owned(),
             ))),
         );
 
@@ -538,10 +545,10 @@ mod tests {
     #[test]
     fn test_convert_unknown_field() {
         let ast = odata_ast::Expr::Compare(
-            Box::new(odata_ast::Expr::Identifier("unknown_field".to_string())),
+            Box::new(odata_ast::Expr::Identifier("unknown_field".to_owned())),
             odata_ast::CompareOperator::Eq,
             Box::new(odata_ast::Expr::Value(odata_ast::Value::String(
-                "value".to_string(),
+                "value".to_owned(),
             ))),
         );
 
@@ -554,10 +561,10 @@ mod tests {
     fn test_validate_type_mismatch() {
         // Try to use a string value for an integer field - should fail validation
         let ast = odata_ast::Expr::Compare(
-            Box::new(odata_ast::Expr::Identifier("age".to_string())),
+            Box::new(odata_ast::Expr::Identifier("age".to_owned())),
             odata_ast::CompareOperator::Eq,
             Box::new(odata_ast::Expr::Value(odata_ast::Value::String(
-                "not_a_number".to_string(),
+                "not_a_number".to_owned(),
             ))),
         );
 
@@ -573,14 +580,14 @@ mod tests {
     fn test_logical_and_combination() {
         // (email eq 'test@example.com') and (is_active eq true)
         let left = odata_ast::Expr::Compare(
-            Box::new(odata_ast::Expr::Identifier("email".to_string())),
+            Box::new(odata_ast::Expr::Identifier("email".to_owned())),
             odata_ast::CompareOperator::Eq,
             Box::new(odata_ast::Expr::Value(odata_ast::Value::String(
-                "test@example.com".to_string(),
+                "test@example.com".to_owned(),
             ))),
         );
         let right = odata_ast::Expr::Compare(
-            Box::new(odata_ast::Expr::Identifier("is_active".to_string())),
+            Box::new(odata_ast::Expr::Identifier("is_active".to_owned())),
             odata_ast::CompareOperator::Eq,
             Box::new(odata_ast::Expr::Value(odata_ast::Value::Bool(true))),
         );
@@ -601,12 +608,12 @@ mod tests {
     fn test_logical_or_combination() {
         // (age gt 30) or (is_active eq false)
         let left = odata_ast::Expr::Compare(
-            Box::new(odata_ast::Expr::Identifier("age".to_string())),
+            Box::new(odata_ast::Expr::Identifier("age".to_owned())),
             odata_ast::CompareOperator::Gt,
             Box::new(odata_ast::Expr::Value(odata_ast::Value::Number(30.into()))),
         );
         let right = odata_ast::Expr::Compare(
-            Box::new(odata_ast::Expr::Identifier("is_active".to_string())),
+            Box::new(odata_ast::Expr::Identifier("is_active".to_owned())),
             odata_ast::CompareOperator::Eq,
             Box::new(odata_ast::Expr::Value(odata_ast::Value::Bool(false))),
         );
@@ -627,7 +634,7 @@ mod tests {
     fn test_logical_not() {
         // not (age eq 25)
         let inner = odata_ast::Expr::Compare(
-            Box::new(odata_ast::Expr::Identifier("age".to_string())),
+            Box::new(odata_ast::Expr::Identifier("age".to_owned())),
             odata_ast::CompareOperator::Eq,
             Box::new(odata_ast::Expr::Value(odata_ast::Value::Number(25.into()))),
         );
@@ -647,14 +654,14 @@ mod tests {
     fn test_logical_not_composite() {
         // not ((email eq 'test') and (age gt 20))
         let email_cond = odata_ast::Expr::Compare(
-            Box::new(odata_ast::Expr::Identifier("email".to_string())),
+            Box::new(odata_ast::Expr::Identifier("email".to_owned())),
             odata_ast::CompareOperator::Eq,
             Box::new(odata_ast::Expr::Value(odata_ast::Value::String(
-                "test".to_string(),
+                "test".to_owned(),
             ))),
         );
         let age_cond = odata_ast::Expr::Compare(
-            Box::new(odata_ast::Expr::Identifier("age".to_string())),
+            Box::new(odata_ast::Expr::Identifier("age".to_owned())),
             odata_ast::CompareOperator::Gt,
             Box::new(odata_ast::Expr::Value(odata_ast::Value::Number(20.into()))),
         );
@@ -675,10 +682,10 @@ mod tests {
     fn test_contains_function() {
         // contains(email, 'test')
         let ast = odata_ast::Expr::Function(
-            "contains".to_string(),
+            "contains".to_owned(),
             vec![
-                odata_ast::Expr::Identifier("email".to_string()),
-                odata_ast::Expr::Value(odata_ast::Value::String("test".to_string())),
+                odata_ast::Expr::Identifier("email".to_owned()),
+                odata_ast::Expr::Value(odata_ast::Value::String("test".to_owned())),
             ],
         );
 
@@ -698,10 +705,10 @@ mod tests {
     fn test_startswith_function() {
         // startswith(email, 'test')
         let ast = odata_ast::Expr::Function(
-            "startswith".to_string(),
+            "startswith".to_owned(),
             vec![
-                odata_ast::Expr::Identifier("email".to_string()),
-                odata_ast::Expr::Value(odata_ast::Value::String("test".to_string())),
+                odata_ast::Expr::Identifier("email".to_owned()),
+                odata_ast::Expr::Value(odata_ast::Value::String("test".to_owned())),
             ],
         );
 
@@ -720,10 +727,10 @@ mod tests {
     fn test_endswith_function() {
         // endswith(email, '.com')
         let ast = odata_ast::Expr::Function(
-            "endswith".to_string(),
+            "endswith".to_owned(),
             vec![
-                odata_ast::Expr::Identifier("email".to_string()),
-                odata_ast::Expr::Value(odata_ast::Value::String(".com".to_string())),
+                odata_ast::Expr::Identifier("email".to_owned()),
+                odata_ast::Expr::Value(odata_ast::Value::String(".com".to_owned())),
             ],
         );
 
@@ -742,10 +749,10 @@ mod tests {
     fn test_contains_on_non_string_field_fails() {
         // contains(age, 'test') - should fail because age is I64, not String
         let ast = odata_ast::Expr::Function(
-            "contains".to_string(),
+            "contains".to_owned(),
             vec![
-                odata_ast::Expr::Identifier("age".to_string()),
-                odata_ast::Expr::Value(odata_ast::Value::String("test".to_string())),
+                odata_ast::Expr::Identifier("age".to_owned()),
+                odata_ast::Expr::Value(odata_ast::Value::String("test".to_owned())),
             ],
         );
 
@@ -760,7 +767,7 @@ mod tests {
     #[test]
     fn test_bare_identifier_error() {
         // Just "email" by itself is not valid
-        let ast = odata_ast::Expr::Identifier("email".to_string());
+        let ast = odata_ast::Expr::Identifier("email".to_owned());
 
         let result = convert_expr_to_filter_node::<TestField>(&ast);
         assert!(result.is_err());
@@ -773,7 +780,7 @@ mod tests {
     #[test]
     fn test_bare_literal_error() {
         // Just a string literal by itself is not valid
-        let ast = odata_ast::Expr::Value(odata_ast::Value::String("test".to_string()));
+        let ast = odata_ast::Expr::Value(odata_ast::Value::String("test".to_owned()));
 
         let result = convert_expr_to_filter_node::<TestField>(&ast);
         assert!(result.is_err());
@@ -784,9 +791,9 @@ mod tests {
     fn test_unsupported_function() {
         // substring() is not supported
         let ast = odata_ast::Expr::Function(
-            "substring".to_string(),
+            "substring".to_owned(),
             vec![
-                odata_ast::Expr::Identifier("email".to_string()),
+                odata_ast::Expr::Identifier("email".to_owned()),
                 odata_ast::Expr::Value(odata_ast::Value::Number(1.into())),
             ],
         );
@@ -831,7 +838,7 @@ mod tests {
 
         // price eq 19.99
         let ast = odata_ast::Expr::Compare(
-            Box::new(odata_ast::Expr::Identifier("price".to_string())),
+            Box::new(odata_ast::Expr::Identifier("price".to_owned())),
             odata_ast::CompareOperator::Eq,
             Box::new(odata_ast::Expr::Value(odata_ast::Value::Number(
                 BigDecimal::from_str("19.99").unwrap(),
@@ -852,7 +859,7 @@ mod tests {
     fn test_decimal_field_wrong_type() {
         // price eq true - should fail
         let ast = odata_ast::Expr::Compare(
-            Box::new(odata_ast::Expr::Identifier("price".to_string())),
+            Box::new(odata_ast::Expr::Identifier("price".to_owned())),
             odata_ast::CompareOperator::Eq,
             Box::new(odata_ast::Expr::Value(odata_ast::Value::Bool(true))),
         );

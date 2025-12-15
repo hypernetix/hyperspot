@@ -11,7 +11,7 @@ use syn::{
 
 use crate::utils::{parse_path_attribute, parse_string_attribute, validate_path};
 
-/// Configuration for #[grpc_client] attribute
+/// Configuration for #[`grpc_client`] attribute
 pub struct GrpcClientConfig {
     pub api: Path,
     pub tonic: String,
@@ -94,7 +94,7 @@ pub fn expand_grpc_client(
     let tonic_client_type: syn::Type = syn::parse_str(tonic_client_str).map_err(|e| {
         syn::Error::new(
             proc_macro2::Span::call_site(),
-            format!("invalid tonic client type: {}", e),
+            format!("invalid tonic client type: {e}"),
         )
     })?;
 

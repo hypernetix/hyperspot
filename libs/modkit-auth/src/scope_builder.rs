@@ -1,7 +1,7 @@
 use crate::{claims::Claims, traits::ScopeBuilder};
 use modkit_security::AccessScope;
 
-/// Simple scope builder that converts tenant claims to AccessScope
+/// Simple scope builder that converts tenant claims to `AccessScope`
 #[derive(Debug, Clone, Default)]
 pub struct SimpleScopeBuilder;
 

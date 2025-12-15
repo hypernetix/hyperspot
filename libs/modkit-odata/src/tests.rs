@@ -8,13 +8,13 @@ mod tests {
     fn test_cursor_v1_encode_decode_round_trip() {
         let cursor = CursorV1 {
             k: vec![
-                "2023-11-14T12:00:00Z".to_string(),
-                "123e4567-e89b-12d3-a456-426614174000".to_string(),
+                "2023-11-14T12:00:00Z".to_owned(),
+                "123e4567-e89b-12d3-a456-426614174000".to_owned(),
             ],
             o: SortDir::Desc,
-            s: "+created_at,-id".to_string(),
-            f: Some("abc123".to_string()),
-            d: "fwd".to_string(),
+            s: "+created_at,-id".to_owned(),
+            f: Some("abc123".to_owned()),
+            d: "fwd".to_owned(),
         };
 
         let encoded = cursor.encode().expect("encode should succeed");
@@ -30,11 +30,11 @@ mod tests {
     #[test]
     fn test_cursor_v1_encode_decode_without_filter_hash() {
         let cursor = CursorV1 {
-            k: vec!["value1".to_string(), "value2".to_string()],
+            k: vec!["value1".to_owned(), "value2".to_owned()],
             o: SortDir::Asc,
-            s: "+field1,+field2".to_string(),
+            s: "+field1,+field2".to_owned(),
             f: None,
-            d: "fwd".to_string(),
+            d: "fwd".to_owned(),
         };
 
         let encoded = cursor.encode().expect("encode should succeed");
@@ -115,15 +115,15 @@ mod tests {
     fn test_odata_order_by_to_signed_tokens() {
         let order = ODataOrderBy(vec![
             OrderKey {
-                field: "created_at".to_string(),
+                field: "created_at".to_owned(),
                 dir: SortDir::Desc,
             },
             OrderKey {
-                field: "id".to_string(),
+                field: "id".to_owned(),
                 dir: SortDir::Asc,
             },
             OrderKey {
-                field: "name".to_string(),
+                field: "name".to_owned(),
                 dir: SortDir::Desc,
             },
         ]);
@@ -143,11 +143,11 @@ mod tests {
     fn test_odata_order_by_equals_signed_tokens() {
         let order = ODataOrderBy(vec![
             OrderKey {
-                field: "created_at".to_string(),
+                field: "created_at".to_owned(),
                 dir: SortDir::Desc,
             },
             OrderKey {
-                field: "id".to_string(),
+                field: "id".to_owned(),
                 dir: SortDir::Asc,
             },
         ]);
@@ -162,7 +162,7 @@ mod tests {
     #[test]
     fn test_odata_order_by_equals_signed_tokens_implicit_asc() {
         let order = ODataOrderBy(vec![OrderKey {
-            field: "name".to_string(),
+            field: "name".to_owned(),
             dir: SortDir::Asc,
         }]);
 
@@ -173,7 +173,7 @@ mod tests {
     #[test]
     fn test_odata_order_by_ensure_tiebreaker() {
         let order = ODataOrderBy(vec![OrderKey {
-            field: "created_at".to_string(),
+            field: "created_at".to_owned(),
             dir: SortDir::Desc,
         }]);
 
@@ -188,11 +188,11 @@ mod tests {
     fn test_odata_order_by_ensure_tiebreaker_already_present() {
         let order = ODataOrderBy(vec![
             OrderKey {
-                field: "created_at".to_string(),
+                field: "created_at".to_owned(),
                 dir: SortDir::Desc,
             },
             OrderKey {
-                field: "id".to_string(),
+                field: "id".to_owned(),
                 dir: SortDir::Asc,
             },
         ]);
@@ -209,22 +209,22 @@ mod tests {
         use crate::ast::*;
 
         let expr = Expr::Compare(
-            Box::new(Expr::Identifier("email".to_string())),
+            Box::new(Expr::Identifier("email".to_owned())),
             CompareOperator::Eq,
-            Box::new(Expr::Value(Value::String("test@example.com".to_string()))),
+            Box::new(Expr::Value(Value::String("test@example.com".to_owned()))),
         );
 
         let order = ODataOrderBy(vec![OrderKey {
-            field: "created_at".to_string(),
+            field: "created_at".to_owned(),
             dir: SortDir::Desc,
         }]);
 
         let cursor = CursorV1 {
-            k: vec!["2023-11-14T12:00:00Z".to_string()],
+            k: vec!["2023-11-14T12:00:00Z".to_owned()],
             o: SortDir::Desc,
-            s: "-created_at".to_string(),
+            s: "-created_at".to_owned(),
             f: None,
-            d: "fwd".to_string(),
+            d: "fwd".to_owned(),
         };
 
         let query = ODataQuery::new()
@@ -232,13 +232,13 @@ mod tests {
             .with_order(order)
             .with_limit(25)
             .with_cursor(cursor)
-            .with_filter_hash("abc123".to_string());
+            .with_filter_hash("abc123".to_owned());
 
         assert!(query.filter.is_some());
         assert_eq!(query.order.0.len(), 1);
         assert_eq!(query.limit, Some(25));
         assert!(query.cursor.is_some());
-        assert_eq!(query.filter_hash, Some("abc123".to_string()));
+        assert_eq!(query.filter_hash, Some("abc123".to_owned()));
     }
 
     #[test]
@@ -267,44 +267,44 @@ mod tests {
     fn test_orderby_display_formatting() {
         // Test empty order
         let order = ODataOrderBy::empty();
-        assert_eq!(format!("{}", order), "(none)");
+        assert_eq!(format!("{order}"), "(none)");
 
         // Test single field
         let order = ODataOrderBy(vec![OrderKey {
-            field: "name".to_string(),
+            field: "name".to_owned(),
             dir: SortDir::Asc,
         }]);
-        assert_eq!(format!("{}", order), "name asc");
+        assert_eq!(format!("{order}"), "name asc");
 
         // Test multiple fields
         let order = ODataOrderBy(vec![
             OrderKey {
-                field: "created_at".to_string(),
+                field: "created_at".to_owned(),
                 dir: SortDir::Desc,
             },
             OrderKey {
-                field: "id".to_string(),
+                field: "id".to_owned(),
                 dir: SortDir::Desc,
             },
         ]);
-        assert_eq!(format!("{}", order), "created_at desc, id desc");
+        assert_eq!(format!("{order}"), "created_at desc, id desc");
 
         // Test mixed directions
         let order = ODataOrderBy(vec![
             OrderKey {
-                field: "email".to_string(),
+                field: "email".to_owned(),
                 dir: SortDir::Asc,
             },
             OrderKey {
-                field: "created_at".to_string(),
+                field: "created_at".to_owned(),
                 dir: SortDir::Desc,
             },
             OrderKey {
-                field: "id".to_string(),
+                field: "id".to_owned(),
                 dir: SortDir::Desc,
             },
         ]);
-        assert_eq!(format!("{}", order), "email asc, created_at desc, id desc");
+        assert_eq!(format!("{order}"), "email asc, created_at desc, id desc");
     }
 
     #[test]
@@ -312,7 +312,7 @@ mod tests {
         // Test that we can parse signed tokens and get readable display
         let signed = "+email,-created_at,-id";
         let order = ODataOrderBy::from_signed_tokens(signed).unwrap();
-        let display = format!("{}", order);
+        let display = format!("{order}");
         assert_eq!(display, "email asc, created_at desc, id desc");
 
         // Test roundtrip back to signed tokens
@@ -364,7 +364,7 @@ mod tests {
     #[test]
     fn test_error_messages() {
         // Test that error messages are descriptive
-        let filter_err = Error::InvalidFilter("malformed expression".to_string());
+        let filter_err = Error::InvalidFilter("malformed expression".to_owned());
         assert_eq!(
             filter_err.to_string(),
             "invalid $filter: malformed expression"
@@ -376,7 +376,7 @@ mod tests {
             "invalid cursor: invalid base64url encoding"
         );
 
-        let orderby_err = Error::InvalidOrderByField("unknown_field".to_string());
+        let orderby_err = Error::InvalidOrderByField("unknown_field".to_owned());
         assert_eq!(
             orderby_err.to_string(),
             "unsupported $orderby field: unknown_field"

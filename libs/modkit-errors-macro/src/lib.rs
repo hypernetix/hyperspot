@@ -298,7 +298,7 @@ fn validate_gts_format(code: &str) -> syn::Result<()> {
     if !code.starts_with("gts.") {
         return Err(syn::Error::new(
             Span::call_site(),
-            format!("GTS code '{}' must start with 'gts.'", code),
+            format!("GTS code '{code}' must start with 'gts.'"),
         ));
     }
 
@@ -307,7 +307,7 @@ fn validate_gts_format(code: &str) -> syn::Result<()> {
     if parts.is_empty() {
         return Err(syn::Error::new(
             Span::call_site(),
-            format!("GTS code '{}' is empty or malformed", code),
+            format!("GTS code '{code}' is empty or malformed"),
         ));
     }
 
@@ -319,7 +319,7 @@ fn validate_gts_format(code: &str) -> syn::Result<()> {
         if idx == 0 && segments.first().is_none_or(|s| *s != "gts") {
             return Err(syn::Error::new(
                 Span::call_site(),
-                format!("GTS code '{}' must start with 'gts' in the first GTX", code),
+                format!("GTS code '{code}' must start with 'gts' in the first GTX"),
             ));
         }
 
@@ -328,7 +328,7 @@ fn validate_gts_format(code: &str) -> syn::Result<()> {
             if segment.is_empty() {
                 return Err(syn::Error::new(
                     Span::call_site(),
-                    format!("GTS code '{}' contains empty segment", code),
+                    format!("GTS code '{code}' contains empty segment"),
                 ));
             }
             if !segment
@@ -338,8 +338,7 @@ fn validate_gts_format(code: &str) -> syn::Result<()> {
                 return Err(syn::Error::new(
                     Span::call_site(),
                     format!(
-                        "GTS code '{}' has invalid segment '{}': only lowercase letters, digits and underscores are allowed",
-                        code, segment
+                        "GTS code '{code}' has invalid segment '{segment}': only lowercase letters, digits and underscores are allowed"
                     ),
                 ));
             }
@@ -358,8 +357,7 @@ fn validate_gts_format(code: &str) -> syn::Result<()> {
                 return Err(syn::Error::new(
                     Span::call_site(),
                     format!(
-                        "GTS code '{}' is expected to have at least 5 segments in final GTX: vendor.package.namespace.type.version (found {} segments)",
-                        code, meaningful_segments
+                        "GTS code '{code}' is expected to have at least 5 segments in final GTX: vendor.package.namespace.type.version (found {meaningful_segments} segments)"
                     ),
                 ));
             }
@@ -374,8 +372,7 @@ fn validate_gts_format(code: &str) -> syn::Result<()> {
                     return Err(syn::Error::new(
                         Span::call_site(),
                         format!(
-                            "GTS code '{}' final GTX must end with version 'vN' or 'vN.M' (found '{}')",
-                            code, last
+                            "GTS code '{code}' final GTX must end with version 'vN' or 'vN.M' (found '{last}')"
                         ),
                     ));
                 }
@@ -387,7 +384,7 @@ fn validate_gts_format(code: &str) -> syn::Result<()> {
     if parts.is_empty() {
         return Err(syn::Error::new(
             Span::call_site(),
-            format!("GTS code '{}' must have at least one GTX", code),
+            format!("GTS code '{code}' must have at least one GTX"),
         ));
     }
 
@@ -490,7 +487,7 @@ fn code_to_ident(code: &str) -> syn::Ident {
 
     // Prefix with underscore if it starts with a digit
     if sanitized.chars().next().is_some_and(|c| c.is_ascii_digit()) {
-        sanitized = format!("_{}", sanitized);
+        sanitized = format!("_{sanitized}");
     }
 
     syn::Ident::new(&sanitized, Span::call_site())
@@ -507,7 +504,7 @@ fn last_gtx_segment(code: &str) -> &str {
 }
 
 /// Given a GTX segment "vendor.package.namespace.type.version",
-/// produce alias "package_namespace_type_version".
+/// produce alias "`package_namespace_type_version`".
 ///
 /// - Drops the vendor (first path segment)
 /// - Replaces dots with underscores
@@ -520,8 +517,7 @@ fn derive_alias_from_gts(code: &str) -> syn::Result<String> {
         return Err(syn::Error::new(
             Span::call_site(),
             format!(
-                "GTS code '{}' is expected to have at least 5 segments in final GTX: vendor.package.namespace.type.version",
-                code
+                "GTS code '{code}' is expected to have at least 5 segments in final GTX: vendor.package.namespace.type.version"
             ),
         ));
     }
@@ -532,7 +528,7 @@ fn derive_alias_from_gts(code: &str) -> syn::Result<String> {
     // Ensure valid Rust identifier (lowercase is already per spec)
     let mut ident = alias_raw.replace(['-', '/', '~'], "_"); // just in case
     if ident.chars().next().is_some_and(|c| c.is_ascii_digit()) {
-        ident = format!("_{}", ident);
+        ident = format!("_{ident}");
     }
     Ok(ident)
 }
@@ -604,7 +600,7 @@ fn generate_short_accessors(entries: &[ErrorEntry], short_names: &[String]) -> V
         .collect()
 }
 
-/// Generate from_literal match arms
+/// Generate `from_literal` match arms
 fn generate_from_literal(entries: &[ErrorEntry]) -> Vec<TokenStream2> {
     entries
         .iter()
@@ -619,7 +615,7 @@ fn generate_from_literal(entries: &[ErrorEntry]) -> Vec<TokenStream2> {
         .collect()
 }
 
-/// Generate response_from_catalog! macro rules (with format support)
+/// Generate `response_from_catalog`! macro rules (with format support)
 fn generate_response_macro_rules(
     entries: &[ErrorEntry],
     namespace: &syn::Ident,

@@ -1,11 +1,11 @@
 //! # Secure ORM Layer Documentation
 //!
-//! The secure ORM layer provides type-safe, scoped access to database entities using SeaORM.
+//! The secure ORM layer provides type-safe, scoped access to database entities using `SeaORM`.
 //! It enforces an implicit security policy that prevents unscoped queries from executing.
 //!
 //! ## Core Concepts
 //!
-//! ### 1. AccessScope
+//! ### 1. `AccessScope`
 //!
 //! The [`AccessScope`](crate::secure::AccessScope) struct defines the security boundary:
 //!
@@ -29,7 +29,7 @@
 //! let scope = AccessScope::default();
 //! ```
 //!
-//! ### 2. ScopableEntity
+//! ### 2. `ScopableEntity`
 //!
 //! Entities must implement [`ScopableEntity`](crate::secure::ScopableEntity) to declare
 //! which columns are used for scoping:
@@ -98,7 +98,7 @@
 //! |----------------|------------|
 //! | Empty (no tenant, no resource) | `WHERE 1=0` (deny all) |
 //! | Tenants only | `WHERE tenant_id IN (...)` |
-//! | Tenants only + entity has no tenant_col | `WHERE 1=0` (deny all) |
+//! | Tenants only + entity has no `tenant_col` | `WHERE 1=0` (deny all) |
 //! | Resources only | `WHERE resource_col IN (...)` |
 //! | Both tenants and resources | `WHERE tenant_col IN (...) AND resource_col IN (...)` |
 //!
@@ -282,7 +282,7 @@
 //!
 //! 1. **No unscoped execution**: Queries cannot be executed without calling `.scope_with()`
 //! 2. **Explicit deny-all**: Empty scopes are denied rather than returning all data
-//! 3. **Tenant isolation**: When tenant_ids are provided, they're always enforced
+//! 3. **Tenant isolation**: When `tenant_ids` are provided, they're always enforced
 //! 4. **Type safety**: Typestates prevent misuse at compile time
 //! 5. **No runtime overhead**: All checks happen at compile time or query build time
 //!
@@ -292,7 +292,7 @@
 //!
 //! - `#[derive(Scopable)]` macro to auto-implement `ScopableEntity`
 //! - Support for scoped UPDATE and DELETE operations
-//! - Row-level security helpers for PostgreSQL
+//! - Row-level security helpers for `PostgreSQL`
 //! - Audit logging integration
 //! - Policy composition (e.g., role-based filters)
 //!

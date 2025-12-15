@@ -133,7 +133,7 @@ type InstanceMap = HashMap<Uuid, LocalInstance>;
 /// Backend that spawns modules as local child processes and manages their lifecycle.
 ///
 /// When the cancellation token is triggered, the backend will:
-/// 1. Send termination signal to all processes (SIGTERM on Unix, TerminateProcess on Windows)
+/// 1. Send termination signal to all processes (SIGTERM on Unix, `TerminateProcess` on Windows)
 /// 2. Wait up to 5 seconds for graceful shutdown
 /// 3. Force kill any remaining processes
 pub struct LocalProcessBackend {
@@ -142,9 +142,10 @@ pub struct LocalProcessBackend {
 }
 
 impl LocalProcessBackend {
-    /// Create a new LocalProcessBackend with the given cancellation token.
+    /// Create a new `LocalProcessBackend` with the given cancellation token.
     ///
     /// When the token is cancelled, all spawned processes will be gracefully stopped.
+    #[must_use]
     pub fn new(cancel: CancellationToken) -> Self {
         let backend = Self {
             instances: Arc::new(RwLock::new(HashMap::new())),
@@ -394,7 +395,7 @@ mod tests {
         let binary = PathBuf::from("/bin/sleep");
 
         cfg.binary = Some(binary);
-        cfg.args = vec!["10".to_string()]; // sleep for 10 seconds
+        cfg.args = vec!["10".to_owned()]; // sleep for 10 seconds
 
         // Spawn instance
         let handle = backend
@@ -441,7 +442,7 @@ mod tests {
         // Spawn instance for module_a
         let mut cfg_a = OopModuleConfig::new("module_a", BackendKind::LocalProcess);
         cfg_a.binary = Some(binary.clone());
-        cfg_a.args = vec!["10".to_string()];
+        cfg_a.args = vec!["10".to_owned()];
 
         let handle_a = backend
             .spawn_instance(&cfg_a)
@@ -451,7 +452,7 @@ mod tests {
         // Spawn instance for module_b
         let mut cfg_b = OopModuleConfig::new("module_b", BackendKind::LocalProcess);
         cfg_b.binary = Some(binary);
-        cfg_b.args = vec!["10".to_string()];
+        cfg_b.args = vec!["10".to_owned()];
 
         let handle_b = backend
             .spawn_instance(&cfg_b)
@@ -483,7 +484,7 @@ mod tests {
     async fn test_stop_nonexistent_instance() {
         let backend = test_backend();
         let handle = InstanceHandle {
-            module: "test_module".to_string(),
+            module: "test_module".to_owned(),
             instance_id: Uuid::new_v4(),
             backend: BackendKind::LocalProcess,
             pid: None,

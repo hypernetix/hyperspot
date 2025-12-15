@@ -1,6 +1,6 @@
-//! Mapping from OData errors to Problem (pure data)
+//! Mapping from `OData` errors to Problem (pure data)
 //!
-//! This provides a baseline conversion from OData errors to RFC 9457 Problem
+//! This provides a baseline conversion from `OData` errors to RFC 9457 Problem
 //! without HTTP framework dependencies. The HTTP layer in `modkit` adds
 //! instance paths and trace IDs before the Problem is converted to an HTTP response.
 
@@ -19,11 +19,11 @@ impl From<Error> for Problem {
         match err {
             // Filter parsing errors → 422
             InvalidFilter(msg) => ErrorCode::odata_errors_invalid_filter_v1()
-                .as_problem(format!("Invalid $filter: {}", msg)),
+                .as_problem(format!("Invalid $filter: {msg}")),
 
             // OrderBy parsing and validation errors → 422
             InvalidOrderByField(field) => ErrorCode::odata_errors_invalid_orderby_v1()
-                .as_problem(format!("Unsupported $orderby field: {}", field)),
+                .as_problem(format!("Unsupported $orderby field: {field}")),
 
             // All cursor-related errors → 422
             InvalidCursor
@@ -69,7 +69,7 @@ mod tests {
     fn test_filter_error_converts_to_problem() {
         use http::StatusCode;
 
-        let err = Error::InvalidFilter("malformed".to_string());
+        let err = Error::InvalidFilter("malformed".to_owned());
         let problem: Problem = err.into();
 
         assert_eq!(problem.status, StatusCode::UNPROCESSABLE_ENTITY);
@@ -83,7 +83,7 @@ mod tests {
     fn test_orderby_error_converts_to_problem() {
         use http::StatusCode;
 
-        let err = Error::InvalidOrderByField("unknown".to_string());
+        let err = Error::InvalidOrderByField("unknown".to_owned());
         let problem: Problem = err.into();
 
         assert_eq!(problem.status, StatusCode::UNPROCESSABLE_ENTITY);

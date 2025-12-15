@@ -1,4 +1,4 @@
-//! Minimalistic, type-safe ClientHub.
+//! Minimalistic, type-safe `ClientHub`.
 //!
 //! Design goals:
 //! - Providers register an implementation once (local or remote).
@@ -55,6 +55,7 @@ pub struct ClientHub {
 
 impl ClientHub {
     #[inline]
+    #[must_use]
     pub fn new() -> Self {
         Self {
             map: RwLock::new(HashMap::new()),
@@ -75,6 +76,10 @@ impl ClientHub {
     }
 
     /// Fetch a client by interface type `T`.
+    ///
+    /// # Errors
+    /// Returns `ClientHubError::NotFound` if no client is registered for the type.
+    /// Returns `ClientHubError::TypeMismatch` if the stored type doesn't match.
     pub fn get<T>(&self) -> Result<Arc<T>, ClientHubError>
     where
         T: ?Sized + Send + Sync + 'static,

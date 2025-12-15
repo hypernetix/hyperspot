@@ -6,7 +6,7 @@
 //!
 //! ## `#[derive(Scopable)]`
 //!
-//! Automatically implements `ScopableEntity` for a SeaORM entity based on attributes.
+//! Automatically implements `ScopableEntity` for a `SeaORM` entity based on attributes.
 //!
 //! **IMPORTANT**: All four scope dimensions must be explicitly specified. No implicit defaults.
 //!
@@ -51,7 +51,7 @@ mod scopable;
 
 /// Derive macro for implementing `ScopableEntity`.
 ///
-/// Place this on your SeaORM Model struct along with `#[secure(...)]` attributes.
+/// Place this on your `SeaORM` Model struct along with `#[secure(...)]` attributes.
 ///
 /// # Attributes
 ///
@@ -105,16 +105,16 @@ pub fn derive_scopable(input: TokenStream) -> TokenStream {
     scopable::expand_derive_scopable(input).into()
 }
 
-/// Derive macro for implementing type-safe OData filtering on DTOs.
+/// Derive macro for implementing type-safe `OData` filtering on DTOs.
 ///
-/// This macro generates a FilterField enum and implementation for a DTO struct,
-/// allowing type-safe field references in OData filter expressions.
+/// This macro generates a `FilterField` enum and implementation for a DTO struct,
+/// allowing type-safe field references in `OData` filter expressions.
 ///
 /// # Attributes
 ///
 /// Fields can be marked as filterable using `#[odata(filter(kind = "..."))]`:
 ///
-/// - `kind`: The logical field type (String, I64, F64, Bool, Uuid, DateTimeUtc, Date, Time, Decimal)
+/// - `kind`: The logical field type (String, I64, F64, Bool, Uuid, `DateTimeUtc`, Date, Time, Decimal)
 ///
 /// # Example
 ///

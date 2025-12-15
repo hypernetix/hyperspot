@@ -57,7 +57,10 @@ impl Default for AuthConfig {
 }
 
 impl AuthConfig {
-    /// Validate the configuration for consistency
+    /// Validate the configuration for consistency.
+    ///
+    /// # Errors
+    /// Returns `ConfigError::UnknownPlugin` if the configured provider is not registered.
     pub fn validate(&self) -> Result<(), ConfigError> {
         if !self.plugins.contains_key(&self.mode.provider) {
             return Err(ConfigError::UnknownPlugin(self.mode.provider.clone()));
@@ -98,7 +101,7 @@ pub enum PluginConfig {
         #[serde(default = "default_tenant_claim")]
         tenant_claim: String,
 
-        /// Client ID for resource_access roles
+        /// Client ID for `resource_access` roles
         client_roles: Option<String>,
 
         /// Role prefix to add to all roles
@@ -116,14 +119,17 @@ pub enum PluginConfig {
 }
 
 fn default_tenant_claim() -> String {
-    "tenants".to_string()
+    "tenants".to_owned()
 }
 
 fn default_roles_claim() -> String {
-    "roles".to_string()
+    "roles".to_owned()
 }
 
-/// Build an AuthDispatcher from configuration
+/// Build an `AuthDispatcher` from configuration.
+///
+/// # Errors
+/// Returns `ConfigError` if the configuration is invalid or plugin initialization fails.
 pub fn build_auth_dispatcher(config: &AuthConfig) -> Result<AuthDispatcher, ConfigError> {
     config.validate()?;
 
@@ -171,7 +177,7 @@ pub fn build_auth_dispatcher(config: &AuthConfig) -> Result<AuthDispatcher, Conf
     let dispatcher = AuthDispatcher::new(validation_config, config, &registry)?;
 
     let dispatcher = if let Some(jwks_config) = &config.jwks {
-        let provider = JwksKeyProvider::new(&jwks_config.uri)
+        let provider = JwksKeyProvider::new(&jwks_config.uri)?
             .with_refresh_interval(Duration::from_secs(jwks_config.refresh_interval_seconds))
             .with_max_backoff(Duration::from_secs(jwks_config.max_backoff_seconds));
 
@@ -205,21 +211,21 @@ mod tests {
     fn test_single_mode_config() {
         let mut plugins = HashMap::new();
         plugins.insert(
-            "keycloak".to_string(),
+            "keycloak".to_owned(),
             PluginConfig::Keycloak {
-                tenant_claim: "tenants".to_string(),
-                client_roles: Some("modkit-api".to_string()),
+                tenant_claim: "tenants".to_owned(),
+                client_roles: Some("modkit-api".to_owned()),
                 role_prefix: None,
             },
         );
 
         let config = AuthConfig {
             mode: AuthModeConfig {
-                provider: "keycloak".to_string(),
+                provider: "keycloak".to_owned(),
             },
             leeway_seconds: 60,
-            issuers: vec!["https://auth.example.com".to_string()],
-            audiences: vec!["api".to_string()],
+            issuers: vec!["https://auth.example.com".to_owned()],
+            audiences: vec!["api".to_owned()],
             jwks: None,
             plugins,
         };
@@ -232,7 +238,7 @@ mod tests {
     fn test_single_mode_unknown_plugin() {
         let config = AuthConfig {
             mode: AuthModeConfig {
-                provider: "unknown".to_string(),
+                provider: "unknown".to_owned(),
             },
             plugins: HashMap::new(),
             ..Default::default()
@@ -247,23 +253,23 @@ mod tests {
     fn test_config_serialization() {
         let mut plugins = HashMap::new();
         plugins.insert(
-            "keycloak".to_string(),
+            "keycloak".to_owned(),
             PluginConfig::Keycloak {
-                tenant_claim: "tenants".to_string(),
-                client_roles: Some("modkit-api".to_string()),
-                role_prefix: Some("kc".to_string()),
+                tenant_claim: "tenants".to_owned(),
+                client_roles: Some("modkit-api".to_owned()),
+                role_prefix: Some("kc".to_owned()),
             },
         );
 
         let config = AuthConfig {
             mode: AuthModeConfig {
-                provider: "keycloak".to_string(),
+                provider: "keycloak".to_owned(),
             },
             leeway_seconds: 120,
-            issuers: vec!["https://auth.example.com".to_string()],
-            audiences: vec!["api".to_string()],
+            issuers: vec!["https://auth.example.com".to_owned()],
+            audiences: vec!["api".to_owned()],
             jwks: Some(JwksConfig {
-                uri: "https://auth.example.com/.well-known/jwks.json".to_string(),
+                uri: "https://auth.example.com/.well-known/jwks.json".to_owned(),
                 refresh_interval_seconds: 300,
                 max_backoff_seconds: 3600,
             }),
@@ -271,7 +277,7 @@ mod tests {
         };
 
         let json = serde_json::to_string_pretty(&config).unwrap();
-        println!("{}", json);
+        println!("{json}");
 
         let deserialized: AuthConfig = serde_json::from_str(&json).unwrap();
         assert_eq!(deserialized.leeway_seconds, 120);
@@ -282,22 +288,22 @@ mod tests {
     fn test_build_dispatcher_with_jwks() {
         let mut plugins = HashMap::new();
         plugins.insert(
-            "oidc".to_string(),
+            "oidc".to_owned(),
             PluginConfig::Oidc {
-                tenant_claim: "tenants".to_string(),
-                roles_claim: "roles".to_string(),
+                tenant_claim: "tenants".to_owned(),
+                roles_claim: "roles".to_owned(),
             },
         );
 
         let config = AuthConfig {
             mode: AuthModeConfig {
-                provider: "oidc".to_string(),
+                provider: "oidc".to_owned(),
             },
             leeway_seconds: 60,
-            issuers: vec!["https://auth.example.com".to_string()],
-            audiences: vec!["api".to_string()],
+            issuers: vec!["https://auth.example.com".to_owned()],
+            audiences: vec!["api".to_owned()],
             jwks: Some(JwksConfig {
-                uri: "https://auth.example.com/.well-known/jwks.json".to_string(),
+                uri: "https://auth.example.com/.well-known/jwks.json".to_owned(),
                 refresh_interval_seconds: 300,
                 max_backoff_seconds: 3600,
             }),

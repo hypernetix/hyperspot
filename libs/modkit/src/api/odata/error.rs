@@ -1,7 +1,7 @@
-//! Centralized OData error mapping using OData catalog
+//! Centralized `OData` error mapping using `OData` catalog
 //!
-//! This module provides a single source of truth for mapping modkit_odata::Error
-//! to RFC 9457 Problem+JSON responses using the OData error catalog.
+//! This module provides a single source of truth for mapping `modkit_odata::Error`
+//! to RFC 9457 Problem+JSON responses using the `OData` error catalog.
 
 use crate::api::problem::Problem;
 use modkit_odata::errors::ErrorCode;
@@ -15,7 +15,7 @@ fn current_trace_id() -> Option<String> {
         .map(|id| id.into_u64().to_string())
 }
 
-/// Helper to convert ErrorCode to Problem with context
+/// Helper to convert `ErrorCode` to Problem with context
 #[inline]
 fn to_problem(
     code: ErrorCode,
@@ -31,14 +31,14 @@ fn to_problem(
     problem
 }
 
-/// Returns a fully contextualized Problem for OData errors.
+/// Returns a fully contextualized Problem for `OData` errors.
 ///
-/// This function maps all modkit_odata::Error variants to appropriate system
+/// This function maps all `modkit_odata::Error` variants to appropriate system
 /// error codes from the framework catalog. The `instance` parameter should
 /// be the request path.
 ///
 /// # Arguments
-/// * `err` - The OData error to convert
+/// * `err` - The `OData` error to convert
 /// * `instance` - The request path (e.g., "/api/users")
 /// * `trace_id` - Optional trace ID (uses current span if None)
 pub fn odata_error_to_problem(
@@ -46,14 +46,15 @@ pub fn odata_error_to_problem(
     instance: &str,
     trace_id: Option<String>,
 ) -> Problem {
+    use modkit_odata::Error as OE;
+
     let trace_id = trace_id.or_else(current_trace_id);
 
-    use modkit_odata::Error as OE;
     match err {
         // Filter parsing errors
         OE::InvalidFilter(msg) => to_problem(
             ErrorCode::odata_errors_invalid_filter_v1(),
-            format!("Invalid $filter: {}", msg),
+            format!("Invalid $filter: {msg}"),
             instance,
             trace_id,
         ),
@@ -61,7 +62,7 @@ pub fn odata_error_to_problem(
         // OrderBy parsing and validation errors
         OE::InvalidOrderByField(field) => to_problem(
             ErrorCode::odata_errors_invalid_orderby_v1(),
-            format!("Unsupported $orderby field: {}", field),
+            format!("Unsupported $orderby field: {field}"),
             instance,
             trace_id,
         ),
@@ -129,7 +130,7 @@ mod tests {
     fn test_filter_error_mapping() {
         use http::StatusCode;
 
-        let error = ODataError::InvalidFilter("malformed expression".to_string());
+        let error = ODataError::InvalidFilter("malformed expression".to_owned());
         let problem = odata_error_to_problem(&error, "/api/users", None);
 
         assert_eq!(problem.status, StatusCode::UNPROCESSABLE_ENTITY);
@@ -141,7 +142,7 @@ mod tests {
     fn test_orderby_error_mapping() {
         use http::StatusCode;
 
-        let error = ODataError::InvalidOrderByField("unknown_field".to_string());
+        let error = ODataError::InvalidOrderByField("unknown_field".to_owned());
         let problem = odata_error_to_problem(&error, "/api/users", None);
 
         assert_eq!(problem.status, StatusCode::UNPROCESSABLE_ENTITY);
@@ -153,16 +154,16 @@ mod tests {
         use http::StatusCode;
 
         let error = ODataError::CursorInvalidBase64;
-        let problem = odata_error_to_problem(&error, "/api/users", Some("trace123".to_string()));
+        let problem = odata_error_to_problem(&error, "/api/users", Some("trace123".to_owned()));
 
         assert_eq!(problem.status, StatusCode::UNPROCESSABLE_ENTITY);
         assert!(problem.code.contains("invalid_cursor"));
-        assert_eq!(problem.trace_id, Some("trace123".to_string()));
+        assert_eq!(problem.trace_id, Some("trace123".to_owned()));
     }
 
     #[test]
     fn test_gts_code_format() {
-        let error = ODataError::InvalidFilter("test".to_string());
+        let error = ODataError::InvalidFilter("test".to_owned());
         let problem = odata_error_to_problem(&error, "/api/test", None);
 
         // Verify the code follows GTS format

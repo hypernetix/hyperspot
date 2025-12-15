@@ -11,7 +11,7 @@ pub use crate::api::openapi_registry::OpenApiRegistry;
 pub trait SystemModule: Send + Sync {
     /// Wire system-level context into this module.
     ///
-    /// Called once during runtime bootstrap, before init(), for all system modules.
+    /// Called once during runtime bootstrap, before `init()`, for all system modules.
     fn wire_system(&self, sys: &crate::runtime::SystemContext);
 }
 
@@ -21,7 +21,7 @@ pub trait Module: Send + Sync + 'static {
     async fn init(&self, ctx: &crate::context::ModuleCtx) -> anyhow::Result<()>;
     fn as_any(&self) -> &dyn std::any::Any;
 
-    /// Return self as a SystemModule if this module has the "system" capability.
+    /// Return self as a `SystemModule` if this module has the "system" capability.
     ///
     /// Default implementation returns None. System modules override this to return Some(self).
     fn as_system_module(&self) -> Option<&dyn SystemModule> {
@@ -37,6 +37,10 @@ pub trait DbModule: Send + Sync {
 
 /// Pure wiring; must be sync. Runs AFTER DB migrations.
 pub trait RestfulModule: Send + Sync {
+    /// Register REST routes for this module.
+    ///
+    /// # Errors
+    /// Returns an error if route registration fails.
     fn register_rest(
         &self,
         ctx: &crate::context::ModuleCtx,
@@ -49,8 +53,11 @@ pub trait RestfulModule: Send + Sync {
 /// Must be sync. Runs during REST phase, but doesn't start the server.
 #[allow(dead_code)]
 pub trait RestHostModule: Send + Sync + 'static {
-    /// Prepare a base Router (e.g., global middlewares, /healthz) and optionally touch OpenAPI meta.
+    /// Prepare a base Router (e.g., global middlewares, /healthz) and optionally touch `OpenAPI` meta.
     /// Do NOT start the server here.
+    ///
+    /// # Errors
+    /// Returns an error if router preparation fails.
     fn rest_prepare(
         &self,
         ctx: &crate::context::ModuleCtx,
@@ -59,6 +66,9 @@ pub trait RestHostModule: Send + Sync + 'static {
 
     /// Finalize before start: attach /openapi.json, /docs, persist the Router internally if needed.
     /// Do NOT start the server here.
+    ///
+    /// # Errors
+    /// Returns an error if router finalization fails.
     fn rest_finalize(
         &self,
         ctx: &crate::context::ModuleCtx,
@@ -98,7 +108,7 @@ pub struct RegisterGrpcServiceFn {
 pub trait GrpcServiceModule: Send + Sync {
     /// Returns all gRPC services this module wants to expose.
     ///
-    /// Each installer adds one service to the tonic::Server builder.
+    /// Each installer adds one service to the `tonic::Server` builder.
     async fn get_grpc_services(
         &self,
         ctx: &crate::context::ModuleCtx,
@@ -108,7 +118,7 @@ pub trait GrpcServiceModule: Send + Sync {
 /// Trait for the gRPC hub module that hosts the gRPC server.
 ///
 /// This trait is implemented by the single module responsible for hosting
-/// the tonic::Server instance. Only one module per process should implement this.
+/// the `tonic::Server` instance. Only one module per process should implement this.
 pub trait GrpcHubModule: Send + Sync {
     /// Returns the bound endpoint after the server starts listening.
     ///

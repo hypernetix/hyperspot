@@ -8,9 +8,10 @@ fn default_body_limit_bytes() -> usize {
     16 * 1024 * 1024
 }
 
-/// API ingress configuration - reused from api_ingress module
+/// API ingress configuration - reused from `api_ingress` module
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 #[serde(deny_unknown_fields)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct ApiIngressConfig {
     pub bind_addr: String,
     #[serde(default)]
@@ -21,7 +22,7 @@ pub struct ApiIngressConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cors: Option<CorsConfig>,
 
-    /// OpenAPI document metadata
+    /// `OpenAPI` document metadata
     #[serde(default)]
     pub openapi: OpenApiConfig,
 
@@ -30,8 +31,8 @@ pub struct ApiIngressConfig {
     pub defaults: Defaults,
 
     /// Disable authentication and authorization completely.
-    /// When true, middleware automatically injects SecurityCtx::root_ctx() for all requests,
-    /// providing full system-level access with no tenant filtering (scope.is_root() == true).
+    /// When true, middleware automatically injects `SecurityCtx::root_ctx()` for all requests,
+    /// providing full system-level access with no tenant filtering (`scope.is_root()` == true).
     /// This bypasses all tenant isolation and should only be used for single-user on-premise installations.
     /// Default: false (authentication required).
     #[serde(default)]
@@ -108,27 +109,27 @@ pub struct CorsConfig {
 impl Default for CorsConfig {
     fn default() -> Self {
         Self {
-            allowed_origins: vec!["*".to_string()],
+            allowed_origins: vec!["*".to_owned()],
             allowed_methods: vec![
-                "GET".to_string(),
-                "POST".to_string(),
-                "PUT".to_string(),
-                "PATCH".to_string(),
-                "DELETE".to_string(),
-                "OPTIONS".to_string(),
+                "GET".to_owned(),
+                "POST".to_owned(),
+                "PUT".to_owned(),
+                "PATCH".to_owned(),
+                "DELETE".to_owned(),
+                "OPTIONS".to_owned(),
             ],
-            allowed_headers: vec!["*".to_string()],
+            allowed_headers: vec!["*".to_owned()],
             allow_credentials: false,
             max_age_seconds: 600,
         }
     }
 }
 
-/// OpenAPI document metadata configuration
+/// `OpenAPI` document metadata configuration
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields, default)]
 pub struct OpenApiConfig {
-    /// API title shown in OpenAPI documentation
+    /// API title shown in `OpenAPI` documentation
     pub title: String,
     /// API version
     pub version: String,
@@ -140,8 +141,8 @@ pub struct OpenApiConfig {
 impl Default for OpenApiConfig {
     fn default() -> Self {
         Self {
-            title: "API Documentation".to_string(),
-            version: "0.1.0".to_string(),
+            title: "API Documentation".to_owned(),
+            version: "0.1.0".to_owned(),
             description: None,
         }
     }

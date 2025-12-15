@@ -1,9 +1,9 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-//! Integration tests for OData cursor pagination.
+//! Integration tests for `OData` cursor pagination.
 //!
 //! These tests verify end-to-end cursor pagination behavior using an in-memory
-//! SQLite database, including forward/backward navigation, filters, security scopes,
+//! `SQLite` database, including forward/backward navigation, filters, security scopes,
 //! and edge cases.
 
 mod support;
@@ -22,7 +22,7 @@ use uuid::Uuid;
 
 /// Seed multiple users with sequential IDs and names for predictable ordering.
 ///
-/// Returns the tenant_id and list of user IDs in creation order.
+/// Returns the `tenant_id` and list of user IDs in creation order.
 async fn seed_users_sequential(
     db: &sea_orm::DatabaseConnection,
     count: usize,
@@ -32,8 +32,8 @@ async fn seed_users_sequential(
 
     for i in 0..count {
         let id = Uuid::new_v4();
-        let email = format!("user{}@example.com", i);
-        let display_name = format!("User {}", i);
+        let email = format!("user{i}@example.com");
+        let display_name = format!("User {i}");
 
         seed_user(db, id, tenant_id, &email, &display_name).await;
         user_ids.push(id);
@@ -62,8 +62,8 @@ async fn seed_users_multi_tenant(
             db,
             id,
             tenant1,
-            &format!("t1user{}@example.com", i),
-            &format!("Tenant1 User {}", i),
+            &format!("t1user{i}@example.com"),
+            &format!("Tenant1 User {i}"),
         )
         .await;
         tenant1_users.push(id);
@@ -77,8 +77,8 @@ async fn seed_users_multi_tenant(
             db,
             id,
             tenant2,
-            &format!("t2user{}@example.com", i),
-            &format!("Tenant2 User {}", i),
+            &format!("t2user{i}@example.com"),
+            &format!("Tenant2 User {i}"),
         )
         .await;
         tenant2_users.push(id);
@@ -175,7 +175,7 @@ async fn test_forward_pagination_respects_order() {
 
     // Act: Paginate with explicit DESC order on created_at
     let order = ODataOrderBy(vec![OrderKey {
-        field: "created_at".to_string(),
+        field: "created_at".to_owned(),
         dir: SortDir::Desc,
     }]);
 
@@ -351,7 +351,7 @@ async fn test_backward_pagination_maintains_order() {
 
     // Act: Get page 2 (skip first 8 items) with explicit ordering by created_at DESC
     let order = modkit_odata::ODataOrderBy(vec![modkit_odata::OrderKey {
-        field: "created_at".to_string(),
+        field: "created_at".to_owned(),
         dir: modkit_odata::SortDir::Desc,
     }]);
 
@@ -450,7 +450,7 @@ async fn test_backward_pagination_has_next_cursor() {
 
     // Act: Get page 1, then page 2, then use prev_cursor to go back
     let order = modkit_odata::ODataOrderBy(vec![modkit_odata::OrderKey {
-        field: "created_at".to_string(),
+        field: "created_at".to_owned(),
         dir: modkit_odata::SortDir::Desc,
     }]);
 
@@ -620,11 +620,11 @@ async fn test_cursor_pagination_with_filter() {
         let id = Uuid::new_v4();
         // Half will have "alice" in email, half "bob"
         let email = if i % 2 == 0 {
-            format!("alice{}@example.com", i)
+            format!("alice{i}@example.com")
         } else {
-            format!("bob{}@example.com", i)
+            format!("bob{i}@example.com")
         };
-        let display_name = format!("User {}", i);
+        let display_name = format!("User {i}");
 
         seed_user(&db, id, tenant_id, &email, &display_name).await;
         tokio::time::sleep(tokio::time::Duration::from_millis(5)).await;
@@ -636,10 +636,10 @@ async fn test_cursor_pagination_with_filter() {
 
     // Act: Filter for "alice" in email and paginate
     let filter_ast = ast::Expr::Function(
-        "contains".to_string(),
+        "contains".to_owned(),
         vec![
-            ast::Expr::Identifier("email".to_string()),
-            ast::Expr::Value(ast::Value::String("alice".to_string())),
+            ast::Expr::Identifier("email".to_owned()),
+            ast::Expr::Value(ast::Value::String("alice".to_owned())),
         ],
     );
 
@@ -673,10 +673,10 @@ async fn test_cursor_pagination_with_filter() {
 
             // Create the same filter for next page
             let filter_ast_next = ast::Expr::Function(
-                "contains".to_string(),
+                "contains".to_owned(),
                 vec![
-                    ast::Expr::Identifier("email".to_string()),
-                    ast::Expr::Value(ast::Value::String("alice".to_string())),
+                    ast::Expr::Identifier("email".to_owned()),
+                    ast::Expr::Value(ast::Value::String("alice".to_owned())),
                 ],
             );
 
@@ -717,10 +717,10 @@ async fn test_cursor_filter_hash_mismatch_error() {
 
     // Act: Get first page with a filter
     let filter_ast = ast::Expr::Function(
-        "contains".to_string(),
+        "contains".to_owned(),
         vec![
-            ast::Expr::Identifier("email".to_string()),
-            ast::Expr::Value(ast::Value::String("user".to_string())),
+            ast::Expr::Identifier("email".to_owned()),
+            ast::Expr::Value(ast::Value::String("user".to_owned())),
         ],
     );
 
@@ -745,10 +745,10 @@ async fn test_cursor_filter_hash_mismatch_error() {
 
     // Create a different filter
     let different_filter = ast::Expr::Function(
-        "contains".to_string(),
+        "contains".to_owned(),
         vec![
-            ast::Expr::Identifier("email".to_string()),
-            ast::Expr::Value(ast::Value::String("different".to_string())),
+            ast::Expr::Identifier("email".to_owned()),
+            ast::Expr::Value(ast::Value::String("different".to_owned())),
         ],
     );
 
@@ -767,8 +767,7 @@ async fn test_cursor_filter_hash_mismatch_error() {
     let err = result.unwrap_err();
     assert!(
         matches!(err, modkit_odata::Error::FilterMismatch),
-        "Should be FilterMismatch error, got: {:?}",
-        err
+        "Should be FilterMismatch error, got: {err:?}"
     );
 }
 
@@ -1038,26 +1037,26 @@ async fn test_cursor_stability_repeated_queries() {
     // Act: Get first page twice with same query
     let query = ODataQuery::default().with_limit(5);
 
-    let page1a = repo
+    let first_page = repo
         .list_users_page(&ctx, &query)
         .await
         .expect("First query should succeed");
 
-    let page1b = repo
+    let second_page = repo
         .list_users_page(&ctx, &query)
         .await
         .expect("Second query should succeed");
 
     // Assert: Both should return identical results
-    assert_eq!(page1a.items.len(), page1b.items.len());
+    assert_eq!(first_page.items.len(), second_page.items.len());
 
-    for (a, b) in page1a.items.iter().zip(page1b.items.iter()) {
+    for (a, b) in first_page.items.iter().zip(second_page.items.iter()) {
         assert_eq!(a.id, b.id, "Repeated queries should return same items");
     }
 
     // Cursors should be identical
     assert_eq!(
-        page1a.page_info.next_cursor, page1b.page_info.next_cursor,
+        first_page.page_info.next_cursor, second_page.page_info.next_cursor,
         "Cursors should be stable across repeated queries"
     );
 }
@@ -1075,7 +1074,7 @@ async fn test_cursor_with_different_ordering() {
 
     // Act: Get page 1 with ASC order
     let order_asc = ODataOrderBy(vec![OrderKey {
-        field: "created_at".to_string(),
+        field: "created_at".to_owned(),
         dir: SortDir::Asc,
     }]);
 
@@ -1088,7 +1087,7 @@ async fn test_cursor_with_different_ordering() {
 
     // Get page 1 with DESC order
     let order_desc = ODataOrderBy(vec![OrderKey {
-        field: "created_at".to_string(),
+        field: "created_at".to_owned(),
         dir: SortDir::Desc,
     }]);
 

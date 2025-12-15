@@ -12,18 +12,18 @@ pub fn domain_error_to_problem(e: &DomainError, instance: &str) -> Problem {
 
     match &e {
         DomainError::UserNotFound { id } => ErrorCode::example1_user_not_found_v1().with_context(
-            format!("User with id {} was not found", id),
+            format!("User with id {id} was not found"),
             instance,
             trace_id,
         ),
         DomainError::EmailAlreadyExists { email } => ErrorCode::example1_user_invalid_email_v1()
             .with_context(
-                format!("Email '{}' is already in use", email),
+                format!("Email '{email}' is already in use"),
                 instance,
                 trace_id,
             ),
         DomainError::InvalidEmail { email } => ErrorCode::example1_user_invalid_email_v1()
-            .with_context(format!("Email '{}' is invalid", email), instance, trace_id),
+            .with_context(format!("Email '{email}' is invalid"), instance, trace_id),
         DomainError::EmptyDisplayName => ErrorCode::example1_user_validation_v1().with_context(
             "Display name cannot be empty",
             instance,
@@ -31,7 +31,7 @@ pub fn domain_error_to_problem(e: &DomainError, instance: &str) -> Problem {
         ),
         DomainError::DisplayNameTooLong { .. } | DomainError::Validation { .. } => {
             ErrorCode::example1_user_validation_v1().with_context(
-                format!("{}", e),
+                format!("{e}"),
                 instance,
                 trace_id,
             )
@@ -48,7 +48,7 @@ pub fn domain_error_to_problem(e: &DomainError, instance: &str) -> Problem {
     }
 }
 
-/// Implement Into<Problem> for DomainError so it works with ApiError
+/// Implement Into<Problem> for `DomainError` so it works with `ApiError`
 impl From<DomainError> for Problem {
     fn from(e: DomainError) -> Self {
         domain_error_to_problem(&e, "/")

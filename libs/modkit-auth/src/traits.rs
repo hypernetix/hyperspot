@@ -9,9 +9,9 @@ pub trait TokenValidator: Send + Sync {
     async fn validate_and_parse(&self, token: &str) -> Result<Claims, AuthError>;
 }
 
-/// Builds an AccessScope from JWT claims
+/// Builds an `AccessScope` from JWT claims
 pub trait ScopeBuilder: Send + Sync {
-    /// Convert tenant claims into an AccessScope
+    /// Convert tenant claims into an `AccessScope`
     fn tenants_to_scope(&self, claims: &Claims) -> AccessScope;
 }
 

@@ -1,7 +1,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 #![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 
-//! Compile-time tests for GTS validation in declare_errors! macro
+//! Compile-time tests for GTS validation in `declare_errors`! macro
 //!
 //! These tests verify that the macro correctly rejects invalid GTS codes
 //! and accepts valid ones.

@@ -10,6 +10,7 @@ pub struct NodesRegistryLocalClient {
 }
 
 impl NodesRegistryLocalClient {
+    #[must_use]
     pub fn new(service: Arc<Service>) -> Self {
         Self { service }
     }
@@ -18,7 +19,7 @@ impl NodesRegistryLocalClient {
 #[async_trait::async_trait]
 impl NodesRegistryApi for NodesRegistryLocalClient {
     async fn get_node(&self, id: uuid::Uuid) -> Result<Node, NodesRegistryError> {
-        self.service.get_node(id).map_err(|e| e.into())
+        self.service.get_node(id).map_err(Into::into)
     }
 
     async fn list_nodes(&self) -> Result<Vec<Node>, NodesRegistryError> {
@@ -29,12 +30,12 @@ impl NodesRegistryApi for NodesRegistryLocalClient {
         &self,
         node_id: uuid::Uuid,
     ) -> Result<NodeSysInfo, NodesRegistryError> {
-        self.service.get_node_sysinfo(node_id).map_err(|e| e.into())
+        self.service.get_node_sysinfo(node_id).map_err(Into::into)
     }
 
     async fn get_node_syscap(&self, node_id: uuid::Uuid) -> Result<NodeSysCap, NodesRegistryError> {
         self.service
             .get_node_syscap(node_id, false)
-            .map_err(|e| e.into())
+            .map_err(Into::into)
     }
 }

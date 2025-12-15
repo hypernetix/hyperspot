@@ -2,6 +2,9 @@
 cognitive-complexity-threshold = 55
 type-complexity-threshold = 220
 
+# Function length threshold (default is 100)
+too-many-lines-threshold = 200
+
 # Allow unwrap/expect in tests and doctests (they should panic on failure)
 allow-unwrap-in-tests = true
 allow-expect-in-tests = true

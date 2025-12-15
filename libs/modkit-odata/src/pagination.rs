@@ -1,4 +1,4 @@
-//! Filter hashing utilities for OData pagination
+//! Filter hashing utilities for `OData` pagination
 
 use crate::ast;
 use sha2::{Digest, Sha256};
@@ -54,8 +54,8 @@ pub fn normalize_filter_for_hash(expr: &ast::Expr) -> String {
                 format!("ID({})", name.to_lowercase())
             }
             ast::Expr::Value(value) => match value {
-                ast::Value::Null => "NULL".to_string(),
-                ast::Value::Bool(b) => format!("BOOL({})", b),
+                ast::Value::Null => "NULL".to_owned(),
+                ast::Value::Bool(b) => format!("BOOL({b})"),
                 ast::Value::Number(n) => format!("NUM({})", n.normalized()),
                 ast::Value::Uuid(u) => {
                     format!("UUID({})", u.as_hyphenated().to_string().to_lowercase())
@@ -63,7 +63,7 @@ pub fn normalize_filter_for_hash(expr: &ast::Expr) -> String {
                 ast::Value::DateTime(dt) => format!("DATETIME({})", dt.to_rfc3339()),
                 ast::Value::Date(d) => format!("DATE({})", d.format("%Y-%m-%d")),
                 ast::Value::Time(t) => format!("TIME({})", t.format("%H:%M:%S%.f")),
-                ast::Value::String(s) => format!("STR({})", s),
+                ast::Value::String(s) => format!("STR({s})"),
             },
         }
     }
@@ -94,15 +94,15 @@ mod tests {
     fn test_normalize_filter_consistency() {
         // Test that the same logical filter produces the same normalized string
         let expr1 = Expr::Compare(
-            Box::new(Expr::Identifier("name".to_string())),
+            Box::new(Expr::Identifier("name".to_owned())),
             CompareOperator::Eq,
-            Box::new(Expr::Value(Value::String("test".to_string()))),
+            Box::new(Expr::Value(Value::String("test".to_owned()))),
         );
 
         let expr2 = Expr::Compare(
-            Box::new(Expr::Identifier("name".to_string())),
+            Box::new(Expr::Identifier("name".to_owned())),
             CompareOperator::Eq,
-            Box::new(Expr::Value(Value::String("test".to_string()))),
+            Box::new(Expr::Value(Value::String("test".to_owned()))),
         );
 
         assert_eq!(
@@ -114,7 +114,7 @@ mod tests {
     #[test]
     fn test_short_filter_hash_consistency() {
         let expr = Expr::Compare(
-            Box::new(Expr::Identifier("id".to_string())),
+            Box::new(Expr::Identifier("id".to_owned())),
             CompareOperator::Gt,
             Box::new(Expr::Value(Value::Number(42.into()))),
         );
