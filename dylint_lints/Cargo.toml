@@ -1,0 +1,24 @@
+[workspace]
+members = ["contract_lints"]
+exclude = ["contract_lints/ui"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+authors = ["Hypernetix"]
+
+# This workspace contains dylint linter crates
+# Each linter will be added as a member as it's implemented
+#
+# Current linters:
+# - contract_lints: DE0101, DE0102, DE0103 (contract layer validation)
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+unused_extern_crates = "warn"
+
+[workspace.lints.clippy]
+all = "warn"
+pedantic = "warn"

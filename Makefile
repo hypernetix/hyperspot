@@ -57,8 +57,16 @@ fmt:
 # |             | - Missing documentation warnings                                     |
 # |             | - Ensures clean compilation across all targets and features          |
 # +-------------+----------------------------------------------------------------------+
+# | dylint      | - Project-specific architectural conventions (custom lints)         |
+# |             | - DTO declaration and placement (only in api/rest folders)           |
+# |             | - DTO isolation (no references from domain/contract layers)          |
+# |             | - API endpoint versioning requirements (e.g., /v1/users)            |
+# |             | - Contract layer purity (no serde, HTTP types, or ToSchema)         |
+# |             | - Layer separation and dependency rules enforcement                  |
+# |             | - Use 'make dylint-list' to see all available custom lints          |
+# +-------------+----------------------------------------------------------------------+
 
-.PHONY: clippy kani geiger safety lint
+.PHONY: clippy kani geiger safety lint dylint dylint-list dylint-test
 
 # Run clippy linter
 clippy:
@@ -81,8 +89,46 @@ geiger:
 lint:
 	RUSTFLAGS="-D warnings" cargo check --workspace --all-targets --all-features
 
+## List all custom project compliance lints (see dylint_lints/README.md)
+dylint-list:
+	@cd dylint_lints && \
+	DYLINT_LIB=$$(find target/release -maxdepth 1 \( -name "libcontract_lints@*.so" -o -name "libcontract_lints@*.dylib" -o -name "contract_lints@*.dll" -o -name "libcontract_lints.so" -o -name "libcontract_lints.dylib" -o -name "contract_lints.dll" \) -type f | head -n 1); \
+	if [ -z "$$DYLINT_LIB" ]; then \
+		echo "ERROR: dylint library not found. Run 'make dylint' first to build it."; \
+		exit 1; \
+	fi; \
+	cargo dylint list --lib-path "$$DYLINT_LIB"
+
+## Test dylint lints on UI test cases (compile and verify violations)
+dylint-test:
+	@python3 dylint_lints/test_ui.py
+
+# Run project compliance dylint lints on the workspace (see `make dylint-list`)
+dylint:
+	@cd dylint_lints && cargo build --release
+	@TOOLCHAIN=$$(rustc --version --verbose | grep 'host:' | cut -d' ' -f2); \
+	RUSTUP_TOOLCHAIN=$$(cat dylint_lints/rust-toolchain.toml 2>/dev/null | grep 'channel' | cut -d'"' -f2 || echo "nightly"); \
+	LIB_NAME="libcontract_lints@$$RUSTUP_TOOLCHAIN-$$TOOLCHAIN"; \
+	cd dylint_lints/target/release && \
+	if [ -f "libcontract_lints.dylib" ]; then \
+		cp -f "libcontract_lints.dylib" "$$LIB_NAME.dylib" 2>/dev/null || true; \
+	fi; \
+	if [ -f "libcontract_lints.so" ]; then \
+		cp -f "libcontract_lints.so" "$$LIB_NAME.so" 2>/dev/null || true; \
+	fi; \
+	if [ -f "contract_lints.dll" ]; then \
+		cp -f "contract_lints.dll" "$${LIB_NAME#lib}.dll" 2>/dev/null || true; \
+	fi; \
+	cd ../../.. && \
+	DYLINT_LIB=$$(find dylint_lints/target/release -maxdepth 1 \( -name "libcontract_lints@*.so" -o -name "libcontract_lints@*.dylib" -o -name "contract_lints@*.dll" \) -type f | head -n 1); \
+	if [ -z "$$DYLINT_LIB" ]; then \
+		echo "ERROR: dylint library not found after build."; \
+		exit 1; \
+	fi; \
+	cargo +$$RUSTUP_TOOLCHAIN dylint --lib-path "$$DYLINT_LIB" --workspace
+
 # Run all code safety checks
-safety: clippy kani lint # geiger
+safety: clippy kani lint dylint # geiger
 	@echo "OK. Rust Safety Pipeline complete"
 
 # -------- Code security checks --------
@@ -232,7 +278,7 @@ oop-example:
 	cargo run --bin hyperspot-server --features oop-example,users-info-example -- --config config/quickstart.yaml run
 
 # Run all quality checks
-check: fmt clippy test security
+check: fmt clippy test security dylint
 
 # Run CI pipeline
 ci: check
