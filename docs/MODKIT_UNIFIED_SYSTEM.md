@@ -1,6 +1,8 @@
 # ModKit — Architecture & Developer Guide (DDD-light)
 
-This guide explains how to build production-grade modules on **ModKit**: how to lay out a module, declare it with a macro, wire REST with a type-safe builder, publish typed clients, and run background services with a clean lifecycle. It also describes the DDD-light layering and conventions used across modules.
+This guide explains how to build production-grade modules on **ModKit**: how to lay out a module, declare it with a
+macro, wire REST with a type-safe builder, publish typed clients, and run background services with a clean lifecycle. It
+also describes the DDD-light layering and conventions used across modules.
 
 ---
 
@@ -84,7 +86,8 @@ pub struct ModuleCtx {
 }
 ```
 
-**Note:** The `instance_id` is generated once at process startup and shared by all modules in the same process. OoP modules receive their own unique instance ID.
+**Note:** The `instance_id` is generated once at process startup and shared by all modules in the same process. OoP
+modules receive their own unique instance ID.
 
 ### Common usage
 
@@ -93,7 +96,9 @@ pub struct ModuleCtx {
 ```rust
 #[derive(serde::Deserialize, Default, Debug, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct MyModuleConfig { /* fields */ }
+pub struct MyModuleConfig {
+    /* fields */
+}
 ```
 
 **DB access (SeaORM / SQLx)**
@@ -107,12 +112,12 @@ let pool = db.sqlx_pool();  // SQLx pool
 
 ```rust
 // publish (provider module, in init()):
-expose_my_module_client(&ctx, &api)?;
+expose_my_module_client( & ctx, & api) ?;
 
 // consume (consumer module, in init()):
-let api = my_module_client(&ctx.client_hub);
+let api = my_module_client( & ctx.client_hub);
 // or without helpers:
-let api = ctx.client_hub.get::<dyn my_module::contract::client::MyModuleApi>()?;
+let api = ctx.client_hub.get::<dyn my_module::contract::client::MyModuleApi>() ?;
 ```
 
 **Cancellation**
@@ -145,7 +150,9 @@ Attach the attribute to your main struct. The macro:
     ctor = MyModule::new(),
     lifecycle(entry = "serve", stop_timeout = "30s", await_ready)
 )]
-pub struct MyModule { /* fields */ }
+pub struct MyModule {
+    /* fields */
+}
 ```
 
 ### Capabilities
@@ -155,8 +162,8 @@ pub struct MyModule { /* fields */ }
 * `rest_host` → own the Axum server/OpenAPI (e.g., `api_ingress`).
 * `stateful` → background job:
 
-  * With `lifecycle(...)`, the macro generates `Runnable` and registers `WithLifecycle<Self>`.
-  * Without it, implement `StatefulModule` yourself.
+    * With `lifecycle(...)`, the macro generates `Runnable` and registers `WithLifecycle<Self>`.
+    * Without it, implement `StatefulModule` yourself.
 
 ### Client helpers (when `client` is set)
 
@@ -179,7 +186,9 @@ Generated helpers:
     capabilities = [rest_host, rest, stateful],
     lifecycle(entry = "serve", stop_timeout = "30s", await_ready)
 )]
-pub struct ApiIngress { /* ... */ }
+pub struct ApiIngress {
+    /* ... */
+}
 
 impl ApiIngress {
     // accepted signatures:
@@ -245,7 +254,7 @@ modules:
       type: oop
       execution:
         executable_path: "~/.hyperspot/bin/calculator-oop.exe"
-        args: []
+        args: [ ]
         working_directory: null
         environment:
           RUST_LOG: "info"
@@ -263,10 +272,10 @@ modules:
 
 ### OoP Bootstrap Library
 
-Use `modkit_bootstrap::oop` to bootstrap OoP modules:
+Use `modkit::bootstrap::oop` to bootstrap OoP modules (remember to enable the bootstrap feature from modkit):
 
 ```rust
-use modkit_bootstrap::oop::{OopRunOptions, run_oop_with_options};
+use modkit::bootstrap::oop::{OopRunOptions, run_oop_with_options};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -279,22 +288,22 @@ async fn main() -> anyhow::Result<()> {
         print_config: false,
         heartbeat_interval_secs: 5,
     };
-    
+
     run_oop_with_options(opts).await
 }
 ```
 
 **`OopRunOptions` fields:**
 
-| Field | Description |
-|-------|-------------|
-| `module_name` | Logical module name (e.g., "file_parser") |
-| `instance_id` | Instance ID (defaults to random UUID) |
-| `directory_endpoint` | DirectoryService gRPC endpoint |
-| `config_path` | Path to configuration file |
-| `verbose` | Log verbosity (0=default, 1=info, 2=debug, 3=trace) |
-| `print_config` | Print effective config and exit |
-| `heartbeat_interval_secs` | Heartbeat interval (default: 5) |
+| Field                     | Description                                         |
+|---------------------------|-----------------------------------------------------|
+| `module_name`             | Logical module name (e.g., "file_parser")           |
+| `instance_id`             | Instance ID (defaults to random UUID)               |
+| `directory_endpoint`      | DirectoryService gRPC endpoint                      |
+| `config_path`             | Path to configuration file                          |
+| `verbose`                 | Log verbosity (0=default, 1=info, 2=debug, 3=trace) |
+| `print_config`            | Print effective config and exit                     |
+| `heartbeat_interval_secs` | Heartbeat interval (default: 5)                     |
 
 ### OoP Lifecycle
 
@@ -383,10 +392,10 @@ pub struct RegisterInstanceInfo {
 async fn init(&self, ctx: &ModuleCtx) -> anyhow::Result<()> {
     // DirectoryApi is available via ClientHub in OoP modules
     let directory = ctx.client_hub.get::<dyn DirectoryApi>()?;
-    
+
     // Resolve another service's endpoint
     let endpoint = directory.resolve_grpc_service("my.package.MyService").await?;
-    
+
     Ok(())
 }
 ```
@@ -418,7 +427,7 @@ pub enum BackendKind {
 pub trait OopBackend: Send + Sync {
     /// Spawn an OoP module instance
     async fn spawn(&self, config: OopSpawnConfig) -> Result<()>;
-    
+
     /// Shutdown all spawned instances
     async fn shutdown_all(&self);
 }
@@ -490,6 +499,7 @@ modules/my_module/
 ```
 
 **Key points:**
+
 - The `-sdk` crate contains everything consumers need: API trait, types, gRPC client, and wiring helpers
 - Server implementations are owned by the module itself, not the SDK
 - Consumers only need one dependency: `my_module-sdk`
@@ -545,10 +555,14 @@ pub enum MyModuleError {
 }
 
 #[derive(Clone, Debug)]
-pub struct Input { pub value: String }
+pub struct Input {
+    pub value: String
+}
 
 #[derive(Clone, Debug)]
-pub struct Output { pub result: String }
+pub struct Output {
+    pub result: String
+}
 ```
 
 ### gRPC Client (in SDK)
@@ -632,10 +646,10 @@ use my_module_sdk::{MyModuleApi, wire_client};
 
 async fn init(&self, ctx: &ModuleCtx) -> Result<()> {
     let directory = ctx.client_hub().get::<dyn DirectoryApi>()?;
-    
+
     // Wire the client into ClientHub
     wire_client(ctx.client_hub(), directory.as_ref()).await?;
-    
+
     // Later, get client from ClientHub
     let client = ctx.client_hub().get::<dyn MyModuleApi>()?;
     let result = client.do_something(Input { value: "test".into() }).await?;
@@ -654,7 +668,8 @@ See `examples/oop-modules/calculator/` for a complete working example:
 
 ## REST with `OperationBuilder`
 
-`OperationBuilder` is a type-state builder that **won't compile** unless you set both a **handler** and at least one **response** before calling `register()`. It also attaches request bodies and component schemas using `utoipa`.
+`OperationBuilder` is a type-state builder that **won't compile** unless you set both a **handler** and at least one *
+*response** before calling `register()`. It also attaches request bodies and component schemas using `utoipa`.
 
 ### Quick reference
 
@@ -707,7 +722,7 @@ OperationBuilder::<Missing, Missing, S>::post("/path")
 
 ```rust
 // Configure allowed Content-Type values (enforced by ingress middleware):
-.allow_content_types(&["application/json", "application/xml"])
+.allow_content_types( & ["application/json", "application/xml"])
 ```
 
 **Responses**
@@ -761,7 +776,8 @@ OperationBuilder::<Missing, Missing, S>::post("/path")
 
 ### Using Router state (`S`)
 
-Pass a state once via `Router::with_state(S)`. Handlers are free functions taking `State<S>`, so you don't capture/clone your service per route.
+Pass a state once via `Router::with_state(S)`. Handlers are free functions taking `State<S>`, so you don't capture/clone
+your service per route.
 
 ---
 
@@ -804,26 +820,26 @@ async fn create_user_handler(
 
 ```rust
 OperationBuilder::post("/users")
-    .operation_id("users.create")
-    .summary("Create user")
-    .json_request::<CreateUserReq>(openapi, "User creation data")
-    .handler(create_user_handler)
-    .json_response_with_schema::<UserDto>(openapi, StatusCode::CREATED, "User created")
-    .standard_errors(openapi)  // Adds 400, 401, 403, 404, 409, 422, 429, 500
-    .register(router, openapi);
+.operation_id("users.create")
+.summary("Create user")
+.json_request::<CreateUserReq>(openapi, "User creation data")
+.handler(create_user_handler)
+.json_response_with_schema::<UserDto>(openapi, StatusCode::CREATED, "User created")
+.standard_errors(openapi)  // Adds 400, 401, 403, 404, 409, 422, 429, 500
+.register(router, openapi);
 
 // Or for more specific error responses:
 OperationBuilder::post("/users")
-    .operation_id("users.create")
-    .summary("Create user")
-    .json_request::<CreateUserReq>(openapi, "User creation data")
-    .handler(create_user_handler)
-    .json_response_with_schema::<UserDto>(openapi, StatusCode::CREATED, "User created")
-    .problem_response(openapi, StatusCode::BAD_REQUEST, "Invalid input")
-    .problem_response(openapi, StatusCode::CONFLICT, "Email already exists")
-    .with_422_validation_error(openapi)  // Structured validation errors
-    .problem_response(openapi, StatusCode::INTERNAL_SERVER_ERROR, "Internal error")
-    .register(router, openapi);
+.operation_id("users.create")
+.summary("Create user")
+.json_request::<CreateUserReq>(openapi, "User creation data")
+.handler(create_user_handler)
+.json_response_with_schema::<UserDto>(openapi, StatusCode::CREATED, "User created")
+.problem_response(openapi, StatusCode::BAD_REQUEST, "Invalid input")
+.problem_response(openapi, StatusCode::CONFLICT, "Email already exists")
+.with_422_validation_error(openapi)  // Structured validation errors
+.problem_response(openapi, StatusCode::INTERNAL_SERVER_ERROR, "Internal error")
+.register(router, openapi);
 ```
 
 ---
@@ -831,6 +847,7 @@ OperationBuilder::post("/users")
 # Modkit Unified Pagination/OData System
 
 ## Layers
+
 - `modkit-odata`: AST, ODataQuery, CursorV1, ODataOrderBy, SortDir, ODataPageError, **Page<T>/PageInfo**.
 - `modkit`: HTTP extractor for OData (`$filter`, `$orderby`, `limit`, `cursor`) with budgets + Problem mapper.
 - `modkit-db`: Type-safe OData filter system with `FilterField` trait, `FilterNode<F>` AST, and SeaORM integration.
@@ -840,6 +857,7 @@ OperationBuilder::post("/users")
 The OData system uses a **three-layer architecture** for type safety:
 
 ### 1. DTO Layer (REST)
+
 Use `#[derive(ODataFilterable)]` on your REST DTOs to auto-generate a `FilterField` enum:
 
 ```rust
@@ -864,13 +882,16 @@ This generates a `UserDtoFilterField` enum automatically with variants for each 
 **Supported field kinds**: `String`, `I64`, `F64`, `Bool`, `Uuid`, `DateTimeUtc`, `Date`, `Time`, `Decimal`
 
 ### 2. Domain/Service Layer
+
 Work with transport-agnostic `FilterNode<F>` AST - no HTTP or SeaORM dependencies:
 
 ```rust
 use modkit_db::odata::filter::FilterNode;
 use crate::api::rest::dto::UserDtoFilterField;
 
-pub struct UserService { /* ... */ }
+pub struct UserService {
+    /* ... */
+}
 
 impl UserService {
     pub async fn list_users(
@@ -885,6 +906,7 @@ impl UserService {
 ```
 
 ### 3. Infrastructure Layer
+
 Map FilterField to SeaORM columns via `ODataFieldMapping` trait:
 
 ```rust
@@ -894,7 +916,7 @@ pub struct UserODataMapper;
 
 impl FieldToColumn<UserDtoFilterField> for UserODataMapper {
     type Column = Column;  // SeaORM Column enum
-    
+
     fn map_field(field: UserDtoFilterField) -> Column {
         match field {
             UserDtoFilterField::Id => Column::Id,
@@ -906,7 +928,7 @@ impl FieldToColumn<UserDtoFilterField> for UserODataMapper {
 
 impl ODataFieldMapping<UserDtoFilterField> for UserODataMapper {
     type Entity = Entity;
-    
+
     fn extract_cursor_value(model: &Model, field: UserDtoFilterField) -> sea_orm::Value {
         match field {
             UserDtoFilterField::Id => sea_orm::Value::Uuid(Some(Box::new(model.id))),
@@ -935,7 +957,7 @@ pub async fn list_with_odata(
         cursor: None,
         filter_hash: None,
     };
-    
+
     let page = paginate_odata::<UserDtoFilterField, UserODataMapper, _, _, _, _>(
         base_query,
         conn,
@@ -944,30 +966,32 @@ pub async fn list_with_odata(
         LimitCfg { default: 25, max: 1000 },
         |model| model.into(),  // map to domain
     ).await?;
-    
+
     Ok(page)
 }
 ```
 
 ## Usage (4 steps)
+
 1. In REST DTO: `#[derive(ODataFilterable)]` with `#[odata(filter(kind = "..."))]` on filterable fields.
 2. In the handler: `OData(q)` extractor (Axum) → pass `q` down to service.
 3. In repo/infra: implement `ODataFieldMapping<F>` mapper, call `paginate_odata(...)` and return `Page<T>`.
 4. In REST: map `ODataError` to Problem via `odata_page_error_to_problem`.
 
 ### Notes
+
 - If `cursor` present, `$orderby` must be omitted (400 ORDER_WITH_CURSOR).
 - Cursors are opaque, Base64URL v1; include signed order `s` and filter hash `f`.
 - Order must include a unique tiebreaker (e.g., `id`), enforced via helper.
 - The `#[odata(filter(kind = "..."))]` attribute is required for each filterable field.
 - Non-annotated fields are automatically excluded from filtering.
 
-
 ---
 
 ## Server-Sent Events (SSE)
 
-ModKit provides built-in support for Server-Sent Events through the `SseBroadcaster<T>` type and `OperationBuilder` integration. This enables real-time streaming of typed events to web clients with proper OpenAPI documentation.
+ModKit provides built-in support for Server-Sent Events through the `SseBroadcaster<T>` type and `OperationBuilder`
+integration. This enables real-time streaming of typed events to web clients with proper OpenAPI documentation.
 
 ### Core components
 
@@ -995,9 +1019,9 @@ let broadcaster = SseBroadcaster::<UserEvent>::new(1024);
 
 // Send events
 broadcaster.send(UserEvent {
-    kind: "created".to_string(),
-    id: uuid::Uuid::new_v4(),
-    at: chrono::Utc::now(),
+kind: "created".to_string(),
+id: uuid::Uuid::new_v4(),
+at: chrono::Utc::now(),
 });
 
 // Subscribe to stream
@@ -1014,7 +1038,7 @@ use std::convert::Infallible;
 
 async fn user_events_handler(
     Extension(sse): Extension<SseBroadcaster<UserEvent>>,
-) -> Sse<impl Stream<Item = Result<axum::response::sse::Event, Infallible>>> {
+) -> Sse<impl Stream<Item=Result<axum::response::sse::Event, Infallible>>> {
     tracing::info!("New SSE connection for user events");
     sse.sse_response()  // Returns Sse with keepalive pings
 }
@@ -1163,7 +1187,7 @@ broadcaster.sse_response()
 
 // SSE with custom HTTP headers
 broadcaster.sse_response_with_headers([
-    (HeaderName::from_static("x-custom"), HeaderValue::from_static("value"))
+(HeaderName::from_static("x-custom"), HeaderValue::from_static("value"))
 ])
 
 // Named events (sets event: field in SSE stream)
@@ -1223,7 +1247,7 @@ async fn upload_handler(
         if field.name() == Some("file") {
             let filename = field.file_name().map(|s| s.to_string());
             let bytes = field.bytes().await.map_err(|e| internal_error(e))?;
-            
+
             let result = service.process_file(filename, bytes).await?;
             return Ok(Json(result));
         }
@@ -1233,16 +1257,17 @@ async fn upload_handler(
 
 // Register with type-safe builder
 OperationBuilder::post("/upload")
-    .operation_id("files.upload")
-    .summary("Upload a file")
-    .multipart_file_request("file", Some("File to upload"))
-    .handler(upload_handler)
-    .json_response_with_schema::<UploadResponse>(openapi, StatusCode::OK, "Upload successful")
-    .standard_errors(openapi)
-    .register(router, openapi);
+.operation_id("files.upload")
+.summary("Upload a file")
+.multipart_file_request("file", Some("File to upload"))
+.handler(upload_handler)
+.json_response_with_schema::<UploadResponse>(openapi, StatusCode::OK, "Upload successful")
+.standard_errors(openapi)
+.register(router, openapi);
 ```
 
 The `.multipart_file_request()` method:
+
 - Sets `multipart/form-data` content type
 - Generates proper OpenAPI schema with binary file field
 - Restricts allowed Content-Type to `multipart/form-data` only
@@ -1265,16 +1290,17 @@ async fn upload_binary_handler(
 
 // Register with type-safe builder
 OperationBuilder::post("/upload")
-    .operation_id("files.upload_binary")
-    .summary("Upload raw file bytes")
-    .octet_stream_request(Some("Raw file bytes"))
-    .handler(upload_binary_handler)
-    .json_response_with_schema::<ParseResponse>(openapi, StatusCode::OK, "Parse successful")
-    .standard_errors(openapi)
-    .register(router, openapi);
+.operation_id("files.upload_binary")
+.summary("Upload raw file bytes")
+.octet_stream_request(Some("Raw file bytes"))
+.handler(upload_binary_handler)
+.json_response_with_schema::<ParseResponse>(openapi, StatusCode::OK, "Parse successful")
+.standard_errors(openapi)
+.register(router, openapi);
 ```
 
 The `.octet_stream_request()` method:
+
 - Sets `application/octet-stream` content type
 - Generates OpenAPI schema: `type: string, format: binary`
 - Restricts allowed Content-Type to `application/octet-stream` only
@@ -1282,22 +1308,25 @@ The `.octet_stream_request()` method:
 
 ### MIME type validation
 
-Both helpers automatically configure MIME type validation via the ingress middleware. If a request arrives with a different Content-Type, it will receive HTTP 415 (Unsupported Media Type).
+Both helpers automatically configure MIME type validation via the ingress middleware. If a request arrives with a
+different Content-Type, it will receive HTTP 415 (Unsupported Media Type).
 
 You can also manually configure allowed types:
 
 ```rust
 OperationBuilder::post("/upload")
-    .operation_id("files.upload_custom")
-    .summary("Upload with custom validation")
-    .allow_content_types(&["application/pdf", "image/png", "image/jpeg"])
-    .handler(upload_handler)
-    .json_response(StatusCode::OK, "Upload successful")
-    .problem_response(openapi, StatusCode::UNSUPPORTED_MEDIA_TYPE, "Unsupported file type")
-    .register(router, openapi);
+.operation_id("files.upload_custom")
+.summary("Upload with custom validation")
+.allow_content_types(& ["application/pdf", "image/png", "image/jpeg"])
+.handler(upload_handler)
+.json_response(StatusCode::OK, "Upload successful")
+.problem_response(openapi, StatusCode::UNSUPPORTED_MEDIA_TYPE, "Unsupported file type")
+.register(router, openapi);
 ```
 
-**Important**: `.allow_content_types()` is independent of the request body schema. It only configures ingress validation and doesn't create OpenAPI request body specs. Use it when you want to enforce MIME types but handle the body parsing manually in your handler.
+**Important**: `.allow_content_types()` is independent of the request body schema. It only configures ingress validation
+and doesn't create OpenAPI request body specs. Use it when you want to enforce MIME types but handle the body parsing
+manually in your handler.
 
 ---
 
@@ -1341,7 +1370,8 @@ let users: Vec<User> = entities.into_iter().map(Into::into).collect();
 
 ## OpenAPI integration (utoipa)
 
-ModKit provides a standalone OpenAPI registry system that collects operation specs and schemas, then builds a complete OpenAPI 3.1 document.
+ModKit provides a standalone OpenAPI registry system that collects operation specs and schemas, then builds a complete
+OpenAPI 3.1 document.
 
 ### OpenApiRegistry trait
 
@@ -1366,14 +1396,14 @@ let registry = OpenApiRegistryImpl::new();
 
 // Build OpenAPI document
 let info = OpenApiInfo {
-    title: "My API".to_string(),
-    version: "1.0.0".to_string(),
-    description: Some("API documentation".to_string()),
+title: "My API".to_string(),
+version: "1.0.0".to_string(),
+description: Some("API documentation".to_string()),
 };
-let openapi = registry.build_openapi(&info)?;
+let openapi = registry.build_openapi( & info) ?;
 
 // Serialize to JSON
-let json = serde_json::to_string_pretty(&openapi)?;
+let json = serde_json::to_string_pretty( & openapi) ?;
 ```
 
 ### Schema registration
@@ -1407,7 +1437,8 @@ pub struct UserDto {
 
 ### Security schemes
 
-The registry automatically adds a `bearerAuth` security scheme (HTTP Bearer with JWT format). Operations using `.require_auth()` will reference this scheme in OpenAPI.
+The registry automatically adds a `bearerAuth` security scheme (HTTP Bearer with JWT format). Operations using
+`.require_auth()` will reference this scheme in OpenAPI.
 
 ### Content type handling
 
@@ -1421,7 +1452,8 @@ The registry automatically adds a `bearerAuth` security scheme (HTTP Bearer with
 
 ## Typed ClientHub
 
-The **ClientHub** provides type-safe client resolution for inter-module communication. It supports both in-process and remote clients:
+The **ClientHub** provides type-safe client resolution for inter-module communication. It supports both in-process and
+remote clients:
 
 * **In-process clients** — direct function calls within the same process
 * **Remote clients** — gRPC clients for OoP modules (resolved via DirectoryApi)
@@ -1435,13 +1467,13 @@ The **ClientHub** provides type-safe client resolution for inter-module communic
 
 ### In-Process vs Remote Clients
 
-| Aspect | In-Process | Remote (OoP) |
-|--------|------------|--------------|
-| Transport | Direct call | gRPC |
-| Latency | Nanoseconds | Milliseconds |
-| Isolation | Shared process | Separate process |
-| Contract | Trait in `contract/` | Trait in `*-contracts/` crate |
-| Registration | `expose_*_client()` | DirectoryApi + gRPC client |
+| Aspect       | In-Process           | Remote (OoP)                  |
+|--------------|----------------------|-------------------------------|
+| Transport    | Direct call          | gRPC                          |
+| Latency      | Nanoseconds          | Milliseconds                  |
+| Isolation    | Shared process       | Separate process              |
+| Contract     | Trait in `contract/` | Trait in `*-contracts/` crate |
+| Registration | `expose_*_client()`  | DirectoryApi + gRPC client    |
 
 **Publish in `init`**
 
@@ -1466,9 +1498,9 @@ impl Module for MyModule {
 **Consume**
 
 ```rust
-let api = my_module_client(&ctx.client_hub);
+let api = my_module_client( & ctx.client_hub);
 // or:
-let api = ctx.client_hub.get::<dyn my_module::contract::client::MyModuleApi>()?;
+let api = ctx.client_hub.get::<dyn my_module::contract::client::MyModuleApi>() ?;
 ```
 
 ---
@@ -1519,28 +1551,36 @@ pub trait StatefulModule: Send + Sync {
 ## Addendum — Rationale (DDD-light)
 
 1. **What does a domain service do?**
-   Encodes **business rules/orchestration**. It calls repositories/infrastructure, applies invariants, aggregates data, owns retries/timeouts at the business level.
+   Encodes **business rules/orchestration**. It calls repositories/infrastructure, applies invariants, aggregates data,
+   owns retries/timeouts at the business level.
 
 2. **Where to put “low-level” things?**
-   In **infra/** (storage, system probes, processes, files, raw SQL, HTTP to other systems). Domain calls infra via small interfaces/constructors.
+   In **infra/** (storage, system probes, processes, files, raw SQL, HTTP to other systems). Domain calls infra via
+   small interfaces/constructors.
 
 3. **Where to keep “glue”?**
-   Glue that adapts domain to transport lives in **api/rest** (HTTP DTOs, handlers). Glue that adapts domain to **other modules** lives in **gateways/** (client implementations). DB mapping glue sits in **infra/storage**.
+   Glue that adapts domain to transport lives in **api/rest** (HTTP DTOs, handlers). Glue that adapts domain to **other
+   modules** lives in **gateways/** (client implementations). DB mapping glue sits in **infra/storage**.
 
 4. **Why not put platform-dependent logic into service?**
-   To keep business rules portable/testable. Platform logic churns often; isolating it in infra avoids leaking OS/DB concerns into your domain.
+   To keep business rules portable/testable. Platform logic churns often; isolating it in infra avoids leaking OS/DB
+   concerns into your domain.
 
 5. **What is `contract` and why separate?**
-   It’s the **public API** of your module for **other modules**: traits + DTOs + domain errors safe to expose. This separation allows swapping local/remote clients without changing consumers. For simple internal modules you may re-export a subset of domain models via `contract::model`.
+   It’s the **public API** of your module for **other modules**: traits + DTOs + domain errors safe to expose. This
+   separation allows swapping local/remote clients without changing consumers. For simple internal modules you may
+   re-export a subset of domain models via `contract::model`.
 
 6. **How to hide domain & internals from other modules?**
-   Re-export only what’s needed via `contract`. Consumers depend on `contract` and `gateways` through the ClientHub; they never import your domain/infra directly.
+   Re-export only what’s needed via `contract`. Consumers depend on `contract` and `gateways` through the ClientHub;
+   they never import your domain/infra directly.
 
 ---
 
 ## OoP Configuration: How It Works
 
-This section describes the complete configuration flow for Out-of-Process modules, from master host preparation to final merged configuration in the OoP process.
+This section describes the complete configuration flow for Out-of-Process modules, from master host preparation to final
+merged configuration in the OoP process.
 
 ### Configuration Flow Diagram
 
@@ -1633,22 +1673,22 @@ When an OoP module starts via `run_oop_with_options()`:
 
 OoP modules receive configuration from the master host via environment variables:
 
-| Variable | Description |
-|----------|-------------|
-| `MODKIT_MODULE_CONFIG` | JSON blob with rendered module config (database, config, logging, tracing) |
-| `MODKIT_DIRECTORY_ENDPOINT` | DirectoryService gRPC endpoint (e.g., `http://127.0.0.1:50051`) |
-| `MODKIT_CONFIG_PATH` | Path to config file (fallback if `MODKIT_MODULE_CONFIG` not set) |
+| Variable                    | Description                                                                |
+|-----------------------------|----------------------------------------------------------------------------|
+| `MODKIT_MODULE_CONFIG`      | JSON blob with rendered module config (database, config, logging, tracing) |
+| `MODKIT_DIRECTORY_ENDPOINT` | DirectoryService gRPC endpoint (e.g., `http://127.0.0.1:50051`)            |
+| `MODKIT_CONFIG_PATH`        | Path to config file (fallback if `MODKIT_MODULE_CONFIG` not set)           |
 
 ### Merge Strategies by Section
 
 For each configuration section, master config serves as **base** and local `--config` serves as **override**:
 
-| Section | Merge Strategy | Description |
-|---------|---------------|-------------|
+| Section      | Merge Strategy       | Description                                                                                 |
+|--------------|----------------------|---------------------------------------------------------------------------------------------|
 | **database** | Field-by-field merge | Local fields override master fields (dsn, host, port, user, password, dbname, params, pool) |
-| **logging** | Key-by-key merge | Local subsystem keys override master keys (e.g., "default", "calculator") |
-| **config** | Full replacement | If local has `config` section, it completely replaces master |
-| **tracing** | From master only | OoP modules use master's OTEL settings |
+| **logging**  | Key-by-key merge     | Local subsystem keys override master keys (e.g., "default", "calculator")                   |
+| **config**   | Full replacement     | If local has `config` section, it completely replaces master                                |
+| **tracing**  | From master only     | OoP modules use master's OTEL settings                                                      |
 
 **Database configuration merge (3 levels):**
 
@@ -1667,6 +1707,7 @@ Each level uses field-by-field merge (same logic as `DbManager::merge_server_int
 **Example:**
 
 Master config (`quickstart.yaml`):
+
 ```yaml
 database:
   servers:
@@ -1691,6 +1732,7 @@ logging:
 ```
 
 Local OoP config (`oop-example.yaml`):
+
 ```yaml
 modules:
   calculator:
@@ -1707,6 +1749,7 @@ logging:
 ```
 
 **Result:**
+
 - Database: Uses `sqlite_main` server with `max_conns: 10` (local override)
 - Config: `some_setting: "from_local"` (local replaces master)
 - Logging: `console_level: debug`, `file: "logs/calculator-oop.log"` (local overrides)
@@ -1760,7 +1803,8 @@ Both formats are detected and forwarded with the correct log level.
 * Use `.multipart_file_request()` for HTML form uploads, `.octet_stream_request()` for raw binary.
 * Use `.require_auth()` for protected endpoints, `.public()` for public endpoints.
 * Use `.with_422_validation_error()` for endpoints with input validation.
-* For OoP modules: use the SDK pattern with a single `*-sdk` crate containing API trait, types, gRPC client, and wiring helpers.
+* For OoP modules: use the SDK pattern with a single `*-sdk` crate containing API trait, types, gRPC client, and wiring
+  helpers.
 * For gRPC: server implementations live in the module itself; the SDK crate provides only the client.
 * For gRPC clients: always use `modkit_transport_grpc::client` utilities (`connect_with_stack`, `connect_with_retry`).
 * Use `CancellationToken` for coordinated shutdown across the entire process tree.

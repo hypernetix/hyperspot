@@ -635,7 +635,6 @@ dependencies = [
  "grpc_hub",
  "inventory",
  "modkit",
- "modkit-bootstrap",
  "modkit-security",
  "modkit-transport-grpc",
  "tokio",
@@ -2136,7 +2135,6 @@ dependencies = [
  "grpc_hub",
  "mimalloc",
  "modkit",
- "modkit-bootstrap",
  "modkit-db",
  "module_orchestrator",
  "nodes_registry",
@@ -2669,8 +2667,11 @@ dependencies = [
  "arc-swap",
  "async-trait",
  "axum",
+ "chrono",
  "dashmap",
+ "dsn",
  "figment",
+ "file-rotate",
  "futures",
  "http",
  "httpmock",
@@ -2680,15 +2681,20 @@ dependencies = [
  "modkit-macros",
  "modkit-odata",
  "module_orchestrator-contracts",
+ "module_orchestrator-grpc",
  "nix 0.29.0",
  "odata-params",
  "opentelemetry",
  "opentelemetry-otlp",
  "opentelemetry_sdk",
  "parking_lot",
+ "regex",
  "reqwest",
  "serde",
+ "serde-saphyr",
  "serde_json",
+ "temp-env",
+ "tempfile",
  "thiserror 2.0.17",
  "tokio",
  "tokio-stream",
@@ -2696,9 +2702,12 @@ dependencies = [
  "tonic",
  "tower",
  "tracing",
+ "tracing-appender",
+ "tracing-log",
  "tracing-opentelemetry",
  "tracing-subscriber",
  "trybuild",
+ "url",
  "urlencoding",
  "utoipa",
  "uuid",
@@ -2724,41 +2733,6 @@ dependencies = [
  "tower",
  "tracing",
  "tracing-subscriber",
- "uuid",
-]
-
-[[package]]
-name = "modkit-bootstrap"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "chrono",
- "dsn",
- "figment",
- "file-rotate",
- "modkit",
- "modkit-db",
- "modkit-transport-grpc",
- "module_orchestrator-contracts",
- "module_orchestrator-grpc",
- "opentelemetry_sdk",
- "regex",
- "serde",
- "serde-saphyr",
- "serde_json",
- "temp-env",
- "tempfile",
- "thiserror 2.0.17",
- "tokio",
- "tokio-util",
- "tracing",
- "tracing-appender",
- "tracing-error",
- "tracing-log",
- "tracing-opentelemetry",
- "tracing-subscriber",
- "url",
- "urlencoding",
  "uuid",
 ]
 
@@ -5803,16 +5777,6 @@ checksum = "7a04e24fab5c89c6a36eb8558c9656f30d81de51dfa4d3b45f26b21d61fa0a6c"
 dependencies = [
  "once_cell",
  "valuable",
-]
-
-[[package]]
-name = "tracing-error"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8b1581020d7a273442f5b45074a6a57d5757ad0a47dac0e9f0bd57b81936f3db"
-dependencies = [
- "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]

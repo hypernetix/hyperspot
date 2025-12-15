@@ -24,7 +24,7 @@
 //! ## Example
 //!
 //! ```rust,no_run
-//! use modkit_bootstrap::oop::{OopRunOptions, run_oop_with_options};
+//! use modkit::bootstrap::oop::{OopRunOptions, run_oop_with_options};
 //!
 //! #[tokio::main]
 //! async fn main() -> anyhow::Result<()> {
@@ -52,9 +52,12 @@ use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
-use crate::config::{AppConfig, CliArgs, RenderedModuleConfig, MODKIT_MODULE_CONFIG_ENV};
-use crate::host::{AppConfigProvider, ConfigProvider as _};
-use modkit::runtime::{
+use super::config::{
+    AppConfig, CliArgs, LoggingConfig, RenderedDbConfig, RenderedModuleConfig,
+    MODKIT_MODULE_CONFIG_ENV,
+};
+use crate::bootstrap::host::init_logging_unified;
+use crate::runtime::{
     run, shutdown, ClientRegistration, DbOptions, RunOptions, ShutdownOptions,
     MODKIT_DIRECTORY_ENDPOINT_ENV,
 };
@@ -108,15 +111,6 @@ impl Default for OopRunOptions {
     }
 }
 
-/// Adapter to make `AppConfigProvider` implement `modkit::ConfigProvider`
-struct ModkitConfigAdapter(Arc<AppConfigProvider>);
-
-impl modkit::ConfigProvider for ModkitConfigAdapter {
-    fn get_module_config(&self, module_name: &str) -> Option<&serde_json::Value> {
-        self.0.get_module_config(module_name)
-    }
-}
-
 /// Builds the final configuration and `DbOptions` for an `OoP` module.
 ///
 /// Configuration merge strategy (for each section):
@@ -142,7 +136,7 @@ fn build_oop_config_and_db(
     local_config: &AppConfig,
     module_name: &str,
     rendered_config: Option<&RenderedModuleConfig>,
-) -> Result<(AppConfig, crate::config::LoggingConfig, DbOptions)> {
+) -> Result<(AppConfig, LoggingConfig, DbOptions)> {
     let home_dir = PathBuf::from(&local_config.server.home_dir);
 
     // Build final_config for module's "config" section
@@ -206,9 +200,9 @@ fn build_oop_config_and_db(
 /// Each key in the logging `HashMap` (e.g., "default", "calculator", "sqlx")
 /// is overridden by local if present.
 fn merge_logging_configs(
-    master: Option<&crate::config::LoggingConfig>,
-    local: Option<&crate::config::LoggingConfig>,
-) -> crate::config::LoggingConfig {
+    master: Option<&LoggingConfig>,
+    local: Option<&LoggingConfig>,
+) -> LoggingConfig {
     let mut result = master.cloned().unwrap_or_default();
 
     if let Some(local_logging) = local {
@@ -228,7 +222,7 @@ fn merge_logging_configs(
 fn build_merged_db_options(
     home_dir: &Path,
     module_name: &str,
-    rendered_db: Option<&crate::config::RenderedDbConfig>,
+    rendered_db: Option<&RenderedDbConfig>,
     local_config: &AppConfig,
 ) -> Result<DbOptions> {
     // Check if we have any database configuration
@@ -387,7 +381,7 @@ fn merge_json_objects(target: &mut serde_json::Value, source: &serde_json::Value
 /// # Example
 ///
 /// ```rust,no_run
-/// use modkit_bootstrap::oop::{OopRunOptions, run_oop_with_options};
+/// use modkit::bootstrap::oop::{OopRunOptions, run_oop_with_options};
 ///
 /// #[tokio::main]
 /// async fn main() -> anyhow::Result<()> {
@@ -455,7 +449,7 @@ pub async fn run_oop_with_options(opts: OopRunOptions) -> Result<()> {
 
     // Load configuration
     let mut config = AppConfig::load_or_default(opts.config_path.as_deref())?;
-    config.apply_cli_overrides(&args);
+    config.apply_cli_overrides(args.verbose);
 
     // Try to read rendered module config from master host via env var BEFORE logging init
     // so we can use the tracing config from master for OTEL
@@ -477,12 +471,13 @@ pub async fn run_oop_with_options(opts: OopRunOptions) -> Result<()> {
     let otel_layer = rendered_config
         .as_ref()
         .and_then(|rc| rc.tracing.as_ref())
-        .and_then(modkit::telemetry::init_tracing);
+        .map(crate::telemetry::init_tracing)
+        .transpose()?;
     #[cfg(not(feature = "otel"))]
     let otel_layer = None;
 
     // Initialize logging with MERGED config (master base + local override)
-    crate::host::logging::init_logging_unified(
+    init_logging_unified(
         &merged_logging,
         std::path::Path::new(&config.server.home_dir),
         otel_layer,
@@ -571,9 +566,7 @@ pub async fn run_oop_with_options(opts: OopRunOptions) -> Result<()> {
     });
 
     // Build config provider for modules
-    let config_provider = Arc::new(ModkitConfigAdapter(Arc::new(AppConfigProvider::new(
-        final_config,
-    ))));
+    let config_provider = Arc::new(final_config);
 
     // Keep a reference to directory_api for deregistration after shutdown
     // Run the module lifecycle with the root cancellation token.

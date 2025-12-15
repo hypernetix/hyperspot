@@ -25,10 +25,13 @@ Common and stateless logic that can be reusable across modules should be impleme
 
 Modules follow a DDD-light architecture with an **SDK pattern** for public API separation:
 
-- **`<module>-sdk`**: Separate crate containing the public API surface (trait, models, errors). Transport-agnostic. Consumers depend only on this.
-- **`<module>`**: Module implementation crate containing domain logic, REST handlers, local client adapter, and infrastructure.
+- **`<module>-sdk`**: Separate crate containing the public API surface (trait, models, errors). Transport-agnostic.
+  Consumers depend only on this.
+- **`<module>`**: Module implementation crate containing domain logic, REST handlers, local client adapter, and
+  infrastructure.
 
 This SDK pattern provides:
+
 - Clear separation between public API and implementation
 - Consumers only need one lightweight dependency (`<module>-sdk`)
 - Direct ClientHub registration: `hub.get::<dyn MyModuleApi>()?`
@@ -77,7 +80,8 @@ modules/<your-module>/
 
 ## Step-by-Step Generation Guide
 
-> **Note:** Strictly mirror the style, naming, and structure of the `examples/modkit/users_info/` reference when generating
+> **Note:** Strictly mirror the style, naming, and structure of the `examples/modkit/users_info/` reference when
+> generating
 > code. This example uses the **SDK pattern** with:
 > - `user_info-sdk/` — SDK crate containing the public API trait, models, and error types
 > - `users_info/` — Module crate containing implementation, local client, domain, and REST handlers
@@ -266,14 +270,14 @@ ApiError<DomainError> (handler return type)
 
 **Rule:** Use the following naming and placement matrix for error types and mappings:
 
-| Concern                        | Type/Concept                              | File (must define)                            | Notes                                                                                                                                        |
-|--------------------------------|-------------------------------------------|-----------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|
-| Domain error (business)        | `DomainError`                             | `<module>/src/domain/error.rs`                | Pure business errors; no transport details. Variants reflect domain invariants (e.g., `UserNotFound`, `EmailAlreadyExists`, `InvalidEmail`). |
-| SDK error (public)             | `<ModuleName>Error`                       | `<module>-sdk/src/errors.rs`                  | Transport-agnostic surface for consumers. No `serde` derives. Lives in SDK crate.                                                            |
-| Domain → SDK error conversion  | `impl From<DomainError> for <Sdk>Error`   | `<module>/src/domain/error.rs`                | Module crate imports SDK error and provides `From` impl.                                                                                      |
-| REST error mapping             | `impl From<DomainError> for Problem`      | `<module>/src/api/rest/error.rs`              | Centralize RFC-9457 mapping via `From` trait; `Problem` implements `IntoResponse` directly.                                                  |
-| Handler return type            | `ApiResult<T, DomainError>`               | `<module>/src/api/rest/handlers.rs`           | Use `ApiError::from_domain(e)` for error conversion; type aliases simplify signatures.                                                       |
-| OpenAPI responses registration | `.error_400(openapi)`, `.error_404(...)` | `<module>/src/api/rest/routes.rs`             | Register error statuses using convenience methods on `OperationBuilder`.                                                                     |
+| Concern                        | Type/Concept                             | File (must define)                  | Notes                                                                                                                                        |
+|--------------------------------|------------------------------------------|-------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|
+| Domain error (business)        | `DomainError`                            | `<module>/src/domain/error.rs`      | Pure business errors; no transport details. Variants reflect domain invariants (e.g., `UserNotFound`, `EmailAlreadyExists`, `InvalidEmail`). |
+| SDK error (public)             | `<ModuleName>Error`                      | `<module>-sdk/src/errors.rs`        | Transport-agnostic surface for consumers. No `serde` derives. Lives in SDK crate.                                                            |
+| Domain → SDK error conversion  | `impl From<DomainError> for <Sdk>Error`  | `<module>/src/domain/error.rs`      | Module crate imports SDK error and provides `From` impl.                                                                                     |
+| REST error mapping             | `impl From<DomainError> for Problem`     | `<module>/src/api/rest/error.rs`    | Centralize RFC-9457 mapping via `From` trait; `Problem` implements `IntoResponse` directly.                                                  |
+| Handler return type            | `ApiResult<T, DomainError>`              | `<module>/src/api/rest/handlers.rs` | Use `ApiError::from_domain(e)` for error conversion; type aliases simplify signatures.                                                       |
+| OpenAPI responses registration | `.error_400(openapi)`, `.error_404(...)` | `<module>/src/api/rest/routes.rs`   | Register error statuses using convenience methods on `OperationBuilder`.                                                                     |
 
 Error design rules:
 
@@ -460,15 +464,15 @@ pub async fn delete_user(
 
 The `modkit::api::prelude` module provides:
 
-| Type/Function     | Description                                              |
-|-------------------|----------------------------------------------------------|
-| `ApiResult<T, E>` | `Result<T, ApiError<E>>` - standard handler return type  |
-| `ApiError<E>`     | Error wrapper with `from_domain(e)` conversion           |
-| `JsonBody<T>`     | Type alias for `Json<T>` response                        |
-| `JsonPage<T>`     | Type alias for `Json<Page<T>>` paginated response        |
-| `created_json(v)` | Returns `(StatusCode::CREATED, Json(v))`                 |
-| `no_content()`    | Returns `StatusCode::NO_CONTENT`                         |
-| `Json`, `Path`    | Re-exported Axum extractors                              |
+| Type/Function     | Description                                             |
+|-------------------|---------------------------------------------------------|
+| `ApiResult<T, E>` | `Result<T, ApiError<E>>` - standard handler return type |
+| `ApiError<E>`     | Error wrapper with `from_domain(e)` conversion          |
+| `JsonBody<T>`     | Type alias for `Json<T>` response                       |
+| `JsonPage<T>`     | Type alias for `Json<Page<T>>` paginated response       |
+| `created_json(v)` | Returns `(StatusCode::CREATED, Json(v))`                |
+| `no_content()`    | Returns `StatusCode::NO_CONTENT`                        |
+| `Json`, `Path`    | Re-exported Axum extractors                             |
 
 #### OpenAPI Error Registration
 
@@ -559,7 +563,8 @@ pub struct UpdateUserRequest {
 
 #### 4b. `<module>-sdk/src/errors.rs`
 
-**Rule:** Define a domain-specific error enum. This allows consumers to handle errors without depending on implementation details.
+**Rule:** Define a domain-specific error enum. This allows consumers to handle errors without depending on
+implementation details.
 
 ```rust
 // Example from user_info-sdk
@@ -646,6 +651,7 @@ pub trait UsersInfoApi: Send + Sync {
 ```
 
 **Why SecurityCtx is required:**
+
 - Enables tenant isolation (user can only access data within their tenant)
 - Provides authorization context for access control checks
 - Propagates user identity for audit logging
@@ -890,14 +896,14 @@ pub struct MyModule { /* ... */ }
 
 The `init` function receives a `ModuleCtx` struct, which provides access to essential runtime components:
 
-| Method                    | Description                                                    |
-|---------------------------|----------------------------------------------------------------|
-| `ctx.config::<T>()?`      | Deserialize typed config; returns `anyhow::Result<T>`          |
-| `ctx.db_required()?`      | Get DB handle or fail; returns `anyhow::Result<Arc<DbHandle>>` |
-| `ctx.db()`                | Optional DB handle; returns `Option<Arc<DbHandle>>`            |
-| `ctx.client_hub()`        | Access ClientHub for registering/resolving clients             |
-| `ctx.cancellation_token()`| CancellationToken for graceful shutdown                        |
-| `ctx.instance_id()`       | Process-level unique instance ID (UUID)                        |
+| Method                     | Description                                                    |
+|----------------------------|----------------------------------------------------------------|
+| `ctx.config::<T>()?`       | Deserialize typed config; returns `anyhow::Result<T>`          |
+| `ctx.db_required()?`       | Get DB handle or fail; returns `anyhow::Result<Arc<DbHandle>>` |
+| `ctx.db()`                 | Optional DB handle; returns `Option<Arc<DbHandle>>`            |
+| `ctx.client_hub()`         | Access ClientHub for registering/resolving clients             |
+| `ctx.cancellation_token()` | CancellationToken for graceful shutdown                        |
+| `ctx.instance_id()`        | Process-level unique instance ID (UUID)                        |
 
 This is where all components are assembled and registered with ModKit.
 
@@ -922,19 +928,19 @@ This is where all components are assembled and registered with ModKit.
    ```
 
    **Rule:** The `init` function is the composition root. It MUST:
-   1. Read the typed config: `let cfg: Config = ctx.config()?;`
-   2. Get a DB handle: `let db = ctx.db_required()?;`
-   3. Get SecureConn for security-aware queries: `let sec_conn = db.sea_secure();`
-   4. Instantiate the repository, service, and any other dependencies.
-   5. Store the `Arc<Service>` in a thread-safe container like `arc_swap::ArcSwapOption`.
-   6. Create local client adapter and register explicitly:
-      ```rust
-      use <module>_sdk::api::YourModuleApi;
-      let local_client = YourLocalClient::new(domain_service);
-      let api: Arc<dyn YourModuleApi> = Arc::new(local_client);
-      ctx.client_hub().register::<dyn YourModuleApi>(api);
-      ```
-   7. Config structs SHOULD use `#[serde(deny_unknown_fields)]` and provide safe defaults.
+    1. Read the typed config: `let cfg: Config = ctx.config()?;`
+    2. Get a DB handle: `let db = ctx.db_required()?;`
+    3. Get SecureConn for security-aware queries: `let sec_conn = db.sea_secure();`
+    4. Instantiate the repository, service, and any other dependencies.
+    5. Store the `Arc<Service>` in a thread-safe container like `arc_swap::ArcSwapOption`.
+    6. Create local client adapter and register explicitly:
+       ```rust
+       use <module>_sdk::api::YourModuleApi;
+       let local_client = YourLocalClient::new(domain_service);
+       let api: Arc<dyn YourModuleApi> = Arc::new(local_client);
+       ctx.client_hub().register::<dyn YourModuleApi>(api);
+       ```
+    7. Config structs SHOULD use `#[serde(deny_unknown_fields)]` and provide safe defaults.
 
 3. **`src/module.rs` - `impl DbModule` and `impl RestfulModule`:**
    **Rule:** `DbModule::migrate` MUST be implemented to run your SeaORM migrations.
@@ -1167,7 +1173,7 @@ external API clients.
    **Rule:** Handler return types use the prelude helpers:
 
    | Pattern | Return Type | Helper |
-   |---------|-------------|--------|
+      |---------|-------------|--------|
    | GET with body | `UsersResult<JsonBody<T>>` | `Ok(Json(dto))` |
    | POST with body | `UsersResult<impl IntoResponse>` | `Ok(created_json(dto))` |
    | DELETE no body | `UsersResult<impl IntoResponse>` | `Ok(no_content())` |
@@ -1326,16 +1332,16 @@ external API clients.
 
 **Rule:** Use convenience methods instead of raw `.problem_response()`:
 
-| Method | Status Code | Description |
-|--------|-------------|-------------|
-| `.error_400(openapi)` | 400 | Bad Request |
-| `.error_401(openapi)` | 401 | Unauthorized |
-| `.error_403(openapi)` | 403 | Forbidden |
-| `.error_404(openapi)` | 404 | Not Found |
-| `.error_409(openapi)` | 409 | Conflict |
-| `.error_422(openapi)` | 422 | Unprocessable Entity |
-| `.error_500(openapi)` | 500 | Internal Server Error |
-| `.standard_errors(openapi)` | All | Adds 400, 401, 403, 404, 409, 422, 429, 500 |
+| Method                      | Status Code | Description                                 |
+|-----------------------------|-------------|---------------------------------------------|
+| `.error_400(openapi)`       | 400         | Bad Request                                 |
+| `.error_401(openapi)`       | 401         | Unauthorized                                |
+| `.error_403(openapi)`       | 403         | Forbidden                                   |
+| `.error_404(openapi)`       | 404         | Not Found                                   |
+| `.error_409(openapi)`       | 409         | Conflict                                    |
+| `.error_422(openapi)`       | 422         | Unprocessable Entity                        |
+| `.error_500(openapi)`       | 500         | Internal Server Error                       |
+| `.standard_errors(openapi)` | All         | Adds 400, 401, 403, 404, 409, 422, 429, 500 |
 
 #### OpenAPI Schema Registration for POST/PUT/DELETE
 
@@ -1368,6 +1374,7 @@ This layer implements the domain's repository traits with **Secure ORM** for ten
 #### Security Model
 
 The Secure ORM layer provides:
+
 - **Typestate enforcement**: Unscoped queries cannot be executed (compile-time safety)
 - **Request-scoped security**: SecurityCtx passed per-operation from handlers
 - **Tenant isolation**: Automatic WHERE clauses for multi-tenant data
@@ -1614,6 +1621,7 @@ The local client implements the SDK trait and forwards calls to domain service m
 **Location:** `src/local_client.rs` (at module root, NOT in `gateways/`)
 
 **Rule:** The local client:
+
 - Implements the SDK API trait (`<module>_sdk::api::YourModuleApi`)
 - Imports types from the SDK, not from a local `contract` module
 - Delegates all calls to the domain `Service`
@@ -1722,7 +1730,8 @@ impl From<DomainError> for UsersInfoError {
 
 ### Step 11: Register Module in HyperSpot Server
 
-**CRITICAL:** After creating your module, you MUST register it in the HyperSpot server application to make it discoverable and include its API endpoints in the OpenAPI documentation.
+**CRITICAL:** After creating your module, you MUST register it in the HyperSpot server application to make it
+discoverable and include its API endpoints in the OpenAPI documentation.
 
 **Rule:** Every new module MUST be registered in TWO places:
 
@@ -1752,6 +1761,7 @@ impl From<DomainError> for UsersInfoError {
    ```
 
 **Why this is required:**
+
 - The `inventory` crate discovers modules at link time
 - Without importing the module, it won't be linked into the binary
 - This results in missing API endpoints in OpenAPI documentation
@@ -1759,6 +1769,7 @@ impl From<DomainError> for UsersInfoError {
 
 **Verification:**
 After registration, rebuild and run the server:
+
 ```bash
 cargo build
 cargo run --bin hyperspot-server -- --config config/quickstart.yaml run
@@ -2183,7 +2194,7 @@ impl GrpcServiceModule for MyModule {
 ```rust
 // <name>/src/main.rs
 use anyhow::Result;
-use modkit_bootstrap::oop::{run_oop_with_options, OopRunOptions};
+use modkit::bootstrap::oop::{run_oop_with_options, OopRunOptions};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -2247,8 +2258,8 @@ async fn init(&self, ctx: &ModuleCtx) -> anyhow::Result<()> {
 ### A. Rust Best Practices
 
 - **Panic Policy**: Panics mean "stop the program". Use for programming errors only, never for recoverable conditions.
-  - `unwrap()` is forbidden
-  - `expect()` is forbidden
+    - `unwrap()` is forbidden
+    - `expect()` is forbidden
 
 - **Type Safety**:
     - All public types must be `Send` (especially futures)
@@ -2301,7 +2312,9 @@ errors (add explicit types), missing `chrono::Utc`, handler/service name mismatc
 - [SECURE-ORM.md](../docs/SECURE-ORM.md) — Secure ORM layer with tenant isolation
 - [TRACING_SETUP.md](../docs/TRACING_SETUP.md) — Distributed tracing with OpenTelemetry
 - [DNA/REST/API.md](./DNA/REST/API.md) — REST API design principles
-- [examples/modkit/users_info/](../examples/modkit/users_info/) — Reference implementation of a local module with SDK pattern
-  - `user_info-sdk/` — SDK crate with public API trait, models, and errors
-  - `users_info/` — Module implementation with local client, domain, and REST handlers
-- [examples/oop-modules/remote_accum/](../examples/oop-modules/remote_accum/) — Reference implementation of an OoP module
+- [examples/modkit/users_info/](../examples/modkit/users_info/) — Reference implementation of a local module with SDK
+  pattern
+    - `user_info-sdk/` — SDK crate with public API trait, models, and errors
+    - `users_info/` — Module implementation with local client, domain, and REST handlers
+- [examples/oop-modules/remote_accum/](../examples/oop-modules/remote_accum/) — Reference implementation of an OoP
+  module

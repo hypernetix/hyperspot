@@ -138,7 +138,6 @@ safety: clippy kani lint dylint # geiger
 ## Check licenses and dependencies
 deny:
 	$(call ensure_tool,cargo-deny)
-	@command -v cargo-deny >/dev/null || (echo "Installing cargo-deny..." && cargo install cargo-deny)
 	cargo deny check
 
 # Run all security checks

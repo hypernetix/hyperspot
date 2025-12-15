@@ -140,6 +140,5 @@ pub use runtime::{
     RunOptions, ShutdownOptions,
 };
 
-#[cfg(test)]
-#[cfg_attr(coverage_nightly, coverage(off))]
-mod tests;
+#[cfg(feature = "bootstrap")]
+pub mod bootstrap;
