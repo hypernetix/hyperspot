@@ -15,8 +15,8 @@ pub fn register_routes(
 ) -> Router {
     // Schemas should be auto-registered via ToSchema when used in operations
 
-    // GET /users - List users with cursor-based pagination
-    router = OperationBuilder::get("/users")
+    // GET /users-info/v1/users - List users with cursor-based pagination
+    router = OperationBuilder::get("/users-info/v1/users")
         .operation_id("users_info.list_users")
         .summary("List users with cursor pagination")
         .description("Retrieve a paginated list of users using cursor-based pagination")
@@ -32,8 +32,8 @@ pub fn register_routes(
         .error_500(openapi)
         .register(router, openapi);
 
-    // GET /users/{id} - Get a specific user
-    router = OperationBuilder::get("/users/{id}")
+    // GET /users-info/v1/users/{id} - Get a specific user
+    router = OperationBuilder::get("/users-info/v1/users/{id}")
         .operation_id("users_info.get_user")
         .require_auth("users", "read")
         .summary("Get user by ID")
@@ -48,8 +48,8 @@ pub fn register_routes(
         .error_500(openapi)
         .register(router, openapi);
 
-    // POST /users - Create a new user
-    router = OperationBuilder::post("/users")
+    // POST /users-info/v1/users - Create a new user
+    router = OperationBuilder::post("/users-info/v1/users")
         .operation_id("users_info.create_user")
         .require_auth("users", "create")
         .summary("Create a new user")
@@ -69,8 +69,8 @@ pub fn register_routes(
         .error_500(openapi)
         .register(router, openapi);
 
-    // PUT /users/{id} - Update a user
-    router = OperationBuilder::put("/users/{id}")
+    // PUT /users-info/v1/users/{id} - Update a user
+    router = OperationBuilder::put("/users-info/v1/users/{id}")
         .operation_id("users_info.update_user")
         .require_auth("users", "update")
         .summary("Update user")
@@ -88,8 +88,8 @@ pub fn register_routes(
         .error_500(openapi)
         .register(router, openapi);
 
-    // DELETE /users/{id} - Delete a user
-    router = OperationBuilder::delete("/users/{id}")
+    // DELETE /users-info/v1/users/{id} - Delete a user
+    router = OperationBuilder::delete("/users-info/v1/users/{id}")
         .operation_id("users_info.delete_user")
         .require_auth("users", "delete") // ← Explicit auth requirement
         .summary("Delete user")
@@ -119,7 +119,7 @@ where
     S: Clone + Send + Sync + 'static,
 {
     // First register the route, then add layers
-    let router = OperationBuilder::get("/users/events")
+    let router = OperationBuilder::get("/users-info/v1/users/events")
         .operation_id("users_info.events")
         .require_auth("users", "read") // ← Explicit auth requirement for event stream
         .summary("User events stream (SSE)")
@@ -170,9 +170,10 @@ mod sse_tests {
         assert!(schema.get("$ref").is_none());
 
         // content is text/event-stream with $ref to our schema
+        // Path is /users-info/v1/users/events, JSON pointer escapes / as ~1
         let refp = v
             .pointer(
-                "/paths/~1users~1events/get/responses/200/content/text~1event-stream/schema/$ref",
+                "/paths/~1users-info~1v1~1users~1events/get/responses/200/content/text~1event-stream/schema/$ref",
             )
             .and_then(|x| x.as_str())
             .unwrap_or_default();

@@ -9,12 +9,12 @@ impl OperationBuilder {
 
 pub fn define_endpoints() {
     // Should NOT trigger - has version
-    OperationBuilder::get("/v1/users");
-    OperationBuilder::get("/v2/products");
-    OperationBuilder::post("/v1/orders");
-    OperationBuilder::get("/v1/users/{id}");
-    OperationBuilder::post("/v2/users/{id}/update");
-    OperationBuilder::put("/v3/products/{id}");
+    OperationBuilder::get("/tests/v1/users");
+    OperationBuilder::get("/abc/v2/products");
+    OperationBuilder::post("/a-b-c/v1/orders");
+    OperationBuilder::get("/tests/v1/users/{id}");
+    OperationBuilder::post("/tests/v2/users/{id}/update");
+    OperationBuilder::put("/tests/v3/products/{id}");
 
     // Should trigger DE0801 - no version
     OperationBuilder::get("/users");
@@ -31,6 +31,27 @@ pub fn define_endpoints() {
     // Should trigger DE0801 - invalid version format
     OperationBuilder::get("/version1/users");
 
-    // Should trigger DE0801 - no version
-    OperationBuilder::get("/api/products");
+    // Should trigger DE0801 - no service name
+    OperationBuilder::get("/v1/products");
+
+    // Should trigger DE0801 - service name is not in kebab case
+    OperationBuilder::get("/some_service/v1/products");
+
+    // Should trigger DE0801 - capital letters
+    OperationBuilder::get("/SomeService/v1/products");
+
+    // Should trigger DE0801 - capital version
+    OperationBuilder::get("/some-service/V1/products");
+
+    // Should trigger DE0801 - capital endpoint
+    OperationBuilder::get("/some-service/v1/Products");
+
+    // Should trigger DE0801 - leading "-" in service name
+    OperationBuilder::get("/-some-service/v1/products");
+
+    // Should trigger DE0801 - leading "-" in resource name
+    OperationBuilder::get("/some-service/v1/-products");
+
+    // Should trigger DE0801 - leading "-" in sub-resource name
+    OperationBuilder::get("/some-service/v1/products/-abc");
 }

@@ -279,7 +279,7 @@ async fn main() -> anyhow::Result<()> {
         print_config: false,
         heartbeat_interval_secs: 5,
     };
-    
+
     run_oop_with_options(opts).await
 }
 ```
@@ -383,10 +383,10 @@ pub struct RegisterInstanceInfo {
 async fn init(&self, ctx: &ModuleCtx) -> anyhow::Result<()> {
     // DirectoryApi is available via ClientHub in OoP modules
     let directory = ctx.client_hub.get::<dyn DirectoryApi>()?;
-    
+
     // Resolve another service's endpoint
     let endpoint = directory.resolve_grpc_service("my.package.MyService").await?;
-    
+
     Ok(())
 }
 ```
@@ -418,7 +418,7 @@ pub enum BackendKind {
 pub trait OopBackend: Send + Sync {
     /// Spawn an OoP module instance
     async fn spawn(&self, config: OopSpawnConfig) -> Result<()>;
-    
+
     /// Shutdown all spawned instances
     async fn shutdown_all(&self);
 }
@@ -632,10 +632,10 @@ use my_module_sdk::{MyModuleApi, wire_client};
 
 async fn init(&self, ctx: &ModuleCtx) -> Result<()> {
     let directory = ctx.client_hub().get::<dyn DirectoryApi>()?;
-    
+
     // Wire the client into ClientHub
     wire_client(ctx.client_hub(), directory.as_ref()).await?;
-    
+
     // Later, get client from ClientHub
     let client = ctx.client_hub().get::<dyn MyModuleApi>()?;
     let result = client.do_something(Input { value: "test".into() }).await?;
@@ -661,8 +661,8 @@ See `examples/oop-modules/calculator/` for a complete working example:
 **Constructors**
 
 ```rust
-OperationBuilder::<Missing, Missing, S>::get("/path")
-OperationBuilder::<Missing, Missing, S>::post("/path")
+OperationBuilder::<Missing, Missing, S>::get("/my-module/v1/path")
+OperationBuilder::<Missing, Missing, S>::post("/my-module/v1/path")
 // put/patch/delete are available too
 ```
 
@@ -803,7 +803,7 @@ async fn create_user_handler(
 **OpenAPI response registration**
 
 ```rust
-OperationBuilder::post("/users")
+OperationBuilder::post("/user-management/v1/users")
     .operation_id("users.create")
     .summary("Create user")
     .json_request::<CreateUserReq>(openapi, "User creation data")
@@ -813,7 +813,7 @@ OperationBuilder::post("/users")
     .register(router, openapi);
 
 // Or for more specific error responses:
-OperationBuilder::post("/users")
+OperationBuilder::post("/user-management/v1/users")
     .operation_id("users.create")
     .summary("Create user")
     .json_request::<CreateUserReq>(openapi, "User creation data")
@@ -894,7 +894,7 @@ pub struct UserODataMapper;
 
 impl FieldToColumn<UserDtoFilterField> for UserODataMapper {
     type Column = Column;  // SeaORM Column enum
-    
+
     fn map_field(field: UserDtoFilterField) -> Column {
         match field {
             UserDtoFilterField::Id => Column::Id,
@@ -906,7 +906,7 @@ impl FieldToColumn<UserDtoFilterField> for UserODataMapper {
 
 impl ODataFieldMapping<UserDtoFilterField> for UserODataMapper {
     type Entity = Entity;
-    
+
     fn extract_cursor_value(model: &Model, field: UserDtoFilterField) -> sea_orm::Value {
         match field {
             UserDtoFilterField::Id => sea_orm::Value::Uuid(Some(Box::new(model.id))),
@@ -935,7 +935,7 @@ pub async fn list_with_odata(
         cursor: None,
         filter_hash: None,
     };
-    
+
     let page = paginate_odata::<UserDtoFilterField, UserODataMapper, _, _, _, _>(
         base_query,
         conn,
@@ -944,7 +944,7 @@ pub async fn list_with_odata(
         LimitCfg { default: 25, max: 1000 },
         |model| model.into(),  // map to domain
     ).await?;
-    
+
     Ok(page)
 }
 ```
@@ -1032,7 +1032,7 @@ fn register_sse_route(
     openapi: &dyn OpenApiRegistry,
     broadcaster: SseBroadcaster<UserEvent>,
 ) -> Router<S> {
-    OperationBuilder::<Missing, Missing, S>::get("/users/events")
+    OperationBuilder::<Missing, Missing, S>::get("/user-management/v1/users/events")
         .operation_id("users.events")
         .summary("User events stream")
         .description("Real-time stream of user events via Server-Sent Events")
@@ -1223,7 +1223,7 @@ async fn upload_handler(
         if field.name() == Some("file") {
             let filename = field.file_name().map(|s| s.to_string());
             let bytes = field.bytes().await.map_err(|e| internal_error(e))?;
-            
+
             let result = service.process_file(filename, bytes).await?;
             return Ok(Json(result));
         }
@@ -1232,7 +1232,7 @@ async fn upload_handler(
 }
 
 // Register with type-safe builder
-OperationBuilder::post("/upload")
+OperationBuilder::post("/files/v1/upload")
     .operation_id("files.upload")
     .summary("Upload a file")
     .multipart_file_request("file", Some("File to upload"))
@@ -1264,7 +1264,7 @@ async fn upload_binary_handler(
 }
 
 // Register with type-safe builder
-OperationBuilder::post("/upload")
+OperationBuilder::post("/files/v1/upload")
     .operation_id("files.upload_binary")
     .summary("Upload raw file bytes")
     .octet_stream_request(Some("Raw file bytes"))
@@ -1287,7 +1287,7 @@ Both helpers automatically configure MIME type validation via the ingress middle
 You can also manually configure allowed types:
 
 ```rust
-OperationBuilder::post("/upload")
+OperationBuilder::post("/files/v1/upload")
     .operation_id("files.upload_custom")
     .summary("Upload with custom validation")
     .allow_content_types(&["application/pdf", "image/png", "image/jpeg"])

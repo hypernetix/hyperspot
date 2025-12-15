@@ -17,7 +17,7 @@ fn main() {
     let router = Router::new();
 
     // This should fail to compile - missing handler
-    let _ = OperationBuilder::<_, _, ()>::get("/test")
+    let _ = OperationBuilder::<_, _, ()>::get("/tests/v1/test")
         .summary("Test endpoint")
         .json_response(200, "Success")
         .register(router, &registry);

@@ -86,7 +86,7 @@ impl RestfulModule for BodyLimitTestModule {
         router: axum::Router,
         openapi: &dyn OpenApiRegistry,
     ) -> Result<axum::Router> {
-        let router = OperationBuilder::post("/upload")
+        let router = OperationBuilder::post("/files/v1/upload")
             .operation_id("test:upload")
             .summary("Upload endpoint with body limit")
             .json_request::<LargePayload>(openapi, "Large payload")
@@ -213,8 +213,9 @@ async fn test_openapi_includes_413_response() {
     let json = serde_json::to_value(&openapi).expect("Failed to serialize");
 
     // Verify 413 response is documented
+    // Path is /files/v1/upload, JSON pointer escapes / as ~1
     let upload_op = json
-        .pointer("/paths/~1upload/post")
+        .pointer("/paths/~1files~1v1~1upload/post")
         .expect("Upload endpoint not found");
     let responses = upload_op.get("responses").expect("Responses not found");
     let response_413 = responses.get("413");

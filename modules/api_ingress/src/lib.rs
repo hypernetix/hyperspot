@@ -613,7 +613,7 @@ mod problem_openapi_tests {
         let router = axum::Router::new();
 
         // Build a route with a problem+json response
-        let _router = OperationBuilder::<Missing, Missing, ()>::get("/problem-demo")
+        let _router = OperationBuilder::<Missing, Missing, ()>::get("/tests/v1/problem-demo")
             .public()
             .summary("Problem demo")
             .problem_response(&api, http::StatusCode::BAD_REQUEST, "Bad Request") // <-- registers Problem + sets content type
@@ -634,7 +634,7 @@ mod problem_openapi_tests {
 
         // 2) Response under /paths/... references Problem and has correct media type
         let path_obj = v
-            .pointer("/paths/~1problem-demo/get/responses/400")
+            .pointer("/paths/~1tests~1v1~1problem-demo/get/responses/400")
             .expect("400 response missing");
 
         // Check what content types exist
@@ -683,7 +683,7 @@ mod sse_openapi_tests {
         let api = ApiIngress::default();
         let router = axum::Router::new();
 
-        let _router = OperationBuilder::<Missing, Missing, ()>::get("/demo/sse")
+        let _router = OperationBuilder::<Missing, Missing, ()>::get("/tests/v1/demo/sse")
             .summary("Demo SSE")
             .handler(sse_handler)
             .public()
@@ -701,7 +701,7 @@ mod sse_openapi_tests {
 
         // content is text/event-stream with $ref to our schema
         let refp = v
-            .pointer("/paths/~1demo~1sse/get/responses/200/content/text~1event-stream/schema/$ref")
+            .pointer("/paths/~1tests~1v1~1demo~1sse/get/responses/200/content/text~1event-stream/schema/$ref")
             .and_then(|x| x.as_str())
             .unwrap_or_default();
         assert_eq!(refp, "#/components/schemas/UserEvent");
@@ -716,7 +716,7 @@ mod sse_openapi_tests {
         let api = ApiIngress::default();
         let router = axum::Router::new();
 
-        let _router = OperationBuilder::<Missing, Missing, ()>::get("/demo/mixed")
+        let _router = OperationBuilder::<Missing, Missing, ()>::get("/tests/v1/demo/mixed")
             .summary("Mixed responses")
             .public()
             .handler(mixed_handler)
@@ -729,7 +729,7 @@ mod sse_openapi_tests {
 
         // Check that both response types are present
         let responses = v
-            .pointer("/paths/~1demo~1mixed/get/responses")
+            .pointer("/paths/~1tests~1v1~1demo~1mixed/get/responses")
             .expect("responses");
 
         // JSON response exists
@@ -756,7 +756,7 @@ mod sse_openapi_tests {
         let api = ApiIngress::default();
         let router = axum::Router::new();
 
-        let _router = OperationBuilder::<Missing, Missing, ()>::get("/users/{id}")
+        let _router = OperationBuilder::<Missing, Missing, ()>::get("/tests/v1/users/{id}")
             .summary("Get user by ID")
             .public()
             .path_param("id", "User ID")
@@ -772,7 +772,7 @@ mod sse_openapi_tests {
             .map(|e| e.value().clone())
             .collect();
         assert_eq!(ops.len(), 1);
-        assert_eq!(ops[0].path, "/users/{id}");
+        assert_eq!(ops[0].path, "/tests/v1/users/{id}");
 
         // Verify OpenAPI doc also has {id} (no conversion needed for regular params)
         let doc = api.build_openapi().expect("openapi");
@@ -780,7 +780,7 @@ mod sse_openapi_tests {
 
         let paths = v.get("paths").expect("paths");
         assert!(
-            paths.get("/users/{id}").is_some(),
+            paths.get("/tests/v1/users/{id}").is_some(),
             "OpenAPI should use {{id}} placeholder"
         );
     }
@@ -794,15 +794,16 @@ mod sse_openapi_tests {
         let api = ApiIngress::default();
         let router = axum::Router::new();
 
-        let _router =
-            OperationBuilder::<Missing, Missing, ()>::get("/projects/{project_id}/items/{item_id}")
-                .summary("Get project item")
-                .public()
-                .path_param("project_id", "Project ID")
-                .path_param("item_id", "Item ID")
-                .handler(item_handler)
-                .json_response(http::StatusCode::OK, "Item details")
-                .register(router, &api);
+        let _router = OperationBuilder::<Missing, Missing, ()>::get(
+            "/tests/v1/projects/{project_id}/items/{item_id}",
+        )
+        .summary("Get project item")
+        .public()
+        .path_param("project_id", "Project ID")
+        .path_param("item_id", "Item ID")
+        .handler(item_handler)
+        .json_response(http::StatusCode::OK, "Item details")
+        .register(router, &api);
 
         // Verify storage and OpenAPI both use {param} syntax
         let ops: Vec<_> = api
@@ -811,13 +812,16 @@ mod sse_openapi_tests {
             .iter()
             .map(|e| e.value().clone())
             .collect();
-        assert_eq!(ops[0].path, "/projects/{project_id}/items/{item_id}");
+        assert_eq!(
+            ops[0].path,
+            "/tests/v1/projects/{project_id}/items/{item_id}"
+        );
 
         let doc = api.build_openapi().expect("openapi");
         let v = serde_json::to_value(&doc).expect("json");
         let paths = v.get("paths").expect("paths");
         assert!(paths
-            .get("/projects/{project_id}/items/{item_id}")
+            .get("/tests/v1/projects/{project_id}/items/{item_id}")
             .is_some());
     }
 
@@ -831,7 +835,7 @@ mod sse_openapi_tests {
         let router = axum::Router::new();
 
         // Axum 0.8 uses {*path} for wildcards
-        let _router = OperationBuilder::<Missing, Missing, ()>::get("/static/{*path}")
+        let _router = OperationBuilder::<Missing, Missing, ()>::get("/tests/v1/static/{*path}")
             .summary("Serve static files")
             .public()
             .handler(static_handler)
@@ -845,14 +849,14 @@ mod sse_openapi_tests {
             .iter()
             .map(|e| e.value().clone())
             .collect();
-        assert_eq!(ops[0].path, "/static/{*path}");
+        assert_eq!(ops[0].path, "/tests/v1/static/{*path}");
 
         // Verify OpenAPI converts wildcard to {path} (without asterisk)
         let doc = api.build_openapi().expect("openapi");
         let v = serde_json::to_value(&doc).expect("json");
         let paths = v.get("paths").expect("paths");
         assert!(
-            paths.get("/static/{path}").is_some(),
+            paths.get("/tests/v1/static/{path}").is_some(),
             "Wildcard {{*path}} should be converted to {{path}} in OpenAPI"
         );
         assert!(
@@ -870,7 +874,7 @@ mod sse_openapi_tests {
         let api = ApiIngress::default();
         let router = axum::Router::new();
 
-        let _router = OperationBuilder::<Missing, Missing, ()>::post("/upload")
+        let _router = OperationBuilder::<Missing, Missing, ()>::post("/tests/v1/files/upload")
             .operation_id("upload_file")
             .public()
             .summary("Upload a file")
@@ -884,7 +888,9 @@ mod sse_openapi_tests {
         let v = serde_json::to_value(&doc).expect("json");
 
         let paths = v.get("paths").expect("paths");
-        let upload_path = paths.get("/upload").expect("/upload path");
+        let upload_path = paths
+            .get("/tests/v1/files/upload")
+            .expect("/tests/v1/files/upload path");
         let post_op = upload_path.get("post").expect("POST operation");
 
         // Verify request body exists

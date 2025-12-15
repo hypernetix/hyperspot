@@ -94,8 +94,8 @@ async fn main() {
     // Build a complete REST API using the type-safe builder
     // Each operation MUST have both a handler and at least one response
 
-    println!("Building GET /users endpoint...");
-    router = OperationBuilder::<Missing, Missing, ()>::get("/users")
+    println!("Building GET /user-management/v1/users endpoint...");
+    router = OperationBuilder::<Missing, Missing, ()>::get("/user-management/v1/users")
         .operation_id("users.list")
         .summary("List all users")
         .description("Returns a paginated list of all users in the system")
@@ -111,8 +111,8 @@ async fn main() {
         .handler(get_users) // <- Required: handler must be set
         .register(router, &registry); // <- Only works when handler, response, and auth are all set
 
-    println!("Building POST /users endpoint...");
-    router = OperationBuilder::<Missing, Missing, ()>::post("/users")
+    println!("Building POST /user-management/v1/users endpoint...");
+    router = OperationBuilder::<Missing, Missing, ()>::post("/user-management/v1/users")
         .operation_id("users.create")
         .summary("Create a new user")
         .description("Creates a new user account in the system")
@@ -128,8 +128,8 @@ async fn main() {
         .handler(create_user) // <- Required: handler must be set
         .register(router, &registry);
 
-    println!("Building GET /users/{{id}} endpoint...");
-    let _router = OperationBuilder::<Missing, Missing, ()>::get("/users/{id}")
+    println!("Building GET /user-management/v1/users/{{id}} endpoint...");
+    let _router = OperationBuilder::<Missing, Missing, ()>::get("/user-management/v1/users/{id}")
         .operation_id("users.get")
         .summary("Get user by ID")
         .description("Retrieves detailed information about a specific user")
@@ -153,26 +153,26 @@ async fn main() {
     println!("===========================");
 
     println!("VALID: Both handler and response are provided");
-    println!("   OperationBuilder::get(\"/example\")");
+    println!("   OperationBuilder::get(\"/tests/v1/example\")");
     println!("     .json_response(StatusCode::OK, \"OK\")");
     println!("     .handler(some_handler)");
     println!("     .register(router, registry) // ← This compiles!");
 
     println!();
     println!("INVALID: Missing handler (compile-time error)");
-    println!("   OperationBuilder::get(\"/example\")");
+    println!("   OperationBuilder::get(\"/tests/v1/example\")");
     println!("     .json_response(StatusCode::OK, \"OK\")");
     println!("     .register(router, registry) // ← Compilation error!");
 
     println!();
     println!("INVALID: Missing response (compile-time error)");
-    println!("   OperationBuilder::get(\"/example\")");
+    println!("   OperationBuilder::get(\"/tests/v1/example\")");
     println!("     .handler(some_handler)");
     println!("     .register(router, registry) // ← Compilation error!");
 
     println!();
     println!("FLEXIBLE: Descriptive methods can be called in any order");
-    println!("   OperationBuilder::get(\"/example\")");
+    println!("   OperationBuilder::get(\"/tests/v1/example\")");
     println!("     .summary(\"Example\")        // ← Can be anywhere");
     println!("     .handler(some_handler)      // ← Can be anywhere");
     println!("     .description(\"Details\")     // ← Can be anywhere");

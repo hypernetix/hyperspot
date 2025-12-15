@@ -146,8 +146,8 @@ impl RestfulModule for MyModule {
     ) -> anyhow::Result<axum::Router> {
         use modkit::api::OperationBuilder;
 
-        // GET /my-resources - List all resources with RFC-9457 error handling
-        let router = OperationBuilder::get("/my-resources")
+        // GET /my-module/v1/my-resources - List all resources with RFC-9457 error handling
+        let router = OperationBuilder::get("/my-module/v1/my-resources")
             .operation_id("my_module.list")
             .summary("List all resources")
             .description("Retrieve a list of all available resources")

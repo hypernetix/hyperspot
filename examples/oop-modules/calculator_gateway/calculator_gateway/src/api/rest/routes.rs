@@ -23,8 +23,8 @@ pub fn register_routes(
     openapi: &dyn OpenApiRegistry,
     service: Arc<Service>,
 ) -> anyhow::Result<Router> {
-    // POST /calculator/add - Add two numbers
-    let router = OperationBuilder::post("/calculator/add")
+    // POST /calculator-gateway/v1/calculator/add - Add two numbers
+    let router = OperationBuilder::post("/calculator-gateway/v1/calculator/add")
         .operation_id("calculator_gateway.add")
         .summary("Add two numbers")
         .description(

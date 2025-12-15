@@ -139,7 +139,7 @@ mod tests {
 
         let specs = vec![OperationSpec {
             method: Method::POST,
-            path: "/upload".to_owned(),
+            path: "/files/v1/upload".to_owned(),
             operation_id: None,
             summary: None,
             description: None,
@@ -163,8 +163,10 @@ mod tests {
 
         let map = build_mime_validation_map(&specs);
 
-        assert!(map.contains_key(&(Method::POST, "/upload".to_owned())));
-        let allowed = map.get(&(Method::POST, "/upload".to_owned())).unwrap();
+        assert!(map.contains_key(&(Method::POST, "/files/v1/upload".to_owned())));
+        let allowed = map
+            .get(&(Method::POST, "/files/v1/upload".to_owned()))
+            .unwrap();
         assert_eq!(allowed.len(), 2);
         assert!(allowed.contains(&"multipart/form-data"));
         assert!(allowed.contains(&"application/pdf"));

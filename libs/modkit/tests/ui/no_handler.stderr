@@ -1,7 +1,7 @@
 error[E0599]: no method named `register` found for struct `modkit::OperationBuilder<Missing, Present, ()>` in the current scope
   --> tests/ui/no_handler.rs:23:10
    |
-20 |       let _ = OperationBuilder::<_, _, ()>::get("/test")
+20 |       let _ = OperationBuilder::<_, _, ()>::get("/tests/v1/test")
    |  _____________-
 21 | |         .summary("Test endpoint")
 22 | |         .json_response(200, "Success")
