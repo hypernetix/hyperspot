@@ -47,7 +47,7 @@ fn test_keycloak_token_format() {
     };
     assert_eq!(
         aud,
-        Some(vec!["account".to_string()]),
+        Some(vec!["account".to_owned()]),
         "String aud should convert to array"
     );
 
@@ -111,7 +111,7 @@ fn test_custom_token_format() {
     };
     assert_eq!(
         aud,
-        Some(vec!["api".to_string(), "web".to_string()]),
+        Some(vec!["api".to_owned(), "web".to_owned()]),
         "Array aud should remain as array"
     );
 

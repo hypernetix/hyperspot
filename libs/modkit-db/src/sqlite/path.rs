@@ -16,24 +16,24 @@ use std::io;
 /// # Returns
 /// * `Ok(String)` - The prepared DSN (may be unchanged)
 /// * `Err(io::Error)` - If directory creation fails
-pub(crate) fn prepare_sqlite_path(dsn: &str, create_dirs: bool) -> io::Result<String> {
+pub fn prepare_sqlite_path(dsn: &str, create_dirs: bool) -> io::Result<String> {
     // Handle memory databases - no path preparation needed
     if dsn == "sqlite::memory:" || dsn == "sqlite://memory:" {
-        return Ok(dsn.to_string());
+        return Ok(dsn.to_owned());
     }
 
     // Check for mode=memory in query parameters
     if let Ok(url) = url::Url::parse(dsn) {
         for (key, value) in url.query_pairs() {
             if key.to_lowercase() == "mode" && value.to_lowercase() == "memory" {
-                return Ok(dsn.to_string());
+                return Ok(dsn.to_owned());
             }
         }
     }
 
     // Only create directories if requested
     if !create_dirs {
-        return Ok(dsn.to_string());
+        return Ok(dsn.to_owned());
     }
 
     // Extract file path from DSN for directory creation
@@ -45,7 +45,7 @@ pub(crate) fn prepare_sqlite_path(dsn: &str, create_dirs: bool) -> io::Result<St
         }
     }
 
-    Ok(dsn.to_string())
+    Ok(dsn.to_owned())
 }
 
 /// Extract the file path from a `SQLite` DSN.
@@ -97,6 +97,7 @@ fn extract_file_path_from_dsn(dsn: &str) -> Option<std::path::PathBuf> {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use std::path::PathBuf;

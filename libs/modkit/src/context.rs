@@ -230,6 +230,7 @@ impl ModuleCtx {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use serde::Deserialize;
@@ -256,7 +257,7 @@ mod tests {
 
             // Valid module config
             modules.insert(
-                "test_module".to_string(),
+                "test_module".to_owned(),
                 json!({
                     "database": {
                         "url": "postgres://localhost/test"

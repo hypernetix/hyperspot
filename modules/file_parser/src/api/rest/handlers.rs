@@ -132,7 +132,7 @@ pub async fn upload_and_parse(
 
     if body.is_empty() {
         return Err(FileParserApiError::from_domain(
-            DomainError::invalid_request("Empty request body, expected file bytes".to_string()),
+            DomainError::invalid_request("Empty request body, expected file bytes".to_owned()),
         ));
     }
 
@@ -269,7 +269,7 @@ pub async fn upload_and_parse_markdown(
             "Multipart error: {e}"
         )))
     })? {
-        let field_name = field.name().unwrap_or("").to_string();
+        let field_name = field.name().unwrap_or("").to_owned();
         if field_name == "file" {
             file_name = field.file_name().map(ToString::to_string);
             file_bytes = Some(field.bytes().await.map_err(|e| {

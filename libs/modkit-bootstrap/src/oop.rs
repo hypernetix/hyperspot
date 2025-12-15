@@ -94,7 +94,7 @@ impl Default for OopRunOptions {
         // Check for directory endpoint in environment variable (set by master host)
         // This is the preferred way to get the endpoint when spawned by master host
         let directory_endpoint = std::env::var(MODKIT_DIRECTORY_ENDPOINT_ENV)
-            .unwrap_or_else(|_| "http://127.0.0.1:50051".to_string());
+            .unwrap_or_else(|_| "http://127.0.0.1:50051".to_owned());
 
         Self {
             module_name: String::new(),
@@ -153,7 +153,7 @@ fn build_oop_config_and_db(
         // Get or create the module entry
         let module_entry = config
             .modules
-            .entry(module_name.to_string())
+            .entry(module_name.to_owned())
             .or_insert_with(|| serde_json::json!({}));
 
         // Merge rendered.config as base, local module config as override
@@ -161,7 +161,7 @@ fn build_oop_config_and_db(
             // If local doesn't have "config" section, use rendered entirely
             // If local has "config" section, it takes precedence (local overrides master)
             if !obj.contains_key("config") || obj["config"].is_null() {
-                obj.insert("config".to_string(), rendered.config.clone());
+                obj.insert("config".to_owned(), rendered.config.clone());
             }
             // If local has "config", it already overrides - no action needed
         }
@@ -260,7 +260,7 @@ fn build_merged_db_options(
         if let Some(ref global) = rendered.global {
             let global_json = serde_json::to_value(global)
                 .context("Failed to serialize rendered global db config")?;
-            merged_config.insert("database".to_string(), global_json);
+            merged_config.insert("database".to_owned(), global_json);
         }
 
         // Add module's database config from master
@@ -270,12 +270,12 @@ fn build_merged_db_options(
 
             let mut modules = serde_json::Map::new();
             let mut module_entry = serde_json::Map::new();
-            module_entry.insert("database".to_string(), module_db_json);
+            module_entry.insert("database".to_owned(), module_db_json);
             modules.insert(
-                module_name.to_string(),
+                module_name.to_owned(),
                 serde_json::Value::Object(module_entry),
             );
-            merged_config.insert("modules".to_string(), serde_json::Value::Object(modules));
+            merged_config.insert("modules".to_owned(), serde_json::Value::Object(modules));
         }
     }
 
@@ -289,7 +289,7 @@ fn build_merged_db_options(
         if let Some(existing) = merged_config.get_mut("database") {
             merge_json_objects(existing, &local_db_json);
         } else {
-            merged_config.insert("database".to_string(), local_db_json);
+            merged_config.insert("database".to_owned(), local_db_json);
         }
     }
 
@@ -297,19 +297,19 @@ fn build_merged_db_options(
     if let Some(local_module) = local_config.modules.get(module_name) {
         if let Some(local_module_db) = local_module.get("database") {
             let modules = merged_config
-                .entry("modules".to_string())
+                .entry("modules".to_owned())
                 .or_insert_with(|| serde_json::Value::Object(serde_json::Map::new()));
 
             if let Some(modules_obj) = modules.as_object_mut() {
                 let module_entry = modules_obj
-                    .entry(module_name.to_string())
+                    .entry(module_name.to_owned())
                     .or_insert_with(|| serde_json::Value::Object(serde_json::Map::new()));
 
                 if let Some(module_obj) = module_entry.as_object_mut() {
                     if let Some(existing_db) = module_obj.get_mut("database") {
                         merge_json_objects(existing_db, local_module_db);
                     } else {
-                        module_obj.insert("database".to_string(), local_module_db.clone());
+                        module_obj.insert("database".to_owned(), local_module_db.clone());
                     }
                 }
             }
@@ -601,5 +601,6 @@ pub async fn run_oop_with_options(opts: OopRunOptions) -> Result<()> {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 #[path = "oop_tests.rs"]
 mod tests;

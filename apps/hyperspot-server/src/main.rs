@@ -189,7 +189,7 @@ fn override_modules_with_mock_db(config: &mut AppConfig) {
     for module_value in config.modules.values_mut() {
         if let Some(obj) = module_value.as_object_mut() {
             obj.insert(
-                "database".to_string(),
+                "database".to_owned(),
                 serde_json::json!({
                     "dsn": "sqlite::memory:",
                     "params": {

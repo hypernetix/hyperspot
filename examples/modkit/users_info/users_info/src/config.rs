@@ -34,9 +34,9 @@ fn default_max_page_size() -> u32 {
 }
 
 fn default_audit_base_url() -> String {
-    "http://audit.local".to_string()
+    "http://audit.local".to_owned()
 }
 
 fn default_notifications_base_url() -> String {
-    "http://notifications.local".to_string()
+    "http://notifications.local".to_owned()
 }

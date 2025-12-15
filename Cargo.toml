@@ -47,6 +47,7 @@ unsafe_code = "forbid"
 unused_mut = "warn"
 noop_method_call = "warn"
 unused_import_braces = "warn"
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage_nightly)'] }
 
 [workspace.lints.clippy]
 # See clippy rules details https://rust-lang.github.io/rust-clippy/master/index.html
@@ -135,6 +136,32 @@ used_underscore_items = "deny"
 useless_let_if_seq = "deny"
 wildcard_dependencies = "deny"
 wildcard_imports = "deny"
+
+# Additional lints for LLM-generated code quality
+# Catches redundant/inefficient patterns
+redundant_clone = "deny"
+redundant_pattern_matching = "deny"
+redundant_pub_crate = "deny"
+str_to_string = "deny"
+manual_ok_or = "deny"
+manual_map = "deny"
+manual_filter_map = "deny"
+manual_find_map = "deny"
+
+# Prevents verbose/non-idiomatic code
+match_bool = "deny"
+needless_for_each = "deny"
+needless_collect = "deny"
+needless_late_init = "deny"
+needless_option_as_deref = "deny"
+
+# Memory efficiency and correctness
+large_stack_arrays = "deny"
+large_types_passed_by_value = "deny"
+rc_buffer = "deny"
+rc_mutex = "deny"
+string_lit_as_bytes = "deny"
+verbose_file_reads = "deny"
 
 [workspace.dependencies]
 # Serialization

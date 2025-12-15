@@ -1,3 +1,4 @@
+#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 #![cfg_attr(
     not(any(feature = "pg", feature = "mysql", feature = "sqlite")),
     allow(
@@ -322,7 +323,7 @@ impl DbHandle {
         } else if s.starts_with("sqlite:") || s.starts_with("sqlite://") {
             Ok(DbEngine::Sqlite)
         } else {
-            Err(DbError::UnknownDsn(dsn.to_string()))
+            Err(DbError::UnknownDsn(dsn.to_owned()))
         }
     }
 
@@ -342,7 +343,7 @@ impl DbHandle {
                 Ok(Self {
                     engine,
                     pool: DbPool::Postgres(pool),
-                    dsn: dsn.to_string(),
+                    dsn: dsn.to_owned(),
                     #[cfg(feature = "sea-orm")]
                     sea,
                 })
@@ -356,7 +357,7 @@ impl DbHandle {
                 Ok(Self {
                     engine,
                     pool: DbPool::MySql(pool),
-                    dsn: dsn.to_string(),
+                    dsn: dsn.to_owned(),
                     #[cfg(feature = "sea-orm")]
                     sea,
                 })
@@ -475,6 +476,7 @@ impl DbHandle {
         }
     }
     #[cfg(feature = "mysql")]
+    #[must_use]
     pub fn sqlx_mysql(&self) -> Option<&MySqlPool> {
         match self.pool {
             DbPool::MySql(ref p) => Some(p),
@@ -584,7 +586,7 @@ impl DbHandle {
         }
     }
 
-    /// Execute a closure within a MySQL transaction.
+    /// Execute a closure within a `MySQL` transaction.
     ///
     /// # Errors
     /// Returns an error if the transaction fails or the closure returns an error.
@@ -699,6 +701,7 @@ impl DbHandle {
 // ===================== tests =====================
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use tokio::time::Duration;

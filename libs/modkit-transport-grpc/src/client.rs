@@ -310,6 +310,7 @@ where
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 
@@ -343,7 +344,7 @@ mod tests {
     #[test]
     fn test_build_endpoint_succeeds() {
         let cfg = GrpcClientConfig::default();
-        let result = build_endpoint("http://localhost:50051".to_string(), &cfg);
+        let result = build_endpoint("http://localhost:50051".to_owned(), &cfg);
         assert!(
             result.is_ok(),
             "build_endpoint should succeed with valid URI"

@@ -301,19 +301,16 @@ impl Lifecycle {
         // Spawn the actual task with descriptive logging
         let module_name = self.name;
         let task_id = format!("{module_name}-{self:p}");
-        let handle = tokio::spawn({
-            let task_id = task_id.clone();
-            async move {
-                tracing::debug!(task_id = %task_id, module = %module_name, "lifecycle task starting");
-                let res = make(token, ready_mode.then(|| ReadySignal(ready_tx))).await;
-                if let Err(e) = res {
-                    tracing::error!(error=%e, task_id=%task_id, module = %module_name, "lifecycle task error");
-                }
-                finished_flag.store(true, Ordering::Release);
-                finished_notify.notify_waiters();
-                status_on_finish.store(Status::Stopped.as_u8(), Ordering::Release);
-                tracing::debug!(task_id=%task_id, module = %module_name, "lifecycle task finished");
+        let handle = tokio::spawn(async move {
+            tracing::debug!(task_id = %task_id, module = %module_name, "lifecycle task starting");
+            let res = make(token, ready_mode.then(|| ReadySignal(ready_tx))).await;
+            if let Err(e) = res {
+                tracing::error!(error=%e, task_id=%task_id, module = %module_name, "lifecycle task error");
             }
+            finished_flag.store(true, Ordering::Release);
+            finished_notify.notify_waiters();
+            status_on_finish.store(Status::Stopped.as_u8(), Ordering::Release);
+            tracing::debug!(task_id=%task_id, module = %module_name, "lifecycle task finished");
         });
 
         // store handle (bounded lock scope)
@@ -388,9 +385,10 @@ impl Lifecycle {
                     if let Ok(panic_payload) = e.try_into_panic() {
                         let panic_msg = panic_payload
                             .downcast_ref::<&str>()
-                            .map(|s| (*s).to_string())
+                            .copied()
+                            .map(str::to_owned)
                             .or_else(|| panic_payload.downcast_ref::<String>().cloned())
-                            .unwrap_or_else(|| "unknown panic".to_string());
+                            .unwrap_or_else(|| "unknown panic".to_owned());
 
                         tracing::error!(
                             task_id = %task_id,
@@ -635,6 +633,7 @@ impl<T: Runnable> Drop for WithLifecycle<T> {
 // ----- Tests -----------------------------------------------------------------
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use std::sync::atomic::{AtomicU32, Ordering as AOrd};

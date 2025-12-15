@@ -38,8 +38,8 @@ pub struct OpenApiInfo {
 impl Default for OpenApiInfo {
     fn default() -> Self {
         Self {
-            title: "API Documentation".to_string(),
-            version: "0.1.0".to_string(),
+            title: "API Documentation".to_owned(),
+            version: "0.1.0".to_owned(),
             description: None,
         }
     }
@@ -127,13 +127,10 @@ impl OpenApiRegistryImpl {
             // Vendor extensions for rate limit, if present (string values)
             if let Some(rl) = spec.rate_limit.as_ref() {
                 let mut ext = utoipa::openapi::extensions::Extensions::default();
-                ext.insert("x-rate-limit-rps".to_string(), serde_json::json!(rl.rps));
+                ext.insert("x-rate-limit-rps".to_owned(), serde_json::json!(rl.rps));
+                ext.insert("x-rate-limit-burst".to_owned(), serde_json::json!(rl.burst));
                 ext.insert(
-                    "x-rate-limit-burst".to_string(),
-                    serde_json::json!(rl.burst),
-                );
-                ext.insert(
-                    "x-in-flight-limit".to_string(),
+                    "x-in-flight-limit".to_owned(),
                     serde_json::json!(rl.in_flight),
                 );
                 op = op.extensions(Some(ext));
@@ -224,7 +221,7 @@ impl OpenApiRegistryImpl {
                 };
                 let mut rbld = RequestBodyBuilder::new()
                     .description(rb.description.clone())
-                    .content(rb.content_type.to_string(), content);
+                    .content(rb.content_type.to_owned(), content);
                 if rb.required {
                     rbld = rbld.required(Some(Required::True));
                 }
@@ -374,7 +371,7 @@ impl OpenApiRegistry for OpenApiRegistryImpl {
         }
 
         self.components_registry.store(Arc::new(reg));
-        root_name.to_string()
+        root_name.to_owned()
     }
 
     fn as_any(&self) -> &dyn std::any::Any {
@@ -383,6 +380,7 @@ impl OpenApiRegistry for OpenApiRegistryImpl {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use crate::api::operation_builder::{OperationSpec, ParamLocation, ParamSpec, ResponseSpec};
@@ -400,9 +398,9 @@ mod tests {
         let registry = OpenApiRegistryImpl::new();
         let spec = OperationSpec {
             method: Method::GET,
-            path: "/test".to_string(),
-            operation_id: Some("test_op".to_string()),
-            summary: Some("Test operation".to_string()),
+            path: "/test".to_owned(),
+            operation_id: Some("test_op".to_owned()),
+            summary: Some("Test operation".to_owned()),
             description: None,
             tags: vec![],
             params: vec![],
@@ -410,10 +408,10 @@ mod tests {
             responses: vec![ResponseSpec {
                 status: 200,
                 content_type: "application/json",
-                description: "Success".to_string(),
+                description: "Success".to_owned(),
                 schema_name: None,
             }],
-            handler_id: "get_test".to_string(),
+            handler_id: "get_test".to_owned(),
             sec_requirement: None,
             is_public: false,
             rate_limit: None,
@@ -428,9 +426,9 @@ mod tests {
     fn test_build_empty_openapi() {
         let registry = OpenApiRegistryImpl::new();
         let info = OpenApiInfo {
-            title: "Test API".to_string(),
-            version: "1.0.0".to_string(),
-            description: Some("Test API Description".to_string()),
+            title: "Test API".to_owned(),
+            version: "1.0.0".to_owned(),
+            description: Some("Test API Description".to_owned()),
         };
         let doc = registry.build_openapi(&info).unwrap();
         let json = serde_json::to_value(&doc).unwrap();
@@ -455,26 +453,26 @@ mod tests {
         let registry = OpenApiRegistryImpl::new();
         let spec = OperationSpec {
             method: Method::GET,
-            path: "/users/{id}".to_string(),
-            operation_id: Some("get_user".to_string()),
-            summary: Some("Get user by ID".to_string()),
-            description: Some("Retrieves a user by their ID".to_string()),
-            tags: vec!["users".to_string()],
+            path: "/users/{id}".to_owned(),
+            operation_id: Some("get_user".to_owned()),
+            summary: Some("Get user by ID".to_owned()),
+            description: Some("Retrieves a user by their ID".to_owned()),
+            tags: vec!["users".to_owned()],
             params: vec![ParamSpec {
-                name: "id".to_string(),
+                name: "id".to_owned(),
                 location: ParamLocation::Path,
                 required: true,
-                description: Some("User ID".to_string()),
-                param_type: "string".to_string(),
+                description: Some("User ID".to_owned()),
+                param_type: "string".to_owned(),
             }],
             request_body: None,
             responses: vec![ResponseSpec {
                 status: 200,
                 content_type: "application/json",
-                description: "User found".to_string(),
+                description: "User found".to_owned(),
                 schema_name: None,
             }],
-            handler_id: "get_users_id".to_string(),
+            handler_id: "get_users_id".to_owned(),
             sec_requirement: None,
             is_public: false,
             rate_limit: None,
@@ -500,7 +498,7 @@ mod tests {
     fn test_ensure_schema_raw() {
         let registry = OpenApiRegistryImpl::new();
         let schema = Schema::Object(ObjectBuilder::new().build());
-        let schemas = vec![("TestSchema".to_string(), RefOr::T(schema))];
+        let schemas = vec![("TestSchema".to_owned(), RefOr::T(schema))];
 
         let name = registry.ensure_schema_raw("TestSchema", schemas);
         assert_eq!(name, "TestSchema");
@@ -514,25 +512,25 @@ mod tests {
         let registry = OpenApiRegistryImpl::new();
         let spec = OperationSpec {
             method: Method::POST,
-            path: "/upload".to_string(),
-            operation_id: Some("upload_file".to_string()),
-            summary: Some("Upload a file".to_string()),
-            description: Some("Upload raw binary file".to_string()),
-            tags: vec!["upload".to_string()],
+            path: "/upload".to_owned(),
+            operation_id: Some("upload_file".to_owned()),
+            summary: Some("Upload a file".to_owned()),
+            description: Some("Upload raw binary file".to_owned()),
+            tags: vec!["upload".to_owned()],
             params: vec![],
             request_body: Some(crate::api::operation_builder::RequestBodySpec {
                 content_type: "application/octet-stream",
-                description: Some("Raw file bytes".to_string()),
+                description: Some("Raw file bytes".to_owned()),
                 schema: RequestBodySchema::Binary,
                 required: true,
             }),
             responses: vec![ResponseSpec {
                 status: 200,
                 content_type: "application/json",
-                description: "Upload successful".to_string(),
+                description: "Upload successful".to_owned(),
                 schema_name: None,
             }],
-            handler_id: "post_upload".to_string(),
+            handler_id: "post_upload".to_owned(),
             sec_requirement: None,
             is_public: false,
             rate_limit: None,

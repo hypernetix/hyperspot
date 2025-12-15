@@ -76,6 +76,7 @@ impl Claims {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 
@@ -83,8 +84,8 @@ mod tests {
     fn test_expiration_check() {
         let mut claims = Claims {
             sub: Uuid::new_v4(),
-            issuer: "test".to_string(),
-            audiences: vec!["api".to_string()],
+            issuer: "test".to_owned(),
+            audiences: vec!["api".to_owned()],
             expires_at: Some(OffsetDateTime::now_utc() + time::Duration::hours(1)),
             not_before: None,
             tenants: vec![],
@@ -102,8 +103,8 @@ mod tests {
     fn test_nbf_check() {
         let mut claims = Claims {
             sub: Uuid::new_v4(),
-            issuer: "test".to_string(),
-            audiences: vec!["api".to_string()],
+            issuer: "test".to_owned(),
+            audiences: vec!["api".to_owned()],
             expires_at: None,
             not_before: Some(OffsetDateTime::now_utc() - time::Duration::hours(1)),
             tenants: vec![],
@@ -121,12 +122,12 @@ mod tests {
     fn test_role_check() {
         let claims = Claims {
             sub: Uuid::new_v4(),
-            issuer: "test".to_string(),
-            audiences: vec!["api".to_string()],
+            issuer: "test".to_owned(),
+            audiences: vec!["api".to_owned()],
             expires_at: None,
             not_before: None,
             tenants: vec![],
-            roles: vec!["admin".to_string(), "user".to_string()],
+            roles: vec!["admin".to_owned(), "user".to_owned()],
             extras: serde_json::Map::new(),
         };
 

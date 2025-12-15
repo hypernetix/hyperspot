@@ -16,12 +16,12 @@ async fn test_precedence_module_fields_override_server() {
         servers: {
             let mut servers = HashMap::new();
             servers.insert(
-                "sqlite_server".to_string(),
+                "sqlite_server".to_owned(),
                 DbConnConfig {
                     params: Some({
                         let mut params = HashMap::new();
-                        params.insert("synchronous".to_string(), "FULL".to_string());
-                        params.insert("journal_mode".to_string(), "DELETE".to_string());
+                        params.insert("synchronous".to_owned(), "FULL".to_owned());
+                        params.insert("journal_mode".to_owned(), "DELETE".to_owned());
                         params
                     }),
                     ..Default::default()
@@ -84,7 +84,7 @@ async fn test_precedence_module_dsn_override_server() {
         servers: {
             let mut servers = HashMap::new();
             servers.insert(
-                "sqlite_server".to_string(),
+                "sqlite_server".to_owned(),
                 DbConnConfig {
                     dsn: Some(format!("sqlite://{}?synchronous=FULL", server_db.display())),
                     ..Default::default()
@@ -138,12 +138,12 @@ async fn test_precedence_params_merging() {
         servers: {
             let mut servers = HashMap::new();
             servers.insert(
-                "sqlite_server".to_string(),
+                "sqlite_server".to_owned(),
                 DbConnConfig {
                     params: Some({
                         let mut params = HashMap::new();
-                        params.insert("synchronous".to_string(), "FULL".to_string());
-                        params.insert("journal_mode".to_string(), "DELETE".to_string());
+                        params.insert("synchronous".to_owned(), "FULL".to_owned());
+                        params.insert("journal_mode".to_owned(), "DELETE".to_owned());
                         params
                     }),
                     ..Default::default()

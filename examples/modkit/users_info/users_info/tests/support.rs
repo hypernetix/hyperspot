@@ -117,8 +117,8 @@ pub async fn seed_user(
     let am = ActiveModel {
         id: Set(id),
         tenant_id: Set(tenant_id),
-        email: Set(email.to_string()),
-        display_name: Set(display_name.to_string()),
+        email: Set(email.to_owned()),
+        display_name: Set(display_name.to_owned()),
         created_at: Set(now),
         updated_at: Set(now),
     };

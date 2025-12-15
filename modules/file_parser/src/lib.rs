@@ -1,5 +1,6 @@
 // === MODULE DEFINITION ===
 // ModKit needs access to the module struct for instantiation
+#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 pub mod module;
 pub use module::FileParserModule;
 

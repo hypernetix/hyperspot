@@ -232,6 +232,7 @@ where
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 
@@ -274,7 +275,7 @@ mod tests {
         let result = call_with_retry(
             &mut client,
             cfg,
-            "test_request".to_string(),
+            "test_request".to_owned(),
             |_c, req| async move { Ok::<_, Status>(format!("response: {req}")) },
             "test.op",
         )
@@ -333,7 +334,7 @@ mod tests {
                     if count < 3 {
                         Err(Status::unavailable("temporarily unavailable"))
                     } else {
-                        Ok("success".to_string())
+                        Ok("success".to_owned())
                     }
                 }
             },

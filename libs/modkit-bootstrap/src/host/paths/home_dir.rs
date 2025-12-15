@@ -90,13 +90,13 @@ pub fn normalize_executable_path(raw: &str) -> Result<PathBuf, HomeDirError> {
 
     if has_separator {
         // Relative path with separators - not allowed
-        Err(HomeDirError::RelativePathNotAllowed(raw.to_string()))
+        Err(HomeDirError::RelativePathNotAllowed(raw.to_owned()))
     } else {
         // Filename only - prepend directory where main executable lives
         let exe_path =
             env::current_exe().map_err(|e| HomeDirError::ExecutablePathError(e.to_string()))?;
         let exe_dir = exe_path.parent().ok_or_else(|| {
-            HomeDirError::ExecutablePathError("executable has no parent directory".to_string())
+            HomeDirError::ExecutablePathError("executable has no parent directory".to_owned())
         })?;
         Ok(exe_dir.join(&expanded))
     }
@@ -171,6 +171,7 @@ pub fn resolve_home_dir(
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use tempfile::tempdir;
@@ -309,7 +310,7 @@ mod tests {
             HomeDirError::WindowsAbsoluteRequired(s) => {
                 assert!(s.contains("relative\\path"));
             }
-            _ => panic!("Expected WindowsAbsoluteRequired, got {:?}", err),
+            _ => panic!("Expected WindowsAbsoluteRequired, got {err:?}"),
         }
     }
 
@@ -335,7 +336,7 @@ mod tests {
             let err = resolve_home_dir(None, ".hyperspot", false).unwrap_err();
             match err {
                 HomeDirError::AppDataMissing => {}
-                _ => panic!("Expected AppDataMissing, got {:?}", err),
+                _ => panic!("Expected AppDataMissing, got {err:?}"),
             }
         });
     }
@@ -461,7 +462,7 @@ mod tests {
             HomeDirError::RelativePathNotAllowed(s) => {
                 assert!(s.contains(".\\bin\\myapp"));
             }
-            _ => panic!("Expected RelativePathNotAllowed, got {:?}", err),
+            _ => panic!("Expected RelativePathNotAllowed, got {err:?}"),
         }
     }
 }

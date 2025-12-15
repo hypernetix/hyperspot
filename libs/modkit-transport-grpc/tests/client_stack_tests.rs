@@ -347,7 +347,7 @@ async fn call_with_retry_recovers_from_unavailable() {
     let result = call_with_retry(
         &mut client,
         cfg,
-        "data".to_string(),
+        "data".to_owned(),
         |c, req| {
             let count = c.call_count.fetch_add(1, Ordering::SeqCst) + 1;
             async move {

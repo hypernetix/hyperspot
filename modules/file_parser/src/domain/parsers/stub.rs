@@ -64,7 +64,7 @@ impl FileParserBackend for StubParser {
             file_name,
             &bytes,
             ParsedSource::Uploaded {
-                original_name: file_name.to_string(),
+                original_name: file_name.to_owned(),
             },
         ))
     }

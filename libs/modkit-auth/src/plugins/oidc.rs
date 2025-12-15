@@ -26,8 +26,8 @@ pub struct GenericOidcPlugin {
 impl Default for GenericOidcPlugin {
     fn default() -> Self {
         Self {
-            tenant_claim: "tenants".to_string(),
-            roles_claim: "roles".to_string(),
+            tenant_claim: "tenants".to_owned(),
+            roles_claim: "roles".to_owned(),
         }
     }
 }
@@ -64,13 +64,13 @@ impl ClaimsPlugin for GenericOidcPlugin {
         // 1. Extract subject (required, must be UUID)
         let sub = raw
             .get("sub")
-            .ok_or_else(|| ClaimsError::MissingClaim("sub".to_string()))
+            .ok_or_else(|| ClaimsError::MissingClaim("sub".to_owned()))
             .and_then(|v| parse_uuid_from_value(v, "sub"))?;
 
         // 2. Extract issuer (required)
         let issuer = raw
             .get("iss")
-            .ok_or_else(|| ClaimsError::MissingClaim("iss".to_string()))
+            .ok_or_else(|| ClaimsError::MissingClaim("iss".to_owned()))
             .and_then(|v| extract_string(v, "iss"))?;
 
         // 3. Extract audiences (handle string or array)
@@ -130,7 +130,7 @@ impl ClaimsPlugin for GenericOidcPlugin {
             "picture",
         ] {
             if let Some(value) = raw.get(field) {
-                extras.insert(field.to_string(), value.clone());
+                extras.insert(field.to_owned(), value.clone());
             }
         }
 
@@ -149,6 +149,7 @@ impl ClaimsPlugin for GenericOidcPlugin {
 
 #[cfg(test)]
 #[allow(clippy::unreadable_literal)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use serde_json::json;

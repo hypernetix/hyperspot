@@ -107,17 +107,17 @@ async fn test_dbmanager_sqlite_with_path() {
 async fn test_dbmanager_server_merge() {
     let mut servers = HashMap::new();
     servers.insert(
-        "test_server".to_string(),
+        "test_server".to_owned(),
         DbConnConfig {
             dsn: None,
-            host: Some("localhost".to_string()),
+            host: Some("localhost".to_owned()),
             port: Some(5432),
-            user: Some("serveruser".to_string()),
-            password: Some("serverpass".to_string()),
-            dbname: Some("serverdb".to_string()),
+            user: Some("serveruser".to_owned()),
+            password: Some("serverpass".to_owned()),
+            dbname: Some("serverdb".to_owned()),
             params: Some({
                 let mut params = HashMap::new();
-                params.insert("ssl".to_string(), "require".to_string());
+                params.insert("ssl".to_owned(), "require".to_owned());
                 params
             }),
             file: None,
@@ -240,12 +240,12 @@ async fn test_dbmanager_sqlite_server_without_dsn() {
         servers: {
             let mut servers = HashMap::new();
             servers.insert(
-                "sqlite_server".to_string(),
+                "sqlite_server".to_owned(),
                 DbConnConfig {
                     params: Some({
                         let mut params = HashMap::new();
-                        params.insert("WAL".to_string(), "true".to_string());
-                        params.insert("synchronous".to_string(), "NORMAL".to_string());
+                        params.insert("WAL".to_owned(), "true".to_owned());
+                        params.insert("synchronous".to_owned(), "NORMAL".to_owned());
                         params
                     }),
                     pool: Some(PoolCfg {

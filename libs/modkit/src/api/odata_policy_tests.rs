@@ -1,6 +1,7 @@
 //! Tests for cursor+orderby policy enforcement
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::super::odata::*;
     use axum::http::{request::Parts, Uri};
@@ -28,11 +29,11 @@ mod tests {
     async fn test_cursor_only_success() {
         // Create a valid cursor
         let cursor = CursorV1 {
-            k: vec!["test".to_string()],
+            k: vec!["test".to_owned()],
             o: SortDir::Desc,
-            s: "-id".to_string(),
+            s: "-id".to_owned(),
             f: None,
-            d: "fwd".to_string(),
+            d: "fwd".to_owned(),
         };
         let cursor_encoded = cursor.encode().unwrap();
 

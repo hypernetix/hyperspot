@@ -67,7 +67,7 @@ impl FileParserBackend for PlainTextParser {
         let blocks = text_to_blocks(&text);
 
         let source = ParsedSource::Uploaded {
-            original_name: filename_hint.unwrap_or("unknown.txt").to_string(),
+            original_name: filename_hint.unwrap_or("unknown.txt").to_owned(),
         };
 
         let mut builder = DocumentBuilder::new(source)

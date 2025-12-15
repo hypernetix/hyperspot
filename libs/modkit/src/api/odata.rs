@@ -71,7 +71,7 @@ pub fn parse_orderby(raw: &str) -> Result<ODataOrderBy, modkit_odata::Error> {
         }
 
         keys.push(OrderKey {
-            field: field.to_string(),
+            field: field.to_owned(),
             dir,
         });
     }
@@ -243,5 +243,6 @@ where
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 #[path = "odata_tests.rs"]
 mod odata_tests;

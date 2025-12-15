@@ -140,7 +140,7 @@ impl DbConnectOptions {
                 let handle = crate::DbHandle {
                     engine: crate::DbEngine::MySql,
                     pool: crate::DbPool::MySql(sqlx_pool),
-                    dsn: "mysql://<redacted>@...".to_string(),
+                    dsn: "mysql://<redacted>@...".to_owned(),
                     #[cfg(feature = "sea-orm")]
                     sea,
                 };
@@ -210,7 +210,7 @@ pub mod sqlite_pragma {
             "true" | "1" => Ok("WAL"),
             "false" | "0" => Ok("DELETE"),
             _ => Err(DbError::InvalidSqlitePragma {
-                key: "wal".to_string(),
+                key: "wal".to_owned(),
                 message: format!("must be true/false/1/0, got '{value}'"),
             }),
         }
@@ -221,7 +221,7 @@ pub mod sqlite_pragma {
         match value.to_uppercase().as_str() {
             "OFF" | "NORMAL" | "FULL" | "EXTRA" => Ok(value.to_uppercase()),
             _ => Err(DbError::InvalidSqlitePragma {
-                key: "synchronous".to_string(),
+                key: "synchronous".to_owned(),
                 message: format!("must be OFF/NORMAL/FULL/EXTRA, got '{value}'"),
             }),
         }
@@ -232,13 +232,13 @@ pub mod sqlite_pragma {
         let timeout = value
             .parse::<i64>()
             .map_err(|_| DbError::InvalidSqlitePragma {
-                key: "busy_timeout".to_string(),
+                key: "busy_timeout".to_owned(),
                 message: format!("must be a non-negative integer, got '{value}'"),
             })?;
 
         if timeout < 0 {
             return Err(DbError::InvalidSqlitePragma {
-                key: "busy_timeout".to_string(),
+                key: "busy_timeout".to_owned(),
                 message: format!("must be non-negative, got '{timeout}'"),
             });
         }
@@ -253,7 +253,7 @@ pub mod sqlite_pragma {
                 Ok(value.to_uppercase())
             }
             _ => Err(DbError::InvalidSqlitePragma {
-                key: "journal_mode".to_string(),
+                key: "journal_mode".to_owned(),
                 message: format!("must be DELETE/WAL/MEMORY/TRUNCATE/PERSIST/OFF, got '{value}'"),
             }),
         }
@@ -332,11 +332,11 @@ fn build_sqlite_options(cfg: &DbConnConfig) -> Result<DbConnectOptions> {
         } else if let Some(_file) = &cfg.file {
             // This should not happen as manager.rs should have resolved file to path
             return Err(DbError::InvalidParameter(
-                "File path should have been resolved to absolute path".to_string(),
+                "File path should have been resolved to absolute path".to_owned(),
             ));
         } else {
             return Err(DbError::InvalidParameter(
-                "SQLite connection requires either DSN, path, or file".to_string(),
+                "SQLite connection requires either DSN, path, or file".to_owned(),
             ));
         };
 
@@ -367,9 +367,9 @@ fn build_server_options(cfg: &DbConnConfig) -> Result<DbConnectOptions> {
     // Determine the database type from DSN or default to PostgreSQL
     let scheme = if let Some(dsn) = &cfg.dsn {
         let parsed = url::Url::parse(dsn)?;
-        parsed.scheme().to_string()
+        parsed.scheme().to_owned()
     } else {
-        "postgresql".to_string()
+        "postgresql".to_owned()
     };
 
     match scheme.as_str() {
@@ -400,7 +400,7 @@ fn build_server_options(cfg: &DbConnConfig) -> Result<DbConnectOptions> {
                     opts = opts.database(dbname);
                 } else if cfg.dsn.is_none() {
                     return Err(DbError::InvalidParameter(
-                        "dbname is required for PostgreSQL connections".to_string(),
+                        "dbname is required for PostgreSQL connections".to_owned(),
                     ));
                 }
 
@@ -445,7 +445,7 @@ fn build_server_options(cfg: &DbConnConfig) -> Result<DbConnectOptions> {
                     opts = opts.database(dbname);
                 } else if cfg.dsn.is_none() {
                     return Err(DbError::InvalidParameter(
-                        "dbname is required for MySQL connections".to_string(),
+                        "dbname is required for MySQL connections".to_owned(),
                     ));
                 }
 
@@ -467,11 +467,11 @@ fn parse_sqlite_path_from_dsn(dsn: &str) -> Result<std::path::PathBuf> {
     if dsn.starts_with("sqlite:") {
         let path_part = dsn
             .strip_prefix("sqlite:")
-            .ok_or_else(|| DbError::InvalidParameter("Invalid SQLite DSN".to_string()))?;
+            .ok_or_else(|| DbError::InvalidParameter("Invalid SQLite DSN".to_owned()))?;
         let path_part = if path_part.starts_with("//") {
             path_part
                 .strip_prefix("//")
-                .ok_or_else(|| DbError::InvalidParameter("Invalid SQLite DSN".to_string()))?
+                .ok_or_else(|| DbError::InvalidParameter("Invalid SQLite DSN".to_owned()))?
         } else {
             path_part
         };
@@ -495,7 +495,7 @@ fn parse_sqlite_path_from_dsn(dsn: &str) -> Result<std::path::PathBuf> {
 fn expand_env_vars(input: &str) -> Result<String> {
     let re = regex::Regex::new(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
         .map_err(|e| DbError::InvalidParameter(e.to_string()))?;
-    let mut result = input.to_string();
+    let mut result = input.to_owned();
 
     for caps in re.captures_iter(input) {
         let full_match = &caps[0];
@@ -513,7 +513,7 @@ fn resolve_password(password: &str) -> Result<String> {
         let var_name = &password[2..password.len() - 1];
         Ok(std::env::var(var_name)?)
     } else {
-        Ok(password.to_string())
+        Ok(password.to_owned())
     }
 }
 
@@ -527,13 +527,13 @@ fn validate_config_consistency(cfg: &DbConnConfig) -> Result<()> {
 
         if is_sqlite_dsn && has_server_fields {
             return Err(DbError::ConfigConflict(
-                "SQLite DSN cannot be used with host/port fields".to_string(),
+                "SQLite DSN cannot be used with host/port fields".to_owned(),
             ));
         }
 
         if !is_sqlite_dsn && has_sqlite_fields {
             return Err(DbError::ConfigConflict(
-                "Non-SQLite DSN cannot be used with file/path fields".to_string(),
+                "Non-SQLite DSN cannot be used with file/path fields".to_owned(),
             ));
         }
 
@@ -554,13 +554,13 @@ fn validate_config_consistency(cfg: &DbConnConfig) -> Result<()> {
     // Check for SQLite-specific conflicts
     if cfg.file.is_some() && cfg.path.is_some() {
         return Err(DbError::ConfigConflict(
-            "Cannot specify both 'file' and 'path' for SQLite - use one or the other".to_string(),
+            "Cannot specify both 'file' and 'path' for SQLite - use one or the other".to_owned(),
         ));
     }
 
     if (cfg.file.is_some() || cfg.path.is_some()) && (cfg.host.is_some() || cfg.port.is_some()) {
         return Err(DbError::ConfigConflict(
-            "SQLite file/path fields cannot be used with host/port fields".to_string(),
+            "SQLite file/path fields cannot be used with host/port fields".to_owned(),
         ));
     }
 
@@ -578,10 +578,10 @@ pub fn redact_credentials_in_dsn(dsn: Option<&str>) -> String {
                 }
                 parsed.to_string()
             } else {
-                "***".to_string()
+                "***".to_owned()
             }
         }
-        Some(dsn) => dsn.to_string(),
-        None => "none".to_string(),
+        Some(dsn) => dsn.to_owned(),
+        None => "none".to_owned(),
     }
 }

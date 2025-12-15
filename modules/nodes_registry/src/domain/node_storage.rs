@@ -259,6 +259,7 @@ impl Default for NodeStorage {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use crate::contract::SysCap;
@@ -266,10 +267,10 @@ mod tests {
 
     fn make_syscap_with(fetched_at_secs: i64, cache_ttl_secs: u64) -> SysCap {
         SysCap {
-            key: "k".to_string(),
-            category: "c".to_string(),
-            name: "n".to_string(),
-            display_name: "d".to_string(),
+            key: "k".to_owned(),
+            category: "c".to_owned(),
+            name: "n".to_owned(),
+            display_name: "d".to_owned(),
             present: true,
             version: None,
             amount: None,

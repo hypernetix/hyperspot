@@ -76,7 +76,7 @@ struct TestResponse {
 /// Handler that requires `SecurityCtx` (via Authz extractor)
 async fn protected_handler(Authz(ctx): Authz) -> Json<TestResponse> {
     Json(TestResponse {
-        message: "Protected resource accessed".to_string(),
+        message: "Protected resource accessed".to_owned(),
         user_id: ctx.subject_id().to_string(),
     })
 }
@@ -84,8 +84,8 @@ async fn protected_handler(Authz(ctx): Authz) -> Json<TestResponse> {
 /// Handler that doesn't require auth
 async fn public_handler() -> Json<TestResponse> {
     Json(TestResponse {
-        message: "Public resource accessed".to_string(),
-        user_id: "anonymous".to_string(),
+        message: "Public resource accessed".to_owned(),
+        user_id: "anonymous".to_owned(),
     })
 }
 

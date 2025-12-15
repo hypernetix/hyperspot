@@ -175,7 +175,7 @@ async fn test_forward_pagination_respects_order() {
 
     // Act: Paginate with explicit DESC order on created_at
     let order = ODataOrderBy(vec![OrderKey {
-        field: "created_at".to_string(),
+        field: "created_at".to_owned(),
         dir: SortDir::Desc,
     }]);
 
@@ -351,7 +351,7 @@ async fn test_backward_pagination_maintains_order() {
 
     // Act: Get page 2 (skip first 8 items) with explicit ordering by created_at DESC
     let order = modkit_odata::ODataOrderBy(vec![modkit_odata::OrderKey {
-        field: "created_at".to_string(),
+        field: "created_at".to_owned(),
         dir: modkit_odata::SortDir::Desc,
     }]);
 
@@ -450,7 +450,7 @@ async fn test_backward_pagination_has_next_cursor() {
 
     // Act: Get page 1, then page 2, then use prev_cursor to go back
     let order = modkit_odata::ODataOrderBy(vec![modkit_odata::OrderKey {
-        field: "created_at".to_string(),
+        field: "created_at".to_owned(),
         dir: modkit_odata::SortDir::Desc,
     }]);
 
@@ -636,10 +636,10 @@ async fn test_cursor_pagination_with_filter() {
 
     // Act: Filter for "alice" in email and paginate
     let filter_ast = ast::Expr::Function(
-        "contains".to_string(),
+        "contains".to_owned(),
         vec![
-            ast::Expr::Identifier("email".to_string()),
-            ast::Expr::Value(ast::Value::String("alice".to_string())),
+            ast::Expr::Identifier("email".to_owned()),
+            ast::Expr::Value(ast::Value::String("alice".to_owned())),
         ],
     );
 
@@ -673,10 +673,10 @@ async fn test_cursor_pagination_with_filter() {
 
             // Create the same filter for next page
             let filter_ast_next = ast::Expr::Function(
-                "contains".to_string(),
+                "contains".to_owned(),
                 vec![
-                    ast::Expr::Identifier("email".to_string()),
-                    ast::Expr::Value(ast::Value::String("alice".to_string())),
+                    ast::Expr::Identifier("email".to_owned()),
+                    ast::Expr::Value(ast::Value::String("alice".to_owned())),
                 ],
             );
 
@@ -717,10 +717,10 @@ async fn test_cursor_filter_hash_mismatch_error() {
 
     // Act: Get first page with a filter
     let filter_ast = ast::Expr::Function(
-        "contains".to_string(),
+        "contains".to_owned(),
         vec![
-            ast::Expr::Identifier("email".to_string()),
-            ast::Expr::Value(ast::Value::String("user".to_string())),
+            ast::Expr::Identifier("email".to_owned()),
+            ast::Expr::Value(ast::Value::String("user".to_owned())),
         ],
     );
 
@@ -745,10 +745,10 @@ async fn test_cursor_filter_hash_mismatch_error() {
 
     // Create a different filter
     let different_filter = ast::Expr::Function(
-        "contains".to_string(),
+        "contains".to_owned(),
         vec![
-            ast::Expr::Identifier("email".to_string()),
-            ast::Expr::Value(ast::Value::String("different".to_string())),
+            ast::Expr::Identifier("email".to_owned()),
+            ast::Expr::Value(ast::Value::String("different".to_owned())),
         ],
     );
 
@@ -1074,7 +1074,7 @@ async fn test_cursor_with_different_ordering() {
 
     // Act: Get page 1 with ASC order
     let order_asc = ODataOrderBy(vec![OrderKey {
-        field: "created_at".to_string(),
+        field: "created_at".to_owned(),
         dir: SortDir::Asc,
     }]);
 
@@ -1087,7 +1087,7 @@ async fn test_cursor_with_different_ordering() {
 
     // Get page 1 with DESC order
     let order_desc = ODataOrderBy(vec![OrderKey {
-        field: "created_at".to_string(),
+        field: "created_at".to_owned(),
         dir: SortDir::Desc,
     }]);
 

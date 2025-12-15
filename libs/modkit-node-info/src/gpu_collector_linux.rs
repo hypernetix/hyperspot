@@ -37,7 +37,7 @@ fn collect_nvidia_gpus() -> Option<Vec<GpuInfo>> {
             Ok(device) => {
                 let model = device
                     .name()
-                    .unwrap_or_else(|_| "Unknown NVIDIA GPU".to_string());
+                    .unwrap_or_else(|_| "Unknown NVIDIA GPU".to_owned());
 
                 // Get memory info
                 let memory_info = device.memory_info().ok();
@@ -94,7 +94,7 @@ fn collect_gpus_via_lspci() -> Vec<GpuInfo> {
                     // Format: "00:02.0 VGA compatible controller: Intel Corporation ..."
                     if let Some(pos) = line.find(':') {
                         if let Some(model_start) = line[pos..].find(':') {
-                            let model = line[pos + model_start + 1..].trim().to_string();
+                            let model = line[pos + model_start + 1..].trim().to_owned();
                             gpus.push(GpuInfo {
                                 model,
                                 cores: None,

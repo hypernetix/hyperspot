@@ -30,7 +30,7 @@ impl OpenApiRegistry for TestRegistry {
         )>,
     ) -> String {
         // Test implementation - return the schema name
-        name.to_string()
+        name.to_owned()
     }
 
     fn as_any(&self) -> &dyn std::any::Any {
@@ -120,8 +120,8 @@ async fn test_complete_api_builder_flow() {
     let list_op = &operations[0];
     assert_eq!(list_op.method, http::Method::GET);
     assert_eq!(list_op.path, "/users");
-    assert_eq!(list_op.operation_id, Some("users.list".to_string()));
-    assert_eq!(list_op.summary, Some("List all users".to_string()));
+    assert_eq!(list_op.operation_id, Some("users.list".to_owned()));
+    assert_eq!(list_op.summary, Some("List all users".to_owned()));
     assert_eq!(list_op.tags, vec!["users"]);
     assert_eq!(list_op.params.len(), 2); // limit and offset
     assert_eq!(list_op.responses.len(), 2); // 200 and 500
@@ -130,14 +130,14 @@ async fn test_complete_api_builder_flow() {
     let create_op = &operations[1];
     assert_eq!(create_op.method, http::Method::POST);
     assert_eq!(create_op.path, "/users");
-    assert_eq!(create_op.operation_id, Some("users.create".to_string()));
+    assert_eq!(create_op.operation_id, Some("users.create".to_owned()));
     assert_eq!(create_op.responses.len(), 3); // 201, 400, 500
 
     // Verify GET /users/{id} operation
     let get_op = &operations[2];
     assert_eq!(get_op.method, http::Method::GET);
     assert_eq!(get_op.path, "/users/{id}");
-    assert_eq!(get_op.operation_id, Some("users.get".to_string()));
+    assert_eq!(get_op.operation_id, Some("users.get".to_owned()));
     assert_eq!(get_op.params.len(), 1); // id path param
     assert_eq!(get_op.responses.len(), 3); // 200, 404, 500
 }

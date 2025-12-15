@@ -59,7 +59,7 @@ pub async fn rate_limit_middleware(map: RateLimiterMap, req: Request, next: Next
     let path = req
         .extensions()
         .get::<axum::extract::MatchedPath>()
-        .map_or_else(|| req.uri().path().to_string(), |p| p.as_str().to_string());
+        .map_or_else(|| req.uri().path().to_owned(), |p| p.as_str().to_owned());
     let key = (method, path);
 
     if let Some(bucket) = map.buckets.get(&key) {

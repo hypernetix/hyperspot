@@ -1,3 +1,4 @@
+#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 pub mod errors;
 pub mod limits;
 pub mod page;
@@ -122,10 +123,10 @@ impl ODataOrderBy {
                 _ => (SortDir::Asc, seg), // default '+'
             };
             if name.is_empty() {
-                return Err(Error::InvalidOrderByField(seg.to_string()));
+                return Err(Error::InvalidOrderByField(seg.to_owned()));
             }
             out.push(OrderKey {
-                field: name.to_string(),
+                field: name.to_owned(),
                 dir,
             });
         }
@@ -151,7 +152,7 @@ impl ODataOrderBy {
             if name.is_empty() {
                 return None;
             }
-            Some((name.to_string(), dir))
+            Some((name.to_owned(), dir))
         };
         let theirs: Vec<_> = signed.split(',').filter_map(parse).collect();
         if theirs.len() != self.0.len() {
@@ -167,7 +168,7 @@ impl ODataOrderBy {
     pub fn ensure_tiebreaker(mut self, tiebreaker: &str, dir: SortDir) -> Self {
         if !self.0.iter().any(|k| k.field == tiebreaker) {
             self.0.push(OrderKey {
-                field: tiebreaker.to_string(),
+                field: tiebreaker.to_owned(),
                 dir,
             });
         }
@@ -350,7 +351,7 @@ impl CursorV1 {
         }
 
         fn default_direction() -> String {
-            "fwd".to_string()
+            "fwd".to_owned()
         }
 
         let bytes = base64_url::decode(token).map_err(|_| Error::CursorInvalidBase64)?;

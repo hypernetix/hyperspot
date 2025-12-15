@@ -62,7 +62,7 @@ impl DbManager {
         // Build new handle
         if let Some(handle) = self.build_for_module(module).await? {
             // Use entry API to handle race conditions properly
-            match self.cache.entry(module.to_string()) {
+            match self.cache.entry(module.to_owned()) {
                 dashmap::mapref::entry::Entry::Occupied(entry) => {
                     // Another thread beat us to it, return the cached version
                     Ok(Some(entry.get().clone()))

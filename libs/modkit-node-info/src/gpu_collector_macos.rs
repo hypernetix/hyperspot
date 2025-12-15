@@ -34,7 +34,7 @@ pub fn collect_gpu_info() -> Vec<GpuInfo> {
     for (i, model_cap) in model_matches.iter().enumerate() {
         if let Some(model) = model_cap.get(1) {
             let mut gpu = GpuInfo {
-                model: model.as_str().trim().to_string(),
+                model: model.as_str().trim().to_owned(),
                 cores: None,
                 total_memory_mb: None,
                 used_memory_mb: None,

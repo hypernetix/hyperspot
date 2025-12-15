@@ -133,7 +133,7 @@ impl SysCapCollector {
         caps.push(
             SysCapBuilder::new(
                 format!("hardware:{arch}"),
-                "hardware".to_string(),
+                "hardware".to_owned(),
                 arch.clone(),
                 arch.to_uppercase(),
             )
@@ -146,13 +146,13 @@ impl SysCapCollector {
         let total_gb = bytes_to_gb(sysinfo.memory.total_bytes);
         caps.push(
             SysCapBuilder::new(
-                "hardware:ram".to_string(),
-                "hardware".to_string(),
-                "ram".to_string(),
-                "RAM".to_string(),
+                "hardware:ram".to_owned(),
+                "hardware".to_owned(),
+                "ram".to_owned(),
+                "RAM".to_owned(),
             )
             .amount(Some(total_gb))
-            .amount_dimension(Some("GB".to_string()))
+            .amount_dimension(Some("GB".to_owned()))
             .details(Some(format!(
                 "Total: {:.2} GB, Used: {}%",
                 total_gb, sysinfo.memory.used_percent
@@ -164,14 +164,14 @@ impl SysCapCollector {
         // CPU capability from sysinfo
         caps.push(
             SysCapBuilder::new(
-                "hardware:cpu".to_string(),
-                "hardware".to_string(),
-                "cpu".to_string(),
-                "CPU".to_string(),
+                "hardware:cpu".to_owned(),
+                "hardware".to_owned(),
+                "cpu".to_owned(),
+                "CPU".to_owned(),
             )
             .version(Some(sysinfo.cpu.model.clone()))
             .amount(Some(f64::from(sysinfo.cpu.cores)))
-            .amount_dimension(Some("cores".to_string()))
+            .amount_dimension(Some("cores".to_owned()))
             .details(Some(format!(
                 "{} with {} cores @ {:.0} MHz",
                 sysinfo.cpu.model, sysinfo.cpu.cores, sysinfo.cpu.frequency_mhz
@@ -190,15 +190,15 @@ impl SysCapCollector {
         caps.push(
             SysCapBuilder::new(
                 format!("os:{os}"),
-                "os".to_string(),
-                os.to_string(),
+                "os".to_owned(),
+                os.to_owned(),
                 match os {
                     "macos" => "macOS",
                     "linux" => "Linux",
                     "windows" => "Windows",
                     _ => os,
                 }
-                .to_string(),
+                .to_owned(),
             )
             .version(Some(sysinfo.os.version.clone()))
             .details(Some(format!(
@@ -217,7 +217,7 @@ impl SysCapCollector {
 
         for (i, gpu) in sysinfo.gpus.iter().enumerate() {
             let gpu_key = if i == 0 {
-                "hardware:gpu".to_string()
+                "hardware:gpu".to_owned()
             } else {
                 format!("hardware:gpu{i}")
             };
@@ -235,14 +235,14 @@ impl SysCapCollector {
             caps.push(
                 SysCapBuilder::new(
                     gpu_key,
-                    "hardware".to_string(),
+                    "hardware".to_owned(),
                     format!("gpu{}", if i == 0 { String::new() } else { i.to_string() }),
-                    "GPU".to_string(),
+                    "GPU".to_owned(),
                 )
                 .version(Some(gpu.model.clone()))
                 .amount(gpu.total_memory_mb)
                 .amount_dimension(if gpu.total_memory_mb.is_some() {
-                    Some("MB".to_string())
+                    Some("MB".to_owned())
                 } else {
                     None
                 })
@@ -267,13 +267,13 @@ impl SysCapCollector {
 
             caps.push(
                 SysCapBuilder::new(
-                    "hardware:battery".to_string(),
-                    "hardware".to_string(),
-                    "battery".to_string(),
-                    "Battery".to_string(),
+                    "hardware:battery".to_owned(),
+                    "hardware".to_owned(),
+                    "battery".to_owned(),
+                    "Battery".to_owned(),
                 )
                 .amount(Some(f64::from(battery.percentage)))
-                .amount_dimension(Some("percent".to_string()))
+                .amount_dimension(Some("percent".to_owned()))
                 .details(Some(format!(
                     "Status: {}, Level: {}%",
                     status, battery.percentage

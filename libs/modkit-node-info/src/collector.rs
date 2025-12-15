@@ -25,7 +25,7 @@ impl NodeInfoCollector {
     #[must_use]
     pub fn create_current_node() -> Node {
         let id = crate::get_hardware_uuid();
-        let hostname = sysinfo::System::host_name().unwrap_or_else(|| "unknown".to_string());
+        let hostname = sysinfo::System::host_name().unwrap_or_else(|| "unknown".to_owned());
         let ip_address = Self::detect_local_ip();
         let now = chrono::Utc::now();
 

@@ -220,7 +220,7 @@ impl JwksKeyProvider {
                     );
                 }
 
-                return Err(ClaimsError::UnknownKeyId(kid.to_string()));
+                return Err(ClaimsError::UnknownKeyId(kid.to_owned()));
             }
         }
         Ok(())
@@ -237,7 +237,7 @@ impl JwksKeyProvider {
             state.failed_kids.remove(kid);
         } else {
             // Kid still not found after refresh - track it
-            state.failed_kids.insert(kid.to_string());
+            state.failed_kids.insert(kid.to_owned());
             tracing::warn!(
                 kid = kid,
                 "Kid still not found after on-demand JWKS refresh"
@@ -251,7 +251,7 @@ impl JwksKeyProvider {
     async fn handle_refresh_failure(&self, kid: &str, error: ClaimsError) -> ClaimsError {
         let mut state = self.refresh_state.write().await;
         state.last_on_demand_refresh = Some(Instant::now());
-        state.failed_kids.insert(kid.to_string());
+        state.failed_kids.insert(kid.to_owned());
         error
     }
 
@@ -368,6 +368,7 @@ pub async fn run_jwks_refresh_task(provider: Arc<JwksKeyProvider>) {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 
@@ -401,7 +402,7 @@ mod tests {
 
         // Store a dummy key
         let mut keys = HashMap::new();
-        keys.insert("test-kid".to_string(), DecodingKey::from_secret(b"secret"));
+        keys.insert("test-kid".to_owned(), DecodingKey::from_secret(b"secret"));
         provider.keys.store(Arc::new(keys));
 
         // Should be retrievable
@@ -416,7 +417,7 @@ mod tests {
         // Pre-populate with a key
         let mut keys = HashMap::new();
         keys.insert(
-            "existing-kid".to_string(),
+            "existing-kid".to_owned(),
             DecodingKey::from_secret(b"secret"),
         );
         provider.keys.store(Arc::new(keys));
@@ -504,7 +505,7 @@ mod tests {
         {
             let mut state = provider.refresh_state.write().await;
             state.consecutive_failures = 3;
-            state.last_error = Some("Previous error".to_string());
+            state.last_error = Some("Previous error".to_owned());
         }
 
         // This will fail, but we're testing state update logic

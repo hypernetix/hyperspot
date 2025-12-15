@@ -65,7 +65,7 @@ impl FileParserBackend for PdfParser {
             .map_err(|e| DomainError::parse_error(format!("Task join error: {e}")))??;
 
         let source = ParsedSource::Uploaded {
-            original_name: filename_hint.unwrap_or("unknown.pdf").to_string(),
+            original_name: filename_hint.unwrap_or("unknown.pdf").to_owned(),
         };
 
         let mut builder = DocumentBuilder::new(source)

@@ -137,8 +137,9 @@ impl PoolCfg {
         opts
     }
 
-    /// Apply pool configuration to MySQL pool options.
+    /// Apply pool configuration to `MySQL` pool options.
     #[cfg(feature = "mysql")]
+    #[must_use]
     pub fn apply_mysql(
         &self,
         mut opts: sqlx::mysql::MySqlPoolOptions,

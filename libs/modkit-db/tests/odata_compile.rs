@@ -36,7 +36,7 @@ mod tests {
     #[test]
     fn test_simple_equality() {
         let ast = Expr::Compare(
-            Box::new(Expr::Identifier("score".to_string())),
+            Box::new(Expr::Identifier("score".to_owned())),
             CompareOperator::Eq,
             Box::new(Expr::Value(Value::Number(
                 BigDecimal::from_str("42").unwrap(),
@@ -55,17 +55,17 @@ mod tests {
     fn test_and_expression() {
         let ast = Expr::And(
             Box::new(Expr::Compare(
-                Box::new(Expr::Identifier("score".to_string())),
+                Box::new(Expr::Identifier("score".to_owned())),
                 CompareOperator::Gt,
                 Box::new(Expr::Value(Value::Number(
                     BigDecimal::from_str("10").unwrap(),
                 ))),
             )),
             Box::new(Expr::Function(
-                "contains".to_string(),
+                "contains".to_owned(),
                 vec![
-                    Expr::Identifier("email".to_string()),
-                    Expr::Value(Value::String("@test.com".to_string())),
+                    Expr::Identifier("email".to_owned()),
+                    Expr::Value(Value::String("@test.com".to_owned())),
                 ],
             )),
         );
@@ -80,7 +80,7 @@ mod tests {
     #[test]
     fn test_in_expression() {
         let ast = Expr::In(
-            Box::new(Expr::Identifier("score".to_string())),
+            Box::new(Expr::Identifier("score".to_owned())),
             vec![
                 Expr::Value(Value::Number(BigDecimal::from_str("1").unwrap())),
                 Expr::Value(Value::Number(BigDecimal::from_str("2").unwrap())),
@@ -98,7 +98,7 @@ mod tests {
     #[test]
     fn test_null_comparison() {
         let ast = Expr::Compare(
-            Box::new(Expr::Identifier("name".to_string())),
+            Box::new(Expr::Identifier("name".to_owned())),
             CompareOperator::Eq,
             Box::new(Expr::Value(Value::Null)),
         );
@@ -113,9 +113,9 @@ mod tests {
     #[test]
     fn test_unknown_field_error() {
         let ast = Expr::Compare(
-            Box::new(Expr::Identifier("unknown_field".to_string())),
+            Box::new(Expr::Identifier("unknown_field".to_owned())),
             CompareOperator::Eq,
-            Box::new(Expr::Value(Value::String("test".to_string()))),
+            Box::new(Expr::Value(Value::String("test".to_owned()))),
         );
 
         let fmap = setup_field_map();

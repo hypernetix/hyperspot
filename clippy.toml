@@ -43,3 +43,17 @@ too-many-lines-threshold = 200
 allow-expect-in-tests = true
 allow-unwrap-in-tests = true
 
+# Stricter thresholds for LLM-generated code
+single-char-binding-names-threshold = 4
+large-error-threshold = 128
+
+# Stack size limits
+stack-size-threshold = 512000
+
+# Struct field limits
+max-struct-bools = 2
+
+# Disallowed types (prevent common LLM mistakes)
+disallowed-types = [
+    { path = "std::collections::LinkedList", reason = "Use Vec instead - LinkedList has poor cache locality" },
+]

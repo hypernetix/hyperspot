@@ -1,3 +1,4 @@
+#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 use heck::ToSnakeCase;
 use proc_macro::TokenStream;
 use proc_macro2::Span;
@@ -119,8 +120,8 @@ struct LcModuleCfg {
 impl Default for LcModuleCfg {
     fn default() -> Self {
         Self {
-            entry: "serve".to_string(),
-            stop_timeout: "30s".to_string(),
+            entry: "serve".to_owned(),
+            stop_timeout: "30s".to_owned(),
             await_ready: false,
         }
     }
@@ -907,7 +908,7 @@ pub fn lifecycle(attr: TokenStream, item: TokenStream) -> TokenStream {
 
 fn parse_lifecycle_args(args: Punctuated<Meta, Token![,]>) -> syn::Result<LcCfg> {
     let mut method: Option<String> = None;
-    let mut stop_timeout = "30s".to_string();
+    let mut stop_timeout = "30s".to_owned();
     let mut await_ready = false;
 
     for m in args {

@@ -1,3 +1,4 @@
+#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 //! Proc-macro for generating strongly-typed error catalogs from JSON.
 //!
 //! This macro reads a JSON file at compile time, validates error definitions,

@@ -61,6 +61,7 @@ impl From<Error> for Problem {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 
@@ -68,7 +69,7 @@ mod tests {
     fn test_filter_error_converts_to_problem() {
         use http::StatusCode;
 
-        let err = Error::InvalidFilter("malformed".to_string());
+        let err = Error::InvalidFilter("malformed".to_owned());
         let problem: Problem = err.into();
 
         assert_eq!(problem.status, StatusCode::UNPROCESSABLE_ENTITY);
@@ -82,7 +83,7 @@ mod tests {
     fn test_orderby_error_converts_to_problem() {
         use http::StatusCode;
 
-        let err = Error::InvalidOrderByField("unknown".to_string());
+        let err = Error::InvalidOrderByField("unknown".to_owned());
         let problem: Problem = err.into();
 
         assert_eq!(problem.status, StatusCode::UNPROCESSABLE_ENTITY);

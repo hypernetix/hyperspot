@@ -40,6 +40,7 @@
 //! - **Owner**: `owner_col = "column_name"` OR `no_owner`
 //! - **Type**: `type_col = "column_name"` OR `no_type`
 //! - **Unrestricted**: `unrestricted` (forbids all other attributes)
+#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 
 use proc_macro::TokenStream;
 use proc_macro_error2::proc_macro_error;

@@ -24,7 +24,7 @@ pub fn get_traceparent(headers: &HeaderMap) -> Option<&str> {
 pub fn parse_trace_id(traceparent: &str) -> Option<String> {
     let parts: Vec<&str> = traceparent.split('-').collect();
     if parts.len() >= 4 && parts[0] == "00" {
-        Some(parts[1].to_string())
+        Some(parts[1].to_owned())
     } else {
         None
     }
@@ -133,6 +133,7 @@ mod imp {
 pub use imp::{inject_current_span, set_parent_from_headers};
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use tracing::info_span;
@@ -167,7 +168,7 @@ mod tests {
         let trace_id = parse_trace_id(traceparent);
         assert_eq!(
             trace_id,
-            Some("4bf92f3577b34da6a3ce929d0e0e4736".to_string())
+            Some("4bf92f3577b34da6a3ce929d0e0e4736".to_owned())
         );
     }
 

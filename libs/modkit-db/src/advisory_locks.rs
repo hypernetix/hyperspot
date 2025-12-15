@@ -195,13 +195,13 @@ impl LockManager {
             DbEngine::Postgres => self.lock_pg(&namespaced_key).await,
             #[cfg(not(feature = "pg"))]
             DbEngine::Postgres => Err(DbLockError::InvalidState(
-                "PostgreSQL feature not enabled".to_string(),
+                "PostgreSQL feature not enabled".to_owned(),
             )),
             #[cfg(feature = "mysql")]
             DbEngine::MySql => self.lock_mysql(&namespaced_key).await,
             #[cfg(not(feature = "mysql"))]
             DbEngine::MySql => Err(DbLockError::InvalidState(
-                "MySQL feature not enabled".to_string(),
+                "MySQL feature not enabled".to_owned(),
             )),
             DbEngine::Sqlite => self.lock_file(&namespaced_key).await,
         }
@@ -280,7 +280,7 @@ impl LockManager {
     async fn lock_pg(&self, namespaced_key: &str) -> Result<DbLockGuard, DbLockError> {
         let DbPool::Postgres(ref pool) = self.pool else {
             return Err(DbLockError::InvalidState(
-                "not a PostgreSQL pool".to_string(),
+                "not a PostgreSQL pool".to_owned(),
             ));
         };
         let mut conn = pool.acquire().await?; // sqlx::Error via #[from]
@@ -297,7 +297,7 @@ impl LockManager {
             .await?; // sqlx::Error via #[from]
 
         Ok(DbLockGuard {
-            namespaced_key: namespaced_key.to_string(),
+            namespaced_key: namespaced_key.to_owned(),
             inner: Some(GuardInner::Postgres { conn, key_hash }),
         })
     }
@@ -306,7 +306,7 @@ impl LockManager {
     async fn try_lock_pg(&self, namespaced_key: &str) -> Result<Option<DbLockGuard>, DbLockError> {
         let DbPool::Postgres(ref pool) = self.pool else {
             return Err(DbLockError::InvalidState(
-                "not a PostgreSQL pool".to_string(),
+                "not a PostgreSQL pool".to_owned(),
             ));
         };
         let mut conn = pool.acquire().await?; // sqlx::Error via #[from]
@@ -324,7 +324,7 @@ impl LockManager {
 
         if ok {
             Ok(Some(DbLockGuard {
-                namespaced_key: namespaced_key.to_string(),
+                namespaced_key: namespaced_key.to_owned(),
                 inner: Some(GuardInner::Postgres { conn, key_hash }),
             }))
         } else {
@@ -336,7 +336,7 @@ impl LockManager {
     #[cfg(feature = "mysql")]
     async fn lock_mysql(&self, namespaced_key: &str) -> Result<DbLockGuard, DbLockError> {
         let DbPool::MySql(ref pool) = self.pool else {
-            return Err(DbLockError::InvalidState("not a MySQL pool".to_string()));
+            return Err(DbLockError::InvalidState("not a MySQL pool".to_owned()));
         };
         let mut conn = pool.acquire().await?; // sqlx::Error via #[from]
 
@@ -349,15 +349,15 @@ impl LockManager {
 
         if ok != 1 {
             return Err(DbLockError::InvalidState(
-                "failed to acquire MySQL lock".to_string(),
+                "failed to acquire MySQL lock".to_owned(),
             ));
         }
 
         Ok(DbLockGuard {
-            namespaced_key: namespaced_key.to_string(),
+            namespaced_key: namespaced_key.to_owned(),
             inner: Some(GuardInner::MySql {
                 conn,
-                lock_name: namespaced_key.to_string(),
+                lock_name: namespaced_key.to_owned(),
             }),
         })
     }
@@ -368,7 +368,7 @@ impl LockManager {
         namespaced_key: &str,
     ) -> Result<Option<DbLockGuard>, DbLockError> {
         let DbPool::MySql(ref pool) = self.pool else {
-            return Err(DbLockError::InvalidState("not a MySQL pool".to_string()));
+            return Err(DbLockError::InvalidState("not a MySQL pool".to_owned()));
         };
         let mut conn = pool.acquire().await?; // sqlx::Error via #[from]
 
@@ -380,10 +380,10 @@ impl LockManager {
 
         if ok == 1 {
             Ok(Some(DbLockGuard {
-                namespaced_key: namespaced_key.to_string(),
+                namespaced_key: namespaced_key.to_owned(),
                 inner: Some(GuardInner::MySql {
                     conn,
-                    lock_name: namespaced_key.to_string(),
+                    lock_name: namespaced_key.to_owned(),
                 }),
             }))
         } else {
@@ -408,7 +408,7 @@ impl LockManager {
             Ok(f) => f,
             Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {
                 return Err(DbLockError::AlreadyHeld {
-                    lock_name: namespaced_key.to_string(),
+                    lock_name: namespaced_key.to_owned(),
                 });
             }
             Err(e) => return Err(e.into()),
@@ -432,7 +432,7 @@ impl LockManager {
         }
 
         Ok(DbLockGuard {
-            namespaced_key: namespaced_key.to_string(),
+            namespaced_key: namespaced_key.to_owned(),
             inner: Some(GuardInner::File { path, file }),
         })
     }
@@ -471,7 +471,7 @@ impl LockManager {
                 }
 
                 Ok(Some(DbLockGuard {
-                    namespaced_key: namespaced_key.to_string(),
+                    namespaced_key: namespaced_key.to_owned(),
                     inner: Some(GuardInner::File { path, file }),
                 }))
             }
@@ -489,13 +489,13 @@ impl LockManager {
             DbEngine::Postgres => self.try_lock_pg(namespaced_key).await,
             #[cfg(not(feature = "pg"))]
             DbEngine::Postgres => Err(DbLockError::InvalidState(
-                "PostgreSQL feature not enabled".to_string(),
+                "PostgreSQL feature not enabled".to_owned(),
             )),
             #[cfg(feature = "mysql")]
             DbEngine::MySql => self.try_lock_mysql(namespaced_key).await,
             #[cfg(not(feature = "mysql"))]
             DbEngine::MySql => Err(DbLockError::InvalidState(
-                "MySQL feature not enabled".to_string(),
+                "MySQL feature not enabled".to_owned(),
             )),
             DbEngine::Sqlite => self.try_lock_file(namespaced_key).await,
         }
@@ -543,6 +543,7 @@ pub enum DbLockError {
 // --------------------------- Tests -------------------------------------------
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use anyhow::Result;
@@ -556,7 +557,7 @@ mod tests {
         let lock_manager = LockManager::new(
             crate::DbEngine::Sqlite,
             crate::DbPool::Sqlite(pool),
-            dsn.to_string(),
+            dsn.to_owned(),
         );
 
         // Unique key suffix (avoid conflicts in parallel)
@@ -591,7 +592,7 @@ mod tests {
         let lock_manager = Arc::new(LockManager::new(
             DbEngine::Sqlite,
             DbPool::Sqlite(pool),
-            dsn.to_string(),
+            dsn.to_owned(),
         ));
 
         let test_id = format!(
@@ -626,8 +627,7 @@ mod tests {
     async fn test_try_lock_success() -> Result<()> {
         let dsn = "sqlite:file:memdb5?mode=memory&cache=shared";
         let pool = sqlx::SqlitePool::connect(dsn).await?;
-        let lock_manager =
-            LockManager::new(DbEngine::Sqlite, DbPool::Sqlite(pool), dsn.to_string());
+        let lock_manager = LockManager::new(DbEngine::Sqlite, DbPool::Sqlite(pool), dsn.to_owned());
 
         let test_id = format!(
             "test_success_{}",
@@ -653,8 +653,7 @@ mod tests {
     async fn test_double_lock_same_key_errors() -> Result<()> {
         let dsn = "sqlite:file:memdb6?mode=memory&cache=shared";
         let pool = sqlx::SqlitePool::connect(dsn).await?;
-        let lock_manager =
-            LockManager::new(DbEngine::Sqlite, DbPool::Sqlite(pool), dsn.to_string());
+        let lock_manager = LockManager::new(DbEngine::Sqlite, DbPool::Sqlite(pool), dsn.to_owned());
 
         let test_id = format!(
             "test_double_{}",
@@ -685,8 +684,7 @@ mod tests {
     async fn test_try_lock_conflict_returns_none() -> Result<()> {
         let dsn = "sqlite:file:memdb7?mode=memory&cache=shared";
         let pool = sqlx::SqlitePool::connect(dsn).await?;
-        let lock_manager =
-            LockManager::new(DbEngine::Sqlite, DbPool::Sqlite(pool), dsn.to_string());
+        let lock_manager = LockManager::new(DbEngine::Sqlite, DbPool::Sqlite(pool), dsn.to_owned());
 
         let key = format!(
             "test_conflict_{}",

@@ -129,6 +129,7 @@ impl AuthMetrics for LoggingMetrics {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 
@@ -153,9 +154,9 @@ mod tests {
             .with_issuer("https://kc.example.com")
             .with_kid("key-123");
 
-        assert_eq!(labels.provider, Some("keycloak".to_string()));
-        assert_eq!(labels.issuer, Some("https://kc.example.com".to_string()));
-        assert_eq!(labels.kid, Some("key-123".to_string()));
+        assert_eq!(labels.provider, Some("keycloak".to_owned()));
+        assert_eq!(labels.issuer, Some("https://kc.example.com".to_owned()));
+        assert_eq!(labels.kid, Some("key-123".to_owned()));
         assert_eq!(labels.error_type, None);
     }
 

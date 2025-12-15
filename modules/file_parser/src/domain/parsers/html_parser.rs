@@ -77,7 +77,7 @@ impl FileParserBackend for HtmlParser {
         .map_err(|e| DomainError::parse_error(format!("Task join error: {e}")))??;
 
         let source = ParsedSource::Uploaded {
-            original_name: filename_hint.unwrap_or("unknown.html").to_string(),
+            original_name: filename_hint.unwrap_or("unknown.html").to_owned(),
         };
 
         let mut builder = DocumentBuilder::new(source)
@@ -138,7 +138,7 @@ fn parse_html_bytes(
 
     // Fallback: if no blocks extracted, treat as plain text
     if blocks.is_empty() {
-        let text = dom.outer_html().trim().to_string();
+        let text = dom.outer_html().trim().to_owned();
         if !text.is_empty() {
             blocks.push(ParsedBlock::Paragraph {
                 inlines: vec![Inline::plain(text)],
@@ -165,7 +165,7 @@ fn extract_blocks_from_node(
                 .and_then(|c| c.to_digit(10))
                 .and_then(|d| u8::try_from(d).ok())
                 .unwrap_or(1);
-            let text = tag.inner_text(parser).trim().to_string();
+            let text = tag.inner_text(parser).trim().to_owned();
             if !text.is_empty() {
                 // TODO: Parse inline styles from HTML
                 blocks.push(ParsedBlock::Heading {
@@ -175,7 +175,7 @@ fn extract_blocks_from_node(
             }
         }
         "p" => {
-            let text = tag.inner_text(parser).trim().to_string();
+            let text = tag.inner_text(parser).trim().to_owned();
             if !text.is_empty() {
                 // TODO: Parse inline styles from HTML
                 blocks.push(ParsedBlock::Paragraph {
@@ -184,7 +184,7 @@ fn extract_blocks_from_node(
             }
         }
         "li" => {
-            let text = tag.inner_text(parser).trim().to_string();
+            let text = tag.inner_text(parser).trim().to_owned();
             if !text.is_empty() {
                 // TODO: detect from parent <ol> vs <ul>, parse nested content
                 blocks.push(ParsedBlock::ListItem {
@@ -202,7 +202,7 @@ fn extract_blocks_from_node(
             for child in tag.children().top().iter() {
                 if let Some(child_tag) = child.get(parser).and_then(|n| n.as_tag()) {
                     if child_tag.name().as_utf8_str() == "li" {
-                        let text = child_tag.inner_text(parser).trim().to_string();
+                        let text = child_tag.inner_text(parser).trim().to_owned();
                         if !text.is_empty() {
                             blocks.push(ParsedBlock::ListItem {
                                 level: list_level,
@@ -226,7 +226,7 @@ fn extract_blocks_from_node(
             }
         }
         "blockquote" => {
-            let text = tag.inner_text(parser).trim().to_string();
+            let text = tag.inner_text(parser).trim().to_owned();
             if !text.is_empty() {
                 // TODO: Parse nested blocks within blockquote
                 blocks.push(ParsedBlock::Quote {

@@ -46,7 +46,7 @@ impl OpenApiRegistry for TestOpenApiRegistry {
             utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>,
         )>,
     ) -> String {
-        root_name.to_string()
+        root_name.to_owned()
     }
     fn as_any(&self) -> &dyn std::any::Any {
         self

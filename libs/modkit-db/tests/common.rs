@@ -68,6 +68,10 @@ pub async fn bring_up_postgres() -> Result<DbUnderTest> {
     })
 }
 
+/// Bring up a `MySQL` container for testing.
+///
+/// # Errors
+/// Returns an error if the container fails to start or the port cannot be obtained.
 #[cfg(feature = "mysql")]
 pub async fn bring_up_mysql() -> Result<DbUnderTest> {
     use testcontainers::ContainerRequest;

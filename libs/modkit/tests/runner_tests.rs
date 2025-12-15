@@ -40,7 +40,7 @@ impl OpenApiRegistry for TestOpenApiRegistry {
             utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>,
         )>,
     ) -> String {
-        root_name.to_string()
+        root_name.to_owned()
     }
     fn as_any(&self) -> &dyn std::any::Any {
         self
@@ -61,7 +61,7 @@ impl MockConfigProvider {
     }
 
     fn with_config(mut self, module_name: &str, config: serde_json::Value) -> Self {
-        self.configs.insert(module_name.to_string(), config);
+        self.configs.insert(module_name.to_owned(), config);
         self
     }
 }
@@ -101,7 +101,7 @@ struct TestModule {
 impl TestModule {
     fn new(name: &str, calls: CallTracker) -> Self {
         Self {
-            name: name.to_string(),
+            name: name.to_owned(),
             calls,
             should_fail_init: Arc::new(AtomicBool::new(false)),
             should_fail_db: Arc::new(AtomicBool::new(false)),

@@ -5,10 +5,10 @@
 //! - PRAGMA parameter handling with typed enums
 //! - Path preparation for `SQLite` databases
 
-pub(crate) mod dsn;
-pub(crate) mod path;
-pub(crate) mod pragmas;
+pub mod dsn;
+pub mod path;
+pub mod pragmas;
 
-pub(crate) use dsn::{extract_sqlite_pragmas, is_memory_dsn};
-pub(crate) use path::prepare_sqlite_path;
-pub(crate) use pragmas::Pragmas;
+pub use dsn::{extract_sqlite_pragmas, is_memory_dsn};
+pub use path::prepare_sqlite_path;
+pub use pragmas::Pragmas;

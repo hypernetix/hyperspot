@@ -1,3 +1,4 @@
+#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 use async_trait::async_trait;
 use std::sync::Arc;
 
@@ -117,10 +118,10 @@ impl ApiIngress {
         let mut public_routes = std::collections::HashSet::new();
 
         // Always mark built-in health check routes as public
-        public_routes.insert((Method::GET, "/health".to_string()));
-        public_routes.insert((Method::GET, "/healthz".to_string()));
-        public_routes.insert((Method::GET, "/docs".to_string()));
-        public_routes.insert((Method::GET, "/openapi.json".to_string()));
+        public_routes.insert((Method::GET, "/health".to_owned()));
+        public_routes.insert((Method::GET, "/healthz".to_owned()));
+        public_routes.insert((Method::GET, "/docs".to_owned()));
+        public_routes.insert((Method::GET, "/openapi.json".to_owned()));
 
         for spec in &self.openapi_registry.operation_specs {
             let spec = spec.value();
@@ -173,7 +174,7 @@ impl ApiIngress {
 
         // 2. Generate x-request-id when missing
         router = router.layer(SetRequestIdLayer::new(
-            x_request_id.clone(),
+            x_request_id,
             crate::middleware::request_id::MakeReqId,
         ));
 
@@ -346,7 +347,7 @@ impl ApiIngress {
         let info = modkit::api::OpenApiInfo {
             title: config.openapi.title.clone(),
             version: config.openapi.version.clone(),
-            description: config.openapi.description.clone(),
+            description: config.openapi.description,
         };
         self.openapi_registry.build_openapi(&info)
     }
@@ -426,15 +427,16 @@ impl modkit::Module for ApiIngress {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 
     #[test]
     fn test_openapi_generation() {
         let mut config = ApiIngressConfig::default();
-        config.openapi.title = "Test API".to_string();
-        config.openapi.version = "1.0.0".to_string();
-        config.openapi.description = Some("Test Description".to_string());
+        config.openapi.title = "Test API".to_owned();
+        config.openapi.version = "1.0.0".to_owned();
+        config.openapi.description = Some("Test Description".to_owned());
         let api = ApiIngress::new(config);
 
         // Test that we can build OpenAPI without any operations
@@ -491,7 +493,7 @@ impl modkit::contracts::RestHostModule for ApiIngress {
                     "/openapi.json",
                     get({
                         use axum::{http::header, response::IntoResponse, Json};
-                        let doc = openapi_doc.clone();
+                        let doc = openapi_doc;
                         move || async move {
                             ([(header::CACHE_CONTROL, "no-store")], Json(doc.as_ref()))
                                 .into_response()
@@ -594,6 +596,7 @@ impl OpenApiRegistry for ApiIngress {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod problem_openapi_tests {
     use super::*;
     use axum::Json;
@@ -655,6 +658,7 @@ mod problem_openapi_tests {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod sse_openapi_tests {
     use super::*;
     use axum::Json;

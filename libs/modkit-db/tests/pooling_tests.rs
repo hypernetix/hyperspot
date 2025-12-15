@@ -55,7 +55,7 @@ async fn test_module_pool_overrides_server_pool() {
         servers: {
             let mut servers = HashMap::new();
             servers.insert(
-                "sqlite_server".to_string(),
+                "sqlite_server".to_owned(),
                 DbConnConfig {
                     pool: Some(PoolCfg {
                         max_conns: Some(10),
@@ -114,7 +114,7 @@ async fn test_pool_config_inheritance() {
         servers: {
             let mut servers = HashMap::new();
             servers.insert(
-                "sqlite_server".to_string(),
+                "sqlite_server".to_owned(),
                 DbConnConfig {
                     pool: Some(PoolCfg {
                         max_conns: Some(15),

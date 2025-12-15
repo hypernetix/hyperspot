@@ -107,8 +107,8 @@ impl PrimaryAuthorizer for IntegrationAuthorizer {
 fn fake_claims(sub_id: Uuid) -> Claims {
     Claims {
         sub: sub_id,
-        issuer: "test-issuer".to_string(),
-        audiences: vec!["test-api".to_string()],
+        issuer: "test-issuer".to_owned(),
+        audiences: vec!["test-api".to_owned()],
         expires_at: None,
         not_before: None,
         tenants: vec![Uuid::new_v4()],

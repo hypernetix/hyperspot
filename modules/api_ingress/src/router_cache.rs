@@ -133,7 +133,7 @@ impl<T> RouterCache<T> {
         T: PartialEq,
     {
         let new_arc = Arc::new(new_router);
-        let result = self.inner.compare_and_swap(&expected, new_arc.clone());
+        let result = self.inner.compare_and_swap(&expected, new_arc);
 
         // The compare_and_swap returns the previous value, not a Result
         // If it matches our expected value, the swap succeeded
@@ -175,6 +175,7 @@ where
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use std::sync::atomic::{AtomicUsize, Ordering};
@@ -191,7 +192,7 @@ mod tests {
         fn new(id: usize, name: &str) -> Self {
             Self {
                 id,
-                name: name.to_string(),
+                name: name.to_owned(),
             }
         }
     }
@@ -217,7 +218,7 @@ mod tests {
     #[test]
     fn test_concurrent_reads() {
         let initial = TestRouter::new(1, "concurrent_test");
-        let cache = Arc::new(RouterCache::new(initial.clone()));
+        let cache = Arc::new(RouterCache::new(initial));
 
         let mut handles = vec![];
 
@@ -322,7 +323,7 @@ mod tests {
     #[test]
     fn test_compare_and_swap() {
         let initial = TestRouter::new(1, "cas_test");
-        let cache = RouterCache::new(initial.clone());
+        let cache = RouterCache::new(initial);
 
         let current = cache.load();
         let new_router = TestRouter::new(2, "cas_updated");

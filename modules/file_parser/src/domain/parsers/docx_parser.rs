@@ -95,7 +95,7 @@ impl FileParserBackend for DocxParser {
             .map_err(|e| DomainError::parse_error(format!("Task join error: {e}")))??;
 
         let source = ParsedSource::Uploaded {
-            original_name: filename_hint.unwrap_or("unknown.docx").to_string(),
+            original_name: filename_hint.unwrap_or("unknown.docx").to_owned(),
         };
 
         let mut builder = DocumentBuilder::new(source)

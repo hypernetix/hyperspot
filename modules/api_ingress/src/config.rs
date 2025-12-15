@@ -109,16 +109,16 @@ pub struct CorsConfig {
 impl Default for CorsConfig {
     fn default() -> Self {
         Self {
-            allowed_origins: vec!["*".to_string()],
+            allowed_origins: vec!["*".to_owned()],
             allowed_methods: vec![
-                "GET".to_string(),
-                "POST".to_string(),
-                "PUT".to_string(),
-                "PATCH".to_string(),
-                "DELETE".to_string(),
-                "OPTIONS".to_string(),
+                "GET".to_owned(),
+                "POST".to_owned(),
+                "PUT".to_owned(),
+                "PATCH".to_owned(),
+                "DELETE".to_owned(),
+                "OPTIONS".to_owned(),
             ],
-            allowed_headers: vec!["*".to_string()],
+            allowed_headers: vec!["*".to_owned()],
             allow_credentials: false,
             max_age_seconds: 600,
         }
@@ -141,8 +141,8 @@ pub struct OpenApiConfig {
 impl Default for OpenApiConfig {
     fn default() -> Self {
         Self {
-            title: "API Documentation".to_string(),
-            version: "0.1.0".to_string(),
+            title: "API Documentation".to_owned(),
+            version: "0.1.0".to_owned(),
             description: None,
         }
     }

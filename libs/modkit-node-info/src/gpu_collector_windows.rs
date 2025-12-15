@@ -37,7 +37,7 @@ fn collect_nvidia_gpus() -> Option<Vec<GpuInfo>> {
             Ok(device) => {
                 let model = device
                     .name()
-                    .unwrap_or_else(|_| "Unknown NVIDIA GPU".to_string());
+                    .unwrap_or_else(|_| "Unknown NVIDIA GPU".to_owned());
 
                 // Get memory info
                 let memory_info = device.memory_info().ok();
@@ -100,7 +100,7 @@ fn collect_gpus_via_wmic() -> Vec<GpuInfo> {
                     let name = parts[1].trim();
                     if !name.is_empty() {
                         let mut gpu = GpuInfo {
-                            model: name.to_string(),
+                            model: name.to_owned(),
                             cores: None,
                             total_memory_mb: None,
                             used_memory_mb: None,

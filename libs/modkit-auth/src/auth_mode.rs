@@ -12,7 +12,7 @@ pub struct AuthModeConfig {
 impl Default for AuthModeConfig {
     fn default() -> Self {
         AuthModeConfig {
-            provider: "default".to_string(),
+            provider: "default".to_owned(),
         }
     }
 }
@@ -36,7 +36,7 @@ impl PluginRegistry {
     pub fn get(&self, name: &str) -> Result<&Arc<dyn ClaimsPlugin>, ConfigError> {
         self.plugins
             .get(name)
-            .ok_or_else(|| ConfigError::UnknownPlugin(name.to_string()))
+            .ok_or_else(|| ConfigError::UnknownPlugin(name.to_owned()))
     }
 
     /// Check if a plugin exists
@@ -65,6 +65,7 @@ impl PluginRegistry {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use crate::{claims::Claims, claims_error::ClaimsError};
@@ -102,7 +103,7 @@ mod tests {
     #[test]
     fn test_auth_mode_config_serialization() {
         let config = AuthModeConfig {
-            provider: "keycloak".to_string(),
+            provider: "keycloak".to_owned(),
         };
         let json = serde_json::to_string(&config).unwrap();
         assert!(json.contains("\"provider\":\"keycloak\""));

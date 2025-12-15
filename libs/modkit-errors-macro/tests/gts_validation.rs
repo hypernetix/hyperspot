@@ -1,4 +1,5 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
+#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 
 //! Compile-time tests for GTS validation in `declare_errors`! macro
 //!
@@ -34,6 +35,7 @@ const _VALID_UNDERSCORES: &str = r#"[{
 // For now, we'll create JSON test fixtures that the macro can validate
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     #[test]
     fn test_gts_validation_documented() {

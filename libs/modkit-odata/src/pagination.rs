@@ -54,7 +54,7 @@ pub fn normalize_filter_for_hash(expr: &ast::Expr) -> String {
                 format!("ID({})", name.to_lowercase())
             }
             ast::Expr::Value(value) => match value {
-                ast::Value::Null => "NULL".to_string(),
+                ast::Value::Null => "NULL".to_owned(),
                 ast::Value::Bool(b) => format!("BOOL({b})"),
                 ast::Value::Number(n) => format!("NUM({})", n.normalized()),
                 ast::Value::Uuid(u) => {
@@ -85,6 +85,7 @@ pub fn short_filter_hash(expr: Option<&ast::Expr>) -> Option<String> {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use crate::ast::{CompareOperator, Expr, Value};
@@ -93,15 +94,15 @@ mod tests {
     fn test_normalize_filter_consistency() {
         // Test that the same logical filter produces the same normalized string
         let expr1 = Expr::Compare(
-            Box::new(Expr::Identifier("name".to_string())),
+            Box::new(Expr::Identifier("name".to_owned())),
             CompareOperator::Eq,
-            Box::new(Expr::Value(Value::String("test".to_string()))),
+            Box::new(Expr::Value(Value::String("test".to_owned()))),
         );
 
         let expr2 = Expr::Compare(
-            Box::new(Expr::Identifier("name".to_string())),
+            Box::new(Expr::Identifier("name".to_owned())),
             CompareOperator::Eq,
-            Box::new(Expr::Value(Value::String("test".to_string()))),
+            Box::new(Expr::Value(Value::String("test".to_owned()))),
         );
 
         assert_eq!(
@@ -113,7 +114,7 @@ mod tests {
     #[test]
     fn test_short_filter_hash_consistency() {
         let expr = Expr::Compare(
-            Box::new(Expr::Identifier("id".to_string())),
+            Box::new(Expr::Identifier("id".to_owned())),
             CompareOperator::Gt,
             Box::new(Expr::Value(Value::Number(42.into()))),
         );

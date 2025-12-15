@@ -37,7 +37,7 @@ pub fn normalize_to_axum_path(path: &str) -> String {
     // which is the same as OpenAPI except wildcards need the asterisk prefix.
     // For now, we just pass through the path as-is since OpenAPI and Axum 0.8 use the same syntax
     // for regular parameters. Wildcards need special handling if used.
-    path.to_string()
+    path.to_owned()
 }
 
 /// Convert Axum 0.8+ style path parameters to OpenAPI-style placeholders.
@@ -227,22 +227,22 @@ where
 {
     fn with_odata_filter(mut self) -> Self {
         self.spec.params.push(ParamSpec {
-            name: "$filter".to_string(),
+            name: "$filter".to_owned(),
             location: ParamLocation::Query,
             required: false,
-            description: Some("OData v4 filter expression".to_string()),
-            param_type: "string".to_string(),
+            description: Some("OData v4 filter expression".to_owned()),
+            param_type: "string".to_owned(),
         });
         self
     }
 
     fn with_odata_filter_doc(mut self, description: impl Into<String>) -> Self {
         self.spec.params.push(ParamSpec {
-            name: "$filter".to_string(),
+            name: "$filter".to_owned(),
             location: ParamLocation::Query,
             required: false,
             description: Some(description.into()),
-            param_type: "string".to_string(),
+            param_type: "string".to_owned(),
         });
         self
     }
@@ -403,7 +403,7 @@ where
             location: ParamLocation::Path,
             required: true,
             description: Some(description.into()),
-            param_type: "string".to_string(),
+            param_type: "string".to_owned(),
         });
         self
     }
@@ -420,7 +420,7 @@ where
             location: ParamLocation::Query,
             required,
             description: Some(description.into()),
-            param_type: "string".to_string(),
+            param_type: "string".to_owned(),
         });
         self
     }
@@ -552,7 +552,7 @@ where
             description: description
                 .map(|s| format!("{s} (expects field '{field_name}' with file data)")),
             schema: RequestBodySchema::MultipartFile {
-                field_name: field_name.to_string(),
+                field_name: field_name.to_owned(),
             },
             required: true,
         });
@@ -1090,7 +1090,7 @@ where
             self.spec.responses.push(ResponseSpec {
                 status: status.as_u16(),
                 content_type: problem::APPLICATION_PROBLEM_JSON,
-                description: description.to_string(),
+                description: description.to_owned(),
                 schema_name: Some(problem_name.clone()),
             });
         }
@@ -1120,7 +1120,7 @@ where
         self.spec.responses.push(ResponseSpec {
             status: http::StatusCode::UNPROCESSABLE_ENTITY.as_u16(),
             content_type: problem::APPLICATION_PROBLEM_JSON,
-            description: "Validation Error".to_string(),
+            description: "Validation Error".to_owned(),
             schema_name: Some(validation_error_name),
         });
 
@@ -1236,6 +1236,7 @@ where
 // Tests
 // -------------------------------------------------------------------------------------------------
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use axum::Json;
@@ -1270,7 +1271,7 @@ mod tests {
                 utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>,
             )>,
         ) -> String {
-            let name = name.to_string();
+            let name = name.to_owned();
             if let Ok(mut s) = self.schemas.lock() {
                 s.push(name.clone());
             }
@@ -1297,11 +1298,11 @@ mod tests {
 
         assert_eq!(builder.spec.method, Method::GET);
         assert_eq!(builder.spec.path, "/test");
-        assert_eq!(builder.spec.operation_id, Some("test.get".to_string()));
-        assert_eq!(builder.spec.summary, Some("Test endpoint".to_string()));
+        assert_eq!(builder.spec.operation_id, Some("test.get".to_owned()));
+        assert_eq!(builder.spec.summary, Some("Test endpoint".to_owned()));
         assert_eq!(
             builder.spec.description,
-            Some("A test endpoint for validation".to_string())
+            Some("A test endpoint for validation".to_owned())
         );
         assert_eq!(builder.spec.tags, vec!["test"]);
         assert_eq!(builder.spec.params.len(), 1);
@@ -1532,7 +1533,7 @@ mod tests {
                 "Unsupported Media Type",
             );
 
-        assert_eq!(builder.spec.operation_id, Some("test.post".to_string()));
+        assert_eq!(builder.spec.operation_id, Some("test.post".to_owned()));
         assert!(builder.spec.request_body.is_some());
         assert!(builder.spec.allowed_request_content_types.is_some());
         assert_eq!(builder.spec.responses.len(), 2);
@@ -1560,7 +1561,7 @@ mod tests {
         assert_eq!(
             rb.schema,
             RequestBodySchema::MultipartFile {
-                field_name: "file".to_string()
+                field_name: "file".to_owned()
             }
         );
 
@@ -1586,7 +1587,7 @@ mod tests {
         assert_eq!(
             rb.schema,
             RequestBodySchema::MultipartFile {
-                field_name: "file".to_string()
+                field_name: "file".to_owned()
             }
         );
     }
@@ -1605,7 +1606,7 @@ mod tests {
         assert!(builder.spec.request_body.is_some());
         let rb = builder.spec.request_body.as_ref().unwrap();
         assert_eq!(rb.content_type, "application/octet-stream");
-        assert_eq!(rb.description, Some("Raw file bytes".to_string()));
+        assert_eq!(rb.description, Some("Raw file bytes".to_owned()));
         assert!(rb.required);
 
         // Should use Binary schema variant

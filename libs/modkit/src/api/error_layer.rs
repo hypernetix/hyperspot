@@ -174,24 +174,25 @@ impl IntoProblem for anyhow::Error {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 
     #[test]
     fn test_odata_error_mapping() {
-        let error = ODataError::InvalidFilter("malformed".to_string());
-        let problem = error.into_problem("/test", Some("trace123".to_string()));
+        let error = ODataError::InvalidFilter("malformed".to_owned());
+        let problem = error.into_problem("/test", Some("trace123".to_owned()));
 
         assert_eq!(problem.status, StatusCode::UNPROCESSABLE_ENTITY);
         assert!(problem.code.contains("invalid_filter"));
         assert_eq!(problem.instance, "/test");
-        assert_eq!(problem.trace_id, Some("trace123".to_string()));
+        assert_eq!(problem.trace_id, Some("trace123".to_owned()));
     }
 
     #[test]
     fn test_config_error_mapping() {
         let error = ConfigError::ModuleNotFound {
-            module: "test_module".to_string(),
+            module: "test_module".to_owned(),
         };
         let problem = error.into_problem("/api/test", None);
 
@@ -204,12 +205,12 @@ mod tests {
     #[test]
     fn test_anyhow_error_mapping() {
         let error = anyhow::anyhow!("Something went wrong");
-        let problem = error.into_problem("/api/test", Some("trace456".to_string()));
+        let problem = error.into_problem("/api/test", Some("trace456".to_owned()));
 
         assert_eq!(problem.status, StatusCode::INTERNAL_SERVER_ERROR);
         assert_eq!(problem.code, "INTERNAL_ERROR");
         assert_eq!(problem.instance, "/api/test");
-        assert_eq!(problem.trace_id, Some("trace456".to_string()));
+        assert_eq!(problem.trace_id, Some("trace456".to_owned()));
     }
 
     #[test]
@@ -218,6 +219,6 @@ mod tests {
         headers.insert("x-trace-id", "test-trace-123".parse().unwrap());
 
         let trace_id = extract_trace_id(&headers);
-        assert_eq!(trace_id, Some("test-trace-123".to_string()));
+        assert_eq!(trace_id, Some("test-trace-123".to_owned()));
     }
 }

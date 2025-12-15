@@ -118,11 +118,11 @@ pub struct Section {
 pub fn default_logging_config() -> LoggingConfig {
     let mut logging = HashMap::new();
     logging.insert(
-        "default".to_string(),
+        "default".to_owned(),
         Section {
-            console_level: "info".to_string(),
-            file: "logs/hyperspot.log".to_string(),
-            file_level: "debug".to_string(),
+            console_level: "info".to_owned(),
+            file: "logs/hyperspot.log".to_owned(),
+            file_level: "debug".to_owned(),
             max_age_days: Some(7),
             max_backups: Some(3),
             max_size_mb: Some(100),
@@ -179,7 +179,7 @@ impl AppConfig {
 
         let mut config: AppConfig = figment
             .extract()
-            .with_context(|| "Failed to extract config from figment".to_string())?;
+            .with_context(|| "Failed to extract config from figment".to_owned())?;
 
         // Normalize + create home_dir immediately.
         normalize_home_dir_inplace(&mut config.server)
@@ -224,8 +224,8 @@ impl AppConfig {
         if let Some(default_section) = logging.get_mut("default") {
             default_section.console_level = match args.verbose {
                 0 => default_section.console_level.clone(), // keep
-                1 => "debug".to_string(),
-                _ => "trace".to_string(),
+                1 => "debug".to_owned(),
+                _ => "trace".to_owned(),
             };
         }
     }
@@ -288,7 +288,7 @@ fn merge_module_files(
             .file_stem()
             .and_then(|s| s.to_str())
             .unwrap_or("")
-            .to_string();
+            .to_owned();
         let raw = fs::read_to_string(&path)?;
         let json: serde_json::Value = serde_saphyr::from_str(&raw)?;
         bag.insert(name, json);
@@ -306,7 +306,7 @@ fn merge_module_files(
 pub fn expand_env_in_dsn(dsn: &str) -> anyhow::Result<String> {
     use std::env;
 
-    let mut result = dsn.to_string();
+    let mut result = dsn.to_owned();
     let re = regex::Regex::new(r"\$\{([A-Za-z_][A-Za-z0-9_]*)}")?;
 
     for cap in re.captures_iter(dsn) {
@@ -337,7 +337,7 @@ pub fn resolve_password(password: Option<&str>) -> anyhow::Result<Option<String>
             Ok(Some(resolved))
         } else {
             // Return literal password as-is
-            Ok(Some(pwd.to_string()))
+            Ok(Some(pwd.to_owned()))
         }
     } else {
         Ok(None)
@@ -426,7 +426,7 @@ fn resolve_sqlite_dsn(dsn: &str, home_dir: &Path, module_name: &str) -> anyhow::
     }
 
     // Return DSN as-is for normal cases
-    Ok(dsn.to_string())
+    Ok(dsn.to_owned())
 }
 
 /// Builds a server-based DSN from individual fields.
@@ -694,7 +694,7 @@ impl DbConfigBuilder {
         let resolved_dsn = if module_dsn.starts_with("sqlite") {
             resolve_sqlite_dsn(module_dsn, home_dir, module_name)?
         } else {
-            module_dsn.to_string()
+            module_dsn.to_owned()
         };
         validate_dsn(&resolved_dsn)?;
         self.dsn = Some(resolved_dsn);
@@ -777,7 +777,7 @@ fn finalize_sqlite_dsn(
 fn finalize_server_dsn(builder: &DbConfigBuilder, module_name: &str) -> anyhow::Result<String> {
     // Extract dbname from DSN if not provided separately
     let dbname = if let Some(dbname) = builder.dbname.as_deref() {
-        dbname.to_string()
+        dbname.to_owned()
     } else if let Some(dsn) = builder.dsn.as_ref() {
         // Try to extract dbname from DSN path
         if let Ok(parsed) = url::Url::parse(dsn) {
@@ -805,9 +805,9 @@ fn finalize_server_dsn(builder: &DbConfigBuilder, module_name: &str) -> anyhow::
         // Build DSN from fields when we have overrides or no original DSN
         let scheme = if let Some(dsn) = &builder.dsn {
             let parsed = url::Url::parse(dsn)?;
-            parsed.scheme().to_string()
+            parsed.scheme().to_owned()
         } else {
-            "postgresql".to_string() // default
+            "postgresql".to_owned() // default
         };
 
         build_server_dsn(
@@ -856,7 +856,7 @@ fn redact_dsn_for_logging(dsn: &str) -> anyhow::Result<String> {
         }
         Ok(log_url.to_string())
     } else {
-        Ok(dsn.to_string())
+        Ok(dsn.to_owned())
     }
 }
 
@@ -1109,6 +1109,7 @@ pub fn module_home(app: &AppConfig, module_name: &str) -> PathBuf {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use std::{env, fs};
@@ -1363,7 +1364,7 @@ logging:
     /// Helper function to create `AppConfig` with database server configuration
     fn create_app_with_server(server_name: &str, db_config: DbConnConfig) -> AppConfig {
         let mut servers = HashMap::new();
-        servers.insert(server_name.to_string(), db_config);
+        servers.insert(server_name.to_owned(), db_config);
 
         AppConfig {
             database: Some(GlobalDatabaseConfig {
@@ -1381,7 +1382,7 @@ logging:
         database_config: &serde_json::Value,
     ) {
         app.modules.insert(
-            module_name.to_string(),
+            module_name.to_owned(),
             serde_json::json!({
                 "database": database_config,
                 "config": {}
@@ -1398,7 +1399,7 @@ logging:
             "test_server",
             DbConnConfig {
                 dsn: Some(
-                    "postgresql://global_user:global_pass@global_host:5432/global_db".to_string(),
+                    "postgresql://global_user:global_pass@global_host:5432/global_db".to_owned(),
                 ),
                 ..Default::default()
             },
@@ -1430,10 +1431,10 @@ logging:
         let mut app = create_app_with_server(
             "test_server",
             DbConnConfig {
-                host: Some("field_host".to_string()),
+                host: Some("field_host".to_owned()),
                 port: Some(5433),
-                user: Some("field_user".to_string()),
-                dbname: Some("field_db".to_string()),
+                user: Some("field_user".to_owned()),
+                dbname: Some("field_db".to_owned()),
                 ..Default::default()
             },
         );
@@ -1466,7 +1467,7 @@ logging:
             modules: {
                 let mut modules = HashMap::new();
                 modules.insert(
-                    "test_module".to_string(),
+                    "test_module".to_owned(),
                     serde_json::json!({
                         "database": {
                             "dsn": "sqlite://module_test.db?wal=true&synchronous=NORMAL"
@@ -1496,7 +1497,7 @@ logging:
             modules: {
                 let mut modules = HashMap::new();
                 modules.insert(
-                    "test_module".to_string(),
+                    "test_module".to_owned(),
                     serde_json::json!({
                         "database": {
                             "file": "module_fields.db"
@@ -1529,11 +1530,11 @@ logging:
         let mut app = create_app_with_server(
             "test_server",
             DbConnConfig {
-                dsn: Some("postgresql://old_user:old_pass@old_host:5432/old_db".to_string()),
-                host: Some("new_host".to_string()), // This should override DSN host
-                port: Some(5433),                   // This should override DSN port
-                user: Some("new_user".to_string()), // This should override DSN user
-                dbname: Some("new_db".to_string()), // This should override DSN dbname
+                dsn: Some("postgresql://old_user:old_pass@old_host:5432/old_db".to_owned()),
+                host: Some("new_host".to_owned()), // This should override DSN host
+                port: Some(5433),                  // This should override DSN port
+                user: Some("new_user".to_owned()), // This should override DSN user
+                dbname: Some("new_db".to_owned()), // This should override DSN dbname
                 ..Default::default()
             },
         );
@@ -1575,11 +1576,11 @@ logging:
         let mut app = create_app_with_server(
             "test_server",
             DbConnConfig {
-                host: Some("localhost".to_string()),
+                host: Some("localhost".to_owned()),
                 port: Some(5432),
-                user: Some("testuser".to_string()),
-                password: Some("${TEST_DB_PASSWORD}".to_string()), // Should expand to "secret123"
-                dbname: Some("testdb".to_string()),
+                user: Some("testuser".to_owned()),
+                password: Some("${TEST_DB_PASSWORD}".to_owned()), // Should expand to "secret123"
+                dbname: Some("testdb".to_owned()),
                 ..Default::default()
             },
         );
@@ -1614,7 +1615,7 @@ logging:
         let mut app = create_app_with_server(
             "test_server",
             DbConnConfig {
-                dsn: Some("postgresql://user:${DB_PASSWORD}@${DB_HOST}:5432/mydb".to_string()),
+                dsn: Some("postgresql://user:${DB_PASSWORD}@${DB_HOST}:5432/mydb".to_owned()),
                 ..Default::default()
             },
         );
@@ -1652,7 +1653,7 @@ logging:
             modules: {
                 let mut modules = HashMap::new();
                 modules.insert(
-                    "test_module".to_string(),
+                    "test_module".to_owned(),
                     serde_json::json!({
                         "database": {
                             "file": "test.db"
@@ -1677,7 +1678,7 @@ logging:
             modules: {
                 let mut modules = HashMap::new();
                 modules.insert(
-                    "test_module".to_string(),
+                    "test_module".to_owned(),
                     serde_json::json!({
                         "database": {
                             "path": abs_path.to_string_lossy()
@@ -1700,7 +1701,7 @@ logging:
             modules: {
                 let mut modules = HashMap::new();
                 modules.insert(
-                    "test_module".to_string(),
+                    "test_module".to_owned(),
                     serde_json::json!({
                         "database": {},
                         "config": {}
@@ -1727,7 +1728,7 @@ logging:
             modules: {
                 let mut modules = HashMap::new();
                 modules.insert(
-                    "test_module".to_string(),
+                    "test_module".to_owned(),
                     serde_json::json!({
                         "database": {
                             "file": "test.db"
@@ -1759,11 +1760,11 @@ logging:
         // Global server with SQLite DSN and query params
         let mut servers = HashMap::new();
         servers.insert(
-            "sqlite_users".to_string(),
+            "sqlite_users".to_owned(),
             DbConnConfig {
                 dsn: Some(
                     "sqlite://users_info.db?WAL=true&synchronous=NORMAL&busy_timeout=5000"
-                        .to_string(),
+                        .to_owned(),
                 ),
                 host: None,
                 port: None,
@@ -1785,7 +1786,7 @@ logging:
 
         // Module that references the server but overrides the dbname
         app.modules.insert(
-            "users_info".to_string(),
+            "users_info".to_owned(),
             serde_json::json!({
                 "database": {
                     "server": "sqlite_users",
@@ -1828,7 +1829,7 @@ logging:
             modules: {
                 let mut modules = HashMap::new();
                 modules.insert(
-                    "test_module".to_string(),
+                    "test_module".to_owned(),
                     serde_json::json!({
                         "database": {
                             "file": "test.db"
@@ -1858,9 +1859,9 @@ logging:
         let mut app = create_app_with_server(
             "test_server",
             DbConnConfig {
-                host: Some("localhost".to_string()),
+                host: Some("localhost".to_owned()),
                 port: Some(5432),
-                user: Some("testuser".to_string()),
+                user: Some("testuser".to_owned()),
                 // Missing dbname for server-based DB
                 ..Default::default()
             },
@@ -1890,7 +1891,7 @@ logging:
             modules: {
                 let mut modules = HashMap::new();
                 modules.insert(
-                    "no_db_module".to_string(),
+                    "no_db_module".to_owned(),
                     serde_json::json!({
                         "config": {
                             "some_setting": "value"
@@ -1916,7 +1917,7 @@ logging:
             modules: {
                 let mut modules = HashMap::new();
                 modules.insert(
-                    "empty_db_module".to_string(),
+                    "empty_db_module".to_owned(),
                     serde_json::json!({
                         "database": null,
                         "config": {}
@@ -1940,7 +1941,7 @@ logging:
             modules: {
                 let mut modules = HashMap::new();
                 modules.insert(
-                    "test_module".to_string(),
+                    "test_module".to_owned(),
                     serde_json::json!({
                         "database": {
                             "server": "nonexistent_server"
@@ -1968,7 +1969,7 @@ logging:
             modules: {
                 let mut modules = HashMap::new();
                 modules.insert(
-                    "test_module".to_string(),
+                    "test_module".to_owned(),
                     serde_json::json!({
                         "database": {
                             "dsn": "invalid://not-a-valid[url"
@@ -1996,9 +1997,9 @@ logging:
         let mut app = create_app_with_server(
             "test_server",
             DbConnConfig {
-                host: Some("localhost".to_string()),
-                password: Some("${NONEXISTENT_PASSWORD}".to_string()),
-                dbname: Some("testdb".to_string()),
+                host: Some("localhost".to_owned()),
+                password: Some("${NONEXISTENT_PASSWORD}".to_owned()),
+                dbname: Some("testdb".to_owned()),
                 ..Default::default()
             },
         );
@@ -2026,7 +2027,7 @@ logging:
             modules: {
                 let mut modules = HashMap::new();
                 modules.insert(
-                    "test_module".to_string(),
+                    "test_module".to_owned(),
                     serde_json::json!({
                         "database": {
                             "dsn": "sqlite://@file(users.db)"
@@ -2062,7 +2063,7 @@ logging:
             modules: {
                 let mut modules = HashMap::new();
                 modules.insert(
-                    "test_module".to_string(),
+                    "test_module".to_owned(),
                     serde_json::json!({
                         "database": {
                             "dsn": format!("sqlite://@file({})", abs_path.to_string_lossy())
@@ -2096,7 +2097,7 @@ logging:
             modules: {
                 let mut modules = HashMap::new();
                 modules.insert(
-                    "test_module".to_string(),
+                    "test_module".to_owned(),
                     serde_json::json!({
                         "database": {
                             "dsn": "sqlite://"
@@ -2131,7 +2132,7 @@ logging:
             modules: {
                 let mut modules = HashMap::new();
                 modules.insert(
-                    "test_module".to_string(),
+                    "test_module".to_owned(),
                     serde_json::json!({
                         "database": {
                             "dsn": "sqlite://@file(missing_closing_paren"
@@ -2159,11 +2160,11 @@ logging:
         let mut app = create_app_with_server(
             "test_server",
             DbConnConfig {
-                host: Some("localhost".to_string()),
+                host: Some("localhost".to_owned()),
                 port: Some(5432),
-                user: Some("user@domain".to_string()),
-                password: Some("pa@ss:w0rd/with%special&chars".to_string()),
-                dbname: Some("test/db".to_string()),
+                user: Some("user@domain".to_owned()),
+                password: Some("pa@ss:w0rd/with%special&chars".to_owned()),
+                dbname: Some("test/db".to_owned()),
                 ..Default::default()
             },
         );
@@ -2210,9 +2211,9 @@ logging:
         let mut app = create_app_with_server(
             "test_server",
             DbConnConfig {
-                host: Some("localhost".to_string()),
-                user: Some("ユーザー".to_string()), // Japanese characters
-                dbname: Some("unicode_db".to_string()),
+                host: Some("localhost".to_owned()),
+                user: Some("ユーザー".to_owned()), // Japanese characters
+                dbname: Some("unicode_db".to_owned()),
                 ..Default::default()
             },
         );
@@ -2245,15 +2246,15 @@ logging:
         let home_dir = tmp.path();
 
         let mut params = HashMap::new();
-        params.insert("ssl mode".to_string(), "require & verify".to_string());
-        params.insert("application_name".to_string(), "my-app/v1.0".to_string());
+        params.insert("ssl mode".to_owned(), "require & verify".to_owned());
+        params.insert("application_name".to_owned(), "my-app/v1.0".to_owned());
 
         let mut app = create_app_with_server(
             "test_server",
             DbConnConfig {
-                host: Some("localhost".to_string()),
-                user: Some("testuser".to_string()),
-                dbname: Some("testdb".to_string()),
+                host: Some("localhost".to_owned()),
+                user: Some("testuser".to_owned()),
+                dbname: Some("testdb".to_owned()),
                 params: Some(params),
                 ..Default::default()
             },
@@ -2291,8 +2292,8 @@ logging:
         let mut app = create_app_with_server(
             "test_server",
             DbConnConfig {
-                host: Some("localhost".to_string()),
-                dbname: Some("testdb".to_string()),
+                host: Some("localhost".to_owned()),
+                dbname: Some("testdb".to_owned()),
                 pool: Some(PoolCfg {
                     max_conns: Some(10),
                     min_conns: None,
@@ -2336,8 +2337,8 @@ logging:
         let mut app = create_app_with_server(
             "test_server",
             DbConnConfig {
-                host: Some("localhost".to_string()),
-                dbname: Some("testdb".to_string()),
+                host: Some("localhost".to_owned()),
+                dbname: Some("testdb".to_owned()),
                 pool: Some(PoolCfg {
                     max_conns: Some(10),
                     min_conns: None,

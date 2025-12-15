@@ -26,12 +26,12 @@ impl ClaimsPlugin for DemoClaimsPlugin {
     fn normalize(&self, raw: &Value) -> Result<Claims, ClaimsError> {
         let issuer_value = raw
             .get("iss")
-            .ok_or_else(|| ClaimsError::MissingClaim("iss".to_string()))?;
+            .ok_or_else(|| ClaimsError::MissingClaim("iss".to_owned()))?;
         let issuer = extract_string(issuer_value, "iss")?;
 
         let sub_value = raw
             .get("sub")
-            .ok_or_else(|| ClaimsError::MissingClaim("sub".to_string()))?;
+            .ok_or_else(|| ClaimsError::MissingClaim("sub".to_owned()))?;
         let sub = parse_uuid_from_value(sub_value, "sub")?;
 
         let audiences = raw.get("aud").map(extract_audiences).unwrap_or_default();
@@ -104,19 +104,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut plugin_configs = HashMap::new();
     plugin_configs.insert(
-        "demo".to_string(),
+        "demo".to_owned(),
         PluginConfig::Oidc {
-            tenant_claim: "tenants".to_string(),
-            roles_claim: "roles".to_string(),
+            tenant_claim: "tenants".to_owned(),
+            roles_claim: "roles".to_owned(),
         },
     );
 
     let config = AuthConfig {
         mode: AuthModeConfig {
-            provider: "demo".to_string(),
+            provider: "demo".to_owned(),
         },
-        issuers: vec!["https://issuer.local".to_string()],
-        audiences: vec!["demo-api".to_string()],
+        issuers: vec!["https://issuer.local".to_owned()],
+        audiences: vec!["demo-api".to_owned()],
         plugins: plugin_configs,
         ..AuthConfig::default()
     };
@@ -147,7 +147,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let claims = dispatcher.validate_jwt("demo-token").await?;
     let role_list = if claims.roles.is_empty() {
-        "none".to_string()
+        "none".to_owned()
     } else {
         claims.roles.join(", ")
     };

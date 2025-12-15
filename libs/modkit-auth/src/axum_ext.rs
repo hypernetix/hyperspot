@@ -38,7 +38,7 @@ where
             .cloned() // TODO: drop this clone
             .map(Authz)
             .ok_or(AuthError::Internal(
-                "SecurityCtx not found - auth middleware not configured".to_string(),
+                "SecurityCtx not found - auth middleware not configured".to_owned(),
             ))
     }
 }
@@ -60,7 +60,7 @@ where
             .cloned() // TODO: drop this clone
             .map(AuthClaims)
             .ok_or(AuthError::Internal(
-                "Claims not found - auth middleware not configured".to_string(),
+                "Claims not found - auth middleware not configured".to_owned(),
             ))
     }
 }

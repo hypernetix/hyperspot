@@ -261,7 +261,7 @@ impl MarkdownRenderer {
     }
 
     fn render_styled_text(text: &str, style: &crate::domain::ir::InlineStyle, output: &mut String) {
-        let mut wrapped = text.to_string();
+        let mut wrapped = text.to_owned();
 
         // Apply styles in order: code, bold, italic, underline, strike
         // Note: code is handled by Inline::Code variant, not here
@@ -368,6 +368,7 @@ impl MarkdownRenderer {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use crate::domain::ir::{
@@ -381,7 +382,7 @@ mod tests {
             title: None,
             language: None,
             meta: ParsedMetadata {
-                source: ParsedSource::LocalPath("test.txt".to_string()),
+                source: ParsedSource::LocalPath("test.txt".to_owned()),
                 original_filename: None,
                 content_type: None,
                 created_at: None,
@@ -412,7 +413,7 @@ mod tests {
             title: None,
             language: None,
             meta: ParsedMetadata {
-                source: ParsedSource::LocalPath("test.txt".to_string()),
+                source: ParsedSource::LocalPath("test.txt".to_owned()),
                 original_filename: None,
                 content_type: None,
                 created_at: None,
@@ -441,7 +442,7 @@ mod tests {
             title: None,
             language: None,
             meta: ParsedMetadata {
-                source: ParsedSource::LocalPath("test.txt".to_string()),
+                source: ParsedSource::LocalPath("test.txt".to_owned()),
                 original_filename: None,
                 content_type: None,
                 created_at: None,
@@ -464,7 +465,7 @@ mod tests {
             title: None,
             language: None,
             meta: ParsedMetadata {
-                source: ParsedSource::LocalPath("test.txt".to_string()),
+                source: ParsedSource::LocalPath("test.txt".to_owned()),
                 original_filename: None,
                 content_type: None,
                 created_at: None,
@@ -501,7 +502,7 @@ mod tests {
             title: None,
             language: None,
             meta: ParsedMetadata {
-                source: ParsedSource::LocalPath("test.txt".to_string()),
+                source: ParsedSource::LocalPath("test.txt".to_owned()),
                 original_filename: None,
                 content_type: None,
                 created_at: None,
@@ -509,8 +510,8 @@ mod tests {
                 is_stub: false,
             },
             blocks: vec![ParsedBlock::CodeBlock {
-                language: Some("rust".to_string()),
-                code: "fn main() {\n    println!(\"Hello\");\n}".to_string(),
+                language: Some("rust".to_owned()),
+                code: "fn main() {\n    println!(\"Hello\");\n}".to_owned(),
             }],
         };
 
@@ -561,7 +562,7 @@ mod tests {
             title: None,
             language: None,
             meta: ParsedMetadata {
-                source: ParsedSource::LocalPath("test.txt".to_string()),
+                source: ParsedSource::LocalPath("test.txt".to_owned()),
                 original_filename: None,
                 content_type: None,
                 created_at: None,
@@ -614,7 +615,7 @@ mod tests {
             title: None,
             language: None,
             meta: ParsedMetadata {
-                source: ParsedSource::LocalPath("test.txt".to_string()),
+                source: ParsedSource::LocalPath("test.txt".to_owned()),
                 original_filename: None,
                 content_type: None,
                 created_at: None,
@@ -677,7 +678,7 @@ mod tests {
             title: None,
             language: None,
             meta: ParsedMetadata {
-                source: ParsedSource::LocalPath("test.txt".to_string()),
+                source: ParsedSource::LocalPath("test.txt".to_owned()),
                 original_filename: None,
                 content_type: None,
                 created_at: None,
@@ -697,10 +698,10 @@ mod tests {
     fn test_render_with_title() {
         let doc = ParsedDocument {
             id: None,
-            title: Some("Document Title".to_string()),
+            title: Some("Document Title".to_owned()),
             language: None,
             meta: ParsedMetadata {
-                source: ParsedSource::LocalPath("test.txt".to_string()),
+                source: ParsedSource::LocalPath("test.txt".to_owned()),
                 original_filename: None,
                 content_type: None,
                 created_at: None,
@@ -720,12 +721,12 @@ mod tests {
     fn test_render_iter_streaming() {
         let doc = ParsedDocument {
             id: None,
-            title: Some("Test Title".to_string()),
-            language: Some("en".to_string()),
+            title: Some("Test Title".to_owned()),
+            language: Some("en".to_owned()),
             meta: ParsedMetadata {
-                source: ParsedSource::LocalPath("test.txt".to_string()),
-                original_filename: Some("test.txt".to_string()),
-                content_type: Some("text/plain".to_string()),
+                source: ParsedSource::LocalPath("test.txt".to_owned()),
+                original_filename: Some("test.txt".to_owned()),
+                content_type: Some("text/plain".to_owned()),
                 created_at: None,
                 modified_at: None,
                 is_stub: false,
@@ -774,7 +775,7 @@ mod tests {
             title: None,
             language: None,
             meta: ParsedMetadata {
-                source: ParsedSource::LocalPath("test.txt".to_string()),
+                source: ParsedSource::LocalPath("test.txt".to_owned()),
                 original_filename: None,
                 content_type: None,
                 created_at: None,

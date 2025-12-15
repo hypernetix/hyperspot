@@ -228,14 +228,14 @@ impl HostRuntime {
         let mut router = Router::new();
 
         // Find host(s) and whether any rest modules exist
-        let hosts: Vec<_> = self
+        let host_count = self
             .registry
             .modules()
             .iter()
             .filter(|e| e.rest_host.is_some())
-            .collect();
+            .count();
 
-        match hosts.len() {
+        match host_count {
             0 => {
                 return if self.registry.modules().iter().any(|e| e.rest.is_some()) {
                     Err(RegistryError::RestRequiresHost)
@@ -451,11 +451,11 @@ impl HostRuntime {
             // Note: User controls --config via execution.args in master config
             let mut env = module_cfg.env.clone();
             env.insert(
-                MODKIT_MODULE_CONFIG_ENV.to_string(),
+                MODKIT_MODULE_CONFIG_ENV.to_owned(),
                 module_cfg.rendered_config_json.clone(),
             );
             if let Some(ref endpoint) = directory_endpoint {
-                env.insert(MODKIT_DIRECTORY_ENDPOINT_ENV.to_string(), endpoint.clone());
+                env.insert(MODKIT_DIRECTORY_ENDPOINT_ENV.to_owned(), endpoint.clone());
             }
 
             // Use args from execution config as-is (user controls --config via args)
@@ -567,6 +567,7 @@ impl HostRuntime {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use crate::context::ModuleCtx;

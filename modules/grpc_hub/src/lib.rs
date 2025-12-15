@@ -1,3 +1,4 @@
+#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 //! gRPC Hub Module
 //!
 //! This module builds and hosts the single `tonic::Server` instance for the process.
@@ -165,7 +166,7 @@ impl GrpcHub {
             .strip_prefix("pipe://")
             .or_else(|| listen_addr.strip_prefix("npipe://"))
         {
-            let pipe_name = pipe_name.to_string();
+            let pipe_name = pipe_name.to_owned();
             *self.listen_cfg.write() = ListenConfig::NamedPipe(pipe_name.clone());
             tracing::info!(
                 name = %pipe_name,
@@ -176,10 +177,7 @@ impl GrpcHub {
 
         // Explicitly reject UDS on Windows
         if listen_addr.starts_with("uds://") {
-            anyhow::bail!(
-                "UDS listen_addr is not supported on Windows: '{}'",
-                listen_addr
-            );
+            anyhow::bail!("UDS listen_addr is not supported on Windows: '{listen_addr}'");
         }
 
         // Not a platform-specific address, fall back to TCP
@@ -421,7 +419,7 @@ impl GrpcHub {
     ) -> anyhow::Result<()> {
         tracing::info!(name = %pipe_name, transport = "named_pipe", "gRPC hub listening");
 
-        let endpoint = format!("pipe://{}", pipe_name);
+        let endpoint = format!("pipe://{pipe_name}");
         self.set_bound_endpoint(endpoint.clone());
         self.register_modules(modules, &endpoint).await?;
         ready.notify();
@@ -452,7 +450,7 @@ impl GrpcHub {
                 let service_names: Vec<String> = module_data
                     .installers
                     .iter()
-                    .map(|i| i.service_name.to_string())
+                    .map(|i| i.service_name.to_owned())
                     .collect();
 
                 let info = module_orchestrator_contracts::RegisterInstanceInfo {
@@ -467,7 +465,7 @@ impl GrpcHub {
                             )
                         })
                         .collect(),
-                    version: Some(env!("CARGO_PKG_VERSION").to_string()),
+                    version: Some(env!("CARGO_PKG_VERSION").to_owned()),
                 };
 
                 directory.register_instance(info).await?;
@@ -552,6 +550,7 @@ impl Module for GrpcHub {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use http::{Request, Response};
@@ -637,7 +636,7 @@ mod tests {
         hub.set_listen_addr_tcp("127.0.0.1:0".parse().unwrap());
         let data = GrpcInstallerData {
             modules: vec![ModuleInstallers {
-                module_name: "test".to_string(),
+                module_name: "test".to_owned(),
                 installers: vec![installer_a(), installer_a()],
             }],
         };
@@ -656,7 +655,7 @@ mod tests {
         hub.set_listen_addr_tcp("127.0.0.1:0".parse().unwrap());
         let data = GrpcInstallerData {
             modules: vec![ModuleInstallers {
-                module_name: "test".to_string(),
+                module_name: "test".to_owned(),
                 installers: vec![installer_a(), installer_b()],
             }],
         };
@@ -696,7 +695,7 @@ mod tests {
         installer_store
             .set(GrpcInstallerData {
                 modules: vec![ModuleInstallers {
-                    module_name: "test".to_string(),
+                    module_name: "test".to_owned(),
                     installers: vec![installer_a()],
                 }],
             })
@@ -877,7 +876,7 @@ mod tests {
         let installers = vec![installer_a()];
         let data = GrpcInstallerData {
             modules: vec![ModuleInstallers {
-                module_name: "test".to_string(),
+                module_name: "test".to_owned(),
                 installers,
             }],
         };
@@ -912,9 +911,6 @@ mod tests {
     #[tokio::test]
     #[cfg(windows)]
     async fn test_named_pipe_listen_and_shutdown() {
-        let hub = Arc::new(GrpcHub::default());
-        let cancel = CancellationToken::new();
-
         // Custom ConfigProvider returning named pipe address
         struct ConfigProviderWithNamedPipe;
         impl ConfigProvider for ConfigProviderWithNamedPipe {
@@ -934,6 +930,9 @@ mod tests {
                 }
             }
         }
+
+        let hub = Arc::new(GrpcHub::default());
+        let cancel = CancellationToken::new();
 
         let ctx = ModuleCtx::new(
             "grpc_hub",
@@ -955,7 +954,7 @@ mod tests {
         let installers = vec![installer_a()];
         let data = GrpcInstallerData {
             modules: vec![ModuleInstallers {
-                module_name: "test".to_string(),
+                module_name: "test".to_owned(),
                 installers,
             }],
         };

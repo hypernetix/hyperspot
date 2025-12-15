@@ -1,4 +1,5 @@
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use crate::api::odata::*;
     use axum::extract::FromRequestParts;
@@ -175,7 +176,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_extract_odata_query_filter_too_long() {
-        let long_filter = "email eq '".to_string() + &"a".repeat(MAX_FILTER_LEN) + "'";
+        let long_filter = "email eq '".to_owned() + &"a".repeat(MAX_FILTER_LEN) + "'";
         let uri = format!("/?%24filter={}", urlencoding::encode(&long_filter));
 
         let request = Request::builder().uri(uri).body(()).unwrap();
@@ -244,7 +245,7 @@ mod tests {
     fn test_odata_deref() {
         use modkit_odata::ast::*;
 
-        let expr = Expr::Identifier("test".to_string());
+        let expr = Expr::Identifier("test".to_owned());
         let query = ODataQuery::default().with_filter(expr);
         let odata = OData(query);
 

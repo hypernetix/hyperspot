@@ -10,25 +10,25 @@ use std::time::Duration;
 #[test]
 fn test_dbconnconfig_serialization() {
     let config = DbConnConfig {
-        dsn: Some("postgresql://user:pass@localhost/db".to_string()),
-        host: Some("localhost".to_string()),
+        dsn: Some("postgresql://user:pass@localhost/db".to_owned()),
+        host: Some("localhost".to_owned()),
         port: Some(5432),
-        user: Some("testuser".to_string()),
-        password: Some("testpass".to_string()),
-        dbname: Some("testdb".to_string()),
+        user: Some("testuser".to_owned()),
+        password: Some("testpass".to_owned()),
+        dbname: Some("testdb".to_owned()),
         params: Some({
             let mut params = HashMap::new();
-            params.insert("ssl".to_string(), "require".to_string());
+            params.insert("ssl".to_owned(), "require".to_owned());
             params
         }),
-        file: Some("test.db".to_string()),
+        file: Some("test.db".to_owned()),
         path: Some(PathBuf::from("/tmp/test.db")),
         pool: Some(PoolCfg {
             max_conns: Some(10),
             acquire_timeout: Some(Duration::from_secs(30)),
             ..Default::default()
         }),
-        server: Some("test_server".to_string()),
+        server: Some("test_server".to_owned()),
     };
 
     // Test serialization to JSON
@@ -65,16 +65,16 @@ fn test_dbconnconfig_defaults() {
 fn test_globaldatabaseconfig_serialization() {
     let mut servers = HashMap::new();
     servers.insert(
-        "postgres_main".to_string(),
+        "postgres_main".to_owned(),
         DbConnConfig {
-            host: Some("db.example.com".to_string()),
+            host: Some("db.example.com".to_owned()),
             port: Some(5432),
-            user: Some("appuser".to_string()),
-            password: Some("${DB_PASSWORD}".to_string()),
-            dbname: Some("maindb".to_string()),
+            user: Some("appuser".to_owned()),
+            password: Some("${DB_PASSWORD}".to_owned()),
+            dbname: Some("maindb".to_owned()),
             params: Some({
                 let mut params = HashMap::new();
-                params.insert("sslmode".to_string(), "require".to_string());
+                params.insert("sslmode".to_owned(), "require".to_owned());
                 params
             }),
             pool: Some(PoolCfg {
@@ -104,7 +104,7 @@ fn test_globaldatabaseconfig_serialization() {
     assert!(deserialized.servers.contains_key("postgres_main"));
 
     let server_config = &deserialized.servers["postgres_main"];
-    assert_eq!(server_config.host, Some("db.example.com".to_string()));
+    assert_eq!(server_config.host, Some("db.example.com".to_owned()));
     assert_eq!(server_config.port, Some(5432));
 }
 
@@ -165,21 +165,21 @@ fn test_deny_unknown_fields() {
 fn test_minimal_configs() {
     // Test minimal SQLite config
     let sqlite_config = DbConnConfig {
-        file: Some("data.db".to_string()),
+        file: Some("data.db".to_owned()),
         ..Default::default()
     };
     let json = serde_json::to_string(&sqlite_config).unwrap();
     let deserialized: DbConnConfig = serde_json::from_str(&json).unwrap();
-    assert_eq!(deserialized.file, Some("data.db".to_string()));
+    assert_eq!(deserialized.file, Some("data.db".to_owned()));
 
     // Test minimal server reference config
     let server_ref_config = DbConnConfig {
-        server: Some("main_db".to_string()),
-        dbname: Some("myapp".to_string()),
+        server: Some("main_db".to_owned()),
+        dbname: Some("myapp".to_owned()),
         ..Default::default()
     };
     let json = serde_json::to_string(&server_ref_config).unwrap();
     let deserialized: DbConnConfig = serde_json::from_str(&json).unwrap();
-    assert_eq!(deserialized.server, Some("main_db".to_string()));
-    assert_eq!(deserialized.dbname, Some("myapp".to_string()));
+    assert_eq!(deserialized.server, Some("main_db".to_owned()));
+    assert_eq!(deserialized.dbname, Some("myapp".to_owned()));
 }

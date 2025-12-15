@@ -2,6 +2,7 @@
 //!
 //! System module for service discovery.
 //! This module provides `DirectoryService` for gRPC service registration and discovery.
+#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 
 use anyhow::Result;
 use async_trait::async_trait;

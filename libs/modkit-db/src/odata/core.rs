@@ -268,7 +268,7 @@ pub fn parse_cursor_value(kind: FieldKind, s: &str) -> ODataBuildResult<sea_orm:
     use sea_orm::Value as V;
 
     let result = match kind {
-        FieldKind::String => V::String(Some(Box::new(s.to_string()))),
+        FieldKind::String => V::String(Some(Box::new(s.to_owned()))),
         FieldKind::I64 => {
             let i = s
                 .parse::<i64>()
@@ -409,7 +409,7 @@ fn resolve_field<'a, E: EntityTrait>(
 ) -> Result<&'a Field<E>, ODataError> {
     fld_map
         .get(name)
-        .ok_or_else(|| ODataError::InvalidOrderByField(name.to_string()))
+        .ok_or_else(|| ODataError::InvalidOrderByField(name.to_owned()))
 }
 
 /* ---------- tiebreaker handling ---------- */
@@ -445,7 +445,7 @@ pub fn build_cursor_for_model<E: EntityTrait>(
         o: primary_dir,
         s: order.to_signed_tokens(),
         f: filter_hash,
-        d: direction.to_string(),
+        d: direction.to_owned(),
     })
 }
 

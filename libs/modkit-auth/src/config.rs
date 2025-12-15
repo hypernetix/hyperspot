@@ -119,11 +119,11 @@ pub enum PluginConfig {
 }
 
 fn default_tenant_claim() -> String {
-    "tenants".to_string()
+    "tenants".to_owned()
 }
 
 fn default_roles_claim() -> String {
-    "roles".to_string()
+    "roles".to_owned()
 }
 
 /// Build an `AuthDispatcher` from configuration.
@@ -195,6 +195,7 @@ pub fn build_auth_dispatcher(config: &AuthConfig) -> Result<AuthDispatcher, Conf
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 
@@ -210,21 +211,21 @@ mod tests {
     fn test_single_mode_config() {
         let mut plugins = HashMap::new();
         plugins.insert(
-            "keycloak".to_string(),
+            "keycloak".to_owned(),
             PluginConfig::Keycloak {
-                tenant_claim: "tenants".to_string(),
-                client_roles: Some("modkit-api".to_string()),
+                tenant_claim: "tenants".to_owned(),
+                client_roles: Some("modkit-api".to_owned()),
                 role_prefix: None,
             },
         );
 
         let config = AuthConfig {
             mode: AuthModeConfig {
-                provider: "keycloak".to_string(),
+                provider: "keycloak".to_owned(),
             },
             leeway_seconds: 60,
-            issuers: vec!["https://auth.example.com".to_string()],
-            audiences: vec!["api".to_string()],
+            issuers: vec!["https://auth.example.com".to_owned()],
+            audiences: vec!["api".to_owned()],
             jwks: None,
             plugins,
         };
@@ -237,7 +238,7 @@ mod tests {
     fn test_single_mode_unknown_plugin() {
         let config = AuthConfig {
             mode: AuthModeConfig {
-                provider: "unknown".to_string(),
+                provider: "unknown".to_owned(),
             },
             plugins: HashMap::new(),
             ..Default::default()
@@ -252,23 +253,23 @@ mod tests {
     fn test_config_serialization() {
         let mut plugins = HashMap::new();
         plugins.insert(
-            "keycloak".to_string(),
+            "keycloak".to_owned(),
             PluginConfig::Keycloak {
-                tenant_claim: "tenants".to_string(),
-                client_roles: Some("modkit-api".to_string()),
-                role_prefix: Some("kc".to_string()),
+                tenant_claim: "tenants".to_owned(),
+                client_roles: Some("modkit-api".to_owned()),
+                role_prefix: Some("kc".to_owned()),
             },
         );
 
         let config = AuthConfig {
             mode: AuthModeConfig {
-                provider: "keycloak".to_string(),
+                provider: "keycloak".to_owned(),
             },
             leeway_seconds: 120,
-            issuers: vec!["https://auth.example.com".to_string()],
-            audiences: vec!["api".to_string()],
+            issuers: vec!["https://auth.example.com".to_owned()],
+            audiences: vec!["api".to_owned()],
             jwks: Some(JwksConfig {
-                uri: "https://auth.example.com/.well-known/jwks.json".to_string(),
+                uri: "https://auth.example.com/.well-known/jwks.json".to_owned(),
                 refresh_interval_seconds: 300,
                 max_backoff_seconds: 3600,
             }),
@@ -287,22 +288,22 @@ mod tests {
     fn test_build_dispatcher_with_jwks() {
         let mut plugins = HashMap::new();
         plugins.insert(
-            "oidc".to_string(),
+            "oidc".to_owned(),
             PluginConfig::Oidc {
-                tenant_claim: "tenants".to_string(),
-                roles_claim: "roles".to_string(),
+                tenant_claim: "tenants".to_owned(),
+                roles_claim: "roles".to_owned(),
             },
         );
 
         let config = AuthConfig {
             mode: AuthModeConfig {
-                provider: "oidc".to_string(),
+                provider: "oidc".to_owned(),
             },
             leeway_seconds: 60,
-            issuers: vec!["https://auth.example.com".to_string()],
-            audiences: vec!["api".to_string()],
+            issuers: vec!["https://auth.example.com".to_owned()],
+            audiences: vec!["api".to_owned()],
             jwks: Some(JwksConfig {
-                uri: "https://auth.example.com/.well-known/jwks.json".to_string(),
+                uri: "https://auth.example.com/.well-known/jwks.json".to_owned(),
                 refresh_interval_seconds: 300,
                 max_backoff_seconds: 3600,
             }),

@@ -28,7 +28,7 @@ async fn update_with_scoped_ctx_denies_out_of_scope() {
 
     // Act: Try to update user outside scope
     let mut updated = user.clone();
-    updated.email = "hacker@example.com".to_string();
+    updated.email = "hacker@example.com".to_owned();
     updated.updated_at = chrono::Utc::now();
 
     let result = repo.update(&ctx_deny, updated).await;
@@ -63,7 +63,7 @@ async fn update_succeeds_within_scope() {
 
     // Act: Update user within scope
     let mut updated = user.clone();
-    updated.email = "updated@example.com".to_string();
+    updated.email = "updated@example.com".to_owned();
     updated.updated_at = chrono::Utc::now();
 
     let result = repo.update(&ctx_ok, updated).await;
@@ -93,7 +93,7 @@ async fn update_with_deny_all_fails() {
 
     // Act: Try to update with deny-all context
     let mut updated = user.clone();
-    updated.email = "blocked@example.com".to_string();
+    updated.email = "blocked@example.com".to_owned();
 
     let result = repo.update(&ctx, updated).await;
 

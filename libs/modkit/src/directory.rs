@@ -46,7 +46,7 @@ impl DirectoryApi for LocalDirectoryApi {
         for inst in self.mgr.instances_of(module) {
             if let Some((_, ep)) = inst.grpc_services.iter().next() {
                 result.push(ServiceInstanceInfo {
-                    module: module.to_string(),
+                    module: module.to_owned(),
                     instance_id: inst.instance_id.to_string(),
                     endpoint: ServiceEndpoint::new(ep.uri.clone()),
                     version: inst.version.clone(),
@@ -98,6 +98,7 @@ impl DirectoryApi for LocalDirectoryApi {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 
@@ -118,13 +119,13 @@ mod tests {
         let instance_id = Uuid::new_v4();
         // Register an instance through the API
         let register_info = RegisterInstanceInfo {
-            module: "test_module".to_string(),
+            module: "test_module".to_owned(),
             instance_id: instance_id.to_string(),
             grpc_services: vec![(
-                "test.Service".to_string(),
+                "test.Service".to_owned(),
                 ServiceEndpoint::http("127.0.0.1", 8001),
             )],
-            version: Some("1.0.0".to_string()),
+            version: Some("1.0.0".to_owned()),
         };
 
         api.register_instance(register_info).await.unwrap();
@@ -133,7 +134,7 @@ mod tests {
         let instances = dir.instances_of("test_module");
         assert_eq!(instances.len(), 1);
         assert_eq!(instances[0].instance_id, instance_id);
-        assert_eq!(instances[0].version, Some("1.0.0".to_string()));
+        assert_eq!(instances[0].version, Some("1.0.0".to_owned()));
         assert!(instances[0].grpc_services.contains_key("test.Service"));
     }
 

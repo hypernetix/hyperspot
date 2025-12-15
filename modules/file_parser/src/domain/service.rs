@@ -58,7 +58,7 @@ impl FileParserService {
                 .iter()
                 .map(ToString::to_string)
                 .collect();
-            supported_extensions.insert(id.to_string(), extensions);
+            supported_extensions.insert(id.to_owned(), extensions);
         }
 
         FileParserInfo {
@@ -264,7 +264,7 @@ impl FileParserService {
             _ => return None,
         };
 
-        Some(ext.to_string())
+        Some(ext.to_owned())
     }
 
     /// Validate MIME type against expected type for extension

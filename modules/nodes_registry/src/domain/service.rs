@@ -117,7 +117,7 @@ impl Service {
         self.storage
             .get_syscap(node_id)
             .ok_or(DomainError::SysCapCollectionFailed(
-                "Failed to get syscap after refresh".to_string(),
+                "Failed to get syscap after refresh".to_owned(),
             ))
     }
 

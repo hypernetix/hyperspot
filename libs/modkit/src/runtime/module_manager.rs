@@ -351,7 +351,7 @@ impl ModuleManager {
         }
 
         let len = candidates.len();
-        let mut counter = self.rr_counters.entry(module.to_string()).or_insert(0);
+        let mut counter = self.rr_counters.entry(module.to_owned()).or_insert(0);
         let idx = *counter % len;
         *counter = (*counter + 1) % len;
 
@@ -385,7 +385,7 @@ impl ModuleManager {
 
         // Use a counter keyed by service name for round-robin
         let len = candidates.len();
-        let service_key = service_name.to_string();
+        let service_key = service_name.to_owned();
         let mut counter = self.rr_counters.entry(service_key).or_insert(0);
         let idx = *counter % len;
         *counter = (*counter + 1) % len;
@@ -401,6 +401,7 @@ impl Default for ModuleManager {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use std::thread::sleep;
@@ -416,13 +417,13 @@ mod tests {
                 .with_version("1.0.0"),
         );
 
-        dir.register_instance(instance.clone());
+        dir.register_instance(instance);
 
         let instances = dir.instances_of("test_module");
         assert_eq!(instances.len(), 1);
         assert_eq!(instances[0].instance_id, instance_id);
         assert_eq!(instances[0].module, "test_module");
-        assert_eq!(instances[0].version, Some("1.0.0".to_string()));
+        assert_eq!(instances[0].version, Some("1.0.0".to_owned()));
     }
 
     #[test]
@@ -460,7 +461,7 @@ mod tests {
 
         let registered = dir.instances_of("test_module");
         assert_eq!(registered.len(), 1, "Should not duplicate instance");
-        assert_eq!(registered[0].version, Some("2.0.0".to_string()));
+        assert_eq!(registered[0].version, Some("2.0.0".to_owned()));
     }
 
     #[test]
@@ -623,7 +624,7 @@ mod tests {
         assert_eq!(instance.module, "test_module");
         assert_eq!(instance.instance_id, instance_id);
         assert!(instance.control.is_some());
-        assert_eq!(instance.version, Some("1.2.3".to_string()));
+        assert_eq!(instance.version, Some("1.2.3".to_owned()));
         assert_eq!(instance.grpc_services.len(), 2);
         assert!(instance.grpc_services.contains_key("service1"));
         assert!(instance.grpc_services.contains_key("service2"));
@@ -672,12 +673,12 @@ mod tests {
         // Create two instances: one healthy, one quarantined
         let healthy_id = Uuid::new_v4();
         let healthy = Arc::new(ModuleInstance::new("test_module", healthy_id));
-        dir.register_instance(healthy.clone());
+        dir.register_instance(healthy);
         dir.update_heartbeat("test_module", healthy_id, Instant::now());
 
         let quarantined_id = Uuid::new_v4();
         let quarantined = Arc::new(ModuleInstance::new("test_module", quarantined_id));
-        dir.register_instance(quarantined.clone());
+        dir.register_instance(quarantined);
         dir.mark_quarantined("test_module", quarantined_id);
 
         // RR should only pick the healthy instance

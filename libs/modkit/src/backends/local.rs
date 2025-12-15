@@ -395,7 +395,7 @@ mod tests {
         let binary = PathBuf::from("/bin/sleep");
 
         cfg.binary = Some(binary);
-        cfg.args = vec!["10".to_string()]; // sleep for 10 seconds
+        cfg.args = vec!["10".to_owned()]; // sleep for 10 seconds
 
         // Spawn instance
         let handle = backend
@@ -442,7 +442,7 @@ mod tests {
         // Spawn instance for module_a
         let mut cfg_a = OopModuleConfig::new("module_a", BackendKind::LocalProcess);
         cfg_a.binary = Some(binary.clone());
-        cfg_a.args = vec!["10".to_string()];
+        cfg_a.args = vec!["10".to_owned()];
 
         let handle_a = backend
             .spawn_instance(&cfg_a)
@@ -452,7 +452,7 @@ mod tests {
         // Spawn instance for module_b
         let mut cfg_b = OopModuleConfig::new("module_b", BackendKind::LocalProcess);
         cfg_b.binary = Some(binary);
-        cfg_b.args = vec!["10".to_string()];
+        cfg_b.args = vec!["10".to_owned()];
 
         let handle_b = backend
             .spawn_instance(&cfg_b)
@@ -484,7 +484,7 @@ mod tests {
     async fn test_stop_nonexistent_instance() {
         let backend = test_backend();
         let handle = InstanceHandle {
-            module: "test_module".to_string(),
+            module: "test_module".to_owned(),
             instance_id: Uuid::new_v4(),
             backend: BackendKind::LocalProcess,
             pid: None,

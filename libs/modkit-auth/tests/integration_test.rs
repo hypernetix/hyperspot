@@ -13,21 +13,21 @@ async fn test_dispatcher_single_mode() {
     // Setup config with single mode
     let mut plugins = HashMap::new();
     plugins.insert(
-        "keycloak".to_string(),
+        "keycloak".to_owned(),
         PluginConfig::Keycloak {
-            tenant_claim: "tenants".to_string(),
-            client_roles: Some("modkit-api".to_string()),
+            tenant_claim: "tenants".to_owned(),
+            client_roles: Some("modkit-api".to_owned()),
             role_prefix: None,
         },
     );
 
     let config = AuthConfig {
         mode: AuthModeConfig {
-            provider: "keycloak".to_string(),
+            provider: "keycloak".to_owned(),
         },
         leeway_seconds: 60,
-        issuers: vec!["https://keycloak.example.com/realms/test".to_string()],
-        audiences: vec!["modkit-api".to_string()],
+        issuers: vec!["https://keycloak.example.com/realms/test".to_owned()],
+        audiences: vec!["modkit-api".to_owned()],
         jwks: None,
         plugins,
     };
@@ -45,7 +45,7 @@ async fn test_dispatcher_single_mode() {
 fn test_config_validation_unknown_plugin() {
     let config = AuthConfig {
         mode: AuthModeConfig {
-            provider: "unknown".to_string(),
+            provider: "unknown".to_owned(),
         },
         plugins: HashMap::new(),
         ..Default::default()
@@ -66,15 +66,15 @@ fn test_claims_structure() {
 
     let normalized = Claims {
         sub: user_id,
-        issuer: "https://auth.example.com".to_string(),
-        audiences: vec!["api".to_string()],
+        issuer: "https://auth.example.com".to_owned(),
+        audiences: vec!["api".to_owned()],
         expires_at: Some(time::OffsetDateTime::now_utc() + time::Duration::hours(1)),
         not_before: None,
         tenants: vec![tenant_id],
-        roles: vec!["admin".to_string(), "user".to_string()],
+        roles: vec!["admin".to_owned(), "user".to_owned()],
         extras: {
             let mut map = serde_json::Map::new();
-            map.insert("email".to_string(), json!("test@example.com"));
+            map.insert("email".to_owned(), json!("test@example.com"));
             map
         },
     };
@@ -97,8 +97,8 @@ fn test_claims_validation() {
     // Test expired token
     let expired = Claims {
         sub: user_id,
-        issuer: "https://auth.example.com".to_string(),
-        audiences: vec!["api".to_string()],
+        issuer: "https://auth.example.com".to_owned(),
+        audiences: vec!["api".to_owned()],
         expires_at: Some(time::OffsetDateTime::now_utc() - time::Duration::hours(1)),
         not_before: None,
         tenants: vec![],
@@ -111,8 +111,8 @@ fn test_claims_validation() {
     // Test not yet valid
     let future = Claims {
         sub: user_id,
-        issuer: "https://auth.example.com".to_string(),
-        audiences: vec!["api".to_string()],
+        issuer: "https://auth.example.com".to_owned(),
+        audiences: vec!["api".to_owned()],
         expires_at: None,
         not_before: Some(time::OffsetDateTime::now_utc() + time::Duration::hours(1)),
         tenants: vec![],
@@ -127,23 +127,23 @@ fn test_claims_validation() {
 fn test_config_serialization_roundtrip() {
     let mut plugins = HashMap::new();
     plugins.insert(
-        "keycloak".to_string(),
+        "keycloak".to_owned(),
         PluginConfig::Keycloak {
-            tenant_claim: "tenants".to_string(),
-            client_roles: Some("modkit-api".to_string()),
-            role_prefix: Some("kc".to_string()),
+            tenant_claim: "tenants".to_owned(),
+            client_roles: Some("modkit-api".to_owned()),
+            role_prefix: Some("kc".to_owned()),
         },
     );
 
     let config = AuthConfig {
         mode: AuthModeConfig {
-            provider: "keycloak".to_string(),
+            provider: "keycloak".to_owned(),
         },
         leeway_seconds: 120,
-        issuers: vec!["https://auth.example.com".to_string()],
-        audiences: vec!["api".to_string()],
+        issuers: vec!["https://auth.example.com".to_owned()],
+        audiences: vec!["api".to_owned()],
         jwks: Some(JwksConfig {
-            uri: "https://auth.example.com/.well-known/jwks.json".to_string(),
+            uri: "https://auth.example.com/.well-known/jwks.json".to_owned(),
             refresh_interval_seconds: 300,
             max_backoff_seconds: 3600,
         }),
@@ -166,8 +166,8 @@ fn test_config_serialization_roundtrip() {
 #[test]
 fn test_claims_error_types() {
     let err = ClaimsError::InvalidIssuer {
-        expected: vec!["https://expected.com".to_string()],
-        actual: "https://actual.com".to_string(),
+        expected: vec!["https://expected.com".to_owned()],
+        actual: "https://actual.com".to_owned(),
     };
     assert!(err.to_string().contains("expected"));
     assert!(err.to_string().contains("actual"));
@@ -175,7 +175,7 @@ fn test_claims_error_types() {
     let err = ClaimsError::Expired;
     assert_eq!(err.to_string(), "Token expired");
 
-    let err = ClaimsError::MissingClaim("sub".to_string());
+    let err = ClaimsError::MissingClaim("sub".to_owned());
     assert!(err.to_string().contains("sub"));
 
     // Test new error variants
@@ -193,16 +193,16 @@ fn test_claims_error_types() {
 async fn test_dispatcher_refresh_keys_with_no_providers() {
     let mut plugins = HashMap::new();
     plugins.insert(
-        "oidc".to_string(),
+        "oidc".to_owned(),
         PluginConfig::Oidc {
-            tenant_claim: "tenants".to_string(),
-            roles_claim: "roles".to_string(),
+            tenant_claim: "tenants".to_owned(),
+            roles_claim: "roles".to_owned(),
         },
     );
 
     let config = AuthConfig {
         mode: AuthModeConfig {
-            provider: "oidc".to_string(),
+            provider: "oidc".to_owned(),
         },
         plugins,
         ..Default::default()

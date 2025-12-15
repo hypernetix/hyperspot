@@ -232,7 +232,7 @@ fn odata_value_to_sea_value(value: &ODataValue) -> Result<sea_orm::Value, String
             } else if let Some(f) = n.to_f64() {
                 sea_orm::Value::Double(Some(f))
             } else {
-                return Err("Number value out of range".to_string());
+                return Err("Number value out of range".to_owned());
             }
         }
         ODataValue::Bool(b) => sea_orm::Value::Bool(Some(*b)),
@@ -241,7 +241,7 @@ fn odata_value_to_sea_value(value: &ODataValue) -> Result<sea_orm::Value, String
         ODataValue::Date(d) => sea_orm::Value::ChronoDate(Some(Box::new(*d))),
         ODataValue::Time(t) => sea_orm::Value::ChronoTime(Some(Box::new(*t))),
         ODataValue::Null => {
-            return Err("NULL values should be handled separately".to_string());
+            return Err("NULL values should be handled separately".to_owned());
         }
     })
 }
@@ -285,14 +285,14 @@ pub fn encode_cursor_value(value: &sea_orm::Value, kind: FieldKind) -> Result<St
     let result = match (kind, value) {
         (FieldKind::String, V::String(Some(s))) => s.to_string(),
         (FieldKind::I64, V::BigInt(Some(i))) => i.to_string(),
-        (FieldKind::F64, V::Double(Some(f))) => ryu::Buffer::new().format(*f).to_string(),
+        (FieldKind::F64, V::Double(Some(f))) => ryu::Buffer::new().format(*f).to_owned(),
         (FieldKind::Bool, V::Bool(Some(b))) => b.to_string(),
         (FieldKind::Uuid, V::Uuid(Some(u))) => u.to_string(),
         (FieldKind::DateTimeUtc, V::ChronoDateTimeUtc(Some(dt))) => dt.to_rfc3339(),
         (FieldKind::Date, V::ChronoDate(Some(d))) => d.to_string(),
         (FieldKind::Time, V::ChronoTime(Some(t))) => t.to_string(),
         (FieldKind::Decimal, V::Decimal(Some(d))) => d.to_string(),
-        _ => return Err("Unsupported or mismatched cursor value type".to_string()),
+        _ => return Err("Unsupported or mismatched cursor value type".to_owned()),
     };
 
     Ok(result)
@@ -309,53 +309,53 @@ pub fn parse_cursor_value(kind: FieldKind, s: &str) -> Result<sea_orm::Value, St
     use sea_orm::Value as V;
 
     let result = match kind {
-        FieldKind::String => V::String(Some(Box::new(s.to_string()))),
+        FieldKind::String => V::String(Some(Box::new(s.to_owned()))),
         FieldKind::I64 => {
             let i = s
                 .parse::<i64>()
-                .map_err(|_| "invalid i64 in cursor".to_string())?;
+                .map_err(|_| "invalid i64 in cursor".to_owned())?;
             V::BigInt(Some(i))
         }
         FieldKind::F64 => {
             let f = s
                 .parse::<f64>()
-                .map_err(|_| "invalid f64 in cursor".to_string())?;
+                .map_err(|_| "invalid f64 in cursor".to_owned())?;
             V::Double(Some(f))
         }
         FieldKind::Bool => {
             let b = s
                 .parse::<bool>()
-                .map_err(|_| "invalid bool in cursor".to_string())?;
+                .map_err(|_| "invalid bool in cursor".to_owned())?;
             V::Bool(Some(b))
         }
         FieldKind::Uuid => {
             let u = s
                 .parse::<uuid::Uuid>()
-                .map_err(|_| "invalid uuid in cursor".to_string())?;
+                .map_err(|_| "invalid uuid in cursor".to_owned())?;
             V::Uuid(Some(Box::new(u)))
         }
         FieldKind::DateTimeUtc => {
             let dt = chrono::DateTime::parse_from_rfc3339(s)
-                .map_err(|_| "invalid datetime in cursor".to_string())?
+                .map_err(|_| "invalid datetime in cursor".to_owned())?
                 .with_timezone(&chrono::Utc);
             V::ChronoDateTimeUtc(Some(Box::new(dt)))
         }
         FieldKind::Date => {
             let d = s
                 .parse::<chrono::NaiveDate>()
-                .map_err(|_| "invalid date in cursor".to_string())?;
+                .map_err(|_| "invalid date in cursor".to_owned())?;
             V::ChronoDate(Some(Box::new(d)))
         }
         FieldKind::Time => {
             let t = s
                 .parse::<chrono::NaiveTime>()
-                .map_err(|_| "invalid time in cursor".to_string())?;
+                .map_err(|_| "invalid time in cursor".to_owned())?;
             V::ChronoTime(Some(Box::new(t)))
         }
         FieldKind::Decimal => {
             let d = s
                 .parse::<rust_decimal::Decimal>()
-                .map_err(|_| "invalid decimal in cursor".to_string())?;
+                .map_err(|_| "invalid decimal in cursor".to_owned())?;
             V::Decimal(Some(Box::new(d)))
         }
     };
@@ -679,11 +679,12 @@ where
         o: primary_dir,
         s: order.to_signed_tokens(),
         f: filter_hash.map(ToString::to_string),
-        d: direction.to_string(),
+        d: direction.to_owned(),
     })
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 
@@ -697,7 +698,7 @@ mod tests {
 
     #[test]
     fn test_odata_value_to_sea_value_string() {
-        let value = ODataValue::String("test".to_string());
+        let value = ODataValue::String("test".to_owned());
         let result = odata_value_to_sea_value(&value);
         assert!(result.is_ok());
     }
@@ -713,7 +714,7 @@ mod tests {
     #[test]
     fn test_encode_decode_cursor_string() {
         use sea_orm::Value as V;
-        let val = V::String(Some(Box::new("test".to_string())));
+        let val = V::String(Some(Box::new("test".to_owned())));
         let encoded = encode_cursor_value(&val, FieldKind::String).unwrap();
         assert_eq!(encoded, "test");
 

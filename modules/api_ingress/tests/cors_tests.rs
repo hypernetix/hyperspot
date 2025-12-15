@@ -126,7 +126,7 @@ impl RestfulModule for CorsTestModule {
 
 async fn test_handler() -> Json<TestData> {
     Json(TestData {
-        value: "cors-test".to_string(),
+        value: "cors-test".to_owned(),
     })
 }
 
