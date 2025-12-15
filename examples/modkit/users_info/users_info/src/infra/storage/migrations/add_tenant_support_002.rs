@@ -1,5 +1,5 @@
 use sea_orm_migration::prelude::*;
-use sea_orm_migration::sea_orm::ConnectionTrait;
+use sea_orm_migration::sea_orm::{ConnectionTrait, Statement};
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
@@ -38,16 +38,17 @@ impl MigrationTrait for Migration {
                         .await?;
 
                     // Step 2: Backfill all rows with the root tenant UUID
-                    let upd = match backend {
-                        DB::Postgres => format!(
-                            "UPDATE \"users\" SET \"tenant_id\"='{root_tenant}' WHERE \"tenant_id\" IS NULL"
-                        ),
-                        DB::MySql => format!(
-                            "UPDATE `users` SET `tenant_id`='{root_tenant}' WHERE `tenant_id` IS NULL"
-                        ),
+                    let sql = match backend {
+                        DB::Postgres => {
+                            r#"UPDATE "users" SET "tenant_id" = $1 WHERE "tenant_id" IS NULL"#
+                        }
+                        DB::MySql => {
+                            r"UPDATE `users` SET `tenant_id` = ? WHERE `tenant_id` IS NULL"
+                        }
                         DB::Sqlite => unreachable!(),
                     };
-                    manager.get_connection().execute_unprepared(&upd).await?;
+                    let stmt = Statement::from_sql_and_values(backend, sql, [root_tenant.into()]);
+                    manager.get_connection().execute(stmt).await?;
 
                     // Step 3: Set NOT NULL constraint
                     manager
@@ -61,10 +62,14 @@ impl MigrationTrait for Migration {
                 }
                 DB::Sqlite => {
                     // SQLite cannot modify columns; add directly with NOT NULL + DEFAULT
-                    let sql = format!(
-                        "ALTER TABLE \"users\" ADD COLUMN \"tenant_id\" TEXT NOT NULL DEFAULT '{root_tenant}'"
+                    // Note: SQLite DEFAULT requires a literal value, cannot use parameters.
+                    // root_tenant is a compile-time constant, so this is safe.
+                    let stmt = Statement::from_sql_and_values(
+                        backend,
+                        r#"ALTER TABLE "users" ADD COLUMN "tenant_id" TEXT NOT NULL DEFAULT ?"#,
+                        [root_tenant.into()],
                     );
-                    manager.get_connection().execute_unprepared(&sql).await?;
+                    manager.get_connection().execute(stmt).await?;
                 }
             }
         }
