@@ -61,15 +61,13 @@ impl MigrationTrait for Migration {
                         .await?;
                 }
                 DB::Sqlite => {
-                    // SQLite cannot modify columns; add directly with NOT NULL + DEFAULT
-                    // Note: SQLite DEFAULT requires a literal value, cannot use parameters.
-                    // root_tenant is a compile-time constant, so this is safe.
-                    let stmt = Statement::from_sql_and_values(
-                        backend,
-                        r#"ALTER TABLE "users" ADD COLUMN "tenant_id" TEXT NOT NULL DEFAULT ?"#,
-                        [root_tenant.into()],
+                    // SQLite cannot modify columns; add directly with NOT NULL + DEFAULT.
+                    // SQLite's ALTER TABLE DEFAULT clause requires a literal value, not a parameter.
+                    // Since root_tenant is a compile-time constant, string interpolation is safe here.
+                    let sql = format!(
+                        r#"ALTER TABLE "users" ADD COLUMN "tenant_id" TEXT NOT NULL DEFAULT '{root_tenant}'"#
                     );
-                    manager.get_connection().execute(stmt).await?;
+                    manager.get_connection().execute_unprepared(&sql).await?;
                 }
             }
         }
