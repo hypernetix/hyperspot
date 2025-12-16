@@ -113,7 +113,7 @@ modules:
 
   module_orchestrator:
     config:
-      # No configuration needed for the module orchestrator
+    # No configuration needed for the module orchestrator
 
   grpc_hub:
     config:
@@ -131,7 +131,7 @@ modules:
         #   - Configure system modules for OoP process (e.g., grpc_hub.listen_addr)
         #   - Override settings from master (MODKIT_MODULE_CONFIG)
         #   - Run in standalone mode (without master host)
-        args: ["--config", "C:/projects/hyperspot-MikeFalcon/config/oop-example.yaml"]
+        args: [ "--config", "C:/projects/hyperspot-MikeFalcon/config/oop-example.yaml" ]
         working_directory: "."
         environment: { }
     config:
@@ -188,8 +188,8 @@ tracing:
 
   # Sampling configuration
   sampler:
-    strategy: "parentbased_ratio"  # parentbased_always_on | parentbased_ratio | always_on | always_off
-    ratio: 1.0  # Sample 20% of traces (only used with ratio strategies)
+    parent_based_ratio: # parentbased_always_on | parent_based_ratio | always_on | always_off
+      ratio: 1.0  # Sample 20% of traces (only used with ratio strategies)
 
   # Propagation configuration
   propagation:

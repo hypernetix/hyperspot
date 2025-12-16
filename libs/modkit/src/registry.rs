@@ -746,6 +746,12 @@ mod tests {
         }
     }
 
+    #[test]
+    fn test_module_registry_builds() {
+        let registry = ModuleRegistry::discover_and_build();
+        assert!(registry.is_ok(), "Registry should build successfully");
+    }
+
     /* Test helper implementations */
     #[derive(Default)]
     struct DummyRest;

@@ -1,10 +1,10 @@
-use crate::config::{LoggingConfig, Section};
+use super::super::config::{LoggingConfig, Section};
+use anyhow::Context;
 use std::collections::HashMap;
 use std::io;
 use std::io::{IsTerminal, Write};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
-use tracing::Level;
 use tracing_subscriber::{fmt, util::SubscriberInitExt, Layer};
 
 // ========== OTEL-agnostic layer type (compiles with/without the feature) ==========
@@ -21,18 +21,6 @@ static CONSOLE_GUARD: std::sync::OnceLock<tracing_appender::non_blocking::Worker
     std::sync::OnceLock::new();
 
 // ================= level helpers =================
-
-fn parse_tracing_level(s: &str) -> Option<tracing::Level> {
-    match s.to_ascii_lowercase().as_str() {
-        "trace" => Some(Level::TRACE),
-        "debug" => Some(Level::DEBUG),
-        "warn" => Some(Level::WARN),
-        "error" => Some(Level::ERROR),
-        "off" | "none" => None,
-        // "info" and any unrecognized value default to INFO
-        _ => Some(Level::INFO),
-    }
-}
 
 /// Returns true if target == `crate_name` or target starts with "`crate_name::`"
 fn matches_crate_prefix(target: &str, crate_name: &str) -> bool {
@@ -179,7 +167,9 @@ fn create_rotating_writer_at_path(
     }
 
     // Respect retention policy: prefer MaxFiles if provided, else Age
-    let age = chrono::Duration::days(i64::from(max_age_days.unwrap_or(1)));
+    let max_age_days = max_age_days.unwrap_or(1);
+    let age = chrono::Duration::try_days(i64::from(max_age_days))
+        .with_context(|| format!("Invalid max_age_days: {max_age_days}"))?;
     let limit = if let Some(n) = max_backups {
         FileLimit::MaxFiles(n)
     } else {
@@ -250,7 +240,7 @@ fn build_targets(config: &ConfigData, kind: SinkKind) -> Targets {
             // default level
             let default_level = config
                 .default_section
-                .and_then(|s| parse_tracing_level(s.console_level.as_str()))
+                .and_then(|s| s.console_level)
                 .map_or(LevelFilter::INFO, LevelFilter::from_level);
 
             // start with default
@@ -263,9 +253,7 @@ fn build_targets(config: &ConfigData, kind: SinkKind) -> Targets {
 
             // per-crate rules (console sink is always "active")
             for (crate_name, section) in &config.crate_sections {
-                if let Some(level) =
-                    parse_tracing_level(section.console_level.as_str()).map(LevelFilter::from_level)
-                {
+                if let Some(level) = section.console_level.map(LevelFilter::from_level) {
                     targets = targets.with_target(crate_name.clone(), level);
                 }
             }
@@ -275,17 +263,14 @@ fn build_targets(config: &ConfigData, kind: SinkKind) -> Targets {
 
         SinkKind::File { has_default_file } => {
             // default level depends on whether there is a default file sink
-            let default_level = config
-                .default_section
-                .and_then(|s| parse_tracing_level(s.file_level.as_str()))
-                .map_or(
-                    if has_default_file {
-                        LevelFilter::INFO
-                    } else {
-                        LevelFilter::OFF
-                    },
-                    LevelFilter::from_level,
-                );
+            let default_level = config.default_section.and_then(|s| s.file_level).map_or(
+                if has_default_file {
+                    LevelFilter::INFO
+                } else {
+                    LevelFilter::OFF
+                },
+                LevelFilter::from_level,
+            );
 
             let mut targets = Targets::new().with_default(default_level);
 
@@ -294,9 +279,7 @@ fn build_targets(config: &ConfigData, kind: SinkKind) -> Targets {
                 if section.file.trim().is_empty() {
                     continue;
                 }
-                if let Some(level) =
-                    parse_tracing_level(section.file_level.as_str()).map(LevelFilter::from_level)
-                {
+                if let Some(level) = section.file_level.map(LevelFilter::from_level) {
                     targets = targets.with_target(crate_name.clone(), level);
                 }
             }
