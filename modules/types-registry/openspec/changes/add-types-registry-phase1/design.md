@@ -10,6 +10,8 @@ HyperSpot requires a centralized GTS (Global Type System) registry to manage typ
 
 Phase 1.1 focuses on establishing the foundational contracts and in-memory storage, deferring REST API (Phase 1.2) and database persistence (Phase 1.3) to later phases.
 
+**Reference Implementation**: `examples/modkit/users_info` — follow this structure for SDK pattern, module layout, and ClientHub integration.
+
 **Stakeholders**: Platform developers, module authors, third-party integrators
 
 ## Goals / Non-Goals
@@ -46,14 +48,44 @@ Phase 1.1 focuses on establishing the foundational contracts and in-memory stora
 
 ### 2. SDK Pattern with Separate Crates
 
-**Decision**: Follow the standard HyperSpot SDK pattern with two crates:
-- `types-registry-sdk`: Public API trait, models, errors
-- `types-registry`: Module implementation
+**Decision**: Follow the standard HyperSpot SDK pattern with two crates (mirroring `examples/modkit/users_info`):
+
+**SDK Crate (`types-registry-sdk/`):**
+```
+types-registry-sdk/
+├── Cargo.toml
+└── src/
+    ├── lib.rs          # Re-exports: TypesRegistryApi, models, errors
+    ├── api.rs          # TypesRegistryApi trait definition
+    ├── models.rs       # GtsEntity, NewGtsEntity, GtsEntityKind, etc.
+    └── errors.rs       # TypesRegistryError enum
+```
+
+**Module Crate (`types-registry/`):**
+```
+types-registry/
+├── Cargo.toml
+└── src/
+    ├── lib.rs              # Re-exports SDK + module
+    ├── module.rs           # #[modkit::module] declaration
+    ├── local_client.rs     # TypesRegistryLocalClient implements SDK trait
+    ├── config.rs           # TypesRegistryConfig
+    ├── domain/
+    │   ├── mod.rs
+    │   ├── service.rs      # Domain service with business logic
+    │   ├── error.rs        # DomainError
+    │   ├── repo.rs         # GtsRepository trait (port)
+    │   └── ports/          # Output ports (EventPublisher, etc.)
+    └── infra/
+        └── storage/
+            └── in_memory_repo.rs  # In-memory repository implementation
+```
 
 **Rationale**:
-- Consistent with other HyperSpot modules
+- Consistent with `users_info` example and other HyperSpot modules
 - Consumers only depend on lightweight SDK crate
 - Clear separation of public API and implementation
+- DDD-light structure with ports/adapters
 
 ### 3. In-Memory Storage with DashMap
 
@@ -173,7 +205,7 @@ InMemoryStorage {
 ### Query Model
 
 ```rust
-pub struct ListEntitiesQuery {
+pub struct ListQuery {
     pub pattern: Option<String>,      // Wildcard pattern (OP#4)
     pub kind: Option<GtsEntityKind>,  // Filter by Type/Instance
     pub vendor: Option<String>,       // Filter by vendor
