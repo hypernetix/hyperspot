@@ -10,8 +10,8 @@ pub fn register_routes(
     openapi: &dyn OpenApiRegistry,
     service: Arc<FileParserService>,
 ) -> Router {
-    // GET /file-parser/info - Get information about available file parsers
-    router = OperationBuilder::get("/file-parser/info")
+    // GET /file-parser/v1/info - Get information about available file parsers
+    router = OperationBuilder::get("/file-parser/v1/info")
         .operation_id("file_parser.get_parser_info")
         .summary("Get information about available file parsers")
         .tag("File Parser")
@@ -25,8 +25,8 @@ pub fn register_routes(
         .standard_errors(openapi)
         .register(router, openapi);
 
-    // POST /file-parser/parse-local - Parse a file from a local path
-    router = OperationBuilder::post("/file-parser/parse-local")
+    // POST /file-parser/v1/parse-local - Parse a file from a local path
+    router = OperationBuilder::post("/file-parser/v1/parse-local")
         .operation_id("file_parser.parse_local")
         .summary("Parse a file from a local path")
         .tag("File Parser")
@@ -49,8 +49,8 @@ pub fn register_routes(
         .error_415(openapi)
         .register(router, openapi);
 
-    // POST /file-parser/upload - Upload and parse a file
-    router = OperationBuilder::post("/file-parser/upload")
+    // POST /file-parser/v1/upload - Upload and parse a file
+    router = OperationBuilder::post("/file-parser/v1/upload")
         .operation_id("file_parser.upload")
         .summary("Upload and parse a file")
         .tag("File Parser")
@@ -78,8 +78,8 @@ pub fn register_routes(
         .error_415(openapi)
         .register(router, openapi);
 
-    // POST /file-parser/parse-url - Parse a file from a URL
-    router = OperationBuilder::post("/file-parser/parse-url")
+    // POST /file-parser/v1/parse-url - Parse a file from a URL
+    router = OperationBuilder::post("/file-parser/v1/parse-url")
         .operation_id("file_parser.parse_url")
         .summary("Parse a file from a URL")
         .tag("File Parser")
@@ -102,8 +102,8 @@ pub fn register_routes(
         .error_415(openapi)
         .register(router, openapi);
 
-    // POST /file-parser/parse-local/markdown - Parse a local file and stream Markdown
-    router = OperationBuilder::post("/file-parser/parse-local/markdown")
+    // POST /file-parser/v1/parse-local/markdown - Parse a local file and stream Markdown
+    router = OperationBuilder::post("/file-parser/v1/parse-local/markdown")
         .operation_id("file_parser.parse_local_markdown")
         .summary("Parse a local file and stream Markdown")
         .tag("File Parser")
@@ -115,8 +115,8 @@ pub fn register_routes(
         .standard_errors(openapi)
         .register(router, openapi);
 
-    // POST /file-parser/upload/markdown - Upload and parse a file, streaming Markdown
-    router = OperationBuilder::post("/file-parser/upload/markdown")
+    // POST /file-parser/v1/upload/markdown - Upload and parse a file, streaming Markdown
+    router = OperationBuilder::post("/file-parser/v1/upload/markdown")
         .operation_id("file_parser.upload_markdown")
         .summary("Upload and parse a file, streaming Markdown")
         .tag("File Parser")
@@ -128,8 +128,8 @@ pub fn register_routes(
         .error_415(openapi)
         .register(router, openapi);
 
-    // POST /file-parser/parse-url/markdown - Parse a file from a URL and stream Markdown
-    router = OperationBuilder::post("/file-parser/parse-url/markdown")
+    // POST /file-parser/v1/parse-url/markdown - Parse a file from a URL and stream Markdown
+    router = OperationBuilder::post("/file-parser/v1/parse-url/markdown")
         .operation_id("file_parser.parse_url_markdown")
         .summary("Parse a file from a URL and stream Markdown")
         .tag("File Parser")

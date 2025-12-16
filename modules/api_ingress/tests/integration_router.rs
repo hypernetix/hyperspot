@@ -83,7 +83,7 @@ impl RestfulModule for TestUsersModule {
         // Schemas will be auto-registered when used in operations
 
         // GET /users - List users
-        let router = OperationBuilder::get("/users")
+        let router = OperationBuilder::get("/tests/v1/users")
             .operation_id("users:list")
             .summary("List all users")
             .description("Retrieve a paginated list of users")
@@ -104,7 +104,7 @@ impl RestfulModule for TestUsersModule {
             .register(router, openapi);
 
         // GET /users/{id} - Get user by ID
-        let router = OperationBuilder::get("/users/{id}")
+        let router = OperationBuilder::get("/tests/v1/users/{id}")
             .operation_id("users:get")
             .summary("Get user by ID")
             .description("Retrieve a specific user by their ID")
@@ -121,7 +121,7 @@ impl RestfulModule for TestUsersModule {
             .register(router, openapi);
 
         // POST /users - Create user
-        let router = OperationBuilder::post("/users")
+        let router = OperationBuilder::post("/tests/v1/users")
             .operation_id("users:create")
             .summary("Create new user")
             .description("Create a new user with the provided data")

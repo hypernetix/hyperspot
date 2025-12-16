@@ -480,7 +480,7 @@ The `modkit::api::prelude` module provides:
 
 ```rust
 // src/api/rest/routes.rs
-router = OperationBuilder::get("/users/{id}")
+router = OperationBuilder::get("/users-info/v1/users/{id}")
     .operation_id("users_info.get_user")
     .require_auth("users", "read")
     .handler(handlers::get_user)
@@ -1260,7 +1260,7 @@ external API clients.
        service: Arc<Service>,
    ) -> anyhow::Result<Router> {
        // GET /users - List users with cursor pagination
-       router = OperationBuilder::get("/users")
+       router = OperationBuilder::get("/users-info/v1/users")
            .operation_id("users_info.list_users")
            .summary("List users with cursor pagination")
            .tag("users")
@@ -1278,7 +1278,7 @@ external API clients.
            .register(router, openapi);
 
        // GET /users/{id} - Get a specific user
-       router = OperationBuilder::get("/users/{id}")
+       router = OperationBuilder::get("/users-info/v1/users/{id}")
            .operation_id("users_info.get_user")
            .summary("Get user by ID")
            .tag("users")
@@ -1293,7 +1293,7 @@ external API clients.
            .register(router, openapi);
 
        // POST /users - Create a new user
-       router = OperationBuilder::post("/users")
+       router = OperationBuilder::post("/users-info/v1/users")
            .operation_id("users_info.create_user")
            .summary("Create a new user")
            .tag("users")
@@ -1309,7 +1309,7 @@ external API clients.
            .register(router, openapi);
 
        // DELETE /users/{id} - Delete a user
-       router = OperationBuilder::delete("/users/{id}")
+       router = OperationBuilder::delete("/users-info/v1/users/{id}")
            .operation_id("users_info.delete_user")
            .summary("Delete user")
            .tag("users")
@@ -1600,7 +1600,7 @@ For real-time event streaming, add Server-Sent Events support.
        openapi: &dyn modkit::api::OpenApiRegistry,
        sse: modkit::SseBroadcaster<UserEvent>,
    ) -> axum::Router {
-       modkit::api::OperationBuilder::<_, _, ()>::get("/users/events")
+       modkit::api::OperationBuilder::<_, _, ()>::get("/users-info/v1/users/events")
            .operation_id("users_info.events")
            .summary("User events stream (SSE)")
            .description("Real-time stream of user events as Server-Sent Events")

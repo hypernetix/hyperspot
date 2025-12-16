@@ -537,7 +537,7 @@ where
     ///
     /// # Example
     /// ```rust,ignore
-    /// OperationBuilder::post("/upload")
+    /// OperationBuilder::post("/files/v1/upload")
     ///     .operation_id("upload_file")
     ///     .summary("Upload a file")
     ///     .multipart_file_request("file", Some("File to upload"))
@@ -587,7 +587,7 @@ where
     ///
     /// # Example
     /// ```rust,ignore
-    /// OperationBuilder::post("/upload")
+    /// OperationBuilder::post("/files/v1/upload")
     ///     .operation_id("upload_file")
     ///     .summary("Upload a file")
     ///     .octet_stream_request(Some("Raw file bytes to parse"))
@@ -620,7 +620,7 @@ where
     ///
     /// # Example
     /// ```rust,ignore
-    /// OperationBuilder::post("/upload")
+    /// OperationBuilder::post("/files/v1/upload")
     ///     .operation_id("upload_file")
     ///     .allow_content_types(&["multipart/form-data", "application/pdf"])
     ///     .handler(upload_handler)
@@ -646,7 +646,7 @@ where
     ///
     /// # Example
     /// ```rust,ignore
-    /// OperationBuilder::get("/users")
+    /// OperationBuilder::get("/users-info/v1/users")
     ///     .require_auth("users", "read")
     ///     .handler(list_users)
     ///     .json_response(200, "List of users")
@@ -679,7 +679,7 @@ where
     ///
     /// # Example
     /// ```rust,ignore
-    /// OperationBuilder::get("/health")
+    /// OperationBuilder::get("/users-info/v1/health")
     ///     .public()
     ///     .handler(health_check)
     ///     .json_response(200, "OK")
@@ -1056,7 +1056,7 @@ where
     /// # Example
     ///
     /// ```rust,ignore
-    /// let op = OperationBuilder::get("/users")
+    /// let op = OperationBuilder::get("/users-info/v1/users")
     ///     .handler(list_users)
     ///     .json_response(StatusCode::OK, "List of users")
     ///     .standard_errors(&registry);
@@ -1064,7 +1064,7 @@ where
     ///
     /// This adds the following error responses:
     /// - 400 Bad Request
-    /// - 401 Unauthorized  
+    /// - 401 Unauthorized
     /// - 403 Forbidden
     /// - 404 Not Found
     /// - 409 Conflict
@@ -1107,7 +1107,7 @@ where
     /// # Example
     ///
     /// ```rust,ignore
-    /// let op = OperationBuilder::post("/users")
+    /// let op = OperationBuilder::post("/users-info/v1/users")
     ///     .handler(create_user)
     ///     .json_request::<CreateUserRequest>(&registry, "User data")
     ///     .json_response(StatusCode::CREATED, "User created")
@@ -1289,7 +1289,7 @@ mod tests {
 
     #[test]
     fn test_builder_descriptive_methods() {
-        let builder = OperationBuilder::<Missing, Missing, (), AuthNotSet>::get("/test")
+        let builder = OperationBuilder::<Missing, Missing, (), AuthNotSet>::get("/tests/v1/test")
             .operation_id("test.get")
             .summary("Test endpoint")
             .description("A test endpoint for validation")
@@ -1297,7 +1297,7 @@ mod tests {
             .path_param("id", "Test ID");
 
         assert_eq!(builder.spec.method, Method::GET);
-        assert_eq!(builder.spec.path, "/test");
+        assert_eq!(builder.spec.path, "/tests/v1/test");
         assert_eq!(builder.spec.operation_id, Some("test.get".to_owned()));
         assert_eq!(builder.spec.summary, Some("Test endpoint".to_owned()));
         assert_eq!(
@@ -1313,7 +1313,7 @@ mod tests {
         let registry = MockRegistry::new();
         let router = Router::new();
 
-        let _router = OperationBuilder::<Missing, Missing, ()>::post("/test")
+        let _router = OperationBuilder::<Missing, Missing, ()>::post("/tests/v1/test")
             .summary("Test endpoint")
             .json_request::<serde_json::Value>(&registry, "optional body") // registers schema
             .public()
@@ -1330,7 +1330,7 @@ mod tests {
         assert_eq!(ops.len(), 1);
         let op = &ops[0];
         assert_eq!(op.method, Method::POST);
-        assert_eq!(op.path, "/test");
+        assert_eq!(op.path, "/tests/v1/test");
         assert!(op.request_body.is_some());
         assert!(op.request_body.as_ref().unwrap().required);
         assert_eq!(op.responses.len(), 1);
@@ -1343,80 +1343,99 @@ mod tests {
 
     #[test]
     fn test_convenience_constructors() {
-        let get_builder = OperationBuilder::<Missing, Missing, (), AuthNotSet>::get("/get");
+        let get_builder =
+            OperationBuilder::<Missing, Missing, (), AuthNotSet>::get("/tests/v1/get");
         assert_eq!(get_builder.spec.method, Method::GET);
-        assert_eq!(get_builder.spec.path, "/get");
+        assert_eq!(get_builder.spec.path, "/tests/v1/get");
 
-        let post_builder = OperationBuilder::<Missing, Missing, (), AuthNotSet>::post("/post");
+        let post_builder =
+            OperationBuilder::<Missing, Missing, (), AuthNotSet>::post("/tests/v1/post");
         assert_eq!(post_builder.spec.method, Method::POST);
-        assert_eq!(post_builder.spec.path, "/post");
+        assert_eq!(post_builder.spec.path, "/tests/v1/post");
 
-        let put_builder = OperationBuilder::<Missing, Missing, (), AuthNotSet>::put("/put");
+        let put_builder =
+            OperationBuilder::<Missing, Missing, (), AuthNotSet>::put("/tests/v1/put");
         assert_eq!(put_builder.spec.method, Method::PUT);
-        assert_eq!(put_builder.spec.path, "/put");
+        assert_eq!(put_builder.spec.path, "/tests/v1/put");
 
         let delete_builder =
-            OperationBuilder::<Missing, Missing, (), AuthNotSet>::delete("/delete");
+            OperationBuilder::<Missing, Missing, (), AuthNotSet>::delete("/tests/v1/delete");
         assert_eq!(delete_builder.spec.method, Method::DELETE);
-        assert_eq!(delete_builder.spec.path, "/delete");
+        assert_eq!(delete_builder.spec.path, "/tests/v1/delete");
 
-        let patch_builder = OperationBuilder::<Missing, Missing, (), AuthNotSet>::patch("/patch");
+        let patch_builder =
+            OperationBuilder::<Missing, Missing, (), AuthNotSet>::patch("/tests/v1/patch");
         assert_eq!(patch_builder.spec.method, Method::PATCH);
-        assert_eq!(patch_builder.spec.path, "/patch");
+        assert_eq!(patch_builder.spec.path, "/tests/v1/patch");
     }
 
     #[test]
     fn test_normalize_to_axum_path() {
         // Axum 0.8+ uses {param} syntax, same as OpenAPI
-        assert_eq!(normalize_to_axum_path("/users/{id}"), "/users/{id}");
         assert_eq!(
-            normalize_to_axum_path("/projects/{project_id}/items/{item_id}"),
-            "/projects/{project_id}/items/{item_id}"
+            normalize_to_axum_path("/tests/v1/users/{id}"),
+            "/tests/v1/users/{id}"
         );
-        assert_eq!(normalize_to_axum_path("/simple"), "/simple");
         assert_eq!(
-            normalize_to_axum_path("/users/{id}/edit"),
-            "/users/{id}/edit"
+            normalize_to_axum_path("/tests/v1/projects/{project_id}/items/{item_id}"),
+            "/tests/v1/projects/{project_id}/items/{item_id}"
+        );
+        assert_eq!(
+            normalize_to_axum_path("/tests/v1/simple"),
+            "/tests/v1/simple"
+        );
+        assert_eq!(
+            normalize_to_axum_path("/tests/v1/users/{id}/edit"),
+            "/tests/v1/users/{id}/edit"
         );
     }
 
     #[test]
     fn test_axum_to_openapi_path() {
         // Regular parameters stay the same
-        assert_eq!(axum_to_openapi_path("/users/{id}"), "/users/{id}");
         assert_eq!(
-            axum_to_openapi_path("/projects/{project_id}/items/{item_id}"),
-            "/projects/{project_id}/items/{item_id}"
+            axum_to_openapi_path("/tests/v1/users/{id}"),
+            "/tests/v1/users/{id}"
         );
-        assert_eq!(axum_to_openapi_path("/simple"), "/simple");
-        // Wildcards: Axum uses {*path}, OpenAPI uses {path}
-        assert_eq!(axum_to_openapi_path("/static/{*path}"), "/static/{path}");
         assert_eq!(
-            axum_to_openapi_path("/files/{*filepath}"),
-            "/files/{filepath}"
+            axum_to_openapi_path("/tests/v1/projects/{project_id}/items/{item_id}"),
+            "/tests/v1/projects/{project_id}/items/{item_id}"
+        );
+        assert_eq!(axum_to_openapi_path("/tests/v1/simple"), "/tests/v1/simple");
+        // Wildcards: Axum uses {*path}, OpenAPI uses {path}
+        assert_eq!(
+            axum_to_openapi_path("/tests/v1/static/{*path}"),
+            "/tests/v1/static/{path}"
+        );
+        assert_eq!(
+            axum_to_openapi_path("/tests/v1/files/{*filepath}"),
+            "/tests/v1/files/{filepath}"
         );
     }
 
     #[test]
     fn test_path_normalization_in_constructors() {
         // Test that paths are kept as-is (Axum 0.8+ uses same {param} syntax)
-        let builder = OperationBuilder::<Missing, Missing, ()>::get("/users/{id}");
-        assert_eq!(builder.spec.path, "/users/{id}");
+        let builder = OperationBuilder::<Missing, Missing, ()>::get("/tests/v1/users/{id}");
+        assert_eq!(builder.spec.path, "/tests/v1/users/{id}");
 
         let builder = OperationBuilder::<Missing, Missing, ()>::post(
-            "/projects/{project_id}/items/{item_id}",
+            "/tests/v1/projects/{project_id}/items/{item_id}",
         );
-        assert_eq!(builder.spec.path, "/projects/{project_id}/items/{item_id}");
+        assert_eq!(
+            builder.spec.path,
+            "/tests/v1/projects/{project_id}/items/{item_id}"
+        );
 
         // Simple paths remain unchanged
-        let builder = OperationBuilder::<Missing, Missing, ()>::get("/simple");
-        assert_eq!(builder.spec.path, "/simple");
+        let builder = OperationBuilder::<Missing, Missing, ()>::get("/tests/v1/simple");
+        assert_eq!(builder.spec.path, "/tests/v1/simple");
     }
 
     #[test]
     fn test_standard_errors() {
         let registry = MockRegistry::new();
-        let builder = OperationBuilder::<Missing, Missing, ()>::get("/test")
+        let builder = OperationBuilder::<Missing, Missing, ()>::get("/tests/v1/test")
             .public()
             .handler(test_handler)
             .json_response(http::StatusCode::OK, "Success")
@@ -1457,7 +1476,7 @@ mod tests {
     #[test]
     fn test_with_422_validation_error() {
         let registry = MockRegistry::new();
-        let builder = OperationBuilder::<Missing, Missing, ()>::post("/test")
+        let builder = OperationBuilder::<Missing, Missing, ()>::post("/tests/v1/test")
             .public()
             .handler(test_handler)
             .json_response(http::StatusCode::CREATED, "Created")
@@ -1484,7 +1503,7 @@ mod tests {
     #[test]
     fn test_allow_content_types_with_existing_request_body() {
         let registry = MockRegistry::new();
-        let builder = OperationBuilder::<Missing, Missing, ()>::post("/test")
+        let builder = OperationBuilder::<Missing, Missing, ()>::post("/tests/v1/test")
             .json_request::<serde_json::Value>(&registry, "Test request")
             .allow_content_types(&["application/json", "application/xml"])
             .public()
@@ -1502,7 +1521,7 @@ mod tests {
 
     #[test]
     fn test_allow_content_types_without_existing_request_body() {
-        let builder = OperationBuilder::<Missing, Missing, ()>::post("/test")
+        let builder = OperationBuilder::<Missing, Missing, ()>::post("/tests/v1/test")
             .allow_content_types(&["multipart/form-data"])
             .public()
             .handler(test_handler)
@@ -1519,7 +1538,7 @@ mod tests {
     #[test]
     fn test_allow_content_types_can_be_chained() {
         let registry = MockRegistry::new();
-        let builder = OperationBuilder::<Missing, Missing, ()>::post("/test")
+        let builder = OperationBuilder::<Missing, Missing, ()>::post("/tests/v1/test")
             .operation_id("test.post")
             .summary("Test endpoint")
             .json_request::<serde_json::Value>(&registry, "Test request")
@@ -1541,7 +1560,7 @@ mod tests {
 
     #[test]
     fn test_multipart_file_request() {
-        let builder = OperationBuilder::<Missing, Missing, ()>::post("/upload")
+        let builder = OperationBuilder::<Missing, Missing, ()>::post("/tests/v1/upload")
             .operation_id("test.upload")
             .summary("Upload file")
             .multipart_file_request("file", Some("Upload a file"))
@@ -1574,7 +1593,7 @@ mod tests {
 
     #[test]
     fn test_multipart_file_request_without_description() {
-        let builder = OperationBuilder::<Missing, Missing, ()>::post("/upload")
+        let builder = OperationBuilder::<Missing, Missing, ()>::post("/tests/v1/upload")
             .multipart_file_request("file", None)
             .public()
             .handler(test_handler)
@@ -1594,7 +1613,7 @@ mod tests {
 
     #[test]
     fn test_octet_stream_request() {
-        let builder = OperationBuilder::<Missing, Missing, ()>::post("/upload")
+        let builder = OperationBuilder::<Missing, Missing, ()>::post("/tests/v1/upload")
             .operation_id("test.upload")
             .summary("Upload raw file")
             .octet_stream_request(Some("Raw file bytes"))
@@ -1621,7 +1640,7 @@ mod tests {
 
     #[test]
     fn test_octet_stream_request_without_description() {
-        let builder = OperationBuilder::<Missing, Missing, ()>::post("/upload")
+        let builder = OperationBuilder::<Missing, Missing, ()>::post("/tests/v1/upload")
             .octet_stream_request(None)
             .public()
             .handler(test_handler)
@@ -1637,7 +1656,7 @@ mod tests {
     #[test]
     fn test_json_request_uses_ref_schema() {
         let registry = MockRegistry::new();
-        let builder = OperationBuilder::<Missing, Missing, ()>::post("/test")
+        let builder = OperationBuilder::<Missing, Missing, ()>::post("/tests/v1/test")
             .json_request::<serde_json::Value>(&registry, "Test request body")
             .public()
             .handler(test_handler)
@@ -1661,7 +1680,7 @@ mod tests {
         // This test ensures OpenAPI correctness: media type keys cannot include
         // parameters like "; charset=utf-8"
         let registry = MockRegistry::new();
-        let builder = OperationBuilder::<Missing, Missing, ()>::post("/test")
+        let builder = OperationBuilder::<Missing, Missing, ()>::post("/tests/v1/test")
             .operation_id("test.content_type_purity")
             .summary("Test response content types")
             .json_request::<serde_json::Value>(&registry, "Test")

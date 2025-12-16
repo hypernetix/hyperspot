@@ -174,7 +174,7 @@ async fn test_middleware_rejects_missing_content_type() {
     // Setup: operation that requires specific content type
     let specs = vec![OperationSpec {
         method: Method::POST,
-        path: "/api/upload".to_owned(),
+        path: "/files/v1/upload".to_owned(),
         operation_id: Some("test:upload".to_owned()),
         summary: None,
         description: None,
@@ -192,7 +192,7 @@ async fn test_middleware_rejects_missing_content_type() {
     let validation_map = build_mime_validation_map(&specs);
 
     let app = Router::new()
-        .route("/api/upload", post(test_handler))
+        .route("/files/v1/upload", post(test_handler))
         .layer(axum::middleware::from_fn(move |req, next| {
             mime_validation_middleware(validation_map.clone(), req, next)
         }));
@@ -200,7 +200,7 @@ async fn test_middleware_rejects_missing_content_type() {
     // Test: Send request without content-type header
     let request = Request::builder()
         .method("POST")
-        .uri("/api/upload")
+        .uri("/files/v1/upload")
         .body(Body::from("data"))
         .unwrap();
 
@@ -223,7 +223,7 @@ async fn test_middleware_passes_through_unconfigured_routes() {
 
     // Apply middleware AFTER routing (like in real usage)
     let app = Router::new()
-        .route("/api/public", post(test_handler))
+        .route("/tests/v1/public", post(test_handler))
         .layer(axum::middleware::from_fn(move |req, next| {
             mime_validation_middleware(validation_map.clone(), req, next)
         }));
@@ -231,7 +231,7 @@ async fn test_middleware_passes_through_unconfigured_routes() {
     // Test: Send request with JSON body (even without content-type, should work if no validation)
     let request = Request::builder()
         .method("POST")
-        .uri("/api/public")
+        .uri("/tests/v1/public")
         .header("content-type", "application/json") // Add content-type so handler doesn't fail
         .body(Body::from(r#"{"test": "data"}"#))
         .unwrap();
@@ -247,7 +247,7 @@ async fn test_middleware_allows_multiple_content_types() {
     // Setup: operation that allows multiple content types
     let specs = vec![OperationSpec {
         method: Method::POST,
-        path: "/api/flexible".to_owned(),
+        path: "/tests/v1/flexible".to_owned(),
         operation_id: Some("test:flexible".to_owned()),
         summary: None,
         description: None,
@@ -269,7 +269,7 @@ async fn test_middleware_allows_multiple_content_types() {
     let validation_map = build_mime_validation_map(&specs);
 
     let app = Router::new()
-        .route("/api/flexible", post(test_handler))
+        .route("/tests/v1/flexible", post(test_handler))
         .layer(axum::middleware::from_fn(move |req, next| {
             mime_validation_middleware(validation_map.clone(), req, next)
         }));
@@ -277,7 +277,7 @@ async fn test_middleware_allows_multiple_content_types() {
     // Test: application/json should work
     let request = Request::builder()
         .method("POST")
-        .uri("/api/flexible")
+        .uri("/tests/v1/flexible")
         .header("content-type", "application/json")
         .body(Body::from(r#"{"test": "data"}"#))
         .unwrap();
@@ -295,7 +295,7 @@ async fn test_middleware_allows_multiple_content_types() {
     // Test: Disallowed type should fail
     let request = Request::builder()
         .method("POST")
-        .uri("/api/flexible")
+        .uri("/tests/v1/flexible")
         .header("content-type", "application/octet-stream")
         .body(Body::from("test data"))
         .unwrap();

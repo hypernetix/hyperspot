@@ -676,8 +676,8 @@ See `examples/oop-modules/calculator/` for a complete working example:
 **Constructors**
 
 ```rust
-OperationBuilder::<Missing, Missing, S>::get("/path")
-OperationBuilder::<Missing, Missing, S>::post("/path")
+OperationBuilder::<Missing, Missing, S>::get("/my-module/v1/path")
+OperationBuilder::<Missing, Missing, S>::post("/my-module/v1/path")
 // put/patch/delete are available too
 ```
 
@@ -819,27 +819,27 @@ async fn create_user_handler(
 **OpenAPI response registration**
 
 ```rust
-OperationBuilder::post("/users")
-.operation_id("users.create")
-.summary("Create user")
-.json_request::<CreateUserReq>(openapi, "User creation data")
-.handler(create_user_handler)
-.json_response_with_schema::<UserDto>(openapi, StatusCode::CREATED, "User created")
-.standard_errors(openapi)  // Adds 400, 401, 403, 404, 409, 422, 429, 500
-.register(router, openapi);
+OperationBuilder::post("/user-management/v1/users")
+    .operation_id("users.create")
+    .summary("Create user")
+    .json_request::<CreateUserReq>(openapi, "User creation data")
+    .handler(create_user_handler)
+    .json_response_with_schema::<UserDto>(openapi, StatusCode::CREATED, "User created")
+    .standard_errors(openapi)  // Adds 400, 401, 403, 404, 409, 422, 429, 500
+    .register(router, openapi);
 
 // Or for more specific error responses:
-OperationBuilder::post("/users")
-.operation_id("users.create")
-.summary("Create user")
-.json_request::<CreateUserReq>(openapi, "User creation data")
-.handler(create_user_handler)
-.json_response_with_schema::<UserDto>(openapi, StatusCode::CREATED, "User created")
-.problem_response(openapi, StatusCode::BAD_REQUEST, "Invalid input")
-.problem_response(openapi, StatusCode::CONFLICT, "Email already exists")
-.with_422_validation_error(openapi)  // Structured validation errors
-.problem_response(openapi, StatusCode::INTERNAL_SERVER_ERROR, "Internal error")
-.register(router, openapi);
+OperationBuilder::post("/user-management/v1/users")
+    .operation_id("users.create")
+    .summary("Create user")
+    .json_request::<CreateUserReq>(openapi, "User creation data")
+    .handler(create_user_handler)
+    .json_response_with_schema::<UserDto>(openapi, StatusCode::CREATED, "User created")
+    .problem_response(openapi, StatusCode::BAD_REQUEST, "Invalid input")
+    .problem_response(openapi, StatusCode::CONFLICT, "Email already exists")
+    .with_422_validation_error(openapi)  // Structured validation errors
+    .problem_response(openapi, StatusCode::INTERNAL_SERVER_ERROR, "Internal error")
+    .register(router, openapi);
 ```
 
 ---
@@ -1056,7 +1056,7 @@ fn register_sse_route(
     openapi: &dyn OpenApiRegistry,
     broadcaster: SseBroadcaster<UserEvent>,
 ) -> Router<S> {
-    OperationBuilder::<Missing, Missing, S>::get("/users/events")
+    OperationBuilder::<Missing, Missing, S>::get("/user-management/v1/users/events")
         .operation_id("users.events")
         .summary("User events stream")
         .description("Real-time stream of user events via Server-Sent Events")
@@ -1256,14 +1256,14 @@ async fn upload_handler(
 }
 
 // Register with type-safe builder
-OperationBuilder::post("/upload")
-.operation_id("files.upload")
-.summary("Upload a file")
-.multipart_file_request("file", Some("File to upload"))
-.handler(upload_handler)
-.json_response_with_schema::<UploadResponse>(openapi, StatusCode::OK, "Upload successful")
-.standard_errors(openapi)
-.register(router, openapi);
+OperationBuilder::post("/files/v1/upload")
+    .operation_id("files.upload")
+    .summary("Upload a file")
+    .multipart_file_request("file", Some("File to upload"))
+    .handler(upload_handler)
+    .json_response_with_schema::<UploadResponse>(openapi, StatusCode::OK, "Upload successful")
+    .standard_errors(openapi)
+    .register(router, openapi);
 ```
 
 The `.multipart_file_request()` method:
@@ -1289,14 +1289,14 @@ async fn upload_binary_handler(
 }
 
 // Register with type-safe builder
-OperationBuilder::post("/upload")
-.operation_id("files.upload_binary")
-.summary("Upload raw file bytes")
-.octet_stream_request(Some("Raw file bytes"))
-.handler(upload_binary_handler)
-.json_response_with_schema::<ParseResponse>(openapi, StatusCode::OK, "Parse successful")
-.standard_errors(openapi)
-.register(router, openapi);
+OperationBuilder::post("/files/v1/upload")
+    .operation_id("files.upload_binary")
+    .summary("Upload raw file bytes")
+    .octet_stream_request(Some("Raw file bytes"))
+    .handler(upload_binary_handler)
+    .json_response_with_schema::<ParseResponse>(openapi, StatusCode::OK, "Parse successful")
+    .standard_errors(openapi)
+    .register(router, openapi);
 ```
 
 The `.octet_stream_request()` method:
@@ -1314,14 +1314,14 @@ different Content-Type, it will receive HTTP 415 (Unsupported Media Type).
 You can also manually configure allowed types:
 
 ```rust
-OperationBuilder::post("/upload")
-.operation_id("files.upload_custom")
-.summary("Upload with custom validation")
-.allow_content_types(& ["application/pdf", "image/png", "image/jpeg"])
-.handler(upload_handler)
-.json_response(StatusCode::OK, "Upload successful")
-.problem_response(openapi, StatusCode::UNSUPPORTED_MEDIA_TYPE, "Unsupported file type")
-.register(router, openapi);
+OperationBuilder::post("/files/v1/upload")
+    .operation_id("files.upload_custom")
+    .summary("Upload with custom validation")
+    .allow_content_types(&["application/pdf", "image/png", "image/jpeg"])
+    .handler(upload_handler)
+    .json_response(StatusCode::OK, "Upload successful")
+    .problem_response(openapi, StatusCode::UNSUPPORTED_MEDIA_TYPE, "Unsupported file type")
+    .register(router, openapi);
 ```
 
 **Important**: `.allow_content_types()` is independent of the request body schema. It only configures ingress validation

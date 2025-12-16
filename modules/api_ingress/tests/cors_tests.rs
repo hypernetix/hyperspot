@@ -103,7 +103,7 @@ impl RestfulModule for CorsTestModule {
         router: axum::Router,
         openapi: &dyn OpenApiRegistry,
     ) -> Result<axum::Router> {
-        let router = OperationBuilder::get("/cors-test")
+        let router = OperationBuilder::get("/tests/v1/cors/v1/cors-test")
             .operation_id("cors:test")
             .summary("CORS test endpoint")
             .public()
@@ -111,7 +111,7 @@ impl RestfulModule for CorsTestModule {
             .handler(get(test_handler))
             .register(router, openapi);
 
-        let router = OperationBuilder::post("/cors-post")
+        let router = OperationBuilder::post("/tests/v1/cors/v1/cors-post")
             .operation_id("cors:post")
             .summary("CORS POST endpoint")
             .json_request::<TestData>(openapi, "Test data")

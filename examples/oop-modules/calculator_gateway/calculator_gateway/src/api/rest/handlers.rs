@@ -11,7 +11,7 @@ use crate::domain::Service;
 
 use super::dto::{AddRequest, AddResponse};
 
-/// Handler for POST /calculator/add
+/// Handler for POST /calculator-gateway/v1/calculator/add
 ///
 /// Accepts a JSON body with operands and returns their sum.
 /// Delegates to Service directly.

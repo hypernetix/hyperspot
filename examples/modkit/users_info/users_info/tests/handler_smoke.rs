@@ -44,8 +44,14 @@ async fn create_test_router() -> Router {
     let service = Arc::new(Service::new(Arc::new(repo), events, audit, config));
 
     Router::new()
-        .route("/users/{id}", axum::routing::get(handlers::get_user))
-        .route("/users", axum::routing::get(handlers::list_users))
+        .route(
+            "/users-info/v1/users/{id}",
+            axum::routing::get(handlers::get_user),
+        )
+        .route(
+            "/users-info/v1/users",
+            axum::routing::get(handlers::list_users),
+        )
         .layer(Extension(service))
         .layer(middleware::from_fn(inject_fake_security_ctx))
 }
@@ -75,14 +81,17 @@ async fn get_user_handler_returns_json() {
     ));
 
     let app = Router::new()
-        .route("/users/{id}", axum::routing::get(handlers::get_user))
+        .route(
+            "/users-info/v1/users/{id}",
+            axum::routing::get(handlers::get_user),
+        )
         .layer(Extension(service))
         .layer(middleware::from_fn(inject_fake_security_ctx));
 
-    // Act: Call GET /users/:id
+    // Act: Call GET /users-info/v1/users/:id
     let request = Request::builder()
         .method("GET")
-        .uri(format!("/users/{user_id}"))
+        .uri(format!("/users-info/v1/users/{user_id}"))
         .body(Body::empty())
         .unwrap();
 
@@ -102,7 +111,7 @@ async fn get_nonexistent_user_returns_404() {
     let app = create_test_router().await;
     let random_id = Uuid::new_v4();
 
-    // Act: Call GET /users/:id for non-existent user
+    // Act: Call GET /users-info/v1//users/:id for non-existent user
     let request = Request::builder()
         .method("GET")
         .uri(format!("/users/{random_id}"))
@@ -147,14 +156,17 @@ async fn list_users_returns_json_page() {
     ));
 
     let app = Router::new()
-        .route("/users", axum::routing::get(handlers::list_users))
+        .route(
+            "/users-info/v1/users",
+            axum::routing::get(handlers::list_users),
+        )
         .layer(Extension(service))
         .layer(middleware::from_fn(inject_fake_security_ctx));
 
-    // Act: Call GET /users
+    // Act: Call GET /users-info/v1/users
     let request = Request::builder()
         .method("GET")
-        .uri("/users")
+        .uri("/users-info/v1/users")
         .body(Body::empty())
         .unwrap();
 

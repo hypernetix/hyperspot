@@ -39,7 +39,7 @@ fn to_problem(
 ///
 /// # Arguments
 /// * `err` - The `OData` error to convert
-/// * `instance` - The request path (e.g., "/api/users")
+/// * `instance` - The request path (e.g., "/api/user-management/v1/users")
 /// * `trace_id` - Optional trace ID (uses current span if None)
 pub fn odata_error_to_problem(
     err: &ODataError,
@@ -131,11 +131,11 @@ mod tests {
         use http::StatusCode;
 
         let error = ODataError::InvalidFilter("malformed expression".to_owned());
-        let problem = odata_error_to_problem(&error, "/api/users", None);
+        let problem = odata_error_to_problem(&error, "/user-management/v1/users", None);
 
         assert_eq!(problem.status, StatusCode::UNPROCESSABLE_ENTITY);
         assert!(problem.code.contains("invalid_filter"));
-        assert_eq!(problem.instance, "/api/users");
+        assert_eq!(problem.instance, "/user-management/v1/users");
     }
 
     #[test]
@@ -143,7 +143,7 @@ mod tests {
         use http::StatusCode;
 
         let error = ODataError::InvalidOrderByField("unknown_field".to_owned());
-        let problem = odata_error_to_problem(&error, "/api/users", None);
+        let problem = odata_error_to_problem(&error, "/user-management/v1/users", None);
 
         assert_eq!(problem.status, StatusCode::UNPROCESSABLE_ENTITY);
         assert!(problem.code.contains("invalid_orderby"));
@@ -154,7 +154,11 @@ mod tests {
         use http::StatusCode;
 
         let error = ODataError::CursorInvalidBase64;
-        let problem = odata_error_to_problem(&error, "/api/users", Some("trace123".to_owned()));
+        let problem = odata_error_to_problem(
+            &error,
+            "/user-management/v1/users",
+            Some("trace123".to_owned()),
+        );
 
         assert_eq!(problem.status, StatusCode::UNPROCESSABLE_ENTITY);
         assert!(problem.code.contains("invalid_cursor"));
@@ -164,7 +168,7 @@ mod tests {
     #[test]
     fn test_gts_code_format() {
         let error = ODataError::InvalidFilter("test".to_owned());
-        let problem = odata_error_to_problem(&error, "/api/test", None);
+        let problem = odata_error_to_problem(&error, "/user-management/v1/test", None);
 
         // Verify the code follows GTS format
         assert!(problem.code.starts_with("gts.hx.core.errors.err.v1~"));

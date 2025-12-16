@@ -57,13 +57,13 @@ fmt:
 # |             | - Missing documentation warnings                                     |
 # |             | - Ensures clean compilation across all targets and features          |
 # +-------------+----------------------------------------------------------------------+
-# | dylint      | - Project-specific architectural conventions (custom lints)         |
+# | dylint      | - Project-specific architectural conventions (custom lints)          |
 # |             | - DTO declaration and placement (only in api/rest folders)           |
 # |             | - DTO isolation (no references from domain/contract layers)          |
-# |             | - API endpoint versioning requirements (e.g., /v1/users)            |
-# |             | - Contract layer purity (no serde, HTTP types, or ToSchema)         |
+# |             | - API endpoint versioning requirements (e.g., /users/v1/users)       |
+# |             | - Contract layer purity (no serde, HTTP types, or ToSchema)          |
 # |             | - Layer separation and dependency rules enforcement                  |
-# |             | - Use 'make dylint-list' to see all available custom lints          |
+# |             | - Use 'make dylint-list' to see all available custom lints           |
 # +-------------+----------------------------------------------------------------------+
 
 .PHONY: clippy kani geiger safety lint dylint dylint-list dylint-test

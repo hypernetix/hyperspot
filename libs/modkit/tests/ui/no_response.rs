@@ -19,7 +19,7 @@ fn main() {
     let router = Router::new();
 
     // This should fail to compile - missing response
-    let _ = OperationBuilder::<_, _, ()>::get("/test")
+    let _ = OperationBuilder::<_, _, ()>::get("/tests/v1/test")
         .summary("Test endpoint")
         .handler(test_handler)
         .register(router, &registry);

@@ -78,12 +78,12 @@ The file_parser module has comprehensive E2E test coverage including golden-refe
 
 ### Test Files
 
-- **`modules/file_parser/test_file_parser_info.py`**: Tests the `/file-parser/info` endpoint
-- **`modules/file_parser/test_file_parser_upload.py`**: Tests the `/file-parser/upload` endpoint (binary upload)
-- **`modules/file_parser/test_file_parser_upload_markdown.py`**: Tests the `/file-parser/upload/markdown` endpoint (
+- **`modules/file_parser/test_file_parser_info.py`**: Tests the `/file-parser/v1/info` endpoint
+- **`modules/file_parser/test_file_parser_upload.py`**: Tests the `/file-parser/v1/upload` endpoint (binary upload)
+- **`modules/file_parser/test_file_parser_upload_markdown.py`**: Tests the `/file-parser/v1/upload/markdown` endpoint (
   multipart)
-- **`modules/file_parser/test_file_parser_parse_local.py`**: Tests the `/file-parser/parse-local*` endpoints
-- **`modules/file_parser/test_file_parser_parse_url.py`**: Tests the `/file-parser/parse-url*` endpoints
+- **`modules/file_parser/test_file_parser_parse_local.py`**: Tests the `/file-parser/v1/parse-local*` endpoints
+- **`modules/file_parser/test_file_parser_parse_url.py`**: Tests the `/file-parser/v1/parse-url*` endpoints
 
 ### Golden Markdown Generation
 
@@ -169,4 +169,3 @@ Make sure Docker is running and you have sufficient disk space:
 docker system df
 docker system prune  # if needed
 ```
-

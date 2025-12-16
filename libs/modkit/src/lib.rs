@@ -30,14 +30,14 @@
 //! }
 //!
 //! pub fn router(service: Arc<UserService>) -> axum::Router {
-//!     let op = OperationBuilder::get("/users")
+//!     let op = OperationBuilder::get("/users-info/v1/users")
 //!         .summary("List users")
 //!         .handler(list_users)
 //!         .json_response(200, "List of users")
 //!         .standard_errors(&registry);
 //!
 //!     axum::Router::new()
-//!         .route("/users", axum::routing::get(list_users))
+//!         .route("/users-info/v1/users", axum::routing::get(list_users))
 //!         .layer(Extension(service))
 //!         .layer(op.to_layer())
 //! }

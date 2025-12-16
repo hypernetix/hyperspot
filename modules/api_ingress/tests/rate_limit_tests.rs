@@ -79,7 +79,7 @@ impl RestfulModule for RateLimitedModule {
         openapi: &dyn OpenApiRegistry,
     ) -> Result<axum::Router> {
         // Route with strict rate limit: 1 RPS, burst 1
-        let mut builder = OperationBuilder::get("/limited");
+        let mut builder = OperationBuilder::get("/tests/v1/limited");
         builder.require_rate_limit(1, 1, 2);
         let router = builder
             .operation_id("test:limited")
@@ -90,7 +90,7 @@ impl RestfulModule for RateLimitedModule {
             .register(router, openapi);
 
         // Route with low in-flight limit
-        let mut builder = OperationBuilder::get("/slow");
+        let mut builder = OperationBuilder::get("/tests/v1/slow");
         builder.require_rate_limit(100, 100, 2);
         let router = builder
             .operation_id("test:slow")
@@ -101,7 +101,7 @@ impl RestfulModule for RateLimitedModule {
             .register(router, openapi);
 
         // Normal route without explicit limits (uses defaults)
-        let router = OperationBuilder::get("/normal")
+        let router = OperationBuilder::get("/tests/v1/normal")
             .operation_id("test:normal")
             .summary("Normal endpoint")
             .public()
@@ -193,8 +193,9 @@ async fn test_openapi_includes_rate_limit_extensions() {
     let json = serde_json::to_value(&openapi).expect("Failed to serialize OpenAPI");
 
     // Verify rate limit extensions are present for the limited endpoint
+    // Path is /tests/v1/limited, JSON pointer escapes / as ~1
     let limited_op = json
-        .pointer("/paths/~1limited/get")
+        .pointer("/paths/~1tests~1v1~1limited/get")
         .expect("Limited endpoint not found in OpenAPI");
 
     // Check for vendor extensions
@@ -222,7 +223,7 @@ async fn test_rate_limit_metadata_stored() {
     let api_ingress = api_ingress::ApiIngress::default();
     let router = Router::<()>::new();
 
-    let mut builder = OperationBuilder::get("/test");
+    let mut builder = OperationBuilder::get("/tests/v1/test");
     builder.require_rate_limit(10, 20, 5);
 
     let spec = builder.spec();
@@ -246,6 +247,7 @@ async fn test_rate_limit_metadata_stored() {
         .expect("Failed to build OpenAPI");
     let json = serde_json::to_value(&openapi).expect("Failed to serialize");
 
-    let test_op = json.pointer("/paths/~1test/get");
+    // Path is /tests/v1/test, JSON pointer escapes / as ~1
+    let test_op = json.pointer("/paths/~1tests~1v1~1test/get");
     assert!(test_op.is_some(), "Test endpoint should be in OpenAPI");
 }

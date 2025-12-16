@@ -6,7 +6,7 @@
     "version": "0.1.0"
   },
   "paths": {
-    "/file-parser/info": {
+    "/file-parser/v1/info": {
       "get": {
         "tags": [
           "File Parser"
@@ -112,7 +112,7 @@
         ]
       }
     },
-    "/file-parser/parse-local": {
+    "/file-parser/v1/parse-local": {
       "post": {
         "tags": [
           "File Parser"
@@ -250,7 +250,7 @@
         ]
       }
     },
-    "/file-parser/parse-local/markdown": {
+    "/file-parser/v1/parse-local/markdown": {
       "post": {
         "tags": [
           "File Parser"
@@ -368,7 +368,7 @@
         ]
       }
     },
-    "/file-parser/parse-url": {
+    "/file-parser/v1/parse-url": {
       "post": {
         "tags": [
           "File Parser"
@@ -506,7 +506,7 @@
         ]
       }
     },
-    "/file-parser/parse-url/markdown": {
+    "/file-parser/v1/parse-url/markdown": {
       "post": {
         "tags": [
           "File Parser"
@@ -634,7 +634,7 @@
         ]
       }
     },
-    "/file-parser/upload": {
+    "/file-parser/v1/upload": {
       "post": {
         "tags": [
           "File Parser"
@@ -782,7 +782,7 @@
         ]
       }
     },
-    "/file-parser/upload/markdown": {
+    "/file-parser/v1/upload/markdown": {
       "post": {
         "tags": [
           "File Parser"
@@ -919,7 +919,7 @@
         ]
       }
     },
-    "/users": {
+    "/users-info/v1/users": {
       "get": {
         "tags": [
           "users"
@@ -1090,7 +1090,7 @@
         ]
       }
     },
-    "/users/events": {
+    "/users-info/v1/users/events": {
       "get": {
         "tags": [
           "users"
@@ -1117,7 +1117,7 @@
         ]
       }
     },
-    "/users/{id}": {
+    "/users-info/v1/users/{id}": {
       "get": {
         "tags": [
           "users"

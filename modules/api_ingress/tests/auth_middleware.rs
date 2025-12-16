@@ -111,7 +111,7 @@ impl RestfulModule for TestAuthModule {
         openapi: &dyn OpenApiRegistry,
     ) -> Result<Router> {
         // Protected route with explicit auth requirement
-        let router = OperationBuilder::get("/api/protected")
+        let router = OperationBuilder::get("/tests/v1/api/protected")
             .operation_id("test.protected")
             .require_auth("test", "read")
             .summary("Protected endpoint")
@@ -122,7 +122,7 @@ impl RestfulModule for TestAuthModule {
             .register(router, openapi);
 
         // Protected route with path parameter (to test pattern matching)
-        let router = OperationBuilder::get("/api/users/{id}")
+        let router = OperationBuilder::get("/tests/v1/api/users/{id}")
             .operation_id("test.get_user")
             .require_auth("users", "read")
             .summary("Get user by ID")
@@ -134,7 +134,7 @@ impl RestfulModule for TestAuthModule {
             .register(router, openapi);
 
         // Public route with explicit public marking
-        let router = OperationBuilder::get("/api/public")
+        let router = OperationBuilder::get("/tests/v1/api/public")
             .operation_id("test.public")
             .public()
             .summary("Public endpoint")
@@ -183,7 +183,7 @@ async fn test_auth_disabled_mode() {
         .clone()
         .oneshot(
             Request::builder()
-                .uri("/api/protected")
+                .uri("/tests/v1/api/protected")
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -200,7 +200,7 @@ async fn test_auth_disabled_mode() {
     let response = router
         .oneshot(
             Request::builder()
-                .uri("/api/public")
+                .uri("/tests/v1/api/public")
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -321,7 +321,7 @@ async fn test_middleware_always_inserts_security_ctx() {
     let response = router
         .oneshot(
             Request::builder()
-                .uri("/api/protected")
+                .uri("/tests/v1/api/protected")
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -378,14 +378,15 @@ async fn test_openapi_includes_security_metadata() {
     );
 
     // Verify protected route has security requirement
-    let protected_security = spec.pointer("/paths/~1api~1protected/get/security");
+    // Path is /tests/v1/api/protected, JSON pointer escapes / as ~1
+    let protected_security = spec.pointer("/paths/~1tests~1v1~1api~1protected/get/security");
     assert!(
         protected_security.is_some(),
         "Protected route should have security requirement in OpenAPI"
     );
 
     // Verify public route does NOT have security requirement
-    let public_security = spec.pointer("/paths/~1api~1public/get/security");
+    let public_security = spec.pointer("/paths/~1tests~1v1~1api~1public/get/security");
     assert!(
         public_security.is_none()
             || public_security
@@ -427,12 +428,12 @@ async fn test_route_pattern_matching_with_path_params() {
         .rest_finalize(&api_ctx, router)
         .expect("Failed to finalize");
 
-    // Test that /api/users/123 is accessible (matches /api/users/{id})
+    // Test that /tests/v1/api/users/123 is accessible (matches /tests/v1/api/users/{id})
     let response = router
         .clone()
         .oneshot(
             Request::builder()
-                .uri("/api/users/123")
+                .uri("/tests/v1/api/users/123")
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -445,11 +446,11 @@ async fn test_route_pattern_matching_with_path_params() {
         "Route with path parameter should be accessible and matched correctly"
     );
 
-    // Test that /api/users/abc-def-456 is also accessible
+    // Test that /tests/v1/api/users/abc-def-456 is also accessible
     let response = router
         .oneshot(
             Request::builder()
-                .uri("/api/users/abc-def-456")
+                .uri("/tests/v1/api/users/abc-def-456")
                 .body(Body::empty())
                 .unwrap(),
         )

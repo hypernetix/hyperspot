@@ -512,7 +512,7 @@ mod tests {
         let registry = OpenApiRegistryImpl::new();
         let spec = OperationSpec {
             method: Method::POST,
-            path: "/upload".to_owned(),
+            path: "/files/v1/upload".to_owned(),
             operation_id: Some("upload_file".to_owned()),
             summary: Some("Upload a file".to_owned()),
             description: Some("Upload raw binary file".to_owned()),
@@ -544,10 +544,10 @@ mod tests {
 
         // Verify path exists
         let paths = json.get("paths").unwrap();
-        assert!(paths.get("/upload").is_some());
+        assert!(paths.get("/files/v1/upload").is_some());
 
         // Verify request body has application/octet-stream with binary schema
-        let post_op = paths.get("/upload").unwrap().get("post").unwrap();
+        let post_op = paths.get("/files/v1/upload").unwrap().get("post").unwrap();
         let request_body = post_op.get("requestBody").unwrap();
         let content = request_body.get("content").unwrap();
         let octet_stream = content

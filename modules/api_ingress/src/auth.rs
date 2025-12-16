@@ -455,18 +455,24 @@ mod tests {
         // GET /users is secured
         let mut get_matcher = RouteMatcher::new();
         let sec_req = SecRequirement::new("users", "read");
-        get_matcher.insert("/users", sec_req).unwrap();
+        get_matcher
+            .insert("/user-management/v1/users", sec_req)
+            .unwrap();
         route_matchers.insert(Method::GET, get_matcher);
 
         // POST /users is not in matchers
         let policy = build_test_policy(route_matchers, HashMap::new(), false);
 
         // GET should be secured
-        let get_result = policy.resolve(&Method::GET, "/users").await;
+        let get_result = policy
+            .resolve(&Method::GET, "/user-management/v1/users")
+            .await;
         assert!(matches!(get_result, AuthRequirement::Required(Some(_))));
 
         // POST should be public (no requirement, require_auth_by_default=false)
-        let post_result = policy.resolve(&Method::POST, "/users").await;
+        let post_result = policy
+            .resolve(&Method::POST, "/user-management/v1/users")
+            .await;
         assert_eq!(post_result, AuthRequirement::None);
     }
 }
