@@ -16,7 +16,8 @@ name = "modkit"
 default = ["otel"]
 
 # OpenTelemetry support for distributed tracing
-otel = ["opentelemetry", "opentelemetry_sdk", "tracing-opentelemetry", "tracing-subscriber", "opentelemetry-otlp", "tonic"]
+otel = ["dep:opentelemetry", "dep:opentelemetry_sdk", "dep:tracing-opentelemetry", "dep:tracing-subscriber", "dep:opentelemetry-otlp", "dep:tonic"]
+bootstrap = ["dep:serde-saphyr", "dep:module_orchestrator-grpc", "dep:tracing-appender", "dep:file-rotate", "dep:tracing-log", "dep:chrono", "dep:regex", "dep:url", "dep:dsn"]
 
 [dependencies]
 # Project-local crates
@@ -25,6 +26,7 @@ modkit-errors = { path = "../modkit-errors", features = ["utoipa", "axum"] }
 modkit-db = { path = "../modkit-db" }
 modkit-odata = { path = "../modkit-odata", features = ["with-odata-params"] }
 module_orchestrator-contracts = { path = "../../modules/module_orchestrator/module_orchestrator-contracts" } # TODO: probably we need remove this dependency at the future
+module_orchestrator-grpc = { path = "../../modules/module_orchestrator/module_orchestrator-grpc", optional = true }
 
 # Core deps
 anyhow = { workspace = true }
@@ -32,6 +34,11 @@ async-trait = { workspace = true }
 inventory = { workspace = true }
 tracing = { workspace = true }
 figment = { workspace = true }
+file-rotate = { workspace = true, optional = true }
+chrono = { workspace = true, optional = true }
+url = { workspace = true, optional = true }
+dsn = { workspace = true, optional = true }
+regex = { workspace = true, optional = true }
 
 tokio = { workspace = true }
 tokio-util = { workspace = true }
@@ -46,6 +53,7 @@ http = { workspace = true }
 utoipa = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+serde-saphyr = { workspace = true, optional = true }
 
 # Performance / lock-free structures
 parking_lot = { workspace = true }
@@ -53,7 +61,7 @@ dashmap = { workspace = true }
 arc-swap = { workspace = true }
 thiserror = { workspace = true }
 odata-params = { workspace = true }
-uuid = { workspace = true, features = ["v7"]}
+uuid = { workspace = true, features = ["v7"] }
 urlencoding = { workspace = true }
 
 # HTTP client for traced requests
@@ -64,6 +72,8 @@ opentelemetry = { workspace = true, optional = true }
 opentelemetry_sdk = { workspace = true, optional = true }
 tracing-opentelemetry = { workspace = true, optional = true }
 tracing-subscriber = { workspace = true, optional = true }
+tracing-log = { workspace = true, optional = true }
+tracing-appender = { workspace = true, optional = true }
 opentelemetry-otlp = { workspace = true, optional = true }
 
 # gRPC support only for otel (optional)
@@ -77,5 +87,7 @@ nix = { version = "0.29", default-features = false, features = ["signal"] }
 tower = { workspace = true }
 trybuild = { workspace = true }
 httpmock = { workspace = true }
+tempfile = { workspace = true }
+temp-env = { workspace = true }
 
 

@@ -12,7 +12,7 @@ workspace = true
 default = []
 users-info-example = ["dep:users_info"]
 oop-example = ["dep:calculator_gateway"]
-otel = ["modkit/otel", "modkit-bootstrap/otel"]
+otel = ["modkit/otel"]
 
 [[bin]]
 name = "hyperspot-server"
@@ -21,8 +21,7 @@ path = "src/main.rs"
 [dependencies]
 mimalloc = { version = "0.1" }
 # Local crates
-modkit-bootstrap = { path = "../../libs/modkit-bootstrap" }
-modkit = { path = "../../libs/modkit", features = ["otel"] }
+modkit = { path = "../../libs/modkit", features = ["otel", "bootstrap"] }
 modkit-db = { path = "../../libs/modkit-db", features = ["sqlite"] }
 
 # System modules

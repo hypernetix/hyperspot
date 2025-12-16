@@ -18,18 +18,32 @@ pub struct TracingConfig {
     pub logs_correlation: Option<LogsCorrelation>,
 }
 
+#[derive(Debug, Default, Clone, Deserialize, Serialize, PartialEq, Eq, Copy)]
+#[serde(rename_all = "snake_case")]
+pub enum ExporterKind {
+    #[default]
+    OtlpGrpc,
+    OtlpHttp,
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Exporter {
-    pub kind: Option<String>, // "otlp_grpc" | "otlp_http"
+    pub kind: ExporterKind,
     pub endpoint: Option<String>,
     pub headers: Option<HashMap<String, String>>,
     pub timeout_ms: Option<u64>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct Sampler {
-    pub strategy: Option<String>, // "parentbased_always_on" | "parentbased_ratio" | "always_on" | "always_off"
-    pub ratio: Option<f64>,
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum Sampler {
+    ParentBasedAlwaysOn {},
+    ParentBasedRatio {
+        #[serde(skip_serializing_if = "Option::is_none")]
+        ratio: Option<f64>,
+    },
+    AlwaysOn {},
+    AlwaysOff {},
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

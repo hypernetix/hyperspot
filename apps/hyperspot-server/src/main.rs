@@ -4,11 +4,11 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 use figment::Figment;
 use mimalloc::MiMalloc;
-use modkit::LocalProcessBackend;
-use modkit_bootstrap::config::{
-    get_module_runtime_config, render_module_config_for_oop, AppConfig, CliArgs, RuntimeKind,
+use modkit::bootstrap::config::{
+    get_module_runtime_config, render_module_config_for_oop, AppConfig, RuntimeKind,
 };
-use modkit_bootstrap::host::{normalize_executable_path, AppConfigProvider, ConfigProvider};
+use modkit::bootstrap::host::{init_logging_unified, normalize_executable_path};
+use modkit::LocalProcessBackend;
 use tokio_util::sync::CancellationToken;
 
 use std::path::{Path, PathBuf};
@@ -20,15 +20,6 @@ use sqlx::{postgres::Postgres, sqlite::Sqlite};
 
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
-
-/// Adapter to make `AppConfigProvider` implement `modkit::ConfigProvider`.
-struct ModkitConfigAdapter(std::sync::Arc<AppConfigProvider>);
-
-impl modkit::ConfigProvider for ModkitConfigAdapter {
-    fn get_module_config(&self, module_name: &str) -> Option<&serde_json::Value> {
-        self.0.get_module_config(module_name)
-    }
-}
 
 // Bring runner types & our per-module DB factory
 use modkit::runtime::{
@@ -92,22 +83,14 @@ async fn main() -> Result<()> {
         }
     }
 
-    // Prepare CLI args that flow into runtime::AppConfig merge logic.
-    let args = CliArgs {
-        config: cli.config.as_ref().map(|p| p.to_string_lossy().to_string()),
-        print_config: cli.print_config,
-        verbose: cli.verbose,
-        mock: cli.mock,
-    };
-
     // Layered config:
     // 1) defaults -> 2) YAML (if provided) -> 3) env (APP__*) -> 4) CLI overrides
     // Also normalizes + creates server.home_dir.
     let mut config = AppConfig::load_or_default(cli.config.as_deref())?;
-    config.apply_cli_overrides(&args);
+    config.apply_cli_overrides(cli.verbose);
 
     // Build OpenTelemetry layer before logging
-    // Convert TracingConfig from modkit_bootstrap to modkit's type (they have identical structure)
+    // Convert TracingConfig from modkit::bootstrap to modkit's type (they have identical structure)
     #[cfg(feature = "otel")]
     let modkit_tracing_config: Option<modkit::telemetry::TracingConfig> = config
         .tracing
@@ -117,13 +100,14 @@ async fn main() -> Result<()> {
     #[cfg(feature = "otel")]
     let otel_layer = modkit_tracing_config
         .as_ref()
-        .and_then(modkit::telemetry::init::init_tracing);
+        .map(modkit::telemetry::init::init_tracing)
+        .transpose()?;
     #[cfg(not(feature = "otel"))]
     let otel_layer = None;
 
     // Initialize logging + otel in one Registry
     let logging_config = config.logging.clone().unwrap_or_default();
-    modkit_bootstrap::host::logging::init_logging_unified(
+    init_logging_unified(
         &logging_config,
         Path::new(&config.server.home_dir),
         otel_layer,
@@ -151,8 +135,8 @@ async fn main() -> Result<()> {
     }
 
     // Dispatch subcommands (default: run)
-    match cli.command.unwrap_or(Commands::Run) {
-        Commands::Run => run_server(config, args).await,
+    match cli.command.as_ref().unwrap_or(&Commands::Run) {
+        Commands::Run => run_server(config, cli).await,
         Commands::Check => check_config(&config),
     }
 }
@@ -201,15 +185,8 @@ fn override_modules_with_mock_db(config: &mut AppConfig) {
     }
 }
 
-/// Build config provider from `AppConfig`
-fn build_config_provider(config: AppConfig) -> Arc<dyn modkit::ConfigProvider> {
-    Arc::new(ModkitConfigAdapter(Arc::new(AppConfigProvider::new(
-        config,
-    ))))
-}
-
 /// Resolve database options based on configuration and args
-fn resolve_db_options(config: &AppConfig, args: &CliArgs) -> Result<DbOptions> {
+fn resolve_db_options(config: &AppConfig, args: &Cli) -> Result<DbOptions> {
     if config.database.is_none() {
         tracing::warn!("No global database section found; running without databases");
         return Ok(DbOptions::None);
@@ -230,7 +207,7 @@ fn resolve_db_options(config: &AppConfig, args: &CliArgs) -> Result<DbOptions> {
     Ok(DbOptions::Manager(db_manager))
 }
 
-async fn run_server(config: AppConfig, args: CliArgs) -> Result<()> {
+async fn run_server(config: AppConfig, args: Cli) -> Result<()> {
     tracing::info!("Initializing modules...");
 
     // Generate process-level instance ID once at startup.
@@ -262,7 +239,6 @@ async fn run_server(config: AppConfig, args: CliArgs) -> Result<()> {
     });
 
     // Build config provider and resolve database options
-    let config_provider = build_config_provider(config.clone());
     let db_options = resolve_db_options(&config, &args)?;
 
     // Create OoP backend with cancellation token - it will auto-shutdown all processes on cancel
@@ -276,7 +252,7 @@ async fn run_server(config: AppConfig, args: CliArgs) -> Result<()> {
     // Note: DirectoryApi is registered by the ModuleOrchestrator system module, not here.
     // OoP modules are spawned after the start phase (once grpc_hub has bound its port).
     let run_options = RunOptions {
-        modules_cfg: config_provider,
+        modules_cfg: Arc::new(config),
         db: db_options,
         shutdown: ShutdownOptions::Token(cancel.clone()),
         clients: vec![],
@@ -299,7 +275,7 @@ async fn run_server(config: AppConfig, args: CliArgs) -> Result<()> {
 /// The actual spawning happens in the `HostRuntime` after the start phase.
 fn build_oop_spawn_options(
     config: &AppConfig,
-    _args: &CliArgs,
+    _args: &Cli,
     backend: LocalProcessBackend,
 ) -> Result<Option<OopSpawnOptions>> {
     let home_dir = PathBuf::from(&config.server.home_dir);

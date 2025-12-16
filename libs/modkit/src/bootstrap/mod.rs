@@ -27,5 +27,4 @@ pub use config::{
 };
 
 // Re-export host types for convenience
-pub use host::{AppConfigProvider, ConfigProvider};
 pub use oop::{run_oop_with_options, OopRunOptions};

@@ -6,13 +6,14 @@
 //! - Config: full replacement (local replaces master if present)
 
 use super::*;
-use crate::config::{
+use crate::bootstrap::config::{
     AppConfig, GlobalDatabaseConfig, LoggingConfig, RenderedDbConfig, RenderedModuleConfig,
     Section, ServerConfig,
 };
 use modkit_db::{DbConnConfig, PoolCfg};
 use std::collections::HashMap;
 use std::time::Duration;
+use tracing::Level;
 
 /// Helper to create a minimal `AppConfig` for testing
 fn minimal_app_config() -> AppConfig {
@@ -32,11 +33,11 @@ fn minimal_app_config() -> AppConfig {
 }
 
 /// Helper to create a logging section
-fn logging_section(console_level: &str, file: &str) -> Section {
+fn logging_section(console_level: Option<Level>, file: &str) -> Section {
     Section {
-        console_level: console_level.to_owned(),
+        console_level,
         file: file.to_owned(),
-        file_level: "debug".to_owned(),
+        file_level: Some(Level::DEBUG),
         max_age_days: Some(7),
         max_backups: Some(3),
         max_size_mb: Some(100),
@@ -56,11 +57,11 @@ mod logging_merge {
         let master_logging: LoggingConfig = [
             (
                 "default".to_owned(),
-                logging_section("info", "logs/default.log"),
+                logging_section(Some(Level::INFO), "logs/default.log"),
             ),
             (
                 "module_a".to_owned(),
-                logging_section("debug", "logs/a.log"),
+                logging_section(Some(Level::DEBUG), "logs/a.log"),
             ),
         ]
         .into();
@@ -68,8 +69,14 @@ mod logging_merge {
         let result = merge_logging_configs(Some(&master_logging), None);
 
         assert_eq!(result.len(), 2);
-        assert_eq!(result.get("default").unwrap().console_level, "info");
-        assert_eq!(result.get("module_a").unwrap().console_level, "debug");
+        assert_eq!(
+            result.get("default").unwrap().console_level,
+            Some(Level::INFO)
+        );
+        assert_eq!(
+            result.get("module_a").unwrap().console_level,
+            Some(Level::DEBUG)
+        );
     }
 
     #[test]
@@ -77,14 +84,17 @@ mod logging_merge {
         // When only local has logging, result should be local's logging
         let local_logging: LoggingConfig = [(
             "default".to_owned(),
-            logging_section("debug", "logs/local.log"),
+            logging_section(Some(Level::DEBUG), "logs/local.log"),
         )]
         .into();
 
         let result = merge_logging_configs(None, Some(&local_logging));
 
         assert_eq!(result.len(), 1);
-        assert_eq!(result.get("default").unwrap().console_level, "debug");
+        assert_eq!(
+            result.get("default").unwrap().console_level,
+            Some(Level::DEBUG)
+        );
         assert_eq!(result.get("default").unwrap().file, "logs/local.log");
     }
 
@@ -94,18 +104,18 @@ mod logging_merge {
         let master_logging: LoggingConfig = [
             (
                 "default".to_owned(),
-                logging_section("info", "logs/master.log"),
+                logging_section(Some(Level::INFO), "logs/master.log"),
             ),
             (
                 "module_a".to_owned(),
-                logging_section("info", "logs/a-master.log"),
+                logging_section(Some(Level::INFO), "logs/a-master.log"),
             ),
         ]
         .into();
 
         let local_logging: LoggingConfig = [(
             "default".to_owned(),
-            logging_section("debug", "logs/local.log"),
+            logging_section(Some(Level::DEBUG), "logs/local.log"),
         )]
         .into();
 
@@ -113,10 +123,16 @@ mod logging_merge {
 
         assert_eq!(result.len(), 2);
         // Local overrides default
-        assert_eq!(result.get("default").unwrap().console_level, "debug");
+        assert_eq!(
+            result.get("default").unwrap().console_level,
+            Some(Level::DEBUG)
+        );
         assert_eq!(result.get("default").unwrap().file, "logs/local.log");
         // Master's module_a preserved
-        assert_eq!(result.get("module_a").unwrap().console_level, "info");
+        assert_eq!(
+            result.get("module_a").unwrap().console_level,
+            Some(Level::INFO)
+        );
         assert_eq!(result.get("module_a").unwrap().file, "logs/a-master.log");
     }
 
@@ -125,21 +141,27 @@ mod logging_merge {
         // Local can add new keys that don't exist in master
         let master_logging: LoggingConfig = [(
             "default".to_owned(),
-            logging_section("info", "logs/default.log"),
+            logging_section(Some(Level::INFO), "logs/default.log"),
         )]
         .into();
 
         let local_logging: LoggingConfig = [(
             "new_module".to_owned(),
-            logging_section("trace", "logs/new.log"),
+            logging_section(Some(Level::TRACE), "logs/new.log"),
         )]
         .into();
 
         let result = merge_logging_configs(Some(&master_logging), Some(&local_logging));
 
         assert_eq!(result.len(), 2);
-        assert_eq!(result.get("default").unwrap().console_level, "info");
-        assert_eq!(result.get("new_module").unwrap().console_level, "trace");
+        assert_eq!(
+            result.get("default").unwrap().console_level,
+            Some(Level::INFO)
+        );
+        assert_eq!(
+            result.get("new_module").unwrap().console_level,
+            Some(Level::TRACE)
+        );
     }
 
     #[test]
@@ -155,21 +177,27 @@ mod logging_merge {
         let master_logging: LoggingConfig = [
             (
                 "default".to_owned(),
-                logging_section("info", "logs/default.log"),
+                logging_section(Some(Level::INFO), "logs/default.log"),
             ),
-            ("sqlx".to_owned(), logging_section("warn", "logs/sql.log")),
-            ("api".to_owned(), logging_section("info", "logs/api.log")),
+            (
+                "sqlx".to_owned(),
+                logging_section(Some(Level::WARN), "logs/sql.log"),
+            ),
+            (
+                "api".to_owned(),
+                logging_section(Some(Level::INFO), "logs/api.log"),
+            ),
         ]
         .into();
 
         let local_logging: LoggingConfig = [
             (
                 "default".to_owned(),
-                logging_section("debug", "logs/local-default.log"),
+                logging_section(Some(Level::DEBUG), "logs/local-default.log"),
             ),
             (
                 "sqlx".to_owned(),
-                logging_section("debug", "logs/local-sql.log"),
+                logging_section(Some(Level::DEBUG), "logs/local-sql.log"),
             ),
         ]
         .into();
@@ -178,10 +206,16 @@ mod logging_merge {
 
         assert_eq!(result.len(), 3);
         // Overridden
-        assert_eq!(result.get("default").unwrap().console_level, "debug");
-        assert_eq!(result.get("sqlx").unwrap().console_level, "debug");
+        assert_eq!(
+            result.get("default").unwrap().console_level,
+            Some(Level::DEBUG)
+        );
+        assert_eq!(
+            result.get("sqlx").unwrap().console_level,
+            Some(Level::DEBUG)
+        );
         // Preserved from master
-        assert_eq!(result.get("api").unwrap().console_level, "info");
+        assert_eq!(result.get("api").unwrap().console_level, Some(Level::INFO));
     }
 }
 
@@ -572,7 +606,7 @@ mod full_oop_config {
         local_config.logging = Some(
             [(
                 "default".to_owned(),
-                logging_section("debug", "logs/standalone.log"),
+                logging_section(Some(Level::DEBUG), "logs/standalone.log"),
             )]
             .into(),
         );
@@ -598,7 +632,7 @@ mod full_oop_config {
         assert_eq!(merged_logging.len(), 1);
         assert_eq!(
             merged_logging.get("default").unwrap().console_level,
-            "debug"
+            Some(Level::DEBUG)
         );
 
         // No database
@@ -616,7 +650,7 @@ mod full_oop_config {
             logging: Some(
                 [(
                     "default".to_owned(),
-                    logging_section("info", "logs/master.log"),
+                    logging_section(Some(Level::INFO), "logs/master.log"),
                 )]
                 .into(),
             ),
@@ -633,7 +667,10 @@ mod full_oop_config {
         assert_eq!(module_config["config"]["master_setting"], "value");
 
         // Logging from master
-        assert_eq!(merged_logging.get("default").unwrap().console_level, "info");
+        assert_eq!(
+            merged_logging.get("default").unwrap().console_level,
+            Some(Level::INFO)
+        );
     }
 
     #[test]
@@ -679,11 +716,11 @@ mod full_oop_config {
             [
                 (
                     "default".to_owned(),
-                    logging_section("debug", "logs/local-default.log"),
+                    logging_section(Some(Level::DEBUG), "logs/local-default.log"),
                 ),
                 (
                     "new_key".to_owned(),
-                    logging_section("trace", "logs/new.log"),
+                    logging_section(Some(Level::TRACE), "logs/new.log"),
                 ),
             ]
             .into(),
@@ -696,9 +733,12 @@ mod full_oop_config {
                 [
                     (
                         "default".to_owned(),
-                        logging_section("info", "logs/master-default.log"),
+                        logging_section(Some(Level::INFO), "logs/master-default.log"),
                     ),
-                    ("sqlx".to_owned(), logging_section("warn", "logs/sql.log")),
+                    (
+                        "sqlx".to_owned(),
+                        logging_section(Some(Level::WARN), "logs/sql.log"),
+                    ),
                 ]
                 .into(),
             ),
@@ -716,7 +756,7 @@ mod full_oop_config {
         // default: overridden by local
         assert_eq!(
             merged_logging.get("default").unwrap().console_level,
-            "debug"
+            Some(Level::DEBUG)
         );
         assert_eq!(
             merged_logging.get("default").unwrap().file,
@@ -724,12 +764,15 @@ mod full_oop_config {
         );
 
         // sqlx: from master
-        assert_eq!(merged_logging.get("sqlx").unwrap().console_level, "warn");
+        assert_eq!(
+            merged_logging.get("sqlx").unwrap().console_level,
+            Some(Level::WARN)
+        );
 
         // new_key: from local
         assert_eq!(
             merged_logging.get("new_key").unwrap().console_level,
-            "trace"
+            Some(Level::TRACE)
         );
     }
 

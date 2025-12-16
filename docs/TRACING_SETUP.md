@@ -49,8 +49,8 @@ tracing:
     timeout_ms: 5000
 
   sampler:
-    strategy: "parentbased_ratio"
-    ratio: 0.1  # Sample 10% of traces
+    parent_based_ratio:
+      ratio: 0.1  # Sample 10% of traces
 
   propagation:
     w3c_trace_context: true
@@ -128,7 +128,7 @@ tracing:
       uptrace-dsn: "http://project1_secret@localhost:14318?grpc=14317"
 
   sampler:
-    strategy: "always_on"
+    always_on: { }
 
   resource:
     service.version: "1.3.7"
@@ -186,15 +186,14 @@ tracing:
 
 (rest of your original doc unchanged below)
 
-```
-
 ### Sampling Strategies
 
 #### Always Sample
+
 ```yaml
 tracing:
   sampler:
-    strategy: "always_on"
+    always_on: { }
 ```
 
 #### Never Sample
@@ -202,7 +201,7 @@ tracing:
 ```yaml
 tracing:
   sampler:
-    strategy: "always_off"
+    always_off: { }
 ```
 
 #### Ratio-Based Sampling
@@ -210,17 +209,8 @@ tracing:
 ```yaml
 tracing:
   sampler:
-    strategy: "parentbased_ratio"
-    ratio: 0.1  # Sample 10% of traces
-```
-
-#### Simple Ratio (No Parent Context)
-
-```yaml
-tracing:
-  sampler:
-    strategy: "ratio"
-    ratio: 0.05  # Sample 5% of traces
+    parent_based_ratio:
+      ratio: 0.1  # Sample 10% of traces
 ```
 
 ### Resource Attributes
@@ -371,7 +361,7 @@ export APP__TRACING__SAMPLER__RATIO=0.01  # 1% sampling in prod
 
 1. **Check Jaeger is running**: Visit http://localhost:16686
 2. **Verify endpoint**: Ensure `exporter.endpoint` matches Jaeger's OTLP port
-3. **Check sampling**: Set `sampler.strategy: "always_on"` for testing
+3. **Check sampling**: Set `sampler.strategy: {always_on: {}}` for testing
 4. **View logs**: Look for "OpenTelemetry tracing initialized" message
 
 ### Performance Impact

@@ -3,17 +3,17 @@
 //! This module provides configuration types and utilities for both host and `OoP` modules.
 
 use anyhow::{Context, Result};
+// Use DB config types from modkit-db
+pub use modkit_db::{DbConnConfig, GlobalDatabaseConfig, PoolCfg};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use tracing::Level;
 
-// Use DB config types from modkit-db
-pub use modkit_db::{DbConnConfig, GlobalDatabaseConfig, PoolCfg};
-
-// Uses your module: crate::host::paths::home_dir::resolve_home_dir
-use crate::host::paths::home_dir::resolve_home_dir;
-
-// DB config types are now imported from modkit-db
+use super::host::paths::home_dir::resolve_home_dir;
+use crate::telemetry::TracingConfig;
+use crate::ConfigProvider;
+use url::Url;
 
 /// Small typed view to parse each module entry.
 #[derive(Debug, Clone, Deserialize)]
@@ -85,6 +85,12 @@ pub struct AppConfig {
     pub modules: HashMap<String, serde_json::Value>,
 }
 
+impl ConfigProvider for AppConfig {
+    fn get_module_config(&self, module_name: &str) -> Option<&serde_json::Value> {
+        self.modules.get(module_name)
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 #[serde(deny_unknown_fields)]
 pub struct ServerConfig {
@@ -95,17 +101,57 @@ pub struct ServerConfig {
 /// Key "default" is the catch-all for logs that don't match explicit subsystems.
 pub type LoggingConfig = HashMap<String, Section>;
 
-// Re-export tracing configuration types from modkit (single source of truth)
-pub use modkit::telemetry::{
-    Exporter, HttpOpts, LogsCorrelation, Propagation, Sampler, TracingConfig,
-};
+// ================= Custom serde module for optional Level (supports "off") =================
+mod optional_level_serde {
+    use serde::{Deserialize, Deserializer, Serializer};
+    use tracing::Level;
+
+    #[allow(clippy::ref_option, clippy::trivially_copy_pass_by_ref)]
+    pub fn serialize<S>(level: &Option<Level>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match level {
+            Some(l) => serializer.serialize_str(l.as_str()),
+            None => serializer.serialize_str("off"),
+        }
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<Level>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        match s.to_lowercase().as_str() {
+            "trace" => Ok(Some(Level::TRACE)),
+            "debug" => Ok(Some(Level::DEBUG)),
+            "info" => Ok(Some(Level::INFO)),
+            "warn" => Ok(Some(Level::WARN)),
+            "error" => Ok(Some(Level::ERROR)),
+            "off" | "none" => Ok(None),
+            _ => Err(serde::de::Error::custom(format!("invalid level: {s}"))),
+        }
+    }
+
+    #[allow(clippy::unnecessary_wraps)]
+    pub fn default() -> Option<Level> {
+        Some(Level::INFO)
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Section {
-    pub console_level: String, // "info", "debug", "error", "off"
-    pub file: String,          // "logs/api.log"
-    #[serde(default)]
-    pub file_level: String,
+    #[serde(
+        default = "optional_level_serde::default",
+        with = "optional_level_serde"
+    )]
+    pub console_level: Option<Level>,
+    pub file: String, // "logs/api.log"
+    #[serde(
+        default = "optional_level_serde::default",
+        with = "optional_level_serde"
+    )]
+    pub file_level: Option<Level>,
     pub max_age_days: Option<u32>, // Not implemented yet
     #[serde(default)]
     pub max_backups: Option<usize>, // How many files to keep
@@ -120,9 +166,9 @@ pub fn default_logging_config() -> LoggingConfig {
     logging.insert(
         "default".to_owned(),
         Section {
-            console_level: "info".to_owned(),
+            console_level: Some(Level::INFO),
             file: "logs/hyperspot.log".to_owned(),
-            file_level: "debug".to_owned(),
+            file_level: Some(Level::DEBUG),
             max_age_days: Some(7),
             max_backups: Some(3),
             max_size_mb: Some(100),
@@ -218,14 +264,14 @@ impl AppConfig {
     }
 
     /// Apply overrides from command line arguments.
-    pub fn apply_cli_overrides(&mut self, args: &CliArgs) {
+    pub fn apply_cli_overrides(&mut self, verbose: u8) {
         // Set logging level based on verbose flags for "default" section.
         let logging = self.logging.get_or_insert_with(default_logging_config);
         if let Some(default_section) = logging.get_mut("default") {
-            default_section.console_level = match args.verbose {
-                0 => default_section.console_level.clone(), // keep
-                1 => "debug".to_owned(),
-                _ => "trace".to_owned(),
+            default_section.console_level = match verbose {
+                0 => default_section.console_level, // keep
+                1 => Some(Level::DEBUG),
+                _ => Some(Level::TRACE),
             };
         }
     }
@@ -303,10 +349,11 @@ fn merge_module_files(
 ///
 /// # Errors
 /// Returns an error if any referenced env var is missing.
-pub fn expand_env_in_dsn(dsn: &str) -> anyhow::Result<String> {
+pub fn expand_env_in_dsn(dsn: &str) -> Result<String> {
     use std::env;
 
     let mut result = dsn.to_owned();
+    // TODO: Think about other way
     let re = regex::Regex::new(r"\$\{([A-Za-z_][A-Za-z0-9_]*)}")?;
 
     for cap in re.captures_iter(dsn) {
@@ -326,7 +373,7 @@ pub fn expand_env_in_dsn(dsn: &str) -> anyhow::Result<String> {
 ///
 /// # Errors
 /// Returns an error if the referenced environment variable is not found.
-pub fn resolve_password(password: Option<&str>) -> anyhow::Result<Option<String>> {
+pub fn resolve_password(password: Option<&str>) -> Result<Option<String>> {
     if let Some(pwd) = password {
         if pwd.starts_with("${") && pwd.ends_with('}') {
             // Extract variable name from ${VAR_NAME}
@@ -349,7 +396,7 @@ pub fn resolve_password(password: Option<&str>) -> anyhow::Result<Option<String>
 ///
 /// # Errors
 /// Returns an error if the DSN is invalid.
-pub fn validate_dsn(dsn: &str) -> anyhow::Result<()> {
+pub fn validate_dsn(dsn: &str) -> Result<()> {
     // Skip validation for SQLite DSNs as they use special syntax not recognized by dsn crate
     if dsn.starts_with("sqlite:") {
         return Ok(());
@@ -364,7 +411,7 @@ pub fn validate_dsn(dsn: &str) -> anyhow::Result<()> {
 /// - `sqlite://@file(users.sqlite)` → `$HOME/.hyperspot/<module>/users.sqlite`
 /// - `sqlite://@file(/abs/path/file.db)` → use absolute path
 /// - `sqlite://` or `sqlite:///` → `$HOME/.hyperspot/<module>/<module>.sqlite`
-fn resolve_sqlite_dsn(dsn: &str, home_dir: &Path, module_name: &str) -> anyhow::Result<String> {
+fn resolve_sqlite_dsn(dsn: &str, home_dir: &Path, module_name: &str) -> Result<String> {
     if dsn.contains("@file(") {
         // Extract the file path from @file(...)
         if let Some(start) = dsn.find("@file(") {
@@ -440,9 +487,7 @@ fn build_server_dsn(
     password: Option<&str>,
     dbname: Option<&str>,
     params: &HashMap<String, String>,
-) -> anyhow::Result<String> {
-    use url::Url;
-
+) -> Result<String> {
     let host = host.unwrap_or("localhost");
     let user = user.unwrap_or("postgres"); // reasonable default for server-based DBs
 
@@ -497,7 +542,7 @@ fn build_sqlite_dsn_with_dbname_override(
     dbname: &str,
     module_name: &str,
     home_dir: &Path,
-) -> anyhow::Result<String> {
+) -> Result<String> {
     // Parse the original DSN to extract query parameters
     let query_params = if let Some(query_start) = original_dsn.find('?') {
         &original_dsn[query_start..]
@@ -537,7 +582,7 @@ fn build_sqlite_dsn(
     dbname: Option<&str>,
     module_name: &str,
     home_dir: &Path,
-) -> anyhow::Result<String> {
+) -> Result<String> {
     // If full DSN provided, resolve @file() syntax and validate
     if let Some(dsn) = dsn {
         let resolved_dsn = resolve_sqlite_dsn(dsn, home_dir, module_name)?;
@@ -617,7 +662,7 @@ fn build_sqlite_dsn(
 }
 
 /// Type alias for the complex return type of `build_final_db_for_module`
-type DbConfigResult = anyhow::Result<Option<(String /* final_dsn */, PoolCfg)>>;
+type DbConfigResult = Result<Option<(String /* final_dsn */, PoolCfg)>>;
 
 /// Builder for accumulating database configuration from multiple sources
 #[derive(Default)]
@@ -643,7 +688,7 @@ impl DbConfigBuilder {
         global_server: &DbConnConfig,
         home_dir: &Path,
         module_name: &str,
-    ) -> anyhow::Result<()> {
+    ) -> Result<()> {
         // Apply global server DSN
         if let Some(global_dsn) = &global_server.dsn {
             let expanded_dsn = expand_env_in_dsn(global_dsn)?;
@@ -689,7 +734,7 @@ impl DbConfigBuilder {
         module_dsn: &str,
         home_dir: &Path,
         module_name: &str,
-    ) -> anyhow::Result<()> {
+    ) -> Result<()> {
         // For SQLite, resolve @file() syntax before validation
         let resolved_dsn = if module_dsn.starts_with("sqlite") {
             resolve_sqlite_dsn(module_dsn, home_dir, module_name)?
@@ -702,7 +747,7 @@ impl DbConfigBuilder {
     }
 
     /// Apply module fields (override everything)
-    fn apply_module_fields(&mut self, module_db_config: &DbConnConfig) -> anyhow::Result<()> {
+    fn apply_module_fields(&mut self, module_db_config: &DbConnConfig) -> Result<()> {
         if let Some(host) = &module_db_config.host {
             self.host = Some(host.clone());
         }
@@ -762,7 +807,7 @@ fn finalize_sqlite_dsn(
     module_db_config: &DbConnConfig,
     module_name: &str,
     home_dir: &Path,
-) -> anyhow::Result<String> {
+) -> Result<String> {
     build_sqlite_dsn(
         builder.dsn.as_deref(),
         module_db_config.file.as_deref(),
@@ -774,7 +819,7 @@ fn finalize_sqlite_dsn(
 }
 
 /// Finalize server-based DSN from builder state
-fn finalize_server_dsn(builder: &DbConfigBuilder, module_name: &str) -> anyhow::Result<String> {
+fn finalize_server_dsn(builder: &DbConfigBuilder, module_name: &str) -> Result<String> {
     // Extract dbname from DSN if not provided separately
     let dbname = if let Some(dbname) = builder.dbname.as_deref() {
         dbname.to_owned()
@@ -804,7 +849,7 @@ fn finalize_server_dsn(builder: &DbConfigBuilder, module_name: &str) -> anyhow::
     if builder.has_field_overrides() || builder.dsn.is_none() {
         // Build DSN from fields when we have overrides or no original DSN
         let scheme = if let Some(dsn) = &builder.dsn {
-            let parsed = url::Url::parse(dsn)?;
+            let parsed = Url::parse(dsn)?;
             parsed.scheme().to_owned()
         } else {
             "postgresql".to_owned() // default
@@ -821,7 +866,7 @@ fn finalize_server_dsn(builder: &DbConfigBuilder, module_name: &str) -> anyhow::
         )
     } else if let Some(original_dsn) = &builder.dsn {
         // Use original DSN when no field overrides (but update dbname if needed)
-        if let Ok(mut parsed) = url::Url::parse(original_dsn) {
+        if let Ok(mut parsed) = Url::parse(original_dsn) {
             // Update the path with the final dbname if it's different
             let original_dbname = parsed.path().trim_start_matches('/');
             if original_dbname != dbname {
@@ -847,9 +892,9 @@ fn finalize_server_dsn(builder: &DbConfigBuilder, module_name: &str) -> anyhow::
 }
 
 /// Redacts password from DSN for logging
-fn redact_dsn_for_logging(dsn: &str) -> anyhow::Result<String> {
+fn redact_dsn_for_logging(dsn: &str) -> Result<String> {
     if dsn.contains('@') {
-        let parsed = url::Url::parse(dsn)?;
+        let parsed = Url::parse(dsn)?;
         let mut log_url = parsed;
         if log_url.password().is_some() {
             log_url.set_password(Some("***")).ok();
@@ -919,7 +964,7 @@ impl RenderedModuleConfig {
     ///
     /// # Errors
     /// Returns an error if JSON parsing fails.
-    pub fn from_json(json: &str) -> anyhow::Result<Self> {
+    pub fn from_json(json: &str) -> Result<Self> {
         serde_json::from_str(json).context("Failed to parse RenderedModuleConfig from JSON")
     }
 
@@ -927,7 +972,7 @@ impl RenderedModuleConfig {
     ///
     /// # Errors
     /// Returns an error if serialization fails.
-    pub fn to_json(&self) -> anyhow::Result<String> {
+    pub fn to_json(&self) -> Result<String> {
         serde_json::to_string(self).context("Failed to serialize RenderedModuleConfig to JSON")
     }
 }
@@ -952,7 +997,7 @@ pub fn render_module_config_for_oop(
     app: &AppConfig,
     module_name: &str,
     _home_dir: &std::path::Path,
-) -> anyhow::Result<RenderedModuleConfig> {
+) -> Result<RenderedModuleConfig> {
     // Get module's database config (with server reference, but NOT resolved to DSN).
     // OoP module will use DbManager to resolve this with its local overrides.
     let module_db_config = parse_module_config(app, module_name)
@@ -992,7 +1037,7 @@ pub fn render_module_config_for_oop(
 ///
 /// # Errors
 /// Returns an error if the module is not found or config parsing fails.
-pub fn parse_module_config(app: &AppConfig, module_name: &str) -> anyhow::Result<ModuleConfig> {
+pub fn parse_module_config(app: &AppConfig, module_name: &str) -> Result<ModuleConfig> {
     let module_raw = app
         .modules
         .get(module_name)
@@ -1010,7 +1055,7 @@ pub fn parse_module_config(app: &AppConfig, module_name: &str) -> anyhow::Result
 pub fn get_module_runtime_config(
     app: &AppConfig,
     module_name: &str,
-) -> anyhow::Result<Option<ModuleRuntime>> {
+) -> Result<Option<ModuleRuntime>> {
     let entry = parse_module_config(app, module_name)?;
     Ok(entry.runtime)
 }
@@ -1142,7 +1187,7 @@ mod tests {
         assert!(logging.contains_key("default"));
 
         let default_section = &logging["default"];
-        assert_eq!(default_section.console_level, "info");
+        assert_eq!(default_section.console_level, Some(Level::INFO));
         assert_eq!(default_section.file, "logs/hyperspot.log");
 
         // Modules bag is empty by default
@@ -1186,7 +1231,7 @@ logging:
         // logging parsed
         let logging = config.logging.as_ref().unwrap();
         let def = &logging["default"];
-        assert_eq!(def.console_level, "debug");
+        assert_eq!(def.console_level, Some(Level::DEBUG));
         assert_eq!(def.file, "logs/default.log");
     }
 
@@ -1237,46 +1282,46 @@ server:
     fn test_cli_overrides() {
         let mut config = AppConfig::default();
 
-        let args = super::CliArgs {
+        let args = CliArgs {
             config: None,
             print_config: false,
             verbose: 2, // trace
             mock: false,
         };
 
-        config.apply_cli_overrides(&args);
+        config.apply_cli_overrides(args.verbose);
 
         // Port override
 
         // Verbose override affects logging
         let logging = config.logging.as_ref().unwrap();
         let default_section = &logging["default"];
-        assert_eq!(default_section.console_level, "trace");
+        assert_eq!(default_section.console_level, Some(Level::TRACE));
     }
 
     #[test]
     fn test_cli_verbose_levels_matrix() {
         for (verbose_level, expected_log_level) in [
-            (0, "info"), // unchanged from default
-            (1, "debug"),
-            (2, "trace"),
-            (3, "trace"), // cap at trace
+            (0, Some(Level::INFO)), // unchanged from default
+            (1, Some(Level::DEBUG)),
+            (2, Some(Level::TRACE)),
+            (3, Some(Level::TRACE)), // cap at trace
         ] {
             let mut config = AppConfig::default();
-            let args = super::CliArgs {
+            let args = CliArgs {
                 config: None,
                 print_config: false,
                 verbose: verbose_level,
                 mock: false,
             };
 
-            config.apply_cli_overrides(&args);
+            config.apply_cli_overrides(args.verbose);
 
             let logging = config.logging.as_ref().unwrap();
             let default_section = &logging["default"];
 
             if verbose_level == 0 {
-                assert_eq!(default_section.console_level, "info");
+                assert_eq!(default_section.console_level, Some(Level::INFO));
             } else {
                 assert_eq!(default_section.console_level, expected_log_level);
             }
@@ -1354,8 +1399,8 @@ logging:
         assert!(logging.contains_key("default"));
 
         let default_section = &logging["default"];
-        assert_eq!(default_section.console_level, "debug");
-        assert_eq!(default_section.file_level, "info");
+        assert_eq!(default_section.console_level, Some(Level::DEBUG));
+        assert_eq!(default_section.file_level, Some(Level::INFO));
         // not calling init to avoid side effects in tests
     }
 
