@@ -8,12 +8,13 @@ use axum::{
     Router,
 };
 use modkit_auth::axum_ext::AuthPolicyLayer;
+use modkit_auth::claims::Permission;
 use modkit_auth::{
     authorizer::RoleAuthorizer,
     axum_ext::Authz,
     build_auth_dispatcher,
-    scope_builder::SimpleScopeBuilder,
-    traits::{PrimaryAuthorizer, ScopeBuilder, TokenValidator},
+    scope_builder::SimpleSecurityContextBuilder,
+    traits::{PrimaryAuthorizer, SecurityContextBuilder, TokenValidator},
     types::{AuthRequirement, RoutePolicy},
     AuthConfig, AuthModeConfig, Claims, PluginConfig, ValidationConfig,
 };
@@ -49,7 +50,7 @@ fn create_test_config() -> AuthConfig {
     plugins.insert(
         "test-oidc".to_owned(),
         PluginConfig::Oidc {
-            tenant_claim: "tenants".to_owned(),
+            tenant_claim: "tenant".to_owned(),
             roles_claim: "roles".to_owned(),
         },
     );
@@ -77,7 +78,7 @@ async fn optional_handler() -> impl IntoResponse {
 fn create_app(
     policy: Arc<dyn RoutePolicy>,
     validator: Arc<dyn TokenValidator>,
-    scope_builder: Arc<dyn ScopeBuilder>,
+    scope_builder: Arc<dyn SecurityContextBuilder>,
     authorizer: Arc<dyn PrimaryAuthorizer>,
 ) -> Router {
     Router::new()
@@ -96,7 +97,7 @@ async fn test_middleware_returns_401_for_missing_token() {
     let dispatcher = Arc::new(build_auth_dispatcher(&config).unwrap());
 
     let validator: Arc<dyn TokenValidator> = dispatcher;
-    let scope_builder: Arc<dyn ScopeBuilder> = Arc::new(SimpleScopeBuilder);
+    let scope_builder: Arc<dyn SecurityContextBuilder> = Arc::new(SimpleSecurityContextBuilder);
     let authorizer: Arc<dyn PrimaryAuthorizer> = Arc::new(RoleAuthorizer);
     let policy: Arc<dyn RoutePolicy> = Arc::new(AlwaysRequiredPolicy);
 
@@ -121,7 +122,7 @@ async fn test_middleware_returns_401_for_invalid_token() {
     let dispatcher = Arc::new(build_auth_dispatcher(&config).unwrap());
 
     let validator: Arc<dyn TokenValidator> = dispatcher;
-    let scope_builder: Arc<dyn ScopeBuilder> = Arc::new(SimpleScopeBuilder);
+    let scope_builder: Arc<dyn SecurityContextBuilder> = Arc::new(SimpleSecurityContextBuilder);
     let authorizer: Arc<dyn PrimaryAuthorizer> = Arc::new(RoleAuthorizer);
     let policy: Arc<dyn RoutePolicy> = Arc::new(AlwaysRequiredPolicy);
 
@@ -147,7 +148,7 @@ async fn test_middleware_allows_options_preflight() {
     let dispatcher = Arc::new(build_auth_dispatcher(&config).unwrap());
 
     let validator: Arc<dyn TokenValidator> = dispatcher;
-    let scope_builder: Arc<dyn ScopeBuilder> = Arc::new(SimpleScopeBuilder);
+    let scope_builder: Arc<dyn SecurityContextBuilder> = Arc::new(SimpleSecurityContextBuilder);
     let authorizer: Arc<dyn PrimaryAuthorizer> = Arc::new(RoleAuthorizer);
     let policy: Arc<dyn RoutePolicy> = Arc::new(AlwaysRequiredPolicy);
 
@@ -179,7 +180,7 @@ async fn test_optional_auth_inserts_anonymous_context() {
     let dispatcher = Arc::new(build_auth_dispatcher(&config).unwrap());
 
     let validator: Arc<dyn TokenValidator> = dispatcher;
-    let scope_builder: Arc<dyn ScopeBuilder> = Arc::new(SimpleScopeBuilder);
+    let scope_builder: Arc<dyn SecurityContextBuilder> = Arc::new(SimpleSecurityContextBuilder);
     let authorizer: Arc<dyn PrimaryAuthorizer> = Arc::new(RoleAuthorizer);
     let policy: Arc<dyn RoutePolicy> = Arc::new(AlwaysOptionalPolicy);
 
@@ -249,13 +250,15 @@ async fn test_claims_uuid_validation() {
     };
 
     let claims = Claims {
-        sub: Uuid::new_v4(),
+        subject: Uuid::new_v4(),
         issuer: "https://test.example.com".to_owned(),
         audiences: vec!["api".to_owned()],
         expires_at: Some(time::OffsetDateTime::now_utc() + time::Duration::hours(1)),
         not_before: None,
-        tenants: vec![Uuid::new_v4()],
-        roles: vec!["user".to_owned()],
+        issued_at: None,
+        jwt_id: None,
+        tenant_id: Uuid::new_v4(),
+        permissions: vec![Permission::new("resource", "read")],
         extras: serde_json::Map::new(),
     };
 
@@ -276,13 +279,15 @@ async fn test_expired_token_fails_validation() {
     };
 
     let claims = Claims {
-        sub: Uuid::new_v4(),
+        subject: Uuid::new_v4(),
         issuer: "https://test.example.com".to_owned(),
         audiences: vec!["api".to_owned()],
         expires_at: Some(time::OffsetDateTime::now_utc() - time::Duration::hours(1)),
         not_before: None,
-        tenants: vec![],
-        roles: vec![],
+        issued_at: None,
+        jwt_id: None,
+        tenant_id: Uuid::new_v4(),
+        permissions: vec![],
         extras: serde_json::Map::new(),
     };
 
@@ -303,13 +308,15 @@ async fn test_invalid_issuer_fails_validation() {
     };
 
     let claims = Claims {
-        sub: Uuid::new_v4(),
+        subject: Uuid::new_v4(),
         issuer: "https://invalid.example.com".to_owned(),
         audiences: vec!["api".to_owned()],
         expires_at: Some(time::OffsetDateTime::now_utc() + time::Duration::hours(1)),
         not_before: None,
-        tenants: vec![],
-        roles: vec![],
+        issued_at: None,
+        jwt_id: None,
+        tenant_id: Uuid::new_v4(),
+        permissions: vec![],
         extras: serde_json::Map::new(),
     };
 

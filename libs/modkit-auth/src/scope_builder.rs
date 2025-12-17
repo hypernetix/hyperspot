@@ -1,17 +1,31 @@
-use crate::{claims::Claims, traits::ScopeBuilder};
-use modkit_security::AccessScope;
+use crate::{claims::Claims, traits::SecurityContextBuilder};
+use modkit_security::SecurityContext;
 
 /// Simple scope builder that converts tenant claims to `AccessScope`
 #[derive(Debug, Clone, Default)]
-pub struct SimpleScopeBuilder;
+pub struct SimpleSecurityContextBuilder;
 
-impl ScopeBuilder for SimpleScopeBuilder {
-    fn tenants_to_scope(&self, claims: &Claims) -> AccessScope {
-        if claims.tenants.is_empty() {
+impl SecurityContextBuilder for SimpleSecurityContextBuilder {
+    fn build(&self, claims: &Claims) -> SecurityContext {
+        if claims.tenant_id.is_nil() {
             // No explicit tenants - deny all by default
-            AccessScope::default()
+            SecurityContext::anonymous()
         } else {
-            AccessScope::tenants_only(claims.tenants.clone())
+            let mut builder = SecurityContext::builder()
+                .tenant_id(claims.tenant_id)
+                .subject_id(claims.subject);
+
+            for perm in &claims.permissions {
+                builder = builder.add_permission(perm.resource(), perm.action());
+            }
+
+            for (extra_key, extra_value) in &claims.extras {
+                if let Some(value_str) = extra_value.as_str() {
+                    builder = builder.add_environment_attribute(extra_key, value_str);
+                }
+            }
+
+            builder.build()
         }
     }
 }

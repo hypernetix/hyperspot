@@ -10,7 +10,7 @@ pub use windows_named_pipe::{create_named_pipe_incoming, NamedPipeConnection, Na
 
 pub const SECCTX_METADATA_KEY: &str = "x-secctx-bin";
 
-use modkit_security::{decode_bin, encode_bin, SecurityCtx};
+use modkit_security::{decode_bin, encode_bin, SecurityContext};
 use tonic::metadata::{MetadataMap, MetadataValue};
 use tonic::Status;
 
@@ -18,7 +18,7 @@ use tonic::Status;
 ///
 /// # Errors
 /// Returns `Status::internal` if encoding fails.
-pub fn attach_secctx(meta: &mut MetadataMap, ctx: &SecurityCtx) -> Result<(), Status> {
+pub fn attach_secctx(meta: &mut MetadataMap, ctx: &SecurityContext) -> Result<(), Status> {
     let encoded = encode_bin(ctx).map_err(|e| Status::internal(format!("secctx encode: {e}")))?;
 
     meta.insert_bin(SECCTX_METADATA_KEY, MetadataValue::from_bytes(&encoded));
@@ -29,7 +29,7 @@ pub fn attach_secctx(meta: &mut MetadataMap, ctx: &SecurityCtx) -> Result<(), St
 ///
 /// # Errors
 /// Returns `Status::unauthenticated` if the metadata is missing or decoding fails.
-pub fn extract_secctx(meta: &MetadataMap) -> Result<SecurityCtx, Status> {
+pub fn extract_secctx(meta: &MetadataMap) -> Result<SecurityContext, Status> {
     let raw = meta
         .get_bin(SECCTX_METADATA_KEY)
         .ok_or_else(|| Status::unauthenticated("missing secctx metadata"))?;

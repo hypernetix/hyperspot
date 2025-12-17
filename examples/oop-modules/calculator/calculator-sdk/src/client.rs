@@ -2,11 +2,11 @@
 //!
 //! Internal client used by `wire_client()`. Not exported from SDK.
 
+use std::sync::Arc;
 use anyhow::Result;
 use async_trait::async_trait;
 use tonic::transport::Channel;
-
-use modkit_security::SecurityCtx;
+use modkit_security::PolicyEngine;
 use modkit_transport_grpc::attach_secctx;
 use modkit_transport_grpc::client::{connect_with_retry, GrpcClientConfig};
 
@@ -32,7 +32,7 @@ impl CalculatorGrpcClient {
 
 #[async_trait]
 impl CalculatorClient for CalculatorGrpcClient {
-    async fn add(&self, ctx: &SecurityCtx, a: i64, b: i64) -> Result<i64, CalculatorError> {
+    async fn add(&self, pe: Arc<dyn PolicyEngine>, a: i64, b: i64) -> Result<i64, CalculatorError> {
         let mut client = self.inner.clone();
 
         // Build request with SecurityCtx in metadata
@@ -40,7 +40,7 @@ impl CalculatorClient for CalculatorGrpcClient {
         let mut request = tonic::Request::new(proto_req);
 
         // Attach SecurityCtx to metadata
-        attach_secctx(request.metadata_mut(), ctx)
+        attach_secctx(request.metadata_mut(), pe.context())
             .map_err(|e| CalculatorError::Internal(e.to_string()))?;
 
         // Make the gRPC call

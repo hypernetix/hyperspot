@@ -4,6 +4,7 @@
 //!
 //! These tests verify end-to-end behavior with a real Axum Router
 
+use axum::middleware::from_fn_with_state;
 use axum::{
     body::Body,
     extract::Request,
@@ -12,14 +13,17 @@ use axum::{
     routing::get,
     Router,
 };
+use modkit_auth::policy_engine_builder::{policy_engine_injector, SimplePolicyEngineBuilder};
+use modkit_auth::traits::PolicyEngineBuilder;
 use modkit_auth::{
     axum_ext::AuthPolicyLayer,
+    claims::Permission,
     errors::AuthError,
-    traits::{PrimaryAuthorizer, ScopeBuilder, TokenValidator},
+    traits::{PrimaryAuthorizer, SecurityContextBuilder, TokenValidator},
     types::{AuthRequirement, RoutePolicy, SecRequirement},
     Claims,
 };
-use modkit_security::{AccessScope, SecurityCtx};
+use modkit_security::{PolicyEngine, SecurityContext};
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
@@ -60,12 +64,27 @@ impl TokenValidator for IntegrationValidator {
     }
 }
 
-/// Fake `ScopeBuilder` for integration testing
-struct IntegrationScopeBuilder;
+/// Fake `SecurityContext` for integration testing
+struct IntegrationSecurityContextBuilder;
 
-impl ScopeBuilder for IntegrationScopeBuilder {
-    fn tenants_to_scope(&self, claims: &Claims) -> AccessScope {
-        AccessScope::tenants_only(claims.tenants.clone())
+impl SecurityContextBuilder for IntegrationSecurityContextBuilder {
+    fn build(&self, claims: &Claims) -> SecurityContext {
+        // Build an AccessScope from the single tenant_id
+        let mut builder = SecurityContext::builder()
+            .tenant_id(claims.tenant_id)
+            .subject_id(claims.subject);
+
+        for perm in &claims.permissions {
+            builder = builder.add_permission(perm.resource(), perm.action());
+        }
+
+        for (extra_key, extra_value) in &claims.extras {
+            if let Some(value_str) = extra_value.as_str() {
+                builder = builder.add_environment_attribute(extra_key, value_str);
+            }
+        }
+
+        builder.build()
     }
 }
 
@@ -106,24 +125,25 @@ impl PrimaryAuthorizer for IntegrationAuthorizer {
 /// Helper to create fake Claims
 fn fake_claims(sub_id: Uuid) -> Claims {
     Claims {
-        sub: sub_id,
+        subject: sub_id,
         issuer: "test-issuer".to_owned(),
         audiences: vec!["test-api".to_owned()],
         expires_at: None,
         not_before: None,
-        tenants: vec![Uuid::new_v4()],
-        roles: vec![],
+        issued_at: None,
+        jwt_id: None,
+        tenant_id: Uuid::new_v4(),
+        permissions: vec![Permission::new("resource", "action")],
         extras: serde_json::Map::new(),
     }
 }
 
-/// Handler that returns `SecurityCtx` information
-async fn test_handler(ctx: axum::Extension<SecurityCtx>) -> impl IntoResponse {
-    let ctx = ctx.0;
-    if ctx.is_denied() {
-        format!("anonymous:{}", ctx.subject_id())
+/// Handler that returns `SecurityContext` information
+async fn test_handler(policy: axum::Extension<Arc<dyn PolicyEngine>>) -> impl IntoResponse {
+    if policy.allows("resource", "action") {
+        format!("user:{}", policy.context().subject_id())
     } else {
-        format!("user:{}", ctx.subject_id())
+        format!("anonymous:{}", policy.context().subject_id())
     }
 }
 
@@ -131,16 +151,22 @@ async fn test_handler(ctx: axum::Extension<SecurityCtx>) -> impl IntoResponse {
 fn build_test_router(
     policy: Arc<dyn RoutePolicy>,
     validator: Arc<dyn TokenValidator>,
-    scope_builder: Arc<dyn ScopeBuilder>,
+    sec_ctx_builder: Arc<dyn SecurityContextBuilder>,
     authorizer: Arc<dyn PrimaryAuthorizer>,
 ) -> Router {
+    let policy_engine_builder: Arc<dyn PolicyEngineBuilder> = Arc::new(SimplePolicyEngineBuilder);
+
     Router::new()
         .route("/secured", get(test_handler))
         .route("/public", get(test_handler))
         .route("/optional", get(test_handler))
+        .layer(from_fn_with_state(
+            policy_engine_builder,
+            policy_engine_injector,
+        ))
         .layer(AuthPolicyLayer::new(
             validator,
-            scope_builder,
+            sec_ctx_builder,
             authorizer,
             policy,
         ))
@@ -160,11 +186,11 @@ fn build_request(method: Method, path: &str, token: Option<&str>) -> Request {
 #[tokio::test(flavor = "multi_thread")]
 async fn secured_route_without_token_returns_401() {
     let validator = Arc::new(IntegrationValidator::new_ok(fake_claims(Uuid::new_v4())));
-    let scope_builder = Arc::new(IntegrationScopeBuilder);
+    let sec_ctx_builder = Arc::new(IntegrationSecurityContextBuilder);
     let authorizer = Arc::new(IntegrationAuthorizer::new_ok());
     let policy = Arc::new(AuthRequirement::Required(None));
 
-    let app = build_test_router(policy, validator, scope_builder, authorizer);
+    let app = build_test_router(policy, validator, sec_ctx_builder, authorizer);
 
     let request = build_request(Method::GET, "/secured", None);
     let response = app.oneshot(request).await.unwrap();
@@ -176,11 +202,11 @@ async fn secured_route_without_token_returns_401() {
 async fn secured_route_with_valid_token_returns_ok() {
     let sub_id = Uuid::new_v4();
     let validator = Arc::new(IntegrationValidator::new_ok(fake_claims(sub_id)));
-    let scope_builder = Arc::new(IntegrationScopeBuilder);
+    let sec_ctx_builder = Arc::new(IntegrationSecurityContextBuilder);
     let authorizer = Arc::new(IntegrationAuthorizer::new_ok());
     let policy = Arc::new(AuthRequirement::Required(None));
 
-    let app = build_test_router(policy, validator, scope_builder, authorizer);
+    let app = build_test_router(policy, validator, sec_ctx_builder, authorizer);
 
     let request = build_request(Method::GET, "/secured", Some("valid-token"));
     let response = app.oneshot(request).await.unwrap();
@@ -198,11 +224,11 @@ async fn secured_route_with_valid_token_returns_ok() {
 #[tokio::test(flavor = "multi_thread")]
 async fn public_route_always_returns_ok_with_anonymous() {
     let validator = Arc::new(IntegrationValidator::new_ok(fake_claims(Uuid::new_v4())));
-    let scope_builder = Arc::new(IntegrationScopeBuilder);
+    let sec_ctx_builder = Arc::new(IntegrationSecurityContextBuilder);
     let authorizer = Arc::new(IntegrationAuthorizer::new_ok());
     let policy = Arc::new(AuthRequirement::None);
 
-    let app = build_test_router(policy, validator, scope_builder, authorizer);
+    let app = build_test_router(policy, validator, sec_ctx_builder, authorizer);
 
     let request = build_request(Method::GET, "/public", None);
     let response = app.oneshot(request).await.unwrap();
@@ -220,11 +246,11 @@ async fn public_route_always_returns_ok_with_anonymous() {
 async fn optional_route_with_valid_token_returns_ok_authenticated() {
     let sub_id = Uuid::new_v4();
     let validator = Arc::new(IntegrationValidator::new_ok(fake_claims(sub_id)));
-    let scope_builder = Arc::new(IntegrationScopeBuilder);
+    let sec_ctx_builder = Arc::new(IntegrationSecurityContextBuilder);
     let authorizer = Arc::new(IntegrationAuthorizer::new_ok());
     let policy = Arc::new(AuthRequirement::Optional);
 
-    let app = build_test_router(policy, validator, scope_builder, authorizer);
+    let app = build_test_router(policy, validator, sec_ctx_builder, authorizer);
 
     let request = build_request(Method::GET, "/optional", Some("valid-token"));
     let response = app.oneshot(request).await.unwrap();
@@ -242,11 +268,11 @@ async fn optional_route_with_valid_token_returns_ok_authenticated() {
 #[tokio::test(flavor = "multi_thread")]
 async fn optional_route_without_token_returns_ok_anonymous() {
     let validator = Arc::new(IntegrationValidator::new_ok(fake_claims(Uuid::new_v4())));
-    let scope_builder = Arc::new(IntegrationScopeBuilder);
+    let sec_ctx_builder = Arc::new(IntegrationSecurityContextBuilder);
     let authorizer = Arc::new(IntegrationAuthorizer::new_ok());
     let policy = Arc::new(AuthRequirement::Optional);
 
-    let app = build_test_router(policy, validator, scope_builder, authorizer);
+    let app = build_test_router(policy, validator, sec_ctx_builder, authorizer);
 
     let request = build_request(Method::GET, "/optional", None);
     let response = app.oneshot(request).await.unwrap();
@@ -263,11 +289,11 @@ async fn optional_route_without_token_returns_ok_anonymous() {
 #[tokio::test(flavor = "multi_thread")]
 async fn cors_preflight_bypasses_auth_logic() {
     let validator = Arc::new(IntegrationValidator::new_ok(fake_claims(Uuid::new_v4())));
-    let scope_builder = Arc::new(IntegrationScopeBuilder);
+    let sec_ctx_builder = Arc::new(IntegrationSecurityContextBuilder);
     let authorizer = Arc::new(IntegrationAuthorizer::new_ok());
     let policy = Arc::new(AuthRequirement::Required(None));
 
-    let app = build_test_router(policy, validator, scope_builder, authorizer);
+    let app = build_test_router(policy, validator, sec_ctx_builder, authorizer);
 
     let mut request = build_request(Method::OPTIONS, "/secured", None);
     request
@@ -286,11 +312,11 @@ async fn cors_preflight_bypasses_auth_logic() {
 #[tokio::test(flavor = "multi_thread")]
 async fn secured_route_with_invalid_token_returns_401() {
     let validator = Arc::new(IntegrationValidator::new_err());
-    let scope_builder = Arc::new(IntegrationScopeBuilder);
+    let security_context_builder = Arc::new(IntegrationSecurityContextBuilder);
     let authorizer = Arc::new(IntegrationAuthorizer::new_ok());
     let policy = Arc::new(AuthRequirement::Required(None));
 
-    let app = build_test_router(policy, validator, scope_builder, authorizer);
+    let app = build_test_router(policy, validator, security_context_builder, authorizer);
 
     let request = build_request(Method::GET, "/secured", Some("invalid-token"));
     let response = app.oneshot(request).await.unwrap();
@@ -301,12 +327,12 @@ async fn secured_route_with_invalid_token_returns_401() {
 #[tokio::test(flavor = "multi_thread")]
 async fn secured_route_with_sec_requirement_denied_returns_403() {
     let validator = Arc::new(IntegrationValidator::new_ok(fake_claims(Uuid::new_v4())));
-    let scope_builder = Arc::new(IntegrationScopeBuilder);
+    let sec_ctx_builder = Arc::new(IntegrationSecurityContextBuilder);
     let authorizer = Arc::new(IntegrationAuthorizer::new_err());
     let sec_req = SecRequirement::new("admin", "access");
     let policy = Arc::new(AuthRequirement::Required(Some(sec_req)));
 
-    let app = build_test_router(policy, validator, scope_builder, authorizer);
+    let app = build_test_router(policy, validator, sec_ctx_builder, authorizer);
 
     let request = build_request(Method::GET, "/secured", Some("valid-token"));
     let response = app.oneshot(request).await.unwrap();
@@ -318,12 +344,12 @@ async fn secured_route_with_sec_requirement_denied_returns_403() {
 async fn secured_route_with_sec_requirement_allowed_returns_ok() {
     let sub_id = Uuid::new_v4();
     let validator = Arc::new(IntegrationValidator::new_ok(fake_claims(sub_id)));
-    let scope_builder = Arc::new(IntegrationScopeBuilder);
+    let sec_ctx_builder = Arc::new(IntegrationSecurityContextBuilder);
     let authorizer = Arc::new(IntegrationAuthorizer::new_ok());
     let sec_req = SecRequirement::new("admin", "access");
     let policy = Arc::new(AuthRequirement::Required(Some(sec_req)));
 
-    let app = build_test_router(policy, validator, scope_builder, authorizer);
+    let app = build_test_router(policy, validator, sec_ctx_builder, authorizer);
 
     let request = build_request(Method::GET, "/secured", Some("valid-token"));
     let response = app.oneshot(request).await.unwrap();

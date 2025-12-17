@@ -1,3 +1,4 @@
+use crate::claims::Permission;
 use crate::{claims::Claims, errors::AuthError, traits::PrimaryAuthorizer, types::SecRequirement};
 use async_trait::async_trait;
 
@@ -8,32 +9,13 @@ pub struct RoleAuthorizer;
 impl RoleAuthorizer {
     /// Check if any role matches the requirement pattern
     fn check_role(claims: &Claims, requirement: &SecRequirement) -> bool {
-        let required_role = format!("{}:{}", requirement.resource, requirement.action);
+        let required_permission = Permission::new(&requirement.resource, &requirement.action);
 
         // Check for exact match or wildcard patterns
-        claims.roles.iter().any(|role| {
-            // Exact match: "users:read"
-            if role == &required_role {
-                return true;
-            }
-
-            // Resource wildcard: "users:*"
-            if role == &format!("{}:*", requirement.resource) {
-                return true;
-            }
-
-            // Action wildcard: "*:read"
-            if role == &format!("*:{}", requirement.action) {
-                return true;
-            }
-
-            // Full wildcard: "*:*"
-            if role == "*:*" {
-                return true;
-            }
-
-            false
-        })
+        claims
+            .permissions
+            .iter()
+            .any(|permission: &Permission| return permission.matches(&required_permission))
     }
 }
 
@@ -55,14 +37,27 @@ mod tests {
     use uuid::Uuid;
 
     fn mock_claims(roles: Vec<String>) -> Claims {
+        let permissions: Vec<Permission> = roles
+            .into_iter()
+            .map(|r| {
+                if let Some((res, act)) = r.split_once(':') {
+                    Permission::new(res, act)
+                } else {
+                    Permission::new(&r, "*")
+                }
+            })
+            .collect();
+
         Claims {
-            sub: Uuid::new_v4(),
             issuer: "test".to_owned(),
-            audiences: vec![],
+            subject: Uuid::new_v4(),
+            audiences: vec!["api".to_owned()],
             expires_at: None,
             not_before: None,
-            tenants: vec![],
-            roles,
+            issued_at: None,
+            jwt_id: None,
+            tenant_id: Uuid::new_v4(),
+            permissions,
             extras: serde_json::Map::new(),
         }
     }

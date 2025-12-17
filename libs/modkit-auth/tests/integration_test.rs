@@ -1,5 +1,6 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
+use modkit_auth::claims::Permission;
 use modkit_auth::{
     build_auth_dispatcher, AuthConfig, AuthModeConfig, Claims, ClaimsError, JwksConfig,
     PluginConfig,
@@ -15,7 +16,7 @@ async fn test_dispatcher_single_mode() {
     plugins.insert(
         "keycloak".to_owned(),
         PluginConfig::Keycloak {
-            tenant_claim: "tenants".to_owned(),
+            tenant_claim: "tenant".to_owned(),
             client_roles: Some("modkit-api".to_owned()),
             role_prefix: None,
         },
@@ -65,13 +66,18 @@ fn test_claims_structure() {
     let tenant_id = Uuid::new_v4();
 
     let normalized = Claims {
-        sub: user_id,
+        subject: user_id,
         issuer: "https://auth.example.com".to_owned(),
         audiences: vec!["api".to_owned()],
         expires_at: Some(time::OffsetDateTime::now_utc() + time::Duration::hours(1)),
         not_before: None,
-        tenants: vec![tenant_id],
-        roles: vec!["admin".to_owned(), "user".to_owned()],
+        issued_at: None,
+        jwt_id: None,
+        tenant_id,
+        permissions: vec![
+            Permission::new("resource", "read"),
+            Permission::new("resource", "write"),
+        ],
         extras: {
             let mut map = serde_json::Map::new();
             map.insert("email".to_owned(), json!("test@example.com"));
@@ -80,10 +86,10 @@ fn test_claims_structure() {
     };
 
     // Verify normalized claims structure
-    assert_eq!(normalized.sub, user_id);
+    assert_eq!(normalized.subject, user_id);
     assert_eq!(normalized.issuer, "https://auth.example.com");
-    assert_eq!(normalized.tenants, vec![tenant_id]);
-    assert_eq!(normalized.roles.len(), 2);
+    assert_eq!(normalized.tenant_id, tenant_id);
+    assert_eq!(normalized.permissions.len(), 2);
     assert_eq!(
         normalized.extras.get("email").and_then(|v| v.as_str()),
         Some("test@example.com")
@@ -96,13 +102,15 @@ fn test_claims_validation() {
 
     // Test expired token
     let expired = Claims {
-        sub: user_id,
+        subject: user_id,
         issuer: "https://auth.example.com".to_owned(),
         audiences: vec!["api".to_owned()],
         expires_at: Some(time::OffsetDateTime::now_utc() - time::Duration::hours(1)),
         not_before: None,
-        tenants: vec![],
-        roles: vec![],
+        issued_at: None,
+        jwt_id: None,
+        tenant_id: Uuid::new_v4(),
+        permissions: vec![],
         extras: serde_json::Map::new(),
     };
 
@@ -110,13 +118,15 @@ fn test_claims_validation() {
 
     // Test not yet valid
     let future = Claims {
-        sub: user_id,
+        subject: user_id,
         issuer: "https://auth.example.com".to_owned(),
         audiences: vec!["api".to_owned()],
         expires_at: None,
         not_before: Some(time::OffsetDateTime::now_utc() + time::Duration::hours(1)),
-        tenants: vec![],
-        roles: vec![],
+        issued_at: None,
+        jwt_id: None,
+        tenant_id: Uuid::new_v4(),
+        permissions: vec![],
         extras: serde_json::Map::new(),
     };
 
@@ -195,7 +205,7 @@ async fn test_dispatcher_refresh_keys_with_no_providers() {
     plugins.insert(
         "oidc".to_owned(),
         PluginConfig::Oidc {
-            tenant_claim: "tenants".to_owned(),
+            tenant_claim: "tenant".to_owned(),
             roles_claim: "roles".to_owned(),
         },
     );

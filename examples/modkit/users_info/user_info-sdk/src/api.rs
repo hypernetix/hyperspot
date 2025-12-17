@@ -3,13 +3,13 @@
 //! This trait defines the public API for the `user_info` module.
 //! All methods require a `SecurityCtx` for authorization and access control.
 
-use async_trait::async_trait;
-use modkit_odata::{ODataQuery, Page};
-use modkit_security::SecurityCtx;
-use uuid::Uuid;
-
 use crate::errors::UsersInfoError;
 use crate::models::{NewUser, UpdateUserRequest, User};
+use async_trait::async_trait;
+use modkit_odata::{ODataQuery, Page};
+use modkit_security::PolicyEngine;
+use std::sync::Arc;
+use uuid::Uuid;
 
 /// Public API trait for the `user_info` module.
 ///
@@ -23,29 +23,29 @@ use crate::models::{NewUser, UpdateUserRequest, User};
 #[async_trait]
 pub trait UsersInfoApi: Send + Sync {
     /// Get a user by ID.
-    async fn get_user(&self, ctx: &SecurityCtx, id: Uuid) -> Result<User, UsersInfoError>;
+    async fn get_user(&self, pe: Arc<dyn PolicyEngine>, id: Uuid) -> Result<User, UsersInfoError>;
 
     /// List users with cursor-based pagination.
     async fn list_users(
         &self,
-        ctx: &SecurityCtx,
+        pe: Arc<dyn PolicyEngine>,
         query: ODataQuery,
     ) -> Result<Page<User>, UsersInfoError>;
 
     /// Create a new user.
     async fn create_user(
         &self,
-        ctx: &SecurityCtx,
+        pe: Arc<dyn PolicyEngine>,
         new_user: NewUser,
     ) -> Result<User, UsersInfoError>;
 
     /// Update a user with partial data.
     async fn update_user(
         &self,
-        ctx: &SecurityCtx,
+        pe: Arc<dyn PolicyEngine>,
         req: UpdateUserRequest,
     ) -> Result<User, UsersInfoError>;
 
     /// Delete a user by ID.
-    async fn delete_user(&self, ctx: &SecurityCtx, id: Uuid) -> Result<(), UsersInfoError>;
+    async fn delete_user(&self, pe: Arc<dyn PolicyEngine>, id: Uuid) -> Result<(), UsersInfoError>;
 }

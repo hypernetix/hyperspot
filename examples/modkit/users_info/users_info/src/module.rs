@@ -6,7 +6,6 @@ use modkit::{DbModule, Module, ModuleCtx, RestfulModule, SseBroadcaster, TracedC
 use sea_orm_migration::MigratorTrait;
 use tracing::{debug, info};
 use url::Url;
-
 // Import the API trait from SDK
 use user_info_sdk::UsersInfoApi;
 

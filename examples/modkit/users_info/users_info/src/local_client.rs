@@ -5,10 +5,9 @@
 
 use async_trait::async_trait;
 use modkit_odata::{ODataQuery, Page};
-use modkit_security::SecurityCtx;
 use std::sync::Arc;
 use uuid::Uuid;
-
+use modkit_security::PolicyEngine;
 use user_info_sdk::{NewUser, UpdateUserRequest, User, UsersInfoApi, UsersInfoError};
 
 use crate::domain::service::Service;
@@ -32,16 +31,16 @@ impl UsersInfoLocalClient {
 
 #[async_trait]
 impl UsersInfoApi for UsersInfoLocalClient {
-    async fn get_user(&self, ctx: &SecurityCtx, id: Uuid) -> Result<User, UsersInfoError> {
+    async fn get_user(&self, pe: Arc<dyn PolicyEngine>, id: Uuid) -> Result<User, UsersInfoError> {
         self.service.get_user(ctx, id).await.map_err(Into::into)
     }
 
     async fn list_users(
         &self,
-        ctx: &SecurityCtx,
+        pe: Arc<dyn PolicyEngine>,
         query: ODataQuery,
     ) -> Result<Page<User>, UsersInfoError> {
-        self.service.list_users_page(ctx, query).await.map_err(|e| {
+        self.service.list_users_page(pe.context(), query).await.map_err(|e| {
             // OData errors at this layer are unexpected (query construction errors)
             // Log and convert to internal error
             tracing::error!(error = ?e, "Unexpected OData error in gateway");

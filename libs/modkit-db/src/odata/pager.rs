@@ -108,11 +108,11 @@
 //! - Applies filters at the database level (not in application memory)
 //! - Supports indexed columns via field mappings for optimal query performance
 
-use modkit_odata::{Error as ODataError, ODataQuery, Page, SortDir};
-use sea_orm::{ColumnTrait, ConnectionTrait, EntityTrait};
-
 use crate::odata::{paginate_with_odata, FieldMap, LimitCfg};
-use crate::secure::{ScopableEntity, SecureConn, SecurityCtx};
+use crate::secure::{ScopableEntity, SecureConn};
+use modkit_odata::{Error as ODataError, ODataQuery, Page, SortDir};
+use modkit_security::AccessScope;
+use sea_orm::{ColumnTrait, ConnectionTrait, EntityTrait};
 
 /// Minimal fluent builder for Secure + `OData` pagination.
 ///
@@ -148,7 +148,7 @@ where
     C: ConnectionTrait + Send + Sync,
 {
     db: &'a SecureConn,
-    ctx: &'a SecurityCtx,
+    ctx: &'a AccessScope,
     conn: &'a C,
     fmap: &'a FieldMap<E>,
     tiebreaker: (&'a str, SortDir),
@@ -175,14 +175,14 @@ where
     /// ```ignore
     /// let pager = OPager::<UserEntity, _>::new(
     ///     db,
-    ///     &SecurityCtx::for_tenant(tenant_id, user_id),
+    ///     &AccessScope::for_tenant(tenant_id, user_id),
     ///     db.conn(),
     ///     &USER_FIELD_MAP
     /// );
     /// ```
     pub fn new(
         db: &'a SecureConn,
-        ctx: &'a SecurityCtx,
+        ctx: &'a AccessScope,
         conn: &'a C,
         fmap: &'a FieldMap<E>,
     ) -> Self {
@@ -313,7 +313,7 @@ mod tests {
         // These should compile, demonstrating the API shape
         fn _compile_check<'a, E, C>(
             db: &'a SecureConn,
-            ctx: &'a SecurityCtx,
+            ctx: &'a AccessScope,
             conn: &'a C,
             fmap: &'a FieldMap<E>,
         ) where

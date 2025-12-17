@@ -145,7 +145,7 @@ impl AuthDispatcher {
         validate_claims(claims, validation_config).map_err(|e| {
             tracing::warn!(
                 error = %e,
-                sub_prefix = %truncate_uuid(&claims.sub),
+                sub_prefix = %truncate_uuid(&claims.subject),
                 issuer = %claims.issuer,
                 "Common validation failed"
             );
@@ -156,12 +156,12 @@ impl AuthDispatcher {
     /// Log successful JWT validation
     fn log_jwt_success(claims: &Claims, plugin_name: &str, kid: Option<&String>) {
         tracing::debug!(
-            sub_prefix = %truncate_uuid(&claims.sub),
+            sub_prefix = %truncate_uuid(&claims.subject),
             issuer = %claims.issuer,
             plugin = plugin_name,
             kid = ?kid,
-            num_roles = claims.roles.len(),
-            num_tenants = claims.tenants.len(),
+            tenant = %claims.tenant_id,
+            num_permissions = claims.permissions.len(),
             "Token validation successful"
         );
     }
@@ -267,7 +267,7 @@ impl AuthDispatcher {
         validate_claims(claims, config).map_err(|e| {
             tracing::warn!(
                 error = %e,
-                sub_prefix = %truncate_uuid(&claims.sub),
+                sub_prefix = %truncate_uuid(&claims.subject),
                 issuer = %claims.issuer,
                 "Common validation failed"
             );
@@ -278,11 +278,11 @@ impl AuthDispatcher {
     /// Log successful validation
     fn log_validation_success(claims: &Claims, plugin_name: &str) {
         tracing::debug!(
-            sub_prefix = %truncate_uuid(&claims.sub),
+            sub_prefix = %truncate_uuid(&claims.subject),
             issuer = %claims.issuer,
             plugin = plugin_name,
-            num_roles = claims.roles.len(),
-            num_tenants = claims.tenants.len(),
+            tenant = %claims.tenant_id,
+            num_permissions = claims.permissions.len(),
             "Opaque token validation successful"
         );
     }
@@ -381,9 +381,11 @@ impl TokenValidator for AuthDispatcher {
 mod tests {
     use super::*;
     use crate::auth_mode::AuthModeConfig;
+    use crate::claims::Permission;
     use crate::config::PluginConfig;
     use serde_json::json;
     use std::collections::HashMap;
+    use time::OffsetDateTime;
 
     #[test]
     fn test_dispatcher_creation() {
@@ -540,13 +542,15 @@ mod tests {
     /// Helper to create test claims
     fn test_claims() -> Claims {
         Claims {
-            sub: Uuid::new_v4(),
             issuer: "https://test.example.com".to_owned(),
+            subject: Uuid::new_v4(),
             audiences: vec!["test-api".to_owned()],
-            expires_at: Some(time::OffsetDateTime::now_utc() + time::Duration::hours(1)),
+            expires_at: Some(OffsetDateTime::now_utc() + time::Duration::hours(1)),
             not_before: None,
-            tenants: vec![Uuid::new_v4()],
-            roles: vec!["user".to_owned()],
+            issued_at: None,
+            jwt_id: None,
+            tenant_id: Uuid::new_v4(),
+            permissions: vec![Permission::new("resource", "action")],
             extras: serde_json::Map::new(),
         }
     }
@@ -559,7 +563,7 @@ mod tests {
         let claims = test_claims();
         let raw_claims = json!({
             "iss": claims.issuer.clone(),
-            "sub": claims.sub.to_string(),
+            "sub": claims.subject.to_string(),
             "aud": claims.audiences.clone(),
             "exp": claims.expires_at.unwrap().unix_timestamp()
         });
@@ -622,7 +626,7 @@ mod tests {
         let claims = test_claims();
         let raw_claims = json!({
             "iss": claims.issuer.clone(),
-            "sub": claims.sub.to_string(),
+            "sub": claims.subject.to_string(),
             "aud": claims.audiences.clone(),
             "exp": claims.expires_at.unwrap().unix_timestamp()
         });
@@ -722,7 +726,7 @@ mod tests {
 
         let raw_claims = json!({
             "iss": "https://wrong.example.com",
-            "sub": claims.sub.to_string(),
+            "sub": claims.subject.to_string(),
             "aud": claims.audiences.clone(),
             "exp": claims.expires_at.unwrap().unix_timestamp()
         });

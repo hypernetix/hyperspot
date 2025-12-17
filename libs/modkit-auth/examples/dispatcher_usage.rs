@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use jsonwebtoken::Header;
+use modkit_auth::claims::Permission;
 use modkit_auth::plugin_traits::{ClaimsPlugin, KeyProvider};
 use modkit_auth::validation::{
     extract_audiences, extract_string, parse_timestamp, parse_uuid_array_from_value,
@@ -46,30 +47,36 @@ impl ClaimsPlugin for DemoClaimsPlugin {
             .map(|value| parse_timestamp(value, "nbf"))
             .transpose()?;
 
-        let tenants = raw
-            .get("tenants")
-            .map(|value| parse_uuid_array_from_value(value, "tenants"))
-            .transpose()?
-            .unwrap_or_default();
+        let tenant_id = raw
+            .get("tenant_id")
+            .ok_or_else(|| ClaimsError::MissingClaim("tenant_id".to_owned()))?;
+        let tenant_id = parse_uuid_from_value(tenant_id, "tenant_id")?;
 
-        let roles = raw
-            .get("roles")
+        let permissions = raw
+            .get("permissions")
             .and_then(Value::as_array)
             .map(|arr| {
                 arr.iter()
-                    .filter_map(|value| value.as_str().map(ToString::to_string))
+                    .filter_map(|value| {
+                        let mut iter = value.as_array()?.iter();
+                        let resource = iter.next()?.as_str()?;
+                        let action = iter.next()?.as_str()?;
+                        Some(Permission::new(resource, action))
+                    })
                     .collect()
             })
             .unwrap_or_default();
 
         Ok(Claims {
-            sub,
+            subject: sub,
             issuer,
             audiences,
             expires_at,
             not_before,
-            tenants,
-            roles,
+            issued_at: None,
+            jwt_id: None,
+            tenant_id,
+            permissions,
             extras: serde_json::Map::new(),
         })
     }
@@ -106,8 +113,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     plugin_configs.insert(
         "demo".to_owned(),
         PluginConfig::Oidc {
-            tenant_claim: "tenants".to_owned(),
-            roles_claim: "roles".to_owned(),
+            tenant_claim: "tenant_id".to_owned(),
+            roles_claim: "permissions".to_owned(),
         },
     );
 
@@ -138,23 +145,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "sub": subject.to_string(),
         "aud": ["demo-api"],
         "exp": expires_at.unix_timestamp(),
-        "tenants": [tenant.to_string()],
-        "roles": ["viewer"]
+        "tenant_id": tenant.to_string(),
+        "permissions": [["resource", "read"]]
     });
 
     let dispatcher = AuthDispatcher::new(validation, &config, &plugins)?
         .with_key_provider(Arc::new(StaticKeyProvider::new(raw_claims)));
 
     let claims = dispatcher.validate_jwt("demo-token").await?;
-    let role_list = if claims.roles.is_empty() {
+    println!("Tenant: {}", claims.tenant_id);
+    let role_list = if claims.permissions.is_empty() {
         "none".to_owned()
     } else {
-        claims.roles.join(", ")
+        claims
+            .permissions
+            .iter()
+            .map(|p| format!("{}:{}", p.resource(), p.action()))
+            .collect::<Vec<_>>()
+            .join(", ")
     };
-    println!(
-        "Validated token for subject {} with roles {}",
-        claims.sub, role_list
-    );
+    println!("Permissions: {role_list}");
 
     Ok(())
 }

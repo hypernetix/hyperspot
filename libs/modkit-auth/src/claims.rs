@@ -2,39 +2,92 @@ use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 use uuid::Uuid;
 
+pub struct RegisteredClaims {}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Ord, Eq, PartialOrd)]
+pub struct Permission {
+    resource: String,
+    action: String,
+}
+
+impl Permission {
+    pub fn new(resource: &str, action: &str) -> Self {
+        Self {
+            resource: resource.to_string(),
+            action: action.to_string(),
+        }
+    }
+
+    pub fn resource(&self) -> &str {
+        &self.resource
+    }
+
+    pub fn action(&self) -> &str {
+        &self.action
+    }
+
+    pub fn matches(&self, other: &Permission) -> bool {
+        // TODO: use GTS library to check wildcards more robustly
+        (self.resource == other.resource || self.resource == "*" || other.resource == "*")
+            && (self.action == other.action || self.action == "*" || other.action == "*")
+    }
+}
+
+impl From<&str> for Permission {
+    fn from(role_str: &str) -> Self {
+        let parts: Vec<&str> = role_str.split(':').collect();
+        if parts.len() == 2 {
+            Permission::new(parts[0], parts[1])
+        } else {
+            Permission::new(&role_str, "*")
+        }
+    }
+}
+
 /// JWT claims representation that's provider-agnostic
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Claims {
-    /// Subject (user ID) - must be a UUID
-    pub sub: Uuid,
-
-    /// Issuer
+    /// Issuer 	 the `iss` claim. See https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.1
     pub issuer: String,
 
-    /// Audiences (can be multiple)
+    /// Subject - the `sub` claim. See https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.2
+    pub subject: Uuid,
+
+    /// Audiences - the `aud` claim. See https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.3
     pub audiences: Vec<String>,
 
-    /// Expiration time
+    /// Expiration time - the `exp` claim. See https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.4
     #[serde(
         skip_serializing_if = "Option::is_none",
         with = "time::serde::rfc3339::option"
     )]
     pub expires_at: Option<OffsetDateTime>,
 
-    /// Not before time
+    /// Not before time - the `nbf` claim. See https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.5
     #[serde(
         skip_serializing_if = "Option::is_none",
         with = "time::serde::rfc3339::option"
     )]
     pub not_before: Option<OffsetDateTime>,
 
-    /// Tenant IDs (all must be UUIDs)
-    #[serde(default)]
-    pub tenants: Vec<Uuid>,
+    /// Issued At - the `iat` claim. See https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.6
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        with = "time::serde::rfc3339::option"
+    )]
+    pub issued_at: Option<OffsetDateTime>,
+
+    /// JWT ID - the `jti` claim. See https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.7
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub jwt_id: Option<String>,
+
+    /* modkit - specific claims */
+    /// Tenant ID - the `tenant_id` claim
+    pub tenant_id: Uuid,
 
     /// User roles
     #[serde(default)]
-    pub roles: Vec<String>,
+    pub permissions: Vec<Permission>,
 
     /// Additional provider-specific claims
     #[serde(flatten)]
@@ -61,18 +114,6 @@ impl Claims {
             true
         }
     }
-
-    /// Check if user has a specific role
-    #[must_use]
-    pub fn has_role(&self, role: &str) -> bool {
-        self.roles.iter().any(|r| r == role)
-    }
-
-    /// Check if user has access to a specific tenant
-    #[must_use]
-    pub fn has_tenant(&self, tenant_id: &Uuid) -> bool {
-        self.tenants.contains(tenant_id)
-    }
 }
 
 #[cfg(test)]
@@ -83,13 +124,15 @@ mod tests {
     #[test]
     fn test_expiration_check() {
         let mut claims = Claims {
-            sub: Uuid::new_v4(),
             issuer: "test".to_owned(),
+            subject: Uuid::new_v4(),
             audiences: vec!["api".to_owned()],
             expires_at: Some(OffsetDateTime::now_utc() + time::Duration::hours(1)),
             not_before: None,
-            tenants: vec![],
-            roles: vec![],
+            issued_at: None,
+            jwt_id: None,
+            tenant_id: Uuid::new_v4(),
+            permissions: vec![],
             extras: serde_json::Map::new(),
         };
 
@@ -102,13 +145,15 @@ mod tests {
     #[test]
     fn test_nbf_check() {
         let mut claims = Claims {
-            sub: Uuid::new_v4(),
+            subject: Uuid::new_v4(),
             issuer: "test".to_owned(),
             audiences: vec!["api".to_owned()],
             expires_at: None,
             not_before: Some(OffsetDateTime::now_utc() - time::Duration::hours(1)),
-            tenants: vec![],
-            roles: vec![],
+            issued_at: None,
+            jwt_id: None,
+            tenant_id: Uuid::new_v4(),
+            permissions: vec![],
             extras: serde_json::Map::new(),
         };
 
@@ -116,23 +161,5 @@ mod tests {
 
         claims.not_before = Some(OffsetDateTime::now_utc() + time::Duration::hours(1));
         assert!(!claims.is_valid_yet());
-    }
-
-    #[test]
-    fn test_role_check() {
-        let claims = Claims {
-            sub: Uuid::new_v4(),
-            issuer: "test".to_owned(),
-            audiences: vec!["api".to_owned()],
-            expires_at: None,
-            not_before: None,
-            tenants: vec![],
-            roles: vec!["admin".to_owned(), "user".to_owned()],
-            extras: serde_json::Map::new(),
-        };
-
-        assert!(claims.has_role("admin"));
-        assert!(claims.has_role("user"));
-        assert!(!claims.has_role("superuser"));
     }
 }

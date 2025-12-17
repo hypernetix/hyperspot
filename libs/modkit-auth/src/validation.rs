@@ -82,7 +82,7 @@ pub fn validate_claims(claims: &Claims, config: &ValidationConfig) -> Result<(),
     }
 
     // 5. Validate subject is UUID (already validated during normalization, but double-check)
-    if config.require_uuid_subject && claims.sub.is_nil() {
+    if config.require_uuid_subject && claims.subject.is_nil() {
         // sub is already a Uuid type, so this is guaranteed
         // Just a safety check for future-proofing
         return Err(ClaimsError::InvalidClaimFormat {
@@ -93,13 +93,11 @@ pub fn validate_claims(claims: &Claims, config: &ValidationConfig) -> Result<(),
 
     // 6. Validate tenants are UUIDs (already validated during normalization)
     if config.require_uuid_tenants {
-        for tenant in &claims.tenants {
-            if tenant.is_nil() {
-                return Err(ClaimsError::InvalidClaimFormat {
-                    field: "tenants".to_owned(),
-                    reason: "tenant ID cannot be nil UUID".to_owned(),
-                });
-            }
+        if claims.tenant_id.is_nil() {
+            return Err(ClaimsError::InvalidClaimFormat {
+                field: "tenant_id".to_owned(),
+                reason: "tenant ID cannot be nil UUID".to_owned(),
+            });
         }
     }
 
@@ -196,17 +194,20 @@ pub fn extract_audiences(value: &serde_json::Value) -> Vec<String> {
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
+    use crate::claims::Permission;
     use serde_json::json;
 
     fn create_test_claims() -> Claims {
         Claims {
-            sub: Uuid::new_v4(),
             issuer: "https://test.example.com".to_owned(),
+            subject: Uuid::new_v4(),
             audiences: vec!["api".to_owned()],
             expires_at: Some(OffsetDateTime::now_utc() + time::Duration::hours(1)),
             not_before: None,
-            tenants: vec![Uuid::new_v4()],
-            roles: vec!["user".to_owned()],
+            issued_at: None,
+            jwt_id: None,
+            tenant_id: Uuid::new_v4(),
+            permissions: vec![Permission::new("res", "act")],
             extras: serde_json::Map::new(),
         }
     }

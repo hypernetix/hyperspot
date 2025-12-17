@@ -7,6 +7,7 @@ use dashmap::DashMap;
 
 use anyhow::Result;
 use axum::http::Method;
+use axum::middleware::from_fn_with_state;
 use axum::{extract::DefaultBodyLimit, middleware::from_fn, routing::get, Router};
 use modkit::api::{OpenApiRegistry, OpenApiRegistryImpl};
 use modkit::lifecycle::ReadySignal;
@@ -33,6 +34,7 @@ mod router_cache;
 mod web;
 
 pub use config::{ApiIngressConfig, CorsConfig};
+use modkit_auth::policy_engine_builder::policy_engine_injector;
 use router_cache::RouterCache;
 
 /// Main API Ingress module — owns the HTTP server (`rest_host`) and collects
@@ -281,7 +283,13 @@ impl ApiIngress {
         // 10. Error mapping layer (no-op converter for now; keeps order explicit)
         router = router.layer(from_fn(modkit::api::error_layer::error_mapping_middleware));
 
-        // 11. Auth middleware - MUST be after CORS; preflight short-circuits before this.
+        // 11. Policy Engine injection layer
+        router = router.layer(from_fn_with_state(
+            auth_state.policy_builder,
+            policy_engine_injector,
+        ));
+
+        // 12. Auth middleware - MUST be after CORS; preflight short-circuits before this.
         let config = self.get_cached_config();
         if config.auth_disabled {
             tracing::warn!(
@@ -291,7 +299,7 @@ impl ApiIngress {
             );
             router = router.layer(from_fn(
                 |mut req: axum::extract::Request, next: axum::middleware::Next| async move {
-                    let sec = modkit_security::SecurityCtx::root_ctx();
+                    let sec = modkit_security::SecurityContext::root();
                     req.extensions_mut().insert(sec);
                     next.run(req).await
                 },

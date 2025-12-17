@@ -1,11 +1,9 @@
+use crate::claims::Permission;
 use crate::{
     claims::Claims,
     claims_error::ClaimsError,
     plugin_traits::ClaimsPlugin,
-    validation::{
-        extract_audiences, extract_string, parse_timestamp, parse_uuid_array_from_value,
-        parse_uuid_from_value,
-    },
+    validation::{extract_audiences, extract_string, parse_timestamp, parse_uuid_from_value},
 };
 use serde_json::Value;
 
@@ -14,11 +12,11 @@ use serde_json::Value;
 /// Handles Keycloak's specific claim structure:
 /// - Roles from `realm_access.roles` and `resource_access.<client>.roles`
 /// - Optional role prefix
-/// - Tenant claim from configurable field (default: "tenants")
+/// - Tenant claim from configurable field (default: "tenant")
 /// - Handles Keycloak's audience validation via `aud`, `azp`, or `resource_access`
 #[derive(Debug, Clone)]
 pub struct KeycloakClaimsPlugin {
-    /// Name of the tenant claim field (default: "tenants")
+    /// Name of the tenant claim field (default: "tenant")
     pub tenant_claim: String,
 
     /// Optional: client ID to extract roles from `resource_access`
@@ -31,7 +29,7 @@ pub struct KeycloakClaimsPlugin {
 impl Default for KeycloakClaimsPlugin {
     fn default() -> Self {
         Self {
-            tenant_claim: "tenants".to_owned(),
+            tenant_claim: "tenant".to_owned(),
             client_roles: None,
             role_prefix: None,
         }
@@ -53,26 +51,18 @@ impl KeycloakClaimsPlugin {
     }
 
     /// Extract roles from Keycloak's complex role structure
-    fn extract_roles(&self, raw: &Value) -> Vec<String> {
-        let mut roles = Vec::new();
+    fn extract_permissions(&self, raw: &Value) -> Vec<Permission> {
+        let mut permissions = Vec::<Permission>::new();
 
         // 1. Check for top-level "roles" array (simplified format)
         if let Some(Value::Array(arr)) = raw.get("roles") {
-            roles.extend(
-                arr.iter()
-                    .filter_map(|v| v.as_str())
-                    .map(ToString::to_string),
-            );
+            permissions.extend(arr.iter().filter_map(|v| v.as_str()).map(Permission::from));
         }
 
         // 2. Extract from realm_access.roles
         if let Some(Value::Object(realm)) = raw.get("realm_access") {
             if let Some(Value::Array(arr)) = realm.get("roles") {
-                roles.extend(
-                    arr.iter()
-                        .filter_map(|v| v.as_str())
-                        .map(ToString::to_string),
-                );
+                permissions.extend(arr.iter().filter_map(|v| v.as_str()).map(Permission::from));
             }
         }
 
@@ -81,26 +71,28 @@ impl KeycloakClaimsPlugin {
             if let Some(Value::Object(resource_access)) = raw.get("resource_access") {
                 if let Some(Value::Object(client)) = resource_access.get(client_id) {
                     if let Some(Value::Array(arr)) = client.get("roles") {
-                        roles.extend(
-                            arr.iter()
-                                .filter_map(|v| v.as_str())
-                                .map(ToString::to_string),
-                        );
+                        permissions
+                            .extend(arr.iter().filter_map(|v| v.as_str()).map(Permission::from));
                     }
                 }
             }
         }
 
-        // Apply role prefix if configured
+        // 4. Apply role prefix if configured
         if let Some(prefix) = &self.role_prefix {
-            roles = roles.into_iter().map(|r| format!("{prefix}:{r}")).collect();
+            permissions = permissions
+                .into_iter()
+                .map(|perm| {
+                    Permission::new(&format!("{}{}", prefix, perm.resource()), perm.action())
+                })
+                .collect();
         }
 
         // Deduplicate
-        roles.sort();
-        roles.dedup();
+        permissions.sort();
+        permissions.dedup();
 
-        roles
+        permissions
     }
 }
 
@@ -137,17 +129,28 @@ impl ClaimsPlugin for KeycloakClaimsPlugin {
             .map(|v| parse_timestamp(v, "nbf"))
             .transpose()?;
 
-        // 6. Extract tenants (optional, must be UUIDs)
-        let tenants = raw
-            .get(&self.tenant_claim)
-            .map(|v| parse_uuid_array_from_value(v, &self.tenant_claim))
-            .transpose()?
-            .unwrap_or_default();
+        // 6. Extract issued-at time
+        let issued_at = raw
+            .get("iat")
+            .map(|v| parse_timestamp(v, "iat"))
+            .transpose()?;
 
-        // 7. Extract roles using Keycloak-specific logic
-        let roles = self.extract_roles(raw);
+        // 7. Extract JWT ID (optional)
+        let jwt_id = raw
+            .get("jti")
+            .map(|v| extract_string(v, "jti"))
+            .transpose()?;
 
-        // 8. Collect extra claims (excluding standard ones)
+        // 8. Extract tenants (optional, must be UUIDs)
+        let tenant_id = raw
+            .get("tenant")
+            .ok_or_else(|| ClaimsError::MissingClaim("tenant".to_owned()))
+            .and_then(|v| parse_uuid_from_value(v, "tenant"))?;
+
+        // 9. Extract permissions using Keycloak-specific logic
+        let permissions = self.extract_permissions(raw);
+
+        // 10. Collect extra claims (excluding standard ones)
         let mut extras = serde_json::Map::new();
         let standard_fields = [
             "sub",
@@ -188,13 +191,15 @@ impl ClaimsPlugin for KeycloakClaimsPlugin {
         }
 
         Ok(Claims {
-            sub,
             issuer,
+            subject: sub,
             audiences,
             expires_at,
             not_before,
-            tenants,
-            roles,
+            issued_at,
+            jwt_id,
+            tenant_id,
+            permissions,
             extras,
         })
     }
@@ -220,7 +225,7 @@ mod tests {
             "sub": user_id.to_string(),
             "aud": "modkit-api",
             "exp": 9999999999i64,
-            "tenants": [tenant_id.to_string()],
+            "tenant": tenant_id.to_string(),
             "realm_access": {
                 "roles": ["user", "admin"]
             },
@@ -229,11 +234,14 @@ mod tests {
 
         let normalized = plugin.normalize(&claims).unwrap();
 
-        assert_eq!(normalized.sub, user_id);
+        assert_eq!(normalized.subject, user_id);
         assert_eq!(normalized.issuer, "https://kc.example.com/realms/test");
         assert_eq!(normalized.audiences, vec!["modkit-api"]);
-        assert_eq!(normalized.tenants, vec![tenant_id]);
-        assert_eq!(normalized.roles, vec!["admin", "user"]);
+        assert_eq!(normalized.tenant_id, tenant_id);
+        assert_eq!(
+            normalized.permissions,
+            vec![Permission::from("admin"), Permission::from("user")]
+        );
         assert_eq!(
             normalized.extras.get("email").unwrap().as_str().unwrap(),
             "test@example.com"
@@ -255,23 +263,9 @@ mod tests {
             }
         });
 
-        let roles = plugin.extract_roles(&claims);
-        assert!(roles.contains(&"realm-role".to_owned()));
-        assert!(roles.contains(&"api-role".to_owned()));
-    }
-
-    #[test]
-    fn test_keycloak_extract_roles_with_prefix() {
-        let plugin = KeycloakClaimsPlugin::new("tenants", None, Some("kc".to_owned()));
-
-        let claims = json!({
-            "realm_access": {
-                "roles": ["admin", "user"]
-            }
-        });
-
-        let roles = plugin.extract_roles(&claims);
-        assert_eq!(roles, vec!["kc:admin", "kc:user"]);
+        let permissions = plugin.extract_permissions(&claims);
+        assert!(permissions.contains(&Permission::from("realm-role")));
+        assert!(permissions.contains(&Permission::from("api-role")));
     }
 
     #[test]
@@ -285,6 +279,21 @@ mod tests {
 
         let result = plugin.normalize(&claims);
         assert!(matches!(result, Err(ClaimsError::MissingClaim(_))));
+    }
+
+    #[test]
+    fn test_keycloak_extract_roles_with_prefix() {
+        let plugin = KeycloakClaimsPlugin::new("tenant", None, Some("kc-".to_owned()));
+
+        let claims = json!({
+            "realm_access": {
+                "roles": ["user", "admin"]
+            }
+        });
+
+        let permissions = plugin.extract_permissions(&claims);
+        assert!(permissions.contains(&Permission::from("kc-user")));
+        assert!(permissions.contains(&Permission::from("kc-admin")));
     }
 
     #[test]

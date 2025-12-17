@@ -2,8 +2,9 @@
 //!
 //! Contract trait and types for the calculator service.
 
+use std::sync::Arc;
 use async_trait::async_trait;
-use modkit_security::SecurityCtx;
+use modkit_security::PolicyEngine;
 
 /// Calculator API trait
 ///
@@ -12,7 +13,7 @@ use modkit_security::SecurityCtx;
 #[async_trait]
 pub trait CalculatorClient: Send + Sync {
     /// Add two numbers and return the sum.
-    async fn add(&self, ctx: &SecurityCtx, a: i64, b: i64) -> Result<i64, CalculatorError>;
+    async fn add(&self, pe: Arc<dyn PolicyEngine>, a: i64, b: i64) -> Result<i64, CalculatorError>;
 }
 
 /// Error type for Calculator operations
