@@ -60,7 +60,6 @@ pub struct Problem {
     /// Optional machine-readable error code defined by the application.
     pub code: String,
     /// Optional trace id useful for tracing.
-    #[serde(rename = "traceId")]
     pub trace_id: Option<String>,
     /// Optional validation errors for 4xx problems.
     pub errors: Option<Vec<ValidationViolation>>,
@@ -198,7 +197,7 @@ mod tests {
 
     #[test]
     fn problem_deserializes_status_from_u16() {
-        let json = r#"{"type":"about:blank","title":"Not Found","status":404,"detail":"Resource not found","instance":"","code":"","traceId":null,"errors":null}"#;
+        let json = r#"{"type":"about:blank","title":"Not Found","status":404,"detail":"Resource not found","instance":"","code":"","trace_id":null,"errors":null}"#;
         let p: Problem = serde_json::from_str(json).unwrap();
         assert_eq!(p.status, StatusCode::NOT_FOUND);
     }

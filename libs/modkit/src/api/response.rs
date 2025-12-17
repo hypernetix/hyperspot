@@ -1,5 +1,5 @@
 use axum::{
-    http::StatusCode,
+    http::{header, StatusCode, Uri},
     response::{IntoResponse, Response},
     Json,
 };
@@ -13,9 +13,14 @@ pub fn ok_json<T: serde::Serialize>(value: T) -> impl IntoResponse {
     (StatusCode::OK, Json(value))
 }
 
-/// 201 Created + JSON
-pub fn created_json<T: serde::Serialize>(value: T) -> impl IntoResponse {
-    (StatusCode::CREATED, Json(value))
+/// 201 Created + JSON with Location header
+pub fn created_json<T: serde::Serialize>(value: T, uri: &Uri, new_id: &str) -> impl IntoResponse {
+    let location = [uri.path().trim_end_matches('/'), new_id].join("/");
+    (
+        StatusCode::CREATED,
+        [(header::LOCATION, location)],
+        Json(value),
+    )
 }
 
 /// 204 No Content

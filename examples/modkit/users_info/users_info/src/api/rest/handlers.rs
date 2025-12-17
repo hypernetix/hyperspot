@@ -1,4 +1,4 @@
-use axum::{extract::Path, Extension};
+use axum::{extract::Path, http::Uri, Extension};
 use tracing::{field::Empty, info};
 use uuid::Uuid;
 
@@ -73,7 +73,7 @@ pub async fn get_user(
 
 /// Create a new user
 #[tracing::instrument(
-    skip(svc, req_body, ctx),
+    skip(svc, req_body, ctx, uri),
     fields(
         user.email = %req_body.email,
         user.display_name = %req_body.display_name,
@@ -83,6 +83,7 @@ pub async fn get_user(
     )
 )]
 pub async fn create_user(
+    uri: Uri,
     Authz(ctx): Authz,
     Extension(svc): Extension<std::sync::Arc<Service>>,
     Json(req_body): Json<CreateUserReq>,
@@ -109,12 +110,10 @@ pub async fn create_user(
     if !scope.is_root() {
         let allowed = scope.tenant_ids().iter().any(|t| t == &tenant_id);
         if !allowed {
-            return Err(UsersApiError::from_domain(
-                crate::domain::error::DomainError::validation(
-                    "tenant_id",
-                    format!("Tenant {tenant_id} is not allowed in current security scope"),
-                ),
-            ));
+            return Err(UsersApiError::from_domain(DomainError::validation(
+                "tenant_id",
+                format!("Tenant {tenant_id} is not allowed in current security scope"),
+            )));
         }
     }
 
@@ -125,11 +124,13 @@ pub async fn create_user(
         display_name,
     };
 
-    let user = svc
-        .create_user(&ctx, new_user)
+    svc.create_user(&ctx, new_user)
         .await
-        .map_err(UsersApiError::from_domain)?;
-    Ok(created_json(UserDto::from(user)))
+        .map(|user| {
+            let id_str = user.id.to_string();
+            created_json(UserDto::from(user), &uri, &id_str)
+        })
+        .map_err(UsersApiError::from_domain)
 }
 
 /// Update an existing user

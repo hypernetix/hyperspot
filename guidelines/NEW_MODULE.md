@@ -209,9 +209,9 @@ pub use models::{NewUser, User, UserPatch, UpdateUserRequest};
 //! The public API is defined in `<your-module>-sdk` and re-exported here.
 
 // === PUBLIC API (from SDK) ===
-pub use <your_module>_sdk::{
-    YourModuleApi, YourModuleError,
-    User, NewUser, UserPatch, UpdateUserRequest,
+pub use < your_module>_sdk::{
+YourModuleApi, YourModuleError,
+User, NewUser, UserPatch, UpdateUserRequest,
 };
 
 // === MODULE DEFINITION ===
@@ -222,10 +222,14 @@ pub use module::YourModule;
 pub mod local_client;
 
 // === INTERNAL MODULES ===
-#[doc(hidden)] pub mod api;
-#[doc(hidden)] pub mod config;
-#[doc(hidden)] pub mod domain;
-#[doc(hidden)] pub mod infra;
+#[doc(hidden)]
+pub mod api;
+#[doc(hidden)]
+pub mod config;
+#[doc(hidden)]
+pub mod domain;
+#[doc(hidden)]
+pub mod infra;
 ```
 
 ### Step 2: Data types naming matrix
@@ -419,6 +423,7 @@ impl From<DomainError> for Problem {
 // src/api/rest/handlers.rs
 use modkit::api::prelude::*;
 use crate::domain::error::DomainError;
+use axum::{extract::Path, http::Uri, Extension};
 
 // Type aliases for cleaner signatures
 type UsersResult<T> = ApiResult<T, DomainError>;
@@ -437,6 +442,7 @@ pub async fn get_user(
 }
 
 pub async fn create_user(
+    uri: Uri,
     Authz(ctx): Authz,
     Extension(svc): Extension<Arc<Service>>,
     Json(req): Json<CreateUserReq>,
@@ -445,7 +451,8 @@ pub async fn create_user(
         .create_user(&ctx, req.into())
         .await
         .map_err(UsersApiError::from_domain)?;
-    Ok(created_json(UserDto::from(user)))  // Returns (StatusCode::CREATED, Json<T>)
+    let location = format!("/users/{}", user.id);
+    Ok(created_json(UserDto::from(user), location))  // Returns (StatusCode::CREATED, Location header, Json<T>)
 }
 
 pub async fn delete_user(
@@ -464,15 +471,15 @@ pub async fn delete_user(
 
 The `modkit::api::prelude` module provides:
 
-| Type/Function     | Description                                             |
-|-------------------|---------------------------------------------------------|
-| `ApiResult<T, E>` | `Result<T, ApiError<E>>` - standard handler return type |
-| `ApiError<E>`     | Error wrapper with `from_domain(e)` conversion          |
-| `JsonBody<T>`     | Type alias for `Json<T>` response                       |
-| `JsonPage<T>`     | Type alias for `Json<Page<T>>` paginated response       |
-| `created_json(v)` | Returns `(StatusCode::CREATED, Json(v))`                |
-| `no_content()`    | Returns `StatusCode::NO_CONTENT`                        |
-| `Json`, `Path`    | Re-exported Axum extractors                             |
+| Type/Function          | Description                                               |
+|------------------------|-----------------------------------------------------------|
+| `ApiResult<T, E>`      | `Result<T, ApiError<E>>` - standard handler return type   |
+| `ApiError<E>`          | Error wrapper with `from_domain(e)` conversion            |
+| `JsonBody<T>`          | Type alias for `Json<T>` response                         |
+| `JsonPage<T>`          | Type alias for `Json<Page<T>>` paginated response         |
+| `created_json(v, loc)` | Returns `(StatusCode::CREATED, Location header, Json(v))` |
+| `no_content()`         | Returns `StatusCode::NO_CONTENT`                          |
+| `Json`, `Path`         | Re-exported Axum extractors                               |
 
 #### OpenAPI Error Registration
 
@@ -481,17 +488,17 @@ The `modkit::api::prelude` module provides:
 ```rust
 // src/api/rest/routes.rs
 router = OperationBuilder::get("/users-info/v1/users/{id}")
-    .operation_id("users_info.get_user")
-    .require_auth("users", "read")
-    .handler(handlers::get_user)
-    .json_response_with_schema::<UserDto>(openapi, StatusCode::OK, "User found")
-    .error_400(openapi)   // Bad Request
-    .error_401(openapi)   // Unauthorized
-    .error_403(openapi)   // Forbidden
-    .error_404(openapi)   // Not Found
-    .error_409(openapi)   // Conflict
-    .error_500(openapi)   // Internal Server Error
-    .register(router, openapi);
+.operation_id("users_info.get_user")
+.require_auth("users", "read")
+.handler(handlers::get_user)
+.json_response_with_schema::<UserDto>(openapi, StatusCode::OK, "User found")
+.error_400(openapi)   // Bad Request
+.error_401(openapi)   // Unauthorized
+.error_403(openapi)   // Forbidden
+.error_404(openapi)   // Not Found
+.error_409(openapi)   // Conflict
+.error_500(openapi)   // Internal Server Error
+.register(router, openapi);
 ```
 
 #### Checklist
@@ -887,7 +894,9 @@ The `#[modkit::module]` macro provides declarative registration and lifecycle ma
     ctor = MyModule::new(), // Constructor expression (defaults to `Default`)
     lifecycle(entry = "serve", stop_timeout = "30s", await_ready) // For stateful background tasks
 )]
-pub struct MyModule { /* ... */ }
+pub struct MyModule {
+    /* ... */
+}
 ```
 
 > **Note:** The `client = ...` attribute is no longer used. Clients are registered **explicitly** in `init()`.
@@ -1083,8 +1092,8 @@ Edit `apps/hyperspot-server/Cargo.toml`:
 ```toml
 [dependencies]
 # ... existing dependencies
-api_ingress = { path = "../../modules/api_ingress"}
-your_module = { path = "../../modules/your-module"}  # Add this line
+api_ingress = { path = "../../modules/api_ingress" }
+your_module = { path = "../../modules/your-module" }  # Add this line
 ```
 
 #### 2. Link module in main.rs
@@ -1173,9 +1182,9 @@ external API clients.
    **Rule:** Handler return types use the prelude helpers:
 
    | Pattern | Return Type | Helper |
-      |---------|-------------|--------|
+            |---------|-------------|--------|
    | GET with body | `UsersResult<JsonBody<T>>` | `Ok(Json(dto))` |
-   | POST with body | `UsersResult<impl IntoResponse>` | `Ok(created_json(dto))` |
+   | POST with body | `UsersResult<impl IntoResponse>` | `Ok(created_json(dto, location))` |
    | DELETE no body | `UsersResult<impl IntoResponse>` | `Ok(no_content())` |
    | Paginated list | `UsersResult<JsonPage<T>>` | `Ok(Json(page))` |
 
@@ -1221,11 +1230,13 @@ external API clients.
        Extension(svc): Extension<Arc<Service>>,
        Json(req): Json<CreateUserReq>,
    ) -> UsersResult<impl IntoResponse> {
-       let user = svc
-           .create_user(&ctx, req.into())
-           .await
-           .map_err(UsersApiError::from_domain)?;
-       Ok(created_json(UserDto::from(user)))
+      svc.create_user(&ctx, new_user)
+          .await
+          .map(|user| {
+              let id_str = user.id.to_string();
+              created_json(UserDto::from(user), &uri, &id_str)
+          })
+          .map_err(UsersApiError::from_domain)
    }
 
    /// Delete a user by ID
@@ -2224,7 +2235,7 @@ modules:
       type: oop
       execution:
         executable_path: "~/.hyperspot/bin/my-module.exe"
-        args: []
+        args: [ ]
         working_directory: null
         environment:
           RUST_LOG: "info"
