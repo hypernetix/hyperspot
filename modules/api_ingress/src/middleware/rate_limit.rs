@@ -1,20 +1,21 @@
-use std::collections::HashMap;
-use std::sync::Arc;
-use std::time::Instant;
-
-use axum::http::{Method, StatusCode};
+use crate::config::ApiIngressConfig;
+use anyhow::{anyhow, Context, Result};
+use axum::http::{header, HeaderValue, Method, StatusCode};
 use axum::{
     extract::Request,
     middleware::Next,
     response::{IntoResponse, Response},
 };
-use parking_lot::Mutex;
+use governor::clock::Clock;
+use governor::middleware::StateInformationMiddleware;
+use governor::{DefaultDirectRateLimiter, Quota, RateLimiter};
+use std::collections::HashMap;
+use std::num::NonZeroU32;
+use std::sync::Arc;
 use tokio::sync::Semaphore;
 
-use crate::config::ApiIngressConfig;
-
 type RateLimitKey = (Method, String);
-type BucketMap = Arc<HashMap<RateLimitKey, Arc<Mutex<TokenBucket>>>>;
+type BucketMap = Arc<HashMap<RateLimitKey, Arc<BucketMapEntry>>>;
 type InflightMap = Arc<HashMap<RateLimitKey, Arc<Semaphore>>>;
 
 #[derive(Default, Clone)]
@@ -23,9 +24,36 @@ pub struct RateLimiterMap {
     inflight: InflightMap,
 }
 
+struct BucketMapEntry {
+    bucket: DefaultDirectRateLimiter<StateInformationMiddleware>,
+    policy: HeaderValue,
+    burst: HeaderValue,
+}
+
+impl BucketMapEntry {
+    pub fn new(rps: u32, burst: u32) -> Result<Self> {
+        let bucket = RateLimiter::direct(
+            Quota::per_second(NonZeroU32::new(rps).with_context(|| anyhow!("rps is zero"))?)
+                .allow_burst(NonZeroU32::new(burst).with_context(|| anyhow!("burst is zero"))?),
+        )
+        .with_middleware::<StateInformationMiddleware>();
+        let policy = HeaderValue::from_str(&format!("\"burst\";q={burst};w={rps}"))
+            .context("Failed to create rate limit policy")?;
+        Ok(Self {
+            bucket,
+            policy,
+            burst: burst.into(),
+        })
+    }
+}
+
 impl RateLimiterMap {
-    #[must_use]
-    pub fn from_specs(specs: &Vec<modkit::api::OperationSpec>, cfg: &ApiIngressConfig) -> Self {
+    /// # Errors
+    /// Returns an error if any rate limit spec is 0.
+    pub fn from_specs(
+        specs: &Vec<modkit::api::OperationSpec>,
+        cfg: &ApiIngressConfig,
+    ) -> Result<Self> {
         let mut buckets = HashMap::new();
         let mut inflight = HashMap::new();
         // TODO: Add support for per-route rate limiting
@@ -41,19 +69,22 @@ impl RateLimiterMap {
             let key = (spec.method.clone(), spec.path.clone());
             buckets.insert(
                 key.clone(),
-                Arc::new(Mutex::new(TokenBucket::new(rps, burst))),
+                Arc::new(
+                    BucketMapEntry::new(rps, burst)
+                        .with_context(|| anyhow!("RateLimit spec invalid {spec:?} invalid"))?,
+                ),
             );
             inflight.insert(key, Arc::new(Semaphore::new(max_in_flight as usize)));
         }
-        Self {
+        Ok(Self {
             buckets: Arc::new(buckets),
             inflight: Arc::new(inflight),
-        }
+        })
     }
 }
 
-// TODO: Use tower-governor instead of own implementation
-pub async fn rate_limit_middleware(map: RateLimiterMap, req: Request, next: Next) -> Response {
+// TODO: Use tower-governor instead of own implementation (upd: https://github.com/benwis/tower-governor/issues/59 )
+pub async fn rate_limit_middleware(map: RateLimiterMap, mut req: Request, next: Next) -> Response {
     let method = req.method().clone();
     // Use MatchedPath extension (set by Axum router) for accurate route matching
     let path = req
@@ -62,10 +93,27 @@ pub async fn rate_limit_middleware(map: RateLimiterMap, req: Request, next: Next
         .map_or_else(|| req.uri().path().to_owned(), |p| p.as_str().to_owned());
     let key = (method, path);
 
-    if let Some(bucket) = map.buckets.get(&key) {
-        let mut b = bucket.lock();
-        if !b.allow_now() {
-            return StatusCode::TOO_MANY_REQUESTS.into_response();
+    if let Some(bucker_map_entry) = map.buckets.get(&key) {
+        let headers = req.headers_mut();
+        headers.insert("RateLimit-Policy", bucker_map_entry.policy.clone());
+        match bucker_map_entry.bucket.check() {
+            Ok(state) => {
+                headers.insert("RateLimit-Limit", bucker_map_entry.burst.clone());
+                headers.insert(
+                    "RateLimit-Limit-Remaining",
+                    state.remaining_burst_capacity().into(),
+                );
+                headers.insert("X-RateLimit-Limit", bucker_map_entry.burst.clone());
+                headers.insert(
+                    "X-RateLimit-Remaining",
+                    state.remaining_burst_capacity().into(),
+                );
+            }
+            Err(not_until) => {
+                let wait = not_until.wait_time_from(bucker_map_entry.bucket.clock().now());
+                headers.insert(header::RETRY_AFTER, wait.as_secs().into());
+                return StatusCode::TOO_MANY_REQUESTS.into_response();
+            }
         }
     }
 
@@ -82,36 +130,4 @@ pub async fn rate_limit_middleware(map: RateLimiterMap, req: Request, next: Next
     }
 
     next.run(req).await
-}
-
-struct TokenBucket {
-    capacity: u32,
-    tokens: f64,
-    refill_per_sec: f64,
-    last: Instant,
-}
-
-impl TokenBucket {
-    fn new(rps: u32, burst: u32) -> Self {
-        let cap = burst.max(rps).max(1);
-        Self {
-            capacity: cap,
-            tokens: f64::from(cap),
-            refill_per_sec: f64::from(rps.max(1)),
-            last: Instant::now(),
-        }
-    }
-
-    fn allow_now(&mut self) -> bool {
-        let now = Instant::now();
-        let elapsed = now.duration_since(self.last).as_secs_f64();
-        self.last = now;
-        self.tokens = (self.tokens + elapsed * self.refill_per_sec).min(f64::from(self.capacity));
-        if self.tokens >= 1.0 {
-            self.tokens -= 1.0;
-            true
-        } else {
-            false
-        }
-    }
 }

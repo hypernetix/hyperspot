@@ -270,7 +270,7 @@ impl ApiIngress {
         ));
 
         // 9. Per-route rate limiting & in-flight limits (after MIME validation, before auth)
-        let rate_map = middleware::rate_limit::RateLimiterMap::from_specs(&specs, &config);
+        let rate_map = middleware::rate_limit::RateLimiterMap::from_specs(&specs, &config)?;
         router = router.layer(from_fn(
             move |req: axum::extract::Request, next: axum::middleware::Next| {
                 let map = rate_map.clone();

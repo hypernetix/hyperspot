@@ -200,6 +200,7 @@ axum = "0.8"
 tower = "0.5"
 tower-http = { version = "0.6", features = ["trace", "request-id", "cors", "limit", "util", "timeout"] }
 uuid = { version = "1.19", features = ["serde"] }
+governor = "0.10"
 
 # OpenAPI documentation (only for api_ingress)
 utoipa = { version = "5.4", features = ["macros", "openapi_extensions", "chrono", "uuid"] }
