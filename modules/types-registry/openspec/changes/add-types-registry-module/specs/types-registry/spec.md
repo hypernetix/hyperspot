@@ -137,21 +137,21 @@ This method is called by the modkit master process during service startup.
 
 ### Requirement: GTS Entity Listing
 
-The system SHALL provide an API to list GTS entities with filtering and pagination support.
+The system SHALL provide an API to list GTS entities with filtering support.
 
 Listing SHALL support:
 - Filtering by GTS ID pattern using OP#4 (ID Pattern Matching) with wildcards
 - Filtering by entity kind (Type, Instance, or both)
 - Filtering by vendor, package, namespace, or type components
-- Cursor-based pagination with configurable limit
 - Query execution using OP#10 (Query Execution)
 
-#### Scenario: List all entities with pagination
+Note: Pagination (limit, cursor) deferred to Phase 1.2.
 
-- **GIVEN** the registry contains 100 GTS entities
-- **WHEN** the user calls `list` with `limit=25`
-- **THEN** the system returns the first 25 entities
-- **AND** the response includes a cursor for the next page
+#### Scenario: List all entities
+
+- **GIVEN** the registry contains multiple GTS entities
+- **WHEN** the user calls `list` without filters
+- **THEN** the system returns all registered entities
 
 #### Scenario: Filter entities by wildcard pattern
 
@@ -470,4 +470,33 @@ Storage SHALL:
 - **GIVEN** a read operation and a write operation occurring concurrently
 - **WHEN** both operations complete
 - **THEN** the read returns consistent data (either before or after the write)
+
+---
+
+### Requirement: REST API Endpoints
+
+The system SHALL expose REST API endpoints for types registry operations.
+
+Endpoints SHALL include:
+- `POST /api/v1/types-registry/entities` — Register entities (batch)
+- `GET /api/v1/types-registry/entities` — List entities with query params
+- `GET /api/v1/types-registry/entities/{gts_id}` — Get entity by ID
+
+#### Scenario: Register entities via REST
+
+- **GIVEN** a valid JSON payload with entity data
+- **WHEN** POST request is sent to `/api/v1/types-registry/entities`
+- **THEN** entities are registered and response contains registered entities
+
+#### Scenario: List entities via REST
+
+- **GIVEN** registered entities in the registry
+- **WHEN** GET request is sent to `/api/v1/types-registry/entities?pattern=gts.acme.*`
+- **THEN** response contains filtered entities matching the pattern
+
+#### Scenario: Get entity via REST
+
+- **GIVEN** an entity with GTS ID `gts.acme.core.events.user_created.v1~`
+- **WHEN** GET request is sent to `/api/v1/types-registry/entities/gts.acme.core.events.user_created.v1~`
+- **THEN** response contains the complete entity
 
