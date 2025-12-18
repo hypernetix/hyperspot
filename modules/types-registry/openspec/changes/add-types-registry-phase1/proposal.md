@@ -12,7 +12,7 @@ Phase 1.1 establishes the foundational contracts and in-memory storage with core
 
 **SDK API (`types-registry-sdk`):**
 - `TypesRegistryApi` trait with 3 core methods:
-  - `register` — Register a GTS entity (type or instance)
+  - `register` — Register a GTS entity (well-known type or instance)
   - `list` — List GTS entities with filtering/pagination
   - `get` — Get a GTS entity by ID
 
