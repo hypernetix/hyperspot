@@ -164,21 +164,94 @@ impl ApiIngress {
         // Build auth state and route policy once
         let (auth_state, route_policy) = self.build_auth_state_from_specs()?;
 
-        // Correct middleware order (outermost to innermost):
-        // RequestId(Propagate -> Set) -> Trace -> push_req_id_to_extensions -> Timeout -> BodyLimit -> CORS -> RateLimit -> ErrorMapping -> Auth -> Router
-        // Note: CORS must short-circuit OPTIONS before Auth/limits; tower-http does this when the layer is present above them.
-        let x_request_id = crate::middleware::request_id::header();
+        // IMPORTANT: `axum::Router::layer(...)` behaves like Tower layers: the **last** added layer
+        // becomes the **outermost** layer and therefore runs **first** on the request path.
+        //
+        // Desired request execution order (outermost -> innermost):
+        // SetRequestId -> PropagateRequestId -> Trace -> push_req_id_to_extensions
+        // -> Timeout -> BodyLimit -> CORS -> MIME validation -> RateLimit -> ErrorMapping -> Auth -> Router
+        //
+        // Therefore we must add layers in the reverse order (innermost -> outermost) below.
+        // Due future refactoring, this order must be maintained.
 
-        // 1. If client sent x-request-id, propagate it; otherwise we will set it
-        router = router.layer(PropagateRequestIdLayer::new(x_request_id.clone()));
+        let config = self.get_cached_config();
 
-        // 2. Generate x-request-id when missing
-        router = router.layer(SetRequestIdLayer::new(
-            x_request_id,
-            crate::middleware::request_id::MakeReqId,
+        // Collect specs once; used by MIME validation + rate limiting maps.
+        let specs: Vec<_> = self
+            .openapi_registry
+            .operation_specs
+            .iter()
+            .map(|e| e.value().clone())
+            .collect();
+
+        // 10) Auth
+        if config.auth_disabled {
+            tracing::warn!(
+                "API Ingress auth is DISABLED: all requests will run with root SecurityCtx (SecurityCtx::root_ctx()). \
+                 This mode bypasses authentication and is intended ONLY for single-user on-premises deployments without an IdP. \
+                 Permission checks and secure ORM still apply. DO NOT use this mode in multi-tenant or production environments."
+            );
+            router = router.layer(from_fn(
+                |mut req: axum::extract::Request, next: axum::middleware::Next| async move {
+                    let sec = modkit_security::SecurityCtx::root_ctx();
+                    req.extensions_mut().insert(sec);
+                    next.run(req).await
+                },
+            ));
+        } else {
+            let validator = auth_state.validator.clone();
+            let scope_builder = auth_state.scope_builder.clone();
+            let authorizer = auth_state.authorizer.clone();
+            let policy = Arc::new(route_policy) as Arc<dyn modkit_auth::RoutePolicy>;
+
+            router = router.layer(modkit_auth::axum_ext::AuthPolicyLayer::new(
+                validator,
+                scope_builder,
+                authorizer,
+                policy,
+            ));
+        }
+
+        // 9) Error mapping (outer to auth so it can translate auth/handler errors)
+        router = router.layer(from_fn(modkit::api::error_layer::error_mapping_middleware));
+
+        // 8) Per-route rate limiting & in-flight limits
+        let rate_map = middleware::rate_limit::RateLimiterMap::from_specs(&specs, &config);
+        router = router.layer(from_fn(
+            move |req: axum::extract::Request, next: axum::middleware::Next| {
+                let map = rate_map.clone();
+                middleware::rate_limit::rate_limit_middleware(map, req, next)
+            },
         ));
 
-        // 3. Create the http span with request_id/status/latency
+        // 7) MIME type validation
+        let mime_map = middleware::mime_validation::build_mime_validation_map(&specs);
+        router = router.layer(from_fn(
+            move |req: axum::extract::Request, next: axum::middleware::Next| {
+                let map = mime_map.clone();
+                middleware::mime_validation::mime_validation_middleware(map, req, next)
+            },
+        ));
+
+        // 6) CORS (must be outer to auth/limits so OPTIONS preflight short-circuits)
+        if config.cors_enabled {
+            router = router.layer(crate::cors::build_cors_layer(&config));
+        }
+
+        // 5) Body limit
+        router = router.layer(RequestBodyLimitLayer::new(config.defaults.body_limit_bytes));
+        router = router.layer(DefaultBodyLimit::max(config.defaults.body_limit_bytes));
+
+        // 4) Timeout
+        router = router.layer(TimeoutLayer::with_status_code(
+            axum::http::StatusCode::GATEWAY_TIMEOUT,
+            Duration::from_secs(30),
+        ));
+
+        // 3) Record request_id into span + extensions (requires span to exist first => must be inner to Trace)
+        router = router.layer(from_fn(middleware::request_id::push_req_id_to_extensions));
+
+        // 2) Trace (outer to push_req_id_to_extensions)
         router = router.layer({
             use modkit::http::otel;
             use tower_http::trace::TraceLayer;
@@ -235,80 +308,14 @@ impl ApiIngress {
                 )
         });
 
-        // 4. Record request_id into span + extensions (span must exist first)
-        router = router.layer(from_fn(middleware::request_id::push_req_id_to_extensions));
-
-        // 5. Timeout layer - 30 second timeout for handlers
-        router = router.layer(TimeoutLayer::with_status_code(
-            axum::http::StatusCode::GATEWAY_TIMEOUT,
-            Duration::from_secs(30),
+        // 1) Request ID handling
+        let x_request_id = crate::middleware::request_id::header();
+        // If missing, generate x-request-id first; then propagate it to the response.
+        router = router.layer(PropagateRequestIdLayer::new(x_request_id.clone()));
+        router = router.layer(SetRequestIdLayer::new(
+            x_request_id,
+            crate::middleware::request_id::MakeReqId,
         ));
-
-        // 6. Body limit layer - from config default
-        let config = self.get_cached_config();
-        router = router.layer(RequestBodyLimitLayer::new(config.defaults.body_limit_bytes));
-        router = router.layer(DefaultBodyLimit::max(config.defaults.body_limit_bytes));
-
-        // 7. CORS layer (if enabled). Place after BodyLimit so preflight returns early.
-        if config.cors_enabled {
-            router = router.layer(crate::cors::build_cors_layer(&config));
-        }
-
-        // 8. MIME type validation (after CORS, before rate limiting)
-        let specs: Vec<_> = self
-            .openapi_registry
-            .operation_specs
-            .iter()
-            .map(|e| e.value().clone())
-            .collect();
-        let mime_map = middleware::mime_validation::build_mime_validation_map(&specs);
-        router = router.layer(from_fn(
-            move |req: axum::extract::Request, next: axum::middleware::Next| {
-                let map = mime_map.clone();
-                middleware::mime_validation::mime_validation_middleware(map, req, next)
-            },
-        ));
-
-        // 9. Per-route rate limiting & in-flight limits (after MIME validation, before auth)
-        let rate_map = middleware::rate_limit::RateLimiterMap::from_specs(&specs, &config);
-        router = router.layer(from_fn(
-            move |req: axum::extract::Request, next: axum::middleware::Next| {
-                let map = rate_map.clone();
-                middleware::rate_limit::rate_limit_middleware(map, req, next)
-            },
-        ));
-
-        // 10. Error mapping layer (no-op converter for now; keeps order explicit)
-        router = router.layer(from_fn(modkit::api::error_layer::error_mapping_middleware));
-
-        // 11. Auth middleware - MUST be after CORS; preflight short-circuits before this.
-        let config = self.get_cached_config();
-        if config.auth_disabled {
-            tracing::warn!(
-                "API Ingress auth is DISABLED: all requests will run with root SecurityCtx (SecurityCtx::root_ctx()). \
-                 This mode bypasses authentication and is intended ONLY for single-user on-premises deployments without an IdP. \
-                 Permission checks and secure ORM still apply. DO NOT use this mode in multi-tenant or production environments."
-            );
-            router = router.layer(from_fn(
-                |mut req: axum::extract::Request, next: axum::middleware::Next| async move {
-                    let sec = modkit_security::SecurityCtx::root_ctx();
-                    req.extensions_mut().insert(sec);
-                    next.run(req).await
-                },
-            ));
-        } else {
-            let validator = auth_state.validator.clone();
-            let scope_builder = auth_state.scope_builder.clone();
-            let authorizer = auth_state.authorizer.clone();
-            let policy = Arc::new(route_policy) as Arc<dyn modkit_auth::RoutePolicy>;
-
-            router = router.layer(modkit_auth::axum_ext::AuthPolicyLayer::new(
-                validator,
-                scope_builder,
-                authorizer,
-                policy,
-            ));
-        }
 
         Ok(router)
     }
