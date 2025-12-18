@@ -23,6 +23,8 @@ members = [
     "modules/api_ingress",
     "modules/grpc_hub",
     "modules/file_parser",
+    "modules/feature_flags_gateway/feature_flags_gateway-sdk",
+    "modules/feature_flags_gateway/feature_flags_gateway",
     "modules/nodes_registry",
     "modules/module_orchestrator/module_orchestrator-contracts",
     "modules/module_orchestrator/module_orchestrator-grpc",

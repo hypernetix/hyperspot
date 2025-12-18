@@ -1,0 +1,24 @@
+[package]
+name = "feature_flags_gateway"
+version.workspace = true
+publish = false
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+feature_flags_gateway-sdk = { path = "../feature_flags_gateway-sdk" }
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+inventory = { workspace = true }
+modkit = { path = "../../../libs/modkit" }
+modkit-security = { path = "../../../libs/modkit-security" }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+uuid = { workspace = true }

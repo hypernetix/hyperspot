@@ -1,0 +1,18 @@
+[package]
+name = "feature_flags_gateway-sdk"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[lints]
+workspace = true
+
+[lib]
+name = "feature_flags_gateway_sdk"
+path = "src/lib.rs"
+
+[dependencies]
+async-trait = { workspace = true }
+modkit-security = { path = "../../../libs/modkit-security" }
+thiserror = { workspace = true }

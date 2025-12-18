@@ -1404,6 +1404,31 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "37909eebbb50d72f9059c3b6d82c0463f2ff062c9e95845c43a6c9c0355411be"
 
 [[package]]
+name = "feature_flags_gateway"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "feature_flags_gateway-sdk",
+ "inventory",
+ "modkit",
+ "modkit-security",
+ "serde_json",
+ "tokio",
+ "tokio-util",
+ "uuid",
+]
+
+[[package]]
+name = "feature_flags_gateway-sdk"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "modkit-security",
+ "thiserror 2.0.17",
+]
+
+[[package]]
 name = "ferroid"
 version = "0.8.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
