@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use time::OffsetDateTime;
 use uuid::Uuid;
 
 /// Intermediate representation of a parsed document
@@ -17,8 +17,8 @@ pub struct ParsedMetadata {
     pub source: ParsedSource,
     pub original_filename: Option<String>,
     pub content_type: Option<String>,
-    pub created_at: Option<DateTime<Utc>>,
-    pub modified_at: Option<DateTime<Utc>>,
+    pub created_at: Option<OffsetDateTime>,
+    pub modified_at: Option<OffsetDateTime>,
     pub is_stub: bool,
 }
 
@@ -154,8 +154,8 @@ pub struct DocumentBuilder {
     source: ParsedSource,
     original_filename: Option<String>,
     content_type: Option<String>,
-    created_at: Option<DateTime<Utc>>,
-    modified_at: Option<DateTime<Utc>>,
+    created_at: Option<OffsetDateTime>,
+    modified_at: Option<OffsetDateTime>,
     is_stub: bool,
     blocks: Vec<ParsedBlock>,
 }
@@ -208,13 +208,13 @@ impl DocumentBuilder {
     }
 
     /// Set the created timestamp
-    pub fn created_at(mut self, created_at: DateTime<Utc>) -> Self {
+    pub fn created_at(mut self, created_at: OffsetDateTime) -> Self {
         self.created_at = Some(created_at);
         self
     }
 
     /// Set the modified timestamp
-    pub fn modified_at(mut self, modified_at: DateTime<Utc>) -> Self {
+    pub fn modified_at(mut self, modified_at: OffsetDateTime) -> Self {
         self.modified_at = Some(modified_at);
         self
     }

@@ -1,6 +1,6 @@
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use time::OffsetDateTime;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -38,10 +38,12 @@ pub struct ParsedDocMetadataDto {
     pub original_filename: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub content_type: Option<String>,
+    #[serde(with = "time::serde::rfc3339::option")]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub created_at: Option<DateTime<Utc>>,
+    pub created_at: Option<OffsetDateTime>,
+    #[serde(with = "time::serde::rfc3339::option")]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub modified_at: Option<DateTime<Utc>>,
+    pub modified_at: Option<OffsetDateTime>,
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub is_stub: bool,
 }

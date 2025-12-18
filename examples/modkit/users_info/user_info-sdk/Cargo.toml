@@ -14,7 +14,7 @@ workspace = true
 async-trait = { workspace = true }
 thiserror = { workspace = true }
 uuid = { workspace = true }
-chrono = { workspace = true, features = ["serde"] }
+time = { workspace = true }
 
 # Security context for API methods
 modkit-security = { path = "../../../../libs/modkit-security" }

@@ -1,10 +1,10 @@
-use chrono::{DateTime, Utc};
+use time::OffsetDateTime;
 use uuid::Uuid;
 
 /// Transport-agnostic domain event.
 #[derive(Debug, Clone)]
 pub enum UserDomainEvent {
-    Created { id: Uuid, at: DateTime<Utc> },
-    Updated { id: Uuid, at: DateTime<Utc> },
-    Deleted { id: Uuid, at: DateTime<Utc> },
+    Created { id: Uuid, at: OffsetDateTime },
+    Updated { id: Uuid, at: OffsetDateTime },
+    Deleted { id: Uuid, at: OffsetDateTime },
 }

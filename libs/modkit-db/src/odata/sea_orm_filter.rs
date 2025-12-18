@@ -7,6 +7,7 @@
 use crate::odata::filter::{FilterField, FilterNode, FilterOp, ODataValue};
 use crate::odata::{convert_expr_to_filter_node, FieldKind};
 use bigdecimal::ToPrimitive;
+use chrono::SecondsFormat;
 use modkit_odata::{CursorV1, Error as ODataError, ODataOrderBy, Page, PageInfo, SortDir};
 use sea_orm::{
     sea_query::{Expr, Order},
@@ -282,20 +283,31 @@ pub fn escape_like(s: &str) -> String {
 pub fn encode_cursor_value(value: &sea_orm::Value, kind: FieldKind) -> Result<String, String> {
     use sea_orm::Value as V;
 
-    let result = match (kind, value) {
-        (FieldKind::String, V::String(Some(s))) => s.to_string(),
-        (FieldKind::I64, V::BigInt(Some(i))) => i.to_string(),
-        (FieldKind::F64, V::Double(Some(f))) => ryu::Buffer::new().format(*f).to_owned(),
-        (FieldKind::Bool, V::Bool(Some(b))) => b.to_string(),
-        (FieldKind::Uuid, V::Uuid(Some(u))) => u.to_string(),
-        (FieldKind::DateTimeUtc, V::ChronoDateTimeUtc(Some(dt))) => dt.to_rfc3339(),
-        (FieldKind::Date, V::ChronoDate(Some(d))) => d.to_string(),
-        (FieldKind::Time, V::ChronoTime(Some(t))) => t.to_string(),
-        (FieldKind::Decimal, V::Decimal(Some(d))) => d.to_string(),
-        _ => return Err("Unsupported or mismatched cursor value type".to_owned()),
+    let result: Result<String, String> = match (kind, value) {
+        (FieldKind::String, V::String(Some(s))) => Ok(s.to_string()),
+        (FieldKind::I64, V::BigInt(Some(i))) => Ok(i.to_string()),
+        (FieldKind::F64, V::Double(Some(f))) => Ok(ryu::Buffer::new().format(*f).to_owned()),
+        (FieldKind::Bool, V::Bool(Some(b))) => Ok(b.to_string()),
+        (FieldKind::Uuid, V::Uuid(Some(u))) => Ok(u.to_string()),
+        (FieldKind::DateTimeUtc, V::ChronoDateTimeUtc(Some(dt))) => {
+            Ok(dt.to_rfc3339_opts(SecondsFormat::Nanos, true))
+        }
+        (FieldKind::DateTimeUtc, V::TimeDateTimeWithTimeZone(Some(dt))) => {
+            let fmt = time::format_description::parse(
+                "[year]-[month]-[day]T[hour]:[minute]:[second].[subsecond digits:9]Z",
+            )
+            .map_err(|_| "invalid datetime format".to_owned())?;
+            dt.to_offset(time::UtcOffset::UTC)
+                .format(&fmt)
+                .map_err(|_| "failed to format datetime".to_owned())
+        }
+        (FieldKind::Date, V::ChronoDate(Some(d))) => Ok(d.to_string()),
+        (FieldKind::Time, V::ChronoTime(Some(t))) => Ok(t.to_string()),
+        (FieldKind::Decimal, V::Decimal(Some(d))) => Ok(d.to_string()),
+        _ => Err("Unsupported or mismatched cursor value type".to_owned()),
     };
 
-    Ok(result)
+    result
 }
 
 /// Parse a cursor value from string based on field kind.
@@ -335,10 +347,16 @@ pub fn parse_cursor_value(kind: FieldKind, s: &str) -> Result<sea_orm::Value, St
             V::Uuid(Some(Box::new(u)))
         }
         FieldKind::DateTimeUtc => {
-            let dt = chrono::DateTime::parse_from_rfc3339(s)
-                .map_err(|_| "invalid datetime in cursor".to_owned())?
-                .with_timezone(&chrono::Utc);
-            V::ChronoDateTimeUtc(Some(Box::new(dt)))
+            if let Ok(dt) =
+                time::OffsetDateTime::parse(s, &time::format_description::well_known::Rfc3339)
+            {
+                V::TimeDateTimeWithTimeZone(Some(Box::new(dt)))
+            } else {
+                let dt = chrono::DateTime::parse_from_rfc3339(s)
+                    .map_err(|_| "invalid datetime in cursor".to_owned())?
+                    .with_timezone(&chrono::Utc);
+                V::ChronoDateTimeUtc(Some(Box::new(dt)))
+            }
         }
         FieldKind::Date => {
             let d = s
@@ -781,12 +799,19 @@ mod tests {
         let dt = Utc.with_ymd_and_hms(2024, 1, 15, 10, 30, 0).unwrap();
         let val = V::ChronoDateTimeUtc(Some(Box::new(dt)));
         let encoded = encode_cursor_value(&val, FieldKind::DateTimeUtc).unwrap();
+        assert!(encoded.ends_with('Z'));
+        assert!(encoded.contains(".000000000Z"));
 
         let decoded = parse_cursor_value(FieldKind::DateTimeUtc, &encoded).unwrap();
-        if let V::ChronoDateTimeUtc(Some(decoded_dt)) = decoded {
-            assert_eq!(*decoded_dt, dt);
-        } else {
-            panic!("Expected DateTime value");
+        match decoded {
+            V::ChronoDateTimeUtc(Some(decoded_dt)) => {
+                assert_eq!(*decoded_dt, dt);
+            }
+            V::TimeDateTimeWithTimeZone(Some(decoded_dt)) => {
+                assert_eq!(decoded_dt.unix_timestamp(), dt.timestamp());
+                assert_eq!(decoded_dt.nanosecond(), dt.timestamp_subsec_nanos());
+            }
+            _ => panic!("Expected DateTime value"),
         }
     }
 

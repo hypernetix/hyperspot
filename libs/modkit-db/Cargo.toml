@@ -30,7 +30,8 @@ sqlx = { workspace = true, features = ["runtime-tokio", "tls-rustls", "macros", 
 xxhash-rust = { workspace = true }
 dirs = { workspace = true }
 chrono = { workspace = true, features = ["serde", "clock"] }
-sea-orm = { workspace = true, optional = true }
+time = { workspace = true }
+sea-orm = { workspace = true, features = ["with-time"], optional = true }
 modkit-db-macros = { path = "../modkit-db-macros", optional = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }

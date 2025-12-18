@@ -1,6 +1,6 @@
-use chrono::{DateTime, Utc};
 use modkit_db_macros::ODataFilterable;
 use serde::{Deserialize, Serialize};
+use time::OffsetDateTime;
 use user_info_sdk::{NewUser, User, UserPatch};
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -15,8 +15,10 @@ pub struct UserDto {
     pub email: String,
     pub display_name: String,
     #[odata(filter(kind = "DateTimeUtc"))]
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
+    #[serde(with = "time::serde::rfc3339")]
+    pub created_at: OffsetDateTime,
+    #[serde(with = "time::serde::rfc3339")]
+    pub updated_at: OffsetDateTime,
 }
 
 /// REST DTO for creating a new user
@@ -78,7 +80,8 @@ pub struct UserEvent {
     pub kind: String,
     pub id: Uuid,
     #[schema(format = "date-time")]
-    pub at: DateTime<Utc>,
+    #[serde(with = "time::serde::rfc3339")]
+    pub at: OffsetDateTime,
 }
 
 impl From<&crate::domain::events::UserDomainEvent> for UserEvent {
@@ -109,14 +112,11 @@ impl From<&crate::domain::events::UserDomainEvent> for UserEvent {
 mod tests {
     use super::*;
     use crate::domain::events::UserDomainEvent;
-    use chrono::TimeZone;
 
     #[test]
     fn maps_domain_event_to_transport() {
-        let at = chrono::Utc
-            .with_ymd_and_hms(2023, 11, 14, 12, 0, 0)
-            .unwrap();
-        let id = uuid::Uuid::nil();
+        let at = OffsetDateTime::from_unix_timestamp(1_699_963_200).unwrap();
+        let id = Uuid::nil();
         let de = UserDomainEvent::Created { id, at };
         let out = UserEvent::from(&de);
         assert_eq!(out.kind, "created");
@@ -126,10 +126,8 @@ mod tests {
 
     #[test]
     fn maps_all_domain_event_variants() {
-        let at = chrono::Utc
-            .with_ymd_and_hms(2023, 11, 14, 12, 0, 0)
-            .unwrap();
-        let id = uuid::Uuid::nil();
+        let at = OffsetDateTime::from_unix_timestamp(1_699_963_200).unwrap();
+        let id = Uuid::nil();
 
         // Test Created event
         let created = UserDomainEvent::Created { id, at };
@@ -151,5 +149,18 @@ mod tests {
         assert_eq!(deleted_event.kind, "deleted");
         assert_eq!(deleted_event.id, id);
         assert_eq!(deleted_event.at, at);
+    }
+
+    #[test]
+    fn serializes_event_timestamp_with_millis() {
+        let input = serde_json::json!({
+            "kind": "created",
+            "id": Uuid::nil(),
+            "at": "2023-11-14T12:00:00.123Z"
+        });
+
+        let ev: UserEvent = serde_json::from_value(input).unwrap();
+        assert_eq!(ev.at.unix_timestamp(), 1_699_963_200);
+        assert_eq!(ev.at.nanosecond(), 123_000_000);
     }
 }

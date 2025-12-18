@@ -34,7 +34,6 @@ async fn seed_users_sequential(
         let id = Uuid::new_v4();
         let email = format!("user{i}@example.com");
         let display_name = format!("User {i}");
-
         seed_user(db, id, tenant_id, &email, &display_name).await;
         user_ids.push(id);
 

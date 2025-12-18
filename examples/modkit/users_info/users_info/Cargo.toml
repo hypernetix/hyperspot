@@ -26,7 +26,7 @@ inventory = { workspace = true }
 # Serde and JSON schema
 serde = { workspace = true }
 serde_json = { workspace = true }
-utoipa = { workspace = true }
+utoipa = { workspace = true, features = ["time"] }
 
 # HTTP and REST
 axum = { workspace = true, features = ["macros"] }
@@ -35,7 +35,7 @@ futures = { workspace = true }
 http = { workspace = true }
 
 # Time handling
-chrono = { workspace = true, features = ["serde"] }
+time = { workspace = true }
 
 # URL parsing
 url = { workspace = true }
@@ -51,7 +51,7 @@ sea-orm = { workspace = true, features = [
     "sqlx-sqlite",
     "runtime-tokio-rustls",
     "macros",
-    "with-chrono",
+    "with-time",
     "with-uuid"
 ] }
 sea-orm-migration = { workspace = true, features = ["sqlx-sqlite"] }

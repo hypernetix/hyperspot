@@ -3,7 +3,7 @@
 //! These are transport-agnostic data structures that define the contract
 //! between the `user_info` module and its consumers.
 
-use chrono::{DateTime, Utc};
+use time::OffsetDateTime;
 use uuid::Uuid;
 
 /// A user entity.
@@ -13,8 +13,8 @@ pub struct User {
     pub tenant_id: Uuid,
     pub email: String,
     pub display_name: String,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
+    pub created_at: OffsetDateTime,
+    pub updated_at: OffsetDateTime,
 }
 
 /// Data for creating a new user.

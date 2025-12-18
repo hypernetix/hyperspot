@@ -1,6 +1,7 @@
 //! Filter hashing utilities for `OData` pagination
 
 use crate::ast;
+use chrono::SecondsFormat;
 use sha2::{Digest, Sha256};
 
 /// Normalize filter AST for consistent hashing
@@ -60,7 +61,12 @@ pub fn normalize_filter_for_hash(expr: &ast::Expr) -> String {
                 ast::Value::Uuid(u) => {
                     format!("UUID({})", u.as_hyphenated().to_string().to_lowercase())
                 }
-                ast::Value::DateTime(dt) => format!("DATETIME({})", dt.to_rfc3339()),
+                ast::Value::DateTime(dt) => {
+                    format!(
+                        "DATETIME({})",
+                        dt.to_rfc3339_opts(SecondsFormat::Nanos, true)
+                    )
+                }
                 ast::Value::Date(d) => format!("DATE({})", d.format("%Y-%m-%d")),
                 ast::Value::Time(t) => format!("TIME({})", t.format("%H:%M:%S%.f")),
                 ast::Value::String(s) => format!("STR({s})"),
