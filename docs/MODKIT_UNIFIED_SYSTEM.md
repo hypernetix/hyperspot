@@ -754,8 +754,8 @@ OperationBuilder::<Missing, Missing, S>::post("/my-module/v1/path")
 **Authentication**
 
 ```rust
-// Require authentication with resource:action permission:
-.require_auth("users", "read")
+// Require authentication with resource:action permission (module-defined Resource/Action enums):
+.require_auth(&Resource::Users, &Action::Read)
 
 // Or mark as public (no auth required):
 .public()

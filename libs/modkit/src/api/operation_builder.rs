@@ -120,6 +120,10 @@ pub struct ParamSpec {
     pub param_type: String, // JSON Schema type (string, integer, etc.)
 }
 
+pub trait AuthReqResource: AsRef<str> {}
+
+pub trait AuthReqAction: AsRef<str> {}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ParamLocation {
     Path,
@@ -536,14 +540,25 @@ where
     /// * `description` - Optional description for the request body
     ///
     /// # Example
-    /// ```rust,ignore
-    /// OperationBuilder::post("/files/v1/upload")
+    /// ```rust
+    /// # use axum::Router;
+    /// # use http::StatusCode;
+    /// # use modkit::api::{
+    /// #     openapi_registry::OpenApiRegistryImpl,
+    /// #     operation_builder::OperationBuilder,
+    /// # };
+    /// # async fn upload_handler() -> &'static str { "uploaded" }
+    /// # let registry = OpenApiRegistryImpl::new();
+    /// # let router: Router<()> = Router::new();
+    /// let router = OperationBuilder::post("/files/v1/upload")
     ///     .operation_id("upload_file")
     ///     .summary("Upload a file")
     ///     .multipart_file_request("file", Some("File to upload"))
+    ///     .public()
     ///     .handler(upload_handler)
-    ///     .json_response(200, "Upload successful")
-    ///     .register(router, &api);
+    ///     .json_response(StatusCode::OK, "Upload successful")
+    ///     .register(router, &registry);
+    /// # let _ = router;
     /// ```
     pub fn multipart_file_request(mut self, field_name: &str, description: Option<&str>) -> Self {
         // Set request body with multipart/form-data content type
@@ -586,14 +601,25 @@ where
     /// * `description` - Optional description for the request body
     ///
     /// # Example
-    /// ```rust,ignore
-    /// OperationBuilder::post("/files/v1/upload")
+    /// ```rust
+    /// # use axum::Router;
+    /// # use http::StatusCode;
+    /// # use modkit::api::{
+    /// #     openapi_registry::OpenApiRegistryImpl,
+    /// #     operation_builder::OperationBuilder,
+    /// # };
+    /// # async fn upload_handler() -> &'static str { "uploaded" }
+    /// # let registry = OpenApiRegistryImpl::new();
+    /// # let router: Router<()> = Router::new();
+    /// let router = OperationBuilder::post("/files/v1/upload")
     ///     .operation_id("upload_file")
     ///     .summary("Upload a file")
     ///     .octet_stream_request(Some("Raw file bytes to parse"))
+    ///     .public()
     ///     .handler(upload_handler)
-    ///     .json_response(200, "Upload successful")
-    ///     .register(router, &api);
+    ///     .json_response(StatusCode::OK, "Upload successful")
+    ///     .register(router, &registry);
+    /// # let _ = router;
     /// ```
     pub fn octet_stream_request(mut self, description: Option<&str>) -> Self {
         self.spec.request_body = Some(RequestBodySpec {
@@ -619,13 +645,24 @@ where
     /// validation and does not affect `OpenAPI` request body specifications.
     ///
     /// # Example
-    /// ```rust,ignore
-    /// OperationBuilder::post("/files/v1/upload")
+    /// ```rust
+    /// # use axum::Router;
+    /// # use http::StatusCode;
+    /// # use modkit::api::{
+    /// #     openapi_registry::OpenApiRegistryImpl,
+    /// #     operation_builder::OperationBuilder,
+    /// # };
+    /// # async fn upload_handler() -> &'static str { "uploaded" }
+    /// # let registry = OpenApiRegistryImpl::new();
+    /// # let router: Router<()> = Router::new();
+    /// let router = OperationBuilder::post("/files/v1/upload")
     ///     .operation_id("upload_file")
     ///     .allow_content_types(&["multipart/form-data", "application/pdf"])
+    ///     .public()
     ///     .handler(upload_handler)
-    ///     .json_response(200, "Upload successful")
-    ///     .register(router, &api);
+    ///     .json_response(StatusCode::OK, "Upload successful")
+    ///     .register(router, &registry);
+    /// # let _ = router;
     /// ```
     pub fn allow_content_types(mut self, types: &[&'static str]) -> Self {
         self.spec.allowed_request_content_types = Some(types.to_vec());
@@ -642,24 +679,73 @@ where
 {
     /// Require authentication with a specific resource:action permission.
     ///
+    /// This only sets per-route security metadata (`resource` + allowed `action`).
+    /// Runtime enforcement is performed by middleware when it is configured.
+    ///
     /// This method transitions from `AuthNotSet` to `AuthSet` state.
     ///
     /// # Example
-    /// ```rust,ignore
-    /// OperationBuilder::get("/users-info/v1/users")
-    ///     .require_auth("users", "read")
-    ///     .handler(list_users)
-    ///     .json_response(200, "List of users")
-    ///     .register(router, &api);
+    /// ```rust
+    /// # use modkit::api::operation_builder::{OperationBuilder, AuthReqResource, AuthReqAction};
+    /// # use axum::{extract::Json, Router };
+    /// # use serde::{Serialize};
+    /// #
+    /// # #[derive(Serialize)]
+    /// # pub struct User;
+    /// #
+    /// enum Resource {
+    ///     Users,
+    /// }
+    ///
+    /// impl AsRef<str> for Resource {
+    ///     fn as_ref(&self) -> &'static str {
+    ///       match self {
+    ///         Resource::Users => "users",
+    ///       }
+    ///    }
+    /// }
+    ///
+    /// impl AuthReqResource for Resource {}
+    ///
+    /// enum Action {
+    ///     Read,
+    /// }
+    ///
+    /// impl AsRef<str> for Action {
+    ///    fn as_ref(&self) -> &'static str {
+    ///      match self {
+    ///         Action::Read => "read",
+    ///      }
+    ///    }
+    /// }
+    ///
+    /// impl AuthReqAction for Action {}
+    ///
+    /// #
+    /// # fn register_rest(
+    /// #   router: axum::Router,
+    /// #   api: &dyn modkit::api::OpenApiRegistry,
+    /// # ) -> anyhow::Result<axum::Router> {
+    /// let router = OperationBuilder::get("/users-info/v1/users")
+    ///     .require_auth(&Resource::Users, &Action::Read)
+    ///     .handler(list_users_handler)
+    ///     .json_response(axum::http::StatusCode::OK, "List of users")
+    ///     .register(router, api);
+    /// #  Ok(router)
+    /// # }
+    ///
+    /// # async fn list_users_handler() -> Json<Vec<User>> {
+    /// #   unimplemented!()
+    /// # }
     /// ```
     pub fn require_auth(
         mut self,
-        resource: impl Into<String>,
-        action: impl Into<String>,
+        resource: &impl AuthReqResource,
+        action: &impl AuthReqAction,
     ) -> OperationBuilder<H, R, S, AuthSet> {
         self.spec.sec_requirement = Some(OperationSecRequirement {
-            resource: resource.into(),
-            action: action.into(),
+            resource: resource.as_ref().into(),
+            action: action.as_ref().into(),
         });
         self.spec.is_public = false;
         OperationBuilder {
@@ -678,12 +764,22 @@ where
     /// This method transitions from `AuthNotSet` to `AuthSet` state.
     ///
     /// # Example
-    /// ```rust,ignore
-    /// OperationBuilder::get("/users-info/v1/health")
+    /// ```rust
+    /// # use axum::Router;
+    /// # use http::StatusCode;
+    /// # use modkit::api::{
+    /// #     openapi_registry::OpenApiRegistryImpl,
+    /// #     operation_builder::OperationBuilder,
+    /// # };
+    /// # async fn health_check() -> &'static str { "OK" }
+    /// # let registry = OpenApiRegistryImpl::new();
+    /// # let router: Router<()> = Router::new();
+    /// let router = OperationBuilder::get("/users-info/v1/health")
     ///     .public()
     ///     .handler(health_check)
-    ///     .json_response(200, "OK")
-    ///     .register(router, &api);
+    ///     .json_response(StatusCode::OK, "OK")
+    ///     .register(router, &registry);
+    /// # let _ = router;
     /// ```
     pub fn public(mut self) -> OperationBuilder<H, R, S, AuthSet> {
         self.spec.is_public = true;
@@ -1055,11 +1151,24 @@ where
     ///
     /// # Example
     ///
-    /// ```rust,ignore
-    /// let op = OperationBuilder::get("/users-info/v1/users")
+    /// ```rust
+    /// # use axum::Router;
+    /// # use http::StatusCode;
+    /// # use modkit::api::{
+    /// #     openapi_registry::OpenApiRegistryImpl,
+    /// #     operation_builder::OperationBuilder,
+    /// # };
+    /// # async fn list_users() -> &'static str { "[]" }
+    /// # let registry = OpenApiRegistryImpl::new();
+    /// # let router: Router<()> = Router::new();
+    /// let op = OperationBuilder::get("/user-info/v1/users")
+    ///     .public()
     ///     .handler(list_users)
     ///     .json_response(StatusCode::OK, "List of users")
     ///     .standard_errors(&registry);
+    ///
+    /// let router = op.register(router, &registry);
+    /// # let _ = router;
     /// ```
     ///
     /// This adds the following error responses:
@@ -1106,12 +1215,33 @@ where
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
+    /// # use axum::Router;
+    /// # use http::StatusCode;
+    /// # use modkit::api::{
+    /// #     openapi_registry::OpenApiRegistryImpl,
+    /// #     operation_builder::OperationBuilder,
+    /// # };
+    /// # use serde::{Deserialize, Serialize};
+    /// # use utoipa::ToSchema;
+    /// #
+    /// #[derive(Deserialize, Serialize, ToSchema)]
+    /// struct CreateUserRequest {
+    ///     email: String,
+    /// }
+    ///
+    /// # async fn create_user() -> &'static str { "created" }
+    /// # let registry = OpenApiRegistryImpl::new();
+    /// # let router: Router<()> = Router::new();
     /// let op = OperationBuilder::post("/users-info/v1/users")
+    ///     .public()
     ///     .handler(create_user)
     ///     .json_request::<CreateUserRequest>(&registry, "User data")
     ///     .json_response(StatusCode::CREATED, "User created")
     ///     .with_422_validation_error(&registry);
+    ///
+    /// let router = op.register(router, &registry);
+    /// # let _ = router;
     /// ```
     pub fn with_422_validation_error(mut self, registry: &dyn OpenApiRegistry) -> Self {
         let validation_error_name =
@@ -1288,7 +1418,7 @@ mod tests {
     }
 
     #[test]
-    fn test_builder_descriptive_methods() {
+    fn builder_descriptive_methods() {
         let builder = OperationBuilder::<Missing, Missing, (), AuthNotSet>::get("/tests/v1/test")
             .operation_id("test.get")
             .summary("Test endpoint")
@@ -1309,7 +1439,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_builder_with_request_response_and_handler() {
+    async fn builder_with_request_response_and_handler() {
         let registry = MockRegistry::new();
         let router = Router::new();
 
@@ -1342,7 +1472,7 @@ mod tests {
     }
 
     #[test]
-    fn test_convenience_constructors() {
+    fn convenience_constructors() {
         let get_builder =
             OperationBuilder::<Missing, Missing, (), AuthNotSet>::get("/tests/v1/get");
         assert_eq!(get_builder.spec.method, Method::GET);
@@ -1370,7 +1500,7 @@ mod tests {
     }
 
     #[test]
-    fn test_normalize_to_axum_path() {
+    fn normalize_to_axum_path_should_normalize() {
         // Axum 0.8+ uses {param} syntax, same as OpenAPI
         assert_eq!(
             normalize_to_axum_path("/tests/v1/users/{id}"),
@@ -1391,7 +1521,7 @@ mod tests {
     }
 
     #[test]
-    fn test_axum_to_openapi_path() {
+    fn axum_to_openapi_path_should_convert() {
         // Regular parameters stay the same
         assert_eq!(
             axum_to_openapi_path("/tests/v1/users/{id}"),
@@ -1414,7 +1544,7 @@ mod tests {
     }
 
     #[test]
-    fn test_path_normalization_in_constructors() {
+    fn path_normalization_in_constructors() {
         // Test that paths are kept as-is (Axum 0.8+ uses same {param} syntax)
         let builder = OperationBuilder::<Missing, Missing, ()>::get("/tests/v1/users/{id}");
         assert_eq!(builder.spec.path, "/tests/v1/users/{id}");
@@ -1433,7 +1563,7 @@ mod tests {
     }
 
     #[test]
-    fn test_standard_errors() {
+    fn standard_errors() {
         let registry = MockRegistry::new();
         let builder = OperationBuilder::<Missing, Missing, ()>::get("/tests/v1/test")
             .public()
@@ -1473,8 +1603,51 @@ mod tests {
         }
     }
 
+    enum TestResource {
+        Users,
+    }
+
+    enum TestAction {
+        Read,
+    }
+
+    impl AsRef<str> for TestResource {
+        fn as_ref(&self) -> &'static str {
+            match self {
+                TestResource::Users => "users",
+            }
+        }
+    }
+
+    impl AuthReqResource for TestResource {}
+
+    impl AsRef<str> for TestAction {
+        fn as_ref(&self) -> &'static str {
+            match self {
+                TestAction::Read => "read",
+            }
+        }
+    }
+
+    impl AuthReqAction for TestAction {}
+
     #[test]
-    fn test_with_422_validation_error() {
+    fn require_auth() {
+        let builder = OperationBuilder::<Missing, Missing, ()>::get("/tests/v1/test")
+            .require_auth(&TestResource::Users, &TestAction::Read)
+            .handler(test_handler)
+            .json_response(http::StatusCode::OK, "Success");
+
+        let sec_requirement = builder
+            .spec
+            .sec_requirement
+            .expect("Should have security requirement");
+        assert_eq!(sec_requirement.resource, "users");
+        assert_eq!(sec_requirement.action, "read");
+    }
+
+    #[test]
+    fn with_422_validation_error() {
         let registry = MockRegistry::new();
         let builder = OperationBuilder::<Missing, Missing, ()>::post("/tests/v1/test")
             .public()
@@ -1501,7 +1674,7 @@ mod tests {
     }
 
     #[test]
-    fn test_allow_content_types_with_existing_request_body() {
+    fn allow_content_types_with_existing_request_body() {
         let registry = MockRegistry::new();
         let builder = OperationBuilder::<Missing, Missing, ()>::post("/tests/v1/test")
             .json_request::<serde_json::Value>(&registry, "Test request")
@@ -1520,7 +1693,7 @@ mod tests {
     }
 
     #[test]
-    fn test_allow_content_types_without_existing_request_body() {
+    fn allow_content_types_without_existing_request_body() {
         let builder = OperationBuilder::<Missing, Missing, ()>::post("/tests/v1/test")
             .allow_content_types(&["multipart/form-data"])
             .public()
@@ -1536,7 +1709,7 @@ mod tests {
     }
 
     #[test]
-    fn test_allow_content_types_can_be_chained() {
+    fn allow_content_types_can_be_chained() {
         let registry = MockRegistry::new();
         let builder = OperationBuilder::<Missing, Missing, ()>::post("/tests/v1/test")
             .operation_id("test.post")
@@ -1559,7 +1732,7 @@ mod tests {
     }
 
     #[test]
-    fn test_multipart_file_request() {
+    fn multipart_file_request() {
         let builder = OperationBuilder::<Missing, Missing, ()>::post("/tests/v1/upload")
             .operation_id("test.upload")
             .summary("Upload file")
@@ -1592,7 +1765,7 @@ mod tests {
     }
 
     #[test]
-    fn test_multipart_file_request_without_description() {
+    fn multipart_file_request_without_description() {
         let builder = OperationBuilder::<Missing, Missing, ()>::post("/tests/v1/upload")
             .multipart_file_request("file", None)
             .public()
@@ -1612,7 +1785,7 @@ mod tests {
     }
 
     #[test]
-    fn test_octet_stream_request() {
+    fn octet_stream_request() {
         let builder = OperationBuilder::<Missing, Missing, ()>::post("/tests/v1/upload")
             .operation_id("test.upload")
             .summary("Upload raw file")
@@ -1639,7 +1812,7 @@ mod tests {
     }
 
     #[test]
-    fn test_octet_stream_request_without_description() {
+    fn octet_stream_request_without_description() {
         let builder = OperationBuilder::<Missing, Missing, ()>::post("/tests/v1/upload")
             .octet_stream_request(None)
             .public()
@@ -1654,7 +1827,7 @@ mod tests {
     }
 
     #[test]
-    fn test_json_request_uses_ref_schema() {
+    fn json_request_uses_ref_schema() {
         let registry = MockRegistry::new();
         let builder = OperationBuilder::<Missing, Missing, ()>::post("/tests/v1/test")
             .json_request::<serde_json::Value>(&registry, "Test request body")
@@ -1676,7 +1849,7 @@ mod tests {
     }
 
     #[test]
-    fn test_response_content_types_must_not_contain_parameters() {
+    fn response_content_types_must_not_contain_parameters() {
         // This test ensures OpenAPI correctness: media type keys cannot include
         // parameters like "; charset=utf-8"
         let registry = MockRegistry::new();
