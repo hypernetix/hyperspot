@@ -483,8 +483,20 @@ impl RegistryBuilder {
 #[derive(Debug, Error)]
 pub enum RegistryError {
     // Phase errors with module context
+    #[error("pre-init failed for module '{module}'")]
+    PreInit {
+        module: &'static str,
+        #[source]
+        source: anyhow::Error,
+    },
     #[error("initialization failed for module '{module}'")]
     Init {
+        module: &'static str,
+        #[source]
+        source: anyhow::Error,
+    },
+    #[error("post-init failed for module '{module}'")]
+    PostInit {
         module: &'static str,
         #[source]
         source: anyhow::Error,

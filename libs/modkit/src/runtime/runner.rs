@@ -6,7 +6,7 @@
 //!
 //! Design notes:
 //! - We use **`ModuleContextBuilder`** to resolve per-module `DbHandles` at runtime.
-//! - Phase order: **`system_wire` → DB → init → REST → gRPC → start → `OoP` spawn → wait → stop**.
+//! - Phase order is orchestrated by `HostRuntime` (see `runtime/host_runtime.rs` docs).
 //! - Modules receive a fully-scoped `ModuleCtx` with a resolved Option<DbHandle>.
 //! - Shutdown can be driven by OS signals, an external `CancellationToken`,
 //!   or an arbitrary future.
@@ -121,7 +121,7 @@ pub struct RunOptions {
     pub oop: Option<OopSpawnOptions>,
 }
 
-/// Full cycle: `system_wire` → DB → init → REST → gRPC → start → wait → stop.
+/// Full cycle is orchestrated by `HostRuntime` (see `runtime/host_runtime.rs` docs).
 ///
 /// This function is a thin wrapper around `HostRuntime` that handles shutdown signal setup
 /// and then delegates all lifecycle orchestration to the `HostRuntime`.
