@@ -1,7 +1,17 @@
 //! Host Runtime - orchestrates the full `ModKit` lifecycle
 //!
 //! This module contains the `HostRuntime` type that owns and coordinates
-//! the execution of all lifecycle phases: `system_wire` → DB → init → REST → gRPC → start → `OoP` spawn → wait → stop.
+//! the execution of all lifecycle phases.
+//!
+//! High-level phase order:
+//! - `pre_init` (system modules only)
+//! - DB migrations (modules with DB capability)
+//! - `init` (all modules)
+//! - `post_init` (system modules only; runs after *all* `init` complete)
+//! - REST wiring (modules with REST capability; requires a single REST host)
+//! - gRPC registration (modules with gRPC capability; requires a single gRPC hub)
+//! - start/stop (stateful modules)
+//! - `OoP` spawn / wait / stop (host-only orchestration)
 
 use axum::Router;
 use std::collections::HashSet;
@@ -33,8 +43,7 @@ pub const MODKIT_MODULE_CONFIG_ENV: &str = "MODKIT_MODULE_CONFIG";
 
 /// `HostRuntime` owns the lifecycle orchestration for `ModKit`.
 ///
-/// It encapsulates all runtime state and drives modules through the full lifecycle:
-/// `system_wire` → DB → init → REST → gRPC → start → `OoP` spawn → wait → stop.
+/// It encapsulates all runtime state and drives modules through the full lifecycle (see module docs).
 pub struct HostRuntime {
     registry: ModuleRegistry,
     ctx_builder: ModuleContextBuilder,
@@ -94,14 +103,14 @@ impl HostRuntime {
         }
     }
 
-    /// SYSTEM WIRING phase: wire runtime internals into system modules.
+    /// `PRE_INIT` phase: wire runtime internals into system modules.
     ///
     /// This phase runs before init and only for modules with the "system" capability.
     ///
     /// # Errors
     /// Returns `RegistryError` if system wiring fails.
-    pub fn wire_system(&self) -> Result<(), RegistryError> {
-        tracing::info!("Phase: system_wire");
+    pub fn run_pre_init_phase(&self) -> Result<(), RegistryError> {
+        tracing::info!("Phase: pre_init");
 
         let sys_ctx = SystemContext::new(
             self.instance_id,
@@ -112,8 +121,13 @@ impl HostRuntime {
         for entry in self.registry.modules() {
             if entry.is_system {
                 if let Some(sys_mod) = entry.core.as_system_module() {
-                    tracing::debug!(module = entry.name, "Wiring system context");
-                    sys_mod.wire_system(&sys_ctx);
+                    tracing::debug!(module = entry.name, "Running system pre_init");
+                    sys_mod
+                        .pre_init(&sys_ctx)
+                        .map_err(|e| RegistryError::PreInit {
+                            module: entry.name,
+                            source: e,
+                        })?;
                 }
             }
         }
@@ -211,6 +225,39 @@ impl HostRuntime {
                     module: entry.name,
                     source: e,
                 })?;
+        }
+
+        Ok(())
+    }
+
+    /// `POST_INIT` phase: optional hook after ALL modules completed `init()`.
+    ///
+    /// This provides a global barrier between initialization-time registration
+    /// and subsequent phases that may rely on a fully-populated runtime registry.
+    ///
+    /// System modules run first, followed by user modules, preserving topo order.
+    async fn run_post_init_phase(&self) -> Result<(), RegistryError> {
+        tracing::info!("Phase: post_init");
+
+        let sys_ctx = SystemContext::new(
+            self.instance_id,
+            Arc::clone(&self.module_manager),
+            Arc::clone(&self.grpc_installers),
+        );
+
+        for entry in self.registry.modules_by_system_priority() {
+            if !entry.is_system {
+                continue;
+            }
+            if let Some(sys_mod) = entry.core.as_system_module() {
+                sys_mod
+                    .post_init(&sys_ctx)
+                    .await
+                    .map_err(|e| RegistryError::PostInit {
+                        module: entry.name,
+                        source: e,
+                    })?;
+            }
         }
 
         Ok(())
@@ -528,15 +575,15 @@ impl HostRuntime {
         }
     }
 
-    /// Run the full lifecycle: `system_wire` → DB → init → REST → gRPC → start → `OoP` spawn → wait → stop.
+    /// Run the full lifecycle: `pre_init` → DB → init → `post_init` → REST → gRPC → start → `OoP` spawn → wait → stop.
     ///
     /// This is the main entry point for orchestrating the complete module lifecycle.
     ///
     /// # Errors
     /// Returns an error if any lifecycle phase fails.
     pub async fn run_module_phases(self) -> anyhow::Result<()> {
-        // 1. System wiring phase (before init, only for system modules)
-        self.wire_system()?;
+        // 1. Pre-init phase (before init, only for system modules)
+        self.run_pre_init_phase()?;
 
         // 2. DB migration phase (system modules first)
         self.run_db_phase().await?;
@@ -544,22 +591,25 @@ impl HostRuntime {
         // 3. Init phase (system modules first)
         self.run_init_phase().await?;
 
-        // 4. REST phase (synchronous router composition)
+        // 4. Post-init phase (barrier after ALL init; system modules only)
+        self.run_post_init_phase().await?;
+
+        // 5. REST phase (synchronous router composition)
         let _router = self.run_rest_phase().await?;
 
-        // 5. gRPC registration phase
+        // 6. gRPC registration phase
         self.run_grpc_phase().await?;
 
-        // 6. Start phase
+        // 7. Start phase
         self.run_start_phase().await?;
 
-        // 7. OoP spawn phase (after grpc_hub is running)
+        // 8. OoP spawn phase (after grpc_hub is running)
         self.run_oop_spawn_phase().await?;
 
-        // 8. Wait for cancellation
+        // 9. Wait for cancellation
         self.cancel.cancelled().await;
 
-        // 9. Stop phase
+        // 10. Stop phase
         self.run_stop_phase().await?;
 
         Ok(())
@@ -571,10 +621,11 @@ impl HostRuntime {
 mod tests {
     use super::*;
     use crate::context::ModuleCtx;
-    use crate::contracts::{Module, StatefulModule};
+    use crate::contracts::{Module, StatefulModule, SystemModule};
     use crate::registry::RegistryBuilder;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
+    use tokio::sync::Mutex;
 
     #[derive(Default)]
     #[allow(dead_code)]
@@ -759,5 +810,109 @@ mod tests {
         fn get_module_config(&self, _module_name: &str) -> Option<&serde_json::Value> {
             None
         }
+    }
+
+    #[tokio::test]
+    async fn test_post_init_runs_after_all_init_and_system_first() {
+        #[derive(Clone)]
+        struct TrackHooks {
+            name: &'static str,
+            events: Arc<Mutex<Vec<String>>>,
+        }
+
+        #[async_trait::async_trait]
+        impl Module for TrackHooks {
+            async fn init(&self, _ctx: &ModuleCtx) -> anyhow::Result<()> {
+                self.events.lock().await.push(format!("init:{}", self.name));
+                Ok(())
+            }
+
+            fn as_any(&self) -> &dyn std::any::Any {
+                self
+            }
+
+            fn as_system_module(&self) -> Option<&dyn SystemModule> {
+                // Only sys modules are registered as system in the registry builder.
+                Some(self)
+            }
+        }
+
+        #[async_trait::async_trait]
+        impl SystemModule for TrackHooks {
+            fn pre_init(&self, _sys: &crate::runtime::SystemContext) -> anyhow::Result<()> {
+                Ok(())
+            }
+
+            async fn post_init(&self, _sys: &crate::runtime::SystemContext) -> anyhow::Result<()> {
+                self.events
+                    .lock()
+                    .await
+                    .push(format!("post_init:{}", self.name));
+                Ok(())
+            }
+        }
+
+        let events = Arc::new(Mutex::new(Vec::<String>::new()));
+        let sys_a = Arc::new(TrackHooks {
+            name: "sys_a",
+            events: events.clone(),
+        });
+        let user_b = Arc::new(TrackHooks {
+            name: "user_b",
+            events: events.clone(),
+        });
+        let user_c = Arc::new(TrackHooks {
+            name: "user_c",
+            events: events.clone(),
+        });
+
+        let mut builder = RegistryBuilder::default();
+        builder.register_core_with_meta("sys_a", &[], sys_a.clone() as Arc<dyn Module>);
+        builder.register_core_with_meta("user_b", &["sys_a"], user_b.clone() as Arc<dyn Module>);
+        builder.register_core_with_meta("user_c", &["user_b"], user_c.clone() as Arc<dyn Module>);
+        builder.register_system_with_meta("sys_a");
+
+        let registry = builder.build_topo_sorted().unwrap();
+
+        let client_hub = Arc::new(ClientHub::new());
+        let cancel = CancellationToken::new();
+        let config_provider: Arc<dyn ConfigProvider> = Arc::new(EmptyConfigProvider);
+
+        let runtime = HostRuntime::new(
+            registry,
+            config_provider,
+            DbOptions::None,
+            client_hub,
+            cancel,
+            Uuid::new_v4(),
+            None,
+        );
+
+        // Run init phase for all modules, then post_init as a separate barrier phase.
+        runtime.run_init_phase().await.unwrap();
+        runtime.run_post_init_phase().await.unwrap();
+
+        let events = events.lock().await.clone();
+        let first_post_init = events
+            .iter()
+            .position(|e| e.starts_with("post_init:"))
+            .expect("expected post_init events");
+        assert!(
+            events[..first_post_init]
+                .iter()
+                .all(|e| e.starts_with("init:")),
+            "expected all init events before post_init, got: {events:?}"
+        );
+
+        // system-first order within each phase
+        assert_eq!(
+            events,
+            vec![
+                "init:sys_a",
+                "init:user_b",
+                "init:user_c",
+                "post_init:sys_a",
+            ]
+        );
     }
 }

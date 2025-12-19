@@ -20,7 +20,7 @@ use std::path::PathBuf;
 use std::{
     collections::HashSet,
     net::{Ipv4Addr, SocketAddr, SocketAddrV4},
-    sync::Arc,
+    sync::{Arc, OnceLock},
 };
 use tokio::net::TcpListener;
 use tokio_stream::wrappers::TcpListenerStream;
@@ -74,10 +74,9 @@ enum ListenConfig {
 )]
 pub struct GrpcHub {
     listen_cfg: RwLock<ListenConfig>,
-    installer_store: RwLock<Option<Arc<GrpcInstallerStore>>>,
-    directory: RwLock<Option<Arc<dyn DirectoryApi>>>,
-    /// Process-level instance ID (set from `SystemContext` during `wire_system` phase)
-    instance_id: RwLock<String>,
+    installer_store: OnceLock<Arc<GrpcInstallerStore>>,
+    directory: OnceLock<Option<Arc<dyn DirectoryApi>>>,
+    instance_id: OnceLock<String>,
     bound_endpoint: RwLock<Option<String>>,
 }
 
@@ -85,9 +84,9 @@ impl Default for GrpcHub {
     fn default() -> Self {
         Self {
             listen_cfg: RwLock::new(ListenConfig::Tcp(DEFAULT_LISTEN_ADDR)),
-            installer_store: RwLock::new(None),
-            directory: RwLock::new(None),
-            instance_id: RwLock::new(String::new()), // Set from SystemContext during wire_system
+            installer_store: OnceLock::new(),
+            directory: OnceLock::new(),
+            instance_id: OnceLock::new(),
             bound_endpoint: RwLock::new(None),
         }
     }
@@ -277,27 +276,32 @@ impl GrpcHub {
     }
 
     /// Deregister modules from Directory on shutdown.
-    async fn deregister_modules(&self, modules: &[ModuleInstallers]) {
-        let directory = {
-            let guard = self.directory.read();
-            guard.as_ref().cloned()
+    async fn deregister_modules(&self, modules: &[ModuleInstallers]) -> anyhow::Result<()> {
+        let directory = self.directory.get().cloned().unwrap_or(None);
+        let Some(directory) = directory else {
+            return Ok(());
         };
-        let instance_id = self.instance_id.read().clone();
 
-        if let Some(directory) = directory {
-            for module_data in modules {
-                if let Err(e) = directory
-                    .deregister_instance(&module_data.module_name, &instance_id)
-                    .await
-                {
-                    tracing::warn!(
-                        module = %module_data.module_name,
-                        error = %e,
-                        "Failed to deregister module from Directory"
-                    );
-                }
+        let instance_id = self.instance_id.get().ok_or_else(|| {
+            anyhow::anyhow!(
+                "GrpcHub instance_id not set: SystemModule::pre_init must run before Directory deregistration"
+            )
+        })?;
+
+        for module_data in modules {
+            if let Err(e) = directory
+                .deregister_instance(&module_data.module_name, instance_id)
+                .await
+            {
+                tracing::warn!(
+                    module = %module_data.module_name,
+                    error = %e,
+                    "Failed to deregister module from Directory"
+                );
             }
         }
+
+        Ok(())
     }
 
     /// Run the tonic server with the provided installers.
@@ -336,7 +340,7 @@ impl GrpcHub {
             }
         };
 
-        self.deregister_modules(&data.modules).await;
+        self.deregister_modules(&data.modules).await?;
         serve_result
     }
 
@@ -439,13 +443,19 @@ impl GrpcHub {
         modules: &[ModuleInstallers],
         endpoint: &str,
     ) -> anyhow::Result<()> {
-        let directory = {
-            let guard = self.directory.read();
-            guard.as_ref().cloned()
+        let directory = self.directory.get().cloned().unwrap_or(None);
+        let Some(directory) = directory else {
+            tracing::info!("DirectoryApi not available; skipping Directory registration");
+            return Ok(());
         };
-        let instance_id = self.instance_id.read().clone();
 
-        if let Some(directory) = directory {
+        let instance_id = self.instance_id.get().ok_or_else(|| {
+            anyhow::anyhow!(
+                "GrpcHub instance_id not set: SystemModule::pre_init must run before Directory registration"
+            )
+        })?;
+
+        {
             for module_data in modules {
                 let service_names: Vec<String> = module_data
                     .installers
@@ -475,8 +485,6 @@ impl GrpcHub {
                     "Registered module in Directory"
                 );
             }
-        } else {
-            tracing::info!("DirectoryApi not available; skipping Directory registration");
         }
 
         Ok(())
@@ -487,13 +495,11 @@ impl GrpcHub {
         cancel: CancellationToken,
         ready: ReadySignal,
     ) -> anyhow::Result<()> {
-        let data = {
-            let store_guard = self.installer_store.read();
-            let store = store_guard
-                .as_ref()
-                .ok_or_else(|| anyhow::anyhow!("GrpcInstallerStore not wired into GrpcHub"))?;
-            store.take()
-        };
+        let store = self
+            .installer_store
+            .get()
+            .ok_or_else(|| anyhow::anyhow!("GrpcInstallerStore not wired into GrpcHub"))?;
+        let data = store.take();
 
         let data = data.ok_or_else(|| anyhow::anyhow!("GrpcInstallerStore is empty"))?;
 
@@ -501,18 +507,19 @@ impl GrpcHub {
     }
 }
 
+#[async_trait]
 impl SystemModule for GrpcHub {
-    fn wire_system(&self, sys: &modkit::runtime::SystemContext) {
-        // Store gRPC installer store reference
-        {
-            let mut guard = self.installer_store.write();
-            *guard = Some(Arc::clone(&sys.grpc_installers));
-        }
-        // Store process-level instance_id from SystemContext
-        {
-            let mut guard = self.instance_id.write();
-            *guard = sys.instance_id().to_string();
-        }
+    fn pre_init(&self, sys: &modkit::runtime::SystemContext) -> anyhow::Result<()> {
+        self.installer_store
+            .set(Arc::clone(&sys.grpc_installers))
+            .map_err(|_| {
+                anyhow::anyhow!("GrpcInstallerStore already set (pre_init called twice?)")
+            })?;
+
+        self.instance_id
+            .set(sys.instance_id().to_string())
+            .map_err(|_| anyhow::anyhow!("instance_id already set (pre_init called twice?)"))?;
+        Ok(())
     }
 }
 
@@ -532,10 +539,11 @@ impl Module for GrpcHub {
         // Parse listen_addr into appropriate transport type
         self.apply_listen_config(&cfg.listen_addr)?;
 
-        // Fetch DirectoryApi from ClientHub if available
-        if let Ok(dir) = ctx.client_hub().get::<dyn DirectoryApi>() {
-            *self.directory.write() = Some(dir);
-        }
+        // Fetch DirectoryApi from ClientHub if available and persist the decision exactly once.
+        let dir = ctx.client_hub().get::<dyn DirectoryApi>().ok();
+        self.directory
+            .set(dir)
+            .map_err(|_| anyhow::anyhow!("DirectoryApi already set (init called twice?)"))?;
 
         Ok(())
     }
@@ -708,7 +716,8 @@ mod tests {
             Arc::clone(&installer_store),
         );
 
-        hub.wire_system(&sys_ctx);
+        hub.pre_init(&sys_ctx)
+            .expect("pre_init should set installer_store and instance_id");
 
         let cancel = CancellationToken::new();
         let cancel_clone = cancel.clone();

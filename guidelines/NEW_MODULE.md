@@ -1751,10 +1751,8 @@ discoverable and include its API endpoints in the OpenAPI documentation.
    #![allow(unused_imports)]
 
    use api_ingress as _;
-   use directory_service as _;
-   use file_parser as _;
-   use grpc_hub as _;
-   use nodes_registry as _;
+   // NOTE: built-in infrastructure modules may also be imported here in the real server,
+   // but new user modules typically only need to add their own crate.
    use your_module as _;  // ADD THIS LINE
    #[cfg(feature = "users-info-example")]
    use users_info as _;
