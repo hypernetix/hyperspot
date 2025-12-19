@@ -16,7 +16,10 @@ use axum::{
     Json, Router,
 };
 use modkit::{
-    api::OperationBuilder,
+    api::{
+        operation_builder::{AuthReqAction, AuthReqResource},
+        OperationBuilder,
+    },
     config::ConfigProvider,
     context::ModuleCtx,
     contracts::{OpenApiRegistry, RestHostModule, RestfulModule},
@@ -103,6 +106,34 @@ impl Module for TestAuthModule {
     }
 }
 
+enum TestResource {
+    Test,
+}
+
+impl AsRef<str> for TestResource {
+    fn as_ref(&self) -> &'static str {
+        match self {
+            TestResource::Test => "test",
+        }
+    }
+}
+
+impl AuthReqResource for TestResource {}
+
+enum Action {
+    Read,
+}
+
+impl AsRef<str> for Action {
+    fn as_ref(&self) -> &'static str {
+        match self {
+            Action::Read => "read",
+        }
+    }
+}
+
+impl AuthReqAction for Action {}
+
 impl RestfulModule for TestAuthModule {
     fn register_rest(
         &self,
@@ -113,7 +144,7 @@ impl RestfulModule for TestAuthModule {
         // Protected route with explicit auth requirement
         let router = OperationBuilder::get("/tests/v1/api/protected")
             .operation_id("test.protected")
-            .require_auth("test", "read")
+            .require_auth(&TestResource::Test, &Action::Read)
             .summary("Protected endpoint")
             .handler(protected_handler)
             .json_response_with_schema::<TestResponse>(openapi, http::StatusCode::OK, "Success")
@@ -124,7 +155,7 @@ impl RestfulModule for TestAuthModule {
         // Protected route with path parameter (to test pattern matching)
         let router = OperationBuilder::get("/tests/v1/api/users/{id}")
             .operation_id("test.get_user")
-            .require_auth("users", "read")
+            .require_auth(&TestResource::Test, &Action::Read)
             .summary("Get user by ID")
             .path_param("id", "User ID")
             .handler(protected_handler)

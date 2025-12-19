@@ -482,7 +482,7 @@ The `modkit::api::prelude` module provides:
 // src/api/rest/routes.rs
 router = OperationBuilder::get("/users-info/v1/users/{id}")
     .operation_id("users_info.get_user")
-    .require_auth("users", "read")
+    .require_auth(&Resource::Users, &Action::Read)
     .handler(handlers::get_user)
     .json_response_with_schema::<UserDto>(openapi, StatusCode::OK, "User found")
     .error_400(openapi)   // Bad Request
@@ -1243,7 +1243,7 @@ external API clients.
 
 5. **`src/api/rest/routes.rs`:**
    **Rule:** Register ALL endpoints in a single `register_routes` function.
-   **Rule:** Use `OperationBuilder` for every route with `.require_auth("resource", "action")` for protected endpoints.
+   **Rule:** Use `OperationBuilder` for every route with `.require_auth(&Resource::X, [Action::Y])` for protected endpoints.
    **Rule:** Use `.error_400(openapi)`, `.error_404(openapi)` etc. instead of raw `.problem_response()`.
    **Rule:** After all routes are registered, attach the service ONCE with `router.layer(Extension(service.clone()))`.
 
@@ -1264,7 +1264,7 @@ external API clients.
            .operation_id("users_info.list_users")
            .summary("List users with cursor pagination")
            .tag("users")
-           .require_auth("users", "read")
+           .require_auth(&Resource::Users, &Action::Read)
            .query_param_typed("limit", false, "Max users to return", "integer")
            .query_param("cursor", false, "Cursor for pagination")
            .handler(handlers::list_users)
@@ -1282,7 +1282,7 @@ external API clients.
            .operation_id("users_info.get_user")
            .summary("Get user by ID")
            .tag("users")
-           .require_auth("users", "read")
+           .require_auth(&Resource::Users, &Action::Read)
            .path_param("id", "User UUID")
            .handler(handlers::get_user)
            .json_response_with_schema::<dto::UserDto>(openapi, http::StatusCode::OK, "User found")
@@ -1297,7 +1297,7 @@ external API clients.
            .operation_id("users_info.create_user")
            .summary("Create a new user")
            .tag("users")
-           .require_auth("users", "create")
+           .require_auth(&Resource::Users, &Action::Create)
            .json_request::<dto::CreateUserReq>(openapi, "User creation data")
            .handler(handlers::create_user)
            .json_response_with_schema::<dto::UserDto>(openapi, http::StatusCode::CREATED, "Created")
@@ -1313,7 +1313,7 @@ external API clients.
            .operation_id("users_info.delete_user")
            .summary("Delete user")
            .tag("users")
-           .require_auth("users", "delete")
+           .require_auth(&Resource::Users, &Action::Delete)
            .path_param("id", "User UUID")
            .handler(handlers::delete_user)
            .json_response(http::StatusCode::NO_CONTENT, "User deleted")
