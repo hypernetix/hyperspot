@@ -8,17 +8,35 @@ pub use crate::api::openapi_registry::OpenApiRegistry;
 ///
 /// This trait is internal to modkit and only used by system modules
 /// (those with the "system" capability). Normal user modules don't implement this.
+#[async_trait]
 pub trait SystemModule: Send + Sync {
-    /// Wire system-level context into this module.
+    /// Optional pre-init hook for system modules.
     ///
-    /// Called once during runtime bootstrap, before `init()`, for all system modules.
-    fn wire_system(&self, sys: &crate::runtime::SystemContext);
+    /// This runs BEFORE `init()` has completed for ALL modules, and only for system modules.
+    ///
+    /// Default implementation is a no-op so most modules don't need to implement it.
+    ///
+    /// # Errors
+    /// Returns an error if system wiring fails.
+    fn pre_init(&self, _sys: &crate::runtime::SystemContext) -> anyhow::Result<()> {
+        Ok(())
+    }
+
+    /// Optional post-init hook for system modules.
+    ///
+    /// This runs AFTER `init()` has completed for ALL modules, and only for system modules.
+    ///
+    /// Default implementation is a no-op so most modules don't need to implement it.
+    async fn post_init(&self, _sys: &crate::runtime::SystemContext) -> anyhow::Result<()> {
+        Ok(())
+    }
 }
 
 /// Core module: DI/wiring; do not rely on migrated schema here.
 #[async_trait]
 pub trait Module: Send + Sync + 'static {
     async fn init(&self, ctx: &crate::context::ModuleCtx) -> anyhow::Result<()>;
+
     fn as_any(&self) -> &dyn std::any::Any;
 
     /// Return self as a `SystemModule` if this module has the "system" capability.

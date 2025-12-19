@@ -6,8 +6,7 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use parking_lot::RwLock as BlockingRwLock;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use tokio::sync::RwLock;
 
 use modkit::context::ModuleCtx;
@@ -42,24 +41,27 @@ pub struct ModuleOrchestratorConfig;
 )]
 pub struct ModuleOrchestrator {
     config: RwLock<ModuleOrchestratorConfig>,
-    directory_api: RwLock<Option<Arc<dyn DirectoryApi>>>,
-    module_manager: BlockingRwLock<Option<Arc<ModuleManager>>>,
+    directory_api: OnceLock<Arc<dyn DirectoryApi>>,
+    module_manager: OnceLock<Arc<ModuleManager>>,
 }
 
 impl Default for ModuleOrchestrator {
     fn default() -> Self {
         Self {
             config: RwLock::new(ModuleOrchestratorConfig),
-            directory_api: RwLock::new(None),
-            module_manager: BlockingRwLock::new(None),
+            directory_api: OnceLock::new(),
+            module_manager: OnceLock::new(),
         }
     }
 }
 
+#[async_trait]
 impl SystemModule for ModuleOrchestrator {
-    fn wire_system(&self, sys: &modkit::runtime::SystemContext) {
-        let mut guard = self.module_manager.write();
-        *guard = Some(Arc::clone(&sys.module_manager));
+    fn pre_init(&self, sys: &modkit::runtime::SystemContext) -> anyhow::Result<()> {
+        self.module_manager
+            .set(Arc::clone(&sys.module_manager))
+            .map_err(|_| anyhow::anyhow!("ModuleManager already set (pre_init called twice?)"))?;
+        Ok(())
     }
 }
 
@@ -71,12 +73,10 @@ impl modkit::Module for ModuleOrchestrator {
         *self.config.write().await = cfg;
 
         // Use the injected ModuleManager to create the LocalDirectoryApi
-        let manager = self
-            .module_manager
-            .read()
-            .as_ref()
-            .cloned()
-            .ok_or_else(|| anyhow::anyhow!("ModuleManager not wired into ModuleOrchestrator"))?;
+        let manager =
+            self.module_manager.get().cloned().ok_or_else(|| {
+                anyhow::anyhow!("ModuleManager not wired into ModuleOrchestrator")
+            })?;
 
         let api_impl: Arc<dyn DirectoryApi> = Arc::new(LocalDirectoryApi::new(manager));
 
@@ -84,7 +84,9 @@ impl modkit::Module for ModuleOrchestrator {
         ctx.client_hub()
             .register::<dyn DirectoryApi>(api_impl.clone());
 
-        *self.directory_api.write().await = Some(api_impl);
+        self.directory_api
+            .set(api_impl)
+            .map_err(|_| anyhow::anyhow!("DirectoryApi already set (init called twice?)"))?;
 
         tracing::info!("ModuleOrchestrator initialized");
 
@@ -106,9 +108,7 @@ impl GrpcServiceModule for ModuleOrchestrator {
     async fn get_grpc_services(&self, _ctx: &ModuleCtx) -> Result<Vec<RegisterGrpcServiceFn>> {
         let api = self
             .directory_api
-            .read()
-            .await
-            .as_ref()
+            .get()
             .cloned()
             .ok_or_else(|| anyhow::anyhow!("DirectoryApi not initialized"))?;
 

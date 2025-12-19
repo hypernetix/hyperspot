@@ -8,7 +8,7 @@
 //! - **Declarative**: Use `#[module(...)]` attribute to declare modules
 //! - **Auto-discovery**: Modules are automatically discovered via inventory
 //! - **Type-safe**: Compile-time validation of capabilities
-//! - **Phase-based lifecycle**: DB → init → REST → start → stop
+//! - **Phase-based lifecycle**: executed by `HostRuntime` (see `runtime/host_runtime.rs` docs)
 //!
 //! ## Golden Path: Stateless Handlers
 //!
