@@ -8,8 +8,9 @@ license.workspace = true
 workspace = true
 
 [dependencies]
-uuid = { workspace = true, features = ["v4"]}
+uuid = { workspace = true, features = ["v4"] }
 serde = { workspace = true }
+serde_json = { workspace = true }
 bincode = { workspace = true }
 thiserror = { workspace = true }
-
+anyhow = { workspace = true }

@@ -2,6 +2,7 @@ use crate::{constants, AccessScope, Subject};
 use uuid::Uuid;
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+// TO BE DELETED AND REPLACED WITH SecurityContext
 pub struct SecurityCtx {
     scope: AccessScope,
     subject: Subject,
