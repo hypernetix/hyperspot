@@ -963,6 +963,15 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "$select",
+            "in": "query",
+            "description": "OData field projection. Select specific fields to return. Supports dot notation for nested fields. Examples: 'id,name', 'id,access_control.read,access_control.write'",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {

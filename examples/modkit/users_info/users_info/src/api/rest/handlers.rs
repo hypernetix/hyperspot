@@ -6,6 +6,7 @@ use crate::api::rest::dto::{CreateUserReq, UpdateUserReq, UserDto, UserEvent};
 
 use modkit::api::odata::OData;
 use modkit::api::prelude::*;
+use modkit::api::select::{apply_select, page_to_projected_json};
 
 use crate::domain::service::Service;
 use modkit::SseBroadcaster;
@@ -18,7 +19,7 @@ use crate::domain::error::DomainError;
 type UsersResult<T> = ApiResult<T, DomainError>;
 type UsersApiError = ApiError<DomainError>;
 
-/// List users with cursor-based pagination
+/// List users with cursor-based pagination and optional field projection via $select
 #[tracing::instrument(
     skip(svc, query, ctx),
     fields(
@@ -31,20 +32,21 @@ pub async fn list_users(
     Authz(ctx): Authz,
     Extension(svc): Extension<std::sync::Arc<Service>>,
     OData(query): OData,
-) -> UsersResult<JsonPage<UserDto>> {
+) -> UsersResult<JsonPage<serde_json::Value>> {
     info!(
         user_id = %ctx.subject_id(),
         "Listing users with cursor pagination"
     );
 
     let page = svc
-        .list_users_page(&ctx, query)
+        .list_users_page(&ctx, &query)
         .await?
         .map_items(UserDto::from);
-    Ok(Json(page))
+
+    Ok(Json(page_to_projected_json(&page, query.selected_fields())))
 }
 
-/// Get a specific user by ID
+/// Get a specific user by ID with optional field projection via $select
 #[tracing::instrument(
     skip(svc, ctx),
     fields(
@@ -57,7 +59,8 @@ pub async fn get_user(
     Authz(ctx): Authz,
     Extension(svc): Extension<std::sync::Arc<Service>>,
     Path(id): Path<Uuid>,
-) -> UsersResult<JsonBody<UserDto>> {
+    OData(query): OData,
+) -> UsersResult<JsonBody<serde_json::Value>> {
     info!(
         user_id = %id,
         requester_id = %ctx.subject_id(),
@@ -68,7 +71,11 @@ pub async fn get_user(
         .get_user(&ctx, id)
         .await
         .map_err(UsersApiError::from_domain)?;
-    Ok(Json(UserDto::from(user)))
+    let user_dto = UserDto::from(user);
+
+    let projected = apply_select(&user_dto, query.selected_fields());
+
+    Ok(Json(projected))
 }
 
 /// Create a new user

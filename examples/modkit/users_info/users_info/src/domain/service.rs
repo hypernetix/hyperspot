@@ -79,11 +79,11 @@ impl Service {
     pub async fn list_users_page(
         &self,
         ctx: &SecurityCtx,
-        query: ODataQuery,
+        query: &ODataQuery,
     ) -> Result<Page<User>, modkit_odata::Error> {
         debug!("Listing users with cursor pagination");
 
-        let page = self.repo.list_users_page(ctx, &query).await?;
+        let page = self.repo.list_users_page(ctx, query).await?;
 
         debug!("Successfully listed {} users in page", page.items.len());
         Ok(page)

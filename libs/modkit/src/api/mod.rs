@@ -11,6 +11,7 @@ pub mod openapi_registry;
 pub mod operation_builder;
 pub mod problem;
 pub mod response;
+pub mod select;
 pub mod trace_layer;
 
 #[cfg(test)]
@@ -30,6 +31,7 @@ pub use problem::{
     bad_request, conflict, internal_error, not_found, Problem, ValidationError,
     APPLICATION_PROBLEM_JSON,
 };
+pub use select::{apply_select, page_to_projected_json, project_json};
 pub use trace_layer::{WithRequestContext, WithTraceContext};
 
 /// Prelude module that re-exports common API types and utilities for module authors
@@ -39,6 +41,9 @@ pub mod prelude {
 
     // Response sugar
     pub use super::response::{created_json, no_content, ok_json, to_response, JsonBody, JsonPage};
+
+    // OData and field projection
+    pub use super::select::apply_select;
 
     // Useful axum bits (common in handlers)
     pub use axum::{http::StatusCode, response::IntoResponse, Json};
