@@ -111,8 +111,13 @@ modules:
       issuer: "http://localhost:8080/realms/dev"
       audience: "api-ingress"
 
+  module_orchestrator:
+    config: {}
+    # No configuration needed for the module orchestrator
+
   grpc_hub:
     config:
+      # Use ephemeral port; OoP modules receive the actual bound address from master host
       listen_addr: "uds:///tmp/hyperspot-grpc"
 
   users_info:

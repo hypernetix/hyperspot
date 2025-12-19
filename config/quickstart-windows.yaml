@@ -112,7 +112,7 @@ modules:
       audience: "api-ingress"
 
   module_orchestrator:
-    config:
+    config: {}
     # No configuration needed for the module orchestrator
 
   grpc_hub:
