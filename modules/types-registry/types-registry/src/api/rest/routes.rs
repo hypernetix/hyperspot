@@ -3,7 +3,9 @@
 use std::sync::Arc;
 
 use axum::{Extension, Router};
-use modkit::api::operation_builder::{AuthReqAction, AuthReqResource, OperationBuilder};
+use modkit::api::operation_builder::{
+    AuthReqAction, AuthReqResource, LicenseFeature, OperationBuilder,
+};
 use modkit::api::prelude::StatusCode;
 use modkit::api::OpenApiRegistry;
 
@@ -45,6 +47,16 @@ impl AsRef<str> for Action {
 
 impl AuthReqAction for Action {}
 
+struct License;
+
+impl AsRef<str> for License {
+    fn as_ref(&self) -> &'static str {
+        "gts.x.core.lic.feat.v1~x.core.global.base.v1"
+    }
+}
+
+impl LicenseFeature for License {}
+
 /// Registers all REST routes for the Types Registry module.
 #[allow(clippy::needless_pass_by_value)]
 pub fn register_routes(
@@ -61,6 +73,7 @@ pub fn register_routes(
         )
         .tag(TAG)
         .require_auth(&Resource::TypesRegistry, &Action::Write)
+        .require_license_features::<License>([])
         .json_request::<RegisterEntitiesRequest>(openapi, "GTS entities to register")
         .handler(handlers::register_entities)
         .json_response_with_schema::<RegisterEntitiesResponse>(
@@ -80,6 +93,7 @@ pub fn register_routes(
         )
         .tag(TAG)
         .require_auth(&Resource::TypesRegistry, &Action::Read)
+        .require_license_features::<License>([])
         .query_param("pattern", false, "Wildcard pattern for GTS ID matching (e.g., gts.acme.*)")
         .query_param("kind", false, "Filter by entity kind: 'type' or 'instance'")
         .query_param("vendor", false, "Filter by vendor")
@@ -102,6 +116,7 @@ pub fn register_routes(
         .description("Retrieve a single GTS entity by its identifier.")
         .tag(TAG)
         .require_auth(&Resource::TypesRegistry, &Action::Read)
+        .require_license_features::<License>([])
         .path_param(
             "gts_id",
             "The GTS identifier (e.g., gts.acme.core.events.user_created.v1~)",

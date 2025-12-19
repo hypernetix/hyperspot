@@ -88,9 +88,14 @@ impl SystemModule for TypesRegistryModule {
             .ok_or_else(|| anyhow::anyhow!("Service not initialized"))?
             .clone();
 
-        service
-            .switch_to_ready()
-            .map_err(|e| anyhow::anyhow!("Failed to switch to ready mode: {e}"))?;
+        service.switch_to_ready().map_err(|e| {
+            if let Some(errors) = e.validation_errors() {
+                for err in errors {
+                    tracing::error!(gts_id = %err.gts_id, message = %err.message, "GTS validation error");
+                }
+            }
+            anyhow::anyhow!("Failed to switch to ready mode: {e}")
+        })?;
 
         info!("types_registry switched to ready mode successfully");
         Ok(())

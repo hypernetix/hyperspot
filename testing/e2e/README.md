@@ -191,6 +191,17 @@ If you see "Server not responding" when running local tests:
 3. Verify the health endpoint: `curl http://localhost:8087/healthz`
 4. Or use Docker mode: `make e2e-docker`
 
+### Tenant Resolver Gateway example (local)
+
+If you run the server with `[config/e2e-local.yaml](config/e2e-local.yaml)`, note that it binds `api_ingress` to **8086**.
+
+Example:
+
+```bash
+cargo run -p hyperspot-server --features tenant-resolver-example -- --config config/e2e-local.yaml run
+E2E_BASE_URL=http://localhost:8086 E2E_AUTH_TOKEN=your-token python3 scripts/ci.py e2e -k tenant_resolver_gw
+```
+
 ### pytest not found
 
 Install the required dependencies:
