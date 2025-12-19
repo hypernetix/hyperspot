@@ -68,10 +68,10 @@ fmt:
 
 .PHONY: clippy kani geiger safety lint dylint dylint-list dylint-test
 
-# Run clippy linter
+# Run clippy linter (excludes gts-rust submodule which has its own lint settings)
 clippy:
 	$(call ensure_tool,cargo-clippy)
-	cargo clippy --workspace --all-targets --all-features -- -D warnings -D clippy::perf
+	cargo clippy --workspace --all-targets --all-features --exclude gts -- -D warnings -D clippy::perf
 
 ## The Kani Rust Verifier for checking safety of the code
 kani:

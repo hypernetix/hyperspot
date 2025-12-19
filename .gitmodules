@@ -1,3 +1,6 @@
 [submodule "guidelines/DNA"]
 	path = guidelines/DNA
 	url = https://github.com/hypernetix/DNA
+[submodule "modules/types-registry/gts-rust"]
+	path = modules/types-registry/gts-rust
+	url = https://github.com/globaltypesystem/gts-rust.git
