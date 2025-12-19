@@ -36,4 +36,8 @@ pub mod models;
 // Re-export main types at crate root for convenience
 pub use api::TypesRegistryApi;
 pub use error::TypesRegistryError;
-pub use models::{GtsEntity, GtsEntityKind, GtsIdSegment, ListQuery};
+pub use models::{
+    DynGtsEntity, DynRegisterResult, GtsEntity, GtsEntityKind, GtsIdSegment, GtsInstanceEntity,
+    GtsTypeEntity, InstanceObject, ListQuery, RegisterResult, RegisterSummary, SegmentMatchScope,
+    TypeSchema,
+};

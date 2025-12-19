@@ -112,8 +112,9 @@ jobs:
         run: cargo fmt --all -- --check
 
       # Clippy lints across workspace and all targets; fail on warnings
+      # Exclude gts crate (external submodule with its own lint rules)
       - name: cargo clippy
-        run: cargo clippy --workspace --all-targets --all-features -- -D warnings -D clippy::perf
+        run: cargo clippy --workspace --all-targets --all-features --exclude gts -- -D warnings -D clippy::perf
 
       # Unit tests (excluding integration tests)
       - name: cargo test (no ui)

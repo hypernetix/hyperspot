@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use modkit_security::SecurityCtx;
 
 use crate::error::TypesRegistryError;
-use crate::models::{GtsEntity, ListQuery};
+use crate::models::{GtsEntity, ListQuery, RegisterResult};
 
 /// Public API trait for the `types-registry` module.
 ///
@@ -32,18 +32,38 @@ pub trait TypesRegistryApi: Send + Sync {
     ///
     /// # Returns
     ///
-    /// A vector of registered `GtsEntity` objects on success.
+    /// A vector of `RegisterResult` for each input entity, preserving order.
+    /// Each result indicates success (with the registered entity) or failure
+    /// (with the error and attempted GTS ID if available).
+    ///
+    /// Use `RegisterSummary::from_results(&results)` for aggregate counts.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let results = registry.register(&ctx, entities).await?;
+    /// let summary = RegisterSummary::from_results(&results);
+    /// println!("Registered {}/{} entities", summary.succeeded, summary.total());
+    ///
+    /// for result in results {
+    ///     match result {
+    ///         RegisterResult::Ok(entity) => println!("OK: {}", entity.gts_id),
+    ///         RegisterResult::Err { gts_id, error } => {
+    ///             eprintln!("FAIL {}: {}", gts_id.as_deref().unwrap_or("?"), error);
+    ///         }
+    ///     }
+    /// }
+    /// ```
     ///
     /// # Errors
     ///
-    /// * `InvalidGtsId` - If any entity has an invalid GTS ID format
-    /// * `AlreadyExists` - If any entity with the same GTS ID already exists
-    /// * `ValidationFailed` - If any entity fails schema validation
+    /// Returns `Err` only for catastrophic failures (e.g., database unavailable).
+    /// Per-item errors are returned in the `RegisterResult::Err` variant.
     async fn register(
         &self,
         ctx: &SecurityCtx,
         entities: Vec<serde_json::Value>,
-    ) -> Result<Vec<GtsEntity>, TypesRegistryError>;
+    ) -> Result<Vec<RegisterResult>, TypesRegistryError>;
 
     /// List GTS entities with optional filtering.
     ///
