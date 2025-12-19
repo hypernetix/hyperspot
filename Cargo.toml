@@ -324,8 +324,11 @@ temp-env = "0.3"
 # Additional utilities
 nanoid = "0.4"
 
-# GTS dependencies (for gts-rust submodule)
+# GTS dependencies
 jsonschema = "0.18"
 walkdir = "2.5"
 serde_yaml = "0.9"
 shellexpand = "3.1"
+
+# GTS library
+gts = { git = "https://github.com/globaltypesystem/gts-rust.git", branch = "main" }

@@ -17,8 +17,8 @@ uuid = { workspace = true, features = ["v5"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
 
-# GTS types from gts-rust submodule
-gts = { path = "../gts-rust/gts" }
+# GTS types (from git dependency)
+gts = { workspace = true }
 
 # Security context for API methods
 modkit-security = { path = "../../../libs/modkit-security" }

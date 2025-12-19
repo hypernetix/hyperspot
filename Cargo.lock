@@ -1825,6 +1825,7 @@ dependencies = [
 [[package]]
 name = "gts"
 version = "0.1.0"
+source = "git+https://github.com/globaltypesystem/gts-rust.git?branch=main#d1050a82d74e5afbb402d63e91365197897fdae8"
 dependencies = [
  "anyhow",
  "jsonschema",
@@ -1832,7 +1833,7 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "shellexpand",
- "thiserror 2.0.17",
+ "thiserror 1.0.69",
  "tracing",
  "uuid",
  "walkdir",
