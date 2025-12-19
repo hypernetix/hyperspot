@@ -1,11 +1,8 @@
 use crate::{
-    claims::Claims,
+    claims::{Claims, Permission},
     claims_error::ClaimsError,
     plugin_traits::ClaimsPlugin,
-    validation::{
-        extract_audiences, extract_string, parse_timestamp, parse_uuid_array_from_value,
-        parse_uuid_from_value,
-    },
+    validation::{extract_audiences, extract_string, parse_timestamp, parse_uuid_from_value},
 };
 use serde_json::Value;
 
@@ -14,11 +11,11 @@ use serde_json::Value;
 /// Handles Keycloak's specific claim structure:
 /// - Roles from `realm_access.roles` and `resource_access.<client>.roles`
 /// - Optional role prefix
-/// - Tenant claim from configurable field (default: "tenants")
+/// - Tenant claim from configurable field (default: `tenant_id`)
 /// - Handles Keycloak's audience validation via `aud`, `azp`, or `resource_access`
 #[derive(Debug, Clone)]
 pub struct KeycloakClaimsPlugin {
-    /// Name of the tenant claim field (default: "tenants")
+    /// Name of the tenant claim field (default: `tenant_id`)
     pub tenant_claim: String,
 
     /// Optional: client ID to extract roles from `resource_access`
@@ -31,7 +28,7 @@ pub struct KeycloakClaimsPlugin {
 impl Default for KeycloakClaimsPlugin {
     fn default() -> Self {
         Self {
-            tenant_claim: "tenants".to_owned(),
+            tenant_claim: "tenant_id".to_owned(),
             client_roles: None,
             role_prefix: None,
         }
@@ -52,8 +49,8 @@ impl KeycloakClaimsPlugin {
         }
     }
 
-    /// Extract roles from Keycloak's complex role structure
-    fn extract_roles(&self, raw: &Value) -> Vec<String> {
+    /// Extract permissions from Keycloak's complex role structure
+    fn extract_permissions(&self, raw: &Value) -> Vec<Permission> {
         let mut roles = Vec::new();
 
         // 1. Check for top-level "roles" array (simplified format)
@@ -100,7 +97,27 @@ impl KeycloakClaimsPlugin {
         roles.sort();
         roles.dedup();
 
+        // Convert roles to permissions (resource_pattern:action format)
         roles
+            .into_iter()
+            .filter_map(|role| {
+                // Try to parse as "resource:action" format
+                if let Some(pos) = role.rfind(':') {
+                    Permission::builder()
+                        .resource_pattern(&role[..pos])
+                        .action(&role[pos + 1..])
+                        .build()
+                        .ok()
+                } else {
+                    // Treat as resource with wildcard action
+                    Permission::builder()
+                        .resource_pattern(&role)
+                        .action("*")
+                        .build()
+                        .ok()
+                }
+            })
+            .collect()
     }
 }
 
@@ -111,7 +128,7 @@ impl ClaimsPlugin for KeycloakClaimsPlugin {
 
     fn normalize(&self, raw: &Value) -> Result<Claims, ClaimsError> {
         // 1. Extract subject (required, must be UUID)
-        let sub = raw
+        let subject = raw
             .get("sub")
             .ok_or_else(|| ClaimsError::MissingClaim("sub".to_owned()))
             .and_then(|v| parse_uuid_from_value(v, "sub"))?;
@@ -137,17 +154,28 @@ impl ClaimsPlugin for KeycloakClaimsPlugin {
             .map(|v| parse_timestamp(v, "nbf"))
             .transpose()?;
 
-        // 6. Extract tenants (optional, must be UUIDs)
-        let tenants = raw
+        // 6. Extract issued-at time
+        let issued_at = raw
+            .get("iat")
+            .map(|v| parse_timestamp(v, "iat"))
+            .transpose()?;
+
+        // 7. Extract JWT ID
+        let jwt_id = raw
+            .get("jti")
+            .and_then(|v| v.as_str())
+            .map(ToString::to_string);
+
+        // 8. Extract tenant_id (required, must be UUID)
+        let tenant_id = raw
             .get(&self.tenant_claim)
-            .map(|v| parse_uuid_array_from_value(v, &self.tenant_claim))
-            .transpose()?
-            .unwrap_or_default();
+            .ok_or_else(|| ClaimsError::MissingClaim(self.tenant_claim.clone()))
+            .and_then(|v| parse_uuid_from_value(v, &self.tenant_claim))?;
 
-        // 7. Extract roles using Keycloak-specific logic
-        let roles = self.extract_roles(raw);
+        // 9. Extract permissions using Keycloak-specific logic
+        let permissions = self.extract_permissions(raw);
 
-        // 8. Collect extra claims (excluding standard ones)
+        // 10. Collect extra claims (excluding standard ones)
         let mut extras = serde_json::Map::new();
         let standard_fields = [
             "sub",
@@ -188,13 +216,15 @@ impl ClaimsPlugin for KeycloakClaimsPlugin {
         }
 
         Ok(Claims {
-            sub,
             issuer,
+            subject,
             audiences,
             expires_at,
             not_before,
-            tenants,
-            roles,
+            issued_at,
+            jwt_id,
+            tenant_id,
+            permissions,
             extras,
         })
     }
@@ -220,20 +250,20 @@ mod tests {
             "sub": user_id.to_string(),
             "aud": "modkit-api",
             "exp": 9999999999i64,
-            "tenants": [tenant_id.to_string()],
+            "tenant_id": tenant_id.to_string(),
             "realm_access": {
-                "roles": ["user", "admin"]
+                "roles": ["users:read", "admin:write"]
             },
             "email": "test@example.com"
         });
 
         let normalized = plugin.normalize(&claims).unwrap();
 
-        assert_eq!(normalized.sub, user_id);
+        assert_eq!(normalized.subject, user_id);
         assert_eq!(normalized.issuer, "https://kc.example.com/realms/test");
         assert_eq!(normalized.audiences, vec!["modkit-api"]);
-        assert_eq!(normalized.tenants, vec![tenant_id]);
-        assert_eq!(normalized.roles, vec!["admin", "user"]);
+        assert_eq!(normalized.tenant_id, tenant_id);
+        assert_eq!(normalized.permissions.len(), 2);
         assert_eq!(
             normalized.extras.get("email").unwrap().as_str().unwrap(),
             "test@example.com"
@@ -241,28 +271,27 @@ mod tests {
     }
 
     #[test]
-    fn test_keycloak_extract_roles_with_client() {
-        let plugin = KeycloakClaimsPlugin::new("tenants", Some("modkit-api".to_owned()), None);
+    fn test_keycloak_extract_permissions_with_client() {
+        let plugin = KeycloakClaimsPlugin::new("tenant_id", Some("modkit-api".to_owned()), None);
 
         let claims = json!({
             "realm_access": {
-                "roles": ["realm-role"]
+                "roles": ["realm:role"]
             },
             "resource_access": {
                 "modkit-api": {
-                    "roles": ["api-role"]
+                    "roles": ["api:role"]
                 }
             }
         });
 
-        let roles = plugin.extract_roles(&claims);
-        assert!(roles.contains(&"realm-role".to_owned()));
-        assert!(roles.contains(&"api-role".to_owned()));
+        let permissions = plugin.extract_permissions(&claims);
+        assert_eq!(permissions.len(), 2);
     }
 
     #[test]
-    fn test_keycloak_extract_roles_with_prefix() {
-        let plugin = KeycloakClaimsPlugin::new("tenants", None, Some("kc".to_owned()));
+    fn test_keycloak_extract_permissions_with_prefix() {
+        let plugin = KeycloakClaimsPlugin::new("tenant_id", None, Some("kc".to_owned()));
 
         let claims = json!({
             "realm_access": {
@@ -270,8 +299,15 @@ mod tests {
             }
         });
 
-        let roles = plugin.extract_roles(&claims);
-        assert_eq!(roles, vec!["kc:admin", "kc:user"]);
+        let permissions = plugin.extract_permissions(&claims);
+        assert_eq!(permissions.len(), 2);
+        // Prefixed roles become "kc:admin" and "kc:user", parsed as resource:action
+        assert!(permissions
+            .iter()
+            .any(|p| p.resource_pattern() == "kc" && p.action() == "admin"));
+        assert!(permissions
+            .iter()
+            .any(|p| p.resource_pattern() == "kc" && p.action() == "user"));
     }
 
     #[test]

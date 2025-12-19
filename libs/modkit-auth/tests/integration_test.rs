@@ -65,13 +65,15 @@ fn test_claims_structure() {
     let tenant_id = Uuid::new_v4();
 
     let normalized = Claims {
-        sub: user_id,
         issuer: "https://auth.example.com".to_owned(),
+        subject: user_id,
         audiences: vec!["api".to_owned()],
         expires_at: Some(time::OffsetDateTime::now_utc() + time::Duration::hours(1)),
         not_before: None,
-        tenants: vec![tenant_id],
-        roles: vec!["admin".to_owned(), "user".to_owned()],
+        issued_at: None,
+        jwt_id: None,
+        tenant_id,
+        permissions: vec![],
         extras: {
             let mut map = serde_json::Map::new();
             map.insert("email".to_owned(), json!("test@example.com"));
@@ -80,10 +82,9 @@ fn test_claims_structure() {
     };
 
     // Verify normalized claims structure
-    assert_eq!(normalized.sub, user_id);
+    assert_eq!(normalized.subject, user_id);
     assert_eq!(normalized.issuer, "https://auth.example.com");
-    assert_eq!(normalized.tenants, vec![tenant_id]);
-    assert_eq!(normalized.roles.len(), 2);
+    assert_eq!(normalized.tenant_id, tenant_id);
     assert_eq!(
         normalized.extras.get("email").and_then(|v| v.as_str()),
         Some("test@example.com")
@@ -96,13 +97,15 @@ fn test_claims_validation() {
 
     // Test expired token
     let expired = Claims {
-        sub: user_id,
         issuer: "https://auth.example.com".to_owned(),
+        subject: user_id,
         audiences: vec!["api".to_owned()],
         expires_at: Some(time::OffsetDateTime::now_utc() - time::Duration::hours(1)),
         not_before: None,
-        tenants: vec![],
-        roles: vec![],
+        issued_at: None,
+        jwt_id: None,
+        tenant_id: Uuid::new_v4(),
+        permissions: vec![],
         extras: serde_json::Map::new(),
     };
 
@@ -110,13 +113,15 @@ fn test_claims_validation() {
 
     // Test not yet valid
     let future = Claims {
-        sub: user_id,
         issuer: "https://auth.example.com".to_owned(),
+        subject: user_id,
         audiences: vec!["api".to_owned()],
         expires_at: None,
         not_before: Some(time::OffsetDateTime::now_utc() + time::Duration::hours(1)),
-        tenants: vec![],
-        roles: vec![],
+        issued_at: None,
+        jwt_id: None,
+        tenant_id: Uuid::new_v4(),
+        permissions: vec![],
         extras: serde_json::Map::new(),
     };
 

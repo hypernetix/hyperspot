@@ -1,11 +1,8 @@
 use crate::{
-    claims::Claims,
+    claims::{Claims, Permission},
     claims_error::ClaimsError,
     plugin_traits::ClaimsPlugin,
-    validation::{
-        extract_audiences, extract_string, parse_timestamp, parse_uuid_array_from_value,
-        parse_uuid_from_value,
-    },
+    validation::{extract_audiences, extract_string, parse_timestamp, parse_uuid_from_value},
 };
 use serde_json::Value;
 
@@ -16,17 +13,17 @@ use serde_json::Value;
 /// that doesn't need special handling.
 #[derive(Debug, Clone)]
 pub struct GenericOidcPlugin {
-    /// Name of the tenant claim field (default: "tenants")
+    /// Name of the tenant claim field (default: `tenant_id`)
     pub tenant_claim: String,
 
-    /// Name of the roles claim field (default: "roles")
+    /// Name of the roles claim field (default: `roles`)
     pub roles_claim: String,
 }
 
 impl Default for GenericOidcPlugin {
     fn default() -> Self {
         Self {
-            tenant_claim: "tenants".to_owned(),
+            tenant_claim: "tenant_id".to_owned(),
             roles_claim: "roles".to_owned(),
         }
     }
@@ -41,9 +38,10 @@ impl GenericOidcPlugin {
         }
     }
 
-    /// Extract roles from the configured roles claim
-    fn extract_roles(&self, raw: &Value) -> Vec<String> {
-        raw.get(&self.roles_claim)
+    /// Extract permissions from the configured roles claim
+    fn extract_permissions(&self, raw: &Value) -> Vec<Permission> {
+        let roles: Vec<String> = raw
+            .get(&self.roles_claim)
             .and_then(|v| v.as_array())
             .map(|arr| {
                 arr.iter()
@@ -51,7 +49,29 @@ impl GenericOidcPlugin {
                     .map(ToString::to_string)
                     .collect()
             })
-            .unwrap_or_default()
+            .unwrap_or_default();
+
+        // Convert roles to permissions (resource_pattern:action format)
+        roles
+            .into_iter()
+            .filter_map(|role| {
+                // Try to parse as "resource:action" format
+                if let Some(pos) = role.rfind(':') {
+                    Permission::builder()
+                        .resource_pattern(&role[..pos])
+                        .action(&role[pos + 1..])
+                        .build()
+                        .ok()
+                } else {
+                    // Treat as resource with wildcard action
+                    Permission::builder()
+                        .resource_pattern(&role)
+                        .action("*")
+                        .build()
+                        .ok()
+                }
+            })
+            .collect()
     }
 }
 
@@ -62,7 +82,7 @@ impl ClaimsPlugin for GenericOidcPlugin {
 
     fn normalize(&self, raw: &Value) -> Result<Claims, ClaimsError> {
         // 1. Extract subject (required, must be UUID)
-        let sub = raw
+        let subject = raw
             .get("sub")
             .ok_or_else(|| ClaimsError::MissingClaim("sub".to_owned()))
             .and_then(|v| parse_uuid_from_value(v, "sub"))?;
@@ -88,17 +108,28 @@ impl ClaimsPlugin for GenericOidcPlugin {
             .map(|v| parse_timestamp(v, "nbf"))
             .transpose()?;
 
-        // 6. Extract tenants (optional, must be UUIDs)
-        let tenants = raw
+        // 6. Extract issued-at time
+        let issued_at = raw
+            .get("iat")
+            .map(|v| parse_timestamp(v, "iat"))
+            .transpose()?;
+
+        // 7. Extract JWT ID
+        let jwt_id = raw
+            .get("jti")
+            .and_then(|v| v.as_str())
+            .map(ToString::to_string);
+
+        // 8. Extract tenant_id (required, must be UUID)
+        let tenant_id = raw
             .get(&self.tenant_claim)
-            .map(|v| parse_uuid_array_from_value(v, &self.tenant_claim))
-            .transpose()?
-            .unwrap_or_default();
+            .ok_or_else(|| ClaimsError::MissingClaim(self.tenant_claim.clone()))
+            .and_then(|v| parse_uuid_from_value(v, &self.tenant_claim))?;
 
-        // 7. Extract roles from configured field
-        let roles = self.extract_roles(raw);
+        // 9. Extract permissions from configured field
+        let permissions = self.extract_permissions(raw);
 
-        // 8. Collect extra claims (excluding standard ones)
+        // 10. Collect extra claims (excluding standard ones)
         let mut extras = serde_json::Map::new();
         let standard_fields = [
             "sub",
@@ -135,13 +166,15 @@ impl ClaimsPlugin for GenericOidcPlugin {
         }
 
         Ok(Claims {
-            sub,
             issuer,
+            subject,
             audiences,
             expires_at,
             not_before,
-            tenants,
-            roles,
+            issued_at,
+            jwt_id,
+            tenant_id,
+            permissions,
             extras,
         })
     }
@@ -167,19 +200,19 @@ mod tests {
             "sub": user_id.to_string(),
             "aud": ["api", "ui"],
             "exp": 9999999999i64,
-            "roles": ["user", "admin"],
-            "tenants": [tenant_id.to_string()],
+            "roles": ["users:read", "admin:write"],
+            "tenant_id": tenant_id.to_string(),
             "email": "test@example.com",
             "name": "Test User"
         });
 
         let normalized = plugin.normalize(&claims).unwrap();
 
-        assert_eq!(normalized.sub, user_id);
+        assert_eq!(normalized.subject, user_id);
         assert_eq!(normalized.issuer, "https://auth.example.com");
         assert_eq!(normalized.audiences, vec!["api", "ui"]);
-        assert_eq!(normalized.tenants, vec![tenant_id]);
-        assert_eq!(normalized.roles, vec!["user", "admin"]);
+        assert_eq!(normalized.tenant_id, tenant_id);
+        assert_eq!(normalized.permissions.len(), 2);
         assert_eq!(
             normalized.extras.get("email").unwrap().as_str().unwrap(),
             "test@example.com"
@@ -192,7 +225,7 @@ mod tests {
 
     #[test]
     fn test_generic_oidc_custom_claims() {
-        let plugin = GenericOidcPlugin::new("organizations", "permissions");
+        let plugin = GenericOidcPlugin::new("organization_id", "permissions");
 
         let user_id = Uuid::new_v4();
         let org_id = Uuid::new_v4();
@@ -201,14 +234,14 @@ mod tests {
             "iss": "https://auth.example.com",
             "sub": user_id.to_string(),
             "aud": "api",
-            "permissions": ["read", "write"],
-            "organizations": [org_id.to_string()]
+            "permissions": ["read:*", "write:*"],
+            "organization_id": org_id.to_string()
         });
 
         let normalized = plugin.normalize(&claims).unwrap();
 
-        assert_eq!(normalized.tenants, vec![org_id]);
-        assert_eq!(normalized.roles, vec!["read", "write"]);
+        assert_eq!(normalized.tenant_id, org_id);
+        assert_eq!(normalized.permissions.len(), 2);
     }
 
     #[test]
@@ -229,12 +262,14 @@ mod tests {
         let plugin = GenericOidcPlugin::default();
 
         let user_id = Uuid::new_v4();
+        let tenant_id = Uuid::new_v4();
 
         let claims = json!({
             "iss": "https://auth.example.com",
             "sub": user_id.to_string(),
             "aud": "api",  // String instead of array
-            "exp": 9999999999i64
+            "exp": 9999999999i64,
+            "tenant_id": tenant_id.to_string()
         });
 
         let normalized = plugin.normalize(&claims).unwrap();

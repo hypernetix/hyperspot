@@ -178,7 +178,8 @@ where
 
                     // Build SecurityCtx from validated claims
                     let scope = state.scope_builder.tenants_to_scope(&claims);
-                    let sec = SecurityCtx::new(scope, modkit_security::Subject::new(claims.sub));
+                    let sec =
+                        SecurityCtx::new(scope, modkit_security::Subject::new(claims.subject));
 
                     request.extensions_mut().insert(claims);
                     request.extensions_mut().insert(sec);
@@ -192,7 +193,7 @@ where
                                 let scope = state.scope_builder.tenants_to_scope(&claims);
                                 let sec = SecurityCtx::new(
                                     scope,
-                                    modkit_security::Subject::new(claims.sub),
+                                    modkit_security::Subject::new(claims.subject),
                                 );
                                 request.extensions_mut().insert(claims);
                                 request.extensions_mut().insert(sec);

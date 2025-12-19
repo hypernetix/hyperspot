@@ -7,11 +7,11 @@ pub struct SimpleScopeBuilder;
 
 impl ScopeBuilder for SimpleScopeBuilder {
     fn tenants_to_scope(&self, claims: &Claims) -> AccessScope {
-        if claims.tenants.is_empty() {
-            // No explicit tenants - deny all by default
+        if claims.tenant_id.is_nil() {
+            // No explicit tenant - deny all by default
             AccessScope::default()
         } else {
-            AccessScope::tenants_only(claims.tenants.clone())
+            AccessScope::tenants_only(vec![claims.tenant_id])
         }
     }
 }
