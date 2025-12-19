@@ -1,9 +1,9 @@
 use async_trait::async_trait;
 use jsonwebtoken::Header;
+use modkit_auth::claims::Permission;
 use modkit_auth::plugin_traits::{ClaimsPlugin, KeyProvider};
 use modkit_auth::validation::{
-    extract_audiences, extract_string, parse_timestamp, parse_uuid_array_from_value,
-    parse_uuid_from_value,
+    extract_audiences, extract_string, parse_timestamp, parse_uuid_from_value,
 };
 use modkit_auth::{
     AuthConfig, AuthDispatcher, AuthModeConfig, Claims, ClaimsError, PluginConfig, PluginRegistry,
@@ -32,7 +32,7 @@ impl ClaimsPlugin for DemoClaimsPlugin {
         let sub_value = raw
             .get("sub")
             .ok_or_else(|| ClaimsError::MissingClaim("sub".to_owned()))?;
-        let sub = parse_uuid_from_value(sub_value, "sub")?;
+        let subject = parse_uuid_from_value(sub_value, "sub")?;
 
         let audiences = raw.get("aud").map(extract_audiences).unwrap_or_default();
 
@@ -46,30 +46,56 @@ impl ClaimsPlugin for DemoClaimsPlugin {
             .map(|value| parse_timestamp(value, "nbf"))
             .transpose()?;
 
-        let tenants = raw
-            .get("tenants")
-            .map(|value| parse_uuid_array_from_value(value, "tenants"))
-            .transpose()?
-            .unwrap_or_default();
+        let issued_at = raw
+            .get("iat")
+            .map(|value| parse_timestamp(value, "iat"))
+            .transpose()?;
 
-        let roles = raw
+        let jwt_id = raw
+            .get("jti")
+            .and_then(|v| v.as_str())
+            .map(ToString::to_string);
+
+        let tenant_id_value = raw
+            .get("tenant_id")
+            .ok_or_else(|| ClaimsError::MissingClaim("tenant_id".to_owned()))?;
+        let tenant_id = parse_uuid_from_value(tenant_id_value, "tenant_id")?;
+
+        let permissions: Vec<Permission> = raw
             .get("roles")
             .and_then(Value::as_array)
             .map(|arr| {
                 arr.iter()
-                    .filter_map(|value| value.as_str().map(ToString::to_string))
+                    .filter_map(|value| value.as_str())
+                    .filter_map(|role| {
+                        if let Some(pos) = role.rfind(':') {
+                            Permission::builder()
+                                .resource_pattern(&role[..pos])
+                                .action(&role[pos + 1..])
+                                .build()
+                                .ok()
+                        } else {
+                            Permission::builder()
+                                .resource_pattern(role)
+                                .action("*")
+                                .build()
+                                .ok()
+                        }
+                    })
                     .collect()
             })
             .unwrap_or_default();
 
         Ok(Claims {
-            sub,
             issuer,
+            subject,
             audiences,
             expires_at,
             not_before,
-            tenants,
-            roles,
+            issued_at,
+            jwt_id,
+            tenant_id,
+            permissions,
             extras: serde_json::Map::new(),
         })
     }
@@ -138,22 +164,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "sub": subject.to_string(),
         "aud": ["demo-api"],
         "exp": expires_at.unix_timestamp(),
-        "tenants": [tenant.to_string()],
-        "roles": ["viewer"]
+        "tenant_id": tenant.to_string(),
+        "roles": ["viewer:read"]
     });
 
     let dispatcher = AuthDispatcher::new(validation, &config, &plugins)?
         .with_key_provider(Arc::new(StaticKeyProvider::new(raw_claims)));
 
     let claims = dispatcher.validate_jwt("demo-token").await?;
-    let role_list = if claims.roles.is_empty() {
+    let perm_list = if claims.permissions.is_empty() {
         "none".to_owned()
     } else {
-        claims.roles.join(", ")
+        claims
+            .permissions
+            .iter()
+            .map(|p| format!("{}:{}", p.resource_pattern(), p.action()))
+            .collect::<Vec<_>>()
+            .join(", ")
     };
     println!(
-        "Validated token for subject {} with roles {}",
-        claims.sub, role_list
+        "Validated token for subject {} with permissions {}",
+        claims.subject, perm_list
     );
 
     Ok(())

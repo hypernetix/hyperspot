@@ -65,7 +65,11 @@ struct IntegrationScopeBuilder;
 
 impl ScopeBuilder for IntegrationScopeBuilder {
     fn tenants_to_scope(&self, claims: &Claims) -> AccessScope {
-        AccessScope::tenants_only(claims.tenants.clone())
+        if claims.tenant_id.is_nil() {
+            AccessScope::default()
+        } else {
+            AccessScope::tenants_only(vec![claims.tenant_id])
+        }
     }
 }
 
@@ -106,13 +110,15 @@ impl PrimaryAuthorizer for IntegrationAuthorizer {
 /// Helper to create fake Claims
 fn fake_claims(sub_id: Uuid) -> Claims {
     Claims {
-        sub: sub_id,
         issuer: "test-issuer".to_owned(),
+        subject: sub_id,
         audiences: vec!["test-api".to_owned()],
         expires_at: None,
         not_before: None,
-        tenants: vec![Uuid::new_v4()],
-        roles: vec![],
+        issued_at: None,
+        jwt_id: None,
+        tenant_id: Uuid::new_v4(),
+        permissions: vec![],
         extras: serde_json::Map::new(),
     }
 }
