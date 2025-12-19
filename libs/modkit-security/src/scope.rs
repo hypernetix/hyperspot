@@ -5,6 +5,7 @@ pub struct AccessScope {
     /// True if this is a root scope (system-level access with no tenant filtering)
     pub(crate) is_root: bool,
     pub(crate) tenant_ids: Vec<Uuid>,
+    pub(crate) types: Vec<Uuid>,
     pub(crate) resource_ids: Vec<Uuid>,
     // future: include_descendants (unused in v1)
     // pub(crate) include_descendants: bool,
@@ -38,10 +39,12 @@ impl AccessScope {
         }
         self.tenant_ids.is_empty() && self.resource_ids.is_empty()
     }
+
     #[must_use]
     pub fn has_tenants(&self) -> bool {
         !self.tenant_ids.is_empty()
     }
+
     #[must_use]
     pub fn has_resources(&self) -> bool {
         !self.resource_ids.is_empty()
@@ -52,14 +55,17 @@ impl AccessScope {
         Self {
             is_root: false,
             tenant_ids,
+            types: vec![],
             resource_ids: vec![],
         }
     }
+
     #[must_use]
     pub fn resources_only(resource_ids: Vec<Uuid>) -> Self {
         Self {
             is_root: false,
             tenant_ids: vec![],
+            types: vec![],
             resource_ids,
         }
     }
@@ -68,6 +74,7 @@ impl AccessScope {
     pub fn tenant(tenant_id: Uuid) -> Self {
         Self::tenants_only(vec![tenant_id])
     }
+
     #[must_use]
     pub fn resource(resource_id: Uuid) -> Self {
         Self::resources_only(vec![resource_id])
@@ -80,6 +87,7 @@ impl AccessScope {
         Self {
             is_root: false,
             tenant_ids,
+            types: vec![],
             resource_ids,
         }
     }
@@ -92,6 +100,7 @@ impl AccessScope {
         Self {
             is_root: true,
             tenant_ids: Vec::new(),
+            types: vec![],
             resource_ids: Vec::new(),
         }
     }
