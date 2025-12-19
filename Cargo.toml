@@ -32,7 +32,8 @@ members = [
     "examples/oop-modules/calculator_gateway/calculator_gateway-sdk",
     "examples/oop-modules/calculator_gateway/calculator_gateway",
     "examples/oop-modules/calculator/calculator-sdk",
-    "examples/oop-modules/calculator/calculator"
+    "examples/oop-modules/calculator/calculator",
+    "modules/types-registry/types-registry-sdk"
 ]
 resolver = "2"
 
@@ -321,3 +322,9 @@ temp-env = "0.3"
 
 # Additional utilities
 nanoid = "0.4"
+
+# GTS dependencies (for gts-rust submodule)
+jsonschema = "0.18"
+walkdir = "2.5"
+serde_yaml = "0.9"
+shellexpand = "3.1"
