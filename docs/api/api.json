@@ -1991,7 +1991,7 @@
         "title": "ValidationViolation",
         "description": "Individual validation violation for a specific field or property.",
         "required": [
-          "pointer",
+          "field",
           "message"
         ],
         "properties": {
@@ -2006,9 +2006,9 @@
             "type": "string",
             "description": "Human-readable message describing the validation error"
           },
-          "pointer": {
+          "field": {
             "type": "string",
-            "description": "JSON Pointer or field path, e.g. \"/email\" or \"user.email\""
+            "description": "Field path, e.g. \"email\" or \"user.email\""
           }
         }
       }

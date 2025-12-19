@@ -63,7 +63,7 @@ mod tests {
         .with_trace_id("req-456")
         .with_errors(vec![ValidationViolation {
             message: "Email is required".to_owned(),
-            pointer: "/email".to_owned(),
+            field: "email".to_owned(),
             code: None,
         }]);
 

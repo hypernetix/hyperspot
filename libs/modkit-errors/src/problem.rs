@@ -70,8 +70,8 @@ pub struct Problem {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "utoipa", schema(title = "ValidationViolation"))]
 pub struct ValidationViolation {
-    /// JSON Pointer or field path, e.g. "/email" or "user.email"
-    pub pointer: String,
+    /// field path, e.g. "email" or "user.email"
+    pub field: String,
     /// Human-readable message describing the validation error
     pub message: String,
     /// Optional machine-readable error code
@@ -176,7 +176,7 @@ mod tests {
         .with_trace_id("req-456")
         .with_errors(vec![ValidationViolation {
             message: "Email is required".to_owned(),
-            pointer: "/email".to_owned(),
+            field: "email".to_owned(),
             code: None,
         }]);
 
