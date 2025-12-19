@@ -124,7 +124,7 @@ pub fn page_to_projected_json<T: serde::Serialize>(
     let projected_items: Vec<Value> = page
         .items
         .iter()
-        .map(|item| apply_select(&item, selected_fields))
+        .map(|item| apply_select(item, selected_fields))
         .collect();
 
     modkit_odata::Page {
@@ -146,7 +146,7 @@ mod tests {
             "age": 30
         });
 
-        let selected = vec!["id".to_owned(), "name".to_owned()];
+        let selected = ["id".to_owned(), "name".to_owned()];
         let fields_set: HashSet<String> = selected.iter().map(|f| f.to_lowercase()).collect();
 
         let projected = project_json(&value, &fields_set);
@@ -164,7 +164,7 @@ mod tests {
             "Name": "John"
         });
 
-        let selected = vec!["id".to_owned(), "name".to_owned()];
+        let selected = ["id".to_owned(), "name".to_owned()];
         let fields_set: HashSet<String> = selected.iter().map(|f| f.to_lowercase()).collect();
 
         let projected = project_json(&value, &fields_set);
@@ -180,7 +180,7 @@ mod tests {
             {"id": "2", "name": "Jane"}
         ]);
 
-        let selected = vec!["id".to_owned()];
+        let selected = ["id".to_owned()];
         let fields_set: HashSet<String> = selected.iter().map(|f| f.to_lowercase()).collect();
 
         let projected = project_json(&value, &fields_set);

@@ -37,6 +37,7 @@ pub const MAX_SELECT_FIELDS: usize = 100;
 ///
 /// # Errors
 /// Returns a `Problem` if the select string is invalid.
+#[allow(clippy::result_large_err)] // It's used without error in the parsing function, no idea why complains here
 pub fn parse_select(raw: &str) -> Result<Vec<String>, crate::api::problem::Problem> {
     let raw = raw.trim();
     if raw.is_empty() {
