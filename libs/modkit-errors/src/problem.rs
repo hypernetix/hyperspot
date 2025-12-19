@@ -60,7 +60,6 @@ pub struct Problem {
     /// Optional machine-readable error code defined by the application.
     pub code: String,
     /// Optional trace id useful for tracing.
-    #[serde(rename = "traceId")]
     pub trace_id: Option<String>,
     /// Optional validation errors for 4xx problems.
     pub errors: Option<Vec<ValidationViolation>>,
@@ -71,8 +70,8 @@ pub struct Problem {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "utoipa", schema(title = "ValidationViolation"))]
 pub struct ValidationViolation {
-    /// JSON Pointer or field path, e.g. "/email" or "user.email"
-    pub pointer: String,
+    /// field path, e.g. "email" or "user.email"
+    pub field: String,
     /// Human-readable message describing the validation error
     pub message: String,
     /// Optional machine-readable error code
@@ -177,7 +176,7 @@ mod tests {
         .with_trace_id("req-456")
         .with_errors(vec![ValidationViolation {
             message: "Email is required".to_owned(),
-            pointer: "/email".to_owned(),
+            field: "email".to_owned(),
             code: None,
         }]);
 
@@ -198,7 +197,7 @@ mod tests {
 
     #[test]
     fn problem_deserializes_status_from_u16() {
-        let json = r#"{"type":"about:blank","title":"Not Found","status":404,"detail":"Resource not found","instance":"","code":"","traceId":null,"errors":null}"#;
+        let json = r#"{"type":"about:blank","title":"Not Found","status":404,"detail":"Resource not found","instance":"","code":"","trace_id":null,"errors":null}"#;
         let p: Problem = serde_json::from_str(json).unwrap();
         assert_eq!(p.status, StatusCode::NOT_FOUND);
     }

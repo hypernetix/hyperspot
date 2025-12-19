@@ -406,6 +406,7 @@ pub struct ODataQuery {
     pub limit: Option<u64>,
     pub cursor: Option<CursorV1>,
     pub filter_hash: Option<String>,
+    pub select: Option<Vec<String>>,
 }
 
 impl ODataQuery {
@@ -438,6 +439,11 @@ impl ODataQuery {
         self
     }
 
+    pub fn with_select(mut self, fields: Vec<String>) -> Self {
+        self.select = Some(fields);
+        self
+    }
+
     /// Get filter as AST
     #[must_use]
     pub fn filter(&self) -> Option<&ast::Expr> {
@@ -454,6 +460,18 @@ impl ODataQuery {
     #[must_use]
     pub fn into_filter(self) -> Option<ast::Expr> {
         self.filter.map(|b| *b)
+    }
+
+    /// Check if field selection is present
+    #[must_use]
+    pub fn has_select(&self) -> bool {
+        self.select.is_some()
+    }
+
+    /// Get selected fields
+    #[must_use]
+    pub fn selected_fields(&self) -> Option<&[String]> {
+        self.select.as_deref()
     }
 }
 

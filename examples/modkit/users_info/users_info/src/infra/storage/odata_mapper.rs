@@ -44,7 +44,7 @@ impl ODataFieldMapping<UserDtoFilterField> for UserODataMapper {
                 sea_orm::Value::String(Some(Box::new(model.email.clone())))
             }
             UserDtoFilterField::CreatedAt => {
-                sea_orm::Value::ChronoDateTimeUtc(Some(Box::new(model.created_at)))
+                sea_orm::Value::TimeDateTimeWithTimeZone(Some(Box::new(model.created_at)))
             }
         }
     }

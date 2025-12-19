@@ -10,6 +10,7 @@
 use modkit_db::secure::{AccessScope, SecureConn, SecurityCtx, Subject};
 use sea_orm::{Database, DatabaseConnection};
 use sea_orm_migration::MigratorTrait;
+use time::OffsetDateTime;
 use uuid::Uuid;
 
 use user_info_sdk::User;
@@ -113,7 +114,7 @@ pub async fn seed_user(
     use sea_orm::{ActiveModelTrait, Set};
     use users_info::infra::storage::entity::ActiveModel;
 
-    let now = chrono::Utc::now();
+    let now = OffsetDateTime::now_utc();
     let am = ActiveModel {
         id: Set(id),
         tenant_id: Set(tenant_id),
@@ -125,14 +126,7 @@ pub async fn seed_user(
 
     let model = am.insert(db).await.expect("Failed to seed user");
 
-    User {
-        id: model.id,
-        tenant_id: model.tenant_id,
-        email: model.email,
-        display_name: model.display_name,
-        created_at: model.created_at,
-        updated_at: model.updated_at,
-    }
+    model.into()
 }
 
 /// Create a test database, seed data, and return both the `SecureConn` and raw connection.

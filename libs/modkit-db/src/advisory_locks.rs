@@ -23,6 +23,9 @@ use std::time::{Duration, Instant};
 use thiserror::Error;
 use xxhash_rust::xxh3::xxh3_64;
 
+#[cfg(feature = "sqlite")]
+use chrono::SecondsFormat;
+
 #[cfg(feature = "mysql")]
 use sqlx::MySql;
 #[cfg(feature = "pg")]
@@ -424,7 +427,7 @@ impl LockManager {
                         "PID: {}\nKey: {}\nTimestamp: {}\n",
                         std::process::id(),
                         namespaced_key,
-                        chrono::Utc::now().to_rfc3339()
+                        chrono::Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true)
                     )
                     .as_bytes(),
                 )
@@ -463,7 +466,7 @@ impl LockManager {
                                 "PID: {}\nKey: {}\nTimestamp: {}\n",
                                 std::process::id(),
                                 namespaced_key,
-                                chrono::Utc::now().to_rfc3339()
+                                chrono::Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true)
                             )
                             .as_bytes(),
                         )

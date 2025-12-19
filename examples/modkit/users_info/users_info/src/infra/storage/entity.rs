@@ -1,6 +1,6 @@
-use chrono::{DateTime, Utc};
 use modkit_db_macros::Scopable;
 use sea_orm::entity::prelude::*;
+use time::OffsetDateTime;
 use uuid::Uuid;
 
 /// User entity with multi-tenant isolation.
@@ -21,8 +21,8 @@ pub struct Model {
     pub tenant_id: Uuid,
     pub email: String,
     pub display_name: String,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
+    pub created_at: OffsetDateTime,
+    pub updated_at: OffsetDateTime,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

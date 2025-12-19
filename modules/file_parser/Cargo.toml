@@ -19,14 +19,14 @@ inventory = { workspace = true }
 
 # Serde and JSON schema
 serde = { workspace = true }
-utoipa = { workspace = true }
+utoipa = { workspace = true, features = ["time"] }
 
 # HTTP and REST
 axum = { workspace = true, features = ["macros", "multipart"] }
 http = { workspace = true }
 
 # Time handling
-chrono = { workspace = true, features = ["serde"] }
+time = { workspace = true }
 
 # URL parsing and HTTP client
 url = { workspace = true }

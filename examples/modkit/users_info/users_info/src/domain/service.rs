@@ -4,9 +4,9 @@ use crate::domain::error::DomainError;
 use crate::domain::events::UserDomainEvent;
 use crate::domain::ports::{AuditPort, EventPublisher};
 use crate::domain::repo::UsersRepository;
-use chrono::Utc;
 use modkit_db::secure::SecurityCtx;
 use modkit_odata::{ODataQuery, Page};
+use time::OffsetDateTime;
 use tracing::{debug, info, instrument};
 use user_info_sdk::{NewUser, User, UserPatch};
 use uuid::Uuid;
@@ -79,11 +79,11 @@ impl Service {
     pub async fn list_users_page(
         &self,
         ctx: &SecurityCtx,
-        query: ODataQuery,
+        query: &ODataQuery,
     ) -> Result<Page<User>, modkit_odata::Error> {
         debug!("Listing users with cursor pagination");
 
-        let page = self.repo.list_users_page(ctx, &query).await?;
+        let page = self.repo.list_users_page(ctx, query).await?;
 
         debug!("Successfully listed {} users in page", page.items.len());
         Ok(page)
@@ -127,7 +127,7 @@ impl Service {
             return Err(DomainError::email_already_exists(new_user.email));
         }
 
-        let now = Utc::now();
+        let now = OffsetDateTime::now_utc();
         let id = new_user.id.unwrap_or_else(uuid::Uuid::now_v7);
 
         let user = User {
@@ -197,7 +197,7 @@ impl Service {
         if let Some(display_name) = patch.display_name {
             current.display_name = display_name;
         }
-        current.updated_at = Utc::now();
+        current.updated_at = OffsetDateTime::now_utc();
 
         self.repo
             .update(ctx, current.clone())
@@ -230,8 +230,10 @@ impl Service {
             return Err(DomainError::user_not_found(id));
         }
 
-        self.events
-            .publish(&UserDomainEvent::Deleted { id, at: Utc::now() });
+        self.events.publish(&UserDomainEvent::Deleted {
+            id,
+            at: OffsetDateTime::now_utc(),
+        });
 
         info!("Successfully deleted user");
         Ok(())

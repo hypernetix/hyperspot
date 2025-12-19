@@ -18,6 +18,8 @@ pub struct ODataParams {
     pub filter: Option<String>,
     #[serde(rename = "$orderby")]
     pub orderby: Option<String>,
+    #[serde(rename = "$select")]
+    pub select: Option<String>,
     pub limit: Option<u64>,
     pub cursor: Option<String>,
 }
@@ -26,6 +28,54 @@ pub const MAX_FILTER_LEN: usize = 8 * 1024;
 pub const MAX_NODES: usize = 2000;
 pub const MAX_ORDERBY_LEN: usize = 1024;
 pub const MAX_ORDER_FIELDS: usize = 10;
+pub const MAX_SELECT_LEN: usize = 2048;
+pub const MAX_SELECT_FIELDS: usize = 100;
+
+/// Parse $select string into a list of field names.
+/// Format: "field1, field2, field3, ..."
+/// Field names are case-insensitive and whitespace is trimmed.
+///
+/// # Errors
+/// Returns a `Problem` if the select string is invalid.
+#[allow(clippy::result_large_err)] // It's used without error in the parsing function, no idea why complains here
+pub fn parse_select(raw: &str) -> Result<Vec<String>, crate::api::problem::Problem> {
+    let raw = raw.trim();
+    if raw.is_empty() {
+        return Err(crate::api::bad_request("$select cannot be empty"));
+    }
+
+    if raw.len() > MAX_SELECT_LEN {
+        return Err(crate::api::bad_request("$select too long"));
+    }
+
+    let fields: Vec<String> = raw
+        .split(',')
+        .map(|f| f.trim().to_lowercase())
+        .filter(|f| !f.is_empty())
+        .collect();
+
+    if fields.is_empty() {
+        return Err(crate::api::bad_request(
+            "$select must contain at least one field",
+        ));
+    }
+
+    if fields.len() > MAX_SELECT_FIELDS {
+        return Err(crate::api::bad_request("$select contains too many fields"));
+    }
+
+    // Check for duplicate fields
+    let mut seen = std::collections::HashSet::new();
+    for field in &fields {
+        if !seen.insert(field.clone()) {
+            return Err(crate::api::bad_request(format!(
+                "duplicate field in $select: {field}",
+            )));
+        }
+    }
+
+    Ok(fields)
+}
 
 /// Parse $orderby string into `ODataOrderBy`.
 /// Format: "field1 [asc|desc], field2 [asc|desc], ..."
@@ -181,6 +231,12 @@ where
             ));
         }
         query = query.with_limit(limit);
+    }
+
+    // Parse select
+    if let Some(raw_select) = params.select.as_ref() {
+        let fields = parse_select(raw_select)?;
+        query = query.with_select(fields);
     }
 
     Ok(query)

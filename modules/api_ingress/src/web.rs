@@ -3,6 +3,7 @@ use axum::{
     response::{Html, Json},
     routing::{get, MethodRouter},
 };
+use chrono::{SecondsFormat, Utc};
 use serde_json::{json, Value};
 
 /// Returns a 501 Not Implemented handler for operations without implementations
@@ -13,7 +14,7 @@ pub fn placeholder_handler_501() -> MethodRouter {
             StatusCode::NOT_IMPLEMENTED,
             Json(json!({
                 "message": "Handler not implemented - will be routed via gRPC in future",
-                "timestamp": chrono::Utc::now().to_rfc3339()
+                "timestamp": Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true)
             })),
         )
     })
@@ -22,7 +23,7 @@ pub fn placeholder_handler_501() -> MethodRouter {
 pub async fn health_check() -> Json<Value> {
     Json(json!({
         "status": "healthy",
-        "timestamp": chrono::Utc::now().to_rfc3339()
+        "timestamp": Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true)
     }))
 }
 

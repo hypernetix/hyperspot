@@ -179,9 +179,9 @@ mod sse_tests {
     use crate::api::rest::sse_adapter::SseUserEventPublisher;
     use crate::domain::events::UserDomainEvent;
     use crate::domain::ports::EventPublisher;
-    use chrono::Utc;
     use futures::StreamExt;
     use modkit::SseBroadcaster;
+    use time::OffsetDateTime;
     use tokio::time::{timeout, Duration};
     use uuid::Uuid;
 
@@ -222,7 +222,7 @@ mod sse_tests {
         let test_event = dto::UserEvent {
             kind: "created".to_owned(),
             id: Uuid::new_v4(),
-            at: Utc::now(),
+            at: OffsetDateTime::now_utc(),
         };
 
         // Send event
@@ -246,7 +246,7 @@ mod sse_tests {
         let mut stream = Box::pin(broadcaster.subscribe_stream());
 
         let user_id = Uuid::new_v4();
-        let timestamp = Utc::now();
+        let timestamp = OffsetDateTime::now_utc();
         let domain_event = UserDomainEvent::Created {
             id: user_id,
             at: timestamp,
@@ -273,7 +273,7 @@ mod sse_tests {
         let mut stream = Box::pin(broadcaster.subscribe_stream());
 
         let user_id = Uuid::new_v4();
-        let timestamp = Utc::now();
+        let timestamp = OffsetDateTime::now_utc();
 
         // Test Created event
         adapter.publish(&UserDomainEvent::Created {
@@ -318,7 +318,7 @@ mod sse_tests {
         let test_event = dto::UserEvent {
             kind: "created".to_owned(),
             id: Uuid::new_v4(),
-            at: Utc::now(),
+            at: OffsetDateTime::now_utc(),
         };
 
         // Send event

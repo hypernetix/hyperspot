@@ -216,7 +216,7 @@ impl ApiIngress {
         router = router.layer(from_fn(modkit::api::error_layer::error_mapping_middleware));
 
         // 8) Per-route rate limiting & in-flight limits
-        let rate_map = middleware::rate_limit::RateLimiterMap::from_specs(&specs, &config);
+        let rate_map = middleware::rate_limit::RateLimiterMap::from_specs(&specs, &config)?;
         router = router.layer(from_fn(
             move |req: axum::extract::Request, next: axum::middleware::Next| {
                 let map = rate_map.clone();

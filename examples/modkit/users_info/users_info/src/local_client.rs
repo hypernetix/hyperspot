@@ -41,12 +41,15 @@ impl UsersInfoApi for UsersInfoLocalClient {
         ctx: &SecurityCtx,
         query: ODataQuery,
     ) -> Result<Page<User>, UsersInfoError> {
-        self.service.list_users_page(ctx, query).await.map_err(|e| {
-            // OData errors at this layer are unexpected (query construction errors)
-            // Log and convert to internal error
-            tracing::error!(error = ?e, "Unexpected OData error in gateway");
-            UsersInfoError::internal()
-        })
+        self.service
+            .list_users_page(ctx, &query)
+            .await
+            .map_err(|e| {
+                // OData errors at this layer are unexpected (query construction errors)
+                // Log and convert to internal error
+                tracing::error!(error = ?e, "Unexpected OData error in gateway");
+                UsersInfoError::internal()
+            })
     }
 
     async fn create_user(
