@@ -72,6 +72,44 @@ The `scripts/ci.py` Python script accepts the following options:
 - `--docker`: Run tests in Docker environment (default is local mode)
 - `--help`: Show help message
 
+## Types Registry Test Suite
+
+The types-registry module has comprehensive E2E test coverage for GTS entity management:
+
+### Test Files
+
+- **`modules/types_registry/test_types_registry_register.py`**: Tests the `POST /types-registry/v1/entities` endpoint
+  - Single and batch entity registration
+  - Type and instance registration
+  - Invalid entity handling
+  - Mixed valid/invalid batch processing
+  
+- **`modules/types_registry/test_types_registry_list.py`**: Tests the `GET /types-registry/v1/entities` endpoint
+  - List all entities
+  - Filter by kind (type/instance)
+  - Filter by vendor, package, namespace
+  - Wildcard pattern matching
+  - Combined filters
+  
+- **`modules/types_registry/test_types_registry_get.py`**: Tests the `GET /types-registry/v1/entities/{gts_id}` endpoint
+  - Get entity by GTS ID
+  - 404 for non-existent entities
+  - Response structure validation
+  - UUID format verification
+  
+- **`modules/types_registry/test_types_registry_validation.py`**: Tests schema validation behavior
+  - Instance validation against type schemas
+  - Missing required fields
+  - Wrong field types
+  - Nested schema validation
+  
+- **`modules/types_registry/test_types_registry_error_handling.py`**: Tests error handling and edge cases
+  - RFC-9457 error response format
+  - Malformed requests
+  - Large batch handling
+  - Unicode content
+  - Deeply nested schemas
+
 ## File Parser Test Suite
 
 The file_parser module has comprehensive E2E test coverage including golden-reference Markdown comparison:
