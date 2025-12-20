@@ -502,25 +502,25 @@ Storage SHALL:
 The system SHALL expose REST API endpoints for types registry operations.
 
 Endpoints SHALL include:
-- `POST /api/v1/types-registry/entities` — Register entities (batch)
-- `GET /api/v1/types-registry/entities` — List entities with query params
-- `GET /api/v1/types-registry/entities/{gts_id}` — Get entity by ID
+- `POST /types-registry/v1/entities` — Register entities (batch)
+- `GET /types-registry/v1/entities` — List entities with query params
+- `GET /types-registry/v1/entities/{gts_id}` — Get entity by ID
 
 #### Scenario: Register entities via REST
 
 - **GIVEN** a valid JSON payload with entity data
-- **WHEN** POST request is sent to `/api/v1/types-registry/entities`
+- **WHEN** POST request is sent to `/types-registry/v1/entities`
 - **THEN** entities are registered and response contains registered entities
 
 #### Scenario: List entities via REST
 
 - **GIVEN** registered entities in the registry
-- **WHEN** GET request is sent to `/api/v1/types-registry/entities?pattern=gts.acme.*`
+- **WHEN** GET request is sent to `/types-registry/v1/entities?pattern=gts.acme.*`
 - **THEN** response contains filtered entities matching the pattern
 
 #### Scenario: Get entity via REST
 
 - **GIVEN** an entity with GTS ID `gts.acme.core.events.user_created.v1~`
-- **WHEN** GET request is sent to `/api/v1/types-registry/entities/gts.acme.core.events.user_created.v1~`
+- **WHEN** GET request is sent to `/types-registry/v1/entities/gts.acme.core.events.user_created.v1~`
 - **THEN** response contains the complete entity
 
