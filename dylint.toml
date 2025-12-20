@@ -3,5 +3,5 @@
 [workspace.metadata.dylint]
 # Path to the local dylint linters
 libraries = [
-    { path = "dylint_lints/contract_lints" }
+    { path = "dylint_lints/de0101_no_serde_in_contract" }
 ]

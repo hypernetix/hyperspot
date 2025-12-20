@@ -1,0 +1,38 @@
+[package]
+name = "de0101_no_serde_in_contract"
+version = "0.1.0"
+authors = ["authors go here"]
+description = "description goes here"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[[example]]
+name = "serialize"
+path = "ui/contract/serialize.rs"
+
+[[example]]
+name = "no_serde_derive"
+path = "ui/contract/no_serde_derive.rs"
+
+[[example]]
+name = "serialize_deserialize"
+path = "ui/contract/serialize_deserialize.rs"
+
+[[example]]
+name = "deserialize"
+path = "ui/contract/deserialize.rs"
+
+[dependencies]
+clippy_utils = { git = "https://github.com/rust-lang/rust-clippy", rev = "20ce69b9a63bcd2756cd906fe0964d1e901e042a" }
+dylint_linting = "5.0.0"
+lint_utils = { path = "../lint_utils" }
+
+[dev-dependencies]
+dylint_testing = "5.0.0"
+serde = { version = "1.0", features = ["derive"] }
+
+[package.metadata.rust-analyzer]
+rustc_private = true

@@ -1,6 +1,6 @@
 [workspace]
-members = ["contract_lints"]
-exclude = ["contract_lints/ui"]
+members = ["de0101_no_serde_in_contract", "lint_utils"]
+exclude = ["contract_lints"]
 resolver = "2"
 
 [workspace.package]
