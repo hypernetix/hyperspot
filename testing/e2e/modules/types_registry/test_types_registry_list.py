@@ -30,12 +30,10 @@ async def register_test_entities(client, base_url, auth_headers):
             },
             {
                 "$id": "gts.e2e.list.acme.models.user.v1~e2e.list.instances.user1.v1",
-                "type": "gts.e2e.list.acme.models.user.v1~",
                 "name": "Test User 1"
             },
             {
                 "$id": "gts.e2e.list.acme.models.user.v1~e2e.list.instances.user2.v1",
-                "type": "gts.e2e.list.acme.models.user.v1~",
                 "name": "Test User 2"
             }
         ]

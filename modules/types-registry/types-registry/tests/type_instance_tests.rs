@@ -44,9 +44,9 @@ async fn test_type_with_valid_instances() {
 
     // Register valid instances that conform to the schema
     // Instances have format: parent~instance (at least 2 segments)
+    // Note: "type" field is not needed - schema ID is derived from $id
     let valid_instance1 = json!({
         "$id": "gts.acme.core.models.user.v1~acme.core.instances.user1.v1",
-        "type": "gts.acme.core.models.user.v1~",
         "userId": "user-001",
         "email": "alice@example.com",
         "age": 30,
@@ -55,7 +55,6 @@ async fn test_type_with_valid_instances() {
 
     let valid_instance2 = json!({
         "$id": "gts.acme.core.models.user.v1~acme.core.instances.user2.v1",
-        "type": "gts.acme.core.models.user.v1~",
         "userId": "user-002",
         "email": "bob@example.com"
         // age and isActive are optional
@@ -106,9 +105,9 @@ async fn test_type_with_invalid_instance_missing_required_field() {
     service.switch_to_production().unwrap();
 
     // Try to register an instance missing required "total" field
+    // Note: "type" field is not needed - schema ID is derived from $id
     let invalid_instance = json!({
         "$id": "gts.acme.core.models.order.v1~acme.core.instances.order1.v1",
-        "type": "gts.acme.core.models.order.v1~",
         "orderId": "order-001",
         "customerId": "cust-001"
         // Missing required "total" field
@@ -147,9 +146,9 @@ async fn test_type_with_invalid_instance_wrong_field_type() {
     service.switch_to_production().unwrap();
 
     // Try to register an instance with wrong type for "price" (string instead of number)
+    // Note: "type" field is not needed - schema ID is derived from $id
     let invalid_instance = json!({
         "$id": "gts.acme.core.models.product.v1~acme.core.instances.prod1.v1",
-        "type": "gts.acme.core.models.product.v1~",
         "productId": "prod-001",
         "name": "Widget",
         "price": "not-a-number",  // Should be a number
@@ -189,10 +188,10 @@ async fn test_multiple_instances_of_same_type() {
     service.switch_to_production().unwrap();
 
     // Register multiple instances of the same type (parent~instance format)
+    // Note: "type" field is not needed - schema ID is derived from $id
     let instances = vec![
         json!({
             "$id": "gts.acme.core.events.user_action.v1~acme.core.instances.event1.v1",
-            "type": "gts.acme.core.events.user_action.v1~",
             "eventId": "evt-001",
             "userId": "user-001",
             "action": "login",
@@ -200,7 +199,6 @@ async fn test_multiple_instances_of_same_type() {
         }),
         json!({
             "$id": "gts.acme.core.events.user_action.v1~acme.core.instances.event2.v1",
-            "type": "gts.acme.core.events.user_action.v1~",
             "eventId": "evt-002",
             "userId": "user-001",
             "action": "purchase",
@@ -208,7 +206,6 @@ async fn test_multiple_instances_of_same_type() {
         }),
         json!({
             "$id": "gts.acme.core.events.user_action.v1~acme.core.instances.event3.v1",
-            "type": "gts.acme.core.events.user_action.v1~",
             "eventId": "evt-003",
             "userId": "user-002",
             "action": "logout",
@@ -270,9 +267,9 @@ async fn test_nested_object_type_with_instance() {
     service.switch_to_production().unwrap();
 
     // Register a valid customer instance with nested address
+    // Note: "type" field is not needed - schema ID is derived from $id
     let valid_customer = json!({
         "$id": "gts.acme.core.models.customer.v1~acme.core.instances.cust1.v1",
-        "type": "gts.acme.core.models.customer.v1~",
         "customerId": "cust-001",
         "name": "Acme Corp",
         "billingAddress": {
@@ -326,9 +323,9 @@ async fn test_array_type_with_instance() {
     service.switch_to_production().unwrap();
 
     // Register a valid cart instance with array items
+    // Note: "type" field is not needed - schema ID is derived from $id
     let valid_cart = json!({
         "$id": "gts.acme.core.models.cart.v1~acme.core.instances.cart1.v1",
-        "type": "gts.acme.core.models.cart.v1~",
         "cartId": "cart-001",
         "items": [
             { "productId": "prod-001", "quantity": 2 },
@@ -340,6 +337,60 @@ async fn test_array_type_with_instance() {
     assert!(
         result[0].is_ok(),
         "Cart with array items should succeed: {:?}",
+        result[0]
+    );
+}
+
+#[tokio::test]
+async fn test_instance_with_mismatched_type_field_fails() {
+    let service = create_service();
+
+    // Register two different type schemas
+    let user_type = json!({
+        "$id": "gts.acme.core.models.user.v1~",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "userId": { "type": "string" },
+            "name": { "type": "string" }
+        },
+        "required": ["userId", "name"],
+        "description": "User type"
+    });
+
+    let product_type = json!({
+        "$id": "gts.acme.core.models.product.v1~",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "productId": { "type": "string" },
+            "price": { "type": "number" }
+        },
+        "required": ["productId", "price"],
+        "description": "Product type"
+    });
+
+    let _ = service.register(vec![user_type, product_type]);
+    service.switch_to_production().unwrap();
+
+    // Register an instance where:
+    // - $id indicates parent is "user" type (gts.acme.core.models.user.v1~)
+    // - "type" field claims parent is "product" type (gts.acme.core.models.product.v1~)
+    // This mismatch should cause validation to fail
+    let mismatched_instance = json!({
+        "$id": "gts.acme.core.models.user.v1~acme.core.instances.user1.v1",
+        "type": "gts.acme.core.models.product.v1~",
+        "userId": "user-001",
+        "name": "Alice"
+    });
+
+    let result = service.register(vec![mismatched_instance]);
+
+    // The instance should fail because the "type" field takes precedence
+    // and the data doesn't conform to the product schema (missing productId, price)
+    assert!(
+        result[0].is_err(),
+        "Instance with mismatched type field should fail validation: {:?}",
         result[0]
     );
 }

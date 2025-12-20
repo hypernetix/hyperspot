@@ -48,7 +48,6 @@ async def test_validation_invalid_instance_against_schema(base_url, auth_headers
                 },
                 {
                     "$id": instance_id,
-                    "type": type_id,
                     "employeeId": "emp-001"
                 }
             ]
@@ -104,7 +103,6 @@ async def test_validation_wrong_type_for_field(base_url, auth_headers):
                 },
                 {
                     "$id": instance_id,
-                    "type": type_id,
                     "productId": "prod-001",
                     "price": "not-a-number"
                 }
@@ -164,7 +162,6 @@ async def test_validation_valid_instance_succeeds(base_url, auth_headers):
                 },
                 {
                     "$id": instance_id,
-                    "type": type_id,
                     "orderId": "order-001",
                     "total": 99.99,
                     "items": ["item1", "item2"]
@@ -207,7 +204,6 @@ async def test_validation_instance_before_type_fails(base_url, auth_headers):
             "entities": [
                 {
                     "$id": instance_id,
-                    "type": type_id,
                     "widgetId": "w-001"
                 },
                 {
@@ -318,7 +314,6 @@ async def test_validation_complex_nested_schema(base_url, auth_headers):
                 },
                 {
                     "$id": instance_id,
-                    "type": type_id,
                     "id": "nested-001",
                     "metadata": {
                         "createdAt": "2024-01-01T00:00:00Z",
@@ -373,19 +368,16 @@ async def test_validation_multiple_instances_same_type(base_url, auth_headers):
                 },
                 {
                     "$id": unique_instance_id(type_id, "user1"),
-                    "type": type_id,
                     "username": "alice",
                     "email": "alice@example.com"
                 },
                 {
                     "$id": unique_instance_id(type_id, "user2"),
-                    "type": type_id,
                     "username": "bob",
                     "email": "bob@example.com"
                 },
                 {
                     "$id": unique_instance_id(type_id, "user3"),
-                    "type": type_id,
                     "username": "charlie",
                     "email": "charlie@example.com"
                 }

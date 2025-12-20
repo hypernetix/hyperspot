@@ -37,21 +37,18 @@ async fn test_production_mode_validates_immediately_with_correct_order() {
         // Instance 1 - valid, conforms to schema
         json!({
             "$id": "gts.acme.core.models.person.v1~acme.core.instances.person1.v1",
-            "type": "gts.acme.core.models.person.v1~",
             "name": "Alice",
             "age": 30
         }),
         // Instance 2 - valid
         json!({
             "$id": "gts.acme.core.models.person.v1~acme.core.instances.person2.v1",
-            "type": "gts.acme.core.models.person.v1~",
             "name": "Bob",
             "age": 25
         }),
         // Instance 3 - valid
         json!({
             "$id": "gts.acme.core.models.person.v1~acme.core.instances.person3.v1",
-            "type": "gts.acme.core.models.person.v1~",
             "name": "Charlie",
             "age": 35
         }),
@@ -94,7 +91,6 @@ async fn test_production_mode_fails_when_instance_before_parent() {
         // Instance first - will fail because parent doesn't exist yet
         json!({
             "$id": "gts.acme.core.models.widget.v1~acme.core.instances.widget1.v1",
-            "type": "gts.acme.core.models.widget.v1~",
             "widgetId": "w-001",
             "color": "red"
         }),
@@ -154,7 +150,6 @@ async fn test_production_mode_validates_invalid_instance_immediately() {
         // Invalid instance - missing required "salary" field
         json!({
             "$id": "gts.acme.core.models.employee.v1~acme.core.instances.emp1.v1",
-            "type": "gts.acme.core.models.employee.v1~",
             "employeeId": "emp-001",
             "department": "Engineering"
             // Missing required "salary" field
@@ -202,21 +197,18 @@ async fn test_production_mode_batch_with_valid_and_invalid_instances() {
         // Valid instance
         json!({
             "$id": "gts.acme.core.models.item.v1~acme.core.instances.item1.v1",
-            "type": "gts.acme.core.models.item.v1~",
             "itemId": "item-001",
             "price": 29.99
         }),
         // Invalid instance - wrong type for price
         json!({
             "$id": "gts.acme.core.models.item.v1~acme.core.instances.item2.v1",
-            "type": "gts.acme.core.models.item.v1~",
             "itemId": "item-002",
             "price": "not-a-number"  // Should be number
         }),
         // Another valid instance
         json!({
             "$id": "gts.acme.core.models.item.v1~acme.core.instances.item3.v1",
-            "type": "gts.acme.core.models.item.v1~",
             "itemId": "item-003",
             "price": 49.99
         }),
@@ -266,8 +258,7 @@ async fn test_configuration_mode_defers_validation() {
     // Register an instance that would fail validation (missing required field)
     // In configuration mode, this should succeed (deferred validation)
     let invalid_instance = json!({
-        "$id": "gts.acme.core.models.config_test.v1~acme.core.instances.test1.v1",
-        "type": "gts.acme.core.models.config_test.v1~"
+        "$id": "gts.acme.core.models.config_test.v1~acme.core.instances.test1.v1"
         // Missing "requiredField"
     });
 
@@ -393,15 +384,13 @@ async fn test_switch_to_production_returns_errors_as_list() {
     // Register multiple invalid child instances in configuration mode
     // Child 1: Missing all required fields
     let invalid_child1 = json!({
-        "$id": "gts.acme.core.models.product.v1~acme.core.instances.product1.v1",
-        "type": "gts.acme.core.models.product.v1~"
+        "$id": "gts.acme.core.models.product.v1~acme.core.instances.product1.v1"
         // Missing productId, name, price
     });
 
     // Child 2: Missing price field
     let invalid_child2 = json!({
         "$id": "gts.acme.core.models.product.v1~acme.core.instances.product2.v1",
-        "type": "gts.acme.core.models.product.v1~",
         "productId": "prod-002",
         "name": "Widget"
         // Missing price
@@ -410,7 +399,6 @@ async fn test_switch_to_production_returns_errors_as_list() {
     // Child 3: Wrong type for price (string instead of number)
     let invalid_child3 = json!({
         "$id": "gts.acme.core.models.product.v1~acme.core.instances.product3.v1",
-        "type": "gts.acme.core.models.product.v1~",
         "productId": "prod-003",
         "name": "Gadget",
         "price": "not-a-number"  // Should be number
@@ -493,8 +481,7 @@ async fn test_switch_to_production_error_contains_gts_ids() {
 
     // Register an invalid instance
     let invalid_instance = json!({
-        "$id": "gts.acme.core.models.error_test.v1~acme.core.instances.missing_name.v1",
-        "type": "gts.acme.core.models.error_test.v1~"
+        "$id": "gts.acme.core.models.error_test.v1~acme.core.instances.missing_name.v1"
         // Missing required "name" field
     });
 

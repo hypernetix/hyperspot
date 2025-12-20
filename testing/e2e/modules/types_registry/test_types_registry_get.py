@@ -199,7 +199,6 @@ async def test_get_instance_entity(base_url, auth_headers):
                 },
                 {
                     "$id": instance_id,
-                    "type": type_id,
                     "itemName": "Test Item",
                     "quantity": 42
                 }

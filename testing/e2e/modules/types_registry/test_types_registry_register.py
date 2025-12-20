@@ -186,7 +186,6 @@ async def test_register_type_with_instance(base_url, auth_headers):
                 },
                 {
                     "$id": instance_id,
-                    "type": type_id,
                     "name": "Alice",
                     "age": 30
                 }

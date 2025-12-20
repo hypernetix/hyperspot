@@ -152,12 +152,10 @@ async fn test_list_with_is_type_filter() {
     let instances = vec![
         json!({
             "$id": "gts.acme.core.models.filter_test.v1~acme.core.instances.i1.v1",
-            "type": "gts.acme.core.models.filter_test.v1~",
             "name": "instance1"
         }),
         json!({
             "$id": "gts.acme.core.models.filter_test.v1~acme.core.instances.i2.v1",
-            "type": "gts.acme.core.models.filter_test.v1~",
             "name": "instance2"
         }),
     ];
