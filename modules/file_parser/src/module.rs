@@ -77,10 +77,6 @@ impl Module for FileParserModule {
         info!("FileParserService initialized successfully");
         Ok(())
     }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
 }
 
 impl RestfulModule for FileParserModule {

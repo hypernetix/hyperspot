@@ -131,10 +131,6 @@ impl Module for MyModule {
         tracing::info!("My module initialized");
         Ok(())
     }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
 }
 
 impl RestfulModule for MyModule {

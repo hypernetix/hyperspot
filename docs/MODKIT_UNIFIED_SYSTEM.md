@@ -1491,7 +1491,6 @@ impl Module for MyModule {
         expose_my_module_client(ctx, &api)?;
         Ok(())
     }
-    fn as_any(&self) -> &dyn std::any::Any { self }
 }
 ```
 
@@ -1511,7 +1510,6 @@ let api = ctx.client_hub.get::<dyn my_module::contract::client::MyModuleApi>() ?
 #[async_trait::async_trait]
 pub trait Module: Send + Sync + 'static {
     async fn init(&self, ctx: &crate::context::ModuleCtx) -> anyhow::Result<()>;
-    fn as_any(&self) -> &dyn std::any::Any;
 }
 
 #[async_trait::async_trait]

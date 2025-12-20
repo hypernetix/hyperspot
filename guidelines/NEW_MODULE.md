@@ -922,14 +922,9 @@ This is where all components are assembled and registered with ModKit.
    **Checklist:** Ensure `capabilities` and `deps` are set correctly for your module.
 
 2. **`src/module.rs` - `impl Module for YourModule`:**
-   **Rule:** The Module trait requires implementing `as_any()` method:
 
    ```rust
    impl Module for YourModule {
-       fn as_any(&self) -> &dyn std::any::Any {
-           self
-       }
-
        async fn init(&self, ctx: &ModuleCtx) -> anyhow::Result<()> {
            // ... init logic
        }
@@ -1040,10 +1035,6 @@ impl Module for UsersInfo {
         ctx.client_hub().register::<dyn UsersInfoApi>(api);
         info!("UsersInfo API registered in ClientHub via local adapter");
         Ok(())
-    }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
     }
 }
 
@@ -2178,10 +2169,6 @@ impl modkit::Module for MyModule {
         // Register local implementation in ClientHub
         ctx.client_hub().register::<dyn MyModuleApi>(self.api.clone());
         Ok(())
-    }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
     }
 }
 
