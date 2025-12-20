@@ -6097,6 +6097,33 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "562d481066bde0658276a35467c4af00bdc6ee726305698a55b86e61d7ad82bb"
 
 [[package]]
+name = "types-registry"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "api_ingress",
+ "arc-swap",
+ "async-trait",
+ "axum",
+ "futures",
+ "gts",
+ "inventory",
+ "modkit",
+ "modkit-auth",
+ "modkit-security",
+ "parking_lot",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.17",
+ "tokio",
+ "tower",
+ "tracing",
+ "types-registry-sdk",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
 name = "types-registry-sdk"
 version = "0.1.0"
 dependencies = [
@@ -6106,7 +6133,6 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 2.0.17",
- "tokio",
  "uuid",
 ]
 

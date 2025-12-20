@@ -2,6 +2,12 @@
 
 Instructions for AI coding assistants using OpenSpec for spec-driven development.
 
+## Project Guidelines
+
+Always consult the following project-wide resources:
+- `guidelines/` — Project conventions and best practices
+- `guidelines/DNA/` — REST API design patterns and architectural principles
+
 ## TL;DR Quick Checklist
 
 - Search existing work: `openspec spec list --long`, `openspec list` (use `rg` only for full-text search)

@@ -22,6 +22,3 @@ gts = { workspace = true }
 
 # Security context for API methods
 modkit-security = { path = "../../../libs/modkit-security" }
-
-[dev-dependencies]
-tokio = { workspace = true }
