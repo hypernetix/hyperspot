@@ -119,16 +119,14 @@ impl HostRuntime {
         );
 
         for entry in self.registry.modules() {
-            if entry.is_system {
-                if let Some(sys_mod) = entry.core.as_system_module() {
-                    tracing::debug!(module = entry.name, "Running system pre_init");
-                    sys_mod
-                        .pre_init(&sys_ctx)
-                        .map_err(|e| RegistryError::PreInit {
-                            module: entry.name,
-                            source: e,
-                        })?;
-                }
+            if let Some(sys_mod) = &entry.system {
+                tracing::debug!(module = entry.name, "Running system pre_init");
+                sys_mod
+                    .pre_init(&sys_ctx)
+                    .map_err(|e| RegistryError::PreInit {
+                        module: entry.name,
+                        source: e,
+                    })?;
             }
         }
 
@@ -246,10 +244,7 @@ impl HostRuntime {
         );
 
         for entry in self.registry.modules_by_system_priority() {
-            if !entry.is_system {
-                continue;
-            }
-            if let Some(sys_mod) = entry.core.as_system_module() {
+            if let Some(sys_mod) = &entry.system {
                 sys_mod
                     .post_init(&sys_ctx)
                     .await
@@ -436,7 +431,7 @@ impl HostRuntime {
             if let Some(s) = &e.stateful {
                 tracing::debug!(
                     module = e.name,
-                    is_system = e.is_system,
+                    is_system = e.system.is_some(),
                     "Starting stateful module"
                 );
                 s.start(self.cancel.clone())
@@ -635,9 +630,6 @@ mod tests {
         async fn init(&self, _ctx: &ModuleCtx) -> anyhow::Result<()> {
             Ok(())
         }
-        fn as_any(&self) -> &dyn std::any::Any {
-            self
-        }
     }
 
     struct StopOrderTracker {
@@ -659,9 +651,6 @@ mod tests {
     impl Module for StopOrderTracker {
         async fn init(&self, _ctx: &ModuleCtx) -> anyhow::Result<()> {
             Ok(())
-        }
-        fn as_any(&self) -> &dyn std::any::Any {
-            self
         }
     }
 
@@ -739,9 +728,6 @@ mod tests {
         impl Module for FailingModule {
             async fn init(&self, _ctx: &ModuleCtx) -> anyhow::Result<()> {
                 Ok(())
-            }
-            fn as_any(&self) -> &dyn std::any::Any {
-                self
             }
         }
 
@@ -826,15 +812,6 @@ mod tests {
                 self.events.lock().await.push(format!("init:{}", self.name));
                 Ok(())
             }
-
-            fn as_any(&self) -> &dyn std::any::Any {
-                self
-            }
-
-            fn as_system_module(&self) -> Option<&dyn SystemModule> {
-                // Only sys modules are registered as system in the registry builder.
-                Some(self)
-            }
         }
 
         #[async_trait::async_trait]
@@ -870,7 +847,7 @@ mod tests {
         builder.register_core_with_meta("sys_a", &[], sys_a.clone() as Arc<dyn Module>);
         builder.register_core_with_meta("user_b", &["sys_a"], user_b.clone() as Arc<dyn Module>);
         builder.register_core_with_meta("user_c", &["user_b"], user_c.clone() as Arc<dyn Module>);
-        builder.register_system_with_meta("sys_a");
+        builder.register_system_with_meta("sys_a", sys_a.clone() as Arc<dyn SystemModule>);
 
         let registry = builder.build_topo_sorted().unwrap();
 

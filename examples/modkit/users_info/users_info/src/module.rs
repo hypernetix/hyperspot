@@ -112,10 +112,6 @@ impl Module for UsersInfo {
         info!("UsersInfo local client registered into ClientHub");
         Ok(())
     }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
 }
 
 #[async_trait]

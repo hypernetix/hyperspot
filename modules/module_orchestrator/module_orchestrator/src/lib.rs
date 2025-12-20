@@ -92,14 +92,6 @@ impl modkit::Module for ModuleOrchestrator {
 
         Ok(())
     }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    fn as_system_module(&self) -> Option<&dyn SystemModule> {
-        Some(self)
-    }
 }
 
 /// Export gRPC services to `grpc_hub`

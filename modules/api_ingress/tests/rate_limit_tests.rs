@@ -65,10 +65,6 @@ impl Module for RateLimitedModule {
     async fn init(&self, _ctx: &modkit::ModuleCtx) -> Result<()> {
         Ok(())
     }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
 }
 
 impl RestfulModule for RateLimitedModule {

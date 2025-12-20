@@ -47,10 +47,6 @@ impl modkit::Module for CalculatorGateway {
         tracing::info!("calculator_gateway module initialized");
         Ok(())
     }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
 }
 
 impl RestfulModule for CalculatorGateway {

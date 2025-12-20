@@ -54,10 +54,6 @@ impl Module for NodesRegistry {
         tracing::info!("Nodes registry module initialized");
         Ok(())
     }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
 }
 
 impl RestfulModule for NodesRegistry {

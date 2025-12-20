@@ -100,10 +100,6 @@ impl Module for TestAuthModule {
     async fn init(&self, _ctx: &ModuleCtx) -> Result<()> {
         Ok(())
     }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
 }
 
 enum TestResource {

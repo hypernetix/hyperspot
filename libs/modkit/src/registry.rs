@@ -18,7 +18,7 @@ pub struct ModuleEntry {
     pub(crate) rest_host: Option<Arc<dyn contracts::RestHostModule>>,
     pub(crate) db: Option<Arc<dyn contracts::DbModule>>,
     pub(crate) stateful: Option<Arc<dyn contracts::StatefulModule>>,
-    pub(crate) is_system: bool,
+    pub(crate) system: Option<Arc<dyn contracts::SystemModule>>,
     pub(crate) grpc_hub: Option<Arc<dyn contracts::GrpcHubModule>>,
     pub(crate) grpc_service: Option<Arc<dyn contracts::GrpcServiceModule>>,
 }
@@ -32,7 +32,7 @@ impl std::fmt::Debug for ModuleEntry {
             .field("is_rest_host", &self.rest_host.is_some())
             .field("has_db", &self.db.is_some())
             .field("has_stateful", &self.stateful.is_some())
-            .field("is_system", &self.is_system)
+            .field("is_system", &self.system.is_some())
             .field("is_grpc_hub", &self.grpc_hub.is_some())
             .field("has_grpc_service", &self.grpc_service.is_some())
             .finish_non_exhaustive()
@@ -78,7 +78,7 @@ impl ModuleRegistry {
         let mut non_system_mods = Vec::new();
 
         for entry in &self.modules {
-            if entry.is_system {
+            if entry.system.is_some() {
                 system_mods.push(entry);
             } else {
                 non_system_mods.push(entry);
@@ -124,7 +124,7 @@ pub struct RegistryBuilder {
     rest_host: Option<RestHostEntry>,
     db: HashMap<&'static str, Arc<dyn contracts::DbModule>>,
     stateful: HashMap<&'static str, Arc<dyn contracts::StatefulModule>>,
-    system_modules: std::collections::HashSet<&'static str>,
+    system: HashMap<&'static str, Arc<dyn contracts::SystemModule>>,
     grpc_hub: Option<GrpcHubEntry>,
     grpc_services: HashMap<&'static str, Arc<dyn contracts::GrpcServiceModule>>,
     errors: Vec<String>,
@@ -187,8 +187,12 @@ impl RegistryBuilder {
         self.stateful.insert(name, m);
     }
 
-    pub fn register_system_with_meta(&mut self, name: &'static str) {
-        self.system_modules.insert(name);
+    pub fn register_system_with_meta(
+        &mut self,
+        name: &'static str,
+        m: Arc<dyn contracts::SystemModule>,
+    ) {
+        self.system.insert(name, m);
     }
 
     pub fn register_grpc_hub_with_meta(
@@ -400,7 +404,7 @@ impl RegistryBuilder {
                     .map(|(_, module)| module.clone()),
                 db: self.db.get(name).cloned(),
                 stateful: self.stateful.get(name).cloned(),
-                is_system: self.system_modules.contains(name),
+                system: self.system.get(name).cloned(),
                 grpc_hub: self
                     .grpc_hub
                     .as_ref()
@@ -593,9 +597,6 @@ mod tests {
     impl contracts::Module for DummyCore {
         async fn init(&self, _ctx: &ModuleCtx) -> anyhow::Result<()> {
             Ok(())
-        }
-        fn as_any(&self) -> &dyn std::any::Any {
-            self
         }
     }
 

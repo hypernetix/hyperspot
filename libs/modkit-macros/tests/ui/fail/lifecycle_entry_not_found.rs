@@ -13,7 +13,6 @@ impl X {
 #[async_trait::async_trait]
 impl modkit::Module for X {
     async fn init(&self, _ctx: &modkit::ModuleCtx) -> anyhow::Result<()> { Ok(()) }
-    fn as_any(&self) -> &dyn core::any::Any { self }
 }
 
 fn main() {}
