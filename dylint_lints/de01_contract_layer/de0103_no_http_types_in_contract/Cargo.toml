@@ -1,0 +1,35 @@
+[package]
+name = "de0103_no_http_types_in_contract"
+version = "0.1.0"
+authors = ["authors go here"]
+description = "Contract modules should not reference HTTP types (DE0103)"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[[example]]
+name = "http_imports"
+path = "ui/http_imports.rs"
+
+[[example]]
+name = "no_http_imports"
+path = "ui/no_http_imports.rs"
+
+[[example]]
+name = "mixed_imports"
+path = "ui/mixed_imports.rs"
+
+[dependencies]
+clippy_utils = { git = "https://github.com/rust-lang/rust-clippy", rev = "20ce69b9a63bcd2756cd906fe0964d1e901e042a" }
+dylint_linting = "5.0.0"
+lint_utils = { path = "../../lint_utils" }
+
+[dev-dependencies]
+dylint_testing = "5.0.0"
+http = "1.0"
+axum = "0.7"
+
+[package.metadata.rust-analyzer]
+rustc_private = true

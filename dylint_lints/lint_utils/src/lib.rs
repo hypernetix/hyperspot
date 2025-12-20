@@ -93,3 +93,35 @@ pub fn path_to_string(path: &rustc_hir::UsePath<'_>) -> String {
         .collect::<Vec<_>>()
         .join("::")
 }
+
+/// Generic helper to traverse inline "contract" modules and apply a check function to items within.
+/// Returns true if the item was a contract module (and was handled), false otherwise.
+///
+/// This handles the pattern:
+/// ```rust
+/// mod contract {
+///     // items here will be passed to check_fn
+/// }
+/// ```
+pub fn for_each_item_in_contract_module<F>(
+    cx: &EarlyContext<'_>,
+    item: &rustc_ast::Item,
+    mut check_fn: F,
+) -> bool
+where
+    F: FnMut(&EarlyContext<'_>, &rustc_ast::Item),
+{
+    use rustc_ast::ItemKind;
+
+    if let ItemKind::Mod(_, ident, mod_kind) = &item.kind {
+        if ident.name.as_str() == "contract" {
+            if let rustc_ast::ModKind::Loaded(items, ..) = mod_kind {
+                for inner_item in items {
+                    check_fn(cx, inner_item);
+                }
+            }
+            return true;
+        }
+    }
+    false
+}

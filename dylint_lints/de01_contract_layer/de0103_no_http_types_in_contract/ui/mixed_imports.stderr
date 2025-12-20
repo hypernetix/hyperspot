@@ -1,0 +1,11 @@
+error: contract module imports HTTP type (DE0103)
+  --> $DIR/mixed_imports.rs:3:5
+   |
+LL |     use http::StatusCode;
+   |     ^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: contract modules should be transport-agnostic; move HTTP types to api/rest/
+   = note: `#[deny(de0103_no_http_types_in_contract)]` on by default
+
+error: aborting due to 1 previous error
+

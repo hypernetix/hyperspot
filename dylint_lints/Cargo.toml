@@ -1,5 +1,10 @@
 [workspace]
-members = ["de0101_no_serde_in_contract", "lint_utils"]
+members = [
+    "de01_contract_layer/de0101_no_serde_in_contract",
+    "de01_contract_layer/de0102_no_toschema_in_contract",
+    "de01_contract_layer/de0103_no_http_types_in_contract",
+    "lint_utils",
+]
 exclude = ["contract_lints"]
 resolver = "2"
 

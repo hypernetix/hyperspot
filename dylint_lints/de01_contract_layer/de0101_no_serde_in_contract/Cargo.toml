@@ -11,24 +11,28 @@ crate-type = ["cdylib"]
 
 [[example]]
 name = "serialize"
-path = "ui/contract/serialize.rs"
+path = "ui/serialize.rs"
 
 [[example]]
 name = "no_serde_derive"
-path = "ui/contract/no_serde_derive.rs"
+path = "ui/no_serde_derive.rs"
 
 [[example]]
 name = "serialize_deserialize"
-path = "ui/contract/serialize_deserialize.rs"
+path = "ui/serialize_deserialize.rs"
 
 [[example]]
 name = "deserialize"
-path = "ui/contract/deserialize.rs"
+path = "ui/deserialize.rs"
+
+[[example]]
+name = "qualified_paths"
+path = "ui/qualified_paths.rs"
 
 [dependencies]
 clippy_utils = { git = "https://github.com/rust-lang/rust-clippy", rev = "20ce69b9a63bcd2756cd906fe0964d1e901e042a" }
 dylint_linting = "5.0.0"
-lint_utils = { path = "../lint_utils" }
+lint_utils = { path = "../../lint_utils" }
 
 [dev-dependencies]
 dylint_testing = "5.0.0"
