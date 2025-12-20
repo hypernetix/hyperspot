@@ -50,7 +50,7 @@ async fn list_with_deny_all_returns_empty_page() {
 
     // Act: List users with deny-all context
     let query = ODataQuery::default();
-    let result = repo.list_users_page(&ctx, &query).await;
+    let result = repo.list_users_page(ctx.scope(), &query).await;
 
     // Assert: Should succeed but return empty page
     assert!(result.is_ok(), "Query should succeed");
@@ -74,7 +74,7 @@ async fn list_with_empty_database_returns_empty_page() {
 
     // Act: List users from empty database
     let query = ODataQuery::default();
-    let result = repo.list_users_page(&ctx, &query).await;
+    let result = repo.list_users_page(ctx.scope(), &query).await;
 
     // Assert: Should succeed with empty page
     assert!(result.is_ok());

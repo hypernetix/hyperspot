@@ -108,11 +108,11 @@
 //! - Applies filters at the database level (not in application memory)
 //! - Supports indexed columns via field mappings for optimal query performance
 
-use modkit_odata::{Error as ODataError, ODataQuery, Page, SortDir};
-use sea_orm::{ColumnTrait, ConnectionTrait, EntityTrait};
-
 use crate::odata::{paginate_with_odata, FieldMap, LimitCfg};
-use crate::secure::{ScopableEntity, SecureConn, SecurityCtx};
+use crate::secure::{ScopableEntity, SecureConn};
+use modkit_odata::{Error as ODataError, ODataQuery, Page, SortDir};
+use modkit_security::AccessScope;
+use sea_orm::{ColumnTrait, ConnectionTrait, EntityTrait};
 
 /// Minimal fluent builder for Secure + `OData` pagination.
 ///
@@ -148,7 +148,7 @@ where
     C: ConnectionTrait + Send + Sync,
 {
     db: &'a SecureConn,
-    ctx: &'a SecurityCtx,
+    scope: &'a AccessScope,
     conn: &'a C,
     fmap: &'a FieldMap<E>,
     tiebreaker: (&'a str, SortDir),
@@ -182,13 +182,13 @@ where
     /// ```
     pub fn new(
         db: &'a SecureConn,
-        ctx: &'a SecurityCtx,
+        scope: &'a AccessScope,
         conn: &'a C,
         fmap: &'a FieldMap<E>,
     ) -> Self {
         Self {
             db,
-            ctx,
+            scope,
             conn,
             fmap,
             // Sane defaults that work for most use cases
@@ -286,7 +286,7 @@ where
         F: Fn(E::Model) -> D + Copy,
     {
         // Apply security scope first - this enforces tenant isolation
-        let select = self.db.find::<E>(self.ctx).into_inner();
+        let select = self.db.find::<E>(self.scope).into_inner();
 
         // Now apply OData filters, cursor, order, and limits
         paginate_with_odata::<E, D, _, _>(
@@ -313,7 +313,7 @@ mod tests {
         // These should compile, demonstrating the API shape
         fn _compile_check<'a, E, C>(
             db: &'a SecureConn,
-            ctx: &'a SecurityCtx,
+            scope: &'a AccessScope,
             conn: &'a C,
             fmap: &'a FieldMap<E>,
         ) where
@@ -321,8 +321,8 @@ mod tests {
             E::Column: ColumnTrait + Copy,
             C: ConnectionTrait + Send + Sync,
         {
-            let _pager = OPager::<E, C>::new(db, ctx, conn, fmap);
-            let _pager = OPager::<E, C>::new(db, ctx, conn, fmap)
+            let _pager = OPager::<E, C>::new(db, scope, conn, fmap);
+            let _pager = OPager::<E, C>::new(db, scope, conn, fmap)
                 .tiebreaker("id", SortDir::Asc)
                 .limits(10, 100);
         }

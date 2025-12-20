@@ -20,6 +20,7 @@ pub mod metrics;
 pub mod plugin_traits;
 pub mod plugins;
 pub mod providers;
+pub mod standard_claims;
 pub mod validation;
 
 #[cfg(feature = "axum-ext")]
@@ -39,4 +40,5 @@ pub use config_error::ConfigError;
 pub use dispatcher::AuthDispatcher;
 pub use metrics::{AuthEvent, AuthMetricLabels, AuthMetrics, LoggingMetrics, NoOpMetrics};
 pub use plugin_traits::{ClaimsPlugin, IntrospectionProvider, KeyProvider};
+pub use standard_claims::StandardClaim;
 pub use validation::ValidationConfig;

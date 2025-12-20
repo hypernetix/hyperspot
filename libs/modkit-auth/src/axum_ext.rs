@@ -12,7 +12,7 @@ use axum::{
     http::{request::Parts, HeaderMap, Method},
     response::{IntoResponse, Response},
 };
-use modkit_security::SecurityCtx;
+use modkit_security::{SecurityContext, SecurityCtx};
 use std::{
     future::Future,
     pin::Pin,
@@ -154,6 +154,9 @@ where
                 AuthRequirement::None => {
                     // 3. For public routes (AuthRequirement::None): inserts anonymous SecurityCtx
                     request.extensions_mut().insert(SecurityCtx::anonymous());
+                    request
+                        .extensions_mut()
+                        .insert(SecurityContext::anonymous());
                     ready_inner.call(request).await
                 }
                 AuthRequirement::Required(sec_requirement) => {
@@ -176,13 +179,20 @@ where
                         }
                     }
 
-                    // Build SecurityCtx from validated claims
+                    // Build SecurityCtx from validated claims (legacy)
                     let scope = state.scope_builder.tenants_to_scope(&claims);
                     let sec =
                         SecurityCtx::new(scope, modkit_security::Subject::new(claims.subject));
 
+                    // Build SecurityContext from validated claims (new)
+                    let sec_context = SecurityContext::builder()
+                        .tenant_id(claims.tenant_id)
+                        .subject_id(claims.subject)
+                        .build();
+
                     request.extensions_mut().insert(claims);
                     request.extensions_mut().insert(sec);
+                    request.extensions_mut().insert(sec_context);
                     ready_inner.call(request).await
                 }
                 AuthRequirement::Optional => {
@@ -190,21 +200,36 @@ where
                     if let Some(token) = extract_bearer_token(request.headers()) {
                         match state.validator.validate_and_parse(token).await {
                             Ok(claims) => {
+                                // Build SecurityCtx from validated claims (legacy)
                                 let scope = state.scope_builder.tenants_to_scope(&claims);
                                 let sec = SecurityCtx::new(
                                     scope,
                                     modkit_security::Subject::new(claims.subject),
                                 );
+
+                                // Build SecurityContext from validated claims (new)
+                                let sec_context = SecurityContext::builder()
+                                    .tenant_id(claims.tenant_id)
+                                    .subject_id(claims.subject)
+                                    .build();
+
                                 request.extensions_mut().insert(claims);
                                 request.extensions_mut().insert(sec);
+                                request.extensions_mut().insert(sec_context);
                             }
                             Err(err) => {
                                 tracing::debug!("Optional auth: invalid token: {err}");
                                 request.extensions_mut().insert(SecurityCtx::anonymous());
+                                request
+                                    .extensions_mut()
+                                    .insert(SecurityContext::anonymous());
                             }
                         }
                     } else {
                         request.extensions_mut().insert(SecurityCtx::anonymous());
+                        request
+                            .extensions_mut()
+                            .insert(SecurityContext::anonymous());
                     }
                     ready_inner.call(request).await
                 }

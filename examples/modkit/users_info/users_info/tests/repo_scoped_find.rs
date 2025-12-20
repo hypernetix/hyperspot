@@ -29,12 +29,12 @@ async fn find_by_id_respects_tenant_scope() {
     let ctx_deny = ctx_allow_tenants(&[tenant2]); // Different tenant
 
     // Act & Assert: With access to correct tenant should find user
-    let result_ok = repo.find_by_id(&ctx_ok, user.id).await.unwrap();
+    let result_ok = repo.find_by_id(ctx_ok.scope(), user.id).await.unwrap();
     assert!(result_ok.is_some());
     assert_eq!(result_ok.unwrap().email, "test@example.com");
 
     // Act & Assert: Without access to tenant should return None
-    let result_deny = repo.find_by_id(&ctx_deny, user.id).await.unwrap();
+    let result_deny = repo.find_by_id(ctx_deny.scope(), user.id).await.unwrap();
     assert!(
         result_deny.is_none(),
         "Should not find user outside tenant scope"
@@ -57,7 +57,7 @@ async fn find_by_id_with_deny_all_returns_none() {
     let ctx = ctx_deny_all();
 
     // Act: Try to find user
-    let result = repo.find_by_id(&ctx, user.id).await.unwrap();
+    let result = repo.find_by_id(ctx.scope(), user.id).await.unwrap();
 
     // Assert: Should return None (empty scope = no access)
     assert!(
@@ -85,14 +85,14 @@ async fn email_exists_respects_tenant_scope() {
 
     // Act & Assert: With access to correct tenant should find email
     let exists_ok = repo
-        .email_exists(&ctx_ok, "test@example.com")
+        .email_exists(ctx_ok.scope(), "test@example.com")
         .await
         .unwrap();
     assert!(exists_ok, "Email should exist in accessible tenant scope");
 
     // Act & Assert: Without access to tenant should not find email
     let exists_deny = repo
-        .email_exists(&ctx_deny, "test@example.com")
+        .email_exists(ctx_deny.scope(), "test@example.com")
         .await
         .unwrap();
     assert!(

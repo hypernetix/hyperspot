@@ -2,6 +2,7 @@ use crate::{
     claims::{Claims, Permission},
     claims_error::ClaimsError,
     plugin_traits::ClaimsPlugin,
+    standard_claims::StandardClaim,
     validation::{extract_audiences, extract_string, parse_timestamp, parse_uuid_from_value},
 };
 use serde_json::Value;
@@ -83,40 +84,43 @@ impl ClaimsPlugin for GenericOidcPlugin {
     fn normalize(&self, raw: &Value) -> Result<Claims, ClaimsError> {
         // 1. Extract subject (required, must be UUID)
         let subject = raw
-            .get("sub")
-            .ok_or_else(|| ClaimsError::MissingClaim("sub".to_owned()))
-            .and_then(|v| parse_uuid_from_value(v, "sub"))?;
+            .get(StandardClaim::SUB)
+            .ok_or_else(|| ClaimsError::MissingClaim(StandardClaim::SUB.to_owned()))
+            .and_then(|v| parse_uuid_from_value(v, StandardClaim::SUB))?;
 
         // 2. Extract issuer (required)
         let issuer = raw
-            .get("iss")
-            .ok_or_else(|| ClaimsError::MissingClaim("iss".to_owned()))
-            .and_then(|v| extract_string(v, "iss"))?;
+            .get(StandardClaim::ISS)
+            .ok_or_else(|| ClaimsError::MissingClaim(StandardClaim::ISS.to_owned()))
+            .and_then(|v| extract_string(v, StandardClaim::ISS))?;
 
         // 3. Extract audiences (handle string or array)
-        let audiences = raw.get("aud").map(extract_audiences).unwrap_or_default();
+        let audiences = raw
+            .get(StandardClaim::AUD)
+            .map(extract_audiences)
+            .unwrap_or_default();
 
         // 4. Extract expiration time
         let expires_at = raw
-            .get("exp")
-            .map(|v| parse_timestamp(v, "exp"))
+            .get(StandardClaim::EXP)
+            .map(|v| parse_timestamp(v, StandardClaim::EXP))
             .transpose()?;
 
         // 5. Extract not-before time
         let not_before = raw
-            .get("nbf")
-            .map(|v| parse_timestamp(v, "nbf"))
+            .get(StandardClaim::NBF)
+            .map(|v| parse_timestamp(v, StandardClaim::NBF))
             .transpose()?;
 
         // 6. Extract issued-at time
         let issued_at = raw
-            .get("iat")
-            .map(|v| parse_timestamp(v, "iat"))
+            .get(StandardClaim::IAT)
+            .map(|v| parse_timestamp(v, StandardClaim::IAT))
             .transpose()?;
 
         // 7. Extract JWT ID
         let jwt_id = raw
-            .get("jti")
+            .get(StandardClaim::JTI)
             .and_then(|v| v.as_str())
             .map(ToString::to_string);
 
@@ -131,21 +135,14 @@ impl ClaimsPlugin for GenericOidcPlugin {
 
         // 10. Collect extra claims (excluding standard ones)
         let mut extras = serde_json::Map::new();
-        let standard_fields = [
-            "sub",
-            "iss",
-            "aud",
-            "exp",
-            "nbf",
-            "iat",
-            "jti",
-            &self.tenant_claim,
-            &self.roles_claim,
-        ];
 
         if let Value::Object(obj) = raw {
             for (key, value) in obj {
-                if !standard_fields.contains(&key.as_str()) {
+                let is_standard = StandardClaim::is_registered(key);
+                let is_tenant = key == &self.tenant_claim;
+                let is_roles = key == &self.roles_claim;
+
+                if !is_standard && !is_tenant && !is_roles {
                     extras.insert(key.clone(), value.clone());
                 }
             }

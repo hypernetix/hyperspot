@@ -32,7 +32,7 @@ async fn root_scope_can_access_all_tenants() {
 
     // Act: List users with root context
     let query = ODataQuery::default();
-    let result = repo.list_users_page(&ctx, &query).await;
+    let result = repo.list_users_page(ctx.scope(), &query).await;
 
     // Assert: Should return users from all tenants
     assert!(result.is_ok(), "Root scope query should succeed");
@@ -59,12 +59,12 @@ async fn root_scope_can_find_users_in_any_tenant() {
     let ctx_root = ctx_root();
 
     // Act & Assert: Root context can find users in tenant1
-    let result1 = repo.find_by_id(&ctx_root, user1.id).await.unwrap();
+    let result1 = repo.find_by_id(ctx_root.scope(), user1.id).await.unwrap();
     assert!(result1.is_some(), "Root scope should find user in tenant1");
     assert_eq!(result1.unwrap().email, "user1@example.com");
 
     // Act & Assert: Root context can find users in tenant2
-    let result2 = repo.find_by_id(&ctx_root, user2.id).await.unwrap();
+    let result2 = repo.find_by_id(ctx_root.scope(), user2.id).await.unwrap();
     assert!(result2.is_some(), "Root scope should find user in tenant2");
     assert_eq!(result2.unwrap().email, "user2@example.com");
 }
@@ -90,10 +90,16 @@ async fn root_scope_vs_tenant_scope() {
 
     // Act: List with root context
     let query = ODataQuery::default();
-    let root_result = repo.list_users_page(&ctx_root, &query).await.unwrap();
+    let root_result = repo
+        .list_users_page(ctx_root.scope(), &query)
+        .await
+        .unwrap();
 
     // Act: List with tenant-scoped context
-    let tenant_result = repo.list_users_page(&ctx_tenant1, &query).await.unwrap();
+    let tenant_result = repo
+        .list_users_page(ctx_tenant1.scope(), &query)
+        .await
+        .unwrap();
 
     // Assert: Root context sees all users
     assert_eq!(
@@ -135,7 +141,7 @@ async fn root_scope_is_not_empty_scope() {
 
     // Act: List with root context
     let query = ODataQuery::default();
-    let result = repo.list_users_page(&ctx_root, &query).await;
+    let result = repo.list_users_page(ctx_root.scope(), &query).await;
 
     // Assert: Should succeed and return data
     assert!(result.is_ok(), "Root scope query should succeed");

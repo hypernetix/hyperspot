@@ -7,6 +7,7 @@ use modkit_auth::{
     types::{AuthRequirement, SecRequirement},
     AuthConfig as ModkitAuthConfig, AuthModeConfig, JwksConfig, PluginConfig,
 };
+use modkit_security::{DummyPolicyEngine, PolicyEngineRef};
 use std::{collections::HashMap, sync::Arc};
 
 #[derive(Clone)]
@@ -94,6 +95,7 @@ fn convert_axum_path_to_matchit(path: &str) -> String {
 #[derive(Clone)]
 pub struct AuthState {
     pub validator: Arc<dyn TokenValidator>,
+    pub policy_engine: PolicyEngineRef,
     pub scope_builder: Arc<dyn ScopeBuilder>,
     pub authorizer: Arc<dyn PrimaryAuthorizer>,
 }
@@ -257,6 +259,7 @@ pub fn build_auth_state(
 
     let auth_state = AuthState {
         validator,
+        policy_engine: Arc::new(DummyPolicyEngine),
         scope_builder,
         authorizer,
     };

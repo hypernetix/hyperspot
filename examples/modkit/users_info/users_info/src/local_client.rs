@@ -5,7 +5,7 @@
 
 use async_trait::async_trait;
 use modkit_odata::{ODataQuery, Page};
-use modkit_security::SecurityCtx;
+use modkit_security::SecurityContext;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -32,13 +32,13 @@ impl UsersInfoLocalClient {
 
 #[async_trait]
 impl UsersInfoApi for UsersInfoLocalClient {
-    async fn get_user(&self, ctx: &SecurityCtx, id: Uuid) -> Result<User, UsersInfoError> {
+    async fn get_user(&self, ctx: &SecurityContext, id: Uuid) -> Result<User, UsersInfoError> {
         self.service.get_user(ctx, id).await.map_err(Into::into)
     }
 
     async fn list_users(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         query: ODataQuery,
     ) -> Result<Page<User>, UsersInfoError> {
         self.service
@@ -54,7 +54,7 @@ impl UsersInfoApi for UsersInfoLocalClient {
 
     async fn create_user(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         new_user: NewUser,
     ) -> Result<User, UsersInfoError> {
         self.service
@@ -65,7 +65,7 @@ impl UsersInfoApi for UsersInfoLocalClient {
 
     async fn update_user(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         req: UpdateUserRequest,
     ) -> Result<User, UsersInfoError> {
         self.service
@@ -74,7 +74,7 @@ impl UsersInfoApi for UsersInfoLocalClient {
             .map_err(Into::into)
     }
 
-    async fn delete_user(&self, ctx: &SecurityCtx, id: Uuid) -> Result<(), UsersInfoError> {
+    async fn delete_user(&self, ctx: &SecurityContext, id: Uuid) -> Result<(), UsersInfoError> {
         self.service.delete_user(ctx, id).await.map_err(Into::into)
     }
 }

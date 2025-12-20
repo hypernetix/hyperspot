@@ -22,8 +22,9 @@ use crate::domain::repo::UsersRepository;
 use crate::infra::storage::entity::{ActiveModel as UserAM, Column, Entity as UserEntity};
 use crate::infra::storage::odata_mapper::UserODataMapper;
 use modkit_db::odata::{paginate_odata, LimitCfg};
-use modkit_db::secure::{SecureConn, SecurityCtx};
+use modkit_db::secure::SecureConn;
 use modkit_odata::{ODataQuery, Page, SortDir};
+use modkit_security::AccessScope;
 use user_info_sdk::User;
 
 /// `SeaORM` repository implementation with automatic security scoping.
@@ -53,19 +54,19 @@ impl SeaOrmUsersRepository {
 #[async_trait::async_trait]
 impl UsersRepository for SeaOrmUsersRepository {
     #[instrument(
-        skip(self, ctx),
+        skip(self, scope),
         fields(
             db.system = %self.sec.db_engine(),
             db.operation = "SELECT",
             user.id = %id
         )
     )]
-    async fn find_by_id(&self, ctx: &SecurityCtx, id: Uuid) -> anyhow::Result<Option<User>> {
+    async fn find_by_id(&self, scope: &AccessScope, id: Uuid) -> anyhow::Result<Option<User>> {
         debug!("Finding user by id with security context");
 
         let found = self
             .sec
-            .find_by_id::<UserEntity>(ctx, id)
+            .find_by_id::<UserEntity>(scope, id)
             .context("Failed to create secure query")?
             .one(self.sec.conn())
             .await
@@ -75,19 +76,19 @@ impl UsersRepository for SeaOrmUsersRepository {
     }
 
     #[instrument(
-        skip(self, ctx),
+        skip(self, scope),
         fields(
             db.system = %self.sec.db_engine(),
             db.operation = "SELECT COUNT",
             user.email = %email
         )
     )]
-    async fn email_exists(&self, ctx: &SecurityCtx, email: &str) -> anyhow::Result<bool> {
+    async fn email_exists(&self, scope: &AccessScope, email: &str) -> anyhow::Result<bool> {
         debug!("Checking if email exists within security scope");
 
         let secure_query = self
             .sec
-            .find::<UserEntity>(ctx)
+            .find::<UserEntity>(scope)
             .filter(sea_orm::Condition::all().add(Expr::col(Column::Email).eq(email)));
 
         let count = secure_query
@@ -100,7 +101,7 @@ impl UsersRepository for SeaOrmUsersRepository {
     }
 
     #[instrument(
-        skip(self, ctx, u),
+        skip(self, scope, u),
         fields(
             db.system = %self.sec.db_engine(),
             db.operation = "INSERT",
@@ -108,7 +109,7 @@ impl UsersRepository for SeaOrmUsersRepository {
             user.email = %u.email
         )
     )]
-    async fn insert(&self, ctx: &SecurityCtx, u: User) -> anyhow::Result<()> {
+    async fn insert(&self, scope: &AccessScope, u: User) -> anyhow::Result<()> {
         debug!("Inserting new user with security validation");
 
         let m = UserAM {
@@ -122,7 +123,7 @@ impl UsersRepository for SeaOrmUsersRepository {
 
         let _ = self
             .sec
-            .insert::<UserEntity>(ctx, m)
+            .insert::<UserEntity>(scope, m)
             .await
             .context("Secure insert failed")?;
 
@@ -130,7 +131,7 @@ impl UsersRepository for SeaOrmUsersRepository {
     }
 
     #[instrument(
-        skip(self, ctx, u),
+        skip(self, scope, u),
         fields(
             db.system = %self.sec.db_engine(),
             db.operation = "UPDATE",
@@ -138,7 +139,7 @@ impl UsersRepository for SeaOrmUsersRepository {
             user.email = %u.email
         )
     )]
-    async fn update(&self, ctx: &SecurityCtx, u: User) -> anyhow::Result<()> {
+    async fn update(&self, scope: &AccessScope, u: User) -> anyhow::Result<()> {
         debug!("Updating user with security validation");
 
         let m = UserAM {
@@ -152,7 +153,7 @@ impl UsersRepository for SeaOrmUsersRepository {
 
         let _ = self
             .sec
-            .update_with_ctx::<UserEntity>(ctx, u.id, m)
+            .update_with_ctx::<UserEntity>(scope, u.id, m)
             .await
             .context("Secure update failed")?;
 
@@ -160,19 +161,19 @@ impl UsersRepository for SeaOrmUsersRepository {
     }
 
     #[instrument(
-        skip(self, ctx),
+        skip(self, scope),
         fields(
             db.system = %self.sec.db_engine(),
             db.operation = "DELETE",
             user.id = %id
         )
     )]
-    async fn delete(&self, ctx: &SecurityCtx, id: Uuid) -> anyhow::Result<bool> {
+    async fn delete(&self, scope: &AccessScope, id: Uuid) -> anyhow::Result<bool> {
         debug!("Deleting user with security validation");
 
         let deleted = self
             .sec
-            .delete_by_id::<UserEntity>(ctx, id)
+            .delete_by_id::<UserEntity>(scope, id)
             .await
             .context("Secure delete failed")?;
 
@@ -180,7 +181,7 @@ impl UsersRepository for SeaOrmUsersRepository {
     }
 
     #[instrument(
-        skip(self, ctx, query),
+        skip(self, scope, query),
         fields(
             db.system = %self.sec.db_engine(),
             db.operation = "SELECT"
@@ -188,13 +189,13 @@ impl UsersRepository for SeaOrmUsersRepository {
     )]
     async fn list_users_page(
         &self,
-        ctx: &SecurityCtx,
+        scope: &AccessScope,
         query: &ODataQuery,
     ) -> Result<Page<User>, modkit_odata::Error> {
         debug!("Listing users with fully type-safe OData");
 
         // Apply security scope first
-        let secure_query = self.sec.find::<UserEntity>(ctx);
+        let secure_query = self.sec.find::<UserEntity>(scope);
 
         let base_query = secure_query.into_inner();
 
