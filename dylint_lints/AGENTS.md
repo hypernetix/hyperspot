@@ -87,63 +87,6 @@ name = "test_case_name"
 path = "ui/test_case_name.rs"
 ```
 
-### 3. Module Detection Pattern
-```rust
-impl EarlyLintPass for LintName {
-    fn check_item(&mut self, cx: &EarlyContext<'_>, item: &Item) {
-        // Detect inline modules: mod contract { ... }
-        if let ItemKind::Mod(_, ident, mod_kind) = &item.kind {
-            if ident.name.as_str() == "contract" {
-                if let rustc_ast::ModKind::Loaded(items, ..) = mod_kind {
-                    for inner_item in items {
-                        check_item_in_contract(cx, inner_item);
-                    }
-                }
-                return;
-            }
-        }
-        
-        // Check structs/enums
-        if !matches!(item.kind, ItemKind::Struct(..) | ItemKind::Enum(..)) {
-            return;
-        }
-
-        // File-based module detection
-        if !is_in_contract_module_ast(cx, item) {
-            return;
-        }
-        
-        check_derives(cx, item);
-    }
-}
-```
-
-### 4. Derive Attribute Checking
-```rust
-fn check_derives(cx: &EarlyContext<'_>, item: &Item) {
-    for attr in &item.attrs {
-        if !attr.has_name(rustc_span::symbol::sym::derive) {
-            continue;
-        }
-
-        if let Some(meta_items) = attr.meta_item_list() {
-            for meta_item in meta_items {
-                if let Some(ident) = meta_item.ident() {
-                    let derive_name = ident.name.as_str();
-                    
-                    if derive_name == "TargetTrait" {
-                        cx.span_lint(LINT_NAME, attr.span, |diag| {
-                            diag.primary_message("error message");
-                            diag.help("helpful suggestion");
-                        });
-                    }
-                }
-            }
-        }
-    }
-}
-```
-
 ## Testing Options
 
 ### ui_examples vs ui_test vs ui_test_example

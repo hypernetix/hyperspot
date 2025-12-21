@@ -467,6 +467,11 @@ jobs:
           shared-key: dylint-tests
           workspaces: dylint_lints
 
+      - name: Install dylint-link
+        uses: taiki-e/install-action@v2
+        with:
+          tool: dylint-link
+
       - name: Run dylint tests
         working-directory: dylint_lints
         run: cargo test
@@ -509,5 +514,5 @@ jobs:
         with:
           tool: cargo-dylint,dylint-link
 
-      - name: Run dylint on all lints
+      - name: Run dylint on all crates
         run: cargo dylint --all --workspace
