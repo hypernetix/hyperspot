@@ -8,6 +8,7 @@ members = [
     "de02_api_layer/de0202_dtos_not_referenced_outside_api",
     "de02_api_layer/de0203_dtos_must_have_serde_derives",
     "de02_api_layer/de0204_dtos_must_have_toschema_derive",
+    "de08_rest_api_conventions/de0801_api_endpoint_version",
 ]
 exclude = ["contract_lints"]
 resolver = "2"

@@ -325,6 +325,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "de0801_api_endpoint_version"
+version = "0.1.0"
+dependencies = [
+ "clippy_utils",
+ "dylint_linting",
+ "dylint_testing",
+]
+
+[[package]]
 name = "diff"
 version = "0.1.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
