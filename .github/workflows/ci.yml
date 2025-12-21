@@ -440,3 +440,74 @@ jobs:
       - name: sccache stats
         if: env.SCCACHE_OK == '1'
         run: sccache --show-stats
+
+  dylint_tests:
+    name: Dylint Lints Tests
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TERM_COLOR: always
+      RUST_BACKTRACE: 1
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          clean: 'true'
+          submodules: recursive
+
+      - name: Install Rust nightly toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2025-09-18
+          components: llvm-tools-preview, rustc-dev
+
+      - name: Cache Cargo/target
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: dylint-tests
+          workspaces: dylint_lints
+
+      - name: Run dylint tests
+        working-directory: dylint_lints
+        run: cargo test
+
+  dylint_check:
+    name: Run Dylint Lints
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TERM_COLOR: always
+      RUST_BACKTRACE: 1
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          clean: 'true'
+          submodules: recursive
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Rust stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Rust nightly toolchain for dylint
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2025-09-18
+          components: llvm-tools-preview, rustc-dev
+
+      - name: Cache Cargo/target
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: dylint-check
+
+      - name: Install cargo-dylint and dylint-link
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-dylint,dylint-link
+
+      - name: Run dylint on all lints
+        run: cargo dylint --all --workspace
