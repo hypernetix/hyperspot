@@ -1,17 +1,17 @@
 error: contract type should not derive `Deserialize` (DE0101)
-  --> $DIR/deserialize.rs:4:5
+  --> $DIR/deserialize.rs:4:1
    |
-LL |     #[derive(Debug, Clone, Deserialize)]
-   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+LL | #[derive(Debug, Clone, Deserialize)]
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    |
    = help: remove serde derives from contract models; use DTOs in the API layer
    = note: `#[deny(de0101_no_serde_in_contract)]` on by default
 
 error: contract type should not derive `Deserialize` (DE0101)
-  --> $DIR/deserialize.rs:11:5
+  --> $DIR/deserialize.rs:11:1
    |
-LL |     #[derive(Debug, Clone, Deserialize)]
-   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+LL | #[derive(Debug, Clone, Deserialize)]
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    |
    = help: remove serde derives from contract models; use DTOs in the API layer
 

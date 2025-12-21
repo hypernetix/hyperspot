@@ -1,0 +1,29 @@
+[package]
+name = "de0204_dtos_must_have_toschema_derive"
+version = "0.1.0"
+authors = ["authors go here"]
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[[example]]
+name = "missing_toschema"
+path = "ui/missing_toschema.rs"
+
+[[example]]
+name = "has_toschema"
+path = "ui/has_toschema.rs"
+
+[dependencies]
+clippy_utils = { git = "https://github.com/rust-lang/rust-clippy", rev = "20ce69b9a63bcd2756cd906fe0964d1e901e042a" }
+dylint_linting = "5.0.0"
+lint_utils = { path = "../../lint_utils" }
+
+[dev-dependencies]
+dylint_testing = "5.0.0"
+serde = { version = "1.0", features = ["derive"] }
+utoipa = "5.2.0"
+
+[package.metadata.rust-analyzer]
+rustc_private = true

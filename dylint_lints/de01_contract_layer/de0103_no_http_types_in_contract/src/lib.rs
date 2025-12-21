@@ -6,7 +6,7 @@ extern crate rustc_ast;
 use rustc_ast::{Item, ItemKind, UseTree, UseTreeKind};
 use rustc_lint::{EarlyLintPass, LintContext};
 
-use lint_utils::{for_each_item_in_contract_module, is_in_contract_module_ast};
+use lint_utils::is_in_contract_module_ast;
 
 dylint_linting::declare_early_lint! {
     /// ### What it does
@@ -74,7 +74,7 @@ const HTTP_TYPE_PATTERNS: &[&str] = &[
 
 fn use_tree_to_string(tree: &UseTree) -> String {
     match &tree.kind {
-        UseTreeKind::Simple(_, ..) | UseTreeKind::Glob => {
+        UseTreeKind::Simple(..) | UseTreeKind::Glob => {
             tree.prefix.segments.iter()
                 .map(|seg| seg.ident.name.as_str())
                 .collect::<Vec<_>>()
@@ -118,16 +118,10 @@ fn check_use_in_contract(cx: &rustc_lint::EarlyContext<'_>, item: &Item) {
 
 impl EarlyLintPass for De0103NoHttpTypesInContract {
     fn check_item(&mut self, cx: &rustc_lint::EarlyContext<'_>, item: &Item) {
-        // Check if this is an inline "mod contract { ... }" and process items within
-        if for_each_item_in_contract_module(cx, item, check_use_in_contract) {
-            return;
-        }
-
         // Check use statements in file-based contract modules
-        if matches!(item.kind, ItemKind::Use(_)) {
-            if is_in_contract_module_ast(cx, item) {
-                check_use_in_contract(cx, item);
-            }
+        if matches!(item.kind, ItemKind::Use(_))
+            && is_in_contract_module_ast(cx, item) {
+            check_use_in_contract(cx, item);
         }
     }
 }

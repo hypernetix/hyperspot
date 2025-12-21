@@ -1,0 +1,29 @@
+[package]
+name = "de0201_dtos_only_in_api_rest"
+version = "0.1.0"
+edition = "2021"
+authors = ["authors go here"]
+description = "description goes here"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+clippy_utils = { git = "https://github.com/rust-lang/rust-clippy", rev = "20ce69b9a63bcd2756cd906fe0964d1e901e042a" }
+dylint_linting = "5.0.0"
+lint_utils = { path = "../../lint_utils" }
+
+[dev-dependencies]
+dylint_testing = "5.0.0"
+
+[[example]]
+name = "dto_in_domain"
+path = "ui/dto_in_domain.rs"
+
+[[example]]
+name = "dto_in_api_rest"
+path = "ui/dto_in_api_rest.rs"
+
+[package.metadata.rust-analyzer]
+rustc_private = true

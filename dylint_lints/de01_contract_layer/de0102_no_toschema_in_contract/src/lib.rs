@@ -7,7 +7,7 @@ extern crate rustc_span;
 use rustc_ast::{Item, ItemKind};
 use rustc_lint::{EarlyContext, EarlyLintPass, LintContext};
 
-use lint_utils::{for_each_item_in_contract_module, is_in_contract_module_ast};
+use lint_utils::is_in_contract_module_ast;
 
 dylint_linting::declare_pre_expansion_lint! {
     /// ### What it does
@@ -53,34 +53,19 @@ dylint_linting::declare_pre_expansion_lint! {
 
 impl EarlyLintPass for De0102NoToschemaInContract {
     fn check_item(&mut self, cx: &EarlyContext<'_>, item: &Item) {
-        // Check if this is an inline "mod contract { ... }" and process items within
-        if for_each_item_in_contract_module(cx, item, check_item_in_contract) {
-            return;
-        }
-        
         // Only check structs and enums
         if !matches!(item.kind, ItemKind::Struct(..) | ItemKind::Enum(..)) {
             return;
         }
 
-        // Check if we're in a contract module by file path (for file-based modules)
+        // Check if we're in a contract module (supports simulated_dir for tests)
         if !is_in_contract_module_ast(cx, item) {
             return;
         }
         
-        // Item is in a file-based contract module, check for ToSchema derives
+        // Check for ToSchema derives
         check_toschema_derives(cx, item);
     }
-}
-
-// Helper to check items within a contract module
-fn check_item_in_contract(cx: &EarlyContext<'_>, item: &Item) {
-    // Only check structs and enums
-    if !matches!(item.kind, ItemKind::Struct(..) | ItemKind::Enum(..)) {
-        return;
-    }
-    
-    check_toschema_derives(cx, item);
 }
 
 // Helper to check for ToSchema derives on an item
@@ -94,25 +79,24 @@ fn check_toschema_derives(cx: &EarlyContext<'_>, item: &Item) {
         }
 
         // Parse the derive attribute meta list
-        if let AttrKind::Normal(attr_item) = &attr.kind {
-            if let Some(meta_items) = attr_item.item.meta_item_list() {
-                for nested_meta in meta_items {
-                    if let Some(meta_item) = nested_meta.meta_item() {
-                        let path = &meta_item.path;
-                        let segments: Vec<_> = path.segments.iter()
-                            .map(|s| s.ident.name.as_str())
-                            .collect();
-                        
-                        // Check if this is a utoipa ToSchema
-                        // Handles: ToSchema, utoipa::ToSchema, ::utoipa::ToSchema
-                        if is_utoipa_trait(&segments, "ToSchema") {
-                            cx.span_lint(DE0102_NO_TOSCHEMA_IN_CONTRACT, attr.span, |diag| {
-                                diag.primary_message(
-                                    "contract type should not derive `ToSchema` (DE0102)"
-                                );
-                                diag.help("ToSchema is an OpenAPI concern; use DTOs in api/rest/ instead");
-                            });
-                        }
+        if let AttrKind::Normal(attr_item) = &attr.kind
+            && let Some(meta_items) = attr_item.item.meta_item_list() {
+            for nested_meta in meta_items {
+                if let Some(meta_item) = nested_meta.meta_item() {
+                    let path = &meta_item.path;
+                    let segments: Vec<_> = path.segments.iter()
+                        .map(|s| s.ident.name.as_str())
+                        .collect();
+                    
+                    // Check if this is a utoipa ToSchema
+                    // Handles: ToSchema, utoipa::ToSchema, ::utoipa::ToSchema
+                    if is_utoipa_trait(&segments, "ToSchema") {
+                        cx.span_lint(DE0102_NO_TOSCHEMA_IN_CONTRACT, attr.span, |diag| {
+                            diag.primary_message(
+                                "contract type should not derive `ToSchema` (DE0102)"
+                            );
+                            diag.help("ToSchema is an OpenAPI concern; use DTOs in api/rest/ instead");
+                        });
                     }
                 }
             }
@@ -136,7 +120,7 @@ fn is_utoipa_trait(segments: &[&str], trait_name: &str) -> bool {
     // Accept: utoipa::ToSchema, ::utoipa::ToSchema
     // Reject: other_crate::ToSchema
     if segments.len() >= 2 {
-        segments.iter().any(|&s| s == "utoipa")
+        segments.contains(&"utoipa")
     } else {
         // Bare identifier: ToSchema
         // We accept this as it's commonly used with `use utoipa::ToSchema`

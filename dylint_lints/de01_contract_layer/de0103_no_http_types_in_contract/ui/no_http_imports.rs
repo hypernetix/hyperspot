@@ -1,17 +1,16 @@
-mod contract {
-    #[derive(Debug, Clone)]
-    #[allow(dead_code)]
-    pub enum OrderStatus {
-        Pending,
-        Confirmed,
-        Shipped,
-    }
+// simulated_dir=/hyperspot/modules/some_module/contract/
+#[derive(Debug, Clone)]
+#[allow(dead_code)]
+pub enum OrderStatus {
+    Pending,
+    Confirmed,
+    Shipped,
+}
 
-    #[derive(Debug, Clone)]
-    #[allow(dead_code)]
-    pub struct OrderResult {
-        pub status: OrderStatus,
-    }
+#[derive(Debug, Clone)]
+#[allow(dead_code)]
+pub struct OrderResult {
+    pub status: OrderStatus,
 }
 
 fn main() {}

@@ -5,7 +5,7 @@
 1. **Initialize**: `cargo dylint new <lint_name>` in `dylint_lints/`
 2. **Configure**: Update `Cargo.toml` with dependencies and example targets
 3. **Implement**: Write lint logic in `src/lib.rs`
-4. **Test**: Create UI test files in `ui/` with corresponding `.stderr` files
+4. **Test**: Create UI test files in `ui/` with corresponding `.stderr` files. If the `main.rs` and `main.stderr` are empty, remove them.
 5. **Register**: Add to workspace in `dylint_lints/Cargo.toml`
 
 ## Lint Pass Selection
@@ -259,3 +259,5 @@ error: aborting due to 1 previous error
 3. **Line numbers**: `.stderr` files must match exact line numbers including `#[allow(dead_code)]`
 4. **Empty tests**: Include test case with no violations (empty `.stderr`)
 5. **Workspace**: Don't forget to add new crate to workspace members
+6. **Test verification**: Always verify correct package tests are running with `-p` flag
+7. **simulated_dir**: Only works with EarlyLintPass, not LateLintPass

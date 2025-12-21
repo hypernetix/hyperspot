@@ -1,0 +1,11 @@
+error: DTO type `UserDto` is defined outside of api/rest folder (DE0201)
+  --> $DIR/dto_in_domain.rs:4:1
+   |
+LL | pub struct UserDto {
+   | ^^^^^^^^^^^^^^^^^^
+   |
+   = help: move DTO types to src/api/rest/dto.rs
+   = note: `#[deny(de0201_dtos_only_in_api_rest)]` on by default
+
+error: aborting due to 1 previous error
+

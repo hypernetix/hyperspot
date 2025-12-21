@@ -1,0 +1,11 @@
+error: contract module imports DTO type `UserDto` from api layer (DE0202)
+  --> $DIR/import_dto_in_contract.rs:12:5
+   |
+LL |     use crate::api::rest::dto::UserDto;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: DTOs are API layer details; use contract models or domain types instead
+   = note: `#[deny(de0202_dtos_not_referenced_outside_api)]` on by default
+
+error: aborting due to 1 previous error
+

@@ -10,16 +10,73 @@ use rustc_hir::Item;
 use rustc_lint::{EarlyContext, LateContext, LintContext};
 use rustc_span::Span;
 
+/// Extract simulated directory path from a comment at the start of a file.
+/// Looks for a comment like: `// simulated_dir=/hyperspot/modules/some_module/contract/`
+/// Returns None if no such comment is found.
+/// 
+/// Only checks files in temporary directories to avoid unnecessary file I/O in production.
+fn extract_simulated_dir(source_map: &rustc_span::source_map::SourceMap, span: Span) -> Option<String> {
+    let file_name = source_map.span_to_filename(span);
+    
+    use rustc_span::FileName;
+    let local_path = match file_name {
+        FileName::Real(ref real_name) => real_name.local_path()?,
+        _ => return None,
+    };
+    
+    // Only check for simulated_dir in temporary paths (tests run in temp directories)
+    let path_str = local_path.to_string_lossy();
+    let is_temp = path_str.contains("/tmp/") 
+        || path_str.contains("/var/folders/")  // macOS temp
+        || path_str.contains("\\Temp\\")        // Windows temp
+        || path_str.contains(".tmp");           // dylint test temp dirs
+    
+    if !is_temp {
+        return None;
+    }
+    
+    // Read the first few lines of the file to check for simulated_dir comment
+    let contents = std::fs::read_to_string(local_path).ok()?;
+    
+    for line in contents.lines().take(10) {
+        let trimmed = line.trim();
+        if trimmed.starts_with("// simulated_dir=") {
+            return Some(trimmed.trim_start_matches("// simulated_dir=").to_string());
+        }
+        // Stop at first non-comment, non-empty line
+        if !trimmed.is_empty() && !trimmed.starts_with("//") && !trimmed.starts_with("#!") {
+            break;
+        }
+    }
+    
+    None
+}
+
 pub fn is_in_contract_module(cx: &LateContext<'_>, def_id: LocalDefId) -> bool {
-    is_in_path_containing(cx, def_id, "contract/")
+    is_in_module_named(cx, def_id, "contract") || is_in_path_containing(cx, def_id, "contract/")
 }
 
 pub fn is_in_domain_module(cx: &LateContext<'_>, def_id: LocalDefId) -> bool {
-    is_in_path_containing(cx, def_id, "domain/")
+    is_in_module_named(cx, def_id, "domain") || is_in_path_containing(cx, def_id, "domain/")
 }
 
 pub fn is_in_infra_module(cx: &LateContext<'_>, def_id: LocalDefId) -> bool {
-    is_in_path_containing(cx, def_id, "infra/")
+    is_in_module_named(cx, def_id, "infra") || is_in_path_containing(cx, def_id, "infra/")
+}
+
+/// Check if a def_id is within a module with the given name in the HIR hierarchy
+/// This handles inline modules like `mod contract { ... }`
+fn is_in_module_named(cx: &LateContext<'_>, def_id: LocalDefId, module_name: &str) -> bool {
+    let def_path = cx.tcx.def_path(def_id.to_def_id());
+    
+    for component in def_path.data.iter() {
+        if let rustc_hir::definitions::DefPathData::TypeNs(symbol) = component.data
+            && symbol.as_str() == module_name {
+            return true;
+        }
+    }
+    
+    false
 }
 
 pub fn is_in_api_rest_folder(cx: &LateContext<'_>, def_id: LocalDefId) -> bool {
@@ -32,16 +89,46 @@ pub fn is_in_api_rest_folder_early(cx: &EarlyContext<'_>, span: Span) -> bool {
 
 pub fn is_in_contract_module_ast(cx: &EarlyContext<'_>, item: &rustc_ast::Item) -> bool {
     let source_map = cx.sess().source_map();
+    
+    // Check for simulated directory in test files first
+    if let Some(simulated) = extract_simulated_dir(source_map, item.span) {
+        return simulated.contains("/contract/") || simulated.contains("\\contract\\");
+    }
+    
+    // Fall back to actual file path
     let filename = source_map.span_to_filename(item.span);
     let path_str = format!("{:?}", filename);
     
-    // Check if the full path contains /contract/ or \contract\
-    // This covers both:
-    // 1. Files in a contract/ directory: /path/to/contract/file.rs
-    // 2. Files in ui/contract/ for tests: /path/to/ui/contract/file.rs
-    // Note: Due to how compiletest flattens paths, UI tests wrap code in `mod contract {}`
-    // which is semantically equivalent for testing purposes
     path_str.contains("/contract/") || path_str.contains("\\contract\\")
+}
+
+/// Check if an AST item is in an api/rest folder
+/// Checks the source file path for */api/rest/* pattern
+pub fn is_in_api_rest_folder_ast(cx: &EarlyContext<'_>, item: &rustc_ast::Item) -> bool {
+    use rustc_span::FileName;
+    
+    let source_map = cx.sess().source_map();
+    
+    // Check for simulated directory in test files first
+    if let Some(simulated) = extract_simulated_dir(source_map, item.span) {
+        return simulated.contains("/api/rest/") || simulated.contains("\\api\\rest\\");
+    }
+    
+    // Fall back to actual file path
+    let file_name = source_map.span_to_filename(item.span);
+    
+    let path_str = match file_name {
+        FileName::Real(ref real_name) => {
+            if let Some(local) = real_name.local_path() {
+                local.to_string_lossy().to_string()
+            } else {
+                return false;
+            }
+        }
+        _ => return false,
+    };
+    
+    path_str.contains("/api/rest/") || path_str.contains("\\api\\rest\\")
 }
 
 pub fn is_in_module_crate(cx: &LateContext<'_>, def_id: LocalDefId) -> bool {
@@ -113,15 +200,51 @@ where
 {
     use rustc_ast::ItemKind;
 
-    if let ItemKind::Mod(_, ident, mod_kind) = &item.kind {
-        if ident.name.as_str() == "contract" {
-            if let rustc_ast::ModKind::Loaded(items, ..) = mod_kind {
-                for inner_item in items {
-                    check_fn(cx, inner_item);
-                }
+    if let ItemKind::Mod(_, ident, mod_kind) = &item.kind
+        && ident.name.as_str() == "contract" {
+        if let rustc_ast::ModKind::Loaded(items, ..) = mod_kind {
+            for inner_item in items {
+                check_fn(cx, inner_item);
             }
-            return true;
         }
+        return true;
     }
     false
+}
+
+/// Check if path segments represent a serde trait (Serialize or Deserialize)
+/// 
+/// Handles various forms:
+/// - Bare: `Serialize`, `Deserialize`
+/// - Qualified: `serde::Serialize`, `serde::Deserialize`
+/// - Fully qualified: `::serde::Serialize`
+/// 
+/// # Examples
+/// ```no_run
+/// use lint_utils::is_serde_trait;
+/// assert!(is_serde_trait(&["Serialize"], "Serialize"));
+/// assert!(is_serde_trait(&["serde", "Serialize"], "Serialize"));
+/// assert!(is_serde_trait(&["serde", "Deserialize"], "Deserialize"));
+/// assert!(!is_serde_trait(&["other", "Serialize"], "Serialize"));
+/// ```
+pub fn is_serde_trait(segments: &[&str], trait_name: &str) -> bool {
+    if segments.is_empty() {
+        return false;
+    }
+    
+    // Check if last segment matches the trait name
+    if segments.last() != Some(&trait_name) {
+        return false;
+    }
+    
+    // If it's a qualified path, ensure it contains "serde"
+    // Accept: serde::Serialize, ::serde::Serialize
+    // Reject: other_crate::Serialize
+    if segments.len() >= 2 {
+        segments.contains(&"serde")
+    } else {
+        // Bare identifier: Serialize or Deserialize
+        // We accept this as it's commonly used with `use serde::{Serialize, Deserialize}`
+        true
+    }
 }
