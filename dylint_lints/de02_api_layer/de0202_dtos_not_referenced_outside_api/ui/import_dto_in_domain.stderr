@@ -1,8 +1,8 @@
 error: domain module imports DTO type `UserDto` from api layer (DE0202)
-  --> $DIR/import_dto_in_domain.rs:13:5
+  --> $DIR/import_dto_in_domain.rs:12:1
    |
-LL |     use crate::api::rest::dto::UserDto;
-   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+LL | use crate::api::rest::dto::UserDto;
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    |
    = help: DTOs are API layer details; use contract models or domain types instead
    = note: `#[deny(de0202_dtos_not_referenced_outside_api)]` on by default

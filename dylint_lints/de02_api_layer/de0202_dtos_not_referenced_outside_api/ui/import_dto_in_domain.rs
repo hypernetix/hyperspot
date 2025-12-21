@@ -9,10 +9,8 @@ mod api {
     }
 }
 
-mod domain {
-    use crate::api::rest::dto::UserDto;
+use crate::api::rest::dto::UserDto;
 
-    pub struct UserService;
-}
+pub struct UserService;
 
 fn main() {}

@@ -50,7 +50,45 @@ dylint_linting::declare_late_lint! {
 
 impl<'tcx> LateLintPass<'tcx> for De0801ApiEndpointVersion {
     fn check_expr(&mut self, cx: &LateContext<'tcx>, expr: &'tcx Expr<'tcx>) {
-        check_operation_builder_call(cx, expr);
+        if let ExprKind::Call(func, args) = &expr.kind
+            && let ExprKind::Path(qpath) = &func.kind
+        {
+            let is_operation_builder_http_method = match qpath {
+                rustc_hir::QPath::TypeRelative(ty, segment) => {
+                    let method_name = segment.ident.name.as_str();
+                    let is_http_method = HTTP_METHODS.contains(&method_name);
+
+                    if is_http_method {
+                        type_contains_operation_builder(ty)
+                    } else {
+                        false
+                    }
+                }
+                rustc_hir::QPath::Resolved(_, path) => {
+                    let segments: Vec<&str> = path
+                        .segments
+                        .iter()
+                        .map(|seg| seg.ident.name.as_str())
+                        .collect();
+
+                    if segments.len() >= 2 {
+                        let has_op_builder = segments.contains(&"OperationBuilder");
+                        let last_is_http_method = segments
+                            .last()
+                            .map(|s| HTTP_METHODS.contains(s))
+                            .unwrap_or(false);
+                        has_op_builder && last_is_http_method
+                    } else {
+                        false
+                    }
+                }
+                _ => false,
+            };
+
+            if is_operation_builder_http_method && let Some(path_arg) = args.first() {
+                check_path_argument(cx, path_arg);
+            }
+        }
     }
 }
 
@@ -177,51 +215,6 @@ fn type_contains_operation_builder(ty: &rustc_hir::Ty<'_>) -> bool {
     }
 }
 
-/// Check if an expression is an OperationBuilder method call
-fn check_operation_builder_call<'tcx>(cx: &LateContext<'tcx>, expr: &'tcx Expr<'tcx>) {
-    if let ExprKind::Call(func, args) = &expr.kind
-        && let ExprKind::Path(qpath) = &func.kind
-    {
-        let is_operation_builder_http_method = match qpath {
-            rustc_hir::QPath::TypeRelative(ty, segment) => {
-                let method_name = segment.ident.name.as_str();
-                let is_http_method = HTTP_METHODS.contains(&method_name);
-
-                if is_http_method {
-                    type_contains_operation_builder(ty)
-                } else {
-                    false
-                }
-            }
-            rustc_hir::QPath::Resolved(_, path) => {
-                let segments: Vec<&str> = path
-                    .segments
-                    .iter()
-                    .map(|seg| seg.ident.name.as_str())
-                    .collect();
-
-                if segments.len() >= 2 {
-                    let has_op_builder = segments.contains(&"OperationBuilder");
-                    let last_is_http_method = segments
-                        .last()
-                        .map(|s| HTTP_METHODS.contains(s))
-                        .unwrap_or(false);
-                    has_op_builder && last_is_http_method
-                } else {
-                    false
-                }
-            }
-            _ => false,
-        };
-
-        if is_operation_builder_http_method
-            && let Some(path_arg) = args.first()
-        {
-            check_path_argument(cx, path_arg);
-        }
-    }
-}
-
 fn check_path_argument<'tcx>(cx: &LateContext<'tcx>, path_arg: &'tcx Expr<'tcx>) {
     if let ExprKind::Lit(lit) = &path_arg.kind
         && let rustc_ast::ast::LitKind::Str(sym, _) = lit.node
@@ -248,9 +241,11 @@ fn check_path_argument<'tcx>(cx: &LateContext<'tcx>, path_arg: &'tcx Expr<'tcx>)
                     "service name must not start or end with a dash".to_string(),
                 ),
                 PathValidationError::MissingVersion => (
-                    format!("API endpoint `{}` is missing a version segment (DE0801)", path),
-                    "add version as second segment: /{service-name}/v{N}/{resource}"
-                        .to_string(),
+                    format!(
+                        "API endpoint `{}` is missing a version segment (DE0801)",
+                        path
+                    ),
+                    "add version as second segment: /{service-name}/v{N}/{resource}".to_string(),
                     "version must be v1, v2, etc.".to_string(),
                 ),
                 PathValidationError::InvalidVersionFormat(ver) => (
@@ -258,8 +253,7 @@ fn check_path_argument<'tcx>(cx: &LateContext<'tcx>, path_arg: &'tcx Expr<'tcx>)
                         "API endpoint `{}` has invalid version format `{}` (DE0801)",
                         path, ver
                     ),
-                    "version must be lowercase 'v' followed by digits (v1, v2, v10)"
-                        .to_string(),
+                    "version must be lowercase 'v' followed by digits (v1, v2, v10)".to_string(),
                     "semver (v1.0) and uppercase (V1) are not allowed".to_string(),
                 ),
                 PathValidationError::MissingResource => (

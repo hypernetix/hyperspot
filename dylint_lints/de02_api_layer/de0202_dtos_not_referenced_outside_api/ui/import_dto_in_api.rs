@@ -7,10 +7,8 @@ mod api {
             pub struct UserDto;
         }
 
-        mod handlers {
-            // This is allowed
-            use crate::api::rest::dto::UserDto;
-        }
+        // This is allowed
+        use crate::api::rest::dto::UserDto;
     }
 }
 

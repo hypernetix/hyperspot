@@ -2,12 +2,11 @@
 #![warn(unused_extern_crates)]
 
 extern crate rustc_ast;
-extern crate rustc_span;
 
 use rustc_ast::{Item, ItemKind};
 use rustc_lint::{EarlyContext, EarlyLintPass, LintContext};
 
-use lint_utils::is_in_contract_module_ast;
+use lint_utils::is_in_contract_path;
 
 dylint_linting::declare_pre_expansion_lint! {
     /// ### What it does
@@ -57,59 +56,35 @@ impl EarlyLintPass for De0101NoSerdeInContract {
             return;
         }
 
-        // Check if we're in a contract module (supports simulated_dir for tests)
-        if !is_in_contract_module_ast(cx, item) {
+        if !is_in_contract_path(cx.sess().source_map(), item.span) {
             return;
         }
 
         // Check for serde derives
-        check_serde_derives(cx, item);
-    }
-}
+        lint_utils::check_derive_attrs(item, |meta_item, attr| {
+            let segments = lint_utils::get_derive_path_segments(meta_item);
 
-// Helper to check for serde derives on an item
-fn check_serde_derives(cx: &EarlyContext<'_>, item: &Item) {
-    use rustc_ast::ast::AttrKind;
-    
-    // Check each attribute for derive with Serialize or Deserialize
-    for attr in &item.attrs {
-        if !attr.has_name(rustc_span::symbol::sym::derive) {
-            continue;
-        }
+            // Check if this is a serde Serialize or Deserialize
+            // Handles: Serialize, serde::Serialize, ::serde::Serialize
+            let is_serialize = lint_utils::is_serde_trait(&segments, "Serialize");
+            let is_deserialize = lint_utils::is_serde_trait(&segments, "Deserialize");
 
-        // Parse the derive attribute meta list
-        if let AttrKind::Normal(attr_item) = &attr.kind
-            && let Some(meta_items) = attr_item.item.meta_item_list() {
-            for nested_meta in meta_items {
-                if let Some(meta_item) = nested_meta.meta_item() {
-                    let path = &meta_item.path;
-                    let segments: Vec<_> = path.segments.iter()
-                        .map(|s| s.ident.name.as_str())
-                        .collect();
-                    
-                    // Check if this is a serde Serialize or Deserialize
-                    // Handles: Serialize, serde::Serialize, ::serde::Serialize
-                    let is_serialize = lint_utils::is_serde_trait(&segments, "Serialize");
-                    let is_deserialize = lint_utils::is_serde_trait(&segments, "Deserialize");
-
-                    if is_serialize {
-                        cx.span_lint(DE0101_NO_SERDE_IN_CONTRACT, attr.span, |diag| {
-                            diag.primary_message(
-                                "contract type should not derive `Serialize` (DE0101)"
-                            );
-                            diag.help("remove serde derives from contract models; use DTOs in the API layer");
-                        });
-                    } else if is_deserialize {
-                        cx.span_lint(DE0101_NO_SERDE_IN_CONTRACT, attr.span, |diag| {
-                            diag.primary_message(
-                                "contract type should not derive `Deserialize` (DE0101)"
-                            );
-                            diag.help("remove serde derives from contract models; use DTOs in the API layer");
-                        });
-                    }
-                }
+            if is_serialize {
+                cx.span_lint(DE0101_NO_SERDE_IN_CONTRACT, attr.span, |diag| {
+                    diag.primary_message("contract type should not derive `Serialize` (DE0101)");
+                    diag.help(
+                        "remove serde derives from contract models; use DTOs in the API layer",
+                    );
+                });
+            } else if is_deserialize {
+                cx.span_lint(DE0101_NO_SERDE_IN_CONTRACT, attr.span, |diag| {
+                    diag.primary_message("contract type should not derive `Deserialize` (DE0101)");
+                    diag.help(
+                        "remove serde derives from contract models; use DTOs in the API layer",
+                    );
+                });
             }
-        }
+        });
     }
 }
 

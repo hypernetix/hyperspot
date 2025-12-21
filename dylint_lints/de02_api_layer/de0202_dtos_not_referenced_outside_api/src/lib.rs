@@ -24,18 +24,18 @@ impl<'tcx> LateLintPass<'tcx> for De0202DtosNotReferencedOutsideApi {
         };
 
         // Check if we're in a forbidden module (contract, domain, infra)
-        let def_id = item.owner_id.def_id;
+        let sm = cx.sess().source_map();
+        let span = cx.tcx.def_span(item.owner_id.def_id);
 
-        let in_forbidden = lint_utils::is_in_contract_module(cx, def_id)
-            || lint_utils::is_in_domain_module(cx, def_id)
-            || lint_utils::is_in_infra_module(cx, def_id);
-
+        let in_forbidden = lint_utils::is_in_contract_path(sm, span)
+            || lint_utils::is_in_domain_path(sm, span)
+            || lint_utils::is_in_infra_path(sm, span);
         if !in_forbidden {
             return;
         }
 
         // Check if the import path references api::rest::dto
-        let path_str = lint_utils::path_to_string(path);
+        let path_str = path_to_string(path);
 
         // Only check imports from api::rest::dto or api::rest
         if !path_str.contains("api::rest::dto") && !path_str.contains("api::rest") {
@@ -51,9 +51,9 @@ impl<'tcx> LateLintPass<'tcx> for De0202DtosNotReferencedOutsideApi {
                 || last.ends_with("Query");
 
             if is_dto {
-                let module_type = if lint_utils::is_in_contract_module(cx, def_id) {
+                let module_type = if lint_utils::is_in_contract_path(sm, span) {
                     "contract"
-                } else if lint_utils::is_in_domain_module(cx, def_id) {
+                } else if lint_utils::is_in_domain_path(sm, span) {
                     "domain"
                 } else {
                     "infra"
@@ -71,6 +71,14 @@ impl<'tcx> LateLintPass<'tcx> for De0202DtosNotReferencedOutsideApi {
             }
         }
     }
+}
+
+fn path_to_string(path: &rustc_hir::UsePath<'_>) -> String {
+    path.segments
+        .iter()
+        .map(|seg| seg.ident.name.as_str())
+        .collect::<Vec<_>>()
+        .join("::")
 }
 
 #[test]

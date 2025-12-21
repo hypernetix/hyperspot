@@ -1,3 +1,4 @@
+// simulated_dir=/hyperspot/modules/some_module/contract/
 #![allow(unused)]
 
 mod api {
@@ -8,12 +9,10 @@ mod api {
     }
 }
 
-mod contract {
-    use crate::api::rest::dto::UserDto;
+use crate::api::rest::dto::UserDto;
 
-    pub fn get_user() -> UserDto {
-        UserDto
-    }
+pub fn get_user() -> UserDto {
+    UserDto
 }
 
 fn main() {}

@@ -2,12 +2,11 @@
 #![warn(unused_extern_crates)]
 
 extern crate rustc_ast;
-extern crate rustc_span;
 
 use rustc_ast::{Item, ItemKind};
 use rustc_lint::{EarlyContext, EarlyLintPass, LintContext};
 
-use lint_utils::is_in_api_rest_folder_ast;
+use lint_utils::is_in_api_rest_folder;
 
 dylint_linting::declare_pre_expansion_lint! {
     /// DE0203: DTOs Must Have Serde Derives
@@ -48,15 +47,13 @@ impl EarlyLintPass for De0203DtosMustHaveSerdeDerives {
 }
 
 fn check_dto_serde_derives(cx: &EarlyContext<'_>, item: &Item) {
-    use rustc_ast::ast::AttrKind;
-
     // Only check structs and enums
     if !matches!(item.kind, ItemKind::Struct(..) | ItemKind::Enum(..)) {
         return;
     }
 
     // Only check items in api/rest folder
-    if !is_in_api_rest_folder_ast(cx, item) {
+    if !is_in_api_rest_folder(cx.sess().source_map(), item.span) {
         return;
     }
 
@@ -71,36 +68,18 @@ fn check_dto_serde_derives(cx: &EarlyContext<'_>, item: &Item) {
         return;
     }
 
-    // Check for Serialize and Deserialize derives
+     // Check for Serialize and Deserialize derives
     let mut has_serialize = false;
     let mut has_deserialize = false;
-
-    for attr in &item.attrs {
-        if !attr.has_name(rustc_span::symbol::sym::derive) {
-            continue;
+    lint_utils::check_derive_attrs(item, |meta_item, _attr| {
+        let segments = lint_utils::get_derive_path_segments(meta_item);
+        // Check for Serialize (bare or serde::Serialize)
+        if lint_utils::is_serde_trait(&segments, "Serialize") {
+            has_serialize = true;
+        } else if lint_utils::is_serde_trait(&segments, "Deserialize") { // Check for Deserialize (bare or serde::Deserialize)
+            has_deserialize = true;
         }
-
-        if let AttrKind::Normal(attr_item) = &attr.kind
-            && let Some(meta_items) = attr_item.item.meta_item_list() {
-            for nested_meta in meta_items {
-                if let Some(meta_item) = nested_meta.meta_item() {
-                    let path = &meta_item.path;
-                    let segments: Vec<_> = path.segments.iter()
-                        .map(|s| s.ident.name.as_str())
-                        .collect();
-
-                    // Check for Serialize (bare or serde::Serialize)
-                    if lint_utils::is_serde_trait(&segments, "Serialize") {
-                        has_serialize = true;
-                    }
-                    // Check for Deserialize (bare or serde::Deserialize)
-                    if lint_utils::is_serde_trait(&segments, "Deserialize") {
-                        has_deserialize = true;
-                    }
-                }
-            }
-        }
-    }
+    });
 
     // Report missing derives
     if !has_serialize || !has_deserialize {

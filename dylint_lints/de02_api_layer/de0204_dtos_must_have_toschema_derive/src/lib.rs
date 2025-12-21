@@ -2,7 +2,6 @@
 #![warn(unused_extern_crates)]
 
 extern crate rustc_ast;
-extern crate rustc_span;
 
 use rustc_ast::{Item, ItemKind};
 use rustc_lint::{EarlyContext, EarlyLintPass, LintContext};
@@ -49,8 +48,6 @@ impl EarlyLintPass for De0204DtosMustHaveToschemaDerive {
 }
 
 fn check_dto_toschema_derive(cx: &EarlyContext<'_>, item: &Item) {
-    use rustc_ast::ast::AttrKind;
-
     // Only check structs and enums
     if !matches!(item.kind, ItemKind::Struct(..) | ItemKind::Enum(..)) {
         return;
@@ -69,59 +66,20 @@ fn check_dto_toschema_derive(cx: &EarlyContext<'_>, item: &Item) {
 
     // Check for ToSchema derive
     let mut has_toschema = false;
-
-    for attr in &item.attrs {
-        if !attr.has_name(rustc_span::symbol::sym::derive) {
-            continue;
+    lint_utils::check_derive_attrs(item, |meta_item, _attr| {
+        let segments = lint_utils::get_derive_path_segments(meta_item);
+        // Check for ToSchema (bare or utoipa::ToSchema)
+        if lint_utils::is_utoipa_trait(&segments, "ToSchema") {
+            has_toschema = true;
         }
-
-        if let AttrKind::Normal(attr_item) = &attr.kind {
-            if let Some(meta_items) = attr_item.item.meta_item_list() {
-                for nested_meta in meta_items {
-                    if let Some(meta_item) = nested_meta.meta_item() {
-                        let path = &meta_item.path;
-                        let segments: Vec<_> = path.segments.iter()
-                            .map(|s| s.ident.name.as_str())
-                            .collect();
-
-                        // Check for ToSchema (bare or utoipa::ToSchema)
-                        if is_toschema_trait(&segments) {
-                            has_toschema = true;
-                        }
-                    }
-                }
-            }
-        }
-    }
+    });
 
     // Report missing derive
     if !has_toschema {
         cx.span_lint(DE0204_DTOS_MUST_HAVE_TOSCHEMA_DERIVE, item.span, |diag| {
-            diag.primary_message(
-                "api/rest type is missing required ToSchema derive (DE0204)"
-            );
+            diag.primary_message("api/rest type is missing required ToSchema derive (DE0204)");
             diag.help("DTOs in api/rest must derive ToSchema for OpenAPI documentation");
         });
-    }
-}
-
-// Check if path segments represent ToSchema trait
-fn is_toschema_trait(segments: &[&str]) -> bool {
-    if segments.is_empty() {
-        return false;
-    }
-
-    // Check if last segment is "ToSchema"
-    if segments.last() != Some(&"ToSchema") {
-        return false;
-    }
-
-    // If qualified path, ensure it contains "utoipa"
-    if segments.len() >= 2 {
-        segments.contains(&"utoipa")
-    } else {
-        // Bare identifier accepted (common with use statements)
-        true
     }
 }
 
