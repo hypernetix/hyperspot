@@ -103,12 +103,12 @@ pub fn register_routes(
         .error_500(openapi)
         .register(router, openapi);
 
-    // PUT /users-info/v1/users/{id} - Update a user
-    router = OperationBuilder::put("/users-info/v1/users/{id}")
+    // PATCH /users-info/v1/users/{id} - Partially update a user
+    router = OperationBuilder::patch("/users-info/v1/users/{id}")
         .operation_id("users_info.update_user")
         .require_auth(&Resource::Users, &Action::Update)
         .summary("Update user")
-        .description("Update a user with partial data")
+        .description("Partially update a user with the provided fields")
         .tag("users")
         .path_param("id", "User UUID")
         .json_request::<dto::UpdateUserReq>(openapi, "User update data")
