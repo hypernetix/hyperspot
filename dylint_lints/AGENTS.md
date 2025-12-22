@@ -72,20 +72,24 @@ de0xxx_lint_name/
 ```
 
 ### 2. Cargo.toml Configuration
+Common dependencies (`clippy_utils`, `dylint_linting`, `dylint_testing`, `lint_utils`) are defined in the workspace `Cargo.toml`. Reference them using `.workspace = true`:
+
 ```toml
 [dependencies]
-clippy_utils = { git = "...", rev = "..." }
-dylint_linting = "5.0.0"
-lint_utils = { path = "../lint_utils" }
+clippy_utils.workspace = true
+dylint_linting.workspace = true
+lint_utils.workspace = true
 
 [dev-dependencies]
-dylint_testing = "5.0.0"
+dylint_testing.workspace = true
 # Add trait/macro crates needed for tests
 
 [[example]]
 name = "test_case_name"
 path = "ui/test_case_name.rs"
 ```
+
+**Note**: Only add lint-specific dependencies to individual `Cargo.toml` files. Keep common dependencies in the workspace to avoid duplication.
 
 ## Testing Options
 

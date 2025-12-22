@@ -18,11 +18,11 @@ name = "invalid_endpoints"
 path = "ui/invalid_endpoints.rs"
 
 [dependencies]
-clippy_utils = { git = "https://github.com/rust-lang/rust-clippy", rev = "20ce69b9a63bcd2756cd906fe0964d1e901e042a" }
-dylint_linting = "5.0.0"
+clippy_utils.workspace = true
+dylint_linting.workspace = true
 
 [dev-dependencies]
-dylint_testing = "5.0.0"
+dylint_testing.workspace = true
 
 [package.metadata.rust-analyzer]
 rustc_private = true

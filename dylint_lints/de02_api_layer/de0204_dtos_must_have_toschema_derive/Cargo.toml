@@ -16,12 +16,12 @@ name = "has_toschema"
 path = "ui/has_toschema.rs"
 
 [dependencies]
-clippy_utils = { git = "https://github.com/rust-lang/rust-clippy", rev = "20ce69b9a63bcd2756cd906fe0964d1e901e042a" }
-dylint_linting = "5.0.0"
-lint_utils = { path = "../../lint_utils" }
+clippy_utils.workspace = true
+dylint_linting.workspace = true
+lint_utils.workspace = true
 
 [dev-dependencies]
-dylint_testing = "5.0.0"
+dylint_testing.workspace = true
 serde = { version = "1.0", features = ["derive"] }
 utoipa = "5.2.0"
 
