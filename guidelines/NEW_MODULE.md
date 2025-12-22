@@ -1224,6 +1224,7 @@ external API clients.
 5. **`src/api/rest/routes.rs`:**
    **Rule:** Register ALL endpoints in a single `register_routes` function.
    **Rule:** Use `OperationBuilder` for every route with `.require_auth(&Resource::X, [Action::Y])` for protected endpoints.
+   **Rule:** For protected endpoints, call `.require_license_feature(...)` after `.require_auth(...)` (use `None` to explicitly declare no feature requirement).
    **Rule:** Use `.error_400(openapi)`, `.error_404(openapi)` etc. instead of raw `.problem_response()`.
    **Rule:** After all routes are registered, attach the service ONCE with `router.layer(Extension(service.clone()))`.
 
@@ -1231,8 +1232,19 @@ external API clients.
    use crate::api::rest::{dto, handlers};
    use crate::domain::service::Service;
    use axum::{Extension, Router};
+   use modkit::api::operation_builder::LicenseFeature;
    use modkit::api::{OpenApiRegistry, OperationBuilder};
    use std::sync::Arc;
+
+   struct License;
+
+   impl AsRef<str> for License {
+       fn as_ref(&self) -> &'static str {
+           "gts.x.core.lic.feat.v1~x.core.global.base.v1"
+       }
+   }
+
+   impl LicenseFeature for License {}
 
    pub fn register_routes(
        mut router: Router,
@@ -1245,6 +1257,7 @@ external API clients.
            .summary("List users with cursor pagination")
            .tag("users")
            .require_auth(&Resource::Users, &Action::Read)
+           .require_license_feature(None::<&License>)
            .query_param_typed("limit", false, "Max users to return", "integer")
            .query_param("cursor", false, "Cursor for pagination")
            .handler(handlers::list_users)
@@ -1263,6 +1276,7 @@ external API clients.
            .summary("Get user by ID")
            .tag("users")
            .require_auth(&Resource::Users, &Action::Read)
+           .require_license_feature(None::<&License>)
            .path_param("id", "User UUID")
            .handler(handlers::get_user)
            .json_response_with_schema::<dto::UserDto>(openapi, http::StatusCode::OK, "User found")
@@ -1278,6 +1292,7 @@ external API clients.
            .summary("Create a new user")
            .tag("users")
            .require_auth(&Resource::Users, &Action::Create)
+           .require_license_feature(None::<&License>)
            .json_request::<dto::CreateUserReq>(openapi, "User creation data")
            .handler(handlers::create_user)
            .json_response_with_schema::<dto::UserDto>(openapi, http::StatusCode::CREATED, "Created")
@@ -1294,6 +1309,7 @@ external API clients.
            .summary("Delete user")
            .tag("users")
            .require_auth(&Resource::Users, &Action::Delete)
+           .require_license_feature(None::<&License>)
            .path_param("id", "User UUID")
            .handler(handlers::delete_user)
            .json_response(http::StatusCode::NO_CONTENT, "User deleted")

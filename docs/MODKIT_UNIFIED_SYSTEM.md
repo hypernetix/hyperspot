@@ -761,6 +761,40 @@ OperationBuilder::<Missing, Missing, S>::post("/my-module/v1/path")
 .public()
 ```
 
+**Licensing (feature gating)**
+
+```rust
+use modkit::api::operation_builder::LicenseFeature;
+
+// Define a license feature identifier for this module.
+// AsRef<str> should return the canonical feature id (typically a GTS type name).
+struct BaseLicenseFeature;
+
+impl AsRef<str> for BaseLicenseFeature {
+    fn as_ref(&self) -> &'static str {
+        "gts.x.core.lic.feat.v1~x.core.global.base.v1"
+    }
+}
+
+impl LicenseFeature for BaseLicenseFeature {}
+
+// For authenticated endpoints, calling `require_license_feature(...)` is mandatory.
+// Use `None` to explicitly declare that no license feature is required.
+.require_auth(&Resource::Users, &Action::Read)
+.require_license_feature(None::<&BaseLicenseFeature>)
+
+// Or require a specific feature for this operation:
+let feature = BaseLicenseFeature;
+.require_auth(&Resource::Users, &Action::Read)
+.require_license_feature(Some(&feature))
+```
+
+Notes:
+
+- Authenticated operations must call `require_license_feature(...)` before `register(...)`.
+- Public routes cannot (and do not need to) call `require_license_feature(...)`.
+- `api_ingress` currently enforces license requirements via a stub middleware that only allows the base feature.
+
 **Handler / method router**
 
 ```rust

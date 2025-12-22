@@ -2,7 +2,7 @@ use crate::api::rest::handlers;
 use crate::domain::service::FileParserService;
 use axum::{Extension, Router};
 use modkit::api::{
-    operation_builder::{AuthReqAction, AuthReqResource},
+    operation_builder::{AuthReqAction, AuthReqResource, LicenseFeature},
     OpenApiRegistry, OperationBuilder,
 };
 use std::sync::Arc;
@@ -35,6 +35,16 @@ impl AsRef<str> for Action {
 
 impl AuthReqAction for Action {}
 
+struct License;
+
+impl AsRef<str> for License {
+    fn as_ref(&self) -> &'static str {
+        "gts.x.core.lic.feat.v1~x.core.global.base.v1"
+    }
+}
+
+impl LicenseFeature for License {}
+
 #[allow(clippy::needless_pass_by_value)] // Arc is intentionally passed by value for Extension layer
 pub fn register_routes(
     mut router: Router,
@@ -47,6 +57,7 @@ pub fn register_routes(
         .summary("Get information about available file parsers")
         .tag("File Parser")
         .require_auth(&Resource::FileParser, &Action::Read)
+        .require_license_feature(None::<&License>)
         .handler(handlers::get_parser_info)
         .json_response_with_schema::<crate::api::rest::dto::FileParserInfoDto>(
             openapi,
@@ -62,6 +73,7 @@ pub fn register_routes(
         .summary("Parse a file from a local path")
         .tag("File Parser")
         .require_auth(&Resource::FileParser, &Action::Read)
+        .require_license_feature(None::<&License>)
         .query_param_typed(
             "render_markdown",
             false,
@@ -86,6 +98,7 @@ pub fn register_routes(
         .summary("Upload and parse a file")
         .tag("File Parser")
         .require_auth(&Resource::FileParser, &Action::Read)
+        .require_license_feature(None::<&License>)
         .query_param_typed(
             "render_markdown",
             false,
@@ -115,6 +128,7 @@ pub fn register_routes(
         .summary("Parse a file from a URL")
         .tag("File Parser")
         .require_auth(&Resource::FileParser, &Action::Read)
+        .require_license_feature(None::<&License>)
         .query_param_typed(
             "render_markdown",
             false,
@@ -139,6 +153,7 @@ pub fn register_routes(
         .summary("Parse a local file and stream Markdown")
         .tag("File Parser")
         .require_auth(&Resource::FileParser, &Action::Read)
+        .require_license_feature(None::<&License>)
         .json_request::<crate::api::rest::dto::ParseLocalFileRequest>(openapi, "Local file path")
         .allow_content_types(&["application/json"])
         .handler(handlers::parse_local_markdown)
@@ -152,6 +167,7 @@ pub fn register_routes(
         .summary("Upload and parse a file, streaming Markdown")
         .tag("File Parser")
         .require_auth(&Resource::FileParser, &Action::Read)
+        .require_license_feature(None::<&License>)
         .multipart_file_request("file", Some("File to parse and stream as Markdown"))
         .handler(handlers::upload_and_parse_markdown)
         .text_response(http::StatusCode::OK, "Markdown stream", "text/markdown")
@@ -165,6 +181,7 @@ pub fn register_routes(
         .summary("Parse a file from a URL and stream Markdown")
         .tag("File Parser")
         .require_auth(&Resource::FileParser, &Action::Read)
+        .require_license_feature(None::<&License>)
         .json_request::<crate::api::rest::dto::ParseUrlRequest>(openapi, "URL to file")
         .allow_content_types(&["application/json"])
         .handler(handlers::parse_url_markdown)

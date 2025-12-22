@@ -436,6 +436,7 @@ mod tests {
             rate_limit: None,
             allowed_request_content_types: None,
             vendor_extensions: VendorExtensions::default(),
+            license_requirement: None,
         };
 
         registry.register_operation(&spec);
@@ -498,6 +499,7 @@ mod tests {
             rate_limit: None,
             allowed_request_content_types: None,
             vendor_extensions: VendorExtensions::default(),
+            license_requirement: None,
         };
 
         registry.register_operation(&spec);
@@ -557,6 +559,7 @@ mod tests {
             rate_limit: None,
             allowed_request_content_types: Some(vec!["application/octet-stream"]),
             vendor_extensions: VendorExtensions::default(),
+            license_requirement: None,
         };
 
         registry.register_operation(&spec);
@@ -635,6 +638,7 @@ mod tests {
             rate_limit: None,
             allowed_request_content_types: None,
             vendor_extensions: VendorExtensions::default(),
+            license_requirement: None,
         };
         spec.vendor_extensions.x_odata_filter = Some(filter);
         spec.vendor_extensions.x_odata_orderby = Some(order_by);
