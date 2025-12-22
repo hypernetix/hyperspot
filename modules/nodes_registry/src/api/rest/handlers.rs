@@ -7,10 +7,7 @@ use serde::Deserialize;
 use std::sync::Arc;
 
 use super::dto::{NodeDto, NodeSysCapDto, NodeSysInfoDto};
-use crate::domain::error::DomainError;
 use crate::domain::service::Service;
-
-type NodesResult<T> = ApiResult<T, DomainError>;
 
 #[derive(Debug, Deserialize)]
 pub struct DetailsQuery {
@@ -31,7 +28,7 @@ pub struct SysCapQuery {
 pub async fn list_nodes(
     Extension(svc): Extension<Arc<Service>>,
     Query(query): Query<DetailsQuery>,
-) -> NodesResult<Json<Vec<NodeDto>>> {
+) -> ApiResult<Json<Vec<NodeDto>>> {
     let nodes = svc.list_nodes();
 
     if query.details {
@@ -61,7 +58,7 @@ pub async fn get_node(
     Extension(svc): Extension<Arc<Service>>,
     Path(id): Path<uuid::Uuid>,
     Query(query): Query<DetailsQuery>,
-) -> NodesResult<Json<NodeDto>> {
+) -> ApiResult<Json<NodeDto>> {
     let node = svc.get_node(id)?;
 
     if query.details {
@@ -84,7 +81,7 @@ pub async fn get_node(
 pub async fn get_node_sysinfo(
     Extension(svc): Extension<Arc<Service>>,
     Path(node_id): Path<uuid::Uuid>,
-) -> NodesResult<Json<NodeSysInfoDto>> {
+) -> ApiResult<Json<NodeSysInfoDto>> {
     let sysinfo = svc.get_node_sysinfo(node_id)?;
     Ok(Json(sysinfo.into()))
 }
@@ -94,7 +91,7 @@ pub async fn get_node_syscap(
     Extension(svc): Extension<Arc<Service>>,
     Path(node_id): Path<uuid::Uuid>,
     Query(query): Query<SysCapQuery>,
-) -> NodesResult<Json<NodeSysCapDto>> {
+) -> ApiResult<Json<NodeSysCapDto>> {
     let syscap = svc.get_node_syscap(node_id, query.force_refresh)?;
     Ok(Json(syscap.into()))
 }

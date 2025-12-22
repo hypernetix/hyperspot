@@ -422,7 +422,7 @@ impl<'a> UserService<'a> {
 pub async fn list_users_handler(
     Extension(auth): Extension<AuthContext>,
     Extension(db): Extension<DbHandle>,
-) -> Result<Json<Vec<UserDto>>, ApiError> {
+) -> Result<Json<Vec<UserDto>>, Problem> {
     // Create context from request auth
     let ctx = SecurityCtx::for_tenants(vec![auth.tenant_id], auth.user_id);
     

@@ -142,14 +142,28 @@ impl Problem {
     }
 }
 
-/// Axum integration: make Problem directly usable as a response
+/// Axum integration: make Problem directly usable as a response.
+///
+/// Automatically enriches the Problem with `trace_id` from the current
+/// tracing span if not already set.
 #[cfg(feature = "axum")]
 impl axum::response::IntoResponse for Problem {
     fn into_response(self) -> axum::response::Response {
         use axum::http::HeaderValue;
 
-        let status = self.status;
-        let mut resp = axum::Json(self).into_response();
+        // Enrich with trace_id from current span if not already set
+        let problem = if self.trace_id.is_none() {
+            if let Some(span_id) = tracing::Span::current().id() {
+                self.with_trace_id(span_id.into_u64().to_string())
+            } else {
+                self
+            }
+        } else {
+            self
+        };
+
+        let status = problem.status;
+        let mut resp = axum::Json(problem).into_response();
         *resp.status_mut() = status;
         resp.headers_mut().insert(
             axum::http::header::CONTENT_TYPE,

@@ -77,7 +77,7 @@ pub struct Model {
 pub async fn list_users_handler(
     Extension(auth): Extension<AuthContext>,
     Extension(db): Extension<DbHandle>,
-) -> Result<Json<Vec<User>>, ApiError> {
+) -> Result<Json<Vec<User>>, Problem> {
     // Create security context from request
     let ctx = SecurityCtx::for_tenants(vec![auth.tenant_id], auth.user_id);
 

@@ -20,10 +20,6 @@ use crate::domain::service::FileParserService;
 use modkit::api::prelude::*;
 use modkit_auth::axum_ext::Authz;
 
-// Type aliases for our specific API with DomainError
-type FileParserResult<T> = ApiResult<T, DomainError>;
-type FileParserApiError = ApiError<DomainError>;
-
 /// Query parameter for `render_markdown` flag
 #[derive(Debug, serde::Deserialize)]
 pub struct RenderMarkdownQuery {
@@ -42,7 +38,7 @@ pub struct RenderMarkdownQuery {
 pub async fn get_parser_info(
     Authz(_ctx): Authz,
     Extension(svc): Extension<std::sync::Arc<FileParserService>>,
-) -> FileParserResult<JsonBody<FileParserInfoDto>> {
+) -> ApiResult<JsonBody<FileParserInfoDto>> {
     info!("Getting file parser info");
 
     let info = svc.info();
@@ -65,7 +61,7 @@ pub async fn parse_local(
     Extension(svc): Extension<std::sync::Arc<FileParserService>>,
     Query(query): Query<RenderMarkdownQuery>,
     Json(req_body): Json<ParseLocalFileRequest>,
-) -> FileParserResult<JsonBody<ParsedDocResponseDto>> {
+) -> ApiResult<JsonBody<ParsedDocResponseDto>> {
     let render_md = query.render_markdown.unwrap_or(false);
 
     info!(
@@ -75,10 +71,7 @@ pub async fn parse_local(
     );
 
     let path = std::path::Path::new(&req_body.file_path);
-    let document = svc
-        .parse_local(path)
-        .await
-        .map_err(FileParserApiError::from_domain)?;
+    let document = svc.parse_local(path).await?;
 
     // Optionally render markdown
     let markdown = if render_md {
@@ -112,7 +105,7 @@ pub async fn upload_and_parse(
     Query(query): Query<UploadQuery>,
     headers: HeaderMap,
     body: Bytes,
-) -> FileParserResult<JsonBody<ParsedDocResponseDto>> {
+) -> ApiResult<JsonBody<ParsedDocResponseDto>> {
     let render_md = query.render_markdown.unwrap_or(false);
     let filename_opt = query.filename.as_deref();
 
@@ -131,15 +124,15 @@ pub async fn upload_and_parse(
     );
 
     if body.is_empty() {
-        return Err(FileParserApiError::from_domain(
-            DomainError::invalid_request("Empty request body, expected file bytes".to_owned()),
-        ));
+        return Err(DomainError::invalid_request(
+            "Empty request body, expected file bytes".to_owned(),
+        )
+        .into());
     }
 
     let document = svc
         .parse_bytes(filename_opt, content_type_str.as_deref(), body)
-        .await
-        .map_err(FileParserApiError::from_domain)?;
+        .await?;
 
     // Optionally render markdown
     let markdown = if render_md {
@@ -171,7 +164,7 @@ pub async fn parse_url(
     Extension(svc): Extension<std::sync::Arc<FileParserService>>,
     Query(query): Query<RenderMarkdownQuery>,
     Json(req_body): Json<ParseUrlRequest>,
-) -> FileParserResult<JsonBody<ParsedDocResponseDto>> {
+) -> ApiResult<JsonBody<ParsedDocResponseDto>> {
     let render_md = query.render_markdown.unwrap_or(false);
 
     info!(
@@ -181,12 +174,9 @@ pub async fn parse_url(
     );
 
     let url = url::Url::parse(&req_body.url)
-        .map_err(|_| FileParserApiError::from_domain(DomainError::invalid_url(req_body.url)))?;
+        .map_err(|_| Problem::from(DomainError::invalid_url(req_body.url)))?;
 
-    let document = svc
-        .parse_url(&url)
-        .await
-        .map_err(FileParserApiError::from_domain)?;
+    let document = svc.parse_url(&url).await?;
 
     // Optionally render markdown
     let markdown = if render_md {
@@ -216,17 +206,14 @@ pub async fn parse_local_markdown(
     Authz(_ctx): Authz,
     Extension(svc): Extension<std::sync::Arc<FileParserService>>,
     Json(req_body): Json<ParseLocalFileRequest>,
-) -> Result<Response, FileParserApiError> {
+) -> ApiResult<Response> {
     info!(
         file_path = %req_body.file_path,
         "Parsing file from local path and streaming Markdown"
     );
 
     let path = std::path::Path::new(&req_body.file_path);
-    let document = svc
-        .parse_local(path)
-        .await
-        .map_err(FileParserApiError::from_domain)?;
+    let document = svc.parse_local(path).await?;
 
     // Create streaming response - render_iter takes ownership of document
     let stream = stream::iter(
@@ -257,7 +244,7 @@ pub async fn upload_and_parse_markdown(
     Authz(_ctx): Authz,
     Extension(svc): Extension<std::sync::Arc<FileParserService>>,
     mut multipart: axum::extract::Multipart,
-) -> Result<Response, FileParserApiError> {
+) -> ApiResult<Response> {
     info!("Uploading and parsing file, streaming Markdown");
 
     // Extract the first file field (reuse logic from upload_and_parse)
@@ -265,7 +252,7 @@ pub async fn upload_and_parse_markdown(
     let mut file_bytes: Option<bytes::Bytes> = None;
 
     while let Some(field) = multipart.next_field().await.map_err(|e| {
-        FileParserApiError::from_domain(DomainError::invalid_request(format!(
+        Problem::from(DomainError::invalid_request(format!(
             "Multipart error: {e}"
         )))
     })? {
@@ -273,22 +260,20 @@ pub async fn upload_and_parse_markdown(
         if field_name == "file" {
             file_name = field.file_name().map(ToString::to_string);
             file_bytes = Some(field.bytes().await.map_err(|e| {
-                FileParserApiError::from_domain(DomainError::io_error(format!(
-                    "Failed to read file: {e}"
-                )))
+                Problem::from(DomainError::io_error(format!("Failed to read file: {e}")))
             })?);
             break;
         }
     }
 
     let file_name = file_name.ok_or_else(|| {
-        FileParserApiError::from_domain(DomainError::invalid_request(
+        Problem::from(DomainError::invalid_request(
             "No file field found in multipart request",
         ))
     })?;
 
     let file_bytes = file_bytes.ok_or_else(|| {
-        FileParserApiError::from_domain(DomainError::invalid_request(
+        Problem::from(DomainError::invalid_request(
             "No file data found in multipart request",
         ))
     })?;
@@ -299,10 +284,7 @@ pub async fn upload_and_parse_markdown(
         "Processing uploaded file for Markdown streaming"
     );
 
-    let document = svc
-        .parse_bytes(Some(&file_name), None, file_bytes)
-        .await
-        .map_err(FileParserApiError::from_domain)?;
+    let document = svc.parse_bytes(Some(&file_name), None, file_bytes).await?;
 
     // Create streaming response - render_iter takes ownership of document
     let stream = stream::iter(
@@ -334,19 +316,16 @@ pub async fn parse_url_markdown(
     Authz(_ctx): Authz,
     Extension(svc): Extension<std::sync::Arc<FileParserService>>,
     Json(req_body): Json<ParseUrlRequest>,
-) -> Result<Response, FileParserApiError> {
+) -> ApiResult<Response> {
     info!(
         url = %req_body.url,
         "Parsing file from URL and streaming Markdown"
     );
 
     let url = url::Url::parse(&req_body.url)
-        .map_err(|_| FileParserApiError::from_domain(DomainError::invalid_url(req_body.url)))?;
+        .map_err(|_| Problem::from(DomainError::invalid_url(req_body.url)))?;
 
-    let document = svc
-        .parse_url(&url)
-        .await
-        .map_err(FileParserApiError::from_domain)?;
+    let document = svc.parse_url(&url).await?;
 
     // Create streaming response - render_iter takes ownership of document
     let stream = stream::iter(

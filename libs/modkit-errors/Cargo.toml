@@ -10,12 +10,13 @@ workspace = true
 [features]
 default = []
 utoipa = ["dep:utoipa"]
-axum = ["dep:axum"]
+axum = ["dep:axum", "dep:tracing"]
 
 [dependencies]
 serde = { workspace = true }
 utoipa = { workspace = true, optional = true }
 axum = { workspace = true, optional = true }
+tracing = { workspace = true, optional = true }
 http = { workspace = true }
 
 [dev-dependencies]

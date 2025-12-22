@@ -14,10 +14,8 @@ use modkit::SseBroadcaster;
 // Import auth extractors
 use modkit_auth::axum_ext::Authz;
 
-// Type aliases for our specific API with DomainError
+// Import domain error for conversion
 use crate::domain::error::DomainError;
-type UsersResult<T> = ApiResult<T, DomainError>;
-type UsersApiError = ApiError<DomainError>;
 
 /// List users with cursor-based pagination and optional field projection via $select
 #[tracing::instrument(
@@ -32,7 +30,7 @@ pub async fn list_users(
     Authz(ctx): Authz,
     Extension(svc): Extension<std::sync::Arc<Service>>,
     OData(query): OData,
-) -> UsersResult<JsonPage<serde_json::Value>> {
+) -> ApiResult<JsonPage<serde_json::Value>> {
     info!(
         user_id = %ctx.subject_id(),
         "Listing users with cursor pagination"
@@ -60,17 +58,14 @@ pub async fn get_user(
     Extension(svc): Extension<std::sync::Arc<Service>>,
     Path(id): Path<Uuid>,
     OData(query): OData,
-) -> UsersResult<JsonBody<serde_json::Value>> {
+) -> ApiResult<JsonBody<serde_json::Value>> {
     info!(
         user_id = %id,
         requester_id = %ctx.subject_id(),
         "Getting user details"
     );
 
-    let user = svc
-        .get_user(&ctx, id)
-        .await
-        .map_err(UsersApiError::from_domain)?;
+    let user = svc.get_user(&ctx, id).await?;
     let user_dto = UserDto::from(user);
 
     let projected = apply_select(&user_dto, query.selected_fields());
@@ -94,7 +89,7 @@ pub async fn create_user(
     Authz(ctx): Authz,
     Extension(svc): Extension<std::sync::Arc<Service>>,
     Json(req_body): Json<CreateUserReq>,
-) -> UsersResult<impl IntoResponse> {
+) -> ApiResult<impl IntoResponse> {
     info!(
         email = %req_body.email,
         display_name = %req_body.display_name,
@@ -117,10 +112,11 @@ pub async fn create_user(
     if !scope.is_root() {
         let allowed = scope.tenant_ids().iter().any(|t| t == &tenant_id);
         if !allowed {
-            return Err(UsersApiError::from_domain(DomainError::validation(
+            return Err(DomainError::validation(
                 "tenant_id",
                 format!("Tenant {tenant_id} is not allowed in current security scope"),
-            )));
+            )
+            .into());
         }
     }
 
@@ -131,13 +127,9 @@ pub async fn create_user(
         display_name,
     };
 
-    svc.create_user(&ctx, new_user)
-        .await
-        .map(|user| {
-            let id_str = user.id.to_string();
-            created_json(UserDto::from(user), &uri, &id_str)
-        })
-        .map_err(UsersApiError::from_domain)
+    let user = svc.create_user(&ctx, new_user).await?;
+    let id_str = user.id.to_string();
+    Ok(created_json(UserDto::from(user), &uri, &id_str))
 }
 
 /// Update an existing user
@@ -154,7 +146,7 @@ pub async fn update_user(
     Extension(svc): Extension<std::sync::Arc<Service>>,
     Path(id): Path<Uuid>,
     Json(req_body): Json<UpdateUserReq>,
-) -> UsersResult<JsonBody<UserDto>> {
+) -> ApiResult<JsonBody<UserDto>> {
     info!(
         user_id = %id,
         updater_id = %ctx.subject_id(),
@@ -162,10 +154,7 @@ pub async fn update_user(
     );
 
     let patch = req_body.into();
-    let user = svc
-        .update_user(&ctx, id, patch)
-        .await
-        .map_err(UsersApiError::from_domain)?;
+    let user = svc.update_user(&ctx, id, patch).await?;
     Ok(Json(UserDto::from(user)))
 }
 
@@ -182,16 +171,14 @@ pub async fn delete_user(
     Authz(ctx): Authz,
     Extension(svc): Extension<std::sync::Arc<Service>>,
     Path(id): Path<Uuid>,
-) -> UsersResult<impl IntoResponse> {
+) -> ApiResult<impl IntoResponse> {
     info!(
         user_id = %id,
         deleter_id = %ctx.subject_id(),
         "Deleting user"
     );
 
-    svc.delete_user(&ctx, id)
-        .await
-        .map_err(UsersApiError::from_domain)?;
+    svc.delete_user(&ctx, id).await?;
     Ok(no_content())
 }
 
