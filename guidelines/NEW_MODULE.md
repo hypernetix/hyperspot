@@ -257,7 +257,7 @@ Notes:
 
 ### Step 3: Errors management
 
-ModKit provides a unified error handling system with `Problem` (RFC-9457) and `ApiError<E>` for type-safe error
+ModKit provides a unified error handling system with `Problem` (RFC-9457) for type-safe error
 propagation.
 
 #### Error Architecture Overview
@@ -266,8 +266,8 @@ propagation.
 DomainError (business logic)
      ↓ From impl
 Problem (RFC-9457, implements IntoResponse)
-     ↓ wrapped by
-ApiError<DomainError> (handler return type)
+     ↓
+ApiResult<T> = Result<T, Problem>  (handler return type)
 ```
 
 #### Errors definition
@@ -280,7 +280,7 @@ ApiError<DomainError> (handler return type)
 | SDK error (public)             | `<ModuleName>Error`                      | `<module>-sdk/src/errors.rs`        | Transport-agnostic surface for consumers. No `serde` derives. Lives in SDK crate.                                                            |
 | Domain → SDK error conversion  | `impl From<DomainError> for <Sdk>Error`  | `<module>/src/domain/error.rs`      | Module crate imports SDK error and provides `From` impl.                                                                                     |
 | REST error mapping             | `impl From<DomainError> for Problem`     | `<module>/src/api/rest/error.rs`    | Centralize RFC-9457 mapping via `From` trait; `Problem` implements `IntoResponse` directly.                                                  |
-| Handler return type            | `ApiResult<T, DomainError>`              | `<module>/src/api/rest/handlers.rs` | Use `ApiError::from_domain(e)` for error conversion; type aliases simplify signatures.                                                       |
+| Handler return type            | `ApiResult<T>`                           | `<module>/src/api/rest/handlers.rs` | Use `?` operator for error propagation; `DomainError` auto-converts to `Problem` via `From` impl.                                            |
 | OpenAPI responses registration | `.error_400(openapi)`, `.error_404(...)` | `<module>/src/api/rest/routes.rs`   | Register error statuses using convenience methods on `OperationBuilder`.                                                                     |
 
 Error design rules:
@@ -363,7 +363,7 @@ use http::StatusCode;
 use modkit::api::problem::Problem;
 use crate::domain::error::DomainError;
 
-/// Implement From<DomainError> for Problem so it works with ApiError
+/// Implement From<DomainError> for Problem so `?` works in handlers
 impl From<DomainError> for Problem {
     fn from(e: DomainError) -> Self {
         // Extract trace ID from current tracing span if available
@@ -415,7 +415,7 @@ impl From<DomainError> for Problem {
 }
 ```
 
-#### Handler Error Pattern with ApiError
+#### Handler Error Pattern
 
 **Rule:** Use `modkit::api::prelude::*` for ergonomic error handling.
 
@@ -425,19 +425,13 @@ use modkit::api::prelude::*;
 use crate::domain::error::DomainError;
 use axum::{extract::Path, http::Uri, Extension};
 
-// Type aliases for cleaner signatures
-type UsersResult<T> = ApiResult<T, DomainError>;
-type UsersApiError = ApiError<DomainError>;
-
 pub async fn get_user(
     Authz(ctx): Authz,
     Extension(svc): Extension<Arc<Service>>,
     Path(id): Path<Uuid>,
-) -> UsersResult<JsonBody<UserDto>> {
-    let user = svc
-        .get_user(&ctx, id)
-        .await
-        .map_err(UsersApiError::from_domain)?;  // Convert DomainError to ApiError
+) -> ApiResult<JsonBody<UserDto>> {
+    // DomainError auto-converts to Problem via From impl
+    let user = svc.get_user(&ctx, id).await?;
     Ok(Json(UserDto::from(user)))
 }
 
@@ -446,24 +440,19 @@ pub async fn create_user(
     Authz(ctx): Authz,
     Extension(svc): Extension<Arc<Service>>,
     Json(req): Json<CreateUserReq>,
-) -> UsersResult<impl IntoResponse> {
-    let user = svc
-        .create_user(&ctx, req.into())
-        .await
-        .map_err(UsersApiError::from_domain)?;
-    let location = format!("/users/{}", user.id);
-    Ok(created_json(UserDto::from(user), location))  // Returns (StatusCode::CREATED, Location header, Json<T>)
+) -> ApiResult<impl IntoResponse> {
+    let user = svc.create_user(&ctx, req.into()).await?;
+    let id_str = user.id.to_string();
+    Ok(created_json(UserDto::from(user), &uri, &id_str))
 }
 
 pub async fn delete_user(
     Authz(ctx): Authz,
     Extension(svc): Extension<Arc<Service>>,
     Path(id): Path<Uuid>,
-) -> UsersResult<impl IntoResponse> {
-    svc.delete_user(&ctx, id)
-        .await
-        .map_err(UsersApiError::from_domain)?;
-    Ok(no_content())  // Returns StatusCode::NO_CONTENT
+) -> ApiResult<impl IntoResponse> {
+    svc.delete_user(&ctx, id).await?;
+    Ok(no_content())
 }
 ```
 
@@ -473,8 +462,8 @@ The `modkit::api::prelude` module provides:
 
 | Type/Function          | Description                                               |
 |------------------------|-----------------------------------------------------------|
-| `ApiResult<T, E>`      | `Result<T, ApiError<E>>` - standard handler return type   |
-| `ApiError<E>`          | Error wrapper with `from_domain(e)` conversion            |
+| `ApiResult<T>`         | `Result<T, Problem>` - standard handler return type       |
+| `Problem`              | RFC-9457 error type that implements `IntoResponse`        |
 | `JsonBody<T>`          | Type alias for `Json<T>` response                         |
 | `JsonPage<T>`          | Type alias for `Json<Page<T>>` paginated response         |
 | `created_json(v, loc)` | Returns `(StatusCode::CREATED, Location header, Json(v))` |
@@ -504,10 +493,11 @@ router = OperationBuilder::get("/users-info/v1/users/{id}")
 #### Checklist
 
 - Implement `From<DomainError> for Problem` for automatic RFC-9457 conversion.
-- Provide `From<DomainError> for <Module>Error` for contract errors.
-- Use `ApiResult<T, DomainError>` and `ApiError::from_domain(e)` in handlers.
+- Provide `From<DomainError> for <Module>Error` for SDK errors.
+- Use `ApiResult<T>` (which is `Result<T, Problem>`) in handlers.
+- Use `?` operator for error propagation — `DomainError` auto-converts to `Problem`.
 - Use `.error_400()/.error_404()` etc. for OpenAPI registration.
-- Keep all contract errors free of `serde` and any transport specifics.
+- Keep all SDK errors free of `serde` and any transport specifics.
 - Validation errors SHOULD use `400 Bad Request` (or `422` for structured validation).
 
 ### Step 4: SDK Crate (Public API for Rust Clients)
@@ -1169,15 +1159,14 @@ external API clients.
    **Rule:** Handlers must be thin. They extract data, call the domain service, and map results.
    **Rule:** Use `Authz(ctx): Authz` extractor to get `SecurityCtx` for authorization.
    **Rule:** Use `Extension<Arc<Service>>` for dependency injection.
-   **Rule:** Define type aliases for cleaner signatures: `type UsersResult<T> = ApiResult<T, DomainError>`.
    **Rule:** Handler return types use the prelude helpers:
 
    | Pattern | Return Type | Helper |
             |---------|-------------|--------|
-   | GET with body | `UsersResult<JsonBody<T>>` | `Ok(Json(dto))` |
-   | POST with body | `UsersResult<impl IntoResponse>` | `Ok(created_json(dto, location))` |
-   | DELETE no body | `UsersResult<impl IntoResponse>` | `Ok(no_content())` |
-   | Paginated list | `UsersResult<JsonPage<T>>` | `Ok(Json(page))` |
+   | GET with body | `ApiResult<JsonBody<T>>` | `Ok(Json(dto))` |
+   | POST with body | `ApiResult<impl IntoResponse>` | `Ok(created_json(dto, location))` |
+   | DELETE no body | `ApiResult<impl IntoResponse>` | `Ok(no_content())` |
+   | Paginated list | `ApiResult<JsonPage<T>>` | `Ok(Json(page))` |
 
    ```rust
    use modkit::api::prelude::*;
@@ -1185,19 +1174,16 @@ external API clients.
    use modkit_auth::axum_ext::Authz;
    use crate::domain::error::DomainError;
 
-   // Type aliases for cleaner signatures
-   type UsersResult<T> = ApiResult<T, DomainError>;
-   type UsersApiError = ApiError<DomainError>;
-
    /// List users with cursor-based pagination
    pub async fn list_users(
        Authz(ctx): Authz,                              // Extract SecurityCtx
        Extension(svc): Extension<Arc<Service>>,
        OData(query): OData,                            // OData query parameters
-   ) -> UsersResult<JsonPage<UserDto>> {
+   ) -> ApiResult<JsonPage<UserDto>> {
+       // DomainError auto-converts to Problem via From impl
        let page = svc
            .list_users_page(&ctx, query)
-           .await?                                      // DomainError auto-converts to ApiError
+           .await?
            .map_items(UserDto::from);
        Ok(Json(page))
    }
@@ -1207,27 +1193,21 @@ external API clients.
        Authz(ctx): Authz,
        Extension(svc): Extension<Arc<Service>>,
        Path(id): Path<Uuid>,
-   ) -> UsersResult<JsonBody<UserDto>> {
-       let user = svc
-           .get_user(&ctx, id)
-           .await
-           .map_err(UsersApiError::from_domain)?;
+   ) -> ApiResult<JsonBody<UserDto>> {
+       let user = svc.get_user(&ctx, id).await?;
        Ok(Json(UserDto::from(user)))
    }
 
    /// Create a new user
    pub async fn create_user(
+       uri: Uri,
        Authz(ctx): Authz,
        Extension(svc): Extension<Arc<Service>>,
        Json(req): Json<CreateUserReq>,
-   ) -> UsersResult<impl IntoResponse> {
-      svc.create_user(&ctx, new_user)
-          .await
-          .map(|user| {
-              let id_str = user.id.to_string();
-              created_json(UserDto::from(user), &uri, &id_str)
-          })
-          .map_err(UsersApiError::from_domain)
+   ) -> ApiResult<impl IntoResponse> {
+       let user = svc.create_user(&ctx, req.into()).await?;
+       let id_str = user.id.to_string();
+       Ok(created_json(UserDto::from(user), &uri, &id_str))
    }
 
    /// Delete a user by ID
@@ -1235,10 +1215,8 @@ external API clients.
        Authz(ctx): Authz,
        Extension(svc): Extension<Arc<Service>>,
        Path(id): Path<Uuid>,
-   ) -> UsersResult<impl IntoResponse> {
-       svc.delete_user(&ctx, id)
-           .await
-           .map_err(UsersApiError::from_domain)?;
+   ) -> ApiResult<impl IntoResponse> {
+       svc.delete_user(&ctx, id).await?;
        Ok(no_content())
    }
    ```

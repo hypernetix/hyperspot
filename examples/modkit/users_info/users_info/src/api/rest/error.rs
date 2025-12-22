@@ -48,7 +48,7 @@ pub fn domain_error_to_problem(e: &DomainError, instance: &str) -> Problem {
     }
 }
 
-/// Implement Into<Problem> for `DomainError` so it works with `ApiError`
+/// Implement Into<Problem> for `DomainError` so `?` works in handlers
 impl From<DomainError> for Problem {
     fn from(e: DomainError) -> Self {
         domain_error_to_problem(&e, "/")
