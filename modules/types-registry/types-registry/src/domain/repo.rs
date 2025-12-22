@@ -14,7 +14,7 @@ pub trait GtsRepository: Send + Sync {
     /// # Arguments
     ///
     /// * `entity` - The entity to register
-    /// * `validate` - Whether to perform full validation (production mode)
+    /// * `validate` - Whether to perform full validation (ready mode)
     ///
     /// # Errors
     ///
@@ -48,10 +48,10 @@ pub trait GtsRepository: Send + Sync {
     /// Checks if an entity with the given GTS ID exists.
     fn exists(&self, gts_id: &str) -> bool;
 
-    /// Returns whether the repository is in production mode.
-    fn is_production(&self) -> bool;
+    /// Returns whether the repository is in ready mode.
+    fn is_ready(&self) -> bool;
 
-    /// Switches the repository from configuration mode to production mode.
+    /// Switches the repository from configuration mode to ready mode.
     ///
     /// This validates all entities in temporary storage and moves them
     /// to persistent storage if validation succeeds.
@@ -59,5 +59,5 @@ pub trait GtsRepository: Send + Sync {
     /// # Errors
     ///
     /// Returns a list of validation errors if any entity fails validation.
-    fn switch_to_production(&self) -> Result<(), Vec<String>>;
+    fn switch_to_ready(&self) -> Result<(), Vec<String>>;
 }

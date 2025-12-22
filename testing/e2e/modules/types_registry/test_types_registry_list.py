@@ -29,11 +29,11 @@ async def register_test_entities(client, base_url, auth_headers):
                 "description": "Product type from globex vendor"
             },
             {
-                "$id": "gts.e2e.list.acme.models.user.v1~e2e.list.instances.user1.v1",
+                "id": "gts.e2e.list.acme.models.user.v1~e2e.list.instances.user1.v1",
                 "name": "Test User 1"
             },
             {
-                "$id": "gts.e2e.list.acme.models.user.v1~e2e.list.instances.user2.v1",
+                "id": "gts.e2e.list.acme.models.user.v1~e2e.list.instances.user2.v1",
                 "name": "Test User 2"
             }
         ]
@@ -85,11 +85,11 @@ async def test_list_entities_basic(base_url, auth_headers):
 
 
 @pytest.mark.asyncio
-async def test_list_entities_filter_by_kind_type(base_url, auth_headers):
+async def test_list_entities_filter_by_is_schema_true(base_url, auth_headers):
     """
-    Test GET /types-registry/v1/entities?kind=type
+    Test GET /types-registry/v1/entities?isSchema=true
     
-    Verifies filtering entities by kind='type'.
+    Verifies filtering entities by isSchema=true (types only).
     """
     async with httpx.AsyncClient(timeout=10.0) as client:
         await register_test_entities(client, base_url, auth_headers)
@@ -97,7 +97,7 @@ async def test_list_entities_filter_by_kind_type(base_url, auth_headers):
         response = await client.get(
             f"{base_url}/types-registry/v1/entities",
             headers=auth_headers,
-            params={"kind": "type"}
+            params={"isSchema": "true"}
         )
         
         if response.status_code in (401, 403) and not auth_headers:
@@ -114,17 +114,17 @@ async def test_list_entities_filter_by_kind_type(base_url, auth_headers):
         entities = data["entities"]
         
         for entity in entities:
-            assert entity["kind"] == "type", (
-                f"Expected kind='type', got '{entity['kind']}' for {entity['gtsId']}"
+            assert entity["isSchema"] is True, (
+                f"Expected isSchema=True, got '{entity.get('isSchema')}' for {entity['gtsId']}"
             )
 
 
 @pytest.mark.asyncio
-async def test_list_entities_filter_by_kind_instance(base_url, auth_headers):
+async def test_list_entities_filter_by_is_schema_false(base_url, auth_headers):
     """
-    Test GET /types-registry/v1/entities?kind=instance
+    Test GET /types-registry/v1/entities?isSchema=false
     
-    Verifies filtering entities by kind='instance'.
+    Verifies filtering entities by isSchema=false (instances only).
     """
     async with httpx.AsyncClient(timeout=10.0) as client:
         await register_test_entities(client, base_url, auth_headers)
@@ -132,7 +132,7 @@ async def test_list_entities_filter_by_kind_instance(base_url, auth_headers):
         response = await client.get(
             f"{base_url}/types-registry/v1/entities",
             headers=auth_headers,
-            params={"kind": "instance"}
+            params={"isSchema": "false"}
         )
         
         if response.status_code in (401, 403) and not auth_headers:
@@ -149,8 +149,8 @@ async def test_list_entities_filter_by_kind_instance(base_url, auth_headers):
         entities = data["entities"]
         
         for entity in entities:
-            assert entity["kind"] == "instance", (
-                f"Expected kind='instance', got '{entity['kind']}' for {entity['gtsId']}"
+            assert entity["isSchema"] is False, (
+                f"Expected isSchema=False, got '{entity.get('isSchema')}' for {entity['gtsId']}"
             )
 
 
@@ -308,7 +308,7 @@ async def test_list_entities_combined_filters(base_url, auth_headers):
             f"{base_url}/types-registry/v1/entities",
             headers=auth_headers,
             params={
-                "kind": "type",
+                "isSchema": "true",
                 "vendor": "e2e"
             }
         )
@@ -327,7 +327,7 @@ async def test_list_entities_combined_filters(base_url, auth_headers):
         entities = data["entities"]
         
         for entity in entities:
-            assert entity["kind"] == "type", f"Expected kind='type': {entity}"
+            assert entity["isSchema"] is True, f"Expected isSchema=True: {entity}"
 
 
 @pytest.mark.asyncio
@@ -438,10 +438,10 @@ async def test_list_entities_response_structure(base_url, auth_headers):
             
             assert "id" in entity, "Entity should have 'id' field"
             assert "gtsId" in entity, "Entity should have 'gtsId' field"
-            assert "kind" in entity, "Entity should have 'kind' field"
+            assert "isSchema" in entity, "Entity should have 'isSchema' field"
             assert "content" in entity, "Entity should have 'content' field"
             
             assert isinstance(entity["id"], str), "'id' should be a string (UUID)"
             assert isinstance(entity["gtsId"], str), "'gtsId' should be a string"
-            assert entity["kind"] in ("type", "instance"), "'kind' should be 'type' or 'instance'"
+            assert isinstance(entity["isSchema"], bool), "'isSchema' should be a boolean"
             assert isinstance(entity["content"], dict), "'content' should be an object"

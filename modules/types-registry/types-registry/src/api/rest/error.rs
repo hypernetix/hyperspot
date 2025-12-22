@@ -36,23 +36,23 @@ impl From<DomainError> for Problem {
                 "Validation failed",
                 msg.clone(),
             ),
-            DomainError::NotInProductionMode => (
+            DomainError::NotInReadyMode => (
                 StatusCode::SERVICE_UNAVAILABLE,
-                "TYPES_REGISTRY_NOT_IN_PRODUCTION",
-                "Not in production mode",
-                "The types registry is not yet in production mode".to_owned(),
+                "TYPES_REGISTRY_NOT_READY",
+                "Service not ready",
+                "The types registry is not yet ready".to_owned(),
             ),
-            DomainError::ProductionCommitFailed(errors) => {
+            DomainError::ReadyCommitFailed(errors) => {
                 let error_strings: Vec<String> = errors
                     .iter()
                     .map(std::string::ToString::to_string)
                     .collect();
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    "TYPES_REGISTRY_COMMIT_FAILED",
-                    "Production commit failed",
+                    "TYPES_REGISTRY_ACTIVATION_FAILED",
+                    "Registry activation failed",
                     format!(
-                        "Production commit failed with {} validation errors: {}",
+                        "Failed to activate registry: {} validation errors: {}",
                         errors.len(),
                         error_strings.join("; ")
                     ),
@@ -114,16 +114,16 @@ mod tests {
     }
 
     #[test]
-    fn test_domain_error_to_problem_not_in_production() {
-        let err = DomainError::NotInProductionMode;
+    fn test_domain_error_to_problem_not_in_ready_mode() {
+        let err = DomainError::NotInReadyMode;
         let problem: Problem = err.into();
         assert_eq!(problem.status, StatusCode::SERVICE_UNAVAILABLE);
     }
 
     #[test]
-    fn test_domain_error_to_problem_production_commit_failed() {
+    fn test_domain_error_to_problem_ready_commit_failed() {
         use crate::domain::error::ValidationError;
-        let err = DomainError::ProductionCommitFailed(vec![
+        let err = DomainError::ReadyCommitFailed(vec![
             ValidationError::new("gts.test1~", "error1"),
             ValidationError::new("gts.test2~", "error2"),
             ValidationError::new("gts.test3~", "error3"),

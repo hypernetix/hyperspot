@@ -77,19 +77,19 @@ async fn test_batch_with_anonymous_entities_rejected_immediately() {
 }
 
 #[tokio::test]
-async fn test_anonymous_entity_rejected_in_production_mode() {
+async fn test_anonymous_entity_rejected_in_ready_mode() {
     let service = create_service();
 
-    // Register a valid entity first and switch to production
+    // Register a valid entity first and switch to ready
     let valid_entity = json!({
         "$id": "gts.acme.core.models.setup.v1~",
         "type": "object"
     });
     let _ = service.register(vec![valid_entity]);
-    service.switch_to_production().unwrap();
-    assert!(service.is_production());
+    service.switch_to_ready().unwrap();
+    assert!(service.is_ready());
 
-    // Try to register anonymous entity in production mode
+    // Try to register anonymous entity in ready mode
     let anonymous_entity = json!({
         "type": "object",
         "properties": {
@@ -101,7 +101,7 @@ async fn test_anonymous_entity_rejected_in_production_mode() {
     assert_eq!(results.len(), 1);
     assert!(
         results[0].is_err(),
-        "Anonymous entity should be rejected in production mode"
+        "Anonymous entity should be rejected in ready mode"
     );
 }
 
@@ -110,11 +110,11 @@ async fn test_anonymous_entity_rejected_in_production_mode() {
 // =============================================================================
 
 #[tokio::test]
-async fn test_full_registration_flow_configuration_to_production() {
+async fn test_full_registration_flow_configuration_to_ready() {
     let service = create_service();
 
     // Phase 1: Configuration mode - register entities without validation
-    assert!(!service.is_production());
+    assert!(!service.is_ready());
 
     let type_schema = json!({
         "$id": "gts.acme.core.events.user_created.v1~",
@@ -132,10 +132,10 @@ async fn test_full_registration_flow_configuration_to_production() {
     assert_eq!(results.len(), 1);
     assert!(results[0].is_ok());
 
-    // Phase 2: Switch to production mode
-    let switch_result = service.switch_to_production();
+    // Phase 2: Switch to ready mode
+    let switch_result = service.switch_to_ready();
     assert!(switch_result.is_ok());
-    assert!(service.is_production());
+    assert!(service.is_ready());
 
     // Phase 3: Verify entity is accessible
     let entity = service
@@ -205,16 +205,16 @@ async fn test_duplicate_registration_fails() {
 }
 
 #[tokio::test]
-async fn test_registration_in_production_mode() {
+async fn test_registration_in_ready_mode() {
     let service = create_service();
 
-    // Switch to production first
-    service.switch_to_production().unwrap();
-    assert!(service.is_production());
+    // Switch to ready first
+    service.switch_to_ready().unwrap();
+    assert!(service.is_ready());
 
-    // Register in production mode (with validation)
+    // Register in ready mode (with validation)
     let entity = json!({
-        "$id": "gts.acme.core.events.production_type.v1~",
+        "$id": "gts.acme.core.events.ready_type.v1~",
         "type": "object",
         "properties": {
             "data": { "type": "string" }
@@ -225,7 +225,7 @@ async fn test_registration_in_production_mode() {
     assert!(results[0].is_ok());
 
     // Entity should be immediately accessible
-    let retrieved = service.get("gts.acme.core.events.production_type.v1~");
+    let retrieved = service.get("gts.acme.core.events.ready_type.v1~");
     assert!(retrieved.is_ok());
 }
 
@@ -255,7 +255,7 @@ async fn test_large_batch_registration() {
     assert_eq!(results.len(), 100);
     assert!(results.iter().all(types_registry::RegisterResult::is_ok));
 
-    service.switch_to_production().unwrap();
+    service.switch_to_ready().unwrap();
 
     let all = service.list(&ListQuery::default()).unwrap();
     assert_eq!(all.len(), 100);
@@ -271,6 +271,8 @@ async fn test_rest_register_handler_integration() {
     use types_registry::api::rest::handlers::register_entities;
 
     let service = create_service();
+    // Switch to ready first so REST API works
+    service.switch_to_ready().unwrap();
 
     let request = RegisterEntitiesRequest {
         entities: vec![json!({
@@ -296,6 +298,8 @@ async fn test_rest_register_empty_request() {
     use types_registry::api::rest::handlers::register_entities;
 
     let service = create_service();
+    // Switch to ready first so REST API works
+    service.switch_to_ready().unwrap();
 
     let request = RegisterEntitiesRequest { entities: vec![] };
 
@@ -315,6 +319,8 @@ async fn test_rest_register_with_invalid_entities() {
     use types_registry::api::rest::handlers::register_entities;
 
     let service = create_service();
+    // Switch to ready first so REST API works
+    service.switch_to_ready().unwrap();
 
     let request = RegisterEntitiesRequest {
         entities: vec![

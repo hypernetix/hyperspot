@@ -213,11 +213,12 @@ async def test_large_batch_registration(base_url, auth_headers):
 
 
 @pytest.mark.asyncio
-async def test_duplicate_entity_registration(base_url, auth_headers):
+async def test_duplicate_entity_registration_different_content_fails(base_url, auth_headers):
     """
-    Test registering the same entity twice.
+    Test registering the same entity ID with different content fails.
     
-    Verifies handling of duplicate registrations.
+    Verifies that attempting to register an entity with the same GTS ID but
+    different content (any field change) returns an AlreadyExists error.
     """
     async with httpx.AsyncClient(timeout=10.0) as client:
         gts_id = unique_type_id("duplicate")
@@ -245,7 +246,10 @@ async def test_duplicate_entity_registration(base_url, auth_headers):
             )
         
         assert response1.status_code == 200
+        data1 = response1.json()
+        assert data1["summary"]["succeeded"] == 1
         
+        # Change description - this should cause a conflict
         payload["entities"][0]["description"] = "Second registration"
         
         response2 = await client.post(
@@ -255,8 +259,16 @@ async def test_duplicate_entity_registration(base_url, auth_headers):
         )
         
         assert response2.status_code == 200, (
-            f"Expected 200, got {response2.status_code}. Response: {response2.text}"
+            f"Batch endpoint should return 200: {response2.status_code}. "
+            f"Response: {response2.text}"
         )
+        
+        data2 = response2.json()
+        assert data2["summary"]["failed"] == 1, (
+            f"Registration with different content should fail, got: {data2}"
+        )
+        assert data2["results"][0]["status"] == "error"
+        assert "error" in data2["results"][0]
 
 
 @pytest.mark.asyncio
@@ -458,4 +470,97 @@ async def test_method_not_allowed(base_url, auth_headers):
         
         assert response.status_code == 405, (
             f"Expected 405 Method Not Allowed, got {response.status_code}"
+        )
+
+
+@pytest.mark.asyncio
+@pytest.mark.skip(reason="Requires ability to test module before switch_to_production completes - see unit tests in handlers.rs")
+async def test_service_unavailable_when_module_not_ready(base_url, auth_headers):
+    """
+    Test that 503 Service Unavailable is returned when the types-registry module
+    is not ready (before switch_to_production completes).
+    
+    ## Implementation Status: IMPLEMENTED ✓
+    
+    The 503 logic is implemented in the types-registry module:
+    - handlers.rs: Each handler checks `service.is_ready()` before processing
+    - error.rs: `DomainError::NotInReadyMode` maps to `StatusCode::SERVICE_UNAVAILABLE`
+    - Unit tests verify this behavior (see test_*_returns_503_when_not_ready in handlers.rs)
+    
+    ## Two-Phase Architecture
+    
+    The types-registry module operates in two phases:
+    1. **Configuration phase**: entities accumulate in temporary storage, not queryable
+       - All REST API requests return 503 Service Unavailable
+       - Internal module registration (via ClientHub) still works
+    2. **Production phase**: after switch_to_production succeeds, entities are queryable
+       - REST API becomes available
+       - Full validation is enforced
+    
+    ## Why This Test is Skipped
+    
+    E2E tests run against a fully started server where the module is already ready.
+    Testing the "not ready" scenario requires controlling module lifecycle, which is
+    covered by Rust unit tests in:
+    - `modules/types-registry/types-registry/src/api/rest/handlers.rs`
+      - `test_register_entities_returns_503_when_not_ready`
+      - `test_list_entities_returns_503_when_not_ready`
+      - `test_get_entity_returns_503_when_not_ready`
+    
+    ## Expected 503 Response Format
+    
+    When module is not ready, all endpoints return:
+    - Status: 503 Service Unavailable
+    - Content-Type: application/problem+json
+    - Body (RFC-9457 Problem Details):
+      ```json
+      {
+        "type": "https://errors.hyperspot.com/TYPES_REGISTRY_NOT_READY",
+        "title": "Service not ready",
+        "status": 503,
+        "detail": "The types registry is not yet ready",
+        "code": "TYPES_REGISTRY_NOT_READY"
+      }
+      ```
+    """
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        # Test GET list endpoint
+        response = await client.get(
+            f"{base_url}/types-registry/v1/entities",
+            headers=auth_headers,
+        )
+        
+        assert response.status_code == 503, (
+            f"Expected 503 Service Unavailable when module not ready, got {response.status_code}"
+        )
+        
+        # Verify RFC-9457 Problem Details format
+        if response.headers.get("content-type", "").startswith("application/problem+json"):
+            data = response.json()
+            assert "title" in data or "detail" in data, (
+                "503 response should include problem details"
+            )
+            assert data.get("code") == "TYPES_REGISTRY_NOT_READY", (
+                "503 response should have TYPES_REGISTRY_NOT_READY code"
+            )
+        
+        # Test GET single entity endpoint
+        response = await client.get(
+            f"{base_url}/types-registry/v1/entities/gts.test.pkg.ns.type.v1~",
+            headers=auth_headers,
+        )
+        
+        assert response.status_code == 503, (
+            f"Expected 503 Service Unavailable when module not ready, got {response.status_code}"
+        )
+        
+        # Test POST endpoint
+        response = await client.post(
+            f"{base_url}/types-registry/v1/entities",
+            headers=auth_headers,
+            json={"entities": []},
+        )
+        
+        assert response.status_code == 503, (
+            f"Expected 503 Service Unavailable when module not ready, got {response.status_code}"
         )

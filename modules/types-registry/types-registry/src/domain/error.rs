@@ -59,13 +59,13 @@ pub enum DomainError {
     #[error("Validation failed: {0}")]
     ValidationFailed(String),
 
-    /// The operation requires production mode but registry is in configuration mode.
-    #[error("Not in production mode")]
-    NotInProductionMode,
+    /// The operation requires ready mode but registry is in configuration mode.
+    #[error("Not in ready mode")]
+    NotInReadyMode,
 
-    /// Multiple validation errors occurred during `switch_to_production`.
-    #[error("Production commit failed with {} errors", .0.len())]
-    ProductionCommitFailed(Vec<ValidationError>),
+    /// Multiple validation errors occurred during `switch_to_ready`.
+    #[error("Ready commit failed with {} errors", .0.len())]
+    ReadyCommitFailed(Vec<ValidationError>),
 
     /// An internal error occurred.
     #[error("Internal error: {0}")]
@@ -97,11 +97,11 @@ impl DomainError {
         Self::ValidationFailed(message.into())
     }
 
-    /// Returns the list of validation errors if this is a `ProductionCommitFailed` error.
+    /// Returns the list of validation errors if this is a `ReadyCommitFailed` error.
     #[must_use]
     pub fn validation_errors(&self) -> Option<&[ValidationError]> {
         match self {
-            Self::ProductionCommitFailed(errors) => Some(errors),
+            Self::ReadyCommitFailed(errors) => Some(errors),
             _ => None,
         }
     }
@@ -114,14 +114,14 @@ impl From<DomainError> for TypesRegistryError {
             DomainError::NotFound(id) => TypesRegistryError::not_found(id),
             DomainError::AlreadyExists(id) => TypesRegistryError::already_exists(id),
             DomainError::ValidationFailed(msg) => TypesRegistryError::validation_failed(msg),
-            DomainError::NotInProductionMode => TypesRegistryError::not_in_production_mode(),
-            DomainError::ProductionCommitFailed(errors) => {
+            DomainError::NotInReadyMode => TypesRegistryError::not_in_ready_mode(),
+            DomainError::ReadyCommitFailed(errors) => {
                 let error_strings: Vec<String> = errors
                     .iter()
                     .map(std::string::ToString::to_string)
                     .collect();
                 TypesRegistryError::validation_failed(format!(
-                    "Production commit failed with {} errors: {}",
+                    "Ready commit failed with {} errors: {}",
                     errors.len(),
                     error_strings.join("; ")
                 ))
@@ -170,19 +170,19 @@ mod tests {
     }
 
     #[test]
-    fn test_domain_to_sdk_error_not_in_production() {
-        let domain_err = DomainError::NotInProductionMode;
+    fn test_domain_to_sdk_error_not_in_ready_mode() {
+        let domain_err = DomainError::NotInReadyMode;
         let sdk_err: TypesRegistryError = domain_err.into();
-        assert!(matches!(sdk_err, TypesRegistryError::NotInProductionMode));
+        assert!(matches!(sdk_err, TypesRegistryError::NotInReadyMode));
     }
 
     #[test]
-    fn test_domain_to_sdk_error_production_commit_failed() {
+    fn test_domain_to_sdk_error_ready_commit_failed() {
         let errors = vec![
             ValidationError::new("gts.test1~", "error1"),
             ValidationError::new("gts.test2~", "error2"),
         ];
-        let domain_err = DomainError::ProductionCommitFailed(errors);
+        let domain_err = DomainError::ReadyCommitFailed(errors);
         let sdk_err: TypesRegistryError = domain_err.into();
         assert!(sdk_err.is_validation_failed());
     }
@@ -208,15 +208,15 @@ mod tests {
         let err = DomainError::ValidationFailed("schema invalid".to_owned());
         assert_eq!(err.to_string(), "Validation failed: schema invalid");
 
-        let err = DomainError::NotInProductionMode;
-        assert_eq!(err.to_string(), "Not in production mode");
+        let err = DomainError::NotInReadyMode;
+        assert_eq!(err.to_string(), "Not in ready mode");
 
-        let err = DomainError::ProductionCommitFailed(vec![
+        let err = DomainError::ReadyCommitFailed(vec![
             ValidationError::new("gts.test1~", "error1"),
             ValidationError::new("gts.test2~", "error2"),
             ValidationError::new("gts.test3~", "error3"),
         ]);
-        assert_eq!(err.to_string(), "Production commit failed with 3 errors");
+        assert_eq!(err.to_string(), "Ready commit failed with 3 errors");
     }
 
     #[test]

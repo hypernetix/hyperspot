@@ -91,7 +91,7 @@ mod tests {
         assert_eq!(results.len(), 1);
         assert!(results[0].is_ok());
 
-        client.service.switch_to_production().unwrap();
+        client.service.switch_to_ready().unwrap();
 
         let retrieved = client
             .get(&ctx, "gts.acme.core.events.user_created.v1~")
@@ -115,7 +115,7 @@ mod tests {
         });
 
         client.register(&ctx, vec![type1, type2]).await.unwrap();
-        client.service.switch_to_production().unwrap();
+        client.service.switch_to_ready().unwrap();
 
         let all = client.list(&ctx, ListQuery::default()).await.unwrap();
         assert_eq!(all.len(), 2);
@@ -133,7 +133,7 @@ mod tests {
         let client = create_client();
         let ctx = test_ctx();
 
-        client.service.switch_to_production().unwrap();
+        client.service.switch_to_ready().unwrap();
 
         let result = client.get(&ctx, "gts.unknown.pkg.ns.type.v1~").await;
         assert!(result.is_err());

@@ -24,15 +24,39 @@ impl TypesRegistryService {
 
     /// Registers GTS entities in batch.
     ///
+    /// Validation is controlled by the ready state:
+    /// - Configuration phase (not ready): No validation (for internal/system types)
+    /// - Ready phase: Full validation
+    ///
     /// Returns a `RegisterResult` for each input entity, preserving order.
     #[must_use]
     pub fn register(&self, entities: Vec<serde_json::Value>) -> Vec<RegisterResult> {
-        let is_production = self.repo.is_production();
+        let validate = self.repo.is_ready();
+        self.register_internal(entities, validate)
+    }
+
+    /// Registers GTS entities in batch with forced validation.
+    ///
+    /// This method always validates entities regardless of ready state.
+    /// Used by REST API to ensure all externally registered entities are validated.
+    ///
+    /// Returns a `RegisterResult` for each input entity, preserving order.
+    #[must_use]
+    pub fn register_validated(&self, entities: Vec<serde_json::Value>) -> Vec<RegisterResult> {
+        self.register_internal(entities, true)
+    }
+
+    /// Internal registration method with explicit validation control.
+    fn register_internal(
+        &self,
+        entities: Vec<serde_json::Value>,
+        validate: bool,
+    ) -> Vec<RegisterResult> {
         let mut results = Vec::with_capacity(entities.len());
 
         for entity in entities {
             let gts_id = Self::extract_gts_id(&entity);
-            let result = match self.repo.register(&entity, is_production) {
+            let result = match self.repo.register(&entity, validate) {
                 Ok(registered) => RegisterResult::Ok(registered),
                 Err(e) => RegisterResult::Err {
                     gts_id,
@@ -55,30 +79,30 @@ impl TypesRegistryService {
         self.repo.list(query)
     }
 
-    /// Switches the registry from configuration mode to production mode.
+    /// Switches the registry from configuration mode to ready mode.
     ///
     /// This validates all entities in temporary storage and moves them
     /// to persistent storage if validation succeeds.
     ///
     /// # Errors
     ///
-    /// Returns `ProductionCommitFailed` with typed `ValidationError` structs
+    /// Returns `ReadyCommitFailed` with typed `ValidationError` structs
     /// containing the GTS ID and error message for each failing entity.
-    pub fn switch_to_production(&self) -> Result<(), DomainError> {
+    pub fn switch_to_ready(&self) -> Result<(), DomainError> {
         use crate::domain::error::ValidationError;
-        self.repo.switch_to_production().map_err(|errors| {
+        self.repo.switch_to_ready().map_err(|errors| {
             let typed_errors: Vec<ValidationError> = errors
                 .into_iter()
                 .map(|s| ValidationError::from_string(&s))
                 .collect();
-            DomainError::ProductionCommitFailed(typed_errors)
+            DomainError::ReadyCommitFailed(typed_errors)
         })
     }
 
-    /// Returns whether the registry is in production mode.
+    /// Returns whether the registry is in ready mode.
     #[must_use]
-    pub fn is_production(&self) -> bool {
-        self.repo.is_production()
+    pub fn is_ready(&self) -> bool {
+        self.repo.is_ready()
     }
 
     /// Extracts the GTS ID from an entity JSON value.
@@ -99,25 +123,24 @@ mod tests {
     use super::*;
     use serde_json::json;
     use std::sync::atomic::{AtomicBool, Ordering};
-    use types_registry_sdk::GtsEntityKind;
     use uuid::Uuid;
 
     struct MockRepo {
-        is_production: AtomicBool,
+        is_ready: AtomicBool,
         fail_switch: bool,
     }
 
     impl MockRepo {
         fn new() -> Self {
             Self {
-                is_production: AtomicBool::new(false),
+                is_ready: AtomicBool::new(false),
                 fail_switch: false,
             }
         }
 
         fn with_fail_switch() -> Self {
             Self {
-                is_production: AtomicBool::new(false),
+                is_ready: AtomicBool::new(false),
                 fail_switch: true,
             }
         }
@@ -142,7 +165,7 @@ mod tests {
                 Uuid::nil(),
                 gts_id.to_owned(),
                 vec![],
-                GtsEntityKind::Type,
+                true, // is_schema
                 entity.clone(),
                 None,
             ))
@@ -156,7 +179,7 @@ mod tests {
                 Uuid::nil(),
                 gts_id.to_owned(),
                 vec![],
-                GtsEntityKind::Type,
+                true, // is_schema
                 json!({}),
                 None,
             ))
@@ -167,7 +190,7 @@ mod tests {
                 Uuid::nil(),
                 "gts.test.pkg.ns.type.v1~".to_owned(),
                 vec![],
-                GtsEntityKind::Type,
+                true, // is_schema
                 json!({}),
                 None,
             )])
@@ -177,11 +200,11 @@ mod tests {
             true
         }
 
-        fn is_production(&self) -> bool {
-            self.is_production.load(Ordering::SeqCst)
+        fn is_ready(&self) -> bool {
+            self.is_ready.load(Ordering::SeqCst)
         }
 
-        fn switch_to_production(&self) -> Result<(), Vec<String>> {
+        fn switch_to_ready(&self) -> Result<(), Vec<String>> {
             if self.fail_switch {
                 // Return errors in "gts_id: message" format for ValidationError::from_string
                 return Err(vec![
@@ -189,7 +212,7 @@ mod tests {
                     "gts.test2~: error2".to_owned(),
                 ]);
             }
-            self.is_production.store(true, Ordering::SeqCst);
+            self.is_ready.store(true, Ordering::SeqCst);
             Ok(())
         }
     }
@@ -278,35 +301,35 @@ mod tests {
     }
 
     #[test]
-    fn test_switch_to_production_success() {
+    fn test_switch_to_ready_success() {
         let service = TypesRegistryService::new(Arc::new(MockRepo::new()));
-        assert!(!service.is_production());
+        assert!(!service.is_ready());
 
-        let result = service.switch_to_production();
+        let result = service.switch_to_ready();
         assert!(result.is_ok());
-        assert!(service.is_production());
+        assert!(service.is_ready());
     }
 
     #[test]
-    fn test_switch_to_production_failure() {
+    fn test_switch_to_ready_failure() {
         let service = TypesRegistryService::new(Arc::new(MockRepo::with_fail_switch()));
-        let result = service.switch_to_production();
+        let result = service.switch_to_ready();
         assert!(result.is_err());
         match result.unwrap_err() {
-            DomainError::ProductionCommitFailed(errors) => {
+            DomainError::ReadyCommitFailed(errors) => {
                 assert_eq!(errors.len(), 2);
                 assert_eq!(errors[0].gts_id, "gts.test1~");
                 assert_eq!(errors[0].message, "error1");
                 assert_eq!(errors[1].gts_id, "gts.test2~");
                 assert_eq!(errors[1].message, "error2");
             }
-            _ => panic!("Expected ProductionCommitFailed"),
+            _ => panic!("Expected ReadyCommitFailed"),
         }
     }
 
     #[test]
-    fn test_is_production() {
+    fn test_is_ready() {
         let service = TypesRegistryService::new(Arc::new(MockRepo::new()));
-        assert!(!service.is_production());
+        assert!(!service.is_ready());
     }
 }

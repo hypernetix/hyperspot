@@ -81,13 +81,13 @@ impl Module for TypesRegistryModule {
 
 #[async_trait]
 impl SystemModule for TypesRegistryModule {
-    /// Post-init hook: switches the registry to production mode.
+    /// Post-init hook: switches the registry to ready mode.
     ///
     /// This runs AFTER `init()` has completed for ALL modules.
     /// At this point, all modules have had a chance to register their types,
-    /// so we can safely validate and switch to production mode.
+    /// so we can safely validate and switch to ready mode.
     async fn post_init(&self, _sys: &modkit::runtime::SystemContext) -> anyhow::Result<()> {
-        info!("types_registry post_init: switching to production mode");
+        info!("types_registry post_init: switching to ready mode");
 
         let service = self
             .service
@@ -97,10 +97,10 @@ impl SystemModule for TypesRegistryModule {
             .clone();
 
         service
-            .switch_to_production()
-            .map_err(|e| anyhow::anyhow!("Failed to switch to production mode: {e}"))?;
+            .switch_to_ready()
+            .map_err(|e| anyhow::anyhow!("Failed to switch to ready mode: {e}"))?;
 
-        info!("types_registry switched to production mode successfully");
+        info!("types_registry switched to ready mode successfully");
         Ok(())
     }
 }

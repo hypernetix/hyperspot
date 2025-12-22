@@ -20,11 +20,19 @@ pub type TypesRegistryApiError = ApiError<DomainError>;
 /// POST /api/v1/types-registry/entities
 ///
 /// Register GTS entities in batch.
+/// REST API always validates entities, regardless of ready state.
+/// However, REST API is blocked until service is ready.
 pub async fn register_entities(
     Extension(service): Extension<Arc<TypesRegistryService>>,
     Json(req): Json<RegisterEntitiesRequest>,
 ) -> TypesRegistryResult<(StatusCode, Json<RegisterEntitiesResponse>)> {
-    let results = service.register(req.entities);
+    if !service.is_ready() {
+        return Err(TypesRegistryApiError::from_domain(
+            crate::domain::error::DomainError::NotInReadyMode,
+        ));
+    }
+
+    let results = service.register_validated(req.entities);
 
     let summary = RegisterSummary::from_results(&results);
     let result_dtos: Vec<RegisterResultDto> = results.into_iter().map(Into::into).collect();
@@ -44,6 +52,12 @@ pub async fn list_entities(
     Extension(service): Extension<Arc<TypesRegistryService>>,
     Query(query): Query<ListEntitiesQuery>,
 ) -> TypesRegistryResult<Json<ListEntitiesResponse>> {
+    if !service.is_ready() {
+        return Err(TypesRegistryApiError::from_domain(
+            crate::domain::error::DomainError::NotInReadyMode,
+        ));
+    }
+
     let list_query = query.to_list_query();
 
     let entities = service
@@ -66,6 +80,12 @@ pub async fn get_entity(
     Extension(service): Extension<Arc<TypesRegistryService>>,
     Path(gts_id): Path<String>,
 ) -> TypesRegistryResult<Json<GtsEntityDto>> {
+    if !service.is_ready() {
+        return Err(TypesRegistryApiError::from_domain(
+            crate::domain::error::DomainError::NotInReadyMode,
+        ));
+    }
+
     let entity = service
         .get(&gts_id)
         .map_err(TypesRegistryApiError::from_domain)?;
@@ -93,8 +113,48 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_register_entities_handler() {
+    async fn test_register_entities_returns_503_when_not_ready() {
         let service = create_service();
+        // Service is not ready yet
+
+        let req = RegisterEntitiesRequest {
+            entities: vec![json!({
+                "$id": "gts.acme.core.events.user_created.v1~",
+                "type": "object"
+            })],
+        };
+
+        let result = register_entities(Extension(service), Json(req)).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_list_entities_returns_503_when_not_ready() {
+        let service = create_service();
+        // Service is not ready yet
+
+        let query = ListEntitiesQuery::default();
+        let result = list_entities(Extension(service), Query(query)).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_get_entity_returns_503_when_not_ready() {
+        let service = create_service();
+        // Service is not ready yet
+
+        let result = get_entity(
+            Extension(service),
+            Path("gts.acme.core.events.user_created.v1~".to_owned()),
+        )
+        .await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_register_entities_handler_when_ready() {
+        let service = create_service();
+        service.switch_to_ready().unwrap();
 
         let req = RegisterEntitiesRequest {
             entities: vec![json!({
@@ -114,26 +174,21 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_list_entities_handler() {
+    async fn test_list_entities_handler_when_ready() {
         let service = create_service();
 
-        let req = RegisterEntitiesRequest {
-            entities: vec![
-                json!({
-                    "$id": "gts.acme.core.events.user_created.v1~",
-                    "type": "object"
-                }),
-                json!({
-                    "$id": "gts.globex.core.events.order_placed.v1~",
-                    "type": "object"
-                }),
-            ],
-        };
-
-        let _ = register_entities(Extension(service.clone()), Json(req))
-            .await
-            .unwrap();
-        service.switch_to_production().unwrap();
+        // Register entities via internal API (before ready)
+        let _ = service.register(vec![
+            json!({
+                "$id": "gts.acme.core.events.user_created.v1~",
+                "type": "object"
+            }),
+            json!({
+                "$id": "gts.globex.core.events.order_placed.v1~",
+                "type": "object"
+            }),
+        ]);
+        service.switch_to_ready().unwrap();
 
         let query = ListEntitiesQuery::default();
         let result = list_entities(Extension(service), Query(query)).await;
@@ -144,20 +199,15 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_get_entity_handler() {
+    async fn test_get_entity_handler_when_ready() {
         let service = create_service();
 
-        let req = RegisterEntitiesRequest {
-            entities: vec![json!({
-                "$id": "gts.acme.core.events.user_created.v1~",
-                "type": "object"
-            })],
-        };
-
-        let _ = register_entities(Extension(service.clone()), Json(req))
-            .await
-            .unwrap();
-        service.switch_to_production().unwrap();
+        // Register entity via internal API (before ready)
+        let _ = service.register(vec![json!({
+            "$id": "gts.acme.core.events.user_created.v1~",
+            "type": "object"
+        })]);
+        service.switch_to_ready().unwrap();
 
         let result = get_entity(
             Extension(service),
@@ -173,7 +223,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_entity_not_found() {
         let service = create_service();
-        service.switch_to_production().unwrap();
+        service.switch_to_ready().unwrap();
 
         let result = get_entity(
             Extension(service),

@@ -1,6 +1,6 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-//! Integration tests for production mode behavior and immediate validation
+//! Integration tests for ready mode behavior and immediate validation
 
 mod common;
 
@@ -9,18 +9,18 @@ use serde_json::json;
 use types_registry_sdk::ListQuery;
 
 // =============================================================================
-// Production Mode Immediate Validation Tests
+// Ready Mode Immediate Validation Tests
 // =============================================================================
 
 #[tokio::test]
-async fn test_production_mode_validates_immediately_with_correct_order() {
+async fn test_ready_mode_validates_immediately_with_correct_order() {
     let service = create_service();
 
-    // First, switch to production mode
-    let _ = service.switch_to_production();
+    // First, switch to ready mode
+    let _ = service.switch_to_ready();
 
     // Register parent type FIRST, then instances in a single call
-    // In production mode, validation happens immediately so order matters
+    // In ready mode, validation happens immediately so order matters
     let entities = vec![
         // Parent type - must be first for instances to validate against it
         json!({
@@ -36,19 +36,19 @@ async fn test_production_mode_validates_immediately_with_correct_order() {
         }),
         // Instance 1 - valid, conforms to schema
         json!({
-            "$id": "gts.acme.core.models.person.v1~acme.core.instances.person1.v1",
+            "id": "gts.acme.core.models.person.v1~acme.core.instances.person1.v1",
             "name": "Alice",
             "age": 30
         }),
         // Instance 2 - valid
         json!({
-            "$id": "gts.acme.core.models.person.v1~acme.core.instances.person2.v1",
+            "id": "gts.acme.core.models.person.v1~acme.core.instances.person2.v1",
             "name": "Bob",
             "age": 25
         }),
         // Instance 3 - valid
         json!({
-            "$id": "gts.acme.core.models.person.v1~acme.core.instances.person3.v1",
+            "id": "gts.acme.core.models.person.v1~acme.core.instances.person3.v1",
             "name": "Charlie",
             "age": 35
         }),
@@ -62,7 +62,7 @@ async fn test_production_mode_validates_immediately_with_correct_order() {
         assert!(result.is_ok(), "Entity {i} should succeed: {result:?}");
     }
 
-    // Verify all entities are immediately available (production mode)
+    // Verify all entities are immediately available (ready mode)
     let all = service.list(&ListQuery::default()).unwrap();
     assert_eq!(all.len(), 4, "All 4 entities should be registered");
 
@@ -79,18 +79,18 @@ async fn test_production_mode_validates_immediately_with_correct_order() {
 }
 
 #[tokio::test]
-async fn test_production_mode_fails_when_instance_before_parent() {
+async fn test_ready_mode_fails_when_instance_before_parent() {
     let service = create_service();
 
-    // Switch to production mode
-    let _ = service.switch_to_production();
+    // Switch to ready mode
+    let _ = service.switch_to_ready();
 
     // Try to register instance BEFORE parent type - should fail
-    // In production mode, validation is immediate so parent must exist
+    // In ready mode, validation is immediate so parent must exist
     let entities = vec![
         // Instance first - will fail because parent doesn't exist yet
         json!({
-            "$id": "gts.acme.core.models.widget.v1~acme.core.instances.widget1.v1",
+            "id": "gts.acme.core.models.widget.v1~acme.core.instances.widget1.v1",
             "widgetId": "w-001",
             "color": "red"
         }),
@@ -125,11 +125,11 @@ async fn test_production_mode_fails_when_instance_before_parent() {
 }
 
 #[tokio::test]
-async fn test_production_mode_validates_invalid_instance_immediately() {
+async fn test_ready_mode_validates_invalid_instance_immediately() {
     let service = create_service();
 
-    // Switch to production mode first
-    let _ = service.switch_to_production();
+    // Switch to ready mode first
+    let _ = service.switch_to_ready();
 
     // Register parent type and an INVALID instance in one call
     // The instance is missing required "age" field
@@ -149,7 +149,7 @@ async fn test_production_mode_validates_invalid_instance_immediately() {
         }),
         // Invalid instance - missing required "salary" field
         json!({
-            "$id": "gts.acme.core.models.employee.v1~acme.core.instances.emp1.v1",
+            "id": "gts.acme.core.models.employee.v1~acme.core.instances.emp1.v1",
             "employeeId": "emp-001",
             "department": "Engineering"
             // Missing required "salary" field
@@ -165,20 +165,20 @@ async fn test_production_mode_validates_invalid_instance_immediately() {
         results[0]
     );
 
-    // Invalid instance should fail validation immediately in production mode
+    // Invalid instance should fail validation immediately in ready mode
     assert!(
         results[1].is_err(),
-        "Invalid instance should fail immediately in production: {:?}",
+        "Invalid instance should fail immediately in ready mode: {:?}",
         results[1]
     );
 }
 
 #[tokio::test]
-async fn test_production_mode_batch_with_valid_and_invalid_instances() {
+async fn test_ready_mode_batch_with_valid_and_invalid_instances() {
     let service = create_service();
 
-    // Switch to production mode
-    let _ = service.switch_to_production();
+    // Switch to ready mode
+    let _ = service.switch_to_ready();
 
     // Register type with mix of valid and invalid instances
     let entities = vec![
@@ -196,19 +196,19 @@ async fn test_production_mode_batch_with_valid_and_invalid_instances() {
         }),
         // Valid instance
         json!({
-            "$id": "gts.acme.core.models.item.v1~acme.core.instances.item1.v1",
+            "id": "gts.acme.core.models.item.v1~acme.core.instances.item1.v1",
             "itemId": "item-001",
             "price": 29.99
         }),
         // Invalid instance - wrong type for price
         json!({
-            "$id": "gts.acme.core.models.item.v1~acme.core.instances.item2.v1",
+            "id": "gts.acme.core.models.item.v1~acme.core.instances.item2.v1",
             "itemId": "item-002",
             "price": "not-a-number"  // Should be number
         }),
         // Another valid instance
         json!({
-            "$id": "gts.acme.core.models.item.v1~acme.core.instances.item3.v1",
+            "id": "gts.acme.core.models.item.v1~acme.core.instances.item3.v1",
             "itemId": "item-003",
             "price": 49.99
         }),
@@ -240,7 +240,7 @@ async fn test_configuration_mode_defers_validation() {
     let service = create_service();
 
     // In configuration mode, entities are stored without validation
-    assert!(!service.is_production());
+    assert!(!service.is_ready());
 
     // Register a type schema
     let type_schema = json!({
@@ -258,7 +258,7 @@ async fn test_configuration_mode_defers_validation() {
     // Register an instance that would fail validation (missing required field)
     // In configuration mode, this should succeed (deferred validation)
     let invalid_instance = json!({
-        "$id": "gts.acme.core.models.config_test.v1~acme.core.instances.test1.v1"
+        "id": "gts.acme.core.models.config_test.v1~acme.core.instances.test1.v1"
         // Missing "requiredField"
     });
 
@@ -291,13 +291,13 @@ async fn test_switch_to_production_validates_all_entities() {
 
     let _ = service.register(entities);
 
-    // Switch to production should succeed with valid entities
-    let result = service.switch_to_production();
+    // Switch to ready should succeed with valid entities
+    let result = service.switch_to_ready();
     assert!(
         result.is_ok(),
-        "Switch to production should succeed with valid entities"
+        "Switch to ready should succeed with valid entities"
     );
-    assert!(service.is_production());
+    assert!(service.is_ready());
 }
 
 // =============================================================================
@@ -305,7 +305,7 @@ async fn test_switch_to_production_validates_all_entities() {
 // =============================================================================
 
 #[tokio::test]
-async fn test_switch_to_production_is_idempotent() {
+async fn test_switch_to_ready_is_idempotent() {
     let service = create_service();
 
     // Register something first
@@ -315,18 +315,18 @@ async fn test_switch_to_production_is_idempotent() {
     })]);
 
     // First switch should succeed
-    let first_switch = service.switch_to_production();
+    let first_switch = service.switch_to_ready();
     assert!(first_switch.is_ok());
-    assert!(service.is_production());
+    assert!(service.is_ready());
 
-    // Second switch is idempotent (already in production, no-op)
-    let second_switch = service.switch_to_production();
+    // Second switch is idempotent (already in ready, no-op)
+    let second_switch = service.switch_to_ready();
     assert!(second_switch.is_ok(), "Second switch should be idempotent");
-    assert!(service.is_production());
+    assert!(service.is_ready());
 }
 
 #[tokio::test]
-async fn test_list_before_production_returns_empty() {
+async fn test_list_before_ready_returns_empty() {
     let service = create_service();
 
     // Register entities in configuration mode
@@ -335,16 +335,13 @@ async fn test_list_before_production_returns_empty() {
         "type": "object"
     })]);
 
-    // List should return empty before switching to production
+    // List should return empty before switching to ready
     let results = service.list(&ListQuery::default()).unwrap();
-    assert!(
-        results.is_empty(),
-        "List should be empty before production mode"
-    );
+    assert!(results.is_empty(), "List should be empty before ready mode");
 }
 
 #[tokio::test]
-async fn test_get_before_production_fails() {
+async fn test_get_before_ready_fails() {
     let service = create_service();
 
     // Register entity in configuration mode
@@ -353,17 +350,17 @@ async fn test_get_before_production_fails() {
         "type": "object"
     })]);
 
-    // Get should fail before switching to production
+    // Get should fail before switching to ready
     let result = service.get("gts.acme.core.events.not_accessible.v1~");
-    assert!(result.is_err(), "Get should fail before production mode");
+    assert!(result.is_err(), "Get should fail before ready mode");
 }
 
 // =============================================================================
-// Switch to Production Validation Error Reporting Tests
+// Switch to Ready Validation Error Reporting Tests
 // =============================================================================
 
 #[tokio::test]
-async fn test_switch_to_production_returns_errors_as_list() {
+async fn test_switch_to_ready_returns_errors_as_list() {
     let service = create_service();
 
     // Register a parent type schema
@@ -384,13 +381,13 @@ async fn test_switch_to_production_returns_errors_as_list() {
     // Register multiple invalid child instances in configuration mode
     // Child 1: Missing all required fields
     let invalid_child1 = json!({
-        "$id": "gts.acme.core.models.product.v1~acme.core.instances.product1.v1"
+        "id": "gts.acme.core.models.product.v1~acme.core.instances.product1.v1"
         // Missing productId, name, price
     });
 
     // Child 2: Missing price field
     let invalid_child2 = json!({
-        "$id": "gts.acme.core.models.product.v1~acme.core.instances.product2.v1",
+        "id": "gts.acme.core.models.product.v1~acme.core.instances.product2.v1",
         "productId": "prod-002",
         "name": "Widget"
         // Missing price
@@ -398,7 +395,7 @@ async fn test_switch_to_production_returns_errors_as_list() {
 
     // Child 3: Wrong type for price (string instead of number)
     let invalid_child3 = json!({
-        "$id": "gts.acme.core.models.product.v1~acme.core.instances.product3.v1",
+        "id": "gts.acme.core.models.product.v1~acme.core.instances.product3.v1",
         "productId": "prod-003",
         "name": "Gadget",
         "price": "not-a-number"  // Should be number
@@ -419,11 +416,11 @@ async fn test_switch_to_production_returns_errors_as_list() {
         "Config mode should accept invalid child 3"
     );
 
-    // Switch to production should fail
-    let switch_result = service.switch_to_production();
+    // Switch to ready should fail
+    let switch_result = service.switch_to_ready();
     assert!(
         switch_result.is_err(),
-        "Switch to production should fail with invalid children"
+        "Switch to ready should fail with invalid children"
     );
 
     let error = switch_result.unwrap_err();
@@ -463,7 +460,7 @@ async fn test_switch_to_production_returns_errors_as_list() {
 }
 
 #[tokio::test]
-async fn test_switch_to_production_error_contains_gts_ids() {
+async fn test_switch_to_ready_error_contains_gts_ids() {
     let service = create_service();
 
     // Register a type schema
@@ -481,14 +478,14 @@ async fn test_switch_to_production_error_contains_gts_ids() {
 
     // Register an invalid instance
     let invalid_instance = json!({
-        "$id": "gts.acme.core.models.error_test.v1~acme.core.instances.missing_name.v1"
+        "id": "gts.acme.core.models.error_test.v1~acme.core.instances.missing_name.v1"
         // Missing required "name" field
     });
 
     let _ = service.register(vec![invalid_instance]);
 
-    // Switch to production should fail
-    let switch_result = service.switch_to_production();
+    // Switch to ready should fail
+    let switch_result = service.switch_to_ready();
     assert!(switch_result.is_err());
 
     let error = switch_result.unwrap_err();
@@ -514,7 +511,7 @@ async fn test_switch_to_production_error_contains_gts_ids() {
 }
 
 #[tokio::test]
-async fn test_switch_to_production_success_with_valid_types_only() {
+async fn test_switch_to_ready_success_with_valid_types_only() {
     let service = create_service();
 
     // Register only valid type schemas (no instances that need validation)
@@ -538,13 +535,13 @@ async fn test_switch_to_production_success_with_valid_types_only() {
 
     let _ = service.register(vec![type_schema1, type_schema2]);
 
-    // Switch to production should succeed with valid type schemas
-    let switch_result = service.switch_to_production();
+    // Switch to ready should succeed with valid type schemas
+    let switch_result = service.switch_to_ready();
     assert!(
         switch_result.is_ok(),
         "Switch should succeed with valid types: {switch_result:?}"
     );
-    assert!(service.is_production());
+    assert!(service.is_ready());
 
     // Verify entities are accessible
     let all = service.list(&ListQuery::default()).unwrap();
@@ -582,8 +579,8 @@ async fn test_concurrent_registrations() {
         assert!(register_results[0].is_ok());
     }
 
-    // Switch to production and verify all entities
-    let _ = service.switch_to_production();
+    // Switch to ready and verify all entities
+    let _ = service.switch_to_ready();
 
     let all = service.list(&ListQuery::default()).unwrap();
     assert_eq!(all.len(), 10);

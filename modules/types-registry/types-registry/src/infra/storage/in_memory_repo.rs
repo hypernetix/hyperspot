@@ -2,9 +2,9 @@
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use gts::{GtsConfig, GtsID, GtsOps, GtsWildcard};
+use gts::{GtsConfig, GtsID, GtsIdSegment, GtsOps, GtsWildcard};
 use parking_lot::Mutex;
-use types_registry_sdk::{GtsEntity, GtsEntityKind, GtsIdSegment, ListQuery, SegmentMatchScope};
+use types_registry_sdk::{GtsEntity, ListQuery, SegmentMatchScope};
 
 use crate::domain::error::DomainError;
 use crate::domain::repo::GtsRepository;
@@ -13,17 +13,17 @@ use crate::domain::repo::GtsRepository;
 ///
 /// Implements two-phase storage:
 /// - **Configuration phase**: Entities stored in `temporary` without validation
-/// - **Production phase**: Entities validated and stored in `persistent`
+/// - **Ready phase**: Entities validated and stored in `persistent`
 ///
 /// Note: Uses `Mutex` instead of `RwLock` because `GtsOps` contains a
 /// `Box<dyn GtsReader>` which is not `Sync`.
 pub struct InMemoryGtsRepository {
     /// Temporary storage during configuration phase.
     temporary: Mutex<GtsOps>,
-    /// Persistent storage after production commit.
+    /// Persistent storage after ready commit.
     persistent: Mutex<GtsOps>,
-    /// Flag indicating production mode.
-    is_production: AtomicBool,
+    /// Flag indicating ready mode.
+    is_ready: AtomicBool,
     /// GTS configuration.
     config: GtsConfig,
 }
@@ -35,7 +35,7 @@ impl InMemoryGtsRepository {
         Self {
             temporary: Mutex::new(GtsOps::new(None, None, 0)),
             persistent: Mutex::new(GtsOps::new(None, None, 0)),
-            is_production: AtomicBool::new(false),
+            is_ready: AtomicBool::new(false),
             config,
         }
     }
@@ -46,11 +46,7 @@ impl InMemoryGtsRepository {
 
         let segments: Vec<GtsIdSegment> = parsed.gts_id_segments.clone();
 
-        let kind = if gts_id.ends_with('~') {
-            GtsEntityKind::Type
-        } else {
-            GtsEntityKind::Instance
-        };
+        let is_schema = gts_id.ends_with('~');
 
         let id = parsed.to_uuid();
 
@@ -63,7 +59,7 @@ impl InMemoryGtsRepository {
             id,
             gts_id.to_owned(),
             segments,
-            kind,
+            is_schema,
             content.clone(),
             description,
         ))
@@ -140,10 +136,13 @@ impl GtsRepository for InMemoryGtsRepository {
 
         GtsID::new(&gts_id).map_err(|e| DomainError::invalid_gts_id(e.to_string()))?;
 
-        if self.is_production.load(Ordering::SeqCst) {
+        if self.is_ready.load(Ordering::SeqCst) {
             let mut persistent = self.persistent.lock();
 
-            if persistent.store.get(&gts_id).is_some() {
+            if let Some(existing) = persistent.store.get(&gts_id) {
+                if existing.content == *entity {
+                    return Self::to_gts_entity(&gts_id, entity);
+                }
                 return Err(DomainError::already_exists(&gts_id));
             }
 
@@ -156,7 +155,10 @@ impl GtsRepository for InMemoryGtsRepository {
         } else {
             let mut temporary = self.temporary.lock();
 
-            if temporary.store.get(&gts_id).is_some() {
+            if let Some(existing) = temporary.store.get(&gts_id) {
+                if existing.content == *entity {
+                    return Self::to_gts_entity(&gts_id, entity);
+                }
                 return Err(DomainError::already_exists(&gts_id));
             }
 
@@ -199,11 +201,11 @@ impl GtsRepository for InMemoryGtsRepository {
         persistent.store.get(gts_id).is_some()
     }
 
-    fn is_production(&self) -> bool {
-        self.is_production.load(Ordering::SeqCst)
+    fn is_ready(&self) -> bool {
+        self.is_ready.load(Ordering::SeqCst)
     }
 
-    fn switch_to_production(&self) -> Result<(), Vec<String>> {
+    fn switch_to_ready(&self) -> Result<(), Vec<String>> {
         let mut errors = Vec::new();
 
         let gts_ids: Vec<String> = {
@@ -244,7 +246,7 @@ impl GtsRepository for InMemoryGtsRepository {
             return Err(errors);
         }
 
-        self.is_production.store(true, Ordering::SeqCst);
+        self.is_ready.store(true, Ordering::SeqCst);
 
         Ok(())
     }
@@ -283,7 +285,7 @@ mod tests {
     }
 
     #[test]
-    fn test_register_duplicate_fails() {
+    fn test_register_duplicate_identical_succeeds() {
         let repo = InMemoryGtsRepository::new(default_config());
 
         let entity = json!({
@@ -295,6 +297,28 @@ mod tests {
         assert!(result1.is_ok());
 
         let result2 = repo.register(&entity, false);
+        assert!(result2.is_ok(), "Idempotent registration should succeed");
+    }
+
+    #[test]
+    fn test_register_duplicate_different_content_fails() {
+        let repo = InMemoryGtsRepository::new(default_config());
+
+        let entity1 = json!({
+            "$id": "gts.acme.core.events.user_created.v1~",
+            "type": "object"
+        });
+
+        let entity2 = json!({
+            "$id": "gts.acme.core.events.user_created.v1~",
+            "type": "object",
+            "description": "Different content"
+        });
+
+        let result1 = repo.register(&entity1, false);
+        assert!(result1.is_ok());
+
+        let result2 = repo.register(&entity2, false);
         assert!(matches!(result2, Err(DomainError::AlreadyExists(_))));
     }
 
@@ -324,7 +348,7 @@ mod tests {
     }
 
     #[test]
-    fn test_switch_to_production() {
+    fn test_switch_to_ready() {
         let repo = InMemoryGtsRepository::new(default_config());
 
         let entity = json!({
@@ -337,11 +361,11 @@ mod tests {
 
         repo.register(&entity, false).unwrap();
 
-        assert!(!repo.is_production());
+        assert!(!repo.is_ready());
 
-        let result = repo.switch_to_production();
+        let result = repo.switch_to_ready();
         assert!(result.is_ok());
-        assert!(repo.is_production());
+        assert!(repo.is_ready());
 
         let get_result = repo.get("gts.acme.core.events.user_created.v1~");
         assert!(get_result.is_ok());
@@ -362,7 +386,7 @@ mod tests {
 
         repo.register(&type1, false).unwrap();
         repo.register(&type2, false).unwrap();
-        repo.switch_to_production().unwrap();
+        repo.switch_to_ready().unwrap();
 
         let query = ListQuery::default().with_vendor("acme");
         let results = repo.list(&query).unwrap();
@@ -377,16 +401,16 @@ mod tests {
     #[test]
     fn test_get_not_found() {
         let repo = InMemoryGtsRepository::new(default_config());
-        repo.switch_to_production().unwrap();
+        repo.switch_to_ready().unwrap();
 
         let result = repo.get("gts.unknown.pkg.ns.type.v1~");
         assert!(matches!(result, Err(DomainError::NotFound(_))));
     }
 
     #[test]
-    fn test_register_in_production_mode() {
+    fn test_register_in_ready_mode() {
         let repo = InMemoryGtsRepository::new(default_config());
-        repo.switch_to_production().unwrap();
+        repo.switch_to_ready().unwrap();
 
         let entity = json!({
             "$id": "gts.acme.core.events.user_created.v1~",
@@ -401,9 +425,9 @@ mod tests {
     }
 
     #[test]
-    fn test_register_duplicate_in_production_mode() {
+    fn test_register_duplicate_identical_in_ready_mode_succeeds() {
         let repo = InMemoryGtsRepository::new(default_config());
-        repo.switch_to_production().unwrap();
+        repo.switch_to_ready().unwrap();
 
         let entity = json!({
             "$id": "gts.acme.core.events.user_created.v1~",
@@ -412,6 +436,30 @@ mod tests {
 
         repo.register(&entity, true).unwrap();
         let result = repo.register(&entity, true);
+        assert!(
+            result.is_ok(),
+            "Idempotent registration should succeed in ready mode"
+        );
+    }
+
+    #[test]
+    fn test_register_duplicate_different_content_in_ready_mode_fails() {
+        let repo = InMemoryGtsRepository::new(default_config());
+        repo.switch_to_ready().unwrap();
+
+        let entity1 = json!({
+            "$id": "gts.acme.core.events.user_created.v1~",
+            "type": "object"
+        });
+
+        let entity2 = json!({
+            "$id": "gts.acme.core.events.user_created.v1~",
+            "type": "object",
+            "description": "Different content"
+        });
+
+        repo.register(&entity1, true).unwrap();
+        let result = repo.register(&entity2, true);
         assert!(matches!(result, Err(DomainError::AlreadyExists(_))));
     }
 
@@ -425,7 +473,7 @@ mod tests {
         });
 
         repo.register(&entity, false).unwrap();
-        repo.switch_to_production().unwrap();
+        repo.switch_to_ready().unwrap();
 
         assert!(repo.exists("gts.acme.core.events.user_created.v1~"));
         assert!(!repo.exists("gts.unknown.pkg.ns.type.v1~"));
@@ -441,7 +489,7 @@ mod tests {
         });
 
         repo.register(&type_entity, false).unwrap();
-        repo.switch_to_production().unwrap();
+        repo.switch_to_ready().unwrap();
 
         let query = ListQuery::default().with_is_type(true);
         let results = repo.list(&query).unwrap();
@@ -462,7 +510,7 @@ mod tests {
         });
 
         repo.register(&entity, false).unwrap();
-        repo.switch_to_production().unwrap();
+        repo.switch_to_ready().unwrap();
 
         let query = ListQuery::default().with_package("core");
         let results = repo.list(&query).unwrap();
@@ -483,7 +531,7 @@ mod tests {
         });
 
         repo.register(&entity, false).unwrap();
-        repo.switch_to_production().unwrap();
+        repo.switch_to_ready().unwrap();
 
         let query = ListQuery::default().with_namespace("events");
         let results = repo.list(&query).unwrap();
@@ -504,7 +552,7 @@ mod tests {
         });
 
         repo.register(&entity, false).unwrap();
-        repo.switch_to_production().unwrap();
+        repo.switch_to_ready().unwrap();
 
         let query = ListQuery::default().with_pattern("gts.acme.*");
         let results = repo.list(&query).unwrap();
@@ -525,7 +573,7 @@ mod tests {
         });
 
         repo.register(&entity, false).unwrap();
-        repo.switch_to_production().unwrap();
+        repo.switch_to_ready().unwrap();
 
         let query = ListQuery::default()
             .with_vendor("acme")
@@ -553,7 +601,7 @@ mod tests {
         let repo = InMemoryGtsRepository::new(default_config());
 
         let entity = json!({
-            "$id": "gts.acme.core.events.user_created.v1~acme.core.events.instance.v1",
+            "id": "gts.acme.core.events.user_created.v1~acme.core.events.instance.v1",
             "data": "value"
         });
 

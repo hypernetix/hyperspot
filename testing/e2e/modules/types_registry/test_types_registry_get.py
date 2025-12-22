@@ -78,7 +78,7 @@ async def test_get_entity_by_id(base_url, auth_headers):
         entity = response.json()
         
         assert entity["gtsId"] == gts_id
-        assert entity["kind"] == "type"
+        assert entity["isSchema"] is True
         assert "id" in entity
         assert "content" in entity
         assert entity["description"] == "Document type for get test"
@@ -198,7 +198,7 @@ async def test_get_instance_entity(base_url, auth_headers):
                     "required": ["itemName", "quantity"]
                 },
                 {
-                    "$id": instance_id,
+                    "id": instance_id,
                     "itemName": "Test Item",
                     "quantity": 42
                 }
@@ -233,7 +233,7 @@ async def test_get_instance_entity(base_url, auth_headers):
         entity = response.json()
         
         assert entity["gtsId"] == instance_id
-        assert entity["kind"] == "instance"
+        assert entity["isSchema"] is False
         
         content = entity["content"]
         assert content.get("itemName") == "Test Item"
@@ -448,3 +448,225 @@ async def test_get_entity_deterministic_uuid(base_url, auth_headers):
         assert entity1["id"] == entity2["id"], (
             "Same GTS ID should produce same UUID across requests"
         )
+
+
+@pytest.mark.asyncio
+async def test_get_entity_returns_segments(base_url, auth_headers):
+    """
+    Test that GET returns segments array for a type entity.
+    
+    Verifies that the segments field contains parsed GTS ID components.
+    """
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        gts_id = unique_id("segtest")
+        
+        payload = {
+            "entities": [
+                {
+                    "$id": gts_id,
+                    "$schema": "http://json-schema.org/draft-07/schema#",
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"}
+                    }
+                }
+            ]
+        }
+        
+        register_response = await client.post(
+            f"{base_url}/types-registry/v1/entities",
+            headers=auth_headers,
+            json=payload,
+        )
+        
+        if register_response.status_code in (401, 403) and not auth_headers:
+            pytest.skip(
+                f"Endpoint requires authentication (got {register_response.status_code}). "
+                "Set E2E_AUTH_TOKEN environment variable to run this test."
+            )
+        
+        assert register_response.status_code == 200
+        reg_data = register_response.json()
+        assert reg_data["summary"]["succeeded"] == 1, f"Registration should succeed: {reg_data}"
+        
+        response = await client.get(
+            f"{base_url}/types-registry/v1/entities/{gts_id}",
+            headers=auth_headers,
+        )
+        
+        assert response.status_code == 200, f"GET failed: {response.text}"
+        
+        entity = response.json()
+        
+        # Verify segments array exists and has expected structure
+        assert "segments" in entity, "Entity should have segments field"
+        segments = entity["segments"]
+        assert isinstance(segments, list), "Segments should be an array"
+        assert len(segments) >= 1, "Type entity should have at least one segment"
+        
+        # Verify segment structure
+        first_segment = segments[0]
+        assert "vendor" in first_segment, "Segment should have vendor"
+        assert "package" in first_segment, "Segment should have package"
+        assert "namespace" in first_segment, "Segment should have namespace"
+        assert "typeName" in first_segment, "Segment should have typeName"
+        assert "verMajor" in first_segment, "Segment should have verMajor"
+        
+        # Verify segment values match the GTS ID
+        assert first_segment["vendor"] == "e2etest"
+        assert first_segment["package"] == "pkg"
+        assert first_segment["namespace"] == "ns"
+        assert first_segment["verMajor"] == 1
+
+
+@pytest.mark.asyncio
+async def test_get_instance_with_multiple_segments(base_url, auth_headers):
+    """
+    Test that instance entities have multiple segments.
+    
+    Verifies that an instance has both type segment and instance segment.
+    """
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        type_id = unique_id("multiseg")
+        instance_id = f"{type_id}e2etest.pkg.instances.inst1.v1"
+        
+        # Register type first, then instance
+        payload = {
+            "entities": [
+                {
+                    "$id": type_id,
+                    "$schema": "http://json-schema.org/draft-07/schema#",
+                    "type": "object",
+                    "properties": {
+                        "value": {"type": "string"}
+                    },
+                    "required": ["value"]
+                },
+                {
+                    "id": instance_id,
+                    "value": "test-value"
+                }
+            ]
+        }
+        
+        register_response = await client.post(
+            f"{base_url}/types-registry/v1/entities",
+            headers=auth_headers,
+            json=payload,
+        )
+        
+        if register_response.status_code in (401, 403) and not auth_headers:
+            pytest.skip(
+                f"Endpoint requires authentication (got {register_response.status_code}). "
+                "Set E2E_AUTH_TOKEN environment variable to run this test."
+            )
+        
+        assert register_response.status_code == 200
+        reg_data = register_response.json()
+        assert reg_data["summary"]["succeeded"] == 2, (
+            f"Both type and instance should succeed: {reg_data}"
+        )
+        
+        # Get the instance entity
+        response = await client.get(
+            f"{base_url}/types-registry/v1/entities/{instance_id}",
+            headers=auth_headers,
+        )
+        
+        assert response.status_code == 200, f"GET instance failed: {response.text}"
+        
+        entity = response.json()
+        
+        assert entity["isSchema"] is False
+        assert "segments" in entity
+        segments = entity["segments"]
+        
+        # Instance should have 2 segments: type segment + instance segment
+        assert len(segments) == 2, (
+            f"Instance should have 2 segments (type + instance), got {len(segments)}"
+        )
+        
+        # First segment is the type
+        assert segments[0]["vendor"] == "e2etest"
+        assert segments[0]["package"] == "pkg"
+        assert segments[0]["namespace"] == "ns"
+        
+        # Second segment is the instance
+        assert segments[1]["vendor"] == "e2etest"
+        assert segments[1]["package"] == "pkg"
+        assert segments[1]["namespace"] == "instances"
+        assert segments[1]["typeName"] == "inst1"
+
+
+@pytest.mark.asyncio
+async def test_get_instance_with_different_vendor_segments(base_url, auth_headers):
+    """
+    Test instance where type and instance have different vendors.
+    
+    Verifies that segments correctly capture different vendors in the GTS ID chain.
+    """
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        # Type from vendor "e2etest"
+        type_id = unique_id("crossvendor")
+        # Instance from different vendor "e2eother"
+        instance_id = f"{type_id}e2eother.otherpkg.instances.inst1.v1"
+        
+        payload = {
+            "entities": [
+                {
+                    "$id": type_id,
+                    "$schema": "http://json-schema.org/draft-07/schema#",
+                    "type": "object",
+                    "properties": {
+                        "data": {"type": "string"}
+                    },
+                    "required": ["data"]
+                },
+                {
+                    "id": instance_id,
+                    "data": "cross-vendor-data"
+                }
+            ]
+        }
+        
+        register_response = await client.post(
+            f"{base_url}/types-registry/v1/entities",
+            headers=auth_headers,
+            json=payload,
+        )
+        
+        if register_response.status_code in (401, 403) and not auth_headers:
+            pytest.skip(
+                f"Endpoint requires authentication (got {register_response.status_code}). "
+                "Set E2E_AUTH_TOKEN environment variable to run this test."
+            )
+        
+        assert register_response.status_code == 200
+        reg_data = register_response.json()
+        assert reg_data["summary"]["succeeded"] == 2, (
+            f"Both type and instance should succeed: {reg_data}"
+        )
+        
+        # Get the instance entity
+        response = await client.get(
+            f"{base_url}/types-registry/v1/entities/{instance_id}",
+            headers=auth_headers,
+        )
+        
+        assert response.status_code == 200, f"GET instance failed: {response.text}"
+        
+        entity = response.json()
+        segments = entity["segments"]
+        
+        assert len(segments) == 2, "Instance should have 2 segments"
+        
+        # Type segment has vendor "e2etest"
+        assert segments[0]["vendor"] == "e2etest", (
+            f"Type segment should have vendor 'e2etest', got '{segments[0]['vendor']}'"
+        )
+        
+        # Instance segment has different vendor "e2eother"
+        assert segments[1]["vendor"] == "e2eother", (
+            f"Instance segment should have vendor 'e2eother', got '{segments[1]['vendor']}'"
+        )
+        assert segments[1]["package"] == "otherpkg"

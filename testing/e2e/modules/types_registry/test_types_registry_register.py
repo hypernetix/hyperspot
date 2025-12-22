@@ -74,7 +74,7 @@ async def test_register_single_type_entity(base_url, auth_headers):
         
         entity = results[0]["entity"]
         assert entity["gtsId"] == gts_id
-        assert entity["kind"] == "type"
+        assert entity["isSchema"] is True
         assert "id" in entity
         assert "content" in entity
 
@@ -155,7 +155,7 @@ async def test_register_batch_entities(base_url, auth_headers):
         for result in results:
             assert result["status"] == "ok"
             assert "entity" in result
-            assert result["entity"]["kind"] == "type"
+            assert result["entity"]["isSchema"] is True
 
 
 @pytest.mark.asyncio
@@ -185,7 +185,7 @@ async def test_register_type_with_instance(base_url, auth_headers):
                     "description": "Person type for instance test"
                 },
                 {
-                    "$id": instance_id,
+                    "id": instance_id,
                     "name": "Alice",
                     "age": 30
                 }
@@ -216,8 +216,8 @@ async def test_register_type_with_instance(base_url, auth_headers):
         assert summary["failed"] == 0
         
         results = data["results"]
-        assert results[0]["entity"]["kind"] == "type"
-        assert results[1]["entity"]["kind"] == "instance"
+        assert results[0]["entity"]["isSchema"] is True
+        assert results[1]["entity"]["isSchema"] is False
 
 
 @pytest.mark.asyncio
@@ -433,3 +433,150 @@ async def test_register_malformed_json_request(base_url, auth_headers):
             f"Expected 400 or 422 for malformed JSON, got {response.status_code}. "
             f"Response: {response.text}"
         )
+
+
+@pytest.mark.asyncio
+async def test_register_idempotent_identical_content(base_url, auth_headers):
+    """
+    Test idempotent registration: registering the same entity twice succeeds.
+    
+    Verifies that re-registering an entity with identical content returns success
+    (idempotent behavior) rather than a conflict error.
+    """
+    gts_id = unique_type_id("idempotent")
+    
+    entity = {
+        "$id": gts_id,
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "name": {"type": "string"}
+        },
+        "description": "Idempotent test entity"
+    }
+    
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        payload = {"entities": [entity]}
+        
+        # First registration
+        response1 = await client.post(
+            f"{base_url}/types-registry/v1/entities",
+            headers=auth_headers,
+            json=payload,
+        )
+        
+        if response1.status_code in (401, 403) and not auth_headers:
+            pytest.skip(
+                f"Endpoint requires authentication (got {response1.status_code}). "
+                "Set E2E_AUTH_TOKEN environment variable to run this test."
+            )
+        
+        assert response1.status_code == 200, (
+            f"First registration failed: {response1.status_code}. Response: {response1.text}"
+        )
+        
+        data1 = response1.json()
+        assert data1["summary"]["succeeded"] == 1
+        assert data1["results"][0]["status"] == "ok"
+        
+        # Second registration with identical content (should succeed - idempotent)
+        response2 = await client.post(
+            f"{base_url}/types-registry/v1/entities",
+            headers=auth_headers,
+            json=payload,
+        )
+        
+        assert response2.status_code == 200, (
+            f"Idempotent registration should succeed: {response2.status_code}. "
+            f"Response: {response2.text}"
+        )
+        
+        data2 = response2.json()
+        assert data2["summary"]["succeeded"] == 1, (
+            f"Idempotent registration should succeed, got: {data2}"
+        )
+        assert data2["results"][0]["status"] == "ok"
+
+
+@pytest.mark.asyncio
+async def test_register_conflict_different_content(base_url, auth_headers):
+    """
+    Test conflict detection: registering same ID with different content fails.
+    
+    Verifies that attempting to register an entity with the same GTS ID but
+    different content returns an AlreadyExists error (409 Conflict).
+    """
+    gts_id = unique_type_id("conflict")
+    
+    entity1 = {
+        "$id": gts_id,
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "name": {"type": "string"}
+        },
+        "description": "Original entity"
+    }
+    
+    entity2 = {
+        "$id": gts_id,
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "name": {"type": "string"},
+            "email": {"type": "string"}
+        },
+        "description": "Modified entity with different content"
+    }
+    
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        # First registration
+        response1 = await client.post(
+            f"{base_url}/types-registry/v1/entities",
+            headers=auth_headers,
+            json={"entities": [entity1]},
+        )
+        
+        if response1.status_code in (401, 403) and not auth_headers:
+            pytest.skip(
+                f"Endpoint requires authentication (got {response1.status_code}). "
+                "Set E2E_AUTH_TOKEN environment variable to run this test."
+            )
+        
+        assert response1.status_code == 200, (
+            f"First registration failed: {response1.status_code}. Response: {response1.text}"
+        )
+        
+        data1 = response1.json()
+        assert data1["summary"]["succeeded"] == 1
+        
+        # Second registration with different content (should fail)
+        response2 = await client.post(
+            f"{base_url}/types-registry/v1/entities",
+            headers=auth_headers,
+            json={"entities": [entity2]},
+        )
+        
+        assert response2.status_code == 200, (
+            f"Batch endpoint should return 200: {response2.status_code}. "
+            f"Response: {response2.text}"
+        )
+        
+        data2 = response2.json()
+        assert data2["summary"]["failed"] == 1, (
+            f"Registration with different content should fail, got: {data2}"
+        )
+        assert data2["results"][0]["status"] == "error"
+        assert "error" in data2["results"][0]
+        
+        error = data2["results"][0]["error"]
+        # Error can be a string or a dict with code/message
+        if isinstance(error, str):
+            assert "already exists" in error.lower(), (
+                f"Expected AlreadyExists error, got: {error}"
+            )
+        else:
+            assert "already_exists" in error.get("code", "").lower() or \
+                   "already exists" in error.get("message", "").lower(), (
+                f"Expected AlreadyExists error, got: {error}"
+            )

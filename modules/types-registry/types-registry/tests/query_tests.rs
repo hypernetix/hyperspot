@@ -27,7 +27,7 @@ async fn test_list_entities_with_vendor_filter() {
     ];
 
     let _ = service.register(entities);
-    service.switch_to_production().unwrap();
+    service.switch_to_ready().unwrap();
 
     // Filter by vendor "acme"
     let query = ListQuery::default().with_vendor("acme");
@@ -53,7 +53,7 @@ async fn test_list_entities_with_package_filter() {
     ];
 
     let _ = service.register(entities);
-    service.switch_to_production().unwrap();
+    service.switch_to_ready().unwrap();
 
     let query = ListQuery::default().with_package("core");
     let results = service.list(&query).unwrap();
@@ -76,7 +76,7 @@ async fn test_list_entities_with_namespace_filter() {
     ];
 
     let _ = service.register(entities);
-    service.switch_to_production().unwrap();
+    service.switch_to_ready().unwrap();
 
     let query = ListQuery::default().with_namespace("events");
     let results = service.list(&query).unwrap();
@@ -98,7 +98,7 @@ async fn test_list_entities_with_combined_filters() {
     ];
 
     let _ = service.register(entities);
-    service.switch_to_production().unwrap();
+    service.switch_to_ready().unwrap();
 
     // Combined filter: vendor=acme AND package=core
     let query = ListQuery::default()
@@ -121,7 +121,7 @@ async fn test_list_with_pattern_filter() {
     ];
 
     let _ = service.register(entities);
-    service.switch_to_production().unwrap();
+    service.switch_to_ready().unwrap();
 
     // Pattern matching for "user" in the name
     let query = ListQuery::default().with_pattern("user");
@@ -146,16 +146,16 @@ async fn test_list_with_is_type_filter() {
     });
 
     let _ = service.register(vec![type_schema]);
-    service.switch_to_production().unwrap();
+    service.switch_to_ready().unwrap();
 
     // Register instances
     let instances = vec![
         json!({
-            "$id": "gts.acme.core.models.filter_test.v1~acme.core.instances.i1.v1",
+            "id": "gts.acme.core.models.filter_test.v1~acme.core.instances.i1.v1",
             "name": "instance1"
         }),
         json!({
-            "$id": "gts.acme.core.models.filter_test.v1~acme.core.instances.i2.v1",
+            "id": "gts.acme.core.models.filter_test.v1~acme.core.instances.i2.v1",
             "name": "instance2"
         }),
     ];
@@ -194,7 +194,7 @@ async fn test_multiple_vendors_isolation() {
     ];
 
     let _ = service.register(entities);
-    service.switch_to_production().unwrap();
+    service.switch_to_ready().unwrap();
 
     // Each vendor filter should return correct count
     assert_eq!(
@@ -239,7 +239,7 @@ async fn test_combined_vendor_package_namespace_filter() {
     ];
 
     let _ = service.register(entities);
-    service.switch_to_production().unwrap();
+    service.switch_to_ready().unwrap();
 
     // Triple filter: vendor + package + namespace
     let query = ListQuery::default()
@@ -257,23 +257,19 @@ async fn test_combined_vendor_package_namespace_filter() {
 
 #[tokio::test]
 async fn test_rest_list_handler_integration() {
-    use axum::extract::{Extension, Json, Query};
-    use types_registry::api::rest::dto::RegisterEntitiesRequest;
-    use types_registry::api::rest::handlers::{list_entities, register_entities};
+    use axum::extract::{Extension, Query};
+    use types_registry::api::rest::handlers::list_entities;
 
     let service = create_service();
 
-    // Register some entities first
-    let request = RegisterEntitiesRequest {
-        entities: vec![
-            json!({ "$id": "gts.acme.core.events.list_test1.v1~", "type": "object" }),
-            json!({ "$id": "gts.acme.core.events.list_test2.v1~", "type": "object" }),
-        ],
-    };
-    let _ = register_entities(Extension(service.clone()), Json(request)).await;
-    service.switch_to_production().unwrap();
+    // Register entities via internal API (before ready)
+    let _ = service.register(vec![
+        json!({ "$id": "gts.acme.core.events.list_test1.v1~", "type": "object" }),
+        json!({ "$id": "gts.acme.core.events.list_test2.v1~", "type": "object" }),
+    ]);
+    service.switch_to_ready().unwrap();
 
-    // Test list handler
+    // Test list handler (now service is ready)
     let query = ListEntitiesQuery {
         vendor: Some("acme".to_owned()),
         ..Default::default()
@@ -292,7 +288,7 @@ async fn test_rest_list_empty_results() {
     use types_registry::api::rest::handlers::list_entities;
 
     let service = create_service();
-    service.switch_to_production().unwrap();
+    service.switch_to_ready().unwrap();
 
     // Query with filter that matches nothing
     let query = ListEntitiesQuery {
@@ -314,24 +310,20 @@ async fn test_rest_list_empty_results() {
 
 #[tokio::test]
 async fn test_rest_get_handler_integration() {
-    use axum::extract::{Extension, Json, Path};
-    use types_registry::api::rest::dto::RegisterEntitiesRequest;
-    use types_registry::api::rest::handlers::{get_entity, register_entities};
+    use axum::extract::{Extension, Path};
+    use types_registry::api::rest::handlers::get_entity;
 
     let service = create_service();
 
-    // Register an entity first
-    let request = RegisterEntitiesRequest {
-        entities: vec![json!({
-            "$id": "gts.acme.core.events.get_test.v1~",
-            "type": "object",
-            "description": "Test entity for GET handler"
-        })],
-    };
-    let _ = register_entities(Extension(service.clone()), Json(request)).await;
-    service.switch_to_production().unwrap();
+    // Register entity via internal API (before ready)
+    let _ = service.register(vec![json!({
+        "$id": "gts.acme.core.events.get_test.v1~",
+        "type": "object",
+        "description": "Test entity for GET handler"
+    })]);
+    service.switch_to_ready().unwrap();
 
-    // Test get handler
+    // Test get handler (now service is ready)
     let result = get_entity(
         Extension(service),
         Path("gts.acme.core.events.get_test.v1~".to_owned()),
@@ -353,7 +345,7 @@ async fn test_rest_get_handler_not_found() {
     use types_registry::api::rest::handlers::get_entity;
 
     let service = create_service();
-    service.switch_to_production().unwrap();
+    service.switch_to_ready().unwrap();
 
     let result = get_entity(
         Extension(service),

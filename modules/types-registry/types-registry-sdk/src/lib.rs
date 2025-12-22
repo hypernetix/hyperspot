@@ -37,7 +37,6 @@ pub mod models;
 pub use api::TypesRegistryApi;
 pub use error::TypesRegistryError;
 pub use models::{
-    DynGtsEntity, DynRegisterResult, GtsEntity, GtsEntityKind, GtsIdSegment, GtsInstanceEntity,
-    GtsTypeEntity, InstanceObject, ListQuery, RegisterResult, RegisterSummary, SegmentMatchScope,
-    TypeSchema,
+    DynGtsEntity, DynRegisterResult, GtsEntity, GtsInstanceEntity, GtsTypeEntity, InstanceObject,
+    ListQuery, RegisterResult, RegisterSummary, SegmentMatchScope, TypeSchema,
 };

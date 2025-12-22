@@ -28,7 +28,7 @@ async def test_validation_invalid_instance_against_schema(base_url, auth_headers
     """
     Test that invalid instances fail validation against their type schema.
     
-    In production mode, instances are validated immediately.
+    In ready mode, instances are validated immediately.
     """
     type_id = unique_type_id("employee")
     instance_id = unique_instance_id(type_id, "emp1")
@@ -47,7 +47,7 @@ async def test_validation_invalid_instance_against_schema(base_url, auth_headers
                     "required": ["employeeId", "salary"]
                 },
                 {
-                    "$id": instance_id,
+                    "id": instance_id,
                     "employeeId": "emp-001"
                 }
             ]
@@ -102,7 +102,7 @@ async def test_validation_wrong_type_for_field(base_url, auth_headers):
                     "required": ["productId", "price"]
                 },
                 {
-                    "$id": instance_id,
+                    "id": instance_id,
                     "productId": "prod-001",
                     "price": "not-a-number"
                 }
@@ -161,7 +161,7 @@ async def test_validation_valid_instance_succeeds(base_url, auth_headers):
                     "required": ["orderId", "total"]
                 },
                 {
-                    "$id": instance_id,
+                    "id": instance_id,
                     "orderId": "order-001",
                     "total": 99.99,
                     "items": ["item1", "item2"]
@@ -192,7 +192,7 @@ async def test_validation_valid_instance_succeeds(base_url, auth_headers):
 @pytest.mark.asyncio
 async def test_validation_instance_before_type_fails(base_url, auth_headers):
     """
-    Test that registering instance before its type fails in production mode.
+    Test that registering instance before its type fails in ready mode.
     
     Parent type must exist before instances can be validated.
     """
@@ -203,7 +203,7 @@ async def test_validation_instance_before_type_fails(base_url, auth_headers):
         payload = {
             "entities": [
                 {
-                    "$id": instance_id,
+                    "id": instance_id,
                     "widgetId": "w-001"
                 },
                 {
@@ -296,7 +296,7 @@ async def test_validation_complex_nested_schema(base_url, auth_headers):
                     "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object",
                     "properties": {
-                        "id": {"type": "string"},
+                        "nestedId": {"type": "string"},
                         "metadata": {
                             "type": "object",
                             "properties": {
@@ -310,11 +310,11 @@ async def test_validation_complex_nested_schema(base_url, auth_headers):
                             "required": ["createdAt"]
                         }
                     },
-                    "required": ["id", "metadata"]
+                    "required": ["nestedId", "metadata"]
                 },
                 {
-                    "$id": instance_id,
-                    "id": "nested-001",
+                    "id": instance_id,
+                    "nestedId": "nested-001",
                     "metadata": {
                         "createdAt": "2024-01-01T00:00:00Z",
                         "tags": ["test", "e2e"]
@@ -367,17 +367,17 @@ async def test_validation_multiple_instances_same_type(base_url, auth_headers):
                     "required": ["username", "email"]
                 },
                 {
-                    "$id": unique_instance_id(type_id, "user1"),
+                    "id": unique_instance_id(type_id, "user1"),
                     "username": "alice",
                     "email": "alice@example.com"
                 },
                 {
-                    "$id": unique_instance_id(type_id, "user2"),
+                    "id": unique_instance_id(type_id, "user2"),
                     "username": "bob",
                     "email": "bob@example.com"
                 },
                 {
-                    "$id": unique_instance_id(type_id, "user3"),
+                    "id": unique_instance_id(type_id, "user3"),
                     "username": "charlie",
                     "email": "charlie@example.com"
                 }

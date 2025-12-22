@@ -14,7 +14,7 @@ use serde_json::json;
 #[tokio::test]
 async fn test_get_nonexistent_entity() {
     let service = create_service();
-    service.switch_to_production().unwrap();
+    service.switch_to_ready().unwrap();
 
     let result = service.get("gts.nonexistent.pkg.ns.type.v1~");
     assert!(result.is_err());
@@ -57,7 +57,7 @@ async fn test_gts_id_extraction_priority() {
     let results = service.register(vec![entity]);
     assert!(results[0].is_ok());
 
-    service.switch_to_production().unwrap();
+    service.switch_to_ready().unwrap();
 
     // Verify the entity was registered with the $id value
     let retrieved = service.get("gts.acme.core.events.from_dollar_id.v1~");
@@ -97,7 +97,7 @@ async fn test_entity_content_preserved() {
     });
 
     let _ = service.register(vec![original_content]);
-    service.switch_to_production().unwrap();
+    service.switch_to_ready().unwrap();
 
     let retrieved = service
         .get("gts.acme.core.events.content_test.v1~")
@@ -124,7 +124,7 @@ async fn test_entity_segments_parsed_correctly() {
     });
 
     let _ = service.register(vec![entity]);
-    service.switch_to_production().unwrap();
+    service.switch_to_ready().unwrap();
 
     let retrieved = service
         .get("gts.myvendor.mypackage.mynamespace.mytype.v2~")
@@ -162,7 +162,7 @@ async fn test_gts_id_with_special_segments() {
         results[1]
     );
 
-    service.switch_to_production().unwrap();
+    service.switch_to_ready().unwrap();
 
     let e1 = service.get("gts.acme_corp.core_v2.events_ns.my_type_123.v1~");
     assert!(e1.is_ok());

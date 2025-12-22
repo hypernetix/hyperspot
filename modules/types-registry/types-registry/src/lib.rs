@@ -5,7 +5,7 @@
 //!
 //! ## Architecture
 //!
-//! - **Two-phase storage**: Configuration phase (no validation) → Production phase (full validation)
+//! - **Two-phase storage**: Configuration phase (no validation) → Ready phase (full validation)
 //! - **gts-rust integration**: Uses the official GTS library for all operations
 //! - **`ClientHub` registration**: Other modules access via `hub.get::<dyn TypesRegistryApi>()?`
 
@@ -14,9 +14,9 @@
 
 // === PUBLIC API (from SDK) ===
 pub use types_registry_sdk::{
-    DynGtsEntity, DynRegisterResult, GtsEntity, GtsEntityKind, GtsIdSegment, GtsInstanceEntity,
-    GtsTypeEntity, InstanceObject, ListQuery, RegisterResult, RegisterSummary, SegmentMatchScope,
-    TypeSchema, TypesRegistryApi, TypesRegistryError,
+    DynGtsEntity, DynRegisterResult, GtsEntity, GtsInstanceEntity, GtsTypeEntity, InstanceObject,
+    ListQuery, RegisterResult, RegisterSummary, SegmentMatchScope, TypeSchema, TypesRegistryApi,
+    TypesRegistryError,
 };
 
 // === MODULE DEFINITION ===
