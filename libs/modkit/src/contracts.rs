@@ -36,15 +36,6 @@ pub trait SystemModule: Send + Sync {
 #[async_trait]
 pub trait Module: Send + Sync + 'static {
     async fn init(&self, ctx: &crate::context::ModuleCtx) -> anyhow::Result<()>;
-
-    fn as_any(&self) -> &dyn std::any::Any;
-
-    /// Return self as a `SystemModule` if this module has the "system" capability.
-    ///
-    /// Default implementation returns None. System modules override this to return Some(self).
-    fn as_system_module(&self) -> Option<&dyn SystemModule> {
-        None
-    }
 }
 
 #[async_trait]

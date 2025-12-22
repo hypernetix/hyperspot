@@ -134,10 +134,6 @@ impl Module for TypesRegistryModule {
         tracing::info!("Types registry module initialized");
         Ok(())
     }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
 }
 ```
 

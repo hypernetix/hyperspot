@@ -39,7 +39,7 @@ use router_cache::RouterCache;
 /// typed operation specs to emit a single `OpenAPI` document.
 #[modkit::module(
 	name = "api_ingress",
-	capabilities = [rest_host, rest, stateful, system],
+	capabilities = [rest_host, rest, stateful],
     deps = ["grpc_hub"],
 	lifecycle(entry = "serve", stop_timeout = "30s", await_ready)
 )]
@@ -426,10 +426,6 @@ impl modkit::Module for ApiIngress {
             self.config.load()
         );
         Ok(())
-    }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
     }
 }
 

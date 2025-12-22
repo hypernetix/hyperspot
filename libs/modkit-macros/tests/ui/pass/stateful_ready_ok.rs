@@ -20,7 +20,6 @@ impl DemoReady {
 #[async_trait::async_trait]
 impl modkit::Module for DemoReady {
     async fn init(&self, _ctx: &modkit::ModuleCtx) -> anyhow::Result<()> { Ok(()) }
-    fn as_any(&self) -> &dyn core::any::Any { self }
 }
 
 fn main() {}

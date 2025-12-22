@@ -64,9 +64,6 @@ impl Module for BasicModule {
     async fn init(&self, _ctx: &modkit::context::ModuleCtx) -> Result<()> {
         Ok(())
     }
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
 }
 
 #[derive(Default)]
@@ -77,9 +74,6 @@ struct FullFeaturedModule;
 impl Module for FullFeaturedModule {
     async fn init(&self, _ctx: &modkit::context::ModuleCtx) -> Result<()> {
         Ok(())
-    }
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
     }
 }
 #[async_trait]
@@ -117,9 +111,6 @@ impl Module for DependentModule {
     async fn init(&self, _ctx: &modkit::context::ModuleCtx) -> Result<()> {
         Ok(())
     }
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
 }
 
 #[derive(Default)]
@@ -139,9 +130,6 @@ impl Module for CustomCtorModule {
     async fn init(&self, _ctx: &modkit::context::ModuleCtx) -> Result<()> {
         Ok(())
     }
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
 }
 
 #[derive(Default)]
@@ -151,9 +139,6 @@ struct DbOnlyModule;
 impl Module for DbOnlyModule {
     async fn init(&self, _ctx: &modkit::context::ModuleCtx) -> Result<()> {
         Ok(())
-    }
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
     }
 }
 #[async_trait]
@@ -170,9 +155,6 @@ struct RestOnlyModule;
 impl Module for RestOnlyModule {
     async fn init(&self, _ctx: &modkit::context::ModuleCtx) -> Result<()> {
         Ok(())
-    }
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
     }
 }
 impl RestfulModule for RestOnlyModule {
@@ -196,9 +178,6 @@ struct TestRestHostModule {
 impl Module for TestRestHostModule {
     async fn init(&self, _ctx: &modkit::context::ModuleCtx) -> Result<()> {
         Ok(())
-    }
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
     }
 }
 
@@ -231,9 +210,6 @@ struct StatefulOnlyModule;
 impl Module for StatefulOnlyModule {
     async fn init(&self, _ctx: &modkit::context::ModuleCtx) -> Result<()> {
         Ok(())
-    }
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
     }
 }
 #[async_trait]

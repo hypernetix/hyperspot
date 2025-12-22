@@ -45,10 +45,6 @@ impl modkit::Module for CalculatorModule {
         tracing::info!("calculator module initialized");
         Ok(())
     }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
 }
 
 /// Export gRPC services to grpc_hub
