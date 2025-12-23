@@ -138,9 +138,14 @@ impl OpenApiRegistryImpl {
             }
 
             // Pagination
-            if let Some(pagination) = spec.vendor_extensions.x_pagination.as_ref() {
+            if let Some(pagination) = spec.vendor_extensions.x_odata_filter.as_ref() {
                 if let Ok(value) = serde_json::to_value(pagination) {
-                    ext.insert("x-pagination".to_owned(), value);
+                    ext.insert("x-odata-filter".to_owned(), value);
+                }
+            }
+            if let Some(pagination) = spec.vendor_extensions.x_odata_orderby.as_ref() {
+                if let Ok(value) = serde_json::to_value(pagination) {
+                    ext.insert("x-odata-orderby".to_owned(), value);
                 }
             }
 
@@ -582,53 +587,32 @@ mod tests {
 
     #[test]
     fn test_build_openapi_with_pagination() {
-        // Mock FilterField
-        #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-        enum TestFilter {
-            Name,
-            Age,
-        }
-
-        impl modkit_db::odata::filter::FilterField for TestFilter {
-            const FIELDS: &'static [Self] = &[TestFilter::Name, TestFilter::Age];
-
-            fn name(&self) -> &'static str {
-                match self {
-                    TestFilter::Name => "name",
-                    TestFilter::Age => "age",
-                }
-            }
-
-            fn kind(&self) -> modkit_db::odata::FieldKind {
-                match self {
-                    TestFilter::Name => modkit_db::odata::FieldKind::String,
-                    TestFilter::Age => modkit_db::odata::FieldKind::I64,
-                }
-            }
-        }
-
         let registry = OpenApiRegistryImpl::new();
 
-        let mut xp = crate::api::operation_builder::XPagination::default();
-        // Fill like with_odata_pagination would
-        xp.filter_fields.insert(
+        let mut filter: operation_builder::ODataPagination<
+            std::collections::BTreeMap<String, Vec<String>>,
+        > = operation_builder::ODataPagination::default();
+        filter.allowed_fields.insert(
             "name".to_owned(),
             vec!["eq", "ne", "contains", "startswith", "endswith", "in"]
                 .into_iter()
                 .map(String::from)
                 .collect(),
         );
-        xp.filter_fields.insert(
+        filter.allowed_fields.insert(
             "age".to_owned(),
             vec!["eq", "ne", "gt", "ge", "lt", "le", "in"]
                 .into_iter()
                 .map(String::from)
                 .collect(),
         );
-        xp.order_by.push("name asc".to_owned());
-        xp.order_by.push("name desc".to_owned());
-        xp.order_by.push("age asc".to_owned());
-        xp.order_by.push("age desc".to_owned());
+
+        let mut order_by: operation_builder::ODataPagination<Vec<String>> =
+            operation_builder::ODataPagination::default();
+        order_by.allowed_fields.push("name asc".to_owned());
+        order_by.allowed_fields.push("name desc".to_owned());
+        order_by.allowed_fields.push("age asc".to_owned());
+        order_by.allowed_fields.push("age desc".to_owned());
 
         let mut spec = OperationSpec {
             method: Method::GET,
@@ -652,7 +636,8 @@ mod tests {
             allowed_request_content_types: None,
             vendor_extensions: VendorExtensions::default(),
         };
-        spec.vendor_extensions.x_pagination = Some(xp);
+        spec.vendor_extensions.x_odata_filter = Some(filter);
+        spec.vendor_extensions.x_odata_orderby = Some(order_by);
 
         registry.register_operation(&spec);
         let info = OpenApiInfo::default();
@@ -662,16 +647,20 @@ mod tests {
         let paths = json.get("paths").unwrap();
         let op = paths.get("/test").unwrap().get("get").unwrap();
 
-        let ext = op
-            .get("x-pagination")
-            .expect("x-pagination should be present");
+        let filter_ext = op
+            .get("x-odata-filter")
+            .expect("x-odata-filter should be present");
 
-        let filters = ext.get("filterFields").unwrap();
-        assert!(filters.get("name").is_some());
-        assert!(filters.get("age").is_some());
+        let allowed_fields = filter_ext.get("allowedFields").unwrap();
+        assert!(allowed_fields.get("name").is_some());
+        assert!(allowed_fields.get("age").is_some());
 
-        let order_by = ext.get("orderBy").unwrap().as_array().unwrap();
-        assert!(order_by.iter().any(|v| v.as_str() == Some("name asc")));
-        assert!(order_by.iter().any(|v| v.as_str() == Some("age desc")));
+        let order_ext = op
+            .get("x-odata-orderby")
+            .expect("x-odata-orderby should be present");
+
+        let allowed_order = order_ext.get("allowedFields").unwrap().as_array().unwrap();
+        assert!(allowed_order.iter().any(|v| v.as_str() == Some("name asc")));
+        assert!(allowed_order.iter().any(|v| v.as_str() == Some("age desc")));
     }
 }

@@ -207,8 +207,16 @@ pub struct OperationSpec {
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct VendorExtensions {
-    #[serde(rename = "X-Pagination")]
-    pub x_pagination: Option<XPagination>,
+    #[serde(rename = "x-odata-filter", skip_serializing_if = "Option::is_none")]
+    pub x_odata_filter: Option<ODataPagination<BTreeMap<String, Vec<String>>>>,
+    #[serde(rename = "x-odata-orderby", skip_serializing_if = "Option::is_none")]
+    pub x_odata_orderby: Option<ODataPagination<Vec<String>>>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct ODataPagination<T> {
+    #[serde(rename = "allowedFields")]
+    pub allowed_fields: T,
 }
 
 /// Per-operation rate & concurrency limit specification
@@ -294,7 +302,16 @@ where
     {
         use modkit_db::odata::FieldKind;
 
-        let mut xp = self.spec.vendor_extensions.x_pagination.unwrap_or_default();
+        let mut filter = self
+            .spec
+            .vendor_extensions
+            .x_odata_filter
+            .unwrap_or_default();
+        let mut order_by = self
+            .spec
+            .vendor_extensions
+            .x_odata_orderby
+            .unwrap_or_default();
 
         for field in T::FIELDS {
             let name = field.name().to_owned();
@@ -314,22 +331,24 @@ where
                 }
             };
 
-            xp.filter_fields
+            filter
+                .allowed_fields
                 .insert(name.clone(), ops.into_iter().map(String::from).collect());
 
             // Add sort options (asc/desc)
             let asc = format!("{name} asc");
             let desc = format!("{name} desc");
 
-            if !xp.order_by.contains(&asc) {
-                xp.order_by.push(asc);
+            if !order_by.allowed_fields.contains(&asc) {
+                order_by.allowed_fields.push(asc);
             }
-            if !xp.order_by.contains(&desc) {
-                xp.order_by.push(desc);
+            if !order_by.allowed_fields.contains(&desc) {
+                order_by.allowed_fields.push(desc);
             }
         }
 
-        self.spec.vendor_extensions.x_pagination = Some(xp);
+        self.spec.vendor_extensions.x_odata_filter = Some(filter);
+        self.spec.vendor_extensions.x_odata_orderby = Some(order_by);
         self
     }
 }
