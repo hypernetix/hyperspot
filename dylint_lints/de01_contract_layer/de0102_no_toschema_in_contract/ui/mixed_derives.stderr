@@ -1,5 +1,5 @@
 error: contract type should not derive `ToSchema` (DE0102)
-  --> $DIR/mixed_derives.rs:5:1
+  --> $DIR/mixed_derives.rs:6:1
    |
 LL | #[derive(Debug, Clone, ToSchema)]
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -8,7 +8,7 @@ LL | #[derive(Debug, Clone, ToSchema)]
    = note: `#[deny(de0102_no_toschema_in_contract)]` on by default
 
 error: contract type should not derive `ToSchema` (DE0102)
-  --> $DIR/mixed_derives.rs:20:1
+  --> $DIR/mixed_derives.rs:23:1
    |
 LL | #[derive(Debug, Clone, ToSchema)]
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

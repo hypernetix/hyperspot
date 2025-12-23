@@ -169,3 +169,119 @@ fn extract_simulated_dir(path_str: &str) -> Option<String> {
 
     None
 }
+
+/// Test helper function to validate that comment annotations in UI test files match the stderr outputs.
+///
+/// This function scans all `.rs` files in the specified UI test directory and verifies that:
+/// - Lines with a "Should trigger" comment have corresponding errors in the `.stderr` file
+/// - Lines with a "Should not trigger" comment do NOT have errors in the `.stderr` file
+/// - All errors in `.stderr` files are properly annotated with "Should trigger" comments
+///
+/// # Arguments
+/// * `ui_dir` - Path to the directory containing UI test files
+/// * `lint_code` - The lint code to check for in comments (e.g., "DE0101")
+/// * `comment_pattern` - The pattern to match in comments (e.g., "Serde in contract")
+pub fn test_comment_annotations_match_stderr(
+    ui_dir: &std::path::Path,
+    lint_code: &str,
+    comment_pattern: &str,
+) {
+    use std::collections::HashSet;
+    use std::fs;
+
+    let trigger_comment = format!("// Should trigger {} - {}", lint_code, comment_pattern);
+    let not_trigger_comment = format!("// Should not trigger {} - {}", lint_code, comment_pattern);
+
+    // Find all .rs files in ui directory
+    let rs_files: Vec<_> = fs::read_dir(ui_dir)
+        .expect("Failed to read ui directory")
+        .filter_map(|entry| {
+            let entry = entry.ok()?;
+            let path = entry.path();
+            if path.extension()? == "rs" {
+                Some(path)
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    assert!(!rs_files.is_empty(), "No .rs test files found in ui directory");
+
+    for rs_file in rs_files {
+        let stderr_file = rs_file.with_extension("stderr");
+
+        // Read the .rs file
+        let rs_content = fs::read_to_string(&rs_file)
+            .unwrap_or_else(|_| panic!("Failed to read {:?}", rs_file));
+
+        // Read the .stderr file (if it exists)
+        let stderr_content = fs::read_to_string(&stderr_file).unwrap_or_default();
+
+        // Parse lines from .rs file
+        let rs_lines: Vec<&str> = rs_content.lines().collect();
+
+        // Find all lines with "Should trigger" or "Should not trigger" comments
+        let mut should_trigger_lines = HashSet::new();
+        let mut should_not_trigger_lines = HashSet::new();
+
+        for (idx, line) in rs_lines.iter().enumerate() {
+            if line.contains(&trigger_comment) {
+                // The next line should have an error (idx + 1 is the next line, +1 again for 1-indexed)
+                should_trigger_lines.insert(idx + 2);
+            } else if line.contains(&not_trigger_comment) {
+                // The next line should NOT have an error
+                should_not_trigger_lines.insert(idx + 2);
+            }
+        }
+
+        // Parse stderr file to find which lines have errors
+        let mut error_lines = HashSet::new();
+        for line in stderr_content.lines() {
+            // Look for lines like "  --> $DIR/file.rs:5:1"
+            if line.contains("-->") && line.contains(".rs:") {
+                if let Some(pos) = line.rfind(".rs:") {
+                    let rest = &line[pos + 4..];
+                    if let Some(colon_pos) = rest.find(':') {
+                        if let Ok(line_num) = rest[..colon_pos].parse::<usize>() {
+                            error_lines.insert(line_num);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Validate that should_trigger_lines match error_lines
+        for line_num in &should_trigger_lines {
+            assert!(
+                error_lines.contains(line_num),
+                "In {:?}: Line {} has '{}' comment but no corresponding error in .stderr file",
+                rs_file.file_name().unwrap(),
+                line_num,
+                trigger_comment
+            );
+        }
+
+        // Validate that should_not_trigger_lines do NOT appear in error_lines
+        for line_num in &should_not_trigger_lines {
+            assert!(
+                !error_lines.contains(line_num),
+                "In {:?}: Line {} has '{}' comment but has an error in .stderr file",
+                rs_file.file_name().unwrap(),
+                line_num,
+                not_trigger_comment
+            );
+        }
+
+        // Also verify that all error_lines are marked with should_trigger comments
+        for line_num in &error_lines {
+            assert!(
+                should_trigger_lines.contains(line_num),
+                "In {:?}: Line {} has an error in .stderr file but no '{}' comment",
+                rs_file.file_name().unwrap(),
+                line_num,
+                trigger_comment
+            );
+        }
+    }
+}

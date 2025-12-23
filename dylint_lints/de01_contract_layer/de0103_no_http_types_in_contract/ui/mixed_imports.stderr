@@ -1,5 +1,5 @@
 error: contract module imports HTTP type (DE0103)
-  --> $DIR/mixed_imports.rs:3:1
+  --> $DIR/mixed_imports.rs:5:1
    |
 LL | use http::StatusCode;
    | ^^^^^^^^^^^^^^^^^^^^^

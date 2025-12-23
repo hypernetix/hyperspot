@@ -1,5 +1,5 @@
 error: api/rest type is missing required ToSchema derive (DE0204)
-  --> $DIR/missing_toschema.rs:6:1
+  --> $DIR/missing_toschema.rs:7:1
    |
 LL | / pub struct UserDto {
 LL | |     pub id: String,

@@ -1,5 +1,5 @@
 error: DTO type `UserDto` is defined outside of api/rest folder (DE0201)
-  --> $DIR/dto_in_domain.rs:4:1
+  --> $DIR/dto_in_domain.rs:5:1
    |
 LL | pub struct UserDto {
    | ^^^^^^^^^^^^^^^^^^

@@ -1,5 +1,5 @@
 error: contract type should not derive `Serialize` (DE0101)
-  --> $DIR/qualified_paths.rs:3:1
+  --> $DIR/qualified_paths.rs:4:1
    |
 LL | #[derive(Debug, Clone, serde::Serialize)]
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -8,7 +8,7 @@ LL | #[derive(Debug, Clone, serde::Serialize)]
    = note: `#[deny(de0101_no_serde_in_contract)]` on by default
 
 error: contract type should not derive `Deserialize` (DE0101)
-  --> $DIR/qualified_paths.rs:9:1
+  --> $DIR/qualified_paths.rs:11:1
    |
 LL | #[derive(Debug, serde::Deserialize)]
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -16,7 +16,7 @@ LL | #[derive(Debug, serde::Deserialize)]
    = help: remove serde derives from contract models; use DTOs in the API layer
 
 error: contract type should not derive `Serialize` (DE0101)
-  --> $DIR/qualified_paths.rs:15:1
+  --> $DIR/qualified_paths.rs:18:1
    |
 LL | #[derive(serde::Serialize, serde::Deserialize)]
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -24,7 +24,7 @@ LL | #[derive(serde::Serialize, serde::Deserialize)]
    = help: remove serde derives from contract models; use DTOs in the API layer
 
 error: contract type should not derive `Deserialize` (DE0101)
-  --> $DIR/qualified_paths.rs:15:1
+  --> $DIR/qualified_paths.rs:18:1
    |
 LL | #[derive(serde::Serialize, serde::Deserialize)]
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

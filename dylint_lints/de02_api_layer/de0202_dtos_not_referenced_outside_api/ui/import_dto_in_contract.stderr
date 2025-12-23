@@ -1,5 +1,5 @@
 error: contract module imports DTO type `UserDto` from api layer (DE0202)
-  --> $DIR/import_dto_in_contract.rs:12:1
+  --> $DIR/import_dto_in_contract.rs:13:1
    |
 LL | use crate::api::rest::dto::UserDto;
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

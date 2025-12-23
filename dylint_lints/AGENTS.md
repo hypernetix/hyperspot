@@ -151,7 +151,8 @@ fn specific_case() {
 mod contract {
     use target_crate::TargetTrait;
 
-    #[derive(Debug, Clone, TargetTrait)]  // Should trigger lint
+    #[derive(Debug, Clone, TargetTrait)]
+    // Should trigger DEXXX - description of what triggers
     pub struct Example {
         pub field: String,
     }
@@ -160,19 +161,81 @@ mod contract {
 fn main() {}
 ```
 
+### Comment Annotations for Test Validation
+
+**Purpose**: Validate that test comments match actual lint behavior in `.stderr` files.
+
+**Comment Format**:
+- `// Should trigger DEXXX - description` - Marks code that MUST trigger the lint
+- `// Should not trigger DEXXX - description` - Marks code that MUST NOT trigger the lint
+
+**Placement Rules**:
+- Place comment on the line **immediately before** where the error is reported
+- For multiline spans (structs, enums, functions), the error is reported on the **first line** of the item
+- NOT on the attribute line (e.g., `#[derive(...)]`), but on the item declaration line
+
+**Example - Correct**:
+```rust
+#[derive(Debug, Clone)]
+// Should trigger DE0203 - DTOs must have serde derives
+pub struct UserDto {  // Error reported HERE
+    pub id: String,
+}
+```
+
+**Example - Incorrect**:
+```rust
+// Should trigger DE0203 - DTOs must have serde derives
+#[derive(Debug, Clone)]  // Comment expects error on next line (derive)
+pub struct UserDto {     // But error is actually reported HERE
+    pub id: String,
+}
+```
+
+**Required Unit Test**:
+Every lint MUST include this test to enforce comment/stderr alignment:
+
+```rust
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn ui_examples() {
+        dylint_testing::ui_test_examples(env!("CARGO_PKG_NAME"));
+    }
+
+    #[test]
+    fn test_comment_annotations_match_stderr() {
+        let ui_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("ui");
+        lint_utils::test_comment_annotations_match_stderr(
+            &ui_dir,
+            "DEXXX",  // Lint code
+            "description of what triggers"  // Must match comment text
+        );
+    }
+}
+```
+
+This test validates:
+1. Every "Should trigger" comment has a corresponding error in `.stderr`
+2. Every "Should not trigger" comment has NO error in `.stderr`
+3. Every error in `.stderr` has a corresponding "Should trigger" comment
+
 ### Generating .stderr Files
 1. Run tests: `cargo test --lib ui_examples`
 2. Copy normalized stderr from test output
 3. Create `.stderr` file with `$DIR/` placeholder for paths
 4. Line numbers must match exactly
+5. Add comment annotations as described above
 
 ### Example .stderr
 ```
 error: contract type should not derive `TargetTrait` (DEXXX)
-  --> $DIR/test_case.rs:4:5
+  --> $DIR/test_case.rs:5:5
    |
-LL |     #[derive(Debug, Clone, TargetTrait)]
-   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+LL | / pub struct Example {
+LL | |     pub field: String,
+LL | | }
+   | |_^
    |
    = help: helpful suggestion here
    = note: `#[deny(lint_name)]` on by default
@@ -193,9 +256,10 @@ error: aborting due to 1 previous error
 - [ ] Update `Cargo.toml` with dependencies
 - [ ] Add example targets for each test case
 - [ ] Implement lint with appropriate pass type
-- [ ] Create UI test files in `ui/`
+- [ ] Create UI test files in `ui/` with comment annotations
 - [ ] Generate `.stderr` golden files
-- [ ] Verify all tests pass: `cargo test --lib ui_examples`
+- [ ] Add `test_comment_annotations_match_stderr` unit test
+- [ ] Verify all tests pass: `cargo test --lib`
 - [ ] Add to workspace `members` in root `Cargo.toml`
 - [ ] Document lint behavior in doc comments
 

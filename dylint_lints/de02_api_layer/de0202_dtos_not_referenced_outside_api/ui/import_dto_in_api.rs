@@ -7,7 +7,7 @@ mod api {
             pub struct UserDto;
         }
 
-        // This is allowed
+        // Should not trigger DE0202 - DTOs not referenced outside api
         use crate::api::rest::dto::UserDto;
     }
 }

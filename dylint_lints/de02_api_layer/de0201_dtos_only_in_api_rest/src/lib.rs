@@ -52,7 +52,16 @@ impl EarlyLintPass for De0201DtosOnlyInApiRest {
     }
 }
 
-#[test]
-fn ui_examples() {
-    dylint_testing::ui_test_examples(env!("CARGO_PKG_NAME"));
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn ui_examples() {
+        dylint_testing::ui_test_examples(env!("CARGO_PKG_NAME"));
+    }
+
+    #[test]
+    fn test_comment_annotations_match_stderr() {
+        let ui_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("ui");
+        lint_utils::test_comment_annotations_match_stderr(&ui_dir, "DE0201", "DTOs only in api/rest");
+    }
 }

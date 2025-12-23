@@ -1,5 +1,5 @@
 error: api/rest type is missing required serde derives: Serialize, Deserialize (DE0203)
-  --> $DIR/missing_serde.rs:4:1
+  --> $DIR/missing_serde.rs:5:1
    |
 LL | / pub struct UserDto {
 LL | |     pub id: String,
@@ -10,7 +10,7 @@ LL | | }
    = note: `#[deny(de0203_dtos_must_have_serde_derives)]` on by default
 
 error: api/rest type is missing required serde derives: Serialize, Deserialize (DE0203)
-  --> $DIR/missing_serde.rs:10:1
+  --> $DIR/missing_serde.rs:12:1
    |
 LL | / pub struct ProductDto {
 LL | |     pub name: String,

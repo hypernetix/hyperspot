@@ -9,6 +9,7 @@ mod api {
     }
 }
 
+// Should trigger DE0202 - DTOs not referenced outside api
 use crate::api::rest::dto::UserDto;
 
 pub fn get_user() -> UserDto {

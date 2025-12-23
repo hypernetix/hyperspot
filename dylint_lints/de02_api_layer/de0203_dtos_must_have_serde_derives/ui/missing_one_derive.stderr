@@ -1,5 +1,5 @@
 error: api/rest type is missing required serde derives: Deserialize (DE0203)
-  --> $DIR/missing_one_derive.rs:6:1
+  --> $DIR/missing_one_derive.rs:7:1
    |
 LL | / pub struct OnlySerializeDto {
 LL | |     pub id: String,

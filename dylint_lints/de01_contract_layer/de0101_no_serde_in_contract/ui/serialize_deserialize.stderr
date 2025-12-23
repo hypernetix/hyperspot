@@ -1,5 +1,5 @@
 error: contract type should not derive `Serialize` (DE0101)
-  --> $DIR/serialize_deserialize.rs:5:1
+  --> $DIR/serialize_deserialize.rs:6:1
    |
 LL | #[derive(Debug, Clone, Serialize, Deserialize)]
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -8,7 +8,7 @@ LL | #[derive(Debug, Clone, Serialize, Deserialize)]
    = note: `#[deny(de0101_no_serde_in_contract)]` on by default
 
 error: contract type should not derive `Deserialize` (DE0101)
-  --> $DIR/serialize_deserialize.rs:5:1
+  --> $DIR/serialize_deserialize.rs:6:1
    |
 LL | #[derive(Debug, Clone, Serialize, Deserialize)]
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -16,7 +16,7 @@ LL | #[derive(Debug, Clone, Serialize, Deserialize)]
    = help: remove serde derives from contract models; use DTOs in the API layer
 
 error: contract type should not derive `Serialize` (DE0101)
-  --> $DIR/serialize_deserialize.rs:12:1
+  --> $DIR/serialize_deserialize.rs:14:1
    |
 LL | #[derive(Debug, Clone, Serialize)]
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -24,7 +24,7 @@ LL | #[derive(Debug, Clone, Serialize)]
    = help: remove serde derives from contract models; use DTOs in the API layer
 
 error: contract type should not derive `Deserialize` (DE0101)
-  --> $DIR/serialize_deserialize.rs:19:1
+  --> $DIR/serialize_deserialize.rs:22:1
    |
 LL | #[derive(Debug, Clone, Deserialize)]
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -32,7 +32,7 @@ LL | #[derive(Debug, Clone, Deserialize)]
    = help: remove serde derives from contract models; use DTOs in the API layer
 
 error: contract type should not derive `Serialize` (DE0101)
-  --> $DIR/serialize_deserialize.rs:33:1
+  --> $DIR/serialize_deserialize.rs:38:1
    |
 LL | #[derive(Debug, Clone, Serialize, Deserialize)]
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -40,7 +40,7 @@ LL | #[derive(Debug, Clone, Serialize, Deserialize)]
    = help: remove serde derives from contract models; use DTOs in the API layer
 
 error: contract type should not derive `Deserialize` (DE0101)
-  --> $DIR/serialize_deserialize.rs:33:1
+  --> $DIR/serialize_deserialize.rs:38:1
    |
 LL | #[derive(Debug, Clone, Serialize, Deserialize)]
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

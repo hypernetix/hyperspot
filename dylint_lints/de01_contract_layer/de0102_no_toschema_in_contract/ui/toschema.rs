@@ -2,6 +2,7 @@
 use utoipa::ToSchema;
 
 #[allow(dead_code)]
+// Should trigger DE0102 - ToSchema in contract
 #[derive(Debug, Clone, ToSchema)]
 pub struct Product {
     pub id: String,
@@ -10,6 +11,7 @@ pub struct Product {
 }
 
 #[allow(dead_code)]
+// Should trigger DE0102 - ToSchema in contract
 #[derive(Debug, Clone, ToSchema)]
 pub struct Order {
     pub id: String,
@@ -17,6 +19,7 @@ pub struct Order {
 }
 
 #[allow(dead_code)]
+// Should trigger DE0102 - ToSchema in contract
 #[derive(Debug, Clone, ToSchema)]
 pub enum Status {
     Active,
