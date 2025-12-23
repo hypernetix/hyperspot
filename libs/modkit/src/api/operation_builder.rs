@@ -242,6 +242,12 @@ pub trait OperationBuilderODataExt<S, H, R> {
     /// Adds optional `$orderby` query parameter to `OpenAPI`.
     #[must_use]
     fn with_odata_orderby(self) -> Self;
+
+    /// Populates `x-pagination` vendor extension based on the provided `FilterField` type.
+    #[must_use]
+    fn with_odata_pagination<T>(self) -> Self
+    where
+        T: modkit_db::odata::filter::FilterField;
 }
 
 impl<S, H, R, A> OperationBuilderODataExt<S, H, R> for OperationBuilder<H, R, S, A>
@@ -257,21 +263,6 @@ where
             description: Some("OData v4 filter expression".to_owned()),
             param_type: "string".to_owned(),
         });
-        // TODO
-        let mut xp = self.spec.vendor_extensions.x_pagination.unwrap_or_default();
-        xp.filter_fields.insert(
-            "created_at".to_owned(),
-            vec!["ge", "gt", "le", "lt", "eq"]
-                .into_iter()
-                .map(String::from)
-                .collect(),
-        );
-        xp.filter_fields.insert(
-            "id".to_owned(),
-            vec!["eq", "in"].into_iter().map(String::from).collect(),
-        );
-
-        self.spec.vendor_extensions.x_pagination = Some(xp);
         self
     }
 
@@ -294,10 +285,49 @@ where
             description: Some("OData v4 orderby expression".to_owned()),
             param_type: "string".to_owned(),
         });
-        // TODO
+        self
+    }
+
+    fn with_odata_pagination<T>(mut self) -> Self
+    where
+        T: modkit_db::odata::filter::FilterField,
+    {
+        use modkit_db::odata::FieldKind;
+
         let mut xp = self.spec.vendor_extensions.x_pagination.unwrap_or_default();
-        xp.order_by
-            .extend(["created_at desc".to_owned(), "created_at asc".to_owned()]);
+
+        for field in T::FIELDS {
+            let name = field.name().to_owned();
+            let kind = field.kind();
+
+            let ops = match kind {
+                FieldKind::String => vec!["eq", "ne", "contains", "startswith", "endswith", "in"],
+                FieldKind::Uuid => vec!["eq", "ne", "in"],
+                FieldKind::Bool => vec!["eq", "ne"],
+                FieldKind::I64
+                | FieldKind::F64
+                | FieldKind::Decimal
+                | FieldKind::DateTimeUtc
+                | FieldKind::Date
+                | FieldKind::Time => {
+                    vec!["eq", "ne", "gt", "ge", "lt", "le", "in"]
+                }
+            };
+
+            xp.filter_fields
+                .insert(name.clone(), ops.into_iter().map(String::from).collect());
+
+            // Add sort options (asc/desc)
+            let asc = format!("{name} asc");
+            let desc = format!("{name} desc");
+
+            if !xp.order_by.contains(&asc) {
+                xp.order_by.push(asc);
+            }
+            if !xp.order_by.contains(&desc) {
+                xp.order_by.push(desc);
+            }
+        }
 
         self.spec.vendor_extensions.x_pagination = Some(xp);
         self

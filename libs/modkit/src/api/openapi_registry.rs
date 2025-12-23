@@ -124,15 +124,27 @@ impl OpenApiRegistryImpl {
                 op = op.tag(tag.clone());
             }
 
-            // Vendor extensions for rate limit, if present (string values)
+            // Vendor extensions
+            let mut ext = utoipa::openapi::extensions::Extensions::default();
+
+            // Rate limit
             if let Some(rl) = spec.rate_limit.as_ref() {
-                let mut ext = utoipa::openapi::extensions::Extensions::default();
                 ext.insert("x-rate-limit-rps".to_owned(), serde_json::json!(rl.rps));
                 ext.insert("x-rate-limit-burst".to_owned(), serde_json::json!(rl.burst));
                 ext.insert(
                     "x-in-flight-limit".to_owned(),
                     serde_json::json!(rl.in_flight),
                 );
+            }
+
+            // Pagination
+            if let Some(pagination) = spec.vendor_extensions.x_pagination.as_ref() {
+                if let Ok(value) = serde_json::to_value(pagination) {
+                    ext.insert("x-pagination".to_owned(), value);
+                }
+            }
+
+            if !ext.is_empty() {
                 op = op.extensions(Some(ext));
             }
 
@@ -566,5 +578,100 @@ mod tests {
 
         // Verify required flag
         assert_eq!(request_body.get("required").unwrap(), true);
+    }
+
+    #[test]
+    fn test_build_openapi_with_pagination() {
+        // Mock FilterField
+        #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+        enum TestFilter {
+            Name,
+            Age,
+        }
+
+        impl modkit_db::odata::filter::FilterField for TestFilter {
+            const FIELDS: &'static [Self] = &[TestFilter::Name, TestFilter::Age];
+
+            fn name(&self) -> &'static str {
+                match self {
+                    TestFilter::Name => "name",
+                    TestFilter::Age => "age",
+                }
+            }
+
+            fn kind(&self) -> modkit_db::odata::FieldKind {
+                match self {
+                    TestFilter::Name => modkit_db::odata::FieldKind::String,
+                    TestFilter::Age => modkit_db::odata::FieldKind::I64,
+                }
+            }
+        }
+
+        let registry = OpenApiRegistryImpl::new();
+
+        let mut xp = crate::api::operation_builder::XPagination::default();
+        // Fill like with_odata_pagination would
+        xp.filter_fields.insert(
+            "name".to_owned(),
+            vec!["eq", "ne", "contains", "startswith", "endswith", "in"]
+                .into_iter()
+                .map(String::from)
+                .collect(),
+        );
+        xp.filter_fields.insert(
+            "age".to_owned(),
+            vec!["eq", "ne", "gt", "ge", "lt", "le", "in"]
+                .into_iter()
+                .map(String::from)
+                .collect(),
+        );
+        xp.order_by.push("name asc".to_owned());
+        xp.order_by.push("name desc".to_owned());
+        xp.order_by.push("age asc".to_owned());
+        xp.order_by.push("age desc".to_owned());
+
+        let mut spec = OperationSpec {
+            method: Method::GET,
+            path: "/test".to_owned(),
+            operation_id: Some("test_op".to_owned()),
+            summary: Some("Test".to_owned()),
+            description: None,
+            tags: vec![],
+            params: vec![],
+            request_body: None,
+            responses: vec![ResponseSpec {
+                status: 200,
+                content_type: "application/json",
+                description: "OK".to_owned(),
+                schema_name: None,
+            }],
+            handler_id: "get_test".to_owned(),
+            sec_requirement: None,
+            is_public: false,
+            rate_limit: None,
+            allowed_request_content_types: None,
+            vendor_extensions: VendorExtensions::default(),
+        };
+        spec.vendor_extensions.x_pagination = Some(xp);
+
+        registry.register_operation(&spec);
+        let info = OpenApiInfo::default();
+        let doc = registry.build_openapi(&info).unwrap();
+        let json = serde_json::to_value(&doc).unwrap();
+
+        let paths = json.get("paths").unwrap();
+        let op = paths.get("/test").unwrap().get("get").unwrap();
+
+        let ext = op
+            .get("x-pagination")
+            .expect("x-pagination should be present");
+
+        let filters = ext.get("filterFields").unwrap();
+        assert!(filters.get("name").is_some());
+        assert!(filters.get("age").is_some());
+
+        let order_by = ext.get("orderBy").unwrap().as_array().unwrap();
+        assert!(order_by.iter().any(|v| v.as_str() == Some("name asc")));
+        assert!(order_by.iter().any(|v| v.as_str() == Some("age desc")));
     }
 }

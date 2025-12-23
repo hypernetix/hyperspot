@@ -72,6 +72,7 @@ pub fn register_routes(
         .with_odata_filter()
         .with_odata_select()
         .with_odata_orderby()
+        .with_odata_pagination::<dto::UserDtoFilterField>()
         .error_400(openapi)
         .error_500(openapi)
         .register(router, openapi);
