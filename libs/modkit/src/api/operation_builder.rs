@@ -11,11 +11,12 @@
 //!   then use plain function handlers (no per-route closures that capture/clones).
 //! - Optional `method_router(...)` for advanced use (layers/middleware on route level).
 
+use crate::api::problem;
 use axum::{handler::Handler, routing::MethodRouter, Router};
 use http::Method;
+use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::marker::PhantomData;
-
-use crate::api::problem;
 
 /// Convert OpenAPI-style path placeholders to Axum 0.8+ style path parameters.
 ///
@@ -200,6 +201,22 @@ pub struct OperationSpec {
     /// requests with disallowed Content-Type headers. This is independent of the
     /// request body schema and should not be used to create synthetic request bodies.
     pub allowed_request_content_types: Option<Vec<&'static str>>,
+    /// `OpenAPI` vendor extensions (x-*)
+    pub vendor_extensions: VendorExtensions,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct VendorExtensions {
+    #[serde(rename = "x-odata-filter", skip_serializing_if = "Option::is_none")]
+    pub x_odata_filter: Option<ODataPagination<BTreeMap<String, Vec<String>>>>,
+    #[serde(rename = "x-odata-orderby", skip_serializing_if = "Option::is_none")]
+    pub x_odata_orderby: Option<ODataPagination<Vec<String>>>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct ODataPagination<T> {
+    #[serde(rename = "allowedFields")]
+    pub allowed_fields: T,
 }
 
 /// Per-operation rate & concurrency limit specification
@@ -213,15 +230,30 @@ pub struct RateLimitSpec {
     pub in_flight: u32,
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct XPagination {
+    pub filter_fields: BTreeMap<String, Vec<String>>,
+    pub order_by: Vec<String>,
+}
+
 //
 pub trait OperationBuilderODataExt<S, H, R> {
     /// Adds optional `$filter` query parameter to `OpenAPI`.
     #[must_use]
-    fn with_odata_filter(self) -> Self;
+    fn with_odata_filter<T>(self) -> Self
+    where
+        T: modkit_db::odata::filter::FilterField;
 
-    /// Same as above but with explicit description (e.g., allowed fields).
+    /// Adds optional `$select` query parameter to `OpenAPI`.
     #[must_use]
-    fn with_odata_filter_doc(self, description: impl Into<String>) -> Self;
+    fn with_odata_select(self) -> Self;
+
+    /// Adds optional `$orderby` query parameter to `OpenAPI`.
+    #[must_use]
+    fn with_odata_orderby<T>(self) -> Self
+    where
+        T: modkit_db::odata::filter::FilterField;
 }
 
 impl<S, H, R, A> OperationBuilderODataExt<S, H, R> for OperationBuilder<H, R, S, A>
@@ -229,25 +261,100 @@ where
     H: HandlerSlot<S>,
     A: AuthState,
 {
-    fn with_odata_filter(mut self) -> Self {
+    fn with_odata_filter<T>(mut self) -> Self
+    where
+        T: modkit_db::odata::filter::FilterField,
+    {
+        use modkit_db::odata::FieldKind;
+        use std::fmt::Write as _;
+
+        let mut filter = self
+            .spec
+            .vendor_extensions
+            .x_odata_filter
+            .unwrap_or_default();
+
+        let mut description = "OData v4 filter expression".to_owned();
+        for field in T::FIELDS {
+            let name = field.name().to_owned();
+            let kind = field.kind();
+
+            let ops: Vec<String> = match kind {
+                FieldKind::String => vec!["eq", "ne", "contains", "startswith", "endswith", "in"],
+                FieldKind::Uuid => vec!["eq", "ne", "in"],
+                FieldKind::Bool => vec!["eq", "ne"],
+                FieldKind::I64
+                | FieldKind::F64
+                | FieldKind::Decimal
+                | FieldKind::DateTimeUtc
+                | FieldKind::Date
+                | FieldKind::Time => {
+                    vec!["eq", "ne", "gt", "ge", "lt", "le", "in"]
+                }
+            }
+            .into_iter()
+            .map(String::from)
+            .collect();
+
+            _ = write!(description, "\n- {}: {}", name, ops.join("|"));
+            filter.allowed_fields.insert(name.clone(), ops);
+        }
         self.spec.params.push(ParamSpec {
             name: "$filter".to_owned(),
             location: ParamLocation::Query,
             required: false,
-            description: Some("OData v4 filter expression".to_owned()),
+            description: Some(description),
+            param_type: "string".to_owned(),
+        });
+        self.spec.vendor_extensions.x_odata_filter = Some(filter);
+        self
+    }
+
+    fn with_odata_select(mut self) -> Self {
+        self.spec.params.push(ParamSpec {
+            name: "$select".to_owned(),
+            location: ParamLocation::Query,
+            required: false,
+            description: Some("OData v4 select expression".to_owned()),
             param_type: "string".to_owned(),
         });
         self
     }
 
-    fn with_odata_filter_doc(mut self, description: impl Into<String>) -> Self {
+    fn with_odata_orderby<T>(mut self) -> Self
+    where
+        T: modkit_db::odata::filter::FilterField,
+    {
+        use std::fmt::Write as _;
+        let mut order_by = self
+            .spec
+            .vendor_extensions
+            .x_odata_orderby
+            .unwrap_or_default();
+        let mut description = "OData v4 orderby expression".to_owned();
+        for field in T::FIELDS {
+            let name = field.name().to_owned();
+
+            // Add sort options (asc/desc)
+            let asc = format!("{name} asc");
+            let desc = format!("{name} desc");
+
+            _ = write!(description, "\n- {asc}\n- {desc}");
+            if !order_by.allowed_fields.contains(&asc) {
+                order_by.allowed_fields.push(asc);
+            }
+            if !order_by.allowed_fields.contains(&desc) {
+                order_by.allowed_fields.push(desc);
+            }
+        }
         self.spec.params.push(ParamSpec {
-            name: "$filter".to_owned(),
+            name: "$orderby".to_owned(),
             location: ParamLocation::Query,
             required: false,
-            description: Some(description.into()),
+            description: Some(description),
             param_type: "string".to_owned(),
         });
+        self.spec.vendor_extensions.x_odata_orderby = Some(order_by);
         self
     }
 }
@@ -306,6 +413,7 @@ impl<S> OperationBuilder<Missing, Missing, S, AuthNotSet> {
                 is_public: false,
                 rate_limit: None,
                 allowed_request_content_types: None,
+                vendor_extensions: VendorExtensions::default(),
             },
             method_router: (), // no router in Missing state
             _has_handler: PhantomData,

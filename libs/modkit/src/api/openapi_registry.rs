@@ -124,15 +124,32 @@ impl OpenApiRegistryImpl {
                 op = op.tag(tag.clone());
             }
 
-            // Vendor extensions for rate limit, if present (string values)
+            // Vendor extensions
+            let mut ext = utoipa::openapi::extensions::Extensions::default();
+
+            // Rate limit
             if let Some(rl) = spec.rate_limit.as_ref() {
-                let mut ext = utoipa::openapi::extensions::Extensions::default();
                 ext.insert("x-rate-limit-rps".to_owned(), serde_json::json!(rl.rps));
                 ext.insert("x-rate-limit-burst".to_owned(), serde_json::json!(rl.burst));
                 ext.insert(
                     "x-in-flight-limit".to_owned(),
                     serde_json::json!(rl.in_flight),
                 );
+            }
+
+            // Pagination
+            if let Some(pagination) = spec.vendor_extensions.x_odata_filter.as_ref() {
+                if let Ok(value) = serde_json::to_value(pagination) {
+                    ext.insert("x-odata-filter".to_owned(), value);
+                }
+            }
+            if let Some(pagination) = spec.vendor_extensions.x_odata_orderby.as_ref() {
+                if let Ok(value) = serde_json::to_value(pagination) {
+                    ext.insert("x-odata-orderby".to_owned(), value);
+                }
+            }
+
+            if !ext.is_empty() {
                 op = op.extensions(Some(ext));
             }
 
@@ -383,7 +400,9 @@ impl OpenApiRegistry for OpenApiRegistryImpl {
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
-    use crate::api::operation_builder::{OperationSpec, ParamLocation, ParamSpec, ResponseSpec};
+    use crate::api::operation_builder::{
+        OperationSpec, ParamLocation, ParamSpec, ResponseSpec, VendorExtensions,
+    };
     use http::Method;
 
     #[test]
@@ -416,6 +435,7 @@ mod tests {
             is_public: false,
             rate_limit: None,
             allowed_request_content_types: None,
+            vendor_extensions: VendorExtensions::default(),
         };
 
         registry.register_operation(&spec);
@@ -477,6 +497,7 @@ mod tests {
             is_public: false,
             rate_limit: None,
             allowed_request_content_types: None,
+            vendor_extensions: VendorExtensions::default(),
         };
 
         registry.register_operation(&spec);
@@ -535,6 +556,7 @@ mod tests {
             is_public: false,
             rate_limit: None,
             allowed_request_content_types: Some(vec!["application/octet-stream"]),
+            vendor_extensions: VendorExtensions::default(),
         };
 
         registry.register_operation(&spec);
@@ -561,5 +583,84 @@ mod tests {
 
         // Verify required flag
         assert_eq!(request_body.get("required").unwrap(), true);
+    }
+
+    #[test]
+    fn test_build_openapi_with_pagination() {
+        let registry = OpenApiRegistryImpl::new();
+
+        let mut filter: operation_builder::ODataPagination<
+            std::collections::BTreeMap<String, Vec<String>>,
+        > = operation_builder::ODataPagination::default();
+        filter.allowed_fields.insert(
+            "name".to_owned(),
+            vec!["eq", "ne", "contains", "startswith", "endswith", "in"]
+                .into_iter()
+                .map(String::from)
+                .collect(),
+        );
+        filter.allowed_fields.insert(
+            "age".to_owned(),
+            vec!["eq", "ne", "gt", "ge", "lt", "le", "in"]
+                .into_iter()
+                .map(String::from)
+                .collect(),
+        );
+
+        let mut order_by: operation_builder::ODataPagination<Vec<String>> =
+            operation_builder::ODataPagination::default();
+        order_by.allowed_fields.push("name asc".to_owned());
+        order_by.allowed_fields.push("name desc".to_owned());
+        order_by.allowed_fields.push("age asc".to_owned());
+        order_by.allowed_fields.push("age desc".to_owned());
+
+        let mut spec = OperationSpec {
+            method: Method::GET,
+            path: "/test".to_owned(),
+            operation_id: Some("test_op".to_owned()),
+            summary: Some("Test".to_owned()),
+            description: None,
+            tags: vec![],
+            params: vec![],
+            request_body: None,
+            responses: vec![ResponseSpec {
+                status: 200,
+                content_type: "application/json",
+                description: "OK".to_owned(),
+                schema_name: None,
+            }],
+            handler_id: "get_test".to_owned(),
+            sec_requirement: None,
+            is_public: false,
+            rate_limit: None,
+            allowed_request_content_types: None,
+            vendor_extensions: VendorExtensions::default(),
+        };
+        spec.vendor_extensions.x_odata_filter = Some(filter);
+        spec.vendor_extensions.x_odata_orderby = Some(order_by);
+
+        registry.register_operation(&spec);
+        let info = OpenApiInfo::default();
+        let doc = registry.build_openapi(&info).unwrap();
+        let json = serde_json::to_value(&doc).unwrap();
+
+        let paths = json.get("paths").unwrap();
+        let op = paths.get("/test").unwrap().get("get").unwrap();
+
+        let filter_ext = op
+            .get("x-odata-filter")
+            .expect("x-odata-filter should be present");
+
+        let allowed_fields = filter_ext.get("allowedFields").unwrap();
+        assert!(allowed_fields.get("name").is_some());
+        assert!(allowed_fields.get("age").is_some());
+
+        let order_ext = op
+            .get("x-odata-orderby")
+            .expect("x-odata-orderby should be present");
+
+        let allowed_order = order_ext.get("allowedFields").unwrap().as_array().unwrap();
+        assert!(allowed_order.iter().any(|v| v.as_str() == Some("name asc")));
+        assert!(allowed_order.iter().any(|v| v.as_str() == Some("age desc")));
     }
 }
