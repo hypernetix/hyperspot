@@ -56,15 +56,9 @@ pub fn domain_error_to_problem(err: DomainError, instance: &str) -> Problem {
     problem
 }
 
+/// Implement Into<Problem> for `DomainError` so `?` works in handlers
 impl From<DomainError> for Problem {
     fn from(e: DomainError) -> Self {
         domain_error_to_problem(e, "/")
-    }
-}
-
-// Enable ? operator in handlers by implementing From<DomainError> for ApiError<DomainError>
-impl From<DomainError> for modkit::api::error::ApiError<DomainError> {
-    fn from(e: DomainError) -> Self {
-        modkit::api::error::ApiError::Domain(e)
     }
 }

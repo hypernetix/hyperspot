@@ -2919,6 +2919,7 @@ dependencies = [
  "http",
  "serde",
  "serde_json",
+ "tracing",
  "utoipa",
 ]
 
