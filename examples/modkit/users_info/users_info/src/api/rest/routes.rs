@@ -56,12 +56,22 @@ pub fn register_routes(
         .description("Retrieve a paginated list of users using cursor-based pagination")
         .tag("users")
         .require_auth(&Resource::Users, &Action::Read)
-        .query_param_typed("limit", false, "Maximum number of users to return", "integer")
+        .query_param_typed(
+            "limit",
+            false,
+            "Maximum number of users to return",
+            "integer",
+        )
         .query_param("cursor", false, "Cursor for pagination")
         .handler(handlers::list_users)
-        .json_response_with_schema::<modkit_odata::Page<dto::UserDto>>(openapi, http::StatusCode::OK, "Paginated list of users")
-        .with_odata_filter_doc("OData v4 filter. Examples: `email eq 'test@example.com'`, `contains(email,'@acme.com')`")
-        .query_param("$orderby", false, "OData orderby clause. Example: 'created_at desc, id desc'")
+        .json_response_with_schema::<modkit_odata::Page<dto::UserDto>>(
+            openapi,
+            http::StatusCode::OK,
+            "Paginated list of users",
+        )
+        .with_odata_filter()
+        .with_odata_select()
+        .with_odata_orderby()
         .error_400(openapi)
         .error_500(openapi)
         .register(router, openapi);
@@ -75,6 +85,7 @@ pub fn register_routes(
         .tag("users")
         .path_param("id", "User UUID")
         .handler(handlers::get_user)
+        .with_odata_select()
         .json_response_with_schema::<dto::UserDto>(openapi, http::StatusCode::OK, "User found")
         .error_401(openapi)
         .error_403(openapi)

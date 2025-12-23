@@ -11,11 +11,12 @@
 //!   then use plain function handlers (no per-route closures that capture/clones).
 //! - Optional `method_router(...)` for advanced use (layers/middleware on route level).
 
+use crate::api::problem;
 use axum::{handler::Handler, routing::MethodRouter, Router};
 use http::Method;
+use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::marker::PhantomData;
-
-use crate::api::problem;
 
 /// Convert OpenAPI-style path placeholders to Axum 0.8+ style path parameters.
 ///
@@ -200,6 +201,14 @@ pub struct OperationSpec {
     /// requests with disallowed Content-Type headers. This is independent of the
     /// request body schema and should not be used to create synthetic request bodies.
     pub allowed_request_content_types: Option<Vec<&'static str>>,
+    /// `OpenAPI` vendor extensions (x-*)
+    vendor_extensions: VendorExtensions,
+}
+
+#[derive(Clone, Debug, Default, Deserialize)]
+struct VendorExtensions {
+    #[serde(rename = "X-Pagination")]
+    pub x_pagination: Option<XPagination>,
 }
 
 /// Per-operation rate & concurrency limit specification
@@ -213,15 +222,26 @@ pub struct RateLimitSpec {
     pub in_flight: u32,
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct XPagination {
+    pub filter_fields: BTreeMap<String, Vec<String>>,
+    pub order_by: Vec<String>,
+}
+
 //
 pub trait OperationBuilderODataExt<S, H, R> {
     /// Adds optional `$filter` query parameter to `OpenAPI`.
     #[must_use]
     fn with_odata_filter(self) -> Self;
 
-    /// Same as above but with explicit description (e.g., allowed fields).
+    /// Adds optional `$select` query parameter to `OpenAPI`.
     #[must_use]
-    fn with_odata_filter_doc(self, description: impl Into<String>) -> Self;
+    fn with_odata_select(self) -> Self;
+
+    /// Adds optional `$orderby` query parameter to `OpenAPI`.
+    #[must_use]
+    fn with_odata_orderby(self) -> Self;
 }
 
 impl<S, H, R, A> OperationBuilderODataExt<S, H, R> for OperationBuilder<H, R, S, A>
@@ -237,17 +257,47 @@ where
             description: Some("OData v4 filter expression".to_owned()),
             param_type: "string".to_owned(),
         });
+        let mut xp = self.spec.vendor_extensions.x_pagination.unwrap_or_default();
+        xp.filter_fields.insert(
+            "created_at".to_owned(),
+            vec!["ge", "gt", "le", "lt", "eq"]
+                .into_iter()
+                .map(String::from)
+                .collect(),
+        );
+        xp.filter_fields.insert(
+            "id".to_owned(),
+            vec!["eq", "in"].into_iter().map(String::from).collect(),
+        );
+
+        self.spec.vendor_extensions.x_pagination = Some(xp);
         self
     }
 
-    fn with_odata_filter_doc(mut self, description: impl Into<String>) -> Self {
+    fn with_odata_select(mut self) -> Self {
         self.spec.params.push(ParamSpec {
-            name: "$filter".to_owned(),
+            name: "$select".to_owned(),
             location: ParamLocation::Query,
             required: false,
-            description: Some(description.into()),
+            description: Some("OData v4 select expression".to_owned()),
             param_type: "string".to_owned(),
         });
+        self
+    }
+
+    fn with_odata_orderby(mut self) -> Self {
+        self.spec.params.push(ParamSpec {
+            name: "$orderby".to_owned(),
+            location: ParamLocation::Query,
+            required: false,
+            description: Some("OData v4 orderby expression".to_owned()),
+            param_type: "string".to_owned(),
+        });
+        let mut xp = self.spec.vendor_extensions.x_pagination.unwrap_or_default();
+        xp.order_by
+            .extend(["created_at desc".to_owned(), "created_at asc".to_owned()]);
+
+        self.spec.vendor_extensions.x_pagination = Some(xp);
         self
     }
 }
@@ -306,6 +356,7 @@ impl<S> OperationBuilder<Missing, Missing, S, AuthNotSet> {
                 is_public: false,
                 rate_limit: None,
                 allowed_request_content_types: None,
+                vendor_extensions: VendorExtensions::default(),
             },
             method_router: (), // no router in Missing state
             _has_handler: PhantomData,
