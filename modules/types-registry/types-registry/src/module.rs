@@ -69,14 +69,6 @@ impl Module for TypesRegistryModule {
         info!("Types registry module initialized");
         Ok(())
     }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    fn as_system_module(&self) -> Option<&dyn SystemModule> {
-        Some(self)
-    }
 }
 
 #[async_trait]

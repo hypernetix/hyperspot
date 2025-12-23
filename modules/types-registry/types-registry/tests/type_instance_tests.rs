@@ -342,7 +342,7 @@ async fn test_array_type_with_instance() {
 }
 
 #[tokio::test]
-async fn test_instance_with_mismatched_type_field_fails() {
+async fn test_instance_with_mismatched_type_field_is_ignored_for_well_known_instances() {
     let service = create_service();
 
     // Register two different type schemas
@@ -386,11 +386,11 @@ async fn test_instance_with_mismatched_type_field_fails() {
 
     let result = service.register(vec![mismatched_instance]);
 
-    // The instance should fail because the "type" field takes precedence
-    // and the data doesn't conform to the product schema (missing productId, price)
+    // For well-known instances (GTS ID in `id`), schema is derived from the chained `id`.
+    // The `type` field does not override schema selection.
     assert!(
-        result[0].is_err(),
-        "Instance with mismatched type field should fail validation: {:?}",
+        result[0].is_ok(),
+        "Instance with mismatched type field should still be accepted: {:?}",
         result[0]
     );
 }

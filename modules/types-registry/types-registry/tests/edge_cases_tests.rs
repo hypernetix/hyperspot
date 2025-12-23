@@ -51,6 +51,7 @@ async fn test_gts_id_extraction_priority() {
     // The repository extracts GTS ID from configured fields in order
     let entity = json!({
         "$id": "gts.acme.core.events.from_dollar_id.v1~",
+        "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object"
     });
 
@@ -120,6 +121,7 @@ async fn test_entity_segments_parsed_correctly() {
 
     let entity = json!({
         "$id": "gts.myvendor.mypackage.mynamespace.mytype.v2~",
+        "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object"
     });
 
@@ -146,8 +148,16 @@ async fn test_gts_id_with_special_segments() {
 
     // GTS IDs with underscores and numbers
     let entities = vec![
-        json!({ "$id": "gts.acme_corp.core_v2.events_ns.my_type_123.v1~", "type": "object" }),
-        json!({ "$id": "gts.vendor123.pkg456.ns789.type000.v99~", "type": "object" }),
+        json!({
+            "$id": "gts.acme_corp.core_v2.events_ns.my_type_123.v1~",
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object"
+        }),
+        json!({
+            "$id": "gts.vendor123.pkg456.ns789.type000.v99~",
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object"
+        }),
     ];
 
     let results = service.register(entities);

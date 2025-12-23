@@ -83,6 +83,7 @@ async fn test_anonymous_entity_rejected_in_ready_mode() {
     // Register a valid entity first and switch to ready
     let valid_entity = json!({
         "$id": "gts.acme.core.models.setup.v1~",
+        "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object"
     });
     let _ = service.register(vec![valid_entity]);
@@ -118,6 +119,7 @@ async fn test_full_registration_flow_configuration_to_ready() {
 
     let type_schema = json!({
         "$id": "gts.acme.core.events.user_created.v1~",
+        "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
         "properties": {
             "userId": { "type": "string" },
@@ -155,6 +157,7 @@ async fn test_batch_registration_with_mixed_results() {
     let entities = vec![
         json!({
             "$id": "gts.acme.core.events.valid_type.v1~",
+            "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object"
         }),
         json!({
@@ -163,6 +166,7 @@ async fn test_batch_registration_with_mixed_results() {
         }),
         json!({
             "$id": "gts.globex.core.events.another_valid.v1~",
+            "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object"
         }),
         json!({
@@ -192,15 +196,23 @@ async fn test_duplicate_registration_fails() {
 
     let entity = json!({
         "$id": "gts.acme.core.events.user_created.v1~",
+        "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object"
     });
 
+    let entity_modified = json!({
+        "$id": "gts.acme.core.events.user_created.v1~",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "description": "modified"
+    });
+
     // First registration should succeed
-    let results1 = service.register(vec![entity.clone()]);
+    let results1 = service.register(vec![entity]);
     assert!(results1[0].is_ok());
 
-    // Second registration of same entity should fail
-    let results2 = service.register(vec![entity]);
+    // Second registration with different content should fail
+    let results2 = service.register(vec![entity_modified]);
     assert!(results2[0].is_err());
 }
 
@@ -215,6 +227,7 @@ async fn test_registration_in_ready_mode() {
     // Register in ready mode (with validation)
     let entity = json!({
         "$id": "gts.acme.core.events.ready_type.v1~",
+        "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
         "properties": {
             "data": { "type": "string" }
@@ -246,6 +259,7 @@ async fn test_large_batch_registration() {
         .map(|i| {
             json!({
                 "$id": format!("gts.acme.core.events.batch_{i}.v1~"),
+                "$schema": "http://json-schema.org/draft-07/schema#",
                 "type": "object"
             })
         })
@@ -277,6 +291,7 @@ async fn test_rest_register_handler_integration() {
     let request = RegisterEntitiesRequest {
         entities: vec![json!({
             "$id": "gts.acme.core.events.rest_test.v1~",
+            "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object",
             "description": "Test type for REST handler"
         })],

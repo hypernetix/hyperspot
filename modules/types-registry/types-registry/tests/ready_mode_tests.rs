@@ -311,6 +311,7 @@ async fn test_switch_to_ready_is_idempotent() {
     // Register something first
     let _ = service.register(vec![json!({
         "$id": "gts.acme.core.events.state_test.v1~",
+        "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object"
     })]);
 
@@ -332,6 +333,7 @@ async fn test_list_before_ready_returns_empty() {
     // Register entities in configuration mode
     let _ = service.register(vec![json!({
         "$id": "gts.acme.core.events.not_visible.v1~",
+        "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object"
     })]);
 
@@ -347,6 +349,7 @@ async fn test_get_before_ready_fails() {
     // Register entity in configuration mode
     let _ = service.register(vec![json!({
         "$id": "gts.acme.core.events.not_accessible.v1~",
+        "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object"
     })]);
 
@@ -564,6 +567,7 @@ async fn test_concurrent_registrations() {
         let handle = tokio::spawn(async move {
             let entity = json!({
                 "$id": format!("gts.acme.core.events.concurrent_{i}.v1~"),
+                "$schema": "http://json-schema.org/draft-07/schema#",
                 "type": "object"
             });
             svc.register(vec![entity])

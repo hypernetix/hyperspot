@@ -20,10 +20,10 @@ async fn test_list_entities_with_vendor_filter() {
 
     // Register entities from different vendors
     let entities = vec![
-        json!({ "$id": "gts.acme.core.events.type1.v1~", "type": "object" }),
-        json!({ "$id": "gts.acme.core.events.type2.v1~", "type": "object" }),
-        json!({ "$id": "gts.globex.core.events.type3.v1~", "type": "object" }),
-        json!({ "$id": "gts.initech.core.events.type4.v1~", "type": "object" }),
+        json!({ "$id": "gts.acme.core.events.type1.v1~", "$schema": "http://json-schema.org/draft-07/schema#", "type": "object" }),
+        json!({ "$id": "gts.acme.core.events.type2.v1~", "$schema": "http://json-schema.org/draft-07/schema#", "type": "object" }),
+        json!({ "$id": "gts.globex.core.events.type3.v1~", "$schema": "http://json-schema.org/draft-07/schema#", "type": "object" }),
+        json!({ "$id": "gts.initech.core.events.type4.v1~", "$schema": "http://json-schema.org/draft-07/schema#", "type": "object" }),
     ];
 
     let _ = service.register(entities);
@@ -47,9 +47,9 @@ async fn test_list_entities_with_package_filter() {
     let service = create_service();
 
     let entities = vec![
-        json!({ "$id": "gts.acme.core.events.type1.v1~", "type": "object" }),
-        json!({ "$id": "gts.acme.billing.events.type2.v1~", "type": "object" }),
-        json!({ "$id": "gts.acme.core.events.type3.v1~", "type": "object" }),
+        json!({ "$id": "gts.acme.core.events.type1.v1~", "$schema": "http://json-schema.org/draft-07/schema#", "type": "object" }),
+        json!({ "$id": "gts.acme.billing.events.type2.v1~", "$schema": "http://json-schema.org/draft-07/schema#", "type": "object" }),
+        json!({ "$id": "gts.acme.core.events.type3.v1~", "$schema": "http://json-schema.org/draft-07/schema#", "type": "object" }),
     ];
 
     let _ = service.register(entities);
@@ -70,9 +70,9 @@ async fn test_list_entities_with_namespace_filter() {
     let service = create_service();
 
     let entities = vec![
-        json!({ "$id": "gts.acme.core.events.type1.v1~", "type": "object" }),
-        json!({ "$id": "gts.acme.core.commands.type2.v1~", "type": "object" }),
-        json!({ "$id": "gts.acme.core.events.type3.v1~", "type": "object" }),
+        json!({ "$id": "gts.acme.core.events.type1.v1~", "$schema": "http://json-schema.org/draft-07/schema#", "type": "object" }),
+        json!({ "$id": "gts.acme.core.commands.type2.v1~", "$schema": "http://json-schema.org/draft-07/schema#", "type": "object" }),
+        json!({ "$id": "gts.acme.core.events.type3.v1~", "$schema": "http://json-schema.org/draft-07/schema#", "type": "object" }),
     ];
 
     let _ = service.register(entities);
@@ -92,9 +92,9 @@ async fn test_list_entities_with_combined_filters() {
     let service = create_service();
 
     let entities = vec![
-        json!({ "$id": "gts.acme.core.events.type1.v1~", "type": "object" }),
-        json!({ "$id": "gts.acme.billing.events.type2.v1~", "type": "object" }),
-        json!({ "$id": "gts.globex.core.events.type3.v1~", "type": "object" }),
+        json!({ "$id": "gts.acme.core.events.type1.v1~", "$schema": "http://json-schema.org/draft-07/schema#", "type": "object" }),
+        json!({ "$id": "gts.acme.billing.events.type2.v1~", "$schema": "http://json-schema.org/draft-07/schema#", "type": "object" }),
+        json!({ "$id": "gts.globex.core.events.type3.v1~", "$schema": "http://json-schema.org/draft-07/schema#", "type": "object" }),
     ];
 
     let _ = service.register(entities);
@@ -114,10 +114,10 @@ async fn test_list_with_pattern_filter() {
     let service = create_service();
 
     let entities = vec![
-        json!({ "$id": "gts.acme.core.events.user_created.v1~", "type": "object" }),
-        json!({ "$id": "gts.acme.core.events.user_updated.v1~", "type": "object" }),
-        json!({ "$id": "gts.acme.core.events.order_created.v1~", "type": "object" }),
-        json!({ "$id": "gts.acme.core.commands.create_user.v1~", "type": "object" }),
+        json!({ "$id": "gts.acme.core.events.user_created.v1~", "$schema": "http://json-schema.org/draft-07/schema#", "type": "object" }),
+        json!({ "$id": "gts.acme.core.events.user_updated.v1~", "$schema": "http://json-schema.org/draft-07/schema#", "type": "object" }),
+        json!({ "$id": "gts.acme.core.events.order_created.v1~", "$schema": "http://json-schema.org/draft-07/schema#", "type": "object" }),
+        json!({ "$id": "gts.acme.core.commands.create_user.v1~", "$schema": "http://json-schema.org/draft-07/schema#", "type": "object" }),
     ];
 
     let _ = service.register(entities);
@@ -187,10 +187,10 @@ async fn test_multiple_vendors_isolation() {
 
     // Register entities from multiple vendors
     let entities = vec![
-        json!({ "$id": "gts.vendor_a.pkg.ns.type1.v1~", "type": "object" }),
-        json!({ "$id": "gts.vendor_a.pkg.ns.type2.v1~", "type": "object" }),
-        json!({ "$id": "gts.vendor_b.pkg.ns.type1.v1~", "type": "object" }),
-        json!({ "$id": "gts.vendor_c.pkg.ns.type1.v1~", "type": "object" }),
+        json!({ "$id": "gts.vendor_a.pkg.ns.type1.v1~", "$schema": "http://json-schema.org/draft-07/schema#", "type": "object" }),
+        json!({ "$id": "gts.vendor_a.pkg.ns.type2.v1~", "$schema": "http://json-schema.org/draft-07/schema#", "type": "object" }),
+        json!({ "$id": "gts.vendor_b.pkg.ns.type1.v1~", "$schema": "http://json-schema.org/draft-07/schema#", "type": "object" }),
+        json!({ "$id": "gts.vendor_c.pkg.ns.type1.v1~", "$schema": "http://json-schema.org/draft-07/schema#", "type": "object" }),
     ];
 
     let _ = service.register(entities);
@@ -232,10 +232,10 @@ async fn test_combined_vendor_package_namespace_filter() {
     let service = create_service();
 
     let entities = vec![
-        json!({ "$id": "gts.acme.billing.invoices.invoice.v1~", "type": "object" }),
-        json!({ "$id": "gts.acme.billing.payments.payment.v1~", "type": "object" }),
-        json!({ "$id": "gts.acme.core.events.event.v1~", "type": "object" }),
-        json!({ "$id": "gts.globex.billing.invoices.invoice.v1~", "type": "object" }),
+        json!({ "$id": "gts.acme.billing.invoices.invoice.v1~", "$schema": "http://json-schema.org/draft-07/schema#", "type": "object" }),
+        json!({ "$id": "gts.acme.billing.payments.payment.v1~", "$schema": "http://json-schema.org/draft-07/schema#", "type": "object" }),
+        json!({ "$id": "gts.acme.core.events.event.v1~", "$schema": "http://json-schema.org/draft-07/schema#", "type": "object" }),
+        json!({ "$id": "gts.globex.billing.invoices.invoice.v1~", "$schema": "http://json-schema.org/draft-07/schema#", "type": "object" }),
     ];
 
     let _ = service.register(entities);
@@ -264,8 +264,8 @@ async fn test_rest_list_handler_integration() {
 
     // Register entities via internal API (before ready)
     let _ = service.register(vec![
-        json!({ "$id": "gts.acme.core.events.list_test1.v1~", "type": "object" }),
-        json!({ "$id": "gts.acme.core.events.list_test2.v1~", "type": "object" }),
+        json!({ "$id": "gts.acme.core.events.list_test1.v1~", "$schema": "http://json-schema.org/draft-07/schema#", "type": "object" }),
+        json!({ "$id": "gts.acme.core.events.list_test2.v1~", "$schema": "http://json-schema.org/draft-07/schema#", "type": "object" }),
     ]);
     service.switch_to_ready().unwrap();
 
@@ -318,6 +318,7 @@ async fn test_rest_get_handler_integration() {
     // Register entity via internal API (before ready)
     let _ = service.register(vec![json!({
         "$id": "gts.acme.core.events.get_test.v1~",
+        "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
         "description": "Test entity for GET handler"
     })]);
