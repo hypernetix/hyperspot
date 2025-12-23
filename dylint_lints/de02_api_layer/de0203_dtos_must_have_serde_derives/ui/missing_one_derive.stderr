@@ -1,0 +1,13 @@
+error: api/rest type is missing required serde derives: Deserialize (DE0203)
+  --> $DIR/missing_one_derive.rs:7:1
+   |
+LL | / pub struct OnlySerializeDto {
+LL | |     pub id: String,
+LL | | }
+   | |_^
+   |
+   = help: DTOs in api/rest must derive both Serialize and Deserialize
+   = note: `#[deny(de0203_dtos_must_have_serde_derives)]` on by default
+
+error: aborting due to 1 previous error
+

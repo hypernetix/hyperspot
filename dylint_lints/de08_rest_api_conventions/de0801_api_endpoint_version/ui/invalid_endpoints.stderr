@@ -1,0 +1,120 @@
+error: API endpoint `/users` is missing a version segment (DE0801)
+  --> $DIR/invalid_endpoints.rs:34:27
+   |
+LL |     OperationBuilder::get("/users");
+   |                           ^^^^^^^^
+   |
+   = help: add version as second segment: /{service-name}/v{N}/{resource}
+   = note: version must be v1, v2, etc.
+   = note: `#[deny(de0801_api_endpoint_version)]` on by default
+
+error: API endpoint `/users/list` has invalid version format `list` (DE0801)
+  --> $DIR/invalid_endpoints.rs:38:27
+   |
+LL |     OperationBuilder::get("/users/list")
+   |                           ^^^^^^^^^^^^^
+   |
+   = help: version must be lowercase 'v' followed by digits (v1, v2, v10)
+   = note: semver (v1.0) and uppercase (V1) are not allowed
+
+error: API endpoint `/api/users` has invalid version format `users` (DE0801)
+  --> $DIR/invalid_endpoints.rs:43:28
+   |
+LL |     OperationBuilder::post("/api/users")
+   |                            ^^^^^^^^^^^^
+   |
+   = help: version must be lowercase 'v' followed by digits (v1, v2, v10)
+   = note: semver (v1.0) and uppercase (V1) are not allowed
+
+error: API endpoint `/version1/users` has invalid version format `users` (DE0801)
+  --> $DIR/invalid_endpoints.rs:49:27
+   |
+LL |     OperationBuilder::put("/version1/users");
+   |                           ^^^^^^^^^^^^^^^^^
+   |
+   = help: version must be lowercase 'v' followed by digits (v1, v2, v10)
+   = note: semver (v1.0) and uppercase (V1) are not allowed
+
+error: API endpoint `/v1/products` is missing a service name before version (DE0801)
+  --> $DIR/invalid_endpoints.rs:53:30
+   |
+LL |     OperationBuilder::delete("/v1/products")
+   |                              ^^^^^^^^^^^^^^
+   |
+   = help: use format: /{service-name}/v{N}/{resource}
+   = note: service name must come before version segment
+
+error: API endpoint `/some_service/v1/products` has invalid service name `some_service` (DE0801)
+  --> $DIR/invalid_endpoints.rs:58:29
+   |
+LL |     OperationBuilder::patch("/some_service/v1/products");
+   |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: service name must be kebab-case (lowercase letters, numbers, dashes)
+   = note: service name must not start or end with a dash
+
+error: API endpoint `/SomeService/v1/products` has invalid service name `SomeService` (DE0801)
+  --> $DIR/invalid_endpoints.rs:62:27
+   |
+LL |     OperationBuilder::get("/SomeService/v1/products")
+   |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: service name must be kebab-case (lowercase letters, numbers, dashes)
+   = note: service name must not start or end with a dash
+
+error: API endpoint `/some-service/V1/products` has invalid version format `V1` (DE0801)
+  --> $DIR/invalid_endpoints.rs:68:28
+   |
+LL |     OperationBuilder::post("/some-service/V1/products");
+   |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: version must be lowercase 'v' followed by digits (v1, v2, v10)
+   = note: semver (v1.0) and uppercase (V1) are not allowed
+
+error: API endpoint `/some-service/v1/Products` has invalid resource name `Products` (DE0801)
+  --> $DIR/invalid_endpoints.rs:72:27
+   |
+LL |     OperationBuilder::put("/some-service/v1/Products")
+   |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: resource names must be kebab-case (lowercase letters, numbers, dashes)
+   = note: resource names must not start or end with a dash
+
+error: API endpoint `/-some-service/v1/products` has invalid service name `-some-service` (DE0801)
+  --> $DIR/invalid_endpoints.rs:77:27
+   |
+LL |     OperationBuilder::get("/-some-service/v1/products");
+   |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: service name must be kebab-case (lowercase letters, numbers, dashes)
+   = note: service name must not start or end with a dash
+
+error: API endpoint `/some-service/v1/-products` has invalid resource name `-products` (DE0801)
+  --> $DIR/invalid_endpoints.rs:81:30
+   |
+LL |     OperationBuilder::delete("/some-service/v1/-products")
+   |                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: resource names must be kebab-case (lowercase letters, numbers, dashes)
+   = note: resource names must not start or end with a dash
+
+error: API endpoint `/some-service/v1/products/-abc` has invalid resource name `-abc` (DE0801)
+  --> $DIR/invalid_endpoints.rs:86:29
+   |
+LL |     OperationBuilder::patch("/some-service/v1/products/-abc");
+   |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: resource names must be kebab-case (lowercase letters, numbers, dashes)
+   = note: resource names must not start or end with a dash
+
+error: API endpoint `/my-service/v1` is missing a resource after version (DE0801)
+  --> $DIR/invalid_endpoints.rs:90:28
+   |
+LL |     OperationBuilder::post("/my-service/v1")
+   |                            ^^^^^^^^^^^^^^^^
+   |
+   = help: add resource: /{service-name}/v{N}/{resource}
+   = note: at least one resource segment is required after version
+
+error: aborting due to 13 previous errors
+

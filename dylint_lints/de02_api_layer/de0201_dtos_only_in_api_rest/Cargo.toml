@@ -1,0 +1,29 @@
+[package]
+name = "de0201_dtos_only_in_api_rest"
+version = "0.1.0"
+edition = "2021"
+authors = ["authors go here"]
+description = "description goes here"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+clippy_utils.workspace = true
+dylint_linting.workspace = true
+lint_utils.workspace = true
+
+[dev-dependencies]
+dylint_testing.workspace = true
+
+[[example]]
+name = "dto_in_domain"
+path = "ui/dto_in_domain.rs"
+
+[[example]]
+name = "dto_in_api_rest"
+path = "ui/dto_in_api_rest.rs"
+
+[package.metadata.rust-analyzer]
+rustc_private = true

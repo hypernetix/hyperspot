@@ -1,0 +1,29 @@
+[package]
+name = "de0801_api_endpoint_version"
+version = "0.1.0"
+authors = ["Hypernetix"]
+description = "DE0801: API endpoints must follow /{service-name}/v{N}/{resource} format"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[[example]]
+name = "valid_endpoints"
+path = "ui/valid_endpoints.rs"
+
+[[example]]
+name = "invalid_endpoints"
+path = "ui/invalid_endpoints.rs"
+
+[dependencies]
+clippy_utils.workspace = true
+dylint_linting.workspace = true
+lint_utils.workspace = true
+
+[dev-dependencies]
+dylint_testing.workspace = true
+
+[package.metadata.rust-analyzer]
+rustc_private = true

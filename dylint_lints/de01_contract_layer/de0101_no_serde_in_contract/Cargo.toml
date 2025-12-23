@@ -1,0 +1,42 @@
+[package]
+name = "de0101_no_serde_in_contract"
+version = "0.1.0"
+authors = ["authors go here"]
+description = "description goes here"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[[example]]
+name = "serialize"
+path = "ui/serialize.rs"
+
+[[example]]
+name = "no_serde_derive"
+path = "ui/no_serde_derive.rs"
+
+[[example]]
+name = "serialize_deserialize"
+path = "ui/serialize_deserialize.rs"
+
+[[example]]
+name = "deserialize"
+path = "ui/deserialize.rs"
+
+[[example]]
+name = "qualified_paths"
+path = "ui/qualified_paths.rs"
+
+[dependencies]
+clippy_utils.workspace = true
+dylint_linting.workspace = true
+lint_utils.workspace = true
+
+[dev-dependencies]
+dylint_testing.workspace = true
+serde = { version = "1.0", features = ["derive"] }
+
+[package.metadata.rust-analyzer]
+rustc_private = true

@@ -1,0 +1,13 @@
+error: api/rest type is missing required ToSchema derive (DE0204)
+  --> $DIR/missing_toschema.rs:7:1
+   |
+LL | / pub struct UserDto {
+LL | |     pub id: String,
+LL | | }
+   | |_^
+   |
+   = help: DTOs in api/rest must derive ToSchema for OpenAPI documentation
+   = note: `#[deny(de0204_dtos_must_have_toschema_derive)]` on by default
+
+error: aborting due to 1 previous error
+

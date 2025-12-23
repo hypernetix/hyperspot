@@ -1,0 +1,34 @@
+[package]
+name = "de0102_no_toschema_in_contract"
+version = "0.1.0"
+authors = ["authors go here"]
+description = "Contract models should not have ToSchema derive (DE0102)"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[[example]]
+name = "toschema"
+path = "ui/toschema.rs"
+
+[[example]]
+name = "no_toschema_derive"
+path = "ui/no_toschema_derive.rs"
+
+[[example]]
+name = "mixed_derives"
+path = "ui/mixed_derives.rs"
+
+[dependencies]
+clippy_utils.workspace = true
+dylint_linting.workspace = true
+lint_utils.workspace = true
+
+[dev-dependencies]
+dylint_testing.workspace = true
+utoipa = "5.2"
+
+[package.metadata.rust-analyzer]
+rustc_private = true

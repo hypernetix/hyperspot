@@ -1,0 +1,31 @@
+[package]
+name = "de0202_dtos_not_referenced_outside_api"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+clippy_utils.workspace = true
+dylint_linting.workspace = true
+lint_utils.workspace = true
+
+[dev-dependencies]
+dylint_testing.workspace = true
+
+[package.metadata.rust-analyzer]
+rustc_private = true
+
+[[example]]
+name = "import_dto_in_contract"
+path = "ui/import_dto_in_contract.rs"
+
+[[example]]
+name = "import_dto_in_domain"
+path = "ui/import_dto_in_domain.rs"
+
+[[example]]
+name = "import_dto_in_api"
+path = "ui/import_dto_in_api.rs"

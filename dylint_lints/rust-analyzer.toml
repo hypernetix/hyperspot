@@ -1,0 +1,5 @@
+[rustc]
+source = "discover"
+
+[cargo]
+sysroot = "discover"

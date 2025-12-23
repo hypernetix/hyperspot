@@ -1,0 +1,34 @@
+[package]
+name = "de0203_dtos_must_have_serde_derives"
+version = "0.1.0"
+authors = ["authors go here"]
+description = "description goes here"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[[example]]
+name = "missing_serde"
+path = "ui/missing_serde.rs"
+
+[[example]]
+name = "has_serde"
+path = "ui/has_serde.rs"
+
+[[example]]
+name = "missing_one_derive"
+path = "ui/missing_one_derive.rs"
+
+[dependencies]
+clippy_utils.workspace = true
+dylint_linting.workspace = true
+lint_utils.workspace = true
+
+[dev-dependencies]
+dylint_testing.workspace = true
+serde = { version = "1.0", features = ["derive"] }
+
+[package.metadata.rust-analyzer]
+rustc_private = true
