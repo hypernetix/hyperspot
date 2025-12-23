@@ -1,6 +1,6 @@
 use axum::{
     http::{header, StatusCode, Uri},
-    response::{IntoResponse, Response},
+    response::IntoResponse,
     Json,
 };
 
@@ -27,9 +27,4 @@ pub fn created_json<T: serde::Serialize>(value: T, uri: &Uri, new_id: &str) -> i
 #[must_use]
 pub fn no_content() -> impl IntoResponse {
     StatusCode::NO_CONTENT
-}
-
-/// Convert any `IntoResponse` into a concrete Response (useful for unified signatures)
-pub fn to_response<R: IntoResponse>(r: R) -> Response {
-    r.into_response()
 }

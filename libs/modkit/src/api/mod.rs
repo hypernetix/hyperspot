@@ -41,7 +41,7 @@ pub mod prelude {
     pub use super::problem::Problem;
 
     // Response sugar
-    pub use super::response::{created_json, no_content, ok_json, to_response, JsonBody, JsonPage};
+    pub use super::response::{created_json, no_content, ok_json, JsonBody, JsonPage};
 
     // OData and field projection
     pub use super::select::apply_select;
