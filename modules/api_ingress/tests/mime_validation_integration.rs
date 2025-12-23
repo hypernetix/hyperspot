@@ -20,6 +20,7 @@ use tower::ServiceExt; // for oneshot
 use api_ingress::middleware::mime_validation::{
     build_mime_validation_map, mime_validation_middleware,
 };
+use modkit::api::operation_builder::VendorExtensions;
 
 /// Helper to extract Problem from response
 async fn extract_problem(response: axum::response::Response) -> Problem {
@@ -52,6 +53,7 @@ async fn test_middleware_allows_configured_content_type() {
         is_public: true,
         rate_limit: None,
         allowed_request_content_types: Some(vec!["application/json"]),
+        vendor_extensions: VendorExtensions::default(),
     }];
 
     let validation_map = build_mime_validation_map(&specs);
@@ -95,6 +97,7 @@ async fn test_middleware_strips_content_type_parameters() {
         is_public: true,
         rate_limit: None,
         allowed_request_content_types: Some(vec!["application/json"]),
+        vendor_extensions: VendorExtensions::default(),
     }];
 
     let validation_map = build_mime_validation_map(&specs);
@@ -138,6 +141,7 @@ async fn test_middleware_rejects_disallowed_content_type() {
         is_public: true,
         rate_limit: None,
         allowed_request_content_types: Some(vec!["application/json"]),
+        vendor_extensions: VendorExtensions::default(),
     }];
 
     let validation_map = build_mime_validation_map(&specs);
@@ -187,6 +191,7 @@ async fn test_middleware_rejects_missing_content_type() {
         is_public: true,
         rate_limit: None,
         allowed_request_content_types: Some(vec!["multipart/form-data"]),
+        vendor_extensions: VendorExtensions::default(),
     }];
 
     let validation_map = build_mime_validation_map(&specs);
@@ -264,6 +269,7 @@ async fn test_middleware_allows_multiple_content_types() {
             "application/xml",
             "text/plain",
         ]),
+        vendor_extensions: VendorExtensions::default(),
     }];
 
     let validation_map = build_mime_validation_map(&specs);

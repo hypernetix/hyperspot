@@ -383,7 +383,9 @@ impl OpenApiRegistry for OpenApiRegistryImpl {
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
-    use crate::api::operation_builder::{OperationSpec, ParamLocation, ParamSpec, ResponseSpec};
+    use crate::api::operation_builder::{
+        OperationSpec, ParamLocation, ParamSpec, ResponseSpec, VendorExtensions,
+    };
     use http::Method;
 
     #[test]
@@ -416,6 +418,7 @@ mod tests {
             is_public: false,
             rate_limit: None,
             allowed_request_content_types: None,
+            vendor_extensions: VendorExtensions::default(),
         };
 
         registry.register_operation(&spec);
@@ -477,6 +480,7 @@ mod tests {
             is_public: false,
             rate_limit: None,
             allowed_request_content_types: None,
+            vendor_extensions: VendorExtensions::default(),
         };
 
         registry.register_operation(&spec);
@@ -535,6 +539,7 @@ mod tests {
             is_public: false,
             rate_limit: None,
             allowed_request_content_types: Some(vec!["application/octet-stream"]),
+            vendor_extensions: VendorExtensions::default(),
         };
 
         registry.register_operation(&spec);

@@ -202,11 +202,11 @@ pub struct OperationSpec {
     /// request body schema and should not be used to create synthetic request bodies.
     pub allowed_request_content_types: Option<Vec<&'static str>>,
     /// `OpenAPI` vendor extensions (x-*)
-    vendor_extensions: VendorExtensions,
+    pub vendor_extensions: VendorExtensions,
 }
 
-#[derive(Clone, Debug, Default, Deserialize)]
-struct VendorExtensions {
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct VendorExtensions {
     #[serde(rename = "X-Pagination")]
     pub x_pagination: Option<XPagination>,
 }
@@ -257,6 +257,7 @@ where
             description: Some("OData v4 filter expression".to_owned()),
             param_type: "string".to_owned(),
         });
+        // TODO
         let mut xp = self.spec.vendor_extensions.x_pagination.unwrap_or_default();
         xp.filter_fields.insert(
             "created_at".to_owned(),
@@ -293,6 +294,7 @@ where
             description: Some("OData v4 orderby expression".to_owned()),
             param_type: "string".to_owned(),
         });
+        // TODO
         let mut xp = self.spec.vendor_extensions.x_pagination.unwrap_or_default();
         xp.order_by
             .extend(["created_at desc".to_owned(), "created_at asc".to_owned()]);
