@@ -45,6 +45,14 @@ pub fn domain_error_to_problem(e: &DomainError, instance: &str) -> Problem {
                 trace_id,
             )
         }
+        DomainError::InternalError => {
+            tracing::error!(error = ?e, "Internal error occurred");
+            ErrorCode::example1_user_internal_database_v1().with_context(
+                "An internal error occurred",
+                instance,
+                trace_id,
+            )
+        }
     }
 }
 

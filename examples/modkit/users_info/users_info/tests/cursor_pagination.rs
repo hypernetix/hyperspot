@@ -109,7 +109,7 @@ async fn test_forward_pagination_through_multiple_pages() {
 
     loop {
         let page = repo
-            .list_users_page(&ctx, &query)
+            .list_users_page(ctx.scope(), &query)
             .await
             .expect("Pagination should succeed");
 
@@ -181,7 +181,7 @@ async fn test_forward_pagination_respects_order() {
     let mut query = ODataQuery::default().with_order(order).with_limit(5);
 
     let page1 = repo
-        .list_users_page(&ctx, &query)
+        .list_users_page(ctx.scope(), &query)
         .await
         .expect("Page 1 should succeed");
 
@@ -202,7 +202,7 @@ async fn test_forward_pagination_respects_order() {
     query = ODataQuery::default().with_cursor(cursor).with_limit(5);
 
     let page2 = repo
-        .list_users_page(&ctx, &query)
+        .list_users_page(ctx.scope(), &query)
         .await
         .expect("Page 2 should succeed");
 
@@ -240,7 +240,7 @@ async fn test_forward_pagination_no_duplicates_across_pages() {
 
     for _ in 0..5 {
         let page = repo
-            .list_users_page(&ctx, &query)
+            .list_users_page(ctx.scope(), &query)
             .await
             .expect("Pagination should succeed");
 
@@ -283,7 +283,7 @@ async fn test_backward_pagination_with_prev_cursor() {
     // Act: Get page 1, then page 2, then go back to page 1 using prev_cursor
     let query1 = ODataQuery::default().with_limit(8);
     let page1 = repo
-        .list_users_page(&ctx, &query1)
+        .list_users_page(ctx.scope(), &query1)
         .await
         .expect("Page 1 should succeed");
 
@@ -297,7 +297,7 @@ async fn test_backward_pagination_with_prev_cursor() {
     let query2 = ODataQuery::default().with_cursor(cursor2).with_limit(8);
 
     let page2 = repo
-        .list_users_page(&ctx, &query2)
+        .list_users_page(ctx.scope(), &query2)
         .await
         .expect("Page 2 should succeed");
 
@@ -316,7 +316,7 @@ async fn test_backward_pagination_with_prev_cursor() {
     let query_back = ODataQuery::default().with_cursor(cursor_back).with_limit(8);
 
     let page_back = repo
-        .list_users_page(&ctx, &query_back)
+        .list_users_page(ctx.scope(), &query_back)
         .await
         .expect("Backward navigation should succeed");
 
@@ -358,7 +358,7 @@ async fn test_backward_pagination_maintains_order() {
         .with_order(order.clone())
         .with_limit(8);
     let page1 = repo
-        .list_users_page(&ctx, &query1)
+        .list_users_page(ctx.scope(), &query1)
         .await
         .expect("Page 1 should succeed");
 
@@ -366,7 +366,7 @@ async fn test_backward_pagination_maintains_order() {
     let cursor2 = modkit_odata::CursorV1::decode(next_cursor).unwrap();
     let query2 = ODataQuery::default().with_cursor(cursor2).with_limit(8);
     let page2 = repo
-        .list_users_page(&ctx, &query2)
+        .list_users_page(ctx.scope(), &query2)
         .await
         .expect("Page 2 should succeed");
 
@@ -385,7 +385,7 @@ async fn test_backward_pagination_maintains_order() {
 
     let query_back = ODataQuery::default().with_cursor(cursor_back).with_limit(8);
     let page_back = repo
-        .list_users_page(&ctx, &query_back)
+        .list_users_page(ctx.scope(), &query_back)
         .await
         .expect("Backward navigation should succeed");
 
@@ -457,7 +457,7 @@ async fn test_backward_pagination_has_next_cursor() {
         .with_order(order.clone())
         .with_limit(2);
     let page1 = repo
-        .list_users_page(&ctx, &query1)
+        .list_users_page(ctx.scope(), &query1)
         .await
         .expect("Page 1 should succeed");
 
@@ -472,7 +472,7 @@ async fn test_backward_pagination_has_next_cursor() {
     let next_cursor = modkit_odata::CursorV1::decode(next_cursor_encoded).unwrap();
     let query2 = ODataQuery::default().with_cursor(next_cursor).with_limit(2);
     let page2 = repo
-        .list_users_page(&ctx, &query2)
+        .list_users_page(ctx.scope(), &query2)
         .await
         .expect("Page 2 should succeed");
 
@@ -494,7 +494,7 @@ async fn test_backward_pagination_has_next_cursor() {
 
     let query_back = ODataQuery::default().with_cursor(prev_cursor).with_limit(2);
     let page_back = repo
-        .list_users_page(&ctx, &query_back)
+        .list_users_page(ctx.scope(), &query_back)
         .await
         .expect("Backward page should succeed");
 
@@ -519,7 +519,7 @@ async fn test_backward_pagination_has_next_cursor() {
 
     let query_fwd = ODataQuery::default().with_cursor(next_cursor).with_limit(2);
     let page_fwd = repo
-        .list_users_page(&ctx, &query_fwd)
+        .list_users_page(ctx.scope(), &query_fwd)
         .await
         .expect("Forward page should succeed");
 
@@ -554,7 +554,7 @@ async fn test_prev_cursor_at_first_page() {
     // Act: Get first page
     let query = ODataQuery::default().with_limit(10);
     let page1 = repo
-        .list_users_page(&ctx, &query)
+        .list_users_page(ctx.scope(), &query)
         .await
         .expect("Page 1 should succeed");
 
@@ -576,7 +576,7 @@ async fn test_prev_cursor_at_first_page() {
         .with_cursor(next_cursor)
         .with_limit(10);
     let page2 = repo
-        .list_users_page(&ctx, &query2)
+        .list_users_page(ctx.scope(), &query2)
         .await
         .expect("Page 2 should succeed");
 
@@ -592,7 +592,7 @@ async fn test_prev_cursor_at_first_page() {
         let query_prev = ODataQuery::default().with_cursor(cursor).with_limit(10);
 
         let page_prev = repo
-            .list_users_page(&ctx, &query_prev)
+            .list_users_page(ctx.scope(), &query_prev)
             .await
             .expect("Using prev_cursor should succeed");
 
@@ -654,7 +654,7 @@ async fn test_cursor_pagination_with_filter() {
 
     loop {
         let page = repo
-            .list_users_page(&ctx, &query)
+            .list_users_page(ctx.scope(), &query)
             .await
             .expect("Filtered pagination should succeed");
 
@@ -734,7 +734,7 @@ async fn test_cursor_filter_hash_mismatch_error() {
     }
 
     let page1 = repo
-        .list_users_page(&ctx, &query)
+        .list_users_page(ctx.scope(), &query)
         .await
         .expect("First page should succeed");
 
@@ -760,7 +760,7 @@ async fn test_cursor_filter_hash_mismatch_error() {
     }
 
     // Assert: Should fail with filter mismatch error
-    let result = repo.list_users_page(&ctx, &bad_query).await;
+    let result = repo.list_users_page(ctx.scope(), &bad_query).await;
     assert!(result.is_err(), "Should error on filter hash mismatch");
 
     let err = result.unwrap_err();
@@ -790,7 +790,7 @@ async fn test_cursor_pagination_with_tenant_isolation() {
 
     loop {
         let page = repo
-            .list_users_page(&ctx1, &query)
+            .list_users_page(ctx1.scope(), &query)
             .await
             .expect("Tenant1 pagination should succeed");
 
@@ -815,7 +815,7 @@ async fn test_cursor_pagination_with_tenant_isolation() {
 
     loop {
         let page = repo
-            .list_users_page(&ctx2, &query)
+            .list_users_page(ctx2.scope(), &query)
             .await
             .expect("Tenant2 pagination should succeed");
 
@@ -852,7 +852,7 @@ async fn test_cursor_pagination_with_deny_all_returns_empty() {
     // Act: Try to paginate with deny-all context
     let query = ODataQuery::default().with_limit(10);
     let page = repo
-        .list_users_page(&ctx, &query)
+        .list_users_page(ctx.scope(), &query)
         .await
         .expect("Query should succeed");
 
@@ -879,7 +879,7 @@ async fn test_cursor_pagination_empty_database() {
     // Act: Try to paginate
     let query = ODataQuery::default().with_limit(10);
     let page = repo
-        .list_users_page(&ctx, &query)
+        .list_users_page(ctx.scope(), &query)
         .await
         .expect("Empty pagination should succeed");
 
@@ -904,7 +904,7 @@ async fn test_cursor_pagination_exact_page_boundary() {
     // Act: Get page 1
     let query1 = ODataQuery::default().with_limit(10);
     let page1 = repo
-        .list_users_page(&ctx, &query1)
+        .list_users_page(ctx.scope(), &query1)
         .await
         .expect("Page 1 should succeed");
 
@@ -915,7 +915,7 @@ async fn test_cursor_pagination_exact_page_boundary() {
     let cursor = modkit_odata::CursorV1::decode(&page1.page_info.next_cursor.unwrap()).unwrap();
     let query2 = ODataQuery::default().with_cursor(cursor).with_limit(10);
     let page2 = repo
-        .list_users_page(&ctx, &query2)
+        .list_users_page(ctx.scope(), &query2)
         .await
         .expect("Page 2 should succeed");
 
@@ -941,7 +941,7 @@ async fn test_cursor_pagination_single_item() {
     // Act: Paginate with large limit
     let query = ODataQuery::default().with_limit(10);
     let page = repo
-        .list_users_page(&ctx, &query)
+        .list_users_page(ctx.scope(), &query)
         .await
         .expect("Single item pagination should succeed");
 
@@ -969,7 +969,7 @@ async fn test_cursor_pagination_limit_exceeds_total() {
     // Act: Request more than available with limit=100
     let query = ODataQuery::default().with_limit(100);
     let page = repo
-        .list_users_page(&ctx, &query)
+        .list_users_page(ctx.scope(), &query)
         .await
         .expect("Should succeed");
 
@@ -999,7 +999,7 @@ async fn test_cursor_pagination_with_limit_1() {
     for _ in 0..10 {
         // Limit iterations to prevent infinite loop
         let page = repo
-            .list_users_page(&ctx, &query)
+            .list_users_page(ctx.scope(), &query)
             .await
             .expect("Should succeed");
 
@@ -1037,12 +1037,12 @@ async fn test_cursor_stability_repeated_queries() {
     let query = ODataQuery::default().with_limit(5);
 
     let first_page = repo
-        .list_users_page(&ctx, &query)
+        .list_users_page(ctx.scope(), &query)
         .await
         .expect("First query should succeed");
 
     let second_page = repo
-        .list_users_page(&ctx, &query)
+        .list_users_page(ctx.scope(), &query)
         .await
         .expect("Second query should succeed");
 
@@ -1080,7 +1080,7 @@ async fn test_cursor_with_different_ordering() {
     let query_asc = ODataQuery::default().with_order(order_asc).with_limit(5);
 
     let page_asc = repo
-        .list_users_page(&ctx, &query_asc)
+        .list_users_page(ctx.scope(), &query_asc)
         .await
         .expect("ASC query should succeed");
 
@@ -1093,7 +1093,7 @@ async fn test_cursor_with_different_ordering() {
     let query_desc = ODataQuery::default().with_order(order_desc).with_limit(5);
 
     let page_desc = repo
-        .list_users_page(&ctx, &query_desc)
+        .list_users_page(ctx.scope(), &query_desc)
         .await
         .expect("DESC query should succeed");
 

@@ -27,7 +27,7 @@ async fn delete_respects_tenant_scope() {
     let ctx_deny = ctx_allow_tenants(&[tenant2]);
 
     // Act: Try to delete user outside scope
-    let result = repo.delete(&ctx_deny, user_id).await;
+    let result = repo.delete(ctx_deny.scope(), user_id).await;
 
     // Assert: Should return Ok(false) - no rows deleted
     assert!(result.is_ok());
@@ -50,7 +50,7 @@ async fn delete_succeeds_within_scope() {
     let ctx_ok = ctx_allow_tenants(&[tenant_id]);
 
     // Act: Delete user within scope
-    let result = repo.delete(&ctx_ok, user_id).await;
+    let result = repo.delete(ctx_ok.scope(), user_id).await;
 
     // Assert: Should succeed
     assert!(result.is_ok());
@@ -58,7 +58,7 @@ async fn delete_succeeds_within_scope() {
     assert!(deleted, "Should successfully delete user in scope");
 
     // Verify the user is gone
-    let loaded = repo.find_by_id(&ctx_ok, user_id).await.unwrap();
+    let loaded = repo.find_by_id(ctx_ok.scope(), user_id).await.unwrap();
     assert!(loaded.is_none(), "User should be deleted");
 }
 
@@ -77,7 +77,7 @@ async fn delete_with_deny_all_returns_false() {
     let ctx = ctx_deny_all();
 
     // Act: Try to delete with deny-all context
-    let result = repo.delete(&ctx, user_id).await;
+    let result = repo.delete(ctx.scope(), user_id).await;
 
     // Assert: Should return Ok(false)
     assert!(result.is_ok());

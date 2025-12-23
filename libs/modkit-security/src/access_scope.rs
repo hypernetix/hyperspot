@@ -92,6 +92,12 @@ impl AccessScope {
         }
     }
 
+    /// True if this scope explicitly includes the root tenant.
+    #[must_use]
+    pub fn includes_root_tenant(&self) -> bool {
+        self.tenant_ids.contains(&crate::constants::ROOT_TENANT_ID)
+    }
+
     /// Root scope for system-level access.
     /// This bypasses all tenant filtering and allows access to all tenants.
     /// Resource filters can still be applied if `resource_ids` are set.
@@ -103,11 +109,5 @@ impl AccessScope {
             types: vec![],
             resource_ids: Vec::new(),
         }
-    }
-
-    /// True if this scope explicitly includes the root tenant.
-    #[must_use]
-    pub fn includes_root_tenant(&self) -> bool {
-        self.tenant_ids.contains(&crate::constants::ROOT_TENANT_ID)
     }
 }

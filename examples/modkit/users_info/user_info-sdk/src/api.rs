@@ -5,7 +5,7 @@
 
 use async_trait::async_trait;
 use modkit_odata::{ODataQuery, Page};
-use modkit_security::SecurityCtx;
+use modkit_security::SecurityContext;
 use uuid::Uuid;
 
 use crate::errors::UsersInfoError;
@@ -19,33 +19,33 @@ use crate::models::{NewUser, UpdateUserRequest, User};
 /// let user = client.get_user(&ctx, user_id).await?;
 /// ```
 ///
-/// All methods require a `SecurityCtx` for proper authorization and access control.
+/// All methods require a `SecurityContext` for proper authorization and access control.
 #[async_trait]
 pub trait UsersInfoApi: Send + Sync {
     /// Get a user by ID.
-    async fn get_user(&self, ctx: &SecurityCtx, id: Uuid) -> Result<User, UsersInfoError>;
+    async fn get_user(&self, ctx: &SecurityContext, id: Uuid) -> Result<User, UsersInfoError>;
 
     /// List users with cursor-based pagination.
     async fn list_users(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         query: ODataQuery,
     ) -> Result<Page<User>, UsersInfoError>;
 
     /// Create a new user.
     async fn create_user(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         new_user: NewUser,
     ) -> Result<User, UsersInfoError>;
 
     /// Update a user with partial data.
     async fn update_user(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         req: UpdateUserRequest,
     ) -> Result<User, UsersInfoError>;
 
     /// Delete a user by ID.
-    async fn delete_user(&self, ctx: &SecurityCtx, id: Uuid) -> Result<(), UsersInfoError>;
+    async fn delete_user(&self, ctx: &SecurityContext, id: Uuid) -> Result<(), UsersInfoError>;
 }

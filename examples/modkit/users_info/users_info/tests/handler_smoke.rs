@@ -11,7 +11,7 @@ use axum::{
     Extension, Router,
 };
 use modkit_db::secure::SecureConn;
-use modkit_security::SecurityCtx;
+use modkit_security::SecurityContext;
 use std::sync::Arc;
 use support::{inmem_db, seed_user, MockAuditPort, MockEventPublisher};
 use tower::ServiceExt;
@@ -22,11 +22,14 @@ use users_info::{
 };
 use uuid::Uuid;
 
-/// Middleware to inject a fake `SecurityCtx` for testing
+/// Middleware to inject a fake `SecurityContext` for testing
 async fn inject_fake_security_ctx(mut req: Request<Body>, next: Next) -> axum::response::Response {
     let fake_tenant = Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
     let fake_subject = Uuid::parse_str("00000000-0000-0000-0000-000000000002").unwrap();
-    let ctx = SecurityCtx::for_tenant(fake_tenant, fake_subject);
+    let ctx = SecurityContext::builder()
+        .tenant_id(fake_tenant)
+        .subject_id(fake_subject)
+        .build();
     req.extensions_mut().insert(ctx);
     next.run(req).await
 }
@@ -111,10 +114,10 @@ async fn get_nonexistent_user_returns_404() {
     let app = create_test_router().await;
     let random_id = Uuid::new_v4();
 
-    // Act: Call GET /users-info/v1//users/:id for non-existent user
+    // Act: Call GET /users-info/v1/users/:id for non-existent user
     let request = Request::builder()
         .method("GET")
-        .uri(format!("/users/{random_id}"))
+        .uri(format!("/users-info/v1/users/{random_id}"))
         .body(Body::empty())
         .unwrap();
 

@@ -31,7 +31,7 @@ async fn update_with_scoped_ctx_denies_out_of_scope() {
     updated.email = "hacker@example.com".to_owned();
     updated.updated_at = time::OffsetDateTime::now_utc();
 
-    let result = repo.update(&ctx_deny, updated).await;
+    let result = repo.update(ctx_deny.scope(), updated).await;
 
     // Assert: Should fail (ScopeError -> anyhow::Error)
     assert!(
@@ -66,13 +66,13 @@ async fn update_succeeds_within_scope() {
     updated.email = "updated@example.com".to_owned();
     updated.updated_at = time::OffsetDateTime::now_utc();
 
-    let result = repo.update(&ctx_ok, updated).await;
+    let result = repo.update(ctx_ok.scope(), updated).await;
 
     // Assert: Should succeed
     assert!(result.is_ok(), "Update should succeed for in-scope tenant");
 
     // Verify the update persisted
-    let loaded = repo.find_by_id(&ctx_ok, user_id).await.unwrap();
+    let loaded = repo.find_by_id(ctx_ok.scope(), user_id).await.unwrap();
     assert!(loaded.is_some());
     assert_eq!(loaded.unwrap().email, "updated@example.com");
 }
@@ -95,7 +95,7 @@ async fn update_with_deny_all_fails() {
     let mut updated = user.clone();
     updated.email = "blocked@example.com".to_owned();
 
-    let result = repo.update(&ctx, updated).await;
+    let result = repo.update(ctx.scope(), updated).await;
 
     // Assert: Should fail
     assert!(result.is_err(), "Deny-all context should prevent updates");

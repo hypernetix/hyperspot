@@ -6,7 +6,9 @@ use arc_swap::ArcSwap;
 use dashmap::DashMap;
 
 use anyhow::Result;
+use axum::extract::State;
 use axum::http::Method;
+use axum::middleware::from_fn_with_state;
 use axum::{extract::DefaultBodyLimit, middleware::from_fn, routing::get, Router};
 use modkit::api::{OpenApiRegistry, OpenApiRegistryImpl};
 use modkit::lifecycle::ReadySignal;
@@ -33,6 +35,7 @@ mod router_cache;
 mod web;
 
 pub use config::{ApiIngressConfig, CorsConfig};
+use modkit_security::PolicyEngineRef;
 use router_cache::RouterCache;
 
 /// Main API Ingress module — owns the HTTP server (`rest_host`) and collects
@@ -183,6 +186,17 @@ impl ApiIngress {
             .iter()
             .map(|e| e.value().clone())
             .collect();
+
+        // 11) Inject Policy Engine
+        router = router.layer(from_fn_with_state(
+            auth_state.policy_engine,
+            |State(engine): State<PolicyEngineRef>,
+             mut req: axum::extract::Request,
+             next: axum::middleware::Next| async move {
+                req.extensions_mut().insert(engine);
+                next.run(req).await
+            },
+        ));
 
         // 10) Auth
         if config.auth_disabled {

@@ -11,11 +11,7 @@ use modkit::api::select::{apply_select, page_to_projected_json};
 use crate::domain::service::Service;
 use modkit::SseBroadcaster;
 
-// Import auth extractors
-use modkit_auth::axum_ext::Authz;
-
-// Import domain error for conversion
-use crate::domain::error::DomainError;
+use modkit_security::SecurityContext;
 
 /// List users with cursor-based pagination and optional field projection via $select
 #[tracing::instrument(
@@ -27,7 +23,7 @@ use crate::domain::error::DomainError;
     )
 )]
 pub async fn list_users(
-    Authz(ctx): Authz,
+    Extension(ctx): Extension<SecurityContext>,
     Extension(svc): Extension<std::sync::Arc<Service>>,
     OData(query): OData,
 ) -> ApiResult<JsonPage<serde_json::Value>> {
@@ -54,7 +50,7 @@ pub async fn list_users(
     )
 )]
 pub async fn get_user(
-    Authz(ctx): Authz,
+    Extension(ctx): Extension<SecurityContext>,
     Extension(svc): Extension<std::sync::Arc<Service>>,
     Path(id): Path<Uuid>,
     OData(query): OData,
@@ -86,7 +82,7 @@ pub async fn get_user(
 )]
 pub async fn create_user(
     uri: Uri,
-    Authz(ctx): Authz,
+    Extension(ctx): Extension<SecurityContext>,
     Extension(svc): Extension<std::sync::Arc<Service>>,
     Json(req_body): Json<CreateUserReq>,
 ) -> ApiResult<impl IntoResponse> {
@@ -108,17 +104,18 @@ pub async fn create_user(
     // Authorization check:
     // - root scope: allow any tenant_id
     // - non-root: tenant_id must be present in scope.tenant_ids()
-    let scope = ctx.scope();
-    if !scope.is_root() {
-        let allowed = scope.tenant_ids().iter().any(|t| t == &tenant_id);
-        if !allowed {
-            return Err(DomainError::validation(
-                "tenant_id",
-                format!("Tenant {tenant_id} is not allowed in current security scope"),
-            )
-            .into());
-        }
-    }
+    // TODO: the check must be done in the service layer
+    // let scope = ctx.scope();
+    // if !scope.is_root() {
+    //     let allowed = scope.tenant_ids().iter().any(|t| t == &tenant_id);
+    //     if !allowed {
+    //         return Err(DomainError::validation(
+    //             "tenant_id",
+    //             format!("Tenant {tenant_id} is not allowed in current security scope"),
+    //         )
+    //         .into());
+    //     }
+    // }
 
     let new_user = user_info_sdk::NewUser {
         id,
@@ -142,7 +139,7 @@ pub async fn create_user(
     )
 )]
 pub async fn update_user(
-    Authz(ctx): Authz,
+    Extension(ctx): Extension<SecurityContext>,
     Extension(svc): Extension<std::sync::Arc<Service>>,
     Path(id): Path<Uuid>,
     Json(req_body): Json<UpdateUserReq>,
@@ -168,7 +165,7 @@ pub async fn update_user(
     )
 )]
 pub async fn delete_user(
-    Authz(ctx): Authz,
+    Extension(ctx): Extension<SecurityContext>,
     Extension(svc): Extension<std::sync::Arc<Service>>,
     Path(id): Path<Uuid>,
 ) -> ApiResult<impl IntoResponse> {

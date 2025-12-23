@@ -25,6 +25,9 @@ pub enum DomainError {
 
     #[error("Validation failed: {field}: {message}")]
     Validation { field: String, message: String },
+
+    #[error("Internal error")]
+    InternalError,
 }
 
 impl DomainError {
@@ -85,7 +88,15 @@ impl From<DomainError> for UsersInfoError {
             DomainError::Validation { field, message } => {
                 UsersInfoError::validation(format!("{field}: {message}"))
             }
-            DomainError::Database { .. } => UsersInfoError::internal(),
+            DomainError::Database { .. } | DomainError::InternalError => UsersInfoError::internal(),
         }
+    }
+}
+
+impl From<Box<dyn std::error::Error>> for DomainError {
+    fn from(value: Box<dyn std::error::Error>) -> Self {
+        tracing::debug!(error = %value, "Converting boxed error to DomainError");
+
+        DomainError::InternalError
     }
 }

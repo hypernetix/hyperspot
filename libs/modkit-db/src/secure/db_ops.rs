@@ -64,7 +64,7 @@ use crate::secure::{AccessScope, ScopableEntity, Scoped, Unscoped};
 ///   in higher layers (e.g., service logic or request handlers).
 pub async fn secure_insert<E>(
     am: E::ActiveModel,
-    _sec: &crate::secure::SecurityCtx,
+    _scope: &AccessScope,
     conn: &impl ConnectionTrait,
 ) -> Result<E::Model, ScopeError>
 where

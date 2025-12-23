@@ -55,7 +55,7 @@ use sea_orm::{
 };
 use uuid::Uuid;
 
-use modkit_security::SecurityCtx;
+use modkit_security::AccessScope;
 
 use crate::secure::{ScopableEntity, ScopeError, Scoped, SecureEntityExt, SecureSelect};
 
@@ -76,7 +76,7 @@ use crate::secure::db_ops::{SecureDeleteExt, SecureDeleteMany, SecureUpdateExt, 
 /// }
 ///
 /// impl<'a> MyService<'a> {
-///     pub async fn get_user(&self, ctx: &SecurityCtx, id: Uuid) -> Result<Option<User>> {
+///     pub async fn get_user(&self, scope: &AccessScope, id: Uuid) -> Result<Option<User>> {
 ///         self.db.find_by_id::<user::Entity>(ctx, id)?
 ///             .one(self.db.conn())
 ///             .await
@@ -152,12 +152,12 @@ impl SecureConn {
     /// # Errors
     ///
     #[allow(clippy::unused_self)] // Keep fluent &SecureConn API even when method only delegates
-    pub fn find<E>(&self, ctx: &SecurityCtx) -> SecureSelect<E, Scoped>
+    pub fn find<E>(&self, scope: &AccessScope) -> SecureSelect<E, Scoped>
     where
         E: ScopableEntity + EntityTrait,
         E::Column: ColumnTrait + Copy,
     {
-        E::find().secure().scope_with(ctx.scope())
+        E::find().secure().scope_with(scope)
     }
 
     /// Create a scoped select query filtered by a specific resource ID.
@@ -177,14 +177,14 @@ impl SecureConn {
     /// Returns `ScopeError` if the entity doesn't have a resource column or scoping fails.
     pub fn find_by_id<E>(
         &self,
-        ctx: &SecurityCtx,
+        scope: &AccessScope,
         id: Uuid,
     ) -> Result<SecureSelect<E, Scoped>, ScopeError>
     where
         E: ScopableEntity + EntityTrait,
         E::Column: ColumnTrait + Copy,
     {
-        self.find::<E>(ctx).and_id(id)
+        self.find::<E>(scope).and_id(id)
     }
 
     /// Create a scoped update query for the given entity.
@@ -207,12 +207,12 @@ impl SecureConn {
     ///
     #[allow(clippy::unused_self)] // Delegates but matches the rest of the connection API
     #[must_use]
-    pub fn update_many<E>(&self, ctx: &SecurityCtx) -> SecureUpdateMany<E, Scoped>
+    pub fn update_many<E>(&self, scope: &AccessScope) -> SecureUpdateMany<E, Scoped>
     where
         E: ScopableEntity + EntityTrait,
         E::Column: ColumnTrait + Copy,
     {
-        E::update_many().secure().scope_with(ctx.scope())
+        E::update_many().secure().scope_with(scope)
     }
 
     /// Create a scoped delete query for the given entity.
@@ -232,12 +232,12 @@ impl SecureConn {
     ///
     #[allow(clippy::unused_self)] // Retain method-style ergonomics for callers of SecureConn
     #[must_use]
-    pub fn delete_many<E>(&self, ctx: &SecurityCtx) -> SecureDeleteMany<E, Scoped>
+    pub fn delete_many<E>(&self, scope: &AccessScope) -> SecureDeleteMany<E, Scoped>
     where
         E: ScopableEntity + EntityTrait,
         E::Column: ColumnTrait + Copy,
     {
-        E::delete_many().secure().scope_with(ctx.scope())
+        E::delete_many().secure().scope_with(scope)
     }
 
     /// Insert a new entity with automatic tenant validation.
@@ -266,7 +266,7 @@ impl SecureConn {
     /// - `ScopeError::Db` if database insert fails
     pub async fn insert<E>(
         &self,
-        ctx: &SecurityCtx,
+        scope: &AccessScope,
         am: E::ActiveModel,
     ) -> Result<E::Model, ScopeError>
     where
@@ -275,7 +275,7 @@ impl SecureConn {
         E::ActiveModel: sea_orm::ActiveModelTrait<Entity = E> + Send,
         E::Model: sea_orm::IntoActiveModel<E::ActiveModel>,
     {
-        crate::secure::secure_insert::<E>(am, ctx, &self.conn).await
+        crate::secure::secure_insert::<E>(am, scope, &self.conn).await
     }
 
     /// Update a single entity by ID (unscoped).
@@ -349,7 +349,7 @@ impl SecureConn {
     /// - `ScopeError::Db` if the database operation fails
     pub async fn update_with_ctx<E>(
         &self,
-        ctx: &SecurityCtx,
+        scope: &AccessScope,
         id: Uuid,
         am: E::ActiveModel,
     ) -> Result<E::Model, ScopeError>
@@ -360,7 +360,7 @@ impl SecureConn {
         E::Model: sea_orm::IntoActiveModel<E::ActiveModel>,
     {
         let exists = self
-            .find_by_id::<E>(ctx, id)?
+            .find_by_id::<E>(scope, id)?
             .one(&self.conn)
             .await?
             .is_some();
@@ -393,7 +393,7 @@ impl SecureConn {
     /// # Errors
     ///
     /// Returns `ScopeError::Invalid` if the entity does not have a `resource_col` defined.
-    pub async fn delete_by_id<E>(&self, ctx: &SecurityCtx, id: Uuid) -> Result<bool, ScopeError>
+    pub async fn delete_by_id<E>(&self, scope: &AccessScope, id: Uuid) -> Result<bool, ScopeError>
     where
         E: ScopableEntity + EntityTrait,
         E::Column: ColumnTrait + Copy,
@@ -405,7 +405,7 @@ impl SecureConn {
         let result = E::delete_many()
             .filter(sea_orm::Condition::all().add(Expr::col(resource_col).eq(id)))
             .secure()
-            .scope_with(ctx.scope())
+            .scope_with(scope)
             .exec(&self.conn)
             .await?;
 

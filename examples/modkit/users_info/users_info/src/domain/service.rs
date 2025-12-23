@@ -4,8 +4,8 @@ use crate::domain::error::DomainError;
 use crate::domain::events::UserDomainEvent;
 use crate::domain::ports::{AuditPort, EventPublisher};
 use crate::domain::repo::UsersRepository;
-use modkit_db::secure::SecurityCtx;
 use modkit_odata::{ODataQuery, Page};
+use modkit_security::{PolicyEngineRef, SecurityContext};
 use time::OffsetDateTime;
 use tracing::{debug, info, instrument};
 use user_info_sdk::{NewUser, User, UserPatch};
@@ -15,6 +15,7 @@ use uuid::Uuid;
 /// Depends only on the repository port, not on testing types.
 #[derive(Clone)]
 pub struct Service {
+    policy_engine: PolicyEngineRef,
     repo: Arc<dyn UsersRepository>,
     events: Arc<dyn EventPublisher<UserDomainEvent>>,
     audit: Arc<dyn AuditPort>,
@@ -48,6 +49,7 @@ impl Service {
         config: ServiceConfig,
     ) -> Self {
         Self {
+            policy_engine: Arc::new(modkit_security::DummyPolicyEngine),
             repo,
             events,
             audit,
@@ -56,7 +58,7 @@ impl Service {
     }
 
     #[instrument(skip(self, ctx), fields(user_id = %id))]
-    pub async fn get_user(&self, ctx: &SecurityCtx, id: Uuid) -> Result<User, DomainError> {
+    pub async fn get_user(&self, ctx: &SecurityContext, id: Uuid) -> Result<User, DomainError> {
         debug!("Getting user by id");
 
         let audit_result = self.audit.get_user_access(id).await;
@@ -64,9 +66,15 @@ impl Service {
             debug!("Audit service call failed (continuing): {}", e);
         }
 
+        let scope = ctx
+            .scope(self.policy_engine.clone())
+            .include_tenant_children()
+            .prepare()
+            .await?;
+
         let user = self
             .repo
-            .find_by_id(ctx, id)
+            .find_by_id(&scope, id)
             .await
             .map_err(|e| DomainError::database(e.to_string()))?
             .ok_or_else(|| DomainError::user_not_found(id))?;
@@ -78,12 +86,22 @@ impl Service {
     #[instrument(skip(self, ctx, query))]
     pub async fn list_users_page(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         query: &ODataQuery,
-    ) -> Result<Page<User>, modkit_odata::Error> {
+    ) -> Result<Page<User>, DomainError> {
         debug!("Listing users with cursor pagination");
 
-        let page = self.repo.list_users_page(ctx, query).await?;
+        let scope = ctx
+            .scope(self.policy_engine.clone())
+            .include_tenant_children()
+            .prepare()
+            .await?;
+
+        let page = self
+            .repo
+            .list_users_page(&scope, query)
+            .await
+            .map_err(|e| DomainError::database(e.to_string()))?;
 
         debug!("Successfully listed {} users in page", page.items.len());
         Ok(page)
@@ -95,7 +113,7 @@ impl Service {
     )]
     pub async fn create_user(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         new_user: NewUser,
     ) -> Result<User, DomainError> {
         info!("Creating new user");
@@ -104,10 +122,16 @@ impl Service {
 
         let id = new_user.id.unwrap_or_else(Uuid::now_v7);
 
+        let scope = ctx
+            .scope(self.policy_engine.clone())
+            .include_tenant_children()
+            .prepare()
+            .await?;
+
         if new_user.id.is_some()
             && self
                 .repo
-                .find_by_id(ctx, id)
+                .find_by_id(&scope, id)
                 .await
                 .map_err(|e| DomainError::database(e.to_string()))?
                 .is_some()
@@ -120,7 +144,7 @@ impl Service {
 
         if self
             .repo
-            .email_exists(ctx, &new_user.email)
+            .email_exists(&scope, &new_user.email)
             .await
             .map_err(|e| DomainError::database(e.to_string()))?
         {
@@ -140,7 +164,7 @@ impl Service {
         };
 
         self.repo
-            .insert(ctx, user.clone())
+            .insert(&scope, user.clone())
             .await
             .map_err(|e| DomainError::database(e.to_string()))?;
 
@@ -164,7 +188,7 @@ impl Service {
     )]
     pub async fn update_user(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         id: Uuid,
         patch: UserPatch,
     ) -> Result<User, DomainError> {
@@ -172,9 +196,15 @@ impl Service {
 
         self.validate_user_patch(&patch)?;
 
+        let scope = ctx
+            .scope(self.policy_engine.clone())
+            .include_tenant_children()
+            .prepare()
+            .await?;
+
         let mut current = self
             .repo
-            .find_by_id(ctx, id)
+            .find_by_id(&scope, id)
             .await
             .map_err(|e| DomainError::database(e.to_string()))?
             .ok_or_else(|| DomainError::user_not_found(id))?;
@@ -183,7 +213,7 @@ impl Service {
             if new_email != &current.email
                 && self
                     .repo
-                    .email_exists(ctx, new_email)
+                    .email_exists(&scope, new_email)
                     .await
                     .map_err(|e| DomainError::database(e.to_string()))?
             {
@@ -200,7 +230,7 @@ impl Service {
         current.updated_at = OffsetDateTime::now_utc();
 
         self.repo
-            .update(ctx, current.clone())
+            .update(&scope, current.clone())
             .await
             .map_err(|e| DomainError::database(e.to_string()))?;
 
@@ -217,12 +247,18 @@ impl Service {
         skip(self, ctx),
         fields(user_id = %id)
     )]
-    pub async fn delete_user(&self, ctx: &SecurityCtx, id: Uuid) -> Result<(), DomainError> {
+    pub async fn delete_user(&self, ctx: &SecurityContext, id: Uuid) -> Result<(), DomainError> {
         info!("Deleting user");
+
+        let scope = ctx
+            .scope(self.policy_engine.clone())
+            .include_tenant_children()
+            .prepare()
+            .await?;
 
         let deleted = self
             .repo
-            .delete(ctx, id)
+            .delete(&scope, id)
             .await
             .map_err(|e| DomainError::database(e.to_string()))?;
 
