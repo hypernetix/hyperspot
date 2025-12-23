@@ -5,6 +5,7 @@ use std::sync::Arc;
 use axum::extract::{Extension, Path, Query};
 use axum::Json;
 use modkit::api::prelude::*;
+use modkit::api::problem::Problem;
 use types_registry_sdk::RegisterSummary;
 
 use super::dto::{
@@ -14,9 +15,6 @@ use super::dto::{
 use crate::domain::error::DomainError;
 use crate::domain::service::TypesRegistryService;
 
-pub type TypesRegistryResult<T> = ApiResult<T, DomainError>;
-pub type TypesRegistryApiError = ApiError<DomainError>;
-
 /// POST /api/v1/types-registry/entities
 ///
 /// Register GTS entities in batch.
@@ -25,11 +23,9 @@ pub type TypesRegistryApiError = ApiError<DomainError>;
 pub async fn register_entities(
     Extension(service): Extension<Arc<TypesRegistryService>>,
     Json(req): Json<RegisterEntitiesRequest>,
-) -> TypesRegistryResult<(StatusCode, Json<RegisterEntitiesResponse>)> {
+) -> ApiResult<(StatusCode, Json<RegisterEntitiesResponse>)> {
     if !service.is_ready() {
-        return Err(TypesRegistryApiError::from_domain(
-            crate::domain::error::DomainError::NotInReadyMode,
-        ));
+        return Err(DomainError::NotInReadyMode.into());
     }
 
     let results = service.register_validated(req.entities);
@@ -51,18 +47,14 @@ pub async fn register_entities(
 pub async fn list_entities(
     Extension(service): Extension<Arc<TypesRegistryService>>,
     Query(query): Query<ListEntitiesQuery>,
-) -> TypesRegistryResult<Json<ListEntitiesResponse>> {
+) -> ApiResult<Json<ListEntitiesResponse>> {
     if !service.is_ready() {
-        return Err(TypesRegistryApiError::from_domain(
-            crate::domain::error::DomainError::NotInReadyMode,
-        ));
+        return Err(DomainError::NotInReadyMode.into());
     }
 
     let list_query = query.to_list_query();
 
-    let entities = service
-        .list(&list_query)
-        .map_err(TypesRegistryApiError::from_domain)?;
+    let entities = service.list(&list_query).map_err(Problem::from)?;
 
     let entity_dtos: Vec<GtsEntityDto> = entities.into_iter().map(Into::into).collect();
     let count = entity_dtos.len();
@@ -79,16 +71,12 @@ pub async fn list_entities(
 pub async fn get_entity(
     Extension(service): Extension<Arc<TypesRegistryService>>,
     Path(gts_id): Path<String>,
-) -> TypesRegistryResult<Json<GtsEntityDto>> {
+) -> ApiResult<Json<GtsEntityDto>> {
     if !service.is_ready() {
-        return Err(TypesRegistryApiError::from_domain(
-            crate::domain::error::DomainError::NotInReadyMode,
-        ));
+        return Err(DomainError::NotInReadyMode.into());
     }
 
-    let entity = service
-        .get(&gts_id)
-        .map_err(TypesRegistryApiError::from_domain)?;
+    let entity = service.get(&gts_id).map_err(Problem::from)?;
 
     Ok(Json(entity.into()))
 }
