@@ -69,10 +69,9 @@ pub fn register_routes(
             http::StatusCode::OK,
             "Paginated list of users",
         )
-        .with_odata_filter()
+        .with_odata_filter::<dto::UserDtoFilterField>()
         .with_odata_select()
-        .with_odata_orderby()
-        .with_odata_pagination::<dto::UserDtoFilterField>()
+        .with_odata_orderby::<dto::UserDtoFilterField>()
         .error_400(openapi)
         .error_500(openapi)
         .register(router, openapi);

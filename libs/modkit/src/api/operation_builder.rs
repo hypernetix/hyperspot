@@ -241,7 +241,9 @@ pub struct XPagination {
 pub trait OperationBuilderODataExt<S, H, R> {
     /// Adds optional `$filter` query parameter to `OpenAPI`.
     #[must_use]
-    fn with_odata_filter(self) -> Self;
+    fn with_odata_filter<T>(self) -> Self
+    where
+        T: modkit_db::odata::filter::FilterField;
 
     /// Adds optional `$select` query parameter to `OpenAPI`.
     #[must_use]
@@ -249,11 +251,7 @@ pub trait OperationBuilderODataExt<S, H, R> {
 
     /// Adds optional `$orderby` query parameter to `OpenAPI`.
     #[must_use]
-    fn with_odata_orderby(self) -> Self;
-
-    /// Populates `x-pagination` vendor extension based on the provided `FilterField` type.
-    #[must_use]
-    fn with_odata_pagination<T>(self) -> Self
+    fn with_odata_orderby<T>(self) -> Self
     where
         T: modkit_db::odata::filter::FilterField;
 }
@@ -263,14 +261,52 @@ where
     H: HandlerSlot<S>,
     A: AuthState,
 {
-    fn with_odata_filter(mut self) -> Self {
+    fn with_odata_filter<T>(mut self) -> Self
+    where
+        T: modkit_db::odata::filter::FilterField,
+    {
+        use modkit_db::odata::FieldKind;
+        use std::fmt::Write as _;
+
+        let mut filter = self
+            .spec
+            .vendor_extensions
+            .x_odata_filter
+            .unwrap_or_default();
+
+        let mut description = "OData v4 filter expression".to_owned();
+        for field in T::FIELDS {
+            let name = field.name().to_owned();
+            let kind = field.kind();
+
+            let ops: Vec<String> = match kind {
+                FieldKind::String => vec!["eq", "ne", "contains", "startswith", "endswith", "in"],
+                FieldKind::Uuid => vec!["eq", "ne", "in"],
+                FieldKind::Bool => vec!["eq", "ne"],
+                FieldKind::I64
+                | FieldKind::F64
+                | FieldKind::Decimal
+                | FieldKind::DateTimeUtc
+                | FieldKind::Date
+                | FieldKind::Time => {
+                    vec!["eq", "ne", "gt", "ge", "lt", "le", "in"]
+                }
+            }
+            .into_iter()
+            .map(String::from)
+            .collect();
+
+            _ = write!(description, "\n- {}: {}", name, ops.join("|"));
+            filter.allowed_fields.insert(name.clone(), ops);
+        }
         self.spec.params.push(ParamSpec {
             name: "$filter".to_owned(),
             location: ParamLocation::Query,
             required: false,
-            description: Some("OData v4 filter expression".to_owned()),
+            description: Some(description),
             param_type: "string".to_owned(),
         });
+        self.spec.vendor_extensions.x_odata_filter = Some(filter);
         self
     }
 
@@ -285,60 +321,25 @@ where
         self
     }
 
-    fn with_odata_orderby(mut self) -> Self {
-        self.spec.params.push(ParamSpec {
-            name: "$orderby".to_owned(),
-            location: ParamLocation::Query,
-            required: false,
-            description: Some("OData v4 orderby expression".to_owned()),
-            param_type: "string".to_owned(),
-        });
-        self
-    }
-
-    fn with_odata_pagination<T>(mut self) -> Self
+    fn with_odata_orderby<T>(mut self) -> Self
     where
         T: modkit_db::odata::filter::FilterField,
     {
-        use modkit_db::odata::FieldKind;
-
-        let mut filter = self
-            .spec
-            .vendor_extensions
-            .x_odata_filter
-            .unwrap_or_default();
+        use std::fmt::Write as _;
         let mut order_by = self
             .spec
             .vendor_extensions
             .x_odata_orderby
             .unwrap_or_default();
-
+        let mut description = "OData v4 orderby expression".to_owned();
         for field in T::FIELDS {
             let name = field.name().to_owned();
-            let kind = field.kind();
-
-            let ops = match kind {
-                FieldKind::String => vec!["eq", "ne", "contains", "startswith", "endswith", "in"],
-                FieldKind::Uuid => vec!["eq", "ne", "in"],
-                FieldKind::Bool => vec!["eq", "ne"],
-                FieldKind::I64
-                | FieldKind::F64
-                | FieldKind::Decimal
-                | FieldKind::DateTimeUtc
-                | FieldKind::Date
-                | FieldKind::Time => {
-                    vec!["eq", "ne", "gt", "ge", "lt", "le", "in"]
-                }
-            };
-
-            filter
-                .allowed_fields
-                .insert(name.clone(), ops.into_iter().map(String::from).collect());
 
             // Add sort options (asc/desc)
             let asc = format!("{name} asc");
             let desc = format!("{name} desc");
 
+            _ = write!(description, "\n- {asc}\n- {desc}");
             if !order_by.allowed_fields.contains(&asc) {
                 order_by.allowed_fields.push(asc);
             }
@@ -346,8 +347,13 @@ where
                 order_by.allowed_fields.push(desc);
             }
         }
-
-        self.spec.vendor_extensions.x_odata_filter = Some(filter);
+        self.spec.params.push(ParamSpec {
+            name: "$orderby".to_owned(),
+            location: ParamLocation::Query,
+            required: false,
+            description: Some(description),
+            param_type: "string".to_owned(),
+        });
         self.spec.vendor_extensions.x_odata_orderby = Some(order_by);
         self
     }
