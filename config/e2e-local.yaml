@@ -111,6 +111,53 @@ modules:
       issuer: "http://localhost:8080/realms/dev"
       audience: "api-ingress"
 
+  # --- Tenant Resolver example (gateway + plugins) ---
+  types_registry:
+    config: {}
+
+  contoso_tr_plugin:
+    config:
+      vendor: "Contoso"
+      priority: 10
+
+  fabrikam_tr_plugin:
+    config:
+      vendor: "Fabrikam"
+      priority: 20
+      tenants:
+        # Root
+        - id: "00000000000000000000000000000001"
+          parent_id: null
+          status: ACTIVE
+          is_accessible_by_parent: true
+        # Level 1
+        - id: "00000000000000000000000000000002"
+          parent_id: "00000000000000000000000000000001"
+          status: ACTIVE
+          is_accessible_by_parent: true
+        - id: "00000000000000000000000000000005"
+          parent_id: "00000000000000000000000000000001"
+          status: ACTIVE
+          is_accessible_by_parent: true
+        # Level 2 under 000...02
+        - id: "00000000000000000000000000000003"
+          parent_id: "00000000000000000000000000000002"
+          status: SOFT_DELETED
+          is_accessible_by_parent: false
+        - id: "00000000000000000000000000000004"
+          parent_id: "00000000000000000000000000000002"
+          status: ACTIVE
+          is_accessible_by_parent: true
+        # Level 2 under 000...05
+        - id: "00000000000000000000000000000006"
+          parent_id: "00000000000000000000000000000005"
+          status: ACTIVE
+          is_accessible_by_parent: true
+
+  tenant_resolver_gateway:
+    config:
+      vendor: "Fabrikam"
+
   grpc_hub:
     config:
       listen_addr: "uds:///tmp/hyperspot-grpc-e2e"

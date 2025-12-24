@@ -216,14 +216,20 @@ impl GtsRepository for InMemoryGtsRepository {
     fn switch_to_ready(&self) -> Result<(), Vec<String>> {
         let mut errors = Vec::new();
 
-        let gts_ids: Vec<String> = {
+        // Collect all GTS IDs, separating schemas (ending with ~) from instances
+        let (schema_ids, instance_ids): (Vec<String>, Vec<String>) = {
             let temporary = self.temporary.lock();
-            temporary.store.items().map(|(id, _)| id.clone()).collect()
+            temporary
+                .store
+                .items()
+                .map(|(id, _)| id.clone())
+                .partition(|id| id.ends_with('~'))
         };
 
+        // Validate all entities in temporary storage
         {
             let mut temporary = self.temporary.lock();
-            for gts_id in &gts_ids {
+            for gts_id in schema_ids.iter().chain(instance_ids.iter()) {
                 let result = temporary.validate_entity(gts_id);
                 if !result.ok {
                     errors.push(format!("{gts_id}: {}", result.error));
@@ -235,11 +241,25 @@ impl GtsRepository for InMemoryGtsRepository {
             return Err(errors);
         }
 
+        // Move to persistent: schemas first, then instances
+        // This ensures schemas are available when validating instances
         {
             let mut temporary = self.temporary.lock();
             let mut persistent = self.persistent.lock();
 
-            for gts_id in &gts_ids {
+            // Add schemas first (with validation)
+            for gts_id in &schema_ids {
+                if let Some(entity) = temporary.store.get(gts_id) {
+                    let content = entity.content.clone();
+                    let result = persistent.add_entity(&content, true);
+                    if !result.ok {
+                        errors.push(format!("{gts_id}: {}", result.error));
+                    }
+                }
+            }
+
+            // Then add instances (with validation against already-added schemas)
+            for gts_id in &instance_ids {
                 if let Some(entity) = temporary.store.get(gts_id) {
                     let content = entity.content.clone();
                     let result = persistent.add_entity(&content, true);

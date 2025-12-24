@@ -34,7 +34,11 @@ members = [
     "examples/oop-modules/calculator/calculator-sdk",
     "examples/oop-modules/calculator/calculator",
     "modules/types-registry/types-registry-sdk",
-    "modules/types-registry/types-registry"
+    "modules/types-registry/types-registry",
+    "examples/plugin-modules/tenant_resolver/tenant_resolver-sdk",
+    "examples/plugin-modules/tenant_resolver/tenant_resolver-gw",
+    "examples/plugin-modules/tenant_resolver/plugins/contoso_tr_plugin",
+    "examples/plugin-modules/tenant_resolver/plugins/fabrikam_tr_plugin"
 ]
 resolver = "2"
 
@@ -169,6 +173,7 @@ verbose_file_reads = "deny"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde-saphyr = "0.0.10"
+schemars = { version = "0.8", features = ["derive"] }
 
 # Error handling
 anyhow = "1.0"
@@ -333,3 +338,4 @@ shellexpand = "3.1"
 
 # GTS library
 gts = { git = "https://github.com/globaltypesystem/gts-rust.git", tag = "v0.7.0" }
+gts-macros = { git = "https://github.com/globaltypesystem/gts-rust.git", tag = "v0.7.0" }

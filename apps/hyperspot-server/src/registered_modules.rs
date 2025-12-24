@@ -15,3 +15,10 @@ use users_info as _;
 
 #[cfg(feature = "oop-example")]
 use calculator_gateway as _;
+
+#[cfg(feature = "tenant-resolver-example")]
+use contoso_tr_plugin as _;
+#[cfg(feature = "tenant-resolver-example")]
+use fabrikam_tr_plugin as _;
+#[cfg(feature = "tenant-resolver-example")]
+use tenant_resolver_gw as _;
