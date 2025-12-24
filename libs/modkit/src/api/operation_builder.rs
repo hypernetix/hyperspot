@@ -76,6 +76,14 @@ pub mod state {
     /// Marker for auth requirement set (either `require_auth` or public)
     #[derive(Debug, Clone, Copy)]
     pub struct AuthSet;
+
+    /// Marker for license requirement not yet set
+    #[derive(Debug, Clone, Copy)]
+    pub struct LicenseNotSet;
+
+    /// Marker for license requirement set
+    #[derive(Debug, Clone, Copy)]
+    pub struct LicenseSet;
 }
 
 /// Internal trait mapping handler state to the concrete router slot type.
@@ -84,6 +92,7 @@ pub mod state {
 mod sealed {
     pub trait Sealed {}
     pub trait SealedAuth {}
+    pub trait SealedLicenseReq {}
 }
 
 pub trait HandlerSlot<S>: sealed::Sealed {
@@ -102,6 +111,14 @@ impl sealed::SealedAuth for state::AuthSet {}
 impl AuthState for state::AuthNotSet {}
 impl AuthState for state::AuthSet {}
 
+pub trait LicenseState: sealed::SealedLicenseReq {}
+
+impl sealed::SealedLicenseReq for state::LicenseNotSet {}
+impl sealed::SealedLicenseReq for state::LicenseSet {}
+
+impl LicenseState for state::LicenseNotSet {}
+impl LicenseState for state::LicenseSet {}
+
 impl<S> HandlerSlot<S> for Missing {
     type Slot = ();
 }
@@ -109,7 +126,7 @@ impl<S> HandlerSlot<S> for Present {
     type Slot = MethodRouter<S>;
 }
 
-pub use state::{AuthNotSet, AuthSet, Missing, Present};
+pub use state::{AuthNotSet, AuthSet, LicenseNotSet, LicenseSet, Missing, Present};
 
 /// Parameter specification for API operations
 #[derive(Clone, Debug)]
@@ -124,6 +141,10 @@ pub struct ParamSpec {
 pub trait AuthReqResource: AsRef<str> {}
 
 pub trait AuthReqAction: AsRef<str> {}
+
+pub trait LicenseFeature: AsRef<str> {}
+
+impl<T: LicenseFeature + ?Sized> LicenseFeature for &T {}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ParamLocation {
@@ -175,6 +196,12 @@ pub struct OperationSecRequirement {
     pub action: String,
 }
 
+/// License requirement specification for an operation
+#[derive(Clone, Debug)]
+pub struct LicenseReqSpec {
+    pub license_names: Vec<String>,
+}
+
 /// Simplified operation specification for the type-safe builder
 #[derive(Clone, Debug)]
 pub struct OperationSpec {
@@ -203,6 +230,7 @@ pub struct OperationSpec {
     pub allowed_request_content_types: Option<Vec<&'static str>>,
     /// `OpenAPI` vendor extensions (x-*)
     pub vendor_extensions: VendorExtensions,
+    pub license_requirement: Option<LicenseReqSpec>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -256,10 +284,11 @@ pub trait OperationBuilderODataExt<S, H, R> {
         T: modkit_db::odata::filter::FilterField;
 }
 
-impl<S, H, R, A> OperationBuilderODataExt<S, H, R> for OperationBuilder<H, R, S, A>
+impl<S, H, R, A, L> OperationBuilderODataExt<S, H, R> for OperationBuilder<H, R, S, A, L>
 where
     H: HandlerSlot<S>,
     A: AuthState,
+    L: LicenseState,
 {
     fn with_odata_filter<T>(mut self) -> Self
     where
@@ -369,11 +398,13 @@ pub use crate::api::openapi_registry::{ensure_schema, OpenApiRegistry};
 /// - `R`: Response state (Missing | Present)
 /// - `S`: Router state type (what you put into `Router::with_state(S)`).
 /// - `A`: Auth state (`AuthNotSet` | `AuthSet`)
+/// - `L`: License requirement state (`LicenseNotSet` | `LicenseSet`)
 #[must_use]
-pub struct OperationBuilder<H = Missing, R = Missing, S = (), A = AuthNotSet>
+pub struct OperationBuilder<H = Missing, R = Missing, S = (), A = AuthNotSet, L = LicenseNotSet>
 where
     H: HandlerSlot<S>,
     A: AuthState,
+    L: LicenseState,
 {
     spec: OperationSpec,
     method_router: <H as HandlerSlot<S>>::Slot,
@@ -382,6 +413,7 @@ where
     #[allow(clippy::type_complexity)]
     _state: PhantomData<fn() -> S>, // Zero-sized marker for type-state pattern
     _auth_state: PhantomData<A>,
+    _license_state: PhantomData<L>,
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -414,12 +446,14 @@ impl<S> OperationBuilder<Missing, Missing, S, AuthNotSet> {
                 rate_limit: None,
                 allowed_request_content_types: None,
                 vendor_extensions: VendorExtensions::default(),
+                license_requirement: None,
             },
             method_router: (), // no router in Missing state
             _has_handler: PhantomData,
             _has_response: PhantomData,
             _state: PhantomData,
             _auth_state: PhantomData,
+            _license_state: PhantomData,
         }
     }
 
@@ -457,10 +491,11 @@ impl<S> OperationBuilder<Missing, Missing, S, AuthNotSet> {
 // -------------------------------------------------------------------------------------------------
 // Descriptive methods — available at any stage
 // -------------------------------------------------------------------------------------------------
-impl<H, R, S, A> OperationBuilder<H, R, S, A>
+impl<H, R, S, A, L> OperationBuilder<H, R, S, A, L>
 where
     H: HandlerSlot<S>,
     A: AuthState,
+    L: LicenseState,
 {
     /// Inspect the spec (primarily for tests)
     pub fn spec(&self) -> &OperationSpec {
@@ -778,12 +813,57 @@ where
     }
 }
 
+/// License requirement setting — transitions `LicenseNotSet` -> `LicenseSet`
+impl<H, R, S> OperationBuilder<H, R, S, AuthSet, LicenseNotSet>
+where
+    H: HandlerSlot<S>,
+{
+    /// Set (or explicitly clear) the license feature requirement for this operation.
+    ///
+    /// This method is only available after the auth requirement has been decided
+    /// (i.e. after calling `require_auth(...)`).
+    ///
+    /// **Mandatory for authenticated endpoints:** operations configured with `require_auth(...)`
+    /// must call `require_license_features(...)` before `register()`, because `register()` is only
+    /// available once the license requirement state has transitioned to `LicenseSet`.
+    ///
+    /// **Not available for public endpoints:** public routes cannot (and do not need to) call this method.
+    ///
+    /// Pass an empty iterator (e.g. `[]`) to explicitly declare that no license feature is required.
+    pub fn require_license_features<F>(
+        mut self,
+        licenses: impl IntoIterator<Item = F>,
+    ) -> OperationBuilder<H, R, S, AuthSet, LicenseSet>
+    where
+        F: LicenseFeature,
+    {
+        let license_names: Vec<String> = licenses
+            .into_iter()
+            .map(|l| l.as_ref().to_owned())
+            .collect();
+
+        self.spec.license_requirement =
+            (!license_names.is_empty()).then_some(LicenseReqSpec { license_names });
+
+        OperationBuilder {
+            spec: self.spec,
+            method_router: self.method_router,
+            _has_handler: self._has_handler,
+            _has_response: self._has_response,
+            _state: self._state,
+            _auth_state: self._auth_state,
+            _license_state: PhantomData,
+        }
+    }
+}
+
 // -------------------------------------------------------------------------------------------------
 // Auth requirement setting — transitions AuthNotSet -> AuthSet
 // -------------------------------------------------------------------------------------------------
-impl<H, R, S> OperationBuilder<H, R, S, AuthNotSet>
+impl<H, R, S, L> OperationBuilder<H, R, S, AuthNotSet, L>
 where
     H: HandlerSlot<S>,
+    L: LicenseState,
 {
     /// Require authentication with a specific resource:action permission.
     ///
@@ -794,7 +874,7 @@ where
     ///
     /// # Example
     /// ```rust
-    /// # use modkit::api::operation_builder::{OperationBuilder, AuthReqResource, AuthReqAction};
+    /// # use modkit::api::operation_builder::{OperationBuilder, AuthReqResource, AuthReqAction, LicenseFeature};
     /// # use axum::{extract::Json, Router };
     /// # use serde::{Serialize};
     /// #
@@ -829,6 +909,20 @@ where
     ///
     /// impl AuthReqAction for Action {}
     ///
+    /// enum License {
+    ///     Base,
+    /// }
+    ///
+    /// impl AsRef<str> for License {
+    ///     fn as_ref(&self) -> &str {
+    ///         match self {
+    ///             License::Base => "gts.x.core.lic.feat.v1~x.core.global.base.v1",
+    ///         }
+    ///     }
+    /// }
+    ///
+    /// impl LicenseFeature for License {}
+    ///
     /// #
     /// # fn register_rest(
     /// #   router: axum::Router,
@@ -836,6 +930,7 @@ where
     /// # ) -> anyhow::Result<axum::Router> {
     /// let router = OperationBuilder::get("/users-info/v1/users")
     ///     .require_auth(&Resource::Users, &Action::Read)
+    ///     .require_license_features::<License>([])
     ///     .handler(list_users_handler)
     ///     .json_response(axum::http::StatusCode::OK, "List of users")
     ///     .register(router, api);
@@ -850,7 +945,7 @@ where
         mut self,
         resource: &impl AuthReqResource,
         action: &impl AuthReqAction,
-    ) -> OperationBuilder<H, R, S, AuthSet> {
+    ) -> OperationBuilder<H, R, S, AuthSet, L> {
         self.spec.sec_requirement = Some(OperationSecRequirement {
             resource: resource.as_ref().into(),
             action: action.as_ref().into(),
@@ -863,6 +958,7 @@ where
             _has_response: self._has_response,
             _state: self._state,
             _auth_state: PhantomData,
+            _license_state: self._license_state,
         }
     }
 
@@ -889,7 +985,7 @@ where
     ///     .register(router, &registry);
     /// # let _ = router;
     /// ```
-    pub fn public(mut self) -> OperationBuilder<H, R, S, AuthSet> {
+    pub fn public(mut self) -> OperationBuilder<H, R, S, AuthSet, LicenseSet> {
         self.spec.is_public = true;
         self.spec.sec_requirement = None;
         OperationBuilder {
@@ -899,6 +995,7 @@ where
             _has_response: self._has_response,
             _state: self._state,
             _auth_state: PhantomData,
+            _license_state: PhantomData,
         }
     }
 }
@@ -906,15 +1003,16 @@ where
 // -------------------------------------------------------------------------------------------------
 // Handler setting — transitions Missing -> Present for handler
 // -------------------------------------------------------------------------------------------------
-impl<R, S, A> OperationBuilder<Missing, R, S, A>
+impl<R, S, A, L> OperationBuilder<Missing, R, S, A, L>
 where
     S: Clone + Send + Sync + 'static,
     A: AuthState,
+    L: LicenseState,
 {
     /// Set the handler for this operation (function handlers are recommended).
     ///
     /// This transitions the builder from `Missing` to `Present` handler state.
-    pub fn handler<F, T>(self, h: F) -> OperationBuilder<Present, R, S, A>
+    pub fn handler<F, T>(self, h: F) -> OperationBuilder<Present, R, S, A, L>
     where
         F: Handler<T, S> + Clone + Send + 'static,
         T: 'static,
@@ -935,12 +1033,13 @@ where
             _has_response: self._has_response,
             _state: self._state,
             _auth_state: self._auth_state,
+            _license_state: self._license_state,
         }
     }
 
     /// Alternative path: provide a pre-composed `MethodRouter<S>` yourself
     /// (useful to attach per-route middleware/layers).
-    pub fn method_router(self, mr: MethodRouter<S>) -> OperationBuilder<Present, R, S, A> {
+    pub fn method_router(self, mr: MethodRouter<S>) -> OperationBuilder<Present, R, S, A, L> {
         OperationBuilder {
             spec: self.spec,
             method_router: mr, // concrete MethodRouter<S> in Present state
@@ -948,6 +1047,7 @@ where
             _has_response: self._has_response,
             _state: self._state,
             _auth_state: self._auth_state,
+            _license_state: self._license_state,
         }
     }
 }
@@ -955,13 +1055,14 @@ where
 // -------------------------------------------------------------------------------------------------
 // Response setting — transitions Missing -> Present for response (first response)
 // -------------------------------------------------------------------------------------------------
-impl<H, S, A> OperationBuilder<H, Missing, S, A>
+impl<H, S, A, L> OperationBuilder<H, Missing, S, A, L>
 where
     H: HandlerSlot<S>,
     A: AuthState,
+    L: LicenseState,
 {
     /// Add a raw response spec (transitions from Missing to Present).
-    pub fn response(mut self, resp: ResponseSpec) -> OperationBuilder<H, Present, S, A> {
+    pub fn response(mut self, resp: ResponseSpec) -> OperationBuilder<H, Present, S, A, L> {
         self.spec.responses.push(resp);
         OperationBuilder {
             spec: self.spec,
@@ -970,6 +1071,7 @@ where
             _has_response: PhantomData::<Present>,
             _state: self._state,
             _auth_state: self._auth_state,
+            _license_state: self._license_state,
         }
     }
 
@@ -978,7 +1080,7 @@ where
         mut self,
         status: http::StatusCode,
         description: impl Into<String>,
-    ) -> OperationBuilder<H, Present, S, A> {
+    ) -> OperationBuilder<H, Present, S, A, L> {
         self.spec.responses.push(ResponseSpec {
             status: status.as_u16(),
             content_type: "application/json",
@@ -992,6 +1094,7 @@ where
             _has_response: PhantomData::<Present>,
             _state: self._state,
             _auth_state: self._auth_state,
+            _license_state: self._license_state,
         }
     }
 
@@ -1001,7 +1104,7 @@ where
         registry: &dyn OpenApiRegistry,
         status: http::StatusCode,
         description: impl Into<String>,
-    ) -> OperationBuilder<H, Present, S, A>
+    ) -> OperationBuilder<H, Present, S, A, L>
     where
         T: utoipa::ToSchema + utoipa::PartialSchema + 'static,
     {
@@ -1019,6 +1122,7 @@ where
             _has_response: PhantomData::<Present>,
             _state: self._state,
             _auth_state: self._auth_state,
+            _license_state: self._license_state,
         }
     }
 
@@ -1039,7 +1143,7 @@ where
         status: http::StatusCode,
         description: impl Into<String>,
         content_type: &'static str,
-    ) -> OperationBuilder<H, Present, S, A> {
+    ) -> OperationBuilder<H, Present, S, A, L> {
         self.spec.responses.push(ResponseSpec {
             status: status.as_u16(),
             content_type,
@@ -1053,6 +1157,7 @@ where
             _has_response: PhantomData::<Present>,
             _state: self._state,
             _auth_state: self._auth_state,
+            _license_state: self._license_state,
         }
     }
 
@@ -1061,7 +1166,7 @@ where
         mut self,
         status: http::StatusCode,
         description: impl Into<String>,
-    ) -> OperationBuilder<H, Present, S, A> {
+    ) -> OperationBuilder<H, Present, S, A, L> {
         self.spec.responses.push(ResponseSpec {
             status: status.as_u16(),
             content_type: "text/html",
@@ -1075,6 +1180,7 @@ where
             _has_response: PhantomData::<Present>,
             _state: self._state,
             _auth_state: self._auth_state,
+            _license_state: self._license_state,
         }
     }
 
@@ -1084,7 +1190,7 @@ where
         registry: &dyn OpenApiRegistry,
         status: http::StatusCode,
         description: impl Into<String>,
-    ) -> OperationBuilder<H, Present, S, A> {
+    ) -> OperationBuilder<H, Present, S, A, L> {
         // Ensure `Problem` schema is registered in components
         let problem_name = ensure_schema::<crate::api::problem::Problem>(registry);
         self.spec.responses.push(ResponseSpec {
@@ -1100,6 +1206,7 @@ where
             _has_response: PhantomData::<Present>,
             _state: self._state,
             _auth_state: self._auth_state,
+            _license_state: self._license_state,
         }
     }
 
@@ -1108,7 +1215,7 @@ where
         mut self,
         openapi: &dyn OpenApiRegistry,
         description: impl Into<String>,
-    ) -> OperationBuilder<H, Present, S, A>
+    ) -> OperationBuilder<H, Present, S, A, L>
     where
         T: utoipa::ToSchema + utoipa::PartialSchema + 'static,
     {
@@ -1126,6 +1233,7 @@ where
             _has_response: PhantomData::<Present>,
             _state: self._state,
             _auth_state: self._auth_state,
+            _license_state: self._license_state,
         }
     }
 }
@@ -1133,10 +1241,11 @@ where
 // -------------------------------------------------------------------------------------------------
 // Additional responses — for Present response state (additional responses)
 // -------------------------------------------------------------------------------------------------
-impl<H, S, A> OperationBuilder<H, Present, S, A>
+impl<H, S, A, L> OperationBuilder<H, Present, S, A, L>
 where
     H: HandlerSlot<S>,
     A: AuthState,
+    L: LicenseState,
 {
     /// Add a JSON response (additional).
     pub fn json_response(
@@ -1448,7 +1557,7 @@ where
 // -------------------------------------------------------------------------------------------------
 // Registration — only available when handler, response, AND auth are all set
 // -------------------------------------------------------------------------------------------------
-impl<S> OperationBuilder<Present, Present, S, AuthSet>
+impl<S> OperationBuilder<Present, Present, S, AuthSet, LicenseSet>
 where
     S: Clone + Send + Sync + 'static,
 {
@@ -1493,6 +1602,20 @@ mod tests {
             }
         }
     }
+
+    enum TestLicenseFeatures {
+        FeatureA,
+        FeatureB,
+    }
+    impl AsRef<str> for TestLicenseFeatures {
+        fn as_ref(&self) -> &str {
+            match self {
+                TestLicenseFeatures::FeatureA => "feature_a",
+                TestLicenseFeatures::FeatureB => "feature_b",
+            }
+        }
+    }
+    impl LicenseFeature for TestLicenseFeatures {}
 
     impl OpenApiRegistry for MockRegistry {
         fn register_operation(&self, spec: &OperationSpec) {
@@ -1752,6 +1875,73 @@ mod tests {
             .expect("Should have security requirement");
         assert_eq!(sec_requirement.resource, "users");
         assert_eq!(sec_requirement.action, "read");
+    }
+
+    #[test]
+    fn require_license_features_none() {
+        let builder = OperationBuilder::<Missing, Missing, ()>::get("/tests/v1/test")
+            .require_auth(&TestResource::Users, &TestAction::Read)
+            .require_license_features::<TestLicenseFeatures>([])
+            .handler(|| async {})
+            .json_response(http::StatusCode::OK, "OK");
+
+        assert!(builder.spec.license_requirement.is_none());
+    }
+
+    #[test]
+    fn require_license_features_one() {
+        let feature = TestLicenseFeatures::FeatureA;
+
+        let builder = OperationBuilder::<Missing, Missing, ()>::get("/tests/v1/test")
+            .require_auth(&TestResource::Users, &TestAction::Read)
+            .require_license_features([&feature])
+            .handler(|| async {})
+            .json_response(http::StatusCode::OK, "OK");
+
+        let license_req = builder
+            .spec
+            .license_requirement
+            .as_ref()
+            .expect("Should have license requirement");
+        assert_eq!(license_req.license_names, vec!["feature_a".to_owned()]);
+    }
+
+    #[test]
+    fn require_license_features_many() {
+        let feature_a = TestLicenseFeatures::FeatureA;
+        let feature_b = TestLicenseFeatures::FeatureB;
+
+        let builder = OperationBuilder::<Missing, Missing, ()>::get("/tests/v1/test")
+            .require_auth(&TestResource::Users, &TestAction::Read)
+            .require_license_features([&feature_a, &feature_b])
+            .handler(|| async {})
+            .json_response(http::StatusCode::OK, "OK");
+
+        let license_req = builder
+            .spec
+            .license_requirement
+            .as_ref()
+            .expect("Should have license requirement");
+        assert_eq!(
+            license_req.license_names,
+            vec!["feature_a".to_owned(), "feature_b".to_owned()]
+        );
+    }
+
+    #[tokio::test]
+    async fn public_does_not_require_license_features_and_can_register() {
+        let registry = MockRegistry::new();
+        let router = Router::new();
+
+        let _router = OperationBuilder::<Missing, Missing, ()>::get("/tests/v1/test")
+            .public()
+            .handler(test_handler)
+            .json_response(http::StatusCode::OK, "Success")
+            .register(router, &registry);
+
+        let ops = registry.operations.lock().unwrap();
+        assert_eq!(ops.len(), 1);
+        assert!(ops[0].license_requirement.is_none());
     }
 
     #[test]

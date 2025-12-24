@@ -1,7 +1,9 @@
 use crate::api::rest::{dto, handlers};
 use crate::domain::service::Service;
 use axum::{Extension, Router};
-use modkit::api::operation_builder::{AuthReqAction, AuthReqResource, OperationBuilderODataExt};
+use modkit::api::operation_builder::{
+    AuthReqAction, AuthReqResource, LicenseFeature, OperationBuilderODataExt,
+};
 use modkit::api::{OpenApiRegistry, OperationBuilder};
 use std::sync::Arc;
 use std::time::Duration;
@@ -41,6 +43,16 @@ impl AsRef<str> for Action {
 
 impl AuthReqAction for Action {}
 
+struct License;
+
+impl AsRef<str> for License {
+    fn as_ref(&self) -> &'static str {
+        "gts.x.core.lic.feat.v1~x.core.global.base.v1"
+    }
+}
+
+impl LicenseFeature for License {}
+
 #[allow(clippy::needless_pass_by_value)] // Arc is intentionally passed by value for Extension layer
 pub fn register_routes(
     mut router: Router,
@@ -56,6 +68,13 @@ pub fn register_routes(
         .description("Retrieve a paginated list of users using cursor-based pagination")
         .tag("users")
         .require_auth(&Resource::Users, &Action::Read)
+        .query_param_typed(
+            "limit",
+            false,
+            "Maximum number of users to return",
+            "integer",
+        )
+        .require_license_features::<License>([])
         .query_param_typed(
             "limit",
             false,
@@ -80,6 +99,7 @@ pub fn register_routes(
     router = OperationBuilder::get("/users-info/v1/users/{id}")
         .operation_id("users_info.get_user")
         .require_auth(&Resource::Users, &Action::Read)
+        .require_license_features::<License>([])
         .summary("Get user by ID")
         .description("Retrieve a specific user by their UUID")
         .tag("users")
@@ -97,6 +117,7 @@ pub fn register_routes(
     router = OperationBuilder::post("/users-info/v1/users")
         .operation_id("users_info.create_user")
         .require_auth(&Resource::Users, &Action::Create)
+        .require_license_features::<License>([])
         .summary("Create a new user")
         .description("Create a new user with the provided information")
         .tag("users")
@@ -118,6 +139,7 @@ pub fn register_routes(
     router = OperationBuilder::patch("/users-info/v1/users/{id}")
         .operation_id("users_info.update_user")
         .require_auth(&Resource::Users, &Action::Update)
+        .require_license_features::<License>([])
         .summary("Update user")
         .description("Partially update a user with the provided fields")
         .tag("users")
@@ -137,6 +159,7 @@ pub fn register_routes(
     router = OperationBuilder::delete("/users-info/v1/users/{id}")
         .operation_id("users_info.delete_user")
         .require_auth(&Resource::Users, &Action::Delete) // ← Explicit auth requirement
+        .require_license_features::<License>([])
         .summary("Delete user")
         .description("Delete a user by their UUID")
         .tag("users")
@@ -167,6 +190,7 @@ where
     let router = OperationBuilder::get("/users-info/v1/users/events")
         .operation_id("users_info.events")
         .require_auth(&Resource::Users, &Action::Read) // ← Explicit auth requirement for event stream
+        .require_license_features::<License>([])
         .summary("User events stream (SSE)")
         .description("Real-time stream of user events as Server-Sent Events")
         .tag("users")
