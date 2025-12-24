@@ -33,7 +33,8 @@ members = [
     "examples/oop-modules/calculator_gateway/calculator_gateway",
     "examples/oop-modules/calculator/calculator-sdk",
     "examples/oop-modules/calculator/calculator",
-    "modules/types-registry/types-registry-sdk"
+    "modules/types-registry/types-registry-sdk",
+    "modules/types-registry/types-registry"
 ]
 resolver = "2"
 
@@ -331,4 +332,4 @@ serde_yaml = "0.9"
 shellexpand = "3.1"
 
 # GTS library
-gts = { git = "https://github.com/globaltypesystem/gts-rust.git", branch = "main" }
+gts = { git = "https://github.com/globaltypesystem/gts-rust.git", tag = "v0.6.0" }

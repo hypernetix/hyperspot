@@ -182,19 +182,33 @@ pub struct TypesRegistryStorage {
 
 ```rust
 impl TypesRegistryApi for TypesRegistryLocalClient {
-    async fn register(&self, ctx: &SecurityCtx, entities: Vec<Value>) -> Result<Vec<GtsEntity>> {
-        if self.storage.is_production.load(Ordering::SeqCst) {
-            // Production: use gts-rust with validate=true
-            for entity in entities {
-                self.storage.persistent.add_entity(&entity, true)?;
-            }
-        } else {
-            // Configuration: use gts-rust with validate=false
-            for entity in entities {
-                self.storage.temporary.add_entity(&entity, false)?;
-            }
+    async fn register(&self, ctx: &SecurityCtx, entities: Vec<Value>) -> Result<Vec<RegisterResult>, TypesRegistryError> {
+        let mut results = Vec::with_capacity(entities.len());
+        
+        for entity in entities {
+            let result = if self.storage.is_production.load(Ordering::SeqCst) {
+                // Production: use gts-rust with validate=true
+                match self.storage.persistent.add_entity(&entity, true) {
+                    Ok(gts_entity) => RegisterResult::Ok(gts_entity),
+                    Err(e) => RegisterResult::Err { 
+                        gts_id: extract_gts_id(&entity), 
+                        error: e.into() 
+                    },
+                }
+            } else {
+                // Configuration: use gts-rust with validate=false
+                match self.storage.temporary.add_entity(&entity, false) {
+                    Ok(gts_entity) => RegisterResult::Ok(gts_entity),
+                    Err(e) => RegisterResult::Err { 
+                        gts_id: extract_gts_id(&entity), 
+                        error: e.into() 
+                    },
+                }
+            };
+            results.push(result);
         }
-        // ...
+        
+        Ok(results)
     }
 }
 

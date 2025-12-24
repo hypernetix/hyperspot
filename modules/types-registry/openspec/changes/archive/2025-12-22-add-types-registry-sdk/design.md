@@ -42,7 +42,7 @@ No implementation logic — that lives in the module crate.
 ```rust
 #[async_trait]
 pub trait TypesRegistryApi: Send + Sync {
-    async fn register(&self, ctx: &SecurityCtx, entities: Vec<Value>) -> Result<Vec<GtsEntity>, TypesRegistryError>;
+    async fn register(&self, ctx: &SecurityCtx, entities: Vec<Value>) -> Result<Vec<RegisterResult>, TypesRegistryError>;
     async fn list(&self, ctx: &SecurityCtx, query: ListQuery) -> Result<Vec<GtsEntity>, TypesRegistryError>;
     async fn get(&self, ctx: &SecurityCtx, gts_id: &str) -> Result<GtsEntity, TypesRegistryError>;
 }
@@ -51,29 +51,29 @@ pub trait TypesRegistryApi: Send + Sync {
 **Rationale**:
 - Enables ClientHub registration: `hub.register::<dyn TypesRegistryApi>(api)`
 - Consistent with other HyperSpot SDK traits
+- `register` returns `Vec<RegisterResult>` for per-item error reporting in batch operations
 
 ### 3. GTS Entity Model
 
-**Decision**: Define a generic `GtsEntity<C>` model using standard serde traits and reuse `GtsIdSegment` from gts-rust:
+**Decision**: Define a generic `GtsEntity<C>` model and reuse `GtsIdSegment` from gts-rust:
 
 ```rust
-use serde::{Serialize, de::DeserializeOwned};
-use gts::GtsIdSegment;  // From gts-rust OP#3
+use gts::GtsIdSegment;  // From gts-rust
 
 /// Generic GTS entity - content type is pluggable
-pub struct GtsEntity<C = serde_json::Value>
-where
-    C: Serialize + DeserializeOwned + Clone,
-{
-    pub id: Uuid,                       // Deterministic UUID from GTS ID (OP#5)
+pub struct GtsEntity<C = serde_json::Value> {
+    pub id: Uuid,                       // Deterministic UUID from GTS ID (UUID v5 with GTS namespace)
     pub gts_id: String,                 // Full GTS identifier string
     pub segments: Vec<GtsIdSegment>,    // All parsed segments (chained IDs have multiple)
+    pub kind: GtsEntityKind,            // Type or Instance
     pub content: C,                     // Generic content: Value or concrete type
     pub description: Option<String>,
 }
 
 /// Type alias for dynamic entities (default)
 pub type DynGtsEntity = GtsEntity<serde_json::Value>;
+pub type GtsTypeEntity = GtsEntity<TypeSchema>;
+pub type GtsInstanceEntity = GtsEntity<InstanceObject>;
 
 pub enum GtsEntityKind {
     Type,      // GTS ID ends with ~
@@ -83,13 +83,48 @@ pub enum GtsEntityKind {
 
 **Rationale**:
 - **Reuse gts-rust**: `GtsIdSegment` already has all parsed components
-- **Standard serde**: No custom traits — just use `#[derive(Serialize, Deserialize)]`
+- **No trait bounds on `C`**: Keeps the struct simple and flexible
 - **Flexibility**: Use `serde_json::Value` when you don't care about the concrete type
-- **Type safety**: Use concrete structs when you want compile-time guarantees
+- **Type safety**: Use `TypeSchema` or `InstanceObject` for semantic clarity
 
-### 4. ListQuery Without Pagination
+### 3.1 Content Wrapper Types
 
-**Decision**: Defer pagination (limit, cursor) to Phase 1.2.
+**Decision**: Provide newtype wrappers for semantic clarity:
+
+```rust
+/// Wrapper for JSON Schema content in type definitions
+pub struct TypeSchema(pub serde_json::Value);
+
+/// Wrapper for instance object content
+pub struct InstanceObject(pub serde_json::Value);
+```
+
+Both implement `Deref`, `AsRef`, and `From`/`Into` conversions for ergonomic use.
+
+**Rationale**:
+- Semantic clarity when working with different entity types
+- Type aliases (`GtsTypeEntity`, `GtsInstanceEntity`) provide compile-time distinction
+- Transparent access via `Deref` means no API friction
+
+### 3.2 RegisterResult for Batch Operations
+
+**Decision**: Use a custom `RegisterResult<C>` enum instead of `Result<GtsEntity<C>, Error>`:
+
+```rust
+pub enum RegisterResult<C = serde_json::Value> {
+    Ok(GtsEntity<C>),
+    Err { gts_id: Option<String>, error: TypesRegistryError },
+}
+```
+
+**Rationale**:
+- Batch registration should not fail entirely if one item is invalid
+- Per-item error reporting with the attempted GTS ID for debugging
+- `RegisterSummary::from_results()` provides aggregate counts
+
+### 4. ListQuery with SegmentMatchScope
+
+**Decision**: Defer pagination (limit, cursor) to Phase 1.2. Add `segment_scope` for controlling filter matching on chained GTS IDs.
 
 ```rust
 pub struct ListQuery {
@@ -98,13 +133,20 @@ pub struct ListQuery {
     pub vendor: Option<String>,
     pub package: Option<String>,
     pub namespace: Option<String>,
+    pub segment_scope: SegmentMatchScope,  // defaults to Any
+}
+
+pub enum SegmentMatchScope {
+    Primary,  // Match only the first segment
+    Any,      // Match any segment in the chain (default)
 }
 ```
 
 **Rationale**:
 - Phase 1.1 focuses on core functionality
 - In-memory storage doesn't need pagination initially
-- Simplifies initial implementation
+- `segment_scope` provides flexibility for chained GTS ID filtering
+- Default `Any` is most intuitive for users
 
 ### 5. Error Types
 

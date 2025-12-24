@@ -1,7 +1,9 @@
-# Types Registry Specification
+# types-registry Specification
 
-## ADDED Requirements
+## Purpose
 
+The Types Registry module provides GTS (Global Type System) entity registration, storage, validation, and REST API endpoints. It enables HyperSpot to manage versioned type definitions and instances with full GTS specification compliance, including two-phase registration (configuration → production), reference validation, and pattern-based querying.
+## Requirements
 ### Requirement: GTS Entity Registration
 
 The system SHALL provide an API to register GTS entities (types and instances) in the registry using a two-phase approach.
@@ -54,12 +56,15 @@ Registration SHALL use gts-rust built-in validations:
   - Validate GTS references using gts-rust OP#7 (`resolve_relationships`)
 - Store the entity in appropriate storage (temporary or persistent)
 
+Registration SHALL return `Vec<RegisterResult>` where each result indicates success (with `GtsEntity`) or failure (with error and optional GTS ID) for each input item. This allows batch operations to report per-item errors without failing the entire batch.
+
 #### Scenario: Register entities during startup (configuration phase)
 
 - **GIVEN** the service is in configuration mode (before `switch_to_production`)
 - **AND** multiple entities with cross-references are registered in random order
 - **WHEN** the user calls `register` with entity data
 - **THEN** the system stores entities in temporary storage without reference validation
+- **AND** returns `Vec<RegisterResult>` with success for each stored entity
 - **AND** entities are not yet queryable
 
 #### Scenario: Register a type entity in production mode
@@ -68,27 +73,36 @@ Registration SHALL use gts-rust built-in validations:
 - **AND** a valid GTS type identifier `gts.acme.core.events.user_created.v1~`
 - **AND** a valid JSON Schema as content
 - **WHEN** the user calls `register` with the entity data
-- **THEN** the system validates immediately and returns the registered entity
+- **THEN** the system validates immediately and returns `RegisterResult::Ok` with the registered entity
 - **AND** the entity is stored in persistent storage
 
 #### Scenario: Reject invalid GTS ID format
 
 - **GIVEN** an invalid GTS identifier `invalid-gts-id`
 - **WHEN** the user calls `register` with the entity data
-- **THEN** the system returns a validation error with details about the invalid format
+- **THEN** the system returns `RegisterResult::Err` with `TypesRegistryError::InvalidGtsId`
 
 #### Scenario: Reject invalid reference in production mode
 
 - **GIVEN** the service is in production mode
 - **AND** an entity references a non-existent type via `x-gts-ref`
 - **WHEN** the user calls `register` with the entity data
-- **THEN** the system returns a validation error about the invalid reference
+- **THEN** the system returns `RegisterResult::Err` with `TypesRegistryError::ValidationFailed`
 
 #### Scenario: Reject duplicate entity registration
 
 - **GIVEN** an entity with GTS ID `gts.acme.core.events.user_created.v1~` already exists
 - **WHEN** the user calls `register` with the same GTS ID
-- **THEN** the system returns a conflict error
+- **THEN** the system returns `RegisterResult::Err` with `TypesRegistryError::AlreadyExists`
+
+#### Scenario: Batch registration with mixed results
+
+- **GIVEN** the service is in production mode
+- **AND** a batch of 3 entities: 2 valid and 1 with invalid GTS ID
+- **WHEN** the user calls `register` with all entities
+- **THEN** the system returns `Vec<RegisterResult>` with 2 `Ok` and 1 `Err`
+- **AND** the valid entities are stored in persistent storage
+- **AND** `RegisterSummary::from_results()` shows `succeeded=2, failed=1`
 
 ---
 
@@ -143,6 +157,9 @@ Listing SHALL support:
 - Filtering by GTS ID pattern using OP#4 (ID Pattern Matching) with wildcards
 - Filtering by entity kind (Type, Instance, or both)
 - Filtering by vendor, package, namespace, or type components
+- `segment_scope` control for chained GTS IDs:
+  - `Primary` — match filters against only the first segment
+  - `Any` — match filters against any segment in the chain (default)
 - Query execution using OP#10 (Query Execution)
 
 Note: Pagination (limit, cursor) deferred to Phase 1.2.
@@ -165,15 +182,24 @@ Note: Pagination (limit, cursor) deferred to Phase 1.2.
 - **WHEN** the user calls `list` with `kind=Type`
 - **THEN** the system returns only type entities (ending with `~`)
 
-#### Scenario: Filter chained entities by vendor
+#### Scenario: Filter chained entities by vendor with Any scope
 
 - **GIVEN** the registry contains chained GTS IDs:
   - `gts.a.b.c.d.v1~globex.app.x.y.v1`
   - `gts.k.l.m.n.v1~globex.app.a.b.v1`
   - `gts.acme.x.y.z.v1~acme.a.b.c.v1~globex.app.a.b.v1`
-- **WHEN** the user calls `list` with `vendor=globex`
+- **WHEN** the user calls `list` with `vendor=globex` and `segment_scope=Any` (default)
 - **THEN** the system returns all three entities (vendor matches ANY segment)
 - **AND** this differs from wildcard `gts.globex.*` which only matches the first segment
+
+#### Scenario: Filter chained entities by vendor with Primary scope
+
+- **GIVEN** the registry contains chained GTS IDs:
+  - `gts.a.b.c.d.v1~globex.app.x.y.v1`
+  - `gts.globex.core.events.order.v1~acme.app.orders.v1`
+- **WHEN** the user calls `list` with `vendor=globex` and `segment_scope=Primary`
+- **THEN** the system returns only `gts.globex.core.events.order.v1~acme.app.orders.v1`
+- **AND** the first entity is excluded because its primary segment vendor is `a`, not `globex`
 
 #### Scenario: Return empty list when no matches
 
@@ -478,25 +504,25 @@ Storage SHALL:
 The system SHALL expose REST API endpoints for types registry operations.
 
 Endpoints SHALL include:
-- `POST /api/v1/types-registry/entities` — Register entities (batch)
-- `GET /api/v1/types-registry/entities` — List entities with query params
-- `GET /api/v1/types-registry/entities/{gts_id}` — Get entity by ID
+- `POST /types-registry/v1/entities` — Register entities (batch)
+- `GET /types-registry/v1/entities` — List entities with query params
+- `GET /types-registry/v1/entities/{gts_id}` — Get entity by ID
 
 #### Scenario: Register entities via REST
 
 - **GIVEN** a valid JSON payload with entity data
-- **WHEN** POST request is sent to `/api/v1/types-registry/entities`
+- **WHEN** POST request is sent to `/types-registry/v1/entities`
 - **THEN** entities are registered and response contains registered entities
 
 #### Scenario: List entities via REST
 
 - **GIVEN** registered entities in the registry
-- **WHEN** GET request is sent to `/api/v1/types-registry/entities?pattern=gts.acme.*`
+- **WHEN** GET request is sent to `/types-registry/v1/entities?pattern=gts.acme.*`
 - **THEN** response contains filtered entities matching the pattern
 
 #### Scenario: Get entity via REST
 
 - **GIVEN** an entity with GTS ID `gts.acme.core.events.user_created.v1~`
-- **WHEN** GET request is sent to `/api/v1/types-registry/entities/gts.acme.core.events.user_created.v1~`
+- **WHEN** GET request is sent to `/types-registry/v1/entities/gts.acme.core.events.user_created.v1~`
 - **THEN** response contains the complete entity
 
