@@ -266,7 +266,7 @@ mod tests {
         let repo = InMemoryGtsRepository::new(default_config());
 
         let entity = json!({
-            "$id": "gts.acme.core.events.user_created.v1~",
+            "$id": "gts://gts.acme.core.events.user_created.v1~",
             "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object",
             "properties": {
@@ -287,7 +287,7 @@ mod tests {
         let repo = InMemoryGtsRepository::new(default_config());
 
         let entity = json!({
-            "$id": "gts.acme.core.events.user_created.v1~",
+            "$id": "gts://gts.acme.core.events.user_created.v1~",
             "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object"
         });
@@ -304,13 +304,13 @@ mod tests {
         let repo = InMemoryGtsRepository::new(default_config());
 
         let entity1 = json!({
-            "$id": "gts.acme.core.events.user_created.v1~",
+            "$id": "gts://gts.acme.core.events.user_created.v1~",
             "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object"
         });
 
         let entity2 = json!({
-            "$id": "gts.acme.core.events.user_created.v1~",
+            "$id": "gts://gts.acme.core.events.user_created.v1~",
             "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object",
             "description": "Different content"
@@ -355,7 +355,7 @@ mod tests {
         let repo = InMemoryGtsRepository::new(default_config());
 
         let entity = json!({
-            "$id": "gts.acme.core.events.user_created.v1~",
+            "$id": "gts://gts.acme.core.events.user_created.v1~",
             "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object",
             "properties": {
@@ -380,12 +380,12 @@ mod tests {
         let repo = InMemoryGtsRepository::new(default_config());
 
         let type1 = json!({
-            "$id": "gts.acme.core.events.user_created.v1~",
+            "$id": "gts://gts.acme.core.events.user_created.v1~",
             "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object"
         });
         let type2 = json!({
-            "$id": "gts.globex.core.events.order_placed.v1~",
+            "$id": "gts://gts.globex.core.events.order_placed.v1~",
             "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object"
         });
@@ -419,7 +419,7 @@ mod tests {
         repo.switch_to_ready().unwrap();
 
         let entity = json!({
-            "$id": "gts.acme.core.events.user_created.v1~",
+            "$id": "gts://gts.acme.core.events.user_created.v1~",
             "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object"
         });
@@ -437,7 +437,7 @@ mod tests {
         repo.switch_to_ready().unwrap();
 
         let entity = json!({
-            "$id": "gts.acme.core.events.user_created.v1~",
+            "$id": "gts://gts.acme.core.events.user_created.v1~",
             "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object"
         });
@@ -456,13 +456,13 @@ mod tests {
         repo.switch_to_ready().unwrap();
 
         let entity1 = json!({
-            "$id": "gts.acme.core.events.user_created.v1~",
+            "$id": "gts://gts.acme.core.events.user_created.v1~",
             "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object"
         });
 
         let entity2 = json!({
-            "$id": "gts.acme.core.events.user_created.v1~",
+            "$id": "gts://gts.acme.core.events.user_created.v1~",
             "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object",
             "description": "Different content"
@@ -478,7 +478,7 @@ mod tests {
         let repo = InMemoryGtsRepository::new(default_config());
 
         let entity = json!({
-            "$id": "gts.acme.core.events.user_created.v1~",
+            "$id": "gts://gts.acme.core.events.user_created.v1~",
             "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object"
         });
@@ -495,7 +495,7 @@ mod tests {
         let repo = InMemoryGtsRepository::new(default_config());
 
         let type_entity = json!({
-            "$id": "gts.acme.core.events.user_created.v1~",
+            "$id": "gts://gts.acme.core.events.user_created.v1~",
             "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object"
         });
@@ -517,7 +517,7 @@ mod tests {
         let repo = InMemoryGtsRepository::new(default_config());
 
         let entity = json!({
-            "$id": "gts.acme.core.events.user_created.v1~",
+            "$id": "gts://gts.acme.core.events.user_created.v1~",
             "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object"
         });
@@ -539,7 +539,7 @@ mod tests {
         let repo = InMemoryGtsRepository::new(default_config());
 
         let entity = json!({
-            "$id": "gts.acme.core.events.user_created.v1~",
+            "$id": "gts://gts.acme.core.events.user_created.v1~",
             "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object"
         });
@@ -561,7 +561,7 @@ mod tests {
         let repo = InMemoryGtsRepository::new(default_config());
 
         let entity = json!({
-            "$id": "gts.acme.core.events.user_created.v1~",
+            "$id": "gts://gts.acme.core.events.user_created.v1~",
             "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object"
         });
@@ -583,7 +583,7 @@ mod tests {
         let repo = InMemoryGtsRepository::new(default_config());
 
         let entity = json!({
-            "$id": "gts.acme.core.events.user_created.v1~",
+            "$id": "gts://gts.acme.core.events.user_created.v1~",
             "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object"
         });
@@ -603,7 +603,7 @@ mod tests {
         let repo = InMemoryGtsRepository::new(default_config());
 
         let entity = json!({
-            "$id": "gts.acme.core.events.user_created.v1~",
+            "$id": "gts://gts.acme.core.events.user_created.v1~",
             "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object",
             "description": "A user created event"

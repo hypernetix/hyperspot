@@ -47,7 +47,7 @@ async fn test_batch_with_anonymous_entities_rejected_immediately() {
 
     // Mix of valid and anonymous entities
     let valid_entity = json!({
-        "$id": "gts.acme.core.models.valid.v1~",
+        "$id": "gts://gts.acme.core.models.valid.v1~",
         "type": "object",
         "properties": {
             "name": { "type": "string" }
@@ -82,7 +82,7 @@ async fn test_anonymous_entity_rejected_in_ready_mode() {
 
     // Register a valid entity first and switch to ready
     let valid_entity = json!({
-        "$id": "gts.acme.core.models.setup.v1~",
+        "$id": "gts://gts.acme.core.models.setup.v1~",
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object"
     });
@@ -118,7 +118,7 @@ async fn test_full_registration_flow_configuration_to_ready() {
     assert!(!service.is_ready());
 
     let type_schema = json!({
-        "$id": "gts.acme.core.events.user_created.v1~",
+        "$id": "gts://gts.acme.core.events.user_created.v1~",
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
         "properties": {
@@ -156,7 +156,7 @@ async fn test_batch_registration_with_mixed_results() {
 
     let entities = vec![
         json!({
-            "$id": "gts.acme.core.events.valid_type.v1~",
+            "$id": "gts://gts.acme.core.events.valid_type.v1~",
             "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object"
         }),
@@ -165,7 +165,7 @@ async fn test_batch_registration_with_mixed_results() {
             "type": "object"
         }),
         json!({
-            "$id": "gts.globex.core.events.another_valid.v1~",
+            "$id": "gts://gts.globex.core.events.another_valid.v1~",
             "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object"
         }),
@@ -195,13 +195,13 @@ async fn test_duplicate_registration_fails() {
     let service = create_service();
 
     let entity = json!({
-        "$id": "gts.acme.core.events.user_created.v1~",
+        "$id": "gts://gts.acme.core.events.user_created.v1~",
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object"
     });
 
     let entity_modified = json!({
-        "$id": "gts.acme.core.events.user_created.v1~",
+        "$id": "gts://gts.acme.core.events.user_created.v1~",
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
         "description": "modified"
@@ -226,7 +226,7 @@ async fn test_registration_in_ready_mode() {
 
     // Register in ready mode (with validation)
     let entity = json!({
-        "$id": "gts.acme.core.events.ready_type.v1~",
+        "$id": "gts://gts.acme.core.events.ready_type.v1~",
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
         "properties": {
@@ -290,7 +290,7 @@ async fn test_rest_register_handler_integration() {
 
     let request = RegisterEntitiesRequest {
         entities: vec![json!({
-            "$id": "gts.acme.core.events.rest_test.v1~",
+            "$id": "gts://gts.acme.core.events.rest_test.v1~",
             "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object",
             "description": "Test type for REST handler"

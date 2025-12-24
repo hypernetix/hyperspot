@@ -32,7 +32,7 @@ use serde_json::json;
 // Register a type schema
 let schemas = vec![
     json!({
-        "$id": "gts.acme.core.events.user_created.v1~",
+        "$id": "gts://gts.acme.core.events.user_created.v1~",
         "type": "object",
         "properties": {
             "user_id": { "type": "string" },

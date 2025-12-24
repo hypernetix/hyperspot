@@ -80,7 +80,7 @@ mod tests {
         let ctx = test_ctx();
 
         let entity = json!({
-            "$id": "gts.acme.core.events.user_created.v1~",
+            "$id": "gts://gts.acme.core.events.user_created.v1~",
             "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object",
             "properties": {
@@ -107,12 +107,12 @@ mod tests {
         let ctx = test_ctx();
 
         let type1 = json!({
-            "$id": "gts.acme.core.events.user_created.v1~",
+            "$id": "gts://gts.acme.core.events.user_created.v1~",
             "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object"
         });
         let type2 = json!({
-            "$id": "gts.globex.core.events.order_placed.v1~",
+            "$id": "gts://gts.globex.core.events.order_placed.v1~",
             "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object"
         });

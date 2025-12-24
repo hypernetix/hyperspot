@@ -107,7 +107,7 @@ mod tests {
 
         let req = RegisterEntitiesRequest {
             entities: vec![json!({
-                "$id": "gts.acme.core.events.user_created.v1~",
+                "$id": "gts://gts.acme.core.events.user_created.v1~",
                 "$schema": "http://json-schema.org/draft-07/schema#",
                 "type": "object"
             })],
@@ -147,7 +147,7 @@ mod tests {
 
         let req = RegisterEntitiesRequest {
             entities: vec![json!({
-                "$id": "gts.acme.core.events.user_created.v1~",
+                "$id": "gts://gts.acme.core.events.user_created.v1~",
                 "$schema": "http://json-schema.org/draft-07/schema#",
                 "type": "object"
             })],
@@ -170,12 +170,12 @@ mod tests {
         // Register entities via internal API (before ready)
         let _ = service.register(vec![
             json!({
-                "$id": "gts.acme.core.events.user_created.v1~",
+                "$id": "gts://gts.acme.core.events.user_created.v1~",
                 "$schema": "http://json-schema.org/draft-07/schema#",
                 "type": "object"
             }),
             json!({
-                "$id": "gts.globex.core.events.order_placed.v1~",
+                "$id": "gts://gts.globex.core.events.order_placed.v1~",
                 "$schema": "http://json-schema.org/draft-07/schema#",
                 "type": "object"
             }),
@@ -196,7 +196,7 @@ mod tests {
 
         // Register entity via internal API (before ready)
         let _ = service.register(vec![json!({
-            "$id": "gts.acme.core.events.user_created.v1~",
+            "$id": "gts://gts.acme.core.events.user_created.v1~",
             "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object"
         })]);

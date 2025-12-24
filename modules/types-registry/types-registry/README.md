@@ -57,7 +57,7 @@ Content-Type: application/json
 {
   "entities": [
     {
-      "$id": "gts.acme.core.events.user_created.v1~",
+      "$id": "gts://gts.acme.core.events.user_created.v1~",
       "type": "object",
       "properties": { "userId": { "type": "string" } }
     }
