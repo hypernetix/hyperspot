@@ -78,7 +78,7 @@ pub struct RegisterEntitiesRequest {
 }
 
 /// Result of registering a single entity.
-#[derive(Debug, Clone, Serialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase", tag = "status")]
 pub enum RegisterResultDto {
     /// Successfully registered entity.
@@ -123,7 +123,7 @@ pub struct RegisterEntitiesResponse {
 }
 
 /// Summary of a batch registration operation.
-#[derive(Debug, Clone, Serialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct RegisterSummaryDto {
     /// Total number of entities processed.

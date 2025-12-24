@@ -258,10 +258,7 @@ mod tests {
     use serde_json::json;
 
     fn default_config() -> GtsConfig {
-        GtsConfig {
-            entity_id_fields: vec!["$id".to_owned(), "gtsId".to_owned(), "id".to_owned()],
-            schema_id_fields: vec!["$schema".to_owned(), "gtsTid".to_owned(), "type".to_owned()],
-        }
+        crate::config::TypesRegistryConfig::default().to_gts_config()
     }
 
     #[test]

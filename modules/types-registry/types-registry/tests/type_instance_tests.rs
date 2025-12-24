@@ -374,9 +374,9 @@ async fn test_instance_with_mismatched_type_field_is_ignored_for_well_known_inst
     service.switch_to_ready().unwrap();
 
     // Register an instance where:
-    // - $id indicates parent is "user" type (gts.acme.core.models.user.v1~)
-    // - "type" field claims parent is "product" type (gts.acme.core.models.product.v1~)
-    // This mismatch should cause validation to fail
+    // - Instance ID indicates parent is "user" type (gts.acme.core.models.user.v1~)
+    // - "type" field explicitly claims parent is "product" type (gts.acme.core.models.product.v1~)
+    // The "type" field takes priority in schema_id_fields config, so validation uses product schema
     let mismatched_instance = json!({
         "id": "gts.acme.core.models.user.v1~acme.core.instances.user1.v1",
         "type": "gts.acme.core.models.product.v1~",
@@ -386,11 +386,11 @@ async fn test_instance_with_mismatched_type_field_is_ignored_for_well_known_inst
 
     let result = service.register(vec![mismatched_instance]);
 
-    // For well-known instances (GTS ID in `id`), schema is derived from the chained `id`.
-    // The `type` field does not override schema selection.
+    // The explicit "type" field takes priority over the chained ID's type portion.
+    // Since the instance has user fields but is validated against product schema, it should fail.
     assert!(
-        result[0].is_ok(),
-        "Instance with mismatched type field should still be accepted: {:?}",
+        result[0].is_err(),
+        "Instance with mismatched type field should fail validation: {:?}",
         result[0]
     );
 }

@@ -1825,7 +1825,7 @@ dependencies = [
 [[package]]
 name = "gts"
 version = "0.1.0"
-source = "git+https://github.com/globaltypesystem/gts-rust.git?branch=main#c31a077a78a3e03fc8f18bed67625ede289cf55e"
+source = "git+https://github.com/globaltypesystem/gts-rust.git?tag=v0.6.0#ff22b224f362d752354a80316429fc4d3827a574"
 dependencies = [
  "anyhow",
  "jsonschema",

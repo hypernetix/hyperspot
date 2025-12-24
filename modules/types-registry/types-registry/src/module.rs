@@ -59,7 +59,7 @@ impl Module for TypesRegistryModule {
 
         let gts_config = cfg.to_gts_config();
         let repo = Arc::new(InMemoryGtsRepository::new(gts_config));
-        let service = Arc::new(TypesRegistryService::new(repo));
+        let service = Arc::new(TypesRegistryService::new(repo, cfg));
 
         self.service.store(Some(service.clone()));
 

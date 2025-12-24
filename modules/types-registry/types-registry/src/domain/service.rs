@@ -6,6 +6,7 @@ use types_registry_sdk::{GtsEntity, ListQuery, RegisterResult};
 
 use super::error::DomainError;
 use super::repo::GtsRepository;
+use crate::config::TypesRegistryConfig;
 
 /// Domain service for GTS entity operations.
 ///
@@ -13,13 +14,14 @@ use super::repo::GtsRepository;
 /// operations to the repository.
 pub struct TypesRegistryService {
     repo: Arc<dyn GtsRepository>,
+    config: TypesRegistryConfig,
 }
 
 impl TypesRegistryService {
-    /// Creates a new `TypesRegistryService` with the given repository.
+    /// Creates a new `TypesRegistryService` with the given repository and config.
     #[must_use]
-    pub fn new(repo: Arc<dyn GtsRepository>) -> Self {
-        Self { repo }
+    pub fn new(repo: Arc<dyn GtsRepository>, config: TypesRegistryConfig) -> Self {
+        Self { repo, config }
     }
 
     /// Registers GTS entities in batch.
@@ -55,7 +57,7 @@ impl TypesRegistryService {
         let mut results = Vec::with_capacity(entities.len());
 
         for entity in entities {
-            let gts_id = Self::extract_gts_id(&entity);
+            let gts_id = self.extract_gts_id(&entity);
             let result = match self.repo.register(&entity, validate) {
                 Ok(registered) => RegisterResult::Ok(registered),
                 Err(e) => RegisterResult::Err {
@@ -106,11 +108,19 @@ impl TypesRegistryService {
     }
 
     /// Extracts the GTS ID from an entity JSON value.
-    fn extract_gts_id(entity: &serde_json::Value) -> Option<String> {
+    ///
+    /// Strips the `gts://` URI prefix from `$id` fields for JSON Schema compatibility (gts-rust v0.6.0+).
+    fn extract_gts_id(&self, entity: &serde_json::Value) -> Option<String> {
         if let Some(obj) = entity.as_object() {
-            for field in &["$id", "gtsId", "id"] {
-                if let Some(id) = obj.get(*field).and_then(|v| v.as_str()) {
-                    return Some(id.to_owned());
+            for field in &self.config.entity_id_fields {
+                if let Some(id) = obj.get(field.as_str()).and_then(|v| v.as_str()) {
+                    // Strip gts:// prefix from $id field (JSON Schema URI format)
+                    let cleaned_id = if field == "$id" {
+                        id.strip_prefix("gts://").unwrap_or(id)
+                    } else {
+                        id
+                    };
+                    return Some(cleaned_id.to_owned());
                 }
             }
         }
@@ -219,36 +229,42 @@ mod tests {
 
     #[test]
     fn test_extract_gts_id() {
-        let _service = TypesRegistryService::new(Arc::new(MockRepo::new()));
+        let service = TypesRegistryService::new(
+            Arc::new(MockRepo::new()),
+            crate::config::TypesRegistryConfig::default(),
+        );
 
         let entity = json!({"$id": "gts.acme.core.events.test.v1~"});
         assert_eq!(
-            TypesRegistryService::extract_gts_id(&entity),
+            service.extract_gts_id(&entity),
             Some("gts.acme.core.events.test.v1~".to_owned())
         );
 
         let entity = json!({"gtsId": "gts.acme.core.events.test.v1~"});
         assert_eq!(
-            TypesRegistryService::extract_gts_id(&entity),
+            service.extract_gts_id(&entity),
             Some("gts.acme.core.events.test.v1~".to_owned())
         );
 
         let entity = json!({"id": "gts.acme.core.events.test.v1~"});
         assert_eq!(
-            TypesRegistryService::extract_gts_id(&entity),
+            service.extract_gts_id(&entity),
             Some("gts.acme.core.events.test.v1~".to_owned())
         );
 
         let entity = json!({"other": "value"});
-        assert_eq!(TypesRegistryService::extract_gts_id(&entity), None);
+        assert_eq!(service.extract_gts_id(&entity), None);
 
         let entity = json!("not an object");
-        assert_eq!(TypesRegistryService::extract_gts_id(&entity), None);
+        assert_eq!(service.extract_gts_id(&entity), None);
     }
 
     #[test]
     fn test_register_success() {
-        let service = TypesRegistryService::new(Arc::new(MockRepo::new()));
+        let service = TypesRegistryService::new(
+            Arc::new(MockRepo::new()),
+            crate::config::TypesRegistryConfig::default(),
+        );
 
         let entities = vec![
             json!({"$id": "gts.acme.core.events.test.v1~"}),
@@ -263,7 +279,10 @@ mod tests {
 
     #[test]
     fn test_register_with_failures() {
-        let service = TypesRegistryService::new(Arc::new(MockRepo::new()));
+        let service = TypesRegistryService::new(
+            Arc::new(MockRepo::new()),
+            crate::config::TypesRegistryConfig::default(),
+        );
 
         let entities = vec![
             json!({"$id": "gts.acme.core.events.test.v1~"}),
@@ -280,21 +299,30 @@ mod tests {
 
     #[test]
     fn test_get_success() {
-        let service = TypesRegistryService::new(Arc::new(MockRepo::new()));
+        let service = TypesRegistryService::new(
+            Arc::new(MockRepo::new()),
+            crate::config::TypesRegistryConfig::default(),
+        );
         let result = service.get("gts.acme.core.events.test.v1~");
         assert!(result.is_ok());
     }
 
     #[test]
     fn test_get_not_found() {
-        let service = TypesRegistryService::new(Arc::new(MockRepo::new()));
+        let service = TypesRegistryService::new(
+            Arc::new(MockRepo::new()),
+            crate::config::TypesRegistryConfig::default(),
+        );
         let result = service.get("gts.notfound.pkg.ns.type.v1~");
         assert!(result.is_err());
     }
 
     #[test]
     fn test_list() {
-        let service = TypesRegistryService::new(Arc::new(MockRepo::new()));
+        let service = TypesRegistryService::new(
+            Arc::new(MockRepo::new()),
+            crate::config::TypesRegistryConfig::default(),
+        );
         let result = service.list(&ListQuery::default());
         assert!(result.is_ok());
         assert_eq!(result.unwrap().len(), 1);
@@ -302,7 +330,10 @@ mod tests {
 
     #[test]
     fn test_switch_to_ready_success() {
-        let service = TypesRegistryService::new(Arc::new(MockRepo::new()));
+        let service = TypesRegistryService::new(
+            Arc::new(MockRepo::new()),
+            crate::config::TypesRegistryConfig::default(),
+        );
         assert!(!service.is_ready());
 
         let result = service.switch_to_ready();
@@ -312,7 +343,10 @@ mod tests {
 
     #[test]
     fn test_switch_to_ready_failure() {
-        let service = TypesRegistryService::new(Arc::new(MockRepo::with_fail_switch()));
+        let service = TypesRegistryService::new(
+            Arc::new(MockRepo::with_fail_switch()),
+            crate::config::TypesRegistryConfig::default(),
+        );
         let result = service.switch_to_ready();
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -329,7 +363,10 @@ mod tests {
 
     #[test]
     fn test_is_ready() {
-        let service = TypesRegistryService::new(Arc::new(MockRepo::new()));
+        let service = TypesRegistryService::new(
+            Arc::new(MockRepo::new()),
+            crate::config::TypesRegistryConfig::default(),
+        );
         assert!(!service.is_ready());
     }
 }

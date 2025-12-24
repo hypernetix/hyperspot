@@ -10,6 +10,9 @@ description = "Types Registry module: GTS entity registration, storage, and REST
 [lints]
 workspace = true
 
+[lib]
+doctest = false
+
 [dependencies]
 # SDK - public API, models, and errors
 types-registry-sdk = { path = "../types-registry-sdk" }
