@@ -66,11 +66,19 @@ impl InMemoryGtsRepository {
     }
 
     /// Extracts the GTS ID from an entity JSON value using configured fields.
+    ///
+    /// Strips the `gts://` URI prefix from `$id` fields for JSON Schema compatibility (gts-rust v0.7.0+).
     fn extract_gts_id(&self, entity: &serde_json::Value) -> Option<String> {
         if let Some(obj) = entity.as_object() {
             for field in &self.config.entity_id_fields {
                 if let Some(id) = obj.get(field).and_then(|v| v.as_str()) {
-                    return Some(id.to_owned());
+                    // Strip gts:// prefix from $id field (JSON Schema URI format)
+                    let cleaned_id = if field == "$id" {
+                        id.strip_prefix("gts://").unwrap_or(id)
+                    } else {
+                        id
+                    };
+                    return Some(cleaned_id.to_owned());
                 }
             }
         }
