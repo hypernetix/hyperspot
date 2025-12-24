@@ -143,6 +143,37 @@ HyperSpot is designed from the ground up for **Software-as-a-Service (SaaS)** de
 
 The diagram above illustrates principal HyperSpot's modules architecture. Deployment and components list depends on the target environment and build configuration, for example it could be single executable for a desktop version or multiple containers for a cloud server.
 
+Each module encapsulates a well-defined piece of business logic and exposes **versioned contracts** to its consumers via Rust-native interfaces, HTTP APIs, or gRPC. In addition, modules can define it's own **plugin interfaces** that allow pluggable implementations of processing and storage concerns, enabling extensibility without coupling core logic to concrete backends.
+
+All interaction between modules and between modules and their plugins happens strictly through these versioned public interfaces. No module or plugin is allowed to depend on another module’s internal structures or implementation details. This enforces loose coupling, enables independent evolution and versioning, and allows modules or plugin implementations to be replaced without impacting the rest of the system.
+
+| Module | Category | Module Interface | Plugins Interface | Description | Possible plugins (if any) |
+| --- | --- | --- | --- | --- | --- |
+| chat | Gen AI | TODO | TODO | Chat gateway | Chat messages storage (DB, ELK, etc.) |
+| mcp_gateway | Gen AI | TODO | TODO | MCP gateway | MCP inbound/outbound traffic interceptors |
+| web_search | Gen AI | TODO | TODO | Search gateway | Search inboud/outbound traffic interceptors; search providers |
+| rag | Gen AI | TODO | TODO | RAG gateway | Vector databases |
+| llm_gateway | Gen AI | TODO | TODO | LLM gateway | LLM inbound/outbound traffic interceptors |
+| llm_manager | Gen AI | TODO | TODO | LLM manager | LLM providers manager (e.g. download model, load model, etc.) |
+| local_search_index | Gen AI | TODO | TODO | Local search index | Qdrant; Meilisearch; ... |
+| file_parser | Gen AI | TODO | TODO | File parser | Integrated file parser; Tika parser |
+| workflows_runtime | Core | TODO | TODO | Workflows and FaaS runtime | RUST runtime; Starlark runtime |
+| events_broker | Core | TODO | TODO | Events and message broker | DB storage; ClickHouse storage; Kafka storage |
+| audit | Core | TODO | TODO | Audit logging | DB storage; ClickHouse storage; ELK storage |
+| metrics | Core | TODO | TODO | Metrics collection | DB storage; ClickHouse storage; ELK storage |
+| auth_manager | System | TODO | TODO | Token and claims parser | Gateways to other Platforms |
+| tenant_resolver | System | TODO | TODO | Multi-tenancy provider | Gateways to other Platforms |
+| policy_manager | System | TODO | TODO | Authentication provider | Gateways to other Platforms |
+| license_manager | System | TODO | TODO | License manager | Gateways to other Platforms |
+| settings | System | TODO | TODO | Per-tenant, per-user, etc. settings | Storage providers; Gateways to other Platforms |
+| cred_storage | System | TODO | TODO | Credentials storage | Storage providers; Gateways to other Platforms |
+| usage_tracker | System | TODO | TODO | Usage tracker | Storage providers; Integrations with other Platforms |
+| outbound_api_gateway | System | TODO | TODO | Manage outbound trafic and contracts | Auth adapters; Integrations with other Platforms |
+| api_ingress | Internal | TODO | TODO | HTTP server and routing | - |
+| grpc_hub | Internal | TODO | TODO | gRPC communication gateway | - |
+| types_registry | Internal | TODO | TODO | Types and contracts registry | - |
+| nodes_registry | Internal | TODO | TODO | Hyperspot nodes (deployments) registry | - |
+
 Check [ROADMAP.md](ROADMAP.md) for more details.
 
 ---
