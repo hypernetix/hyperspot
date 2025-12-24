@@ -14,7 +14,7 @@ type LicenseKey = (Method, String);
 
 #[derive(Clone)]
 pub struct LicenseRequirementMap {
-    requirements: Arc<DashMap<LicenseKey, String>>,
+    requirements: Arc<DashMap<LicenseKey, Vec<String>>>,
 }
 
 impl LicenseRequirementMap {
@@ -26,7 +26,7 @@ impl LicenseRequirementMap {
             if let Some(req) = spec.license_requirement.as_ref() {
                 requirements.insert(
                     (spec.method.clone(), spec.path.clone()),
-                    req.license_name.clone(),
+                    req.license_names.clone(),
                 );
             }
         }
@@ -36,7 +36,7 @@ impl LicenseRequirementMap {
         }
     }
 
-    fn get(&self, method: &Method, path: &str) -> Option<String> {
+    fn get(&self, method: &Method, path: &str) -> Option<Vec<String>> {
         self.requirements
             .get(&(method.clone(), path.to_owned()))
             .map(|v| v.value().clone())
@@ -61,12 +61,12 @@ pub async fn license_validation_middleware(
     // TODO: this is a stub implementation
     // We need first to implement plugin and get its client from client_hub
     // Plugin should provide an interface to get a list of global features (features that are not scoped to particular resource)
-    if required != BASE_FEATURE {
+    if required.iter().any(|r| r != BASE_FEATURE) {
         return Problem::new(
             StatusCode::FORBIDDEN,
             "Forbidden",
             format!(
-                "Endpoint requires unsupported license feature '{required}'; only '{BASE_FEATURE}' is allowed",
+                "Endpoint requires unsupported license features '{required:?}'; only '{BASE_FEATURE}' is allowed",
             ),
         )
         .into_response();

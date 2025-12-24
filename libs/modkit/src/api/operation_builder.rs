@@ -144,6 +144,8 @@ pub trait AuthReqAction: AsRef<str> {}
 
 pub trait LicenseFeature: AsRef<str> {}
 
+impl<T: LicenseFeature + ?Sized> LicenseFeature for &T {}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ParamLocation {
     Path,
@@ -197,7 +199,7 @@ pub struct OperationSecRequirement {
 /// License requirement specification for an operation
 #[derive(Clone, Debug)]
 pub struct LicenseReqSpec {
-    pub license_name: String,
+    pub license_names: Vec<String>,
 }
 
 /// Simplified operation specification for the type-safe builder
@@ -822,20 +824,27 @@ where
     /// (i.e. after calling `require_auth(...)`).
     ///
     /// **Mandatory for authenticated endpoints:** operations configured with `require_auth(...)`
-    /// must call `require_license_feature(...)` before `register()`, because `register()` is only
+    /// must call `require_license_features(...)` before `register()`, because `register()` is only
     /// available once the license requirement state has transitioned to `LicenseSet`.
     ///
     /// **Not available for public endpoints:** public routes cannot (and do not need to) call this method.
     ///
-    /// Pass `Some(feature)` to require a specific license feature. Pass `None` to explicitly
-    /// declare that no license feature is required for this authenticated operation.
-    pub fn require_license_feature(
+    /// Pass an empty iterator (e.g. `[]`) to explicitly declare that no license feature is required.
+    pub fn require_license_features<F>(
         mut self,
-        license: Option<&impl LicenseFeature>,
-    ) -> OperationBuilder<H, R, S, AuthSet, LicenseSet> {
-        self.spec.license_requirement = license.map(|l| LicenseReqSpec {
-            license_name: l.as_ref().to_owned(),
-        });
+        licenses: impl IntoIterator<Item = F>,
+    ) -> OperationBuilder<H, R, S, AuthSet, LicenseSet>
+    where
+        F: LicenseFeature,
+    {
+        let license_names: Vec<String> = licenses
+            .into_iter()
+            .map(|l| l.as_ref().to_owned())
+            .collect();
+
+        self.spec.license_requirement =
+            (!license_names.is_empty()).then_some(LicenseReqSpec { license_names });
+
         OperationBuilder {
             spec: self.spec,
             method_router: self.method_router,
@@ -921,7 +930,7 @@ where
     /// # ) -> anyhow::Result<axum::Router> {
     /// let router = OperationBuilder::get("/users-info/v1/users")
     ///     .require_auth(&Resource::Users, &Action::Read)
-    ///     .require_license_feature(None::<&License>)
+    ///     .require_license_features::<License>([])
     ///     .handler(list_users_handler)
     ///     .json_response(axum::http::StatusCode::OK, "List of users")
     ///     .register(router, api);
@@ -1596,11 +1605,13 @@ mod tests {
 
     enum TestLicenseFeatures {
         FeatureA,
+        FeatureB,
     }
     impl AsRef<str> for TestLicenseFeatures {
         fn as_ref(&self) -> &str {
             match self {
                 TestLicenseFeatures::FeatureA => "feature_a",
+                TestLicenseFeatures::FeatureB => "feature_b",
             }
         }
     }
@@ -1867,36 +1878,58 @@ mod tests {
     }
 
     #[test]
-    fn require_license_feature_none() {
+    fn require_license_features_none() {
         let builder = OperationBuilder::<Missing, Missing, ()>::get("/tests/v1/test")
             .require_auth(&TestResource::Users, &TestAction::Read)
-            .require_license_feature(None::<&TestLicenseFeatures>)
-            .handler(test_handler)
-            .json_response(http::StatusCode::OK, "Success");
+            .require_license_features::<TestLicenseFeatures>([])
+            .handler(|| async {})
+            .json_response(http::StatusCode::OK, "OK");
 
         assert!(builder.spec.license_requirement.is_none());
     }
 
     #[test]
-    fn require_license_feature_some() {
+    fn require_license_features_one() {
         let feature = TestLicenseFeatures::FeatureA;
 
         let builder = OperationBuilder::<Missing, Missing, ()>::get("/tests/v1/test")
             .require_auth(&TestResource::Users, &TestAction::Read)
-            .require_license_feature(Some(&feature))
-            .handler(test_handler)
-            .json_response(http::StatusCode::OK, "Success");
+            .require_license_features([&feature])
+            .handler(|| async {})
+            .json_response(http::StatusCode::OK, "OK");
 
         let license_req = builder
             .spec
             .license_requirement
             .as_ref()
             .expect("Should have license requirement");
-        assert_eq!(license_req.license_name, "feature_a");
+        assert_eq!(license_req.license_names, vec!["feature_a".to_owned()]);
+    }
+
+    #[test]
+    fn require_license_features_many() {
+        let feature_a = TestLicenseFeatures::FeatureA;
+        let feature_b = TestLicenseFeatures::FeatureB;
+
+        let builder = OperationBuilder::<Missing, Missing, ()>::get("/tests/v1/test")
+            .require_auth(&TestResource::Users, &TestAction::Read)
+            .require_license_features([&feature_a, &feature_b])
+            .handler(|| async {})
+            .json_response(http::StatusCode::OK, "OK");
+
+        let license_req = builder
+            .spec
+            .license_requirement
+            .as_ref()
+            .expect("Should have license requirement");
+        assert_eq!(
+            license_req.license_names,
+            vec!["feature_a".to_owned(), "feature_b".to_owned()]
+        );
     }
 
     #[tokio::test]
-    async fn public_does_not_require_license_feature_and_can_register() {
+    async fn public_does_not_require_license_features_and_can_register() {
         let registry = MockRegistry::new();
         let router = Router::new();
 

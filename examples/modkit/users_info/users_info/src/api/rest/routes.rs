@@ -74,7 +74,7 @@ pub fn register_routes(
             "Maximum number of users to return",
             "integer",
         )
-        .require_license_feature(None::<&License>)
+        .require_license_features::<License>([])
         .query_param_typed(
             "limit",
             false,
@@ -99,7 +99,7 @@ pub fn register_routes(
     router = OperationBuilder::get("/users-info/v1/users/{id}")
         .operation_id("users_info.get_user")
         .require_auth(&Resource::Users, &Action::Read)
-        .require_license_feature(None::<&License>)
+        .require_license_features::<License>([])
         .summary("Get user by ID")
         .description("Retrieve a specific user by their UUID")
         .tag("users")
@@ -117,7 +117,7 @@ pub fn register_routes(
     router = OperationBuilder::post("/users-info/v1/users")
         .operation_id("users_info.create_user")
         .require_auth(&Resource::Users, &Action::Create)
-        .require_license_feature(None::<&License>)
+        .require_license_features::<License>([])
         .summary("Create a new user")
         .description("Create a new user with the provided information")
         .tag("users")
@@ -139,7 +139,7 @@ pub fn register_routes(
     router = OperationBuilder::patch("/users-info/v1/users/{id}")
         .operation_id("users_info.update_user")
         .require_auth(&Resource::Users, &Action::Update)
-        .require_license_feature(None::<&License>)
+        .require_license_features::<License>([])
         .summary("Update user")
         .description("Partially update a user with the provided fields")
         .tag("users")
@@ -159,7 +159,7 @@ pub fn register_routes(
     router = OperationBuilder::delete("/users-info/v1/users/{id}")
         .operation_id("users_info.delete_user")
         .require_auth(&Resource::Users, &Action::Delete) // ← Explicit auth requirement
-        .require_license_feature(None::<&License>)
+        .require_license_features::<License>([])
         .summary("Delete user")
         .description("Delete a user by their UUID")
         .tag("users")
@@ -190,7 +190,7 @@ where
     let router = OperationBuilder::get("/users-info/v1/users/events")
         .operation_id("users_info.events")
         .require_auth(&Resource::Users, &Action::Read) // ← Explicit auth requirement for event stream
-        .require_license_feature(None::<&License>)
+        .require_license_features::<License>([])
         .summary("User events stream (SSE)")
         .description("Real-time stream of user events as Server-Sent Events")
         .tag("users")

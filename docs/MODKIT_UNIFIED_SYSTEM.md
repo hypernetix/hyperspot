@@ -778,21 +778,21 @@ impl AsRef<str> for BaseLicenseFeature {
 
 impl LicenseFeature for BaseLicenseFeature {}
 
-// For authenticated endpoints, calling `require_license_feature(...)` is mandatory.
-// Use `None` to explicitly declare that no license feature is required.
+// For authenticated endpoints, calling `require_license_features(...)` is mandatory.
+// Use an empty iterator (e.g. `[]`) to explicitly declare that no license feature is required.
 .require_auth(&Resource::Users, &Action::Read)
-.require_license_feature(None::<&BaseLicenseFeature>)
+.require_license_features::<BaseLicenseFeature>([])
 
-// Or require a specific feature for this operation:
+// Or require one (or more) features for this operation:
 let feature = BaseLicenseFeature;
 .require_auth(&Resource::Users, &Action::Read)
-.require_license_feature(Some(&feature))
+.require_license_features([&feature])
 ```
 
 Notes:
 
-- Authenticated operations must call `require_license_feature(...)` before `register(...)`.
-- Public routes cannot (and do not need to) call `require_license_feature(...)`.
+- Authenticated operations must call `require_license_features(...)` before `register(...)`.
+- Public routes cannot (and do not need to) call `require_license_features(...)`.
 - `api_ingress` currently enforces license requirements via a stub middleware that only allows the base feature.
 
 **Handler / method router**

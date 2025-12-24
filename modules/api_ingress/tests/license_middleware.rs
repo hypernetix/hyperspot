@@ -126,7 +126,7 @@ impl RestfulModule for TestLicenseModule {
         let router = OperationBuilder::get("/tests/v1/license/bad")
             .operation_id("test.license.bad")
             .require_auth(&TestResource::Test, &TestAction::Read)
-            .require_license_feature(Some(&feature))
+            .require_license_features([&feature])
             .handler(ok_handler)
             .json_response(http::StatusCode::OK, "OK")
             .register(router, openapi);
@@ -136,7 +136,7 @@ impl RestfulModule for TestLicenseModule {
         let router = OperationBuilder::get("/tests/v1/license/good")
             .operation_id("test.license.good")
             .require_auth(&TestResource::Test, &TestAction::Read)
-            .require_license_feature(Some(&base_feature))
+            .require_license_features([&base_feature])
             .handler(ok_handler)
             .json_response(http::StatusCode::OK, "OK")
             .register(router, openapi);
@@ -144,7 +144,7 @@ impl RestfulModule for TestLicenseModule {
         let router = OperationBuilder::get("/tests/v1/license/none")
             .operation_id("test.license.none")
             .require_auth(&TestResource::Test, &TestAction::Read)
-            .require_license_feature(None::<&BaseFeature>)
+            .require_license_features::<BaseFeature>([])
             .handler(ok_handler)
             .json_response(http::StatusCode::OK, "OK")
             .register(router, openapi);
