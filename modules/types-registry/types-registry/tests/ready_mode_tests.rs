@@ -24,7 +24,7 @@ async fn test_ready_mode_validates_immediately_with_correct_order() {
     let entities = vec![
         // Parent type - must be first for instances to validate against it
         json!({
-            "$id": "gts.acme.core.models.person.v1~",
+            "$id": "gts://gts.acme.core.models.person.v1~",
             "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object",
             "properties": {
@@ -96,7 +96,7 @@ async fn test_ready_mode_fails_when_instance_before_parent() {
         }),
         // Parent type - registered after instance
         json!({
-            "$id": "gts.acme.core.models.widget.v1~",
+            "$id": "gts://gts.acme.core.models.widget.v1~",
             "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object",
             "properties": {
@@ -136,7 +136,7 @@ async fn test_ready_mode_validates_invalid_instance_immediately() {
     let entities = vec![
         // Parent type
         json!({
-            "$id": "gts.acme.core.models.employee.v1~",
+            "$id": "gts://gts.acme.core.models.employee.v1~",
             "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object",
             "properties": {
@@ -184,7 +184,7 @@ async fn test_ready_mode_batch_with_valid_and_invalid_instances() {
     let entities = vec![
         // Parent type
         json!({
-            "$id": "gts.acme.core.models.item.v1~",
+            "$id": "gts://gts.acme.core.models.item.v1~",
             "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object",
             "properties": {
@@ -244,7 +244,7 @@ async fn test_configuration_mode_defers_validation() {
 
     // Register a type schema
     let type_schema = json!({
-        "$id": "gts.acme.core.models.config_test.v1~",
+        "$id": "gts://gts.acme.core.models.config_test.v1~",
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
         "properties": {
@@ -278,12 +278,12 @@ async fn test_switch_to_production_validates_all_entities() {
     // Register valid entities in configuration mode
     let entities = vec![
         json!({
-            "$id": "gts.acme.core.events.valid1.v1~",
+            "$id": "gts://gts.acme.core.events.valid1.v1~",
             "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object"
         }),
         json!({
-            "$id": "gts.acme.core.events.valid2.v1~",
+            "$id": "gts://gts.acme.core.events.valid2.v1~",
             "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object"
         }),
@@ -310,7 +310,7 @@ async fn test_switch_to_ready_is_idempotent() {
 
     // Register something first
     let _ = service.register(vec![json!({
-        "$id": "gts.acme.core.events.state_test.v1~",
+        "$id": "gts://gts.acme.core.events.state_test.v1~",
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object"
     })]);
@@ -332,7 +332,7 @@ async fn test_list_before_ready_returns_empty() {
 
     // Register entities in configuration mode
     let _ = service.register(vec![json!({
-        "$id": "gts.acme.core.events.not_visible.v1~",
+        "$id": "gts://gts.acme.core.events.not_visible.v1~",
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object"
     })]);
@@ -348,7 +348,7 @@ async fn test_get_before_ready_fails() {
 
     // Register entity in configuration mode
     let _ = service.register(vec![json!({
-        "$id": "gts.acme.core.events.not_accessible.v1~",
+        "$id": "gts://gts.acme.core.events.not_accessible.v1~",
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object"
     })]);
@@ -368,7 +368,7 @@ async fn test_switch_to_ready_returns_errors_as_list() {
 
     // Register a parent type schema
     let parent_type = json!({
-        "$id": "gts.acme.core.models.product.v1~",
+        "$id": "gts://gts.acme.core.models.product.v1~",
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
         "properties": {
@@ -468,7 +468,7 @@ async fn test_switch_to_ready_error_contains_gts_ids() {
 
     // Register a type schema
     let type_schema = json!({
-        "$id": "gts.acme.core.models.error_test.v1~",
+        "$id": "gts://gts.acme.core.models.error_test.v1~",
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
         "properties": {
@@ -519,7 +519,7 @@ async fn test_switch_to_ready_success_with_valid_types_only() {
 
     // Register only valid type schemas (no instances that need validation)
     let type_schema1 = json!({
-        "$id": "gts.acme.core.models.fixable1.v1~",
+        "$id": "gts://gts.acme.core.models.fixable1.v1~",
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
         "properties": {
@@ -528,7 +528,7 @@ async fn test_switch_to_ready_success_with_valid_types_only() {
     });
 
     let type_schema2 = json!({
-        "$id": "gts.acme.core.models.fixable2.v1~",
+        "$id": "gts://gts.acme.core.models.fixable2.v1~",
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
         "properties": {

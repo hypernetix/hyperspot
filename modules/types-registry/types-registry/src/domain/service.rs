@@ -234,7 +234,7 @@ mod tests {
             crate::config::TypesRegistryConfig::default(),
         );
 
-        let entity = json!({"$id": "gts.acme.core.events.test.v1~"});
+        let entity = json!({"$id": "gts://gts.acme.core.events.test.v1~"});
         assert_eq!(
             service.extract_gts_id(&entity),
             Some("gts.acme.core.events.test.v1~".to_owned())
@@ -267,8 +267,8 @@ mod tests {
         );
 
         let entities = vec![
-            json!({"$id": "gts.acme.core.events.test.v1~"}),
-            json!({"$id": "gts.acme.core.events.test2.v1~"}),
+            json!({"$id": "gts://gts.acme.core.events.test.v1~"}),
+            json!({"$id": "gts://gts.acme.core.events.test2.v1~"}),
         ];
 
         let results = service.register(entities);
@@ -285,8 +285,8 @@ mod tests {
         );
 
         let entities = vec![
-            json!({"$id": "gts.acme.core.events.test.v1~"}),
-            json!({"$id": "gts.acme.core.events.fail.v1~"}),
+            json!({"$id": "gts://gts.acme.core.events.test.v1~"}),
+            json!({"$id": "gts://gts.acme.core.events.fail.v1~"}),
             json!({"other": "no id"}),
         ];
 

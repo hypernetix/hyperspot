@@ -19,7 +19,7 @@ async fn test_type_with_valid_instances() {
     // Register a base type schema (User type)
     // Types end with ~ and define the schema
     let user_type = json!({
-        "$id": "gts.acme.core.models.user.v1~",
+        "$id": "gts://gts.acme.core.models.user.v1~",
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
         "properties": {
@@ -89,7 +89,7 @@ async fn test_type_with_invalid_instance_missing_required_field() {
 
     // Register a type with required fields
     let order_type = json!({
-        "$id": "gts.acme.core.models.order.v1~",
+        "$id": "gts://gts.acme.core.models.order.v1~",
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
         "properties": {
@@ -129,7 +129,7 @@ async fn test_type_with_invalid_instance_wrong_field_type() {
 
     // Register a type with specific field types
     let product_type = json!({
-        "$id": "gts.acme.core.models.product.v1~",
+        "$id": "gts://gts.acme.core.models.product.v1~",
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
         "properties": {
@@ -171,7 +171,7 @@ async fn test_multiple_instances_of_same_type() {
 
     // Register an event type
     let event_type = json!({
-        "$id": "gts.acme.core.events.user_action.v1~",
+        "$id": "gts://gts.acme.core.events.user_action.v1~",
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
         "properties": {
@@ -243,7 +243,7 @@ async fn test_nested_object_type_with_instance() {
 
     // Register a complex type with nested objects
     let customer_type = json!({
-        "$id": "gts.acme.core.models.customer.v1~",
+        "$id": "gts://gts.acme.core.models.customer.v1~",
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
         "properties": {
@@ -298,7 +298,7 @@ async fn test_array_type_with_instance() {
 
     // Register a type with array properties
     let cart_type = json!({
-        "$id": "gts.acme.core.models.cart.v1~",
+        "$id": "gts://gts.acme.core.models.cart.v1~",
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
         "properties": {
@@ -347,7 +347,7 @@ async fn test_instance_with_mismatched_type_field_is_ignored_for_well_known_inst
 
     // Register two different type schemas
     let user_type = json!({
-        "$id": "gts.acme.core.models.user.v1~",
+        "$id": "gts://gts.acme.core.models.user.v1~",
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
         "properties": {
@@ -359,7 +359,7 @@ async fn test_instance_with_mismatched_type_field_is_ignored_for_well_known_inst
     });
 
     let product_type = json!({
-        "$id": "gts.acme.core.models.product.v1~",
+        "$id": "gts://gts.acme.core.models.product.v1~",
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
         "properties": {
@@ -376,7 +376,7 @@ async fn test_instance_with_mismatched_type_field_is_ignored_for_well_known_inst
     // Register an instance where:
     // - Instance ID indicates parent is "user" type (gts.acme.core.models.user.v1~)
     // - "type" field explicitly claims parent is "product" type (gts.acme.core.models.product.v1~)
-    // The "type" field takes priority in schema_id_fields config, so validation uses product schema
+    // Chained GTS ID ALWAYS takes priority over explicit type field, so validation uses user schema
     let mismatched_instance = json!({
         "id": "gts.acme.core.models.user.v1~acme.core.instances.user1.v1",
         "type": "gts.acme.core.models.product.v1~",
@@ -386,11 +386,12 @@ async fn test_instance_with_mismatched_type_field_is_ignored_for_well_known_inst
 
     let result = service.register(vec![mismatched_instance]);
 
-    // The explicit "type" field takes priority over the chained ID's type portion.
-    // Since the instance has user fields but is validated against product schema, it should fail.
+    // The chained GTS ID takes priority over the explicit "type" field.
+    // Since the instance has user fields and is validated against user schema (from chain),
+    // it should SUCCEED. The explicit "type" field is ignored.
     assert!(
-        result[0].is_err(),
-        "Instance with mismatched type field should fail validation: {:?}",
+        result[0].is_ok(),
+        "Instance should succeed validation using schema from chained ID: {:?}",
         result[0]
     );
 }
