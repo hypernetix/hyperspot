@@ -12,6 +12,10 @@ workspace = true
 name = "api_ingress"
 path = "src/lib.rs"
 
+[[example]]
+name = "update_assets"
+path = "examples/update_assets.rs"
+
 [dependencies]
 modkit = { path = "../../libs/modkit" }
 modkit-auth = { path = "../../libs/modkit-auth" }
@@ -46,12 +50,10 @@ rust-embed = { workspace = true }
 [dev-dependencies]
 futures = { workspace = true }
 uuid = { workspace = true }
+reqwest = { workspace = true }
 
 [features]
 grpc = []
 debug-errors = []
 embed_elements = []
 otel = []
-
-[build-dependencies]
-reqwest = { workspace = true, features = ["blocking", "rustls-tls"] }
