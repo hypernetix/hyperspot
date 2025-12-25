@@ -1,0 +1,34 @@
+[package]
+name = "de0110_no_schema_for_on_gts_structs"
+version = "0.1.0"
+authors = ["Hypernetix"]
+description = "Prohibit using schemars::schema_for!() on GTS-wrapped structs"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[[example]]
+name = "gts_struct_schema_for"
+path = "ui/gts_struct_schema_for.rs"
+
+[[example]]
+name = "non_gts_struct_schema_for"
+path = "ui/non_gts_struct_schema_for.rs"
+
+[dependencies]
+clippy_utils.workspace = true
+dylint_linting.workspace = true
+lint_utils.workspace = true
+
+[dev-dependencies]
+dylint_testing.workspace = true
+schemars = { version = "0.8", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+gts-macros.workspace = true
+gts.workspace = true
+
+[package.metadata.rust-analyzer]
+rustc_private = true

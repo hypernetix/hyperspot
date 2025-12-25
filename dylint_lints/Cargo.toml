@@ -4,6 +4,7 @@ members = [
     "de01_contract_layer/de0101_no_serde_in_contract",
     "de01_contract_layer/de0102_no_toschema_in_contract",
     "de01_contract_layer/de0103_no_http_types_in_contract",
+    "de01_contract_layer/de0110_no_schema_for_on_gts_structs",
     "de02_api_layer/de0201_dtos_only_in_api_rest",
     "de02_api_layer/de0202_dtos_not_referenced_outside_api",
     "de02_api_layer/de0203_dtos_must_have_serde_derives",
@@ -22,7 +23,7 @@ authors = ["Hypernetix"]
 # Each linter will be added as a member as it's implemented
 #
 # Current linters:
-# - contract_lints: DE0101, DE0102, DE0103 (contract layer validation)
+# - contract_lints: DE0101, DE0102, DE0103, DE0110 (contract layer validation)
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
@@ -33,6 +34,9 @@ clippy_utils = { git = "https://github.com/rust-lang/rust-clippy", rev = "20ce69
 dylint_linting = "5.0.0"
 dylint_testing = "5.0.0"
 lint_utils = { path = "lint_utils" }
+# NOTE: Keep gts version in sync with /Cargo.toml workspace dependencies
+gts = { git = "https://github.com/globaltypesystem/gts-rust.git", tag = "v0.7.1" }
+gts-macros = { git = "https://github.com/globaltypesystem/gts-rust.git", tag = "v0.7.1" }
 
 [workspace.lints.clippy]
 all = "warn"
