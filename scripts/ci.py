@@ -127,7 +127,7 @@ def wait_for_health(base_url, timeout_secs=30):
             pass
 
         if time.time() - start > timeout_secs:
-            print("ERROR: API did not become ready in time")
+            print("ERROR: The API readiness check timed out")
             sys.exit(1)
         time.sleep(1)
 
@@ -146,9 +146,33 @@ def check_pytest():
     sys.exit(1)
 
 
+def kill_existing_server(port):
+    """Kill any existing server process on the specified port"""
+    try:
+        # Find process using the port
+        if sys.platform == "darwin":  # macOS
+            result = run_cmd_allow_fail(["lsof", "-ti", f":{port}"])
+        else:  # Linux and others
+            result = run_cmd_allow_fail(["fuser", "-k", f"{port}/tcp"])
+
+        if result.returncode == 0 and result.stdout:
+            pids = result.stdout.strip().split()
+            for pid in pids:
+                print(f"Killing existing server process {pid} on port {port}")
+                run_cmd_allow_fail(["kill", "-9", pid])
+                time.sleep(1)  # Give it time to die
+    except Exception:
+        # If we can't find or kill the process, continue anyway
+        pass
+
+
 def cmd_e2e(args):
-    base_url = os.environ.get("E2E_BASE_URL", "http://localhost:8087")
+    base_url = os.environ.get("E2E_BASE_URL", "http://localhost:8086")
     check_pytest()
+
+    # Kill any existing server on the port before starting
+    port = base_url.split(":")[-1]
+    kill_existing_server(port)
 
     docker_env_started = False
 
@@ -179,31 +203,61 @@ def cmd_e2e(args):
         wait_for_health(base_url)
     else:
         step("Running E2E tests in local mode")
-        # Check local server
+        # Start local server automatically
+        server_process = None
         try:
             wait_for_health(base_url, timeout_secs=5)
         except SystemExit:
-            print("")
-            print(f"WARNING: Server not responding at {base_url}/healthz")
-            print("")
-            print("Please start hyperspot-server before running E2E tests, for example:")
-            print("  make example")
-            print("  OR")
-            print("  cargo run --bin hyperspot-server --features users-info-example -- --config config/quickstart.yaml")
-            print("")
-            print("To use Docker environment instead, run:")
-            print("  python scripts/ci.py e2e --docker")
-            print("")
-            print("To use a different URL, set E2E_BASE_URL environment variable:")
-            print("  E2E_BASE_URL=http://localhost:9000 python scripts/ci.py e2e")
-            print("")
-            sys.exit(1)
+            print("Server not running, starting hyperspot-server...")
+            # Create logs directory if it doesn't exist
+            logs_dir = os.path.join(PROJECT_ROOT, "logs")
+            os.makedirs(logs_dir, exist_ok=True)
+
+            # Start server in background with logs redirected to files
+            server_cmd = [
+                "cargo", "run", "--bin", "hyperspot-server",
+                "--features", "users-info-example,tenant-resolver-example",
+                "--", "--config", "config/e2e-local.yaml"
+            ]
+
+            # Redirect stdout and stderr to log files
+            server_log_file = os.path.join(
+                logs_dir, "hyperspot-e2e.log"
+            )
+            server_error_file = os.path.join(
+                logs_dir, "hyperspot-e2e-error.log"
+            )
+
+            with open(server_log_file, "w") as out_file, \
+                    open(server_error_file, "w") as err_file:
+                server_process = subprocess.Popen(
+                    server_cmd,
+                    stdout=out_file,
+                    stderr=err_file
+                )
+
+            print("Server logs redirected to:")
+            print(f"  - stdout: {server_log_file}")
+            print(f"  - stderr: {server_error_file}")
+            print(
+                f"  - application logs: "
+                f"{os.path.join(logs_dir, 'hyperspot-e2e.log')}"
+            )
+            print(
+                f"  - SQL logs: {os.path.join(logs_dir, 'sql.log')}"
+            )
+            print(
+                f"  - API logs: {os.path.join(logs_dir, 'api.log')}"
+            )
+
+            # Wait for server to be ready
+            wait_for_health(base_url, timeout_secs=30)
 
     # Run pytest
     step("Running pytest")
     env = os.environ.copy()
     env["E2E_BASE_URL"] = base_url
-    
+
     # Set E2E_DOCKER_MODE flag for the tests to know which mode they're in
     if args.docker:
         env["E2E_DOCKER_MODE"] = "1"
@@ -218,6 +272,16 @@ def cmd_e2e(args):
     if args.docker and docker_env_started:
         step("Stopping E2E docker-compose environment")
         run_cmd_allow_fail(["docker", "compose", "-f", "testing/docker/docker-compose.yml", "down", "-v"])
+
+    # Stop server if we started it
+    if server_process is not None:
+        step("Stopping hyperspot-server")
+        server_process.terminate()
+        try:
+            server_process.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            server_process.kill()
+            server_process.wait()
 
     print("")
     if exit_code == 0:
