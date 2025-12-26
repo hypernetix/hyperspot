@@ -294,5 +294,5 @@ build:
 	cargo +stable build --release
 
 # Run all necessary quality checks and tests and then build the release binary
-all: check test test-sqlite build
-	@echo "consider to run 'make test-db' and 'make e2e-local' as well"
+all: check test test-sqlite build e2e-local
+	@echo "consider to run 'make test-db' as well"
