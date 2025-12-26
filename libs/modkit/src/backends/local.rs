@@ -36,8 +36,15 @@ fn send_terminate_signal(child: &Child) -> bool {
     use nix::unistd::Pid;
 
     if let Some(pid) = child.id() {
-        let pid_i32 = i32::try_from(pid).unwrap_or(0);
-        kill(Pid::from_raw(pid_i32), Signal::SIGTERM).is_ok()
+        if let Ok(pid_i32) = i32::try_from(pid) {
+            kill(Pid::from_raw(pid_i32), Signal::SIGTERM).is_ok()
+        } else {
+            tracing::warn!(
+                pid = pid,
+                "Failed to convert PID to i32, cannot send SIGTERM (PID exceeds i32::MAX)"
+            );
+            false
+        }
     } else {
         false
     }
