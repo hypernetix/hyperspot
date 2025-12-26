@@ -10,6 +10,7 @@ members = [
     "de02_api_layer/de0203_dtos_must_have_serde_derives",
     "de02_api_layer/de0204_dtos_must_have_toschema_derive",
     "de08_rest_api_conventions/de0801_api_endpoint_version",
+    "de09_gts_layer/de0901_gts_string_pattern",
 ]
 resolver = "2"
 

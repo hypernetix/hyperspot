@@ -381,8 +381,8 @@ dependencies = [
  "clippy_utils",
  "dylint_linting",
  "dylint_testing",
- "gts",
- "gts-macros",
+ "gts 0.1.0 (git+https://github.com/globaltypesystem/gts-rust.git?tag=v0.7.3)",
+ "gts-macros 0.1.0 (git+https://github.com/globaltypesystem/gts-rust.git?tag=v0.7.3)",
  "lint_utils",
  "schemars",
  "serde",
@@ -440,6 +440,22 @@ dependencies = [
  "dylint_linting",
  "dylint_testing",
  "lint_utils",
+]
+
+[[package]]
+name = "de0901_gts_string_pattern"
+version = "0.1.0"
+dependencies = [
+ "clippy_utils",
+ "dylint_linting",
+ "dylint_testing",
+ "gts 0.1.0",
+ "gts-macros 0.1.0",
+ "lint_utils",
+ "regex",
+ "schemars",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -790,6 +806,23 @@ dependencies = [
 [[package]]
 name = "gts"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "jsonschema",
+ "schemars",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "shellexpand",
+ "thiserror 1.0.69",
+ "tracing",
+ "uuid",
+ "walkdir",
+]
+
+[[package]]
+name = "gts"
+version = "0.1.0"
 source = "git+https://github.com/globaltypesystem/gts-rust.git?tag=v0.7.3#a90049972e56aa710d7d9c6899b276828d999d8d"
 dependencies = [
  "anyhow",
@@ -803,6 +836,16 @@ dependencies = [
  "tracing",
  "uuid",
  "walkdir",
+]
+
+[[package]]
+name = "gts-macros"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "serde_json",
+ "syn",
 ]
 
 [[package]]

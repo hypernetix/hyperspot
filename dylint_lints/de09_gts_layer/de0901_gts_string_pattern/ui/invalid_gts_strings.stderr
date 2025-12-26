@@ -1,0 +1,25 @@
+error: invalid GTS schema_id string: 'gts.x.core.events.type.v1' (DE0901)
+  --> $DIR/invalid_gts_strings.rs:11:5
+   |
+LL |     schema_id = "gts.x.core.events.type.v1",
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: Expected gts-macros schema_id format: gts.<v>.<p>.<ns>.<name>.v<MAJOR>[.<MINOR>]~ with optional ~segment~ chain
+   = help: Examples:
+   = help:   gts.x.core.events.type.v1~
+   = help:   gts.x.core.events.type.v1~x.core.audit.event.v1~
+   = note: `#[deny(de0901_gts_string_pattern)]` on by default
+
+error: invalid GTS schema_id string: 'gts.x.core.events-type.v1~' (DE0901)
+  --> $DIR/invalid_gts_strings.rs:25:5
+   |
+LL |     schema_id = "gts.x.core.events-type.v1~",
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: Expected gts-macros schema_id format: gts.<v>.<p>.<ns>.<name>.v<MAJOR>[.<MINOR>]~ with optional ~segment~ chain
+   = help: Examples:
+   = help:   gts.x.core.events.type.v1~
+   = help:   gts.x.core.events.type.v1~x.core.audit.event.v1~
+
+error: aborting due to 2 previous errors
+
