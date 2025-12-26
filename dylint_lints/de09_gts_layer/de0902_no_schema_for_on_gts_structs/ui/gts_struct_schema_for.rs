@@ -1,4 +1,4 @@
-//! Test case: schema_for! on GTS-wrapped struct should trigger DE0110
+//! Test case: schema_for! on GTS-wrapped struct should trigger DE0902
 
 use gts_macros::struct_to_gts_schema;
 use schemars;
@@ -18,6 +18,6 @@ pub struct MyGtsPluginSpecV1 {
 }
 
 fn main() {
-    // Should trigger DE0110 - schema_for on GTS struct
+    // Should trigger DE0902 - schema_for on GTS struct
     let _schema = schemars::schema_for!(MyGtsPluginSpecV1);
 }

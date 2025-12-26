@@ -44,9 +44,9 @@ dylint_linting::declare_late_lint! {
     ///
     /// let schema = MyPluginSpec::gts_schema_with_refs_as_string();
     /// ```
-    pub DE0110_NO_SCHEMA_FOR_ON_GTS_STRUCTS,
+    pub DE0902_NO_SCHEMA_FOR_ON_GTS_STRUCTS,
     Deny,
-    "GTS structs must use gts_schema_with_refs_as_string() instead of schema_for!() (DE0110)"
+    "GTS structs must use gts_schema_with_refs_as_string() instead of schema_for!() (DE0902)"
 }
 
 /// Check if a type has the gts_schema_with_refs_as_string method.
@@ -80,7 +80,7 @@ fn get_type_name<'tcx>(ty: Ty<'tcx>) -> String {
     }
 }
 
-impl<'tcx> LateLintPass<'tcx> for De0110NoSchemaForOnGtsStructs {
+impl<'tcx> LateLintPass<'tcx> for De0902NoSchemaForOnGtsStructs {
     fn check_expr(&mut self, cx: &LateContext<'tcx>, expr: &'tcx Expr<'tcx>) {
         // The schema_for! macro expands to:
         // schemars::gen::SchemaGenerator::default().into_root_schema_for::<Type>()
@@ -111,11 +111,11 @@ impl<'tcx> LateLintPass<'tcx> for De0110NoSchemaForOnGtsStructs {
                                 if is_gts_type(cx, ty) {
                                     let type_name = get_type_name(ty);
                                     cx.span_lint(
-                                        DE0110_NO_SCHEMA_FOR_ON_GTS_STRUCTS,
+                                        DE0902_NO_SCHEMA_FOR_ON_GTS_STRUCTS,
                                         callsite_span,
                                         |diag| {
                                             diag.primary_message(format!(
-                                                "do not use `schema_for!({})` on GTS-wrapped struct (DE0110)",
+                                                "do not use `schema_for!({})` on GTS-wrapped struct (DE0902)",
                                                 type_name
                                             ));
                                             diag.help(format!(
@@ -147,7 +147,7 @@ mod tests {
         let ui_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("ui");
         lint_utils::test_comment_annotations_match_stderr(
             &ui_dir,
-            "DE0110",
+            "DE0902",
             "schema_for on GTS struct",
         );
     }
