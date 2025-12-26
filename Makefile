@@ -104,7 +104,7 @@ dylint-list:
 
 ## Test dylint lints on UI test cases (compile and verify violations)
 dylint-test:
-	@python3 dylint_lints/test_ui.py
+	@cd dylint_lints && cargo test
 
 # Run project compliance dylint lints on the workspace (see `make dylint-list`)
 dylint:
@@ -284,7 +284,7 @@ oop-example:
 	cargo run --bin hyperspot-server --features oop-example,users-info-example,tenant-resolver-example -- --config config/quickstart.yaml run
 
 # Run all quality checks
-check: fmt clippy test security dylint
+check: fmt clippy test security dylint-test dylint
 
 # Run CI pipeline
 ci: check
