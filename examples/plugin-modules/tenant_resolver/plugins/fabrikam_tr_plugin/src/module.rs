@@ -1,6 +1,6 @@
 //! Fabrikam tenant resolver plugin module.
 
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use async_trait::async_trait;
 use modkit::client_hub::ClientScope;
@@ -26,13 +26,14 @@ use crate::domain::Service;
     deps = ["types_registry"],
 )]
 pub struct FabrikamTrPlugin {
-    service: arc_swap::ArcSwapOption<Service>,
+    /// Service instance, initialized once during `init()`.
+    service: OnceLock<Arc<Service>>,
 }
 
 impl Default for FabrikamTrPlugin {
     fn default() -> Self {
         Self {
-            service: arc_swap::ArcSwapOption::empty(),
+            service: OnceLock::new(),
         }
     }
 }
@@ -72,7 +73,9 @@ impl Module for FabrikamTrPlugin {
             Service::new(&cfg.tenants)
                 .map_err(|e| anyhow::anyhow!("invalid Fabrikam tenant tree configuration: {e}"))?,
         );
-        self.service.store(Some(domain_service.clone()));
+        self.service
+            .set(domain_service.clone())
+            .map_err(|_| anyhow::anyhow!("Service already initialized"))?;
 
         // Register scoped client in ClientHub
         let api: Arc<dyn ThrPluginApi> = domain_service;

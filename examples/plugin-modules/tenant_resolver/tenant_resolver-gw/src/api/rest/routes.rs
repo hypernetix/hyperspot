@@ -28,10 +28,15 @@ pub fn register_routes(
         .register(router, openapi);
 
     // GET /tenant-resolver/v1/tenants
+    // NOTE: Response is `Page<serde_json::Value>` because `$select` projection may return
+    // a subset of TenantDto fields. When `$select` is omitted, the full TenantDto shape is returned.
     router = OperationBuilder::get("/tenant-resolver/v1/tenants")
         .operation_id("tenant_resolver_gateway.list_tenants")
         .summary("List tenants")
-        .description("Returns a paginated list of tenants with optional filtering by status.")
+        .description(
+            "Returns a paginated list of tenants with optional filtering by status. \
+             When `$select` is provided, the response items contain only the requested fields.",
+        )
         .tag("tenant_resolver_gateway")
         .public()
         .query_param(
@@ -47,10 +52,10 @@ pub fn register_routes(
         )
         .query_param("cursor", false, "Cursor for pagination")
         .handler(handlers::list_tenants)
-        .json_response_with_schema::<modkit_odata::Page<TenantDto>>(
+        .json_response_with_schema::<modkit_odata::Page<serde_json::Value>>(
             openapi,
             http::StatusCode::OK,
-            "Paginated list of tenants",
+            "Paginated list of tenants (shape depends on $select)",
         )
         .with_odata_select()
         .standard_errors(openapi)
