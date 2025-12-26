@@ -54,6 +54,11 @@ utoipa = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 serde-saphyr = { workspace = true, optional = true }
+schemars = { workspace = true, features = ["derive"] }
+
+# GTS support
+gts = { workspace = true }
+gts-macros = { workspace = true }
 
 # Performance / lock-free structures
 parking_lot = { workspace = true }
@@ -89,5 +94,3 @@ trybuild = { workspace = true }
 httpmock = { workspace = true }
 tempfile = { workspace = true }
 temp-env = { workspace = true }
-
-

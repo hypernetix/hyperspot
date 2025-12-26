@@ -1865,10 +1865,11 @@ dependencies = [
 [[package]]
 name = "gts"
 version = "0.1.0"
-source = "git+https://github.com/globaltypesystem/gts-rust.git?tag=v0.7.0#24179afcc272039924ab222d66c034bebfb46552"
+source = "git+https://github.com/globaltypesystem/gts-rust.git?tag=v0.7.3#a90049972e56aa710d7d9c6899b276828d999d8d"
 dependencies = [
  "anyhow",
  "jsonschema",
+ "schemars 0.8.22",
  "serde",
  "serde_json",
  "serde_yaml",
@@ -1882,7 +1883,7 @@ dependencies = [
 [[package]]
 name = "gts-macros"
 version = "0.1.0"
-source = "git+https://github.com/globaltypesystem/gts-rust.git?tag=v0.7.0#24179afcc272039924ab222d66c034bebfb46552"
+source = "git+https://github.com/globaltypesystem/gts-rust.git?tag=v0.7.3#a90049972e56aa710d7d9c6899b276828d999d8d"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2856,6 +2857,8 @@ dependencies = [
  "figment",
  "file-rotate",
  "futures",
+ "gts",
+ "gts-macros",
  "http",
  "httpmock",
  "inventory",
@@ -2873,6 +2876,7 @@ dependencies = [
  "parking_lot",
  "regex",
  "reqwest",
+ "schemars 0.8.22",
  "serde",
  "serde-saphyr",
  "serde_json",
@@ -4634,6 +4638,7 @@ dependencies = [
  "schemars_derive",
  "serde",
  "serde_json",
+ "uuid",
 ]
 
 [[package]]
@@ -5614,6 +5619,7 @@ dependencies = [
  "async-trait",
  "gts",
  "gts-macros",
+ "modkit",
  "modkit-odata",
  "modkit-security",
  "schemars 0.8.22",

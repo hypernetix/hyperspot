@@ -12,7 +12,7 @@ The goal is to show a clean pattern for “modules with plugins” in HyperSpot/
 
 - **`tenant_resolver-sdk/`**
   - Defines the public contract (API traits + models)
-  - Defines the GTS types used in this example (e.g. `ThrPluginSpec`)
+  - Defines the GTS types used in this example (e.g. `TenantResolverPluginSpecV1`)
 
 - **`tenant_resolver-gw/`** (gateway module)
   - Exposes REST endpoint(s) (example: `GET /tenant-resolver/v1/root`, `GET /tenant-resolver/v1/tenants`)
@@ -42,21 +42,21 @@ The goal is to show a clean pattern for “modules with plugins” in HyperSpot/
 
 Plugins generate their instance ID using the GTS type helper:
 
-- GTS type id: `gts.x.core.plugins.thr_plugin.v1~`
+- GTS type id: `gts.x.core.modkit.plugin.v1~<vendor>.<pkg>.<module>.<plugin>.v1~`
 - Instance ids (examples):
-  - `gts.x.core.plugins.thr_plugin.v1~contoso.plugins._.thr_plugin.v1`
-  - `gts.x.core.plugins.thr_plugin.v1~fabrikam.plugins._.thr_plugin.v1`
+  - `gts.x.core.modkit.plugin.v1~x.core.tenant_resolver.plugin.v1~contoso.app._.plugin.v1`
+  - `gts.x.core.modkit.plugin.v1~x.core.tenant_resolver.plugin.v1~fabrikam.app._.plugin.v1`
 
 In code this is done via:
 
-- `ThrPluginSpec::make_gts_instance_id("contoso.plugins._.thr_plugin.v1")`
+- `TenantResolverPluginSpecV1::gts_make_instance_id("contoso.app._.plugin.v1")`
 
 ### 2) A plugin registers its instance in `types-registry`
 
 At `init()` the plugin registers a JSON document (validated by schema) in the registry:
 
 - `gts_id`: the full instance id (string)
-- `content`: serialized `ThrPluginSpec` (must match the `gts_id`)
+- `content`: serialized `TenantResolverPluginSpecV1` (must match the `gts_id`)
 
 This makes instances discoverable at runtime.
 
@@ -82,7 +82,7 @@ modules:
 
 Then it:
 
-- lists `ThrPluginSpec` instances in `types-registry`
+- lists `TenantResolverPluginSpecV1` instances in `types-registry`
 - filters by `vendor`
 - chooses the best by `priority` (lower = higher priority)
 - stores the selected `gts_id` as `active_plugin_id`
@@ -136,7 +136,7 @@ Then call:
 1) Create a new crate under `plugins/<your_plugin>/`
 2) Add `#[modkit::module(name = "<your_plugin>", deps = ["types_registry"])]`
 3) Generate a stable instance id:
-   - `ThrPluginSpec::make_gts_instance_id("<your.instance.name>")`
+   - `TenantResolverPluginSpecV1::gts_make_instance_id("<your.instance.name>")`
 4) Register the instance in `types-registry` using that `gts_id`
 5) Register your `Arc<dyn ThrPluginApi>` into `ClientHub` with scope `ClientScope::gts_id(&gts_id)`
 6) Add the plugin module name into the gateway’s `deps = [...]` list so the plugin initializes before the gateway
@@ -149,5 +149,3 @@ GTS gives you:
 - **stable, versioned IDs** for types and instances
 - **schema-driven validation** (instances are structured, not arbitrary JSON blobs)
 - a clean bridge between “registry discovery” and “runtime implementation” via `gts_id`
-
-

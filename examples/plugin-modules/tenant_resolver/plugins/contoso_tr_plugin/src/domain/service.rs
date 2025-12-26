@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use modkit_odata::{ODataQuery, Page, PageInfo};
 use modkit_security::SecurityCtx;
 use tenant_resolver_sdk::{
-    AccessOptions, GetParentsResponse, Tenant, TenantFilter, TenantResolverError, TenantSpec,
+    AccessOptions, GetParentsResponse, Tenant, TenantFilter, TenantResolverError, TenantSpecV1,
     TenantStatus, ThrPluginApi,
 };
 
@@ -21,7 +21,7 @@ impl Service {
             id: "00000000000000000000000000000000".to_owned(),
             parent_id: String::new(),
             status: TenantStatus::Active,
-            r#type: TenantSpec::GTS_SCHEMA_ID.to_owned(),
+            r#type: TenantSpecV1::<()>::gts_schema_id().clone(),
             is_accessible_by_parent: true,
         }
     }

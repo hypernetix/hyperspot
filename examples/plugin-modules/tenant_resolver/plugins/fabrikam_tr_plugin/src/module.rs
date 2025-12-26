@@ -5,9 +5,10 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use modkit::client_hub::ClientScope;
 use modkit::context::ModuleCtx;
+use modkit::gts::BaseModkitPluginV1;
 use modkit::Module;
 use modkit_security::SecurityCtx;
-use tenant_resolver_sdk::{ThrPluginApi, ThrPluginSpec};
+use tenant_resolver_sdk::{TenantResolverPluginSpecV1, ThrPluginApi};
 use tracing::info;
 use types_registry_sdk::TypesRegistryApi;
 
@@ -15,6 +16,11 @@ use crate::config::FabrikamPluginConfig;
 use crate::domain::Service;
 
 /// Fabrikam tenant resolver plugin module.
+///
+/// **Plugin registration pattern:**
+/// - The gateway module registers the plugin **schema** (GTS type definition)
+/// - This plugin registers its **instance** (specific implementation metadata)
+/// - This plugin registers its **scoped client** (implementation in `ClientHub`)
 #[modkit::module(
     name = "fabrikam_tr_plugin",
     deps = ["types_registry"],
@@ -40,31 +46,23 @@ impl Module for FabrikamTrPlugin {
         let cfg: FabrikamPluginConfig = ctx.config()?;
 
         // Generate plugin instance ID
-        let instance_id =
-            ThrPluginSpec::make_gts_instance_id("fabrikam.plugins._.thr_plugin.v1").to_string();
-
-        // Register plugin schema and instance in types-registry
-        let registry = ctx.client_hub().get::<dyn TypesRegistryApi>()?;
-
-        // First, register the schema (idempotent — OK if already registered by another plugin)
-        // Generate JSON Schema from Rust type using schemars, then add GTS $id
-        let mut schema = schemars::schema_for!(ThrPluginSpec);
-        schema.schema.extensions.insert(
-            "$id".to_owned(),
-            serde_json::json!(ThrPluginSpec::GTS_SCHEMA_ID),
+        let instance_id = TenantResolverPluginSpecV1::gts_make_instance_id(
+            "fabrikam.plugins.tenant_resolver.plugin.v1",
         );
-        let schema_json = serde_json::to_value(&schema)?;
-        let _ = registry
-            .register(&SecurityCtx::root_ctx(), vec![schema_json])
-            .await?;
 
-        // Then, register the instance
-        let instance = ThrPluginSpec {
+        // === INSTANCE REGISTRATION ===
+        // Register the plugin INSTANCE in types-registry.
+        // Note: The plugin SCHEMA is registered by the gateway module.
+        let registry = ctx.client_hub().get::<dyn TypesRegistryApi>()?;
+        let vendor_clone = cfg.vendor.clone();
+        let instance = BaseModkitPluginV1::<TenantResolverPluginSpecV1> {
             id: instance_id.clone(),
-            vendor: cfg.vendor.clone(),
+            vendor: cfg.vendor,
             priority: cfg.priority,
+            properties: TenantResolverPluginSpecV1,
         };
         let instance_json = serde_json::to_value(&instance)?;
+
         let _ = registry
             .register(&SecurityCtx::root_ctx(), vec![instance_json])
             .await?;
@@ -83,7 +81,7 @@ impl Module for FabrikamTrPlugin {
 
         info!(
             instance_id = %instance_id,
-            vendor = %cfg.vendor,
+            vendor = %vendor_clone,
             tenant_count = cfg.tenants.len(),
             "Fabrikam plugin initialized with tenant tree"
         );

@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use tenant_resolver_sdk::{GetParentsResponse, Tenant, TenantStatus};
+use tenant_resolver_sdk::{GetParentsResponse, GtsSchemaId, Tenant, TenantStatus};
 
 // ============================================================================
 // Tenant DTOs
@@ -15,8 +15,13 @@ pub struct TenantDto {
     pub id: String,
     pub parent_id: String,
     pub status: TenantStatusDto,
-    pub r#type: String,
+    #[serde(skip, default = "default_schema_id")]
+    pub r#type: GtsSchemaId,
     pub is_accessible_by_parent: bool,
+}
+
+fn default_schema_id() -> GtsSchemaId {
+    tenant_resolver_sdk::TenantSpecV1::<()>::gts_schema_id().clone()
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema)]

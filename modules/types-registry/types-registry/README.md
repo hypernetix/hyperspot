@@ -85,6 +85,18 @@ types_registry:
     - "type"
 ```
 
+## Core GTS Types
+
+The types-registry module automatically registers core GTS types during initialization.
+These are framework-level types that other modules depend on:
+
+| GTS ID | Description |
+|--------|-------------|
+| `gts.x.core.modkit.plugin.v1~` | Base plugin schema for all plugin systems |
+
+This ensures that when modules register their derived schemas (e.g., plugin-specific types),
+the base types are already available for validation.
+
 ## Two-Phase Registration
 
 1. **Configuration Phase**: Entities are stored in temporary storage without full validation
