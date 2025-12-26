@@ -18,7 +18,7 @@ dylint_linting::declare_late_lint! {
     /// ### Why is this bad?
     ///
     /// GTS-wrapped structs (those using `#[struct_to_gts_schema]`) must use
-    /// `gts_json_schema_with_refs()` for schema generation because:
+    /// `gts_schema_with_refs_as_string()` for schema generation because:
     ///
     /// 1. **Performance**: It is static (computed at compile time), so it's faster
     /// 2. **Correct `$id`**: It automatically sets the correct `$id` field
@@ -42,11 +42,11 @@ dylint_linting::declare_late_lint! {
     /// #[struct_to_gts_schema(...)]
     /// pub struct MyPluginSpec { ... }
     ///
-    /// let schema = MyPluginSpec::gts_json_schema_with_refs();
+    /// let schema = MyPluginSpec::gts_schema_with_refs_as_string();
     /// ```
     pub DE0110_NO_SCHEMA_FOR_ON_GTS_STRUCTS,
     Deny,
-    "GTS structs must use gts_json_schema_with_refs() instead of schema_for!() (DE0110)"
+    "GTS structs must use gts_schema_with_refs_as_string() instead of schema_for!() (DE0110)"
 }
 
 /// Check if a type has the GTS_SCHEMA_ID associated const.
@@ -119,7 +119,7 @@ impl<'tcx> LateLintPass<'tcx> for De0110NoSchemaForOnGtsStructs {
                                                 type_name
                                             ));
                                             diag.help(format!(
-                                                "use `{}::gts_json_schema_with_refs()` instead for proper `$id` and `$ref` handling",
+                                                "use `{}::gts_schema_with_refs_as_string()` instead for proper `$id` and `$ref` handling",
                                                 type_name
                                             ));
                                         },

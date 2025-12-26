@@ -4,7 +4,7 @@ error: do not use `schema_for!(MyGtsPluginSpecV1)` on GTS-wrapped struct (DE0110
 LL |     let _schema = schemars::schema_for!(MyGtsPluginSpecV1);
    |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    |
-   = help: use `MyGtsPluginSpecV1::gts_json_schema_with_refs()` instead for proper `$id` and `$ref` handling
+   = help: use `MyGtsPluginSpecV1::gts_schema_with_refs_as_string()` instead for proper `$id` and `$ref` handling
    = note: `#[deny(de0110_no_schema_for_on_gts_structs)]` on by default
 
 error: aborting due to 1 previous error

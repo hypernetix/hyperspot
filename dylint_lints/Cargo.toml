@@ -35,8 +35,8 @@ dylint_linting = "5.0.0"
 dylint_testing = "5.0.0"
 lint_utils = { path = "lint_utils" }
 # NOTE: Keep gts version in sync with /Cargo.toml workspace dependencies
-gts = { git = "https://github.com/globaltypesystem/gts-rust.git", tag = "v0.7.1" }
-gts-macros = { git = "https://github.com/globaltypesystem/gts-rust.git", tag = "v0.7.1" }
+gts = { git = "https://github.com/globaltypesystem/gts-rust.git", tag = "v0.7.3" }
+gts-macros = { git = "https://github.com/globaltypesystem/gts-rust.git", tag = "v0.7.3" }
 
 [workspace.lints.clippy]
 all = "warn"

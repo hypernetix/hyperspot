@@ -6,11 +6,10 @@ Detects usage of `schemars::schema_for!()` macro on GTS-wrapped structs (those u
 
 ## Why is this bad?
 
-GTS-wrapped structs **must** use `gts_json_schema_with_refs()` for schema generation because:
+GTS-wrapped structs **must** use `gts_schema_with_refs_as_string()` for schema generation because:
 
-1. **Performance**: It is static (computed at compile time), so it's faster
-2. **Correct `$id`**: It automatically sets the correct `$id` field, no need to do it manually
-3. **Proper `$ref`s**: It generates proper schema with `$ref` references, while `schema_for!` inlines everything
+1. **Correct `$id`**: It automatically sets the correct `$id` field, no need to do it manually
+2. **Proper `$ref`s**: It generates proper schema with `$ref` references, while `schema_for!` inlines everything
 
 ## Example
 
@@ -31,7 +30,7 @@ Use instead:
 #[struct_to_gts_schema(...)]
 pub struct MyPluginSpec { ... }
 
-let schema = MyPluginSpec::gts_json_schema_with_refs();  // ✅ Correct
+let schema = MyPluginSpec::gts_schema_with_refs_as_string();  // ✅ Correct
 ```
 
 ## Detection
