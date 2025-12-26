@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use async_trait::async_trait;
 use modkit::api::OpenApiRegistry;
@@ -27,19 +27,26 @@ use crate::local_client::TenantResolverGwClient;
 ///
 /// Plugin discovery is **lazy**: it happens on the first API call,
 /// after `types_registry` has switched to ready mode in `post_init`.
+///
+/// **Note on plugin dependencies:**
+/// The gateway does NOT declare hard dependencies on specific plugins.
+/// Plugins are discovered dynamically via `types_registry`. To include
+/// plugins in a build, add them to `registered_modules.rs` in the server
+/// binary or use Cargo feature flags.
 #[modkit::module(
     name = "tenant_resolver_gateway",
-    deps = ["types_registry", "contoso_tr_plugin", "fabrikam_tr_plugin"],
+    deps = ["types_registry"],
     capabilities = [rest]
 )]
 pub struct TenantResolverGateway {
-    service: arc_swap::ArcSwapOption<Service>,
+    /// Service instance, initialized once during `init()`.
+    service: OnceLock<Arc<Service>>,
 }
 
 impl Default for TenantResolverGateway {
     fn default() -> Self {
         Self {
-            service: arc_swap::ArcSwapOption::empty(),
+            service: OnceLock::new(),
         }
     }
 }
@@ -74,7 +81,9 @@ impl Module for TenantResolverGateway {
         let api: Arc<dyn TenantResolverClient> = Arc::new(TenantResolverGwClient::new(svc.clone()));
         ctx.client_hub().register::<dyn TenantResolverClient>(api);
 
-        self.service.store(Some(svc));
+        self.service
+            .set(svc)
+            .map_err(|_| anyhow::anyhow!("Service already initialized"))?;
 
         Ok(())
     }
@@ -89,8 +98,7 @@ impl RestfulModule for TenantResolverGateway {
     ) -> anyhow::Result<axum::Router> {
         let svc = self
             .service
-            .load()
-            .as_ref()
+            .get()
             .ok_or_else(|| anyhow::anyhow!("Service not initialized"))?
             .clone();
 

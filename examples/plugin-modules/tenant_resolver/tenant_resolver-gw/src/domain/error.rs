@@ -28,9 +28,10 @@ impl From<tenant_resolver_sdk::TenantResolverError> for DomainError {
         use tenant_resolver_sdk::TenantResolverError;
         match e {
             TenantResolverError::NotFound(msg) => Self::TenantNotFound(msg),
-            TenantResolverError::PermissionDenied(msg) => Self::PermissionDenied(msg),
-            TenantResolverError::Unauthorized(msg) => {
-                Self::Internal(format!("unauthorized: {msg}"))
+            // Unauthorized maps to PermissionDenied since this is a gateway
+            // and authentication is handled at the ingress layer.
+            TenantResolverError::PermissionDenied(msg) | TenantResolverError::Unauthorized(msg) => {
+                Self::PermissionDenied(msg)
             }
             TenantResolverError::Internal(msg) => Self::Internal(msg),
         }

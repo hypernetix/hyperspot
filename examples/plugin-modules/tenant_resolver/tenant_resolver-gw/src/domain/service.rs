@@ -154,7 +154,8 @@ impl Service {
 /// If multiple instances match, the one with the lowest priority wins.
 #[tracing::instrument(skip_all, fields(vendor, instance_count = instances.len()))]
 fn choose_plugin_instance(vendor: &str, instances: &[GtsEntity]) -> Result<String, DomainError> {
-    let mut best: Option<(&GtsEntity, BaseModkitPluginV1<TenantResolverPluginSpecV1>)> = None;
+    // Track best match: (gts_id, priority)
+    let mut best: Option<(String, i16)> = None;
 
     for ent in instances {
         // Deserialize the plugin instance content using the SDK type
@@ -195,16 +196,16 @@ fn choose_plugin_instance(vendor: &str, instances: &[GtsEntity]) -> Result<Strin
         }
 
         match &best {
-            None => best = Some((ent, content)),
-            Some((_cur_ent, cur_content)) => {
-                if content.priority < cur_content.priority {
-                    best = Some((ent, content));
+            None => best = Some((ent.gts_id.clone(), content.priority)),
+            Some((_, cur_priority)) => {
+                if content.priority < *cur_priority {
+                    best = Some((ent.gts_id.clone(), content.priority));
                 }
             }
         }
     }
 
-    best.map(|(ent, _)| ent.gts_id.clone())
+    best.map(|(gts_id, _)| gts_id)
         .ok_or_else(|| DomainError::PluginNotFound {
             vendor: vendor.to_owned(),
         })
