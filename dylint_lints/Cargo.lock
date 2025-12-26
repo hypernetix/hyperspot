@@ -375,21 +375,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "de0110_no_schema_for_on_gts_structs"
-version = "0.1.0"
-dependencies = [
- "clippy_utils",
- "dylint_linting",
- "dylint_testing",
- "gts 0.1.0 (git+https://github.com/globaltypesystem/gts-rust.git?tag=v0.7.3)",
- "gts-macros 0.1.0 (git+https://github.com/globaltypesystem/gts-rust.git?tag=v0.7.3)",
- "lint_utils",
- "schemars",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "de0201_dtos_only_in_api_rest"
 version = "0.1.0"
 dependencies = [
@@ -449,10 +434,24 @@ dependencies = [
  "clippy_utils",
  "dylint_linting",
  "dylint_testing",
- "gts 0.1.0",
- "gts-macros 0.1.0",
+ "gts",
+ "gts-macros",
  "lint_utils",
- "regex",
+ "schemars",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "de0902_no_schema_for_on_gts_structs"
+version = "0.1.0"
+dependencies = [
+ "clippy_utils",
+ "dylint_linting",
+ "dylint_testing",
+ "gts",
+ "gts-macros",
+ "lint_utils",
  "schemars",
  "serde",
  "serde_json",
@@ -501,7 +500,7 @@ dependencies = [
  "libc",
  "option-ext",
  "redox_users 0.5.2",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -806,24 +805,7 @@ dependencies = [
 [[package]]
 name = "gts"
 version = "0.1.0"
-dependencies = [
- "anyhow",
- "jsonschema",
- "schemars",
- "serde",
- "serde_json",
- "serde_yaml",
- "shellexpand",
- "thiserror 1.0.69",
- "tracing",
- "uuid",
- "walkdir",
-]
-
-[[package]]
-name = "gts"
-version = "0.1.0"
-source = "git+https://github.com/globaltypesystem/gts-rust.git?tag=v0.7.3#a90049972e56aa710d7d9c6899b276828d999d8d"
+source = "git+https://github.com/globaltypesystem/gts-rust.git?tag=v0.7.4#df8d29f11988aa46aeb03f8fc5c06a3df1df540b"
 dependencies = [
  "anyhow",
  "jsonschema",
@@ -841,17 +823,7 @@ dependencies = [
 [[package]]
 name = "gts-macros"
 version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "serde_json",
- "syn",
-]
-
-[[package]]
-name = "gts-macros"
-version = "0.1.0"
-source = "git+https://github.com/globaltypesystem/gts-rust.git?tag=v0.7.3#a90049972e56aa710d7d9c6899b276828d999d8d"
+source = "git+https://github.com/globaltypesystem/gts-rust.git?tag=v0.7.4#df8d29f11988aa46aeb03f8fc5c06a3df1df540b"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2466,7 +2438,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

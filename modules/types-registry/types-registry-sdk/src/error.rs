@@ -125,11 +125,17 @@ mod tests {
         let err = TypesRegistryError::InvalidGtsId("bad format".to_owned());
         assert_eq!(err.to_string(), "Invalid GTS ID: bad format");
 
-        let err = TypesRegistryError::NotFound("gts.test~".to_owned());
-        assert_eq!(err.to_string(), "Entity not found: gts.test~");
+        let err = TypesRegistryError::NotFound("gts.x.core.events.test.v1~".to_owned());
+        assert_eq!(
+            err.to_string(),
+            "Entity not found: gts.x.core.events.test.v1~"
+        );
 
-        let err = TypesRegistryError::AlreadyExists("gts.test~".to_owned());
-        assert_eq!(err.to_string(), "Entity already exists: gts.test~");
+        let err = TypesRegistryError::AlreadyExists("gts.x.core.events.test.v1~".to_owned());
+        assert_eq!(
+            err.to_string(),
+            "Entity already exists: gts.x.core.events.test.v1~"
+        );
 
         let err = TypesRegistryError::ValidationFailed("missing required field".to_owned());
         assert_eq!(err.to_string(), "Validation failed: missing required field");

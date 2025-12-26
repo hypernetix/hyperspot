@@ -152,11 +152,11 @@ mod tests {
 
     #[test]
     fn test_domain_to_sdk_error_conversion() {
-        let domain_err = DomainError::not_found("gts.test~");
+        let domain_err = DomainError::not_found("gts.x.core.events.test.v1~");
         let sdk_err: TypesRegistryError = domain_err.into();
         assert!(sdk_err.is_not_found());
 
-        let domain_err = DomainError::already_exists("gts.test~");
+        let domain_err = DomainError::already_exists("gts.x.core.events.test.v1~");
         let sdk_err: TypesRegistryError = domain_err.into();
         assert!(sdk_err.is_already_exists());
 
@@ -199,11 +199,17 @@ mod tests {
         let err = DomainError::InvalidGtsId("bad format".to_owned());
         assert_eq!(err.to_string(), "Invalid GTS ID: bad format");
 
-        let err = DomainError::NotFound("gts.test~".to_owned());
-        assert_eq!(err.to_string(), "Entity not found: gts.test~");
+        let err = DomainError::NotFound("gts.x.core.events.test.v1~".to_owned());
+        assert_eq!(
+            err.to_string(),
+            "Entity not found: gts.x.core.events.test.v1~"
+        );
 
-        let err = DomainError::AlreadyExists("gts.test~".to_owned());
-        assert_eq!(err.to_string(), "Entity already exists: gts.test~");
+        let err = DomainError::AlreadyExists("gts.x.core.events.test.v1~".to_owned());
+        assert_eq!(
+            err.to_string(),
+            "Entity already exists: gts.x.core.events.test.v1~"
+        );
 
         let err = DomainError::ValidationFailed("schema invalid".to_owned());
         assert_eq!(err.to_string(), "Validation failed: schema invalid");

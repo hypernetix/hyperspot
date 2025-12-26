@@ -1,0 +1,96 @@
+error: invalid GTS schema_id: 'gts.x.core.events.type.v1' (DE0901)
+  --> $DIR/invalid_cases.rs:25:5
+   |
+LL |     schema_id = "gts.x.core.events.type.v1",
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: Invalid GTS identifier: gts.x.core.events.type.v1: Single-segment instance IDs are prohibited. Instance IDs must be chained with at least one type segment (e.g., 'type~instance')
+   = help: Example: gts.x.core.events.type.v1~
+   = note: `#[deny(de0901_gts_string_pattern)]` on by default
+
+error: invalid GTS schema_id: 'gts.x.core.events-type.v1~' (DE0901)
+  --> $DIR/invalid_cases.rs:39:5
+   |
+LL |     schema_id = "gts.x.core.events-type.v1~",
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: Invalid GTS identifier: gts.x.core.events-type.v1~: Must not contain '-'
+   = help: Example: gts.x.core.events.type.v1~
+
+error: wildcards are not allowed in schema_id: 'gts.x.*.events.type.v1~' (DE0901)
+  --> $DIR/invalid_cases.rs:53:5
+   |
+LL |     schema_id = "gts.x.*.events.type.v1~",
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: Wildcards (*) are only allowed in permission strings, not in schema_id attributes
+   = help: Use concrete type names in schema_id
+
+error: gts_make_instance_id expects a single GTS segment, got: 'vendor.package.sku.abc.v1~a.b.c' (DE0901)
+  --> $DIR/invalid_cases.rs:65:16
+   |
+LL |     let _id1 = ProductV1::<()>::gts_make_instance_id("vendor.package.sku.abc.v1~a.b.c");
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Example: vendor.package.sku.abc.v1
+
+error: invalid GTS segment: 'vendor.package.sku.v1' (DE0901)
+  --> $DIR/invalid_cases.rs:69:16
+   |
+LL |     let _id2 = ProductV1::<()>::gts_make_instance_id("vendor.package.sku.v1");
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: Invalid GTS segment #0 @ offset 0: 'vendor.package.sku.v1': Too few tokens
+   = help: Example: vendor.package.sku.abc.v1
+
+error: gts_make_instance_id expects a single GTS segment, got: 'vendor.package.sku.abc.v1~' (DE0901)
+  --> $DIR/invalid_cases.rs:73:16
+   |
+LL |     let _id3 = ProductV1::<()>::gts_make_instance_id("vendor.package.sku.abc.v1~");
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Example: vendor.package.sku.abc.v1
+
+error: wildcards are not allowed in instance id segments: 'vendor.package.*.abc.v1' (DE0901)
+  --> $DIR/invalid_cases.rs:77:16
+   |
+LL |     let _id4 = ProductV1::<()>::gts_make_instance_id("vendor.package.*.abc.v1");
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Example: vendor.package.sku.abc.v1
+
+error: gts_make_instance_id expects a single GTS segment, got: 'vendor.package.sku.abc.v1~a.b.c.d.v1' (DE0901)
+  --> $DIR/invalid_cases.rs:81:16
+   |
+LL |     let _id1 = ProductV1::<()>::gts_make_instance_id("vendor.package.sku.abc.v1~a.b.c.d.v1");
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Example: vendor.package.sku.abc.v1
+
+error: invalid GTS string: 'gts.x.core.lic.feat.v1~x.core.global.base' (DE0901)
+  --> $DIR/invalid_cases.rs:85:14
+   |
+LL |     let _s = "gts.x.core.lic.feat.v1~x.core.global.base";
+   |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: Invalid GTS segment #2 @ offset 23: 'x.core.global.base': Too few tokens
+
+error: invalid GTS string: 'gts.x.core.events.type.v1' (DE0901)
+  --> $DIR/invalid_cases.rs:89:14
+   |
+LL |     let _s = "gts.x.core.events.type.v1";
+   |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: Invalid GTS identifier: gts.x.core.events.type.v1: Single-segment instance IDs are prohibited. Instance IDs must be chained with at least one type segment (e.g., 'type~instance')
+
+error: invalid GTS string (wildcards not allowed): 'gts.x.core.events.type.*' (DE0901)
+  --> $DIR/invalid_cases.rs:93:14
+   |
+LL |     let _s = "gts.x.core.events.type.*";
+   |              ^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: Wildcards (*) are only allowed in permission strings, not in regular GTS identifiers
+   = help: Use concrete type names
+
+error: aborting due to 11 previous errors
+

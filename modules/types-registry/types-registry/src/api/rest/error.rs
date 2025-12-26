@@ -87,14 +87,14 @@ mod tests {
 
     #[test]
     fn test_domain_error_to_problem_not_found() {
-        let err = DomainError::not_found("gts.test~");
+        let err = DomainError::not_found("gts.x.core.events.test.v1~");
         let problem: Problem = err.into();
         assert_eq!(problem.status, StatusCode::NOT_FOUND);
     }
 
     #[test]
     fn test_domain_error_to_problem_already_exists() {
-        let err = DomainError::already_exists("gts.test~");
+        let err = DomainError::already_exists("gts.x.core.events.test.v1~");
         let problem: Problem = err.into();
         assert_eq!(problem.status, StatusCode::CONFLICT);
     }

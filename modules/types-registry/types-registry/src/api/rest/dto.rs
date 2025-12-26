@@ -250,7 +250,7 @@ mod tests {
     fn test_gts_entity_dto_instance() {
         let entity = GtsEntity::new(
             Uuid::nil(),
-            "gts.acme.core.events.user_created.v1~instance1",
+            "gts.acme.core.events.user_created.v1~acme.core.instances.instance1.v1",
             vec![],
             false, // is_schema
             serde_json::json!({"data": "value"}),
@@ -355,6 +355,8 @@ mod tests {
     #[test]
     fn test_list_entities_query_to_list_query() {
         let dto = ListEntitiesQuery {
+            #[allow(unknown_lints)]
+            #[allow(de0901_gts_string_pattern)]
             pattern: Some("gts.acme.*".to_owned()),
             is_schema: Some(true),
             vendor: Some("acme".to_owned()),
@@ -431,7 +433,7 @@ mod tests {
     #[test]
     fn test_register_result_dto_err() {
         let result: RegisterResult = RegisterResult::Err {
-            gts_id: Some("gts.test~".to_owned()),
+            gts_id: Some("gts.x.core.events.test.v1~".to_owned()),
             error: TypesRegistryError::validation_failed("test error"),
         };
         let dto: RegisterResultDto = result.into();
