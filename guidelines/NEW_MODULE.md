@@ -13,7 +13,8 @@ ModKit provides a powerful framework for building production-grade modules:
 - **Type-Safe REST**: An operation builder prevents half-wired routes at compile time.
 - **Server-Sent Events (SSE)**: Type-safe broadcasters for real-time domain event integration.
 - **Standardized HTTP Errors**: Built-in support for RFC-9457 `Problem` and `ProblemResponse`.
-- **Typed ClientHub**: For in-process clients, resolved by interface type.
+- **Typed ClientHub**: For in-process clients, resolved by interface type (with optional scope for plugins).
+- **Plugin Architecture**: Scoped ClientHub + GTS-based discovery for gateway + plugins pattern.
 - **Lifecycle Management**: Helpers for long-running tasks and graceful shutdown.
 
 ## HyperSpot Modular architecture
@@ -2243,6 +2244,316 @@ async fn init(&self, ctx: &ModuleCtx) -> anyhow::Result<()> {
 
 ---
 
+### Step 14: Plugin-Based Modules (Gateway + Plugins Pattern)
+
+For modules that require **multiple interchangeable implementations** (e.g., different vendors, providers, or
+strategies), use the **Gateway + Plugins** pattern.
+
+> **See also:** [MODKIT_PLUGINS.md](../docs/MODKIT_PLUGINS.md) for comprehensive plugin architecture documentation.
+
+#### When to Use Plugins
+
+Use the plugin pattern when:
+
+- Multiple implementations of the same interface need to coexist
+- The implementation is selected at runtime based on configuration or context
+- You want vendor-specific or tenant-specific behavior
+- New implementations should be addable without modifying the gateway
+
+**Examples:**
+
+- **Authentication providers** — OAuth2, SAML, LDAP
+- **Search engines** — Qdrant, Weaviate, Elasticsearch
+- **LLM providers** — OpenAI, Anthropic, local models
+- **File parsers** — Embedded parser, Apache Tika
+- **Tenant resolvers** — Different customer backends
+- **License enforcement** - Integrate with external licensing engines
+- **LLM benchmarks** - Different workers
+- **Persistency plugins** - Storing data to different Databases (ELK, ClickHouse)
+
+#### Plugin Architecture Overview
+
+```
+┌────────────────────────────────────────────────────────────────────┐
+│                            GATEWAY MODULE                          │
+│  • Exposes public API (REST + ClientHub)                           │
+│  • Selects plugin based on config/context                          │
+│  • Routes calls to selected plugin                                 │
+└───────────────────────────────┬────────────────────────────────────┘
+                                │ hub.get_scoped::<dyn PluginApi>(&scope)
+                ┌───────────────┼───────────────┐
+                │               │               │
+                ▼               ▼               ▼
+        ┌───────────┐   ┌───────────┐   ┌───────────┐
+        │ Plugin A  │   │ Plugin B  │   │ Plugin C  │
+        └───────────┘   └───────────┘   └───────────┘
+```
+
+#### Crate Structure
+
+```
+modules/<gateway-name>/
+├── <gateway>-sdk/              # SDK: API traits, models, errors, GTS types
+│   └── src/
+│       ├── api.rs              # PublicClient trait + PluginApi trait
+│       ├── models.rs           # Shared models
+│       ├── error.rs            # Errors
+│       └── gts.rs              # GTS schema for plugin instances
+│
+├── <gateway>-gw/               # Gateway module
+│   └── src/
+│       ├── module.rs           # Module with plugin discovery
+│       ├── local_client.rs     # Public client adapter
+│       └── domain/service.rs   # Plugin resolution and delegation
+│
+└── plugins/                    # Plugin implementations
+    ├── <vendor_a>_plugin/
+    │   └── src/
+    │       ├── module.rs       # Registers GTS instance + scoped client
+    │       └── domain/service.rs
+    └── <vendor_b>_plugin/
+        └── ...
+```
+
+#### Key Implementation Steps
+
+**1. Define Two API Traits in SDK**
+
+```rust
+// <gateway>-sdk/src/api.rs
+
+/// Public API — exposed by gateway, consumed by other modules
+#[async_trait]
+pub trait MyModuleGatewayClient: Send + Sync {
+    async fn do_work(&self, ctx: &SecurityCtx, input: Input) -> Result<Output, MyError>;
+}
+
+/// Plugin API — implemented by plugins, called by gateway
+#[async_trait]
+pub trait MyModulePluginApi: Send + Sync {
+    async fn do_work(&self, ctx: &SecurityCtx, input: Input) -> Result<Output, MyError>;
+}
+```
+
+**2. Define GTS Schema for Plugin Instances**
+
+```rust
+// <gateway>-sdk/src/gts.rs
+use gts_macros::struct_to_gts_schema;
+use modkit::gts::BaseModkitPluginV1;
+
+/// GTS type definition for plugin instances.
+///
+/// For unit struct plugins (no additional properties), use an empty unit struct.
+/// The `struct_to_gts_schema` macro generates the GTS schema and helper methods.
+#[struct_to_gts_schema(
+    dir_path = "schemas",
+    base = BaseModkitPluginV1,
+    schema_id = "gts.x.core.modkit.plugin.v1~x.y.my_module.plugin.v1~",
+    description = "My Module plugin specification",
+    properties = ""
+)]
+pub struct MyModulePluginV1;
+```
+
+**3. Gateway Registers Plugin Schema + Public Client**
+
+The gateway is responsible for registering the plugin **schema** (GTS type definition).
+Plugins only register their **instances**.
+
+```rust
+// <gateway>-gw/src/module.rs
+use modkit_security::SecurityCtx;
+use types_registry_sdk::TypesRegistryApi;
+
+#[async_trait]
+impl Module for MyGateway {
+    async fn init(&self, ctx: &ModuleCtx) -> anyhow::Result<()> {
+        let cfg: GatewayConfig = ctx.config()?;
+
+        // === SCHEMA REGISTRATION ===
+        // Gateway registers the plugin SCHEMA in types-registry.
+        // Plugins only register their INSTANCES.
+        let registry = ctx.client_hub().get::<dyn TypesRegistryApi>()?;
+        let schema_str = MyModulePluginV1::gts_schema_with_refs_as_string();
+        let schema_json: serde_json::Value = serde_json::from_str(&schema_str)?;
+        let _ = registry
+            .register(&SecurityCtx::root_ctx(), vec![schema_json])
+            .await?;
+        info!("Registered {} schema in types-registry",
+            MyModulePluginV1::gts_schema_id().clone());
+
+        let svc = Arc::new(Service::new(ctx.client_hub(), cfg.vendor));
+
+        // Register PUBLIC client (no scope)
+        let api: Arc<dyn MyModuleGatewayClient> = Arc::new(LocalClient::new(svc.clone()));
+        ctx.client_hub().register::<dyn MyModuleGatewayClient>(api);
+
+        self.service.store(Some(svc));
+        Ok(())
+    }
+}
+```
+
+**4. Plugin Registers Instance + Scoped Client**
+
+Each plugin registers its **instance** (metadata) and **scoped client** (implementation).
+The plugin schema is already registered by the gateway.
+
+```rust
+// plugins/<vendor>_plugin/src/module.rs
+use modkit::client_hub::ClientScope;
+use modkit::gts::BaseModkitPluginV1;
+
+#[async_trait]
+impl Module for VendorPlugin {
+    async fn init(&self, ctx: &ModuleCtx) -> anyhow::Result<()> {
+        let cfg: PluginConfig = ctx.config()?;
+
+        // Generate GTS instance ID
+        let instance_id = MyModulePluginV1::gts_make_instance_id("vendor.plugins._.my_plugin.v1");
+
+        // === INSTANCE REGISTRATION ===
+        // Register the plugin INSTANCE in types-registry.
+        // Note: The plugin SCHEMA is registered by the gateway module.
+        let registry = ctx.client_hub().get::<dyn TypesRegistryApi>()?;
+        let instance = BaseModkitPluginV1::<MyModulePluginV1> {
+            id: instance_id.clone(),
+            vendor: cfg.vendor.clone(),
+            priority: cfg.priority,
+            properties: MyModulePluginV1,
+        };
+        let instance_json = serde_json::to_value(&instance)?;
+        let _ = registry
+            .register(&SecurityCtx::root_ctx(), vec![instance_json])
+            .await?;
+
+        // Create service
+        let service = Arc::new(Service::new());
+        self.service.store(Some(service.clone()));
+
+        // Register SCOPED client (with GTS instance ID as scope)
+        let api: Arc<dyn MyModulePluginApi> = service;
+        ctx.client_hub()
+            .register_scoped::<dyn MyModulePluginApi>(ClientScope::gts_id(&instance_id), api);
+
+        Ok(())
+    }
+}
+```
+
+**5. Gateway Service Resolves Plugin**
+
+```rust
+// <gateway>-gw/src/domain/service.rs
+use modkit::client_hub::ClientScope;
+use tokio::sync::OnceCell;
+
+pub struct Service {
+    hub: Arc<ClientHub>,
+    vendor: String,
+    resolved: OnceCell<ClientScope>,  // Lazy resolution
+}
+
+impl Service {
+    async fn get_plugin(&self) -> Result<Arc<dyn MyModulePluginApi>, DomainError> {
+        let scope = self.resolved
+            .get_or_try_init(|| self.resolve_plugin())
+            .await?;
+
+        self.hub.get_scoped::<dyn MyModulePluginApi>(scope)
+            .map_err(|_| DomainError::PluginClientNotFound)
+    }
+
+    async fn resolve_plugin(&self) -> Result<ClientScope, DomainError> {
+        // Query types-registry for plugin instances
+        let registry = self.hub.get::<dyn TypesRegistryApi>()?;
+        let instances = registry.list(&SecurityCtx::root_ctx(), /* query */).await?;
+
+        // Select best plugin based on vendor + priority
+        let selected = choose_plugin(&self.vendor, &instances)?;
+        Ok(ClientScope::gts_id(&selected.gts_id))
+    }
+}
+```
+
+#### Module Dependencies
+
+Ensure proper initialization order:
+
+```rust
+// Gateway depends on types_registry AND all plugins
+#[modkit::module(
+    name = "my_gateway",
+    deps = ["types_registry", "plugin_a", "plugin_b"],
+    capabilities = [rest]
+)]
+pub struct MyGateway { /* ... */ }
+
+// Each plugin depends only on types_registry
+#[modkit::module(
+    name = "plugin_a",
+    deps = ["types_registry"],
+)]
+pub struct PluginA { /* ... */ }
+```
+
+#### Plugin Configuration
+
+```yaml
+# config/quickstart.yaml
+modules:
+  my_gateway:
+    config:
+      vendor: "VendorA"  # Select VendorA plugin
+
+  plugin_a:
+    config:
+      vendor: "VendorA"
+      priority: 10
+
+  plugin_b:
+    config:
+      vendor: "VendorB"
+      priority: 20
+```
+
+#### Plugin Checklist
+
+- [ ] SDK defines both `PublicClient` trait (gateway) and `PluginApi` trait (plugins)
+- [ ] SDK defines GTS schema type with `#[struct_to_gts_schema]`
+- [ ] Gateway depends on `types_registry` and all plugin modules
+- [ ] Gateway registers plugin **schema** using `gts_schema_with_refs_as_string()`
+- [ ] Gateway registers public client WITHOUT scope
+- [ ] Gateway resolves plugin lazily (after types-registry is ready)
+- [ ] Each plugin depends on `types_registry`
+- [ ] Each plugin registers its **instance** (not schema)
+- [ ] Each plugin registers scoped client with `ClientScope::gts_id(&instance_id)`
+- [ ] Plugin selection uses priority for tiebreaking
+
+> **Note:** Use `gts_schema_with_refs_as_string()` for schema generation. This method is faster (static),
+> automatically sets the correct `$id`, and generates proper `$ref` references.
+
+#### Reference Example
+
+See `examples/plugin-modules/tenant_resolver/` for a complete working example:
+
+- **`tenant_resolver-sdk/`** — SDK with `TenantResolverClient` and `ThrPluginApi` traits
+- **`tenant_resolver-gw/`** — Gateway that registers schema and selects plugin by vendor config
+- **`plugins/contoso_tr_plugin/`** — Contoso vendor implementation (registers instance only)
+- **`plugins/fabrikam_tr_plugin/`** — Fabrikam vendor implementation (registers instance only)
+
+```bash
+# Run the example
+cargo run -p hyperspot-server --features tenant-resolver-example -- \
+    --config config/quickstart.yaml run
+
+# Test
+curl http://127.0.0.1:8087/tenant-resolver/v1/root
+```
+
+---
+
 ## Appendix: Operations & Quality
 
 ### A. Rust Best Practices
@@ -2299,6 +2610,7 @@ errors (add explicit types), missing `chrono::Utc`, handler/service name mismatc
 ## Further Reading
 
 - [MODKIT_UNIFIED_SYSTEM.md](../docs/MODKIT_UNIFIED_SYSTEM.md) — Complete ModKit architecture and developer guide
+- [MODKIT_PLUGINS.md](../docs/MODKIT_PLUGINS.md) — Plugin architecture with Gateway + Plugins pattern
 - [SECURE-ORM.md](../docs/SECURE-ORM.md) — Secure ORM layer with tenant isolation
 - [TRACING_SETUP.md](../docs/TRACING_SETUP.md) — Distributed tracing with OpenTelemetry
 - [DNA/REST/API.md](./DNA/REST/API.md) — REST API design principles
@@ -2308,3 +2620,8 @@ errors (add explicit types), missing `chrono::Utc`, handler/service name mismatc
     - `users_info/` — Module implementation with local client, domain, and REST handlers
 - [examples/oop-modules/remote_accum/](../examples/oop-modules/remote_accum/) — Reference implementation of an OoP
   module
+- [examples/plugin-modules/tenant_resolver/](../examples/plugin-modules/tenant_resolver/) — Reference implementation of
+  a Gateway + Plugins module
+    - `tenant_resolver-sdk/` — SDK with public and plugin API traits
+    - `tenant_resolver-gw/` — Gateway module with plugin discovery
+    - `plugins/` — Plugin implementations (Contoso, Fabrikam)

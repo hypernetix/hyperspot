@@ -3,6 +3,7 @@
 //! This module contains data transfer objects and client-facing models.
 //! GTS schema types are defined separately in the `gts` module.
 
+use gts::GtsSchemaId;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -31,7 +32,7 @@ pub struct Tenant {
     /// Current tenant status.
     pub status: TenantStatus,
     /// Tenant type (GTS identifier).
-    pub r#type: String,
+    pub r#type: GtsSchemaId,
     /// Whether the tenant is accessible by parent.
     pub is_accessible_by_parent: bool,
 }

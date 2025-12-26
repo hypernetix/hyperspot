@@ -8,7 +8,7 @@ use modkit_odata::{
 };
 use modkit_security::SecurityCtx;
 use tenant_resolver_sdk::{
-    AccessOptions, GetParentsResponse, Tenant, TenantFilter, TenantResolverError, TenantSpec,
+    AccessOptions, GetParentsResponse, Tenant, TenantFilter, TenantResolverError, TenantSpecV1,
     ThrPluginApi,
 };
 
@@ -72,7 +72,7 @@ impl Service {
                 id: id.clone(),
                 parent_id,
                 status: cfg.status,
-                r#type: TenantSpec::GTS_SCHEMA_ID.to_owned(),
+                r#type: TenantSpecV1::<()>::gts_schema_id().clone(),
                 is_accessible_by_parent: cfg.is_accessible_by_parent,
             };
             tenants.insert(id, tenant);

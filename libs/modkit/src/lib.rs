@@ -130,6 +130,9 @@ pub use directory::{
     DirectoryApi, LocalDirectoryApi, RegisterInstanceInfo, ServiceEndpoint, ServiceInstanceInfo,
 };
 
+// GTS schema support
+pub mod gts;
+
 pub use backends::{
     BackendKind, InstanceHandle, LocalProcessBackend, ModuleRuntimeBackend, OopBackend,
     OopModuleConfig, OopSpawnConfig,

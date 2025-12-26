@@ -5,7 +5,9 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use modkit::api::OpenApiRegistry;
 use modkit::contracts::SystemModule;
+use modkit::gts::get_core_gts_schemas; // NOTE: This is temporary logic until <https://github.com/hypernetix/hyperspot/issues/156> resolved
 use modkit::{Module, ModuleCtx, RestfulModule};
+use modkit_security::SecurityCtx;
 use tracing::{debug, info};
 use types_registry_sdk::TypesRegistryApi;
 
@@ -22,6 +24,14 @@ use crate::local_client::TypesRegistryLocalClient;
 ///
 /// - `system` — Core infrastructure module, initialized early in startup
 /// - `rest` — Exposes REST API endpoints
+///
+/// ## Core GTS Types
+///
+/// During initialization, this module registers core GTS types that other modules
+/// depend on (e.g., `BaseModkitPluginV1` for plugin systems). This ensures that
+/// when modules register their derived schemas/instances, the base types are
+/// already available for validation.
+/// NOTE: This is temprorary logic until <https://github.com/hypernetix/hyperspot/issues/156> resolved
 #[modkit::module(
     name = "types_registry",
     capabilities = [system, rest]
@@ -64,6 +74,15 @@ impl Module for TypesRegistryModule {
         self.service.store(Some(service.clone()));
 
         let api: Arc<dyn TypesRegistryApi> = Arc::new(TypesRegistryLocalClient::new(service));
+
+        // === REGISTER CORE GTS TYPES ===
+        // NOTE: This is temporary logic until <https://github.com/hypernetix/hyperspot/issues/156> resolved
+        // Register core GTS types that other modules depend on.
+        // This must happen before any module registers derived schemas/instances.
+        let core_schemas = get_core_gts_schemas()?;
+        api.register(&SecurityCtx::root_ctx(), core_schemas).await?;
+        info!("Core GTS types registered");
+
         ctx.client_hub().register::<dyn TypesRegistryApi>(api);
 
         info!("Types registry module initialized");
@@ -91,7 +110,20 @@ impl SystemModule for TypesRegistryModule {
         service.switch_to_ready().map_err(|e| {
             if let Some(errors) = e.validation_errors() {
                 for err in errors {
-                    tracing::error!(gts_id = %err.gts_id, message = %err.message, "GTS validation error");
+                    // Try to get the entity content for debugging
+                    let entity_content = if let Ok(entity) = service.get(&err.gts_id) {
+                        serde_json::to_string_pretty(&entity.content)
+                            .unwrap_or_else(|_| "Failed to serialize".to_owned())
+                    } else {
+                        "Entity not found or failed to retrieve".to_owned()
+                    };
+
+                    tracing::error!(
+                        gts_id = %err.gts_id,
+                        message = %err.message,
+                        entity_content = %entity_content,
+                        "GTS validation error"
+                    );
                 }
             }
             anyhow::anyhow!("Failed to switch to ready mode: {e}")

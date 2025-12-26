@@ -5,8 +5,10 @@ use modkit::api::OpenApiRegistry;
 use modkit::context::ModuleCtx;
 use modkit::contracts::RestfulModule;
 use modkit::Module;
-use tenant_resolver_sdk::TenantResolverClient;
+use modkit_security::SecurityCtx;
+use tenant_resolver_sdk::{TenantResolverClient, TenantResolverPluginSpecV1};
 use tracing::info;
+use types_registry_sdk::TypesRegistryApi;
 
 use crate::config::TenantResolverConfig;
 use crate::domain::service::Service;
@@ -14,8 +16,14 @@ use crate::local_client::TenantResolverGwClient;
 
 /// Tenant Resolver Gateway module.
 ///
-/// This module discovers plugin instances via `types_registry` and routes
-/// requests to the selected plugin based on vendor configuration.
+/// This module:
+/// 1. Registers the **plugin schema** in types-registry (once, for all plugins)
+/// 2. Discovers plugin instances via `types_registry`
+/// 3. Routes requests to the selected plugin based on vendor configuration
+///
+/// **Plugin registration pattern:**
+/// - Gateway registers the **schema** (GTS type definition)
+/// - Plugins register their **instances** (specific plugin implementations)
 ///
 /// Plugin discovery is **lazy**: it happens on the first API call,
 /// after `types_registry` has switched to ready mode in `post_init`.
@@ -42,7 +50,22 @@ impl Module for TenantResolverGateway {
     async fn init(&self, ctx: &ModuleCtx) -> anyhow::Result<()> {
         let cfg: TenantResolverConfig = ctx.config()?;
         tracing::Span::current().record("vendor", cfg.vendor.as_str());
-        info!(vendor = %cfg.vendor, "Initializing tenant_resolver_gateway (lazy plugin discovery)");
+        info!(vendor = %cfg.vendor, "Initializing tenant_resolver_gateway");
+
+        // === SCHEMA REGISTRATION ===
+        // Gateway is responsible for registering the plugin SCHEMA in types-registry.
+        // Plugins only register their INSTANCES.
+        // Use GTS-provided method for proper $id and $ref handling.
+        let registry = ctx.client_hub().get::<dyn TypesRegistryApi>()?;
+        let schema_str = TenantResolverPluginSpecV1::gts_schema_with_refs_as_string();
+        let schema_json: serde_json::Value = serde_json::from_str(&schema_str)?;
+        let _ = registry
+            .register(&SecurityCtx::root_ctx(), vec![schema_json])
+            .await?;
+        info!(
+            "Registered {} schema in types-registry",
+            TenantResolverPluginSpecV1::gts_schema_id().clone()
+        );
 
         let hub = ctx.client_hub();
         let svc = Arc::new(Service::new(hub, cfg.vendor));

@@ -6,10 +6,12 @@
 use std::sync::Arc;
 
 use modkit::client_hub::{ClientHub, ClientScope};
+use modkit::gts::BaseModkitPluginV1;
 use modkit_odata::{ODataQuery, Page};
 use modkit_security::SecurityCtx;
 use tenant_resolver_sdk::{
-    AccessOptions, GetParentsResponse, Tenant, TenantFilter, ThrPluginApi, ThrPluginSpec,
+    AccessOptions, GetParentsResponse, Tenant, TenantFilter, TenantResolverPluginSpecV1,
+    ThrPluginApi,
 };
 use tokio::sync::OnceCell;
 use tracing::info;
@@ -73,7 +75,7 @@ impl Service {
             .map_err(|e| DomainError::TypesRegistryUnavailable(e.to_string()))?;
 
         let root_ctx = SecurityCtx::root_ctx();
-        let plugin_type_id = ThrPluginSpec::GTS_SCHEMA_ID;
+        let plugin_type_id = TenantResolverPluginSpecV1::gts_schema_id().clone();
 
         let instances = registry
             .list(
@@ -152,19 +154,33 @@ impl Service {
 /// If multiple instances match, the one with the lowest priority wins.
 #[tracing::instrument(skip_all, fields(vendor, instance_count = instances.len()))]
 fn choose_plugin_instance(vendor: &str, instances: &[GtsEntity]) -> Result<String, DomainError> {
-    let mut best: Option<(&GtsEntity, ThrPluginSpec)> = None;
+    let mut best: Option<(&GtsEntity, BaseModkitPluginV1<TenantResolverPluginSpecV1>)> = None;
 
     for ent in instances {
         // Deserialize the plugin instance content using the SDK type
-        let content: ThrPluginSpec = serde_json::from_value(ent.content.clone()).map_err(|e| {
-            DomainError::InvalidPluginInstance {
-                gts_id: ent.gts_id.clone(),
-                reason: e.to_string(),
-            }
-        })?;
+        let content: BaseModkitPluginV1<TenantResolverPluginSpecV1> =
+            serde_json::from_value(ent.content.clone()).map_err(|e| {
+                let content_str = serde_json::to_string_pretty(&ent.content)
+                    .unwrap_or_else(|_| "Failed to serialize content for logging".to_owned());
+                tracing::error!(
+                    gts_id = %ent.gts_id,
+                    error = %e,
+                    content = %content_str,
+                    "Failed to deserialize plugin instance content"
+                );
+                DomainError::InvalidPluginInstance {
+                    gts_id: ent.gts_id.clone(),
+                    reason: e.to_string(),
+                }
+            })?;
 
         // Ensure the instance content self-identifies with the same full instance id.
         if content.id != ent.gts_id {
+            tracing::error!(
+                gts_id = %ent.gts_id,
+                content_id = %content.id,
+                "Plugin instance content.id mismatch with GTS ID"
+            );
             return Err(DomainError::InvalidPluginInstance {
                 gts_id: ent.gts_id.clone(),
                 reason: format!(
