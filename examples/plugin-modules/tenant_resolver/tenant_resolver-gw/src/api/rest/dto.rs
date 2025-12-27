@@ -85,6 +85,33 @@ impl From<TenantFilterDto> for tenant_resolver_sdk::TenantFilter {
     }
 }
 
+// ============================================================================
+// Shared Helpers
+// ============================================================================
+
+/// Parses a comma-separated status string into a `Vec<TenantStatus>`.
+///
+/// Recognized values (case-insensitive): `ACTIVE`, `SOFT_DELETED`, `UNSPECIFIED`.
+/// Unknown values are ignored.
+fn parse_statuses_csv(statuses: Option<&str>) -> Vec<TenantStatus> {
+    statuses
+        .unwrap_or("")
+        .split(',')
+        .filter_map(|raw| {
+            let s = raw.trim();
+            if s.eq_ignore_ascii_case("ACTIVE") {
+                Some(TenantStatus::Active)
+            } else if s.eq_ignore_ascii_case("SOFT_DELETED") {
+                Some(TenantStatus::SoftDeleted)
+            } else if s.eq_ignore_ascii_case("UNSPECIFIED") {
+                Some(TenantStatus::Unspecified)
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
 /// Access control options.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -114,24 +141,8 @@ impl ListTenantsQuery {
     #[must_use]
     pub fn to_filter(&self) -> tenant_resolver_sdk::TenantFilter {
         tenant_resolver_sdk::TenantFilter {
-            statuses: self.parse_statuses(),
+            statuses: parse_statuses_csv(self.statuses.as_deref()),
         }
-    }
-
-    fn parse_statuses(&self) -> Vec<TenantStatus> {
-        self.statuses
-            .as_ref()
-            .map(|s| {
-                s.split(',')
-                    .filter_map(|status| match status.trim().to_uppercase().as_str() {
-                        "ACTIVE" => Some(TenantStatus::Active),
-                        "SOFT_DELETED" => Some(TenantStatus::SoftDeleted),
-                        "UNSPECIFIED" => Some(TenantStatus::Unspecified),
-                        _ => None,
-                    })
-                    .collect()
-            })
-            .unwrap_or_default()
     }
 }
 
@@ -149,7 +160,7 @@ impl GetParentsQuery {
     #[must_use]
     pub fn to_filter(&self) -> tenant_resolver_sdk::TenantFilter {
         tenant_resolver_sdk::TenantFilter {
-            statuses: self.parse_statuses(),
+            statuses: parse_statuses_csv(self.statuses.as_deref()),
         }
     }
 
@@ -159,22 +170,6 @@ impl GetParentsQuery {
         tenant_resolver_sdk::AccessOptions {
             ignore_parent_access_constraints: self.ignore_access.unwrap_or(false),
         }
-    }
-
-    fn parse_statuses(&self) -> Vec<TenantStatus> {
-        self.statuses
-            .as_ref()
-            .map(|s| {
-                s.split(',')
-                    .filter_map(|status| match status.trim().to_uppercase().as_str() {
-                        "ACTIVE" => Some(TenantStatus::Active),
-                        "SOFT_DELETED" => Some(TenantStatus::SoftDeleted),
-                        "UNSPECIFIED" => Some(TenantStatus::Unspecified),
-                        _ => None,
-                    })
-                    .collect()
-            })
-            .unwrap_or_default()
     }
 }
 
@@ -194,7 +189,7 @@ impl GetChildrenQuery {
     #[must_use]
     pub fn to_filter(&self) -> tenant_resolver_sdk::TenantFilter {
         tenant_resolver_sdk::TenantFilter {
-            statuses: self.parse_statuses(),
+            statuses: parse_statuses_csv(self.statuses.as_deref()),
         }
     }
 
@@ -204,22 +199,6 @@ impl GetChildrenQuery {
         tenant_resolver_sdk::AccessOptions {
             ignore_parent_access_constraints: self.ignore_access.unwrap_or(false),
         }
-    }
-
-    fn parse_statuses(&self) -> Vec<TenantStatus> {
-        self.statuses
-            .as_ref()
-            .map(|s| {
-                s.split(',')
-                    .filter_map(|status| match status.trim().to_uppercase().as_str() {
-                        "ACTIVE" => Some(TenantStatus::Active),
-                        "SOFT_DELETED" => Some(TenantStatus::SoftDeleted),
-                        "UNSPECIFIED" => Some(TenantStatus::Unspecified),
-                        _ => None,
-                    })
-                    .collect()
-            })
-            .unwrap_or_default()
     }
 }
 

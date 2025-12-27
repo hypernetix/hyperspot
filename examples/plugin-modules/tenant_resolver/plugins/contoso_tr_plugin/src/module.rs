@@ -1,6 +1,6 @@
 //! Contoso tenant resolver plugin module.
 
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use async_trait::async_trait;
 use modkit::client_hub::ClientScope;
@@ -26,13 +26,14 @@ use crate::domain::Service;
     deps = ["types_registry"],
 )]
 pub struct ContosoTrPlugin {
-    service: arc_swap::ArcSwapOption<Service>,
+    /// Service instance, initialized once during `init()`.
+    service: OnceLock<Arc<Service>>,
 }
 
 impl Default for ContosoTrPlugin {
     fn default() -> Self {
         Self {
-            service: arc_swap::ArcSwapOption::empty(),
+            service: OnceLock::new(),
         }
     }
 }
@@ -68,7 +69,9 @@ impl Module for ContosoTrPlugin {
 
         // Create and store the service
         let service = Arc::new(Service);
-        self.service.store(Some(service.clone()));
+        self.service
+            .set(service.clone())
+            .map_err(|_| anyhow::anyhow!("Service already initialized"))?;
 
         // Register scoped client in ClientHub
         let api: Arc<dyn ThrPluginApi> = service;
