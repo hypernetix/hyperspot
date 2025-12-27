@@ -566,7 +566,7 @@ async fn test_concurrent_registrations() {
         let svc = service.clone();
         let handle = tokio::spawn(async move {
             let entity = json!({
-                "$id": format!("gts.acme.core.events.concurrent_{i}.v1~"),
+                "$id": format!("gts://gts.acme.core.events.concurrent_{i}.v1~"),
                 "$schema": "http://json-schema.org/draft-07/schema#",
                 "type": "object"
             });
