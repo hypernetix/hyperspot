@@ -13,6 +13,10 @@ def unique_type_id(name: str) -> str:
     return f"gts.e2etest.reg.models.{name}{_counter}.v1~"
 
 
+def make_schema_id(gts_id: str) -> str:
+    return "gts://" + gts_id
+
+
 @pytest.mark.asyncio
 async def test_register_single_type_entity(base_url, auth_headers):
     """
@@ -26,7 +30,7 @@ async def test_register_single_type_entity(base_url, auth_headers):
         payload = {
             "entities": [
                 {
-                    "$id": gts_id,
+                    "$id": make_schema_id(gts_id),
                     "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object",
                     "properties": {
@@ -94,7 +98,7 @@ async def test_register_batch_entities(base_url, auth_headers):
         payload = {
             "entities": [
                 {
-                    "$id": product_id,
+                    "$id": make_schema_id(product_id),
                     "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object",
                     "properties": {
@@ -104,7 +108,7 @@ async def test_register_batch_entities(base_url, auth_headers):
                     "required": ["productId", "price"]
                 },
                 {
-                    "$id": order_id,
+                    "$id": make_schema_id(order_id),
                     "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object",
                     "properties": {
@@ -114,7 +118,7 @@ async def test_register_batch_entities(base_url, auth_headers):
                     "required": ["orderId", "total"]
                 },
                 {
-                    "$id": customer_id,
+                    "$id": make_schema_id(customer_id),
                     "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object",
                     "properties": {
@@ -174,7 +178,7 @@ async def test_register_type_with_instance(base_url, auth_headers):
         payload = {
             "entities": [
                 {
-                    "$id": type_id,
+                    "$id": make_schema_id(type_id),
                     "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object",
                     "properties": {
@@ -281,7 +285,7 @@ async def test_register_mixed_valid_and_invalid(base_url, auth_headers):
         payload = {
             "entities": [
                 {
-                    "$id": valid1_id,
+                    "$id": make_schema_id(valid1_id),
                     "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object"
                 },
@@ -289,7 +293,7 @@ async def test_register_mixed_valid_and_invalid(base_url, auth_headers):
                     "type": "object"
                 },
                 {
-                    "$id": valid2_id,
+                    "$id": make_schema_id(valid2_id),
                     "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object"
                 }
@@ -374,7 +378,7 @@ async def test_register_entity_with_description(base_url, auth_headers):
         payload = {
             "entities": [
                 {
-                    "$id": gts_id,
+                    "$id": make_schema_id(gts_id),
                     "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object",
                     "properties": {
@@ -448,7 +452,7 @@ async def test_register_idempotent_identical_content(base_url, auth_headers):
     gts_id = unique_type_id("idempotent")
 
     entity = {
-        "$id": gts_id,
+        "$id": make_schema_id(gts_id),
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
         "properties": {
@@ -511,7 +515,7 @@ async def test_register_conflict_different_content(base_url, auth_headers):
     gts_id = unique_type_id("conflict")
 
     entity1 = {
-        "$id": gts_id,
+        "$id": make_schema_id(gts_id),
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
         "properties": {
@@ -521,7 +525,7 @@ async def test_register_conflict_different_content(base_url, auth_headers):
     }
 
     entity2 = {
-        "$id": gts_id,
+        "$id": make_schema_id(gts_id),
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
         "properties": {

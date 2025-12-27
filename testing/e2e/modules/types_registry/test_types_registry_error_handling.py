@@ -13,6 +13,10 @@ def unique_type_id(name: str) -> str:
     return f"gts.e2etest.err.models.{name}{_counter}.v1~"
 
 
+def make_schema_id(gts_id: str) -> str:
+    return "gts://" + gts_id
+
+
 @pytest.mark.asyncio
 async def test_error_response_format_rfc9457(base_url, auth_headers):
     """
@@ -183,7 +187,7 @@ async def test_large_batch_registration(base_url, auth_headers):
         entities = []
         for i in range(50):
             entities.append({
-                "$id": f"gts.e2etest.large.models.type{i}x{batch_id}.v1~",
+                "$id": make_schema_id(f"gts.e2etest.large.models.type{i}x{batch_id}.v1~"),
                 "type": "object",
                 "properties": {
                     "field": {"type": "string"}
@@ -226,7 +230,7 @@ async def test_duplicate_entity_registration_different_content_fails(base_url, a
         payload = {
             "entities": [
                 {
-                    "$id": gts_id,
+                    "$id": make_schema_id(gts_id),
                     "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object",
                     "description": "First registration"
@@ -286,7 +290,7 @@ async def test_very_long_gts_id(base_url, auth_headers):
         payload = {
             "entities": [
                 {
-                    "$id": gts_id,
+                    "$id": make_schema_id(gts_id),
                     "type": "object"
                 }
             ]
@@ -320,7 +324,7 @@ async def test_unicode_in_content(base_url, auth_headers):
         payload = {
             "entities": [
                 {
-                    "$id": gts_id,
+                    "$id": make_schema_id(gts_id),
                     "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object",
                     "properties": {
@@ -366,7 +370,7 @@ async def test_null_values_in_entity(base_url, auth_headers):
         payload = {
             "entities": [
                 {
-                    "$id": gts_id,
+                    "$id": make_schema_id(gts_id),
                     "type": "object",
                     "properties": {
                         "optional_field": {"type": ["string", "null"]}
@@ -404,7 +408,7 @@ async def test_deeply_nested_schema(base_url, auth_headers):
         payload = {
             "entities": [
                 {
-                    "$id": gts_id,
+                    "$id": make_schema_id(gts_id),
                     "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object",
                     "properties": {

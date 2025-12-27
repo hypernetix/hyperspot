@@ -258,7 +258,7 @@ async fn test_large_batch_registration() {
     let entities: Vec<_> = (0..100)
         .map(|i| {
             json!({
-                "$id": format!("gts.acme.core.events.batch_{i}.v1~"),
+                "$id": format!("gts://gts.acme.core.events.batch_{i}.v1~"),
                 "$schema": "http://json-schema.org/draft-07/schema#",
                 "type": "object"
             })
