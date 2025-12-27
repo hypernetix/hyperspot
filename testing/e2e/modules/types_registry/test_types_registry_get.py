@@ -17,6 +17,10 @@ def unique_id(name: str) -> str:
     return f"gts.e2etest.pkg.ns.{name}{_counter}.v1~"
 
 
+def make_schema_id(gts_id: str) -> str:
+    return "gts://" + gts_id
+
+
 @pytest.mark.asyncio
 async def test_get_entity_by_id(base_url, auth_headers):
     """
@@ -30,7 +34,7 @@ async def test_get_entity_by_id(base_url, auth_headers):
         payload = {
             "entities": [
                 {
-                    "$id": gts_id,
+                    "$id": make_schema_id(gts_id),
                     "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object",
                     "properties": {
@@ -122,7 +126,7 @@ async def test_get_entity_returns_full_content(base_url, auth_headers):
         gts_id = unique_id("fullcontent")
 
         original_content = {
-            "$id": gts_id,
+            "$id": make_schema_id(gts_id),
             "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object",
             "properties": {
@@ -188,7 +192,7 @@ async def test_get_instance_entity(base_url, auth_headers):
         payload = {
             "entities": [
                 {
-                    "$id": type_id,
+                    "$id": make_schema_id(type_id),
                     "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object",
                     "properties": {
@@ -253,7 +257,7 @@ async def test_get_entity_with_special_characters_in_id(base_url, auth_headers):
         payload = {
             "entities": [
                 {
-                    "$id": gts_id,
+                    "$id": make_schema_id(gts_id),
                     "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object",
                     "description": "Entity with underscores in ID"
@@ -303,7 +307,7 @@ async def test_get_entity_uuid_format(base_url, auth_headers):
         payload = {
             "entities": [
                 {
-                    "$id": gts_id,
+                    "$id": make_schema_id(gts_id),
                     "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object"
                 }
@@ -359,7 +363,7 @@ async def test_get_entity_vendor_package_namespace(base_url, auth_headers):
         payload = {
             "entities": [
                 {
-                    "$id": gts_id,
+                    "$id": make_schema_id(gts_id),
                     "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object",
                     "description": "Entity for segment test"
@@ -410,7 +414,7 @@ async def test_get_entity_deterministic_uuid(base_url, auth_headers):
         payload = {
             "entities": [
                 {
-                    "$id": gts_id,
+                    "$id": make_schema_id(gts_id),
                     "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object"
                 }
@@ -467,7 +471,7 @@ async def test_get_entity_returns_segments(base_url, auth_headers):
         payload = {
             "entities": [
                 {
-                    "$id": gts_id,
+                    "$id": make_schema_id(gts_id),
                     "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object",
                     "properties": {
@@ -538,7 +542,7 @@ async def test_get_instance_with_multiple_segments(base_url, auth_headers):
         payload = {
             "entities": [
                 {
-                    "$id": type_id,
+                    "$id": make_schema_id(type_id),
                     "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object",
                     "properties": {
@@ -618,7 +622,7 @@ async def test_get_instance_with_different_vendor_segments(base_url, auth_header
         payload = {
             "entities": [
                 {
-                    "$id": type_id,
+                    "$id": make_schema_id(type_id),
                     "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object",
                     "properties": {

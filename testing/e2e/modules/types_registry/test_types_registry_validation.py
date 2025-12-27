@@ -16,6 +16,10 @@ def unique_type_id(name: str) -> str:
     return f"gts.e2etest.validation.models.{name}{_counter}.v1~"
 
 
+def make_schema_id(gts_id: str) -> str:
+    return "gts://" + gts_id
+
+
 def unique_instance_id(type_id: str, name: str) -> str:
     """Generate a unique instance GTS ID based on a type ID."""
     global _counter
@@ -37,7 +41,7 @@ async def test_validation_invalid_instance_against_schema(base_url, auth_headers
         payload = {
             "entities": [
                 {
-                    "$id": type_id,
+                    "$id": make_schema_id(type_id),
                     "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object",
                     "properties": {
@@ -92,7 +96,7 @@ async def test_validation_wrong_type_for_field(base_url, auth_headers):
         payload = {
             "entities": [
                 {
-                    "$id": type_id,
+                    "$id": make_schema_id(type_id),
                     "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object",
                     "properties": {
@@ -147,7 +151,7 @@ async def test_validation_valid_instance_succeeds(base_url, auth_headers):
         payload = {
             "entities": [
                 {
-                    "$id": type_id,
+                    "$id": make_schema_id(type_id),
                     "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object",
                     "properties": {
@@ -207,7 +211,7 @@ async def test_validation_instance_before_type_fails(base_url, auth_headers):
                     "widgetId": "w-001"
                 },
                 {
-                    "$id": type_id,
+                    "$id": make_schema_id(type_id),
                     "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object",
                     "properties": {
@@ -292,7 +296,7 @@ async def test_validation_complex_nested_schema(base_url, auth_headers):
         payload = {
             "entities": [
                 {
-                    "$id": type_id,
+                    "$id": make_schema_id(type_id),
                     "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object",
                     "properties": {
@@ -357,7 +361,7 @@ async def test_validation_multiple_instances_same_type(base_url, auth_headers):
         payload = {
             "entities": [
                 {
-                    "$id": type_id,
+                    "$id": make_schema_id(type_id),
                     "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object",
                     "properties": {
