@@ -649,7 +649,7 @@ mod tests {
         // Test instance
         let instance = GtsEntity::new(
             Uuid::nil(),
-            "gts.acme.core.events.user_created.v1~instance1",
+            "gts.acme.core.events.user_created.v1~acme.core.instances.instance1.v1",
             vec![],
             false, // is_schema
             serde_json::json!({"data": "value"}),

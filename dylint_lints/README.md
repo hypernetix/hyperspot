@@ -42,13 +42,16 @@ make dylint-test         # Test UI cases (compile & verify violations)
 **REST Conventions (DE08xx)**
 - ✅ DE0801: API Endpoint Must Have Version
 
-**Error handling (DE09xx)**
+**GTS (DE09xx)**
 - TODO
 
-**Testing (DE10xx)**
+**Error handling (DE10xx)**
 - TODO
 
-**Documentation (DE11xx)**
+**Testing (DE11xx)**
+- TODO
+
+**Documentation (DE12xx)**
 - TODO
 
 ## Examples

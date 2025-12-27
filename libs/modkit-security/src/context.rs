@@ -173,7 +173,7 @@ mod tests {
 
         let permission1 = Permission::builder()
             .tenant_id(tenant_id)
-            .resource_pattern("gts.htx.events.topic.v1~*")
+            .resource_pattern("gts.x.core.events.topic.v1~*")
             .action("publish")
             .build()
             .unwrap();
@@ -259,14 +259,14 @@ mod tests {
 
         let permission1 = Permission::builder()
             .tenant_id(tenant_id)
-            .resource_pattern("gts.htx.events.topic.v1~vendor.*")
+            .resource_pattern("gts.x.core.events.topic.v1~vendor.*")
             .action("publish")
             .build()
             .unwrap();
 
         let permission2 = Permission::builder()
             .tenant_id(tenant_id)
-            .resource_pattern("gts.htx.events.topic.v1~vendor.*")
+            .resource_pattern("gts.x.core.events.topic.v1~vendor.*")
             .action("subscribe")
             .build()
             .unwrap();
@@ -289,7 +289,7 @@ mod tests {
         assert_eq!(perms[0].tenant_id(), Some(tenant_id));
         assert_eq!(
             perms[0].resource_pattern(),
-            "gts.htx.events.topic.v1~vendor.*"
+            "gts.x.core.events.topic.v1~vendor.*"
         );
         assert_eq!(perms[0].action(), "publish");
         assert_eq!(perms[1].action(), "subscribe");
@@ -391,7 +391,7 @@ mod tests {
 
         let permission = Permission::builder()
             .tenant_id(tenant_id)
-            .resource_pattern("gts.htx.events.topic.v1~*")
+            .resource_pattern("gts.x.core.events.topic.v1~*")
             .action("publish")
             .build()
             .unwrap();

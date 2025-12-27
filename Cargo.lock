@@ -1865,7 +1865,7 @@ dependencies = [
 [[package]]
 name = "gts"
 version = "0.1.0"
-source = "git+https://github.com/globaltypesystem/gts-rust.git?tag=v0.7.3#a90049972e56aa710d7d9c6899b276828d999d8d"
+source = "git+https://github.com/globaltypesystem/gts-rust.git?tag=v0.7.4#df8d29f11988aa46aeb03f8fc5c06a3df1df540b"
 dependencies = [
  "anyhow",
  "jsonschema",
@@ -1883,7 +1883,7 @@ dependencies = [
 [[package]]
 name = "gts-macros"
 version = "0.1.0"
-source = "git+https://github.com/globaltypesystem/gts-rust.git?tag=v0.7.3#a90049972e56aa710d7d9c6899b276828d999d8d"
+source = "git+https://github.com/globaltypesystem/gts-rust.git?tag=v0.7.4#df8d29f11988aa46aeb03f8fc5c06a3df1df540b"
 dependencies = [
  "proc-macro2",
  "quote",

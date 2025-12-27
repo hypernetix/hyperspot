@@ -1,8 +1,8 @@
 [package]
-name = "de0110_no_schema_for_on_gts_structs"
+name = "de0901_gts_string_pattern"
 version = "0.1.0"
-authors = ["Hypernetix"]
-description = "Prohibit using schemars::schema_for!() on GTS-wrapped structs"
+authors = ["authors go here"]
+description = "Validates GTS string patterns in functions and annotations"
 edition = "2024"
 publish = false
 
@@ -10,25 +10,29 @@ publish = false
 crate-type = ["cdylib"]
 
 [[example]]
-name = "gts_struct_schema_for"
-path = "ui/gts_struct_schema_for.rs"
+name = "valid_use_cases"
+path = "ui/valid_use_cases.rs"
 
 [[example]]
-name = "non_gts_struct_schema_for"
-path = "ui/non_gts_struct_schema_for.rs"
+name = "invalid_cases"
+path = "ui/invalid_cases.rs"
+
+[[example]]
+name = "permission_strings"
+path = "ui/permission_strings.rs"
 
 [dependencies]
 clippy_utils.workspace = true
 dylint_linting.workspace = true
 lint_utils.workspace = true
+gts.workspace = true
 
 [dev-dependencies]
 dylint_testing.workspace = true
-schemars = { version = "0.8", features = ["derive"] }
+gts-macros.workspace = true
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-gts-macros.workspace = true
-gts.workspace = true
+schemars = "0.8"
 
 [package.metadata.rust-analyzer]
 rustc_private = true
