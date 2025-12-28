@@ -66,6 +66,7 @@ jobs:
 
       # Cache Cargo registry/git + target/ across platforms.
       - name: Cache Cargo/target
+        if: runner.os != 'Linux'
         uses: Swatinem/rust-cache@v2
         with:
           # Separate caches by OS to avoid incompatible artifacts.
@@ -93,6 +94,7 @@ jobs:
 
       # Probe sccache; if startup fails, fall back to plain rustc (no hard CI failure).
       - name: Probe sccache & set RUSTC_WRAPPER
+        if: runner.os != 'Linux'
         shell: bash
         run: |
           if sccache --start-server >/dev/null 2>&1; then
@@ -117,8 +119,17 @@ jobs:
         run: cargo clippy --workspace --all-targets --all-features -- -D warnings -D clippy::perf
 
       # Unit tests (excluding integration tests)
+      - name: cargo clean
+        if: runner.os == 'Linux'
+        run: cargo clean
+      - name: disk space
+        if: runner.os == 'Linux'
+        run: df -h && df -i
       - name: cargo test (no ui)
         run: cargo test --workspace --no-fail-fast --exclude modkit-macros --exclude modkit-db-macros
+      - name: disk space
+        if: always() && runner.os == 'Linux' 
+        run: df -h && df -i
       # Print sccache stats when active
       - name: sccache stats
         if: env.SCCACHE_OK == '1'
