@@ -29,7 +29,11 @@ pub use modkit_odata::ast::Value as ODataValue;
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```
+/// use modkit_db::odata::{FilterField, FieldKind};
+/// use modkit_db_macros::ODataFilterable;
+///
+/// // Define a DTO with filterable fields using the derive macro
 /// #[derive(ODataFilterable)]
 /// pub struct UserDto {
 ///     #[odata(filter(kind = "Uuid"))]
@@ -39,14 +43,15 @@ pub use modkit_odata::ast::Value as ODataValue;
 ///     pub internal_field: String,  // not filterable
 /// }
 ///
-/// // Generated:
-/// #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-/// pub enum UserDtoFilterField {
-///     Id,
-///     Email,
-/// }
+/// // The derive macro generates:
+/// // - An enum `UserDtoFilterField` with variants for each filterable field
+/// // - An implementation of `FilterField` trait for that enum
 ///
-/// impl FilterField for UserDtoFilterField { ... }
+/// // Now you can use the generated type:
+/// assert_eq!(UserDtoFilterField::from_name("email"), Some(UserDtoFilterField::Email));
+/// assert_eq!(UserDtoFilterField::Email.name(), "email");
+/// assert_eq!(UserDtoFilterField::Id.kind(), FieldKind::Uuid);
+/// assert_eq!(UserDtoFilterField::FIELDS.len(), 2);
 /// ```
 pub trait FilterField: Copy + Eq + std::hash::Hash + fmt::Debug + 'static {
     /// All allowed fields for this DTO.
@@ -124,17 +129,34 @@ impl fmt::Display for FilterOp {
 ///
 /// # Example
 ///
-/// ```ignore
-/// // Parse from OData string
-/// let filter = parse_odata_filter::<UserDtoFilterField>("email eq 'test@example.com'")?;
+/// ```
+/// use modkit_db::odata::filter::{FilterField, FilterNode, FilterOp, ODataValue, parse_odata_filter};
+/// use modkit_db::odata::FieldKind;
+/// use modkit_db_macros::ODataFilterable;
 ///
-/// // Or build manually
+/// #[derive(ODataFilterable)]
+/// pub struct UserDto {
+///     #[odata(filter(kind = "String"))]
+///     pub email: String,
+/// }
+///
+/// // Parse from OData string (requires with-odata-params feature)
+/// // let filter = parse_odata_filter::<UserDtoFilterField>("email eq 'test@example.com'")?;
+///
+/// // Or build manually using enum variants
 /// use FilterNode::*;
 /// let filter = Binary {
 ///     field: UserDtoFilterField::Email,
 ///     op: FilterOp::Eq,
 ///     value: ODataValue::String("test@example.com".to_string()),
 /// };
+///
+/// // Or use the builder method
+/// let filter2 = FilterNode::binary(
+///     UserDtoFilterField::Email,
+///     FilterOp::Eq,
+///     ODataValue::String("test@example.com".to_string()),
+/// );
 /// ```
 #[derive(Debug, Clone)]
 pub enum FilterNode<F: FilterField> {
@@ -275,11 +297,31 @@ pub fn parse_odata_filter<F: FilterField>(raw: &str) -> FilterResult<FilterNode<
 ///
 /// # Example
 ///
-/// ```ignore
-/// if let Some(ast) = odata_query.filter() {
-///     let filter_node = convert_expr_to_filter_node::<UserDtoFilterField>(ast)?;
-///     // Use filter_node...
+/// ```rust
+/// use modkit_db::odata::filter::{FilterNode, convert_expr_to_filter_node};
+/// use modkit_db_macros::ODataFilterable;
+/// use modkit_odata::{ast as odata_ast, ODataQuery};
+///
+/// // Define a DTO with filterable fields using the derive macro
+/// #[derive(ODataFilterable)]
+/// pub struct UserDto {
+///     #[odata(filter(kind = "String"))]
+///     pub email: String,
 /// }
+///
+/// // Build an OData query with a filter expression
+/// let expr = odata_ast::Expr::Compare(
+///     Box::new(odata_ast::Expr::Identifier("email".to_owned())),
+///     odata_ast::CompareOperator::Eq,
+///     Box::new(odata_ast::Expr::Value(odata_ast::Value::String("test@example.com".to_owned()))),
+/// );
+/// let odata_query = ODataQuery::new().with_filter(expr);
+///
+/// // Convert from ODataQuery filter to type-safe FilterNode
+/// let ast = odata_query.filter().unwrap();
+/// let filter_node = convert_expr_to_filter_node::<UserDtoFilterField>(ast).unwrap();
+/// assert!(matches!(filter_node, FilterNode::Binary { .. }));
+///
 /// ```
 ///
 /// # Errors
