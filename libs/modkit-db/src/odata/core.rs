@@ -1051,7 +1051,10 @@ mod tests {
     #[test]
     fn parse_cursor_value_i64_invalid() {
         let result = parse_cursor_value(FieldKind::I64, "not_a_number");
-        assert!(matches!(result, Err(ODataBuildError::Other("invalid i64 in cursor"))));
+        assert!(matches!(
+            result,
+            Err(ODataBuildError::Other("invalid i64 in cursor"))
+        ));
     }
 
     #[test]
@@ -1060,13 +1063,19 @@ mod tests {
         let sea_orm::Value::Double(Some(f)) = result else {
             panic!("expected Double value");
         };
-        assert!((f - 3.14).abs() < 1e-10);
+        #[allow(clippy::approx_constant)]
+        {
+            assert!((f - 3.14).abs() < 1e-10);
+        }
     }
 
     #[test]
     fn parse_cursor_value_f64_invalid() {
         let result = parse_cursor_value(FieldKind::F64, "not_a_float");
-        assert!(matches!(result, Err(ODataBuildError::Other("invalid f64 in cursor"))));
+        assert!(matches!(
+            result,
+            Err(ODataBuildError::Other("invalid f64 in cursor"))
+        ));
     }
 
     #[test]
@@ -1078,7 +1087,10 @@ mod tests {
     #[test]
     fn parse_cursor_value_bool_invalid() {
         let result = parse_cursor_value(FieldKind::Bool, "not_a_bool");
-        assert!(matches!(result, Err(ODataBuildError::Other("invalid bool in cursor"))));
+        assert!(matches!(
+            result,
+            Err(ODataBuildError::Other("invalid bool in cursor"))
+        ));
     }
 
     #[test]
@@ -1094,7 +1106,10 @@ mod tests {
     #[test]
     fn parse_cursor_value_uuid_invalid() {
         let result = parse_cursor_value(FieldKind::Uuid, "not-a-uuid");
-        assert!(matches!(result, Err(ODataBuildError::Other("invalid uuid in cursor"))));
+        assert!(matches!(
+            result,
+            Err(ODataBuildError::Other("invalid uuid in cursor"))
+        ));
     }
 
     #[test]
@@ -1112,7 +1127,10 @@ mod tests {
     #[test]
     fn parse_cursor_value_datetime_utc_invalid() {
         let result = parse_cursor_value(FieldKind::DateTimeUtc, "not-a-datetime");
-        assert!(matches!(result, Err(ODataBuildError::Other("invalid datetime in cursor"))));
+        assert!(matches!(
+            result,
+            Err(ODataBuildError::Other("invalid datetime in cursor"))
+        ));
     }
 
     #[test]
@@ -1130,7 +1148,10 @@ mod tests {
     #[test]
     fn parse_cursor_value_date_invalid() {
         let result = parse_cursor_value(FieldKind::Date, "not-a-date");
-        assert!(matches!(result, Err(ODataBuildError::Other("invalid date in cursor"))));
+        assert!(matches!(
+            result,
+            Err(ODataBuildError::Other("invalid date in cursor"))
+        ));
     }
 
     #[test]
@@ -1148,7 +1169,10 @@ mod tests {
     #[test]
     fn parse_cursor_value_time_invalid() {
         let result = parse_cursor_value(FieldKind::Time, "not-a-time");
-        assert!(matches!(result, Err(ODataBuildError::Other("invalid time in cursor"))));
+        assert!(matches!(
+            result,
+            Err(ODataBuildError::Other("invalid time in cursor"))
+        ));
     }
 
     #[test]
@@ -1172,7 +1196,10 @@ mod tests {
     #[test]
     fn parse_cursor_value_decimal_invalid() {
         let result = parse_cursor_value(FieldKind::Decimal, "not-a-decimal");
-        assert!(matches!(result, Err(ODataBuildError::Other("invalid decimal in cursor"))));
+        assert!(matches!(
+            result,
+            Err(ODataBuildError::Other("invalid decimal in cursor"))
+        ));
     }
 
     #[test]
@@ -1249,8 +1276,12 @@ mod tests {
             m.id.to_string()
         }
 
-        let fmap = FieldMap::<Entity>::new()
-            .insert_with_extractor("id", Column::Id, FieldKind::I64, id_extractor);
+        let fmap = FieldMap::<Entity>::new().insert_with_extractor(
+            "id",
+            Column::Id,
+            FieldKind::I64,
+            id_extractor,
+        );
 
         let model = Model {
             id: 99,

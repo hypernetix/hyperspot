@@ -216,7 +216,7 @@ pub enum FilterError {
     TypeMismatch {
         field: String,
         expected: FieldKind,
-        got: &'static str,
+        got: String,
     },
 
     #[error("Unsupported operation: {0}")]
@@ -399,7 +399,7 @@ pub fn convert_expr_to_filter_node<F: FilterField>(
                         return Err(FilterError::TypeMismatch {
                             field: field_name.clone(),
                             expected: FieldKind::String,
-                            got: "non-string",
+                            got: "non-string".to_owned(),
                         });
                     }
 
@@ -420,7 +420,7 @@ pub fn convert_expr_to_filter_node<F: FilterField>(
                         return Err(FilterError::TypeMismatch {
                             field: field_name.clone(),
                             expected: FieldKind::String,
-                            got: "non-string",
+                            got: "non-string".to_owned(),
                         });
                     }
 
@@ -441,7 +441,7 @@ pub fn convert_expr_to_filter_node<F: FilterField>(
                         return Err(FilterError::TypeMismatch {
                             field: field_name.clone(),
                             expected: FieldKind::String,
-                            got: "non-string",
+                            got: "non-string".to_owned(),
                         });
                     }
 
@@ -476,17 +476,6 @@ pub fn convert_expr_to_filter_node<F: FilterField>(
 fn validate_value_type<F: FilterField>(field: F, value: &odata_ast::Value) -> FilterResult<()> {
     use odata_ast::Value as V;
 
-    let got_type = match value {
-        V::String(_) => "string",
-        V::Number(_) => "number",
-        V::Bool(_) => "bool",
-        V::Uuid(_) => "uuid",
-        V::DateTime(_) => "datetime",
-        V::Date(_) => "date",
-        V::Time(_) => "time",
-        V::Null => "null",
-    };
-
     let kind = field.kind();
     let matches = matches!(
         (kind, value),
@@ -508,7 +497,7 @@ fn validate_value_type<F: FilterField>(field: F, value: &odata_ast::Value) -> Fi
         Err(FilterError::TypeMismatch {
             field: field.name().to_owned(),
             expected: kind,
-            got: got_type,
+            got: value.to_string(),
         })
     }
 }
