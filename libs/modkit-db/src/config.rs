@@ -48,10 +48,10 @@
 //! See the test suite in `tests/precedence_tests.rs` for complete verification.
 
 use serde::{Deserialize, Serialize};
+use serde_with::{serde_as, DurationSeconds};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::Duration;
-use serde_with::{serde_as, DurationSeconds};
 
 /// Global database configuration with server-based DBs.
 #[derive(Debug, Clone, Deserialize, Serialize)]
