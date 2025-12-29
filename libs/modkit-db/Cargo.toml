@@ -42,12 +42,12 @@ bigdecimal = { workspace = true }
 rust_decimal = { workspace = true }
 ryu = { workspace = true }
 url = { workspace = true }
-humantime-serde = { workspace = true }
 regex = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 dashmap = { workspace = true }
 figment = { workspace = true }
+serde_with = "3.16.1"
 
 [dev-dependencies]
 tempfile = { workspace = true }

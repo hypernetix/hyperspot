@@ -234,7 +234,6 @@ chrono = { version = "0.4", default-features = false, features = ["serde"] }
 
 # DSN parsing
 dsn = "1.1.1"
-humantime-serde = "1.1"
 
 # URL parsing
 url = "2.5"

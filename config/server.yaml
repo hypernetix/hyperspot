@@ -13,28 +13,28 @@ database:
       dsn: "sqlite://sysinfo.db?wal=true&synchronous=NORMAL&busy_timeout=5000"
       pool:
         max_conns: 5
-        acquire_timeout: "30s"
+        acquire_timeout: 30
     
     # SQLite server for benchmarks module  
     sqlite_benchmarks:
       dsn: "sqlite://benchmarks.db?wal=true&synchronous=NORMAL&busy_timeout=5000"
       pool:
         max_conns: 8
-        acquire_timeout: "30s"
+        acquire_timeout: 30
     
     # SQLite server for chat module
     sqlite_chat:
       dsn: "sqlite://chat.db?wal=true&synchronous=NORMAL&busy_timeout=5000"
       pool:
         max_conns: 10
-        acquire_timeout: "30s"
+        acquire_timeout: 30
     
     # Example PostgreSQL server (uncomment to use)
     # postgres_main:
     #   dsn: "postgresql://hyperspot:${PG_PASSWORD}@localhost:5432/hyperspot"
     #   pool:
     #     max_conns: 10
-    #     acquire_timeout: "30s"
+    #     acquire_timeout: 30
 
 # Logging configuration
 logging:

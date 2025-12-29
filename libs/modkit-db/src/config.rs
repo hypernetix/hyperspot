@@ -51,6 +51,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::Duration;
+use serde_with::{serde_as, DurationSeconds};
 
 /// Global database configuration with server-based DBs.
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -94,16 +95,17 @@ pub struct DbConnConfig {
     pub server: Option<String>,
 }
 
+#[serde_as]
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct PoolCfg {
     pub max_conns: Option<u32>,
     pub min_conns: Option<u32>,
-    #[serde(with = "humantime_serde", default)]
+    #[serde_as(as = "Option<DurationSeconds<u64>>")]
     pub acquire_timeout: Option<Duration>,
-    #[serde(with = "humantime_serde", default)]
+    #[serde_as(as = "Option<DurationSeconds<u64>>")]
     pub idle_timeout: Option<Duration>,
-    #[serde(with = "humantime_serde", default)]
+    #[serde_as(as = "Option<DurationSeconds<u64>>")]
     pub max_lifetime: Option<Duration>,
     pub test_before_acquire: Option<bool>,
 }

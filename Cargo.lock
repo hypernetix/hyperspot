@@ -2141,22 +2141,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "humantime"
-version = "2.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "135b12329e5e3ce057a9f972339ea52bc954fe1e9358ef27f95e89716fbc5424"
-
-[[package]]
-name = "humantime-serde"
-version = "1.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "57a3db5ea5923d99402c94e9feb261dc5ee9b4efa158b0315f788cf549cc200c"
-dependencies = [
- "humantime",
- "serde",
-]
-
-[[package]]
 name = "hyper"
 version = "1.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2933,7 +2917,6 @@ dependencies = [
  "dashmap",
  "dirs",
  "figment",
- "humantime-serde",
  "modkit-db-macros",
  "modkit-odata",
  "modkit-security",
@@ -2944,6 +2927,7 @@ dependencies = [
  "serde",
  "serde-saphyr",
  "serde_json",
+ "serde_with",
  "sqlx",
  "tempfile",
  "testcontainers",

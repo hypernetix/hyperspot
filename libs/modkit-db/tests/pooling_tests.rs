@@ -20,9 +20,9 @@ async fn test_pool_cfg_options_applied() {
                     "pool": {
                         "max_conns": 20,
                         "min_conns": 2,
-                        "acquire_timeout": "45s",
-                        "idle_timeout": "300s",
-                        "max_lifetime": "1800s",
+                        "acquire_timeout": "45",
+                        "idle_timeout": "300",
+                        "max_lifetime": "1800",
                         "test_before_acquire": true
                     }
                 }
@@ -82,7 +82,7 @@ async fn test_module_pool_overrides_server_pool() {
                     "dsn": "sqlite::memory:",
                     "pool": {
                         "max_conns": 25,          // Should override server value (10)
-                        "acquire_timeout": "60s"  // Should override server value (30s)
+                        "acquire_timeout": 60.    // Should override server value (30s)
                         // Other values should be inherited from server
                     }
                 }
@@ -98,7 +98,7 @@ async fn test_module_pool_overrides_server_pool() {
     match result {
         Ok(_handle) => {
             // Connection succeeded - module pool config took precedence
-            // The pool should have max_conns=25 and acquire_timeout=60s from module config
+            // The pool should have max_conns=25 and acquire_timeout=60 from module config
         }
         Err(err) => {
             panic!("Expected successful connection with overridden pool settings, got: {err:?}");
@@ -246,7 +246,7 @@ async fn test_partial_pool_configuration() {
                     "dsn": "sqlite::memory:",
                     "pool": {
                         "max_conns": 8,
-                        "acquire_timeout": "20s"
+                        "acquire_timeout": 20
                         // Other fields should use defaults
                     }
                 }
@@ -267,30 +267,6 @@ async fn test_partial_pool_configuration() {
             panic!("Expected successful connection with partial pool config, got: {err:?}");
         }
     }
-}
-
-/// Test humantime parsing for duration fields.
-#[test]
-fn test_humantime_parsing() {
-    // Test various humantime formats
-    let test_cases = vec![
-        r#"{"acquire_timeout": "30s"}"#,
-        r#"{"acquire_timeout": "5m"}"#,
-        r#"{"acquire_timeout": "1h"}"#,
-        r#"{"acquire_timeout": "500ms"}"#,
-        r#"{"idle_timeout": "10min"}"#,
-        r#"{"max_lifetime": "2hours"}"#,
-    ];
-
-    for case in test_cases {
-        let result: Result<PoolCfg, _> = serde_json::from_str(case);
-        assert!(result.is_ok(), "Failed to parse: {case}");
-    }
-
-    // Test invalid humantime format
-    let invalid_case = r#"{"acquire_timeout": "invalid_duration"}"#;
-    let result: Result<PoolCfg, _> = serde_json::from_str(invalid_case);
-    assert!(result.is_err());
 }
 
 /// Test `PoolCfg` serialization and deserialization roundtrip.

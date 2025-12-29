@@ -52,7 +52,7 @@ database:
       # Connection pool settings shared by all modules using this server
       pool:
         max_conns: 5             # Maximum 5 concurrent connections
-        acquire_timeout: "30s"   # Timeout when acquiring connection from pool
+        acquire_timeout: 30   # Timeout when acquiring connection from pool
   
   # Global database options
   # auto_provision: true       # (default) Create directories automatically for SQLite files
@@ -272,7 +272,7 @@ tracing:
 #         application_name: "hyperspot"
 #       pool:
 #         max_conns: 20
-#         acquire_timeout: "30s"
+#         acquire_timeout: 30
 # modules:
 #   users_module:
 #     database:

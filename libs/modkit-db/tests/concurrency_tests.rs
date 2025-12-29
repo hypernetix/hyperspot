@@ -337,7 +337,7 @@ async fn test_concurrent_slow_initialization() {
                     "file": format!("slow_test_{}.db", std::process::id()),
                     "pool": {
                         "max_conns": 1,           // Force serialization
-                        "acquire_timeout": "5s"   // Longer timeout
+                        "acquire_timeout": 5   // Longer timeout
                     }
                 }
             }

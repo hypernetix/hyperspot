@@ -116,26 +116,6 @@ fn test_poolcfg_defaults() {
 }
 
 #[test]
-fn test_poolcfg_with_humantime() {
-    // Test that humantime_serde works correctly
-    let json = r#"{
-        "max_conns": 15,
-        "acquire_timeout": "45s"
-    }"#;
-
-    let pool: PoolCfg = serde_json::from_str(json).expect("Failed to deserialize PoolCfg");
-    assert_eq!(pool.max_conns, Some(15));
-    assert_eq!(pool.acquire_timeout, Some(Duration::from_secs(45)));
-
-    // Test serialization back
-    let serialized = serde_json::to_string(&pool).expect("Failed to serialize PoolCfg");
-    let deserialized: PoolCfg =
-        serde_json::from_str(&serialized).expect("Failed to deserialize again");
-    assert_eq!(deserialized.max_conns, Some(15));
-    assert_eq!(deserialized.acquire_timeout, Some(Duration::from_secs(45)));
-}
-
-#[test]
 fn test_deny_unknown_fields() {
     // Test that serde(deny_unknown_fields) works for DbConnConfig
     let json_with_unknown = r#"{
