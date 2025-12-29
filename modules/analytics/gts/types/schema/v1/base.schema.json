@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.hypernetix.hyperspot.ax.schema.v1~",
+  "type": "object",
+  "description": "Base schema type for defining data structures. All specialized schema types (query_params, query_returns, template_config, values) must inherit from this. Schemas define the structure, validation rules, and mock data generation for their respective data types. The x-gts-mock field provides example data for testing and documentation.",
+  "additionalProperties": true,
+  "examples": [
+    {}
+  ]
+}

@@ -1,0 +1,1532 @@
+openapi: 3.0.3
+info:
+  title: Analytics API
+  version: 1.0.0
+  description: |
+    Hyperspot Analytics API for managing queries, datasources, templates, layouts, and dashboards.
+    
+    ## Overview
+    The Analytics API provides a complete platform for building data-driven dashboards and reports.
+    It uses the GTS (Generic Type System) for type-safe entity management.
+    
+    ## Features
+    - **GTS Registry**: Register and manage GTS types and instances
+    - **OData v4**: Compatible query interface with filtering, sorting, pagination
+    - **Full-text search**: Advanced filtering and text search
+    - **Field projection**: Select specific fields with $select
+    - **Partial updates**: JSON Patch (RFC 6902) for granular updates
+    
+    ## Patterns
+    - **Tolerant Reader**: Service understands field semantics per operation (create/update/read)
+    - **Read-only entities**: Entities provisioned via configuration files cannot be modified
+    - **Strict typing**: Entity payloads validated against GTS type schemas
+    
+    ## Resources
+    - [GTS Specification](../openspec/specs/domain/gts-types.md)
+    - [Tolerant Reader Pattern](https://martinfowler.com/bliki/TolerantReader.html)
+    - [GTS Type Definitions](../gts/types/)
+
+servers:
+  - url: https://api.hyperspot.io/analytics/v1
+    description: Production
+  - url: http://localhost:8080/analytics/v1
+    description: Local development
+
+security:
+  - oauth2: []
+
+tags:
+  - name: GTS Registry
+    description: CRUD operations for GTS types and instances
+  - name: Queries
+    description: Query execution endpoints
+  - name: Templates
+    description: Template bundle management endpoints
+  - name: OData
+    description: OData metadata and capabilities
+
+paths:
+  /$metadata:
+    get:
+      summary: Get OData Service Metadata
+      tags: [OData]
+      security:
+        - oauth2: [analytics:metadata_read]
+      parameters:
+        - name: Accept
+          in: header
+          required: false
+          schema:
+            type: string
+            default: application/json
+          description: Metadata format (application/json for JSON CSDL, application/xml for CSDL XML)
+      description: |
+        **Required Scope:** `analytics:metadata_read`
+        
+        Returns complete OData service metadata in JSON CSDL format (OData v4.01).
+        Includes EntityType definitions for GTS entities with Capabilities vocabulary annotations.
+        Describes available entity sets, properties, and query capabilities (FilterRestrictions, SortRestrictions, SearchRestrictions, SelectSupport, TopSupported, SkipSupported).
+      responses:
+        '200':
+          description: OData service metadata in JSON CSDL format
+          content:
+            application/json:
+              schema:
+                type: object
+                description: OData JSON CSDL metadata document
+              example:
+                $Version: "4.01"
+                $EntityContainer: "Analytics.Container"
+                $Reference:
+                  "https://oasis-tcs.github.io/odata-vocabularies/vocabularies/Org.OData.Capabilities.V1.json":
+                    $Include:
+                      - $Namespace: Org.OData.Capabilities.V1
+                        $Alias: Capabilities
+                Analytics:
+                  GTSEntity:
+                    $Kind: EntityType
+                    $Key: [id]
+                    id: {$Type: Edm.String}
+                    type: {$Type: Edm.String}
+                    entity: {$Type: Edm.ComplexType}
+                    registered_at: {$Type: Edm.DateTimeOffset}
+                    tenant: {$Type: Edm.Guid}
+                  Container:
+                    $Kind: EntityContainer
+                    GTS:
+                      $Collection: true
+                      $Type: Analytics.GTSEntity
+                      "@Capabilities.FilterRestrictions":
+                        Filterable: true
+                        RequiresFilter: false
+                      "@Capabilities.SortRestrictions":
+                        Sortable: true
+                      "@Capabilities.SearchRestrictions":
+                        Searchable: true
+                      "@Capabilities.SelectSupport":
+                        Supported: true
+                      "@Capabilities.TopSupported": true
+                      "@Capabilities.SkipSupported": true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /queries/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: GTS identifier of the query to execute
+        schema:
+          type: string
+        example: gts.hypernetix.hyperspot.ax.query.v1~acme.analytics._.sales.v1
+
+    get:
+      summary: Execute Query (GET with OData Query Options)
+      tags: [Queries]
+      security:
+        - oauth2: [analytics:query_execute]
+      description: |
+        Execute a query using OData v4 query options in URL.
+        Best for simple queries that fit within URL length limits.
+        
+        **Required Scope:** `analytics:query_execute`
+        
+        **OData Query Options:**
+        - `$filter` - Filter expression (e.g., "status eq 'active' and revenue gt 1000")
+        - `$orderby` - Sort expression (e.g., "created_at desc,name asc")
+        - `$top` - Page size (limit, default 50, max 1000)
+        - `$skip` - Offset for pagination
+        - `$select` - Fields to include (e.g., "id,name,revenue")
+        - `$expand` - Navigation properties to expand
+        - `$count` - Include total count (true/false)
+        - `$search` - Full-text search query
+      parameters:
+        - $ref: '#/components/parameters/ContextTenantId'
+        - name: $filter
+          in: query
+          description: OData filter expression
+          schema:
+            type: string
+          example: "status eq 'active' and revenue gt 1000"
+        - name: $orderby
+          in: query
+          description: OData sort expression
+          schema:
+            type: string
+          example: "created_at desc"
+        - name: $top
+          in: query
+          description: Page size (max 1000)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 50
+        - name: $skip
+          in: query
+          description: Number of items to skip
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: $select
+          in: query
+          description: Fields to select
+          schema:
+            type: string
+          example: "id,name,revenue,status"
+        - name: $expand
+          in: query
+          description: Navigation properties to expand
+          schema:
+            type: string
+          example: "customer($select=id,name)"
+        - name: $count
+          in: query
+          description: Include total count
+          schema:
+            type: boolean
+            default: false
+        - name: $search
+          in: query
+          description: Full-text search query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Query executed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ODataResponse'
+              example:
+                "@odata.context": "/api/analytics/v1/queries/$metadata#Sales"
+                "@odata.count": 1547
+                value:
+                  - id: "ord-001"
+                    order_number: "ORD-2024-001"
+                    status: "active"
+                    revenue: 1250.50
+                    created_at: "2024-01-15T10:30:00Z"
+                  - id: "ord-002"
+                    order_number: "ORD-2024-002"
+                    status: "active"
+                    revenue: 2100.00
+                    created_at: "2024-01-15T11:45:00Z"
+                "@odata.nextLink": "/api/analytics/v1/queries/...?$skip=50"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /queries/{id}/$query:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: GTS identifier of the query to execute
+        schema:
+          type: string
+        example: gts.hypernetix.hyperspot.ax.query.v1~acme.analytics._.sales.v1
+
+    post:
+      summary: Execute Query (POST with OData Query Options in Body)
+      tags: [Queries]
+      security:
+        - oauth2: [analytics:query_execute]
+      parameters:
+        - $ref: '#/components/parameters/ContextTenantId'
+      description: |
+        **Required Scope:** `analytics:query_execute`
+        
+        Execute a query using OData v4 query options in JSON body.
+        Best for complex queries that exceed URL length limits.
+        Supports all OData query options: $filter, $orderby, $top, $skip, $select, $expand, $count, $search.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ODataQueryOptions'
+            examples:
+              simpleFilter:
+                summary: Simple filter and sort
+                value:
+                  $filter: "status eq 'active'"
+                  $orderby: "created_at desc"
+                  $top: 50
+                  $count: true
+              complexFilter:
+                summary: Complex filter with multiple conditions
+                value:
+                  $filter: "status eq 'active' and revenue gt 1000 and region in ('EU','US','APAC')"
+                  $orderby: "revenue desc,created_at desc"
+                  $select: "id,order_number,status,revenue,created_at"
+                  $top: 100
+                  $skip: 0
+                  $count: true
+              withExpand:
+                summary: With navigation property expansion
+                value:
+                  $filter: "status eq 'completed'"
+                  $expand: "customer($select=id,name,email)"
+                  $top: 25
+      responses:
+        '200':
+          description: Query executed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ODataResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /queries/{id}/$metadata:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: GTS identifier of the query
+        schema:
+          type: string
+        example: gts.hypernetix.hyperspot.ax.query.v1~acme.analytics._.sales.v1
+
+    get:
+      summary: Get Query OData Metadata
+      tags: [Queries, OData]
+      security:
+        - oauth2: [analytics:query_read]
+      parameters:
+        - $ref: '#/components/parameters/ContextTenantId'
+        - name: Accept
+          in: header
+          required: false
+          schema:
+            type: string
+            default: application/json
+          description: Metadata format (application/json for JSON CSDL, application/xml for CSDL XML)
+      description: |
+        **Required Scope:** `analytics:query_read`
+        
+        Returns OData metadata in JSON CSDL format (OData v4.01).
+        Includes EntityType definitions, properties, and Capabilities vocabulary annotations.
+        Used by clients to discover data structure and query capabilities (FilterRestrictions, SortRestrictions, etc.).
+      responses:
+        '200':
+          description: JSON Schema with OData capabilities
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                $schema: "https://json-schema.org/draft/2020-12/schema"
+                title: "Sales Query Results"
+                type: object
+                properties:
+                  value:
+                    type: array
+                    items:
+                      $ref: "#/$defs/SalesOrder"
+                  "@odata.count":
+                    type: integer
+                  "@odata.nextLink":
+                    type: string
+                $defs:
+                  SalesOrder:
+                    type: object
+                    required: ["id", "order_number"]
+                    properties:
+                      id:
+                        type: string
+                      order_number:
+                        type: string
+                      status:
+                        type: string
+                        enum: ["pending", "active", "completed"]
+                      revenue:
+                        type: number
+                        minimum: 0
+                      created_at:
+                        type: string
+                        format: date-time
+                x-odata-capabilities:
+                  filter:
+                    filterable: true
+                    filterExpressionRestrictions:
+                      - property: status
+                        allowedExpressions: ["eq", "in"]
+                      - property: revenue
+                        allowedExpressions: ["eq", "ne", "gt", "ge", "lt", "le"]
+                  sort:
+                    sortable: true
+                    sortableProperties: ["created_at", "revenue"]
+                  pagination:
+                    maxTop: 1000
+                    defaultTop: 50
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /gts:
+    post:
+      summary: Register GTS Type or Instance
+      tags: [GTS Registry]
+      security:
+        - oauth2: [analytics:gts_write]
+      parameters:
+        - $ref: '#/components/parameters/ContextTenantId'
+      description: |
+        **Required Scope:** `analytics:gts_write`
+        
+        Register a new GTS type (schema) or instance.
+        
+        **Type Registration:**
+        - Include `$schema` and `$id` in entity
+        - Service validates JSON Schema format
+        - Base types are read-only (preloaded from files)
+        
+        **Instance Registration:**
+        - Provide `id` field with GTS identifier
+        - Service validates against type schema
+        
+        **Server-managed fields** (ignored in request):
+        - `type` - derived from `id` or `$id`
+        - `registered_at`, `tenant`, `registered_by` - set by service
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GTSRequest'
+            examples:
+              registerQuery:
+                summary: Register Query Instance
+                value:
+                  id: gts.hypernetix.hyperspot.ax.query.v1~acme.analytics._.sales.v1
+                  entity:
+                    category: gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.query.v1~acme.analytics._.sales.v1
+                    name: Sales Data Query
+                    api_endpoint: https://api.acme.com/analytics/sales
+                    contract_format: native
+      responses:
+        '201':
+          description: Entity successfully registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GTSEntity'
+              example:
+                id: gts.hypernetix.hyperspot.ax.query.v1~acme.analytics._.sales.v1
+                type: gts.hypernetix.hyperspot.ax.query.v1~
+                entity:
+                  category: gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.query.v1~acme.analytics._.sales.v1
+                  name: Sales Data Query
+                  description: Query for retrieving sales analytics data
+                  api_endpoint: https://api.acme.com/analytics/sales
+                  capabilities_id: gts.hypernetix.hyperspot.ax.query_capabilities.v1~acme.analytics._.sales_capabilities.v1
+                  returns_schema_id: gts.hypernetix.hyperspot.ax.schema.v1~hypernetix.hyperspot.ax.query_returns.v1~acme.analytics._.sales_data.v1
+                registered_at: "2024-01-15T10:30:00Z"
+                updated_at: "2024-01-15T10:30:00Z"
+                deleted_at: null
+                tenant: 550e8400-e29b-41d4-a716-446655440000
+                registered_by: user@example.com
+                updated_by: user@example.com
+                deleted_by: null
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+    get:
+      summary: List and Search GTS Entities
+      tags: [GTS Registry]
+      security:
+        - oauth2: [analytics:gts_read]
+      description: |
+        **Required Scope:** `analytics:gts_read`
+        
+        Powerful search and listing endpoint with OData v4 support.
+        
+        **Query Capabilities:**
+        - Filter by GTS segments (vendor, package, namespace, type)
+        - Filter by entity properties (entity/name, entity/api_endpoint)
+        - Filter by metadata (tenant, registered_at, registered_by)
+        - Full-text search with search.ismatch()
+        - Field projection with $select
+        - Cursor-based pagination
+        
+        **Query Optimization:**
+        Service validates filter expressions against available indexes.
+        Unsupported queries return 400 with available indexed fields.
+      parameters:
+        - $ref: '#/components/parameters/ContextTenantId'
+        - $ref: '#/components/parameters/ODataFilter'
+        - $ref: '#/components/parameters/ODataSelect'
+        - $ref: '#/components/parameters/ODataOrderBy'
+        - $ref: '#/components/parameters/ODataTop'
+        - $ref: '#/components/parameters/ODataSkipToken'
+        - $ref: '#/components/parameters/ODataCount'
+        - name: allow_deleted
+          in: query
+          description: Include soft-deleted entities
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: List of GTS entities
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GTSEntityList'
+              examples:
+                listQueries:
+                  summary: List queries by type
+                  value:
+                    items:
+                      - id: gts.hypernetix.hyperspot.ax.query.v1~acme.analytics._.sales.v1
+                        type: gts.hypernetix.hyperspot.ax.query.v1~
+                        entity:
+                          name: Sales Data Query
+                          description: Query for retrieving sales analytics data
+                          api_endpoint: https://api.acme.com/analytics/sales
+                          capabilities_id: gts.hypernetix.hyperspot.ax.query_capabilities.v1~acme.analytics._.sales_capabilities.v1
+                          returns_schema_id: gts.hypernetix.hyperspot.ax.schema.v1~hypernetix.hyperspot.ax.query_returns.v1~acme.analytics._.sales_data.v1
+                        registered_at: '2024-01-15T10:30:00Z'
+                        tenant: 550e8400-e29b-41d4-a716-446655440000
+                    '@odata.count': 1
+                    '@odata.nextLink': null
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /gts/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: |
+          GTS identifier following format:
+          gts.<vendor>.<package>.<namespace>.<type>.v<MAJOR>[.<MINOR>][~[chain]]
+          
+          Validation rules:
+          - Each segment: alphanumeric + underscore, start with letter
+          - Version: v<MAJOR> required, <MINOR> optional
+          - Can be type identifier (ends with ~) or instance identifier
+          - Optional chain for derived types or instances
+        schema:
+          type: string
+          pattern: ^gts\.[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*\.v[0-9]+(\.[0-9]+)?(~.*)?$
+        example: gts.hypernetix.hyperspot.ax.query.v1~acme.analytics._.sales.v1
+
+    get:
+      summary: Get GTS Entity by ID
+      tags: [GTS Registry]
+      security:
+        - oauth2: [analytics:gts_read]
+      parameters:
+        - $ref: '#/components/parameters/ContextTenantId'
+      description: |
+        **Required Scope:** `analytics:gts_read`
+        
+        Retrieve a specific GTS type or instance by exact identifier
+      responses:
+        '200':
+          description: GTS entity details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GTSEntity'
+              example:
+                id: gts.hypernetix.hyperspot.ax.query.v1~acme.analytics._.sales.v1
+                type: gts.hypernetix.hyperspot.ax.query.v1~
+                entity:
+                  category: gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.query.v1~acme.analytics._.sales.v1
+                  name: Sales Data Query
+                  description: Query for retrieving sales analytics data
+                  api_endpoint: https://api.acme.com/analytics/sales
+                  capabilities_id: gts.hypernetix.hyperspot.ax.query_capabilities.v1~acme.analytics._.sales_capabilities.v1
+                  returns_schema_id: gts.hypernetix.hyperspot.ax.schema.v1~hypernetix.hyperspot.ax.query_returns.v1~acme.analytics._.sales_data.v1
+                registered_at: "2024-01-15T10:30:00Z"
+                updated_at: "2024-01-15T14:22:00Z"
+                deleted_at: null
+                tenant: 550e8400-e29b-41d4-a716-446655440000
+                registered_by: user@example.com
+                updated_by: user@example.com
+                deleted_by: null
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      summary: Update GTS Entity (Full Replacement)
+      tags: [GTS Registry]
+      description: |
+        Replace entire entity object. All fields must be provided.
+        
+        **Restrictions:**
+        - Only entities registered via API can be updated
+        - Read-only entities (from config files) return 403
+        - Server-managed fields (id, type, timestamps) are ignored
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GTSUpdateRequest'
+      responses:
+        '200':
+          description: Entity successfully updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GTSEntity'
+        '403':
+          $ref: '#/components/responses/ReadOnlyEntity'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      summary: Partially Update GTS Entity
+      tags: [GTS Registry]
+      security:
+        - oauth2: [analytics:gts_write]
+      parameters:
+        - $ref: '#/components/parameters/ContextTenantId'
+      description: |
+        **Required Scope:** `analytics:gts_write`
+        
+        Partially update entity using JSON Patch (RFC 6902).
+        
+        **Supported Operations:**
+        - replace, add, remove, copy, move, test
+        
+        **Restrictions:**
+        - Only /entity/* paths can be modified
+        - Attempts to modify server-managed fields are rejected
+      requestBody:
+        required: true
+        content:
+          application/json-patch+json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/JsonPatchOperation'
+            example:
+              - op: replace
+                path: /entity/description
+                value: Updated description
+              - op: replace
+                path: /entity/api_endpoint
+                value: https://api.acme.com/v2/analytics/sales
+      responses:
+        '200':
+          description: Entity successfully updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GTSEntity'
+              example:
+                id: gts.hypernetix.hyperspot.ax.query.v1~acme.analytics._.sales.v1
+                type: gts.hypernetix.hyperspot.ax.query.v1~
+                entity:
+                  category: gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.query.v1~acme.analytics._.sales.v1
+                  name: Sales Data Query
+                  description: Updated description via PATCH
+                  api_endpoint: https://api.acme.com/v2/analytics/sales
+                  capabilities_id: gts.hypernetix.hyperspot.ax.query_capabilities.v1~acme.analytics._.sales_capabilities.v1
+                  returns_schema_id: gts.hypernetix.hyperspot.ax.schema.v1~hypernetix.hyperspot.ax.query_returns.v1~acme.analytics._.sales_data.v1
+                registered_at: "2024-01-15T10:30:00Z"
+                updated_at: "2024-01-16T11:22:00Z"
+                deleted_at: null
+                tenant: 550e8400-e29b-41d4-a716-446655440000
+                registered_by: user@example.com
+                updated_by: user@example.com
+                deleted_by: null
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/ReadOnlyEntity'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: Delete GTS Entity (Soft Delete)
+      tags: [GTS Registry]
+      security:
+        - oauth2: [analytics:gts_write]
+      parameters:
+        - $ref: '#/components/parameters/ContextTenantId'
+      description: |
+        **Required Scope:** `analytics:gts_write`
+        
+        Soft-delete entity by setting deleted_at timestamp.
+        Entity remains in database for audit purposes.
+      responses:
+        '204':
+          description: Entity successfully deleted (No Content)
+        '403':
+          $ref: '#/components/responses/ReadOnlyEntity'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /templates/{id}/bundle:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: GTS identifier of the template
+        schema:
+          type: string
+        example: gts.hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.widget.v1~acme.charts._.line_chart.v2
+
+    post:
+      summary: Upload Template Bundle
+      tags: [Templates]
+      security:
+        - oauth2: [analytics:template_write]
+      parameters:
+        - $ref: '#/components/parameters/ContextTenantId'
+      description: |
+        **Required Scope:** `analytics:template_write`
+        
+        Upload JavaScript bundle implementation for a registered template.
+        
+        **Flow:**
+        1. Register template metadata via POST /gts (Step 1)
+        2. Upload bundle via this endpoint (Step 2)
+        
+        **Bundle Replacement:**
+        - Can be uploaded multiple times for the same template
+        - Each upload replaces the previous bundle
+        - UI cache is invalidated via ETag/Last-Modified headers
+        - Template metadata remains unchanged
+      requestBody:
+        required: true
+        content:
+          application/javascript:
+            schema:
+              type: string
+              format: binary
+              description: JavaScript bundle file
+      responses:
+        '200':
+          description: Bundle successfully uploaded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  template_id:
+                    type: string
+                    description: GTS identifier of the template
+                  bundle_url:
+                    type: string
+                    format: uri
+                    description: URL to download the bundle
+                  checksum:
+                    type: string
+                    description: SHA-256 checksum of the bundle
+                  size_bytes:
+                    type: integer
+                    description: Bundle size in bytes
+                  uploaded_at:
+                    type: string
+                    format: date-time
+                  uploaded_by:
+                    type: string
+              example:
+                template_id: gts.hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.widget.v1~acme.charts._.line_chart.v2
+                bundle_url: https://api.hyperspot.io/analytics/v1/templates/gts.hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.widget.v1~acme.charts._.line_chart.v2/bundle
+                checksum: "sha256:a3f5b2e8c1d4f6a9b2c5e8f1a4d7b0c3"
+                size_bytes: 245760
+                uploaded_at: "2024-01-15T10:35:00Z"
+                uploaded_by: user-7a1d2f34-5678-49ab-9012-abcdef123456
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Template not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+    get:
+      summary: Download Template Bundle
+      tags: [Templates]
+      security:
+        - oauth2: [analytics:template_read]
+      parameters:
+        - $ref: '#/components/parameters/ContextTenantId'
+      description: |
+        **Required Scope:** `analytics:template_read`
+        
+        Download JavaScript bundle for a template.
+        
+        **Caching:**
+        - Response includes ETag and Last-Modified headers
+        - UI should cache bundles aggressively
+        - Use conditional requests (If-None-Match, If-Modified-Since)
+      responses:
+        '200':
+          description: Bundle content
+          headers:
+            ETag:
+              description: Bundle version identifier
+              schema:
+                type: string
+            Last-Modified:
+              description: Last upload timestamp
+              schema:
+                type: string
+                format: date-time
+            Cache-Control:
+              description: Cache directives
+              schema:
+                type: string
+                example: public, max-age=3600, immutable
+          content:
+            application/javascript:
+              schema:
+                type: string
+                format: binary
+        '304':
+          description: Not Modified (cached version is current)
+        '404':
+          description: Template or bundle not found
+
+  /gts/{id}/enablement:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: GTS identifier of the entity
+        schema:
+          type: string
+        example: gts.hypernetix.hyperspot.ax.query.v1~acme.analytics._.sales.v1
+
+    get:
+      summary: Get Tenant Enablement Configuration
+      tags: [GTS Registry]
+      security:
+        - oauth2: [analytics:gts_admin]
+      parameters:
+        - $ref: '#/components/parameters/ContextTenantId'
+      description: |
+        **Required Scope:** `analytics:gts_admin`
+        
+        Retrieve tenant enablement configuration for a GTS entity.
+        Lists which tenants have access to this entity.
+      responses:
+        '200':
+          description: Enablement configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GTSEnablement'
+              example:
+                enabled_for:
+                  - tenant-1
+                  - tenant-2
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      summary: Replace Tenant Enablement Configuration
+      tags: [GTS Registry]
+      security:
+        - oauth2: [analytics:gts_admin]
+      parameters:
+        - $ref: '#/components/parameters/ContextTenantId'
+      description: |
+        **Required Scope:** `analytics:gts_admin`
+        
+        Replace the entire tenant enablement configuration.
+        Completely replaces the enabled_for list.
+        
+        **Automatic Reference Enablement:**
+        System automatically enables all referenced entities for the same tenants.
+        Examples:
+        - Query → automatically enables returns_schema_id, capabilities_id
+        - Template → automatically enables config_schema_id, query_returns_schema_id
+        - Datasource → automatically enables query_id and its references
+        - Widget → automatically enables template_id, datasource and their references
+        
+        This ensures tenants have access to all dependencies required to use the entity.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GTSEnablement'
+            example:
+              enabled_for:
+                - tenant-1
+                - tenant-2
+                - tenant-3
+      responses:
+        '200':
+          description: Enablement successfully updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GTSEnablement'
+              example:
+                enabled_for:
+                  - tenant-1
+                  - tenant-2
+                  - tenant-3
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      summary: Partial Update Tenant Enablement (JSON Patch)
+      tags: [GTS Registry]
+      security:
+        - oauth2: [analytics:gts_admin]
+      parameters:
+        - $ref: '#/components/parameters/ContextTenantId'
+      description: |
+        **Required Scope:** `analytics:gts_admin`
+        
+        Partially update tenant enablement using JSON Patch (RFC 6902).
+        
+        **Common Operations:**
+        - Add tenant: `{ "op": "add", "path": "/enabled_for/-", "value": "tenant-id" }`
+        - Remove by index: `{ "op": "remove", "path": "/enabled_for/0" }`
+        - Replace all: `{ "op": "replace", "path": "/enabled_for", "value": ["new-list"] }`
+        - Test before change: `{ "op": "test", "path": "/enabled_for/0", "value": "tenant-1" }`
+        
+        **Benefits:**
+        - Atomic operations
+        - Race condition protection with test operation
+        - Efficient for single tenant add/remove
+      requestBody:
+        required: true
+        content:
+          application/json-patch+json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/JsonPatchOperation'
+            examples:
+              addTenant:
+                summary: Add single tenant
+                value:
+                  - op: add
+                    path: /enabled_for/-
+                    value: tenant-4
+              removeTenant:
+                summary: Remove tenant by index
+                value:
+                  - op: remove
+                    path: /enabled_for/0
+              multipleOps:
+                summary: Multiple operations
+                value:
+                  - op: add
+                    path: /enabled_for/-
+                    value: tenant-4
+                  - op: remove
+                    path: /enabled_for/0
+              safeUpdate:
+                summary: Test before update
+                value:
+                  - op: test
+                    path: /enabled_for/0
+                    value: tenant-1
+                  - op: remove
+                    path: /enabled_for/0
+      responses:
+        '200':
+          description: Enablement successfully patched
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GTSEnablement'
+              example:
+                enabled_for:
+                  - tenant-2
+                  - tenant-3
+                  - tenant-4
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Test operation failed
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: https://example.com/problems/json-patch-test-failed
+                title: JSON Patch Test Failed
+                status: 409
+                detail: Test operation failed at path /enabled_for/0. Expected value 'tenant-1' but found 'tenant-2'.
+
+  /gts/$schema:
+    get:
+      summary: GTS Registry JSON Schema and Capabilities
+      tags: [OData]
+      security:
+        - oauth2: [analytics:gts_read]
+      parameters:
+        - $ref: '#/components/parameters/ContextTenantId'
+      description: |
+        **Required Scope:** `analytics:gts_read`
+        
+        Returns JSON Schema with OData capabilities for GTS Registry.
+        
+        **Includes:**
+        - Entity type definition (GTSEntity)
+        - Filter restrictions per property
+        - Sort restrictions
+        - Search capabilities
+        - Select support
+        - Pagination limits
+      responses:
+        '200':
+          description: JSON Schema with OData capabilities
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                $schema: "https://json-schema.org/draft/2020-12/schema"
+                title: "GTS Entity Collection"
+                type: object
+                properties:
+                  value:
+                    type: array
+                    items:
+                      $ref: "#/$defs/GTSEntity"
+                  "@odata.count":
+                    type: integer
+                  "@odata.nextLink":
+                    type: string
+                $defs:
+                  GTSEntity:
+                    type: object
+                    required: ["id", "type", "entity", "registered_at", "tenant"]
+                    properties:
+                      id:
+                        type: string
+                      type:
+                        type: string
+                      entity:
+                        type: object
+                      registered_at:
+                        type: string
+                        format: date-time
+                      tenant:
+                        type: string
+                        format: uuid
+                x-odata-capabilities:
+                  filter:
+                    filterable: true
+                    requiresFilter: false
+                    filterExpressionRestrictions:
+                      - property: id
+                        allowedExpressions: ["eq", "startswith"]
+                      - property: tenant
+                        allowedExpressions: ["eq"]
+                  sort:
+                    sortable: true
+                    nonSortableProperties: ["entity"]
+                  search:
+                    searchable: true
+                  select:
+                    supported: true
+                  pagination:
+                    maxTop: 1000
+                    defaultTop: 50
+
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      description: |
+        Service-to-Service OAuth2 authentication using Client Credentials flow.
+        Services authenticate with client_id and client_secret to obtain access token with specific scopes.
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.hyperspot.io/oauth/token
+          scopes:
+            analytics:metadata_read: Read OData service metadata
+            analytics:gts_read: Read GTS entities, schemas, and metadata
+            analytics:gts_write: Create, update, and delete GTS entities
+            analytics:gts_admin: Manage tenant enablement configuration
+            analytics:query_read: Read query metadata and schemas
+            analytics:query_execute: Execute queries and access results
+            analytics:template_read: Download template bundles
+            analytics:template_write: Upload and manage template bundles
+
+  schemas:
+    # ============================================================================
+    # GTS Entity Schemas (OpenAPI-compatible inline definitions)
+    # ============================================================================
+    # Note: Original schemas in ../gts/types/ use gts:// URI scheme which is not
+    # supported by OpenAPI validators. These are simplified inline versions.
+    # For full schema definitions with validation, see ../gts/types/
+    
+    # All entity types accept arbitrary JSON objects
+    # Runtime validation happens server-side against GTS type schemas
+    GTSEntityObject:
+      type: object
+      description: |
+        Generic entity object that conforms to a GTS type.
+        The actual structure depends on the GTS type identifier.
+        Server validates against the corresponding GTS schema.
+      additionalProperties: true
+
+    JsonSchemaType:
+      type: object
+      description: Valid JSON Schema for GTS type registration
+      required:
+        - $schema
+        - $id
+        - type
+      properties:
+        $schema:
+          type: string
+          format: uri
+          enum:
+            - https://json-schema.org/draft/2020-12/schema
+          example: https://json-schema.org/draft/2020-12/schema
+        $id:
+          type: string
+          pattern: ^gts://gts\.[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*\.v[0-9]+(\.[0-9]+)?(~.*)?~$
+          description: |
+            GTS type identifier URI following format:
+            gts://gts.<vendor>.<package>.<namespace>.<type>.v<MAJOR>[.<MINOR>][~[chain]]~
+            
+            Validation rules:
+            - URI scheme: gts://
+            - Each segment: alphanumeric + underscore, start with letter
+            - Version: v<MAJOR> required, <MINOR> optional
+            - MUST end with ~ (type identifiers end with ~)
+            - Optional chain before final ~ for derived types
+          example: gts://gts.hypernetix.hyperspot.ax.query.v1~acme.custom._.my_query.v1~
+        type:
+          type: string
+        description:
+          type: string
+        properties:
+          type: object
+          additionalProperties: true
+        required:
+          type: array
+          items:
+            type: string
+        additionalProperties:
+          type: object
+
+    # ============================================================================
+    # Request/Response Schemas
+    # ============================================================================
+
+    GTSInstanceRequest:
+      type: object
+      description: |
+        Request for registering a GTS instance.
+        Entity structure validated server-side against GTS type schema.
+      required:
+        - id
+        - entity
+      properties:
+        id:
+          type: string
+          description: |
+            GTS instance identifier following format:
+            gts.<vendor>.<package>.<namespace>.<type>.v<MAJOR>[.<MINOR>][~[chain]]
+            
+            Validation rules:
+            - Each segment: alphanumeric + underscore, start with letter
+            - Version: v<MAJOR> required, <MINOR> optional
+            - Must NOT end with ~ (instances don't end with ~)
+            - Optional chain after ~ for derived types
+          pattern: ^gts\.[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*\.v[0-9]+(\.[0-9]+)?(~.+)?$
+          example: gts.hypernetix.hyperspot.ax.query.v1~acme.analytics._.sales.v1
+        entity:
+          $ref: '#/components/schemas/GTSEntityObject'
+
+    GTSTypeRequest:
+      type: object
+      description: Request for registering a GTS type (schema)
+      required:
+        - entity
+      properties:
+        entity:
+          $ref: '#/components/schemas/JsonSchemaType'
+
+    GTSRequest:
+      oneOf:
+        - $ref: '#/components/schemas/GTSInstanceRequest'
+        - $ref: '#/components/schemas/GTSTypeRequest'
+      description: |
+        Request for registering either a GTS type or instance.
+        
+        **Type Registration:** Include $schema and $id in entity
+        **Instance Registration:** Provide id field with entity conforming to base type
+
+    GTSUpdateRequest:
+      type: object
+      description: |
+        Request for full entity replacement (PUT).
+        Entity must conform to its GTS type schema.
+      required:
+        - entity
+      properties:
+        entity:
+          oneOf:
+            - $ref: '#/components/schemas/GTSEntityObject'
+            - $ref: '#/components/schemas/JsonSchemaType'
+          description: Complete entity object (instance data or JSON Schema for types)
+
+    GTSEntity:
+      type: object
+      description: GTS entity with metadata
+      required:
+        - id
+        - type
+        - entity
+        - registered_at
+        - tenant
+      properties:
+        id:
+          type: string
+          description: GTS identifier
+          readOnly: true
+          example: gts.hypernetix.hyperspot.ax.query.v1~acme.analytics._.sales.v1
+        type:
+          type: string
+          description: GTS type identifier (derived from id)
+          readOnly: true
+          example: gts.hypernetix.hyperspot.ax.query.v1~
+        entity:
+          oneOf:
+            - $ref: '#/components/schemas/GTSEntityObject'
+            - $ref: '#/components/schemas/JsonSchemaType'
+          description: Entity data (instance conforming to GTS type, or JSON Schema for type registration)
+        registered_at:
+          type: string
+          format: date-time
+          description: Registration timestamp
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp
+          readOnly: true
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Soft deletion timestamp
+          readOnly: true
+        tenant:
+          type: string
+          format: uuid
+          description: Tenant identifier
+          readOnly: true
+        registered_by:
+          type: string
+          description: User who registered the entity
+          readOnly: true
+        updated_by:
+          type: string
+          description: User who last updated the entity
+          readOnly: true
+        deleted_by:
+          type: string
+          nullable: true
+          description: User who deleted the entity
+          readOnly: true
+
+    GTSEntityList:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/GTSEntity'
+        '@odata.count':
+          type: integer
+          description: Total count (when $count=true)
+        '@odata.nextLink':
+          type: string
+          nullable: true
+          description: URL for next page
+
+    JsonPatchOperation:
+      type: object
+      required:
+        - op
+        - path
+      properties:
+        op:
+          type: string
+          enum: [add, remove, replace, move, copy, test]
+        path:
+          type: string
+          description: JSON Pointer path
+          example: /entity/description
+        value:
+          description: Value for add, replace, test operations
+        from:
+          type: string
+          description: Source path for move, copy operations
+
+    GTSEnablement:
+      type: object
+      description: Tenant enablement configuration for GTS entities
+      required:
+        - enabled_for
+      properties:
+        enabled_for:
+          oneOf:
+            - type: string
+              enum: ["all"]
+              description: Special value to enable access for all tenants
+              example: "all"
+            - type: array
+              description: List of specific tenant identifiers that have access to this entity
+              items:
+                type: string
+              example: ["tenant-1", "tenant-2"]
+
+    ODataQueryOptions:
+      type: object
+      description: OData v4 query options for POST requests
+      properties:
+        $filter:
+          type: string
+          description: OData filter expression
+          example: "status eq 'active' and revenue gt 1000"
+        $orderby:
+          type: string
+          description: OData sort expression
+          example: "created_at desc,name asc"
+        $top:
+          type: integer
+          description: Page size (max 1000)
+          minimum: 1
+          maximum: 1000
+        $skip:
+          type: integer
+          description: Number of items to skip
+          minimum: 0
+        $select:
+          type: string
+          description: Comma-separated list of fields to select
+          example: "id,name,revenue,status"
+        $expand:
+          type: string
+          description: Navigation properties to expand
+          example: "customer($select=id,name)"
+        $count:
+          type: boolean
+          description: Include total count in response
+        $search:
+          type: string
+          description: Full-text search query
+
+    ODataResponse:
+      type: object
+      description: OData v4 response format
+      properties:
+        "@odata.context":
+          type: string
+          description: Metadata context URL
+          example: "/api/analytics/v1/queries/$metadata#Sales"
+        "@odata.count":
+          type: integer
+          description: Total count (when $count=true)
+        value:
+          type: array
+          description: Result items
+          items:
+            type: object
+            additionalProperties: true
+        "@odata.nextLink":
+          type: string
+          nullable: true
+          description: URL for next page
+
+    ErrorResponse:
+      $ref: '#/components/schemas/ProblemDetails'
+
+    ProblemDetails:
+      type: object
+      description: RFC 9457 Problem Details
+      required:
+        - type
+        - title
+        - status
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri
+
+  parameters:
+    ContextTenantId:
+      name: context_tenant_id
+      in: query
+      required: false
+      description: |
+        Execute request on behalf of a specific tenant within the authorized tenant hierarchy.
+        
+        **Cross-Tenant Access:**
+        - Service validates that `context_tenant_id` is within the tenant hierarchy from JWT token
+        - If not provided, defaults to `tenant_id` from JWT
+        - Enables parent tenants to perform operations on behalf of child tenants
+        
+        **Use Cases:**
+        - Admin service managing resources for multiple tenants
+        - Parent org accessing child tenant data
+        - Cross-tenant reporting and analytics
+      schema:
+        type: string
+        format: uuid
+      example: "550e8400-e29b-41d4-a716-446655440000"
+
+    ODataFilter:
+      name: $filter
+      in: query
+      description: |
+        OData filter expression.
+        
+        **Examples:**
+        - `startswith(id,'gts.hypernetix.hyperspot.ax.query.v1~')`
+        - `gts_vendor eq 'acme' and gts_type eq 'query'`
+        - `contains(entity/name, 'monitoring')`
+        - `registered_at ge 2024-01-01T00:00:00Z`
+      schema:
+        type: string
+
+    ODataSelect:
+      name: $select
+      in: query
+      description: |
+        Comma-separated list of fields to include in response.
+        Supports dot notation for nested fields.
+        
+        **Example:** `id,type,entity/name,registered_at`
+      schema:
+        type: string
+
+    ODataOrderBy:
+      name: $orderby
+      in: query
+      description: |
+        Sort expression with direction.
+        
+        **Example:** `registered_at desc`, `entity/name asc`
+      schema:
+        type: string
+
+    ODataTop:
+      name: $top
+      in: query
+      description: Page size (max 200)
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+
+    ODataSkipToken:
+      name: $skiptoken
+      in: query
+      description: Opaque pagination cursor from previous response
+      schema:
+        type: string
+
+    ODataCount:
+      name: $count
+      in: query
+      description: Include total count in response
+      schema:
+        type: boolean
+        default: false
+
+  responses:
+    Unauthorized:
+      description: Unauthorized - Invalid or missing authentication token
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: https://example.com/problems/unauthorized
+            title: Unauthorized
+            status: 401
+            detail: Invalid or missing authentication token. Please provide a valid Bearer token.
+
+    BadRequest:
+      description: Bad Request
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          examples:
+            unsupportedQuery:
+              summary: Unsupported query operation
+              value:
+                type: https://example.com/problems/unsupported-query
+                title: Unsupported Query Operation
+                status: 400
+                detail: "Filter on 'entity/custom_field' is not supported. Available indexed fields: [id, type, tenant, registered_at, entity/api_endpoint, entity/name]"
+
+    Forbidden:
+      description: Forbidden
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+
+    ReadOnlyEntity:
+      description: Read-Only Entity
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: https://example.com/problems/read-only-entity
+            title: Read-Only Entity
+            status: 403
+            detail: Entity is read-only. It was provisioned through configuration files and cannot be modified via the API.
+
+    NotFound:
+      description: Not Found
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+
+    Conflict:
+      description: Conflict - Entity already exists
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: https://example.com/problems/duplicate-entity
+            title: Entity Already Exists
+            status: 409
+            detail: Entity with ID 'gts.hypernetix.hyperspot.ax.query.v1~acme.analytics._.sales.v1' already exists. Use PUT to update or DELETE first.

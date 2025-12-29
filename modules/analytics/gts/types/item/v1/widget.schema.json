@@ -1,0 +1,176 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.widget.v1~",
+  "description": "Widget item type for data visualizations. Widgets combine a template (defines how data is rendered) with a datasource (provides the data). They are the primary building blocks for interactive dashboards and reports, supporting various chart types, tables, maps, and custom visualizations.",
+  "allOf": [
+    {
+      "$ref": "gts://gts.hypernetix.hyperspot.ax.item.v1~"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "settings": {
+          "type": "object",
+          "description": "Widget-specific settings combining template and datasource configurations.",
+          "properties": {
+            "template": {
+              "type": "object",
+              "description": "Template configuration defining how the widget renders data. Specifies the template ID and its customization options (colors, axes, legends, etc.).",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "GTS identifier of the widget template to use for rendering this widget. The template determines how data is visualized (chart type, table format, map style, etc.).",
+                  "x-gts-ref": "gts.hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.widget.v1~"
+                },
+                "config": {
+                  "type": "object",
+                  "description": "Template-specific configuration object containing customization options like colors, axes settings, legends, tooltips, and other visual/behavioral properties. Structure is defined by the template's config_schema_id.",
+                  "additionalProperties": true
+                }
+              },
+              "required": ["id", "config"]
+            },
+            "datasource": {
+              "description": "Datasource configuration providing data to this widget. Can be defined inline (full datasource structure) or reference an existing datasource via 'gts' field.",
+              "allOf": [
+                {
+                  "$ref": "gts://gts.hypernetix.hyperspot.ax.datasource.v1~"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "gts": {
+                      "type": "object",
+                      "description": "Reference to the base GTS datasource that this widget's datasource was created from. Serves as a marker/link to the original datasource template, while the widget may have its own customized params and ui_config.",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "GTS identifier of the base datasource instance that was used as a template for this widget's datasource configuration.",
+                          "x-gts-ref": "gts.hypernetix.hyperspot.ax.datasource.v1~"
+                        },
+                        "type": {
+                          "type": "string",
+                          "description": "GTS type identifier of the datasource schema.",
+                          "x-gts-ref": "gts.hypernetix.hyperspot.ax.datasource.v1~"
+                        }
+                      },
+                      "required": ["id", "type"]
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "required": ["template", "datasource"]
+        }
+      }
+    }
+  ],
+  "examples": [
+    {
+      "category_id": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.widget.v1~hypernetix.hyperspot.ax.categories_widgets_charts.v1",
+      "name": "Sales Trend Chart",
+      "description": "Line chart showing sales revenue over time",
+      "size": {
+        "width": 50,
+        "height": "medium"
+      },
+      "settings": {
+        "template": {
+          "id": "gts.hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.widget.v1~hypernetix.hyperspot.ax.templates_charts_line.v1",
+          "config": {
+            "colors": ["#3b82f6", "#10b981"],
+            "showLegend": true,
+            "showGrid": true
+          }
+        },
+        "datasource": {
+          "query_id": "gts.hypernetix.hyperspot.ax.query.v1~hypernetix.hyperspot.ax.sales_daily.v1",
+          "params": {
+            "$filter": "created_at ge 2024-01-01T00:00:00Z",
+            "$orderby": "created_at asc",
+            "$top": 365
+          },
+          "gts": {
+            "id": "gts.hypernetix.hyperspot.ax.datasource.v1~hypernetix.hyperspot.ax.sales_trend.v1",
+            "type": "gts.hypernetix.hyperspot.ax.datasource.v1~"
+          }
+        }
+      }
+    },
+    {
+      "category_id": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.widget.v1~hypernetix.hyperspot.ax.categories_widgets_kpi.v1",
+      "name": "Total Revenue KPI",
+      "description": "Key performance indicator showing total revenue",
+      "size": {
+        "width": 25,
+        "height": "small"
+      },
+      "settings": {
+        "template": {
+          "id": "gts.hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.widget.v1~hypernetix.hyperspot.ax.templates_kpi_card.v1",
+          "config": {
+            "icon": "dollar-sign",
+            "color": "green",
+            "format": "currency"
+          }
+        },
+        "datasource": {
+          "query_id": "gts.hypernetix.hyperspot.ax.query.v1~hypernetix.hyperspot.ax.templates_kpi_total_revenue.v1",
+          "params": {
+            "$filter": "status eq 'active'",
+            "$top": 1
+          }
+        }
+      }
+    },
+    {
+      "category_id": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.widget.v1~hypernetix.hyperspot.ax.categories_widgets_tables.v1",
+      "name": "Recent Orders Table",
+      "description": "Table displaying recent sales orders with filtering",
+      "size": {
+        "width": 100,
+        "height": "unlimited"
+      },
+      "settings": {
+        "template": {
+          "id": "gts.hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.widget.v1~hypernetix.hyperspot.ax.templates_tables_data_grid.v1",
+          "config": {
+            "showPagination": true,
+            "pageSize": 50,
+            "sortable": true,
+            "filterable": true
+          }
+        },
+        "datasource": {
+          "query_id": "gts.hypernetix.hyperspot.ax.query.v1~hypernetix.hyperspot.ax.sales_orders.v1",
+          "params": {
+            "$filter": "created_at ge 2024-12-01T00:00:00Z",
+            "$orderby": "created_at desc",
+            "$top": 50,
+            "$select": "id,customer,revenue,status,created_at"
+          },
+          "ui_config": {
+            "filters": {
+              "status": {
+                "enabled": true,
+                "label": "Order Status",
+                "values": {
+                  "items": [
+                    {"value": "pending", "label": "Pending"},
+                    {"value": "active", "label": "Active"},
+                    {"value": "completed", "label": "Completed"}
+                  ]
+                }
+              }
+            },
+            "pagination": {
+              "enabled": true,
+              "page_sizes": [25, 50, 100]
+            }
+          }
+        }
+      }
+    }
+  ]
+}

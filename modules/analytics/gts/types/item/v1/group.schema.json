@@ -1,0 +1,196 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.group.v1~",
+  "description": "Group item type for organizing and containing other items. Groups provide visual and logical organization of widgets and nested groups within layouts. They support collapsible sections, allowing users to expand/collapse related content. Groups help create hierarchical dashboard structures.",
+  "allOf": [
+    {
+      "$ref": "gts://gts.hypernetix.hyperspot.ax.item.v1~"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "settings": {
+          "type": "object",
+          "description": "Group-specific settings for container behavior and nested items.",
+          "properties": {
+            "collapsible": {
+              "type": "boolean",
+              "description": "Whether the group can be collapsed by users. If true, shows collapse/expand controls in the UI."
+            },
+            "collapsed": {
+              "type": "boolean",
+              "description": "Initial collapsed state when the layout loads. Only applies if collapsible is true."
+            },
+            "items": {
+              "type": "array",
+              "description": "Nested items contained within this group. Can include widgets and nested groups, allowing for hierarchical layout structures. Items are rendered in the order they appear.",
+              "items": {
+                "$ref": "gts://gts.hypernetix.hyperspot.ax.item.v1~",
+                "description": "Child item - can be a widget or another group for nested organization."
+              }
+            }
+          },
+          "required": ["items"]
+        }
+      },
+      "examples": [
+        {
+          "category_id": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.group.v1~hypernetix.hyperspot.ax.categories_groups_kpi.v1",
+          "name": "Sales KPI Section",
+          "description": "Group containing key sales performance indicators",
+          "size": {
+            "width": 100,
+            "height": "high"
+          },
+          "settings": {
+            "collapsible": true,
+            "collapsed": false,
+            "items": [
+              {
+                "type": "gts.hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.widget.v1~",
+                "category_id": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.widget.v1~hypernetix.hyperspot.ax.categories_widgets_kpi.v1",
+                "name": "Total Revenue",
+                "size": {"width": 35, "height": "small"},
+                "settings": {
+                  "template": {
+                    "template_id": "gts.hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.widget.v1~hypernetix.hyperspot.ax.templates_kpi_card.v1",
+                    "config": {
+                      "icon": "dollar-sign",
+                      "color": "green"
+                    }
+                  },
+                  "datasource": {
+                    "datasource_id": "gts.hypernetix.hyperspot.ax.datasource.v1~hypernetix.hyperspot.ax.templates_kpi_revenue.v1"
+                  }
+                }
+              },
+              {
+                "type": "gts.hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.widget.v1~",
+                "category_id": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.widget.v1~hypernetix.hyperspot.ax.categories_widgets_kpi.v1",
+                "name": "Orders Count",
+                "size": {"width": 35, "height": "small"},
+                "settings": {
+                  "template": {
+                    "template_id": "gts.hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.widget.v1~hypernetix.hyperspot.ax.templates_kpi_card.v1",
+                    "config": {
+                      "icon": "shopping-cart",
+                      "color": "blue"
+                    }
+                  },
+                  "datasource": {
+                    "datasource_id": "gts.hypernetix.hyperspot.ax.datasource.v1~hypernetix.hyperspot.ax.templates_kpi_orders.v1"
+                  }
+                }
+              },
+              {
+                "type": "gts.hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.widget.v1~",
+                "category_id": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.widget.v1~hypernetix.hyperspot.ax.categories_widgets_kpi.v1",
+                "name": "Average Order Value",
+                "size": {"width": 35, "height": "small"},
+                "settings": {
+                  "template": {
+                    "template_id": "gts.hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.widget.v1~hypernetix.hyperspot.ax.templates_kpi_card.v1",
+                    "config": {
+                      "icon": "trending-up",
+                      "color": "purple"
+                    }
+                  },
+                  "datasource": {
+                    "datasource_id": "gts.hypernetix.hyperspot.ax.datasource.v1~hypernetix.hyperspot.ax.templates_kpi_avg_order.v1"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "category_id": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.group.v1~hypernetix.hyperspot.ax.categories_groups_charts.v1",
+          "name": "Sales Analytics",
+          "description": "Detailed sales charts and trends",
+          "size": {
+            "width": 100,
+            "height": "high"
+          },
+          "settings": {
+            "collapsible": true,
+            "collapsed": true,
+            "items": [
+              {
+                "type": "gts.hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.widget.v1~",
+                "category_id": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.widget.v1~hypernetix.hyperspot.ax.categories_widgets_charts.v1",
+                "name": "Revenue Trend",
+                "size": {"width": 50, "height": "medium"},
+                "settings": {
+                  "template": {
+                    "template_id": "gts.hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.widget.v1~hypernetix.hyperspot.ax.templates_charts_line.v1",
+                    "config": {
+                      "colors": ["#3b82f6"],
+                      "showLegend": true
+                    }
+                  },
+                  "datasource": {
+                    "datasource_id": "gts.hypernetix.hyperspot.ax.datasource.v1~hypernetix.hyperspot.ax.revenue_trend.v1"
+                  }
+                }
+              },
+              {
+                "type": "gts.hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.widget.v1~",
+                "category_id": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.widget.v1~hypernetix.hyperspot.ax.categories_widgets_charts.v1",
+                "name": "Sales by Region",
+                "size": {"width": 50, "height": "medium"},
+                "settings": {
+                  "template": {
+                    "template_id": "gts.hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.widget.v1~hypernetix.hyperspot.ax.templates_charts_bar.v1",
+                    "config": {
+                      "colors": ["#10b981", "#f59e0b", "#ef4444"],
+                      "showLegend": false
+                    }
+                  },
+                  "datasource": {
+                    "datasource_id": "gts.hypernetix.hyperspot.ax.datasource.v1~hypernetix.hyperspot.ax.sales_by_region.v1"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "category_id": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.group.v1~hypernetix.hyperspot.ax.categories_groups_nested.v1",
+          "name": "Executive Overview",
+          "description": "Multi-level grouped dashboard section with nested groups",
+          "size": {
+            "width": 100,
+            "height": "high"
+          },
+          "settings": {
+            "collapsible": false,
+            "items": [
+              {
+                "type": "gts.hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.group.v1~",
+                "category_id": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.group.v1~hypernetix.hyperspot.ax.categories_groups_kpi.v1",
+                "name": "Key Metrics",
+                "size": {"width": 100, "height": "high"},
+                "settings": {
+                  "collapsible": true,
+                  "collapsed": false,
+                  "items": []
+                }
+              },
+              {
+                "type": "gts.hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.group.v1~",
+                "category_id": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.group.v1~hypernetix.hyperspot.ax.categories_groups_charts.v1",
+                "name": "Detailed Analytics",
+                "size": {"width": 100, "height": "high"},
+                "settings": {
+                  "collapsible": true,
+                  "collapsed": true,
+                  "items": []
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

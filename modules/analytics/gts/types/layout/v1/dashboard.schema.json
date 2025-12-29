@@ -1,0 +1,248 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.hypernetix.hyperspot.ax.layout.v1~hypernetix.hyperspot.ax.dashboard.v1~",
+  "description": "Dashboard layout type for interactive, real-time data monitoring and visualization. Dashboards are designed for live viewing with auto-refresh capabilities and theme customization. They support dynamic filtering, drill-downs, and user interaction with data visualizations.",
+  "allOf": [
+    {
+      "$ref": "gts://gts.hypernetix.hyperspot.ax.layout.v1~"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "settings": {
+          "type": "object",
+          "description": "Dashboard-specific configuration for refresh behavior and visual theme. These settings control how the dashboard automatically updates and displays to users.",
+          "properties": {
+            "refresh_interval": {
+              "type": "integer",
+              "description": "Auto-refresh interval in seconds. Dashboard data will automatically reload at this interval. Set to 0 to disable auto-refresh. Typical values: 30, 60, 300."
+            },
+            "theme": {
+              "type": "string",
+              "enum": ["light", "dark", "auto"],
+              "description": "Visual theme for the dashboard. 'light' for light mode, 'dark' for dark mode, 'auto' to follow system preference."
+            }
+          }
+        }
+      }
+    }
+  ],
+  "examples": [
+    {
+      "name": "Sales Performance Dashboard",
+      "description": "Real-time sales analytics with KPIs, trends, and regional breakdowns. Auto-refreshes every minute to show current performance metrics.",
+      "category": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.layout.v1~hypernetix.hyperspot.ax.dashboard.v1~hypernetix.hyperspot.ax.sales.v1",
+      "items": [
+        {
+          "type": "gts.hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.group.v1~",
+          "category_id": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.group.v1~hypernetix.hyperspot.ax.categories_groups_kpi.v1",
+          "name": "Key Metrics",
+          "description": "Primary sales KPIs",
+          "size": {"width": 100, "height": "high"},
+          "settings": {
+            "collapsible": false,
+            "items": [
+              {
+                "type": "gts.hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.widget.v1~",
+                "category_id": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.widget.v1~hypernetix.hyperspot.ax.categories_widgets_kpi.v1",
+                "name": "Total Revenue",
+                "size": {"width": 25, "height": "small"},
+                "settings": {
+                  "template": {
+                    "id": "gts.hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.widget.v1~hypernetix.hyperspot.ax.templates_kpi_card.v1",
+                    "config": {"icon": "dollar-sign", "color": "green"}
+                  },
+                  "datasource": {
+                    "query_id": "gts.hypernetix.hyperspot.ax.query.v1~hypernetix.hyperspot.ax.templates_kpi_revenue.v1",
+                    "params": {"$filter": "status eq 'completed'", "$top": 1}
+                  }
+                }
+              },
+              {
+                "type": "gts.hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.widget.v1~",
+                "category_id": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.widget.v1~hypernetix.hyperspot.ax.categories_widgets_kpi.v1",
+                "name": "Orders Today",
+                "size": {"width": 25, "height": "small"},
+                "settings": {
+                  "template": {
+                    "id": "gts.hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.widget.v1~hypernetix.hyperspot.ax.templates_kpi_card.v1",
+                    "config": {"icon": "shopping-cart", "color": "blue"}
+                  },
+                  "datasource": {
+                    "query_id": "gts.hypernetix.hyperspot.ax.query.v1~hypernetix.hyperspot.ax.templates_kpi_orders_today.v1",
+                    "params": {"$top": 1}
+                  }
+                }
+              },
+              {
+                "type": "gts.hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.widget.v1~",
+                "category_id": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.widget.v1~hypernetix.hyperspot.ax.categories_widgets_kpi.v1",
+                "name": "Avg Order Value",
+                "size": {"width": 25, "height": "small"},
+                "settings": {
+                  "template": {
+                    "id": "gts.hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.widget.v1~hypernetix.hyperspot.ax.templates_kpi_card.v1",
+                    "config": {"icon": "trending-up", "color": "purple"}
+                  },
+                  "datasource": {
+                    "query_id": "gts.hypernetix.hyperspot.ax.query.v1~hypernetix.hyperspot.ax.templates_kpi_avg_order.v1",
+                    "params": {"$top": 1}
+                  }
+                }
+              },
+              {
+                "type": "gts.hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.widget.v1~",
+                "category_id": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.widget.v1~hypernetix.hyperspot.ax.categories_widgets_kpi.v1",
+                "name": "Conversion Rate",
+                "size": {"width": 25, "height": "small"},
+                "settings": {
+                  "template": {
+                    "id": "gts.hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.widget.v1~hypernetix.hyperspot.ax.templates_kpi_card.v1",
+                    "config": {"icon": "percent", "color": "orange"}
+                  },
+                  "datasource": {
+                    "query_id": "gts.hypernetix.hyperspot.ax.query.v1~hypernetix.hyperspot.ax.templates_kpi_conversion.v1",
+                    "params": {"$top": 1}
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "type": "gts.hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.widget.v1~",
+          "category_id": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.widget.v1~hypernetix.hyperspot.ax.categories_widgets_charts.v1",
+          "name": "Revenue Trend (30 Days)",
+          "description": "Daily revenue over the last 30 days",
+          "size": {"width": 65, "height": "medium"},
+          "settings": {
+            "template": {
+              "id": "gts.hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.widget.v1~hypernetix.hyperspot.ax.templates_charts_line.v1",
+              "config": {"colors": ["#3b82f6"], "showLegend": false, "showGrid": true}
+            },
+            "datasource": {
+              "query_id": "gts.hypernetix.hyperspot.ax.query.v1~hypernetix.hyperspot.ax.daily_revenue.v1",
+              "params": {
+                "$filter": "created_at ge 2024-12-01T00:00:00Z",
+                "$orderby": "created_at asc",
+                "$top": 30
+              }
+            }
+          }
+        },
+        {
+          "type": "gts.hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.widget.v1~",
+          "category_id": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.widget.v1~hypernetix.hyperspot.ax.categories_widgets_charts.v1",
+          "name": "Top Products",
+          "description": "Best selling products by revenue",
+          "size": {"width": 35, "height": "small"},
+          "settings": {
+            "template": {
+              "id": "gts.hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.widget.v1~hypernetix.hyperspot.ax.templates_charts_bar.v1",
+              "config": {"colors": ["#10b981"], "showLegend": false, "horizontal": true}
+            },
+            "datasource": {
+              "query_id": "gts.hypernetix.hyperspot.ax.query.v1~hypernetix.hyperspot.ax.top_products.v1",
+              "params": {
+                "$orderby": "revenue desc",
+                "$top": 10
+              }
+            }
+          }
+        },
+        {
+          "type": "gts.hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.widget.v1~",
+          "category_id": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.widget.v1~hypernetix.hyperspot.ax.categories_widgets_tables.v1",
+          "name": "Recent Orders",
+          "description": "Latest sales orders with real-time updates",
+          "size": {"width": 100, "height": "high"},
+          "settings": {
+            "template": {
+              "id": "gts.hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.widget.v1~hypernetix.hyperspot.ax.templates_tables_data_grid.v1",
+              "config": {"showPagination": true, "pageSize": 20}
+            },
+            "datasource": {
+              "query_id": "gts.hypernetix.hyperspot.ax.query.v1~hypernetix.hyperspot.ax.sales_orders.v1",
+              "params": {
+                "$orderby": "created_at desc",
+                "$top": 20,
+                "$select": "id,customer,product,revenue,status,created_at"
+              }
+            }
+          }
+        }
+      ],
+      "settings": {
+        "refresh_interval": 60,
+        "theme": "auto"
+      }
+    },
+    {
+      "name": "Operations Monitoring Dashboard",
+      "description": "Real-time system monitoring with server metrics, logs, and alerts. High-frequency refresh for operational awareness.",
+      "category": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.layout.v1~hypernetix.hyperspot.ax.dashboard.v1~hypernetix.hyperspot.ax.monitoring.v1",
+      "items": [
+        {
+          "type": "gts.hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.group.v1~",
+          "category_id": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.group.v1~hypernetix.hyperspot.ax.categories_groups_monitoring.v1",
+          "name": "System Health",
+          "size": {"width": 100, "height": "high"},
+          "settings": {
+            "collapsible": false,
+            "items": [
+              {
+                "type": "gts.hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.widget.v1~",
+                "name": "CPU Usage",
+                "size": {"width": 35, "height": "small"},
+                "settings": {
+                  "template": {
+                    "id": "gts.hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.widget.v1~hypernetix.hyperspot.ax.templates_gauges_circular.v1",
+                    "config": {"color": "blue", "min": 0, "max": 100, "unit": "%"}
+                  },
+                  "datasource": {
+                    "query_id": "gts.hypernetix.hyperspot.ax.query.v1~hypernetix.hyperspot.ax.monitoring_server_cpu.v1",
+                    "params": {"$top": 1}
+                  }
+                }
+              },
+              {
+                "type": "gts.hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.widget.v1~",
+                "name": "Memory Usage",
+                "size": {"width": 35, "height": "small"},
+                "settings": {
+                  "template": {
+                    "id": "gts.hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.widget.v1~hypernetix.hyperspot.ax.templates_gauges_circular.v1",
+                    "config": {"color": "green", "min": 0, "max": 100, "unit": "%"}
+                  },
+                  "datasource": {
+                    "query_id": "gts.hypernetix.hyperspot.ax.query.v1~hypernetix.hyperspot.ax.monitoring_server_memory.v1",
+                    "params": {"$top": 1}
+                  }
+                }
+              },
+              {
+                "type": "gts.hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.widget.v1~",
+                "name": "Active Alerts",
+                "size": {"width": 35, "height": "small"},
+                "settings": {
+                  "template": {
+                    "id": "gts.hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.widget.v1~hypernetix.hyperspot.ax.templates_kpi_card.v1",
+                    "config": {"icon": "alert-triangle", "color": "red"}
+                  },
+                  "datasource": {
+                    "query_id": "gts.hypernetix.hyperspot.ax.query.v1~hypernetix.hyperspot.ax.monitoring_server_alerts.v1",
+                    "params": {"$filter": "severity eq 'critical'", "$count": true}
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "settings": {
+        "refresh_interval": 30,
+        "theme": "dark"
+      }
+    }
+  ]
+}

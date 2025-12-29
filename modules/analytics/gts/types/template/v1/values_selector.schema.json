@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.values_selector.v1~",
+  "description": "Template for value selection UI components like dropdowns, multi-selects, and autocomplete fields. Used in filter controls to allow users to select from a list of available values. Values can be loaded from static lists or dynamic queries.",
+  "allOf": [
+    {
+      "$ref": "gts://gts.hypernetix.hyperspot.ax.template.v1~"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "query_returns_schema_id": {
+          "type": "string",
+          "description": "GTS identifier of the values schema that this selector expects. Defines the structure of value/label pairs returned by the values query. Used to populate dropdown options, multi-select items, and autocomplete suggestions.",
+          "x-gts-ref": "gts.hypernetix.hyperspot.ax.schema.v1~hypernetix.hyperspot.ax.query_returns.v1~hypernetix.hyperspot.ax.values.v1~"
+        }
+      },
+      "required": ["query_returns_schema_id"],
+      "examples": [
+        {
+          "name": "Dropdown Selector",
+          "config_schema_id": "gts.hypernetix.hyperspot.ax.schema.v1~hypernetix.hyperspot.ax.template_config.v1~hypernetix.hyperspot.ax.templates_selectors_dropdown.v1",
+          "category_id": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.templates_selectors.v1",
+          "query_returns_schema_id": "gts.hypernetix.hyperspot.ax.schema.v1~hypernetix.hyperspot.ax.query_returns.v1~hypernetix.hyperspot.ax.values.v1~hypernetix.hyperspot.ax.filters_regions_regions.v1"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,169 @@
+<svg host="65bd71144e" xmlns="http://www.w3.org/2000/svg" style="background: transparent; background-color: transparent;" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="1012" height="1312" viewBox="-0.5 -0.5 1012 1312" content="&lt;mxfile&gt;&lt;diagram id=&quot;d&quot; name=&quot;P&quot;&gt;3ZjPc5wgFMf/Gu8K/thca9Mkh04Pe+iZKFVaFYfFqP3rCytk0cBkJ3VnSk/rfh/wfB8e8DCAeTs9MNTXX2mJmwCE5RTAzwEAUZiE4kcq86JkWbwIFSOlanQRjuQ31j2VOpASn1YNOaUNJ/1aLGjX4YKvNMQYHdfNftBm7bVHFX4jHAvUvFW/k5LXi3rQYUn9EZOq1p6jUFmeUfGrYnTolL+OdnixtEgPo5qealTScf3qJeo5ecE5bShTIaCBU2mF9wHMGaV8eWqnHDcSuua5jPrFYX0NiOGOX9OBcNyqTi+oGRSXJ6EKRRjSAEAxW/CTZJIEIJcRtUiOsXWkh8GM48mQlOMHTFvM2SyajBfWiSZaG5yBFpGCU732vYTy7fmnTAkQnqcBrwGMtQjs2KNCBTSK/FV+eNusJ0P5OPG5waYD8aBwudEBFzpgR9eSgtG/QTdtsL2HMvIGJXShhAZKyXGvLJw3yWagBInXWRm7UMY3QjltsP2/aBMX2sSx4HFJhnbPFT9vFvZ7O0DsDdvUxTY12J7j3nkLiC0shR+vEzVzwcwMmDDZ72RSLFMLS2hb8/6cTAcXyoOJcv9DHm62Uytavw/9OxfauxtlqbKm16D1O2v1HctS1oc3quv1LfDao8mf3TRy35Eie01VizB3SNTtsW9jay2pUn/YOi9REbCz3a2oypIP0v0niyrx9/Lh4GwzPtvA+z8=&lt;/diagram&gt;&lt;/mxfile&gt;">
+    <defs>
+        <filter id="drawio-drop-shadow">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1.7" result="blur"/>
+            <feOffset in="blur" dx="3" dy="3" result="offsetBlur"/>
+            <feFlood flood-color="#3D4574" flood-opacity="0.4" result="offsetColor"/>
+            <feComposite in="offsetColor" in2="offsetBlur" operator="in" result="offsetBlur"/>
+            <feBlend in="SourceGraphic" in2="offsetBlur"/>
+        </filter>
+    </defs>
+    <g filter="url(#drawio-drop-shadow)">
+        <g>
+            <rect x="0" y="0" width="500" height="200" fill="#ffffff" stroke="#000000" pointer-events="all" style="fill: light-dark(#ffffff, var(--ge-dark-color, #121212)); stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+        </g>
+        <g>
+            <g fill="#000000" font-family="&quot;Helvetica&quot;" text-anchor="middle" font-size="12px" style="fill: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));">
+                <text x="249.5" y="97.5">
+                    Item 1
+                </text>
+                <text x="249.5" y="111.5">
+                    50%, small
+                </text>
+            </g>
+        </g>
+        <g>
+            <rect x="500" y="0" width="500" height="100" fill="#ffffff" stroke="#000000" pointer-events="all" style="fill: light-dark(#ffffff, var(--ge-dark-color, #121212)); stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+        </g>
+        <g>
+            <g fill="#000000" font-family="&quot;Helvetica&quot;" text-anchor="middle" font-size="12px" style="fill: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));">
+                <text x="749.5" y="47.5">
+                    Item 2
+                </text>
+                <text x="749.5" y="61.5">
+                    50%, micro
+                </text>
+            </g>
+        </g>
+        <g>
+            <rect x="0" y="200" width="250" height="200" fill="#ffffff" stroke="#000000" pointer-events="all" style="fill: light-dark(#ffffff, var(--ge-dark-color, #121212)); stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+        </g>
+        <g>
+            <g fill="#000000" font-family="&quot;Helvetica&quot;" text-anchor="middle" font-size="12px" style="fill: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));">
+                <text x="124.5" y="297.5">
+                    Item 3
+                </text>
+                <text x="124.5" y="311.5">
+                    25%, small
+                </text>
+            </g>
+        </g>
+        <g>
+            <rect x="250" y="200" width="250" height="200" fill="#ffffff" stroke="#000000" pointer-events="all" style="fill: light-dark(#ffffff, var(--ge-dark-color, #121212)); stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+        </g>
+        <g>
+            <g fill="#000000" font-family="&quot;Helvetica&quot;" text-anchor="middle" font-size="12px" style="fill: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));">
+                <text x="374.5" y="297.5">
+                    Item 4
+                </text>
+                <text x="374.5" y="311.5">
+                    25%, small
+                </text>
+            </g>
+        </g>
+        <g>
+            <rect x="500" y="100" width="500" height="400" fill="#ffffff" stroke="#000000" pointer-events="all" style="fill: light-dark(#ffffff, var(--ge-dark-color, #121212)); stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+        </g>
+        <g>
+            <g fill="#000000" font-family="&quot;Helvetica&quot;" text-anchor="middle" font-size="12px" style="fill: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));">
+                <text x="749.5" y="297.5">
+                    Item 5
+                </text>
+                <text x="749.5" y="311.5">
+                    50%, medium
+                </text>
+            </g>
+        </g>
+        <g>
+            <rect x="0" y="400" width="1000" height="200" fill="#ffffff" stroke="#000000" pointer-events="all" style="fill: light-dark(#ffffff, var(--ge-dark-color, #121212)); stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+        </g>
+        <g>
+            <g fill="#000000" font-family="&quot;Helvetica&quot;" text-anchor="middle" font-size="12px" style="fill: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));">
+                <text x="499.5" y="497.5">
+                    Item 6
+                </text>
+                <text x="499.5" y="511.5">
+                    100%, small
+                </text>
+            </g>
+        </g>
+        <g>
+            <rect x="0" y="600" width="350" height="100" fill="#ffffff" stroke="#000000" pointer-events="all" style="fill: light-dark(#ffffff, var(--ge-dark-color, #121212)); stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+        </g>
+        <g>
+            <g fill="#000000" font-family="&quot;Helvetica&quot;" text-anchor="middle" font-size="12px" style="fill: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));">
+                <text x="174.5" y="647.5">
+                    Item 7
+                </text>
+                <text x="174.5" y="661.5">
+                    35%, micro
+                </text>
+            </g>
+        </g>
+        <g>
+            <rect x="350" y="600" width="300" height="100" fill="#ffffff" stroke="#000000" pointer-events="all" style="fill: light-dark(#ffffff, var(--ge-dark-color, #121212)); stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+        </g>
+        <g>
+            <g fill="#000000" font-family="&quot;Helvetica&quot;" text-anchor="middle" font-size="12px" style="fill: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));">
+                <text x="499.5" y="647.5">
+                    Item 8
+                </text>
+                <text x="499.5" y="661.5">
+                    30%, micro
+                </text>
+            </g>
+        </g>
+        <g>
+            <rect x="650" y="600" width="350" height="100" fill="#ffffff" stroke="#000000" pointer-events="all" style="fill: light-dark(#ffffff, var(--ge-dark-color, #121212)); stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+        </g>
+        <g>
+            <g fill="#000000" font-family="&quot;Helvetica&quot;" text-anchor="middle" font-size="12px" style="fill: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));">
+                <text x="824.5" y="647.5">
+                    Item 9
+                </text>
+                <text x="824.5" y="661.5">
+                    35%, micro
+                </text>
+            </g>
+        </g>
+        <g>
+            <rect x="0" y="700" width="500" height="200" fill="#ffffff" stroke="#000000" pointer-events="all" style="fill: light-dark(#ffffff, var(--ge-dark-color, #121212)); stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+        </g>
+        <g>
+            <g fill="#000000" font-family="&quot;Helvetica&quot;" text-anchor="middle" font-size="12px" style="fill: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));">
+                <text x="249.5" y="797.5">
+                    Item 10
+                </text>
+                <text x="249.5" y="811.5">
+                    50%, small
+                </text>
+            </g>
+        </g>
+        <g>
+            <rect x="500" y="700" width="250" height="600" fill="#ffffff" stroke="#000000" pointer-events="all" style="fill: light-dark(#ffffff, var(--ge-dark-color, #121212)); stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+        </g>
+        <g>
+            <g fill="#000000" font-family="&quot;Helvetica&quot;" text-anchor="middle" font-size="12px" style="fill: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));">
+                <text x="624.5" y="997.5">
+                    Item 11
+                </text>
+                <text x="624.5" y="1011.5">
+                    25%, high
+                </text>
+            </g>
+        </g>
+        <g>
+            <rect x="750" y="700" width="250" height="400" fill="#ffffff" stroke="#000000" pointer-events="all" style="fill: light-dark(#ffffff, var(--ge-dark-color, #121212)); stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+        </g>
+        <g>
+            <g fill="#000000" font-family="&quot;Helvetica&quot;" text-anchor="middle" font-size="12px" style="fill: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));">
+                <text x="874.5" y="897.5">
+                    Item 12
+                </text>
+                <text x="874.5" y="911.5">
+                    25%, medium
+                </text>
+            </g>
+        </g>
+    </g>
+</svg>
