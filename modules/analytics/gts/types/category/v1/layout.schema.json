@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.layout.v1~",
+  "type": "object",
+  "description": "Category for layout definitions (dashboards and reports). Used to organize layout templates and instances by use case, presentation format, or audience.",
+  "allOf": [
+    {
+      "$ref": "gts://gts.hypernetix.hyperspot.ax.category.v1~"
+    }
+  ],
+  "examples": [
+    {
+      "name": "Standard Layouts",
+      "description": "Common dashboard and report layouts",
+      "icon": "layout"
+    }
+  ]
+}

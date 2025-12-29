@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.hypernetix.hyperspot.ax.query.v1~hypernetix.hyperspot.ax.values.v1~",
+  "description": "Values query type - specialized query that returns value/label pairs for UI selectors (dropdowns, filters, autocomplete). Inherits all query properties but enforces returns_schema_id to point to values schema.",
+  "allOf": [
+    {
+      "$ref": "gts://gts.hypernetix.hyperspot.ax.query.v1~"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "returns_schema_id": {
+          "type": "string",
+          "const": "gts.hypernetix.hyperspot.ax.schema.v1~hypernetix.hyperspot.ax.query_returns.v1~hypernetix.hyperspot.ax.values.v1~",
+          "description": "Fixed reference to values schema. This query type always returns value/label pairs."
+        }
+      }
+    }
+  ],
+  "examples": [
+    {
+      "category": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.query.v1~hypernetix.hyperspot.ax.values.v1~hypernetix.hyperspot.ax.filters_regions_regions.v1",
+      "name": "Region Filter Values",
+      "description": "List of available regions for filtering. Returns region codes with human-readable labels for dropdown selectors and filter controls.",
+      "api_endpoint": "https://api.acme.com/odata/values/Regions",
+      "capabilities_id": "gts.hypernetix.hyperspot.ax.query_capabilities.v1~hypernetix.hyperspot.ax.values_regions_capabilities.v1",
+      "returns_schema_id": "gts.hypernetix.hyperspot.ax.schema.v1~hypernetix.hyperspot.ax.query_returns.v1~hypernetix.hyperspot.ax.values.v1~"
+    }
+  ]
+}

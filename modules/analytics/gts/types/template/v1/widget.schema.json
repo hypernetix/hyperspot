@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.widget.v1~",
+  "description": "Widget template defining how to render data visualizations. Widget templates specify the rendering logic, configuration schema, and data requirements for charts, tables, maps, and other visualization components. Each template declares what query return schema it expects to receive.",
+  "allOf": [
+    {
+      "$ref": "gts://gts.hypernetix.hyperspot.ax.template.v1~"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "query_returns_schema_id": {
+          "type": "string",
+          "description": "GTS identifier of the query returns schema that this widget template is designed to render. Defines the expected data structure, field names, and types that the template knows how to visualize. Must match the returns_schema_id of the query used by the widget's datasource for proper data binding.",
+          "x-gts-ref": "gts.hypernetix.hyperspot.ax.schema.v1~hypernetix.hyperspot.ax.query_returns.v1~"
+        }
+      },
+      "required": ["query_returns_schema_id"],
+      "examples": [
+        {
+          "name": "Bar Chart Widget",
+          "config_schema_id": "gts.hypernetix.hyperspot.ax.schema.v1~hypernetix.hyperspot.ax.template_config.v1~hypernetix.hyperspot.ax.analytics_charts_bar.v1",
+          "category_id": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.analytics_widgets_charts.v1",
+          "query_returns_schema_id": "gts.hypernetix.hyperspot.ax.schema.v1~hypernetix.hyperspot.ax.query_returns.v1~hypernetix.hyperspot.ax.analytics_sales.v1"
+        }
+      ]
+    }
+  ]
+}

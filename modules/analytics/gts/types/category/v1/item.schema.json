@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.item.v1~",
+  "type": "object",
+  "description": "Category for layout items (widgets and groups). Used to organize reusable item instances that can be placed in dashboards and reports.",
+  "allOf": [
+    {
+      "$ref": "gts://gts.hypernetix.hyperspot.ax.category.v1~"
+    }
+  ],
+  "examples": [
+    {
+      "name": "Dashboard Items",
+      "description": "Reusable dashboard components",
+      "icon": "layout"
+    }
+  ]
+}

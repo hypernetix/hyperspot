@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.dashboard.v1~",
+  "type": "object",
+  "description": "Category for dashboard layouts. Used to organize dashboard instances by business domain, team, or purpose (e.g., 'Executive Overview', 'Operations', 'Marketing Analytics').",
+  "allOf": [
+    {
+      "$ref": "gts://gts.hypernetix.hyperspot.ax.category.v1~"
+    }
+  ],
+  "examples": [
+    {
+      "name": "Executive Dashboards",
+      "description": "High-level overview dashboards for executives",
+      "icon": "briefcase"
+    },
+    {
+      "name": "Operational Dashboards",
+      "description": "Real-time operational monitoring",
+      "icon": "activity"
+    }
+  ]
+}

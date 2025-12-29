@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.group.v1~",
+  "type": "object",
+  "description": "Category for group items. Used to organize group instances that serve as containers for organizing and structuring related widgets and nested groups within layouts (e.g., 'KPI Sections', 'Monitoring Groups', 'Report Sections').",
+  "allOf": [
+    {
+      "$ref": "gts://gts.hypernetix.hyperspot.ax.category.v1~"
+    }
+  ],
+  "examples": [
+    {
+      "name": "KPI Groups",
+      "description": "Grouped KPI sections",
+      "icon": "grid"
+    }
+  ]
+}

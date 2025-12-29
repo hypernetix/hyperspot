@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.hypernetix.hyperspot.ax.schema.v1~hypernetix.hyperspot.ax.query_returns.v1~hypernetix.hyperspot.ax.values.v1~",
+  "description": "Schema for value lists used in UI selectors and filters. Returns a standardized list of value/label pairs suitable for dropdowns, multi-selects, checkboxes, and autocomplete components. Each item has a required value field (the actual data value) and optional label (display text), description (tooltip), and metadata (additional context).",
+  "allOf": [
+    {
+      "$ref": "gts://gts.hypernetix.hyperspot.ax.schema.v1~hypernetix.hyperspot.ax.query_returns.v1~"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "array",
+          "description": "Array of value/label pairs following OData format. Each item represents a selectable option for UI controls.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": ["string", "number", "integer", "boolean", "null"],
+                "description": "The actual value that will be submitted when selected. Can be string, number, integer, boolean, or null."
+              },
+              "label": {
+                "type": "string",
+                "description": "Human-readable label displayed to users. If omitted, value will be displayed directly."
+              },
+              "description": {
+                "type": "string",
+                "description": "Optional detailed description shown in tooltips or help text to explain what this value represents."
+              },
+              "metadata": {
+                "type": "object",
+                "description": "Additional context data like icons, colors, badges, or custom properties used by specific UI components.",
+                "additionalProperties": true
+              }
+            },
+            "required": ["value"]
+          }
+        }
+      }
+    }
+  ],
+  "examples": [
+    {
+      "@odata.context": "$metadata#Regions",
+      "value": [
+        {"value": "EU", "label": "Europe", "description": "European region"},
+        {"value": "US", "label": "United States", "description": "North America"},
+        {"value": "APAC", "label": "Asia Pacific", "description": "Asia Pacific region"}
+      ]
+    }
+  ]
+}

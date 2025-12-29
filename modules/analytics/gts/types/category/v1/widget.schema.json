@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.widget.v1~",
+  "type": "object",
+  "description": "Category for widget items. Used to organize widget instances by visualization type, data domain, or functional purpose (e.g., 'KPI Cards', 'Time Series Charts', 'Distribution Graphs').",
+  "allOf": [
+    {
+      "$ref": "gts://gts.hypernetix.hyperspot.ax.category.v1~"
+    }
+  ],
+  "examples": [
+    {
+      "name": "KPI Widgets",
+      "description": "Key performance indicator visualizations",
+      "icon": "target"
+    },
+    {
+      "name": "Chart Widgets",
+      "description": "Data visualization charts",
+      "icon": "pie-chart"
+    }
+  ]
+}
