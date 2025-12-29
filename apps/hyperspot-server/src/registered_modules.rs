@@ -8,9 +8,17 @@ use file_parser as _;
 use grpc_hub as _;
 use module_orchestrator as _;
 use nodes_registry as _;
+use types_registry as _;
 
 #[cfg(feature = "users-info-example")]
 use users_info as _;
 
 #[cfg(feature = "oop-example")]
 use calculator_gateway as _;
+
+#[cfg(feature = "tenant-resolver-example")]
+use contoso_tr_plugin as _;
+#[cfg(feature = "tenant-resolver-example")]
+use fabrikam_tr_plugin as _;
+#[cfg(feature = "tenant-resolver-example")]
+use tenant_resolver_gw as _;

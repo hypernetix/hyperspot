@@ -158,6 +158,7 @@ mod tests {
             handler_id: "test".to_owned(),
             sec_requirement: None,
             is_public: false,
+            license_requirement: None,
             rate_limit: None,
             allowed_request_content_types: Some(vec!["multipart/form-data", "application/pdf"]),
             vendor_extensions: VendorExtensions::default(),

@@ -92,40 +92,47 @@ lint:
 ## List all custom project compliance lints (see dylint_lints/README.md)
 dylint-list:
 	@cd dylint_lints && \
-	DYLINT_LIB=$$(find target/release -maxdepth 1 \( -name "libcontract_lints@*.so" -o -name "libcontract_lints@*.dylib" -o -name "contract_lints@*.dll" -o -name "libcontract_lints.so" -o -name "libcontract_lints.dylib" -o -name "contract_lints.dll" \) -type f | head -n 1); \
-	if [ -z "$$DYLINT_LIB" ]; then \
-		echo "ERROR: dylint library not found. Run 'make dylint' first to build it."; \
+	DYLINT_LIBS=$$(find target/release -maxdepth 1 \( -name "libde*@*.so" -o -name "libde*@*.dylib" -o -name "de*@*.dll" \) -type f | sort -u); \
+	if [ -z "$$DYLINT_LIBS" ]; then \
+		echo "ERROR: No dylint libraries found. Run 'make dylint' first to build them."; \
 		exit 1; \
 	fi; \
-	cargo dylint list --lib-path "$$DYLINT_LIB"
+	for lib in $$DYLINT_LIBS; do \
+		echo "=== $$lib ==="; \
+		cargo dylint list --lib-path "$$lib"; \
+	done
 
 ## Test dylint lints on UI test cases (compile and verify violations)
 dylint-test:
-	@python3 dylint_lints/test_ui.py
+	@cd dylint_lints && cargo test
 
 # Run project compliance dylint lints on the workspace (see `make dylint-list`)
 dylint:
 	@cd dylint_lints && cargo build --release
 	@TOOLCHAIN=$$(rustc --version --verbose | grep 'host:' | cut -d' ' -f2); \
 	RUSTUP_TOOLCHAIN=$$(cat dylint_lints/rust-toolchain.toml 2>/dev/null | grep 'channel' | cut -d'"' -f2 || echo "nightly"); \
-	LIB_NAME="libcontract_lints@$$RUSTUP_TOOLCHAIN-$$TOOLCHAIN"; \
 	cd dylint_lints/target/release && \
-	if [ -f "libcontract_lints.dylib" ]; then \
-		cp -f "libcontract_lints.dylib" "$$LIB_NAME.dylib" 2>/dev/null || true; \
-	fi; \
-	if [ -f "libcontract_lints.so" ]; then \
-		cp -f "libcontract_lints.so" "$$LIB_NAME.so" 2>/dev/null || true; \
-	fi; \
-	if [ -f "contract_lints.dll" ]; then \
-		cp -f "contract_lints.dll" "$${LIB_NAME#lib}.dll" 2>/dev/null || true; \
-	fi; \
+	for lib in $$(ls libde*.dylib libde*.so de*.dll 2>/dev/null | grep -v '@'); do \
+		case "$$lib" in \
+			*.dylib) EXT=".dylib" ;; \
+			*.so) EXT=".so" ;; \
+			*.dll) EXT=".dll" ;; \
+		esac; \
+		BASE=$${lib%$$EXT}; \
+		TARGET="$$BASE@$$RUSTUP_TOOLCHAIN-$$TOOLCHAIN$$EXT"; \
+		cp -f "$$lib" "$$TARGET" 2>/dev/null || true; \
+	done; \
 	cd ../../.. && \
-	DYLINT_LIB=$$(find dylint_lints/target/release -maxdepth 1 \( -name "libcontract_lints@*.so" -o -name "libcontract_lints@*.dylib" -o -name "contract_lints@*.dll" \) -type f | head -n 1); \
-	if [ -z "$$DYLINT_LIB" ]; then \
-		echo "ERROR: dylint library not found after build."; \
+	DYLINT_LIBS=$$(find dylint_lints/target/release -maxdepth 1 \( -name "libde*@*.so" -o -name "libde*@*.dylib" -o -name "de*@*.dll" \) -type f | sort -u); \
+	if [ -z "$$DYLINT_LIBS" ]; then \
+		echo "ERROR: No dylint libraries found after build."; \
 		exit 1; \
 	fi; \
-	cargo +$$RUSTUP_TOOLCHAIN dylint --lib-path "$$DYLINT_LIB" --workspace
+	LIB_ARGS=""; \
+	for lib in $$DYLINT_LIBS; do \
+		LIB_ARGS="$$LIB_ARGS --lib-path $$lib"; \
+	done; \
+	cargo +$$RUSTUP_TOOLCHAIN dylint $$LIB_ARGS --workspace
 
 # Run all code safety checks
 safety: clippy kani lint dylint # geiger
@@ -270,14 +277,14 @@ quickstart:
 
 ## Run server with example module
 example:
-	cargo run --bin hyperspot-server --features users-info-example -- --config config/quickstart.yaml run
+	cargo run --bin hyperspot-server --features users-info-example,tenant-resolver-example -- --config config/quickstart.yaml run
 
 oop-example:
 	cargo build -p calculator --features oop_module
-	cargo run --bin hyperspot-server --features oop-example,users-info-example -- --config config/quickstart.yaml run
+	cargo run --bin hyperspot-server --features oop-example,users-info-example,tenant-resolver-example -- --config config/quickstart.yaml run
 
 # Run all quality checks
-check: fmt clippy test security dylint
+check: fmt clippy test security dylint-test dylint
 
 # Run CI pipeline
 ci: check
@@ -287,5 +294,5 @@ build:
 	cargo +stable build --release
 
 # Run all necessary quality checks and tests and then build the release binary
-all: check test test-sqlite build
-	@echo "consider to run 'make test-db' and 'make e2e-local' as well"
+all: check test test-sqlite build e2e-local
+	@echo "consider to run 'make test-db' as well"

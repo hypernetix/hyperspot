@@ -17,7 +17,7 @@ use axum::{
 };
 use modkit::{
     api::{
-        operation_builder::{AuthReqAction, AuthReqResource},
+        operation_builder::{AuthReqAction, AuthReqResource, LicenseFeature},
         OperationBuilder,
     },
     config::ConfigProvider,
@@ -130,6 +130,16 @@ impl AsRef<str> for Action {
 
 impl AuthReqAction for Action {}
 
+struct License;
+
+impl AsRef<str> for License {
+    fn as_ref(&self) -> &'static str {
+        "gts.x.core.lic.feat.v1~x.core.global.base.v1"
+    }
+}
+
+impl LicenseFeature for License {}
+
 impl RestfulModule for TestAuthModule {
     fn register_rest(
         &self,
@@ -141,6 +151,7 @@ impl RestfulModule for TestAuthModule {
         let router = OperationBuilder::get("/tests/v1/api/protected")
             .operation_id("test.protected")
             .require_auth(&TestResource::Test, &Action::Read)
+            .require_license_features::<License>([])
             .summary("Protected endpoint")
             .handler(protected_handler)
             .json_response_with_schema::<TestResponse>(openapi, http::StatusCode::OK, "Success")
@@ -152,6 +163,7 @@ impl RestfulModule for TestAuthModule {
         let router = OperationBuilder::get("/tests/v1/api/users/{id}")
             .operation_id("test.get_user")
             .require_auth(&TestResource::Test, &Action::Read)
+            .require_license_features::<License>([])
             .summary("Get user by ID")
             .path_param("id", "User ID")
             .handler(protected_handler)

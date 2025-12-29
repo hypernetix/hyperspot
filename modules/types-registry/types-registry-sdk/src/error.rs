@@ -23,9 +23,9 @@ pub enum TypesRegistryError {
     #[error("Validation failed: {0}")]
     ValidationFailed(String),
 
-    /// The operation requires production mode.
-    #[error("Not in production mode")]
-    NotInProductionMode,
+    /// The operation requires ready mode.
+    #[error("Not in ready mode")]
+    NotInReadyMode,
 
     /// An internal error occurred.
     #[error("Internal error: {0}")]
@@ -57,10 +57,10 @@ impl TypesRegistryError {
         Self::ValidationFailed(message.into())
     }
 
-    /// Creates a `NotInProductionMode` error.
+    /// Creates a `NotInReadyMode` error.
     #[must_use]
-    pub const fn not_in_production_mode() -> Self {
-        Self::NotInProductionMode
+    pub const fn not_in_ready_mode() -> Self {
+        Self::NotInReadyMode
     }
 
     /// Creates an `Internal` error.
@@ -113,8 +113,8 @@ mod tests {
         let err = TypesRegistryError::validation_failed("schema invalid");
         assert!(err.is_validation_failed());
 
-        let err = TypesRegistryError::not_in_production_mode();
-        assert!(matches!(err, TypesRegistryError::NotInProductionMode));
+        let err = TypesRegistryError::not_in_ready_mode();
+        assert!(matches!(err, TypesRegistryError::NotInReadyMode));
 
         let err = TypesRegistryError::internal("database error");
         assert!(matches!(err, TypesRegistryError::Internal(_)));
@@ -125,17 +125,23 @@ mod tests {
         let err = TypesRegistryError::InvalidGtsId("bad format".to_owned());
         assert_eq!(err.to_string(), "Invalid GTS ID: bad format");
 
-        let err = TypesRegistryError::NotFound("gts.test~".to_owned());
-        assert_eq!(err.to_string(), "Entity not found: gts.test~");
+        let err = TypesRegistryError::NotFound("gts.x.core.events.test.v1~".to_owned());
+        assert_eq!(
+            err.to_string(),
+            "Entity not found: gts.x.core.events.test.v1~"
+        );
 
-        let err = TypesRegistryError::AlreadyExists("gts.test~".to_owned());
-        assert_eq!(err.to_string(), "Entity already exists: gts.test~");
+        let err = TypesRegistryError::AlreadyExists("gts.x.core.events.test.v1~".to_owned());
+        assert_eq!(
+            err.to_string(),
+            "Entity already exists: gts.x.core.events.test.v1~"
+        );
 
         let err = TypesRegistryError::ValidationFailed("missing required field".to_owned());
         assert_eq!(err.to_string(), "Validation failed: missing required field");
 
-        let err = TypesRegistryError::NotInProductionMode;
-        assert_eq!(err.to_string(), "Not in production mode");
+        let err = TypesRegistryError::NotInReadyMode;
+        assert_eq!(err.to_string(), "Not in ready mode");
 
         let err = TypesRegistryError::Internal("unexpected".to_owned());
         assert_eq!(err.to_string(), "Internal error: unexpected");

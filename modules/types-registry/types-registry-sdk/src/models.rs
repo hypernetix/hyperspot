@@ -3,33 +3,8 @@
 //! These are transport-agnostic data structures that define the contract
 //! between the `types-registry` module and its consumers.
 
+use gts::GtsIdSegment;
 use uuid::Uuid;
-
-// Re-export GtsIdSegment from gts-rust
-pub use gts::GtsIdSegment;
-
-/// The kind of GTS entity.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum GtsEntityKind {
-    /// A type definition (GTS ID ends with `~`)
-    Type,
-    /// An instance of a type (GTS ID does not end with `~`)
-    Instance,
-}
-
-impl GtsEntityKind {
-    /// Returns `true` if this is a type definition.
-    #[must_use]
-    pub const fn is_type(self) -> bool {
-        matches!(self, Self::Type)
-    }
-
-    /// Returns `true` if this is an instance.
-    #[must_use]
-    pub const fn is_instance(self) -> bool {
-        matches!(self, Self::Instance)
-    }
-}
 
 /// A registered GTS entity.
 ///
@@ -72,8 +47,11 @@ pub struct GtsEntity<C = serde_json::Value> {
     /// For chained IDs (instances), this contains multiple segments.
     pub segments: Vec<GtsIdSegment>,
 
-    /// The kind of entity (Type or Instance).
-    pub kind: GtsEntityKind,
+    /// Whether this entity is a schema (type definition).
+    ///
+    /// - `true`: This is a type definition (GTS ID ends with `~`)
+    /// - `false`: This is an instance (GTS ID does not end with `~`)
+    pub is_schema: bool,
 
     /// The entity content (schema for types, object for instances).
     pub content: C,
@@ -423,7 +401,7 @@ impl<C> GtsEntity<C> {
         id: Uuid,
         gts_id: impl Into<String>,
         segments: Vec<GtsIdSegment>,
-        kind: GtsEntityKind,
+        is_schema: bool,
         content: C,
         description: Option<String>,
     ) -> Self {
@@ -431,22 +409,22 @@ impl<C> GtsEntity<C> {
             id,
             gts_id: gts_id.into(),
             segments,
-            kind,
+            is_schema,
             content,
             description,
         }
     }
 
-    /// Returns `true` if this entity is a type definition.
+    /// Returns `true` if this entity is a type definition (schema).
     #[must_use]
     pub const fn is_type(&self) -> bool {
-        self.kind.is_type()
+        self.is_schema
     }
 
     /// Returns `true` if this entity is an instance.
     #[must_use]
     pub const fn is_instance(&self) -> bool {
-        self.kind.is_instance()
+        !self.is_schema
     }
 
     /// Returns the primary segment (first segment in the chain).
@@ -651,21 +629,13 @@ mod tests {
     }
 
     #[test]
-    fn test_gts_entity_kind() {
-        assert!(GtsEntityKind::Type.is_type());
-        assert!(!GtsEntityKind::Type.is_instance());
-        assert!(GtsEntityKind::Instance.is_instance());
-        assert!(!GtsEntityKind::Instance.is_type());
-    }
-
-    #[test]
     fn test_gts_entity_accessors() {
         let segment = GtsIdSegment::new(0, 0, "acme.core.events.user_created.v1~").unwrap();
         let entity = GtsEntity::new(
             Uuid::nil(),
             "gts.acme.core.events.user_created.v1~",
             vec![segment],
-            GtsEntityKind::Type,
+            true, // is_schema
             serde_json::json!({"type": "object"}),
             Some("A user created event".to_owned()),
         );
@@ -675,6 +645,18 @@ mod tests {
         assert_eq!(entity.vendor(), Some("acme"));
         assert_eq!(entity.package(), Some("core"));
         assert_eq!(entity.namespace(), Some("events"));
+
+        // Test instance
+        let instance = GtsEntity::new(
+            Uuid::nil(),
+            "gts.acme.core.events.user_created.v1~acme.core.instances.instance1.v1",
+            vec![],
+            false, // is_schema
+            serde_json::json!({"data": "value"}),
+            None,
+        );
+        assert!(!instance.is_type());
+        assert!(instance.is_instance());
     }
 
     #[test]

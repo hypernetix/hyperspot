@@ -4,9 +4,9 @@ use uuid::Uuid;
 /// Serializes to format: `"{tenant_id}:{resource_pattern}:{resource_id}:{action}"`
 /// where `tenant_id` and `resource_id` are "*" if None
 /// Examples:
-///  - "550e8400-e29b-41d4-a716-446655440000:gts.htx.events.topic.v1~vendor.*:*:publish"
+///  - "550e8400-e29b-41d4-a716-446655440000:gts.x.core.events.topic.v1~vendor.*:*:publish"
 ///  - "`*:file_parser:*:edit`"
-///  - "550e8400-e29b-41d4-a716-446655440001:gts.htx.events.tenant.v1:660e8400-e29b-41d4-a716-446655440002:edit"
+///  - "550e8400-e29b-41d4-a716-446655440001:gts.x.core.events.type.v1~:660e8400-e29b-41d4-a716-446655440002:edit"
 #[derive(Debug, Clone)]
 pub struct Permission {
     /// Optional tenant ID the permission applies to
@@ -15,7 +15,7 @@ pub struct Permission {
 
     /// A pattern that can include wildcards to match multiple resources
     /// examples:
-    ///   - "gts.htx.events.topic.v1~vendor.*"
+    ///   - "gts.x.events.topic.v1~vendor.*"
     ///   - "`gts.x.module.v1~x.file_parser.v1`"
     resource_pattern: String,
 
@@ -198,7 +198,7 @@ mod tests {
         let tenant_id = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap();
         let permission = Permission::builder()
             .tenant_id(tenant_id)
-            .resource_pattern("gts.htx.events.topic.v1~vendor.*")
+            .resource_pattern("gts.x.core.events.topic.v1~vendor.*")
             .action("publish")
             .build()
             .unwrap();
@@ -206,7 +206,7 @@ mod tests {
         assert_eq!(permission.tenant_id(), Some(tenant_id));
         assert_eq!(
             permission.resource_pattern(),
-            "gts.htx.events.topic.v1~vendor.*"
+            "gts.x.core.events.topic.v1~vendor.*"
         );
         assert_eq!(permission.action(), "publish");
     }
@@ -251,7 +251,7 @@ mod tests {
         let tenant_id = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap();
         let permission = Permission::builder()
             .tenant_id(tenant_id)
-            .resource_pattern("gts.htx.events.topic.v1~vendor.*")
+            .resource_pattern("gts.x.core.events.topic.v1~vendor.*")
             .action("publish")
             .build()
             .unwrap();
@@ -259,7 +259,7 @@ mod tests {
         let serialized = serde_json::to_string(&permission).unwrap();
         assert_eq!(
             serialized,
-            r#""550e8400-e29b-41d4-a716-446655440000:gts.htx.events.topic.v1~vendor.*:*:publish""#
+            r#""550e8400-e29b-41d4-a716-446655440000:gts.x.core.events.topic.v1~vendor.*:*:publish""#
         );
     }
 
@@ -277,15 +277,14 @@ mod tests {
 
     #[test]
     fn test_deserialize_permission_with_tenant_id() {
-        let json =
-            r#""550e8400-e29b-41d4-a716-446655440000:gts.htx.events.topic.v1~vendor.*:*:publish""#;
+        let json = r#""550e8400-e29b-41d4-a716-446655440000:gts.x.core.events.topic.v1~vendor.*:*:publish""#;
         let permission: Permission = serde_json::from_str(json).unwrap();
 
         let expected_id = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap();
         assert_eq!(permission.tenant_id(), Some(expected_id));
         assert_eq!(
             permission.resource_pattern(),
-            "gts.htx.events.topic.v1~vendor.*"
+            "gts.x.core.events.topic.v1~vendor.*"
         );
         assert_eq!(permission.resource_id(), None);
         assert_eq!(permission.action(), "publish");
@@ -365,7 +364,7 @@ mod tests {
         let tenant_id = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap();
         let original = Permission::builder()
             .tenant_id(tenant_id)
-            .resource_pattern("gts.htx.events.tenant.v1")
+            .resource_pattern("gts.x.core.events.type.v1~")
             .action("edit")
             .build()
             .unwrap();
@@ -381,7 +380,7 @@ mod tests {
     #[test]
     fn test_serialize_deserialize_roundtrip_without_tenant_id() {
         let original = Permission::builder()
-            .resource_pattern("gts.htx.events.topic.v1~*")
+            .resource_pattern("gts.x.core.events.topic.v1~*")
             .action("subscribe")
             .build()
             .unwrap();
@@ -400,7 +399,7 @@ mod tests {
         let permissions = vec![
             Permission::builder()
                 .tenant_id(tenant_id)
-                .resource_pattern("gts.htx.events.topic.v1~vendor.*")
+                .resource_pattern("gts.x.core.events.topic.v1~vendor.*")
                 .action("publish")
                 .build()
                 .unwrap(),
@@ -418,7 +417,7 @@ mod tests {
         assert_eq!(deserialized[0].tenant_id(), Some(tenant_id));
         assert_eq!(
             deserialized[0].resource_pattern(),
-            "gts.htx.events.topic.v1~vendor.*"
+            "gts.x.core.events.topic.v1~vendor.*"
         );
         assert_eq!(deserialized[0].action(), "publish");
         assert_eq!(deserialized[1].tenant_id(), None);
@@ -433,14 +432,14 @@ mod tests {
 
         let permission = Permission::builder()
             .tenant_id(tenant_id)
-            .resource_pattern("gts.htx.events.tenant.v1")
+            .resource_pattern("gts.x.core.events.type.v1~")
             .resource_id(resource_id)
             .action("edit")
             .build()
             .unwrap();
 
         assert_eq!(permission.tenant_id(), Some(tenant_id));
-        assert_eq!(permission.resource_pattern(), "gts.htx.events.tenant.v1");
+        assert_eq!(permission.resource_pattern(), "gts.x.core.events.type.v1~");
         assert_eq!(permission.resource_id(), Some(resource_id));
         assert_eq!(permission.action(), "edit");
     }
@@ -452,7 +451,7 @@ mod tests {
 
         let permission = Permission::builder()
             .tenant_id(tenant_id)
-            .resource_pattern("gts.htx.events.tenant.v1")
+            .resource_pattern("gts.x.core.events.type.v1~")
             .resource_id(resource_id)
             .action("edit")
             .build()
@@ -461,20 +460,20 @@ mod tests {
         let serialized = serde_json::to_string(&permission).unwrap();
         assert_eq!(
             serialized,
-            r#""550e8400-e29b-41d4-a716-446655440000:gts.htx.events.tenant.v1:660e8400-e29b-41d4-a716-446655440002:edit""#
+            r#""550e8400-e29b-41d4-a716-446655440000:gts.x.core.events.type.v1~:660e8400-e29b-41d4-a716-446655440002:edit""#
         );
     }
 
     #[test]
     fn test_deserialize_permission_with_resource_id() {
-        let json = r#""550e8400-e29b-41d4-a716-446655440000:gts.htx.events.tenant.v1:660e8400-e29b-41d4-a716-446655440002:edit""#;
+        let json = r#""550e8400-e29b-41d4-a716-446655440000:gts.x.core.events.type.v1~:660e8400-e29b-41d4-a716-446655440002:edit""#;
         let permission: Permission = serde_json::from_str(json).unwrap();
 
         let expected_tenant_id = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap();
         let expected_resource_id = Uuid::parse_str("660e8400-e29b-41d4-a716-446655440002").unwrap();
 
         assert_eq!(permission.tenant_id(), Some(expected_tenant_id));
-        assert_eq!(permission.resource_pattern(), "gts.htx.events.tenant.v1");
+        assert_eq!(permission.resource_pattern(), "gts.x.core.events.type.v1~");
         assert_eq!(permission.resource_id(), Some(expected_resource_id));
         assert_eq!(permission.action(), "edit");
     }
@@ -486,7 +485,7 @@ mod tests {
 
         let original = Permission::builder()
             .tenant_id(tenant_id)
-            .resource_pattern("gts.htx.events.tenant.v1")
+            .resource_pattern("gts.x.core.events.type.v1~")
             .resource_id(resource_id)
             .action("edit")
             .build()
@@ -506,7 +505,7 @@ mod tests {
         let resource_id = Uuid::parse_str("660e8400-e29b-41d4-a716-446655440002").unwrap();
 
         let permission = Permission::builder()
-            .resource_pattern("gts.htx.events.topic.v1~vendor.*")
+            .resource_pattern("gts.x.core.events.topic.v1~vendor.*")
             .resource_id(resource_id)
             .action("publish")
             .build()
@@ -518,7 +517,7 @@ mod tests {
         let serialized = serde_json::to_string(&permission).unwrap();
         assert_eq!(
             serialized,
-            r#""*:gts.htx.events.topic.v1~vendor.*:660e8400-e29b-41d4-a716-446655440002:publish""#
+            r#""*:gts.x.core.events.topic.v1~vendor.*:660e8400-e29b-41d4-a716-446655440002:publish""#
         );
     }
 }

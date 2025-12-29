@@ -1,0 +1,43 @@
+error: invalid GTS string: 'gts.x.*.events.*.v1~' (DE0901)
+  --> $DIR/permission_strings.rs:16:18
+   |
+LL |     let _perm3 = "resource-id:gts.x.*.events.*.v1~:action:scope";
+   |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: Invalid GTS wildcard pattern: gts.x.*.events.*.v1~: The wildcard '*' token is allowed only once
+   = note: `#[deny(de0901_gts_string_pattern)]` on by default
+
+error: invalid GTS string: 'gts.x.core.events.event.v1~a.b.c~' (DE0901)
+  --> $DIR/permission_strings.rs:20:18
+   |
+LL |     let _perm3 = "resource-id:gts.x.core.events.event.v1~a.b.c~:action:scope";
+   |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: Invalid GTS segment #2 @ offset 27: 'a.b.c~': Too few tokens
+
+error: invalid GTS string: 'gts.htx.events.tenant.v1' (DE0901)
+  --> $DIR/permission_strings.rs:24:18
+   |
+LL |     let _perm2 = "550e8400-e29b-41d4-a716-446655440000:gts.htx.events.tenant.v1:660e8400-e29b-41d4-a716-446655440002:edit";
+   |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: Invalid GTS segment #1 @ offset 4: 'htx.events.tenant.v1': Too few tokens
+
+error: invalid GTS string: 'gts.vendor.pkg.ns.type.v1' (DE0901)
+  --> $DIR/permission_strings.rs:28:18
+   |
+LL |     let _perm5 = "uuid:gts.vendor.pkg.ns.type.v1:action";
+   |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: Invalid GTS identifier: gts.vendor.pkg.ns.type.v1: Single-segment instance IDs are prohibited. Instance IDs must be chained with at least one type segment (e.g., 'type~instance')
+
+error: invalid GTS string: 'gts.x.core.events.type.v*' (DE0901)
+  --> $DIR/permission_strings.rs:32:27
+   |
+LL |         .resource_pattern("gts.x.core.events.type.v*")
+   |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: Invalid GTS wildcard pattern: gts.x.core.events.type.v*: The wildcard '*' token is allowed only at the end of the pattern
+
+error: aborting due to 5 previous errors
+

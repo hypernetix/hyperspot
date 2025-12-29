@@ -855,6 +855,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2459377285ad874054d797f3ccebf984978aa39129f6eafde5cdc8315b612f8"
 
 [[package]]
+name = "contoso_tr_plugin"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "arc-swap",
+ "async-trait",
+ "inventory",
+ "modkit",
+ "modkit-odata",
+ "modkit-security",
+ "schemars 0.8.22",
+ "serde",
+ "serde_json",
+ "tenant-resolver-sdk",
+ "thiserror 2.0.17",
+ "tracing",
+ "types-registry-sdk",
+]
+
+[[package]]
 name = "convert_case"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1415,6 +1435,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "fabrikam_tr_plugin"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "arc-swap",
+ "async-trait",
+ "inventory",
+ "modkit",
+ "modkit-odata",
+ "modkit-security",
+ "schemars 0.8.22",
+ "serde",
+ "serde_json",
+ "tenant-resolver-sdk",
+ "thiserror 2.0.17",
+ "tracing",
+ "types-registry-sdk",
+]
+
+[[package]]
 name = "fancy-regex"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1825,10 +1865,11 @@ dependencies = [
 [[package]]
 name = "gts"
 version = "0.1.0"
-source = "git+https://github.com/globaltypesystem/gts-rust.git?branch=main#d1050a82d74e5afbb402d63e91365197897fdae8"
+source = "git+https://github.com/globaltypesystem/gts-rust.git?tag=v0.7.6#836bcff115751fb062e0d5e9832a6cf13ed69ead"
 dependencies = [
  "anyhow",
  "jsonschema",
+ "schemars 0.8.22",
  "serde",
  "serde_json",
  "serde_yaml",
@@ -1837,6 +1878,17 @@ dependencies = [
  "tracing",
  "uuid",
  "walkdir",
+]
+
+[[package]]
+name = "gts-macros"
+version = "0.1.0"
+source = "git+https://github.com/globaltypesystem/gts-rust.git?tag=v0.7.6#836bcff115751fb062e0d5e9832a6cf13ed69ead"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "serde_json",
+ "syn 2.0.111",
 ]
 
 [[package]]
@@ -2219,6 +2271,8 @@ dependencies = [
  "api_ingress",
  "calculator_gateway",
  "clap",
+ "contoso_tr_plugin",
+ "fabrikam_tr_plugin",
  "figment",
  "file_parser",
  "grpc_hub",
@@ -2230,9 +2284,11 @@ dependencies = [
  "serde_json",
  "sqlx",
  "tempfile",
+ "tenant_resolver-gw",
  "tokio",
  "tokio-util",
  "tracing",
+ "types-registry",
  "users_info",
  "uuid",
 ]
@@ -2801,6 +2857,8 @@ dependencies = [
  "figment",
  "file-rotate",
  "futures",
+ "gts",
+ "gts-macros",
  "http",
  "httpmock",
  "inventory",
@@ -2818,6 +2876,7 @@ dependencies = [
  "parking_lot",
  "regex",
  "reqwest",
+ "schemars 0.8.22",
  "serde",
  "serde-saphyr",
  "serde_json",
@@ -4571,6 +4630,19 @@ dependencies = [
 
 [[package]]
 name = "schemars"
+version = "0.8.22"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3fbf2ae1b8bc8e02df939598064d22402220cd5bbcca1c76f7d6a310974d5615"
+dependencies = [
+ "dyn-clone",
+ "schemars_derive",
+ "serde",
+ "serde_json",
+ "uuid",
+]
+
+[[package]]
+name = "schemars"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4cd191f9397d57d581cddd31014772520aa448f65ef991055d7f61582c65165f"
@@ -4591,6 +4663,18 @@ dependencies = [
  "ref-cast",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "schemars_derive"
+version = "0.8.22"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "32e265784ad618884abaea0600a9adf15393368d840e0222d101a072f3f7534d"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "serde_derive_internals",
+ "syn 2.0.111",
 ]
 
 [[package]]
@@ -4843,6 +4927,17 @@ name = "serde_derive"
 version = "1.0.228"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d540f220d3187173da220f885ab66608367b6574e925011a9353e4badda91d79"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.111",
+]
+
+[[package]]
+name = "serde_derive_internals"
+version = "0.29.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "18d26a20a969b9e3fdf2fc2d9f21eda6c40e2de84c9408bb5d3b05d499aae711"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -5518,6 +5613,46 @@ dependencies = [
 ]
 
 [[package]]
+name = "tenant-resolver-sdk"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "gts",
+ "gts-macros",
+ "modkit",
+ "modkit-odata",
+ "modkit-security",
+ "schemars 0.8.22",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.17",
+ "uuid",
+]
+
+[[package]]
+name = "tenant_resolver-gw"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "arc-swap",
+ "async-trait",
+ "axum",
+ "http",
+ "inventory",
+ "modkit",
+ "modkit-odata",
+ "modkit-security",
+ "serde",
+ "serde_json",
+ "tenant-resolver-sdk",
+ "thiserror 2.0.17",
+ "tokio",
+ "tracing",
+ "types-registry-sdk",
+ "utoipa",
+]
+
+[[package]]
 name = "termcolor"
 version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6098,6 +6233,33 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "562d481066bde0658276a35467c4af00bdc6ee726305698a55b86e61d7ad82bb"
 
 [[package]]
+name = "types-registry"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "api_ingress",
+ "arc-swap",
+ "async-trait",
+ "axum",
+ "futures",
+ "gts",
+ "inventory",
+ "modkit",
+ "modkit-auth",
+ "modkit-security",
+ "parking_lot",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.17",
+ "tokio",
+ "tower",
+ "tracing",
+ "types-registry-sdk",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
 name = "types-registry-sdk"
 version = "0.1.0"
 dependencies = [
@@ -6107,7 +6269,6 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 2.0.17",
- "tokio",
  "uuid",
 ]
 

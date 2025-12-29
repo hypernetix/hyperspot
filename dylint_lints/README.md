@@ -24,8 +24,35 @@ make dylint-test         # Test UI cases (compile & verify violations)
 - ✅ DE0203: DTOs Must Have Serde Derives
 - ✅ DE0204: DTOs Must Have ToSchema Derive
 
+**Domain Layer (DE03xx)**
+- TODO
+
+**Infrastructure/storage Layer (DE04xx)**
+- TODO
+
+**Client/gateway Layer (DE05xx)**
+- TODO
+
+**Module structure (DE06xx)**
+- TODO
+
+**Sucurity (DE07xx)**
+- TODO
+
 **REST Conventions (DE08xx)**
 - ✅ DE0801: API Endpoint Must Have Version
+
+**GTS (DE09xx)**
+- TODO
+
+**Error handling (DE10xx)**
+- TODO
+
+**Testing (DE11xx)**
+- TODO
+
+**Documentation (DE12xx)**
+- TODO
 
 ## Examples
 

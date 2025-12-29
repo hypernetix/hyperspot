@@ -12,6 +12,7 @@ workspace = true
 default = []
 users-info-example = ["dep:users_info"]
 oop-example = ["dep:calculator_gateway"]
+tenant-resolver-example = ["dep:tenant_resolver_gw", "dep:contoso_tr_plugin", "dep:fabrikam_tr_plugin"]
 otel = ["modkit/otel"]
 
 [[bin]]
@@ -28,6 +29,7 @@ modkit-db = { path = "../../libs/modkit-db", features = ["sqlite"] }
 api_ingress = { path = "../../modules/api_ingress" }
 grpc_hub = { path = "../../modules/grpc_hub" }
 module_orchestrator = { path = "../../modules/module_orchestrator/module_orchestrator" }
+types-registry = { path = "../../modules/types-registry/types-registry" }
 
 # user modules
 file_parser = { path = "../../modules/file_parser" }
@@ -48,6 +50,11 @@ sqlx = { workspace = true, features = ["postgres", "sqlite"] }
 # Optional example module
 users_info = { path = "../../examples/modkit/users_info/users_info", optional = true }
 calculator_gateway = { path = "../../examples/oop-modules/calculator_gateway/calculator_gateway", optional = true }
+
+# tenant_resolver plugin example
+tenant_resolver_gw = { package = "tenant_resolver-gw", path = "../../examples/plugin-modules/tenant_resolver/tenant_resolver-gw", optional = true }
+contoso_tr_plugin = { path = "../../examples/plugin-modules/tenant_resolver/plugins/contoso_tr_plugin", optional = true }
+fabrikam_tr_plugin = { path = "../../examples/plugin-modules/tenant_resolver/plugins/fabrikam_tr_plugin", optional = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }

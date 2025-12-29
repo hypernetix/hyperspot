@@ -187,6 +187,15 @@ impl ApiIngress {
             .map(|e| e.value().clone())
             .collect();
 
+        // 12) License validation
+        let license_map = middleware::license_validation::LicenseRequirementMap::from_specs(&specs);
+        router = router.layer(from_fn(
+            move |req: axum::extract::Request, next: axum::middleware::Next| {
+                let map = license_map.clone();
+                middleware::license_validation::license_validation_middleware(map, req, next)
+            },
+        ));
+
         // 11) Inject Policy Engine
         router = router.layer(from_fn_with_state(
             auth_state.policy_engine,

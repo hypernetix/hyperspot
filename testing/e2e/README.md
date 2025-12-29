@@ -72,6 +72,44 @@ The `scripts/ci.py` Python script accepts the following options:
 - `--docker`: Run tests in Docker environment (default is local mode)
 - `--help`: Show help message
 
+## Types Registry Test Suite
+
+The types-registry module has comprehensive E2E test coverage for GTS entity management:
+
+### Test Files
+
+- **`modules/types_registry/test_types_registry_register.py`**: Tests the `POST /types-registry/v1/entities` endpoint
+  - Single and batch entity registration
+  - Type and instance registration
+  - Invalid entity handling
+  - Mixed valid/invalid batch processing
+  
+- **`modules/types_registry/test_types_registry_list.py`**: Tests the `GET /types-registry/v1/entities` endpoint
+  - List all entities
+  - Filter by kind (type/instance)
+  - Filter by vendor, package, namespace
+  - Wildcard pattern matching
+  - Combined filters
+  
+- **`modules/types_registry/test_types_registry_get.py`**: Tests the `GET /types-registry/v1/entities/{gts_id}` endpoint
+  - Get entity by GTS ID
+  - 404 for non-existent entities
+  - Response structure validation
+  - UUID format verification
+  
+- **`modules/types_registry/test_types_registry_validation.py`**: Tests schema validation behavior
+  - Instance validation against type schemas
+  - Missing required fields
+  - Wrong field types
+  - Nested schema validation
+  
+- **`modules/types_registry/test_types_registry_error_handling.py`**: Tests error handling and edge cases
+  - RFC-9457 error response format
+  - Malformed requests
+  - Large batch handling
+  - Unicode content
+  - Deeply nested schemas
+
 ## File Parser Test Suite
 
 The file_parser module has comprehensive E2E test coverage including golden-reference Markdown comparison:
@@ -152,6 +190,17 @@ If you see "Server not responding" when running local tests:
 2. Check that it's listening on the correct port (default: 8087)
 3. Verify the health endpoint: `curl http://localhost:8087/healthz`
 4. Or use Docker mode: `make e2e-docker`
+
+### Tenant Resolver Gateway example (local)
+
+If you run the server with `[config/e2e-local.yaml](config/e2e-local.yaml)`, note that it binds `api_ingress` to **8086**.
+
+Example:
+
+```bash
+cargo run -p hyperspot-server --features tenant-resolver-example -- --config config/e2e-local.yaml run
+E2E_BASE_URL=http://localhost:8086 E2E_AUTH_TOKEN=your-token python3 scripts/ci.py e2e -k tenant_resolver_gw
+```
 
 ### pytest not found
 

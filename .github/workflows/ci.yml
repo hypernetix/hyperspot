@@ -117,8 +117,19 @@ jobs:
         run: cargo clippy --workspace --all-targets --all-features -- -D warnings -D clippy::perf
 
       # Unit tests (excluding integration tests)
+      - name: cargo clean
+        if: runner.os == 'Linux'
+        run: cargo clean
+      - name: disk space
+        if: runner.os == 'Linux'
+        run: df -h && df -i
       - name: cargo test (no ui)
+        env:
+          RUSTFLAGS: "-C debuginfo=0"
         run: cargo test --workspace --no-fail-fast --exclude modkit-macros --exclude modkit-db-macros
+      - name: disk space
+        if: always() && runner.os == 'Linux' 
+        run: df -h && df -i
       # Print sccache stats when active
       - name: sccache stats
         if: env.SCCACHE_OK == '1'

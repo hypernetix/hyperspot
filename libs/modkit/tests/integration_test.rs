@@ -7,7 +7,7 @@
 
 use axum::{response::IntoResponse, Json, Router};
 use modkit::api::{
-    operation_builder::{AuthReqAction, AuthReqResource},
+    operation_builder::{AuthReqAction, AuthReqResource, LicenseFeature},
     Missing, OpenApiRegistry, OperationBuilder, OperationSpec, ParamLocation,
 };
 use serde_json::Value;
@@ -42,6 +42,21 @@ impl AsRef<str> for Action {
 }
 
 impl AuthReqAction for Action {}
+
+#[allow(dead_code)]
+enum TestLicenseFeatures {
+    Base,
+}
+
+impl AsRef<str> for TestLicenseFeatures {
+    fn as_ref(&self) -> &'static str {
+        match self {
+            TestLicenseFeatures::Base => "gts.x.core.lic.feat.v1~x.core.global.base.v1",
+        }
+    }
+}
+
+impl LicenseFeature for TestLicenseFeatures {}
 
 // Test registry that captures operations
 #[derive(Default)]
@@ -117,6 +132,7 @@ async fn test_complete_api_builder_flow() {
         .operation_id("users.create")
         .summary("Create a new user")
         .require_auth(&TestResource::Users, &Action::Write)
+        .require_license_features::<TestLicenseFeatures>([])
         .description("Creates a new user in the system")
         .tag("users")
         .json_response(http::StatusCode::CREATED, "User created successfully")
@@ -133,6 +149,7 @@ async fn test_complete_api_builder_flow() {
         .operation_id("users.get")
         .summary("Get user by ID")
         .require_auth(&TestResource::Users, &Action::Read)
+        .require_license_features::<TestLicenseFeatures>([])
         .description("Retrieves a specific user by their unique identifier")
         .tag("users")
         .path_param("id", "User unique identifier")
@@ -223,6 +240,7 @@ fn test_response_types() {
 
     let _router = OperationBuilder::<Missing, Missing, ()>::get("/tests/v1/text")
         .require_auth(&TestResource::Users, &Action::Read)
+        .require_license_features::<TestLicenseFeatures>([])
         .text_response(http::StatusCode::OK, "Plain text response", "text/plain")
         .html_response(http::StatusCode::OK, "HTML response")
         .json_response(http::StatusCode::INTERNAL_SERVER_ERROR, "Error response")

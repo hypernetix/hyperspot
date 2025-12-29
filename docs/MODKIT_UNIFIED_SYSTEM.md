@@ -15,6 +15,7 @@ also describes the DDD-light layering and conventions used across modules.
 * **OpenAPI 3.1** generation using `utoipa` with automatic schema registration for DTOs.
 * **Standardized HTTP errors** with RFC-9457 `Problem` (implements `IntoResponse` directly).
 * **Typed ClientHub** for in-process clients (resolve by interface type + optional scope).
+* **Plugin architecture** via scoped ClientHub registration and GTS-based discovery (see [MODKIT_PLUGINS.md](./MODKIT_PLUGINS.md)).
 * **Lifecycle** helpers and wrappers for long-running tasks and graceful shutdown.
 * **Lock-free hot paths** via atomic `Arc` swaps for read-mostly state.
 
@@ -761,6 +762,40 @@ OperationBuilder::<Missing, Missing, S>::post("/my-module/v1/path")
 .public()
 ```
 
+**Licensing (feature gating)**
+
+```rust
+use modkit::api::operation_builder::LicenseFeature;
+
+// Define a license feature identifier for this module.
+// AsRef<str> should return the canonical feature id (typically a GTS type name).
+struct BaseLicenseFeature;
+
+impl AsRef<str> for BaseLicenseFeature {
+    fn as_ref(&self) -> &'static str {
+        "gts.x.core.lic.feat.v1~x.core.global.base.v1"
+    }
+}
+
+impl LicenseFeature for BaseLicenseFeature {}
+
+// For authenticated endpoints, calling `require_license_features(...)` is mandatory.
+// Use an empty iterator (e.g. `[]`) to explicitly declare that no license feature is required.
+.require_auth(&Resource::Users, &Action::Read)
+.require_license_features::<BaseLicenseFeature>([])
+
+// Or require one (or more) features for this operation:
+let feature = BaseLicenseFeature;
+.require_auth(&Resource::Users, &Action::Read)
+.require_license_features([&feature])
+```
+
+Notes:
+
+- Authenticated operations must call `require_license_features(...)` before `register(...)`.
+- Public routes cannot (and do not need to) call `require_license_features(...)`.
+- `api_ingress` currently enforces license requirements via a stub middleware that only allows the base feature.
+
 **Handler / method router**
 
 ```rust
@@ -1457,6 +1492,7 @@ remote clients:
 
 * **In-process clients** — direct function calls within the same process
 * **Remote clients** — gRPC clients for OoP modules (resolved via DirectoryApi)
+* **Scoped clients** — multiple implementations of the same interface keyed by scope (for plugins)
 
 **Client types:**
 
@@ -1501,6 +1537,28 @@ let api = my_module_client( & ctx.client_hub);
 // or:
 let api = ctx.client_hub.get::<dyn my_module::contract::client::MyModuleApi>() ?;
 ```
+
+### Scoped Clients (for Plugins)
+
+For plugin-like scenarios where multiple implementations of the same interface coexist, use scoped clients:
+
+```rust
+use modkit::client_hub::ClientScope;
+
+// Plugin registers with a scope (e.g., GTS instance ID)
+let scope = ClientScope::gts_id("gts.x.core.modkit.plugin.v1~vendor.pkg.my_module.plugin.v1~acme.test._.plugin.v1");
+ctx.client_hub().register_scoped::<dyn MyPluginApi>(scope, plugin_impl);
+
+// Gateway resolves the selected plugin
+let scope = ClientScope::gts_id(&selected_instance_id);
+let plugin = ctx.client_hub().get_scoped::<dyn MyPluginApi>(&scope)?;
+```
+
+**Key points:**
+
+* Scoped clients are independent from global (unscoped) clients
+* Use `ClientScope::gts_id()` for GTS-based plugin IDs
+* See [MODKIT_PLUGINS.md](./MODKIT_PLUGINS.md) for the complete plugin architecture guide
 
 ---
 
@@ -1806,3 +1864,8 @@ Both formats are detected and forwarded with the correct log level.
 * For gRPC: server implementations live in the module itself; the SDK crate provides only the client.
 * For gRPC clients: always use `modkit_transport_grpc::client` utilities (`connect_with_stack`, `connect_with_retry`).
 * Use `CancellationToken` for coordinated shutdown across the entire process tree.
+* For plugin systems: use scoped ClientHub registration and GTS-based discovery (see [MODKIT_PLUGINS.md](./MODKIT_PLUGINS.md)).
+  - **Gateway** registers the plugin **schema** (GTS type definition)
+  - **Plugins** register their **instances** (metadata + scoped client)
+* For GTS schema generation: use `gts_schema_with_refs_as_string()`. This method is faster (static), automatically sets
+  the correct `$id`, and generates proper `$ref` references.
