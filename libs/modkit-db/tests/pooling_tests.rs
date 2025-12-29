@@ -20,7 +20,7 @@ async fn test_pool_cfg_options_applied() {
                     "pool": {
                         "max_conns": 20,
                         "min_conns": 2,
-                        "acquire_timeout": "45",
+                        "acquire_timeout": 45,
                         "idle_timeout": "300",
                         "max_lifetime": "1800",
                         "test_before_acquire": true

@@ -2404,7 +2404,7 @@ logging:
                 "server": "test_server",
                 "pool": {
                     "max_conns": 30,
-                    "acquire_timeout": "10s"
+                    "acquire_timeout": 10
                 }
             }),
         );
