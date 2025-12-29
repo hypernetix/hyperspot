@@ -28,12 +28,6 @@ pub mod sea_orm_filter;
 // Fluent pagination builder
 pub mod pager;
 
-// Tests (only compiled during tests)
-// TODO: Fix test module after refactoring
-// #[cfg(test)]
-// #[path = "tests.rs"]
-// mod odata_tests;
-
 // Re-export shared FieldKind
 pub use kind::FieldKind;
 
@@ -51,3 +45,7 @@ pub use sea_orm_filter::{
     encode_cursor_value, filter_node_to_condition, paginate_odata, parse_cursor_value,
     FieldToColumn, LimitCfg, ODataFieldMapping,
 };
+
+#[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
+mod tests;
