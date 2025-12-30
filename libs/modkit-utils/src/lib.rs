@@ -1,4 +1,4 @@
 #[cfg(feature = "humantime-serde")]
-pub mod humantime;
+pub mod humantime_serde;
 #[cfg(feature = "humantime-serde")]
-pub use humantime::*;
+pub use humantime_serde::*;

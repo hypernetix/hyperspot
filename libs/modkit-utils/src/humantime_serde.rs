@@ -4,7 +4,7 @@
 //!
 //! Based on [this fork](https://github.com/jean-airoldie/humantime-serde).
 //!
-//! Currently `std::time::{Duration, SystemTime}` are supported.
+//! Currently `std::time::Duration` is supported.
 //!
 //! # Example
 //! ```
@@ -13,11 +13,8 @@
 //!
 //! #[derive(Serialize, Deserialize)]
 //! struct Foo {
-//!     #[serde(with = "humantime_serde")]
+//!     #[serde(with = "modkit_utils::humantime_serde")]
 //!     timeout: Duration,
-//!     #[serde(default)]
-//!     #[serde(with = "humantime_serde")]
-//!     time: Option<SystemTime>,
 //! }
 //! ```
 //!
@@ -25,12 +22,12 @@
 //!
 //! ```
 //! use serde::{Serialize, Deserialize};
-//! use humantime_serde::Serde;
-//! use std::time::SystemTime;
+//! use modkit_utils::humantime_serde::Serde;
+//! use std::time::Duration;
 //!
 //! #[derive(Serialize, Deserialize)]
 //! struct Foo {
-//!     timeout: Vec<Serde<SystemTime>>,
+//!     timeout: Vec<Serde<Duration>>,
 //! }
 //! ```
 
@@ -41,7 +38,7 @@ pub mod re {
 
 use std::fmt;
 use std::ops::{Deref, DerefMut};
-use std::time::{Duration, SystemTime};
+use std::time::Duration;
 
 use humantime;
 use serde::{de, ser, Deserialize, Deserializer, Serialize, Serializer};
@@ -138,51 +135,12 @@ impl<'de> Deserialize<'de> for Serde<Duration> {
     }
 }
 
-impl<'de> Deserialize<'de> for Serde<SystemTime> {
-    fn deserialize<D>(d: D) -> Result<Serde<SystemTime>, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        struct V;
-
-        impl<'de2> de::Visitor<'de2> for V {
-            type Value = SystemTime;
-
-            fn expecting(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-                fmt.write_str("a timestamp")
-            }
-
-            fn visit_str<E>(self, v: &str) -> Result<SystemTime, E>
-            where
-                E: de::Error,
-            {
-                humantime::parse_rfc3339_weak(v)
-                    .map_err(|_| E::invalid_value(de::Unexpected::Str(v), &self))
-            }
-        }
-
-        d.deserialize_str(V).map(Serde)
-    }
-}
-
 impl<'de> Deserialize<'de> for Serde<Option<Duration>> {
     fn deserialize<D>(d: D) -> Result<Serde<Option<Duration>>, D::Error>
     where
         D: Deserializer<'de>,
     {
         match Option::<Serde<Duration>>::deserialize(d)? {
-            Some(Serde(dur)) => Ok(Serde(Some(dur))),
-            None => Ok(Serde(None)),
-        }
-    }
-}
-
-impl<'de> Deserialize<'de> for Serde<Option<SystemTime>> {
-    fn deserialize<D>(d: D) -> Result<Serde<Option<SystemTime>>, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        match Option::<Serde<SystemTime>>::deserialize(d)? {
             Some(Serde(dur)) => Ok(Serde(Some(dur))),
             None => Ok(Serde(None)),
         }
@@ -211,28 +169,6 @@ impl ser::Serialize for Serde<Duration> {
     }
 }
 
-impl<'a> ser::Serialize for Serde<&'a SystemTime> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: ser::Serializer,
-    {
-        humantime::format_rfc3339(*self.0)
-            .to_string()
-            .serialize(serializer)
-    }
-}
-
-impl ser::Serialize for Serde<SystemTime> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: ser::Serializer,
-    {
-        humantime::format_rfc3339(self.0)
-            .to_string()
-            .serialize(serializer)
-    }
-}
-
 impl<'a> ser::Serialize for Serde<&'a Option<Duration>> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -254,27 +190,6 @@ impl ser::Serialize for Serde<Option<Duration>> {
     }
 }
 
-impl<'a> ser::Serialize for Serde<&'a Option<SystemTime>> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: ser::Serializer,
-    {
-        match *self.0 {
-            Some(tm) => serializer.serialize_some(&Serde(tm)),
-            None => serializer.serialize_none(),
-        }
-    }
-}
-
-impl ser::Serialize for Serde<Option<SystemTime>> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: ser::Serializer,
-    {
-        Serde(&self.0).serialize(serializer)
-    }
-}
-
 pub mod option {
     //! Convenience module to allow serialization via `humantime_serde` for `Option`
     //!
@@ -287,18 +202,15 @@ pub mod option {
     //! #[derive(Serialize, Deserialize)]
     //! struct Foo {
     //!     #[serde(default)]
-    //!     #[serde(with = "humantime_serde::option")]
+    //!     #[serde(with = "modkit_utils::humantime_serde::option")]
     //!     timeout: Option<Duration>,
-    //!     #[serde(default)]
-    //!     #[serde(with = "humantime_serde::option")]
-    //!     time: Option<SystemTime>,
     //! }
     //! ```
 
     use super::Serde;
     use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-    /// Serializes an `Option<Duration>` or `Option<SystemTime>`
+    /// Serializes an `Option<Duration>`
     ///
     /// This function can be used with `serde_derive`'s `with` and
     /// `deserialize_with` annotations.
@@ -311,7 +223,7 @@ pub mod option {
         nested.serialize(s)
     }
 
-    /// Deserialize an `Option<Duration>` or `Option<SystemTime>`
+    /// Deserialize an `Option<Duration>`
     ///
     /// This function can be used with `serde_derive`'s `with` and
     /// `deserialize_with` annotations.
@@ -328,7 +240,6 @@ pub mod option {
 #[cfg(test)]
 mod test {
     use super::*;
-    use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
     fn with() {
@@ -375,14 +286,14 @@ mod test {
         #[derive(Serialize, Deserialize)]
         struct Foo {
             #[serde(with = "super")]
-            time: SystemTime,
+            duration: Duration,
         }
 
-        let json = r#"{"time": "2018-05-11 18:28:30"}"#;
+        let json = r#"{"duration": "10m 10s"}"#;
         let foo = serde_json::from_str::<Foo>(json).unwrap();
-        assert_eq!(foo.time, UNIX_EPOCH + Duration::new(1526063310, 0));
+        assert_eq!(foo.duration, Duration::new(610, 0));
         let reverse = serde_json::to_string(&foo).unwrap();
-        assert_eq!(reverse, r#"{"time":"2018-05-11T18:28:30Z"}"#);
+        assert_eq!(reverse, r#"{"duration":"10m 10s"}"#);
     }
 
     #[test]
@@ -390,33 +301,23 @@ mod test {
         #[derive(Serialize, Deserialize)]
         struct Foo {
             #[serde(with = "super", default)]
-            time: Option<SystemTime>,
+            duration: Option<Duration>,
         }
 
-        let json = r#"{"time": "2018-05-11 18:28:30"}"#;
+        let json = r#"{"duration": "5m"}"#;
         let foo = serde_json::from_str::<Foo>(json).unwrap();
-        assert_eq!(foo.time, Some(UNIX_EPOCH + Duration::new(1526063310, 0)));
+        assert_eq!(foo.duration, Some(Duration::new(300, 0)));
         let reverse = serde_json::to_string(&foo).unwrap();
-        assert_eq!(reverse, r#"{"time":"2018-05-11T18:28:30Z"}"#);
+        assert_eq!(reverse, r#"{"duration":"5m"}"#);
 
-        let json = r#"{"time": null}"#;
+        let json = r#"{"duration": null}"#;
         let foo = serde_json::from_str::<Foo>(json).unwrap();
-        assert_eq!(foo.time, None);
+        assert_eq!(foo.duration, None);
         let reverse = serde_json::to_string(&foo).unwrap();
-        assert_eq!(reverse, r#"{"time":null}"#);
+        assert_eq!(reverse, r#"{"duration":null}"#);
 
         let json = r#"{}"#;
         let foo = serde_json::from_str::<Foo>(json).unwrap();
-        assert_eq!(foo.time, None);
-    }
-
-    #[test]
-    fn test_readme_deps() {
-        version_sync::assert_markdown_deps_updated!("README.md");
-    }
-
-    #[test]
-    fn test_html_root_url() {
-        version_sync::assert_html_root_url_updated!("src/lib.rs");
+        assert_eq!(foo.duration, None);
     }
 }
