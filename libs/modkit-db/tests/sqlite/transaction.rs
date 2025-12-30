@@ -1,8 +1,6 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-#[cfg(feature = "sqlite")]
-mod sqlite_tx_tests {
-    use modkit_db::{ConnectOpts, DbHandle};
+use modkit_db::{ConnectOpts, DbHandle};
 
     #[tokio::test]
     async fn sqlite_with_tx_commit_persists_changes() {
@@ -78,10 +76,10 @@ mod sqlite_tx_tests {
             .await
             .expect("Failed to query count");
         assert_eq!(count, 0);
-    }
+}
 
-    #[tokio::test]
-    async fn sqlite_with_tx_returns_value() {
+#[tokio::test]
+async fn sqlite_with_tx_returns_value() {
         let opts = ConnectOpts {
             max_conns: Some(1),
             ..Default::default()

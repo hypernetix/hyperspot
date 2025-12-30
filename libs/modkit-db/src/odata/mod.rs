@@ -11,7 +11,6 @@
 //! - `core`: Core `OData` to `SeaORM` translation (filters, cursors, ordering) - legacy `FieldMap` based
 //! - `filter`: Type-safe filter representation using `FilterField` trait and `FilterNode<F>` AST
 //! - `pager`: Fluent builder for secure + `OData` pagination
-//! - `tests`: Integration tests (when compiled with `#[cfg(test)]`)
 
 // Shared FieldKind enum for both legacy and new code
 pub mod kind;
@@ -45,7 +44,3 @@ pub use sea_orm_filter::{
     encode_cursor_value, filter_node_to_condition, paginate_odata, parse_cursor_value,
     FieldToColumn, LimitCfg, ODataFieldMapping,
 };
-
-#[cfg(test)]
-#[cfg_attr(coverage_nightly, coverage(off))]
-mod tests;
