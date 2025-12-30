@@ -17,19 +17,6 @@
 //!     timeout: Duration,
 //! }
 //! ```
-//!
-//! Or use the `Serde` wrapper type:
-//!
-//! ```
-//! use serde::{Serialize, Deserialize};
-//! use modkit_utils::humantime_serde::Serde;
-//! use std::time::Duration;
-//!
-//! #[derive(Serialize, Deserialize)]
-//! struct Foo {
-//!     timeout: Vec<Serde<Duration>>,
-//! }
-//! ```
 
 /// Reexport module.
 pub mod re {
@@ -37,11 +24,10 @@ pub mod re {
 }
 
 use std::fmt;
-use std::ops::{Deref, DerefMut};
 use std::time::Duration;
 
 use humantime;
-use serde::{de, ser, Deserialize, Deserializer, Serialize, Serializer};
+use serde::{de, Deserializer, Serializer};
 
 /// Deserializes a `Duration` via the humantime crate.
 ///
@@ -49,12 +35,29 @@ use serde::{de, ser, Deserialize, Deserializer, Serialize, Serializer};
 /// `deserialize_with` annotations.
 /// # Errors
 /// Returns a `humantime::Error` if string is not a valid Duration
-pub fn deserialize<'a, T, D>(d: D) -> Result<T, D::Error>
+pub fn deserialize<'a, D>(d: D) -> Result<Duration, D::Error>
 where
-    Serde<T>: Deserialize<'a>,
     D: Deserializer<'a>,
 {
-    Serde::deserialize(d).map(Serde::into_inner)
+    struct V;
+
+    impl de::Visitor<'_> for V {
+        type Value = Duration;
+
+        fn expecting(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+            fmt.write_str("a duration")
+        }
+
+        fn visit_str<E>(self, v: &str) -> Result<Duration, E>
+        where
+            E: de::Error,
+        {
+            humantime::parse_duration(v)
+                .map_err(|_| E::invalid_value(de::Unexpected::Str(v), &self))
+        }
+    }
+
+    d.deserialize_str(V)
 }
 
 /// Serializes a `Duration` via the humantime crate.
@@ -63,135 +66,12 @@ where
 /// `serialize_with` annotations.
 /// # Errors
 /// Returns a `humantime::Error` if string is not a valid Duration
-pub fn serialize<T, S>(d: &T, s: S) -> Result<S::Ok, S::Error>
+pub fn serialize<S>(d: &Duration, s: S) -> Result<S::Ok, S::Error>
 where
-    for<'a> Serde<&'a T>: Serialize,
     S: Serializer,
 {
-    Serde::from(d).serialize(s)
-}
-
-/// A wrapper type which implements `Serialize` and `Deserialize` for
-/// types involving `Duration`.
-#[derive(Copy, Clone, Eq, Hash, PartialEq)]
-pub struct Serde<T>(T);
-
-impl<T> fmt::Debug for Serde<T>
-where
-    T: fmt::Debug,
-{
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        self.0.fmt(formatter)
-    }
-}
-
-impl<T> Deref for Serde<T> {
-    type Target = T;
-
-    fn deref(&self) -> &T {
-        &self.0
-    }
-}
-
-impl<T> DerefMut for Serde<T> {
-    fn deref_mut(&mut self) -> &mut T {
-        &mut self.0
-    }
-}
-
-impl<T> Serde<T> {
-    /// Consumes the `De`, returning the inner value.
-    pub fn into_inner(self) -> T {
-        self.0
-    }
-}
-
-impl<T> From<T> for Serde<T> {
-    fn from(val: T) -> Serde<T> {
-        Serde(val)
-    }
-}
-
-impl<'de> Deserialize<'de> for Serde<Duration> {
-    fn deserialize<D>(d: D) -> Result<Serde<Duration>, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        struct V;
-
-        impl de::Visitor<'_> for V {
-            type Value = Duration;
-
-            fn expecting(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-                fmt.write_str("a duration")
-            }
-
-            fn visit_str<E>(self, v: &str) -> Result<Duration, E>
-            where
-                E: de::Error,
-            {
-                humantime::parse_duration(v)
-                    .map_err(|_| E::invalid_value(de::Unexpected::Str(v), &self))
-            }
-        }
-
-        d.deserialize_str(V).map(Serde)
-    }
-}
-
-impl<'de> Deserialize<'de> for Serde<Option<Duration>> {
-    fn deserialize<D>(d: D) -> Result<Serde<Option<Duration>>, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        match Option::<Serde<Duration>>::deserialize(d)? {
-            Some(Serde(dur)) => Ok(Serde(Some(dur))),
-            None => Ok(Serde(None)),
-        }
-    }
-}
-
-impl ser::Serialize for Serde<&'_ Duration> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: ser::Serializer,
-    {
-        humantime::format_duration(*self.0)
-            .to_string()
-            .serialize(serializer)
-    }
-}
-
-impl ser::Serialize for Serde<Duration> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: ser::Serializer,
-    {
-        humantime::format_duration(self.0)
-            .to_string()
-            .serialize(serializer)
-    }
-}
-
-impl ser::Serialize for Serde<&'_ Option<Duration>> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: ser::Serializer,
-    {
-        match *self.0 {
-            Some(dur) => serializer.serialize_some(&Serde(dur)),
-            None => serializer.serialize_none(),
-        }
-    }
-}
-
-impl ser::Serialize for Serde<Option<Duration>> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: ser::Serializer,
-    {
-        Serde(&self.0).serialize(serializer)
-    }
+    let duration_str = humantime::format_duration(*d).to_string();
+    s.serialize_str(&duration_str)
 }
 
 pub mod option {
@@ -205,14 +85,14 @@ pub mod option {
     //!
     //! #[derive(Serialize, Deserialize)]
     //! struct Foo {
-    //!     #[serde(default)]
     //!     #[serde(with = "modkit_utils::humantime_serde::option")]
     //!     timeout: Option<Duration>,
     //! }
     //! ```
 
-    use super::Serde;
-    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+    use std::time::Duration;
+
+    use serde::{Deserialize, Deserializer, Serializer};
 
     /// Serializes an `Option<Duration>`
     ///
@@ -220,13 +100,14 @@ pub mod option {
     /// `deserialize_with` annotations.
     /// # Errors
     /// Returns a `humantime::Error` if string is not a valid Duration
-    pub fn serialize<T, S>(d: &Option<T>, s: S) -> Result<S::Ok, S::Error>
+    pub fn serialize<S>(d: &Option<Duration>, s: S) -> Result<S::Ok, S::Error>
     where
-        for<'a> Serde<&'a T>: Serialize,
         S: Serializer,
     {
-        let nested: Option<Serde<&T>> = d.as_ref().map(Into::into);
-        nested.serialize(s)
+        match d {
+            Some(d) => super::serialize(d, s),
+            None => s.serialize_none(),
+        }
     }
 
     /// Deserialize an `Option<Duration>`
@@ -235,19 +116,21 @@ pub mod option {
     /// `deserialize_with` annotations.
     /// # Errors
     /// Returns a `humantime::Error` if string is not a valid Duration
-    pub fn deserialize<'a, T, D>(d: D) -> Result<Option<T>, D::Error>
+    pub fn deserialize<'a, D>(d: D) -> Result<Option<Duration>, D::Error>
     where
-        Serde<T>: Deserialize<'a>,
         D: Deserializer<'a>,
     {
-        let got: Option<Serde<T>> = Deserialize::deserialize(d)?;
-        Ok(got.map(Serde::into_inner))
+        Option::deserialize(d).and_then(|opt: Option<String>| {
+            opt.map(|s| humantime::parse_duration(&s).map_err(serde::de::Error::custom))
+                .transpose()
+        })
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+    use serde::{Deserialize, Serialize};
 
     #[test]
     fn with() {
@@ -268,7 +151,7 @@ mod test {
     fn with_option() {
         #[derive(Serialize, Deserialize)]
         struct Foo {
-            #[serde(with = "super", default)]
+            #[serde(with = "super::option", default)]
             time: Option<Duration>,
         }
 
@@ -308,7 +191,7 @@ mod test {
     fn time_with_option() {
         #[derive(Serialize, Deserialize)]
         struct Foo {
-            #[serde(with = "super", default)]
+            #[serde(with = "super::option", default)]
             duration: Option<Duration>,
         }
 
@@ -333,7 +216,7 @@ mod test {
     fn test_option_module() {
         #[derive(Serialize, Deserialize)]
         struct Foo {
-            #[serde(with = "option")]
+            #[serde(with = "super::option")]
             duration: Option<Duration>,
         }
 
@@ -348,25 +231,5 @@ mod test {
         assert_eq!(foo.duration, None);
         let reverse = serde_json::to_string(&foo).unwrap();
         assert_eq!(reverse, r#"{"duration":null}"#);
-    }
-
-    #[test]
-    fn test_serde_traits() {
-        let mut s = Serde(Duration::from_secs(1));
-
-        // Test Deref
-        assert_eq!(*s, Duration::from_secs(1));
-
-        // Test DerefMut
-        *s = Duration::from_secs(2);
-        assert_eq!(s.0, Duration::from_secs(2));
-
-        // Test Debug
-        let debug = format!("{s:?}");
-        assert!(debug.contains("2s"));
-
-        // Test From
-        let from: Serde<Duration> = Duration::from_secs(3).into();
-        assert_eq!(from.0, Duration::from_secs(3));
     }
 }
