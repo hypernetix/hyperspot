@@ -1,0 +1,22 @@
+[package]
+name = "modkit-utils"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description.workspace = true
+
+[features]
+humantime-serde = ["dep:humantime", "dep:serde"]
+
+[dependencies]
+serde = { workspace = true, optional = true }
+humantime = { workspace = true, optional = true }
+
+[dev-dependencies]
+serde_json = "1.0"
+version-sync = "0.8"
+
+[lints]
+workspace = true
