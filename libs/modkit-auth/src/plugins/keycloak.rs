@@ -299,10 +299,10 @@ mod tests {
         // Prefixed roles become "kc:admin" and "kc:user", parsed as resource:action
         assert!(permissions
             .iter()
-            .any(|p| p.resource_pattern() == "kc" && p.action() == "admin"));
+            .any(|p: &Permission| p.resource_pattern() == "kc" && p.action() == "admin"));
         assert!(permissions
             .iter()
-            .any(|p| p.resource_pattern() == "kc" && p.action() == "user"));
+            .any(|p: &Permission| p.resource_pattern() == "kc" && p.action() == "user"));
     }
 
     #[test]
