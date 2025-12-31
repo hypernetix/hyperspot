@@ -28,8 +28,10 @@ use serde::{de, Deserializer, Serializer};
 ///
 /// This function can be used with `serde_derive`'s `with` and
 /// `deserialize_with` annotations.
+///
 /// # Errors
-/// Returns a `humantime::Error` if string is not a valid Duration
+///
+/// Returns an error if the string is not a valid duration.
 pub fn deserialize<'a, D>(d: D) -> Result<Duration, D::Error>
 where
     D: Deserializer<'a>,
@@ -59,14 +61,14 @@ where
 ///
 /// This function can be used with `serde_derive`'s `with` and
 /// `serialize_with` annotations.
+///
 /// # Errors
-/// Returns a `humantime::Error` if string is not a valid Duration
+/// None
 pub fn serialize<S>(d: &Duration, s: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
-    let duration_str = humantime::format_duration(*d).to_string();
-    s.serialize_str(&duration_str)
+    s.collect_str(&humantime::format_duration(*d))
 }
 
 pub mod option {
@@ -92,9 +94,10 @@ pub mod option {
     /// Serializes an `Option<Duration>`
     ///
     /// This function can be used with `serde_derive`'s `with` and
-    /// `deserialize_with` annotations.
+    /// `serialize_with` annotations.
+    ///
     /// # Errors
-    /// Returns a `humantime::Error` if string is not a valid Duration
+    /// None
     pub fn serialize<S>(d: &Option<Duration>, s: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -109,16 +112,27 @@ pub mod option {
     ///
     /// This function can be used with `serde_derive`'s `with` and
     /// `deserialize_with` annotations.
+    ///
     /// # Errors
-    /// Returns a `humantime::Error` if string is not a valid Duration
+    ///
+    /// Returns an error if the string is not a valid duration.
     pub fn deserialize<'a, D>(d: D) -> Result<Option<Duration>, D::Error>
     where
         D: Deserializer<'a>,
     {
-        Option::deserialize(d).and_then(|opt: Option<String>| {
-            opt.map(|s| humantime::parse_duration(&s).map_err(serde::de::Error::custom))
-                .transpose()
-        })
+        struct Wrapper(Duration);
+
+        impl<'de> Deserialize<'de> for Wrapper {
+            fn deserialize<D>(d: D) -> Result<Self, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                super::deserialize(d).map(Wrapper)
+            }
+        }
+
+        let v: Option<Wrapper> = Option::deserialize(d)?;
+        Ok(v.map(|Wrapper(d)| d))
     }
 }
 
@@ -236,6 +250,19 @@ mod test {
         }
 
         let json = r#"{"duration": 123}"#;
+        let err = serde_json::from_str::<Foo>(json).unwrap_err();
+        assert!(err.to_string().contains("expected a duration"));
+    }
+
+    #[test]
+    fn test_invalid_string() {
+        #[derive(Serialize, Deserialize, Debug)]
+        struct Foo {
+            #[serde(with = "super")]
+            duration: super::Duration,
+        }
+
+        let json = r#"{"duration": "not a duration"}"#;
         let err = serde_json::from_str::<Foo>(json).unwrap_err();
         assert!(err.to_string().contains("expected a duration"));
     }
