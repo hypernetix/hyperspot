@@ -1,7 +1,7 @@
 # HyperSpot Server Configuration
 # Updated to use the new configuration structure
 
-# Core server configuration (global section)  
+# Core server configuration (global section)
 server:
   home_dir: "~/.hyperspot"
 
@@ -23,3 +23,4 @@ modules:
       bind_addr: "127.0.0.1:8087"
       enable_docs: true
       cors_enabled: true
+      auth_disabled: true
