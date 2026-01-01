@@ -11,6 +11,10 @@ use tower_http::timeout::TimeoutLayer;
 
 enum Resource {
     Users,
+    Cities,
+    Languages,
+    Addresses,
+    UserLanguages,
 }
 
 enum Action {
@@ -24,6 +28,10 @@ impl AsRef<str> for Resource {
     fn as_ref(&self) -> &'static str {
         match self {
             Resource::Users => "users",
+            Resource::Cities => "cities",
+            Resource::Languages => "languages",
+            Resource::Addresses => "addresses",
+            Resource::UserLanguages => "user_languages",
         }
     }
 }
@@ -166,6 +174,340 @@ pub fn register_routes(
         .path_param("id", "User UUID")
         .handler(handlers::delete_user)
         .json_response(http::StatusCode::NO_CONTENT, "User deleted successfully")
+        .error_401(openapi)
+        .error_403(openapi)
+        .error_404(openapi)
+        .error_500(openapi)
+        .register(router, openapi);
+
+    // ==================== City Routes ====================
+
+    // GET /users-info/v1/cities - List cities with cursor-based pagination
+    router = OperationBuilder::get("/users-info/v1/cities")
+        .operation_id("users_info.list_cities")
+        .summary("List cities with cursor pagination")
+        .description("Retrieve a paginated list of cities using cursor-based pagination")
+        .tag("cities")
+        .require_auth(&Resource::Cities, &Action::Read)
+        .require_license_features::<License>([])
+        .query_param_typed("limit", false, "Maximum number of cities to return", "integer")
+        .query_param("cursor", false, "Cursor for pagination")
+        .handler(handlers::list_cities)
+        .json_response_with_schema::<modkit_odata::Page<dto::CityDto>>(
+            openapi,
+            http::StatusCode::OK,
+            "Paginated list of cities",
+        )
+        .with_odata_filter::<dto::CityDtoFilterField>()
+        .with_odata_select()
+        .with_odata_orderby::<dto::CityDtoFilterField>()
+        .error_400(openapi)
+        .error_500(openapi)
+        .register(router, openapi);
+
+    // GET /users-info/v1/cities/{id} - Get a specific city
+    router = OperationBuilder::get("/users-info/v1/cities/{id}")
+        .operation_id("users_info.get_city")
+        .require_auth(&Resource::Cities, &Action::Read)
+        .require_license_features::<License>([])
+        .summary("Get city by ID")
+        .description("Retrieve a specific city by UUID")
+        .tag("cities")
+        .path_param("id", "City UUID")
+        .handler(handlers::get_city)
+        .with_odata_select()
+        .json_response_with_schema::<dto::CityDto>(openapi, http::StatusCode::OK, "City found")
+        .error_401(openapi)
+        .error_403(openapi)
+        .error_404(openapi)
+        .error_500(openapi)
+        .register(router, openapi);
+
+    // POST /users-info/v1/cities - Create a new city
+    router = OperationBuilder::post("/users-info/v1/cities")
+        .operation_id("users_info.create_city")
+        .require_auth(&Resource::Cities, &Action::Create)
+        .require_license_features::<License>([])
+        .summary("Create a new city")
+        .description("Create a new city with the provided information")
+        .tag("cities")
+        .json_request::<dto::CreateCityReq>(openapi, "City creation data")
+        .handler(handlers::create_city)
+        .json_response_with_schema::<dto::CityDto>(
+            openapi,
+            http::StatusCode::CREATED,
+            "Created city",
+        )
+        .error_400(openapi)
+        .error_401(openapi)
+        .error_403(openapi)
+        .error_409(openapi)
+        .error_500(openapi)
+        .register(router, openapi);
+
+    // PATCH /users-info/v1/cities/{id} - Update a city
+    router = OperationBuilder::patch("/users-info/v1/cities/{id}")
+        .operation_id("users_info.update_city")
+        .require_auth(&Resource::Cities, &Action::Update)
+        .require_license_features::<License>([])
+        .summary("Update city")
+        .description("Partially update a city with the provided fields")
+        .tag("cities")
+        .path_param("id", "City UUID")
+        .json_request::<dto::UpdateCityReq>(openapi, "City update data")
+        .handler(handlers::update_city)
+        .json_response_with_schema::<dto::CityDto>(openapi, http::StatusCode::OK, "Updated city")
+        .error_400(openapi)
+        .error_401(openapi)
+        .error_403(openapi)
+        .error_404(openapi)
+        .error_409(openapi)
+        .error_500(openapi)
+        .register(router, openapi);
+
+    // DELETE /users-info/v1/cities/{id} - Delete a city
+    router = OperationBuilder::delete("/users-info/v1/cities/{id}")
+        .operation_id("users_info.delete_city")
+        .require_auth(&Resource::Cities, &Action::Delete)
+        .require_license_features::<License>([])
+        .summary("Delete city")
+        .description("Delete a city by UUID")
+        .tag("cities")
+        .path_param("id", "City UUID")
+        .handler(handlers::delete_city)
+        .json_response(http::StatusCode::NO_CONTENT, "City deleted successfully")
+        .error_401(openapi)
+        .error_403(openapi)
+        .error_404(openapi)
+        .error_500(openapi)
+        .register(router, openapi);
+
+    // ==================== Language Routes ====================
+
+    // GET /users-info/v1/languages - List languages with cursor-based pagination
+    router = OperationBuilder::get("/users-info/v1/languages")
+        .operation_id("users_info.list_languages")
+        .summary("List languages with cursor pagination")
+        .description("Retrieve a paginated list of languages using cursor-based pagination")
+        .tag("languages")
+        .require_auth(&Resource::Languages, &Action::Read)
+        .require_license_features::<License>([])
+        .query_param_typed("limit", false, "Maximum number of languages to return", "integer")
+        .query_param("cursor", false, "Cursor for pagination")
+        .handler(handlers::list_languages)
+        .json_response_with_schema::<modkit_odata::Page<dto::LanguageDto>>(
+            openapi,
+            http::StatusCode::OK,
+            "Paginated list of languages",
+        )
+        .with_odata_filter::<dto::LanguageDtoFilterField>()
+        .with_odata_select()
+        .with_odata_orderby::<dto::LanguageDtoFilterField>()
+        .error_400(openapi)
+        .error_500(openapi)
+        .register(router, openapi);
+
+    // GET /users-info/v1/languages/{id} - Get a specific language
+    router = OperationBuilder::get("/users-info/v1/languages/{id}")
+        .operation_id("users_info.get_language")
+        .require_auth(&Resource::Languages, &Action::Read)
+        .require_license_features::<License>([])
+        .summary("Get language by ID")
+        .description("Retrieve a specific language by UUID")
+        .tag("languages")
+        .path_param("id", "Language UUID")
+        .handler(handlers::get_language)
+        .with_odata_select()
+        .json_response_with_schema::<dto::LanguageDto>(
+            openapi,
+            http::StatusCode::OK,
+            "Language found",
+        )
+        .error_401(openapi)
+        .error_403(openapi)
+        .error_404(openapi)
+        .error_500(openapi)
+        .register(router, openapi);
+
+    // POST /users-info/v1/languages - Create a new language
+    router = OperationBuilder::post("/users-info/v1/languages")
+        .operation_id("users_info.create_language")
+        .require_auth(&Resource::Languages, &Action::Create)
+        .require_license_features::<License>([])
+        .summary("Create a new language")
+        .description("Create a new language with the provided information")
+        .tag("languages")
+        .json_request::<dto::CreateLanguageReq>(openapi, "Language creation data")
+        .handler(handlers::create_language)
+        .json_response_with_schema::<dto::LanguageDto>(
+            openapi,
+            http::StatusCode::CREATED,
+            "Created language",
+        )
+        .error_400(openapi)
+        .error_401(openapi)
+        .error_403(openapi)
+        .error_409(openapi)
+        .error_500(openapi)
+        .register(router, openapi);
+
+    // PATCH /users-info/v1/languages/{id} - Update a language
+    router = OperationBuilder::patch("/users-info/v1/languages/{id}")
+        .operation_id("users_info.update_language")
+        .require_auth(&Resource::Languages, &Action::Update)
+        .require_license_features::<License>([])
+        .summary("Update language")
+        .description("Partially update a language with the provided fields")
+        .tag("languages")
+        .path_param("id", "Language UUID")
+        .json_request::<dto::UpdateLanguageReq>(openapi, "Language update data")
+        .handler(handlers::update_language)
+        .json_response_with_schema::<dto::LanguageDto>(
+            openapi,
+            http::StatusCode::OK,
+            "Updated language",
+        )
+        .error_400(openapi)
+        .error_401(openapi)
+        .error_403(openapi)
+        .error_404(openapi)
+        .error_409(openapi)
+        .error_500(openapi)
+        .register(router, openapi);
+
+    // DELETE /users-info/v1/languages/{id} - Delete a language
+    router = OperationBuilder::delete("/users-info/v1/languages/{id}")
+        .operation_id("users_info.delete_language")
+        .require_auth(&Resource::Languages, &Action::Delete)
+        .require_license_features::<License>([])
+        .summary("Delete language")
+        .description("Delete a language by UUID")
+        .tag("languages")
+        .path_param("id", "Language UUID")
+        .handler(handlers::delete_language)
+        .json_response(http::StatusCode::NO_CONTENT, "Language deleted successfully")
+        .error_401(openapi)
+        .error_403(openapi)
+        .error_404(openapi)
+        .error_500(openapi)
+        .register(router, openapi);
+
+    // ==================== Address Routes (User Subresource) ====================
+
+    // GET /users-info/v1/users/{id}/address - Get user's address
+    router = OperationBuilder::get("/users-info/v1/users/{id}/address")
+        .operation_id("users_info.get_user_address")
+        .require_auth(&Resource::Addresses, &Action::Read)
+        .require_license_features::<License>([])
+        .summary("Get user address")
+        .description("Retrieve the address for a specific user")
+        .tag("addresses")
+        .path_param("id", "User UUID")
+        .handler(handlers::get_user_address)
+        .json_response_with_schema::<dto::AddressDto>(
+            openapi,
+            http::StatusCode::OK,
+            "User address",
+        )
+        .error_401(openapi)
+        .error_403(openapi)
+        .error_404(openapi)
+        .error_500(openapi)
+        .register(router, openapi);
+
+    // PUT /users-info/v1/users/{id}/address - Upsert user's address
+    router = OperationBuilder::put("/users-info/v1/users/{id}/address")
+        .operation_id("users_info.put_user_address")
+        .require_auth(&Resource::Addresses, &Action::Update)
+        .require_license_features::<License>([])
+        .summary("Upsert user address")
+        .description("Create or replace the address for a specific user")
+        .tag("addresses")
+        .path_param("id", "User UUID")
+        .json_request::<dto::PutAddressReq>(openapi, "Address data")
+        .handler(handlers::put_user_address)
+        .json_response_with_schema::<dto::AddressDto>(
+            openapi,
+            http::StatusCode::OK,
+            "Address created or updated",
+        )
+        .error_400(openapi)
+        .error_401(openapi)
+        .error_403(openapi)
+        .error_404(openapi)
+        .error_500(openapi)
+        .register(router, openapi);
+
+    // DELETE /users-info/v1/users/{id}/address - Delete user's address
+    router = OperationBuilder::delete("/users-info/v1/users/{id}/address")
+        .operation_id("users_info.delete_user_address")
+        .require_auth(&Resource::Addresses, &Action::Delete)
+        .require_license_features::<License>([])
+        .summary("Delete user address")
+        .description("Delete the address for a specific user")
+        .tag("addresses")
+        .path_param("id", "User UUID")
+        .handler(handlers::delete_user_address)
+        .json_response(http::StatusCode::NO_CONTENT, "Address deleted successfully")
+        .error_401(openapi)
+        .error_403(openapi)
+        .error_404(openapi)
+        .error_500(openapi)
+        .register(router, openapi);
+
+    // ==================== User-Language Relationship Routes ====================
+
+    // GET /users-info/v1/users/{id}/languages - List user's languages
+    router = OperationBuilder::get("/users-info/v1/users/{id}/languages")
+        .operation_id("users_info.list_user_languages")
+        .require_auth(&Resource::UserLanguages, &Action::Read)
+        .require_license_features::<License>([])
+        .summary("List user languages")
+        .description("Retrieve all languages assigned to a user")
+        .tag("user-languages")
+        .path_param("id", "User UUID")
+        .handler(handlers::list_user_languages)
+        .json_response_with_schema::<Vec<dto::LanguageDto>>(
+            openapi,
+            http::StatusCode::OK,
+            "List of user's languages",
+        )
+        .error_401(openapi)
+        .error_403(openapi)
+        .error_404(openapi)
+        .error_500(openapi)
+        .register(router, openapi);
+
+    // PUT /users-info/v1/users/{id}/languages/{langId} - Assign language to user
+    router = OperationBuilder::put("/users-info/v1/users/{id}/languages/{langId}")
+        .operation_id("users_info.assign_language_to_user")
+        .require_auth(&Resource::UserLanguages, &Action::Update)
+        .require_license_features::<License>([])
+        .summary("Assign language to user")
+        .description("Assign a language to a user (idempotent)")
+        .tag("user-languages")
+        .path_param("id", "User UUID")
+        .path_param("langId", "Language UUID")
+        .handler(handlers::assign_language_to_user)
+        .json_response(http::StatusCode::NO_CONTENT, "Language assigned successfully")
+        .error_401(openapi)
+        .error_403(openapi)
+        .error_404(openapi)
+        .error_500(openapi)
+        .register(router, openapi);
+
+    // DELETE /users-info/v1/users/{id}/languages/{langId} - Remove language from user
+    router = OperationBuilder::delete("/users-info/v1/users/{id}/languages/{langId}")
+        .operation_id("users_info.remove_language_from_user")
+        .require_auth(&Resource::UserLanguages, &Action::Delete)
+        .require_license_features::<License>([])
+        .summary("Remove language from user")
+        .description("Remove a language from a user (idempotent)")
+        .tag("user-languages")
+        .path_param("id", "User UUID")
+        .path_param("langId", "Language UUID")
+        .handler(handlers::remove_language_from_user)
+        .json_response(http::StatusCode::NO_CONTENT, "Language removed successfully")
         .error_401(openapi)
         .error_403(openapi)
         .error_404(openapi)

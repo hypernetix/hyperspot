@@ -7,7 +7,8 @@
 
 #![allow(dead_code)] // Support module provides utilities that may not all be used
 
-use modkit_db::secure::{AccessScope, SecureConn, SecurityCtx, Subject};
+use modkit_db::secure::SecureConn;
+use modkit_security::SecurityContext;
 use sea_orm::{Database, DatabaseConnection};
 use sea_orm_migration::MigratorTrait;
 use time::OffsetDateTime;
@@ -24,44 +25,52 @@ use users_info::domain::{
 ///
 /// Uses a random subject ID for testing purposes.
 #[must_use]
-pub fn ctx_allow_tenants(tenants: &[Uuid]) -> SecurityCtx {
-    let subject = Subject::new(Uuid::new_v4());
-    SecurityCtx::new(AccessScope::tenants_only(tenants.to_vec()), subject)
+pub fn ctx_allow_tenants(tenants: &[Uuid]) -> SecurityContext {
+    // Use the first tenant as the context tenant_id
+    let tenant_id = tenants.first().copied().unwrap_or_else(Uuid::new_v4);
+    SecurityContext::builder()
+        .tenant_id(tenant_id)
+        .subject_id(Uuid::new_v4())
+        .build()
 }
 
 /// Create a security context that allows access to specific resources.
 ///
 /// Uses a random subject ID for testing purposes.
 #[must_use]
-pub fn ctx_allow_resources(resources: &[Uuid]) -> SecurityCtx {
-    let subject = Subject::new(Uuid::new_v4());
-    SecurityCtx::new(AccessScope::resources_only(resources.to_vec()), subject)
+pub fn ctx_allow_resources(_resources: &[Uuid]) -> SecurityContext {
+    SecurityContext::builder()
+        .tenant_id(Uuid::new_v4())
+        .subject_id(Uuid::new_v4())
+        .build()
 }
 
 /// Create a security context with a specific subject ID and tenant access.
 ///
 /// Useful when you need to test `owner_id` or subject-specific behavior.
 #[must_use]
-pub fn ctx_with_subject(subject_id: Uuid, tenants: &[Uuid]) -> SecurityCtx {
-    let subject = Subject::new(subject_id);
-    SecurityCtx::new(AccessScope::tenants_only(tenants.to_vec()), subject)
+pub fn ctx_with_subject(subject_id: Uuid, tenants: &[Uuid]) -> SecurityContext {
+    let tenant_id = tenants.first().copied().unwrap_or_else(Uuid::new_v4);
+    SecurityContext::builder()
+        .tenant_id(tenant_id)
+        .subject_id(subject_id)
+        .build()
 }
 
 /// Create a deny-all security context.
 ///
 /// This context will deny access to all data (empty scope).
 #[must_use]
-pub fn ctx_deny_all() -> SecurityCtx {
-    let subject = Subject::new(Uuid::new_v4());
-    SecurityCtx::new(AccessScope::default(), subject)
+pub fn ctx_deny_all() -> SecurityContext {
+    SecurityContext::anonymous()
 }
 
 /// Create a root security context (system-level access).
 ///
 /// This context bypasses all tenant filtering and allows access to all data.
 #[must_use]
-pub fn ctx_root() -> SecurityCtx {
-    SecurityCtx::root_ctx()
+pub fn ctx_root() -> SecurityContext {
+    SecurityContext::root()
 }
 
 /// Create a fresh in-memory `SQLite` database with migrations applied.
@@ -171,5 +180,37 @@ pub struct MockEventPublisher;
 impl EventPublisher<UserDomainEvent> for MockEventPublisher {
     fn publish(&self, _event: &UserDomainEvent) {
         // Discard events in tests
+    }
+}
+
+/// Test context with service and database for integration tests.
+pub struct TestContext {
+    pub service: std::sync::Arc<users_info::domain::service::Service>,
+    pub db: DatabaseConnection,
+}
+
+impl TestContext {
+    /// Create a new test context with an in-memory database and service.
+    pub async fn new() -> Self {
+        let db = inmem_db().await;
+        let sec = SecureConn::new(db.clone());
+        
+        let events = std::sync::Arc::new(MockEventPublisher) as std::sync::Arc<dyn EventPublisher<UserDomainEvent>>;
+        let audit = std::sync::Arc::new(MockAuditPort) as std::sync::Arc<dyn AuditPort>;
+        
+        let config = users_info::domain::service::ServiceConfig {
+            max_display_name_length: 100,
+            default_page_size: 50,
+            max_page_size: 1000,
+        };
+        
+        let service = std::sync::Arc::new(users_info::domain::service::Service::new(
+            sec,
+            events,
+            audit,
+            config,
+        ));
+        
+        Self { service, db }
     }
 }

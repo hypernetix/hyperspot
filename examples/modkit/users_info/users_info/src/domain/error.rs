@@ -26,6 +26,9 @@ pub enum DomainError {
     #[error("Validation failed: {field}: {message}")]
     Validation { field: String, message: String },
 
+    #[error("{entity_type} not found: {id}")]
+    NotFound { entity_type: String, id: Uuid },
+
     #[error("Internal error")]
     InternalError,
 }
@@ -68,6 +71,14 @@ impl DomainError {
             message: message.into(),
         }
     }
+
+    #[must_use]
+    pub fn not_found(entity_type: impl Into<String>, id: Uuid) -> Self {
+        Self::NotFound {
+            entity_type: entity_type.into(),
+            id,
+        }
+    }
 }
 
 /// Convert domain errors to SDK errors for public API consumption.
@@ -88,6 +99,7 @@ impl From<DomainError> for UsersInfoError {
             DomainError::Validation { field, message } => {
                 UsersInfoError::validation(format!("{field}: {message}"))
             }
+            DomainError::NotFound { id, .. } => UsersInfoError::not_found(id),
             DomainError::Database { .. } | DomainError::InternalError => UsersInfoError::internal(),
         }
     }

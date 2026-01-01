@@ -1,5 +1,5 @@
 use sea_orm_migration::prelude::*;
-use sea_orm_migration::sea_orm::{ConnectionTrait, Statement};
+use sea_orm_migration::sea_orm::ConnectionTrait;
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
@@ -7,217 +7,144 @@ pub struct Migration;
 #[async_trait::async_trait]
 impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
-        use sea_orm::DatabaseBackend as DB;
-
         let backend = manager.get_database_backend();
-        let users = Users::Table;
-        let tenant_id = Users::TenantId;
-        let email = Users::Email;
-
-        let idx_old_email = "idx_users_email";
-        let uk_tenant_email = "uk_users_tenant_email";
-        let idx_tenant = "idx_users_tenant";
-
+        let conn = manager.get_connection();
         let root_tenant = modkit_security::constants::ROOT_TENANT_ID;
 
-        // 1) Add tenant_id column if it doesn't exist
-        if !manager
-            .has_column(users.to_string(), tenant_id.to_string())
-            .await?
-        {
-            match backend {
-                DB::Postgres | DB::MySql => {
-                    // Step 1: Add column as NULL to allow backfill
-                    manager
-                        .alter_table(
-                            Table::alter()
-                                .table(users)
-                                .add_column(tenant_col_def(backend, tenant_id).null())
-                                .to_owned(),
-                        )
-                        .await?;
+        let sql = match backend {
+            sea_orm::DatabaseBackend::Postgres => {
+                format!(
+                    r#"
+-- Add tenant_id column
+ALTER TABLE users ADD COLUMN IF NOT EXISTS tenant_id UUID;
 
-                    // Step 2: Backfill all rows with the root tenant UUID
-                    let sql = match backend {
-                        DB::Postgres => {
-                            r#"UPDATE "users" SET "tenant_id" = $1 WHERE "tenant_id" IS NULL"#
-                        }
-                        DB::MySql => {
-                            r"UPDATE `users` SET `tenant_id` = ? WHERE `tenant_id` IS NULL"
-                        }
-                        DB::Sqlite => unreachable!(),
-                    };
-                    let stmt = Statement::from_sql_and_values(backend, sql, [root_tenant.into()]);
-                    manager.get_connection().execute(stmt).await?;
+-- Backfill existing rows with root tenant
+UPDATE users SET tenant_id = '{root_tenant}' WHERE tenant_id IS NULL;
 
-                    // Step 3: Set NOT NULL constraint
-                    manager
-                        .alter_table(
-                            Table::alter()
-                                .table(users)
-                                .modify_column(tenant_col_def(backend, tenant_id).not_null())
-                                .to_owned(),
-                        )
-                        .await?;
-                }
-                DB::Sqlite => {
-                    // SQLite cannot modify columns; add directly with NOT NULL + DEFAULT.
-                    // SQLite's ALTER TABLE DEFAULT clause requires a literal value, not a parameter.
-                    // Since root_tenant is a compile-time constant, string interpolation is safe here.
-                    let sql = format!(
-                        r#"ALTER TABLE "users" ADD COLUMN "tenant_id" TEXT NOT NULL DEFAULT '{root_tenant}'"#
-                    );
-                    manager.get_connection().execute_unprepared(&sql).await?;
-                }
+-- Make tenant_id NOT NULL
+ALTER TABLE users ALTER COLUMN tenant_id SET NOT NULL;
+
+-- Drop old unique index on email
+DROP INDEX IF EXISTS idx_users_email;
+
+-- Create composite unique index on (tenant_id, email)
+CREATE UNIQUE INDEX IF NOT EXISTS uk_users_tenant_email ON users(tenant_id, email);
+
+-- Create index on tenant_id for filtering
+CREATE INDEX IF NOT EXISTS idx_users_tenant ON users(tenant_id);
+                "#
+                )
             }
-        }
+            sea_orm::DatabaseBackend::MySql => {
+                format!(
+                    r#"
+-- Add tenant_id column
+ALTER TABLE users ADD COLUMN tenant_id VARCHAR(36);
 
-        // 2) Drop the old global unique index on email (if it exists)
-        if manager.has_index(users.to_string(), idx_old_email).await? {
-            manager
-                .drop_index(Index::drop().name(idx_old_email).table(users).to_owned())
-                .await?;
-        }
+-- Backfill existing rows with root tenant
+UPDATE users SET tenant_id = '{root_tenant}' WHERE tenant_id IS NULL;
 
-        // 3) Create unique index on (tenant_id, email)
-        if !manager
-            .has_index(users.to_string(), uk_tenant_email)
-            .await?
-        {
-            match backend {
-                DB::Postgres | DB::MySql => {
-                    manager
-                        .create_index(
-                            Index::create()
-                                .name(uk_tenant_email)
-                                .table(users)
-                                .col(tenant_id)
-                                .col(email)
-                                .unique()
-                                .to_owned(),
-                        )
-                        .await?;
-                }
-                DB::Sqlite => {
-                    let sql = format!(
-                        "CREATE UNIQUE INDEX IF NOT EXISTS \"{uk_tenant_email}\" ON \"users\" (\"tenant_id\", \"email\")"
-                    );
-                    manager.get_connection().execute_unprepared(&sql).await?;
-                }
+-- Make tenant_id NOT NULL
+ALTER TABLE users MODIFY COLUMN tenant_id VARCHAR(36) NOT NULL;
+
+-- Drop old unique index on email
+DROP INDEX idx_users_email ON users;
+
+-- Create composite unique index on (tenant_id, email)
+CREATE UNIQUE INDEX uk_users_tenant_email ON users(tenant_id, email);
+
+-- Create index on tenant_id for filtering
+CREATE INDEX idx_users_tenant ON users(tenant_id);
+                "#
+                )
             }
-        }
+            sea_orm::DatabaseBackend::Sqlite => {
+                format!(
+                    r#"
+-- SQLite: Add tenant_id column with default
+ALTER TABLE users ADD COLUMN tenant_id TEXT NOT NULL DEFAULT '{root_tenant}';
 
-        // 4) Create regular index on tenant_id for filtering
-        if !manager.has_index(users.to_string(), idx_tenant).await? {
-            match backend {
-                DB::Postgres | DB::MySql => {
-                    manager
-                        .create_index(
-                            Index::create()
-                                .name(idx_tenant)
-                                .table(users)
-                                .col(tenant_id)
-                                .to_owned(),
-                        )
-                        .await?;
-                }
-                DB::Sqlite => {
-                    let sql = format!(
-                        "CREATE INDEX IF NOT EXISTS \"{idx_tenant}\" ON \"users\" (\"tenant_id\")"
-                    );
-                    manager.get_connection().execute_unprepared(&sql).await?;
-                }
+-- Drop old unique index on email
+DROP INDEX IF EXISTS idx_users_email;
+
+-- Create composite unique index on (tenant_id, email)
+CREATE UNIQUE INDEX IF NOT EXISTS uk_users_tenant_email ON users(tenant_id, email);
+
+-- Create index on tenant_id for filtering
+CREATE INDEX IF NOT EXISTS idx_users_tenant ON users(tenant_id);
+                "#
+                )
             }
-        }
+        };
 
+        conn.execute_unprepared(&sql).await?;
         Ok(())
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
-        use sea_orm::DatabaseBackend as DB;
-
         let backend = manager.get_database_backend();
-        let users = Users::Table;
-        let tenant_id = Users::TenantId;
-        let email = Users::Email;
+        let conn = manager.get_connection();
 
-        let idx_old_email = "idx_users_email";
-        let uk_tenant_email = "uk_users_tenant_email";
-        let idx_tenant = "idx_users_tenant";
+        let sql = match backend {
+            sea_orm::DatabaseBackend::Postgres => {
+                r#"
+-- Drop composite unique index
+DROP INDEX IF EXISTS uk_users_tenant_email;
 
-        // 1) Drop the composite unique index
-        if manager
-            .has_index(users.to_string(), uk_tenant_email)
-            .await?
-        {
-            manager
-                .drop_index(Index::drop().name(uk_tenant_email).table(users).to_owned())
-                .await?;
-        }
+-- Drop tenant index
+DROP INDEX IF EXISTS idx_users_tenant;
 
-        // 2) Restore the old unique index on email
-        if !manager.has_index(users.to_string(), idx_old_email).await? {
-            match backend {
-                DB::Postgres | DB::MySql => {
-                    manager
-                        .create_index(
-                            Index::create()
-                                .name(idx_old_email)
-                                .table(users)
-                                .col(email)
-                                .unique()
-                                .to_owned(),
-                        )
-                        .await?;
-                }
-                DB::Sqlite => {
-                    let sql = format!(
-                        "CREATE UNIQUE INDEX IF NOT EXISTS \"{idx_old_email}\" ON \"users\" (\"email\")"
-                    );
-                    manager.get_connection().execute_unprepared(&sql).await?;
-                }
+-- Restore old unique index on email
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email);
+
+-- Drop tenant_id column
+ALTER TABLE users DROP COLUMN IF EXISTS tenant_id;
+                "#
             }
-        }
+            sea_orm::DatabaseBackend::MySql => {
+                r#"
+-- Drop composite unique index
+DROP INDEX uk_users_tenant_email ON users;
 
-        // 3) Drop the tenant_id index
-        if manager.has_index(users.to_string(), idx_tenant).await? {
-            manager
-                .drop_index(Index::drop().name(idx_tenant).table(users).to_owned())
-                .await?;
-        }
+-- Drop tenant index
+DROP INDEX idx_users_tenant ON users;
 
-        // 4) Drop the tenant_id column
-        manager
-            .alter_table(
-                Table::alter()
-                    .table(users)
-                    .drop_column(tenant_id)
-                    .to_owned(),
-            )
-            .await?;
+-- Restore old unique index on email
+CREATE UNIQUE INDEX idx_users_email ON users(email);
 
+-- Drop tenant_id column
+ALTER TABLE users DROP COLUMN tenant_id;
+                "#
+            }
+            sea_orm::DatabaseBackend::Sqlite => {
+                r#"
+-- SQLite: Cannot drop columns, need to recreate table
+-- Drop indexes first
+DROP INDEX IF EXISTS uk_users_tenant_email;
+DROP INDEX IF EXISTS idx_users_tenant;
+
+-- Recreate table without tenant_id
+CREATE TABLE users_new (
+    id TEXT PRIMARY KEY NOT NULL,
+    email TEXT NOT NULL,
+    display_name TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+INSERT INTO users_new (id, email, display_name, created_at, updated_at)
+SELECT id, email, display_name, created_at, updated_at FROM users;
+
+DROP TABLE users;
+ALTER TABLE users_new RENAME TO users;
+
+-- Restore old unique index on email
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email);
+                "#
+            }
+        };
+
+        conn.execute_unprepared(sql).await?;
         Ok(())
-    }
-}
-
-#[derive(DeriveIden, Copy, Clone)]
-enum Users {
-    #[sea_orm(iden = "users")]
-    Table,
-    Email,
-    #[sea_orm(iden = "tenant_id")]
-    TenantId,
-}
-
-/// Helper to generate the correct column type for Postgres/MySQL
-/// - Postgres: native UUID
-/// - `MySQL`: VARCHAR(36)
-fn tenant_col_def(backend: sea_orm::DatabaseBackend, col: Users) -> ColumnDef {
-    match backend {
-        sea_orm::DatabaseBackend::Postgres => ColumnDef::new(col).uuid().to_owned(),
-        sea_orm::DatabaseBackend::MySql => ColumnDef::new(col).string_len(36).to_owned(),
-        sea_orm::DatabaseBackend::Sqlite => {
-            unreachable!("tenant_col_def is only used for Postgres/MySQL paths")
-        }
     }
 }

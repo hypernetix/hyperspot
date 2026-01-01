@@ -1,4 +1,5 @@
 use sea_orm_migration::prelude::*;
+use sea_orm_migration::sea_orm::ConnectionTrait;
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
@@ -6,62 +7,58 @@ pub struct Migration;
 #[async_trait::async_trait]
 impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
-        manager
-            .create_table(
-                Table::create()
-                    .table(Users::Table)
-                    .if_not_exists()
-                    .col(ColumnDef::new(Users::Id).uuid().not_null().primary_key())
-                    .col(
-                        ColumnDef::new(Users::Email)
-                            .string()
-                            .not_null()
-                            .unique_key(),
-                    )
-                    .col(ColumnDef::new(Users::DisplayName).string().not_null())
-                    .col(
-                        ColumnDef::new(Users::CreatedAt)
-                            .timestamp_with_time_zone()
-                            .not_null(),
-                    )
-                    .col(
-                        ColumnDef::new(Users::UpdatedAt)
-                            .timestamp_with_time_zone()
-                            .not_null(),
-                    )
-                    .to_owned(),
-            )
-            .await?;
+        let backend = manager.get_database_backend();
+        let conn = manager.get_connection();
 
-        // Add unique index on email for better performance
-        manager
-            .create_index(
-                Index::create()
-                    .if_not_exists()
-                    .name("idx_users_email")
-                    .table(Users::Table)
-                    .col(Users::Email)
-                    .unique()
-                    .to_owned(),
-            )
-            .await?;
+        let sql = match backend {
+            sea_orm::DatabaseBackend::Postgres => {
+                r#"
+CREATE TABLE IF NOT EXISTS users (
+    id UUID PRIMARY KEY NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    display_name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL
+);
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email);
+                "#
+            }
+            sea_orm::DatabaseBackend::MySql => {
+                r#"
+CREATE TABLE IF NOT EXISTS users (
+    id VARCHAR(36) PRIMARY KEY NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    display_name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL,
+    UNIQUE KEY idx_users_email (email)
+);
+                "#
+            }
+            sea_orm::DatabaseBackend::Sqlite => {
+                r#"
+CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY NOT NULL,
+    email TEXT NOT NULL,
+    display_name TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email);
+                "#
+            }
+        };
+
+        conn.execute_unprepared(sql).await?;
         Ok(())
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
-        manager
-            .drop_table(Table::drop().table(Users::Table).to_owned())
-            .await
+        let conn = manager.get_connection();
+        let sql = "DROP TABLE IF EXISTS users;";
+        conn.execute_unprepared(sql).await?;
+        Ok(())
     }
-}
-
-#[derive(DeriveIden)]
-enum Users {
-    Table,
-    Id,
-    Email,
-    DisplayName,
-    CreatedAt,
-    UpdatedAt,
 }

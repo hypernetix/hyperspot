@@ -7,8 +7,8 @@ use sea_orm_migration::MigratorTrait;
 use tracing::{debug, info};
 use url::Url;
 
-// Import the API trait from SDK
-use user_info_sdk::UsersInfoApi;
+// Import the client trait from SDK
+use user_info_sdk::UsersInfoClient;
 
 use crate::api::rest::dto::UserEvent;
 use crate::api::rest::routes;
@@ -18,7 +18,6 @@ use crate::domain::events::UserDomainEvent;
 use crate::domain::ports::{AuditPort, EventPublisher};
 use crate::domain::service::{Service, ServiceConfig};
 use crate::infra::audit::HttpAuditClient;
-use crate::infra::storage::sea_orm_repo::SeaOrmUsersRepository;
 use crate::local_client::UsersInfoLocalClient;
 
 /// Main module struct with DDD-light layout and proper `ClientHub` integration
@@ -67,10 +66,6 @@ impl Module for UsersInfo {
         let db = ctx.db_required()?;
         let sec_conn = db.sea_secure(); // SecureConn - enforces access control on all queries
 
-        // Wire repository (testing) to domain service (port)
-        // Repository now uses SecureConn to automatically apply security filtering
-        let repo = SeaOrmUsersRepository::new(sec_conn);
-
         // Create event publisher adapter that bridges domain events to SSE
         let publisher: Arc<dyn EventPublisher<UserDomainEvent>> =
             Arc::new(SseUserEventPublisher::new(self.sse.clone()));
@@ -94,7 +89,7 @@ impl Module for UsersInfo {
             max_page_size: cfg.max_page_size,
         };
         let domain_service = Arc::new(Service::new(
-            Arc::new(repo),
+            sec_conn,
             publisher,
             audit_adapter,
             service_config,
@@ -103,12 +98,12 @@ impl Module for UsersInfo {
         // Store service for REST and internal usage
         self.service.store(Some(domain_service.clone()));
 
-        // Create local client adapter that implements UsersInfoApi
+        // Create local client adapter that implements UsersInfoClient
         let local = UsersInfoLocalClient::new(domain_service);
-        let api: Arc<dyn UsersInfoApi> = Arc::new(local);
+        let client: Arc<dyn UsersInfoClient> = Arc::new(local);
 
-        // Register in ClientHub directly - consumers use hub.get::<dyn UsersInfoApi>()?
-        ctx.client_hub().register::<dyn UsersInfoApi>(api);
+        // Register in ClientHub directly - consumers use hub.get::<dyn UsersInfoClient>()?
+        ctx.client_hub().register::<dyn UsersInfoClient>(client);
         info!("UsersInfo local client registered into ClientHub");
         Ok(())
     }

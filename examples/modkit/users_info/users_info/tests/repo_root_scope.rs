@@ -1,15 +1,14 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-//! Test that repository operations work with root scope (system-level access).
+//! Test that service operations work with root scope (system-level access).
 
 mod support;
 
 use modkit_db::secure::SecureConn;
 use modkit_odata::ODataQuery;
-use support::{ctx_allow_tenants, ctx_root, inmem_db, seed_user};
-use users_info::{
-    domain::repo::UsersRepository, infra::storage::sea_orm_repo::SeaOrmUsersRepository,
-};
+use std::sync::Arc;
+use support::{ctx_allow_tenants, ctx_root, inmem_db, seed_user, MockAuditPort, MockEventPublisher};
+use users_info::domain::service::{Service, ServiceConfig};
 use uuid::Uuid;
 
 #[tokio::test]
@@ -25,14 +24,19 @@ async fn root_scope_can_access_all_tenants() {
     seed_user(&db, user2_id, tenant2, "user2@example.com", "User 2").await;
 
     let sec = SecureConn::new(db);
-    let repo = SeaOrmUsersRepository::new(sec);
+    let service = Service::new(
+        sec,
+        Arc::new(MockEventPublisher),
+        Arc::new(MockAuditPort),
+        ServiceConfig::default(),
+    );
 
     // Create root context
     let ctx = ctx_root();
 
     // Act: List users with root context
     let query = ODataQuery::default();
-    let result = repo.list_users_page(ctx.scope(), &query).await;
+    let result = service.list_users_page(&ctx, &query).await;
 
     // Assert: Should return users from all tenants
     assert!(result.is_ok(), "Root scope query should succeed");
@@ -53,19 +57,24 @@ async fn root_scope_can_find_users_in_any_tenant() {
     let user2 = seed_user(&db, user2_id, tenant2, "user2@example.com", "User 2").await;
 
     let sec = SecureConn::new(db);
-    let repo = SeaOrmUsersRepository::new(sec);
+    let service = Service::new(
+        sec,
+        Arc::new(MockEventPublisher),
+        Arc::new(MockAuditPort),
+        ServiceConfig::default(),
+    );
 
     // Create root context
     let ctx_root = ctx_root();
 
     // Act & Assert: Root context can find users in tenant1
-    let result1 = repo.find_by_id(ctx_root.scope(), user1.id).await.unwrap();
-    assert!(result1.is_some(), "Root scope should find user in tenant1");
+    let result1 = service.get_user(&ctx_root, user1.id).await;
+    assert!(result1.is_ok(), "Root scope should find user in tenant1");
     assert_eq!(result1.unwrap().email, "user1@example.com");
 
     // Act & Assert: Root context can find users in tenant2
-    let result2 = repo.find_by_id(ctx_root.scope(), user2.id).await.unwrap();
-    assert!(result2.is_some(), "Root scope should find user in tenant2");
+    let result2 = service.get_user(&ctx_root, user2.id).await;
+    assert!(result2.is_ok(), "Root scope should find user in tenant2");
     assert_eq!(result2.unwrap().email, "user2@example.com");
 }
 
@@ -82,7 +91,12 @@ async fn root_scope_vs_tenant_scope() {
     seed_user(&db, user2_id, tenant2, "user2@example.com", "User 2").await;
 
     let sec = SecureConn::new(db);
-    let repo = SeaOrmUsersRepository::new(sec);
+    let service = Service::new(
+        sec,
+        Arc::new(MockEventPublisher),
+        Arc::new(MockAuditPort),
+        ServiceConfig::default(),
+    );
 
     // Create different contexts
     let ctx_root = ctx_root();
@@ -90,14 +104,14 @@ async fn root_scope_vs_tenant_scope() {
 
     // Act: List with root context
     let query = ODataQuery::default();
-    let root_result = repo
-        .list_users_page(ctx_root.scope(), &query)
+    let root_result = service
+        .list_users_page(&ctx_root, &query)
         .await
         .unwrap();
 
     // Act: List with tenant-scoped context
-    let tenant_result = repo
-        .list_users_page(ctx_tenant1.scope(), &query)
+    let tenant_result = service
+        .list_users_page(&ctx_tenant1, &query)
         .await
         .unwrap();
 
@@ -126,22 +140,19 @@ async fn root_scope_is_not_empty_scope() {
     seed_user(&db, user_id, tenant_id, "test@example.com", "Test User").await;
 
     let sec = SecureConn::new(db);
-    let repo = SeaOrmUsersRepository::new(sec);
+    let service = Service::new(
+        sec,
+        Arc::new(MockEventPublisher),
+        Arc::new(MockAuditPort),
+        ServiceConfig::default(),
+    );
 
     // Create contexts
     let ctx_root = ctx_root();
 
-    // Verify scope properties
-    assert!(ctx_root.scope().is_root(), "Should be root scope");
-    assert!(
-        !ctx_root.scope().is_empty(),
-        "Root scope should not be empty"
-    );
-    assert!(!ctx_root.is_denied(), "Root scope should not be denied");
-
-    // Act: List with root context
+    // Act: List with root context (root context should access all data)
     let query = ODataQuery::default();
-    let result = repo.list_users_page(ctx_root.scope(), &query).await;
+    let result = service.list_users_page(&ctx_root, &query).await;
 
     // Assert: Should succeed and return data
     assert!(result.is_ok(), "Root scope query should succeed");

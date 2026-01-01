@@ -6,10 +6,9 @@ mod support;
 
 use modkit_db::secure::SecureConn;
 use modkit_odata::ODataQuery;
-use support::{ctx_deny_all, inmem_db, seed_user};
-use users_info::{
-    domain::repo::UsersRepository, infra::storage::sea_orm_repo::SeaOrmUsersRepository,
-};
+use std::sync::Arc;
+use support::{ctx_deny_all, inmem_db, seed_user, MockAuditPort, MockEventPublisher};
+use users_info::domain::service::{Service, ServiceConfig};
 use uuid::Uuid;
 
 #[tokio::test]
@@ -43,14 +42,19 @@ async fn list_with_deny_all_returns_empty_page() {
     .await;
 
     let sec = SecureConn::new(db);
-    let repo = SeaOrmUsersRepository::new(sec);
+    let service = Service::new(
+        sec,
+        Arc::new(MockEventPublisher),
+        Arc::new(MockAuditPort),
+        ServiceConfig::default(),
+    );
 
     // Create deny-all context
     let ctx = ctx_deny_all();
 
     // Act: List users with deny-all context
     let query = ODataQuery::default();
-    let result = repo.list_users_page(ctx.scope(), &query).await;
+    let result = service.list_users_page(&ctx, &query).await;
 
     // Assert: Should succeed but return empty page
     assert!(result.is_ok(), "Query should succeed");
@@ -67,14 +71,19 @@ async fn list_with_empty_database_returns_empty_page() {
     // Arrange: Create empty database
     let db = inmem_db().await;
     let sec = SecureConn::new(db);
-    let repo = SeaOrmUsersRepository::new(sec);
+    let service = Service::new(
+        sec,
+        Arc::new(MockEventPublisher),
+        Arc::new(MockAuditPort),
+        ServiceConfig::default(),
+    );
 
     // Create any context (even allow-all would return empty)
     let ctx = ctx_deny_all();
 
     // Act: List users from empty database
     let query = ODataQuery::default();
-    let result = repo.list_users_page(ctx.scope(), &query).await;
+    let result = service.list_users_page(&ctx, &query).await;
 
     // Assert: Should succeed with empty page
     assert!(result.is_ok());

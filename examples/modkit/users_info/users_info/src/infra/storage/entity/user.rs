@@ -3,17 +3,13 @@ use sea_orm::entity::prelude::*;
 use time::OffsetDateTime;
 use uuid::Uuid;
 
-/// User entity with multi-tenant isolation.
-///
-/// This entity demonstrates the use of the `#[derive(Scopable)]` macro
-/// for automatic implementation of secure ORM scoping.
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Scopable)]
 #[sea_orm(table_name = "users")]
 #[secure(
-    tenant_col = "tenant_id",  // Multi-tenant entity - scope by tenant_id
-    resource_col = "id",        // Primary resource identifier
-    no_owner,                   // No owner-based filtering
-    no_type                     // No type-based filtering
+    tenant_col = "tenant_id",
+    resource_col = "id",
+    no_owner,
+    no_type
 )]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
@@ -26,6 +22,21 @@ pub struct Model {
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-pub enum Relation {}
+pub enum Relation {
+    #[sea_orm(has_one = "super::address::Entity")]
+    Address,
+}
 
 impl ActiveModelBehavior for ActiveModel {}
+
+impl Related<super::address::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Address.def()
+    }
+}
+
+impl Related<super::user_language::Entity> for Entity {
+    fn to() -> RelationDef {
+        super::user_language::Relation::User.def()
+    }
+}
