@@ -6,15 +6,17 @@
 //! ## Public API
 //!
 //! The public API is defined in the `user_info-sdk` crate and re-exported here:
-//! - `UsersInfoApi` - trait for inter-module communication
-//! - `User`, `NewUser`, `UserPatch`, `UpdateUserRequest` - data models
+//! - `UsersInfoClient` - trait for inter-module communication
+//! - User, Address, City, Language models and their request/patch types
 //! - `UsersInfoError` - error types
 //!
-//! Other modules should use `hub.get::<dyn UsersInfoApi>()?` to obtain the client.
+//! Other modules should use `hub.get::<dyn UsersInfoClient>()?` to obtain the client.
 #![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 // === PUBLIC API (from SDK) ===
 pub use user_info_sdk::{
-    NewUser, UpdateUserRequest, User, UserPatch, UsersInfoApi, UsersInfoError,
+    Address, AddressPatch, City, CityPatch, Language, LanguagePatch, NewAddress, NewCity,
+    NewLanguage, NewUser, UpdateAddressRequest, UpdateCityRequest, UpdateLanguageRequest,
+    UpdateUserRequest, User, UserPatch, UsersInfoClient, UsersInfoError,
 };
 
 // === ERROR CATALOG ===

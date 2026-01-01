@@ -18,7 +18,6 @@ use tower::ServiceExt;
 use users_info::{
     api::rest::handlers,
     domain::service::{Service, ServiceConfig},
-    infra::storage::sea_orm_repo::SeaOrmUsersRepository,
 };
 use uuid::Uuid;
 
@@ -38,13 +37,12 @@ async fn inject_fake_security_ctx(mut req: Request<Body>, next: Next) -> axum::r
 async fn create_test_router() -> Router {
     let db = inmem_db().await;
     let sec = SecureConn::new(db);
-    let repo = SeaOrmUsersRepository::new(sec);
 
     let events = Arc::new(MockEventPublisher);
     let audit = Arc::new(MockAuditPort);
     let config = ServiceConfig::default();
 
-    let service = Arc::new(Service::new(Arc::new(repo), events, audit, config));
+    let service = Arc::new(Service::new(sec, events, audit, config));
 
     Router::new()
         .route(
@@ -75,9 +73,8 @@ async fn get_user_handler_returns_json() {
     let _user = seed_user(&db, user_id, fake_tenant, "test@example.com", "Test User").await;
 
     let sec = SecureConn::new(db);
-    let repo = SeaOrmUsersRepository::new(sec);
     let service = Arc::new(Service::new(
-        Arc::new(repo),
+        sec,
         Arc::new(MockEventPublisher),
         Arc::new(MockAuditPort),
         ServiceConfig::default(),
@@ -150,9 +147,8 @@ async fn list_users_returns_json_page() {
     .await;
 
     let sec = SecureConn::new(db);
-    let repo = SeaOrmUsersRepository::new(sec);
     let service = Arc::new(Service::new(
-        Arc::new(repo),
+        sec,
         Arc::new(MockEventPublisher),
         Arc::new(MockAuditPort),
         ServiceConfig::default(),
