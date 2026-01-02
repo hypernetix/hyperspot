@@ -76,10 +76,10 @@ impl<'de> serde::Deserialize<'de> for Permission {
         let action = parts[3];
         if !action
             .chars()
-            .all(|c| c.is_ascii_alphanumeric() || c == '_')
+            .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '*')
         {
             return Err(serde::de::Error::custom(format!(
-                "Action must contain only alphanumeric characters and underscores, got: {action}"
+                "Action must contain only alphanumeric characters, underscores, or '*', got: {action}"
             )));
         }
 
@@ -172,10 +172,10 @@ impl PermissionBuilder {
         // Validate action contains only alphanumeric characters and underscores
         if !action
             .chars()
-            .all(|c| c.is_ascii_alphanumeric() || c == '_')
+            .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '*')
         {
             return Err(anyhow::anyhow!(
-                "Action must contain only alphanumeric characters and underscores, got: {action}"
+                "Action must contain only alphanumeric characters, underscores, or '*', got: {action}"
             ));
         }
 
@@ -310,7 +310,7 @@ mod tests {
         let err = result.unwrap_err();
         assert!(err
             .to_string()
-            .contains("Action must contain only alphanumeric characters and underscores"));
+            .contains("Action must contain only alphanumeric characters, underscores, or '*'"));
     }
 
     #[test]
@@ -322,7 +322,7 @@ mod tests {
         let err = result.unwrap_err();
         assert!(err
             .to_string()
-            .contains("Action must contain only alphanumeric characters and underscores"));
+            .contains("Action must contain only alphanumeric characters, underscores, or '*'"));
     }
 
     #[test]
@@ -336,7 +336,7 @@ mod tests {
         let err = result.unwrap_err();
         assert!(err
             .to_string()
-            .contains("Action must contain only alphanumeric characters and underscores"));
+            .contains("Action must contain only alphanumeric characters, underscores, or '*'"));
     }
 
     #[test]
@@ -519,5 +519,24 @@ mod tests {
             serialized,
             r#""*:gts.x.core.events.topic.v1~vendor.*:660e8400-e29b-41d4-a716-446655440002:publish""#
         );
+    }
+
+    #[test]
+    fn test_permission_builder_with_wildcard_action() {
+        let permission = Permission::builder()
+            .resource_pattern("file_parser")
+            .action("*")
+            .build()
+            .unwrap();
+
+        assert_eq!(permission.action(), "*");
+    }
+
+    #[test]
+    fn test_deserialize_permission_with_wildcard_action() {
+        let json = r#""*:file_parser:*:*""#;
+        let permission: Permission = serde_json::from_str(json).unwrap();
+
+        assert_eq!(permission.action(), "*");
     }
 }
