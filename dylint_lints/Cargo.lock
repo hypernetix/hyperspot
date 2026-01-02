@@ -428,6 +428,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "de0802_use_odata_ext"
+version = "0.1.0"
+dependencies = [
+ "clippy_utils",
+ "dylint_linting",
+ "dylint_testing",
+ "lint_utils",
+]
+
+[[package]]
 name = "de0901_gts_string_pattern"
 version = "0.1.0"
 dependencies = [

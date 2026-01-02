@@ -796,6 +796,29 @@ Notes:
 - Public routes cannot (and do not need to) call `require_license_features(...)`.
 - `api_ingress` currently enforces license requirements via a stub middleware that only allows the base feature.
 
+**OData query options (type-safe, OpenAPI-friendly)**
+
+Use `OperationBuilderODataExt` helpers to register OData query parameters. This avoids manually wiring `$filter`, `$orderby`, and `$select` via `.query_param(...)` and keeps the allowed filter/order fields type-safe.
+
+```rust
+use modkit::api::operation_builder::OperationBuilderODataExt;
+
+OperationBuilder::get("/users-info/v1/users")
+    .operation_id("users_info.list_users")
+    .require_auth(&Resource::Users, &Action::Read)
+    .require_license_features::<License>([])
+    .with_odata_filter::<dto::UserDtoFilterField>()
+    .with_odata_select()
+    .with_odata_orderby::<dto::UserDtoFilterField>()
+    .handler(handlers::list_users)
+    .json_response_with_schema::<modkit_odata::Page<dto::UserDto>>(
+        openapi,
+        http::StatusCode::OK,
+        "Paginated list of users",
+    )
+    .register(router, openapi);
+```
+
 **Handler / method router**
 
 ```rust
@@ -913,6 +936,19 @@ pub struct UserDto {
 ```
 
 This generates a `UserDtoFilterField` enum automatically with variants for each filterable field.
+
+**How to annotate fields**
+
+- **Opt-in per field**: a field is only available for `$filter` / `$orderby` if it has a `#[odata(filter(kind = "..."))]` attribute.
+- **Unannotated fields are not filterable/orderable**: omitting `#[odata(...)]` keeps the field out of the generated `*FilterField` enum, so it cannot appear in `$filter` or `$orderby`.
+- **Kind must match the Rust type**: choose the `kind` that corresponds to the DTO field type (e.g. `Uuid` for `uuid::Uuid`, `DateTimeUtc` for `chrono::DateTime<Utc>`).
+- **Route wiring uses the generated enum**: `routes.rs` registers OData query params via `OperationBuilderODataExt` using that generated enum type.
+
+When exposing OData on REST endpoints, register the corresponding query options in `routes.rs` using:
+
+- `OperationBuilderODataExt::with_odata_filter::<F>()`
+- `OperationBuilderODataExt::with_odata_select()`
+- `OperationBuilderODataExt::with_odata_orderby::<F>()`
 
 **Supported field kinds**: `String`, `I64`, `F64`, `Bool`, `Uuid`, `DateTimeUtc`, `Date`, `Time`, `Decimal`
 

@@ -1120,6 +1120,7 @@ external API clients.
 2. **`src/api/rest/dto.rs`:**
    **Rule:** Create Data Transfer Objects (DTOs) for the REST API. These structs derive `serde` and `utoipa::ToSchema`.
    **Rule:** For OData filtering, add `#[derive(ODataFilterable)]` with `#[odata(filter(kind = "..."))]` on fields.
+   **Rule:** Only fields annotated with `#[odata(filter(kind = "..."))]` become available for `$filter` / `$orderby` (unannotated fields are not filterable/orderable).
    **Rule:** Map OpenAPI types correctly: `string: uuid` -> `uuid::Uuid`, `string: date-time` ->
    `chrono::DateTime<chrono::Utc>`.
 
@@ -1226,6 +1227,7 @@ external API clients.
    **Rule:** Register ALL endpoints in a single `register_routes` function.
    **Rule:** Use `OperationBuilder` for every route with `.require_auth(&Resource::X, [Action::Y])` for protected endpoints.
    **Rule:** For protected endpoints, call `.require_license_features(...)` after `.require_auth(...)` (use `[]` to explicitly declare no feature requirement).
+   **Rule:** For OData-enabled list endpoints, use `OperationBuilderODataExt` helpers instead of manually wiring `$filter`, `$orderby`, and `$select` via `.query_param(...)`.
    **Rule:** Use `.error_400(openapi)`, `.error_404(openapi)` etc. instead of raw `.problem_response()`.
    **Rule:** After all routes are registered, attach the service ONCE with `router.layer(Extension(service.clone()))`.
 
@@ -1233,7 +1235,7 @@ external API clients.
    use crate::api::rest::{dto, handlers};
    use crate::domain::service::Service;
    use axum::{Extension, Router};
-   use modkit::api::operation_builder::LicenseFeature;
+   use modkit::api::operation_builder::{LicenseFeature, OperationBuilderODataExt};
    use modkit::api::{OpenApiRegistry, OperationBuilder};
    use std::sync::Arc;
 
@@ -1267,6 +1269,9 @@ external API clients.
                http::StatusCode::OK,
                "Paginated list of users",
            )
+           .with_odata_filter::<dto::UserDtoFilterField>() // not .query_param("$filter", ...)
+           .with_odata_select() // not .query_param("$select", ...)
+           .with_odata_orderby::<dto::UserDtoFilterField>() // not .query_param("$orderby", ...)
            .error_400(openapi)
            .error_500(openapi)
            .register(router, openapi);
