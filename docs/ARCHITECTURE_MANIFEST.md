@@ -31,6 +31,49 @@ HyperSpot does not aim to ship a comprehensive set of ready-made, end-user SaaS 
 
 HyperSpot is not a replacement for cloud providers or infrastructure platforms such as AWS, Azure, GCP, or on-prem orchestration stacks. It does not offer physical infrastructure, networking, container orchestration, or low-level resource scheduling. Instead, HyperSpot intentionally positions itself above IaaS/PaaS and below vendor-developed SaaS, focusing on application-level services, governance, and GenAI enablement.
 
+## Why Rust and why Monorepo?
+
+Rust and a monorepo are intentional choices to optimize **recurring engineering work**,especially the feedback loop required for safe and high-throughput **LLM-assisted development**. The goal is to maximize how quickly generated code can be validated (build, lint, test, run, debug) *before* it is committed.
+
+### Why Rust (recurring benefits)
+
+- **Compile-time safety for memory and concurrency**.
+  Rust's ownership model prevents data races and memory safety issues by construction. It removes entire categories of runtime failures (null pointer dereference, use-after-free, iterator invalidation) by design—critical for a multi-tenant platform handling concurrent requests.
+
+- **Faster debugging of complex, cross-cutting scenarios (human + LLM)**.
+  Strong typing, structured errors, and deterministic build artifacts make failures easier to localize. This improves troubleshooting for complex, multi-module behaviors and makes it easier for LLMs to propose minimal, correct fixes based on compiler diagnostics, test failures, and traces.
+
+- **Deep static analysis as a platform feature**.
+  Rust's compiler and tooling ecosystem enable strong static inspection (AST/HIR/MIR-level analysis). Over time, recurring code review feedback and internal guidelines can be converted into custom project-specific lints (see [dylint_lints](../dylint_lints)), preventing bad patterns *before* they reach code review or production.
+
+- **Low footprint + performance enable “whole subsystem locally” workflows**.
+  A fast, resource-efficient stack makes it realistic for developers (and LLM-based code generators) to:
+  - build and run large subsystems locally (e.g. via Docker Compose),
+  - run end-to-end tests locally,
+  - reproduce issues with full logs + source access without relying on remote environments.
+
+- **Fearless refactoring**.
+  Strong type system and exhaustive pattern matching mean large-scale refactors (e.g., changing a contract used by 20 modules) are caught at compile time, not in production.
+
+### Why a monorepo (recurring benefits)
+
+- **Atomic changes across modules and contracts**.
+  HyperSpot is modular, but the contracts between modules evolve. A monorepo allows changing a contract and all its consumers in one PR.
+
+- **Short, controllable feedback loops for LLM-generated changes**.
+  When generation touches multiple crates, the monorepo makes it practical to run build + lints + targeted tests + E2E in a single workspace context. This reduces "partial correctness" changes and enables rapid iteration on generated patches until the full system is green.
+
+- **Single source of truth for tooling and quality gates**.
+  Consistent formatting, linting, security checks, and test entry points are easier to enforce when everything shares the same CI and build system.
+
+- **Realistic local builds and end-to-end testing**.
+  When the code is together, it is much easier to run “the full actual system” locally, which is a prerequisite for fast debugging and reliable local E2E.
+
+- **Avoid version skew between internal crates/services**.
+  Multi-repos often introduce dependency pinning, release choreography, and integration lag. A monorepo keeps internal APIs aligned by default.
+
+Monorepo is not dogma: it has to be kept while it improves velocity and correctness. If a part of the system grows to the point where independent versioning, release cadence, or access control is required, it can be extracted behind stable contracts.
+
 ---
 
 ## 1. Modular Architecture

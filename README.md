@@ -11,8 +11,10 @@
 - **Quality First**: 90%+ test coverage target with unit, integration, E2E, performance, and security testing
 - **Universal Deployment**: Single codebase runs on cloud, on-prem Windows/Linux workstation, or mobile
 - **Developer Friendly**: AI-assisted code generation, automatic OpenAPI docs, DDD-light structure, and type-safe APIs
+- **Written in Rust**: Optimize recurring engineering work with compile-time safety and deep static analysis (including project-specific lints) so more issues are prevented before review/runtime.
+- **Keep Monorepo while possible**: Keep core modules and contracts in one place to enable atomic refactors, consistent tooling/CI, and realistic local build + end-to-end testing; split only when scale forces it.
 
-See the full architecture [MANIFEST](docs/ARCHITECTURE_MANIFEST.md) for more details.
+See the full architecture [MANIFEST](docs/ARCHITECTURE_MANIFEST.md) for more details, including rationales behind Rust and Monorepo choice.
 
 ## Quick Start
 
