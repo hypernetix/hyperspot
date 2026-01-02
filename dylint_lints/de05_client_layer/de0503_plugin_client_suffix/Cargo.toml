@@ -1,0 +1,30 @@
+[package]
+name = "de0503_plugin_client_suffix"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[[example]]
+name = "plugin_api_bad-sdk"
+path = "ui/plugin_api_bad.rs"
+
+[[example]]
+name = "plugin_client_good-sdk"
+path = "ui/plugin_client_good.rs"
+
+[dependencies]
+clippy_utils.workspace = true
+dylint_linting.workspace = true
+lint_utils.workspace = true
+
+[dev-dependencies]
+dylint_testing.workspace = true
+async-trait = "0.1"
+
+[package.metadata.rust-analyzer]
+rustc_private = true
