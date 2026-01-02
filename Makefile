@@ -284,7 +284,7 @@ oop-example:
 	cargo run --bin hyperspot-server --features oop-example,users-info-example,tenant-resolver-example -- --config config/quickstart.yaml run
 
 # Run all quality checks
-check: fmt clippy test security dylint-test dylint
+check: fmt clippy security dylint-test dylint test
 
 # Run CI pipeline
 ci: check
@@ -294,5 +294,5 @@ build:
 	cargo +stable build --release
 
 # Run all necessary quality checks and tests and then build the release binary
-all: check test test-sqlite build e2e-local
+all: build check test-sqlite e2e-local
 	@echo "consider to run 'make test-db' as well"
