@@ -21,6 +21,7 @@ pub struct NodeStorage {
 }
 
 impl NodeStorage {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             nodes: RwLock::new(HashMap::new()),
