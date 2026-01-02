@@ -31,7 +31,7 @@ utoipa = { workspace = true, features = ["time"] }
 # HTTP and REST
 axum = { workspace = true, features = ["macros"] }
 tower-http = { workspace = true, features = ["timeout"] }
-futures = { workspace = true }
+futures-util  = { workspace = true }
 http = { workspace = true }
 
 # Time handling

@@ -1,0 +1,8 @@
+error: ODataSchema can only be derived for structs
+ --> tests/ui/fail/enum_not_supported.rs:4:1
+  |
+4 | / enum Status {
+5 | |     Active,
+6 | |     Inactive,
+7 | | }
+  | |_^

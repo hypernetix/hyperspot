@@ -149,7 +149,7 @@ dependencies = [
  "axum",
  "chrono",
  "dashmap",
- "futures",
+ "futures-core",
  "governor",
  "http",
  "inventory",
@@ -1533,7 +1533,7 @@ dependencies = [
  "base64 0.22.1",
  "bytes",
  "docx-rust",
- "futures",
+ "futures-util",
  "http",
  "inventory",
  "mime",
@@ -2259,6 +2259,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "api_ingress",
+ "calculator",
  "calculator_gateway",
  "clap",
  "contoso_tr_plugin",
@@ -2846,7 +2847,8 @@ dependencies = [
  "dsn",
  "figment",
  "file-rotate",
- "futures",
+ "futures-core",
+ "futures-util",
  "gts",
  "gts-macros",
  "http",
@@ -2856,6 +2858,7 @@ dependencies = [
  "modkit-errors",
  "modkit-macros",
  "modkit-odata",
+ "modkit-sdk",
  "module_orchestrator-contracts",
  "module_orchestrator-grpc",
  "nix 0.29.0",
@@ -3039,6 +3042,36 @@ dependencies = [
  "sha2",
  "thiserror 2.0.17",
  "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "modkit-sdk"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "futures-core",
+ "futures-util",
+ "modkit-odata",
+ "modkit-sdk-macros",
+ "modkit-security",
+ "pin-project-lite",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
+name = "modkit-sdk-macros"
+version = "0.1.0"
+dependencies = [
+ "heck 0.5.0",
+ "modkit-odata",
+ "modkit-sdk",
+ "proc-macro-error2",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.111",
+ "trybuild",
  "uuid",
 ]
 
@@ -6421,7 +6454,7 @@ dependencies = [
  "arc-swap",
  "async-trait",
  "axum",
- "futures",
+ "futures-util",
  "http",
  "httpmock",
  "inventory",

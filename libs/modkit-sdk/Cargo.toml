@@ -1,0 +1,39 @@
+[package]
+name = "modkit-sdk"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[lints]
+workspace = true
+
+[lib]
+name = "modkit_sdk"
+
+[features]
+default = []
+derive = ["dep:modkit-sdk-macros"]
+uuid = ["dep:uuid"]
+chrono = ["dep:chrono"]
+
+[dependencies]
+# Project-local crates
+modkit-security = { path = "../modkit-security" }
+modkit-odata = { path = "../modkit-odata" }
+modkit-sdk-macros = { path = "../modkit-sdk-macros", optional = true }
+
+# Core deps
+futures-core = { workspace = true }
+pin-project-lite = { workspace = true }
+
+# Optional feature dependencies
+uuid = { workspace = true, features = ["v7"], optional = true }
+chrono = { workspace = true, optional = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt"] }
+futures-util = { workspace = true }
+uuid = { workspace = true, features = ["v7"] }
+chrono = { workspace = true }
+modkit-sdk-macros = { path = "../modkit-sdk-macros" }
