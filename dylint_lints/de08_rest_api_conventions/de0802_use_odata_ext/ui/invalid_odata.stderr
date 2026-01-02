@@ -62,15 +62,6 @@ LL |         .query_param("$count", false, "Include total count");
    = help: use .query_param_typed() with proper OData extractor instead
    = note: type-safe OData methods provide compile-time validation and automatic OpenAPI schema generation
 
-error: use OperationBuilderODataExt instead of .query_param() for OData parameter `$filter` (DE0802)
-  --> $DIR/invalid_odata.rs:67:22
-   |
-LL |         .query_param("$filter", false, "Filter")
-   |                      ^^^^^^^^^
-   |
-   = help: use .with_odata_filter::<FilterFieldEnum>() instead
-   = note: type-safe OData methods provide compile-time validation and automatic OpenAPI schema generation
-
 error: use OperationBuilderODataExt instead of .query_param() for OData parameter `$orderby` (DE0802)
   --> $DIR/invalid_odata.rs:69:22
    |
@@ -80,4 +71,14 @@ LL |         .query_param("$orderby", false, "Order")
    = help: use .with_odata_orderby::<FilterFieldEnum>() instead
    = note: type-safe OData methods provide compile-time validation and automatic OpenAPI schema generation
 
+error: use OperationBuilderODataExt instead of .query_param() for OData parameter `$filter` (DE0802)
+  --> $DIR/invalid_odata.rs:67:22
+   |
+LL |         .query_param("$filter", false, "Filter")
+   |                      ^^^^^^^^^
+   |
+   = help: use .with_odata_filter::<FilterFieldEnum>() instead
+   = note: type-safe OData methods provide compile-time validation and automatic OpenAPI schema generation
+
 error: aborting due to 9 previous errors
+
