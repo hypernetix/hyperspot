@@ -183,3 +183,115 @@ async fn test_credential_redaction() {
     let no_dsn = redact_credentials_in_dsn(None);
     assert_eq!(no_dsn, "none");
 }
+
+#[cfg(feature = "sqlite")]
+#[test]
+fn test_display_sqlite_memory() {
+    use modkit_db::DbConnectOptions;
+
+    let opts = sqlx::sqlite::SqliteConnectOptions::new().filename(":memory:");
+    let db_opts = DbConnectOptions::Sqlite(opts);
+
+    let display_str = format!("{db_opts}");
+    assert_eq!(display_str, "sqlite://:memory:");
+}
+
+#[cfg(feature = "sqlite")]
+#[test]
+fn test_display_sqlite_file() {
+    use modkit_db::DbConnectOptions;
+
+    let opts = sqlx::sqlite::SqliteConnectOptions::new().filename("/tmp/test.db");
+    let db_opts = DbConnectOptions::Sqlite(opts);
+
+    let display_str = format!("{db_opts}");
+    assert_eq!(display_str, "sqlite:///tmp/test.db");
+}
+
+#[cfg(feature = "sqlite")]
+#[test]
+fn test_display_sqlite_relative_path() {
+    use modkit_db::DbConnectOptions;
+
+    let opts = sqlx::sqlite::SqliteConnectOptions::new().filename("./data/test.db");
+    let db_opts = DbConnectOptions::Sqlite(opts);
+
+    let display_str = format!("{db_opts}");
+    assert_eq!(display_str, "sqlite://./data/test.db");
+}
+
+#[cfg(feature = "pg")]
+#[test]
+fn test_display_postgres() {
+    use modkit_db::DbConnectOptions;
+
+    let opts = sqlx::postgres::PgConnectOptions::new()
+        .host("localhost")
+        .port(5432)
+        .database("testdb")
+        .username("user")
+        .password("secret");
+
+    let db_opts = DbConnectOptions::Postgres(opts);
+
+    let display_str = format!("{db_opts}");
+    assert_eq!(display_str, "postgresql://<redacted>@localhost:5432/testdb");
+    assert!(!display_str.contains("secret"));
+    assert!(!display_str.contains("user"));
+}
+
+#[cfg(feature = "pg")]
+#[test]
+fn test_display_postgres_custom_port() {
+    use modkit_db::DbConnectOptions;
+
+    let opts = sqlx::postgres::PgConnectOptions::new()
+        .host("db.example.com")
+        .port(15432)
+        .database("myapp");
+
+    let db_opts = DbConnectOptions::Postgres(opts);
+
+    let display_str = format!("{db_opts}");
+    assert_eq!(
+        display_str,
+        "postgresql://<redacted>@db.example.com:15432/myapp"
+    );
+}
+
+#[cfg(feature = "pg")]
+#[test]
+fn test_display_postgres_no_database() {
+    use modkit_db::DbConnectOptions;
+
+    let opts = sqlx::postgres::PgConnectOptions::new()
+        .host("localhost")
+        .port(5432);
+
+    let db_opts = DbConnectOptions::Postgres(opts);
+
+    let display_str = format!("{db_opts}");
+    assert_eq!(display_str, "postgresql://<redacted>@localhost:5432/");
+}
+
+#[cfg(feature = "mysql")]
+#[test]
+fn test_display_mysql() {
+    use modkit_db::DbConnectOptions;
+
+    let opts = sqlx::mysql::MySqlConnectOptions::new()
+        .host("localhost")
+        .port(3306)
+        .database("testdb")
+        .username("user")
+        .password("secret");
+
+    let db_opts = DbConnectOptions::MySql(opts);
+
+    let display_str = format!("{db_opts}");
+    assert_eq!(display_str, "mysql://<redacted>@...");
+    assert!(!display_str.contains("secret"));
+    assert!(!display_str.contains("user"));
+    assert!(!display_str.contains("localhost"));
+    assert!(!display_str.contains("testdb"));
+}

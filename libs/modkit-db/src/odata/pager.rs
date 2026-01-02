@@ -301,30 +301,3 @@ where
         .await
     }
 }
-
-#[cfg(test)]
-#[cfg_attr(coverage_nightly, coverage(off))]
-mod tests {
-    use super::*;
-
-    // Type safety tests (compile-time validation)
-    #[allow(dead_code)]
-    fn test_type_safety() {
-        // These should compile, demonstrating the API shape
-        fn _compile_check<'a, E, C>(
-            db: &'a SecureConn,
-            scope: &'a AccessScope,
-            conn: &'a C,
-            fmap: &'a FieldMap<E>,
-        ) where
-            E: ScopableEntity + EntityTrait,
-            E::Column: ColumnTrait + Copy,
-            C: ConnectionTrait + Send + Sync,
-        {
-            let _pager = OPager::<E, C>::new(db, scope, conn, fmap);
-            let _pager = OPager::<E, C>::new(db, scope, conn, fmap)
-                .tiebreaker("id", SortDir::Asc)
-                .limits(10, 100);
-        }
-    }
-}

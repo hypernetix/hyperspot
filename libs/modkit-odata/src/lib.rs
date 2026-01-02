@@ -47,6 +47,21 @@ pub mod ast {
         Time(NaiveTime),
         String(String),
     }
+
+    impl std::fmt::Display for Value {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            match self {
+                Value::Null => write!(f, "null"),
+                Value::Bool(_) => write!(f, "bool"),
+                Value::Number(_) => write!(f, "number"),
+                Value::Uuid(_) => write!(f, "uuid"),
+                Value::DateTime(_) => write!(f, "datetime"),
+                Value::Date(_) => write!(f, "date"),
+                Value::Time(_) => write!(f, "time"),
+                Value::String(_) => write!(f, "string"),
+            }
+        }
+    }
 }
 
 // Ordering primitives

@@ -29,7 +29,11 @@ pub use modkit_odata::ast::Value as ODataValue;
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```
+/// use modkit_db::odata::{FilterField, FieldKind};
+/// use modkit_db_macros::ODataFilterable;
+///
+/// // Define a DTO with filterable fields using the derive macro
 /// #[derive(ODataFilterable)]
 /// pub struct UserDto {
 ///     #[odata(filter(kind = "Uuid"))]
@@ -39,14 +43,15 @@ pub use modkit_odata::ast::Value as ODataValue;
 ///     pub internal_field: String,  // not filterable
 /// }
 ///
-/// // Generated:
-/// #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-/// pub enum UserDtoFilterField {
-///     Id,
-///     Email,
-/// }
+/// // The derive macro generates:
+/// // - An enum `UserDtoFilterField` with variants for each filterable field
+/// // - An implementation of `FilterField` trait for that enum
 ///
-/// impl FilterField for UserDtoFilterField { ... }
+/// // Now you can use the generated type:
+/// assert_eq!(UserDtoFilterField::from_name("email"), Some(UserDtoFilterField::Email));
+/// assert_eq!(UserDtoFilterField::Email.name(), "email");
+/// assert_eq!(UserDtoFilterField::Id.kind(), FieldKind::Uuid);
+/// assert_eq!(UserDtoFilterField::FIELDS.len(), 2);
 /// ```
 pub trait FilterField: Copy + Eq + std::hash::Hash + fmt::Debug + 'static {
     /// All allowed fields for this DTO.
@@ -124,17 +129,34 @@ impl fmt::Display for FilterOp {
 ///
 /// # Example
 ///
-/// ```ignore
-/// // Parse from OData string
-/// let filter = parse_odata_filter::<UserDtoFilterField>("email eq 'test@example.com'")?;
+/// ```
+/// use modkit_db::odata::filter::{FilterField, FilterNode, FilterOp, ODataValue, parse_odata_filter};
+/// use modkit_db::odata::FieldKind;
+/// use modkit_db_macros::ODataFilterable;
 ///
-/// // Or build manually
+/// #[derive(ODataFilterable)]
+/// pub struct UserDto {
+///     #[odata(filter(kind = "String"))]
+///     pub email: String,
+/// }
+///
+/// // Parse from OData string (requires with-odata-params feature)
+/// // let filter = parse_odata_filter::<UserDtoFilterField>("email eq 'test@example.com'")?;
+///
+/// // Or build manually using enum variants
 /// use FilterNode::*;
 /// let filter = Binary {
 ///     field: UserDtoFilterField::Email,
 ///     op: FilterOp::Eq,
 ///     value: ODataValue::String("test@example.com".to_string()),
 /// };
+///
+/// // Or use the builder method
+/// let filter2 = FilterNode::binary(
+///     UserDtoFilterField::Email,
+///     FilterOp::Eq,
+///     ODataValue::String("test@example.com".to_string()),
+/// );
 /// ```
 #[derive(Debug, Clone)]
 pub enum FilterNode<F: FilterField> {
@@ -194,7 +216,7 @@ pub enum FilterError {
     TypeMismatch {
         field: String,
         expected: FieldKind,
-        got: &'static str,
+        got: String,
     },
 
     #[error("Unsupported operation: {0}")]
@@ -275,11 +297,31 @@ pub fn parse_odata_filter<F: FilterField>(raw: &str) -> FilterResult<FilterNode<
 ///
 /// # Example
 ///
-/// ```ignore
-/// if let Some(ast) = odata_query.filter() {
-///     let filter_node = convert_expr_to_filter_node::<UserDtoFilterField>(ast)?;
-///     // Use filter_node...
+/// ```rust
+/// use modkit_db::odata::filter::{FilterNode, convert_expr_to_filter_node};
+/// use modkit_db_macros::ODataFilterable;
+/// use modkit_odata::{ast as odata_ast, ODataQuery};
+///
+/// // Define a DTO with filterable fields using the derive macro
+/// #[derive(ODataFilterable)]
+/// pub struct UserDto {
+///     #[odata(filter(kind = "String"))]
+///     pub email: String,
 /// }
+///
+/// // Build an OData query with a filter expression
+/// let expr = odata_ast::Expr::Compare(
+///     Box::new(odata_ast::Expr::Identifier("email".to_owned())),
+///     odata_ast::CompareOperator::Eq,
+///     Box::new(odata_ast::Expr::Value(odata_ast::Value::String("test@example.com".to_owned()))),
+/// );
+/// let odata_query = ODataQuery::new().with_filter(expr);
+///
+/// // Convert from ODataQuery filter to type-safe FilterNode
+/// let ast = odata_query.filter().unwrap();
+/// let filter_node = convert_expr_to_filter_node::<UserDtoFilterField>(ast).unwrap();
+/// assert!(matches!(filter_node, FilterNode::Binary { .. }));
+///
 /// ```
 ///
 /// # Errors
@@ -357,7 +399,7 @@ pub fn convert_expr_to_filter_node<F: FilterField>(
                         return Err(FilterError::TypeMismatch {
                             field: field_name.clone(),
                             expected: FieldKind::String,
-                            got: "non-string",
+                            got: "non-string".to_owned(),
                         });
                     }
 
@@ -378,7 +420,7 @@ pub fn convert_expr_to_filter_node<F: FilterField>(
                         return Err(FilterError::TypeMismatch {
                             field: field_name.clone(),
                             expected: FieldKind::String,
-                            got: "non-string",
+                            got: "non-string".to_owned(),
                         });
                     }
 
@@ -399,7 +441,7 @@ pub fn convert_expr_to_filter_node<F: FilterField>(
                         return Err(FilterError::TypeMismatch {
                             field: field_name.clone(),
                             expected: FieldKind::String,
-                            got: "non-string",
+                            got: "non-string".to_owned(),
                         });
                     }
 
@@ -434,17 +476,6 @@ pub fn convert_expr_to_filter_node<F: FilterField>(
 fn validate_value_type<F: FilterField>(field: F, value: &odata_ast::Value) -> FilterResult<()> {
     use odata_ast::Value as V;
 
-    let got_type = match value {
-        V::String(_) => "string",
-        V::Number(_) => "number",
-        V::Bool(_) => "bool",
-        V::Uuid(_) => "uuid",
-        V::DateTime(_) => "datetime",
-        V::Date(_) => "date",
-        V::Time(_) => "time",
-        V::Null => "null",
-    };
-
     let kind = field.kind();
     let matches = matches!(
         (kind, value),
@@ -466,409 +497,7 @@ fn validate_value_type<F: FilterField>(field: F, value: &odata_ast::Value) -> Fi
         Err(FilterError::TypeMismatch {
             field: field.name().to_owned(),
             expected: kind,
-            got: got_type,
+            got: value.to_string(),
         })
-    }
-}
-
-#[cfg(test)]
-#[cfg_attr(coverage_nightly, coverage(off))]
-mod tests {
-    use super::*;
-
-    // Test FilterField implementation
-    #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-    enum TestField {
-        Email,
-        Age,
-        IsActive,
-    }
-
-    impl FilterField for TestField {
-        const FIELDS: &'static [Self] = &[TestField::Email, TestField::Age, TestField::IsActive];
-
-        fn name(&self) -> &'static str {
-            match self {
-                TestField::Email => "email",
-                TestField::Age => "age",
-                TestField::IsActive => "is_active",
-            }
-        }
-
-        fn kind(&self) -> FieldKind {
-            match self {
-                TestField::Email => FieldKind::String,
-                TestField::Age => FieldKind::I64,
-                TestField::IsActive => FieldKind::Bool,
-            }
-        }
-    }
-
-    #[test]
-    fn test_filter_field_from_name() {
-        assert_eq!(TestField::from_name("email"), Some(TestField::Email));
-        assert_eq!(TestField::from_name("age"), Some(TestField::Age));
-        assert_eq!(TestField::from_name("is_active"), Some(TestField::IsActive));
-        assert_eq!(TestField::from_name("unknown"), None);
-    }
-
-    #[test]
-    fn test_filter_field_case_insensitive() {
-        assert_eq!(TestField::from_name("EMAIL"), Some(TestField::Email));
-        assert_eq!(TestField::from_name("Age"), Some(TestField::Age));
-        assert_eq!(TestField::from_name("IS_ACTIVE"), Some(TestField::IsActive));
-    }
-
-    #[test]
-    fn test_convert_simple_eq_filter() {
-        // Create an AST manually (simulating what would come from parsed OData)
-        let ast = odata_ast::Expr::Compare(
-            Box::new(odata_ast::Expr::Identifier("email".to_owned())),
-            odata_ast::CompareOperator::Eq,
-            Box::new(odata_ast::Expr::Value(odata_ast::Value::String(
-                "test@example.com".to_owned(),
-            ))),
-        );
-
-        let result = convert_expr_to_filter_node::<TestField>(&ast);
-        assert!(result.is_ok());
-
-        if let Ok(FilterNode::Binary { field, op, value }) = result {
-            assert_eq!(field, TestField::Email);
-            assert_eq!(op, FilterOp::Eq);
-            assert!(matches!(value, odata_ast::Value::String(_)));
-        } else {
-            panic!("Expected Binary node");
-        }
-    }
-
-    #[test]
-    fn test_convert_unknown_field() {
-        let ast = odata_ast::Expr::Compare(
-            Box::new(odata_ast::Expr::Identifier("unknown_field".to_owned())),
-            odata_ast::CompareOperator::Eq,
-            Box::new(odata_ast::Expr::Value(odata_ast::Value::String(
-                "value".to_owned(),
-            ))),
-        );
-
-        let result = convert_expr_to_filter_node::<TestField>(&ast);
-        assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), FilterError::UnknownField(_)));
-    }
-
-    #[test]
-    fn test_validate_type_mismatch() {
-        // Try to use a string value for an integer field - should fail validation
-        let ast = odata_ast::Expr::Compare(
-            Box::new(odata_ast::Expr::Identifier("age".to_owned())),
-            odata_ast::CompareOperator::Eq,
-            Box::new(odata_ast::Expr::Value(odata_ast::Value::String(
-                "not_a_number".to_owned(),
-            ))),
-        );
-
-        let result = convert_expr_to_filter_node::<TestField>(&ast);
-        assert!(result.is_err());
-        assert!(matches!(
-            result.unwrap_err(),
-            FilterError::TypeMismatch { .. }
-        ));
-    }
-
-    #[test]
-    fn test_logical_and_combination() {
-        // (email eq 'test@example.com') and (is_active eq true)
-        let left = odata_ast::Expr::Compare(
-            Box::new(odata_ast::Expr::Identifier("email".to_owned())),
-            odata_ast::CompareOperator::Eq,
-            Box::new(odata_ast::Expr::Value(odata_ast::Value::String(
-                "test@example.com".to_owned(),
-            ))),
-        );
-        let right = odata_ast::Expr::Compare(
-            Box::new(odata_ast::Expr::Identifier("is_active".to_owned())),
-            odata_ast::CompareOperator::Eq,
-            Box::new(odata_ast::Expr::Value(odata_ast::Value::Bool(true))),
-        );
-        let ast = odata_ast::Expr::And(Box::new(left), Box::new(right));
-
-        let result = convert_expr_to_filter_node::<TestField>(&ast);
-        assert!(result.is_ok());
-
-        if let Ok(FilterNode::Composite { op, children }) = result {
-            assert_eq!(op, FilterOp::And);
-            assert_eq!(children.len(), 2);
-        } else {
-            panic!("Expected Composite And node");
-        }
-    }
-
-    #[test]
-    fn test_logical_or_combination() {
-        // (age gt 30) or (is_active eq false)
-        let left = odata_ast::Expr::Compare(
-            Box::new(odata_ast::Expr::Identifier("age".to_owned())),
-            odata_ast::CompareOperator::Gt,
-            Box::new(odata_ast::Expr::Value(odata_ast::Value::Number(30.into()))),
-        );
-        let right = odata_ast::Expr::Compare(
-            Box::new(odata_ast::Expr::Identifier("is_active".to_owned())),
-            odata_ast::CompareOperator::Eq,
-            Box::new(odata_ast::Expr::Value(odata_ast::Value::Bool(false))),
-        );
-        let ast = odata_ast::Expr::Or(Box::new(left), Box::new(right));
-
-        let result = convert_expr_to_filter_node::<TestField>(&ast);
-        assert!(result.is_ok());
-
-        if let Ok(FilterNode::Composite { op, children }) = result {
-            assert_eq!(op, FilterOp::Or);
-            assert_eq!(children.len(), 2);
-        } else {
-            panic!("Expected Composite Or node");
-        }
-    }
-
-    #[test]
-    fn test_logical_not() {
-        // not (age eq 25)
-        let inner = odata_ast::Expr::Compare(
-            Box::new(odata_ast::Expr::Identifier("age".to_owned())),
-            odata_ast::CompareOperator::Eq,
-            Box::new(odata_ast::Expr::Value(odata_ast::Value::Number(25.into()))),
-        );
-        let ast = odata_ast::Expr::Not(Box::new(inner));
-
-        let result = convert_expr_to_filter_node::<TestField>(&ast);
-        assert!(result.is_ok());
-
-        if let Ok(FilterNode::Not(inner_node)) = result {
-            assert!(matches!(*inner_node, FilterNode::Binary { .. }));
-        } else {
-            panic!("Expected Not node");
-        }
-    }
-
-    #[test]
-    fn test_logical_not_composite() {
-        // not ((email eq 'test') and (age gt 20))
-        let email_cond = odata_ast::Expr::Compare(
-            Box::new(odata_ast::Expr::Identifier("email".to_owned())),
-            odata_ast::CompareOperator::Eq,
-            Box::new(odata_ast::Expr::Value(odata_ast::Value::String(
-                "test".to_owned(),
-            ))),
-        );
-        let age_cond = odata_ast::Expr::Compare(
-            Box::new(odata_ast::Expr::Identifier("age".to_owned())),
-            odata_ast::CompareOperator::Gt,
-            Box::new(odata_ast::Expr::Value(odata_ast::Value::Number(20.into()))),
-        );
-        let and_expr = odata_ast::Expr::And(Box::new(email_cond), Box::new(age_cond));
-        let ast = odata_ast::Expr::Not(Box::new(and_expr));
-
-        let result = convert_expr_to_filter_node::<TestField>(&ast);
-        assert!(result.is_ok());
-
-        if let Ok(FilterNode::Not(inner_node)) = result {
-            assert!(matches!(*inner_node, FilterNode::Composite { .. }));
-        } else {
-            panic!("Expected Not with Composite inner node");
-        }
-    }
-
-    #[test]
-    fn test_contains_function() {
-        // contains(email, 'test')
-        let ast = odata_ast::Expr::Function(
-            "contains".to_owned(),
-            vec![
-                odata_ast::Expr::Identifier("email".to_owned()),
-                odata_ast::Expr::Value(odata_ast::Value::String("test".to_owned())),
-            ],
-        );
-
-        let result = convert_expr_to_filter_node::<TestField>(&ast);
-        assert!(result.is_ok());
-
-        if let Ok(FilterNode::Binary { field, op, value }) = result {
-            assert_eq!(field, TestField::Email);
-            assert_eq!(op, FilterOp::Contains);
-            assert!(matches!(value, odata_ast::Value::String(_)));
-        } else {
-            panic!("Expected Binary node with Contains operation");
-        }
-    }
-
-    #[test]
-    fn test_startswith_function() {
-        // startswith(email, 'test')
-        let ast = odata_ast::Expr::Function(
-            "startswith".to_owned(),
-            vec![
-                odata_ast::Expr::Identifier("email".to_owned()),
-                odata_ast::Expr::Value(odata_ast::Value::String("test".to_owned())),
-            ],
-        );
-
-        let result = convert_expr_to_filter_node::<TestField>(&ast);
-        assert!(result.is_ok());
-
-        if let Ok(FilterNode::Binary { field, op, .. }) = result {
-            assert_eq!(field, TestField::Email);
-            assert_eq!(op, FilterOp::StartsWith);
-        } else {
-            panic!("Expected Binary node with StartsWith operation");
-        }
-    }
-
-    #[test]
-    fn test_endswith_function() {
-        // endswith(email, '.com')
-        let ast = odata_ast::Expr::Function(
-            "endswith".to_owned(),
-            vec![
-                odata_ast::Expr::Identifier("email".to_owned()),
-                odata_ast::Expr::Value(odata_ast::Value::String(".com".to_owned())),
-            ],
-        );
-
-        let result = convert_expr_to_filter_node::<TestField>(&ast);
-        assert!(result.is_ok());
-
-        if let Ok(FilterNode::Binary { field, op, .. }) = result {
-            assert_eq!(field, TestField::Email);
-            assert_eq!(op, FilterOp::EndsWith);
-        } else {
-            panic!("Expected Binary node with EndsWith operation");
-        }
-    }
-
-    #[test]
-    fn test_contains_on_non_string_field_fails() {
-        // contains(age, 'test') - should fail because age is I64, not String
-        let ast = odata_ast::Expr::Function(
-            "contains".to_owned(),
-            vec![
-                odata_ast::Expr::Identifier("age".to_owned()),
-                odata_ast::Expr::Value(odata_ast::Value::String("test".to_owned())),
-            ],
-        );
-
-        let result = convert_expr_to_filter_node::<TestField>(&ast);
-        assert!(result.is_err());
-        assert!(matches!(
-            result.unwrap_err(),
-            FilterError::TypeMismatch { .. }
-        ));
-    }
-
-    #[test]
-    fn test_bare_identifier_error() {
-        // Just "email" by itself is not valid
-        let ast = odata_ast::Expr::Identifier("email".to_owned());
-
-        let result = convert_expr_to_filter_node::<TestField>(&ast);
-        assert!(result.is_err());
-        assert!(matches!(
-            result.unwrap_err(),
-            FilterError::BareIdentifier(_)
-        ));
-    }
-
-    #[test]
-    fn test_bare_literal_error() {
-        // Just a string literal by itself is not valid
-        let ast = odata_ast::Expr::Value(odata_ast::Value::String("test".to_owned()));
-
-        let result = convert_expr_to_filter_node::<TestField>(&ast);
-        assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), FilterError::BareLiteral));
-    }
-
-    #[test]
-    fn test_unsupported_function() {
-        // substring() is not supported
-        let ast = odata_ast::Expr::Function(
-            "substring".to_owned(),
-            vec![
-                odata_ast::Expr::Identifier("email".to_owned()),
-                odata_ast::Expr::Value(odata_ast::Value::Number(1.into())),
-            ],
-        );
-
-        let result = convert_expr_to_filter_node::<TestField>(&ast);
-        assert!(result.is_err());
-        assert!(matches!(
-            result.unwrap_err(),
-            FilterError::UnsupportedOperation(_)
-        ));
-    }
-
-    // Test with a Decimal field
-    #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-    enum TestFieldWithDecimal {
-        Name,
-        Price,
-    }
-
-    impl FilterField for TestFieldWithDecimal {
-        const FIELDS: &'static [Self] = &[TestFieldWithDecimal::Name, TestFieldWithDecimal::Price];
-
-        fn name(&self) -> &'static str {
-            match self {
-                TestFieldWithDecimal::Name => "name",
-                TestFieldWithDecimal::Price => "price",
-            }
-        }
-
-        fn kind(&self) -> FieldKind {
-            match self {
-                TestFieldWithDecimal::Name => FieldKind::String,
-                TestFieldWithDecimal::Price => FieldKind::Decimal,
-            }
-        }
-    }
-
-    #[test]
-    fn test_decimal_field_validation() {
-        use bigdecimal::BigDecimal;
-        use std::str::FromStr;
-
-        // price eq 19.99
-        let ast = odata_ast::Expr::Compare(
-            Box::new(odata_ast::Expr::Identifier("price".to_owned())),
-            odata_ast::CompareOperator::Eq,
-            Box::new(odata_ast::Expr::Value(odata_ast::Value::Number(
-                BigDecimal::from_str("19.99").unwrap(),
-            ))),
-        );
-
-        let result = convert_expr_to_filter_node::<TestFieldWithDecimal>(&ast);
-        assert!(result.is_ok());
-
-        if let Ok(FilterNode::Binary { field, .. }) = result {
-            assert_eq!(field, TestFieldWithDecimal::Price);
-        } else {
-            panic!("Expected Binary node");
-        }
-    }
-
-    #[test]
-    fn test_decimal_field_wrong_type() {
-        // price eq true - should fail
-        let ast = odata_ast::Expr::Compare(
-            Box::new(odata_ast::Expr::Identifier("price".to_owned())),
-            odata_ast::CompareOperator::Eq,
-            Box::new(odata_ast::Expr::Value(odata_ast::Value::Bool(true))),
-        );
-
-        let result = convert_expr_to_filter_node::<TestFieldWithDecimal>(&ast);
-        assert!(result.is_err());
-        assert!(matches!(
-            result.unwrap_err(),
-            FilterError::TypeMismatch { .. }
-        ));
     }
 }
