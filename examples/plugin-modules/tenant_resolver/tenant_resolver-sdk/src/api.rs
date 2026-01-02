@@ -2,7 +2,7 @@
 //!
 //! This module defines two separate API traits:
 //! - `TenantResolverClient` - Public API exposed by the gateway to other modules
-//! - `ThrPluginApi` - Internal API implemented by plugins, called by the gateway
+//! - `TenantResolverPluginClient` - Internal API implemented by plugins, called by the gateway
 
 use async_trait::async_trait;
 use modkit_odata::{ODataQuery, Page};
@@ -60,7 +60,7 @@ pub trait TenantResolverClient: Send + Sync {
 /// Plugins implement this trait to provide tenant resolution functionality.
 /// The gateway calls this on the selected plugin implementation.
 #[async_trait]
-pub trait ThrPluginApi: Send + Sync {
+pub trait TenantResolverPluginClient: Send + Sync {
     /// Returns the root tenant as resolved by this plugin.
     async fn get_root_tenant(&self, ctx: &SecurityCtx) -> Result<Tenant, TenantResolverError>;
 
