@@ -99,11 +99,11 @@ pub struct DbConnConfig {
 pub struct PoolCfg {
     pub max_conns: Option<u32>,
     pub min_conns: Option<u32>,
-    #[serde(with = "humantime_serde", default)]
+    #[serde(with = "modkit_utils::humantime_serde::option", default)]
     pub acquire_timeout: Option<Duration>,
-    #[serde(with = "humantime_serde", default)]
+    #[serde(with = "modkit_utils::humantime_serde::option", default)]
     pub idle_timeout: Option<Duration>,
-    #[serde(with = "humantime_serde", default)]
+    #[serde(with = "modkit_utils::humantime_serde::option", default)]
     pub max_lifetime: Option<Duration>,
     pub test_before_acquire: Option<bool>,
 }

@@ -20,6 +20,7 @@ members = [
     "libs/modkit-odata",
     "libs/modkit-node-info",
     "libs/modkit-transport-grpc",
+    "libs/modkit-utils",
     "modules/api_ingress",
     "modules/grpc_hub",
     "modules/file_parser",
@@ -234,7 +235,7 @@ chrono = { version = "0.4", default-features = false, features = ["serde"] }
 
 # DSN parsing
 dsn = "1.1.1"
-humantime-serde = "1.1"
+humantime = "2.3.0"
 
 # URL parsing
 url = "2.5"
