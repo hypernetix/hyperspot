@@ -1583,11 +1583,11 @@ use modkit::client_hub::ClientScope;
 
 // Plugin registers with a scope (e.g., GTS instance ID)
 let scope = ClientScope::gts_id("gts.x.core.modkit.plugin.v1~vendor.pkg.my_module.plugin.v1~acme.test._.plugin.v1");
-ctx.client_hub().register_scoped::<dyn MyPluginApi>(scope, plugin_impl);
+ctx.client_hub().register_scoped::<dyn MyPluginClient>(scope, plugin_impl);
 
 // Gateway resolves the selected plugin
 let scope = ClientScope::gts_id(&selected_instance_id);
-let plugin = ctx.client_hub().get_scoped::<dyn MyPluginApi>(&scope)?;
+let plugin = ctx.client_hub().get_scoped::<dyn MyPluginClient>(&scope)?;
 ```
 
 **Key points:**

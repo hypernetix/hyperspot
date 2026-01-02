@@ -2285,7 +2285,7 @@ Use the plugin pattern when:
 │  • Selects plugin based on config/context                          │
 │  • Routes calls to selected plugin                                 │
 └───────────────────────────────┬────────────────────────────────────┘
-                                │ hub.get_scoped::<dyn PluginApi>(&scope)
+                                │ hub.get_scoped::<dyn PluginClient>(&scope)
                 ┌───────────────┼───────────────┐
                 │               │               │
                 ▼               ▼               ▼
@@ -2300,7 +2300,7 @@ Use the plugin pattern when:
 modules/<gateway-name>/
 ├── <gateway>-sdk/              # SDK: API traits, models, errors, GTS types
 │   └── src/
-│       ├── api.rs              # PublicClient trait + PluginApi trait
+│       ├── api.rs              # PublicClient trait + PluginClient trait
 │       ├── models.rs           # Shared models
 │       ├── error.rs            # Errors
 │       └── gts.rs              # GTS schema for plugin instances
@@ -2335,7 +2335,7 @@ pub trait MyModuleGatewayClient: Send + Sync {
 
 /// Plugin API — implemented by plugins, called by gateway
 #[async_trait]
-pub trait MyModulePluginApi: Send + Sync {
+pub trait MyModulePluginClient: Send + Sync {
     async fn do_work(&self, ctx: &SecurityCtx, input: Input) -> Result<Output, MyError>;
 }
 ```
@@ -2438,9 +2438,9 @@ impl Module for VendorPlugin {
         self.service.store(Some(service.clone()));
 
         // Register SCOPED client (with GTS instance ID as scope)
-        let api: Arc<dyn MyModulePluginApi> = service;
+        let api: Arc<dyn MyModulePluginClient> = service;
         ctx.client_hub()
-            .register_scoped::<dyn MyModulePluginApi>(ClientScope::gts_id(&instance_id), api);
+            .register_scoped::<dyn MyModulePluginClient>(ClientScope::gts_id(&instance_id), api);
 
         Ok(())
     }
@@ -2461,12 +2461,12 @@ pub struct Service {
 }
 
 impl Service {
-    async fn get_plugin(&self) -> Result<Arc<dyn MyModulePluginApi>, DomainError> {
+    async fn get_plugin(&self) -> Result<Arc<dyn MyModulePluginClient>, DomainError> {
         let scope = self.resolved
             .get_or_try_init(|| self.resolve_plugin())
             .await?;
 
-        self.hub.get_scoped::<dyn MyModulePluginApi>(scope)
+        self.hub.get_scoped::<dyn MyModulePluginClient>(scope)
             .map_err(|_| DomainError::PluginClientNotFound)
     }
 
@@ -2525,7 +2525,7 @@ modules:
 
 #### Plugin Checklist
 
-- [ ] SDK defines both `PublicClient` trait (gateway) and `PluginApi` trait (plugins)
+- [ ] SDK defines both `PublicClient` trait (gateway) and `PluginClient` trait (plugins)
 - [ ] SDK defines GTS schema type with `#[struct_to_gts_schema]`
 - [ ] Gateway depends on `types_registry` and all plugin modules
 - [ ] Gateway registers plugin **schema** using `gts_schema_with_refs_as_string()`

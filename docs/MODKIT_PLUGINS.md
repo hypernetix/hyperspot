@@ -48,7 +48,7 @@ This pattern enables:
 │   │   - Resolves plugin client from ClientHub (scoped)                        │   │
 │   └───────────────────────────────────────────────────────────────────────────┘   │
 │                                         │                                         │
-│                                         │ hub.get_scoped::<dyn PluginApi>(&scope) │
+│                                         │ hub.get_scoped::<dyn PluginClient>(&scope)
 │                                         ▼                                         │
 └───────────────────────────────────────────────────────────────────────────────────┘
                                           │
@@ -60,7 +60,7 @@ This pattern enables:
 │  (contoso_impl)   │           │  (fabrikam_impl)  │           │  (custom_impl)    │
 │                   │           │                   │           │                   │
 │  Implements:      │           │  Implements:      │           │  Implements:      │
-│  dyn PluginApi    │           │  dyn PluginApi    │           │  dyn PluginApi    │
+│  dyn PluginClient │           │  dyn PluginClient │           │  dyn PluginClient │
 │                   │           │                   │           │                   │
 │  Registers:       │           │  Registers:       │           │  Registers:       │
 │  - GTS instance   │           │  - GTS instance   │           │  - GTS instance   │
@@ -87,7 +87,7 @@ pub trait MyModuleGatewayClient: Send + Sync {
 /// Plugin API — implemented by plugins, called by the gateway
 /// Registered WITH a scope (GTS instance ID) in ClientHub
 #[async_trait]
-pub trait MyModulePluginApi: Send + Sync {
+pub trait MyModulePluginClient: Send + Sync {
     async fn do_something(&self, ctx: &SecurityCtx, input: Input) -> Result<Output, MyError>;
 }
 ```
@@ -129,11 +129,11 @@ The `ClientHub` supports **scoped clients** for plugin-like scenarios:
 ```rust
 // Plugin registers its implementation with a scope
 let scope = ClientScope::gts_id(&instance_id);
-ctx.client_hub().register_scoped::<dyn MyModulePluginApi>(scope, plugin_impl);
+ctx.client_hub().register_scoped::<dyn MyModulePluginClient>(scope, plugin_impl);
 
 // Gateway resolves the selected plugin's client
 let scope = ClientScope::gts_id(&selected_instance_id);
-let plugin = hub.get_scoped::<dyn MyModulePluginApi>(&scope)?;
+let plugin = hub.get_scoped::<dyn MyModulePluginClient>(&scope)?;
 ```
 
 This allows multiple implementations of the same trait to coexist, each keyed by its GTS instance ID.
@@ -205,8 +205,8 @@ modules/<gateway-name>/
 ├── <gateway>-sdk/              # SDK crate: API traits, models, errors, GTS types
 │   ├── Cargo.toml
 │   └── src/
-│       ├── lib.rs              # Re-exports: PublicClient, PluginApi, models, errors
-│       ├── api.rs              # Both trait definitions (PublicClient + PluginApi)
+│       ├── lib.rs              # Re-exports: PublicClient, PluginClient, models, errors
+│       ├── api.rs              # Both trait definitions (PublicClient + PluginClient)
 │       ├── models.rs           # Shared models for both APIs
 │       ├── error.rs            # Transport-agnostic errors
 │       └── gts.rs              # GTS schema types for plugin instances
@@ -231,7 +231,7 @@ modules/<gateway-name>/
     │       ├── module.rs       # Module declaration with types-registry + scoped client registration
     │       ├── config.rs       # Plugin config (vendor, priority)
     │       └── domain/
-    │           └── service.rs  # Plugin implementation (implements PluginApi)
+    │           └── service.rs  # Plugin implementation (implements PluginClient)
     │
     └── <vendor_b>_plugin/
         └── ...                 # Same structure
@@ -260,7 +260,7 @@ pub trait MyModuleGatewayClient: Send + Sync {
 
 /// Plugin API (registered with scope by each plugin)
 #[async_trait]
-pub trait MyModulePluginApi: Send + Sync {
+pub trait MyModulePluginClient: Send + Sync {
     async fn get_data(&self, ctx: &SecurityCtx, id: &str) -> Result<Data, MyError>;
     async fn list_data(&self, ctx: &SecurityCtx, query: Query) -> Result<Page<Data>, MyError>;
 }
@@ -388,7 +388,7 @@ The domain service handles plugin resolution:
 // <gateway>-gw/src/domain/service.rs
 
 use modkit::client_hub::{ClientHub, ClientScope};
-use my_sdk::{MyModulePluginApi, MyModulePluginSpec};
+use my_sdk::{MyModulePluginClient, MyModulePluginSpec};
 use tokio::sync::OnceCell;
 use types_registry_sdk::TypesRegistryApi;
 
@@ -400,13 +400,13 @@ pub struct Service {
 
 impl Service {
     /// Lazily resolve the plugin on first call
-    async fn get_plugin(&self) -> Result<Arc<dyn MyMoodulePluginApi>, DomainError> {
+    async fn get_plugin(&self) -> Result<Arc<dyn MyMoodulePluginClient>, DomainError> {
         let scope = self.resolved
             .get_or_try_init(|| self.resolve_plugin())
             .await?;
 
         self.hub
-            .get_scoped::<dyn MyModulePluginApi>(scope)
+            .get_scoped::<dyn MyModulePluginClient>(scope)
             .map_err(|_| DomainError::PluginClientNotFound)
     }
 
@@ -453,7 +453,7 @@ use modkit::client_hub::ClientScope;
 use modkit::gts::BaseModkitPluginV1;
 use modkit::{Module, ModuleCtx};
 use modkit_security::SecurityCtx;
-use my_sdk::{MyModulePluginApi, MyModulePluginSpecV1};
+use my_sdk::{MyModulePluginClient, MyModulePluginSpecV1};
 use types_registry_sdk::TypesRegistryApi;
 
 #[modkit::module(
@@ -490,9 +490,9 @@ impl Module for VendorAPlugin {
         let service = Arc::new(Service::new());
         self.service.store(Some(service.clone()));
 
-        let api: Arc<dyn MyModulePluginApi> = service;
+        let api: Arc<dyn MyModulePluginClient> = service;
         ctx.client_hub()
-            .register_scoped::<dyn MyModulePluginApi>(ClientScope::gts_id(&instance_id), api);
+            .register_scoped::<dyn MyModulePluginClient>(ClientScope::gts_id(&instance_id), api);
 
         tracing::info!(instance_id = %instance_id, "Plugin initialized");
         Ok(())
@@ -507,12 +507,12 @@ The plugin service implements the plugin API:
 
 use async_trait::async_trait;
 use modkit_security::SecurityCtx;
-use my_sdk::{Data, MyError, MyModulePluginApi, Query, Page};
+use my_sdk::{Data, MyError, MyModulePluginClient, Query, Page};
 
 pub struct Service;
 
 #[async_trait]
-impl MyModulePluginApi for Service {
+impl MyModulePluginClient for Service {
     async fn get_data(&self, _ctx: &SecurityCtx, id: &str) -> Result<Data, MyError> {
         // Vendor-specific implementation
         Ok(Data { id: id.to_owned(), /* ... */ })
@@ -563,12 +563,12 @@ fn choose_plugin(vendor: &str, instances: &[GtsEntity]) -> Result<&GtsEntity, Do
 async fn get_plugin_for_tenant(
     &self,
     ctx: &SecurityCtx,
-) -> Result<Arc<dyn MyModulePluginApi>, DomainError> {
+) -> Result<Arc<dyn MyModulePluginClient>, DomainError> {
     // Look up tenant-specific plugin configuration
     let tenant_id = ctx.tenant_id();
     let plugin_id = self.tenant_plugin_map.get(&tenant_id)?;
     let scope = ClientScope::gts_id(plugin_id);
-    self.hub.get_scoped::<dyn PluginApi>(&scope)
+    self.hub.get_scoped::<dyn PluginClient>(&scope)
 }
 ```
 
@@ -582,7 +582,7 @@ pub async fn handle_request(
 ) -> Result<Response, DomainError> {
     let plugin_id = format!("gts.x.core.modkit.plugin.v1~x.llm_gateway.llm_gateway.plugin.v1~{}.llm_gateway._.plugin.v1", provider);
     let scope = ClientScope::gts_id(&plugin_id);
-    let plugin = self.hub.get_scoped::<dyn LlmPluginApi>(&scope)?;
+    let plugin = self.hub.get_scoped::<dyn LlmPluginClient>(&scope)?;
     plugin.complete(ctx, request).await
 }
 ```
@@ -758,8 +758,8 @@ async fn test_gateway_plugin_resolution() {
 
     // Register mock plugin
     let instance_id = "gts.x.core.modkit.plugin.v1~vendor.pkg.my_module.plugin.v1~fabrikam.test._.plugin.v1";
-    let mock_plugin: Arc<dyn MyModulePluginApi> = Arc::new(MockPlugin::new());
-    hub.register_scoped::<dyn MyModulePluginApi>(ClientScope::gts_id(instance_id), mock_plugin);
+    let mock_plugin: Arc<dyn MyModulePluginClient> = Arc::new(MockPlugin::new());
+    hub.register_scoped::<dyn MyModulePluginClient>(ClientScope::gts_id(instance_id), mock_plugin);
 
     // Test gateway service
     let svc = Service::new(hub, "Test".to_owned());
