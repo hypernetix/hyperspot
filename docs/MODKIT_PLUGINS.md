@@ -351,6 +351,37 @@ impl Module for MyGateway {
 }
 ```
 
+#### Gateway REST requirements (access control, licensing, OData)
+
+When the gateway exposes REST endpoints, route definitions follow the same ModKit conventions as regular modules:
+
+- **Access control**: use `.require_auth(&Resource::X, &Action::Y)` for protected operations.
+- **License check**: for authenticated operations, calling `.require_license_features::<F>(...)` is mandatory (use `[]` to explicitly declare no license feature requirement).
+- **OData query options**: for list endpoints, use `OperationBuilderODataExt` helpers instead of manually registering `$filter`, `$orderby`, and `$select` query params.
+- **OData DTO annotations**: list DTOs must derive `ODataFilterable`, and each filterable/orderable field must be annotated with `#[odata(filter(kind = "..."))]` to generate the `*FilterField` enum used by `.with_odata_filter::<...>()` and `.with_odata_orderby::<...>()`.
+
+Example (gateway `routes.rs`):
+
+```rust
+use modkit::api::operation_builder::{LicenseFeature, OperationBuilderODataExt};
+use modkit::api::{OpenApiRegistry, OperationBuilder};
+
+router = OperationBuilder::get("/my-gateway/v1/items")
+    .operation_id("my_gateway.list_items")
+    .require_auth(&Resource::Items, &Action::Read)
+    .require_license_features::<License>([])
+    .with_odata_filter::<dto::ItemDtoFilterField>()
+    .with_odata_select()
+    .with_odata_orderby::<dto::ItemDtoFilterField>()
+    .handler(handlers::list_items)
+    .json_response_with_schema::<modkit_odata::Page<dto::ItemDto>>(
+        openapi,
+        http::StatusCode::OK,
+        "Paginated list of items",
+    )
+    .register(router, openapi);
+```
+
 The domain service handles plugin resolution:
 
 ```rust
