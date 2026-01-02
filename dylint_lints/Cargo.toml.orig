@@ -12,7 +12,6 @@ members = [
     "de08_rest_api_conventions/de0802_use_odata_ext",
     "de09_gts_layer/de0901_gts_string_pattern",
     "de09_gts_layer/de0902_no_schema_for_on_gts_structs",
-    "de05_client_layer/de0503_plugin_client_suffix",
 ]
 resolver = "2"
 
