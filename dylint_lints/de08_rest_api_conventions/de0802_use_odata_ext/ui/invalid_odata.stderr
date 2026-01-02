@@ -1,0 +1,83 @@
+error: use OperationBuilderODataExt instead of .query_param() for OData parameter `$filter` (DE0802)
+  --> $DIR/invalid_odata.rs:32:22
+   |
+LL |         .query_param("$filter", false, "OData filter expression");
+   |                      ^^^^^^^^^
+   |
+   = help: use .with_odata_filter::<FilterFieldEnum>() instead
+   = note: type-safe OData methods provide compile-time validation and automatic OpenAPI schema generation
+   = note: `#[deny(de0802_use_odata_ext)]` on by default
+
+error: use OperationBuilderODataExt instead of .query_param() for OData parameter `$orderby` (DE0802)
+  --> $DIR/invalid_odata.rs:37:22
+   |
+LL |         .query_param("$orderby", false, "OData ordering");
+   |                      ^^^^^^^^^^
+   |
+   = help: use .with_odata_orderby::<FilterFieldEnum>() instead
+   = note: type-safe OData methods provide compile-time validation and automatic OpenAPI schema generation
+
+error: use OperationBuilderODataExt instead of .query_param() for OData parameter `$select` (DE0802)
+  --> $DIR/invalid_odata.rs:42:22
+   |
+LL |         .query_param("$select", false, "OData field selection");
+   |                      ^^^^^^^^^
+   |
+   = help: use .with_odata_select() instead
+   = note: type-safe OData methods provide compile-time validation and automatic OpenAPI schema generation
+
+error: use OperationBuilderODataExt instead of .query_param_typed() for OData parameter `$filter` (DE0802)
+  --> $DIR/invalid_odata.rs:47:28
+   |
+LL |         .query_param_typed("$filter", false, "OData filter", "string");
+   |                            ^^^^^^^^^
+   |
+   = help: use .with_odata_filter::<FilterFieldEnum>() instead
+   = note: type-safe OData methods provide compile-time validation and automatic OpenAPI schema generation
+
+error: use OperationBuilderODataExt instead of .query_param() for OData parameter `$top` (DE0802)
+  --> $DIR/invalid_odata.rs:52:22
+   |
+LL |         .query_param("$top", false, "Maximum number of results");
+   |                      ^^^^^^
+   |
+   = help: use .query_param_typed() with proper OData extractor instead
+   = note: type-safe OData methods provide compile-time validation and automatic OpenAPI schema generation
+
+error: use OperationBuilderODataExt instead of .query_param() for OData parameter `$skip` (DE0802)
+  --> $DIR/invalid_odata.rs:57:22
+   |
+LL |         .query_param("$skip", false, "Number of results to skip");
+   |                      ^^^^^^^
+   |
+   = help: use .query_param_typed() with proper OData extractor instead
+   = note: type-safe OData methods provide compile-time validation and automatic OpenAPI schema generation
+
+error: use OperationBuilderODataExt instead of .query_param() for OData parameter `$count` (DE0802)
+  --> $DIR/invalid_odata.rs:62:22
+   |
+LL |         .query_param("$count", false, "Include total count");
+   |                      ^^^^^^^^
+   |
+   = help: use .query_param_typed() with proper OData extractor instead
+   = note: type-safe OData methods provide compile-time validation and automatic OpenAPI schema generation
+
+error: use OperationBuilderODataExt instead of .query_param() for OData parameter `$filter` (DE0802)
+  --> $DIR/invalid_odata.rs:67:22
+   |
+LL |         .query_param("$filter", false, "Filter")
+   |                      ^^^^^^^^^
+   |
+   = help: use .with_odata_filter::<FilterFieldEnum>() instead
+   = note: type-safe OData methods provide compile-time validation and automatic OpenAPI schema generation
+
+error: use OperationBuilderODataExt instead of .query_param() for OData parameter `$orderby` (DE0802)
+  --> $DIR/invalid_odata.rs:69:22
+   |
+LL |         .query_param("$orderby", false, "Order")
+   |                      ^^^^^^^^^^
+   |
+   = help: use .with_odata_orderby::<FilterFieldEnum>() instead
+   = note: type-safe OData methods provide compile-time validation and automatic OpenAPI schema generation
+
+error: aborting due to 9 previous errors

@@ -1,0 +1,29 @@
+[package]
+name = "de0802_use_odata_ext"
+version = "0.1.0"
+authors = ["Hypernetix"]
+description = "DE0802: Use OperationBuilderODataExt methods instead of .query_param() for OData parameters"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[[example]]
+name = "valid_odata"
+path = "ui/valid_odata.rs"
+
+[[example]]
+name = "invalid_odata"
+path = "ui/invalid_odata.rs"
+
+[dependencies]
+clippy_utils.workspace = true
+dylint_linting.workspace = true
+lint_utils.workspace = true
+
+[dev-dependencies]
+dylint_testing.workspace = true
+
+[package.metadata.rust-analyzer]
+rustc_private = true
