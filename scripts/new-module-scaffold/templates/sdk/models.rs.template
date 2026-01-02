@@ -1,0 +1,24 @@
+
+// TODO(PLACEHOLDER): replace example model with required models
+// Models MUST be transport-agnostic. NEVER use serde here
+
+/// Example check response
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Example {{
+    pub status: String,
+}}
+
+impl Example {{
+    #[must_use]
+    pub fn new() -> Self {{
+        Example{{
+            status: "Hello world!".to_owned(),
+        }}
+    }}
+}}
+
+impl Default for Example {{
+    fn default() -> Self {{
+        Self::new()
+    }}
+}}

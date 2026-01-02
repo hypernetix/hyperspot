@@ -34,6 +34,7 @@ types-registry = { path = "../../modules/types-registry/types-registry" }
 # user modules
 file_parser = { path = "../../modules/file_parser" }
 nodes_registry = { path = "../../modules/nodes_registry" }
+todoer = { path = "../../modules/todoer/todoer" }
 
 anyhow = { workspace = true }
 tokio = { workspace = true }

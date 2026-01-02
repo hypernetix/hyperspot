@@ -1,3 +1,5 @@
+audience: human, agent
+---
 # HyperSpot Architecture Manifest
 
 > **Welcome to HyperSpot!** This document serves as your architectural compass, explaining the core ideas, design principles, and rules that guide HyperSpot's development. Whether you're a newcomer or contributor, understanding these concepts will help you navigate and extend the platform effectively.

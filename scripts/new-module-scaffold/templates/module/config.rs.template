@@ -1,0 +1,22 @@
+use serde::Deserialize;
+
+/// Configuration for `{pascal}` module
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct {pascal}Config {{
+    // Add configuration fields here as needed
+    #[serde(default = "default_enabled")]
+    pub enabled: bool,
+}}
+
+impl Default for {pascal}Config {{
+    fn default() -> Self {{
+        Self {{
+            enabled: true,
+        }}
+    }}
+}}
+
+fn default_enabled() -> bool {{
+    true
+}}

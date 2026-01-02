@@ -1,0 +1,18 @@
+use serde::{{Deserialize, Serialize}};
+use utoipa::ToSchema;
+
+// TODO(PLACEHOLDER): remove contents of this file and replace with required DTOs and mappers
+/// Example REST DTO
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct ExampleDto {{
+    pub status: String,
+}}
+
+// Mapper: SDK model -> DTO
+impl From<{snake}_sdk::models::Example> for ExampleDto {{
+    fn from(example: {snake}_sdk::models::Example) -> Self {{
+        Self {{
+            status: example.status,
+        }}
+    }}
+}}

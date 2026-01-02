@@ -1,0 +1,33 @@
+use thiserror::Error;
+
+#[derive(Error, Debug, Clone)]
+pub enum {pascal}Error {{
+    #[error("Resource not found")]
+    NotFound,
+
+    #[error("Validation error: {{message}}")]
+    Validation {{ message: String }},
+
+    #[error("Internal error")]
+    Internal,
+}}
+
+// Convenience constructors
+impl {pascal}Error {{
+    #[must_use]
+    pub fn not_found() -> Self {{
+        Self::NotFound
+    }}
+
+    #[must_use]
+    pub fn validation(message: impl Into<String>) -> Self {{
+        Self::Validation {{
+            message: message.into(),
+        }}
+    }}
+
+    #[must_use]
+    pub fn internal() -> Self {{
+        Self::Internal
+    }}
+}}

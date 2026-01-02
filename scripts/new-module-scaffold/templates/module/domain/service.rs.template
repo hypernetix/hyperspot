@@ -1,0 +1,16 @@
+use {snake}_sdk::models::Example; // TODO(PLACEHOLDER)
+
+#[derive(Default)]
+pub struct Service;
+
+impl Service {{
+    #[must_use]
+    pub fn new() -> Self {{
+        Self
+    }}
+    // TODO(PLACEHOLDER): replace it with actual methods for your domain service
+    pub async fn example(&self) -> Example {{
+        let _ = self;
+        std::future::ready(Example::new()).await
+    }}
+}}

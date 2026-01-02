@@ -1,0 +1,9 @@
+// Repository trait placeholder
+// Example:
+// use async_trait::async_trait;
+// use modkit_security::SecurityCtx;
+//
+// #[async_trait]
+// pub trait MyRepository: Send + Sync {{
+//     async fn find_by_id(&self, ctx: &SecurityCtx, id: uuid::Uuid) -> anyhow::Result<Option<Model>>;
+// }}
