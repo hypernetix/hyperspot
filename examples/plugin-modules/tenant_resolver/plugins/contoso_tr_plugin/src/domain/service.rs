@@ -1,11 +1,11 @@
-//! Contoso plugin service implementing `ThrPluginApi`.
+//! Contoso plugin service implementing `TenantResolverPluginClient`.
 
 use async_trait::async_trait;
 use modkit_odata::{ODataQuery, Page, PageInfo};
 use modkit_security::SecurityCtx;
 use tenant_resolver_sdk::{
-    AccessOptions, GetParentsResponse, Tenant, TenantFilter, TenantResolverError, TenantSpecV1,
-    TenantStatus, ThrPluginApi,
+    AccessOptions, GetParentsResponse, Tenant, TenantFilter, TenantResolverError,
+    TenantResolverPluginClient, TenantSpecV1, TenantStatus,
 };
 
 /// Contoso plugin service implementing the tenant resolver plugin API.
@@ -28,7 +28,7 @@ impl Service {
 }
 
 #[async_trait]
-impl ThrPluginApi for Service {
+impl TenantResolverPluginClient for Service {
     async fn get_root_tenant(&self, _ctx: &SecurityCtx) -> Result<Tenant, TenantResolverError> {
         Ok(Self::root_tenant())
     }

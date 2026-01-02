@@ -10,8 +10,8 @@ use modkit::gts::BaseModkitPluginV1;
 use modkit_odata::{ODataQuery, Page};
 use modkit_security::SecurityCtx;
 use tenant_resolver_sdk::{
-    AccessOptions, GetParentsResponse, Tenant, TenantFilter, TenantResolverPluginSpecV1,
-    ThrPluginApi,
+    AccessOptions, GetParentsResponse, Tenant, TenantFilter, TenantResolverPluginClient,
+    TenantResolverPluginSpecV1,
 };
 use tokio::sync::OnceCell;
 use tracing::info;
@@ -51,14 +51,14 @@ impl Service {
     ///
     /// On first call, queries `types_registry` to find the plugin instance
     /// matching the configured vendor. Result is cached for subsequent calls.
-    async fn get_plugin(&self) -> Result<Arc<dyn ThrPluginApi>, DomainError> {
+    async fn get_plugin(&self) -> Result<Arc<dyn TenantResolverPluginClient>, DomainError> {
         let resolved = self
             .resolved
             .get_or_try_init(|| self.resolve_plugin())
             .await?;
 
         self.hub
-            .get_scoped::<dyn ThrPluginApi>(&resolved.scope)
+            .get_scoped::<dyn TenantResolverPluginClient>(&resolved.scope)
             .map_err(|_| DomainError::PluginClientNotFound {
                 gts_id: resolved.gts_id.clone(),
             })

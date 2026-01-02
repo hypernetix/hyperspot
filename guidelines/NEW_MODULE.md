@@ -2543,7 +2543,7 @@ modules:
 
 See `examples/plugin-modules/tenant_resolver/` for a complete working example:
 
-- **`tenant_resolver-sdk/`** — SDK with `TenantResolverClient` and `ThrPluginApi` traits
+- **`tenant_resolver-sdk/`** — SDK with `TenantResolverClient` and `TenantResolverPluginClient` traits
 - **`tenant_resolver-gw/`** — Gateway that registers schema and selects plugin by vendor config
 - **`plugins/contoso_tr_plugin/`** — Contoso vendor implementation (registers instance only)
 - **`plugins/fabrikam_tr_plugin/`** — Fabrikam vendor implementation (registers instance only)
