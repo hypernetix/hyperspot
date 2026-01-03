@@ -202,23 +202,53 @@ Design and requirements evolve together through iteration:
 
 For each feature in IMPLEMENTATION_PLAN.md, use OpenSpec to implement incrementally.
 
+### Prerequisites: Module OpenSpec Setup
+
+Before creating OpenSpec proposals for a module, ensure the module has OpenSpec initialized:
+
+1. **Check if module has openspec directory:**
+   ```bash
+   ls modules/{module}/openspec/
+   ```
+
+2. **If not initialized, run from module directory:**
+   ```bash
+   cd modules/{module}
+   openspec init
+   ```
+
+**Notes:**
+1. All `openspec` commands for a module must be run from that module's directory:
+```bash
+cd modules/{module}
+openspec list
+openspec validate --strict
+```
+2. Only root level OpenSpec slash commands should be used. They extended with a special intructions to run commands in the module directory. 
+
+---
+
 ### Step 2.1: Create OpenSpec Change Proposal
 
 Create a change proposal for the next unchecked feature in IMPLEMENTATION_PLAN.md.
 
 **Command:** `/openspec:proposal` (or equivalent AI command)
 
-**Input:** Feature name and scope from IMPLEMENTATION_PLAN.md, reference to the module's design documents.
+**Input:** Feature name and scope from IMPLEMENTATION_PLAN.md, reference to the module's design documents. Module name must be specified explicitly.
 
-**Output:** `openspec/changes/module-{name}-{feature}/proposal.md`
+**Output:**
+-   `modules/{module}/openspec/changes/{change-name}/proposal.md`
+-   `modules/{module}/openspec/changes/{change-name}/tasks.md`
+-   `modules/{module}/openspec/changes/{change-name}/design.md` (optional)
+-   `modules/{module}/openspec/changes/{change-name}/specs/{capability}/spec.md`
 
-See [OpenSpec documentation](https://github.com/Fission-AI/OpenSpec/blob/main/README.md) for proposal format.
+See [OpenSpec documentation](https://github.com/Fission-AI/OpenSpec/blob/main/README.md) for details.
 
 ---
 
 ### Step 2.2: Review and Refine Proposal
 
-1. **Review** the generated proposal for alignment with requirements
+1. **Review** the generated proposal for alignment with requirements and design (if generated) for alignment with the module's design documents.
 2. **Refine** specs — ensure scenarios cover success, error, and edge cases
 3. **Validate** tasks — ensure they're granular and actionable (< 1 hour each)
 4. **Run** `openspec validate --strict` before implementing
@@ -231,7 +261,7 @@ See [OpenSpec documentation](https://github.com/Fission-AI/OpenSpec/blob/main/RE
 
 **Command:** `/openspec:apply` (or equivalent AI command)
 
-**Input:** Approved OpenSpec change proposal
+**Input:** Approved OpenSpec change proposal. Module name must be specified explicitly.
 
 **Output:** Code changes + unit tests in module source
 
@@ -253,8 +283,8 @@ After implementation is complete and tests pass:
 **Command:** `/openspec:archive` (or equivalent AI command)
 
 This:
-- Moves change to `openspec/archive/`
-- Updates `openspec/specs/` with verified scenarios
+- Moves change to `modules/{module}/openspec/changes/archive/`
+- Updates `modules/{module}/openspec/specs/` with verified scenarios
 - Check off the feature in IMPLEMENTATION_PLAN.md
 
 See [OpenSpec documentation](https://github.com/Fission-AI/OpenSpec/blob/main/README.md) for archiving.
@@ -279,7 +309,7 @@ Follow [Step 2: Implementation (OpenSpec)](#step-2-implementation-openspec) abov
 
 ### Step 3: Update CHANGELOG.md
 
-Add entry to `modules/{m}/docs/CHANGELOG.md` following [Keep A Changelog](https://keepachangelog.com/) format.
+Add entry to `modules/{module}/docs/CHANGELOG.md` following [Keep A Changelog](https://keepachangelog.com/) format.
 
 Reference requirement IDs in entries:
 ```markdown
