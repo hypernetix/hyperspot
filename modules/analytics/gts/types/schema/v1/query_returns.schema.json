@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.hypernetix.hyperspot.ax.schema.v1~hypernetix.hyperspot.ax.query_returns.v1~",
+  "allOf": [
+    {
+      "$ref": "gts://gts.hypernetix.hyperspot.ax.schema.v1~"
+    },
+    {
+      "type": "object",
+      "description": "OData v4 response format for query results. Follows standard OData conventions with @odata.* metadata fields and 'value' array for data items. All items must have flat structure (scalar values only) for consistent widget rendering.",
+      "properties": {
+        "@odata.context": {
+          "type": "string",
+          "description": "OData context URL describing the payload structure. Example: '$metadata#EntitySet'"
+        },
+        "@odata.count": {
+          "type": "integer",
+          "description": "Total count of items matching the query. Only present when $count=true is requested. May be expensive for large datasets.",
+          "minimum": 0
+        },
+        "@odata.nextLink": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL to fetch the next page of results. Omitted if this is the last page. Contains full URL with query parameters including skip token."
+        },
+        "value": {
+          "type": "array",
+          "description": "Array of result items. Each item must be a flat object with scalar values only (string, number, boolean, null) - no nested objects or arrays. This ensures consistent rendering across all widget types.",
+          "items": {
+            "type": "object",
+            "description": "Single result item with flat structure. All properties must be scalar values.",
+            "additionalProperties": {
+              "type": ["string", "number", "integer", "boolean", "null"],
+              "description": "Property value - must be scalar (string, number, integer, boolean, or null). Nested objects and arrays are not allowed."
+            }
+          }
+        }
+      },
+      "required": ["value"]
+    }
+  ],
+  "examples": [
+    {
+      "@odata.context": "$metadata#SalesOrders",
+      "@odata.count": 1547,
+      "@odata.nextLink": "https://api.acme.com/odata/v1/sales/SalesOrders?$skip=100",
+      "value": [
+        {"id": "ord-001", "customer": "Acme Corp", "revenue": 15000, "status": "active"},
+        {"id": "ord-002", "customer": "TechStart", "revenue": 28000, "status": "active"}
+      ]
+    }
+  ]
+}

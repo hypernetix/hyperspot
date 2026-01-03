@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.hypernetix.hyperspot.ax.schema.v1~hypernetix.hyperspot.ax.template_config.v1~",
+  "allOf": [
+    {
+      "$ref": "gts://gts.hypernetix.hyperspot.ax.schema.v1~"
+    },
+    {
+      "type": "object",
+      "description": "Base schema for template configuration objects. Defines the structure of customization options for UI templates. Derived schemas specify template-specific properties like colors, axes configurations, legend settings, and other visual/behavioral customizations. Each template type (chart, table, map) extends this with its own config schema.",
+      "additionalProperties": true
+    }
+  ],
+  "examples": [
+    {
+      "colors": ["#3b82f6", "#10b981", "#f59e0b"],
+      "title": "Sales by Region",
+      "showLegend": true
+    }
+  ]
+}

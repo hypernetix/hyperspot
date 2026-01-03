@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.hypernetix.hyperspot.ax.layout.v1~hypernetix.hyperspot.ax.report.v1~",
+  "description": "Report layout type for scheduled, printable, and exportable data presentations. Reports are designed for periodic generation, distribution, and archival. They support scheduled generation, multiple export formats (PDF, Excel, CSV), and optimized layouts for printing and sharing.",
+  "allOf": [
+    {
+      "$ref": "gts://gts.hypernetix.hyperspot.ax.layout.v1~"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "settings": {
+          "type": "object",
+          "description": "Report-specific configuration for scheduled generation and export options.",
+          "properties": {
+            "schedule": {
+              "type": "object",
+              "description": "Configuration for automated report generation and distribution schedule. When enabled, reports are generated automatically based on the cron schedule and can be emailed or stored.",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Whether scheduled report generation is enabled. If false, report can only be generated manually."
+                },
+                "cron": {
+                  "type": "string",
+                  "description": "Cron expression defining when to generate the report (e.g., '0 9 * * 1' for every Monday at 9am). Uses standard cron format."
+                }
+              }
+            },
+            "export_formats": {
+              "type": "array",
+              "description": "List of supported export formats for this report. Users can generate the report in any of these formats.",
+              "items": {
+                "type": "string",
+                "enum": ["pdf", "xlsx", "csv", "html"],
+                "description": "Export format: pdf (portable document), xlsx (Excel spreadsheet), csv (comma-separated values), html (web page)"
+              }
+            }
+          },
+          "required": ["export_formats"]
+        }
+      }
+    }
+  ],
+  "examples": [
+    {
+      "name": "Monthly Sales Report",
+      "description": "Detailed monthly sales analysis",
+      "category": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.layout.v1~hypernetix.hyperspot.ax.report.v1~hypernetix.hyperspot.ax.layouts_reports_sales.v1",
+      "items": [],
+      "settings": {
+        "schedule": {
+          "enabled": true,
+          "cron": "0 9 1 * *"
+        },
+        "export_formats": ["pdf", "xlsx"]
+      }
+    }
+  ]
+}
