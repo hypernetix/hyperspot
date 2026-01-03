@@ -44,24 +44,29 @@ This document answers common questions about the module development workflow, pr
 
 ### Is OpenSpec a strict requirement for this workflow?
 
-**No, OpenSpec is a tool choice, not a requirement.**
+**OpenSpec is the recommended tool, but not a strict requirement.**
 
-**Current state:**
-- OpenSpec provides a practical way to do feature-by-feature spec-driven development
-- It has CLI tooling for validation, listing changes, and archiving
-- It works well enough for our current needs
+**Current recommendation:**
+- OpenSpec is our agreed-upon tool for spec-driven development
+- It provides CLI tooling for validation, listing changes, and archiving
+- The team should use it consistently to keep specs in sync with code
 
-**Future flexibility:**
-- We may switch to another spec-driven development (SDD) tool as we gain more experience
-- We may implement our own tool tailored to Hyperspot's specific needs
+**Module-level consistency is important:**
+- Once a module adopts OpenSpec, all contributors to that module should use it
+- Mixing tools within the same module creates friction and sync issues
+- OpenSpec's AGENTS.md instructions assume consistent usage
+
+**Monorepo flexibility:**
+- Different modules may have different maintainers
+- A new module could experiment with a different SDD tool if maintainers agree
+- This allows us to evaluate alternatives without disrupting existing modules
+
+**What if we find something better?**
+- If we discover a better tool, we can adopt it for new modules first
+- Migration of existing modules should be a deliberate team decision
 - The workflow principles (design → implementation → verification) remain the same regardless of tooling
 
-**What matters:**
-- **Feature-by-feature implementation** — Breaking work into small, reviewable chunks
-- **Spec-driven development** — Documenting expected behavior before/during implementation
-- **Verification** — Ensuring specs match actual code behavior
-
-**TL;DR:** OpenSpec is our current implementation of spec-driven development, but the workflow is tool-agnostic. We can replace it when we find or build something better.
+**TL;DR:** OpenSpec is our recommended default choice. Use it consistently within each module. Experimentation with alternatives is possible for new modules, but don't mix approaches within the same module.
 
 ---
 
@@ -96,7 +101,6 @@ Draft Design → Extract Requirements → Refine Design → Cross-Reference → 
 - Requirements can be referenced independently in specs and tests
 - Architecture can evolve without rewriting requirements
 - Clear traceability from requirement → design → implementation
-- Different stakeholders can focus on relevant documents
 
 **TL;DR:** Created together (iteratively), stored separately (for different purposes).
 
