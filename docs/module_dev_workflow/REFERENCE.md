@@ -40,7 +40,7 @@ Phases are delivery milestones for incremental development.
 
 **Notes:**
 - Simple modules may not need phases on the first iteration
-- Phases are defined in `modules/{m}/docs/DESIGN.md`
+- Phases are defined in `modules/{module}/docs/DESIGN.md`
 - Phases may be referenced in IMPLEMENTATION_PLAN.md and requirements
 
 ### Requirements
@@ -55,7 +55,7 @@ Requirements define **what the system SHALL do**. They use [RFC 2119](https://da
 
 **Two levels:**
 1. **Global Requirements** — project-wide, in `docs/REQUIREMENTS.md` (e.g., `REQ1`, `REQ2`)
-2. **Module Requirements** — module-specific, in `modules/{m}/docs/REQUIREMENTS.md` (e.g., `OAGW-REQ01`)
+2. **Module Requirements** — module-specific, in `modules/{module}/docs/REQUIREMENTS.md` (e.g., `OAGW-REQ01`)
 
 **Common global requirements:**
 - `REQ1`: Tenant Isolation
@@ -88,7 +88,7 @@ Verifies: OAGW-REQ01, REQ1, REQ2, REQ5
 
 ### DESIGN.md
 
-**Location:** `modules/{m}/docs/DESIGN.md`
+**Location:** `modules/{module}/docs/DESIGN.md`
 
 **Purpose:** Documents the module's architecture, components, and implementation approach.
 
@@ -137,7 +137,7 @@ Verifies: OAGW-REQ01, REQ1, REQ2, REQ5
 
 ### REQUIREMENTS.md
 
-**Location:** `modules/{m}/docs/REQUIREMENTS.md`
+**Location:** `modules/{module}/docs/REQUIREMENTS.md`
 
 **Purpose:** Defines what the module SHALL, SHOULD, and MAY do using RFC 2119 language.
 
@@ -174,7 +174,7 @@ The system SHALL [requirement description].
 
 ### IMPLEMENTATION_PLAN.md
 
-**Location:** `modules/{m}/docs/IMPLEMENTATION_PLAN.md`
+**Location:** `modules/{module}/docs/IMPLEMENTATION_PLAN.md`
 
 **Purpose:** Trackable checklist of **features** to implement, organized by phase. Features are high-level deliverables, not granular tasks.
 
@@ -228,7 +228,7 @@ The system SHALL [requirement description].
 
 ### CHANGELOG.md
 
-**Location:** `modules/{m}/docs/CHANGELOG.md`
+**Location:** `modules/{module}/docs/CHANGELOG.md`
 
 **Purpose:** Track module evolution following [Keep A Changelog](https://keepachangelog.com/en/1.0.0/) format.
 
@@ -291,34 +291,35 @@ hyperspot/
 │           ├── create_implementation_plan.md
 │           └── validate_design_docs.md
 │
-├── openspec/
-│   ├── project.md                         # Project conventions
-│   ├── specs/                             # Current implementation truth
-│   │   └── module-{name}/
-│   │       └── spec.md                    # Verified scenarios
-│   ├── changes/                           # In-progress implementations
-│   │   └── module-{name}-{change-id}/
-│   │       ├── proposal.md
-│   │       ├── tasks.md
-│   │       └── specs/
-│   │           └── module-{name}/
-│   │               └── spec.md            # Deltas
-│   └── archive/                           # Completed changes
-│
 ├── modules/{module}/
 │   ├── src/                               # Code
-│   └── docs/
-│       ├── DESIGN.md                      # Architecture + phases
-│       ├── IMPLEMENTATION_PLAN.md         # Feature checklist
-│       ├── REQUIREMENTS.md                # Module requirements
-│       └── CHANGELOG.md                   # Change history
+│   ├── docs/
+│   │   ├── DESIGN.md                      # Architecture + phases
+│   │   ├── IMPLEMENTATION_PLAN.md         # Feature checklist
+│   │   ├── REQUIREMENTS.md                # Module requirements
+│   │   └── CHANGELOG.md                   # Change history
+│   └── openspec/                          # Module-specific OpenSpec
+│       ├── AGENTS.md                      # AI instructions (from openspec init)
+│       ├── project.md                     # Module context
+│       ├── specs/                         # Current module specs
+│       │   └── {capability}/
+│       │       └── spec.md
+│       └── changes/
+│           ├── {change-name}/             # Active changes
+│           │   ├── proposal.md
+│           │   ├── tasks.md
+│           │   ├── design.md              # (optional)
+│           │   └── specs/
+│           │       └── {capability}/
+│           │           └── spec.md        # Deltas
+│           └── archive/                   # Completed changes
 ```
 
 ---
 
 ## OpenSpec Specifications
 
-**Location:** `openspec/specs/module-{m}-{capability}/spec.md`
+**Location:** `modules/{module}/openspec/specs/{capability}/spec.md`
 
 **Purpose:** Document the current state of implemented features with verified scenarios. Represents the **source of truth** for what's built and working.
 
