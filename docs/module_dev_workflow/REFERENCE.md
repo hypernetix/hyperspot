@@ -1,35 +1,55 @@
 # Module Development Reference
 
-This document provides reference material for module development, including ID formats, document templates, and directory structure.
+This document provides reference material for module development, including terminology, document templates, and directory structure.
 
 For the workflow steps, see [Module Development Workflow](./README.md).
 
 ## Index
 
-- [Module Development Reference](#module-development-reference)
-  - [Index](#index)
-  - [Terms and ID Formats](#terms-and-id-formats)
-    - [Implementation Phases](#implementation-phases)
-    - [Requirements](#requirements)
-    - [Scenarios](#scenarios)
-  - [Document Formats](#document-formats)
-    - [DESIGN.md](#designmd)
-    - [REQUIREMENTS.md](#requirementsmd)
-    - [IMPLEMENTATION\_PLAN.md](#implementation_planmd)
-    - [CHANGELOG.md](#changelogmd)
-  - [Directory Structure](#directory-structure)
-  - [OpenSpec Specifications](#openspec-specifications)
+- [Terminology](#terminology)
+  - [Implementation Phases](#implementation-phases)
+  - [Requirements](#requirements)
+  - [Scenarios](#scenarios)
+- [Document Formats](#document-formats)
+  - [DESIGN.md](#designmd)
+  - [REQUIREMENTS.md](#requirementsmd)
+  - [IMPLEMENTATION\_PLAN.md](#implementation_planmd)
+  - [CHANGELOG.md](#changelogmd)
+- [Directory Structure](#directory-structure)
+- [OpenSpec Specifications](#openspec-specifications)
 
 ---
 
-## Terms and ID Formats
+## Terminology
 
 | Term | Format | Description | Example |
 |------|--------|-------------|---------|
 | **Implementation Phase** | `{MODULE}-P{N}` | Incremental delivery milestone. Phases group related features for staged rollout. | `OAGW-P1`, `TYPEREG-P2` |
-| **Module Requirement** | `{MODULE}-REQ{N}` | Module-specific requirement defining what the system SHALL do. | `OAGW-REQ01`, `TYPEREG-REQ1` |
-| **Global Requirement** | `REQ{N}` | Project-wide requirement from `docs/REQUIREMENTS.md`. | `REQ1` (tenant isolation) |
-| **Scenario** | *(heading text)* | Concrete use case with WHEN/THEN/AND structure that verifies a requirement. Lives in OpenSpec specs. | "Forward request to upstream" |
+| **Global Requirement** | `REQ{N}` | Project-wide requirement from `docs/REQUIREMENTS.md`. Referenced by module requirements, not directly by scenarios. | `REQ1` (tenant isolation) |
+| **Module Requirement** | `{MODULE}-REQ{N}` | Module-specific requirement defining what the system SHALL do. May reference global requirements. | `OAGW-REQ01`, `TYPEREG-REQ1` |
+| **Feature** | *(checkbox item)* | Deliverable unit of work that implements one or more module requirements. Maps 1:1 to an OpenSpec change. | "Request Forwarding" |
+| **Scenario** | *(heading text)* | Concrete use case with WHEN/THEN/AND structure that verifies a module requirement. Lives in OpenSpec specs. | "Forward request to upstream" |
+
+```mermaid
+graph TD
+    subgraph "Design Documents"
+        GR["Global Requirement<br/>(REQ1, REQ2...)"]
+        MR["Module Requirement<br/>({MODULE}-REQ{N})"]
+        PH["Phase<br/>({MODULE}-P{N})"]
+        FT["Feature<br/>(checkbox item)"]
+    end
+
+    subgraph "OpenSpec"
+        SC["Scenario<br/>(WHEN/THEN/AND)"]
+    end
+
+    GR -->|"referenced by"| MR
+    MR -->|"grouped into"| PH
+    MR -->|"implemented by"| FT
+    FT -->|"belongs to"| PH
+    FT -->|"= 1 OpenSpec change"| SC
+    SC -->|"verifies"| MR
+```
 
 ### Implementation Phases
 
@@ -66,22 +86,39 @@ Requirements define **what the system SHALL do**. They use [RFC 2119](https://da
 - `REQ4`: Error Handling and API Responses
 - `REQ5`: Traceability
 
+### Features
+
+Features are **deliverable units of work** tracked in `IMPLEMENTATION_PLAN.md`:
+
+- Each feature implements one or more module requirements
+- Maps 1:1 to an OpenSpec change during implementation
+- Typically 1-5 days of work (depends on complexity, without AI assistance)
+- Has a scope hint describing affected layers/components
+
+**Example:**
+```markdown
+- [ ] Request Forwarding (OAGW-REQ01, OAGW-REQ03)
+      Scope: contract traits, domain service, REST endpoint
+```
+
 ### Scenarios
 
-Scenarios are **concrete use cases** that verify requirements using WHEN/THEN/AND format:
+Scenarios are **concrete use cases** that verify module requirements using WHEN/THEN/AND format:
 
 ```markdown
 #### Forward request to upstream
-Verifies: OAGW-REQ01, REQ1, REQ2, REQ5
+Verifies: OAGW-REQ01
 - **WHEN** client sends POST /gateway/forward with valid auth
-- **THEN** system validates access by role (REQ2) and tenant (REQ1)
+- **THEN** system validates access by role and tenant
 - **AND** request is forwarded to configured upstream
 - **AND** response is returned within timeout
-- **AND** trace ID is included in headers (REQ5)
+- **AND** trace ID is included in headers
 ```
 
+> **Note:** Scenarios reference **module requirements only**. Module requirements reference global requirements in their definition (e.g., OAGW-REQ01 might reference REQ1, REQ2, REQ5 in REQUIREMENTS.md).
+
 - Scenarios don't have IDs — the heading is the name
-- Each scenario should reference the requirement(s) it verifies
+- Each scenario should reference the module requirement(s) it verifies
 - Create separate scenarios for success, error, and edge cases
 
 ---
@@ -190,7 +227,7 @@ The system SHALL [requirement description].
 
 - [ ] [Feature 1 name] ({MODULE}-REQ{X})
       Scope: [brief description of what this feature involves]
-- [ ] [Feature 2 name] ({MODULE}-REQ{Y}, REQ{Z})
+- [ ] [Feature 2 name] ({MODULE}-REQ{Y})
       Scope: [brief description]
 - [x] [Completed feature] ({MODULE}-REQ{A})
 
@@ -198,7 +235,7 @@ The system SHALL [requirement description].
 
 **Goal:** [What this phase achieves]
 
-- [ ] [Feature name] ({MODULE}-REQ{B}, REQ{C})
+- [ ] [Feature name] ({MODULE}-REQ{B})
       Scope: [brief description]
 ```
 
@@ -208,7 +245,7 @@ The system SHALL [requirement description].
 
 - [ ] [Feature Name] ({MODULE}-REQ{X})
       Scope: contract traits, domain service, REST endpoint
-- [ ] [Feature Name] ({MODULE}-REQ{Y}, REQ{Z})
+- [ ] [Feature Name] ({MODULE}-REQ{Y})
       Scope: authorization checks, tenant isolation
 ```
 
@@ -329,15 +366,18 @@ hyperspot/
 ```markdown
 # {Module Name} / {Capability}
 
-## Requirement: [Requirement Name]
-[Brief requirement description using SHALL/SHOULD/MAY and reference to {MODULE}-REQ{X}]
+## Requirement: {MODULE}-REQ{X} - [Requirement Name]
+[Brief requirement description using SHALL/SHOULD/MAY]
+References: REQ1, REQ2 (global requirements this module requirement relates to)
 
 ### Scenario: [Scenario name]
+Verifies: {MODULE}-REQ{X}
 - **WHEN** [action/trigger]
 - **THEN** [expected result]
 - **AND** [additional verification]
 
 ### Scenario: [Another scenario]
+Verifies: {MODULE}-REQ{Y}
 - **WHEN** [action]
 - **THEN** [result]
 ```
