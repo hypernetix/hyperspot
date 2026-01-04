@@ -6,17 +6,19 @@ For the workflow steps, see [Module Development Workflow](./README.md).
 
 ## Index
 
-- [Terms and ID Formats](#terms-and-id-formats)
-  - [Implementation Phases](#implementation-phases)
-  - [Requirements](#requirements)
-  - [Scenarios](#scenarios)
-- [Document Formats](#document-formats)
-  - [DESIGN.md](#designmd)
-  - [REQUIREMENTS.md](#requirementsmd)
-  - [IMPLEMENTATION_PLAN.md](#implementation_planmd)
-  - [CHANGELOG.md](#changelogmd)
-- [Directory Structure](#directory-structure)
-- [OpenSpec Specifications](#openspec-specifications)
+- [Module Development Reference](#module-development-reference)
+  - [Index](#index)
+  - [Terms and ID Formats](#terms-and-id-formats)
+    - [Implementation Phases](#implementation-phases)
+    - [Requirements](#requirements)
+    - [Scenarios](#scenarios)
+  - [Document Formats](#document-formats)
+    - [DESIGN.md](#designmd)
+    - [REQUIREMENTS.md](#requirementsmd)
+    - [IMPLEMENTATION\_PLAN.md](#implementation_planmd)
+    - [CHANGELOG.md](#changelogmd)
+  - [Directory Structure](#directory-structure)
+  - [OpenSpec Specifications](#openspec-specifications)
 
 ---
 
@@ -294,25 +296,25 @@ hyperspot/
 ├── modules/{module}/
 │   ├── src/                               # Code
 │   ├── docs/
-│   │   ├── DESIGN.md                      # Architecture + phases
-│   │   ├── IMPLEMENTATION_PLAN.md         # Feature checklist
-│   │   ├── REQUIREMENTS.md                # Module requirements
-│   │   └── CHANGELOG.md                   # Change history
+│   │   ├── DESIGN.md                      # Architecture + phases ({MODULE}-P1, {MODULE}-P2...)
+│   │   ├── IMPLEMENTATION_PLAN.md         # Feature checklist (already implemented and planned) divided by phases
+│   │   ├── REQUIREMENTS.md                # Module requirements ({MODULE}-REQ1, {MODULE}-REQ2...)
+│   │   └── CHANGELOG.md                   # Change history with requirement references
 │   └── openspec/                          # Module-specific OpenSpec
 │       ├── AGENTS.md                      # AI instructions (from openspec init)
 │       ├── project.md                     # Module context
 │       ├── specs/                         # Current module specs
 │       │   └── {capability}/
-│       │       └── spec.md
+│       │       └── spec.md                # Implemented scenarios for module requirements referenced in docs/REQUIREMENTS.md
 │       └── changes/
-│           ├── {change-name}/             # Active changes
+│           ├── {change-name}/             # Active changes (change is a feature to implement from the IMPLEMENTATION_PLAN.md)
 │           │   ├── proposal.md
 │           │   ├── tasks.md
 │           │   ├── design.md              # (optional)
 │           │   └── specs/
 │           │       └── {capability}/
 │           │           └── spec.md        # Deltas
-│           └── archive/                   # Completed changes
+│           └── archive/                   # Completed changes (change is an implemented feature from the IMPLEMENTATION_PLAN.md)
 ```
 
 ---
