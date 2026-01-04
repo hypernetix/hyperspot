@@ -18,7 +18,7 @@ Read `modules/{module_name}/docs/DESIGN.md` and `modules/{module_name}/docs/REQU
 Requirements:
 - Organize features by implementation phases from DESIGN.md (or as flat list for simple modules)
 - Each feature must:
-  - Have checkbox format: `- [ ] Feature Name (REQ-IDS)`
+  - Have checkbox format: `- [ ] Feature Name (#module/req-name)`
   - Reference at least one requirement (module or global)
   - Include scope hint on next line (6-space indent): `Scope: layers/components involved`
 - Feature granularity: 1-5 days of work, implements 1-3 related requirements

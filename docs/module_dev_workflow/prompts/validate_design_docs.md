@@ -25,9 +25,9 @@ Validate design documents for `modules/{module_name}/docs/`:
 
 1. **Format Validation:**
    - DESIGN.md has required sections (Overview, Architecture, Implementation Phases)
-   - REQUIREMENTS.md: each requirement has proper header format `{MODULE}-REQ{N}`, uses RFC 2119 keywords (SHALL/SHOULD/MAY), has Phase and Rationale fields
+   - REQUIREMENTS.md: each requirement has proper header format `#{module}/{name}`, uses RFC 2119 keywords (SHALL/SHOULD/MAY), has Phase and Rationale fields
    - IMPLEMENTATION_PLAN.md: features use checkbox format, have requirement references and Scope hints
-   - ID formats: {MODULE}-REQ{N}, {MODULE}-P{N}, REQ{N}
+   - ID formats: `#{name}` (global), `#{module}/{name}` (module), `#{module}/P{N}` (phases)
 
 2. **Consistency Validation:**
    - Phases in IMPLEMENTATION_PLAN.md match DESIGN.md

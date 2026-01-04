@@ -10,12 +10,12 @@ For the workflow steps, see [Module Development Workflow](./README.md).
   - [Implementation Phases](#implementation-phases)
   - [Requirements](#requirements)
   - [Scenarios](#scenarios)
+- [Directory Structure](#directory-structure)
 - [Document Formats](#document-formats)
   - [DESIGN.md](#designmd)
   - [REQUIREMENTS.md](#requirementsmd)
   - [IMPLEMENTATION\_PLAN.md](#implementation_planmd)
   - [CHANGELOG.md](#changelogmd)
-- [Directory Structure](#directory-structure)
 - [OpenSpec Specifications](#openspec-specifications)
 
 ---
@@ -24,18 +24,18 @@ For the workflow steps, see [Module Development Workflow](./README.md).
 
 | Term | Format | Description | Example |
 |------|--------|-------------|---------|
-| **Implementation Phase** | `{MODULE}-P{N}` | Incremental delivery milestone. Phases group related features for staged rollout. | `OAGW-P1`, `TYPEREG-P2` |
-| **Global Requirement** | `REQ{N}` | Project-wide requirement from `docs/REQUIREMENTS.md`. Referenced by module requirements, not directly by scenarios. | `REQ1` (tenant isolation) |
-| **Module Requirement** | `{MODULE}-REQ{N}` | Module-specific requirement defining what the system SHALL do. May reference global requirements. | `OAGW-REQ01`, `TYPEREG-REQ1` |
+| **Implementation Phase** | `#{module}/P{N}` | Incremental delivery milestone. Phases group related features for staged rollout. | `#oagw/P1`, `#typereg/P2` |
+| **Global Requirement** | `#{name}` | Project-wide requirement from `docs/REQUIREMENTS.md`. Referenced by module requirements, not directly by scenarios. | `#tenant-isolation`, `#rbac` |
+| **Module Requirement** | `#{module}/{name}` | Module-specific requirement defining what the system SHALL do. May reference global requirements. | `#oagw/request-forward`, `#typereg/entity-reg` |
 | **Feature** | *(checkbox item)* | Deliverable unit of work that implements one or more module requirements. Maps 1:1 to an OpenSpec change. | "Request Forwarding" |
 | **Scenario** | *(heading text)* | Concrete use case with WHEN/THEN/AND structure that verifies a module requirement. Lives in OpenSpec specs. | "Forward request to upstream" |
 
 ```mermaid
 graph TD
     subgraph "Design Documents"
-        GR["Global Requirement<br/>(REQ1, REQ2...)"]
-        MR["Module Requirement<br/>({MODULE}-REQ{N})"]
-        PH["Phase<br/>({MODULE}-P{N})"]
+        GR["Global Requirement<br/>(#tenant-isolation, #rbac...)"]
+        MR["Module Requirement<br/>(#module/name)"]
+        PH["Phase<br/>(#{module}/P{N})"]
         FT["Feature<br/>(checkbox item)"]
     end
 
@@ -56,9 +56,9 @@ graph TD
 Phases are delivery milestones for incremental development.
 
 **Example phases for Outbound API Gateway module:**
-- `OAGW-P1`: Core Functionality
-- `OAGW-P2`: Request Forwarding with Advanced Features
-- `OAGW-P3`: Monitoring and Analytics
+- `#oagw/P1`: Core Functionality
+- `#oagw/P2`: Request Forwarding with Advanced Features
+- `#oagw/P3`: Monitoring and Analytics
 
 **Notes:**
 - Simple modules may not need phases on the first iteration
@@ -76,15 +76,15 @@ Requirements define **what the system SHALL do**. They use [RFC 2119](https://da
 | **MAY** | Optional |
 
 **Two levels:**
-1. **Global Requirements** — project-wide, in `docs/REQUIREMENTS.md` (e.g., `REQ1`, `REQ2`)
-2. **Module Requirements** — module-specific, in `modules/{module}/docs/REQUIREMENTS.md` (e.g., `OAGW-REQ01`)
+1. **Global Requirements** — project-wide, in `docs/REQUIREMENTS.md` (e.g., `#tenant-isolation`, `#rbac`)
+2. **Module Requirements** — module-specific, in `modules/{module}/docs/REQUIREMENTS.md` (e.g., `#oagw/request-forward`)
 
 **Common global requirements:**
-- `REQ1`: Tenant Isolation
-- `REQ2`: Role Based Access Control
-- `REQ3`: Logging
-- `REQ4`: Error Handling and API Responses
-- `REQ5`: Traceability
+- `#tenant-isolation`
+- `#rbac`
+- `#logging`
+- `#error-handling`
+- `#traceability`
 
 ### Features
 
@@ -97,7 +97,7 @@ Features are **deliverable units of work** tracked in `IMPLEMENTATION_PLAN.md`:
 
 **Example:**
 ```markdown
-- [ ] Request Forwarding (OAGW-REQ01, OAGW-REQ03)
+- [ ] Request Forwarding (#oagw/request-forward, #oagw/timeout-handling)
       Scope: contract traits, domain service, REST endpoint
 ```
 
@@ -107,7 +107,7 @@ Scenarios are **concrete use cases** that verify module requirements using WHEN/
 
 ```markdown
 #### Forward request to upstream
-Verifies: OAGW-REQ01
+Verifies: #oagw/request-forward
 - **WHEN** client sends POST /gateway/forward with valid auth
 - **THEN** system validates access by role and tenant
 - **AND** request is forwarded to configured upstream
@@ -115,11 +115,52 @@ Verifies: OAGW-REQ01
 - **AND** trace ID is included in headers
 ```
 
-> **Note:** Scenarios reference **module requirements only**. Module requirements reference global requirements in their definition (e.g., OAGW-REQ01 might reference REQ1, REQ2, REQ5 in REQUIREMENTS.md).
+> **Note:** Scenarios reference **module requirements only**. Module requirements reference global requirements in their definition (e.g., `#oagw/request-forward` might reference `#tenant-isolation`, `#rbac`, `#traceability` in REQUIREMENTS.md).
 
 - Scenarios don't have IDs — the heading is the name
 - Each scenario should reference the module requirement(s) it verifies
 - Create separate scenarios for success, error, and edge cases
+
+---
+
+## Directory Structure
+
+```
+hyperspot/
+├── docs/
+│   ├── REQUIREMENTS.md                    # Global requirements (#tenant-isolation, #rbac...)
+│   └── module_dev_workflow/               # Module development workflow
+│       ├── README.md                      # Workflow steps (main doc)
+│       ├── REFERENCE.md                   # This document
+│       ├── ROADMAP.md                     # Future improvements
+│       └── prompts/                       # AI prompt templates
+│           ├── create_design_and_requirements.md
+│           ├── create_implementation_plan.md
+│           └── validate_design_docs.md
+│
+├── modules/{module}/
+│   ├── src/                               # Code
+│   ├── docs/
+│   │   ├── DESIGN.md                      # Architecture + phases (#{module}/P1, #{module}/P2...)
+│   │   ├── IMPLEMENTATION_PLAN.md         # Feature checklist (already implemented and planned) divided by phases
+│   │   ├── REQUIREMENTS.md                # Module requirements (#module/name format)
+│   │   └── CHANGELOG.md                   # Change history with requirement references
+│   └── openspec/                          # Module-specific OpenSpec
+│       ├── AGENTS.md                      # AI instructions (from openspec init)
+│       ├── project.md                     # Module context
+│       ├── specs/                         # Current module specs
+│       │   └── {capability}/
+│       │       └── spec.md                # Implemented scenarios for module requirements referenced in docs/REQUIREMENTS.md
+│       └── changes/
+│           ├── {change-name}/             # Active changes (change is a feature to implement from the IMPLEMENTATION_PLAN.md)
+│           │   ├── proposal.md
+│           │   ├── tasks.md
+│           │   ├── design.md              # (optional)
+│           │   └── specs/
+│           │       └── {capability}/
+│           │           └── spec.md        # Deltas
+│           └── archive/                   # Completed changes (change is an implemented feature from the IMPLEMENTATION_PLAN.md)
+```
 
 ---
 
@@ -152,17 +193,17 @@ Verifies: OAGW-REQ01
 
 ## Implementation Phases
 
-### Phase {MODULE}-P1: [Phase Name]
+### Phase #{module}/P1: [Phase Name]
 [Description of what's included in this phase — reference requirements]
 
-### Phase {MODULE}-P2: [Phase Name]
+### Phase #{module}/P2: [Phase Name]
 [Description of what's included in this phase — reference requirements]
 
 ## Technical Decisions
 [Key architectural and technical decisions]
 ```
 
-**Cross-References:** After requirements are defined, add requirement IDs (`{MODULE}-REQ{N}`, `REQ{N}`) to:
+**Cross-References:** After requirements are defined, add requirement IDs (`#{module}/{name}`, `#{name}`) to:
 - Implementation Phases (which requirements each phase delivers)
 - Components (which requirements each component supports)
 - Data Flow steps (where applicable)
@@ -184,7 +225,7 @@ Verifies: OAGW-REQ01
 ```markdown
 # {Module Name} - Requirements
 
-## {MODULE}-REQ{N}: [Requirement Name]
+## #{module}/{name}: [Requirement Name]
 
 The system SHALL [requirement description].
 
@@ -192,9 +233,9 @@ The system SHALL [requirement description].
 - [Specific detail 1]
 - [Specific detail 2]
 
-**References:** REQ{X}, REQ{Y} (global requirements)
+**References:** #global-req-1, #global-req-2
 
-**Phase:** {MODULE}-P{N}
+**Phase:** #{module}/P{N}
 
 **Rationale:** [Why this requirement exists]
 ```
@@ -221,21 +262,21 @@ The system SHALL [requirement description].
 ```markdown
 # {Module Name} - Implementation Plan
 
-## Phase {MODULE}-P1: [Phase Name]
+## Phase #{module}/P1: [Phase Name]
 
 **Goal:** [What this phase achieves]
 
-- [ ] [Feature 1 name] ({MODULE}-REQ{X})
+- [ ] [Feature 1 name] (#{module}/req-name)
       Scope: [brief description of what this feature involves]
-- [ ] [Feature 2 name] ({MODULE}-REQ{Y})
+- [ ] [Feature 2 name] (#{module}/another-req)
       Scope: [brief description]
-- [x] [Completed feature] ({MODULE}-REQ{A})
+- [x] [Completed feature] (#{module}/completed-req)
 
-## Phase {MODULE}-P2: [Phase Name]
+## Phase #{module}/P2: [Phase Name]
 
 **Goal:** [What this phase achieves]
 
-- [ ] [Feature name] ({MODULE}-REQ{B})
+- [ ] [Feature name] (#{module}/feature-req)
       Scope: [brief description]
 ```
 
@@ -243,9 +284,9 @@ The system SHALL [requirement description].
 ```markdown
 # {Module Name} - Implementation Plan
 
-- [ ] [Feature Name] ({MODULE}-REQ{X})
+- [ ] [Feature Name] (#{module}/req-name)
       Scope: contract traits, domain service, REST endpoint
-- [ ] [Feature Name] ({MODULE}-REQ{Y})
+- [ ] [Feature Name] (#{module}/another-req)
       Scope: authorization checks, tenant isolation
 ```
 
@@ -282,10 +323,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
-- [New features] - Implements {MODULE}-REQ{X}
+- [New features] — Implements #{module}/req-name
 
 ### Changed
-- [Changes to existing functionality] - Updates {MODULE}-REQ{Y}
+- [Changes to existing functionality] — Updates #{module}/another-req
 
 ### Deprecated
 - [Soon-to-be removed features]
@@ -294,7 +335,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - [Removed features]
 
 ### Fixed
-- [Bug fixes] - Fixes {MODULE}-REQ{Z}
+- [Bug fixes] — Fixes #{module}/bug-fix-req
 
 ### Security
 - [Security fixes/improvements]
@@ -315,47 +356,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## Directory Structure
-
-```
-hyperspot/
-├── docs/
-│   ├── REQUIREMENTS.md                    # Global requirements (REQ1, REQ2...)
-│   └── module_dev_workflow/               # Module development workflow
-│       ├── README.md                      # Workflow steps (main doc)
-│       ├── REFERENCE.md                   # This document
-│       ├── ROADMAP.md                     # Future improvements
-│       └── prompts/                       # AI prompt templates
-│           ├── create_design_and_requirements.md
-│           ├── create_implementation_plan.md
-│           └── validate_design_docs.md
-│
-├── modules/{module}/
-│   ├── src/                               # Code
-│   ├── docs/
-│   │   ├── DESIGN.md                      # Architecture + phases ({MODULE}-P1, {MODULE}-P2...)
-│   │   ├── IMPLEMENTATION_PLAN.md         # Feature checklist (already implemented and planned) divided by phases
-│   │   ├── REQUIREMENTS.md                # Module requirements ({MODULE}-REQ1, {MODULE}-REQ2...)
-│   │   └── CHANGELOG.md                   # Change history with requirement references
-│   └── openspec/                          # Module-specific OpenSpec
-│       ├── AGENTS.md                      # AI instructions (from openspec init)
-│       ├── project.md                     # Module context
-│       ├── specs/                         # Current module specs
-│       │   └── {capability}/
-│       │       └── spec.md                # Implemented scenarios for module requirements referenced in docs/REQUIREMENTS.md
-│       └── changes/
-│           ├── {change-name}/             # Active changes (change is a feature to implement from the IMPLEMENTATION_PLAN.md)
-│           │   ├── proposal.md
-│           │   ├── tasks.md
-│           │   ├── design.md              # (optional)
-│           │   └── specs/
-│           │       └── {capability}/
-│           │           └── spec.md        # Deltas
-│           └── archive/                   # Completed changes (change is an implemented feature from the IMPLEMENTATION_PLAN.md)
-```
-
----
-
 ## OpenSpec Specifications
 
 **Location:** `modules/{module}/openspec/specs/{capability}/spec.md`
@@ -366,18 +366,18 @@ hyperspot/
 ```markdown
 # {Module Name} / {Capability}
 
-## Requirement: {MODULE}-REQ{X} - [Requirement Name]
+## Requirement: #{module}/{name} - [Requirement Name]
 [Brief requirement description using SHALL/SHOULD/MAY]
-References: REQ1, REQ2 (global requirements this module requirement relates to)
+References: #global-req-1, #global-req-2
 
 ### Scenario: [Scenario name]
-Verifies: {MODULE}-REQ{X}
+Verifies: #{module}/{name}
 - **WHEN** [action/trigger]
 - **THEN** [expected result]
 - **AND** [additional verification]
 
 ### Scenario: [Another scenario]
-Verifies: {MODULE}-REQ{Y}
+Verifies: #{module}/{another-name}
 - **WHEN** [action]
 - **THEN** [result]
 ```

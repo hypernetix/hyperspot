@@ -30,7 +30,7 @@ It combines AI-assisted design with [OpenSpec-driven](https://openspec.dev/) imp
 
 ## Quick Links
 
-- [Module Development Reference](./REFERENCE.md) — ID formats, document templates, directory structure
+- [Module Development Reference](./REFERENCE.md) — Terminology, document templates, directory structure
 - [FAQ](./FAQ.md) — Common questions and rationale
 - [Prompt Templates](./prompts/) — AI prompts for each step
 - [ROADMAP](./ROADMAP.md) — Future improvements of the workflow
@@ -84,9 +84,9 @@ It combines AI-assisted design with [OpenSpec-driven](https://openspec.dev/) imp
 
 | Term | Format | Example |
 |------|--------|---------|
-| Implementation Phase | `{MODULE}-P{N}` | `OAGW-P1` |
-| Module Requirement | `{MODULE}-REQ{N}` | `OAGW-REQ01` |
-| Global Requirement | `REQ{N}` | `REQ1` |
+| Implementation Phase | `#{module}/P{N}` | `#oagw/P1` |
+| Global Requirement | `#{name}` | `#tenant-isolation` |
+| Module Requirement | `#{module}/{name}` | `#oagw/request-forward` |
 
 For detailed formats and templates, see [Module Development Reference](./REFERENCE.md).
 
@@ -145,7 +145,7 @@ Design and requirements evolve together through iteration:
 **Tips:**
 - Focus on **what** and **why**, not implementation details
 - Requirements must be atomic and testable
-- Reference global requirements (REQ1, REQ2...) — don't duplicate
+- Reference global requirements (`#tenant-isolation`, `#rbac`...) — don't duplicate
 - Use RFC 2119 language: SHALL (mandatory), SHOULD (recommended), MAY (optional)
 - Mark open questions for design review
 
@@ -160,7 +160,7 @@ Design and requirements evolve together through iteration:
 
 **Tips:**
 - Each checkbox = 1 feature (maps to 1 OpenSpec change)
-- Include requirement references: `({MODULE}-REQ{X}, REQ{Y})`
+- Include requirement references: `(#module/req-name)`
 - Add scope hints: `Scope: contract, domain service, REST endpoint`
 - Organize by phases if defined in DESIGN.md
 
@@ -316,10 +316,10 @@ Reference requirement IDs in entries:
 ## [Unreleased]
 
 ### Added
-- Pagination support for entity listing - Implements TYPEREG-REQ9, references REQ1
+- Pagination support for entity listing — Implements #typereg/pagination
 
 ### Fixed
-- Race condition in concurrent updates - Fixes TYPEREG-REQ11
+- Race condition in concurrent updates — Fixes #typereg/concurrent-updates
 ```
 
 ---

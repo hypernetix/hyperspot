@@ -22,12 +22,12 @@ Design and requirements evolve together. Follow this iterative approach:
 1. **Draft Initial Design** - Create DESIGN.md with:
    - Overview, Architecture, Components, Data Flow
    - Integration Points, Implementation Phases, Technical Decisions
-   - Use phase IDs: {MODULE}-P1, {MODULE}-P2, etc.
+   - Use phase IDs: #{module}/P1, #{module}/P2, etc.
 
 2. **Extract Requirements** - From the design, identify:
    - What the system SHALL/SHOULD/MAY do
-   - Create REQUIREMENTS.md with {MODULE}-REQ{N} format
-   - Reference global requirements (REQ1, REQ2...) from docs/REQUIREMENTS.md
+   - Create REQUIREMENTS.md with `#{module}/{name}` format
+   - Reference global requirements (`#tenant-isolation`, `#rbac`...) from docs/REQUIREMENTS.md
 
 3. **Refine Design from Requirements** - Requirements often reveal:
    - Missing components or data flows

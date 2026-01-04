@@ -116,7 +116,7 @@ Draft Design → Extract Requirements → Refine Design → Cross-Reference → 
 - Allows pivoting if design assumptions prove incorrect
 - Reduces scope creep by clearly defining phase boundaries
 
-### Should I reference global requirements (REQ1, REQ2) or duplicate them in module REQUIREMENTS.md?
+### Should I reference global requirements (#tenant-isolation, #rbac) or duplicate them in module REQUIREMENTS.md?
 
 **Always reference, never duplicate.**
 
@@ -138,7 +138,7 @@ Draft Design → Extract Requirements → Refine Design → Cross-Reference → 
 
 **Reference another module's requirement when:**
 - You depend on functionality from that module
-- Example: `"SHALL integrate with Type Registry (references TYPEREG-REQ5)"`
+- Example: `"SHALL integrate with Type Registry (references #typereg/entity-lookup)"`
 
 ---
 

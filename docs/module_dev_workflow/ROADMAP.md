@@ -41,7 +41,7 @@ Define automated verification workflows to ensure consistency across documentati
 - REST endpoints match OpenSpec scenario descriptions
 - Data models in code match models described in requirements
 - Error handling matches scenarios (e.g., 404, 400, 500 cases)
-- Security requirements (REQ1, REQ2) are implemented
+- Security requirements (#tenant-isolation, #rbac) are implemented
 
 #### c) Source Code vs. Design
 
@@ -78,8 +78,8 @@ Verification reports should be written as Markdown documents with the following 
 
 ### ❌ Error: Missing Scenario
 
-**Requirement:** TYPEREG-REQ05  
-**Description:** Requirement TYPEREG-REQ05 has no corresponding scenarios  
+**Requirement:** #typereg/entity-lookup  
+**Description:** Requirement #typereg/entity-lookup has no corresponding scenarios  
 **Location:** [REQUIREMENTS.md:45](file:///path/to/modules/types_registry/docs/REQUIREMENTS.md#L45)
 
 ---
@@ -87,7 +87,7 @@ Verification reports should be written as Markdown documents with the following 
 ### ⚠️ Warning: Scenario Mismatch
 
 **Scenario:** "List entities with invalid token"  
-**Description:** Scenario references non-existent requirement TYPEREG-REQ99  
+**Description:** Scenario references non-existent requirement #typereg/invalid-req  
 **Location:** [spec.md:120](file:///path/to/openspec/specs/types-registry/spec.md#L120)
 
 ---
