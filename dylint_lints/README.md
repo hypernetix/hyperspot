@@ -31,7 +31,7 @@ make dylint-test         # Test UI cases (compile & verify violations)
 - TODO
 
 **Client/gateway Layer (DE05xx)**
-- TODO
+- ✅ DE0503: Plugin Client Suffix
 
 **Module structure (DE06xx)**
 - TODO
