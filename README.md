@@ -187,12 +187,36 @@ make coverage-unit
 
 ### CI / Development Commands
 
-The Makefile is the authoritative entry point for local development and CI automation.
+
+HyperSpot uses a unified, cross-platform Python CI script. Ensure you have Python 3.9+ installed.
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd hyperspot
+
+# All code must pass these checks before merging
+python scripts/ci.py all          # Build and run all the checks
+# Run individual checks
+python scripts/ci.py check        # Full CI suite: fmt, clippy, test, audit, deny
+python scripts/ci.py fmt          # Check formatting
+python scripts/ci.py fmt --fix    # Auto-format code
+python scripts/ci.py clippy       # Run linter
+python scripts/ci.py clippy --fix # Attempt to fix warnings
+python scripts/ci.py dylint       # runs custom project compliance lints on the workspace
+python scripts/ci.py audit        # Security audit
+python scripts/ci.py deny         # License & dependency checks
+````
+
+On Unix/Linux/macOS, the Makefile provides shortcuts:
 
 ```bash
 # All code must pass these checks before merging
+make all    # Build and run all the checks
+# Run individual checks
 make check  # Full check suite as defined in Makefile
 make fmt    # formatting (cargo fmt --all -- --check)
+make dev-fmt # auto-format code (cargo fmt --all)
 make clippy # linting (cargo clippy --workspace --all-targets --all-features -- -D warnings -D clippy::perf)
 make lint   # compilation with warnings denied (RUSTFLAGS="-D warnings" cargo check ...)
 make dylint # runs custom project compliance lints on the workspace
