@@ -1,0 +1,21 @@
+use sea_orm_migration::prelude::*;
+
+// TODO(PLACEHOLDER): define your own migrations
+
+// CRITICAL FOR CODING AGENT:
+// Don't define migrations here, they should be defined in separate files under the migrations folder
+// Prefer using CLI if available: 
+// `sea-orm-cli migrate generate -d ./modules/{{snake}}/{{snake}}/src/infra/storage/migrations <migration_name>`
+
+// mod m20261015_120000_create_example_table;
+
+pub struct Migrator;
+
+#[async_trait::async_trait]
+impl MigratorTrait for Migrator {
+    fn migrations() -> Vec<Box<dyn MigrationTrait>> {
+        vec![
+            // Box::new(m<YYYYMMDD>_<hhmmss>_<migration_name>::Migration),
+        ]
+    }
+}

@@ -8,7 +8,6 @@ use file_parser as _;
 use grpc_hub as _;
 use module_orchestrator as _;
 use nodes_registry as _;
-use todoer as _;
 use types_registry as _;
 
 #[cfg(feature = "users-info-example")]

@@ -1,0 +1,18 @@
+use crate::infra::storage::entities::example_entity::Model as ExampleEntity;
+use {snake}_sdk::Example;
+
+// TODO(PLACEHOLDER): remove contents of this file and replace with required mapper
+
+/// Convert a database entity to a contract model (owned version)
+impl From<ExampleEntity> for Example {
+    fn from(_e: ExampleEntity) -> Self {
+        Self::default()
+    }
+}
+
+/// Convert a database entity to a contract model (by-ref version)
+impl From<&ExampleEntity> for Example {
+    fn from(_e: &ExampleEntity) -> Self {
+        Self::default()
+    }
+}

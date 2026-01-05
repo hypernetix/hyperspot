@@ -10,7 +10,7 @@ This skill guides Agent to create a minimal Hyperspot module via the repository'
 ## Quick Start
 
 - Run:
-  - `python scripts/new-module-scaffold/main.py <module_name> --validate`
+  - `python scripts/new-module-scaffold/main.py <module_name> --with-db --validate`
 - Apply the printed wiring instructions to:
   - Root `Cargo.toml` workspace members
   - `apps/hyperspot-server/Cargo.toml` dependency
@@ -25,6 +25,7 @@ This skill guides Agent to create a minimal Hyperspot module via the repository'
 - Flags:
   - `--force`: overwrite existing files
   - `--validate`: run cargo check/fmt after generation
+  - `--with-db`: generate example scaffold for db capability
 
 ## Outputs
 

@@ -1,0 +1,8 @@
+// TODO(PLACEHOLDER): define your own entities
+
+// CRITICAL FOR CODING AGENT:
+// Don't define entities here, they should be defined in separate files under this folder
+// One entity per file
+
+pub mod example_entity;
+pub mod mapper;

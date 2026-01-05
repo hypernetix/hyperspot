@@ -22,3 +22,8 @@ pub mod api;
 pub mod config;
 #[doc(hidden)]
 pub mod domain;
+{% if with_db %}
+
+#[doc(hidden)]
+pub mod infra;
+{% endif %}

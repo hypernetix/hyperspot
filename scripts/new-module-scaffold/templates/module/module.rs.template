@@ -1,8 +1,12 @@
 use std::sync::Arc;
 use async_trait::async_trait;
 use modkit::api::OpenApiRegistry;
-use modkit::{{Module, ModuleCtx, RestfulModule}};
-use tracing::info;
+{% if with_db %}use modkit::{{DbModule, Module, ModuleCtx, RestfulModule}};
+{% else %}use modkit::{{Module, ModuleCtx, RestfulModule}};
+{% endif %}use tracing::info;
+{% if with_db %}
+use sea_orm_migration::MigratorTrait;
+{% endif %}
 
 use crate::api::rest::routes;
 use crate::config::{pascal}Config;
@@ -78,3 +82,16 @@ impl RestfulModule for {pascal} {{
         Ok(router)
     }}
 }}
+{% if with_db %}
+
+#[async_trait]
+impl DbModule for {pascal} {{
+    async fn migrate(&self, db: &modkit_db::DbHandle) -> anyhow::Result<()> {{
+        info!("Running {snake} database migrations");
+        let conn = db.sea();
+        crate::infra::storage::migrations::Migrator::up(&conn, None).await?;
+        info!("{snake} database migrations completed successfully");
+        Ok(())
+    }}
+}}
+{% endif %}

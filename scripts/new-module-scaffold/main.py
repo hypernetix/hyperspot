@@ -17,6 +17,12 @@ import sys
 from pathlib import Path
 from typing import Dict
 
+try:
+    from jinja2 import Environment, StrictUndefined
+except ImportError as exc:  # pragma: no cover - informative early exit
+    print("ERROR: Missing dependency 'jinja2'. Install it with `pip install jinja2` and rerun the scaffold.")
+    raise
+
 
 def snake_to_pascal(snake: str) -> str:
     """Convert snake_case to PascalCase."""
@@ -49,13 +55,54 @@ def get_script_dir() -> Path:
     return Path(__file__).parent.resolve()
 
 
+LITERAL_LBRACE_TOKEN = "__JINJA_LITERAL_LBRACE__"
+LITERAL_RBRACE_TOKEN = "__JINJA_LITERAL_RBRACE__"
+FORMAT_VAR_PATTERN = re.compile(r"\{([a-zA-Z0-9_]+)\}")
+
+
+def create_template_env() -> Environment:
+    """Create a shared Jinja environment for rendering templates."""
+    return Environment(
+        autoescape=False,
+        keep_trailing_newline=True,
+        lstrip_blocks=False,
+        trim_blocks=False,
+        undefined=StrictUndefined,
+    )
+
+
+JINJA_ENV = create_template_env()
+
+
+def _format_to_jinja(template_content: str) -> str:
+    """
+    Convert legacy `str.format` placeholders to Jinja syntax.
+
+    Existing templates rely on single-brace placeholders (e.g. {snake}) and double-brace
+    escapes (e.g. {{ ... }}) to emit literal braces for Rust/TOML snippets. This helper
+    preserves literal braces while rewriting substitution targets for the Jinja renderer.
+    """
+
+    def _replace_placeholder(match: re.Match[str]) -> str:
+        key = match.group(1)
+        return f"{{{{ {key} }}}}"
+
+    converted = (
+        template_content.replace("{{", LITERAL_LBRACE_TOKEN).replace("}}", LITERAL_RBRACE_TOKEN)
+    )
+    converted = FORMAT_VAR_PATTERN.sub(_replace_placeholder, converted)
+    return converted.replace(LITERAL_LBRACE_TOKEN, "{").replace(LITERAL_RBRACE_TOKEN, "}")
+
+
 def load_template(template_path: Path, names: Dict[str, str]) -> str:
-    """Load a template file and apply variable substitution."""
+    """Load a template file, convert to Jinja, and apply variable substitution."""
     if not template_path.exists():
         raise FileNotFoundError(f"Template not found: {template_path}")
-    
+
     template_content = template_path.read_text()
-    return template_content.format(**names)
+    jinja_ready = _format_to_jinja(template_content)
+    template = JINJA_ENV.from_string(jinja_ready)
+    return template.render(**names)
 
 
 def ensure_dir(path: Path):
@@ -107,6 +154,16 @@ MODULE_TEMPLATES = {
     'tests/smoke.rs': 'module/tests/smoke.rs.template',
 }
 
+MODULE_TEMPLATES_EXTRA_DB = {
+    'src/infra/mod.rs': 'module/infra/mod.rs.template',
+    'src/infra/storage/mod.rs': 'module/infra/storage/mod.rs.template',
+    'src/infra/storage/odata_mapper.rs': 'module/infra/storage/odata_mapper.rs.template',
+    'src/infra/storage/entities/mod.rs': 'module/infra/storage/entities/mod.rs.template',
+    'src/infra/storage/entities/example_entity.rs': 'module/infra/storage/entities/example_entity.rs.template',
+    'src/infra/storage/entities/mapper.rs': 'module/infra/storage/entities/mapper.rs.template',
+    'src/infra/storage/migrations/mod.rs': 'module/infra/storage/migrations/mod.rs.template',
+}
+
 
 # ============================================================================
 # Generator Functions
@@ -127,7 +184,7 @@ def generate_sdk_crate(base_path: Path, names: Dict[str, str], templates_dir: Pa
         write_file(output_path, content, force)
 
 
-def generate_module_crate(base_path: Path, names: Dict[str, str], templates_dir: Path, force: bool):
+def generate_module_crate(base_path: Path, names: Dict[str, str], templates_dir: Path, force: bool, with_db: bool):
     """Generate module crate structure."""
     # Module crate goes inside the module directory alongside SDK
     module_root = base_path / names['snake']
@@ -140,6 +197,12 @@ def generate_module_crate(base_path: Path, names: Dict[str, str], templates_dir:
         content = load_template(template_path, names)
         output_path = module_path / output_file
         write_file(output_path, content, force)
+    if with_db:
+        for output_file, template_file in MODULE_TEMPLATES_EXTRA_DB.items():
+            template_path = templates_dir / template_file
+            content = load_template(template_path, names)
+            output_path = module_path / output_file
+            write_file(output_path, content, force)
 
 
 def print_wiring_instructions(names: Dict[str, str]):
@@ -195,6 +258,11 @@ def main():
         action="store_true",
         help="Run cargo check after generation (requires Rust toolchain)"
     )
+    parser.add_argument(
+        "--with-db",
+        action="store_true",
+        help="Scaffold module with database-ready placeholders (available as `with_db` in templates)"
+    )
     
     args = parser.parse_args()
     
@@ -206,6 +274,7 @@ def main():
     
     # Derive naming conventions
     names = derive_names(args.module_name)
+    names["with_db"] = args.with_db
     
     print("🚀 Hyperspot Module Scaffold Generator")
     print("="*70)
@@ -213,6 +282,7 @@ def main():
     print(f"Type name (PascalCase):   {names['pascal']}")
     print(f"REST path (kebab-case):   /{names['kebab']}/v1")
     print(f"SDK crate:                {names['sdk_crate']}")
+    print(f"Database scaffolding:     {'enabled' if args.with_db else 'disabled'} (--with-db)")
     print("="*70)
     
     # Get script directory and templates directory
@@ -253,7 +323,7 @@ def main():
     
     # Generate module crate
     try:
-        generate_module_crate(modules_path, names, templates_dir, args.force)
+        generate_module_crate(modules_path, names, templates_dir, args.force, args.with_db)
     except Exception as e:
         print(f"\n❌ ERROR generating module crate: {e}")
         sys.exit(1)
