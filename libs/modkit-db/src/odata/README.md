@@ -176,8 +176,6 @@ cargo build -p modkit-db --features sea-orm,sqlite
 
 ## Future Enhancements
 
-- [ ] Fix `tests.rs` mock entities after module refactoring
-- [ ] Add integration tests with real database
 - [ ] Consider adding `OPager::new_with_defaults()` for common cases
 - [ ] Add metrics/tracing support for pagination performance
 - [ ] Consider caching field maps at compile time
