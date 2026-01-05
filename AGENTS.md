@@ -25,6 +25,8 @@ If the instruction sounds unclear, vague or requires more context. Ask for clari
 
 Always open `@/docs/ARCHITECTURE_MANIFEST.md` to have context about how is the project.
 
+Always open `@/docs/module_dev_workflow/REFERENCE.md` when defining requirements, designing new modules or adding new features for the existing modules.
+
 Always open `@/docs/TRACING_SETUP.md` to learn about the project's tracing setup.
 
 Always open `@/docs/MODKIT_UNIFIED_SYSTEM.md` to learn about the project's `@/lib/modkit*` unified system.
