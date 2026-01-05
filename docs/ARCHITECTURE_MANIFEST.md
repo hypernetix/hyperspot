@@ -1,6 +1,8 @@
 # HyperSpot Architecture Manifest
 
-> **Welcome to HyperSpot!** This document serves as your architectural and technical reference, explaining the core ideas, design principles, and rules that guide HyperSpot's development. Whether you're a newcomer or contributor, understanding these concepts will help you navigate and extend the platform effectively.
+> **NOTE:** This manifest describes our targets and forward-looking architecture. It is not a changelog of the current implementation. Canonical, up-to-date product and API documentation is maintained separately (e.g., module-specific docs, OpenAPI, and design records). Use this document for intent and direction; confirm current behavior in the dedicated docs.
+
+**Welcome to HyperSpot!** This document serves as your architectural and technical reference, explaining the core ideas, design principles, and rules that guide HyperSpot's development. Whether you're a newcomer or contributor, understanding these concepts will help you navigate and extend the platform effectively.
 
 HyperSpot is a modular Rust-based foundation for building SaaS products where Generative AI capabilities are first-class, alongside enterprise-grade SaaS requirements such as multi-tenancy, access control, governance, auditability, and usage tracking. It is designed to sit between cloud infrastructure (IaaS/PaaS) and vendor-developed SaaS applications, providing reusable building blocks that product teams can assemble into complete end-to-end services.
 
