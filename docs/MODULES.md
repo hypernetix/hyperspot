@@ -40,7 +40,7 @@ All modules can be divided into several categories:
 The **Core Platform Integration Modules** layer abstracts integration with core platform services, such as IdP, policy management, licensing, and credentials management that is out of scope of HyperSpot. This keeps HyperSpot reusable: it can run as a standalone platform, or it can integrate into an existing enterprise platform by wiring adapters to the platform’s services.
 
 ## Dependency rules
-- Authentication and authorization is built-in in every module and can not be bypassed (zero-trust architecture)
+- Authentication/authorization: all **external HTTP** traffic is enforced by `api_ingress` middleware, and secure ORM access is scoped by `SecurityCtx`. In-process calls must propagate `SecurityCtx` and use SDK/clients; bypassing middlewares is not permitted for ingress paths.
 - Generative AI Modules MAY depend on Shared Control Plane Modules
 - Generative AI Modules MUST NOT depend on Core Platform Services directly
 - Control Plane Modules MUST NOT depend on GenAI Modules
