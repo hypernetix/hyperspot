@@ -230,7 +230,7 @@ hyperspot/
 ├── examples/          # Example modules and usage patterns
 ├── guidelines/        # Coding standards and best practices for LLMs
 ├── libs/              # Shared libraries (modkit, modkit-db, modkit-auth, etc.)
-├── modules/           # Business logic modules (api_ingress, directory_service, etc.)
+├── modules/           # Business logic modules (chat, file_parser, etc.)
 ├── scripts/           # Custom scripts for build, testing, etc.
 └── testing/           # E2E and integration tests (pytest)
 ```
