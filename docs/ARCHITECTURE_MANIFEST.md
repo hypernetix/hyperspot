@@ -274,7 +274,9 @@ modules/<module-dir>/
 │       ├── lib.rs                    # Re-exports
 │       ├── api.rs                    # ClientHub API trait (methods take &SecurityCtx)
 │       ├── models.rs                 # Transport-agnostic models (no serde)
-│       └── error.rs|errors.rs         # Transport-agnostic errors
+│       ├── error.rs|errors.rs         # Transport-agnostic errors
+│       ├── (optional) proto/         # Generated gRPC/proto types for OoP modules
+│       └── (optional) wiring.rs      # gRPC client wiring/helpers for OoP transport
 └── <module-name>/
     ├── Cargo.toml
     └── src/
