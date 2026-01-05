@@ -698,7 +698,7 @@ mod sse_openapi_tests {
     }
 
     async fn sse_handler() -> axum::response::sse::Sse<
-        impl futures::Stream<Item = Result<axum::response::sse::Event, std::convert::Infallible>>,
+        impl futures_core::Stream<Item = Result<axum::response::sse::Event, std::convert::Infallible>>,
     > {
         let b = modkit::SseBroadcaster::<UserEvent>::new(4);
         b.sse_response()

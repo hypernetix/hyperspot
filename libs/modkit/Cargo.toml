@@ -26,6 +26,7 @@ modkit-macros = { path = "../modkit-macros" }
 modkit-errors = { path = "../modkit-errors", features = ["utoipa", "axum"] }
 modkit-db = { path = "../modkit-db" }
 modkit-odata = { path = "../modkit-odata", features = ["with-odata-params"] }
+modkit-sdk = { path = "../modkit-sdk" }
 module_orchestrator-contracts = { path = "../../modules/module_orchestrator/module_orchestrator-contracts" } # TODO: probably we need remove this dependency at the future
 module_orchestrator-grpc = { path = "../../modules/module_orchestrator/module_orchestrator-grpc", optional = true }
 
@@ -44,7 +45,8 @@ regex = { workspace = true, optional = true }
 tokio = { workspace = true }
 tokio-util = { workspace = true }
 tokio-stream = { workspace = true }
-futures = { workspace = true }
+futures-core = { workspace = true }
+futures-util = { workspace = true }
 
 # Router/types used in contracts and runtime
 axum = { workspace = true }

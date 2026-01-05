@@ -217,6 +217,7 @@ modules:
       enable_docs: false
       cors_enabled: false
       auth_disabled: true
+  users_info: {{}}
 "#,
         temp_dir
             .path()

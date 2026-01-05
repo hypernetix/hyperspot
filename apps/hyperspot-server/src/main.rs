@@ -176,6 +176,10 @@ fn override_modules_with_mock_db(config: &mut AppConfig) {
                 "database".to_owned(),
                 serde_json::json!({
                     "dsn": "sqlite::memory:",
+                    "pool": {
+                        "max_conns": 1,
+                        "min_conns": 1
+                    },
                     "params": {
                         "journal_mode": "WAL"
                     }

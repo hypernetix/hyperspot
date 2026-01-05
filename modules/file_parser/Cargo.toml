@@ -45,7 +45,7 @@ thiserror = { workspace = true }
 bytes = { workspace = true }
 
 # Futures and async streaming
-futures = { workspace = true }
+futures-util = { workspace = true }
 
 # Base64 encoding (used by stub parser)
 base64 = { workspace = true }

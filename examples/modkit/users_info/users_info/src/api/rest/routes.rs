@@ -214,7 +214,7 @@ mod sse_tests {
     use crate::api::rest::sse_adapter::SseUserEventPublisher;
     use crate::domain::events::UserDomainEvent;
     use crate::domain::ports::EventPublisher;
-    use futures::StreamExt;
+    use futures_util::StreamExt;
     use modkit::SseBroadcaster;
     use time::OffsetDateTime;
     use tokio::time::{timeout, Duration};

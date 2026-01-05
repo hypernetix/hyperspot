@@ -6,7 +6,7 @@ use axum::extract::{Extension, Query};
 use axum::http::HeaderMap;
 use axum::response::Response;
 use bytes::Bytes;
-use futures::stream;
+use futures_util::stream;
 use std::convert::Infallible;
 use tracing::{field::Empty, info};
 

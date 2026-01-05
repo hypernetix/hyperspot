@@ -1,0 +1,13 @@
+error[E0107]: function takes 0 generic arguments but 1 generic argument was supplied
+  --> tests/ui/fail/generic_type_parameter.rs:11:19
+   |
+11 |     let _ = user::age::<String>();
+   |                   ^^^---------- help: remove the unnecessary generics
+   |                   |
+   |                   expected 0 generic arguments
+   |
+note: function defined here, with 0 generic parameters
+  --> tests/ui/fail/generic_type_parameter.rs:6:5
+   |
+ 6 |     age: i32,
+   |     ^^^
