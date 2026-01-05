@@ -91,10 +91,7 @@ A **Module** is a logical component that provides a specific set of functionalit
 - Modules can have plugins - plugins are not exposed their own Public REST API, depend on the main module and just implement certain contract defined by their host module. Plugins typically are runtime components that can be loaded dynamically
 
 **Example modules:**
-- `api_ingress` - HTTP server and routing
-- `directory_service` - User and tenant management
 - `file_parser` - Document parsing and extraction
-- `grpc_hub` - gRPC communication gateway
 - `chat` - Chat module
 - `web_search` - Web search module
 
