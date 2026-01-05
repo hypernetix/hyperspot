@@ -77,29 +77,12 @@ Always include unit tests when introducing new code.
 
 ### 2.3. Run Code Quality Checks
 
-Key formatting rules:
-- **Line length**: 100 characters max
-- **Indentation**: 4 spaces (no tabs)
-- **Trailing commas**: Required in multi-line expressions
-
-Run all the quality checks:
+Build and run all the quality checks:
 
 ```bash
 # Run the complete quality check suite: formatting, linting, tests, and security
-make all
-```
-
-Run the unit tests:
-
-```bash
-# Run tests with output shown
-cargo test -- --nocapture
-
-# Run tests in a single thread
-cargo test -- --test-threads=1
-
-# Run tests marked as ignored
-cargo test -- --ignored
+make all # Linux/Mac
+python scripts/ci.py all # Windows
 ```
 
 Aim for high test coverage:

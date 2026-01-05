@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import argparse
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -11,17 +12,17 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PYTHON = sys.executable or "python"
 
 
-def run_cmd(cmd, env=None):
+def run_cmd(cmd, env=None, cwd=None):
     print(f"> {' '.join(cmd)}")
-    result = subprocess.run(cmd, env=env)
+    result = subprocess.run(cmd, env=env, cwd=cwd)
     if result.returncode != 0:
         sys.exit(result.returncode)
     return result
 
 
-def run_cmd_allow_fail(cmd, env=None):
+def run_cmd_allow_fail(cmd, env=None, cwd=None):
     print(f"> {' '.join(cmd)}")
-    return subprocess.run(cmd, env=env)
+    return subprocess.run(cmd, env=env, cwd=cwd)
 
 
 def step(msg):
@@ -38,23 +39,44 @@ def cmd_fmt(args):
         if result.returncode == 0:
             print("Code formatting is correct")
         else:
-            print("Formatting issues found. Run: python scripts/ci.py fmt --fix")
+            print(
+                "Formatting issues found. Run: python scripts/ci.py fmt --fix"
+            )
             sys.exit(result.returncode)
 
 
 def cmd_clippy(args):
     step("Running cargo clippy")
     if args.fix:
-        run_cmd(["cargo", "clippy", "--workspace", "--all-targets", "--fix", "--allow-dirty"])
+        run_cmd(
+            [
+                "cargo",
+                "clippy",
+                "--workspace",
+                "--all-targets",
+                "--fix",
+                "--allow-dirty",
+            ]
+        )
         print("Clippy issues fixed")
     else:
         result = run_cmd_allow_fail(
-            ["cargo", "clippy", "--workspace", "--all-targets", "--", "-D", "warnings"]
+            [
+                "cargo",
+                "clippy",
+                "--workspace",
+                "--all-targets",
+                "--",
+                "-D",
+                "warnings",
+            ]
         )
         if result.returncode == 0:
             print("No clippy warnings found")
         else:
-            print("Clippy warnings found. Run: python scripts/ci.py clippy --fix")
+            print(
+                "Clippy warnings found. Run: python scripts/ci.py clippy --fix"
+            )
             sys.exit(result.returncode)
 
 
@@ -100,6 +122,8 @@ def cmd_check(args):
     cmd_fmt(args)
     cmd_clippy(args)
     cmd_test(args)
+    cmd_dylint_test(args)
+    cmd_dylint(args)
     cmd_security(args)
     print("All checks passed")
 
@@ -110,7 +134,18 @@ def cmd_quickstart(_args):
     if not os.path.isdir(data_dir):
         os.makedirs(data_dir, exist_ok=True)
         print(f"Created data directory: {data_dir}")
-    run_cmd(["cargo", "run", "--bin", "hyperspot-server", "--", "--config", "config/quickstart.yaml", "run"])
+    run_cmd(
+        [
+            "cargo",
+            "run",
+            "--bin",
+            "hyperspot-server",
+            "--",
+            "--config",
+            "config/quickstart.yaml",
+            "run",
+        ]
+    )
 
 
 def wait_for_health(base_url, timeout_secs=30):
@@ -142,7 +177,10 @@ def check_pytest():
     result = run_cmd_allow_fail(["pytest", "--version"])
     if result.returncode == 0:
         return
-    print("ERROR: pytest is not installed. Install with: pip install -r testing/e2e/requirements.txt")
+    print(
+        "ERROR: pytest is not installed. Install with: "
+        "pip install -r testing/e2e/requirements.txt"
+    )
     sys.exit(1)
 
 
@@ -192,11 +230,30 @@ def cmd_e2e(args):
 
         # Build image
         step("Building Docker image for E2E tests")
-        run_cmd(["docker", "build", "-f", "testing/docker/hyperspot.Dockerfile", "-t", "hyperspot-api:e2e", "."])
+        run_cmd(
+            [
+                "docker",
+                "build",
+                "-f",
+                "testing/docker/hyperspot.Dockerfile",
+                "-t",
+                "hyperspot-api:e2e",
+                ".",
+            ]
+        )
 
         # Start environment
         step("Starting E2E docker-compose environment")
-        run_cmd(["docker", "compose", "-f", "testing/docker/docker-compose.yml", "up", "-d"])
+        run_cmd(
+            [
+                "docker",
+                "compose",
+                "-f",
+                "testing/docker/docker-compose.yml",
+                "up",
+                "-d",
+            ]
+        )
         docker_env_started = True
 
         # Wait for healthz
@@ -215,9 +272,15 @@ def cmd_e2e(args):
 
             # Start server in background with logs redirected to files
             server_cmd = [
-                "cargo", "run", "--bin", "hyperspot-server",
-                "--features", "users-info-example,tenant-resolver-example",
-                "--", "--config", "config/e2e-local.yaml"
+                "cargo",
+                "run",
+                "--bin",
+                "hyperspot-server",
+                "--features",
+                "users-info-example,tenant-resolver-example",
+                "--",
+                "--config",
+                "config/e2e-local.yaml",
             ]
 
             # Redirect stdout and stderr to log files
@@ -228,27 +291,24 @@ def cmd_e2e(args):
                 logs_dir, "hyperspot-e2e-error.log"
             )
 
-            with open(server_log_file, "w") as out_file, \
-                    open(server_error_file, "w") as err_file:
+            with open(server_log_file, "w") as out_file, open(
+                server_error_file, "w"
+            ) as err_file:
                 server_process = subprocess.Popen(
                     server_cmd,
                     stdout=out_file,
-                    stderr=err_file
+                    stderr=err_file,
                 )
 
             print("Server logs redirected to:")
             print(f"  - stdout: {server_log_file}")
             print(f"  - stderr: {server_error_file}")
             print(
-                f"  - application logs: "
+                "  - application logs: "
                 f"{os.path.join(logs_dir, 'hyperspot-e2e.log')}"
             )
-            print(
-                f"  - SQL logs: {os.path.join(logs_dir, 'sql.log')}"
-            )
-            print(
-                f"  - API logs: {os.path.join(logs_dir, 'api.log')}"
-            )
+            print(f"  - SQL logs: {os.path.join(logs_dir, 'sql.log')}")
+            print(f"  - API logs: {os.path.join(logs_dir, 'api.log')}")
 
             # Wait for server to be ready
             wait_for_health(base_url, timeout_secs=30)
@@ -271,7 +331,16 @@ def cmd_e2e(args):
 
     if args.docker and docker_env_started:
         step("Stopping E2E docker-compose environment")
-        run_cmd_allow_fail(["docker", "compose", "-f", "testing/docker/docker-compose.yml", "down", "-v"])
+        run_cmd_allow_fail(
+            [
+                "docker",
+                "compose",
+                "-f",
+                "testing/docker/docker-compose.yml",
+                "down",
+                "-v",
+            ]
+        )
 
     # Stop server if we started it
     if server_process is not None:
@@ -290,6 +359,127 @@ def cmd_e2e(args):
         print("E2E tests failed")
 
     sys.exit(exit_code)
+
+
+def cmd_dylint(_args):
+    step("Building dylint lints")
+    dylint_dir = os.path.join(PROJECT_ROOT, "dylint_lints")
+    run_cmd(["cargo", "build", "--release"], cwd=dylint_dir)
+    # Copy toolchain-suffixed names similar to Makefile
+    rustc_host = (
+        subprocess.check_output(["rustc", "--version", "--verbose"])
+        .decode()
+        .splitlines()
+    )
+    host = next((line.split()[-1] for line in rustc_host if line.startswith("host:")), "")
+    toolchain = "nightly"
+    rust_toolchain_path = os.path.join(dylint_dir, "rust-toolchain.toml")
+    if os.path.isfile(rust_toolchain_path):
+        with open(rust_toolchain_path, "r", encoding="utf-8") as f:
+            for line in f:
+                if "channel" in line:
+                    toolchain = line.split('"')[1]
+                    break
+    target_release = os.path.join(dylint_dir, "target", "release")
+    for fname in os.listdir(target_release):
+        if not fname.startswith("libde") and not fname.startswith("de"):
+            continue
+        if "@" in fname:
+            continue
+        if fname.endswith(".dylib"):
+            ext = ".dylib"
+        elif fname.endswith(".so"):
+            ext = ".so"
+        elif fname.endswith(".dll"):
+            ext = ".dll"
+        else:
+            continue
+        base = fname[: -len(ext)]
+        target = f"{base}@{toolchain}-{host}{ext}"
+        src = os.path.join(target_release, fname)
+        dst = os.path.join(target_release, target)
+        try:
+            shutil.copyfile(src, dst)
+        except OSError:
+            pass
+    dylint_libs = sorted(
+        [
+            os.path.join(target_release, f)
+            for f in os.listdir(target_release)
+            if (f.startswith("libde") or f.startswith("de"))
+            and ("@" in f)
+            and (
+                f.endswith(".dylib")
+                or f.endswith(".so")
+                or f.endswith(".dll")
+            )
+        ]
+    )
+    if not dylint_libs:
+        print("ERROR: No dylint libraries found after build.")
+        sys.exit(1)
+    lib_args = []
+    for lib in dylint_libs:
+        lib_args.extend(["--lib-path", lib])
+    run_cmd(
+        ["cargo", f"+{toolchain}", "dylint", *lib_args, "--workspace"],
+        cwd=PROJECT_ROOT,
+    )
+    print("Dylint checks passed")
+
+
+def cmd_dylint_test(_args):
+    step("Running dylint tests")
+    dylint_dir = os.path.join(PROJECT_ROOT, "dylint_lints")
+    run_cmd(["cargo", "test"], cwd=dylint_dir)
+    print("Dylint tests passed")
+
+
+def cmd_dylint_list(_args):
+    step("Listing dylint lints")
+    dylint_dir = os.path.join(PROJECT_ROOT, "dylint_lints")
+    target_release = os.path.join(dylint_dir, "target", "release")
+    dylint_libs = sorted(
+        [
+            os.path.join(target_release, f)
+            for f in os.listdir(target_release)
+            if (f.startswith("libde") or f.startswith("de"))
+            and (
+                f.endswith(".dylib")
+                or f.endswith(".so")
+                or f.endswith(".dll")
+            )
+        ]
+    )
+    if not dylint_libs:
+        print("ERROR: No dylint libraries found. Run 'python scripts/ci.py dylint' first.")
+        sys.exit(1)
+    for lib in dylint_libs:
+        print(f"=== {lib} ===")
+        run_cmd(["cargo", "dylint", "list", "--lib-path", lib], cwd=PROJECT_ROOT)
+
+
+def cmd_all(args):
+    step("Running full build and testing pipeline")
+    cmd_check(args)
+    step("Running SQLite integration tests")
+    run_cmd(
+        [
+            "cargo",
+            "test",
+            "-p",
+            "modkit-db",
+            "--features",
+            "sqlite,integration",
+            "--",
+            "--nocapture",
+        ]
+    )
+    step("Building release (stable)")
+    run_cmd(["cargo", "+stable", "build", "--release"])
+    step("Running e2e-local")
+    cmd_e2e(argparse.Namespace(docker=False, pytest_args=[]))
+    print("All (full pipeline) completed")
 
 
 def build_parser():
@@ -347,6 +537,23 @@ def build_parser():
         help="Extra arguments passed to pytest (use -- to separate)",
     )
     p_e2e.set_defaults(func=cmd_e2e)
+
+    # dylint
+    p_dylint = subparsers.add_parser("dylint", help="Build and run dylint lints")
+    p_dylint.set_defaults(func=cmd_dylint)
+
+    # dylint-test
+    p_dylint_test = subparsers.add_parser("dylint-test", help="Run dylint UI tests")
+    p_dylint_test.set_defaults(func=cmd_dylint_test)
+
+    # dylint-list
+    p_dylint_list = subparsers.add_parser("dylint-list", help="List available dylint lints")
+    p_dylint_list.set_defaults(func=cmd_dylint_list)
+
+    # all
+    p_all = subparsers.add_parser("all", help="Run full pipeline (Makefile all equivalent)")
+    p_all.add_argument("--fix", action="store_true", help="Auto-fix formatting/clippy")
+    p_all.set_defaults(func=cmd_all)
 
     return parser
 
