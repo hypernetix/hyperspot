@@ -6,115 +6,81 @@ For the current workflow, see [Module Development Workflow](./README.md).
 
 ## Index
 
-- [1. Verification Flows](#1-verification-flows)
-  - [Verification Types](#verification-types)
-  - [Verification Output Format](#verification-output-format)
-  - [When to Run Verifications](#when-to-run-verifications)
-  - [Implementation Plan](#implementation-plan)
+- [1. Verification Automation](#1-verification-automation)
+  - [Current Implementation](#current-implementation)
+  - [Future: Automation Scripts](#future-automation-scripts)
+  - [Future: CI/CD Integration](#future-cicd-integration)
+  - [Future: Periodic Global Verification](#future-periodic-global-verification)
 - [2. Migration to Agent Skills](#2-migration-to-agent-skills)
 
 ---
 
-## 1. Verification Flows
+## 1. Verification Automation
 
-Define automated verification workflows to ensure consistency across documentation, specifications, and code.
+> **Status:** Verification is implemented via AI prompts in Steps 2.3, 3.1, and 3.2. This section tracks future automation work.
 
-### Verification Types
+### Current Implementation
 
-#### a) OpenSpec Specs vs. Design and Requirements
+Verification is currently performed using AI prompts:
+- **Step 2.3:** [`verify_specs_vs_requirements.md`](./prompts/verify_specs_vs_requirements.md)
+- **Step 3.1:** [`verify_code_vs_specs_and_requirements.md`](./prompts/verify_code_vs_specs_and_requirements.md)
+- **Step 3.2:** [`verify_code_vs_design.md`](./prompts/verify_code_vs_design.md)
 
-**Purpose:** Verify that OpenSpec scenarios align with DESIGN.md architecture and REQUIREMENTS.md definitions.
+Reports are stored in `modules/{module}/docs/verification/{change-name}/`.
 
-**What to verify:**
-- All requirements in REQUIREMENTS.md marked as implemented in IMPLEMENTATION_PLAN.md have corresponding scenarios in OpenSpec specs
-- Scenarios reference correct requirement IDs
-- No orphaned scenarios (scenarios without corresponding requirements)
-- Scenario coverage matches implementation phase scope from DESIGN.md
+### Future: Automation Scripts
 
-#### b) Source Code vs. OpenSpec Specs and Requirements
+Create scripts to automate structural verification checks that don't require AI:
 
-**Purpose:** Verify that implementation matches documented specifications and requirements.
+**Potential scripts (Python or Rust):**
 
-**What to verify:**
-- All scenarios from OpenSpec specs are actually implemented
-- All scenarios from OpenSpec specs are covered by e2e tests
-- REST endpoints match OpenSpec scenario descriptions
-- Data models in code match models described in requirements
-- Error handling matches scenarios (e.g., 404, 400, 500 cases)
-- Security requirements (#tenant-isolation, #rbac) are implemented
+| Script | Purpose |
+|--------|---------|
+| `verify-requirement-refs` | Check all `#module/name` references point to existing requirements |
+| `verify-scenario-coverage` | Ensure all completed requirements have scenarios |
+| `verify-id-formats` | Validate ID format consistency (`#{module}/P{N}`, `#{module}/{name}`) |
+| `verify-cross-refs` | Check IMPLEMENTATION_PLAN.md ↔ REQUIREMENTS.md alignment |
 
-#### c) Source Code vs. Design
+**Location:** `tools/verify/`
 
-**Purpose:** Verify that code structure follows DESIGN.md architecture.
+**Integration:**
+```bash
+# Run all verification scripts
+make verify
 
-**What to verify:**
-- Module layer structure matches DESIGN.md (contract, api, domain, infra)
-- Components described in DESIGN.md exist in code
-- Integration points (ClientHub dependencies, REST routes) match design
-- Data flow implementation follows DESIGN.md diagrams
-
-### Verification Output Format
-
-Verification reports should be written as Markdown documents with the following structure:
-
-```markdown
-# Verification Report: Specs vs. Requirements
-
-**Module:** `types_registry`  
-**Type:** Specs vs. Requirements  
-**Status:** ❌ Failed  
-**Timestamp:** 2025-01-01 12:00:00 UTC
-
-## Summary
-
-| Metric | Count |
-|--------|-------|
-| Total Requirements | 12 |
-| Requirements with Scenarios | 10 |
-| Missing Scenarios | 2 |
-| Orphaned Scenarios | 0 |
-
-## Issues
-
-### ❌ Error: Missing Scenario
-
-**Requirement:** #typereg/entity-lookup  
-**Description:** Requirement #typereg/entity-lookup has no corresponding scenarios  
-**Location:** [REQUIREMENTS.md:45](file:///path/to/modules/types_registry/docs/REQUIREMENTS.md#L45)
-
----
-
-### ⚠️ Warning: Scenario Mismatch
-
-**Scenario:** "List entities with invalid token"  
-**Description:** Scenario references non-existent requirement #typereg/invalid-req  
-**Location:** [spec.md:120](file:///path/to/openspec/specs/types-registry/spec.md#L120)
-
----
-
-## Status Legend
-
-- ✅ **Passed** — No issues found
-- ⚠️ **Warning** — Non-critical issues that should be addressed
-- ❌ **Failed** — Critical issues that must be fixed
+# Run specific check
+make verify-requirement-refs
 ```
 
-### When to Run Verifications
+### Future: CI/CD Integration
 
-| Timing | Verification | Goal |
-|--------|--------------|------|
-| During Design Review (Step 1.4) | Design self-consistency | Catch design issues before implementation |
-| Before Creating OpenSpec Proposal | Requirements vs. Design | Ensure new requirements align with design |
-| After Archiving OpenSpec Change | Specs vs. Requirements | Ensure all scenarios are documented and linked |
-| Before PR Merge | All verifications (a, b, c) | Comprehensive consistency check |
-| CI/CD Pipeline | Code vs. OpenSpec Specs (b) | Continuous verification |
+- Add verification to PR checks
+- Configurable severity thresholds (fail on errors, warn on warnings)
+- Auto-generate verification reports on PR creation
 
-### Implementation Plan
+### Future: Periodic Global Verification
 
-- Create verification scripts in `tools/verify/`
-- Integrate with `make verify` command
-- Add to CI/CD pipeline with configurable severity thresholds
-- Generate reports as Markdown files in `docs/verification/`
+Run verification across the entire module (not just per-change) to catch drift over time:
+
+**Scope:**
+- Verify ALL specs match ALL requirements across the module
+- Verify ALL code matches ALL archived specs
+- Detect orphaned requirements (no scenarios), orphaned specs (no code), undocumented code
+
+**Potential triggers:**
+- Scheduled (weekly/monthly)
+- Before major releases
+- On-demand via `make verify-all`
+
+**Reports:**
+- `modules/{module}/docs/verification/specs_vs_requirements.md`
+- `modules/{module}/docs/verification/code_vs_specs.md`
+- `modules/{module}/docs/verification/code_vs_design.md`
+
+**Use cases:**
+- Catch drift from incremental changes
+- Validate module consistency before 1.0 release
+- Audit existing modules for documentation gaps
 
 ---
 

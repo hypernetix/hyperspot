@@ -21,9 +21,14 @@ It combines AI-assisted design with [OpenSpec-driven](https://openspec.dev/) imp
 - [Step 2: Implementation (OpenSpec)](#step-2-implementation-openspec)
   - [2.1: Create OpenSpec Change Proposal](#step-21-create-openspec-change-proposal)
   - [2.2: Review and Refine Proposal](#step-22-review-and-refine-proposal)
-  - [2.3: Implement the Feature](#step-23-implement-the-feature)
-  - [2.4: Generate E2E Tests](#step-24-write-e2e-tests-if-applicable)
-  - [2.5: Archive the OpenSpec Change](#step-25-archive-the-openspec-change)
+  - [2.3: Verify Specs vs. Requirements](#step-23-verify-specs-vs-requirements)
+  - [2.4: Implement the Feature](#step-24-implement-the-feature)
+  - [2.5: Generate E2E Tests](#step-25-generate-e2e-tests-if-applicable)
+- [Step 3: Verification & Completion](#step-3-verification--completion)
+  - [3.1: Verify Code vs. Specs & Requirements](#step-31-verify-code-vs-specs--requirements)
+  - [3.2: Verify Code vs. Design](#step-32-verify-code-vs-design)
+  - [3.3: Archive the OpenSpec Change](#step-33-archive-the-openspec-change)
+  - [3.4: Create PR for Feature](#step-34-create-pr-for-feature)
 - [Adding Features to Existing Modules](#adding-features-to-existing-modules)
 - [Best Practices](#best-practices)
 - [References](#references)
@@ -51,13 +56,21 @@ It combines AI-assisted design with [OpenSpec-driven](https://openspec.dev/) imp
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
+│ ITERATE: For each feature in IMPLEMENTATION_PLAN                │
+│                                                                 │
 │ Step 2: Implementation (OpenSpec)                               │
-│  └─ For each feature in IMPLEMENTATION_PLAN:                    │
-│      1. Create OpenSpec change proposal                         │
-│      2. Review and refine proposal, specs and tasks             │
-│      3. Implement code + unit tests                             │
-│      4. Generate E2E tests (if applicable)                         │
-│      5. Archive change → specs updated                          │
+│  └─ 2.1: Create OpenSpec change proposal                        │
+│  └─ 2.2: Review and refine proposal                             │
+│  └─ 2.3: Verify specs vs. requirements                          │
+│  └─ 2.4: Implement code + unit tests                            │
+│  └─ 2.5: Generate E2E tests (if applicable)                     │
+│                              ↓                                  │
+│ Step 3: Verification & Completion                               │
+│  └─ 3.1: Verify code vs. specs & requirements                   │
+│  └─ 3.2: Verify code vs. design                                 │
+│       → Issues found? Fix and return to Step 2.4                │
+│  └─ 3.3: Archive the OpenSpec change                            │
+│  └─ 3.4: Create PR for feature                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -70,11 +83,11 @@ It combines AI-assisted design with [OpenSpec-driven](https://openspec.dev/) imp
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│ Step 2: Implementation (OpenSpec) — same as new module          │
+│ Steps 2-3: Implementation + Verification (same as new module)   │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│ Step 3: Update CHANGELOG.md                                     │
+│ Step 4: Update CHANGELOG.md                                     │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -97,7 +110,7 @@ For detailed formats and templates, see [Module Development Reference](./REFEREN
 All design steps use prompt templates from [`prompts/`](./prompts/):
 
 1. Open the prompt template file
-2. Replace `{module_name}` (snake_case) and `{MODULE}` (UPPERCASE prefix)
+2. Replace `{module}` with lowercase module name (e.g., `oagw`, `types_registry`)
 3. Submit to AI assistant with module context
 4. Review and refine the generated output
 
@@ -106,6 +119,9 @@ All design steps use prompt templates from [`prompts/`](./prompts/):
 | 1.1 | [`create_design_and_requirements.md`](./prompts/create_design_and_requirements.md) | `DESIGN.md` + `REQUIREMENTS.md` |
 | 1.2 | [`create_implementation_plan.md`](./prompts/create_implementation_plan.md) | `IMPLEMENTATION_PLAN.md` |
 | 1.3 | [`validate_design_docs.md`](./prompts/validate_design_docs.md) | Validation report |
+| 2.3 | [`verify_specs_vs_requirements.md`](./prompts/verify_specs_vs_requirements.md) | Validation report |
+| 3.1 | [`verify_code_vs_specs_and_requirements.md`](./prompts/verify_code_vs_specs_and_requirements.md) | `verification/{change-name}/code_vs_specs_and_requirements.md` |
+| 3.2 | [`verify_code_vs_design.md`](./prompts/verify_code_vs_design.md) | `verification/{change-name}/code_vs_design.md` |
 
 ---
 
@@ -248,16 +264,32 @@ See [OpenSpec documentation](https://github.com/Fission-AI/OpenSpec/blob/main/RE
 
 ### Step 2.2: Review and Refine Proposal
 
-1. **Review** the generated proposal for alignment with requirements and design (if generated) for alignment with the module's design documents.
+1. **Review** the generated proposal for alignment with the module's design documents
 2. **Refine** specs — ensure scenarios cover success, error, and edge cases
 3. **Validate** tasks — ensure they're granular and actionable (< 1 hour each)
-4. **Run** `openspec validate --strict` before implementing
+4. **Run** `openspec validate --strict` before proceeding
 
 See [OpenSpec documentation](https://github.com/Fission-AI/OpenSpec/blob/main/README.md) for validation.
 
 ---
 
-### Step 2.3: Implement the Feature
+### Step 2.3: Verify Specs vs. Requirements
+
+**Prompt:** [`verify_specs_vs_requirements.md`](./prompts/verify_specs_vs_requirements.md)
+
+Before implementation, validate that the proposed specs align with requirements:
+
+| Check | Description |
+|-------|-------------|
+| **Coverage** | All referenced requirements exist in REQUIREMENTS.md |
+| **Completeness** | Proposed scenarios cover the feature scope |
+| **Consistency** | Scenarios use correct requirement IDs |
+
+**Pass Criteria:** Zero errors required to proceed to implementation.
+
+---
+
+### Step 2.4: Implement the Feature
 
 **Command:** `/openspec:apply` (or equivalent AI command)
 
@@ -267,7 +299,7 @@ See [OpenSpec documentation](https://github.com/Fission-AI/OpenSpec/blob/main/RE
 
 ---
 
-### Step 2.4: Generate E2E Tests (if applicable)
+### Step 2.5: Generate E2E Tests (if applicable)
 
 Generate E2E tests when the feature:
 - Exposes REST endpoints
@@ -276,9 +308,54 @@ Generate E2E tests when the feature:
 
 ---
 
-### Step 2.5: Archive the OpenSpec Change
+## Step 3: Verification & Completion
 
-After implementation is complete and tests pass:
+Before creating a PR, verify that implementation matches documentation. Issues found should be fixed before proceeding.
+
+**Output:** Reports in `modules/{module}/docs/verification/{change-name}/`
+
+---
+
+### Step 3.1: Verify Code vs. Specs & Requirements
+
+**Prompt:** [`verify_code_vs_specs_and_requirements.md`](./prompts/verify_code_vs_specs_and_requirements.md)
+
+Verify that implementation matches OpenSpec scenarios and requirements:
+
+| Check | Description |
+|-------|-------------|
+| **Scenario Implementation** | All scenarios have corresponding code |
+| **Requirements Coverage** | All completed requirements have working code |
+| **E2E Test Coverage** | Scenarios are covered by E2E tests |
+| **Security Requirements** | `#tenant-isolation`, `#rbac` are enforced in code |
+
+**Output:** `modules/{module}/docs/verification/{change-name}/code_vs_specs_and_requirements.md`
+
+**Issues Found?** Fix issues and return to [Step 2.4](#step-24-implement-the-feature), then re-verify.
+
+---
+
+### Step 3.2: Verify Code vs. Design
+
+**Prompt:** [`verify_code_vs_design.md`](./prompts/verify_code_vs_design.md)
+
+Verify that code structure follows DESIGN.md architecture:
+
+| Check | Description |
+|-------|-------------|
+| **Layer Structure** | Code matches DESIGN.md layers (contract, api, domain, infra) |
+| **Components** | All described components exist in code |
+| **Integration Points** | Dependencies and routes match design |
+
+**Output:** `modules/{module}/docs/verification/{change-name}/code_vs_design.md`
+
+**Issues Found?** Fix issues and return to [Step 2.4](#step-24-implement-the-feature), then re-verify.
+
+---
+
+### Step 3.3: Archive the OpenSpec Change
+
+After verification passes, archive the completed change:
 
 **Command:** `/openspec:archive` (or equivalent AI command)
 
@@ -288,6 +365,24 @@ This:
 - Check off the feature in IMPLEMENTATION_PLAN.md
 
 See [OpenSpec documentation](https://github.com/Fission-AI/OpenSpec/blob/main/README.md) for archiving.
+
+---
+
+### Step 3.4: Create PR for Feature
+
+After verification passes and change is archived, create a PR that includes code, specs, and verification reports.
+
+1. **Commit** code changes, updated specs, and verification reports
+2. **Create PR** with title: `feat({module}): {feature-name}`
+3. **PR description** should include:
+   - Feature summary and requirement references
+   - Scenarios implemented
+   - Link to verification reports
+
+**PR includes:**
+- `modules/{module}/src/` changes
+- `modules/{module}/openspec/specs/` updates
+- `modules/{module}/docs/verification/{change-name}/*.md` reports
 
 ---
 
@@ -303,13 +398,13 @@ For modules with existing design documentation:
 4. **Add feature** to IMPLEMENTATION_PLAN.md with requirement references
 5. **Validate** using [Step 1.3](#step-13-validate-design-documents)
 
-### Step 2: Implementation
+### Steps 2-3: Implementation & Verification
 
-Follow [Step 2: Implementation (OpenSpec)](#step-2-implementation-openspec) above.
+Follow [Step 2: Implementation](#step-2-implementation-openspec) and [Step 3: Verification & Completion](#step-3-verification--completion) above.
 
-### Step 3: Update CHANGELOG.md
+### Update CHANGELOG.md
 
-Add entry to `modules/{module}/docs/CHANGELOG.md` following [Keep A Changelog](https://keepachangelog.com/) format.
+After each feature PR is merged, add entry to `modules/{module}/docs/CHANGELOG.md` following [Keep A Changelog](https://keepachangelog.com/) format.
 
 Reference requirement IDs in entries:
 ```markdown

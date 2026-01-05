@@ -136,7 +136,10 @@ hyperspot/
 │       └── prompts/                       # AI prompt templates
 │           ├── create_design_and_requirements.md
 │           ├── create_implementation_plan.md
-│           └── validate_design_docs.md
+│           ├── validate_design_docs.md
+│           ├── verify_specs_vs_requirements.md
+│           ├── verify_code_vs_specs_and_requirements.md
+│           └── verify_code_vs_design.md
 │
 ├── modules/{module}/
 │   ├── src/                               # Code
@@ -144,7 +147,12 @@ hyperspot/
 │   │   ├── DESIGN.md                      # Architecture + phases (#{module}/P1, #{module}/P2...)
 │   │   ├── IMPLEMENTATION_PLAN.md         # Feature checklist (already implemented and planned) divided by phases
 │   │   ├── REQUIREMENTS.md                # Module requirements (#module/name format)
-│   │   └── CHANGELOG.md                   # Change history with requirement references
+│   │   ├── CHANGELOG.md                   # Change history with requirement references
+│   │   └── verification/                  # Implementation verification reports
+│   │       └── {change-name}/             # Per-change verification reports
+│   │           ├── specs_vs_requirements.md
+│   │           ├── code_vs_specs_and_requirements.md
+│   │           └── code_vs_design.md
 │   └── openspec/                          # Module-specific OpenSpec
 │       ├── AGENTS.md                      # AI instructions (from openspec init)
 │       ├── project.md                     # Module context
