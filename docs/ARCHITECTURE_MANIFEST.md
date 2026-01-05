@@ -389,7 +389,7 @@ An **extension point** is a well-defined interface where new functionality and d
 
 **Example Use Cases:**
 
-- A vendor adds a proprietary chat extension for it's competitive solutio
+- A vendor adds a proprietary chat extension for it's competitive solution
 - A researcher implements a new MCP or benchmark suite as a module worker
 - A user creates custom FaaS functions or workflows for domain-specific workflows
 - An enterprise integrates a custom search engine for compliance requirements
