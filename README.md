@@ -63,6 +63,39 @@ curl http://127.0.0.1:8087/health
 # visit: http://127.0.0.1:8087/docs
 ```
 
+### Example Configuration (config/quickstart.yaml)
+
+```yaml
+# HyperSpot Server Configuration
+
+# Core server configuration (global section)
+server:
+  home_dir: "~/.hyperspot"
+
+# Database configuration (global section)
+database:
+  url: "sqlite://database/database.db"
+  max_conns: 10
+  busy_timeout_ms: 5000
+
+# Logging configuration (global section)
+logging:
+  default:
+    console_level: info
+    file: "logs/hyperspot.log"
+    file_level: warn
+    max_age_days: 28
+    max_backups: 3
+    max_size_mb: 1000
+
+# Per-module configurations moved under modules section
+modules:
+  api_ingress:
+    bind_addr: "127.0.0.1:8087"
+    enable_docs: true
+    cors_enabled: false
+```
+
 ### Creating Your First Module
 
 See [NEW_MODULE.md](guidelines/NEW_MODULE.md), but also [MODKIT_UNIFIED_SYSTEM.md](docs/MODKIT_UNIFIED_SYSTEM.md) and [MODKIT_PLUGINS.md](docs/MODKIT_PLUGINS.md) for more details.
