@@ -70,9 +70,32 @@ Follow the coding standards and guidelines:
 1. See common [RUST.md](./guidelines/DNA/languages/RUST.md) guideline
 2. When develop new REST API use [API.md](./guidelines/DNA/REST/API.md), [PAGINATION](./guidelines/DNA/REST/PAGINATION.md), [STATUS_CODES](./guidelines/DNA/REST/STATUS_CODES.md)
 3. When develop new Module use [NEW_MODULE.md](./guidelines/NEW_MODULE.md)
-4. Security [SECURITY.md](./guidelines/SECURITY.md)
+4. When design features use [FEATURE_DRIVEN_DESIGN.md](./guidelines/FEATURE_DRIVEN_DESIGN.md)
+5. Security [SECURITY.md](./guidelines/SECURITY.md)
 
 Always include unit tests when introducing new code.
+
+**OpenSpec Workflow**:
+
+HyperSpot uses [OpenSpec](https://openspec.dev/) for spec-driven development. For feature implementation:
+
+1. **Design Phase**: Create feature DESIGN.md with OpenSpec Changes Plan
+2. **Initialize**: Run `/openspec-init {feature-slug}` to create change structure
+3. **Implement**: Work through changes using `openspec` CLI commands
+4. **Complete**: Archive changes with `openspec archive {change-name}`
+
+See [Feature-Driven Design Guide](./guidelines/FEATURE_DRIVEN_DESIGN.md) for full workflow.
+
+**OpenSpec CLI**:
+```bash
+npm install -g @fission-ai/openspec@latest  # Install
+openspec list                                # List changes
+openspec show {change-name}                  # View details
+openspec validate {change-name}              # Validate structure
+openspec archive {change-name}               # Complete & merge
+```
+
+Resources: [OpenSpec.dev](https://openspec.dev/) | [GitHub](https://github.com/Fission-AI/OpenSpec)
 
 
 ### 2.3. Run Code Quality Checks
