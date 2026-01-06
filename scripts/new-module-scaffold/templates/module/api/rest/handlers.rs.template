@@ -1,0 +1,14 @@
+use modkit::api::prelude::*;
+use crate::domain::service::Service;
+use crate::api::rest::dto::ExampleDto;
+use std::sync::Arc;
+use axum::Extension;
+
+/// Example endpoint (public - no auth required)
+/// TODO: remove it and replace with required API handlers
+pub async fn example(
+    Extension(svc): Extension<Arc<Service>>,
+) -> ApiResult<JsonBody<ExampleDto>> {{
+    let example = svc.example().await;
+    Ok(Json(ExampleDto::from(example)))
+}}

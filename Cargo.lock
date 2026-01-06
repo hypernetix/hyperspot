@@ -2276,6 +2276,7 @@ dependencies = [
  "sqlx",
  "tempfile",
  "tenant_resolver-gw",
+ "todoer",
  "tokio",
  "tokio-util",
  "tracing",
@@ -5844,6 +5845,46 @@ name = "tl"
 version = "0.7.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b130bd8a58c163224b44e217b4239ca7b927d82bf6cc2fea1fc561d15056e3f7"
+
+[[package]]
+name = "todoer"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "api_ingress",
+ "arc-swap",
+ "async-trait",
+ "axum",
+ "chrono",
+ "futures",
+ "inventory",
+ "modkit",
+ "modkit-auth",
+ "modkit-odata",
+ "modkit-security",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.17",
+ "todoer-sdk",
+ "tokio",
+ "tower",
+ "tower-http",
+ "tracing",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "todoer-sdk"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "modkit-odata",
+ "modkit-security",
+ "thiserror 2.0.17",
+ "uuid",
+]
 
 [[package]]
 name = "tokio"

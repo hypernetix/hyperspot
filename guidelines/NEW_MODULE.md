@@ -1,3 +1,5 @@
+audience: human, agent
+---
 # New Module Guideline (Hyperspot / ModKit)
 
 This guide provides a comprehensive, step-by-step process for creating production-grade Hyperspot modules. It is
@@ -88,6 +90,8 @@ modules/<your-module>/
 > - `users_info/` — Module crate containing implementation, local client, domain, and REST handlers
 
 ### Step 1: Project & Cargo Setup
+
+NOTE: Using the scaffold tool, you can skip manual crate/Cargo setup; it generates SDK and module crates with lib.rs, SDK/domain/REST stubs. You still must wire workspace members and server deps/imports manually per the tool’s printed instructions and customize generated code.
 
 #### 1a. Create SDK crate `<your-module>-sdk/Cargo.toml`
 
@@ -235,6 +239,8 @@ pub mod infra;
 
 ### Step 2: Data types naming matrix
 
+NOTE: Scaffold creates initial SDK models and REST DTO files, but the naming matrix across DB/domain/API requires manual alignment and mappings; adjust types and conversions yourself.
+
 **Rule:** Use the following naming matrix for your data types:
 
 | Operation              | DB Layer (sqlx/SeaORM)<br/>`src/infra/storage/entity.rs` | Domain Layer (contract model)<br/>`src/contract/model.rs` | API Request (in)<br/>`src/api/rest/dto.rs`      | API Response (out)<br/>`src/api/rest/dto.rs`                                                    |
@@ -257,6 +263,8 @@ Notes:
   `src/api/rest/mapper.rs`.
 
 ### Step 3: Errors management
+
+NOTE: Scaffold provides domain error, SDK error, and REST Problem mapping stubs; you must implement concrete variants and From conversions, and register OpenAPI error responses in routes manually.
 
 ModKit provides a unified error handling system with `Problem` (RFC-9457) for type-safe error
 propagation.
@@ -503,6 +511,8 @@ router = OperationBuilder::get("/users-info/v1/users/{id}")
 
 ### Step 4: SDK Crate (Public API for Rust Clients)
 
+NOTE: Scaffold generates `<module>-sdk` with api.rs, models.rs, errors.rs, and lib.rs; customize trait methods, models, and errors to your domain. Templates avoid serde in SDK, but you must review and adapt.
+
 The SDK crate (`<module>-sdk`) defines the transport-agnostic interface for your module.
 Consumers depend only on this crate — not the full module implementation.
 
@@ -656,6 +666,8 @@ pub trait UsersInfoApi: Send + Sync {
 - Works seamlessly across local and gRPC transports
 
 ### Step 5: Domain Layer
+
+NOTE: Scaffold generates domain stubs (service.rs, ports.rs, repo.rs, error.rs, mod.rs); you must implement business logic and repositories. Events.rs is not generated—add domain events manually if needed.
 
 This layer contains the core business logic, free from API specifics and infrastructure concerns.
 All service methods receive `&SecurityCtx` for authorization and access control.
@@ -872,6 +884,8 @@ All service methods receive `&SecurityCtx` for authorization and access control.
    ```
 
 ### Step 6: Module Wiring & Lifecycle
+
+NOTE: Scaffold creates module.rs, config.rs, and local_client.rs with macro and trait stubs; set capabilities/deps and implement init/migrate/register_rest bodies yourself. Stateful/SSE lifecycle wiring is not generated.
 
 #### `#[modkit::module]` Full Syntax
 
@@ -1097,6 +1111,8 @@ fn _ensure_modules_linked() {
 **Note:** Replace `your_module` with your actual module name and `YourModule` with your module struct name.
 
 ### Step 7: REST API Layer (Optional)
+
+NOTE: Scaffold generates REST stubs (dto.rs, handlers.rs, routes.rs, error.rs); you must define endpoints, auth/feature gating, DTO schemas, and error registrations. Ingress hosts the server—do not add a REST host.
 
 This layer adapts HTTP requests to domain calls. It is required only for modules exposing their own REST API to UI or
 external API clients.
@@ -1367,6 +1383,8 @@ schema:
 
 ### Step 8: Infra/Storage Layer (Optional)
 
+NOTE: Not covered by the scaffold; implement SeaORM entities, mappers, OData field mapping, and migrations manually if your module uses `db` capability.
+
 If no database required: skip `DbModule`, remove `db` from capabilities.
 
 This layer implements the domain's repository traits with **Secure ORM** for tenant isolation.
@@ -1549,6 +1567,8 @@ Database
 
 ### Step 9: SSE Integration (Optional)
 
+NOTE: Not covered by the scaffold; add `sse_adapter.rs`, broadcaster fields, and SSE route registration manually if you need real-time events.
+
 If no SSE required: Remove `SseBroadcaster` and event publishing
 
 For real-time event streaming, add Server-Sent Events support.
@@ -1616,6 +1636,8 @@ For real-time event streaming, add Server-Sent Events support.
    ```
 
 ### Step 10: Local Client Implementation
+
+NOTE: Scaffold generates local_client.rs implementing the SDK trait; ensure DomainError→SDK error conversion exists and methods forward `&SecurityCtx`. Adapt methods and types to your domain.
 
 Implement the local client adapter that bridges the domain service to the SDK API trait.
 The local client implements the SDK trait and forwards calls to domain service methods.
@@ -1732,6 +1754,8 @@ impl From<DomainError> for UsersInfoError {
 
 ### Step 11: Register Module in HyperSpot Server
 
+NOTE: The tool does not modify server files; you must manually add workspace members, add the dependency in apps/hyperspot-server/Cargo.toml, and import in src/registered_modules.rs per the tool’s wiring instructions.
+
 **CRITICAL:** After creating your module, you MUST register it in the HyperSpot server application to make it
 discoverable and include its API endpoints in the OpenAPI documentation.
 
@@ -1780,6 +1804,8 @@ Then check the OpenAPI documentation at `http://127.0.0.1:8087/docs` to verify y
 ---
 
 ### Step 12: Testing
+
+NOTE: Scaffold includes a basic `tests/smoke.rs`; you should add unit, integration/REST, and SSE tests manually to cover your business logic and handlers.
 
 - **Unit Tests:** Place next to the code being tested. Mock repository traits to test domain service logic in isolation.
 - **Integration/REST Tests:** Place in the `tests/` directory. Use `Router::oneshot` with a stubbed service or a real
@@ -1911,6 +1937,8 @@ async fn test_sse_broadcaster() {
 ---
 
 ### Step 13: Out-of-Process (OoP) Module Support (Optional)
+
+NOTE: Not covered by the scaffold; follow MODKIT_UNIFIED_SYSTEM.md to create `*-contracts`, `*-grpc`, and module crates with server/binary, and wire gRPC clients manually.
 
 ModKit supports running modules as separate processes with gRPC-based inter-process communication.
 This enables process isolation, language flexibility, and independent scaling.
@@ -2250,6 +2278,8 @@ async fn init(&self, ctx: &ModuleCtx) -> anyhow::Result<()> {
 ---
 
 ### Step 14: Plugin-Based Modules (Gateway + Plugins Pattern)
+
+NOTE: Not covered by the scaffold; implement gateway SDK (public + plugin API traits), GTS schema, gateway module, and plugin modules, and register schema/instances and scoped clients manually.
 
 For modules that require **multiple interchangeable implementations** (e.g., different vendors, providers, or
 strategies), use the **Gateway + Plugins** pattern.

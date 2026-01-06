@@ -1,0 +1,42 @@
+//! Infrastructure layer mapping from type-safe `FilterNode` to `SeaORM` Conditions.
+//!
+//! This module is the ONLY place where we map from DTO-level filter fields to
+//! `SeaORM` Column types. The API and domain layers work exclusively with `FilterNode`
+//! and do not know about `SeaORM` Column enums.
+//!
+//! This module provides the complete `OData` mapping including filtering, ordering,
+//! and cursor extraction - all using the type-safe `FilterField` approach.
+
+use modkit_db::odata::sea_orm_filter::{{FieldToColumn, ODataFieldMapping,
+}};
+
+use crate::api::rest::dto::ExampleDtoFilterField;
+use crate::infra::storage::entities::example_entity::{{Column, Entity, Model}};
+
+// TODO(PLACEHOLDER): replace your own OData mapper 
+
+pub struct ExampleODataMapper;
+
+impl FieldToColumn<ExampleDtoFilterField> for ExampleODataMapper {
+    type Column = Column;
+
+    fn map_field(field: ExampleDtoFilterField) -> Column {{
+        match field {{
+            ExampleDtoFilterField::Id => Column::Id,
+            ExampleDtoFilterField::CreatedAt => Column::CreatedAt,
+        }}
+    }}
+}
+
+impl ODataFieldMapping<ExampleDtoFilterField> for ExampleODataMapper {
+    type Entity = Entity;
+
+    fn extract_cursor_value(model: &Model, field: ExampleDtoFilterField) -> sea_orm::Value {
+        match field {
+            ExampleDtoFilterField::Id => sea_orm::Value::Uuid(Some(Box::new(model.id))),
+            ExampleDtoFilterField::CreatedAt => {
+                sea_orm::Value::TimeDateTimeWithTimeZone(Some(Box::new(model.created_at)))
+            }
+        }
+    }
+}

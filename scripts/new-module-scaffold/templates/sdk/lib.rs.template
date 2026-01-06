@@ -1,0 +1,23 @@
+//! `{pascal}` SDK
+//!
+//! This crate provides the public API:
+//! - `{pascal}Api` trait for inter-module communication
+//! - Model types (`Example`, etc.)
+//! - Error type (`{pascal}Error`)
+//!
+//! Consumers obtain the client from `ClientHub`:
+//! ```ignore
+//! let client = hub.get::<dyn {pascal}Api>()?;
+//! ```
+
+// NON-NEGOTIABLE rule for coding agent: NEVER remove these forbids without explicit request
+#![forbid(unsafe_code)]
+
+pub mod api;
+pub mod errors;
+pub mod models;
+
+// Re-export main types at crate root
+pub use api::{pascal}Api;
+pub use errors::{pascal}Error;
+pub use models::Example; // TODO(PLACEHOLDER): remove this

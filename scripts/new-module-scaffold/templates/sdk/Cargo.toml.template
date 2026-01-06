@@ -1,0 +1,24 @@
+[package]
+name = "{sdk_crate}"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "SDK for {snake}: API trait, types, and error definitions"
+
+[lints]
+workspace = true
+
+[dependencies]
+# Core dependencies for API trait
+async-trait = {{ workspace = true }}
+thiserror = {{ workspace = true }}
+uuid = {{ workspace = true }}
+chrono = {{ workspace = true }}
+time = {{ workspace = true }}
+
+# Security context for API methods
+modkit-security = {{ path = "../../../libs/modkit-security" }}
+
+# OData support for pagination (if needed)
+modkit-odata = {{ path = "../../../libs/modkit-odata" }}

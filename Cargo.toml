@@ -30,6 +30,8 @@ members = [
     "modules/module_orchestrator/module_orchestrator-contracts",
     "modules/module_orchestrator/module_orchestrator-grpc",
     "modules/module_orchestrator/module_orchestrator",
+    "modules/todoer/todoer-sdk",
+    "modules/todoer/todoer",
     "examples/modkit/users_info/user_info-sdk",
     "examples/modkit/users_info/users_info",
     "examples/oop-modules/calculator_gateway/calculator_gateway-sdk",
@@ -41,7 +43,7 @@ members = [
     "examples/plugin-modules/tenant_resolver/tenant_resolver-sdk",
     "examples/plugin-modules/tenant_resolver/tenant_resolver-gw",
     "examples/plugin-modules/tenant_resolver/plugins/contoso_tr_plugin",
-    "examples/plugin-modules/tenant_resolver/plugins/fabrikam_tr_plugin"
+    "examples/plugin-modules/tenant_resolver/plugins/fabrikam_tr_plugin",
 ]
 resolver = "2"
 

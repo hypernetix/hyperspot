@@ -1,0 +1,4 @@
+/// Output port for event publishing
+pub trait EventPublisher<E>: Send + Sync + 'static {{
+    fn publish(&self, event: &E);
+}}

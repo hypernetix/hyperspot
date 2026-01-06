@@ -1,0 +1,33 @@
+{% if with_db %}use modkit_db_macros::ODataFilterable;
+{% endif %}use serde::{{Deserialize, Serialize}};
+use time::OffsetDateTime;
+use utoipa::ToSchema;
+use uuid::Uuid;
+
+// TODO(PLACEHOLDER): remove contents of this file and replace with required DTOs and mappers
+/// Example REST DTO
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema{% if with_db %}, ODataFilterable{% endif %})]
+pub struct ExampleDto {{
+    {% if with_db %}#[odata(filter(kind = "Uuid"))]
+    {% endif %}pub id: Uuid,
+    pub status: String,
+    pub tenant_id: Uuid,
+    {% if with_db %}#[odata(filter(kind = "DateTimeUtc"))]
+    {% endif %}#[serde(with = "time::serde::rfc3339")]
+    pub created_at: OffsetDateTime,
+    #[serde(with = "time::serde::rfc3339")]
+    pub updated_at: OffsetDateTime,
+}}
+
+// Mapper: SDK model -> DTO
+impl From<{snake}_sdk::models::Example> for ExampleDto {{
+    fn from(example: {snake}_sdk::models::Example) -> Self {{
+        Self {{
+            id: example.id,
+            status: example.status,
+            tenant_id: example.tenant_id,
+            created_at: example.created_at,
+            updated_at: example.updated_at,
+        }}
+    }}
+}}

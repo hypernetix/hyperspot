@@ -1,0 +1,33 @@
+use crate::api::rest::{{dto, handlers}};
+use crate::domain::service::Service;
+use axum::{{Extension, Router}};
+use modkit::api::{{OpenApiRegistry, OperationBuilder}};
+use modkit::api::prelude::StatusCode;
+use std::sync::Arc;
+
+pub fn register_routes(
+    mut router: Router,
+    openapi: &dyn OpenApiRegistry,
+    service: &Arc<Service>,
+) -> Router {{
+    // TODO(PLACEHOLDER): Remove this and replace with required API
+    // GET /{kebab}/v1/example - Example public endpoint
+    router = OperationBuilder::get("/{kebab}/v1/example")
+        .operation_id("{snake}.example")
+        .summary("This is just an example endpoint")
+        .tag("{snake}")
+        .public()  // Mark as public (no auth required)
+        .handler(handlers::example)
+        .json_response_with_schema::<dto::ExampleDto>(
+            openapi,
+            StatusCode::OK,
+            "Example",
+        )
+        .error_500(openapi)
+        .register(router, openapi);
+
+    // Attach service to all routes
+    router = router.layer(Extension(Arc::clone(service)));
+    
+    router
+}}

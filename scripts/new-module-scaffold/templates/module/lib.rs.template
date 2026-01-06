@@ -1,0 +1,29 @@
+//! `{pascal}` Module Implementation
+//!
+//! The public API is defined in `{sdk_crate}` and re-exported here.
+
+// === PUBLIC API (from SDK) ===
+pub use {snake}_sdk::{{
+    {pascal}Api, {pascal}Error,
+    Example, // TODO(PLACEHOLDER): replace it with your public API from SDK
+}};
+
+// === MODULE DEFINITION ===
+pub mod module;
+pub use module::{pascal};
+
+// === LOCAL CLIENT ===
+pub mod local_client;
+
+// === INTERNAL MODULES ===
+#[doc(hidden)]
+pub mod api;
+#[doc(hidden)]
+pub mod config;
+#[doc(hidden)]
+pub mod domain;
+{% if with_db %}
+
+#[doc(hidden)]
+pub mod infra;
+{% endif %}

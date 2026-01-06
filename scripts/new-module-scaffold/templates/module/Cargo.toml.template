@@ -1,0 +1,58 @@
+[package]
+name = "{snake}"
+version.workspace = true
+publish = false
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# SDK - public API, models, and errors
+{sdk_crate} = {{ path = "../{sdk_crate}" }}
+
+# Core dependencies
+anyhow = {{ workspace = true }}
+async-trait = {{ workspace = true }}
+tokio = {{ workspace = true }}
+tracing = {{ workspace = true }}
+inventory = {{ workspace = true }}
+serde = {{ workspace = true }}
+serde_json = {{ workspace = true }}
+utoipa = {{ workspace = true }}
+axum = {{ workspace = true, features = ["macros"] }}
+tower-http = {{ workspace = true, features = ["timeout"] }}
+futures = {{ workspace = true }}
+chrono = {{ workspace = true, features = ["serde"] }}
+time = {{ workspace = true }}
+uuid = {{ workspace = true }}
+arc-swap = {{ workspace = true }}
+thiserror = {{ workspace = true }}
+{% if with_db %}
+
+# Database - SeaORM
+sea-orm = {{ workspace = true, features = [
+    "sqlx-sqlite",
+    "runtime-tokio-rustls",
+    "macros",
+    "with-time",
+    "with-uuid"
+] }}
+sea-orm-migration = {{ workspace = true, features = ["sqlx-sqlite"] }}
+{% endif %}
+
+# Local dependencies
+modkit = {{ path = "../../../libs/modkit" }}
+modkit-auth = {{ path = "../../../libs/modkit-auth" }}
+modkit-security = {{ path = "../../../libs/modkit-security" }}
+modkit-odata = {{ path = "../../../libs/modkit-odata" }}
+{% if with_db %}
+modkit-db = {{ path = "../../../libs/modkit-db", default-features = false, features = ["pg", "sea-orm", "insecure-escape"] }}
+modkit-db-macros = {{ path = "../../../libs/modkit-db-macros" }}
+{% endif %}
+
+[dev-dependencies]
+tower = {{ workspace = true, features = ["util"] }}
+api_ingress = {{ path = "../../../modules/api_ingress" }}

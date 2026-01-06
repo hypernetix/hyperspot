@@ -1,3 +1,5 @@
+audience: human, agent
+---
 # HyperSpot Architecture Manifest
 
 > **NOTE:** This manifest describes our targets and forward-looking architecture. It is not a changelog of the current implementation. Canonical, up-to-date product and API documentation is maintained separately (e.g., module-specific docs, OpenAPI, and design records). Use this document for intent and direction; confirm current behavior in the dedicated docs.

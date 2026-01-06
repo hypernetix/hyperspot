@@ -1,0 +1,35 @@
+use async_trait::async_trait;
+use std::sync::Arc;
+
+// Import API trait and types from SDK crate
+use {snake}_sdk::{{
+    api::{pascal}Api,
+    errors::{pascal}Error,
+    models::Example, // TODO(PLACEHOLDER)
+}};
+
+use crate::domain::service::Service;
+use modkit_security::SecurityCtx;
+
+/// Local client adapter implementing the SDK API trait.
+/// Registered in `ClientHub` during module `init()`.
+pub struct {pascal}LocalClient {{
+    service: Arc<Service>,
+}}
+
+impl {pascal}LocalClient {{
+    #[must_use]
+    pub fn new(service: Arc<Service>) -> Self {{
+        Self {{ service }}
+    }}
+}}
+
+#[async_trait]
+impl {pascal}Api for {pascal}LocalClient {{
+    // TODO(PLACEHOLDER): replace this with required methods for your module
+    async fn example(&self, _ctx: &SecurityCtx) -> Result<Example, {pascal}Error> {{
+        Ok(self.service
+            .example()
+            .await)
+    }}
+}}

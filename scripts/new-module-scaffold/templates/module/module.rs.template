@@ -1,0 +1,97 @@
+use std::sync::Arc;
+use async_trait::async_trait;
+use modkit::api::OpenApiRegistry;
+{% if with_db %}use modkit::{{DbModule, Module, ModuleCtx, RestfulModule}};
+{% else %}use modkit::{{Module, ModuleCtx, RestfulModule}};
+{% endif %}use tracing::info;
+{% if with_db %}
+use sea_orm_migration::MigratorTrait;
+{% endif %}
+
+use crate::api::rest::routes;
+use crate::config::{pascal}Config;
+use crate::domain::service::Service;
+
+// Import API trait from SDK
+use {snake}_sdk::api::{pascal}Api;
+// Import local client adapter
+use crate::local_client::{pascal}LocalClient;
+
+#[modkit::module(
+    name = "{snake}",
+    capabilities = [rest]
+)]
+pub struct {pascal} {{
+    service: arc_swap::ArcSwapOption<Service>,
+}}
+
+impl Default for {pascal} {{
+    fn default() -> Self {{
+        Self {{
+            service: arc_swap::ArcSwapOption::from(None),
+        }}
+    }}
+}}
+
+#[async_trait]
+impl Module for {pascal} {{
+    async fn init(&self, ctx: &ModuleCtx) -> anyhow::Result<()> {{
+        info!("Initializing {snake} module");
+
+        // Load module configuration
+        let cfg: {pascal}Config = ctx.config()?;
+        info!("Loaded config: {{:?}}", cfg);
+
+        // Create domain service
+        let domain_service = Arc::new(Service::new());
+
+        // Store service for REST handlers
+        self.service.store(Some(domain_service.clone()));
+
+        // === EXPLICIT CLIENT REGISTRATION ===
+        // Create local client adapter that implements the SDK API trait
+        let local_client = {pascal}LocalClient::new(Arc::clone(&domain_service));
+        let api: Arc<dyn {pascal}Api> = Arc::new(local_client);
+
+        // Register directly in ClientHub
+        ctx.client_hub().register::<dyn {pascal}Api>(api);
+        info!("{pascal} API registered in ClientHub via local adapter");
+        
+        Ok(())
+    }}
+}}
+
+impl RestfulModule for {pascal} {{
+    fn register_rest(
+        &self,
+        _ctx: &ModuleCtx,
+        router: axum::Router,
+        openapi: &dyn OpenApiRegistry,
+    ) -> anyhow::Result<axum::Router> {{
+        info!("Registering {snake} REST routes");
+
+        let service = self
+            .service
+            .load()
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("Service not initialized"))?
+            .clone();
+
+        let router = routes::register_routes(router, openapi, &service);
+
+        Ok(router)
+    }}
+}}
+{% if with_db %}
+
+#[async_trait]
+impl DbModule for {pascal} {{
+    async fn migrate(&self, db: &modkit_db::DbHandle) -> anyhow::Result<()> {{
+        info!("Running {snake} database migrations");
+        let conn = db.sea();
+        crate::infra::storage::migrations::Migrator::up(&conn, None).await?;
+        info!("{snake} database migrations completed successfully");
+        Ok(())
+    }}
+}}
+{% endif %}

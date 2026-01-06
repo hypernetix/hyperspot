@@ -1,0 +1,18 @@
+use async_trait::async_trait;
+use modkit_security::SecurityCtx;
+
+use crate::{{
+    errors::{pascal}Error,
+    models::Example,
+}};
+
+/// Public API trait for `{snake}` module.
+///
+/// All methods require `SecurityCtx` for authorization.
+/// Obtain via `ClientHub`: `hub.get::<dyn {pascal}Api>()?`
+#[async_trait]
+pub trait {pascal}Api: Send + Sync {{
+    // TODO(PLACEHOLDER): replace example endpoint with those specified in requirements
+    /// Example check endpoint
+    async fn example(&self, ctx: &SecurityCtx) -> Result<Example, {pascal}Error>;
+}}

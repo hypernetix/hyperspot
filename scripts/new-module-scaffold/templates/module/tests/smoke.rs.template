@@ -1,0 +1,34 @@
+use axum::{{
+    body::Body,
+    http::{{Request, StatusCode}},
+}};
+use tower::ServiceExt;
+
+
+// TODO(PLACEHOLDER): replace this tests with integration tests for your module according 
+// to requirements
+#[tokio::test]
+async fn test_example_endpoint() {{
+    // Create test service
+    let service = std::sync::Arc::new({snake}::domain::service::Service::new());
+    
+    // Create router with api_ingress as OpenAPI registry
+    let openapi = api_ingress::ApiIngress::default();
+    let router = axum::Router::new();
+    let router = {snake}::api::rest::routes::register_routes(router, &openapi, &service);
+
+    // Create test request
+    let request = Request::builder()
+        .uri("/{kebab}/v1/example")
+        .body(Body::empty())
+        .unwrap();
+
+    // Execute request
+    let response = router
+        .oneshot(request)
+        .await
+        .expect("Failed to execute request");
+
+    // Assert response
+    assert_eq!(response.status(), StatusCode::OK);
+}}

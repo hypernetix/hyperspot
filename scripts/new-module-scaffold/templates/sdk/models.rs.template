@@ -1,0 +1,32 @@
+
+// TODO(PLACEHOLDER): replace example model with required models
+// Models MUST be transport-agnostic. NEVER use serde here
+
+/// Example check response
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Example {{
+    pub id: uuid::Uuid,
+    pub status: String,
+    pub tenant_id: uuid::Uuid,
+    pub created_at: time::OffsetDateTime,
+    pub updated_at: time::OffsetDateTime,
+}}
+
+impl Example {{
+    #[must_use]
+    pub fn new() -> Self {{
+        Example{{
+            id: uuid::Uuid::new_v4(),
+            tenant_id: uuid::Uuid::new_v4(),
+            created_at: time::OffsetDateTime::now_utc(),
+            updated_at: time::OffsetDateTime::now_utc(),
+            status: "Hello world!".to_owned(),
+        }}
+    }}
+}}
+
+impl Default for Example {{
+    fn default() -> Self {{
+        Self::new()
+    }}
+}}
