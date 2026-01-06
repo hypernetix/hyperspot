@@ -12,6 +12,7 @@ It combines AI-assisted design with [OpenSpec-driven](https://openspec.dev/) imp
 
 - [Workflow Overview](#workflow-overview)
 - [Quick Reference](#quick-reference)
+- [LLM Model Tiers](#llm-model-tiers)
 - [Using Prompt Templates](#using-prompt-templates)
 - [Step 1: Design & Planning](#step-1-design--planning)
   - [1.1: Create DESIGN.md](#step-11-create-designmd)
@@ -108,14 +109,27 @@ For detailed formats and templates, see [Module Development Reference](./REFEREN
 
 ---
 
+## LLM Model Tiers
+
+It's recommended to use different models for different steps of the workflow for the economic efficiency. Higher tier models produce better results but cost more. Use lower tiers where the task complexity allows to optimize costs.
+
+| Tier | Use Case | Examples |
+|------|----------|----------|
+| **High Reasoning** | Complex design, architecture decisions, verification analysis | Claude Opus 4.5, GPT-5.2, Gemini 3 Pro (High) |
+| **Mid Reasoning** | Code generation, implementation, standard patterns | Claude Sonnet 4.5, Gemini 3 Pro (Low) |
+| **Low Reasoning** | Simple refactoring, formatting, small bugfixes | Claude Haiku 4.5, Gemini 3 Flash |
+
+---
+
 ## Using Prompt Templates
 
-All design steps use prompt templates from [`prompts/`](./prompts/):
+All design steps use prompt templates from [`prompts/`](./prompts/).
 
 1. Open the prompt template file
 2. Replace `{module}` with lowercase module name (e.g., `oagw`, `types_registry`)
-3. Submit to AI assistant with module context
-4. Review and refine the generated output
+3. Choose appropriate model tier for the step
+4. Submit to AI assistant with module context
+5. Review and refine the generated output
 
 | Step | Prompt File | Output |
 |------|-------------|--------|
@@ -130,6 +144,8 @@ All design steps use prompt templates from [`prompts/`](./prompts/):
 ---
 
 ## Step 1: Design & Planning
+
+> **Recommended Model Tier:** High Reasoning
 
 ### Step 1.1: Create DESIGN.md
 
@@ -219,6 +235,8 @@ For each planned feature, create a `features/{feature-name}/FEATURE.md` file con
 ---
 
 ## Step 2: Implementation (OpenSpec)
+
+> **Recommended Model Tier:** Mid Reasoning
 
 For each feature in IMPLEMENTATION_PLAN.md, use OpenSpec to implement incrementally.
 
@@ -313,6 +331,8 @@ Generate E2E tests when the feature:
 ---
 
 ## Step 3: Verification & Completion
+
+> **Recommended Model Tier:** High Reasoning
 
 Before creating a PR, verify that implementation matches documentation. Issues found should be fixed before proceeding.
 

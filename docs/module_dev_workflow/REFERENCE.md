@@ -13,7 +13,7 @@ For the workflow steps, see [Module Development Workflow](./README.md).
 - [Directory Structure](#directory-structure)
 - [Document Formats](#document-formats)
   - [DESIGN.md](#designmd)
-  - [REQUIREMENTS.md](#requirementsmd)
+  - [FEATURE.md](#featuremd)
   - [IMPLEMENTATION\_PLAN.md](#implementation_planmd)
   - [CHANGELOG.md](#changelogmd)
 - [OpenSpec Specifications](#openspec-specifications)
