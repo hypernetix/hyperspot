@@ -11,7 +11,9 @@ mod support;
 use modkit_db::secure::SecureConn;
 use modkit_odata::{ast, ODataOrderBy, ODataQuery, OrderKey, SortDir};
 use std::sync::Arc;
-use support::{ctx_allow_tenants, ctx_deny_all, inmem_db, seed_user, MockAuditPort, MockEventPublisher};
+use support::{
+    ctx_allow_tenants, ctx_deny_all, inmem_db, seed_user, MockAuditPort, MockEventPublisher,
+};
 use users_info::domain::service::{Service, ServiceConfig};
 use uuid::Uuid;
 
@@ -98,7 +100,12 @@ async fn test_forward_pagination_through_multiple_pages() {
     let user_ids = seed_users_sequential(&db, 25, tenant_id).await;
 
     let sec = SecureConn::new(db);
-    let service = Service::new(sec, Arc::new(MockEventPublisher), Arc::new(MockAuditPort), ServiceConfig::default());
+    let service = Service::new(
+        sec,
+        Arc::new(MockEventPublisher),
+        Arc::new(MockAuditPort),
+        ServiceConfig::default(),
+    );
     let ctx = ctx_allow_tenants(&[tenant_id]);
 
     // Act & Assert: Paginate through with limit=10
@@ -168,7 +175,12 @@ async fn test_forward_pagination_respects_order() {
     seed_users_sequential(&db, 15, tenant_id).await;
 
     let sec = SecureConn::new(db);
-    let service = Service::new(sec, Arc::new(MockEventPublisher), Arc::new(MockAuditPort), ServiceConfig::default());
+    let service = Service::new(
+        sec,
+        Arc::new(MockEventPublisher),
+        Arc::new(MockAuditPort),
+        ServiceConfig::default(),
+    );
     let ctx = ctx_allow_tenants(&[tenant_id]);
 
     // Act: Paginate with explicit DESC order on created_at
@@ -230,7 +242,12 @@ async fn test_forward_pagination_no_duplicates_across_pages() {
     seed_users_sequential(&db, 30, tenant_id).await;
 
     let sec = SecureConn::new(db);
-    let service = Service::new(sec, Arc::new(MockEventPublisher), Arc::new(MockAuditPort), ServiceConfig::default());
+    let service = Service::new(
+        sec,
+        Arc::new(MockEventPublisher),
+        Arc::new(MockAuditPort),
+        ServiceConfig::default(),
+    );
     let ctx = ctx_allow_tenants(&[tenant_id]);
 
     // Act: Paginate with small pages
@@ -276,7 +293,12 @@ async fn test_backward_pagination_with_prev_cursor() {
     seed_users_sequential(&db, 20, tenant_id).await;
 
     let sec = SecureConn::new(db);
-    let service = Service::new(sec, Arc::new(MockEventPublisher), Arc::new(MockAuditPort), ServiceConfig::default());
+    let service = Service::new(
+        sec,
+        Arc::new(MockEventPublisher),
+        Arc::new(MockAuditPort),
+        ServiceConfig::default(),
+    );
     let ctx = ctx_allow_tenants(&[tenant_id]);
 
     // Act: Get page 1, then page 2, then go back to page 1 using prev_cursor
@@ -344,7 +366,12 @@ async fn test_backward_pagination_maintains_order() {
     seed_users_sequential(&db, 20, tenant_id).await;
 
     let sec = SecureConn::new(db);
-    let service = Service::new(sec, Arc::new(MockEventPublisher), Arc::new(MockAuditPort), ServiceConfig::default());
+    let service = Service::new(
+        sec,
+        Arc::new(MockEventPublisher),
+        Arc::new(MockAuditPort),
+        ServiceConfig::default(),
+    );
     let ctx = ctx_allow_tenants(&[tenant_id]);
 
     // Act: Get page 2 (skip first 8 items) with explicit ordering by created_at DESC
@@ -443,7 +470,12 @@ async fn test_backward_pagination_has_next_cursor() {
     seed_users_sequential(&db, 10, tenant_id).await;
 
     let sec = SecureConn::new(db);
-    let service = Service::new(sec, Arc::new(MockEventPublisher), Arc::new(MockAuditPort), ServiceConfig::default());
+    let service = Service::new(
+        sec,
+        Arc::new(MockEventPublisher),
+        Arc::new(MockAuditPort),
+        ServiceConfig::default(),
+    );
     let ctx = ctx_allow_tenants(&[tenant_id]);
 
     // Act: Get page 1, then page 2, then use prev_cursor to go back
@@ -547,7 +579,12 @@ async fn test_prev_cursor_at_first_page() {
     seed_users_sequential(&db, 15, tenant_id).await;
 
     let sec = SecureConn::new(db);
-    let service = Service::new(sec, Arc::new(MockEventPublisher), Arc::new(MockAuditPort), ServiceConfig::default());
+    let service = Service::new(
+        sec,
+        Arc::new(MockEventPublisher),
+        Arc::new(MockAuditPort),
+        ServiceConfig::default(),
+    );
     let ctx = ctx_allow_tenants(&[tenant_id]);
 
     // Act: Get first page
@@ -629,7 +666,12 @@ async fn test_cursor_pagination_with_filter() {
     }
 
     let sec = SecureConn::new(db);
-    let service = Service::new(sec, Arc::new(MockEventPublisher), Arc::new(MockAuditPort), ServiceConfig::default());
+    let service = Service::new(
+        sec,
+        Arc::new(MockEventPublisher),
+        Arc::new(MockAuditPort),
+        ServiceConfig::default(),
+    );
     let ctx = ctx_allow_tenants(&[tenant_id]);
 
     // Act: Filter for "alice" in email and paginate
@@ -710,7 +752,12 @@ async fn test_cursor_filter_hash_mismatch_error() {
     seed_users_sequential(&db, 20, tenant_id).await;
 
     let sec = SecureConn::new(db);
-    let service = Service::new(sec, Arc::new(MockEventPublisher), Arc::new(MockAuditPort), ServiceConfig::default());
+    let service = Service::new(
+        sec,
+        Arc::new(MockEventPublisher),
+        Arc::new(MockAuditPort),
+        ServiceConfig::default(),
+    );
     let ctx = ctx_allow_tenants(&[tenant_id]);
 
     // Act: Get first page with a filter
@@ -766,7 +813,9 @@ async fn test_cursor_filter_hash_mismatch_error() {
     let err = result.unwrap_err();
     let err_msg = err.to_string();
     assert!(
-        err_msg.contains("FILTER_MISMATCH") || err_msg.contains("FilterMismatch") || err_msg.contains("filter"),
+        err_msg.contains("FILTER_MISMATCH")
+            || err_msg.contains("FilterMismatch")
+            || err_msg.contains("filter"),
         "Expected filter mismatch error, got: {err_msg}"
     );
 }
@@ -782,7 +831,12 @@ async fn test_cursor_pagination_with_tenant_isolation() {
     let (tenant1, tenant2, _, _) = seed_users_multi_tenant(&db).await;
 
     let sec = SecureConn::new(db);
-    let service = Service::new(sec, Arc::new(MockEventPublisher), Arc::new(MockAuditPort), ServiceConfig::default());
+    let service = Service::new(
+        sec,
+        Arc::new(MockEventPublisher),
+        Arc::new(MockAuditPort),
+        ServiceConfig::default(),
+    );
 
     // Act: Paginate with tenant1 context
     let ctx1 = ctx_allow_tenants(&[tenant1]);
@@ -847,7 +901,12 @@ async fn test_cursor_pagination_with_deny_all_returns_empty() {
     seed_users_sequential(&db, 20, tenant_id).await;
 
     let sec = SecureConn::new(db);
-    let service = Service::new(sec, Arc::new(MockEventPublisher), Arc::new(MockAuditPort), ServiceConfig::default());
+    let service = Service::new(
+        sec,
+        Arc::new(MockEventPublisher),
+        Arc::new(MockAuditPort),
+        ServiceConfig::default(),
+    );
     let ctx = ctx_deny_all();
 
     // Act: Try to paginate with deny-all context
@@ -874,7 +933,12 @@ async fn test_cursor_pagination_empty_database() {
     // Arrange: Empty database
     let db = inmem_db().await;
     let sec = SecureConn::new(db);
-    let service = Service::new(sec, Arc::new(MockEventPublisher), Arc::new(MockAuditPort), ServiceConfig::default());
+    let service = Service::new(
+        sec,
+        Arc::new(MockEventPublisher),
+        Arc::new(MockAuditPort),
+        ServiceConfig::default(),
+    );
     let ctx = ctx_allow_tenants(&[Uuid::new_v4()]);
 
     // Act: Try to paginate
@@ -899,7 +963,12 @@ async fn test_cursor_pagination_exact_page_boundary() {
     seed_users_sequential(&db, 20, tenant_id).await;
 
     let sec = SecureConn::new(db);
-    let service = Service::new(sec, Arc::new(MockEventPublisher), Arc::new(MockAuditPort), ServiceConfig::default());
+    let service = Service::new(
+        sec,
+        Arc::new(MockEventPublisher),
+        Arc::new(MockAuditPort),
+        ServiceConfig::default(),
+    );
     let ctx = ctx_allow_tenants(&[tenant_id]);
 
     // Act: Get page 1
@@ -936,7 +1005,12 @@ async fn test_cursor_pagination_single_item() {
     seed_users_sequential(&db, 1, tenant_id).await;
 
     let sec = SecureConn::new(db);
-    let service = Service::new(sec, Arc::new(MockEventPublisher), Arc::new(MockAuditPort), ServiceConfig::default());
+    let service = Service::new(
+        sec,
+        Arc::new(MockEventPublisher),
+        Arc::new(MockAuditPort),
+        ServiceConfig::default(),
+    );
     let ctx = ctx_allow_tenants(&[tenant_id]);
 
     // Act: Paginate with large limit
@@ -964,7 +1038,12 @@ async fn test_cursor_pagination_limit_exceeds_total() {
     seed_users_sequential(&db, 5, tenant_id).await;
 
     let sec = SecureConn::new(db);
-    let service = Service::new(sec, Arc::new(MockEventPublisher), Arc::new(MockAuditPort), ServiceConfig::default());
+    let service = Service::new(
+        sec,
+        Arc::new(MockEventPublisher),
+        Arc::new(MockAuditPort),
+        ServiceConfig::default(),
+    );
     let ctx = ctx_allow_tenants(&[tenant_id]);
 
     // Act: Request more than available with limit=100
@@ -990,7 +1069,12 @@ async fn test_cursor_pagination_with_limit_1() {
     seed_users_sequential(&db, 5, tenant_id).await;
 
     let sec = SecureConn::new(db);
-    let service = Service::new(sec, Arc::new(MockEventPublisher), Arc::new(MockAuditPort), ServiceConfig::default());
+    let service = Service::new(
+        sec,
+        Arc::new(MockEventPublisher),
+        Arc::new(MockAuditPort),
+        ServiceConfig::default(),
+    );
     let ctx = ctx_allow_tenants(&[tenant_id]);
 
     // Act: Paginate with limit=1
@@ -1031,7 +1115,12 @@ async fn test_cursor_stability_repeated_queries() {
     seed_users_sequential(&db, 10, tenant_id).await;
 
     let sec = SecureConn::new(db);
-    let service = Service::new(sec, Arc::new(MockEventPublisher), Arc::new(MockAuditPort), ServiceConfig::default());
+    let service = Service::new(
+        sec,
+        Arc::new(MockEventPublisher),
+        Arc::new(MockAuditPort),
+        ServiceConfig::default(),
+    );
     let ctx = ctx_allow_tenants(&[tenant_id]);
 
     // Act: Get first page twice with same query
@@ -1069,7 +1158,12 @@ async fn test_cursor_with_different_ordering() {
     seed_users_sequential(&db, 15, tenant_id).await;
 
     let sec = SecureConn::new(db);
-    let service = Service::new(sec, Arc::new(MockEventPublisher), Arc::new(MockAuditPort), ServiceConfig::default());
+    let service = Service::new(
+        sec,
+        Arc::new(MockEventPublisher),
+        Arc::new(MockAuditPort),
+        ServiceConfig::default(),
+    );
     let ctx = ctx_allow_tenants(&[tenant_id]);
 
     // Act: Get page 1 with ASC order

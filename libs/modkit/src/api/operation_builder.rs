@@ -271,7 +271,7 @@ pub trait OperationBuilderODataExt<S, H, R> {
     #[must_use]
     fn with_odata_filter<T>(self) -> Self
     where
-        T: modkit_db::odata::filter::FilterField;
+        T: modkit_odata::filter::FilterField;
 
     /// Adds optional `$select` query parameter to `OpenAPI`.
     #[must_use]
@@ -281,7 +281,7 @@ pub trait OperationBuilderODataExt<S, H, R> {
     #[must_use]
     fn with_odata_orderby<T>(self) -> Self
     where
-        T: modkit_db::odata::filter::FilterField;
+        T: modkit_odata::filter::FilterField;
 }
 
 impl<S, H, R, A, L> OperationBuilderODataExt<S, H, R> for OperationBuilder<H, R, S, A, L>
@@ -292,9 +292,9 @@ where
 {
     fn with_odata_filter<T>(mut self) -> Self
     where
-        T: modkit_db::odata::filter::FilterField,
+        T: modkit_odata::filter::FilterField,
     {
-        use modkit_db::odata::FieldKind;
+        use modkit_odata::filter::FieldKind;
         use std::fmt::Write as _;
 
         let mut filter = self
@@ -352,7 +352,7 @@ where
 
     fn with_odata_orderby<T>(mut self) -> Self
     where
-        T: modkit_db::odata::filter::FilterField,
+        T: modkit_odata::filter::FilterField,
     {
         use std::fmt::Write as _;
         let mut order_by = self

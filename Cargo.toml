@@ -15,7 +15,7 @@ members = [
     "libs/modkit-db-macros",
     "libs/modkit-auth",
     "libs/modkit-sdk",
-    "libs/modkit-sdk-macros",
+    "libs/modkit-odata-macros",
     "libs/modkit-security",
     "libs/modkit-errors",
     "libs/modkit-errors-macro",

@@ -1,4 +1,6 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
+#![allow(clippy::doc_markdown)]
+#![allow(clippy::uninlined_format_args)]
 
 //! Phase 6 Guard Check: OData cursor validation and filter mismatch tests for cities/languages.
 //!
@@ -94,7 +96,9 @@ async fn test_cities_cursor_preserves_order() {
         dir: SortDir::Asc,
     }]);
 
-    let query1 = ODataQuery::default().with_order(order.clone()).with_limit(3);
+    let query1 = ODataQuery::default()
+        .with_order(order.clone())
+        .with_limit(3);
 
     let page1 = service
         .list_cities_page(&ctx, &query1)
@@ -105,7 +109,10 @@ async fn test_cities_cursor_preserves_order() {
     let first_page_names: Vec<_> = page1.items.iter().map(|c| c.name.clone()).collect();
 
     let next_cursor = modkit_odata::CursorV1::decode(
-        &page1.page_info.next_cursor.expect("Should have next cursor"),
+        &page1
+            .page_info
+            .next_cursor
+            .expect("Should have next cursor"),
     )
     .unwrap();
 
@@ -138,9 +145,9 @@ async fn test_cities_invalid_cursor_format() {
     let sec = SecureConn::new(db);
     let events = Arc::new(MockEventPublisher);
     let audit = Arc::new(MockAuditPort);
-    let service = Service::new(sec, events, audit, ServiceConfig::default());
+    let _service = Service::new(sec, events, audit, ServiceConfig::default());
 
-    let ctx = ctx_allow_tenants(&[tenant_id]);
+    let _ctx = ctx_allow_tenants(&[tenant_id]);
 
     let result = modkit_odata::CursorV1::decode("invalid_base64_cursor");
     assert!(result.is_err(), "Invalid cursor format should be rejected");
@@ -152,7 +159,14 @@ async fn test_cities_tiebreaker_enforced() {
     let tenant_id = Uuid::new_v4();
 
     for i in 0..5 {
-        seed_city(&db, Uuid::new_v4(), tenant_id, "SameName", &format!("Country{i}")).await;
+        seed_city(
+            &db,
+            Uuid::new_v4(),
+            tenant_id,
+            "SameName",
+            &format!("Country{i}"),
+        )
+        .await;
         tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
     }
 
@@ -181,7 +195,8 @@ async fn test_cities_tiebreaker_enforced() {
         "Should have next cursor even with duplicate names"
     );
 
-    let next_cursor = modkit_odata::CursorV1::decode(&page1.page_info.next_cursor.unwrap()).unwrap();
+    let next_cursor =
+        modkit_odata::CursorV1::decode(&page1.page_info.next_cursor.unwrap()).unwrap();
     let query2 = ODataQuery::default().with_cursor(next_cursor).with_limit(2);
 
     let page2 = service
@@ -224,7 +239,9 @@ async fn test_languages_cursor_preserves_order() {
         dir: SortDir::Asc,
     }]);
 
-    let query1 = ODataQuery::default().with_order(order.clone()).with_limit(3);
+    let query1 = ODataQuery::default()
+        .with_order(order.clone())
+        .with_limit(3);
 
     let page1 = service
         .list_languages_page(&ctx, &query1)
@@ -235,7 +252,10 @@ async fn test_languages_cursor_preserves_order() {
     let first_page_codes: Vec<_> = page1.items.iter().map(|l| l.code.clone()).collect();
 
     let next_cursor = modkit_odata::CursorV1::decode(
-        &page1.page_info.next_cursor.expect("Should have next cursor"),
+        &page1
+            .page_info
+            .next_cursor
+            .expect("Should have next cursor"),
     )
     .unwrap();
 
@@ -286,7 +306,10 @@ async fn test_languages_backward_cursor_navigation() {
     let page1_first_id = page1.items[0].id;
 
     let cursor2 = modkit_odata::CursorV1::decode(
-        &page1.page_info.next_cursor.expect("Should have next cursor"),
+        &page1
+            .page_info
+            .next_cursor
+            .expect("Should have next cursor"),
     )
     .unwrap();
     let query2 = ODataQuery::default().with_cursor(cursor2).with_limit(3);
@@ -297,7 +320,10 @@ async fn test_languages_backward_cursor_navigation() {
         .expect("Page 2 should succeed");
 
     let cursor_back = modkit_odata::CursorV1::decode(
-        &page2.page_info.prev_cursor.expect("Should have prev cursor"),
+        &page2
+            .page_info
+            .prev_cursor
+            .expect("Should have prev cursor"),
     )
     .unwrap();
 

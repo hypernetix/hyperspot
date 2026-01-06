@@ -62,8 +62,7 @@ pub fn ctx_with_subject(subject_id: Uuid, tenants: &[Uuid]) -> SecurityContext {
 /// This context will deny access to all data (empty scope).
 #[must_use]
 pub fn ctx_deny_all() -> SecurityContext {
-    let subject = Subject::new(Uuid::new_v4());
-    SecurityContext::new(AccessScope::default(), subject)
+    SecurityContext::anonymous()
 }
 
 /// Create a root security context (system-level access).
@@ -181,5 +180,37 @@ pub struct MockEventPublisher;
 impl EventPublisher<UserDomainEvent> for MockEventPublisher {
     fn publish(&self, _event: &UserDomainEvent) {
         // Discard events in tests
+    }
+}
+
+/// Test context with service and database for integration tests.
+pub struct TestContext {
+    pub service: std::sync::Arc<users_info::domain::service::Service>,
+    pub db: DatabaseConnection,
+}
+
+impl TestContext {
+    /// Create a new test context with an in-memory database and service.
+    pub async fn new() -> Self {
+        let db = inmem_db().await;
+        let sec = SecureConn::new(db.clone());
+        
+        let events = std::sync::Arc::new(MockEventPublisher) as std::sync::Arc<dyn EventPublisher<UserDomainEvent>>;
+        let audit = std::sync::Arc::new(MockAuditPort) as std::sync::Arc<dyn AuditPort>;
+        
+        let config = users_info::domain::service::ServiceConfig {
+            max_display_name_length: 100,
+            default_page_size: 50,
+            max_page_size: 1000,
+        };
+        
+        let service = std::sync::Arc::new(users_info::domain::service::Service::new(
+            sec,
+            events,
+            audit,
+            config,
+        ));
+        
+        Self { service, db }
     }
 }

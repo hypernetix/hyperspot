@@ -13,15 +13,16 @@ help: the trait `IntoODataValue` is not implemented for `NotODataValue`
    | ^^^^^^^^^^^^^^^^^^^^
    = help: the following other types implement trait `IntoODataValue`:
              &str
-             String
-             Uuid
              bool
+             chrono::datetime::DateTime<chrono::offset::utc::Utc>
+             chrono::naive::date::NaiveDate
+             chrono::naive::time::NaiveTime
              i32
              i64
-             u32
-             u64
+             std::string::String
+           and $N others
 note: required by a bound in `FieldRef::<S, T>::eq`
-  --> $WORKSPACE/libs/modkit-sdk/src/odata.rs
+  --> $WORKSPACE/libs/modkit-odata/src/schema.rs
    |
    |     pub fn eq<V: IntoODataValue>(self, value: V) -> Expr {
    |                  ^^^^^^^^^^^^^^ required by this bound in `FieldRef::<S, T>::eq`

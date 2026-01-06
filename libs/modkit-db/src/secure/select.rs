@@ -1,6 +1,6 @@
 use sea_orm::{
-    sea_query::Expr, ColumnTrait, ConnectionTrait, EntityTrait, QueryFilter, QueryOrder,
-    QuerySelect,
+    sea_query::Expr, ColumnTrait, ConnectionTrait, EntityTrait, PaginatorTrait, QueryFilter,
+    QueryOrder, QuerySelect,
 };
 use std::marker::PhantomData;
 
@@ -113,7 +113,20 @@ where
         Ok(self.inner.one(conn).await?)
     }
 
-    // Note: count() is not directly available; use `into_inner()` and call `.count()` on the inner select
+    /// Execute the query and return the number of matching results.
+    ///
+    /// # Errors
+    /// Returns `ScopeError::Db` if the database query fails.
+    #[allow(clippy::disallowed_methods)]
+    pub async fn count<C>(self, conn: &C) -> Result<u64, ScopeError>
+    where
+        C: ConnectionTrait + Send + Sync,
+        E::Model: sea_orm::FromQueryResult + Send + Sync,
+    {
+        Ok(self.inner.count(conn).await?)
+    }
+
+    // Note: count() uses SeaORM's `PaginatorTrait::count` internally.
 
     // Note: For pagination, use `into_inner().paginate()` due to complex lifetime bounds
 

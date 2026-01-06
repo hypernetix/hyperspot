@@ -6,7 +6,9 @@ mod support;
 
 use modkit_db::secure::SecureConn;
 use std::sync::Arc;
-use support::{ctx_allow_tenants, ctx_deny_all, inmem_db, seed_user, MockAuditPort, MockEventPublisher};
+use support::{
+    ctx_allow_tenants, ctx_deny_all, inmem_db, seed_user, MockAuditPort, MockEventPublisher,
+};
 use user_info_sdk::UserPatch;
 use users_info::domain::service::{Service, ServiceConfig};
 use uuid::Uuid;
@@ -52,7 +54,7 @@ async fn update_succeeds_within_scope() {
     let db = inmem_db().await;
     let tenant_id = Uuid::new_v4();
     let user_id = Uuid::new_v4();
-    let user = seed_user(&db, user_id, tenant_id, "test@example.com", "Test User").await;
+    let _user = seed_user(&db, user_id, tenant_id, "test@example.com", "Test User").await;
 
     let sec = SecureConn::new(db);
     let service = Service::new(

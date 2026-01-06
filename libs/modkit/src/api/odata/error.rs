@@ -1,10 +1,9 @@
-//! Centralized `OData` error mapping using `OData` catalog
+//! Centralized `OData` error mapping
 //!
-//! This module provides a single source of truth for mapping `modkit_odata::Error`
-//! to RFC 9457 Problem+JSON responses using the `OData` error catalog.
+//! This module adds HTTP-specific context (instance path, trace ID) to OData errors.
+//! The core Error → Problem mapping is owned by modkit-odata.
 
 use crate::api::problem::Problem;
-use modkit_odata::errors::ErrorCode;
 use modkit_odata::Error as ODataError;
 
 /// Extract trace ID from current tracing span
@@ -13,22 +12,6 @@ fn current_trace_id() -> Option<String> {
     tracing::Span::current()
         .id()
         .map(|id| id.into_u64().to_string())
-}
-
-/// Helper to convert `ErrorCode` to Problem with context
-#[inline]
-fn to_problem(
-    code: ErrorCode,
-    detail: impl Into<String>,
-    instance: &str,
-    trace_id: Option<String>,
-) -> Problem {
-    let mut problem = code.as_problem(detail);
-    problem = problem.with_instance(instance);
-    if let Some(tid) = trace_id {
-        problem = problem.with_trace_id(tid);
-    }
-    problem
 }
 
 /// Returns a fully contextualized Problem for `OData` errors.
@@ -48,77 +31,29 @@ pub fn odata_error_to_problem(
 ) -> Problem {
     use modkit_odata::Error as OE;
 
-    let trace_id = trace_id.or_else(current_trace_id);
-
+    // Add logging for errors that need it before conversion
     match err {
-        // Filter parsing errors
-        OE::InvalidFilter(msg) => to_problem(
-            ErrorCode::odata_errors_invalid_filter_v1(),
-            format!("Invalid $filter: {msg}"),
-            instance,
-            trace_id,
-        ),
-
-        // OrderBy parsing and validation errors
-        OE::InvalidOrderByField(field) => to_problem(
-            ErrorCode::odata_errors_invalid_orderby_v1(),
-            format!("Unsupported $orderby field: {field}"),
-            instance,
-            trace_id,
-        ),
-
-        // All cursor-related errors map to invalid_cursor
-        OE::InvalidCursor
-        | OE::CursorInvalidBase64
-        | OE::CursorInvalidJson
-        | OE::CursorInvalidVersion
-        | OE::CursorInvalidKeys
-        | OE::CursorInvalidFields
-        | OE::CursorInvalidDirection => to_problem(
-            ErrorCode::odata_errors_invalid_cursor_v1(),
-            err.to_string(), // Use the specific error message
-            instance,
-            trace_id,
-        ),
-
-        // Pagination validation errors
-        OE::OrderMismatch => to_problem(
-            ErrorCode::odata_errors_invalid_orderby_v1(),
-            "Order mismatch between cursor and query",
-            instance,
-            trace_id,
-        ),
-        OE::FilterMismatch => to_problem(
-            ErrorCode::odata_errors_invalid_filter_v1(),
-            "Filter mismatch between cursor and query",
-            instance,
-            trace_id,
-        ),
-        OE::InvalidLimit => to_problem(
-            ErrorCode::odata_errors_invalid_filter_v1(),
-            "Invalid limit parameter",
-            instance,
-            trace_id,
-        ),
-        OE::OrderWithCursor => to_problem(
-            ErrorCode::odata_errors_invalid_cursor_v1(),
-            "Cannot specify both $orderby and cursor parameters",
-            instance,
-            trace_id,
-        ),
-
-        // Database errors should not happen at OData layer in production,
-        // but if they do, map to filter error (422) as a safe default
         OE::Db(msg) => {
             tracing::error!(error = %msg, "Unexpected database error in OData layer");
-            to_problem(
-                ErrorCode::odata_errors_invalid_filter_v1(),
-                "An internal error occurred while processing the query",
-                instance,
-                trace_id,
-            )
         }
+        OE::ParsingUnavailable(msg) => {
+            tracing::error!(error = %msg, "OData parsing unavailable");
+        }
+        _ => {}
     }
+
+    // Delegate to modkit-odata's base mapping (single source of truth)
+    let mut problem: Problem = err.clone().into();
+
+    // Add HTTP-specific context
+    problem = problem.with_instance(instance);
+    
+    let trace_id = trace_id.or_else(current_trace_id);
+    if let Some(tid) = trace_id {
+        problem = problem.with_trace_id(tid);
+    }
+
+    problem
 }
 
 #[cfg(test)]

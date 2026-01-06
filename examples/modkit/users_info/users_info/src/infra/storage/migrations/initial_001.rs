@@ -12,7 +12,7 @@ impl MigrationTrait for Migration {
 
         let sql = match backend {
             sea_orm::DatabaseBackend::Postgres => {
-                r#"
+                r"
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY NOT NULL,
     email VARCHAR(255) NOT NULL,
@@ -22,10 +22,10 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email);
-                "#
+                "
             }
             sea_orm::DatabaseBackend::MySql => {
-                r#"
+                r"
 CREATE TABLE IF NOT EXISTS users (
     id VARCHAR(36) PRIMARY KEY NOT NULL,
     email VARCHAR(255) NOT NULL,
@@ -34,10 +34,10 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMP NOT NULL,
     UNIQUE KEY idx_users_email (email)
 );
-                "#
+                "
             }
             sea_orm::DatabaseBackend::Sqlite => {
-                r#"
+                r"
 CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY NOT NULL,
     email TEXT NOT NULL,
@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email);
-                "#
+                "
             }
         };
 

@@ -13,15 +13,14 @@ name = "modkit_sdk"
 
 [features]
 default = []
-derive = ["dep:modkit-sdk-macros"]
-uuid = ["dep:uuid"]
+derive = ["dep:modkit-odata-macros"]
 chrono = ["dep:chrono"]
 
 [dependencies]
 # Project-local crates
 modkit-security = { path = "../modkit-security" }
 modkit-odata = { path = "../modkit-odata" }
-modkit-sdk-macros = { path = "../modkit-sdk-macros", optional = true }
+modkit-odata-macros = { path = "../modkit-odata-macros", optional = true }
 
 # Core deps
 futures-core = { workspace = true }
@@ -36,4 +35,3 @@ tokio = { workspace = true, features = ["macros", "rt"] }
 futures-util = { workspace = true }
 uuid = { workspace = true, features = ["v7"] }
 chrono = { workspace = true }
-modkit-sdk-macros = { path = "../modkit-sdk-macros" }

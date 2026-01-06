@@ -1,5 +1,6 @@
 use crate::api::rest::{dto, handlers};
 use crate::domain::service::Service;
+use crate::query::{CityFilterField, LanguageFilterField, UserFilterField};
 use axum::{Extension, Router};
 use modkit::api::operation_builder::{
     AuthReqAction, AuthReqResource, LicenseFeature, OperationBuilderODataExt,
@@ -62,6 +63,7 @@ impl AsRef<str> for License {
 impl LicenseFeature for License {}
 
 #[allow(clippy::needless_pass_by_value)] // Arc is intentionally passed by value for Extension layer
+#[allow(clippy::too_many_lines)] // Route registration function is naturally long
 pub fn register_routes(
     mut router: Router,
     openapi: &dyn OpenApiRegistry,
@@ -83,12 +85,6 @@ pub fn register_routes(
             "integer",
         )
         .require_license_features::<License>([])
-        .query_param_typed(
-            "limit",
-            false,
-            "Maximum number of users to return",
-            "integer",
-        )
         .query_param("cursor", false, "Cursor for pagination")
         .handler(handlers::list_users)
         .json_response_with_schema::<modkit_odata::Page<dto::UserDto>>(
@@ -96,9 +92,9 @@ pub fn register_routes(
             http::StatusCode::OK,
             "Paginated list of users",
         )
-        .with_odata_filter::<dto::UserDtoFilterField>()
+        .with_odata_filter::<UserFilterField>()
         .with_odata_select()
-        .with_odata_orderby::<dto::UserDtoFilterField>()
+        .with_odata_orderby::<UserFilterField>()
         .error_400(openapi)
         .error_500(openapi)
         .register(router, openapi);
@@ -190,7 +186,12 @@ pub fn register_routes(
         .tag("cities")
         .require_auth(&Resource::Cities, &Action::Read)
         .require_license_features::<License>([])
-        .query_param_typed("limit", false, "Maximum number of cities to return", "integer")
+        .query_param_typed(
+            "limit",
+            false,
+            "Maximum number of cities to return",
+            "integer",
+        )
         .query_param("cursor", false, "Cursor for pagination")
         .handler(handlers::list_cities)
         .json_response_with_schema::<modkit_odata::Page<dto::CityDto>>(
@@ -198,9 +199,9 @@ pub fn register_routes(
             http::StatusCode::OK,
             "Paginated list of cities",
         )
-        .with_odata_filter::<dto::CityDtoFilterField>()
+        .with_odata_filter::<CityFilterField>()
         .with_odata_select()
-        .with_odata_orderby::<dto::CityDtoFilterField>()
+        .with_odata_orderby::<CityFilterField>()
         .error_400(openapi)
         .error_500(openapi)
         .register(router, openapi);
@@ -292,7 +293,12 @@ pub fn register_routes(
         .tag("languages")
         .require_auth(&Resource::Languages, &Action::Read)
         .require_license_features::<License>([])
-        .query_param_typed("limit", false, "Maximum number of languages to return", "integer")
+        .query_param_typed(
+            "limit",
+            false,
+            "Maximum number of languages to return",
+            "integer",
+        )
         .query_param("cursor", false, "Cursor for pagination")
         .handler(handlers::list_languages)
         .json_response_with_schema::<modkit_odata::Page<dto::LanguageDto>>(
@@ -300,9 +306,9 @@ pub fn register_routes(
             http::StatusCode::OK,
             "Paginated list of languages",
         )
-        .with_odata_filter::<dto::LanguageDtoFilterField>()
+        .with_odata_filter::<LanguageFilterField>()
         .with_odata_select()
-        .with_odata_orderby::<dto::LanguageDtoFilterField>()
+        .with_odata_orderby::<LanguageFilterField>()
         .error_400(openapi)
         .error_500(openapi)
         .register(router, openapi);
@@ -385,7 +391,10 @@ pub fn register_routes(
         .tag("languages")
         .path_param("id", "Language UUID")
         .handler(handlers::delete_language)
-        .json_response(http::StatusCode::NO_CONTENT, "Language deleted successfully")
+        .json_response(
+            http::StatusCode::NO_CONTENT,
+            "Language deleted successfully",
+        )
         .error_401(openapi)
         .error_403(openapi)
         .error_404(openapi)
@@ -404,11 +413,7 @@ pub fn register_routes(
         .tag("addresses")
         .path_param("id", "User UUID")
         .handler(handlers::get_user_address)
-        .json_response_with_schema::<dto::AddressDto>(
-            openapi,
-            http::StatusCode::OK,
-            "User address",
-        )
+        .json_response_with_schema::<dto::AddressDto>(openapi, http::StatusCode::OK, "User address")
         .error_401(openapi)
         .error_403(openapi)
         .error_404(openapi)
@@ -489,7 +494,10 @@ pub fn register_routes(
         .path_param("id", "User UUID")
         .path_param("langId", "Language UUID")
         .handler(handlers::assign_language_to_user)
-        .json_response(http::StatusCode::NO_CONTENT, "Language assigned successfully")
+        .json_response(
+            http::StatusCode::NO_CONTENT,
+            "Language assigned successfully",
+        )
         .error_401(openapi)
         .error_403(openapi)
         .error_404(openapi)
@@ -507,7 +515,10 @@ pub fn register_routes(
         .path_param("id", "User UUID")
         .path_param("langId", "Language UUID")
         .handler(handlers::remove_language_from_user)
-        .json_response(http::StatusCode::NO_CONTENT, "Language removed successfully")
+        .json_response(
+            http::StatusCode::NO_CONTENT,
+            "Language removed successfully",
+        )
         .error_401(openapi)
         .error_403(openapi)
         .error_404(openapi)
@@ -552,7 +563,7 @@ where
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod sse_tests {
-    use super::*;
+    use super::{dto, register_users_sse_route};
     use crate::api::rest::sse_adapter::SseUserEventPublisher;
     use crate::domain::events::UserDomainEvent;
     use crate::domain::ports::EventPublisher;

@@ -6,7 +6,9 @@ mod support;
 
 use modkit_db::secure::SecureConn;
 use std::sync::Arc;
-use support::{ctx_allow_tenants, ctx_deny_all, inmem_db, seed_user, MockAuditPort, MockEventPublisher};
+use support::{
+    ctx_allow_tenants, ctx_deny_all, inmem_db, seed_user, MockAuditPort, MockEventPublisher,
+};
 use users_info::domain::service::{Service, ServiceConfig};
 use uuid::Uuid;
 
@@ -80,7 +82,7 @@ async fn email_exists_respects_tenant_scope() {
     // Arrange: Create database with users in different tenants
     let db = inmem_db().await;
     let tenant1 = Uuid::new_v4();
-    let tenant2 = Uuid::new_v4();
+    let _tenant2 = Uuid::new_v4();
     let user_id = Uuid::new_v4();
     seed_user(&db, user_id, tenant1, "test@example.com", "Test User").await;
 

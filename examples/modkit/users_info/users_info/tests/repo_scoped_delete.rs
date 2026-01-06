@@ -6,7 +6,9 @@ mod support;
 
 use modkit_db::secure::SecureConn;
 use std::sync::Arc;
-use support::{ctx_allow_tenants, ctx_deny_all, inmem_db, seed_user, MockAuditPort, MockEventPublisher};
+use support::{
+    ctx_allow_tenants, ctx_deny_all, inmem_db, seed_user, MockAuditPort, MockEventPublisher,
+};
 use users_info::domain::service::{Service, ServiceConfig};
 use uuid::Uuid;
 
@@ -34,7 +36,10 @@ async fn delete_respects_tenant_scope() {
     let result = service.delete_user(&ctx_deny, user_id).await;
 
     // Assert: Should return error - user not found in scope
-    assert!(result.is_err(), "Should not delete user outside tenant scope");
+    assert!(
+        result.is_err(),
+        "Should not delete user outside tenant scope"
+    );
 }
 
 #[tokio::test]
@@ -90,5 +95,8 @@ async fn delete_with_deny_all_returns_false() {
     let result = service.delete_user(&ctx, user_id).await;
 
     // Assert: Should return error
-    assert!(result.is_err(), "Deny-all context should not delete any data");
+    assert!(
+        result.is_err(),
+        "Deny-all context should not delete any data"
+    );
 }

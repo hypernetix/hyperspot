@@ -1,4 +1,5 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
+#![allow(clippy::doc_markdown)]
 
 //! Integration tests for OData cursor pagination on cities and languages.
 //!
@@ -143,7 +144,6 @@ async fn test_cities_forward_pagination() {
     assert_eq!(collected_ids.len(), 15, "Should collect all 15 cities");
 }
 
-
 #[tokio::test]
 async fn test_cities_order_by_name() {
     let db = inmem_db().await;
@@ -196,7 +196,9 @@ async fn test_cities_cursor_with_ordering() {
         dir: SortDir::Asc,
     }]);
 
-    let query = ODataQuery::default().with_order(order.clone()).with_limit(5);
+    let query = ODataQuery::default()
+        .with_order(order.clone())
+        .with_limit(5);
 
     let page1 = service
         .list_cities_page(&ctx, &query)
@@ -261,7 +263,6 @@ async fn test_languages_forward_pagination() {
     assert_eq!(collected_ids.len(), 12, "Should collect all 12 languages");
 }
 
-
 #[tokio::test]
 async fn test_languages_order_by_name_desc() {
     let db = inmem_db().await;
@@ -316,7 +317,10 @@ async fn test_languages_backward_navigation() {
         .expect("Page 1 should succeed");
 
     let cursor2 = modkit_odata::CursorV1::decode(
-        &page1.page_info.next_cursor.expect("Should have next cursor"),
+        &page1
+            .page_info
+            .next_cursor
+            .expect("Should have next cursor"),
     )
     .unwrap();
     let query2 = ODataQuery::default().with_cursor(cursor2).with_limit(4);
@@ -327,7 +331,10 @@ async fn test_languages_backward_navigation() {
         .expect("Page 2 should succeed");
 
     let cursor_back = modkit_odata::CursorV1::decode(
-        &page2.page_info.prev_cursor.expect("Should have prev cursor"),
+        &page2
+            .page_info
+            .prev_cursor
+            .expect("Should have prev cursor"),
     )
     .unwrap();
 

@@ -1,4 +1,4 @@
-use modkit_sdk_macros::ODataSchema;
+use modkit_odata_macros::ODataSchema;
 
 #[derive(ODataSchema)]
 struct User {

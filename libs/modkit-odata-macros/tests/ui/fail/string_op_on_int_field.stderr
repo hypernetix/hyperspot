@@ -5,4 +5,4 @@ error[E0599]: no method named `contains` found for struct `FieldRef<UserSchema, 
    |                         ^^^^^^^^ method not found in `FieldRef<UserSchema, i32>`
    |
    = note: the method was found for
-           - `FieldRef<S, String>`
+           - `FieldRef<S, std::string::String>`

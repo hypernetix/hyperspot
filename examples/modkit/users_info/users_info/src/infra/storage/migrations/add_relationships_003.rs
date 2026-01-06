@@ -12,7 +12,7 @@ impl MigrationTrait for Migration {
 
         let sql = match backend {
             sea_orm::DatabaseBackend::Postgres => {
-                r#"
+                r"
 -- Create cities table
 CREATE TABLE IF NOT EXISTS cities (
     id UUID PRIMARY KEY NOT NULL,
@@ -63,10 +63,10 @@ CREATE TABLE IF NOT EXISTS users_languages (
 
 CREATE UNIQUE INDEX IF NOT EXISTS uk_users_languages_user_lang ON users_languages(user_id, language_id);
 CREATE INDEX IF NOT EXISTS idx_users_languages_language ON users_languages(language_id);
-                "#
+                "
             }
             sea_orm::DatabaseBackend::MySql => {
-                r#"
+                r"
 -- Create cities table
 CREATE TABLE IF NOT EXISTS cities (
     id VARCHAR(36) PRIMARY KEY NOT NULL,
@@ -113,10 +113,10 @@ CREATE TABLE IF NOT EXISTS users_languages (
     CONSTRAINT fk_users_languages_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_users_languages_language FOREIGN KEY (language_id) REFERENCES languages(id) ON DELETE CASCADE
 );
-                "#
+                "
             }
             sea_orm::DatabaseBackend::Sqlite => {
-                r#"
+                r"
 -- Create cities table
 CREATE TABLE IF NOT EXISTS cities (
     id TEXT PRIMARY KEY NOT NULL,
@@ -167,7 +167,7 @@ CREATE TABLE IF NOT EXISTS users_languages (
 
 CREATE UNIQUE INDEX IF NOT EXISTS uk_users_languages_user_lang ON users_languages(user_id, language_id);
 CREATE INDEX IF NOT EXISTS idx_users_languages_language ON users_languages(language_id);
-                "#
+                "
             }
         };
 
@@ -177,13 +177,13 @@ CREATE INDEX IF NOT EXISTS idx_users_languages_language ON users_languages(langu
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         let conn = manager.get_connection();
-        
-        let sql = r#"
+
+        let sql = r"
 DROP TABLE IF EXISTS users_languages;
 DROP TABLE IF EXISTS languages;
 DROP TABLE IF EXISTS addresses;
 DROP TABLE IF EXISTS cities;
-        "#;
+        ";
 
         conn.execute_unprepared(sql).await?;
         Ok(())
