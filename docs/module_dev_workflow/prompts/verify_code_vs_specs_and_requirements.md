@@ -18,7 +18,7 @@ Verify that implementation matches OpenSpec specs and requirements for module `{
 **Files to analyze:**
 - `modules/{module}/src/` (implementation code)
 - `modules/{module}/openspec/specs/**/*.md` (verified scenarios)
-- `modules/{module}/docs/REQUIREMENTS.md` (module requirements)
+- `modules/{module}/docs/features/*/FEATURE.md` (module requirements)
 - `docs/REQUIREMENTS.md` (global requirements)
 - E2E tests (if applicable)
 

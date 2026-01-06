@@ -1,30 +1,37 @@
 # Prompt: Create Implementation Plan
 
-> **See [Module Development Workflow](../README.md) for complete workflow details and [Reference](../REFERENCE.md) for IMPLEMENTATION_PLAN format and feature granularity guidelines.**
+> **See [Module Development Workflow](../README.md) for complete workflow details and [Reference](../REFERENCE.md) for IMPLEMENTATION_PLAN format.**
 
 ## Variables
 
 Replace in the prompt below:
 - `{module_name}` - snake_case (e.g., `types_registry`, `oagw`)
-- `{MODULE}` - UPPERCASE prefix (e.g., `TYPEREG`, `OAGW`)
 
 ---
 
 ## Prompt template
 
 ```
-Read `modules/{module_name}/docs/DESIGN.md` and `modules/{module_name}/docs/REQUIREMENTS.md` and create `modules/{module_name}/docs/IMPLEMENTATION_PLAN.md` following the template in docs/module_dev_workflow/REFERENCE.md (IMPLEMENTATION_PLAN.md section).
+Read `modules/{module_name}/docs/DESIGN.md` and all `modules/{module_name}/docs/features/*/FEATURE.md` files, then create `modules/{module_name}/docs/IMPLEMENTATION_PLAN.md` following the template in docs/module_dev_workflow/REFERENCE.md (IMPLEMENTATION_PLAN.md section).
 
-Requirements:
-- Organize features by implementation phases from DESIGN.md (or as flat list for simple modules)
-- Each feature must:
-  - Have checkbox format: `- [ ] Feature Name (#module/req-name)`
-  - Reference at least one requirement (module or global)
-  - Include scope hint on next line (6-space indent): `Scope: layers/components involved`
-- Feature granularity: 1-5 days of work, implements 1-3 related requirements
-- Good feature names: "Entity Registration", "Pagination Support", "Request Forwarding"
-- Good scope hints: "contract traits, domain service, REST endpoint, database storage"
-- Ensure all requirements from REQUIREMENTS.md are covered by at least one feature
+## Requirements
+
+- Organize by implementation phases from DESIGN.md
+- Use nested checkbox structure: Phase → Feature → Requirements
+- Format:
+  ```
+  ## Phase #{module}/P1: [Phase Name]
+  
+  **Goal:** [What this phase achieves]
+  
+  - [ ] **{feature-name}** — [Brief description]
+    - [ ] #{module}/{req-1}: [Requirement title]
+    - [ ] #{module}/{req-2}: [Requirement title]
+  ```
+- Each feature checkbox has its requirements as sub-items
+- Group features by their phase (from FEATURE.md Phase field)
+- Ensure all requirements from all FEATURE.md files are included
 
 Output IMPLEMENTATION_PLAN.md.
 ```
+

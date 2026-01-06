@@ -72,37 +72,16 @@ This document answers common questions about the module development workflow, pr
 
 ## Design Phase
 
-### Why are DESIGN.md and REQUIREMENTS.md created together?
+### Why separate DESIGN.md from FEATURE.md files?
 
-**They inform each other:**
-- Defining requirements often reveals missing design elements
-- Design decisions create new requirements
-- Phase boundaries depend on requirement dependencies
-- Trying to separate them linearly leads to rework
-
-**Iterative process:**
-```
-Draft Design → Extract Requirements → Refine Design → Cross-Reference → Iterate
-```
-
-**Benefits of iteration:**
-- Catches inconsistencies early (before implementation)
-- Requirements and design stay aligned throughout
-- Reduces back-and-forth during implementation
-- Both documents are ready for review together
-
-### Why keep them as separate files?
-
-**Separation of concerns:**
-- **DESIGN.md** focuses on architecture, components, and technical decisions (the "how")
-- **REQUIREMENTS.md** focuses on capabilities and acceptance criteria (the "what")
+**Different levels of abstraction:**
+- **DESIGN.md** focuses on module-level architecture, components, and phases (the "how")
+- **FEATURE.md** focuses on specific features and their requirements (the "what")
 
 **Benefits:**
-- Requirements can be referenced independently in specs and tests
-- Architecture can evolve without rewriting requirements
-- Clear traceability from requirement → design → implementation
-
-**TL;DR:** Created together (iteratively), stored separately (for different purposes).
+- DESIGN.md is created once per module, FEATURE.md is created per feature
+- Features can be added incrementally without changing architecture
+- Clear mapping: 1 feature = 1 FEATURE.md = 1 OpenSpec specification
 
 ### Why use implementation phases in DESIGN.md?
 

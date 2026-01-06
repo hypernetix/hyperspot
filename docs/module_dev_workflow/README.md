@@ -14,10 +14,11 @@ It combines AI-assisted design with [OpenSpec-driven](https://openspec.dev/) imp
 - [Quick Reference](#quick-reference)
 - [Using Prompt Templates](#using-prompt-templates)
 - [Step 1: Design & Planning](#step-1-design--planning)
-  - [1.1: Create DESIGN.md and REQUIREMENTS.md](#step-11-create-designmd-and-requirementsmd-iterative)
-  - [1.2: Create IMPLEMENTATION_PLAN.md](#step-12-create-implementation_planmd)
-  - [1.3: Validate Design Documents](#step-13-validate-design-documents)
-  - [1.4: Create PR for Design Review](#step-14-create-pr-for-design-review)
+  - [1.1: Create DESIGN.md](#step-11-create-designmd)
+  - [1.2: Create Features](#step-12-create-features)
+  - [1.3: Create IMPLEMENTATION_PLAN.md](#step-13-create-implementation_planmd)
+  - [1.4: Validate Design Documents](#step-14-validate-design-documents)
+  - [1.5: Create PR for Design Review](#step-15-create-pr-for-design-review)
 - [Step 2: Implementation (OpenSpec)](#step-2-implementation-openspec)
   - [2.1: Create OpenSpec Change Proposal](#step-21-create-openspec-change-proposal)
   - [2.2: Review and Refine Proposal](#step-22-review-and-refine-proposal)
@@ -49,10 +50,11 @@ It combines AI-assisted design with [OpenSpec-driven](https://openspec.dev/) imp
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │ Step 1: Design & Planning                                       │
-│  └─ 1.1: Create DESIGN.md and REQUIREMENTS.md (iterative)       │
-│  └─ 1.2: Create IMPLEMENTATION_PLAN.md                          │
-│  └─ 1.3: Validate design documents                              │
-│  └─ 1.4: Create PR for design review                            │
+│  └─ 1.1: Create DESIGN.md (module architecture)                  │
+│  └─ 1.2: Create Features (FEATURE.md files with requirements)    │
+│  └─ 1.3: Create IMPLEMENTATION_PLAN.md (phases → features → reqs)│
+│  └─ 1.4: Validate design documents                              │
+│  └─ 1.5: Create PR for design review                            │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
@@ -96,8 +98,9 @@ It combines AI-assisted design with [OpenSpec-driven](https://openspec.dev/) imp
 ## Quick Reference
 
 | Term | Format | Example |
-|------|--------|---------|
+|------|---------|---------|
 | Implementation Phase | `#{module}/P{N}` | `#oagw/P1` |
+| Feature | `{feature-name}/` | `request-forward/` |
 | Global Requirement | `#{name}` | `#tenant-isolation` |
 | Module Requirement | `#{module}/{name}` | `#oagw/request-forward` |
 
@@ -116,9 +119,10 @@ All design steps use prompt templates from [`prompts/`](./prompts/):
 
 | Step | Prompt File | Output |
 |------|-------------|--------|
-| 1.1 | [`create_design_and_requirements.md`](./prompts/create_design_and_requirements.md) | `DESIGN.md` + `REQUIREMENTS.md` |
-| 1.2 | [`create_implementation_plan.md`](./prompts/create_implementation_plan.md) | `IMPLEMENTATION_PLAN.md` |
-| 1.3 | [`validate_design_docs.md`](./prompts/validate_design_docs.md) | Validation report |
+| 1.1 | [`create_design.md`](./prompts/create_design.md) | `DESIGN.md` |
+| 1.2 | [`create_feature.md`](./prompts/create_feature.md) | `features/{name}/FEATURE.md` |
+| 1.3 | [`create_implementation_plan.md`](./prompts/create_implementation_plan.md) | `IMPLEMENTATION_PLAN.md` |
+| 1.4 | [`validate_design_docs.md`](./prompts/validate_design_docs.md) | Validation report |
 | 2.3 | [`verify_specs_vs_requirements.md`](./prompts/verify_specs_vs_requirements.md) | Validation report |
 | 3.1 | [`verify_code_vs_specs_and_requirements.md`](./prompts/verify_code_vs_specs_and_requirements.md) | `verification/{change-name}/code_vs_specs_and_requirements.md` |
 | 3.2 | [`verify_code_vs_design.md`](./prompts/verify_code_vs_design.md) | `verification/{change-name}/code_vs_design.md` |
@@ -127,9 +131,9 @@ All design steps use prompt templates from [`prompts/`](./prompts/):
 
 ## Step 1: Design & Planning
 
-### Step 1.1: Create DESIGN.md and REQUIREMENTS.md (Iterative)
+### Step 1.1: Create DESIGN.md
 
-**Prompt:** [`create_design_and_requirements.md`](./prompts/create_design_and_requirements.md)
+**Prompt:** [`create_design.md`](./prompts/create_design.md)
 
 **Prerequisites:**
 - Review [`guidelines/NEW_MODULE.md`](../../guidelines/NEW_MODULE.md) for module development standards
@@ -137,52 +141,52 @@ All design steps use prompt templates from [`prompts/`](./prompts/):
 - Review global requirements in [`REQUIREMENTS.md`](../REQUIREMENTS.md)
 - Clarify module purpose, scope, and key use cases
 
-**Output:** Both `DESIGN.md` and `REQUIREMENTS.md` with cross-references
-
-**Iterative Process:**
-
-Design and requirements evolve together through iteration:
-
-```
-┌──────────────────────────────────────────────────────────────┐
-│  Draft Design → Extract Requirements → Refine Design → ...  │
-│       ↑                                        │             │
-│       └────────────────────────────────────────┘             │
-│                    Iterate until consistent                  │
-└──────────────────────────────────────────────────────────────┘
-```
-
-1. **Draft Initial Design** — Architecture, components, data flow, phases
-2. **Extract Requirements** — What the system SHALL/SHOULD/MAY do
-3. **Refine Design** — Requirements often reveal missing components or unclear flows
-4. **Cross-Reference** — Add requirement IDs to design, verify alignment
-5. **Iterate** — Repeat until both documents are internally consistent
+**Output:** `DESIGN.md` with architecture, components, phases, and integration points
 
 **Tips:**
 - Focus on **what** and **why**, not implementation details
-- Requirements must be atomic and testable
-- Reference global requirements (`#tenant-isolation`, `#rbac`...) — don't duplicate
-- Use RFC 2119 language: SHALL (mandatory), SHOULD (recommended), MAY (optional)
+- Define implementation phases (`#{module}/P1`, `#{module}/P2`...)
 - Mark open questions for design review
 
 ---
 
-### Step 1.2: Create IMPLEMENTATION_PLAN.md
+### Step 1.2: Create Features
+
+**Prompt:** [`create_feature.md`](./prompts/create_feature.md)
+
+For each planned feature, create a `features/{feature-name}/FEATURE.md` file containing:
+- Feature description and scope
+- Requirements (using RFC 2119 language: SHALL/SHOULD/MAY)
+- Phase reference and implementation approach
+
+**Output:** `features/{feature-name}/FEATURE.md` for each feature
+
+**Notes:**
+- Each feature usually maps 1:1 to an OpenSpec specification
+- Requirements use flat IDs: `#{module}/{requirement-name}`
+- Reference global requirements — don't duplicate them
+- Repeat this step for each feature in the module
+
+---
+
+### Step 1.3: Create IMPLEMENTATION_PLAN.md
 
 **Prompt:** [`create_implementation_plan.md`](./prompts/create_implementation_plan.md)
 
 **Prerequisites:**
-- DESIGN.md and REQUIREMENTS.md exist with cross-references (from Step 1.1)
+- DESIGN.md exists (from Step 1.1)
+- FEATURE.md files exist (from Step 1.2)
+
+**Output:** `IMPLEMENTATION_PLAN.md` with nested checkboxes: phases → features → requirements
 
 **Tips:**
-- Each checkbox = 1 feature (maps to 1 OpenSpec change)
-- Include requirement references: `(#module/req-name)`
-- Add scope hints: `Scope: contract, domain service, REST endpoint`
-- Organize by phases if defined in DESIGN.md
+- Organize by phases from DESIGN.md
+- Each feature checkbox has requirement sub-items
+- This becomes your progress tracker
 
 ---
 
-### Step 1.3: Validate Design Documents
+### Step 1.4: Validate Design Documents
 
 **Prompt:** [`validate_design_docs.md`](./prompts/validate_design_docs.md)
 
@@ -190,20 +194,20 @@ Design and requirements evolve together through iteration:
 
 | Category | Checks |
 |----------|--------|
-| **Format** | Required sections, ID formats, checkbox syntax, RFC 2119 language |
+| **Format** | DESIGN.md sections, FEATURE.md structure, RFC 2119 language |
 | **Consistency** | Phases match across docs, requirement phases reference valid phases |
-| **Cross-References** | All referenced requirements exist, all features reference requirements |
-| **Completeness** | All phases have features, scope hints present, rationale present |
+| **Cross-References** | All requirements exist, all features have requirements |
+| **Completeness** | All phases have features, all requirements have rationale |
 
 **Pass Criteria:** Zero errors required to proceed. Address warnings where appropriate.
 
 ---
 
-### Step 1.4: Create PR for Design Review
+### Step 1.5: Create PR for Design Review
 
-1. **Verify** Step 1.3 completed with zero errors
+1. **Verify** Step 1.4 completed with zero errors
 2. **Commit docs and create PR** with title: `docs({module}): add design documents`
-3. **PR description** should include: module purpose, key requirements summary, phases overview, open questions
+3. **PR description** should include: module purpose, features summary, phases overview, open questions
 
 **Review Checklist:**
 - [ ] Architecture aligns with ModKit patterns

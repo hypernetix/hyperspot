@@ -17,7 +17,7 @@ Verify alignment between OpenSpec specs and requirements for module `{module}`.
 
 **Files to verify:**
 - `modules/{module}/openspec/changes/{change-name}/specs/**/*.md` (proposed scenarios)
-- `modules/{module}/docs/REQUIREMENTS.md` (module requirements)
+- `modules/{module}/docs/features/*/FEATURE.md` (module requirements)
 - `docs/REQUIREMENTS.md` (global requirements)
 
 **Verification checks:**

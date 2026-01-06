@@ -6,7 +6,6 @@
 
 Replace in the prompt below:
 - `{module_name}` - snake_case (e.g., `types_registry`, `oagw`)
-- `{MODULE}` - UPPERCASE prefix (e.g., `TYPEREG`, `OAGW`)
 
 ---
 
@@ -17,7 +16,7 @@ Validate design documents for `modules/{module_name}/docs/`:
 
 **Files to validate:**
 - DESIGN.md
-- REQUIREMENTS.md
+- features/*/FEATURE.md (all feature files)
 - IMPLEMENTATION_PLAN.md
 - docs/REQUIREMENTS.md (global requirements reference)
 
@@ -25,22 +24,24 @@ Validate design documents for `modules/{module_name}/docs/`:
 
 1. **Format Validation:**
    - DESIGN.md has required sections (Overview, Architecture, Implementation Phases)
-   - REQUIREMENTS.md: each requirement has proper header format `#{module}/{name}`, uses RFC 2119 keywords (SHALL/SHOULD/MAY), has Phase and Rationale fields
-   - IMPLEMENTATION_PLAN.md: features use checkbox format, have requirement references and Scope hints
+   - Each FEATURE.md: has Overview, Requirements, Implementation Approach sections
+   - Requirements use proper header format `#{module}/{name}`, RFC 2119 keywords (SHALL/SHOULD/MAY), Phase and Rationale fields
+   - IMPLEMENTATION_PLAN.md: nested checkbox format (phases → features → requirements)
    - ID formats: `#{name}` (global), `#{module}/{name}` (module), `#{module}/P{N}` (phases)
 
 2. **Consistency Validation:**
    - Phases in IMPLEMENTATION_PLAN.md match DESIGN.md
    - Requirements reference valid phases from DESIGN.md
+   - Feature names in IMPLEMENTATION_PLAN match feature directories
 
 3. **Cross-Reference Validation:**
-   - All requirement references in IMPLEMENTATION_PLAN.md exist in REQUIREMENTS.md or docs/REQUIREMENTS.md
-   - All requirements in REQUIREMENTS.md are referenced by at least one feature
-   - All features reference at least one requirement
+   - All requirement references in IMPLEMENTATION_PLAN.md exist in FEATURE.md files or docs/REQUIREMENTS.md
+   - All requirements in FEATURE.md files are referenced in IMPLEMENTATION_PLAN.md
+   - Global requirement references (#name) exist in docs/REQUIREMENTS.md
 
 4. **Completeness Validation:**
-   - Each phase has features
-   - Each feature has scope hint
+   - Each phase has at least one feature
+   - Each feature has at least one requirement
    - Each requirement has rationale
 
 **Output format:**
@@ -61,3 +62,4 @@ WARNING = should review
 
 If PASSED (0 errors), ready for Step 1.5 (Create PR for Design Review).
 ```
+
