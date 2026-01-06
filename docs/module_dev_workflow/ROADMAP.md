@@ -14,6 +14,7 @@ For the current workflow, see [Module Development Workflow](./README.md).
   - [Future: CI/CD Integration](#future-cicd-integration)
   - [Future: Periodic Global Verification](#future-periodic-global-verification)
 - [2. Migration to Agent Skills](#2-migration-to-agent-skills)
+- [3. FDD Integration](#3-fdd-integration)
 
 ---
 
@@ -93,6 +94,12 @@ Consider migrating from `./prompts/` templates to [Agent Skills](https://agentsk
 ### Open Questions
 
 - Agent Skills are currently supported by Claude Code, Codex CLI, GitHub Copilot, and Cursor (nightly). What about other tools (Windsurf, Antigravity, etc.)?
+
+---
+
+## 3. FDD Integration
+
+Consider integrating with [FDD (Feature-Driven Design)](https://github.com/ainetx/FDD) — an AI-native methodology for feature-driven development.
 
 ---
 
