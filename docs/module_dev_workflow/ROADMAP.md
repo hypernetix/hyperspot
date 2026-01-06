@@ -2,6 +2,8 @@
 
 This document tracks planned enhancements to the module development workflow.
 
+> **Document Audience:** Human developers. Tracks future improvements and planned work.
+
 For the current workflow, see [Module Development Workflow](./README.md).
 
 ## Index

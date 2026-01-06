@@ -2,6 +2,8 @@
 
 This document answers common questions about the module development workflow, providing rationale and decision-making guidance.
 
+> **Document Audience:** Human developers. Explains the reasoning behind workflow decisions.
+
 ## Index
 
 - [General Questions](#general-questions)

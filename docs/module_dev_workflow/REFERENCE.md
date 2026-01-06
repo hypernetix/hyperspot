@@ -2,7 +2,7 @@
 
 This document provides reference material for module development, including terminology, document templates, and directory structure.
 
-For the workflow steps, see [Module Development Workflow](./README.md).
+> **Document Audience:** Human developers and AI agents. Provides reference material for understanding terminology and document formats.
 
 ## Index
 

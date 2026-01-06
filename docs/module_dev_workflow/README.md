@@ -1,37 +1,21 @@
 # Module Development Workflow
 
-This document describes the module development workflow:
-- **New modules** — design and implement from scratch
-- **Existing modules** — add new features post-1.0 release
+This document describes the module development workflow.
 
 It combines AI-assisted design with [OpenSpec-driven](https://openspec.dev/) implementation tracking.
 
-> **Intended Audience:** Human developers. AI assistance generates documentation and code; developers perform workflow steps, decision-making, and validation.
+> **Document Audience:** Human developers. AI assistance generates documentation and code; developers perform workflow steps, decision-making, and validation.
 
 ## Index
 
+- [Quick Links](#quick-links)
 - [Workflow Overview](#workflow-overview)
 - [Quick Reference](#quick-reference)
-- [LLM Model Tiers](#llm-model-tiers)
-- [Using Prompt Templates](#using-prompt-templates)
-- [Step 1: Design & Planning](#step-1-design--planning)
-  - [1.1: Create DESIGN.md](#step-11-create-designmd)
-  - [1.2: Create Features](#step-12-create-features)
-  - [1.3: Create IMPLEMENTATION_PLAN.md](#step-13-create-implementation_planmd)
-  - [1.4: Validate Design Documents](#step-14-validate-design-documents)
-  - [1.5: Create PR for Design Review](#step-15-create-pr-for-design-review)
+- [AI Assistant](#ai-assistant)
+- [Step 1: Design \& Planning](#step-1-design--planning)
 - [Step 2: Implementation (OpenSpec)](#step-2-implementation-openspec)
-  - [2.1: Create OpenSpec Change Proposal](#step-21-create-openspec-change-proposal)
-  - [2.2: Review and Refine Proposal](#step-22-review-and-refine-proposal)
-  - [2.3: Verify Specs vs. Requirements](#step-23-verify-specs-vs-requirements)
-  - [2.4: Implement the Feature](#step-24-implement-the-feature)
-  - [2.5: Generate E2E Tests](#step-25-generate-e2e-tests-if-applicable)
-- [Step 3: Verification & Completion](#step-3-verification--completion)
-  - [3.1: Verify Code vs. Specs & Requirements](#step-31-verify-code-vs-specs--requirements)
-  - [3.2: Verify Code vs. Design](#step-32-verify-code-vs-design)
-  - [3.3: Archive the OpenSpec Change](#step-33-archive-the-openspec-change)
-  - [3.4: Create PR for Feature](#step-34-create-pr-for-feature)
-- [Adding Features to Existing Modules](#adding-features-to-existing-modules)
+- [Step 3: Verification \& Completion](#step-3-verification--completion)
+- [Adding New Feature](#adding-new-feature)
 - [Best Practices](#best-practices)
 - [References](#references)
 
@@ -49,17 +33,17 @@ It combines AI-assisted design with [OpenSpec-driven](https://openspec.dev/) imp
 ### New Module Development
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│ Step 1: Design & Planning                                       │
+┌──────────────────────────────────────────────────────────────────┐
+│ Step 1: Design & Planning                                        |
 │  └─ 1.1: Create DESIGN.md (module architecture)                  │
 │  └─ 1.2: Create Features (FEATURE.md files with requirements)    │
 │  └─ 1.3: Create IMPLEMENTATION_PLAN.md (phases → features → reqs)│
-│  └─ 1.4: Validate design documents                              │
-│  └─ 1.5: Create PR for design review                            │
-└─────────────────────────────────────────────────────────────────┘
+│  └─ 1.4: Validate design documents                               │
+│  └─ 1.5: Create PR for design review                             │
+└──────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│ ITERATE: For each feature in IMPLEMENTATION_PLAN                │
+│ ITERATE: For each requirement (or batch) to implement           │
 │                                                                 │
 │ Step 2: Implementation (OpenSpec)                               │
 │  └─ 2.1: Create OpenSpec change proposal                        │
@@ -77,20 +61,18 @@ It combines AI-assisted design with [OpenSpec-driven](https://openspec.dev/) imp
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Adding Features to Existing Module
+### Adding New Feature
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│ Step 1: Update Design Documents                                 │
-│  └─ Review existing docs, update as needed, validate            │
+│ Create FEATURE.md for the new feature                           │
+│  └─ Use create_feature.md prompt                                │
+│  └─ Update DESIGN.md if architecture changes                    │
+│  └─ Update IMPLEMENTATION_PLAN.md with new feature              │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│ Steps 2-3: Implementation + Verification (same as new module)   │
-└─────────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────────┐
-│ Step 4: Update CHANGELOG.md                                     │
+│ Steps 2-3: Implementation + Verification (same as above)        │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -109,7 +91,9 @@ For detailed formats and templates, see [Module Development Reference](./REFEREN
 
 ---
 
-## LLM Model Tiers
+## AI Assistant
+
+### LLM Model Tiers
 
 It's recommended to use different models for different steps of the workflow for the economic efficiency. Higher tier models produce better results but cost more. Use lower tiers where the task complexity allows to optimize costs.
 
@@ -119,9 +103,7 @@ It's recommended to use different models for different steps of the workflow for
 | **Mid Reasoning** | Code generation, implementation, standard patterns | Claude Sonnet 4.5, Gemini 3 Pro (Low) |
 | **Low Reasoning** | Simple refactoring, formatting, small bugfixes | Claude Haiku 4.5, Gemini 3 Flash |
 
----
-
-## Using Prompt Templates
+### Prompt Templates
 
 All design steps use prompt templates from [`prompts/`](./prompts/).
 
@@ -130,16 +112,6 @@ All design steps use prompt templates from [`prompts/`](./prompts/).
 3. Choose appropriate model tier for the step
 4. Submit to AI assistant with module context
 5. Review and refine the generated output
-
-| Step | Prompt File | Output |
-|------|-------------|--------|
-| 1.1 | [`create_design.md`](./prompts/create_design.md) | `DESIGN.md` |
-| 1.2 | [`create_feature.md`](./prompts/create_feature.md) | `features/{name}/FEATURE.md` |
-| 1.3 | [`create_implementation_plan.md`](./prompts/create_implementation_plan.md) | `IMPLEMENTATION_PLAN.md` |
-| 1.4 | [`validate_design_docs.md`](./prompts/validate_design_docs.md) | Validation report |
-| 2.3 | [`verify_specs_vs_requirements.md`](./prompts/verify_specs_vs_requirements.md) | Validation report |
-| 3.1 | [`verify_code_vs_specs_and_requirements.md`](./prompts/verify_code_vs_specs_and_requirements.md) | `verification/{change-name}/code_vs_specs_and_requirements.md` |
-| 3.2 | [`verify_code_vs_design.md`](./prompts/verify_code_vs_design.md) | `verification/{change-name}/code_vs_design.md` |
 
 ---
 
@@ -410,27 +382,28 @@ After verification passes and change is archived, create a PR that includes code
 
 ---
 
-## Adding Features to Existing Modules
+## Adding New Feature
 
-For modules with existing design documentation:
+To add a new feature to an existing module:
 
-### Step 1: Update Design Documents
+### Create FEATURE.md
 
-1. **Review** existing DESIGN.md, REQUIREMENTS.md, IMPLEMENTATION_PLAN.md
-2. **Add requirement** to REQUIREMENTS.md if introducing new capability
-3. **Update DESIGN.md** if architecture, components, or data flow changes
-4. **Add feature** to IMPLEMENTATION_PLAN.md with requirement references
-5. **Validate** using [Step 1.3](#step-13-validate-design-documents)
+1. **Create** `features/{feature-name}/FEATURE.md` using [`create_feature.md`](./prompts/create_feature.md) prompt
+2. **Define requirements** using RFC 2119 language (SHALL/SHOULD/MAY)
+3. **Reference** global requirements — don't duplicate them
 
-### Steps 2-3: Implementation & Verification
+### Update Design Documents
 
-Follow [Step 2: Implementation](#step-2-implementation-openspec) and [Step 3: Verification & Completion](#step-3-verification--completion) above.
+1. **Update DESIGN.md** if the feature changes architecture or adds new components
+2. **Update IMPLEMENTATION_PLAN.md** to add the new feature and its requirements
+3. **Validate** using [Step 1.4](#step-14-validate-design-documents)
 
-### Update CHANGELOG.md
+### Implementation & Verification
 
-After each feature PR is merged, add entry to `modules/{module}/docs/CHANGELOG.md` following [Keep A Changelog](https://keepachangelog.com/) format.
+Follow [Step 2: Implementation](#step-2-implementation-openspec) and [Step 3: Verification & Completion](#step-3-verification--completion).
 
-Reference requirement IDs in entries:
+After PR is merged, update `modules/{module}/docs/CHANGELOG.md` following [Keep A Changelog](https://keepachangelog.com/) format:
+
 ```markdown
 ## [Unreleased]
 
