@@ -1,70 +1,47 @@
-//! Type-safe `OData` filter representation that operates on DTO-level field identifiers.
-//!
-//! This module provides:
-//! - `FilterField` trait for defining filterable fields on DTOs
-//! - `FilterOp` enum for filter operations (eq, ne, contains, etc.)
-//! - `FilterNode<F>` AST for representing filters in a DB-agnostic way
-//! - Parsing from `OData` filter strings to `FilterNode<F>`
-//!
-//! # Design Goals
-//!
-//! 1. **Type Safety**: Use generated enums instead of raw strings for field names
-//! 2. **Separation of Concerns**: Keep DB infrastructure details (`SeaORM`, Column enums)
-//!    out of API and domain layers
-//! 3. **Flexibility**: Enable mapping from DTO-level filters to any backend in the infrastructure layer
-
-use modkit_odata::ast as odata_ast;
 use std::fmt;
+
 use thiserror::Error;
 
-use crate::odata::FieldKind;
+use crate::ast as odata_ast;
 
-/// Re-export `ODataValue` from `modkit_odata` for use in filters
-pub use modkit_odata::ast::Value as ODataValue;
+pub use crate::ast::Value as ODataValue;
 
-/// Trait representing a set of filterable fields for a DTO.
-///
-/// This trait is typically implemented by a derive macro on DTO types.
-/// It provides a type-safe way to refer to filterable fields without using raw strings.
-///
-/// # Example
-///
-/// ```
-/// use modkit_db::odata::{FilterField, FieldKind};
-/// use modkit_db_macros::ODataFilterable;
-///
-/// // Define a DTO with filterable fields using the derive macro
-/// #[derive(ODataFilterable)]
-/// pub struct UserDto {
-///     #[odata(filter(kind = "Uuid"))]
-///     pub id: uuid::Uuid,
-///     #[odata(filter(kind = "String"))]
-///     pub email: String,
-///     pub internal_field: String,  // not filterable
-/// }
-///
-/// // The derive macro generates:
-/// // - An enum `UserDtoFilterField` with variants for each filterable field
-/// // - An implementation of `FilterField` trait for that enum
-///
-/// // Now you can use the generated type:
-/// assert_eq!(UserDtoFilterField::from_name("email"), Some(UserDtoFilterField::Email));
-/// assert_eq!(UserDtoFilterField::Email.name(), "email");
-/// assert_eq!(UserDtoFilterField::Id.kind(), FieldKind::Uuid);
-/// assert_eq!(UserDtoFilterField::FIELDS.len(), 2);
-/// ```
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum FieldKind {
+    String,
+    I64,
+    F64,
+    Bool,
+    Uuid,
+    DateTimeUtc,
+    Date,
+    Time,
+    Decimal,
+}
+
+impl fmt::Display for FieldKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FieldKind::String => write!(f, "String"),
+            FieldKind::I64 => write!(f, "I64"),
+            FieldKind::F64 => write!(f, "F64"),
+            FieldKind::Bool => write!(f, "Bool"),
+            FieldKind::Uuid => write!(f, "Uuid"),
+            FieldKind::DateTimeUtc => write!(f, "DateTimeUtc"),
+            FieldKind::Date => write!(f, "Date"),
+            FieldKind::Time => write!(f, "Time"),
+            FieldKind::Decimal => write!(f, "Decimal"),
+        }
+    }
+}
+
 pub trait FilterField: Copy + Eq + std::hash::Hash + fmt::Debug + 'static {
-    /// All allowed fields for this DTO.
     const FIELDS: &'static [Self];
 
-    /// API-visible name for this field (e.g., "email", "`created_at`").
-    /// This is the name used in `OData` filter strings.
     fn name(&self) -> &'static str;
 
-    /// Logical type of the field for value coercion and validation.
     fn kind(&self) -> FieldKind;
 
-    /// Resolve a field by its API name, or None if not supported.
     fn from_name(name: &str) -> Option<Self> {
         Self::FIELDS
             .iter()
@@ -73,30 +50,18 @@ pub trait FilterField: Copy + Eq + std::hash::Hash + fmt::Debug + 'static {
     }
 }
 
-/// Filter operations supported in `OData` filters.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FilterOp {
-    /// Equality: field eq value
     Eq,
-    /// Inequality: field ne value
     Ne,
-    /// Greater than: field gt value
     Gt,
-    /// Greater than or equal: field ge value
     Ge,
-    /// Less than: field lt value
     Lt,
-    /// Less than or equal: field le value
     Le,
-    /// String contains: contains(field, 'substring')
     Contains,
-    /// String starts with: startswith(field, 'prefix')
     StartsWith,
-    /// String ends with: endswith(field, 'suffix')
     EndsWith,
-    /// Logical AND
     And,
-    /// Logical OR
     Or,
 }
 
@@ -118,70 +83,25 @@ impl fmt::Display for FilterOp {
     }
 }
 
-/// Type-safe filter AST node parameterized by a `FilterField` implementation.
-///
-/// This represents a filter expression in a database-agnostic way, using only
-/// DTO-level field identifiers and logical operations.
-///
-/// # Type Parameters
-///
-/// - `F`: The `FilterField` implementation (typically a generated enum)
-///
-/// # Example
-///
-/// ```
-/// use modkit_db::odata::filter::{FilterField, FilterNode, FilterOp, ODataValue, parse_odata_filter};
-/// use modkit_db::odata::FieldKind;
-/// use modkit_db_macros::ODataFilterable;
-///
-/// #[derive(ODataFilterable)]
-/// pub struct UserDto {
-///     #[odata(filter(kind = "String"))]
-///     pub email: String,
-/// }
-///
-/// // Parse from OData string (requires with-odata-params feature)
-/// // let filter = parse_odata_filter::<UserDtoFilterField>("email eq 'test@example.com'")?;
-///
-/// // Or build manually using enum variants
-/// use FilterNode::*;
-/// let filter = Binary {
-///     field: UserDtoFilterField::Email,
-///     op: FilterOp::Eq,
-///     value: ODataValue::String("test@example.com".to_string()),
-/// };
-///
-/// // Or use the builder method
-/// let filter2 = FilterNode::binary(
-///     UserDtoFilterField::Email,
-///     FilterOp::Eq,
-///     ODataValue::String("test@example.com".to_string()),
-/// );
-/// ```
 #[derive(Debug, Clone)]
 pub enum FilterNode<F: FilterField> {
-    /// Binary comparison: field op value
     Binary {
         field: F,
         op: FilterOp,
         value: ODataValue,
     },
-    /// Composite expression: AND or OR of multiple filters
     Composite {
-        op: FilterOp, // And or Or
+        op: FilterOp,
         children: Vec<FilterNode<F>>,
     },
-    /// Negation: NOT expression
     Not(Box<FilterNode<F>>),
 }
 
 impl<F: FilterField> FilterNode<F> {
-    /// Create a simple binary comparison node
     pub fn binary(field: F, op: FilterOp, value: ODataValue) -> Self {
         FilterNode::Binary { field, op, value }
     }
 
-    /// Create an AND composite node
     #[must_use]
     pub fn and(children: Vec<FilterNode<F>>) -> Self {
         FilterNode::Composite {
@@ -190,7 +110,6 @@ impl<F: FilterField> FilterNode<F> {
         }
     }
 
-    /// Create an OR composite node
     #[must_use]
     pub fn or(children: Vec<FilterNode<F>>) -> Self {
         FilterNode::Composite {
@@ -199,14 +118,12 @@ impl<F: FilterField> FilterNode<F> {
         }
     }
 
-    /// Create a NOT node
     #[allow(clippy::should_implement_trait)]
     pub fn not(inner: FilterNode<F>) -> Self {
         FilterNode::Not(Box::new(inner))
     }
 }
 
-/// Errors that can occur during filter parsing or validation
 #[derive(Debug, Error, Clone)]
 pub enum FilterError {
     #[error("Unknown field: {0}")]
@@ -237,102 +154,44 @@ pub enum FilterError {
 
 pub type FilterResult<T> = Result<T, FilterError>;
 
-/// Parse an `OData` filter string into a `FilterNode`<F>.
-///
-/// This function takes a raw `OData` filter string (e.g., from a query parameter)
-/// and converts it into a type-safe `FilterNode` using the provided `FilterField` implementation.
-///
-/// **Note**: This function requires the `with-odata-params` feature to be enabled
-/// on the `modkit-odata` crate for actual parsing. If you're working with an
-/// already-parsed AST (e.g., from `ODataQuery`), use `convert_expr_to_filter_node` directly.
-///
-/// # Type Parameters
-///
-/// - `F`: The `FilterField` implementation that defines available fields
-///
-/// # Arguments
-///
-/// - `raw`: The raw `OData` filter string (e.g., "email eq 'test@example.com'")
-///
-/// # Returns
-///
-/// A `FilterNode`<F> representing the parsed filter, or a `FilterError` if parsing fails.
-///
-/// # Example
-///
-/// ```ignore
-/// let filter = parse_odata_filter::<UserDtoFilterField>(
-///     "email eq 'test@example.com' and contains(display_name, 'John')"
-/// )?;
-/// ```
+#[allow(unexpected_cfgs)]
+/// Parse an `OData` filter string into a typed `FilterNode`.
 ///
 /// # Errors
-/// Returns `FilterError` if the filter expression is invalid or parsing fails.
-#[allow(unexpected_cfgs)]
+///
+/// Returns `FilterError::InvalidExpression` if parsing fails, the required feature is disabled,
+/// or the expression cannot be converted into a typed filter node.
 pub fn parse_odata_filter<F: FilterField>(raw: &str) -> FilterResult<FilterNode<F>> {
-    // Parse using odata-params (requires with-odata-params feature)
     #[cfg(feature = "with-odata-params")]
     {
-        use odata_params;
-        let ast = odata_params::parse_str(raw)
-            .map_err(|e| FilterError::InvalidExpression(format!("{:?}", e)))?;
-        // Convert from odata_params AST to modkit_odata AST
+        use odata_params::filters::parse_str;
+
+        let ast = parse_str(raw).map_err(|e| FilterError::InvalidExpression(format!("{e:?}")))?;
         let ast: odata_ast::Expr = ast.into();
         convert_expr_to_filter_node::<F>(&ast)
     }
 
     #[cfg(not(feature = "with-odata-params"))]
     {
-        let _ = raw; // Suppress unused variable warning
+        let _ = raw;
         Err(FilterError::InvalidExpression(
             "OData filter parsing requires 'with-odata-params' feature".to_owned(),
         ))
     }
 }
 
-/// Convert `modkit_odata` AST expression to our `FilterNode`.
-///
-/// This function is useful when you already have a parsed AST (e.g., from `ODataQuery.filter`)
-/// and want to convert it to a type-safe `FilterNode`.
-///
-/// # Example
-///
-/// ```rust
-/// use modkit_db::odata::filter::{FilterNode, convert_expr_to_filter_node};
-/// use modkit_db_macros::ODataFilterable;
-/// use modkit_odata::{ast as odata_ast, ODataQuery};
-///
-/// // Define a DTO with filterable fields using the derive macro
-/// #[derive(ODataFilterable)]
-/// pub struct UserDto {
-///     #[odata(filter(kind = "String"))]
-///     pub email: String,
-/// }
-///
-/// // Build an OData query with a filter expression
-/// let expr = odata_ast::Expr::Compare(
-///     Box::new(odata_ast::Expr::Identifier("email".to_owned())),
-///     odata_ast::CompareOperator::Eq,
-///     Box::new(odata_ast::Expr::Value(odata_ast::Value::String("test@example.com".to_owned()))),
-/// );
-/// let odata_query = ODataQuery::new().with_filter(expr);
-///
-/// // Convert from ODataQuery filter to type-safe FilterNode
-/// let ast = odata_query.filter().unwrap();
-/// let filter_node = convert_expr_to_filter_node::<UserDtoFilterField>(ast).unwrap();
-/// assert!(matches!(filter_node, FilterNode::Binary { .. }));
-///
-/// ```
+/// Convert a parsed `OData` AST expression into a typed `FilterNode`.
 ///
 /// # Errors
-/// Returns `FilterError` if the expression contains unknown fields or unsupported operations.
+///
+/// Returns `FilterError` if the expression is invalid, references unknown fields, uses unsupported
+/// operations, or contains type mismatches.
 pub fn convert_expr_to_filter_node<F: FilterField>(
     expr: &odata_ast::Expr,
 ) -> FilterResult<FilterNode<F>> {
     use odata_ast::Expr as E;
 
     match expr {
-        // Logical operators
         E::And(left, right) => {
             let left_node = convert_expr_to_filter_node::<F>(left)?;
             let right_node = convert_expr_to_filter_node::<F>(right)?;
@@ -348,9 +207,7 @@ pub fn convert_expr_to_filter_node<F: FilterField>(
             Ok(FilterNode::not(inner_node))
         }
 
-        // Binary comparisons
         E::Compare(left, op, right) => {
-            // Extract field name and value
             let (field_name, value) = match (&**left, &**right) {
                 (E::Identifier(name), E::Value(val)) => (name.as_str(), val.clone()),
                 (E::Identifier(_), E::Identifier(_)) => {
@@ -363,14 +220,11 @@ pub fn convert_expr_to_filter_node<F: FilterField>(
                 }
             };
 
-            // Resolve field
             let field = F::from_name(field_name)
                 .ok_or_else(|| FilterError::UnknownField(field_name.to_owned()))?;
 
-            // Validate value type matches field kind
             validate_value_type(field, &value)?;
 
-            // Convert operation
             let filter_op = match op {
                 odata_ast::CompareOperator::Eq => FilterOp::Eq,
                 odata_ast::CompareOperator::Ne => FilterOp::Ne,
@@ -383,7 +237,6 @@ pub fn convert_expr_to_filter_node<F: FilterField>(
             Ok(FilterNode::binary(field, filter_op, value))
         }
 
-        // Function calls (contains, startswith, endswith)
         E::Function(func_name, args) => {
             let name_lower = func_name.to_ascii_lowercase();
             match (name_lower.as_str(), args.as_slice()) {
@@ -394,7 +247,6 @@ pub fn convert_expr_to_filter_node<F: FilterField>(
                     let field = F::from_name(field_name)
                         .ok_or_else(|| FilterError::UnknownField(field_name.clone()))?;
 
-                    // Ensure field is string type
                     if field.kind() != FieldKind::String {
                         return Err(FilterError::TypeMismatch {
                             field: field_name.clone(),
@@ -457,22 +309,15 @@ pub fn convert_expr_to_filter_node<F: FilterField>(
             }
         }
 
-        // IN operator
-        E::In(_left, _list) => {
-            // For now, we don't support IN in the simplified API
-            // It can be added later if needed
-            Err(FilterError::UnsupportedOperation(
-                "IN operator not yet supported in typed filters".to_owned(),
-            ))
-        }
+        E::In(_left, _list) => Err(FilterError::UnsupportedOperation(
+            "IN operator not yet supported in typed filters".to_owned(),
+        )),
 
-        // Invalid leaf expressions
         E::Identifier(name) => Err(FilterError::BareIdentifier(name.clone())),
         E::Value(_) => Err(FilterError::BareLiteral),
     }
 }
 
-/// Validate that a value matches the expected field kind
 fn validate_value_type<F: FilterField>(field: F, value: &odata_ast::Value) -> FilterResult<()> {
     use odata_ast::Value as V;
 

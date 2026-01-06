@@ -1,4 +1,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
+#![allow(clippy::str_to_string)]
+#![allow(clippy::uninlined_format_args)]
+#![allow(clippy::default_trait_access)]
 
 //! Integration tests for domain service operations on cities, languages, addresses, and user-language relations.
 //!
@@ -15,13 +18,14 @@ use modkit_db::secure::SecureConn;
 use modkit_odata::ODataQuery;
 use sea_orm::{ActiveModelTrait, Set};
 use std::sync::Arc;
-use support::{ctx_allow_tenants, ctx_deny_all, inmem_db, seed_user, MockAuditPort, MockEventPublisher};
+use support::{
+    ctx_allow_tenants, ctx_deny_all, inmem_db, seed_user, MockAuditPort, MockEventPublisher,
+};
 use time::OffsetDateTime;
-use user_info_sdk::{NewAddress, NewCity, NewLanguage, CityPatch, LanguagePatch};
+use user_info_sdk::{CityPatch, LanguagePatch, NewAddress, NewCity, NewLanguage};
 use users_info::domain::service::{Service, ServiceConfig};
 use users_info::infra::storage::entity::{
-    city::ActiveModel as CityAM,
-    language::ActiveModel as LanguageAM,
+    city::ActiveModel as CityAM, language::ActiveModel as LanguageAM,
 };
 use uuid::Uuid;
 
@@ -89,7 +93,10 @@ async fn get_city_respects_tenant_scope() {
     assert_eq!(result_ok.unwrap().name, "Paris");
 
     let result_deny = service.get_city(&ctx_deny, city_id).await;
-    assert!(result_deny.is_err(), "Should not access city in different tenant");
+    assert!(
+        result_deny.is_err(),
+        "Should not access city in different tenant"
+    );
 }
 
 #[tokio::test]
@@ -199,7 +206,7 @@ async fn list_cities_with_pagination() {
         select: None,
     };
 
-    let result = service.list_cities(&ctx, &query).await;
+    let result = service.list_cities_page(&ctx, &query).await;
     assert!(result.is_ok());
     let page = result.unwrap();
     assert_eq!(page.items.len(), 5);
@@ -268,7 +275,10 @@ async fn get_language_respects_tenant_scope() {
     assert_eq!(result_ok.unwrap().code, "fr");
 
     let result_deny = service.get_language(&ctx_deny, language_id).await;
-    assert!(result_deny.is_err(), "Should not access language in different tenant");
+    assert!(
+        result_deny.is_err(),
+        "Should not access language in different tenant"
+    );
 }
 
 #[tokio::test]
@@ -378,7 +388,7 @@ async fn list_languages_with_pagination() {
         select: None,
     };
 
-    let result = service.list_languages(&ctx, &query).await;
+    let result = service.list_languages_page(&ctx, &query).await;
     assert!(result.is_ok());
     let page = result.unwrap();
     assert_eq!(page.items.len(), 5);
@@ -489,7 +499,10 @@ async fn put_user_address_updates_existing_address() {
         street: "Old Street".to_string(),
         postal_code: "00000".to_string(),
     };
-    let created = service.put_user_address(&ctx, user_id, first_address).await.unwrap();
+    let created = service
+        .put_user_address(&ctx, user_id, first_address)
+        .await
+        .unwrap();
 
     let updated_address = NewAddress {
         id: Some(created.id),
@@ -499,7 +512,9 @@ async fn put_user_address_updates_existing_address() {
         street: "New Street".to_string(),
         postal_code: "99999".to_string(),
     };
-    let result = service.put_user_address(&ctx, user_id, updated_address).await;
+    let result = service
+        .put_user_address(&ctx, user_id, updated_address)
+        .await;
     assert!(result.is_ok());
     let updated = result.unwrap();
     assert_eq!(updated.id, created.id);
@@ -543,7 +558,10 @@ async fn delete_user_address_success() {
         street: "123 Main St".to_string(),
         postal_code: "12345".to_string(),
     };
-    service.put_user_address(&ctx, user_id, new_address).await.unwrap();
+    service
+        .put_user_address(&ctx, user_id, new_address)
+        .await
+        .unwrap();
 
     let result = service.delete_user_address(&ctx, user_id).await;
     assert!(result.is_ok());
@@ -604,7 +622,9 @@ async fn assign_language_to_user_success() {
     );
 
     let ctx = ctx_allow_tenants(&[tenant_id]);
-    let result = service.assign_language_to_user(&ctx, user_id, language_id).await;
+    let result = service
+        .assign_language_to_user(&ctx, user_id, language_id)
+        .await;
     assert!(result.is_ok());
 
     let languages = service.list_user_languages(&ctx, user_id).await.unwrap();
@@ -641,15 +661,26 @@ async fn assign_language_to_user_is_idempotent() {
     );
 
     let ctx = ctx_allow_tenants(&[tenant_id]);
-    
-    let result1 = service.assign_language_to_user(&ctx, user_id, language_id).await;
+
+    let result1 = service
+        .assign_language_to_user(&ctx, user_id, language_id)
+        .await;
     assert!(result1.is_ok());
 
-    let result2 = service.assign_language_to_user(&ctx, user_id, language_id).await;
-    assert!(result2.is_ok(), "Second assignment should succeed (idempotent)");
+    let result2 = service
+        .assign_language_to_user(&ctx, user_id, language_id)
+        .await;
+    assert!(
+        result2.is_ok(),
+        "Second assignment should succeed (idempotent)"
+    );
 
     let languages = service.list_user_languages(&ctx, user_id).await.unwrap();
-    assert_eq!(languages.len(), 1, "Should only have one language assignment");
+    assert_eq!(
+        languages.len(),
+        1,
+        "Should only have one language assignment"
+    );
 }
 
 #[tokio::test]
@@ -681,9 +712,14 @@ async fn remove_language_from_user_success() {
     );
 
     let ctx = ctx_allow_tenants(&[tenant_id]);
-    service.assign_language_to_user(&ctx, user_id, language_id).await.unwrap();
+    service
+        .assign_language_to_user(&ctx, user_id, language_id)
+        .await
+        .unwrap();
 
-    let result = service.remove_language_from_user(&ctx, user_id, language_id).await;
+    let result = service
+        .remove_language_from_user(&ctx, user_id, language_id)
+        .await;
     assert!(result.is_ok());
 
     let languages = service.list_user_languages(&ctx, user_id).await.unwrap();
@@ -719,13 +755,23 @@ async fn remove_language_from_user_is_idempotent() {
     );
 
     let ctx = ctx_allow_tenants(&[tenant_id]);
-    service.assign_language_to_user(&ctx, user_id, language_id).await.unwrap();
+    service
+        .assign_language_to_user(&ctx, user_id, language_id)
+        .await
+        .unwrap();
 
-    let result1 = service.remove_language_from_user(&ctx, user_id, language_id).await;
+    let result1 = service
+        .remove_language_from_user(&ctx, user_id, language_id)
+        .await;
     assert!(result1.is_ok());
 
-    let result2 = service.remove_language_from_user(&ctx, user_id, language_id).await;
-    assert!(result2.is_ok(), "Second removal should succeed (idempotent)");
+    let result2 = service
+        .remove_language_from_user(&ctx, user_id, language_id)
+        .await;
+    assert!(
+        result2.is_ok(),
+        "Second removal should succeed (idempotent)"
+    );
 
     let languages = service.list_user_languages(&ctx, user_id).await.unwrap();
     assert_eq!(languages.len(), 0);
@@ -785,7 +831,10 @@ async fn list_user_languages_returns_multiple() {
 
     let ctx = ctx_allow_tenants(&[tenant_id]);
     for lang_id in &lang_ids {
-        service.assign_language_to_user(&ctx, user_id, *lang_id).await.unwrap();
+        service
+            .assign_language_to_user(&ctx, user_id, *lang_id)
+            .await
+            .unwrap();
     }
 
     let result = service.list_user_languages(&ctx, user_id).await;
@@ -803,7 +852,7 @@ async fn deny_all_context_blocks_all_operations() {
     let user_id = Uuid::new_v4();
     let city_id = Uuid::new_v4();
     let language_id = Uuid::new_v4();
-    
+
     seed_user(&db, user_id, tenant_id, "test@example.com", "Test User").await;
 
     let now = OffsetDateTime::now_utc();
@@ -838,11 +887,20 @@ async fn deny_all_context_blocks_all_operations() {
     let ctx = ctx_deny_all();
 
     let city_result = service.get_city(&ctx, city_id).await;
-    assert!(city_result.is_err(), "Deny-all context should block city access");
+    assert!(
+        city_result.is_err(),
+        "Deny-all context should block city access"
+    );
 
     let lang_result = service.get_language(&ctx, language_id).await;
-    assert!(lang_result.is_err(), "Deny-all context should block language access");
+    assert!(
+        lang_result.is_err(),
+        "Deny-all context should block language access"
+    );
 
     let user_result = service.get_user(&ctx, user_id).await;
-    assert!(user_result.is_err(), "Deny-all context should block user access");
+    assert!(
+        user_result.is_err(),
+        "Deny-all context should block user access"
+    );
 }

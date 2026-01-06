@@ -2,6 +2,9 @@
 //!
 //! Tests all endpoints: Users, Cities, Languages, Addresses, and User-Language relationships
 
+#![allow(clippy::str_to_string)]
+#![allow(clippy::uninlined_format_args)]
+
 use modkit_security::SecurityContext;
 use uuid::Uuid;
 
@@ -60,7 +63,7 @@ async fn test_city_crud_operations() {
     let query = modkit_odata::ODataQuery::default();
     let page = ctx
         .service
-        .list_cities(&sec_ctx, &query)
+        .list_cities_page(&sec_ctx, &query)
         .await
         .expect("Failed to list cities");
     assert!(!page.items.is_empty());
@@ -138,7 +141,7 @@ async fn test_language_crud_operations() {
     let query = modkit_odata::ODataQuery::default();
     let page = ctx
         .service
-        .list_languages(&sec_ctx, &query)
+        .list_languages_page(&sec_ctx, &query)
         .await
         .expect("Failed to list languages");
     assert!(!page.items.is_empty());

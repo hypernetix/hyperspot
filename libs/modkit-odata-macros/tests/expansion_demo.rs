@@ -1,7 +1,7 @@
 // This test demonstrates the actual macro expansion
-// Run with: cargo expand --package modkit-sdk-macros --test expansion_demo
+// Run with: cargo expand --package modkit-odata-macros --test expansion_demo
 
-use modkit_sdk_macros::ODataSchema;
+use modkit_odata_macros::ODataSchema;
 
 #[derive(ODataSchema)]
 #[allow(dead_code)]
@@ -15,8 +15,7 @@ struct DemoDto {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use modkit_odata::SortDir;
-    use modkit_sdk::odata::{AsFieldKey, FilterExpr, QueryBuilder, Schema};
+    use modkit_odata::schema::Schema;
 
     #[test]
     fn demo_field_enum() {
@@ -46,29 +45,6 @@ mod tests {
         assert_eq!(created_at.name(), "created_at");
     }
 
-    #[test]
-    fn demo_query_building() {
-        let dto_id = uuid::Uuid::new_v4();
-
-        let id = demo_dto::id();
-        let email = demo_dto::email();
-
-        let query = QueryBuilder::<DemoDtoSchema>::new()
-            .filter(
-                demo_dto::id()
-                    .eq(dto_id)
-                    .and(demo_dto::email().contains("@example.com")),
-            )
-            .order_by(demo_dto::created_at(), SortDir::Desc)
-            .select(&[
-                &id as &dyn AsFieldKey<DemoDtoSchema>,
-                &email as &dyn AsFieldKey<DemoDtoSchema>,
-            ])
-            .page_size(25)
-            .build();
-
-        assert!(query.has_filter());
-        assert_eq!(query.order.0.len(), 1);
-        assert_eq!(query.limit, Some(25));
-    }
+    // Note: QueryBuilder integration test removed to avoid circular dependency.
+    // Full integration tests with QueryBuilder belong in modkit-sdk tests.
 }

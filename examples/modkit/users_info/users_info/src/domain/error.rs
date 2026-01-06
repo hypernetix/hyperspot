@@ -85,7 +85,6 @@ impl DomainError {
 impl From<DomainError> for UsersInfoError {
     fn from(domain_error: DomainError) -> Self {
         match domain_error {
-            DomainError::UserNotFound { id } => UsersInfoError::not_found(id),
             DomainError::EmailAlreadyExists { email } => UsersInfoError::conflict(email),
             DomainError::InvalidEmail { email } => {
                 UsersInfoError::validation(format!("Invalid email: {email}"))
@@ -99,7 +98,9 @@ impl From<DomainError> for UsersInfoError {
             DomainError::Validation { field, message } => {
                 UsersInfoError::validation(format!("{field}: {message}"))
             }
-            DomainError::NotFound { id, .. } => UsersInfoError::not_found(id),
+            DomainError::UserNotFound { id } | DomainError::NotFound { id, .. } => {
+                UsersInfoError::not_found(id)
+            }
             DomainError::Database { .. } | DomainError::InternalError => UsersInfoError::internal(),
         }
     }

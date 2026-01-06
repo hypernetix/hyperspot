@@ -7,7 +7,9 @@ mod support;
 use modkit_db::secure::SecureConn;
 use modkit_odata::ODataQuery;
 use std::sync::Arc;
-use support::{ctx_allow_tenants, ctx_root, inmem_db, seed_user, MockAuditPort, MockEventPublisher};
+use support::{
+    ctx_allow_tenants, ctx_root, inmem_db, seed_user, MockAuditPort, MockEventPublisher,
+};
 use users_info::domain::service::{Service, ServiceConfig};
 use uuid::Uuid;
 
@@ -104,16 +106,10 @@ async fn root_scope_vs_tenant_scope() {
 
     // Act: List with root context
     let query = ODataQuery::default();
-    let root_result = service
-        .list_users_page(&ctx_root, &query)
-        .await
-        .unwrap();
+    let root_result = service.list_users_page(&ctx_root, &query).await.unwrap();
 
     // Act: List with tenant-scoped context
-    let tenant_result = service
-        .list_users_page(&ctx_tenant1, &query)
-        .await
-        .unwrap();
+    let tenant_result = service.list_users_page(&ctx_tenant1, &query).await.unwrap();
 
     // Assert: Root context sees all users
     assert_eq!(

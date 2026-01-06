@@ -5,12 +5,7 @@ use uuid::Uuid;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Scopable)]
 #[sea_orm(table_name = "addresses")]
-#[secure(
-    tenant_col = "tenant_id",
-    resource_col = "id",
-    no_owner,
-    no_type
-)]
+#[secure(tenant_col = "tenant_id", resource_col = "id", no_owner, no_type)]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: Uuid,

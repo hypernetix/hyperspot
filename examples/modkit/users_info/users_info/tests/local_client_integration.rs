@@ -1,4 +1,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
+#![allow(clippy::str_to_string)]
+#![allow(clippy::uninlined_format_args)]
+#![allow(clippy::default_trait_access)]
 
 //! Integration tests for `UsersInfoLocalClient`.
 //!
@@ -12,8 +15,8 @@ use std::sync::Arc;
 use support::{ctx_root, TestContext};
 use user_info_sdk::{
     AddressPatch, CityPatch, LanguagePatch, NewAddress, NewCity, NewLanguage, NewUser,
-    UpdateAddressRequest, UpdateCityRequest, UpdateLanguageRequest, UpdateUserRequest,
-    UsersInfoClient, UsersInfoError, UserPatch,
+    UpdateAddressRequest, UpdateCityRequest, UpdateLanguageRequest, UpdateUserRequest, UserPatch,
+    UsersInfoClient, UsersInfoError,
 };
 use users_info::local_client::UsersInfoLocalClient;
 use uuid::Uuid;
@@ -479,17 +482,17 @@ async fn test_client_can_be_wrapped_in_arc() {
     let test_ctx = TestContext::new().await;
     let client = create_client(&test_ctx);
     let arc_client: Arc<dyn UsersInfoClient> = Arc::new(client);
-    
+
     let ctx = ctx_root();
     let tenant_id = Uuid::new_v4();
-    
+
     let new_user = NewUser {
         id: None,
         tenant_id,
         email: "arc@example.com".to_string(),
         display_name: "Arc User".to_string(),
     };
-    
+
     let created = arc_client.create_user(&ctx, new_user).await.unwrap();
     assert_eq!(created.email, "arc@example.com");
 }

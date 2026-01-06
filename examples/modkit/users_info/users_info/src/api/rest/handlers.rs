@@ -16,6 +16,19 @@ use modkit::SseBroadcaster;
 
 use modkit_security::SecurityContext;
 
+#[path = "handlers/addresses.rs"]
+mod addresses;
+#[path = "handlers/cities.rs"]
+mod cities;
+#[path = "handlers/languages.rs"]
+mod languages;
+#[path = "handlers/sse.rs"]
+mod sse;
+#[path = "handlers/user_languages.rs"]
+mod user_languages;
+#[path = "handlers/users.rs"]
+mod users;
+
 /// List users with cursor-based pagination and optional field projection via $select
 #[tracing::instrument(
     skip(svc, query, ctx),
@@ -30,17 +43,7 @@ pub async fn list_users(
     Extension(svc): Extension<std::sync::Arc<Service>>,
     OData(query): OData,
 ) -> ApiResult<JsonPage<serde_json::Value>> {
-    info!(
-        user_id = %ctx.subject_id(),
-        "Listing users with cursor pagination"
-    );
-
-    let page = svc
-        .list_users_page(&ctx, &query)
-        .await?
-        .map_items(UserDto::from);
-
-    Ok(Json(page_to_projected_json(&page, query.selected_fields())))
+    users::list_users(ctx, svc, query).await
 }
 
 /// Get a specific user by ID with optional field projection via $select
@@ -58,18 +61,7 @@ pub async fn get_user(
     Path(id): Path<Uuid>,
     OData(query): OData,
 ) -> ApiResult<JsonBody<serde_json::Value>> {
-    info!(
-        user_id = %id,
-        requester_id = %ctx.subject_id(),
-        "Getting user details"
-    );
-
-    let user = svc.get_user(&ctx, id).await?;
-    let user_dto = UserDto::from(user);
-
-    let projected = apply_select(&user_dto, query.selected_fields());
-
-    Ok(Json(projected))
+    users::get_user(ctx, svc, id, query).await
 }
 
 /// Create a new user
@@ -127,9 +119,7 @@ pub async fn create_user(
         display_name,
     };
 
-    let user = svc.create_user(&ctx, new_user).await?;
-    let id_str = user.id.to_string();
-    Ok(created_json(UserDto::from(user), &uri, &id_str))
+    users::create_user(uri, ctx, svc, new_user).await
 }
 
 /// Update an existing user
@@ -147,15 +137,7 @@ pub async fn update_user(
     Path(id): Path<Uuid>,
     Json(req_body): Json<UpdateUserReq>,
 ) -> ApiResult<JsonBody<UserDto>> {
-    info!(
-        user_id = %id,
-        updater_id = %ctx.subject_id(),
-        "Updating user"
-    );
-
-    let patch = req_body.into();
-    let user = svc.update_user(&ctx, id, patch).await?;
-    Ok(Json(UserDto::from(user)))
+    users::update_user(ctx, svc, id, req_body).await
 }
 
 /// Delete a user by ID
@@ -172,14 +154,7 @@ pub async fn delete_user(
     Extension(svc): Extension<std::sync::Arc<Service>>,
     Path(id): Path<Uuid>,
 ) -> ApiResult<impl IntoResponse> {
-    info!(
-        user_id = %id,
-        deleter_id = %ctx.subject_id(),
-        "Deleting user"
-    );
-
-    svc.delete_user(&ctx, id).await?;
-    Ok(no_content())
+    users::delete_user(ctx, svc, id).await
 }
 
 /// SSE endpoint returning a live stream of `UserEvent`.
@@ -190,8 +165,7 @@ pub async fn delete_user(
 pub async fn users_events(
     Extension(sse): Extension<SseBroadcaster<UserEvent>>,
 ) -> impl IntoResponse {
-    info!("New SSE connection for user events");
-    sse.sse_response_named("users_events")
+    sse::users_events(&sse)
 }
 
 // ==================== City Handlers ====================
@@ -210,17 +184,7 @@ pub async fn list_cities(
     Extension(svc): Extension<std::sync::Arc<Service>>,
     OData(query): OData,
 ) -> ApiResult<JsonPage<serde_json::Value>> {
-    info!(
-        user_id = %ctx.subject_id(),
-        "Listing cities with cursor pagination"
-    );
-
-    let page = svc
-        .list_cities_page(&ctx, &query)
-        .await?
-        .map_items(CityDto::from);
-
-    Ok(Json(page_to_projected_json(&page, query.selected_fields())))
+    cities::list_cities(ctx, svc, query).await
 }
 
 /// Get a specific city by ID with optional field projection via $select
@@ -238,18 +202,7 @@ pub async fn get_city(
     Path(id): Path<Uuid>,
     OData(query): OData,
 ) -> ApiResult<JsonBody<serde_json::Value>> {
-    info!(
-        city_id = %id,
-        requester_id = %ctx.subject_id(),
-        "Getting city details"
-    );
-
-    let city = svc.get_city(&ctx, id).await?;
-    let city_dto = CityDto::from(city);
-
-    let projected = apply_select(&city_dto, query.selected_fields());
-
-    Ok(Json(projected))
+    cities::get_city(ctx, svc, id, query).await
 }
 
 /// Create a new city
@@ -269,18 +222,7 @@ pub async fn create_city(
     Extension(svc): Extension<std::sync::Arc<Service>>,
     Json(req_body): Json<CreateCityReq>,
 ) -> ApiResult<impl IntoResponse> {
-    info!(
-        name = %req_body.name,
-        country = %req_body.country,
-        tenant_id = %req_body.tenant_id,
-        creator_id = %ctx.subject_id(),
-        "Creating new city"
-    );
-
-    let new_city = req_body.into();
-    let city = svc.create_city(&ctx, new_city).await?;
-    let id_str = city.id.to_string();
-    Ok(created_json(CityDto::from(city), &uri, &id_str))
+    cities::create_city(uri, ctx, svc, req_body).await
 }
 
 /// Update an existing city
@@ -298,15 +240,7 @@ pub async fn update_city(
     Path(id): Path<Uuid>,
     Json(req_body): Json<UpdateCityReq>,
 ) -> ApiResult<JsonBody<CityDto>> {
-    info!(
-        city_id = %id,
-        updater_id = %ctx.subject_id(),
-        "Updating city"
-    );
-
-    let patch = req_body.into();
-    let city = svc.update_city(&ctx, id, patch).await?;
-    Ok(Json(CityDto::from(city)))
+    cities::update_city(ctx, svc, id, req_body).await
 }
 
 /// Delete a city by ID
@@ -323,14 +257,7 @@ pub async fn delete_city(
     Extension(svc): Extension<std::sync::Arc<Service>>,
     Path(id): Path<Uuid>,
 ) -> ApiResult<impl IntoResponse> {
-    info!(
-        city_id = %id,
-        deleter_id = %ctx.subject_id(),
-        "Deleting city"
-    );
-
-    svc.delete_city(&ctx, id).await?;
-    Ok(no_content())
+    cities::delete_city(ctx, svc, id).await
 }
 
 // ==================== Language Handlers ====================
@@ -349,17 +276,7 @@ pub async fn list_languages(
     Extension(svc): Extension<std::sync::Arc<Service>>,
     OData(query): OData,
 ) -> ApiResult<JsonPage<serde_json::Value>> {
-    info!(
-        user_id = %ctx.subject_id(),
-        "Listing languages with cursor pagination"
-    );
-
-    let page = svc
-        .list_languages_page(&ctx, &query)
-        .await?
-        .map_items(LanguageDto::from);
-
-    Ok(Json(page_to_projected_json(&page, query.selected_fields())))
+    languages::list_languages(ctx, svc, query).await
 }
 
 /// Get a specific language by ID with optional field projection via $select
@@ -377,18 +294,7 @@ pub async fn get_language(
     Path(id): Path<Uuid>,
     OData(query): OData,
 ) -> ApiResult<JsonBody<serde_json::Value>> {
-    info!(
-        language_id = %id,
-        requester_id = %ctx.subject_id(),
-        "Getting language details"
-    );
-
-    let language = svc.get_language(&ctx, id).await?;
-    let language_dto = LanguageDto::from(language);
-
-    let projected = apply_select(&language_dto, query.selected_fields());
-
-    Ok(Json(projected))
+    languages::get_language(ctx, svc, id, query).await
 }
 
 /// Create a new language
@@ -408,18 +314,7 @@ pub async fn create_language(
     Extension(svc): Extension<std::sync::Arc<Service>>,
     Json(req_body): Json<CreateLanguageReq>,
 ) -> ApiResult<impl IntoResponse> {
-    info!(
-        code = %req_body.code,
-        name = %req_body.name,
-        tenant_id = %req_body.tenant_id,
-        creator_id = %ctx.subject_id(),
-        "Creating new language"
-    );
-
-    let new_language = req_body.into();
-    let language = svc.create_language(&ctx, new_language).await?;
-    let id_str = language.id.to_string();
-    Ok(created_json(LanguageDto::from(language), &uri, &id_str))
+    languages::create_language(uri, ctx, svc, req_body).await
 }
 
 /// Update an existing language
@@ -437,15 +332,7 @@ pub async fn update_language(
     Path(id): Path<Uuid>,
     Json(req_body): Json<UpdateLanguageReq>,
 ) -> ApiResult<JsonBody<LanguageDto>> {
-    info!(
-        language_id = %id,
-        updater_id = %ctx.subject_id(),
-        "Updating language"
-    );
-
-    let patch = req_body.into();
-    let language = svc.update_language(&ctx, id, patch).await?;
-    Ok(Json(LanguageDto::from(language)))
+    languages::update_language(ctx, svc, id, req_body).await
 }
 
 /// Delete a language by ID
@@ -462,14 +349,7 @@ pub async fn delete_language(
     Extension(svc): Extension<std::sync::Arc<Service>>,
     Path(id): Path<Uuid>,
 ) -> ApiResult<impl IntoResponse> {
-    info!(
-        language_id = %id,
-        deleter_id = %ctx.subject_id(),
-        "Deleting language"
-    );
-
-    svc.delete_language(&ctx, id).await?;
-    Ok(no_content())
+    languages::delete_language(ctx, svc, id).await
 }
 
 // ==================== Address Handlers ====================
@@ -488,18 +368,7 @@ pub async fn get_user_address(
     Extension(svc): Extension<std::sync::Arc<Service>>,
     Path(user_id): Path<Uuid>,
 ) -> ApiResult<JsonBody<AddressDto>> {
-    info!(
-        user_id = %user_id,
-        requester_id = %ctx.subject_id(),
-        "Getting user address"
-    );
-
-    let address = svc
-        .get_user_address(&ctx, user_id)
-        .await?
-        .ok_or_else(|| crate::domain::error::DomainError::not_found("Address", user_id))?;
-
-    Ok(Json(AddressDto::from(address)))
+    addresses::get_user_address(ctx, svc, user_id).await
 }
 
 /// Upsert address for a specific user (PUT = create or replace)
@@ -517,16 +386,7 @@ pub async fn put_user_address(
     Path(user_id): Path<Uuid>,
     Json(req_body): Json<PutAddressReq>,
 ) -> ApiResult<impl IntoResponse> {
-    info!(
-        user_id = %user_id,
-        updater_id = %ctx.subject_id(),
-        "Upserting user address"
-    );
-
-    let new_address = req_body.into_new_address(user_id);
-    let address = svc.put_user_address(&ctx, user_id, new_address).await?;
-
-    Ok(Json(AddressDto::from(address)))
+    addresses::put_user_address(ctx, svc, user_id, req_body).await
 }
 
 /// Delete address for a specific user
@@ -543,14 +403,7 @@ pub async fn delete_user_address(
     Extension(svc): Extension<std::sync::Arc<Service>>,
     Path(user_id): Path<Uuid>,
 ) -> ApiResult<impl IntoResponse> {
-    info!(
-        user_id = %user_id,
-        deleter_id = %ctx.subject_id(),
-        "Deleting user address"
-    );
-
-    svc.delete_user_address(&ctx, user_id).await?;
-    Ok(no_content())
+    addresses::delete_user_address(ctx, svc, user_id).await
 }
 
 // ==================== User-Language Relationship Handlers ====================
@@ -569,16 +422,7 @@ pub async fn list_user_languages(
     Extension(svc): Extension<std::sync::Arc<Service>>,
     Path(user_id): Path<Uuid>,
 ) -> ApiResult<JsonBody<Vec<LanguageDto>>> {
-    info!(
-        user_id = %user_id,
-        requester_id = %ctx.subject_id(),
-        "Listing user languages"
-    );
-
-    let languages = svc.list_user_languages(&ctx, user_id).await?;
-    let dtos: Vec<LanguageDto> = languages.into_iter().map(LanguageDto::from).collect();
-
-    Ok(Json(dtos))
+    user_languages::list_user_languages(ctx, svc, user_id).await
 }
 
 /// Assign a language to a user (idempotent)
@@ -596,16 +440,7 @@ pub async fn assign_language_to_user(
     Extension(svc): Extension<std::sync::Arc<Service>>,
     Path((user_id, language_id)): Path<(Uuid, Uuid)>,
 ) -> ApiResult<impl IntoResponse> {
-    info!(
-        user_id = %user_id,
-        language_id = %language_id,
-        updater_id = %ctx.subject_id(),
-        "Assigning language to user"
-    );
-
-    svc.assign_language_to_user(&ctx, user_id, language_id)
-        .await?;
-    Ok(no_content())
+    user_languages::assign_language_to_user(ctx, svc, user_id, language_id).await
 }
 
 /// Remove a language from a user (idempotent)
@@ -623,14 +458,5 @@ pub async fn remove_language_from_user(
     Extension(svc): Extension<std::sync::Arc<Service>>,
     Path((user_id, language_id)): Path<(Uuid, Uuid)>,
 ) -> ApiResult<impl IntoResponse> {
-    info!(
-        user_id = %user_id,
-        language_id = %language_id,
-        deleter_id = %ctx.subject_id(),
-        "Removing language from user"
-    );
-
-    svc.remove_language_from_user(&ctx, user_id, language_id)
-        .await?;
-    Ok(no_content())
+    user_languages::remove_language_from_user(ctx, svc, user_id, language_id).await
 }

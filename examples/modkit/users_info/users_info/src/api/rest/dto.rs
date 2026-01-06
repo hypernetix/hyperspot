@@ -1,4 +1,3 @@
-use modkit_db_macros::ODataFilterable;
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 use user_info_sdk::{
@@ -8,15 +7,12 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 
 /// REST DTO for user representation with serde/utoipa
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, ODataFilterable)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct UserDto {
-    #[odata(filter(kind = "Uuid"))]
     pub id: Uuid,
     pub tenant_id: Uuid,
-    #[odata(filter(kind = "String"))]
     pub email: String,
     pub display_name: String,
-    #[odata(filter(kind = "DateTimeUtc"))]
     #[serde(with = "time::serde::rfc3339")]
     pub created_at: OffsetDateTime,
     #[serde(with = "time::serde::rfc3339")]
@@ -78,16 +74,12 @@ impl From<UpdateUserReq> for UserPatch {
 // ==================== City DTOs ====================
 
 /// REST DTO for city representation
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, ODataFilterable)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct CityDto {
-    #[odata(filter(kind = "Uuid"))]
     pub id: Uuid,
     pub tenant_id: Uuid,
-    #[odata(filter(kind = "String"))]
     pub name: String,
-    #[odata(filter(kind = "String"))]
     pub country: String,
-    #[odata(filter(kind = "DateTimeUtc"))]
     #[serde(with = "time::serde::rfc3339")]
     pub created_at: OffsetDateTime,
     #[serde(with = "time::serde::rfc3339")]
@@ -147,16 +139,12 @@ impl From<UpdateCityReq> for user_info_sdk::CityPatch {
 // ==================== Language DTOs ====================
 
 /// REST DTO for language representation
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, ODataFilterable)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct LanguageDto {
-    #[odata(filter(kind = "Uuid"))]
     pub id: Uuid,
     pub tenant_id: Uuid,
-    #[odata(filter(kind = "String"))]
     pub code: String,
-    #[odata(filter(kind = "String"))]
     pub name: String,
-    #[odata(filter(kind = "DateTimeUtc"))]
     #[serde(with = "time::serde::rfc3339")]
     pub created_at: OffsetDateTime,
     #[serde(with = "time::serde::rfc3339")]
@@ -254,6 +242,7 @@ impl From<Address> for AddressDto {
 }
 
 impl PutAddressReq {
+    #[must_use]
     pub fn into_new_address(self, user_id: Uuid) -> NewAddress {
         NewAddress {
             id: None,
@@ -303,8 +292,9 @@ impl From<&crate::domain::events::UserDomainEvent> for UserEvent {
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
-    use super::*;
+    use super::{UserEvent, Uuid};
     use crate::domain::events::UserDomainEvent;
+    use time::OffsetDateTime;
 
     #[test]
     fn maps_domain_event_to_transport() {

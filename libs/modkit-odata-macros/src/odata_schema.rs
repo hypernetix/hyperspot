@@ -57,7 +57,7 @@ pub fn expand_derive_odata_schema(input: &DeriveInput) -> TokenStream {
     let schema_impl = quote! {
         pub struct #schema_struct_name;
 
-        impl modkit_sdk::odata::Schema for #schema_struct_name {
+        impl ::modkit_odata::schema::Schema for #schema_struct_name {
             type Field = #field_enum_name;
 
             fn field_name(field: Self::Field) -> &'static str {
@@ -74,8 +74,8 @@ pub fn expand_derive_odata_schema(input: &DeriveInput) -> TokenStream {
             let fn_name = field_ident.clone();
             quote! {
                 #[must_use]
-                pub fn #fn_name() -> modkit_sdk::odata::FieldRef<super::#schema_struct_name, #field_type> {
-                    modkit_sdk::odata::FieldRef::new(super::#field_enum_name::#variant)
+                pub fn #fn_name() -> ::modkit_odata::schema::FieldRef<super::#schema_struct_name, #field_type> {
+                    ::modkit_odata::schema::FieldRef::new(super::#field_enum_name::#variant)
                 }
             }
         });

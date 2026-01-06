@@ -1,8 +1,8 @@
 [package]
-name = "modkit-sdk-macros"
+name = "modkit-odata-macros"
 version.workspace = true
 edition.workspace = true
-description = "Proc-macro derives for modkit-sdk OData schema generation"
+description = "Proc-macro derives for OData protocol (FilterField, Schema, etc)"
 license.workspace = true
 authors.workspace = true
 
@@ -21,6 +21,5 @@ proc-macro-error2 = { workspace = true }
 
 [dev-dependencies]
 trybuild = { workspace = true }
-modkit-sdk = { path = "../modkit-sdk", default-features = false, features = ["uuid"] }
 modkit-odata = { path = "../modkit-odata" }
 uuid = { workspace = true, features = ["v7"] }

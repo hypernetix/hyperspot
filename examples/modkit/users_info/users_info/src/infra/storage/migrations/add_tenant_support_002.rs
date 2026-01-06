@@ -14,7 +14,7 @@ impl MigrationTrait for Migration {
         let sql = match backend {
             sea_orm::DatabaseBackend::Postgres => {
                 format!(
-                    r#"
+                    r"
 -- Add tenant_id column
 ALTER TABLE users ADD COLUMN IF NOT EXISTS tenant_id UUID;
 
@@ -32,12 +32,12 @@ CREATE UNIQUE INDEX IF NOT EXISTS uk_users_tenant_email ON users(tenant_id, emai
 
 -- Create index on tenant_id for filtering
 CREATE INDEX IF NOT EXISTS idx_users_tenant ON users(tenant_id);
-                "#
+                "
                 )
             }
             sea_orm::DatabaseBackend::MySql => {
                 format!(
-                    r#"
+                    r"
 -- Add tenant_id column
 ALTER TABLE users ADD COLUMN tenant_id VARCHAR(36);
 
@@ -55,12 +55,12 @@ CREATE UNIQUE INDEX uk_users_tenant_email ON users(tenant_id, email);
 
 -- Create index on tenant_id for filtering
 CREATE INDEX idx_users_tenant ON users(tenant_id);
-                "#
+                "
                 )
             }
             sea_orm::DatabaseBackend::Sqlite => {
                 format!(
-                    r#"
+                    r"
 -- SQLite: Add tenant_id column with default
 ALTER TABLE users ADD COLUMN tenant_id TEXT NOT NULL DEFAULT '{root_tenant}';
 
@@ -72,7 +72,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uk_users_tenant_email ON users(tenant_id, emai
 
 -- Create index on tenant_id for filtering
 CREATE INDEX IF NOT EXISTS idx_users_tenant ON users(tenant_id);
-                "#
+                "
                 )
             }
         };
@@ -87,7 +87,7 @@ CREATE INDEX IF NOT EXISTS idx_users_tenant ON users(tenant_id);
 
         let sql = match backend {
             sea_orm::DatabaseBackend::Postgres => {
-                r#"
+                r"
 -- Drop composite unique index
 DROP INDEX IF EXISTS uk_users_tenant_email;
 
@@ -99,10 +99,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email);
 
 -- Drop tenant_id column
 ALTER TABLE users DROP COLUMN IF EXISTS tenant_id;
-                "#
+                "
             }
             sea_orm::DatabaseBackend::MySql => {
-                r#"
+                r"
 -- Drop composite unique index
 DROP INDEX uk_users_tenant_email ON users;
 
@@ -114,10 +114,10 @@ CREATE UNIQUE INDEX idx_users_email ON users(email);
 
 -- Drop tenant_id column
 ALTER TABLE users DROP COLUMN tenant_id;
-                "#
+                "
             }
             sea_orm::DatabaseBackend::Sqlite => {
-                r#"
+                r"
 -- SQLite: Cannot drop columns, need to recreate table
 -- Drop indexes first
 DROP INDEX IF EXISTS uk_users_tenant_email;
@@ -140,7 +140,7 @@ ALTER TABLE users_new RENAME TO users;
 
 -- Restore old unique index on email
 CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email);
-                "#
+                "
             }
         };
 

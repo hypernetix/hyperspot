@@ -56,7 +56,7 @@ impl UsersInfoError {
         Self::Internal
     }
 
-    /// Create a NotImplemented error.
+    /// Create a `NotImplemented` error.
     #[must_use]
     pub fn not_implemented() -> Self {
         Self::NotImplemented

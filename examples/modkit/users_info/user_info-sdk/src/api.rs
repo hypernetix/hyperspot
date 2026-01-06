@@ -45,11 +45,8 @@ pub trait UsersInfoClient: Send + Sync {
     async fn delete_user(&self, ctx: &SecurityContext, id: Uuid) -> Result<(), UsersInfoError>;
 
     // Address operations
-    async fn get_address(
-        &self,
-        ctx: &SecurityContext,
-        id: Uuid,
-    ) -> Result<Address, UsersInfoError>;
+    async fn get_address(&self, ctx: &SecurityContext, id: Uuid)
+        -> Result<Address, UsersInfoError>;
     async fn get_address_by_user(
         &self,
         ctx: &SecurityContext,
@@ -65,8 +62,7 @@ pub trait UsersInfoClient: Send + Sync {
         ctx: &SecurityContext,
         req: UpdateAddressRequest,
     ) -> Result<Address, UsersInfoError>;
-    async fn delete_address(&self, ctx: &SecurityContext, id: Uuid)
-        -> Result<(), UsersInfoError>;
+    async fn delete_address(&self, ctx: &SecurityContext, id: Uuid) -> Result<(), UsersInfoError>;
 
     // City operations
     async fn get_city(&self, ctx: &SecurityContext, id: Uuid) -> Result<City, UsersInfoError>;
@@ -108,11 +104,7 @@ pub trait UsersInfoClient: Send + Sync {
         ctx: &SecurityContext,
         req: UpdateLanguageRequest,
     ) -> Result<Language, UsersInfoError>;
-    async fn delete_language(
-        &self,
-        ctx: &SecurityContext,
-        id: Uuid,
-    ) -> Result<(), UsersInfoError>;
+    async fn delete_language(&self, ctx: &SecurityContext, id: Uuid) -> Result<(), UsersInfoError>;
 
     // User-Language relationship operations
     async fn assign_language_to_user(

@@ -1,5 +1,5 @@
-use modkit_sdk_macros::ODataSchema;
-use modkit_sdk::odata::Schema;
+use modkit_odata_macros::ODataSchema;
+use modkit_odata::schema::Schema;
 
 #[derive(ODataSchema)]
 struct Product {

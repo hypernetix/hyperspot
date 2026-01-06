@@ -12,7 +12,7 @@ impl MigrationTrait for Migration {
 
         let sql = match backend {
             sea_orm::DatabaseBackend::Postgres => {
-                r#"
+                r"
 -- Add tenant_id to cities table
 ALTER TABLE cities ADD COLUMN IF NOT EXISTS tenant_id UUID NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000';
 CREATE INDEX IF NOT EXISTS idx_cities_tenant ON cities(tenant_id);
@@ -28,10 +28,10 @@ CREATE INDEX IF NOT EXISTS idx_addresses_tenant ON addresses(tenant_id);
 -- Add tenant_id to users_languages table
 ALTER TABLE users_languages ADD COLUMN IF NOT EXISTS tenant_id UUID NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000';
 CREATE INDEX IF NOT EXISTS idx_users_languages_tenant ON users_languages(tenant_id);
-                "#
+                "
             }
             sea_orm::DatabaseBackend::MySql => {
-                r#"
+                r"
 -- Add tenant_id to cities table
 ALTER TABLE cities ADD COLUMN tenant_id VARCHAR(36) NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000';
 CREATE INDEX idx_cities_tenant ON cities(tenant_id);
@@ -47,10 +47,10 @@ CREATE INDEX idx_addresses_tenant ON addresses(tenant_id);
 -- Add tenant_id to users_languages table
 ALTER TABLE users_languages ADD COLUMN tenant_id VARCHAR(36) NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000';
 CREATE INDEX idx_users_languages_tenant ON users_languages(tenant_id);
-                "#
+                "
             }
             sea_orm::DatabaseBackend::Sqlite => {
-                r#"
+                r"
 -- SQLite doesn't support ALTER TABLE ADD COLUMN IF NOT EXISTS, so we need to check first
 -- For SQLite, we'll use a different approach with CREATE TABLE IF NOT EXISTS and data migration
 
@@ -69,7 +69,7 @@ CREATE INDEX IF NOT EXISTS idx_addresses_tenant ON addresses(tenant_id);
 -- Add tenant_id to users_languages table
 ALTER TABLE users_languages ADD COLUMN tenant_id TEXT NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000';
 CREATE INDEX IF NOT EXISTS idx_users_languages_tenant ON users_languages(tenant_id);
-                "#
+                "
             }
         };
 
@@ -83,26 +83,26 @@ CREATE INDEX IF NOT EXISTS idx_users_languages_tenant ON users_languages(tenant_
 
         let sql = match backend {
             sea_orm::DatabaseBackend::Postgres => {
-                r#"
+                r"
 ALTER TABLE cities DROP COLUMN IF EXISTS tenant_id;
 ALTER TABLE languages DROP COLUMN IF EXISTS tenant_id;
 ALTER TABLE addresses DROP COLUMN IF EXISTS tenant_id;
 ALTER TABLE users_languages DROP COLUMN IF EXISTS tenant_id;
-                "#
+                "
             }
             sea_orm::DatabaseBackend::MySql => {
-                r#"
+                r"
 ALTER TABLE cities DROP COLUMN tenant_id;
 ALTER TABLE languages DROP COLUMN tenant_id;
 ALTER TABLE addresses DROP COLUMN tenant_id;
 ALTER TABLE users_languages DROP COLUMN tenant_id;
-                "#
+                "
             }
             sea_orm::DatabaseBackend::Sqlite => {
-                r#"
+                r"
 -- SQLite doesn't support DROP COLUMN easily, would need table recreation
 -- For now, we'll leave the columns (SQLite limitation)
-                "#
+                "
             }
         };
 

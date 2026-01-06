@@ -44,3 +44,5 @@ pub mod config;
 pub mod domain;
 #[doc(hidden)]
 pub mod infra;
+#[doc(hidden)]
+pub mod query;

@@ -5,51 +5,42 @@
 
 #![allow(clippy::use_debug)]
 
-use modkit_odata::SortDir;
-use modkit_sdk::odata::{FieldRef, FilterExpr, QueryBuilder, Schema};
+fn main() {
+    use modkit_odata::SortDir;
+    use modkit_sdk::odata::{FieldRef, QueryBuilder, Schema};
+    use uuid::Uuid;
 
-#[cfg(feature = "uuid")]
-use uuid::Uuid;
+    #[derive(Copy, Clone, Eq, PartialEq, Debug)]
+    enum UserField {
+        Id,
+        Name,
+        Email,
+        Age,
+        IsActive,
+    }
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
-enum UserField {
-    Id,
-    Name,
-    Email,
-    Age,
-    IsActive,
-}
+    struct UserSchema;
 
-struct UserSchema;
+    impl Schema for UserSchema {
+        type Field = UserField;
 
-impl Schema for UserSchema {
-    type Field = UserField;
-
-    fn field_name(field: Self::Field) -> &'static str {
-        match field {
-            UserField::Id => "id",
-            UserField::Name => "name",
-            UserField::Email => "email",
-            UserField::Age => "age",
-            UserField::IsActive => "is_active",
+        fn field_name(field: Self::Field) -> &'static str {
+            match field {
+                UserField::Id => "id",
+                UserField::Name => "name",
+                UserField::Email => "email",
+                UserField::Age => "age",
+                UserField::IsActive => "is_active",
+            }
         }
     }
-}
 
-#[cfg(feature = "uuid")]
-const ID: FieldRef<UserSchema, Uuid> = FieldRef::new(UserField::Id);
-const NAME: FieldRef<UserSchema, String> = FieldRef::new(UserField::Name);
-const EMAIL: FieldRef<UserSchema, String> = FieldRef::new(UserField::Email);
-const AGE: FieldRef<UserSchema, i32> = FieldRef::new(UserField::Age);
-const IS_ACTIVE: FieldRef<UserSchema, bool> = FieldRef::new(UserField::IsActive);
+    const ID: FieldRef<UserSchema, Uuid> = FieldRef::new(UserField::Id);
+    const NAME: FieldRef<UserSchema, String> = FieldRef::new(UserField::Name);
+    const EMAIL: FieldRef<UserSchema, String> = FieldRef::new(UserField::Email);
+    const AGE: FieldRef<UserSchema, i32> = FieldRef::new(UserField::Age);
+    const IS_ACTIVE: FieldRef<UserSchema, bool> = FieldRef::new(UserField::IsActive);
 
-#[cfg(not(feature = "uuid"))]
-fn main() {
-    println!("This example requires the modkit-sdk 'uuid' feature.");
-}
-
-#[cfg(feature = "uuid")]
-fn main() {
     println!("=== Typed OData Query Builder Examples ===\n");
 
     // Example 1: Simple equality filter

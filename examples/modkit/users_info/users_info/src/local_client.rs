@@ -123,12 +123,11 @@ impl UsersInfoClient for UsersInfoLocalClient {
             .map_err(Into::into)
     }
 
-    async fn delete_address(
-        &self,
-        ctx: &SecurityContext,
-        id: Uuid,
-    ) -> Result<(), UsersInfoError> {
-        self.service.delete_address(ctx, id).await.map_err(Into::into)
+    async fn delete_address(&self, ctx: &SecurityContext, id: Uuid) -> Result<(), UsersInfoError> {
+        self.service
+            .delete_address(ctx, id)
+            .await
+            .map_err(Into::into)
     }
 
     // City operations
@@ -221,12 +220,11 @@ impl UsersInfoClient for UsersInfoLocalClient {
             .map_err(Into::into)
     }
 
-    async fn delete_language(
-        &self,
-        ctx: &SecurityContext,
-        id: Uuid,
-    ) -> Result<(), UsersInfoError> {
-        self.service.delete_language(ctx, id).await.map_err(Into::into)
+    async fn delete_language(&self, ctx: &SecurityContext, id: Uuid) -> Result<(), UsersInfoError> {
+        self.service
+            .delete_language(ctx, id)
+            .await
+            .map_err(Into::into)
     }
 
     // User-Language relationship operations

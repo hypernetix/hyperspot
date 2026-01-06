@@ -194,23 +194,21 @@ impl TestContext {
     pub async fn new() -> Self {
         let db = inmem_db().await;
         let sec = SecureConn::new(db.clone());
-        
-        let events = std::sync::Arc::new(MockEventPublisher) as std::sync::Arc<dyn EventPublisher<UserDomainEvent>>;
+
+        let events = std::sync::Arc::new(MockEventPublisher)
+            as std::sync::Arc<dyn EventPublisher<UserDomainEvent>>;
         let audit = std::sync::Arc::new(MockAuditPort) as std::sync::Arc<dyn AuditPort>;
-        
+
         let config = users_info::domain::service::ServiceConfig {
             max_display_name_length: 100,
             default_page_size: 50,
             max_page_size: 1000,
         };
-        
+
         let service = std::sync::Arc::new(users_info::domain::service::Service::new(
-            sec,
-            events,
-            audit,
-            config,
+            sec, events, audit, config,
         ));
-        
+
         Self { service, db }
     }
 }

@@ -7,54 +7,52 @@
 //! This module provides the complete `OData` mapping including filtering, ordering,
 //! and cursor extraction - all using the type-safe `FilterField` approach.
 
-use modkit_db::odata::filter::FilterNode;
 use modkit_db::odata::sea_orm_filter::{
     filter_node_to_condition, FieldToColumn, ODataFieldMapping,
 };
+use modkit_odata::filter::FilterNode;
 use sea_orm::Condition;
 
-use crate::api::rest::dto::{CityDtoFilterField, LanguageDtoFilterField, UserDtoFilterField};
 use crate::infra::storage::entity::{
     city::{Column as CityColumn, Entity as CityEntity, Model as CityModel},
     language::{Column as LanguageColumn, Entity as LanguageEntity, Model as LanguageModel},
     Column, Entity, Model,
 };
+use crate::query::{CityFilterField, LanguageFilterField, UserFilterField};
 
 /// Complete `OData` mapper for `users_info`.
 ///
 /// This is the only users_info-specific code needed for `OData` operations.
-/// It maps `UserDtoFilterField` to database columns and extracts cursor values.
+/// It maps `UserFilterField` to database columns and extracts cursor values.
 pub struct UserODataMapper;
 
-impl FieldToColumn<UserDtoFilterField> for UserODataMapper {
+impl FieldToColumn<UserFilterField> for UserODataMapper {
     type Column = Column;
 
-    fn map_field(field: UserDtoFilterField) -> Column {
+    fn map_field(field: UserFilterField) -> Column {
         match field {
-            UserDtoFilterField::Id => Column::Id,
-            UserDtoFilterField::Email => Column::Email,
-            UserDtoFilterField::CreatedAt => Column::CreatedAt,
+            UserFilterField::Id => Column::Id,
+            UserFilterField::Email => Column::Email,
+            UserFilterField::CreatedAt => Column::CreatedAt,
         }
     }
 }
 
-impl ODataFieldMapping<UserDtoFilterField> for UserODataMapper {
+impl ODataFieldMapping<UserFilterField> for UserODataMapper {
     type Entity = Entity;
 
-    fn extract_cursor_value(model: &Model, field: UserDtoFilterField) -> sea_orm::Value {
+    fn extract_cursor_value(model: &Model, field: UserFilterField) -> sea_orm::Value {
         match field {
-            UserDtoFilterField::Id => sea_orm::Value::Uuid(Some(Box::new(model.id))),
-            UserDtoFilterField::Email => {
-                sea_orm::Value::String(Some(Box::new(model.email.clone())))
-            }
-            UserDtoFilterField::CreatedAt => {
+            UserFilterField::Id => sea_orm::Value::Uuid(Some(Box::new(model.id))),
+            UserFilterField::Email => sea_orm::Value::String(Some(Box::new(model.email.clone()))),
+            UserFilterField::CreatedAt => {
                 sea_orm::Value::TimeDateTimeWithTimeZone(Some(Box::new(model.created_at)))
             }
         }
     }
 }
 
-/// Map a `FilterNode`<UserDtoFilterField> to a `SeaORM` Condition.
+/// Map a `FilterNode`<UserFilterField> to a `SeaORM` Condition.
 ///
 /// This function is provided for compatibility but is no longer needed
 /// if you use `paginate_odata` directly, which handles filtering internally.
@@ -66,39 +64,37 @@ impl ODataFieldMapping<UserDtoFilterField> for UserODataMapper {
 /// # Returns
 ///
 /// A `SeaORM` Condition that can be applied to a query
-pub fn filter_to_condition(filter: &FilterNode<UserDtoFilterField>) -> Result<Condition, String> {
-    filter_node_to_condition::<UserDtoFilterField, UserODataMapper>(filter)
+pub fn filter_to_condition(filter: &FilterNode<UserFilterField>) -> Result<Condition, String> {
+    filter_node_to_condition::<UserFilterField, UserODataMapper>(filter)
 }
 
 /// Complete `OData` mapper for cities.
 pub struct CityODataMapper;
 
-impl FieldToColumn<CityDtoFilterField> for CityODataMapper {
+impl FieldToColumn<CityFilterField> for CityODataMapper {
     type Column = CityColumn;
 
-    fn map_field(field: CityDtoFilterField) -> CityColumn {
+    fn map_field(field: CityFilterField) -> CityColumn {
         match field {
-            CityDtoFilterField::Id => CityColumn::Id,
-            CityDtoFilterField::Name => CityColumn::Name,
-            CityDtoFilterField::Country => CityColumn::Country,
-            CityDtoFilterField::CreatedAt => CityColumn::CreatedAt,
+            CityFilterField::Id => CityColumn::Id,
+            CityFilterField::Name => CityColumn::Name,
+            CityFilterField::Country => CityColumn::Country,
+            CityFilterField::CreatedAt => CityColumn::CreatedAt,
         }
     }
 }
 
-impl ODataFieldMapping<CityDtoFilterField> for CityODataMapper {
+impl ODataFieldMapping<CityFilterField> for CityODataMapper {
     type Entity = CityEntity;
 
-    fn extract_cursor_value(model: &CityModel, field: CityDtoFilterField) -> sea_orm::Value {
+    fn extract_cursor_value(model: &CityModel, field: CityFilterField) -> sea_orm::Value {
         match field {
-            CityDtoFilterField::Id => sea_orm::Value::Uuid(Some(Box::new(model.id))),
-            CityDtoFilterField::Name => {
-                sea_orm::Value::String(Some(Box::new(model.name.clone())))
-            }
-            CityDtoFilterField::Country => {
+            CityFilterField::Id => sea_orm::Value::Uuid(Some(Box::new(model.id))),
+            CityFilterField::Name => sea_orm::Value::String(Some(Box::new(model.name.clone()))),
+            CityFilterField::Country => {
                 sea_orm::Value::String(Some(Box::new(model.country.clone())))
             }
-            CityDtoFilterField::CreatedAt => {
+            CityFilterField::CreatedAt => {
                 sea_orm::Value::TimeDateTimeWithTimeZone(Some(Box::new(model.created_at)))
             }
         }
@@ -108,32 +104,28 @@ impl ODataFieldMapping<CityDtoFilterField> for CityODataMapper {
 /// Complete `OData` mapper for languages.
 pub struct LanguageODataMapper;
 
-impl FieldToColumn<LanguageDtoFilterField> for LanguageODataMapper {
+impl FieldToColumn<LanguageFilterField> for LanguageODataMapper {
     type Column = LanguageColumn;
 
-    fn map_field(field: LanguageDtoFilterField) -> LanguageColumn {
+    fn map_field(field: LanguageFilterField) -> LanguageColumn {
         match field {
-            LanguageDtoFilterField::Id => LanguageColumn::Id,
-            LanguageDtoFilterField::Code => LanguageColumn::Code,
-            LanguageDtoFilterField::Name => LanguageColumn::Name,
-            LanguageDtoFilterField::CreatedAt => LanguageColumn::CreatedAt,
+            LanguageFilterField::Id => LanguageColumn::Id,
+            LanguageFilterField::Code => LanguageColumn::Code,
+            LanguageFilterField::Name => LanguageColumn::Name,
+            LanguageFilterField::CreatedAt => LanguageColumn::CreatedAt,
         }
     }
 }
 
-impl ODataFieldMapping<LanguageDtoFilterField> for LanguageODataMapper {
+impl ODataFieldMapping<LanguageFilterField> for LanguageODataMapper {
     type Entity = LanguageEntity;
 
-    fn extract_cursor_value(model: &LanguageModel, field: LanguageDtoFilterField) -> sea_orm::Value {
+    fn extract_cursor_value(model: &LanguageModel, field: LanguageFilterField) -> sea_orm::Value {
         match field {
-            LanguageDtoFilterField::Id => sea_orm::Value::Uuid(Some(Box::new(model.id))),
-            LanguageDtoFilterField::Code => {
-                sea_orm::Value::String(Some(Box::new(model.code.clone())))
-            }
-            LanguageDtoFilterField::Name => {
-                sea_orm::Value::String(Some(Box::new(model.name.clone())))
-            }
-            LanguageDtoFilterField::CreatedAt => {
+            LanguageFilterField::Id => sea_orm::Value::Uuid(Some(Box::new(model.id))),
+            LanguageFilterField::Code => sea_orm::Value::String(Some(Box::new(model.code.clone()))),
+            LanguageFilterField::Name => sea_orm::Value::String(Some(Box::new(model.name.clone()))),
+            LanguageFilterField::CreatedAt => {
                 sea_orm::Value::TimeDateTimeWithTimeZone(Some(Box::new(model.created_at)))
             }
         }
