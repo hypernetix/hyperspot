@@ -14,7 +14,7 @@ integration = []   # gate integration tests
 
 [dependencies]
 # SDK - public API, models, and errors
-user_info-sdk = { path = "../user_info-sdk" }
+user_info-sdk = { path = "../user_info-sdk", features = ["odata"] }
 
 # Core dependencies
 anyhow = { workspace = true }
@@ -64,7 +64,6 @@ modkit = { path = "../../../../libs/modkit" }
 # NOTE: insecure-escape enabled for migrations and example infrastructure code
 modkit-db = { path = "../../../../libs/modkit-db", default-features = false, features = ["pg", "sea-orm", "insecure-escape"] }
 modkit-db-macros = { path = "../../../../libs/modkit-db-macros" }
-modkit-odata-macros = { path = "../../../../libs/modkit-odata-macros" }
 modkit-auth = { path = "../../../../libs/modkit-auth" }
 modkit-security = { path = "../../../../libs/modkit-security" }
 modkit-errors = { path = "../../../../libs/modkit-errors" }

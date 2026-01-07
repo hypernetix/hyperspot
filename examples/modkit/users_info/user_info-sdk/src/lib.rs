@@ -4,6 +4,7 @@
 //! - `UsersInfoClient` trait
 //! - Model types for users, addresses, cities, and languages
 //! - Error type (`UsersInfoError`)
+//! - OData filter field definitions (behind `odata` feature)
 //!
 //! ## Usage
 //!
@@ -18,6 +19,13 @@
 //! let user = client.get_user(&ctx, user_id).await?;
 //! let users = client.list_users(&ctx, query).await?;
 //! ```
+//!
+//! ## OData Support
+//!
+//! Enable the `odata` feature to access filter field definitions:
+//! ```ignore
+//! use user_info_sdk::odata::{UserFilterField, CityFilterField};
+//! ```
 
 #![forbid(unsafe_code)]
 #![deny(rust_2018_idioms)]
@@ -25,6 +33,10 @@
 pub mod api;
 pub mod errors;
 pub mod models;
+
+// OData filter field definitions (feature-gated)
+#[cfg(feature = "odata")]
+pub mod odata;
 
 // Re-export main types at crate root for convenience
 pub use api::UsersInfoClient;

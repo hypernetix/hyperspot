@@ -6436,6 +6436,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "modkit-odata",
+ "modkit-odata-macros",
  "modkit-security",
  "thiserror 2.0.17",
  "time",
@@ -6463,7 +6464,6 @@ dependencies = [
  "modkit-errors",
  "modkit-errors-macro",
  "modkit-odata",
- "modkit-odata-macros",
  "modkit-security",
  "opentelemetry",
  "opentelemetry_sdk",

@@ -1,7 +1,7 @@
 use modkit_security::AccessScope;
 
 use super::{
-    paginate_odata, Column, DomainError, Expr, LimitCfg, NewUser, ODataQuery, OffsetDateTime, Page,
+    paginate_odata, Column, DomainError, Expr, NewUser, ODataQuery, OffsetDateTime, Page,
     SecurityContext, Service, Set, SortDir, User, UserAM, UserDomainEvent, UserEntity,
     UserFilterField, UserODataMapper, UserPatch, Uuid,
 };
@@ -110,10 +110,7 @@ pub(super) async fn list_users_page(
         svc.sec.conn(),
         query,
         ("id", SortDir::Desc),
-        LimitCfg {
-            default: u64::from(svc.config.default_page_size),
-            max: u64::from(svc.config.max_page_size),
-        },
+        svc.limit_cfg(),
         Into::into,
     )
     .await

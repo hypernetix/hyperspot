@@ -9,6 +9,10 @@ description = "SDK for user_info module: API trait, types, and error definitions
 [lints]
 workspace = true
 
+[features]
+default = []
+odata = ["dep:modkit-odata-macros"]
+
 [dependencies]
 # Core dependencies for API trait
 async-trait = { workspace = true }
@@ -21,6 +25,9 @@ modkit-security = { path = "../../../../libs/modkit-security" }
 
 # OData support for pagination
 modkit-odata = { path = "../../../../libs/modkit-odata" }
+
+# OData filter schema generation (optional feature)
+modkit-odata-macros = { path = "../../../../libs/modkit-odata-macros", optional = true }
 
 [dev-dependencies]
 tokio = { workspace = true }

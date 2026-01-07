@@ -1,7 +1,7 @@
 use super::{
     debug, info, paginate_odata, City, CityAM, CityEntity, CityFilterField, CityODataMapper,
-    CityPatch, DomainError, LimitCfg, NewCity, ODataQuery, OffsetDateTime, Page, SecurityContext,
-    Service, Set, SortDir, Uuid,
+    CityPatch, DomainError, NewCity, ODataQuery, OffsetDateTime, Page, SecurityContext, Service,
+    Set, SortDir, Uuid,
 };
 
 pub(super) async fn get_city(
@@ -51,10 +51,7 @@ pub(super) async fn list_cities_page(
         svc.sec.conn(),
         query,
         ("id", SortDir::Desc),
-        LimitCfg {
-            default: u64::from(svc.config.default_page_size),
-            max: u64::from(svc.config.max_page_size),
-        },
+        svc.limit_cfg(),
         Into::into,
     )
     .await

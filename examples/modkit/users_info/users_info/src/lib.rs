@@ -3,6 +3,54 @@
 //! This module provides user management functionality with REST API,
 //! database storage, and inter-module communication via `ClientHub`.
 //!
+//! ## Architecture
+//!
+//! This module follows clean architecture with strict layering:
+//!
+//! ### Contract Layer (`user_info-sdk`)
+//! - **Location:** `examples/modkit/users_info/user_info-sdk/`
+//! - **Purpose:** Public API contract for inter-module communication
+//! - **Contains:**
+//!   - `UsersInfoClient` trait
+//!   - Model types: `User`, `Address`, `City`, `Language`
+//!   - Request/patch types: `NewUser`, `UserPatch`, etc.
+//!   - Error type: `UsersInfoError`
+//!   - OData filter schemas (behind `odata` feature): `UserFilterField`, `CityFilterField`, etc.
+//! - **Dependencies:** Only modkit core libs (no server code)
+//!
+//! ### API Layer (`users_info::api`)
+//! - **Location:** `src/api/`
+//! - **Purpose:** HTTP/REST interface
+//! - **Contains:**
+//!   - `routes/` - Per-resource route definitions (users, cities, languages, etc.)
+//!   - `handlers/` - Request handlers per resource
+//!   - `dto.rs` - REST-specific DTOs and serialization
+//!   - `error.rs` - HTTP error mapping (domain errors → RFC9457 Problem)
+//! - **Dependencies:** Domain service, SDK types
+//! - **Rule:** May import `domain::service::Service` and `domain::error::DomainError` for orchestration
+//!
+//! ### Domain Layer (`users_info::domain`)
+//! - **Location:** `src/domain/`
+//! - **Purpose:** Business logic and domain rules
+//! - **Contains:**
+//!   - `service/` - Business operations per resource (users, cities, languages, etc.)
+//!   - `error.rs` - Domain error types
+//!   - `events.rs` - Domain events
+//!   - `ports.rs` - Interfaces for external dependencies
+//! - **Dependencies:** SDK contract types, modkit libs, infra for data access
+//! - **Rule:** MUST NOT import `api::*` (one-way dependency only)
+//!
+//! ### Infrastructure Layer (`users_info::infra`)
+//! - **Location:** `src/infra/storage/`
+//! - **Purpose:** Database persistence and OData mapping
+//! - **Contains:**
+//!   - `entity/` - SeaORM entity definitions
+//!   - `mapper.rs` - Entity ↔ SDK model conversions
+//!   - `odata_mapper.rs` - OData filter → SeaORM column mappings
+//!   - `migrations/` - Database schema migrations
+//! - **Dependencies:** SDK types (for models), SeaORM
+//! - **Rule:** ALL SeaORM specifics contained here; OData schemas from SDK only
+//!
 //! ## Public API
 //!
 //! The public API is defined in the `user_info-sdk` crate and re-exported here:
@@ -11,6 +59,13 @@
 //! - `UsersInfoError` - error types
 //!
 //! Other modules should use `hub.get::<dyn UsersInfoClient>()?` to obtain the client.
+//!
+//! ## OData Support
+//!
+//! OData filter schemas live in `user_info-sdk::odata` (behind `odata` feature):
+//! - Type-safe filter enums for each resource
+//! - Used by both REST API (OpenAPI) and domain pagination
+//! - Mapped to database columns in `infra::storage::odata_mapper`
 #![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 // === PUBLIC API (from SDK) ===
 pub use user_info_sdk::{
@@ -44,5 +99,3 @@ pub mod config;
 pub mod domain;
 #[doc(hidden)]
 pub mod infra;
-#[doc(hidden)]
-pub mod query;
