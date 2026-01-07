@@ -1,9 +1,9 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-//! Integration tests for the API Ingress router and new `OperationBuilder`
+//! Integration tests for the API Gateway router and new `OperationBuilder`
 //!
 //! This test demonstrates that the new type-safe `OperationBuilder` works
-//! correctly with the API Ingress module for routing and `OpenAPI` generation.
+//! correctly with the API Gateway module for routing and `OpenAPI` generation.
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -176,7 +176,7 @@ async fn create_user_handler(Json(req): Json<CreateUserRequest>) -> Json<User> {
 #[tokio::test]
 async fn test_operation_builder_integration() {
     // Test that our new OperationBuilder works with the registry
-    let registry = api_ingress::ApiIngress::default();
+    let registry = api_gateway::ApiGateway::default();
     let router = Router::new();
 
     let test_module = TestUsersModule;
@@ -193,7 +193,7 @@ async fn test_operation_builder_integration() {
 #[tokio::test]
 async fn test_schema_registration() {
     // Test that schemas are properly registered
-    let registry = api_ingress::ApiIngress::default();
+    let registry = api_gateway::ApiGateway::default();
     let router = Router::new();
 
     let test_module = TestUsersModule;

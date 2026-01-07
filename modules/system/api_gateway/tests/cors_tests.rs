@@ -23,7 +23,7 @@ struct TestConfigProvider {
 
 impl ConfigProvider for TestConfigProvider {
     fn get_module_config(&self, module: &str) -> Option<&serde_json::Value> {
-        if module == "api_ingress" {
+        if module == "api_gateway" {
             Some(&self.config)
         } else {
             None
@@ -52,7 +52,7 @@ fn create_test_module_ctx_with_cors() -> ModuleCtx {
     }));
 
     ModuleCtx::new(
-        "api_ingress",
+        "api_gateway",
         Uuid::new_v4(),
         Arc::new(TestConfigProvider { config }),
         Arc::new(modkit::ClientHub::new()),
@@ -69,7 +69,7 @@ fn create_test_module_ctx_permissive_cors() -> ModuleCtx {
     }));
 
     ModuleCtx::new(
-        "api_ingress",
+        "api_gateway",
         Uuid::new_v4(),
         Arc::new(TestConfigProvider { config }),
         Arc::new(modkit::ClientHub::new()),
@@ -132,18 +132,18 @@ async fn post_handler(Json(data): Json<TestData>) -> Json<TestData> {
 
 #[tokio::test]
 async fn test_cors_layer_builds_with_config() {
-    let api_ingress = api_ingress::ApiIngress::default();
+    let api_gateway = api_gateway::ApiGateway::default();
     let ctx = create_test_module_ctx_with_cors();
-    api_ingress.init(&ctx).await.expect("Failed to init");
+    api_gateway.init(&ctx).await.expect("Failed to init");
 
     let module = CorsTestModule;
     let router = Router::new();
     let router = module
-        .register_rest(&ctx, router, &api_ingress)
+        .register_rest(&ctx, router, &api_gateway)
         .expect("Failed to register routes");
 
     // Build the final router with CORS middleware
-    let _final_router = api_ingress
+    let _final_router = api_gateway
         .rest_finalize(&ctx, router)
         .expect("Failed to finalize router");
 
@@ -153,17 +153,17 @@ async fn test_cors_layer_builds_with_config() {
 
 #[tokio::test]
 async fn test_cors_permissive_mode() {
-    let api_ingress = api_ingress::ApiIngress::default();
+    let api_gateway = api_gateway::ApiGateway::default();
     let ctx = create_test_module_ctx_permissive_cors();
-    api_ingress.init(&ctx).await.expect("Failed to init");
+    api_gateway.init(&ctx).await.expect("Failed to init");
 
     let module = CorsTestModule;
     let router = Router::new();
     let router = module
-        .register_rest(&ctx, router, &api_ingress)
+        .register_rest(&ctx, router, &api_gateway)
         .expect("Failed to register routes");
 
-    let _final_router = api_ingress
+    let _final_router = api_gateway
         .rest_finalize(&ctx, router)
         .expect("Failed to finalize router");
 
@@ -179,7 +179,7 @@ async fn test_cors_disabled() {
     }));
 
     let ctx = ModuleCtx::new(
-        "api_ingress",
+        "api_gateway",
         Uuid::new_v4(),
         Arc::new(TestConfigProvider { config }),
         Arc::new(modkit::ClientHub::new()),
@@ -187,16 +187,16 @@ async fn test_cors_disabled() {
         None,
     );
 
-    let api_ingress = api_ingress::ApiIngress::default();
-    api_ingress.init(&ctx).await.expect("Failed to init");
+    let api_gateway = api_gateway::ApiGateway::default();
+    api_gateway.init(&ctx).await.expect("Failed to init");
 
     let module = CorsTestModule;
     let router = Router::new();
     let router = module
-        .register_rest(&ctx, router, &api_ingress)
+        .register_rest(&ctx, router, &api_gateway)
         .expect("Failed to register routes");
 
-    let _final_router = api_ingress
+    let _final_router = api_gateway
         .rest_finalize(&ctx, router)
         .expect("Failed to finalize router");
 
@@ -220,7 +220,7 @@ async fn test_cors_config_validation() {
     }));
 
     let ctx = ModuleCtx::new(
-        "api_ingress",
+        "api_gateway",
         Uuid::new_v4(),
         Arc::new(TestConfigProvider { config }),
         Arc::new(modkit::ClientHub::new()),
@@ -228,10 +228,10 @@ async fn test_cors_config_validation() {
         None,
     );
 
-    let api_ingress = api_ingress::ApiIngress::default();
-    api_ingress.init(&ctx).await.expect("Failed to init");
+    let api_gateway = api_gateway::ApiGateway::default();
+    api_gateway.init(&ctx).await.expect("Failed to init");
 
-    let loaded_config = api_ingress.get_config();
+    let loaded_config = api_gateway.get_config();
     assert!(loaded_config.cors_enabled, "CORS should be enabled");
     assert!(
         loaded_config.cors.is_some(),

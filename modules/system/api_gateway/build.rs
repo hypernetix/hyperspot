@@ -42,7 +42,7 @@ fn main() {
             panic!(
                 "Failed to download Stoplight Elements assets.\n\
                  To proceed: either build without --features embed_elements (external mode),\n\
-                 or pin a specific version and vendor files manually into modules/api_ingress/assets/elements/.\n\
+                 or pin a specific version and vendor files manually into modules/api_gateway/assets/elements/.\n\
                  Example pinned URL: https://unpkg.com/@stoplight/elements@7.18.0/web-components.min.js"
             );
         }

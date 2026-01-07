@@ -43,5 +43,5 @@ modkit-security = { path = "../../../../libs/modkit-security" }
 
 [dev-dependencies]
 tower = { workspace = true, features = ["util"] }
-api_ingress = { path = "../../api_ingress" }
+api_gateway = { path = "../../api_gateway" }
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }

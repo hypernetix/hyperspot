@@ -24,7 +24,7 @@ struct TestConfigProvider {
 
 impl ConfigProvider for TestConfigProvider {
     fn get_module_config(&self, module: &str) -> Option<&serde_json::Value> {
-        if module == "api_ingress" {
+        if module == "api_gateway" {
             Some(&self.config)
         } else {
             None
@@ -41,7 +41,7 @@ fn wrap_config(config: &serde_json::Value) -> serde_json::Value {
 fn create_test_module_ctx_with_config(config: &serde_json::Value) -> ModuleCtx {
     let wrapped_config = wrap_config(config);
     ModuleCtx::new(
-        "api_ingress",
+        "api_gateway",
         Uuid::new_v4(),
         Arc::new(TestConfigProvider {
             config: wrapped_config,
@@ -131,7 +131,7 @@ async fn normal_handler() -> Json<TestResponse> {
 
 #[tokio::test]
 async fn test_rate_limit_enforcement() {
-    // Create API ingress with rate limiting enabled
+    // Create API gateway with rate limiting enabled
     let config = serde_json::json!({
         "bind_addr": "127.0.0.1:0",
         "cors_enabled": false,
@@ -145,18 +145,18 @@ async fn test_rate_limit_enforcement() {
         }
     });
 
-    let api_ingress = api_ingress::ApiIngress::default();
+    let api_gateway = api_gateway::ApiGateway::default();
     let ctx = create_test_module_ctx_with_config(&config);
-    api_ingress.init(&ctx).await.expect("Failed to init");
+    api_gateway.init(&ctx).await.expect("Failed to init");
 
     let module = RateLimitedModule;
     let router = Router::new();
     let router = module
-        .register_rest(&ctx, router, &api_ingress)
+        .register_rest(&ctx, router, &api_gateway)
         .expect("Failed to register routes");
 
     // Build the final router with middleware
-    let _final_router = api_ingress
+    let _final_router = api_gateway
         .rest_finalize(&ctx, router)
         .expect("Failed to finalize router");
 
@@ -172,18 +172,18 @@ async fn test_openapi_includes_rate_limit_extensions() {
         "auth_disabled": true
     });
 
-    let api_ingress = api_ingress::ApiIngress::default();
+    let api_gateway = api_gateway::ApiGateway::default();
     let ctx = create_test_module_ctx_with_config(&config);
-    api_ingress.init(&ctx).await.expect("Failed to init");
+    api_gateway.init(&ctx).await.expect("Failed to init");
 
     let module = RateLimitedModule;
     let router = Router::new();
     let _router = module
-        .register_rest(&ctx, router, &api_ingress)
+        .register_rest(&ctx, router, &api_gateway)
         .expect("Failed to register routes");
 
     // Build OpenAPI spec
-    let openapi = api_ingress
+    let openapi = api_gateway
         .build_openapi()
         .expect("Failed to build OpenAPI");
     let json = serde_json::to_value(&openapi).expect("Failed to serialize OpenAPI");
@@ -216,7 +216,7 @@ async fn test_openapi_includes_rate_limit_extensions() {
 
 #[tokio::test]
 async fn test_rate_limit_metadata_stored() {
-    let api_ingress = api_ingress::ApiIngress::default();
+    let api_gateway = api_gateway::ApiGateway::default();
     let router = Router::<()>::new();
 
     let mut builder = OperationBuilder::get("/tests/v1/test");
@@ -235,10 +235,10 @@ async fn test_rate_limit_metadata_stored() {
         .public()
         .json_response(http::StatusCode::OK, "OK")
         .handler(get(normal_handler))
-        .register(router, &api_ingress);
+        .register(router, &api_gateway);
 
     // The operation should be registered with rate limit metadata
-    let openapi = api_ingress
+    let openapi = api_gateway
         .build_openapi()
         .expect("Failed to build OpenAPI");
     let json = serde_json::to_value(&openapi).expect("Failed to serialize");

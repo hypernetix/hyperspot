@@ -90,7 +90,7 @@ impl Write for RoutedWriterHandle {
 }
 
 /// Route log records to different files by target prefix:
-/// keys are *full* prefixes like "`hyperspot::api_ingress`"
+/// keys are *full* prefixes like "`hyperspot::api_gateway`"
 #[derive(Clone)]
 struct MultiFileRouter {
     default: Option<RotWriter>, // default file (from "default" section), optional

@@ -8,11 +8,11 @@ fn default_body_limit_bytes() -> usize {
     16 * 1024 * 1024
 }
 
-/// API ingress configuration - reused from `api_ingress` module
+/// API gateway configuration - reused from `api_gateway` module
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 #[serde(deny_unknown_fields)]
 #[allow(clippy::struct_excessive_bools)]
-pub struct ApiIngressConfig {
+pub struct ApiGatewayConfig {
     pub bind_addr: String,
     #[serde(default)]
     pub enable_docs: bool,

@@ -23,7 +23,7 @@ members = [
     "libs/modkit-node-info",
     "libs/modkit-transport-grpc",
     "libs/modkit-utils",
-    "modules/system/api_ingress",
+    "modules/system/api_gateway",
     "modules/system/grpc_hub",
     "modules/file_parser",
     "modules/system/nodes_registry",
@@ -205,14 +205,14 @@ opentelemetry = { version = "0.31", features = ["trace"] }
 opentelemetry_sdk = { version = "0.31", features = ["trace", "rt-tokio"] }
 opentelemetry-otlp = { version = "0.31", features = ["grpc-tonic", "http-proto"] }
 
-# Web framework (only for api_ingress)
+# Web framework (only for api_gateway)
 axum = "0.8"
 tower = "0.5"
 tower-http = { version = "0.6", features = ["trace", "request-id", "cors", "limit", "util", "timeout"] }
 uuid = { version = "1.19", features = ["serde"] }
 governor = "0.10"
 
-# OpenAPI documentation (only for api_ingress)
+# OpenAPI documentation (only for api_gateway)
 utoipa = { version = "5.4", features = ["macros", "openapi_extensions", "chrono", "uuid"] }
 
 # Synchronous locks for better performance

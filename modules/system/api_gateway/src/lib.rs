@@ -34,21 +34,21 @@ pub mod error;
 mod router_cache;
 mod web;
 
-pub use config::{ApiIngressConfig, CorsConfig};
+pub use config::{ApiGatewayConfig, CorsConfig};
 use modkit_security::PolicyEngineRef;
 use router_cache::RouterCache;
 
-/// Main API Ingress module — owns the HTTP server (`rest_host`) and collects
+/// Main API Gateway module — owns the HTTP server (`rest_host`) and collects
 /// typed operation specs to emit a single `OpenAPI` document.
 #[modkit::module(
-	name = "api_ingress",
+	name = "api_gateway",
 	capabilities = [rest_host, rest, stateful],
     deps = ["grpc_hub"],
 	lifecycle(entry = "serve", stop_timeout = "30s", await_ready)
 )]
-pub struct ApiIngress {
+pub struct ApiGateway {
     // Lock-free config using arc-swap for read-mostly access
-    config: ArcSwap<ApiIngressConfig>,
+    config: ArcSwap<ApiGatewayConfig>,
     // OpenAPI registry for operations and schemas
     openapi_registry: Arc<OpenApiRegistryImpl>,
     // Built router cache for zero-lock hot path access
@@ -61,11 +61,11 @@ pub struct ApiIngress {
     registered_handlers: DashMap<String, ()>,
 }
 
-impl Default for ApiIngress {
+impl Default for ApiGateway {
     fn default() -> Self {
         let default_router = Router::new();
         Self {
-            config: ArcSwap::from_pointee(ApiIngressConfig::default()),
+            config: ArcSwap::from_pointee(ApiGatewayConfig::default()),
             openapi_registry: Arc::new(OpenApiRegistryImpl::new()),
             router_cache: RouterCache::new(default_router),
             final_router: Mutex::new(None),
@@ -75,10 +75,10 @@ impl Default for ApiIngress {
     }
 }
 
-impl ApiIngress {
-    /// Create a new `ApiIngress` instance with the given configuration
+impl ApiGateway {
+    /// Create a new `ApiGateway` instance with the given configuration
     #[must_use]
-    pub fn new(config: ApiIngressConfig) -> Self {
+    pub fn new(config: ApiGatewayConfig) -> Self {
         let default_router = Router::new();
         Self {
             config: ArcSwap::from_pointee(config),
@@ -91,12 +91,12 @@ impl ApiIngress {
     }
 
     /// Get the current configuration (cheap clone from `ArcSwap`)
-    pub fn get_config(&self) -> ApiIngressConfig {
+    pub fn get_config(&self) -> ApiGatewayConfig {
         (**self.config.load()).clone()
     }
 
     /// Get cached configuration (lock-free with `ArcSwap`)
-    pub fn get_cached_config(&self) -> ApiIngressConfig {
+    pub fn get_cached_config(&self) -> ApiGatewayConfig {
         (**self.config.load()).clone()
     }
 
@@ -116,7 +116,7 @@ impl ApiIngress {
     }
 
     /// Build auth state and route policy from operation specs
-    fn build_auth_state_from_specs(&self) -> Result<(auth::AuthState, auth::IngressRoutePolicy)> {
+    fn build_auth_state_from_specs(&self) -> Result<(auth::AuthState, auth::GatewayRoutePolicy)> {
         let mut req_map = std::collections::HashMap::new();
         let mut public_routes = std::collections::HashSet::new();
 
@@ -210,7 +210,7 @@ impl ApiIngress {
         // 10) Auth
         if config.auth_disabled {
             tracing::warn!(
-                "API Ingress auth is DISABLED: all requests will run with root SecurityCtx (SecurityCtx::root_ctx()). \
+                "API Gateway auth is DISABLED: all requests will run with root SecurityCtx (SecurityCtx::root_ctx()). \
                  This mode bypasses authentication and is intended ONLY for single-user on-premises deployments without an IdP. \
                  Permission checks and secure ORM still apply. DO NOT use this mode in multi-tenant or production environments."
             );
@@ -294,7 +294,7 @@ impl ApiIngress {
                         method = %req.method(),
                         uri = %req.uri().path(),
                         version = ?req.version(),
-                        module = "api_ingress",
+                        module = "api_gateway",
                         endpoint = %req.uri().path(),
                         request_id = %rid,
                         status = Empty,
@@ -438,14 +438,14 @@ impl ApiIngress {
 
 // Manual implementation of Module trait with config loading
 #[async_trait]
-impl modkit::Module for ApiIngress {
+impl modkit::Module for ApiGateway {
     async fn init(&self, ctx: &modkit::context::ModuleCtx) -> anyhow::Result<()> {
         debug!("Module initialized with context");
-        let cfg = ctx.config::<crate::config::ApiIngressConfig>()?;
+        let cfg = ctx.config::<crate::config::ApiGatewayConfig>()?;
         self.config.store(Arc::new(cfg));
 
         debug!(
-            "Effective api_ingress configuration:\n{:#?}",
+            "Effective api_gateway configuration:\n{:#?}",
             self.config.load()
         );
         Ok(())
@@ -459,11 +459,11 @@ mod tests {
 
     #[test]
     fn test_openapi_generation() {
-        let mut config = ApiIngressConfig::default();
+        let mut config = ApiGatewayConfig::default();
         config.openapi.title = "Test API".to_owned();
         config.openapi.version = "1.0.0".to_owned();
         config.openapi.description = Some("Test Description".to_owned());
-        let api = ApiIngress::new(config);
+        let api = ApiGateway::new(config);
 
         // Test that we can build OpenAPI without any operations
         let doc = api.build_openapi().unwrap();
@@ -483,7 +483,7 @@ mod tests {
 }
 
 // REST host role: prepare/finalize the router, but do not start the server here.
-impl modkit::contracts::RestHostModule for ApiIngress {
+impl modkit::contracts::RestHostModule for ApiGateway {
     fn rest_prepare(
         &self,
         _ctx: &modkit::context::ModuleCtx,
@@ -550,7 +550,7 @@ impl modkit::contracts::RestHostModule for ApiIngress {
     }
 }
 
-impl modkit::contracts::RestfulModule for ApiIngress {
+impl modkit::contracts::RestfulModule for ApiGateway {
     fn register_rest(
         &self,
         _ctx: &modkit::context::ModuleCtx,
@@ -563,7 +563,7 @@ impl modkit::contracts::RestfulModule for ApiIngress {
     }
 }
 
-impl OpenApiRegistry for ApiIngress {
+impl OpenApiRegistry for ApiGateway {
     fn register_operation(&self, spec: &modkit::api::OperationSpec) {
         // Reject duplicates with "first wins" policy (second registration = programmer error).
         if self
@@ -635,7 +635,7 @@ mod problem_openapi_tests {
 
     #[tokio::test]
     async fn openapi_includes_problem_schema_and_response() {
-        let api = ApiIngress::default();
+        let api = ApiGateway::default();
         let router = axum::Router::new();
 
         // Build a route with a problem+json response
@@ -706,7 +706,7 @@ mod sse_openapi_tests {
 
     #[tokio::test]
     async fn openapi_has_sse_content() {
-        let api = ApiIngress::default();
+        let api = ApiGateway::default();
         let router = axum::Router::new();
 
         let _router = OperationBuilder::<Missing, Missing, ()>::get("/tests/v1/demo/sse")
@@ -739,7 +739,7 @@ mod sse_openapi_tests {
             Json(serde_json::json!({"ok": true}))
         }
 
-        let api = ApiIngress::default();
+        let api = ApiGateway::default();
         let router = axum::Router::new();
 
         let _router = OperationBuilder::<Missing, Missing, ()>::get("/tests/v1/demo/mixed")
@@ -779,7 +779,7 @@ mod sse_openapi_tests {
             Json(serde_json::json!({"user_id": "123"}))
         }
 
-        let api = ApiIngress::default();
+        let api = ApiGateway::default();
         let router = axum::Router::new();
 
         let _router = OperationBuilder::<Missing, Missing, ()>::get("/tests/v1/users/{id}")
@@ -817,7 +817,7 @@ mod sse_openapi_tests {
             Json(serde_json::json!({"ok": true}))
         }
 
-        let api = ApiIngress::default();
+        let api = ApiGateway::default();
         let router = axum::Router::new();
 
         let _router = OperationBuilder::<Missing, Missing, ()>::get(
@@ -857,7 +857,7 @@ mod sse_openapi_tests {
             Json(serde_json::json!({"ok": true}))
         }
 
-        let api = ApiIngress::default();
+        let api = ApiGateway::default();
         let router = axum::Router::new();
 
         // Axum 0.8 uses {*path} for wildcards
@@ -897,7 +897,7 @@ mod sse_openapi_tests {
             Json(serde_json::json!({"uploaded": true}))
         }
 
-        let api = ApiIngress::default();
+        let api = ApiGateway::default();
         let router = axum::Router::new();
 
         let _router = OperationBuilder::<Missing, Missing, ()>::post("/tests/v1/files/upload")

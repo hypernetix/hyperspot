@@ -31,7 +31,7 @@
 
 - [x] 5.1 Create REST DTOs (request/response models)
 - [x] 5.2 Implement REST handlers for `register`, `list`, `get`
-- [x] 5.3 Define REST routes and register with `api_ingress`
+- [x] 5.3 Define REST routes and register with `api_gateway`
 - [x] 5.4 Implement error mapping (domain errors → HTTP responses)
 - [x] 5.5 Add OpenAPI documentation for endpoints
 

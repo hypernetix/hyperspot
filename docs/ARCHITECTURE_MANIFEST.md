@@ -328,7 +328,7 @@ Every HyperSpot module uses the **ModKit** framework, which provides:
  **Key ModKit libraries:**
  - `modkit` - Core module framework: lifecycle, REST host/contracts, OpenAPI registry, ClientHub, tracing helpers
  - `modkit-macros` - Procedural macros for module registration (`#[modkit::module(...)]`)
- - `modkit-auth` - Authn/z plumbing for ingress and route policies
+ - `modkit-auth` - Authn/z plumbing for gateway and route policies
  - `modkit-security` - `SecurityCtx` and security-scoping primitives used across modules (request-scoped context)
  - `modkit-errors` - Shared error types and RFC-9457 Problem modeling utilities
  - `modkit-errors-macro` - Macros/codegen for error catalogs

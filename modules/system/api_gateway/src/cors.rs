@@ -1,9 +1,9 @@
 use tower_http::cors::CorsLayer;
 
-use crate::config::{ApiIngressConfig, CorsConfig};
+use crate::config::{ApiGatewayConfig, CorsConfig};
 
 /// Build a CORS layer from config.
-pub fn build_cors_layer(cfg: &ApiIngressConfig) -> CorsLayer {
+pub fn build_cors_layer(cfg: &ApiGatewayConfig) -> CorsLayer {
     let cors_cfg: CorsConfig = cfg.cors.clone().unwrap_or_default();
 
     let mut layer = CorsLayer::new();

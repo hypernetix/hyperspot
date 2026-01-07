@@ -100,15 +100,15 @@ pub struct AuthState {
     pub authorizer: Arc<dyn PrimaryAuthorizer>,
 }
 
-/// Ingress-specific route policy implementation
+/// Gateway-specific route policy implementation
 #[derive(Clone)]
-pub struct IngressRoutePolicy {
+pub struct GatewayRoutePolicy {
     route_matchers: Arc<HashMap<Method, RouteMatcher>>,
     public_matchers: Arc<HashMap<Method, PublicRouteMatcher>>,
     require_auth_by_default: bool,
 }
 
-impl IngressRoutePolicy {
+impl GatewayRoutePolicy {
     pub fn new(
         route_matchers: Arc<HashMap<Method, RouteMatcher>>,
         public_matchers: Arc<HashMap<Method, PublicRouteMatcher>>,
@@ -123,7 +123,7 @@ impl IngressRoutePolicy {
 }
 
 #[async_trait::async_trait]
-impl modkit_auth::RoutePolicy for IngressRoutePolicy {
+impl modkit_auth::RoutePolicy for GatewayRoutePolicy {
     async fn resolve(&self, method: &Method, path: &str) -> AuthRequirement {
         // Find requirement using pattern matching
         let requirement = self
@@ -150,9 +150,9 @@ impl modkit_auth::RoutePolicy for IngressRoutePolicy {
 }
 
 // Old auth_middleware has been removed.
-// Use modkit_auth::axum_ext::auth_with_policy via IngressRoutePolicy instead.
+// Use modkit_auth::axum_ext::auth_with_policy via GatewayRoutePolicy instead.
 
-/// Helper to build `AuthState` and `IngressRoutePolicy` from config
+/// Helper to build `AuthState` and `GatewayRoutePolicy` from config
 ///
 /// # Note on `auth_disabled` mode
 ///
@@ -169,10 +169,10 @@ impl modkit_auth::RoutePolicy for IngressRoutePolicy {
 /// - This function builds the real OIDC/JWKS validator and associated auth components
 /// - `auth_with_policy` is wired into the router to validate tokens and build security contexts
 pub fn build_auth_state(
-    cfg: &crate::config::ApiIngressConfig,
+    cfg: &crate::config::ApiGatewayConfig,
     requirements: HashMap<(Method, String), Requirement>,
     public_routes: std::collections::HashSet<(Method, String)>,
-) -> Result<(AuthState, IngressRoutePolicy), anyhow::Error> {
+) -> Result<(AuthState, GatewayRoutePolicy), anyhow::Error> {
     // Build validator (TokenValidator trait implementation)
     let validator: Arc<dyn TokenValidator> = if cfg.auth_disabled {
         // Defensive fallback: NoopValidator should never be called in normal flow.
@@ -264,7 +264,7 @@ pub fn build_auth_state(
         authorizer,
     };
 
-    let route_policy = IngressRoutePolicy::new(
+    let route_policy = GatewayRoutePolicy::new(
         Arc::new(route_matchers_map),
         Arc::new(public_matchers_map),
         cfg.require_auth_by_default,
@@ -295,13 +295,13 @@ mod tests {
     use axum::http::Method;
     use modkit_auth::types::RoutePolicy;
 
-    /// Helper to build `IngressRoutePolicy` with given matchers
+    /// Helper to build `GatewayRoutePolicy` with given matchers
     fn build_test_policy(
         route_matchers: HashMap<Method, RouteMatcher>,
         public_matchers: HashMap<Method, PublicRouteMatcher>,
         require_auth_by_default: bool,
-    ) -> IngressRoutePolicy {
-        IngressRoutePolicy::new(
+    ) -> GatewayRoutePolicy {
+        GatewayRoutePolicy::new(
             Arc::new(route_matchers),
             Arc::new(public_matchers),
             require_auth_by_default,

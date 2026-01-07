@@ -1,4 +1,4 @@
-use crate::config::ApiIngressConfig;
+use crate::config::ApiGatewayConfig;
 use anyhow::{anyhow, Context, Result};
 use axum::http::{header, HeaderValue, Method, StatusCode};
 use axum::{
@@ -52,7 +52,7 @@ impl RateLimiterMap {
     /// Returns an error if any rate limit spec is 0.
     pub fn from_specs(
         specs: &Vec<modkit::api::OperationSpec>,
-        cfg: &ApiIngressConfig,
+        cfg: &ApiGatewayConfig,
     ) -> Result<Self> {
         let mut buckets = HashMap::new();
         let mut inflight = HashMap::new();

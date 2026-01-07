@@ -31,9 +31,9 @@ impl ConfigProvider for TestConfigProvider {
     }
 }
 
-fn create_api_ingress_ctx(config: serde_json::Value) -> ModuleCtx {
+fn create_api_gateway_ctx(config: serde_json::Value) -> ModuleCtx {
     ModuleCtx::new(
-        "api_ingress",
+        "api_gateway",
         Uuid::new_v4(),
         Arc::new(TestConfigProvider { config }),
         Arc::new(ClientHub::new()),
@@ -156,7 +156,7 @@ impl RestfulModule for TestLicenseModule {
 #[tokio::test]
 async fn rejects_non_base_feature_requirement() {
     let config = json!({
-        "api_ingress": {
+        "api_gateway": {
             "config": {
                 "bind_addr": "0.0.0.0:8080",
                 "enable_docs": false,
@@ -166,19 +166,19 @@ async fn rejects_non_base_feature_requirement() {
         }
     });
 
-    let api_ctx = create_api_ingress_ctx(config);
+    let api_ctx = create_api_gateway_ctx(config);
     let test_ctx = create_test_module_ctx();
 
-    let api_ingress = api_ingress::ApiIngress::default();
-    api_ingress.init(&api_ctx).await.expect("Failed to init");
+    let api_gateway = api_gateway::ApiGateway::default();
+    api_gateway.init(&api_ctx).await.expect("Failed to init");
 
     let router = Router::new();
     let test_module = TestLicenseModule;
     let router = test_module
-        .register_rest(&test_ctx, router, &api_ingress)
+        .register_rest(&test_ctx, router, &api_gateway)
         .expect("Failed to register routes");
 
-    let router = api_ingress
+    let router = api_gateway
         .rest_finalize(&api_ctx, router)
         .expect("Failed to finalize");
 
@@ -198,7 +198,7 @@ async fn rejects_non_base_feature_requirement() {
 #[tokio::test]
 async fn allows_base_feature_requirement() {
     let config = json!({
-        "api_ingress": {
+        "api_gateway": {
             "config": {
                 "bind_addr": "0.0.0.0:8080",
                 "enable_docs": false,
@@ -208,19 +208,19 @@ async fn allows_base_feature_requirement() {
         }
     });
 
-    let api_ctx = create_api_ingress_ctx(config);
+    let api_ctx = create_api_gateway_ctx(config);
     let test_ctx = create_test_module_ctx();
 
-    let api_ingress = api_ingress::ApiIngress::default();
-    api_ingress.init(&api_ctx).await.expect("Failed to init");
+    let api_gateway = api_gateway::ApiGateway::default();
+    api_gateway.init(&api_ctx).await.expect("Failed to init");
 
     let router = Router::new();
     let test_module = TestLicenseModule;
     let router = test_module
-        .register_rest(&test_ctx, router, &api_ingress)
+        .register_rest(&test_ctx, router, &api_gateway)
         .expect("Failed to register routes");
 
-    let router = api_ingress
+    let router = api_gateway
         .rest_finalize(&api_ctx, router)
         .expect("Failed to finalize");
 
@@ -240,7 +240,7 @@ async fn allows_base_feature_requirement() {
 #[tokio::test]
 async fn allows_no_license_requirement() {
     let config = json!({
-        "api_ingress": {
+        "api_gateway": {
             "config": {
                 "bind_addr": "0.0.0.0:8080",
                 "enable_docs": false,
@@ -250,19 +250,19 @@ async fn allows_no_license_requirement() {
         }
     });
 
-    let api_ctx = create_api_ingress_ctx(config);
+    let api_ctx = create_api_gateway_ctx(config);
     let test_ctx = create_test_module_ctx();
 
-    let api_ingress = api_ingress::ApiIngress::default();
-    api_ingress.init(&api_ctx).await.expect("Failed to init");
+    let api_gateway = api_gateway::ApiGateway::default();
+    api_gateway.init(&api_ctx).await.expect("Failed to init");
 
     let router = Router::new();
     let test_module = TestLicenseModule;
     let router = test_module
-        .register_rest(&test_ctx, router, &api_ingress)
+        .register_rest(&test_ctx, router, &api_gateway)
         .expect("Failed to register routes");
 
-    let router = api_ingress
+    let router = api_gateway
         .rest_finalize(&api_ctx, router)
         .expect("Failed to finalize");
 

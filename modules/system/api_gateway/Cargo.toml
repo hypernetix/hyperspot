@@ -1,5 +1,5 @@
 [package]
-name = "api_ingress"
+name = "api_gateway"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -9,7 +9,7 @@ authors.workspace = true
 workspace = true
 
 [lib]
-name = "api_ingress"
+name = "api_gateway"
 path = "src/lib.rs"
 
 [dependencies]

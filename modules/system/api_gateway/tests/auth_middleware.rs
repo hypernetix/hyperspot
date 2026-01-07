@@ -45,10 +45,10 @@ impl ConfigProvider for TestConfigProvider {
     }
 }
 
-/// Create test context for `api_ingress` module
-fn create_api_ingress_ctx(config: serde_json::Value) -> ModuleCtx {
+/// Create test context for `api_gateway` module
+fn create_api_gateway_ctx(config: serde_json::Value) -> ModuleCtx {
     ModuleCtx::new(
-        "api_ingress",
+        "api_gateway",
         Uuid::new_v4(),
         Arc::new(TestConfigProvider { config }),
         Arc::new(ClientHub::new()),
@@ -187,9 +187,9 @@ impl RestfulModule for TestAuthModule {
 
 #[tokio::test]
 async fn test_auth_disabled_mode() {
-    // Create api_ingress with auth disabled
+    // Create api_gateway with auth disabled
     let config = json!({
-        "api_ingress": {
+        "api_gateway": {
             "config": {
                 "bind_addr": "0.0.0.0:8080",
                 "enable_docs": true,
@@ -199,21 +199,21 @@ async fn test_auth_disabled_mode() {
         }
     });
 
-    let api_ctx = create_api_ingress_ctx(config);
+    let api_ctx = create_api_gateway_ctx(config);
     let test_ctx = create_test_module_ctx();
 
-    let api_ingress = api_ingress::ApiIngress::default();
-    api_ingress.init(&api_ctx).await.expect("Failed to init");
+    let api_gateway = api_gateway::ApiGateway::default();
+    api_gateway.init(&api_ctx).await.expect("Failed to init");
 
     // Register test module
     let router = Router::new();
     let test_module = TestAuthModule;
     let router = test_module
-        .register_rest(&test_ctx, router, &api_ingress)
+        .register_rest(&test_ctx, router, &api_gateway)
         .expect("Failed to register routes");
 
     // Finalize router (applies middleware)
-    let router = api_ingress
+    let router = api_gateway
         .rest_finalize(&api_ctx, router)
         .expect("Failed to finalize");
 
@@ -255,9 +255,9 @@ async fn test_auth_disabled_mode() {
 
 #[tokio::test]
 async fn test_public_routes_accessible() {
-    // Create api_ingress with auth enabled but test public routes
+    // Create api_gateway with auth enabled but test public routes
     let config = json!({
-        "api_ingress": {
+        "api_gateway": {
             "config": {
                 "bind_addr": "0.0.0.0:8080",
                 "enable_docs": true,
@@ -267,26 +267,26 @@ async fn test_public_routes_accessible() {
         }
     });
 
-    let api_ctx = create_api_ingress_ctx(config);
+    let api_ctx = create_api_gateway_ctx(config);
     let test_ctx = create_test_module_ctx();
 
-    let api_ingress = api_ingress::ApiIngress::default();
-    api_ingress.init(&api_ctx).await.expect("Failed to init");
+    let api_gateway = api_gateway::ApiGateway::default();
+    api_gateway.init(&api_ctx).await.expect("Failed to init");
 
     // First call rest_prepare to add built-in routes
     let router = Router::new();
-    let router = api_ingress
+    let router = api_gateway
         .rest_prepare(&api_ctx, router)
         .expect("Failed to prepare");
 
     // Then register test module routes
     let test_module = TestAuthModule;
     let router = test_module
-        .register_rest(&test_ctx, router, &api_ingress)
+        .register_rest(&test_ctx, router, &api_gateway)
         .expect("Failed to register routes");
 
     // Finally finalize
-    let router = api_ingress
+    let router = api_gateway
         .rest_finalize(&api_ctx, router)
         .expect("Failed to finalize");
 
@@ -330,7 +330,7 @@ async fn test_public_routes_accessible() {
 async fn test_middleware_always_inserts_security_ctx() {
     // This test verifies that SecurityCtx is always available in handlers
     let config = json!({
-        "api_ingress": {
+        "api_gateway": {
             "config": {
                 "bind_addr": "0.0.0.0:8080",
                 "enable_docs": false,
@@ -340,19 +340,19 @@ async fn test_middleware_always_inserts_security_ctx() {
         }
     });
 
-    let api_ctx = create_api_ingress_ctx(config);
+    let api_ctx = create_api_gateway_ctx(config);
     let test_ctx = create_test_module_ctx();
 
-    let api_ingress = api_ingress::ApiIngress::default();
-    api_ingress.init(&api_ctx).await.expect("Failed to init");
+    let api_gateway = api_gateway::ApiGateway::default();
+    api_gateway.init(&api_ctx).await.expect("Failed to init");
 
     let router = Router::new();
     let test_module = TestAuthModule;
     let router = test_module
-        .register_rest(&test_ctx, router, &api_ingress)
+        .register_rest(&test_ctx, router, &api_gateway)
         .expect("Failed to register routes");
 
-    let router = api_ingress
+    let router = api_gateway
         .rest_finalize(&api_ctx, router)
         .expect("Failed to finalize");
 
@@ -378,7 +378,7 @@ async fn test_middleware_always_inserts_security_ctx() {
 #[tokio::test]
 async fn test_openapi_includes_security_metadata() {
     let config = json!({
-        "api_ingress": {
+        "api_gateway": {
             "config": {
                 "bind_addr": "0.0.0.0:8080",
                 "enable_docs": true,
@@ -389,20 +389,20 @@ async fn test_openapi_includes_security_metadata() {
         }
     });
 
-    let api_ctx = create_api_ingress_ctx(config);
+    let api_ctx = create_api_gateway_ctx(config);
     let test_ctx = create_test_module_ctx();
 
-    let api_ingress = api_ingress::ApiIngress::default();
-    api_ingress.init(&api_ctx).await.expect("Failed to init");
+    let api_gateway = api_gateway::ApiGateway::default();
+    api_gateway.init(&api_ctx).await.expect("Failed to init");
 
     let router = Router::new();
     let test_module = TestAuthModule;
     let _router = test_module
-        .register_rest(&test_ctx, router, &api_ingress)
+        .register_rest(&test_ctx, router, &api_gateway)
         .expect("Failed to register routes");
 
     // Build OpenAPI spec
-    let openapi = api_ingress
+    let openapi = api_gateway
         .build_openapi()
         .expect("Failed to build OpenAPI");
     let spec = serde_json::to_value(&openapi).expect("Failed to serialize");
@@ -441,7 +441,7 @@ async fn test_route_pattern_matching_with_path_params() {
     // This test verifies that routes with path parameters (e.g., /users/{id})
     // are properly matched and authorization is enforced
     let config = json!({
-        "api_ingress": {
+        "api_gateway": {
             "config": {
                 "bind_addr": "0.0.0.0:8080",
                 "enable_docs": false,
@@ -451,19 +451,19 @@ async fn test_route_pattern_matching_with_path_params() {
         }
     });
 
-    let api_ctx = create_api_ingress_ctx(config);
+    let api_ctx = create_api_gateway_ctx(config);
     let test_ctx = create_test_module_ctx();
 
-    let api_ingress = api_ingress::ApiIngress::default();
-    api_ingress.init(&api_ctx).await.expect("Failed to init");
+    let api_gateway = api_gateway::ApiGateway::default();
+    api_gateway.init(&api_ctx).await.expect("Failed to init");
 
     let router = Router::new();
     let test_module = TestAuthModule;
     let router = test_module
-        .register_rest(&test_ctx, router, &api_ingress)
+        .register_rest(&test_ctx, router, &api_gateway)
         .expect("Failed to register routes");
 
-    let router = api_ingress
+    let router = api_gateway
         .rest_finalize(&api_ctx, router)
         .expect("Failed to finalize");
 

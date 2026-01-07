@@ -22,7 +22,7 @@ struct TestConfigProvider {
 
 impl ConfigProvider for TestConfigProvider {
     fn get_module_config(&self, module: &str) -> Option<&serde_json::Value> {
-        if module == "api_ingress" {
+        if module == "api_gateway" {
             Some(&self.config)
         } else {
             None
@@ -52,7 +52,7 @@ fn create_test_module_ctx_with_body_limit(limit_bytes: usize) -> ModuleCtx {
     }));
 
     ModuleCtx::new(
-        "api_ingress",
+        "api_gateway",
         Uuid::new_v4(),
         Arc::new(TestConfigProvider { config }),
         Arc::new(modkit::ClientHub::new()),
@@ -105,22 +105,22 @@ async fn upload_handler(Json(payload): Json<LargePayload>) -> Json<serde_json::V
 #[tokio::test]
 async fn test_body_limit_configured() {
     let limit = 1024; // 1KB limit
-    let api_ingress = api_ingress::ApiIngress::default();
+    let api_gateway = api_gateway::ApiGateway::default();
     let ctx = create_test_module_ctx_with_body_limit(limit);
-    api_ingress.init(&ctx).await.expect("Failed to init");
+    api_gateway.init(&ctx).await.expect("Failed to init");
 
     let module = BodyLimitTestModule;
     let router = Router::new();
     let router = module
-        .register_rest(&ctx, router, &api_ingress)
+        .register_rest(&ctx, router, &api_gateway)
         .expect("Failed to register routes");
 
-    let _final_router = api_ingress
+    let _final_router = api_gateway
         .rest_finalize(&ctx, router)
         .expect("Failed to finalize router");
 
     // Verify router builds with custom body limit
-    let config = api_ingress.get_config();
+    let config = api_gateway.get_config();
     assert_eq!(
         config.defaults.body_limit_bytes, limit,
         "Body limit should match config"
@@ -130,22 +130,22 @@ async fn test_body_limit_configured() {
 #[tokio::test]
 async fn test_body_limit_with_cors() {
     // Verify body limit and CORS layers coexist
-    let api_ingress = api_ingress::ApiIngress::default();
+    let api_gateway = api_gateway::ApiGateway::default();
     let ctx = create_test_module_ctx_with_body_limit(16 * 1024 * 1024);
-    api_ingress.init(&ctx).await.expect("Failed to init");
+    api_gateway.init(&ctx).await.expect("Failed to init");
 
     let module = BodyLimitTestModule;
     let router = Router::new();
     let router = module
-        .register_rest(&ctx, router, &api_ingress)
+        .register_rest(&ctx, router, &api_gateway)
         .expect("Failed to register routes");
 
-    let _final_router = api_ingress
+    let _final_router = api_gateway
         .rest_finalize(&ctx, router)
         .expect("Failed to finalize router");
 
     // Both CORS and body limit should be active
-    let config = api_ingress.get_config();
+    let config = api_gateway.get_config();
     assert!(config.cors_enabled, "CORS should be enabled");
     assert!(
         config.defaults.body_limit_bytes > 0,
@@ -161,7 +161,7 @@ async fn test_default_body_limit() {
     }));
 
     let ctx = ModuleCtx::new(
-        "api_ingress",
+        "api_gateway",
         Uuid::new_v4(),
         Arc::new(TestConfigProvider { config }),
         Arc::new(modkit::ClientHub::new()),
@@ -169,21 +169,21 @@ async fn test_default_body_limit() {
         None,
     );
 
-    let api_ingress = api_ingress::ApiIngress::default();
-    api_ingress.init(&ctx).await.expect("Failed to init");
+    let api_gateway = api_gateway::ApiGateway::default();
+    api_gateway.init(&ctx).await.expect("Failed to init");
 
     let module = BodyLimitTestModule;
     let router = Router::new();
     let router = module
-        .register_rest(&ctx, router, &api_ingress)
+        .register_rest(&ctx, router, &api_gateway)
         .expect("Failed to register routes");
 
-    let _final_router = api_ingress
+    let _final_router = api_gateway
         .rest_finalize(&ctx, router)
         .expect("Failed to finalize router");
 
     // Verify default body limit is applied (16MB)
-    let config = api_ingress.get_config();
+    let config = api_gateway.get_config();
     assert_eq!(
         config.defaults.body_limit_bytes,
         16 * 1024 * 1024,
@@ -193,17 +193,17 @@ async fn test_default_body_limit() {
 
 #[tokio::test]
 async fn test_openapi_includes_413_response() {
-    let api_ingress = api_ingress::ApiIngress::default();
+    let api_gateway = api_gateway::ApiGateway::default();
     let ctx = create_test_module_ctx_with_body_limit(1024);
-    api_ingress.init(&ctx).await.expect("Failed to init");
+    api_gateway.init(&ctx).await.expect("Failed to init");
 
     let module = BodyLimitTestModule;
     let router = Router::new();
     let _router = module
-        .register_rest(&ctx, router, &api_ingress)
+        .register_rest(&ctx, router, &api_gateway)
         .expect("Failed to register routes");
 
-    let openapi = api_ingress
+    let openapi = api_gateway
         .build_openapi()
         .expect("Failed to build OpenAPI");
     let json = serde_json::to_value(&openapi).expect("Failed to serialize");

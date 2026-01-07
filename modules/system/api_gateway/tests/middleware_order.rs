@@ -1,8 +1,8 @@
 #![allow(clippy::expect_used)]
 
-//! Validates the *actual* middleware execution order of `ApiIngress::apply_middleware_stack`.
+//! Validates the *actual* middleware execution order of `ApiGateway::apply_middleware_stack`.
 //!
-//! The intended order is documented in `modules/api_ingress/src/lib.rs`:
+//! The intended order is documented in `modules/api_gateway/src/lib.rs`:
 //! set request id -> propagate request id -> trace -> push request id to extensions
 //! -> timeout -> body limit -> CORS -> MIME validation -> rate limit -> error mapping -> auth -> router
 //!
@@ -23,7 +23,7 @@ use std::sync::Arc;
 use tower::ServiceExt;
 use uuid::Uuid;
 
-use api_ingress::middleware::request_id::XRequestId;
+use api_gateway::middleware::request_id::XRequestId;
 
 struct TestConfigProvider {
     config: serde_json::Value,
@@ -35,9 +35,9 @@ impl ConfigProvider for TestConfigProvider {
     }
 }
 
-fn create_api_ingress_ctx(config: serde_json::Value) -> ModuleCtx {
+fn create_api_gateway_ctx(config: serde_json::Value) -> ModuleCtx {
     ModuleCtx::new(
-        "api_ingress",
+        "api_gateway",
         Uuid::new_v4(),
         Arc::new(TestConfigProvider { config }),
         Arc::new(modkit::ClientHub::new()),
@@ -54,7 +54,7 @@ async fn handler(Extension(XRequestId(rid)): Extension<XRequestId>) -> impl Into
 async fn real_middlewares_observe_documented_order() -> Result<()> {
     // Configure strict + deterministic rate limiting for the test route.
     let cfg = json!({
-        "api_ingress": {
+        "api_gateway": {
             "config": {
                 "bind_addr": "127.0.0.1:0",
                 "cors_enabled": true,
@@ -65,9 +65,9 @@ async fn real_middlewares_observe_documented_order() -> Result<()> {
             }
         }
     });
-    let ctx = create_api_ingress_ctx(cfg);
+    let ctx = create_api_gateway_ctx(cfg);
 
-    let api = api_ingress::ApiIngress::default();
+    let api = api_gateway::ApiGateway::default();
     api.init(&ctx).await?;
 
     // Register an endpoint that enables both MIME validation and rate limiting.
@@ -83,7 +83,7 @@ async fn real_middlewares_observe_documented_order() -> Result<()> {
         .handler(axum::routing::post(handler))
         .register(router, &api);
 
-    // Apply the real ingress middleware stack.
+    // Apply the real gateway middleware stack.
     let app = api.rest_finalize(&ctx, router)?;
 
     // --------------------

@@ -17,7 +17,7 @@ use modkit::api::{OperationSpec, Problem};
 use serde_json::json;
 use tower::ServiceExt; // for oneshot
 
-use api_ingress::middleware::mime_validation::{
+use api_gateway::middleware::mime_validation::{
     build_mime_validation_map, mime_validation_middleware,
 };
 use modkit::api::operation_builder::VendorExtensions;
