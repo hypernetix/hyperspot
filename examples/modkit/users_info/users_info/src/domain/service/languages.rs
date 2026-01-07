@@ -1,6 +1,6 @@
 use super::{
     debug, info, paginate_odata, DomainError, Language, LanguageAM, LanguageEntity,
-    LanguageFilterField, LanguageODataMapper, LanguagePatch, LimitCfg, NewLanguage, ODataQuery,
+    LanguageFilterField, LanguageODataMapper, LanguagePatch, NewLanguage, ODataQuery,
     OffsetDateTime, Page, SecurityContext, Service, Set, SortDir, Uuid,
 };
 
@@ -51,10 +51,7 @@ pub(super) async fn list_languages_page(
         svc.sec.conn(),
         query,
         ("id", SortDir::Desc),
-        LimitCfg {
-            default: u64::from(svc.config.default_page_size),
-            max: u64::from(svc.config.max_page_size),
-        },
+        svc.limit_cfg(),
         Into::into,
     )
     .await

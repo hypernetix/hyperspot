@@ -18,7 +18,7 @@ use crate::infra::storage::entity::{
     language::{Column as LanguageColumn, Entity as LanguageEntity, Model as LanguageModel},
     Column, Entity, Model,
 };
-use crate::query::{CityFilterField, LanguageFilterField, UserFilterField};
+use user_info_sdk::odata::{CityFilterField, LanguageFilterField, UserFilterField};
 
 /// Complete `OData` mapper for `users_info`.
 ///

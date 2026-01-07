@@ -16,18 +16,14 @@ use modkit::SseBroadcaster;
 
 use modkit_security::SecurityContext;
 
-#[path = "handlers/addresses.rs"]
 mod addresses;
-#[path = "handlers/cities.rs"]
 mod cities;
-#[path = "handlers/languages.rs"]
+mod events;
 mod languages;
-#[path = "handlers/sse.rs"]
-mod sse;
-#[path = "handlers/user_languages.rs"]
-mod user_languages;
-#[path = "handlers/users.rs"]
+mod relations;
 mod users;
+
+// ==================== User Handlers ====================
 
 /// List users with cursor-based pagination and optional field projection via $select
 #[tracing::instrument(
@@ -157,6 +153,8 @@ pub async fn delete_user(
     users::delete_user(ctx, svc, id).await
 }
 
+// ==================== Event Handlers (SSE) ====================
+
 /// SSE endpoint returning a live stream of `UserEvent`.
 #[tracing::instrument(
     skip(sse),
@@ -165,7 +163,7 @@ pub async fn delete_user(
 pub async fn users_events(
     Extension(sse): Extension<SseBroadcaster<UserEvent>>,
 ) -> impl IntoResponse {
-    sse::users_events(&sse)
+    events::users_events(&sse)
 }
 
 // ==================== City Handlers ====================
@@ -422,7 +420,7 @@ pub async fn list_user_languages(
     Extension(svc): Extension<std::sync::Arc<Service>>,
     Path(user_id): Path<Uuid>,
 ) -> ApiResult<JsonBody<Vec<LanguageDto>>> {
-    user_languages::list_user_languages(ctx, svc, user_id).await
+    relations::list_user_languages(ctx, svc, user_id).await
 }
 
 /// Assign a language to a user (idempotent)
@@ -440,7 +438,7 @@ pub async fn assign_language_to_user(
     Extension(svc): Extension<std::sync::Arc<Service>>,
     Path((user_id, language_id)): Path<(Uuid, Uuid)>,
 ) -> ApiResult<impl IntoResponse> {
-    user_languages::assign_language_to_user(ctx, svc, user_id, language_id).await
+    relations::assign_language_to_user(ctx, svc, user_id, language_id).await
 }
 
 /// Remove a language from a user (idempotent)
@@ -458,5 +456,5 @@ pub async fn remove_language_from_user(
     Extension(svc): Extension<std::sync::Arc<Service>>,
     Path((user_id, language_id)): Path<(Uuid, Uuid)>,
 ) -> ApiResult<impl IntoResponse> {
-    user_languages::remove_language_from_user(ctx, svc, user_id, language_id).await
+    relations::remove_language_from_user(ctx, svc, user_id, language_id).await
 }

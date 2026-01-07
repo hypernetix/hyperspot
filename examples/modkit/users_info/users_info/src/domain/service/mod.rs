@@ -1,3 +1,36 @@
+//! Domain service layer - business logic and rules.
+//!
+//! ## Architecture
+//!
+//! This module implements the domain service pattern with per-resource submodules:
+//! - `users` - User CRUD and business rules (email/display name validation)
+//! - `cities` - City CRUD operations
+//! - `languages` - Language CRUD operations
+//! - `addresses` - Address management (1-to-1 with users)
+//! - `relations` - User-Language many-to-many relationships
+//!
+//! ## Layering Rules
+//!
+//! The domain layer:
+//! - **MAY** import: `user_info_sdk` (contract types), `infra` (data access), `modkit` libs
+//! - **MUST NOT** import: `api::*` (one-way dependency: API → Domain)
+//! - **Uses**: SDK contract types (`User`, `NewUser`, etc.) as primary domain models
+//! - **Uses**: OData filter schemas from `user_info_sdk::odata` (not defined here)
+//!
+//! ## OData Integration
+//!
+//! The service uses type-safe OData filtering via SDK filter enums:
+//! - Filter schemas: `user_info_sdk::odata::{UserFilterField, CityFilterField, ...}`
+//! - Pagination: `modkit_db::odata::paginate_odata` with filter type parameter
+//! - Mapping: Infrastructure layer (`odata_mapper`) maps filters to SeaORM columns
+//!
+//! ## Security
+//!
+//! All operations use `SecureConn` for tenant isolation and RBAC:
+//! - Queries filtered by security context automatically
+//! - Operations checked against policy engine
+//! - Audit events published for compliance
+
 use std::sync::Arc;
 
 use crate::domain::error::DomainError;
@@ -13,7 +46,7 @@ use crate::infra::storage::entity::{
     },
 };
 use crate::infra::storage::odata_mapper::{CityODataMapper, LanguageODataMapper, UserODataMapper};
-use crate::query::{CityFilterField, LanguageFilterField, UserFilterField};
+use user_info_sdk::odata::{CityFilterField, LanguageFilterField, UserFilterField};
 use modkit_db::odata::{paginate_odata, LimitCfg};
 use modkit_db::secure::SecureConn;
 use modkit_odata::{ODataQuery, Page, SortDir};
@@ -28,15 +61,10 @@ use user_info_sdk::{
 };
 use uuid::Uuid;
 
-#[path = "service/addresses.rs"]
 mod addresses;
-#[path = "service/cities.rs"]
 mod cities;
-#[path = "service/languages.rs"]
 mod languages;
-#[path = "service/user_languages.rs"]
-mod user_languages;
-#[path = "service/users.rs"]
+mod relations;
 mod users;
 
 /// Domain service with business rules for user management.
@@ -84,6 +112,16 @@ impl Service {
             config,
         }
     }
+
+    /// Helper to construct LimitCfg from service configuration.
+    fn limit_cfg(&self) -> LimitCfg {
+        LimitCfg {
+            default: u64::from(self.config.default_page_size),
+            max: u64::from(self.config.max_page_size),
+        }
+    }
+
+    // ==================== User Operations ====================
 
     #[instrument(skip(self, ctx), fields(user_id = %id))]
     pub async fn get_user(&self, ctx: &SecurityContext, id: Uuid) -> Result<User, DomainError> {
@@ -338,7 +376,7 @@ impl Service {
         user_id: Uuid,
         language_id: Uuid,
     ) -> Result<(), DomainError> {
-        user_languages::assign_language_to_user(self, ctx, user_id, language_id).await
+        relations::assign_language_to_user(self, ctx, user_id, language_id).await
     }
 
     #[instrument(skip(self, ctx), fields(user_id = %user_id, language_id = %language_id))]
@@ -348,7 +386,7 @@ impl Service {
         user_id: Uuid,
         language_id: Uuid,
     ) -> Result<(), DomainError> {
-        user_languages::remove_language_from_user(self, ctx, user_id, language_id).await
+        relations::remove_language_from_user(self, ctx, user_id, language_id).await
     }
 
     #[instrument(skip(self, ctx), fields(user_id = %user_id))]
@@ -357,6 +395,6 @@ impl Service {
         ctx: &SecurityContext,
         user_id: Uuid,
     ) -> Result<Vec<Language>, DomainError> {
-        user_languages::list_user_languages(self, ctx, user_id).await
+        relations::list_user_languages(self, ctx, user_id).await
     }
 }
