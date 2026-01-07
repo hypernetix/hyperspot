@@ -84,11 +84,13 @@ Monorepo is not dogma: it has to be kept while it improves velocity and correctn
 
 A **Module** is a logical component that provides a specific set of functionality. In HyperSpot:
 - Every logical component must be a module
-- Each module is a Rust crate library
+- Each module is a Rust **package** containing:
+  - A **library crate** (`lib.rs`) — always present, contains module declaration
+  - Optionally a **binary crate** (`main.rs`) — for out-of-process (OoP) modules that run as separate processes
 - Modules are self-contained with their own configuration, API, and business logic
 - Modules are discovered automatically via the `inventory` crate
 - Modules can depend on each other
-- Modules can have plugins - plugins are not exposed their own Public REST API, depend on the main module and just implement certain contract defined by their host module. Plugins typically are runtime components that can be loaded dynamically
+- Modules can run either **in-process** (linked into the main binary) or **out-of-process** (as separate binaries communicating via gRPC) — see [MODKIT_UNIFIED_SYSTEM.md](MODKIT_UNIFIED_SYSTEM.md) for OoP details
 
 **Example modules:**
 - `file_parser` - Document parsing and extraction
@@ -97,12 +99,13 @@ A **Module** is a logical component that provides a specific set of functionalit
 
 **Module categories**
 
-- **Regular Module** - Regular modules are typically independent, expose their own versioned public API and responsible for their own domain end to end, including module business logic, data storage, migrations and module API documentation
-- **Plugin Module** - Plugins are special modules that are not exposing their own Public REST API, but implement certain host-module defined contract and acting as workers. Plugins typically are runtime components that can be loaded dynamically
+- **Regular Module** — Regular modules are typically independent, expose their own versioned public API, and are responsible for their own domain end-to-end, including module business logic, data storage, migrations, and module API documentation. Regular modules **cannot** depend on or consume plugin modules directly—all plugin functionality must be accessed through a Gateway Module's public API.
+- **Gateway Module** — Gateway modules are Regular Modules that define a **plugin contract** and route requests to one or more Plugin Modules at runtime. They expose a public API and delegate execution to the selected plugin based on configuration or context. See [MODKIT_PLUGINS.md](MODKIT_PLUGINS.md) for the Gateway + Plugin pattern.
+- **Plugin Module** — Plugins are special modules identified by a **GTS instance ID** that implement a gateway-defined contract. They do not expose their own **public API** and act as pluggable workers. Plugins register themselves in the types-registry for runtime discovery — see [MODKIT_PLUGINS.md](MODKIT_PLUGINS.md) for details.
 
 **Module structure:**
 
-| Module type | Generic module| Host module | Plugin module |
+| Module layer | Regular module | Gateway module | Plugin module |
 | --- | --- | --- | --- |
 | API layer @ api/ | Yes | Yes | No |
 | Business logic layer @ domain/ | Yes | Yes (contract, router) | Yes, main logic |
@@ -200,7 +203,7 @@ HyperSpot is designed from the ground up for **Software-as-a-Service (SaaS)** de
 
 ![architecture.drawio.png](img/architecture.drawio.png)
 
-See detailed descriptions in [COMPONENTS.md](COMPONENTS.md).
+See detailed descriptions in [MODULES.md](MODULES.md).
 
 ---
 
