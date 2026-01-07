@@ -83,13 +83,13 @@ From `architecture/openapi/v1/api.yaml`:
 1. Admin sends POST request to `/api/analytics/v1/gts` endpoint with JWT token
 2. Request body contains entity with JSON Schema fields ($schema, $id, type, properties)
 3. GTS Core receives request
-4. **IF** entity contains $id field **THEN**:
+4. **IF** entity contains $id field:
    1. Extract GTS type from $id field (everything before instance name)
    2. Type example: `gts.hypernetix.hyperspot.ax.query.v1~`
 5. **ELSE**:
    1. Return error: Type registration requires $id in entity
 6. Match extracted type against routing table
-7. **IF** match found **THEN**:
+7. **IF** match found:
    1. Forward request to domain feature (e.g., feature-query-definitions)
 8. **ELSE**:
    1. Return HTTP 404 (unknown type)
@@ -115,7 +115,7 @@ From `architecture/openapi/v1/api.yaml`:
 4. Extract GTS type from id field (text before last ~ separator)
 5. Type extracted: `gts.hypernetix.hyperspot.ax.query.v1~`
 6. Match type against routing table
-7. **IF** match found **THEN**:
+7. **IF** match found:
    1. Forward to appropriate domain feature (feature-query-definitions)
 8. **ELSE**:
    1. Return HTTP 404 (unknown type pattern)
@@ -142,14 +142,14 @@ From `architecture/openapi/v1/api.yaml`:
 5. Extract GTS type prefix from filter (e.g., `gts.hypernetix.hyperspot.ax.query.v1~`)
 6. Determine which domain features handle this type
 7. Validate filter fields against indexed fields (see Section C - Query Optimization)
-8. **IF** filter uses unsupported fields **THEN**:
+8. **IF** filter uses unsupported fields:
    1. Return HTTP 400 with available indexed fields list
    2. **RETURN** error response
 9. **ELSE**:
    1. Route request to domain feature (feature-query-definitions)
 10. Domain feature executes database query with OData filters
 11. Domain feature applies $top limit and generates $skiptoken for pagination
-12. **IF** $count=true **THEN**:
+12. **IF** $count=true:
     1. Include total count in response
 13. **RETURN** OData response with @odata.context, @odata.count, @odata.nextLink, value array
 
@@ -167,12 +167,12 @@ From `architecture/openapi/v1/api.yaml`:
 
 1. GTS Core receives any HTTP request (POST/GET/PUT/PATCH/DELETE)
 2. Auth middleware validates JWT signature
-3. **IF** JWT invalid **THEN**:
+3. **IF** JWT invalid:
    1. Return HTTP 401 Unauthorized
    2. **RETURN** error response
 4. Extract tenant_id and user_id from JWT claims
 5. Create SecurityCtx object with extracted values
-6. **IF** request contains query parameters **THEN**:
+6. **IF** request contains query parameters:
    1. OData parser processes $filter, $select, $orderby, $top, $skiptoken, $count
 7. Determine HTTP method type
 8. **MATCH** method:
@@ -180,7 +180,7 @@ From `architecture/openapi/v1/api.yaml`:
    - **CASE** GET/PUT/PATCH/DELETE: Extract type from URL path {id}
 9. Parse GTS identifier to extract base type
 10. Look up type in routing table (see Section C - Routing Algorithm)
-11. **IF** no match found **THEN**:
+11. **IF** no match found:
     1. Return HTTP 404 (unknown type)
     2. **RETURN** error response
 12. Forward request to domain feature handler with SecurityCtx
@@ -239,7 +239,7 @@ The GTS Core routes requests to domain-specific features based on GTS type ident
    - **CASE** GET/PUT/PATCH/DELETE: Extract from URL path {id} parameter
 3. Parse GTS identifier to determine base type (text before instance separator)
 4. Look up base type in routing table hash map
-5. **IF** match found **THEN**:
+5. **IF** match found:
    1. Forward request to domain feature handler
    2. Pass SecurityCtx and request data
 6. **ELSE**:
@@ -285,10 +285,10 @@ The service validates filter expressions against available indexes before execut
 4. Query domain feature for list of supported indexed fields
 5. **FOR EACH** field reference in filter:
    1. Check if field exists in indexed fields list
-   2. **IF** field NOT indexed **THEN**:
+   2. **IF** field NOT indexed:
       - Mark query as invalid
       - Add field to unsupported fields list
-6. **IF** query marked as invalid **THEN**:
+6. **IF** query marked as invalid:
    1. Create HTTP 400 Bad Request response
    2. Include error message with unsupported field names
    3. Include list of available indexed fields
@@ -324,14 +324,14 @@ The API follows the **[Tolerant Reader](https://martinfowler.com/bliki/TolerantR
      1. Extract entity fields from client request body
      2. Generate server-managed fields: id, type, registered_at
      3. Extract tenant from SecurityCtx
-     4. **IF** client provided system fields (id, type, tenant) **THEN**:
+     4. **IF** client provided system fields (id, type, tenant):
         - Ignore client values, use generated values
      5. Store entity with generated and client fields
      6. **RETURN** created entity with all fields
    - **CASE** GET (Read):
      1. Retrieve entity from database
      2. **FOR EACH** field in entity:
-        - **IF** field is secret or credential **THEN**:
+        - **IF** field is secret or credential:
           - Exclude field from response
      3. Add computed fields (e.g., asset_path) if applicable
      4. **RETURN** entity with non-sensitive fields
@@ -345,7 +345,7 @@ The API follows the **[Tolerant Reader](https://martinfowler.com/bliki/TolerantR
    - **CASE** PATCH (Partial Update):
      1. Receive JSON Patch operations array
      2. **FOR EACH** patch operation:
-        - **IF** path starts with /entity/ **THEN**:
+        - **IF** path starts with /entity/:
           - Apply operation to entity object
         - **ELSE**:
           - Reject operation (system fields immutable)
@@ -881,34 +881,6 @@ Delegated to domain features. GTS Core only validates JWT signature.
    - Future: Implement recursive traversal for deeply nested object filtering
    - Impact: Medium (rare case in current GTS types)
 - Field handling follows Tolerant Reader pattern specification
-
----
-
-## G. Implementation Plan
-
-1. **fdd-analytics-feature-gts-core-change-routing-infrastructure** ✅ COMPLETED
-   - **Description**: Implement complete routing layer including routing table definition, GTS identifier parser, routing algorithm with O(1) hash lookup, and OpenAPI specification for unified /gts endpoints
-   - **Implements Requirements**: `fdd-analytics-feature-gts-core-req-routing`
-   - **Dependencies**: None
-
-2. **fdd-analytics-feature-gts-core-change-request-middleware** ✅ COMPLETED
-   - **Description**: Implement request processing middleware chain including JWT validation, SecurityCtx injection with tenant isolation, OData v4 parameter parsing, and query optimization validator to prevent full table scans
-   - **Implements Requirements**: `fdd-analytics-feature-gts-core-req-middleware`
-   - **Dependencies**: fdd-analytics-feature-gts-core-change-routing-infrastructure
-   - **Validation Score**: 95/100 (OpenAPI alignment 95%)
-
-3. **fdd-analytics-feature-gts-core-change-response-processing** ✅ COMPLETED
-   - **Description**: Implement response processing including Tolerant Reader pattern with field categorization, OData metadata aggregator for CSDL generation, and computed field injection
-   - **Implements Requirements**: `fdd-analytics-feature-gts-core-req-tolerant-reader`, `fdd-analytics-feature-gts-core-req-routing`
-   - **Dependencies**: fdd-analytics-feature-gts-core-change-routing-infrastructure, fdd-analytics-feature-gts-core-change-request-middleware
-   - **Validation Score**: 98/100 (OpenAPI alignment 98%)
-
-4. **fdd-analytics-feature-gts-core-change-quality-assurance** ✅ COMPLETED
-   - **Description**: Implement RFC 7807 Problem Details error handling for all error cases and comprehensive end-to-end integration tests with mock domain features covering all requirements
-   - **Implements Requirements**: `fdd-analytics-feature-gts-core-req-routing`, `fdd-analytics-feature-gts-core-req-middleware`, `fdd-analytics-feature-gts-core-req-tolerant-reader`
-   - **Dependencies**: fdd-analytics-feature-gts-core-change-routing-infrastructure, fdd-analytics-feature-gts-core-change-request-middleware, fdd-analytics-feature-gts-core-change-response-processing
-   - **Completed**: 2026-01-06
-   - **Validation Score**: 100/100 (OpenSpec 100%, ModKit 95%, GTS 100%)
 
 ---
 

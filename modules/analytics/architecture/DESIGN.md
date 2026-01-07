@@ -1,241 +1,61 @@
-# Analytics - Overall Design
-
-<!-- REVERSE-ENGINEERED FROM CODE -->
-<!-- Date: 2026-01-06 -->
-<!-- Source: modules/analytics.bak -->
-<!-- Adapter: guidelines/FDD-Adapter/AGENTS.md -->
+# Analytics - Technical Design
 
 **Version**: 1.0  
 **Date**: 2025-12-31  
 **Module**: Analytics
 
+**Business Context**: `@/modules/analytics/architecture/BUSINESS.md`
+
 ---
 
-## Section A: Business Context
+## Section A: Architecture Overview
 
-### 1. VISION
+### Architectural Vision
 
-**Purpose**: Comprehensive framework for creating, managing, and displaying data visualizations and reports within the Hyperspot Platform
+The Analytics module follows a **plugin-based, data-agnostic architecture** built on the **Hyperspot Platform's modkit pattern**. The core philosophy is:
 
-**Target Users**:
-- Platform Administrators - Infrastructure and security management
-- Data Engineers - External data infrastructure (indirect interaction)
-- Plugin Developers - Custom datasource and query plugins
-- Dashboard Designers - Creating dashboards and visualizations
-- Business Analysts - Consuming reports and insights
-- End Users - Viewing dashboards and exploring data
+1. **Zero Vendor Lock-in**: No built-in data warehouse or ETL. All data access via dynamically registered query plugins.
+2. **Type Safety First**: GTS (Global Type System) ensures runtime type validation across all components.
+3. **Security by Design**: SecurityCtx enforced at compile-time via Secure ORM, tenant isolation guaranteed.
+4. **Horizontal Scalability**: Stateless service design enables unlimited scaling, with query result caching for performance.
 
-**Key Problems Solved**:
-- **Data Fragmentation**: Unified access to multiple external data sources through plugin architecture
-- **Data Agnostic Design**: No vendor lock-in - works with any data source (OLAP, OLTP, APIs) via query registration
-- **Visualization Complexity**: Rich set of chart types and interactive features without coding
-- **Type Safety**: Strong typing through GTS (Global Type System) prevents runtime errors
-- **Multi-Tenancy**: Complete tenant isolation with automatic JWT propagation
-- **Extensibility**: Plugin-based architecture for custom datasources and query adapters
-- **Reporting & Scheduling**: Automated report generation and delivery via platform services
-- **Performance**: Query result caching and horizontal scalability (data performance depends on external sources)
-- **Security**: SecurityCtx enforced at every layer with automatic tenant context injection
+The architecture separates **contract** (SDK) from **implementation** (service), enabling independent evolution and testing. All datasources are plugins that implement standardized query interfaces, supporting OData v4, native queries, and REST APIs.
 
-**Success Criteria**:
-- Sub-second query response for typical dashboards (p95 < 1s)
-- Support 100+ concurrent users per tenant
-- 99.9% uptime SLA
-- Plugin registration without service restart
-- Complete tenant data isolation
+### Architecture layers
 
-### 2. Actors
+![Architecture Diagram](diagrams/architecture.drawio.svg)
 
-**Human Actors**:
+The architecture consists of four distinct layers:
 
-#### Platform Administrator
-**Role**: Manages platform infrastructure and configuration
-**Capabilities**:
-- Configure tenant isolation and security policies
-- Monitor system health and performance
-- Manage user access across tenants
-- Configure DWH connections
+**PRESENTATION** (HAI3 - UI Application):
+- Dashboards, Reports, Widgets
+- Datasources & Templates
+- REST API consumption with JWT authentication
 
-#### Data Engineer
-**Role**: Manages external data infrastructure (indirect interaction)
-**Interaction**: Does NOT directly interact with Analytics module - manages external DWH/ETL systems that Analytics queries via plugins
-**Capabilities** (external to Analytics):
-- Build ETL pipelines in external systems
-- Configure external OLAP/OLTP data warehouses
-- Maintain data quality in source systems
-**Analytics Impact**: External data sources become available via query plugin registration performance
+**APPLICATION** (Analytics Service):
+- Plugin Gateway - Dynamic datasource registration
+- Query Execution Engine - Multi-datasource queries with caching
+- Dashboard Management - CRUD operations for dashboards/widgets
+- Report Generation - Scheduled reports via platform
+- SecurityCtx propagation throughout all operations
 
-#### Plugin Developer
-**Role**: Develops custom datasource plugins and adapters
-**Capabilities**:
-- Create datasource plugins
-- Implement contract adapters (OData, REST)
-- Register GTS type extensions
-- Build integration connectors
+**DOMAIN** (Analytics SDK - Contract Layer):
+- GTS Type Definitions (26 schema files)
+- Contract Traits (Query API, Plugin API)
+- Business Logic (isolated from infrastructure)
+- No HTTP, no database, no serialization
 
-#### Dashboard Designer
-**Role**: Creates dashboards and visualizations
-**Capabilities**:
-- Design dashboards and reports
-- Configure widgets and filters
-- Set up scheduled exports
-- Organize layouts for end users
+**INFRASTRUCTURE**:
+- **Database**: PostgreSQL via Secure ORM (metadata only: GTS types, instances, configuration)
+- **External Data Sources**: Query plugins access external DWH/OLAP/APIs with JWT propagation
+- **Platform Services**: Event management, tenancy, authentication, scheduling, email
+- **Observability**: OpenTelemetry tracing, structured logging, Prometheus metrics
 
-#### Business Analyst
-**Role**: Analyzes data and creates insights
-**Capabilities**:
-- Create ad-hoc queries
-- Build interactive reports
-- Export data for analysis
-- Set up alerts and notifications
-
-#### End User
-**Role**: Consumes dashboards and reports
-**Capabilities**:
-- View dashboards
-- Apply filters and drilldowns
-- Export visualizations
-- Subscribe to reports
-
-#### Template Developer
-**Role**: Develops custom widget templates and visualizations
-**Capabilities**:
-- Create widget templates
-- Define template configuration schemas
-- Implement rendering logic
-- Build reusable components
-- Register templates via GTS
-
-#### System Integrator
-**Role**: Embeds analytics into third-party products
-**Capabilities**:
-- Embed dashboards via iframe/SDK
-- Configure white-label solutions
-- Integrate with SSO/OAuth
-- Set up multi-tenant configurations
-- Implement branding customization
-
-#### Tenant Administrator
-**Role**: Manages tenant-specific configurations
-**Capabilities**:
-- Control user access within tenant
-- Configure tenant datasources
-- Manage tenant data retention
-- Monitor tenant usage and quotas
-
-#### API Consumer
-**Role**: Integrates analytics programmatically
-**Capabilities**:
-- Execute queries via REST API
-- Fetch data for custom visualizations
-- Build automation workflows
-- Integrate with mobile/desktop apps
-
-**System Actors**:
-
-#### UI Application (HAI3)
-**Role**: Frontend application for Analytics module
-**Integration**: REST API consumption with JWT authentication
-**Capabilities**:
-- Render dashboards and widgets
-- Execute queries via API
-- Manage user interactions
-- Handle authentication flow
-
-#### Hyperspot Platform
-**Role**: Provides core infrastructure services
-**Integration**: Platform APIs and event bus
-**Services Provided**:
-- Event management and propagation
-- Tenancy management and isolation
-- User authentication and authorization
-- Access control and permissions
-- UI configuration and settings
-- **Scheduling service** - Cron-based job scheduling for reports and tasks
-- **Email delivery** - Email sending for report delivery and notifications
-
-#### Query Plugin
-**Role**: Executes queries against datasources
-**Integration**: Plugin API with JWT propagation
-**Data Flow**: Analytics Service → Plugin → External API → Response
-
-#### External API Provider
-**Role**: Provides data through REST/OData APIs
-**Integration**: JWT-based authentication
-**Requirements**: Must validate JWT and filter by tenant_id
-
-### 3. System Capabilities
-
-**Data Visualization**:
-- Rich chart types (line, bar, pie, scatter, heatmap, etc.)
-- Interactive tables with sorting and filtering
-- Geographic maps with custom layers
-- Custom widget templates
-- **Values selectors** (dropdowns, autocomplete, pickers) for filters and parameters
-
-**Data Access**:
-- Plugin-based datasource architecture
-- OData v4 query support
-- Native REST API queries
-- Real-time data refresh
-- **Data agnostic** - no built-in DWH or data sources, all connected via query registration
-
-**Datasource Management**:
-- Datasource configuration (query + parameters + UI controls)
-- Parameter binding and validation
-- Values selector integration for parameter inputs
-- Datasource reusability across widgets
-- Runtime parameter injection
-
-**Dashboard Management**:
-- Grid-based responsive layouts
-- Drag-and-drop widget positioning
-- Dashboard templates
-- Version history
-
-**Query Execution**:
-- Multi-datasource queries
-- Query result caching
-- Automatic JWT generation with tenant context
-- Plugin-based query adapters
-
-**Reporting**:
-- Report generation (on-demand, scheduled via platform)
-- Report templates (based on dashboards)
-- Multi-format export (PDF, CSV, Excel)
-- Report history and versioning
-- Report delivery (email via platform)
-
-**Export & Sharing**:
-- Dashboard export to multiple formats
-- Dashboard sharing with permissions
-- Embed widgets in external apps
-- Public/private dashboard URLs
-
-**Security & Multi-Tenancy**:
-- Complete tenant isolation
-- SecurityCtx enforced everywhere
-- JWT-based API authentication
-- Row-level security in queries
-
-**Extensible Architecture**:
-- Dynamic datasource registration
-- Custom query implementations
-- Contract format adapters (native, odata, rest)
-- GTS-based type extensions
-- Plugin-based extensibility
-
-**Organization & Libraries**:
-- **Categories** for all GTS types and instances (hierarchical classification)
-- **Widget Libraries** - reusable widget collections
-- **Template Libraries** - visualization template marketplace
-- **Datasource Libraries** - preconfigured data source connectors
-- **Query Libraries** - shareable query definitions
-
-**Performance**:
-- Query result caching
-- Horizontal scalability
-- External data sources accessed via query plugins
-- No built-in ETL or DWH (data agnostic)
+**Key Architectural Patterns**:
+- **Plugin Architecture**: Dynamic registration without service restart
+- **SDK Pattern**: Contract/implementation separation via traits
+- **Secure ORM**: Compile-time tenant isolation enforcement
+- **GTS Native**: All plugin communication via GTS for type safety
 
 ---
 
@@ -243,21 +63,24 @@
 
 ### 1. System Requirements & Constraints
 
-**Performance Requirements**:
+**Performance Requirements**:  
+**ID**: `fdd-analytics-req-performance`
 - Query execution: p95 < 1s, p99 < 3s (depends on external data sources)
 - Dashboard load: < 2s for typical dashboard
 - API response: p95 < 200ms
 - Concurrent users: 100+ per tenant
 - Plugin registration: < 5s
 
-**Scalability**:
+**Scalability**:  
+**ID**: `fdd-analytics-req-scalability`
 - 1000+ dashboards per tenant
 - 100+ widgets per dashboard
 - 10M+ rows per query result (limited by external sources)
 - 50+ concurrent queries per tenant
 - Unlimited datasource plugins
 
-**Security Requirements**:
+**Security Requirements**:  
+**ID**: `fdd-analytics-req-security`
 - Multi-tenant isolation (mandatory, **provided by Hyperspot Platform**)
 - JWT signature validation
 - Automatic tenant_id injection
@@ -265,20 +88,23 @@
 - Audit logging for all queries (**platform-level**)
 - Row-level security in data access (enforced by external sources)
 
-**Compliance**:
+**Compliance**:  
+**ID**: `fdd-analytics-req-compliance`
 - GDPR compliant (data retention, deletion) - **managed by platform**
 - SOC 2 Type II requirements
 - Audit trail for all data access (**platform-level**)
 - Data encryption at rest and in transit
 
-**Technology Constraints**:
+**Technology Constraints**:  
+**ID**: `fdd-analytics-req-tech-constraints`
 - Rust for core services
 - **PostgreSQL for OLTP** (GTS metadata, types, instances, configuration)
 - **No built-in DWH** - data agnostic, all sources via query registration
 - GTS for all type definitions
 - JWT for authentication (**provided by Hyperspot Platform**)
 
-**Platform Dependencies**:
+**Platform Dependencies**:  
+**ID**: `fdd-analytics-req-platform-deps`
 - **Hyperspot Platform** provides:
   - Event management system
   - Tenancy management and isolation
@@ -292,23 +118,27 @@
 
 ### 1a. Security Requirements
 
-**Secure ORM (REQUIRED)**:
+**Secure ORM (REQUIRED)**:  
+**ID**: `fdd-analytics-req-secure-orm`
 - All database queries MUST use `SecureConn` with `SecurityCtx`
 - Entities MUST derive `#[derive(Scopable)]` with explicit scope dimensions
 - Compile-time enforcement: unscoped queries cannot execute
 - Tenant isolation automatic when tenant_ids provided
 
-**SecurityCtx Propagation**:
+**SecurityCtx Propagation**:  
+**ID**: `fdd-analytics-req-security-ctx`
 - All service methods accept `&SecurityCtx` as first parameter
 - All repository methods accept `&SecurityCtx` for scope enforcement
 - SecurityCtx created from request auth (per-operation, not stored)
 
-**Input Validation**:
+**Input Validation**:  
+**ID**: `fdd-analytics-req-input-validation`
 - Use `validator` crate for DTO validation
 - Field-level constraints (length, email, custom validators)
 - Return 422 with structured validation errors
 
-**Secrets Management**:
+**Secrets Management**:  
+**ID**: `fdd-analytics-req-secrets-mgmt`
 - Never commit secrets to version control
 - Use environment variables for configuration
 - Rotate secrets regularly
@@ -320,25 +150,29 @@
 
 ### 1b. Observability Requirements
 
-**Distributed Tracing (OpenTelemetry)**:
+**Distributed Tracing (OpenTelemetry)**:  
+**ID**: `fdd-analytics-req-tracing`
 - Accept/propagate `traceparent` header (W3C Trace Context)
 - Emit `traceId` header on all responses
 - Auto-instrument: HTTP requests, DB queries, inter-module calls
 - Export to Jaeger/Uptrace via OTLP
 
-**Structured Logging**:
+**Structured Logging**:  
+**ID**: `fdd-analytics-req-logging`
 - JSON logs per request: `traceId`, `requestId`, `userId`, `path`, `status`, `durationMs`
 - Use `tracing` crate with contextual fields
 - Log levels configurable per-module
 
-**Metrics (Prometheus)**:
+**Metrics (Prometheus)**:  
+**ID**: `fdd-analytics-req-metrics`
 - Health check endpoint: `/health`
 - RED metrics: Rate, Errors, Duration (per route)
 - USE metrics: Utilization, Saturation, Errors
 - Performance: p50/p90/p99 latencies
 - Resource: memory, connection pools, queue depths
 
-**Health Checks**:
+**Health Checks**:  
+**ID**: `fdd-analytics-req-health-checks`
 - Liveness probe: service is running
 - Readiness probe: service can handle traffic
 - Kubernetes-compatible health endpoints
@@ -350,56 +184,78 @@
 ### 2. Principles
 
 #### 1. Security First
+**ID**: `fdd-analytics-principle-security-first`
+
 SecurityCtx enforced at every level. No query execution without tenant context.
 
 **Implementation**: SecurityCtx as first parameter in all service methods
 
 #### 2. Plugin-Based Extensibility
+**ID**: `fdd-analytics-principle-plugin-extensibility`
+
 Datasources as dynamically registered plugins. No service restart required.
 
 **Implementation**: Plugin registry with runtime registration
 
 #### 3. GTS Native
+**ID**: `fdd-analytics-principle-gts-native`
+
 All plugin communication via GTS. Type safety at runtime.
 
 **Implementation**: GTS Schema Registry for all data structures
 
 #### 4. Strongly Typed
+**ID**: `fdd-analytics-principle-strongly-typed`
+
 All configuration validated with schemas. No runtime errors from invalid config.
 
 **Implementation**: JSON Schema validation + GTS type checking
 
 #### 5. Metadata Storage
+**ID**: `fdd-analytics-principle-metadata-storage`
+
 OLTP database for storing GTS types, instances, and configuration.
 
 **Implementation**: PostgreSQL for metadata, GTS Registry for CRUD operations
 
 #### 6. Data Agnostic Architecture
+**ID**: `fdd-analytics-principle-data-agnostic`
+
 No built-in data sources or DWH. All data access via registered queries to external systems.
 
 **Implementation**: Query plugins with JWT propagation to external APIs/DWH
 
 #### 7. Modular Design
+**ID**: `fdd-analytics-principle-modular-design`
+
 Reusable layouts, items, widgets, templates.
 
 **Implementation**: GTS-based composable components
 
 #### 8. API-First
+**ID**: `fdd-analytics-principle-api-first`
+
 REST API with OpenAPI specification. All features accessible via API.
 
 **Implementation**: OpenAPI 3.x spec with code generation
 
 #### 9. Horizontal Scalability
+**ID**: `fdd-analytics-principle-horizontal-scalability`
+
 Stateless services, distributed architecture.
 
 **Implementation**: Kubernetes deployment, Redis for caching
 
 #### 10. Tenant Isolation
+**ID**: `fdd-analytics-principle-tenant-isolation`
+
 Complete data separation per tenant. Cryptographic JWT integrity.
 
 **Implementation**: Automatic tenant_id injection + JWT validation
 
 #### 11. Mock Mode Support
+**ID**: `fdd-analytics-principle-mock-mode`
+
 All services and UI components support mock mode for development and testing.
 
 **Implementation**:
@@ -474,15 +330,7 @@ modules/analytics/
 
 ## Section C: Technical Architecture
 
-#### C.1: System Architecture
-
-![Architecture Diagram](diagrams/architecture.drawio.svg)
-
-The architecture consists of four distinct layers:
-
-**PRESENTATION** (HAI3 - UI Application):
-- Dashboards, Reports, Widgets
-- Datasources & Templates
+#### C.1: Domain Model (GTS)
 - Admin Panel
 - Interactive features (drilldowns, tooltips, filtering)
 
@@ -705,291 +553,57 @@ The domain model consists of interconnected type categories managed through unif
 
 #### C.5: Non-Functional Requirements
 
-**Performance**:
-- **Query Execution**: p95 < 1s, p99 < 3s (depends on external data sources)
-- **Dashboard Load**: < 2s for typical dashboard (10-20 widgets)
-- **API Response**: p95 < 200ms for metadata operations
-- **Plugin Registration**: < 5s to register new datasource plugin
-- **Caching**: Query result caching reduces repeated query latency
+**Performance Requirements**:  
+**ID**: `fdd-analytics-req-nfr-performance`
+- Query execution: p95 < 1s, p99 < 3s (depends on external data sources)
+- Dashboard load: < 2s for typical dashboard (10-20 widgets)
+- API response: p95 < 200ms for metadata operations
+- Plugin registration: < 5s to register new datasource plugin
+- Query result caching reduces repeated query latency
 
-**Scalability**:
-- **Horizontal Scaling**: Stateless service design enables adding instances
-- **Concurrent Users**: 100+ per tenant without degradation
-- **Data Volume**: 10M+ rows per query result (limited by external sources)
-- **Entity Limits**: 1000+ dashboards per tenant, 100+ widgets per dashboard
-- **Plugin Capacity**: Unlimited datasource plugins via dynamic registration
+**Scalability Requirements**:  
+**ID**: `fdd-analytics-req-nfr-scalability`
+- Horizontal scaling: Stateless service design enables adding instances
+- Concurrent users: 100+ per tenant without degradation
+- Data volume: 10M+ rows per query result (limited by external sources)
+- Entity limits: 1000+ dashboards per tenant, 100+ widgets per dashboard
+- Plugin capacity: Unlimited datasource plugins via dynamic registration
 
-**Reliability & Availability**:
-- **Uptime SLA**: 99.9% availability target
-- **Health Checks**: Liveness and readiness probes for Kubernetes
-- **Graceful Degradation**: Mock mode fallback when dependencies unavailable
-- **Retry Logic**: Automatic retry with exponential backoff for transient failures
-- **Circuit Breaker**: Prevent cascade failures from external API issues
+**Reliability & Availability Requirements**:  
+**ID**: `fdd-analytics-req-nfr-reliability`
+- Uptime SLA: 99.9% availability target
+- Health checks: Liveness and readiness probes for Kubernetes
+- Graceful degradation: Mock mode fallback when dependencies unavailable
+- Retry logic: Automatic retry with exponential backoff for transient failures
+- Circuit breaker: Prevent cascade failures from external API issues
 
-**Observability**:
-- **Distributed Tracing**: OpenTelemetry with W3C Trace Context propagation
-- **Structured Logging**: JSON logs with `traceId`, `requestId`, `tenant_id`
-- **Metrics**: Prometheus RED (Rate, Errors, Duration) and USE (Utilization, Saturation, Errors) metrics
-- **Health Endpoints**: `/health` (liveness), `/ready` (readiness)
+**Observability Requirements**:  
+**ID**: `fdd-analytics-req-nfr-observability`
+- Distributed tracing: OpenTelemetry with W3C Trace Context propagation
+- Structured logging: JSON logs with `traceId`, `requestId`, `tenant_id`
+- Metrics: Prometheus RED (Rate, Errors, Duration) and USE (Utilization, Saturation, Errors) metrics
+- Health endpoints: `/health` (liveness), `/ready` (readiness)
 - **References**: `@/docs/TRACING_SETUP.md`
 
-**Maintainability**:
-- **Modular Architecture**: Plugin-based extensibility without core changes
-- **SDK Pattern**: Clear contract/implementation separation
-- **Type Safety**: GTS eliminates runtime type errors
-- **Testing**: Mock mode enables fast local development and E2E testing
-- **Documentation**: OpenAPI specification auto-generated from code
+**Maintainability Requirements**:  
+**ID**: `fdd-analytics-req-nfr-maintainability`
+- Modular architecture: Plugin-based extensibility without core changes
+- SDK pattern: Clear contract/implementation separation
+- Type safety: GTS eliminates runtime type errors
+- Testing: Mock mode enables fast local development and E2E testing
+- Documentation: OpenAPI specification auto-generated from code
 
-**Deployment**:
-- **Container-Based**: Docker images for consistent deployment
-- **Kubernetes-Ready**: Supports horizontal pod autoscaling
-- **Configuration**: Environment variables and config files
-- **Zero Downtime**: Rolling updates without service interruption
-
----
-
-## Section D: Architecture Decision Records
-
-### ADR-0001: Initial Analytics Architecture
-
-**Date**: 2025-12-31  
-**Status**: Accepted  
-**Deciders**: Hyperspot Team  
-**Technical Story**: Analytics module initialization
-
-#### Context and Problem Statement
-
-The Hyperspot platform required a comprehensive analytics and reporting solution that could:
-- Support multiple data sources without vendor lock-in
-- Provide type-safe data visualization and querying
-- Ensure complete tenant isolation in multi-tenant environment
-- Scale horizontally while maintaining performance
-- Enable extensibility through plugins
-
-The challenge was to design an architecture that balances flexibility, security, type safety, and performance while avoiding coupling to specific data warehouse technologies.
-
-#### Decision Drivers
-
-- **Type Safety**: Need compile-time and runtime type validation across distributed system
-- **Multi-Tenancy**: Complete tenant isolation is mandatory for SaaS platform
-- **Data Agnostic**: No vendor lock-in to specific DWH or data source technologies
-- **Extensibility**: Plugin architecture for datasources, queries, and visualizations
-- **Performance**: Sub-second query response times for typical dashboards
-- **Security**: JWT-based authentication with automatic tenant context propagation
-- **Modularity**: Reusable components (dashboards, widgets, templates)
-
-#### Considered Options
-
-1. **GTS + Plugin Architecture** (chosen)
-   - GTS (Global Type System) for type-safe cross-module communication
-   - Plugin-based datasource architecture with dynamic registration
-   - No built-in DWH, all data via external query plugins
-   - SecurityCtx enforcement at every layer
-   - Modkit pattern with SDK separation
-
-2. **Monolithic with Built-in DWH**
-   - Integrated PostgreSQL-based data warehouse
-   - Direct SQL queries from analytics service
-   - Simpler deployment but vendor lock-in
-   - ETL pipelines built into analytics module
-
-3. **Microservices with Dedicated Query Service**
-   - Separate query execution service
-   - REST API between analytics and query service
-   - More network overhead, complex deployment
-   - Harder to maintain type safety across services
-
-#### Decision Outcome
-
-**Chosen option**: "GTS + Plugin Architecture"
-
-**Rationale**:
-- **Type Safety**: GTS provides schema validation at runtime with JSON Schema compliance
-- **Flexibility**: Plugin architecture allows adding new datasources without service restart
-- **Data Agnostic**: Query plugins abstract data source details, supporting any external system
-- **Security**: SecurityCtx enforced at compilation via Secure ORM and at runtime via JWT
-- **Performance**: Stateless design enables horizontal scaling, caching reduces query latency
-- **Modularity**: SDK pattern separates contracts from implementation
-
-**Positive Consequences**:
-- No vendor lock-in - can connect to any data source (OLAP, OLTP, REST APIs)
-- Type-safe communication through GTS eliminates entire class of runtime errors
-- Plugin registration without service restart improves operational flexibility
-- Complete tenant isolation via SecurityCtx prevents data leakage
-- Horizontal scalability achieved through stateless service design
-- Reusable components (templates, widgets, layouts) reduce development time
-
-**Negative Consequences**:
-- More complex architecture than monolithic approach
-- Plugin development requires understanding of GTS system
-- Query performance depends on external data source capabilities
-- Initial setup requires more configuration than integrated solution
-- Debugging distributed queries can be challenging
-
-#### Implementation Notes
-
-**Sections affected**:
-
-**Section A: Business Context**
-- Vision emphasizes "Data Agnostic Design" and plugin architecture
-- Actors include "Plugin Developer" for datasource extensibility
-- System capabilities list "Plugin-based datasource architecture"
-
-**Section B: Requirements & Principles**
-- Principle #2: "Plugin-Based Extensibility" - no service restart required
-- Principle #3: "GTS Native" - all plugin communication via GTS
-- Principle #6: "Data Agnostic Architecture" - no built-in DWH
-- Security requirements mandate SecurityCtx at all layers
-
-**Section C: Technical Architecture**
-- Domain model uses GTS + JSON Schema (26 schema files)
-- API contracts use OpenAPI 3.x for REST + gRPC for inter-module
-- Storage layer uses PostgreSQL for OLTP metadata only
-- Plugin architecture documented with Gateway + Plugin pattern
-- SDK pattern enforced for clean contract/implementation separation
+**Deployment Requirements**:  
+**ID**: `fdd-analytics-req-nfr-deployment`
+- Container-based: Docker images for consistent deployment
+- Kubernetes-ready: Supports horizontal pod autoscaling
+- Configuration: Environment variables and config files
+- Zero downtime: Rolling updates without service interruption
 
 ---
 
-### ADR-0002: OData v4 Query Protocol Selection
+## Section D: Additional Context
 
-**Date**: 2025-12-31  
-**Status**: Accepted  
-**Deciders**: Hyperspot Team  
+**Note**: This section is optional and reserved for architect notes, technical rationale, or other relevant technical context not covered by the core FDD structure.
 
-#### Context and Problem Statement
-
-Analytics module needed a standardized query protocol for data retrieval that supports:
-- Complex filtering, sorting, and pagination
-- Field projection and selection
-- Metadata discovery
-- Industry-standard compatibility
-
-#### Decision Drivers
-
-- Need standardized query language that external systems can understand
-- Must support complex filtering and sorting operations
-- Require metadata endpoint for schema discovery
-- Industry adoption and tooling ecosystem
-
-#### Considered Options
-
-1. **OData v4** (chosen)
-2. **GraphQL**
-3. **Custom REST query DSL**
-
-#### Decision Outcome
-
-**Chosen option**: "OData v4"
-
-**Rationale**: OData v4 provides mature standard for querying data with built-in support for filtering (`$filter`), sorting (`$orderby`), pagination (`$top`, `$skip`), field selection (`$select`), and metadata discovery (`$metadata`). Wide industry adoption ensures compatibility with external tools and services.
-
-**Positive Consequences**:
-- Standard protocol understood by many external systems
-- Built-in metadata discovery via `$metadata` endpoint
-- Rich query capabilities (filter, sort, project, paginate)
-- JSON CSDL support for schema definition
-
-**Negative Consequences**:
-- OData query syntax can be complex for users
-- Additional implementation overhead vs custom DSL
-- Some OData features not needed by all use cases
-
-**Sections affected**:
-- Section C.3: GTS Domain Types include query capabilities schema
-- Section C.4: API endpoints include `/$metadata` and `/queries/{id}/$query`
-- Section C.5: REST API Standards document OData pagination
-
----
-
-### ADR-0003: SecurityCtx and Secure ORM for Tenant Isolation
-
-**Date**: 2025-12-31  
-**Status**: Accepted  
-**Deciders**: Hyperspot Team  
-
-#### Context and Problem Statement
-
-Multi-tenant SaaS platform requires absolute guarantee of tenant data isolation. Traditional approach of manual tenant_id filtering in queries is error-prone and can lead to data leakage vulnerabilities.
-
-#### Decision Drivers
-
-- Zero-tolerance for tenant data leakage
-- Compile-time enforcement of security constraints
-- Automatic tenant context propagation
-- Audit trail for all data access
-
-#### Considered Options
-
-1. **Secure ORM with SecurityCtx** (chosen)
-2. **Manual tenant_id filtering**
-3. **Database-level row-level security (RLS)**
-
-#### Decision Outcome
-
-**Chosen option**: "Secure ORM with SecurityCtx"
-
-**Rationale**: Secure ORM with `#[derive(Scopable)]` macro provides compile-time enforcement of tenant isolation. All database queries must go through `SecureConn` with `SecurityCtx`, making it impossible to execute unscoped queries. This eliminates entire class of security vulnerabilities.
-
-**Positive Consequences**:
-- Compile-time enforcement - unscoped queries cannot compile
-- Automatic tenant_id injection in all queries
-- SecurityCtx propagation through all service layers
-- JWT validation and tenant extraction centralized
-- Impossible to accidentally query across tenant boundaries
-
-**Negative Consequences**:
-- Additional boilerplate - all methods accept `&SecurityCtx`
-- Learning curve for developers unfamiliar with pattern
-- Cannot opt-out of scoping even when intentional (e.g., admin queries)
-
-**Sections affected**:
-- Section B.1a: Security Requirements document Secure ORM mandate
-- Section C: All API endpoints validate JWT and extract SecurityCtx
-- All service methods accept `&SecurityCtx` as first parameter
-
----
-
-### ADR-0004: Mock Mode Architecture
-
-**Date**: 2025-12-31  
-**Status**: Accepted  
-**Deciders**: Hyperspot Team  
-
-#### Context and Problem Statement
-
-Development and testing require ability to run analytics module without dependencies on database, external data sources, or query plugins. Need consistent mock data that matches production schemas.
-
-#### Decision Drivers
-
-- Faster local development without infrastructure setup
-- Reliable E2E testing with predictable data
-- Demo environments without production data access
-- Offline development capability
-
-#### Considered Options
-
-1. **Comprehensive Mock Mode** (chosen)
-2. **Test database with seed data**
-3. **In-memory database only**
-
-#### Decision Outcome
-
-**Chosen option**: "Comprehensive Mock Mode"
-
-**Rationale**: Mock mode at both service and UI levels provides maximum flexibility for development and testing. Mock datasources return realistic data matching GTS schemas, enabling full feature development without infrastructure.
-
-**Positive Consequences**:
-- Service mock mode via `--mock-mode` flag or `MOCK_MODE=true` env var
-- UI mock mode via `VITE_MOCK_MODE=true` build-time config
-- Mock responses follow same GTS contracts as real implementations
-- Faster development cycles without database/plugin dependencies
-- Reliable E2E tests with deterministic mock data
-
-**Negative Consequences**:
-- Additional maintenance - mock implementations must stay in sync with real implementations
-- Mock data may not catch all edge cases that occur in production
-- Risk of "works in mock but fails in production" scenarios
-
-**Sections affected**:
-- Section B.2: Principle #11 documents Mock Mode Support
-- Implementation includes mock datasources and mock API client
+<!-- Add any additional technical context, implementation notes, technology selection rationale, or other relevant information here -->
