@@ -27,8 +27,8 @@ modkit-errors = { path = "../modkit-errors", features = ["utoipa", "axum"] }
 modkit-db = { path = "../modkit-db" }
 modkit-odata = { path = "../modkit-odata", features = ["with-odata-params"] }
 modkit-sdk = { path = "../modkit-sdk" }
-module_orchestrator-contracts = { path = "../../modules/module_orchestrator/module_orchestrator-contracts" } # TODO: probably we need remove this dependency at the future
-module_orchestrator-grpc = { path = "../../modules/module_orchestrator/module_orchestrator-grpc", optional = true }
+module_orchestrator-contracts = { path = "../../modules/system/module_orchestrator/module_orchestrator-contracts" } # TODO: probably we need remove this dependency at the future
+module_orchestrator-grpc = { path = "../../modules/system/module_orchestrator/module_orchestrator-grpc", optional = true }
 
 # Core deps
 anyhow = { workspace = true }

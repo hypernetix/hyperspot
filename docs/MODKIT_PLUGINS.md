@@ -875,4 +875,4 @@ curl http://127.0.0.1:8087/tenant-resolver/v1/tenants?limit=50
 - [MODKIT_UNIFIED_SYSTEM.md](./MODKIT_UNIFIED_SYSTEM.md) — Complete ModKit architecture guide
 - [NEW_MODULE.md](../guidelines/NEW_MODULE.md) — Step-by-step module creation guide
 - [ARCHITECTURE_MANIFEST.md](./ARCHITECTURE_MANIFEST.md) — HyperSpot architecture overview
-- [types-registry](../modules/types-registry/) — GTS types and instances registry
+- [types-registry](../modules/system/types-registry/) — GTS types and instances registry

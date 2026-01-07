@@ -12,7 +12,7 @@ workspace = true
 [dependencies]
 module_orchestrator-contracts = { path = "../module_orchestrator-contracts" }
 module_orchestrator-grpc = { path = "../module_orchestrator-grpc" }
-modkit = { path = "../../../libs/modkit" }
+modkit = { path = "../../../../libs/modkit" }
 parking_lot = { workspace = true }
 tokio = { workspace = true }
 tonic = { workspace = true, features = ["transport"] }

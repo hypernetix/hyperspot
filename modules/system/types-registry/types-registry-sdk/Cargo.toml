@@ -21,4 +21,4 @@ serde_json = { workspace = true }
 gts = { workspace = true }
 
 # Security context for API methods
-modkit-security = { path = "../../../libs/modkit-security" }
+modkit-security = { path = "../../../../libs/modkit-security" }

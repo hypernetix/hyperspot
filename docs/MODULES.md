@@ -641,7 +641,7 @@ Core platform egress policy enforcement and governance layer (outbound controls,
 
 ## Sub-scenario - incoming API call processing
 
-This diagram reflects the **actual middleware stack** from `api_ingress` (see `apply_middleware_stack` in `modules/api_ingress/src/lib.rs`).
+This diagram reflects the **actual middleware stack** from `api_ingress` (see `apply_middleware_stack` in `modules/system/api_ingress/src/lib.rs`).
 
 **Middleware execution order (outermost → innermost):**
 1. Request ID (SetRequestId + PropagateRequestId)

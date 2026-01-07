@@ -168,7 +168,7 @@ modkit-odata = { path = "../../libs/modkit-odata" }
 
 [dev-dependencies]
 tower = { workspace = true, features = ["util"] }
-api_ingress = { path = "../../modules/api_ingress" }
+api_ingress = { path = "../../modules/system/api_ingress" }
 ```
 
 #### 1c. Create SDK `src/lib.rs`
@@ -1074,7 +1074,7 @@ Edit `apps/hyperspot-server/Cargo.toml`:
 ```toml
 [dependencies]
 # ... existing dependencies
-api_ingress = { path = "../../modules/api_ingress" }
+api_ingress = { path = "../../modules/system/api_ingress" }
 your_module = { path = "../../modules/your-module" }  # Add this line
 ```
 
@@ -1742,7 +1742,7 @@ discoverable and include its API endpoints in the OpenAPI documentation.
    ```toml
    # user modules
    file_parser = { path = "../../modules/file_parser" }
-   nodes_registry = { path = "../../modules/nodes_registry" }
+   nodes_registry = { path = "../../modules/system/nodes_registry" }
    your_module = { path = "../../modules/your_module" }  # ADD THIS LINE
    ```
 

@@ -16,7 +16,7 @@ modkit-security = { path = "../../../../libs/modkit-security" }
 # gRPC transport dependencies
 modkit-transport-grpc = { path = "../../../../libs/modkit-transport-grpc" }
 modkit = { path = "../../../../libs/modkit" }
-module_orchestrator-contracts = { path = "../../../../modules/module_orchestrator/module_orchestrator-contracts" }
+module_orchestrator-contracts = { path = "../../../../modules/system/module_orchestrator/module_orchestrator-contracts" }
 tonic = { workspace = true, features = ["transport"] }
 tonic-prost = { workspace = true }
 prost = { workspace = true }

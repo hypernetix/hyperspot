@@ -13,9 +13,9 @@ name = "api_ingress"
 path = "src/lib.rs"
 
 [dependencies]
-modkit = { path = "../../libs/modkit" }
-modkit-auth = { path = "../../libs/modkit-auth" }
-modkit-security = { path = "../../libs/modkit-security" }
+modkit = { path = "../../../libs/modkit" }
+modkit-auth = { path = "../../../libs/modkit-auth" }
+modkit-security = { path = "../../../libs/modkit-security" }
 inventory = { workspace = true }
 anyhow = { workspace = true }
 async-trait = { workspace = true }

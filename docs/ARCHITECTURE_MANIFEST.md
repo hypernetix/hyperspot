@@ -230,7 +230,9 @@ hyperspot/
 ├── examples/          # Example modules and usage patterns
 ├── guidelines/        # Coding standards and best practices for LLMs
 ├── libs/              # Shared libraries (modkit, modkit-db, modkit-auth, etc.)
-├── modules/           # Business logic modules (chat, file_parser, etc.)
+├── modules/           # Business logic modules
+│   ├── system/        # Core system modules (api_gateway, grpc_hub, module_orchestrator, nodes_registry, types-registry)
+│   └── ...            # User modules (file_parser, etc.)
 ├── scripts/           # Custom scripts for build, testing, etc.
 └── testing/           # E2E and integration tests (pytest)
 ```
@@ -266,7 +268,7 @@ modules/<module-name>/
 ├── tests/                            # Optional
 └── (optional extras: gts/, openspec/, build.rs, etc.)
 
-# SDK pattern (used by e.g. `modules/types-registry/` and `examples/modkit/users_info/`)
+# SDK pattern (used by e.g. `modules/system/types-registry/` and `examples/modkit/users_info/`)
 modules/<module-dir>/
 ├── <module-name>-sdk/
 │   ├── Cargo.toml

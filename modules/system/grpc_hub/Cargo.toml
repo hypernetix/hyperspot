@@ -13,8 +13,8 @@ name = "grpc_hub"
 path = "src/lib.rs"
 
 [dependencies]
-modkit = { path = "../../libs/modkit" }
-modkit-transport-grpc = { path = "../../libs/modkit-transport-grpc" }
+modkit = { path = "../../../libs/modkit" }
+modkit-transport-grpc = { path = "../../../libs/modkit-transport-grpc" }
 module_orchestrator-contracts = { path = "../module_orchestrator/module_orchestrator-contracts" }
 inventory = { workspace = true }
 anyhow = { workspace = true }
