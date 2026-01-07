@@ -14,11 +14,14 @@ use modkit_odata::filter::FilterNode;
 use sea_orm::Condition;
 
 use crate::infra::storage::entity::{
+    address::{Column as AddressColumn, Entity as AddressEntity, Model as AddressModel},
     city::{Column as CityColumn, Entity as CityEntity, Model as CityModel},
     language::{Column as LanguageColumn, Entity as LanguageEntity, Model as LanguageModel},
     Column, Entity, Model,
 };
-use user_info_sdk::odata::{CityFilterField, LanguageFilterField, UserFilterField};
+use user_info_sdk::odata::{
+    AddressFilterField, CityFilterField, LanguageFilterField, UserFilterField,
+};
 
 /// Complete `OData` mapper for `users_info`.
 ///
@@ -95,6 +98,45 @@ impl ODataFieldMapping<CityFilterField> for CityODataMapper {
                 sea_orm::Value::String(Some(Box::new(model.country.clone())))
             }
             CityFilterField::CreatedAt => {
+                sea_orm::Value::TimeDateTimeWithTimeZone(Some(Box::new(model.created_at)))
+            }
+        }
+    }
+}
+
+/// Complete `OData` mapper for addresses.
+pub struct AddressODataMapper;
+
+impl FieldToColumn<AddressFilterField> for AddressODataMapper {
+    type Column = AddressColumn;
+
+    fn map_field(field: AddressFilterField) -> AddressColumn {
+        match field {
+            AddressFilterField::Id => AddressColumn::Id,
+            AddressFilterField::UserId => AddressColumn::UserId,
+            AddressFilterField::CityId => AddressColumn::CityId,
+            AddressFilterField::Street => AddressColumn::Street,
+            AddressFilterField::PostalCode => AddressColumn::PostalCode,
+            AddressFilterField::CreatedAt => AddressColumn::CreatedAt,
+        }
+    }
+}
+
+impl ODataFieldMapping<AddressFilterField> for AddressODataMapper {
+    type Entity = AddressEntity;
+
+    fn extract_cursor_value(model: &AddressModel, field: AddressFilterField) -> sea_orm::Value {
+        match field {
+            AddressFilterField::Id => sea_orm::Value::Uuid(Some(Box::new(model.id))),
+            AddressFilterField::UserId => sea_orm::Value::Uuid(Some(Box::new(model.user_id))),
+            AddressFilterField::CityId => sea_orm::Value::Uuid(Some(Box::new(model.city_id))),
+            AddressFilterField::Street => {
+                sea_orm::Value::String(Some(Box::new(model.street.clone())))
+            }
+            AddressFilterField::PostalCode => {
+                sea_orm::Value::String(Some(Box::new(model.postal_code.clone())))
+            }
+            AddressFilterField::CreatedAt => {
                 sea_orm::Value::TimeDateTimeWithTimeZone(Some(Box::new(model.created_at)))
             }
         }

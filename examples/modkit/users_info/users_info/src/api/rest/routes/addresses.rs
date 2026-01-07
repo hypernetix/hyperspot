@@ -1,12 +1,9 @@
-use super::{Action, License, Resource, dto, handlers};
+use super::{dto, handlers, Action, License, Resource};
 use axum::Router;
 use modkit::api::operation_builder::OperationBuilder;
 use modkit::api::OpenApiRegistry;
 
-pub(super) fn register_address_routes(
-    mut router: Router,
-    openapi: &dyn OpenApiRegistry,
-) -> Router {
+pub(super) fn register_address_routes(mut router: Router, openapi: &dyn OpenApiRegistry) -> Router {
     // GET /users-info/v1/users/{id}/address - Get user's address
     router = OperationBuilder::get("/users-info/v1/users/{id}/address")
         .operation_id("users_info.get_user_address")

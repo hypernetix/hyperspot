@@ -15,14 +15,14 @@
 //! - **MAY** import: `user_info_sdk` (contract types), `infra` (data access), `modkit` libs
 //! - **MUST NOT** import: `api::*` (one-way dependency: API → Domain)
 //! - **Uses**: SDK contract types (`User`, `NewUser`, etc.) as primary domain models
-//! - **Uses**: OData filter schemas from `user_info_sdk::odata` (not defined here)
+//! - **Uses**: `OData` filter schemas from `user_info_sdk::odata` (not defined here)
 //!
-//! ## OData Integration
+//! ## `OData` Integration
 //!
-//! The service uses type-safe OData filtering via SDK filter enums:
+//! The service uses type-safe `OData` filtering via SDK filter enums:
 //! - Filter schemas: `user_info_sdk::odata::{UserFilterField, CityFilterField, ...}`
 //! - Pagination: `modkit_db::odata::paginate_odata` with filter type parameter
-//! - Mapping: Infrastructure layer (`odata_mapper`) maps filters to SeaORM columns
+//! - Mapping: Infrastructure layer (`odata_mapper`) maps filters to `SeaORM` columns
 //!
 //! ## Security
 //!
@@ -45,8 +45,9 @@ use crate::infra::storage::entity::{
         ActiveModel as UserLanguageAM, Column as UserLanguageColumn, Entity as UserLanguageEntity,
     },
 };
-use crate::infra::storage::odata_mapper::{CityODataMapper, LanguageODataMapper, UserODataMapper};
-use user_info_sdk::odata::{CityFilterField, LanguageFilterField, UserFilterField};
+use crate::infra::storage::odata_mapper::{
+    AddressODataMapper, CityODataMapper, LanguageODataMapper, UserODataMapper,
+};
 use modkit_db::odata::{paginate_odata, LimitCfg};
 use modkit_db::secure::SecureConn;
 use modkit_odata::{ODataQuery, Page, SortDir};
@@ -55,6 +56,9 @@ use sea_orm::sea_query::Expr;
 use sea_orm::Set;
 use time::OffsetDateTime;
 use tracing::{debug, info, instrument};
+use user_info_sdk::odata::{
+    AddressFilterField, CityFilterField, LanguageFilterField, UserFilterField,
+};
 use user_info_sdk::{
     Address, AddressPatch, City, CityPatch, Language, LanguagePatch, NewAddress, NewCity,
     NewLanguage, NewUser, User, UserPatch,
@@ -113,7 +117,7 @@ impl Service {
         }
     }
 
-    /// Helper to construct LimitCfg from service configuration.
+    /// Helper to construct `LimitCfg` from service configuration.
     fn limit_cfg(&self) -> LimitCfg {
         LimitCfg {
             default: u64::from(self.config.default_page_size),
@@ -304,6 +308,16 @@ impl Service {
         id: Uuid,
     ) -> Result<Address, DomainError> {
         addresses::get_address(self, ctx, id).await
+    }
+
+    /// List addresses with cursor-based pagination
+    #[instrument(skip(self, ctx, query))]
+    pub async fn list_addresses_page(
+        &self,
+        ctx: &SecurityContext,
+        query: &ODataQuery,
+    ) -> Result<Page<Address>, DomainError> {
+        addresses::list_addresses_page(self, ctx, query).await
     }
 
     #[instrument(skip(self, ctx), fields(user_id = %user_id))]

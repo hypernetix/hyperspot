@@ -1,13 +1,10 @@
-use super::{Action, License, Resource, dto, handlers};
+use super::{dto, handlers, Action, License, Resource};
 use axum::Router;
 use modkit::api::operation_builder::{OperationBuilder, OperationBuilderODataExt};
 use modkit::api::OpenApiRegistry;
 use user_info_sdk::odata::UserFilterField;
 
-pub(super) fn register_user_routes(
-    mut router: Router,
-    openapi: &dyn OpenApiRegistry,
-) -> Router {
+pub(super) fn register_user_routes(mut router: Router, openapi: &dyn OpenApiRegistry) -> Router {
     // GET /users-info/v1/users - List users with cursor-based pagination
     router = OperationBuilder::get("/users-info/v1/users")
         .operation_id("users_info.list_users")

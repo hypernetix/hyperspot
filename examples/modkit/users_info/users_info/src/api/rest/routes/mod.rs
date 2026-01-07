@@ -1,8 +1,8 @@
-//! REST API route definitions - OpenAPI and Axum routing.
+//! REST API route definitions - `OpenAPI` and Axum routing.
 //!
 //! ## Architecture
 //!
-//! This module defines REST routes with OpenAPI metadata organized by resource:
+//! This module defines REST routes with `OpenAPI` metadata organized by resource:
 //! - `users` - User endpoints (5: list, get, create, update, delete)
 //! - `cities` - City endpoints (5: list, get, create, update, delete)
 //! - `languages` - Language endpoints (5: list, get, create, update, delete)
@@ -10,9 +10,9 @@
 //! - `relations` - User-Language relation endpoints (3: list, assign, remove)
 //! - `events` - SSE event stream (1: user events)
 //!
-//! ## OData Integration
+//! ## `OData` Integration
 //!
-//! List endpoints support OData query parameters via SDK filter schemas:
+//! List endpoints support `OData` query parameters via SDK filter schemas:
 //! - `$filter` - Type-safe filtering using `user_info_sdk::odata::*FilterField`
 //! - `$orderby` - Sorting on filterable fields
 //! - `$select` - Field projection for response optimization
@@ -93,7 +93,7 @@ impl AsRef<str> for License {
 
 impl LicenseFeature for License {}
 
-/// Register all routes for the users_info module
+/// Register all routes for the `users_info` module
 #[allow(clippy::needless_pass_by_value)]
 pub fn register_routes(
     mut router: Router,

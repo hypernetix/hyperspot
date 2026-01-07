@@ -1,6 +1,7 @@
 use super::{
-    debug, info, Address, AddressAM, AddressColumn, AddressEntity, AddressPatch, DomainError, Expr,
-    NewAddress, OffsetDateTime, SecurityContext, Service, Set, UserEntity, Uuid,
+    debug, info, paginate_odata, Address, AddressAM, AddressColumn, AddressEntity,
+    AddressFilterField, AddressODataMapper, AddressPatch, DomainError, Expr, NewAddress,
+    ODataQuery, OffsetDateTime, Page, SecurityContext, Service, Set, SortDir, UserEntity, Uuid,
 };
 
 pub(super) async fn get_address(
@@ -59,6 +60,37 @@ pub(super) async fn get_address_by_user(
     user_id: Uuid,
 ) -> Result<Option<Address>, DomainError> {
     get_user_address(svc, ctx, user_id).await
+}
+
+pub(super) async fn list_addresses_page(
+    svc: &Service,
+    ctx: &SecurityContext,
+    query: &ODataQuery,
+) -> Result<Page<Address>, DomainError> {
+    debug!("Listing addresses with cursor pagination");
+
+    let scope = ctx
+        .scope(svc.policy_engine.clone())
+        .include_tenant_children()
+        .prepare()
+        .await?;
+
+    let secure_query = svc.sec.find::<AddressEntity>(&scope);
+    let base_query = secure_query.into_inner();
+
+    let page = paginate_odata::<AddressFilterField, AddressODataMapper, _, _, _, _>(
+        base_query,
+        svc.sec.conn(),
+        query,
+        ("id", SortDir::Desc),
+        svc.limit_cfg(),
+        Into::into,
+    )
+    .await
+    .map_err(|e| DomainError::database(e.to_string()))?;
+
+    debug!("Successfully listed {} addresses in page", page.items.len());
+    Ok(page)
 }
 
 #[allow(clippy::cognitive_complexity)]

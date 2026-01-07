@@ -1,5 +1,5 @@
-use crate::api::rest::{dto, routes};
 use crate::api::rest::sse_adapter::SseUserEventPublisher;
+use crate::api::rest::{dto, routes};
 use crate::domain::events::UserDomainEvent;
 use crate::domain::ports::EventPublisher;
 use futures_util::StreamExt;

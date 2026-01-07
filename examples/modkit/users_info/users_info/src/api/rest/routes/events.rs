@@ -1,4 +1,4 @@
-use super::{Action, License, Resource, dto, handlers};
+use super::{dto, handlers, Action, License, Resource};
 use axum::Router;
 use modkit::api::operation_builder::OperationBuilder;
 use modkit::api::OpenApiRegistry;

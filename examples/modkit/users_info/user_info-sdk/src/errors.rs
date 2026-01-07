@@ -27,6 +27,10 @@ pub enum UsersInfoError {
     /// Feature not yet implemented.
     #[error("Feature not implemented")]
     NotImplemented,
+
+    /// Streaming or pagination failure in cursor-based APIs.
+    #[error("Streaming error: {message}")]
+    Streaming { message: String },
 }
 
 impl UsersInfoError {
@@ -60,5 +64,12 @@ impl UsersInfoError {
     #[must_use]
     pub fn not_implemented() -> Self {
         Self::NotImplemented
+    }
+
+    /// Create a streaming error.
+    pub fn streaming(message: impl Into<String>) -> Self {
+        Self::Streaming {
+            message: message.into(),
+        }
     }
 }

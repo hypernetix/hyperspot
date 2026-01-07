@@ -8,6 +8,7 @@ use tracing::{debug, info};
 use url::Url;
 
 // Import the client trait from SDK
+#[allow(unused_imports)]
 use user_info_sdk::UsersInfoClient;
 
 use crate::api::rest::dto::UserEvent;
@@ -15,10 +16,10 @@ use crate::api::rest::routes;
 use crate::api::rest::sse_adapter::SseUserEventPublisher;
 use crate::config::UsersInfoConfig;
 use crate::domain::events::UserDomainEvent;
+use crate::domain::local_client::UsersInfoLocalClient;
 use crate::domain::ports::{AuditPort, EventPublisher};
 use crate::domain::service::{Service, ServiceConfig};
 use crate::infra::audit::HttpAuditClient;
-use crate::local_client::UsersInfoLocalClient;
 
 /// Main module struct with DDD-light layout and proper `ClientHub` integration
 #[modkit::module(
@@ -98,13 +99,13 @@ impl Module for UsersInfo {
         // Store service for REST and internal usage
         self.service.store(Some(domain_service.clone()));
 
-        // Create local client adapter that implements UsersInfoClient
+        // Create local client adapter that implements object-safe UsersInfoClient
         let local = UsersInfoLocalClient::new(domain_service);
-        let client: Arc<dyn UsersInfoClient> = Arc::new(local);
 
-        // Register in ClientHub directly - consumers use hub.get::<dyn UsersInfoClient>()?
-        ctx.client_hub().register::<dyn UsersInfoClient>(client);
-        info!("UsersInfo local client registered into ClientHub");
+        // Register under the SDK trait for transport-agnostic consumption
+        ctx.client_hub()
+            .register::<dyn UsersInfoClient>(Arc::new(local));
+        info!("UsersInfo client registered into ClientHub as dyn UsersInfoClient");
         Ok(())
     }
 }

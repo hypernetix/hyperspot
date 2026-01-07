@@ -10,6 +10,8 @@ authors.workspace = true
 workspace = true
 
 [features]
+default = ["odata"]
+odata = []         # enable streaming API with typed queries
 integration = []   # gate integration tests
 
 [dependencies]
@@ -69,6 +71,7 @@ modkit-security = { path = "../../../../libs/modkit-security" }
 modkit-errors = { path = "../../../../libs/modkit-errors" }
 modkit-errors-macro = { path = "../../../../libs/modkit-errors-macro" }
 modkit-odata = { path = "../../../../libs/modkit-odata", features = ["with-utoipa"] }
+modkit-sdk = { path = "../../../../libs/modkit-sdk" }
 
 [dev-dependencies]
 tower = { workspace = true, features = ["util"] }

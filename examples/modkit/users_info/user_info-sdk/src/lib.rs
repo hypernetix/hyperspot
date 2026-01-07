@@ -4,7 +4,7 @@
 //! - `UsersInfoClient` trait
 //! - Model types for users, addresses, cities, and languages
 //! - Error type (`UsersInfoError`)
-//! - OData filter field definitions (behind `odata` feature)
+//! - `OData` filter field definitions (behind `odata` feature)
 //!
 //! ## Usage
 //!
@@ -20,7 +20,7 @@
 //! let users = client.list_users(&ctx, query).await?;
 //! ```
 //!
-//! ## OData Support
+//! ## `OData` Support
 //!
 //! Enable the `odata` feature to access filter field definitions:
 //! ```ignore

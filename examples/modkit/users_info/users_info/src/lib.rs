@@ -15,7 +15,7 @@
 //!   - Model types: `User`, `Address`, `City`, `Language`
 //!   - Request/patch types: `NewUser`, `UserPatch`, etc.
 //!   - Error type: `UsersInfoError`
-//!   - OData filter schemas (behind `odata` feature): `UserFilterField`, `CityFilterField`, etc.
+//!   - `OData` filter schemas (behind `odata` feature): `UserFilterField`, `CityFilterField`, etc.
 //! - **Dependencies:** Only modkit core libs (no server code)
 //!
 //! ### API Layer (`users_info::api`)
@@ -42,14 +42,14 @@
 //!
 //! ### Infrastructure Layer (`users_info::infra`)
 //! - **Location:** `src/infra/storage/`
-//! - **Purpose:** Database persistence and OData mapping
+//! - **Purpose:** Database persistence and `OData` mapping
 //! - **Contains:**
-//!   - `entity/` - SeaORM entity definitions
+//!   - `entity/` - `SeaORM` entity definitions
 //!   - `mapper.rs` - Entity ↔ SDK model conversions
-//!   - `odata_mapper.rs` - OData filter → SeaORM column mappings
+//!   - `odata_mapper.rs` - `OData` filter → `SeaORM` column mappings
 //!   - `migrations/` - Database schema migrations
-//! - **Dependencies:** SDK types (for models), SeaORM
-//! - **Rule:** ALL SeaORM specifics contained here; OData schemas from SDK only
+//! - **Dependencies:** SDK types (for models), `SeaORM`
+//! - **Rule:** ALL `SeaORM` specifics contained here; `OData` schemas from SDK only
 //!
 //! ## Public API
 //!
@@ -60,11 +60,11 @@
 //!
 //! Other modules should use `hub.get::<dyn UsersInfoClient>()?` to obtain the client.
 //!
-//! ## OData Support
+//! ## `OData` Support
 //!
-//! OData filter schemas live in `user_info-sdk::odata` (behind `odata` feature):
+//! `OData` filter schemas live in `user_info-sdk::odata` (behind `odata` feature):
 //! - Type-safe filter enums for each resource
-//! - Used by both REST API (OpenAPI) and domain pagination
+//! - Used by both REST API (`OpenAPI`) and domain pagination
 //! - Mapped to database columns in `infra::storage::odata_mapper`
 #![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 // === PUBLIC API (from SDK) ===
@@ -82,10 +82,6 @@ pub mod errors;
 // ModKit needs access to the module struct for instantiation
 pub mod module;
 pub use module::UsersInfo;
-
-// === LOCAL CLIENT ===
-// Local client adapter that implements UsersInfoApi
-pub mod local_client;
 
 // === INTERNAL MODULES ===
 // WARNING: These modules are internal implementation details!

@@ -1,6 +1,6 @@
 //! Centralized `OData` error mapping
 //!
-//! This module adds HTTP-specific context (instance path, trace ID) to OData errors.
+//! This module adds HTTP-specific context (instance path, trace ID) to `OData` errors.
 //! The core Error → Problem mapping is owned by modkit-odata.
 
 use crate::api::problem::Problem;
@@ -47,7 +47,7 @@ pub fn odata_error_to_problem(
 
     // Add HTTP-specific context
     problem = problem.with_instance(instance);
-    
+
     let trace_id = trace_id.or_else(current_trace_id);
     if let Some(tid) = trace_id {
         problem = problem.with_trace_id(tid);

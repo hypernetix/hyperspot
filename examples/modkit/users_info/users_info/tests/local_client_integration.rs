@@ -10,20 +10,27 @@
 
 mod support;
 
-use modkit_odata::ODataQuery;
+use futures_util::TryStreamExt;
+use modkit::ClientHub;
+use modkit_sdk::odata::QueryBuilder;
 use std::sync::Arc;
 use support::{ctx_root, TestContext};
+use user_info_sdk::odata::{CitySchema, LanguageSchema, UserSchema};
 use user_info_sdk::{
     AddressPatch, CityPatch, LanguagePatch, NewAddress, NewCity, NewLanguage, NewUser,
     UpdateAddressRequest, UpdateCityRequest, UpdateLanguageRequest, UpdateUserRequest, UserPatch,
     UsersInfoClient, UsersInfoError,
 };
-use users_info::local_client::UsersInfoLocalClient;
+use users_info::domain::local_client::UsersInfoLocalClient;
 use uuid::Uuid;
 
 /// Helper to create a local client from test context
-fn create_client(ctx: &TestContext) -> UsersInfoLocalClient {
-    UsersInfoLocalClient::new(ctx.service.clone())
+fn create_client(ctx: &TestContext) -> Arc<dyn UsersInfoClient> {
+    let hub = ClientHub::new();
+    let client = UsersInfoLocalClient::new(ctx.service.clone());
+    hub.register::<dyn UsersInfoClient>(Arc::new(client));
+    hub.get::<dyn UsersInfoClient>()
+        .expect("client should be registered")
 }
 
 #[tokio::test]
@@ -40,12 +47,12 @@ async fn test_user_crud_operations() {
         display_name: "Test User".to_string(),
     };
 
-    let created = client.create_user(&ctx, new_user).await.unwrap();
+    let created = client.create_user(ctx.clone(), new_user).await.unwrap();
     assert_eq!(created.email, "test@example.com");
     assert_eq!(created.display_name, "Test User");
     assert_eq!(created.tenant_id, tenant_id);
 
-    let fetched = client.get_user(&ctx, created.id).await.unwrap();
+    let fetched = client.get_user(ctx.clone(), created.id).await.unwrap();
     assert_eq!(fetched.id, created.id);
     assert_eq!(fetched.email, created.email);
 
@@ -56,13 +63,13 @@ async fn test_user_crud_operations() {
             display_name: Some("Updated User".to_string()),
         },
     };
-    let updated = client.update_user(&ctx, update_req).await.unwrap();
+    let updated = client.update_user(ctx.clone(), update_req).await.unwrap();
     assert_eq!(updated.email, "updated@example.com");
     assert_eq!(updated.display_name, "Updated User");
 
-    client.delete_user(&ctx, created.id).await.unwrap();
+    client.delete_user(ctx.clone(), created.id).await.unwrap();
 
-    let result = client.get_user(&ctx, created.id).await;
+    let result = client.get_user(ctx, created.id).await;
     assert!(matches!(result, Err(UsersInfoError::NotFound { .. })));
 }
 
@@ -80,20 +87,17 @@ async fn test_list_users_with_pagination() {
             email: format!("user{}@example.com", i),
             display_name: format!("User {}", i),
         };
-        client.create_user(&ctx, new_user).await.unwrap();
+        client.create_user(ctx.clone(), new_user).await.unwrap();
     }
 
-    let query = ODataQuery {
-        filter: None,
-        order: Default::default(),
-        limit: Some(10),
-        cursor: None,
-        filter_hash: None,
-        select: None,
-    };
-
-    let page = client.list_users(&ctx, query).await.unwrap();
-    assert_eq!(page.items.len(), 5);
+    let query = QueryBuilder::<UserSchema>::new().page_size(10);
+    let users: Vec<_> = client
+        .users()
+        .stream(ctx.clone(), query)
+        .try_collect()
+        .await
+        .unwrap();
+    assert_eq!(users.len(), 5);
 }
 
 #[tokio::test]
@@ -110,11 +114,11 @@ async fn test_city_crud_operations() {
         country: "USA".to_string(),
     };
 
-    let created = client.create_city(&ctx, new_city).await.unwrap();
+    let created = client.create_city(ctx.clone(), new_city).await.unwrap();
     assert_eq!(created.name, "San Francisco");
     assert_eq!(created.country, "USA");
 
-    let fetched = client.get_city(&ctx, created.id).await.unwrap();
+    let fetched = client.get_city(ctx.clone(), created.id).await.unwrap();
     assert_eq!(fetched.id, created.id);
 
     let update_req = UpdateCityRequest {
@@ -124,13 +128,13 @@ async fn test_city_crud_operations() {
             country: Some("United States".to_string()),
         },
     };
-    let updated = client.update_city(&ctx, update_req).await.unwrap();
+    let updated = client.update_city(ctx.clone(), update_req).await.unwrap();
     assert_eq!(updated.name, "Los Angeles");
     assert_eq!(updated.country, "United States");
 
-    client.delete_city(&ctx, created.id).await.unwrap();
+    client.delete_city(ctx.clone(), created.id).await.unwrap();
 
-    let result = client.get_city(&ctx, created.id).await;
+    let result = client.get_city(ctx, created.id).await;
     assert!(matches!(result, Err(UsersInfoError::NotFound { .. })));
 }
 
@@ -148,20 +152,17 @@ async fn test_list_cities() {
             name: format!("City {}", i),
             country: "Country".to_string(),
         };
-        client.create_city(&ctx, new_city).await.unwrap();
+        client.create_city(ctx.clone(), new_city).await.unwrap();
     }
 
-    let query = ODataQuery {
-        filter: None,
-        order: Default::default(),
-        limit: Some(10),
-        cursor: None,
-        filter_hash: None,
-        select: None,
-    };
-
-    let page = client.list_cities(&ctx, query).await.unwrap();
-    assert_eq!(page.items.len(), 3);
+    let query = QueryBuilder::<CitySchema>::new().page_size(10);
+    let cities: Vec<_> = client
+        .cities()
+        .stream(ctx.clone(), query)
+        .try_collect()
+        .await
+        .unwrap();
+    assert_eq!(cities.len(), 3);
 }
 
 #[tokio::test]
@@ -178,11 +179,14 @@ async fn test_language_crud_operations() {
         name: "English".to_string(),
     };
 
-    let created = client.create_language(&ctx, new_language).await.unwrap();
+    let created = client
+        .create_language(ctx.clone(), new_language)
+        .await
+        .unwrap();
     assert_eq!(created.code, "en");
     assert_eq!(created.name, "English");
 
-    let fetched = client.get_language(&ctx, created.id).await.unwrap();
+    let fetched = client.get_language(ctx.clone(), created.id).await.unwrap();
     assert_eq!(fetched.id, created.id);
 
     let update_req = UpdateLanguageRequest {
@@ -192,13 +196,19 @@ async fn test_language_crud_operations() {
             name: Some("English (US)".to_string()),
         },
     };
-    let updated = client.update_language(&ctx, update_req).await.unwrap();
+    let updated = client
+        .update_language(ctx.clone(), update_req)
+        .await
+        .unwrap();
     assert_eq!(updated.code, "en-US");
     assert_eq!(updated.name, "English (US)");
 
-    client.delete_language(&ctx, created.id).await.unwrap();
+    client
+        .delete_language(ctx.clone(), created.id)
+        .await
+        .unwrap();
 
-    let result = client.get_language(&ctx, created.id).await;
+    let result = client.get_language(ctx, created.id).await;
     assert!(matches!(result, Err(UsersInfoError::NotFound { .. })));
 }
 
@@ -216,20 +226,20 @@ async fn test_list_languages() {
             code: code.to_string(),
             name: name.to_string(),
         };
-        client.create_language(&ctx, new_language).await.unwrap();
+        client
+            .create_language(ctx.clone(), new_language)
+            .await
+            .unwrap();
     }
 
-    let query = ODataQuery {
-        filter: None,
-        order: Default::default(),
-        limit: Some(10),
-        cursor: None,
-        filter_hash: None,
-        select: None,
-    };
-
-    let page = client.list_languages(&ctx, query).await.unwrap();
-    assert_eq!(page.items.len(), 3);
+    let query = QueryBuilder::<LanguageSchema>::new().page_size(10);
+    let langs: Vec<_> = client
+        .languages()
+        .stream(ctx.clone(), query)
+        .try_collect()
+        .await
+        .unwrap();
+    assert_eq!(langs.len(), 3);
 }
 
 #[tokio::test]
@@ -241,7 +251,7 @@ async fn test_address_crud_operations() {
 
     let user = client
         .create_user(
-            &ctx,
+            ctx.clone(),
             NewUser {
                 id: None,
                 tenant_id,
@@ -254,7 +264,7 @@ async fn test_address_crud_operations() {
 
     let city = client
         .create_city(
-            &ctx,
+            ctx.clone(),
             NewCity {
                 id: None,
                 tenant_id,
@@ -274,17 +284,20 @@ async fn test_address_crud_operations() {
         postal_code: "10001".to_string(),
     };
 
-    let created = client.create_address(&ctx, new_address).await.unwrap();
+    let created = client
+        .create_address(ctx.clone(), new_address)
+        .await
+        .unwrap();
     assert_eq!(created.user_id, user.id);
     assert_eq!(created.city_id, city.id);
     assert_eq!(created.street, "123 Main St");
     assert_eq!(created.postal_code, "10001");
 
-    let fetched = client.get_address(&ctx, created.id).await.unwrap();
+    let fetched = client.get_address(ctx.clone(), created.id).await.unwrap();
     assert_eq!(fetched.id, created.id);
 
     let by_user = client
-        .get_address_by_user(&ctx, user.id)
+        .get_address_by_user(ctx.clone(), user.id)
         .await
         .unwrap()
         .unwrap();
@@ -298,13 +311,19 @@ async fn test_address_crud_operations() {
             postal_code: Some("10002".to_string()),
         },
     };
-    let updated = client.update_address(&ctx, update_req).await.unwrap();
+    let updated = client
+        .update_address(ctx.clone(), update_req)
+        .await
+        .unwrap();
     assert_eq!(updated.street, "456 Oak Ave");
     assert_eq!(updated.postal_code, "10002");
 
-    client.delete_address(&ctx, created.id).await.unwrap();
+    client
+        .delete_address(ctx.clone(), created.id)
+        .await
+        .unwrap();
 
-    let result = client.get_address(&ctx, created.id).await;
+    let result = client.get_address(ctx, created.id).await;
     assert!(matches!(result, Err(UsersInfoError::NotFound { .. })));
 }
 
@@ -317,7 +336,7 @@ async fn test_get_address_by_user_not_found() {
 
     let user = client
         .create_user(
-            &ctx,
+            ctx.clone(),
             NewUser {
                 id: None,
                 tenant_id,
@@ -328,7 +347,7 @@ async fn test_get_address_by_user_not_found() {
         .await
         .unwrap();
 
-    let result = client.get_address_by_user(&ctx, user.id).await.unwrap();
+    let result = client.get_address_by_user(ctx, user.id).await.unwrap();
     assert!(result.is_none());
 }
 
@@ -341,7 +360,7 @@ async fn test_user_language_relationships() {
 
     let user = client
         .create_user(
-            &ctx,
+            ctx.clone(),
             NewUser {
                 id: None,
                 tenant_id,
@@ -354,7 +373,7 @@ async fn test_user_language_relationships() {
 
     let lang1 = client
         .create_language(
-            &ctx,
+            ctx.clone(),
             NewLanguage {
                 id: None,
                 tenant_id,
@@ -367,7 +386,7 @@ async fn test_user_language_relationships() {
 
     let lang2 = client
         .create_language(
-            &ctx,
+            ctx.clone(),
             NewLanguage {
                 id: None,
                 tenant_id,
@@ -378,41 +397,53 @@ async fn test_user_language_relationships() {
         .await
         .unwrap();
 
-    let languages = client.list_user_languages(&ctx, user.id).await.unwrap();
+    let languages = client
+        .list_user_languages(ctx.clone(), user.id)
+        .await
+        .unwrap();
     assert_eq!(languages.len(), 0);
 
     client
-        .assign_language_to_user(&ctx, user.id, lang1.id)
+        .assign_language_to_user(ctx.clone(), user.id, lang1.id)
         .await
         .unwrap();
     client
-        .assign_language_to_user(&ctx, user.id, lang2.id)
+        .assign_language_to_user(ctx.clone(), user.id, lang2.id)
         .await
         .unwrap();
 
-    let languages = client.list_user_languages(&ctx, user.id).await.unwrap();
+    let languages = client
+        .list_user_languages(ctx.clone(), user.id)
+        .await
+        .unwrap();
     assert_eq!(languages.len(), 2);
     let codes: Vec<String> = languages.iter().map(|l| l.code.clone()).collect();
     assert!(codes.contains(&"en".to_string()));
     assert!(codes.contains(&"es".to_string()));
 
     client
-        .assign_language_to_user(&ctx, user.id, lang1.id)
+        .assign_language_to_user(ctx.clone(), user.id, lang1.id)
         .await
         .unwrap();
-    let languages = client.list_user_languages(&ctx, user.id).await.unwrap();
+    let languages = client
+        .list_user_languages(ctx.clone(), user.id)
+        .await
+        .unwrap();
     assert_eq!(languages.len(), 2);
 
     client
-        .remove_language_from_user(&ctx, user.id, lang1.id)
+        .remove_language_from_user(ctx.clone(), user.id, lang1.id)
         .await
         .unwrap();
-    let languages = client.list_user_languages(&ctx, user.id).await.unwrap();
+    let languages = client
+        .list_user_languages(ctx.clone(), user.id)
+        .await
+        .unwrap();
     assert_eq!(languages.len(), 1);
     assert_eq!(languages[0].code, "es");
 
     client
-        .remove_language_from_user(&ctx, user.id, lang1.id)
+        .remove_language_from_user(ctx, user.id, lang1.id)
         .await
         .unwrap();
 }
@@ -424,7 +455,7 @@ async fn test_error_conversion_not_found() {
     let ctx = ctx_root();
     let non_existent_id = Uuid::new_v4();
 
-    let result = client.get_user(&ctx, non_existent_id).await;
+    let result = client.get_user(ctx, non_existent_id).await;
     assert!(matches!(result, Err(UsersInfoError::NotFound { id }) if id == non_existent_id));
 }
 
@@ -442,7 +473,7 @@ async fn test_error_conversion_validation() {
         display_name: "Test User".to_string(),
     };
 
-    let result = client.create_user(&ctx, new_user).await;
+    let result = client.create_user(ctx, new_user).await;
     assert!(matches!(result, Err(UsersInfoError::Validation { .. })));
 }
 
@@ -459,7 +490,10 @@ async fn test_error_conversion_conflict() {
         email: "duplicate@example.com".to_string(),
         display_name: "User 1".to_string(),
     };
-    client.create_user(&ctx, new_user.clone()).await.unwrap();
+    client
+        .create_user(ctx.clone(), new_user.clone())
+        .await
+        .unwrap();
 
     let duplicate_user = NewUser {
         id: None,
@@ -467,7 +501,7 @@ async fn test_error_conversion_conflict() {
         email: "duplicate@example.com".to_string(),
         display_name: "User 2".to_string(),
     };
-    let result = client.create_user(&ctx, duplicate_user).await;
+    let result = client.create_user(ctx, duplicate_user).await;
     assert!(matches!(result, Err(UsersInfoError::Conflict { .. })));
 }
 
@@ -475,13 +509,14 @@ async fn test_error_conversion_conflict() {
 async fn test_client_is_send_sync() {
     fn assert_send_sync<T: Send + Sync>() {}
     assert_send_sync::<UsersInfoLocalClient>();
+    assert_send_sync::<Arc<dyn UsersInfoClient>>();
 }
 
 #[tokio::test]
 async fn test_client_can_be_wrapped_in_arc() {
     let test_ctx = TestContext::new().await;
     let client = create_client(&test_ctx);
-    let arc_client: Arc<dyn UsersInfoClient> = Arc::new(client);
+    let arc_client: Arc<dyn UsersInfoClient> = client;
 
     let ctx = ctx_root();
     let tenant_id = Uuid::new_v4();
@@ -493,6 +528,6 @@ async fn test_client_can_be_wrapped_in_arc() {
         display_name: "Arc User".to_string(),
     };
 
-    let created = arc_client.create_user(&ctx, new_user).await.unwrap();
+    let created = arc_client.create_user(ctx, new_user).await.unwrap();
     assert_eq!(created.email, "arc@example.com");
 }

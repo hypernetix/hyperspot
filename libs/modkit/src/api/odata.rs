@@ -167,7 +167,7 @@ where
             let parsed = modkit_odata::parse_filter_string(raw).map_err(|e| {
                 // Log parser details for debugging (no PII - only length)
                 tracing::debug!(error = %e, filter_len = raw.len(), "OData filter parsing failed");
-                
+
                 // Delegate to centralized error mapping (single source of truth)
                 // This handles ParsingUnavailable → 500 and InvalidFilter → 400
                 crate::api::odata::odata_error_to_problem(&e, parts.uri.path(), None)
