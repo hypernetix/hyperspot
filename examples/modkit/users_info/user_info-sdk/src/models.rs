@@ -113,36 +113,10 @@ pub struct UpdateCityRequest {
     pub patch: CityPatch,
 }
 
-/// A language entity.
+/// Aggregated user representation with related entities.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Language {
-    pub id: Uuid,
-    pub tenant_id: Uuid,
-    pub code: String,
-    pub name: String,
-    pub created_at: OffsetDateTime,
-    pub updated_at: OffsetDateTime,
-}
-
-/// Data for creating a new language.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct NewLanguage {
-    pub id: Option<Uuid>,
-    pub tenant_id: Uuid,
-    pub code: String,
-    pub name: String,
-}
-
-/// Partial update data for a language.
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
-pub struct LanguagePatch {
-    pub code: Option<String>,
-    pub name: Option<String>,
-}
-
-/// Request to update a language.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct UpdateLanguageRequest {
-    pub id: Uuid,
-    pub patch: LanguagePatch,
+pub struct UserFull {
+    pub user: User,
+    pub address: Option<Address>,
+    pub city: Option<City>,
 }

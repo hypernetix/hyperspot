@@ -633,7 +633,7 @@ impl ParsedFilter {
 /// Parse a raw $filter string into internal AST with complexity metadata.
 ///
 /// This function encapsulates the parsing logic and node counting,
-/// abstracting away the underlying odata_params dependency.
+/// abstracting away the underlying `odata_params` dependency.
 ///
 /// # Errors
 /// - `Error::InvalidFilter` if the filter string is malformed or parsing fails
@@ -650,22 +650,19 @@ impl ParsedFilter {
 pub fn parse_filter_string(raw: &str) -> Result<ParsedFilter, Error> {
     use odata_params::filters as od;
 
-    /// Count nodes in odata_params AST for complexity budget enforcement.
+    /// Count nodes in `odata_params` AST for complexity budget enforcement.
     fn count_ast_nodes(e: &od::Expr) -> usize {
         use od::Expr::{And, Compare, Function, Identifier, In, Not, Or, Value};
         match e {
             Value(_) | Identifier(_) => 1,
             Not(x) => 1 + count_ast_nodes(x),
-            And(a, b) | Or(a, b) | Compare(a, _, b) => {
-                1 + count_ast_nodes(a) + count_ast_nodes(b)
-            }
+            And(a, b) | Or(a, b) | Compare(a, _, b) => 1 + count_ast_nodes(a) + count_ast_nodes(b),
             In(a, list) => 1 + count_ast_nodes(a) + list.iter().map(count_ast_nodes).sum::<usize>(),
             Function(_, args) => 1 + args.iter().map(count_ast_nodes).sum::<usize>(),
         }
     }
 
-    let ast_src = od::parse_str(raw)
-        .map_err(|e| Error::InvalidFilter(format!("{e:?}")))?;
+    let ast_src = od::parse_str(raw).map_err(|e| Error::InvalidFilter(format!("{e:?}")))?;
 
     let node_count = count_ast_nodes(&ast_src);
     let expr: ast::Expr = ast_src.into();
@@ -673,6 +670,14 @@ pub fn parse_filter_string(raw: &str) -> Result<ParsedFilter, Error> {
     Ok(ParsedFilter { expr, node_count })
 }
 
+/// Parse `OData` filter string.
+///
+/// This stub is compiled when the `with-odata-params` feature is disabled.
+///
+/// # Errors
+///
+/// Always returns `Error::ParsingUnavailable` because `OData` parsing
+/// support is not enabled in this build.
 #[cfg(not(feature = "with-odata-params"))]
 pub fn parse_filter_string(_raw: &str) -> Result<ParsedFilter, Error> {
     Err(Error::ParsingUnavailable(

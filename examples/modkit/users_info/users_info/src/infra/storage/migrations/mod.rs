@@ -1,9 +1,9 @@
 use sea_orm_migration::prelude::*;
 
-mod add_relationships_003;
-mod add_tenant_support_002;
-mod add_tenant_to_all_tables_004;
-mod initial_001;
+mod m20260111_000001_initial;
+mod m20260111_000002_add_tenant_support;
+mod m20260111_000003_add_relationships;
+mod m20260111_000004_add_tenant_to_all_tables;
 
 pub struct Migrator;
 
@@ -11,10 +11,10 @@ pub struct Migrator;
 impl MigratorTrait for Migrator {
     fn migrations() -> Vec<Box<dyn MigrationTrait>> {
         vec![
-            Box::new(initial_001::Migration),
-            Box::new(add_tenant_support_002::Migration),
-            Box::new(add_relationships_003::Migration),
-            Box::new(add_tenant_to_all_tables_004::Migration),
+            Box::new(m20260111_000001_initial::Migration),
+            Box::new(m20260111_000002_add_tenant_support::Migration),
+            Box::new(m20260111_000003_add_relationships::Migration),
+            Box::new(m20260111_000004_add_tenant_to_all_tables::Migration),
         ]
     }
 }

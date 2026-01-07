@@ -2,9 +2,9 @@
 //!
 //! This crate provides the public API for the `user_info` module:
 //! - `UsersInfoClient` trait
-//! - Model types for users, addresses, cities, and languages
+//! - Model types for users, addresses and cities
 //! - Error type (`UsersInfoError`)
-//! - OData filter field definitions (behind `odata` feature)
+//! - `OData` filter field definitions (behind `odata` feature)
 //!
 //! ## Usage
 //!
@@ -20,7 +20,7 @@
 //! let users = client.list_users(&ctx, query).await?;
 //! ```
 //!
-//! ## OData Support
+//! ## `OData` Support
 //!
 //! Enable the `odata` feature to access filter field definitions:
 //! ```ignore
@@ -30,7 +30,7 @@
 #![forbid(unsafe_code)]
 #![deny(rust_2018_idioms)]
 
-pub mod api;
+pub mod client;
 pub mod errors;
 pub mod models;
 
@@ -39,10 +39,9 @@ pub mod models;
 pub mod odata;
 
 // Re-export main types at crate root for convenience
-pub use api::UsersInfoClient;
+pub use client::UsersInfoClient;
 pub use errors::UsersInfoError;
 pub use models::{
-    Address, AddressPatch, City, CityPatch, Language, LanguagePatch, NewAddress, NewCity,
-    NewLanguage, NewUser, UpdateAddressRequest, UpdateCityRequest, UpdateLanguageRequest,
-    UpdateUserRequest, User, UserPatch,
+    Address, AddressPatch, City, CityPatch, NewAddress, NewCity, NewUser, UpdateAddressRequest,
+    UpdateCityRequest, UpdateUserRequest, User, UserFull, UserPatch,
 };

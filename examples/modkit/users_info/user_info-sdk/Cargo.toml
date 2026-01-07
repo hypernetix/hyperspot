@@ -10,24 +10,37 @@ description = "SDK for user_info module: API trait, types, and error definitions
 workspace = true
 
 [features]
-default = []
-odata = ["dep:modkit-odata-macros"]
+default = ["odata"]
+odata = [
+    "dep:modkit-odata-macros",
+    "dep:futures",
+    "dep:futures-core",
+    "dep:modkit-sdk",
+    "dep:modkit-odata",
+]
 
 [dependencies]
 # Core dependencies for API trait
-async-trait = { workspace = true }
 thiserror = { workspace = true }
 uuid = { workspace = true }
 time = { workspace = true }
+async-trait = { workspace = true }
+
+# OData macros (for #[derive(ODataFilterable)])
+modkit-odata-macros = { path = "../../../../libs/modkit-odata-macros", optional = true }
+
+# Streaming support
+futures-core = { workspace = true, optional = true }
+futures = { workspace = true, optional = true }
 
 # Security context for API methods
 modkit-security = { path = "../../../../libs/modkit-security" }
 
-# OData support for pagination
-modkit-odata = { path = "../../../../libs/modkit-odata" }
+# SDK utilities (streaming, typed OData queries)
+modkit-sdk = { path = "../../../../libs/modkit-sdk", optional = true }
 
-# OData filter schema generation (optional feature)
-modkit-odata-macros = { path = "../../../../libs/modkit-odata-macros", optional = true }
+# OData support for pagination
+modkit-odata = { path = "../../../../libs/modkit-odata", optional = true }
 
 [dev-dependencies]
 tokio = { workspace = true }

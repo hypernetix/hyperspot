@@ -68,6 +68,13 @@
 // Re-export key types for public API
 pub use advisory_locks::{DbLockGuard, LockConfig};
 
+/// `SeaORM` connection trait alias used by downstream crates (domain/ports) to avoid
+/// depending on `sea_orm` directly.
+///
+/// This is only available when `modkit-db` is compiled with the `sea-orm` feature.
+#[cfg(feature = "sea-orm")]
+pub use sea_orm::ConnectionTrait as DbConnTrait;
+
 // Core modules
 pub mod advisory_locks;
 pub mod config;

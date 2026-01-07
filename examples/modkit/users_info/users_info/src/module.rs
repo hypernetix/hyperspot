@@ -8,6 +8,7 @@ use tracing::{debug, info};
 use url::Url;
 
 // Import the client trait from SDK
+#[allow(unused_imports)]
 use user_info_sdk::UsersInfoClient;
 
 use crate::api::rest::dto::UserEvent;
@@ -16,9 +17,16 @@ use crate::api::rest::sse_adapter::SseUserEventPublisher;
 use crate::config::UsersInfoConfig;
 use crate::domain::events::UserDomainEvent;
 use crate::domain::ports::{AuditPort, EventPublisher};
-use crate::domain::service::{Service, ServiceConfig};
+use crate::domain::service::{AppServices, ServiceConfig};
 use crate::infra::audit::HttpAuditClient;
-use crate::local_client::UsersInfoLocalClient;
+use crate::infra::local_client::client::UsersInfoLocalClient;
+use crate::infra::storage::{OrmAddressesRepository, OrmCitiesRepository, OrmUsersRepository};
+
+/// Type alias for the concrete `AppServices` type used with ORM repositories.
+/// This lives in the composition root (module.rs) to avoid infra dependencies in domain.
+/// May be converted to `AppState` if we need additional fields like metrics, config and etc
+pub(crate) type ConcreteAppServices =
+    AppServices<OrmUsersRepository, OrmCitiesRepository, OrmAddressesRepository>;
 
 /// Main module struct with DDD-light layout and proper `ClientHub` integration
 #[modkit::module(
@@ -27,7 +35,7 @@ use crate::local_client::UsersInfoLocalClient;
 )]
 pub struct UsersInfo {
     // Keep the domain service behind ArcSwap for cheap read-mostly access.
-    service: arc_swap::ArcSwapOption<Service>,
+    service: arc_swap::ArcSwapOption<ConcreteAppServices>,
     // SSE broadcaster for user events
     sse: SseBroadcaster<UserEvent>,
 }
@@ -88,7 +96,18 @@ impl Module for UsersInfo {
             default_page_size: cfg.default_page_size,
             max_page_size: cfg.max_page_size,
         };
-        let domain_service = Arc::new(Service::new(
+
+        // Create repository implementations
+        let limit_cfg = service_config.limit_cfg();
+        let users_repo = OrmUsersRepository::new(limit_cfg);
+        let cities_repo = OrmCitiesRepository::new(limit_cfg);
+        let addresses_repo = OrmAddressesRepository::new(limit_cfg);
+
+        // Create services with repository dependencies
+        let services = Arc::new(AppServices::new(
+            users_repo,
+            cities_repo,
+            addresses_repo,
             sec_conn,
             publisher,
             audit_adapter,
@@ -96,15 +115,15 @@ impl Module for UsersInfo {
         ));
 
         // Store service for REST and internal usage
-        self.service.store(Some(domain_service.clone()));
+        self.service.store(Some(services.clone()));
 
-        // Create local client adapter that implements UsersInfoClient
-        let local = UsersInfoLocalClient::new(domain_service);
-        let client: Arc<dyn UsersInfoClient> = Arc::new(local);
+        // Create local client adapter that implements object-safe UsersInfoClient
+        let local = UsersInfoLocalClient::new(services);
 
-        // Register in ClientHub directly - consumers use hub.get::<dyn UsersInfoClient>()?
-        ctx.client_hub().register::<dyn UsersInfoClient>(client);
-        info!("UsersInfo local client registered into ClientHub");
+        // Register under the SDK trait for transport-agnostic consumption
+        ctx.client_hub()
+            .register::<dyn UsersInfoClient>(Arc::new(local));
+        info!("UsersInfo client registered into ClientHub as dyn UsersInfoClient");
         Ok(())
     }
 }

@@ -29,9 +29,3 @@ impl Related<super::address::Entity> for Entity {
         Relation::Address.def()
     }
 }
-
-impl Related<super::user_language::Entity> for Entity {
-    fn to() -> RelationDef {
-        super::user_language::Relation::User.def()
-    }
-}

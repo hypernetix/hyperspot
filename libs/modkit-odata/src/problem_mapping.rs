@@ -59,10 +59,8 @@ impl From<Error> for Problem {
             }
 
             // Configuration errors → 500 (feature not enabled)
-            ParsingUnavailable(msg) => {
-                ErrorCode::odata_errors_internal_v1()
-                    .as_problem(format!("OData parsing unavailable: {msg}"))
-            }
+            ParsingUnavailable(msg) => ErrorCode::odata_errors_internal_v1()
+                .as_problem(format!("OData parsing unavailable: {msg}")),
         }
     }
 }

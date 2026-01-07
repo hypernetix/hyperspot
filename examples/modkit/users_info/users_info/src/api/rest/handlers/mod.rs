@@ -3,15 +3,15 @@ use tracing::{field::Empty, info};
 use uuid::Uuid;
 
 use crate::api::rest::dto::{
-    AddressDto, CityDto, CreateCityReq, CreateLanguageReq, CreateUserReq, LanguageDto,
-    PutAddressReq, UpdateCityReq, UpdateLanguageReq, UpdateUserReq, UserDto, UserEvent,
+    AddressDto, CityDto, CreateCityReq, CreateUserReq, PutAddressReq, UpdateCityReq, UpdateUserReq,
+    UserDto, UserEvent, UserFullDto,
 };
 
 use modkit::api::odata::OData;
 use modkit::api::prelude::*;
 use modkit::api::select::{apply_select, page_to_projected_json};
 
-use crate::domain::service::Service;
+use crate::module::ConcreteAppServices;
 use modkit::SseBroadcaster;
 
 use modkit_security::SecurityContext;
@@ -19,8 +19,6 @@ use modkit_security::SecurityContext;
 mod addresses;
 mod cities;
 mod events;
-mod languages;
-mod relations;
 mod users;
 
 // ==================== User Handlers ====================
@@ -34,9 +32,9 @@ mod users;
         user.id = %ctx.subject_id()
     )
 )]
-pub async fn list_users(
+pub(crate) async fn list_users(
     Extension(ctx): Extension<SecurityContext>,
-    Extension(svc): Extension<std::sync::Arc<Service>>,
+    Extension(svc): Extension<std::sync::Arc<ConcreteAppServices>>,
     OData(query): OData,
 ) -> ApiResult<JsonPage<serde_json::Value>> {
     users::list_users(ctx, svc, query).await
@@ -51,9 +49,9 @@ pub async fn list_users(
         requester.id = %ctx.subject_id()
     )
 )]
-pub async fn get_user(
+pub(crate) async fn get_user(
     Extension(ctx): Extension<SecurityContext>,
-    Extension(svc): Extension<std::sync::Arc<Service>>,
+    Extension(svc): Extension<std::sync::Arc<ConcreteAppServices>>,
     Path(id): Path<Uuid>,
     OData(query): OData,
 ) -> ApiResult<JsonBody<serde_json::Value>> {
@@ -71,10 +69,10 @@ pub async fn get_user(
         creator.id = %ctx.subject_id()
     )
 )]
-pub async fn create_user(
+pub(crate) async fn create_user(
     uri: Uri,
     Extension(ctx): Extension<SecurityContext>,
-    Extension(svc): Extension<std::sync::Arc<Service>>,
+    Extension(svc): Extension<std::sync::Arc<ConcreteAppServices>>,
     Json(req_body): Json<CreateUserReq>,
 ) -> ApiResult<impl IntoResponse> {
     info!(
@@ -127,9 +125,9 @@ pub async fn create_user(
         updater.id = %ctx.subject_id()
     )
 )]
-pub async fn update_user(
+pub(crate) async fn update_user(
     Extension(ctx): Extension<SecurityContext>,
-    Extension(svc): Extension<std::sync::Arc<Service>>,
+    Extension(svc): Extension<std::sync::Arc<ConcreteAppServices>>,
     Path(id): Path<Uuid>,
     Json(req_body): Json<UpdateUserReq>,
 ) -> ApiResult<JsonBody<UserDto>> {
@@ -145,9 +143,9 @@ pub async fn update_user(
         deleter.id = %ctx.subject_id()
     )
 )]
-pub async fn delete_user(
+pub(crate) async fn delete_user(
     Extension(ctx): Extension<SecurityContext>,
-    Extension(svc): Extension<std::sync::Arc<Service>>,
+    Extension(svc): Extension<std::sync::Arc<ConcreteAppServices>>,
     Path(id): Path<Uuid>,
 ) -> ApiResult<impl IntoResponse> {
     users::delete_user(ctx, svc, id).await
@@ -160,7 +158,7 @@ pub async fn delete_user(
     skip(sse),
     fields(request_id = Empty)
 )]
-pub async fn users_events(
+pub(crate) async fn users_events(
     Extension(sse): Extension<SseBroadcaster<UserEvent>>,
 ) -> impl IntoResponse {
     events::users_events(&sse)
@@ -177,9 +175,9 @@ pub async fn users_events(
         user.id = %ctx.subject_id()
     )
 )]
-pub async fn list_cities(
+pub(crate) async fn list_cities(
     Extension(ctx): Extension<SecurityContext>,
-    Extension(svc): Extension<std::sync::Arc<Service>>,
+    Extension(svc): Extension<std::sync::Arc<ConcreteAppServices>>,
     OData(query): OData,
 ) -> ApiResult<JsonPage<serde_json::Value>> {
     cities::list_cities(ctx, svc, query).await
@@ -194,9 +192,9 @@ pub async fn list_cities(
         requester.id = %ctx.subject_id()
     )
 )]
-pub async fn get_city(
+pub(crate) async fn get_city(
     Extension(ctx): Extension<SecurityContext>,
-    Extension(svc): Extension<std::sync::Arc<Service>>,
+    Extension(svc): Extension<std::sync::Arc<ConcreteAppServices>>,
     Path(id): Path<Uuid>,
     OData(query): OData,
 ) -> ApiResult<JsonBody<serde_json::Value>> {
@@ -214,10 +212,10 @@ pub async fn get_city(
         creator.id = %ctx.subject_id()
     )
 )]
-pub async fn create_city(
+pub(crate) async fn create_city(
     uri: Uri,
     Extension(ctx): Extension<SecurityContext>,
-    Extension(svc): Extension<std::sync::Arc<Service>>,
+    Extension(svc): Extension<std::sync::Arc<ConcreteAppServices>>,
     Json(req_body): Json<CreateCityReq>,
 ) -> ApiResult<impl IntoResponse> {
     cities::create_city(uri, ctx, svc, req_body).await
@@ -232,9 +230,9 @@ pub async fn create_city(
         updater.id = %ctx.subject_id()
     )
 )]
-pub async fn update_city(
+pub(crate) async fn update_city(
     Extension(ctx): Extension<SecurityContext>,
-    Extension(svc): Extension<std::sync::Arc<Service>>,
+    Extension(svc): Extension<std::sync::Arc<ConcreteAppServices>>,
     Path(id): Path<Uuid>,
     Json(req_body): Json<UpdateCityReq>,
 ) -> ApiResult<JsonBody<CityDto>> {
@@ -250,104 +248,12 @@ pub async fn update_city(
         deleter.id = %ctx.subject_id()
     )
 )]
-pub async fn delete_city(
+pub(crate) async fn delete_city(
     Extension(ctx): Extension<SecurityContext>,
-    Extension(svc): Extension<std::sync::Arc<Service>>,
+    Extension(svc): Extension<std::sync::Arc<ConcreteAppServices>>,
     Path(id): Path<Uuid>,
 ) -> ApiResult<impl IntoResponse> {
     cities::delete_city(ctx, svc, id).await
-}
-
-// ==================== Language Handlers ====================
-
-/// List languages with cursor-based pagination and optional field projection via $select
-#[tracing::instrument(
-    skip(svc, query, ctx),
-    fields(
-        limit = query.limit,
-        request_id = Empty,
-        user.id = %ctx.subject_id()
-    )
-)]
-pub async fn list_languages(
-    Extension(ctx): Extension<SecurityContext>,
-    Extension(svc): Extension<std::sync::Arc<Service>>,
-    OData(query): OData,
-) -> ApiResult<JsonPage<serde_json::Value>> {
-    languages::list_languages(ctx, svc, query).await
-}
-
-/// Get a specific language by ID with optional field projection via $select
-#[tracing::instrument(
-    skip(svc, ctx),
-    fields(
-        language.id = %id,
-        request_id = Empty,
-        requester.id = %ctx.subject_id()
-    )
-)]
-pub async fn get_language(
-    Extension(ctx): Extension<SecurityContext>,
-    Extension(svc): Extension<std::sync::Arc<Service>>,
-    Path(id): Path<Uuid>,
-    OData(query): OData,
-) -> ApiResult<JsonBody<serde_json::Value>> {
-    languages::get_language(ctx, svc, id, query).await
-}
-
-/// Create a new language
-#[tracing::instrument(
-    skip(svc, req_body, ctx, uri),
-    fields(
-        language.code = %req_body.code,
-        language.name = %req_body.name,
-        language.tenant_id = %req_body.tenant_id,
-        request_id = Empty,
-        creator.id = %ctx.subject_id()
-    )
-)]
-pub async fn create_language(
-    uri: Uri,
-    Extension(ctx): Extension<SecurityContext>,
-    Extension(svc): Extension<std::sync::Arc<Service>>,
-    Json(req_body): Json<CreateLanguageReq>,
-) -> ApiResult<impl IntoResponse> {
-    languages::create_language(uri, ctx, svc, req_body).await
-}
-
-/// Update an existing language
-#[tracing::instrument(
-    skip(svc, req_body, ctx),
-    fields(
-        language.id = %id,
-        request_id = Empty,
-        updater.id = %ctx.subject_id()
-    )
-)]
-pub async fn update_language(
-    Extension(ctx): Extension<SecurityContext>,
-    Extension(svc): Extension<std::sync::Arc<Service>>,
-    Path(id): Path<Uuid>,
-    Json(req_body): Json<UpdateLanguageReq>,
-) -> ApiResult<JsonBody<LanguageDto>> {
-    languages::update_language(ctx, svc, id, req_body).await
-}
-
-/// Delete a language by ID
-#[tracing::instrument(
-    skip(svc, ctx),
-    fields(
-        language.id = %id,
-        request_id = Empty,
-        deleter.id = %ctx.subject_id()
-    )
-)]
-pub async fn delete_language(
-    Extension(ctx): Extension<SecurityContext>,
-    Extension(svc): Extension<std::sync::Arc<Service>>,
-    Path(id): Path<Uuid>,
-) -> ApiResult<impl IntoResponse> {
-    languages::delete_language(ctx, svc, id).await
 }
 
 // ==================== Address Handlers ====================
@@ -361,9 +267,9 @@ pub async fn delete_language(
         requester.id = %ctx.subject_id()
     )
 )]
-pub async fn get_user_address(
+pub(crate) async fn get_user_address(
     Extension(ctx): Extension<SecurityContext>,
-    Extension(svc): Extension<std::sync::Arc<Service>>,
+    Extension(svc): Extension<std::sync::Arc<ConcreteAppServices>>,
     Path(user_id): Path<Uuid>,
 ) -> ApiResult<JsonBody<AddressDto>> {
     addresses::get_user_address(ctx, svc, user_id).await
@@ -378,9 +284,9 @@ pub async fn get_user_address(
         updater.id = %ctx.subject_id()
     )
 )]
-pub async fn put_user_address(
+pub(crate) async fn put_user_address(
     Extension(ctx): Extension<SecurityContext>,
-    Extension(svc): Extension<std::sync::Arc<Service>>,
+    Extension(svc): Extension<std::sync::Arc<ConcreteAppServices>>,
     Path(user_id): Path<Uuid>,
     Json(req_body): Json<PutAddressReq>,
 ) -> ApiResult<impl IntoResponse> {
@@ -396,65 +302,10 @@ pub async fn put_user_address(
         deleter.id = %ctx.subject_id()
     )
 )]
-pub async fn delete_user_address(
+pub(crate) async fn delete_user_address(
     Extension(ctx): Extension<SecurityContext>,
-    Extension(svc): Extension<std::sync::Arc<Service>>,
+    Extension(svc): Extension<std::sync::Arc<ConcreteAppServices>>,
     Path(user_id): Path<Uuid>,
 ) -> ApiResult<impl IntoResponse> {
     addresses::delete_user_address(ctx, svc, user_id).await
-}
-
-// ==================== User-Language Relationship Handlers ====================
-
-/// List all languages assigned to a user
-#[tracing::instrument(
-    skip(svc, ctx),
-    fields(
-        user.id = %user_id,
-        request_id = Empty,
-        requester.id = %ctx.subject_id()
-    )
-)]
-pub async fn list_user_languages(
-    Extension(ctx): Extension<SecurityContext>,
-    Extension(svc): Extension<std::sync::Arc<Service>>,
-    Path(user_id): Path<Uuid>,
-) -> ApiResult<JsonBody<Vec<LanguageDto>>> {
-    relations::list_user_languages(ctx, svc, user_id).await
-}
-
-/// Assign a language to a user (idempotent)
-#[tracing::instrument(
-    skip(svc, ctx),
-    fields(
-        user.id = %user_id,
-        language.id = %language_id,
-        request_id = Empty,
-        updater.id = %ctx.subject_id()
-    )
-)]
-pub async fn assign_language_to_user(
-    Extension(ctx): Extension<SecurityContext>,
-    Extension(svc): Extension<std::sync::Arc<Service>>,
-    Path((user_id, language_id)): Path<(Uuid, Uuid)>,
-) -> ApiResult<impl IntoResponse> {
-    relations::assign_language_to_user(ctx, svc, user_id, language_id).await
-}
-
-/// Remove a language from a user (idempotent)
-#[tracing::instrument(
-    skip(svc, ctx),
-    fields(
-        user.id = %user_id,
-        language.id = %language_id,
-        request_id = Empty,
-        deleter.id = %ctx.subject_id()
-    )
-)]
-pub async fn remove_language_from_user(
-    Extension(ctx): Extension<SecurityContext>,
-    Extension(svc): Extension<std::sync::Arc<Service>>,
-    Path((user_id, language_id)): Path<(Uuid, Uuid)>,
-) -> ApiResult<impl IntoResponse> {
-    relations::remove_language_from_user(ctx, svc, user_id, language_id).await
 }

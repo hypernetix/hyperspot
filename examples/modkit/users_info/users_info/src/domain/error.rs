@@ -1,3 +1,4 @@
+use modkit_db::secure::InfraError;
 use thiserror::Error;
 use user_info_sdk::UsersInfoError;
 use uuid::Uuid;
@@ -63,6 +64,13 @@ impl DomainError {
         Self::Database {
             message: message.into(),
         }
+    }
+
+    /// Convert an infrastructure error into a domain database error.
+    #[must_use]
+    #[allow(clippy::needless_pass_by_value)]
+    pub fn database_infra(e: InfraError) -> Self {
+        Self::database(e.to_string())
     }
 
     pub fn validation(field: impl Into<String>, message: impl Into<String>) -> Self {

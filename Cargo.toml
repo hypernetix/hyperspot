@@ -6,6 +6,17 @@ authors = ["Hypernetix"]
 repository = "https://github.com/hypernetix/hyperspot"
 description = "HyperSpot Server"
 
+[profile.dev]
+incremental = true
+codegen-units = 16
+
+[profile.test]
+incremental = true
+codegen-units = 16
+
+[profile.release]
+codegen-units = 1
+
 [workspace]
 members = [
     "apps/hyperspot-server",

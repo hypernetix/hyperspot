@@ -1,320 +1,299 @@
-use super::{
-    debug, info, Address, AddressAM, AddressColumn, AddressEntity, AddressPatch, DomainError, Expr,
-    NewAddress, OffsetDateTime, SecurityContext, Service, Set, UserEntity, Uuid,
-};
+use std::sync::Arc;
+use tracing::{debug, info, instrument};
 
-pub(super) async fn get_address(
-    svc: &Service,
-    ctx: &SecurityContext,
-    id: Uuid,
-) -> Result<Address, DomainError> {
-    debug!("Getting address by id");
+use crate::domain::error::DomainError;
+use crate::domain::repos::{AddressesRepository, UsersRepository};
+use modkit_db::secure::SecureConn;
+use modkit_odata::{ODataQuery, Page};
+use modkit_security::{PolicyEngineRef, SecurityContext};
+use time::OffsetDateTime;
+use user_info_sdk::{Address, AddressPatch, NewAddress};
+use uuid::Uuid;
 
-    let scope = ctx
-        .scope(svc.policy_engine.clone())
-        .include_tenant_children()
-        .prepare()
-        .await?;
-
-    let found = svc
-        .sec
-        .find_by_id::<AddressEntity>(&scope, id)
-        .map_err(|e| DomainError::database(e.to_string()))?
-        .one(svc.sec.conn())
-        .await
-        .map_err(|e| DomainError::database(e.to_string()))?;
-
-    found
-        .map(Into::into)
-        .ok_or_else(|| DomainError::not_found("Address", id))
+#[derive(Clone)]
+pub struct AddressesService<R: AddressesRepository, U: UsersRepository> {
+    policy_engine: PolicyEngineRef,
+    repo: Arc<R>,
+    users_repo: Arc<U>,
+    db: SecureConn,
 }
 
-pub(super) async fn get_user_address(
-    svc: &Service,
-    ctx: &SecurityContext,
-    user_id: Uuid,
-) -> Result<Option<Address>, DomainError> {
-    debug!("Getting address by user_id");
-
-    let scope = ctx
-        .scope(svc.policy_engine.clone())
-        .include_tenant_children()
-        .prepare()
-        .await?;
-
-    let found = svc
-        .sec
-        .find::<AddressEntity>(&scope)
-        .filter(sea_orm::Condition::all().add(Expr::col(AddressColumn::UserId).eq(user_id)))
-        .one(svc.sec.conn())
-        .await
-        .map_err(|e| DomainError::database(e.to_string()))?;
-
-    Ok(found.map(Into::into))
+impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
+    pub fn new(
+        repo: Arc<R>,
+        users_repo: Arc<U>,
+        db: SecureConn,
+        policy_engine: PolicyEngineRef,
+    ) -> Self {
+        Self {
+            policy_engine,
+            repo,
+            users_repo,
+            db,
+        }
+    }
 }
 
-pub(super) async fn get_address_by_user(
-    svc: &Service,
-    ctx: &SecurityContext,
-    user_id: Uuid,
-) -> Result<Option<Address>, DomainError> {
-    get_user_address(svc, ctx, user_id).await
-}
+// Business logic methods
+impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
+    #[instrument(skip(self, ctx), fields(address_id = %id))]
+    pub async fn get_address(
+        &self,
+        ctx: &SecurityContext,
+        id: Uuid,
+    ) -> Result<Address, DomainError> {
+        debug!("Getting address by id");
 
-#[allow(clippy::cognitive_complexity)]
-pub(super) async fn put_user_address(
-    svc: &Service,
-    ctx: &SecurityContext,
-    user_id: Uuid,
-    address: NewAddress,
-) -> Result<Address, DomainError> {
-    info!("Upserting address for user");
+        let scope = ctx
+            .scope(self.policy_engine.clone())
+            .include_tenant_children()
+            .prepare()
+            .await?;
 
-    let scope = ctx
-        .scope(svc.policy_engine.clone())
-        .include_tenant_children()
-        .prepare()
-        .await?;
+        let found = self.repo.get(self.db.conn(), &scope, id).await?;
 
-    let user = svc
-        .sec
-        .find_by_id::<UserEntity>(&scope, user_id)
-        .map_err(|e| DomainError::database(e.to_string()))?
-        .one(svc.sec.conn())
-        .await
-        .map_err(|e| DomainError::database(e.to_string()))?
-        .ok_or_else(|| DomainError::user_not_found(user_id))?;
+        found.ok_or_else(|| DomainError::not_found("Address", id))
+    }
 
-    let existing = svc
-        .sec
-        .find::<AddressEntity>(&scope)
-        .filter(sea_orm::Condition::all().add(Expr::col(AddressColumn::UserId).eq(user_id)))
-        .one(svc.sec.conn())
-        .await
-        .map_err(|e| DomainError::database(e.to_string()))?;
+    /// List addresses with cursor-based pagination
+    #[instrument(skip(self, ctx, query))]
+    pub async fn list_addresses_page(
+        &self,
+        ctx: &SecurityContext,
+        query: &ODataQuery,
+    ) -> Result<Page<Address>, DomainError> {
+        debug!("Listing addresses with cursor pagination");
 
-    let now = OffsetDateTime::now_utc();
+        let scope = ctx
+            .scope(self.policy_engine.clone())
+            .include_tenant_children()
+            .prepare()
+            .await?;
 
-    if let Some(existing_model) = existing {
-        let mut updated: Address = existing_model.into();
-        updated.city_id = address.city_id;
-        updated.street = address.street;
-        updated.postal_code = address.postal_code;
-        updated.updated_at = now;
+        let page = self.repo.list_page(self.db.conn(), &scope, query).await?;
 
-        let m = AddressAM {
-            id: Set(updated.id),
-            tenant_id: Set(updated.tenant_id),
-            user_id: Set(updated.user_id),
-            city_id: Set(updated.city_id),
-            street: Set(updated.street.clone()),
-            postal_code: Set(updated.postal_code.clone()),
-            created_at: Set(updated.created_at),
-            updated_at: Set(updated.updated_at),
-        };
+        debug!("Successfully listed {} addresses in page", page.items.len());
+        Ok(page)
+    }
 
-        let _ = svc
-            .sec
-            .update_with_ctx::<AddressEntity>(&scope, updated.id, m)
-            .await
-            .map_err(|e| DomainError::database(e.to_string()))?;
+    #[instrument(skip(self, ctx), fields(user_id = %user_id))]
+    pub async fn get_user_address(
+        &self,
+        ctx: &SecurityContext,
+        user_id: Uuid,
+    ) -> Result<Option<Address>, DomainError> {
+        debug!("Getting address by user_id");
 
-        info!("Successfully updated address for user");
-        Ok(updated)
-    } else {
-        let id = address.id.unwrap_or_else(Uuid::now_v7);
+        let scope = ctx
+            .scope(self.policy_engine.clone())
+            .include_tenant_children()
+            .prepare()
+            .await?;
 
-        let new_address = Address {
+        let found = self
+            .repo
+            .get_by_user_id(self.db.conn(), &scope, user_id)
+            .await?;
+
+        Ok(found)
+    }
+
+    #[instrument(skip(self, ctx), fields(user_id = %user_id))]
+    pub async fn get_address_by_user(
+        &self,
+        ctx: &SecurityContext,
+        user_id: Uuid,
+    ) -> Result<Option<Address>, DomainError> {
+        self.get_user_address(ctx, user_id).await
+    }
+
+    #[allow(clippy::cognitive_complexity)]
+    #[instrument(skip(self, ctx, address), fields(user_id = %user_id))]
+    pub async fn put_user_address(
+        &self,
+        ctx: &SecurityContext,
+        user_id: Uuid,
+        address: NewAddress,
+    ) -> Result<Address, DomainError> {
+        info!("Upserting address for user");
+
+        let scope = ctx
+            .scope(self.policy_engine.clone())
+            .include_tenant_children()
+            .prepare()
+            .await?;
+
+        let user = self
+            .users_repo
+            .get(self.db.conn(), &scope, user_id)
+            .await?
+            .ok_or_else(|| DomainError::user_not_found(user_id))?;
+
+        let existing = self
+            .repo
+            .get_by_user_id(self.db.conn(), &scope, user_id)
+            .await?;
+
+        let now = OffsetDateTime::now_utc();
+
+        if let Some(existing_model) = existing {
+            let mut updated: Address = existing_model;
+            updated.city_id = address.city_id;
+            updated.street = address.street;
+            updated.postal_code = address.postal_code;
+            updated.updated_at = now;
+
+            let _ = self
+                .repo
+                .update(self.db.conn(), &scope, updated.clone())
+                .await?;
+
+            info!("Successfully updated address for user");
+            Ok(updated)
+        } else {
+            let id = address.id.unwrap_or_else(Uuid::now_v7);
+
+            let new_address = Address {
+                id,
+                tenant_id: user.tenant_id,
+                user_id,
+                city_id: address.city_id,
+                street: address.street,
+                postal_code: address.postal_code,
+                created_at: now,
+                updated_at: now,
+            };
+
+            let _ = self
+                .repo
+                .create(self.db.conn(), &scope, new_address.clone())
+                .await?;
+
+            info!("Successfully created address for user");
+            Ok(new_address)
+        }
+    }
+
+    #[instrument(skip(self, ctx), fields(user_id = %user_id))]
+    pub async fn delete_user_address(
+        &self,
+        ctx: &SecurityContext,
+        user_id: Uuid,
+    ) -> Result<(), DomainError> {
+        info!("Deleting address for user");
+
+        let scope = ctx
+            .scope(self.policy_engine.clone())
+            .include_tenant_children()
+            .prepare()
+            .await?;
+
+        let rows_affected = self
+            .repo
+            .delete_by_user_id(self.db.conn(), &scope, user_id)
+            .await?;
+
+        if rows_affected == 0 {
+            return Err(DomainError::not_found("Address", user_id));
+        }
+
+        info!("Successfully deleted address for user");
+        Ok(())
+    }
+
+    #[instrument(skip(self, ctx), fields(user_id = %new_address.user_id))]
+    pub async fn create_address(
+        &self,
+        ctx: &SecurityContext,
+        new_address: NewAddress,
+    ) -> Result<Address, DomainError> {
+        info!("Creating new address");
+
+        let scope = ctx
+            .scope(self.policy_engine.clone())
+            .include_tenant_children()
+            .prepare()
+            .await?;
+
+        let now = OffsetDateTime::now_utc();
+        let id = new_address.id.unwrap_or_else(Uuid::now_v7);
+
+        let address = Address {
             id,
-            tenant_id: user.tenant_id,
-            user_id,
-            city_id: address.city_id,
-            street: address.street,
-            postal_code: address.postal_code,
+            tenant_id: new_address.tenant_id,
+            user_id: new_address.user_id,
+            city_id: new_address.city_id,
+            street: new_address.street,
+            postal_code: new_address.postal_code,
             created_at: now,
             updated_at: now,
         };
 
-        let m = AddressAM {
-            id: Set(new_address.id),
-            tenant_id: Set(new_address.tenant_id),
-            user_id: Set(new_address.user_id),
-            city_id: Set(new_address.city_id),
-            street: Set(new_address.street.clone()),
-            postal_code: Set(new_address.postal_code.clone()),
-            created_at: Set(new_address.created_at),
-            updated_at: Set(new_address.updated_at),
-        };
+        let _ = self
+            .repo
+            .create(self.db.conn(), &scope, address.clone())
+            .await?;
 
-        let _ = svc
-            .sec
-            .insert::<AddressEntity>(&scope, m)
-            .await
-            .map_err(|e| DomainError::database(e.to_string()))?;
-
-        info!("Successfully created address for user");
-        Ok(new_address)
-    }
-}
-
-pub(super) async fn delete_user_address(
-    svc: &Service,
-    ctx: &SecurityContext,
-    user_id: Uuid,
-) -> Result<(), DomainError> {
-    info!("Deleting address for user");
-
-    let scope = ctx
-        .scope(svc.policy_engine.clone())
-        .include_tenant_children()
-        .prepare()
-        .await?;
-
-    let result = svc
-        .sec
-        .delete_many::<AddressEntity>(&scope)
-        .filter(sea_orm::Condition::all().add(Expr::col(AddressColumn::UserId).eq(user_id)))
-        .exec(svc.sec.conn())
-        .await
-        .map_err(|e| DomainError::database(e.to_string()))?;
-
-    if result.rows_affected == 0 {
-        return Err(DomainError::not_found("Address", user_id));
+        info!("Successfully created address with id={}", address.id);
+        Ok(address)
     }
 
-    info!("Successfully deleted address for user");
-    Ok(())
-}
+    #[instrument(skip(self, ctx), fields(address_id = %id))]
+    pub async fn update_address(
+        &self,
+        ctx: &SecurityContext,
+        id: Uuid,
+        patch: AddressPatch,
+    ) -> Result<Address, DomainError> {
+        info!("Updating address");
 
-pub(super) async fn create_address(
-    svc: &Service,
-    ctx: &SecurityContext,
-    new_address: NewAddress,
-) -> Result<Address, DomainError> {
-    info!("Creating new address");
+        let scope = ctx
+            .scope(self.policy_engine.clone())
+            .include_tenant_children()
+            .prepare()
+            .await?;
 
-    let scope = ctx
-        .scope(svc.policy_engine.clone())
-        .include_tenant_children()
-        .prepare()
-        .await?;
+        let found = self.repo.get(self.db.conn(), &scope, id).await?;
 
-    let now = OffsetDateTime::now_utc();
-    let id = new_address.id.unwrap_or_else(Uuid::now_v7);
+        let mut current: Address = found.ok_or_else(|| DomainError::not_found("Address", id))?;
 
-    let address = Address {
-        id,
-        tenant_id: new_address.tenant_id,
-        user_id: new_address.user_id,
-        city_id: new_address.city_id,
-        street: new_address.street,
-        postal_code: new_address.postal_code,
-        created_at: now,
-        updated_at: now,
-    };
+        if let Some(city_id) = patch.city_id {
+            current.city_id = city_id;
+        }
+        if let Some(street) = patch.street {
+            current.street = street;
+        }
+        if let Some(postal_code) = patch.postal_code {
+            current.postal_code = postal_code;
+        }
+        current.updated_at = OffsetDateTime::now_utc();
 
-    let m = AddressAM {
-        id: Set(address.id),
-        tenant_id: Set(address.tenant_id),
-        user_id: Set(address.user_id),
-        city_id: Set(address.city_id),
-        street: Set(address.street.clone()),
-        postal_code: Set(address.postal_code.clone()),
-        created_at: Set(address.created_at),
-        updated_at: Set(address.updated_at),
-    };
+        let _ = self
+            .repo
+            .update(self.db.conn(), &scope, current.clone())
+            .await?;
 
-    let _ = svc
-        .sec
-        .insert::<AddressEntity>(&scope, m)
-        .await
-        .map_err(|e| DomainError::database(e.to_string()))?;
-
-    info!("Successfully created address with id={}", address.id);
-    Ok(address)
-}
-
-pub(super) async fn update_address(
-    svc: &Service,
-    ctx: &SecurityContext,
-    id: Uuid,
-    patch: AddressPatch,
-) -> Result<Address, DomainError> {
-    info!("Updating address");
-
-    let scope = ctx
-        .scope(svc.policy_engine.clone())
-        .include_tenant_children()
-        .prepare()
-        .await?;
-
-    let found = svc
-        .sec
-        .find_by_id::<AddressEntity>(&scope, id)
-        .map_err(|e| DomainError::database(e.to_string()))?
-        .one(svc.sec.conn())
-        .await
-        .map_err(|e| DomainError::database(e.to_string()))?;
-
-    let mut current: Address = found
-        .ok_or_else(|| DomainError::not_found("Address", id))?
-        .into();
-
-    if let Some(city_id) = patch.city_id {
-        current.city_id = city_id;
-    }
-    if let Some(street) = patch.street {
-        current.street = street;
-    }
-    if let Some(postal_code) = patch.postal_code {
-        current.postal_code = postal_code;
-    }
-    current.updated_at = OffsetDateTime::now_utc();
-
-    let m = AddressAM {
-        id: Set(current.id),
-        tenant_id: Set(current.tenant_id),
-        user_id: Set(current.user_id),
-        city_id: Set(current.city_id),
-        street: Set(current.street.clone()),
-        postal_code: Set(current.postal_code.clone()),
-        created_at: Set(current.created_at),
-        updated_at: Set(current.updated_at),
-    };
-
-    let _ = svc
-        .sec
-        .update_with_ctx::<AddressEntity>(&scope, current.id, m)
-        .await
-        .map_err(|e| DomainError::database(e.to_string()))?;
-
-    info!("Successfully updated address");
-    Ok(current)
-}
-
-pub(super) async fn delete_address(
-    svc: &Service,
-    ctx: &SecurityContext,
-    id: Uuid,
-) -> Result<(), DomainError> {
-    info!("Deleting address");
-
-    let scope = ctx
-        .scope(svc.policy_engine.clone())
-        .include_tenant_children()
-        .prepare()
-        .await?;
-
-    let deleted = svc
-        .sec
-        .delete_by_id::<AddressEntity>(&scope, id)
-        .await
-        .map_err(|e| DomainError::database(e.to_string()))?;
-
-    if !deleted {
-        return Err(DomainError::not_found("Address", id));
+        info!("Successfully updated address");
+        Ok(current)
     }
 
-    info!("Successfully deleted address");
-    Ok(())
+    #[instrument(skip(self, ctx), fields(address_id = %id))]
+    pub async fn delete_address(&self, ctx: &SecurityContext, id: Uuid) -> Result<(), DomainError> {
+        info!("Deleting address");
+
+        let scope = ctx
+            .scope(self.policy_engine.clone())
+            .include_tenant_children()
+            .prepare()
+            .await?;
+
+        let deleted = self.repo.delete(self.db.conn(), &scope, id).await?;
+
+        if !deleted {
+            return Err(DomainError::not_found("Address", id));
+        }
+
+        info!("Successfully deleted address");
+        Ok(())
+    }
 }

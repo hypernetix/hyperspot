@@ -1,8 +1,6 @@
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
-use user_info_sdk::{
-    Address, City, Language, NewAddress, NewCity, NewLanguage, NewUser, User, UserPatch,
-};
+use user_info_sdk::{Address, City, NewAddress, NewCity, NewUser, User, UserFull, UserPatch};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -37,6 +35,16 @@ pub struct UpdateUserReq {
     pub display_name: Option<String>,
 }
 
+/// REST DTO for aggregated user response with related entities
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct UserFullDto {
+    pub user: UserDto,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub address: Option<AddressDto>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub city: Option<CityDto>,
+}
+
 // Conversion implementations between REST DTOs and contract models
 impl From<User> for UserDto {
     fn from(user: User) -> Self {
@@ -67,6 +75,16 @@ impl From<UpdateUserReq> for UserPatch {
         Self {
             email: req.email,
             display_name: req.display_name,
+        }
+    }
+}
+
+impl From<UserFull> for UserFullDto {
+    fn from(user_full: UserFull) -> Self {
+        Self {
+            user: UserDto::from(user_full.user),
+            address: user_full.address.map(AddressDto::from),
+            city: user_full.city.map(CityDto::from),
         }
     }
 }
@@ -132,71 +150,6 @@ impl From<UpdateCityReq> for user_info_sdk::CityPatch {
         Self {
             name: req.name,
             country: req.country,
-        }
-    }
-}
-
-// ==================== Language DTOs ====================
-
-/// REST DTO for language representation
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct LanguageDto {
-    pub id: Uuid,
-    pub tenant_id: Uuid,
-    pub code: String,
-    pub name: String,
-    #[serde(with = "time::serde::rfc3339")]
-    pub created_at: OffsetDateTime,
-    #[serde(with = "time::serde::rfc3339")]
-    pub updated_at: OffsetDateTime,
-}
-
-/// REST DTO for creating a new language
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct CreateLanguageReq {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<Uuid>,
-    pub tenant_id: Uuid,
-    pub code: String,
-    pub name: String,
-}
-
-/// REST DTO for updating a language (partial)
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Default)]
-pub struct UpdateLanguageReq {
-    pub code: Option<String>,
-    pub name: Option<String>,
-}
-
-impl From<Language> for LanguageDto {
-    fn from(language: Language) -> Self {
-        Self {
-            id: language.id,
-            tenant_id: language.tenant_id,
-            code: language.code,
-            name: language.name,
-            created_at: language.created_at,
-            updated_at: language.updated_at,
-        }
-    }
-}
-
-impl From<CreateLanguageReq> for NewLanguage {
-    fn from(req: CreateLanguageReq) -> Self {
-        Self {
-            id: req.id,
-            tenant_id: req.tenant_id,
-            code: req.code,
-            name: req.name,
-        }
-    }
-}
-
-impl From<UpdateLanguageReq> for user_info_sdk::LanguagePatch {
-    fn from(req: UpdateLanguageReq) -> Self {
-        Self {
-            code: req.code,
-            name: req.name,
         }
     }
 }

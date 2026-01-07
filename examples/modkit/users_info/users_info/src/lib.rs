@@ -12,17 +12,17 @@
 //! - **Purpose:** Public API contract for inter-module communication
 //! - **Contains:**
 //!   - `UsersInfoClient` trait
-//!   - Model types: `User`, `Address`, `City`, `Language`
+//!   - Model types: `User`, `Address`, `City`
 //!   - Request/patch types: `NewUser`, `UserPatch`, etc.
 //!   - Error type: `UsersInfoError`
-//!   - OData filter schemas (behind `odata` feature): `UserFilterField`, `CityFilterField`, etc.
+//!   - `OData` filter schemas (behind `odata` feature): `UserFilterField`, `CityFilterField`, etc.
 //! - **Dependencies:** Only modkit core libs (no server code)
 //!
 //! ### API Layer (`users_info::api`)
 //! - **Location:** `src/api/`
 //! - **Purpose:** HTTP/REST interface
 //! - **Contains:**
-//!   - `routes/` - Per-resource route definitions (users, cities, languages, etc.)
+//!   - `routes/` - Per-resource route definitions (users, cities, etc.)
 //!   - `handlers/` - Request handlers per resource
 //!   - `dto.rs` - REST-specific DTOs and serialization
 //!   - `error.rs` - HTTP error mapping (domain errors → RFC9457 Problem)
@@ -33,7 +33,7 @@
 //! - **Location:** `src/domain/`
 //! - **Purpose:** Business logic and domain rules
 //! - **Contains:**
-//!   - `service/` - Business operations per resource (users, cities, languages, etc.)
+//!   - `service/` - Business operations per resource (users, cities, etc.)
 //!   - `error.rs` - Domain error types
 //!   - `events.rs` - Domain events
 //!   - `ports.rs` - Interfaces for external dependencies
@@ -42,36 +42,35 @@
 //!
 //! ### Infrastructure Layer (`users_info::infra`)
 //! - **Location:** `src/infra/storage/`
-//! - **Purpose:** Database persistence and OData mapping
+//! - **Purpose:** Database persistence and `OData` mapping
 //! - **Contains:**
-//!   - `entity/` - SeaORM entity definitions
+//!   - `entity/` - `SeaORM` entity definitions
 //!   - `mapper.rs` - Entity ↔ SDK model conversions
-//!   - `odata_mapper.rs` - OData filter → SeaORM column mappings
+//!   - `odata_mapper.rs` - `OData` filter → `SeaORM` column mappings
 //!   - `migrations/` - Database schema migrations
-//! - **Dependencies:** SDK types (for models), SeaORM
-//! - **Rule:** ALL SeaORM specifics contained here; OData schemas from SDK only
+//! - **Dependencies:** SDK types (for models), `SeaORM`
+//! - **Rule:** ALL `SeaORM` specifics contained here; `OData` schemas from SDK only
 //!
 //! ## Public API
 //!
 //! The public API is defined in the `user_info-sdk` crate and re-exported here:
 //! - `UsersInfoClient` - trait for inter-module communication
-//! - User, Address, City, Language models and their request/patch types
+//! - User, Address and City models and their request/patch types
 //! - `UsersInfoError` - error types
 //!
 //! Other modules should use `hub.get::<dyn UsersInfoClient>()?` to obtain the client.
 //!
-//! ## OData Support
+//! ## `OData` Support
 //!
-//! OData filter schemas live in `user_info-sdk::odata` (behind `odata` feature):
+//! `OData` filter schemas live in `user_info-sdk::odata` (behind `odata` feature):
 //! - Type-safe filter enums for each resource
-//! - Used by both REST API (OpenAPI) and domain pagination
+//! - Used by both REST API (`OpenAPI`) and domain pagination
 //! - Mapped to database columns in `infra::storage::odata_mapper`
 #![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 // === PUBLIC API (from SDK) ===
 pub use user_info_sdk::{
-    Address, AddressPatch, City, CityPatch, Language, LanguagePatch, NewAddress, NewCity,
-    NewLanguage, NewUser, UpdateAddressRequest, UpdateCityRequest, UpdateLanguageRequest,
-    UpdateUserRequest, User, UserPatch, UsersInfoClient, UsersInfoError,
+    Address, AddressPatch, City, CityPatch, NewAddress, NewCity, NewUser, UpdateAddressRequest,
+    UpdateCityRequest, UpdateUserRequest, User, UserPatch, UsersInfoClient, UsersInfoError,
 };
 
 // === ERROR CATALOG ===
@@ -82,10 +81,6 @@ pub mod errors;
 // ModKit needs access to the module struct for instantiation
 pub mod module;
 pub use module::UsersInfo;
-
-// === LOCAL CLIENT ===
-// Local client adapter that implements UsersInfoApi
-pub mod local_client;
 
 // === INTERNAL MODULES ===
 // WARNING: These modules are internal implementation details!
@@ -99,3 +94,6 @@ pub mod config;
 pub mod domain;
 #[doc(hidden)]
 pub mod infra;
+
+#[cfg(test)]
+mod test_support;

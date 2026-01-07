@@ -1,5 +1,5 @@
 use crate::infra::storage::entity;
-use user_info_sdk::{Address, City, Language, User};
+use user_info_sdk::{Address, City, User};
 
 /// Convert a database entity to a contract model (owned version)
 impl From<entity::user::Model> for User {
@@ -51,34 +51,6 @@ impl From<&entity::city::Model> for City {
             tenant_id: e.tenant_id,
             name: e.name.clone(),
             country: e.country.clone(),
-            created_at: e.created_at,
-            updated_at: e.updated_at,
-        }
-    }
-}
-
-/// Convert a language database entity to a contract model (owned version)
-impl From<entity::language::Model> for Language {
-    fn from(e: entity::language::Model) -> Self {
-        Self {
-            id: e.id,
-            tenant_id: e.tenant_id,
-            code: e.code,
-            name: e.name,
-            created_at: e.created_at,
-            updated_at: e.updated_at,
-        }
-    }
-}
-
-/// Convert a language database entity to a contract model (by-ref version)
-impl From<&entity::language::Model> for Language {
-    fn from(e: &entity::language::Model) -> Self {
-        Self {
-            id: e.id,
-            tenant_id: e.tenant_id,
-            code: e.code.clone(),
-            name: e.name.clone(),
             created_at: e.created_at,
             updated_at: e.updated_at,
         }

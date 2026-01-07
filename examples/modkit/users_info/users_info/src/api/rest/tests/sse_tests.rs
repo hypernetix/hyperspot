@@ -1,8 +1,9 @@
-use crate::api::rest::{dto, routes};
 use crate::api::rest::sse_adapter::SseUserEventPublisher;
+use crate::api::rest::{dto, routes};
 use crate::domain::events::UserDomainEvent;
 use crate::domain::ports::EventPublisher;
 use futures_util::StreamExt;
+use modkit::api::{OpenApiInfo, OpenApiRegistryImpl};
 use modkit::SseBroadcaster;
 use time::OffsetDateTime;
 use tokio::time::{timeout, Duration};
@@ -11,13 +12,13 @@ use uuid::Uuid;
 #[tokio::test]
 async fn openapi_has_users_sse_content() {
     // Create a mock OpenAPI registry (using api_ingress)
-    let api = api_ingress::ApiIngress::default();
+    let api = OpenApiRegistryImpl::default();
     let router: axum::Router<()> = axum::Router::new();
     let sse_broadcaster = SseBroadcaster::<dto::UserEvent>::new(4);
 
     let _router = routes::register_users_sse_route(router, &api, sse_broadcaster);
 
-    let doc = api.build_openapi().expect("openapi");
+    let doc = api.build_openapi(&OpenApiInfo::default()).expect("openapi");
     let v = serde_json::to_value(&doc).expect("json");
 
     // UserEvent schema is materialized

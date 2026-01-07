@@ -6435,8 +6435,11 @@ name = "user_info-sdk"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "futures",
+ "futures-core",
  "modkit-odata",
  "modkit-odata-macros",
+ "modkit-sdk",
  "modkit-security",
  "thiserror 2.0.17",
  "time",
@@ -6464,6 +6467,7 @@ dependencies = [
  "modkit-errors",
  "modkit-errors-macro",
  "modkit-odata",
+ "modkit-sdk",
  "modkit-security",
  "opentelemetry",
  "opentelemetry_sdk",
@@ -6477,6 +6481,7 @@ dependencies = [
  "time",
  "tokio",
  "tokio-test",
+ "tokio-util",
  "tower",
  "tower-http",
  "tracing",
