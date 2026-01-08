@@ -7,3 +7,10 @@ edition = "2021"
 thiserror = "2.0"
 async-trait = "0.1"
 modkit-security = { path = "../../../libs/modkit-security" }
+
+# @fdd-change:change-rust-gts-types - GTS dependencies for schema generation test
+gts = { workspace = true }
+gts-macros = { workspace = true }
+schemars = { workspace = true, features = ["derive"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }

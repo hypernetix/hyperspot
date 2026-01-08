@@ -105,7 +105,12 @@ name = "analytics-sdk"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "gts",
+ "gts-macros",
  "modkit-security",
+ "schemars 0.8.22",
+ "serde",
+ "serde_json",
  "thiserror 2.0.17",
 ]
 
