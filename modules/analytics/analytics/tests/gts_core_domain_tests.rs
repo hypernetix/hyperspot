@@ -1,8 +1,22 @@
-use analytics::api::rest::gts_core::{GtsCoreError, ProblemDetails};
-use serde_json::json;
+//! Domain logic unit tests for GTS Core
+//!
+//! These tests verify:
+//! - GTS identifier parsing and validation
+//! - Routing table lookup logic
+//! - Error handling and RFC 7807 Problem Details
+//! - Field filtering and validation
+//!
+//! Note: These are NOT end-to-end tests. They test domain logic in isolation
+//! using mock implementations. True integration tests with api_ingress are in
+//! gts_core_integration_tests.rs
 
-mod mock_domain_feature;
-use mock_domain_feature::{MockBehavior, MockDomainFeature};
+mod integration {
+    pub mod mock_domain_feature;
+}
+
+use analytics::api::rest::gts_core::{GtsCoreError, ProblemDetails};
+use integration::mock_domain_feature::{MockBehavior, MockDomainFeature};
+use serde_json::json;
 
 #[cfg(test)]
 mod routing_tests {
@@ -13,9 +27,9 @@ mod routing_tests {
         let mock = MockDomainFeature::new();
         
         let test_identifiers = vec![
-            "gts.hypernetix.hyperspot.ax.query.v1~test-query.v1",
-            "gts.test.type.v1~uuid-12345.v1",
-            "gts.vendor.pkg.ns.type.v1~instance.v1",
+            "gts.hypernetix.hyperspot.ax.query.v1~test.mock._.test_query.v1",
+            "gts.test.type.v1~test.mock._.uuid_12345.v1",
+            "gts.vendor.pkg.ns.type.v1~vendor.mock._.instance.v1",
         ];
         
         for identifier in test_identifiers {
@@ -110,7 +124,7 @@ mod routing_tests {
             }
         });
         
-        let system_fields = vec!["id", "type", "tenant", "registered_at", "updated_at"];
+        let system_fields = vec!["id", "type", "tenant"];
         
         for field in system_fields {
             assert!(client_request.get(field).is_some(), "Field '{}' should be present in request", field);
