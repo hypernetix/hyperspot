@@ -4,7 +4,7 @@
 #![allow(unused_imports)]
 
 use analytics as _;
-use api_ingress as _;
+use api_gateway as _;
 use file_parser as _;
 use grpc_hub as _;
 use module_orchestrator as _;

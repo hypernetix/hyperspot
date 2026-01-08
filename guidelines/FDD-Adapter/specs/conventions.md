@@ -55,14 +55,14 @@
 ### REST Integration
 - ❌ **Direct axum routes** → MUST use `OperationBuilder`
 - ❌ **Router::new() in routes.rs** → MUST extend passed router
-- ❌ **Manual middleware (JWT/SecurityCtx)** → MUST use api_ingress automatic middleware
+- ❌ **Manual middleware (JWT/SecurityCtx)** → MUST use api_gateway automatic middleware
 - ❌ **Bypassing RestfulModule** → MUST implement `RestfulModule` trait
 - ❌ **Missing OpenAPI registration** → MUST call `.register(router, openapi)`
 
 See `specs/modkit-rest-integration.md` for correct patterns.
 
 ### Middleware
-- ❌ **Custom JWT validation** → api_ingress handles automatically
+- ❌ **Custom JWT validation** → api_gateway handles automatically
 - ❌ **Custom SecurityCtx creation** → Injected via Extension
 - ❌ **Custom OData parsing** → Use modkit-odata
 

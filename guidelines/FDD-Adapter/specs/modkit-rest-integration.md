@@ -11,7 +11,7 @@
 **Critical**: All REST modules MUST integrate through ModKit's `RestfulModule` trait and `OperationBuilder` pattern. Direct axum integration is **FORBIDDEN**.
 
 **Why**: 
-- `api_ingress` provides automatic middleware (JWT, SecurityCtx, tracing)
+- `api_gateway` provides automatic middleware (JWT, SecurityCtx, tracing)
 - `OperationBuilder` ensures type-safety and OpenAPI generation
 - Direct axum bypasses platform features and breaks observability
 
@@ -24,7 +24,7 @@
 ```rust
 #[modkit::module(
     name = "my_module",
-    capabilities = [rest],  // ← Adds api_ingress dependency automatically
+    capabilities = [rest],  // ← Adds api_gateway dependency automatically
     deps = []
 )]
 pub struct MyModule {
@@ -32,7 +32,7 @@ pub struct MyModule {
 }
 ```
 
-**Note**: `api_ingress` dependency added automatically when `rest` capability declared.
+**Note**: `api_gateway` dependency added automatically when `rest` capability declared.
 
 ---
 
@@ -134,7 +134,7 @@ use modkit_security::SecurityCtx;
 
 pub async fn get_resource(
     Path(id): Path<String>,
-    Extension(ctx): Extension<SecurityCtx>,     // ← Injected by api_ingress
+    Extension(ctx): Extension<SecurityCtx>,     // ← Injected by api_gateway
     Extension(service): Extension<Arc<MyService>>
 ) -> Result<Json<ResourceDto>, Problem> {
     // SecurityCtx already validated and injected
@@ -148,7 +148,7 @@ pub async fn get_resource(
 - ✅ Use `Problem` for error responses (RFC 7807)
 - ✅ Return typed responses matching OperationBuilder schema
 
-**AUTOMATIC** (provided by api_ingress):
+**AUTOMATIC** (provided by api_gateway):
 - ✅ JWT validation (happens before handler)
 - ✅ SecurityCtx injection (available in Extension)
 - ✅ Request tracing (correlation IDs added)
@@ -156,9 +156,9 @@ pub async fn get_resource(
 
 ---
 
-## What api_ingress Provides Automatically
+## What api_gateway Provides Automatically
 
-When you implement `RestfulModule`, `api_ingress` automatically applies:
+When you implement `RestfulModule`, `api_gateway` automatically applies:
 
 ### 1. Authentication Middleware
 - JWT signature validation
@@ -206,7 +206,7 @@ Router::new()
     .layer(from_fn(jwt_validation_middleware))  // ❌ Duplicate platform
 ```
 
-**Why wrong**: `api_ingress` already validates JWT for all REST modules.
+**Why wrong**: `api_gateway` already validates JWT for all REST modules.
 
 **Fix**: Remove middleware, use `Extension<SecurityCtx>` in handler.
 
@@ -226,7 +226,7 @@ pub fn create_router() -> Router {
 **Why wrong**: 
 - No OpenAPI documentation
 - No type-safety
-- Bypasses api_ingress middleware
+- Bypasses api_gateway middleware
 - Not discoverable
 
 **Fix**: Use `OperationBuilder` in `RestfulModule::register_rest`.
@@ -274,7 +274,7 @@ When implementing REST integration, verify:
 - [ ] No manual SecurityCtx creation
 
 ### Testing
-- [ ] Integration tests use `api_ingress` test helpers
+- [ ] Integration tests use `api_gateway` test helpers
 - [ ] Tests verify OpenAPI registration
 - [ ] Tests verify middleware chain
 

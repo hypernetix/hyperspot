@@ -178,7 +178,7 @@ async fn list_users(Query(odata): Query<ODataQuery>) -> Result<Json<Page<UserDto
 - MUST implement `RestfulModule` trait
 - MUST use `OperationBuilder` for ALL endpoints
 - MUST extend passed router (NOT create new)
-- MUST register through `api_ingress`
+- MUST register through `api_gateway`
 - FORBIDDEN: Direct axum routes, custom middleware, Router::new()
 
 **Quick example**:
@@ -343,7 +343,7 @@ impl DatasourcePlugin for MockDatasource {
 ### 1. Generic Module
 - Independent module with own public API
 - Responsible for specific domain
-- Example: `api_ingress`, `directory_service`
+- Example: `api_gateway`, `directory_service`
 
 **Structure**:
 ```

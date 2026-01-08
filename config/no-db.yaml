@@ -21,8 +21,8 @@ modules:
     # Analytics module with GTS Core
     config: {}
   
-  api_ingress:
-    # No database configuration needed for api_ingress
+  api_gateway:
+    # No database configuration needed for api_gateway
     config:
       bind_addr: "127.0.0.1:8087"
       enable_docs: true
