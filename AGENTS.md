@@ -10,8 +10,6 @@ Always open `@/docs/MODKIT_UNIFIED_SYSTEM.md` to learn about the project's `@/li
 
 Always open `@/guidelines/NEW_MODULE.md` to learn about how to create a new module.
 
-Always open `@/guidelines/hyperspot-fdd-adapter/AGENTS.md` to learn about the Feature-Driven Design framework.
-
 Always open `@/docs/SECURE-ORM.md` to learn about the project's database interactions with ORM.
 
 Always open `@/docs/ODATA_SELECT.md` to learn about the OData `$select` field projection feature.
