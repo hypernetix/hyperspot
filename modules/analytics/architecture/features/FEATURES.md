@@ -17,6 +17,8 @@
 **Status**: IMPLEMENTED
 **Depends On**: None
 **Blocks**: All other features
+**Requirements Covered**: fdd-analytics-req-tech-constraints, fdd-analytics-req-nfr-maintainability, fdd-analytics-req-nfr-deployment
+**Principles Covered**: fdd-analytics-principle-modular-design, fdd-analytics-principle-api-first, fdd-analytics-principle-mock-mode
 
 **Scope**:
 - Create SDK crate with empty API trait (no business methods)
@@ -33,6 +35,8 @@
 **Status**: IMPLEMENTED
 **Depends On**: None
 **Blocks**: All domain type features
+**Requirements Covered**: fdd-analytics-req-security, fdd-analytics-req-secure-orm, fdd-analytics-req-security-ctx, fdd-analytics-req-input-validation, fdd-analytics-req-tracing, fdd-analytics-req-logging, fdd-analytics-req-metrics, fdd-analytics-req-health-checks, fdd-analytics-req-nfr-observability, fdd-analytics-req-nfr-reliability
+**Principles Covered**: fdd-analytics-principle-security-first, fdd-analytics-principle-gts-native, fdd-analytics-principle-api-first, fdd-analytics-principle-tenant-isolation, fdd-analytics-principle-horizontal-scalability
 
 **Scope**:
 - GTS API routing (`/gts`, `/gts/{id}`) - routes to domain features
@@ -48,6 +52,8 @@
 **Status**: IN_PROGRESS
 **Depends On**: [feature-gts-core](feature-gts-core/)
 **Blocks**: [feature-query-definitions](feature-query-definitions/)
+**Requirements Covered**: fdd-analytics-req-tech-constraints
+**Principles Covered**: fdd-analytics-principle-gts-native, fdd-analytics-principle-strongly-typed, fdd-analytics-principle-metadata-storage
 
 **Scope**:
 - Schema GTS type: `schema.v1~` (base) + `schema.v1~query_returns.v1~`
@@ -63,6 +69,8 @@
 **Status**: NOT_STARTED
 **Depends On**: [feature-gts-core](feature-gts-core/)
 **Blocks**: [feature-widget-templates](feature-widget-templates/)
+**Requirements Covered**: fdd-analytics-req-tech-constraints
+**Principles Covered**: fdd-analytics-principle-gts-native, fdd-analytics-principle-strongly-typed, fdd-analytics-principle-metadata-storage
 
 **Scope**:
 - Schema GTS type: `schema.v1~template_config.v1~`
@@ -77,6 +85,8 @@
 **Status**: IN_PROGRESS
 **Depends On**: [feature-gts-core](feature-gts-core/)
 **Blocks**: [feature-values-selector-templates](feature-values-selector-templates/)
+**Requirements Covered**: fdd-analytics-req-tech-constraints
+**Principles Covered**: fdd-analytics-principle-gts-native, fdd-analytics-principle-strongly-typed, fdd-analytics-principle-metadata-storage
 
 **Scope**:
 - Schema GTS type: `schema.v1~values.v1~`
@@ -91,6 +101,8 @@
 **Status**: IN_PROGRESS
 **Depends On**: [feature-gts-core](feature-gts-core/), [feature-schema-query-returns](feature-schema-query-returns/)
 **Blocks**: [feature-query-execution](feature-query-execution/)
+**Requirements Covered**: fdd-analytics-req-tech-constraints, fdd-analytics-req-datasource-mgmt
+**Principles Covered**: fdd-analytics-principle-gts-native, fdd-analytics-principle-data-agnostic, fdd-analytics-principle-metadata-storage
 
 **Scope**:
 - Query GTS type: `query.v1~` (main query type)
@@ -106,6 +118,8 @@
 **Status**: IN_PROGRESS
 **Depends On**: [feature-gts-core](feature-gts-core/)
 **Blocks**: [feature-query-definitions](feature-query-definitions/)
+**Requirements Covered**: fdd-analytics-req-tech-constraints
+**Principles Covered**: fdd-analytics-principle-gts-native, fdd-analytics-principle-metadata-storage
 
 **Scope**:
 - Query capabilities GTS type: `query_capabilities.v1~`
@@ -120,6 +134,8 @@
 **Status**: IN_PROGRESS
 **Depends On**: [feature-gts-core](feature-gts-core/)
 **Blocks**: [feature-query-definitions](feature-query-definitions/)
+**Requirements Covered**: fdd-analytics-req-tech-constraints
+**Principles Covered**: fdd-analytics-principle-gts-native, fdd-analytics-principle-metadata-storage
 
 **Scope**:
 - Query values GTS type: `query.v1~values.v1~`
@@ -134,6 +150,8 @@
 **Status**: IN_PROGRESS
 **Depends On**: [feature-gts-core](feature-gts-core/)
 **Blocks**: [feature-query-execution](feature-query-execution/)
+**Requirements Covered**: fdd-analytics-req-tech-constraints, fdd-analytics-req-secrets-mgmt, fdd-analytics-req-nfr-maintainability
+**Principles Covered**: fdd-analytics-principle-plugin-extensibility, fdd-analytics-principle-data-agnostic, fdd-analytics-principle-modular-design
 
 **Scope**:
 - Plugin registration and discovery
@@ -153,6 +171,8 @@
 **Status**: IN_PROGRESS
 **Depends On**: [feature-query-definitions](feature-query-definitions/), [feature-query-capabilities](feature-query-capabilities/), [feature-query-values](feature-query-values/), [feature-plugins](feature-plugins/)
 **Blocks**: [feature-datasources](feature-datasources/)
+**Requirements Covered**: fdd-analytics-req-performance, fdd-analytics-req-tech-constraints, fdd-analytics-req-platform-deps, fdd-analytics-req-nfr-performance, fdd-analytics-req-nfr-scalability
+**Principles Covered**: fdd-analytics-principle-data-agnostic, fdd-analytics-principle-horizontal-scalability
 
 **Scope**:
 - OData v4 execution engine (GET/POST)
@@ -170,6 +190,8 @@
 **Status**: IN_PROGRESS
 **Depends On**: [feature-gts-core](feature-gts-core/), [feature-schema-template-config](feature-schema-template-config/)
 **Blocks**: [feature-widget-items](feature-widget-items/)
+**Requirements Covered**: fdd-analytics-req-data-visualization, fdd-analytics-req-tech-constraints
+**Principles Covered**: fdd-analytics-principle-gts-native, fdd-analytics-principle-modular-design, fdd-analytics-principle-metadata-storage
 
 **Scope**:
 - Template GTS type: `template.v1~` (base) + `template.v1~widget.v1~`
@@ -186,6 +208,8 @@
 **Status**: NOT_STARTED
 **Depends On**: [feature-gts-core](feature-gts-core/), [feature-schema-values](feature-schema-values/)
 **Blocks**: [feature-datasources](feature-datasources/)
+**Requirements Covered**: fdd-analytics-req-data-visualization, fdd-analytics-req-datasource-mgmt, fdd-analytics-req-tech-constraints
+**Principles Covered**: fdd-analytics-principle-gts-native, fdd-analytics-principle-modular-design, fdd-analytics-principle-metadata-storage
 
 **Scope**:
 - Template GTS type: `template.v1~values_selector.v1~`
@@ -201,6 +225,8 @@
 **Status**: IN_PROGRESS
 **Depends On**: [feature-gts-core](feature-gts-core/), [feature-query-execution](feature-query-execution/), [feature-values-selector-templates](feature-values-selector-templates/)
 **Blocks**: [feature-widget-items](feature-widget-items/)
+**Requirements Covered**: fdd-analytics-req-datasource-mgmt, fdd-analytics-req-tech-constraints
+**Principles Covered**: fdd-analytics-principle-gts-native, fdd-analytics-principle-modular-design, fdd-analytics-principle-metadata-storage
 
 **Scope**:
 - Datasource GTS type: `datasource.v1~`
@@ -218,6 +244,8 @@
 **Status**: NOT_STARTED
 **Depends On**: [feature-gts-core](feature-gts-core/), [feature-widget-templates](feature-widget-templates/), [feature-datasources](feature-datasources/)
 **Blocks**: [feature-dashboard-layouts](feature-dashboard-layouts/)
+**Requirements Covered**: fdd-analytics-req-data-visualization, fdd-analytics-req-tech-constraints
+**Principles Covered**: fdd-analytics-principle-gts-native, fdd-analytics-principle-modular-design, fdd-analytics-principle-metadata-storage
 
 **Scope**:
 - Item GTS type: `item.v1~` (base) + `item.v1~widget.v1~`
@@ -235,6 +263,8 @@
 **Status**: NOT_STARTED
 **Depends On**: [feature-gts-core](feature-gts-core/)
 **Blocks**: [feature-dashboard-layouts](feature-dashboard-layouts/)
+**Requirements Covered**: fdd-analytics-req-tech-constraints
+**Principles Covered**: fdd-analytics-principle-gts-native, fdd-analytics-principle-modular-design, fdd-analytics-principle-metadata-storage
 
 **Scope**:
 - Item GTS type: `item.v1~group.v1~`
@@ -251,6 +281,8 @@
 **Status**: IN_PROGRESS
 **Depends On**: [feature-gts-core](feature-gts-core/), [feature-widget-items](feature-widget-items/), [feature-group-items](feature-group-items/)
 **Blocks**: [feature-dashboards](feature-dashboards/)
+**Requirements Covered**: fdd-analytics-req-scalability, fdd-analytics-req-tech-constraints, fdd-analytics-req-nfr-scalability
+**Principles Covered**: fdd-analytics-principle-gts-native, fdd-analytics-principle-modular-design, fdd-analytics-principle-metadata-storage
 
 **Scope**:
 - Layout GTS type: `layout.v1~` (base) + `layout.v1~dashboard.v1~`
@@ -266,6 +298,8 @@
 **Status**: NOT_STARTED
 **Depends On**: [feature-gts-core](feature-gts-core/), [feature-widget-items](feature-widget-items/), [feature-group-items](feature-group-items/)
 **Blocks**: [feature-reporting](feature-reporting/)
+**Requirements Covered**: fdd-analytics-req-tech-constraints
+**Principles Covered**: fdd-analytics-principle-gts-native, fdd-analytics-principle-modular-design, fdd-analytics-principle-metadata-storage
 
 **Scope**:
 - Layout GTS type: `layout.v1~report.v1~`
@@ -281,6 +315,8 @@
 **Status**: NOT_STARTED
 **Depends On**: [feature-gts-core](feature-gts-core/)
 **Blocks**: None
+**Requirements Covered**: fdd-analytics-req-organization, fdd-analytics-req-tech-constraints
+**Principles Covered**: fdd-analytics-principle-gts-native, fdd-analytics-principle-metadata-storage
 
 **Scope**:
 - Category GTS types (9 types: base + 8 domain categories)
@@ -298,6 +334,8 @@
 **Status**: IN_PROGRESS
 **Depends On**: [feature-gts-core](feature-gts-core/)
 **Blocks**: None
+**Requirements Covered**: fdd-analytics-req-security, fdd-analytics-req-compliance, fdd-analytics-req-tech-constraints
+**Principles Covered**: fdd-analytics-principle-security-first, fdd-analytics-principle-tenant-isolation
 
 **Scope**:
 - Tenant enablement configuration via `/gts/{id}/enablement`
@@ -314,6 +352,8 @@
 **Status**: IN_PROGRESS
 **Depends On**: [feature-dashboard-layouts](feature-dashboard-layouts/)
 **Blocks**: [feature-reporting](feature-reporting/), [feature-export-sharing](feature-export-sharing/)
+**Requirements Covered**: fdd-analytics-req-data-visualization, fdd-analytics-req-scalability, fdd-analytics-req-nfr-scalability
+**Principles Covered**: fdd-analytics-principle-modular-design
 
 **Scope**:
 - Dashboard CRUD operations (business logic layer)
@@ -330,6 +370,8 @@
 **Status**: IN_PROGRESS
 **Depends On**: [feature-report-layouts](feature-report-layouts/), [feature-dashboards](feature-dashboards/)
 **Blocks**: None
+**Requirements Covered**: fdd-analytics-req-export-sharing, fdd-analytics-req-platform-deps
+**Principles Covered**: None
 
 **Scope**:
 - Report generation (on-demand, scheduled)
@@ -348,6 +390,8 @@
 **Status**: NOT_STARTED
 **Depends On**: [feature-dashboards](feature-dashboards/)
 **Blocks**: None
+**Requirements Covered**: fdd-analytics-req-export-sharing
+**Principles Covered**: None
 
 **Scope**:
 - Dashboard export to multiple formats (ad-hoc, no scheduling)

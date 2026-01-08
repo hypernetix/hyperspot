@@ -2,20 +2,31 @@ use crate::config::AnalyticsConfig;
 use async_trait::async_trait;
 use modkit::api::OpenApiRegistry;
 use modkit::{DbModule, Module, ModuleCtx, RestfulModule};
+use std::sync::Arc;
+use crate::domain::gts_core::{GtsCoreRouter, RoutingTable};
 
-#[modkit::module(
-    name = "analytics",
-    capabilities = [db, rest]
-)]
-#[derive(Clone, Default)]
+#[modkit::module(name = "analytics", capabilities = [rest, db])]
+#[derive(Clone)]
 pub struct AnalyticsModule {
     config: AnalyticsConfig,
+    gts_router: Arc<GtsCoreRouter>,
+}
+
+impl Default for AnalyticsModule {
+    fn default() -> Self {
+        let table = RoutingTable::new();
+        Self {
+            config: AnalyticsConfig::default(),
+            gts_router: Arc::new(GtsCoreRouter::new(table)),
+        }
+    }
 }
 
 #[async_trait]
 impl Module for AnalyticsModule {
     async fn init(&self, _ctx: &ModuleCtx) -> anyhow::Result<()> {
         tracing::info!(module = "analytics", "Analytics module initialized");
+        // TODO: Register domain features in routing table
         Ok(())
     }
 }
@@ -28,14 +39,28 @@ impl DbModule for AnalyticsModule {
     }
 }
 
+/// REST API integration via ModKit's RestfulModule pattern.
+/// 
+/// This implementation registers GTS Core routes using OperationBuilder for type-safe
+/// OpenAPI generation. All endpoints automatically receive:
+/// - JWT validation via api_ingress
+/// - SecurityCtx injection with tenant isolation
+/// - Request tracing and correlation IDs
+/// - RFC 7807 Problem Details error handling
 impl RestfulModule for AnalyticsModule {
     fn register_rest(
         &self,
         _ctx: &ModuleCtx,
         router: axum::Router,
-        _openapi: &dyn OpenApiRegistry,
+        openapi: &dyn OpenApiRegistry,
     ) -> anyhow::Result<axum::Router> {
-        // REST routes will be added by business features
+        // Register GTS Core routes with service instance
+        let router = crate::api::rest::gts_core::register_routes(
+            router,
+            openapi,
+            self.gts_router.clone(),
+        );
+        
         Ok(router)
     }
 }

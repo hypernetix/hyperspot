@@ -74,6 +74,8 @@ From `architecture/openapi/v1/api.yaml`:
 
 ### Flow 1: Admin Registers GTS Type
 
+**ID**: fdd-analytics-feature-gts-core-flow-admin-register-type
+
 **Actor**: Admin  
 **Trigger**: Need to define new GTS type schema  
 **Goal**: Register type definition for future instance creation
@@ -103,6 +105,8 @@ From `architecture/openapi/v1/api.yaml`:
 
 ### Flow 2: Developer Registers Instance
 
+**ID**: fdd-analytics-feature-gts-core-flow-developer-register-instance
+
 **Actor**: Developer  
 **Trigger**: Create instance of registered type  
 **Goal**: Register entity instance with data
@@ -128,6 +132,8 @@ From `architecture/openapi/v1/api.yaml`:
 ---
 
 ### Flow 3: Developer Lists Entities with OData
+
+**ID**: fdd-analytics-feature-gts-core-flow-developer-list-entities
 
 **Actor**: Developer  
 **Trigger**: Need to find entities matching criteria  
@@ -158,6 +164,8 @@ From `architecture/openapi/v1/api.yaml`:
 ---
 
 ### Flow 4: GTS Core Routes CRUD Operations
+
+**ID**: fdd-analytics-feature-gts-core-flow-route-crud-operations
 
 **Actor**: GTS Core Router (System)  
 **Trigger**: Any GTS API call  
@@ -193,6 +201,8 @@ From `architecture/openapi/v1/api.yaml`:
 
 ### Flow 5: Aggregate OData Metadata
 
+**ID**: fdd-analytics-feature-gts-core-flow-aggregate-odata-metadata
+
 **Actor**: OData Client (System)  
 **Trigger**: Client requests service metadata  
 **Goal**: Return complete OData CSDL with all entity types
@@ -222,6 +232,8 @@ From `architecture/openapi/v1/api.yaml`:
 ## C. Algorithms
 
 ### Service Algorithm 1: Routing Logic
+
+**ID**: fdd-analytics-feature-gts-core-algo-routing-logic
 
 The GTS Core routes requests to domain-specific features based on GTS type identifier.
 
@@ -269,6 +281,8 @@ The GTS Core routes requests to domain-specific features based on GTS type ident
 
 ### Service Algorithm 2: Query Optimization Validator
 
+**ID**: fdd-analytics-feature-gts-core-algo-query-optimization-validator
+
 The service validates filter expressions against available indexes before executing queries.
 
 **Algorithm Type**: Service-side (query validation)
@@ -304,6 +318,8 @@ The service validates filter expressions against available indexes before execut
 ---
 
 ### Service Algorithm 3: Tolerant Reader Pattern
+
+**ID**: fdd-analytics-feature-gts-core-algo-tolerant-reader-pattern
 
 The API follows the **[Tolerant Reader](https://martinfowler.com/bliki/TolerantReader.html)** pattern for field handling.
 
@@ -720,21 +736,25 @@ Delegated to domain features. GTS Core only validates JWT signature.
 **Unit Tests**:
 
 1. **Routing Table Lookup**
+   **ID**: fdd-analytics-feature-gts-core-test-routing-table-lookup
    - Input: Various GTS identifiers
    - Expected: Correct domain feature selected
    - Verify: All patterns in routing table covered
 
 2. **GTS Identifier Parsing**
+   **ID**: fdd-analytics-feature-gts-core-test-gts-identifier-parsing
    - Input: `gts.vendor.pkg.ns.type.v1~instance.v1`
    - Expected: Extract type = `gts.vendor.pkg.ns.type.v1~`
    - Verify: Handles named and UUID instances
 
 3. **Query Optimization Validator**
+   **ID**: fdd-analytics-feature-gts-core-test-query-optimization-validator
    - Input: `$filter=entity/unsupported_field eq 'value'`
    - Expected: HTTP 400 with available fields list
    - Verify: Prevents full table scans
 
 4. **Tolerant Reader Pattern**
+   **ID**: fdd-analytics-feature-gts-core-test-tolerant-reader-pattern
    - Input: POST with system fields in request
    - Expected: System fields ignored, generated values used
    - Verify: Client cannot override id, type, tenant
@@ -742,16 +762,19 @@ Delegated to domain features. GTS Core only validates JWT signature.
 **Integration Tests**:
 
 1. **End-to-End Registration**
+   **ID**: fdd-analytics-feature-gts-core-test-e2e-registration
    - Register type via GTS Core
    - Verify routed to correct domain feature
    - Verify response matches schema
 
 2. **OData Query Routing**
+   **ID**: fdd-analytics-feature-gts-core-test-odata-query-routing
    - List entities with complex $filter
    - Verify routing to correct features
    - Verify pagination works across features
 
 3. **Multi-Feature Metadata**
+   **ID**: fdd-analytics-feature-gts-core-test-multi-feature-metadata
    - Request /$metadata
    - Verify aggregates from all features
    - Verify valid OData CSDL
@@ -759,11 +782,13 @@ Delegated to domain features. GTS Core only validates JWT signature.
 **Performance Tests**:
 
 1. **Routing Overhead**
+   **ID**: fdd-analytics-feature-gts-core-test-routing-overhead
    - Measure routing decision time
    - Target: <1ms per request
    - Verify: O(1) hash lookup
 
 2. **Concurrent Requests**
+   **ID**: fdd-analytics-feature-gts-core-test-concurrent-requests
    - 1000 concurrent requests
    - Verify: No routing errors
    - Verify: Fair distribution to features
@@ -808,16 +833,19 @@ Delegated to domain features. GTS Core only validates JWT signature.
 **Testing Scenarios**:
 
 1. **JWT Validation**:
+   **ID**: fdd-analytics-feature-gts-core-test-jwt-validation
    - Send request with invalid JWT signature
    - Verify HTTP 401 returned
    - Expected: No routing to domain features
 
 2. **SecurityCtx Injection**:
+   **ID**: fdd-analytics-feature-gts-core-test-security-ctx-injection
    - Send valid JWT with tenant_id claim
    - Verify SecurityCtx created with correct tenant_id
    - Expected: All downstream calls include SecurityCtx
 
 3. **OData Parameter Parsing**:
+   **ID**: fdd-analytics-feature-gts-core-test-odata-parameter-parsing
    - Send GET request with complex $filter expression
    - Verify parameters parsed into AST
    - Expected: Filter validated against indexed fields
@@ -844,16 +872,19 @@ Delegated to domain features. GTS Core only validates JWT signature.
 **Testing Scenarios**:
 
 1. **Client Cannot Override System Fields**:
+   **ID**: fdd-analytics-feature-gts-core-test-client-cannot-override-fields
    - POST request with id, type, tenant in body
    - Verify system fields ignored and generated
    - Expected: Client values discarded
 
 2. **Secrets Not Returned**:
+   **ID**: fdd-analytics-feature-gts-core-test-secrets-not-returned
    - GET request for entity with API key in entity object
    - Verify response omits sensitive fields
    - Expected: API keys and credentials excluded from response
 
 3. **PATCH Operations Restricted**:
+   **ID**: fdd-analytics-feature-gts-core-test-patch-operations-restricted
    - PATCH request attempting to modify /id or /type
    - Verify request rejected with HTTP 400
    - Expected: Only /entity/* paths allowed in JSON Patch

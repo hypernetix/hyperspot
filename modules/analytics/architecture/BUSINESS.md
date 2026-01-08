@@ -213,7 +213,7 @@
 
 ---
 
-## Section D: Additional Context
+## Section E: Additional Context
 
 **Note**: This section is optional and reserved for product owner notes, business rationale, or other relevant context not covered by the core FDD structure.
 

@@ -2,20 +2,27 @@
 
 **Extends**: `../FDD/AGENTS.md`
 
-**Version**: 2.0  
+**Version**: 2.1  
 **Status**: COMPLETE  
-**Last Updated**: 2026-01-07
+**Last Updated**: 2026-01-08  
+**Tech Stack**: Rust (edition 2021) + GTS + OpenAPI/gRPC
 
 ---
 
-MUST READ `specs/domain-model.md` WHEN working with domain types.
+MUST read `specs/tech-stack.md` WHEN checking dependencies or versions
 
-MUST READ `specs/api-contracts.md` WHEN working with API endpoints.
+MUST read `specs/domain-model.md` WHEN working with domain types
 
-MUST READ `specs/testing.md` WHEN writing or running tests.
+MUST read `specs/api-contracts.md` WHEN working with API endpoints
 
-MUST READ `specs/build-deploy.md` WHEN building or deploying.
+MUST read `specs/modkit-rest-integration.md` WHEN implementing REST modules (MANDATORY)
 
-MUST READ `specs/project-structure.md` WHEN creating files or directories.
+MUST read `specs/patterns.md` WHEN implementing architecture patterns
 
-MUST READ `specs/conventions.md` WHEN writing code or documentation.
+MUST read `specs/conventions.md` WHEN writing code or documentation
+
+MUST read `specs/build-deploy.md` WHEN building or deploying
+
+MUST read `specs/testing.md` WHEN writing or running tests
+
+MUST read `specs/project-structure.md` WHEN creating files or directories

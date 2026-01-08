@@ -64,7 +64,9 @@ The architecture consists of four distinct layers:
 ### 1. System Requirements & Constraints
 
 **Performance Requirements**:  
-**ID**: `fdd-analytics-req-performance`
+**ID**: `fdd-analytics-req-performance`  
+**Capabilities**: `fdd-analytics-capability-performance`, `fdd-analytics-capability-query-execution`  
+**Actors**: `fdd-analytics-actor-platform-admin`, `fdd-analytics-actor-query-plugin`
 - Query execution: p95 < 1s, p99 < 3s (depends on external data sources)
 - Dashboard load: < 2s for typical dashboard
 - API response: p95 < 200ms
@@ -72,7 +74,9 @@ The architecture consists of four distinct layers:
 - Plugin registration: < 5s
 
 **Scalability**:  
-**ID**: `fdd-analytics-req-scalability`
+**ID**: `fdd-analytics-req-scalability`  
+**Capabilities**: `fdd-analytics-capability-performance`, `fdd-analytics-capability-dashboard-mgmt`  
+**Actors**: `fdd-analytics-actor-platform-admin`, `fdd-analytics-actor-dashboard-designer`
 - 1000+ dashboards per tenant
 - 100+ widgets per dashboard
 - 10M+ rows per query result (limited by external sources)
@@ -80,7 +84,10 @@ The architecture consists of four distinct layers:
 - Unlimited datasource plugins
 
 **Security Requirements**:  
-**ID**: `fdd-analytics-req-security`
+**ID**: `fdd-analytics-req-security`  
+**Capabilities**: `fdd-analytics-capability-security`  
+**Actors**: `fdd-analytics-actor-platform-admin`, `fdd-analytics-actor-tenant-admin`, `fdd-analytics-actor-platform`  
+**ADRs**: `fdd-analytics-adr-security-ctx-secure-orm`
 - Multi-tenant isolation (mandatory, **provided by Hyperspot Platform**)
 - JWT signature validation
 - Automatic tenant_id injection
@@ -89,14 +96,19 @@ The architecture consists of four distinct layers:
 - Row-level security in data access (enforced by external sources)
 
 **Compliance**:  
-**ID**: `fdd-analytics-req-compliance`
+**ID**: `fdd-analytics-req-compliance`  
+**Capabilities**: `fdd-analytics-capability-security`  
+**Actors**: `fdd-analytics-actor-platform-admin`, `fdd-analytics-actor-tenant-admin`
 - GDPR compliant (data retention, deletion) - **managed by platform**
 - SOC 2 Type II requirements
 - Audit trail for all data access (**platform-level**)
 - Data encryption at rest and in transit
 
 **Technology Constraints**:  
-**ID**: `fdd-analytics-req-tech-constraints`
+**ID**: `fdd-analytics-req-tech-constraints`  
+**Capabilities**: `fdd-analytics-capability-data-access`, `fdd-analytics-capability-extensibility`  
+**Actors**: `fdd-analytics-actor-plugin-developer`, `fdd-analytics-actor-query-plugin`  
+**ADRs**: `fdd-analytics-adr-initial-architecture`, `fdd-analytics-adr-odata-protocol`
 - Rust for core services
 - **PostgreSQL for OLTP** (GTS metadata, types, instances, configuration)
 - **No built-in DWH** - data agnostic, all sources via query registration
@@ -104,7 +116,9 @@ The architecture consists of four distinct layers:
 - JWT for authentication (**provided by Hyperspot Platform**)
 
 **Platform Dependencies**:  
-**ID**: `fdd-analytics-req-platform-deps`
+**ID**: `fdd-analytics-req-platform-deps`  
+**Capabilities**: `fdd-analytics-capability-security`, `fdd-analytics-capability-reporting`  
+**Actors**: `fdd-analytics-actor-platform`
 - **Hyperspot Platform** provides:
   - Event management system
   - Tenancy management and isolation
@@ -119,26 +133,36 @@ The architecture consists of four distinct layers:
 ### 1a. Security Requirements
 
 **Secure ORM (REQUIRED)**:  
-**ID**: `fdd-analytics-req-secure-orm`
+**ID**: `fdd-analytics-req-secure-orm`  
+**Capabilities**: `fdd-analytics-capability-security`  
+**Actors**: `fdd-analytics-actor-platform-admin`  
+**ADRs**: `fdd-analytics-adr-security-ctx-secure-orm`
 - All database queries MUST use `SecureConn` with `SecurityCtx`
 - Entities MUST derive `#[derive(Scopable)]` with explicit scope dimensions
 - Compile-time enforcement: unscoped queries cannot execute
 - Tenant isolation automatic when tenant_ids provided
 
 **SecurityCtx Propagation**:  
-**ID**: `fdd-analytics-req-security-ctx`
+**ID**: `fdd-analytics-req-security-ctx`  
+**Capabilities**: `fdd-analytics-capability-security`  
+**Actors**: `fdd-analytics-actor-platform-admin`  
+**ADRs**: `fdd-analytics-adr-security-ctx-secure-orm`
 - All service methods accept `&SecurityCtx` as first parameter
 - All repository methods accept `&SecurityCtx` for scope enforcement
 - SecurityCtx created from request auth (per-operation, not stored)
 
 **Input Validation**:  
-**ID**: `fdd-analytics-req-input-validation`
+**ID**: `fdd-analytics-req-input-validation`  
+**Capabilities**: `fdd-analytics-capability-security`  
+**Actors**: `fdd-analytics-actor-api-consumer`, `fdd-analytics-actor-ui-app`
 - Use `validator` crate for DTO validation
 - Field-level constraints (length, email, custom validators)
 - Return 422 with structured validation errors
 
 **Secrets Management**:  
-**ID**: `fdd-analytics-req-secrets-mgmt`
+**ID**: `fdd-analytics-req-secrets-mgmt`  
+**Capabilities**: `fdd-analytics-capability-security`  
+**Actors**: `fdd-analytics-actor-platform-admin`
 - Never commit secrets to version control
 - Use environment variables for configuration
 - Rotate secrets regularly
@@ -151,20 +175,26 @@ The architecture consists of four distinct layers:
 ### 1b. Observability Requirements
 
 **Distributed Tracing (OpenTelemetry)**:  
-**ID**: `fdd-analytics-req-tracing`
+**ID**: `fdd-analytics-req-tracing`  
+**Capabilities**: `fdd-analytics-capability-performance`  
+**Actors**: `fdd-analytics-actor-platform-admin`
 - Accept/propagate `traceparent` header (W3C Trace Context)
 - Emit `traceId` header on all responses
 - Auto-instrument: HTTP requests, DB queries, inter-module calls
 - Export to Jaeger/Uptrace via OTLP
 
 **Structured Logging**:  
-**ID**: `fdd-analytics-req-logging`
+**ID**: `fdd-analytics-req-logging`  
+**Capabilities**: `fdd-analytics-capability-performance`  
+**Actors**: `fdd-analytics-actor-platform-admin`
 - JSON logs per request: `traceId`, `requestId`, `userId`, `path`, `status`, `durationMs`
 - Use `tracing` crate with contextual fields
 - Log levels configurable per-module
 
 **Metrics (Prometheus)**:  
-**ID**: `fdd-analytics-req-metrics`
+**ID**: `fdd-analytics-req-metrics`  
+**Capabilities**: `fdd-analytics-capability-performance`  
+**Actors**: `fdd-analytics-actor-platform-admin`
 - Health check endpoint: `/health`
 - RED metrics: Rate, Errors, Duration (per route)
 - USE metrics: Utilization, Saturation, Errors
@@ -172,12 +202,56 @@ The architecture consists of four distinct layers:
 - Resource: memory, connection pools, queue depths
 
 **Health Checks**:  
-**ID**: `fdd-analytics-req-health-checks`
+**ID**: `fdd-analytics-req-health-checks`  
+**Capabilities**: `fdd-analytics-capability-performance`  
+**Actors**: `fdd-analytics-actor-platform-admin`
 - Liveness probe: service is running
 - Readiness probe: service can handle traffic
 - Kubernetes-compatible health endpoints
 
 **References**: `@/docs/TRACING_SETUP.md`, `@/docs/ARCHITECTURE_MANIFEST.md`
+
+---
+
+### 1c. Functional Requirements
+
+**Data Visualization**:  
+**ID**: `fdd-analytics-req-data-visualization`  
+**Capabilities**: `fdd-analytics-capability-data-visualization`  
+**Actors**: `fdd-analytics-actor-dashboard-designer`, `fdd-analytics-actor-business-analyst`, `fdd-analytics-actor-end-user`, `fdd-analytics-actor-template-developer`
+- Support rich chart types (line, bar, pie, scatter, heatmap, maps)
+- Interactive tables with sorting and filtering
+- Custom widget templates via JavaScript bundles
+- Values selectors (dropdowns, autocomplete, pickers) for filters and parameters
+
+**Datasource Management**:  
+**ID**: `fdd-analytics-req-datasource-mgmt`  
+**Capabilities**: `fdd-analytics-capability-datasource-mgmt`  
+**Actors**: `fdd-analytics-actor-plugin-developer`, `fdd-analytics-actor-dashboard-designer`, `fdd-analytics-actor-tenant-admin`
+- Datasource configuration (query + parameters + UI controls)
+- Parameter binding and validation with GTS type checking
+- Values selector integration for parameter inputs
+- Datasource reusability across widgets and dashboards
+- Runtime parameter injection with security context
+
+**Export & Sharing**:  
+**ID**: `fdd-analytics-req-export-sharing`  
+**Capabilities**: `fdd-analytics-capability-export-sharing`  
+**Actors**: `fdd-analytics-actor-dashboard-designer`, `fdd-analytics-actor-business-analyst`, `fdd-analytics-actor-system-integrator`
+- Dashboard export to multiple formats (PDF, PNG, CSV, Excel)
+- Dashboard sharing with tenant-scoped permissions
+- Widget embedding in external applications
+- Public/private dashboard URLs with security tokens
+
+**Organization & Libraries**:  
+**ID**: `fdd-analytics-req-organization`  
+**Capabilities**: `fdd-analytics-capability-organization`  
+**Actors**: `fdd-analytics-actor-dashboard-designer`, `fdd-analytics-actor-template-developer`, `fdd-analytics-actor-plugin-developer`
+- Hierarchical categories for all GTS types and instances
+- Widget libraries for reusable component collections
+- Template libraries (visualization marketplace)
+- Datasource libraries (preconfigured connectors)
+- Query libraries (shareable query definitions)
 
 ---
 
@@ -226,7 +300,8 @@ No built-in data sources or DWH. All data access via registered queries to exter
 **Implementation**: Query plugins with JWT propagation to external APIs/DWH
 
 #### 7. Modular Design
-**ID**: `fdd-analytics-principle-modular-design`
+**ID**: `fdd-analytics-principle-modular-design`  
+**ADRs**: `fdd-analytics-adr-initial-architecture`
 
 Reusable layouts, items, widgets, templates.
 
@@ -254,7 +329,8 @@ Complete data separation per tenant. Cryptographic JWT integrity.
 **Implementation**: Automatic tenant_id injection + JWT validation
 
 #### 11. Mock Mode Support
-**ID**: `fdd-analytics-principle-mock-mode`
+**ID**: `fdd-analytics-principle-mock-mode`  
+**ADRs**: `fdd-analytics-adr-mock-mode`
 
 All services and UI components support mock mode for development and testing.
 
@@ -330,9 +406,13 @@ modules/analytics/
 
 ## Section C: Technical Architecture
 
-#### C.1: Domain Model (GTS)
-- Admin Panel
+#### C.1: Component Architecture
+
+**PRESENTATION** (HAI3 - UI Application):
+- Dashboards, Reports, Widgets
+- Datasources & Templates
 - Interactive features (drilldowns, tooltips, filtering)
+- Admin Panel
 
 **API LAYER**:
 - REST API with Multi-Tenancy support (via Hyperspot Platform)

@@ -5,7 +5,7 @@ pub struct GtsTypeIdentifier(String);
 
 impl GtsTypeIdentifier {
     pub fn parse(gts_id: &str) -> Result<Self, String> {
-        let parsed = GtsID::new(gts_id)
+        let _parsed = GtsID::new(gts_id)
             .map_err(|e| format!("Invalid GTS identifier: {}", e))?;
         
         let type_part = if gts_id.contains('~') {

@@ -10,6 +10,7 @@ This document tracks all significant architectural decisions for the Analytics m
 
 ## ADR-0001: Initial Analytics Architecture
 
+**ID**: `fdd-analytics-adr-initial-architecture`  
 **Date**: 2025-12-31  
 **Status**: Accepted  
 **Deciders**: Hyperspot Team  
@@ -111,6 +112,7 @@ The challenge was to design an architecture that balances flexibility, security,
 
 ## ADR-0002: OData v4 Query Protocol Selection
 
+**ID**: `fdd-analytics-adr-odata-protocol`  
 **Date**: 2025-12-31  
 **Status**: Accepted  
 **Deciders**: Hyperspot Team
@@ -166,6 +168,7 @@ Analytics module needed a standardized query protocol for data retrieval that su
 
 ## ADR-0003: SecurityCtx and Secure ORM for Tenant Isolation
 
+**ID**: `fdd-analytics-adr-security-ctx-secure-orm`  
 **Date**: 2025-12-31  
 **Status**: Accepted  
 **Deciders**: Hyperspot Team
@@ -223,6 +226,7 @@ Multi-tenant SaaS platform requires absolute guarantee of tenant data isolation.
 
 ## ADR-0004: Mock Mode Architecture
 
+**ID**: `fdd-analytics-adr-mock-mode`  
 **Date**: 2025-12-31  
 **Status**: Accepted  
 **Deciders**: Hyperspot Team

@@ -91,7 +91,7 @@ impl FieldHandler {
         value
     }
 
-    pub fn inject_computed_fields(&self, mut value: Value, id: &str, type_id: &str) -> Value {
+    pub fn inject_computed_fields(&self, mut value: Value, id: &str, _type_id: &str) -> Value {
         if let Some(obj) = value.as_object_mut() {
             let asset_path = format!("/api/analytics/v1/gts/{}", id);
             obj.insert("asset_path".to_string(), Value::String(asset_path));
@@ -124,7 +124,7 @@ impl FieldHandler {
                     if let Some(entity) = obj.get("entity") {
                         if let Some(entity_obj) = entity.as_object() {
                             if let Some(field_value) = entity_obj.get(entity_field) {
-                                let mut entity_map = projected
+                                let entity_map = projected
                                     .entry("entity")
                                     .or_insert_with(|| Value::Object(Map::new()))
                                     .as_object_mut()

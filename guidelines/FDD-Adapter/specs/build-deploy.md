@@ -49,6 +49,55 @@ make lint
 
 ---
 
+## Quality Assurance Tools
+
+**Formal Verification**:
+```bash
+# Kani Rust Verifier - Formal verification of safety properties
+make kani
+# Checks: memory safety, arithmetic overflow, assertion violations, undefined behavior
+```
+
+**Security Auditing**:
+```bash
+# Geiger - Scan for unsafe code in dependencies
+make geiger
+
+# Cargo Deny - License compliance and security vulnerabilities
+make deny
+cargo deny check
+```
+
+**Code Coverage**:
+```bash
+# Generate code coverage reports
+make coverage          # Combined unit + e2e tests
+make coverage-unit     # Unit tests only
+make coverage-e2e-local  # E2E tests only
+
+# Tool: cargo-llvm-cov
+```
+
+**Custom Architectural Lints**:
+```bash
+# List all custom lints
+make dylint-list
+
+# Test lint implementations
+make dylint-test
+
+# Run custom lints
+make dylint
+```
+
+**Lint Categories**:
+- **de01_contract_layer**: Contract layer purity (no serde, HTTP types)
+- **de02_api_layer**: DTO placement and isolation
+- **de08_rest_api_conventions**: API endpoint versioning
+- **de09_gts_layer**: GTS identifier format validation
+
+---
+
 ## Deployment
 
 **Architecture**: Stateless design, horizontal scaling ready

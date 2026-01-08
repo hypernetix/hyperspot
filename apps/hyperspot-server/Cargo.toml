@@ -32,6 +32,7 @@ module_orchestrator = { path = "../../modules/system/module_orchestrator/module_
 types-registry = { path = "../../modules/system/types-registry/types-registry" }
 
 # user modules
+analytics = { path = "../../modules/analytics/analytics" }
 file_parser = { path = "../../modules/file_parser" }
 nodes_registry = { path = "../../modules/system/nodes_registry" }
 

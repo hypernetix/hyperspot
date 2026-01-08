@@ -2292,6 +2292,7 @@ dependencies = [
 name = "hyperspot-server"
 version = "0.1.0"
 dependencies = [
+ "analytics",
  "anyhow",
  "api_gateway",
  "calculator",

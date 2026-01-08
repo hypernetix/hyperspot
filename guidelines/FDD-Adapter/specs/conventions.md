@@ -48,6 +48,31 @@
 
 ---
 
+## FORBIDDEN Patterns
+
+**⚠️ These patterns are STRICTLY FORBIDDEN and will cause implementation validation to FAIL**
+
+### REST Integration
+- ❌ **Direct axum routes** → MUST use `OperationBuilder`
+- ❌ **Router::new() in routes.rs** → MUST extend passed router
+- ❌ **Manual middleware (JWT/SecurityCtx)** → MUST use api_ingress automatic middleware
+- ❌ **Bypassing RestfulModule** → MUST implement `RestfulModule` trait
+- ❌ **Missing OpenAPI registration** → MUST call `.register(router, openapi)`
+
+See `specs/modkit-rest-integration.md` for correct patterns.
+
+### Middleware
+- ❌ **Custom JWT validation** → api_ingress handles automatically
+- ❌ **Custom SecurityCtx creation** → Injected via Extension
+- ❌ **Custom OData parsing** → Use modkit-odata
+
+### Error Handling
+- ❌ **Custom error types without Problem** → Use `Problem` or convert to it
+- ❌ **Panic in production code** → Return Result
+- ❌ **Unwrap without context** → Use `?` or `context()`
+
+---
+
 ## Documentation
 
 - Use Rust doc comments (`///`, `//!`)
