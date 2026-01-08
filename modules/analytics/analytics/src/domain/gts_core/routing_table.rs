@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 use super::identifier::GtsTypeIdentifier;
 
-pub type FeatureHandler = String;
+pub type DomainHandler = String;
 
 #[derive(Debug, Clone)]
 pub struct RoutingTable {
-    routes: HashMap<GtsTypeIdentifier, FeatureHandler>,
+    routes: HashMap<GtsTypeIdentifier, DomainHandler>,
 }
 
 impl RoutingTable {
@@ -15,13 +15,13 @@ impl RoutingTable {
         }
     }
     
-    pub fn register(&mut self, type_pattern: &str, feature_name: impl Into<String>) -> Result<(), String> {
+    pub fn register(&mut self, type_pattern: &str, handler_id: impl Into<String>) -> Result<(), String> {
         let type_id = GtsTypeIdentifier::parse(type_pattern)?;
-        self.routes.insert(type_id, feature_name.into());
+        self.routes.insert(type_id, handler_id.into());
         Ok(())
     }
     
-    pub fn lookup(&self, gts_id: &str) -> Result<Option<&FeatureHandler>, String> {
+    pub fn lookup(&self, gts_id: &str) -> Result<Option<&DomainHandler>, String> {
         let type_id = GtsTypeIdentifier::parse(gts_id)?;
         Ok(self.routes.get(&type_id))
     }
@@ -49,14 +49,14 @@ mod tests {
     fn test_routing_table_register_and_lookup() {
         let mut table = RoutingTable::new();
         
-        table.register("gts.hypernetix.hyperspot.ax.query.v1~acme.analytics._.test.v1", "feature-one").unwrap();
-        table.register("gts.hypernetix.hyperspot.ax.schema.v1~acme.analytics._.test.v1", "feature-two").unwrap();
+        table.register("gts.hypernetix.hyperspot.ax.query.v1~acme.analytics._.test.v1", "query-handler").unwrap();
+        table.register("gts.hypernetix.hyperspot.ax.schema.v1~acme.analytics._.test.v1", "schema-handler").unwrap();
         
         let handler = table.lookup("gts.hypernetix.hyperspot.ax.query.v1~acme.analytics._.instance_123.v1").unwrap();
-        assert_eq!(handler, Some(&"feature-one".to_string()));
+        assert_eq!(handler, Some(&"query-handler".to_string()));
         
         let handler = table.lookup("gts.hypernetix.hyperspot.ax.schema.v1~acme.analytics._.instance_456.v1").unwrap();
-        assert_eq!(handler, Some(&"feature-two".to_string()));
+        assert_eq!(handler, Some(&"schema-handler".to_string()));
     }
 
     #[test]
@@ -73,7 +73,7 @@ mod tests {
         
         for i in 0..100 {
             let type_pattern = format!("gts.hypernetix.hyperspot.ax.type_{}.v1~acme.analytics._.test.v1", i);
-            table.register(&type_pattern, format!("feature-{}", i)).unwrap();
+            table.register(&type_pattern, format!("handler-{}", i)).unwrap();
         }
         
         assert_eq!(table.len(), 100);
@@ -94,13 +94,13 @@ mod tests {
         let mut table = RoutingTable::new();
         
         let patterns = vec![
-            ("gts.hypernetix.hyperspot.ax.schema.v1~acme.analytics._.test.v1", "feature-schema-query-returns"),
-            ("gts.hypernetix.hyperspot.ax.query.v1~acme.analytics._.test.v1", "feature-query-definitions"),
-            ("gts.hypernetix.hyperspot.ax.query_capabilities.v1~acme.analytics._.test.v1", "feature-query-capabilities"),
+            ("gts.hypernetix.hyperspot.ax.schema.v1~acme.analytics._.test.v1", "schema-handler"),
+            ("gts.hypernetix.hyperspot.ax.query.v1~acme.analytics._.test.v1", "query-handler"),
+            ("gts.hypernetix.hyperspot.ax.query_capabilities.v1~acme.analytics._.test.v1", "query-capabilities-handler"),
         ];
         
-        for (pattern, feature) in &patterns {
-            table.register(pattern, *feature).unwrap();
+        for (pattern, handler) in &patterns {
+            table.register(pattern, *handler).unwrap();
         }
         
         for (pattern, expected_feature) in &patterns {

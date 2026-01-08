@@ -45,14 +45,14 @@ pub async fn get_entity(
     Extension(ctx): Extension<SecurityCtx>,
     Extension(router): Extension<Arc<GtsCoreRouter>>,
 ) -> Result<Json<GtsEntityDto>, Problem> {
-    // Route to appropriate domain feature
+    // Route to appropriate domain handler
     match router.route(&id) {
-        Ok(Some(feature_name)) => {
-            // TODO: Actual domain feature call
+        Ok(Some(handler_id)) => {
+            // TODO: Call domain handler service
             Ok(Json(GtsEntityDto {
                 id: id.clone(),
-                type_id: "gts.example.type.v1~".to_string(),
-                entity: serde_json::json!({"routed_to": feature_name}),
+                type_id: "gts.hypernetix.hyperspot.analytics.example.v1~".to_string(),
+                entity: serde_json::json!({"routed_to": handler_id}),
                 tenant: format!("{:?}", ctx.scope()),
                 registered_at: chrono::Utc::now().to_rfc3339(),
             }))
@@ -96,7 +96,7 @@ pub async fn create_entity(
     
     Ok((StatusCode::CREATED, Json(GtsEntityDto {
         id: entity_id.clone(),
-        type_id: "gts.example.type.v1~".to_string(),
+        type_id: "gts.hypernetix.hyperspot.analytics.example.v1~".to_string(),
         entity: request.entity,
         tenant: format!("{:?}", ctx.scope()),
         registered_at: chrono::Utc::now().to_rfc3339(),
@@ -113,7 +113,7 @@ pub async fn update_entity(
     // TODO: Validate and update entity
     Ok(Json(GtsEntityDto {
         id: id.clone(),
-        type_id: "gts.example.type.v1~".to_string(),
+        type_id: "gts.hypernetix.hyperspot.analytics.example.v1~".to_string(),
         entity: request.entity,
         tenant: format!("{:?}", ctx.scope()),
         registered_at: chrono::Utc::now().to_rfc3339(),
@@ -131,7 +131,7 @@ pub async fn patch_entity(
     // TODO: Apply patch
     Ok(Json(GtsEntityDto {
         id: id.clone(),
-        type_id: "gts.example.type.v1~".to_string(),
+        type_id: "gts.hypernetix.hyperspot.analytics.example.v1~".to_string(),
         entity: serde_json::json!({"patched": true}),
         tenant: format!("{:?}", ctx.scope()),
         registered_at: chrono::Utc::now().to_rfc3339(),

@@ -28,7 +28,7 @@ mod routing_tests {
         
         let test_identifiers = vec![
             "gts.hypernetix.hyperspot.ax.query.v1~test.mock._.test_query.v1",
-            "gts.test.type.v1~test.mock._.uuid_12345.v1",
+            "gts.hypernetix.hyperspot.analytics.test.v1~test.mock._.uuid_12345.v1",
             "gts.vendor.pkg.ns.type.v1~vendor.mock._.instance.v1",
         ];
         
@@ -49,8 +49,8 @@ mod routing_tests {
                 "gts.vendor.pkg.ns.type.v1~",
             ),
             (
-                "gts.test.query.v1~my-query.v1",
-                "gts.test.query.v1~",
+                "gts.hypernetix.hyperspot.analytics.query.v1~my-query.v1",
+                "gts.hypernetix.hyperspot.analytics.query.v1~",
             ),
             (
                 "gts.hypernetix.hyperspot.ax.query.v1~550e8400-e29b-41d4-a716-446655440000.v1",
@@ -69,7 +69,7 @@ mod routing_tests {
 
     #[test]
     fn test_gts_identifier_handles_named_instances() {
-        let identifier = "gts.test.type.v1~my-named-instance.v1";
+        let identifier = "gts.hypernetix.hyperspot.analytics.test.v1~my-named-instance.v1";
         let parts: Vec<&str> = identifier.split('~').collect();
         
         assert_eq!(parts.len(), 2);
@@ -79,7 +79,7 @@ mod routing_tests {
 
     #[test]
     fn test_gts_identifier_handles_uuid_instances() {
-        let identifier = "gts.test.type.v1~550e8400-e29b-41d4-a716-446655440000.v1";
+        let identifier = "gts.hypernetix.hyperspot.analytics.test.v1~550e8400-e29b-41d4-a716-446655440000.v1";
         let parts: Vec<&str> = identifier.split('~').collect();
         
         assert_eq!(parts.len(), 2);
@@ -168,9 +168,9 @@ mod routing_tests {
     #[test]
     fn test_multi_feature_metadata_aggregation() {
         let mock_features = vec![
-            ("gts.test.query.v1~", "Query"),
-            ("gts.test.template.v1~", "Template"),
-            ("gts.test.datasource.v1~", "Datasource"),
+            ("gts.hypernetix.hyperspot.analytics.query.v1~", "Query"),
+            ("gts.hypernetix.hyperspot.analytics.template.v1~", "Template"),
+            ("gts.hypernetix.hyperspot.analytics.datasource.v1~", "Datasource"),
         ];
         
         assert_eq!(mock_features.len(), 3);
@@ -267,7 +267,7 @@ mod routing_tests {
         
         let routing_table: HashMap<String, String> = HashMap::new();
         
-        let gts_type = "gts.unknown.type.v1~";
+        let gts_type = "gts.hypernetix.hyperspot.analytics.unknown.v1~";
         let result = routing_table.get(gts_type);
         
         assert!(result.is_none());
@@ -464,7 +464,7 @@ mod error_handling_tests {
     fn test_rfc7807_format_for_all_error_types() {
         let test_errors = vec![
             GtsCoreError::UnknownGtsType {
-                gts_type: "gts.unknown.v1~".to_string(),
+                gts_type: "gts.hypernetix.hyperspot.analytics.unknown.v1~".to_string(),
                 instance: "/test".to_string(),
             },
             GtsCoreError::InvalidJwt {
@@ -481,7 +481,7 @@ mod error_handling_tests {
                 instance: "/test".to_string(),
             },
             GtsCoreError::DomainFeatureUnavailable {
-                gts_type: "gts.test.v1~".to_string(),
+                gts_type: "gts.hypernetix.hyperspot.analytics.test.v1~".to_string(),
                 instance: "/test".to_string(),
             },
         ];

@@ -28,14 +28,14 @@ Thin routing layer for GTS unified API - delegates to domain-specific features. 
 
 This feature **owns no GTS types** - it is a pure routing layer.
 
-**Routes to domain features** that own types:
-- `gts://gts.hypernetix.hyperspot.ax.schema.v1~*` → feature-schema-query-returns
-- `gts://gts.hypernetix.hyperspot.ax.query.v1~*` → feature-query-definitions  
-- `gts://gts.hypernetix.hyperspot.ax.template.v1~*` → feature-widget-templates, feature-values-selector-templates
-- `gts://gts.hypernetix.hyperspot.ax.datasource.v1~*` → feature-datasources
-- `gts://gts.hypernetix.hyperspot.ax.item.v1~*` → feature-widget-items, feature-group-items
-- `gts://gts.hypernetix.hyperspot.ax.layout.v1~*` → feature-dashboard-layouts, feature-report-layouts
-- `gts://gts.hypernetix.hyperspot.ax.category.v1~*` → feature-categories
+**Routes to domain handlers**:
+- `gts://gts.hypernetix.hyperspot.ax.schema.v1~*` → schema-handler
+- `gts://gts.hypernetix.hyperspot.ax.query.v1~*` → query-handler
+- `gts://gts.hypernetix.hyperspot.ax.template.v1~*` → widget-template-handler, values-selector-handler
+- `gts://gts.hypernetix.hyperspot.ax.datasource.v1~*` → datasource-handler
+- `gts://gts.hypernetix.hyperspot.ax.item.v1~*` → widget-item-handler, group-item-handler
+- `gts://gts.hypernetix.hyperspot.ax.layout.v1~*` → dashboard-layout-handler, report-layout-handler
+- `gts://gts.hypernetix.hyperspot.ax.category.v1~*` → category-handler
 
 ### OpenAPI Endpoints
 
@@ -261,17 +261,17 @@ The GTS Core routes requests to domain-specific features based on GTS type ident
 
 **Routing Table**:
 
-| GTS Type Pattern | Routed To Feature |
+| GTS Type Pattern | Domain Handler ID |
 |-----------------|-------------------|
-| `gts://gts.hypernetix.hyperspot.ax.schema.v1~*` | feature-schema-query-returns |
-| `gts://gts.hypernetix.hyperspot.ax.query.v1~*` | feature-query-definitions |
-| `gts://gts.hypernetix.hyperspot.ax.query_capabilities.v1~*` | feature-query-capabilities |
-| `gts://gts.hypernetix.hyperspot.ax.template.v1~widget.v1~*` | feature-widget-templates |
-| `gts://gts.hypernetix.hyperspot.ax.template.v1~values_selector.v1~*` | feature-values-selector-templates |
-| `gts://gts.hypernetix.hyperspot.ax.datasource.v1~*` | feature-datasources |
-| `gts://gts.hypernetix.hyperspot.ax.item.v1~widget.v1~*` | feature-widget-items |
-| `gts://gts.hypernetix.hyperspot.ax.layout.v1~dashboard.v1~*` | feature-dashboard-layouts |
-| `gts://gts.hypernetix.hyperspot.ax.category.v1~*` | feature-categories |
+| `gts://gts.hypernetix.hyperspot.ax.schema.v1~*` | schema-handler |
+| `gts://gts.hypernetix.hyperspot.ax.query.v1~*` | query-handler |
+| `gts://gts.hypernetix.hyperspot.ax.query_capabilities.v1~*` | query-capabilities-handler |
+| `gts://gts.hypernetix.hyperspot.ax.template.v1~widget.v1~*` | widget-template-handler |
+| `gts://gts.hypernetix.hyperspot.ax.template.v1~values_selector.v1~*` | values-selector-handler |
+| `gts://gts.hypernetix.hyperspot.ax.datasource.v1~*` | datasource-handler |
+| `gts://gts.hypernetix.hyperspot.ax.item.v1~widget.v1~*` | widget-item-handler |
+| `gts://gts.hypernetix.hyperspot.ax.layout.v1~dashboard.v1~*` | dashboard-layout-handler |
+| `gts://gts.hypernetix.hyperspot.ax.category.v1~*` | category-handler |
 
 **Complexity**: O(1) - Hash table lookup
 

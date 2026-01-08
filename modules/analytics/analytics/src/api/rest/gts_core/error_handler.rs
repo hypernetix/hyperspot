@@ -247,14 +247,14 @@ mod tests {
     #[test]
     fn test_routing_error_format() {
         let problem = ProblemDetails::routing_error(
-            "No domain feature registered for GTS type 'gts.unknown.type.v1~'",
-            Some("/api/analytics/v1/gts/gts.unknown.type.v1~test.v1".to_string()),
+            "No domain feature registered for GTS type 'gts.hypernetix.hyperspot.analytics.unknown.v1~'",
+            Some("/api/analytics/v1/gts/gts.hypernetix.hyperspot.analytics.unknown.v1~test.v1".to_string()),
         );
 
         assert_eq!(problem.status, 404);
         assert_eq!(problem.title, "Routing Failed");
         assert_eq!(problem.problem_type, "https://hyperspot.dev/problems/routing-failed");
-        assert!(problem.detail.contains("gts.unknown.type.v1~"));
+        assert!(problem.detail.contains("gts.hypernetix.hyperspot.analytics.unknown.v1~"));
         assert!(!problem.trace_id.is_empty());
     }
 

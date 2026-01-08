@@ -22,8 +22,8 @@ mod tests {
 
     fn create_test_router() -> GtsCoreRouter {
         let mut table = RoutingTable::new();
-        table.register("gts.hypernetix.hyperspot.ax.query.v1~acme.analytics._.test.v1", "feature-one").unwrap();
-        table.register("gts.hypernetix.hyperspot.ax.schema.v1~acme.analytics._.test.v1", "feature-two").unwrap();
+        table.register("gts.hypernetix.hyperspot.ax.query.v1~acme.analytics._.test.v1", "query-handler").unwrap();
+        table.register("gts.hypernetix.hyperspot.ax.schema.v1~acme.analytics._.test.v1", "schema-handler").unwrap();
         GtsCoreRouter::new(table)
     }
 
@@ -31,11 +31,11 @@ mod tests {
     fn test_router_routes_to_correct_feature() {
         let router = create_test_router();
         
-        let feature = router.route("gts.hypernetix.hyperspot.ax.query.v1~acme.analytics._.instance_123.v1").unwrap();
-        assert_eq!(feature, Some("feature-one"));
+        let handler = router.route("gts.hypernetix.hyperspot.ax.query.v1~acme.analytics._.instance_123.v1").unwrap();
+        assert_eq!(handler, Some("query-handler"));
         
-        let feature = router.route("gts.hypernetix.hyperspot.ax.schema.v1~acme.analytics._.instance_456.v1").unwrap();
-        assert_eq!(feature, Some("feature-two"));
+        let handler = router.route("gts.hypernetix.hyperspot.ax.schema.v1~acme.analytics._.instance_456.v1").unwrap();
+        assert_eq!(handler, Some("schema-handler"));
     }
 
     #[test]
