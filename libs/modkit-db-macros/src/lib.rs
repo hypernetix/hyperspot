@@ -1,5 +1,3 @@
-// Proc-macro crate for modkit-db secure ORM derives
-//
 //! # modkit-db-macros
 //!
 //! Procedural macros for the `modkit-db` secure ORM layer.
@@ -40,13 +38,18 @@
 //! - **Owner**: `owner_col = "column_name"` OR `no_owner`
 //! - **Type**: `type_col = "column_name"` OR `no_type`
 //! - **Unrestricted**: `unrestricted` (forbids all other attributes)
+//!
+//! ## Note on `OData` Macros
+//!
+//! OData-related derives like `ODataFilterable` have been moved to `modkit-odata-macros`.
+//! Use that crate for `OData` protocol macros.
+
 #![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 
 use proc_macro::TokenStream;
 use proc_macro_error2::proc_macro_error;
 use syn::{parse_macro_input, DeriveInput};
 
-mod odata_filterable;
 mod scopable;
 
 /// Derive macro for implementing `ScopableEntity`.
@@ -103,77 +106,4 @@ mod scopable;
 pub fn derive_scopable(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     scopable::expand_derive_scopable(input).into()
-}
-
-/// Derive macro for implementing type-safe `OData` filtering on DTOs.
-///
-/// This macro generates a `FilterField` enum and implementation for a DTO struct,
-/// allowing type-safe field references in `OData` filter expressions.
-///
-/// # Attributes
-///
-/// Fields can be marked as filterable using `#[odata(filter(kind = "..."))]`:
-///
-/// - `kind`: The logical field type (String, I64, F64, Bool, Uuid, `DateTimeUtc`, Date, Time, Decimal)
-///
-/// # Example
-///
-/// ```ignore
-/// use modkit_db_macros::ODataFilterable;
-///
-/// #[derive(ODataFilterable)]
-/// pub struct UserDto {
-///     #[odata(filter(kind = "Uuid"))]
-///     pub id: uuid::Uuid,
-///     
-///     #[odata(filter(kind = "String"))]
-///     pub email: String,
-///     
-///     #[odata(filter(kind = "DateTimeUtc"))]
-///     pub created_at: chrono::DateTime<chrono::Utc>,
-///     
-///     // This field is not filterable (no attribute)
-///     pub internal_data: String,
-/// }
-/// ```
-///
-/// This generates:
-///
-/// ```ignore
-/// #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-/// pub enum UserDtoFilterField {
-///     Id,
-///     Email,
-///     CreatedAt,
-/// }
-///
-/// impl FilterField for UserDtoFilterField {
-///     const FIELDS: &'static [Self] = &[
-///         UserDtoFilterField::Id,
-///         UserDtoFilterField::Email,
-///         UserDtoFilterField::CreatedAt,
-///     ];
-///
-///     fn name(&self) -> &'static str {
-///         match self {
-///             UserDtoFilterField::Id => "id",
-///             UserDtoFilterField::Email => "email",
-///             UserDtoFilterField::CreatedAt => "created_at",
-///         }
-///     }
-///
-///     fn kind(&self) -> FieldKind {
-///         match self {
-///             UserDtoFilterField::Id => FieldKind::Uuid,
-///             UserDtoFilterField::Email => FieldKind::String,
-///             UserDtoFilterField::CreatedAt => FieldKind::DateTimeUtc,
-///         }
-///     }
-/// }
-/// ```
-#[proc_macro_derive(ODataFilterable, attributes(odata))]
-#[proc_macro_error]
-pub fn derive_odata_filterable(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as DeriveInput);
-    odata_filterable::expand_derive_odata_filterable(input).into()
 }

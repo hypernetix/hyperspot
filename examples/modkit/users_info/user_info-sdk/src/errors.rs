@@ -5,16 +5,16 @@
 use thiserror::Error;
 use uuid::Uuid;
 
-/// Errors that can be returned by the `UsersInfoApi`.
+/// Errors that can be returned by the `UsersInfoClient`.
 #[derive(Error, Debug, Clone)]
 pub enum UsersInfoError {
-    /// User with the specified ID was not found.
-    #[error("User not found: {id}")]
+    /// Resource with the specified ID was not found.
+    #[error("Resource not found: {id}")]
     NotFound { id: Uuid },
 
-    /// A user with the specified email already exists.
-    #[error("User with email '{email}' already exists")]
-    Conflict { email: String },
+    /// A resource with the specified identifier already exists.
+    #[error("Resource with identifier '{identifier}' already exists")]
+    Conflict { identifier: String },
 
     /// Validation error with the provided data.
     #[error("Validation error: {message}")]
@@ -23,6 +23,14 @@ pub enum UsersInfoError {
     /// An internal error occurred.
     #[error("Internal error")]
     Internal,
+
+    /// Feature not yet implemented.
+    #[error("Feature not implemented")]
+    NotImplemented,
+
+    /// Streaming or pagination failure in cursor-based APIs.
+    #[error("Streaming error: {message}")]
+    Streaming { message: String },
 }
 
 impl UsersInfoError {
@@ -33,9 +41,9 @@ impl UsersInfoError {
     }
 
     /// Create a Conflict error.
-    pub fn conflict(email: impl Into<String>) -> Self {
+    pub fn conflict(identifier: impl Into<String>) -> Self {
         Self::Conflict {
-            email: email.into(),
+            identifier: identifier.into(),
         }
     }
 
@@ -50,5 +58,18 @@ impl UsersInfoError {
     #[must_use]
     pub fn internal() -> Self {
         Self::Internal
+    }
+
+    /// Create a `NotImplemented` error.
+    #[must_use]
+    pub fn not_implemented() -> Self {
+        Self::NotImplemented
+    }
+
+    /// Create a streaming error.
+    pub fn streaming(message: impl Into<String>) -> Self {
+        Self::Streaming {
+            message: message.into(),
+        }
     }
 }

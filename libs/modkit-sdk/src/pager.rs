@@ -7,24 +7,24 @@
 //!
 //! ```rust,ignore
 //! use modkit_sdk::pager::{CursorPager, PagerError};
-//! use modkit_sdk::odata::QueryBuilder;
+//! use modkit_sdk::odata::{items_stream, pages_stream, QueryBuilder};
 //! use futures_util::StreamExt;
 //!
 //! // Stream of pages
-//! let pages = QueryBuilder::<UserSchema>::new()
-//!     .filter(NAME.contains("john"))
-//!     .page_size(50)
-//!     .pages_stream(|query| async move {
-//!         client.list_users(query).await
-//!     });
+//! let pages = pages_stream(
+//!     QueryBuilder::<UserSchema>::new()
+//!         .filter(NAME.contains("john"))
+//!         .page_size(50),
+//!     |query| async move { client.list_users(query).await },
+//! );
 //!
 //! // Stream of items
-//! let items = QueryBuilder::<UserSchema>::new()
-//!     .filter(NAME.contains("john"))
-//!     .page_size(50)
-//!     .items_stream(|query| async move {
-//!         client.list_users(query).await
-//!     });
+//! let items = items_stream(
+//!     QueryBuilder::<UserSchema>::new()
+//!         .filter(NAME.contains("john"))
+//!         .page_size(50),
+//!     |query| async move { client.list_users(query).await },
+//! );
 //!
 //! // Consume the stream
 //! while let Some(result) = items.next().await {

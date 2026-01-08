@@ -1,8 +1,0 @@
-error[E0599]: no method named `contains` found for struct `FieldRef<UserSchema, i32>` in the current scope
-  --> tests/ui/fail/string_op_on_int_field.rs:11:25
-   |
-11 |     let _ = user::age().contains("test");
-   |                         ^^^^^^^^ method not found in `FieldRef<UserSchema, i32>`
-   |
-   = note: the method was found for
-           - `FieldRef<S, String>`

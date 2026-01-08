@@ -1,7 +1,6 @@
 use axum::extract::{FromRequestParts, Query};
 use axum::http::request::Parts;
-use modkit_odata::{ast, CursorV1, Error as ODataError, ODataOrderBy, OrderKey, SortDir};
-use odata_params::filters as od;
+use modkit_odata::{CursorV1, Error as ODataError, ODataOrderBy, OrderKey, SortDir};
 use serde::Deserialize;
 
 // Re-export types from modkit-odata for convenience and better DX
@@ -149,18 +148,6 @@ pub async fn extract_odata_query<S>(
 where
     S: Send + Sync,
 {
-    // Complexity budget (node count)
-    fn count_nodes(e: &od::Expr) -> usize {
-        use od::Expr::{And, Compare, Function, Identifier, In, Not, Or, Value};
-        match e {
-            Value(_) | Identifier(_) => 1,
-            Not(x) => 1 + count_nodes(x),
-            And(a, b) | Or(a, b) | Compare(a, _, b) => 1 + count_nodes(a) + count_nodes(b),
-            In(a, list) => 1 + count_nodes(a) + list.iter().map(count_nodes).sum::<usize>(),
-            Function(_, args) => 1 + args.iter().map(count_nodes).sum::<usize>(),
-        }
-    }
-
     // Parse query; default if missing
     let Query(params) = Query::<ODataParams>::from_request_parts(parts, state)
         .await
@@ -176,19 +163,30 @@ where
                 return Err(crate::api::bad_request("Filter too long"));
             }
 
-            // Parse into odata_params AST
-            let ast_src = od::parse_str(raw)
-                .map_err(|e| crate::api::bad_request(format!("invalid $filter: {e:?}")))?;
+            // Parse filter string using modkit-odata
+            let parsed = modkit_odata::parse_filter_string(raw).map_err(|e| {
+                // Log parser details for debugging (no PII - only length)
+                tracing::debug!(error = %e, filter_len = raw.len(), "OData filter parsing failed");
 
-            if count_nodes(&ast_src) > MAX_NODES {
+                // Delegate to centralized error mapping (single source of truth)
+                // This handles ParsingUnavailable → 500 and InvalidFilter → 400
+                crate::api::odata::odata_error_to_problem(&e, parts.uri.path(), None)
+            })?;
+
+            if parsed.node_count() > MAX_NODES {
+                tracing::debug!(
+                    node_count = parsed.node_count(),
+                    max_nodes = MAX_NODES,
+                    "Filter complexity budget exceeded"
+                );
                 return Err(crate::api::bad_request("Filter too complex"));
             }
 
-            // Convert to transport-agnostic core AST
-            let core_expr: ast::Expr = ast_src.into();
+            // Generate filter hash for cursor consistency (use non-consuming accessor)
+            let filter_hash = modkit_odata::pagination::short_filter_hash(Some(parsed.as_expr()));
 
-            // Generate filter hash for cursor consistency
-            let filter_hash = modkit_odata::pagination::short_filter_hash(Some(&core_expr));
+            // Extract expression for query
+            let core_expr = parsed.into_expr();
 
             query = query.with_filter(core_expr);
             if let Some(hash) = filter_hash {

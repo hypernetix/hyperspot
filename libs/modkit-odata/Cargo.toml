@@ -10,6 +10,7 @@ workspace = true
 [features]
 with-odata-params = ["dep:odata-params"]
 with-utoipa = ["dep:utoipa"]
+chrono = []
 
 [dependencies]
 modkit-errors = { path = "../modkit-errors" }

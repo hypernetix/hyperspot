@@ -4,10 +4,11 @@
 //! into `SeaORM` conditions. Concrete modules only need to provide a mapping from
 //! their DTO field enum to `SeaORM` Column types via the `FieldToColumn` trait.
 
-use crate::odata::filter::{FilterField, FilterNode, FilterOp, ODataValue};
-use crate::odata::{convert_expr_to_filter_node, FieldKind};
 use bigdecimal::ToPrimitive;
 use chrono::SecondsFormat;
+use modkit_odata::filter::{
+    convert_expr_to_filter_node, FieldKind, FilterField, FilterNode, FilterOp, ODataValue,
+};
 use modkit_odata::{CursorV1, Error as ODataError, ODataOrderBy, Page, PageInfo, SortDir};
 use sea_orm::{
     sea_query::{Expr, Order},

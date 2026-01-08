@@ -39,4 +39,4 @@ pub use secured::{Secured, WithSecurityContext};
 
 // Re-export proc-macros (feature-gated)
 #[cfg(feature = "derive")]
-pub use modkit_sdk_macros::ODataSchema;
+pub use modkit_odata_macros::ODataSchema;
