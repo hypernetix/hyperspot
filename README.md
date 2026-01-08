@@ -90,7 +90,7 @@ logging:
 
 # Per-module configurations moved under modules section
 modules:
-  api_ingress:
+  api_gateway:
     bind_addr: "127.0.0.1:8087"
     enable_docs: true
     cors_enabled: false
@@ -142,7 +142,7 @@ logging:
 
 # Per-module configuration
 modules:
-  api_ingress:
+  api_gateway:
     config:
       bind_addr: "127.0.0.1:8087"
       enable_docs: true
@@ -162,7 +162,7 @@ Configuration supports environment variable overrides with `HYPERSPOT_` prefix:
 
 ```bash
 export HYPERSPOT_DATABASE_URL="postgres://user:pass@localhost/db"
-export HYPERSPOT_MODULES_API_INGRESS_BIND_ADDR="0.0.0.0:8080"
+export HYPERSPOT_MODULES_api_gateway_BIND_ADDR="0.0.0.0:8080"
 export HYPERSPOT_LOGGING_DEFAULT_CONSOLE_LEVEL="debug"
 ```
 
@@ -175,7 +175,7 @@ make test
 cargo test
 
 # Run specific module tests
-cargo test -p api_ingress
+cargo test -p api_gateway
 cargo test -p modkit
 
 # Integration tests with database

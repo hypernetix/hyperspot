@@ -193,7 +193,7 @@ If you see "Server not responding" when running local tests:
 
 ### Tenant Resolver Gateway example (local)
 
-If you run the server with `[config/e2e-local.yaml](config/e2e-local.yaml)`, note that it binds `api_ingress` to **8086**.
+If you run the server with `[config/e2e-local.yaml](config/e2e-local.yaml)`, note that it binds `api_gateway` to **8086**.
 
 Example:
 

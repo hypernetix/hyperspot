@@ -536,7 +536,7 @@ pub enum RegistryError {
         #[source]
         source: anyhow::Error,
     },
-    #[error("REST phase requires an ingress host: modules with capability 'rest' found, but no module with capability 'rest_host'")]
+    #[error("REST phase requires an gateway host: modules with capability 'rest' found, but no module with capability 'rest_host'")]
     RestRequiresHost,
     #[error("multiple 'rest_host' modules detected; exactly one is allowed")]
     MultipleRestHosts,

@@ -230,7 +230,9 @@ hyperspot/
 ├── examples/          # Example modules and usage patterns
 ├── guidelines/        # Coding standards and best practices for LLMs
 ├── libs/              # Shared libraries (modkit, modkit-db, modkit-auth, etc.)
-├── modules/           # Business logic modules (chat, file_parser, etc.)
+├── modules/           # Business logic modules
+│   ├── system/        # Core system modules (api_gateway, grpc_hub, module_orchestrator, nodes_registry, types-registry)
+│   └── ...            # User modules (file_parser, etc.)
 ├── scripts/           # Custom scripts for build, testing, etc.
 └── testing/           # E2E and integration tests (pytest)
 ```
@@ -266,7 +268,7 @@ modules/<module-name>/
 ├── tests/                            # Optional
 └── (optional extras: gts/, openspec/, build.rs, etc.)
 
-# SDK pattern (used by e.g. `modules/types-registry/` and `examples/modkit/users_info/`)
+# SDK pattern (used by e.g. `modules/system/types-registry/` and `examples/modkit/users_info/`)
 modules/<module-dir>/
 ├── <module-name>-sdk/
 │   ├── Cargo.toml
@@ -326,7 +328,7 @@ Every HyperSpot module uses the **ModKit** framework, which provides:
  **Key ModKit libraries:**
  - `modkit` - Core module framework: lifecycle, REST host/contracts, OpenAPI registry, ClientHub, tracing helpers
  - `modkit-macros` - Procedural macros for module registration (`#[modkit::module(...)]`)
- - `modkit-auth` - Authn/z plumbing for ingress and route policies
+ - `modkit-auth` - Authn/z plumbing for gateway and route policies
  - `modkit-security` - `SecurityCtx` and security-scoping primitives used across modules (request-scoped context)
  - `modkit-errors` - Shared error types and RFC-9457 Problem modeling utilities
  - `modkit-errors-macro` - Macros/codegen for error catalogs

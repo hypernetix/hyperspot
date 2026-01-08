@@ -1,0 +1,25 @@
+[package]
+name = "nodes_registry"
+version.workspace = true
+publish = false
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+tracing = { workspace = true }
+inventory = { workspace = true }
+serde = { workspace = true }
+utoipa = { workspace = true }
+axum = { workspace = true, features = ["macros"] }
+chrono = { workspace = true, features = ["serde"] }
+uuid = { workspace = true }
+arc-swap = { workspace = true }
+thiserror = { workspace = true }
+
+modkit = { path = "../../../libs/modkit" }
+modkit-node-info = { path = "../../../libs/modkit-node-info" }

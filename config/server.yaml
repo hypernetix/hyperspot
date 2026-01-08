@@ -46,8 +46,8 @@ logging:
     max_age_days: 28
     max_backups: 3
     max_size_mb: 1000
-  # api_ingress section
-  api_ingress:
+  # api_gateway section
+  api_gateway:
     console_level: info
     file: "logs/api.log"
     file_level: warn
@@ -57,8 +57,8 @@ logging:
 
 # Per-module configurations moved under modules section
 modules:
-  api_ingress:
-    # No database needed for api_ingress
+  api_gateway:
+    # No database needed for api_gateway
     config:
       bind_addr: "127.0.0.1:8087"
       enable_docs: true

@@ -72,7 +72,7 @@ modkit-odata = { path = "../../../../libs/modkit-odata", features = ["with-utoip
 
 [dev-dependencies]
 tower = { workspace = true, features = ["util"] }
-api_ingress = { path = "../../../../modules/api_ingress" }
+api_gateway = { path = "../../../../modules/system/api_gateway" }
 serde_json = { workspace = true }
 testcontainers = { workspace = true }
 testcontainers-modules = { workspace = true, features = ["postgres"] }

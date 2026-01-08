@@ -9,7 +9,7 @@ also describes the DDD-light layering and conventions used across modules.
 ## What ModKit provides
 
 * **Composable modules** discovered via `inventory`, initialized in dependency order.
-* **Ingress as a module** (e.g., `api_ingress`) that owns the Axum router and OpenAPI document.
+* **Gateway as a module** (e.g., `api_gateway`) that owns the Axum router and OpenAPI document.
 * **Type-safe REST** via an operation builder that prevents half-wired routes at compile time.
 * **Server-Sent Events (SSE)** with type-safe broadcasters and domain event integration.
 * **OpenAPI 3.1** generation using `utoipa` with automatic schema registration for DTOs.
@@ -145,7 +145,7 @@ Attach the attribute to your main struct. The macro:
 ```rust
 #[modkit::module(
     name = "my_module",
-    deps = ["foo", "bar"], // api_ingress dependency will be added automatically for rest module capability
+    deps = ["foo", "bar"], // api_gateway dependency will be added automatically for rest module capability
     capabilities = [db, rest, stateful, /* rest_host if you own the HTTP server */],
     client = contract::client::MyModuleApi,
     ctor = MyModule::new(),
@@ -160,7 +160,7 @@ pub struct MyModule {
 
 * `db` → implement `DbModule` (migrations / schema setup).
 * `rest` → implement `RestfulModule` (register routes synchronously).
-* `rest_host` → own the Axum server/OpenAPI (e.g., `api_ingress`).
+* `rest_host` → own the Axum server/OpenAPI (e.g., `api_gateway`).
 * `stateful` → background job:
 
     * With `lifecycle(...)`, the macro generates `Runnable` and registers `WithLifecycle<Self>`.
@@ -183,15 +183,15 @@ Generated helpers:
 
 ```rust
 #[modkit::module(
-    name = "api_ingress",
+    name = "api_gateway",
     capabilities = [rest_host, rest, stateful],
     lifecycle(entry = "serve", stop_timeout = "30s", await_ready)
 )]
-pub struct ApiIngress {
+pub struct ApiGateway {
     /* ... */
 }
 
-impl ApiIngress {
+impl ApiGateway {
     // accepted signatures:
     // 1) async fn serve(self: Arc<Self>, cancel: CancellationToken) -> Result<()>
     // 2) async fn serve(self: Arc<Self>, cancel: CancellationToken, ready: ReadySignal) -> Result<()>
@@ -722,7 +722,7 @@ OperationBuilder::<Missing, Missing, S>::post("/my-module/v1/path")
 **MIME type validation**
 
 ```rust
-// Configure allowed Content-Type values (enforced by ingress middleware):
+// Configure allowed Content-Type values (enforced by gateway middleware):
 .allow_content_types( & ["application/json", "application/xml"])
 ```
 
@@ -794,7 +794,7 @@ Notes:
 
 - Authenticated operations must call `require_license_features(...)` before `register(...)`.
 - Public routes cannot (and do not need to) call `require_license_features(...)`.
-- `api_ingress` currently enforces license requirements via a stub middleware that only allows the base feature.
+- `api_gateway` currently enforces license requirements via a stub middleware that only allows the base feature.
 
 **OData query options (type-safe, OpenAPI-friendly)**
 
@@ -1379,7 +1379,7 @@ The `.octet_stream_request()` method:
 
 ### MIME type validation
 
-Both helpers automatically configure MIME type validation via the ingress middleware. If a request arrives with a
+Both helpers automatically configure MIME type validation via the gateway middleware. If a request arrives with a
 different Content-Type, it will receive HTTP 415 (Unsupported Media Type).
 
 You can also manually configure allowed types:
@@ -1395,7 +1395,7 @@ OperationBuilder::post("/files/v1/upload")
     .register(router, openapi);
 ```
 
-**Important**: `.allow_content_types()` is independent of the request body schema. It only configures ingress validation
+**Important**: `.allow_content_types()` is independent of the request body schema. It only configures gateway validation
 and doesn't create OpenAPI request body specs. Use it when you want to enforce MIME types but handle the body parsing
 manually in your handler.
 

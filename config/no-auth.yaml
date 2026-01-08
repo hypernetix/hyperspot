@@ -3,7 +3,7 @@
 # WARNING: Only use for single-user on-premise installations
 
 # Module configurations
-api_ingress:
+api_gateway:
   bind_addr: "0.0.0.0:8080"
   enable_docs: true
   cors_enabled: true

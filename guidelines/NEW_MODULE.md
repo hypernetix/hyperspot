@@ -9,7 +9,7 @@ across the Hyperspot ecosystem.
 ModKit provides a powerful framework for building production-grade modules:
 
 - **Composable Modules**: Discovered via `inventory` and initialized in dependency order.
-- **Ingress as a Module**: `api_ingress` owns the Axum router and OpenAPI document.
+- **Gateway as a Module**: `api_gateway` owns the Axum router and OpenAPI document.
 - **Type-Safe REST**: An operation builder prevents half-wired routes at compile time.
 - **Server-Sent Events (SSE)**: Type-safe broadcasters for real-time domain event integration.
 - **Standardized HTTP Errors**: Built-in support for RFC-9457 `Problem` and `ProblemResponse`.
@@ -168,7 +168,7 @@ modkit-odata = { path = "../../libs/modkit-odata" }
 
 [dev-dependencies]
 tower = { workspace = true, features = ["util"] }
-api_ingress = { path = "../../modules/api_ingress" }
+api_gateway = { path = "../../modules/system/api_gateway" }
 ```
 
 #### 1c. Create SDK `src/lib.rs`
@@ -1074,7 +1074,7 @@ Edit `apps/hyperspot-server/Cargo.toml`:
 ```toml
 [dependencies]
 # ... existing dependencies
-api_ingress = { path = "../../modules/api_ingress" }
+api_gateway = { path = "../../modules/system/api_gateway" }
 your_module = { path = "../../modules/your-module" }  # Add this line
 ```
 
@@ -1087,7 +1087,7 @@ Edit `apps/hyperspot-server/src/main.rs` in the `_ensure_modules_linked()` funct
 #[allow(dead_code)]
 fn _ensure_modules_linked() {
     // Make sure all modules are linked
-    let _ = std::any::type_name::<api_ingress::ApiIngress>();
+    let _ = std::any::type_name::<api_gateway::ApiGateway>();
     let _ = std::any::type_name::<your_module::YourModule>();  // Add this line
     #[cfg(feature = "users-info-example")]
     let _ = std::any::type_name::<users_info::UsersInfo>();
@@ -1105,7 +1105,7 @@ external API clients.
 
 1. **Follow the rules below:**
    **Rule:** Strictly follow the [API guideline](./DNA/REST/API.md).
-   **Rule:** Do NOT implement a REST host. `api_ingress` owns the Axum server and OpenAPI. Modules only register routes
+   **Rule:** Do NOT implement a REST host. `api_gateway` owns the Axum server and OpenAPI. Modules only register routes
    via `register_routes(...)`.
    **Rule:** Use `Extension<Arc<Service>>` for dependency injection and attach the service ONCE after all
    routes are registered: `router = router.layer(Extension(service.clone()));`.
@@ -1113,9 +1113,9 @@ external API clients.
    **Rule:** Follow the `<crate>.<resource>.<action>` convention for `operation_id` naming.
    **Rule:** Use `modkit::api::prelude::*` for ergonomic handler types (ApiResult, created_json, no_content).
    **Rule:** Always return RFC 9457 Problem Details for all 4xx/5xx errors via `Problem` (implements `IntoResponse`).
-   **Rule:** Observability is provided by ingress: request tracing and `X-Request-Id` are already handled.
+   **Rule:** Observability is provided by gateway: request tracing and `X-Request-Id` are already handled.
    **Rule:** Do not add transport middlewares (CORS, timeouts, compression, body limits) at module level.
-   **Rule:** Handlers should complete within ~30s (ingress timeout). If work may exceed that, return `202 Accepted`.
+   **Rule:** Handlers should complete within ~30s (gateway timeout). If work may exceed that, return `202 Accepted`.
 
 2. **`src/api/rest/dto.rs`:**
    **Rule:** Create Data Transfer Objects (DTOs) for the REST API. These structs derive `serde` and `utoipa::ToSchema`.
@@ -1742,7 +1742,7 @@ discoverable and include its API endpoints in the OpenAPI documentation.
    ```toml
    # user modules
    file_parser = { path = "../../modules/file_parser" }
-   nodes_registry = { path = "../../modules/nodes_registry" }
+   nodes_registry = { path = "../../modules/system/nodes_registry" }
    your_module = { path = "../../modules/your_module" }  # ADD THIS LINE
    ```
 
@@ -1752,7 +1752,7 @@ discoverable and include its API endpoints in the OpenAPI documentation.
    // This file ensures all modules are linked and registered via inventory
    #![allow(unused_imports)]
 
-   use api_ingress as _;
+   use api_gateway as _;
    // NOTE: built-in infrastructure modules may also be imported here in the real server,
    // but new user modules typically only need to add their own crate.
    use your_module as _;  // ADD THIS LINE
@@ -1832,13 +1832,13 @@ use modkit::api::OpenApiRegistry;
 use std::sync::Arc;
 use tower::ServiceExt;
 
-// Use api_ingress as the OpenAPI registry (it implements OpenApiRegistry)
-use api_ingress::ApiIngress;
+// Use api_gateway as the OpenAPI registry (it implements OpenApiRegistry)
+use api_gateway::ApiGateway;
 
 async fn create_test_router() -> Router {
     let service = create_test_service().await;
     let router = Router::new();
-    let openapi = ApiIngress::default();
+    let openapi = ApiGateway::default();
     your_module::api::rest::routes::register_routes(router, &openapi, service).unwrap()
 }
 

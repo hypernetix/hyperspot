@@ -40,7 +40,7 @@ All modules can be divided into several categories:
 The **Core Platform Integration Modules** layer abstracts integration with core platform services, such as IdP, policy management, licensing, and credentials management that is out of scope of HyperSpot. This keeps HyperSpot reusable: it can run as a standalone platform, or it can integrate into an existing enterprise platform by wiring adapters to the platform’s services.
 
 ## Dependency rules
-- Authentication/authorization: all **external HTTP** traffic is enforced by `api_ingress` middleware, and secure ORM access is scoped by `SecurityCtx`. In-process calls must propagate `SecurityCtx` and use SDK/clients; bypassing middlewares is not permitted for ingress paths.
+- Authentication/authorization: all **external HTTP** traffic is enforced by `api_gateway` middleware, and secure ORM access is scoped by `SecurityCtx`. In-process calls must propagate `SecurityCtx` and use SDK/clients; bypassing middlewares is not permitted for gateway paths.
 - Generative AI Modules MAY depend on Shared Control Plane Modules
 - Generative AI Modules MUST NOT depend on Core Platform Services directly
 - Control Plane Modules MUST NOT depend on GenAI Modules
@@ -48,14 +48,14 @@ The **Core Platform Integration Modules** layer abstracts integration with core 
 - No “cross-category sideways” deps except through contracts.
 - No circular dependencies allowed
 
-## API Ingress Modules
+## API Gateway Modules
 
-API Ingress is the single public entry point into HyperSpot for all external clients. It terminates protocols, exposes versioned REST APIs with OpenAPI documentation, and applies a consistent middleware stack for authentication, authorization hooks, rate limiting, validation, and observability. API Ingress is responsible for request shaping and policy enforcement, but contains no business logic.
+API Gateway is the single public entry point into HyperSpot for all external clients. It terminates protocols, exposes versioned REST APIs with OpenAPI documentation, and applies a consistent middleware stack for authentication, authorization hooks, rate limiting, validation, and observability. API Gateway is responsible for request shaping and policy enforcement, but contains no business logic.
 
-Once a request is validated, it is routed to the appropriate module via stable contracts. All domain decisions and state changes occur downstream, allowing ingress to remain simple, auditable, and scalable while internal modules evolve independently.
+Once a request is validated, it is routed to the appropriate module via stable contracts. All domain decisions and state changes occur downstream, allowing gateway to remain simple, auditable, and scalable while internal modules evolve independently.
 
 Every external request MUST pass through:
-API Ingress → Auth Resolver → Policy Engine → License Resolver → Execution Module → Tenancy Check → Audit/Usage → Response
+API Gateway → Auth Resolver → Policy Engine → License Resolver → Execution Module → Tenancy Check → Audit/Usage → Response
 
 ### API gateway
 #### Responsibility
@@ -63,7 +63,7 @@ Provide the single public API entrypoint for HyperSpot, including request routin
 #### High Level Scenarios
 - [ ] p1 - route versioned HTTP APIs to modules and expose OpenAPI
 - [ ] p1 - enforce request limits, timeouts, and basic middleware
-- [ ] p2 - unified authn/z + license checks at ingress
+- [ ] p2 - unified authn/z + license checks at gateway
 - [ ] p3 - streaming endpoints (SSE) for long-running operations
 - [ ] p4 - multi-region routing and traffic shaping policies
 #### More details
@@ -641,7 +641,7 @@ Core platform egress policy enforcement and governance layer (outbound controls,
 
 ## Sub-scenario - incoming API call processing
 
-This diagram reflects the **actual middleware stack** from `api_ingress` (see `apply_middleware_stack` in `modules/api_ingress/src/lib.rs`).
+This diagram reflects the **actual middleware stack** from `api_gateway` (see `apply_middleware_stack` in `modules/system/api_gateway/src/lib.rs`).
 
 **Middleware execution order (outermost → innermost):**
 1. Request ID (SetRequestId + PropagateRequestId)
@@ -669,7 +669,7 @@ sequenceDiagram
   end
 
   box "HyperSpot"
-    participant I as API gateway (api_ingress)
+    participant I as API gateway (api_gateway)
     participant LIC as License resolver
     participant M as Target module (REST handler)
     participant D as Domain service

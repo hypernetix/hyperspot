@@ -58,7 +58,7 @@ pub trait RestfulModule: Send + Sync {
     ) -> anyhow::Result<Router>;
 }
 
-/// REST host module: handles ingress hosting with prepare/finalize phases.
+/// REST host module: handles gateway hosting with prepare/finalize phases.
 /// Must be sync. Runs during REST phase, but doesn't start the server.
 #[allow(dead_code)]
 pub trait RestHostModule: Send + Sync + 'static {

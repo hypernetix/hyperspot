@@ -26,14 +26,14 @@ modkit = { path = "../../libs/modkit", features = ["otel", "bootstrap"] }
 modkit-db = { path = "../../libs/modkit-db", features = ["sqlite"] }
 
 # System modules
-api_ingress = { path = "../../modules/api_ingress" }
-grpc_hub = { path = "../../modules/grpc_hub" }
-module_orchestrator = { path = "../../modules/module_orchestrator/module_orchestrator" }
-types-registry = { path = "../../modules/types-registry/types-registry" }
+api_gateway = { path = "../../modules/system/api_gateway" }
+grpc_hub = { path = "../../modules/system/grpc_hub" }
+module_orchestrator = { path = "../../modules/system/module_orchestrator/module_orchestrator" }
+types-registry = { path = "../../modules/system/types-registry/types-registry" }
 
 # user modules
 file_parser = { path = "../../modules/file_parser" }
-nodes_registry = { path = "../../modules/nodes_registry" }
+nodes_registry = { path = "../../modules/system/nodes_registry" }
 
 anyhow = { workspace = true }
 tokio = { workspace = true }

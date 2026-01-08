@@ -227,7 +227,7 @@ def categorize_file(rel_path):
             return 'lib', parts[1]
         return 'file', None
     elif rel_path.startswith('modules/'):
-        # Extract module name: modules/api_ingress/... -> api_ingress
+        # Extract module name: modules/api_gateway/... -> api_gateway
         parts = rel_path.split('/')
         if len(parts) >= 2:
             return 'module', parts[1]
@@ -575,13 +575,13 @@ def parse_bind_addr_port(config_file):
         config_file: Path to YAML config file
 
     Returns:
-        int: Port number from api_ingress.bind_addr
+        int: Port number from api_gateway.bind_addr
     """
     config_path = PROJECT_ROOT / config_file
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
 
-    bind_addr = config.get('modules', {}).get('api_ingress', {}).get(
+    bind_addr = config.get('modules', {}).get('api_gateway', {}).get(
         'config', {}).get('bind_addr', '127.0.0.1:8080'
     )
     if ':' not in bind_addr:
@@ -769,7 +769,7 @@ def collect_e2e_local_coverage(
     Args:
         output_dir: Directory to store coverage reports
         config_file: Config file for server
-        test_filter: Optional test path filter (e.g., 'modules/api_ingress')
+        test_filter: Optional test path filter (e.g., 'modules/api_gateway')
         skip_build: If True, skip clean and test execution
     """
     if skip_build:
@@ -1113,7 +1113,7 @@ Examples:
   python scripts/coverage.py e2e-local
 
   # Generate local e2e test coverage for specific module
-  python scripts/coverage.py e2e-local --filter modules/api_ingress
+  python scripts/coverage.py e2e-local --filter modules/api_gateway
 
   # Generate combined coverage (unit + e2e-local)
   python scripts/coverage.py combined
@@ -1137,7 +1137,7 @@ Examples:
     )
     p_unit.add_argument(
         "--filter",
-        help="Filter tests by package name (e.g., modkit-db, api-ingress)",
+        help="Filter tests by package name (e.g., modkit-db, api-gateway)",
         default=None
     )
     p_unit.add_argument(
@@ -1173,7 +1173,7 @@ Examples:
         "--filter",
         help=(
             "Filter E2E tests by path relative to testing/e2e "
-            "(e.g., modules/api_ingress)"
+            "(e.g., modules/api_gateway)"
         ),
         default=None
     )

@@ -224,7 +224,7 @@ pub struct OperationSpec {
     pub rate_limit: Option<RateLimitSpec>,
     /// Optional whitelist of allowed request Content-Type values (without parameters).
     /// Example: Some(vec!["application/json", "multipart/form-data", "application/pdf"])
-    /// When set, ingress middleware will enforce these types and return HTTP 415 for
+    /// When set, gateway middleware will enforce these types and return HTTP 415 for
     /// requests with disallowed Content-Type headers. This is independent of the
     /// request body schema and should not be used to create synthetic request bodies.
     pub allowed_request_content_types: Option<Vec<&'static str>>,
@@ -509,7 +509,7 @@ where
     }
 
     /// Require per-route rate and concurrency limits.
-    /// Stores metadata for the ingress to enforce.
+    /// Stores metadata for the gateway to enforce.
     pub fn require_rate_limit(&mut self, rps: u32, burst: u32, in_flight: u32) -> &mut Self {
         self.spec.rate_limit = Some(RateLimitSpec {
             rps,
@@ -781,10 +781,10 @@ where
     /// Configure allowed request MIME types for this operation.
     ///
     /// This attaches a whitelist of allowed Content-Type values (without parameters),
-    /// which will be enforced by ingress middleware. If a request arrives with a
-    /// Content-Type that is not in this list, ingress will return HTTP 415.
+    /// which will be enforced by gateway middleware. If a request arrives with a
+    /// Content-Type that is not in this list, gateway will return HTTP 415.
     ///
-    /// This is independent of the request body schema - it only configures ingress
+    /// This is independent of the request body schema - it only configures gateway
     /// validation and does not affect `OpenAPI` request body specifications.
     ///
     /// # Example

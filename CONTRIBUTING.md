@@ -140,7 +140,7 @@ Follow a structured commit message format:
 ```
 
 - `<type>`: change category (see table below)
-- `<module>` (optional): the area touched (e.g., api_ingress, modkit, ecommerce)
+- `<module>` (optional): the area touched (e.g., api_gateway, modkit, ecommerce)
 - `<description>`: concise, imperative summary
 
 Accepted commit types:
