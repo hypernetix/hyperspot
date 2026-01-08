@@ -172,7 +172,7 @@ let registry = ctx.client_hub().get::<dyn TypesRegistryApi>()?;
 // Register schema using GTS-provided method for proper $id and $ref handling
 let schema_str = MyModulePluginSpecV1::gts_schema_with_refs_as_string();
 let schema_json: serde_json::Value = serde_json::from_str(&schema_str)?;
-registry.register(&SecurityCtx::root_ctx(), vec![schema_json]).await?;
+registry.register(vec![schema_json]).await?;
 ```
 
 **Plugin registers instance:**
@@ -190,7 +190,7 @@ let instance = BaseModkitPluginV1::<MyModulePluginSpecV1> {
 };
 let instance_json = serde_json::to_value(&instance)?;
 let _ = registry
-    .register(&SecurityCtx::root_ctx(), vec![instance_json])
+    .register(vec![instance_json])
     .await?;
 ```
 
@@ -336,7 +336,7 @@ impl Module for MyGateway {
         let schema_str = MyModulePluginSpecV1::gts_schema_with_refs_as_string();
         let schema_json: serde_json::Value = serde_json::from_str(&schema_str)?;
         let _ = registry
-            .register(&SecurityCtx::root_ctx(), vec![schema_json])
+            .register(vec![schema_json])
             .await?;
         info!("Registered {} schema in types-registry",
             MyModulePluginSpecV1::gts_schema_id().clone());
@@ -420,7 +420,6 @@ impl Service {
         let plugin_type_id = MyModulePluginSpecV1::gts_schema_id().clone();
         let instances = registry
             .list(
-                &SecurityCtx::root_ctx(),
                 ListQuery::new()
                     .with_pattern(format!("{}*", plugin_type_id))
                     .with_is_type(false),
@@ -486,7 +485,7 @@ impl Module for VendorAPlugin {
         };
         let instance_json = serde_json::to_value(&instance)?;
         let _ = registry
-            .register(&SecurityCtx::root_ctx(), vec![instance_json])
+            .register(vec![instance_json])
             .await?;
 
         // 3. Create service and register SCOPED client
@@ -741,7 +740,8 @@ This ensures:
 #[tokio::test]
 async fn test_plugin_implementation() {
     let service = Service::new();
-    let ctx = SecurityCtx::root_ctx();
+    let tenant_id = Uuid::new_v4();
+    let ctx = SecurityCtx::for_tenant(tenant_id, Uuid::new_v4());
 
     let result = service.get_data(&ctx, "test-id").await;
     assert!(result.is_ok());
@@ -766,7 +766,8 @@ async fn test_gateway_plugin_resolution() {
 
     // Test gateway service
     let svc = Service::new(hub, "Test".to_owned());
-    let ctx = SecurityCtx::root_ctx();
+    let tenant_id = Uuid::new_v4();
+    let ctx = SecurityCtx::for_tenant(tenant_id, Uuid::new_v4());
     let result = svc.get_data(&ctx, "id").await;
     assert!(result.is_ok());
 }

@@ -13,7 +13,7 @@ use axum::{
 use modkit_db::secure::SecureConn;
 use modkit_security::SecurityContext;
 use std::sync::Arc;
-use support::{inmem_db, seed_user, MockAuditPort, MockEventPublisher};
+use support::{inmem_db, seed_user, MockAuditPort, MockEventPublisher, MockTenantResolver};
 use tower::ServiceExt;
 use users_info::{
     api::rest::handlers,
@@ -44,7 +44,14 @@ async fn create_test_router() -> Router {
     let audit = Arc::new(MockAuditPort);
     let config = ServiceConfig::default();
 
-    let service = Arc::new(Service::new(Arc::new(repo), events, audit, config));
+    let resolver = Arc::new(MockTenantResolver);
+    let service = Arc::new(Service::new(
+        Arc::new(repo),
+        events,
+        audit,
+        resolver,
+        config,
+    ));
 
     Router::new()
         .route(
@@ -80,6 +87,7 @@ async fn get_user_handler_returns_json() {
         Arc::new(repo),
         Arc::new(MockEventPublisher),
         Arc::new(MockAuditPort),
+        Arc::new(MockTenantResolver),
         ServiceConfig::default(),
     ));
 
@@ -155,6 +163,7 @@ async fn list_users_returns_json_page() {
         Arc::new(repo),
         Arc::new(MockEventPublisher),
         Arc::new(MockAuditPort),
+        Arc::new(MockTenantResolver),
         ServiceConfig::default(),
     ));
 

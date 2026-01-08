@@ -1,3 +1,4 @@
+use modkit_security::constants::DEFAULT_TENANT_ID;
 use sea_orm_migration::prelude::*;
 use sea_orm_migration::sea_orm::{ConnectionTrait, Statement};
 
@@ -17,8 +18,6 @@ impl MigrationTrait for Migration {
         let idx_old_email = "idx_users_email";
         let uk_tenant_email = "uk_users_tenant_email";
         let idx_tenant = "idx_users_tenant";
-
-        let root_tenant = modkit_security::constants::ROOT_TENANT_ID;
 
         // 1) Add tenant_id column if it doesn't exist
         if !manager
@@ -47,7 +46,8 @@ impl MigrationTrait for Migration {
                         }
                         DB::Sqlite => unreachable!(),
                     };
-                    let stmt = Statement::from_sql_and_values(backend, sql, [root_tenant.into()]);
+                    let stmt =
+                        Statement::from_sql_and_values(backend, sql, [DEFAULT_TENANT_ID.into()]);
                     manager.get_connection().execute(stmt).await?;
 
                     // Step 3: Set NOT NULL constraint
@@ -63,9 +63,9 @@ impl MigrationTrait for Migration {
                 DB::Sqlite => {
                     // SQLite cannot modify columns; add directly with NOT NULL + DEFAULT.
                     // SQLite's ALTER TABLE DEFAULT clause requires a literal value, not a parameter.
-                    // Since root_tenant is a compile-time constant, string interpolation is safe here.
+                    // Since default_tenant is a compile-time constant, string interpolation is safe here.
                     let sql = format!(
-                        r#"ALTER TABLE "users" ADD COLUMN "tenant_id" TEXT NOT NULL DEFAULT '{root_tenant}'"#
+                        r#"ALTER TABLE "users" ADD COLUMN "tenant_id" TEXT NOT NULL DEFAULT '{DEFAULT_TENANT_ID}'"#
                     );
                     manager.get_connection().execute_unprepared(&sql).await?;
                 }

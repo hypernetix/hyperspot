@@ -6,14 +6,11 @@ use crate::secure::{AccessScope, ScopableEntity};
 /// Builds a `SeaORM` `Condition` based on the implicit security policy.
 ///
 /// # Policy Rules
-/// 1. **Empty scope** (no tenants, no resources, not root) → deny all (`false`)
-/// 2. **Root scope** → bypass tenant filtering entirely
-///    - If no resource filters either → return `Condition::all()` (no filters)
-///    - If resource filters present → apply only resource filters
-/// 3. **Tenants only** → filter by `tenant_col IN tenant_ids` (via provider)
+/// 1. **Empty scope** (no tenants, no resources) → deny all (`WHERE false`)
+/// 2. **Tenants only** → filter by `tenant_col IN tenant_ids` (via provider)
 ///    - If entity has no `tenant_col` but `tenant_ids` provided → deny all
-/// 4. **Resources only** → filter by `resource_col IN resource_ids`
-/// 5. **Both present** → AND them: `(tenant_col IN ...) AND (resource_col IN ...)`
+/// 3. **Resources only** → filter by `resource_col IN resource_ids`
+/// 4. **Both present** → AND them: `(tenant_col IN ...) AND (resource_col IN ...)`
 ///
 /// # Provider Pattern
 ///
@@ -23,7 +20,6 @@ use crate::secure::{AccessScope, ScopableEntity};
 ///
 /// This ensures that:
 /// - No query can bypass tenant isolation when tenants are specified
-/// - Root scope explicitly bypasses all tenant filtering for system-level access
 /// - Explicit resource IDs provide fine-grained access
 /// - Empty scopes are explicitly denied rather than returning all data
 pub fn build_scope_condition<E>(scope: &AccessScope) -> Condition
@@ -55,15 +51,14 @@ where
         }
     }
 
-    let cond = match parts.as_slice() {
+    match parts.as_slice() {
         [only] => only.clone(),
         [a, b] => Condition::all().add(a.clone()).add(b.clone()),
-        [] if scope.is_root() => Condition::all(), // root with no filters at all
-        [] => deny_all(),                          // non-root, no filters → deny all
+        // No filters = deny all (this case is handled by is_empty check above,
+        // but included for completeness)
+        [] => deny_all(),
         _ => unreachable!(),
-    };
-
-    cond
+    }
 }
 
 #[cfg(test)]

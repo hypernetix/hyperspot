@@ -1,0 +1,42 @@
+[package]
+name = "hs-static-tr-plugin"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Tenant resolver plugin with static config-based tenant data and access rules"
+
+[lints]
+workspace = true
+
+[dependencies]
+# Local dependencies
+hs-tenant-resolver-sdk = { path = "../../tenant_resolver-sdk" }
+types-registry-sdk = { path = "../../../types-registry/types-registry-sdk" }
+
+# ModKit dependencies
+modkit = { path = "../../../../../libs/modkit" }
+modkit-security = { path = "../../../../../libs/modkit-security" }
+modkit-odata = { path = "../../../../../libs/modkit-odata" }
+
+# Async runtime
+async-trait = { workspace = true }
+
+# Data structures
+uuid = { workspace = true }
+
+# Error handling
+anyhow = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+
+# Required by modkit::module macro
+inventory = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt", "macros"] }

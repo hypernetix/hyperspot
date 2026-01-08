@@ -1,14 +1,14 @@
 use uuid::Uuid;
 
+/// Access scope defining which tenants and resources a request can access.
+///
+/// An empty scope (no tenants, no resources) is considered a "deny all" scope.
+/// To access data, the scope must contain at least one tenant ID or resource ID.
 #[derive(Clone, Debug, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub struct AccessScope {
-    /// True if this is a root scope (system-level access with no tenant filtering)
-    pub(crate) is_root: bool,
     pub(crate) tenant_ids: Vec<Uuid>,
     pub(crate) types: Vec<Uuid>,
     pub(crate) resource_ids: Vec<Uuid>,
-    // future: include_descendants (unused in v1)
-    // pub(crate) include_descendants: bool,
 }
 
 impl AccessScope {
@@ -17,26 +17,17 @@ impl AccessScope {
     pub fn tenant_ids(&self) -> &[Uuid] {
         &self.tenant_ids
     }
+
     #[inline]
     #[must_use]
     pub fn resource_ids(&self) -> &[Uuid] {
         &self.resource_ids
     }
 
-    /// Returns true if this is a root scope (system-level access).
-    #[inline]
-    #[must_use]
-    pub fn is_root(&self) -> bool {
-        self.is_root
-    }
-
-    /// Returns true if this scope is empty (no tenants, no resources, not root).
-    /// A root scope is never considered empty.
+    /// Returns true if this scope is empty (no tenants, no resources).
+    /// An empty scope results in a "deny all" condition in queries.
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        if self.is_root {
-            return false;
-        }
         self.tenant_ids.is_empty() && self.resource_ids.is_empty()
     }
 
@@ -53,7 +44,6 @@ impl AccessScope {
     #[must_use]
     pub fn tenants_only(tenant_ids: Vec<Uuid>) -> Self {
         Self {
-            is_root: false,
             tenant_ids,
             types: vec![],
             resource_ids: vec![],
@@ -63,7 +53,6 @@ impl AccessScope {
     #[must_use]
     pub fn resources_only(resource_ids: Vec<Uuid>) -> Self {
         Self {
-            is_root: false,
             tenant_ids: vec![],
             types: vec![],
             resource_ids,
@@ -85,29 +74,9 @@ impl AccessScope {
     #[must_use]
     pub fn both(tenant_ids: Vec<Uuid>, resource_ids: Vec<Uuid>) -> Self {
         Self {
-            is_root: false,
             tenant_ids,
             types: vec![],
             resource_ids,
-        }
-    }
-
-    /// True if this scope explicitly includes the root tenant.
-    #[must_use]
-    pub fn includes_root_tenant(&self) -> bool {
-        self.tenant_ids.contains(&crate::constants::ROOT_TENANT_ID)
-    }
-
-    /// Root scope for system-level access.
-    /// This bypasses all tenant filtering and allows access to all tenants.
-    /// Resource filters can still be applied if `resource_ids` are set.
-    #[must_use]
-    pub fn root_tenant() -> Self {
-        Self {
-            is_root: true,
-            tenant_ids: Vec::new(),
-            types: vec![],
-            resource_ids: Vec::new(),
         }
     }
 }

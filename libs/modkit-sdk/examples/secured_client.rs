@@ -45,10 +45,11 @@ fn main() {
     println!("Tenant ID: {}", secured.ctx().tenant_id());
     println!("Subject ID: {}", secured.ctx().subject_id());
 
-    let root_ctx = SecurityContext::root();
-    let secured_root = client.security_ctx(&root_ctx);
+    // Context for internal operations (still scoped to a tenant)
+    let internal_ctx = SecurityContext::builder().tenant_id(tenant_id).build();
+    let secured_internal = client.security_ctx(&internal_ctx);
 
-    println!("\nRoot context:");
-    println!("Tenant ID: {}", secured_root.ctx().tenant_id());
-    println!("Subject ID: {}", secured_root.ctx().subject_id());
+    println!("\nInternal context:");
+    println!("Tenant ID: {}", secured_internal.ctx().tenant_id());
+    println!("Subject ID: {}", secured_internal.ctx().subject_id());
 }

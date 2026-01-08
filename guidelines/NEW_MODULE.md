@@ -1787,14 +1787,17 @@ Then check the OpenAPI documentation at `http://127.0.0.1:8087/docs` to verify y
 
 #### Testing with SecurityCtx
 
-All service and repository tests need a `SecurityCtx`. Use `SecurityCtx::root_ctx()` for unrestricted access in tests:
+All service and repository tests need a `SecurityCtx`. Use explicit tenant IDs for test contexts:
 
 ```rust
 use modkit_security::SecurityCtx;
+use uuid::Uuid;
 
 #[tokio::test]
 async fn test_service_method() {
-    let ctx = SecurityCtx::root_ctx();  // Root context for testing
+    let tenant_id = Uuid::new_v4();
+    let subject_id = Uuid::new_v4();
+    let ctx = SecurityCtx::for_tenant(tenant_id, subject_id);
     let service = create_test_service().await;
 
     let result = service.get_user(&ctx, test_user_id).await;
@@ -1802,7 +1805,7 @@ async fn test_service_method() {
 }
 ```
 
-For tenant-scoped tests:
+For multi-tenant tests:
 
 ```rust
 use modkit_security::SecurityCtx;
@@ -2379,11 +2382,12 @@ impl Module for MyGateway {
         // === SCHEMA REGISTRATION ===
         // Gateway registers the plugin SCHEMA in types-registry.
         // Plugins only register their INSTANCES.
+        // Note: types-registry is tenant-agnostic, no SecurityCtx needed.
         let registry = ctx.client_hub().get::<dyn TypesRegistryApi>()?;
         let schema_str = MyModulePluginV1::gts_schema_with_refs_as_string();
         let schema_json: serde_json::Value = serde_json::from_str(&schema_str)?;
         let _ = registry
-            .register(&SecurityCtx::root_ctx(), vec![schema_json])
+            .register(vec![schema_json])
             .await?;
         info!("Registered {} schema in types-registry",
             MyModulePluginV1::gts_schema_id().clone());
@@ -2421,6 +2425,7 @@ impl Module for VendorPlugin {
         // === INSTANCE REGISTRATION ===
         // Register the plugin INSTANCE in types-registry.
         // Note: The plugin SCHEMA is registered by the gateway module.
+        // types-registry is tenant-agnostic, no SecurityCtx needed.
         let registry = ctx.client_hub().get::<dyn TypesRegistryApi>()?;
         let instance = BaseModkitPluginV1::<MyModulePluginV1> {
             id: instance_id.clone(),
@@ -2430,7 +2435,7 @@ impl Module for VendorPlugin {
         };
         let instance_json = serde_json::to_value(&instance)?;
         let _ = registry
-            .register(&SecurityCtx::root_ctx(), vec![instance_json])
+            .register(vec![instance_json])
             .await?;
 
         // Create service
@@ -2471,9 +2476,9 @@ impl Service {
     }
 
     async fn resolve_plugin(&self) -> Result<ClientScope, DomainError> {
-        // Query types-registry for plugin instances
+        // Query types-registry for plugin instances (tenant-agnostic)
         let registry = self.hub.get::<dyn TypesRegistryApi>()?;
-        let instances = registry.list(&SecurityCtx::root_ctx(), /* query */).await?;
+        let instances = registry.list(/* query */).await?;
 
         // Select best plugin based on vendor + priority
         let selected = choose_plugin(&self.vendor, &instances)?;

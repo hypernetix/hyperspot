@@ -13,6 +13,8 @@ default = []
 users-info-example = ["dep:users_info"]
 oop-example = ["dep:calculator_gateway", "dep:calculator"]
 tenant-resolver-example = ["dep:tenant_resolver_gw", "dep:contoso_tr_plugin", "dep:fabrikam_tr_plugin"]
+single-tenant = ["dep:hs-single-tenant-tr-plugin"]
+static-tenants = ["dep:hs-static-tr-plugin"]
 otel = ["modkit/otel"]
 
 [[bin]]
@@ -30,6 +32,11 @@ api_gateway = { path = "../../modules/system/api_gateway" }
 grpc_hub = { path = "../../modules/system/grpc_hub" }
 module_orchestrator = { path = "../../modules/system/module_orchestrator/module_orchestrator" }
 types-registry = { path = "../../modules/system/types-registry/types-registry" }
+hs-tenant-resolver-gw = { path = "../../modules/system/tenant_resolver/tenant_resolver-gw" }
+
+# Optional tenant resolver plugins
+hs-single-tenant-tr-plugin = { path = "../../modules/system/tenant_resolver/plugins/single_tenant_tr_plugin", optional = true }
+hs-static-tr-plugin = { path = "../../modules/system/tenant_resolver/plugins/static_tr_plugin", optional = true }
 
 # user modules
 file_parser = { path = "../../modules/file_parser" }
