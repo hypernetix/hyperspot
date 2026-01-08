@@ -253,7 +253,7 @@ modules/<module-name>/
 ├── Cargo.toml
 ├── src/
 │   ├── lib.rs                        # Public exports
-│   ├── module.rs                     # Module struct + #[modkit::module(...)] (some modules keep this in lib.rs)
+│   ├── module.rs                     # Module struct + #[modkit::module(...)]
 │   ├── config.rs                     # Typed module config
 │   ├── local_client.rs               # Local adapter implementing an SDK API trait (optional)
 │   ├── api/
