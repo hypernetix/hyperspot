@@ -17,6 +17,8 @@ MUST read `specs/api-contracts.md` WHEN working with API endpoints
 
 MUST read `specs/modkit-rest-integration.md` WHEN implementing REST modules (MANDATORY)
 
+MUST read `specs/module-structure.md` WHEN creating new modules or understanding module layout (MANDATORY)
+
 MUST read `specs/patterns.md` WHEN implementing architecture patterns
 
 MUST read `specs/conventions.md` WHEN writing code or documentation

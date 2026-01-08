@@ -43,7 +43,7 @@ impl DbModule for AnalyticsModule {
 /// 
 /// This implementation registers GTS Core routes using OperationBuilder for type-safe
 /// OpenAPI generation. All endpoints automatically receive:
-/// - JWT validation via api_ingress
+/// - JWT validation via api_gateway
 /// - SecurityCtx injection with tenant isolation
 /// - Request tracing and correlation IDs
 /// - RFC 7807 Problem Details error handling

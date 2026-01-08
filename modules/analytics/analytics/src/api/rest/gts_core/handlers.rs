@@ -29,7 +29,7 @@ pub struct ODataQueryParams {
 ///
 /// # Example: SecurityCtx Usage
 /// ```rust,ignore
-/// // SecurityCtx automatically injected by api_ingress middleware
+/// // SecurityCtx automatically injected by api_gateway middleware
 /// pub async fn get_entity(
 ///     Path(id): Path<String>,
 ///     Extension(ctx): Extension<SecurityCtx>,  // ← Automatic injection
