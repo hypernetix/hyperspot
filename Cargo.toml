@@ -345,5 +345,5 @@ serde_yaml = "0.9"
 shellexpand = "3.1"
 
 # GTS library
-gts = { git = "https://github.com/globaltypesystem/gts-rust.git", tag = "v0.7.6" }
-gts-macros = { git = "https://github.com/globaltypesystem/gts-rust.git", tag = "v0.7.6" }
+gts = { git = "https://github.com/globaltypesystem/gts-rust.git", tag = "v0.7.7" }
+gts-macros = { git = "https://github.com/globaltypesystem/gts-rust.git", tag = "v0.7.7" }
