@@ -75,29 +75,6 @@ Follow the coding standards and guidelines:
 
 Always include unit tests when introducing new code.
 
-**OpenSpec Workflow**:
-
-HyperSpot uses [OpenSpec](https://openspec.dev/) for spec-driven development. For feature implementation:
-
-1. **Design Phase**: Create feature DESIGN.md with OpenSpec Changes Plan
-2. **Initialize**: Run `/openspec-init {feature-slug}` to create change structure
-3. **Implement**: Work through changes using `openspec` CLI commands
-4. **Complete**: Archive changes with `openspec archive {change-name}`
-
-See [Feature-Driven Design Guide](./guidelines/FEATURE_DRIVEN_DESIGN.md) for full workflow.
-
-**OpenSpec CLI**:
-```bash
-npm install -g @fission-ai/openspec@latest  # Install
-openspec list                                # List changes
-openspec show {change-name}                  # View details
-openspec validate {change-name}              # Validate structure
-openspec archive {change-name}               # Complete & merge
-```
-
-Resources: [OpenSpec.dev](https://openspec.dev/) | [GitHub](https://github.com/Fission-AI/OpenSpec)
-
-
 ### 2.3. Run Code Quality Checks
 
 Build and run all the quality checks:
