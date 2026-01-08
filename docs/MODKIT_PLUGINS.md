@@ -19,6 +19,9 @@ This pattern enables:
 - **Runtime selection** — choose which plugin to use based on configuration, tenant, or other context
 - **Hot-pluggable extensions** — add new plugins without modifying the gateway
 
+> [!IMPORTANT]
+> **Plugin Isolation Rule:** Regular modules **cannot** depend on or consume plugin modules directly. All plugin functionality must be accessed through the Gateway Module's public API (`hub.get::<dyn GatewayClient>()`). This ensures plugin implementations remain swappable, isolated, and decoupled from consumers.
+
 ---
 
 ## Architecture Diagram
