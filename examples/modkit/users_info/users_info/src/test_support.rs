@@ -2,6 +2,9 @@
 
 use std::sync::Arc;
 
+use hs_tenant_resolver_sdk::{
+    TenantFilter, TenantResolverError, TenantResolverGatewayClient, TenantStatus,
+};
 use modkit_db::secure::SecureConn;
 use modkit_security::SecurityContext;
 use sea_orm::{Database, DatabaseConnection};
@@ -27,11 +30,6 @@ pub fn ctx_allow_tenants(tenants: &[Uuid]) -> SecurityContext {
 #[must_use]
 pub fn ctx_deny_all() -> SecurityContext {
     SecurityContext::anonymous()
-}
-
-#[must_use]
-pub fn ctx_root() -> SecurityContext {
-    SecurityContext::root()
 }
 
 pub async fn inmem_db() -> DatabaseConnection {
@@ -87,6 +85,55 @@ impl AuditPort for MockAuditPort {
     }
 }
 
+/// Mock tenant resolver that returns the context's tenant as an accessible tenant.
+pub struct MockTenantResolver;
+
+#[async_trait::async_trait]
+impl TenantResolverGatewayClient for MockTenantResolver {
+    async fn get_tenant(
+        &self,
+        _ctx: &SecurityContext,
+        id: hs_tenant_resolver_sdk::TenantId,
+    ) -> Result<hs_tenant_resolver_sdk::TenantInfo, TenantResolverError> {
+        Ok(hs_tenant_resolver_sdk::TenantInfo {
+            id,
+            name: format!("Tenant {id}"),
+            status: TenantStatus::Active,
+            tenant_type: None,
+        })
+    }
+
+    async fn can_access(
+        &self,
+        ctx: &SecurityContext,
+        target: hs_tenant_resolver_sdk::TenantId,
+        _options: Option<&hs_tenant_resolver_sdk::AccessOptions>,
+    ) -> Result<bool, TenantResolverError> {
+        // Allow access if target matches context tenant
+        Ok(ctx.tenant_id() == target)
+    }
+
+    async fn get_accessible_tenants(
+        &self,
+        ctx: &SecurityContext,
+        _filter: Option<&TenantFilter>,
+        _options: Option<&hs_tenant_resolver_sdk::AccessOptions>,
+    ) -> Result<Vec<hs_tenant_resolver_sdk::TenantInfo>, TenantResolverError> {
+        // Return the context's tenant as the only accessible tenant
+        let tenant_id = ctx.tenant_id();
+        if tenant_id == Uuid::default() {
+            // Anonymous context - no accessible tenants
+            return Ok(vec![]);
+        }
+        Ok(vec![hs_tenant_resolver_sdk::TenantInfo {
+            id: tenant_id,
+            name: format!("Tenant {tenant_id}"),
+            status: TenantStatus::Active,
+            tenant_type: None,
+        }])
+    }
+}
+
 pub fn build_services(sec: SecureConn, config: ServiceConfig) -> Arc<ConcreteAppServices> {
     let limit_cfg = config.limit_cfg();
 
@@ -101,6 +148,7 @@ pub fn build_services(sec: SecureConn, config: ServiceConfig) -> Arc<ConcreteApp
         sec,
         Arc::new(MockEventPublisher),
         Arc::new(MockAuditPort),
+        Arc::new(MockTenantResolver),
         config,
     ))
 }

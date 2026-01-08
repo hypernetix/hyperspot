@@ -3,9 +3,7 @@
 use uuid::Uuid;
 
 use crate::domain::service::ServiceConfig;
-use crate::test_support::{
-    build_services, ctx_allow_tenants, ctx_deny_all, ctx_root, inmem_db, seed_user,
-};
+use crate::test_support::{build_services, ctx_allow_tenants, ctx_deny_all, inmem_db, seed_user};
 use modkit_db::secure::SecureConn;
 use user_info_sdk::NewUser;
 
@@ -47,26 +45,6 @@ async fn deny_all_sees_nothing() {
         .await
         .unwrap();
     assert!(page.items.is_empty());
-}
-
-#[tokio::test]
-async fn root_sees_all_tenants() {
-    let db = inmem_db().await;
-    let tenant1 = Uuid::new_v4();
-    let tenant2 = Uuid::new_v4();
-
-    seed_user(&db, Uuid::new_v4(), tenant1, "u1@example.com", "U1").await;
-    seed_user(&db, Uuid::new_v4(), tenant2, "u2@example.com", "U2").await;
-
-    let services = build_services(SecureConn::new(db), ServiceConfig::default());
-    let ctx = ctx_root();
-
-    let page = services
-        .users
-        .list_users_page(&ctx, &modkit_odata::ODataQuery::default())
-        .await
-        .unwrap();
-    assert_eq!(page.items.len(), 2);
 }
 
 #[tokio::test]

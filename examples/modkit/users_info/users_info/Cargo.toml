@@ -18,6 +18,9 @@ integration = []   # gate integration tests
 # SDK - public API, models, and errors
 user_info-sdk = { path = "../user_info-sdk", features = ["odata"] }
 
+# Tenant resolver for multi-tenant access
+hs-tenant-resolver-sdk = { path = "../../../../modules/system/tenant_resolver/tenant_resolver-sdk" }
+
 # Core dependencies
 anyhow = { workspace = true }
 async-trait = { workspace = true }

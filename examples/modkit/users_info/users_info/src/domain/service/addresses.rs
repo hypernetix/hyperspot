@@ -3,6 +3,7 @@ use tracing::{debug, info, instrument};
 
 use crate::domain::error::DomainError;
 use crate::domain::repos::{AddressesRepository, UsersRepository};
+use hs_tenant_resolver_sdk::TenantResolverGatewayClient;
 use modkit_db::secure::SecureConn;
 use modkit_odata::{ODataQuery, Page};
 use modkit_security::{PolicyEngineRef, SecurityContext};
@@ -16,6 +17,7 @@ pub struct AddressesService<R: AddressesRepository, U: UsersRepository> {
     repo: Arc<R>,
     users_repo: Arc<U>,
     db: SecureConn,
+    resolver: Arc<dyn TenantResolverGatewayClient>,
 }
 
 impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
@@ -24,12 +26,14 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
         users_repo: Arc<U>,
         db: SecureConn,
         policy_engine: PolicyEngineRef,
+        resolver: Arc<dyn TenantResolverGatewayClient>,
     ) -> Self {
         Self {
             policy_engine,
             repo,
             users_repo,
             db,
+            resolver,
         }
     }
 }
@@ -44,9 +48,10 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
     ) -> Result<Address, DomainError> {
         debug!("Getting address by id");
 
+        let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
         let scope = ctx
             .scope(self.policy_engine.clone())
-            .include_tenant_children()
+            .include_accessible_tenants(tenant_ids)
             .prepare()
             .await?;
 
@@ -64,9 +69,10 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
     ) -> Result<Page<Address>, DomainError> {
         debug!("Listing addresses with cursor pagination");
 
+        let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
         let scope = ctx
             .scope(self.policy_engine.clone())
-            .include_tenant_children()
+            .include_accessible_tenants(tenant_ids)
             .prepare()
             .await?;
 
@@ -84,9 +90,10 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
     ) -> Result<Option<Address>, DomainError> {
         debug!("Getting address by user_id");
 
+        let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
         let scope = ctx
             .scope(self.policy_engine.clone())
-            .include_tenant_children()
+            .include_accessible_tenants(tenant_ids)
             .prepare()
             .await?;
 
@@ -117,9 +124,10 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
     ) -> Result<Address, DomainError> {
         info!("Upserting address for user");
 
+        let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
         let scope = ctx
             .scope(self.policy_engine.clone())
-            .include_tenant_children()
+            .include_accessible_tenants(tenant_ids)
             .prepare()
             .await?;
 
@@ -182,9 +190,10 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
     ) -> Result<(), DomainError> {
         info!("Deleting address for user");
 
+        let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
         let scope = ctx
             .scope(self.policy_engine.clone())
-            .include_tenant_children()
+            .include_accessible_tenants(tenant_ids)
             .prepare()
             .await?;
 
@@ -209,9 +218,10 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
     ) -> Result<Address, DomainError> {
         info!("Creating new address");
 
+        let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
         let scope = ctx
             .scope(self.policy_engine.clone())
-            .include_tenant_children()
+            .include_accessible_tenants(tenant_ids)
             .prepare()
             .await?;
 
@@ -247,9 +257,10 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
     ) -> Result<Address, DomainError> {
         info!("Updating address");
 
+        let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
         let scope = ctx
             .scope(self.policy_engine.clone())
-            .include_tenant_children()
+            .include_accessible_tenants(tenant_ids)
             .prepare()
             .await?;
 
@@ -281,9 +292,10 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
     pub async fn delete_address(&self, ctx: &SecurityContext, id: Uuid) -> Result<(), DomainError> {
         info!("Deleting address");
 
+        let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
         let scope = ctx
             .scope(self.policy_engine.clone())
-            .include_tenant_children()
+            .include_accessible_tenants(tenant_ids)
             .prepare()
             .await?;
 

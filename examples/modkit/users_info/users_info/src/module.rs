@@ -11,6 +11,9 @@ use url::Url;
 #[allow(unused_imports)]
 use user_info_sdk::UsersInfoClient;
 
+// Import tenant resolver for multi-tenant access
+use hs_tenant_resolver_sdk::TenantResolverGatewayClient;
+
 use crate::api::rest::dto::UserEvent;
 use crate::api::rest::routes;
 use crate::api::rest::sse_adapter::SseUserEventPublisher;
@@ -31,6 +34,7 @@ pub(crate) type ConcreteAppServices =
 /// Main module struct with DDD-light layout and proper `ClientHub` integration
 #[modkit::module(
     name = "users_info",
+    deps = ["tenant_resolver"],
     capabilities = [db, rest]
 )]
 pub struct UsersInfo {
@@ -91,6 +95,12 @@ impl Module for UsersInfo {
         let audit_adapter: Arc<dyn AuditPort> =
             Arc::new(HttpAuditClient::new(traced_client, audit_base, notify_base));
 
+        // Fetch tenant resolver from ClientHub
+        let resolver = ctx
+            .client_hub()
+            .get::<dyn TenantResolverGatewayClient>()
+            .map_err(|e| anyhow::anyhow!("failed to get tenant resolver: {e}"))?;
+
         let service_config = ServiceConfig {
             max_display_name_length: 100,
             default_page_size: cfg.default_page_size,
@@ -111,6 +121,7 @@ impl Module for UsersInfo {
             sec_conn,
             publisher,
             audit_adapter,
+            resolver,
             service_config,
         ));
 

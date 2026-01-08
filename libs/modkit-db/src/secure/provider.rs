@@ -46,11 +46,6 @@ impl TenantFilterProvider for SimpleTenantFilter {
         E: ScopableEntity + EntityTrait,
         E::Column: ColumnTrait + Copy,
     {
-        // Root scope: skip tenant filtering entirely
-        if scope.is_root() {
-            return None;
-        }
-
         // No tenant IDs in scope → no tenant filter
         if scope.tenant_ids().is_empty() {
             return None;

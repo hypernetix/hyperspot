@@ -75,7 +75,7 @@ impl UsersRepository for OrmUsersRepository {
         scope: &AccessScope,
         user: User,
     ) -> Result<User, DomainError> {
-        if !scope.has_tenants() && !scope.is_root() {
+        if !scope.has_tenants() {
             return Err(DomainError::validation(
                 "scope",
                 "Security scope must contain tenant for insert operation",

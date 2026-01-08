@@ -15,6 +15,10 @@ use axum::{
     http::{Request, StatusCode},
     Json, Router,
 };
+use hs_tenant_resolver_sdk::{
+    AccessOptions, TenantFilter, TenantId, TenantInfo, TenantResolverError,
+    TenantResolverGatewayClient, TenantStatus,
+};
 use modkit::{
     api::{
         operation_builder::{AuthReqAction, AuthReqResource, LicenseFeature},
@@ -26,6 +30,8 @@ use modkit::{
     ClientHub, Module,
 };
 use modkit_auth::axum_ext::Authz;
+
+use modkit_security::SecurityContext;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::sync::Arc;
@@ -33,6 +39,43 @@ use tower::ServiceExt;
 use uuid::Uuid;
 // for oneshot
 use utoipa::ToSchema;
+
+/// Mock tenant resolver for tests
+struct MockTenantResolver;
+
+#[async_trait]
+impl TenantResolverGatewayClient for MockTenantResolver {
+    async fn get_tenant(
+        &self,
+        _ctx: &SecurityContext,
+        id: TenantId,
+    ) -> std::result::Result<TenantInfo, TenantResolverError> {
+        Ok(TenantInfo {
+            id,
+            name: format!("Tenant {id}"),
+            status: TenantStatus::Active,
+            tenant_type: None,
+        })
+    }
+
+    async fn can_access(
+        &self,
+        _ctx: &SecurityContext,
+        _target: TenantId,
+        _options: Option<&AccessOptions>,
+    ) -> std::result::Result<bool, TenantResolverError> {
+        Ok(true)
+    }
+
+    async fn get_accessible_tenants(
+        &self,
+        _ctx: &SecurityContext,
+        _filter: Option<&TenantFilter>,
+        _options: Option<&AccessOptions>,
+    ) -> std::result::Result<Vec<TenantInfo>, TenantResolverError> {
+        Ok(vec![])
+    }
+}
 
 /// Test configuration provider
 struct TestConfigProvider {
@@ -45,13 +88,18 @@ impl ConfigProvider for TestConfigProvider {
     }
 }
 
-/// Create test context for `api_gateway` module
+/// Create test context for `api_gateway` module with mock tenant resolver
 fn create_api_gateway_ctx(config: serde_json::Value) -> ModuleCtx {
+    let hub = Arc::new(ClientHub::new());
+
+    // Register mock tenant resolver for auth_disabled mode
+    hub.register::<dyn TenantResolverGatewayClient>(Arc::new(MockTenantResolver));
+
     ModuleCtx::new(
         "api_gateway",
         Uuid::new_v4(),
         Arc::new(TestConfigProvider { config }),
-        Arc::new(ClientHub::new()),
+        hub,
         tokio_util::sync::CancellationToken::new(),
         None,
     )

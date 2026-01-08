@@ -5,16 +5,58 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use axum::{extract::Json, routing::post, Router};
+use hs_tenant_resolver_sdk::{
+    AccessOptions, TenantFilter, TenantId, TenantInfo, TenantResolverError,
+    TenantResolverGatewayClient, TenantStatus,
+};
 use modkit::{
     api::OperationBuilder,
     config::ConfigProvider,
     contracts::{OpenApiRegistry, RestHostModule},
     Module, ModuleCtx, RestfulModule,
 };
+
+use modkit_security::SecurityContext;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use utoipa::ToSchema;
 use uuid::Uuid;
+
+struct MockTenantResolver;
+
+#[async_trait]
+impl TenantResolverGatewayClient for MockTenantResolver {
+    async fn get_tenant(
+        &self,
+        _ctx: &SecurityContext,
+        id: TenantId,
+    ) -> std::result::Result<TenantInfo, TenantResolverError> {
+        Ok(TenantInfo {
+            id,
+            name: format!("Tenant {id}"),
+            status: TenantStatus::Active,
+            tenant_type: None,
+        })
+    }
+
+    async fn can_access(
+        &self,
+        _ctx: &SecurityContext,
+        _target: TenantId,
+        _options: Option<&AccessOptions>,
+    ) -> std::result::Result<bool, TenantResolverError> {
+        Ok(true)
+    }
+
+    async fn get_accessible_tenants(
+        &self,
+        _ctx: &SecurityContext,
+        _filter: Option<&TenantFilter>,
+        _options: Option<&AccessOptions>,
+    ) -> std::result::Result<Vec<TenantInfo>, TenantResolverError> {
+        Ok(vec![])
+    }
+}
 
 struct TestConfigProvider {
     config: serde_json::Value,
@@ -51,11 +93,14 @@ fn create_test_module_ctx_with_body_limit(limit_bytes: usize) -> ModuleCtx {
         }
     }));
 
+    let hub = Arc::new(modkit::ClientHub::new());
+    hub.register::<dyn TenantResolverGatewayClient>(Arc::new(MockTenantResolver));
+
     ModuleCtx::new(
         "api_gateway",
         Uuid::new_v4(),
         Arc::new(TestConfigProvider { config }),
-        Arc::new(modkit::ClientHub::new()),
+        hub,
         tokio_util::sync::CancellationToken::new(),
         None,
     )
@@ -160,11 +205,14 @@ async fn test_default_body_limit() {
         "auth_disabled": true
     }));
 
+    let hub = Arc::new(modkit::ClientHub::new());
+    hub.register::<dyn TenantResolverGatewayClient>(Arc::new(MockTenantResolver));
+
     let ctx = ModuleCtx::new(
         "api_gateway",
         Uuid::new_v4(),
         Arc::new(TestConfigProvider { config }),
-        Arc::new(modkit::ClientHub::new()),
+        hub,
         tokio_util::sync::CancellationToken::new(),
         None,
     );

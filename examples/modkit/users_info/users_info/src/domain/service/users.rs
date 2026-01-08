@@ -8,6 +8,7 @@ use crate::domain::events::UserDomainEvent;
 use crate::domain::ports::{AuditPort, EventPublisher};
 use crate::domain::repos::{AddressesRepository, CitiesRepository, UsersRepository};
 use crate::domain::service::{AddressesService, CitiesService, ServiceConfig};
+use hs_tenant_resolver_sdk::TenantResolverGatewayClient;
 use modkit_db::secure::{SecureConn, Tx};
 use modkit_odata::{ODataQuery, Page};
 use modkit_security::{PolicyEngineRef, SecurityContext};
@@ -23,6 +24,7 @@ pub struct UsersService<R: UsersRepository + 'static, CR: CitiesRepository, AR: 
     db: SecureConn,
     events: Arc<dyn EventPublisher<UserDomainEvent>>,
     audit: Arc<dyn AuditPort>,
+    resolver: Arc<dyn TenantResolverGatewayClient>,
     config: ServiceConfig,
     cities: Arc<CitiesService<CR>>,
     addresses: Arc<AddressesService<AR, R>>,
@@ -38,6 +40,7 @@ impl<R: UsersRepository + 'static, CR: CitiesRepository, AR: AddressesRepository
         events: Arc<dyn EventPublisher<UserDomainEvent>>,
         audit: Arc<dyn AuditPort>,
         policy_engine: PolicyEngineRef,
+        resolver: Arc<dyn TenantResolverGatewayClient>,
         config: ServiceConfig,
         cities: Arc<CitiesService<CR>>,
         addresses: Arc<AddressesService<AR, R>>,
@@ -48,6 +51,7 @@ impl<R: UsersRepository + 'static, CR: CitiesRepository, AR: AddressesRepository
             db,
             events,
             audit,
+            resolver,
             config,
             cities,
             addresses,
@@ -94,9 +98,10 @@ impl<R: UsersRepository + 'static, CR: CitiesRepository, AR: AddressesRepository
 
         audit_get_user_access_best_effort(self, id).await;
 
+        let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
         let scope = ctx
             .scope(self.policy_engine.clone())
-            .include_tenant_children()
+            .include_accessible_tenants(tenant_ids)
             .prepare()
             .await?;
 
@@ -117,9 +122,10 @@ impl<R: UsersRepository + 'static, CR: CitiesRepository, AR: AddressesRepository
     ) -> Result<Page<User>, DomainError> {
         tracing::debug!("Listing users with cursor pagination");
 
+        let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
         let scope = ctx
             .scope(self.policy_engine.clone())
-            .include_tenant_children()
+            .include_accessible_tenants(tenant_ids)
             .prepare()
             .await?;
 
@@ -152,9 +158,10 @@ impl<R: UsersRepository + 'static, CR: CitiesRepository, AR: AddressesRepository
 
         let id = provided_id.unwrap_or_else(Uuid::now_v7);
 
+        let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
         let scope = ctx
             .scope(self.policy_engine.clone())
-            .include_tenant_children()
+            .include_accessible_tenants(tenant_ids)
             .prepare()
             .await?;
 
@@ -216,9 +223,10 @@ impl<R: UsersRepository + 'static, CR: CitiesRepository, AR: AddressesRepository
 
         self.validate_user_patch(&patch)?;
 
+        let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
         let scope = ctx
             .scope(self.policy_engine.clone())
-            .include_tenant_children()
+            .include_accessible_tenants(tenant_ids)
             .prepare()
             .await?;
 
@@ -271,9 +279,10 @@ impl<R: UsersRepository + 'static, CR: CitiesRepository, AR: AddressesRepository
     pub async fn delete_user(&self, ctx: &SecurityContext, id: Uuid) -> Result<(), DomainError> {
         tracing::info!("Deleting user");
 
+        let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
         let scope = ctx
             .scope(self.policy_engine.clone())
-            .include_tenant_children()
+            .include_accessible_tenants(tenant_ids)
             .prepare()
             .await?;
 

@@ -8,7 +8,7 @@ use std::sync::Arc;
 use modkit::client_hub::{ClientHub, ClientScope};
 use modkit::gts::BaseModkitPluginV1;
 use modkit_odata::{ODataQuery, Page};
-use modkit_security::{SecurityContext, SecurityCtx};
+use modkit_security::SecurityCtx;
 use tenant_resolver_sdk::{
     AccessOptions, GetParentsResponse, Tenant, TenantFilter, TenantResolverPluginClient,
     TenantResolverPluginSpecV1,
@@ -16,6 +16,9 @@ use tenant_resolver_sdk::{
 use tokio::sync::OnceCell;
 use tracing::info;
 use types_registry_sdk::{GtsEntity, ListQuery, TypesRegistryApi};
+
+// Note: This example gateway still uses SecurityCtx in its public API methods
+// because it uses an older SDK with hierarchical tenant model.
 
 use crate::domain::error::DomainError;
 
@@ -78,7 +81,6 @@ impl Service {
 
         let instances = registry
             .list(
-                &SecurityContext::root(),
                 ListQuery::new()
                     .with_pattern(format!("{plugin_type_id}*"))
                     .with_is_type(false),
