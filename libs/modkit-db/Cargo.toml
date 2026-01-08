@@ -38,11 +38,11 @@ tracing = { workspace = true }
 uuid = { workspace = true, features = ["v4"]}
 modkit-security = { path = "../modkit-security" }
 modkit-odata = { path = "../modkit-odata" }
+modkit-utils = { path = "../modkit-utils", features = ["humantime-serde"] }
 bigdecimal = { workspace = true }
 rust_decimal = { workspace = true }
 ryu = { workspace = true }
 url = { workspace = true }
-humantime-serde = { workspace = true }
 regex = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

@@ -11,7 +11,6 @@
 //! - `core`: Core `OData` to `SeaORM` translation (filters, cursors, ordering) - legacy `FieldMap` based
 //! - `filter`: Type-safe filter representation using `FilterField` trait and `FilterNode<F>` AST
 //! - `pager`: Fluent builder for secure + `OData` pagination
-//! - `tests`: Integration tests (when compiled with `#[cfg(test)]`)
 
 // Shared FieldKind enum for both legacy and new code
 pub mod kind;
@@ -27,12 +26,6 @@ pub mod sea_orm_filter;
 
 // Fluent pagination builder
 pub mod pager;
-
-// Tests (only compiled during tests)
-// TODO: Fix test module after refactoring
-// #[cfg(test)]
-// #[path = "tests.rs"]
-// mod odata_tests;
 
 // Re-export shared FieldKind
 pub use kind::FieldKind;

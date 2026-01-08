@@ -9,8 +9,10 @@ members = [
     "de02_api_layer/de0203_dtos_must_have_serde_derives",
     "de02_api_layer/de0204_dtos_must_have_toschema_derive",
     "de08_rest_api_conventions/de0801_api_endpoint_version",
+    "de08_rest_api_conventions/de0802_use_odata_ext",
     "de09_gts_layer/de0901_gts_string_pattern",
     "de09_gts_layer/de0902_no_schema_for_on_gts_structs",
+    "de05_client_layer/de0503_plugin_client_suffix",
 ]
 resolver = "2"
 

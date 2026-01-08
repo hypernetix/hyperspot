@@ -1,0 +1,5 @@
+error: ODataSchema only supports structs with named fields
+ --> tests/ui/fail/tuple_struct_not_supported.rs:4:1
+  |
+4 | struct User(uuid::Uuid, String);
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

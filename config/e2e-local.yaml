@@ -72,7 +72,7 @@ logging:
     console_level: debug
     file: "logs/sql.log"
     file_level: debug
-  api_ingress:
+  api_gateway:
     console_level: debug
     file: "logs/api.log"
     file_level: debug
@@ -83,8 +83,8 @@ logging:
 
 # Per-module configurations using new structure
 modules:
-  api_ingress:
-    # No database needed for api_ingress
+  api_gateway:
+    # No database needed for api_gateway
     config:
       bind_addr: "127.0.0.1:8086"
       enable_docs: true
@@ -109,7 +109,7 @@ modules:
       # JWKS Configuration (replace with your OIDC provider)
       jwks_uri: "http://localhost:8080/realms/dev/protocol/openid-connect/certs"
       issuer: "http://localhost:8080/realms/dev"
-      audience: "api-ingress"
+      audience: "api-gateway"
 
   # --- Tenant Resolver example (gateway + plugins) ---
   types_registry:

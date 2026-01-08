@@ -140,7 +140,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a23eb6b1614318a8071c9b2521f36b424b2c83db5eb3a0fead4a6c0809af6e61"
 
 [[package]]
-name = "api_ingress"
+name = "api_gateway"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -149,7 +149,7 @@ dependencies = [
  "axum",
  "chrono",
  "dashmap",
- "futures",
+ "futures-core",
  "governor",
  "http",
  "inventory",
@@ -1533,7 +1533,7 @@ dependencies = [
  "base64 0.22.1",
  "bytes",
  "docx-rust",
- "futures",
+ "futures-util",
  "http",
  "inventory",
  "mime",
@@ -2147,16 +2147,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "135b12329e5e3ce057a9f972339ea52bc954fe1e9358ef27f95e89716fbc5424"
 
 [[package]]
-name = "humantime-serde"
-version = "1.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "57a3db5ea5923d99402c94e9feb261dc5ee9b4efa158b0315f788cf549cc200c"
-dependencies = [
- "humantime",
- "serde",
-]
-
-[[package]]
 name = "hyper"
 version = "1.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2268,7 +2258,8 @@ name = "hyperspot-server"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "api_ingress",
+ "api_gateway",
+ "calculator",
  "calculator_gateway",
  "clap",
  "contoso_tr_plugin",
@@ -2856,7 +2847,8 @@ dependencies = [
  "dsn",
  "figment",
  "file-rotate",
- "futures",
+ "futures-core",
+ "futures-util",
  "gts",
  "gts-macros",
  "http",
@@ -2866,6 +2858,7 @@ dependencies = [
  "modkit-errors",
  "modkit-macros",
  "modkit-odata",
+ "modkit-sdk",
  "module_orchestrator-contracts",
  "module_orchestrator-grpc",
  "nix 0.29.0",
@@ -2933,10 +2926,10 @@ dependencies = [
  "dashmap",
  "dirs",
  "figment",
- "humantime-serde",
  "modkit-db-macros",
  "modkit-odata",
  "modkit-security",
+ "modkit-utils",
  "regex",
  "rust_decimal",
  "ryu",
@@ -3053,6 +3046,36 @@ dependencies = [
 ]
 
 [[package]]
+name = "modkit-sdk"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "futures-core",
+ "futures-util",
+ "modkit-odata",
+ "modkit-sdk-macros",
+ "modkit-security",
+ "pin-project-lite",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
+name = "modkit-sdk-macros"
+version = "0.1.0"
+dependencies = [
+ "heck 0.5.0",
+ "modkit-odata",
+ "modkit-sdk",
+ "proc-macro-error2",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.111",
+ "trybuild",
+ "uuid",
+]
+
+[[package]]
 name = "modkit-security"
 version = "0.1.0"
 dependencies = [
@@ -3075,6 +3098,15 @@ dependencies = [
  "tokio-util",
  "tonic",
  "tracing",
+]
+
+[[package]]
+name = "modkit-utils"
+version = "0.1.0"
+dependencies = [
+ "humantime",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -6237,7 +6269,7 @@ name = "types-registry"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "api_ingress",
+ "api_gateway",
  "arc-swap",
  "async-trait",
  "axum",
@@ -6418,11 +6450,11 @@ name = "users_info"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "api_ingress",
+ "api_gateway",
  "arc-swap",
  "async-trait",
  "axum",
- "futures",
+ "futures-util",
  "http",
  "httpmock",
  "inventory",

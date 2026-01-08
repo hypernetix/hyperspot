@@ -1,4 +1,4 @@
-//! Fabrikam plugin service implementing `ThrPluginApi`.
+//! Fabrikam plugin service implementing `TenantResolverPluginClient`.
 
 use std::collections::HashMap;
 
@@ -8,8 +8,8 @@ use modkit_odata::{
 };
 use modkit_security::SecurityCtx;
 use tenant_resolver_sdk::{
-    AccessOptions, GetParentsResponse, Tenant, TenantFilter, TenantResolverError, TenantSpecV1,
-    ThrPluginApi,
+    AccessOptions, GetParentsResponse, Tenant, TenantFilter, TenantResolverError,
+    TenantResolverPluginClient, TenantSpecV1,
 };
 
 use crate::config::TenantConfig;
@@ -217,7 +217,7 @@ impl Service {
 }
 
 #[async_trait]
-impl ThrPluginApi for Service {
+impl TenantResolverPluginClient for Service {
     async fn get_root_tenant(&self, _ctx: &SecurityCtx) -> Result<Tenant, TenantResolverError> {
         self.root_id
             .as_ref()

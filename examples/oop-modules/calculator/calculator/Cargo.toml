@@ -24,7 +24,7 @@ calculator-sdk = { path = "../calculator-sdk" }
 modkit = { path = "../../../../libs/modkit", features = ["bootstrap"] }
 modkit-security = { path = "../../../../libs/modkit-security" }
 modkit-transport-grpc = { path = "../../../../libs/modkit-transport-grpc" }
-grpc_hub = { path = "../../../../modules/grpc_hub" }
+grpc_hub = { path = "../../../../modules/system/grpc_hub" }
 
 # Runtime dependencies
 tonic = { workspace = true }

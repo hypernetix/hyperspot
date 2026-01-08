@@ -214,7 +214,7 @@ mod sse_tests {
     use crate::api::rest::sse_adapter::SseUserEventPublisher;
     use crate::domain::events::UserDomainEvent;
     use crate::domain::ports::EventPublisher;
-    use futures::StreamExt;
+    use futures_util::StreamExt;
     use modkit::SseBroadcaster;
     use time::OffsetDateTime;
     use tokio::time::{timeout, Duration};
@@ -222,8 +222,8 @@ mod sse_tests {
 
     #[tokio::test]
     async fn openapi_has_users_sse_content() {
-        // Create a mock OpenAPI registry (using api_ingress)
-        let api = api_ingress::ApiIngress::default();
+        // Create a mock OpenAPI registry (using api_gateway)
+        let api = api_gateway::ApiGateway::default();
         let router: axum::Router<()> = axum::Router::new();
         let sse_broadcaster = SseBroadcaster::<dto::UserEvent>::new(4);
 

@@ -280,25 +280,13 @@ impl DbTransaction<'_> {
 }
 
 /// Main handle.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DbHandle {
     engine: DbEngine,
     pool: DbPool,
     dsn: String,
     #[cfg(feature = "sea-orm")]
     sea: DatabaseConnection,
-}
-
-impl Clone for DbHandle {
-    fn clone(&self) -> Self {
-        Self {
-            engine: self.engine,
-            pool: self.pool.clone(),
-            dsn: self.dsn.clone(),
-            #[cfg(feature = "sea-orm")]
-            sea: self.sea.clone(),
-        }
-    }
 }
 
 const DEFAULT_SQLITE_BUSY_TIMEOUT: i32 = 5000;
@@ -563,10 +551,13 @@ impl DbHandle {
     /// # Errors
     /// Returns an error if the transaction fails or the closure returns an error.
     #[cfg(feature = "pg")]
-    pub async fn with_pg_tx<F, Fut, T>(&self, f: F) -> Result<T>
+    pub async fn with_pg_tx<F, T>(&self, f: F) -> Result<T>
     where
-        F: FnOnce(&mut sqlx::Transaction<'_, Postgres>) -> Fut,
-        Fut: std::future::Future<Output = Result<T>>,
+        F: for<'a> FnOnce(
+            &'a mut sqlx::Transaction<'_, Postgres>,
+        ) -> std::pin::Pin<
+            Box<dyn std::future::Future<Output = Result<T>> + Send + 'a>,
+        >,
     {
         let pool = self
             .sqlx_postgres()
@@ -591,10 +582,13 @@ impl DbHandle {
     /// # Errors
     /// Returns an error if the transaction fails or the closure returns an error.
     #[cfg(feature = "mysql")]
-    pub async fn with_mysql_tx<F, Fut, T>(&self, f: F) -> Result<T>
+    pub async fn with_mysql_tx<F, T>(&self, f: F) -> Result<T>
     where
-        F: FnOnce(&mut sqlx::Transaction<'_, MySql>) -> Fut,
-        Fut: std::future::Future<Output = Result<T>>,
+        F: for<'a> FnOnce(
+            &'a mut sqlx::Transaction<'_, MySql>,
+        ) -> std::pin::Pin<
+            Box<dyn std::future::Future<Output = Result<T>> + Send + 'a>,
+        >,
     {
         let pool = self
             .sqlx_mysql()
@@ -618,10 +612,13 @@ impl DbHandle {
     /// # Errors
     /// Returns an error if the transaction fails or the closure returns an error.
     #[cfg(feature = "sqlite")]
-    pub async fn with_sqlite_tx<F, Fut, T>(&self, f: F) -> Result<T>
+    pub async fn with_sqlite_tx<F, T>(&self, f: F) -> Result<T>
     where
-        F: FnOnce(&mut sqlx::Transaction<'_, Sqlite>) -> Fut,
-        Fut: std::future::Future<Output = Result<T>>,
+        F: for<'a> FnOnce(
+            &'a mut sqlx::Transaction<'_, Sqlite>,
+        ) -> std::pin::Pin<
+            Box<dyn std::future::Future<Output = Result<T>> + Send + 'a>,
+        >,
     {
         let pool = self
             .sqlx_sqlite()

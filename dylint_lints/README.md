@@ -31,7 +31,7 @@ make dylint-test         # Test UI cases (compile & verify violations)
 - TODO
 
 **Client/gateway Layer (DE05xx)**
-- TODO
+- ✅ DE0503: Plugin Client Suffix
 
 **Module structure (DE06xx)**
 - TODO
@@ -41,6 +41,7 @@ make dylint-test         # Test UI cases (compile & verify violations)
 
 **REST Conventions (DE08xx)**
 - ✅ DE0801: API Endpoint Must Have Version
+- ✅ DE0802: Use OData Extension Methods
 
 **GTS (DE09xx)**
 - TODO

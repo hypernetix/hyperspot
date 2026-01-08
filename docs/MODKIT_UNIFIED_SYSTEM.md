@@ -9,7 +9,7 @@ also describes the DDD-light layering and conventions used across modules.
 ## What ModKit provides
 
 * **Composable modules** discovered via `inventory`, initialized in dependency order.
-* **Ingress as a module** (e.g., `api_ingress`) that owns the Axum router and OpenAPI document.
+* **Gateway as a module** (e.g., `api_gateway`) that owns the Axum router and OpenAPI document.
 * **Type-safe REST** via an operation builder that prevents half-wired routes at compile time.
 * **Server-Sent Events (SSE)** with type-safe broadcasters and domain event integration.
 * **OpenAPI 3.1** generation using `utoipa` with automatic schema registration for DTOs.
@@ -145,7 +145,7 @@ Attach the attribute to your main struct. The macro:
 ```rust
 #[modkit::module(
     name = "my_module",
-    deps = ["foo", "bar"], // api_ingress dependency will be added automatically for rest module capability
+    deps = ["foo", "bar"], // api_gateway dependency will be added automatically for rest module capability
     capabilities = [db, rest, stateful, /* rest_host if you own the HTTP server */],
     client = contract::client::MyModuleApi,
     ctor = MyModule::new(),
@@ -160,7 +160,7 @@ pub struct MyModule {
 
 * `db` → implement `DbModule` (migrations / schema setup).
 * `rest` → implement `RestfulModule` (register routes synchronously).
-* `rest_host` → own the Axum server/OpenAPI (e.g., `api_ingress`).
+* `rest_host` → own the Axum server/OpenAPI (e.g., `api_gateway`).
 * `stateful` → background job:
 
     * With `lifecycle(...)`, the macro generates `Runnable` and registers `WithLifecycle<Self>`.
@@ -183,15 +183,15 @@ Generated helpers:
 
 ```rust
 #[modkit::module(
-    name = "api_ingress",
+    name = "api_gateway",
     capabilities = [rest_host, rest, stateful],
     lifecycle(entry = "serve", stop_timeout = "30s", await_ready)
 )]
-pub struct ApiIngress {
+pub struct ApiGateway {
     /* ... */
 }
 
-impl ApiIngress {
+impl ApiGateway {
     // accepted signatures:
     // 1) async fn serve(self: Arc<Self>, cancel: CancellationToken) -> Result<()>
     // 2) async fn serve(self: Arc<Self>, cancel: CancellationToken, ready: ReadySignal) -> Result<()>
@@ -722,7 +722,7 @@ OperationBuilder::<Missing, Missing, S>::post("/my-module/v1/path")
 **MIME type validation**
 
 ```rust
-// Configure allowed Content-Type values (enforced by ingress middleware):
+// Configure allowed Content-Type values (enforced by gateway middleware):
 .allow_content_types( & ["application/json", "application/xml"])
 ```
 
@@ -794,7 +794,30 @@ Notes:
 
 - Authenticated operations must call `require_license_features(...)` before `register(...)`.
 - Public routes cannot (and do not need to) call `require_license_features(...)`.
-- `api_ingress` currently enforces license requirements via a stub middleware that only allows the base feature.
+- `api_gateway` currently enforces license requirements via a stub middleware that only allows the base feature.
+
+**OData query options (type-safe, OpenAPI-friendly)**
+
+Use `OperationBuilderODataExt` helpers to register OData query parameters. This avoids manually wiring `$filter`, `$orderby`, and `$select` via `.query_param(...)` and keeps the allowed filter/order fields type-safe.
+
+```rust
+use modkit::api::operation_builder::OperationBuilderODataExt;
+
+OperationBuilder::get("/users-info/v1/users")
+    .operation_id("users_info.list_users")
+    .require_auth(&Resource::Users, &Action::Read)
+    .require_license_features::<License>([])
+    .with_odata_filter::<dto::UserDtoFilterField>()
+    .with_odata_select()
+    .with_odata_orderby::<dto::UserDtoFilterField>()
+    .handler(handlers::list_users)
+    .json_response_with_schema::<modkit_odata::Page<dto::UserDto>>(
+        openapi,
+        http::StatusCode::OK,
+        "Paginated list of users",
+    )
+    .register(router, openapi);
+```
 
 **Handler / method router**
 
@@ -913,6 +936,19 @@ pub struct UserDto {
 ```
 
 This generates a `UserDtoFilterField` enum automatically with variants for each filterable field.
+
+**How to annotate fields**
+
+- **Opt-in per field**: a field is only available for `$filter` / `$orderby` if it has a `#[odata(filter(kind = "..."))]` attribute.
+- **Unannotated fields are not filterable/orderable**: omitting `#[odata(...)]` keeps the field out of the generated `*FilterField` enum, so it cannot appear in `$filter` or `$orderby`.
+- **Kind must match the Rust type**: choose the `kind` that corresponds to the DTO field type (e.g. `Uuid` for `uuid::Uuid`, `DateTimeUtc` for `chrono::DateTime<Utc>`).
+- **Route wiring uses the generated enum**: `routes.rs` registers OData query params via `OperationBuilderODataExt` using that generated enum type.
+
+When exposing OData on REST endpoints, register the corresponding query options in `routes.rs` using:
+
+- `OperationBuilderODataExt::with_odata_filter::<F>()`
+- `OperationBuilderODataExt::with_odata_select()`
+- `OperationBuilderODataExt::with_odata_orderby::<F>()`
 
 **Supported field kinds**: `String`, `I64`, `F64`, `Bool`, `Uuid`, `DateTimeUtc`, `Date`, `Time`, `Decimal`
 
@@ -1343,7 +1379,7 @@ The `.octet_stream_request()` method:
 
 ### MIME type validation
 
-Both helpers automatically configure MIME type validation via the ingress middleware. If a request arrives with a
+Both helpers automatically configure MIME type validation via the gateway middleware. If a request arrives with a
 different Content-Type, it will receive HTTP 415 (Unsupported Media Type).
 
 You can also manually configure allowed types:
@@ -1359,7 +1395,7 @@ OperationBuilder::post("/files/v1/upload")
     .register(router, openapi);
 ```
 
-**Important**: `.allow_content_types()` is independent of the request body schema. It only configures ingress validation
+**Important**: `.allow_content_types()` is independent of the request body schema. It only configures gateway validation
 and doesn't create OpenAPI request body specs. Use it when you want to enforce MIME types but handle the body parsing
 manually in your handler.
 
@@ -1547,11 +1583,11 @@ use modkit::client_hub::ClientScope;
 
 // Plugin registers with a scope (e.g., GTS instance ID)
 let scope = ClientScope::gts_id("gts.x.core.modkit.plugin.v1~vendor.pkg.my_module.plugin.v1~acme.test._.plugin.v1");
-ctx.client_hub().register_scoped::<dyn MyPluginApi>(scope, plugin_impl);
+ctx.client_hub().register_scoped::<dyn MyPluginClient>(scope, plugin_impl);
 
 // Gateway resolves the selected plugin
 let scope = ClientScope::gts_id(&selected_instance_id);
-let plugin = ctx.client_hub().get_scoped::<dyn MyPluginApi>(&scope)?;
+let plugin = ctx.client_hub().get_scoped::<dyn MyPluginClient>(&scope)?;
 ```
 
 **Key points:**

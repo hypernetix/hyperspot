@@ -33,10 +33,10 @@ The goal is to show a clean pattern for “modules with plugins” in HyperSpot/
   - registered by the gateway **without a scope**
   - consumers call it via `ctx.client_hub().get::<dyn TenantResolverClient>()?`
 
-- **Plugin API (implemented by plugins, called by gateway)**: `dyn ThrPluginApi`
+- **Plugin API (implemented by plugins, called by gateway)**: `dyn TenantResolverPluginClient`
   - registered by each plugin **with a scope**
   - scope key: `ClientScope::gts_id(&instance_id)`
-  - gateway resolves the selected plugin via `get_scoped::<dyn ThrPluginApi>(&scope)`
+  - gateway resolves the selected plugin via `get_scoped::<dyn TenantResolverPluginClient>(&scope)`
 
 ### 1) A plugin defines an instance ID as a GTS ID
 
@@ -64,7 +64,7 @@ This makes instances discoverable at runtime.
 
 The same plugin registers its implementation under:
 
-- interface type: `dyn ThrPluginApi`
+- interface type: `dyn TenantResolverPluginClient`
 - scope: `ClientScope::gts_id(&instance_id)`
 
 So the gateway can later resolve *the correct implementation for a particular instance id*.
@@ -138,7 +138,7 @@ Then call:
 3) Generate a stable instance id:
    - `TenantResolverPluginSpecV1::gts_make_instance_id("<your.instance.name>")`
 4) Register the instance in `types-registry` using that `gts_id`
-5) Register your `Arc<dyn ThrPluginApi>` into `ClientHub` with scope `ClientScope::gts_id(&gts_id)`
+5) Register your `Arc<dyn TenantResolverPluginClient>` into `ClientHub` with scope `ClientScope::gts_id(&gts_id)`
 6) Add the plugin module name into the gateway’s `deps = [...]` list so the plugin initializes before the gateway
 7) Update `apps/hyperspot-server/Cargo.toml` feature `tenant-resolver-example` deps if you want it included in the example build
 

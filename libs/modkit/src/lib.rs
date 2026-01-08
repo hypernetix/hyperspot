@@ -133,6 +133,9 @@ pub use directory::{
 // GTS schema support
 pub mod gts;
 
+// Security context scoping wrapper (re-exported from modkit-sdk)
+pub use modkit_sdk::{Secured, WithSecurityContext};
+
 pub use backends::{
     BackendKind, InstanceHandle, LocalProcessBackend, ModuleRuntimeBackend, OopBackend,
     OopModuleConfig, OopSpawnConfig,

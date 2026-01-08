@@ -211,12 +211,13 @@ server:
   home_dir: "{}"
 
 modules:
-  api_ingress:
+  api_gateway:
     config:
       bind_addr: "127.0.0.1:{}"
       enable_docs: false
       cors_enabled: false
       auth_disabled: true
+  users_info: {{}}
 "#,
         temp_dir
             .path()

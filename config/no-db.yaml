@@ -1,7 +1,7 @@
 # HyperSpot Server Configuration
 # Updated to use the new configuration structure
 
-# Core server configuration (global section)  
+# Core server configuration (global section)
 server:
   home_dir: "~/.hyperspot"
 
@@ -17,9 +17,10 @@ logging:
 
 # Per-module configurations using new structure
 modules:
-  api_ingress:
-    # No database configuration needed for api_ingress
+  api_gateway:
+    # No database configuration needed for api_gateway
     config:
       bind_addr: "127.0.0.1:8087"
       enable_docs: true
       cors_enabled: true
+      auth_disabled: true

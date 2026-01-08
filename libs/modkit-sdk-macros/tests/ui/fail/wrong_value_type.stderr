@@ -1,0 +1,27 @@
+error[E0277]: the trait bound `NotODataValue: IntoODataValue` is not satisfied
+  --> tests/ui/fail/wrong_value_type.rs:13:28
+   |
+13 |     let _ = user::age().eq(NotODataValue);
+   |                         -- ^^^^^^^^^^^^^ unsatisfied trait bound
+   |                         |
+   |                         required by a bound introduced by this call
+   |
+help: the trait `IntoODataValue` is not implemented for `NotODataValue`
+  --> tests/ui/fail/wrong_value_type.rs:9:1
+   |
+ 9 | struct NotODataValue;
+   | ^^^^^^^^^^^^^^^^^^^^
+   = help: the following other types implement trait `IntoODataValue`:
+             &str
+             String
+             Uuid
+             bool
+             i32
+             i64
+             u32
+             u64
+note: required by a bound in `FieldRef::<S, T>::eq`
+  --> $WORKSPACE/libs/modkit-sdk/src/odata.rs
+   |
+   |     pub fn eq<V: IntoODataValue>(self, value: V) -> Expr {
+   |                  ^^^^^^^^^^^^^^ required by this bound in `FieldRef::<S, T>::eq`

@@ -1,6 +1,10 @@
 # HyperSpot Architecture Manifest
 
-> **Welcome to HyperSpot!** This document serves as your architectural compass, explaining the core ideas, design principles, and rules that guide HyperSpot's development. Whether you're a newcomer or contributor, understanding these concepts will help you navigate and extend the platform effectively.
+> **NOTE:** This manifest describes our targets and forward-looking architecture. It is not a changelog of the current implementation. Canonical, up-to-date product and API documentation is maintained separately (e.g., module-specific docs, OpenAPI, and design records). Use this document for intent and direction; confirm current behavior in the dedicated docs.
+
+**Welcome to HyperSpot!** This document serves as your architectural and technical reference, explaining the core ideas, design principles, and rules that guide HyperSpot's development. Whether you're a newcomer or contributor, understanding these concepts will help you navigate and extend the platform effectively.
+
+HyperSpot is a modular Rust-based foundation for building SaaS products where Generative AI capabilities are first-class, alongside enterprise-grade SaaS requirements such as multi-tenancy, access control, governance, auditability, and usage tracking. It is designed to sit between cloud infrastructure (IaaS/PaaS) and vendor-developed SaaS applications, providing reusable building blocks that product teams can assemble into complete end-to-end services.
 
 ## Overview
 
@@ -15,6 +19,63 @@ HyperSpot is a **modular, high-performance AI services platform** built in Rust.
 - **Universal Deployment**: Single codebase runs on cloud, on-prem Windows/Linux workstation, or mobile
 - **Developer Friendly**: AI-assisted code generation, automatic OpenAPI docs, DDD-light structure, and type-safe APIs
 
+## Non-goals
+
+1. HyperSpot doesn't optimize for **minimalism** or the lowest barrier to entry
+
+HyperSpot does not aim to be the simplest or smallest framework for building SaaS or AI applications. It intentionally prioritizes explicit structure, governance, composability, and long-term evolvability over quick-start simplicity or minimal configuration.
+
+2. HyperSpot doesn't Provide a **rich catalog of end-user services** out of the box
+
+HyperSpot does not aim to ship a comprehensive set of ready-made, end-user SaaS services (e.g. CRM, ticketing, billing products) as part of its core. Its primary focus is the foundational layer—runtime, control plane, GenAI capabilities, workflows, and extensibility—on top of which vendors and product teams build their own complete SaaS offerings.
+
+3. HyperSpot doesn't attempt to replace **cloud infrastructure or PaaS layers**
+
+HyperSpot is not a replacement for cloud providers or infrastructure platforms such as AWS, Azure, GCP, or on-prem orchestration stacks. It does not offer physical infrastructure, networking, container orchestration, or low-level resource scheduling. Instead, HyperSpot intentionally positions itself above IaaS/PaaS and below vendor-developed SaaS, focusing on application-level services, governance, and GenAI enablement.
+
+## Why Rust and why Monorepo?
+
+Rust and a monorepo are intentional choices to optimize **recurring engineering work**,especially the feedback loop required for safe and high-throughput **LLM-assisted development**. The goal is to maximize how quickly generated code can be validated (build, lint, test, run, debug) *before* it is committed.
+
+### Why Rust (recurring benefits)
+
+- **Compile-time safety for memory and concurrency**.
+  Rust's ownership model prevents data races and memory safety issues by construction. It removes entire categories of runtime failures (null pointer dereference, use-after-free, iterator invalidation) by design—critical for a multi-tenant platform handling concurrent requests.
+
+- **Faster debugging of complex, cross-cutting scenarios (human + LLM)**.
+  Strong typing, structured errors, and deterministic build artifacts make failures easier to localize. This improves troubleshooting for complex, multi-module behaviors and makes it easier for LLMs to propose minimal, correct fixes based on compiler diagnostics, test failures, and traces.
+
+- **Deep static analysis as a platform feature**.
+  Rust's compiler and tooling ecosystem enable strong static inspection (AST/HIR/MIR-level analysis). Over time, recurring code review feedback and internal guidelines can be converted into custom project-specific lints (see [dylint_lints](../dylint_lints)), preventing bad patterns *before* they reach code review or production.
+
+- **Low footprint + performance enable “whole subsystem locally” workflows**.
+  A fast, resource-efficient stack makes it realistic for developers (and LLM-based code generators) to:
+  - build and run large subsystems locally (e.g. via Docker Compose),
+  - run end-to-end tests locally,
+  - reproduce issues with full logs + source access without relying on remote environments.
+
+- **Fearless refactoring**.
+  Strong type system and exhaustive pattern matching mean large-scale refactors (e.g., changing a contract used by 20 modules) are caught at compile time, not in production.
+
+### Why a monorepo (recurring benefits)
+
+- **Atomic changes across modules and contracts**.
+  HyperSpot is modular, but the contracts between modules evolve. A monorepo allows changing a contract and all its consumers in one PR.
+
+- **Short, controllable feedback loops for LLM-generated changes**.
+  When generation touches multiple crates, the monorepo makes it practical to run build + lints + targeted tests + E2E in a single workspace context. This reduces "partial correctness" changes and enables rapid iteration on generated patches until the full system is green.
+
+- **Single source of truth for tooling and quality gates**.
+  Consistent formatting, linting, security checks, and test entry points are easier to enforce when everything shares the same CI and build system.
+
+- **Realistic local builds and end-to-end testing**.
+  When the code is together, it is much easier to run “the full actual system” locally, which is a prerequisite for fast debugging and reliable local E2E.
+
+- **Avoid version skew between internal crates/services**.
+  Multi-repos often introduce dependency pinning, release choreography, and integration lag. A monorepo keeps internal APIs aligned by default.
+
+Monorepo is not dogma: it has to be kept while it improves velocity and correctness. If a part of the system grows to the point where independent versioning, release cadence, or access control is required, it can be extracted behind stable contracts.
+
 ---
 
 ## 1. Modular Architecture
@@ -22,32 +83,33 @@ HyperSpot is a **modular, high-performance AI services platform** built in Rust.
 ### 1.1. What is a Module?
 
 A **Module** is a logical component that provides a specific set of functionality. In HyperSpot:
-- Everything MUST be a module (no exceptions)
-- Each module is a Rust crate library
+- Every logical component must be a module
+- Each module is a Rust **package** containing:
+  - A **library crate** (`lib.rs`) — always present, contains module declaration
+  - Optionally a **binary crate** (`main.rs`) — for out-of-process (OoP) modules that run as separate processes
 - Modules are self-contained with their own configuration, API, and business logic
 - Modules are discovered automatically via the `inventory` crate
 - Modules can depend on each other
-- A module can implement a common API gateway, while workers can be implemented as separate modules (for example Search gateway that provides agnostic API for search using different engines like Qdrant, Weaviate, etc.)
+- Modules can run either **in-process** (linked into the main binary) or **out-of-process** (as separate binaries communicating via gRPC) — see [MODKIT_UNIFIED_SYSTEM.md](MODKIT_UNIFIED_SYSTEM.md) for OoP details
 
 **Example modules:**
-- `api_ingress` - HTTP server and routing
-- `directory_service` - User and tenant management
 - `file_parser` - Document parsing and extraction
-- `grpc_hub` - gRPC communication gateway
+- `chat` - Chat module
+- `web_search` - Web search module
 
 **Module categories**
 
-- **Generic Module** - Generic modules are typically independent, expose their own Public API and responsible for their own domain
-- **Gateway Module** - Gateways are normally exposing Public REST API (e.g. search, file parsing, etc.) and routing requests to real executors (workers) based on some context, such as tenant ID, or request parameters/body/headers, etc
-- **Worker Module** - Workers typically do not expose their own Public REST API, depend on Gateways and just implement certain contract defined by their Gateway module.
+- **Regular Module** — Regular modules are typically independent, expose their own versioned public API, and are responsible for their own domain end-to-end, including module business logic, data storage, migrations, and module API documentation. Regular modules **cannot** depend on or consume plugin modules directly—all plugin functionality must be accessed through a Gateway Module's public API.
+- **Gateway Module** — Gateway modules are Regular Modules that define a **plugin contract** and route requests to one or more Plugin Modules at runtime. They expose a public API and delegate execution to the selected plugin based on configuration or context. See [MODKIT_PLUGINS.md](MODKIT_PLUGINS.md) for the Gateway + Plugin pattern.
+- **Plugin Module** — Plugins are special modules identified by a **GTS instance ID** that implement a gateway-defined contract. They do not expose their own **public API** and act as pluggable workers. Plugins register themselves in the types-registry for runtime discovery — see [MODKIT_PLUGINS.md](MODKIT_PLUGINS.md) for details.
 
 **Module structure:**
 
-| Module type | Generic | Gateway | Worker |
+| Module layer | Regular module | Gateway module | Plugin module |
 | --- | --- | --- | --- |
 | API layer @ api/ | Yes | Yes | No |
-| Business logic layer @ domain/ | Yes | Yes (router) | Yes |
-| Infrastructure layer @ infrastructure/ | Likely | Rare | Depends |
+| Business logic layer @ domain/ | Yes | Yes (contract, router) | Yes, main logic |
+| Infrastructure layer @ infrastructure/ | Likely | Rare | Likely |
 | Gateway layer @ gateways/ | Yes, if depends on other modules | Yes, workers connectors | Yes, clients to some service |
 | Examples | Any CRUD module (TODO) | file_parser, (TODO) | file_parser_tika, (TODO) |
 
@@ -61,8 +123,8 @@ See more in [MODKIT_UNIFIED_SYSTEM.md](MODKIT_UNIFIED_SYSTEM.md)
 
 A **Deployment Unit** is a physical component that bundles one or more modules for deployment:
 - **Desktop app**: Most modules compiled into a single process
-- **Cloud server**: Modules running in separate Docker containers
-- **On-prem server**: Modules as Windows/Linux binaries
+- **Cloud server**: Modules compiled into separate processes and running in separate Docker containers
+- **On-prem server**: Modules compiled into several Windows/Linux binaries
 - **Mobile app**: Selected modules in-app, others in the cloud
 
 ### 1.3. Module Communication
@@ -78,7 +140,7 @@ The `ClientHub` provides type-safe client resolution, allowing modules to commun
 
 ## 2. SaaS Readiness
 
-HyperSpot is designed from the ground up for **Software-as-a-Service (SaaS)** deployments with enterprise-grade multi-tenancy and security features.
+HyperSpot is designed from the ground up for **Software-as-a-Service (SaaS)** deployments with enterprise-grade multi-tenancy, product licensing and security features.
 
 ### 2.1. Multi-Tenancy
 
@@ -137,44 +199,11 @@ HyperSpot is designed from the ground up for **Software-as-a-Service (SaaS)** de
 
 ---
 
-## 3. System Components
+## 3. Modules
 
 ![architecture.drawio.png](img/architecture.drawio.png)
 
-The diagram above illustrates principal HyperSpot's modules architecture. Deployment and components list depends on the target environment and build configuration, for example it could be single executable for a desktop version or multiple containers for a cloud server.
-
-Each module encapsulates a well-defined piece of business logic and exposes **versioned contracts** to its consumers via Rust-native interfaces, HTTP APIs, or gRPC. In addition, modules can define it's own **plugin interfaces** that allow pluggable implementations of processing and storage concerns, enabling extensibility without coupling core logic to concrete backends.
-
-All interaction between modules and between modules and their plugins happens strictly through these versioned public interfaces. No module or plugin is allowed to depend on another module’s internal structures or implementation details. This enforces loose coupling, enables independent evolution and versioning, and allows modules or plugin implementations to be replaced without impacting the rest of the system.
-
-| Module | Category | Module Interface | Plugins Interface | Description | Possible plugins (if any) |
-| --- | --- | --- | --- | --- | --- |
-| chat | Gen AI | TODO | TODO | Chat gateway | Chat messages storage (DB, ELK, etc.) |
-| mcp_gateway | Gen AI | TODO | TODO | MCP gateway | MCP inbound/outbound traffic interceptors |
-| web_search | Gen AI | TODO | TODO | Search gateway | Search inboud/outbound traffic interceptors; search providers |
-| rag | Gen AI | TODO | TODO | RAG gateway | Vector databases |
-| llm_gateway | Gen AI | TODO | TODO | LLM gateway | LLM inbound/outbound traffic interceptors |
-| llm_manager | Gen AI | TODO | TODO | LLM manager | LLM providers manager (e.g. download model, load model, etc.) |
-| local_search_index | Gen AI | TODO | TODO | Local search index | Qdrant; Meilisearch; ... |
-| file_parser | Gen AI | TODO | TODO | File parser | Integrated file parser; Tika parser |
-| workflows_runtime | Core | TODO | TODO | Workflows and FaaS runtime | RUST runtime; Starlark runtime |
-| events_broker | Core | TODO | TODO | Events and message broker | DB storage; ClickHouse storage; Kafka storage |
-| audit | Core | TODO | TODO | Audit logging | DB storage; ClickHouse storage; ELK storage |
-| metrics | Core | TODO | TODO | Metrics collection | DB storage; ClickHouse storage; ELK storage |
-| auth_manager | System | TODO | TODO | Token and claims parser | Gateways to other Platforms |
-| tenant_resolver | System | TODO | TODO | Multi-tenancy provider | Gateways to other Platforms |
-| policy_manager | System | TODO | TODO | Authentication provider | Gateways to other Platforms |
-| license_manager | System | TODO | TODO | License manager | Gateways to other Platforms |
-| settings | System | TODO | TODO | Per-tenant, per-user, etc. settings | Storage providers; Gateways to other Platforms |
-| cred_storage | System | TODO | TODO | Credentials storage | Storage providers; Gateways to other Platforms |
-| usage_tracker | System | TODO | TODO | Usage tracker | Storage providers; Integrations with other Platforms |
-| outbound_api_gateway | System | TODO | TODO | Manage outbound trafic and contracts | Auth adapters; Integrations with other Platforms |
-| api_ingress | Internal | TODO | TODO | HTTP server and routing | - |
-| grpc_hub | Internal | TODO | TODO | gRPC communication gateway | - |
-| types_registry | Internal | TODO | TODO | Types and contracts registry | - |
-| nodes_registry | Internal | TODO | TODO | Hyperspot nodes (deployments) registry | - |
-
-Check [ROADMAP.md](ROADMAP.md) for more details.
+See detailed descriptions in [MODULES.md](MODULES.md).
 
 ---
 
@@ -198,51 +227,95 @@ HyperSpot uses a **monorepo** approach with multiple crates:
 ```
 hyperspot/
 ├── apps/              # Executable applications (hyperspot-server)
-├── libs/              # Shared libraries (modkit, modkit-db, modkit-auth, etc.)
-├── modules/           # Business logic modules (api_ingress, directory_service, etc.)
-├── examples/          # Example modules and usage patterns
-├── testing/           # E2E and integration tests
+├── config/            # Configuration files
 ├── docs/              # Architecture and development guides
-├── guidelines/        # Coding standards and best practices
-└── config/            # Configuration files
+├── dylint_lints/      # Project-specific lints (see `make dylint`)
+├── examples/          # Example modules and usage patterns
+├── guidelines/        # Coding standards and best practices for LLMs
+├── libs/              # Shared libraries (modkit, modkit-db, modkit-auth, etc.)
+├── modules/           # Business logic modules
+│   ├── system/        # Core system modules (api_gateway, grpc_hub, module_orchestrator, nodes_registry, types-registry)
+│   └── ...            # User modules (file_parser, etc.)
+├── scripts/           # Custom scripts for build, testing, etc.
+└── testing/           # E2E and integration tests (pytest)
 ```
 
 ### 5.2. External Integration
 
-The 'main' crates can be located in separate repositories and use HyperSpot modules as dependencies via Cargo. This allows:
-- Custom applications built on HyperSpot
-- Private modules not in the main repo
-- Vendor-specific extensions
+ The 'main' crates can be located in separate repositories and use HyperSpot modules as dependencies via Cargo. This allows:
+ - Custom applications built on HyperSpot by choosing only needed modules
+ - Private modules not in the main repo
+ - Vendor-specific extensions (modules, plugins, adapters)
 
 ### 5.3. Module Layout (DDD-Light)
 
-Every module follows a **Domain-Driven Design (DDD-light)** structure:
+ Every module follows a **Domain-Driven Design (DDD-light)** structure:
 
 ```
 modules/<module-name>/
+├── Cargo.toml
 ├── src/
-│   ├── lib.rs           # Public exports
-│   ├── module.rs        # Module declaration and traits
-│   ├── config.rs        # Typed configuration
-│   ├── api/             # Transport adapters (REST, gRPC)
-│   │   └── rest/        # HTTP handlers, DTOs, routes
-│   ├── contract/        # Public API for other modules
-│   │   ├── client.rs    # ClientHub traits
-│   │   ├── model.rs     # Transport-agnostic models
-│   │   └── error.rs     # Domain errors
-│   ├── domain/          # Business logic
-│   │   ├── service.rs   # Orchestration and rules
-│   │   └── events.rs    # Domain events
-│   └── infra/           # Infrastructure (database, external APIs)
-│       └── storage/     # Database entities and repositories
-└── Cargo.toml
+│   ├── lib.rs                        # Public exports
+│   ├── module.rs                     # Module struct + #[modkit::module(...)]
+│   ├── config.rs                     # Typed module config
+│   ├── local_client.rs               # Local adapter implementing an SDK API trait (optional)
+│   ├── api/
+│   │   └── rest/
+│   │       ├── dto.rs                # REST-only DTOs (serde + ToSchema)
+│   │       ├── handlers.rs           # Thin HTTP handlers
+│   │       ├── routes.rs             # Route + OpenAPI registration (OperationBuilder)
+│   │       ├── error.rs              # DomainError -> Problem mapping
+│   │       └── mappers.rs            # DTO <-> domain mapping
+│   ├── domain/                       # Business logic
+│   └── infra/                        # Infrastructure adapters (optional)
+├── tests/                            # Optional
+└── (optional extras: gts/, openspec/, build.rs, etc.)
+
+# SDK pattern (used by e.g. `modules/system/types-registry/` and `examples/modkit/users_info/`)
+modules/<module-dir>/
+├── <module-name>-sdk/
+│   ├── Cargo.toml
+│   └── src/
+│       ├── lib.rs                    # Re-exports
+│       ├── api.rs                    # ClientHub API trait (methods take &SecurityCtx)
+│       ├── models.rs                 # Transport-agnostic models (no serde)
+│       ├── error.rs|errors.rs         # Transport-agnostic errors
+│       ├── (optional) proto/         # Generated gRPC/proto types for OoP modules
+│       └── (optional) wiring.rs      # gRPC client wiring/helpers for OoP transport
+└── <module-name>/
+    ├── Cargo.toml
+    └── src/
+        ├── lib.rs                    # Re-exports SDK + module struct
+        ├── module.rs                 # Module struct + #[modkit::module(...)]
+        ├── config.rs
+        ├── local_client.rs
+        ├── api/
+        ├── domain/
+        └── infra/
 ```
 
-**Layer responsibilities:**
-- **API**: Translates HTTP/gRPC requests to domain commands
-- **Contract**: Public interface for inter-module communication
-- **Domain**: Core business logic, independent of infrastructure
-- **Infra**: Database, external services, system interactions
+Additional common patterns (see `examples/`):
+
+- **Gateway + plugins pattern** (pluggable workers via `ClientHub` scopes):
+  - Gateway crate: `<module>-gw/`
+  - SDK crate: `<module>-sdk/`
+  - Plugin crates: `plugins/<vendor>_<plugin>/`
+
+- **Out-of-process (OoP) module pattern** (gRPC boundary):
+  - SDK crate with gRPC client + wiring helpers
+  - Module crate with gRPC server + (optional) `main.rs` binary for OoP execution
+
+ **Layer responsibilities:**
+ - **SDK (optional but recommended)**: The stable public surface for other modules/apps.
+   - Transport-agnostic traits, models, and errors.
+   - No `serde`, no `axum`, no `utoipa`, no HTTP types.
+ - **Module bootstrap** (`module.rs` + `#[modkit::module]`): Lifecycle, configuration loading, wiring adapters, and `ClientHub` registrations.
+ - **API (transport adapters)**: REST/gRPC adapters.
+   - REST DTOs are defined only in `api/rest` and must not leak into domain/SDK.
+ - **Domain**: Core business logic and invariants.
+   - Depends on ports/repo traits, not on concrete DB/HTTP.
+ - **Infra**: Concrete implementations of storage and integrations.
+   - DB repositories, HTTP clients, SDK clients, filesystems, etc.
 
 ### 5.4. ModKit - The Foundation
 
@@ -255,100 +328,38 @@ Every HyperSpot module uses the **ModKit** framework, which provides:
 - **Observability**: Structured logging and distributed tracing
 - **SSE support**: Server-Sent Events for real-time updates
 
-**Key ModKit libraries:**
-- `modkit` - Core framework
-- `modkit-db` - Database abstractions
-- `modkit-auth` - Authentication and authorization
-- `modkit-errors` - Standardized error handling
-- `modkit-macros` - Procedural macros for module declaration
+ **Key ModKit libraries:**
+ - `modkit` - Core module framework: lifecycle, REST host/contracts, OpenAPI registry, ClientHub, tracing helpers
+ - `modkit-macros` - Procedural macros for module registration (`#[modkit::module(...)]`)
+ - `modkit-auth` - Authn/z plumbing for gateway and route policies
+ - `modkit-security` - `SecurityCtx` and security-scoping primitives used across modules (request-scoped context)
+ - `modkit-errors` - Shared error types and RFC-9457 Problem modeling utilities
+ - `modkit-errors-macro` - Macros/codegen for error catalogs
+ - `modkit-db` - Database runtime integration (DbHandle/DbManager) + Secure ORM patterns
+ - `modkit-db-macros` - DB macros (e.g., secure ORM helpers, OData derives)
+ - `modkit-odata` - OData query + pagination primitives
+ - `modkit-transport-grpc` - gRPC client/server transport utilities (timeouts/retries/tracing)
+ - `modkit-node-info` - Node/runtime metadata used for deployments and diagnostics
 
 ---
 
-## 6. Quality Gateways
+## 6. Dependencies and Standards
 
-HyperSpot maintains high code quality through automated checks and comprehensive testing.
-
-### 6.1. Testing Strategy
-
-**Target: 90%+ code coverage**
-
-- **Unit tests**: Test individual functions and methods
-  ```bash
-  cargo test --workspace
-  ```
-
-- **Integration tests**: Test module interactions with databases
-  ```bash
-  make test-pg  # PostgreSQL
-  make test-sqlite  # SQLite
-  ```
-
-- **End-to-end tests**: Test complete request flows (Python/pytest)
-  ```bash
-  make e2e-docker  # Run in Docker environment
-  ```
-
-- **Performance tests**: Benchmark API response times, throughput, and resource usage
-  ```bash
-  # TODO: Add performance test commands
-  ```
-
-- **Security tests**: API fuzzing and security vulnerability scanning
-  ```bash
-  # TODO: Add security test commands
-  ```
-
-### 6.2. Static Analysis
-
-All code must pass these checks before merging:
-
-- **Formatting**: `cargo fmt --all -- --check`
-  - Max line length: 100 characters
-  - 4-space indentation
-  - Trailing commas required
-
-- **Linting**: `cargo clippy --workspace --all-targets -- -D warnings`
-  - Deny all warnings
-  - Deny unsafe code (workspace-wide)
-  - Deny unwraps (no panics)
-  - Deny expect (no panics)
-
-- **Security audit**: `cargo audit`
-  - Check for known vulnerabilities
-
-- **License compliance**: `cargo deny check`
-  - Verify dependency licenses
-
-**Run all checks:**
-```bash
-make check  # Unix/Linux/macOS
-python scripts/ci.py check  # Cross-platform
-```
-
----
-
-## 7. Dependencies and Standards
-
-### 7.1. DNA - Development Guidelines
+### 6.1. DNA - Development Guidelines
 
 [DNA](https://github.com/hypernetix/DNA) is HyperSpot's collection of development standards and best practices:
 - **REST API design**: Status codes, pagination, error handling
-- **Language conventions**: Rust coding standards
-- **Security practices**: Authentication, authorization, data protection
-- **DCO**: Developer Certificate of Origin for contributions
 
 **Key guidelines:**
 - `guidelines/DNA/REST/API.md` - REST API design principles
-- `guidelines/DNA/languages/RUST.md` - Rust coding standards
-- `guidelines/SECURITY.md` - Security requirements
 
-### 7.2. Extension Points (Type System)
+### 6.2. Extension Points (Type System)
 
 HyperSpot uses the [Global Type System](https://github.com/GlobalTypeSystem/gts-rust) ([specification](https://github.com/GlobalTypeSystem/gts-spec)) to implement a powerful **extension point architecture** where virtually everything in the system can be extended without modifying core code.
 
 **Core Concept: Extension Points**
 
-An **extension point** is a well-defined interface where new functionality can be plugged in dynamically. GTS enables this through:
+An **extension point** is a well-defined interface where new functionality and data types can be plugged in dynamically. GTS enables this through:
 - **Versioned type definitions**: Shared schemas across modules with backward compatibility
 - **Type registration**: Runtime discovery of new types and implementations
 - **Protocol buffer schemas**: Language-agnostic type definitions
@@ -356,7 +367,7 @@ An **extension point** is a well-defined interface where new functionality can b
 
 **What Can Be Extended:**
 
-1. **Module Workers** - Add new implementations behind gateway modules:
+1. **Module Plugins metadata** - Add new implementations behind entrypoint host modules:
    - **LLM Service Connectors**: OpenAI, Anthropic, Gemini, VLLM, LM Studio, custom providers
    - **LLM Benchmarks**: HumanEval, MBPP, custom evaluation frameworks
    - **Search Engines**: Qdrant, Weaviate, Milvus, Elasticsearch, custom engines
@@ -371,7 +382,7 @@ An **extension point** is a well-defined interface where new functionality can b
 
 3. **Executable Extensions**:
    - **FaaS Functions**: User-defined serverless functions
-   - **Server-Side Scripts**: Custom workflows and automation
+   - **Server-Side Workflows**: Custom workflows and automation
    - **Agents**: Pluggable AI agent implementations
 
 **Benefits:**
@@ -385,17 +396,16 @@ An **extension point** is a well-defined interface where new functionality can b
 
 **Example Use Cases:**
 
-- A company adds a proprietary chat extension for it's competitive solution
-- A researcher implements a new benchmark suite as a module worker
+- A vendor adds a proprietary chat extension for it's competitive solution
+- A researcher implements a new MCP or benchmark suite as a module worker
 - A user creates custom FaaS functions or workflows for domain-specific workflows
 - An enterprise integrates a custom search engine for compliance requirements
 
 This extension point architecture makes HyperSpot truly modular and adaptable to diverse use cases while maintaining type safety and system integrity.
 
-# 7.3. Rust dependencies
+# 6.3. Rust dependencies
 
-All dependencies are specified in the root `Cargo.toml` file and are shared across all modules. This ensures consistency and ease of dependency management.
-Each member of the workspace will inherit the dependencies from the root `Cargo.toml` file and specify the features it needs.
+All dependencies are specified in the root `Cargo.toml` file and are shared across all modules. This ensures consistency and ease of dependency management. Each member of the workspace will inherit the dependencies from the root `Cargo.toml` file and specify the features it needs.
 
 That follows what's specified in [Rust documentation](https://doc.rust-lang.org/cargo/reference/manifest.html#the-dependencies-section).
 
@@ -405,11 +415,11 @@ That follows what's specified in [Rust documentation](https://doc.rust-lang.org/
 
 ---
 
-## 8. Cloud Operations Excellence
+## 7. Cloud Operations Excellence
 
 HyperSpot modules are built on **ModKit**, which provides enterprise-grade operational capabilities out of the box. Every module automatically inherits these cloud-native patterns without additional implementation effort.
 
-### 8.1. Observability
+### 7.1. Observability
 
 **Structured Logging:**
 - [ ] **Unified Logging**: All modules use `tracing` for structured, contextual logging
@@ -434,7 +444,7 @@ HyperSpot modules are built on **ModKit**, which provides enterprise-grade opera
 - [ ] **Performance Metrics**: Request latency, throughput, error rates
 - [ ] **Resource Metrics**: Memory usage, connection pool stats, queue depths
 
-### 8.2. Database Excellence
+### 7.2. Database Excellence
 
 **Database Agnostic:**
 - [ ] **Multiple Backends**: PostgreSQL, MySQL, SQLite support via SQLx
@@ -457,7 +467,7 @@ HyperSpot modules are built on **ModKit**, which provides enterprise-grade opera
 - [ ] **Busy Handling**: SQLite busy timeout configuration
 - [ ] **Mock Support**: In-memory database for testing
 
-### 8.3. API Excellence
+### 7.3. API Excellence
 
 **HTTP Best Practices:**
 - [ ] **RESTful Design**: Consistent REST API patterns across all modules
@@ -480,7 +490,7 @@ HyperSpot modules are built on **ModKit**, which provides enterprise-grade opera
 - [ ] **Timeout Protection**: Request timeout enforcement
 - [ ] **Authentication Middleware**: Automatic token validation
 
-### 8.4. Resilience & Reliability
+### 7.4. Resilience & Reliability
 
 **Error Handling:**
 - [ ] **Typed Errors**: Strongly-typed error handling with `anyhow` and `thiserror`
@@ -500,7 +510,7 @@ HyperSpot modules are built on **ModKit**, which provides enterprise-grade opera
 - [ ] **Zero-Downtime Deploys**: Support for rolling updates
 - [ ] **Retry Mechanisms**: Automatic retry for transient failures
 
-### 8.5. Configuration Management
+### 7.5. Configuration Management
 
 **Flexible Configuration:**
 - [ ] **YAML Configuration**: Human-readable configuration files
@@ -514,7 +524,7 @@ HyperSpot modules are built on **ModKit**, which provides enterprise-grade opera
 - [ ] **Secrets Integration**: Support for HashiCorp Vault, AWS Secrets Manager
 - [ ] **Credential Rotation**: Support for zero-downtime credential rotation
 
-### 8.6. Development Experience
+### 7.6. Development Experience
 
 **Developer Productivity:**
 - [ ] **Hot Reload**: Fast development iteration with cargo watch
@@ -529,7 +539,7 @@ HyperSpot modules are built on **ModKit**, which provides enterprise-grade opera
 - [ ] **Stack Traces**: Full stack traces with source locations
 - [ ] **Request Replay**: Ability to replay requests for debugging
 
-### 8.7. Performance Optimization
+### 7.7. Performance Optimization
 
 **Efficient Resource Usage:**
 - [ ] **Async Runtime**: Tokio-based async runtime for high concurrency

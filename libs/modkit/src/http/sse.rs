@@ -1,6 +1,7 @@
 use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::response::IntoResponse;
-use futures::{Stream, StreamExt};
+use futures_core::Stream;
+use futures_util::StreamExt;
 use serde::Serialize;
 use std::{borrow::Cow, convert::Infallible, time::Duration};
 use tokio::sync::broadcast;
@@ -145,7 +146,7 @@ impl<T: Clone + Send + 'static> SseBroadcaster<T> {
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
-    use futures::StreamExt;
+    use futures_util::StreamExt;
     use std::sync::{
         atomic::{AtomicUsize, Ordering},
         Arc,

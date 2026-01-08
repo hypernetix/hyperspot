@@ -34,13 +34,13 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 rustup component add clippy rustfmt
 
 # Build the project
-cargo build
+make build
 
 # Run tests
-cargo test
+make test
 
 # Start the development server (SQLite quickstart)
-cargo run --bin hyperspot-server -- --config config/quickstart.yaml
+make quickstart
 
 # Start the development server with the example users_info module
 cargo run --bin hyperspot-server --features=users-info-example -- --config config/quickstart.yaml
@@ -77,33 +77,12 @@ Always include unit tests when introducing new code.
 
 ### 2.3. Run Code Quality Checks
 
-Key formatting rules:
-- **Line length**: 100 characters max
-- **Indentation**: 4 spaces (no tabs)
-- **Trailing commas**: Required in multi-line expressions
-
-Run static analysis checks:
+Build and run all the quality checks:
 
 ```bash
 # Run the complete quality check suite: formatting, linting, tests, and security
-make check
-
-# (Optional) Run security checks individually
-make audit
-make deny
-```
-
-Run the unit tests:
-
-```bash
-# Run tests with output shown
-cargo test -- --nocapture
-
-# Run tests in a single thread
-cargo test -- --test-threads=1
-
-# Run tests marked as ignored
-cargo test -- --ignored
+make all # Linux/Mac
+python scripts/ci.py all # Windows
 ```
 
 Aim for high test coverage:
@@ -113,7 +92,9 @@ Aim for high test coverage:
 
 ```bash
 # Run tests with coverage (automatically detects your OS)
-make coverage
+make coverage # Run both unit and e2e tests with code coverage
+make coverage-unit # Run only unit tests with code coverage
+make coverage-e2e # Run only e2e tests with code coverage
 ```
 
 Helpful environment variables:
@@ -159,7 +140,7 @@ Follow a structured commit message format:
 ```
 
 - `<type>`: change category (see table below)
-- `<module>` (optional): the area touched (e.g., api_ingress, modkit, ecommerce)
+- `<module>` (optional): the area touched (e.g., api_gateway, modkit, ecommerce)
 - `<description>`: concise, imperative summary
 
 Accepted commit types:
