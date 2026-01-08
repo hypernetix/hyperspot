@@ -1,0 +1,55 @@
+[package]
+name = "oagw-gw"
+version.workspace = true
+publish = false
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "OAGW (Outbound API Gateway) module implementation"
+
+[lints]
+workspace = true
+
+[dependencies]
+# SDK - public API, models, and errors
+oagw-sdk = { path = "../oagw-sdk" }
+
+# Core dependencies
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+inventory = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+utoipa = { workspace = true }
+axum = { workspace = true, features = ["macros"] }
+tower-http = { workspace = true, features = ["timeout"] }
+futures = { workspace = true }
+chrono = { workspace = true, features = ["serde"] }
+uuid = { workspace = true }
+arc-swap = { workspace = true }
+sea-orm = { workspace = true, features = ["sqlx-sqlite", "runtime-tokio-rustls", "macros", "with-chrono", "with-uuid"] }
+sea-orm-migration = { workspace = true }
+thiserror = { workspace = true }
+bytes = { workspace = true }
+http = { workspace = true }
+
+# Local dependencies
+modkit = { path = "../../../libs/modkit" }
+modkit-db = { path = "../../../libs/modkit-db" }
+modkit-db-macros = { path = "../../../libs/modkit-db-macros" }
+modkit-auth = { path = "../../../libs/modkit-auth" }
+modkit-security = { path = "../../../libs/modkit-security" }
+modkit-odata = { path = "../../../libs/modkit-odata" }
+
+# GTS support
+gts = { workspace = true }
+
+# Types registry for plugin discovery
+types-registry-sdk = { path = "../../types-registry/types-registry-sdk" }
+
+[dev-dependencies]
+tower = { workspace = true, features = ["util"] }
+api_ingress = { path = "../../api_ingress" }
+tokio-test = { workspace = true }

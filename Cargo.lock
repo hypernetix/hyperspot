@@ -1865,7 +1865,7 @@ dependencies = [
 [[package]]
 name = "gts"
 version = "0.1.0"
-source = "git+https://github.com/globaltypesystem/gts-rust.git?tag=v0.7.6#836bcff115751fb062e0d5e9832a6cf13ed69ead"
+source = "git+https://github.com/globaltypesystem/gts-rust.git?tag=v0.7.7#eb53551654ce97426ee891ba99ced0fd56b72d59"
 dependencies = [
  "anyhow",
  "jsonschema",
@@ -1883,7 +1883,7 @@ dependencies = [
 [[package]]
 name = "gts-macros"
 version = "0.1.0"
-source = "git+https://github.com/globaltypesystem/gts-rust.git?tag=v0.7.6#836bcff115751fb062e0d5e9832a6cf13ed69ead"
+source = "git+https://github.com/globaltypesystem/gts-rust.git?tag=v0.7.7#eb53551654ce97426ee891ba99ced0fd56b72d59"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2271,6 +2271,8 @@ dependencies = [
  "modkit-db",
  "module_orchestrator",
  "nodes_registry",
+ "oagw-gw",
+ "oagw_default_plugin",
  "serde_json",
  "sqlx",
  "tempfile",
@@ -3406,6 +3408,93 @@ dependencies = [
 ]
 
 [[package]]
+name = "oagw-gw"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "api_ingress",
+ "arc-swap",
+ "async-trait",
+ "axum",
+ "bytes",
+ "chrono",
+ "futures",
+ "gts",
+ "http",
+ "inventory",
+ "modkit",
+ "modkit-auth",
+ "modkit-db",
+ "modkit-db-macros",
+ "modkit-odata",
+ "modkit-security",
+ "oagw-sdk",
+ "sea-orm",
+ "sea-orm-migration",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.17",
+ "tokio",
+ "tokio-test",
+ "tower",
+ "tower-http",
+ "tracing",
+ "types-registry-sdk",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "oagw-sdk"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "bytes",
+ "chrono",
+ "futures",
+ "gts",
+ "gts-macros",
+ "modkit",
+ "modkit-odata",
+ "modkit-security",
+ "pin-project-lite",
+ "schemars 0.8.22",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.17",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
+name = "oagw_default_plugin"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "arc-swap",
+ "async-trait",
+ "bytes",
+ "chrono",
+ "futures",
+ "gts",
+ "inventory",
+ "modkit",
+ "modkit-security",
+ "oagw-sdk",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.17",
+ "tokio",
+ "tokio-test",
+ "tracing",
+ "types-registry-sdk",
+ "url",
+ "uuid",
+]
+
+[[package]]
 name = "objc2-core-foundation"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4369,12 +4458,14 @@ dependencies = [
  "sync_wrapper",
  "tokio",
  "tokio-rustls",
+ "tokio-util",
  "tower",
  "tower-http",
  "tower-service",
  "url",
  "wasm-bindgen",
  "wasm-bindgen-futures",
+ "wasm-streams",
  "web-sys",
  "webpki-roots 1.0.4",
 ]
@@ -6630,6 +6721,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cbc538057e648b67f72a982e708d485b2efa771e1ac05fec311f9f63e5800db4"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "wasm-streams"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "15053d8d85c7eccdbefef60f06769760a563c7f0a9d6902a13d35c7800b0ad65"
+dependencies = [
+ "futures-util",
+ "js-sys",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
 ]
 
 [[package]]

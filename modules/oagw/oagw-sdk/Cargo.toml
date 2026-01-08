@@ -1,0 +1,46 @@
+[package]
+name = "oagw-sdk"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "SDK for OAGW (Outbound API Gateway): API traits, types, and error definitions"
+
+[lints]
+workspace = true
+
+[dependencies]
+# Core dependencies for API trait
+async-trait = { workspace = true }
+thiserror = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+bytes = { workspace = true }
+
+# Security context for API methods
+modkit-security = { path = "../../../libs/modkit-security" }
+
+# ModKit for GTS types
+modkit = { path = "../../../libs/modkit" }
+
+# OData support for pagination
+modkit-odata = { path = "../../../libs/modkit-odata" }
+
+# GTS support
+gts = { workspace = true }
+gts-macros = { workspace = true }
+
+# Serialization for GTS schemas
+serde = { workspace = true }
+serde_json = { workspace = true }
+schemars = { workspace = true }
+
+# Error handling
+anyhow = { workspace = true }
+
+# Streaming support
+futures = { workspace = true }
+pin-project-lite = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }

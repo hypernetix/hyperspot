@@ -2,7 +2,7 @@
 #
 # Database Architecture Overview:
 # ===============================
-# 
+#
 # HyperSpot uses a centralized DbManager that:
 # 1. Loads global database server templates from `database.servers`
 # 2. For each module, merges server template with module-specific overrides
@@ -16,19 +16,19 @@
 # - Environment variables are expanded (${VAR_NAME})
 # - All paths are resolved relative to server.home_dir
 
-# Core server configuration (global section)  
+# Core server configuration (global section)
 server:
   home_dir: "~/.hyperspot"
 
 # Database configuration (DbManager architecture)
-# 
+#
 # The database config has two levels:
 # 1. Global "servers" - shared connection templates that modules can reference
 # 2. Per-module configs - specific database settings for each module
 #
 # Configuration precedence (highest to lowest):
 # - Module `params` map (highest priority)
-# - Module DSN query params 
+# - Module DSN query params
 # - Module fields (host, port, user, etc.)
 # - Module DSN base
 # - Server `params` map
@@ -53,7 +53,7 @@ database:
       pool:
         max_conns: 5             # Maximum 5 concurrent connections
         acquire_timeout: "30s"   # Timeout when acquiring connection from pool
-  
+
   # Global database options
   # auto_provision: true       # (default) Create directories automatically for SQLite files
   # auto_provision: false      # Fail if directories don't exist
@@ -89,7 +89,7 @@ modules:
       bind_addr: "127.0.0.1:8087"
       enable_docs: true
       cors_enabled: false
-      
+
       # OpenAPI Documentation Configuration
       openapi:
         title: "HyperSpot API"
@@ -105,7 +105,7 @@ modules:
       # Authentication Configuration
       auth_disabled: true
       require_auth_by_default: true
-      
+
       # JWKS Configuration (replace with your OIDC provider)
       jwks_uri: "http://localhost:8080/realms/dev/protocol/openid-connect/certs"
       issuer: "http://localhost:8080/realms/dev"
@@ -125,28 +125,28 @@ modules:
     database:
       # Reference to global server template defined above
       server: "sqlite_users"               # Inherits params and pool settings from sqlite_users
-      
+
       # Module-specific database file (required for SQLite modules)
       file: "users_info.db"                # Creates: ~/.hyperspot/users_info/users_info.db
-      
+
       # Module can override server settings:
       # params:
       #   synchronous: "FULL"              # Would override server's "NORMAL" setting
       #   custom_pragma: "value"           # Would add new PRAGMA setting
       # pool:
       #   max_conns: 10                    # Would override server's max_conns: 5
-      
+
       # Alternative ways to specify database location:
       # path: "/absolute/path/to/db.sqlite" # Use absolute path instead of file
       # dsn: "sqlite://custom.db?WAL=false" # Complete DSN override (ignores server)
-      
+
       # For other database types (PostgreSQL, MySQL):
       # host: "localhost"                  # Override server host
-      # port: 5432                         # Override server port  
+      # port: 5432                         # Override server port
       # user: "app_user"                   # Override server user
       # password: "${DB_PASSWORD}"         # Environment variable expansion
       # dbname: "users_db"                 # Override server database name
-    
+
     # Module-specific application configuration
     config:
       default_page_size: 5
@@ -197,6 +197,15 @@ modules:
           parent_id: "00000000000000000000000000000011"
           status: ACTIVE
           is_accessible_by_parent: true
+
+  oagw_gw:
+    database:
+      server: "sqlite_users"
+      file: "oagw.db"
+    config: {}
+
+  oagw_default_plugin:
+    config: {}
 
 # OpenTelemetry tracing configuration
 tracing:
@@ -299,4 +308,3 @@ tracing:
 #     # No database section - module won't get database access
 #     config:
 #       static_dir: "/var/www/static"
-
