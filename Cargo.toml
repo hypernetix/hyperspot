@@ -10,6 +10,7 @@ description = "HyperSpot Server"
 members = [
     "apps/hyperspot-server",
     "libs/modkit",
+    "libs/modkit-framework",
     "libs/modkit-macros",
     "libs/modkit-db",
     "libs/modkit-db-macros",

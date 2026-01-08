@@ -5,9 +5,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use modkit::api::OpenApiRegistry;
 use modkit::contracts::SystemModule;
-use modkit::gts::get_core_gts_schemas; // NOTE: This is temporary logic until <https://github.com/hypernetix/hyperspot/issues/156> resolved
 use modkit::{Module, ModuleCtx, RestfulModule};
-use modkit_security::SecurityCtx;
 use tracing::{debug, info};
 use types_registry_sdk::TypesRegistryApi;
 
@@ -25,13 +23,11 @@ use crate::local_client::TypesRegistryLocalClient;
 /// - `system` — Core infrastructure module, initialized early in startup
 /// - `rest` — Exposes REST API endpoints
 ///
-/// ## Core GTS Types
+/// ## Note
 ///
-/// During initialization, this module registers core GTS types that other modules
-/// depend on (e.g., `BaseModkitPluginV1` for plugin systems). This ensures that
-/// when modules register their derived schemas/instances, the base types are
-/// already available for validation.
-/// NOTE: This is temprorary logic until <https://github.com/hypernetix/hyperspot/issues/156> resolved
+/// Core GTS types (like `BaseModkitPluginV1`) are now registered by the
+/// `modkit_framework` module, not here. This maintains proper separation
+/// of concerns and avoids circular dependencies.
 #[modkit::module(
     name = "types_registry",
     capabilities = [system, rest]
@@ -74,14 +70,6 @@ impl Module for TypesRegistryModule {
         self.service.store(Some(service.clone()));
 
         let api: Arc<dyn TypesRegistryApi> = Arc::new(TypesRegistryLocalClient::new(service));
-
-        // === REGISTER CORE GTS TYPES ===
-        // NOTE: This is temporary logic until <https://github.com/hypernetix/hyperspot/issues/156> resolved
-        // Register core GTS types that other modules depend on.
-        // This must happen before any module registers derived schemas/instances.
-        let core_schemas = get_core_gts_schemas()?;
-        api.register(&SecurityCtx::root_ctx(), core_schemas).await?;
-        info!("Core GTS types registered");
 
         ctx.client_hub().register::<dyn TypesRegistryApi>(api);
 

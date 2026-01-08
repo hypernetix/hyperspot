@@ -16,6 +16,7 @@ types-registry-sdk = { path = "../../../../modules/system/types-registry/types-r
 
 # ModKit
 modkit = { path = "../../../../libs/modkit" }
+modkit-framework = { path = "../../../../libs/modkit-framework" }
 modkit-security = { path = "../../../../libs/modkit-security" }
 modkit-odata = { path = "../../../../libs/modkit-odata", features = ["with-utoipa"] }
 

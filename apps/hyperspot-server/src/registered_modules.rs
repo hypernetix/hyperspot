@@ -6,6 +6,7 @@
 use api_gateway as _;
 use file_parser as _;
 use grpc_hub as _;
+use modkit_framework as _;
 use module_orchestrator as _;
 use nodes_registry as _;
 use types_registry as _;

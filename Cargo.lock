@@ -863,6 +863,7 @@ dependencies = [
  "async-trait",
  "inventory",
  "modkit",
+ "modkit-framework",
  "modkit-odata",
  "modkit-security",
  "schemars 0.8.22",
@@ -1443,6 +1444,7 @@ dependencies = [
  "async-trait",
  "inventory",
  "modkit",
+ "modkit-framework",
  "modkit-odata",
  "modkit-security",
  "schemars 0.8.22",
@@ -2270,6 +2272,7 @@ dependencies = [
  "mimalloc",
  "modkit",
  "modkit-db",
+ "modkit-framework",
  "module_orchestrator",
  "nodes_registry",
  "serde_json",
@@ -2983,6 +2986,19 @@ dependencies = [
  "serde",
  "serde_json",
  "syn 2.0.111",
+]
+
+[[package]]
+name = "modkit-framework"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "inventory",
+ "modkit",
+ "modkit-security",
+ "tracing",
+ "types-registry-sdk",
 ]
 
 [[package]]
@@ -5672,6 +5688,7 @@ dependencies = [
  "http",
  "inventory",
  "modkit",
+ "modkit-framework",
  "modkit-odata",
  "modkit-security",
  "serde",
