@@ -63,6 +63,7 @@ impl Module for ContosoTrPlugin {
         };
         let instance_json = serde_json::to_value(&instance)?;
 
+        #[allow(deprecated)]
         let _ = registry
             .register(&SecurityCtx::root_ctx(), vec![instance_json])
             .await?;

@@ -20,6 +20,7 @@ fn round_trips_security_ctx_binary_payload() {
 
     let scope = AccessScope::both(tenant_ids.clone(), resource_ids.clone());
     let subject = Subject::new(subject_id);
+    #[allow(deprecated)]
     let ctx = SecurityCtx::new(scope, subject.clone());
 
     let encoded = encode_bin(&ctx).expect("security context encodes");
@@ -38,6 +39,7 @@ fn decode_rejects_unknown_version() {
     let tenant_ids = vec![Uuid::from_u128(0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa)];
     let subject_id = Uuid::from_u128(0x33333333333333333333333333333333);
 
+    #[allow(deprecated)]
     let ctx = SecurityCtx::for_tenants(tenant_ids, subject_id);
     let mut encoded = encode_bin(&ctx).expect("encodes context");
     encoded[0] = SECCTX_BIN_VERSION.wrapping_add(1);

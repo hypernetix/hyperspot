@@ -80,6 +80,7 @@ impl Module for TypesRegistryModule {
         // Register core GTS types that other modules depend on.
         // This must happen before any module registers derived schemas/instances.
         let core_schemas = get_core_gts_schemas()?;
+        #[allow(deprecated)]
         api.register(&SecurityCtx::root_ctx(), core_schemas).await?;
         info!("Core GTS types registered");
 

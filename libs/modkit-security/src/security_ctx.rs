@@ -10,11 +10,13 @@ pub struct SecurityCtx {
 
 impl SecurityCtx {
     #[must_use]
+    #[deprecated]
     pub fn new(scope: AccessScope, subject: Subject) -> Self {
         Self { scope, subject }
     }
 
     #[must_use]
+    #[deprecated]
     pub fn for_tenants(tenant_ids: Vec<Uuid>, subject_id: Uuid) -> Self {
         Self {
             scope: AccessScope::tenants_only(tenant_ids),
@@ -22,11 +24,14 @@ impl SecurityCtx {
         }
     }
     #[must_use]
+    #[deprecated]
     pub fn for_tenant(tenant_id: Uuid, subject_id: Uuid) -> Self {
+        #[allow(deprecated)]
         Self::for_tenants(vec![tenant_id], subject_id)
     }
 
     #[must_use]
+    #[deprecated]
     pub fn for_resources(resource_ids: Vec<Uuid>, subject_id: Uuid) -> Self {
         Self {
             scope: AccessScope::resources_only(resource_ids),
@@ -34,11 +39,14 @@ impl SecurityCtx {
         }
     }
     #[must_use]
+    #[deprecated]
     pub fn for_resource(resource_id: Uuid, subject_id: Uuid) -> Self {
+        #[allow(deprecated)]
         Self::for_resources(vec![resource_id], subject_id)
     }
 
     #[must_use]
+    #[deprecated]
     pub fn deny_all(subject_id: Uuid) -> Self {
         Self {
             scope: AccessScope::default(),
@@ -49,13 +57,17 @@ impl SecurityCtx {
     /// Anonymous/unauthenticated context with no access to any resources.
     /// Use this for public routes where no authentication is required.
     #[must_use]
+    #[deprecated]
     pub fn anonymous() -> Self {
+        #[allow(deprecated)]
         Self::deny_all(constants::ANONYMOUS_SUBJECT_ID)
     }
 
     /// Root subject operating within the root tenant (system context).
     #[must_use]
+    #[deprecated]
     pub fn root_ctx() -> Self {
+        #[allow(deprecated)]
         Self::new(AccessScope::root_tenant(), Subject::root())
     }
 
@@ -64,11 +76,13 @@ impl SecurityCtx {
     pub fn scope(&self) -> &AccessScope {
         &self.scope
     }
+
     #[inline]
     #[must_use]
     pub fn subject(&self) -> &Subject {
         &self.subject
     }
+
     #[inline]
     #[must_use]
     pub fn subject_id(&self) -> Uuid {

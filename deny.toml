@@ -35,7 +35,8 @@ yanked = "warn"
 # List of advisory IDs to ignore (RUSTSEC-YYYY-XXXX, etc.)
 ignore = [
   # "RUSTSEC-0000-0000",
-  "RUSTSEC-2023-0071" # we cannot replace rsa 0.9 as it's used by sqlx-mysql AND jsonwebtoken
+  "RUSTSEC-2023-0071", # we cannot replace rsa 0.9 as it's used by sqlx-mysql AND jsonwebtoken
+  "RUSTSEC-2025-0141"  # temporary allow using of bincode 2.0.1
 ]
 
 # Note:

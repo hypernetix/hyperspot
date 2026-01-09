@@ -30,6 +30,7 @@ async fn test_handler(Extension(ctx): Extension<SecurityCtx>) -> impl IntoRespon
 
 /// Middleware that simulates `auth_disabled` mode by injecting root context
 async fn inject_root_context(mut req: Request, next: Next) -> Response {
+    #[allow(deprecated)]
     req.extensions_mut().insert(SecurityCtx::root_ctx());
     next.run(req).await
 }
