@@ -1,6 +1,8 @@
+// @fdd-change:fdd-analytics-feature-gts-core-change-response-processing
+use serde_json::{Map, Value};
 use std::collections::HashSet;
-use serde_json::{Value, Map};
 
+// @fdd-change:fdd-analytics-feature-gts-core-change-response-processing
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FieldCategory {
     ClientProvided,
@@ -49,15 +51,15 @@ impl FieldHandler {
         if self.server_managed_fields.contains(field_path) {
             return FieldCategory::ServerManaged;
         }
-        
+
         if self.secret_fields.contains(field_path) {
             return FieldCategory::Secret;
         }
-        
+
         if self.computed_fields.contains(field_path) {
             return FieldCategory::Computed;
         }
-        
+
         FieldCategory::ClientProvided
     }
 
@@ -74,14 +76,15 @@ impl FieldHandler {
         if let Some(obj) = value.as_object_mut() {
             if let Some(entity) = obj.get_mut("entity") {
                 if let Some(entity_obj) = entity.as_object_mut() {
-                    let keys_to_remove: Vec<String> = entity_obj.keys()
+                    let keys_to_remove: Vec<String> = entity_obj
+                        .keys()
                         .filter(|k| {
                             let path = format!("entity/{}", k);
                             self.secret_fields.contains(&path)
                         })
                         .cloned()
                         .collect();
-                    
+
                     for key in keys_to_remove {
                         entity_obj.remove(&key);
                     }
@@ -117,30 +120,31 @@ impl FieldHandler {
 
         if let Some(obj) = value.as_object_mut() {
             let mut projected = Map::new();
-            
+
             for field in select_fields {
-                if field.starts_with("entity/") {
-                    let entity_field = &field[7..];
+                if let Some(entity_field) = field.strip_prefix("entity/") {
                     if let Some(entity) = obj.get("entity") {
                         if let Some(entity_obj) = entity.as_object() {
                             if let Some(field_value) = entity_obj.get(entity_field) {
-                                let entity_map = projected
+                                let entry = projected
                                     .entry("entity")
-                                    .or_insert_with(|| Value::Object(Map::new()))
-                                    .as_object_mut()
-                                    .unwrap();
-                                entity_map.insert(entity_field.to_string(), field_value.clone());
+                                    .or_insert_with(|| Value::Object(Map::new()));
+
+                                if let Value::Object(entity_map) = entry {
+                                    entity_map
+                                        .insert(entity_field.to_string(), field_value.clone());
+                                }
                             }
                         }
                     }
-                } else if let Some(field_value) = obj.get(field) {
+                } else if let Some(field_value) = obj.get(field.as_str()) {
                     projected.insert(field.clone(), field_value.clone());
                 }
             }
-            
+
             return Value::Object(projected);
         }
-        
+
         value
     }
 }
@@ -160,28 +164,49 @@ mod tests {
     fn test_categorize_server_managed_field() {
         let handler = FieldHandler::new();
         assert_eq!(handler.categorize_field("id"), FieldCategory::ServerManaged);
-        assert_eq!(handler.categorize_field("type"), FieldCategory::ServerManaged);
-        assert_eq!(handler.categorize_field("tenant"), FieldCategory::ServerManaged);
+        assert_eq!(
+            handler.categorize_field("type"),
+            FieldCategory::ServerManaged
+        );
+        assert_eq!(
+            handler.categorize_field("tenant"),
+            FieldCategory::ServerManaged
+        );
     }
 
     #[test]
     fn test_categorize_secret_field() {
         let handler = FieldHandler::new();
-        assert_eq!(handler.categorize_field("entity/api_key"), FieldCategory::Secret);
-        assert_eq!(handler.categorize_field("entity/credentials"), FieldCategory::Secret);
+        assert_eq!(
+            handler.categorize_field("entity/api_key"),
+            FieldCategory::Secret
+        );
+        assert_eq!(
+            handler.categorize_field("entity/credentials"),
+            FieldCategory::Secret
+        );
     }
 
     #[test]
     fn test_categorize_computed_field() {
         let handler = FieldHandler::new();
-        assert_eq!(handler.categorize_field("asset_path"), FieldCategory::Computed);
+        assert_eq!(
+            handler.categorize_field("asset_path"),
+            FieldCategory::Computed
+        );
     }
 
     #[test]
     fn test_categorize_client_provided_field() {
         let handler = FieldHandler::new();
-        assert_eq!(handler.categorize_field("entity/name"), FieldCategory::ClientProvided);
-        assert_eq!(handler.categorize_field("entity/description"), FieldCategory::ClientProvided);
+        assert_eq!(
+            handler.categorize_field("entity/name"),
+            FieldCategory::ClientProvided
+        );
+        assert_eq!(
+            handler.categorize_field("entity/description"),
+            FieldCategory::ClientProvided
+        );
     }
 
     #[test]
@@ -195,7 +220,7 @@ mod tests {
                 "name": "Test"
             }
         });
-        
+
         let filtered = handler.filter_request(input);
         assert!(filtered.get("id").is_none());
         assert!(filtered.get("type").is_none());
@@ -214,7 +239,7 @@ mod tests {
                 "credentials": "secret456"
             }
         });
-        
+
         let filtered = handler.filter_response(input);
         let entity = filtered.get("entity").unwrap().as_object().unwrap();
         assert!(entity.get("name").is_some());
@@ -229,7 +254,7 @@ mod tests {
             "id": "test-id",
             "entity": {"name": "Test"}
         });
-        
+
         let result = handler.inject_computed_fields(input, "test-id", "test-type");
         assert_eq!(
             result.get("asset_path").unwrap().as_str().unwrap(),
@@ -264,10 +289,10 @@ mod tests {
                 "value": 123
             }
         });
-        
+
         let select = vec!["id".to_string(), "entity/name".to_string()];
         let result = handler.apply_field_projection(input, &select);
-        
+
         assert!(result.get("id").is_some());
         assert!(result.get("type").is_none());
         let entity = result.get("entity").unwrap().as_object().unwrap();

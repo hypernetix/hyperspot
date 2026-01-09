@@ -2,29 +2,30 @@
 
 **Extends**: `../FDD/AGENTS.md`
 
-**Version**: 2.1  
-**Status**: COMPLETE  
-**Last Updated**: 2026-01-08  
+**Version**: 2.2  
+**Last Updated**: 2026-01-09  
 **Tech Stack**: Rust (edition 2021) + GTS + OpenAPI/gRPC
 
 ---
 
-MUST read `specs/tech-stack.md` WHEN checking dependencies or versions
+ALWAYS open and follow `specs/feature-status-validation.md` WHEN executing workflows: feature.md, feature-validate.md, feature-changes.md, feature-changes-validate.md, features-validate.md, feature-code-validate.md
 
-MUST read `specs/domain-model.md` WHEN working with domain types
+ALWAYS open and follow `specs/tech-stack.md` WHEN executing workflows: adapter.md, adapter-auto.md, adapter-manual.md, adapter-bootstrap.md, adapter-validate.md, design.md, design-validate.md, adr.md, adr-validate.md, feature-change-implement.md, feature-code-validate.md
 
-MUST read `specs/api-contracts.md` WHEN working with API endpoints
+ALWAYS open and follow `specs/domain-model.md` WHEN executing workflows: design.md, design-validate.md, adr.md, adr-validate.md, features.md, features-validate.md, feature.md, feature-validate.md, feature-changes.md, feature-changes-validate.md, feature-change-implement.md, feature-code-validate.md
 
-MUST read `specs/modkit-rest-integration.md` WHEN implementing REST modules (MANDATORY)
+ALWAYS open and follow `specs/api-contracts.md` WHEN executing workflows: design.md, design-validate.md, adr.md, adr-validate.md, feature.md, feature-validate.md, feature-changes.md, feature-changes-validate.md, feature-change-implement.md, feature-code-validate.md
 
-MUST read `specs/module-structure.md` WHEN creating new modules or understanding module layout (MANDATORY)
+ALWAYS open and follow `specs/modkit-rest-integration.md` WHEN executing workflows: feature-change-implement.md, feature-code-validate.md
 
-MUST read `specs/patterns.md` WHEN implementing architecture patterns
+ALWAYS open and follow `specs/module-structure.md` WHEN executing workflows: adapter.md, adapter-auto.md, adapter-manual.md, adapter-bootstrap.md, adapter-validate.md, feature-change-implement.md, feature-code-validate.md
 
-MUST read `specs/conventions.md` WHEN writing code or documentation
+ALWAYS open and follow `specs/patterns.md` WHEN executing workflows: design.md, design-validate.md, adr.md, adr-validate.md, feature.md, feature-validate.md, feature-change-implement.md, feature-code-validate.md
 
-MUST read `specs/build-deploy.md` WHEN building or deploying
+ALWAYS open and follow `specs/conventions.md` WHEN executing workflows: adapter.md, adapter-auto.md, adapter-manual.md, adapter-bootstrap.md, adapter-validate.md, feature-change-implement.md, feature-code-validate.md
 
-MUST read `specs/testing.md` WHEN writing or running tests
+ALWAYS open and follow `specs/build-deploy.md` WHEN executing workflows: feature-change-implement.md, feature-code-validate.md
 
-MUST read `specs/project-structure.md` WHEN creating files or directories
+ALWAYS open and follow `specs/testing.md` WHEN executing workflows: feature-change-implement.md, feature-code-validate.md
+
+ALWAYS open and follow `specs/project-structure.md` WHEN executing workflows: adapter.md, adapter-auto.md, adapter-manual.md, adapter-bootstrap.md, adapter-agents.md, adapter-validate.md, business-context.md, business-validate.md, design.md, design-validate.md, adr.md, adr-validate.md, features.md, features-validate.md, feature.md, feature-validate.md, feature-changes.md, feature-changes-validate.md

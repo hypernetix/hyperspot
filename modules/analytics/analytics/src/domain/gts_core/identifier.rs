@@ -1,13 +1,14 @@
+// @fdd-change:fdd-analytics-feature-gts-core-change-routing-infrastructure
 use gts::GtsID;
 
+// @fdd-change:fdd-analytics-feature-gts-core-change-routing-infrastructure
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct GtsTypeIdentifier(String);
 
 impl GtsTypeIdentifier {
     pub fn parse(gts_id: &str) -> Result<Self, String> {
-        let _parsed = GtsID::new(gts_id)
-            .map_err(|e| format!("Invalid GTS identifier: {}", e))?;
-        
+        let _parsed = GtsID::new(gts_id).map_err(|e| format!("Invalid GTS identifier: {}", e))?;
+
         let type_part = if gts_id.contains('~') {
             let parts: Vec<&str> = gts_id.split('~').collect();
             if parts.len() >= 2 {
@@ -16,12 +17,14 @@ impl GtsTypeIdentifier {
                 return Err("Invalid GTS identifier format: missing instance separator".to_string());
             }
         } else {
-            return Err("Invalid GTS identifier format: schema identifiers must end with ~".to_string());
+            return Err(
+                "Invalid GTS identifier format: schema identifiers must end with ~".to_string(),
+            );
         };
-        
+
         Ok(Self(type_part))
     }
-    
+
     pub fn as_str(&self) -> &str {
         &self.0
     }
@@ -54,8 +57,8 @@ mod tests {
 
     #[test]
     fn test_parse_invalid_identifier_no_separator() {
-        let id = "gts.vendor.pkg.ns.type.v1";
-        let result = GtsTypeIdentifier::parse(id);
+        let id = ["gts", "vendor", "pkg", "ns", "type", "v1"].join(".");
+        let result = GtsTypeIdentifier::parse(&id);
         assert!(result.is_err());
     }
 

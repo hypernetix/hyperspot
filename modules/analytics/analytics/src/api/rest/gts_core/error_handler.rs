@@ -1,3 +1,4 @@
+// @fdd-change:fdd-analytics-feature-gts-core-change-quality-assurance
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
@@ -7,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
+// @fdd-change:fdd-analytics-feature-gts-core-change-quality-assurance
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ProblemDetails {
     #[serde(rename = "type")]
@@ -100,12 +102,13 @@ impl ProblemDetails {
         )
     }
 
-    pub fn invalid_odata_query(detail: &str, available_fields: &[String], instance: Option<String>) -> Self {
+    pub fn invalid_odata_query(
+        detail: &str,
+        available_fields: &[String],
+        instance: Option<String>,
+    ) -> Self {
         let fields_list = available_fields.join(", ");
-        let full_detail = format!(
-            "{}. Available indexed fields: [{}]",
-            detail, fields_list
-        );
+        let full_detail = format!("{}. Available indexed fields: [{}]", detail, fields_list);
         Self::new(
             "https://hyperspot.dev/problems/invalid-query",
             "Invalid OData Query",
@@ -158,18 +161,54 @@ impl IntoResponse for ProblemDetails {
 
 #[derive(Debug)]
 pub enum GtsCoreError {
-    UnknownGtsType { gts_type: String, instance: String },
-    InvalidIdentifier { detail: String, instance: String },
-    MissingJwt { instance: String },
-    InvalidJwt { detail: String, instance: String },
-    ExpiredJwt { instance: String },
-    ReadOnlyEntity { entity_id: String, instance: String },
-    InvalidOdataQuery { detail: String, available_fields: Vec<String>, instance: String },
-    UnsupportedField { field: String, available_fields: Vec<String>, instance: String },
-    InvalidJsonPatch { detail: String, instance: String },
-    PatchPathRestricted { path: String, instance: String },
-    DomainFeatureUnavailable { gts_type: String, instance: String },
-    DomainFeatureError { detail: String, instance: String },
+    UnknownGtsType {
+        gts_type: String,
+        instance: String,
+    },
+    InvalidIdentifier {
+        detail: String,
+        instance: String,
+    },
+    MissingJwt {
+        instance: String,
+    },
+    InvalidJwt {
+        detail: String,
+        instance: String,
+    },
+    ExpiredJwt {
+        instance: String,
+    },
+    ReadOnlyEntity {
+        entity_id: String,
+        instance: String,
+    },
+    InvalidOdataQuery {
+        detail: String,
+        available_fields: Vec<String>,
+        instance: String,
+    },
+    UnsupportedField {
+        field: String,
+        available_fields: Vec<String>,
+        instance: String,
+    },
+    InvalidJsonPatch {
+        detail: String,
+        instance: String,
+    },
+    PatchPathRestricted {
+        path: String,
+        instance: String,
+    },
+    DomainFeatureUnavailable {
+        gts_type: String,
+        instance: String,
+    },
+    DomainFeatureError {
+        detail: String,
+        instance: String,
+    },
 }
 
 impl GtsCoreError {
@@ -253,8 +292,13 @@ mod tests {
 
         assert_eq!(problem.status, 404);
         assert_eq!(problem.title, "Routing Failed");
-        assert_eq!(problem.problem_type, "https://hyperspot.dev/problems/routing-failed");
-        assert!(problem.detail.contains("gts.hypernetix.hyperspot.analytics.unknown.v1~"));
+        assert_eq!(
+            problem.problem_type,
+            "https://hyperspot.dev/problems/routing-failed"
+        );
+        assert!(problem
+            .detail
+            .contains("gts.hypernetix.hyperspot.analytics.unknown.v1~"));
         assert!(!problem.trace_id.is_empty());
     }
 
@@ -306,7 +350,7 @@ mod tests {
     #[test]
     fn test_service_unavailable_error() {
         let problem = ProblemDetails::domain_feature_unavailable(
-            "gts.test.type.v1~",
+            "gts.hypernetix.hyperspot.ax.query.v1~",
             Some("/api/analytics/v1/gts/test".to_string()),
         );
 
@@ -320,13 +364,15 @@ mod tests {
     #[test]
     fn test_gts_core_error_to_problem_details() {
         let error = GtsCoreError::UnknownGtsType {
-            gts_type: "gts.unknown.v1~".to_string(),
+            gts_type: "gts.hypernetix.hyperspot.ax.unknown.v1~".to_string(),
             instance: "/api/analytics/v1/gts/test".to_string(),
         };
 
         let problem = error.to_problem_details();
         assert_eq!(problem.status, 404);
-        assert!(problem.detail.contains("gts.unknown.v1~"));
+        assert!(problem
+            .detail
+            .contains("gts.hypernetix.hyperspot.ax.unknown.v1~"));
     }
 
     #[test]
@@ -346,7 +392,7 @@ mod tests {
     fn test_trace_id_uniqueness() {
         let problem1 = ProblemDetails::routing_error("test", None);
         let problem2 = ProblemDetails::routing_error("test", None);
-        
+
         assert_ne!(problem1.trace_id, problem2.trace_id);
     }
 }

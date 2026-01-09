@@ -88,6 +88,7 @@ dependencies = [
  "modkit",
  "modkit-auth",
  "modkit-db",
+ "modkit-db-macros",
  "modkit-odata",
  "modkit-security",
  "serde",

@@ -11,10 +11,10 @@
 
 ## Summary
 
-**Total Changes**: 5  
+**Total Changes**: 4  
 **Completed**: 1  
 **In Progress**: 0  
-**Not Started**: 4
+**Not Started**: 3
 
 **Estimated Effort**: 17 hours (AI agent)
 
@@ -251,7 +251,7 @@ Implement schema CRUD operations with SecurityCtx enforcement, scalar-only field
 
 **Depends on**: Change 1 (Rust GTS types must be defined)
 
-**Blocks**: Change 3, 4, 5
+**Blocks**: Change 3, 4
 
 ### Testing
 

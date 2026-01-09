@@ -44,7 +44,7 @@
 - **Actors**: 
   - Dashboard Designer (primary)
   - Platform Administrator
-  - Query Plugin (system component)
+  - Query Execution Engine (system component)
 
 ---
 
@@ -79,7 +79,7 @@
 - `PUT /gts/{id}` - Update schema definition
 - `DELETE /gts/{id}` - Remove schema
 
-### Actor: Query Plugin
+### Actor: Query Execution Engine
 
 **ID**: fdd-analytics-feature-schema-query-returns-flow-validate-result
 
@@ -280,24 +280,26 @@ Output: schemas_array, HTTP status
 
 **ID**: fdd-analytics-feature-schema-query-returns-state-schema
 
-**Schema Lifecycle**:
-
-```
-[DRAFT] --validate--> [ACTIVE]
-[ACTIVE] --deprecate--> [DEPRECATED]
-[DEPRECATED] --archive--> [ARCHIVED]
-```
-
-**States**:
-- **DRAFT**: Schema created but not yet validated/published
-- **ACTIVE**: Schema in use, can be referenced by queries
-- **DEPRECATED**: Schema marked for removal, existing queries still work but new queries cannot use it
-- **ARCHIVED**: Schema removed from active use, read-only for historical reference
-
-**Transitions**:
-- DRAFT → ACTIVE: Manual validation and publication
-- ACTIVE → DEPRECATED: Manual deprecation by admin
-- DEPRECATED → ARCHIVED: Automated after grace period (e.g., 90 days)
+1. **WHEN** DRAFT
+   1. Schemas are editable and awaiting validation
+   2. **IF** validation_passed AND publish_requested
+      1. **TO** ACTIVE
+   3. **IF** schema_abandoned
+      1. **TO** ARCHIVED
+2. **WHEN** ACTIVE
+   1. Schemas are referenced by queries and mutable through CRUD operations
+   2. **IF** admin_marks_deprecated
+      1. **TO** DEPRECATED
+3. **WHEN** DEPRECATED
+   1. Schemas remain readable but cannot be attached to new queries
+   2. **IF** reactivation_requested AND remediation_completed
+      1. **TO** ACTIVE
+   3. **IF** grace_period_expired
+      1. **TO** ARCHIVED
+4. **WHEN** ARCHIVED
+   1. Schemas are immutable and retained for audit history
+   2. **IF** audit_restore_approved
+      1. **TO** ACTIVE
 
 ---
 

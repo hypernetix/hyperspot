@@ -1,11 +1,18 @@
-use axum::{Router, Extension, http::StatusCode};
-use std::sync::Arc;
+// @fdd-change:fdd-analytics-feature-gts-core-change-platform-integration-fix
+// @fdd-flow:fdd-analytics-feature-gts-core-flow-route-crud-operations
+// @fdd-flow:fdd-analytics-feature-gts-core-flow-aggregate-odata-metadata
+// @fdd-req:fdd-analytics-feature-gts-core-req-routing
+// @fdd-req:fdd-analytics-feature-gts-core-req-middleware
+use axum::{http::StatusCode, Extension, Router};
+use modkit::api::operation_builder::OperationBuilderODataExt;
 use modkit::api::{OpenApiRegistry, OperationBuilder};
+use std::sync::Arc;
 
-use crate::domain::gts_core::GtsCoreRouter;
+use super::dto::{GtsEntityDto, GtsEntityDtoFilterField, GtsEntityListDto, GtsEntityRequestDto};
 use super::handlers;
-use super::dto::{GtsEntityDto, GtsEntityRequestDto, GtsEntityListDto};
+use crate::domain::gts_core::GtsCoreRouter;
 
+// @fdd-change:fdd-analytics-feature-gts-core-change-platform-integration-fix
 /// Register GTS Core routes with OperationBuilder
 pub fn register_routes(
     mut router: Router,
@@ -24,7 +31,7 @@ pub fn register_routes(
         .json_response_with_schema::<GtsEntityDto>(
             openapi,
             StatusCode::OK,
-            "Entity retrieved successfully"
+            "Entity retrieved successfully",
         )
         .error_404(openapi)
         .standard_errors(openapi)
@@ -36,17 +43,15 @@ pub fn register_routes(
         .summary("List GTS entities")
         .description("List all GTS entities with OData query support")
         .tag("GTS Core")
-        .query_param("$filter", false, "OData filter expression")
-        .query_param("$select", false, "OData select fields")
-        .query_param("$top", false, "Maximum number of results")
-        .query_param("$skip", false, "Number of results to skip")
-        .query_param("$count", false, "Include total count")
+        .with_odata_filter::<GtsEntityDtoFilterField>()
+        .with_odata_select()
+        .with_odata_orderby::<GtsEntityDtoFilterField>()
         .public()
         .handler(handlers::list_entities)
         .json_response_with_schema::<GtsEntityListDto>(
             openapi,
             StatusCode::OK,
-            "Entity list retrieved successfully"
+            "Entity list retrieved successfully",
         )
         .standard_errors(openapi)
         .register(router, openapi);
@@ -63,7 +68,7 @@ pub fn register_routes(
         .json_response_with_schema::<GtsEntityDto>(
             openapi,
             StatusCode::CREATED,
-            "Entity created successfully"
+            "Entity created successfully",
         )
         .error_400(openapi)
         .standard_errors(openapi)
@@ -82,7 +87,7 @@ pub fn register_routes(
         .json_response_with_schema::<GtsEntityDto>(
             openapi,
             StatusCode::OK,
-            "Entity updated successfully"
+            "Entity updated successfully",
         )
         .error_404(openapi)
         .error_400(openapi)
@@ -101,7 +106,7 @@ pub fn register_routes(
         .json_response_with_schema::<GtsEntityDto>(
             openapi,
             StatusCode::OK,
-            "Entity patched successfully"
+            "Entity patched successfully",
         )
         .error_404(openapi)
         .error_400(openapi)
@@ -117,11 +122,35 @@ pub fn register_routes(
         .path_param("id", "GTS entity identifier")
         .public()
         .handler(handlers::delete_entity)
-        .json_response(
-            StatusCode::NO_CONTENT,
-            "Entity deleted successfully"
-        )
+        .json_response(StatusCode::NO_CONTENT, "Entity deleted successfully")
         .error_404(openapi)
+        .standard_errors(openapi)
+        .register(router, openapi);
+
+    // GET /analytics/v1/$metadata - OData metadata
+    router = OperationBuilder::get("/analytics/v1/$metadata")
+        .operation_id("gts_core.get_metadata")
+        .summary("Get OData metadata")
+        .description("Returns OData JSON CSDL with Capabilities vocabulary annotations")
+        .tag("GTS Core")
+        .public()
+        .handler(handlers::get_metadata)
+        .json_response(StatusCode::OK, "OData metadata retrieved successfully")
+        .standard_errors(openapi)
+        .register(router, openapi);
+
+    // PUT /analytics/v1/gts/{id}/enablement - Configure tenant access
+    router = OperationBuilder::put("/analytics/v1/gts/{id}/enablement")
+        .operation_id("gts_core.update_enablement")
+        .summary("Configure tenant access")
+        .description("Configure tenant access for a GTS entity")
+        .tag("GTS Core")
+        .path_param("id", "GTS entity identifier")
+        .public()
+        .handler(handlers::update_enablement)
+        .json_response(StatusCode::OK, "Enablement updated successfully")
+        .error_404(openapi)
+        .error_400(openapi)
         .standard_errors(openapi)
         .register(router, openapi);
 
@@ -142,10 +171,10 @@ mod tests {
         let table = RoutingTable::new();
         let gts_router = Arc::new(GtsCoreRouter::new(table));
         let openapi = OpenApiRegistryImpl::new();
-        
+
         let base_router = Router::new();
         let extended_router = register_routes(base_router, &openapi, gts_router);
-        
+
         // Verify router was extended (not replaced)
         // Router should have service layer attached
         assert!(std::mem::size_of_val(&extended_router) > 0);

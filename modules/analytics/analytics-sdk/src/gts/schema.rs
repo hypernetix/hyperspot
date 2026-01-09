@@ -170,13 +170,18 @@ mod tests {
     #[test]
     fn test_schema_v1_serialization() {
         let mut schema = SchemaV1::new();
-        schema.fields.insert("test_field".to_string(), json!("test_value"));
-        
+        schema
+            .fields
+            .insert("test_field".to_string(), json!("test_value"));
+
         let json = schema.to_json().unwrap();
         assert_eq!(json["test_field"], "test_value");
-        
+
         let deserialized = SchemaV1::from_json(json).unwrap();
-        assert_eq!(deserialized.fields.get("test_field"), Some(&json!("test_value")));
+        assert_eq!(
+            deserialized.fields.get("test_field"),
+            Some(&json!("test_value"))
+        );
     }
 
     // @fdd-change:fdd-analytics-feature-schema-query-returns-change-rust-gts-types
@@ -196,7 +201,7 @@ mod tests {
         item.insert("id".to_string(), json!("ord-001"));
         item.insert("customer".to_string(), json!("Acme Corp"));
         item.insert("revenue".to_string(), json!(15000));
-        
+
         let schema = QueryReturnsSchemaV1::with_results(vec![item]);
         assert_eq!(schema.value.len(), 1);
         assert_eq!(schema.value[0].get("id"), Some(&json!("ord-001")));
@@ -210,7 +215,7 @@ mod tests {
         item.insert("number_field".to_string(), json!(42));
         item.insert("bool_field".to_string(), json!(true));
         item.insert("null_field".to_string(), json!(null));
-        
+
         let schema = QueryReturnsSchemaV1::with_results(vec![item]);
         assert!(schema.validate_scalar_fields().is_ok());
     }
@@ -221,11 +226,13 @@ mod tests {
         let mut item = std::collections::HashMap::new();
         item.insert("valid_field".to_string(), json!("test"));
         item.insert("nested_object".to_string(), json!({"inner": "value"}));
-        
+
         let schema = QueryReturnsSchemaV1::with_results(vec![item]);
         let result = schema.validate_scalar_fields();
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("nested objects/arrays not allowed"));
+        assert!(result
+            .unwrap_err()
+            .contains("nested objects/arrays not allowed"));
     }
 
     // @fdd-change:fdd-analytics-feature-schema-query-returns-change-rust-gts-types
@@ -234,11 +241,13 @@ mod tests {
         let mut item = std::collections::HashMap::new();
         item.insert("valid_field".to_string(), json!("test"));
         item.insert("array_field".to_string(), json!([1, 2, 3]));
-        
+
         let schema = QueryReturnsSchemaV1::with_results(vec![item]);
         let result = schema.validate_scalar_fields();
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("nested objects/arrays not allowed"));
+        assert!(result
+            .unwrap_err()
+            .contains("nested objects/arrays not allowed"));
     }
 
     // @fdd-change:fdd-analytics-feature-schema-query-returns-change-rust-gts-types
@@ -247,18 +256,21 @@ mod tests {
         let mut item = std::collections::HashMap::new();
         item.insert("id".to_string(), json!("test-id"));
         item.insert("name".to_string(), json!("Test Name"));
-        
+
         let mut schema = QueryReturnsSchemaV1::with_results(vec![item]);
         schema.odata_context = Some("$metadata#TestEntity".to_string());
         schema.odata_count = Some(100);
-        
+
         let json = schema.to_json().unwrap();
         assert_eq!(json["@odata.context"], "$metadata#TestEntity");
         assert_eq!(json["@odata.count"], 100);
         assert!(json["value"].is_array());
-        
+
         let deserialized = QueryReturnsSchemaV1::from_json(json).unwrap();
-        assert_eq!(deserialized.odata_context, Some("$metadata#TestEntity".to_string()));
+        assert_eq!(
+            deserialized.odata_context,
+            Some("$metadata#TestEntity".to_string())
+        );
         assert_eq!(deserialized.odata_count, Some(100));
         assert_eq!(deserialized.value.len(), 1);
     }
