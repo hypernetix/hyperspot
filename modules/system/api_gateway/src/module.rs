@@ -212,6 +212,7 @@ impl ApiGateway {
             );
             router = router.layer(from_fn(
                 |mut req: axum::extract::Request, next: axum::middleware::Next| async move {
+                    #[allow(deprecated)]
                     let sec = modkit_security::SecurityCtx::root_ctx();
                     req.extensions_mut().insert(sec);
                     next.run(req).await

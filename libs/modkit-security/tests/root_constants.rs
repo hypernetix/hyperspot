@@ -5,6 +5,7 @@ use modkit_security::{AccessScope, SecurityCtx, Subject, ROOT_SUBJECT_ID};
 #[test]
 fn root_constants_and_helpers() {
     // Root context now uses explicit is_root flag
+    #[allow(deprecated)]
     let ctx = SecurityCtx::root_ctx();
     assert_eq!(ctx.subject_id(), ROOT_SUBJECT_ID);
     assert!(

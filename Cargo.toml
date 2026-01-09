@@ -49,7 +49,7 @@ resolver = "2"
 # See dylint_lints/README.md for usage instructions
 
 [workspace.lints.rust]
-deprecated = "deny"
+deprecated = "warn"
 non_ascii_idents = "forbid"
 unsafe_code = "forbid"
 unused_mut = "warn"

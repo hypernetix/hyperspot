@@ -87,6 +87,7 @@ mod integration_tests {
     fn test_security_ctx_root_ctx() {
         use crate::secure::SecurityCtx;
 
+        #[allow(deprecated)]
         let root_ctx = SecurityCtx::root_ctx();
 
         // Root context should have root scope
@@ -101,7 +102,9 @@ mod integration_tests {
     fn test_security_ctx_deny_all_vs_root() {
         use crate::secure::SecurityCtx;
 
+        #[allow(deprecated)]
         let deny_all_ctx = SecurityCtx::deny_all(Uuid::new_v4());
+        #[allow(deprecated)]
         let root_ctx = SecurityCtx::root_ctx();
 
         // Deny-all context should be denied

@@ -66,6 +66,8 @@ impl Module for TenantResolverGateway {
         let registry = ctx.client_hub().get::<dyn TypesRegistryApi>()?;
         let schema_str = TenantResolverPluginSpecV1::gts_schema_with_refs_as_string();
         let schema_json: serde_json::Value = serde_json::from_str(&schema_str)?;
+
+        #[allow(deprecated)]
         let _ = registry
             .register(&SecurityCtx::root_ctx(), vec![schema_json])
             .await?;

@@ -74,6 +74,7 @@ impl Service {
             .get::<dyn TypesRegistryApi>()
             .map_err(|e| DomainError::TypesRegistryUnavailable(e.to_string()))?;
 
+        #[allow(deprecated)]
         let root_ctx = SecurityCtx::root_ctx();
         let plugin_type_id = TenantResolverPluginSpecV1::gts_schema_id().clone();
 

@@ -71,6 +71,7 @@ mod tests {
     }
 
     fn test_ctx() -> SecurityCtx {
+        #[allow(deprecated)]
         SecurityCtx::root_ctx()
     }
 

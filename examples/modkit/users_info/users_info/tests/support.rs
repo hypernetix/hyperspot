@@ -26,6 +26,7 @@ use users_info::domain::{
 #[must_use]
 pub fn ctx_allow_tenants(tenants: &[Uuid]) -> SecurityCtx {
     let subject = Subject::new(Uuid::new_v4());
+    #[allow(deprecated)]
     SecurityCtx::new(AccessScope::tenants_only(tenants.to_vec()), subject)
 }
 
@@ -35,6 +36,7 @@ pub fn ctx_allow_tenants(tenants: &[Uuid]) -> SecurityCtx {
 #[must_use]
 pub fn ctx_allow_resources(resources: &[Uuid]) -> SecurityCtx {
     let subject = Subject::new(Uuid::new_v4());
+    #[allow(deprecated)]
     SecurityCtx::new(AccessScope::resources_only(resources.to_vec()), subject)
 }
 
@@ -44,6 +46,7 @@ pub fn ctx_allow_resources(resources: &[Uuid]) -> SecurityCtx {
 #[must_use]
 pub fn ctx_with_subject(subject_id: Uuid, tenants: &[Uuid]) -> SecurityCtx {
     let subject = Subject::new(subject_id);
+    #[allow(deprecated)]
     SecurityCtx::new(AccessScope::tenants_only(tenants.to_vec()), subject)
 }
 
@@ -53,6 +56,7 @@ pub fn ctx_with_subject(subject_id: Uuid, tenants: &[Uuid]) -> SecurityCtx {
 #[must_use]
 pub fn ctx_deny_all() -> SecurityCtx {
     let subject = Subject::new(Uuid::new_v4());
+    #[allow(deprecated)]
     SecurityCtx::new(AccessScope::default(), subject)
 }
 
@@ -61,6 +65,7 @@ pub fn ctx_deny_all() -> SecurityCtx {
 /// This context bypasses all tenant filtering and allows access to all data.
 #[must_use]
 pub fn ctx_root() -> SecurityCtx {
+    #[allow(deprecated)]
     SecurityCtx::root_ctx()
 }
 
