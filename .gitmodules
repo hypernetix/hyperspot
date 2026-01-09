@@ -1,3 +1,9 @@
 [submodule "guidelines/DNA"]
 	path = guidelines/DNA
 	url = https://github.com/hypernetix/DNA
+[submodule "guidelines/FDD"]
+	path = guidelines/FDD
+	url = git@github.com-personal:ainetx/FDD.git
+[submodule "guidelines/GTS"]
+	path = guidelines/GTS
+	url = git@github.com:GlobalTypeSystem/gts-spec.git

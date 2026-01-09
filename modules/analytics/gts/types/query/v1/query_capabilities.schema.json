@@ -1,0 +1,305 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.hypernetix.hyperspot.ax.query_capabilities.v1~",
+  "type": "object",
+  "description": "OData Capabilities annotations (Org.OData.Capabilities.V1) in JSON format. Defines what query operations are supported by the EntitySet. Based on OData CSDL JSON v4.01 specification.",
+  "properties": {
+    "FilterRestrictions": {
+      "type": "object",
+      "description": "Restrictions on $filter operations",
+      "properties": {
+        "Filterable": {
+          "type": "boolean",
+          "description": "Whether $filter is supported at all",
+          "default": true
+        },
+        "RequiresFilter": {
+          "type": "boolean",
+          "description": "Whether $filter is required for security/performance reasons",
+          "default": false
+        },
+        "RequiredProperties": {
+          "type": "array",
+          "description": "Properties that must be specified in $filter",
+          "items": {
+            "type": "string"
+          }
+        },
+        "NonFilterableProperties": {
+          "type": "array",
+          "description": "Properties that cannot be used in $filter expressions",
+          "items": {
+            "type": "string"
+          }
+        },
+        "FilterExpressionRestrictions": {
+          "type": "array",
+          "description": "Per-property filter restrictions",
+          "items": {
+            "type": "object",
+            "properties": {
+              "Property": {
+                "type": "string",
+                "description": "Property path"
+              },
+              "AllowedExpressions": {
+                "type": "string",
+                "description": "Allowed filter expressions",
+                "enum": [
+                  "SingleValue",
+                  "MultiValue",
+                  "SingleRange",
+                  "MultiRange",
+                  "SearchExpression",
+                  "MultiRangeOrSearchExpression"
+                ]
+              }
+            },
+            "required": ["Property"]
+          }
+        },
+        "MaxLevels": {
+          "type": "integer",
+          "description": "Maximum number of levels in $filter expression",
+          "minimum": -1,
+          "default": -1
+        }
+      }
+    },
+    "SortRestrictions": {
+      "type": "object",
+      "description": "Restrictions on $orderby operations",
+      "properties": {
+        "Sortable": {
+          "type": "boolean",
+          "description": "Whether $orderby is supported",
+          "default": true
+        },
+        "AscendingOnlyProperties": {
+          "type": "array",
+          "description": "Properties that can only be sorted ascending",
+          "items": {
+            "type": "string"
+          }
+        },
+        "DescendingOnlyProperties": {
+          "type": "array",
+          "description": "Properties that can only be sorted descending",
+          "items": {
+            "type": "string"
+          }
+        },
+        "NonSortableProperties": {
+          "type": "array",
+          "description": "Properties that cannot be used in $orderby",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "SelectSupport": {
+      "type": "object",
+      "description": "Support for $select operations",
+      "properties": {
+        "Supported": {
+          "type": "boolean",
+          "description": "Whether $select is supported",
+          "default": true
+        }
+      }
+    },
+    "ExpandRestrictions": {
+      "type": "object",
+      "description": "Restrictions on $expand operations",
+      "properties": {
+        "Expandable": {
+          "type": "boolean",
+          "description": "Whether $expand is supported",
+          "default": false
+        },
+        "NonExpandableProperties": {
+          "type": "array",
+          "description": "Navigation properties that cannot be expanded",
+          "items": {
+            "type": "string"
+          }
+        },
+        "MaxLevels": {
+          "type": "integer",
+          "description": "Maximum number of expand levels (-1 for unlimited)",
+          "minimum": -1,
+          "default": 1
+        }
+      }
+    },
+    "SearchRestrictions": {
+      "type": "object",
+      "description": "Restrictions on $search operations",
+      "properties": {
+        "Searchable": {
+          "type": "boolean",
+          "description": "Whether $search is supported",
+          "default": false
+        },
+        "UnsupportedExpressions": {
+          "type": "array",
+          "description": "Search expressions that are not supported",
+          "items": {
+            "type": "string",
+            "enum": ["NOT", "OR", "AND", "phrase", "group"]
+          }
+        }
+      }
+    },
+    "CountRestrictions": {
+      "type": "object",
+      "description": "Restrictions on $count",
+      "properties": {
+        "Countable": {
+          "type": "boolean",
+          "description": "Whether $count is supported",
+          "default": true
+        }
+      }
+    },
+    "NavigationRestrictions": {
+      "type": "object",
+      "description": "Restrictions on navigating properties",
+      "properties": {
+        "Navigability": {
+          "type": "string",
+          "description": "Default navigability of navigation properties",
+          "enum": ["Recursive", "Single", "None"],
+          "default": "Recursive"
+        },
+        "RestrictedProperties": {
+          "type": "array",
+          "description": "Restrictions for specific navigation properties",
+          "items": {
+            "type": "object",
+            "properties": {
+              "NavigationProperty": {
+                "type": "string",
+                "description": "Navigation property path"
+              },
+              "Navigability": {
+                "type": "string",
+                "enum": ["Recursive", "Single", "None"]
+              }
+            },
+            "required": ["NavigationProperty"]
+          }
+        }
+      }
+    },
+    "TopSupported": {
+      "type": "boolean",
+      "description": "Whether $top is supported",
+      "default": true
+    },
+    "SkipSupported": {
+      "type": "boolean",
+      "description": "Whether $skip is supported",
+      "default": true
+    },
+    "ComputeSupported": {
+      "type": "boolean",
+      "description": "Whether $compute is supported (OData v4.01)",
+      "default": false
+    },
+    "BatchSupported": {
+      "type": "boolean",
+      "description": "Whether $batch requests are supported",
+      "default": false
+    },
+    "ReadRestrictions": {
+      "type": "object",
+      "description": "Restrictions on read operations",
+      "properties": {
+        "Readable": {
+          "type": "boolean",
+          "description": "Whether entities can be read",
+          "default": true
+        },
+        "ReadByKeyRestrictions": {
+          "type": "object",
+          "description": "Restrictions on reading by key",
+          "properties": {
+            "Readable": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "FilterRestrictions": {
+        "Filterable": true,
+        "RequiresFilter": false,
+        "NonFilterableProperties": ["metadata", "internal_fields"],
+        "FilterExpressionRestrictions": [
+          {
+            "Property": "customer_id",
+            "AllowedExpressions": "SingleValue"
+          },
+          {
+            "Property": "created_at",
+            "AllowedExpressions": "SingleRange"
+          }
+        ]
+      },
+      "SortRestrictions": {
+        "Sortable": true,
+        "NonSortableProperties": ["metadata", "description"]
+      },
+      "SelectSupport": {
+        "Supported": true
+      },
+      "ExpandRestrictions": {
+        "Expandable": true,
+        "MaxLevels": 2,
+        "NonExpandableProperties": ["internal_relations"]
+      },
+      "SearchRestrictions": {
+        "Searchable": true,
+        "UnsupportedExpressions": ["NOT"]
+      },
+      "CountRestrictions": {
+        "Countable": true
+      },
+      "TopSupported": true,
+      "SkipSupported": true,
+      "ComputeSupported": false,
+      "BatchSupported": false
+    },
+    {
+      "FilterRestrictions": {
+        "Filterable": true,
+        "RequiresFilter": true,
+        "RequiredProperties": ["tenant_id"],
+        "NonFilterableProperties": ["computed_score"]
+      },
+      "SortRestrictions": {
+        "Sortable": true
+      },
+      "SelectSupport": {
+        "Supported": true
+      },
+      "ExpandRestrictions": {
+        "Expandable": false
+      },
+      "SearchRestrictions": {
+        "Searchable": false
+      },
+      "CountRestrictions": {
+        "Countable": true
+      },
+      "TopSupported": true,
+      "SkipSupported": true
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+[package]
+name = "analytics-sdk"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+thiserror = "2.0"
+async-trait = "0.1"
+modkit-security = { path = "../../../libs/modkit-security" }
+
+# @fdd-change:fdd-analytics-feature-schema-query-returns-change-rust-gts-types
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }

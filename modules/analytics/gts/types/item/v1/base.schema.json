@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.hypernetix.hyperspot.ax.item.v1~",
+  "type": "object",
+  "description": "Base item type for dashboard and report components. Items are reusable building blocks that can be placed in layouts. They have size, position, and type-specific settings. Items can be widgets (data visualizations) or groups (containers for other items).",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Display name of the item. Shown in item selector and as widget title."
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed description of what this item displays or does. Used in tooltips and documentation."
+    },
+    "icon": {
+      "type": "string",
+      "description": "Icon identifier for visual representation in UI (e.g., Lucide icon name)."
+    },
+    "category_id": {
+      "type": "string",
+      "description": "GTS identifier of the category this item belongs to. Used to organize items in the item library and help users find relevant widgets and groups for their layouts.",
+      "x-gts-ref": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.item.v1~"
+    },
+    "size": {
+      "type": "object",
+      "description": "Size of the item in the layout grid. Width is percentage-based (flexible), height is fixed in predefined sizes.",
+      "properties": {
+        "width": {
+          "type": "integer",
+          "minimum": 15,
+          "maximum": 100,
+          "multipleOf": 5,
+          "description": "Width as percentage of layout width (15-100%, step 5%). Determines horizontal space occupied by the item. Flexible - adapts to layout container size."
+        },
+        "height": {
+          "type": "string",
+          "enum": ["micro", "small", "medium", "high", "unlimited"],
+          "description": "Fixed vertical size preset. Values: 'micro' (~100px), 'small' (~200px), 'medium' (~400px), 'high' (~600px), 'unlimited' (grows with content, for tables with pagination)."
+        }
+      },
+      "required": ["width", "height"]
+    },
+    "settings": {
+      "type": "object",
+      "description": "Type-specific configuration object. For widgets, contains template and datasource configurations. For groups, contains collapsible behavior and nested items. Structure is defined by derived item types (widget, group).",
+      "additionalProperties": true
+    }
+  },
+  "required": ["name", "size"],
+  "examples": [
+    {
+      "name": "KPI Card",
+      "category_id": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.categories_widgets_kpi.v1",
+      "size": {
+        "width": 25,
+        "height": "small"
+      },
+      "settings": {
+        "title": "Total Revenue",
+        "refresh_interval": 30000
+      }
+    }
+  ],
+  "additionalProperties": false
+}

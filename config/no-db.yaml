@@ -17,6 +17,10 @@ logging:
 
 # Per-module configurations using new structure
 modules:
+  analytics:
+    # Analytics module with GTS Core
+    config: {}
+  
   api_gateway:
     # No database configuration needed for api_gateway
     config:
