@@ -85,7 +85,7 @@ pub trait ApiGatewayCapability: Send + Sync + 'static {
     ) -> anyhow::Result<Router>;
 
     // Return OpenAPI registry of the module, e.g., to register endpoints
-    fn as_registry(&self) -> &dyn crate::contracts::OpenApiRegistry;
+    fn as_registry(&self) -> &dyn OpenApiRegistry;
 }
 
 #[async_trait]

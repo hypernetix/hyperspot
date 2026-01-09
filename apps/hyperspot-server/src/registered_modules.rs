@@ -9,6 +9,7 @@ use grpc_hub as _;
 use hs_tenant_resolver_gw as _;
 use module_orchestrator as _;
 use nodes_registry as _;
+use settings as _;
 use types_registry as _;
 
 #[cfg(feature = "single-tenant")]
