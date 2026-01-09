@@ -4,16 +4,17 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use modkit::api::OpenApiRegistry;
-use modkit::contracts::SystemCapability;
+use modkit::contracts::SystemModule;
 use modkit::gts::get_core_gts_schemas; // NOTE: This is temporary logic until <https://github.com/hypernetix/hyperspot/issues/156> resolved
-use modkit::{Module, ModuleCtx, RestApiCapability};
+use modkit::{Module, ModuleCtx, RestfulModule};
+use modkit_security::SecurityCtx;
 use tracing::{debug, info};
-use types_registry_sdk::TypesRegistryClient;
+use types_registry_sdk::TypesRegistryApi;
 
 use crate::config::TypesRegistryConfig;
-use crate::domain::local_client::TypesRegistryLocalClient;
 use crate::domain::service::TypesRegistryService;
 use crate::infra::InMemoryGtsRepository;
+use crate::local_client::TypesRegistryLocalClient;
 
 /// Types Registry module.
 ///
@@ -72,17 +73,18 @@ impl Module for TypesRegistryModule {
 
         self.service.store(Some(service.clone()));
 
-        let api: Arc<dyn TypesRegistryClient> = Arc::new(TypesRegistryLocalClient::new(service));
+        let api: Arc<dyn TypesRegistryApi> = Arc::new(TypesRegistryLocalClient::new(service));
 
         // === REGISTER CORE GTS TYPES ===
         // NOTE: This is temporary logic until <https://github.com/hypernetix/hyperspot/issues/156> resolved
         // Register core GTS types that other modules depend on.
         // This must happen before any module registers derived schemas/instances.
         let core_schemas = get_core_gts_schemas()?;
-        api.register(core_schemas).await?;
+        #[allow(deprecated)]
+        api.register(&SecurityCtx::root_ctx(), core_schemas).await?;
         info!("Core GTS types registered");
 
-        ctx.client_hub().register::<dyn TypesRegistryClient>(api);
+        ctx.client_hub().register::<dyn TypesRegistryApi>(api);
 
         info!("Types registry module initialized");
         Ok(())
@@ -90,7 +92,7 @@ impl Module for TypesRegistryModule {
 }
 
 #[async_trait]
-impl SystemCapability for TypesRegistryModule {
+impl SystemModule for TypesRegistryModule {
     /// Post-init hook: switches the registry to ready mode.
     ///
     /// This runs AFTER `init()` has completed for ALL modules.
@@ -133,7 +135,7 @@ impl SystemCapability for TypesRegistryModule {
     }
 }
 
-impl RestApiCapability for TypesRegistryModule {
+impl RestfulModule for TypesRegistryModule {
     fn register_rest(
         &self,
         _ctx: &ModuleCtx,

@@ -3,11 +3,12 @@ use std::sync::{Arc, OnceLock};
 use async_trait::async_trait;
 use modkit::api::OpenApiRegistry;
 use modkit::context::ModuleCtx;
-use modkit::contracts::RestApiCapability;
+use modkit::contracts::RestfulModule;
 use modkit::Module;
+use modkit_security::SecurityCtx;
 use tenant_resolver_sdk::{TenantResolverClient, TenantResolverPluginSpecV1};
 use tracing::info;
-use types_registry_sdk::TypesRegistryClient;
+use types_registry_sdk::TypesRegistryApi;
 
 use crate::config::TenantResolverConfig;
 use crate::domain::service::Service;
@@ -62,11 +63,14 @@ impl Module for TenantResolverGateway {
         // Gateway is responsible for registering the plugin SCHEMA in types-registry.
         // Plugins only register their INSTANCES.
         // Use GTS-provided method for proper $id and $ref handling.
-        let registry = ctx.client_hub().get::<dyn TypesRegistryClient>()?;
+        let registry = ctx.client_hub().get::<dyn TypesRegistryApi>()?;
         let schema_str = TenantResolverPluginSpecV1::gts_schema_with_refs_as_string();
         let schema_json: serde_json::Value = serde_json::from_str(&schema_str)?;
 
-        let _ = registry.register(vec![schema_json]).await?;
+        #[allow(deprecated)]
+        let _ = registry
+            .register(&SecurityCtx::root_ctx(), vec![schema_json])
+            .await?;
         info!(
             "Registered {} schema in types-registry",
             TenantResolverPluginSpecV1::gts_schema_id().clone()
@@ -87,7 +91,7 @@ impl Module for TenantResolverGateway {
     }
 }
 
-impl RestApiCapability for TenantResolverGateway {
+impl RestfulModule for TenantResolverGateway {
     fn register_rest(
         &self,
         _ctx: &ModuleCtx,
