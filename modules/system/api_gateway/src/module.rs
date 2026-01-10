@@ -26,10 +26,11 @@ use tower_http::{
 };
 use tracing::debug;
 
-use modkit_security::PolicyEngineRef;
-
 use crate::auth;
 use crate::config::ApiGatewayConfig;
+use modkit_security::constants::{DEFAULT_SUBJECT_ID, DEFAULT_TENANT_ID};
+use modkit_security::{PolicyEngineRef, SecurityContext, SecurityCtx};
+
 use crate::middleware;
 use crate::router_cache::RouterCache;
 use crate::web;
@@ -205,17 +206,29 @@ impl ApiGateway {
 
         // 10) Auth
         if config.auth_disabled {
+            // Build both old and new security contexts for compatibility during migration
+            #[allow(deprecated)] // SecurityCtx is deprecated, migrating to SecurityContext
+            let default_ctx = SecurityCtx::for_tenants(vec![DEFAULT_TENANT_ID], DEFAULT_SUBJECT_ID);
+            let default_security_context = SecurityContext::builder()
+                .tenant_id(DEFAULT_TENANT_ID)
+                .subject_id(DEFAULT_SUBJECT_ID)
+                .build();
+
             tracing::warn!(
-                "API Gateway auth is DISABLED: all requests will run with root SecurityCtx (SecurityCtx::root_ctx()). \
+                "API Gateway auth is DISABLED: all requests will run with default tenant SecurityCtx. \
                  This mode bypasses authentication and is intended ONLY for single-user on-premises deployments without an IdP. \
                  Permission checks and secure ORM still apply. DO NOT use this mode in multi-tenant or production environments."
             );
             router = router.layer(from_fn(
-                |mut req: axum::extract::Request, next: axum::middleware::Next| async move {
-                    #[allow(deprecated)]
-                    let sec = modkit_security::SecurityCtx::root_ctx();
-                    req.extensions_mut().insert(sec);
-                    next.run(req).await
+                move |mut req: axum::extract::Request, next: axum::middleware::Next| {
+                    let sec = default_ctx.clone();
+                    let sec_context = default_security_context.clone();
+                    async move {
+                        // Insert both context types for compatibility during migration
+                        req.extensions_mut().insert(sec);
+                        req.extensions_mut().insert(sec_context);
+                        next.run(req).await
+                    }
                 },
             ));
         } else {
@@ -439,12 +452,20 @@ impl modkit::Module for ApiGateway {
     async fn init(&self, ctx: &modkit::context::ModuleCtx) -> anyhow::Result<()> {
         debug!("Module initialized with context");
         let cfg = ctx.config::<crate::config::ApiGatewayConfig>()?;
-        self.config.store(Arc::new(cfg));
+        self.config.store(Arc::new(cfg.clone()));
 
         debug!(
             "Effective api_gateway configuration:\n{:#?}",
             self.config.load()
         );
+
+        if cfg.auth_disabled {
+            tracing::info!(
+                tenant_id = %DEFAULT_TENANT_ID,
+                "Auth-disabled mode enabled with default tenant"
+            );
+        }
+
         Ok(())
     }
 }

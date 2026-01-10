@@ -10,7 +10,6 @@ pub mod security_ctx;
 pub mod subject;
 
 pub use access_scope::AccessScope;
-pub use constants::{ROOT_SUBJECT_ID, ROOT_TENANT_ID};
 pub use context::SecurityContext;
 pub use permission::Permission;
 pub use policy_engine::{DummyPolicyEngine, PolicyEngine, PolicyEngineRef};

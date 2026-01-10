@@ -152,8 +152,7 @@ where
 
             match auth_requirement {
                 AuthRequirement::None => {
-                    // 3. For public routes (AuthRequirement::None): inserts anonymous SecurityCtx
-                    request.extensions_mut().insert(SecurityCtx::anonymous());
+                    // 3. For public routes (AuthRequirement::None): inserts anonymous SecurityContext
                     request
                         .extensions_mut()
                         .insert(SecurityContext::anonymous());
@@ -181,6 +180,7 @@ where
 
                     // Build SecurityCtx from validated claims (legacy)
                     let scope = state.scope_builder.tenants_to_scope(&claims);
+                    #[allow(deprecated)]
                     let sec =
                         SecurityCtx::new(scope, modkit_security::Subject::new(claims.subject));
 
@@ -202,6 +202,7 @@ where
                             Ok(claims) => {
                                 // Build SecurityCtx from validated claims (legacy)
                                 let scope = state.scope_builder.tenants_to_scope(&claims);
+                                #[allow(deprecated)]
                                 let sec = SecurityCtx::new(
                                     scope,
                                     modkit_security::Subject::new(claims.subject),
@@ -219,14 +220,12 @@ where
                             }
                             Err(err) => {
                                 tracing::debug!("Optional auth: invalid token: {err}");
-                                request.extensions_mut().insert(SecurityCtx::anonymous());
                                 request
                                     .extensions_mut()
                                     .insert(SecurityContext::anonymous());
                             }
                         }
                     } else {
-                        request.extensions_mut().insert(SecurityCtx::anonymous());
                         request
                             .extensions_mut()
                             .insert(SecurityContext::anonymous());

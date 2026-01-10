@@ -1,5 +1,5 @@
 use crate::permission::Permission;
-use crate::{AccessScope, PolicyEngineRef, ROOT_SUBJECT_ID, ROOT_TENANT_ID};
+use crate::{AccessScope, PolicyEngineRef};
 use uuid::Uuid;
 
 /// `SecurityContext` encapsulates the security-related information for a request or operation
@@ -17,14 +17,6 @@ impl SecurityContext {
     #[must_use]
     pub fn builder() -> SecurityContextBuilder {
         SecurityContextBuilder::default()
-    }
-
-    #[must_use]
-    pub fn root() -> Self {
-        SecurityContextBuilder::default()
-            .tenant_id(ROOT_TENANT_ID)
-            .subject_id(ROOT_SUBJECT_ID)
-            .build()
     }
 
     /// Create an anonymous `SecurityContext` with no tenant, subject, or permissions
@@ -62,6 +54,7 @@ impl SecurityContext {
         AccessScopeResolver {
             _policy_engine: policy_engine,
             context: self.clone(),
+            accessible_tenants: None,
         }
     }
 }
@@ -69,11 +62,33 @@ impl SecurityContext {
 pub struct AccessScopeResolver {
     _policy_engine: PolicyEngineRef,
     context: SecurityContext,
+    /// Accessible tenant IDs (set via `include_accessible_tenants`).
+    accessible_tenants: Option<Vec<Uuid>>,
 }
 
 impl AccessScopeResolver {
+    /// Include a list of accessible tenant IDs in the scope.
+    ///
+    /// Use this method when the caller has already resolved which tenants
+    /// the current security context can access (typically via `TenantResolverGatewayClient`).
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// // Fetch accessible tenants from resolver
+    /// let accessible = resolver.get_accessible_tenants(&ctx, query).await?;
+    /// let tenant_ids: Vec<Uuid> = accessible.items.iter().map(|t| t.id).collect();
+    ///
+    /// // Build scope with accessible tenants
+    /// let scope = ctx
+    ///     .scope(policy_engine)
+    ///     .include_accessible_tenants(tenant_ids)
+    ///     .prepare()
+    ///     .await?;
+    /// ```
     #[must_use]
-    pub fn include_tenant_children(&self) -> &Self {
+    pub fn include_accessible_tenants(mut self, tenants: Vec<Uuid>) -> Self {
+        self.accessible_tenants = Some(tenants);
         self
     }
 
@@ -91,20 +106,17 @@ impl AccessScopeResolver {
         // changing the public API. This no-op await also satisfies clippy::unused_async.
         std::future::ready(()).await;
 
-        // Minimal deterministic scope resolution for local/in-process usage.
-        //
-        // NOTE: This is intentionally simple: it enables tenant isolation for the common case
-        // (a request has a tenant_id), while still allowing system/root context to access all.
-        //
-        // More advanced scope resolution should be implemented via `PolicyEngine`.
-        if self.context.tenant_id == ROOT_TENANT_ID && self.context.subject_id == ROOT_SUBJECT_ID {
-            return Ok(AccessScope::root_tenant());
+        // If accessible tenants were provided, use them
+        if let Some(ref tenants) = self.accessible_tenants {
+            return Ok(AccessScope::tenants_only(tenants.clone()));
         }
 
+        // Fallback: single tenant from context
         if self.context.tenant_id != Uuid::default() {
             return Ok(AccessScope::tenants_only(vec![self.context.tenant_id]));
         }
 
+        // Empty scope = deny all
         Ok(AccessScope::default())
     }
 }
@@ -229,16 +241,6 @@ mod tests {
 
         assert_eq!(ctx.tenant_id(), tenant_id);
         assert_eq!(ctx.subject_id(), Uuid::default());
-        assert_eq!(ctx.permissions().len(), 0);
-        assert_eq!(ctx.environment().len(), 0);
-    }
-
-    #[test]
-    fn test_security_context_root() {
-        let ctx = SecurityContext::root();
-
-        assert_eq!(ctx.tenant_id(), ROOT_TENANT_ID);
-        assert_eq!(ctx.subject_id(), ROOT_SUBJECT_ID);
         assert_eq!(ctx.permissions().len(), 0);
         assert_eq!(ctx.environment().len(), 0);
     }

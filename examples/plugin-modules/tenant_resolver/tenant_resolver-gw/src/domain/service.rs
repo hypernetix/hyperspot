@@ -17,6 +17,9 @@ use tokio::sync::OnceCell;
 use tracing::info;
 use types_registry_sdk::{GtsEntity, ListQuery, TypesRegistryApi};
 
+// Note: This example gateway still uses SecurityCtx in its public API methods
+// because it uses an older SDK with hierarchical tenant model.
+
 use crate::domain::error::DomainError;
 
 /// Cached result of plugin resolution.
@@ -74,13 +77,10 @@ impl Service {
             .get::<dyn TypesRegistryApi>()
             .map_err(|e| DomainError::TypesRegistryUnavailable(e.to_string()))?;
 
-        #[allow(deprecated)]
-        let root_ctx = SecurityCtx::root_ctx();
         let plugin_type_id = TenantResolverPluginSpecV1::gts_schema_id().clone();
 
         let instances = registry
             .list(
-                &root_ctx,
                 ListQuery::new()
                     .with_pattern(format!("{plugin_type_id}*"))
                     .with_is_type(false),

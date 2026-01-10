@@ -15,54 +15,31 @@ mod integration_tests {
 
     #[test]
     fn test_access_scope_is_empty() {
+        // Empty scope = deny all
         let scope = AccessScope::default();
         assert!(scope.is_empty());
-        assert!(!scope.is_root());
 
+        // Scope with tenants is not empty
         let scope = AccessScope::tenants_only(vec![Uuid::new_v4()]);
         assert!(!scope.is_empty());
-        assert!(!scope.is_root());
 
+        // Scope with resources is not empty
         let scope = AccessScope::resources_only(vec![Uuid::new_v4()]);
         assert!(!scope.is_empty());
-        assert!(!scope.is_root());
 
+        // Scope with both is not empty
         let scope = AccessScope::both(vec![Uuid::new_v4()], vec![Uuid::new_v4()]);
         assert!(!scope.is_empty());
-        assert!(!scope.is_root());
     }
 
     #[test]
-    fn test_root_scope_behavior() {
-        let root_scope = AccessScope::root_tenant();
-
-        // Root scope should never be considered empty
-        assert!(!root_scope.is_empty());
-
-        // Root scope should be marked as root
-        assert!(root_scope.is_root());
-
-        // Root scope should have no tenant or resource IDs by default
-        assert!(root_scope.tenant_ids().is_empty());
-        assert!(root_scope.resource_ids().is_empty());
-    }
-
-    #[test]
-    fn test_root_vs_empty_scope() {
+    fn test_empty_scope_is_deny_all() {
         let empty_scope = AccessScope::default();
-        let root_scope = AccessScope::root_tenant();
 
-        // Empty scope is empty, root scope is not
+        // Empty scope should be marked as empty (deny all)
         assert!(empty_scope.is_empty());
-        assert!(!root_scope.is_empty());
-
-        // Only root scope is marked as root
-        assert!(!empty_scope.is_root());
-        assert!(root_scope.is_root());
-
-        // Both have no tenant/resource IDs, but different semantics
         assert!(empty_scope.tenant_ids().is_empty());
-        assert!(root_scope.tenant_ids().is_empty());
+        assert!(empty_scope.resource_ids().is_empty());
     }
 
     #[test]
@@ -84,38 +61,31 @@ mod integration_tests {
     }
 
     #[test]
-    fn test_security_ctx_root_ctx() {
-        use crate::secure::SecurityCtx;
-
-        #[allow(deprecated)]
-        let root_ctx = SecurityCtx::root_ctx();
-
-        // Root context should have root scope
-        assert!(root_ctx.scope().is_root());
-        assert!(!root_ctx.scope().is_empty());
-
-        // Root context should not be denied
-        assert!(!root_ctx.is_denied());
-    }
-
-    #[test]
-    fn test_security_ctx_deny_all_vs_root() {
+    fn test_security_ctx_deny_all() {
         use crate::secure::SecurityCtx;
 
         #[allow(deprecated)]
         let deny_all_ctx = SecurityCtx::deny_all(Uuid::new_v4());
-        #[allow(deprecated)]
-        let root_ctx = SecurityCtx::root_ctx();
 
         // Deny-all context should be denied
         assert!(deny_all_ctx.is_denied());
         assert!(deny_all_ctx.scope().is_empty());
-        assert!(!deny_all_ctx.scope().is_root());
+    }
 
-        // Root context should not be denied
-        assert!(!root_ctx.is_denied());
-        assert!(!root_ctx.scope().is_empty());
-        assert!(root_ctx.scope().is_root());
+    #[test]
+    fn test_security_ctx_for_tenant() {
+        use crate::secure::SecurityCtx;
+
+        let tenant_id = Uuid::new_v4();
+        let subject_id = Uuid::new_v4();
+        #[allow(deprecated)]
+        let ctx = SecurityCtx::for_tenant(tenant_id, subject_id);
+
+        // Context with tenant is not denied
+        assert!(!ctx.is_denied());
+        assert!(!ctx.scope().is_empty());
+        assert_eq!(ctx.scope().tenant_ids(), &[tenant_id]);
+        assert_eq!(ctx.subject_id(), subject_id);
     }
 
     // Note: Full entity integration tests should be written in application code

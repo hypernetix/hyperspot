@@ -1,0 +1,39 @@
+[package]
+name = "hs-tenant-resolver-gw"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Tenant resolver gateway module - discovers and routes to plugins"
+
+[lints]
+workspace = true
+
+[dependencies]
+# Local dependencies
+hs-tenant-resolver-sdk = { path = "../tenant_resolver-sdk" }
+types-registry-sdk = { path = "../../types-registry/types-registry-sdk" }
+
+# ModKit dependencies
+modkit = { path = "../../../../libs/modkit" }
+modkit-security = { path = "../../../../libs/modkit-security" }
+modkit-odata = { path = "../../../../libs/modkit-odata" }
+
+# Async runtime
+async-trait = { workspace = true }
+tokio = { workspace = true, features = ["sync"] }
+
+# Data types
+uuid = { workspace = true }
+
+# Error handling and serialization
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Required by modkit::module macro
+inventory = { workspace = true }
+
+# Logging
+tracing = { workspace = true }

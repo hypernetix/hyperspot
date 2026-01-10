@@ -4,6 +4,7 @@ use crate::domain::error::DomainError;
 use crate::domain::events::UserDomainEvent;
 use crate::domain::ports::{AuditPort, EventPublisher};
 use crate::domain::repo::UsersRepository;
+use hs_tenant_resolver_sdk::{TenantFilter, TenantResolverGatewayClient, TenantStatus};
 use modkit_odata::{ODataQuery, Page};
 use modkit_security::{PolicyEngineRef, SecurityContext};
 use time::OffsetDateTime;
@@ -19,6 +20,7 @@ pub struct Service {
     repo: Arc<dyn UsersRepository>,
     events: Arc<dyn EventPublisher<UserDomainEvent>>,
     audit: Arc<dyn AuditPort>,
+    resolver: Arc<dyn TenantResolverGatewayClient>,
     config: ServiceConfig,
 }
 
@@ -46,6 +48,7 @@ impl Service {
         repo: Arc<dyn UsersRepository>,
         events: Arc<dyn EventPublisher<UserDomainEvent>>,
         audit: Arc<dyn AuditPort>,
+        resolver: Arc<dyn TenantResolverGatewayClient>,
         config: ServiceConfig,
     ) -> Self {
         Self {
@@ -53,8 +56,31 @@ impl Service {
             repo,
             events,
             audit,
+            resolver,
             config,
         }
+    }
+
+    /// Resolve accessible tenants for the current security context.
+    /// Only returns active tenants.
+    async fn resolve_accessible_tenants(
+        &self,
+        ctx: &SecurityContext,
+    ) -> Result<Vec<Uuid>, DomainError> {
+        // Only consider active tenants for access
+        let filter = TenantFilter {
+            status: vec![TenantStatus::Active],
+            ..Default::default()
+        };
+        let accessible = self
+            .resolver
+            .get_accessible_tenants(ctx, Some(&filter), None)
+            .await
+            .map_err(|e| {
+                tracing::error!(error = %e, "Failed to resolve accessible tenants");
+                DomainError::InternalError
+            })?;
+        Ok(accessible.iter().map(|t| t.id).collect())
     }
 
     #[instrument(skip(self, ctx), fields(user_id = %id))]
@@ -66,9 +92,10 @@ impl Service {
             debug!("Audit service call failed (continuing): {}", e);
         }
 
+        let tenant_ids = self.resolve_accessible_tenants(ctx).await?;
         let scope = ctx
             .scope(self.policy_engine.clone())
-            .include_tenant_children()
+            .include_accessible_tenants(tenant_ids)
             .prepare()
             .await?;
 
@@ -91,9 +118,10 @@ impl Service {
     ) -> Result<Page<User>, DomainError> {
         debug!("Listing users with cursor pagination");
 
+        let tenant_ids = self.resolve_accessible_tenants(ctx).await?;
         let scope = ctx
             .scope(self.policy_engine.clone())
-            .include_tenant_children()
+            .include_accessible_tenants(tenant_ids)
             .prepare()
             .await?;
 
@@ -122,9 +150,10 @@ impl Service {
 
         let id = new_user.id.unwrap_or_else(Uuid::now_v7);
 
+        let tenant_ids = self.resolve_accessible_tenants(ctx).await?;
         let scope = ctx
             .scope(self.policy_engine.clone())
-            .include_tenant_children()
+            .include_accessible_tenants(tenant_ids)
             .prepare()
             .await?;
 
@@ -196,9 +225,10 @@ impl Service {
 
         self.validate_user_patch(&patch)?;
 
+        let tenant_ids = self.resolve_accessible_tenants(ctx).await?;
         let scope = ctx
             .scope(self.policy_engine.clone())
-            .include_tenant_children()
+            .include_accessible_tenants(tenant_ids)
             .prepare()
             .await?;
 
@@ -250,9 +280,10 @@ impl Service {
     pub async fn delete_user(&self, ctx: &SecurityContext, id: Uuid) -> Result<(), DomainError> {
         info!("Deleting user");
 
+        let tenant_ids = self.resolve_accessible_tenants(ctx).await?;
         let scope = ctx
             .scope(self.policy_engine.clone())
-            .include_tenant_children()
+            .include_accessible_tenants(tenant_ids)
             .prepare()
             .await?;
 

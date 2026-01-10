@@ -6,9 +6,18 @@
 use api_gateway as _;
 use file_parser as _;
 use grpc_hub as _;
+use hs_tenant_resolver_gw as _;
 use module_orchestrator as _;
 use nodes_registry as _;
 use types_registry as _;
+
+#[cfg(feature = "single-tenant")]
+use hs_single_tenant_tr_plugin as _;
+
+#[cfg(feature = "static-tenants")]
+use hs_static_tr_plugin as _;
+
+// === Example Features ===
 
 #[cfg(feature = "users-info-example")]
 use users_info as _;

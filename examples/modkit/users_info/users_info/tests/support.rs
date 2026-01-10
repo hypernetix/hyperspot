@@ -7,7 +7,12 @@
 
 #![allow(dead_code)] // Support module provides utilities that may not all be used
 
+use hs_tenant_resolver_sdk::{
+    AccessOptions, TenantFilter, TenantId, TenantInfo, TenantResolverError,
+    TenantResolverGatewayClient, TenantStatus,
+};
 use modkit_db::secure::{AccessScope, SecureConn, SecurityCtx, Subject};
+use modkit_security::SecurityContext;
 use sea_orm::{Database, DatabaseConnection};
 use sea_orm_migration::MigratorTrait;
 use time::OffsetDateTime;
@@ -58,15 +63,6 @@ pub fn ctx_deny_all() -> SecurityCtx {
     let subject = Subject::new(Uuid::new_v4());
     #[allow(deprecated)]
     SecurityCtx::new(AccessScope::default(), subject)
-}
-
-/// Create a root security context (system-level access).
-///
-/// This context bypasses all tenant filtering and allows access to all data.
-#[must_use]
-pub fn ctx_root() -> SecurityCtx {
-    #[allow(deprecated)]
-    SecurityCtx::root_ctx()
 }
 
 /// Create a fresh in-memory `SQLite` database with migrations applied.
@@ -176,5 +172,76 @@ pub struct MockEventPublisher;
 impl EventPublisher<UserDomainEvent> for MockEventPublisher {
     fn publish(&self, _event: &UserDomainEvent) {
         // Discard events in tests
+    }
+}
+
+/// Mock tenant resolver for tests - returns only the caller's tenant.
+#[derive(Clone)]
+pub struct MockTenantResolver;
+
+impl MockTenantResolver {
+    fn matches_filter(filter: Option<&TenantFilter>) -> bool {
+        // Mock always returns Active status
+        if let Some(f) = filter {
+            if !f.status.is_empty() && !f.status.contains(&TenantStatus::Active) {
+                return false;
+            }
+        }
+        true
+    }
+}
+
+#[async_trait::async_trait]
+impl TenantResolverGatewayClient for MockTenantResolver {
+    async fn get_tenant(
+        &self,
+        ctx: &SecurityContext,
+        id: TenantId,
+    ) -> Result<TenantInfo, TenantResolverError> {
+        // Return tenant info if requesting own tenant
+        if id == ctx.tenant_id() {
+            Ok(TenantInfo {
+                id,
+                name: format!("Tenant {id}"),
+                status: TenantStatus::Active,
+                tenant_type: None,
+            })
+        } else {
+            Err(TenantResolverError::TenantNotFound { tenant_id: id })
+        }
+    }
+
+    async fn can_access(
+        &self,
+        ctx: &SecurityContext,
+        target: TenantId,
+        _options: Option<&AccessOptions>,
+    ) -> Result<bool, TenantResolverError> {
+        // Return error if target doesn't exist (not matching context tenant)
+        if target != ctx.tenant_id() {
+            return Err(TenantResolverError::TenantNotFound { tenant_id: target });
+        }
+        // Allow self-access
+        Ok(true)
+    }
+
+    async fn get_accessible_tenants(
+        &self,
+        ctx: &SecurityContext,
+        filter: Option<&TenantFilter>,
+        _options: Option<&AccessOptions>,
+    ) -> Result<Vec<TenantInfo>, TenantResolverError> {
+        // Return only the caller's tenant if it matches filter
+        if Self::matches_filter(filter) {
+            let tenant_id = ctx.tenant_id();
+            Ok(vec![TenantInfo {
+                id: tenant_id,
+                name: format!("Tenant {tenant_id}"),
+                status: TenantStatus::Active,
+                tenant_type: None,
+            }])
+        } else {
+            Ok(vec![])
+        }
     }
 }
