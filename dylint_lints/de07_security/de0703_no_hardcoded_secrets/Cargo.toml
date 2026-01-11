@@ -1,0 +1,29 @@
+[package]
+name = "de0703_no_hardcoded_secrets"
+version = "0.1.0"
+authors = ["Hypernetix"]
+description = "Detects hardcoded secrets like API keys, passwords, and tokens (DE0703)"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[[example]]
+name = "bad_hardcoded_secrets"
+path = "ui/bad_hardcoded_secrets.rs"
+
+[[example]]
+name = "good_config_usage_0703"
+path = "ui/good_config_usage_0703.rs"
+
+[dependencies]
+clippy_utils.workspace = true
+dylint_linting.workspace = true
+lint_utils.workspace = true
+
+[dev-dependencies]
+dylint_testing.workspace = true
+
+[package.metadata.rust-analyzer]
+rustc_private = true
