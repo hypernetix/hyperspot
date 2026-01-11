@@ -1,0 +1,29 @@
+[package]
+name = "de0409_no_secrets_in_migrations"
+version = "0.1.0"
+authors = ["Hypernetix"]
+description = "Detects hardcoded secrets in database migration files (DE0409)"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[[example]]
+name = "bad_migration_secrets"
+path = "ui/bad_migration_secrets.rs"
+
+[[example]]
+name = "good_migration"
+path = "ui/good_migration.rs"
+
+[dependencies]
+clippy_utils.workspace = true
+dylint_linting.workspace = true
+lint_utils.workspace = true
+
+[dev-dependencies]
+dylint_testing.workspace = true
+
+[package.metadata.rust-analyzer]
+rustc_private = true
