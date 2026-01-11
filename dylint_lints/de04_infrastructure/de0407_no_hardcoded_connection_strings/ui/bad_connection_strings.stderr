@@ -1,0 +1,48 @@
+warning: hardcoded connection string detected (DE0407)
+  --> $DIR/bad_connection_strings.rs:5:15
+   |
+LL |     let _pg = "postgres://user:password@localhost:5432/mydb";
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: load connection strings from environment variables (std::env::var) or configuration files
+   = note: hardcoded connection strings expose credentials and make environment-specific configuration difficult
+   = note: `#[warn(de0407_no_hardcoded_connection_strings)]` on by default
+
+warning: hardcoded connection string detected (DE0407)
+  --> $DIR/bad_connection_strings.rs:8:18
+   |
+LL |     let _mysql = "mysql://root:secret@127.0.0.1:3306/app";
+   |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: load connection strings from environment variables (std::env::var) or configuration files
+   = note: hardcoded connection strings expose credentials and make environment-specific configuration difficult
+
+warning: hardcoded connection string detected (DE0407)
+  --> $DIR/bad_connection_strings.rs:11:18
+   |
+LL |     let _mongo = "mongodb://admin:pass@localhost:27017/test";
+   |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: load connection strings from environment variables (std::env::var) or configuration files
+   = note: hardcoded connection strings expose credentials and make environment-specific configuration difficult
+
+warning: hardcoded connection string detected (DE0407)
+  --> $DIR/bad_connection_strings.rs:14:18
+   |
+LL |     let _redis = "redis://localhost:6379/0";
+   |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: load connection strings from environment variables (std::env::var) or configuration files
+   = note: hardcoded connection strings expose credentials and make environment-specific configuration difficult
+
+warning: hardcoded connection string detected (DE0407)
+  --> $DIR/bad_connection_strings.rs:17:17
+   |
+LL |     let _amqp = "amqp://guest:guest@localhost:5672/";
+   |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: load connection strings from environment variables (std::env::var) or configuration files
+   = note: hardcoded connection strings expose credentials and make environment-specific configuration difficult
+
+warning: 5 warnings emitted
+

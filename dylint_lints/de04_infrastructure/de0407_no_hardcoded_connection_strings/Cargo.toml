@@ -1,0 +1,29 @@
+[package]
+name = "de0407_no_hardcoded_connection_strings"
+version = "0.1.0"
+authors = ["Hypernetix"]
+description = "Detects hardcoded database connection strings (DE0407)"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[[example]]
+name = "bad_connection_strings"
+path = "ui/bad_connection_strings.rs"
+
+[[example]]
+name = "good_config_usage_0407"
+path = "ui/good_config_usage_0407.rs"
+
+[dependencies]
+clippy_utils.workspace = true
+dylint_linting.workspace = true
+lint_utils.workspace = true
+
+[dev-dependencies]
+dylint_testing.workspace = true
+
+[package.metadata.rust-analyzer]
+rustc_private = true
