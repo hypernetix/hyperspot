@@ -1,0 +1,29 @@
+[package]
+name = "de0705_no_sql_injection"
+version = "0.1.0"
+authors = ["Hypernetix"]
+description = "Detects potential SQL injection vulnerabilities (DE0705)"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[[example]]
+name = "bad_sql_injection"
+path = "ui/bad_sql_injection.rs"
+
+[[example]]
+name = "good_parameterized"
+path = "ui/good_parameterized.rs"
+
+[dependencies]
+clippy_utils.workspace = true
+dylint_linting.workspace = true
+lint_utils.workspace = true
+
+[dev-dependencies]
+dylint_testing.workspace = true
+
+[package.metadata.rust-analyzer]
+rustc_private = true
