@@ -1,0 +1,33 @@
+warning: public struct `User` in contract module lacks documentation (DE1107)
+  --> $DIR/bad_no_docs.rs:6:1
+   |
+LL | / pub struct User {
+LL | |     pub id: u64,
+LL | |     pub name: String,
+LL | | }
+   | |_^
+   |
+   = help: add a doc comment (///) explaining the purpose of this item
+   = note: `#[warn(de1107_public_apis_doc_comments)]` on by default
+
+warning: public enum `Status` in contract module lacks documentation (DE1107)
+  --> $DIR/bad_no_docs.rs:12:1
+   |
+LL | / pub enum Status {
+LL | |     Active,
+LL | |     Inactive,
+LL | | }
+   | |_^
+   |
+   = help: add a doc comment (///) explaining the purpose of this item
+
+warning: public function `create_user` in contract module lacks documentation (DE1107)
+  --> $DIR/bad_no_docs.rs:18:1
+   |
+LL | pub fn create_user() {}
+   | ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: add a doc comment (///) explaining the purpose of this item
+
+warning: 3 warnings emitted
+

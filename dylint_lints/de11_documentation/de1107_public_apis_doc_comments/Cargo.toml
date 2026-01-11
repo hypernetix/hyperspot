@@ -1,0 +1,29 @@
+[package]
+name = "de1107_public_apis_doc_comments"
+version = "0.1.0"
+authors = ["Hypernetix"]
+description = "Public items in contract modules must have doc comments (DE1107)"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[[example]]
+name = "bad_no_docs"
+path = "ui/bad_no_docs.rs"
+
+[[example]]
+name = "good_docs"
+path = "ui/good_docs.rs"
+
+[dependencies]
+clippy_utils.workspace = true
+dylint_linting.workspace = true
+lint_utils.workspace = true
+
+[dev-dependencies]
+dylint_testing.workspace = true
+
+[package.metadata.rust-analyzer]
+rustc_private = true
