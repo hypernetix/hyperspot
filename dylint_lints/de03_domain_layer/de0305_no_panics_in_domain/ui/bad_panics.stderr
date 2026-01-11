@@ -1,0 +1,39 @@
+warning: `panic!()` macro should not be used in domain layer (DE0305)
+  --> $DIR/bad_panics.rs:6:5
+   |
+LL |     panic!("data validation failed");
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: use Result<T, E> for error handling instead of panicking
+   = note: domain logic should be pure and handle errors gracefully
+   = note: `#[warn(de0305_no_panics_in_domain)]` on by default
+
+warning: `todo!()` macro should not be used in domain layer (DE0305)
+  --> $DIR/bad_panics.rs:11:5
+   |
+LL |     todo!("implement data processing");
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: use Result<T, E> for error handling instead of panicking
+   = note: domain logic should be pure and handle errors gracefully
+
+warning: `unreachable!()` macro should not be used in domain layer (DE0305)
+  --> $DIR/bad_panics.rs:18:14
+   |
+LL |         _ => unreachable!(),
+   |              ^^^^^^^^^^^^^^
+   |
+   = help: use Result<T, E> for error handling instead of panicking
+   = note: domain logic should be pure and handle errors gracefully
+
+warning: `unimplemented!()` macro should not be used in domain layer (DE0305)
+  --> $DIR/bad_panics.rs:24:5
+   |
+LL |     unimplemented!()
+   |     ^^^^^^^^^^^^^^^^
+   |
+   = help: use Result<T, E> for error handling instead of panicking
+   = note: domain logic should be pure and handle errors gracefully
+
+warning: 4 warnings emitted
+
