@@ -1,0 +1,29 @@
+[package]
+name = "de0702_no_expect"
+version = "0.1.0"
+authors = ["Hypernetix"]
+description = "Detects usage of .expect() method calls (DE0702)"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[[example]]
+name = "bad_expect"
+path = "ui/bad_expect.rs"
+
+[[example]]
+name = "good_error_handling_0702"
+path = "ui/good_error_handling_0702.rs"
+
+[dependencies]
+clippy_utils.workspace = true
+dylint_linting.workspace = true
+lint_utils.workspace = true
+
+[dev-dependencies]
+dylint_testing.workspace = true
+
+[package.metadata.rust-analyzer]
+rustc_private = true
