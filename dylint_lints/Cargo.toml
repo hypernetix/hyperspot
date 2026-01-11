@@ -8,11 +8,21 @@ members = [
     "de02_api_layer/de0202_dtos_not_referenced_outside_api",
     "de02_api_layer/de0203_dtos_must_have_serde_derives",
     "de02_api_layer/de0204_dtos_must_have_toschema_derive",
+    "de03_domain_layer/de0301_no_infra_in_domain",
+    "de03_domain_layer/de0305_no_panics_in_domain",
+    "de03_domain_layer/de0308_no_http_in_domain",
+    "de04_infrastructure/de0407_no_hardcoded_connection_strings",
+    "de04_infrastructure/de0409_no_secrets_in_migrations",
+    "de05_client_layer/de0503_plugin_client_suffix",
+    "de07_security/de0701_no_unwrap",
+    "de07_security/de0702_no_expect",
+    "de07_security/de0703_no_hardcoded_secrets",
+    "de07_security/de0705_no_sql_injection",
     "de08_rest_api_conventions/de0801_api_endpoint_version",
     "de08_rest_api_conventions/de0802_use_odata_ext",
     "de09_gts_layer/de0901_gts_string_pattern",
     "de09_gts_layer/de0902_no_schema_for_on_gts_structs",
-    "de05_client_layer/de0503_plugin_client_suffix",
+    "de11_documentation/de1107_public_apis_doc_comments",
 ]
 resolver = "2"
 
