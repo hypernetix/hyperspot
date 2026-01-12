@@ -13,7 +13,9 @@ use sea_orm::{
 };
 use thiserror::Error;
 
-use crate::odata::{FieldKind, LimitCfg};
+use modkit_odata::filter::FieldKind;
+
+use crate::odata::LimitCfg;
 
 /// Type alias for cursor extraction function to reduce type complexity
 type CursorExtractor<E> = fn(&<E as EntityTrait>::Model) -> String;

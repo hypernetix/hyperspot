@@ -1,3 +1,4 @@
+use modkit_db::secure::InfraError;
 use thiserror::Error;
 use user_info_sdk::UsersInfoError;
 use uuid::Uuid;
@@ -25,6 +26,9 @@ pub enum DomainError {
 
     #[error("Validation failed: {field}: {message}")]
     Validation { field: String, message: String },
+
+    #[error("{entity_type} not found: {id}")]
+    NotFound { entity_type: String, id: Uuid },
 
     #[error("Internal error")]
     InternalError,
@@ -62,10 +66,25 @@ impl DomainError {
         }
     }
 
+    /// Convert an infrastructure error into a domain database error.
+    #[must_use]
+    #[allow(clippy::needless_pass_by_value)]
+    pub fn database_infra(e: InfraError) -> Self {
+        Self::database(e.to_string())
+    }
+
     pub fn validation(field: impl Into<String>, message: impl Into<String>) -> Self {
         Self::Validation {
             field: field.into(),
             message: message.into(),
+        }
+    }
+
+    #[must_use]
+    pub fn not_found(entity_type: impl Into<String>, id: Uuid) -> Self {
+        Self::NotFound {
+            entity_type: entity_type.into(),
+            id,
         }
     }
 }
@@ -74,7 +93,6 @@ impl DomainError {
 impl From<DomainError> for UsersInfoError {
     fn from(domain_error: DomainError) -> Self {
         match domain_error {
-            DomainError::UserNotFound { id } => UsersInfoError::not_found(id),
             DomainError::EmailAlreadyExists { email } => UsersInfoError::conflict(email),
             DomainError::InvalidEmail { email } => {
                 UsersInfoError::validation(format!("Invalid email: {email}"))
@@ -87,6 +105,9 @@ impl From<DomainError> for UsersInfoError {
             )),
             DomainError::Validation { field, message } => {
                 UsersInfoError::validation(format!("{field}: {message}"))
+            }
+            DomainError::UserNotFound { id } | DomainError::NotFound { id, .. } => {
+                UsersInfoError::not_found(id)
             }
             DomainError::Database { .. } | DomainError::InternalError => UsersInfoError::internal(),
         }

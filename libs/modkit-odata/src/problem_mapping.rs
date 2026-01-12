@@ -14,6 +14,7 @@ impl From<Error> for Problem {
             CursorInvalidBase64, CursorInvalidDirection, CursorInvalidFields, CursorInvalidJson,
             CursorInvalidKeys, CursorInvalidVersion, Db, FilterMismatch, InvalidCursor,
             InvalidFilter, InvalidLimit, InvalidOrderByField, OrderMismatch, OrderWithCursor,
+            ParsingUnavailable,
         };
 
         match err {
@@ -56,6 +57,10 @@ impl From<Error> for Problem {
                 ErrorCode::odata_errors_internal_v1()
                     .as_problem("An internal error occurred while processing the OData query")
             }
+
+            // Configuration errors → 500 (feature not enabled)
+            ParsingUnavailable(msg) => ErrorCode::odata_errors_internal_v1()
+                .as_problem(format!("OData parsing unavailable: {msg}")),
         }
     }
 }

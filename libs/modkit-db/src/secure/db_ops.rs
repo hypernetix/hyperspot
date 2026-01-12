@@ -260,6 +260,14 @@ impl<E> SecureDeleteMany<E, Scoped>
 where
     E: EntityTrait,
 {
+    /// Add additional filters to the scoped delete.
+    /// The scope conditions remain in place.
+    #[must_use]
+    pub fn filter(mut self, filter: sea_orm::Condition) -> Self {
+        self.inner = QueryFilter::filter(self.inner, filter);
+        self
+    }
+
     /// Execute the delete operation.
     ///
     /// # Errors

@@ -49,13 +49,20 @@
 //! }
 //! ```
 
+use std::{future::Future, pin::Pin};
+
 use sea_orm::{
-    sea_query::Expr, ActiveModelTrait, ColumnTrait, ConnectionTrait, DatabaseConnection,
-    EntityTrait, QueryFilter,
+    sea_query::Expr, AccessMode, ActiveModelTrait, ColumnTrait, ConnectionTrait,
+    DatabaseConnection, DatabaseTransaction, DbErr, EntityTrait, IsolationLevel, QueryFilter,
+    TransactionTrait,
 };
 use uuid::Uuid;
 
+use crate::secure::tx_error::{InfraError, TxError};
+
 use modkit_security::AccessScope;
+
+use crate::secure::tx_config::TxConfig;
 
 use crate::secure::{ScopableEntity, ScopeError, Scoped, SecureEntityExt, SecureSelect};
 
@@ -410,5 +417,260 @@ impl SecureConn {
             .await?;
 
         Ok(result.rows_affected > 0)
+    }
+
+    // ========================================================================
+    // Transaction support
+    // ========================================================================
+
+    /// Execute a closure inside a database transaction.
+    ///
+    /// This method starts a `SeaORM` transaction, provides the transaction handle
+    /// to the closure as `&dyn ConnectionTrait`, and handles commit/rollback.
+    ///
+    /// # Return Type
+    ///
+    /// Returns `anyhow::Result<Result<T, E>>` where:
+    /// - Outer `Err`: Database/infrastructure error (transaction rolls back)
+    /// - Inner `Ok(T)`: Success (transaction commits)
+    /// - Inner `Err(E)`: Domain/validation error (transaction still commits)
+    ///
+    /// This design ensures domain validation errors don't cause rollback.
+    ///
+    /// # Architecture Note
+    ///
+    /// Transaction boundaries should be managed by **application/domain services**,
+    /// not by REST handlers. REST handlers should call service methods that
+    /// internally decide when to open transactions.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// use modkit_db::secure::SecureConn;
+    ///
+    /// // In a domain service:
+    /// pub async fn create_user(
+    ///     db: &SecureConn,
+    ///     repo: &UsersRepo,
+    ///     user: User,
+    /// ) -> Result<User, DomainError> {
+    ///     let result = db.transaction(|conn| async move {
+    ///         // Check email uniqueness
+    ///         if repo.email_exists(conn, &user.email).await? {
+    ///             return Ok(Err(DomainError::EmailExists));
+    ///         }
+    ///         // Create user
+    ///         let created = repo.create(conn, user).await?;
+    ///         Ok(Ok(created))
+    ///     }).await?;
+    ///     result
+    /// }
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err(anyhow::Error)` if:
+    /// - The transaction cannot be started
+    /// - A database operation fails (transaction is rolled back)
+    /// - The commit fails
+    pub async fn transaction<T, F>(&self, f: F) -> anyhow::Result<T>
+    where
+        T: Send + 'static,
+        F: for<'c> FnOnce(
+                &'c DatabaseTransaction,
+            )
+                -> Pin<Box<dyn Future<Output = anyhow::Result<T>> + Send + 'c>>
+            + Send,
+    {
+        self.conn
+            .transaction::<_, T, DbErr>(|txn| {
+                let fut = f(txn);
+                Box::pin(async move {
+                    fut.await
+                        .map_err(|e| DbErr::Custom(format!("transaction callback failed: {e:#}")))
+                })
+            })
+            .await
+            .map_err(|e| anyhow::anyhow!("transaction failed: {e}"))
+    }
+
+    /// Execute a closure inside a database transaction with custom configuration.
+    ///
+    /// This method is similar to [`transaction`](Self::transaction), but allows
+    /// specifying the isolation level and access mode.
+    ///
+    /// # Configuration
+    ///
+    /// Use [`TxConfig`] to specify transaction settings without importing `SeaORM` types:
+    ///
+    /// ```ignore
+    /// use modkit_db::secure::{TxConfig, TxIsolationLevel, TxAccessMode};
+    ///
+    /// let cfg = TxConfig {
+    ///     isolation: Some(TxIsolationLevel::Serializable),
+    ///     access_mode: Some(TxAccessMode::ReadWrite),
+    /// };
+    /// ```
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// use modkit_db::secure::{SecureConn, TxConfig, TxIsolationLevel};
+    ///
+    /// // In a domain service requiring serializable isolation:
+    /// pub async fn reconcile_accounts(
+    ///     db: &SecureConn,
+    ///     repo: &AccountsRepo,
+    /// ) -> anyhow::Result<Result<ReconciliationResult, DomainError>> {
+    ///     let cfg = TxConfig::serializable();
+    ///
+    ///     db.transaction_with_config(cfg, |conn| async move {
+    ///         let accounts = repo.find_all_pending(conn).await?;
+    ///         for account in accounts {
+    ///             repo.reconcile(conn, &account).await?;
+    ///         }
+    ///         Ok(Ok(ReconciliationResult { processed: accounts.len() }))
+    ///     }).await
+    /// }
+    /// ```
+    ///
+    /// # Backend Notes
+    ///
+    /// - **`PostgreSQL`**: Full support for all isolation levels and access modes.
+    /// - **MySQL/InnoDB**: Full support for all isolation levels and access modes.
+    /// - **`SQLite`**: Only supports `Serializable` isolation. Other levels are
+    ///   mapped to `Serializable`. Read-only mode is a hint only.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err(anyhow::Error)` if:
+    /// - The transaction cannot be started with the specified configuration
+    /// - A database operation fails (transaction is rolled back)
+    /// - The commit fails
+    pub async fn transaction_with_config<T, F>(&self, cfg: TxConfig, f: F) -> anyhow::Result<T>
+    where
+        T: Send + 'static,
+        F: for<'c> FnOnce(
+                &'c DatabaseTransaction,
+            )
+                -> Pin<Box<dyn Future<Output = anyhow::Result<T>> + Send + 'c>>
+            + Send,
+    {
+        let isolation: Option<IsolationLevel> = cfg.isolation.map(Into::into);
+        let access_mode: Option<AccessMode> = cfg.access_mode.map(Into::into);
+
+        self.conn
+            .transaction_with_config::<_, T, DbErr>(
+                |txn| {
+                    let fut = f(txn);
+                    Box::pin(async move {
+                        fut.await.map_err(|e| {
+                            DbErr::Custom(format!("transaction callback failed: {e:#}"))
+                        })
+                    })
+                },
+                isolation,
+                access_mode,
+            )
+            .await
+            .map_err(|e| anyhow::anyhow!("transaction_with_config failed: {e}"))
+    }
+
+    /// Execute a closure inside a typed domain transaction.
+    ///
+    /// This method returns [`TxError<E>`] which distinguishes domain errors from
+    /// infrastructure errors, allowing callers to handle them appropriately.
+    ///
+    /// # Error Handling
+    ///
+    /// - Domain errors returned from the closure are wrapped in `TxError::Domain(e)`
+    /// - Database infrastructure errors are wrapped in `TxError::Infra(InfraError)`
+    ///
+    /// Use [`TxError::into_domain`] to convert the result into your domain error type.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// use modkit_db::secure::SecureConn;
+    ///
+    /// async fn create_user(db: &SecureConn, repo: &UsersRepo, user: User) -> Result<User, DomainError> {
+    ///     db.in_transaction(move |tx| Box::pin(async move {
+    ///         if repo.exists(tx, user.id).await? {
+    ///             return Err(DomainError::already_exists(user.id));
+    ///         }
+    ///         repo.create(tx, user).await
+    ///     }))
+    ///     .await
+    ///     .map_err(|e| e.into_domain(DomainError::database_infra))
+    /// }
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err(TxError<E>)` if:
+    /// - The callback returns a domain error (`TxError::Domain(E)`).
+    /// - The transaction fails due to a database/infrastructure error (`TxError::Infra(InfraError)`).
+    pub async fn in_transaction<T, E, F>(&self, f: F) -> Result<T, TxError<E>>
+    where
+        T: Send + 'static,
+        E: std::fmt::Debug + std::fmt::Display + Send + 'static,
+        F: for<'c> FnOnce(
+                &'c DatabaseTransaction,
+            ) -> Pin<Box<dyn Future<Output = Result<T, E>> + Send + 'c>>
+            + Send,
+    {
+        self.conn
+            .transaction::<_, T, TxError<E>>(|txn| {
+                let fut = f(txn);
+                Box::pin(async move { fut.await.map_err(TxError::Domain) })
+            })
+            .await
+            .map_err(|e| match e {
+                sea_orm::TransactionError::Transaction(tx_err) => tx_err,
+                sea_orm::TransactionError::Connection(db_err) => {
+                    TxError::Infra(InfraError::new(db_err.to_string()))
+                }
+            })
+    }
+
+    /// Execute a typed domain transaction with automatic infrastructure error mapping.
+    ///
+    /// This is a convenience wrapper around [`in_transaction`](Self::in_transaction) that
+    /// automatically converts [`TxError`] into the domain error type using the provided
+    /// mapping function for infrastructure errors.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// use modkit_db::secure::SecureConn;
+    ///
+    /// async fn create_user(db: &SecureConn, repo: &UsersRepo, user: User) -> Result<User, DomainError> {
+    ///     db.in_transaction_mapped(DomainError::database_infra, move |tx| Box::pin(async move {
+    ///         if repo.exists(tx, user.id).await? {
+    ///             return Err(DomainError::already_exists(user.id));
+    ///         }
+    ///         repo.create(tx, user).await
+    ///     })).await
+    /// }
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err(E)` if:
+    /// - The callback returns a domain error (`E`).
+    /// - The transaction fails due to a database/infrastructure error, mapped via `map_infra`.
+    pub async fn in_transaction_mapped<T, E, F, M>(&self, map_infra: M, f: F) -> Result<T, E>
+    where
+        T: Send + 'static,
+        E: std::fmt::Debug + std::fmt::Display + Send + 'static,
+        M: FnOnce(InfraError) -> E + Send,
+        F: for<'c> FnOnce(
+                &'c DatabaseTransaction,
+            ) -> Pin<Box<dyn Future<Output = Result<T, E>> + Send + 'c>>
+            + Send,
+    {
+        self.in_transaction(f)
+            .await
+            .map_err(|tx_err| tx_err.into_domain(map_infra))
     }
 }

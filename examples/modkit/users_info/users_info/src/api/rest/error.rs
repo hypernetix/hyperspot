@@ -16,6 +16,12 @@ pub fn domain_error_to_problem(e: &DomainError, instance: &str) -> Problem {
             instance,
             trace_id,
         ),
+        DomainError::NotFound { entity_type, id } => ErrorCode::example1_user_not_found_v1()
+            .with_context(
+                format!("{entity_type} with id {id} was not found"),
+                instance,
+                trace_id,
+            ),
         DomainError::EmailAlreadyExists { email } => ErrorCode::example1_user_invalid_email_v1()
             .with_context(
                 format!("Email '{email}' is already in use"),

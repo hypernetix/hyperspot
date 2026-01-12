@@ -2862,7 +2862,6 @@ dependencies = [
  "module_orchestrator-contracts",
  "module_orchestrator-grpc",
  "nix 0.29.0",
- "odata-params",
  "opentelemetry",
  "opentelemetry-otlp",
  "opentelemetry_sdk",
@@ -3046,6 +3045,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "modkit-odata-macros"
+version = "0.1.0"
+dependencies = [
+ "heck 0.5.0",
+ "modkit-odata",
+ "proc-macro-error2",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.111",
+ "trybuild",
+ "uuid",
+]
+
+[[package]]
 name = "modkit-sdk"
 version = "0.1.0"
 dependencies = [
@@ -3053,25 +3066,10 @@ dependencies = [
  "futures-core",
  "futures-util",
  "modkit-odata",
- "modkit-sdk-macros",
+ "modkit-odata-macros",
  "modkit-security",
  "pin-project-lite",
  "tokio",
- "uuid",
-]
-
-[[package]]
-name = "modkit-sdk-macros"
-version = "0.1.0"
-dependencies = [
- "heck 0.5.0",
- "modkit-odata",
- "modkit-sdk",
- "proc-macro-error2",
- "proc-macro2",
- "quote",
- "syn 2.0.111",
- "trybuild",
  "uuid",
 ]
 
@@ -6437,7 +6435,11 @@ name = "user_info-sdk"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "futures",
+ "futures-core",
  "modkit-odata",
+ "modkit-odata-macros",
+ "modkit-sdk",
  "modkit-security",
  "thiserror 2.0.17",
  "time",
@@ -6465,6 +6467,7 @@ dependencies = [
  "modkit-errors",
  "modkit-errors-macro",
  "modkit-odata",
+ "modkit-sdk",
  "modkit-security",
  "opentelemetry",
  "opentelemetry_sdk",
@@ -6478,6 +6481,7 @@ dependencies = [
  "time",
  "tokio",
  "tokio-test",
+ "tokio-util",
  "tower",
  "tower-http",
  "tracing",

@@ -87,12 +87,14 @@ impl<'a, C> Secured<'a, C> {
     /// # Example
     ///
     /// ```rust,ignore
-    /// let items = client.security_ctx(&ctx)
-    ///     .query::<UserSchema>()
-    ///     .filter(user::email().contains("@example.com"))
-    ///     .items_stream(|query| async move {
-    ///         client.list_users(query).await
-    ///     });
+    /// use modkit_sdk::odata::items_stream;
+    ///
+    /// let items = items_stream(
+    ///     client.security_ctx(&ctx)
+    ///         .query::<UserSchema>()
+    ///         .filter(user::email().contains("@example.com")),
+    ///     |query| async move { client.list_users(query).await },
+    /// );
     /// ```
     #[must_use]
     pub fn query<S: crate::odata::Schema>(&self) -> crate::odata::QueryBuilder<S> {
