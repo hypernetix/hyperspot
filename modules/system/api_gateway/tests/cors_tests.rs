@@ -12,8 +12,8 @@ use hs_tenant_resolver_sdk::{
 use modkit::{
     api::OperationBuilder,
     config::ConfigProvider,
-    contracts::{OpenApiRegistry, RestHostModule},
-    Module, ModuleCtx, RestfulModule,
+    contracts::{ApiGatewayCapability, OpenApiRegistry},
+    Module, ModuleCtx, RestApiCapability,
 };
 
 use modkit_security::SecurityContext;
@@ -140,7 +140,7 @@ impl Module for CorsTestModule {
     }
 }
 
-impl RestfulModule for CorsTestModule {
+impl RestApiCapability for CorsTestModule {
     fn register_rest(
         &self,
         _ctx: &modkit::ModuleCtx,

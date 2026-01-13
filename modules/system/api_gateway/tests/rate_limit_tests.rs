@@ -12,8 +12,8 @@ use hs_tenant_resolver_sdk::{
 use modkit::{
     api::OperationBuilder,
     config::ConfigProvider,
-    contracts::{OpenApiRegistry, RestHostModule},
-    Module, ModuleCtx, RestfulModule,
+    contracts::{ApiGatewayCapability, OpenApiRegistry},
+    Module, ModuleCtx, RestApiCapability,
 };
 use modkit_security::SecurityContext;
 use serde::{Deserialize, Serialize};
@@ -111,7 +111,7 @@ impl Module for RateLimitedModule {
     }
 }
 
-impl RestfulModule for RateLimitedModule {
+impl RestApiCapability for RateLimitedModule {
     fn register_rest(
         &self,
         _ctx: &modkit::ModuleCtx,

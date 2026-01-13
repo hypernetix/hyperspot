@@ -937,9 +937,9 @@ This is where all components are assembled and registered with ModKit.
        ```
     7. Config structs SHOULD use `#[serde(deny_unknown_fields)]` and provide safe defaults.
 
-3. **`src/module.rs` - `impl DbModule` and `impl RestfulModule`:**
-   **Rule:** `DbModule::migrate` MUST be implemented to run your SeaORM migrations.
-   **Rule:** `RestfulModule::register_rest` MUST fail if the service is not yet initialized, then call your single
+3. **`src/module.rs` - `impl DatabaseCapability` and `impl RestApiCapability`:**
+   **Rule:** `DatabaseCapability::migrate` MUST be implemented to run your SeaORM migrations.
+   **Rule:** `RestApiCapability::register_rest` MUST fail if the service is not yet initialized, then call your single
    `register_routes` function.
 
 ```rust
@@ -947,7 +947,7 @@ This is where all components are assembled and registered with ModKit.
 use std::sync::Arc;
 use async_trait::async_trait;
 use modkit::api::OpenApiRegistry;
-use modkit::{DbModule, Module, ModuleCtx, RestfulModule, SseBroadcaster};
+use modkit::{DatabaseCapability, Module, ModuleCtx, RestApiCapability, SseBroadcaster};
 use sea_orm_migration::MigratorTrait;
 use tracing::info;
 
@@ -1030,7 +1030,7 @@ impl Module for UsersInfo {
 }
 
 #[async_trait]
-impl DbModule for UsersInfo {
+impl DatabaseCapability for UsersInfo {
     async fn migrate(&self, db: &modkit_db::DbHandle) -> anyhow::Result<()> {
         info!("Running users_info database migrations");
         let conn = db.sea();
@@ -1039,7 +1039,7 @@ impl DbModule for UsersInfo {
     }
 }
 
-impl RestfulModule for UsersInfo {
+impl RestApiCapability for UsersInfo {
     fn register_rest(
         &self,
         _ctx: &ModuleCtx,
@@ -1367,7 +1367,7 @@ schema:
 
 ### Step 8: Infra/Storage Layer (Optional)
 
-If no database required: skip `DbModule`, remove `db` from capabilities.
+If no database required: skip `DatabaseCapability`, remove `db` from capabilities.
 
 This layer implements the domain's repository traits with **Secure ORM** for tenant isolation.
 

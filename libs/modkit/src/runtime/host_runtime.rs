@@ -23,7 +23,10 @@ use crate::backends::OopSpawnConfig;
 use crate::client_hub::ClientHub;
 use crate::config::ConfigProvider;
 use crate::context::ModuleContextBuilder;
-use crate::registry::{ModuleEntry, ModuleRegistry, RegistryError};
+use crate::registry::{
+    ApiGatewayCap, DatabaseCap, GrpcHubCap, ModuleEntry, ModuleRegistry, RegistryError, RestApiCap,
+    RunnableCap, SystemCap,
+};
 use crate::runtime::{GrpcInstallerStore, ModuleManager, OopSpawnOptions, SystemContext};
 
 /// How the runtime should provide DBs to modules.
@@ -119,7 +122,7 @@ impl HostRuntime {
         );
 
         for entry in self.registry.modules() {
-            if let Some(sys_mod) = &entry.system {
+            if let Some(sys_mod) = entry.caps.query::<SystemCap>() {
                 tracing::debug!(module = entry.name, "Running system pre_init");
                 sys_mod
                     .pre_init(&sys_ctx)
@@ -148,12 +151,15 @@ impl HostRuntime {
     }
 
     /// Helper: extract DB handle and module if both exist.
-    fn db_migration_target<'a>(
-        ctx: &'a crate::context::ModuleCtx,
-        db_module: Option<&'a Arc<dyn crate::contracts::DbModule>>,
-    ) -> Option<(Arc<modkit_db::DbHandle>, &'a dyn crate::contracts::DbModule)> {
+    fn db_migration_target(
+        ctx: &crate::context::ModuleCtx,
+        db_module: Option<Arc<dyn crate::contracts::DatabaseCapability>>,
+    ) -> Option<(
+        Arc<modkit_db::DbHandle>,
+        Arc<dyn crate::contracts::DatabaseCapability>,
+    )> {
         match (ctx.db_optional(), db_module) {
-            (Some(db), Some(dbm)) => Some((db, dbm.as_ref())),
+            (Some(db), Some(dbm)) => Some((db, dbm)),
             _ => None,
         }
     }
@@ -162,7 +168,7 @@ impl HostRuntime {
     async fn migrate_module(
         module_name: &'static str,
         db: &modkit_db::DbHandle,
-        db_module: &dyn crate::contracts::DbModule,
+        db_module: Arc<dyn crate::contracts::DatabaseCapability>,
     ) -> Result<(), RegistryError> {
         tracing::debug!(module = module_name, "Running DB migration");
         db_module
@@ -182,12 +188,13 @@ impl HostRuntime {
 
         for entry in self.registry.modules_by_system_priority() {
             let ctx = self.module_context(entry.name).await?;
+            let db_module = entry.caps.query::<DatabaseCap>();
 
-            match Self::db_migration_target(&ctx, entry.db.as_ref()) {
+            match Self::db_migration_target(&ctx, db_module.clone()) {
                 Some((db, dbm)) => {
                     Self::migrate_module(entry.name, &db, dbm).await?;
                 }
-                None if entry.db.is_some() => {
+                None if db_module.is_some() => {
                     tracing::debug!(
                         module = entry.name,
                         "Module has DbModule trait but no DB handle (no config)"
@@ -244,7 +251,7 @@ impl HostRuntime {
         );
 
         for entry in self.registry.modules_by_system_priority() {
-            if let Some(sys_mod) = &entry.system {
+            if let Some(sys_mod) = entry.caps.query::<SystemCap>() {
                 sys_mod
                     .post_init(&sys_ctx)
                     .await
@@ -274,12 +281,17 @@ impl HostRuntime {
             .registry
             .modules()
             .iter()
-            .filter(|e| e.rest_host.is_some())
+            .filter(|e| e.caps.has::<ApiGatewayCap>())
             .count();
 
         match host_count {
             0 => {
-                return if self.registry.modules().iter().any(|e| e.rest.is_some()) {
+                return if self
+                    .registry
+                    .modules()
+                    .iter()
+                    .any(|e| e.caps.has::<RestApiCap>())
+                {
                     Err(RegistryError::RestRequiresHost)
                 } else {
                     Ok(router)
@@ -294,10 +306,10 @@ impl HostRuntime {
             .registry
             .modules()
             .iter()
-            .position(|e| e.rest_host.is_some())
+            .position(|e| e.caps.has::<ApiGatewayCap>())
             .ok_or(RegistryError::RestHostNotFoundAfterValidation)?;
         let host_entry = &self.registry.modules()[host_idx];
-        let Some(host) = host_entry.rest_host.as_ref() else {
+        let Some(host) = host_entry.caps.query::<ApiGatewayCap>() else {
             return Err(RegistryError::RestHostMissingFromEntry);
         };
         let host_ctx = self
@@ -322,7 +334,7 @@ impl HostRuntime {
 
         // 2) Register all REST providers (in the current discovery order)
         for e in self.registry.modules() {
-            if let Some(rest) = &e.rest {
+            if let Some(rest) = e.caps.query::<RestApiCap>() {
                 let ctx = self.ctx_builder.for_module(e.name).await.map_err(|err| {
                     RegistryError::RestRegister {
                         module: e.name,
@@ -428,10 +440,10 @@ impl HostRuntime {
         tracing::info!("Phase: start");
 
         for e in self.registry.modules_by_system_priority() {
-            if let Some(s) = &e.stateful {
+            if let Some(s) = e.caps.query::<RunnableCap>() {
                 tracing::debug!(
                     module = e.name,
-                    is_system = e.system.is_some(),
+                    is_system = e.caps.has::<SystemCap>(),
                     "Starting stateful module"
                 );
                 s.start(self.cancel.clone())
@@ -449,7 +461,7 @@ impl HostRuntime {
 
     /// Stop a single module, logging errors but continuing execution.
     async fn stop_one_module(entry: &ModuleEntry, cancel: CancellationToken) {
-        if let Some(s) = &entry.stateful {
+        if let Some(s) = entry.caps.query::<RunnableCap>() {
             if let Err(err) = s.stop(cancel).await {
                 tracing::warn!(module = entry.name, error = %err, "Failed to stop module");
             } else {
@@ -543,7 +555,7 @@ impl HostRuntime {
             .registry
             .modules()
             .iter()
-            .find_map(|e| e.grpc_hub.as_ref());
+            .find_map(|e| e.caps.query::<GrpcHubCap>());
 
         let Some(hub) = grpc_hub else {
             return None; // No grpc_hub registered
@@ -616,7 +628,7 @@ impl HostRuntime {
 mod tests {
     use super::*;
     use crate::context::ModuleCtx;
-    use crate::contracts::{Module, StatefulModule, SystemModule};
+    use crate::contracts::{Module, RunnableCapability, SystemCapability};
     use crate::registry::RegistryBuilder;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
@@ -655,7 +667,7 @@ mod tests {
     }
 
     #[async_trait::async_trait]
-    impl StatefulModule for StopOrderTracker {
+    impl RunnableCapability for StopOrderTracker {
         async fn start(&self, _cancel: CancellationToken) -> anyhow::Result<()> {
             Ok(())
         }
@@ -684,9 +696,9 @@ mod tests {
         builder.register_core_with_meta("b", &["a"], module_b.clone() as Arc<dyn Module>);
         builder.register_core_with_meta("c", &["b"], module_c.clone() as Arc<dyn Module>);
 
-        builder.register_stateful_with_meta("a", module_a.clone() as Arc<dyn StatefulModule>);
-        builder.register_stateful_with_meta("b", module_b.clone() as Arc<dyn StatefulModule>);
-        builder.register_stateful_with_meta("c", module_c.clone() as Arc<dyn StatefulModule>);
+        builder.register_stateful_with_meta("a", module_a.clone() as Arc<dyn RunnableCapability>);
+        builder.register_stateful_with_meta("b", module_b.clone() as Arc<dyn RunnableCapability>);
+        builder.register_stateful_with_meta("c", module_c.clone() as Arc<dyn RunnableCapability>);
 
         let registry = builder.build_topo_sorted().unwrap();
 
@@ -732,7 +744,7 @@ mod tests {
         }
 
         #[async_trait::async_trait]
-        impl StatefulModule for FailingModule {
+        impl RunnableCapability for FailingModule {
             async fn start(&self, _cancel: CancellationToken) -> anyhow::Result<()> {
                 Ok(())
             }
@@ -764,9 +776,9 @@ mod tests {
         builder.register_core_with_meta("b", &["a"], module_b.clone() as Arc<dyn Module>);
         builder.register_core_with_meta("c", &["b"], module_c.clone() as Arc<dyn Module>);
 
-        builder.register_stateful_with_meta("a", module_a.clone() as Arc<dyn StatefulModule>);
-        builder.register_stateful_with_meta("b", module_b.clone() as Arc<dyn StatefulModule>);
-        builder.register_stateful_with_meta("c", module_c.clone() as Arc<dyn StatefulModule>);
+        builder.register_stateful_with_meta("a", module_a.clone() as Arc<dyn RunnableCapability>);
+        builder.register_stateful_with_meta("b", module_b.clone() as Arc<dyn RunnableCapability>);
+        builder.register_stateful_with_meta("c", module_c.clone() as Arc<dyn RunnableCapability>);
 
         let registry = builder.build_topo_sorted().unwrap();
 
@@ -815,7 +827,7 @@ mod tests {
         }
 
         #[async_trait::async_trait]
-        impl SystemModule for TrackHooks {
+        impl SystemCapability for TrackHooks {
             fn pre_init(&self, _sys: &crate::runtime::SystemContext) -> anyhow::Result<()> {
                 Ok(())
             }
@@ -847,7 +859,7 @@ mod tests {
         builder.register_core_with_meta("sys_a", &[], sys_a.clone() as Arc<dyn Module>);
         builder.register_core_with_meta("user_b", &["sys_a"], user_b.clone() as Arc<dyn Module>);
         builder.register_core_with_meta("user_c", &["user_b"], user_c.clone() as Arc<dyn Module>);
-        builder.register_system_with_meta("sys_a", sys_a.clone() as Arc<dyn SystemModule>);
+        builder.register_system_with_meta("sys_a", sys_a.clone() as Arc<dyn SystemCapability>);
 
         let registry = builder.build_topo_sorted().unwrap();
 

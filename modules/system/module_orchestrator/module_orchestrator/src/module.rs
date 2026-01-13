@@ -6,7 +6,7 @@ use std::sync::{Arc, OnceLock};
 use tokio::sync::RwLock;
 
 use modkit::context::ModuleCtx;
-use modkit::contracts::{GrpcServiceModule, RegisterGrpcServiceFn, SystemModule};
+use modkit::contracts::{GrpcServiceCapability, RegisterGrpcServiceFn, SystemCapability};
 use modkit::directory::LocalDirectoryApi;
 use modkit::runtime::ModuleManager;
 use modkit::DirectoryApi;
@@ -47,7 +47,7 @@ impl Default for ModuleOrchestrator {
 }
 
 #[async_trait]
-impl SystemModule for ModuleOrchestrator {
+impl SystemCapability for ModuleOrchestrator {
     fn pre_init(&self, sys: &modkit::runtime::SystemContext) -> anyhow::Result<()> {
         self.module_manager
             .set(Arc::clone(&sys.module_manager))
@@ -87,7 +87,7 @@ impl modkit::Module for ModuleOrchestrator {
 
 /// Export gRPC services to `grpc_hub`
 #[async_trait]
-impl GrpcServiceModule for ModuleOrchestrator {
+impl GrpcServiceCapability for ModuleOrchestrator {
     async fn get_grpc_services(&self, _ctx: &ModuleCtx) -> Result<Vec<RegisterGrpcServiceFn>> {
         let api = self
             .directory_api

@@ -20,8 +20,8 @@ use hs_tenant_resolver_sdk::{
     TenantResolverGatewayClient, TenantStatus,
 };
 use modkit::{
-    api::OperationBuilder, config::ConfigProvider, context::ModuleCtx, contracts::RestHostModule,
-    Module,
+    api::OperationBuilder, config::ConfigProvider, context::ModuleCtx,
+    contracts::ApiGatewayCapability, Module,
 };
 
 use modkit_security::SecurityContext;

@@ -471,7 +471,7 @@ impl modkit::Module for ApiGateway {
 }
 
 // REST host role: prepare/finalize the router, but do not start the server here.
-impl modkit::contracts::RestHostModule for ApiGateway {
+impl modkit::contracts::ApiGatewayCapability for ApiGateway {
     fn rest_prepare(
         &self,
         _ctx: &modkit::context::ModuleCtx,
@@ -541,7 +541,7 @@ impl modkit::contracts::RestHostModule for ApiGateway {
     }
 }
 
-impl modkit::contracts::RestfulModule for ApiGateway {
+impl modkit::contracts::RestApiCapability for ApiGateway {
     fn register_rest(
         &self,
         _ctx: &modkit::context::ModuleCtx,

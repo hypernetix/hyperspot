@@ -26,7 +26,7 @@ use modkit::{
     },
     config::ConfigProvider,
     context::ModuleCtx,
-    contracts::{OpenApiRegistry, RestHostModule, RestfulModule},
+    contracts::{ApiGatewayCapability, OpenApiRegistry, RestApiCapability},
     ClientHub, Module,
 };
 use modkit_auth::axum_ext::Authz;
@@ -188,7 +188,7 @@ impl AsRef<str> for License {
 
 impl LicenseFeature for License {}
 
-impl RestfulModule for TestAuthModule {
+impl RestApiCapability for TestAuthModule {
     fn register_rest(
         &self,
         _ctx: &ModuleCtx,

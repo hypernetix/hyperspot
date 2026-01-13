@@ -4,9 +4,9 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use modkit::api::OpenApiRegistry;
-use modkit::contracts::SystemModule;
+use modkit::contracts::SystemCapability;
 use modkit::gts::get_core_gts_schemas; // NOTE: This is temporary logic until <https://github.com/hypernetix/hyperspot/issues/156> resolved
-use modkit::{Module, ModuleCtx, RestfulModule};
+use modkit::{Module, ModuleCtx, RestApiCapability};
 use tracing::{debug, info};
 use types_registry_sdk::TypesRegistryApi;
 
@@ -90,7 +90,7 @@ impl Module for TypesRegistryModule {
 }
 
 #[async_trait]
-impl SystemModule for TypesRegistryModule {
+impl SystemCapability for TypesRegistryModule {
     /// Post-init hook: switches the registry to ready mode.
     ///
     /// This runs AFTER `init()` has completed for ALL modules.
@@ -133,7 +133,7 @@ impl SystemModule for TypesRegistryModule {
     }
 }
 
-impl RestfulModule for TypesRegistryModule {
+impl RestApiCapability for TypesRegistryModule {
     fn register_rest(
         &self,
         _ctx: &ModuleCtx,

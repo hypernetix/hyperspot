@@ -13,7 +13,7 @@ use axum::{
     Router,
 };
 use modkit::{
-    config::ConfigProvider, contracts::OpenApiRegistry, Module, ModuleCtx, RestfulModule,
+    config::ConfigProvider, contracts::OpenApiRegistry, Module, ModuleCtx, RestApiCapability,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -67,7 +67,7 @@ impl Module for TestUsersModule {
     }
 }
 
-impl RestfulModule for TestUsersModule {
+impl RestApiCapability for TestUsersModule {
     fn register_rest(
         &self,
         _ctx: &modkit::ModuleCtx,

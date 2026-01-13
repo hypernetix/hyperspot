@@ -16,7 +16,9 @@ use uuid::Uuid;
 
 use modkit::{
     config::ConfigProvider,
-    contracts::{DbModule, Module, OpenApiRegistry, RestfulModule, StatefulModule},
+    contracts::{
+        DatabaseCapability, Module, OpenApiRegistry, RestApiCapability, RunnableCapability,
+    },
     registry::{ModuleRegistry, RegistryBuilder},
     runtime::{run, DbOptions, RunOptions, ShutdownOptions},
     ModuleCtx,
@@ -152,7 +154,7 @@ impl Module for TestModule {
 }
 
 #[async_trait::async_trait]
-impl DbModule for TestModule {
+impl DatabaseCapability for TestModule {
     async fn migrate(&self, _db: &modkit_db::DbHandle) -> anyhow::Result<()> {
         self.calls
             .lock()
@@ -165,7 +167,7 @@ impl DbModule for TestModule {
     }
 }
 
-impl RestfulModule for TestModule {
+impl RestApiCapability for TestModule {
     fn register_rest(
         &self,
         _ctx: &ModuleCtx,
@@ -184,7 +186,7 @@ impl RestfulModule for TestModule {
 }
 
 #[async_trait::async_trait]
-impl StatefulModule for TestModule {
+impl RunnableCapability for TestModule {
     async fn start(&self, _cancel: CancellationToken) -> anyhow::Result<()> {
         self.calls
             .lock()
@@ -219,11 +221,17 @@ fn create_test_registry(modules: Vec<TestModule>) -> anyhow::Result<ModuleRegist
         let module = Arc::new(module);
 
         builder.register_core_with_meta(module_name_str, &[], module.clone() as Arc<dyn Module>);
-        builder.register_db_with_meta(module_name_str, module.clone() as Arc<dyn DbModule>);
-        builder.register_rest_with_meta(module_name_str, module.clone() as Arc<dyn RestfulModule>);
+        builder.register_db_with_meta(
+            module_name_str,
+            module.clone() as Arc<dyn DatabaseCapability>,
+        );
+        builder.register_rest_with_meta(
+            module_name_str,
+            module.clone() as Arc<dyn RestApiCapability>,
+        );
         builder.register_stateful_with_meta(
             module_name_str,
-            module.clone() as Arc<dyn StatefulModule>,
+            module.clone() as Arc<dyn RunnableCapability>,
         );
     }
 

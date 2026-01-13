@@ -11,7 +11,7 @@ use axum::Router;
 
 use modkit::api::OpenApiRegistry;
 use modkit::context::ModuleCtx;
-use modkit::contracts::RestfulModule;
+use modkit::contracts::RestApiCapability;
 
 use crate::api::rest::routes;
 use crate::domain::Service;
@@ -49,7 +49,7 @@ impl modkit::Module for CalculatorGateway {
     }
 }
 
-impl RestfulModule for CalculatorGateway {
+impl RestApiCapability for CalculatorGateway {
     fn register_rest(
         &self,
         ctx: &ModuleCtx,

@@ -17,7 +17,7 @@ use modkit::{
     api::OperationBuilder,
     config::ConfigProvider,
     context::ModuleCtx,
-    contracts::{OpenApiRegistry, RestHostModule, RestfulModule},
+    contracts::{ApiGatewayCapability, OpenApiRegistry, RestApiCapability},
     ClientHub, Module,
 };
 
@@ -159,7 +159,7 @@ impl AsRef<str> for BaseFeature {
 
 impl LicenseFeature for BaseFeature {}
 
-impl RestfulModule for TestLicenseModule {
+impl RestApiCapability for TestLicenseModule {
     fn register_rest(
         &self,
         _ctx: &ModuleCtx,
