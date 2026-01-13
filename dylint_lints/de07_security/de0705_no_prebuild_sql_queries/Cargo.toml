@@ -1,8 +1,8 @@
 [package]
-name = "de0702_no_expect"
+name = "de0705_no_prebuild_sql_queries"
 version = "0.1.0"
 authors = ["Hypernetix"]
-description = "Detects usage of .expect() method calls (DE0702)"
+description = "Detects prebuilt SQL queries instead of parameterized queries (DE0705)"
 edition = "2024"
 publish = false
 
@@ -10,12 +10,12 @@ publish = false
 crate-type = ["cdylib"]
 
 [[example]]
-name = "bad_expect"
-path = "ui/bad_expect.rs"
+name = "bad_prebuild_queries"
+path = "ui/bad_prebuild_queries.rs"
 
 [[example]]
-name = "good_error_handling_0702"
-path = "ui/good_error_handling_0702.rs"
+name = "good_parameterized"
+path = "ui/good_parameterized.rs"
 
 [dependencies]
 clippy_utils.workspace = true

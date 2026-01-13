@@ -1,12 +1,12 @@
-// Test file for DE0705: SQL injection vulnerabilities (should trigger)
+// Test file for DE0705: prebuilt SQL queries (should trigger)
 
 fn query_user_by_id(user_id: &str) {
-    // Should trigger DE0705 - SQL injection
+    // Should trigger DE0705 - prebuilt SQL query
     let _query = "SELECT * FROM users WHERE id = '".to_string() + user_id + "'";
 }
 
 fn query_user_by_name(name: &str) {
-    // Should trigger DE0705 - SQL injection
+    // Should trigger DE0705 - prebuilt SQL query
     let _query = "SELECT * FROM users WHERE name = ".to_string();
 }
 

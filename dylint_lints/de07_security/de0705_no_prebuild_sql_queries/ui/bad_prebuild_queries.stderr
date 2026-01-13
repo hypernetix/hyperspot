@@ -1,21 +1,21 @@
-warning: potential SQL injection: SQL string converted for concatenation (DE0705)
-  --> $DIR/bad_sql_injection.rs:5:18
+warning: prebuilt SQL query detected: SQL string converted for concatenation (DE0705)
+  --> $DIR/bad_prebuild_queries.rs:5:18
    |
 LL |     let _query = "SELECT * FROM users WHERE id = '".to_string() + user_id + "'";
    |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    |
    = help: use parameterized queries with .bind() instead of string concatenation
-   = note: string concatenation in SQL queries allows attackers to inject malicious SQL
-   = note: `#[warn(de0705_no_sql_injection)]` on by default
+   = note: prebuilt queries are vulnerable to SQL injection attacks
+   = note: `#[warn(de0705_no_prebuild_sql_queries)]` on by default
 
-warning: potential SQL injection: SQL string converted for concatenation (DE0705)
-  --> $DIR/bad_sql_injection.rs:10:18
+warning: prebuilt SQL query detected: SQL string converted for concatenation (DE0705)
+  --> $DIR/bad_prebuild_queries.rs:10:18
    |
 LL |     let _query = "SELECT * FROM users WHERE name = ".to_string();
    |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    |
    = help: use parameterized queries with .bind() instead of string concatenation
-   = note: string concatenation in SQL queries allows attackers to inject malicious SQL
+   = note: prebuilt queries are vulnerable to SQL injection attacks
 
 warning: 2 warnings emitted
 

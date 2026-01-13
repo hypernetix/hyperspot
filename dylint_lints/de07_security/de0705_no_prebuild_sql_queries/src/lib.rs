@@ -14,20 +14,20 @@ use rustc_span::sym;
 dylint_linting::declare_late_lint! {
     /// ### What it does
     ///
-    /// Detects potential SQL injection vulnerabilities where user input might be
-    /// concatenated or formatted into SQL queries.
+    /// Detects prebuilt SQL queries where strings are concatenated or formatted
+    /// instead of using parameterized queries.
     ///
     /// ### Why is this bad?
     ///
-    /// SQL injection is one of the most critical security vulnerabilities:
-    /// - Attackers can read, modify, or delete database data
-    /// - Can lead to authentication bypass
-    /// - May allow arbitrary command execution on the database server
+    /// Prebuilt SQL queries create security vulnerabilities:
+    /// - Attackers can inject malicious SQL through user input
+    /// - Can lead to data breaches and authentication bypass
+    /// - Parameterized queries are the industry standard for SQL safety
     ///
     /// ### Example
     ///
     /// ```rust,ignore
-    /// // Bad - SQL injection vulnerability
+    /// // Bad - prebuilt query with string formatting
     /// let query = format!("SELECT * FROM users WHERE id = {}", user_input);
     /// let query = "SELECT * FROM users WHERE name = '".to_string() + name + "'";
     /// ```
@@ -39,9 +39,9 @@ dylint_linting::declare_late_lint! {
     /// sqlx::query("SELECT * FROM users WHERE id = $1").bind(user_input);
     /// conn.execute("SELECT * FROM users WHERE name = ?", &[name])?;
     /// ```
-    pub DE0705_NO_SQL_INJECTION,
+    pub DE0705_NO_PREBUILD_SQL_QUERIES,
     Warn,
-    "avoid concatenating or formatting user input into SQL queries (DE0705)"
+    "avoid prebuilt SQL queries; use parameterized queries instead (DE0705)"
 }
 
 /// SQL keywords that indicate a query string
@@ -63,7 +63,7 @@ fn is_sql_query(s: &str) -> bool {
     SQL_KEYWORDS.iter().any(|kw| upper.contains(kw))
 }
 
-impl<'tcx> LateLintPass<'tcx> for De0705NoSqlInjection {
+impl<'tcx> LateLintPass<'tcx> for De0705NoPrebuildSqlQueries {
     fn check_expr(&mut self, cx: &LateContext<'tcx>, expr: &'tcx Expr<'tcx>) {
         // Check for format! macro with SQL content
         if let Some(macro_call) = root_macro_call_first_node(cx, expr) {
@@ -73,10 +73,10 @@ impl<'tcx> LateLintPass<'tcx> for De0705NoSqlInjection {
                     if let Some(first_arg) = args.first() {
                         if let Some(sql_string) = extract_format_string(cx, first_arg) {
                             if is_sql_query(&sql_string) && sql_string.contains("{}") {
-                                cx.span_lint(DE0705_NO_SQL_INJECTION, macro_call.span, |diag| {
-                                    diag.primary_message("potential SQL injection: format! with SQL query (DE0705)");
+                                cx.span_lint(DE0705_NO_PREBUILD_SQL_QUERIES, macro_call.span, |diag| {
+                                    diag.primary_message("prebuilt SQL query detected: format! with SQL query (DE0705)");
                                     diag.help("use parameterized queries with .bind() instead of string formatting");
-                                    diag.note("string formatting in SQL queries allows attackers to inject malicious SQL");
+                                    diag.note("prebuilt queries are vulnerable to SQL injection attacks");
                                 });
                             }
                         }
@@ -93,10 +93,10 @@ impl<'tcx> LateLintPass<'tcx> for De0705NoSqlInjection {
                 let right_sql = extract_string_literal(cx, right).map(|s| is_sql_query(&s)).unwrap_or(false);
 
                 if left_sql || right_sql {
-                    cx.span_lint(DE0705_NO_SQL_INJECTION, expr.span, |diag| {
-                        diag.primary_message("potential SQL injection: string concatenation with SQL query (DE0705)");
+                    cx.span_lint(DE0705_NO_PREBUILD_SQL_QUERIES, expr.span, |diag| {
+                        diag.primary_message("prebuilt SQL query detected: string concatenation with SQL query (DE0705)");
                         diag.help("use parameterized queries with .bind() instead of string concatenation");
-                        diag.note("string concatenation in SQL queries allows attackers to inject malicious SQL");
+                        diag.note("prebuilt queries are vulnerable to SQL injection attacks");
                     });
                 }
             }
@@ -110,10 +110,10 @@ impl<'tcx> LateLintPass<'tcx> for De0705NoSqlInjection {
                         // Check if this to_string is followed by concatenation
                         // We'll flag the to_string() call if the SQL string looks like it expects concatenation
                         if sql_string.ends_with('\'') || sql_string.ends_with('=') || sql_string.ends_with(' ') {
-                            cx.span_lint(DE0705_NO_SQL_INJECTION, expr.span, |diag| {
-                                diag.primary_message("potential SQL injection: SQL string converted for concatenation (DE0705)");
+                            cx.span_lint(DE0705_NO_PREBUILD_SQL_QUERIES, expr.span, |diag| {
+                                diag.primary_message("prebuilt SQL query detected: SQL string converted for concatenation (DE0705)");
                                 diag.help("use parameterized queries with .bind() instead of string concatenation");
-                                diag.note("string concatenation in SQL queries allows attackers to inject malicious SQL");
+                                diag.note("prebuilt queries are vulnerable to SQL injection attacks");
                             });
                         }
                     }
@@ -161,7 +161,7 @@ mod tests {
         lint_utils::test_comment_annotations_match_stderr(
             &ui_dir,
             "DE0705",
-            "SQL injection"
+            "prebuilt SQL query"
         );
     }
 }
