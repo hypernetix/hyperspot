@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use modkit_security::SecurityCtx;
+use modkit_security::SecurityContext;
 use types_registry_sdk::{
     GtsEntity, ListQuery, RegisterResult, TypesRegistryApi, TypesRegistryError,
 };
@@ -31,7 +31,7 @@ impl TypesRegistryLocalClient {
 impl TypesRegistryApi for TypesRegistryLocalClient {
     async fn register(
         &self,
-        _ctx: &SecurityCtx,
+        _ctx: &SecurityContext,
         entities: Vec<serde_json::Value>,
     ) -> Result<Vec<RegisterResult>, TypesRegistryError> {
         Ok(self.service.register(entities))
@@ -39,13 +39,17 @@ impl TypesRegistryApi for TypesRegistryLocalClient {
 
     async fn list(
         &self,
-        _ctx: &SecurityCtx,
+        _ctx: &SecurityContext,
         query: ListQuery,
     ) -> Result<Vec<GtsEntity>, TypesRegistryError> {
         self.service.list(&query).map_err(TypesRegistryError::from)
     }
 
-    async fn get(&self, _ctx: &SecurityCtx, gts_id: &str) -> Result<GtsEntity, TypesRegistryError> {
+    async fn get(
+        &self,
+        _ctx: &SecurityContext,
+        gts_id: &str,
+    ) -> Result<GtsEntity, TypesRegistryError> {
         self.service.get(gts_id).map_err(TypesRegistryError::from)
     }
 }
@@ -70,9 +74,8 @@ mod tests {
         TypesRegistryLocalClient::new(service)
     }
 
-    fn test_ctx() -> SecurityCtx {
-        #[allow(deprecated)]
-        SecurityCtx::root_ctx()
+    fn test_ctx() -> SecurityContext {
+        SecurityContext::root()
     }
 
     #[tokio::test]
