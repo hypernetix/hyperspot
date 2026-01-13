@@ -1,0 +1,43 @@
+[package]
+name = "de0301_config_duration_humantime_serde"
+version = "0.1.0"
+authors = ["Hypernetix"]
+description = "Require humantime-serde mapping for Duration fields in *Config structs"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[[example]]
+name = "missing_with_duration_fq"
+path = "ui/missing_with_duration_fq.rs"
+
+[[example]]
+name = "missing_with_duration_imported"
+path = "ui/missing_with_duration_imported.rs"
+
+[[example]]
+name = "ok_with_duration"
+path = "ui/ok_with_duration.rs"
+
+[[example]]
+name = "missing_with_option_duration"
+path = "ui/missing_with_option_duration.rs"
+
+[[example]]
+name = "ok_with_option_duration"
+path = "ui/ok_with_option_duration.rs"
+
+[dependencies]
+clippy_utils.workspace = true
+dylint_linting.workspace = true
+lint_utils.workspace = true
+
+[dev-dependencies]
+dylint_testing.workspace = true
+serde = { version = "1.0", features = ["derive"] }
+modkit-utils = { path = "../../../libs/modkit-utils", features = ["humantime-serde"] }
+
+[package.metadata.rust-analyzer]
+rustc_private = true

@@ -1,0 +1,11 @@
+error: `ServerConfig` field `timeout` must use `#[serde(with = "modkit_utils::humantime_serde::option")]` for proper serialization/deserialization (DE0301)
+  --> $DIR/missing_with_option_duration.rs:6:5
+   |
+LL |     pub timeout: Option<std::time::Duration>,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: add `#[serde(with = "modkit_utils::humantime_serde::option")]` to this field
+   = note: `#[deny(de0301_config_duration_humantime_serde)]` on by default
+
+error: aborting due to 1 previous error
+

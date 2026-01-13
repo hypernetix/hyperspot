@@ -13,6 +13,7 @@ members = [
     "de09_gts_layer/de0901_gts_string_pattern",
     "de09_gts_layer/de0902_no_schema_for_on_gts_structs",
     "de05_client_layer/de0503_plugin_client_suffix",
+    "de12_config_layer/de12_enforce_humantime_serde",
 ]
 resolver = "2"
 
