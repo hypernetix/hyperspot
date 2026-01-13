@@ -10,6 +10,10 @@ use module_orchestrator as _;
 use nodes_registry as _;
 use types_registry as _;
 
+// OAGW (Outbound API Gateway)
+use oagw_default_plugin as _;
+use oagw_gw as _;
+
 #[cfg(feature = "users-info-example")]
 use users_info as _;
 

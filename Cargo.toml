@@ -52,7 +52,10 @@ members = [
     "examples/plugin-modules/tenant_resolver/tenant_resolver-sdk",
     "examples/plugin-modules/tenant_resolver/tenant_resolver-gw",
     "examples/plugin-modules/tenant_resolver/plugins/contoso_tr_plugin",
-    "examples/plugin-modules/tenant_resolver/plugins/fabrikam_tr_plugin"
+    "examples/plugin-modules/tenant_resolver/plugins/fabrikam_tr_plugin",
+    "modules/oagw/oagw-sdk",
+    "modules/oagw/oagw-gw",
+    "modules/oagw/plugins/oagw_default_plugin"
 ]
 resolver = "2"
 
@@ -267,7 +270,9 @@ prost-build = "0.14"
 tonic-prost-build = "0.14"
 
 # HTTP client
-reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "stream"] }
+reqwest-eventsource = "0.6"
+pin-project-lite = "0.2"
 
 # Time handling
 time = { version = "0.3", features = ["serde", "formatting", "parsing"] }

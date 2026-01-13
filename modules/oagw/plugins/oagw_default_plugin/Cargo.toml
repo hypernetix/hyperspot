@@ -1,0 +1,49 @@
+[package]
+name = "oagw_default_plugin"
+version.workspace = true
+publish = false
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Default HTTP plugin for OAGW (Outbound API Gateway)"
+
+[lints]
+workspace = true
+
+[dependencies]
+# SDK - plugin API trait and types
+oagw-sdk = { path = "../../oagw-sdk" }
+
+# Core dependencies
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+inventory = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+arc-swap = { workspace = true }
+thiserror = { workspace = true }
+bytes = { workspace = true }
+futures = { workspace = true }
+
+# HTTP client
+reqwest = { workspace = true }
+
+# Additional dependencies
+uuid = { workspace = true }
+chrono = { workspace = true }
+url = { workspace = true }
+
+# Local dependencies
+modkit = { path = "../../../../libs/modkit" }
+modkit-security = { path = "../../../../libs/modkit-security" }
+
+# GTS support
+gts = { workspace = true }
+
+# Types registry for plugin registration
+types-registry-sdk = { path = "../../../types-registry/types-registry-sdk" }
+
+[dev-dependencies]
+tokio-test = { workspace = true }
