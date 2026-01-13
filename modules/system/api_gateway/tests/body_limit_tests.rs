@@ -12,8 +12,8 @@ use hs_tenant_resolver_sdk::{
 use modkit::{
     api::OperationBuilder,
     config::ConfigProvider,
-    contracts::{OpenApiRegistry, RestHostModule},
-    Module, ModuleCtx, RestfulModule,
+    contracts::{ApiGatewayCapability, OpenApiRegistry},
+    Module, ModuleCtx, RestApiCapability,
 };
 
 use modkit_security::SecurityContext;
@@ -120,7 +120,7 @@ impl Module for BodyLimitTestModule {
     }
 }
 
-impl RestfulModule for BodyLimitTestModule {
+impl RestApiCapability for BodyLimitTestModule {
     fn register_rest(
         &self,
         _ctx: &modkit::ModuleCtx,

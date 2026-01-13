@@ -3,7 +3,7 @@ use std::sync::{Arc, OnceLock};
 use async_trait::async_trait;
 use modkit::api::OpenApiRegistry;
 use modkit::context::ModuleCtx;
-use modkit::contracts::RestfulModule;
+use modkit::contracts::RestApiCapability;
 use modkit::Module;
 use tenant_resolver_sdk::{TenantResolverClient, TenantResolverPluginSpecV1};
 use tracing::info;
@@ -87,7 +87,7 @@ impl Module for TenantResolverGateway {
     }
 }
 
-impl RestfulModule for TenantResolverGateway {
+impl RestApiCapability for TenantResolverGateway {
     fn register_rest(
         &self,
         _ctx: &ModuleCtx,

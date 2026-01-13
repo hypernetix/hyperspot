@@ -71,7 +71,7 @@ pub use inventory;
 
 // Module system exports
 pub use crate::contracts::*;
-pub use crate::contracts::{GrpcServiceModule, RegisterGrpcServiceFn};
+pub use crate::contracts::{GrpcServiceCapability, RegisterGrpcServiceFn};
 
 // Configuration module
 pub mod config;

@@ -7,7 +7,7 @@ use hs_tenant_resolver_sdk::{
     TenantFilter, TenantResolverError, TenantResolverGatewayClient, TenantStatus,
 };
 use modkit::config::ConfigProvider;
-use modkit::{ClientHub, DbModule, Module, ModuleCtx};
+use modkit::{ClientHub, DatabaseCapability, Module, ModuleCtx};
 use modkit_db::{ConnectOpts, DbHandle};
 use modkit_security::SecurityContext;
 use serde_json::json;

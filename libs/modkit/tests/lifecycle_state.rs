@@ -2,7 +2,7 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use modkit::contracts::StatefulModule;
+use modkit::contracts::RunnableCapability;
 use modkit::lifecycle::*;
 use std::sync::Arc;
 use std::time::Duration;

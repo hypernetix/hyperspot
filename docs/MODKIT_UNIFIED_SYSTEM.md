@@ -158,13 +158,13 @@ pub struct MyModule {
 
 ### Capabilities
 
-* `db` → implement `DbModule` (migrations / schema setup).
-* `rest` → implement `RestfulModule` (register routes synchronously).
+* `db` → implement `DatabaseCapability` (migrations / schema setup).
+* `rest` → implement `RestApiCapability` (register routes synchronously).
 * `rest_host` → own the Axum server/OpenAPI (e.g., `api_gateway`).
 * `stateful` → background job:
 
     * With `lifecycle(...)`, the macro generates `Runnable` and registers `WithLifecycle<Self>`.
-    * Without it, implement `StatefulModule` yourself.
+    * Without it, implement `RunnableCapability` yourself.
 
 ### Client helpers (when `client` is set)
 
@@ -1239,7 +1239,7 @@ impl Module for UsersModule {
     }
 }
 
-impl RestfulModule for UsersModule {
+impl RestApiCapability for UsersModule {
     fn register_rest(&self, _ctx: &ModuleCtx, router: Router, openapi: &dyn OpenApiRegistry) -> anyhow::Result<Router> {
         let router = register_crud_routes(router, openapi, self.service.clone())?;
         let router = register_sse_route(router, openapi, self.sse_broadcaster.clone());

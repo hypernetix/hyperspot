@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use std::sync::Arc;
 
 use modkit::context::ModuleCtx;
-use modkit::contracts::{OpenApiRegistry, RestfulModule};
+use modkit::contracts::{OpenApiRegistry, RestApiCapability};
 use modkit::Module;
 
 use crate::contract::client::NodesRegistryApi;
@@ -56,7 +56,7 @@ impl Module for NodesRegistry {
     }
 }
 
-impl RestfulModule for NodesRegistry {
+impl RestApiCapability for NodesRegistry {
     fn register_rest(
         &self,
         _ctx: &ModuleCtx,

@@ -573,7 +573,7 @@ impl<T: Runnable + Default> Default for WithLifecycle<T> {
 }
 
 #[async_trait]
-impl<T: Runnable> crate::contracts::StatefulModule for WithLifecycle<T> {
+impl<T: Runnable> crate::contracts::RunnableCapability for WithLifecycle<T> {
     #[tracing::instrument(skip(self, external_cancel), level = "debug")]
     async fn start(&self, external_cancel: CancellationToken) -> TaskResult<()> {
         let inner = self.inner.clone();
@@ -827,7 +827,7 @@ mod tests {
 
     #[tokio::test]
     async fn stateful_wrapper_start_stop_roundtrip() {
-        use crate::contracts::StatefulModule;
+        use crate::contracts::RunnableCapability;
 
         let wrapper = WithLifecycle::new(TestRunnable::new());
         assert_eq!(wrapper.status(), Status::Stopped);
@@ -841,7 +841,7 @@ mod tests {
 
     #[tokio::test]
     async fn with_lifecycle_double_start_fails() {
-        use crate::contracts::StatefulModule;
+        use crate::contracts::RunnableCapability;
 
         let wrapper = WithLifecycle::new(TestRunnable::new());
         let cancel = CancellationToken::new();
@@ -853,7 +853,7 @@ mod tests {
 
     #[tokio::test]
     async fn with_lifecycle_concurrent_stop_calls() {
-        use crate::contracts::StatefulModule;
+        use crate::contracts::RunnableCapability;
         let wrapper = Arc::new(WithLifecycle::new(TestRunnable::new()));
         wrapper.start(CancellationToken::new()).await.unwrap();
         let a = wrapper.clone();

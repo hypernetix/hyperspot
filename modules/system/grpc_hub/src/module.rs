@@ -6,7 +6,7 @@ use anyhow::Context;
 use async_trait::async_trait;
 use modkit::{
     context::ModuleCtx,
-    contracts::{Module, SystemModule},
+    contracts::{Module, SystemCapability},
     lifecycle::ReadySignal,
     runtime::{GrpcInstallerData, GrpcInstallerStore, ModuleInstallers},
     DirectoryApi,
@@ -507,7 +507,7 @@ impl GrpcHub {
 }
 
 #[async_trait]
-impl SystemModule for GrpcHub {
+impl SystemCapability for GrpcHub {
     fn pre_init(&self, sys: &modkit::runtime::SystemContext) -> anyhow::Result<()> {
         self.installer_store
             .set(Arc::clone(&sys.grpc_installers))
@@ -522,7 +522,7 @@ impl SystemModule for GrpcHub {
     }
 }
 
-impl modkit::contracts::GrpcHubModule for GrpcHub {
+impl modkit::contracts::GrpcHubCapability for GrpcHub {
     fn bound_endpoint(&self) -> Option<String> {
         self.get_bound_endpoint()
     }

@@ -2,7 +2,9 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use modkit::api::OpenApiRegistry;
-use modkit::{DbModule, Module, ModuleCtx, RestfulModule, SseBroadcaster, TracedClient};
+use modkit::{
+    DatabaseCapability, Module, ModuleCtx, RestApiCapability, SseBroadcaster, TracedClient,
+};
 use sea_orm_migration::MigratorTrait;
 use tracing::{debug, info};
 use url::Url;
@@ -140,7 +142,7 @@ impl Module for UsersInfo {
 }
 
 #[async_trait]
-impl DbModule for UsersInfo {
+impl DatabaseCapability for UsersInfo {
     async fn migrate(&self, db: &modkit_db::DbHandle) -> anyhow::Result<()> {
         info!("Running users_info database migrations");
         let conn = db.sea();
@@ -150,7 +152,7 @@ impl DbModule for UsersInfo {
     }
 }
 
-impl RestfulModule for UsersInfo {
+impl RestApiCapability for UsersInfo {
     fn register_rest(
         &self,
         _ctx: &ModuleCtx,

@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use modkit::api::OpenApiRegistry;
-use modkit::{Module, ModuleCtx, RestfulModule};
+use modkit::{Module, ModuleCtx, RestApiCapability};
 use tracing::{debug, info};
 
 use crate::config::FileParserConfig;
@@ -79,7 +79,7 @@ impl Module for FileParserModule {
     }
 }
 
-impl RestfulModule for FileParserModule {
+impl RestApiCapability for FileParserModule {
     fn register_rest(
         &self,
         _ctx: &ModuleCtx,

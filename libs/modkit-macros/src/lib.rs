@@ -455,39 +455,39 @@ pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
             Capability::Db => quote! {
                 const _: () = {
                     #[allow(dead_code)]
-                    fn __modkit_require_DbModule_impl()
+                    fn __modkit_require_DatabaseCapability_impl()
                     where
-                        #struct_ident #ty_generics: ::modkit::contracts::DbModule,
+                        #struct_ident #ty_generics: ::modkit::contracts::DatabaseCapability,
                     {}
                 };
             },
             Capability::Rest => quote! {
                 const _: () = {
                     #[allow(dead_code)]
-                    fn __modkit_require_RestfulModule_impl()
+                    fn __modkit_require_RestApiCapability_impl()
                     where
-                        #struct_ident #ty_generics: ::modkit::contracts::RestfulModule,
+                        #struct_ident #ty_generics: ::modkit::contracts::RestApiCapability,
                     {}
                 };
             },
             Capability::RestHost => quote! {
                 const _: () = {
                     #[allow(dead_code)]
-                    fn __modkit_require_RestHostModule_impl()
+                    fn __modkit_require_ApiGatewayCapability_impl()
                     where
-                        #struct_ident #ty_generics: ::modkit::contracts::RestHostModule,
+                        #struct_ident #ty_generics: ::modkit::contracts::ApiGatewayCapability,
                     {}
                 };
             },
             Capability::Stateful => {
                 if lifecycle_cfg_opt.is_none() {
-                    // Only require direct StatefulModule impl when lifecycle(...) is NOT used.
+                    // Only require direct RunnableCapability impl when lifecycle(...) is NOT used.
                     quote! {
                         const _: () = {
                             #[allow(dead_code)]
-                            fn __modkit_require_StatefulModule_impl()
+                            fn __modkit_require_RunnableCapability_impl()
                             where
-                                #struct_ident #ty_generics: ::modkit::contracts::StatefulModule,
+                                #struct_ident #ty_generics: ::modkit::contracts::RunnableCapability,
                             {}
                         };
                     }
@@ -502,18 +502,18 @@ pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
             Capability::GrpcHub => quote! {
                 const _: () = {
                     #[allow(dead_code)]
-                    fn __modkit_require_GrpcHubModule_impl()
+                    fn __modkit_require_GrpcHubCapability_impl()
                     where
-                        #struct_ident #ty_generics: ::modkit::contracts::GrpcHubModule,
+                        #struct_ident #ty_generics: ::modkit::contracts::GrpcHubCapability,
                     {}
                 };
             },
             Capability::Grpc => quote! {
                 const _: () = {
                     #[allow(dead_code)]
-                    fn __modkit_require_GrpcServiceModule_impl()
+                    fn __modkit_require_GrpcServiceCapability_impl()
                     where
-                        #struct_ident #ty_generics: ::modkit::contracts::GrpcServiceModule,
+                        #struct_ident #ty_generics: ::modkit::contracts::GrpcServiceCapability,
                     {}
                 };
             },
@@ -599,15 +599,15 @@ pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
         match cap {
             Capability::Db => quote! {
                 b.register_db_with_meta(#name_lit,
-                    module.clone() as ::std::sync::Arc<dyn ::modkit::contracts::DbModule>);
+                    module.clone() as ::std::sync::Arc<dyn ::modkit::contracts::DatabaseCapability>);
             },
             Capability::Rest => quote! {
                 b.register_rest_with_meta(#name_lit,
-                    module.clone() as ::std::sync::Arc<dyn ::modkit::contracts::RestfulModule>);
+                    module.clone() as ::std::sync::Arc<dyn ::modkit::contracts::RestApiCapability>);
             },
             Capability::RestHost => quote! {
                 b.register_rest_host_with_meta(#name_lit,
-                    module.clone() as ::std::sync::Arc<dyn ::modkit::contracts::RestHostModule>);
+                    module.clone() as ::std::sync::Arc<dyn ::modkit::contracts::ApiGatewayCapability>);
             },
             Capability::Stateful => {
                 if let Some(lc) = &lifecycle_cfg_opt {
@@ -628,7 +628,7 @@ pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
 
                             b.register_stateful_with_meta(
                                 #name_lit,
-                                ::std::sync::Arc::new(wl) as ::std::sync::Arc<dyn ::modkit::contracts::StatefulModule>
+                                ::std::sync::Arc::new(wl) as ::std::sync::Arc<dyn ::modkit::contracts::RunnableCapability>
                             );
                         }
                     } else {
@@ -642,29 +642,29 @@ pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
 
                             b.register_stateful_with_meta(
                                 #name_lit,
-                                ::std::sync::Arc::new(wl) as ::std::sync::Arc<dyn ::modkit::contracts::StatefulModule>
+                                ::std::sync::Arc::new(wl) as ::std::sync::Arc<dyn ::modkit::contracts::RunnableCapability>
                             );
                         }
                     }
                 } else {
-                    // Alternative path: the type itself must implement StatefulModule
+                    // Alternative path: the type itself must implement RunnableCapability
                     quote! {
                         b.register_stateful_with_meta(#name_lit,
-                            module.clone() as ::std::sync::Arc<dyn ::modkit::contracts::StatefulModule>);
+                            module.clone() as ::std::sync::Arc<dyn ::modkit::contracts::RunnableCapability>);
                     }
                 }
             },
             Capability::System => quote! {
                 b.register_system_with_meta(#name_lit,
-                    module.clone() as ::std::sync::Arc<dyn ::modkit::contracts::SystemModule>);
+                    module.clone() as ::std::sync::Arc<dyn ::modkit::contracts::SystemCapability>);
             },
             Capability::GrpcHub => quote! {
                 b.register_grpc_hub_with_meta(#name_lit,
-                    module.clone() as ::std::sync::Arc<dyn ::modkit::contracts::GrpcHubModule>);
+                    module.clone() as ::std::sync::Arc<dyn ::modkit::contracts::GrpcHubCapability>);
             },
             Capability::Grpc => quote! {
                 b.register_grpc_service_with_meta(#name_lit,
-                    module.clone() as ::std::sync::Arc<dyn ::modkit::contracts::GrpcServiceModule>);
+                    module.clone() as ::std::sync::Arc<dyn ::modkit::contracts::GrpcServiceCapability>);
             },
         }
     });
