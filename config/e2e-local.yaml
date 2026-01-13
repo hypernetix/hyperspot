@@ -194,6 +194,13 @@ modules:
       default_page_size: 5
       max_page_size: 100
 
+  settings:
+    # Module-specific database configuration
+    database:
+      server: "sqlite_users"
+      file: "settings.db"
+    config: {}
+
 # OpenTelemetry tracing configuration
 tracing:
   enabled: false

@@ -6,7 +6,7 @@ import pytest
 @pytest.mark.asyncio
 async def test_update_settings_full(base_url, auth_headers):
     """
-    Test POST /settings/v1/settings endpoint for full update.
+    Test POST /simple-user-settings/v1/settings endpoint for full update.
 
     This test verifies that we can do a complete update of user settings.
     """
@@ -18,7 +18,7 @@ async def test_update_settings_full(base_url, auth_headers):
         }
 
         response = await client.post(
-            f"{base_url}/settings/v1/settings",
+            f"{base_url}/simple-user-settings/v1/settings",
             json=update_data,
             headers=auth_headers,
         )
@@ -37,21 +37,21 @@ async def test_update_settings_full(base_url, auth_headers):
         # Validate updated values
         assert settings["theme"] == "dark"
         assert settings["language"] == "en"
-        assert "userId" in settings
-        assert "tenantId" in settings
+        assert "user_id" in settings
+        assert "tenant_id" in settings
 
 
 @pytest.mark.asyncio
 async def test_update_settings_creates_on_first_call(base_url, auth_headers):
     """
-    Test POST /settings/v1/settings creates settings if they don't exist.
+    Test POST /simple-user-settings/v1/settings creates settings if they don't exist.
 
     This test verifies upsert behavior (insert on first call).
     """
     async with httpx.AsyncClient(timeout=10.0) as client:
         # First, try to get settings (might be empty or have old values)
         get_response = await client.get(
-            f"{base_url}/settings/v1/settings",
+            f"{base_url}/simple-user-settings/v1/settings",
             headers=auth_headers,
         )
 
@@ -67,7 +67,7 @@ async def test_update_settings_creates_on_first_call(base_url, auth_headers):
         }
 
         post_response = await client.post(
-            f"{base_url}/settings/v1/settings",
+            f"{base_url}/simple-user-settings/v1/settings",
             json=update_data,
             headers=auth_headers,
         )
@@ -80,7 +80,7 @@ async def test_update_settings_creates_on_first_call(base_url, auth_headers):
 
         # Verify by GET
         verify_response = await client.get(
-            f"{base_url}/settings/v1/settings",
+            f"{base_url}/simple-user-settings/v1/settings",
             headers=auth_headers,
         )
 
@@ -94,7 +94,7 @@ async def test_update_settings_creates_on_first_call(base_url, auth_headers):
 @pytest.mark.asyncio
 async def test_update_settings_replaces_existing(base_url, auth_headers):
     """
-    Test POST /settings/v1/settings replaces existing settings completely.
+    Test POST /simple-user-settings/v1/settings replaces existing settings completely.
 
     This test verifies upsert behavior (update on subsequent calls).
     """
@@ -106,7 +106,7 @@ async def test_update_settings_replaces_existing(base_url, auth_headers):
         }
 
         response1 = await client.post(
-            f"{base_url}/settings/v1/settings",
+            f"{base_url}/simple-user-settings/v1/settings",
             json=first_data,
             headers=auth_headers,
         )
@@ -123,7 +123,7 @@ async def test_update_settings_replaces_existing(base_url, auth_headers):
         }
 
         response2 = await client.post(
-            f"{base_url}/settings/v1/settings",
+            f"{base_url}/simple-user-settings/v1/settings",
             json=second_data,
             headers=auth_headers,
         )
@@ -139,7 +139,7 @@ async def test_update_settings_replaces_existing(base_url, auth_headers):
 @pytest.mark.asyncio
 async def test_update_settings_with_empty_strings(base_url, auth_headers):
     """
-    Test POST /settings/v1/settings accepts empty strings.
+    Test POST /simple-user-settings/v1/settings accepts empty strings.
 
     This test verifies that empty strings are valid values.
     """
@@ -150,7 +150,7 @@ async def test_update_settings_with_empty_strings(base_url, auth_headers):
         }
 
         response = await client.post(
-            f"{base_url}/settings/v1/settings",
+            f"{base_url}/simple-user-settings/v1/settings",
             json=update_data,
             headers=auth_headers,
         )
@@ -168,7 +168,7 @@ async def test_update_settings_with_empty_strings(base_url, auth_headers):
 @pytest.mark.asyncio
 async def test_update_settings_validation_max_length(base_url, auth_headers):
     """
-    Test POST /settings/v1/settings validates field length.
+    Test POST /simple-user-settings/v1/settings validates field length.
 
     This test verifies that fields exceeding max length are rejected.
     """
@@ -180,7 +180,7 @@ async def test_update_settings_validation_max_length(base_url, auth_headers):
         }
 
         response = await client.post(
-            f"{base_url}/settings/v1/settings",
+            f"{base_url}/simple-user-settings/v1/settings",
             json=update_data,
             headers=auth_headers,
         )
@@ -189,15 +189,15 @@ async def test_update_settings_validation_max_length(base_url, auth_headers):
             pytest.skip("Endpoint requires authentication")
 
         # Should return 400 Bad Request for validation error
-        assert response.status_code == 400, (
-            f"Expected 400 for validation error, got {response.status_code}"
+        assert response.status_code == 422, (
+            f"Expected 422 for validation error, got {response.status_code}"
         )
 
 
 @pytest.mark.asyncio
 async def test_update_settings_missing_fields(base_url, auth_headers):
     """
-    Test POST /settings/v1/settings with missing required fields.
+    Test POST /simple-user-settings/v1/settings with missing required fields.
 
     This test verifies proper error handling for incomplete data.
     """
@@ -208,7 +208,7 @@ async def test_update_settings_missing_fields(base_url, auth_headers):
         }
 
         response = await client.post(
-            f"{base_url}/settings/v1/settings",
+            f"{base_url}/simple-user-settings/v1/settings",
             json=update_data,
             headers=auth_headers,
         )
@@ -218,5 +218,5 @@ async def test_update_settings_missing_fields(base_url, auth_headers):
 
         # Should return 400 or 422 for missing required field
         assert response.status_code in (400, 422), (
-            f"Expected 400 or 422 for missing field, got {response.status_code}"
+            f"Expected 422 or 422 for missing field, got {response.status_code}"
         )

@@ -6,14 +6,14 @@ import pytest
 @pytest.mark.asyncio
 async def test_get_settings_returns_defaults(base_url, auth_headers):
     """
-    Test GET /settings/v1/settings endpoint returns defaults when settings don't exist.
+    Test GET /simple-user-settings/v1/settings endpoint returns defaults when settings don't exist.
 
     This test verifies that the endpoint returns empty strings for theme and language
     when no settings have been created yet (lazy creation behavior).
     """
     async with httpx.AsyncClient(timeout=10.0) as client:
         response = await client.get(
-            f"{base_url}/settings/v1/settings",
+            f"{base_url}/simple-user-settings/v1/settings",
             headers=auth_headers,
         )
 
@@ -29,8 +29,8 @@ async def test_get_settings_returns_defaults(base_url, auth_headers):
         assert isinstance(settings, dict), "Response should be a JSON object"
 
         # Validate structure
-        assert "userId" in settings
-        assert "tenantId" in settings
+        assert "user_id" in settings
+        assert "tenant_id" in settings
         assert "theme" in settings
         assert "language" in settings
 
@@ -42,14 +42,14 @@ async def test_get_settings_returns_defaults(base_url, auth_headers):
 @pytest.mark.asyncio
 async def test_get_settings_multiple_times(base_url, auth_headers):
     """
-    Test GET /settings/v1/settings can be called multiple times consistently.
+    Test GET /simple-user-settings/v1/settings can be called multiple times consistently.
 
     This test verifies idempotency of the GET endpoint.
     """
     async with httpx.AsyncClient(timeout=10.0) as client:
         # First GET
         response1 = await client.get(
-            f"{base_url}/settings/v1/settings",
+            f"{base_url}/simple-user-settings/v1/settings",
             headers=auth_headers,
         )
 
@@ -61,7 +61,7 @@ async def test_get_settings_multiple_times(base_url, auth_headers):
 
         # Second GET
         response2 = await client.get(
-            f"{base_url}/settings/v1/settings",
+            f"{base_url}/simple-user-settings/v1/settings",
             headers=auth_headers,
         )
 
@@ -69,8 +69,8 @@ async def test_get_settings_multiple_times(base_url, auth_headers):
         settings2 = response2.json()
 
         # Should return the same data
-        assert settings1["userId"] == settings2["userId"]
-        assert settings1["tenantId"] == settings2["tenantId"]
+        assert settings1["user_id"] == settings2["user_id"]
+        assert settings1["tenant_id"] == settings2["tenant_id"]
         assert settings1["theme"] == settings2["theme"]
         assert settings1["language"] == settings2["language"]
 
@@ -78,13 +78,13 @@ async def test_get_settings_multiple_times(base_url, auth_headers):
 @pytest.mark.asyncio
 async def test_get_settings_without_auth(base_url):
     """
-    Test GET /settings/v1/settings without authentication.
+    Test GET /simple-user-settings/v1/settings without authentication.
 
     This test verifies proper error handling when no auth is provided.
     """
     async with httpx.AsyncClient(timeout=10.0) as client:
         response = await client.get(
-            f"{base_url}/settings/v1/settings",
+            f"{base_url}/simple-user-settings/v1/settings",
         )
 
         # Should return 401 Unauthorized or work with default context

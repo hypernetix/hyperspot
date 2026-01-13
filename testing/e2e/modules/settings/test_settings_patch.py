@@ -6,7 +6,7 @@ import pytest
 @pytest.mark.asyncio
 async def test_patch_settings_theme_only(base_url, auth_headers):
     """
-    Test PATCH /settings/v1/settings endpoint updating only theme.
+    Test PATCH /simple-user-settings/v1/settings endpoint updating only theme.
 
     This test verifies partial update behavior - only provided fields are updated.
     """
@@ -18,7 +18,7 @@ async def test_patch_settings_theme_only(base_url, auth_headers):
         }
 
         post_response = await client.post(
-            f"{base_url}/settings/v1/settings",
+            f"{base_url}/simple-user-settings/v1/settings",
             json=initial_data,
             headers=auth_headers,
         )
@@ -34,7 +34,7 @@ async def test_patch_settings_theme_only(base_url, auth_headers):
         }
 
         patch_response = await client.patch(
-            f"{base_url}/settings/v1/settings",
+            f"{base_url}/simple-user-settings/v1/settings",
             json=patch_data,
             headers=auth_headers,
         )
@@ -54,7 +54,7 @@ async def test_patch_settings_theme_only(base_url, auth_headers):
 @pytest.mark.asyncio
 async def test_patch_settings_language_only(base_url, auth_headers):
     """
-    Test PATCH /settings/v1/settings endpoint updating only language.
+    Test PATCH /simple-user-settings/v1/settings endpoint updating only language.
 
     This test verifies partial update behavior for the language field.
     """
@@ -66,7 +66,7 @@ async def test_patch_settings_language_only(base_url, auth_headers):
         }
 
         post_response = await client.post(
-            f"{base_url}/settings/v1/settings",
+            f"{base_url}/simple-user-settings/v1/settings",
             json=initial_data,
             headers=auth_headers,
         )
@@ -82,7 +82,7 @@ async def test_patch_settings_language_only(base_url, auth_headers):
         }
 
         patch_response = await client.patch(
-            f"{base_url}/settings/v1/settings",
+            f"{base_url}/simple-user-settings/v1/settings",
             json=patch_data,
             headers=auth_headers,
         )
@@ -98,7 +98,7 @@ async def test_patch_settings_language_only(base_url, auth_headers):
 @pytest.mark.asyncio
 async def test_patch_settings_both_fields(base_url, auth_headers):
     """
-    Test PATCH /settings/v1/settings endpoint updating both fields.
+    Test PATCH /simple-user-settings/v1/settings endpoint updating both fields.
 
     This test verifies that PATCH can update multiple fields at once.
     """
@@ -110,7 +110,7 @@ async def test_patch_settings_both_fields(base_url, auth_headers):
         }
 
         post_response = await client.post(
-            f"{base_url}/settings/v1/settings",
+            f"{base_url}/simple-user-settings/v1/settings",
             json=initial_data,
             headers=auth_headers,
         )
@@ -127,7 +127,7 @@ async def test_patch_settings_both_fields(base_url, auth_headers):
         }
 
         patch_response = await client.patch(
-            f"{base_url}/settings/v1/settings",
+            f"{base_url}/simple-user-settings/v1/settings",
             json=patch_data,
             headers=auth_headers,
         )
@@ -143,7 +143,7 @@ async def test_patch_settings_both_fields(base_url, auth_headers):
 @pytest.mark.asyncio
 async def test_patch_settings_empty_patch(base_url, auth_headers):
     """
-    Test PATCH /settings/v1/settings with empty patch (no fields).
+    Test PATCH /simple-user-settings/v1/settings with empty patch (no fields).
 
     This test verifies behavior when no fields are provided in the patch.
     """
@@ -155,7 +155,7 @@ async def test_patch_settings_empty_patch(base_url, auth_headers):
         }
 
         post_response = await client.post(
-            f"{base_url}/settings/v1/settings",
+            f"{base_url}/simple-user-settings/v1/settings",
             json=initial_data,
             headers=auth_headers,
         )
@@ -169,7 +169,7 @@ async def test_patch_settings_empty_patch(base_url, auth_headers):
         patch_data = {}
 
         patch_response = await client.patch(
-            f"{base_url}/settings/v1/settings",
+            f"{base_url}/simple-user-settings/v1/settings",
             json=patch_data,
             headers=auth_headers,
         )
@@ -185,7 +185,7 @@ async def test_patch_settings_empty_patch(base_url, auth_headers):
 @pytest.mark.asyncio
 async def test_patch_settings_creates_if_not_exists(base_url, auth_headers):
     """
-    Test PATCH /settings/v1/settings creates settings if they don't exist.
+    Test PATCH /simple-user-settings/v1/settings creates settings if they don't exist.
 
     This test verifies that PATCH also does upsert (creates on first call).
     """
@@ -196,7 +196,7 @@ async def test_patch_settings_creates_if_not_exists(base_url, auth_headers):
         }
 
         patch_response = await client.patch(
-            f"{base_url}/settings/v1/settings",
+            f"{base_url}/simple-user-settings/v1/settings",
             json=patch_data,
             headers=auth_headers,
         )
@@ -215,7 +215,7 @@ async def test_patch_settings_creates_if_not_exists(base_url, auth_headers):
 @pytest.mark.asyncio
 async def test_patch_settings_validation_max_length(base_url, auth_headers):
     """
-    Test PATCH /settings/v1/settings validates field length.
+    Test PATCH /simple-user-settings/v1/settings validates field length.
 
     This test verifies that PATCH also enforces validation rules.
     """
@@ -226,7 +226,7 @@ async def test_patch_settings_validation_max_length(base_url, auth_headers):
         }
 
         patch_response = await client.patch(
-            f"{base_url}/settings/v1/settings",
+            f"{base_url}/simple-user-settings/v1/settings",
             json=patch_data,
             headers=auth_headers,
         )
@@ -235,15 +235,15 @@ async def test_patch_settings_validation_max_length(base_url, auth_headers):
             pytest.skip("Endpoint requires authentication")
 
         # Should return 400 Bad Request for validation error
-        assert patch_response.status_code == 400, (
-            f"Expected 400 for validation error, got {patch_response.status_code}"
+        assert patch_response.status_code == 422, (
+            f"Expected 422 for validation error, got {patch_response.status_code}"
         )
 
 
 @pytest.mark.asyncio
 async def test_patch_settings_sequential_updates(base_url, auth_headers):
     """
-    Test PATCH /settings/v1/settings with multiple sequential partial updates.
+    Test PATCH /simple-user-settings/v1/settings with multiple sequential partial updates.
 
     This test verifies that multiple PATCH calls work correctly.
     """
@@ -255,7 +255,7 @@ async def test_patch_settings_sequential_updates(base_url, auth_headers):
         }
 
         post_response = await client.post(
-            f"{base_url}/settings/v1/settings",
+            f"{base_url}/simple-user-settings/v1/settings",
             json=initial_data,
             headers=auth_headers,
         )
@@ -267,7 +267,7 @@ async def test_patch_settings_sequential_updates(base_url, auth_headers):
 
         # First patch: update theme
         patch1_response = await client.patch(
-            f"{base_url}/settings/v1/settings",
+            f"{base_url}/simple-user-settings/v1/settings",
             json={"theme": "light"},
             headers=auth_headers,
         )
@@ -279,7 +279,7 @@ async def test_patch_settings_sequential_updates(base_url, auth_headers):
 
         # Second patch: update language
         patch2_response = await client.patch(
-            f"{base_url}/settings/v1/settings",
+            f"{base_url}/simple-user-settings/v1/settings",
             json={"language": "fr"},
             headers=auth_headers,
         )
@@ -291,7 +291,7 @@ async def test_patch_settings_sequential_updates(base_url, auth_headers):
 
         # Third patch: update both
         patch3_response = await client.patch(
-            f"{base_url}/settings/v1/settings",
+            f"{base_url}/simple-user-settings/v1/settings",
             json={"theme": "dark", "language": "es"},
             headers=auth_headers,
         )

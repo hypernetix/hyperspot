@@ -13,7 +13,7 @@ async def test_settings_full_workflow(base_url, auth_headers):
     async with httpx.AsyncClient(timeout=10.0) as client:
         # Step 1: GET settings (should return defaults or empty)
         get1_response = await client.get(
-            f"{base_url}/settings/v1/settings",
+            f"{base_url}/simple-user-settings/v1/settings",
             headers=auth_headers,
         )
 
@@ -32,7 +32,7 @@ async def test_settings_full_workflow(base_url, auth_headers):
         }
 
         post_response = await client.post(
-            f"{base_url}/settings/v1/settings",
+            f"{base_url}/simple-user-settings/v1/settings",
             json=post_data,
             headers=auth_headers,
         )
@@ -44,7 +44,7 @@ async def test_settings_full_workflow(base_url, auth_headers):
 
         # Step 3: GET to verify POST worked
         get2_response = await client.get(
-            f"{base_url}/settings/v1/settings",
+            f"{base_url}/simple-user-settings/v1/settings",
             headers=auth_headers,
         )
 
@@ -59,7 +59,7 @@ async def test_settings_full_workflow(base_url, auth_headers):
         }
 
         patch_response = await client.patch(
-            f"{base_url}/settings/v1/settings",
+            f"{base_url}/simple-user-settings/v1/settings",
             json=patch_data,
             headers=auth_headers,
         )
@@ -71,7 +71,7 @@ async def test_settings_full_workflow(base_url, auth_headers):
 
         # Step 5: Final GET to verify PATCH worked
         get3_response = await client.get(
-            f"{base_url}/settings/v1/settings",
+            f"{base_url}/simple-user-settings/v1/settings",
             headers=auth_headers,
         )
 
@@ -97,7 +97,7 @@ async def test_settings_idempotency(base_url, auth_headers):
         if auth_headers:
             # POST same data twice
             response1 = await client.post(
-                f"{base_url}/settings/v1/settings",
+                f"{base_url}/simple-user-settings/v1/settings",
                 json=test_data,
                 headers=auth_headers,
             )
@@ -109,7 +109,7 @@ async def test_settings_idempotency(base_url, auth_headers):
             settings1 = response1.json()
 
             response2 = await client.post(
-                f"{base_url}/settings/v1/settings",
+                f"{base_url}/simple-user-settings/v1/settings",
                 json=test_data,
                 headers=auth_headers,
             )
@@ -137,7 +137,7 @@ async def test_settings_consistency_across_methods(base_url, auth_headers):
         }
 
         post_response = await client.post(
-            f"{base_url}/settings/v1/settings",
+            f"{base_url}/simple-user-settings/v1/settings",
             json=post_data,
             headers=auth_headers,
         )
@@ -154,7 +154,7 @@ async def test_settings_consistency_across_methods(base_url, auth_headers):
         }
 
         patch_response = await client.patch(
-            f"{base_url}/settings/v1/settings",
+            f"{base_url}/simple-user-settings/v1/settings",
             json=patch_data,
             headers=auth_headers,
         )
@@ -164,7 +164,7 @@ async def test_settings_consistency_across_methods(base_url, auth_headers):
 
         # GET to verify final state
         get_response = await client.get(
-            f"{base_url}/settings/v1/settings",
+            f"{base_url}/simple-user-settings/v1/settings",
             headers=auth_headers,
         )
 
