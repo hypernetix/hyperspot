@@ -5,7 +5,7 @@ use modkit::api::OpenApiRegistry;
 use modkit::context::ModuleCtx;
 use modkit::contracts::RestfulModule;
 use modkit::Module;
-use modkit_security::SecurityCtx;
+use modkit_security::SecurityContext;
 use tenant_resolver_sdk::{TenantResolverClient, TenantResolverPluginSpecV1};
 use tracing::info;
 use types_registry_sdk::TypesRegistryApi;
@@ -67,9 +67,8 @@ impl Module for TenantResolverGateway {
         let schema_str = TenantResolverPluginSpecV1::gts_schema_with_refs_as_string();
         let schema_json: serde_json::Value = serde_json::from_str(&schema_str)?;
 
-        #[allow(deprecated)]
         let _ = registry
-            .register(&SecurityCtx::root_ctx(), vec![schema_json])
+            .register(&SecurityContext::root(), vec![schema_json])
             .await?;
         info!(
             "Registered {} schema in types-registry",

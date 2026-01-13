@@ -8,7 +8,7 @@ use std::sync::Arc;
 use modkit::client_hub::{ClientHub, ClientScope};
 use modkit::gts::BaseModkitPluginV1;
 use modkit_odata::{ODataQuery, Page};
-use modkit_security::SecurityCtx;
+use modkit_security::{SecurityContext, SecurityCtx};
 use tenant_resolver_sdk::{
     AccessOptions, GetParentsResponse, Tenant, TenantFilter, TenantResolverPluginClient,
     TenantResolverPluginSpecV1,
@@ -74,13 +74,11 @@ impl Service {
             .get::<dyn TypesRegistryApi>()
             .map_err(|e| DomainError::TypesRegistryUnavailable(e.to_string()))?;
 
-        #[allow(deprecated)]
-        let root_ctx = SecurityCtx::root_ctx();
         let plugin_type_id = TenantResolverPluginSpecV1::gts_schema_id().clone();
 
         let instances = registry
             .list(
-                &root_ctx,
+                &SecurityContext::root(),
                 ListQuery::new()
                     .with_pattern(format!("{plugin_type_id}*"))
                     .with_is_type(false),

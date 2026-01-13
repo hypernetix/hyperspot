@@ -1,10 +1,10 @@
 //! `TypesRegistryApi` trait definition.
 //!
 //! This trait defines the public API for the `types-registry` module.
-//! All methods require a `SecurityCtx` for authorization and access control.
+//! All methods require a `SecurityContext` for authorization and access control.
 
 use async_trait::async_trait;
-use modkit_security::SecurityCtx;
+use modkit_security::SecurityContext;
 
 use crate::error::TypesRegistryError;
 use crate::models::{GtsEntity, ListQuery, RegisterResult};
@@ -61,7 +61,7 @@ pub trait TypesRegistryApi: Send + Sync {
     /// Per-item errors are returned in the `RegisterResult::Err` variant.
     async fn register(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         entities: Vec<serde_json::Value>,
     ) -> Result<Vec<RegisterResult>, TypesRegistryError>;
 
@@ -77,7 +77,7 @@ pub trait TypesRegistryApi: Send + Sync {
     /// A vector of `GtsEntity` objects matching the query.
     async fn list(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         query: ListQuery,
     ) -> Result<Vec<GtsEntity>, TypesRegistryError>;
 
@@ -96,5 +96,9 @@ pub trait TypesRegistryApi: Send + Sync {
     ///
     /// * `NotFound` - If no entity with the given GTS ID exists
     /// * `InvalidGtsId` - If the GTS ID format is invalid
-    async fn get(&self, ctx: &SecurityCtx, gts_id: &str) -> Result<GtsEntity, TypesRegistryError>;
+    async fn get(
+        &self,
+        ctx: &SecurityContext,
+        gts_id: &str,
+    ) -> Result<GtsEntity, TypesRegistryError>;
 }
