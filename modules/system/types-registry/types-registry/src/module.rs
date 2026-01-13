@@ -7,7 +7,6 @@ use modkit::api::OpenApiRegistry;
 use modkit::contracts::SystemModule;
 use modkit::gts::get_core_gts_schemas; // NOTE: This is temporary logic until <https://github.com/hypernetix/hyperspot/issues/156> resolved
 use modkit::{Module, ModuleCtx, RestfulModule};
-use modkit_security::SecurityContext;
 use tracing::{debug, info};
 use types_registry_sdk::TypesRegistryApi;
 
@@ -80,7 +79,7 @@ impl Module for TypesRegistryModule {
         // Register core GTS types that other modules depend on.
         // This must happen before any module registers derived schemas/instances.
         let core_schemas = get_core_gts_schemas()?;
-        api.register(&SecurityContext::root(), core_schemas).await?;
+        api.register(core_schemas).await?;
         info!("Core GTS types registered");
 
         ctx.client_hub().register::<dyn TypesRegistryApi>(api);

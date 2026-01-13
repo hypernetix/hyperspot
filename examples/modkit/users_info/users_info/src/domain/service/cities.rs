@@ -3,6 +3,7 @@ use tracing::{debug, info, instrument};
 
 use crate::domain::error::DomainError;
 use crate::domain::repos::CitiesRepository;
+use hs_tenant_resolver_sdk::TenantResolverGatewayClient;
 use modkit_db::secure::SecureConn;
 use modkit_odata::{ODataQuery, Page};
 use modkit_security::{PolicyEngineRef, SecurityContext};
@@ -15,14 +16,21 @@ pub struct CitiesService<R: CitiesRepository> {
     policy_engine: PolicyEngineRef,
     repo: Arc<R>,
     db: SecureConn,
+    resolver: Arc<dyn TenantResolverGatewayClient>,
 }
 
 impl<R: CitiesRepository> CitiesService<R> {
-    pub fn new(repo: Arc<R>, db: SecureConn, policy_engine: PolicyEngineRef) -> Self {
+    pub fn new(
+        repo: Arc<R>,
+        db: SecureConn,
+        policy_engine: PolicyEngineRef,
+        resolver: Arc<dyn TenantResolverGatewayClient>,
+    ) -> Self {
         Self {
             policy_engine,
             repo,
             db,
+            resolver,
         }
     }
 }
@@ -33,9 +41,10 @@ impl<R: CitiesRepository> CitiesService<R> {
     pub async fn get_city(&self, ctx: &SecurityContext, id: Uuid) -> Result<City, DomainError> {
         debug!("Getting city by id");
 
+        let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
         let scope = ctx
             .scope(self.policy_engine.clone())
-            .include_tenant_children()
+            .include_accessible_tenants(tenant_ids)
             .prepare()
             .await?;
 
@@ -52,9 +61,10 @@ impl<R: CitiesRepository> CitiesService<R> {
     ) -> Result<Page<City>, DomainError> {
         debug!("Listing cities with cursor pagination");
 
+        let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
         let scope = ctx
             .scope(self.policy_engine.clone())
-            .include_tenant_children()
+            .include_accessible_tenants(tenant_ids)
             .prepare()
             .await?;
 
@@ -72,9 +82,10 @@ impl<R: CitiesRepository> CitiesService<R> {
     ) -> Result<City, DomainError> {
         info!("Creating new city");
 
+        let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
         let scope = ctx
             .scope(self.policy_engine.clone())
-            .include_tenant_children()
+            .include_accessible_tenants(tenant_ids)
             .prepare()
             .await?;
 
@@ -108,9 +119,10 @@ impl<R: CitiesRepository> CitiesService<R> {
     ) -> Result<City, DomainError> {
         info!("Updating city");
 
+        let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
         let scope = ctx
             .scope(self.policy_engine.clone())
-            .include_tenant_children()
+            .include_accessible_tenants(tenant_ids)
             .prepare()
             .await?;
 
@@ -139,9 +151,10 @@ impl<R: CitiesRepository> CitiesService<R> {
     pub async fn delete_city(&self, ctx: &SecurityContext, id: Uuid) -> Result<(), DomainError> {
         info!("Deleting city");
 
+        let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
         let scope = ctx
             .scope(self.policy_engine.clone())
-            .include_tenant_children()
+            .include_accessible_tenants(tenant_ids)
             .prepare()
             .await?;
 

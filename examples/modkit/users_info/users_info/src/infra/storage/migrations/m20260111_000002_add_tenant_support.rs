@@ -9,7 +9,7 @@ impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         let backend = manager.get_database_backend();
         let conn = manager.get_connection();
-        let root_tenant = modkit_security::constants::ROOT_TENANT_ID;
+        let root_tenant = modkit_security::constants::DEFAULT_TENANT_ID;
 
         if backend == sea_orm::DatabaseBackend::MySql {
             let tenant_added = if manager.has_column("users", "tenant_id").await? {

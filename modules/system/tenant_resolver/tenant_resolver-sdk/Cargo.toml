@@ -1,0 +1,27 @@
+[package]
+name = "hs-tenant-resolver-sdk"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "SDK for tenant_resolver module: API traits, models, and error definitions"
+
+[lints]
+workspace = true
+
+[dependencies]
+async-trait = { workspace = true }
+thiserror = { workspace = true }
+uuid = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+schemars = { workspace = true }
+
+# GTS types
+gts = { workspace = true }
+gts-macros = { workspace = true }
+
+# ModKit dependencies
+modkit = { path = "../../../../libs/modkit" }
+modkit-security = { path = "../../../../libs/modkit-security" }
+modkit-odata = { path = "../../../../libs/modkit-odata" }

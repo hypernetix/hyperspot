@@ -1,0 +1,61 @@
+# Test configuration for static_tr_plugin integration testing
+#
+# This config uses auth_disabled mode with the hardcoded tenant ID from
+# modkit-security/constants.rs (DEFAULT_TENANT_ID).
+#
+# Run with:
+#   cargo run --bin hyperspot-server -- --config config/test-static-tr.yaml run
+
+server:
+  home_dir: "~/.hyperspot"
+
+database:
+  servers:
+    sqlite_test:
+      params:
+        WAL: "true"
+      pool:
+        max_conns: 5
+
+modules:
+  api_gateway:
+    config:
+      bind_addr: "127.0.0.1:8087"
+      enable_docs: true
+      auth_disabled: true  # Uses DEFAULT_TENANT_ID from modkit-security
+
+  types_registry:
+    config: {}
+
+  static_tr_plugin:
+    config:
+      vendor: "hyperspot"
+      priority: 100
+      tenants:
+        # Default tenant (used when auth_disabled)
+        # Matches DEFAULT_TENANT_ID from modkit-security/constants.rs
+        - id: "00000000-df51-5b42-9538-d2b56b7ee953"
+          name: "Dev Tenant"
+          status: active
+          type: development
+        # Another tenant that Dev Tenant can access
+        - id: "22222222-2222-2222-2222-222222222222"
+          name: "Partner Tenant"
+          status: active
+          type: partner
+      access_rules:
+        # Dev tenant can access Partner tenant
+        - source: "00000000-df51-5b42-9538-d2b56b7ee953"
+          target: "22222222-2222-2222-2222-222222222222"
+
+  tenant_resolver:
+    config:
+      vendor: "hyperspot"
+
+  users_info:
+    database:
+      server: "sqlite_test"
+      file: "users_info_test.db"
+    config:
+      default_page_size: 10
+      max_page_size: 100

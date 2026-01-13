@@ -3,6 +3,9 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use hs_tenant_resolver_sdk::{
+    TenantFilter, TenantResolverError, TenantResolverGatewayClient, TenantStatus,
+};
 use modkit::config::ConfigProvider;
 use modkit::{ClientHub, DbModule, Module, ModuleCtx};
 use modkit_db::{ConnectOpts, DbHandle};
@@ -13,6 +16,52 @@ use uuid::Uuid;
 
 use user_info_sdk::{NewUser, UsersInfoClient};
 use users_info::UsersInfo;
+
+/// Mock tenant resolver for tests.
+struct MockTenantResolver;
+
+#[async_trait::async_trait]
+impl TenantResolverGatewayClient for MockTenantResolver {
+    async fn get_tenant(
+        &self,
+        _ctx: &SecurityContext,
+        id: hs_tenant_resolver_sdk::TenantId,
+    ) -> Result<hs_tenant_resolver_sdk::TenantInfo, TenantResolverError> {
+        Ok(hs_tenant_resolver_sdk::TenantInfo {
+            id,
+            name: format!("Tenant {id}"),
+            status: TenantStatus::Active,
+            tenant_type: None,
+        })
+    }
+
+    async fn can_access(
+        &self,
+        ctx: &SecurityContext,
+        target: hs_tenant_resolver_sdk::TenantId,
+        _options: Option<&hs_tenant_resolver_sdk::AccessOptions>,
+    ) -> Result<bool, TenantResolverError> {
+        Ok(ctx.tenant_id() == target)
+    }
+
+    async fn get_accessible_tenants(
+        &self,
+        ctx: &SecurityContext,
+        _filter: Option<&TenantFilter>,
+        _options: Option<&hs_tenant_resolver_sdk::AccessOptions>,
+    ) -> Result<Vec<hs_tenant_resolver_sdk::TenantInfo>, TenantResolverError> {
+        let tenant_id = ctx.tenant_id();
+        if tenant_id == Uuid::default() {
+            return Ok(vec![]);
+        }
+        Ok(vec![hs_tenant_resolver_sdk::TenantInfo {
+            id: tenant_id,
+            name: format!("Tenant {tenant_id}"),
+            status: TenantStatus::Active,
+            tenant_type: None,
+        }])
+    }
+}
 
 struct MockConfigProvider {
     modules: HashMap<String, serde_json::Value>,
@@ -53,6 +102,10 @@ async fn users_info_registers_sdk_client_and_handles_basic_crud() {
     let db = Arc::new(db);
 
     let hub = Arc::new(ClientHub::new());
+
+    // Register mock tenant resolver before initializing the module
+    hub.register::<dyn TenantResolverGatewayClient>(Arc::new(MockTenantResolver));
+
     let ctx = ModuleCtx::new(
         "users_info",
         Uuid::new_v4(),
@@ -72,8 +125,12 @@ async fn users_info_registers_sdk_client_and_handles_basic_crud() {
         .get::<dyn UsersInfoClient>()
         .expect("UsersInfoClient must be registered");
 
-    let sec = SecurityContext::root();
+    // Create a security context with tenant access
     let tenant_id = Uuid::new_v4();
+    let sec = SecurityContext::builder()
+        .tenant_id(tenant_id)
+        .subject_id(Uuid::new_v4())
+        .build();
 
     let created = client
         .create_user(

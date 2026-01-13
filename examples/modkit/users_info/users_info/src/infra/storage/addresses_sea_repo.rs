@@ -96,7 +96,7 @@ impl AddressesRepository for OrmAddressesRepository {
         scope: &AccessScope,
         address: Address,
     ) -> Result<Address, DomainError> {
-        if !scope.has_tenants() && !scope.is_root() {
+        if !scope.has_tenants() {
             return Err(DomainError::validation(
                 "scope",
                 "Security scope must contain tenant for insert operation",

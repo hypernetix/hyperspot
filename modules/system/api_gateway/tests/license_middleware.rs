@@ -8,6 +8,10 @@ use axum::{
     response::IntoResponse,
     Router,
 };
+use hs_tenant_resolver_sdk::{
+    AccessOptions, TenantFilter, TenantId, TenantInfo, TenantResolverError,
+    TenantResolverGatewayClient, TenantStatus,
+};
 use modkit::{
     api::operation_builder::{AuthReqAction, AuthReqResource, LicenseFeature},
     api::OperationBuilder,
@@ -16,10 +20,48 @@ use modkit::{
     contracts::{OpenApiRegistry, RestHostModule, RestfulModule},
     ClientHub, Module,
 };
+
+use modkit_security::SecurityContext;
 use serde_json::json;
 use std::sync::Arc;
 use tower::ServiceExt;
 use uuid::Uuid;
+
+struct MockTenantResolver;
+
+#[async_trait]
+impl TenantResolverGatewayClient for MockTenantResolver {
+    async fn get_tenant(
+        &self,
+        _ctx: &SecurityContext,
+        id: TenantId,
+    ) -> std::result::Result<TenantInfo, TenantResolverError> {
+        Ok(TenantInfo {
+            id,
+            name: format!("Tenant {id}"),
+            status: TenantStatus::Active,
+            tenant_type: None,
+        })
+    }
+
+    async fn can_access(
+        &self,
+        _ctx: &SecurityContext,
+        _target: TenantId,
+        _options: Option<&AccessOptions>,
+    ) -> std::result::Result<bool, TenantResolverError> {
+        Ok(true)
+    }
+
+    async fn get_accessible_tenants(
+        &self,
+        _ctx: &SecurityContext,
+        _filter: Option<&TenantFilter>,
+        _options: Option<&AccessOptions>,
+    ) -> std::result::Result<Vec<TenantInfo>, TenantResolverError> {
+        Ok(vec![])
+    }
+}
 
 struct TestConfigProvider {
     config: serde_json::Value,
@@ -32,11 +74,14 @@ impl ConfigProvider for TestConfigProvider {
 }
 
 fn create_api_gateway_ctx(config: serde_json::Value) -> ModuleCtx {
+    let hub = Arc::new(ClientHub::new());
+    hub.register::<dyn TenantResolverGatewayClient>(Arc::new(MockTenantResolver));
+
     ModuleCtx::new(
         "api_gateway",
         Uuid::new_v4(),
         Arc::new(TestConfigProvider { config }),
-        Arc::new(ClientHub::new()),
+        hub,
         tokio_util::sync::CancellationToken::new(),
         None,
     )

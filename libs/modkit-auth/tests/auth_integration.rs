@@ -19,7 +19,7 @@ use modkit_auth::{
     types::{AuthRequirement, RoutePolicy, SecRequirement},
     Claims,
 };
-use modkit_security::{AccessScope, SecurityCtx};
+use modkit_security::{AccessScope, SecurityContext};
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
@@ -123,10 +123,11 @@ fn fake_claims(sub_id: Uuid) -> Claims {
     }
 }
 
-/// Handler that returns `SecurityCtx` information
-async fn test_handler(ctx: axum::Extension<SecurityCtx>) -> impl IntoResponse {
+/// Handler that returns `SecurityContext` information for anonymous routes
+async fn test_handler(ctx: axum::Extension<SecurityContext>) -> impl IntoResponse {
     let ctx = ctx.0;
-    if ctx.is_denied() {
+    // Check if it's an anonymous context by checking for default subject_id
+    if ctx.subject_id() == Uuid::default() {
         format!("anonymous:{}", ctx.subject_id())
     } else {
         format!("user:{}", ctx.subject_id())

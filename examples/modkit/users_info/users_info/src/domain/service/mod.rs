@@ -31,12 +31,15 @@
 
 use std::sync::Arc;
 
+use crate::domain::error::DomainError;
 use crate::domain::events::UserDomainEvent;
 use crate::domain::ports::{AuditPort, EventPublisher};
 use crate::domain::repos::{AddressesRepository, CitiesRepository, UsersRepository};
+use hs_tenant_resolver_sdk::{TenantFilter, TenantResolverGatewayClient, TenantStatus};
 use modkit_db::odata::LimitCfg;
 use modkit_db::secure::SecureConn;
-use modkit_security::PolicyEngineRef;
+use modkit_security::{PolicyEngineRef, SecurityContext};
+use uuid::Uuid;
 
 mod addresses;
 mod cities;
@@ -45,6 +48,26 @@ mod users;
 pub(crate) use addresses::AddressesService;
 pub(crate) use cities::CitiesService;
 pub(crate) use users::UsersService;
+
+/// Resolve accessible tenants for the current security context.
+/// Only returns active tenants.
+pub(crate) async fn resolve_accessible_tenants(
+    resolver: &dyn TenantResolverGatewayClient,
+    ctx: &SecurityContext,
+) -> Result<Vec<Uuid>, DomainError> {
+    let filter = TenantFilter {
+        status: vec![TenantStatus::Active],
+        ..Default::default()
+    };
+    let accessible = resolver
+        .get_accessible_tenants(ctx, Some(&filter), None)
+        .await
+        .map_err(|e| {
+            tracing::error!(error = %e, "Failed to resolve accessible tenants");
+            DomainError::InternalError
+        })?;
+    Ok(accessible.iter().map(|t| t.id).collect())
+}
 
 /// Configuration for the domain service
 #[derive(Debug, Clone)]
@@ -102,6 +125,7 @@ where
     CR: CitiesRepository,
     AR: AddressesRepository,
 {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         users_repo: UR,
         cities_repo: CR,
@@ -109,6 +133,7 @@ where
         db: SecureConn,
         events: Arc<dyn EventPublisher<UserDomainEvent>>,
         audit: Arc<dyn AuditPort>,
+        resolver: Arc<dyn TenantResolverGatewayClient>,
         config: ServiceConfig,
     ) -> Self {
         let policy_engine: PolicyEngineRef = Arc::new(modkit_security::DummyPolicyEngine);
@@ -121,12 +146,14 @@ where
             Arc::clone(&cities_repo),
             db.clone(),
             policy_engine.clone(),
+            resolver.clone(),
         ));
         let addresses = Arc::new(AddressesService::new(
             Arc::clone(&addresses_repo),
             Arc::clone(&users_repo),
             db.clone(),
             policy_engine.clone(),
+            resolver.clone(),
         ));
 
         Self {
@@ -136,6 +163,7 @@ where
                 events,
                 audit,
                 policy_engine.clone(),
+                resolver,
                 config,
                 cities.clone(),
                 addresses.clone(),

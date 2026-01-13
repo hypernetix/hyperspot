@@ -3,7 +3,6 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use modkit_security::SecurityContext;
 use types_registry_sdk::{
     GtsEntity, ListQuery, RegisterResult, TypesRegistryApi, TypesRegistryError,
 };
@@ -31,25 +30,16 @@ impl TypesRegistryLocalClient {
 impl TypesRegistryApi for TypesRegistryLocalClient {
     async fn register(
         &self,
-        _ctx: &SecurityContext,
         entities: Vec<serde_json::Value>,
     ) -> Result<Vec<RegisterResult>, TypesRegistryError> {
         Ok(self.service.register(entities))
     }
 
-    async fn list(
-        &self,
-        _ctx: &SecurityContext,
-        query: ListQuery,
-    ) -> Result<Vec<GtsEntity>, TypesRegistryError> {
+    async fn list(&self, query: ListQuery) -> Result<Vec<GtsEntity>, TypesRegistryError> {
         self.service.list(&query).map_err(TypesRegistryError::from)
     }
 
-    async fn get(
-        &self,
-        _ctx: &SecurityContext,
-        gts_id: &str,
-    ) -> Result<GtsEntity, TypesRegistryError> {
+    async fn get(&self, gts_id: &str) -> Result<GtsEntity, TypesRegistryError> {
         self.service.get(gts_id).map_err(TypesRegistryError::from)
     }
 }
@@ -74,14 +64,9 @@ mod tests {
         TypesRegistryLocalClient::new(service)
     }
 
-    fn test_ctx() -> SecurityContext {
-        SecurityContext::root()
-    }
-
     #[tokio::test]
     async fn test_register_and_get() {
         let client = create_client();
-        let ctx = test_ctx();
 
         let entity = json!({
             "$id": "gts://gts.acme.core.events.user_created.v1~",
@@ -92,14 +77,14 @@ mod tests {
             }
         });
 
-        let results = client.register(&ctx, vec![entity]).await.unwrap();
+        let results = client.register(vec![entity]).await.unwrap();
         assert_eq!(results.len(), 1);
         assert!(results[0].is_ok());
 
         client.service.switch_to_ready().unwrap();
 
         let retrieved = client
-            .get(&ctx, "gts.acme.core.events.user_created.v1~")
+            .get("gts.acme.core.events.user_created.v1~")
             .await
             .unwrap();
         assert_eq!(retrieved.gts_id, "gts.acme.core.events.user_created.v1~");
@@ -108,7 +93,6 @@ mod tests {
     #[tokio::test]
     async fn test_list_entities() {
         let client = create_client();
-        let ctx = test_ctx();
 
         let type1 = json!({
             "$id": "gts://gts.acme.core.events.user_created.v1~",
@@ -121,14 +105,14 @@ mod tests {
             "type": "object"
         });
 
-        client.register(&ctx, vec![type1, type2]).await.unwrap();
+        client.register(vec![type1, type2]).await.unwrap();
         client.service.switch_to_ready().unwrap();
 
-        let all = client.list(&ctx, ListQuery::default()).await.unwrap();
+        let all = client.list(ListQuery::default()).await.unwrap();
         assert_eq!(all.len(), 2);
 
         let acme_only = client
-            .list(&ctx, ListQuery::default().with_vendor("acme"))
+            .list(ListQuery::default().with_vendor("acme"))
             .await
             .unwrap();
         assert_eq!(acme_only.len(), 1);
@@ -138,11 +122,10 @@ mod tests {
     #[tokio::test]
     async fn test_get_not_found() {
         let client = create_client();
-        let ctx = test_ctx();
 
         client.service.switch_to_ready().unwrap();
 
-        let result = client.get(&ctx, "gts.unknown.pkg.ns.type.v1~").await;
+        let result = client.get("gts.unknown.pkg.ns.type.v1~").await;
         assert!(result.is_err());
         assert!(result.unwrap_err().is_not_found());
     }

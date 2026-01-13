@@ -52,7 +52,11 @@ members = [
     "examples/plugin-modules/tenant_resolver/tenant_resolver-sdk",
     "examples/plugin-modules/tenant_resolver/tenant_resolver-gw",
     "examples/plugin-modules/tenant_resolver/plugins/contoso_tr_plugin",
-    "examples/plugin-modules/tenant_resolver/plugins/fabrikam_tr_plugin"
+    "examples/plugin-modules/tenant_resolver/plugins/fabrikam_tr_plugin",
+    "modules/system/tenant_resolver/tenant_resolver-sdk",
+    "modules/system/tenant_resolver/tenant_resolver-gw",
+    "modules/system/tenant_resolver/plugins/static_tr_plugin",
+    "modules/system/tenant_resolver/plugins/single_tenant_tr_plugin",
 ]
 resolver = "2"
 

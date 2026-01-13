@@ -77,7 +77,7 @@ impl CitiesRepository for OrmCitiesRepository {
         scope: &AccessScope,
         city: City,
     ) -> Result<City, DomainError> {
-        if !scope.has_tenants() && !scope.is_root() {
+        if !scope.has_tenants() {
             return Err(DomainError::validation(
                 "scope",
                 "Security scope must contain tenant for insert operation",

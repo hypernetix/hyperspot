@@ -151,11 +151,13 @@ dependencies = [
  "dashmap",
  "futures-core",
  "governor",
+ "hs-tenant-resolver-sdk",
  "http",
  "inventory",
  "matchit 0.9.0",
  "modkit",
  "modkit-auth",
+ "modkit-odata",
  "modkit-security",
  "nanoid",
  "parking_lot",
@@ -2062,6 +2064,81 @@ dependencies = [
 ]
 
 [[package]]
+name = "hs-single-tenant-tr-plugin"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "hs-tenant-resolver-sdk",
+ "inventory",
+ "modkit",
+ "modkit-odata",
+ "modkit-security",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "types-registry-sdk",
+ "uuid",
+]
+
+[[package]]
+name = "hs-static-tr-plugin"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "hs-tenant-resolver-sdk",
+ "inventory",
+ "modkit",
+ "modkit-odata",
+ "modkit-security",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "types-registry-sdk",
+ "uuid",
+]
+
+[[package]]
+name = "hs-tenant-resolver-gw"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "hs-tenant-resolver-sdk",
+ "inventory",
+ "modkit",
+ "modkit-odata",
+ "modkit-security",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.17",
+ "tokio",
+ "tracing",
+ "types-registry-sdk",
+ "uuid",
+]
+
+[[package]]
+name = "hs-tenant-resolver-sdk"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "gts",
+ "gts-macros",
+ "modkit",
+ "modkit-odata",
+ "modkit-security",
+ "schemars 0.8.22",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.17",
+ "uuid",
+]
+
+[[package]]
 name = "http"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2267,6 +2344,9 @@ dependencies = [
  "figment",
  "file_parser",
  "grpc_hub",
+ "hs-single-tenant-tr-plugin",
+ "hs-static-tr-plugin",
+ "hs-tenant-resolver-gw",
  "mimalloc",
  "modkit",
  "modkit-db",
@@ -6457,6 +6537,7 @@ dependencies = [
  "async-trait",
  "axum",
  "futures-util",
+ "hs-tenant-resolver-sdk",
  "http",
  "httpmock",
  "inventory",
