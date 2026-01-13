@@ -2,7 +2,7 @@
 mod tests {
     use super::super::*;
     use async_trait::async_trait;
-    use modkit_security::SecurityCtx;
+    use modkit_security::SecurityContext;
     use simple_user_settings_sdk::models::{SimpleUserSettings, SimpleUserSettingsPatch};
     use std::sync::Arc;
     use uuid::Uuid;
@@ -17,14 +17,14 @@ mod tests {
     impl repo::SettingsRepository for MockRepository {
         async fn find_by_user(
             &self,
-            _ctx: &SecurityCtx,
+            _ctx: &SecurityContext,
         ) -> anyhow::Result<Option<SimpleUserSettings>> {
             Ok(self.find_result.clone())
         }
 
         async fn upsert_full(
             &self,
-            _ctx: &SecurityCtx,
+            _ctx: &SecurityContext,
             theme: String,
             language: String,
         ) -> anyhow::Result<SimpleUserSettings> {
@@ -38,7 +38,7 @@ mod tests {
 
         async fn upsert_patch(
             &self,
-            _ctx: &SecurityCtx,
+            _ctx: &SecurityContext,
             patch: SimpleUserSettingsPatch,
         ) -> anyhow::Result<SimpleUserSettings> {
             let mut result = self.upsert_result.clone();
@@ -52,8 +52,8 @@ mod tests {
         }
     }
 
-    fn create_test_context() -> SecurityCtx {
-        SecurityCtx::root_ctx()
+    fn create_test_context() -> SecurityContext {
+        SecurityContext::anonymous()
     }
 
     #[tokio::test]

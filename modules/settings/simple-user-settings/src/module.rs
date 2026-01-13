@@ -3,7 +3,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use axum::Router;
 use modkit::api::OpenApiRegistry;
-use modkit::{DbModule, Module, ModuleCtx, RestfulModule};
+use modkit::{Module, ModuleCtx};
 use tracing::info;
 
 use simple_user_settings_sdk::SimpleUserSettingsApi;
@@ -39,7 +39,7 @@ impl Clone for SettingsModule {
 }
 
 #[async_trait]
-impl DbModule for SettingsModule {
+impl modkit::contracts::DatabaseCapability for SettingsModule {
     async fn migrate(&self, db: &modkit_db::DbHandle) -> anyhow::Result<()> {
         use sea_orm_migration::MigratorTrait;
 
@@ -79,7 +79,7 @@ impl Module for SettingsModule {
 }
 
 #[async_trait]
-impl RestfulModule for SettingsModule {
+impl modkit::contracts::RestApiCapability for SettingsModule {
     fn register_rest(
         &self,
         _ctx: &ModuleCtx,

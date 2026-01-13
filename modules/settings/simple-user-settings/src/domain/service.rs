@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use modkit_security::{constants, SecurityCtx};
+use modkit_security::SecurityContext;
 use simple_user_settings_sdk::models::{SimpleUserSettings, SimpleUserSettingsPatch};
 
 use super::error::DomainError;
@@ -29,18 +29,12 @@ impl Service {
         Self { repo, config }
     }
 
-    pub async fn get_settings(&self, ctx: &SecurityCtx) -> Result<SimpleUserSettings, DomainError> {
+    pub async fn get_settings(&self, ctx: &SecurityContext) -> Result<SimpleUserSettings, DomainError> {
         if let Some(settings) = self.repo.find_by_user(ctx).await? {
             Ok(settings)
         } else {
             let user_id = ctx.subject_id();
-            // Use ROOT_TENANT_ID if no tenant in scope (root context in auth-disabled mode)
-            let tenant_id = ctx
-                .scope()
-                .tenant_ids()
-                .first()
-                .copied()
-                .unwrap_or(constants::ROOT_TENANT_ID);
+            let tenant_id = ctx.tenant_id();
 
             Ok(SimpleUserSettings {
                 user_id,
@@ -53,7 +47,7 @@ impl Service {
 
     pub async fn update_settings(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         theme: String,
         language: String,
     ) -> Result<SimpleUserSettings, DomainError> {
@@ -66,7 +60,7 @@ impl Service {
 
     pub async fn patch_settings(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         patch: SimpleUserSettingsPatch,
     ) -> Result<SimpleUserSettings, DomainError> {
         if let Some(ref theme) = patch.theme {

@@ -43,6 +43,28 @@ where
     }
 }
 
+/// Extractor for `SecurityContext` - validates that auth middleware has run
+#[derive(Debug, Clone)]
+pub struct AuthzContext(pub SecurityContext);
+
+impl<S> FromRequestParts<S> for AuthzContext
+where
+    S: Send + Sync,
+{
+    type Rejection = AuthError;
+
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        parts
+            .extensions
+            .get::<SecurityContext>()
+            .cloned()
+            .map(AuthzContext)
+            .ok_or(AuthError::Internal(
+                "SecurityContext not found - auth middleware not configured".to_owned(),
+            ))
+    }
+}
+
 /// Extractor for Claims - validates that auth middleware has run
 #[derive(Debug, Clone)]
 pub struct AuthClaims(pub Claims);

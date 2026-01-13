@@ -6,12 +6,10 @@ use modkit::api::operation_builder::{AuthReqAction, AuthReqResource, LicenseFeat
 use modkit::api::{OpenApiRegistry, OperationBuilder};
 use std::sync::Arc;
 
-#[allow(dead_code)]
 enum Resource {
     Settings,
 }
 
-#[allow(dead_code)]
 enum Action {
     Read,
     Write,
@@ -48,7 +46,6 @@ impl AsRef<str> for License {
 
 impl LicenseFeature for License {}
 
-#[allow(clippy::needless_pass_by_value)]
 pub fn register_routes(
     mut router: Router,
     openapi: &dyn OpenApiRegistry,

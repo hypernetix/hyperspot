@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use modkit_db::secure::SecureConn;
-use modkit_security::{constants, AccessScope, SecurityCtx};
+use modkit_security::{AccessScope, SecurityContext};
 use sea_orm::{ActiveModelTrait, ActiveValue};
 use simple_user_settings_sdk::models::{SimpleUserSettings, SimpleUserSettingsPatch};
 
@@ -21,13 +21,9 @@ impl SeaOrmSettingsRepository {
 
 #[async_trait]
 impl SettingsRepository for SeaOrmSettingsRepository {
-    async fn find_by_user(&self, ctx: &SecurityCtx) -> anyhow::Result<Option<SimpleUserSettings>> {
-        let mut tenant_ids = ctx.scope().tenant_ids().to_vec();
-        // Use ROOT_TENANT_ID if no tenant in scope (root context in auth-disabled mode)
-        if tenant_ids.is_empty() {
-            tenant_ids.push(constants::ROOT_TENANT_ID);
-        }
-        let scope = AccessScope::both(tenant_ids, vec![ctx.subject_id()]);
+    async fn find_by_user(&self, ctx: &SecurityContext) -> anyhow::Result<Option<SimpleUserSettings>> {
+        let tenant_id = ctx.tenant_id();
+        let scope = AccessScope::both(vec![tenant_id], vec![ctx.subject_id()]);
 
         let result = self
             .db
@@ -40,18 +36,12 @@ impl SettingsRepository for SeaOrmSettingsRepository {
 
     async fn upsert_full(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         theme: String,
         language: String,
     ) -> anyhow::Result<SimpleUserSettings> {
         let user_id = ctx.subject_id();
-        // Use ROOT_TENANT_ID if no tenant in scope (root context in auth-disabled mode)
-        let tenant_id = ctx
-            .scope()
-            .tenant_ids()
-            .first()
-            .copied()
-            .unwrap_or(constants::ROOT_TENANT_ID);
+        let tenant_id = ctx.tenant_id();
         let scope = AccessScope::both(vec![tenant_id], vec![user_id]);
 
         let existing = self
@@ -83,17 +73,11 @@ impl SettingsRepository for SeaOrmSettingsRepository {
 
     async fn upsert_patch(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         patch: SimpleUserSettingsPatch,
     ) -> anyhow::Result<SimpleUserSettings> {
         let user_id = ctx.subject_id();
-        // Use ROOT_TENANT_ID if no tenant in scope (root context in auth-disabled mode)
-        let tenant_id = ctx
-            .scope()
-            .tenant_ids()
-            .first()
-            .copied()
-            .unwrap_or(constants::ROOT_TENANT_ID);
+        let tenant_id = ctx.tenant_id();
         let scope = AccessScope::both(vec![tenant_id], vec![user_id]);
 
         let existing = self
