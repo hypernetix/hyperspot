@@ -28,12 +28,12 @@ lint_utils.workspace = true
 
 [dev-dependencies]
 dylint_testing.workspace = true
-sea-orm = "1.0"
-sqlx = "0.8"
-axum = "0.7"
-uuid = "1.0"
-anyhow = "1.0"
-thiserror = "2.0"
+sea-orm.workspace = true
+sqlx.workspace = true
+axum.workspace = true
+uuid.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
 
 [package.metadata.rust-analyzer]
 rustc_private = true

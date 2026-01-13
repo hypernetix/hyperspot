@@ -51,6 +51,14 @@ lint_utils = { path = "lint_utils" }
 gts = { git = "https://github.com/globaltypesystem/gts-rust.git", tag = "v0.7.7" }
 gts-macros = { git = "https://github.com/globaltypesystem/gts-rust.git", tag = "v0.7.7" }
 
+# Dev dependencies for lint tests
+sea-orm = "1.0"
+sqlx = "0.8"
+axum = "0.7"
+uuid = "1.0"
+anyhow = "1.0"
+thiserror = "2.0"
+
 [workspace.lints.clippy]
 all = "warn"
 pedantic = "warn"
