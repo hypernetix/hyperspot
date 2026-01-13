@@ -1,0 +1,664 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.hypernetix.hyperspot.ax.datasource.v1~",
+  "title": "Datasource Definition",
+  "description": "A datasource connects a query definition with its runtime parameters and UI controls. It encapsulates both the data retrieval logic (via query_id) and the user interface configuration (filters, sorting, pagination) to create a complete, interactive data source for widgets and components. Datasources are reusable and can be shared across multiple widgets.",
+  "type": "object",
+  "$defs": {
+    "odata_params": {
+      "type": "object",
+      "description": "OData query parameters. Standard OData v4 system query options for filtering, sorting, pagination, field selection, and search.",
+      "properties": {
+        "$filter": {
+          "type": "string",
+          "description": "OData filter expression to restrict results. Examples: \"status eq 'active'\", \"revenue gt 1000 and region eq 'US'\""
+        },
+        "$orderby": {
+          "type": "string",
+          "description": "Sort order specification. Examples: \"created_at desc\", \"name asc, revenue desc\""
+        },
+        "$top": {
+          "type": "integer",
+          "description": "Maximum number of items to return (page size)",
+          "minimum": 1
+        },
+        "$skip": {
+          "type": "integer",
+          "description": "Number of items to skip (for pagination)",
+          "minimum": 0
+        },
+        "$select": {
+          "type": "string",
+          "description": "Comma-separated list of properties to include in response. Example: \"id,name,revenue\""
+        },
+        "$expand": {
+          "type": "string",
+          "description": "Related entities to include inline. Example: \"customer,items\""
+        },
+        "$count": {
+          "type": "boolean",
+          "description": "Whether to include total count of items in response"
+        },
+        "$search": {
+          "type": "string",
+          "description": "Full-text search query across searchable fields"
+        },
+        "$apply": {
+          "type": "string",
+          "description": "Data aggregation transformations using OData aggregation extension. Supports groupby, aggregate, filter, compute, expand, and other transformations. Examples: \"groupby((region), aggregate(revenue with sum as total))\", \"filter(status eq 'active')/groupby((product), aggregate($count as items))\""
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "query_id": {
+      "type": "string",
+      "description": "GTS identifier of the registered query that will retrieve data for this datasource. The query defines the API endpoint, parameter specs, and return schema.",
+      "x-gts-ref": "gts.hypernetix.hyperspot.ax.query.v1~"
+    },
+    "params": {
+      "$ref": "#/$defs/odata_params",
+      "description": "OData query parameters to send when executing the query. Defined via reference to reusable odata_params schema."
+    },
+    "render_options": {
+      "type": "object",
+      "description": "Rendering options defining how UI controls are presented and configured for this datasource. Controls visibility, behavior, and presentation of filters, sorting, pagination, grouping, time range selectors, and search.",
+      "properties": {
+        "filters": {
+          "type": "array",
+          "description": "Array of filter controls. Order determines UI presentation. Each filter has settings for field mapping, operators, labels, value sources, and UI templates. UI reads query capabilities to determine available operators per field.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Unique identifier for this filter. Used in depends_on references and for tracking filter state."
+              },
+              "enabled": {
+                "type": "boolean",
+                "description": "Whether this filter control is enabled and visible in the UI. Disabled filters are hidden from users.",
+                "default": true
+              },
+              "field": {
+                "type": "string",
+                "description": "Name of the field to filter in OData $filter expression. Must match field name from query results or capabilities."
+              },
+              "operator": {
+                "type": "string",
+                "description": "Default OData filter operator. Standard operators: eq, ne, gt, ge, lt, le, in, contains, startswith, endswith. UI may allow users to change operator based on query capabilities."
+              },
+              "label": {
+                "type": "string",
+                "description": "Human-readable label displayed above the filter control in the UI."
+              },
+              "depends_on": {
+                "type": "array",
+                "description": "Conditional dependencies on other filters. This filter becomes available only when specified conditions are met. Useful for cascading filters (e.g., city filter depends on country selection).",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "filter_id": {
+                      "type": "string",
+                      "description": "ID of the filter this depends on. Must match an id in the filters array."
+                    },
+                    "condition": {
+                      "type": "string",
+                      "enum": ["any", "empty", "specific"],
+                      "description": "Type of dependency condition: 'any' (any value selected), 'empty' (no value selected), 'specific' (specific value(s) selected, requires 'values' field).",
+                      "default": "any"
+                    },
+                    "values": {
+                      "type": "array",
+                      "description": "Specific values that must be selected in the dependent filter. Only used when condition is 'specific'.",
+                      "items": {
+                        "type": ["string", "number", "boolean"]
+                      }
+                    }
+                  },
+                  "required": ["filter_id", "condition"]
+                }
+              },
+              "values": {
+                "type": "object",
+                "description": "Source of filter values - either static list (items) or dynamic query results (query_id + params).",
+                "oneOf": [
+                  {
+                    "properties": {
+                      "items": {
+                        "type": "array",
+                        "description": "Static array of filter values. Each item is a value/label pair suitable for dropdowns and selectors.",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "type": ["string", "number", "boolean", "null"],
+                              "description": "Scalar value that will be sent as filter parameter. Can be string, number, boolean, or null."
+                            },
+                            "label": {
+                              "type": "string",
+                              "description": "Human-readable label displayed in the UI for this value."
+                            },
+                            "description": {
+                              "type": "string",
+                              "description": "Optional detailed description shown in tooltips or help text."
+                            }
+                          },
+                          "required": ["value", "label"]
+                        }
+                      }
+                    },
+                    "required": ["items"]
+                  },
+                  {
+                    "properties": {
+                      "query_id": {
+                        "type": "string",
+                        "description": "GTS identifier of a values query that returns available filter options dynamically.",
+                        "x-gts-ref": "gts.hypernetix.hyperspot.ax.query.v1~hypernetix.hyperspot.ax.values.v1~"
+                      },
+                      "params": {
+                        "$ref": "#/$defs/odata_params",
+                        "description": "OData parameters to pass to the values query for filtering or customizing the returned options."
+                      }
+                    },
+                    "required": ["query_id"]
+                  }
+                ]
+              },
+              "template": {
+                "type": "object",
+                "description": "UI template configuration for rendering this filter control (dropdown, multi-select, date picker, etc.).",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "description": "GTS identifier of the template to use for rendering this filter control.",
+                    "x-gts-ref": "gts.hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.values_selector.v1~"
+                  },
+                  "config": {
+                    "type": "object",
+                    "description": "Template-specific configuration (colors, size, behavior, etc.).",
+                    "x-gts-ref": "gts.hypernetix.hyperspot.ax.schema.v1~hypernetix.hyperspot.ax.template_config.v1~"
+                  }
+                },
+                "required": ["id"]
+              }
+            }
+          }
+        },
+        "sorting": {
+          "type": "object",
+          "description": "Configuration for sorting controls in the datasource UI.",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Whether sorting controls are enabled and visible to users."
+            },
+            "available_fields": {
+              "type": "array",
+              "description": "List of field names that users can sort by. Must match field names from the query results.",
+              "items": {
+                "type": "string"
+              }
+            },
+            "multi_sort": {
+              "type": "boolean",
+              "description": "Whether users can sort by multiple fields simultaneously (secondary sort)."
+            }
+          }
+        },
+        "pagination": {
+          "type": "object",
+          "description": "Configuration for pagination controls in the datasource UI. Maps to OData $top (page size) and $skip (offset) parameters.",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Whether pagination controls are enabled and visible to users."
+            },
+            "default_page_size": {
+              "type": "integer",
+              "description": "Default page size (maps to OData $top parameter). If not specified, uses query capabilities default.",
+              "minimum": 1
+            },
+            "show_page_size_selector": {
+              "type": "boolean",
+              "description": "Whether to show a page size selector to users."
+            },
+            "page_size_options": {
+              "type": "array",
+              "description": "Available page size options for users to choose from (e.g., [10, 25, 50, 100]). Maps to OData $top values.",
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "show_page_numbers": {
+              "type": "boolean",
+              "description": "Whether to show page number buttons (1, 2, 3, ...) or just prev/next navigation."
+            }
+          }
+        },
+        "grouping": {
+          "type": "object",
+          "description": "Configuration for data grouping and aggregation controls in the datasource UI. Maps to OData $apply parameter with groupby and aggregate transformations. UI reads query capabilities to determine available grouping fields and aggregation functions.",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Whether grouping controls are enabled and visible to users."
+            },
+            "available_fields": {
+              "type": "array",
+              "description": "List of field names that can be used for grouping data (groupby dimension). Must match field names from query results and capabilities.",
+              "items": {
+                "type": "string"
+              }
+            },
+            "available_functions": {
+              "type": "object",
+              "description": "Map of field names to their available aggregation functions. Each field can have multiple aggregation functions. Standard OData functions: sum, min, max, average, countdistinct, $count. Custom functions may be supported if defined in query capabilities.",
+              "additionalProperties": {
+                "type": "array",
+                "description": "List of aggregation function names available for this field. Function availability should match query capabilities.",
+                "items": {
+                  "type": "string",
+                  "description": "Aggregation function name (e.g., 'sum', 'avg', 'min', 'max', 'countdistinct', '$count')"
+                }
+              }
+            }
+          }
+        },
+        "time": {
+          "type": "object",
+          "description": "Configuration for time range selection controls in the datasource UI. Maps UI time controls to OData $filter expressions.",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Whether time range controls are enabled and visible to users."
+            },
+            "field": {
+              "type": "string",
+              "description": "Name of the datetime field to filter. UI will generate OData $filter expressions like 'field ge START and field le END'."
+            },
+            "show_timezone": {
+              "type": "boolean",
+              "description": "Whether to show timezone selector to users. Allows users to view data in different timezones."
+            },
+            "default_timezone": {
+              "type": "string",
+              "description": "Default timezone for time range selector (e.g., 'UTC', 'America/New_York'). Defaults to browser timezone if not specified."
+            },
+            "show_range": {
+              "type": "boolean",
+              "description": "Whether to show custom date range picker (start date and end date inputs)."
+            },
+            "show_quick_ranges": {
+              "type": "boolean",
+              "description": "Whether to show predefined quick range buttons (Last 24h, Last 7 days, etc.)."
+            },
+            "quick_ranges": {
+              "type": "array",
+              "description": "List of predefined quick range options available to users.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "description": "Display label for the quick range button (e.g., 'Last 24 hours', 'Last 7 days')."
+                  },
+                  "value": {
+                    "type": "string",
+                    "description": "ISO 8601 duration string representing the time range (e.g., 'PT24H' for 24 hours, 'P7D' for 7 days)."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "search": {
+          "type": "object",
+          "description": "Configuration for full-text search controls in the datasource UI. Maps to OData $search parameter. UI reads query capabilities to determine if search is supported and which fields are searchable.",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Whether full-text search control is enabled and visible to users."
+            },
+            "placeholder": {
+              "type": "string",
+              "description": "Placeholder text shown in the search input field (e.g., 'Search orders...', 'Find products...')."
+            },
+            "debounce_ms": {
+              "type": "integer",
+              "description": "Debounce delay in milliseconds before sending search query. Prevents excessive API calls while user is typing.",
+              "minimum": 0,
+              "default": 300
+            }
+          }
+        }
+      }
+    },
+    "category": {
+      "type": "string",
+      "description": "GTS identifier of the category this datasource belongs to. Used to organize datasources by data domain, system integration, or data type (e.g., 'User Data', 'Financial', 'Logs') in the datasource library.",
+      "x-gts-ref": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.datasource.v1~"
+    }
+  },
+  "required": ["query_id", "params"],
+  "examples": [
+    {
+      "query_id": "gts.hypernetix.hyperspot.ax.query.v1~hypernetix.hyperspot.ax.sales_orders.v1",
+      "params": {
+        "$filter": "created_at ge 2024-01-01T00:00:00Z and created_at le 2024-12-31T23:59:59Z and region eq 'US' and status eq 'completed'",
+        "$orderby": "revenue desc, created_at desc",
+        "$top": 50,
+        "$skip": 0,
+        "$count": true,
+        "$select": "id,order_number,customer_name,revenue,status,created_at"
+      },
+      "render_options": {
+        "filters": [
+          {
+            "id": "region",
+            "enabled": true,
+            "field": "region",
+            "operator": "eq",
+            "label": "Region",
+            "values": {
+              "query_id": "gts.hypernetix.hyperspot.ax.query.v1~hypernetix.hyperspot.ax.values.v1~hypernetix.hyperspot.ax.filters_regions_regions.v1",
+              "params": {}
+            },
+            "template": {
+              "id": "gts.hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.values_selector.v1~hypernetix.hyperspot.ax.templates_selectors_dropdown.v1",
+              "config": {
+                "placeholder": "Select region...",
+                "clearable": true
+              }
+            }
+          },
+          {
+            "id": "country",
+            "enabled": true,
+            "field": "country",
+            "operator": "eq",
+            "label": "Country",
+            "depends_on": [
+              {
+                "filter_id": "region",
+                "condition": "any"
+              }
+            ],
+            "values": {
+              "query_id": "gts.hypernetix.hyperspot.ax.query.v1~hypernetix.hyperspot.ax.values.v1~hypernetix.hyperspot.ax.filters_countries.v1",
+              "params": {
+                "$filter": "region eq {region}"
+              }
+            },
+            "template": {
+              "id": "gts.hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.values_selector.v1~hypernetix.hyperspot.ax.templates_selectors_dropdown.v1",
+              "config": {
+                "placeholder": "Select country...",
+                "searchable": true
+              }
+            }
+          },
+          {
+            "id": "city",
+            "enabled": true,
+            "field": "city",
+            "operator": "in",
+            "label": "Cities",
+            "depends_on": [
+              {
+                "filter_id": "country",
+                "condition": "any"
+              }
+            ],
+            "values": {
+              "query_id": "gts.hypernetix.hyperspot.ax.query.v1~hypernetix.hyperspot.ax.values.v1~hypernetix.hyperspot.ax.filters_cities.v1",
+              "params": {
+                "$filter": "country eq {country}"
+              }
+            },
+            "template": {
+              "id": "gts.hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.values_selector.v1~hypernetix.hyperspot.ax.templates_selectors_multiselect.v1",
+              "config": {
+                "placeholder": "Select cities...",
+                "max_items": 5
+              }
+            }
+          },
+          {
+            "id": "status",
+            "enabled": true,
+            "field": "status",
+            "operator": "eq",
+            "label": "Order Status",
+            "values": {
+              "items": [
+                {"value": "pending", "label": "Pending", "description": "Order is awaiting processing"},
+                {"value": "processing", "label": "Processing", "description": "Order is being fulfilled"},
+                {"value": "completed", "label": "Completed", "description": "Order has been delivered"},
+                {"value": "cancelled", "label": "Cancelled", "description": "Order was cancelled"}
+              ]
+            },
+            "template": {
+              "id": "gts.hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.values_selector.v1~hypernetix.hyperspot.ax.templates_selectors_dropdown.v1",
+              "config": {
+                "show_descriptions": true
+              }
+            }
+          },
+          {
+            "id": "revenue_range",
+            "enabled": true,
+            "field": "revenue",
+            "operator": "ge",
+            "label": "Minimum Revenue",
+            "template": {
+              "id": "gts.hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.values_selector.v1~hypernetix.hyperspot.ax.templates_inputs_number.v1",
+              "config": {
+                "min": 0,
+                "step": 100,
+                "prefix": "$"
+              }
+            }
+          }
+        ],
+        "sorting": {
+          "enabled": true,
+          "available_fields": ["revenue", "created_at", "customer_name", "order_number"],
+          "multi_sort": true
+        },
+        "pagination": {
+          "enabled": true,
+          "default_page_size": 50,
+          "show_page_size_selector": true,
+          "page_size_options": [25, 50, 100, 200],
+          "show_page_numbers": true
+        },
+        "time": {
+          "enabled": true,
+          "field": "created_at",
+          "show_timezone": true,
+          "default_timezone": "UTC",
+          "show_range": true,
+          "show_quick_ranges": true,
+          "quick_ranges": [
+            {"label": "Today", "value": "P1D"},
+            {"label": "Last 7 days", "value": "P7D"},
+            {"label": "Last 30 days", "value": "P30D"},
+            {"label": "This month", "value": "P1M"},
+            {"label": "This year", "value": "P1Y"}
+          ]
+        },
+        "search": {
+          "enabled": true,
+          "placeholder": "Search orders by customer name, order number...",
+          "debounce_ms": 300
+        }
+      },
+      "category": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.datasource.v1~hypernetix.hyperspot.ax.analytics_sales.v1"
+    },
+    {
+      "query_id": "gts.hypernetix.hyperspot.ax.query.v1~hypernetix.hyperspot.ax.sales_analytics.v1",
+      "params": {
+        "$apply": "groupby((region,product_category), aggregate(revenue with sum as total_revenue, order_count with sum as total_orders))",
+        "$filter": "created_at ge 2024-01-01T00:00:00Z",
+        "$orderby": "total_revenue desc",
+        "$top": 20
+      },
+      "render_options": {
+        "grouping": {
+          "enabled": true,
+          "available_fields": ["region", "country", "product_category", "sales_rep", "customer_segment"],
+          "available_functions": {
+            "revenue": ["sum", "avg", "min", "max"],
+            "order_count": ["sum", "avg"],
+            "customer_id": ["countdistinct"],
+            "profit_margin": ["avg"]
+          }
+        },
+        "filters": [
+          {
+            "id": "date_range",
+            "enabled": true,
+            "field": "created_at",
+            "operator": "ge",
+            "label": "From Date"
+          },
+          {
+            "id": "min_revenue",
+            "enabled": true,
+            "field": "revenue",
+            "operator": "gt",
+            "label": "Minimum Total Revenue",
+            "template": {
+              "id": "gts.hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.values_selector.v1~hypernetix.hyperspot.ax.templates_inputs_number.v1",
+              "config": {
+                "min": 0,
+                "step": 1000,
+                "prefix": "$"
+              }
+            }
+          }
+        ],
+        "sorting": {
+          "enabled": true,
+          "available_fields": ["total_revenue", "total_orders", "region", "product_category"],
+          "multi_sort": false
+        },
+        "pagination": {
+          "enabled": true,
+          "default_page_size": 20,
+          "show_page_size_selector": true,
+          "page_size_options": [10, 20, 50, 100],
+          "show_page_numbers": false
+        }
+      },
+      "category": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.datasource.v1~hypernetix.hyperspot.ax.analytics_sales.v1"
+    },
+    {
+      "query_id": "gts.hypernetix.hyperspot.ax.query.v1~hypernetix.hyperspot.ax.monitoring_server_metrics.v1",
+      "params": {
+        "$filter": "severity in ('critical','warning') and timestamp ge 2024-12-01T00:00:00Z",
+        "$orderby": "timestamp desc",
+        "$top": 100,
+        "$search": "error timeout",
+        "$select": "timestamp,server_name,severity,message,cpu_usage,memory_usage"
+      },
+      "render_options": {
+        "filters": [
+          {
+            "id": "severity",
+            "enabled": true,
+            "field": "severity",
+            "operator": "in",
+            "label": "Severity Level",
+            "values": {
+              "items": [
+                {"value": "critical", "label": "Critical", "description": "System failure or severe degradation"},
+                {"value": "warning", "label": "Warning", "description": "Potential issues requiring attention"},
+                {"value": "info", "label": "Info", "description": "Informational messages"},
+                {"value": "debug", "label": "Debug", "description": "Detailed debugging information"}
+              ]
+            },
+            "template": {
+              "id": "gts.hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.values_selector.v1~hypernetix.hyperspot.ax.templates_selectors_multiselect.v1",
+              "config": {
+                "color_coded": true
+              }
+            }
+          },
+          {
+            "id": "server",
+            "enabled": true,
+            "field": "server_name",
+            "operator": "in",
+            "label": "Servers",
+            "values": {
+              "query_id": "gts.hypernetix.hyperspot.ax.query.v1~hypernetix.hyperspot.ax.values.v1~hypernetix.hyperspot.ax.monitoring_servers.v1",
+              "params": {
+                "$filter": "status eq 'active'"
+              }
+            },
+            "template": {
+              "id": "gts.hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.values_selector.v1~hypernetix.hyperspot.ax.templates_selectors_multiselect.v1",
+              "config": {
+                "searchable": true,
+                "max_items": 10
+              }
+            }
+          },
+          {
+            "id": "cpu_threshold",
+            "enabled": true,
+            "field": "cpu_usage",
+            "operator": "gt",
+            "label": "CPU Usage Above (%)",
+            "template": {
+              "id": "gts.hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.values_selector.v1~hypernetix.hyperspot.ax.templates_inputs_slider.v1",
+              "config": {
+                "min": 0,
+                "max": 100,
+                "step": 5,
+                "suffix": "%"
+              }
+            }
+          }
+        ],
+        "time": {
+          "enabled": true,
+          "field": "timestamp",
+          "show_timezone": false,
+          "default_timezone": "UTC",
+          "show_range": true,
+          "show_quick_ranges": true,
+          "quick_ranges": [
+            {"label": "Last 15 minutes", "value": "PT15M"},
+            {"label": "Last hour", "value": "PT1H"},
+            {"label": "Last 6 hours", "value": "PT6H"},
+            {"label": "Last 24 hours", "value": "PT24H"},
+            {"label": "Last 7 days", "value": "P7D"}
+          ]
+        },
+        "search": {
+          "enabled": true,
+          "placeholder": "Search logs by message, error, server name...",
+          "debounce_ms": 500
+        },
+        "sorting": {
+          "enabled": true,
+          "available_fields": ["timestamp", "severity", "cpu_usage", "memory_usage", "server_name"],
+          "multi_sort": false
+        },
+        "pagination": {
+          "enabled": true,
+          "default_page_size": 100,
+          "show_page_size_selector": true,
+          "page_size_options": [50, 100, 200, 500],
+          "show_page_numbers": true
+        }
+      },
+      "category": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.datasource.v1~hypernetix.hyperspot.ax.monitoring_system.v1"
+    }
+  ]
+}

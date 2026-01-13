@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.hypernetix.hyperspot.ax.layout.v1~",
+  "type": "object",
+  "description": "Base layout type for organizing items into dashboards and reports. Layouts define the structure, arrangement, and presentation of widgets and groups. They specify which items to display, their positions, and layout-specific settings like refresh intervals or export formats.",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Human-readable name of the layout. Displayed in navigation and layout selector."
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed description of the layout's purpose, target audience, and key visualizations it contains."
+    },
+    "icon": {
+      "type": "string",
+      "description": "Icon identifier for the layout (e.g., Lucide icon name). Used in navigation and cards."
+    },
+    "category": {
+      "type": "string",
+      "description": "GTS identifier of the category this layout belongs to. Used to organize layouts by use case, presentation format, or audience (e.g., 'Executive Dashboards', 'Operational Reports', 'Analytics Views').",
+      "x-gts-ref": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.layout.v1~"
+    },
+    "items": {
+      "type": "array",
+      "description": "Ordered array of layout items (widgets and groups) that compose this layout. Items are rendered in the order they appear. Each item defines its own size, position, and content.",
+      "items": {
+        "allOf": [
+          {
+            "$ref": "gts://gts.hypernetix.hyperspot.ax.item.v1~"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "description": "GTS type identifier for this item. Indicates the specific item type (e.g., widget, group) so the layout renderer knows how to interpret and render the item. Required for polymorphic item handling.",
+                "x-gts-ref": "gts.hypernetix.hyperspot.ax.item.v1~"
+              }
+            },
+            "required": ["type"]
+          }
+        ],
+        "description": "Layout item - can be a widget (data visualization) or group (container for nested items). Type field is required to identify the concrete item type."
+      }
+    }
+  },
+  "required": ["name", "items"],
+  "examples": [
+    {
+      "name": "Sales Dashboard",
+      "description": "Overview of sales metrics and trends",
+      "category": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.layout.v1~hypernetix.hyperspot.ax.layouts_dashboards_sales.v1",
+      "items": []
+    }
+  ]
+}

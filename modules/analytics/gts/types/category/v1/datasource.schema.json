@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.datasource.v1~",
+  "type": "object",
+  "description": "Category for datasource configurations. Used to organize datasources by data domain, system integration, or data type (e.g., 'User Data', 'Financial', 'Logs', 'Metrics').",
+  "allOf": [
+    {
+      "$ref": "gts://gts.hypernetix.hyperspot.ax.category.v1~"
+    }
+  ],
+  "examples": [
+    {
+      "name": "API Datasources",
+      "description": "External API integrations",
+      "icon": "link"
+    },
+    {
+      "name": "Database Datasources",
+      "description": "Direct database connections",
+      "icon": "database"
+    }
+  ]
+}

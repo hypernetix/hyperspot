@@ -75,6 +75,44 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
 
 [[package]]
+name = "analytics"
+version = "0.1.0"
+dependencies = [
+ "analytics-sdk",
+ "anyhow",
+ "async-trait",
+ "axum",
+ "chrono",
+ "gts",
+ "inventory",
+ "modkit",
+ "modkit-auth",
+ "modkit-db",
+ "modkit-db-macros",
+ "modkit-odata",
+ "modkit-security",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tower",
+ "tracing",
+ "urlencoding",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "analytics-sdk"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "modkit-security",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.17",
+]
+
+[[package]]
 name = "android_system_properties"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2334,6 +2372,7 @@ dependencies = [
 name = "hyperspot-server"
 version = "0.1.0"
 dependencies = [
+ "analytics",
  "anyhow",
  "api_gateway",
  "calculator",

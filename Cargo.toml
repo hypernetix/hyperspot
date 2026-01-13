@@ -41,6 +41,8 @@ members = [
     "modules/system/module_orchestrator/module_orchestrator-contracts",
     "modules/system/module_orchestrator/module_orchestrator-grpc",
     "modules/system/module_orchestrator/module_orchestrator",
+    "modules/analytics/analytics-sdk",
+    "modules/analytics/analytics",
     "examples/modkit/users_info/user_info-sdk",
     "examples/modkit/users_info/users_info",
     "examples/oop-modules/calculator_gateway/calculator_gateway-sdk",

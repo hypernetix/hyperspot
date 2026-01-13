@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.query.v1~",
+  "type": "object",
+  "description": "Category for query definitions. Used to organize and group query registrations by domain, data source, or functional area (e.g., 'User Analytics', 'Sales Reports', 'System Monitoring').",
+  "allOf": [
+    {
+      "$ref": "gts://gts.hypernetix.hyperspot.ax.category.v1~"
+    }
+  ],
+  "examples": [
+    {
+      "name": "Sales Queries",
+      "description": "Sales and revenue analysis queries",
+      "icon": "dollar-sign"
+    },
+    {
+      "name": "User Analytics Queries",
+      "description": "User behavior and engagement metrics",
+      "icon": "users"
+    }
+  ]
+}

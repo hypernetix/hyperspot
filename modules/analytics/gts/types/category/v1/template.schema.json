@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.template.v1~",
+  "type": "object",
+  "description": "Category for UI component templates. Used to organize templates by visualization type, component family, or use case (e.g., 'Charts', 'Tables', 'Maps', 'Selectors').",
+  "allOf": [
+    {
+      "$ref": "gts://gts.hypernetix.hyperspot.ax.category.v1~"
+    }
+  ],
+  "examples": [
+    {
+      "name": "Chart Templates",
+      "description": "Visualization templates for charts and graphs",
+      "icon": "bar-chart-2"
+    },
+    {
+      "name": "Table Templates",
+      "description": "Data table and grid templates",
+      "icon": "table"
+    }
+  ]
+}

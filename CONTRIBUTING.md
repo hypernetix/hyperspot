@@ -70,10 +70,10 @@ Follow the coding standards and guidelines:
 1. See common [RUST.md](./guidelines/DNA/languages/RUST.md) guideline
 2. When develop new REST API use [API.md](./guidelines/DNA/REST/API.md), [PAGINATION](./guidelines/DNA/REST/PAGINATION.md), [STATUS_CODES](./guidelines/DNA/REST/STATUS_CODES.md)
 3. When develop new Module use [NEW_MODULE.md](./guidelines/NEW_MODULE.md)
-4. Security [SECURITY.md](./guidelines/SECURITY.md)
+4. When design features use [Feature-Driven Design](./guidelines/FDD/)
+5. Security [SECURITY.md](./guidelines/SECURITY.md)
 
 Always include unit tests when introducing new code.
-
 
 ### 2.3. Run Code Quality Checks
 

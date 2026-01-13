@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.hypernetix.hyperspot.ax.category.v1~",
+  "type": "object",
+  "description": "Base category type for organizing and grouping related GTS entities. Categories provide a hierarchical classification system for queries, templates, datasources, items, layouts, and widgets.",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Display name of the category. Used in UI navigation and grouping."
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed description explaining the purpose and scope of this category. Helps users understand what types of entities belong in this category."
+    },
+    "icon": {
+      "type": "string",
+      "description": "Icon identifier (e.g., Lucide icon name) for visual representation in UI. Used in navigation menus, cards, and category selectors."
+    }
+  },
+  "required": ["name"],
+  "examples": [
+    {
+      "name": "Sales Analytics",
+      "description": "Category for sales-related queries, dashboards, and reports. Includes revenue tracking, customer analytics, and sales pipeline monitoring.",
+      "icon": "trending-up"
+    },
+    {
+      "name": "System Monitoring",
+      "description": "Category for infrastructure and system monitoring resources. Contains server metrics, performance dashboards, and alerting queries.",
+      "icon": "activity"
+    }
+  ]
+}

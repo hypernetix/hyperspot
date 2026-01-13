@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.hypernetix.hyperspot.ax.query.v1~",
+  "type": "object",
+  "description": "Query registration with OData integration. Defines a data retrieval operation using OData v4 protocol with $metadata for schema and capabilities. Queries expose OData-compatible endpoints with standard query options ($filter, $orderby, $top, $skip, $select, $expand).",
+  "properties": {
+    "category": {
+      "type": "string",
+      "description": "GTS identifier of the category this query belongs to. Used to organize queries by domain, data source, or functional area (e.g., 'User Analytics', 'Sales Reports', 'System Monitoring') in the query library.",
+      "x-gts-ref": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.query.v1~"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 50,
+      "description": "Human-readable name of the query. Used in UI for query selection and documentation."
+    },
+    "description": {
+      "type": "string",
+      "minLength": 100,
+      "maxLength": 1000,
+      "description": "Detailed description explaining what data this query retrieves, its purpose, use cases, and any important constraints or limitations."
+    },
+    "api_endpoint": {
+      "type": "string",
+      "format": "uri",
+      "description": "Full URL to the OData entity set endpoint. OData query options will be appended to this URL. Example: 'https://api.acme.com/odata/sales/SalesOrders'"
+    },
+    "capabilities_id": {
+      "type": "string",
+      "description": "GTS identifier of query capabilities specification. Defines supported OData query options ($filter, $orderby, etc) and their restrictions.",
+      "x-gts-ref": "gts.hypernetix.hyperspot.ax.query_capabilities.v1~"
+    },
+    "returns_schema_id": {
+      "type": "string",
+      "description": "GTS identifier of the schema defining query result structure. Used for validation, type generation, and OData metadata generation.",
+      "x-gts-ref": "gts.hypernetix.hyperspot.ax.schema.v1~hypernetix.hyperspot.ax.query_returns.v1~"
+    },
+    "contract_format": {
+      "type": "string",
+      "enum": ["native", "custom"],
+      "default": "native",
+      "description": "Query contract format. 'native' = OData v4 compliant endpoint. 'custom' = non-standard format requiring adapter plugin."
+    },
+    "adapter_id": {
+      "type": "string",
+      "description": "GTS identifier of the adapter plugin. Required when contract_format='custom'. Adapter transforms custom API format to OData-compatible responses."
+    }
+  },
+  "required": ["category", "name", "description", "api_endpoint", "capabilities_id", "returns_schema_id", "contract_format"],
+  "examples": [
+    {
+      "category": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.query.v1~hypernetix.hyperspot.ax.analytics_sales.v1",
+      "name": "Sales Orders Query",
+      "description": "Retrieves sales order data with filtering, sorting, and aggregation capabilities. Provides access to order details including customer information, revenue metrics, and order status. Supports real-time queries with sub-second response times for operational dashboards.",
+      "api_endpoint": "https://api.acme.com/odata/v1/sales/SalesOrders",
+      "capabilities_id": "gts.hypernetix.hyperspot.ax.query_capabilities.v1~hypernetix.hyperspot.ax.analytics_sales_capabilities.v1",
+      "returns_schema_id": "gts.hypernetix.hyperspot.ax.schema.v1~hypernetix.hyperspot.ax.query_returns.v1~hypernetix.hyperspot.ax.analytics_sales_schema.v1",
+      "contract_format": "native"
+    },
+    {
+      "category": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.query.v1~hypernetix.hyperspot.ax.monitoring_server_system.v1",
+      "name": "Server Metrics Query",
+      "description": "Real-time server performance metrics including CPU usage, memory consumption, disk I/O, and network traffic. Data is collected every 30 seconds from all production servers. Ideal for monitoring dashboards and alerting systems with support for time-based aggregations.",
+      "api_endpoint": "https://monitoring.acme.com/api/metrics/ServerMetrics",
+      "capabilities_id": "gts.hypernetix.hyperspot.ax.query_capabilities.v1~hypernetix.hyperspot.ax.monitoring_server_metrics_capabilities.v1",
+      "returns_schema_id": "gts.hypernetix.hyperspot.ax.schema.v1~hypernetix.hyperspot.ax.query_returns.v1~hypernetix.hyperspot.ax.monitoring_server_metrics_schema.v1",
+      "contract_format": "custom",
+      "adapter_id": "gts.hypernetix.hyperspot.ax.adapter.v1~hypernetix.hyperspot.ax.monitoring_server_prometheus_odata.v1"
+    }
+  ]
+}

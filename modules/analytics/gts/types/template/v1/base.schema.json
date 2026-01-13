@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.hypernetix.hyperspot.ax.template.v1~",
+  "type": "object",
+  "description": "Base template type defining reusable UI component configurations. Templates specify the visual presentation and behavior of widgets, selectors, and other interactive components. Each template has a configuration schema that defines its customizable properties.",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Display name of the template. Used in template selector and documentation."
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed description of what this template renders, its use cases, and configuration options."
+    },
+    "config_schema_id": {
+      "type": "string",
+      "description": "GTS identifier of the JSON Schema that defines this template's configuration structure. Specifies what properties are available for customization (e.g., colors, dimensions, behavior flags) and their validation rules.",
+      "x-gts-ref": "gts.hypernetix.hyperspot.ax.schema.v1~hypernetix.hyperspot.ax.template_config.v1~"
+    },
+    "category_id": {
+      "type": "string",
+      "description": "GTS identifier of the category this template belongs to. Used to organize templates by type (charts, tables, maps, selectors) in the template library and UI.",
+      "x-gts-ref": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.template.v1~"
+    }
+  },
+  "required": ["name", "config_schema_id"],
+  "examples": [
+    {
+      "name": "Line Chart Template",
+      "config_schema_id": "gts.hypernetix.hyperspot.ax.schema.v1~hypernetix.hyperspot.ax.template_config.v1~hypernetix.hyperspot.ax.templates_charts_line.v1",
+      "category_id": "gts.hypernetix.hyperspot.ax.category.v1~hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.charts.v1"
+    }
+  ]
+}
