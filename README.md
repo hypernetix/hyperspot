@@ -55,8 +55,11 @@ cargo run --bin hyperspot-server -- --config config/no-db.yaml run
 # Option 3: Run with mock in-memory database for testing
 cargo run --bin hyperspot-server -- --config config/quickstart.yaml --mock run
 
-# Check if server is ready
+# Check if server is ready (detailed JSON response)
 curl http://127.0.0.1:8087/health
+
+# Kubernetes-style liveness probe (simple "ok" response)
+curl http://127.0.0.1:8087/healthz
 
 # See API documentation:
 # $ make quickstart

@@ -366,8 +366,12 @@ impl ApiGateway {
             return Ok((*cached_router).clone());
         }
 
-        tracing::debug!("Building new router");
-        let mut router = Router::new().route("/health", get(web::health_check));
+        tracing::debug!("Building new router (standalone/fallback mode)");
+        // In standalone mode (no REST pipeline), register both health endpoints here.
+        // In normal operation, rest_prepare() registers these instead.
+        let mut router = Router::new()
+            .route("/health", get(web::health_check))
+            .route("/healthz", get(|| async { "ok" }));
 
         // Apply all middleware layers including auth, above the router
         router = self.apply_middleware_stack(router)?;
@@ -477,11 +481,15 @@ impl modkit::contracts::ApiGatewayCapability for ApiGateway {
         _ctx: &modkit::context::ModuleCtx,
         router: axum::Router,
     ) -> anyhow::Result<axum::Router> {
-        // Add basic health check endpoint and any global middlewares
-        let router = router.route("/healthz", get(|| async { "ok" }));
+        // Add health check endpoints:
+        // - /health: detailed JSON response with status and timestamp
+        // - /healthz: simple "ok" liveness probe (Kubernetes-style)
+        let router = router
+            .route("/health", get(web::health_check))
+            .route("/healthz", get(|| async { "ok" }));
 
         // You may attach global middlewares here (trace, compression, cors), but do not start server.
-        tracing::debug!("REST host prepared base router with health check");
+        tracing::debug!("REST host prepared base router with health check endpoints");
         Ok(router)
     }
 
