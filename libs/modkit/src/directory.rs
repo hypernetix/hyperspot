@@ -1,7 +1,7 @@
 //! Directory API - contract for service discovery and instance resolution
 //!
 //! This module re-exports the `DirectoryApi` trait and related types from
-//! `module_orchestrator_contracts` and provides the `LocalDirectoryApi` implementation.
+//! `module_orchestrator_sdk` and provides the `LocalDirectoryApi` implementation.
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -11,7 +11,7 @@ use uuid::Uuid;
 use crate::runtime::{Endpoint, ModuleInstance, ModuleManager};
 
 // Re-export all types from contracts - this is the single source of truth
-pub use module_orchestrator_contracts::{
+pub use module_orchestrator_sdk::{
     DirectoryApi, RegisterInstanceInfo, ServiceEndpoint, ServiceInstanceInfo,
 };
 

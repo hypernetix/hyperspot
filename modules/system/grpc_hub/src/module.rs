@@ -462,7 +462,7 @@ impl GrpcHub {
                     .map(|i| i.service_name.to_owned())
                     .collect();
 
-                let info = module_orchestrator_contracts::RegisterInstanceInfo {
+                let info = module_orchestrator_sdk::RegisterInstanceInfo {
                     module: module_data.module_name.clone(),
                     instance_id: instance_id.clone(),
                     grpc_services: service_names
@@ -470,7 +470,7 @@ impl GrpcHub {
                         .map(|n| {
                             (
                                 n.clone(),
-                                module_orchestrator_contracts::ServiceEndpoint::new(endpoint),
+                                module_orchestrator_sdk::ServiceEndpoint::new(endpoint),
                             )
                         })
                         .collect(),

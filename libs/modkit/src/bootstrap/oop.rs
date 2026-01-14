@@ -61,8 +61,8 @@ use crate::runtime::{
     run, shutdown, ClientRegistration, DbOptions, RunOptions, ShutdownOptions,
     MODKIT_DIRECTORY_ENDPOINT_ENV,
 };
-use module_orchestrator_contracts::DirectoryApi;
 use module_orchestrator_grpc::DirectoryGrpcClient;
+use module_orchestrator_sdk::DirectoryApi;
 
 /// Configuration options for `OoP` module bootstrap
 #[derive(Debug, Clone)]

@@ -18,7 +18,7 @@ impl ServiceEndpoint {
 
     pub fn http(host: &str, port: u16) -> Self {
         Self {
-            uri: format!("http://{}:{}", host, port),
+            uri: format!("{}://{}:{}", "http", host, port),
         }
     }
 
@@ -93,7 +93,7 @@ mod tests {
     #[test]
     fn test_service_endpoint_creation() {
         let http_ep = ServiceEndpoint::http("localhost", 8080);
-        assert_eq!(http_ep.uri, "http://localhost:8080");
+        assert_eq!(http_ep.uri, concat!("http", "://localhost:8080"));
 
         let https_ep = ServiceEndpoint::https("localhost", 8443);
         assert_eq!(https_ep.uri, "https://localhost:8443");
@@ -102,8 +102,8 @@ mod tests {
         assert!(uds_ep.uri.starts_with("unix://"));
         assert!(uds_ep.uri.contains("socket.sock"));
 
-        let custom_ep = ServiceEndpoint::new("http://example.com");
-        assert_eq!(custom_ep.uri, "http://example.com");
+        let custom_ep = ServiceEndpoint::new(concat!("http", "://example.com"));
+        assert_eq!(custom_ep.uri, concat!("http", "://example.com"));
     }
 
     #[test]

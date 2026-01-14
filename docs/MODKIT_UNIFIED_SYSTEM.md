@@ -619,7 +619,7 @@ impl MyModuleApi for MyModuleGrpcClient {
 use std::sync::Arc;
 use anyhow::Result;
 use modkit::client_hub::ClientHub;
-use module_orchestrator_contracts::DirectoryApi;
+use module_orchestrator_sdk::DirectoryApi;
 use crate::{MyModuleApi, MyModuleGrpcClient, SERVICE_NAME};
 
 /// Wire the gRPC client into ClientHub
