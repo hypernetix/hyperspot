@@ -8,7 +8,7 @@ use std::sync::Arc;
 use modkit::client_hub::{ClientHub, ClientScope};
 use modkit::gts::BaseModkitPluginV1;
 use modkit_odata::{ODataQuery, Page};
-use modkit_security::SecurityCtx;
+use modkit_security::SecurityContext;
 use tenant_resolver_sdk::{
     AccessOptions, GetParentsResponse, Tenant, TenantFilter, TenantResolverPluginClient,
     TenantResolverPluginSpecV1,
@@ -17,7 +17,7 @@ use tokio::sync::OnceCell;
 use tracing::info;
 use types_registry_sdk::{GtsEntity, ListQuery, TypesRegistryApi};
 
-// Note: This example gateway still uses SecurityCtx in its public API methods
+// Note: This example gateway still uses SecurityContext in its public API methods
 // because it uses an older SDK with hierarchical tenant model.
 
 use crate::domain::error::DomainError;
@@ -96,7 +96,7 @@ impl Service {
 
     /// Returns the root tenant.
     #[tracing::instrument(skip_all)]
-    pub async fn get_root_tenant(&self, ctx: &SecurityCtx) -> Result<Tenant, DomainError> {
+    pub async fn get_root_tenant(&self, ctx: &SecurityContext) -> Result<Tenant, DomainError> {
         let client = self.get_plugin().await?;
         client.get_root_tenant(ctx).await.map_err(DomainError::from)
     }
@@ -105,7 +105,7 @@ impl Service {
     #[tracing::instrument(skip_all)]
     pub async fn list_tenants(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         filter: TenantFilter,
         query: ODataQuery,
     ) -> Result<Page<Tenant>, DomainError> {
@@ -120,7 +120,7 @@ impl Service {
     #[tracing::instrument(skip_all, fields(tenant.id = %id))]
     pub async fn get_parents(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         id: &str,
         filter: TenantFilter,
         access_options: AccessOptions,
@@ -136,7 +136,7 @@ impl Service {
     #[tracing::instrument(skip_all, fields(tenant.id = %id, max_depth))]
     pub async fn get_children(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         id: &str,
         filter: TenantFilter,
         access_options: AccessOptions,

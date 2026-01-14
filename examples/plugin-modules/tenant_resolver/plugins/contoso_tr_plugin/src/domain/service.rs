@@ -2,7 +2,7 @@
 
 use async_trait::async_trait;
 use modkit_odata::{ODataQuery, Page, PageInfo};
-use modkit_security::SecurityCtx;
+use modkit_security::SecurityContext;
 use tenant_resolver_sdk::{
     AccessOptions, GetParentsResponse, Tenant, TenantFilter, TenantResolverError,
     TenantResolverPluginClient, TenantSpecV1, TenantStatus,
@@ -29,13 +29,13 @@ impl Service {
 
 #[async_trait]
 impl TenantResolverPluginClient for Service {
-    async fn get_root_tenant(&self, _ctx: &SecurityCtx) -> Result<Tenant, TenantResolverError> {
+    async fn get_root_tenant(&self, _ctx: &SecurityContext) -> Result<Tenant, TenantResolverError> {
         Ok(Self::root_tenant())
     }
 
     async fn list_tenants(
         &self,
-        _ctx: &SecurityCtx,
+        _ctx: &SecurityContext,
         filter: TenantFilter,
         query: ODataQuery,
     ) -> Result<Page<Tenant>, TenantResolverError> {
@@ -64,7 +64,7 @@ impl TenantResolverPluginClient for Service {
 
     async fn get_parents(
         &self,
-        _ctx: &SecurityCtx,
+        _ctx: &SecurityContext,
         id: &str,
         _filter: TenantFilter,
         _access_options: AccessOptions,
@@ -84,7 +84,7 @@ impl TenantResolverPluginClient for Service {
 
     async fn get_children(
         &self,
-        _ctx: &SecurityCtx,
+        _ctx: &SecurityContext,
         id: &str,
         _filter: TenantFilter,
         _access_options: AccessOptions,

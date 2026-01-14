@@ -5,7 +5,7 @@ use axum::Extension;
 use modkit::api::odata::OData;
 use modkit::api::prelude::*;
 use modkit::api::select::page_to_projected_json;
-use modkit_security::SecurityCtx;
+use modkit_security::SecurityContext;
 use std::sync::Arc;
 
 use crate::api::rest::dto::{
@@ -17,7 +17,7 @@ use crate::domain::service::Service;
 /// GET /tenant-resolver/v1/root
 #[tracing::instrument(skip_all)]
 pub async fn get_root_tenant(
-    Extension(sec): Extension<SecurityCtx>,
+    Extension(sec): Extension<SecurityContext>,
     Extension(svc): Extension<Arc<Service>>,
 ) -> ApiResult<Json<TenantDto>> {
     let tenant = svc.get_root_tenant(&sec).await?;
@@ -27,7 +27,7 @@ pub async fn get_root_tenant(
 /// GET /tenant-resolver/v1/tenants
 #[tracing::instrument(skip_all)]
 pub async fn list_tenants(
-    Extension(sec): Extension<SecurityCtx>,
+    Extension(sec): Extension<SecurityContext>,
     Extension(svc): Extension<Arc<Service>>,
     Query(query): Query<ListTenantsQuery>,
     OData(odata): OData,
@@ -56,7 +56,7 @@ pub async fn list_tenants(
 /// GET /tenant-resolver/v1/tenants/{id}/parents
 #[tracing::instrument(skip_all, fields(tenant.id = %id))]
 pub async fn get_parents(
-    Extension(sec): Extension<SecurityCtx>,
+    Extension(sec): Extension<SecurityContext>,
     Extension(svc): Extension<Arc<Service>>,
     Path(id): Path<String>,
     Query(query): Query<GetParentsQuery>,
@@ -71,7 +71,7 @@ pub async fn get_parents(
 /// GET /tenant-resolver/v1/tenants/{id}/children
 #[tracing::instrument(skip_all, fields(tenant.id = %id))]
 pub async fn get_children(
-    Extension(sec): Extension<SecurityCtx>,
+    Extension(sec): Extension<SecurityContext>,
     Extension(svc): Extension<Arc<Service>>,
     Path(id): Path<String>,
     Query(query): Query<GetChildrenQuery>,
