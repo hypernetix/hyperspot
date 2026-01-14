@@ -217,6 +217,8 @@ jobs:
   coverage:
     name: Code Coverage (cargo-llvm-cov)
     runs-on: ubuntu-latest
+    env:
+      RUSTUP_TOOLCHAIN: nightly-2025-12-13
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -231,7 +233,7 @@ jobs:
       - name: Install Rust toolchain (with llvm-tools)
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly-2025-12-13
+          toolchain: ${RUSTUP_TOOLCHAIN}
           components: llvm-tools-preview
 
       - name: Cache Cargo/target
@@ -280,7 +282,7 @@ jobs:
           CARGO_LLVM_COV_BUILD_DIR: llvm-cov-build
         run: |
           cargo llvm-cov clean --workspace
-          cargo +nightly llvm-cov --workspace --lcov --output-path lcov.info
+          cargo llvm-cov --workspace --lcov --output-path lcov.info
 
       # Upload to Codecov; do not fail CI if Codecov is down/misconfigured.
       - name: Upload to Codecov
