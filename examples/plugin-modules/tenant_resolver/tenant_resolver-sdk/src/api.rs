@@ -6,7 +6,7 @@
 
 use async_trait::async_trait;
 use modkit_odata::{ODataQuery, Page};
-use modkit_security::SecurityCtx;
+use modkit_security::SecurityContext;
 
 use crate::{AccessOptions, GetParentsResponse, Tenant, TenantFilter, TenantResolverError};
 
@@ -17,14 +17,14 @@ use crate::{AccessOptions, GetParentsResponse, Tenant, TenantFilter, TenantResol
 #[async_trait]
 pub trait TenantResolverClient: Send + Sync {
     /// Resolves and returns the root tenant.
-    async fn get_root_tenant(&self, ctx: &SecurityCtx) -> Result<Tenant, TenantResolverError>;
+    async fn get_root_tenant(&self, ctx: &SecurityContext) -> Result<Tenant, TenantResolverError>;
 
     /// Lists tenants with cursor-based pagination.
     ///
     /// Only `$select`, `limit`, and `cursor` are guaranteed to be supported by this example implementation.
     async fn list_tenants(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         filter: TenantFilter,
         query: ODataQuery,
     ) -> Result<Page<Tenant>, TenantResolverError>;
@@ -35,7 +35,7 @@ pub trait TenantResolverClient: Send + Sync {
     /// the direct parent to the top-level parent (i.e., root).
     async fn get_parents(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         id: &str,
         filter: TenantFilter,
         access_options: AccessOptions,
@@ -47,7 +47,7 @@ pub trait TenantResolverClient: Send + Sync {
     /// `max_depth` controls depth: 0 = unlimited, 1 = direct children only, etc.
     async fn get_children(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         id: &str,
         filter: TenantFilter,
         access_options: AccessOptions,
@@ -62,12 +62,12 @@ pub trait TenantResolverClient: Send + Sync {
 #[async_trait]
 pub trait TenantResolverPluginClient: Send + Sync {
     /// Returns the root tenant as resolved by this plugin.
-    async fn get_root_tenant(&self, ctx: &SecurityCtx) -> Result<Tenant, TenantResolverError>;
+    async fn get_root_tenant(&self, ctx: &SecurityContext) -> Result<Tenant, TenantResolverError>;
 
     /// Lists tenants with cursor-based pagination.
     async fn list_tenants(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         filter: TenantFilter,
         query: ODataQuery,
     ) -> Result<Page<Tenant>, TenantResolverError>;
@@ -78,7 +78,7 @@ pub trait TenantResolverPluginClient: Send + Sync {
     /// the direct parent to the top-level parent (i.e., root).
     async fn get_parents(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         id: &str,
         filter: TenantFilter,
         access_options: AccessOptions,
@@ -90,7 +90,7 @@ pub trait TenantResolverPluginClient: Send + Sync {
     /// `max_depth` controls depth: 0 = unlimited, 1 = direct children only, etc.
     async fn get_children(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         id: &str,
         filter: TenantFilter,
         access_options: AccessOptions,

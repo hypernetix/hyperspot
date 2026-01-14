@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use modkit_odata::{ODataQuery, Page};
-use modkit_security::SecurityCtx;
+use modkit_security::SecurityContext;
 use tenant_resolver_sdk::{
     GetParentsResponse, Tenant, TenantFilter, TenantResolverClient, TenantResolverError,
 };
@@ -26,7 +26,7 @@ impl TenantResolverGwClient {
 
 #[async_trait]
 impl TenantResolverClient for TenantResolverGwClient {
-    async fn get_root_tenant(&self, ctx: &SecurityCtx) -> Result<Tenant, TenantResolverError> {
+    async fn get_root_tenant(&self, ctx: &SecurityContext) -> Result<Tenant, TenantResolverError> {
         self.svc
             .get_root_tenant(ctx)
             .await
@@ -38,7 +38,7 @@ impl TenantResolverClient for TenantResolverGwClient {
 
     async fn list_tenants(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         filter: TenantFilter,
         query: ODataQuery,
     ) -> Result<Page<Tenant>, TenantResolverError> {
@@ -53,7 +53,7 @@ impl TenantResolverClient for TenantResolverGwClient {
 
     async fn get_parents(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         id: &str,
         filter: TenantFilter,
         access_options: tenant_resolver_sdk::AccessOptions,
@@ -69,7 +69,7 @@ impl TenantResolverClient for TenantResolverGwClient {
 
     async fn get_children(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         id: &str,
         filter: TenantFilter,
         access_options: tenant_resolver_sdk::AccessOptions,
