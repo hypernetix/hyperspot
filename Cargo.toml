@@ -38,7 +38,7 @@ members = [
     "modules/system/grpc_hub",
     "modules/file_parser",
     "modules/system/nodes_registry",
-    "modules/system/module_orchestrator/module_orchestrator-contracts",
+    "modules/system/module_orchestrator/module_orchestrator-sdk",
     "modules/system/module_orchestrator/module_orchestrator-grpc",
     "modules/system/module_orchestrator/module_orchestrator",
     "examples/modkit/users_info/user_info-sdk",

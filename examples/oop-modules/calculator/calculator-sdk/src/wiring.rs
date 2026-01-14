@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use modkit::client_hub::ClientHub;
-use module_orchestrator_contracts::DirectoryApi;
+use module_orchestrator_sdk::DirectoryApi;
 
 use crate::api::CalculatorClient;
 use crate::client::CalculatorGrpcClient;

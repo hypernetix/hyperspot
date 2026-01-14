@@ -10,7 +10,7 @@ description = "Module Orchestrator - system module for service discovery and mod
 workspace = true
 
 [dependencies]
-module_orchestrator-contracts = { path = "../module_orchestrator-contracts" }
+module_orchestrator-sdk = { path = "../module_orchestrator-sdk" }
 module_orchestrator-grpc = { path = "../module_orchestrator-grpc" }
 modkit = { path = "../../../../libs/modkit" }
 parking_lot = { workspace = true }

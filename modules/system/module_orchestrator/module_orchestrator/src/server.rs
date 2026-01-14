@@ -5,12 +5,12 @@
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
 
-use module_orchestrator_contracts::{DirectoryApi, RegisterInstanceInfo, ServiceEndpoint};
 use module_orchestrator_grpc::{
     DeregisterInstanceRequest, DirectoryService, DirectoryServiceServer, HeartbeatRequest,
     InstanceInfo, ListInstancesRequest, ListInstancesResponse, RegisterInstanceRequest,
     ResolveGrpcServiceRequest, ResolveGrpcServiceResponse,
 };
+use module_orchestrator_sdk::{DirectoryApi, RegisterInstanceInfo, ServiceEndpoint};
 
 /// gRPC service implementation that wraps `DirectoryApi`
 #[derive(Clone)]

@@ -28,7 +28,7 @@ pub struct ModuleOrchestratorConfig;
 #[modkit::module(
     name = "module_orchestrator",
     capabilities = [grpc, system],
-    client = module_orchestrator_contracts::DirectoryApi
+    client = module_orchestrator_sdk::DirectoryApi
 )]
 pub struct ModuleOrchestrator {
     config: RwLock<ModuleOrchestratorConfig>,

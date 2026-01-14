@@ -670,7 +670,7 @@ dependencies = [
  "modkit",
  "modkit-security",
  "modkit-transport-grpc",
- "module_orchestrator-contracts",
+ "module_orchestrator-sdk",
  "prost",
  "thiserror 2.0.17",
  "tokio",
@@ -1850,7 +1850,7 @@ dependencies = [
  "inventory",
  "modkit",
  "modkit-transport-grpc",
- "module_orchestrator-contracts",
+ "module_orchestrator-sdk",
  "parking_lot",
  "serde",
  "serde_json",
@@ -2939,8 +2939,8 @@ dependencies = [
  "modkit-macros",
  "modkit-odata",
  "modkit-sdk",
- "module_orchestrator-contracts",
  "module_orchestrator-grpc",
+ "module_orchestrator-sdk",
  "nix 0.29.0",
  "opentelemetry",
  "opentelemetry-otlp",
@@ -3195,21 +3195,13 @@ dependencies = [
  "async-trait",
  "inventory",
  "modkit",
- "module_orchestrator-contracts",
  "module_orchestrator-grpc",
+ "module_orchestrator-sdk",
  "parking_lot",
  "serde",
  "tokio",
  "tonic",
  "tracing",
-]
-
-[[package]]
-name = "module_orchestrator-contracts"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
 ]
 
 [[package]]
@@ -3219,13 +3211,21 @@ dependencies = [
  "anyhow",
  "async-trait",
  "modkit-transport-grpc",
- "module_orchestrator-contracts",
+ "module_orchestrator-sdk",
  "prost",
  "tokio",
  "tonic",
  "tonic-prost",
  "tonic-prost-build",
  "tracing",
+]
+
+[[package]]
+name = "module_orchestrator-sdk"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
 ]
 
 [[package]]
