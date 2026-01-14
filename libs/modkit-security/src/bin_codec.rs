@@ -1,6 +1,5 @@
-use crate::SecurityCtx;
-use bincode::config::{standard, Config};
-use bincode::error::{DecodeError, EncodeError};
+use crate::SecurityContext;
+use postcard::Error as PostcardError;
 use thiserror::Error;
 
 pub const SECCTX_BIN_VERSION: u8 = 1;
@@ -8,13 +7,7 @@ pub const SECCTX_BIN_VERSION: u8 = 1;
 #[derive(Debug, Error)]
 pub enum SecCtxEncodeError {
     #[error("security context serialization failed: {0:?}")]
-    Bincode(EncodeError),
-}
-
-impl From<EncodeError> for SecCtxEncodeError {
-    fn from(err: EncodeError) -> Self {
-        SecCtxEncodeError::Bincode(err)
-    }
+    Postcard(#[from] PostcardError),
 }
 
 #[derive(Debug, Error)]
@@ -26,42 +19,31 @@ pub enum SecCtxDecodeError {
     UnsupportedVersion(u8),
 
     #[error("security context deserialization failed: {0:?}")]
-    Bincode(DecodeError),
+    Postcard(#[from] PostcardError),
 }
 
-impl From<DecodeError> for SecCtxDecodeError {
-    fn from(err: DecodeError) -> Self {
-        SecCtxDecodeError::Bincode(err)
-    }
-}
-
-const fn secctx_config() -> impl Config {
-    standard().with_fixed_int_encoding().with_little_endian()
-}
-
-/// Encode `SecurityCtx` into a versioned binary blob.
+/// Encode `SecurityContext` into a versioned binary blob using `postcard`.
 /// This does not do any signing or encryption, it is just a transport format.
 ///
 /// # Errors
-/// Returns `SecCtxEncodeError` if bincode serialization fails.
-pub fn encode_bin(ctx: &SecurityCtx) -> Result<Vec<u8>, SecCtxEncodeError> {
+/// Returns `SecCtxEncodeError` if postcard serialization fails.
+pub fn encode_bin(ctx: &SecurityContext) -> Result<Vec<u8>, SecCtxEncodeError> {
     let mut buf = Vec::with_capacity(64);
     buf.push(SECCTX_BIN_VERSION);
 
-    let cfg = secctx_config();
-    let payload = bincode::serde::encode_to_vec(ctx, cfg)?;
+    let payload = postcard::to_allocvec(ctx)?;
     buf.extend_from_slice(&payload);
 
     Ok(buf)
 }
 
-/// Decode `SecurityCtx` from a versioned binary blob produced by `encode_bin()`.
+/// Decode `SecurityContext` from a versioned binary blob produced by `encode_bin()`.
 ///
 /// # Errors
 /// Returns `SecCtxDecodeError::Empty` if the input is empty.
 /// Returns `SecCtxDecodeError::UnsupportedVersion` if the version byte is not supported.
-/// Returns `SecCtxDecodeError::Bincode` if bincode deserialization fails.
-pub fn decode_bin(bytes: &[u8]) -> Result<SecurityCtx, SecCtxDecodeError> {
+/// Returns `SecCtxDecodeError::Postcard` if postcard deserialization fails.
+pub fn decode_bin(bytes: &[u8]) -> Result<SecurityContext, SecCtxDecodeError> {
     if bytes.is_empty() {
         return Err(SecCtxDecodeError::Empty);
     }
@@ -72,10 +54,8 @@ pub fn decode_bin(bytes: &[u8]) -> Result<SecurityCtx, SecCtxDecodeError> {
     }
 
     let payload = &bytes[1..];
-    let cfg = secctx_config();
 
-    // decode_from_slice: Result<(T, usize), DecodeError>
-    let (ctx, _len): (SecurityCtx, usize) = bincode::serde::decode_from_slice(payload, cfg)?;
+    let ctx: SecurityContext = postcard::from_bytes(payload)?;
 
     Ok(ctx)
 }

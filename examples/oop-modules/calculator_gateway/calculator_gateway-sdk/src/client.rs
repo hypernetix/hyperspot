@@ -5,7 +5,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use modkit_security::SecurityCtx;
+use modkit_security::SecurityContext;
 
 use calculator_gateway::{Service, ServiceError};
 
@@ -25,7 +25,12 @@ impl CalculatorGatewayLocalClient {
 
 #[async_trait]
 impl CalculatorGatewayClient for CalculatorGatewayLocalClient {
-    async fn add(&self, ctx: &SecurityCtx, a: i64, b: i64) -> Result<i64, CalculatorGatewayError> {
+    async fn add(
+        &self,
+        ctx: &SecurityContext,
+        a: i64,
+        b: i64,
+    ) -> Result<i64, CalculatorGatewayError> {
         self.service.add(ctx, a, b).await.map_err(convert_error)
     }
 }

@@ -1,19 +1,24 @@
 //! API trait and error types for CalculatorGateway
 
 use async_trait::async_trait;
-use modkit_security::SecurityCtx;
+use modkit_security::SecurityContext;
 
 /// Calculator Gateway API trait
 ///
 /// A simple service that performs addition operations.
-/// All methods require a SecurityCtx for authorization.
+/// All methods require a SecurityContext for authorization.
 ///
 /// This trait is implemented by `CalculatorGatewayLocalClient` which
 /// delegates to the module's internal Service.
 #[async_trait]
 pub trait CalculatorGatewayClient: Send + Sync {
     /// Add two numbers and return the sum.
-    async fn add(&self, ctx: &SecurityCtx, a: i64, b: i64) -> Result<i64, CalculatorGatewayError>;
+    async fn add(
+        &self,
+        ctx: &SecurityContext,
+        a: i64,
+        b: i64,
+    ) -> Result<i64, CalculatorGatewayError>;
 }
 
 /// Error type for CalculatorGateway operations

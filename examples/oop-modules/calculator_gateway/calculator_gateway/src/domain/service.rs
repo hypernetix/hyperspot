@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use calculator_sdk::CalculatorClient;
 use modkit::client_hub::ClientHub;
-use modkit_security::SecurityCtx;
+use modkit_security::SecurityContext;
 use tracing::{debug, instrument};
 
 /// Error type for Service operations.
@@ -40,7 +40,7 @@ impl Service {
 
     /// Add two numbers by delegating to calculator service.
     #[instrument(skip(self, ctx), fields(a, b))]
-    pub async fn add(&self, ctx: &SecurityCtx, a: i64, b: i64) -> Result<i64, ServiceError> {
+    pub async fn add(&self, ctx: &SecurityContext, a: i64, b: i64) -> Result<i64, ServiceError> {
         debug!("Resolving calculator client from ClientHub");
 
         let calculator = self.client_hub.get::<dyn CalculatorClient>().map_err(|e| {

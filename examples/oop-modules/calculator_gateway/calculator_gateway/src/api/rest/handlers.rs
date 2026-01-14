@@ -5,7 +5,7 @@ use std::sync::Arc;
 use axum::{Extension, Json};
 
 use modkit::api::problem::{internal_error, Problem};
-use modkit_security::SecurityCtx;
+use modkit_security::SecurityContext;
 
 use crate::domain::Service;
 
@@ -16,7 +16,7 @@ use super::dto::{AddRequest, AddResponse};
 /// Accepts a JSON body with operands and returns their sum.
 /// Delegates to Service directly.
 pub async fn handle_add(
-    Extension(ctx): Extension<SecurityCtx>,
+    Extension(ctx): Extension<SecurityContext>,
     Extension(service): Extension<Arc<Service>>,
     Json(req): Json<AddRequest>,
 ) -> Result<Json<AddResponse>, Problem> {
