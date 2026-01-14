@@ -6,7 +6,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use tonic::transport::Channel;
 
-use modkit_security::SecurityCtx;
+use modkit_security::SecurityContext;
 use modkit_transport_grpc::attach_secctx;
 use modkit_transport_grpc::client::{connect_with_retry, GrpcClientConfig};
 
@@ -32,14 +32,14 @@ impl CalculatorGrpcClient {
 
 #[async_trait]
 impl CalculatorClient for CalculatorGrpcClient {
-    async fn add(&self, ctx: &SecurityCtx, a: i64, b: i64) -> Result<i64, CalculatorError> {
+    async fn add(&self, ctx: &SecurityContext, a: i64, b: i64) -> Result<i64, CalculatorError> {
         let mut client = self.inner.clone();
 
-        // Build request with SecurityCtx in metadata
+        // Build request with SecurityContext in metadata
         let proto_req = AddRequest { a, b };
         let mut request = tonic::Request::new(proto_req);
 
-        // Attach SecurityCtx to metadata
+        // Attach SecurityContext to metadata
         attach_secctx(request.metadata_mut(), ctx)
             .map_err(|e| CalculatorError::Internal(e.to_string()))?;
 
