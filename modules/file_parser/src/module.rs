@@ -6,8 +6,10 @@ use modkit::{Module, ModuleCtx, RestfulModule};
 use tracing::{debug, info};
 
 use crate::config::FileParserConfig;
-use crate::domain::parsers::{DocxParser, HtmlParser, PdfParser, PlainTextParser, StubParser};
 use crate::domain::service::{FileParserService, ServiceConfig};
+use crate::infra::parsers::{
+    DocxParser, HtmlParser, ImageParser, PdfParser, PlainTextParser, StubParser,
+};
 
 /// Main module struct for file parsing
 #[modkit::module(
@@ -56,6 +58,7 @@ impl Module for FileParserModule {
             Arc::new(HtmlParser::new()),
             Arc::new(PdfParser::new()),
             Arc::new(DocxParser::new()),
+            Arc::new(ImageParser::new()),
             Arc::new(StubParser::new()),
         ];
 
