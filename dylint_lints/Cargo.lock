@@ -680,16 +680,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "de0305_no_panics_in_domain"
-version = "0.1.0"
-dependencies = [
- "clippy_utils",
- "dylint_linting",
- "dylint_testing",
- "lint_utils",
-]
-
-[[package]]
 name = "de0308_no_http_in_domain"
 version = "0.1.0"
 dependencies = [
@@ -734,26 +724,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "de0701_no_unwrap"
-version = "0.1.0"
-dependencies = [
- "clippy_utils",
- "dylint_linting",
- "dylint_testing",
- "lint_utils",
-]
-
-[[package]]
-name = "de0702_no_expect"
-version = "0.1.0"
-dependencies = [
- "clippy_utils",
- "dylint_linting",
- "dylint_testing",
- "lint_utils",
-]
-
-[[package]]
 name = "de0703_no_hardcoded_secrets"
 version = "0.1.0"
 dependencies = [
@@ -764,13 +734,25 @@ dependencies = [
 ]
 
 [[package]]
-name = "de0705_no_sql_injection"
+name = "de0705_no_prebuild_sql_queries"
 version = "0.1.0"
 dependencies = [
  "clippy_utils",
  "dylint_linting",
  "dylint_testing",
  "lint_utils",
+]
+
+[[package]]
+name = "de0706_no_direct_sqlx"
+version = "0.1.0"
+dependencies = [
+ "clippy_utils",
+ "dylint_linting",
+ "dylint_testing",
+ "lint_utils",
+ "sea-orm",
+ "sqlx",
 ]
 
 [[package]]

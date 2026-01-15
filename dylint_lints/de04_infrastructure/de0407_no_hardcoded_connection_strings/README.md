@@ -22,29 +22,58 @@ let mongo = "mongodb://admin:secret@db.example.com/myapp";
 ```
 
 ```rust
-// ❌ Bad - hardcoded with credentials
-const DATABASE_URL: &str = "postgresql://app:secretpass@prod.db.internal:5432/production";
+// ❌ Bad - hardcoded in code even without credentials
+const DATABASE_URL: &str = "postgresql://localhost:5432/production";
+let pool = PgPool::connect(DATABASE_URL).await?;
 ```
 
 Use instead:
 
 ```rust
-// ✅ Good - load from environment
-let db_url = std::env::var("DATABASE_URL")
-    .expect("DATABASE_URL must be set");
-let cache_url = std::env::var("REDIS_URL")?;
+// ✅ Good - configuration struct with defaults
+// File: src/config.rs
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ModuleConfig {
+    #[serde(default = "default_audit_url")]
+    pub audit_base_url: String,
+    #[serde(default = "default_notifications_url")]
+    pub notifications_base_url: String,
+}
+
+fn default_audit_url() -> String {
+    "http://audit.local".to_owned()
+}
+
+fn default_notifications_url() -> String {
+    "http://notifications.local".to_owned()
+}
 ```
 
 ```rust
-// ✅ Good - load from configuration
-#[derive(Deserialize)]
-struct Config {
-    database_url: String,
-    redis_url: String,
-}
+// ✅ Good - load config and database from ModuleCtx
+// File: src/module.rs
+use modkit::{Module, ModuleCtx, DatabaseCapability};
+use url::Url;
 
-let config = Config::from_env()?;
-let db = Database::connect(&config.database_url).await?;
+impl Module for MyModule {
+    async fn init(&self, ctx: &ModuleCtx) -> anyhow::Result<()> {
+        // Load typed configuration
+        let cfg: ModuleConfig = ctx.config()?;
+        
+        // Get database connection with security enforcement
+        let db = ctx.db_required()?;
+        let conn = db.sea_secure();  // SecureConn for all queries
+        
+        // Parse URLs from config
+        let audit_url = Url::parse(&cfg.audit_base_url)?;
+        let notify_url = Url::parse(&cfg.notifications_base_url)?;
+        
+        Ok(())
+    }
+}
 ```
 
 ### Configuration

@@ -37,23 +37,63 @@ let token = encode(&claims, JWT_SECRET.as_bytes())?;
 Use instead:
 
 ```rust
-// ✅ Good - load from environment
-let api_key = std::env::var("STRIPE_API_KEY")
-    .expect("STRIPE_API_KEY must be set");
-let client = StripeClient::new(&api_key);
+// ✅ Good - configuration struct with serde
+// File: src/config.rs
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ModuleConfig {
+    #[serde(default = "default_audit_url")]
+    pub audit_base_url: String,
+    #[serde(default = "default_notifications_url")]
+    pub notifications_base_url: String,
+}
+
+impl Default for ModuleConfig {
+    fn default() -> Self {
+        Self {
+            audit_base_url: default_audit_url(),
+            notifications_base_url: default_notifications_url(),
+        }
+    }
+}
+
+fn default_audit_url() -> String {
+    "http://audit.local".to_owned()
+}
+
+fn default_notifications_url() -> String {
+    "http://notifications.local".to_owned()
+}
 ```
 
 ```rust
-// ✅ Good - load from secure config
-let config = Config::from_env()?;
-let connection = connect_db(&config.db_url, &config.db_password);
-```
+// ✅ Good - load configuration from ModuleCtx
+// File: src/module.rs
+use modkit::{Module, ModuleCtx, TracedClient};
+use url::Url;
 
-```rust
-// ✅ Good - use secret management service
-let secrets = SecretManager::new().await?;
-let jwt_secret = secrets.get("jwt_secret").await?;
-let token = encode(&claims, jwt_secret.as_bytes())?;
+impl Module for MyModule {
+    async fn init(&self, ctx: &ModuleCtx) -> anyhow::Result<()> {
+        // Load typed configuration from YAML/environment
+        let cfg: ModuleConfig = ctx.config()?;
+        
+        // Parse service URLs from config
+        let audit_url = Url::parse(&cfg.audit_base_url)
+            .map_err(|e| anyhow::anyhow!("invalid audit_base_url: {e}"))?;
+        let notify_url = Url::parse(&cfg.notifications_base_url)
+            .map_err(|e| anyhow::anyhow!("invalid notifications_base_url: {e}"))?;
+        
+        // Create traced HTTP client
+        let traced_client = TracedClient::default();
+        
+        // Create adapter with injected dependencies
+        let audit_adapter = HttpAuditClient::new(traced_client, audit_url, notify_url);
+        
+        Ok(())
+    }
+}
 ```
 
 ### Configuration

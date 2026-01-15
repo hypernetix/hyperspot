@@ -16,16 +16,7 @@ Domain modules should be transport-agnostic:
 
 ```rust
 // ❌ Bad - HTTP types in domain
-// File: src/domain/validation.rs
-use http::StatusCode;
-
-pub fn check_result() -> StatusCode {
-    StatusCode::OK  // HTTP-specific
-}
-```
-
-```rust
-// ❌ Bad - HTTP status in domain error
+// File: src/domain/error.rs
 use http::StatusCode;
 
 pub enum DomainError {
@@ -33,24 +24,58 @@ pub enum DomainError {
 }
 ```
 
+```rust
+// ❌ Bad - HTTP status in domain function
+use axum::http::StatusCode;
+
+pub fn validate_user() -> StatusCode {
+    StatusCode::OK  // Domain should not return HTTP types
+}
+```
+
 Use instead:
 
 ```rust
-// ✅ Good - domain errors converted in API layer
-// File: src/domain/validation.rs
-pub enum DomainResult {
-    Success,
-    NotFound,
-    InvalidData,
-}
+// ✅ Good - domain errors are transport-agnostic
+// File: src/domain/error.rs
+use thiserror::Error;
+use uuid::Uuid;
 
-// File: src/api/rest/handlers.rs
-impl From<DomainResult> for StatusCode {
-    fn from(result: DomainResult) -> Self {
-        match result {
-            DomainResult::Success => StatusCode::OK,
-            DomainResult::NotFound => StatusCode::NOT_FOUND,
-            DomainResult::InvalidData => StatusCode::BAD_REQUEST,
+#[derive(Error, Debug)]
+pub enum DomainError {
+    #[error("User not found: {id}")]
+    UserNotFound { id: Uuid },
+    
+    #[error("Email '{email}' already exists")]
+    EmailAlreadyExists { email: String },
+    
+    #[error("Validation failed: {field}: {message}")]
+    Validation { field: String, message: String },
+    
+    #[error("Database error: {message}")]
+    Database { message: String },
+}
+```
+
+```rust
+// ✅ Good - API layer handles HTTP mapping
+// File: src/api/rest/error.rs
+use modkit::api::problem::Problem;
+use crate::domain::error::DomainError;
+
+impl From<DomainError> for Problem {
+    fn from(e: DomainError) -> Self {
+        match &e {
+            DomainError::UserNotFound { id } => {
+                ErrorCode::user_not_found_v1()
+                    .with_context(format!("User {id} not found"), "/", None)
+            }
+            DomainError::Validation { .. } => {
+                ErrorCode::validation_error_v1()
+                    .with_context(e.to_string(), "/", None)
+            }
+            _ => ErrorCode::internal_error_v1()
+                    .with_context("Internal error", "/", None)
         }
     }
 }
