@@ -24,6 +24,7 @@ dylint_linting::declare_pre_expansion_lint! {
 }
 
 impl EarlyLintPass for De0803ApiSnakeCase {
+    /// Checks structs and enums in api/rest folders for snake_case compliance.
     fn check_item(&mut self, cx: &EarlyContext<'_>, item: &Item) {
         if !is_in_api_rest_folder(cx.sess().source_map(), item.span) {
             return;
@@ -45,6 +46,9 @@ impl EarlyLintPass for De0803ApiSnakeCase {
     }
 }
 
+/// Extracts values from serde attributes matching the given name.
+///
+/// Returns spans and string values for all matching attributes.
 fn find_serde_attribute_value(attrs: &[Attribute], attribute_name: &str) -> Vec<(rustc_span::Span, String)> {
     let mut results = Vec::new();
     
@@ -77,6 +81,7 @@ fn find_serde_attribute_value(attrs: &[Attribute], attribute_name: &str) -> Vec<
     results
 }
 
+/// Validates that `rename_all` attributes use snake_case variants.
 fn check_type_rename_all(cx: &EarlyContext<'_>, attrs: &[Attribute]) {
     for (span, value) in find_serde_attribute_value(attrs, "rename_all") {
         if value != "snake_case" && value != "SCREAMING_SNAKE_CASE" && value != "UPPERCASE" {
@@ -94,6 +99,7 @@ fn check_type_rename_all(cx: &EarlyContext<'_>, attrs: &[Attribute]) {
     }
 }
 
+/// Validates that field `rename` attributes use snake_case.
 fn check_fields(cx: &EarlyContext<'_>, variant_data: &VariantData) {
     for field in variant_data.fields() {
         for (span, value) in find_serde_attribute_value(&field.attrs, "rename") {
@@ -113,6 +119,7 @@ fn check_fields(cx: &EarlyContext<'_>, variant_data: &VariantData) {
     }
 }
 
+/// Checks if a string uses valid snake_case, SCREAMING_SNAKE_CASE, or plain upper/lowercase.
 fn is_valid_case(s: &str) -> bool {
     if s.is_empty() {
         return false;
