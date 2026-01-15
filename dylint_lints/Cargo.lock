@@ -449,6 +449,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "de0803_api_snake_case"
+version = "0.1.0"
+dependencies = [
+ "clippy_utils",
+ "dylint_linting",
+ "dylint_testing",
+ "lint_utils",
+ "serde",
+]
+
+[[package]]
 name = "de0901_gts_string_pattern"
 version = "0.1.0"
 dependencies = [

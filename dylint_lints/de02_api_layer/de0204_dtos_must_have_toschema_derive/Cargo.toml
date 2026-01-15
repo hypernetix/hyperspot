@@ -22,7 +22,7 @@ lint_utils.workspace = true
 
 [dev-dependencies]
 dylint_testing.workspace = true
-serde = { version = "1.0", features = ["derive"] }
+serde.workspace = true
 utoipa = "5.2.0"
 
 [package.metadata.rust-analyzer]
