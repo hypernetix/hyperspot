@@ -9,7 +9,7 @@ The `types-registry` module provides:
 - **Two-phase registration**: Configuration phase (no validation) → Production phase (full validation)
 - **GTS entity storage**: In-memory storage using `gts-rust` for Phase 1.1
 - **REST API**: Endpoints for registering, listing, and retrieving GTS entities
-- **ClientHub integration**: Other modules access via `hub.get::<dyn TypesRegistryApi>()?`
+- **ClientHub integration**: Other modules access via `hub.get::<dyn TypesRegistryClient>()?`
 
 ## Architecture
 
@@ -20,7 +20,7 @@ types-registry/
 │   ├── domain/            # Domain layer (error, repo trait, service)
 │   ├── infra/storage/     # Infrastructure (in-memory repository)
 │   ├── config.rs          # Module configuration
-│   ├── local_client.rs    # TypesRegistryApi implementation
+│   ├── local_client.rs    # TypesRegistryClient implementation
 │   ├── module.rs          # Module declaration
 │   └── lib.rs             # Crate root
 └── Cargo.toml
@@ -31,10 +31,10 @@ types-registry/
 ### Via ClientHub (Rust)
 
 ```rust
-use types_registry_sdk::TypesRegistryApi;
+use types_registry_sdk::TypesRegistryClient;
 
 // Get the client from ClientHub
-let client = hub.get::<dyn TypesRegistryApi>()?;
+let client = hub.get::<dyn TypesRegistryClient>()?;
 
 // Register entities
 let results = client.register(&ctx, entities).await?;

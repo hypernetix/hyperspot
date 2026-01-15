@@ -253,7 +253,6 @@ async fn run_server(config: AppConfig, args: Cli) -> Result<()> {
 
     // Run the ModKit runtime with the root cancellation token.
     // Shutdown is driven by the signal handler spawned above, not by ShutdownOptions::Signals.
-    // Note: DirectoryApi is registered by the ModuleOrchestrator system module, not here.
     // OoP modules are spawned after the start phase (once grpc_hub has bound its port).
     let run_options = RunOptions {
         modules_cfg: Arc::new(config),

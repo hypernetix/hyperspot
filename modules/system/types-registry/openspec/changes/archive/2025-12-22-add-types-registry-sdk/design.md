@@ -13,7 +13,7 @@ No implementation logic — that lives in the module crate.
 
 ## Goals
 
-- Define `TypesRegistryApi` trait for inter-module communication
+- Define `TypesRegistryClient` trait for inter-module communication
 - Provide `GtsEntity` model using gts-rust types
 - Define `ListQuery` for filtering operations
 - Define `TypesRegistryError` for error handling
@@ -37,11 +37,11 @@ No implementation logic — that lives in the module crate.
 
 ### 2. Async Trait with Object Safety
 
-**Decision**: Use `#[async_trait]` and ensure `TypesRegistryApi` is object-safe for `Arc<dyn TypesRegistryApi>`.
+**Decision**: Use `#[async_trait]` and ensure `TypesRegistryClient` is object-safe for `Arc<dyn TypesRegistryClient>`.
 
 ```rust
 #[async_trait]
-pub trait TypesRegistryApi: Send + Sync {
+pub trait TypesRegistryClient: Send + Sync {
     async fn register(&self, ctx: &SecurityCtx, entities: Vec<Value>) -> Result<Vec<RegisterResult>, TypesRegistryError>;
     async fn list(&self, ctx: &SecurityCtx, query: ListQuery) -> Result<Vec<GtsEntity>, TypesRegistryError>;
     async fn get(&self, ctx: &SecurityCtx, gts_id: &str) -> Result<GtsEntity, TypesRegistryError>;
@@ -49,7 +49,7 @@ pub trait TypesRegistryApi: Send + Sync {
 ```
 
 **Rationale**:
-- Enables ClientHub registration: `hub.register::<dyn TypesRegistryApi>(api)`
+- Enables ClientHub registration: `hub.register::<dyn TypesRegistryClient>(api)`
 - Consistent with other HyperSpot SDK traits
 - `register` returns `Vec<RegisterResult>` for per-item error reporting in batch operations
 
@@ -182,7 +182,7 @@ types-registry-sdk/
 ├── Cargo.toml
 └── src/
     ├── lib.rs          # Re-exports
-    ├── api.rs          # TypesRegistryApi trait
+    ├── api.rs          # TypesRegistryClient trait
     ├── models.rs       # GtsEntity, GtsEntityKind, ListQuery
     └── error.rs        # TypesRegistryError
 ```

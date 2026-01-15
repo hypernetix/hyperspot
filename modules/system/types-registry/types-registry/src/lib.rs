@@ -15,16 +15,13 @@
 // === PUBLIC API (from SDK) ===
 pub use types_registry_sdk::{
     DynGtsEntity, DynRegisterResult, GtsEntity, GtsInstanceEntity, GtsTypeEntity, InstanceObject,
-    ListQuery, RegisterResult, RegisterSummary, SegmentMatchScope, TypeSchema, TypesRegistryApi,
+    ListQuery, RegisterResult, RegisterSummary, SegmentMatchScope, TypeSchema, TypesRegistryClient,
     TypesRegistryError,
 };
 
 // === MODULE DEFINITION ===
 pub mod module;
 pub use module::TypesRegistryModule;
-
-// === LOCAL CLIENT ===
-pub mod local_client;
 
 // === CONFIGURATION ===
 pub mod config;

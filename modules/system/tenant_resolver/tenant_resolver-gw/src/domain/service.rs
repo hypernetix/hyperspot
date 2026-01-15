@@ -14,7 +14,7 @@ use modkit::gts::BaseModkitPluginV1;
 use modkit_security::SecurityContext;
 use tokio::sync::OnceCell;
 use tracing::info;
-use types_registry_sdk::{GtsEntity, ListQuery, TypesRegistryApi};
+use types_registry_sdk::{GtsEntity, ListQuery, TypesRegistryClient};
 use uuid::Uuid;
 
 use super::error::DomainError;
@@ -67,7 +67,7 @@ impl Service {
 
         let registry = self
             .hub
-            .get::<dyn TypesRegistryApi>()
+            .get::<dyn TypesRegistryClient>()
             .map_err(|e| DomainError::TypesRegistryUnavailable(e.to_string()))?;
 
         let plugin_type_id = TenantResolverPluginSpecV1::gts_schema_id().clone();

@@ -19,7 +19,7 @@ use crate::models::{GtsEntity, ListQuery, RegisterResult};
 /// GTS schemas and instances are global resources (not tenant-scoped),
 /// so no security context is required for these operations.
 #[async_trait]
-pub trait TypesRegistryApi: Send + Sync {
+pub trait TypesRegistryClient: Send + Sync {
     /// Register GTS entities (types or instances) in batch.
     ///
     /// Each JSON value in the input should contain a valid GTS entity

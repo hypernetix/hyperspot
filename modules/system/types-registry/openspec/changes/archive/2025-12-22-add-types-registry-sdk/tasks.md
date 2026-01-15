@@ -5,7 +5,7 @@
 - [x] 1.1 Create `types-registry-sdk/Cargo.toml` with minimal dependencies
 - [x] 1.2 Define `GtsEntity` model using `GtsIdSegment` from gts-rust
 - [x] 1.3 Define `TypesRegistryError` enum
-- [x] 1.4 Define `TypesRegistryApi` trait with 3 methods:
+- [x] 1.4 Define `TypesRegistryClient` trait with 3 methods:
   - `register(&SecurityCtx, Vec<serde_json::Value>) -> Result<Vec<GtsEntity>>` (batch registration)
   - `list(&SecurityCtx, ListQuery) -> Result<Vec<GtsEntity>>`
   - `get(&SecurityCtx, &str) -> Result<GtsEntity>`

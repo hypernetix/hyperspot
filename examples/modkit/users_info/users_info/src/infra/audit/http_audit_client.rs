@@ -10,8 +10,8 @@ use modkit::TracedClient;
 
 /// Single HTTP adapter implementing the `AuditPort`.
 /// Holds two base URLs:
-///  - `audit_base` (e.g., <http://audit.local>)
-///  - `notify_base` (e.g., <http://notifications.local>)
+///  - `audit_base` (e.g., <https://audit.local>)
+///  - `notify_base` (e.g., <https://notifications.local>)
 pub struct HttpAuditClient {
     client: TracedClient,
     audit_base: Url,

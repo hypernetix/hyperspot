@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use types_registry_sdk::{
-    GtsEntity, ListQuery, RegisterResult, TypesRegistryApi, TypesRegistryError,
+    GtsEntity, ListQuery, RegisterResult, TypesRegistryClient, TypesRegistryError,
 };
 
 use crate::domain::service::TypesRegistryService;
@@ -27,7 +27,7 @@ impl TypesRegistryLocalClient {
 }
 
 #[async_trait]
-impl TypesRegistryApi for TypesRegistryLocalClient {
+impl TypesRegistryClient for TypesRegistryLocalClient {
     async fn register(
         &self,
         entities: Vec<serde_json::Value>,
@@ -51,6 +51,8 @@ mod tests {
     use gts::GtsConfig;
     use serde_json::json;
 
+    const JSON_SCHEMA_DRAFT_07: &str = "https://json-schema.org/draft-07/schema#";
+
     fn default_config() -> GtsConfig {
         crate::config::TypesRegistryConfig::default().to_gts_config()
     }
@@ -70,7 +72,7 @@ mod tests {
 
         let entity = json!({
             "$id": "gts://gts.acme.core.events.user_created.v1~",
-            "$schema": "http://json-schema.org/draft-07/schema#",
+            "$schema": JSON_SCHEMA_DRAFT_07,
             "type": "object",
             "properties": {
                 "userId": { "type": "string" }
@@ -96,12 +98,12 @@ mod tests {
 
         let type1 = json!({
             "$id": "gts://gts.acme.core.events.user_created.v1~",
-            "$schema": "http://json-schema.org/draft-07/schema#",
+            "$schema": JSON_SCHEMA_DRAFT_07,
             "type": "object"
         });
         let type2 = json!({
             "$id": "gts://gts.globex.core.events.order_placed.v1~",
-            "$schema": "http://json-schema.org/draft-07/schema#",
+            "$schema": JSON_SCHEMA_DRAFT_07,
             "type": "object"
         });
 

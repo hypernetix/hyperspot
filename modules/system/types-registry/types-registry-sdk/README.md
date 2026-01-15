@@ -6,7 +6,7 @@ SDK crate for the Types Registry module, providing the public API contracts for 
 
 This crate defines the transport-agnostic interface for the Types Registry module:
 
-- **`TypesRegistryApi`** - Async trait for inter-module communication
+- **`TypesRegistryClient`** - Async trait for inter-module communication
 - **`GtsEntity`** - Model representing registered GTS entities (types and instances)
 - **`ListQuery`** - Query builder for filtering entity listings
 - **`TypesRegistryError`** - Error types for all operations
@@ -18,10 +18,10 @@ This crate defines the transport-agnostic interface for the Types Registry modul
 Consumers obtain the client from `ClientHub`:
 
 ```rust
-use types_registry_sdk::{TypesRegistryApi, ListQuery};
+use types_registry_sdk::{TypesRegistryClient, ListQuery};
 
 // Get the client from ClientHub
-let client = hub.get::<dyn TypesRegistryApi>()?;
+let client = hub.get::<dyn TypesRegistryClient>()?;
 ```
 
 ### Registering Entities

@@ -7,7 +7,7 @@ use hs_tenant_resolver_sdk::{TenantResolverGatewayClient, TenantResolverPluginSp
 use modkit::context::ModuleCtx;
 use modkit::Module;
 use tracing::info;
-use types_registry_sdk::TypesRegistryApi;
+use types_registry_sdk::TypesRegistryClient;
 
 use crate::config::TenantResolverGwConfig;
 use crate::domain::{Service, TenantResolverGwLocalClient};
@@ -47,7 +47,7 @@ impl Module for TenantResolverGateway {
         info!(vendor = %cfg.vendor, "Initializing tenant_resolver gateway");
 
         // Register plugin schema in types-registry
-        let registry = ctx.client_hub().get::<dyn TypesRegistryApi>()?;
+        let registry = ctx.client_hub().get::<dyn TypesRegistryClient>()?;
         let schema_str = TenantResolverPluginSpecV1::gts_schema_with_refs_as_string();
         let schema_json: serde_json::Value = serde_json::from_str(&schema_str)?;
         let _ = registry.register(vec![schema_json]).await?;
