@@ -33,9 +33,142 @@ content: [
 | tool_call | id, schema_id, arguments | output |
 | tool_result | tool_call_id, result | input |
 
-**Media**: Consumer uploads to FileStorage, provides URLs. Gateway fetches content before sending to provider. Generated media stored via FileStorage, URLs returned.
+**Media input**:
+- FileStorage URL — Gateway fetches content before sending to provider
+- Data URL (`data:<mime>;base64,...`) — Gateway passes directly to provider
+
+**Media output**: Gateway stores via FileStorage, returns URL.
 
 **Tools**: Consumer defines tools via GTS Schema ID. Gateway resolves schema before sending to provider.
+
+---
+
+## Response Format
+
+Gateway fully normalizes `chat_completion` responses to a unified format. Other endpoints (`embed`, `list_models`, `get_job`) have endpoint-specific response structures.
+
+```plaintext
+response: {
+  content: [...],           // normalized content blocks
+  usage: {                  // normalized usage
+    prompt_tokens: 100,
+    completion_tokens: 50,
+    total_tokens: 150
+  },
+  metadata: {               // normalized metadata
+    model: "gpt-4",
+    provider: "openai",
+    latency_ms: 234,
+    request_id: "req_abc123"
+  },
+  extensions: {             // provider-specific data (optional)
+    "openai": { ... },
+    "anthropic": { ... }
+  }
+}
+```
+
+### Normalization Guarantees
+
+| Field | Guarantee |
+|-------|-----------|
+| `content` | Always present, unified block format |
+| `usage` | Always present, consistent field names |
+| `metadata.model` | Always present, model ID used |
+| `metadata.provider` | Always present, identifies source |
+| `metadata.latency_ms` | Always present, request duration |
+| `metadata.request_id` | Always present, for tracing |
+| `metadata.fallback_used` | Optional, true if fallback was triggered |
+| `metadata.original_model` | Optional, requested model before fallback |
+| `extensions` | Optional, provider-keyed |
+
+### Extensions
+
+Provider-specific data that doesn't fit the normalized schema goes into `extensions`. Consumers should not depend on extensions for core functionality.
+
+**Response extensions** (examples):
+```plaintext
+extensions: {
+  "anthropic": {
+    stop_reason: "end_turn",
+    cache_creation_input_tokens: 1000,
+    cache_read_input_tokens: 500
+  },
+  "openai": {
+    system_fingerprint: "fp_abc123",
+    logprobs: [...]
+  }
+}
+```
+
+**Request extensions** (provider hints):
+```plaintext
+provider_hints: {
+  "anthropic": {
+    cache_control: { type: "ephemeral" }
+  },
+  "openai": {
+    logprobs: true,
+    top_logprobs: 5
+  }
+}
+```
+
+**Principles**:
+- Extensions are optional — consumers can ignore them
+- Extensions are type-safe — keyed by provider name
+- Extensions don't affect Gateway logic — pass-through only
+- Model Discovery (S1.12) advertises available extensions per model
+
+---
+
+## Streaming Format
+
+Gateway normalizes streaming events to a unified SSE format.
+
+**Event types**:
+| Event | Description |
+|-------|-------------|
+| `delta` | Content chunk (text, tool_call) |
+| `usage` | Final usage metrics (last event before done) |
+| `done` | Stream completion |
+| `error` | Error occurred |
+
+**Delta event**:
+```plaintext
+event: delta
+data: {
+  type: "text_delta" | "tool_call_delta",
+  index: 0,           // content block index
+  text?: "...",       // for text_delta
+  tool_call?: {...}   // for tool_call_delta
+}
+```
+
+**Usage event** (always emitted before done):
+```plaintext
+event: usage
+data: {
+  prompt_tokens: 100,
+  completion_tokens: 50,
+  total_tokens: 150
+}
+```
+
+**Done event**:
+```plaintext
+event: done
+data: {
+  finish_reason: "stop" | "tool_calls" | "length" | "content_filter",
+  metadata: { model: "gpt-4", provider: "openai", latency_ms: 234, request_id: "..." },
+  extensions: { ... }
+}
+```
+
+**Normalization**:
+- All providers mapped to same event types
+- `tool_calls` always streamed after text (consistent ordering)
+- `usage` always in final chunk (not deltas)
 
 ---
 
@@ -47,6 +180,8 @@ content: [
 | Credential Resolver | API keys for providers |
 | Type Registry | Read GTS schemas by ID (tool definitions) |
 | Usage Tracker | Token/cost reporting |
+| Hook System | `llm.pre_call`, `llm.post_response` interceptors |
+| Audit | Request/response logging |
 
 ---
 
@@ -120,7 +255,7 @@ sequenceDiagram
 
 ### [ ] S1.2 Streaming Chat Completion
 
-Same as S1.1, but response is streamed via SSE. Gateway forwards provider stream events to consumer, emits final usage on completion.
+Same as S1.1, but response is streamed via SSE. Gateway normalizes provider events to unified format (see Streaming Format section).
 
 ```mermaid
 sequenceDiagram
@@ -130,12 +265,13 @@ sequenceDiagram
 
     C->>GW: chat_completion(stream=true)
     GW->>P: Provider streaming call
-    loop Token chunks
-        P-->>GW: delta
-        GW-->>C: SSE: delta
+    loop Content chunks
+        P-->>GW: provider delta
+        GW-->>C: SSE: delta (normalized)
     end
-    P-->>GW: done + usage
-    GW-->>C: SSE: done + usage
+    P-->>GW: completion
+    GW-->>C: SSE: usage
+    GW-->>C: SSE: done
 ```
 
 **Edge cases**:
@@ -407,6 +543,8 @@ sequenceDiagram
 
 **Parameters**: duration, resolution, aspect_ratio (via request params)
 
+**Async mode**: Video generation is often long-running. Use `async=true` to get job_id immediately and poll for result (see S1.14 Async Jobs).
+
 ---
 
 ### [ ] S1.10 Tool/Function Calling
@@ -493,6 +631,23 @@ sequenceDiagram
 - capabilities: chat, vision, audio, video, embeddings, tools, json_mode
 - context_window, max_output_tokens
 - pricing (per 1M tokens)
+- supported_extensions: provider-specific features available for this model
+
+**Example**:
+```plaintext
+{
+  id: "claude-3-5-sonnet",
+  name: "Claude 3.5 Sonnet",
+  provider: "anthropic",
+  capabilities: ["chat", "vision", "tools", "json_mode"],
+  context_window: 200000,
+  max_output_tokens: 8192,
+  pricing: { prompt: 3.0, completion: 15.0 },
+  supported_extensions: {
+    "anthropic": ["cache_control", "extended_thinking"]
+  }
+}
+```
 
 ---
 
@@ -524,7 +679,26 @@ sequenceDiagram
 
 ### [ ] S1.14 Async Jobs
 
-For long-running operations (video generation), Gateway generates own job ID, stores mapping to provider job ID.
+Consumer explicitly requests async mode via `async=true`. Gateway abstracts provider behavior — consumer always gets consistent response type.
+
+**Behavior matrix**:
+
+| Request | Provider | Gateway action |
+|---------|----------|----------------|
+| `async=false` (default) | sync | Return result immediately |
+| `async=false` (default) | async | Poll internally, return result when done |
+| `async=true` | sync | Simulate job (execute, store result, return job_id) |
+| `async=true` | async | Return job_id, consumer polls |
+
+**Request example**:
+```plaintext
+chat_completion(model, messages, params, async=true)
+```
+
+**Async response** (always when `async=true`):
+```plaintext
+{ job_id: "job_abc123", status: "pending" }
+```
 
 ```mermaid
 sequenceDiagram
@@ -533,33 +707,37 @@ sequenceDiagram
     participant P as Provider
     participant FS as FileStorage
 
-    C->>GW: chat_completion(model, messages, async=true)
+    C->>GW: chat_completion(..., async=true)
     GW->>P: Start generation
-    P-->>GW: provider_job_id
-    GW->>GW: Generate gw_job_id, store mapping
+    alt Provider is async
+        P-->>GW: provider_job_id
+        GW->>GW: Store mapping (gw_job_id → provider_job_id)
+    else Provider is sync
+        P-->>GW: Result
+        GW->>GW: Store result with gw_job_id
+    end
     GW-->>C: { job_id: gw_job_id, status: "pending" }
 
-    loop Poll
-        C->>GW: get_job(gw_job_id)
-        GW->>GW: Lookup provider_job_id
-        GW->>P: Check status (provider_job_id)
-        P-->>GW: status
-        GW-->>C: { status: "processing" }
-    end
-
     C->>GW: get_job(gw_job_id)
-    GW->>P: Check status (provider_job_id)
-    P-->>GW: completed + result
-    GW->>FS: Store result
-    FS-->>GW: stored_url
+    alt Provider is async
+        GW->>P: Check status
+        P-->>GW: status / result
+    else Provider is sync (result cached)
+        GW->>GW: Retrieve stored result
+    end
     GW-->>C: { status: "completed", content: [...] }
 ```
 
 **Job states**: pending → processing → completed | failed
 
-**Storage**: Gateway stores job mapping (gw_job_id → provider_job_id, status, metadata).
+**Storage**: Gateway stores job mapping (gw_job_id → provider_job_id or cached result).
 
 **Cleanup**: Jobs expire after configurable TTL.
+
+**Use cases**:
+- Video generation (long-running)
+- Large batch operations
+- Fire-and-forget with later retrieval
 
 ---
 
@@ -588,9 +766,25 @@ sequenceDiagram
     GW-->>C: usage summary
 ```
 
-**Events**: audio_delta, text_delta, function_call, session_end
+**WebSocket events** (different from SSE streaming):
+| Event | Direction | Description |
+|-------|-----------|-------------|
+| `audio_delta` | bidirectional | Audio chunk |
+| `text_delta` | server→client | Transcribed/generated text |
+| `function_call` | server→client | Tool invocation request |
+| `session_end` | server→client | Session completed with usage |
 
 **Use case**: Voice assistants, real-time translation
+
+---
+
+### [ ] S1.16 Usage Tracking
+
+Gateway reports usage metrics to Usage Tracker after each request.
+
+**Reported**: tokens (prompt, completion), cost estimate, latency, provider, model
+
+**Attribution**: tenant_id, user_id, conversation_id, model_id
 
 ---
 
@@ -613,8 +807,14 @@ sequenceDiagram
     GW->>GW: Select fallback (capability match)
     GW->>P2: Request
     P2-->>GW: Response
-    GW-->>C: Response (metadata: fallback_triggered)
+    GW-->>C: Response (metadata.fallback_used: true)
 ```
+
+**Response metadata** (when fallback triggered):
+- `metadata.fallback_used: true`
+- `metadata.original_model: "gpt-4o"` (requested model)
+- `metadata.model: "claude-3-5-sonnet"` (actual model used)
+- `metadata.provider: "anthropic"` (actual provider used)
 
 **Trigger conditions**:
 - HTTP 5xx
@@ -822,16 +1022,6 @@ Gateway collects embedding requests within time window, batches to single provid
 **Constraints**:
 - No cross-tenant batching
 - Partial failure → return error per failed item
-
----
-
-### [ ] S3.3 Usage Tracking
-
-Gateway reports usage metrics to Usage Tracker after each request.
-
-**Reported**: tokens (prompt, completion), cost estimate, latency, provider, model
-
-**Attribution**: tenant_id, user_id, conversation_id, model_id
 
 ---
 
