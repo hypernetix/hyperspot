@@ -672,7 +672,7 @@ pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
     // ClientHub DX helpers (optional)
     // Note: The `client` parameter now only triggers compile-time trait checks.
     // For client registration/access, use `hub.register::<dyn Trait>(client)` and
-    // `hub.get::<dyn Trait>()` directly, or provide helpers in your *-contracts crate.
+    // `hub.get::<dyn Trait>()` directly, or provide helpers in your *-sdk crate.
     let client_code = if let Some(client_trait_path) = &client_trait_opt {
         quote! {
             // Compile-time trait checks: object-safe + Send + Sync + 'static

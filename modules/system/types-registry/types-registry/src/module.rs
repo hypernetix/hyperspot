@@ -8,12 +8,12 @@ use modkit::contracts::SystemCapability;
 use modkit::gts::get_core_gts_schemas; // NOTE: This is temporary logic until <https://github.com/hypernetix/hyperspot/issues/156> resolved
 use modkit::{Module, ModuleCtx, RestApiCapability};
 use tracing::{debug, info};
-use types_registry_sdk::TypesRegistryApi;
+use types_registry_sdk::TypesRegistryClient;
 
 use crate::config::TypesRegistryConfig;
+use crate::domain::local_client::TypesRegistryLocalClient;
 use crate::domain::service::TypesRegistryService;
 use crate::infra::InMemoryGtsRepository;
-use crate::local_client::TypesRegistryLocalClient;
 
 /// Types Registry module.
 ///
@@ -72,7 +72,7 @@ impl Module for TypesRegistryModule {
 
         self.service.store(Some(service.clone()));
 
-        let api: Arc<dyn TypesRegistryApi> = Arc::new(TypesRegistryLocalClient::new(service));
+        let api: Arc<dyn TypesRegistryClient> = Arc::new(TypesRegistryLocalClient::new(service));
 
         // === REGISTER CORE GTS TYPES ===
         // NOTE: This is temporary logic until <https://github.com/hypernetix/hyperspot/issues/156> resolved
@@ -82,7 +82,7 @@ impl Module for TypesRegistryModule {
         api.register(core_schemas).await?;
         info!("Core GTS types registered");
 
-        ctx.client_hub().register::<dyn TypesRegistryApi>(api);
+        ctx.client_hub().register::<dyn TypesRegistryClient>(api);
 
         info!("Types registry module initialized");
         Ok(())

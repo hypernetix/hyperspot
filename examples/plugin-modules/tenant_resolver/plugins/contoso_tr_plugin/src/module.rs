@@ -9,7 +9,7 @@ use modkit::gts::BaseModkitPluginV1;
 use modkit::Module;
 use tenant_resolver_sdk::{TenantResolverPluginClient, TenantResolverPluginSpecV1};
 use tracing::info;
-use types_registry_sdk::TypesRegistryApi;
+use types_registry_sdk::TypesRegistryClient;
 
 use crate::config::ContosoPluginConfig;
 use crate::domain::Service;
@@ -53,7 +53,7 @@ impl Module for ContosoTrPlugin {
         // === INSTANCE REGISTRATION ===
         // Register the plugin INSTANCE in types-registry.
         // Note: The plugin SCHEMA is registered by the gateway module.
-        let registry = ctx.client_hub().get::<dyn TypesRegistryApi>()?;
+        let registry = ctx.client_hub().get::<dyn TypesRegistryClient>()?;
         let instance = BaseModkitPluginV1::<TenantResolverPluginSpecV1> {
             id: instance_id.clone(),
             vendor: cfg.vendor,

@@ -24,7 +24,7 @@
 
 ## 4. Local Client
 
-- [x] 4.1 Implement `TypesRegistryApi` trait for local client
+- [x] 4.1 Implement `TypesRegistryClient` trait for local client
 - [x] 4.2 Wire local client to ClientHub
 
 ## 5. REST API Layer

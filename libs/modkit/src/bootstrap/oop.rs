@@ -62,7 +62,7 @@ use crate::runtime::{
     MODKIT_DIRECTORY_ENDPOINT_ENV,
 };
 use module_orchestrator_grpc::DirectoryGrpcClient;
-use module_orchestrator_sdk::DirectoryApi;
+use module_orchestrator_sdk::DirectoryClient;
 
 /// Configuration options for `OoP` module bootstrap
 #[derive(Debug, Clone)]
@@ -524,7 +524,7 @@ pub async fn run_oop_with_options(opts: OopRunOptions) -> Result<()> {
         opts.directory_endpoint
     );
     let directory_client = DirectoryGrpcClient::connect(&opts.directory_endpoint).await?;
-    let directory_api: Arc<dyn DirectoryApi> = Arc::new(directory_client);
+    let directory_api: Arc<dyn DirectoryClient> = Arc::new(directory_client);
 
     info!("Successfully connected to directory service");
 
@@ -571,13 +571,15 @@ pub async fn run_oop_with_options(opts: OopRunOptions) -> Result<()> {
     // Keep a reference to directory_api for deregistration after shutdown
     // Run the module lifecycle with the root cancellation token.
     // Shutdown is driven by the signal handler spawned above, not by ShutdownOptions::Signals.
-    // The DirectoryApi (gRPC client) is injected into the ClientHub so modules can access it.
+    // The DirectoryClient (gRPC client) is injected into the ClientHub so modules can access it.
     info!("Starting module lifecycle");
     let run_options = RunOptions {
         modules_cfg: config_provider,
         db: db_options,
         shutdown: ShutdownOptions::Token(cancel.clone()),
-        clients: vec![ClientRegistration::new::<dyn DirectoryApi>(directory_api)],
+        clients: vec![ClientRegistration::new::<dyn DirectoryClient>(
+            directory_api,
+        )],
         instance_id,
         oop: None, // OoP modules don't spawn other OoP modules
     };

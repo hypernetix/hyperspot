@@ -5,6 +5,8 @@
 pub mod error;
 pub mod repo;
 pub mod service;
+// === LOCAL CLIENT ===
+pub mod local_client;
 
 pub use error::DomainError;
 pub use repo::GtsRepository;

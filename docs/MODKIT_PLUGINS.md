@@ -167,7 +167,7 @@ This separation ensures:
 
 ```rust
 // In gateway module init()
-let registry = ctx.client_hub().get::<dyn TypesRegistryApi>()?;
+let registry = ctx.client_hub().get::<dyn TypesRegistryClient>()?;
 
 // Register schema using GTS-provided method for proper $id and $ref handling
 let schema_str = MyModulePluginSpecV1::gts_schema_with_refs_as_string();
@@ -179,7 +179,7 @@ registry.register(vec![schema_json]).await?;
 
 ```rust
 // In plugin module init()
-let registry = ctx.client_hub().get::<dyn TypesRegistryApi>()?;
+let registry = ctx.client_hub().get::<dyn TypesRegistryClient>()?;
 
 // Register instance only (schema is already registered by gateway)
 let instance = BaseModkitPluginV1::<MyModulePluginSpecV1> {
@@ -313,7 +313,7 @@ use async_trait::async_trait;
 use modkit::{Module, ModuleCtx};
 use modkit_security::SecurityCtx;
 use my_sdk::{MyModuleGatewayClient, MyModulePluginSpecV1};
-use types_registry_sdk::TypesRegistryApi;
+use types_registry_sdk::TypesRegistryClient;
 
 #[modkit::module(
     name = "my_gateway",
@@ -332,7 +332,7 @@ impl Module for MyGateway {
         // === SCHEMA REGISTRATION ===
         // Gateway is responsible for registering the plugin SCHEMA.
         // Plugins only register their INSTANCES.
-        let registry = ctx.client_hub().get::<dyn TypesRegistryApi>()?;
+        let registry = ctx.client_hub().get::<dyn TypesRegistryClient>()?;
         let schema_str = MyModulePluginSpecV1::gts_schema_with_refs_as_string();
         let schema_json: serde_json::Value = serde_json::from_str(&schema_str)?;
         let _ = registry
@@ -393,7 +393,7 @@ The domain service handles plugin resolution:
 use modkit::client_hub::{ClientHub, ClientScope};
 use my_sdk::{MyModulePluginClient, MyModulePluginSpec};
 use tokio::sync::OnceCell;
-use types_registry_sdk::TypesRegistryApi;
+use types_registry_sdk::TypesRegistryClient;
 
 pub struct Service {
     hub: Arc<ClientHub>,
@@ -414,7 +414,7 @@ impl Service {
     }
 
     async fn resolve_plugin(&self) -> Result<ClientScope, DomainError> {
-        let registry = self.hub.get::<dyn TypesRegistryApi>()?;
+        let registry = self.hub.get::<dyn TypesRegistryClient>()?;
 
         // Query for plugin instances
         let plugin_type_id = MyModulePluginSpecV1::gts_schema_id().clone();
@@ -456,7 +456,7 @@ use modkit::gts::BaseModkitPluginV1;
 use modkit::{Module, ModuleCtx};
 use modkit_security::SecurityCtx;
 use my_sdk::{MyModulePluginClient, MyModulePluginSpecV1};
-use types_registry_sdk::TypesRegistryApi;
+use types_registry_sdk::TypesRegistryClient;
 
 #[modkit::module(
     name = "vendor_a_plugin",
@@ -476,7 +476,7 @@ impl Module for VendorAPlugin {
 
         // 2. Register plugin INSTANCE in types-registry
         //    Note: The plugin SCHEMA is registered by the gateway module
-        let registry = ctx.client_hub().get::<dyn TypesRegistryApi>()?;
+        let registry = ctx.client_hub().get::<dyn TypesRegistryClient>()?;
         let instance = BaseModkitPluginV1::<MyModulePluginSpecV1> {
             id: instance_id.clone(),
             vendor: cfg.vendor,
@@ -757,7 +757,7 @@ async fn test_gateway_plugin_resolution() {
 
     // Register mock types-registry
     let mock_registry = Arc::new(MockTypesRegistry::new());
-    hub.register::<dyn TypesRegistryApi>(mock_registry);
+    hub.register::<dyn TypesRegistryClient>(mock_registry);
 
     // Register mock plugin
     let instance_id = "gts.x.core.modkit.plugin.v1~vendor.pkg.my_module.plugin.v1~fabrikam.test._.plugin.v1";

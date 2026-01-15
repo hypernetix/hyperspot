@@ -2,9 +2,9 @@
 
 ## ADDED Requirements
 
-### Requirement: TypesRegistryApi Trait
+### Requirement: TypesRegistryClient Trait
 
-The SDK SHALL provide a `TypesRegistryApi` trait defining the public contract for types registry operations.
+The SDK SHALL provide a `TypesRegistryClient` trait defining the public contract for types registry operations.
 
 The trait SHALL define:
 - `register` — Register GTS entities (types or instances) in batch, returning per-item results
@@ -13,13 +13,13 @@ The trait SHALL define:
 
 #### Scenario: Trait is object-safe
 
-- **GIVEN** the `TypesRegistryApi` trait
-- **WHEN** used as `dyn TypesRegistryApi`
-- **THEN** the trait compiles and can be used with `Arc<dyn TypesRegistryApi>`
+- **GIVEN** the `TypesRegistryClient` trait
+- **WHEN** used as `dyn TypesRegistryClient`
+- **THEN** the trait compiles and can be used with `Arc<dyn TypesRegistryClient>`
 
 #### Scenario: Trait methods are async
 
-- **GIVEN** the `TypesRegistryApi` trait
+- **GIVEN** the `TypesRegistryClient` trait
 - **WHEN** implementing the trait
 - **THEN** all methods are async and return `Result` types
 
