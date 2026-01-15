@@ -127,6 +127,7 @@ provider_hints: {
 Gateway normalizes streaming events to a unified SSE format.
 
 **Event types**:
+
 | Event | Description |
 |-------|-------------|
 | `delta` | Content chunk (text, tool_call) |
@@ -187,7 +188,7 @@ data: {
 
 ## Design Principles
 
-**Stateless**: Gateway does not store conversation history. Consumer provides full message history with each request. Conversation state is managed by a separate component (Chat Engine). Exception: async job mappings are stored temporarily until job completion/expiry.
+**Stateless**: Gateway does not store conversation history. Consumer provides full message history with each request. Conversation state is managed by a separate component (Chat Engine). Exception: async job state (ID mappings and cached results for sync providers) is stored temporarily until retrieval/expiry.
 
 **Pass-through**: Gateway normalizes requests/responses but does not interpret content. Tool execution, response parsing — consumer responsibility.
 
@@ -275,7 +276,7 @@ sequenceDiagram
 ```
 
 **Edge cases**:
-- Client disconnect → persist partial response
+- Client disconnect → close provider connection, no persistence (consumer responsibility)
 - Provider timeout → emit error event, close stream
 
 ---
@@ -767,6 +768,7 @@ sequenceDiagram
 ```
 
 **WebSocket events** (different from SSE streaming):
+
 | Event | Direction | Description |
 |-------|-----------|-------------|
 | `audio_delta` | bidirectional | Audio chunk |
@@ -984,6 +986,7 @@ sequenceDiagram
 ```
 
 **Levels** (checked in order):
+
 | Level | Key | Description |
 |-------|-----|-------------|
 | Tenant | tenant_id | Aggregate limit for all users in tenant |
