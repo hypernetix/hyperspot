@@ -22,6 +22,7 @@ Unified interface for LLM inference across providers. Stateless, pass-through de
 | [ ] | Model discovery |
 | [ ] | Async jobs (long-running operations) |
 | [ ] | Realtime audio (WebSocket) |
+| [ ] | Usage tracking |
 
 ### P2 — Reliability & Governance
 
@@ -42,7 +43,6 @@ Unified interface for LLM inference across providers. Stateless, pass-through de
 |------|------------|
 | [ ] | Cost-aware routing |
 | [ ] | Embeddings batching |
-| [ ] | Usage tracking |
 
 ### P4 — Enterprise
 
