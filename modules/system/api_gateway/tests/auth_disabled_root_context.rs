@@ -1,7 +1,6 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 //! Test that `auth_disabled` mode properly injects default tenant context
-
 use axum::{
     body::Body,
     extract::Request,
@@ -11,7 +10,8 @@ use axum::{
     routing::get,
     Extension, Router,
 };
-use modkit_security::SecurityCtx;
+use modkit_security::{NoopPolicyEngine, SecurityContext};
+use std::sync::Arc;
 use tower::ServiceExt;
 use uuid::{uuid, Uuid};
 
@@ -20,17 +20,22 @@ const TEST_DEFAULT_TENANT_ID: Uuid = uuid!("00000000-0000-0000-0000-000000000001
 /// Test subject ID for auth-disabled mode (matches `api_gateway` constant)
 const TEST_DEFAULT_SUBJECT_ID: Uuid = uuid!("11111111-0000-0000-0000-000000000001");
 
-/// Test handler that extracts `SecurityCtx` and returns its properties as JSON
-async fn test_handler(Extension(ctx): Extension<SecurityCtx>) -> impl IntoResponse {
-    let is_empty = ctx.scope().is_empty();
-    let tenant_ids = ctx.scope().tenant_ids().to_vec();
+/// Test handler that extracts `SecurityContext` and returns its properties as JSON
+async fn test_handler(Extension(ctx): Extension<SecurityContext>) -> impl IntoResponse {
+    let scope = ctx
+        .scope(Arc::new(NoopPolicyEngine))
+        .prepare()
+        .await
+        .unwrap();
+
+    let is_empty = scope.is_empty();
+    let tenant_ids = scope.tenant_ids().to_vec();
     let tenant_count = tenant_ids.len();
 
     axum::Json(serde_json::json!({
         "is_empty": is_empty,
         "tenant_count": tenant_count,
         "tenant_ids": tenant_ids,
-        "is_denied": ctx.is_denied(),
         "subject_id": ctx.subject_id()
     }))
 }
@@ -38,9 +43,11 @@ async fn test_handler(Extension(ctx): Extension<SecurityCtx>) -> impl IntoRespon
 /// Middleware that simulates `auth_disabled` mode by injecting default tenant context
 async fn inject_default_tenant_context(mut req: Request, next: Next) -> Response {
     // This simulates what api_gateway does in auth_disabled mode:
-    // Uses SecurityCtx::for_tenant() with the default tenant and subject
-    #[allow(deprecated)]
-    let ctx = SecurityCtx::for_tenant(TEST_DEFAULT_TENANT_ID, TEST_DEFAULT_SUBJECT_ID);
+    let ctx = SecurityContext::builder()
+        .tenant_id(TEST_DEFAULT_TENANT_ID)
+        .subject_id(TEST_DEFAULT_SUBJECT_ID)
+        .build();
+
     req.extensions_mut().insert(ctx);
     next.run(req).await
 }
@@ -82,10 +89,6 @@ async fn test_auth_disabled_injects_default_tenant_context() {
         "Should have exactly one tenant (the default)"
     );
     assert_eq!(
-        json["is_denied"], false,
-        "Default tenant context should not be denied"
-    );
-    assert_eq!(
         json["subject_id"],
         TEST_DEFAULT_SUBJECT_ID.to_string(),
         "Subject should be TEST_DEFAULT_SUBJECT_ID"
@@ -95,19 +98,21 @@ async fn test_auth_disabled_injects_default_tenant_context() {
 #[tokio::test]
 async fn test_auth_disabled_scoped_to_default_tenant() {
     // Handler that verifies the context is scoped to the default tenant
-    async fn check_tenant_access(Extension(ctx): Extension<SecurityCtx>) -> impl IntoResponse {
+    async fn check_tenant_access(Extension(ctx): Extension<SecurityContext>) -> impl IntoResponse {
+        let scope = ctx
+            .scope(Arc::new(NoopPolicyEngine))
+            .prepare()
+            .await
+            .unwrap();
+
         // In disabled mode, we should have access scoped to the default tenant
         assert!(
-            !ctx.scope().is_empty(),
+            !scope.is_empty(),
             "Should have non-empty scope in disabled mode"
-        );
-        assert!(
-            !ctx.is_denied(),
-            "Default tenant context should not be denied"
         );
 
         // Should have exactly the default tenant
-        let tenant_ids = ctx.scope().tenant_ids();
+        let tenant_ids = scope.tenant_ids();
         assert_eq!(tenant_ids.len(), 1, "Should have exactly one tenant");
         assert_eq!(
             tenant_ids[0], TEST_DEFAULT_TENANT_ID,
@@ -151,7 +156,7 @@ async fn test_auth_disabled_scoped_to_default_tenant() {
 #[tokio::test]
 async fn test_auth_disabled_uses_default_subject() {
     // Handler that verifies the default subject ID is used
-    async fn check_subject(Extension(ctx): Extension<SecurityCtx>) -> impl IntoResponse {
+    async fn check_subject(Extension(ctx): Extension<SecurityContext>) -> impl IntoResponse {
         axum::Json(serde_json::json!({
             "subject_id": ctx.subject_id(),
             "is_default_subject": ctx.subject_id() == TEST_DEFAULT_SUBJECT_ID,
@@ -189,11 +194,17 @@ async fn test_auth_disabled_uses_default_subject() {
 #[tokio::test]
 async fn test_default_tenant_vs_normal_scope() {
     // Handler that reports scope info
-    async fn scope_info(Extension(ctx): Extension<SecurityCtx>) -> impl IntoResponse {
+    async fn scope_info(Extension(ctx): Extension<SecurityContext>) -> impl IntoResponse {
+        let scope = ctx
+            .scope(Arc::new(NoopPolicyEngine))
+            .prepare()
+            .await
+            .unwrap();
+
         axum::Json(serde_json::json!({
-            "is_empty": ctx.scope().is_empty(),
-            "has_tenants": ctx.scope().has_tenants(),
-            "tenant_count": ctx.scope().tenant_ids().len(),
+            "is_empty": scope.is_empty(),
+            "has_tenants": scope.has_tenants(),
+            "tenant_count": scope.tenant_ids().len(),
         }))
     }
 

@@ -136,7 +136,7 @@ where
         resolver: Arc<dyn TenantResolverGatewayClient>,
         config: ServiceConfig,
     ) -> Self {
-        let policy_engine: PolicyEngineRef = Arc::new(modkit_security::DummyPolicyEngine);
+        let policy_engine: PolicyEngineRef = Arc::new(modkit_security::NoopPolicyEngine);
 
         let users_repo = Arc::new(users_repo);
         let cities_repo = Arc::new(cities_repo);

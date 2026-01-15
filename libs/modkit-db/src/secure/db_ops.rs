@@ -14,19 +14,19 @@ use crate::secure::{AccessScope, ScopableEntity, Scoped, Unscoped};
 ///
 /// # Responsibilities
 ///
-/// - Does **not** inspect the `SecurityCtx` or enforce tenant scoping rules.
+/// - Does **not** inspect the `SecurityContext` or enforce tenant scoping rules.
 /// - Does **not** automatically populate any entity fields.
 /// - Callers are responsible for:
 ///   - Setting all required fields before calling.
 ///   - Validating that the operation is authorized within the current
-///     `SecurityCtx` (e.g., verifying `tenant_id` or resource ownership).
+///     `SecurityContext` (e.g., verifying `tenant_id` or resource ownership).
 ///
 /// # Behavior by Entity Type
 ///
 /// ## Tenant-scoped entities (have `tenant_col`)
 /// - Must have a valid, non-empty `tenant_id` set in the `ActiveModel` before insert.
 /// - The `tenant_id` should come from the request payload or be validated against
-///   `SecurityCtx` by the service layer before calling this helper.
+///   `SecurityContext` by the service layer before calling this helper.
 ///
 /// ## Global entities (no `tenant_col`)
 /// - May be inserted freely without tenant validation.
@@ -34,7 +34,7 @@ use crate::secure::{AccessScope, ScopableEntity, Scoped, Unscoped};
 ///
 /// # Recommended Field Population
 ///
-/// When inserting entities, populate these fields from `SecurityCtx` in service code:
+/// When inserting entities, populate these fields from `SecurityContext` in service code:
 /// - `tenant_id`: from payload or validated via `ctx.scope()`
 /// - `owner_id`: from `ctx.subject_id()`
 /// - `created_by`: from `ctx.subject_id()` if applicable
@@ -42,7 +42,7 @@ use crate::secure::{AccessScope, ScopableEntity, Scoped, Unscoped};
 /// # Example
 ///
 /// ```ignore
-/// use modkit_db::secure::{secure_insert, SecurityCtx};
+/// use modkit_db::secure::{secure_insert, SecurityContext};
 ///
 /// // Domain/service layer validates tenant_id beforehand
 /// let am = user::ActiveModel {

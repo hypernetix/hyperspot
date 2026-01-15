@@ -8,7 +8,6 @@ pub mod traits;
 pub mod types;
 
 pub mod authorizer;
-pub mod scope_builder;
 
 // Plugin system modules
 pub mod auth_mode;
