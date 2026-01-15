@@ -52,7 +52,7 @@ Unified interface for LLM inference across providers. Stateless, pass-through de
 
 ## Module Structure
 
-```
+```plaintext
 modules/llm_gateway/
 ├── llm_gateway-sdk/         # Public API traits, models, errors
 ├── llm_gateway-gw/          # Gateway implementation
