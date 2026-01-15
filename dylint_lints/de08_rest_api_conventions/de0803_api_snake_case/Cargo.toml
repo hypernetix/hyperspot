@@ -31,12 +31,16 @@ name = "fail_lowercase"
 path = "ui/fail_lowercase.rs"
 
 [[example]]
-name = "fail_uppercase"
-path = "ui/fail_uppercase.rs"
+name = "fail_pascal_case"
+path = "ui/fail_pascal_case.rs"
 
 [[example]]
-name = "fail_screaming_snake_case"
-path = "ui/fail_screaming_snake_case.rs"
+name = "pass_uppercase"
+path = "ui/pass_uppercase.rs"
+
+[[example]]
+name = "pass_screaming_snake_case"
+path = "ui/pass_screaming_snake_case.rs"
 
 [[example]]
 name = "fail_kebab_case"
@@ -63,12 +67,12 @@ name = "fail_field_kebab_case"
 path = "ui/fail_field_kebab_case.rs"
 
 [[example]]
-name = "fail_field_uppercase"
-path = "ui/fail_field_uppercase.rs"
+name = "pass_field_uppercase"
+path = "ui/pass_field_uppercase.rs"
 
 [[example]]
-name = "fail_field_screaming_snake_case"
-path = "ui/fail_field_screaming_snake_case.rs"
+name = "pass_field_screaming_snake_case"
+path = "ui/pass_field_screaming_snake_case.rs"
 
 [[example]]
 name = "fail_field_screaming_kebab_case"

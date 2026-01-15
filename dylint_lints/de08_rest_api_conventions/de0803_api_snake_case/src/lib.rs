@@ -79,7 +79,7 @@ fn find_serde_attribute_value(attrs: &[Attribute], attribute_name: &str) -> Vec<
 
 fn check_type_rename_all(cx: &EarlyContext<'_>, attrs: &[Attribute]) {
     for (span, value) in find_serde_attribute_value(attrs, "rename_all") {
-        if value != "snake_case" {
+        if value != "snake_case" && value != "SCREAMING_SNAKE_CASE" && value != "UPPERCASE" {
             cx.span_lint(
                 DE0803_API_SNAKE_CASE,
                 span,
@@ -97,7 +97,7 @@ fn check_type_rename_all(cx: &EarlyContext<'_>, attrs: &[Attribute]) {
 fn check_fields(cx: &EarlyContext<'_>, variant_data: &VariantData) {
     for field in variant_data.fields() {
         for (span, value) in find_serde_attribute_value(&field.attrs, "rename") {
-            if !is_snake_case(&value) {
+            if !is_valid_case(&value) {
                 cx.span_lint(
                     DE0803_API_SNAKE_CASE,
                     span,
@@ -113,12 +113,8 @@ fn check_fields(cx: &EarlyContext<'_>, variant_data: &VariantData) {
     }
 }
 
-fn is_snake_case(s: &str) -> bool {
+fn is_valid_case(s: &str) -> bool {
     if s.is_empty() {
-        return false;
-    }
-
-    if s.chars().any(|c| c.is_uppercase()) {
         return false;
     }
 
@@ -126,7 +122,8 @@ fn is_snake_case(s: &str) -> bool {
         return false;
     }
 
-    s.chars().all(|c| c.is_lowercase() || c.is_numeric() || c == '_')
+    // Accept uppercase and lowercase, as well as snake_case and SCREAMING_SNAKE_CASE
+    s.chars().all(|c| c.is_uppercase() || c.is_numeric() || c == '_') || s.chars().all(|c| c.is_lowercase() || c.is_numeric() || c == '_')
 }
 
 #[cfg(test)]

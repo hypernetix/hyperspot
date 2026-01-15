@@ -2,9 +2,8 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
-// Should trigger DE0803 - DTO fields must not use non-snake_case in serde rename/rename_all
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub struct BadScreamingSnakeCaseDto {
+pub struct GoodScreamingSnakeCaseDto {
     pub id: String,
 }
 

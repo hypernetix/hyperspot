@@ -10,7 +10,6 @@ use tenant_resolver_sdk::{GetParentsResponse, GtsSchemaId, Tenant, TenantStatus}
 // ============================================================================
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
 pub struct TenantDto {
     pub id: String,
     pub parent_id: String,
@@ -70,7 +69,6 @@ impl From<Tenant> for TenantDto {
 
 /// Filter for tenant queries.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
 pub struct TenantFilterDto {
     /// List of statuses to filter by. Empty = ACTIVE only.
     #[serde(default)]
@@ -114,7 +112,6 @@ fn parse_statuses_csv(statuses: Option<&str>) -> Vec<TenantStatus> {
 
 /// Access control options.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
 pub struct AccessOptionsDto {
     /// Ignore parent access constraints when resolving hierarchy.
     #[serde(default)]
@@ -208,7 +205,6 @@ impl GetChildrenQuery {
 
 /// Response for `get_parents` endpoint.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
 pub struct GetParentsResponseDto {
     /// The target tenant.
     pub tenant: TenantDto,
@@ -227,7 +223,6 @@ impl From<GetParentsResponse> for GetParentsResponseDto {
 
 /// Response for `get_children` endpoint.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
 pub struct GetChildrenResponseDto {
     pub children: Vec<TenantDto>,
 }
