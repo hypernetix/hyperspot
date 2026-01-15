@@ -21,7 +21,10 @@ impl SeaOrmSettingsRepository {
 
 #[async_trait]
 impl SettingsRepository for SeaOrmSettingsRepository {
-    async fn find_by_user(&self, ctx: &SecurityContext) -> anyhow::Result<Option<SimpleUserSettings>> {
+    async fn find_by_user(
+        &self,
+        ctx: &SecurityContext,
+    ) -> anyhow::Result<Option<SimpleUserSettings>> {
         let tenant_id = ctx.tenant_id();
         let scope = AccessScope::both(vec![tenant_id], vec![ctx.subject_id()]);
 

@@ -29,7 +29,10 @@ impl Service {
         Self { repo, config }
     }
 
-    pub async fn get_settings(&self, ctx: &SecurityContext) -> Result<SimpleUserSettings, DomainError> {
+    pub async fn get_settings(
+        &self,
+        ctx: &SecurityContext,
+    ) -> Result<SimpleUserSettings, DomainError> {
         if let Some(settings) = self.repo.find_by_user(ctx).await? {
             Ok(settings)
         } else {

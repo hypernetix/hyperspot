@@ -11,24 +11,16 @@ use crate::models::{SimpleUserSettings, SimpleUserSettingsPatch};
 
 /// Public API trait for the settings module.
 ///
-/// This trait can be consumed by other modules via `ClientHub`:
-/// ```
-/// use simple_user_settings_sdk::SimpleUserSettingsApi;
-/// use modkit_security::SecurityContext;
-/// use modkit::ClientHub;
-///
-/// # fn example(hub: &ClientHub, ctx: &SecurityContext) -> Result<(), Box<dyn std::error::Error>> {
-/// let client = hub.get::<dyn SimpleUserSettingsApi>()?;
-/// # Ok(())
-/// # }
-/// ```
-///
+/// This trait can be consumed by other modules via `ClientHub`.
 /// All methods require a `SecurityContext` for proper authorization and access control.
 #[async_trait]
 pub trait SimpleUserSettingsApi: Send + Sync {
     /// Get settings for the current user.
     /// Returns default empty values if no settings record exists.
-    async fn get_settings(&self, ctx: &SecurityContext) -> Result<SimpleUserSettings, SettingsError>;
+    async fn get_settings(
+        &self,
+        ctx: &SecurityContext,
+    ) -> Result<SimpleUserSettings, SettingsError>;
 
     /// Update settings with full replacement (POST semantics).
     /// Creates a new record if none exists.

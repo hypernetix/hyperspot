@@ -4,7 +4,10 @@ use simple_user_settings_sdk::models::{SimpleUserSettings, SimpleUserSettingsPat
 
 #[async_trait]
 pub trait SettingsRepository: Send + Sync {
-    async fn find_by_user(&self, ctx: &SecurityContext) -> anyhow::Result<Option<SimpleUserSettings>>;
+    async fn find_by_user(
+        &self,
+        ctx: &SecurityContext,
+    ) -> anyhow::Result<Option<SimpleUserSettings>>;
 
     async fn upsert_full(
         &self,

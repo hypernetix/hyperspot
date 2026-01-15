@@ -20,7 +20,10 @@ impl LocalClient {
 
 #[async_trait]
 impl SimpleUserSettingsApi for LocalClient {
-    async fn get_settings(&self, ctx: &SecurityContext) -> Result<SimpleUserSettings, SettingsError> {
+    async fn get_settings(
+        &self,
+        ctx: &SecurityContext,
+    ) -> Result<SimpleUserSettings, SettingsError> {
         self.service.get_settings(ctx).await.map_err(Into::into)
     }
 
