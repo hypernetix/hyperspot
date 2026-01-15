@@ -1742,7 +1742,7 @@ discoverable and include its API endpoints in the OpenAPI documentation.
    ```toml
    # user modules
    file_parser = { path = "../../modules/file_parser" }
-   nodes_registry = { path = "../../modules/system/nodes_registry" }
+   nodes_registry = { path = "../../modules/system/nodes_registry/nodes_registry" }
    your_module = { path = "../../modules/your_module" }  # ADD THIS LINE
    ```
 
@@ -2492,15 +2492,14 @@ impl Service {
 Ensure proper initialization order:
 
 ```rust
-// Gateway depends on types_registry AND all plugins
+// Gateway depends on the types_registry and any other required modules, but not on plugins. Plugins are resolved indirectly via GTS.
 #[modkit::module(
     name = "my_gateway",
-    deps = ["types_registry", "plugin_a", "plugin_b"],
+    deps = ["types_registry"],
     capabilities = [rest]
 )]
 pub struct MyGateway { /* ... */ }
 
-// Each plugin depends only on types_registry
 #[modkit::module(
     name = "plugin_a",
     deps = ["types_registry"],

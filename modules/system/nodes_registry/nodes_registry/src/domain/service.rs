@@ -1,7 +1,7 @@
-use crate::contract::{Node, NodeSysCap, NodeSysInfo, SysCap};
 use crate::domain::error::DomainError;
 use crate::domain::node_storage::NodeStorage;
 use modkit_node_info::NodeInfoCollector;
+use nodes_registry_sdk::{Node, NodeSysCap, NodeSysInfo, SysCap};
 use std::sync::Arc;
 
 /// Check if a UUID is a fallback UUID (hardware detection failed)

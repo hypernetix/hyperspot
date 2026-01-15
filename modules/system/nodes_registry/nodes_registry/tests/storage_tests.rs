@@ -4,8 +4,8 @@
 //!
 //! These tests verify storage operations, concurrency, and edge cases.
 
-use nodes_registry::contract::{Node, SysCap};
 use nodes_registry::domain::node_storage::NodeStorage;
+use nodes_registry::{Node, SysCap};
 use std::sync::Arc;
 use std::thread;
 use uuid::Uuid;
@@ -234,7 +234,7 @@ fn test_storage_clear_custom_syscap_preserves_system() {
     storage.upsert_node(node);
 
     // Add system syscap
-    let system_syscap = nodes_registry::contract::NodeSysCap {
+    let system_syscap = nodes_registry::NodeSysCap {
         node_id,
         capabilities: vec![SysCap {
             key: "system.test".to_owned(),

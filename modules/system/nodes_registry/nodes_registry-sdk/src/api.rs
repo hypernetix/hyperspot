@@ -1,9 +1,9 @@
-use crate::contract::error::NodesRegistryError;
-use crate::contract::{Node, NodeSysCap, NodeSysInfo};
+use crate::error::NodesRegistryError;
+use crate::{Node, NodeSysCap, NodeSysInfo};
 
 /// Client trait for accessing nodes registry functionality
 #[async_trait::async_trait]
-pub trait NodesRegistryApi: Send + Sync {
+pub trait NodesRegistryClient: Send + Sync {
     /// Get a node by ID
     async fn get_node(&self, id: uuid::Uuid) -> Result<Node, NodesRegistryError>;
 

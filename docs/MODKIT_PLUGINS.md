@@ -317,7 +317,7 @@ use types_registry_sdk::TypesRegistryClient;
 
 #[modkit::module(
     name = "my_gateway",
-    deps = ["types_registry", "plugin_a", "plugin_b"],  // Depend on all plugins
+    deps = ["types_registry"],  // Gateway depends on the types_registry and any other required modules, but not on plugins. Plugins are resolved indirectly via GTS.
     capabilities = [rest]
 )]
 pub struct MyGateway {
@@ -708,15 +708,14 @@ pub enum MyError {
 Ensure proper initialization order by declaring dependencies:
 
 ```rust
-// Gateway depends on types_registry AND all plugins
+// Gateway depends on the types_registry and any other required modules, but not on plugins. Plugins are resolved indirectly via GTS.
 #[modkit::module(
     name = "my_gateway",
-    deps = ["types_registry", "plugin_a", "plugin_b", "plugin_c"],
+    deps = ["types_registry"],
     capabilities = [rest]
 )]
 pub struct MyGateway { /* ... */ }
 
-// Each plugin depends only on types_registry
 #[modkit::module(
     name = "plugin_a",
     deps = ["types_registry"],

@@ -16,8 +16,10 @@
 #![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 
 // === PUBLIC CONTRACT ===
-pub mod contract;
-pub use contract::{client, error};
+pub use nodes_registry_sdk::{
+    BatteryInfo, CpuInfo, GpuInfo, HostInfo, MemoryInfo, Node, NodeSysCap, NodeSysInfo,
+    NodesRegistryClient, NodesRegistryError, OsInfo, SysCap,
+};
 
 // === MODULE DEFINITION ===
 pub mod module;
