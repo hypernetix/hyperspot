@@ -76,6 +76,7 @@ modules/llm_gateway/
 |--------|------|
 | FileStorage | Fetch input media, store generated content |
 | Credential Resolver | API key management |
+| Type Registry | Read GTS schemas by ID (tool definitions) |
 | Usage Tracker | Token/cost reporting |
 | Hook System | `llm.pre_call`, `llm.post_response` interceptors |
 | Audit | Request/response logging |
