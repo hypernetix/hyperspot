@@ -10,7 +10,7 @@ Usage:
     python -m e2e.modules.file_parser.generate_file_parser_golden
 
 Environment Variables:
-    E2E_BASE_URL: Base URL for the API (default: http://127.0.0.1:8087)
+    E2E_BASE_URL: Base URL for the API (default: http://127.0.0.1:8086)
     E2E_AUTH_TOKEN: Optional bearer token for authentication
 """
 
@@ -22,7 +22,7 @@ import httpx
 
 def get_base_url():
     """Get base URL from environment or use default."""
-    return os.getenv("E2E_BASE_URL", "http://127.0.0.1:8087")
+    return os.getenv("E2E_BASE_URL", "http://127.0.0.1:8086")
 
 
 def get_auth_headers():

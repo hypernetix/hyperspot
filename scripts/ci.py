@@ -152,17 +152,21 @@ def wait_for_health(base_url, timeout_secs=30):
     url = f"{base_url.rstrip('/')}/healthz"
     step(f"Waiting for API to be ready at {url}")
     start = time.time()
+    attempt = 0
     while True:
         try:
+            attempt += 1
             with urlopen(url, timeout=1) as resp:
                 if 200 <= resp.status < 300:
-                    print("API is ready")
+                    print(f"API is ready (after {attempt} attempts)")
                     return
-        except (URLError, HTTPError):
-            pass
+        except (URLError, HTTPError, ConnectionResetError, OSError) as e:
+            # Server may be starting up or restarting
+            if attempt % 10 == 0:  # Log every 10 attempts
+                print(f"Still waiting... (attempt {attempt}, error: {type(e).__name__})")
 
         if time.time() - start > timeout_secs:
-            print("ERROR: The API readiness check timed out")
+            print(f"ERROR: The API readiness check timed out after {attempt} attempts")
             sys.exit(1)
         time.sleep(1)
 
@@ -213,6 +217,7 @@ def cmd_e2e(args):
     kill_existing_server(port)
 
     docker_env_started = False
+    server_process = None
 
     if args.docker:
         step("Running E2E tests in Docker mode")
@@ -230,17 +235,21 @@ def cmd_e2e(args):
 
         # Build image
         step("Building Docker image for E2E tests")
-        run_cmd(
-            [
-                "docker",
-                "build",
-                "-f",
-                "testing/docker/hyperspot.Dockerfile",
-                "-t",
-                "hyperspot-api:e2e",
-                ".",
-            ]
-        )
+        build_cmd = [
+            "docker",
+            "build",
+            "-f",
+            "testing/docker/hyperspot.Dockerfile",
+            "-t",
+            "hyperspot-api:e2e",
+        ]
+        
+        # Add build args for cargo features if specified
+        if args.features:
+            build_cmd.extend(["--build-arg", f"CARGO_FEATURES={args.features}"])
+        
+        build_cmd.append(".")
+        run_cmd(build_cmd)
 
         # Start environment
         step("Starting E2E docker-compose environment")
@@ -251,6 +260,7 @@ def cmd_e2e(args):
                 "-f",
                 "testing/docker/docker-compose.yml",
                 "up",
+                "--force-recreate",
                 "-d",
             ]
         )
@@ -530,6 +540,11 @@ def build_parser():
         "--docker",
         action="store_true",
         help="Run tests in Docker environment instead of local server",
+    )
+    p_e2e.add_argument(
+        "--features",
+        default="users-info-example",
+        help="Cargo features to enable for Docker build (default: users-info-example)",
     )
     p_e2e.add_argument(
         "pytest_args",

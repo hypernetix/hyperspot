@@ -165,36 +165,37 @@ modules:
       tenants:
         # Root tenant (company level)
         - id: "00000000000000000000000000000001"
+          parent_id: null
           status: ACTIVE
           is_accessible_by_parent: true
 
         # Division 1: Engineering
-        - id: "00000000000000000000000000000010"
+        - id: "00000000000000000000000000000002"
           parent_id: "00000000000000000000000000000001"
           status: ACTIVE
           is_accessible_by_parent: true
 
         # Division 2: Sales
-        - id: "00000000000000000000000000000011"
+        - id: "00000000000000000000000000000005"
           parent_id: "00000000000000000000000000000001"
           status: ACTIVE
           is_accessible_by_parent: true
 
-        # Department under Engineering: Backend
-        - id: "00000000000000000000000000000100"
-          parent_id: "00000000000000000000000000000010"
-          status: ACTIVE
-          is_accessible_by_parent: true
-
         # Department under Engineering: Frontend (soft-deleted, not accessible)
-        - id: "00000000000000000000000000000101"
-          parent_id: "00000000000000000000000000000010"
+        - id: "00000000000000000000000000000003"
+          parent_id: "00000000000000000000000000000002"
           status: SOFT_DELETED
           is_accessible_by_parent: false
 
+        # Department under Engineering: Backend
+        - id: "00000000000000000000000000000004"
+          parent_id: "00000000000000000000000000000002"
+          status: ACTIVE
+          is_accessible_by_parent: true
+
         # Department under Sales: Enterprise
-        - id: "00000000000000000000000000000110"
-          parent_id: "00000000000000000000000000000011"
+        - id: "00000000000000000000000000000006"
+          parent_id: "00000000000000000000000000000005"
           status: ACTIVE
           is_accessible_by_parent: true
 
