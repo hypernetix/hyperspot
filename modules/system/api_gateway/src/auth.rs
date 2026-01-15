@@ -2,12 +2,11 @@ use axum::http::Method;
 use modkit_auth::{
     authorizer::RoleAuthorizer,
     build_auth_dispatcher,
-    scope_builder::SimpleScopeBuilder,
-    traits::{PrimaryAuthorizer, ScopeBuilder, TokenValidator},
+    traits::{PrimaryAuthorizer, TokenValidator},
     types::{AuthRequirement, SecRequirement},
     AuthConfig as ModkitAuthConfig, AuthModeConfig, JwksConfig, PluginConfig,
 };
-use modkit_security::{DummyPolicyEngine, PolicyEngineRef};
+use modkit_security::{NoopPolicyEngine, PolicyEngineRef};
 use std::{collections::HashMap, sync::Arc};
 
 #[derive(Clone)]
@@ -96,7 +95,6 @@ fn convert_axum_path_to_matchit(path: &str) -> String {
 pub struct AuthState {
     pub validator: Arc<dyn TokenValidator>,
     pub policy_engine: PolicyEngineRef,
-    pub scope_builder: Arc<dyn ScopeBuilder>,
     pub authorizer: Arc<dyn PrimaryAuthorizer>,
 }
 
@@ -225,7 +223,6 @@ pub fn build_auth_state(
         Arc::new(dispatcher) as Arc<dyn TokenValidator>
     };
 
-    let scope_builder: Arc<dyn ScopeBuilder> = Arc::new(SimpleScopeBuilder);
     let authorizer: Arc<dyn PrimaryAuthorizer> = Arc::new(RoleAuthorizer);
 
     // Build route matchers per HTTP method (secured routes with requirements)
@@ -259,8 +256,7 @@ pub fn build_auth_state(
 
     let auth_state = AuthState {
         validator,
-        policy_engine: Arc::new(DummyPolicyEngine),
-        scope_builder,
+        policy_engine: Arc::new(NoopPolicyEngine),
         authorizer,
     };
 

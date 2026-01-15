@@ -8,15 +8,15 @@ pub trait PolicyEngine: Send + Sync {
     fn allows(&self, ctx: &SecurityContext, resource: &str, action: &str) -> bool;
 }
 
-pub struct DummyPolicyEngine;
+pub struct NoopPolicyEngine;
 
-impl Default for DummyPolicyEngine {
+impl Default for NoopPolicyEngine {
     fn default() -> Self {
-        DummyPolicyEngine
+        NoopPolicyEngine
     }
 }
 
-impl PolicyEngine for DummyPolicyEngine {
+impl PolicyEngine for NoopPolicyEngine {
     fn allows(&self, _ctx: &SecurityContext, _resource: &str, _action: &str) -> bool {
         true
     }

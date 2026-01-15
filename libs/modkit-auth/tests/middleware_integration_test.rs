@@ -12,8 +12,7 @@ use modkit_auth::{
     authorizer::RoleAuthorizer,
     axum_ext::Authz,
     build_auth_dispatcher,
-    scope_builder::SimpleScopeBuilder,
-    traits::{PrimaryAuthorizer, ScopeBuilder, TokenValidator},
+    traits::{PrimaryAuthorizer, TokenValidator},
     types::{AuthRequirement, RoutePolicy},
     AuthConfig, AuthModeConfig, Claims, PluginConfig, ValidationConfig,
 };
@@ -77,17 +76,11 @@ async fn optional_handler() -> impl IntoResponse {
 fn create_app(
     policy: Arc<dyn RoutePolicy>,
     validator: Arc<dyn TokenValidator>,
-    scope_builder: Arc<dyn ScopeBuilder>,
     authorizer: Arc<dyn PrimaryAuthorizer>,
 ) -> Router {
     Router::new()
         .route("/protected", get(protected_handler))
-        .layer(AuthPolicyLayer::new(
-            validator,
-            scope_builder,
-            authorizer,
-            policy,
-        ))
+        .layer(AuthPolicyLayer::new(validator, authorizer, policy))
 }
 
 #[tokio::test]
@@ -96,11 +89,10 @@ async fn test_middleware_returns_401_for_missing_token() {
     let dispatcher = Arc::new(build_auth_dispatcher(&config).unwrap());
 
     let validator: Arc<dyn TokenValidator> = dispatcher;
-    let scope_builder: Arc<dyn ScopeBuilder> = Arc::new(SimpleScopeBuilder);
     let authorizer: Arc<dyn PrimaryAuthorizer> = Arc::new(RoleAuthorizer);
     let policy: Arc<dyn RoutePolicy> = Arc::new(AlwaysRequiredPolicy);
 
-    let app = create_app(policy, validator, scope_builder, authorizer);
+    let app = create_app(policy, validator, authorizer);
 
     let response = app
         .oneshot(
@@ -121,11 +113,10 @@ async fn test_middleware_returns_401_for_invalid_token() {
     let dispatcher = Arc::new(build_auth_dispatcher(&config).unwrap());
 
     let validator: Arc<dyn TokenValidator> = dispatcher;
-    let scope_builder: Arc<dyn ScopeBuilder> = Arc::new(SimpleScopeBuilder);
     let authorizer: Arc<dyn PrimaryAuthorizer> = Arc::new(RoleAuthorizer);
     let policy: Arc<dyn RoutePolicy> = Arc::new(AlwaysRequiredPolicy);
 
-    let app = create_app(policy, validator, scope_builder, authorizer);
+    let app = create_app(policy, validator, authorizer);
 
     let response = app
         .oneshot(
@@ -147,11 +138,10 @@ async fn test_middleware_allows_options_preflight() {
     let dispatcher = Arc::new(build_auth_dispatcher(&config).unwrap());
 
     let validator: Arc<dyn TokenValidator> = dispatcher;
-    let scope_builder: Arc<dyn ScopeBuilder> = Arc::new(SimpleScopeBuilder);
     let authorizer: Arc<dyn PrimaryAuthorizer> = Arc::new(RoleAuthorizer);
     let policy: Arc<dyn RoutePolicy> = Arc::new(AlwaysRequiredPolicy);
 
-    let app = create_app(policy, validator, scope_builder, authorizer);
+    let app = create_app(policy, validator, authorizer);
 
     // OPTIONS request with CORS headers
     let response = app
@@ -179,18 +169,12 @@ async fn test_optional_auth_inserts_anonymous_context() {
     let dispatcher = Arc::new(build_auth_dispatcher(&config).unwrap());
 
     let validator: Arc<dyn TokenValidator> = dispatcher;
-    let scope_builder: Arc<dyn ScopeBuilder> = Arc::new(SimpleScopeBuilder);
     let authorizer: Arc<dyn PrimaryAuthorizer> = Arc::new(RoleAuthorizer);
     let policy: Arc<dyn RoutePolicy> = Arc::new(AlwaysOptionalPolicy);
 
     let app = Router::new()
         .route("/optional", get(optional_handler))
-        .layer(AuthPolicyLayer::new(
-            validator,
-            scope_builder,
-            authorizer,
-            policy,
-        ));
+        .layer(AuthPolicyLayer::new(validator, authorizer, policy));
 
     let response = app
         .oneshot(
