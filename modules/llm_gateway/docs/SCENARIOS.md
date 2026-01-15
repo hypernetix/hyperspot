@@ -11,13 +11,15 @@
 
 Message content is an array of typed blocks:
 
-```
+```plaintext
 content: [
   { type: "text", text: "..." },
   { type: "image", url: "..." },
   { type: "audio", url: "..." },
   { type: "video", url: "..." },
-  { type: "document", url: "..." }
+  { type: "document", url: "..." },
+  { type: "tool_call", id: "...", schema_id: "...", arguments: {...} },
+  { type: "tool_result", tool_call_id: "...", result: {...} }
 ]
 ```
 
@@ -28,10 +30,12 @@ content: [
 | audio | url | input/output |
 | video | url | input/output |
 | document | url | input/output |
+| tool_call | id, schema_id, arguments | output |
+| tool_result | tool_call_id, result | input |
 
-**Input**: Consumer uploads to FileStorage, provides URLs. Gateway fetches content before sending to provider.
+**Media**: Consumer uploads to FileStorage, provides URLs. Gateway fetches content before sending to provider. Generated media stored via FileStorage, URLs returned.
 
-**Output**: Gateway stores generated media via FileStorage, returns URLs.
+**Tools**: Consumer defines tools via GTS Schema ID. Gateway resolves schema before sending to provider.
 
 ---
 
@@ -41,9 +45,8 @@ content: [
 |------------|------|
 | FileStorage | Fetch input media by URL, store generated content |
 | Credential Resolver | API keys for providers |
+| Type Registry | Read GTS schemas by ID (tool definitions) |
 | Usage Tracker | Token/cost reporting |
-
-**Input media**: Consumer uploads to FileStorage independently, provides URLs to Gateway. Gateway fetches content before sending to provider.
 
 ---
 
@@ -164,7 +167,7 @@ sequenceDiagram
 Consumer uploads images to FileStorage, then sends message with image URLs. Gateway routes to vision-capable model.
 
 **Request example**:
-```
+```plaintext
 messages: [{
   role: "user",
   content: [
@@ -202,7 +205,7 @@ sequenceDiagram
 Consumer sends text prompt to image generation model. Gateway generates image, stores via FileStorage, returns URL.
 
 **Request example**:
-```
+```plaintext
 model: "dall-e-3"
 messages: [{
   role: "user",
@@ -214,7 +217,7 @@ params: { size: "1024x1024", quality: "hd" }
 ```
 
 **Response example**:
-```
+```plaintext
 content: [
   { type: "image", url: "https://storage.example.com/generated/abc123.png" }
 ]
@@ -246,7 +249,7 @@ sequenceDiagram
 Consumer uploads audio to FileStorage, then sends message with audio URL. Gateway returns transcribed text.
 
 **Request example**:
-```
+```plaintext
 messages: [{
   role: "user",
   content: [
@@ -283,7 +286,7 @@ sequenceDiagram
 Consumer sends text to TTS model. Gateway synthesizes audio, stores via FileStorage, returns URL.
 
 **Request example**:
-```
+```plaintext
 model: "tts-1-hd"
 messages: [{
   role: "user",
@@ -295,7 +298,7 @@ params: { voice: "alloy", speed: 1.0 }
 ```
 
 **Response example**:
-```
+```plaintext
 content: [
   { type: "audio", url: "https://storage.example.com/generated/xyz789.mp3" }
 ]
@@ -329,7 +332,7 @@ sequenceDiagram
 Consumer uploads video to FileStorage, then sends message with video URL. Gateway returns analysis.
 
 **Request example**:
-```
+```plaintext
 messages: [{
   role: "user",
   content: [
@@ -367,7 +370,7 @@ sequenceDiagram
 Consumer sends text prompt to video generation model. Gateway generates video, stores via FileStorage, returns URL.
 
 **Request example**:
-```
+```plaintext
 model: "sora-1"
 messages: [{
   role: "user",
@@ -379,7 +382,7 @@ params: { duration: 10, resolution: "1080p" }
 ```
 
 **Response example**:
-```
+```plaintext
 content: [
   { type: "video", url: "https://storage.example.com/generated/vid456.mp4" }
 ]
@@ -408,18 +411,32 @@ sequenceDiagram
 
 ### [ ] S1.10 Tool/Function Calling
 
-Consumer sends request with tool definitions. Model may return tool calls instead of text. Consumer executes tools, sends results back.
+Consumer sends request with tools defined by GTS Schema ID. Gateway resolves schemas, forwards to provider. Model may return tool calls. Consumer executes tools, sends results back.
+
+**Tool Schema ID**: `gts.hx.core.faas.func.v1~<vendor>.<app>.<namespace>.<func_name>.v1`
+
+**Request example**:
+```plaintext
+tools: [
+  { schema_id: "gts.hx.core.faas.func.v1~acme.crm.contacts.search.v1" },
+  { schema_id: "gts.hx.core.faas.func.v1~acme.crm.orders.create.v1" }
+]
+```
 
 ```mermaid
 sequenceDiagram
     participant C as Consumer
     participant GW as LLM Gateway
+    participant TR as Type Registry
     participant P as Provider
 
-    C->>GW: chat_completion(model, messages, tools[])
-    GW->>P: Request with tools
+    C->>GW: chat_completion(model, messages, tools[schema_ids])
+    GW->>TR: Get schemas by IDs
+    TR-->>GW: GTS schemas
+    GW->>GW: Convert to provider format
+    GW->>P: Request with provider-specific tools
     P-->>GW: tool_calls[]
-    GW-->>C: Response with tool_calls[]
+    GW-->>C: Response with tool_calls[] (schema_id preserved)
     Note over C: Consumer executes tools
     C->>GW: chat_completion(messages + tool_results)
     GW->>P: Request with tool results
@@ -427,7 +444,10 @@ sequenceDiagram
     GW-->>C: Response
 ```
 
-**Gateway role**: Pass-through. Gateway does not execute tools — consumer handles tool execution.
+**Gateway role**:
+- Reads schemas from Type Registry
+- Converts to provider-specific format (OpenAI functions, Anthropic tools, etc.)
+- Does not execute tools — consumer handles execution
 
 ---
 
