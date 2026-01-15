@@ -3,8 +3,9 @@
 FROM rust:1.89 AS builder
 
 # Install protobuf-compiler for prost-build
+# libprotoc-dev provides the include files needed for Google protobuf well-known types
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends protobuf-compiler && \
+    apt-get install -y --no-install-recommends protobuf-compiler libprotoc-dev && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /build
@@ -19,13 +20,15 @@ COPY libs ./libs
 COPY modules ./modules
 COPY examples ./examples
 COPY config ./config
+COPY proto ./proto
 
 # Build the hyperspot-server binary in release mode
 # Using --bin to build only the specific binary
 RUN cargo build --bin hyperspot-server --features users-info-example
 
 # Stage 2: Runtime
-FROM debian:bookworm-slim
+# Use debian:trixie-slim which has GLIBC 2.39+ compatible with rust:1.89 builder
+FROM debian:trixie-slim
 
 WORKDIR /app
 

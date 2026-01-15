@@ -86,7 +86,7 @@ modules:
   api_gateway:
     # No database needed for api_gateway
     config:
-      bind_addr: "127.0.0.1:8086"
+      bind_addr: "127.0.0.1:8087"
       enable_docs: true
       cors_enabled: false
 

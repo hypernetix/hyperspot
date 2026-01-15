@@ -154,11 +154,12 @@ def wait_for_health(base_url, timeout_secs=30):
     start = time.time()
     while True:
         try:
-            with urlopen(url, timeout=1) as resp:
+            with urlopen(url, timeout=2) as resp:
                 if 200 <= resp.status < 300:
                     print("API is ready")
                     return
-        except (URLError, HTTPError):
+        except (URLError, HTTPError, ConnectionResetError, OSError) as e:
+            # Connection errors are expected while server is starting
             pass
 
         if time.time() - start > timeout_secs:
@@ -205,7 +206,7 @@ def kill_existing_server(port):
 
 
 def cmd_e2e(args):
-    base_url = os.environ.get("E2E_BASE_URL", "http://localhost:8086")
+    base_url = os.environ.get("E2E_BASE_URL", "http://localhost:8087")
     check_pytest()
 
     # Kill any existing server on the port before starting
@@ -213,6 +214,7 @@ def cmd_e2e(args):
     kill_existing_server(port)
 
     docker_env_started = False
+    server_process = None
 
     if args.docker:
         step("Running E2E tests in Docker mode")
