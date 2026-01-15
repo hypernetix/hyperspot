@@ -8,6 +8,23 @@ use crate::domain::error::DomainError;
 use crate::domain::ir::ParsedDocument;
 use crate::domain::parser::FileParserBackend;
 
+/// Mapping of file extensions to MIME types
+/// Format: `(extension, mime_type)`
+const EXTENSION_MIME_MAPPINGS: &[(&str, &str)] = &[
+    ("pdf", "application/pdf"),
+    ("html", "text/html"),
+    ("htm", "text/html"),
+    (
+        "docx",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ),
+    ("png", "image/png"),
+    ("jpg", "image/jpeg"),
+    ("jpeg", "image/jpeg"),
+    ("webp", "image/webp"),
+    ("gif", "image/gif"),
+];
+
 /// File parser service that routes to appropriate backends
 #[derive(Clone)]
 pub struct FileParserService {
@@ -257,14 +274,16 @@ impl FileParserService {
         let mime: mime::Mime = ct.parse().ok()?;
         let essence = mime.essence_str();
 
-        let ext = match essence {
-            "application/pdf" => "pdf",
-            "text/html" | "application/xhtml+xml" => "html",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document" => "docx",
-            _ => return None,
-        };
+        // Special case: application/xhtml+xml maps to html
+        if essence == "application/xhtml+xml" {
+            return Some("html".to_owned());
+        }
 
-        Some(ext.to_owned())
+        // Find extension by matching MIME type
+        EXTENSION_MIME_MAPPINGS
+            .iter()
+            .find(|(_, mime_type)| *mime_type == essence)
+            .map(|(ext, _)| (*ext).to_owned())
     }
 
     /// Validate MIME type against expected type for extension
@@ -274,35 +293,37 @@ impl FileParserService {
             DomainError::invalid_request(format!("Invalid content-type: {content_type}"))
         })?;
 
-        let expected = match extension.to_lowercase().as_str() {
-            "pdf" => Some("application/pdf"),
-            "html" | "htm" => Some("text/html"),
-            "docx" => {
-                Some("application/vnd.openxmlformats-officedocument.wordprocessingml.document")
-            }
-            _ => None, // Allow unknown extensions
-        };
+        let mime_str = mime.essence_str();
+        let extension_lower = extension.to_lowercase();
 
-        if let Some(expected_type) = expected {
-            let mime_str = mime.essence_str();
-            // Also accept application/xhtml+xml for html
-            let is_valid = if extension == "html" || extension == "htm" {
-                mime_str == expected_type || mime_str == "application/xhtml+xml"
-            } else {
-                mime_str == expected_type
-            };
+        // Find expected MIME type(s) for this extension
+        let expected_mimes: Vec<&str> = EXTENSION_MIME_MAPPINGS
+            .iter()
+            .filter(|(ext, _)| *ext == extension_lower.as_str())
+            .map(|(_, mime_type)| *mime_type)
+            .collect();
 
-            if !is_valid {
-                tracing::warn!(
-                    extension = extension,
-                    expected = expected_type,
-                    actual = mime_str,
-                    "MIME type mismatch"
-                );
-                return Err(DomainError::invalid_request(format!(
-                    "Content-Type {mime_str} does not match expected type {expected_type} for .{extension}"
-                )));
-            }
+        if expected_mimes.is_empty() {
+            // Unknown extension - allow it
+            return Ok(());
+        }
+
+        // Check if actual MIME matches any expected MIME
+        // Special case: also accept application/xhtml+xml for html
+        let is_valid = expected_mimes.contains(&mime_str)
+            || (extension_lower == "html" && mime_str == "application/xhtml+xml")
+            || (extension_lower == "htm" && mime_str == "application/xhtml+xml");
+
+        if !is_valid {
+            tracing::warn!(
+                extension = extension,
+                expected = ?expected_mimes,
+                actual = mime_str,
+                "MIME type mismatch"
+            );
+            return Err(DomainError::invalid_request(format!(
+                "Content-Type {mime_str} does not match expected type(s) {expected_mimes:?} for .{extension}"
+            )));
         }
 
         Ok(())
