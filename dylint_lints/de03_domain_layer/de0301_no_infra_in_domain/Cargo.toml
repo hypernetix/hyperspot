@@ -1,0 +1,39 @@
+[package]
+name = "de0301_no_infra_in_domain"
+version = "0.1.0"
+authors = ["Hypernetix"]
+description = "Domain modules should not import infrastructure dependencies (DE0301)"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[[example]]
+name = "bad_infra_import"
+path = "ui/bad_infra_import.rs"
+
+[[example]]
+name = "good_domain_0301"
+path = "ui/good_domain_0301.rs"
+
+[[example]]
+name = "mixed_imports_0301"
+path = "ui/mixed_imports_0301.rs"
+
+[dependencies]
+clippy_utils.workspace = true
+dylint_linting.workspace = true
+lint_utils.workspace = true
+
+[dev-dependencies]
+dylint_testing.workspace = true
+sea-orm.workspace = true
+sqlx.workspace = true
+axum.workspace = true
+uuid.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+
+[package.metadata.rust-analyzer]
+rustc_private = true

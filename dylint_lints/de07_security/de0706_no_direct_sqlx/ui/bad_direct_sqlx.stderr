@@ -1,0 +1,21 @@
+error: direct sqlx import detected: `sqlx` (DE0706)
+  --> $DIR/bad_direct_sqlx.rs:7:1
+   |
+LL | use sqlx;
+   | ^^^^^^^^^
+   |
+   = help: use Sea-ORM EntityTrait or SecORM abstractions instead
+   = note: sqlx bypasses security enforcement and architectural patterns
+   = note: `#[deny(de0706_no_direct_sqlx)]` on by default
+
+error: direct sqlx import detected: `sqlx::Error` (DE0706)
+  --> $DIR/bad_direct_sqlx.rs:10:1
+   |
+LL | use sqlx::Error;
+   | ^^^^^^^^^^^^^^^^
+   |
+   = help: use Sea-ORM EntityTrait or SecORM abstractions instead
+   = note: sqlx bypasses security enforcement and architectural patterns
+
+error: aborting due to 2 previous errors
+

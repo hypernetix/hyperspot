@@ -1,0 +1,32 @@
+[package]
+name = "de0308_no_http_in_domain"
+version = "0.1.0"
+authors = ["Hypernetix"]
+description = "Domain modules should not reference HTTP types or status codes (DE0308)"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[[example]]
+name = "bad_http_import"
+path = "ui/bad_http_import.rs"
+
+[[example]]
+name = "good_domain_0308"
+path = "ui/good_domain_0308.rs"
+
+[dependencies]
+clippy_utils.workspace = true
+dylint_linting.workspace = true
+lint_utils.workspace = true
+
+[dev-dependencies]
+dylint_testing.workspace = true
+http = "1.0"
+axum.workspace = true
+anyhow.workspace = true
+
+[package.metadata.rust-analyzer]
+rustc_private = true
