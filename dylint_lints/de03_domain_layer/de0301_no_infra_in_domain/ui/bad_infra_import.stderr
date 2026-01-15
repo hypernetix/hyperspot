@@ -1,0 +1,27 @@
+error: domain module imports infrastructure dependency `sea_orm` (DE0301)
+  --> $DIR/bad_infra_import.rs:8:1
+   |
+LL | use sea_orm::entity::*;
+   | ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: domain should depend only on abstractions; move infrastructure code to infra/ layer
+   = note: `#[deny(de0301_no_infra_in_domain)]` on by default
+
+error: domain module imports infrastructure dependency `sqlx` (DE0301)
+  --> $DIR/bad_infra_import.rs:11:1
+   |
+LL | use sqlx::Pool;
+   | ^^^^^^^^^^^^^^^
+   |
+   = help: domain should depend only on abstractions; move infrastructure code to infra/ layer
+
+error: domain module imports infrastructure dependency `axum` (DE0301)
+  --> $DIR/bad_infra_import.rs:14:1
+   |
+LL | use axum::http::StatusCode;
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: domain should depend only on abstractions; move infrastructure code to infra/ layer
+
+error: aborting due to 3 previous errors
+
