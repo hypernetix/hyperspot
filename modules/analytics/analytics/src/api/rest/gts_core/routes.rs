@@ -1,8 +1,8 @@
-// @fdd-change:fdd-analytics-feature-gts-core-change-platform-integration-fix
-// @fdd-flow:fdd-analytics-feature-gts-core-flow-route-crud-operations
-// @fdd-flow:fdd-analytics-feature-gts-core-flow-aggregate-odata-metadata
-// @fdd-req:fdd-analytics-feature-gts-core-req-routing
-// @fdd-req:fdd-analytics-feature-gts-core-req-middleware
+// @fdd-change:fdd-analytics-feature-gts-core-change-platform-integration-fix:ph-1
+// @fdd-flow:fdd-analytics-feature-gts-core-flow-route-crud-operations:ph-1
+// @fdd-flow:fdd-analytics-feature-gts-core-flow-aggregate-odata-metadata:ph-1
+// @fdd-req:fdd-analytics-feature-gts-core-req-routing:ph-1
+// @fdd-req:fdd-analytics-feature-gts-core-req-middleware:ph-1
 use axum::{http::StatusCode, Extension, Router};
 use modkit::api::operation_builder::OperationBuilderODataExt;
 use modkit::api::{OpenApiRegistry, OperationBuilder};
@@ -12,7 +12,7 @@ use super::dto::{GtsEntityDto, GtsEntityDtoFilterField, GtsEntityListDto, GtsEnt
 use super::handlers;
 use crate::domain::gts_core::GtsCoreRouter;
 
-// @fdd-change:fdd-analytics-feature-gts-core-change-platform-integration-fix
+// @fdd-change:fdd-analytics-feature-gts-core-change-platform-integration-fix:ph-1
 /// Register GTS Core routes with OperationBuilder
 pub fn register_routes(
     mut router: Router,
@@ -166,6 +166,7 @@ mod tests {
     use crate::domain::gts_core::RoutingTable;
     use modkit::api::OpenApiRegistryImpl;
 
+    // @fdd-test:fdd-analytics-feature-gts-core-test-operations-registered:ph-1
     #[test]
     fn test_register_routes_extends_router() {
         let table = RoutingTable::new();
@@ -173,10 +174,23 @@ mod tests {
         let openapi = OpenApiRegistryImpl::new();
 
         let base_router = Router::new();
+
+        // fdd-begin fdd-analytics-feature-gts-core-test-operations-registered:ph-1:inst-register-restful-module
         let extended_router = register_routes(base_router, &openapi, gts_router);
+
+        assert!(!openapi.operation_specs.is_empty());
+        // fdd-end fdd-analytics-feature-gts-core-test-operations-registered:ph-1:inst-register-restful-module
 
         // Verify router was extended (not replaced)
         // Router should have service layer attached
+
+        // fdd-begin fdd-analytics-feature-gts-core-test-operations-registered:ph-1:inst-verify-router-extended
         assert!(std::mem::size_of_val(&extended_router) > 0);
+
+        // fdd-end fdd-analytics-feature-gts-core-test-operations-registered:ph-1:inst-verify-router-extended
+
+        // fdd-begin fdd-analytics-feature-gts-core-test-operations-registered:ph-1:inst-verify-openapi-registration
+        assert!(!openapi.operation_specs.is_empty());
+        // fdd-end fdd-analytics-feature-gts-core-test-operations-registered:ph-1:inst-verify-openapi-registration
     }
 }

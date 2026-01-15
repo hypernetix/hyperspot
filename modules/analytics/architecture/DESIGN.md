@@ -4,11 +4,13 @@
 **Date**: 2025-12-31  
 **Module**: Analytics
 
-**Business Context**: `@/modules/analytics/architecture/BUSINESS.md`
+**Business Context**: [BUSINESS.md](BUSINESS.md)
+
+**Architecture Decisions**: [ADR.md](ADR.md)
 
 ---
 
-## Section A: Architecture Overview
+## A. Architecture Overview
 
 ### Architectural Vision
 
@@ -59,7 +61,7 @@ The architecture consists of four distinct layers:
 
 ---
 
-## Section B: Requirements & Principles
+## B. Requirements & Principles
 
 ### 1. System Requirements & Constraints
 
@@ -164,11 +166,11 @@ The architecture consists of four distinct layers:
 **Capabilities**: `fdd-analytics-capability-security`  
 **Actors**: `fdd-analytics-actor-platform-admin`
 - Never commit secrets to version control
-- Use environment variables for configuration
+- Use platform secret storage
 - Rotate secrets regularly
 - Use secure random generation for tokens
 
-**References**: `@/guidelines/SECURITY.md`, `@/docs/SECURE-ORM.md`
+**References**: [SECURITY](../../../guidelines/SECURITY.md), [SECURE-ORM](../../../docs/SECURE-ORM.md)
 
 ---
 
@@ -209,7 +211,7 @@ The architecture consists of four distinct layers:
 - Readiness probe: service can handle traffic
 - Kubernetes-compatible health endpoints
 
-**References**: `@/docs/TRACING_SETUP.md`, `@/docs/ARCHITECTURE_MANIFEST.md`
+**References**: [TRACING_SETUP](../../../docs/TRACING_SETUP.md), [ARCHITECTURE_MANIFEST](../../../docs/ARCHITECTURE_MANIFEST.md)
 
 ---
 
@@ -258,6 +260,7 @@ The architecture consists of four distinct layers:
 ### 2. Principles
 
 #### 1. Security First
+
 **ID**: `fdd-analytics-principle-security-first`
 
 SecurityCtx enforced at every level. No query execution without tenant context.
@@ -265,6 +268,7 @@ SecurityCtx enforced at every level. No query execution without tenant context.
 **Implementation**: SecurityCtx as first parameter in all service methods
 
 #### 2. Plugin-Based Extensibility
+
 **ID**: `fdd-analytics-principle-plugin-extensibility`
 
 Datasources as dynamically registered plugins. No service restart required.
@@ -272,6 +276,7 @@ Datasources as dynamically registered plugins. No service restart required.
 **Implementation**: Plugin registry with runtime registration
 
 #### 3. GTS Native
+
 **ID**: `fdd-analytics-principle-gts-native`
 
 All plugin communication via GTS. Type safety at runtime.
@@ -279,6 +284,7 @@ All plugin communication via GTS. Type safety at runtime.
 **Implementation**: GTS Schema Registry for all data structures
 
 #### 4. Strongly Typed
+
 **ID**: `fdd-analytics-principle-strongly-typed`
 
 All configuration validated with schemas. No runtime errors from invalid config.
@@ -286,6 +292,7 @@ All configuration validated with schemas. No runtime errors from invalid config.
 **Implementation**: JSON Schema validation + GTS type checking
 
 #### 5. Metadata Storage
+
 **ID**: `fdd-analytics-principle-metadata-storage`
 
 OLTP database for storing GTS types, instances, and configuration.
@@ -293,6 +300,7 @@ OLTP database for storing GTS types, instances, and configuration.
 **Implementation**: PostgreSQL for metadata, GTS Registry for CRUD operations
 
 #### 6. Data Agnostic Architecture
+
 **ID**: `fdd-analytics-principle-data-agnostic`
 
 No built-in data sources or DWH. All data access via registered queries to external systems.
@@ -300,6 +308,7 @@ No built-in data sources or DWH. All data access via registered queries to exter
 **Implementation**: Query plugins with JWT propagation to external APIs/DWH
 
 #### 7. Modular Design
+
 **ID**: `fdd-analytics-principle-modular-design`  
 **ADRs**: `fdd-analytics-adr-initial-architecture`
 
@@ -308,6 +317,7 @@ Reusable layouts, items, widgets, templates.
 **Implementation**: GTS-based composable components
 
 #### 8. API-First
+
 **ID**: `fdd-analytics-principle-api-first`
 
 REST API with OpenAPI specification. All features accessible via API.
@@ -315,6 +325,7 @@ REST API with OpenAPI specification. All features accessible via API.
 **Implementation**: OpenAPI 3.x spec with code generation
 
 #### 9. Horizontal Scalability
+
 **ID**: `fdd-analytics-principle-horizontal-scalability`
 
 Stateless services, distributed architecture.
@@ -322,6 +333,7 @@ Stateless services, distributed architecture.
 **Implementation**: Kubernetes deployment, Redis for caching
 
 #### 10. Tenant Isolation
+
 **ID**: `fdd-analytics-principle-tenant-isolation`
 
 Complete data separation per tenant. Cryptographic JWT integrity.
@@ -329,6 +341,7 @@ Complete data separation per tenant. Cryptographic JWT integrity.
 **Implementation**: Automatic tenant_id injection + JWT validation
 
 #### 11. Mock Mode Support
+
 **ID**: `fdd-analytics-principle-mock-mode`  
 **ADRs**: `fdd-analytics-adr-mock-mode`
 
@@ -370,7 +383,7 @@ modules/analytics/
 
 **Note**: Analytics currently has a flat structure and needs refactoring to follow SDK pattern.
 
-**References**: `@/examples/modkit/users_info/`, `@/guidelines/NEW_MODULE.md`
+**References**: [examples/modkit/users_info](../../../examples/modkit/users_info/), [guidelines/NEW_MODULE.md](../../../guidelines/NEW_MODULE.md)
 
 ---
 
@@ -400,11 +413,11 @@ modules/analytics/
 - GTS Instance IDs: Each datasource identified by GTS ID
 - Dynamic registration: Add plugins without service restart
 
-**References**: `@/docs/MODKIT_PLUGINS.md`
+**References**: [docs/MODKIT_PLUGINS.md](../../../docs/MODKIT_PLUGINS.md)
 
 ---
 
-## Section C: Technical Architecture
+## C. Technical Architecture
 
 #### C.1: Component Architecture
 
@@ -437,7 +450,7 @@ modules/analytics/
 
 **Technology**: GTS (Global Type System) + JSON Schema
 
-**Location**: `gts/types/`
+**Location**: `../gts/types/`
 
 ##### Domain Model Diagram
 
@@ -453,7 +466,7 @@ Key entity relationships:
 
 All domain types are defined using GTS (Global Type System) with JSON Schema format.
 
-**Location**: `gts/types/*.json`
+**Location**: `../gts/types/*.json`
 
 The domain model consists of interconnected type categories managed through unified GTS Registry:
 
@@ -461,43 +474,43 @@ The domain model consists of interconnected type categories managed through unif
 
 **Schemas** - Define data structures and validation rules. All schemas inherit from base and require `examples[0]` for validation.
 
-- [`gts://gts.hypernetix.hyperspot.ax.schema.v1~`](../../gts/types/schema/v1/base.schema.json) - Base schema type with mandatory examples
-- [`gts://gts.hypernetix.hyperspot.ax.schema.v1~hypernetix.hyperspot.ax.query_returns.v1~`](../../gts/types/schema/v1/query_returns.schema.json) - Query result schema (paginated, scalar-only fields)
-- [`gts://gts.hypernetix.hyperspot.ax.schema.v1~hypernetix.hyperspot.ax.template_config.v1~`](../../gts/types/schema/v1/template_config.schema.json) - Template configuration base
-- [`gts://gts.hypernetix.hyperspot.ax.schema.v1~hypernetix.hyperspot.ax.values.v1~`](../../gts/types/schema/v1/values.schema.json) - Value lists for UI selectors
+- [`gts://gts.hypernetix.hyperspot.ax.schema.v1~`](../gts/types/schema/v1/base.schema.json) - Base schema type with mandatory examples
+- [`gts://gts.hypernetix.hyperspot.ax.schema.v1~hypernetix.hyperspot.ax.query_returns.v1~`](../gts/types/schema/v1/query_returns.schema.json) - Query result schema (paginated, scalar-only fields)
+- [`gts://gts.hypernetix.hyperspot.ax.schema.v1~hypernetix.hyperspot.ax.template_config.v1~`](../gts/types/schema/v1/template_config.schema.json) - Template configuration base
+- [`gts://gts.hypernetix.hyperspot.ax.schema.v1~hypernetix.hyperspot.ax.values.v1~`](../gts/types/schema/v1/values.schema.json) - Value lists for UI selectors
 
 **Queries** - Define data retrieval operations using OData v4 protocol.
 
-- [`gts://gts.hypernetix.hyperspot.ax.query.v1~`](../../gts/types/query/v1/query.schema.json) - Query registration with OData integration
-- [`gts://gts.hypernetix.hyperspot.ax.query_capabilities.v1~`](../../gts/types/query/v1/query_capabilities.schema.json) - OData capabilities annotations (FilterRestrictions, SortRestrictions, etc)
-- [`gts://gts.hypernetix.hyperspot.ax.query.v1~hypernetix.hyperspot.ax.values.v1~`](../../gts/types/query/v1/values.schema.json) - Default OData query options
+- [`gts://gts.hypernetix.hyperspot.ax.query.v1~`](../gts/types/query/v1/query.schema.json) - Query registration with OData integration
+- [`gts://gts.hypernetix.hyperspot.ax.query_capabilities.v1~`](../gts/types/query/v1/query_capabilities.schema.json) - OData capabilities annotations (FilterRestrictions, SortRestrictions, etc)
+- [`gts://gts.hypernetix.hyperspot.ax.query.v1~hypernetix.hyperspot.ax.values.v1~`](../gts/types/query/v1/values.schema.json) - Default OData query options
 
 **Categories** - Organize and group related GTS entities by domain or purpose.
 
-- [`gts://gts.hypernetix.hyperspot.ax.category.v1~`](../../gts/types/category/v1/base.schema.json) - Base category (hierarchical classification)
+- [`gts://gts.hypernetix.hyperspot.ax.category.v1~`](../gts/types/category/v1/base.schema.json) - Base category (hierarchical classification)
 - Category types for: Query, Template, Datasource, Widget, Item, Group, Dashboard, Layout
 
 **Templates** - Define rendering logic and configuration for visual components.
 
-- [`gts://gts.hypernetix.hyperspot.ax.template.v1~`](../../gts/types/template/v1/base.schema.json) - Base template (UI component config)
-- [`gts://gts.hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.widget.v1~`](../../gts/types/template/v1/widget.schema.json) - Widget template (data visualizations)
-- [`gts://gts.hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.values_selector.v1~`](../../gts/types/template/v1/values_selector.schema.json) - Values selector template (dropdowns, autocomplete)
+- [`gts://gts.hypernetix.hyperspot.ax.template.v1~`](../gts/types/template/v1/base.schema.json) - Base template (UI component config)
+- [`gts://gts.hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.widget.v1~`](../gts/types/template/v1/widget.schema.json) - Widget template (data visualizations)
+- [`gts://gts.hypernetix.hyperspot.ax.template.v1~hypernetix.hyperspot.ax.values_selector.v1~`](../gts/types/template/v1/values_selector.schema.json) - Values selector template (dropdowns, autocomplete)
 
 **Datasources** - Connect query definitions with runtime parameters and UI controls.
 
-- [`gts://gts.hypernetix.hyperspot.ax.datasource.v1~`](../../gts/types/datasource/v1/datasource.schema.json) - Datasource (query + params + UI controls)
+- [`gts://gts.hypernetix.hyperspot.ax.datasource.v1~`](../gts/types/datasource/v1/datasource.schema.json) - Datasource (query + params + UI controls)
 
 **Items** - Reusable building blocks for layouts.
 
-- [`gts://gts.hypernetix.hyperspot.ax.item.v1~`](../../gts/types/item/v1/base.schema.json) - Base item (name, size, category)
-- [`gts://gts.hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.widget.v1~`](../../gts/types/item/v1/widget.schema.json) - Widget item (template + datasource)
-- [`gts://gts.hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.group.v1~`](../../gts/types/item/v1/group.schema.json) - Group item (container for items)
+- [`gts://gts.hypernetix.hyperspot.ax.item.v1~`](../gts/types/item/v1/base.schema.json) - Base item (name, size, category)
+- [`gts://gts.hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.widget.v1~`](../gts/types/item/v1/widget.schema.json) - Widget item (template + datasource)
+- [`gts://gts.hypernetix.hyperspot.ax.item.v1~hypernetix.hyperspot.ax.group.v1~`](../gts/types/item/v1/group.schema.json) - Group item (container for items)
 
 **Layouts** - Organize items into dashboards and reports.
 
-- [`gts://gts.hypernetix.hyperspot.ax.layout.v1~`](../../gts/types/layout/v1/base.schema.json) - Base layout (ordered item array)
-- [`gts://gts.hypernetix.hyperspot.ax.layout.v1~hypernetix.hyperspot.ax.dashboard.v1~`](../../gts/types/layout/v1/dashboard.schema.json) - Dashboard layout (real-time, auto-refresh)
-- [`gts://gts.hypernetix.hyperspot.ax.layout.v1~hypernetix.hyperspot.ax.report.v1~`](../../gts/types/layout/v1/report.schema.json) - Report layout (scheduled, exportable)
+- [`gts://gts.hypernetix.hyperspot.ax.layout.v1~`](../gts/types/layout/v1/base.schema.json) - Base layout (ordered item array)
+- [`gts://gts.hypernetix.hyperspot.ax.layout.v1~hypernetix.hyperspot.ax.dashboard.v1~`](../gts/types/layout/v1/dashboard.schema.json) - Dashboard layout (real-time, auto-refresh)
+- [`gts://gts.hypernetix.hyperspot.ax.layout.v1~hypernetix.hyperspot.ax.report.v1~`](../gts/types/layout/v1/report.schema.json) - Report layout (scheduled, exportable)
 
 **Component Registration**: All types and instances managed via unified `/gts` endpoint with automatic tenant isolation
 
@@ -512,7 +525,8 @@ The domain model consists of interconnected type categories managed through unif
 ##### OpenAPI Specification
 
 **Design-Time OpenAPI**: [api.yaml](openapi/v1/api.yaml)  
-**Runtime OpenAPI**: [openapi.yaml](../../openapi/analytics.yaml) (generated from code)
+**Runtime OpenAPI (repository)**: [api.json](../../../docs/api/api.json) (generated from code)  
+**Runtime OpenAPI (endpoint)**: [openapi.json](http://localhost:8087/openapi.json)
 
 **API Endpoints**:
 - `/$metadata` - OData service metadata (JSON CSDL)
@@ -541,7 +555,7 @@ The domain model consists of interconnected type categories managed through unif
 
 **Purpose**: Define REST API conventions and standards for Analytics module
 
-**Required Standards** (see `@/guidelines/DNA/REST/API.md`):
+**Required Standards** (see [guidelines/DNA/REST/API.md](../../../guidelines/DNA/REST/API.md)):
 
 **Pagination**: OData cursor-based with `$filter`, `$orderby`, `$select`
 - Max limit: 200 items per page
@@ -554,7 +568,7 @@ The domain model consists of interconnected type categories managed through unif
 - Include `type`, `title`, `status`, `detail`, `traceId`
 - Structured validation errors with field-level details
 
-**Status Codes** (see `@/guidelines/DNA/REST/STATUS_CODES.md`):
+**Status Codes** (see [guidelines/DNA/REST/STATUS_CODES.md](../../../guidelines/DNA/REST/STATUS_CODES.md)):
 - Success: 200 (read), 201 (create + Location), 204 (delete), 202 (async)
 - Client errors: 400 (bad request), 401 (auth), 403 (authz), 404, 409 (conflict), 422 (validation), 429 (rate limit)
 - Server errors: 500 (internal), 503 (unavailable + Retry-After)
@@ -569,10 +583,10 @@ The domain model consists of interconnected type categories managed through unif
 - Per-tenant query rate limits
 - Per-tenant API call rate limits
 
-**References**:
-- [REST API Guidelines](../../guidelines/DNA/REST/API.md)
-- [Pagination Spec](../../guidelines/DNA/REST/PAGINATION.md)
-- [Status Codes](../../guidelines/DNA/REST/STATUS_CODES.md)
+ **References**:
+ - [REST API Guidelines](../../../guidelines/DNA/REST/API.md)
+ - [Querying / Pagination](../../../guidelines/DNA/REST/QUERYING.md)
+ - [Status Codes](../../../guidelines/DNA/REST/STATUS_CODES.md)
 
 ---
 
@@ -625,8 +639,8 @@ The domain model consists of interconnected type categories managed through unif
 - GTS entity changes logged with: entity_id, operation, before/after state
 
 **References**: 
-- `@/docs/SECURE-ORM.md` - Secure ORM implementation details
-- `@/guidelines/SECURITY.md` - Platform security guidelines
+- [docs/SECURE-ORM.md](../../../docs/SECURE-ORM.md) - Secure ORM implementation details
+- [guidelines/SECURITY.md](../../../guidelines/SECURITY.md) - Platform security guidelines
 - Section B.1a - Security Requirements
 
 ---
@@ -634,7 +648,7 @@ The domain model consists of interconnected type categories managed through unif
 #### C.5: Non-Functional Requirements
 
 **Performance Requirements**:  
-**ID**: `fdd-analytics-req-nfr-performance`
+**ID**: `fdd-analytics-nfr-performance`
 - Query execution: p95 < 1s, p99 < 3s (depends on external data sources)
 - Dashboard load: < 2s for typical dashboard (10-20 widgets)
 - API response: p95 < 200ms for metadata operations
@@ -642,7 +656,7 @@ The domain model consists of interconnected type categories managed through unif
 - Query result caching reduces repeated query latency
 
 **Scalability Requirements**:  
-**ID**: `fdd-analytics-req-nfr-scalability`
+**ID**: `fdd-analytics-nfr-scalability`
 - Horizontal scaling: Stateless service design enables adding instances
 - Concurrent users: 100+ per tenant without degradation
 - Data volume: 10M+ rows per query result (limited by external sources)
@@ -650,7 +664,7 @@ The domain model consists of interconnected type categories managed through unif
 - Plugin capacity: Unlimited datasource plugins via dynamic registration
 
 **Reliability & Availability Requirements**:  
-**ID**: `fdd-analytics-req-nfr-reliability`
+**ID**: `fdd-analytics-nfr-reliability`
 - Uptime SLA: 99.9% availability target
 - Health checks: Liveness and readiness probes for Kubernetes
 - Graceful degradation: Mock mode fallback when dependencies unavailable
@@ -658,15 +672,15 @@ The domain model consists of interconnected type categories managed through unif
 - Circuit breaker: Prevent cascade failures from external API issues
 
 **Observability Requirements**:  
-**ID**: `fdd-analytics-req-nfr-observability`
+**ID**: `fdd-analytics-nfr-observability`
 - Distributed tracing: OpenTelemetry with W3C Trace Context propagation
 - Structured logging: JSON logs with `traceId`, `requestId`, `tenant_id`
 - Metrics: Prometheus RED (Rate, Errors, Duration) and USE (Utilization, Saturation, Errors) metrics
 - Health endpoints: `/health` (liveness), `/ready` (readiness)
-- **References**: `@/docs/TRACING_SETUP.md`
+- **References**: [docs/TRACING_SETUP.md](../../../docs/TRACING_SETUP.md)
 
 **Maintainability Requirements**:  
-**ID**: `fdd-analytics-req-nfr-maintainability`
+**ID**: `fdd-analytics-nfr-maintainability`
 - Modular architecture: Plugin-based extensibility without core changes
 - SDK pattern: Clear contract/implementation separation
 - Type safety: GTS eliminates runtime type errors
@@ -674,16 +688,8 @@ The domain model consists of interconnected type categories managed through unif
 - Documentation: OpenAPI specification auto-generated from code
 
 **Deployment Requirements**:  
-**ID**: `fdd-analytics-req-nfr-deployment`
+**ID**: `fdd-analytics-nfr-deployment`
 - Container-based: Docker images for consistent deployment
 - Kubernetes-ready: Supports horizontal pod autoscaling
 - Configuration: Environment variables and config files
 - Zero downtime: Rolling updates without service interruption
-
----
-
-## Section D: Additional Context
-
-**Note**: This section is optional and reserved for architect notes, technical rationale, or other relevant technical context not covered by the core FDD structure.
-
-<!-- Add any additional technical context, implementation notes, technology selection rationale, or other relevant information here -->

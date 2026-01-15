@@ -1,7 +1,9 @@
-# Init Module - Feature Design
-
-**Status**: ✅ IMPLEMENTED  
-**Module**: Analytics
+# Feature: Init Module
+ 
+ - **Feature ID**: `fdd-analytics-feature-init-module`
+ - **Feature Directory**: `modules/analytics/architecture/features/feature-init-module/`
+ - **Status**: ✅ IMPLEMENTED
+ - **Module**: Analytics
 
 **Verification**: 
 - ✅ Compilation: `cargo check --package analytics-sdk --package analytics` - SUCCESS
@@ -14,13 +16,14 @@
 
 ## A. Feature Context
 
-### Overview
+### 1. Overview
 
 Create **minimal module structure** following SDK pattern with ModKit compliance. This establishes the compilable skeleton for business features to build upon.
 
 **Critical Scope Constraint**: Init creates **structure only**, NO business logic.
 
-### Purpose
+
+### 2. Purpose
 
 Initialize the analytics module with:
 - Empty compilable module structure
@@ -28,59 +31,54 @@ Initialize the analytics module with:
 - SDK pattern (transport-agnostic API)
 - Layer folders ready for business features
 
-### Actors
 
-- **Developer/Architect**: Creates module structure using init workflow
-
-### References
-
-**MANDATORY Reading**:
-- `@/guidelines/hyperspot-fdd-adapter/INIT_MODULE_PATTERNS.md` - ModKit integration patterns
-- `@/guidelines/NEW_MODULE.md` - Module structure patterns
-- `@/docs/MODKIT_UNIFIED_SYSTEM.md` - ModKit integration
-- `@/modules/analytics/architecture/DESIGN.md` - Overall Design
-
+### 3. Actors
+ 
+ 
+### 4. References
+ 
+ 1. Features manifest entry: [FEATURES.md](../FEATURES.md)
+ 2. Overall Design: [DESIGN.md](../../DESIGN.md)
+ 3. Module creation conventions: [NEW_MODULE.md](../../../../../guidelines/NEW_MODULE.md)
+ 4. ModKit integration reference: [MODKIT_UNIFIED_SYSTEM.md](../../../../../docs/MODKIT_UNIFIED_SYSTEM.md)
+ 
 ### What Init IS vs IS NOT
-
-**Init module creates** (✅):
-- SDK crate with empty API trait
-- Module crate with ModKit registration
-- Stub local client (no method implementations)
-- Empty layer folders (domain/, infra/, api/)
-- Basic configuration with defaults
-- Workspace integration (Cargo.toml)
+ 
+ **Init module creates** (✅):
+1. SDK crate with empty API trait
+2. Module crate with ModKit registration
+3. Stub local client (no method implementations)
+4. Empty layer folders (domain/, infra/, api/)
+5. Basic configuration with defaults
+6. Workspace integration (Cargo.toml)
 
 **Init module does NOT create** (❌):
-- Business models or GTS types
-- API method definitions
-- Database entities or repositories
-- REST handlers or DTOs
-- Domain services
-- Any business logic
+1. Business models or GTS types
+2. API method definitions
+3. Database entities or repositories
+4. REST handlers or DTOs
+5. Domain services
+6. Any business logic
 
 **Rule**: If it requires understanding business requirements or GTS types, it's a **feature**, not init.
 
 ---
 
 ## B. Actor Flows
+ 
+ No actor flows are defined for this feature.
+ 
+ ---
+ 
+ ## C. Algorithms
+ 
+ No algorithms are defined for this feature.
+ 
+ ---
+ 
+ ## D. States
 
-*Intentionally minimal for init-module - structural task, not business logic.*
-
-Developer runs init workflow → creates module skeleton → verifies compilation.
-
----
-
-## C. Algorithms
-
-*Intentionally minimal for init-module - structural task, not business logic.*
-
-See OpenSpec change 001 for implementation details.
-
----
-
-## D. States
-
-*Not applicable for init-module*
+No state machines are defined for this feature.
 
 ---
 
@@ -223,68 +221,35 @@ pub type AnalyticsResult<T> = Result<T, AnalyticsError>;
 ---
 
 ## F. Requirements
-
-### fdd-analytics-feature-init-module-req-module-structure
-
-**Status**: ✅ COMPLETED
-
-**Description**: The system SHALL create a minimal compilable module structure following SDK pattern with ModKit compliance. The module structure MUST include transport-agnostic SDK crate, domain-layered module crate, ModKit registration, and workspace integration without any business logic.
-
-**References**:
-- [Section A: What Init IS vs IS NOT](#what-init-is-vs-is-not)
-- [Section E: File Structure Created](#file-structure-created)
-- [Section E: ModKit Integration](#modkit-integration)
-- [Section E: Workspace Changes](#workspace-changes)
-
-**Testing Scenarios**:
-
-1. **Compilation Test**:
-   - Run `cargo check` on workspace
-   - Verify both analytics-sdk and analytics crates compile
-   - Expected: No compilation errors, zero business logic warnings
-
-2. **Module Registration Test**:
-   - Verify ModKit macro expands correctly
-   - Check module appears in module registry via inventory
-   - Expected: AnalyticsModule registered with db and rest capabilities
-
-3. **Workspace Integration Test**:
-   - Import SDK from external crate
-   - Verify re-exports work correctly
-   - Expected: All SDK types accessible, no circular dependencies
-
-**Acceptance Criteria**:
-- Both analytics-sdk and analytics crates compile without errors
-- ModKit `#[modkit::module]` macro expands correctly with db and rest capabilities
-- Workspace Cargo.toml includes both crates as members
-- All layer folders (domain/, infra/, api/) exist and contain only empty mod.rs files
-- No business logic, GTS types, or API method definitions present
-- SDK crate has no serde dependencies (transport-agnostic)
-- inventory dependency included for macro support
+ ### Module structure exists and is compilable
+ 
+ - [x] **ID**: fdd-analytics-feature-init-module-req-module-structure
+ **Status**: ✅ IMPLEMENTED
+ **Description**: The system MUST provide a minimal, compilable Analytics module structure that follows the SDK pattern and integrates with ModKit, while containing no business logic.
+ **References**:
+  - [What Init IS vs IS NOT](#what-init-is-vs-is-not)
+  - [File Structure Created](#file-structure-created)
+  - [ModKit Integration](#modkit-integration)
+  - [Workspace Changes](#workspace-changes)
+ **Implements**:
+  - Module structure implemented in `modules/analytics/analytics-sdk` and `modules/analytics/analytics`
+ **Phases**:
+  - [x] `ph-1`: Create both crates, integrate into workspace, and ensure `cargo check` passes
+ **Testing Scenarios (FDL)**:
+ - [x] **ID**: fdd-analytics-feature-init-module-test-module-compiles
+   1. [x] - `ph-1` - Execute compilation check for `analytics-sdk` crate - `inst-check-sdk-compiles`
+   2. [x] - `ph-1` - Execute compilation check for `analytics` crate - `inst-check-module-compiles`
+   3. [x] - `ph-1` - Verify compilation has no errors - `inst-verify-no-compilation-errors`
+   4. [x] - `ph-1` - Verify public SDK types are importable by an external crate - `inst-verify-sdk-types-importable`
+ **Acceptance Criteria**:
+ - The workspace contains `modules/analytics/analytics-sdk` and `modules/analytics/analytics`.
+ - Both crates compile successfully.
+ - The module registers via ModKit without defining business logic.
 
 ---
 
-## G. Implementation Plan
-
-**Total Changes**: 1
-
-1. **fdd-analytics-feature-init-module-change-structure** ✅ COMPLETED
-   - **Description**: Create complete module structure with SDK pattern following ModKit compliance
-   - **Implements Requirements**: `fdd-analytics-feature-init-module-req-module-structure`
-   - **Dependencies**: None
-   - **Completed**: 2026-01-06
-   - **Scope**:
-     - SDK crate (analytics-sdk) with empty API trait and base error types
-     - Module crate (analytics) with ModKit registration and empty layer folders
-     - Local client stub with no method implementations
-     - Workspace integration in root Cargo.toml
-     - Configuration structure with defaults
-   - **Effort**: 1-2 hours
-   - **Verification**:
-     - `cargo check --package analytics-sdk --package analytics` passes
-     - Both crates compile successfully
-     - ModKit registration macro expands without errors
-     - Layer folders (domain/, infra/, api/) exist and are empty
-     - No business logic present in any files
+## G. Additional Context (Optional)
+ 
+This feature intentionally delivers only the **module foundation** (SDK + module crate + ModKit registration) and is expected to be extended by subsequent Analytics features.
 
 ---

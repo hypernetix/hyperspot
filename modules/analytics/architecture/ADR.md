@@ -157,12 +157,21 @@ Analytics module needed a standardized query protocol for data retrieval that su
 
 ### Related Design Elements
 
+**Actors**:
+- `fdd-analytics-actor-api-consumer` - Integrates analytics programmatically and relies on predictable query semantics
+- `fdd-analytics-actor-query-plugin` - Executes queries against datasources using OData-compatible query options
+- `fdd-analytics-actor-ui-app` - Issues OData queries for dashboards and data exploration
+
 **Capabilities**:
 - `fdd-analytics-capability-query-execution` - Multi-datasource queries with OData support
 - `fdd-analytics-capability-data-access` - OData v4 query support
 
 **Requirements**:
 - `fdd-analytics-req-tech-constraints` - Technology choices including query protocols
+
+**Principles**:
+- `fdd-analytics-principle-api-first` - REST API with OpenAPI specification
+- `fdd-analytics-principle-gts-native` - Query and metadata semantics expressed via GTS types
 
 ---
 
@@ -270,6 +279,3 @@ Development and testing require ability to run analytics module without dependen
 
 **Principles**:
 - `fdd-analytics-principle-mock-mode` - All services and UI components support mock mode
-
-**Requirements**:
-- `fdd-analytics-req-nfr-maintainability` - Testing with mock mode for fast development

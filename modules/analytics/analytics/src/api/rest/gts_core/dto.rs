@@ -1,9 +1,9 @@
-// @fdd-change:fdd-analytics-feature-gts-core-change-platform-integration-fix
+// @fdd-change:fdd-analytics-feature-gts-core-change-platform-integration-fix:ph-1
 use modkit_db_macros::ODataFilterable;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-// @fdd-change:fdd-analytics-feature-gts-core-change-platform-integration-fix
+// @fdd-change:fdd-analytics-feature-gts-core-change-platform-integration-fix:ph-1
 /// Response DTO for GTS entity operations
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, ODataFilterable)]
 pub struct GtsEntityDto {

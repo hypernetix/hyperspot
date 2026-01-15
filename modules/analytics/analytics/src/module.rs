@@ -5,6 +5,9 @@ use modkit::api::OpenApiRegistry;
 use modkit::{DbModule, Module, ModuleCtx, RestfulModule};
 use std::sync::Arc;
 
+// @fdd-req:fdd-analytics-feature-init-module-req-module-structure:ph-1
+// @fdd-test:fdd-analytics-feature-init-module-test-module-compiles:ph-1
+
 #[modkit::module(name = "analytics", capabilities = [rest, db])]
 #[derive(Clone)]
 pub struct AnalyticsModule {
@@ -60,4 +63,24 @@ impl RestfulModule for AnalyticsModule {
 
         Ok(router)
     }
+}
+
+#[cfg(test)]
+mod init_module_traceability_tests {
+    use super::*;
+
+    #[test]
+    // fdd-begin fdd-analytics-feature-init-module-test-module-compiles:ph-1:inst-verify-no-compilation-errors
+    fn test_init_module_compiles_and_sdk_is_importable() {
+        // fdd-begin fdd-analytics-feature-init-module-test-module-compiles:ph-1:inst-check-module-compiles
+        let _ = AnalyticsModule::default();
+        // fdd-end fdd-analytics-feature-init-module-test-module-compiles:ph-1:inst-check-module-compiles
+
+        // fdd-begin fdd-analytics-feature-init-module-test-module-compiles:ph-1:inst-verify-sdk-types-importable
+        // fdd-begin fdd-analytics-feature-init-module-test-module-compiles:ph-1:inst-check-sdk-compiles
+        let _e = analytics_sdk::AnalyticsError::Internal("ok".to_string());
+        // fdd-end fdd-analytics-feature-init-module-test-module-compiles:ph-1:inst-check-sdk-compiles
+        // fdd-end fdd-analytics-feature-init-module-test-module-compiles:ph-1:inst-verify-sdk-types-importable
+    }
+    // fdd-end fdd-analytics-feature-init-module-test-module-compiles:ph-1:inst-verify-no-compilation-errors
 }

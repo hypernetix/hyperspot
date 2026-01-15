@@ -18,6 +18,13 @@ dylint_linting::declare_late_lint! {
     /// Service names help identify different microservices/modules, and versions
     /// allow for API evolution without breaking changes.
     ///
+    /// ### Exceptions
+    ///
+    /// OData v4 system resources (starting with `$`) are allowed:
+    /// - `$metadata` - Service metadata
+    /// - `$batch` - Batch operations
+    /// - `$count` - Count operations
+    ///
     /// ### Example
     ///
     /// ```rust,ignore
@@ -42,6 +49,10 @@ dylint_linting::declare_late_lint! {
     ///
     /// // Good - with sub-resources
     /// OperationBuilder::post("/my-service/v2/users/{id}/profile")
+    ///
+    /// // Good - OData system resources allowed
+    /// OperationBuilder::get("/my-service/v1/$metadata")
+    /// OperationBuilder::post("/my-service/v1/$batch")
     /// ```
     pub DE0801_API_ENDPOINT_VERSION,
     Deny,
@@ -143,6 +154,12 @@ fn is_path_param(segment: &str) -> bool {
     segment.starts_with('{') && segment.ends_with('}')
 }
 
+/// Check if a segment is an OData v4 system resource (starts with $)
+/// Examples: $metadata, $batch, $count, etc.
+fn is_odata_system_resource(segment: &str) -> bool {
+    segment.starts_with('$')
+}
+
 /// Validate that a path follows the format: /{service-name}/v{N}/{resource}
 fn validate_api_path(path: &str) -> Result<(), PathValidationError> {
     let segments: Vec<&str> = path.split('/').filter(|s| !s.is_empty()).collect();
@@ -181,7 +198,8 @@ fn validate_api_path(path: &str) -> Result<(), PathValidationError> {
 
     // Validate all remaining segments (resources and sub-resources)
     for segment in &segments[2..] {
-        if is_path_param(segment) {
+        // Skip validation for path parameters and OData system resources
+        if is_path_param(segment) || is_odata_system_resource(segment) {
             continue;
         }
         if !is_valid_kebab_case(segment) {

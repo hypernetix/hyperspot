@@ -41,6 +41,23 @@ A feature can be marked `✅ IMPLEMENTED` if it delivers its **defined scope**, 
 
 ---
 
+## Feature Phases (Optional) ↔ Status Consistency
+
+**Purpose**: Allow partial delivery visibility inside a single feature while keeping feature-level status truthful.
+
+**Phase ID Format**: `ph-{N}`
+
+**Rule**:
+- A feature marked `✅ IMPLEMENTED` MUST NOT have any phase in 🔄 IN_PROGRESS or ⏳ NOT_STARTED.
+- If phases are used, each phase marked ✅ IMPLEMENTED MUST be traceable to code via phase postfixes on feature-scoped tags.
+
+**Code Tagging**:
+- Standalone phase tags MUST NOT be used.
+- Phase MUST be encoded as a postfix on feature-scoped tags:
+  - `@fdd-change:{id}:ph-{N}`, `@fdd-flow:{id}:ph-{N}`, `@fdd-algo:{id}:ph-{N}`, `@fdd-state:{id}:ph-{N}`, `@fdd-req:{id}:ph-{N}`, `@fdd-test:{id}:ph-{N}`
+
+---
+
 ## Distinguishing Architectural Stubs vs Incomplete Work
 
 ### ✅ ALLOWED: Architectural Stubs
@@ -204,59 +221,42 @@ Before marking feature as `✅ IMPLEMENTED`:
 
 ### 1. Find Business Logic TODOs
 
-```bash
-# Check for incomplete work in domain/service layers
-rg --type rust -i \
-   -e 'TODO' \
-   -e 'FIXME' \
-   -e 'XXX' \
-   -e 'HACK' \
-   <feature_dir>/src/domain/ \
-   <feature_dir>/src/service/
-```
+Search the feature domain/service code for incomplete work markers:
+- `TODO`
+- `FIXME`
+- `XXX`
+- `HACK`
 
-**Expected**: Exit code 1 (no matches) for IMPLEMENTED features.
+**Expected**: No matches in business logic for `✅ IMPLEMENTED` features.
 
 ---
 
 ### 2. Find Unimplemented Business Logic
 
-```bash
-# Check for unimplemented! in non-trait-default code
-rg --type rust \
-   -e 'unimplemented!' \
-   -e 'todo!' \
-   <feature_dir>/src/domain/ \
-   <feature_dir>/src/service/ \
-   <feature_dir>/src/infra/
-```
+Search the feature code (domain/service/infra) for incomplete implementation markers:
+- `unimplemented!`
+- `todo!`
 
-**Expected**: Exit code 1 (no matches) or only trait defaults.
+**Expected**: No matches, except permitted trait defaults (if adapter allows).
 
 ---
 
 ### 3. Find Ignored Tests
 
-```bash
-# Check for ignored tests without justification
-rg --type rust -A 2 '#\[ignore\]' <feature_dir>/tests/
-```
+Search the feature test code for ignored tests:
+- `#[ignore]`
 
-**Expected**: All `#[ignore]` have doc comments explaining why.
+**Expected**: Every ignored test has documented justification.
 
 ---
 
 ### 4. Find Placeholder Tests
 
-```bash
-# Check for empty or placeholder tests
-rg --type rust \
-   -e 'assert!\(true' \
-   -e 'assert_eq!\(1, 1\)' \
-   <feature_dir>/tests/
-```
+Search the feature test code for placeholder assertions:
+- `assert!(true)`
+- `assert_eq!(1, 1)`
 
-**Expected**: Exit code 1 (no matches).
+**Expected**: No placeholder tests.
 
 ---
 

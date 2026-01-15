@@ -8,6 +8,8 @@
 
 ---
 
+**ALWAYS open and follow**: `../FDD/requirements/core.md` WHEN editing this file
+
 ALWAYS open and follow `specs/feature-status-validation.md` WHEN executing workflows: feature.md, feature-validate.md, feature-changes.md, feature-changes-validate.md, features-validate.md, feature-code-validate.md
 
 ALWAYS open and follow `specs/tech-stack.md` WHEN executing workflows: adapter.md, adapter-auto.md, adapter-manual.md, adapter-bootstrap.md, adapter-validate.md, design.md, design-validate.md, adr.md, adr-validate.md, feature-change-implement.md, feature-code-validate.md

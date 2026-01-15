@@ -1,6 +1,6 @@
 # Project Structure Specification
 
-**Architecture Root**: `architecture/`
+**Architecture Root (per module)**: `modules/{module-name}/architecture/`
 **Source Root**: `modules/`, `libs/`, `apps/`
 
 ---
@@ -8,7 +8,7 @@
 ## Architecture Files
 
 ```
-architecture/
+modules/{module-name}/architecture/
 ├── BUSINESS.md              # Business context (FDD Layer 2)
 ├── DESIGN.md                # Overall architecture design (FDD Layer 3)
 ├── ADR.md                   # Architecture Decision Records
@@ -18,6 +18,24 @@ architecture/
         ├── DESIGN.md        # Feature design (FDD Layer 5)
         └── CHANGES.md       # Implementation plan (FDD Layer 6)
 ```
+
+---
+
+## FDD Core Path Mapping (Modular Architecture)
+
+FDD core workflows and requirements often reference architecture artifacts using paths like `architecture/BUSINESS.md`.
+
+In this repository, architecture artifacts are stored per module.
+
+**Rule**:
+- Map `architecture/{file}` to `modules/{module-name}/architecture/{file}`.
+
+**Examples**:
+- `architecture/BUSINESS.md` -> `modules/analytics/architecture/BUSINESS.md`
+- `architecture/DESIGN.md` -> `modules/analytics/architecture/DESIGN.md`
+
+**Validation note**:
+- When executing a validation workflow, the agent MUST explicitly choose `{module-name}`.
 
 ---
 

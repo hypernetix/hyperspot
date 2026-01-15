@@ -1,4 +1,4 @@
-// @fdd-change:fdd-analytics-feature-gts-core-change-quality-assurance
+// @fdd-change:fdd-analytics-feature-gts-core-change-quality-assurance:ph-1
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-// @fdd-change:fdd-analytics-feature-gts-core-change-quality-assurance
+// @fdd-change:fdd-analytics-feature-gts-core-change-quality-assurance:ph-1
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ProblemDetails {
     #[serde(rename = "type")]

@@ -1,8 +1,9 @@
-// @fdd-change:fdd-analytics-feature-gts-core-change-response-processing
+// @fdd-change:fdd-analytics-feature-gts-core-change-response-processing:ph-1
+// @fdd-req:fdd-analytics-feature-gts-core-req-tolerant-reader:ph-1
 use serde_json::{Map, Value};
 use std::collections::HashSet;
 
-// @fdd-change:fdd-analytics-feature-gts-core-change-response-processing
+// @fdd-change:fdd-analytics-feature-gts-core-change-response-processing:ph-1
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FieldCategory {
     ClientProvided,
@@ -160,6 +161,7 @@ mod tests {
     use super::*;
     use serde_json::json;
 
+    // @fdd-test:fdd-analytics-feature-gts-core-test-client-cannot-override-fields:ph-1
     #[test]
     fn test_categorize_server_managed_field() {
         let handler = FieldHandler::new();
@@ -212,6 +214,8 @@ mod tests {
     #[test]
     fn test_filter_request_removes_system_fields() {
         let handler = FieldHandler::new();
+
+        // fdd-begin fdd-analytics-feature-gts-core-test-client-cannot-override-fields:ph-1:inst-send-request-with-readonly-fields
         let input = json!({
             "id": "custom-id",
             "type": "custom-type",
@@ -220,12 +224,17 @@ mod tests {
                 "name": "Test"
             }
         });
+        // fdd-end fdd-analytics-feature-gts-core-test-client-cannot-override-fields:ph-1:inst-send-request-with-readonly-fields
 
         let filtered = handler.filter_request(input);
+
+        // fdd-begin fdd-analytics-feature-gts-core-test-client-cannot-override-fields:ph-1:inst-verify-readonly-fields-not-applied
         assert!(filtered.get("id").is_none());
         assert!(filtered.get("type").is_none());
         assert!(filtered.get("tenant").is_none());
         assert!(filtered.get("entity").is_some());
+
+        // fdd-end fdd-analytics-feature-gts-core-test-client-cannot-override-fields:ph-1:inst-verify-readonly-fields-not-applied
     }
 
     #[test]

@@ -1,8 +1,8 @@
-// @fdd-change:fdd-analytics-feature-gts-core-change-quality-assurance
+// @fdd-change:fdd-analytics-feature-gts-core-change-quality-assurance:ph-1
 use analytics::api::rest::gts_core::GtsCoreError;
 use analytics::domain::gts_core::{GtsCoreRouter, GtsTypeIdentifier, RoutingTable};
 
-// @fdd-test:fdd-analytics-feature-gts-core-test-gts-identifier-parsing
+// @fdd-test:fdd-analytics-feature-gts-core-test-gts-identifier-parsing:ph-1
 #[test]
 fn parses_gts_type_identifier_from_instance_id() {
     let id = "gts.hypernetix.hyperspot.ax.query.v1~acme.analytics._.sales.v1";
@@ -10,9 +10,10 @@ fn parses_gts_type_identifier_from_instance_id() {
     assert_eq!(type_id.as_str(), "gts.hypernetix.hyperspot.ax.query.v1~");
 }
 
-// @fdd-test:fdd-analytics-feature-gts-core-test-routing-table-lookup
+// @fdd-test:fdd-analytics-feature-gts-core-test-routing-table-lookup:ph-1
 #[test]
 fn routing_table_register_and_lookup() {
+    // fdd-begin fdd-analytics-feature-gts-core-test-routing-table-lookup:ph-1:inst-route-known-type
     let mut table = RoutingTable::new();
     table
         .register(
@@ -20,14 +21,17 @@ fn routing_table_register_and_lookup() {
             "query-handler",
         )
         .expect("register");
+    // fdd-end fdd-analytics-feature-gts-core-test-routing-table-lookup:ph-1:inst-route-known-type
 
+    // fdd-begin fdd-analytics-feature-gts-core-test-routing-table-lookup:ph-1:inst-verify-target-selected
     let handler = table
         .lookup("gts.hypernetix.hyperspot.ax.query.v1~acme.analytics._.instance_123.v1")
         .expect("lookup");
     assert_eq!(handler.map(|h| h.as_str()), Some("query-handler"));
+    // fdd-end fdd-analytics-feature-gts-core-test-routing-table-lookup:ph-1:inst-verify-target-selected
 }
 
-// @fdd-test:fdd-analytics-feature-gts-core-test-routing-table-lookup
+// @fdd-test:fdd-analytics-feature-gts-core-test-routing-table-lookup:ph-1
 #[test]
 fn router_routes_or_returns_none() {
     let mut table = RoutingTable::new();
@@ -45,13 +49,15 @@ fn router_routes_or_returns_none() {
         .expect("route");
     assert_eq!(hit, Some("query-handler"));
 
+    // fdd-begin fdd-analytics-feature-gts-core-test-routing-table-lookup:ph-1:inst-route-unknown-type
     let miss = router
         .route("gts.hypernetix.hyperspot.ax.unknown.v1~acme.analytics._.instance_123.v1")
         .expect("route");
     assert_eq!(miss, None);
+    // fdd-end fdd-analytics-feature-gts-core-test-routing-table-lookup:ph-1:inst-route-unknown-type
 }
 
-// @fdd-test:fdd-analytics-feature-gts-core-test-tolerant-reader-pattern
+// @fdd-test:fdd-analytics-feature-gts-core-test-tolerant-reader-pattern:ph-1
 #[test]
 fn gts_core_error_maps_to_expected_problem_statuses() {
     let e404 = GtsCoreError::UnknownGtsType {
