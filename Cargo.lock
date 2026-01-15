@@ -5329,6 +5329,7 @@ dependencies = [
  "simple-user-settings-sdk",
  "thiserror 2.0.17",
  "tokio",
+ "tower",
  "tracing",
  "utoipa",
  "uuid",

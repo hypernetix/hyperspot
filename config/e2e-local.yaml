@@ -194,7 +194,7 @@ modules:
       default_page_size: 5
       max_page_size: 100
 
-  settings:
+  simple-user-settings:
     # Module-specific database configuration
     database:
       server: "sqlite_users"

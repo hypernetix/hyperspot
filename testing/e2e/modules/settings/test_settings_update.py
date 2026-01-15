@@ -188,7 +188,7 @@ async def test_update_settings_validation_max_length(base_url, auth_headers):
         if response.status_code in (401, 403) and not auth_headers:
             pytest.skip("Endpoint requires authentication")
 
-        # Should return 400 Bad Request for validation error
+        # Should return 422 Unprocessable Entity for validation error
         assert response.status_code == 422, (
             f"Expected 422 for validation error, got {response.status_code}"
         )
@@ -218,5 +218,5 @@ async def test_update_settings_missing_fields(base_url, auth_headers):
 
         # Should return 400 or 422 for missing required field
         assert response.status_code in (400, 422), (
-            f"Expected 422 or 422 for missing field, got {response.status_code}"
+            f"Expected 400 or 422 for missing field, got {response.status_code}"
         )

@@ -88,38 +88,40 @@ async def test_settings_idempotency(base_url, auth_headers):
 
     This test verifies that settings operations are idempotent.
     """
+    if not auth_headers:
+        pytest.skip("Endpoint requires authentication")
+
     async with httpx.AsyncClient(timeout=10.0) as client:
         test_data = {
             "theme": "dark",
             "language": "es"
         }
 
-        if auth_headers:
-            # POST same data twice
-            response1 = await client.post(
-                f"{base_url}/simple-user-settings/v1/settings",
-                json=test_data,
-                headers=auth_headers,
-            )
+        # POST same data twice
+        response1 = await client.post(
+            f"{base_url}/simple-user-settings/v1/settings",
+            json=test_data,
+            headers=auth_headers,
+        )
 
-            if response1.status_code in (401, 403):
-                pytest.skip("Endpoint requires authentication")
+        if response1.status_code in (401, 403):
+            pytest.skip("Endpoint requires authentication")
 
-            assert response1.status_code == 200
-            settings1 = response1.json()
+        assert response1.status_code == 200
+        settings1 = response1.json()
 
-            response2 = await client.post(
-                f"{base_url}/simple-user-settings/v1/settings",
-                json=test_data,
-                headers=auth_headers,
-            )
+        response2 = await client.post(
+            f"{base_url}/simple-user-settings/v1/settings",
+            json=test_data,
+            headers=auth_headers,
+        )
 
-            assert response2.status_code == 200
-            settings2 = response2.json()
+        assert response2.status_code == 200
+        settings2 = response2.json()
 
-            # Should produce same result
-            assert settings1["theme"] == settings2["theme"]
-            assert settings1["language"] == settings2["language"]
+        # Should produce same result
+        assert settings1["theme"] == settings2["theme"]
+        assert settings1["language"] == settings2["language"]
 
 
 @pytest.mark.asyncio
@@ -161,6 +163,9 @@ async def test_settings_consistency_across_methods(base_url, auth_headers):
 
         assert patch_response.status_code == 200
         patched_settings = patch_response.json()
+
+        assert patched_settings["theme"] == "light"
+        assert patched_settings["language"] == "fr"
 
         # GET to verify final state
         get_response = await client.get(
