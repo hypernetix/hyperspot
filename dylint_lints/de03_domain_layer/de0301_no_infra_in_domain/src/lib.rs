@@ -73,13 +73,13 @@ const INFRA_PATTERNS: &[&str] = &[
     "tokio::fs",
 ];
 
-fn use_tree_to_string(tree: &UseTree) -> String {
+fn use_tree_to_strings(tree: &UseTree) -> Vec<String> {
     match &tree.kind {
         UseTreeKind::Simple(..) | UseTreeKind::Glob => {
-            tree.prefix.segments.iter()
+            vec![tree.prefix.segments.iter()
                 .map(|seg| seg.ident.name.as_str())
                 .collect::<Vec<_>>()
-                .join("::")
+                .join("::")]
         }
         UseTreeKind::Nested { items, .. } => {
             let prefix = tree.prefix.segments.iter()
@@ -87,13 +87,19 @@ fn use_tree_to_string(tree: &UseTree) -> String {
                 .collect::<Vec<_>>()
                 .join("::");
             
+            let mut paths = Vec::new();
             for (nested_tree, _) in items {
-                let nested_str = use_tree_to_string(nested_tree);
-                if !nested_str.is_empty() {
-                    return format!("{}::{}", prefix, nested_str);
+                for nested_str in use_tree_to_strings(nested_tree) {
+                    if nested_str.is_empty() {
+                        paths.push(prefix.clone());
+                    } else if prefix.is_empty() {
+                        paths.push(nested_str);
+                    } else {
+                        paths.push(format!("{}::{}", prefix, nested_str));
+                    }
                 }
             }
-            prefix
+            if paths.is_empty() { vec![prefix] } else { paths }
         }
     }
 }
@@ -103,16 +109,17 @@ fn check_use_in_domain(cx: &rustc_lint::EarlyContext<'_>, item: &Item) {
         return;
     };
 
-    let path_str = use_tree_to_string(use_tree);
-    for pattern in INFRA_PATTERNS {
-        if path_str.starts_with(pattern) {
-            cx.span_lint(DE0301_NO_INFRA_IN_DOMAIN, item.span, |diag| {
-                diag.primary_message(
-                    format!("domain module imports infrastructure dependency `{}` (DE0301)", pattern)
-                );
-                diag.help("domain should depend only on abstractions; move infrastructure code to infra/ layer");
-            });
-            break;
+    for path_str in use_tree_to_strings(use_tree) {
+        for pattern in INFRA_PATTERNS {
+            if path_str.starts_with(pattern) {
+                cx.span_lint(DE0301_NO_INFRA_IN_DOMAIN, item.span, |diag| {
+                    diag.primary_message(
+                        format!("domain module imports infrastructure dependency `{}` (DE0301)", pattern)
+                    );
+                    diag.help("domain should depend only on abstractions; move infrastructure code to infra/ layer");
+                });
+                return;
+            }
         }
     }
 }
