@@ -1,13 +1,11 @@
-These instructions are for AI assistants working in this project.
+# HyperSpot AI Agent Instructions
 
-If the instruction sounds unclear, vague or requires more context. Ask for clarification.
+ALWAYS open and follow `/FDD/AGENTS.md`
 
-Always open `@/docs/MODKIT_UNIFIED_SYSTEM.md` to learn about the project's `@/lib/modkit*` unified system.
+---
 
-Always open `@/guidelines/NEW_MODULE.md` to learn about how to create a new module.
+## Commit Rule
 
-Always open `@/docs/SECURE-ORM.md` to learn about the project's database interactions with ORM.
-
-Always open `@/docs/ODATA_SELECT.md` to learn about the OData `$select` field projection feature.
-
-Always follow the guidelines specified in `@/guidelines/README.md`.
+**MUST follow before commit**:
+- Sign commits: `git commit -s` (DCO required)
+- Use format: `<type>(<module>): <description>` (feat/fix/tech/docs/test/refactor/etc.)
