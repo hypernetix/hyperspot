@@ -21,6 +21,10 @@ path = "ui/good_domain_0308.rs"
 name = "bad_http_type_in_struct"
 path = "ui/bad_http_type_in_struct.rs"
 
+[[example]]
+name = "nested_generic_http_type"
+path = "ui/nested_generic_http_type.rs"
+
 [dependencies]
 clippy_utils.workspace = true
 dylint_linting.workspace = true
