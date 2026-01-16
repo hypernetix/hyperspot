@@ -1,10 +1,10 @@
 # DE0706: No Direct sqlx Usage
 
-### What it does
+## What it does
 
 Prohibits direct usage of the `sqlx` crate in the codebase.
 
-### Why is this bad?
+## Why is this bad?
 
 Direct sqlx usage bypasses important architectural layers:
 - **Skips security enforcement**: SecureConn and AccessScope are not applied
@@ -13,7 +13,7 @@ Direct sqlx usage bypasses important architectural layers:
 - **No audit logging**: Loses automatic operation tracking
 - **No tenant isolation**: Multi-tenant security controls are bypassed
 
-### Example
+## Example
 
 ```rust
 // ❌ Bad - direct sqlx usage
@@ -65,7 +65,7 @@ let users = UserEntity::find()
     .map_err(db_err)?;
 ```
 
-### Configuration
+## Configuration
 
 This lint is configured to **deny** by default.
 
@@ -74,7 +74,7 @@ It detects:
 - `use sqlx::{...}` nested imports
 - `extern crate sqlx` declarations
 
-### See Also
+## See Also
 
 - [DE0301](../../de03_domain_layer/de0301_no_infra_in_domain) - No Infrastructure in Domain
 - [DE0308](../../de03_domain_layer/de0308_no_http_in_domain) - No HTTP in Domain
