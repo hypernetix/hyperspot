@@ -1,0 +1,28 @@
+[package]
+name = "types"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Core types registration system module"
+
+[lints]
+workspace = true
+
+[lib]
+name = "types"
+path = "src/lib.rs"
+
+[dependencies]
+# Core dependencies
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+tracing = { workspace = true }
+inventory = { workspace = true }
+
+# ModKit dependencies
+modkit = { path = "../../../libs/modkit" }
+modkit-security = { path = "../../../libs/modkit-security" }
+
+# Types registry for registering core types
+types-registry-sdk = { path = "../types-registry/types-registry-sdk" }

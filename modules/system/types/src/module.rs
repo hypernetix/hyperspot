@@ -1,0 +1,71 @@
+//! Core types registration module implementation.
+
+use async_trait::async_trait;
+use modkit::contracts::SystemCapability;
+use modkit::gts::get_core_gts_schemas;
+use modkit::{Module, ModuleCtx};
+use tracing::{debug, info};
+use types_registry_sdk::TypesRegistryClient;
+
+/// Core types registration module.
+///
+/// This system module is responsible for registering core GTS types that are used
+/// throughout the framework (e.g., `BaseModkitPluginV1` for plugin systems).
+///
+/// ## Initialization Order
+///
+/// This module must initialize after `types_registry` but before any modules that
+/// use plugin systems or other core GTS types.
+///
+/// Dependency chain: `types_registry` → `types` → plugin modules
+///
+/// ## Core Types Registered
+///
+/// - `BaseModkitPluginV1` - Base schema for all plugin instances
+/// - Any future core framework types
+#[modkit::module(
+    name = "types",
+    deps = ["types_registry"],
+    capabilities = [system]
+)]
+pub struct Types;
+
+impl Default for Types {
+    fn default() -> Self {
+        Self
+    }
+}
+
+impl Clone for Types {
+    fn clone(&self) -> Self {
+        Self
+    }
+}
+
+#[async_trait]
+impl Module for Types {
+    async fn init(&self, ctx: &ModuleCtx) -> anyhow::Result<()> {
+        info!("Initializing types module");
+
+        // Get the types registry client
+        let registry = ctx.client_hub().get::<dyn TypesRegistryClient>()?;
+
+        // Register core GTS types that other modules depend on
+        // This must happen before any module registers derived schemas/instances
+        debug!("Registering core GTS schemas");
+        let core_schemas = get_core_gts_schemas()?;
+
+        registry
+            .register(core_schemas)
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to register core GTS schemas: {e}"))?;
+
+        info!("Core GTS schemas registered successfully");
+        info!("Types module initialized");
+
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl SystemCapability for Types {}
