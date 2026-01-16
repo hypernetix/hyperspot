@@ -8,7 +8,7 @@ The current `resource-group` directory is a symlink to an old repository with a 
 
 ## What Changes
 
-**New Crates: `resource-group-sdk` and `resource-group`**
+**New Crates: `resource-group-sdk`  and `resource-group`**
 
 **SDK Crate (`resource-group-sdk`):**
 - `ResourceGroupApi` trait with methods for types, entities, references, and hierarchy operations
