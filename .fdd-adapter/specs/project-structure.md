@@ -6,8 +6,9 @@
 
 ```
 hyperspot/
-├── FDD/                        # FDD core methodology
-├── FDD-Adapter/                # Project-specific FDD adapter
+├── .fdd/                       # FDD core methodology (submodule)
+├── .fdd-adapter/               # Project-specific FDD adapter
+├── .fdd-config.json            # FDD configuration (adapter/core paths)
 ├── apps/                       # Application binaries
 │   └── hyperspot-server/       # Main server application
 ├── libs/                       # Shared libraries
@@ -119,7 +120,8 @@ modules/{module}/
 - [ ] examples/ with working examples
 - [ ] proto/ for gRPC definitions (if used)
 - [ ] dylint_lints/ for custom lints
-- [ ] FDD-Adapter/ at project root
+- [ ] .fdd-adapter/ at project root (configured via .fdd-config.json)
+- [ ] .fdd/ submodule at project root (configured via .fdd-config.json)
 - [ ] Cargo workspace properly configured
 
 ### MAY Requirements (Optional)
