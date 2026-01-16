@@ -115,32 +115,63 @@ fn check_use_in_domain(cx: &rustc_lint::EarlyContext<'_>, item: &Item) {
     }
 }
 
-fn type_to_string(ty: &Ty) -> Option<String> {
+fn check_type_in_domain(cx: &rustc_lint::EarlyContext<'_>, ty: &Ty) {
     match &ty.kind {
         TyKind::Path(_, path) => {
+            // Check the path itself
             let path_str = path.segments.iter()
                 .map(|seg| seg.ident.name.as_str())
                 .collect::<Vec<_>>()
                 .join("::");
-            Some(path_str)
-        }
-        _ => None,
-    }
-}
-
-fn check_type_in_domain(cx: &rustc_lint::EarlyContext<'_>, ty: &Ty) {
-    if let Some(type_path) = type_to_string(ty) {
-        for pattern in HTTP_PATTERNS {
-            if type_path.starts_with(pattern) {
-                cx.span_lint(DE0308_NO_HTTP_IN_DOMAIN, ty.span, |diag| {
-                    diag.primary_message(
-                        format!("domain module uses HTTP type `{}` (DE0308)", type_path)
-                    );
-                    diag.help("domain should be transport-agnostic; handle HTTP in api/ layer");
-                });
-                return;
+            
+            for pattern in HTTP_PATTERNS {
+                if path_str.starts_with(pattern) {
+                    cx.span_lint(DE0308_NO_HTTP_IN_DOMAIN, ty.span, |diag| {
+                        diag.primary_message(
+                            format!("domain module uses HTTP type `{}` (DE0308)", path_str)
+                        );
+                        diag.help("domain should be transport-agnostic; handle HTTP in api/ layer");
+                    });
+                    return;
+                }
+            }
+            
+            // Recursively check generic arguments (e.g., Option<http::StatusCode>)
+            for segment in &path.segments {
+                if let Some(args) = &segment.args {
+                    if let rustc_ast::GenericArgs::AngleBracketed(ref angle_args) = **args {
+                        for arg in &angle_args.args {
+                            if let rustc_ast::AngleBracketedArg::Arg(rustc_ast::GenericArg::Type(inner_ty)) = arg {
+                                check_type_in_domain(cx, inner_ty);
+                            }
+                        }
+                    }
+                }
             }
         }
+        // Handle references: &http::Request
+        TyKind::Ref(_, mut_ty) => {
+            check_type_in_domain(cx, &mut_ty.ty);
+        }
+        // Handle slices: [http::StatusCode]
+        TyKind::Slice(inner_ty) => {
+            check_type_in_domain(cx, inner_ty);
+        }
+        // Handle arrays: [http::StatusCode; 10]
+        TyKind::Array(inner_ty, _) => {
+            check_type_in_domain(cx, inner_ty);
+        }
+        // Handle raw pointers: *const http::Request
+        TyKind::Ptr(mut_ty) => {
+            check_type_in_domain(cx, &mut_ty.ty);
+        }
+        // Handle tuples: (http::Request, String)
+        TyKind::Tup(types) => {
+            for inner_ty in types {
+                check_type_in_domain(cx, inner_ty);
+            }
+        }
+        _ => {}
     }
 }
 
