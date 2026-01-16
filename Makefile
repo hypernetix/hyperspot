@@ -69,7 +69,7 @@ fmt:
 # |             | - Use 'make dylint-list' to see all available custom lints           |
 # +-------------+----------------------------------------------------------------------+
 
-.PHONY: clippy kani geiger safety lint dylint dylint-list dylint-test
+.PHONY: clippy kani geiger safety lint dylint dylint-list dylint-test gts-docs gts-docs-test
 
 # Run clippy linter (excludes gts-rust submodule which has its own lint settings)
 clippy:
@@ -91,6 +91,14 @@ geiger:
 ## Check there are no compile time warnings
 lint:
 	RUSTFLAGS="-D warnings" cargo check --workspace --all-targets --all-features
+
+## Validate GTS identifiers in .md and .json files (DE0903)
+gts-docs:
+	@python3 dylint_lints/validate_gts_docs.py
+
+## Run tests for GTS documentation validator
+gts-docs-test:
+	@python3 dylint_lints/test_validate_gts_docs.py
 
 ## List all custom project compliance lints (see dylint_lints/README.md)
 dylint-list:

@@ -117,6 +117,19 @@ def cmd_security(_args):
     print("All security checks passed")
 
 
+def cmd_gts_docs(args):
+    step("Validating GTS identifiers in documentation files (DE0903)")
+    cmd_args = [PYTHON, os.path.join(PROJECT_ROOT, "dylint_lints", "validate_gts_docs.py")]
+    if getattr(args, 'verbose', False):
+        cmd_args.append("--verbose")
+    result = run_cmd_allow_fail(cmd_args)
+    if result.returncode == 0:
+        print("All GTS identifiers in documentation are valid")
+    else:
+        print("Invalid GTS identifiers found in documentation files")
+        sys.exit(result.returncode)
+
+
 def cmd_check(args):
     step("Running full check suite")
     cmd_fmt(args)
@@ -124,6 +137,7 @@ def cmd_check(args):
     cmd_test(args)
     cmd_dylint_test(args)
     cmd_dylint(args)
+    cmd_gts_docs(args)
     cmd_security(args)
     print("All checks passed")
 
@@ -564,6 +578,11 @@ def build_parser():
     # dylint-list
     p_dylint_list = subparsers.add_parser("dylint-list", help="List available dylint lints")
     p_dylint_list.set_defaults(func=cmd_dylint_list)
+
+    # gts-docs
+    p_gts_docs = subparsers.add_parser("gts-docs", help="Validate GTS identifiers in .md and .json files (DE0903)")
+    p_gts_docs.add_argument("-v", "--verbose", action="store_true", help="Show verbose output")
+    p_gts_docs.set_defaults(func=cmd_gts_docs)
 
     # all
     p_all = subparsers.add_parser("all", help="Run full pipeline (Makefile all equivalent)")
