@@ -65,10 +65,10 @@ modules/llm_gateway/
 ## Documentation
 
 - [SCENARIOS.md](docs/SCENARIOS.md) — Usage scenarios with sequence diagrams
-- [ARCHITECTURE.md](docs/ARCHITECTURE.md) — Gateway + Plugin design, component interactions
-- [API.md](docs/API.md) — SDK traits, request/response models, errors
-- [PROVIDERS.md](docs/PROVIDERS.md) — Provider abstraction, capability matrix
-- [CONFIGURATION.md](docs/CONFIGURATION.md) — Gateway and plugin configuration
+- ARCHITECTURE.md — Gateway + Plugin design, component interactions `TODO`
+- API.md — SDK traits, request/response models, errors `TODO`
+- PROVIDERS.md — Provider abstraction, capability matrix `TODO`
+- CONFIGURATION.md — Gateway and plugin configuration `TODO`
 
 ## Dependencies
 
