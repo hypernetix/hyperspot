@@ -6,9 +6,11 @@ Custom [dylint](https://github.com/trailofbits/dylint) linters enforcing Hypersp
 
 ```bash
 # From workspace root
-make dylint              # Run lints on workspace (auto-rebuilds if changed)
-make dylint-list         # Show all available lints
+make dylint              # Run Dylint lints on Rust code (auto-rebuilds if changed)
+make dylint-list         # Show all available Dylint lints
 make dylint-test         # Test UI cases (compile & verify violations)
+make gts-docs            # Validate GTS identifiers in .md and .json files
+make gts-docs-test       # Run unit tests for GTS validator
 ```
 
 ## What This Checks
@@ -44,7 +46,9 @@ make dylint-test         # Test UI cases (compile & verify violations)
 - ✅ DE0802: Use OData Extension Methods
 
 **GTS (DE09xx)**
-- TODO
+- ✅ DE0901: GTS String Pattern Validator (Rust source code)
+- ✅ DE0902: No `schema_for!` on GTS Structs (Rust source code)
+- ✅ DE0903: GTS Documentation Validator (`.md` and `.json` files)
 
 **Error handling (DE10xx)**
 - TODO
@@ -203,6 +207,104 @@ cx.span_lint(MY_LINT, item.span, |diag| {
     diag.help("Suggestion on how to fix");
 });
 ```
+
+## GTS Validators (DE09xx)
+
+GTS (Global Type System) identifiers are validated by complementary tools that cover different file types:
+
+| Lint | Scope | Tool | Command |
+|------|-------|------|---------|
+| **DE0901** | GTS string patterns in Rust | Dylint (Rust) | `make dylint` |
+| **DE0902** | No `schema_for!` on GTS structs | Dylint (Rust) | `make dylint` |
+| **DE0903** | GTS in docs (`.md`, `.json`) | Python script | `make gts-docs` |
+
+### DE0901: GTS String Pattern Validator
+
+A Dylint lint that validates GTS identifiers in Rust source files during compilation.
+
+**What it checks:**
+- `schema_id = "..."` in `#[struct_to_gts_schema(...)]` attributes
+- Arguments to `gts_make_instance_id("...")`
+- Any string literal starting with `gts.`
+- GTS parts in permission strings (e.g., `"read:gts.x.core.type.v1~"`)
+
+**How to run:**
+```bash
+make dylint  # Runs DE0901 along with other Dylint lints
+```
+
+**Location:** [`de09_gts_layer/de0901_gts_string_pattern/`](de09_gts_layer/de0901_gts_string_pattern/)
+
+### DE0902: No `schema_for!` on GTS Structs
+
+A Dylint lint that prevents using `schemars::schema_for!()` on GTS-wrapped structs.
+
+**Why:** GTS structs must use `gts_schema_with_refs_as_string()` for correct `$id` and `$ref` handling.
+
+**Location:** [`de09_gts_layer/de0902_no_schema_for_on_gts_structs/`](de09_gts_layer/de0902_no_schema_for_on_gts_structs/)
+
+### DE0903: Documentation Validator
+
+A Python script that validates GTS identifiers in documentation and configuration files.
+
+**What it checks:**
+- All `.md` files in `docs/`, `modules/`, `libs/`, `examples/`
+- All `.json` files (error definitions, schemas, configs)
+- Skips intentionally invalid examples (marked with "bad", "invalid", "❌", etc.)
+- Allows wildcards in pattern/filter contexts
+
+**How to run:**
+```bash
+# Quick check (from workspace root)
+make gts-docs
+
+# Via CI script (included in full check suite)
+python scripts/ci.py gts-docs
+
+# Direct script with options
+python dylint_lints/validate_gts_docs.py                    # Default scan
+python dylint_lints/validate_gts_docs.py --verbose          # Show files being scanned
+python dylint_lints/validate_gts_docs.py docs/ modules/     # Scan specific paths
+python dylint_lints/validate_gts_docs.py --json             # Machine-readable output
+```
+
+**Location:** [`validate_gts_docs.py`](validate_gts_docs.py)
+
+**Exit codes:**
+- `0` - All GTS identifiers are valid
+- `1` - Invalid GTS identifiers found (fails CI)
+
+### GTS Identifier Format
+
+A GTS identifier follows this structure:
+```text
+gts.<segment>~[<segment>~]*
+
+Where each segment = vendor.org.package.type.version
+```
+
+**Examples:**
+```text
+gts.x.core.modkit.plugin.v1~                              # Schema (type definition)
+gts.x.core.modkit.plugin.v1~vendor.pkg.module.plugin.v1~  # Instance (chained)
+gts.hx.core.errors.err.v1~hx.odata.errors.invalid.v1      # Error code
+```
+
+**Validation Rules:**
+
+| Rule | Valid ✓ | Invalid ✗ |
+|------|---------|-----------|
+| Must start with `gts.` | `gts.x.core.type.v1~` | `x.core.type.v1~` |
+| Schema IDs end with `~` | `gts.x.core.type.v1~` | `gts.x.core.type.v1` |
+| 5 components per segment | `x.core.pkg.type.v1` | `x.core.type.v1` (4) |
+| No hyphens | `my_type` | `my-type` |
+| Version format | `v1`, `v1.0`, `v2.1` | `1.0`, `version1` |
+| No wildcards (except patterns) | `gts.x.core.type.v1~` | `gts.x.*.type.v1~` |
+
+**When wildcards ARE allowed:**
+- In `$filter` queries: `$filter=type_id eq 'gts.x.*'`
+- In pattern methods: `.with_pattern("gts.x.core.*")`
+- In permission patterns: `.resource_pattern("gts.x.core.type.v1~*")`
 
 ## Troubleshooting
 
