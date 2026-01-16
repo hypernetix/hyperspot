@@ -3,10 +3,9 @@
 
 extern crate rustc_ast;
 
-use rustc_ast::{Item, ItemKind, UseTree, UseTreeKind};
+use rustc_ast::{Item, ItemKind};
 use rustc_lint::{EarlyLintPass, LintContext};
-
-use lint_utils::{is_in_modkit_db_path, is_in_hyperspot_server_path};
+use lint_utils::{is_in_modkit_db_path, is_in_hyperspot_server_path, use_tree_to_strings};
 
 dylint_linting::declare_early_lint! {
     /// ### What it does
@@ -50,32 +49,7 @@ dylint_linting::declare_early_lint! {
 /// Sqlx crate pattern to detect
 const SQLX_PATTERN: &str = "sqlx";
 
-fn use_tree_to_string(tree: &UseTree) -> String {
-    match &tree.kind {
-        UseTreeKind::Simple(..) | UseTreeKind::Glob => {
-            tree.prefix.segments.iter()
-                .map(|seg| seg.ident.name.as_str())
-                .collect::<Vec<_>>()
-                .join("::")
-        }
-        UseTreeKind::Nested { items, .. } => {
-            let prefix = tree.prefix.segments.iter()
-                .map(|seg| seg.ident.name.as_str())
-                .collect::<Vec<_>>()
-                .join("::");
-            
-            for (nested_tree, _) in items {
-                let nested_str = use_tree_to_string(nested_tree);
-                if !nested_str.is_empty() {
-                    return format!("{}::{}", prefix, nested_str);
-                }
-            }
-            prefix
-        }
-    }
-}
-
-fn starts_with_sqlx(tree: &UseTree) -> bool {
+fn starts_with_sqlx(tree: &rustc_ast::UseTree) -> bool {
     if let Some(first_seg) = tree.prefix.segments.first() {
         return first_seg.ident.name.as_str() == SQLX_PATTERN;
     }
@@ -88,7 +62,8 @@ fn check_use_for_sqlx(cx: &rustc_lint::EarlyContext<'_>, item: &Item) {
     };
 
     if starts_with_sqlx(use_tree) {
-        let path_str = use_tree_to_string(use_tree);
+        let paths = use_tree_to_strings(use_tree);
+        let path_str = paths.first().map(|s| s.as_str()).unwrap_or("sqlx");
         cx.span_lint(DE0706_NO_DIRECT_SQLX, item.span, |diag| {
             diag.primary_message(format!(
                 "direct sqlx import detected: `{}` (DE0706)",
