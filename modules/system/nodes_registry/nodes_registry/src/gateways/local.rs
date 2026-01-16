@@ -1,7 +1,5 @@
-use crate::contract::client::NodesRegistryApi;
-use crate::contract::error::NodesRegistryError;
-use crate::contract::{Node, NodeSysCap, NodeSysInfo};
 use crate::domain::service::Service;
+use nodes_registry_sdk::{Node, NodeSysCap, NodeSysInfo, NodesRegistryClient, NodesRegistryError};
 use std::sync::Arc;
 
 /// Local client implementation for the nodes registry
@@ -17,7 +15,7 @@ impl NodesRegistryLocalClient {
 }
 
 #[async_trait::async_trait]
-impl NodesRegistryApi for NodesRegistryLocalClient {
+impl NodesRegistryClient for NodesRegistryLocalClient {
     async fn get_node(&self, id: uuid::Uuid) -> Result<Node, NodesRegistryError> {
         self.service.get_node(id).map_err(Into::into)
     }

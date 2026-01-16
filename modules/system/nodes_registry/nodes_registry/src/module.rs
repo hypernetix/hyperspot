@@ -6,9 +6,9 @@ use modkit::context::ModuleCtx;
 use modkit::contracts::{OpenApiRegistry, RestApiCapability};
 use modkit::Module;
 
-use crate::contract::client::NodesRegistryApi;
 use crate::domain::service::Service;
 use crate::gateways::local::NodesRegistryLocalClient;
+use nodes_registry_sdk::NodesRegistryClient;
 
 /// Nodes Registry Module
 ///
@@ -21,7 +21,7 @@ use crate::gateways::local::NodesRegistryLocalClient;
 #[modkit::module(
     name = "nodes_registry",
     capabilities = [rest],
-    client = crate::contract::client::NodesRegistryApi
+    client = nodes_registry_sdk::NodesRegistryClient
 )]
 pub struct NodesRegistry {
     service: arc_swap::ArcSwapOption<Service>,
@@ -45,11 +45,11 @@ impl Module for NodesRegistry {
         self.service.store(Some(Arc::new(service.clone())));
 
         // Expose the client to the ClientHub
-        let api: Arc<dyn NodesRegistryApi> =
+        let api: Arc<dyn NodesRegistryClient> =
             Arc::new(NodesRegistryLocalClient::new(Arc::new(service)));
 
         // Register in ClientHub directly
-        ctx.client_hub().register::<dyn NodesRegistryApi>(api);
+        ctx.client_hub().register::<dyn NodesRegistryClient>(api);
 
         tracing::info!("Nodes registry module initialized");
         Ok(())

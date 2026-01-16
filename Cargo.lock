@@ -3364,10 +3364,21 @@ dependencies = [
  "inventory",
  "modkit",
  "modkit-node-info",
+ "nodes_registry-sdk",
  "serde",
  "thiserror 2.0.17",
  "tracing",
  "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "nodes_registry-sdk"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "modkit-node-info",
+ "thiserror 2.0.17",
  "uuid",
 ]
 
