@@ -1,0 +1,11 @@
+error: domain module uses HTTP type `http::StatusCode` (DE0308)
+  --> $DIR/bad_http_type_in_struct.rs:8:13
+   |
+LL |     param1: http::StatusCode,
+   |             ^^^^^^^^^^^^^^^^
+   |
+   = help: domain should be transport-agnostic; handle HTTP in api/ layer
+   = note: `#[deny(de0308_no_http_in_domain)]` on by default
+
+error: aborting due to 1 previous error
+
