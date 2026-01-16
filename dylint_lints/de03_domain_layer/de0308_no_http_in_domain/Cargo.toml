@@ -25,6 +25,10 @@ path = "ui/bad_http_type_in_struct.rs"
 name = "nested_generic_http_type"
 path = "ui/nested_generic_http_type.rs"
 
+[[example]]
+name = "trait_bounds_http"
+path = "ui/trait_bounds_http.rs"
+
 [dependencies]
 clippy_utils.workspace = true
 dylint_linting.workspace = true
