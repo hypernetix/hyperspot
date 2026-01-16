@@ -18,7 +18,7 @@ content: [
   { type: "audio", url: "..." },
   { type: "video", url: "..." },
   { type: "document", url: "..." },
-  { type: "tool_call", id: "...", schema_id: "...", arguments: {...} },
+  { type: "tool_call", id: "...", tool_id: "...", arguments: {...} },
   { type: "tool_result", tool_call_id: "...", result: {...} }
 ]
 ```
@@ -30,7 +30,7 @@ content: [
 | audio | url | input/output |
 | video | url | input/output |
 | document | url | input/output |
-| tool_call | id, schema_id, arguments | output |
+| tool_call | id, tool_id, arguments | output |
 | tool_result | tool_call_id, result | input |
 
 **Media input**:
@@ -39,7 +39,47 @@ content: [
 
 **Media output**: Gateway stores via FileStorage, returns URL.
 
-**Tools**: Consumer defines tools via GTS Schema ID. Gateway resolves schema before sending to provider.
+---
+
+## Tools Format
+
+Consumer defines tools via reference or inline GTS schema:
+
+```plaintext
+tools: [
+  // Option 1: Reference to Type Registry
+  { schema_id: "gts.hx.core.faas.func.v1~acme.crm.contacts.search.v1" },
+
+  // Option 2: Inline GTS schema
+  {
+    $id: "dynamic_search",
+    title: "Dynamic Search",
+    description: "Search with dynamic parameters",
+    params: {
+      type: "object",
+      properties: {
+        query: { type: "string" }
+      },
+      required: ["query"]
+    },
+    returns: {
+      type: "array",
+      items: { type: "object" }
+    }
+  }
+]
+```
+
+| Format | When to use |
+|--------|-------------|
+| `schema_id` | Registered tools, governance required |
+| Inline schema | Ad-hoc tools, dynamic generation, testing |
+
+**Gateway behavior**:
+- `schema_id` → resolve from Type Registry, convert to provider format
+- Inline schema → use directly, convert to provider format
+
+**Response `tool_call.tool_id`**: Returns `schema_id` or inline `$id` (whichever was used in request).
 
 ---
 
@@ -550,15 +590,25 @@ sequenceDiagram
 
 ### [ ] S1.10 Tool/Function Calling
 
-Consumer sends request with tools defined by GTS Schema ID. Gateway resolves schemas, forwards to provider. Model may return tool calls. Consumer executes tools, sends results back.
+Consumer sends request with tools (via reference or inline). Gateway resolves/converts schemas, forwards to provider. Model may return tool calls. Consumer executes tools, sends results back.
 
-**Tool Schema ID**: `gts.hx.core.faas.func.v1~<vendor>.<app>.<namespace>.<func_name>.v1`
+**Tool definition** (see Tools Format section):
+- `schema_id` — reference to Type Registry
+- Inline GTS schema — full spec with `$id`, `params`, `returns`
 
 **Request example**:
 ```plaintext
 tools: [
+  // Reference
   { schema_id: "gts.hx.core.faas.func.v1~acme.crm.contacts.search.v1" },
-  { schema_id: "gts.hx.core.faas.func.v1~acme.crm.orders.create.v1" }
+
+  // Inline
+  {
+    $id: "dynamic_filter",
+    title: "Dynamic Filter",
+    params: { type: "object", properties: { field: { type: "string" } } },
+    returns: { type: "array" }
+  }
 ]
 ```
 
@@ -569,13 +619,15 @@ sequenceDiagram
     participant TR as Type Registry
     participant P as Provider
 
-    C->>GW: chat_completion(model, messages, tools[schema_ids])
-    GW->>TR: Get schemas by IDs
+    C->>GW: chat_completion(model, messages, tools)
+    GW->>GW: Separate schema_id refs from inline
+    GW->>TR: Get schemas by IDs (if any)
     TR-->>GW: GTS schemas
-    GW->>GW: Convert to provider format
+    GW->>GW: Merge with inline schemas
+    GW->>GW: Convert all to provider format
     GW->>P: Request with provider-specific tools
     P-->>GW: tool_calls[]
-    GW-->>C: Response with tool_calls[] (schema_id preserved)
+    GW-->>C: Response with tool_calls[] (tool_id preserved)
     Note over C: Consumer executes tools
     C->>GW: chat_completion(messages + tool_results)
     GW->>P: Request with tool results
@@ -584,8 +636,9 @@ sequenceDiagram
 ```
 
 **Gateway role**:
-- Reads schemas from Type Registry
-- Converts to provider-specific format (OpenAI functions, Anthropic tools, etc.)
+- Resolves `schema_id` references from Type Registry
+- Uses inline schemas directly
+- Converts all to provider-specific format (OpenAI functions, Anthropic tools, etc.)
 - Does not execute tools — consumer handles execution
 
 ---
