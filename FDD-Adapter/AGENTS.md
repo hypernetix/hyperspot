@@ -36,4 +36,6 @@ ALWAYS open and follow `specs/module-creation.md` WHEN executing workflows: desi
 
 ALWAYS open and follow `specs/security.md` WHEN executing workflows: design.md, design-validate.md, adr.md, adr-validate.md, feature.md, feature-validate.md, feature-changes.md, feature-changes-validate.md, feature-change-implement.md, feature-code-validate.md
 
+ALWAYS open and follow `specs/performance.md` WHEN executing workflows: design.md, design-validate.md, adr.md, adr-validate.md, feature.md, feature-validate.md, feature-changes.md, feature-changes-validate.md, feature-change-implement.md, feature-code-validate.md
+
 ALWAYS open and follow `specs/architectural-lints.md` WHEN executing workflows: feature-change-implement.md, feature-code-validate.md
