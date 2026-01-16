@@ -127,7 +127,8 @@ pub use result::ApiResult;
 // Directory API for service discovery
 pub mod directory;
 pub use directory::{
-    DirectoryApi, LocalDirectoryApi, RegisterInstanceInfo, ServiceEndpoint, ServiceInstanceInfo,
+    DirectoryClient, LocalDirectoryClient, RegisterInstanceInfo, ServiceEndpoint,
+    ServiceInstanceInfo,
 };
 
 // GTS schema support

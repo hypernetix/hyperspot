@@ -14,7 +14,13 @@ The system SHALL store user-specific settings (theme and language preferences) w
 
 #### Scenario: Default settings for new users
 - **WHEN** a user retrieves settings for the first time (no record exists)
-- **THEN** the system returns empty/default values for theme and language
+- **THEN** the system returns HTTP 200 with the canonical JSON shape where both fields are present and explicitly `null`:
+  ```json
+  {
+    "theme": null,
+    "language": null
+  }
+  ```
 - **AND** no database record is created until the user performs an update
 
 ### Requirement: Retrieve User Settings
@@ -22,17 +28,17 @@ The system SHALL store user-specific settings (theme and language preferences) w
 The system SHALL provide a REST endpoint to retrieve the current user's settings using `SecurityContext` for authentication and authorization.
 
 #### Scenario: Successful settings retrieval
-- **WHEN** an authenticated user sends `GET /settings/v1/settings`
+- **WHEN** an authenticated user sends `GET /simple-user-settings/v1/settings`
 - **THEN** the system returns HTTP 200 with the user's settings (theme, language)
-- **AND** the response uses camelCase JSON field naming
+- **AND** the response uses snake_case JSON field naming
 
 #### Scenario: First-time user retrieval
-- **WHEN** a new user (no existing settings record) sends `GET /settings/v1/settings`
+- **WHEN** a new user (no existing settings record) sends `GET /simple-user-settings/v1/settings`
 - **THEN** the system returns HTTP 200 with empty default values
 - **AND** no database insert occurs
 
 #### Scenario: Unauthorized access
-- **WHEN** an unauthenticated request is sent to `GET /settings/v1/settings`
+- **WHEN** an unauthenticated request is sent to `GET /simple-user-settings/v1/settings`
 - **THEN** the system returns HTTP 401 Unauthorized
 
 ### Requirement: Full Update User Settings
@@ -40,23 +46,23 @@ The system SHALL provide a REST endpoint to retrieve the current user's settings
 The system SHALL provide a REST endpoint to perform a full update of user settings, replacing all fields.
 
 #### Scenario: Successful full update
-- **WHEN** an authenticated user sends `POST /settings/v1/settings` with theme and language
+- **WHEN** an authenticated user sends `POST /simple-user-settings/v1/settings` with theme and language
 - **THEN** the system updates or creates the settings record
 - **AND** returns HTTP 200 with the updated settings
 - **AND** both theme and language are set to the provided values
 
 #### Scenario: Create settings on first update
-- **WHEN** a user without existing settings sends `POST /settings/v1/settings`
+- **WHEN** a user without existing settings sends `POST /simple-user-settings/v1/settings`
 - **THEN** the system creates a new settings record
 - **AND** returns HTTP 200 with the created settings
 
 #### Scenario: Update existing settings
-- **WHEN** a user with existing settings sends `POST /settings/v1/settings`
+- **WHEN** a user with existing settings sends `POST /simple-user-settings/v1/settings`
 - **THEN** the system updates the existing record (not create duplicate)
 - **AND** returns HTTP 200 with the updated settings
 
 #### Scenario: Unauthorized update
-- **WHEN** an unauthenticated request is sent to `POST /settings/v1/settings`
+- **WHEN** an unauthenticated request is sent to `POST /simple-user-settings/v1/settings`
 - **THEN** the system returns HTTP 401 Unauthorized
 
 ### Requirement: Partial Update User Settings
@@ -64,30 +70,30 @@ The system SHALL provide a REST endpoint to perform a full update of user settin
 The system SHALL provide a REST endpoint to partially update user settings, modifying only the fields provided in the request.
 
 #### Scenario: Update only theme
-- **WHEN** an authenticated user sends `PATCH /settings/v1/settings` with only theme field
+- **WHEN** an authenticated user sends `PATCH /simple-user-settings/v1/settings` with only theme field
 - **THEN** the system updates only the theme value
 - **AND** the language value remains unchanged
 - **AND** returns HTTP 200 with the complete updated settings
 
 #### Scenario: Update only language
-- **WHEN** an authenticated user sends `PATCH /settings/v1/settings` with only language field
+- **WHEN** an authenticated user sends `PATCH /simple-user-settings/v1/settings` with only language field
 - **THEN** the system updates only the language value
 - **AND** the theme value remains unchanged
 - **AND** returns HTTP 200 with the complete updated settings
 
 #### Scenario: Update both fields via PATCH
-- **WHEN** an authenticated user sends `PATCH /settings/v1/settings` with both theme and language
+- **WHEN** an authenticated user sends `PATCH /simple-user-settings/v1/settings` with both theme and language
 - **THEN** the system updates both values
 - **AND** returns HTTP 200 with the complete updated settings
 
 #### Scenario: Patch creates settings if not exists
-- **WHEN** a user without existing settings sends `PATCH /settings/v1/settings`
+- **WHEN** a user without existing settings sends `PATCH /simple-user-settings/v1/settings`
 - **THEN** the system creates a new settings record with provided fields
-- **AND** unspecified fields remain empty/default
+- **AND** the HTTP 200 response MUST match the same canonical JSON shape as in the scenario "Default settings for new users" (fields `theme` and `language` are always present; unspecified fields are explicitly `null`)
 - **AND** returns HTTP 200 with the created settings
 
 #### Scenario: Unauthorized partial update
-- **WHEN** an unauthenticated request is sent to `PATCH /settings/v1/settings`
+- **WHEN** an unauthenticated request is sent to `PATCH /simple-user-settings/v1/settings`
 - **THEN** the system returns HTTP 401 Unauthorized
 
 ### Requirement: Security Context Integration
@@ -137,7 +143,7 @@ The system SHALL provide a separate SDK crate (`simple-user-settings-sdk`) with 
 
 #### Scenario: SDK API trait usage
 - **WHEN** another module needs to access user settings
-- **THEN** it obtains the client via `ClientHub.get::<dyn SimpleUserSettingsApi>()?`
+- **THEN** it obtains the client via `ClientHub.get::<dyn SimpleUserSettingsClient>()?`
 - **AND** calls methods passing `SecurityContext` for authorization
 
 #### Scenario: SDK models have no transport dependencies

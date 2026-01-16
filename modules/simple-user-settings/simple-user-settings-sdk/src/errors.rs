@@ -7,8 +7,8 @@ pub enum SettingsError {
     #[error("Settings not found")]
     NotFound,
 
-    #[error("Validation error: {message}")]
-    Validation { message: String },
+    #[error("Validation error on field '{field}': {message}")]
+    Validation { field: String, message: String },
 
     #[error("Internal error")]
     Internal,
@@ -21,8 +21,9 @@ impl SettingsError {
     }
 
     #[must_use]
-    pub fn validation(message: impl Into<String>) -> Self {
+    pub fn validation(field: impl Into<String>, message: impl Into<String>) -> Self {
         Self::Validation {
+            field: field.into(),
             message: message.into(),
         }
     }

@@ -9,7 +9,7 @@ use modkit::context::ModuleCtx;
 use modkit::gts::BaseModkitPluginV1;
 use modkit::Module;
 use tracing::info;
-use types_registry_sdk::TypesRegistryApi;
+use types_registry_sdk::TypesRegistryClient;
 
 use crate::config::StaticTrPluginConfig;
 use crate::domain::Service;
@@ -59,7 +59,7 @@ impl Module for StaticTrPlugin {
         );
 
         // Register plugin instance in types-registry
-        let registry = ctx.client_hub().get::<dyn TypesRegistryApi>()?;
+        let registry = ctx.client_hub().get::<dyn TypesRegistryClient>()?;
         let instance = BaseModkitPluginV1::<TenantResolverPluginSpecV1> {
             id: instance_id.clone(),
             vendor: cfg.vendor.clone(),

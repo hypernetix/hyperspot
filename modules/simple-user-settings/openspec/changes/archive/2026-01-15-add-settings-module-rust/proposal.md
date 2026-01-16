@@ -9,9 +9,9 @@ The settings module needs to be migrated from Go to Rust to align with HyperSpot
 - Create `simple-user-settings-sdk` crate with public API trait, models, and errors (transport-agnostic)
 - Create `simple-user-settings` module crate with full implementation following DDD-light structure
 - Implement REST API with three endpoints:
-  - `GET /settings/v1/settings` - Retrieve user settings
-  - `POST /settings/v1/settings` - Full update of settings
-  - `PATCH /settings/v1/settings` - Partial update of settings
+  - `GET /simple-user-settings/v1/settings` - Retrieve user settings
+  - `POST /simple-user-settings/v1/settings` - Full update of settings
+  - `PATCH /simple-user-settings/v1/settings` - Partial update of settings
 - Use `SecurityContext` for automatic tenant and user isolation (no explicit tenant_id/user_id in requests)
 - Implement Secure ORM patterns with SeaORM for data access
 - Support database migrations with SeaORM migration system
@@ -22,8 +22,8 @@ The settings module needs to be migrated from Go to Rust to align with HyperSpot
 
 - Affected specs: `user-settings` (new capability)
 - Affected code: 
-  - New: `modules/settings/simple-user-settings-sdk/` (SDK crate)
-  - New: `modules/settings/simple-user-settings/` (implementation crate)
+  - New: `modules/simple-user-settings/simple-user-settings-sdk/` (SDK crate)
+  - New: `modules/simple-user-settings/simple-user-settings/` (implementation crate)
   - Modified: Root `Cargo.toml` (workspace members - added both crates)
   - Modified: `apps/hyperspot-server/Cargo.toml` (module dependency - added simple-user-settings)
   - New: `testing/e2e/modules/settings/test_settings_integration.py` (E2E tests)

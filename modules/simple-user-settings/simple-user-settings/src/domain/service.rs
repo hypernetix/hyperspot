@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
 use modkit_security::SecurityContext;
-use simple_user_settings_sdk::models::{SimpleUserSettings, SimpleUserSettingsPatch};
+use simple_user_settings_sdk::models::{
+    SimpleUserSettings, SimpleUserSettingsPatch, SimpleUserSettingsUpdate,
+};
 
 use super::error::DomainError;
 use super::fields::SettingsFields;
@@ -51,17 +53,15 @@ impl Service {
     pub async fn update_settings(
         &self,
         ctx: &SecurityContext,
-        theme: Option<String>,
-        language: Option<String>,
+        update: SimpleUserSettingsUpdate,
     ) -> Result<SimpleUserSettings, DomainError> {
-        if let Some(ref theme) = theme {
-            self.validate_field(SettingsFields::THEME, theme)?;
-        }
-        if let Some(ref language) = language {
-            self.validate_field(SettingsFields::LANGUAGE, language)?;
-        }
+        self.validate_field(SettingsFields::THEME, &update.theme)?;
+        self.validate_field(SettingsFields::LANGUAGE, &update.language)?;
 
-        let settings = self.repo.upsert_full(ctx, theme, language).await?;
+        let settings = self
+            .repo
+            .upsert_full(ctx, Some(update.theme), Some(update.language))
+            .await?;
         Ok(settings)
     }
 

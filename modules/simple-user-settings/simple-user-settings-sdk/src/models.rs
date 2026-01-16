@@ -20,3 +20,12 @@ pub struct SimpleUserSettingsPatch {
     pub theme: Option<String>,
     pub language: Option<String>,
 }
+
+/// Full update data for user settings.
+///
+/// Unlike `SimpleUserSettingsPatch`, all fields are required and represent a full replacement.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SimpleUserSettingsUpdate {
+    pub theme: String,
+    pub language: String,
+}

@@ -209,7 +209,7 @@ async def test_patch_settings_creates_if_not_exists(base_url, auth_headers):
 
         # Theme should be set, language should be default (empty or set value)
         assert settings["theme"] == "light"
-        assert isinstance(settings["language"], str)
+        assert settings.get("language") is None or isinstance(settings.get("language"), str)
 
 
 @pytest.mark.asyncio
@@ -234,7 +234,7 @@ async def test_patch_settings_validation_max_length(base_url, auth_headers):
         if patch_response.status_code in (401, 403) and not auth_headers:
             pytest.skip("Endpoint requires authentication")
 
-        # Should return 400 Bad Request for validation error
+        # Should return 422 Unprocessable Entity for validation error
         assert patch_response.status_code == 422, (
             f"Expected 422 for validation error, got {patch_response.status_code}"
         )

@@ -1742,7 +1742,7 @@ discoverable and include its API endpoints in the OpenAPI documentation.
    ```toml
    # user modules
    file_parser = { path = "../../modules/file_parser" }
-   nodes_registry = { path = "../../modules/system/nodes_registry" }
+   nodes_registry = { path = "../../modules/system/nodes_registry/nodes_registry" }
    your_module = { path = "../../modules/your_module" }  # ADD THIS LINE
    ```
 
@@ -1933,7 +1933,7 @@ OoP modules use the **contracts pattern** with three crates:
 
 ```
 modules/<name>/
-├── <name>-contracts/        # Shared API trait + types (NO transport)
+├── <name>-sdk/        # Shared API trait + types (NO transport)
 │   ├── Cargo.toml
 │   └── src/lib.rs
 ├── <name>-grpc/             # Proto stubs + gRPC CLIENT only
@@ -1950,12 +1950,12 @@ modules/<name>/
         └── main.rs          # OoP binary entry point
 ```
 
-#### 1. Contracts Crate (`<name>-contracts`)
+#### 1. SDK Crate (`<name>-sdk`)
 
 Define the API trait and types in a separate crate (no transport dependencies):
 
 ```rust
-// <name>-contracts/src/lib.rs
+// <name>-sdk/src/lib.rs
 use async_trait::async_trait;
 use modkit_security::SecurityCtx;
 
@@ -1985,9 +1985,9 @@ pub enum MyModuleError {
 ```
 
 ```toml
-# <name>-contracts/Cargo.toml
+# <name>-sdk/Cargo.toml
 [package]
-name = "<name>-contracts"
+name = "<name>-sdk"
 version.workspace = true
 edition.workspace = true
 
@@ -2028,7 +2028,7 @@ use modkit_transport_grpc::client::{connect_with_retry, GrpcClientConfig};
 use modkit_transport_grpc::inject_secctx;
 use tonic::transport::Channel;
 
-use mymodule_contracts::{MyModuleApi, MyModuleError};
+use mymodule_sdk::{MyModuleApi, MyModuleError};
 
 pub struct MyModuleGrpcClient {
     inner: crate::mymodule::my_module_service_client::MyModuleServiceClient<Channel>,
@@ -2104,10 +2104,10 @@ use modkit_transport_grpc::extract_secctx;
 
 // Re-export contracts and grpc for consumers
 // Re-export contracts (SDK) and grpc for consumers
-pub use mymodule_contracts as sdk;
+pub use mymodule_sdk as sdk;
 pub use mymodule_grpc as grpc;
 
-use mymodule_contracts::{MyModuleApi, MyModuleError};
+use mymodule_sdk::{MyModuleApi, MyModuleError};
 use mymodule_grpc::{MyModuleService, MyModuleServiceServer, SERVICE_NAME};
 
 /// Module struct
@@ -2492,15 +2492,14 @@ impl Service {
 Ensure proper initialization order:
 
 ```rust
-// Gateway depends on types_registry AND all plugins
+// Gateway depends on the types_registry and any other required modules, but not on plugins. Plugins are resolved indirectly via GTS.
 #[modkit::module(
     name = "my_gateway",
-    deps = ["types_registry", "plugin_a", "plugin_b"],
+    deps = ["types_registry"],
     capabilities = [rest]
 )]
 pub struct MyGateway { /* ... */ }
 
-// Each plugin depends only on types_registry
 #[modkit::module(
     name = "plugin_a",
     deps = ["types_registry"],

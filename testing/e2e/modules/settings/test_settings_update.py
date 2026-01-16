@@ -3,6 +3,48 @@ import httpx
 import pytest
 
 
+def _resolve_openapi_ref(doc: dict, ref: str):
+    if not ref.startswith("#/"):
+        return None
+    cur = doc
+    for part in ref[2:].split("/"):
+        if not isinstance(cur, dict):
+            return None
+        cur = cur.get(part)
+    return cur
+
+
+def _extract_settings_theme_max_length(openapi_doc: dict):
+    post_op = (
+        openapi_doc.get("paths", {})
+        .get("/simple-user-settings/v1/settings", {})
+        .get("post")
+    )
+    if not isinstance(post_op, dict):
+        return None
+
+    request_body = post_op.get("requestBody", {})
+    content = request_body.get("content", {})
+    app_json = content.get("application/json", {})
+    schema = app_json.get("schema", {})
+    if "$ref" in schema:
+        schema = _resolve_openapi_ref(openapi_doc, schema["$ref"]) or {}
+
+    theme_prop = (schema.get("properties", {}) or {}).get("theme")
+    if not isinstance(theme_prop, dict):
+        return None
+    return theme_prop.get("maxLength")
+
+
+async def _get_settings_max_field_length(client: httpx.AsyncClient, base_url: str):
+    response = await client.get(f"{base_url}/openapi.json")
+    response.raise_for_status()
+    max_length = _extract_settings_theme_max_length(response.json())
+    if isinstance(max_length, int) and max_length > 0:
+        return max_length
+    raise ValueError("Missing or invalid maxLength for theme")
+
+
 @pytest.mark.asyncio
 async def test_update_settings_full(base_url, auth_headers):
     """
@@ -173,9 +215,20 @@ async def test_update_settings_validation_max_length(base_url, auth_headers):
     This test verifies that fields exceeding max length are rejected.
     """
     async with httpx.AsyncClient(timeout=10.0) as client:
-        # Try to set a very long theme value (assuming max is 100 chars)
+        max_field_length = 10000
+        try:
+            response = await client.get(
+                f"{base_url}/openapi.json",
+                headers=auth_headers,
+            )
+            response.raise_for_status()
+            max_field_length = _extract_settings_theme_max_length(response.json()) or max_field_length
+        except Exception:
+            pass
+
+        # Try to set a very long theme value (dynamically computed; fallback if unknown)
         update_data = {
-            "theme": "a" * 200,  # Way too long
+            "theme": "a" * (max_field_length + 1),
             "language": "en"
         }
 

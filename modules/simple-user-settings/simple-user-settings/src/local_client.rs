@@ -1,7 +1,8 @@
 use async_trait::async_trait;
 use modkit_security::SecurityContext;
 use simple_user_settings_sdk::{
-    SettingsError, SimpleUserSettings, SimpleUserSettingsApi, SimpleUserSettingsPatch,
+    SettingsError, SimpleUserSettings, SimpleUserSettingsClient, SimpleUserSettingsPatch,
+    SimpleUserSettingsUpdate,
 };
 use std::sync::Arc;
 
@@ -19,7 +20,7 @@ impl LocalClient {
 }
 
 #[async_trait]
-impl SimpleUserSettingsApi for LocalClient {
+impl SimpleUserSettingsClient for LocalClient {
     async fn get_settings(
         &self,
         ctx: &SecurityContext,
@@ -30,11 +31,10 @@ impl SimpleUserSettingsApi for LocalClient {
     async fn update_settings(
         &self,
         ctx: &SecurityContext,
-        theme: Option<String>,
-        language: Option<String>,
+        update: SimpleUserSettingsUpdate,
     ) -> Result<SimpleUserSettings, SettingsError> {
         self.service
-            .update_settings(ctx, theme, language)
+            .update_settings(ctx, update)
             .await
             .map_err(Into::into)
     }

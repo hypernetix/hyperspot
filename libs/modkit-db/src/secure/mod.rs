@@ -123,7 +123,7 @@ pub use entity_traits::ScopableEntity;
 pub use error::ScopeError;
 
 // Security types from modkit-security
-pub use modkit_security::{AccessScope, SecurityCtx, Subject};
+pub use modkit_security::AccessScope;
 
 // High-level secure database wrapper
 pub use secure_conn::SecureConn;

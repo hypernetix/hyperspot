@@ -6,7 +6,7 @@ use modkit::api::OpenApiRegistry;
 use modkit::{Module, ModuleCtx};
 use tracing::info;
 
-use simple_user_settings_sdk::SimpleUserSettingsApi;
+use simple_user_settings_sdk::SimpleUserSettingsClient;
 
 use crate::api::rest::routes;
 use crate::config::SettingsConfig;
@@ -44,8 +44,8 @@ impl modkit::contracts::DatabaseCapability for SettingsModule {
         use sea_orm_migration::MigratorTrait;
 
         info!("Running settings database migrations");
-        let conn = db.sea();
-        crate::infra::storage::migrations::Migrator::up(&conn, None).await?;
+        let conn = db.sea_secure();
+        crate::infra::storage::migrations::Migrator::up(conn.conn(), None).await?;
         info!("Settings database migrations completed");
         Ok(())
     }
@@ -68,7 +68,7 @@ impl Module for SettingsModule {
         };
         let service = Arc::new(Service::new(Arc::new(repo), service_config));
 
-        let local_client: Arc<dyn SimpleUserSettingsApi> =
+        let local_client: Arc<dyn SimpleUserSettingsClient> =
             Arc::new(LocalClient::new(service.clone()));
         ctx.client_hub().register(local_client);
 

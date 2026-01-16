@@ -38,7 +38,7 @@ The settings module is being migrated from Go to Rust as part of HyperSpot's mod
 ## Decisions
 
 ### Decision 1: SDK Pattern with SecurityContext
-**What:** Separate `settings-sdk` crate containing API trait, models, and errors. All API methods take `&SecurityContext` as first parameter.
+**What:** Separate `simple-user-settings-sdk` crate containing API trait, models, and errors. All API methods take `&SecurityContext` as first parameter.
 
 **Why:**
 - Clean separation of public API from implementation
@@ -66,10 +66,17 @@ The settings module is being migrated from Go to Rust as part of HyperSpot's mod
 ### Decision 3: Lazy Creation on Update
 **What:** GET returns empty defaults if no record exists. Record is created only on POST/PATCH.
 
+**JSON representation for unset fields:**
+- When no database record exists (first-time GET), `theme` and `language` are returned as JSON `null`.
+- The Rust DTOs use `Option<String>` fields which serialize to `null` when `None`.
+- POST/PATCH will create or overwrite the persistent record; after a successful write, subsequent GET responses reflect the stored values (which may be empty strings `""` if explicitly set).
+- Clients should accept both `null` (no record) and `""` (record exists with empty value) as valid "unset" states.
+
 **Why:**
 - Avoids database writes for users who never change settings
 - Matches Go implementation behavior
 - Simpler first-time user flow
+- Using `Option<String>` → `null` is idiomatic Rust/serde
 
 **Alternatives considered:**
 - Create on first GET: Rejected - unnecessary database writes

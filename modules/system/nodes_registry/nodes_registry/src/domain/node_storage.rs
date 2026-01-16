@@ -1,4 +1,4 @@
-use crate::contract::{Node, NodeSysCap, NodeSysInfo, SysCap};
+use nodes_registry_sdk::{Node, NodeSysCap, NodeSysInfo, SysCap};
 use std::collections::HashMap;
 use std::sync::RwLock;
 use tracing::warn;
@@ -263,8 +263,8 @@ impl Default for NodeStorage {
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
-    use crate::contract::SysCap;
     use chrono::Utc;
+    use nodes_registry_sdk::SysCap;
 
     fn make_syscap_with(fetched_at_secs: i64, cache_ttl_secs: u64) -> SysCap {
         SysCap {

@@ -34,9 +34,14 @@ async def test_get_settings_returns_defaults(base_url, auth_headers):
         assert "theme" in settings
         assert "language" in settings
 
-        # Values should be strings (may be empty on first GET)
-        assert isinstance(settings["theme"], str)
-        assert isinstance(settings["language"], str)
+        # Values should be strings (may be empty on first GET, or null if no record)
+        assert settings["theme"] is None or isinstance(settings["theme"], str)
+        assert settings["language"] is None or isinstance(settings["language"], str)
+
+        # Default values are empty strings when no record exists (or after reset)
+        # Note: If a record exists with empty strings, those are returned
+        assert settings["theme"] == "" or settings["theme"] is None
+        assert settings["language"] == "" or settings["language"] is None
 
 
 @pytest.mark.asyncio

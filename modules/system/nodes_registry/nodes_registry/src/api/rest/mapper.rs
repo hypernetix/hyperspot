@@ -2,7 +2,7 @@ use super::dto::{
     BatteryInfoDto, CpuInfoDto, GpuInfoDto, HostInfoDto, MemoryInfoDto, NodeDto, NodeSysCapDto,
     NodeSysInfoDto, OsInfoDto, SysCapDto,
 };
-use crate::contract::{
+use nodes_registry_sdk::{
     BatteryInfo, CpuInfo, GpuInfo, HostInfo, MemoryInfo, Node, NodeSysCap, NodeSysInfo, OsInfo,
     SysCap,
 };

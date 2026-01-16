@@ -3,7 +3,9 @@ mod tests {
     use super::super::*;
     use async_trait::async_trait;
     use modkit_security::SecurityContext;
-    use simple_user_settings_sdk::models::{SimpleUserSettings, SimpleUserSettingsPatch};
+    use simple_user_settings_sdk::models::{
+        SimpleUserSettings, SimpleUserSettingsPatch, SimpleUserSettingsUpdate,
+    };
     use std::sync::Arc;
     use uuid::Uuid;
 
@@ -123,7 +125,13 @@ mod tests {
         let ctx = create_test_context();
 
         let result = service
-            .update_settings(&ctx, Some("light".to_owned()), Some("es".to_owned()))
+            .update_settings(
+                &ctx,
+                SimpleUserSettingsUpdate {
+                    theme: "light".to_owned(),
+                    language: "es".to_owned(),
+                },
+            )
             .await
             .unwrap();
 
@@ -156,7 +164,13 @@ mod tests {
 
         let too_long = "a".repeat(11);
         let result = service
-            .update_settings(&ctx, Some(too_long), Some("en".to_owned()))
+            .update_settings(
+                &ctx,
+                SimpleUserSettingsUpdate {
+                    theme: too_long,
+                    language: "en".to_owned(),
+                },
+            )
             .await;
 
         assert!(result.is_err());

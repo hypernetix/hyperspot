@@ -4,8 +4,8 @@
 //!
 //! These tests verify domain behavior including caching, persistence, and edge cases.
 
-use nodes_registry::contract::SysCap;
 use nodes_registry::domain::service::Service;
+use nodes_registry::SysCap;
 
 #[test]
 fn test_custom_syscap_persists_across_syscap_refreshes() {

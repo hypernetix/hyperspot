@@ -2,7 +2,8 @@ use std::sync::Arc;
 
 use axum::{extract::Extension, Json};
 use modkit::api::prelude::*;
-use modkit_auth::axum_ext::AuthzContext;
+use modkit_auth::axum_ext::Authz;
+use simple_user_settings_sdk::models::SimpleUserSettingsUpdate;
 
 use crate::domain::service::Service;
 
@@ -11,7 +12,7 @@ use super::dto::{
 };
 
 pub async fn get_settings(
-    AuthzContext(ctx): AuthzContext,
+    Authz(ctx): Authz,
     Extension(svc): Extension<Arc<Service>>,
 ) -> ApiResult<JsonBody<SimpleUserSettingsDto>> {
     let settings = svc.get_settings(&ctx).await?;
@@ -19,19 +20,21 @@ pub async fn get_settings(
 }
 
 pub async fn update_settings(
-    AuthzContext(ctx): AuthzContext,
+    Authz(ctx): Authz,
     Extension(svc): Extension<Arc<Service>>,
     Json(req): Json<UpdateSimpleUserSettingsRequest>,
 ) -> ApiResult<impl IntoResponse> {
-    let settings = svc
-        .update_settings(&ctx, Some(req.theme), Some(req.language))
-        .await?;
+    let update = SimpleUserSettingsUpdate {
+        theme: req.theme,
+        language: req.language,
+    };
+    let settings = svc.update_settings(&ctx, update).await?;
     let dto: SimpleUserSettingsDto = settings.into();
     Ok((StatusCode::OK, Json(dto)))
 }
 
 pub async fn patch_settings(
-    AuthzContext(ctx): AuthzContext,
+    Authz(ctx): Authz,
     Extension(svc): Extension<Arc<Service>>,
     Json(req): Json<PatchSimpleUserSettingsRequest>,
 ) -> ApiResult<JsonBody<SimpleUserSettingsDto>> {

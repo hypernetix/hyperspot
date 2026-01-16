@@ -29,7 +29,7 @@ use tracing::debug;
 use crate::auth;
 use crate::config::ApiGatewayConfig;
 use modkit_security::constants::{DEFAULT_SUBJECT_ID, DEFAULT_TENANT_ID};
-use modkit_security::{PolicyEngineRef, SecurityContext, SecurityCtx};
+use modkit_security::{PolicyEngineRef, SecurityContext};
 
 use crate::middleware;
 use crate::router_cache::RouterCache;
@@ -206,9 +206,7 @@ impl ApiGateway {
 
         // 10) Auth
         if config.auth_disabled {
-            // Build both old and new security contexts for compatibility during migration
-            #[allow(deprecated)] // SecurityCtx is deprecated, migrating to SecurityContext
-            let default_ctx = SecurityCtx::for_tenants(vec![DEFAULT_TENANT_ID], DEFAULT_SUBJECT_ID);
+            // Build security contexts for compatibility during migration
             let default_security_context = SecurityContext::builder()
                 .tenant_id(DEFAULT_TENANT_ID)
                 .subject_id(DEFAULT_SUBJECT_ID)
@@ -221,11 +219,9 @@ impl ApiGateway {
             );
             router = router.layer(from_fn(
                 move |mut req: axum::extract::Request, next: axum::middleware::Next| {
-                    let sec = default_ctx.clone();
                     let sec_context = default_security_context.clone();
                     async move {
                         // Insert both context types for compatibility during migration
-                        req.extensions_mut().insert(sec);
                         req.extensions_mut().insert(sec_context);
                         next.run(req).await
                     }
@@ -233,15 +229,11 @@ impl ApiGateway {
             ));
         } else {
             let validator = auth_state.validator.clone();
-            let scope_builder = auth_state.scope_builder.clone();
             let authorizer = auth_state.authorizer.clone();
             let policy = Arc::new(route_policy) as Arc<dyn modkit_auth::RoutePolicy>;
 
             router = router.layer(modkit_auth::axum_ext::AuthPolicyLayer::new(
-                validator,
-                scope_builder,
-                authorizer,
-                policy,
+                validator, authorizer, policy,
             ));
         }
 
@@ -366,8 +358,12 @@ impl ApiGateway {
             return Ok((*cached_router).clone());
         }
 
-        tracing::debug!("Building new router");
-        let mut router = Router::new().route("/health", get(web::health_check));
+        tracing::debug!("Building new router (standalone/fallback mode)");
+        // In standalone mode (no REST pipeline), register both health endpoints here.
+        // In normal operation, rest_prepare() registers these instead.
+        let mut router = Router::new()
+            .route("/health", get(web::health_check))
+            .route("/healthz", get(|| async { "ok" }));
 
         // Apply all middleware layers including auth, above the router
         router = self.apply_middleware_stack(router)?;
@@ -477,11 +473,15 @@ impl modkit::contracts::ApiGatewayCapability for ApiGateway {
         _ctx: &modkit::context::ModuleCtx,
         router: axum::Router,
     ) -> anyhow::Result<axum::Router> {
-        // Add basic health check endpoint and any global middlewares
-        let router = router.route("/healthz", get(|| async { "ok" }));
+        // Add health check endpoints:
+        // - /health: detailed JSON response with status and timestamp
+        // - /healthz: simple "ok" liveness probe (Kubernetes-style)
+        let router = router
+            .route("/health", get(web::health_check))
+            .route("/healthz", get(|| async { "ok" }));
 
         // You may attach global middlewares here (trace, compression, cors), but do not start server.
-        tracing::debug!("REST host prepared base router with health check");
+        tracing::debug!("REST host prepared base router with health check endpoints");
         Ok(router)
     }
 

@@ -68,7 +68,7 @@ pub struct RegisterInstanceInfo {
 /// - A local implementation that delegates to `ModuleManager`
 /// - A gRPC client for out-of-process modules
 #[async_trait]
-pub trait DirectoryApi: Send + Sync {
+pub trait DirectoryClient: Send + Sync {
     /// Resolve a gRPC service by its logical name to an endpoint
     async fn resolve_grpc_service(&self, service_name: &str) -> Result<ServiceEndpoint>;
 

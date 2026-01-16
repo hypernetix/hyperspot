@@ -29,7 +29,7 @@ thiserror = { workspace = true }
 
 modkit = { path = "../../../libs/modkit" }
 modkit-auth = { path = "../../../libs/modkit-auth" }
-modkit-db = { path = "../../../libs/modkit-db", features = ["insecure-escape"] }
+modkit-db = { path = "../../../libs/modkit-db" }
 modkit-db-macros = { path = "../../../libs/modkit-db-macros" }
 modkit-errors = { path = "../../../libs/modkit-errors" }
 modkit-errors-macro = { path = "../../../libs/modkit-errors-macro" }

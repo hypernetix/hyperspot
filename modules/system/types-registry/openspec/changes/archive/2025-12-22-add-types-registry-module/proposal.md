@@ -12,7 +12,7 @@ With the `types-registry-sdk` crate providing the public API contracts, we need 
 - Module declaration with `#[modkit::module(name = "types_registry", capabilities = [system, rest])]`
 - Two-phase storage (configuration + production) using gts-rust `GtsOps`
 - Domain service with business logic
-- Local client implementing `TypesRegistryApi` trait
+- Local client implementing `TypesRegistryClient` trait
 - REST API handlers, routes, and DTOs
 - ClientHub registration for inter-module access
 - Full gts-rust integration (OP#1-OP#11)

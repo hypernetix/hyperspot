@@ -13,28 +13,33 @@ Each node contains:
 ## Architecture
 
 ```
-modules/nodes_registry/
-├── src/
-│   ├── contract/          # Public API for other modules
-│   │   ├── client.rs      # NodesRegistryApi trait
-│   │   ├── model.rs       # Re-exports from modkit-node-info
-│   │   └── error.rs       # Transport-agnostic errors
-│   ├── domain/            # Business logic
-│   │   ├── service.rs     # Node management service with caching
-│   │   ├── node_storage.rs # In-memory storage with cache metadata
-│   │   └── error.rs       # Domain errors
-│   ├── api/rest/          # REST API layer
-│   │   ├── dto.rs         # DTOs with serde/ToSchema
-│   │   ├── handlers.rs    # Axum handlers with cache refresh
-│   │   ├── routes.rs      # Route registration with OpenAPI docs
-│   │   ├── mapper.rs      # Domain to DTO mapping
-│   │   └── error.rs       # Problem response mapping
-│   ├── gateways/          # Client implementations
-│   │   └── local.rs       # Local client for ClientHub
-│   ├── config.rs          # Module configuration
-│   ├── module.rs          # Module registration
-│   └── lib.rs             # Public exports
-└── Cargo.toml
+modules/system/nodes_registry/
+├── nodes_registry-sdk/    # Public contract for other crates (SDK)
+│   ├── src/
+│   │   ├── api.rs         # NodesRegistryClient trait
+│   │   ├── error.rs       # Transport-agnostic errors
+│   │   └── lib.rs         # Re-exports (client, errors, models)
+│   └── Cargo.toml
+├── nodes_registry/        # Module implementation crate
+│   ├── src/
+│   │   ├── domain/            # Business logic
+│   │   │   ├── service.rs     # Node management service with caching
+│   │   │   ├── node_storage.rs # In-memory storage with cache metadata
+│   │   │   └── error.rs       # Domain errors
+│   │   ├── api/rest/          # REST API layer
+│   │   │   ├── dto.rs         # DTOs with serde/ToSchema
+│   │   │   ├── handlers.rs    # Axum handlers
+│   │   │   ├── routes.rs      # Route + OpenAPI registration
+│   │   │   ├── mapper.rs      # Domain/SDK -> DTO mapping
+│   │   │   └── error.rs       # Problem response mapping
+│   │   ├── gateways/          # Client implementations
+│   │   │   └── local.rs       # Local client for ClientHub
+│   │   ├── config.rs          # Module configuration
+│   │   ├── module.rs          # Module registration
+│   │   └── lib.rs             # Re-exports SDK types + module entry
+│   ├── tests/
+│   └── Cargo.toml
+└── README.md
 ```
 
 ## Features
@@ -50,18 +55,18 @@ modules/nodes_registry/
 
 ## API Endpoints
 
-All endpoints are registered under `/nodes`.
+All endpoints are registered under `/nodes-registry/v1/nodes`.
 
 ### List Nodes
 ```bash
 # Basic list (node metadata only)
-curl -X GET "http://localhost:8080/nodes"
+curl -X GET "http://localhost:8080/nodes-registry/v1/nodes"
 
 # With details (includes cached sysinfo and syscap)
-curl -X GET "http://localhost:8080/nodes?details=true"
+curl -X GET "http://localhost:8080/nodes-registry/v1/nodes?details=true"
 
 # With details + force refresh (ignores cache)
-curl -X GET "http://localhost:8080/nodes?details=true&force_refresh=true"
+curl -X GET "http://localhost:8080/nodes-registry/v1/nodes?details=true&force_refresh=true"
 ```
 
 **Response:**
@@ -82,18 +87,18 @@ curl -X GET "http://localhost:8080/nodes?details=true&force_refresh=true"
 ### Get Node by ID
 ```bash
 # Basic node info
-curl -X GET "http://localhost:8080/nodes/{id}"
+curl -X GET "http://localhost:8080/nodes-registry/v1/nodes/{id}"
 
 # With details (includes cached sysinfo and syscap)
-curl -X GET "http://localhost:8080/nodes/{id}?details=true"
+curl -X GET "http://localhost:8080/nodes-registry/v1/nodes/{id}?details=true"
 
 # With details + force refresh
-curl -X GET "http://localhost:8080/nodes/{id}?details=true&force_refresh=true"
+curl -X GET "http://localhost:8080/nodes-registry/v1/nodes/{id}?details=true&force_refresh=true"
 ```
 
 ### Get Node System Information
 ```bash
-curl -X GET "http://localhost:8080/nodes/{id}/sysinfo"
+curl -X GET "http://localhost:8080/nodes-registry/v1/nodes/{id}/sysinfo"
 ```
 
 **Response:**
@@ -140,10 +145,10 @@ curl -X GET "http://localhost:8080/nodes/{id}/sysinfo"
 ### Get Node System Capabilities
 ```bash
 # Uses cached data (auto-refreshes expired capabilities)
-curl -X GET "http://localhost:8080/nodes/{id}/syscap"
+curl -X GET "http://localhost:8080/nodes-registry/v1/nodes/{id}/syscap"
 
 # Force refresh all capabilities (ignores cache)
-curl -X GET "http://localhost:8080/nodes/{id}/syscap?force_refresh=true"
+curl -X GET "http://localhost:8080/nodes-registry/v1/nodes/{id}/syscap?force_refresh=true"
 ```
 
 **Response:**
@@ -219,7 +224,7 @@ curl -X GET "http://localhost:8080/nodes/{id}/syscap?force_refresh=true"
 - **Manual**: Use `?force_refresh=true` to ignore all cache
 - **Merging**: System capabilities merge with custom ones (custom overrides)
 
-## Custom Capabilities API
+## Custom Capabilities
 
 Modules can report custom software capabilities:
 
@@ -256,10 +261,10 @@ client.clear_custom_syscap(node_id).await?;
 
 ```rust
 use modkit::ClientHub;
-use nodes_registry::contract::client::NodesRegistryApi;
+use nodes_registry_sdk::NodesRegistryClient;
 
 // Get the client from ClientHub
-let client = ctx.client_hub().get::<dyn NodesRegistryApi>()?;
+let client = ctx.client_hub().get::<dyn NodesRegistryClient>()?;
 
 // List all nodes
 let nodes = client.list_nodes().await?;

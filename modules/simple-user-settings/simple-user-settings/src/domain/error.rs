@@ -25,9 +25,7 @@ impl From<DomainError> for SettingsError {
     fn from(e: DomainError) -> Self {
         match e {
             DomainError::NotFound => Self::not_found(),
-            DomainError::Validation { field, message } => {
-                Self::validation(format!("{field}: {message}"))
-            }
+            DomainError::Validation { field, message } => Self::validation(field, message),
             DomainError::Database(_) => Self::internal(),
         }
     }

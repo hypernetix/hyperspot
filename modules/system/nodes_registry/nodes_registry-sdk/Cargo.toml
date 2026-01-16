@@ -1,0 +1,17 @@
+[package]
+name = "nodes_registry-sdk"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "SDK for nodes_registry module: API trait, node models, and error definitions"
+
+[lints]
+workspace = true
+
+[dependencies]
+async-trait = { workspace = true }
+thiserror = { workspace = true }
+uuid = { workspace = true }
+
+modkit-node-info = { path = "../../../../libs/modkit-node-info" }

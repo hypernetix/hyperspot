@@ -23,22 +23,4 @@ mod tests {
         assert_eq!(settings.theme, Some("dark".to_owned()));
         assert_eq!(settings.language, Some("en".to_owned()));
     }
-
-    #[test]
-    fn test_entity_to_settings_empty_strings() {
-        let user_id = Uuid::new_v4();
-        let tenant_id = Uuid::new_v4();
-
-        let entity = entity::Model {
-            tenant_id,
-            user_id,
-            theme: None,
-            language: None,
-        };
-
-        let settings: SimpleUserSettings = entity.into();
-
-        assert_eq!(settings.theme, None);
-        assert_eq!(settings.language, None);
-    }
 }

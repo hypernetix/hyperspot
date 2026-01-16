@@ -60,34 +60,6 @@ mod integration_tests {
         assert_eq!(scope.resource_ids(), &[rid]);
     }
 
-    #[test]
-    fn test_security_ctx_deny_all() {
-        use crate::secure::SecurityCtx;
-
-        #[allow(deprecated)]
-        let deny_all_ctx = SecurityCtx::deny_all(Uuid::new_v4());
-
-        // Deny-all context should be denied
-        assert!(deny_all_ctx.is_denied());
-        assert!(deny_all_ctx.scope().is_empty());
-    }
-
-    #[test]
-    fn test_security_ctx_for_tenant() {
-        use crate::secure::SecurityCtx;
-
-        let tenant_id = Uuid::new_v4();
-        let subject_id = Uuid::new_v4();
-        #[allow(deprecated)]
-        let ctx = SecurityCtx::for_tenant(tenant_id, subject_id);
-
-        // Context with tenant is not denied
-        assert!(!ctx.is_denied());
-        assert!(!ctx.scope().is_empty());
-        assert_eq!(ctx.scope().tenant_ids(), &[tenant_id]);
-        assert_eq!(ctx.subject_id(), subject_id);
-    }
-
     // Note: Full entity integration tests should be written in application code
     // where actual SeaORM entities are available. See USAGE_EXAMPLE.md for patterns.
 }

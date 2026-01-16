@@ -13,8 +13,9 @@ The system SHALL store user-specific settings (theme and language preferences) w
 
 #### Scenario: Default settings for new users
 - **WHEN** a user retrieves settings for the first time (no record exists)
-- **THEN** the system returns empty/default values for theme and language
+- **THEN** the system returns a JSON object with `"theme": null` and `"language": null`
 - **AND** no database record is created until the user performs an update
+- **AND** clients should accept both `null` (no record) and `""` (record with empty value) as valid unset states
 
 ### Requirement: Retrieve User Settings
 
@@ -27,8 +28,9 @@ The system SHALL provide a REST endpoint to retrieve the current user's settings
 
 #### Scenario: First-time user retrieval
 - **WHEN** a new user (no existing settings record) sends `GET /simple-user-settings/v1/settings`
-- **THEN** the system returns HTTP 200 with empty default values
+- **THEN** the system returns HTTP 200 with JSON body containing `"theme": null` and `"language": null`
 - **AND** no database insert occurs
+- **AND** if a record exists with empty strings, those are returned instead of `null`
 
 #### Scenario: Unauthorized access
 - **WHEN** an unauthenticated request is sent to `GET /simple-user-settings/v1/settings`
@@ -82,8 +84,8 @@ The system SHALL provide a REST endpoint to partially update user settings, modi
 #### Scenario: Patch creates settings if not exists
 - **WHEN** a user without existing settings sends `PATCH /simple-user-settings/v1/settings`
 - **THEN** the system creates a new settings record with provided fields
-- **AND** unspecified fields remain empty/default
-- **AND** returns HTTP 200 with the created settings
+- **AND** unspecified fields are stored as `NULL` in the database and returned as JSON `null` (or `""` if explicitly set to empty)
+- **AND** returns HTTP 200 with the created settings (e.g., `{"theme": "dark", "language": null}` if only theme was provided)
 
 #### Scenario: Unauthorized partial update
 - **WHEN** an unauthenticated request is sent to `PATCH /simple-user-settings/v1/settings`
@@ -118,7 +120,7 @@ The system SHALL store user settings with the following fields:
 
 ### Requirement: Error Handling
 
- The system SHALL return RFC-9457 Problem Details for all error responses with appropriate HTTP status codes.
+The system SHALL return RFC-9457 Problem Details for all error responses with appropriate HTTP status codes.
 
 #### Scenario: Validation error
 - **WHEN** invalid data is provided (e.g., excessively long strings)
@@ -136,7 +138,7 @@ The system SHALL provide a separate SDK crate (`simple-user-settings-sdk`) with 
 
 #### Scenario: SDK API trait usage
 - **WHEN** another module needs to access user settings
-- **THEN** it obtains the client via `ClientHub.get::<dyn SimpleUserSettingsApi>()?`
+- **THEN** it obtains the client via `ClientHub.get::<dyn SimpleUserSettingsClient>()?`
 - **AND** calls methods passing `SecurityContext` for authorization
 
 #### Scenario: SDK models have no transport dependencies

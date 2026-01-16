@@ -3,7 +3,8 @@
 //! The public API is defined in `simple-user-settings-sdk` and re-exported here.
 
 pub use simple_user_settings_sdk::{
-    SettingsError, SimpleUserSettings, SimpleUserSettingsApi, SimpleUserSettingsPatch,
+    SettingsError, SimpleUserSettings, SimpleUserSettingsClient, SimpleUserSettingsPatch,
+    SimpleUserSettingsUpdate,
 };
 
 pub mod module;

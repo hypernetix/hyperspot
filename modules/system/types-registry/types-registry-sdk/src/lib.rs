@@ -34,7 +34,7 @@ pub mod error;
 pub mod models;
 
 // Re-export main types at crate root for convenience
-pub use api::TypesRegistryApi;
+pub use api::TypesRegistryClient;
 pub use error::TypesRegistryError;
 pub use models::{
     DynGtsEntity, DynRegisterResult, GtsEntity, GtsInstanceEntity, GtsTypeEntity, InstanceObject,

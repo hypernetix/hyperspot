@@ -33,7 +33,7 @@ Follow the architecture manifest: [`@/docs/ARCHITECTURE_MANIFEST.md`](../../../d
 
 Follow the new module guideline: [`@/guidelines/NEW_MODULE.md`](../../../guidelines/NEW_MODULE.md)
 
-```
+```text
 modules/<module>/
 ├─ <module>-sdk/           # Public API: trait, models, errors (NO serde)
 │  └─ src/
@@ -57,7 +57,7 @@ See [`@/guidelines/DNA/languages/RUST.md`](../../../guidelines/DNA/languages/RUS
 - **Linting**: `cargo clippy --workspace --all-targets -- -D warnings`
 - **No unsafe code**: `#![forbid(unsafe_code)]`
 - **No panics**: Deny `unwrap()` and `expect()` in production code
-- **JSON naming**: `camelCase` via `#[serde(rename_all = "camelCase")]`
+- **JSON naming**: `snake_case` via `#[serde(rename_all = "snake_case")]` — responses use snake_case JSON field naming (e.g., `user_id`, `tenant_id`)
 
 ### REST API Design
 

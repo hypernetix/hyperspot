@@ -10,7 +10,7 @@
 ## 2. SDK Crate Implementation
 - [x] 2.1 Implement `simple-user-settings-sdk/src/models.rs` (Settings, SettingsPatch)
 - [x] 2.2 Implement `simple-user-settings-sdk/src/errors.rs` (SettingsError enum)
-- [x] 2.3 Implement `simple-user-settings-sdk/src/api.rs` (SimpleUserSettingsApi trait with SecurityContext)
+- [x] 2.3 Implement `simple-user-settings-sdk/src/api.rs` (SimpleUserSettingsClient trait with SecurityContext)
 - [x] 2.4 Implement `simple-user-settings-sdk/src/lib.rs` (re-exports)
 
 ## 3. Domain Layer
@@ -38,7 +38,7 @@
 
 ## 6. Module Infrastructure
 - [x] 6.1 Implement `src/config.rs` (typed module configuration)
-- [x] 6.2 Implement `src/local_client.rs` (LocalClient implementing SimpleUserSettingsApi)
+- [x] 6.2 Implement `src/local_client.rs` (LocalClient implementing SimpleUserSettingsClient)
 - [x] 6.3 Implement `src/module.rs` (Module struct with #[modkit::module])
 - [x] 6.4 Implement `src/lib.rs` (re-exports and module organization)
 - [x] 6.5 Implement `src/errors.rs` (module-level error types)
