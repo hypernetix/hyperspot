@@ -17,6 +17,10 @@ path = "ui/bad_http_import.rs"
 name = "good_domain_0308"
 path = "ui/good_domain_0308.rs"
 
+[[example]]
+name = "bad_http_type_in_struct"
+path = "ui/bad_http_type_in_struct.rs"
+
 [dependencies]
 clippy_utils.workspace = true
 dylint_linting.workspace = true

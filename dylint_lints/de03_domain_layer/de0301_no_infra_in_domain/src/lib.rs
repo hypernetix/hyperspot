@@ -3,7 +3,7 @@
 
 extern crate rustc_ast;
 
-use rustc_ast::{Item, ItemKind, UseTree, UseTreeKind};
+use rustc_ast::{Item, ItemKind, UseTree, UseTreeKind, Ty, TyKind};
 use rustc_lint::{EarlyLintPass, LintContext};
 
 use lint_utils::is_in_domain_path;
@@ -124,12 +124,78 @@ fn check_use_in_domain(cx: &rustc_lint::EarlyContext<'_>, item: &Item) {
     }
 }
 
+fn type_to_string(ty: &Ty) -> Option<String> {
+    match &ty.kind {
+        TyKind::Path(_, path) => {
+            let path_str = path.segments.iter()
+                .map(|seg| seg.ident.name.as_str())
+                .collect::<Vec<_>>()
+                .join("::");
+            Some(path_str)
+        }
+        _ => None,
+    }
+}
+
+fn check_type_in_domain(cx: &rustc_lint::EarlyContext<'_>, ty: &Ty) {
+    if let Some(type_path) = type_to_string(ty) {
+        for pattern in INFRA_PATTERNS {
+            if type_path.starts_with(pattern) {
+                cx.span_lint(DE0301_NO_INFRA_IN_DOMAIN, ty.span, |diag| {
+                    diag.primary_message(
+                        format!("domain module uses infrastructure type `{}` (DE0301)", type_path)
+                    );
+                    diag.help("domain should depend only on abstractions; move infrastructure code to infra/ layer");
+                });
+                return;
+            }
+        }
+    }
+}
+
 impl EarlyLintPass for De0301NoInfraInDomain {
     fn check_item(&mut self, cx: &rustc_lint::EarlyContext<'_>, item: &Item) {
-        // Check use statements in file-based domain modules
-        if matches!(item.kind, ItemKind::Use(_))
-            && is_in_domain_path(cx.sess().source_map(), item.span) {
-            check_use_in_domain(cx, item);
+        if !is_in_domain_path(cx.sess().source_map(), item.span) {
+            return;
+        }
+
+        match &item.kind {
+            // Check use statements
+            ItemKind::Use(_) => {
+                check_use_in_domain(cx, item);
+            }
+            // Check struct fields
+            ItemKind::Struct(_, _, variant_data) => {
+                for field in variant_data.fields() {
+                    check_type_in_domain(cx, &field.ty);
+                }
+            }
+            // Check enum variants
+            ItemKind::Enum(_, _, enum_def) => {
+                for variant in &enum_def.variants {
+                    for field in variant.data.fields() {
+                        check_type_in_domain(cx, &field.ty);
+                    }
+                }
+            }
+            // Check function signatures
+            ItemKind::Fn(fn_item) => {
+                // Check parameters
+                for param in &fn_item.sig.decl.inputs {
+                    check_type_in_domain(cx, &param.ty);
+                }
+                // Check return type
+                if let rustc_ast::FnRetTy::Ty(ret_ty) = &fn_item.sig.decl.output {
+                    check_type_in_domain(cx, ret_ty);
+                }
+            }
+            // Check type aliases
+            ItemKind::TyAlias(ty_alias) => {
+                if let Some(ty) = &ty_alias.ty {
+                    check_type_in_domain(cx, ty);
+                }
+            }
+            _ => {}
         }
     }
 }
