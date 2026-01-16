@@ -7,7 +7,11 @@ extern crate rustc_lint;
 extern crate rustc_session;
 extern crate rustc_span;
 
+
 use rustc_lint::LintContext;
+
+use rustc_ast::{UseTree, UseTreeKind};
+
 use rustc_span::source_map::SourceMap;
 use rustc_span::{FileName, RealFileName, Span};
 use std::collections::HashSet;
@@ -441,6 +445,44 @@ pub fn is_utoipa_trait(segments: &[&str], trait_name: &str) -> bool {
         // Bare identifier: ToSchema
         // We accept this as it's commonly used with `use utoipa::ToSchema`
         true
+    }
+}
+
+/// Converts a UseTree to a vector of fully qualified path strings.
+/// Handles Simple, Glob, and Nested use tree kinds.
+///
+/// Examples:
+/// - `use foo::bar` -> `["foo::bar"]`
+/// - `use foo::{bar, baz}` -> `["foo::bar", "foo::baz"]`
+/// - `use foo::*` -> `["foo"]`
+pub fn use_tree_to_strings(tree: &UseTree) -> Vec<String> {
+    match &tree.kind {
+        UseTreeKind::Simple(..) | UseTreeKind::Glob => {
+            vec![tree.prefix.segments.iter()
+                .map(|seg| seg.ident.name.as_str())
+                .collect::<Vec<_>>()
+                .join("::")]
+        }
+        UseTreeKind::Nested { items, .. } => {
+            let prefix = tree.prefix.segments.iter()
+                .map(|seg| seg.ident.name.as_str())
+                .collect::<Vec<_>>()
+                .join("::");
+            
+            let mut paths = Vec::new();
+            for (nested_tree, _) in items {
+                for nested_str in use_tree_to_strings(nested_tree) {
+                    if nested_str.is_empty() {
+                        paths.push(prefix.clone());
+                    } else if prefix.is_empty() {
+                        paths.push(nested_str);
+                    } else {
+                        paths.push(format!("{}::{}", prefix, nested_str));
+                    }
+                }
+            }
+            if paths.is_empty() { vec![prefix] } else { paths }
+        }
     }
 }
 

@@ -3,10 +3,9 @@
 
 extern crate rustc_ast;
 
-use rustc_ast::{Item, ItemKind, UseTree, UseTreeKind, Ty, TyKind};
+use rustc_ast::{Item, ItemKind, Ty, TyKind};
 use rustc_lint::{EarlyLintPass, LintContext};
-
-use lint_utils::is_in_domain_path;
+use lint_utils::{is_in_domain_path, use_tree_to_strings};
 
 dylint_linting::declare_early_lint! {
     /// ### What it does
@@ -72,37 +71,6 @@ const INFRA_PATTERNS: &[&str] = &[
     "std::fs",
     "tokio::fs",
 ];
-
-fn use_tree_to_strings(tree: &UseTree) -> Vec<String> {
-    match &tree.kind {
-        UseTreeKind::Simple(..) | UseTreeKind::Glob => {
-            vec![tree.prefix.segments.iter()
-                .map(|seg| seg.ident.name.as_str())
-                .collect::<Vec<_>>()
-                .join("::")]
-        }
-        UseTreeKind::Nested { items, .. } => {
-            let prefix = tree.prefix.segments.iter()
-                .map(|seg| seg.ident.name.as_str())
-                .collect::<Vec<_>>()
-                .join("::");
-            
-            let mut paths = Vec::new();
-            for (nested_tree, _) in items {
-                for nested_str in use_tree_to_strings(nested_tree) {
-                    if nested_str.is_empty() {
-                        paths.push(prefix.clone());
-                    } else if prefix.is_empty() {
-                        paths.push(nested_str);
-                    } else {
-                        paths.push(format!("{}::{}", prefix, nested_str));
-                    }
-                }
-            }
-            if paths.is_empty() { vec![prefix] } else { paths }
-        }
-    }
-}
 
 fn check_use_in_domain(cx: &rustc_lint::EarlyContext<'_>, item: &Item) {
     let ItemKind::Use(use_tree) = &item.kind else {
