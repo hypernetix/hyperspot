@@ -1,5 +1,6 @@
 # HyperSpot Server
 ![Badge](./.github/badgeHN.svg)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/hypernetix/hyperspot/badge)](https://scorecard.dev/viewer/?uri=github.com/hypernetix/hyperspot)
 
 **HyperSpot Server** is a modular, high-performance platform for building modern enterprise-grade SaaS services in Rust. It provides a comprehensive framework for building scalable AI-powered applications with automatic REST API generation, comprehensive OpenAPI documentation, and a extremely flexible modular architecture.
 
