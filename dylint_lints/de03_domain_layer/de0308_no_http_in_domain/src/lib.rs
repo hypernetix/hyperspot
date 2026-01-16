@@ -171,6 +171,56 @@ fn check_type_in_domain(cx: &rustc_lint::EarlyContext<'_>, ty: &Ty) {
                 check_type_in_domain(cx, inner_ty);
             }
         }
+        // Handle trait objects: dyn http::Service
+        TyKind::TraitObject(bounds, _) => {
+            for bound in bounds {
+                if let rustc_ast::GenericBound::Trait(trait_ref) = bound {
+                    // Check the trait path itself
+                    let path = &trait_ref.trait_ref.path;
+                    let path_str = path.segments.iter()
+                        .map(|seg| seg.ident.name.as_str())
+                        .collect::<Vec<_>>()
+                        .join("::");
+                    
+                    for pattern in HTTP_PATTERNS {
+                        if path_str.starts_with(pattern) {
+                            cx.span_lint(DE0308_NO_HTTP_IN_DOMAIN, ty.span, |diag| {
+                                diag.primary_message(
+                                    format!("domain module uses HTTP trait `{}` (DE0308)", path_str)
+                                );
+                                diag.help("domain should be transport-agnostic; handle HTTP in api/ layer");
+                            });
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+        // Handle impl Trait: impl http::Service
+        TyKind::ImplTrait(_, bounds) => {
+            for bound in bounds {
+                if let rustc_ast::GenericBound::Trait(trait_ref) = bound {
+                    // Check the trait path itself
+                    let path = &trait_ref.trait_ref.path;
+                    let path_str = path.segments.iter()
+                        .map(|seg| seg.ident.name.as_str())
+                        .collect::<Vec<_>>()
+                        .join("::");
+                    
+                    for pattern in HTTP_PATTERNS {
+                        if path_str.starts_with(pattern) {
+                            cx.span_lint(DE0308_NO_HTTP_IN_DOMAIN, ty.span, |diag| {
+                                diag.primary_message(
+                                    format!("domain module uses HTTP trait `{}` (DE0308)", path_str)
+                                );
+                                diag.help("domain should be transport-agnostic; handle HTTP in api/ layer");
+                            });
+                            return;
+                        }
+                    }
+                }
+            }
+        }
         _ => {}
     }
 }
