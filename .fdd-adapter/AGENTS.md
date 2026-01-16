@@ -1,8 +1,8 @@
 # FDD Adapter: HyperSpot
 
-**Extends**: `/FDD/AGENTS.md`
+**Extends**: `../.fdd/AGENTS.md`
 
-**ALWAYS open and follow**: `/FDD/requirements/core.md` WHEN editing this file
+**ALWAYS open and follow**: `../.fdd/requirements/core.md` WHEN editing this file
 
 **Version**: 1.1  
 **Last Updated**: 2025-01-16  
