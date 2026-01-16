@@ -50,6 +50,7 @@ dylint_linting::declare_early_lint! {
 }
 
 /// HTTP-related patterns forbidden in domain code
+/// Only includes frameworks actually used in the project: axum, hyper, http
 const HTTP_PATTERNS: &[&str] = &[
     "http::",
     "http::StatusCode",
@@ -60,7 +61,6 @@ const HTTP_PATTERNS: &[&str] = &[
     "axum::http",
     "hyper::StatusCode",
     "hyper::Method",
-    "actix_web::http",
     "reqwest::StatusCode",
 ];
 
@@ -96,7 +96,7 @@ fn check_use_in_domain(cx: &rustc_lint::EarlyContext<'_>, item: &Item) {
 
     let path_str = use_tree_to_string(use_tree);
     for pattern in HTTP_PATTERNS {
-        if path_str.contains(pattern) {
+        if path_str.starts_with(pattern) {
             cx.span_lint(DE0308_NO_HTTP_IN_DOMAIN, item.span, |diag| {
                 diag.primary_message(
                     "domain module imports HTTP type (DE0308)"

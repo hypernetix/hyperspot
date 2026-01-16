@@ -197,7 +197,10 @@ pub fn is_in_sdk_crate(cx: &rustc_lint::EarlyContext<'_>, span: Span) -> bool {
 /// Check if span is within libs/modkit-db/ - the internal sqlx wrapper library
 /// This path is excluded from sqlx restrictions as it provides the abstraction layer
 pub fn is_in_modkit_db_path(source_map: &SourceMap, span: Span) -> bool {
-    // Try both with and without leading slash for compatibility
+    // Multiple checks handle different path contexts:
+    // - "/libs/modkit-db/" - absolute path from workspace root
+    // - "libs/modkit-db/" - relative path in some contexts
+    // - "modkit-db/src/" - simulated_dir paths in tests
     check_span_path(source_map, span, "/libs/modkit-db/")
         || check_span_path(source_map, span, "libs/modkit-db/")
         || check_span_path(source_map, span, "modkit-db/src/")
@@ -206,6 +209,10 @@ pub fn is_in_modkit_db_path(source_map: &SourceMap, span: Span) -> bool {
 /// Check if span is within apps/hyperspot-server - the main server binary
 /// This path is excluded from sqlx restrictions as it needs driver linkage workaround
 pub fn is_in_hyperspot_server_path(source_map: &SourceMap, span: Span) -> bool {
+    // Multiple checks handle different path contexts:
+    // - "/apps/hyperspot-server/" - absolute path from workspace root
+    // - "apps/hyperspot-server/" - relative path in some contexts
+    // - "hyperspot-server/src/" - simulated_dir paths in tests
     check_span_path(source_map, span, "/apps/hyperspot-server/")
         || check_span_path(source_map, span, "apps/hyperspot-server/")
         || check_span_path(source_map, span, "hyperspot-server/src/")

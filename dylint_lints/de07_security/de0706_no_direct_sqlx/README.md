@@ -76,5 +76,5 @@ It detects:
 
 ### See Also
 
-- [DE0705](../de0705_no_prebuild_sql_queries) - No Prebuilt SQL Queries
-- [DE0407](../../de04_infrastructure/de0407_no_hardcoded_connection_strings) - No Hardcoded Connection Strings
+- [DE0301](../../de03_domain_layer/de0301_no_infra_in_domain) - No Infrastructure in Domain
+- [DE0308](../../de03_domain_layer/de0308_no_http_in_domain) - No HTTP in Domain

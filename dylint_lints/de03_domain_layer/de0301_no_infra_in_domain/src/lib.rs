@@ -56,18 +56,11 @@ const INFRA_PATTERNS: &[&str] = &[
     // Infrastructure layer
     "crate::infra",
     "crate::infrastructure",
-    // Database frameworks
+    // Database frameworks (direct access forbidden, use modkit_db abstractions instead)
     "sea_orm",
     "sqlx",
-    "diesel",
-    "tokio_postgres",
-    "rusqlite",
-    // HTTP/Web frameworks
+    // HTTP/Web frameworks (only used ones: axum, hyper, http)
     "axum",
-    "actix",
-    "actix_web",
-    "warp",
-    "rocket",
     "hyper",
     "http::",
     // API layer
@@ -112,7 +105,7 @@ fn check_use_in_domain(cx: &rustc_lint::EarlyContext<'_>, item: &Item) {
 
     let path_str = use_tree_to_string(use_tree);
     for pattern in INFRA_PATTERNS {
-        if path_str.contains(pattern) {
+        if path_str.starts_with(pattern) {
             cx.span_lint(DE0301_NO_INFRA_IN_DOMAIN, item.span, |diag| {
                 diag.primary_message(
                     format!("domain module imports infrastructure dependency `{}` (DE0301)", pattern)
