@@ -108,6 +108,8 @@ dylint-test:
 
 # Run project compliance dylint lints on the workspace (see `make dylint-list`)
 dylint:
+	@command -v cargo-dylint >/dev/null || (echo "Installing cargo-dylint..." && cargo install cargo-dylint)
+	@command -v dylint-link >/dev/null || (echo "Installing dylint-link..." && cargo install dylint-link)
 	@cd dylint_lints && cargo build --release
 	@TOOLCHAIN=$$(rustc --version --verbose | grep 'host:' | cut -d' ' -f2); \
 	RUSTUP_TOOLCHAIN=$$(cat dylint_lints/rust-toolchain.toml 2>/dev/null | grep 'channel' | cut -d'"' -f2 || echo "nightly"); \
