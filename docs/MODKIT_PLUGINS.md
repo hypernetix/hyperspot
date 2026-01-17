@@ -220,10 +220,10 @@ modules/<gateway-name>/
 │       ├── lib.rs              # Re-exports SDK + module struct
 │       ├── module.rs           # Module declaration, init, REST registration
 │       ├── config.rs           # Gateway config (e.g., vendor selection)
-│       ├── local_client.rs     # Public client adapter (implements PublicClient)
 │       ├── api/rest/           # REST handlers, DTOs, routes
 │       └── domain/
 │           ├── service.rs      # Plugin resolution and delegation
+│           ├── local_client.rs # Public client adapter (implements PublicClient)
 │           └── error.rs        # Domain errors
 │
 └── plugins/                    # Plugin implementations

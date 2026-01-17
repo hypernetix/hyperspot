@@ -11,21 +11,6 @@ The `types-registry` module provides:
 - **REST API**: Endpoints for registering, listing, and retrieving GTS entities
 - **ClientHub integration**: Other modules access via `hub.get::<dyn TypesRegistryClient>()?`
 
-## Architecture
-
-```
-types-registry/
-├── src/
-│   ├── api/rest/          # REST API layer (DTOs, handlers, routes)
-│   ├── domain/            # Domain layer (error, repo trait, service)
-│   ├── infra/storage/     # Infrastructure (in-memory repository)
-│   ├── config.rs          # Module configuration
-│   ├── local_client.rs    # TypesRegistryClient implementation
-│   ├── module.rs          # Module declaration
-│   └── lib.rs             # Crate root
-└── Cargo.toml
-```
-
 ## Usage
 
 ### Via ClientHub (Rust)
@@ -109,12 +94,6 @@ registry.register(&ctx, entities).await?;
 // When ready for production
 module.switch_to_production()?;
 ```
-
-## Dependencies
-
-- `types-registry-sdk`: Public API trait, models, and errors
-- `gts-rust`: Official GTS library for ID validation, parsing, and schema operations
-- `modkit`: HyperSpot module framework
 
 ## Testing
 

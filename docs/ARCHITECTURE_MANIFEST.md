@@ -252,26 +252,6 @@ hyperspot/
  Every module follows a **Domain-Driven Design (DDD-light)** structure:
 
 ```
-modules/<module-name>/
-├── Cargo.toml
-├── src/
-│   ├── lib.rs                        # Public exports
-│   ├── module.rs                     # Module struct + #[modkit::module(...)]
-│   ├── config.rs                     # Typed module config
-│   ├── local_client.rs               # Local adapter implementing an SDK API trait (optional)
-│   ├── api/
-│   │   └── rest/
-│   │       ├── dto.rs                # REST-only DTOs (serde + ToSchema)
-│   │       ├── handlers.rs           # Thin HTTP handlers
-│   │       ├── routes.rs             # Route + OpenAPI registration (OperationBuilder)
-│   │       ├── error.rs              # DomainError -> Problem mapping
-│   │       └── mappers.rs            # DTO <-> domain mapping
-│   ├── domain/                       # Business logic
-│   └── infra/                        # Infrastructure adapters (optional)
-├── tests/                            # Optional
-└── (optional extras: gts/, openspec/, build.rs, etc.)
-
-# SDK pattern (used by e.g. `modules/system/types-registry/` and `examples/modkit/users_info/`)
 modules/<module-dir>/
 ├── <module-name>-sdk/
 │   ├── Cargo.toml
@@ -285,13 +265,21 @@ modules/<module-dir>/
 └── <module-name>/
     ├── Cargo.toml
     └── src/
-        ├── lib.rs                    # Re-exports SDK + module struct
-        ├── module.rs                 # Module struct + #[modkit::module(...)]
-        ├── config.rs
-        ├── local_client.rs
+        ├── lib.rs                        # Public exports
+        ├── module.rs                     # Module struct + #[modkit::module(...)]
+        ├── config.rs                     # Typed module config
         ├── api/
-        ├── domain/
-        └── infra/
+        │   └── rest/
+        │       ├── dto.rs                # REST-only DTOs (serde + ToSchema)
+        │       ├── handlers.rs           # Thin HTTP handlers
+        │       ├── routes.rs             # Route + OpenAPI registration (OperationBuilder)
+        │       ├── error.rs              # DomainError -> Problem mapping
+        │       └── mappers.rs            # DTO <-> domain mapping
+        ├── domain/                       # Business logic
+        ├── local_client.rs               # Local adapter implementing an SDK API trait (optional)
+        ├── infra/                        # Infrastructure adapters (optional)
+        ├── tests/                        # Optional
+        └── (optional extras: gts/, openspec/, build.rs, etc.)
 ```
 
 Additional common patterns (see `examples/`):
