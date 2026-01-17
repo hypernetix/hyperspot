@@ -6,8 +6,8 @@ use modkit::context::ModuleCtx;
 use modkit::contracts::{OpenApiRegistry, RestApiCapability};
 use modkit::Module;
 
+use crate::domain::local_client::NodesRegistryLocalClient;
 use crate::domain::service::Service;
-use crate::gateways::local::NodesRegistryLocalClient;
 use nodes_registry_sdk::NodesRegistryClient;
 
 /// Nodes Registry Module
