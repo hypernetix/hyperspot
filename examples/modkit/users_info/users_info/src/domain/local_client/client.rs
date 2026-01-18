@@ -10,7 +10,7 @@ use user_info_sdk::{
     UpdateUserRequest, User, UserFull, UsersInfoClient, UsersInfoError,
 };
 
-use crate::infra::local_client::{
+use crate::domain::local_client::{
     addresses::LocalAddressesStreamingClient, cities::LocalCitiesStreamingClient,
     users::LocalUsersStreamingClient,
 };

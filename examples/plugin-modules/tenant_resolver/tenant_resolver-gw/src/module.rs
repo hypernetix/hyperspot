@@ -10,8 +10,8 @@ use tracing::info;
 use types_registry_sdk::TypesRegistryClient;
 
 use crate::config::TenantResolverConfig;
+use crate::domain::local_client::TenantResolverGwClient;
 use crate::domain::service::Service;
-use crate::local_client::TenantResolverGwClient;
 
 /// Tenant Resolver Gateway module.
 ///

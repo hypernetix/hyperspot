@@ -35,7 +35,7 @@ This SDK pattern provides:
 
 - Clear separation between public API and implementation
 - Consumers only need one lightweight dependency (`<module>-sdk`)
-- Direct ClientHub registration: `hub.get::<dyn MyModuleApi>()?`
+- Direct ClientHub registration: `hub.get::<dyn MyModuleClient>()?`
 
 All modules MUST adhere to the following directory structure:
 
@@ -44,8 +44,8 @@ modules/<your-module>/
 ├─ <your-module>-sdk/           # SDK crate: public API for consumers
 │  ├─ Cargo.toml
 │  └─ src/
-│     ├─ lib.rs                 # Re-exports: Api trait, models, errors
-│     ├─ api.rs                 # API trait (all methods take &SecurityCtx)
+│     ├─ lib.rs                 # Re-exports: Client trait, models, errors
+│     ├─ api.rs                 # Client trait (all methods take &SecurityCtx)
 │     ├─ models.rs              # Transport-agnostic models (NO serde)
 │     └─ errors.rs              # Transport-agnostic errors
 │
@@ -55,7 +55,6 @@ modules/<your-module>/
       ├─ lib.rs                 # Re-exports SDK types + module struct
       ├─ module.rs              # Module struct, #[modkit::module], trait impls
       ├─ config.rs              # Typed config with defaults
-      ├─ local_client.rs        # Local client implementing SDK API trait
       ├─ api/                   # Transport adapters
       │  └─ rest/               # HTTP REST layer
       │     ├─ dto.rs           # DTOs (serde, ToSchema)
@@ -68,7 +67,9 @@ modules/<your-module>/
       │  ├─ events.rs           # Domain events
       │  ├─ ports.rs            # Output ports (e.g., EventPublisher)
       │  ├─ repo.rs             # Repository traits
+      │  ├─ local_client.rs     # Local client implementing SDK API trait
       │  └─ service.rs          # Service orchestrating business logic
+      │      
       └─ infra/                 # Infrastructure adapters
          └─ storage/            # Database layer
             ├─ entity.rs        # SeaORM entities
@@ -179,13 +180,13 @@ api_gateway = { path = "../../modules/system/api_gateway" }
 //! <YourModule> SDK
 //!
 //! This crate provides the public API:
-//! - `<YourModule>Api` trait for inter-module communication
+//! - `<YourModule>Client` trait for inter-module communication
 //! - Model types (`User`, `NewUser`, etc.)
 //! - Error type (`<YourModule>Error`)
 //!
 //! Consumers obtain the client from `ClientHub`:
 //! ```ignore
-//! let client = hub.get::<dyn YourModuleApi>()?;
+//! let client = hub.get::<dyn YourModuleClient>()?;
 //! ```
 
 #![forbid(unsafe_code)]
@@ -195,7 +196,7 @@ pub mod errors;
 pub mod models;
 
 // Re-export main types at crate root
-pub use api::YourModuleApi;
+pub use api::YourModuleClient;
 pub use errors::YourModuleError;
 pub use models::{NewUser, User, UserPatch, UpdateUserRequest};
 ```
@@ -211,16 +212,13 @@ pub use models::{NewUser, User, UserPatch, UpdateUserRequest};
 
 // === PUBLIC API (from SDK) ===
 pub use < your_module>_sdk::{
-YourModuleApi, YourModuleError,
+YourModuleClient, YourModuleError,
 User, NewUser, UserPatch, UpdateUserRequest,
 };
 
 // === MODULE DEFINITION ===
 pub mod module;
 pub use module::YourModule;
-
-// === LOCAL CLIENT ===
-pub mod local_client;
 
 // === INTERNAL MODULES ===
 #[doc(hidden)]
@@ -286,17 +284,11 @@ ApiResult<T> = Result<T, Problem>  (handler return type)
 
 Error design rules:
 
-- Use situation-specific error structs (not mega-enums); include `Backtrace` where helpful.
+- Use situation-specific error enums grouped by concern; avoid one giant catch-all enum.
 - Provide convenience `is_xxx()` helper methods on error types.
 - Implement `From<DomainError> for Problem` for automatic RFC-9457 conversion.
-
-Recommended error variant mapping (example for Users):
-
-| DomainError variant         | HTTP status | Problem title    | Detail                          |
-|-----------------------------|-------------|------------------|---------------------------------|
-| `UserNotFound { id }`       | 404         | "User not found" | `No user with id {id}`          |
-| `EmailAlreadyExists { .. }` | 409         | "Conflict"       | `Email already exists: {email}` |
-| `Validation { field, .. }`  | 400         | "Bad Request"    | Field-specific validation error |
+- Provide `From<DomainError> for <Module>Error` for SDK errors.
+- Use `ApiResult<T>` (which is `Result<T, Problem>`) in handlers.
 
 #### Domain Error Template
 
@@ -597,7 +589,7 @@ impl UsersInfoError {
 
 #### 4c. `<module>-sdk/src/api.rs`
 
-**Rule:** Define the native async trait for ClientHub. Name it `<PascalCaseModule>Api`.
+**Rule:** Define the native async trait for ClientHub. Name it `<PascalCaseModule>Client`.
 
 **Rule:** All methods MUST accept `&SecurityCtx` as the first parameter.
 
@@ -616,9 +608,9 @@ use modkit_odata::{ODataQuery, Page};
 /// Public API trait for users_info module.
 ///
 /// All methods require SecurityCtx for authorization.
-/// Obtain via ClientHub: `hub.get::<dyn UsersInfoApi>()?`
+/// Obtain via ClientHub: `hub.get::<dyn UsersInfoClient>()?`
 #[async_trait]
-pub trait UsersInfoApi: Send + Sync {
+pub trait UsersInfoClient: Send + Sync {
     /// Get a user by ID
     async fn get_user(&self, ctx: &SecurityCtx, id: Uuid) -> Result<User, UsersInfoError>;
 
@@ -930,10 +922,10 @@ This is where all components are assembled and registered with ModKit.
     5. Store the `Arc<Service>` in a thread-safe container like `arc_swap::ArcSwapOption`.
     6. Create local client adapter and register explicitly:
        ```rust
-       use <module>_sdk::api::YourModuleApi;
+       use <module>_sdk::api::YourModuleClient;
        let local_client = YourLocalClient::new(domain_service);
-       let api: Arc<dyn YourModuleApi> = Arc::new(local_client);
-       ctx.client_hub().register::<dyn YourModuleApi>(api);
+       let api: Arc<dyn YourModuleClient> = Arc::new(local_client);
+       ctx.client_hub().register::<dyn YourModuleClient>(api);
        ```
     7. Config structs SHOULD use `#[serde(deny_unknown_fields)]` and provide safe defaults.
 
@@ -961,9 +953,9 @@ use crate::domain::service::{Service, ServiceConfig};
 use crate::infra::storage::sea_orm_repo::SeaOrmUsersRepository;
 
 // Import API trait from SDK (not local contract module)
-use user_info_sdk::api::UsersInfoApi;
+use user_info_sdk::api::UsersInfoClient;
 // Import local client adapter
-use crate::local_client::UsersInfoLocalClient;
+use crate::domain::local_client::UsersInfoLocalClient;
 
 #[modkit::module(
     name = "users_info",
@@ -1020,10 +1012,10 @@ impl Module for UsersInfo {
         // === EXPLICIT CLIENT REGISTRATION ===
         // Create local client adapter that implements the SDK API trait
         let local_client = UsersInfoLocalClient::new(domain_service);
-        let api: Arc<dyn UsersInfoApi> = Arc::new(local_client);
+        let api: Arc<dyn UsersInfoClient> = Arc::new(local_client);
 
         // Register directly in ClientHub — no expose_* helper, no macro glue
-        ctx.client_hub().register::<dyn UsersInfoApi>(api);
+        ctx.client_hub().register::<dyn UsersInfoClient>(api);
         info!("UsersInfo API registered in ClientHub via local adapter");
         Ok(())
     }
@@ -1620,25 +1612,25 @@ For real-time event streaming, add Server-Sent Events support.
 Implement the local client adapter that bridges the domain service to the SDK API trait.
 The local client implements the SDK trait and forwards calls to domain service methods.
 
-**Location:** `src/local_client.rs` (at module root, NOT in `gateways/`)
+**Location:** `src/domain/local_client.rs`. If the client implementation consists of multiple modules, create a local_client subdirectory and place all client modules there.
 
 **Rule:** The local client:
 
-- Implements the SDK API trait (`<module>_sdk::api::YourModuleApi`)
+- Implements the SDK API trait (`<module>_sdk::api::YourModuleClient`)
 - Imports types from the SDK, not from a local `contract` module
 - Delegates all calls to the domain `Service`
 - Passes `SecurityCtx` directly to service methods
 - Converts `DomainError` to SDK `<Module>Error` via `From` impl
 
 ```rust
-// Example: users_info/src/local_client.rs
+// Example: users_info/src/domain/local_client.rs
 use async_trait::async_trait;
 use std::sync::Arc;
 use uuid::Uuid;
 
 // Import API trait and types from SDK crate
 use user_info_sdk::{
-    api::UsersInfoApi,
+    api::UsersInfoClient,
     errors::UsersInfoError,
     models::{NewUser, UpdateUserRequest, User},
 };
@@ -1660,7 +1652,7 @@ impl UsersInfoLocalClient {
 }
 
 #[async_trait]
-impl UsersInfoApi for UsersInfoLocalClient {
+impl UsersInfoClient for UsersInfoLocalClient {
     async fn get_user(&self, ctx: &SecurityCtx, id: Uuid) -> Result<User, UsersInfoError> {
         self.service
             .get_user(ctx, id)
@@ -1959,10 +1951,10 @@ Define the API trait and types in a separate crate (no transport dependencies):
 use async_trait::async_trait;
 use modkit_security::SecurityCtx;
 
-/// API trait for MyModule
+/// Client trait for MyModule
 /// All methods require SecurityCtx for authorization.
 #[async_trait]
-pub trait MyModuleApi: Send + Sync {
+pub trait MyModuleClient: Send + Sync {
     async fn do_something(
         &self,
         ctx: &SecurityCtx,
@@ -2028,7 +2020,7 @@ use modkit_transport_grpc::client::{connect_with_retry, GrpcClientConfig};
 use modkit_transport_grpc::inject_secctx;
 use tonic::transport::Channel;
 
-use mymodule_sdk::{MyModuleApi, MyModuleError};
+use mymodule_sdk::{MyModuleClient, MyModuleError};
 
 pub struct MyModuleGrpcClient {
     inner: crate::mymodule::my_module_service_client::MyModuleServiceClient<Channel>,
@@ -2053,7 +2045,7 @@ impl MyModuleGrpcClient {
 }
 
 #[async_trait]
-impl MyModuleApi for MyModuleGrpcClient {
+impl MyModuleClient for MyModuleGrpcClient {
     async fn do_something(
         &self,
         ctx: &SecurityCtx,
@@ -2107,7 +2099,7 @@ use modkit_transport_grpc::extract_secctx;
 pub use mymodule_sdk as sdk;
 pub use mymodule_grpc as grpc;
 
-use mymodule_sdk::{MyModuleApi, MyModuleError};
+use mymodule_sdk::{MyModuleClient, MyModuleError};
 use mymodule_grpc::{MyModuleService, MyModuleServiceServer, SERVICE_NAME};
 
 /// Module struct
@@ -2117,7 +2109,7 @@ use mymodule_grpc::{MyModuleService, MyModuleServiceServer, SERVICE_NAME};
     // NOTE: No `client = ...` — we register explicitly in init()
 )]
 pub struct MyModule {
-    api: Arc<dyn MyModuleApi>,
+    api: Arc<dyn MyModuleClient>,
 }
 
 impl Default for MyModule {
@@ -2132,7 +2124,7 @@ impl Default for MyModule {
 struct LocalImpl;
 
 #[async_trait]
-impl MyModuleApi for LocalImpl {
+impl MyModuleClient for LocalImpl {
     async fn do_something(
         &self,
         _ctx: &SecurityCtx,
@@ -2144,7 +2136,7 @@ impl MyModuleApi for LocalImpl {
 
 // gRPC Server Implementation
 struct GrpcServer {
-    api: Arc<dyn MyModuleApi>,
+    api: Arc<dyn MyModuleClient>,
 }
 
 #[tonic::async_trait]
@@ -2170,7 +2162,7 @@ impl MyModuleService for GrpcServer {
 impl modkit::Module for MyModule {
     async fn init(&self, ctx: &ModuleCtx) -> anyhow::Result<()> {
         // Register local implementation in ClientHub
-        ctx.client_hub().register::<dyn MyModuleApi>(self.api.clone());
+        ctx.client_hub().register::<dyn MyModuleClient>(self.api.clone());
         Ok(())
     }
 }
@@ -2245,7 +2237,7 @@ async fn init(&self, ctx: &ModuleCtx) -> anyhow::Result<()> {
     wire_mymodule_client(ctx.client_hub(), &*directory).await?;
 
     // Now the client is available
-    let client = ctx.client_hub().get::<dyn MyModuleApi>()?;
+    let client = ctx.client_hub().get::<dyn MyModuleClient>()?;
     Ok(())
 }
 ```
@@ -2372,7 +2364,7 @@ Plugins only register their **instances**.
 ```rust
 // <gateway>-gw/src/module.rs
 use modkit_security::SecurityCtx;
-use types_registry_sdk::TypesRegistryApi;
+use types_registry_sdk::TypesRegistryClient;
 
 #[async_trait]
 impl Module for MyGateway {
@@ -2383,7 +2375,7 @@ impl Module for MyGateway {
         // Gateway registers the plugin SCHEMA in types-registry.
         // Plugins only register their INSTANCES.
         // Note: types-registry is tenant-agnostic, no SecurityCtx needed.
-        let registry = ctx.client_hub().get::<dyn TypesRegistryApi>()?;
+        let registry = ctx.client_hub().get::<dyn TypesRegistryClient>()?;
         let schema_str = MyModulePluginV1::gts_schema_with_refs_as_string();
         let schema_json: serde_json::Value = serde_json::from_str(&schema_str)?;
         let _ = registry
@@ -2426,7 +2418,7 @@ impl Module for VendorPlugin {
         // Register the plugin INSTANCE in types-registry.
         // Note: The plugin SCHEMA is registered by the gateway module.
         // types-registry is tenant-agnostic, no SecurityCtx needed.
-        let registry = ctx.client_hub().get::<dyn TypesRegistryApi>()?;
+        let registry = ctx.client_hub().get::<dyn TypesRegistryClient>()?;
         let instance = BaseModkitPluginV1::<MyModulePluginV1> {
             id: instance_id.clone(),
             vendor: cfg.vendor.clone(),
@@ -2477,7 +2469,7 @@ impl Service {
 
     async fn resolve_plugin(&self) -> Result<ClientScope, DomainError> {
         // Query types-registry for plugin instances (tenant-agnostic)
-        let registry = self.hub.get::<dyn TypesRegistryApi>()?;
+        let registry = self.hub.get::<dyn TypesRegistryClient>()?;
         let instances = registry.list(/* query */).await?;
 
         // Select best plugin based on vendor + priority
@@ -2531,7 +2523,7 @@ modules:
 
 - [ ] SDK defines both `PublicClient` trait (gateway) and `PluginClient` trait (plugins)
 - [ ] SDK defines GTS schema type with `#[struct_to_gts_schema]`
-- [ ] Gateway depends on `types_registry` and all plugin modules
+- [ ] Gateway depends on `types_registry` but MUST NOT depend on plugin crates
 - [ ] Gateway registers plugin **schema** using `gts_schema_with_refs_as_string()`
 - [ ] Gateway registers public client WITHOUT scope
 - [ ] Gateway resolves plugin lazily (after types-registry is ready)

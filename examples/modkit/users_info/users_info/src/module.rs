@@ -21,10 +21,10 @@ use crate::api::rest::routes;
 use crate::api::rest::sse_adapter::SseUserEventPublisher;
 use crate::config::UsersInfoConfig;
 use crate::domain::events::UserDomainEvent;
+use crate::domain::local_client::client::UsersInfoLocalClient;
 use crate::domain::ports::{AuditPort, EventPublisher};
 use crate::domain::service::{AppServices, ServiceConfig};
 use crate::infra::audit::HttpAuditClient;
-use crate::infra::local_client::client::UsersInfoLocalClient;
 use crate::infra::storage::{OrmAddressesRepository, OrmCitiesRepository, OrmUsersRepository};
 
 /// Type alias for the concrete `AppServices` type used with ORM repositories.
