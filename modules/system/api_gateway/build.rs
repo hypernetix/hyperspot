@@ -5,6 +5,12 @@ use std::fs;
 use std::io::Write;
 use std::path::Path;
 
+// Using pinned version instead of @latest to ensure reproducible builds.
+// The file is regenerated on each build, so using @latest would cause
+// different file contents if a new version is released between builds.
+// Current version: 9.0.15 (as of 2026-01-19)
+const STOPLIGHT_ELEMENTS_VERSION: &str = "9.0.15";
+
 fn main() {
     // Only run when the embed_elements feature is enabled
     let embed_enabled = env::var("CARGO_FEATURE_EMBED_ELEMENTS").is_ok();
@@ -24,26 +30,31 @@ fn main() {
 
     let files = [
         (
-            "https://unpkg.com/@stoplight/elements@latest/web-components.min.js",
+            format!(
+                "https://unpkg.com/@stoplight/elements@{STOPLIGHT_ELEMENTS_VERSION}/web-components.min.js"
+            ),
             out_dir.join("web-components.min.js"),
         ),
         (
-            "https://unpkg.com/@stoplight/elements@latest/styles.min.css",
+            format!(
+                "https://unpkg.com/@stoplight/elements@{STOPLIGHT_ELEMENTS_VERSION}/styles.min.css"
+            ),
             out_dir.join("styles.min.css"),
         ),
     ];
 
     for (url, dest) in &files {
-        if let Err(e) = download_to(url, dest) {
+        if let Err(e) = download_to(url.as_str(), dest) {
             println!(
-                "cargo:warning=Failed to download {url} -> {}: {e}",
+                "cargo:warning=Failed to download {} -> {}: {e}",
+                url,
                 dest.display()
             );
             panic!(
                 "Failed to download Stoplight Elements assets.\n\
                  To proceed: either build without --features embed_elements (external mode),\n\
                  or pin a specific version and vendor files manually into modules/api_gateway/assets/elements/.\n\
-                 Example pinned URL: https://unpkg.com/@stoplight/elements@7.18.0/web-components.min.js"
+                 Example pinned URL: https://unpkg.com/@stoplight/elements@{STOPLIGHT_ELEMENTS_VERSION}/web-components.min.js"
             );
         }
     }
