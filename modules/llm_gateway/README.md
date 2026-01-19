@@ -57,14 +57,24 @@ modules/llm_gateway/
 ├── llm_gateway-sdk/         # Public API traits, models, errors
 ├── llm_gateway-gw/          # Gateway implementation
 └── plugins/
-    ├── openai_plugin/       # OpenAI-compatible providers
-    ├── anthropic_plugin/    # Claude API
-    └── ollama_plugin/       # Local models via Ollama
+    ├── providers/
+    │   ├── openai_plugin/       # OpenAI-compatible providers
+    │   ├── anthropic_plugin/    # Claude API
+    │   └── ollama_plugin/       # Local models via Ollama
+    ├── hooks/
+    │   ├── noop_hook_plugin/    # Default no-op (passthrough)
+    │   └── ...                  # Custom hook plugins
+    ├── usage/
+    │   ├── noop_usage_plugin/   # Default no-op
+    │   └── ...                  # Custom usage tracking
+    └── audit/
+        ├── noop_audit_plugin/   # Default no-op
+        └── ...                  # Custom audit logging
 ```
 
 ## Documentation
 
-- [SCENARIOS.md](docs/SCENARIOS.md) — Usage scenarios with sequence diagrams
+- [PRD.md](docs/PRD.md) — Product requirements, scenarios with sequence diagrams
 - ARCHITECTURE.md — Gateway + Plugin design, component interactions `TODO`
 - API.md — SDK traits, request/response models, errors `TODO`
 - PROVIDERS.md — Provider abstraction, capability matrix `TODO`
@@ -74,12 +84,10 @@ modules/llm_gateway/
 
 | Module | Role |
 |--------|------|
+| Model Registry | Model catalog, availability checks |
+| Outbound API Gateway | External API calls to providers |
 | FileStorage | Fetch input media, store generated content |
-| Credential Resolver | API key management |
 | Type Registry | Read GTS schemas by ID (tool definitions) |
-| Usage Tracker | Token/cost reporting |
-| Hook System | `llm.pre_call`, `llm.post_response` interceptors |
-| Audit | Request/response logging |
 
 ## Consumers
 
