@@ -120,9 +120,11 @@ The closure table SHALL maintain:
 
 ---
 
-### Requirement: Reference Management
+### Requirement: References Plugin (Optional)
 
-The system SHALL provide an API to link resource groups to external resources.
+**Condition**: This requirement applies ONLY when the **References Plugin** is enabled/connected.
+
+The system SHALL provide an optional plugin to link resource groups to external resources.
 
 A resource group reference consists of:
 - **Group ID**: Reference to resource group entity
@@ -136,9 +138,23 @@ Reference management SHALL support:
 - Preventing deletion of groups with active references
 - Reference counting for efficient deletion checks
 
-#### Scenario: Create reference
+#### Scenario: Plugin connected
+- **GIVEN** the References Plugin is connected
+- **WHEN** the module initializes
+- **THEN** the `resource_group_reference` table is created via migrations
+- **AND** reference management endpoints are registered
+- **AND** group deletion logic checks for active references
 
-- **GIVEN** a resource group entity `group-id`
+#### Scenario: Plugin NOT connected
+- **GIVEN** the References Plugin is NOT connected
+- **WHEN** the module initializes
+- **THEN** the `resource_group_reference` table is NOT created
+- **AND** reference management endpoints are NOT exposed
+- **AND** API/Service has no knowledge of references
+
+#### Scenario: Create reference
+- **GIVEN** References Plugin is connected
+- **AND** a resource group entity `group-id`
 - **AND** an external resource `resource-type/resource-id`
 - **WHEN** the user calls `create_reference` with reference data
 - **THEN** the system creates the reference
@@ -146,14 +162,14 @@ Reference management SHALL support:
 - **AND** returns the created reference
 
 #### Scenario: Prevent deletion with active references
-
-- **GIVEN** a resource group entity `group-id` with active references
+- **GIVEN** References Plugin is connected
+- **AND** a resource group entity `group-id` with active references
 - **WHEN** the user attempts to delete `group-id`
 - **THEN** the system returns `ResourceGroupError::GroupHasReferences`
 
 #### Scenario: Delete reference
-
-- **GIVEN** a reference from `group-id` to `resource-type/resource-id`
+- **GIVEN** References Plugin is connected
+- **AND** a reference from `group-id` to `resource-type/resource-id`
 - **WHEN** the user calls `delete_reference`
 - **THEN** the system deletes the reference
 - **AND** decrements reference count for the group
@@ -189,21 +205,28 @@ Authorization rules:
 ### Requirement: REST API Endpoints
 
 The system SHALL expose REST API endpoints for resource group operations.
+Base path: `/resource-group/v1`
 
-Endpoints SHALL include:
-- `POST /resource-group/v1/types` — Create type
-- `GET /resource-group/v1/types` — List types
-- `GET /resource-group/v1/types/{code}` — Get type
-- `PUT /resource-group/v1/types/{code}` — Update type
-- `DELETE /resource-group/v1/types/{code}` — Delete type
-- `POST /resource-group/v1/groups` — Create entity
-- `GET /resource-group/v1/groups/{id}` — Get entity
-- `PUT /resource-group/v1/groups/{id}` — Update entity
-- `DELETE /resource-group/v1/groups/{id}` — Delete entity
-- `GET /resource-group/v1/groups/{id}/ancestors` — Get ancestors
-- `GET /resource-group/v1/groups/{id}/descendants` — Get descendants
-- `POST /resource-group/v1/groups/{id}/references` — Create reference
-- `DELETE /resource-group/v1/groups/{id}/references` — Delete reference
+#### Resource Group Types
+- `POST /types` - Create a new type
+- `GET /types` - List all types
+- `GET /types/{code}` - Get a specific type
+- `PUT /types/{code}` - Update a type
+- `DELETE /types/{code}` - Delete a type
+
+#### Resource Group Entities
+- `POST /groups` - Create a new entity
+- `GET /groups/{id}` - Get a specific entity
+- `PUT /groups/{id}` - Update an entity
+- `DELETE /groups/{id}` - Delete an entity
+- `GET /groups/{id}/ancestors` - Get all ancestors
+- `GET /groups/{id}/descendants` - Get all descendants
+
+#### Resource Group References (Plugin-only)
+**Condition**: Available ONLY if References Plugin is connected.
+
+- `POST /groups/{id}/references` - Create a reference
+- `DELETE /groups/{id}/references` - Delete a reference
 
 All endpoints SHALL:
 - Require authentication (Bearer token)
@@ -249,7 +272,8 @@ The system SHALL use SeaORM with the following tables:
 - Composite PK: `(parent_id, child_id)`
 - Indexes on `parent_id`, `child_id`, `depth`
 
-**`resource_group_reference`:**
+**`resource_group_reference` (Plugin-only):**
+- **Condition**: Table exists ONLY if References Plugin is connected.
 - `id` (PK): UUIDv7
 - `group_id` (FK): UUID → `resource_group.id`
 - `resource_type`: String
@@ -264,5 +288,6 @@ All tables SHALL use Secure ORM.
 
 - **GIVEN** SeaORM migrations are defined
 - **WHEN** the module initializes
-- **THEN** migrations create all tables with proper indexes
+- **THEN** migrations create core tables (`type`, `group`, `closure`)
+- **AND** if References Plugin is connected, create `reference` table
 - **AND** Secure ORM scoping is configured
