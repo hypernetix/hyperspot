@@ -31,7 +31,7 @@ HyperSpot needs a Resource Group module that provides hierarchical resource orga
 
 ## Impact
 
-- **Affected specs**: `resource-group` (new capability)
-- **Affected code**: `modules/resource-group/` (new crates)
+- **Affected specs**: None (introduces new `resource-group` spec)
+- **Affected code**: `modules/system/resource-group/` (new crates)
 - **Dependencies**: modkit, modkit-db, modkit-security, sea-orm, axum
-- **Database**: Requires PostgreSQL/SQLite with closure table pattern
+- **Database**: Requires SQL-compatible DB (PostgreSQL/SQLite/MariaDB fully supported) with closure table pattern
