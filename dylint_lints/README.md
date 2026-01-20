@@ -9,54 +9,54 @@ Custom [dylint](https://github.com/trailofbits/dylint) linters enforcing Hypersp
 make dylint              # Run Dylint lints on Rust code (auto-rebuilds if changed)
 make dylint-list         # Show all available Dylint lints
 make dylint-test         # Test UI cases (compile & verify violations)
-make gts-docs            # Validate GTS identifiers in .md and .json files
+make gts-docs            # Validate GTS identifiers in docs (.md, .json, .yaml, .yml)
 make gts-docs-test       # Run unit tests for GTS validator
 ```
 
 ## What This Checks
 
-**Contract Layer (DE01xx)**
+### Contract Layer (DE01xx)
 - ✅ DE0101: No Serde in Contract
 - ✅ DE0102: No ToSchema in Contract
 - ✅ DE0103: No HTTP Types in Contract
 
-**API Layer (DE02xx)**
+### API Layer (DE02xx)
 - ✅ DE0201: DTOs Only in API Rest Folder
 - ✅ DE0202: DTOs Not Referenced Outside API
 - ✅ DE0203: DTOs Must Have Serde Derives
 - ✅ DE0204: DTOs Must Have ToSchema Derive
 
-**Domain Layer (DE03xx)**
+### Domain Layer (DE03xx)
 - TODO
 
-**Infrastructure/storage Layer (DE04xx)**
+### Infrastructure/storage Layer (DE04xx)
 - TODO
 
-**Client/gateway Layer (DE05xx)**
+### Client/gateway Layer (DE05xx)
 - ✅ DE0503: Plugin Client Suffix
 
-**Module structure (DE06xx)**
+### Module structure (DE06xx)
 - TODO
 
-**Sucurity (DE07xx)**
+### Security (DE07xx)
 - TODO
 
-**REST Conventions (DE08xx)**
+### REST Conventions (DE08xx)
 - ✅ DE0801: API Endpoint Must Have Version
 - ✅ DE0802: Use OData Extension Methods
 
-**GTS (DE09xx)**
+### GTS (DE09xx)
 - ✅ DE0901: GTS String Pattern Validator (Rust source code)
 - ✅ DE0902: No `schema_for!` on GTS Structs (Rust source code)
-- ✅ DE0903: GTS Documentation Validator (`.md` and `.json` files)
+- ✅ DE0903: GTS Documentation Validator (`.md`, `.json`, `.yaml`, `.yml` files)
 
-**Error handling (DE10xx)**
+### Error handling (DE10xx)
 - TODO
 
-**Testing (DE11xx)**
+### Testing (DE11xx)
 - TODO
 
-**Documentation (DE12xx)**
+### Documentation (DE12xx)
 - TODO
 
 ## Examples
@@ -92,7 +92,7 @@ Example output:
 
 ### Project Structure
 
-```
+```text
 dylint_lints/
 ├── contract_lints/           # Main lint crate
 │   ├── src/
@@ -216,7 +216,7 @@ GTS (Global Type System) identifiers are validated by complementary tools that c
 |------|-------|------|---------|
 | **DE0901** | GTS string patterns in Rust | Dylint (Rust) | `make dylint` |
 | **DE0902** | No `schema_for!` on GTS structs | Dylint (Rust) | `make dylint` |
-| **DE0903** | GTS in docs (`.md`, `.json`) | Python script | `make gts-docs` |
+| **DE0903** | GTS in docs (`.md`, `.json`, `.yaml`, `.yml`) | Rust CLI | `make gts-docs` |
 
 ### DE0901: GTS String Pattern Validator
 
@@ -245,30 +245,35 @@ A Dylint lint that prevents using `schemars::schema_for!()` on GTS-wrapped struc
 
 ### DE0903: Documentation Validator
 
-A Python script that validates GTS identifiers in documentation and configuration files.
+A Rust CLI tool that validates GTS identifiers in documentation and configuration files.
 
 **What it checks:**
-- All `.md` files in `docs/`, `modules/`, `libs/`, `examples/`
-- All `.json` files (error definitions, schemas, configs)
+- All `.md`, `.json`, `.yaml`, `.yml` files in `docs/`, `modules/`, `libs/`, `examples/`
 - Skips intentionally invalid examples (marked with "bad", "invalid", "❌", etc.)
 - Allows wildcards in pattern/filter contexts
+- Optionally validates vendor consistency with `--vendor` flag
+- Tolerates example vendors: `acme`, `globex`, `example`, `demo`, `test`, `sample`, `tutorial`
 
 **How to run:**
 ```bash
 # Quick check (from workspace root)
 make gts-docs
 
-# Via CI script (included in full check suite)
-python scripts/ci.py gts-docs
+# With vendor validation (ensures all IDs use vendor "x")
+make gts-docs-vendor
 
-# Direct script with options
-python dylint_lints/validate_gts_docs.py                    # Default scan
-python dylint_lints/validate_gts_docs.py --verbose          # Show files being scanned
-python dylint_lints/validate_gts_docs.py docs/ modules/     # Scan specific paths
-python dylint_lints/validate_gts_docs.py --json             # Machine-readable output
+# Run tests
+make gts-docs-test
+
+# Direct CLI with options
+cargo run -p gts-docs-validator -- docs modules libs examples
+cargo run -p gts-docs-validator -- --vendor x docs/              # Validate vendor
+cargo run -p gts-docs-validator -- --exclude "target/*" .        # With exclusions
+cargo run -p gts-docs-validator -- --json docs                   # JSON output
+cargo run -p gts-docs-validator -- --verbose docs                # Verbose output
 ```
 
-**Location:** [`validate_gts_docs.py`](validate_gts_docs.py)
+**Location:** [`apps/gts-docs-validator/`](../apps/gts-docs-validator/)
 
 **Exit codes:**
 - `0` - All GTS identifiers are valid
