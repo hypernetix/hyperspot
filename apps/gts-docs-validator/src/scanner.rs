@@ -7,7 +7,7 @@ use glob::Pattern;
 use regex::Regex;
 use walkdir::WalkDir;
 
-use crate::validator::{is_bad_example_context, is_wildcard_context, validate_gts_id, GtsError};
+use crate::validator::{GtsError, is_bad_example_context, is_wildcard_context, validate_gts_id};
 
 /// File patterns to scan
 const FILE_PATTERNS: &[&str] = &["*.md", "*.json", "*.yaml", "*.yml"];
@@ -432,7 +432,7 @@ mod tests {
         let mut file = NamedTempFile::with_suffix(".md").unwrap();
         // Create a line where the 20-char offset lands in middle of multibyte char
         let prefix = "🎨🎨🎨🎨🎨"; // 5 emoji = 20 bytes
-                                   // Too few segments (only 4) makes it malformed
+        // Too few segments (only 4) makes it malformed
         writeln!(file, "{prefix}`gts.x.core.pkg.v1~` suffix").unwrap();
 
         let errors = scan_file(file.path(), None, false);

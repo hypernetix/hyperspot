@@ -175,10 +175,10 @@ jobs:
         run: cargo clean
 
       - name: UI tests for modkit-db-macros
-        run: cargo test -p modkit-db-macros --test ui -- --nocapture
+        run: cargo test -p cf-modkit-db-macros --test ui -- --nocapture
 
       - name: UI tests for modkit-macros
-        run: cargo test -p modkit-macros --test ui -- --nocapture
+        run: cargo test -p cf-modkit-macros --test ui -- --nocapture
 
       - name: Show disk usage after UI tests
         run: |
@@ -363,13 +363,13 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: cargo clippy (modkit-db only)
-        run: cargo clippy -p modkit-db --all-targets -- -D warnings
+        run: cargo clippy -p cf-modkit-db --all-targets -- -D warnings
 
       - name: Build modkit-db
-        run: cargo build -p modkit-db --features "${{ matrix.backend }}"
+        run: cargo build -p cf-modkit-db --features "${{ matrix.backend }}"
 
       - name: Test modkit-db (integration)
-        run: cargo test -p modkit-db --features "${{ matrix.backend }},integration" -- --nocapture
+        run: cargo test -p cf-modkit-db --features "${{ matrix.backend }},integration" -- --nocapture
 
       - name: sccache stats
         if: env.SCCACHE_OK == '1'
