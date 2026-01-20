@@ -66,7 +66,7 @@ fmt:
 # |             | - Use 'make dylint-list' to see all available custom lints           |
 # +-------------+----------------------------------------------------------------------+
 
-.PHONY: clippy kani geiger safety lint dylint dylint-list dylint-test gts-docs gts-docs-test
+.PHONY: clippy kani geiger safety lint dylint dylint-list dylint-test gts-docs gts-docs-vendor gts-docs-release gts-docs-vendor-release gts-docs-test
 
 # Run clippy linter (excludes gts-rust submodule which has its own lint settings)
 clippy:
@@ -90,12 +90,40 @@ lint:
 	RUSTFLAGS="-D warnings" cargo check --workspace --all-targets --all-features
 
 ## Validate GTS identifiers in .md and .json files (DE0903)
+# Uses gts-docs-validator from apps/gts-docs-validator
+# Vendor enforcement is available via the gts-docs-vendor target (--vendor x)
 gts-docs:
-	@python3 dylint_lints/validate_gts_docs.py
+	cargo run -p gts-docs-validator -- \
+		--exclude "target/*" \
+		--exclude "docs/api/*" \
+		docs modules libs examples
+
+## Validate GTS docs with vendor check (ensures all IDs use vendor "x")
+gts-docs-vendor:
+	cargo run -p gts-docs-validator -- \
+		--vendor x \
+		--exclude "target/*" \
+		--exclude "docs/api/*" \
+		docs modules libs examples
+
+## Validate GTS identifiers (release build)
+gts-docs-release:
+	cargo run --release -p gts-docs-validator -- \
+		--exclude "target/*" \
+		--exclude "docs/api/*" \
+		docs modules libs examples
+
+## Validate GTS docs with vendor check (release build)
+gts-docs-vendor-release:
+	cargo run --release -p gts-docs-validator -- \
+		--vendor x \
+		--exclude "target/*" \
+		--exclude "docs/api/*" \
+		docs modules libs examples
 
 ## Run tests for GTS documentation validator
 gts-docs-test:
-	@python3 dylint_lints/test_validate_gts_docs.py
+	cargo test -p gts-docs-validator
 
 ## List all custom project compliance lints (see dylint_lints/README.md)
 dylint-list:
@@ -294,7 +322,7 @@ oop-example:
 	cargo run --bin hyperspot-server --features oop-example,users-info-example,tenant-resolver-example -- --config config/quickstart.yaml run
 
 # Run all quality checks
-check: fmt clippy security dylint-test dylint test
+check: fmt clippy security dylint-test dylint gts-docs test
 
 # Run CI pipeline
 ci: check

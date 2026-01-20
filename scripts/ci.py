@@ -119,9 +119,23 @@ def cmd_security(_args):
 
 def cmd_gts_docs(args):
     step("Validating GTS identifiers in documentation files (DE0903)")
-    cmd_args = [PYTHON, os.path.join(PROJECT_ROOT, "dylint_lints", "validate_gts_docs.py")]
+    cmd_args = [
+        "cargo",
+        "run",
+        "-p",
+        "gts-docs-validator",
+        "--",
+        "--exclude",
+        "target/*",
+        "--exclude",
+        "docs/api/*",
+        "docs",
+        "modules",
+        "libs",
+        "examples",
+    ]
     if getattr(args, 'verbose', False):
-        cmd_args.append("--verbose")
+        cmd_args.append("--verbose")  # Append to end, after all other args
     result = run_cmd_allow_fail(cmd_args)
     if result.returncode == 0:
         print("All GTS identifiers in documentation are valid")
