@@ -1,0 +1,52 @@
+use async_trait::async_trait;
+use modkit_security::SecurityContext;
+use simple_user_settings_sdk::{
+    SettingsError, SimpleUserSettings, SimpleUserSettingsClient, SimpleUserSettingsPatch,
+    SimpleUserSettingsUpdate,
+};
+use std::sync::Arc;
+
+use crate::domain::service::Service;
+
+pub struct LocalClient {
+    service: Arc<Service>,
+}
+
+impl LocalClient {
+    #[must_use]
+    pub fn new(service: Arc<Service>) -> Self {
+        Self { service }
+    }
+}
+
+#[async_trait]
+impl SimpleUserSettingsClient for LocalClient {
+    async fn get_settings(
+        &self,
+        ctx: &SecurityContext,
+    ) -> Result<SimpleUserSettings, SettingsError> {
+        self.service.get_settings(ctx).await.map_err(Into::into)
+    }
+
+    async fn update_settings(
+        &self,
+        ctx: &SecurityContext,
+        update: SimpleUserSettingsUpdate,
+    ) -> Result<SimpleUserSettings, SettingsError> {
+        self.service
+            .update_settings(ctx, update)
+            .await
+            .map_err(Into::into)
+    }
+
+    async fn patch_settings(
+        &self,
+        ctx: &SecurityContext,
+        patch: SimpleUserSettingsPatch,
+    ) -> Result<SimpleUserSettings, SettingsError> {
+        self.service
+            .patch_settings(ctx, patch)
+            .await
+            .map_err(Into::into)
+    }
+}

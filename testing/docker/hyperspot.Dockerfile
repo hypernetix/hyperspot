@@ -19,6 +19,7 @@ COPY libs ./libs
 COPY modules ./modules
 COPY examples ./examples
 COPY config ./config
+COPY proto ./proto
 
 # Build the hyperspot-server binary in release mode
 # Using --bin to build only the specific binary

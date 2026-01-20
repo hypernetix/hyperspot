@@ -120,6 +120,14 @@ modules:
       # Use ephemeral port; OoP modules receive the actual bound address from master host
       listen_addr: "uds:///tmp/hyperspot-grpc"
 
+  simple-user-settings:
+    # Module-specific database configuration
+    database:
+      server: "sqlite_users"
+      file: "settings.db"
+    config:
+      max_field_length: 100
+
   users_info:
     # Module-specific database configuration
     database:
