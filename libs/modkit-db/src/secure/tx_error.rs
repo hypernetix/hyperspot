@@ -9,7 +9,7 @@ use std::fmt;
 ///
 /// This wraps database errors (connection issues, constraint violations, etc.)
 /// in a type that does not expose `SeaORM` internals.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct InfraError {
     message: String,
 }
@@ -54,7 +54,7 @@ impl std::error::Error for InfraError {}
 ///
 /// let user = result.map_err(|e| e.into_domain(DomainError::database_infra))?;
 /// ```
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum TxError<E> {
     /// A domain error returned from the transaction callback.
     Domain(E),

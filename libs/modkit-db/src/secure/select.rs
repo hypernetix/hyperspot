@@ -10,10 +10,12 @@ use crate::secure::{AccessScope, ScopableEntity};
 
 /// Typestate marker: query has not yet been scoped.
 /// Cannot execute queries in this state.
+#[derive(Debug, Clone, Copy)]
 pub struct Unscoped;
 
 /// Typestate marker: query has been scoped with access control.
 /// Can now execute queries safely.
+#[derive(Debug, Clone, Copy)]
 pub struct Scoped;
 
 /// A type-safe wrapper around `SeaORM`'s `Select` that enforces scoping.
@@ -37,6 +39,7 @@ pub struct Scoped;
 ///     .await?;
 /// ```
 #[must_use]
+#[derive(Clone, Debug)]
 pub struct SecureSelect<E: EntityTrait, S> {
     pub(crate) inner: sea_orm::Select<E>,
     pub(crate) _state: PhantomData<S>,

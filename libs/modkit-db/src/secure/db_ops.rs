@@ -114,6 +114,7 @@ pub fn validate_tenant_in_scope(
 ///     .exec(conn)         // Now can execute
 ///     .await?;
 /// ```
+#[derive(Clone, Debug)]
 pub struct SecureUpdateMany<E: EntityTrait, S> {
     pub(crate) inner: sea_orm::UpdateMany<E>,
     pub(crate) _state: PhantomData<S>,
@@ -207,6 +208,7 @@ where
 ///     .exec(conn)         // Now can execute
 ///     .await?;
 /// ```
+#[derive(Clone, Debug)]
 pub struct SecureDeleteMany<E: EntityTrait, S> {
     pub(crate) inner: sea_orm::DeleteMany<E>,
     pub(crate) _state: PhantomData<S>,
