@@ -21,6 +21,6 @@ uuid = { workspace = true }
 arc-swap = { workspace = true }
 thiserror = { workspace = true }
 
-modkit = { path = "../../../../libs/modkit" }
-modkit-node-info = { path = "../../../../libs/modkit-node-info" }
+modkit = { workspace = true }
+modkit-node-info = { workspace = true }
 nodes_registry-sdk = { path = "../nodes_registry-sdk" }

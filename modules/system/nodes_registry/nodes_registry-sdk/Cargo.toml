@@ -14,4 +14,4 @@ async-trait = { workspace = true }
 thiserror = { workspace = true }
 uuid = { workspace = true }
 
-modkit-node-info = { path = "../../../../libs/modkit-node-info" }
+modkit-node-info = { workspace = true }

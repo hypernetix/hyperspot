@@ -63,5 +63,5 @@ docx-rust = { git = "https://github.com/modcrafter77/docx-rs", branch = "master"
 mime = { workspace = true }
 
 # Local dependencies
-modkit = { path = "../../libs/modkit" }
-modkit-auth = { path = "../../libs/modkit-auth" }
+modkit = { workspace = true }
+modkit-auth = { workspace = true }

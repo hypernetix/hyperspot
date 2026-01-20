@@ -89,7 +89,6 @@ impl DbConnectOptions {
 
                 let sqlx_pool = pool_opts.connect_with(opts.clone()).await?;
 
-                #[cfg(feature = "sea-orm")]
                 let sea = sea_orm::SqlxSqliteConnector::from_sqlx_sqlite_pool(sqlx_pool.clone());
 
                 let filename = opts.get_filename().display().to_string();
@@ -97,7 +96,6 @@ impl DbConnectOptions {
                     engine: crate::DbEngine::Sqlite,
                     pool: crate::DbPool::Sqlite(sqlx_pool),
                     dsn: format!("sqlite://{filename}"),
-                    #[cfg(feature = "sea-orm")]
                     sea,
                 };
 
@@ -109,7 +107,6 @@ impl DbConnectOptions {
 
                 let sqlx_pool = pool_opts.connect_with(opts.clone()).await?;
 
-                #[cfg(feature = "sea-orm")]
                 let sea =
                     sea_orm::SqlxPostgresConnector::from_sqlx_postgres_pool(sqlx_pool.clone());
 
@@ -122,7 +119,6 @@ impl DbConnectOptions {
                         opts.get_port(),
                         opts.get_database().unwrap_or("")
                     ),
-                    #[cfg(feature = "sea-orm")]
                     sea,
                 };
 
@@ -134,14 +130,12 @@ impl DbConnectOptions {
 
                 let sqlx_pool = pool_opts.connect_with(opts.clone()).await?;
 
-                #[cfg(feature = "sea-orm")]
                 let sea = sea_orm::SqlxMySqlConnector::from_sqlx_mysql_pool(sqlx_pool.clone());
 
                 let handle = crate::DbHandle {
                     engine: crate::DbEngine::MySql,
                     pool: crate::DbPool::MySql(sqlx_pool),
                     dsn: "mysql://<redacted>@...".to_owned(),
-                    #[cfg(feature = "sea-orm")]
                     sea,
                 };
 

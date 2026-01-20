@@ -23,7 +23,6 @@ use std::time::{Duration, Instant};
 use thiserror::Error;
 use xxhash_rust::xxh3::xxh3_64;
 
-#[cfg(feature = "sqlite")]
 use chrono::SecondsFormat;
 
 #[cfg(feature = "mysql")]

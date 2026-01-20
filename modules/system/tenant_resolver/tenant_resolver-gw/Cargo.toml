@@ -15,9 +15,9 @@ hs-tenant-resolver-sdk = { path = "../tenant_resolver-sdk" }
 types-registry-sdk = { path = "../../types-registry/types-registry-sdk" }
 
 # ModKit dependencies
-modkit = { path = "../../../../libs/modkit" }
-modkit-security = { path = "../../../../libs/modkit-security" }
-modkit-odata = { path = "../../../../libs/modkit-odata" }
+modkit = { workspace = true }
+modkit-security = { workspace = true }
+modkit-odata = { workspace = true }
 
 # Async runtime
 async-trait = { workspace = true }

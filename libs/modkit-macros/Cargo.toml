@@ -1,15 +1,17 @@
 [package]
-name = "modkit-macros"
-version.workspace = true
+name = "cf-modkit-macros"
+version = "0.1.0"
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
-
-[lints]
-workspace = true
+repository.workspace = true
 
 [lib]
 proc-macro = true
+name = "modkit_macros"
+
+[lints]
+workspace = true
 
 [dependencies]
 proc-macro2 = { workspace = true }
@@ -25,7 +27,7 @@ tokio-util = { workspace = true }
 anyhow = { workspace = true }
 async-trait = { workspace = true }
 inventory = { workspace = true }
-modkit = { path = "../modkit", default-features = false }
-modkit-security = { path = "../modkit-security" }
-modkit-transport-grpc = { path = "../modkit-transport-grpc" }
+modkit = { workspace = true }
+modkit-security = { workspace = true }
+modkit-transport-grpc = { workspace = true }
 tonic = { workspace = true }

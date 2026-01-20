@@ -13,8 +13,8 @@ name = "grpc_hub"
 path = "src/lib.rs"
 
 [dependencies]
-modkit = { path = "../../../libs/modkit" }
-modkit-transport-grpc = { path = "../../../libs/modkit-transport-grpc" }
+modkit = { workspace = true }
+modkit-transport-grpc = { workspace = true }
 module_orchestrator-sdk = { path = "../module_orchestrator/module_orchestrator-sdk" }
 inventory = { workspace = true }
 anyhow = { workspace = true }
@@ -35,4 +35,3 @@ tonic = { workspace = true }
 [dev-dependencies]
 tempfile = { workspace = true }
 uuid = { workspace = true }
-
