@@ -22,7 +22,7 @@ use std::fmt;
 use std::time::Duration;
 
 use humantime;
-use serde::{de, Deserializer, Serializer};
+use serde::{Deserializer, Serializer, de};
 
 /// Deserializes a `Duration` via the humantime crate.
 ///

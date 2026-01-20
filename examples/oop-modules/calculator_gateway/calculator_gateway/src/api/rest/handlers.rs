@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use axum::{Extension, Json};
 
-use modkit::api::problem::{internal_error, Problem};
+use modkit::api::problem::{Problem, internal_error};
 use modkit_security::SecurityContext;
 
 use crate::domain::Service;

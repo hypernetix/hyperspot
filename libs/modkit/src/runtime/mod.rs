@@ -16,6 +16,6 @@ pub use host_runtime::{
 };
 pub use module_manager::{Endpoint, InstanceState, ModuleInstance, ModuleManager};
 pub use runner::{
-    run, ClientRegistration, OopModuleSpawnConfig, OopSpawnOptions, RunOptions, ShutdownOptions,
+    ClientRegistration, OopModuleSpawnConfig, OopSpawnOptions, RunOptions, ShutdownOptions, run,
 };
 pub use system_context::SystemContext;

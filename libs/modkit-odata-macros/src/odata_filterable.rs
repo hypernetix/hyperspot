@@ -1,8 +1,8 @@
 use heck::ToUpperCamelCase;
-use proc_macro2::{Span, TokenStream};
 use proc_macro_error2::{abort, emit_error};
+use proc_macro2::{Span, TokenStream};
 use quote::quote;
-use syn::{spanned::Spanned, Data, DeriveInput, Fields, Ident, Lit};
+use syn::{Data, DeriveInput, Fields, Ident, Lit, spanned::Spanned};
 
 /// Configuration for a single filterable field
 struct FilterableField {

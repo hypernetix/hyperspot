@@ -41,12 +41,11 @@ pub fn collect_gpu_info() -> Vec<GpuInfo> {
             };
 
             // Try to match VRAM info
-            if i < vram_matches.len() {
-                if let Some(vram) = vram_matches[i].get(1) {
-                    if let Ok(vram_mb) = vram.as_str().parse::<f64>() {
-                        gpu.total_memory_mb = Some(vram_mb);
-                    }
-                }
+            if i < vram_matches.len()
+                && let Some(vram_cap) = vram_matches[i].get(1)
+                && let Ok(vram_mb) = vram_cap.as_str().parse::<f64>()
+            {
+                gpu.total_memory_mb = Some(vram_mb);
             }
 
             gpus.push(gpu);

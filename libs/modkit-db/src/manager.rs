@@ -60,22 +60,23 @@ impl DbManager {
         }
 
         // Build new handle
-        match self.build_for_module(module).await? { Some(handle) => {
-            // Use entry API to handle race conditions properly
-            match self.cache.entry(module.to_owned()) {
-                dashmap::mapref::entry::Entry::Occupied(entry) => {
-                    // Another thread beat us to it, return the cached version
-                    Ok(Some(entry.get().clone()))
-                }
-                dashmap::mapref::entry::Entry::Vacant(entry) => {
-                    // We're first, insert our handle
-                    entry.insert(handle.clone());
-                    Ok(Some(handle))
+        match self.build_for_module(module).await? {
+            Some(handle) => {
+                // Use entry API to handle race conditions properly
+                match self.cache.entry(module.to_owned()) {
+                    dashmap::mapref::entry::Entry::Occupied(entry) => {
+                        // Another thread beat us to it, return the cached version
+                        Ok(Some(entry.get().clone()))
+                    }
+                    dashmap::mapref::entry::Entry::Vacant(entry) => {
+                        // We're first, insert our handle
+                        entry.insert(handle.clone());
+                        Ok(Some(handle))
+                    }
                 }
             }
-        } _ => {
-            Ok(None)
-        }}
+            _ => Ok(None),
+        }
     }
 
     /// Build a database handle for the specified module.
@@ -226,10 +227,10 @@ impl DbManager {
         }
 
         // If path is relative, make it absolute relative to module home
-        if let Some(path) = &cfg.path {
-            if path.is_relative() {
-                cfg.path = Some(module_home.join(path));
-            }
+        if let Some(path) = &cfg.path
+            && path.is_relative()
+        {
+            cfg.path = Some(module_home.join(path));
         }
 
         Ok(cfg)

@@ -65,8 +65,8 @@
 pub use modkit_odata::ODataQuery;
 
 // Re-export core OData types from modkit-odata (the canonical source)
-pub use modkit_odata::schema::{AsFieldKey, AsFieldName, FieldRef, IntoODataValue, Schema};
 pub use modkit_odata::QueryBuilder;
+pub use modkit_odata::schema::{AsFieldKey, AsFieldName, FieldRef, IntoODataValue, Schema};
 use std::future::Future;
 use std::pin::Pin;
 

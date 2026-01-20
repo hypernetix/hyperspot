@@ -8,12 +8,12 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use axum::{
+    Router,
     extract::{Json, Path},
     routing::get,
-    Router,
 };
 use modkit::{
-    config::ConfigProvider, contracts::OpenApiRegistry, Module, ModuleCtx, RestApiCapability,
+    Module, ModuleCtx, RestApiCapability, config::ConfigProvider, contracts::OpenApiRegistry,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;

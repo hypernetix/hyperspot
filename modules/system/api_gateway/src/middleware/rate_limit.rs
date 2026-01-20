@@ -1,6 +1,6 @@
 use crate::config::ApiGatewayConfig;
-use anyhow::{anyhow, Context, Result};
-use axum::http::{header, HeaderValue, Method, StatusCode};
+use anyhow::{Context, Result, anyhow};
+use axum::http::{HeaderValue, Method, StatusCode, header};
 use axum::{
     extract::Request,
     middleware::Next,

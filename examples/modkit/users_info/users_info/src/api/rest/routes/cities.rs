@@ -1,7 +1,7 @@
-use super::{dto, handlers, Action, License, Resource};
+use super::{Action, License, Resource, dto, handlers};
 use axum::Router;
-use modkit::api::operation_builder::{OperationBuilder, OperationBuilderODataExt};
 use modkit::api::OpenApiRegistry;
+use modkit::api::operation_builder::{OperationBuilder, OperationBuilderODataExt};
 use user_info_sdk::odata::CityFilterField;
 
 pub(super) fn register_city_routes(mut router: Router, openapi: &dyn OpenApiRegistry) -> Router {

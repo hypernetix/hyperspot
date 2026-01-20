@@ -9,19 +9,19 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use axum::{
+    Router,
     body::Body,
     extract::{Extension, Json},
     http::{Request, StatusCode},
     response::IntoResponse,
-    Router,
 };
 use hs_tenant_resolver_sdk::{
     AccessOptions, TenantFilter, TenantId, TenantInfo, TenantResolverError,
     TenantResolverGatewayClient, TenantStatus,
 };
 use modkit::{
-    api::OperationBuilder, config::ConfigProvider, context::ModuleCtx,
-    contracts::ApiGatewayCapability, Module,
+    Module, api::OperationBuilder, config::ConfigProvider, context::ModuleCtx,
+    contracts::ApiGatewayCapability,
 };
 
 use modkit_security::SecurityContext;

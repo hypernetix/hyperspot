@@ -50,67 +50,67 @@ impl NodeStorage {
 
     /// Get a node by ID
     pub fn get_node(&self, id: Uuid) -> Option<Node> {
-        match self.nodes.read() { Ok(nodes) => {
+        if let Ok(nodes) = self.nodes.read() {
             nodes.get(&id).map(|data| data.node.clone())
-        } _ => {
+        } else {
             warn!("RwLock is poisoned in get_node, cannot access node");
             None
-        }}
+        }
     }
 
     /// List all nodes
     pub fn list_nodes(&self) -> Vec<Node> {
-        match self.nodes.read() { Ok(nodes) => {
+        if let Ok(nodes) = self.nodes.read() {
             nodes.values().map(|data| data.node.clone()).collect()
-        } _ => {
+        } else {
             warn!("RwLock is poisoned in list_nodes, cannot access nodes");
             Vec::new()
-        }}
+        }
     }
 
     /// Update sysinfo for a node
     pub fn update_sysinfo(&self, node_id: Uuid, sysinfo: NodeSysInfo) -> bool {
-        match self.nodes.write() { Ok(mut nodes) => {
+        if let Ok(mut nodes) = self.nodes.write() {
             if let Some(data) = nodes.get_mut(&node_id) {
                 data.sysinfo = Some(sysinfo);
                 true
             } else {
                 false
             }
-        } _ => {
+        } else {
             warn!("RwLock is poisoned in update_sysinfo, cannot update node");
             false
-        }}
+        }
     }
 
     /// Get sysinfo for a node
     pub fn get_sysinfo(&self, node_id: Uuid) -> Option<NodeSysInfo> {
-        match self.nodes.read() { Ok(nodes) => {
+        if let Ok(nodes) = self.nodes.read() {
             nodes.get(&node_id).and_then(|data| data.sysinfo.clone())
-        } _ => {
+        } else {
             warn!("RwLock is poisoned in get_sysinfo, cannot access node");
             None
-        }}
+        }
     }
 
     /// Update system-collected syscap for a node
     pub fn update_syscap_system(&self, node_id: Uuid, syscap: NodeSysCap) -> bool {
-        match self.nodes.write() { Ok(mut nodes) => {
+        if let Ok(mut nodes) = self.nodes.write() {
             if let Some(data) = nodes.get_mut(&node_id) {
                 data.syscap_system = Some(syscap);
                 true
             } else {
                 false
             }
-        } _ => {
+        } else {
             warn!("RwLock is poisoned in update_syscap_system, cannot update node");
             false
-        }}
+        }
     }
 
     /// Get merged syscap for a node (system + custom)
     pub fn get_syscap(&self, node_id: Uuid) -> Option<NodeSysCap> {
-        match self.nodes.read() { Ok(nodes) => {
+        if let Ok(nodes) = self.nodes.read() {
             if let Some(data) = nodes.get(&node_id) {
                 // Merge system and custom capabilities
                 let mut cap_map: HashMap<String, SysCap> = HashMap::new();
@@ -139,15 +139,15 @@ impl NodeStorage {
             } else {
                 None
             }
-        } _ => {
+        } else {
             warn!("RwLock is poisoned in get_syscap, cannot access node");
             None
-        }}
+        }
     }
 
     /// Set custom syscap entries (add or update)
     pub fn set_custom_syscap(&self, node_id: Uuid, caps: Vec<SysCap>) -> bool {
-        match self.nodes.write() { Ok(mut nodes) => {
+        if let Ok(mut nodes) = self.nodes.write() {
             if let Some(data) = nodes.get_mut(&node_id) {
                 for cap in caps {
                     data.syscap_custom.insert(cap.key.clone(), cap);
@@ -156,15 +156,15 @@ impl NodeStorage {
             } else {
                 false
             }
-        } _ => {
+        } else {
             warn!("RwLock is poisoned in set_custom_syscap, cannot update node");
             false
-        }}
+        }
     }
 
     /// Remove custom syscap entries by key
     pub fn remove_custom_syscap(&self, node_id: Uuid, keys: Vec<String>) -> bool {
-        match self.nodes.write() { Ok(mut nodes) => {
+        if let Ok(mut nodes) = self.nodes.write() {
             if let Some(data) = nodes.get_mut(&node_id) {
                 for key in keys {
                     data.syscap_custom.remove(&key);
@@ -173,70 +173,70 @@ impl NodeStorage {
             } else {
                 false
             }
-        } _ => {
+        } else {
             warn!("RwLock is poisoned in remove_custom_syscap, cannot update node");
             false
-        }}
+        }
     }
 
     /// Clear all custom syscap entries for a node
     pub fn clear_custom_syscap(&self, node_id: Uuid) -> bool {
-        match self.nodes.write() { Ok(mut nodes) => {
+        if let Ok(mut nodes) = self.nodes.write() {
             if let Some(data) = nodes.get_mut(&node_id) {
                 data.syscap_custom.clear();
                 true
             } else {
                 false
             }
-        } _ => {
+        } else {
             warn!("RwLock is poisoned in clear_custom_syscap, cannot update node");
             false
-        }}
+        }
     }
 
     /// Check if a system syscap entry needs refresh based on cache TTL
     #[allow(dead_code)]
     pub fn needs_syscap_refresh(&self, node_id: Uuid, key: &str) -> bool {
-        match self.nodes.read() { Ok(nodes) => {
-            if let Some(data) = nodes.get(&node_id) {
-                if let Some(ref syscap_system) = data.syscap_system {
-                    let now = chrono::Utc::now();
+        if let Ok(nodes) = self.nodes.read() {
+            if let Some(data) = nodes.get(&node_id)
+                && let Some(ref syscap_system) = data.syscap_system
+            {
+                let now = chrono::Utc::now();
 
-                    return syscap_system
-                        .capabilities
-                        .iter()
-                        .any(|c| c.key == key && c.cache_is_expired(now));
-                }
+                return syscap_system
+                    .capabilities
+                    .iter()
+                    .any(|c| c.key == key && c.cache_is_expired(now));
             }
             // If not found or no syscap, needs refresh
             true
-        } _ => {
+        } else {
             warn!("RwLock is poisoned in needs_syscap_refresh, cannot access node");
             true // Assume needs refresh on error
-        }}
+        }
     }
 
     /// Get all system syscap entries that need refresh
     pub fn get_expired_syscap_keys(&self, node_id: Uuid) -> Vec<String> {
-        match self.nodes.read() { Ok(nodes) => {
+        if let Ok(nodes) = self.nodes.read() {
             let mut expired_keys = Vec::new();
 
-            if let Some(data) = nodes.get(&node_id) {
-                if let Some(ref syscap_system) = data.syscap_system {
-                    let now = chrono::Utc::now();
-                    syscap_system
-                        .capabilities
-                        .iter()
-                        .filter(|cap| cap.cache_is_expired(now))
-                        .for_each(|cap| expired_keys.push(cap.key.clone()));
-                }
+            if let Some(data) = nodes.get(&node_id)
+                && let Some(ref syscap_system) = data.syscap_system
+            {
+                let now = chrono::Utc::now();
+                syscap_system
+                    .capabilities
+                    .iter()
+                    .filter(|cap| cap.cache_is_expired(now))
+                    .for_each(|cap| expired_keys.push(cap.key.clone()));
             }
 
             expired_keys
-        } _ => {
+        } else {
             warn!("RwLock is poisoned in get_expired_syscap_keys, cannot access node");
             Vec::new()
-        }}
+        }
     }
 }
 

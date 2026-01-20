@@ -1,7 +1,7 @@
 use crate::{claims_error::ClaimsError, plugin_traits::KeyProvider};
 use arc_swap::ArcSwap;
 use async_trait::async_trait;
-use jsonwebtoken::{decode, decode_header, DecodingKey, Header, Validation};
+use jsonwebtoken::{DecodingKey, Header, Validation, decode, decode_header};
 use serde::Deserialize;
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
@@ -429,8 +429,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_on_demand_refresh_returns_error_for_missing_key_on_failed_fetch(
-    ) -> Result<(), reqwest::Error> {
+    async fn test_on_demand_refresh_returns_error_for_missing_key_on_failed_fetch()
+    -> Result<(), reqwest::Error> {
         let provider =
             JwksKeyProvider::new("https://invalid-domain-that-does-not-exist.local/jwks")?;
 

@@ -7,7 +7,7 @@ use anyhow::Result;
 pub async fn wait_for_shutdown() -> Result<()> {
     #[cfg(unix)]
     {
-        use tokio::signal::unix::{signal, SignalKind};
+        use tokio::signal::unix::{SignalKind, signal};
         let mut sigterm = signal(SignalKind::terminate())?;
         let mut sigint = signal(SignalKind::interrupt())?; // Ctrl+C
         tokio::select! {
@@ -21,7 +21,7 @@ pub async fn wait_for_shutdown() -> Result<()> {
     #[cfg(windows)]
     {
         use tokio::signal::windows::{ctrl_break, ctrl_c, ctrl_close, ctrl_logoff, ctrl_shutdown};
-        use tokio::time::{timeout, Duration};
+        use tokio::time::{Duration, timeout};
 
         async fn arm_once() -> std::io::Result<()> {
             // create signal listeners first

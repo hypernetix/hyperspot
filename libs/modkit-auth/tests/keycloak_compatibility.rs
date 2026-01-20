@@ -58,13 +58,13 @@ fn test_keycloak_token_format() {
             arr.iter()
                 .filter_map(|x| x.as_str().map(ToString::to_string)),
         );
-    } else if let Some(serde_json::Value::Object(realm)) = keycloak_token.get("realm_access") {
-        if let Some(serde_json::Value::Array(arr)) = realm.get("roles") {
-            roles.extend(
-                arr.iter()
-                    .filter_map(|x| x.as_str().map(ToString::to_string)),
-            );
-        }
+    } else if let Some(serde_json::Value::Object(realm)) = keycloak_token.get("realm_access")
+        && let Some(serde_json::Value::Array(arr)) = realm.get("roles")
+    {
+        roles.extend(
+            arr.iter()
+                .filter_map(|x| x.as_str().map(ToString::to_string)),
+        );
     }
     assert_eq!(
         roles,
@@ -122,13 +122,13 @@ fn test_custom_token_format() {
             arr.iter()
                 .filter_map(|x| x.as_str().map(ToString::to_string)),
         );
-    } else if let Some(serde_json::Value::Object(realm)) = custom_token.get("realm_access") {
-        if let Some(serde_json::Value::Array(arr)) = realm.get("roles") {
-            roles.extend(
-                arr.iter()
-                    .filter_map(|x| x.as_str().map(ToString::to_string)),
-            );
-        }
+    } else if let Some(serde_json::Value::Object(realm)) = custom_token.get("realm_access")
+        && let Some(serde_json::Value::Array(arr)) = realm.get("roles")
+    {
+        roles.extend(
+            arr.iter()
+                .filter_map(|x| x.as_str().map(ToString::to_string)),
+        );
     }
     assert_eq!(
         roles,
@@ -164,13 +164,13 @@ fn test_minimal_token_format() {
             arr.iter()
                 .filter_map(|x| x.as_str().map(ToString::to_string)),
         );
-    } else if let Some(serde_json::Value::Object(realm)) = minimal_token.get("realm_access") {
-        if let Some(serde_json::Value::Array(arr)) = realm.get("roles") {
-            roles.extend(
-                arr.iter()
-                    .filter_map(|x| x.as_str().map(ToString::to_string)),
-            );
-        }
+    } else if let Some(serde_json::Value::Object(realm)) = minimal_token.get("realm_access")
+        && let Some(serde_json::Value::Array(arr)) = realm.get("roles")
+    {
+        roles.extend(
+            arr.iter()
+                .filter_map(|x| x.as_str().map(ToString::to_string)),
+        );
     }
     assert!(roles.is_empty(), "Missing roles should be empty array");
 
@@ -205,13 +205,13 @@ fn test_both_roles_locations() {
             arr.iter()
                 .filter_map(|x| x.as_str().map(ToString::to_string)),
         );
-    } else if let Some(serde_json::Value::Object(realm)) = token.get("realm_access") {
-        if let Some(serde_json::Value::Array(arr)) = realm.get("roles") {
-            roles.extend(
-                arr.iter()
-                    .filter_map(|x| x.as_str().map(ToString::to_string)),
-            );
-        }
+    } else if let Some(serde_json::Value::Object(realm)) = token.get("realm_access")
+        && let Some(serde_json::Value::Array(arr)) = realm.get("roles")
+    {
+        roles.extend(
+            arr.iter()
+                .filter_map(|x| x.as_str().map(ToString::to_string)),
+        );
     }
     assert_eq!(
         roles,

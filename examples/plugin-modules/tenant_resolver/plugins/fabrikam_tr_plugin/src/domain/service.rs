@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use async_trait::async_trait;
 use modkit_odata::{
-    validate_cursor_against, CursorV1, ODataOrderBy, ODataQuery, OrderKey, Page, PageInfo, SortDir,
+    CursorV1, ODataOrderBy, ODataQuery, OrderKey, Page, PageInfo, SortDir, validate_cursor_against,
 };
 use modkit_security::SecurityContext;
 use tenant_resolver_sdk::{

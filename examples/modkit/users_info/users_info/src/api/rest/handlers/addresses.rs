@@ -2,7 +2,7 @@ use axum::response::{IntoResponse, Response};
 use uuid::Uuid;
 
 use super::{
-    info, no_content, AddressDto, ApiResult, Json, JsonBody, PutAddressReq, SecurityContext,
+    AddressDto, ApiResult, Json, JsonBody, PutAddressReq, SecurityContext, info, no_content,
 };
 use crate::module::ConcreteAppServices;
 

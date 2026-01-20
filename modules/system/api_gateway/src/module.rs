@@ -12,7 +12,7 @@ use anyhow::Result;
 use axum::extract::State;
 use axum::http::Method;
 use axum::middleware::from_fn_with_state;
-use axum::{extract::DefaultBodyLimit, middleware::from_fn, routing::get, Router};
+use axum::{Router, extract::DefaultBodyLimit, middleware::from_fn, routing::get};
 use modkit::api::{OpenApiRegistry, OpenApiRegistryImpl};
 use modkit::lifecycle::ReadySignal;
 use parking_lot::Mutex;
@@ -506,7 +506,7 @@ impl modkit::contracts::ApiGatewayCapability for ApiGateway {
                 .route(
                     "/openapi.json",
                     get({
-                        use axum::{http::header, response::IntoResponse, Json};
+                        use axum::{Json, http::header, response::IntoResponse};
                         let doc = openapi_doc;
                         move || async move {
                             ([(header::CACHE_CONTROL, "no-store")], Json(doc.as_ref()))
@@ -867,9 +867,11 @@ mod sse_openapi_tests {
         let doc = api.build_openapi().expect("openapi");
         let v = serde_json::to_value(&doc).expect("json");
         let paths = v.get("paths").expect("paths");
-        assert!(paths
-            .get("/tests/v1/projects/{project_id}/items/{item_id}")
-            .is_some());
+        assert!(
+            paths
+                .get("/tests/v1/projects/{project_id}/items/{item_id}")
+                .is_some()
+        );
     }
 
     #[tokio::test]

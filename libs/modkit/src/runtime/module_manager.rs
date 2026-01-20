@@ -54,15 +54,15 @@ impl Endpoint {
         if let Some(rest) = self.uri.strip_prefix("unix://") {
             return EndpointKind::Uds(std::path::PathBuf::from(rest));
         }
-        if let Some(rest) = self.uri.strip_prefix("http://") {
-            if let Ok(addr) = rest.parse::<std::net::SocketAddr>() {
-                return EndpointKind::Tcp(addr);
-            }
+        if let Some(rest) = self.uri.strip_prefix("http://")
+            && let Ok(addr) = rest.parse::<std::net::SocketAddr>()
+        {
+            return EndpointKind::Tcp(addr);
         }
-        if let Some(rest) = self.uri.strip_prefix("https://") {
-            if let Ok(addr) = rest.parse::<std::net::SocketAddr>() {
-                return EndpointKind::Tcp(addr);
-            }
+        if let Some(rest) = self.uri.strip_prefix("https://")
+            && let Ok(addr) = rest.parse::<std::net::SocketAddr>()
+        {
+            return EndpointKind::Tcp(addr);
         }
         EndpointKind::Other(self.uri.clone())
     }
@@ -208,43 +208,43 @@ impl ModuleManager {
 
     /// Mark an instance as ready
     pub fn mark_ready(&self, module: &str, instance_id: Uuid) {
-        if let Some(mut vec) = self.inner.get_mut(module) {
-            if let Some(inst) = vec.iter_mut().find(|i| i.instance_id == instance_id) {
-                let mut state = inst.inner.write();
-                state.state = InstanceState::Ready;
-            }
+        if let Some(mut vec) = self.inner.get_mut(module)
+            && let Some(inst) = vec.iter_mut().find(|i| i.instance_id == instance_id)
+        {
+            let mut state = inst.inner.write();
+            state.state = InstanceState::Ready;
         }
     }
 
     /// Update the heartbeat timestamp for an instance
     pub fn update_heartbeat(&self, module: &str, instance_id: Uuid, at: Instant) {
-        if let Some(mut vec) = self.inner.get_mut(module) {
-            if let Some(inst) = vec.iter_mut().find(|i| i.instance_id == instance_id) {
-                let mut state = inst.inner.write();
-                state.last_heartbeat = at;
-                // Transition Registered -> Healthy on first heartbeat
-                if state.state == InstanceState::Registered {
-                    state.state = InstanceState::Healthy;
-                }
+        if let Some(mut vec) = self.inner.get_mut(module)
+            && let Some(inst) = vec.iter_mut().find(|i| i.instance_id == instance_id)
+        {
+            let mut state = inst.inner.write();
+            state.last_heartbeat = at;
+            // Transition Registered -> Healthy on first heartbeat
+            if state.state == InstanceState::Registered {
+                state.state = InstanceState::Healthy;
             }
         }
     }
 
     /// Mark an instance as quarantined
     pub fn mark_quarantined(&self, module: &str, instance_id: Uuid) {
-        if let Some(mut vec) = self.inner.get_mut(module) {
-            if let Some(inst) = vec.iter_mut().find(|i| i.instance_id == instance_id) {
-                inst.inner.write().state = InstanceState::Quarantined;
-            }
+        if let Some(mut vec) = self.inner.get_mut(module)
+            && let Some(inst) = vec.iter_mut().find(|i| i.instance_id == instance_id)
+        {
+            inst.inner.write().state = InstanceState::Quarantined;
         }
     }
 
     /// Mark an instance as draining (graceful shutdown in progress)
     pub fn mark_draining(&self, module: &str, instance_id: Uuid) {
-        if let Some(mut vec) = self.inner.get_mut(module) {
-            if let Some(inst) = vec.iter_mut().find(|i| i.instance_id == instance_id) {
-                inst.inner.write().state = InstanceState::Draining;
-            }
+        if let Some(mut vec) = self.inner.get_mut(module)
+            && let Some(inst) = vec.iter_mut().find(|i| i.instance_id == instance_id)
+        {
+            inst.inner.write().state = InstanceState::Draining;
         }
     }
 

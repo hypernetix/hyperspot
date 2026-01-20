@@ -3,8 +3,8 @@ use axum::response::{IntoResponse, Response};
 use uuid::Uuid;
 
 use super::{
-    apply_select, created_json, info, no_content, page_to_projected_json, ApiResult, Json,
-    JsonBody, JsonPage, SecurityContext, UpdateUserReq, UserDto, UserFullDto,
+    ApiResult, Json, JsonBody, JsonPage, SecurityContext, UpdateUserReq, UserDto, UserFullDto,
+    apply_select, created_json, info, no_content, page_to_projected_json,
 };
 use crate::module::ConcreteAppServices;
 

@@ -5,8 +5,8 @@
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{
-    parse::Parse, parse::ParseStream, punctuated::Punctuated, Data, DeriveInput, Fields, Meta,
-    Path, Token,
+    Data, DeriveInput, Fields, Meta, Path, Token, parse::Parse, parse::ParseStream,
+    punctuated::Punctuated,
 };
 
 use crate::utils::{parse_path_attribute, parse_string_attribute, validate_path};
@@ -29,30 +29,38 @@ impl Parse for GrpcClientConfig {
             input.parse_terminated(Meta::parse, Token![,])?;
 
         for meta in punctuated {
-            match parse_path_attribute("api", &meta)? { Some(path) => {
-                if api.is_some() {
-                    return Err(syn::Error::new_spanned(meta, "duplicate `api` parameter"));
+            match parse_path_attribute("api", &meta)? {
+                Some(path) => {
+                    if api.is_some() {
+                        return Err(syn::Error::new_spanned(meta, "duplicate `api` parameter"));
+                    }
+                    api = Some(path);
                 }
-                api = Some(path);
-            } _ => if let Some(s) = parse_string_attribute("tonic", &meta)? {
-                if tonic.is_some() {
-                    return Err(syn::Error::new_spanned(meta, "duplicate `tonic` parameter"));
+                _ => {
+                    if let Some(s) = parse_string_attribute("tonic", &meta)? {
+                        if tonic.is_some() {
+                            return Err(syn::Error::new_spanned(
+                                meta,
+                                "duplicate `tonic` parameter",
+                            ));
+                        }
+                        tonic = Some(s);
+                    } else if let Some(s) = parse_string_attribute("package", &meta)? {
+                        if package.is_some() {
+                            return Err(syn::Error::new_spanned(
+                                meta,
+                                "duplicate `package` parameter",
+                            ));
+                        }
+                        package = Some(s);
+                    } else {
+                        return Err(syn::Error::new_spanned(
+                            meta,
+                            "unknown parameter; expected `api`, `tonic`, or `package`",
+                        ));
+                    }
                 }
-                tonic = Some(s);
-            } else if let Some(s) = parse_string_attribute("package", &meta)? {
-                if package.is_some() {
-                    return Err(syn::Error::new_spanned(
-                        meta,
-                        "duplicate `package` parameter",
-                    ));
-                }
-                package = Some(s);
-            } else {
-                return Err(syn::Error::new_spanned(
-                    meta,
-                    "unknown parameter; expected `api`, `tonic`, or `package`",
-                ));
-            }}
+            }
         }
 
         let api = api.ok_or_else(|| {

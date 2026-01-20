@@ -6,11 +6,11 @@
 //! without testing private implementation details.
 
 use axum::{
+    Json, Router,
     body::Body,
     http::{Request, StatusCode},
     response::IntoResponse,
     routing::post,
-    Json, Router,
 };
 use http::Method;
 use modkit::api::{OperationSpec, Problem};

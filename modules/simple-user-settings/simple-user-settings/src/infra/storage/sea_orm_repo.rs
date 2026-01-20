@@ -2,8 +2,8 @@ use async_trait::async_trait;
 use modkit_db::secure::SecureConn;
 use modkit_security::{AccessScope, SecurityContext};
 use sea_orm::{
-    sea_query::{Expr, OnConflict, SimpleExpr},
     ActiveValue, EntityTrait,
+    sea_query::{Expr, OnConflict, SimpleExpr},
 };
 use simple_user_settings_sdk::models::{SimpleUserSettings, SimpleUserSettingsPatch};
 

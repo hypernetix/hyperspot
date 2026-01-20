@@ -6,7 +6,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use tonic::transport::Channel;
 
-use modkit_transport_grpc::client::{connect_with_retry, GrpcClientConfig};
+use modkit_transport_grpc::client::{GrpcClientConfig, connect_with_retry};
 use module_orchestrator_sdk::{
     DirectoryClient, RegisterInstanceInfo, ServiceEndpoint, ServiceInstanceInfo,
 };

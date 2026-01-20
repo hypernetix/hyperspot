@@ -1,6 +1,6 @@
 use heck::ToSnakeCase;
-use proc_macro2::TokenStream;
 use proc_macro_error2::abort;
+use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{Data, DeriveInput, Fields, Ident, Lit, Meta};
 
@@ -95,20 +95,18 @@ pub fn expand_derive_odata_schema(input: &DeriveInput) -> TokenStream {
 
 fn extract_odata_name(attrs: &[syn::Attribute], field_ident: &Ident) -> String {
     for attr in attrs {
-        if attr.path().is_ident("odata") {
-            if let Meta::List(meta_list) = &attr.meta {
-                let tokens = &meta_list.tokens;
-                let parsed: Result<Meta, _> = syn::parse2(tokens.clone());
+        if attr.path().is_ident("odata")
+            && let Meta::List(meta_list) = &attr.meta
+        {
+            let tokens = &meta_list.tokens;
+            let parsed: Result<Meta, _> = syn::parse2(tokens.clone());
 
-                if let Ok(Meta::NameValue(nv)) = parsed {
-                    if nv.path.is_ident("name") {
-                        if let syn::Expr::Lit(expr_lit) = &nv.value {
-                            if let Lit::Str(lit_str) = &expr_lit.lit {
-                                return lit_str.value();
-                            }
-                        }
-                    }
-                }
+            if let Ok(Meta::NameValue(nv)) = parsed
+                && nv.path.is_ident("name")
+                && let syn::Expr::Lit(expr_lit) = &nv.value
+                && let Lit::Str(lit_str) = &expr_lit.lit
+            {
+                return lit_str.value();
             }
         }
     }

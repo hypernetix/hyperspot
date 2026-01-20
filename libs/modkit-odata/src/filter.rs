@@ -242,7 +242,10 @@ pub fn convert_expr_to_filter_node<F: FilterField>(
             match (name_lower.as_str(), args.as_slice()) {
                 (
                     "contains",
-                    [E::Identifier(field_name), E::Value(odata_ast::Value::String(s))],
+                    [
+                        E::Identifier(field_name),
+                        E::Value(odata_ast::Value::String(s)),
+                    ],
                 ) => {
                     let field = F::from_name(field_name)
                         .ok_or_else(|| FilterError::UnknownField(field_name.clone()))?;
@@ -263,7 +266,10 @@ pub fn convert_expr_to_filter_node<F: FilterField>(
                 }
                 (
                     "startswith",
-                    [E::Identifier(field_name), E::Value(odata_ast::Value::String(s))],
+                    [
+                        E::Identifier(field_name),
+                        E::Value(odata_ast::Value::String(s)),
+                    ],
                 ) => {
                     let field = F::from_name(field_name)
                         .ok_or_else(|| FilterError::UnknownField(field_name.clone()))?;
@@ -284,7 +290,10 @@ pub fn convert_expr_to_filter_node<F: FilterField>(
                 }
                 (
                     "endswith",
-                    [E::Identifier(field_name), E::Value(odata_ast::Value::String(s))],
+                    [
+                        E::Identifier(field_name),
+                        E::Value(odata_ast::Value::String(s)),
+                    ],
                 ) => {
                     let field = F::from_name(field_name)
                         .ok_or_else(|| FilterError::UnknownField(field_name.clone()))?;

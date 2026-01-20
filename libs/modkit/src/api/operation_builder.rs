@@ -12,7 +12,7 @@
 //! - Optional `method_router(...)` for advanced use (layers/middleware on route level).
 
 use crate::api::problem;
-use axum::{handler::Handler, routing::MethodRouter, Router};
+use axum::{Router, handler::Handler, routing::MethodRouter};
 use http::Method;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -389,7 +389,7 @@ where
 }
 
 // Re-export from openapi_registry for backward compatibility
-pub use crate::api::openapi_registry::{ensure_schema, OpenApiRegistry};
+pub use crate::api::openapi_registry::{OpenApiRegistry, ensure_schema};
 
 /// Type-safe operation builder with compile-time guarantees.
 ///

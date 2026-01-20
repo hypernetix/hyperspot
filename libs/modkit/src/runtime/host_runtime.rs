@@ -295,7 +295,7 @@ impl HostRuntime {
                     Err(RegistryError::RestRequiresHost)
                 } else {
                     Ok(router)
-                }
+                };
             }
             1 => { /* proceed */ }
             _ => return Err(RegistryError::MultipleRestHosts),
@@ -462,11 +462,14 @@ impl HostRuntime {
     /// Stop a single module, logging errors but continuing execution.
     async fn stop_one_module(entry: &ModuleEntry, cancel: CancellationToken) {
         if let Some(s) = entry.caps.query::<RunnableCap>() {
-            match s.stop(cancel).await { Err(err) => {
-                tracing::warn!(module = entry.name, error = %err, "Failed to stop module");
-            } _ => {
-                tracing::info!(module = entry.name, "Stopped module");
-            }}
+            match s.stop(cancel).await {
+                Err(err) => {
+                    tracing::warn!(module = entry.name, error = %err, "Failed to stop module");
+                }
+                _ => {
+                    tracing::info!(module = entry.name, "Stopped module");
+                }
+            }
         }
     }
 
@@ -630,8 +633,8 @@ mod tests {
     use crate::context::ModuleCtx;
     use crate::contracts::{Module, RunnableCapability, SystemCapability};
     use crate::registry::RegistryBuilder;
-    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
     use tokio::sync::Mutex;
 
     #[derive(Default)]

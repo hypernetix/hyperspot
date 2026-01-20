@@ -448,10 +448,10 @@ impl RegistryBuilder {
         let mut path = Vec::new();
 
         for i in 0..names.len() {
-            if colors[i] == Color::White {
-                if let Some(cycle) = dfs(i, names, adj, &mut colors, &mut path) {
-                    return Some(cycle);
-                }
+            if colors[i] == Color::White
+                && let Some(cycle) = dfs(i, names, adj, &mut colors, &mut path)
+            {
+                return Some(cycle);
             }
         }
 
@@ -461,10 +461,10 @@ impl RegistryBuilder {
     /// Validate that all capabilities reference known core modules.
     fn validate_capabilities(&self) -> Result<(), RegistryError> {
         // Check rest_host early
-        if let Some((host_name, _)) = &self.rest_host {
-            if !self.core.contains_key(host_name) {
-                return Err(RegistryError::UnknownModule((*host_name).to_owned()));
-            }
+        if let Some((host_name, _)) = &self.rest_host
+            && !self.core.contains_key(host_name)
+        {
+            return Err(RegistryError::UnknownModule((*host_name).to_owned()));
         }
 
         // Check for configuration errors
@@ -482,10 +482,10 @@ impl RegistryBuilder {
         }
 
         // Validate grpc_hub
-        if let Some((name, _)) = &self.grpc_hub {
-            if !self.core.contains_key(name) {
-                return Err(RegistryError::UnknownModule((*name).to_owned()));
-            }
+        if let Some((name, _)) = &self.grpc_hub
+            && !self.core.contains_key(name)
+        {
+            return Err(RegistryError::UnknownModule((*name).to_owned()));
         }
 
         Ok(())
@@ -549,17 +549,17 @@ impl RegistryBuilder {
             }
 
             // Add rest_host if this module is the host
-            if let Some((host_name, module)) = &self.rest_host {
-                if *host_name == name {
-                    caps.push(Capability::ApiGateway(module.clone()));
-                }
+            if let Some((host_name, module)) = &self.rest_host
+                && *host_name == name
+            {
+                caps.push(Capability::ApiGateway(module.clone()));
             }
 
             // Add grpc_hub if this module is the hub
-            if let Some((hub_name, module)) = &self.grpc_hub {
-                if *hub_name == name {
-                    caps.push(Capability::GrpcHub(module.clone()));
-                }
+            if let Some((hub_name, module)) = &self.grpc_hub
+                && *hub_name == name
+            {
+                caps.push(Capability::GrpcHub(module.clone()));
             }
 
             let entry = ModuleEntry {
@@ -698,7 +698,9 @@ pub enum RegistryError {
         #[source]
         source: anyhow::Error,
     },
-    #[error("REST phase requires an gateway host: modules with capability 'rest' found, but no module with capability 'rest_host'")]
+    #[error(
+        "REST phase requires an gateway host: modules with capability 'rest' found, but no module with capability 'rest_host'"
+    )]
     RestRequiresHost,
     #[error("multiple 'rest_host' modules detected; exactly one is allowed")]
     MultipleRestHosts,
@@ -714,7 +716,9 @@ pub enum RegistryError {
         #[source]
         source: anyhow::Error,
     },
-    #[error("gRPC phase requires a hub: modules with capability 'grpc' found, but no module with capability 'grpc_hub'")]
+    #[error(
+        "gRPC phase requires a hub: modules with capability 'grpc' found, but no module with capability 'grpc_hub'"
+    )]
     GrpcRequiresHub,
     #[error("multiple 'grpc_hub' modules detected; exactly one is allowed")]
     MultipleGrpcHubs,

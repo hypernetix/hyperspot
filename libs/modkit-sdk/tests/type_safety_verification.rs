@@ -4,7 +4,7 @@
 //! at compile time. Uncomment the failing tests to see compile errors.
 
 use modkit_odata::SortDir;
-use modkit_sdk::odata::{items_stream, pages_stream, FieldRef, QueryBuilder, Schema};
+use modkit_sdk::odata::{FieldRef, QueryBuilder, Schema, items_stream, pages_stream};
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 enum TestField {

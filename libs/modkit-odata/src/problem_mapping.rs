@@ -4,8 +4,8 @@
 //! without HTTP framework dependencies. The HTTP layer in `modkit` adds
 //! instance paths and trace IDs before the Problem is converted to an HTTP response.
 
-use crate::errors::ErrorCode;
 use crate::Error;
+use crate::errors::ErrorCode;
 use modkit_errors::problem::Problem;
 
 impl From<Error> for Problem {

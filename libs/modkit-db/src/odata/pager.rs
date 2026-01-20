@@ -108,7 +108,7 @@
 //! - Applies filters at the database level (not in application memory)
 //! - Supports indexed columns via field mappings for optimal query performance
 
-use crate::odata::{paginate_with_odata, FieldMap, LimitCfg};
+use crate::odata::{FieldMap, LimitCfg, paginate_with_odata};
 use crate::secure::{ScopableEntity, SecureConn};
 use modkit_odata::{Error as ODataError, ODataQuery, Page, SortDir};
 use modkit_security::AccessScope;

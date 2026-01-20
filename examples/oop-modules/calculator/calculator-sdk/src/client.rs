@@ -8,11 +8,11 @@ use tonic::transport::Channel;
 
 use modkit_security::SecurityContext;
 use modkit_transport_grpc::attach_secctx;
-use modkit_transport_grpc::client::{connect_with_retry, GrpcClientConfig};
+use modkit_transport_grpc::client::{GrpcClientConfig, connect_with_retry};
 
 use crate::api::{CalculatorClient, CalculatorError};
-use crate::proto::calculator_service_client::CalculatorServiceClient;
 use crate::proto::AddRequest;
+use crate::proto::calculator_service_client::CalculatorServiceClient;
 
 /// gRPC client implementation of CalculatorClient
 pub(crate) struct CalculatorGrpcClient {

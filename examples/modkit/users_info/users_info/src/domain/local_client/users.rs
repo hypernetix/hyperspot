@@ -2,10 +2,10 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 use futures_util::{Stream, StreamExt};
-use modkit_sdk::odata::{items_stream_boxed, QueryBuilder};
+use modkit_sdk::odata::{QueryBuilder, items_stream_boxed};
 use modkit_security::SecurityContext;
 use user_info_sdk::odata::UserSchema;
-use user_info_sdk::{client::UsersStreamingClient, User, UsersInfoError};
+use user_info_sdk::{User, UsersInfoError, client::UsersStreamingClient};
 
 use crate::module::ConcreteAppServices;
 

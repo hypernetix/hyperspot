@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 #[cfg(any(feature = "pg", feature = "mysql"))]
-use testcontainers::{runners::AsyncRunner, ImageExt};
+use testcontainers::{ImageExt, runners::AsyncRunner};
 
 /// Returns a test data directory under target/test_data/modkit-db/
 /// Creates the directory if it doesn't exist.
@@ -96,7 +96,7 @@ pub async fn bring_up_mysql() -> Result<DbUnderTest> {
 async fn wait_for_tcp(host: &str, port: u16, timeout: Duration) -> Result<()> {
     use tokio::{
         net::TcpStream,
-        time::{sleep, Instant},
+        time::{Instant, sleep},
     };
     let deadline = Instant::now() + timeout;
     loop {

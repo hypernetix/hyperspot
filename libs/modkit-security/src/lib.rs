@@ -13,5 +13,5 @@ pub use permission::Permission;
 pub use policy_engine::{NoopPolicyEngine, PolicyEngine, PolicyEngineRef};
 
 pub use bin_codec::{
-    decode_bin, encode_bin, SecCtxDecodeError, SecCtxEncodeError, SECCTX_BIN_VERSION,
+    SECCTX_BIN_VERSION, SecCtxDecodeError, SecCtxEncodeError, decode_bin, encode_bin,
 };

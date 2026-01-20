@@ -6,8 +6,8 @@
 //! database strategies, shutdown options, and error handling.
 
 use std::sync::{
-    atomic::{AtomicBool, Ordering},
     Arc, Mutex,
+    atomic::{AtomicBool, Ordering},
 };
 use std::time::Duration;
 use tokio::time::timeout;
@@ -15,13 +15,13 @@ use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
 use modkit::{
+    ModuleCtx,
     config::ConfigProvider,
     contracts::{
         DatabaseCapability, Module, OpenApiRegistry, RestApiCapability, RunnableCapability,
     },
     registry::{ModuleRegistry, RegistryBuilder},
-    runtime::{run, DbOptions, RunOptions, ShutdownOptions},
-    ModuleCtx,
+    runtime::{DbOptions, RunOptions, ShutdownOptions, run},
 };
 
 // Test tracking infrastructure
@@ -240,7 +240,7 @@ fn create_test_registry(modules: Vec<TestModule>) -> anyhow::Result<ModuleRegist
 
 // Helper function to create a mock DbManager for testing
 fn create_mock_db_manager() -> Arc<modkit_db::DbManager> {
-    use figment::{providers::Serialized, Figment};
+    use figment::{Figment, providers::Serialized};
 
     // Create a simple figment with mock database configuration
     let figment = Figment::new().merge(Serialized::defaults(serde_json::json!({

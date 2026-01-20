@@ -1,7 +1,7 @@
-use super::{dto, handlers, Action, License, Resource};
+use super::{Action, License, Resource, dto, handlers};
 use axum::Router;
-use modkit::api::operation_builder::OperationBuilder;
 use modkit::api::OpenApiRegistry;
+use modkit::api::operation_builder::OperationBuilder;
 use std::time::Duration;
 use tower_http::timeout::TimeoutLayer;
 

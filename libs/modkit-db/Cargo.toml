@@ -56,4 +56,5 @@ testcontainers = { workspace = true }
 testcontainers-modules = { workspace = true }
 tokio = { workspace = true }
 anyhow = { workspace = true }
+temp-env = { workspace = true }
 

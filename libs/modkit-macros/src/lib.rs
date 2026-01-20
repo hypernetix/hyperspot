@@ -4,9 +4,9 @@ use proc_macro::TokenStream;
 use proc_macro2::Span;
 use quote::{format_ident, quote};
 use syn::{
-    parse::Parse, parse::ParseStream, parse_macro_input, punctuated::Punctuated, DeriveInput, Expr,
-    Ident, ImplItem, ItemImpl, Lit, LitBool, LitStr, Meta, MetaList, MetaNameValue, Path, Token,
-    TypePath,
+    DeriveInput, Expr, Ident, ImplItem, ItemImpl, Lit, LitBool, LitStr, Meta, MetaList,
+    MetaNameValue, Path, Token, TypePath, parse::Parse, parse::ParseStream, parse_macro_input,
+    punctuated::Punctuated,
 };
 
 mod grpc_client;
@@ -72,7 +72,9 @@ impl Capability {
             other => {
                 let suggestions = Self::suggest_similar(other);
                 let error_msg = if suggestions.is_empty() {
-                    format!("unknown capability '{other}', expected one of: db, rest, rest_host, stateful, system, grpc_hub, grpc")
+                    format!(
+                        "unknown capability '{other}', expected one of: db, rest, rest_host, stateful, system, grpc_hub, grpc"
+                    )
                 } else {
                     format!(
                         "unknown capability '{other}'\n       = help: did you mean one of: {}?",
@@ -97,7 +99,9 @@ impl Capability {
             other => {
                 let suggestions = Self::suggest_similar(other);
                 let error_msg = if suggestions.is_empty() {
-                    format!("unknown capability '{other}', expected one of: db, rest, rest_host, stateful, system, grpc_hub, grpc")
+                    format!(
+                        "unknown capability '{other}', expected one of: db, rest, rest_host, stateful, system, grpc_hub, grpc"
+                    )
                 } else {
                     format!(
                         "unknown capability '{other}'\n       = help: did you mean one of: {}?",
@@ -767,53 +771,53 @@ pub fn lifecycle(attr: TokenStream, item: TokenStream) -> TokenStream {
     let mut has_runner = false;
     let mut takes_ready_signal = false;
     for it in &impl_item.items {
-        if let ImplItem::Fn(f) = it {
-            if f.sig.ident == runner_ident {
-                has_runner = true;
-                if f.sig.asyncness.is_none() {
-                    return syn::Error::new_spanned(f.sig.fn_token, "runner must be async")
-                        .to_compile_error()
-                        .into();
-                }
-                let input_count = f.sig.inputs.len();
-                match input_count {
-                    2 => {}
-                    3 => {
-                        if let Some(syn::FnArg::Typed(pat_ty)) = f.sig.inputs.iter().nth(2) {
-                            match &*pat_ty.ty {
-                                syn::Type::Path(tp) => {
-                                    if let Some(seg) = tp.path.segments.last() {
-                                        if seg.ident == "ReadySignal" {
-                                            takes_ready_signal = true;
-                                        } else {
-                                            return syn::Error::new_spanned(
-                                                &pat_ty.ty,
-                                                "third parameter must be ReadySignal when await_ready=true",
-                                            )
-                                                .to_compile_error()
-                                                .into();
-                                        }
+        if let ImplItem::Fn(f) = it
+            && f.sig.ident == runner_ident
+        {
+            has_runner = true;
+            if f.sig.asyncness.is_none() {
+                return syn::Error::new_spanned(f.sig.fn_token, "runner must be async")
+                    .to_compile_error()
+                    .into();
+            }
+            let input_count = f.sig.inputs.len();
+            match input_count {
+                2 => {}
+                3 => {
+                    if let Some(syn::FnArg::Typed(pat_ty)) = f.sig.inputs.iter().nth(2) {
+                        match &*pat_ty.ty {
+                            syn::Type::Path(tp) => {
+                                if let Some(seg) = tp.path.segments.last() {
+                                    if seg.ident == "ReadySignal" {
+                                        takes_ready_signal = true;
+                                    } else {
+                                        return syn::Error::new_spanned(
+                                            &pat_ty.ty,
+                                            "third parameter must be ReadySignal when await_ready=true",
+                                        )
+                                            .to_compile_error()
+                                            .into();
                                     }
                                 }
-                                other => {
-                                    return syn::Error::new_spanned(
-                                        other,
-                                        "third parameter must be ReadySignal when await_ready=true",
-                                    )
-                                    .to_compile_error()
-                                    .into();
-                                }
+                            }
+                            other => {
+                                return syn::Error::new_spanned(
+                                    other,
+                                    "third parameter must be ReadySignal when await_ready=true",
+                                )
+                                .to_compile_error()
+                                .into();
                             }
                         }
                     }
-                    _ => {
-                        return syn::Error::new_spanned(
-                            f.sig.inputs.clone(),
-                            "invalid runner signature; expected (&self, CancellationToken) or (&self, CancellationToken, ReadySignal)",
-                        )
-                            .to_compile_error()
-                            .into();
-                    }
+                }
+                _ => {
+                    return syn::Error::new_spanned(
+                        f.sig.inputs.clone(),
+                        "invalid runner signature; expected (&self, CancellationToken) or (&self, CancellationToken, ReadySignal)",
+                    )
+                        .to_compile_error()
+                        .into();
                 }
             }
         }
@@ -969,7 +973,10 @@ fn parse_lifecycle_args(args: Punctuated<Meta, Token![,]>) -> syn::Result<LcCfg>
                 await_ready = true;
             }
             other => {
-                return Err(syn::Error::new_spanned(other, "expected named args: method=\"...\", stop_timeout=\"...\", await_ready=true|false"));
+                return Err(syn::Error::new_spanned(
+                    other,
+                    "expected named args: method=\"...\", stop_timeout=\"...\", await_ready=true|false",
+                ));
             }
         }
     }

@@ -39,10 +39,10 @@ pub fn prepare_sqlite_path(dsn: &str, create_dirs: bool) -> io::Result<String> {
     // Extract file path from DSN for directory creation
     let file_path = extract_file_path_from_dsn(dsn);
 
-    if let Some(path) = file_path {
-        if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
+    if let Some(path) = file_path
+        && let Some(parent) = path.parent()
+    {
+        std::fs::create_dir_all(parent)?;
     }
 
     Ok(dsn.to_owned())
@@ -62,17 +62,17 @@ fn extract_file_path_from_dsn(dsn: &str) -> Option<std::path::PathBuf> {
     }
 
     // Try to parse as URL first
-    if let Ok(url) = url::Url::parse(dsn) {
-        if url.scheme() == "sqlite" {
-            let path_str = url.path();
+    if let Ok(url) = url::Url::parse(dsn)
+        && url.scheme() == "sqlite"
+    {
+        let path_str = url.path();
 
-            // Handle empty path
-            if path_str.is_empty() || path_str == "/" {
-                return None;
-            }
-
-            return Some(std::path::PathBuf::from(path_str));
+        // Handle empty path
+        if path_str.is_empty() || path_str == "/" {
+            return None;
         }
+
+        return Some(std::path::PathBuf::from(path_str));
     }
 
     // Handle sqlite: prefix without proper URL format
