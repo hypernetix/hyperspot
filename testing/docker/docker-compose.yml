@@ -16,16 +16,16 @@ services:
     image: hyperspot-api:e2e
     build:
       context: ../..
-      dockerfile: hyperspot.Dockerfile
+      dockerfile: testing/docker/hyperspot.Dockerfile
     ports:
-      - "8087:8087"
+      - "8086:8086"
     extra_hosts:
       # Allow container to access host machine via host.docker.internal
       - "host.docker.internal:host-gateway"
     environment:
       # No external dependencies needed for file_parser module
       - RUST_LOG=info
-      - APP__MODULES__api_gateway__CONFIG__BIND_ADDR=0.0.0.0:8087
+      - APP__MODULES__api_gateway__CONFIG__BIND_ADDR=0.0.0.0:8086
       - APP__MODULES__api_gateway__CONFIG__ENABLE_DOCS=true
       - APP__MODULES__api_gateway__CONFIG__CORS_ENABLED=true
     depends_on:

@@ -3,6 +3,9 @@ CI := 1
 OPENAPI_URL ?= http://127.0.0.1:8087/openapi.json
 OPENAPI_OUT ?= docs/api/api.json
 
+# E2E Docker args
+E2E_ARGS ?= --features users-info-example
+
 # -------- Utility macros --------
 
 define ensure_tool
@@ -243,7 +246,7 @@ e2e-local:
 
 ## Run E2E tests in Docker environment
 e2e-docker:
-	python3 scripts/ci.py e2e --docker
+	python3 scripts/ci.py e2e --docker $(E2E_ARGS)
 
 # -------- Code coverage --------
 
