@@ -26,8 +26,8 @@
 use crate::api::rest::{dto, handlers};
 use crate::module::ConcreteAppServices;
 use axum::Router;
-use modkit::api::operation_builder::{AuthReqAction, AuthReqResource, LicenseFeature};
 use modkit::api::OpenApiRegistry;
+use modkit::api::operation_builder::{AuthReqAction, AuthReqResource, LicenseFeature};
 use std::sync::Arc;
 
 mod addresses;

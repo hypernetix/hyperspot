@@ -5,24 +5,24 @@
 //! These tests verify end-to-end behavior with a real Axum Router
 
 use axum::{
+    Router,
     body::Body,
     extract::Request,
     http::{Method, StatusCode},
     response::IntoResponse,
     routing::get,
-    Router,
 };
 use modkit_auth::{
+    Claims,
     axum_ext::AuthPolicyLayer,
     errors::AuthError,
     traits::{PrimaryAuthorizer, TokenValidator},
     types::{AuthRequirement, RoutePolicy, SecRequirement},
-    Claims,
 };
 use modkit_security::SecurityContext;
 use std::sync::{
-    atomic::{AtomicBool, Ordering},
     Arc,
+    atomic::{AtomicBool, Ordering},
 };
 use tower::ServiceExt;
 use uuid::Uuid;

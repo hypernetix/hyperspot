@@ -6,13 +6,13 @@ pub mod rpc_retry;
 pub mod windows_named_pipe;
 
 #[cfg(windows)]
-pub use windows_named_pipe::{create_named_pipe_incoming, NamedPipeConnection, NamedPipeIncoming};
+pub use windows_named_pipe::{NamedPipeConnection, NamedPipeIncoming, create_named_pipe_incoming};
 
 pub const SECCTX_METADATA_KEY: &str = "x-secctx-bin";
 
-use modkit_security::{decode_bin, encode_bin, SecurityContext};
-use tonic::metadata::{MetadataMap, MetadataValue};
+use modkit_security::{SecurityContext, decode_bin, encode_bin};
 use tonic::Status;
+use tonic::metadata::{MetadataMap, MetadataValue};
 
 /// Encode `SecurityContext` into gRPC metadata.
 ///

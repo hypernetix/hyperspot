@@ -3,7 +3,7 @@ name = "de0902_no_schema_for_on_gts_structs"
 version = "0.1.0"
 authors = ["Hypernetix"]
 description = "Prohibit using schemars::schema_for!() on GTS-wrapped structs"
-edition = "2024"
+edition.workspace = true
 publish = false
 
 [lib]

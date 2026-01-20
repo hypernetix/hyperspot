@@ -5,11 +5,11 @@ use async_trait::async_trait;
 use std::sync::{Arc, OnceLock};
 use tokio::sync::RwLock;
 
+use modkit::DirectoryClient;
 use modkit::context::ModuleCtx;
 use modkit::contracts::{GrpcServiceCapability, RegisterGrpcServiceFn, SystemCapability};
 use modkit::directory::LocalDirectoryClient;
 use modkit::runtime::ModuleManager;
-use modkit::DirectoryClient;
 
 use module_orchestrator_grpc::DIRECTORY_SERVICE_NAME;
 

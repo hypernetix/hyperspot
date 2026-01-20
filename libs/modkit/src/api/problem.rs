@@ -3,8 +3,8 @@
 use http::StatusCode;
 
 pub use modkit_errors::problem::{
-    Problem, ValidationError, ValidationErrorResponse, ValidationViolation,
-    APPLICATION_PROBLEM_JSON,
+    APPLICATION_PROBLEM_JSON, Problem, ValidationError, ValidationErrorResponse,
+    ValidationViolation,
 };
 
 // Optional convenience constructors that return `Problem` directly

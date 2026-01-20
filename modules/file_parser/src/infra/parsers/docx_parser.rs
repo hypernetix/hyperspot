@@ -254,15 +254,15 @@ fn extract_style_from_run(run: &docx_rust::document::Run) -> crate::domain::ir::
             style.strike = strike.value.unwrap_or(false);
         }
         // Check for monospace fonts as code indicator
-        if let Some(ref fonts) = property.fonts {
-            if let Some(ref ascii) = fonts.ascii {
-                let font_lower = ascii.to_lowercase();
-                if font_lower.contains("consolas")
-                    || font_lower.contains("courier")
-                    || font_lower.contains("mono")
-                {
-                    style.code = true;
-                }
+        if let Some(ref fonts) = property.fonts
+            && let Some(ref ascii) = fonts.ascii
+        {
+            let font_lower = ascii.to_lowercase();
+            if font_lower.contains("consolas")
+                || font_lower.contains("courier")
+                || font_lower.contains("mono")
+            {
+                style.code = true;
             }
         }
     }

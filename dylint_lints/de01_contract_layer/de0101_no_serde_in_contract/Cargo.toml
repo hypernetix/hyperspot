@@ -3,7 +3,7 @@ name = "de0101_no_serde_in_contract"
 version = "0.1.0"
 authors = ["authors go here"]
 description = "description goes here"
-edition = "2024"
+edition.workspace = true
 publish = false
 
 [lib]

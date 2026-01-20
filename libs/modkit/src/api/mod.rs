@@ -18,16 +18,16 @@ pub mod trace_layer;
 mod odata_policy_tests;
 
 pub use error_layer::{
-    error_mapping_middleware, extract_trace_id, map_error_to_problem, IntoProblem,
+    IntoProblem, error_mapping_middleware, extract_trace_id, map_error_to_problem,
 };
-pub use openapi_registry::{ensure_schema, OpenApiInfo, OpenApiRegistry, OpenApiRegistryImpl};
+pub use openapi_registry::{OpenApiInfo, OpenApiRegistry, OpenApiRegistryImpl, ensure_schema};
 pub use operation_builder::{
-    state, Missing, OperationBuilder, OperationSpec, ParamLocation, ParamSpec, Present,
-    RateLimitSpec, ResponseSpec,
+    Missing, OperationBuilder, OperationSpec, ParamLocation, ParamSpec, Present, RateLimitSpec,
+    ResponseSpec, state,
 };
 pub use problem::{
-    bad_request, conflict, internal_error, not_found, Problem, ValidationError,
-    APPLICATION_PROBLEM_JSON,
+    APPLICATION_PROBLEM_JSON, Problem, ValidationError, bad_request, conflict, internal_error,
+    not_found,
 };
 pub use select::{apply_select, page_to_projected_json, project_json};
 pub use trace_layer::{WithRequestContext, WithTraceContext};
@@ -41,11 +41,11 @@ pub mod prelude {
     pub use super::problem::Problem;
 
     // Response sugar
-    pub use super::response::{created_json, no_content, ok_json, JsonBody, JsonPage};
+    pub use super::response::{JsonBody, JsonPage, created_json, no_content, ok_json};
 
     // OData and field projection
     pub use super::select::apply_select;
 
     // Useful axum bits (common in handlers)
-    pub use axum::{http::StatusCode, response::IntoResponse, Json};
+    pub use axum::{Json, http::StatusCode, response::IntoResponse};
 }

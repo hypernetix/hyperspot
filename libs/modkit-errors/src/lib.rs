@@ -12,8 +12,8 @@ pub mod problem;
 // Re-export commonly used types
 pub use catalog::ErrDef;
 pub use problem::{
-    Problem, ValidationError, ValidationErrorResponse, ValidationViolation,
-    APPLICATION_PROBLEM_JSON,
+    APPLICATION_PROBLEM_JSON, Problem, ValidationError, ValidationErrorResponse,
+    ValidationViolation,
 };
 
 /// Helper to attach instance and `trace_id` to a Problem

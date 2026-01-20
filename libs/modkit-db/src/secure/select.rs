@@ -1,6 +1,6 @@
 use sea_orm::{
-    sea_query::Expr, ColumnTrait, ConnectionTrait, EntityTrait, PaginatorTrait, QueryFilter,
-    QueryOrder, QuerySelect,
+    ColumnTrait, ConnectionTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
+    QuerySelect, sea_query::Expr,
 };
 use std::marker::PhantomData;
 
@@ -225,12 +225,12 @@ where
         J: ScopableEntity + EntityTrait,
         J::Column: ColumnTrait + Copy,
     {
-        if !scope.tenant_ids().is_empty() {
-            if let Some(tcol) = J::tenant_col() {
-                let condition = sea_orm::Condition::all()
-                    .add(Expr::col((J::default(), tcol)).is_in(scope.tenant_ids().to_vec()));
-                self.inner = QueryFilter::filter(self.inner, condition);
-            }
+        if !scope.tenant_ids().is_empty()
+            && let Some(tcol) = J::tenant_col()
+        {
+            let condition = sea_orm::Condition::all()
+                .add(Expr::col((J::default(), tcol)).is_in(scope.tenant_ids().to_vec()));
+            self.inner = QueryFilter::filter(self.inner, condition);
         }
         self
     }
@@ -259,21 +259,19 @@ where
         J: ScopableEntity + EntityTrait,
         J::Column: ColumnTrait + Copy,
     {
-        if !scope.tenant_ids().is_empty() {
-            if let Some(tcol) = J::tenant_col() {
-                // Build EXISTS clause with tenant filter on joined entity
-                use sea_orm::sea_query::Query;
+        if !scope.tenant_ids().is_empty()
+            && let Some(tcol) = J::tenant_col()
+        {
+            // Build EXISTS clause with tenant filter on joined entity
+            use sea_orm::sea_query::Query;
 
-                let mut sub = Query::select();
-                sub.expr(Expr::value(1))
-                    .from(J::default())
-                    .cond_where(Expr::col((J::default(), tcol)).is_in(scope.tenant_ids().to_vec()));
+            let mut sub = Query::select();
+            sub.expr(Expr::value(1))
+                .from(J::default())
+                .cond_where(Expr::col((J::default(), tcol)).is_in(scope.tenant_ids().to_vec()));
 
-                self.inner = QueryFilter::filter(
-                    self.inner,
-                    sea_orm::Condition::all().add(Expr::exists(sub)),
-                );
-            }
+            self.inner =
+                QueryFilter::filter(self.inner, sea_orm::Condition::all().add(Expr::exists(sub)));
         }
         self
     }

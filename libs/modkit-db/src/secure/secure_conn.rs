@@ -52,9 +52,9 @@
 use std::{future::Future, pin::Pin};
 
 use sea_orm::{
-    sea_query::Expr, AccessMode, ActiveModelTrait, ColumnTrait, ConnectionTrait,
-    DatabaseConnection, DatabaseTransaction, DbErr, EntityTrait, IsolationLevel, QueryFilter,
-    TransactionTrait,
+    AccessMode, ActiveModelTrait, ColumnTrait, ConnectionTrait, DatabaseConnection,
+    DatabaseTransaction, DbErr, EntityTrait, IsolationLevel, QueryFilter, TransactionTrait,
+    sea_query::Expr,
 };
 use uuid::Uuid;
 

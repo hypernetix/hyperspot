@@ -48,13 +48,13 @@ async fn main() -> anyhow::Result<()> {
     };
 
     let start = std::time::Instant::now();
-    match db.try_lock("user_mgmt", "bulk_update", config).await? { Some(_guard) => {
+    if let Some(_guard) = db.try_lock("user_mgmt", "bulk_update", config).await? {
         println!("✓ Unexpectedly acquired lock (this shouldn't happen)");
-    } _ => {
+    } else {
         let elapsed = start.elapsed();
         println!("✓ Lock acquisition timed out after {elapsed:?} (expected)");
         println!("  This demonstrates the retry/backoff policy in action");
-    }}
+    }
 
     // Demo 3: Successful try_lock
     println!("\n=== Demo 3: Successful try_lock ===");

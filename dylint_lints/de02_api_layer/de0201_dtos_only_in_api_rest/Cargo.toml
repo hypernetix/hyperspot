@@ -1,7 +1,7 @@
 [package]
 name = "de0201_dtos_only_in_api_rest"
 version = "0.1.0"
-edition = "2024"
+edition.workspace = true
 authors = ["authors go here"]
 description = "description goes here"
 publish = false

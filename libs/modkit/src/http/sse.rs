@@ -1,5 +1,5 @@
-use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::response::IntoResponse;
+use axum::response::sse::{Event, KeepAlive, Sse};
 use futures_core::Stream;
 use futures_util::StreamExt;
 use serde::Serialize;
@@ -108,12 +108,13 @@ impl<T: Clone + Send + 'static> SseBroadcaster<T> {
     // -------------------------
 
     /// Plain SSE with a constant `event:` name for all messages (no extra headers).
-    pub fn sse_response_named(
+    pub fn sse_response_named<N>(
         &self,
-        event_name: impl Into<Cow<'static, str>> + 'static,
-    ) -> Sse<impl Stream<Item = Result<Event, Infallible>>>
+        event_name: N,
+    ) -> Sse<impl Stream<Item = Result<Event, Infallible>> + use<T, N>>
     where
         T: Serialize,
+        N: Into<Cow<'static, str>> + 'static,
     {
         let stream = Self::wrap_stream_as_sse_named(self.subscribe_stream(), event_name.into());
         Sse::new(stream).keep_alive(
@@ -148,10 +149,10 @@ mod tests {
     use super::*;
     use futures_util::StreamExt;
     use std::sync::{
-        atomic::{AtomicUsize, Ordering},
         Arc,
+        atomic::{AtomicUsize, Ordering},
     };
-    use tokio::time::{timeout, Duration};
+    use tokio::time::{Duration, timeout};
 
     #[tokio::test]
     async fn broadcaster_delivers_single_event() {

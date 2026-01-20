@@ -2,8 +2,8 @@
 
 use std::sync::Arc;
 
-use axum::extract::{Extension, Path, Query};
 use axum::Json;
+use axum::extract::{Extension, Path, Query};
 use modkit::api::prelude::*;
 use modkit::api::problem::Problem;
 use types_registry_sdk::RegisterSummary;

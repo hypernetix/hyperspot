@@ -4,11 +4,11 @@ use std::process::Command;
 /// Collect GPU information on Windows using NVML for NVIDIA GPUs, fallback to WMIC
 pub fn collect_gpu_info() -> Vec<GpuInfo> {
     // Try NVML first for NVIDIA GPUs
-    if let Some(nvidia_gpus) = collect_nvidia_gpus() {
-        if !nvidia_gpus.is_empty() {
-            tracing::debug!("Found {} NVIDIA GPU(s) via NVML", nvidia_gpus.len());
-            return nvidia_gpus;
-        }
+    if let Some(nvidia_gpus) = collect_nvidia_gpus()
+        && !nvidia_gpus.is_empty()
+    {
+        tracing::debug!("Found {} NVIDIA GPU(s) via NVML", nvidia_gpus.len());
+        return nvidia_gpus;
     }
 
     // Fallback to WMIC for other GPUs
@@ -88,41 +88,41 @@ fn collect_gpus_via_wmic() -> Vec<GpuInfo> {
         ])
         .output();
 
-    if let Ok(output) = output {
-        if output.status.success() {
-            let output_str = String::from_utf8_lossy(&output.stdout);
-            let mut gpus = Vec::new();
+    if let Ok(output) = output
+        && output.status.success()
+    {
+        let output_str = String::from_utf8_lossy(&output.stdout);
+        let mut gpus = Vec::new();
 
-            // Skip header line and parse CSV output
-            for line in output_str.lines().skip(1) {
-                let parts: Vec<&str> = line.split(',').collect();
-                if parts.len() >= 3 {
-                    let name = parts[1].trim();
-                    if !name.is_empty() {
-                        let mut gpu = GpuInfo {
-                            model: name.to_owned(),
-                            cores: None,
-                            total_memory_mb: None,
-                            used_memory_mb: None,
-                        };
+        // Skip header line and parse CSV output
+        for line in output_str.lines().skip(1) {
+            let parts: Vec<&str> = line.split(',').collect();
+            if parts.len() >= 3 {
+                let name = parts[1].trim();
+                if !name.is_empty() {
+                    let mut gpu = GpuInfo {
+                        model: name.to_owned(),
+                        cores: None,
+                        total_memory_mb: None,
+                        used_memory_mb: None,
+                    };
 
-                        // Parse memory if available
-                        if let Ok(ram_bytes) = parts[2].trim().parse::<u64>() {
-                            if ram_bytes > 0 {
-                                gpu.total_memory_mb = Some(ram_bytes as f64 / (1024.0 * 1024.0));
-                            }
-                        }
-
-                        gpus.push(gpu);
+                    // Parse memory if available
+                    if let Ok(ram_bytes) = parts[2].trim().parse::<u64>()
+                        && ram_bytes > 0
+                    {
+                        gpu.total_memory_mb = Some(ram_bytes as f64 / (1024.0 * 1024.0));
                     }
+
+                    gpus.push(gpu);
                 }
             }
-
-            if !gpus.is_empty() {
-                tracing::debug!("Found {} GPU(s) via WMIC", gpus.len());
-            }
-            return gpus;
         }
+
+        if !gpus.is_empty() {
+            tracing::debug!("Found {} GPU(s) via WMIC", gpus.len());
+        }
+        return gpus;
     }
 
     Vec::new()

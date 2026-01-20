@@ -145,19 +145,23 @@ async fn address_crud_and_scope() {
         .await
         .unwrap();
 
-    assert!(services
-        .addresses
-        .get_address(&ctx2, created.id)
-        .await
-        .is_err());
+    assert!(
+        services
+            .addresses
+            .get_address(&ctx2, created.id)
+            .await
+            .is_err()
+    );
     services
         .addresses
         .delete_address(&ctx1, created.id)
         .await
         .unwrap();
-    assert!(services
-        .addresses
-        .get_address(&ctx1, created.id)
-        .await
-        .is_err());
+    assert!(
+        services
+            .addresses
+            .get_address(&ctx1, created.id)
+            .await
+            .is_err()
+    );
 }

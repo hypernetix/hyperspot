@@ -3,7 +3,7 @@ name = "de0901_gts_string_pattern"
 version = "0.1.0"
 authors = ["authors go here"]
 description = "Validates GTS string patterns in functions and annotations"
-edition = "2024"
+edition.workspace = true
 publish = false
 
 [lib]

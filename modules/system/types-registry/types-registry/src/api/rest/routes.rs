@@ -3,11 +3,11 @@
 use std::sync::Arc;
 
 use axum::{Extension, Router};
+use modkit::api::OpenApiRegistry;
 use modkit::api::operation_builder::{
     AuthReqAction, AuthReqResource, LicenseFeature, OperationBuilder,
 };
 use modkit::api::prelude::StatusCode;
-use modkit::api::OpenApiRegistry;
 
 use super::dto::{
     GtsEntityDto, ListEntitiesResponse, RegisterEntitiesRequest, RegisterEntitiesResponse,

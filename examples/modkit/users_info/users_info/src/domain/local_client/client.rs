@@ -5,9 +5,9 @@ use modkit_security::SecurityContext;
 use uuid::Uuid;
 
 use user_info_sdk::{
-    client::{AddressesStreamingClient, CitiesStreamingClient, UsersStreamingClient},
     Address, City, NewAddress, NewCity, NewUser, UpdateAddressRequest, UpdateCityRequest,
     UpdateUserRequest, User, UserFull, UsersInfoClient, UsersInfoError,
+    client::{AddressesStreamingClient, CitiesStreamingClient, UsersStreamingClient},
 };
 
 use crate::domain::local_client::{

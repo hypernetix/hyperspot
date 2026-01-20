@@ -33,6 +33,6 @@ pub use core::*;
 
 // Re-export SeaORM filter mapping and pagination
 pub use sea_orm_filter::{
-    encode_cursor_value, filter_node_to_condition, paginate_odata, parse_cursor_value,
-    FieldToColumn, LimitCfg, ODataFieldMapping,
+    FieldToColumn, LimitCfg, ODataFieldMapping, encode_cursor_value, filter_node_to_condition,
+    paginate_odata, parse_cursor_value,
 };

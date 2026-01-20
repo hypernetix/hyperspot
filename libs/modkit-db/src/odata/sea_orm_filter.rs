@@ -7,12 +7,12 @@
 use bigdecimal::ToPrimitive;
 use chrono::SecondsFormat;
 use modkit_odata::filter::{
-    convert_expr_to_filter_node, FieldKind, FilterField, FilterNode, FilterOp, ODataValue,
+    FieldKind, FilterField, FilterNode, FilterOp, ODataValue, convert_expr_to_filter_node,
 };
 use modkit_odata::{CursorV1, Error as ODataError, ODataOrderBy, Page, PageInfo, SortDir};
 use sea_orm::{
-    sea_query::{Expr, Order},
     Condition, ConnectionTrait, EntityTrait, QueryFilter, QueryOrder, QuerySelect,
+    sea_query::{Expr, Order},
 };
 
 /// Trait for mapping DTO filter fields to `SeaORM` columns.
@@ -473,12 +473,11 @@ where
     };
 
     // Validate cursor consistency (filter hash only)
-    if let Some(cur) = &query.cursor {
-        if let (Some(h), Some(cf)) = (query.filter_hash.as_deref(), cur.f.as_deref()) {
-            if h != cf {
-                return Err(ODataError::FilterMismatch);
-            }
-        }
+    if let Some(cur) = &query.cursor
+        && let (Some(h), Some(cf)) = (query.filter_hash.as_deref(), cur.f.as_deref())
+        && h != cf
+    {
+        return Err(ODataError::FilterMismatch);
     }
 
     let mut s = select;

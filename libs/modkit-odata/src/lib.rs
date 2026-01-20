@@ -340,10 +340,10 @@ pub fn validate_cursor_against(
     if !effective_order.equals_signed_tokens(&cursor.s) {
         return Err(Error::OrderMismatch);
     }
-    if let (Some(h), Some(cf)) = (effective_filter_hash, cursor.f.as_deref()) {
-        if h != cf {
-            return Err(Error::FilterMismatch);
-        }
+    if let (Some(h), Some(cf)) = (effective_filter_hash, cursor.f.as_deref())
+        && h != cf
+    {
+        return Err(Error::FilterMismatch);
     }
     Ok(())
 }

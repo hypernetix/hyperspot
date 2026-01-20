@@ -2,18 +2,18 @@
 
 //! Test that `auth_disabled` mode properly injects default tenant context
 use axum::{
+    Extension, Router,
     body::Body,
     extract::Request,
     http::{Method, StatusCode},
     middleware::{self, Next},
     response::{IntoResponse, Response},
     routing::get,
-    Extension, Router,
 };
 use modkit_security::{NoopPolicyEngine, SecurityContext};
 use std::sync::Arc;
 use tower::ServiceExt;
-use uuid::{uuid, Uuid};
+use uuid::{Uuid, uuid};
 
 /// Test tenant ID for auth-disabled mode tests
 const TEST_DEFAULT_TENANT_ID: Uuid = uuid!("00000000-0000-0000-0000-000000000001");

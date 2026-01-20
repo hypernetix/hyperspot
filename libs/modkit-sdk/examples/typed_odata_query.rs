@@ -71,7 +71,9 @@ fn main() {
                 .and(EMAIL.endswith("@example.com")),
         )
         .build();
-    println!("   Filter: is_active eq true AND age ge 18 AND age le 65 AND endswith(email, '@example.com')");
+    println!(
+        "   Filter: is_active eq true AND age ge 18 AND age le 65 AND endswith(email, '@example.com')"
+    );
     println!("   Filter hash: {:#?}\n", query.filter_hash);
 
     // Example 4: Filter with OR combinator

@@ -2,7 +2,7 @@
 
 //! Tests for options module functionality.
 
-use modkit_db::{build_db_handle, DbConnConfig, DbEngine, PoolCfg};
+use modkit_db::{DbConnConfig, DbEngine, PoolCfg, build_db_handle};
 use std::collections::HashMap;
 use std::time::Duration;
 use tempfile::TempDir;
@@ -49,24 +49,24 @@ async fn test_build_db_handle_sqlite_file() {
     assert_eq!(handle.engine(), DbEngine::Sqlite);
 }
 
-#[tokio::test]
-async fn test_build_db_handle_env_expansion() {
-    // Set a test environment variable
-    // TODO: Audit that the environment access only happens in single-threaded code.
-    unsafe { std::env::set_var("TEST_DB_PASSWORD", "secret123") };
+#[test]
+fn test_build_db_handle_env_expansion() {
+    temp_env::with_var("TEST_DB_PASSWORD", Some("secret123"), || {
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        rt.block_on(async {
+            let config = DbConnConfig {
+                dsn: Some("sqlite::memory:".to_owned()),
+                password: Some("${TEST_DB_PASSWORD}".to_owned()),
+                ..Default::default()
+            };
 
-    let config = DbConnConfig {
-        dsn: Some("sqlite::memory:".to_owned()),
-        password: Some("${TEST_DB_PASSWORD}".to_owned()),
-        ..Default::default()
-    };
-
-    let result = build_db_handle(config, None).await;
-    assert!(result.is_ok());
-
-    // Clean up
-    // TODO: Audit that the environment access only happens in single-threaded code.
-    unsafe { std::env::remove_var("TEST_DB_PASSWORD") };
+            let result = build_db_handle(config, None).await;
+            assert!(result.is_ok());
+        });
+    });
 }
 
 #[tokio::test]
@@ -120,9 +120,11 @@ async fn test_build_db_handle_invalid_journal_mode() {
 
     let error = result.unwrap_err();
     assert!(error.to_string().contains("journal_mode"));
-    assert!(error
-        .to_string()
-        .contains("must be DELETE/WAL/MEMORY/TRUNCATE/PERSIST/OFF"));
+    assert!(
+        error
+            .to_string()
+            .contains("must be DELETE/WAL/MEMORY/TRUNCATE/PERSIST/OFF")
+    );
 }
 
 #[tokio::test]
@@ -162,9 +164,11 @@ async fn test_build_db_handle_postgres_missing_dbname() {
 
     let error = result.unwrap_err();
     println!("Actual error: {error}");
-    assert!(error
-        .to_string()
-        .contains("dbname is required for PostgreSQL connections"));
+    assert!(
+        error
+            .to_string()
+            .contains("dbname is required for PostgreSQL connections")
+    );
 }
 
 #[tokio::test]

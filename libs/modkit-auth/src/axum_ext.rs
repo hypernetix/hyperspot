@@ -9,7 +9,7 @@ use crate::{
 use axum::{
     body::Body,
     extract::{FromRequestParts, Request},
-    http::{request::Parts, HeaderMap, Method},
+    http::{HeaderMap, Method, request::Parts},
     response::{IntoResponse, Response},
 };
 use modkit_security::SecurityContext;
@@ -169,10 +169,10 @@ where
                     };
 
                     // Optional RBAC requirement
-                    if let Some(sec_req) = sec_requirement {
-                        if let Err(err) = state.authorizer.check(&claims, &sec_req).await {
-                            return Ok(err.into_response());
-                        }
+                    if let Some(sec_req) = sec_requirement
+                        && let Err(err) = state.authorizer.check(&claims, &sec_req).await
+                    {
+                        return Ok(err.into_response());
                     }
 
                     // Build SecurityContext from validated claims

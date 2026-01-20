@@ -5,15 +5,15 @@ use crate::domain::repos::UsersRepository;
 use crate::infra::storage::db::db_err;
 use crate::infra::storage::entity::user::{ActiveModel as UserAM, Column, Entity as UserEntity};
 use crate::infra::storage::odata_mapper::UserODataMapper;
-use modkit_db::odata::{paginate_odata, LimitCfg};
-use modkit_db::secure::{SecureDeleteExt, SecureEntityExt};
 use modkit_db::DbConnTrait;
+use modkit_db::odata::{LimitCfg, paginate_odata};
+use modkit_db::secure::{SecureDeleteExt, SecureEntityExt};
 use modkit_odata::{ODataQuery, Page, SortDir};
 use modkit_security::AccessScope;
 use sea_orm::sea_query::Expr;
 use sea_orm::{ActiveModelTrait, EntityTrait, QueryFilter, Set};
-use user_info_sdk::odata::UserFilterField;
 use user_info_sdk::User;
+use user_info_sdk::odata::UserFilterField;
 use uuid::Uuid;
 
 /// ORM-based implementation of the `UsersRepository` trait.

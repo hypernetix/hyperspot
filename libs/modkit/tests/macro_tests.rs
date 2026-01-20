@@ -8,12 +8,13 @@ use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
 use modkit::{
+    ModuleCtx,
     config::ConfigProvider,
     contracts::{
         ApiGatewayCapability, DatabaseCapability, Module, OpenApiRegistry, RestApiCapability,
         RunnableCapability,
     },
-    module, ModuleCtx,
+    module,
 };
 use std::sync::Arc;
 

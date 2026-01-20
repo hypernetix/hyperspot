@@ -11,23 +11,23 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use axum::{
+    Json, Router,
     body::Body,
     http::{Request, StatusCode},
-    Json, Router,
 };
 use hs_tenant_resolver_sdk::{
     AccessOptions, TenantFilter, TenantId, TenantInfo, TenantResolverError,
     TenantResolverGatewayClient, TenantStatus,
 };
 use modkit::{
+    ClientHub, Module,
     api::{
-        operation_builder::{AuthReqAction, AuthReqResource, LicenseFeature},
         OperationBuilder,
+        operation_builder::{AuthReqAction, AuthReqResource, LicenseFeature},
     },
     config::ConfigProvider,
     context::ModuleCtx,
     contracts::{ApiGatewayCapability, OpenApiRegistry, RestApiCapability},
-    ClientHub, Module,
 };
 use modkit_auth::axum_ext::Authz;
 

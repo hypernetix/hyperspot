@@ -64,29 +64,27 @@ impl KeycloakClaimsPlugin {
         }
 
         // 2. Extract from realm_access.roles
-        if let Some(Value::Object(realm)) = raw.get("realm_access") {
-            if let Some(Value::Array(arr)) = realm.get("roles") {
-                roles.extend(
-                    arr.iter()
-                        .filter_map(|v| v.as_str())
-                        .map(ToString::to_string),
-                );
-            }
+        if let Some(Value::Object(realm)) = raw.get("realm_access")
+            && let Some(Value::Array(arr)) = realm.get("roles")
+        {
+            roles.extend(
+                arr.iter()
+                    .filter_map(|v| v.as_str())
+                    .map(ToString::to_string),
+            );
         }
 
         // 3. Extract from resource_access.<client>.roles
-        if let Some(client_id) = &self.client_roles {
-            if let Some(Value::Object(resource_access)) = raw.get("resource_access") {
-                if let Some(Value::Object(client)) = resource_access.get(client_id) {
-                    if let Some(Value::Array(arr)) = client.get("roles") {
-                        roles.extend(
-                            arr.iter()
-                                .filter_map(|v| v.as_str())
-                                .map(ToString::to_string),
-                        );
-                    }
-                }
-            }
+        if let Some(client_id) = &self.client_roles
+            && let Some(Value::Object(resource_access)) = raw.get("resource_access")
+            && let Some(Value::Object(client)) = resource_access.get(client_id)
+            && let Some(Value::Array(arr)) = client.get("roles")
+        {
+            roles.extend(
+                arr.iter()
+                    .filter_map(|v| v.as_str())
+                    .map(ToString::to_string),
+            );
         }
 
         // Apply role prefix if configured
@@ -297,12 +295,16 @@ mod tests {
         let permissions = plugin.extract_permissions(&claims);
         assert_eq!(permissions.len(), 2);
         // Prefixed roles become "kc:admin" and "kc:user", parsed as resource:action
-        assert!(permissions
-            .iter()
-            .any(|p| p.resource_pattern() == "kc" && p.action() == "admin"));
-        assert!(permissions
-            .iter()
-            .any(|p| p.resource_pattern() == "kc" && p.action() == "user"));
+        assert!(
+            permissions
+                .iter()
+                .any(|p| p.resource_pattern() == "kc" && p.action() == "admin")
+        );
+        assert!(
+            permissions
+                .iter()
+                .any(|p| p.resource_pattern() == "kc" && p.action() == "user")
+        );
     }
 
     #[test]

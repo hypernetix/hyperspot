@@ -21,7 +21,7 @@ use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::quote;
 use serde::Deserialize;
 use syn::parse::{Parse, ParseStream};
-use syn::{parse_macro_input, LitStr, Token};
+use syn::{LitStr, Token, parse_macro_input};
 
 /// JSON schema for a single error definition
 #[derive(Debug, Clone, Deserialize)]

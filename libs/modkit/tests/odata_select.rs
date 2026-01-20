@@ -1,5 +1,5 @@
 use modkit::api::{
-    odata::{parse_select, ODataParams},
+    odata::{ODataParams, parse_select},
     select::{apply_select, page_to_projected_json, project_json},
 };
 use modkit_odata::Page;

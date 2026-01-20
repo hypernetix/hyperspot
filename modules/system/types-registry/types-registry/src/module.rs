@@ -110,12 +110,11 @@ impl SystemCapability for TypesRegistryModule {
             if let Some(errors) = e.validation_errors() {
                 for err in errors {
                     // Try to get the entity content for debugging
-                    let entity_content = match service.get(&err.gts_id) { Ok(entity) => {
-                        serde_json::to_string_pretty(&entity.content)
-                            .unwrap_or_else(|_| "Failed to serialize".to_owned())
-                    } _ => {
-                        "Entity not found or failed to retrieve".to_owned()
-                    }};
+                    let entity_content = match service.get(&err.gts_id) {
+                        Ok(entity) => serde_json::to_string_pretty(&entity.content)
+                            .unwrap_or_else(|_| "Failed to serialize".to_owned()),
+                        _ => "Entity not found or failed to retrieve".to_owned(),
+                    };
 
                     tracing::error!(
                         gts_id = %err.gts_id,

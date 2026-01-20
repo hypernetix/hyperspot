@@ -7,15 +7,15 @@ use crate::infra::storage::entity::city::{
     ActiveModel as CityAM, Column as CityColumn, Entity as CityEntity,
 };
 use crate::infra::storage::odata_mapper::CityODataMapper;
-use modkit_db::odata::{paginate_odata, LimitCfg};
-use modkit_db::secure::{SecureDeleteExt, SecureEntityExt};
 use modkit_db::DbConnTrait;
+use modkit_db::odata::{LimitCfg, paginate_odata};
+use modkit_db::secure::{SecureDeleteExt, SecureEntityExt};
 use modkit_odata::{ODataQuery, Page, SortDir};
 use modkit_security::AccessScope;
 use sea_orm::sea_query::Expr;
 use sea_orm::{ActiveModelTrait, EntityTrait, QueryFilter, Set};
-use user_info_sdk::odata::CityFilterField;
 use user_info_sdk::City;
+use user_info_sdk::odata::CityFilterField;
 use uuid::Uuid;
 
 /// ORM-based implementation of the `CitiesRepository` trait.

@@ -1,10 +1,10 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use axum::{
+    Router,
     body::to_bytes,
     http::{Request, StatusCode},
     routing::get,
-    Router,
 };
 use modkit::api::odata::OData;
 use tower::ServiceExt;

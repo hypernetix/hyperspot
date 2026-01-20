@@ -4,7 +4,7 @@ use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
 // Import configuration types from the config module
-use crate::config::{module_config_or_default, ConfigError, ConfigProvider};
+use crate::config::{ConfigError, ConfigProvider, module_config_or_default};
 
 // Note: runtime-dependent features are conditionally compiled
 
@@ -193,10 +193,10 @@ impl ModuleCtx {
 
         if let Some(module_raw) = self.config_provider.get_module_config(&self.module_name) {
             // Try new structure first: modules.<name> = { database: ..., config: ... }
-            if let Some(obj) = module_raw.as_object() {
-                if let Some(config_section) = obj.get("config") {
-                    return config_section;
-                }
+            if let Some(obj) = module_raw.as_object()
+                && let Some(config_section) = obj.get("config")
+            {
+                return config_section;
             }
         }
         &EMPTY

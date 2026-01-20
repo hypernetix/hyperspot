@@ -1,7 +1,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-use modkit_security::constants::DEFAULT_TENANT_ID;
 use modkit_security::AccessScope;
+use modkit_security::constants::DEFAULT_TENANT_ID;
 
 #[test]
 fn empty_scope_is_deny_all() {

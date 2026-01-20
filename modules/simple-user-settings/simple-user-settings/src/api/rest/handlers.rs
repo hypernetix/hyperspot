@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use axum::{extract::Extension, Json};
+use axum::{Json, extract::Extension};
 use modkit::api::prelude::*;
 use modkit_auth::axum_ext::Authz;
 use simple_user_settings_sdk::models::SimpleUserSettingsUpdate;
@@ -48,10 +48,10 @@ mod tests {
     use crate::domain::repo::SettingsRepository;
     use crate::domain::service::ServiceConfig;
     use async_trait::async_trait;
+    use axum::Router;
     use axum::body::Body;
     use axum::http::{Request, StatusCode};
     use axum::routing::{get, patch, post};
-    use axum::Router;
     use modkit_security::SecurityContext;
     use serde_json::Value;
     use simple_user_settings_sdk::models::{SimpleUserSettings, SimpleUserSettingsPatch};

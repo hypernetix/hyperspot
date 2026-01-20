@@ -57,10 +57,10 @@ impl TenantResolverPluginClient for Service {
         let mut items: Vec<TenantInfo> = Vec::new();
 
         // Add self-tenant first if it exists and matches filter
-        if let Some(self_info) = self.tenants.get(&source) {
-            if Self::matches_filter(self_info, filter) {
-                items.push(self_info.clone());
-            }
+        if let Some(self_info) = self.tenants.get(&source)
+            && Self::matches_filter(self_info, filter)
+        {
+            items.push(self_info.clone());
         }
 
         // Get all targets accessible by this source
@@ -73,10 +73,10 @@ impl TenantResolverPluginClient for Service {
                 if *id == source {
                     continue;
                 }
-                if let Some(info) = self.tenants.get(id) {
-                    if Self::matches_filter(info, filter) {
-                        items.push(info.clone());
-                    }
+                if let Some(info) = self.tenants.get(id)
+                    && Self::matches_filter(info, filter)
+                {
+                    items.push(info.clone());
                 }
             }
         }
