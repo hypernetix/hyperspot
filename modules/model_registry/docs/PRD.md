@@ -55,6 +55,29 @@ New models require tenant admin approval before becoming available.
 
 **Auto-approval**: configurable per tenant/provider
 
+### S5 Provider Health Monitoring
+
+Registry tracks provider health metrics for LLM Gateway routing decisions.
+
+```mermaid
+sequenceDiagram
+    participant MR as Model Registry
+    participant OB as Outbound API Gateway
+    participant P as Provider API
+
+    loop Health check interval
+        MR->>OB: Health probe
+        OB->>P: Request
+        P-->>OB: Response / timeout / error
+        OB-->>MR: latency, status
+        MR->>MR: Update provider health state
+    end
+```
+
+Metrics: latency, error rate, availability status.
+
+---
+
 ## Dependencies
 
 | Module | Role |

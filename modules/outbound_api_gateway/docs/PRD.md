@@ -61,6 +61,7 @@ sequenceDiagram
 | **Retry** | Exponential backoff for 429, 5xx |
 | **Circuit Breaker** | Fail fast when target is down |
 | **Rate Limiting** | Per-target outbound limits |
+| **Provider Rate Limits** | Per-provider TPM/RPM tracking and throttling |
 | **Timeouts** | Connect, read, total |
 
 ## Dependencies
