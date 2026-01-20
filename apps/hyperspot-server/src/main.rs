@@ -14,10 +14,6 @@ use tokio_util::sync::CancellationToken;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-// Keep sqlx drivers linked (sqlx::any quirk)
-#[allow(unused_imports)]
-use sqlx::{postgres::Postgres, sqlite::Sqlite};
-
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
 
@@ -25,12 +21,6 @@ static GLOBAL: MiMalloc = MiMalloc;
 use modkit::runtime::{
     DbOptions, OopModuleSpawnConfig, OopSpawnOptions, RunOptions, ShutdownOptions, run, shutdown,
 };
-
-fn ensure_drivers_linked() {
-    // Ensure database drivers are linked for sqlx::any
-    let _ = std::any::type_name::<Sqlite>();
-    let _ = std::any::type_name::<Postgres>();
-}
 
 /// `HyperSpot` Server - modular platform for AI services
 #[derive(Parser)]
@@ -72,8 +62,6 @@ enum Commands {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    ensure_drivers_linked();
-
     let cli = Cli::parse();
 
     if let Some(ref path) = cli.config {

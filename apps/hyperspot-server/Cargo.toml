@@ -29,7 +29,7 @@ path = "src/main.rs"
 mimalloc = { version = "0.1" }
 # Local crates
 modkit = { workspace = true, features = ["otel", "bootstrap"] }
-modkit-db = { workspace = true, features = ["sqlite"] }
+modkit-db = { workspace = true, features = ["sqlite", "pg"] }
 
 # System modules
 api_gateway = { path = "../../modules/system/api_gateway" }
@@ -55,9 +55,6 @@ clap = { workspace = true }
 serde_json = { workspace = true }
 figment = { workspace = true, features = ["yaml", "env"] }
 uuid = { workspace = true }
-
-# SQLx for driver registration workaround
-sqlx = { workspace = true, features = ["postgres", "sqlite"] }
 
 # Optional example module
 users_info = { path = "../../examples/modkit/users_info/users_info", optional = true }

@@ -2,8 +2,8 @@
 
 //! Tests for SQLite-specific functionality.
 
-use figment::{providers::Serialized, Figment};
-use modkit_db::{manager::DbManager, DbError};
+use figment::{Figment, providers::Serialized};
+use modkit_db::{DbError, manager::DbManager};
 use tempfile::TempDir;
 
 /// Test relative path resolution.
@@ -324,6 +324,7 @@ async fn test_sqlite_shared_memory_database() {
         Ok(Some(_handle)) => {
             // Connection succeeded - this proves the shared memory DSN was used correctly.
             // The handle's DSN is simplified for security/logging and doesn't preserve query params.
+            std::fs::remove_file("memdb").unwrap();
         }
         Ok(None) => {
             panic!("Expected database handle for shared memory SQLite");

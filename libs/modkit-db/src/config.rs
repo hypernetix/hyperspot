@@ -114,8 +114,8 @@ impl PoolCfg {
     #[must_use]
     pub fn apply_pg(
         &self,
-        mut opts: sqlx::postgres::PgPoolOptions,
-    ) -> sqlx::postgres::PgPoolOptions {
+        mut opts: sea_orm::sqlx::postgres::PgPoolOptions,
+    ) -> sea_orm::sqlx::postgres::PgPoolOptions {
         if let Some(max_conns) = self.max_conns {
             opts = opts.max_connections(max_conns);
         }
@@ -142,8 +142,8 @@ impl PoolCfg {
     #[must_use]
     pub fn apply_mysql(
         &self,
-        mut opts: sqlx::mysql::MySqlPoolOptions,
-    ) -> sqlx::mysql::MySqlPoolOptions {
+        mut opts: sea_orm::sqlx::mysql::MySqlPoolOptions,
+    ) -> sea_orm::sqlx::mysql::MySqlPoolOptions {
         if let Some(max_conns) = self.max_conns {
             opts = opts.max_connections(max_conns);
         }
@@ -170,8 +170,8 @@ impl PoolCfg {
     #[must_use]
     pub fn apply_sqlite(
         &self,
-        mut opts: sqlx::sqlite::SqlitePoolOptions,
-    ) -> sqlx::sqlite::SqlitePoolOptions {
+        mut opts: sea_orm::sqlx::sqlite::SqlitePoolOptions,
+    ) -> sea_orm::sqlx::sqlite::SqlitePoolOptions {
         if let Some(max_conns) = self.max_conns {
             opts = opts.max_connections(max_conns);
         }

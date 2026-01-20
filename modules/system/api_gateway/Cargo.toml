@@ -1,16 +1,17 @@
 [package]
 name = "api_gateway"
-version.workspace = true
+version = "0.1.0"
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
-
-[lints]
-workspace = true
+rust-version.workspace = true
+description = "API Gateway module"
 
 [lib]
 name = "api_gateway"
-path = "src/lib.rs"
+
+[lints]
+workspace = true
 
 [dependencies]
 modkit = { workspace = true }

@@ -126,7 +126,7 @@ jobs:
       - name: cargo test (no ui)
         env:
           RUSTFLAGS: "-C debuginfo=0"
-        run: cargo test --workspace --no-fail-fast --exclude modkit-macros --exclude modkit-db-macros
+        run: cargo test --workspace --no-fail-fast --exclude cf-modkit-macros --exclude cf-modkit-db-macros
       - name: disk space
         if: always() && runner.os == 'Linux' 
         run: df -h && df -i
@@ -363,7 +363,7 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: cargo clippy (modkit-db only)
-        run: cargo clippy -p cf-modkit-db --all-targets -- -D warnings
+        run: cargo clippy -p cf-modkit-db --all-targets --features "${{ matrix.backend }}" -- -D warnings
 
       - name: Build modkit-db
         run: cargo build -p cf-modkit-db --features "${{ matrix.backend }}"

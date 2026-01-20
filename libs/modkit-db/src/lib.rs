@@ -1,15 +1,4 @@
 #![cfg_attr(coverage_nightly, feature(coverage_attribute))]
-#![cfg_attr(
-    not(any(feature = "pg", feature = "mysql", feature = "sqlite")),
-    allow(
-        unused_imports,
-        unused_variables,
-        dead_code,
-        unreachable_code,
-        unused_lifetimes
-    )
-)]
-
 //! `ModKit` Database abstraction crate.
 //!
 //! This crate provides a unified interface for working with different databases
@@ -65,6 +54,18 @@
 //! // Modules can then use: ctx.db_required_async().await?
 //! ```
 
+#![cfg_attr(
+    not(any(feature = "pg", feature = "mysql", feature = "sqlite")),
+    allow(
+        unused_imports,
+        unused_variables,
+        dead_code,
+        unreachable_code,
+        unused_lifetimes,
+        clippy::unused_async,
+    )
+)]
+
 // Re-export key types for public API
 pub use advisory_locks::{DbLockGuard, LockConfig};
 
@@ -93,6 +94,7 @@ pub use options::{
 use std::time::Duration;
 
 // Internal imports
+#[cfg(any(feature = "pg", feature = "mysql", feature = "sqlite"))]
 use pool_opts::ApplyPoolOpts;
 #[cfg(feature = "sqlite")]
 use sqlite::{Pragmas, extract_sqlite_pragmas, is_memory_dsn, prepare_sqlite_path};
@@ -100,11 +102,11 @@ use sqlite::{Pragmas, extract_sqlite_pragmas, is_memory_dsn, prepare_sqlite_path
 // Used for parsing SQLite DSN query parameters
 
 #[cfg(feature = "mysql")]
-use sqlx::{MySql, MySqlPool, mysql::MySqlPoolOptions};
+use sea_orm::sqlx::{MySql, MySqlPool, mysql::MySqlPoolOptions};
 #[cfg(feature = "pg")]
-use sqlx::{PgPool, Postgres, postgres::PgPoolOptions};
+use sea_orm::sqlx::{PgPool, Postgres, postgres::PgPoolOptions};
 #[cfg(feature = "sqlite")]
-use sqlx::{Sqlite, SqlitePool, sqlite::SqlitePoolOptions};
+use sea_orm::sqlx::{Sqlite, SqlitePool, sqlite::SqlitePoolOptions};
 
 use sea_orm::DatabaseConnection;
 #[cfg(feature = "mysql")]
@@ -152,8 +154,9 @@ pub enum DbError {
     #[error("URL parsing error: {0}")]
     UrlParse(#[from] url::ParseError),
 
+    #[cfg(any(feature = "pg", feature = "mysql", feature = "sqlite"))]
     #[error(transparent)]
-    Sqlx(#[from] sqlx::Error),
+    Sqlx(#[from] sea_orm::sqlx::Error),
 
     #[error(transparent)]
     Sea(#[from] sea_orm::DbErr),
@@ -229,11 +232,11 @@ pub enum DbPool {
 /// Database transaction wrapper (lifetime-bound to the pool).
 pub enum DbTransaction<'a> {
     #[cfg(feature = "pg")]
-    Postgres(sqlx::Transaction<'a, Postgres>),
+    Postgres(sea_orm::sqlx::Transaction<'a, Postgres>),
     #[cfg(feature = "mysql")]
-    MySql(sqlx::Transaction<'a, MySql>),
+    MySql(sea_orm::sqlx::Transaction<'a, MySql>),
     #[cfg(feature = "sqlite")]
-    Sqlite(sqlx::Transaction<'a, Sqlite>),
+    Sqlite(sea_orm::sqlx::Transaction<'a, Sqlite>),
     // When no concrete DB feature is enabled, keep a variant to tie `'a` so
     // the type still compiles and can be referenced in signatures.
     #[cfg(not(any(feature = "pg", feature = "mysql", feature = "sqlite")))]
@@ -285,6 +288,7 @@ pub struct DbHandle {
     sea: DatabaseConnection,
 }
 
+#[cfg(feature = "sqlite")]
 const DEFAULT_SQLITE_BUSY_TIMEOUT: i32 = 5000;
 
 impl DbHandle {
@@ -330,6 +334,8 @@ impl DbHandle {
                     sea,
                 })
             }
+            #[cfg(not(feature = "pg"))]
+            DbEngine::Postgres => Err(DbError::FeatureDisabled("PostgreSQL feature not enabled")),
             #[cfg(feature = "mysql")]
             DbEngine::MySql => {
                 let o = MySqlPoolOptions::new().apply(&opts);
@@ -342,6 +348,8 @@ impl DbHandle {
                     sea,
                 })
             }
+            #[cfg(not(feature = "mysql"))]
+            DbEngine::MySql => Err(DbError::FeatureDisabled("MySQL feature not enabled")),
             #[cfg(feature = "sqlite")]
             DbEngine::Sqlite => {
                 let dsn = prepare_sqlite_path(dsn, opts.create_sqlite_dirs)?;
@@ -371,7 +379,7 @@ impl DbHandle {
                         };
 
                         let stmt = format!("PRAGMA journal_mode = {journal_mode}");
-                        sqlx::query(&stmt).execute(&mut *conn).await?;
+                        sea_orm::sqlx::query(&stmt).execute(&mut *conn).await?;
 
                         // Apply synchronous mode
                         let sync_mode = pragmas
@@ -379,14 +387,14 @@ impl DbHandle {
                             .as_ref()
                             .map_or("NORMAL", |s| s.as_sql());
                         let stmt = format!("PRAGMA synchronous = {sync_mode}");
-                        sqlx::query(&stmt).execute(&mut *conn).await?;
+                        sea_orm::sqlx::query(&stmt).execute(&mut *conn).await?;
 
                         // Apply busy timeout (skip for in-memory databases)
                         if !is_memory {
                             let timeout = pragmas
                                 .busy_timeout_ms
                                 .unwrap_or(DEFAULT_SQLITE_BUSY_TIMEOUT.into());
-                            sqlx::query("PRAGMA busy_timeout = ?")
+                            sea_orm::sqlx::query("PRAGMA busy_timeout = ?")
                                 .bind(timeout)
                                 .execute(&mut *conn)
                                 .await?;
@@ -406,12 +414,8 @@ impl DbHandle {
                     sea,
                 })
             }
-            #[cfg(not(feature = "pg"))]
-            DbEngine::Postgres => Err(DbError::FeatureDisabled("PostgreSQL feature not enabled")),
-            #[cfg(not(feature = "mysql"))]
-            DbEngine::MySql => Err(DbError::FeatureDisabled("MySQL feature not enabled")),
-            #[cfg(not(any(feature = "pg", feature = "mysql", feature = "sqlite")))]
-            _ => Err(DbError::FeatureDisabled("no DB features enabled")),
+            #[cfg(not(feature = "sqlite"))]
+            DbEngine::Sqlite => Err(DbError::FeatureDisabled("SQLite feature not enabled")),
         }
     }
 
@@ -539,7 +543,7 @@ impl DbHandle {
     pub async fn with_pg_tx<F, T>(&self, f: F) -> Result<T>
     where
         F: for<'a> FnOnce(
-            &'a mut sqlx::Transaction<'_, Postgres>,
+            &'a mut sea_orm::sqlx::Transaction<'_, Postgres>,
         ) -> std::pin::Pin<
             Box<dyn std::future::Future<Output = Result<T>> + Send + 'a>,
         >,
@@ -570,7 +574,7 @@ impl DbHandle {
     pub async fn with_mysql_tx<F, T>(&self, f: F) -> Result<T>
     where
         F: for<'a> FnOnce(
-            &'a mut sqlx::Transaction<'_, MySql>,
+            &'a mut sea_orm::sqlx::Transaction<'_, MySql>,
         ) -> std::pin::Pin<
             Box<dyn std::future::Future<Output = Result<T>> + Send + 'a>,
         >,
@@ -600,7 +604,7 @@ impl DbHandle {
     pub async fn with_sqlite_tx<F, T>(&self, f: F) -> Result<T>
     where
         F: for<'a> FnOnce(
-            &'a mut sqlx::Transaction<'_, Sqlite>,
+            &'a mut sea_orm::sqlx::Transaction<'_, Sqlite>,
         ) -> std::pin::Pin<
             Box<dyn std::future::Future<Output = Result<T>> + Send + 'a>,
         >,
@@ -686,6 +690,7 @@ impl DbHandle {
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
+    #[cfg(feature = "sqlite")]
     use tokio::time::Duration;
 
     #[cfg(feature = "sqlite")]
@@ -713,15 +718,15 @@ mod tests {
 
         // Test that we can execute queries (confirming the connection works)
         let pool = db.sqlx_sqlite().unwrap();
-        sqlx::query("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
+        sea_orm::sqlx::query("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
             .execute(pool)
             .await?;
-        sqlx::query("INSERT INTO test (name) VALUES (?)")
+        sea_orm::sqlx::query("INSERT INTO test (name) VALUES (?)")
             .bind("test_value")
             .execute(pool)
             .await?;
 
-        let row: (i64, String) = sqlx::query_as("SELECT id, name FROM test WHERE id = 1")
+        let row: (i64, String) = sea_orm::sqlx::query_as("SELECT id, name FROM test WHERE id = 1")
             .fetch_one(pool)
             .await?;
 

@@ -74,6 +74,7 @@ async fn test_precedence_module_fields_override_server() {
 }
 
 /// Test that module DSN completely overrides server DSN using `SQLite`.
+#[cfg(feature = "sqlite")]
 #[tokio::test]
 async fn test_precedence_module_dsn_override_server() {
     let test_data = common::test_data_dir();
@@ -248,6 +249,7 @@ async fn test_conflict_detection_nonsqlite_dsn_with_sqlite_fields() {
 
 /// Test graceful handling when both file and path are specified.
 /// The system should prioritize 'file' (converted to absolute path) and ignore 'path'.
+#[cfg(feature = "sqlite")]
 #[tokio::test]
 async fn test_file_and_path_handling() {
     let temp_dir = TempDir::new().unwrap();
@@ -315,7 +317,7 @@ async fn test_unknown_server_reference() {
     }
 }
 
-/// Test feature disabled error when SQLite is not compiled.
+/// Test feature disabled error when `SQLite` is not compiled.
 #[tokio::test]
 #[cfg(not(feature = "sqlite"))]
 async fn test_feature_disabled_error() {
@@ -338,7 +340,7 @@ async fn test_feature_disabled_error() {
     if let Err(DbError::FeatureDisabled(msg)) = result {
         assert!(msg.contains("SQLite feature not enabled"));
     } else {
-        panic!("Expected FeatureDisabled error, got: {:?}", result);
+        panic!("Expected FeatureDisabled error, got: {result:?}");
     }
 }
 

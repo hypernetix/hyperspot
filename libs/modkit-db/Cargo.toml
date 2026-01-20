@@ -5,6 +5,8 @@ edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+rust-version.workspace = true
+description = "ModKit database library"
 
 [lib]
 name = "modkit_db"
@@ -15,9 +17,9 @@ workspace = true
 [features]
 # You can use: sqlite + sea-orm for local development
 default = []
-pg = ["sqlx/postgres", "sea-orm/sqlx-postgres"]
-mysql = ["sqlx/mysql", "sea-orm/sqlx-mysql"]
-sqlite = ["sqlx/sqlite", "sea-orm/sqlx-sqlite"]
+pg = ["sea-orm/sqlx-postgres"]
+mysql = ["sea-orm/sqlx-mysql"]
+sqlite = ["sea-orm/sqlx-sqlite"]
 integration = []
 
 # SECURITY: Escape hatch for administrative operations (OFF by default)
@@ -28,13 +30,6 @@ insecure-escape = []
 [dependencies]
 anyhow = { workspace = true }
 tokio = { workspace = true }
-sqlx = { workspace = true, features = [
-    "runtime-tokio",
-    "tls-rustls",
-    "macros",
-    "uuid",
-    "chrono",
-] }
 xxhash-rust = { workspace = true }
 dirs = { workspace = true }
 chrono = { workspace = true, features = ["serde", "clock"] }

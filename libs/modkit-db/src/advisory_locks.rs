@@ -26,14 +26,14 @@ use xxhash_rust::xxh3::xxh3_64;
 use chrono::SecondsFormat;
 
 #[cfg(feature = "mysql")]
-use sqlx::MySql;
+use sea_orm::sqlx::MySql;
 #[cfg(feature = "pg")]
-use sqlx::Postgres;
+use sea_orm::sqlx::Postgres;
 
 #[cfg(feature = "mysql")]
-type MySqlPoolConnection = sqlx::pool::PoolConnection<MySql>;
+type MySqlPoolConnection = sea_orm::sqlx::pool::PoolConnection<MySql>;
 #[cfg(feature = "pg")]
-type PostgresPoolConnection = sqlx::pool::PoolConnection<Postgres>;
+type PostgresPoolConnection = sea_orm::sqlx::pool::PoolConnection<Postgres>;
 use tokio::fs::File;
 
 use crate::{DbEngine, DbPool};
@@ -131,7 +131,7 @@ async fn unlock_inner(inner: GuardInner) {
     match inner {
         #[cfg(feature = "pg")]
         GuardInner::Postgres { mut conn, key_hash } => {
-            if let Err(e) = sqlx::query("SELECT pg_advisory_unlock($1)")
+            if let Err(e) = sea_orm::sqlx::query("SELECT pg_advisory_unlock($1)")
                 .bind(key_hash)
                 .execute(&mut *conn)
                 .await
@@ -146,7 +146,7 @@ async fn unlock_inner(inner: GuardInner) {
             lock_name,
         } => {
             // RELEASE_LOCK returns 1 on success, 0 if you didn't own, NULL on error.
-            if let Err(e) = sqlx::query_scalar::<_, Option<i64>>("SELECT RELEASE_LOCK(?)")
+            if let Err(e) = sea_orm::sqlx::query_scalar::<_, Option<i64>>("SELECT RELEASE_LOCK(?)")
                 .bind(&lock_name)
                 .fetch_one(&mut *conn)
                 .await
@@ -279,6 +279,7 @@ impl LockManager {
 
     #[cfg(feature = "pg")]
     async fn lock_pg(&self, namespaced_key: &str) -> Result<DbLockGuard, DbLockError> {
+        #[allow(irrefutable_let_patterns)] // We could have more than 1 feature enabled
         let DbPool::Postgres(ref pool) = self.pool else {
             return Err(DbLockError::InvalidState(
                 "not a PostgreSQL pool".to_owned(),
@@ -292,7 +293,7 @@ impl LockManager {
         )]
         let key_hash = xxh3_64(namespaced_key.as_bytes()) as i64;
 
-        sqlx::query("SELECT pg_advisory_lock($1)")
+        sea_orm::sqlx::query("SELECT pg_advisory_lock($1)")
             .bind(key_hash)
             .execute(&mut *conn)
             .await?; // sqlx::Error via #[from]
@@ -305,6 +306,7 @@ impl LockManager {
 
     #[cfg(feature = "pg")]
     async fn try_lock_pg(&self, namespaced_key: &str) -> Result<Option<DbLockGuard>, DbLockError> {
+        #[allow(irrefutable_let_patterns)] // We could have more than 1 feature enabled
         let DbPool::Postgres(ref pool) = self.pool else {
             return Err(DbLockError::InvalidState(
                 "not a PostgreSQL pool".to_owned(),
@@ -318,7 +320,7 @@ impl LockManager {
         )]
         let key_hash = xxh3_64(namespaced_key.as_bytes()) as i64;
 
-        let (ok,): (bool,) = sqlx::query_as("SELECT pg_try_advisory_lock($1)")
+        let (ok,): (bool,) = sea_orm::sqlx::query_as("SELECT pg_try_advisory_lock($1)")
             .bind(key_hash)
             .fetch_one(&mut *conn)
             .await?; // sqlx::Error via #[from]
@@ -336,6 +338,7 @@ impl LockManager {
 
     #[cfg(feature = "mysql")]
     async fn lock_mysql(&self, namespaced_key: &str) -> Result<DbLockGuard, DbLockError> {
+        #[allow(irrefutable_let_patterns)] // We could have more than 1 feature enabled
         let DbPool::MySql(ref pool) = self.pool else {
             return Err(DbLockError::InvalidState("not a MySQL pool".to_owned()));
         };
@@ -343,7 +346,7 @@ impl LockManager {
 
         // GET_LOCK(name, timeout_seconds)
         // Note: timeout=0 returns immediately (non-blocking). Use a large timeout to block.
-        let (ok,): (i64,) = sqlx::query_as("SELECT GET_LOCK(?, 31536000)") // ~1 year
+        let (ok,): (i64,) = sea_orm::sqlx::query_as("SELECT GET_LOCK(?, 31536000)") // ~1 year
             .bind(namespaced_key)
             .fetch_one(&mut *conn)
             .await?; // sqlx::Error via #[from]
@@ -368,13 +371,14 @@ impl LockManager {
         &self,
         namespaced_key: &str,
     ) -> Result<Option<DbLockGuard>, DbLockError> {
+        #[allow(irrefutable_let_patterns)] // We could have more than 1 feature enabled
         let DbPool::MySql(ref pool) = self.pool else {
             return Err(DbLockError::InvalidState("not a MySQL pool".to_owned()));
         };
         let mut conn = pool.acquire().await?; // sqlx::Error via #[from]
 
         // Try immediate acquisition; timeout 0 means immediate return.
-        let (ok,): (i64,) = sqlx::query_as("SELECT GET_LOCK(?, 0)")
+        let (ok,): (i64,) = sea_orm::sqlx::query_as("SELECT GET_LOCK(?, 0)")
             .bind(namespaced_key)
             .fetch_one(&mut *conn)
             .await?; // sqlx::Error via #[from]
@@ -529,7 +533,7 @@ pub enum DbLockError {
     /// sqlx errors are propagated verbatim when database features are enabled.
     #[cfg(any(feature = "pg", feature = "mysql"))]
     #[error("SQLx error: {0}")]
-    Sqlx(#[from] sqlx::Error),
+    Sqlx(#[from] sea_orm::sqlx::Error),
 
     #[error("Lock already held: {lock_name}")]
     AlreadyHeld { lock_name: String },
@@ -544,6 +548,7 @@ pub enum DbLockError {
 // --------------------------- Tests -------------------------------------------
 
 #[cfg(test)]
+#[cfg(feature = "sqlite")]
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
@@ -551,10 +556,9 @@ mod tests {
     use std::sync::Arc;
 
     #[tokio::test]
-    #[cfg(feature = "sqlite")]
     async fn test_namespaced_locks() -> Result<()> {
         let dsn = "sqlite:file:memdb3?mode=memory&cache=shared";
-        let pool = sqlx::SqlitePool::connect(dsn).await?;
+        let pool = sea_orm::sqlx::SqlitePool::connect(dsn).await?;
         let lock_manager = LockManager::new(
             crate::DbEngine::Sqlite,
             crate::DbPool::Sqlite(pool),
@@ -586,10 +590,9 @@ mod tests {
     }
 
     #[tokio::test]
-    #[cfg(feature = "sqlite")]
     async fn test_try_lock_with_timeout() -> Result<()> {
         let dsn = "sqlite:file:memdb4?mode=memory&cache=shared";
-        let pool = sqlx::SqlitePool::connect(dsn).await?;
+        let pool = sea_orm::sqlx::SqlitePool::connect(dsn).await?;
         let lock_manager = Arc::new(LockManager::new(
             DbEngine::Sqlite,
             DbPool::Sqlite(pool),
@@ -624,10 +627,9 @@ mod tests {
     }
 
     #[tokio::test]
-    #[cfg(feature = "sqlite")]
     async fn test_try_lock_success() -> Result<()> {
         let dsn = "sqlite:file:memdb5?mode=memory&cache=shared";
-        let pool = sqlx::SqlitePool::connect(dsn).await?;
+        let pool = sea_orm::sqlx::SqlitePool::connect(dsn).await?;
         let lock_manager = LockManager::new(DbEngine::Sqlite, DbPool::Sqlite(pool), dsn.to_owned());
 
         let test_id = format!(
@@ -650,10 +652,9 @@ mod tests {
     }
 
     #[tokio::test]
-    #[cfg(feature = "sqlite")]
     async fn test_double_lock_same_key_errors() -> Result<()> {
         let dsn = "sqlite:file:memdb6?mode=memory&cache=shared";
-        let pool = sqlx::SqlitePool::connect(dsn).await?;
+        let pool = sea_orm::sqlx::SqlitePool::connect(dsn).await?;
         let lock_manager = LockManager::new(DbEngine::Sqlite, DbPool::Sqlite(pool), dsn.to_owned());
 
         let test_id = format!(
@@ -681,10 +682,9 @@ mod tests {
     }
 
     #[tokio::test]
-    #[cfg(feature = "sqlite")]
     async fn test_try_lock_conflict_returns_none() -> Result<()> {
         let dsn = "sqlite:file:memdb7?mode=memory&cache=shared";
-        let pool = sqlx::SqlitePool::connect(dsn).await?;
+        let pool = sea_orm::sqlx::SqlitePool::connect(dsn).await?;
         let lock_manager = LockManager::new(DbEngine::Sqlite, DbPool::Sqlite(pool), dsn.to_owned());
 
         let key = format!(
