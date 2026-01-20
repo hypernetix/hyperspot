@@ -52,7 +52,8 @@ async fn test_build_db_handle_sqlite_file() {
 #[tokio::test]
 async fn test_build_db_handle_env_expansion() {
     // Set a test environment variable
-    std::env::set_var("TEST_DB_PASSWORD", "secret123");
+    // TODO: Audit that the environment access only happens in single-threaded code.
+    unsafe { std::env::set_var("TEST_DB_PASSWORD", "secret123") };
 
     let config = DbConnConfig {
         dsn: Some("sqlite::memory:".to_owned()),
@@ -64,7 +65,8 @@ async fn test_build_db_handle_env_expansion() {
     assert!(result.is_ok());
 
     // Clean up
-    std::env::remove_var("TEST_DB_PASSWORD");
+    // TODO: Audit that the environment access only happens in single-threaded code.
+    unsafe { std::env::remove_var("TEST_DB_PASSWORD") };
 }
 
 #[tokio::test]

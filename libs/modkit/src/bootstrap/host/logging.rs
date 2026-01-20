@@ -333,20 +333,20 @@ fn create_default_file_writer(section: &Section, base_dir: &Path) -> Option<RotW
     let max_bytes = section.max_size_bytes();
     let log_path = resolve_log_path(&section.file, base_dir);
 
-    if let Ok(writer) = create_rotating_writer_at_path(
+    match create_rotating_writer_at_path(
         &log_path,
         max_bytes,
         section.max_age_days,
         section.max_backups,
-    ) {
+    ) { Ok(writer) => {
         Some(writer)
-    } else {
+    } _ => {
         eprintln!(
             "Failed to initialize default log file '{}'",
             log_path.to_string_lossy()
         );
         None
-    }
+    }}
 }
 
 fn create_crate_file_writer(

@@ -29,12 +29,12 @@ impl Parse for GrpcClientConfig {
             input.parse_terminated(Meta::parse, Token![,])?;
 
         for meta in punctuated {
-            if let Some(path) = parse_path_attribute("api", &meta)? {
+            match parse_path_attribute("api", &meta)? { Some(path) => {
                 if api.is_some() {
                     return Err(syn::Error::new_spanned(meta, "duplicate `api` parameter"));
                 }
                 api = Some(path);
-            } else if let Some(s) = parse_string_attribute("tonic", &meta)? {
+            } _ => if let Some(s) = parse_string_attribute("tonic", &meta)? {
                 if tonic.is_some() {
                     return Err(syn::Error::new_spanned(meta, "duplicate `tonic` parameter"));
                 }
@@ -52,7 +52,7 @@ impl Parse for GrpcClientConfig {
                     meta,
                     "unknown parameter; expected `api`, `tonic`, or `package`",
                 ));
-            }
+            }}
         }
 
         let api = api.ok_or_else(|| {

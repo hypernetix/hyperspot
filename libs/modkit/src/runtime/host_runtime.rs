@@ -462,11 +462,11 @@ impl HostRuntime {
     /// Stop a single module, logging errors but continuing execution.
     async fn stop_one_module(entry: &ModuleEntry, cancel: CancellationToken) {
         if let Some(s) = entry.caps.query::<RunnableCap>() {
-            if let Err(err) = s.stop(cancel).await {
+            match s.stop(cancel).await { Err(err) => {
                 tracing::warn!(module = entry.name, error = %err, "Failed to stop module");
-            } else {
+            } _ => {
                 tracing::info!(module = entry.name, "Stopped module");
-            }
+            }}
         }
     }
 

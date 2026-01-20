@@ -1241,7 +1241,8 @@ logging:
         // Ensure platform env is present for home resolution in CI.
         let tmp = tempdir().unwrap();
         #[cfg(target_os = "windows")]
-        env::set_var("APPDATA", tmp.path());
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { env::set_var("APPDATA", tmp.path()) };
         #[cfg(not(target_os = "windows"))]
         env::set_var("HOME", tmp.path());
         let config = AppConfig::load_or_default(None::<&str>).unwrap();
@@ -1256,7 +1257,8 @@ logging:
 
         // Set up environment variables for home directory resolution
         #[cfg(target_os = "windows")]
-        env::set_var("APPDATA", tmp.path());
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { env::set_var("APPDATA", tmp.path()) };
         #[cfg(not(target_os = "windows"))]
         env::set_var("HOME", tmp.path());
 
@@ -1616,7 +1618,8 @@ logging:
         let home_dir = tmp.path();
 
         // Set environment variable for test
-        env::set_var("TEST_DB_PASSWORD", "secret123");
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { env::set_var("TEST_DB_PASSWORD", "secret123") };
 
         let mut app = create_app_with_server(
             "test_server",
@@ -1645,7 +1648,8 @@ logging:
         assert!(dsn.contains("secret123"));
 
         // Clean up
-        env::remove_var("TEST_DB_PASSWORD");
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { env::remove_var("TEST_DB_PASSWORD") };
     }
 
     #[test]
@@ -1654,8 +1658,10 @@ logging:
         let home_dir = tmp.path();
 
         // Set environment variables for test
-        env::set_var("DB_HOST", "test-server");
-        env::set_var("DB_PASSWORD", "env_secret");
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { env::set_var("DB_HOST", "test-server") };
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { env::set_var("DB_PASSWORD", "env_secret") };
 
         let mut app = create_app_with_server(
             "test_server",
@@ -1684,8 +1690,10 @@ logging:
         assert!(!dsn.contains("${DB_PASSWORD}"));
 
         // Clean up
-        env::remove_var("DB_HOST");
-        env::remove_var("DB_PASSWORD");
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { env::remove_var("DB_HOST") };
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { env::remove_var("DB_PASSWORD") };
     }
 
     #[test]
@@ -2037,7 +2045,8 @@ logging:
         let home_dir = tmp.path();
 
         // Ensure the env var doesn't exist
-        env::remove_var("NONEXISTENT_PASSWORD");
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { env::remove_var("NONEXISTENT_PASSWORD") };
 
         let mut app = create_app_with_server(
             "test_server",

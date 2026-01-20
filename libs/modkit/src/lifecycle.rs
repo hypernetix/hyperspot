@@ -382,7 +382,7 @@ impl Lifecycle {
                 }
                 Err(e) if e.is_panic() => {
                     // Extract panic information if possible
-                    if let Ok(panic_payload) = e.try_into_panic() {
+                    match e.try_into_panic() { Ok(panic_payload) => {
                         let panic_msg = panic_payload
                             .downcast_ref::<&str>()
                             .copied()
@@ -396,13 +396,13 @@ impl Lifecycle {
                             panic_message = %panic_msg,
                             "lifecycle task panicked - this indicates a serious bug"
                         );
-                    } else {
+                    } _ => {
                         tracing::error!(
                             task_id = %task_id,
                             module = %module_name,
                             "lifecycle task panicked (could not extract panic message)"
                         );
-                    }
+                    }}
                 }
                 Err(e) => {
                     tracing::warn!(task_id = %task_id, module = %module_name, error = %e, "lifecycle task join error");
