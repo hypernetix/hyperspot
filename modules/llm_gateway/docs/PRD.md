@@ -322,7 +322,7 @@ sequenceDiagram
 
 ### [ ] S1.11 Structured Output
 
-Consumer requests response matching JSON schema. Gateway validates response against schema.
+Consumer requests response matching JSON schema. Gateway validates response against schema. On validation failure, Gateway retries with error context.
 
 ```mermaid
 sequenceDiagram
@@ -508,7 +508,11 @@ sequenceDiagram
 
 ### [ ] S2.3 Timeout Enforcement
 
-Gateway enforces request timeouts. On timeout → retry → fallback → error.
+Gateway enforces timeout types:
+- **Time-to-first-token (TTFT)**: max wait for initial response chunk
+- **Total generation timeout**: max duration for complete response
+
+On timeout → retry → fallback → error.
 
 ---
 
@@ -655,6 +659,36 @@ When multiple providers can serve request, Gateway selects based on cost and lat
 ### [ ] S3.2 Embeddings Batching
 
 Gateway batches embedding requests within time window for efficiency. No cross-tenant batching. Supports partial failure reporting.
+
+---
+
+### [ ] S3.3 Batch Processing
+
+Consumer submits batch of requests for async processing at reduced cost.
+
+Gateway abstracts provider batch APIs (OpenAI Batch API, Anthropic Message Batches).
+
+```mermaid
+sequenceDiagram
+    participant C as Consumer
+    participant GW as LLM Gateway
+    participant OB as Outbound API Gateway
+    participant P as Provider
+
+    C->>GW: create_batch(requests[])
+    GW->>OB: Submit batch
+    OB->>P: Provider batch API
+    P-->>OB: batch_id
+    OB-->>GW: batch_id
+    GW-->>C: batch_id
+
+    C->>GW: get_batch(batch_id)
+    GW->>OB: Check status
+    OB->>P: Poll batch
+    P-->>OB: status + results[]
+    OB-->>GW: status + results[]
+    GW-->>C: status + results[]
+```
 
 ---
 
