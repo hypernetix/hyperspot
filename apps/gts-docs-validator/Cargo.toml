@@ -1,0 +1,43 @@
+[package]
+name = "gts-docs-validator"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "GTS identifier validator for documentation files (DE0903)"
+
+[[bin]]
+name = "gts-docs-validator"
+path = "src/main.rs"
+
+[dependencies]
+# CLI parsing
+clap = { workspace = true }
+
+# GTS library for ID validation
+gts = { workspace = true }
+
+# File system traversal
+walkdir = { workspace = true }
+glob = { workspace = true }
+
+# Regex for pattern matching
+regex = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Error handling
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# For colored terminal output
+colored = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+
+[lints]
+workspace = true
