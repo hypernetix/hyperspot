@@ -2,7 +2,7 @@ use crate::api::rest::{
     FileParserInfoDto, InlineDto, InlineStyleDto, ParsedBlockDto, ParsedDocMetadataDto,
     ParsedDocSourceDto, ParsedDocumentDto, TableBlockDto, TableCellDto, TableRowDto,
 };
-use crate::domain::{ir, FileParserInfo};
+use crate::domain::{FileParserInfo, ir};
 
 // Conversion implementations
 impl From<FileParserInfo> for FileParserInfoDto {

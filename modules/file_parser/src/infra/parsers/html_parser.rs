@@ -107,20 +107,16 @@ fn parse_html_bytes(
 
     let parser = dom.parser();
     let mut blocks = Vec::new();
-    let mut title = None;
 
-    // Try to extract title from <title> tag
-    if let Some(title_node) = dom.query_selector("title").and_then(|mut iter| iter.next()) {
-        if let Some(node) = title_node.get(parser) {
-            let text = node.inner_text(parser);
-            title = Some(text.to_string());
-        }
-    }
-
-    // Fall back to filename if no title found
-    if title.is_none() {
-        title = filename.map(ToString::to_string);
-    }
+    // Try to extract title from <title> tag, fall back to filename
+    let title = if let Some(title_node) =
+        dom.query_selector("title").and_then(|mut iter| iter.next())
+        && let Some(node) = title_node.get(parser)
+    {
+        Some(node.inner_text(parser).to_string())
+    } else {
+        filename.map(ToString::to_string)
+    };
 
     // Extract body content
     if let Some(body) = dom.query_selector("body").and_then(|mut iter| iter.next()) {
@@ -200,18 +196,18 @@ fn extract_blocks_from_node(
             let ordered = tag_name.as_ref() == "ol";
             // Process children with increased list level
             for child in tag.children().top().iter() {
-                if let Some(child_tag) = child.get(parser).and_then(|n| n.as_tag()) {
-                    if child_tag.name().as_utf8_str() == "li" {
-                        let text = child_tag.inner_text(parser).trim().to_owned();
-                        if !text.is_empty() {
-                            blocks.push(ParsedBlock::ListItem {
-                                level: list_level,
-                                ordered,
-                                blocks: vec![ParsedBlock::Paragraph {
-                                    inlines: vec![Inline::plain(text)],
-                                }],
-                            });
-                        }
+                if let Some(child_tag) = child.get(parser).and_then(|n| n.as_tag())
+                    && child_tag.name().as_utf8_str() == "li"
+                {
+                    let text = child_tag.inner_text(parser).trim().to_owned();
+                    if !text.is_empty() {
+                        blocks.push(ParsedBlock::ListItem {
+                            level: list_level,
+                            ordered,
+                            blocks: vec![ParsedBlock::Paragraph {
+                                inlines: vec![Inline::plain(text)],
+                            }],
+                        });
                     }
                 }
             }

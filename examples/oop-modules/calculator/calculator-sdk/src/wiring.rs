@@ -8,9 +8,9 @@ use anyhow::Result;
 use modkit::client_hub::ClientHub;
 use module_orchestrator_sdk::DirectoryClient;
 
+use crate::SERVICE_NAME;
 use crate::api::CalculatorClient;
 use crate::client::CalculatorGrpcClient;
-use crate::SERVICE_NAME;
 
 /// Wire the Calculator gRPC client into the ClientHub.
 ///

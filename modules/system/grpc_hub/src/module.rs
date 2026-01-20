@@ -5,11 +5,11 @@
 use anyhow::Context;
 use async_trait::async_trait;
 use modkit::{
+    DirectoryClient,
     context::ModuleCtx,
     contracts::{Module, SystemCapability},
     lifecycle::ReadySignal,
     runtime::{GrpcInstallerData, GrpcInstallerStore, ModuleInstallers},
-    DirectoryClient,
 };
 
 use parking_lot::RwLock;
@@ -563,7 +563,7 @@ mod tests {
         sync::Arc,
         task::{Context as TaskContext, Poll},
     };
-    use tokio::time::{sleep, Duration};
+    use tokio::time::{Duration, sleep};
     use tokio_util::sync::CancellationToken;
     use tonic::{body::Body, server::NamedService};
     use tower::Service;

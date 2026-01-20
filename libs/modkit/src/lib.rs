@@ -75,7 +75,7 @@ pub use crate::contracts::{GrpcServiceCapability, RegisterGrpcServiceFn};
 
 // Configuration module
 pub mod config;
-pub use config::{module_config_or_default, module_config_required, ConfigError, ConfigProvider};
+pub use config::{ConfigError, ConfigProvider, module_config_or_default, module_config_required};
 
 // Context module
 pub mod context;
@@ -97,15 +97,15 @@ pub mod contracts;
 // Type-safe API operation builder
 pub mod api;
 pub use api::{
-    error_mapping_middleware, IntoProblem, OpenApiInfo, OpenApiRegistry, OpenApiRegistryImpl,
-    OperationBuilder,
+    IntoProblem, OpenApiInfo, OpenApiRegistry, OpenApiRegistryImpl, OperationBuilder,
+    error_mapping_middleware,
 };
 pub use modkit_odata::{Page, PageInfo};
 
 // HTTP utilities
 pub mod http;
 pub use api::problem::{
-    bad_request, conflict, internal_error, not_found, Problem, ValidationError,
+    Problem, ValidationError, bad_request, conflict, internal_error, not_found,
 };
 pub use http::client::TracedClient;
 pub use http::sse::SseBroadcaster;
@@ -143,8 +143,8 @@ pub use backends::{
 };
 pub use lifecycle::{Lifecycle, Runnable, Status, StopReason, WithLifecycle};
 pub use runtime::{
-    run, DbOptions, Endpoint, ModuleInstance, ModuleManager, OopModuleSpawnConfig, OopSpawnOptions,
-    RunOptions, ShutdownOptions,
+    DbOptions, Endpoint, ModuleInstance, ModuleManager, OopModuleSpawnConfig, OopSpawnOptions,
+    RunOptions, ShutdownOptions, run,
 };
 
 #[cfg(feature = "bootstrap")]

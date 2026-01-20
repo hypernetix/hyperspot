@@ -213,7 +213,9 @@ mod tests {
             Level::INFO
         );
         assert_eq!(
-            detect_log_level("2025-12-08T00:10:18.2861457Z DEBUG modkit::bootstrap::backends::local: Sending termination signal"),
+            detect_log_level(
+                "2025-12-08T00:10:18.2861457Z DEBUG modkit::bootstrap::backends::local: Sending termination signal"
+            ),
             Level::DEBUG
         );
         assert_eq!(
@@ -234,11 +236,15 @@ mod tests {
     fn test_detect_log_level_with_spans() {
         // tracing-subscriber with span context
         assert_eq!(
-            detect_log_level("2025-12-08T00:10:18.2864778Z DEBUG stop:stop: modkit::lifecycle: lifecycle task completed"),
+            detect_log_level(
+                "2025-12-08T00:10:18.2864778Z DEBUG stop:stop: modkit::lifecycle: lifecycle task completed"
+            ),
             Level::DEBUG
         );
         assert_eq!(
-            detect_log_level("2025-12-08T00:10:18.2865251Z  INFO stop:stop: modkit::lifecycle: lifecycle stopped"),
+            detect_log_level(
+                "2025-12-08T00:10:18.2865251Z  INFO stop:stop: modkit::lifecycle: lifecycle stopped"
+            ),
             Level::INFO
         );
     }

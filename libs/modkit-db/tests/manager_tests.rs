@@ -2,7 +2,7 @@
 
 //! Tests for `DbManager` functionality.
 
-use figment::{providers::Serialized, Figment};
+use figment::{Figment, providers::Serialized};
 use modkit_db::{DbConnConfig, DbEngine, DbManager, GlobalDatabaseConfig, PoolCfg};
 use std::collections::HashMap;
 use std::time::Duration;
@@ -228,9 +228,11 @@ async fn test_dbmanager_missing_server_reference() {
     println!("Result: {result:?}");
     assert!(result.is_err());
     let error = result.unwrap_err();
-    assert!(error
-        .to_string()
-        .contains("Referenced server 'nonexistent_server' not found"));
+    assert!(
+        error
+            .to_string()
+            .contains("Referenced server 'nonexistent_server' not found")
+    );
 }
 
 #[tokio::test]

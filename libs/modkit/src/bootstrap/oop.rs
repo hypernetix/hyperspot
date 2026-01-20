@@ -43,7 +43,7 @@
 //! ```
 
 use anyhow::{Context, Result};
-use figment::{providers::Serialized, Figment};
+use figment::{Figment, providers::Serialized};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
@@ -53,13 +53,13 @@ use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
 use super::config::{
-    AppConfig, CliArgs, LoggingConfig, RenderedDbConfig, RenderedModuleConfig,
-    MODKIT_MODULE_CONFIG_ENV,
+    AppConfig, CliArgs, LoggingConfig, MODKIT_MODULE_CONFIG_ENV, RenderedDbConfig,
+    RenderedModuleConfig,
 };
 use crate::bootstrap::host::init_logging_unified;
 use crate::runtime::{
-    run, shutdown, ClientRegistration, DbOptions, RunOptions, ShutdownOptions,
-    MODKIT_DIRECTORY_ENDPOINT_ENV,
+    ClientRegistration, DbOptions, MODKIT_DIRECTORY_ENDPOINT_ENV, RunOptions, ShutdownOptions, run,
+    shutdown,
 };
 use module_orchestrator_grpc::DirectoryGrpcClient;
 use module_orchestrator_sdk::DirectoryClient;
@@ -288,23 +288,23 @@ fn build_merged_db_options(
     }
 
     // Local module database config
-    if let Some(local_module) = local_config.modules.get(module_name) {
-        if let Some(local_module_db) = local_module.get("database") {
-            let modules = merged_config
-                .entry("modules".to_owned())
+    if let Some(local_module) = local_config.modules.get(module_name)
+        && let Some(local_module_db) = local_module.get("database")
+    {
+        let modules = merged_config
+            .entry("modules".to_owned())
+            .or_insert_with(|| serde_json::Value::Object(serde_json::Map::new()));
+
+        if let Some(modules_obj) = modules.as_object_mut() {
+            let module_entry = modules_obj
+                .entry(module_name.to_owned())
                 .or_insert_with(|| serde_json::Value::Object(serde_json::Map::new()));
 
-            if let Some(modules_obj) = modules.as_object_mut() {
-                let module_entry = modules_obj
-                    .entry(module_name.to_owned())
-                    .or_insert_with(|| serde_json::Value::Object(serde_json::Map::new()));
-
-                if let Some(module_obj) = module_entry.as_object_mut() {
-                    if let Some(existing_db) = module_obj.get_mut("database") {
-                        merge_json_objects(existing_db, local_module_db);
-                    } else {
-                        module_obj.insert("database".to_owned(), local_module_db.clone());
-                    }
+            if let Some(module_obj) = module_entry.as_object_mut() {
+                if let Some(existing_db) = module_obj.get_mut("database") {
+                    merge_json_objects(existing_db, local_module_db);
+                } else {
+                    module_obj.insert("database".to_owned(), local_module_db.clone());
                 }
             }
         }

@@ -1,10 +1,10 @@
 use axum::http::Method;
 use modkit_auth::{
+    AuthConfig as ModkitAuthConfig, AuthModeConfig, JwksConfig, PluginConfig,
     authorizer::RoleAuthorizer,
     build_auth_dispatcher,
     traits::{PrimaryAuthorizer, TokenValidator},
     types::{AuthRequirement, SecRequirement},
-    AuthConfig as ModkitAuthConfig, AuthModeConfig, JwksConfig, PluginConfig,
 };
 use modkit_security::{NoopPolicyEngine, PolicyEngineRef};
 use std::{collections::HashMap, sync::Arc};

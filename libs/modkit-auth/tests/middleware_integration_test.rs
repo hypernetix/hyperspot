@@ -1,20 +1,20 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use axum::{
+    Router,
     body::Body,
     http::{Request, StatusCode},
     response::IntoResponse,
     routing::get,
-    Router,
 };
 use modkit_auth::axum_ext::AuthPolicyLayer;
 use modkit_auth::{
+    AuthConfig, AuthModeConfig, Claims, PluginConfig, ValidationConfig,
     authorizer::RoleAuthorizer,
     axum_ext::Authz,
     build_auth_dispatcher,
     traits::{PrimaryAuthorizer, TokenValidator},
     types::{AuthRequirement, RoutePolicy},
-    AuthConfig, AuthModeConfig, Claims, PluginConfig, ValidationConfig,
 };
 use std::collections::HashMap;
 use std::sync::Arc;

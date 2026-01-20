@@ -1,6 +1,6 @@
 use axum::response::{IntoResponse, Response};
 
-use super::{info, SseBroadcaster, UserEvent};
+use super::{SseBroadcaster, UserEvent, info};
 
 pub(super) fn users_events(sse: &SseBroadcaster<UserEvent>) -> Response {
     info!("New SSE connection for user events");

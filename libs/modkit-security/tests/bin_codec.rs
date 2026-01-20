@@ -1,6 +1,6 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-use modkit_security::{decode_bin, encode_bin, Permission, SecurityContext, SECCTX_BIN_VERSION};
+use modkit_security::{Permission, SECCTX_BIN_VERSION, SecurityContext, decode_bin, encode_bin};
 use uuid::Uuid;
 
 #[test]

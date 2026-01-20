@@ -1,7 +1,7 @@
 //! REST API handlers for tenant resolver gateway.
 
-use axum::extract::{Path, Query};
 use axum::Extension;
+use axum::extract::{Path, Query};
 use modkit::api::odata::OData;
 use modkit::api::prelude::*;
 use modkit::api::select::page_to_projected_json;

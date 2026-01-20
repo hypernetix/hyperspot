@@ -1,6 +1,6 @@
 use axum::{
-    extract::{Path, Query},
     Extension,
+    extract::{Path, Query},
 };
 use modkit::api::prelude::*;
 use serde::Deserialize;

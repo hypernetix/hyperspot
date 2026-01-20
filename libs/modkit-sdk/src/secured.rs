@@ -157,7 +157,7 @@ impl<T> WithSecurityContext for T {
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
-    use uuid::{uuid, Uuid};
+    use uuid::{Uuid, uuid};
 
     /// Test tenant ID for unit tests.
     const TEST_TENANT_ID: Uuid = uuid!("00000000-0000-0000-0000-000000000001");

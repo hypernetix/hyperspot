@@ -3,10 +3,10 @@ use crate::api::rest::{dto, routes};
 use crate::domain::events::UserDomainEvent;
 use crate::domain::ports::EventPublisher;
 use futures_util::StreamExt;
-use modkit::api::{OpenApiInfo, OpenApiRegistryImpl};
 use modkit::SseBroadcaster;
+use modkit::api::{OpenApiInfo, OpenApiRegistryImpl};
 use time::OffsetDateTime;
-use tokio::time::{timeout, Duration};
+use tokio::time::{Duration, timeout};
 use uuid::Uuid;
 
 #[tokio::test]

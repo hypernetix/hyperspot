@@ -51,7 +51,7 @@
 
 use crate::schema::{AsFieldKey, AsFieldName, FieldRef, Schema};
 use crate::{
-    ast::Expr, pagination::short_filter_hash, ODataOrderBy, ODataQuery, OrderKey, SortDir,
+    ODataOrderBy, ODataQuery, OrderKey, SortDir, ast::Expr, pagination::short_filter_hash,
 };
 use std::marker::PhantomData;
 

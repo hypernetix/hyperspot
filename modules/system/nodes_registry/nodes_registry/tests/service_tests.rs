@@ -4,9 +4,9 @@
 //!
 //! These tests verify service methods, error handling, and business logic.
 
+use nodes_registry::SysCap;
 use nodes_registry::domain::error::DomainError;
 use nodes_registry::domain::service::Service;
-use nodes_registry::SysCap;
 use uuid::Uuid;
 
 #[test]

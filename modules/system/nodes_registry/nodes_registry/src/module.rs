@@ -2,9 +2,9 @@ use anyhow::Result;
 use async_trait::async_trait;
 use std::sync::Arc;
 
+use modkit::Module;
 use modkit::context::ModuleCtx;
 use modkit::contracts::{OpenApiRegistry, RestApiCapability};
-use modkit::Module;
 
 use crate::domain::local_client::NodesRegistryLocalClient;
 use crate::domain::service::Service;

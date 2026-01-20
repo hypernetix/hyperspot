@@ -1,5 +1,5 @@
-use uuid::uuid;
 use uuid::Uuid;
+use uuid::uuid;
 
 /// Default tenant ID for single-tenant or auth-disabled deployments.
 ///

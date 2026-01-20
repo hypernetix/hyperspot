@@ -1,11 +1,11 @@
 use async_trait::async_trait;
 use parking_lot::Mutex;
 use std::sync::{
-    atomic::{AtomicBool, AtomicU8, Ordering},
     Arc,
+    atomic::{AtomicBool, AtomicU8, Ordering},
 };
 use std::time::Duration;
-use tokio::sync::{oneshot, Notify};
+use tokio::sync::{Notify, oneshot};
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 
@@ -382,26 +382,29 @@ impl Lifecycle {
                 }
                 Err(e) if e.is_panic() => {
                     // Extract panic information if possible
-                    if let Ok(panic_payload) = e.try_into_panic() {
-                        let panic_msg = panic_payload
-                            .downcast_ref::<&str>()
-                            .copied()
-                            .map(str::to_owned)
-                            .or_else(|| panic_payload.downcast_ref::<String>().cloned())
-                            .unwrap_or_else(|| "unknown panic".to_owned());
+                    match e.try_into_panic() {
+                        Ok(panic_payload) => {
+                            let panic_msg = panic_payload
+                                .downcast_ref::<&str>()
+                                .copied()
+                                .map(str::to_owned)
+                                .or_else(|| panic_payload.downcast_ref::<String>().cloned())
+                                .unwrap_or_else(|| "unknown panic".to_owned());
 
-                        tracing::error!(
-                            task_id = %task_id,
-                            module = %module_name,
-                            panic_message = %panic_msg,
-                            "lifecycle task panicked - this indicates a serious bug"
-                        );
-                    } else {
-                        tracing::error!(
-                            task_id = %task_id,
-                            module = %module_name,
-                            "lifecycle task panicked (could not extract panic message)"
-                        );
+                            tracing::error!(
+                                task_id = %task_id,
+                                module = %module_name,
+                                panic_message = %panic_msg,
+                                "lifecycle task panicked - this indicates a serious bug"
+                            );
+                        }
+                        _ => {
+                            tracing::error!(
+                                task_id = %task_id,
+                                module = %module_name,
+                                "lifecycle task panicked (could not extract panic message)"
+                            );
+                        }
                     }
                 }
                 Err(e) => {
@@ -637,7 +640,7 @@ impl<T: Runnable> Drop for WithLifecycle<T> {
 mod tests {
     use super::*;
     use std::sync::atomic::{AtomicU32, Ordering as AOrd};
-    use tokio::time::{sleep, Duration};
+    use tokio::time::{Duration, sleep};
 
     struct TestRunnable {
         counter: AtomicU32,

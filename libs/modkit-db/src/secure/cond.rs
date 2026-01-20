@@ -1,4 +1,4 @@
-use sea_orm::{sea_query::Expr, ColumnTrait, Condition, EntityTrait};
+use sea_orm::{ColumnTrait, Condition, EntityTrait, sea_query::Expr};
 
 use crate::secure::provider::{SimpleTenantFilter, TenantFilterProvider};
 use crate::secure::{AccessScope, ScopableEntity};

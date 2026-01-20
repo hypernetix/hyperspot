@@ -66,19 +66,18 @@ impl ImageParser {
         content_type: Option<&str>,
     ) -> Result<String, DomainError> {
         // Priority 1: Use provided content-type if it's an image type
-        if let Some(ct) = content_type {
-            if ct.starts_with("image/") {
-                return Ok(ct.to_owned());
-            }
+        if let Some(ct) = content_type
+            && ct.starts_with("image/")
+        {
+            return Ok(ct.to_owned());
         }
 
         // Priority 2: Infer from filename extension
-        if let Some(filename) = filename_hint {
-            if let Some(ext) = Path::new(filename).extension().and_then(|s| s.to_str()) {
-                if let Some(mime) = Self::mime_type_from_extension(ext) {
-                    return Ok(mime.to_owned());
-                }
-            }
+        if let Some(filename) = filename_hint
+            && let Some(ext) = Path::new(filename).extension().and_then(|s| s.to_str())
+            && let Some(mime) = Self::mime_type_from_extension(ext)
+        {
+            return Ok(mime.to_owned());
         }
 
         Err(DomainError::unsupported_file_type(

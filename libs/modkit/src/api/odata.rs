@@ -109,7 +109,7 @@ pub fn parse_orderby(raw: &str) -> Result<ODataOrderBy, modkit_odata::Error> {
             _ => {
                 return Err(modkit_odata::Error::InvalidOrderByField(format!(
                     "invalid orderby clause: {part}"
-                )))
+                )));
             }
         };
 

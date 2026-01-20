@@ -1,7 +1,7 @@
 [package]
 name = "modkit-db-macros"
 version.workspace = true
-edition = "2021"
+edition.workspace = true
 description = "Proc-macro derives for modkit-db secure ORM layer"
 license.workspace = true
 

@@ -1,4 +1,4 @@
-use axum::{extract::Path, http::Uri, Extension};
+use axum::{Extension, extract::Path, http::Uri};
 use tracing::{field::Empty, info};
 use uuid::Uuid;
 

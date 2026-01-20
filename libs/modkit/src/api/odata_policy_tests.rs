@@ -4,7 +4,7 @@
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::super::odata::*;
-    use axum::http::{request::Parts, Uri};
+    use axum::http::{Uri, request::Parts};
     use modkit_odata::{CursorV1, SortDir};
 
     fn mock_parts(query_string: &str) -> Parts {

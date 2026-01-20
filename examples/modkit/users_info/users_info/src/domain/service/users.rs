@@ -244,12 +244,12 @@ impl<R: UsersRepository + 'static, CR: CitiesRepository, AR: AddressesRepository
                         None => return Err(DomainError::user_not_found(id)),
                     };
 
-                    if let Some(ref new_email) = patch.email {
-                        if new_email != &current.email {
-                            let count = repo.count_by_email(tx, &scope, new_email).await?;
-                            if count > 0 {
-                                return Err(DomainError::email_already_exists(new_email.clone()));
-                            }
+                    if let Some(ref new_email) = patch.email
+                        && new_email != &current.email
+                    {
+                        let count = repo.count_by_email(tx, &scope, new_email).await?;
+                        if count > 0 {
+                            return Err(DomainError::email_already_exists(new_email.clone()));
                         }
                     }
 

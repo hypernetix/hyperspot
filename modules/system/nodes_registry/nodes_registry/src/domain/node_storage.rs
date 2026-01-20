@@ -198,15 +198,15 @@ impl NodeStorage {
     #[allow(dead_code)]
     pub fn needs_syscap_refresh(&self, node_id: Uuid, key: &str) -> bool {
         if let Ok(nodes) = self.nodes.read() {
-            if let Some(data) = nodes.get(&node_id) {
-                if let Some(ref syscap_system) = data.syscap_system {
-                    let now = chrono::Utc::now();
+            if let Some(data) = nodes.get(&node_id)
+                && let Some(ref syscap_system) = data.syscap_system
+            {
+                let now = chrono::Utc::now();
 
-                    return syscap_system
-                        .capabilities
-                        .iter()
-                        .any(|c| c.key == key && c.cache_is_expired(now));
-                }
+                return syscap_system
+                    .capabilities
+                    .iter()
+                    .any(|c| c.key == key && c.cache_is_expired(now));
             }
             // If not found or no syscap, needs refresh
             true
@@ -221,15 +221,15 @@ impl NodeStorage {
         if let Ok(nodes) = self.nodes.read() {
             let mut expired_keys = Vec::new();
 
-            if let Some(data) = nodes.get(&node_id) {
-                if let Some(ref syscap_system) = data.syscap_system {
-                    let now = chrono::Utc::now();
-                    syscap_system
-                        .capabilities
-                        .iter()
-                        .filter(|cap| cap.cache_is_expired(now))
-                        .for_each(|cap| expired_keys.push(cap.key.clone()));
-                }
+            if let Some(data) = nodes.get(&node_id)
+                && let Some(ref syscap_system) = data.syscap_system
+            {
+                let now = chrono::Utc::now();
+                syscap_system
+                    .capabilities
+                    .iter()
+                    .filter(|cap| cap.cache_is_expired(now))
+                    .for_each(|cap| expired_keys.push(cap.key.clone()));
             }
 
             expired_keys

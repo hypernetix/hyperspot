@@ -12,7 +12,7 @@ mod registered_modules;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     use clap::Parser;
-    use modkit::bootstrap::oop::{run_oop_with_options, OopRunOptions};
+    use modkit::bootstrap::oop::{OopRunOptions, run_oop_with_options};
 
     /// OoP calculator module
     #[derive(Parser)]

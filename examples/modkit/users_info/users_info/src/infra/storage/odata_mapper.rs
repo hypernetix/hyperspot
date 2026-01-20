@@ -8,15 +8,15 @@
 //! and cursor extraction - all using the type-safe `FilterField` approach.
 
 use modkit_db::odata::sea_orm_filter::{
-    filter_node_to_condition, FieldToColumn, ODataFieldMapping,
+    FieldToColumn, ODataFieldMapping, filter_node_to_condition,
 };
 use modkit_odata::filter::FilterNode;
 use sea_orm::Condition;
 
 use crate::infra::storage::entity::{
+    Column, Entity, Model,
     address::{Column as AddressColumn, Entity as AddressEntity, Model as AddressModel},
     city::{Column as CityColumn, Entity as CityEntity, Model as CityModel},
-    Column, Entity, Model,
 };
 use user_info_sdk::odata::{AddressFilterField, CityFilterField, UserFilterField};
 

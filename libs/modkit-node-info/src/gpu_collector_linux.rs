@@ -4,11 +4,11 @@ use std::process::Command;
 /// Collect GPU information on Linux using NVML for NVIDIA GPUs, fallback to lspci
 pub fn collect_gpu_info() -> Vec<GpuInfo> {
     // Try NVML first for NVIDIA GPUs
-    if let Some(nvidia_gpus) = collect_nvidia_gpus() {
-        if !nvidia_gpus.is_empty() {
-            tracing::debug!("Found {} NVIDIA GPU(s) via NVML", nvidia_gpus.len());
-            return nvidia_gpus;
-        }
+    if let Some(nvidia_gpus) = collect_nvidia_gpus()
+        && !nvidia_gpus.is_empty()
+    {
+        tracing::debug!("Found {} NVIDIA GPU(s) via NVML", nvidia_gpus.len());
+        return nvidia_gpus;
     }
 
     // Fallback to lspci for AMD/Intel/other GPUs
@@ -79,37 +79,37 @@ fn collect_nvidia_gpus() -> Option<Vec<GpuInfo>> {
 fn collect_gpus_via_lspci() -> Vec<GpuInfo> {
     let output = Command::new("lspci").output();
 
-    if let Ok(output) = output {
-        if output.status.success() {
-            let output_str = String::from_utf8_lossy(&output.stdout);
-            let mut gpus = Vec::new();
+    if let Ok(output) = output
+        && output.status.success()
+    {
+        let output_str = String::from_utf8_lossy(&output.stdout);
+        let mut gpus = Vec::new();
 
-            for line in output_str.lines() {
-                let line_lower = line.to_lowercase();
-                if line_lower.contains("vga")
-                    || line_lower.contains("3d")
-                    || line_lower.contains("display")
+        for line in output_str.lines() {
+            let line_lower = line.to_lowercase();
+            if line_lower.contains("vga")
+                || line_lower.contains("3d")
+                || line_lower.contains("display")
+            {
+                // Extract GPU model from lspci output
+                // Format: "00:02.0 VGA compatible controller: Intel Corporation ..."
+                if let Some(pos) = line.find(':')
+                    && let Some(model_start) = line[pos..].find(':')
                 {
-                    // Extract GPU model from lspci output
-                    // Format: "00:02.0 VGA compatible controller: Intel Corporation ..."
-                    if let Some(pos) = line.find(':') {
-                        if let Some(model_start) = line[pos..].find(':') {
-                            let model = line[pos + model_start + 1..].trim().to_owned();
-                            gpus.push(GpuInfo {
-                                model,
-                                cores: None,
-                                total_memory_mb: None,
-                                used_memory_mb: None,
-                            });
-                        }
-                    }
+                    let model = line[pos + model_start + 1..].trim().to_owned();
+                    gpus.push(GpuInfo {
+                        model,
+                        cores: None,
+                        total_memory_mb: None,
+                        used_memory_mb: None,
+                    });
                 }
             }
+        }
 
-            if !gpus.is_empty() {
-                tracing::debug!("Found {} GPU(s) via lspci", gpus.len());
-                return gpus;
-            }
+        if !gpus.is_empty() {
+            tracing::debug!("Found {} GPU(s) via lspci", gpus.len());
+            return gpus;
         }
     }
 

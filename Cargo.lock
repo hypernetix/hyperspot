@@ -3057,6 +3057,7 @@ dependencies = [
  "serde-saphyr",
  "serde_json",
  "sqlx",
+ "temp-env",
  "tempfile",
  "testcontainers",
  "testcontainers-modules",

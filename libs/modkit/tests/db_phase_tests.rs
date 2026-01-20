@@ -15,7 +15,7 @@ use tokio_util::sync::CancellationToken;
 
 use modkit::{
     config::ConfigProvider,
-    runtime::{run, DbOptions, RunOptions, ShutdownOptions},
+    runtime::{DbOptions, RunOptions, ShutdownOptions, run},
 };
 use uuid::Uuid;
 
@@ -56,7 +56,7 @@ impl ConfigProvider for DbTestConfigProvider {
 
 // Helper to create a mock DbManager
 fn create_test_db_manager() -> Arc<modkit_db::DbManager> {
-    use figment::{providers::Serialized, Figment};
+    use figment::{Figment, providers::Serialized};
 
     let figment = Figment::new().merge(Serialized::defaults(serde_json::json!({
         "test_db_module": {

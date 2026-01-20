@@ -5,11 +5,11 @@ use std::collections::HashMap;
 
 use bigdecimal::{BigDecimal, ToPrimitive};
 use chrono::{NaiveDate, NaiveTime, Utc};
-use modkit_odata::{ast as core, CursorV1, Error as ODataError, ODataOrderBy, ODataQuery, SortDir};
+use modkit_odata::{CursorV1, Error as ODataError, ODataOrderBy, ODataQuery, SortDir, ast as core};
 use rust_decimal::Decimal;
 use sea_orm::{
-    sea_query::{Expr, Order},
     ColumnTrait, Condition, ConnectionTrait, EntityTrait, QueryFilter, QueryOrder, QuerySelect,
+    sea_query::{Expr, Order},
 };
 use thiserror::Error;
 
@@ -168,49 +168,49 @@ fn coerce(kind: FieldKind, v: &core::Value) -> ODataBuildResult<sea_orm::Value> 
             return Err(ODataBuildError::TypeMismatch {
                 expected,
                 got: "null",
-            })
+            });
         }
         (expected, V::String(_)) => {
             return Err(ODataBuildError::TypeMismatch {
                 expected,
                 got: "string",
-            })
+            });
         }
         (expected, V::Number(_)) => {
             return Err(ODataBuildError::TypeMismatch {
                 expected,
                 got: "number",
-            })
+            });
         }
         (expected, V::Bool(_)) => {
             return Err(ODataBuildError::TypeMismatch {
                 expected,
                 got: "bool",
-            })
+            });
         }
         (expected, V::Uuid(_)) => {
             return Err(ODataBuildError::TypeMismatch {
                 expected,
                 got: "uuid",
-            })
+            });
         }
         (expected, V::DateTime(_)) => {
             return Err(ODataBuildError::TypeMismatch {
                 expected,
                 got: "datetime",
-            })
+            });
         }
         (expected, V::Date(_)) => {
             return Err(ODataBuildError::TypeMismatch {
                 expected,
                 got: "date",
-            })
+            });
         }
         (expected, V::Time(_)) => {
             return Err(ODataBuildError::TypeMismatch {
                 expected,
                 got: "time",
-            })
+            });
         }
     })
 }
@@ -490,7 +490,7 @@ where
                 (X::Identifier(_), X::Identifier(_)) => {
                     return Err(ODataBuildError::Other(
                         "field-to-field comparison is not supported",
-                    ))
+                    ));
                 }
                 _ => return Err(ODataBuildError::Other("unsupported comparison form")),
             };
@@ -818,13 +818,11 @@ where
     };
 
     // Validate cursor consistency (filter hash only) if cursor present
-    if let Some(cur) = &q.cursor {
-        // Only filter hash validation is necessary now
-        if let (Some(h), Some(cf)) = (q.filter_hash.as_deref(), cur.f.as_deref()) {
-            if h != cf {
-                return Err(ODataError::FilterMismatch);
-            }
-        }
+    if let Some(cur) = &q.cursor
+        && let (Some(h), Some(cf)) = (q.filter_hash.as_deref(), cur.f.as_deref())
+        && h != cf
+    {
+        return Err(ODataError::FilterMismatch);
     }
 
     // Compose: filter → cursor predicate → order; apply limit+1 at the end
