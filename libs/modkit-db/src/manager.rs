@@ -60,7 +60,7 @@ impl DbManager {
         }
 
         // Build new handle
-        if let Some(handle) = self.build_for_module(module).await? {
+        match self.build_for_module(module).await? { Some(handle) => {
             // Use entry API to handle race conditions properly
             match self.cache.entry(module.to_owned()) {
                 dashmap::mapref::entry::Entry::Occupied(entry) => {
@@ -73,9 +73,9 @@ impl DbManager {
                     Ok(Some(handle))
                 }
             }
-        } else {
+        } _ => {
             Ok(None)
-        }
+        }}
     }
 
     /// Build a database handle for the specified module.

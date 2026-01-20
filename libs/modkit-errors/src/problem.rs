@@ -153,11 +153,11 @@ impl axum::response::IntoResponse for Problem {
 
         // Enrich with trace_id from current span if not already set
         let problem = if self.trace_id.is_none() {
-            if let Some(span_id) = tracing::Span::current().id() {
+            match tracing::Span::current().id() { Some(span_id) => {
                 self.with_trace_id(span_id.into_u64().to_string())
-            } else {
+            } _ => {
                 self
-            }
+            }}
         } else {
             self
         };

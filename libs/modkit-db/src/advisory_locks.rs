@@ -118,13 +118,13 @@ impl Drop for DbLockGuard {
     fn drop(&mut self) {
         // Best-effort async unlock if runtime is alive and inner still present.
         if let Some(inner) = self.inner.take() {
-            if let Ok(handle) = tokio::runtime::Handle::try_current() {
+            match tokio::runtime::Handle::try_current() { Ok(handle) => {
                 handle.spawn(async move { unlock_inner(inner).await });
-            } else {
+            } _ => {
                 // No runtime; we cannot perform async cleanup here.
                 // The lock may remain held until process exit (DB connection)
                 // or lock file may remain on disk. Prefer calling `release().await`.
-            }
+            }}
         }
     }
 }

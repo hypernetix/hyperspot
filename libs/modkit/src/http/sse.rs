@@ -30,7 +30,7 @@ impl<T: Clone + Send + 'static> SseBroadcaster<T> {
     }
 
     /// Subscribe to a typed stream of messages; lag/drop errors are filtered out.
-    pub fn subscribe_stream(&self) -> impl Stream<Item = T> {
+    pub fn subscribe_stream(&self) -> impl Stream<Item = T> + use<T> {
         BroadcastStream::new(self.tx.subscribe()).filter_map(|res| async move { res.ok() })
     }
 
@@ -77,7 +77,7 @@ impl<T: Clone + Send + 'static> SseBroadcaster<T> {
 
     /// Plain SSE (no extra headers), unnamed events.
     /// Includes periodic keepalive pings to avoid idle timeouts.
-    pub fn sse_response(&self) -> Sse<impl Stream<Item = Result<Event, Infallible>>>
+    pub fn sse_response(&self) -> Sse<impl Stream<Item = Result<Event, Infallible>> + use<T>>
     where
         T: Serialize,
     {
