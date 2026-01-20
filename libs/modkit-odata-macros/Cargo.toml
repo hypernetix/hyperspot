@@ -1,16 +1,18 @@
 [package]
-name = "modkit-odata-macros"
-version.workspace = true
+name = "cf-modkit-odata-macros"
+version = "0.1.0"
 edition.workspace = true
-description = "Proc-macro derives for OData protocol (FilterField, Schema, etc)"
 license.workspace = true
 authors.workspace = true
-
-[lints]
-workspace = true
+repository.workspace = true
+description = "Proc-macro derives for OData protocol (FilterField, Schema, etc)"
 
 [lib]
 proc-macro = true
+name = "modkit_odata_macros"
+
+[lints]
+workspace = true
 
 [dependencies]
 syn = { workspace = true }
@@ -21,5 +23,5 @@ proc-macro-error2 = { workspace = true }
 
 [dev-dependencies]
 trybuild = { workspace = true }
-modkit-odata = { path = "../modkit-odata" }
+modkit-odata = { workspace = true }
 uuid = { workspace = true, features = ["v7"] }

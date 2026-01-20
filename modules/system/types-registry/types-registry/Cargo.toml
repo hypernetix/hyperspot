@@ -37,9 +37,9 @@ thiserror = { workspace = true }
 parking_lot = { workspace = true }
 
 # Local dependencies
-modkit = { path = "../../../../libs/modkit" }
-modkit-auth = { path = "../../../../libs/modkit-auth" }
-modkit-security = { path = "../../../../libs/modkit-security" }
+modkit = { workspace = true }
+modkit-auth = { workspace = true }
+modkit-security = { workspace = true }
 
 [dev-dependencies]
 tower = { workspace = true, features = ["util"] }

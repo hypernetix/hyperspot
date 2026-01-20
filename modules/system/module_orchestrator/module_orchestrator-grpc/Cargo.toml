@@ -9,7 +9,7 @@ build = "build.rs"
 
 [dependencies]
 module_orchestrator-sdk = { path = "../module_orchestrator-sdk" }
-modkit-transport-grpc = { path = "../../../../libs/modkit-transport-grpc" }
+modkit-transport-grpc = { workspace = true }
 tonic = { workspace = true, features = ["transport"] }
 tonic-prost = { workspace = true }
 prost = { workspace = true }
@@ -25,4 +25,3 @@ tokio = { workspace = true }
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage_nightly)'] }
-

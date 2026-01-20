@@ -68,11 +68,6 @@
 // Re-export key types for public API
 pub use advisory_locks::{DbLockGuard, LockConfig};
 
-/// `SeaORM` connection trait alias used by downstream crates (domain/ports) to avoid
-/// depending on `sea_orm` directly.
-///
-/// This is only available when `modkit-db` is compiled with the `sea-orm` feature.
-#[cfg(feature = "sea-orm")]
 pub use sea_orm::ConnectionTrait as DbConnTrait;
 
 // Core modules
@@ -81,9 +76,6 @@ pub mod config;
 pub mod manager;
 pub mod odata;
 pub mod options;
-
-// Secure ORM layer (requires sea-orm feature)
-#[cfg(feature = "sea-orm")]
 pub mod secure;
 
 // Internal modules
@@ -114,13 +106,12 @@ use sqlx::{PgPool, Postgres, postgres::PgPoolOptions};
 #[cfg(feature = "sqlite")]
 use sqlx::{Sqlite, SqlitePool, sqlite::SqlitePoolOptions};
 
-#[cfg(feature = "sea-orm")]
 use sea_orm::DatabaseConnection;
-#[cfg(all(feature = "sea-orm", feature = "mysql"))]
+#[cfg(feature = "mysql")]
 use sea_orm::SqlxMySqlConnector;
-#[cfg(all(feature = "sea-orm", feature = "pg"))]
+#[cfg(feature = "pg")]
 use sea_orm::SqlxPostgresConnector;
-#[cfg(all(feature = "sea-orm", feature = "sqlite"))]
+#[cfg(feature = "sqlite")]
 use sea_orm::SqlxSqliteConnector;
 
 use thiserror::Error;
@@ -164,7 +155,6 @@ pub enum DbError {
     #[error(transparent)]
     Sqlx(#[from] sqlx::Error),
 
-    #[cfg(feature = "sea-orm")]
     #[error(transparent)]
     Sea(#[from] sea_orm::DbErr),
 
@@ -292,7 +282,6 @@ pub struct DbHandle {
     engine: DbEngine,
     pool: DbPool,
     dsn: String,
-    #[cfg(feature = "sea-orm")]
     sea: DatabaseConnection,
 }
 
@@ -333,13 +322,11 @@ impl DbHandle {
             DbEngine::Postgres => {
                 let o = PgPoolOptions::new().apply(&opts);
                 let pool = o.connect(dsn).await?;
-                #[cfg(feature = "sea-orm")]
                 let sea = SqlxPostgresConnector::from_sqlx_postgres_pool(pool.clone());
                 Ok(Self {
                     engine,
                     pool: DbPool::Postgres(pool),
                     dsn: dsn.to_owned(),
-                    #[cfg(feature = "sea-orm")]
                     sea,
                 })
             }
@@ -347,13 +334,11 @@ impl DbHandle {
             DbEngine::MySql => {
                 let o = MySqlPoolOptions::new().apply(&opts);
                 let pool = o.connect(dsn).await?;
-                #[cfg(feature = "sea-orm")]
                 let sea = SqlxMySqlConnector::from_sqlx_mysql_pool(pool.clone());
                 Ok(Self {
                     engine,
                     pool: DbPool::MySql(pool),
                     dsn: dsn.to_owned(),
-                    #[cfg(feature = "sea-orm")]
                     sea,
                 })
             }
@@ -412,14 +397,12 @@ impl DbHandle {
                 });
 
                 let pool = o.connect(&clean_dsn).await?;
-                #[cfg(feature = "sea-orm")]
                 let sea = SqlxSqliteConnector::from_sqlx_sqlite_pool(pool.clone());
 
                 Ok(Self {
                     engine,
                     pool: DbPool::Sqlite(pool),
                     dsn: clean_dsn,
-                    #[cfg(feature = "sea-orm")]
                     sea,
                 })
             }
@@ -507,7 +490,6 @@ impl DbHandle {
     ///     .all(secure_conn.conn())
     ///     .await?;
     /// ```
-    #[cfg(feature = "sea-orm")]
     #[must_use]
     pub fn sea_secure(&self) -> crate::secure::SecureConn {
         crate::secure::SecureConn::new(self.sea.clone())
@@ -538,7 +520,7 @@ impl DbHandle {
     ///     // Direct database access...
     /// }
     /// ```
-    #[cfg(all(feature = "sea-orm", feature = "insecure-escape"))]
+    #[cfg(feature = "insecure-escape")]
     pub fn sea(&self) -> DatabaseConnection {
         tracing::warn!(
             target: "security",
@@ -846,7 +828,7 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(all(feature = "sea-orm", feature = "sqlite"))]
+    #[cfg(feature = "sqlite")]
     #[tokio::test]
     async fn test_secure_conn() -> Result<()> {
         let dsn = "sqlite::memory:";
@@ -856,7 +838,7 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(all(feature = "sea-orm", feature = "sqlite", feature = "insecure-escape"))]
+    #[cfg(all(feature = "sqlite", feature = "insecure-escape"))]
     #[tokio::test]
     async fn test_insecure_sea_access() -> Result<()> {
         let dsn = "sqlite::memory:";

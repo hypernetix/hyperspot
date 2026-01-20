@@ -1,9 +1,13 @@
 [package]
-name = "modkit-node-info"
-version.workspace = true
-publish = false
+name = "cf-modkit-node-info"
+version = "0.1.0"
 edition.workspace = true
 license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[lib]
+name = "modkit_node_info"
 
 [lints]
 workspace = true
@@ -16,7 +20,7 @@ hostname = { workspace = true }
 starship-battery = { workspace = true }
 regex = { workspace = true }
 chrono = { workspace = true, features = ["serde", "clock"] }
-uuid = { workspace = true, features = ["v4", "v5"]}
+uuid = { workspace = true, features = ["v4", "v5"] }
 local-ip-address = { workspace = true }
 machine-uid = { workspace = true }
 tracing = { workspace = true }

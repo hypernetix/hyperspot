@@ -13,9 +13,9 @@ name = "api_gateway"
 path = "src/lib.rs"
 
 [dependencies]
-modkit = { path = "../../../libs/modkit" }
-modkit-auth = { path = "../../../libs/modkit-auth" }
-modkit-security = { path = "../../../libs/modkit-security" }
+modkit = { workspace = true }
+modkit-auth = { workspace = true }
+modkit-security = { workspace = true }
 inventory = { workspace = true }
 anyhow = { workspace = true }
 async-trait = { workspace = true }
@@ -47,7 +47,7 @@ rust-embed = { workspace = true }
 [dev-dependencies]
 futures-core = { workspace = true }
 uuid = { workspace = true }
-modkit-odata = { path = "../../../libs/modkit-odata" }
+modkit-odata = { workspace = true }
 hs-tenant-resolver-sdk = { path = "../tenant_resolver/tenant_resolver-sdk" }
 
 [features]

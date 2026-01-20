@@ -62,7 +62,7 @@ members = [
     "modules/system/tenant_resolver/plugins/static_tr_plugin",
     "modules/system/tenant_resolver/plugins/single_tenant_tr_plugin",
 ]
-resolver = "2"
+resolver = "3"
 
 # Note: dylint_lints is a separate workspace for custom linters
 # See dylint_lints/README.md for usage instructions
@@ -191,6 +191,22 @@ string_lit_as_bytes = "deny"
 verbose_file_reads = "deny"
 
 [workspace.dependencies]
+# libs
+modkit = { package = "cf-modkit", version = "0.1.0", path = "libs/modkit" }
+modkit-auth = { package = "cf-modkit-auth", version = "0.1.0", path = "libs/modkit-auth" }
+modkit-db = { package = "cf-modkit-db", version = "0.1.0", path = "libs/modkit-db" }
+modkit-db-macros = { package = "cf-modkit-db-macros", version = "0.1.0", path = "libs/modkit-db-macros" }
+modkit-errors = { package = "cf-modkit-errors", version = "0.1.0", path = "libs/modkit-errors" }
+modkit-errors-macro = { package = "cf-modkit-errors-macro", version = "0.1.0", path = "libs/modkit-errors-macro" }
+modkit-macros = { package = "cf-modkit-macros", version = "0.1.0", path = "libs/modkit-macros" }
+modkit-node-info = { package = "cf-modkit-node-info", version = "0.1.0", path = "libs/modkit-node-info" }
+modkit-odata = { package = "cf-modkit-odata", version = "0.1.0", path = "libs/modkit-odata" }
+modkit-odata-macros = { package = "cf-modkit-odata-macros", version = "0.1.0", path = "libs/modkit-odata-macros" }
+modkit-sdk = { package = "cf-modkit-sdk", version = "0.1.0", path = "libs/modkit-sdk" }
+modkit-security = { package = "cf-modkit-security", version = "0.1.0", path = "libs/modkit-security" }
+modkit-transport-grpc = { package = "cf-modkit-transport-grpc", version = "0.1.0", path = "libs/modkit-transport-grpc" }
+modkit-utils = { package = "cf-modkit-utils", version = "0.1.0", path = "libs/modkit-utils" }
+
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -214,7 +230,12 @@ arc-swap = "1.7"
 
 # Logging
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "time", "local-time"] }
+tracing-subscriber = { version = "0.3", features = [
+    "env-filter",
+    "json",
+    "time",
+    "local-time",
+] }
 tracing-log = "0.2"
 tracing-opentelemetry = "0.32"
 tracing-error = "0.2"
@@ -222,17 +243,32 @@ tracing-appender = "0.2"
 tracing-test = "0.2"
 opentelemetry = { version = "0.31", features = ["trace"] }
 opentelemetry_sdk = { version = "0.31", features = ["trace", "rt-tokio"] }
-opentelemetry-otlp = { version = "0.31", features = ["grpc-tonic", "http-proto"] }
+opentelemetry-otlp = { version = "0.31", features = [
+    "grpc-tonic",
+    "http-proto",
+] }
 
 # Web framework (only for api_gateway)
 axum = "0.8"
 tower = "0.5"
-tower-http = { version = "0.6", features = ["trace", "request-id", "cors", "limit", "util", "timeout"] }
+tower-http = { version = "0.6", features = [
+    "trace",
+    "request-id",
+    "cors",
+    "limit",
+    "util",
+    "timeout",
+] }
 uuid = { version = "1.19", features = ["serde"] }
 governor = "0.10"
 
 # OpenAPI documentation (only for api_gateway)
-utoipa = { version = "5.4", features = ["macros", "openapi_extensions", "chrono", "uuid"] }
+utoipa = { version = "5.4", features = [
+    "macros",
+    "openapi_extensions",
+    "chrono",
+    "uuid",
+] }
 
 # Synchronous locks for better performance
 parking_lot = "0.12"
@@ -241,11 +277,25 @@ parking_lot = "0.12"
 clap = { version = "4.5", features = ["derive"] }
 
 # Database (only for db module)
-sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "sqlite", "any", "migrate"] }
+sqlx = { version = "0.8", features = [
+    "runtime-tokio-rustls",
+    "postgres",
+    "sqlite",
+    "any",
+    "migrate",
+] }
 
 # Database utilities
-sea-orm = { version = "1.1", default-features = false, features = ["runtime-tokio-rustls", "with-uuid", "with-chrono", "with-rust_decimal", "macros"] }
-sea-orm-migration = { version = "1.1", default-features = false, features = ["runtime-tokio-rustls"] }
+sea-orm = { version = "1.1", default-features = false, features = [
+    "runtime-tokio-rustls",
+    "with-uuid",
+    "with-chrono",
+    "with-rust_decimal",
+    "macros",
+] }
+sea-orm-migration = { version = "1.1", default-features = false, features = [
+    "runtime-tokio-rustls",
+] }
 xxhash-rust = { version = "0.8", features = ["xxh3"] }
 
 # File rotation for logging
@@ -279,7 +329,10 @@ prost-build = "0.14"
 tonic-prost-build = "0.14"
 
 # HTTP client
-reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+reqwest = { version = "0.12", default-features = false, features = [
+    "rustls-tls",
+    "json",
+] }
 
 # Time handling
 time = { version = "0.3", features = ["serde", "formatting", "parsing"] }
@@ -323,7 +376,13 @@ odata-params = "0.4"
 # Procedural macros
 proc-macro2 = "1.0"
 quote = "1.0"
-syn = { version = "2.0", features = ["full", "parsing", "printing", "derive", "extra-traits"] }
+syn = { version = "2.0", features = [
+    "full",
+    "parsing",
+    "printing",
+    "derive",
+    "extra-traits",
+] }
 heck = "0.5"
 proc-macro-error2 = "2.0"
 

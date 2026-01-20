@@ -11,11 +11,11 @@ build = "build.rs"
 # Core dependencies for API trait
 async-trait = { workspace = true }
 thiserror = { workspace = true }
-modkit-security = { path = "../../../../libs/modkit-security" }
+modkit-security = { workspace = true }
 
 # gRPC transport dependencies
-modkit-transport-grpc = { path = "../../../../libs/modkit-transport-grpc" }
-modkit = { path = "../../../../libs/modkit" }
+modkit-transport-grpc = { workspace = true }
+modkit = { workspace = true }
 module_orchestrator-sdk = { path = "../../../../modules/system/module_orchestrator/module_orchestrator-sdk" }
 tonic = { workspace = true, features = ["transport"] }
 tonic-prost = { workspace = true }
@@ -28,4 +28,3 @@ tonic-prost-build = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true }
-

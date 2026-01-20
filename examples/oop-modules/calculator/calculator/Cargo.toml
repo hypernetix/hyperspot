@@ -21,9 +21,9 @@ required-features = ["oop_module"]
 calculator-sdk = { path = "../calculator-sdk" }
 
 # ModKit dependencies
-modkit = { path = "../../../../libs/modkit", features = ["bootstrap"] }
-modkit-security = { path = "../../../../libs/modkit-security" }
-modkit-transport-grpc = { path = "../../../../libs/modkit-transport-grpc" }
+modkit = { workspace = true, features = ["bootstrap"] }
+modkit-security = { workspace = true }
+modkit-transport-grpc = { workspace = true }
 grpc_hub = { path = "../../../../modules/system/grpc_hub" }
 
 # Runtime dependencies

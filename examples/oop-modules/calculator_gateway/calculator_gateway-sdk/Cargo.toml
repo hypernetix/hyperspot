@@ -11,8 +11,8 @@ description = "SDK for calculator_gateway module: API trait, types, and client w
 calculator_gateway = { path = "../calculator_gateway" }
 
 # ModKit (for ClientHub)
-modkit = { path = "../../../../libs/modkit" }
-modkit-security = { path = "../../../../libs/modkit-security" }
+modkit = { workspace = true }
+modkit-security = { workspace = true }
 
 # Async
 async-trait = { workspace = true }
