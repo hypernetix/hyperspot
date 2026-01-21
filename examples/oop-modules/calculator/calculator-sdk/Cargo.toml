@@ -16,7 +16,7 @@ modkit-security = { workspace = true }
 # gRPC transport dependencies
 modkit-transport-grpc = { workspace = true }
 modkit = { workspace = true }
-cf-system-sdks = { workspace = true }
+cf-system-sdks = { workspace = true, features = ["directory"] }
 tonic = { workspace = true, features = ["transport"] }
 tonic-prost = { workspace = true }
 prost = { workspace = true }

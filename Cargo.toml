@@ -37,8 +37,7 @@ members = [
     "libs/modkit-node-info",
     "libs/modkit-transport-grpc",
     "libs/modkit-utils",
-    "libs/system-sdks/directory-grpc",
-    "libs/system-sdks/public",
+    "libs/system-sdks",
     "libs/system-sdks/sdks/directory",
     "modules/file_parser",
     "modules/system/api_gateway",
@@ -210,9 +209,8 @@ modkit-security = { package = "cf-modkit-security", version = "0.1.0", path = "l
 modkit-transport-grpc = { package = "cf-modkit-transport-grpc", version = "0.1.0", path = "libs/modkit-transport-grpc" }
 modkit-utils = { package = "cf-modkit-utils", version = "0.1.0", path = "libs/modkit-utils" }
 
-cf-system-sdks = { version = "0.1.0", path = "libs/system-sdks/public" }
+cf-system-sdks = { version = "0.1.0", path = "libs/system-sdks" }
 cf-system-sdk-directory = { version = "0.1.0", path = "libs/system-sdks/sdks/directory" }
-cf-system-directory-grpc = { version = "0.1.0", path = "libs/system-sdks/directory-grpc" }
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }

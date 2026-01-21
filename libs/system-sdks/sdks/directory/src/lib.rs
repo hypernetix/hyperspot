@@ -6,5 +6,9 @@
 #![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 
 mod api;
+#[cfg(feature = "grpc")]
+mod grpc;
 
 pub use api::{DirectoryClient, RegisterInstanceInfo, ServiceEndpoint, ServiceInstanceInfo};
+#[cfg(feature = "grpc")]
+pub use grpc::*;

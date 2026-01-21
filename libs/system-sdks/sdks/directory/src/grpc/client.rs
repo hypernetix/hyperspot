@@ -6,9 +6,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use tonic::transport::Channel;
 
-use cf_system_sdks::directory::{
-    DirectoryClient, RegisterInstanceInfo, ServiceEndpoint, ServiceInstanceInfo,
-};
+use crate::api::{DirectoryClient, RegisterInstanceInfo, ServiceEndpoint, ServiceInstanceInfo};
 use modkit_transport_grpc::client::{GrpcClientConfig, connect_with_retry};
 
 use crate::{
@@ -18,7 +16,7 @@ use crate::{
 
 /// gRPC client for Directory API
 ///
-/// This client connects to a remote DirectoryService via gRPC and provides
+/// This client connects to a remote `DirectoryService` via gRPC and provides
 /// typed access to service discovery functionality. It includes:
 /// - Configurable timeouts and retries via transport stack
 /// - Automatic proto ↔ domain type conversions
@@ -31,7 +29,10 @@ impl DirectoryGrpcClient {
     /// Connect to a directory service using default configuration with retries.
     ///
     /// Uses exponential backoff retry logic for reliable connection establishment.
-    /// This is the recommended method for OoP modules connecting to the master host.
+    /// This is the recommended method for `OoP` modules connecting to the master host.
+    ///
+    /// # Errors
+    /// It will return an error when it fails
     pub async fn connect(uri: impl Into<String>) -> Result<Self> {
         let cfg = GrpcClientConfig::new("directory");
         Self::connect_with_retry(uri, &cfg).await
@@ -41,6 +42,9 @@ impl DirectoryGrpcClient {
     ///
     /// Uses exponential backoff based on `cfg.max_retries`, `cfg.base_backoff`,
     /// and `cfg.max_backoff` settings.
+    ///
+    /// # Errors
+    /// It will return an error when it fails
     pub async fn connect_with_retry(
         uri: impl Into<String>,
         cfg: &GrpcClientConfig,
@@ -55,6 +59,9 @@ impl DirectoryGrpcClient {
     ///
     /// This method attempts a single connection. Use `connect` or `connect_with_retry`
     /// for production scenarios where the directory service may not be immediately available.
+    ///
+    /// # Errors
+    /// It will return an error when it fails
     pub async fn connect_no_retry(uri: impl Into<String>, cfg: &GrpcClientConfig) -> Result<Self> {
         let uri_string = uri.into();
 
@@ -81,6 +88,7 @@ impl DirectoryGrpcClient {
     }
 
     /// Create from an existing channel (useful for testing or custom setup)
+    #[must_use]
     pub fn from_channel(channel: Channel) -> Self {
         Self {
             inner: DirectoryServiceClient::new(channel),
@@ -93,13 +101,13 @@ impl DirectoryClient for DirectoryGrpcClient {
     async fn resolve_grpc_service(&self, service_name: &str) -> Result<ServiceEndpoint> {
         let mut client = self.inner.clone();
         let request = tonic::Request::new(ResolveGrpcServiceRequest {
-            service_name: service_name.to_string(),
+            service_name: service_name.to_owned(),
         });
 
         let response = client
             .resolve_grpc_service(request)
             .await
-            .map_err(|e| anyhow::anyhow!("gRPC call failed: {}", e))?;
+            .map_err(|e| anyhow::anyhow!("gRPC call failed: {e}"))?;
 
         let proto_response = response.into_inner();
         Ok(ServiceEndpoint::new(proto_response.endpoint_uri))
@@ -108,13 +116,13 @@ impl DirectoryClient for DirectoryGrpcClient {
     async fn list_instances(&self, module: &str) -> Result<Vec<ServiceInstanceInfo>> {
         let mut client = self.inner.clone();
         let request = tonic::Request::new(ListInstancesRequest {
-            module_name: module.to_string(),
+            module_name: module.to_owned(),
         });
 
         let response = client
             .list_instances(request)
             .await
-            .map_err(|e| anyhow::anyhow!("gRPC call failed: {}", e))?;
+            .map_err(|e| anyhow::anyhow!("gRPC call failed: {e}"))?;
 
         let proto_response = response.into_inner();
 
@@ -160,7 +168,7 @@ impl DirectoryClient for DirectoryGrpcClient {
         client
             .register_instance(tonic::Request::new(req))
             .await
-            .map_err(|e| anyhow::anyhow!("gRPC register_instance failed: {}", e))?;
+            .map_err(|e| anyhow::anyhow!("gRPC register_instance failed: {e}"))?;
 
         Ok(())
     }
@@ -169,14 +177,14 @@ impl DirectoryClient for DirectoryGrpcClient {
         let mut client = self.inner.clone();
 
         let req = DeregisterInstanceRequest {
-            module_name: module.to_string(),
-            instance_id: instance_id.to_string(),
+            module_name: module.to_owned(),
+            instance_id: instance_id.to_owned(),
         };
 
         client
             .deregister_instance(tonic::Request::new(req))
             .await
-            .map_err(|e| anyhow::anyhow!("gRPC deregister_instance failed: {}", e))?;
+            .map_err(|e| anyhow::anyhow!("gRPC deregister_instance failed: {e}"))?;
 
         Ok(())
     }
@@ -185,14 +193,14 @@ impl DirectoryClient for DirectoryGrpcClient {
         let mut client = self.inner.clone();
 
         let req = HeartbeatRequest {
-            module_name: module.to_string(),
-            instance_id: instance_id.to_string(),
+            module_name: module.to_owned(),
+            instance_id: instance_id.to_owned(),
         };
 
         client
             .heartbeat(tonic::Request::new(req))
             .await
-            .map_err(|e| anyhow::anyhow!("gRPC heartbeat failed: {}", e))?;
+            .map_err(|e| anyhow::anyhow!("gRPC heartbeat failed: {e}"))?;
 
         Ok(())
     }

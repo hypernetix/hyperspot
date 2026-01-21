@@ -2,12 +2,10 @@
 //!
 //! This crate provides gRPC transport for the module orchestrator.
 //! It includes generated protobuf types and client/server implementations.
-#![forbid(unsafe_code)]
-#![deny(rust_2018_idioms)]
-#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 mod client;
 
 // Generated protobuf types for DirectoryService
+#[allow(clippy::all, clippy::pedantic, clippy::nursery, warnings)] // protoc problem
 pub mod directory {
     tonic::include_proto!("module_orchestrator.v1.directory");
 }
@@ -24,6 +22,6 @@ pub use directory::{
 // Re-export the gRPC client implementation
 pub use client::DirectoryGrpcClient;
 
-/// Service name constant for DirectoryService
+/// Service name constant for `DirectoryService`
 pub const DIRECTORY_SERVICE_NAME: &str =
     <DirectoryServiceServer<()> as tonic::server::NamedService>::NAME;
