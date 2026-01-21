@@ -2692,6 +2692,7 @@ dependencies = [
  "module_orchestrator",
  "nodes_registry",
  "serde_json",
+ "serde_yaml",
  "simple-user-settings",
  "tempfile",
  "tenant_resolver-gw",

@@ -30,6 +30,7 @@ otel = [
 ]
 bootstrap = [
     "dep:serde-saphyr",
+    "dep:serde_yaml",
     "dep:module_orchestrator-grpc",
     "dep:tracing-appender",
     "dep:file-rotate",
@@ -77,6 +78,7 @@ utoipa = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 serde-saphyr = { workspace = true, optional = true }
+serde_yaml = { workspace = true, optional = true }
 schemars = { workspace = true, features = ["derive"] }
 
 # GTS support

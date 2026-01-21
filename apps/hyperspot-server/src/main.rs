@@ -6,7 +6,8 @@ use figment::Figment;
 use mimalloc::MiMalloc;
 use modkit::LocalProcessBackend;
 use modkit::bootstrap::config::{
-    AppConfig, RuntimeKind, get_module_runtime_config, render_module_config_for_oop,
+    AppConfig, RuntimeKind, dump_effective_modules_config_json, dump_effective_modules_config_yaml,
+    get_module_runtime_config, list_module_names, render_module_config_for_oop,
 };
 use modkit::bootstrap::host::{init_logging_unified, normalize_executable_path};
 use tokio_util::sync::CancellationToken;
@@ -27,6 +28,7 @@ use modkit::runtime::{
 #[command(name = "hyperspot-server")]
 #[command(about = "HyperSpot Server - modular platform for AI services")]
 #[command(version = "0.1.0")]
+#[allow(clippy::struct_excessive_bools)]
 struct Cli {
     /// Path to configuration file
     #[arg(short, long)]
@@ -39,6 +41,18 @@ struct Cli {
     /// Print effective configuration (YAML) and exit
     #[arg(long)]
     print_config: bool,
+
+    /// List all configured module names and exit
+    #[arg(long)]
+    list_modules: bool,
+
+    /// Dump effective per-module configuration (YAML) and exit
+    #[arg(long)]
+    dump_modules_config_yaml: bool,
+
+    /// Dump effective per-module configuration (JSON) and exit
+    #[arg(long)]
+    dump_modules_config_json: bool,
 
     /// Log verbosity level (-v info, -vv debug, -vvv trace)
     #[arg(short, long, action = clap::ArgAction::Count)]
@@ -116,9 +130,38 @@ async fn main() -> Result<()> {
 
     tracing::info!("HyperSpot Server starting");
 
+    // Apply --mock override to config if requested (before any dumps)
+    if cli.mock {
+        override_modules_with_mock_db(&mut config);
+    }
+
     // Print config and exit if requested
     if cli.print_config {
         println!("Effective configuration:\n{}", config.to_yaml()?);
+        return Ok(());
+    }
+
+    // List all configured modules and exit if requested
+    if cli.list_modules {
+        let modules = list_module_names(&config);
+        println!("Configured modules ({}):", modules.len());
+        for module in modules {
+            println!("  - {module}");
+        }
+        return Ok(());
+    }
+
+    // Dump modules config in YAML format and exit if requested
+    if cli.dump_modules_config_yaml {
+        let yaml = dump_effective_modules_config_yaml(&config)?;
+        println!("{yaml}");
+        return Ok(());
+    }
+
+    // Dump modules config in JSON format and exit if requested
+    if cli.dump_modules_config_json {
+        let json = dump_effective_modules_config_json(&config)?;
+        println!("{json}");
         return Ok(());
     }
 

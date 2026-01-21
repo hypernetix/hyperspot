@@ -68,3 +68,4 @@ fabrikam_tr_plugin = { path = "../../examples/plugin-modules/tenant_resolver/plu
 
 [dev-dependencies]
 tempfile = { workspace = true }
+serde_yaml = { workspace = true }
