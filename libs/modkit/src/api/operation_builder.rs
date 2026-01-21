@@ -12,7 +12,7 @@
 //! - Optional `method_router(...)` for advanced use (layers/middleware on route level).
 
 use crate::api::{api_dto, problem};
-use axum::{handler::Handler, routing::MethodRouter, Router};
+use axum::{Router, handler::Handler, routing::MethodRouter};
 use http::Method;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;

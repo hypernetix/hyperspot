@@ -4,6 +4,7 @@
 //! that API operations cannot be registered unless both a handler and at least one
 //! response are specified.
 
+pub mod api_dto;
 pub mod error_layer;
 pub mod odata;
 pub mod openapi_registry;
@@ -12,7 +13,6 @@ pub mod problem;
 pub mod response;
 pub mod select;
 pub mod trace_layer;
-pub mod api_dto;
 
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]

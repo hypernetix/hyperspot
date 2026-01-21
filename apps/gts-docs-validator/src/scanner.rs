@@ -7,7 +7,7 @@ use glob::Pattern;
 use regex::Regex;
 use walkdir::WalkDir;
 
-use crate::validator::{is_bad_example_context, is_wildcard_context, validate_gts_id, GtsError};
+use crate::validator::{GtsError, is_bad_example_context, is_wildcard_context, validate_gts_id};
 
 /// File patterns to scan
 const FILE_PATTERNS: &[&str] = &["*.md", "*.json", "*.yaml", "*.yml"];
@@ -40,9 +40,10 @@ fn matches_exclude(path: &Path, exclude_patterns: &[Pattern]) -> bool {
         }
         // Also try matching just the file/dir name
         if let Some(name) = path.file_name()
-            && pattern.matches(&name.to_string_lossy()) {
-                return true;
-            }
+            && pattern.matches(&name.to_string_lossy())
+        {
+            return true;
+        }
     }
     false
 }
@@ -51,9 +52,10 @@ fn matches_exclude(path: &Path, exclude_patterns: &[Pattern]) -> bool {
 fn in_skip_dir(path: &Path) -> bool {
     for component in path.components() {
         if let std::path::Component::Normal(name) = component
-            && SKIP_DIRS.iter().any(|skip| name.to_string_lossy() == *skip) {
-                return true;
-            }
+            && SKIP_DIRS.iter().any(|skip| name.to_string_lossy() == *skip)
+        {
+            return true;
+        }
     }
     false
 }
@@ -147,9 +149,10 @@ pub fn find_files(paths: &[PathBuf], exclude: &[String], verbose: bool) -> Vec<P
 fn is_false_positive(gts_id: &str) -> bool {
     for pattern in FALSE_POSITIVE_PATTERNS {
         if let Ok(re) = Regex::new(pattern)
-            && re.is_match(gts_id) {
-                return true;
-            }
+            && re.is_match(gts_id)
+        {
+            return true;
+        }
     }
     false
 }
@@ -429,7 +432,7 @@ mod tests {
         let mut file = NamedTempFile::with_suffix(".md").unwrap();
         // Create a line where the 20-char offset lands in middle of multibyte char
         let prefix = "🎨🎨🎨🎨🎨"; // 5 emoji = 20 bytes
-                                   // Too few segments (only 4) makes it malformed
+        // Too few segments (only 4) makes it malformed
         writeln!(file, "{prefix}`gts.x.core.pkg.v1~` suffix").unwrap();
 
         let errors = scan_file(file.path(), None, false);
