@@ -11,7 +11,7 @@
 //!   then use plain function handlers (no per-route closures that capture/clones).
 //! - Optional `method_router(...)` for advanced use (layers/middleware on route level).
 
-use crate::api::problem;
+use crate::api::{api_dto, problem};
 use axum::{handler::Handler, routing::MethodRouter, Router};
 use http::Method;
 use serde::{Deserialize, Serialize};
@@ -630,7 +630,7 @@ where
         desc: impl Into<String>,
     ) -> Self
     where
-        T: utoipa::ToSchema + utoipa::PartialSchema + 'static,
+        T: utoipa::ToSchema + utoipa::PartialSchema + api_dto::RequestApiDto + 'static,
     {
         let name = ensure_schema::<T>(registry);
         self.spec.request_body = Some(RequestBodySpec {
@@ -646,7 +646,7 @@ where
     /// Marks the body as **required**.
     pub fn json_request_no_desc<T>(mut self, registry: &dyn OpenApiRegistry) -> Self
     where
-        T: utoipa::ToSchema + utoipa::PartialSchema + 'static,
+        T: utoipa::ToSchema + utoipa::PartialSchema + api_dto::RequestApiDto + 'static,
     {
         let name = ensure_schema::<T>(registry);
         self.spec.request_body = Some(RequestBodySpec {
@@ -1106,7 +1106,7 @@ where
         description: impl Into<String>,
     ) -> OperationBuilder<H, Present, S, A, L>
     where
-        T: utoipa::ToSchema + utoipa::PartialSchema + 'static,
+        T: utoipa::ToSchema + utoipa::PartialSchema + api_dto::ResponseApiDto + 'static,
     {
         let name = ensure_schema::<T>(registry);
         self.spec.responses.push(ResponseSpec {
@@ -1217,7 +1217,7 @@ where
         description: impl Into<String>,
     ) -> OperationBuilder<H, Present, S, A, L>
     where
-        T: utoipa::ToSchema + utoipa::PartialSchema + 'static,
+        T: utoipa::ToSchema + utoipa::PartialSchema + api_dto::ResponseApiDto + 'static,
     {
         let name = ensure_schema::<T>(openapi);
         self.spec.responses.push(ResponseSpec {
@@ -1270,7 +1270,7 @@ where
         description: impl Into<String>,
     ) -> Self
     where
-        T: utoipa::ToSchema + utoipa::PartialSchema + 'static,
+        T: utoipa::ToSchema + utoipa::PartialSchema + api_dto::ResponseApiDto + 'static,
     {
         let name = ensure_schema::<T>(registry);
         self.spec.responses.push(ResponseSpec {
@@ -1348,7 +1348,7 @@ where
         description: impl Into<String>,
     ) -> Self
     where
-        T: utoipa::ToSchema + utoipa::PartialSchema + 'static,
+        T: utoipa::ToSchema + utoipa::PartialSchema + api_dto::ResponseApiDto + 'static,
     {
         let name = ensure_schema::<T>(openapi);
         self.spec.responses.push(ResponseSpec {
@@ -1442,7 +1442,7 @@ where
     /// # use serde::{Deserialize, Serialize};
     /// # use utoipa::ToSchema;
     /// #
-    /// #[derive(Deserialize, Serialize, ToSchema)]
+    /// #[modkit_macros::api_dto(request)]
     /// struct CreateUserRequest {
     ///     email: String,
     /// }
@@ -1648,6 +1648,12 @@ mod tests {
         Json(serde_json::json!({"status": "ok"}))
     }
 
+    #[modkit_macros::api_dto(request)]
+    struct SampleDtoRequest;
+
+    #[modkit_macros::api_dto(response)]
+    struct SampleDtoResponse;
+
     #[test]
     fn builder_descriptive_methods() {
         let builder = OperationBuilder::<Missing, Missing, (), AuthNotSet>::get("/tests/v1/test")
@@ -1676,10 +1682,10 @@ mod tests {
 
         let _router = OperationBuilder::<Missing, Missing, ()>::post("/tests/v1/test")
             .summary("Test endpoint")
-            .json_request::<serde_json::Value>(&registry, "optional body") // registers schema
+            .json_request::<SampleDtoRequest>(&registry, "optional body") // registers schema
             .public()
             .handler(test_handler)
-            .json_response_with_schema::<serde_json::Value>(
+            .json_response_with_schema::<SampleDtoResponse>(
                 &registry,
                 http::StatusCode::OK,
                 "Success response",
@@ -1975,7 +1981,7 @@ mod tests {
     fn allow_content_types_with_existing_request_body() {
         let registry = MockRegistry::new();
         let builder = OperationBuilder::<Missing, Missing, ()>::post("/tests/v1/test")
-            .json_request::<serde_json::Value>(&registry, "Test request")
+            .json_request::<SampleDtoRequest>(&registry, "Test request")
             .allow_content_types(&["application/json", "application/xml"])
             .public()
             .handler(test_handler)
@@ -2012,7 +2018,7 @@ mod tests {
         let builder = OperationBuilder::<Missing, Missing, ()>::post("/tests/v1/test")
             .operation_id("test.post")
             .summary("Test endpoint")
-            .json_request::<serde_json::Value>(&registry, "Test request")
+            .json_request::<SampleDtoRequest>(&registry, "Test request")
             .allow_content_types(&["application/json"])
             .public()
             .handler(test_handler)
@@ -2128,7 +2134,7 @@ mod tests {
     fn json_request_uses_ref_schema() {
         let registry = MockRegistry::new();
         let builder = OperationBuilder::<Missing, Missing, ()>::post("/tests/v1/test")
-            .json_request::<serde_json::Value>(&registry, "Test request body")
+            .json_request::<SampleDtoRequest>(&registry, "Test request body")
             .public()
             .handler(test_handler)
             .json_response(http::StatusCode::OK, "Success");
@@ -2154,7 +2160,7 @@ mod tests {
         let builder = OperationBuilder::<Missing, Missing, ()>::post("/tests/v1/test")
             .operation_id("test.content_type_purity")
             .summary("Test response content types")
-            .json_request::<serde_json::Value>(&registry, "Test")
+            .json_request::<SampleDtoRequest>(&registry, "Test")
             .public()
             .handler(test_handler)
             .text_response(http::StatusCode::OK, "Text", "text/plain")

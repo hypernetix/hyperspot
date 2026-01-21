@@ -12,6 +12,7 @@ pub mod problem;
 pub mod response;
 pub mod select;
 pub mod trace_layer;
+pub mod api_dto;
 
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]

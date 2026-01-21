@@ -1,12 +1,11 @@
 use modkit_db_macros::ODataFilterable;
-use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 use user_info_sdk::{NewUser, User, UserPatch};
-use utoipa::ToSchema;
 use uuid::Uuid;
 
 /// REST DTO for user representation with serde/utoipa
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, ODataFilterable)]
+#[derive(Debug, Clone, ODataFilterable)]
+#[modkit_macros::api_dto(request, response)]
 pub struct UserDto {
     #[odata(filter(kind = "Uuid"))]
     pub id: Uuid,
@@ -22,7 +21,8 @@ pub struct UserDto {
 }
 
 /// REST DTO for creating a new user
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request)]
 pub struct CreateUserReq {
     /// Optional ID for the user. If not provided, a UUID v7 will be generated
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -33,7 +33,8 @@ pub struct CreateUserReq {
 }
 
 /// REST DTO for updating a user (partial)
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Default)]
+#[derive(Debug, Clone, Default)]
+#[modkit_macros::api_dto(request)]
 pub struct UpdateUserReq {
     pub email: Option<String>,
     pub display_name: Option<String>,
@@ -74,7 +75,8 @@ impl From<UpdateUserReq> for UserPatch {
 }
 
 /// Transport-level SSE payload.
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request, response)]
 #[schema(title = "UserEvent", description = "Server-sent user event")]
 pub struct UserEvent {
     pub kind: String,

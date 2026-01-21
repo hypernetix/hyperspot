@@ -40,6 +40,7 @@ parking_lot = { workspace = true }
 modkit = { path = "../../../../libs/modkit" }
 modkit-auth = { path = "../../../../libs/modkit-auth" }
 modkit-security = { path = "../../../../libs/modkit-security" }
+modkit-macros = { path = "../../../../libs/modkit-macros" }
 
 [dev-dependencies]
 tower = { workspace = true, features = ["util"] }

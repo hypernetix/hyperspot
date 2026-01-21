@@ -65,3 +65,4 @@ mime = { workspace = true }
 # Local dependencies
 modkit = { path = "../../libs/modkit" }
 modkit-auth = { path = "../../libs/modkit-auth" }
+modkit-macros = { path = "../../libs/modkit-macros" }

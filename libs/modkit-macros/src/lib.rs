@@ -9,6 +9,7 @@ use syn::{
     TypePath,
 };
 
+mod api_dto;
 mod grpc_client;
 mod utils;
 
@@ -1053,4 +1054,11 @@ pub fn grpc_client(attr: TokenStream, item: TokenStream) -> TokenStream {
         Ok(expanded) => TokenStream::from(expanded),
         Err(e) => TokenStream::from(e.to_compile_error()),
     }
+}
+
+#[proc_macro_attribute]
+pub fn api_dto(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let attrs = parse_macro_input!(attr with Punctuated::<Ident, Token![,]>::parse_terminated);
+    let input = parse_macro_input!(item as DeriveInput);
+    TokenStream::from(api_dto::expand_api_dto(attrs, input))
 }

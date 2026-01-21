@@ -15,9 +15,7 @@ use axum::{
 use modkit::{
     config::ConfigProvider, contracts::OpenApiRegistry, Module, ModuleCtx, RestfulModule,
 };
-use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use utoipa::ToSchema;
 use uuid::Uuid;
 
 /// Helper to create a test `ModuleCtx`
@@ -41,7 +39,8 @@ fn create_test_module_ctx() -> ModuleCtx {
 }
 
 /// Test user structure
-#[derive(Serialize, Deserialize, ToSchema, Debug, Clone)]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request, response)]
 #[schema(title = "User")]
 pub struct User {
     pub id: u32,
@@ -50,7 +49,8 @@ pub struct User {
 }
 
 /// Test request for creating users
-#[derive(Serialize, Deserialize, ToSchema, Debug)]
+#[derive(Debug)]
+#[modkit_macros::api_dto(request)]
 #[schema(title = "CreateUserRequest")]
 pub struct CreateUserRequest {
     pub name: String,

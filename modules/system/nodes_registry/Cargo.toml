@@ -23,3 +23,4 @@ thiserror = { workspace = true }
 
 modkit = { path = "../../../libs/modkit" }
 modkit-node-info = { path = "../../../libs/modkit-node-info" }
+modkit-macros = { path = "../../../libs/modkit-macros" }

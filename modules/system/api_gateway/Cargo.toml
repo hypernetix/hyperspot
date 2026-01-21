@@ -16,6 +16,7 @@ path = "src/lib.rs"
 modkit = { path = "../../../libs/modkit" }
 modkit-auth = { path = "../../../libs/modkit-auth" }
 modkit-security = { path = "../../../libs/modkit-security" }
+modkit-macros = { path = "../../../libs/modkit-macros" }
 inventory = { workspace = true }
 anyhow = { workspace = true }
 async-trait = { workspace = true }

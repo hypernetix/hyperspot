@@ -13,6 +13,7 @@ calculator-sdk = { path = "../../calculator/calculator-sdk" }
 # ModKit
 modkit = { path = "../../../../libs/modkit" }
 modkit-security = { path = "../../../../libs/modkit-security" }
+modkit-macros = { path = "../../../../libs/modkit-macros" }
 
 # Axum & HTTP
 axum = { workspace = true }

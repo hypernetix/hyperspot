@@ -11,9 +11,7 @@ use modkit::{
     contracts::{OpenApiRegistry, RestHostModule},
     Module, ModuleCtx, RestfulModule,
 };
-use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use utoipa::ToSchema;
 use uuid::Uuid;
 
 struct TestConfigProvider {
@@ -61,7 +59,8 @@ fn create_test_module_ctx_with_body_limit(limit_bytes: usize) -> ModuleCtx {
     )
 }
 
-#[derive(Serialize, Deserialize, ToSchema, Debug, Clone)]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request, response)]
 struct LargePayload {
     data: String,
 }

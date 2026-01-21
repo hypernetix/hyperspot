@@ -5,19 +5,22 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 
 /// REST DTO for file parser info response
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request, response)]
 pub struct FileParserInfoDto {
     pub supported_extensions: HashMap<String, Vec<String>>,
 }
 
 /// REST DTO for parse local file request
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request)]
 pub struct ParseLocalFileRequest {
     pub file_path: String,
 }
 
 /// REST DTO for parse URL request
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request)]
 pub struct ParseUrlRequest {
     pub url: String,
 }
@@ -164,7 +167,8 @@ pub struct ParsedDocumentDto {
 }
 
 /// REST DTO for file parse response (with optional markdown)
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(response)]
 pub struct ParsedDocResponseDto {
     /// The parsed document in intermediate representation
     pub document: ParsedDocumentDto,

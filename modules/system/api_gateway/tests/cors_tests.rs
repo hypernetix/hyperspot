@@ -11,9 +11,7 @@ use modkit::{
     contracts::{OpenApiRegistry, RestHostModule},
     Module, ModuleCtx, RestfulModule,
 };
-use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use utoipa::ToSchema;
 use uuid::Uuid;
 
 /// Helper to create a test `ModuleCtx` with CORS config
@@ -78,7 +76,8 @@ fn create_test_module_ctx_permissive_cors() -> ModuleCtx {
     )
 }
 
-#[derive(Serialize, Deserialize, ToSchema, Debug, Clone)]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request, response)]
 struct TestData {
     value: String,
 }

@@ -18,6 +18,7 @@ types-registry-sdk = { path = "../../../../modules/system/types-registry/types-r
 modkit = { path = "../../../../libs/modkit" }
 modkit-security = { path = "../../../../libs/modkit-security" }
 modkit-odata = { path = "../../../../libs/modkit-odata", features = ["with-utoipa"] }
+modkit-macros = { path = "../../../../libs/modkit-macros" }
 
 # HTTP/REST
 axum = { workspace = true }

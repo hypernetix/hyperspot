@@ -69,6 +69,7 @@ modkit-security = { path = "../../../../libs/modkit-security" }
 modkit-errors = { path = "../../../../libs/modkit-errors" }
 modkit-errors-macro = { path = "../../../../libs/modkit-errors-macro" }
 modkit-odata = { path = "../../../../libs/modkit-odata", features = ["with-utoipa"] }
+modkit-macros = { path = "../../../../libs/modkit-macros" }
 
 [dev-dependencies]
 tower = { workspace = true, features = ["util"] }

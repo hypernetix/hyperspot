@@ -9,7 +9,8 @@ use tenant_resolver_sdk::{GetParentsResponse, GtsSchemaId, Tenant, TenantStatus}
 // Tenant DTOs
 // ============================================================================
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request, response)]
 pub struct TenantDto {
     pub id: String,
     pub parent_id: String,
@@ -204,7 +205,8 @@ impl GetChildrenQuery {
 // ============================================================================
 
 /// Response for `get_parents` endpoint.
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request, response)]
 pub struct GetParentsResponseDto {
     /// The target tenant.
     pub tenant: TenantDto,
@@ -222,7 +224,8 @@ impl From<GetParentsResponse> for GetParentsResponseDto {
 }
 
 /// Response for `get_children` endpoint.
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(response)]
 pub struct GetChildrenResponseDto {
     pub children: Vec<TenantDto>,
 }

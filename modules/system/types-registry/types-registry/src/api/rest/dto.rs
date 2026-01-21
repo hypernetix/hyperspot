@@ -35,7 +35,8 @@ impl From<&GtsIdSegment> for GtsIdSegmentDto {
 }
 
 /// Response DTO for a GTS entity.
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request, response)]
 pub struct GtsEntityDto {
     /// Deterministic UUID generated from the GTS ID.
     pub id: Uuid,
@@ -69,7 +70,8 @@ impl From<GtsEntity> for GtsEntityDto {
 }
 
 /// Request DTO for registering GTS entities.
-#[derive(Debug, Clone, Deserialize, ToSchema)]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request)]
 pub struct RegisterEntitiesRequest {
     /// Array of GTS entities to register.
     pub entities: Vec<serde_json::Value>,
@@ -111,7 +113,8 @@ impl From<RegisterResult> for RegisterResultDto {
 }
 
 /// Response DTO for batch registration.
-#[derive(Debug, Clone, Serialize, ToSchema)]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(response)]
 pub struct RegisterEntitiesResponse {
     /// Summary of the registration operation.
     pub summary: RegisterSummaryDto,
@@ -202,7 +205,8 @@ impl ListEntitiesQuery {
 }
 
 /// Response DTO for listing GTS entities.
-#[derive(Debug, Clone, Serialize, ToSchema)]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(response)]
 pub struct ListEntitiesResponse {
     /// The list of entities.
     pub entities: Vec<GtsEntityDto>,

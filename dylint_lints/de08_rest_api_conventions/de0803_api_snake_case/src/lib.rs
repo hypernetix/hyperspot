@@ -84,7 +84,7 @@ fn find_serde_attribute_value(attrs: &[Attribute], attribute_name: &str) -> Vec<
 /// Validates that `rename_all` attributes use snake_case variants.
 fn check_type_rename_all(cx: &EarlyContext<'_>, attrs: &[Attribute]) {
     for (span, value) in find_serde_attribute_value(attrs, "rename_all") {
-        if value != "snake_case" && value != "SCREAMING_SNAKE_CASE" && value != "UPPERCASE" {
+        if value != "snake_case" {
             cx.span_lint(
                 DE0803_API_SNAKE_CASE,
                 span,
