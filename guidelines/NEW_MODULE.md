@@ -2620,8 +2620,8 @@ errors (add explicit types), missing `chrono::Utc`, handler/service name mismatc
   pattern
     - `user_info-sdk/` — SDK crate with public API trait, models, and errors
     - `users_info/` — Module implementation with local client, domain, and REST handlers
-- [examples/oop-modules/remote_accum/](../examples/oop-modules/remote_accum/) — Reference implementation of an OoP
-  module
+    - [examples/oop-modules/calculator_gateway/](../examples/oop-modules/calculator_gateway/) — Reference implementation of an OoP
+  module 
 - [examples/plugin-modules/tenant_resolver/](../examples/plugin-modules/tenant_resolver/) — Reference implementation of
   a Gateway + Plugins module
     - `tenant_resolver-sdk/` — SDK with public and plugin API traits

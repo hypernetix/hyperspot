@@ -68,7 +68,7 @@ As an alternative, you can fork the repository to your own GitHub account.
 Follow the coding standards and guidelines:
 
 1. See common [RUST.md](./guidelines/DNA/languages/RUST.md) guideline
-2. When develop new REST API use [API.md](./guidelines/DNA/REST/API.md), [PAGINATION](./guidelines/DNA/REST/PAGINATION.md), [STATUS_CODES](./guidelines/DNA/REST/STATUS_CODES.md)
+2. When develop new REST API use [API.md](./guidelines/DNA/REST/API.md), [STATUS_CODES](./guidelines/DNA/REST/STATUS_CODES.md)
 3. When develop new Module use [NEW_MODULE.md](./guidelines/NEW_MODULE.md)
 4. Security [SECURITY.md](./guidelines/SECURITY.md)
 

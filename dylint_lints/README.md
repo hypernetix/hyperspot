@@ -248,6 +248,7 @@ A Dylint lint that prevents using `schemars::schema_for!()` on GTS-wrapped struc
 A Rust CLI tool that validates GTS identifiers in documentation and configuration files.
 
 **What it checks:**
+
 - All `.md`, `.json`, `.yaml`, `.yml` files in `docs/`, `modules/`, `libs/`, `examples/`
 - Skips intentionally invalid examples (marked with "bad", "invalid", "❌", etc.)
 - Allows wildcards in pattern/filter contexts
@@ -331,7 +332,6 @@ Use `make dylint` - it auto-rebuilds if sources changed.
 
 ## Resources
 
-- [LINTS.md](./LINTS.md) - Complete catalog with examples
 - [Makefile](../Makefile) - Tool comparison table (line 60)
 - [Dylint Docs](https://github.com/trailofbits/dylint)
 - [Clippy Lint Development](https://doc.rust-lang.org/nightly/clippy/development/index.html)
