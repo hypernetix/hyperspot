@@ -2303,8 +2303,9 @@ modules/<gateway-name>/
 ├── <gateway>-gw/               # Gateway module
 │   └── src/
 │       ├── module.rs           # Module with plugin discovery
-│       ├── local_client.rs     # Public client adapter
-│       └── domain/service.rs   # Plugin resolution and delegation
+│       └── domain/
+│           ├── service.rs      # Plugin resolution and delegation
+│           └── local_client.rs # Public client adapter
 │
 └── plugins/                    # Plugin implementations
     ├── <vendor_a>_plugin/

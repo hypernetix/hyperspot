@@ -10,8 +10,6 @@ pub use simple_user_settings_sdk::{
 pub mod module;
 pub use module::SettingsModule;
 
-pub mod local_client;
-
 #[doc(hidden)]
 pub mod api;
 #[doc(hidden)]
