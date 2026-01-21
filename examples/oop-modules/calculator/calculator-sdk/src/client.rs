@@ -1,6 +1,4 @@
 //! gRPC client implementation of CalculatorClient
-//!
-//! Internal client used by `wire_client()`. Not exported from SDK.
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -15,7 +13,7 @@ use crate::proto::calculator_service_client::CalculatorServiceClient;
 use crate::proto::AddRequest;
 
 /// gRPC client implementation of CalculatorClient
-pub(crate) struct CalculatorGrpcClient {
+pub struct CalculatorGrpcClient {
     inner: CalculatorServiceClient<Channel>,
 }
 

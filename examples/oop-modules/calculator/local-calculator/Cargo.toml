@@ -1,0 +1,27 @@
+[package]
+name = "local-calculator"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Local CalculatorClient module that lazily initializes gRPC client using DirectoryClient"
+
+[dependencies]
+# Calculator SDK for API trait and types
+calculator-sdk = { path = "../calculator-sdk" }
+
+# ModKit dependencies
+modkit = { path = "../../../../libs/modkit" }
+modkit-security = { path = "../../../../libs/modkit-security" }
+modkit-transport-grpc = { path = "../../../../libs/modkit-transport-grpc" }
+module_orchestrator-sdk = { path = "../../../../modules/system/module_orchestrator/module_orchestrator-sdk" }
+
+# gRPC dependencies
+tonic = { workspace = true, features = ["transport"] }
+async-trait = { workspace = true }
+
+# Error handling and utilities
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true, features = ["sync"] }
+inventory = { workspace = true }

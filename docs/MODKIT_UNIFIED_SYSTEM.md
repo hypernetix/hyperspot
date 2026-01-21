@@ -420,7 +420,7 @@ modules/my_module/
   │       ├── lib.rs              # Re-exports everything
   │       ├── api.rs              # API trait + types + errors
   │       ├── client.rs           # gRPC client impl (using modkit-transport-grpc)
-  │       └── wiring.rs           # wire_client() helper function
+  │       └── wiring.rs           # wire_client() helper function (optional)
   └── my_module/                  # Module implementation + SERVER
       ├── Cargo.toml
       └── src/
@@ -572,6 +572,8 @@ pub async fn build_client(resolver: &dyn DirectoryApi) -> Result<Arc<dyn MyModul
 
 ### Usage Example
 
+**Option 1: Manual wiring (using `wire_client`)**
+
 ```rust
 // Consumer module
 use my_module_sdk::{MyModuleApi, wire_client};
@@ -589,12 +591,19 @@ async fn init(&self, ctx: &ModuleCtx) -> Result<()> {
 }
 ```
 
+**Option 2: Automatic registration via dedicated module (recommended)**
+
+Create a dedicated module (e.g., `local-my-module`) that registers a lazy-initializing client in `ClientHub` during module initialization. This approach provides better separation of concerns and automatic initialization. See the `local-calculator` module in `examples/oop-modules/calculator/` for a complete example.
+
 ### Example: calculator
 
 See `examples/oop-modules/calculator/` for a complete working example:
 
-* **calculator-sdk** — API trait, types, gRPC client, proto stubs, and `wire_client()` helper
+* **calculator-sdk** — API trait, types, gRPC client, proto stubs
 * **calculator** — OoP module with gRPC server implementation
+* **local-calculator** — Module that registers `LocalCalculatorClient` in ClientHub with lazy initialization
+
+**Note:** The calculator example uses a dedicated `local-calculator` module to automatically register the client in ClientHub, rather than requiring consumers to call `wire_client()` manually. This provides better separation of concerns and automatic initialization.
 
 ---
 

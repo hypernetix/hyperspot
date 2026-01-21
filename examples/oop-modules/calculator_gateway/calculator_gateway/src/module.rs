@@ -23,7 +23,6 @@ use crate::domain::Service;
 #[modkit::module(
     name = "calculator_gateway",
     capabilities = [rest],
-    deps = ["calculator"]
 )]
 pub struct CalculatorGateway;
 
@@ -41,7 +40,7 @@ impl modkit::Module for CalculatorGateway {
         // Create domain service with ClientHub for dependency resolution
         let service = Arc::new(Service::new(ctx.client_hub()));
 
-        // Register Service in ClientHub for SDK's wire_client() to access
+        // Register Service in ClientHub for SDK consumers to access
         ctx.client_hub().register::<Service>(service);
 
         tracing::info!("calculator_gateway module initialized");

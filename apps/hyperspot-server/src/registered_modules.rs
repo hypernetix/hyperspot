@@ -26,7 +26,7 @@ use users_info as _;
 use calculator_gateway as _;
 
 #[cfg(feature = "oop-example")]
-use calculator as _;
+use local_calculator as _;
 
 #[cfg(feature = "tenant-resolver-example")]
 use contoso_tr_plugin as _;

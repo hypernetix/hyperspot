@@ -2386,6 +2386,7 @@ dependencies = [
  "hs-single-tenant-tr-plugin",
  "hs-static-tr-plugin",
  "hs-tenant-resolver-gw",
+ "local-calculator",
  "mimalloc",
  "modkit",
  "modkit-db",
@@ -2798,6 +2799,23 @@ name = "litemap"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6373607a59f0be73a39b6fe456b8192fcc3585f602af20751600e974dd455e77"
+
+[[package]]
+name = "local-calculator"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "calculator-sdk",
+ "inventory",
+ "modkit",
+ "modkit-security",
+ "modkit-transport-grpc",
+ "module_orchestrator-sdk",
+ "tokio",
+ "tonic",
+ "tracing",
+]
 
 [[package]]
 name = "local-ip-address"

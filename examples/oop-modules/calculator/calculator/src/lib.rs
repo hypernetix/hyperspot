@@ -10,7 +10,8 @@
 //! - `module.rs` - Module registration and lifecycle
 //!
 //! External consumers should use `calculator-sdk` crate which provides
-//! the gRPC client and `wire_client()` for ClientHub integration.
+//! the gRPC client implementation. The `local_calculator` module registers
+//! the client in ClientHub for in-process modules to use.
 #![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 // === MODULE DEFINITION ===
 mod module;

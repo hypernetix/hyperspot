@@ -11,7 +11,7 @@ workspace = true
 [features]
 default = []
 users-info-example = ["dep:users_info"]
-oop-example = ["dep:calculator_gateway", "dep:calculator"]
+oop-example = ["dep:calculator_gateway", "dep:calculator", "dep:local-calculator"]
 tenant-resolver-example = ["dep:tenant_resolver_gw", "dep:contoso_tr_plugin", "dep:fabrikam_tr_plugin"]
 single-tenant = ["dep:hs-single-tenant-tr-plugin"]
 static-tenants = ["dep:hs-static-tr-plugin"]
@@ -58,6 +58,7 @@ sqlx = { workspace = true, features = ["postgres", "sqlite"] }
 users_info = { path = "../../examples/modkit/users_info/users_info", optional = true }
 calculator_gateway = { path = "../../examples/oop-modules/calculator_gateway/calculator_gateway", optional = true }
 calculator = { path = "../../examples/oop-modules/calculator/calculator", optional = true }
+local-calculator = { path = "../../examples/oop-modules/calculator/local-calculator", optional = true }
 
 # tenant_resolver plugin example
 tenant_resolver_gw = { package = "tenant_resolver-gw", path = "../../examples/plugin-modules/tenant_resolver/tenant_resolver-gw", optional = true }
