@@ -101,6 +101,20 @@ Hierarchy operations SHALL support:
 - Querying all descendants of an entity (ordered by depth)
 - Efficient subtree operations (move, delete)
 
+Hierarchy query operations (ancestors/descendants) SHALL apply service-level constraints configured via service configuration:
+- **max_depth**: Maximum traversal depth (positive integer). If not configured, the system SHALL use a default value of `10`. The configured value MUST be `<= 10`.
+- **max_width**: Maximum number of children to include per parent node in the response (positive integer). If not configured, the system SHALL not apply a width limit.
+
+The system SHALL treat the effective constraint set `(max_depth, max_width)` as a **query profile** that can be used to define and track SLOs for hierarchy queries.
+
+Changing these constraints MUST NOT delete or rewrite existing hierarchy data in the database.
+
+When constraints are reduced and existing data exceeds the new limits, the operator SHALL independently implement and run a data-migration script/process to bring stored hierarchies into compliance with the new limits (e.g., restructure the tree, split nodes, or otherwise reduce depth/width).
+
+If the data-migration has NOT been performed, then after reducing constraints:
+- Read/query operations SHALL return all data stored in the database (no truncation/obrezanie due to the configured limits)
+- Write operations that would create or increase a violation of the configured limits (e.g., create/move that increases depth beyond `max_depth`, or adds a child beyond `max_width`) SHALL be rejected and require reducing depth/width via data-migration (or increasing limits)
+
 The closure table SHALL maintain:
 - `parent_id`: Ancestor entity ID
 - `child_id`: Descendant entity ID
@@ -116,7 +130,24 @@ The closure table SHALL maintain:
 
 - **GIVEN** an entity `org-id` with descendants: `DEPT1, DEPT2, TEAM1` (child of DEPT1)
 - **WHEN** the user calls `get_descendants` for `org-id`
-- **THEN** the system returns all descendants `[DEPT1, DEPT2, TEAM1]` ordered by depth
+- **THEN** the system applies the default constraint `max_depth = 10`
+- **AND** returns all descendants `[DEPT1, DEPT2, TEAM1]` ordered by depth
+
+#### Scenario: Query descendants with configured constraints
+
+- **GIVEN** an entity `org-id` with descendants across multiple levels
+- **AND** the service is configured with `max_depth = 3` and `max_width = 50`
+- **WHEN** the user calls `get_descendants` for `org-id`
+- **THEN** the system returns descendants up to depth 3
+- **AND** for each parent in the returned set, includes at most 50 direct children
+
+#### Scenario: Configuration reduced after deeper hierarchy already exists
+
+- **GIVEN** a hierarchy exists in the database with depth > 3
+- **AND** the service configuration is changed to `max_depth = 3`
+- **WHEN** a client requests `descendants` for an entity with deeper descendants
+- **THEN** the system returns all descendants stored in the database (including deeper nodes)
+- **AND** the deeper nodes remain stored in the database
 
 ---
 
@@ -244,6 +275,52 @@ All endpoints SHALL:
 - **GIVEN** registered entities in the system
 - **WHEN** GET request is sent to `/resource-group/v1/groups`
 - **THEN** response contains entities
+
+---
+
+### Requirement: Service Configuration for Hierarchy Constraints
+
+The service SHALL support configuring hierarchy query constraints for resource group hierarchy operations.
+
+Configuration options:
+- `max_depth` (positive integer, default `10`, MUST be `<= 10`)
+- `max_width` (positive integer, optional; if provided, limits the number of children included per parent node)
+
+The configured constraints SHALL apply to all hierarchy query operations exposed by the module (service API and REST API).
+
+#### Scenario: Default constraints
+
+- **GIVEN** the service is started without hierarchy constraint configuration
+- **WHEN** a client requests `descendants` for an entity
+- **THEN** the system applies `max_depth = 10`
+
+#### Scenario: Custom constraints
+
+- **GIVEN** the service is configured with `max_depth = 3` and `max_width = 50`
+- **WHEN** a client requests `descendants` for an entity
+- **THEN** the system returns descendants up to depth 3
+- **AND** limits included children per parent node to 50
+
+#### Scenario: Reject invalid max_depth configuration
+
+- **GIVEN** the service is configured with `max_depth = 11`
+- **WHEN** the service starts
+- **THEN** the service rejects the configuration as invalid
+
+#### Scenario: Reject create/move that would violate configured max_depth
+
+- **GIVEN** the service is configured with `max_depth = 3`
+- **AND** a hierarchy exists where an entity `a` is at depth 3 relative to the root
+- **WHEN** a client attempts to create or move an entity under `a` such that its depth would become 4
+- **THEN** the system rejects the operation with `ResourceGroupError::Validation` with a field-specific error for `max_depth`
+
+#### Scenario: Reduced limits require data migration (no read truncation, write blocked)
+
+- **GIVEN** a hierarchy exists in the database that exceeds configured limits (`max_depth` and/or `max_width`)
+- **WHEN** the operator reduces the service configuration limits
+- **THEN** the operator MUST implement and run a data-migration script/process to bring the stored hierarchy into compliance
+- **AND** until the migration is completed, read/query operations return all stored data (no truncation)
+- **AND** write operations that would create or increase a violation are rejected and require reducing depth/width (or increasing limits)
 
 ---
 
