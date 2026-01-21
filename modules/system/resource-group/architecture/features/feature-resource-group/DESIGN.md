@@ -66,15 +66,14 @@ To allow applications to model complex organizational structures (e.g., Organiza
 7. [ ] - `ph-2` - **System** updates `parent_id` on entity - `inst-update-entity`
 8. [ ] - `ph-2` - **System** returns success - `inst-return-success`
 
-### Manage References (Optional Plugin)
+### Manage References
 
 - [ ] **ID**: `fdd-hyperspot-feature-resource-group-flow-manage-refs`
 
-1. [ ] - `ph-3` - **IF** References Plugin is enabled:
-   - [ ] - `ph-3` - **Actor** links group to external resource - `inst-link-ref`
-   - [ ] - `ph-3` - **System** stores reference and increments counter - `inst-store-ref`
-   - [ ] - **IF** **Actor** tries to delete group with refs:
-     - [ ] - `ph-3` - **System** returns error `GroupHasReferences` - `inst-err-refs`
+1. [ ] - `ph-3` - **Actor** links group to external resource - `inst-link-ref`
+2. [ ] - `ph-3` - **System** stores reference and increments counter - `inst-store-ref`
+3. [ ] - **IF** **Actor** tries to delete group with refs:
+   - [ ] - `ph-3` - **System** returns error `GroupHasReferences` - `inst-err-refs`
 
 ---
 
@@ -221,20 +220,20 @@ To allow applications to model complex organizational structures (e.g., Organiza
 - Verify that hierarchy queries respect the configured `max_depth` and `max_width`.
 - Verify that existing data exceeding new stricter limits is returned without truncation during reads.
 
-### References Plugin (Optional)
+### References
 
-- [ ] **ID**: `fdd-hyperspot-feature-resource-group-req-refs-plugin`
+- [ ] **ID**: `fdd-hyperspot-feature-resource-group-req-refs`
 
-### References Plugin
+### References
 **Status**: ⏳ NOT_STARTED
-**Description**: The system SHALL provide an optional plugin to link resource groups to external resources and prevent deletion of referenced groups.
+**Description**: The system SHALL provide functionality to link resource groups to external resources and prevent deletion of referenced groups.
 **Phases**:
 - [ ] `ph-3`: Link/Unlink references
 - [ ] `ph-3`: Prevent deletion if references exist
 **Tests Covered**:
 - `fdd-hyperspot-feature-resource-group-test-refs`
 **Acceptance Criteria**:
-- Verify that references can be created when the plugin is enabled.
+- Verify that references can be created.
 - Verify that deleting a group with active references is prevented.
 - Verify that references can be deleted and the group becomes deletable.
 
@@ -345,17 +344,16 @@ To allow applications to model complex organizational structures (e.g., Organiza
 3. [ ] - `ph-2` - **Actor** attempts to create child C under B (depth 2) - `inst-create-deep`
 4. [ ] - `ph-2` - **System** returns validation error for max depth - `inst-verify-err`
 
-### Test: References Plugin
+### Test: References
 
 - [ ] **ID**: `fdd-hyperspot-feature-resource-group-test-refs`
 
-### References Plugin
-**Validates**: `fdd-hyperspot-feature-resource-group-req-refs-plugin`
+### References
+**Validates**: `fdd-hyperspot-feature-resource-group-req-refs`
 
-1. [ ] - `ph-3` - **Actor** enables References Plugin - `inst-enable-plugin`
-2. [ ] - `ph-3` - **Actor** creates reference from Group A to Resource X - `inst-create-ref`
-3. [ ] - `ph-3` - **Actor** attempts to delete Group A - `inst-delete-fail`
-4. [ ] - `ph-3` - **System** returns error `GroupHasReferences` - `inst-verify-err`
-5. [ ] - `ph-3` - **Actor** deletes reference - `inst-delete-ref`
-6. [ ] - `ph-3` - **Actor** deletes Group A - `inst-delete-success`
-7. [ ] - `ph-3` - **System** successfully deletes group - `inst-verify-delete`
+1. [ ] - `ph-3` - **Actor** creates reference from Group A to Resource X - `inst-create-ref`
+2. [ ] - `ph-3` - **Actor** attempts to delete Group A - `inst-delete-fail`
+3. [ ] - `ph-3` - **System** returns error `GroupHasReferences` - `inst-verify-err`
+4. [ ] - `ph-3` - **Actor** deletes reference - `inst-delete-ref`
+5. [ ] - `ph-3` - **Actor** deletes Group A - `inst-delete-success`
+6. [ ] - `ph-3` - **System** successfully deletes group - `inst-verify-delete`
