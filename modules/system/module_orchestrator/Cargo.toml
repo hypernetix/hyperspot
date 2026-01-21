@@ -10,8 +10,8 @@ description = "Module Orchestrator - system module for service discovery and mod
 workspace = true
 
 [dependencies]
-module_orchestrator-sdk = { path = "../module_orchestrator-sdk" }
-module_orchestrator-grpc = { path = "../module_orchestrator-grpc" }
+cf-system-sdks = { workspace = true }
+cf-system-directory-grpc = { workspace = true }
 modkit = { workspace = true }
 parking_lot = { workspace = true }
 tokio = { workspace = true }

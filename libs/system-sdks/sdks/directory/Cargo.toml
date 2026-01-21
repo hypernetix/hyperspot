@@ -1,21 +1,19 @@
 [package]
-name = "module_orchestrator-sdk"
+name = "cf-system-sdk-directory"
 version = "0.1.0"
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+description = "Directory service SDK module"
 rust-version.workspace = true
-description = "Domain contracts and client interfaces for module orchestrator"
+
+[lib]
+name = "cf_system_sdk_directory"
+
+[lints]
+workspace = true
 
 [dependencies]
 async-trait = { workspace = true }
 anyhow = { workspace = true }
-
-[lints.rust]
-unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage_nightly)'] }
-
-
-
-
-

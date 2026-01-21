@@ -31,7 +31,7 @@ otel = [
 bootstrap = [
     "dep:serde-saphyr",
     "dep:serde_yaml",
-    "dep:module_orchestrator-grpc",
+    "dep:cf-system-directory-grpc",
     "dep:tracing-appender",
     "dep:file-rotate",
     "dep:tracing-log",
@@ -48,8 +48,8 @@ modkit-errors = { workspace = true, features = ["utoipa", "axum"] }
 modkit-db = { workspace = true }
 modkit-odata = { workspace = true, features = ["with-odata-params"] }
 modkit-sdk = { workspace = true }
-module_orchestrator-sdk = { path = "../../modules/system/module_orchestrator/module_orchestrator-sdk" }                    # TODO: probably we need remove this dependency at the future
-module_orchestrator-grpc = { path = "../../modules/system/module_orchestrator/module_orchestrator-grpc", optional = true }
+cf-system-sdks = { workspace = true } # TODO: probably we need remove this dependency at the future
+cf-system-directory-grpc = { workspace = true, optional = true }
 
 # Core deps
 anyhow = { workspace = true }

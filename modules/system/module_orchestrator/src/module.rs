@@ -11,7 +11,7 @@ use modkit::contracts::{GrpcServiceCapability, RegisterGrpcServiceFn, SystemCapa
 use modkit::directory::LocalDirectoryClient;
 use modkit::runtime::ModuleManager;
 
-use module_orchestrator_grpc::DIRECTORY_SERVICE_NAME;
+use cf_system_directory_grpc::DIRECTORY_SERVICE_NAME;
 
 use crate::server;
 
@@ -26,9 +26,9 @@ pub struct ModuleOrchestratorConfig;
 /// - Exposes `DirectoryService` gRPC service via `grpc_hub`
 /// - Tracks module instances and provides service resolution
 #[modkit::module(
-    name = "module_orchestrator",
+    name = "directory",
     capabilities = [grpc, system],
-    client = module_orchestrator_sdk::DirectoryClient
+    client = cf_system_sdks::directory::DirectoryClient
 )]
 pub struct ModuleOrchestrator {
     config: RwLock<ModuleOrchestratorConfig>,

@@ -16,7 +16,7 @@ modkit-security = { workspace = true }
 # gRPC transport dependencies
 modkit-transport-grpc = { workspace = true }
 modkit = { workspace = true }
-module_orchestrator-sdk = { path = "../../../../modules/system/module_orchestrator/module_orchestrator-sdk" }
+cf-system-sdks = { workspace = true }
 tonic = { workspace = true, features = ["transport"] }
 tonic-prost = { workspace = true }
 prost = { workspace = true }

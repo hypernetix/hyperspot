@@ -6,10 +6,10 @@ use anyhow::Result;
 use async_trait::async_trait;
 use tonic::transport::Channel;
 
-use modkit_transport_grpc::client::{GrpcClientConfig, connect_with_retry};
-use module_orchestrator_sdk::{
+use cf_system_sdks::directory::{
     DirectoryClient, RegisterInstanceInfo, ServiceEndpoint, ServiceInstanceInfo,
 };
+use modkit_transport_grpc::client::{GrpcClientConfig, connect_with_retry};
 
 use crate::{
     DeregisterInstanceRequest, DirectoryServiceClient, GrpcServiceEndpoint, HeartbeatRequest,
@@ -33,7 +33,7 @@ impl DirectoryGrpcClient {
     /// Uses exponential backoff retry logic for reliable connection establishment.
     /// This is the recommended method for OoP modules connecting to the master host.
     pub async fn connect(uri: impl Into<String>) -> Result<Self> {
-        let cfg = GrpcClientConfig::new("module_orchestrator");
+        let cfg = GrpcClientConfig::new("directory");
         Self::connect_with_retry(uri, &cfg).await
     }
 

@@ -5,12 +5,12 @@
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
 
-use module_orchestrator_grpc::{
+use cf_system_directory_grpc::{
     DeregisterInstanceRequest, DirectoryService, DirectoryServiceServer, HeartbeatRequest,
     InstanceInfo, ListInstancesRequest, ListInstancesResponse, RegisterInstanceRequest,
     ResolveGrpcServiceRequest, ResolveGrpcServiceResponse,
 };
-use module_orchestrator_sdk::{DirectoryClient, RegisterInstanceInfo, ServiceEndpoint};
+use cf_system_sdks::directory::{DirectoryClient, RegisterInstanceInfo, ServiceEndpoint};
 
 /// gRPC service implementation of Directory Service
 #[derive(Clone)]

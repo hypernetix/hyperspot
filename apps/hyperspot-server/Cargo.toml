@@ -34,7 +34,7 @@ modkit-db = { workspace = true, features = ["sqlite", "pg"] }
 # System modules
 api_gateway = { path = "../../modules/system/api_gateway" }
 grpc_hub = { path = "../../modules/system/grpc_hub" }
-module_orchestrator = { path = "../../modules/system/module_orchestrator/module_orchestrator" }
+module_orchestrator = { path = "../../modules/system/module_orchestrator" }
 types-registry = { path = "../../modules/system/types-registry/types-registry" }
 hs-tenant-resolver-gw = { path = "../../modules/system/tenant_resolver/tenant_resolver-gw" }
 

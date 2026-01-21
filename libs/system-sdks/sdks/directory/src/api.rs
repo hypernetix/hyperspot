@@ -16,15 +16,17 @@ impl ServiceEndpoint {
         Self { uri: uri.into() }
     }
 
+    #[must_use]
     pub fn http(host: &str, port: u16) -> Self {
         Self {
             uri: format!("{}://{}:{}", "http", host, port),
         }
     }
 
+    #[must_use]
     pub fn https(host: &str, port: u16) -> Self {
         Self {
-            uri: format!("https://{}:{}", host, port),
+            uri: format!("https://{host}:{port}"),
         }
     }
 
@@ -95,8 +97,8 @@ mod tests {
         let http_ep = ServiceEndpoint::http("localhost", 8080);
         assert_eq!(http_ep.uri, concat!("http", "://localhost:8080"));
 
-        let https_ep = ServiceEndpoint::https("localhost", 8443);
-        assert_eq!(https_ep.uri, "https://localhost:8443");
+        let https_endpoint = ServiceEndpoint::https("localhost", 8443);
+        assert_eq!(https_endpoint.uri, "https://localhost:8443");
 
         let uds_ep = ServiceEndpoint::uds("/tmp/socket.sock");
         assert!(uds_ep.uri.starts_with("unix://"));
@@ -109,13 +111,13 @@ mod tests {
     #[test]
     fn test_register_instance_info() {
         let info = RegisterInstanceInfo {
-            module: "test_module".to_string(),
-            instance_id: "instance1".to_string(),
+            module: "test_module".to_owned(),
+            instance_id: "instance1".to_owned(),
             grpc_services: vec![(
-                "test.Service".to_string(),
+                "test.Service".to_owned(),
                 ServiceEndpoint::http("127.0.0.1", 8001),
             )],
-            version: Some("1.0.0".to_string()),
+            version: Some("1.0.0".to_owned()),
         };
 
         assert_eq!(info.module, "test_module");

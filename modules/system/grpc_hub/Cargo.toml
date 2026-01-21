@@ -16,7 +16,7 @@ workspace = true
 [dependencies]
 modkit = { workspace = true }
 modkit-transport-grpc = { workspace = true }
-module_orchestrator-sdk = { path = "../module_orchestrator/module_orchestrator-sdk" }
+cf-system-sdks = { workspace = true }
 inventory = { workspace = true }
 anyhow = { workspace = true }
 async-trait = { workspace = true }
