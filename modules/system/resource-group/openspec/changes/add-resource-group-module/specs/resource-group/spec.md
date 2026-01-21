@@ -250,12 +250,6 @@ All endpoints SHALL:
 - **WHEN** POST request is sent to `/resource-group/v1/types`
 - **THEN** the system creates the type and returns `201 Created` with location header
 
-#### Scenario: List entities via REST
-
-- **GIVEN** registered entities in the system
-- **WHEN** GET request is sent to `/resource-group/v1/groups`
-- **THEN** response contains entities
-
 ---
 
 ### Requirement: Service Configuration for Hierarchy Constraints
@@ -330,13 +324,12 @@ The system SHALL use SeaORM with the following tables:
 - Indexes on `parent_id`, `child_id`, `depth`
 
 **`resource_group_reference`:**
-- `id` (PK): UUIDv7
 - `group_id` (FK): UUID → `resource_group.id`
 - `resource_type`: String
 - `resource_id`: String
 - `application_id`: UUID
 - `created_at`: Timestamp
-- Composite index on `(resource_type, resource_id)`
+- Composite PK / Unique Constraint on `(group_id, resource_type, resource_id, application_id)`
 
 All tables SHALL use Secure ORM.
 

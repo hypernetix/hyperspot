@@ -10,6 +10,8 @@ This document tracks all significant architectural decisions for the Resource Gr
 
 ## ADR-0001: Use Closure Table for Hierarchy Storage
 
+**ID**: `fdd-hyperspot-adr-closure-table`
+<!-- fdd-id-content -->
 **Date**: 2026-01-21
 **Status**: Accepted
 **Deciders**: Hyperspot Team
@@ -71,8 +73,8 @@ Closure Table stores all paths between nodes (not just direct parent-child).
 - `fdd-hyperspot-capability-resource-organization` - Hierarchical organization
 
 **Requirements**:
-- `fdd-hyperspot-feature-resource-group-req-hierarchy-ops` - Efficient hierarchy queries
-- `fdd-hyperspot-feature-resource-group-req-db-schema` - Database schema requirements
+- `fdd-hyperspot-req-resource-org` - Efficient hierarchy queries
 
 **Principles**:
 - `fdd-hyperspot-principle-efficient-reads` - Optimize for read performance
+<!-- fdd-id-content -->
