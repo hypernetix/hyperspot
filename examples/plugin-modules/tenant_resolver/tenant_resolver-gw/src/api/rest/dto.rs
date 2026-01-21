@@ -207,7 +207,7 @@ impl GetChildrenQuery {
 
 /// Response for `get_parents` endpoint.
 #[derive(Debug, Clone)]
-#[modkit_macros::api_dto(request, response)]
+#[modkit_macros::api_dto(response)]
 pub struct GetParentsResponseDto {
     /// The target tenant.
     pub tenant: TenantDto,
