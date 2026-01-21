@@ -73,8 +73,8 @@ implementation-specific and not required to satisfy the business requirements.
 ### In Scope
 
 - Runtime creation/modification/registration and execution of:
-    - **Functions** (single unit of custom logic)
-    - **Workflows** (multi-step orchestration)
+  - **Functions** (single unit of custom logic)
+  - **Workflows** (multi-step orchestration)
 - Tenant- and user-scoped registries for functions/workflows
 - Long-running asynchronous execution (including multi-day executions)
 - Governance controls via resource limits and policies
@@ -191,14 +191,7 @@ actionable feedback.
 Actionable feedback MUST include: the specific validation error type, the location in the definition (line number,
 field path, or step identifier), a human-readable error message, and suggested corrections where applicable.
 
-### BR-012 (P0): Graceful disconnection handling
-
-When an integration adapter or external dependency is disconnected, the system MUST:
-
-- reject new workflow/function starts that depend on the disconnected component
-- allow in-flight executions to complete or fail gracefully
-
-### BR-013 (P0): Per-function/workflow resource quotas
+### BR-012 (P0): Per-function/workflow resource quotas
 
 The system MUST support defining resource limits at the individual workflow/function definition level, including:
 
@@ -206,7 +199,7 @@ The system MUST support defining resource limits at the individual workflow/func
 - maximum memory allocation per execution
 - maximum CPU allocation per execution
 
-### BR-014 (P0): Long-running execution credential refresh
+### BR-013 (P0): Long-running execution credential refresh
 
 For long-running asynchronous workflows, the system MUST support automatic refresh of initiator/caller authentication
 tokens or credentials, ensuring that:
@@ -214,7 +207,7 @@ tokens or credentials, ensuring that:
 - workflows do not fail due to token expiration during extended execution
 - security context remains valid and auditable throughout the workflow lifetime
 
-### BR-015 (P0): Workflow and execution lifecycle management
+### BR-014 (P0): Workflow and execution lifecycle management
 
 The system MUST support lifecycle management for workflows/functions and their executions, including the ability to:
 
@@ -224,7 +217,7 @@ The system MUST support lifecycle management for workflows/functions and their e
 - suspend and resume executions
 - apply compensation behavior on cancellation where applicable
 
-### BR-016 (P0): Execution visibility and querying
+### BR-015 (P0): Execution visibility and querying
 
 The system MUST provide an interface for authorized users/operators to:
 
@@ -233,14 +226,14 @@ The system MUST provide an interface for authorized users/operators to:
 - inspect execution history and the current/pending step
 - filter/search by tenant, initiator, time range, status, and correlation identifier
 
-### BR-017 (P0): Access control and separation of duties
+### BR-016 (P0): Access control and separation of duties
 
 The system MUST enforce authenticated and authorized access to all workflow/function management and execution operations
 and MUST fail closed on authorization failures.
 The system SHOULD support separation of duties so that permissions to author/modify workflows/functions can be distinct
 from permissions to execute or administer them.
 
-### BR-018 (P0): Data protection and privacy controls
+### BR-017 (P0): Data protection and privacy controls
 
 The system MUST protect workflow/function definitions, execution state, and audit records with appropriate data
 protection controls, including:
@@ -249,7 +242,7 @@ protection controls, including:
 - minimization of sensitive data exposure in logs and execution history
 - controls for handling sensitive inputs/outputs and restricting who can view them
 
-### BR-019 (P0): Workflow/function definition versioning
+### BR-018 (P0): Workflow/function definition versioning
 
 The system MUST support versioning of workflow/function definitions so that:
 
@@ -257,7 +250,7 @@ The system MUST support versioning of workflow/function definitions so that:
 - in-flight executions continue with the version they started with
 - changes are traceable and can be rolled back where needed
 
-### BR-020 (P0): Retry and failure handling policies
+### BR-019 (P0): Retry and failure handling policies
 
 The system MUST support configurable retry and failure-handling policies for workflows/functions, including:
 
@@ -265,17 +258,17 @@ The system MUST support configurable retry and failure-handling policies for wor
 - backoff behavior
 - classification of non-retryable failures
 
-### BR-021 (P0): Tenant enablement and isolation provisioning
+### BR-020 (P0): Tenant enablement and isolation provisioning
 
 The system MUST support enabling the workflow/function runtime for a tenant in a way that provisions required isolation
 and governance settings (including quotas) so the tenant can safely use the capability.
 
-### BR-022 (P0): Tenant and correlation identifiers in observability
+### BR-021 (P0): Tenant and correlation identifiers in observability
 
 The system MUST ensure that tenant identifiers and correlation identifiers are consistently present across audit
 records, logs, and operational metrics for traceability and compliance.
 
-### BR-023 (P0): Schedule lifecycle and missed schedule handling
+### BR-022 (P0): Schedule lifecycle and missed schedule handling
 
 The system MUST support schedule lifecycle management (create, update, pause/resume, and delete) and MUST support a
 configurable policy for handling missed schedules during downtime.
@@ -284,19 +277,19 @@ The system MUST support at minimum the following policies: skip (ignore missed e
 all missed instances), and backfill (execute each missed instance individually). The default policy SHOULD be "skip" to
 prevent overwhelming the system after extended downtime.
 
-### BR-024 (P0): Audit log integrity
+### BR-023 (P0): Audit log integrity
 
 The system MUST ensure audit records are trustworthy for compliance purposes, including:
 
 - audit records are protected from unauthorized modification and deletion
 - audit records are available for compliance review within the configured retention period
 
-### BR-025 (P0): Security context availability to workflow/function steps
+### BR-024 (P0): Security context availability to workflow/function steps
 
 The system MUST ensure that the execution security context is available throughout the lifetime of an execution and to
 every workflow/function step so that all actions performed by the runtime are attributable, authorized, and auditable.
 
-### BR-026 (P0): Secure handling of secrets and sensitive values
+### BR-025 (P0): Secure handling of secrets and sensitive values
 
 The system MUST support secure handling of secrets and other sensitive values used by workflows/functions, ensuring
 that:
@@ -306,33 +299,33 @@ that:
 - the system integrates with platform secret management capabilities
 - secrets are NEVER persisted in plaintext in workflow definitions or execution state
 
-### BR-027 (P0): Workflow/function state consistency
+### BR-026 (P0): Workflow/function state consistency
 
 The system MUST ensure that workflow/function state remains consistent during concurrent operations and system failures,
 with no partial updates or corrupted states.
 
-### BR-028 (P0): Dead letter queue handling
+### BR-027 (P0): Dead letter queue handling
 
 The system MUST provide dead letter handling for executions that repeatedly fail after all retry attempts, ensuring
 failed executions are preserved for analysis and manual recovery.
 
-### BR-029 (P0): Workflow/function maximum execution duration guardrail
+### BR-028 (P0): Workflow/function maximum execution duration guardrail
 
 The system MUST enforce a maximum execution duration guardrail to prevent infinite or runaway executions.
 This guardrail MUST be configurable per tenant and workflow/function and MUST apply even if higher timeouts are
 requested.
 
-### BR-030 (P0): Workflow/function execution isolation during updates
+### BR-029 (P0): Workflow/function execution isolation during updates
 
 The system MUST ensure that updating a workflow/function definition does not affect executions currently running with
 the previous version.
 
-### BR-031 (P0): Workflow/function execution error boundaries
+### BR-030 (P0): Workflow/function execution error boundaries
 
 The system MUST support error boundary mechanisms that contain failures within specific workflow sections and prevent
 cascading failures across the entire workflow.
 
-### BR-032 (P0): LLM-manageable workflow/function definitions
+### BR-031 (P0): LLM-manageable workflow/function definitions
 
 Workflow/function definitions MUST be expressible in a form that allows automated tools (including LLMs) to reliably:
 
@@ -340,19 +333,19 @@ Workflow/function definitions MUST be expressible in a form that allows automate
 - validate definitions and provide actionable feedback
 - explain the workflow/function behavior in human-readable form
 
-### BR-033 (P0): Typed workflow/function inputs and outputs
+### BR-032 (P0): Typed workflow/function inputs and outputs
 
 The system MUST support starting workflows/functions with typed input parameters and receiving typed outputs, such that:
 
 - inputs/outputs can be validated before execution
 - inputs/outputs can be safely inspected in execution history (subject to privacy controls)
 
-### BR-034 (P0): Encryption controls
+### BR-033 (P0): Encryption controls
 
 The system MUST ensure workflow/function definitions, execution state, and execution history are encrypted at rest, and
 all network communication is encrypted in transit.
 
-### BR-035 (P0): Audit trail and change traceability
+### BR-034 (P0): Audit trail and change traceability
 
 The system MUST maintain a complete audit trail for:
 
@@ -360,7 +353,7 @@ The system MUST maintain a complete audit trail for:
 - execution lifecycle events (started, suspended, resumed, failed, compensated, canceled, completed)
   Audit records MUST identify the tenant, actor (system/API client/user), and correlation identifier.
 
-### BR-036 (P0): Infrastructure adapter integration
+### BR-035 (P0): Infrastructure adapter integration
 
 The system MUST support runtime registration of workflow/function definitions from Infrastructure Adapters, with the
 following characteristics:
@@ -376,7 +369,7 @@ The choice between per-tenant and shared infrastructure is an implementation and
 adapters may require dedicated per-tenant infrastructure for compliance or performance reasons, while others may
 optimize cost and resource utilization through shared infrastructure with logical isolation.
 
-### BR-037 (P0): Definition registry per tenant
+### BR-036 (P0): Definition registry per tenant
 
 The system MUST maintain a registry of available workflow/function definitions per tenant with the following
 capabilities:
@@ -388,7 +381,7 @@ capabilities:
 **Note**: While the registry is tenant-scoped by default (see BR-002), workflows/functions may be visible beyond the
 default scope through extensible sharing mechanisms (see BR-123) enforced by access control integration.
 
-### BR-038 (P0): Input schema validation
+### BR-037 (P0): Input schema validation
 
 The system MUST validate all workflow/function inputs against defined schemas before execution begins, including:
 
@@ -398,7 +391,7 @@ The system MUST validate all workflow/function inputs against defined schemas be
 
 Invalid inputs MUST be rejected with clear error messages indicating the validation failure.
 
-### BR-039 (P0): Injection attack prevention
+### BR-038 (P0): Injection attack prevention
 
 The system MUST prevent injection attacks by ensuring that workflow/function inputs cannot be used to execute
 unintended operations:
@@ -412,7 +405,7 @@ unintended operations:
 
 Error messages for rejected inputs MUST NOT expose internal system details that could aid attackers.
 
-### BR-040 (P0): Privilege escalation prevention
+### BR-039 (P0): Privilege escalation prevention
 
 The system MUST prevent privilege escalation through input manipulation:
 
@@ -424,7 +417,7 @@ The system MUST prevent privilege escalation through input manipulation:
 
 The system MUST fail if privilege validation cannot be performed.
 
-### BR-041 (P0): Resource exhaustion protection
+### BR-040 (P0): Resource exhaustion protection
 
 The system MUST monitor and terminate executions that consume excessive resources relative to configured limits, even if
 within the maximum execution duration, including:
@@ -501,7 +494,7 @@ and billing.
 ### BR-112 (P1): Workflow/function execution timeouts
 
 The system MUST support configurable execution timeouts at both the workflow/function level and individual step level.
-Configured timeouts MUST NOT exceed the maximum execution duration guardrail defined in BR-029.
+Configured timeouts MUST NOT exceed the maximum execution duration guardrail defined in BR-028.
 
 ### BR-113 (P1): Workflow/function execution throttling
 
@@ -647,6 +640,13 @@ correlation identifiers to track and deduplicate requests.
 
 The system MUST provide operational metrics for workflow/function execution, including volume, latency, error rates, and
 queue/backlog indicators, and support segmentation by tenant.
+
+### BR-136 (P1): Graceful disconnection handling
+
+When an integration adapter or external dependency is disconnected, the system MUST:
+
+- reject new workflow/function starts that depend on the disconnected component
+- allow in-flight executions to complete or fail gracefully
 
 ### P2 Requirements (Nice-to-have)
 

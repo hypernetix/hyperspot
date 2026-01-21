@@ -58,7 +58,7 @@ They are distinguished via GTS type inheritance:
 | gts.x.core.serverless.entrypoint.v1~x.core.serverless.function.v1~vendor.app.my_func.v1~     | Custom function      |
 | gts.x.core.serverless.entrypoint.v1~x.core.serverless.workflow.v1~vendor.app.my_workflow.v1~ | Custom workflow      |
 
-**Invocation modes:**
+#### Invocation modes
 
 - **sync** — caller waits for completion and receives the result in the response. Best for short runs.
 - **async** — caller receives an `invocation_id` immediately and polls for status/results later.
@@ -68,17 +68,19 @@ They are distinguished via GTS type inheritance:
 The following GTS types are referenced by entrypoint definitions. Each is a standalone schema that can be
 validated independently and referenced via `gts://` URIs.
 
-| GTS Type                                    | Description                                     |
-|---------------------------------------------|-------------------------------------------------|
-| `gts.x.core.serverless.owner_ref.v1~`       | Ownership reference with visibility semantics   |
-| `gts.x.core.serverless.io_schema.v1~`       | Input/output contract (GTS ref, schema, void)   |
-| `gts.x.core.serverless.limits.v1~`          | Base limits (adapters derive specific types)    |
-| `gts.x.core.serverless.retry_policy.v1~`    | Retry behavior configuration                    |
-| `gts.x.core.serverless.implementation.v1~`  | Code, spec, or adapter reference                |
-| `gts.x.core.serverless.workflow_traits.v1~` | Workflow-specific execution traits              |
-| `gts.x.core.serverless.status.v1~`          | Invocation status (derived types per state)     |
-| `gts.x.core.serverless.err.v1~`             | Error types (derived types per error kind)      |
-| `gts.x.core.serverless.timeline_event.v1~`  | Invocation timeline event for execution history |
+| GTS Type                                         | Description                                       |
+|--------------------------------------------------|---------------------------------------------------|
+| `gts.x.core.serverless.owner_ref.v1~`            | Ownership reference with visibility semantics     |
+| `gts.x.core.serverless.io_schema.v1~`            | Input/output contract (GTS ref, schema, void)     |
+| `gts.x.core.serverless.limits.v1~`               | Base limits (adapters derive specific types)      |
+| `gts.x.core.serverless.rate_limit.v1~`           | Rate limiting configuration (plugin-based)        |
+| `gts.x.core.serverless.retry_policy.v1~`         | Retry behavior configuration                      |
+| `gts.x.core.serverless.implementation.v1~`       | Code, spec, or adapter reference                  |
+| `gts.x.core.serverless.workflow_traits.v1~`      | Workflow-specific execution traits                |
+| `gts.x.core.serverless.compensation_context.v1~` | Input envelope passed to compensation entrypoints |
+| `gts.x.core.serverless.status.v1~`               | Invocation status (derived types per state)       |
+| `gts.x.core.serverless.err.v1~`                  | Error types (derived types per error kind)        |
+| `gts.x.core.serverless.timeline_event.v1~`       | Invocation timeline event for execution history   |
 
 #### OwnerRef
 
@@ -128,7 +130,7 @@ Extended sharing beyond default visibility is managed through access control int
 
 **GTS ID:** `gts.x.core.serverless.io_schema.v1~`
 
-Defines the input/output contract for an entrypoint. Per PRD BR-033 and BR-038, inputs and outputs
+Defines the input/output contract for an entrypoint. Per PRD BR-032 and BR-037, inputs and outputs
 are validated before invocation.
 
 Each of `params` and `returns` accepts:
@@ -184,17 +186,17 @@ Each of `params` and `returns` accepts:
 
 **GTS ID:** `gts.x.core.serverless.limits.v1~`
 
-Base resource limits schema. Per PRD BR-005, BR-013, and BR-029, the runtime enforces limits to
+Base resource limits schema. Per PRD BR-005, BR-012, and BR-028, the runtime enforces limits to
 prevent resource exhaustion and runaway executions.
 
 The base schema defines only universal limits. Adapters register derived GTS types
 with adapter-specific fields. The runtime validates limits against the adapter's schema based
 on the `implementation.adapter` field.
 
-**Base fields:**
+##### Base fields
 
-- `timeout_seconds` — maximum execution duration before termination (BR-029)
-- `max_concurrent` — maximum concurrent invocations of this entrypoint (BR-013)
+- `timeout_seconds` — maximum execution duration before termination (BR-028)
+- `max_concurrent` — maximum concurrent invocations of this entrypoint (BR-012)
 
 ```json
 {
@@ -221,7 +223,7 @@ on the `implementation.adapter` field.
 }
 ```
 
-**Adapter-Derived Limits (Examples):**
+##### Adapter-Derived Limits (Examples)
 
 Adapters register their own GTS types extending the base:
 
@@ -231,7 +233,7 @@ Adapters register their own GTS types extending the base:
 | `gts.x.core.serverless.limits.v1~x.core.serverless.adapter.lambda.limits.v1~`   | AWS Lambda | `memory_mb`, `ephemeral_storage_mb`     |
 | `gts.x.core.serverless.limits.v1~x.core.serverless.adapter.temporal.limits.v1~` | Temporal   | (worker-based, no per-execution limits) |
 
-**Example: Starlark Adapter Limits**
+##### Example: Starlark Adapter Limits
 
 ```json
 {
@@ -266,7 +268,7 @@ Adapters register their own GTS types extending the base:
 }
 ```
 
-**Example: Lambda Adapter Limits**
+##### Example: Lambda Adapter Limits
 
 ```json
 {
@@ -305,14 +307,36 @@ Adapters register their own GTS types extending the base:
 
 **GTS ID:** `gts.x.core.serverless.retry_policy.v1~`
 
-Configures retry behavior for failed invocations. Per PRD BR-020, supports exponential backoff
+Configures retry behavior for failed invocations. Per PRD BR-019, supports exponential backoff
 with configurable limits:
 
 - `max_attempts` — total attempts including the initial invocation (0 = no retries)
 - `initial_delay_ms` — delay before the first retry
 - `max_delay_ms` — maximum delay between retries
 - `backoff_multiplier` — multiplier applied to delay after each retry
-- `non_retryable_errors` — GTS error types that should not trigger retries
+- `non_retryable_errors` — GTS error type IDs that must never be retried, regardless of their
+  `RuntimeErrorCategory`
+
+##### Retry Precedence
+
+The runtime evaluates whether a failed invocation should be retried by combining two inputs:
+the error's `category` field (from `RuntimeErrorCategory` in the `RuntimeErrorPayload` struct)
+and the `non_retryable_errors` list in this `RetryPolicy` schema.
+
+An invocation is retried **only when all** of the following conditions hold:
+
+1. `max_attempts` has not been exhausted.
+2. The error's `RuntimeErrorCategory` is `Retryable`.
+3. The error's GTS type ID is **not** present in `RetryPolicy.non_retryable_errors`.
+
+`non_retryable_errors` takes precedence over the error category: even if an error carries
+`RuntimeErrorCategory::Retryable`, listing its GTS type ID in `non_retryable_errors` opts it
+out of retries. This allows entrypoint authors to suppress retries for specific error types
+(e.g., a retryable upstream timeout that is known to be unrecoverable in a particular context)
+without changing the error's category at the source.
+
+Errors with any other `RuntimeErrorCategory` (`NonRetryable`, `ResourceLimit`, `Timeout`,
+`Canceled`) are never retried, irrespective of their presence in `non_retryable_errors`.
 
 ```json
 {
@@ -356,6 +380,165 @@ with configurable limits:
 }
 ```
 
+#### RateLimit
+
+**GTS ID:** `gts.x.core.serverless.rate_limit.v1~`
+
+Configures rate limiting for an entrypoint. Rate limiting is implemented as a **plugin** — the
+platform provides a default rate limiter, but operators can register custom rate limiter
+implementations via the plugin system with their own configuration schemas.
+
+##### Scope and Isolation
+
+Rate limits are enforced **per-entrypoint per-owner**:
+
+- **Isolated across tenants** — tenant A's traffic never counts toward tenant B's limits.
+- **Applies to both sync and async invocation modes** — the limit is checked at invocation
+  acceptance time, before the request is queued or dispatched.
+
+##### Base Schema
+
+The base rate limit type is an empty marker — it carries no fields. It exists solely as the GTS
+root for the rate-limiting type family. Each rate limiter plugin registers a derived GTS type that
+defines the strategy-specific configuration schema.
+
+The entrypoint's `rate_limit` field uses a `strategy` + `config` structure to reference a rate
+limiter: `strategy` is the GTS type ID of the plugin, `config` is an opaque object validated by
+that plugin. This structure is defined inline in the entrypoint schema, not in the base type.
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.x.core.serverless.rate_limit.v1~",
+  "title": "Rate Limit (Base)",
+  "description": "Base rate limiting type. Empty marker — strategy-specific configuration is defined by derived types.",
+  "type": "object",
+  "additionalProperties": true
+}
+```
+
+##### Plugin-Derived Config Schemas
+
+Each rate limiter plugin registers a derived GTS type that defines the schema for the `config`
+object in the entrypoint's `rate_limit` field:
+
+| `strategy` GTS Type                | Strategy                      | `config` Fields                                                    |
+|------------------------------------|-------------------------------|--------------------------------------------------------------------|
+| `...rate_limit.token_bucket.v1~`   | Token bucket (system default) | `max_requests_per_second`, `max_requests_per_minute`, `burst_size` |
+| `...rate_limit.sliding_window.v1~` | Sliding window (example)      | `window_size_seconds`, `max_requests_per_window`                   |
+
+##### Default: Token Bucket Rate Limiter
+
+The system-provided rate limiter uses the **token bucket** algorithm. Both per-second and per-minute
+limits are enforced independently — an invocation must pass both limits to be accepted.
+
+- `max_requests_per_second` — sustained per-second rate. `0` means no per-second limit.
+- `max_requests_per_minute` — sustained per-minute rate. `0` means no per-minute limit.
+- `burst_size` — maximum instantaneous burst allowed by the per-second bucket. Permits short
+  traffic spikes up to `burst_size` requests before the per-second rate takes effect. Does not
+  apply to the per-minute limit.
+
+If both `max_requests_per_second` and `max_requests_per_minute` are `0`, rate limiting is disabled
+for this entrypoint.
+
+###### Config Schema
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.x.core.serverless.rate_limit.v1~x.core.serverless.rate_limit.token_bucket.v1~",
+  "title": "Token Bucket Rate Limit Config",
+  "description": "Config schema for the system-default token bucket rate limiter. Per-second and per-minute limits enforced independently.",
+  "type": "object",
+  "properties": {
+    "max_requests_per_second": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0,
+      "description": "Maximum sustained invocations per second. 0 means no per-second limit."
+    },
+    "max_requests_per_minute": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 0,
+      "description": "Maximum sustained invocations per minute. 0 means no per-minute limit."
+    },
+    "burst_size": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 10,
+      "description": "Maximum instantaneous burst for the per-second bucket. Permits short traffic spikes before the per-second rate takes effect."
+    }
+  }
+}
+```
+
+##### Instance Example (Token Bucket)
+
+```json
+{
+  "strategy": "gts.x.core.serverless.rate_limit.v1~x.core.serverless.rate_limit.token_bucket.v1~",
+  "config": {
+    "max_requests_per_second": 50,
+    "max_requests_per_minute": 1000,
+    "burst_size": 20
+  }
+}
+```
+
+##### Plugin Model
+
+The rate limiter is registered as a plugin implementing the `RateLimiter` trait. Each plugin
+handles exactly one strategy GTS type (1:1 mapping). The runtime resolves the plugin based on
+`rate_limit.strategy`.
+
+- The **default** system-provided plugin handles `token_bucket.v1~` and uses an in-process token
+  bucket.
+- Custom plugins may implement distributed rate limiting (e.g., Redis-backed), sliding window
+  algorithms, or tenant-aware adaptive throttling — each with its own derived GTS configuration
+  schema.
+- The plugin receives `rate_limit.config` as opaque JSON (`serde_json::Value`) and is responsible
+  for deserializing it into its own config type.
+
+##### Validation
+
+When registering an entrypoint with a `rate_limit` configuration, the runtime:
+
+1. Reads `rate_limit.strategy` to identify the rate limiter plugin.
+2. Looks up the registered `RateLimiter` plugin that handles that strategy GTS type.
+3. Validates `rate_limit.config` against the plugin's config schema.
+4. Rejects registration if no plugin handles the strategy or config validation fails.
+
+##### Error Behavior
+
+When an invocation is rejected due to rate limiting:
+
+- The HTTP API returns **`429 Too Many Requests`** with a `Retry-After` header indicating when the
+  caller may retry (in seconds).
+- The response body is an RFC 9457 Problem Details JSON with error type
+  `gts.x.core.serverless.err.v1~x.core.serverless.err.rate_limited.v1~`.
+- The invocation is **not** created — no `InvocationRecord` is persisted and no retries are
+  attempted by the runtime. The caller is responsible for respecting `Retry-After` and retrying.
+
+##### Example: 429 Error Response
+
+```http
+HTTP/1.1 429 Too Many Requests
+Content-Type: application/problem+json
+Retry-After: 2
+```
+
+```json
+{
+  "type": "gts://gts.x.core.serverless.err.v1~x.core.serverless.err.rate_limited.v1~",
+  "title": "Rate Limit Exceeded",
+  "status": 429,
+  "detail": "Entrypoint rate limit exceeded for tenant t_123. Retry after 2 seconds.",
+  "instance": "/api/serverless-runtime/v1/invocations",
+  "retry_after_seconds": 2
+}
+```
+
 #### Implementation
 
 **GTS ID:** `gts.x.core.serverless.implementation.v1~`
@@ -363,18 +546,18 @@ with configurable limits:
 Defines how an entrypoint is implemented. The `adapter` field explicitly identifies the runtime
 adapter, enabling validation of adapter-specific limits and traits.
 
-**Fields:**
+##### Fields
 
 - `adapter` — GTS type ID of the adapter (e.g., `gts.x.core.serverless.adapter.starlark.v1~`). Required for limits
   validation.
 - `kind` — implementation kind: `code`, `workflow_spec`, or `adapter_ref`
 - Kind-specific payload with implementation details
 
-**Kinds:**
+##### Kinds
 
 - `code` — inline source code for embedded runtimes (Starlark, WASM, etc.)
 - `workflow_spec` — declarative workflow definition (Serverless Workflow DSL, Temporal, etc.)
-- `adapter_ref` — reference to an adapter-provided definition for hot-plug registration (PRD BR-036)
+- `adapter_ref` — reference to an adapter-provided definition for hot-plug registration (PRD BR-035)
 
 ```json
 {
@@ -477,7 +660,7 @@ adapter, enabling validation of adapter-specific limits and traits.
 }
 ```
 
-**Validation Flow:**
+##### Validation Flow
 
 1. Parse `implementation.adapter` to get the adapter GTS type (e.g., `gts.x.core.serverless.adapter.starlark.v1~`)
 2. Derive the adapter's limits schema: `gts.x.core.serverless.limits.v1~x.core.serverless.adapter.starlark.limits.v1~`
@@ -494,7 +677,7 @@ Workflow-specific execution traits required for durable orchestrations. Includes
 - `checkpointing` — durability strategy: `automatic`, `manual`, or `disabled` (PRD BR-009)
 - `max_suspension_days` — maximum time a workflow can remain suspended waiting for events (PRD BR-009)
 
-**Compensation Design:**
+##### Compensation Design
 
 Since all possible runtimes cannot generically implement compensation logic (e.g., "compensate all completed steps")
 compensation handlers are explicit entrypoint references. The workflow author defines a separate function or workflow
@@ -503,7 +686,12 @@ that implements the compensation logic:
 - `on_failure` — GTS ID of entrypoint to invoke when workflow fails, or `null` for no compensation
 - `on_cancel` — GTS ID of entrypoint to invoke when workflow is canceled, or `null` for no compensation
 
-The compensation entrypoint receives the workflow's execution context and can perform rollback actions.
+The referenced compensation entrypoint is invoked as a standard entrypoint with a single JSON body
+conforming to the `CompensationContext` schema (`gts.x.core.serverless.compensation_context.v1~`).
+This context carries the original invocation identity, failure details, and a workflow state snapshot
+so the handler has everything it needs to perform rollback operations. See the
+[CompensationContext](#compensationcontext) section below for the full schema, field descriptions,
+and usage examples.
 
 ```json
 {
@@ -515,35 +703,35 @@ The compensation entrypoint receives the workflow's execution context and can pe
   "properties": {
     "compensation": {
       "type": "object",
-      "description": "Compensation handlers for saga pattern. Each handler is an entrypoint reference or null.",
+      "description": "Compensation handlers for saga pattern. Each handler is an entrypoint reference or null. Referenced entrypoints receive a CompensationContext (gts.x.core.serverless.compensation_context.v1~) as their input.",
       "properties": {
         "on_failure": {
           "oneOf": [
             {
               "type": "string",
               "x-gts-ref": "gts.x.core.serverless.entrypoint.*",
-              "description": "GTS ID of entrypoint to invoke on workflow failure."
+              "description": "GTS ID of entrypoint to invoke on workflow failure. Receives CompensationContext as input."
             },
             {
               "type": "null"
             }
           ],
           "default": null,
-          "description": "Entrypoint to invoke for compensation on failure, or null for no compensation."
+          "description": "Entrypoint to invoke for compensation on failure, or null for no compensation. Invoked with CompensationContext as the single JSON body."
         },
         "on_cancel": {
           "oneOf": [
             {
               "type": "string",
               "x-gts-ref": "gts.x.core.serverless.entrypoint.*",
-              "description": "GTS ID of entrypoint to invoke on workflow cancellation."
+              "description": "GTS ID of entrypoint to invoke on workflow cancellation. Receives CompensationContext as input."
             },
             {
               "type": "null"
             }
           ],
           "default": null,
-          "description": "Entrypoint to invoke for compensation on cancel, or null for no compensation."
+          "description": "Entrypoint to invoke for compensation on cancel, or null for no compensation. Invoked with CompensationContext as the single JSON body."
         }
       }
     },
@@ -574,14 +762,235 @@ The compensation entrypoint receives the workflow's execution context and can pe
 }
 ```
 
+#### CompensationContext
+
+**GTS ID:** `gts.x.core.serverless.compensation_context.v1~`
+
+Defines the input envelope passed to compensation entrypoints referenced by
+`traits.workflow.compensation.on_failure` and `traits.workflow.compensation.on_cancel`.
+
+When the runtime transitions an invocation to the `compensating` status, it constructs a
+`CompensationContext` and invokes the referenced compensation entrypoint through the standard
+invocation flow, passing the context as the **single JSON body** (i.e., the `params` field of
+the invocation request). The compensation entrypoint is a regular entrypoint — no special
+runtime path is needed.
+
+##### Design
+
+The platform owns the envelope structure and guarantees the required fields are always present.
+The `workflow_state_snapshot` is populated by the adapter from its own checkpoint format and is
+opaque to the platform. This split keeps the contract explicit for handler authors while
+allowing adapters full flexibility in their state representation.
+
+##### Required Fields
+
+| Field                             | Type   | Required | Description                                                                                                                                                                                                                 |
+|-----------------------------------|--------|----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `trigger`                         | string | Yes      | What caused compensation: `"failure"` or `"cancellation"`. Maps to `on_failure` or `on_cancel`.                                                                                                                             |
+| `original_workflow_invocation_id` | string | Yes      | Invocation ID of the workflow run being compensated. Primary correlation key.                                                                                                                                               |
+| `failed_step_id`                  | string | Yes      | Identifier of the step that failed or was active at cancellation time. Adapter-specific granularity. Set to `"unknown"` when the adapter does not track step-level state.                                                   |
+| `failed_step_error`               | object | No       | Error details for the failed step. Present when `trigger` is `"failure"`.                                                                                                                                                   |
+| `workflow_state_snapshot`         | object | Yes      | Last checkpointed workflow state. Empty object `{}` if failure occurred before the first checkpoint. |
+| `timestamp`                       | string | Yes      | ISO 8601 timestamp of when compensation was triggered.                                                                                                                                                                      |
+| `invocation_metadata`             | object | Yes      | Metadata from the original invocation: entrypoint ID, original input, tenant, observability IDs.                                                                                                                            |
+
+##### GTS Schema
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.x.core.serverless.compensation_context.v1~",
+  "title": "Compensation Context",
+  "description": "Input envelope passed to compensation entrypoints. Delivered as the single JSON body (params) when the runtime invokes an on_failure or on_cancel handler.",
+  "type": "object",
+  "required": [
+    "trigger",
+    "original_workflow_invocation_id",
+    "failed_step_id",
+    "workflow_state_snapshot",
+    "timestamp",
+    "invocation_metadata"
+  ],
+  "properties": {
+    "trigger": {
+      "type": "string",
+      "enum": [
+        "failure",
+        "cancellation"
+      ],
+      "description": "What caused compensation to start. 'failure' maps to on_failure, 'cancellation' maps to on_cancel."
+    },
+    "original_workflow_invocation_id": {
+      "type": "string",
+      "description": "Invocation ID of the failed/cancelled workflow run. Use this to correlate compensation actions with the original execution."
+    },
+    "failed_step_id": {
+      "type": "string",
+      "description": "Identifier of the step that failed or was active at cancellation. Adapter-specific granularity. Set to 'unknown' when the adapter does not track step-level state."
+    },
+    "failed_step_error": {
+      "type": "object",
+      "description": "Error details for the failed step. Present when trigger is 'failure', absent for 'cancellation'.",
+      "properties": {
+        "error_type": {
+          "type": "string",
+          "description": "Categorized error type (e.g., 'timeout', 'runtime_error', 'resource_exhausted')."
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable error description."
+        },
+        "error_metadata": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Error-type-specific metadata. Structure is defined per error type (out of scope for this ADR; to be specified alongside the error taxonomy)."
+        }
+      },
+      "required": [
+        "error_type",
+        "message"
+      ]
+    },
+    "workflow_state_snapshot": {
+      "type": "object",
+      "description": "Last checkpointed workflow state. Adapter-specific and opaque to the platform. Contains accumulated step results, intermediate data, or adapter-native state. Empty object if failure occurred before the first checkpoint.",
+      "additionalProperties": true
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of when compensation was triggered."
+    },
+    "invocation_metadata": {
+      "type": "object",
+      "description": "Metadata from the original workflow invocation.",
+      "required": [
+        "entrypoint_id",
+        "original_input",
+        "tenant_id"
+      ],
+      "properties": {
+        "entrypoint_id": {
+          "type": "string",
+          "x-gts-ref": "gts.x.core.serverless.entrypoint.*",
+          "description": "GTS ID of the workflow entrypoint that failed."
+        },
+        "original_input": {
+          "type": "object",
+          "description": "The input parameters (params) the workflow was originally invoked with."
+        },
+        "tenant_id": {
+          "type": "string",
+          "description": "Tenant that owns the workflow invocation."
+        },
+        "correlation_id": {
+          "type": "string",
+          "description": "Correlation ID from the original invocation's observability context."
+        },
+        "started_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the original workflow invocation started."
+        }
+      }
+    }
+  }
+}
+```
+
+##### Example Payload
+
+An order-processing workflow fails on step `create_shipping_label` after successfully completing
+`reserve_inventory` and `charge_payment`. The runtime constructs the following `CompensationContext`
+and invokes the `on_failure` entrypoint:
+
+```json
+{
+  "trigger": "failure",
+  "original_workflow_invocation_id": "inv_a1b2c3d4",
+  "failed_step_id": "create_shipping_label",
+  "failed_step_error": {
+    "error_type": "runtime_error",
+    "message": "Shipping provider returned 503: service unavailable",
+    "error_metadata": { "retries_exhausted": true, "last_attempt": 5 }
+  },
+  "workflow_state_snapshot": {
+    "reservation_id": "RSV-7712",
+    "payment_transaction_id": "TXN-33401",
+    "shipping_label": null,
+    "completed_steps": [
+      "reserve_inventory",
+      "charge_payment"
+    ]
+  },
+  "timestamp": "2026-02-08T10:00:47Z",
+  "invocation_metadata": {
+    "entrypoint_id": "gts.x.core.serverless.entrypoint.v1~x.core.serverless.workflow.v1~vendor.app.orders.process_order.v1~",
+    "original_input": {
+      "order_id": "ORD-9182",
+      "items": [
+        {
+          "sku": "WIDGET-01",
+          "qty": 3
+        },
+        {
+          "sku": "GADGET-05",
+          "qty": 1
+        }
+      ],
+      "payment": {
+        "method": "card",
+        "token": "tok_abc123"
+      }
+    },
+    "tenant_id": "t_123",
+    "correlation_id": "corr_789",
+    "started_at": "2026-02-08T10:00:00Z"
+  }
+}
+```
+
+##### How Compensation Handlers Use the Context
+
+The compensation entrypoint receives the `CompensationContext` as its `params` input. Handler
+authors should:
+
+1. **Read `original_workflow_invocation_id`** to correlate compensation actions with the
+   original workflow run. This is essential for idempotent rollback — the handler can check
+   whether compensation for this invocation has already been performed.
+
+2. **Read `failed_step_id`** to determine how far the workflow progressed. The handler
+   iterates backward from the failed step through the `workflow_state_snapshot` to decide which
+   forward actions need reversal. For example, if `failed_step_id` is `"create_shipping_label"`,
+   the handler knows `reserve_inventory` and `charge_payment` completed and need rollback.
+
+3. **Read `workflow_state_snapshot`** to obtain the forward-step outputs required for
+   reversal (e.g., `reservation_id` to release inventory, `payment_transaction_id` to issue a
+   refund).
+
+4. **Inspect `failed_step_error`** (when `trigger` is `"failure"`) to adjust compensation
+   strategy — e.g., a timeout error may warrant different handling than a validation error.
+
+5. **Use `invocation_metadata.original_input`** when the original request parameters are
+   needed for rollback (e.g., re-reading the order details to construct a cancellation notice).
+
+##### Registration Validation
+
+When registering or updating a workflow with `traits.workflow.compensation.on_failure` or `on_cancel`:
+
+1. The referenced entrypoint **must** exist and be in `active` status.
+2. The referenced entrypoint's `schema.params` **must** accept `CompensationContext`
+   (`$ref: "gts://gts.x.core.serverless.compensation_context.v1~"` or a compatible superset).
+3. The platform rejects registration if either condition is not met.
+
 #### InvocationStatus
 
 **GTS ID:** `gts.x.core.serverless.status.v1~`
 
 Invocation lifecycle states. Each state is a derived GTS type extending the base status type.
-Per PRD BR-016 and BR-015, invocations transition through these states during their lifecycle.
+Per PRD BR-015 and BR-014, invocations transition through these states during their lifecycle.
 
-**GTS Schema:**
+##### GTS Schema
 
 ```json
 {
@@ -598,25 +1007,27 @@ Per PRD BR-016 and BR-015, invocations transition through these states during th
     "failed",
     "canceled",
     "compensating",
+    "compensated",
     "dead_lettered"
   ]
 }
 ```
 
-**Derived Status Types:**
+##### Derived Status Types
 
-| GTS Type                                                                     | Description                         |
-|------------------------------------------------------------------------------|-------------------------------------|
-| `gts.x.core.serverless.status.v1~x.core.serverless.status.queued.v1~`        | Waiting to be scheduled             |
-| `gts.x.core.serverless.status.v1~x.core.serverless.status.running.v1~`       | Currently executing                 |
-| `gts.x.core.serverless.status.v1~x.core.serverless.status.suspended.v1~`     | Paused, waiting for event or signal |
-| `gts.x.core.serverless.status.v1~x.core.serverless.status.succeeded.v1~`     | Completed successfully              |
-| `gts.x.core.serverless.status.v1~x.core.serverless.status.failed.v1~`        | Failed after retries exhausted      |
-| `gts.x.core.serverless.status.v1~x.core.serverless.status.canceled.v1~`      | Canceled by user or system          |
-| `gts.x.core.serverless.status.v1~x.core.serverless.status.compensating.v1~`  | Running compensation logic          |
-| `gts.x.core.serverless.status.v1~x.core.serverless.status.dead_lettered.v1~` | Moved to dead letter queue (BR-028) |
+| GTS Type                                                                     | Description                                         |
+|------------------------------------------------------------------------------|-----------------------------------------------------|
+| `gts.x.core.serverless.status.v1~x.core.serverless.status.queued.v1~`        | Waiting to be scheduled                             |
+| `gts.x.core.serverless.status.v1~x.core.serverless.status.running.v1~`       | Currently executing                                 |
+| `gts.x.core.serverless.status.v1~x.core.serverless.status.suspended.v1~`     | Paused, waiting for event or signal                 |
+| `gts.x.core.serverless.status.v1~x.core.serverless.status.succeeded.v1~`     | Completed successfully                              |
+| `gts.x.core.serverless.status.v1~x.core.serverless.status.failed.v1~`        | Failed after retries exhausted                      |
+| `gts.x.core.serverless.status.v1~x.core.serverless.status.canceled.v1~`      | Canceled by user or system                          |
+| `gts.x.core.serverless.status.v1~x.core.serverless.status.compensating.v1~`  | Running compensation logic                          |
+| `gts.x.core.serverless.status.v1~x.core.serverless.status.compensated.v1~`   | Compensation completed successfully (rollback done) |
+| `gts.x.core.serverless.status.v1~x.core.serverless.status.dead_lettered.v1~` | Moved to dead letter queue (BR-027)                 |
 
-**Invocation Status State Machine:**
+##### Invocation Status State Machine
 
 ```mermaid
 stateDiagram-v2
@@ -627,7 +1038,7 @@ stateDiagram-v2
 
     running --> succeeded : completed
     running --> failed : error (retries exhausted)
-    running --> suspended : await event/signal (workflow)
+    running --> suspended : await event/signal or manual suspend (workflow)
     running --> canceled : cancel
 
     suspended --> running : resume / signal received
@@ -636,34 +1047,43 @@ stateDiagram-v2
 
     failed --> compensating : compensation configured
     failed --> dead_lettered : no compensation
+    failed --> queued : retry
 
     canceled --> compensating : compensation configured
     canceled --> [*] : no compensation
 
-    compensating --> dead_lettered : compensation complete/failed
+    compensating --> compensated : compensation succeeded
+    compensating --> dead_lettered : compensation failed
 
     succeeded --> [*]
+    compensated --> [*]
     dead_lettered --> [*]
 ```
 
-**Allowed Transitions:**
+**Note on `replay`:** The `replay` control action creates a **new** invocation (new `invocation_id`, starts at
+`queued`) using the same parameters as the original. It does not transition the original invocation's state.
+Replay is valid from `succeeded` or `failed` terminal states.
 
-| From          | To            | Trigger                                      |
-|---------------|---------------|----------------------------------------------|
-| (start)       | queued        | `start_invocation` API call                  |
-| queued        | running       | Scheduler picks up invocation                |
-| queued        | canceled      | `control_invocation(Cancel)` before start    |
-| running       | succeeded     | Execution completes successfully             |
-| running       | failed        | Execution fails after retry exhaustion       |
-| running       | suspended     | Workflow awaits event/signal (workflow only) |
-| running       | canceled      | `control_invocation(Cancel)` during run      |
-| suspended     | running       | `control_invocation(Resume)` or signal       |
-| suspended     | canceled      | `control_invocation(Cancel)` while suspended |
-| suspended     | failed        | Suspension timeout exceeded                  |
-| failed        | compensating  | Compensation handler configured              |
-| failed        | dead_lettered | No compensation, moved to DLQ                |
-| canceled      | compensating  | Compensation handler configured              |
-| compensating  | dead_lettered | Compensation complete or failed              |
+##### Allowed Transitions
+
+| From         | To            | Trigger                                                                       |
+|--------------|---------------|-------------------------------------------------------------------------------|
+| (start)      | queued        | `start_invocation` API call                                                   |
+| queued       | running       | Scheduler picks up invocation                                                 |
+| queued       | canceled      | `control_invocation(Cancel)` before start                                     |
+| running      | succeeded     | Execution completes successfully                                              |
+| running      | failed        | Execution fails after retry exhaustion                                        |
+| running      | suspended     | Workflow awaits event/signal or `control_invocation(Suspend)` (workflow only) |
+| running      | canceled      | `control_invocation(Cancel)` during run                                       |
+| suspended    | running       | `control_invocation(Resume)` or signal                                        |
+| suspended    | canceled      | `control_invocation(Cancel)` while suspended                                  |
+| suspended    | failed        | Suspension timeout exceeded                                                   |
+| failed       | queued        | `control_invocation(Retry)` — re-queues with same params                      |
+| failed       | compensating  | Compensation handler configured                                               |
+| failed       | dead_lettered | No compensation, moved to DLQ                                                 |
+| canceled     | compensating  | Compensation handler configured                                               |
+| compensating | compensated   | Compensation completed successfully                                           |
+| compensating | dead_lettered | Compensation failed, moved to DLQ                                             |
 
 #### Error
 
@@ -672,7 +1092,7 @@ stateDiagram-v2
 Standardized error types for invocation failures. Per PRD BR-129, errors include a stable identifier,
 human-readable message, and structured details.
 
-**GTS Schema:**
+##### GTS Schema
 
 ```json
 {
@@ -709,6 +1129,16 @@ human-readable message, and structured details.
 }
 ```
 
+##### Derived Error Types
+
+| GTS Type                                                                          | HTTP | Description                                  |
+|-----------------------------------------------------------------------------------|------|----------------------------------------------|
+| `gts.x.core.serverless.err.v1~x.core.serverless.err.validation.v1~`              | 422  | Input or definition validation failure       |
+| `gts.x.core.serverless.err.v1~x.core.serverless.err.rate_limited.v1~`            | 429  | Per-entrypoint rate limit exceeded           |
+| `gts.x.core.serverless.err.v1~x.core.serverless.err.not_found.v1~`               | 404  | Referenced entity does not exist             |
+| `gts.x.core.serverless.err.v1~x.core.serverless.err.not_active.v1~`              | 409  | Entrypoint exists but is not in active state |
+| `gts.x.core.serverless.err.v1~x.core.serverless.err.quota_exceeded.v1~`          | 429  | Tenant quota capacity reached                |
+
 #### ValidationError
 
 **GTS ID:** `gts.x.core.serverless.err.v1~x.core.serverless.err.validation.v1~`
@@ -718,7 +1148,7 @@ include the location in the definition and suggested corrections. Returned only 
 success returns the validated definition. A single validation error can contain multiple issues,
 each with its own error type and location.
 
-**GTS Schema:**
+##### GTS Schema
 
 ```json
 {
@@ -754,30 +1184,47 @@ each with its own error type and location.
                     "description": "JSON path to the error location (e.g., '$.traits.limits.timeout_seconds')."
                   },
                   "line": {
-                    "type": ["integer", "null"],
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
                     "description": "Line number in source code (for code implementations)."
                   },
                   "column": {
-                    "type": ["integer", "null"],
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
                     "description": "Column number in source code (for code implementations)."
                   }
                 },
-                "required": ["path"]
+                "required": [
+                  "path"
+                ]
               },
               "message": {
                 "type": "string",
                 "description": "Human-readable description of the issue."
               },
               "suggestion": {
-                "type": ["string", "null"],
+                "type": [
+                  "string",
+                  "null"
+                ],
                 "description": "Suggested correction or fix for the issue."
               }
             },
-            "required": ["error_type", "location", "message"]
+            "required": [
+              "error_type",
+              "location",
+              "message"
+            ]
           }
         }
       },
-      "required": ["issues"]
+      "required": [
+        "issues"
+      ]
     }
   ]
 }
@@ -788,9 +1235,9 @@ each with its own error type and location.
 **GTS ID:** `gts.x.core.serverless.timeline_event.v1~`
 
 Represents a single event in the invocation execution timeline. Used for debugging, auditing,
-and execution history visualization per PRD BR-016 and BR-130.
+and execution history visualization per PRD BR-015 and BR-130.
 
-**GTS Schema:**
+##### GTS Schema
 
 ```json
 {
@@ -819,6 +1266,7 @@ and execution history visualization per PRD BR-016 and BR-130.
         "checkpoint_created",
         "compensation_started",
         "compensation_completed",
+        "compensation_failed",
         "succeeded",
         "failed",
         "canceled",
@@ -827,21 +1275,29 @@ and execution history visualization per PRD BR-016 and BR-130.
       "description": "Type of timeline event."
     },
     "status": {
-      "type": "string",
-      "x-gts-ref": "gts.x.core.serverless.status.*",
-      "description": "Invocation status after this event."
+      "$ref": "gts://gts.x.core.serverless.status.v1~",
+      "description": "Invocation status after this event (short enum value, e.g. 'running')."
     },
     "step_name": {
-      "type": ["string", "null"],
+      "type": [
+        "string",
+        "null"
+      ],
       "description": "Name of the step (for step-related events)."
     },
     "duration_ms": {
-      "type": ["integer", "null"],
+      "type": [
+        "integer",
+        "null"
+      ],
       "minimum": 0,
       "description": "Duration of the step or action in milliseconds."
     },
     "message": {
-      "type": ["string", "null"],
+      "type": [
+        "string",
+        "null"
+      ],
       "description": "Human-readable description of the event."
     },
     "details": {
@@ -850,7 +1306,11 @@ and execution history visualization per PRD BR-016 and BR-130.
       "default": {}
     }
   },
-  "required": ["at", "event_type", "status"]
+  "required": [
+    "at",
+    "event_type",
+    "status"
+  ]
 }
 ```
 
@@ -860,7 +1320,7 @@ and execution history visualization per PRD BR-016 and BR-130.
 
 The base entrypoint schema defines common fields for all functions and workflows.
 
-**Entrypoint Status State Machine:**
+##### Entrypoint Status State Machine
 
 ```mermaid
 stateDiagram-v2
@@ -881,21 +1341,21 @@ stateDiagram-v2
     archived --> [*]
 ```
 
-**Allowed Transitions:**
+##### Allowed Transitions
 
-| From       | To         | Action     | Description                                           |
-|------------|------------|------------|-------------------------------------------------------|
-| (start)    | draft      | register   | New entrypoint registered                             |
-| draft      | active     | activate   | Entrypoint ready for invocation                       |
-| draft      | (deleted)  | delete     | Hard delete (only in draft status)                    |
-| active     | deprecated | deprecate  | Mark as deprecated (still callable, discouraged)      |
-| active     | disabled   | disable    | Disable invocation (not callable)                     |
-| deprecated | disabled   | disable    | Disable deprecated entrypoint                         |
-| deprecated | archived   | archive    | Archive for historical reference                      |
-| disabled   | active     | enable     | Re-enable for invocation                              |
-| disabled   | archived   | archive    | Archive disabled entrypoint                           |
+| From       | To         | Action    | Description                                      |
+|------------|------------|-----------|--------------------------------------------------|
+| (start)    | draft      | register  | New entrypoint registered                        |
+| draft      | active     | activate  | Entrypoint ready for invocation                  |
+| draft      | (deleted)  | delete    | Hard delete (only in draft status)               |
+| active     | deprecated | deprecate | Mark as deprecated (still callable, discouraged) |
+| active     | disabled   | disable   | Disable invocation (not callable)                |
+| deprecated | disabled   | disable   | Disable deprecated entrypoint                    |
+| deprecated | archived   | archive   | Archive for historical reference                 |
+| disabled   | active     | enable    | Re-enable for invocation                         |
+| disabled   | archived   | archive   | Archive disabled entrypoint                      |
 
-**Status Behavior:**
+##### Status Behavior
 
 | Status     | Callable | Editable | Visible in Registry | Notes                              |
 |------------|----------|----------|---------------------|------------------------------------|
@@ -905,7 +1365,7 @@ stateDiagram-v2
 | disabled   | No       | No       | Yes                 | Temporarily unavailable            |
 | archived   | No       | No       | Optional            | Historical reference, soft-deleted |
 
-**GTS Schema:**
+##### GTS Schema
 
 ```json
 {
@@ -985,34 +1445,38 @@ stateDiagram-v2
         },
         "caching": {
           "type": "object",
+          "description": "Response caching policy. Caching is only active when the caller provides an `Idempotency-Key` header AND `max_age_seconds > 0`",
           "properties": {
             "max_age_seconds": {
               "type": "integer",
-              "default": 0
+              "minimum": 0,
+              "default": 0,
+              "description": "Time-to-live in seconds for cached successful results. `0` disables response caching even when an idempotency key is present."
             }
           }
         },
         "rate_limit": {
-          "type": "object",
-          "description": "Rate limiting configuration for this entrypoint.",
-          "properties": {
-            "max_requests_per_second": {
-              "type": "number",
-              "minimum": 0,
-              "description": "Maximum invocations per second. 0 means no limit."
+          "description": "Optional rate limiting. Null or absent means no rate limiting.",
+          "oneOf": [
+            {
+              "type": "object",
+              "required": ["strategy", "config"],
+              "properties": {
+                "strategy": {
+                  "type": "string",
+                  "description": "GTS type ID of the rate limiter plugin (derived from gts.x.core.serverless.rate_limit.v1~)."
+                },
+                "config": {
+                  "type": "object",
+                  "description": "Strategy-specific configuration. Validated by the resolved plugin against its derived schema.",
+                  "additionalProperties": true
+                }
+              },
+              "additionalProperties": false
             },
-            "max_requests_per_minute": {
-              "type": "integer",
-              "minimum": 0,
-              "description": "Maximum invocations per minute. 0 means no limit."
-            },
-            "burst_size": {
-              "type": "integer",
-              "minimum": 1,
-              "default": 10,
-              "description": "Maximum burst size for rate limiting."
-            }
-          }
+            { "type": "null" }
+          ],
+          "default": null
         },
         "limits": {
           "$ref": "gts://gts.x.core.serverless.limits.v1~"
@@ -1064,7 +1528,7 @@ Functions are stateless, short-lived entrypoints designed for request/response i
 - Commonly used as building blocks for APIs, event handlers, and single-step jobs
 - Authors SHOULD design for idempotency when side effects are possible
 
-**GTS Schema:**
+##### GTS Schema
 
 ```json
 {
@@ -1080,7 +1544,7 @@ Functions are stateless, short-lived entrypoints designed for request/response i
 }
 ```
 
-**Instance Example:**
+##### Instance Example
 
 GTS Address: `gts.x.core.serverless.entrypoint.v1~x.core.serverless.function.v1~vendor.app.billing.calculate_tax.v1~`
 
@@ -1128,7 +1592,7 @@ GTS Address: `gts.x.core.serverless.entrypoint.v1~x.core.serverless.function.v1~
       }
     },
     "errors": [
-      "gts.x.core.serverless.err.v1~x.core._.validation.v1~"
+      "gts.x.core.serverless.err.v1~x.core.serverless.err.validation.v1~"
     ]
   },
   "traits": {
@@ -1142,6 +1606,14 @@ GTS Address: `gts.x.core.serverless.entrypoint.v1~x.core.serverless.function.v1~
     "is_idempotent": true,
     "caching": {
       "max_age_seconds": 0
+    },
+    "rate_limit": {
+      "strategy": "gts.x.core.serverless.rate_limit.v1~x.core.serverless.rate_limit.token_bucket.v1~",
+      "config": {
+        "max_requests_per_second": 50,
+        "max_requests_per_minute": 1000,
+        "burst_size": 20
+      }
     },
     "limits": {
       "timeout_seconds": 30,
@@ -1178,7 +1650,7 @@ Workflows are durable, multi-step orchestrations that coordinate actions over ti
 - Persisted invocation state (durable progress across restarts)
 - Supports long-running behavior (timers, waiting on external events, human-in-the-loop)
 - Encodes orchestration logic (fan-out/fan-in, branching, retries, compensation)
-- Individual steps commonly call functions or external integrations
+- Steps are typically function calls but may also invoke other workflows (sub-orchestration)
 
 The runtime is responsible for:
 
@@ -1187,7 +1659,7 @@ The runtime is responsible for:
 - Checkpointing and suspend/resume
 - Event subscription and event-driven continuation
 
-**GTS Schema:**
+##### GTS Schema
 
 ```json
 {
@@ -1222,7 +1694,7 @@ The runtime is responsible for:
 }
 ```
 
-**Instance Example:**
+##### Instance Example
 
 GTS Address: `gts.x.core.serverless.entrypoint.v1~x.core.serverless.workflow.v1~vendor.app.orders.process_order.v1~`
 
@@ -1323,10 +1795,10 @@ GTS Address: `gts.x.core.serverless.entrypoint.v1~x.core.serverless.workflow.v1~
 **GTS ID:** `gts.x.core.serverless.invocation.v1~`
 
 An invocation record tracks the lifecycle of a single entrypoint execution, including status, parameters,
-results, timing, and observability data. Per PRD BR-016, BR-022, and BR-035, invocations are queryable
+results, timing, and observability data. Per PRD BR-015, BR-021, and BR-034, invocations are queryable
 with tenant and correlation identifiers for traceability.
 
-**GTS Schema:**
+#### GTS Schema
 
 ```json
 {
@@ -1353,9 +1825,8 @@ with tenant and correlation identifiers for traceability.
       "type": "string"
     },
     "status": {
-      "type": "string",
-      "x-gts-ref": "gts.x.core.serverless.status.*",
-      "description": "GTS status type ID."
+      "$ref": "gts://gts.x.core.serverless.status.v1~",
+      "description": "Invocation status (short enum value, e.g. 'running')."
     },
     "mode": {
       "type": "string",
@@ -1392,13 +1863,22 @@ with tenant and correlation identifiers for traceability.
             "message": {
               "type": "string"
             },
+            "category": {
+              "type": "string",
+              "enum": [
+                "retryable",
+                "non_retryable"
+              ],
+              "description": "Error category for retry decisions."
+            },
             "details": {
               "type": "object"
             }
           },
           "required": [
             "error_type_id",
-            "message"
+            "message",
+            "category"
           ]
         },
         {
@@ -1511,7 +1991,7 @@ with tenant and correlation identifiers for traceability.
 }
 ```
 
-**Instance Example:**
+#### Instance Example
 
 ```json
 {
@@ -1519,7 +1999,7 @@ with tenant and correlation identifiers for traceability.
   "entrypoint_id": "gts.x.core.serverless.entrypoint.v1~x.core.serverless.function.v1~vendor.app.namespace.calculate_tax.v1~",
   "entrypoint_version": "1.0.0",
   "tenant_id": "t_123",
-  "status": "gts.x.core.serverless.status.v1~x.core.serverless.status.running.v1~",
+  "status": "running",
   "mode": "async",
   "params": {
     "invoice_id": "inv_001",
@@ -1554,9 +2034,9 @@ with tenant and correlation identifiers for traceability.
 **GTS ID:** `gts.x.core.serverless.schedule.v1~`
 
 A schedule defines a recurring trigger for an entrypoint based on cron expressions or intervals.
-Per PRD BR-007 and BR-023, schedules support lifecycle management and configurable missed schedule policies.
+Per PRD BR-007 and BR-022, schedules support lifecycle management and configurable missed schedule policies.
 
-**GTS Schema:**
+#### GTS Schema
 
 ```json
 {
@@ -1680,7 +2160,7 @@ Per PRD BR-007 and BR-023, schedules support lifecycle management and configurab
 }
 ```
 
-**Instance Example:**
+#### Instance Example
 
 ```json
 {
@@ -1712,7 +2192,7 @@ Per PRD BR-007 and BR-023, schedules support lifecycle management and configurab
 A trigger binds an event type to an entrypoint, enabling event-driven invocation.
 Per PRD BR-007, triggers are one of three supported trigger mechanisms (schedule, API, event).
 
-**GTS Schema:**
+#### GTS Schema
 
 ```json
 {
@@ -1751,19 +2231,19 @@ Per PRD BR-007, triggers are one of three supported trigger mechanisms (schedule
           "$ref": "gts://gts.x.core.serverless.retry_policy.v1~",
           "description": "Retry policy before moving to DLQ. Uses exponential backoff with configurable attempts."
         },
-        "dlq_handler": {
+        "dlq_topic": {
           "oneOf": [
             {
               "type": "string",
-              "x-gts-ref": "gts.x.core.serverless.entrypoint.*",
-              "description": "GTS ID of entrypoint to invoke for DLQ items."
+              "x-gts-ref": "gts.x.core.*",
+              "description": "GTS type ID of the topic to publish dead-lettered events to."
             },
             {
               "type": "null"
             }
           ],
           "default": null,
-          "description": "Optional entrypoint for custom DLQ handling, or null for default DLQ storage."
+          "description": "Optional topic for routing dead-lettered events, or null for the platform-default DLQ topic. Topic type and management are defined by the EventBroker."
         }
       }
     },
@@ -1800,7 +2280,7 @@ Per PRD BR-007, triggers are one of three supported trigger mechanisms (schedule
 }
 ```
 
-**Instance Example:**
+#### Instance Example
 
 ```json
 {
@@ -1817,7 +2297,7 @@ Per PRD BR-007, triggers are one of three supported trigger mechanisms (schedule
       "max_delay_ms": 30000,
       "backoff_multiplier": 2.0
     },
-    "dlq_handler": null
+    "dlq_topic": null
   },
   "status": "active",
   "created_at": "2026-01-01T00:00:00.000Z",
@@ -1830,9 +2310,9 @@ Per PRD BR-007, triggers are one of three supported trigger mechanisms (schedule
 **GTS ID:** `gts.x.core.serverless.tenant_policy.v1~`
 
 Tenant-level governance settings including quotas, retention policies, and defaults.
-Per PRD BR-021, BR-106, and BR-107, tenants are provisioned with isolation and governance settings.
+Per PRD BR-020, BR-106, and BR-107, tenants are provisioned with isolation and governance settings.
 
-**GTS Schema:**
+#### GTS Schema
 
 ```json
 {
@@ -1864,6 +2344,10 @@ Per PRD BR-021, BR-106, and BR-107, tenants are provisioned with isolation and g
           "minimum": 1
         },
         "max_schedules": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "max_triggers": {
           "type": "integer",
           "minimum": 0
         },
@@ -1908,9 +2392,10 @@ Per PRD BR-021, BR-106, and BR-107, tenants are provisioned with isolation and g
         "allowed_runtimes": {
           "type": "array",
           "items": {
-            "type": "string"
+            "type": "string",
+            "x-gts-ref": "gts.x.core.serverless.adapter.*"
           },
-          "description": "List of allowed adapter/runtime types."
+          "description": "List of allowed adapter GTS type IDs (e.g., gts.x.core.serverless.adapter.starlark.v1~). Validated against implementation.adapter at registration time."
         }
       }
     },
@@ -1966,7 +2451,7 @@ Per PRD BR-021, BR-106, and BR-107, tenants are provisioned with isolation and g
 }
 ```
 
-**Instance Example:**
+#### Instance Example
 
 ```json
 {
@@ -1976,6 +2461,7 @@ Per PRD BR-021, BR-106, and BR-107, tenants are provisioned with isolation and g
     "max_concurrent_executions": 200,
     "max_definitions": 500,
     "max_schedules": 50,
+    "max_triggers": 100,
     "max_execution_history_mb": 10240,
     "max_memory_per_execution_mb": 512,
     "max_cpu_per_execution": 2.0,
@@ -1987,12 +2473,12 @@ Per PRD BR-021, BR-106, and BR-107, tenants are provisioned with isolation and g
   },
   "policies": {
     "allowed_runtimes": [
-      "starlark",
-      "temporal"
+      "gts.x.core.serverless.adapter.starlark.v1~",
+      "gts.x.core.serverless.adapter.temporal.v1~"
     ]
   },
   "idempotency": {
-    "deduplication_window_seconds": 3600
+    "deduplication_window_seconds": 86400
   },
   "defaults": {
     "timeout_seconds": 30,
@@ -2010,7 +2496,7 @@ Per PRD BR-021, BR-106, and BR-107, tenants are provisioned with isolation and g
 
 Follows [DNA (Development Norms & Architecture)](https://github.com/hypernetix/DNA) guidelines.
 
-**Single Resource Response**
+### Single Resource Response
 
 ```json
 {
@@ -2049,11 +2535,12 @@ Content-Type: `application/problem+json`
 
 ```json
 {
-  "type": "gts://gts.x.core.serverless.err.v1~x.core._.validation.v1~",
+  "type": "gts://gts.x.core.serverless.err.v1~x.core.serverless.err.validation.v1~",
   "title": "Validation Error",
-  "status": 400,
+  "status": 422,
   "detail": "Input validation failed for field 'params.amount'",
   "instance": "/api/serverless-runtime/v1/invocations",
+  "code": "gts.x.core.serverless.err.v1~x.core.serverless.err.validation.v1~",
   "trace_id": "abc123",
   "errors": [
     {
@@ -2064,7 +2551,7 @@ Content-Type: `application/problem+json`
 }
 ```
 
-**Pagination Parameters**
+### Pagination Parameters
 
 | Parameter | Default | Max | Description                    |
 |-----------|---------|-----|--------------------------------|
@@ -2073,7 +2560,7 @@ Content-Type: `application/problem+json`
 
 **Filtering** (OData-style `$filter`)
 
-```
+```text
 GET /api/serverless-runtime/v1/invocations?$filter=status eq 'running' and created_at ge 2026-01-01T00:00:00.000Z
 ```
 
@@ -2081,7 +2568,7 @@ Operators: `eq`, `ne`, `lt`, `le`, `gt`, `ge`, `in`, `and`, `or`, `not`
 
 **Sorting** (OData-style `$orderby`)
 
-```
+```text
 GET /api/serverless-runtime/v1/invocations?$orderby=created_at desc,status asc
 ```
 
@@ -2089,14 +2576,14 @@ GET /api/serverless-runtime/v1/invocations?$orderby=created_at desc,status asc
 
 ### Entrypoint Registry API
 
-**Path Parameter `{id}` Format:**
+#### Path Parameter `{id}` Format
 
 The `{id}` path parameter is a URL-safe opaque identifier assigned by the system at registration time (e.g.,
 `ep_a1b2c3d4`).
 It is **not** the full GTS address. The GTS address is returned in the response body and can be used in `entrypoint_id`
 fields when starting invocations. To look up an entrypoint by GTS address, use the list endpoint with a filter.
 
-**Versioning:**
+#### Versioning
 
 Entrypoint versioning is inherent in the GTS address (e.g., `...my_func.v1~`, `...my_func.v2~`). Each version is a
 separate entrypoint registration. To create a new version, register a new entrypoint with an incremented version
@@ -2113,7 +2600,7 @@ is `active`, it is immutable and a new version must be registered instead.
 | `POST`   | `/api/serverless-runtime/v1/entrypoints/{id}:status` | Update status (activate, deprecate, disable, enable) |
 | `DELETE` | `/api/serverless-runtime/v1/entrypoints/{id}`        | Hard delete (draft only) or archive                  |
 
-**Entrypoint Status Actions:**
+#### Entrypoint Status Actions
 
 The `:status` endpoint accepts a JSON body with `action` field:
 
@@ -2125,12 +2612,13 @@ The `:status` endpoint accepts a JSON body with `action` field:
 
 Valid actions and state transitions:
 
-| Action      | Description                      | Transition                         |
-|-------------|----------------------------------|------------------------------------|
-| `activate`  | Activate a draft entrypoint      | `draft` → `active`                 |
-| `deprecate` | Mark as deprecated (still works) | `active` → `deprecated`            |
-| `disable`   | Disable (not callable)           | `active`/`deprecated` → `disabled` |
-| `enable`    | Re-enable a disabled entrypoint  | `disabled` → `active`              |
+| Action      | Description                      | Transition                           |
+|-------------|----------------------------------|--------------------------------------|
+| `activate`  | Activate a draft entrypoint      | `draft` → `active`                   |
+| `deprecate` | Mark as deprecated (still works) | `active` → `deprecated`              |
+| `disable`   | Disable (not callable)           | `active`/`deprecated` → `disabled`   |
+| `enable`    | Re-enable a disabled entrypoint  | `disabled` → `active`                |
+| `archive`   | Archive for historical reference | `deprecated`/`disabled` → `archived` |
 
 ---
 
@@ -2143,7 +2631,7 @@ Valid actions and state transitions:
 | `GET`  | `/api/serverless-runtime/v1/invocations/{invocation_id}`         | Get status                   |
 | `POST` | `/api/serverless-runtime/v1/invocations/{invocation_id}:control` | Control invocation lifecycle |
 
-**Invocation Control Actions:**
+#### Invocation Control Actions
 
 The `:control` endpoint accepts a JSON body with `action` field:
 
@@ -2163,7 +2651,7 @@ Valid actions and state requirements:
 | `retry`   | Retry a failed invocation with same parameters    | `failed`                  |
 | `replay`  | Create new invocation from completed one's params | `succeeded`, `failed`     |
 
-**Start Invocation Request**
+#### Start Invocation Request
 
 ```json
 {
@@ -2177,9 +2665,215 @@ Valid actions and state requirements:
 }
 ```
 
-- `dry_run`: Validates readiness without creating a durable record or side effects.
+- `dry_run`: When `true`, validates invocation readiness without executing. See [Dry-Run Behavior](#dry-run-behavior)
+  below.
 - `Idempotency-Key` header prevents duplicate starts. Retention is configurable per tenant via
-  `TenantRuntimePolicy.idempotency.deduplication_window_seconds` (default: 1 hour, per BR-134).
+  `TenantRuntimePolicy.idempotency.deduplication_window_seconds` (default: 24 hours, per BR-134).
+- When the `Idempotency-Key` header is present and the entrypoint enables response caching
+  (`traits.is_idempotent: true` and `traits.caching.max_age_seconds > 0`), the runtime may return
+  a cached successful result instead of re-executing. See [Response Caching](#response-caching).
+
+#### Dry-Run Behavior
+
+When `dry_run: true`, the `POST /invocations` endpoint performs **validation only** and returns
+a synthetic `InvocationResult` without producing any durable state or side effects (BR-103).
+
+##### Validations Performed
+
+The following checks run in order; the first failure short-circuits and returns an
+RFC 9457 Problem Details response (`application/problem+json`):
+
+1. **Entrypoint exists** — resolve `entrypoint_id` to an `EntrypointDefinition`. Return
+   `404 Not Found` with error type
+   `gts.x.core.serverless.err.v1~x.core.serverless.err.not_found.v1~` if missing.
+2. **Entrypoint is callable** — verify `status` is `active` or `deprecated`. Return `409 Conflict`
+   with error type `gts.x.core.serverless.err.v1~x.core.serverless.err.not_active.v1~` if the
+   entrypoint is in `draft`, `disabled`, or `archived` state.
+3. **Input params match schema** — validate `params` against `entrypoint.schema.params` JSON
+   Schema. Return `422 Unprocessable Entity` with error type
+   `gts.x.core.serverless.err.v1~x.core.serverless.err.validation.v1~` and per-field `errors`
+   array on mismatch.
+4. **Tenant quota** — verify the tenant has not exhausted `max_concurrent_executions` from
+   `TenantQuotas`. Return `429 Too Many Requests` with error type
+   `gts.x.core.serverless.err.v1~x.core.serverless.err.quota_exceeded.v1~` if at capacity.
+
+##### What Dry-Run Does NOT Do
+
+- Does **not** create an `InvocationRecord` in the persistence layer.
+- Does **not** execute any user code (function body or workflow steps).
+- Does **not** consume quota — the check is read-only.
+- Does **not** count against per-entrypoint rate limits.
+- Does **not** generate observability traces or billing events.
+- Does **not** evaluate or enforce the `Idempotency-Key` header.
+
+##### Successful Response
+
+On validation success the endpoint returns `200 OK` (not `201 Created`) with the same
+`InvocationResult` structure. The embedded `InvocationRecord` is **synthetic**:
+
+| Field                | Value                                                                              |
+|----------------------|------------------------------------------------------------------------------------|
+| `invocation_id`      | Synthetic, prefixed `dryrun_` (e.g. `dryrun_a1b2c3d4-...`). Not queryable via GET. |
+| `entrypoint_id`      | Echoed from request.                                                               |
+| `entrypoint_version` | Current version of the resolved entrypoint.                                        |
+| `tenant_id`          | Caller's tenant from `SecurityContext`.                                            |
+| `status`             | `queued` — indicates validation passed and the invocation *would* be queued.       |
+| `mode`               | Echoed from request.                                                               |
+| `params`             | Echoed from request.                                                               |
+| `result`             | `null`                                                                             |
+| `error`              | `null`                                                                             |
+| `timestamps`         | `created_at` set to current time; all others `null`.                               |
+| `observability`      | `correlation_id` generated; `trace_id`, `span_id`, metrics all `null`/zero.        |
+
+The `InvocationResult.dry_run` flag is set to `true` so callers can programmatically distinguish
+synthetic results from real invocations.
+
+##### Error Response
+
+Validation failures return an RFC 9457 Problem Details body (`application/problem+json`) with the
+`type` set to the GTS error URI, an appropriate HTTP status code (see table above), and a
+human-readable `detail` message. For schema validation failures (`422`), the `errors` array
+contains per-field violations. The error shape is identical to a normal invocation error — no
+special dry-run error format exists.
+
+##### Example: Dry-Run Success Response (200 OK)
+
+```json
+{
+  "record": {
+    "invocation_id": "dryrun_a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "entrypoint_id": "gts.x.core.serverless.entrypoint.v1~x.core.serverless.function.v1~vendor.app.namespace.calculate_tax.v1~",
+    "entrypoint_version": "1.0.0",
+    "tenant_id": "t_123",
+    "status": "queued",
+    "mode": "async",
+    "params": {
+      "invoice_id": "inv_001",
+      "amount": 100.0
+    },
+    "result": null,
+    "error": null,
+    "timestamps": {
+      "created_at": "2026-01-21T10:00:00.000Z",
+      "started_at": null,
+      "suspended_at": null,
+      "finished_at": null
+    },
+    "observability": {
+      "correlation_id": "corr_dry_xyz",
+      "trace_id": null,
+      "span_id": null,
+      "metrics": {
+        "duration_ms": null,
+        "billed_duration_ms": null,
+        "cpu_time_ms": null,
+        "memory_limit_mb": 256,
+        "max_memory_used_mb": null,
+        "step_count": null
+      }
+    }
+  },
+  "dry_run": true,
+  "cached": false
+}
+```
+
+#### Response Caching
+
+Response caching allows the runtime to return a previously computed successful result for an
+entrypoint invocation without re-executing the entrypoint (BR-118, BR-132). This reduces
+redundant processing for idempotent operations and improves latency for repeated calls.
+
+##### Activation Conditions
+
+Response caching is active for a given invocation **only** when **all** of the following
+conditions are met:
+
+1. The caller provides an `Idempotency-Key` header in the invocation request.
+2. The entrypoint's `traits.caching.max_age_seconds` is greater than `0`.
+3. The entrypoint's `traits.is_idempotent` is `true`.
+
+If any condition is not met, the invocation always executes normally — no cache lookup or
+storage occurs.
+
+##### Cache Key
+
+The cache key depends on the entrypoint's **owner type** (from `owner.owner_type`):
+
+| Owner Type          | Cache Key Tuple                                                    |
+|---------------------|--------------------------------------------------------------------|
+| `user`              | `(subject_id, entrypoint_id, entrypoint_version, idempotency_key)` |
+| `tenant` / `system` | `(tenant_id, entrypoint_id, entrypoint_version, idempotency_key)`  |
+
+- **`subject_id`** — the authenticated user's identity from `SecurityContext`. Used for
+  user-owned entrypoints so that each user's cached results are private and isolated.
+- **`tenant_id`** — the caller's tenant from `SecurityContext`. Used for tenant-owned and
+  system-owned entrypoints where the cache is shared among all authorized callers within the
+  same tenant.
+- **`entrypoint_id`** — the full GTS type ID of the invoked entrypoint.
+- **`entrypoint_version`** — the semantic version of the entrypoint definition at invocation
+  time. A new version produces a different cache key, so cached results from a previous version
+  are never served for a new version.
+- **`idempotency_key`** — the value of the `Idempotency-Key` header provided by the caller.
+
+##### Cache Scope and Tenant Isolation
+
+Cache scope is **per entrypoint owner** and **never shared across tenants**:
+
+- **User-owned entrypoints** (`owner_type: user`) — cache is scoped to the individual
+  `subject_id`. Different users invoking the same user-owned entrypoint with the same
+  idempotency key get independent cache entries.
+- **Tenant-owned entrypoints** (`owner_type: tenant`) — cache is scoped to the `tenant_id`.
+  All authorized callers within the same tenant share cache entries for the same entrypoint,
+  version, and idempotency key.
+- **System-owned entrypoints** (`owner_type: system`) — cache is scoped to the `tenant_id` of
+  the caller. Even though the entrypoint definition is platform-provided, cached results are
+  tenant-isolated.
+
+Cached results are **never** shared across tenants regardless of owner type.
+
+##### Cacheable Results
+
+Only invocations that complete with a `succeeded` status are eligible for caching. Invocations
+that fail, are canceled, or produce any non-success terminal status are **not** cached and do
+**not** invalidate existing cache entries for the same key.
+
+##### TTL and Expiration
+
+Cached results expire after the number of seconds specified by
+`traits.caching.max_age_seconds`. After expiration, the next matching invocation executes
+normally and, if successful, repopulates the cache.
+
+##### Cache Hit Behavior
+
+When a cache hit occurs:
+
+- The runtime returns the previously stored `InvocationResult` with `cached: true`.
+- The embedded `InvocationRecord` is the **original** record from the execution that produced
+  the cached result (including original `invocation_id`, `timestamps`, and `observability`).
+- **No** new `InvocationRecord` is created or persisted.
+- **No** user code is executed.
+- **No** quota is consumed and no rate-limit counters are incremented.
+- **No** new observability traces or billing events are generated.
+
+##### Cache Invalidation
+
+Cache entries are implicitly invalidated when:
+
+- The TTL (`max_age_seconds`) expires.
+- The entrypoint version changes (the version is part of the cache key).
+
+There is no explicit cache purge API. Authors who need to force re-execution should use a
+different `Idempotency-Key` value or wait for TTL expiration.
+
+##### Interaction with Other Features
+
+| Feature        | Interaction                                                                                                                                                                                                                      |
+|----------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Dry-run        | Caching does **not** apply. Dry-run never reads from or writes to the cache.                                                                                                                                                     |
+| Idempotency    | Idempotency deduplication (BR-134) and response caching are complementary. Deduplication prevents duplicate *starts* within the deduplication window; caching returns stored *results* for completed invocations within the TTL. |
+| Rate limiting  | Cache hits bypass rate limiting — the entrypoint is not re-executed.                                                                                                                                                             |
+| Retry / Replay | `retry` and `replay` control actions always execute fresh and do **not** consult the cache.                                                                                                                                      |
 
 ---
 
@@ -2226,7 +2920,7 @@ Valid actions and state requirements:
 | `GET`  | `/api/serverless-runtime/v1/tenants/{tenant_id}/usage`         | Get current usage vs. quotas |
 | `GET`  | `/api/serverless-runtime/v1/tenants/{tenant_id}/usage/history` | Get usage history over time  |
 
-**Usage Response:**
+#### Usage Response
 
 ```json
 {
@@ -2236,18 +2930,21 @@ Valid actions and state requirements:
     "concurrent_executions": 45,
     "total_definitions": 120,
     "total_schedules": 15,
+    "total_triggers": 8,
     "execution_history_mb": 2048
   },
   "quotas": {
     "max_concurrent_executions": 200,
     "max_definitions": 500,
     "max_schedules": 50,
+    "max_triggers": 100,
     "max_execution_history_mb": 10240
   },
   "utilization_percent": {
     "concurrent_executions": 22.5,
     "definitions": 24.0,
     "schedules": 30.0,
+    "triggers": 8.0,
     "execution_history": 20.0
   }
 }
@@ -2287,6 +2984,21 @@ pub enum DefinitionStatus {
 pub enum InvocationMode {
     Sync,
     Async,
+}
+
+/// Invocation lifecycle status. Matches the short enum values in the
+/// `gts.x.core.serverless.status.v1~` GTS schema.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum InvocationStatus {
+    Queued,
+    Running,
+    Suspended,
+    Succeeded,
+    Failed,
+    Canceled,
+    Compensating,
+    Compensated,
+    DeadLettered,
 }
 
 /// Entrypoint type derived from GTS chain (not stored, computed from entrypoint_id).
@@ -2342,18 +3054,92 @@ pub struct EntrypointTraits {
     pub supported_invocations: Vec<InvocationMode>,
     pub default_invocation: InvocationMode,
     pub is_idempotent: bool,
-    pub caching_max_age_seconds: u64,
+    pub caching: ResponseCachingPolicy,
     pub rate_limit: Option<RateLimit>,
     pub limits: EntrypointLimits,
     pub retry: RetryPolicy,
     pub workflow: Option<WorkflowTraits>,
 }
 
+/// Response caching policy for an entrypoint (BR-118, BR-132).
+///
+/// Caching is only active when **all** conditions are met:
+/// 1. The caller provides an `Idempotency-Key` header.
+/// 2. `max_age_seconds > 0`.
+/// 3. The entrypoint's `is_idempotent` trait is `true`.
+///
+/// Cache key depends on entrypoint owner type:
+/// - `user` owner: `(subject_id, entrypoint_id, entrypoint_version, idempotency_key)`
+/// - `tenant`/`system` owner: `(tenant_id, entrypoint_id, entrypoint_version, idempotency_key)`
+///
+/// Cache scope is per entrypoint owner — never shared across tenants.
+/// Only successful (`succeeded`) results are cached.
+#[derive(Clone, Debug)]
+pub struct ResponseCachingPolicy {
+    /// TTL in seconds for cached successful results. `0` disables caching.
+    pub max_age_seconds: u64,
+}
+
+/// Entrypoint-level rate limiting reference. Enforced per-entrypoint
+/// per-tenant (isolated across tenants, aggregated across users within tenant).
+/// Applies to both sync and async invocation modes.
+///
+/// `strategy` is the GTS type ID of the rate limiter plugin (derived from
+/// `gts.x.core.serverless.rate_limit.v1~`); `config` is the strategy-specific
+/// settings as an opaque JSON object validated by the resolved plugin.
 #[derive(Clone, Debug)]
 pub struct RateLimit {
-    pub max_requests_per_second: Option<f64>,
-    pub max_requests_per_minute: Option<u64>,
+    /// GTS type ID of the rate limiting strategy. The runtime resolves
+    /// the rate limiter plugin from this value.
+    pub strategy: GtsId,
+    /// Strategy-specific configuration. Opaque to the platform; the resolved
+    /// plugin deserializes this into its own config type.
+    pub config: serde_json::Value,
+}
+
+/// System-default token bucket rate limiter configuration.
+/// GTS ID: gts.x.core.serverless.rate_limit.v1~x.core.serverless.rate_limit.token_bucket.v1~
+///
+/// Both per-second and per-minute limits are enforced independently.
+/// `burst_size` applies to the per-second bucket only.
+#[derive(Clone, Debug)]
+pub struct TokenBucketRateLimit {
+    /// Maximum sustained invocations per second. `0` = no per-second limit.
+    pub max_requests_per_second: f64,
+    /// Maximum sustained invocations per minute. `0` = no per-minute limit.
+    pub max_requests_per_minute: u64,
+    /// Maximum instantaneous burst for the per-second bucket.
     pub burst_size: u64,
+}
+
+/// Admission decision returned by a `RateLimiter` plugin.
+#[derive(Clone, Debug)]
+pub enum RateLimitDecision {
+    /// Request is allowed.
+    Allow,
+    /// Request is rejected. `retry_after_seconds` is the suggested wait time.
+    Reject { retry_after_seconds: u64 },
+}
+
+/// Plugin trait for rate limiting. Each plugin handles exactly one strategy
+/// GTS type. The runtime resolves the plugin based on `rate_limit.strategy`
+/// and passes the opaque `config` for admission checks.
+///
+/// The default system implementation handles `token_bucket.v1~` using an
+/// in-process token bucket. Custom plugins may implement distributed rate
+/// limiting (e.g., Redis-backed), sliding window, or adaptive throttling.
+#[async_trait]
+pub trait RateLimiter: Send + Sync {
+    /// The single GTS type ID this plugin handles.
+    fn strategy_type(&self) -> &GtsId;
+
+    /// Check whether an invocation should be admitted.
+    async fn check(
+        &self,
+        ctx: &SecurityContext,
+        entrypoint_id: &EntrypointId,
+        config: &serde_json::Value,
+    ) -> RateLimitDecision;
 }
 
 #[derive(Clone, Debug)]
@@ -2463,7 +3249,7 @@ pub struct InvocationRecord {
     pub entrypoint_id: EntrypointId,
     pub entrypoint_version: String,
     pub tenant_id: TenantId,
-    pub status: GtsId,
+    pub status: InvocationStatus,
     pub mode: InvocationMode,
     pub params: JsonValue,
     pub result: Option<JsonValue>,
@@ -2541,8 +3327,10 @@ pub struct DeadLetterQueueConfig {
     pub enabled: bool,
     /// Retry policy before moving to DLQ.
     pub retry_policy: RetryPolicy,
-    /// Optional entrypoint for custom DLQ handling, or None for default DLQ storage.
-    pub dlq_handler: Option<EntrypointId>,
+    /// GTS type ID of the topic to publish dead-lettered events to,
+    /// or None for the platform-default DLQ topic. Topic type and
+    /// management are defined by the EventBroker.
+    pub dlq_topic: Option<GtsId>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -2568,6 +3356,7 @@ pub struct TenantQuotas {
     pub max_concurrent_executions: u64,
     pub max_definitions: u64,
     pub max_schedules: u64,
+    pub max_triggers: u64,
     pub max_execution_history_mb: u64,
     pub max_memory_per_execution_mb: u64,
     pub max_cpu_per_execution: f32,
@@ -2582,7 +3371,9 @@ pub struct TenantRetention {
 
 #[derive(Clone, Debug)]
 pub struct TenantPolicies {
-    pub allowed_runtimes: Vec<String>,
+    /// Allowed adapter GTS type IDs (e.g., gts.x.core.serverless.adapter.starlark.v1~).
+    /// Validated against `implementation.adapter` at entrypoint registration time.
+    pub allowed_runtimes: Vec<GtsId>,
 }
 
 #[derive(Clone, Debug)]
@@ -2613,7 +3404,7 @@ pub enum RuntimeErrorCategory {
 
 #[derive(Clone, Debug)]
 pub struct RuntimeErrorPayload {
-    /// GTS error type ID (e.g., gts.x.core.serverless.err.v1~x.core._.validation.v1~)
+    /// GTS error type ID (e.g., gts.x.core.serverless.err.v1~x.core.serverless.err.validation.v1~)
     pub error_type_id: GtsId,
     pub message: String,
     pub category: RuntimeErrorCategory,
@@ -2625,7 +3416,7 @@ pub struct RuntimeErrorPayload {
 
 ```rust
 use async_trait::async_trait;
-use modkit_security::SecurityCtx;
+use modkit_security::SecurityContext;
 
 #[derive(Clone, Debug)]
 pub struct InvocationRequest {
@@ -2639,6 +3430,13 @@ pub struct InvocationRequest {
 #[derive(Clone, Debug)]
 pub struct InvocationResult {
     pub record: InvocationRecord,
+    /// `true` when the result was produced by a dry-run invocation.
+    /// The embedded record is synthetic and was not persisted.
+    pub dry_run: bool,
+    /// `true` when the result was served from the response cache (cache hit).
+    /// The embedded record is the original record from the execution that
+    /// produced the cached result. No new invocation was created.
+    pub cached: bool,
 }
 
 /// Actions for entrypoint lifecycle status transitions.
@@ -2652,6 +3450,8 @@ pub enum EntrypointStatusAction {
     Enable,
     /// Activate a draft entrypoint.
     Activate,
+    /// Archive a deprecated or disabled entrypoint for historical reference.
+    Archive,
 }
 
 /// Control actions for invocation lifecycle.
@@ -2673,7 +3473,7 @@ pub enum InvocationControlAction {
 pub trait ServerlessRuntime: Send + Sync {
     async fn register_entrypoint(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         entrypoint: EntrypointDefinition,
     ) -> Result<EntrypointDefinition, RuntimeErrorPayload>;
 
@@ -2681,145 +3481,196 @@ pub trait ServerlessRuntime: Send + Sync {
     /// Returns Ok(()) on success, Err(ValidationError) on validation failure.
     async fn validate_entrypoint(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         entrypoint: EntrypointDefinition,
     ) -> Result<(), RuntimeErrorPayload>;
 
     async fn list_entrypoints(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         filter: EntrypointListFilter,
     ) -> Result<Vec<EntrypointDefinition>, RuntimeErrorPayload>;
 
     async fn get_entrypoint(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         entrypoint_id: &EntrypointId,
     ) -> Result<EntrypointDefinition, RuntimeErrorPayload>;
 
-    /// Transition entrypoint status (deprecate, disable, enable, activate).
+    /// Replace an entrypoint definition while it is still in `Draft` status.
+    /// The updated definition is re-validated before saving.
+    async fn update_entrypoint(
+        &self,
+        ctx: &SecurityContext,
+        entrypoint_id: &EntrypointId,
+        entrypoint: EntrypointDefinition,
+    ) -> Result<EntrypointDefinition, RuntimeErrorPayload>;
+
+    /// Transition entrypoint status (deprecate, disable, enable, activate, archive).
     async fn update_entrypoint_status(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         entrypoint_id: &EntrypointId,
         action: EntrypointStatusAction,
     ) -> Result<EntrypointDefinition, RuntimeErrorPayload>;
 
+    /// Delete an entrypoint. Hard-deletes if in `draft` status; archives otherwise
+    /// (equivalent to `update_entrypoint_status(Archive)` for non-draft entrypoints).
+    async fn delete_entrypoint(
+        &self,
+        ctx: &SecurityContext,
+        entrypoint_id: &EntrypointId,
+    ) -> Result<(), RuntimeErrorPayload>;
+
+    /// Start a new invocation of the given entrypoint.
+    ///
+    /// When `request.dry_run` is `true`, validates readiness (entrypoint exists
+    /// and is callable, params match schema, tenant quota available) and returns a
+    /// synthetic `InvocationResult` with `dry_run: true`. No record is persisted,
+    /// no code is executed, and no quota or rate-limit counters are affected.
+    ///
+    /// When response caching is active (idempotency key present, `is_idempotent`
+    /// is `true`, and `caching.max_age_seconds > 0`), the runtime checks the
+    /// cache before executing. The cache key scope depends on the entrypoint
+    /// owner type: `subject_id` for user-owned, `tenant_id` for tenant/system-
+    /// owned — combined with `(entrypoint_id, entrypoint_version,
+    /// idempotency_key)`. On cache hit the previously stored successful result
+    /// is returned with `cached: true` — no new invocation is created and no
+    /// code is executed.
     async fn start_invocation(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         request: InvocationRequest,
     ) -> Result<InvocationResult, RuntimeErrorPayload>;
 
     async fn get_invocation(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         invocation_id: &InvocationId,
     ) -> Result<InvocationRecord, RuntimeErrorPayload>;
 
     /// Control invocation lifecycle (cancel, suspend, resume, retry, replay).
     async fn control_invocation(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         invocation_id: &InvocationId,
         action: InvocationControlAction,
     ) -> Result<InvocationRecord, RuntimeErrorPayload>;
 
     async fn list_invocations(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         filter: InvocationListFilter,
     ) -> Result<Vec<InvocationRecord>, RuntimeErrorPayload>;
 
     async fn get_invocation_timeline(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         invocation_id: &InvocationId,
     ) -> Result<Vec<InvocationTimelineEvent>, RuntimeErrorPayload>;
 
     async fn create_schedule(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         schedule: Schedule,
     ) -> Result<Schedule, RuntimeErrorPayload>;
 
     async fn list_schedules(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         filter: ScheduleListFilter,
     ) -> Result<Vec<Schedule>, RuntimeErrorPayload>;
 
+    async fn get_schedule(
+        &self,
+        ctx: &SecurityContext,
+        schedule_id: &ScheduleId,
+    ) -> Result<Schedule, RuntimeErrorPayload>;
+
     async fn patch_schedule(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         schedule_id: &ScheduleId,
         patch: SchedulePatch,
     ) -> Result<Schedule, RuntimeErrorPayload>;
 
     async fn pause_schedule(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         schedule_id: &ScheduleId,
     ) -> Result<Schedule, RuntimeErrorPayload>;
 
     async fn resume_schedule(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         schedule_id: &ScheduleId,
     ) -> Result<Schedule, RuntimeErrorPayload>;
 
     async fn delete_schedule(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         schedule_id: &ScheduleId,
     ) -> Result<(), RuntimeErrorPayload>;
 
     async fn get_schedule_history(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         schedule_id: &ScheduleId,
     ) -> Result<Vec<InvocationRecord>, RuntimeErrorPayload>;
 
     async fn create_trigger(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         trigger: Trigger,
     ) -> Result<Trigger, RuntimeErrorPayload>;
 
     async fn list_triggers(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         filter: TriggerListFilter,
     ) -> Result<Vec<Trigger>, RuntimeErrorPayload>;
 
+    async fn get_trigger(
+        &self,
+        ctx: &SecurityContext,
+        trigger_id: &TriggerId,
+    ) -> Result<Trigger, RuntimeErrorPayload>;
+
+    async fn update_trigger(
+        &self,
+        ctx: &SecurityContext,
+        trigger_id: &TriggerId,
+        patch: TriggerPatch,
+    ) -> Result<Trigger, RuntimeErrorPayload>;
+
     async fn delete_trigger(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         trigger_id: &TriggerId,
     ) -> Result<(), RuntimeErrorPayload>;
 
     async fn get_tenant_runtime_policy(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         tenant_id: &TenantId,
     ) -> Result<TenantRuntimePolicy, RuntimeErrorPayload>;
 
     async fn update_tenant_runtime_policy(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         tenant_id: &TenantId,
         policy: TenantRuntimePolicy,
     ) -> Result<TenantRuntimePolicy, RuntimeErrorPayload>;
 
     async fn get_tenant_usage(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         tenant_id: &TenantId,
     ) -> Result<TenantUsage, RuntimeErrorPayload>;
 
     async fn get_tenant_usage_history(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         tenant_id: &TenantId,
         filter: UsageHistoryFilter,
     ) -> Result<Vec<TenantUsage>, RuntimeErrorPayload>;
@@ -2870,6 +3721,8 @@ pub struct EntrypointListFilter {
     /// GTS ID prefix for filtering (supports wildcards per GTS spec section 10).
     pub entrypoint_id_prefix: Option<String>,
     pub status: Option<DefinitionStatus>,
+    /// Filter by ownership scope (user, tenant, system) per PRD BR-036.
+    pub owner_type: Option<OwnerType>,
     pub runtime: Option<String>,
     pub tags: Vec<String>,
 }
@@ -2878,7 +3731,7 @@ pub struct EntrypointListFilter {
 pub struct InvocationListFilter {
     pub tenant_id: Option<TenantId>,
     pub entrypoint_id: Option<EntrypointId>,
-    pub status: Option<GtsId>,
+    pub status: Option<InvocationStatus>,
     pub mode: Option<InvocationMode>,
     pub correlation_id: Option<String>,
 }
@@ -2895,6 +3748,15 @@ pub struct TriggerListFilter {
     pub tenant_id: Option<TenantId>,
     pub event_type_id: Option<GtsId>,
     pub entrypoint_id: Option<EntrypointId>,
+}
+
+#[derive(Clone, Debug)]
+pub struct TriggerPatch {
+    pub event_type_id: Option<GtsId>,
+    pub event_filter_query: Option<String>,
+    pub entrypoint_id: Option<EntrypointId>,
+    pub dead_letter_queue: Option<DeadLetterQueueConfig>,
+    pub status: Option<TriggerStatus>,
 }
 
 #[derive(Clone, Debug)]
@@ -2921,6 +3783,7 @@ pub struct UsageMetrics {
     pub concurrent_executions: u64,
     pub total_definitions: u64,
     pub total_schedules: u64,
+    pub total_triggers: u64,
     pub execution_history_mb: u64,
 }
 
@@ -2929,6 +3792,7 @@ pub struct UsageUtilization {
     pub concurrent_executions: f64,
     pub definitions: f64,
     pub schedules: f64,
+    pub triggers: f64,
     pub execution_history: f64,
 }
 
@@ -2951,7 +3815,7 @@ pub enum UsageGranularity {
 pub struct InvocationTimelineEvent {
     pub at: DateTime<Utc>,
     pub event_type: TimelineEventType,
-    pub status: GtsId,
+    pub status: InvocationStatus,
     pub step_name: Option<String>,
     pub duration_ms: Option<u64>,
     pub message: Option<String>,
@@ -2971,6 +3835,7 @@ pub enum TimelineEventType {
     CheckpointCreated,
     CompensationStarted,
     CompensationCompleted,
+    CompensationFailed,
     Succeeded,
     Failed,
     Canceled,
