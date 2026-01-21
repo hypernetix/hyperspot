@@ -375,21 +375,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "de0110_no_schema_for_on_gts_structs"
-version = "0.1.0"
-dependencies = [
- "clippy_utils",
- "dylint_linting",
- "dylint_testing",
- "gts",
- "gts-macros",
- "lint_utils",
- "schemars",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "de0201_dtos_only_in_api_rest"
 version = "0.1.0"
 dependencies = [

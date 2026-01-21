@@ -38,6 +38,7 @@ impl EarlyLintPass for De0803ApiSnakeCase {
             ItemKind::Enum(_, _, enum_def) => {
                 check_type_rename_all(cx, &item.attrs);
                 for variant in &enum_def.variants {
+                    check_variant_rename(cx, &variant.attrs);
                     check_fields(cx, &variant.data);
                 }
             }
@@ -47,6 +48,9 @@ impl EarlyLintPass for De0803ApiSnakeCase {
 }
 
 /// Extracts values from serde attributes matching the given name.
+///
+/// Handles both direct forms like `rename = "value"` and nested forms like
+/// `rename(serialize = "value1", deserialize = "value2")`.
 ///
 /// Returns spans and string values for all matching attributes.
 fn find_serde_attribute_value(attrs: &[Attribute], attribute_name: &str) -> Vec<(rustc_span::Span, String)> {
@@ -70,18 +74,30 @@ fn find_serde_attribute_value(attrs: &[Attribute], attribute_name: &str) -> Vec<
                 continue;
             }
 
-            let Some(value) = meta_item.value_str() else {
-                continue;
-            };
-
-            results.push((meta_item.span, value.as_str().to_string()));
+            // Try to get direct value: rename = "value"
+            if let Some(value) = meta_item.value_str() {
+                results.push((meta_item.span, value.as_str().to_string()));
+            }
+            
+            // Try to get nested list values: rename(serialize = "value1", deserialize = "value2")
+            if let Some(inner_list) = meta_item.meta_item_list() {
+                for inner_nested in inner_list {
+                    let Some(inner_meta_item) = inner_nested.meta_item() else {
+                        continue;
+                    };
+                    
+                    if let Some(inner_value) = inner_meta_item.value_str() {
+                        results.push((inner_meta_item.span, inner_value.as_str().to_string()));
+                    }
+                }
+            }
         }
     }
     
     results
 }
 
-/// Validates that `rename_all` attributes use snake_case variants.
+/// Validates that `rename_all` attributes use the literal "snake_case" value.
 fn check_type_rename_all(cx: &EarlyContext<'_>, attrs: &[Attribute]) {
     for (span, value) in find_serde_attribute_value(attrs, "rename_all") {
         if value != "snake_case" {
@@ -99,8 +115,26 @@ fn check_type_rename_all(cx: &EarlyContext<'_>, attrs: &[Attribute]) {
     }
 }
 
+/// Validates that enum variant `rename` attributes use snake_case values.
+fn check_variant_rename(cx: &EarlyContext<'_>, attrs: &[Attribute]) {
+    for (span, value) in find_serde_attribute_value(attrs, "rename") {
+        if !is_snake_case(&value) {
+            cx.span_lint(
+                DE0803_API_SNAKE_CASE,
+                span,
+                |diag| {
+                    diag.primary_message(
+                        "Enum variants must not use non-snake_case in serde rename (DE0803)"
+                    );
+                    diag.help("Enum variants in api/rest must use snake_case to match API standards");
+                },
+            );
+        }
+    }
+}
+
 /// Validates that fields use snake_case names or have a serde rename to snake_case.
-fn check_fields(cx: &EarlyContext<'_>, variant_data: &VariantData) {
+fn check_fields(cx: &EarlyContext<'_>, variant_data: &VariantData) {    
     for field in variant_data.fields() {
         check_field_snake_case(cx, field);
     }
@@ -124,7 +158,7 @@ fn check_field_snake_case(cx: &EarlyContext<'_>, field: &FieldDef) {
     let rename_values = find_serde_attribute_value(&field.attrs, "rename");
     
     if rename_values.is_empty() {
-        // No serde rename - field name must be snake_case
+        // No field-level serde rename - field name must be snake_case
         if !is_snake_case(&field_name) {
             cx.span_lint(
                 DE0803_API_SNAKE_CASE,
@@ -141,7 +175,7 @@ fn check_field_snake_case(cx: &EarlyContext<'_>, field: &FieldDef) {
             );
         }
     } else {
-        // Has serde rename - the rename value must be snake_case
+        // Has field-level serde rename - the rename value must be snake_case
         for (span, value) in rename_values {
             if !is_snake_case(&value) {
                 cx.span_lint(

@@ -1,0 +1,19 @@
+error: DTO fields must not use non-snake_case in serde rename (DE0803)
+  --> $DIR/fail_field_rename_nested_camel_case.rs:7:20
+   |
+LL |     #[serde(rename(serialize = "userName"))]
+   |                    ^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: DTO fields in api/rest must use snake_case to match API standards
+   = note: `#[deny(de0803_api_snake_case)]` on by default
+
+error: DTO fields must not use non-snake_case in serde rename (DE0803)
+  --> $DIR/fail_field_rename_nested_camel_case.rs:10:20
+   |
+LL |     #[serde(rename(deserialize = "userName"))]
+   |                    ^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: DTO fields in api/rest must use snake_case to match API standards
+
+error: aborting due to 2 previous errors
+

@@ -1,8 +1,8 @@
 error: DTO fields must not use non-snake_case in serde rename (DE0803)
-  --> $DIR/pass_field_uppercase.rs:7:13
+  --> $DIR/fail_field_screaming_snake_case.rs:7:13
    |
-LL |     #[serde(rename = "UPPERCASE_FIELD")]
-   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+LL |     #[serde(rename = "SCREAMING_SNAKE_FIELD")]
+   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    |
    = help: DTO fields in api/rest must use snake_case to match API standards
    = note: `#[deny(de0803_api_snake_case)]` on by default

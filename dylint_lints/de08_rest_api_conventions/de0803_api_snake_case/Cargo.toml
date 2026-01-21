@@ -35,12 +35,12 @@ name = "fail_pascal_case"
 path = "ui/fail_pascal_case.rs"
 
 [[example]]
-name = "pass_uppercase"
-path = "ui/pass_uppercase.rs"
+name = "fail_uppercase"
+path = "ui/fail_uppercase.rs"
 
 [[example]]
-name = "pass_screaming_snake_case"
-path = "ui/pass_screaming_snake_case.rs"
+name = "fail_screaming_snake_case"
+path = "ui/fail_screaming_snake_case.rs"
 
 [[example]]
 name = "fail_kebab_case"
@@ -67,12 +67,12 @@ name = "fail_field_kebab_case"
 path = "ui/fail_field_kebab_case.rs"
 
 [[example]]
-name = "pass_field_uppercase"
-path = "ui/pass_field_uppercase.rs"
+name = "fail_field_uppercase"
+path = "ui/fail_field_uppercase.rs"
 
 [[example]]
-name = "pass_field_screaming_snake_case"
-path = "ui/pass_field_screaming_snake_case.rs"
+name = "fail_field_screaming_snake_case"
+path = "ui/fail_field_screaming_snake_case.rs"
 
 [[example]]
 name = "fail_field_screaming_kebab_case"
@@ -93,6 +93,34 @@ path = "ui/fail_field_name_camel_case.rs"
 [[example]]
 name = "pass_field_name_with_snake_rename"
 path = "ui/pass_field_name_with_snake_rename.rs"
+
+[[example]]
+name = "fail_rename_all_nested_camel_case"
+path = "ui/fail_rename_all_nested_camel_case.rs"
+
+[[example]]
+name = "pass_rename_all_nested_snake_case"
+path = "ui/pass_rename_all_nested_snake_case.rs"
+
+[[example]]
+name = "fail_field_rename_nested_camel_case"
+path = "ui/fail_field_rename_nested_camel_case.rs"
+
+[[example]]
+name = "pass_field_rename_nested_snake_case"
+path = "ui/pass_field_rename_nested_snake_case.rs"
+
+[[example]]
+name = "fail_enum_variant_rename_camel_case"
+path = "ui/fail_enum_variant_rename_camel_case.rs"
+
+[[example]]
+name = "pass_enum_variant_rename_snake_case"
+path = "ui/pass_enum_variant_rename_snake_case.rs"
+
+[[example]]
+name = "fail_enum_variant_rename_nested_pascal_case"
+path = "ui/fail_enum_variant_rename_nested_pascal_case.rs"
 
 [package.metadata.rust-analyzer]
 rustc_private = true

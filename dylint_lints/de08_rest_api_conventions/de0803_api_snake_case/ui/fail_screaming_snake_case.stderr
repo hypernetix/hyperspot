@@ -1,8 +1,8 @@
 error: DTOs must not use non-snake_case in serde rename_all (DE0803)
-  --> $DIR/pass_uppercase.rs:6:9
+  --> $DIR/fail_screaming_snake_case.rs:6:9
    |
-LL | #[serde(rename_all = "UPPERCASE")]
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^
+LL | #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    |
    = help: DTOs in api/rest must use snake_case (or default) to match API standards
    = note: `#[deny(de0803_api_snake_case)]` on by default

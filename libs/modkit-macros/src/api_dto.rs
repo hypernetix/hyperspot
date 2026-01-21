@@ -7,11 +7,13 @@ pub fn expand_api_dto(args: &Punctuated<Ident, Token![,]>, input: &DeriveInput) 
     let has_request = args.iter().any(|id| id == "request");
     let has_response = args.iter().any(|id| id == "response");
 
-    let (serialize, deserialize) = if !has_request && !has_response {
-        (false, false)
-    } else {
-        (has_response, has_request)
-    };
+    if !has_request && !has_response {
+        return quote! {
+            compile_error!("api_dto macro requires at least one of 'request' or 'response' arguments");
+        };
+    }
+
+    let (serialize, deserialize) = (has_response, has_request);
     let name = &input.ident;
     let ser = if serialize {
         quote! { serde::Serialize, }
@@ -33,9 +35,17 @@ pub fn expand_api_dto(args: &Punctuated<Ident, Token![,]>, input: &DeriveInput) 
     } else {
         quote! {}
     };
+    
+    let has_serde = serialize || deserialize;
+    let serde_attr = if has_serde {
+        quote! { #[serde(rename_all = "snake_case")] }
+    } else {
+        quote! {}
+    };
+    
     quote! {
         #[derive(#ser #de utoipa::ToSchema)]
-        #[serde(rename_all = "snake_case")]
+        #serde_attr
         #input
         #req_trait_impl
         #resp_trait_impl

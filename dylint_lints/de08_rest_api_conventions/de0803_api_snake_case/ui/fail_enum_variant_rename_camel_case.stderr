@@ -1,0 +1,19 @@
+error: Enum variants must not use non-snake_case in serde rename (DE0803)
+  --> $DIR/fail_enum_variant_rename_camel_case.rs:7:13
+   |
+LL |     #[serde(rename = "firstVariant")]
+   |             ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Enum variants in api/rest must use snake_case to match API standards
+   = note: `#[deny(de0803_api_snake_case)]` on by default
+
+error: Enum variants must not use non-snake_case in serde rename (DE0803)
+  --> $DIR/fail_enum_variant_rename_camel_case.rs:10:13
+   |
+LL |     #[serde(rename = "secondVariant")]
+   |             ^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Enum variants in api/rest must use snake_case to match API standards
+
+error: aborting due to 2 previous errors
+
