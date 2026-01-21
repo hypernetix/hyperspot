@@ -4,6 +4,7 @@ members = [
     "de01_contract_layer/de0101_no_serde_in_contract",
     "de01_contract_layer/de0102_no_toschema_in_contract",
     "de01_contract_layer/de0103_no_http_types_in_contract",
+    "de01_contract_layer/de0104_no_api_dto_in_contract",
     "de02_api_layer/de0201_dtos_only_in_api_rest",
     "de02_api_layer/de0202_dtos_not_referenced_outside_api",
     "de02_api_layer/de0203_dtos_must_use_api_dto",
@@ -43,6 +44,7 @@ gts = { git = "https://github.com/globaltypesystem/gts-rust.git", tag = "v0.7.7"
 gts-macros = { git = "https://github.com/globaltypesystem/gts-rust.git", tag = "v0.7.7" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+utoipa = "5.2"
 
 [workspace.lints.clippy]
 all = "warn"

@@ -1063,6 +1063,58 @@ pub fn grpc_client(attr: TokenStream, item: TokenStream) -> TokenStream {
     }
 }
 
+/// Generates API DTO (Data Transfer Object) boilerplate for REST API types.
+///
+/// This macro automatically derives the necessary traits and attributes for types
+/// used in REST API requests and responses, ensuring they follow API conventions.
+///
+/// # Arguments
+///
+/// - `request` - Marks the type as a request DTO (adds `Deserialize` and `RequestApiDto`)
+/// - `response` - Marks the type as a response DTO (adds `Serialize` and `ResponseApiDto`)
+///
+/// At least one of `request` or `response` must be specified. Both can be used together
+/// for types that serve as both request and response DTOs.
+///
+/// # Generated Code
+///
+/// The macro generates:
+/// - `#[derive(serde::Serialize)]` if `response` is specified
+/// - `#[derive(serde::Deserialize)]` if `request` is specified
+/// - `#[derive(utoipa::ToSchema)]` for `OpenAPI` schema generation
+/// - `#[serde(rename_all = "snake_case")]` to enforce `snake_case` field naming
+/// - `impl RequestApiDto` if `request` is specified
+/// - `impl ResponseApiDto` if `response` is specified
+///
+/// # Examples
+///
+/// ```ignore
+/// // Request-only DTO
+/// #[api_dto(request)]
+/// pub struct CreateUserRequest {
+///     pub user_name: String,
+///     pub email: String,
+/// }
+///
+/// // Response-only DTO
+/// #[api_dto(response)]
+/// pub struct UserResponse {
+///     pub id: String,
+///     pub user_name: String,
+/// }
+///
+/// // Both request and response
+/// #[api_dto(request, response)]
+/// pub struct UserDto {
+///     pub id: String,
+///     pub user_name: String,
+/// }
+/// ```
+///
+/// # Field Naming
+///
+/// All fields are automatically converted to `snake_case` in JSON serialization,
+/// regardless of the Rust field name.
 #[proc_macro_attribute]
 pub fn api_dto(attr: TokenStream, item: TokenStream) -> TokenStream {
     let attrs = parse_macro_input!(attr with Punctuated::<Ident, Token![,]>::parse_terminated);

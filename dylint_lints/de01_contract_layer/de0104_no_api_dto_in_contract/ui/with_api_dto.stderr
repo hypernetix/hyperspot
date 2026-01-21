@@ -1,0 +1,27 @@
+error: contract type should not use `api_dto` macro (DE0104)
+  --> $DIR/with_api_dto.rs:5:1
+   |
+LL | #[modkit_macros::api_dto(request, response)]
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: api_dto is for API DTOs; use plain structs in contract/ and create DTOs in api/rest/
+   = note: `#[deny(de0104_no_api_dto_in_contract)]` on by default
+
+error: contract type should not use `api_dto` macro (DE0104)
+  --> $DIR/with_api_dto.rs:12:1
+   |
+LL | #[modkit_macros::api_dto(response)]
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: api_dto is for API DTOs; use plain structs in contract/ and create DTOs in api/rest/
+
+error: contract type should not use `api_dto` macro (DE0104)
+  --> $DIR/with_api_dto.rs:19:1
+   |
+LL | #[modkit_macros::api_dto(request)]
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: api_dto is for API DTOs; use plain structs in contract/ and create DTOs in api/rest/
+
+error: aborting due to 3 previous errors
+

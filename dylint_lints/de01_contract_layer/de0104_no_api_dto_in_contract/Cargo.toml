@@ -1,0 +1,33 @@
+[package]
+name = "de0104_no_api_dto_in_contract"
+version = "0.1.0"
+authors = ["Hypernetix"]
+description = "Prevents use of api_dto macro in contract layer"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+clippy_utils.workspace = true
+dylint_linting.workspace = true
+lint_utils.workspace = true
+
+[dev-dependencies]
+dylint_testing.workspace = true
+modkit-macros = { path = "../../../libs/modkit-macros" }
+modkit = { path = "../../../libs/modkit" }
+serde.workspace = true
+utoipa.workspace = true
+
+[package.metadata.rust-analyzer]
+rustc_private = true
+
+[[example]]
+name = "with_api_dto"
+path = "ui/with_api_dto.rs"
+
+[[example]]
+name = "without_api_dto"
+path = "ui/without_api_dto.rs"

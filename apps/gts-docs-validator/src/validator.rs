@@ -267,8 +267,8 @@ pub fn validate_gts_id(
             // Skip vendor check for example/placeholder vendors
             if actual_vendor != expected && !is_example_vendor(actual_vendor) {
                 errors.push(format!(
-                        "Vendor mismatch: expected '{expected}', found '{actual_vendor}' in '{original}'"
-                    ));
+                    "Vendor mismatch: expected '{expected}', found '{actual_vendor}' in '{original}'"
+                ));
             }
         }
     } else {

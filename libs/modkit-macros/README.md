@@ -1,13 +1,19 @@
 # ModKit Macros
 
-Procedural macros for the ModKit framework, focused on generating strongly-typed gRPC clients with built-in SecurityCtx propagation.
+Procedural macros for the ModKit framework, providing code generation for gRPC clients and REST API DTOs.
 
 ## Overview
 
-ModKit provides two macros for generating gRPC client implementations:
+ModKit provides three main macros:
+
+### gRPC Client Generation
 
 1. **`#[generate_clients]`** (RECOMMENDED) - Generate a gRPC client from an API trait definition with automatic SecurityCtx propagation
 2. **`#[grpc_client]`** - Generate a gRPC client with manual trait implementation
+
+### REST API DTO Generation
+
+3. **`#[api_dto]`** - Generate REST API Data Transfer Objects with automatic serialization, schema generation, and type safety
 
 ## Quick Start
 
@@ -370,6 +376,189 @@ async fn update(&self, req: UpdateRequest) -> Result<(), Error>;
 ### Missing Into/From implementations
 
 Ensure you implement the required conversions between domain and proto types.
+
+---
+
+## REST API DTO Macro
+
+The `#[api_dto]` macro simplifies the creation of REST API Data Transfer Objects by automatically deriving serialization traits and OpenAPI schema generation.
+
+### Quick Start
+
+```rust
+use modkit_macros::api_dto;
+
+#[api_dto(request)]
+pub struct CreateUserRequest {
+    pub name: String,
+    pub email: String,
+}
+
+#[api_dto(response)]
+pub struct UserResponse {
+    pub id: String,
+    pub name: String,
+    pub email: String,
+}
+```
+
+### Macro Arguments
+
+The `api_dto` macro accepts one or both of the following flags:
+
+- **`request`** - Marks the type as a request DTO (implements `Deserialize` and `RequestApiDto`)
+- **`response`** - Marks the type as a response DTO (implements `Serialize` and `ResponseApiDto`)
+
+You can use both flags for types that serve as both request and response:
+
+```rust
+#[api_dto(request, response)]
+pub struct UserDto {
+    pub id: String,
+    pub name: String,
+}
+```
+
+### Generated Code
+
+The macro automatically adds:
+
+1. **Serde traits**: `Serialize` and/or `Deserialize` based on flags
+2. **OpenAPI schema**: `utoipa::ToSchema` for automatic API documentation
+3. **Snake case conversion**: `#[serde(rename_all = "snake_case")]` for consistent JSON formatting
+4. **Marker traits**: `RequestApiDto` and/or `ResponseApiDto` for type safety
+
+#### Example: Request DTO
+
+```rust
+#[api_dto(request)]
+pub struct CreateUserRequest {
+    pub name: String,
+    pub email: String,
+}
+```
+
+Expands to:
+
+```rust
+#[derive(serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct CreateUserRequest {
+    pub name: String,
+    pub email: String,
+}
+
+impl ::modkit::api::api_dto::RequestApiDto for CreateUserRequest {}
+```
+
+#### Example: Response DTO
+
+```rust
+#[api_dto(response)]
+pub struct UserResponse {
+    pub id: String,
+    pub name: String,
+}
+```
+
+Expands to:
+
+```rust
+#[derive(serde::Serialize, utoipa::ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct UserResponse {
+    pub id: String,
+    pub name: String,
+}
+
+impl ::modkit::api::api_dto::ResponseApiDto for UserResponse {}
+```
+
+### Usage in REST APIs
+
+Use `api_dto` types with the ModKit REST API framework:
+
+```rust
+use modkit::api::RestApiCapability;
+use modkit_macros::api_dto;
+
+#[api_dto(request)]
+pub struct CreateUserRequest {
+    pub name: String,
+    pub email: String,
+}
+
+#[api_dto(response)]
+pub struct UserResponse {
+    pub id: String,
+    pub name: String,
+    pub email: String,
+    pub created_at: String,
+}
+
+// Use in your REST API handler
+async fn create_user(
+    req: CreateUserRequest,
+) -> Result<UserResponse, Error> {
+    // Your implementation
+    Ok(UserResponse {
+        id: "123".to_string(),
+        name: req.name,
+        email: req.email,
+        created_at: "2024-01-01T00:00:00Z".to_string(),
+    })
+}
+```
+
+### Validation and Error Handling
+
+The macro requires at least one flag (`request` or `response`):
+
+```rust
+// ❌ Compile error: requires at least one flag
+#[api_dto()]
+pub struct InvalidDto {
+    pub field: String,
+}
+
+// ✅ Valid
+#[api_dto(request)]
+pub struct ValidDto {
+    pub field: String,
+}
+```
+
+Unknown flags are rejected at compile time:
+
+```rust
+// ❌ Compile error: unknown flag 'invalid'
+#[api_dto(invalid)]
+pub struct MyDto {
+    pub field: String,
+}
+```
+
+Duplicate flags are also rejected:
+
+```rust
+// ❌ Compile error: duplicate flag 'request'
+#[api_dto(request, request)]
+pub struct MyDto {
+    pub field: String,
+}
+```
+
+### Benefits
+
+1. **Type Safety**: Marker traits (`RequestApiDto`, `ResponseApiDto`) enable compile-time checks to ensure that types used for request/response in OperationBuilder will be compliant
+2. **Consistency**: Automatic snake_case conversion ensures consistent JSON formatting
+3. **Less Boilerplate**: No need to manually derive serde traits and configure attributes
+
+### Best Practices
+
+1. **Use specific flags**: Only add `request` or `response` based on actual usage
+2. **Keep DTOs simple**: DTOs should be data containers without business logic
+3. **Separate concerns**: Use different types for requests and responses when they differ
 
 ## See Also
 
