@@ -7,23 +7,66 @@
 //! -> timeout -> body limit -> CORS -> MIME validation -> rate limit -> error mapping -> auth -> router
 //!
 use anyhow::Result;
+use async_trait::async_trait;
 use axum::{
+    Router,
     body::Body,
     extract::{Extension, Json},
     http::{Request, StatusCode},
     response::IntoResponse,
-    Router,
+};
+use hs_tenant_resolver_sdk::{
+    AccessOptions, TenantFilter, TenantId, TenantInfo, TenantResolverError,
+    TenantResolverGatewayClient, TenantStatus,
 };
 use modkit::{
-    api::OperationBuilder, config::ConfigProvider, context::ModuleCtx, contracts::RestHostModule,
-    Module,
+    Module, api::OperationBuilder, config::ConfigProvider, context::ModuleCtx,
+    contracts::ApiGatewayCapability,
 };
+
+use modkit_security::SecurityContext;
 use serde_json::json;
 use std::sync::Arc;
 use tower::ServiceExt;
 use uuid::Uuid;
 
 use api_gateway::middleware::request_id::XRequestId;
+
+struct MockTenantResolver;
+
+#[async_trait]
+impl TenantResolverGatewayClient for MockTenantResolver {
+    async fn get_tenant(
+        &self,
+        _ctx: &SecurityContext,
+        id: TenantId,
+    ) -> std::result::Result<TenantInfo, TenantResolverError> {
+        Ok(TenantInfo {
+            id,
+            name: format!("Tenant {id}"),
+            status: TenantStatus::Active,
+            tenant_type: None,
+        })
+    }
+
+    async fn can_access(
+        &self,
+        _ctx: &SecurityContext,
+        _target: TenantId,
+        _options: Option<&AccessOptions>,
+    ) -> std::result::Result<bool, TenantResolverError> {
+        Ok(true)
+    }
+
+    async fn get_accessible_tenants(
+        &self,
+        _ctx: &SecurityContext,
+        _filter: Option<&TenantFilter>,
+        _options: Option<&AccessOptions>,
+    ) -> std::result::Result<Vec<TenantInfo>, TenantResolverError> {
+        Ok(vec![])
+    }
+}
 
 struct TestConfigProvider {
     config: serde_json::Value,
@@ -36,11 +79,14 @@ impl ConfigProvider for TestConfigProvider {
 }
 
 fn create_api_gateway_ctx(config: serde_json::Value) -> ModuleCtx {
+    let hub = Arc::new(modkit::ClientHub::new());
+    hub.register::<dyn TenantResolverGatewayClient>(Arc::new(MockTenantResolver));
+
     ModuleCtx::new(
         "api_gateway",
         Uuid::new_v4(),
         Arc::new(TestConfigProvider { config }),
-        Arc::new(modkit::ClientHub::new()),
+        hub,
         tokio_util::sync::CancellationToken::new(),
         None,
     )

@@ -68,6 +68,13 @@
 // Re-export key types for public API
 pub use advisory_locks::{DbLockGuard, LockConfig};
 
+/// `SeaORM` connection trait alias used by downstream crates (domain/ports) to avoid
+/// depending on `sea_orm` directly.
+///
+/// This is only available when `modkit-db` is compiled with the `sea-orm` feature.
+#[cfg(feature = "sea-orm")]
+pub use sea_orm::ConnectionTrait as DbConnTrait;
+
 // Core modules
 pub mod advisory_locks;
 pub mod config;
@@ -88,7 +95,7 @@ mod sqlite;
 pub use config::{DbConnConfig, GlobalDatabaseConfig, PoolCfg};
 pub use manager::DbManager;
 pub use options::{
-    build_db_handle, redact_credentials_in_dsn, ConnectionOptionsError, DbConnectOptions,
+    ConnectionOptionsError, DbConnectOptions, build_db_handle, redact_credentials_in_dsn,
 };
 
 use std::time::Duration;
@@ -96,16 +103,16 @@ use std::time::Duration;
 // Internal imports
 use pool_opts::ApplyPoolOpts;
 #[cfg(feature = "sqlite")]
-use sqlite::{extract_sqlite_pragmas, is_memory_dsn, prepare_sqlite_path, Pragmas};
+use sqlite::{Pragmas, extract_sqlite_pragmas, is_memory_dsn, prepare_sqlite_path};
 
 // Used for parsing SQLite DSN query parameters
 
 #[cfg(feature = "mysql")]
-use sqlx::{mysql::MySqlPoolOptions, MySql, MySqlPool};
+use sqlx::{MySql, MySqlPool, mysql::MySqlPoolOptions};
 #[cfg(feature = "pg")]
-use sqlx::{postgres::PgPoolOptions, PgPool, Postgres};
+use sqlx::{PgPool, Postgres, postgres::PgPoolOptions};
 #[cfg(feature = "sqlite")]
-use sqlx::{sqlite::SqlitePoolOptions, Sqlite, SqlitePool};
+use sqlx::{Sqlite, SqlitePool, sqlite::SqlitePoolOptions};
 
 #[cfg(feature = "sea-orm")]
 use sea_orm::DatabaseConnection;
@@ -370,11 +377,7 @@ impl DbHandle {
                         let journal_mode = if let Some(mode) = &pragmas.journal_mode {
                             mode.as_sql()
                         } else if let Some(wal_toggle) = pragmas.wal_toggle {
-                            if wal_toggle {
-                                "WAL"
-                            } else {
-                                "DELETE"
-                            }
+                            if wal_toggle { "WAL" } else { "DELETE" }
                         } else if is_memory {
                             // Default: DELETE for memory, WAL for file
                             "DELETE"

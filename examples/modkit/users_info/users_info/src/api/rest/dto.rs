@@ -1,19 +1,18 @@
-use modkit_db_macros::ODataFilterable;
+/// REST DTO for user representation with serde/utoipa
+use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
-use user_info_sdk::{NewUser, User, UserPatch};
+use user_info_sdk::{Address, City, NewAddress, NewCity, NewUser, User, UserFull, UserPatch};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 /// REST DTO for user representation with serde/utoipa
-#[derive(Debug, Clone, ODataFilterable)]
+#[derive(Debug, Clone)]
 #[modkit_macros::api_dto(request, response)]
 pub struct UserDto {
-    #[odata(filter(kind = "Uuid"))]
     pub id: Uuid,
     pub tenant_id: Uuid,
-    #[odata(filter(kind = "String"))]
     pub email: String,
     pub display_name: String,
-    #[odata(filter(kind = "DateTimeUtc"))]
     #[serde(with = "time::serde::rfc3339")]
     pub created_at: OffsetDateTime,
     #[serde(with = "time::serde::rfc3339")]
@@ -38,6 +37,16 @@ pub struct CreateUserReq {
 pub struct UpdateUserReq {
     pub email: Option<String>,
     pub display_name: Option<String>,
+}
+
+/// REST DTO for aggregated user response with related entities
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct UserFullDto {
+    pub user: UserDto,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub address: Option<AddressDto>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub city: Option<CityDto>,
 }
 
 // Conversion implementations between REST DTOs and contract models
@@ -70,6 +79,140 @@ impl From<UpdateUserReq> for UserPatch {
         Self {
             email: req.email,
             display_name: req.display_name,
+        }
+    }
+}
+
+impl From<UserFull> for UserFullDto {
+    fn from(user_full: UserFull) -> Self {
+        Self {
+            user: UserDto::from(user_full.user),
+            address: user_full.address.map(AddressDto::from),
+            city: user_full.city.map(CityDto::from),
+        }
+    }
+}
+
+// ==================== City DTOs ====================
+
+/// REST DTO for city representation
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request, response)]
+pub struct CityDto {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub name: String,
+    pub country: String,
+    #[serde(with = "time::serde::rfc3339")]
+    pub created_at: OffsetDateTime,
+    #[serde(with = "time::serde::rfc3339")]
+    pub updated_at: OffsetDateTime,
+}
+
+/// REST DTO for creating a new city
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request)]
+pub struct CreateCityReq {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<Uuid>,
+    pub tenant_id: Uuid,
+    pub name: String,
+    pub country: String,
+}
+
+/// REST DTO for updating a city (partial)
+#[derive(Debug, Clone, Default)]
+#[modkit_macros::api_dto(request)]
+pub struct UpdateCityReq {
+    pub name: Option<String>,
+    pub country: Option<String>,
+}
+
+impl From<City> for CityDto {
+    fn from(city: City) -> Self {
+        Self {
+            id: city.id,
+            tenant_id: city.tenant_id,
+            name: city.name,
+            country: city.country,
+            created_at: city.created_at,
+            updated_at: city.updated_at,
+        }
+    }
+}
+
+impl From<CreateCityReq> for NewCity {
+    fn from(req: CreateCityReq) -> Self {
+        Self {
+            id: req.id,
+            tenant_id: req.tenant_id,
+            name: req.name,
+            country: req.country,
+        }
+    }
+}
+
+impl From<UpdateCityReq> for user_info_sdk::CityPatch {
+    fn from(req: UpdateCityReq) -> Self {
+        Self {
+            name: req.name,
+            country: req.country,
+        }
+    }
+}
+
+// ==================== Address DTOs ====================
+
+/// REST DTO for address representation
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request, response)]
+pub struct AddressDto {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub user_id: Uuid,
+    pub city_id: Uuid,
+    pub street: String,
+    pub postal_code: String,
+    #[serde(with = "time::serde::rfc3339")]
+    pub created_at: OffsetDateTime,
+    #[serde(with = "time::serde::rfc3339")]
+    pub updated_at: OffsetDateTime,
+}
+
+/// REST DTO for creating/upserting an address
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request)]
+pub struct PutAddressReq {
+    pub city_id: Uuid,
+    pub street: String,
+    pub postal_code: String,
+}
+
+impl From<Address> for AddressDto {
+    fn from(address: Address) -> Self {
+        Self {
+            id: address.id,
+            tenant_id: address.tenant_id,
+            user_id: address.user_id,
+            city_id: address.city_id,
+            street: address.street,
+            postal_code: address.postal_code,
+            created_at: address.created_at,
+            updated_at: address.updated_at,
+        }
+    }
+}
+
+impl PutAddressReq {
+    #[must_use]
+    pub fn into_new_address(self, user_id: Uuid) -> NewAddress {
+        NewAddress {
+            id: None,
+            tenant_id: Uuid::nil(),
+            user_id,
+            city_id: self.city_id,
+            street: self.street,
+            postal_code: self.postal_code,
         }
     }
 }
@@ -112,8 +255,9 @@ impl From<&crate::domain::events::UserDomainEvent> for UserEvent {
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
-    use super::*;
+    use super::{UserEvent, Uuid};
     use crate::domain::events::UserDomainEvent;
+    use time::OffsetDateTime;
 
     #[test]
     fn maps_domain_event_to_transport() {

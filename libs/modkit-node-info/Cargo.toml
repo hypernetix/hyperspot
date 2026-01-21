@@ -15,8 +15,8 @@ sysinfo = { workspace = true }
 hostname = { workspace = true }
 starship-battery = { workspace = true }
 regex = { workspace = true }
-chrono = { workspace = true, features = ["serde"] }
-uuid = { workspace = true, features = ["v5"]}
+chrono = { workspace = true, features = ["serde", "clock"] }
+uuid = { workspace = true, features = ["v4", "v5"]}
 local-ip-address = { workspace = true }
 machine-uid = { workspace = true }
 tracing = { workspace = true }

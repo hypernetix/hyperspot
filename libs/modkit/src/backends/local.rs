@@ -1,6 +1,6 @@
 //! Local process backend implementation
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use async_trait::async_trait;
 use parking_lot::RwLock;
 use std::collections::HashMap;
@@ -13,7 +13,7 @@ use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
-use super::log_forwarder::{spawn_stream_forwarder, StreamKind};
+use super::log_forwarder::{StreamKind, spawn_stream_forwarder};
 use super::{BackendKind, InstanceHandle, ModuleRuntimeBackend, OopModuleConfig};
 
 /// Grace period before force-killing processes on shutdown
@@ -32,7 +32,7 @@ const FORWARDER_DRAIN_TIMEOUT: Duration = Duration::from_millis(100);
 /// method for console applications.
 #[cfg(unix)]
 fn send_terminate_signal(child: &Child) -> bool {
-    use nix::sys::signal::{kill, Signal};
+    use nix::sys::signal::{Signal, kill};
     use nix::unistd::Pid;
 
     if let Some(pid) = child.id() {
@@ -361,10 +361,12 @@ mod tests {
 
         let result = backend.spawn_instance(&cfg).await;
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("executable_path must be set"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("executable_path must be set")
+        );
     }
 
     #[tokio::test]
@@ -375,10 +377,12 @@ mod tests {
 
         let result = backend.spawn_instance(&cfg).await;
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("can only spawn LocalProcess"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("can only spawn LocalProcess")
+        );
     }
 
     #[tokio::test]

@@ -8,7 +8,6 @@ pub mod traits;
 pub mod types;
 
 pub mod authorizer;
-pub mod scope_builder;
 
 // Plugin system modules
 pub mod auth_mode;
@@ -35,7 +34,7 @@ pub use types::{AuthRequirement, RoutePolicy, SecRequirement};
 // Plugin system exports
 pub use auth_mode::{AuthModeConfig, PluginRegistry};
 pub use claims_error::ClaimsError;
-pub use config::{build_auth_dispatcher, AuthConfig, JwksConfig, PluginConfig};
+pub use config::{AuthConfig, JwksConfig, PluginConfig, build_auth_dispatcher};
 pub use config_error::ConfigError;
 pub use dispatcher::AuthDispatcher;
 pub use metrics::{AuthEvent, AuthMetricLabels, AuthMetrics, LoggingMetrics, NoOpMetrics};

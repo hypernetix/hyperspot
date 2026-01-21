@@ -11,8 +11,8 @@ use std::path::{Path, PathBuf};
 use tracing::Level;
 
 use super::host::paths::home_dir::resolve_home_dir;
-use crate::telemetry::TracingConfig;
 use crate::ConfigProvider;
+use crate::telemetry::TracingConfig;
 use url::Url;
 
 /// Small typed view to parse each module entry.
@@ -202,8 +202,8 @@ impl AppConfig {
     /// Returns an error if configuration loading or `home_dir` resolution fails.
     pub fn load_layered<P: AsRef<Path>>(config_path: P) -> Result<Self> {
         use figment::{
-            providers::{Env, Format, Serialized, Yaml},
             Figment,
+            providers::{Env, Format, Serialized, Yaml},
         };
 
         // For layered loading, start from a minimal base where optional sections are None,
@@ -414,37 +414,37 @@ pub fn validate_dsn(dsn: &str) -> Result<()> {
 fn resolve_sqlite_dsn(dsn: &str, home_dir: &Path, module_name: &str) -> Result<String> {
     if dsn.contains("@file(") {
         // Extract the file path from @file(...)
-        if let Some(start) = dsn.find("@file(") {
-            if let Some(end) = dsn[start..].find(')') {
-                let file_path = &dsn[start + 6..start + end]; // +6 for "@file("
+        if let Some(start) = dsn.find("@file(")
+            && let Some(end) = dsn[start..].find(')')
+        {
+            let file_path = &dsn[start + 6..start + end]; // +6 for "@file("
 
-                let resolved_path = if file_path.starts_with('/')
-                    || (file_path.len() > 1 && file_path.chars().nth(1) == Some(':'))
-                {
-                    // Absolute path (Unix or Windows)
-                    PathBuf::from(file_path)
-                } else {
-                    // Relative path - resolve under module directory
-                    let module_dir = home_dir.join(module_name);
-                    std::fs::create_dir_all(&module_dir).with_context(|| {
-                        format!(
-                            "Failed to create module directory: {}",
-                            module_dir.display()
-                        )
-                    })?;
-                    module_dir.join(file_path)
-                };
+            let resolved_path = if file_path.starts_with('/')
+                || (file_path.len() > 1 && file_path.chars().nth(1) == Some(':'))
+            {
+                // Absolute path (Unix or Windows)
+                PathBuf::from(file_path)
+            } else {
+                // Relative path - resolve under module directory
+                let module_dir = home_dir.join(module_name);
+                std::fs::create_dir_all(&module_dir).with_context(|| {
+                    format!(
+                        "Failed to create module directory: {}",
+                        module_dir.display()
+                    )
+                })?;
+                module_dir.join(file_path)
+            };
 
-                let normalized_path = resolved_path.to_string_lossy().replace('\\', "/");
-                // For Windows absolute paths (C:/...), use sqlite:path format
-                // For Unix absolute paths (/...), use sqlite://path format
-                if normalized_path.len() > 1 && normalized_path.chars().nth(1) == Some(':') {
-                    // Windows absolute path like C:/...
-                    return Ok(format!("sqlite:{normalized_path}"));
-                }
-                // Unix absolute path or relative path
-                return Ok(format!("sqlite://{normalized_path}"));
+            let normalized_path = resolved_path.to_string_lossy().replace('\\', "/");
+            // For Windows absolute paths (C:/...), use sqlite:path format
+            // For Unix absolute paths (/...), use sqlite://path format
+            if normalized_path.len() > 1 && normalized_path.chars().nth(1) == Some(':') {
+                // Windows absolute path like C:/...
+                return Ok(format!("sqlite:{normalized_path}"));
             }
+            // Unix absolute path or relative path
+            return Ok(format!("sqlite://{normalized_path}"));
         }
         return Err(anyhow::anyhow!(
             "Invalid @file() syntax in SQLite DSN: {dsn}"
@@ -1157,7 +1157,8 @@ pub fn module_home(app: &AppConfig, module_name: &str) -> PathBuf {
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
-    use std::{env, fs};
+    use std::fs;
+    use temp_env::with_var;
     use tempfile::tempdir;
 
     /// Helper: a normalized `home_dir` should be absolute and not start with '~'.
@@ -1240,25 +1241,22 @@ logging:
         // No external file => defaults, but home_dir must be normalized.
         // Ensure platform env is present for home resolution in CI.
         let tmp = tempdir().unwrap();
-        #[cfg(target_os = "windows")]
-        env::set_var("APPDATA", tmp.path());
-        #[cfg(not(target_os = "windows"))]
-        env::set_var("HOME", tmp.path());
-        let config = AppConfig::load_or_default(None::<&str>).unwrap();
-        assert!(is_normalized_path(&config.server.home_dir));
-        assert!(config.server.home_dir.ends_with(default_subdir()));
+        let env_var = if cfg!(target_os = "windows") {
+            "APPDATA"
+        } else {
+            "HOME"
+        };
+        with_var(env_var, Some(tmp.path().to_str().unwrap()), || {
+            let config = AppConfig::load_or_default(None::<&str>).unwrap();
+            assert!(is_normalized_path(&config.server.home_dir));
+            assert!(config.server.home_dir.ends_with(default_subdir()));
+        });
     }
 
     #[test]
     fn test_minimal_yaml_config() {
         let tmp = tempdir().unwrap();
         let cfg_path = tmp.path().join("cfg.yaml");
-
-        // Set up environment variables for home directory resolution
-        #[cfg(target_os = "windows")]
-        env::set_var("APPDATA", tmp.path());
-        #[cfg(not(target_os = "windows"))]
-        env::set_var("HOME", tmp.path());
 
         let yaml = r#"
 server:
@@ -1615,37 +1613,33 @@ logging:
         let tmp = tempdir().unwrap();
         let home_dir = tmp.path();
 
-        // Set environment variable for test
-        env::set_var("TEST_DB_PASSWORD", "secret123");
+        with_var("TEST_DB_PASSWORD", Some("secret123"), || {
+            let mut app = create_app_with_server(
+                "test_server",
+                DbConnConfig {
+                    host: Some("localhost".to_owned()),
+                    port: Some(5432),
+                    user: Some("testuser".to_owned()),
+                    password: Some("${TEST_DB_PASSWORD}".to_owned()), // Should expand to "secret123"
+                    dbname: Some("testdb".to_owned()),
+                    ..Default::default()
+                },
+            );
 
-        let mut app = create_app_with_server(
-            "test_server",
-            DbConnConfig {
-                host: Some("localhost".to_owned()),
-                port: Some(5432),
-                user: Some("testuser".to_owned()),
-                password: Some("${TEST_DB_PASSWORD}".to_owned()), // Should expand to "secret123"
-                dbname: Some("testdb".to_owned()),
-                ..Default::default()
-            },
-        );
+            add_module_to_app(
+                &mut app,
+                "test_module",
+                &serde_json::json!({
+                    "server": "test_server"
+                }),
+            );
 
-        add_module_to_app(
-            &mut app,
-            "test_module",
-            &serde_json::json!({
-                "server": "test_server"
-            }),
-        );
+            let result = build_final_db_for_module(&app, "test_module", home_dir).unwrap();
+            assert!(result.is_some());
 
-        let result = build_final_db_for_module(&app, "test_module", home_dir).unwrap();
-        assert!(result.is_some());
-
-        let (dsn, _pool) = result.unwrap();
-        assert!(dsn.contains("secret123"));
-
-        // Clean up
-        env::remove_var("TEST_DB_PASSWORD");
+            let (dsn, _pool) = result.unwrap();
+            assert!(dsn.contains("secret123"));
+        });
     }
 
     #[test]
@@ -1653,39 +1647,41 @@ logging:
         let tmp = tempdir().unwrap();
         let home_dir = tmp.path();
 
-        // Set environment variables for test
-        env::set_var("DB_HOST", "test-server");
-        env::set_var("DB_PASSWORD", "env_secret");
+        temp_env::with_vars(
+            [
+                ("DB_HOST", Some("test-server")),
+                ("DB_PASSWORD", Some("env_secret")),
+            ],
+            || {
+                let mut app = create_app_with_server(
+                    "test_server",
+                    DbConnConfig {
+                        dsn: Some(
+                            "postgresql://user:${DB_PASSWORD}@${DB_HOST}:5432/mydb".to_owned(),
+                        ),
+                        ..Default::default()
+                    },
+                );
 
-        let mut app = create_app_with_server(
-            "test_server",
-            DbConnConfig {
-                dsn: Some("postgresql://user:${DB_PASSWORD}@${DB_HOST}:5432/mydb".to_owned()),
-                ..Default::default()
+                add_module_to_app(
+                    &mut app,
+                    "test_module",
+                    &serde_json::json!({
+                        "server": "test_server"
+                    }),
+                );
+
+                let result = build_final_db_for_module(&app, "test_module", home_dir).unwrap();
+                assert!(result.is_some());
+
+                let (dsn, _pool) = result.unwrap();
+                assert!(dsn.contains("test-server"));
+                assert!(dsn.contains("env_secret"));
+                // ${} placeholders should be replaced
+                assert!(!dsn.contains("${DB_HOST}"));
+                assert!(!dsn.contains("${DB_PASSWORD}"));
             },
         );
-
-        add_module_to_app(
-            &mut app,
-            "test_module",
-            &serde_json::json!({
-                "server": "test_server"
-            }),
-        );
-
-        let result = build_final_db_for_module(&app, "test_module", home_dir).unwrap();
-        assert!(result.is_some());
-
-        let (dsn, _pool) = result.unwrap();
-        assert!(dsn.contains("test-server"));
-        assert!(dsn.contains("env_secret"));
-        // ${} placeholders should be replaced
-        assert!(!dsn.contains("${DB_HOST}"));
-        assert!(!dsn.contains("${DB_PASSWORD}"));
-
-        // Clean up
-        env::remove_var("DB_HOST");
-        env::remove_var("DB_PASSWORD");
     }
 
     #[test]
@@ -2036,31 +2032,31 @@ logging:
         let tmp = tempdir().unwrap();
         let home_dir = tmp.path();
 
-        // Ensure the env var doesn't exist
-        env::remove_var("NONEXISTENT_PASSWORD");
+        // Use with_var with None to ensure the env var doesn't exist
+        with_var("NONEXISTENT_PASSWORD", None::<&str>, || {
+            let mut app = create_app_with_server(
+                "test_server",
+                DbConnConfig {
+                    host: Some("localhost".to_owned()),
+                    password: Some("${NONEXISTENT_PASSWORD}".to_owned()),
+                    dbname: Some("testdb".to_owned()),
+                    ..Default::default()
+                },
+            );
 
-        let mut app = create_app_with_server(
-            "test_server",
-            DbConnConfig {
-                host: Some("localhost".to_owned()),
-                password: Some("${NONEXISTENT_PASSWORD}".to_owned()),
-                dbname: Some("testdb".to_owned()),
-                ..Default::default()
-            },
-        );
+            add_module_to_app(
+                &mut app,
+                "test_module",
+                &serde_json::json!({
+                    "server": "test_server"
+                }),
+            );
 
-        add_module_to_app(
-            &mut app,
-            "test_module",
-            &serde_json::json!({
-                "server": "test_server"
-            }),
-        );
-
-        let result = build_final_db_for_module(&app, "test_module", home_dir);
-        assert!(result.is_err());
-        let error_msg = result.unwrap_err().to_string();
-        assert!(error_msg.contains("NONEXISTENT_PASSWORD"));
+            let result = build_final_db_for_module(&app, "test_module", home_dir);
+            assert!(result.is_err());
+            let error_msg = result.unwrap_err().to_string();
+            assert!(error_msg.contains("NONEXISTENT_PASSWORD"));
+        });
     }
 
     #[test]

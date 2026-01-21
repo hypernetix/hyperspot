@@ -1,6 +1,7 @@
 //! Unit tests for SeaORM filter mapping and cursor encoding/decoding
 
-use modkit_db::odata::{encode_cursor_value, parse_cursor_value, FieldKind, ODataValue};
+use modkit_db::odata::{encode_cursor_value, parse_cursor_value};
+use modkit_odata::filter::{FieldKind, ODataValue};
 
 #[test]
 fn test_escape_like() {

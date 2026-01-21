@@ -4,12 +4,12 @@ use tokio_util::sync::CancellationToken;
 
 pub use crate::api::openapi_registry::OpenApiRegistry;
 
-/// System module: receives runtime internals before init.
+/// System capability: receives runtime internals before init.
 ///
-/// This trait is internal to modkit and only used by system modules
-/// (those with the "system" capability). Normal user modules don't implement this.
+/// This trait is internal to modkit and only used by modules with the "system" capability.
+/// Normal user modules don't implement this.
 #[async_trait]
-pub trait SystemModule: Send + Sync {
+pub trait SystemCapability: Send + Sync {
     /// Optional pre-init hook for system modules.
     ///
     /// This runs BEFORE `init()` has completed for ALL modules, and only for system modules.
@@ -39,13 +39,13 @@ pub trait Module: Send + Sync + 'static {
 }
 
 #[async_trait]
-pub trait DbModule: Send + Sync {
+pub trait DatabaseCapability: Send + Sync {
     /// Runs AFTER init, BEFORE REST/start.
     async fn migrate(&self, db: &modkit_db::DbHandle) -> anyhow::Result<()>;
 }
 
-/// Pure wiring; must be sync. Runs AFTER DB migrations.
-pub trait RestfulModule: Send + Sync {
+/// REST API capability: Pure wiring; must be sync. Runs AFTER DB migrations.
+pub trait RestApiCapability: Send + Sync {
     /// Register REST routes for this module.
     ///
     /// # Errors
@@ -58,10 +58,10 @@ pub trait RestfulModule: Send + Sync {
     ) -> anyhow::Result<Router>;
 }
 
-/// REST host module: handles gateway hosting with prepare/finalize phases.
+/// API Gateway capability: handles gateway hosting with prepare/finalize phases.
 /// Must be sync. Runs during REST phase, but doesn't start the server.
 #[allow(dead_code)]
-pub trait RestHostModule: Send + Sync + 'static {
+pub trait ApiGatewayCapability: Send + Sync + 'static {
     /// Prepare a base Router (e.g., global middlewares, /healthz) and optionally touch `OpenAPI` meta.
     /// Do NOT start the server here.
     ///
@@ -85,11 +85,11 @@ pub trait RestHostModule: Send + Sync + 'static {
     ) -> anyhow::Result<Router>;
 
     // Return OpenAPI registry of the module, e.g., to register endpoints
-    fn as_registry(&self) -> &dyn crate::contracts::OpenApiRegistry;
+    fn as_registry(&self) -> &dyn OpenApiRegistry;
 }
 
 #[async_trait]
-pub trait StatefulModule: Send + Sync {
+pub trait RunnableCapability: Send + Sync {
     async fn start(&self, cancel: CancellationToken) -> anyhow::Result<()>;
     async fn stop(&self, cancel: CancellationToken) -> anyhow::Result<()>;
 }
@@ -109,12 +109,12 @@ pub struct RegisterGrpcServiceFn {
     pub service_name: &'static str,
 }
 
-/// Trait for modules that export gRPC services.
+/// gRPC Service capability: modules that export gRPC services.
 ///
 /// The runtime will call this during the gRPC registration phase to collect
 /// all services that should be exposed on the shared gRPC server.
 #[async_trait]
-pub trait GrpcServiceModule: Send + Sync {
+pub trait GrpcServiceCapability: Send + Sync {
     /// Returns all gRPC services this module wants to expose.
     ///
     /// Each installer adds one service to the `tonic::Server` builder.
@@ -124,11 +124,11 @@ pub trait GrpcServiceModule: Send + Sync {
     ) -> anyhow::Result<Vec<RegisterGrpcServiceFn>>;
 }
 
-/// Trait for the gRPC hub module that hosts the gRPC server.
+/// gRPC Hub capability: hosts the gRPC server.
 ///
 /// This trait is implemented by the single module responsible for hosting
 /// the `tonic::Server` instance. Only one module per process should implement this.
-pub trait GrpcHubModule: Send + Sync {
+pub trait GrpcHubCapability: Send + Sync {
     /// Returns the bound endpoint after the server starts listening.
     ///
     /// Examples:

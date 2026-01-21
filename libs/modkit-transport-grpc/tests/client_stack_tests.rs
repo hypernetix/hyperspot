@@ -2,8 +2,8 @@
 
 //! Integration tests for gRPC client transport stack
 
-use modkit_transport_grpc::client::{connect_with_stack, GrpcClientConfig};
-use modkit_transport_grpc::rpc_retry::{call_with_retry, RpcRetryConfig};
+use modkit_transport_grpc::client::{GrpcClientConfig, connect_with_stack};
+use modkit_transport_grpc::rpc_retry::{RpcRetryConfig, call_with_retry};
 use std::sync::Arc;
 use std::time::Duration;
 

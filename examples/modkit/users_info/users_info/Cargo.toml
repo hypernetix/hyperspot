@@ -10,11 +10,16 @@ authors.workspace = true
 workspace = true
 
 [features]
+default = ["odata"]
+odata = []         # enable streaming API with typed queries
 integration = []   # gate integration tests
 
 [dependencies]
 # SDK - public API, models, and errors
-user_info-sdk = { path = "../user_info-sdk" }
+user_info-sdk = { path = "../user_info-sdk", features = ["odata"] }
+
+# Tenant resolver for multi-tenant access
+hs-tenant-resolver-sdk = { path = "../../../../modules/system/tenant_resolver/tenant_resolver-sdk" }
 
 # Core dependencies
 anyhow = { workspace = true }
@@ -70,8 +75,10 @@ modkit-errors = { path = "../../../../libs/modkit-errors" }
 modkit-errors-macro = { path = "../../../../libs/modkit-errors-macro" }
 modkit-odata = { path = "../../../../libs/modkit-odata", features = ["with-utoipa"] }
 modkit-macros = { path = "../../../../libs/modkit-macros" }
+modkit-sdk = { path = "../../../../libs/modkit-sdk" }
 
 [dev-dependencies]
+tokio-util = { workspace = true }
 tower = { workspace = true, features = ["util"] }
 api_gateway = { path = "../../../../modules/system/api_gateway" }
 serde_json = { workspace = true }

@@ -1,25 +1,25 @@
 //! gRPC server implementation for `DirectoryService`
 //!
-//! This module provides the gRPC service implementation that wraps `DirectoryApi`.
+//! This module provides the gRPC service implementation for Directory Service.
 
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
 
-use module_orchestrator_contracts::{DirectoryApi, RegisterInstanceInfo, ServiceEndpoint};
 use module_orchestrator_grpc::{
     DeregisterInstanceRequest, DirectoryService, DirectoryServiceServer, HeartbeatRequest,
     InstanceInfo, ListInstancesRequest, ListInstancesResponse, RegisterInstanceRequest,
     ResolveGrpcServiceRequest, ResolveGrpcServiceResponse,
 };
+use module_orchestrator_sdk::{DirectoryClient, RegisterInstanceInfo, ServiceEndpoint};
 
-/// gRPC service implementation that wraps `DirectoryApi`
+/// gRPC service implementation of Directory Service
 #[derive(Clone)]
 pub struct DirectoryServiceImpl {
-    api: Arc<dyn DirectoryApi>,
+    api: Arc<dyn DirectoryClient>,
 }
 
 impl DirectoryServiceImpl {
-    pub fn new(api: Arc<dyn DirectoryApi>) -> Self {
+    pub fn new(api: Arc<dyn DirectoryClient>) -> Self {
         Self { api }
     }
 }
@@ -130,7 +130,7 @@ impl DirectoryService for DirectoryServiceImpl {
 
 /// Create a `DirectoryService` server with the given API implementation
 pub fn make_directory_service(
-    api: Arc<dyn DirectoryApi>,
+    api: Arc<dyn DirectoryClient>,
 ) -> DirectoryServiceServer<DirectoryServiceImpl> {
     DirectoryServiceServer::new(DirectoryServiceImpl::new(api))
 }

@@ -158,13 +158,13 @@ pub struct MyModule {
 
 ### Capabilities
 
-* `db` → implement `DbModule` (migrations / schema setup).
-* `rest` → implement `RestfulModule` (register routes synchronously).
+* `db` → implement `DatabaseCapability` (migrations / schema setup).
+* `rest` → implement `RestApiCapability` (register routes synchronously).
 * `rest_host` → own the Axum server/OpenAPI (e.g., `api_gateway`).
 * `stateful` → background job:
 
     * With `lifecycle(...)`, the macro generates `Runnable` and registers `WithLifecycle<Self>`.
-    * Without it, implement `StatefulModule` yourself.
+    * Without it, implement `RunnableCapability` yourself.
 
 ### Client helpers (when `client` is set)
 
@@ -332,75 +332,6 @@ Shutdown is driven by a single root `CancellationToken` per process:
 ## Module Orchestrator & Directory API
 
 The **Module Orchestrator** provides service discovery and instance management for both in-process and OoP modules.
-
-### DirectoryApi Trait
-
-```rust
-#[async_trait]
-pub trait DirectoryApi: Send + Sync {
-    /// Resolve a gRPC service by its logical name to an endpoint
-    async fn resolve_grpc_service(&self, service_name: &str) -> Result<ServiceEndpoint>;
-
-    /// List all service instances for a given module
-    async fn list_instances(&self, module: &str) -> Result<Vec<ServiceInstanceInfo>>;
-
-    /// Register a new module instance with the directory
-    async fn register_instance(&self, info: RegisterInstanceInfo) -> Result<()>;
-
-    /// Deregister a module instance (for graceful shutdown)
-    async fn deregister_instance(&self, module: &str, instance_id: &str) -> Result<()>;
-
-    /// Send a heartbeat for a module instance to indicate it's still alive
-    async fn send_heartbeat(&self, module: &str, instance_id: &str) -> Result<()>;
-}
-```
-
-### Service Endpoint Types
-
-```rust
-/// Represents an endpoint where a service can be reached
-pub struct ServiceEndpoint {
-    pub uri: String,
-}
-
-impl ServiceEndpoint {
-    pub fn tcp(host: &str, port: u16) -> Self;  // "http://host:port"
-    pub fn uds(path: impl AsRef<Path>) -> Self; // "unix:///path/to/socket"
-}
-
-/// Information about a service instance
-pub struct ServiceInstanceInfo {
-    pub module: String,
-    pub instance_id: String,
-    pub endpoint: ServiceEndpoint,
-    pub version: Option<String>,
-}
-
-/// Information for registering a new module instance
-pub struct RegisterInstanceInfo {
-    pub module: String,
-    pub instance_id: String,
-    pub grpc_services: Vec<(String, ServiceEndpoint)>,
-    pub version: Option<String>,
-}
-```
-
-### Using DirectoryApi
-
-**From an OoP module** — the DirectoryApi client is injected into the ClientHub:
-
-```rust
-async fn init(&self, ctx: &ModuleCtx) -> anyhow::Result<()> {
-    // DirectoryApi is available via ClientHub in OoP modules
-    let directory = ctx.client_hub.get::<dyn DirectoryApi>()?;
-
-    // Resolve another service's endpoint
-    let endpoint = directory.resolve_grpc_service("my.package.MyService").await?;
-
-    Ok(())
-}
-```
-
 **From the master host** — the Module Orchestrator registers itself as the DirectoryApi implementation.
 
 ---
@@ -619,7 +550,7 @@ impl MyModuleApi for MyModuleGrpcClient {
 use std::sync::Arc;
 use anyhow::Result;
 use modkit::client_hub::ClientHub;
-use module_orchestrator_contracts::DirectoryApi;
+use module_orchestrator_sdk::DirectoryClient;
 use crate::{MyModuleApi, MyModuleGrpcClient, SERVICE_NAME};
 
 /// Wire the gRPC client into ClientHub
@@ -1239,7 +1170,7 @@ impl Module for UsersModule {
     }
 }
 
-impl RestfulModule for UsersModule {
+impl RestApiCapability for UsersModule {
     fn register_rest(&self, _ctx: &ModuleCtx, router: Router, openapi: &dyn OpenApiRegistry) -> anyhow::Result<Router> {
         let router = register_crud_routes(router, openapi, self.service.clone())?;
         let router = register_sse_route(router, openapi, self.sse_broadcaster.clone());
@@ -1539,13 +1470,13 @@ remote clients:
 
 ### In-Process vs Remote Clients
 
-| Aspect       | In-Process           | Remote (OoP)                  |
-|--------------|----------------------|-------------------------------|
-| Transport    | Direct call          | gRPC                          |
-| Latency      | Nanoseconds          | Milliseconds                  |
-| Isolation    | Shared process       | Separate process              |
-| Contract     | Trait in `contract/` | Trait in `*-contracts/` crate |
-| Registration | `expose_*_client()`  | DirectoryApi + gRPC client    |
+| Aspect       | In-Process              | Remote (OoP)               |
+|--------------|-------------------------|----------------------------|
+| Transport    | Direct call             | gRPC                       |
+| Latency      | Nanoseconds             | Milliseconds               |
+| Isolation    | Shared process          | Separate process           |
+| Contract     | Trait in `*-sdk/` crate | Trait in `*-sdk/` crate    |
+| Registration | `expose_*_client()`     | DirectoryApi + gRPC client |
 
 **Publish in `init`**
 

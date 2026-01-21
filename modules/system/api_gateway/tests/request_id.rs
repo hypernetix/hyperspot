@@ -1,17 +1,17 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use axum::{
+    Router,
     body::Body,
     extract::Extension,
     http::{Request, StatusCode},
     response::Json,
     routing::get,
-    Router,
 };
 use serde_json::json;
 use tower::util::ServiceExt; // for `oneshot`
 
-use api_gateway::middleware::request_id::{header, MakeReqId, XRequestId};
+use api_gateway::middleware::request_id::{MakeReqId, XRequestId, header};
 
 #[tokio::test]
 async fn generates_request_id_when_missing() {

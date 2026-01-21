@@ -12,7 +12,7 @@ use anyhow::Result;
 use axum::extract::State;
 use axum::http::Method;
 use axum::middleware::from_fn_with_state;
-use axum::{extract::DefaultBodyLimit, middleware::from_fn, routing::get, Router};
+use axum::{Router, extract::DefaultBodyLimit, middleware::from_fn, routing::get};
 use modkit::api::{OpenApiRegistry, OpenApiRegistryImpl};
 use modkit::lifecycle::ReadySignal;
 use parking_lot::Mutex;
@@ -26,10 +26,11 @@ use tower_http::{
 };
 use tracing::debug;
 
-use modkit_security::PolicyEngineRef;
-
 use crate::auth;
 use crate::config::ApiGatewayConfig;
+use modkit_security::constants::{DEFAULT_SUBJECT_ID, DEFAULT_TENANT_ID};
+use modkit_security::{PolicyEngineRef, SecurityContext};
+
 use crate::middleware;
 use crate::router_cache::RouterCache;
 use crate::web;
@@ -205,30 +206,34 @@ impl ApiGateway {
 
         // 10) Auth
         if config.auth_disabled {
+            // Build security contexts for compatibility during migration
+            let default_security_context = SecurityContext::builder()
+                .tenant_id(DEFAULT_TENANT_ID)
+                .subject_id(DEFAULT_SUBJECT_ID)
+                .build();
+
             tracing::warn!(
-                "API Gateway auth is DISABLED: all requests will run with root SecurityCtx (SecurityCtx::root_ctx()). \
+                "API Gateway auth is DISABLED: all requests will run with default tenant SecurityCtx. \
                  This mode bypasses authentication and is intended ONLY for single-user on-premises deployments without an IdP. \
                  Permission checks and secure ORM still apply. DO NOT use this mode in multi-tenant or production environments."
             );
             router = router.layer(from_fn(
-                |mut req: axum::extract::Request, next: axum::middleware::Next| async move {
-                    #[allow(deprecated)]
-                    let sec = modkit_security::SecurityCtx::root_ctx();
-                    req.extensions_mut().insert(sec);
-                    next.run(req).await
+                move |mut req: axum::extract::Request, next: axum::middleware::Next| {
+                    let sec_context = default_security_context.clone();
+                    async move {
+                        // Insert both context types for compatibility during migration
+                        req.extensions_mut().insert(sec_context);
+                        next.run(req).await
+                    }
                 },
             ));
         } else {
             let validator = auth_state.validator.clone();
-            let scope_builder = auth_state.scope_builder.clone();
             let authorizer = auth_state.authorizer.clone();
             let policy = Arc::new(route_policy) as Arc<dyn modkit_auth::RoutePolicy>;
 
             router = router.layer(modkit_auth::axum_ext::AuthPolicyLayer::new(
-                validator,
-                scope_builder,
-                authorizer,
-                policy,
+                validator, authorizer, policy,
             ));
         }
 
@@ -353,8 +358,12 @@ impl ApiGateway {
             return Ok((*cached_router).clone());
         }
 
-        tracing::debug!("Building new router");
-        let mut router = Router::new().route("/health", get(web::health_check));
+        tracing::debug!("Building new router (standalone/fallback mode)");
+        // In standalone mode (no REST pipeline), register both health endpoints here.
+        // In normal operation, rest_prepare() registers these instead.
+        let mut router = Router::new()
+            .route("/health", get(web::health_check))
+            .route("/healthz", get(|| async { "ok" }));
 
         // Apply all middleware layers including auth, above the router
         router = self.apply_middleware_stack(router)?;
@@ -439,28 +448,40 @@ impl modkit::Module for ApiGateway {
     async fn init(&self, ctx: &modkit::context::ModuleCtx) -> anyhow::Result<()> {
         debug!("Module initialized with context");
         let cfg = ctx.config::<crate::config::ApiGatewayConfig>()?;
-        self.config.store(Arc::new(cfg));
+        self.config.store(Arc::new(cfg.clone()));
 
         debug!(
             "Effective api_gateway configuration:\n{:#?}",
             self.config.load()
         );
+
+        if cfg.auth_disabled {
+            tracing::info!(
+                tenant_id = %DEFAULT_TENANT_ID,
+                "Auth-disabled mode enabled with default tenant"
+            );
+        }
+
         Ok(())
     }
 }
 
 // REST host role: prepare/finalize the router, but do not start the server here.
-impl modkit::contracts::RestHostModule for ApiGateway {
+impl modkit::contracts::ApiGatewayCapability for ApiGateway {
     fn rest_prepare(
         &self,
         _ctx: &modkit::context::ModuleCtx,
         router: axum::Router,
     ) -> anyhow::Result<axum::Router> {
-        // Add basic health check endpoint and any global middlewares
-        let router = router.route("/healthz", get(|| async { "ok" }));
+        // Add health check endpoints:
+        // - /health: detailed JSON response with status and timestamp
+        // - /healthz: simple "ok" liveness probe (Kubernetes-style)
+        let router = router
+            .route("/health", get(web::health_check))
+            .route("/healthz", get(|| async { "ok" }));
 
         // You may attach global middlewares here (trace, compression, cors), but do not start server.
-        tracing::debug!("REST host prepared base router with health check");
+        tracing::debug!("REST host prepared base router with health check endpoints");
         Ok(router)
     }
 
@@ -485,7 +506,7 @@ impl modkit::contracts::RestHostModule for ApiGateway {
                 .route(
                     "/openapi.json",
                     get({
-                        use axum::{http::header, response::IntoResponse, Json};
+                        use axum::{Json, http::header, response::IntoResponse};
                         let doc = openapi_doc;
                         move || async move {
                             ([(header::CACHE_CONTROL, "no-store")], Json(doc.as_ref()))
@@ -520,7 +541,7 @@ impl modkit::contracts::RestHostModule for ApiGateway {
     }
 }
 
-impl modkit::contracts::RestfulModule for ApiGateway {
+impl modkit::contracts::RestApiCapability for ApiGateway {
     fn register_rest(
         &self,
         _ctx: &modkit::context::ModuleCtx,
@@ -847,9 +868,11 @@ mod sse_openapi_tests {
         let doc = api.build_openapi().expect("openapi");
         let v = serde_json::to_value(&doc).expect("json");
         let paths = v.get("paths").expect("paths");
-        assert!(paths
-            .get("/tests/v1/projects/{project_id}/items/{item_id}")
-            .is_some());
+        assert!(
+            paths
+                .get("/tests/v1/projects/{project_id}/items/{item_id}")
+                .is_some()
+        );
     }
 
     #[tokio::test]

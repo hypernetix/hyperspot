@@ -40,8 +40,8 @@ impl ClientRegistration {
     ///
     /// # Example
     /// ```ignore
-    /// let api: Arc<dyn DirectoryApi> = Arc::new(client);
-    /// ClientRegistration::new::<dyn DirectoryApi>(api)
+    /// let api: Arc<dyn DirectoryClient> = Arc::new(client);
+    /// ClientRegistration::new::<dyn DirectoryClient>(api)
     /// ```
     pub fn new<T>(client: Arc<T>) -> Self
     where

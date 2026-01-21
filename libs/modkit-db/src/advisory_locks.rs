@@ -117,15 +117,14 @@ impl DbLockGuard {
 impl Drop for DbLockGuard {
     fn drop(&mut self) {
         // Best-effort async unlock if runtime is alive and inner still present.
-        if let Some(inner) = self.inner.take() {
-            if let Ok(handle) = tokio::runtime::Handle::try_current() {
-                handle.spawn(async move { unlock_inner(inner).await });
-            } else {
-                // No runtime; we cannot perform async cleanup here.
-                // The lock may remain held until process exit (DB connection)
-                // or lock file may remain on disk. Prefer calling `release().await`.
-            }
+        if let Some(inner) = self.inner.take()
+            && let Ok(handle) = tokio::runtime::Handle::try_current()
+        {
+            handle.spawn(async move { unlock_inner(inner).await });
         }
+        // else: No runtime or no inner; we cannot perform async cleanup here.
+        // The lock may remain held until process exit (DB connection)
+        // or lock file may remain on disk. Prefer calling `release().await`.
     }
 }
 
@@ -233,15 +232,15 @@ impl LockManager {
         loop {
             attempt += 1;
 
-            if let Some(max_attempts) = config.max_attempts {
-                if attempt > max_attempts {
-                    return Ok(None);
-                }
+            if let Some(max_attempts) = config.max_attempts
+                && attempt > max_attempts
+            {
+                return Ok(None);
             }
-            if let Some(max_wait) = config.max_wait {
-                if start.elapsed() >= max_wait {
-                    return Ok(None);
-                }
+            if let Some(max_wait) = config.max_wait
+                && start.elapsed() >= max_wait
+            {
+                return Ok(None);
             }
 
             if let Some(guard) = self.try_acquire_once(&namespaced_key).await? {

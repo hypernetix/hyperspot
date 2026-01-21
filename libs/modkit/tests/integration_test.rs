@@ -5,10 +5,10 @@
 //! These tests demonstrate correct usage patterns and verify that
 //! the builder works as expected when used correctly.
 
-use axum::{response::IntoResponse, Json, Router};
+use axum::{Json, Router, response::IntoResponse};
 use modkit::api::{
-    operation_builder::{AuthReqAction, AuthReqResource, LicenseFeature},
     Missing, OpenApiRegistry, OperationBuilder, OperationSpec, ParamLocation,
+    operation_builder::{AuthReqAction, AuthReqResource, LicenseFeature},
 };
 use serde_json::Value;
 use std::sync::Mutex;

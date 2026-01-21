@@ -1,21 +1,33 @@
 [workspace.package]
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 license = "Apache-2.0"
 authors = ["Hypernetix"]
 repository = "https://github.com/hypernetix/hyperspot"
 description = "HyperSpot Server"
 
+[profile.dev]
+incremental = true
+codegen-units = 16
+
+[profile.test]
+incremental = true
+codegen-units = 16
+
+[profile.release]
+codegen-units = 1
+
 [workspace]
 members = [
     "apps/hyperspot-server",
+    "apps/gts-docs-validator",
     "libs/modkit",
     "libs/modkit-macros",
     "libs/modkit-db",
     "libs/modkit-db-macros",
     "libs/modkit-auth",
     "libs/modkit-sdk",
-    "libs/modkit-sdk-macros",
+    "libs/modkit-odata-macros",
     "libs/modkit-security",
     "libs/modkit-errors",
     "libs/modkit-errors-macro",
@@ -26,8 +38,9 @@ members = [
     "modules/system/api_gateway",
     "modules/system/grpc_hub",
     "modules/file_parser",
-    "modules/system/nodes_registry",
-    "modules/system/module_orchestrator/module_orchestrator-contracts",
+    "modules/system/nodes_registry/nodes_registry",
+    "modules/system/nodes_registry/nodes_registry-sdk",
+    "modules/system/module_orchestrator/module_orchestrator-sdk",
     "modules/system/module_orchestrator/module_orchestrator-grpc",
     "modules/system/module_orchestrator/module_orchestrator",
     "examples/modkit/users_info/user_info-sdk",
@@ -38,10 +51,16 @@ members = [
     "examples/oop-modules/calculator/calculator",
     "modules/system/types-registry/types-registry-sdk",
     "modules/system/types-registry/types-registry",
+    "modules/simple-user-settings/simple-user-settings-sdk",
+    "modules/simple-user-settings/simple-user-settings",
     "examples/plugin-modules/tenant_resolver/tenant_resolver-sdk",
     "examples/plugin-modules/tenant_resolver/tenant_resolver-gw",
     "examples/plugin-modules/tenant_resolver/plugins/contoso_tr_plugin",
-    "examples/plugin-modules/tenant_resolver/plugins/fabrikam_tr_plugin"
+    "examples/plugin-modules/tenant_resolver/plugins/fabrikam_tr_plugin",
+    "modules/system/tenant_resolver/tenant_resolver-sdk",
+    "modules/system/tenant_resolver/tenant_resolver-gw",
+    "modules/system/tenant_resolver/plugins/static_tr_plugin",
+    "modules/system/tenant_resolver/plugins/single_tenant_tr_plugin",
 ]
 resolver = "2"
 
@@ -246,6 +265,10 @@ urlencoding = "2.1"
 # Regex for env expansion
 regex = "1.10"
 
+# CLI and terminal output
+glob = "0.3"
+colored = "2"
+
 # gRPC support
 tonic = { version = "0.14", features = ["transport"] }
 prost = { version = "0.14" }
@@ -291,7 +314,7 @@ nvml-wrapper = "0.11"
 
 # Text processing
 base64 = "0.22"
-bincode = { version = "2.0", features = ["serde"] }
+postcard = { version = "1.1.3", features = ["alloc"] }
 strsim = "0.11"
 
 # OData support

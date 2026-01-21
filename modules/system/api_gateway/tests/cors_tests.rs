@@ -4,15 +4,56 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use axum::{extract::Json, routing::get, Router};
+use axum::{Router, extract::Json, routing::get};
+use hs_tenant_resolver_sdk::{
+    AccessOptions, TenantFilter, TenantId, TenantInfo, TenantResolverError,
+    TenantResolverGatewayClient, TenantStatus,
+};
 use modkit::{
+    Module, ModuleCtx, RestApiCapability,
     api::OperationBuilder,
     config::ConfigProvider,
-    contracts::{OpenApiRegistry, RestHostModule},
-    Module, ModuleCtx, RestfulModule,
+    contracts::{ApiGatewayCapability, OpenApiRegistry},
 };
+use modkit_security::SecurityContext;
 use std::sync::Arc;
 use uuid::Uuid;
+
+struct MockTenantResolver;
+
+#[async_trait]
+impl TenantResolverGatewayClient for MockTenantResolver {
+    async fn get_tenant(
+        &self,
+        _ctx: &SecurityContext,
+        id: TenantId,
+    ) -> std::result::Result<TenantInfo, TenantResolverError> {
+        Ok(TenantInfo {
+            id,
+            name: format!("Tenant {id}"),
+            status: TenantStatus::Active,
+            tenant_type: None,
+        })
+    }
+
+    async fn can_access(
+        &self,
+        _ctx: &SecurityContext,
+        _target: TenantId,
+        _options: Option<&AccessOptions>,
+    ) -> std::result::Result<bool, TenantResolverError> {
+        Ok(true)
+    }
+
+    async fn get_accessible_tenants(
+        &self,
+        _ctx: &SecurityContext,
+        _filter: Option<&TenantFilter>,
+        _options: Option<&AccessOptions>,
+    ) -> std::result::Result<Vec<TenantInfo>, TenantResolverError> {
+        Ok(vec![])
+    }
+}
 
 /// Helper to create a test `ModuleCtx` with CORS config
 struct TestConfigProvider {
@@ -49,11 +90,14 @@ fn create_test_module_ctx_with_cors() -> ModuleCtx {
         "auth_disabled": true
     }));
 
+    let hub = Arc::new(modkit::ClientHub::new());
+    hub.register::<dyn TenantResolverGatewayClient>(Arc::new(MockTenantResolver));
+
     ModuleCtx::new(
         "api_gateway",
         Uuid::new_v4(),
         Arc::new(TestConfigProvider { config }),
-        Arc::new(modkit::ClientHub::new()),
+        hub,
         tokio_util::sync::CancellationToken::new(),
         None,
     )
@@ -66,11 +110,14 @@ fn create_test_module_ctx_permissive_cors() -> ModuleCtx {
         "auth_disabled": true
     }));
 
+    let hub = Arc::new(modkit::ClientHub::new());
+    hub.register::<dyn TenantResolverGatewayClient>(Arc::new(MockTenantResolver));
+
     ModuleCtx::new(
         "api_gateway",
         Uuid::new_v4(),
         Arc::new(TestConfigProvider { config }),
-        Arc::new(modkit::ClientHub::new()),
+        hub,
         tokio_util::sync::CancellationToken::new(),
         None,
     )
@@ -91,7 +138,7 @@ impl Module for CorsTestModule {
     }
 }
 
-impl RestfulModule for CorsTestModule {
+impl RestApiCapability for CorsTestModule {
     fn register_rest(
         &self,
         _ctx: &modkit::ModuleCtx,
@@ -177,11 +224,14 @@ async fn test_cors_disabled() {
         "auth_disabled": true
     }));
 
+    let hub = Arc::new(modkit::ClientHub::new());
+    hub.register::<dyn TenantResolverGatewayClient>(Arc::new(MockTenantResolver));
+
     let ctx = ModuleCtx::new(
         "api_gateway",
         Uuid::new_v4(),
         Arc::new(TestConfigProvider { config }),
-        Arc::new(modkit::ClientHub::new()),
+        hub,
         tokio_util::sync::CancellationToken::new(),
         None,
     );
@@ -218,11 +268,14 @@ async fn test_cors_config_validation() {
         "auth_disabled": true
     }));
 
+    let hub = Arc::new(modkit::ClientHub::new());
+    hub.register::<dyn TenantResolverGatewayClient>(Arc::new(MockTenantResolver));
+
     let ctx = ModuleCtx::new(
         "api_gateway",
         Uuid::new_v4(),
         Arc::new(TestConfigProvider { config }),
-        Arc::new(modkit::ClientHub::new()),
+        hub,
         tokio_util::sync::CancellationToken::new(),
         None,
     );

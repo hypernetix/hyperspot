@@ -9,7 +9,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 
 use modkit::context::ModuleCtx;
-use modkit::contracts::{GrpcServiceModule, RegisterGrpcServiceFn};
+use modkit::contracts::{GrpcServiceCapability, RegisterGrpcServiceFn};
 
 use calculator_sdk::{CalculatorServiceServer, SERVICE_NAME};
 
@@ -49,7 +49,7 @@ impl modkit::Module for CalculatorModule {
 
 /// Export gRPC services to grpc_hub
 #[async_trait]
-impl GrpcServiceModule for CalculatorModule {
+impl GrpcServiceCapability for CalculatorModule {
     async fn get_grpc_services(&self, ctx: &ModuleCtx) -> Result<Vec<RegisterGrpcServiceFn>> {
         // Get Service from ClientHub
         let service = ctx

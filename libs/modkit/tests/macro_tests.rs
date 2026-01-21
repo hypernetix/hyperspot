@@ -8,9 +8,13 @@ use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
 use modkit::{
+    ModuleCtx,
     config::ConfigProvider,
-    contracts::{DbModule, Module, OpenApiRegistry, RestHostModule, RestfulModule, StatefulModule},
-    module, ModuleCtx,
+    contracts::{
+        ApiGatewayCapability, DatabaseCapability, Module, OpenApiRegistry, RestApiCapability,
+        RunnableCapability,
+    },
+    module,
 };
 use std::sync::Arc;
 
@@ -77,12 +81,12 @@ impl Module for FullFeaturedModule {
     }
 }
 #[async_trait]
-impl DbModule for FullFeaturedModule {
+impl DatabaseCapability for FullFeaturedModule {
     async fn migrate(&self, _db: &modkit_db::DbHandle) -> Result<()> {
         Ok(())
     }
 }
-impl RestfulModule for FullFeaturedModule {
+impl RestApiCapability for FullFeaturedModule {
     fn register_rest(
         &self,
         _ctx: &modkit::context::ModuleCtx,
@@ -93,7 +97,7 @@ impl RestfulModule for FullFeaturedModule {
     }
 }
 #[async_trait]
-impl StatefulModule for FullFeaturedModule {
+impl RunnableCapability for FullFeaturedModule {
     async fn start(&self, _t: CancellationToken) -> Result<()> {
         Ok(())
     }
@@ -142,7 +146,7 @@ impl Module for DbOnlyModule {
     }
 }
 #[async_trait]
-impl DbModule for DbOnlyModule {
+impl DatabaseCapability for DbOnlyModule {
     async fn migrate(&self, _db: &modkit_db::DbHandle) -> Result<()> {
         Ok(())
     }
@@ -157,7 +161,7 @@ impl Module for RestOnlyModule {
         Ok(())
     }
 }
-impl RestfulModule for RestOnlyModule {
+impl RestApiCapability for RestOnlyModule {
     fn register_rest(
         &self,
         _ctx: &modkit::context::ModuleCtx,
@@ -170,18 +174,18 @@ impl RestfulModule for RestOnlyModule {
 
 #[derive(Default)]
 #[module(name = "rest_host", capabilities = [rest_host])]
-struct TestRestHostModule {
+struct TestApiGatewayModule {
     registry: TestOpenApiRegistry,
 }
 
 #[async_trait]
-impl Module for TestRestHostModule {
+impl Module for TestApiGatewayModule {
     async fn init(&self, _ctx: &modkit::context::ModuleCtx) -> Result<()> {
         Ok(())
     }
 }
 
-impl RestHostModule for TestRestHostModule {
+impl ApiGatewayCapability for TestApiGatewayModule {
     fn rest_prepare(
         &self,
         _ctx: &modkit::context::ModuleCtx,
@@ -213,7 +217,7 @@ impl Module for StatefulOnlyModule {
     }
 }
 #[async_trait]
-impl StatefulModule for StatefulOnlyModule {
+impl RunnableCapability for StatefulOnlyModule {
     async fn start(&self, _t: CancellationToken) -> Result<()> {
         Ok(())
     }
@@ -261,9 +265,9 @@ async fn test_full_capabilities() {
 #[test]
 fn test_capability_trait_markers() {
     fn assert_module<T: Module>(_: &T) {}
-    fn assert_db<T: DbModule>(_: &T) {}
-    fn assert_rest<T: RestfulModule>(_: &T) {}
-    fn assert_stateful<T: StatefulModule>(_: &T) {}
+    fn assert_db<T: DatabaseCapability>(_: &T) {}
+    fn assert_rest<T: RestApiCapability>(_: &T) {}
+    fn assert_stateful<T: RunnableCapability>(_: &T) {}
 
     assert_module(&BasicModule);
     assert_module(&DependentModule);

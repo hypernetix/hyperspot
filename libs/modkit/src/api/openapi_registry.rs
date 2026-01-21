@@ -9,6 +9,7 @@ use dashmap::DashMap;
 use std::collections::HashMap;
 use std::sync::Arc;
 use utoipa::openapi::{
+    OpenApi, OpenApiBuilder, Ref, RefOr, Required,
     content::ContentBuilder,
     info::InfoBuilder,
     path::{
@@ -19,7 +20,6 @@ use utoipa::openapi::{
     response::{ResponseBuilder, ResponsesBuilder},
     schema::{ComponentsBuilder, ObjectBuilder, Schema, SchemaFormat, SchemaType},
     security::{HttpAuthScheme, HttpBuilder, SecurityScheme},
-    OpenApi, OpenApiBuilder, Ref, RefOr, Required,
 };
 
 use crate::api::{operation_builder, problem};
@@ -138,15 +138,15 @@ impl OpenApiRegistryImpl {
             }
 
             // Pagination
-            if let Some(pagination) = spec.vendor_extensions.x_odata_filter.as_ref() {
-                if let Ok(value) = serde_json::to_value(pagination) {
-                    ext.insert("x-odata-filter".to_owned(), value);
-                }
+            if let Some(pagination) = spec.vendor_extensions.x_odata_filter.as_ref()
+                && let Ok(value) = serde_json::to_value(pagination)
+            {
+                ext.insert("x-odata-filter".to_owned(), value);
             }
-            if let Some(pagination) = spec.vendor_extensions.x_odata_orderby.as_ref() {
-                if let Ok(value) = serde_json::to_value(pagination) {
-                    ext.insert("x-odata-orderby".to_owned(), value);
-                }
+            if let Some(pagination) = spec.vendor_extensions.x_odata_orderby.as_ref()
+                && let Ok(value) = serde_json::to_value(pagination)
+            {
+                ext.insert("x-odata-orderby".to_owned(), value);
             }
 
             if !ext.is_empty() {

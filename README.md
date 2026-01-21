@@ -1,5 +1,6 @@
 # HyperSpot Server
 ![Badge](./.github/badgeHN.svg)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/hypernetix/hyperspot/badge)](https://scorecard.dev/viewer/?uri=github.com/hypernetix/hyperspot)
 
 **HyperSpot Server** is a modular, high-performance platform for building modern enterprise-grade SaaS services in Rust. It provides a comprehensive framework for building scalable AI-powered applications with automatic REST API generation, comprehensive OpenAPI documentation, and a extremely flexible modular architecture.
 
@@ -55,8 +56,11 @@ cargo run --bin hyperspot-server -- --config config/no-db.yaml run
 # Option 3: Run with mock in-memory database for testing
 cargo run --bin hyperspot-server -- --config config/quickstart.yaml --mock run
 
-# Check if server is ready
+# Check if server is ready (detailed JSON response)
 curl http://127.0.0.1:8087/health
+
+# Kubernetes-style liveness probe (simple "ok" response)
+curl http://127.0.0.1:8087/healthz
 
 # See API documentation:
 # $ make quickstart

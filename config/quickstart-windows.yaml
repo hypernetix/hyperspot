@@ -131,7 +131,7 @@ modules:
         #   - Configure system modules for OoP process (e.g., grpc_hub.listen_addr)
         #   - Override settings from master (MODKIT_MODULE_CONFIG)
         #   - Run in standalone mode (without master host)
-        args: [ "--config", "C:/projects/hyperspot-MikeFalcon/config/oop-example.yaml" ]
+        args: [ "--config", "./config/oop-example.yaml" ]
         working_directory: "."
         environment: { }
     config:

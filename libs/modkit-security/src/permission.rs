@@ -228,10 +228,12 @@ mod tests {
     fn test_permission_builder_missing_resource_pattern() {
         let result = Permission::builder().action("edit").build();
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("resource_pattern is required"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("resource_pattern is required")
+        );
     }
 
     #[test]
@@ -240,10 +242,12 @@ mod tests {
             .resource_pattern("file_parser")
             .build();
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("action is required"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("action is required")
+        );
     }
 
     #[test]
@@ -308,9 +312,10 @@ mod tests {
 
         assert!(result.is_err());
         let err = result.unwrap_err();
-        assert!(err
-            .to_string()
-            .contains("Action must contain only alphanumeric characters and underscores"));
+        assert!(
+            err.to_string()
+                .contains("Action must contain only alphanumeric characters and underscores")
+        );
     }
 
     #[test]
@@ -320,9 +325,10 @@ mod tests {
 
         assert!(result.is_err());
         let err = result.unwrap_err();
-        assert!(err
-            .to_string()
-            .contains("Action must contain only alphanumeric characters and underscores"));
+        assert!(
+            err.to_string()
+                .contains("Action must contain only alphanumeric characters and underscores")
+        );
     }
 
     #[test]
@@ -334,9 +340,10 @@ mod tests {
 
         assert!(result.is_err());
         let err = result.unwrap_err();
-        assert!(err
-            .to_string()
-            .contains("Action must contain only alphanumeric characters and underscores"));
+        assert!(
+            err.to_string()
+                .contains("Action must contain only alphanumeric characters and underscores")
+        );
     }
 
     #[test]
@@ -346,9 +353,10 @@ mod tests {
 
         assert!(result.is_err());
         let err = result.unwrap_err();
-        assert!(err
-            .to_string()
-            .contains("Expected format 'tenant_id:resource_pattern:resource_id:action'"));
+        assert!(
+            err.to_string()
+                .contains("Expected format 'tenant_id:resource_pattern:resource_id:action'")
+        );
     }
 
     #[test]

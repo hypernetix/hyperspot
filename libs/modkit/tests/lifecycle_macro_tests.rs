@@ -1,7 +1,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use anyhow::Result;
-use modkit::{lifecycle as lifecycle_attr, lifecycle::*, StatefulModule};
+use modkit::{RunnableCapability, lifecycle as lifecycle_attr, lifecycle::*};
 use std::time::Duration;
 use tokio_util::sync::CancellationToken;
 

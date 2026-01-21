@@ -3,16 +3,16 @@
 use crate::{
     claims::Claims,
     errors::AuthError,
-    traits::{PrimaryAuthorizer, ScopeBuilder, TokenValidator},
+    traits::{PrimaryAuthorizer, TokenValidator},
     types::{AuthRequirement, RoutePolicy},
 };
 use axum::{
     body::Body,
     extract::{FromRequestParts, Request},
-    http::{request::Parts, HeaderMap, Method},
+    http::{HeaderMap, Method, request::Parts},
     response::{IntoResponse, Response},
 };
-use modkit_security::{SecurityContext, SecurityCtx};
+use modkit_security::SecurityContext;
 use std::{
     future::Future,
     pin::Pin,
@@ -21,9 +21,9 @@ use std::{
 };
 use tower::{Layer, Service};
 
-/// Extractor for `SecurityCtx` - validates that auth middleware has run
+/// Extractor for `SecurityContext` - validates that auth middleware has run
 #[derive(Debug, Clone)]
-pub struct Authz(pub SecurityCtx);
+pub struct Authz(pub SecurityContext);
 
 impl<S> FromRequestParts<S> for Authz
 where
@@ -34,11 +34,11 @@ where
     async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
         parts
             .extensions
-            .get::<SecurityCtx>()
+            .get::<SecurityContext>()
             .cloned() // TODO: drop this clone
             .map(Authz)
             .ok_or(AuthError::Internal(
-                "SecurityCtx not found - auth middleware not configured".to_owned(),
+                "SecurityContext not found - auth middleware not configured".to_owned(),
             ))
     }
 }
@@ -68,7 +68,6 @@ where
 /// Shared state for authentication policy middleware.
 struct AuthPolicyState {
     validator: Arc<dyn TokenValidator>,
-    scope_builder: Arc<dyn ScopeBuilder>,
     authorizer: Arc<dyn PrimaryAuthorizer>,
     policy: Arc<dyn RoutePolicy>,
 }
@@ -77,7 +76,7 @@ struct AuthPolicyState {
 ///
 /// # Example
 /// ```ignore
-/// router = router.layer(AuthPolicyLayer::new(validator, scope_builder, authorizer, policy));
+/// router = router.layer(AuthPolicyLayer::new(validator, authorizer, policy));
 /// ```
 #[derive(Clone)]
 pub struct AuthPolicyLayer {
@@ -87,14 +86,12 @@ pub struct AuthPolicyLayer {
 impl AuthPolicyLayer {
     pub fn new(
         validator: Arc<dyn TokenValidator>,
-        scope_builder: Arc<dyn ScopeBuilder>,
         authorizer: Arc<dyn PrimaryAuthorizer>,
         policy: Arc<dyn RoutePolicy>,
     ) -> Self {
         Self {
             state: Arc::new(AuthPolicyState {
                 validator,
-                scope_builder,
                 authorizer,
                 policy,
             }),
@@ -152,15 +149,14 @@ where
 
             match auth_requirement {
                 AuthRequirement::None => {
-                    // 3. For public routes (AuthRequirement::None): inserts anonymous SecurityCtx
-                    request.extensions_mut().insert(SecurityCtx::anonymous());
+                    // 3. For public routes (AuthRequirement::None): inserts anonymous SecurityContext
                     request
                         .extensions_mut()
                         .insert(SecurityContext::anonymous());
                     ready_inner.call(request).await
                 }
                 AuthRequirement::Required(sec_requirement) => {
-                    // 4. For required routes: validates JWT, enforces RBAC if needed, inserts SecurityCtx
+                    // 4. For required routes: validates JWT, enforces RBAC if needed, inserts SecurityContext
                     let Some(token) = extract_bearer_token(request.headers()) else {
                         return Ok(AuthError::Unauthenticated.into_response());
                     };
@@ -173,60 +169,44 @@ where
                     };
 
                     // Optional RBAC requirement
-                    if let Some(sec_req) = sec_requirement {
-                        if let Err(err) = state.authorizer.check(&claims, &sec_req).await {
-                            return Ok(err.into_response());
-                        }
+                    if let Some(sec_req) = sec_requirement
+                        && let Err(err) = state.authorizer.check(&claims, &sec_req).await
+                    {
+                        return Ok(err.into_response());
                     }
 
-                    // Build SecurityCtx from validated claims (legacy)
-                    let scope = state.scope_builder.tenants_to_scope(&claims);
-                    let sec =
-                        SecurityCtx::new(scope, modkit_security::Subject::new(claims.subject));
-
-                    // Build SecurityContext from validated claims (new)
+                    // Build SecurityContext from validated claims
                     let sec_context = SecurityContext::builder()
                         .tenant_id(claims.tenant_id)
                         .subject_id(claims.subject)
                         .build();
 
                     request.extensions_mut().insert(claims);
-                    request.extensions_mut().insert(sec);
                     request.extensions_mut().insert(sec_context);
                     ready_inner.call(request).await
                 }
                 AuthRequirement::Optional => {
-                    // 5. For optional routes: validates JWT if present, otherwise inserts anonymous SecurityCtx
+                    // 5. For optional routes: validates JWT if present, otherwise inserts anonymous SecurityContext
                     if let Some(token) = extract_bearer_token(request.headers()) {
                         match state.validator.validate_and_parse(token).await {
                             Ok(claims) => {
-                                // Build SecurityCtx from validated claims (legacy)
-                                let scope = state.scope_builder.tenants_to_scope(&claims);
-                                let sec = SecurityCtx::new(
-                                    scope,
-                                    modkit_security::Subject::new(claims.subject),
-                                );
-
-                                // Build SecurityContext from validated claims (new)
+                                // Build SecurityContext from validated claims
                                 let sec_context = SecurityContext::builder()
                                     .tenant_id(claims.tenant_id)
                                     .subject_id(claims.subject)
                                     .build();
 
                                 request.extensions_mut().insert(claims);
-                                request.extensions_mut().insert(sec);
                                 request.extensions_mut().insert(sec_context);
                             }
                             Err(err) => {
                                 tracing::debug!("Optional auth: invalid token: {err}");
-                                request.extensions_mut().insert(SecurityCtx::anonymous());
                                 request
                                     .extensions_mut()
                                     .insert(SecurityContext::anonymous());
                             }
                         }
                     } else {
-                        request.extensions_mut().insert(SecurityCtx::anonymous());
                         request
                             .extensions_mut()
                             .insert(SecurityContext::anonymous());

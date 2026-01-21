@@ -5,7 +5,7 @@ use std::io;
 use std::io::{IsTerminal, Write};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
-use tracing_subscriber::{fmt, util::SubscriberInitExt, Layer};
+use tracing_subscriber::{Layer, fmt, util::SubscriberInitExt};
 
 // ========== OTEL-agnostic layer type (compiles with/without the feature) ==========
 #[cfg(feature = "otel")]
@@ -31,9 +31,9 @@ fn matches_crate_prefix(target: &str, crate_name: &str) -> bool {
 // ================= rotating writer for files =================
 
 use file_rotate::{
+    ContentLimit, FileRotate,
     compression::Compression,
     suffix::{AppendTimestamp, FileLimit},
-    ContentLimit, FileRotate,
 };
 
 #[derive(Clone)]
@@ -388,7 +388,7 @@ fn install_subscriber(
     file_router: MultiFileRouter,
     #[cfg_attr(not(feature = "otel"), allow(unused_variables))] otel_layer: Option<OtelLayer>,
 ) {
-    use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter, Registry};
+    use tracing_subscriber::{EnvFilter, Registry, fmt, layer::SubscriberExt};
 
     // RUST_LOG acts as a global upper-bound for console/file if present.
     // If not set, we don't clamp here — YAML targets drive levels.
@@ -449,7 +449,7 @@ fn install_subscriber(
 fn init_minimal(
     #[cfg_attr(not(feature = "otel"), allow(unused_variables))] otel: Option<OtelLayer>,
 ) {
-    use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter, Registry};
+    use tracing_subscriber::{EnvFilter, Registry, fmt, layer::SubscriberExt};
 
     // If RUST_LOG is set, it will cap fmt output; otherwise don't clamp here.
     let env = EnvFilter::try_from_default_env().ok();

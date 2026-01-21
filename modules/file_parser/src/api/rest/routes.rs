@@ -2,8 +2,8 @@ use crate::api::rest::handlers;
 use crate::domain::service::FileParserService;
 use axum::{Extension, Router};
 use modkit::api::{
-    operation_builder::{AuthReqAction, AuthReqResource, LicenseFeature},
     OpenApiRegistry, OperationBuilder,
+    operation_builder::{AuthReqAction, AuthReqResource, LicenseFeature},
 };
 use std::sync::Arc;
 

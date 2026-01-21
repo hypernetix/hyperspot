@@ -1,4 +1,4 @@
-//! gRPC client implementation of DirectoryApi
+//! gRPC client implementation of Directory API
 //!
 //! This client allows remote modules to discover and resolve services via gRPC.
 
@@ -6,9 +6,9 @@ use anyhow::Result;
 use async_trait::async_trait;
 use tonic::transport::Channel;
 
-use modkit_transport_grpc::client::{connect_with_retry, GrpcClientConfig};
-use module_orchestrator_contracts::{
-    DirectoryApi, RegisterInstanceInfo, ServiceEndpoint, ServiceInstanceInfo,
+use modkit_transport_grpc::client::{GrpcClientConfig, connect_with_retry};
+use module_orchestrator_sdk::{
+    DirectoryClient, RegisterInstanceInfo, ServiceEndpoint, ServiceInstanceInfo,
 };
 
 use crate::{
@@ -16,7 +16,7 @@ use crate::{
     ListInstancesRequest, RegisterInstanceRequest, ResolveGrpcServiceRequest,
 };
 
-/// gRPC client implementation of DirectoryApi
+/// gRPC client for Directory API
 ///
 /// This client connects to a remote DirectoryService via gRPC and provides
 /// typed access to service discovery functionality. It includes:
@@ -89,7 +89,7 @@ impl DirectoryGrpcClient {
 }
 
 #[async_trait]
-impl DirectoryApi for DirectoryGrpcClient {
+impl DirectoryClient for DirectoryGrpcClient {
     async fn resolve_grpc_service(&self, service_name: &str) -> Result<ServiceEndpoint> {
         let mut client = self.inner.clone();
         let request = tonic::Request::new(ResolveGrpcServiceRequest {

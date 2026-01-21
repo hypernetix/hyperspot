@@ -2,8 +2,8 @@
 
 use std::sync::Arc;
 
-use axum::extract::{Extension, Path, Query};
 use axum::Json;
+use axum::extract::{Extension, Path, Query};
 use modkit::api::prelude::*;
 use modkit::api::problem::Problem;
 use types_registry_sdk::RegisterSummary;
@@ -88,6 +88,8 @@ mod tests {
     use gts::GtsConfig;
     use serde_json::json;
 
+    const JSON_SCHEMA_DRAFT_07: &str = "http://json-schema.org/draft-07/schema#";
+
     fn default_config() -> GtsConfig {
         crate::config::TypesRegistryConfig::default().to_gts_config()
     }
@@ -108,7 +110,7 @@ mod tests {
         let req = RegisterEntitiesRequest {
             entities: vec![json!({
                 "$id": "gts://gts.acme.core.events.user_created.v1~",
-                "$schema": "http://json-schema.org/draft-07/schema#",
+                "$schema": JSON_SCHEMA_DRAFT_07,
                 "type": "object"
             })],
         };
@@ -148,7 +150,7 @@ mod tests {
         let req = RegisterEntitiesRequest {
             entities: vec![json!({
                 "$id": "gts://gts.acme.core.events.user_created.v1~",
-                "$schema": "http://json-schema.org/draft-07/schema#",
+                "$schema": JSON_SCHEMA_DRAFT_07,
                 "type": "object"
             })],
         };
@@ -171,12 +173,12 @@ mod tests {
         let _ = service.register(vec![
             json!({
                 "$id": "gts://gts.acme.core.events.user_created.v1~",
-                "$schema": "http://json-schema.org/draft-07/schema#",
+                "$schema": JSON_SCHEMA_DRAFT_07,
                 "type": "object"
             }),
             json!({
                 "$id": "gts://gts.globex.core.events.order_placed.v1~",
-                "$schema": "http://json-schema.org/draft-07/schema#",
+                "$schema": JSON_SCHEMA_DRAFT_07,
                 "type": "object"
             }),
         ]);
@@ -197,7 +199,7 @@ mod tests {
         // Register entity via internal API (before ready)
         let _ = service.register(vec![json!({
             "$id": "gts://gts.acme.core.events.user_created.v1~",
-            "$schema": "http://json-schema.org/draft-07/schema#",
+            "$schema": JSON_SCHEMA_DRAFT_07,
             "type": "object"
         })]);
         service.switch_to_ready().unwrap();

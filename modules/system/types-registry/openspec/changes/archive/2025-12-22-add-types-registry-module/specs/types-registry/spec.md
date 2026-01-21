@@ -194,9 +194,9 @@ Note: Pagination (limit, cursor) deferred to Phase 1.2.
 
 - **GIVEN** the registry contains chained GTS IDs:
   - `gts.a.b.c.d.v1~globex.app.x.y.v1`
-  - `gts.globex.core.events.order.v1~acme.app.orders.v1`
+  - `gts.globex.core.events.order.v1~acme.app.orders.order.v1`
 - **WHEN** the user calls `list` with `vendor=globex` and `segment_scope=Primary`
-- **THEN** the system returns only `gts.globex.core.events.order.v1~acme.app.orders.v1`
+- **THEN** the system returns only `gts.globex.core.events.order.v1~acme.app.orders.order.v1`
 - **AND** the first entity is excluded because its primary segment vendor is `a`, not `globex`
 
 #### Scenario: Return empty list when no matches

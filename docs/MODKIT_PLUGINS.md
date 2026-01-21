@@ -167,19 +167,19 @@ This separation ensures:
 
 ```rust
 // In gateway module init()
-let registry = ctx.client_hub().get::<dyn TypesRegistryApi>()?;
+let registry = ctx.client_hub().get::<dyn TypesRegistryClient>()?;
 
 // Register schema using GTS-provided method for proper $id and $ref handling
 let schema_str = MyModulePluginSpecV1::gts_schema_with_refs_as_string();
 let schema_json: serde_json::Value = serde_json::from_str(&schema_str)?;
-registry.register(&SecurityCtx::root_ctx(), vec![schema_json]).await?;
+registry.register(vec![schema_json]).await?;
 ```
 
 **Plugin registers instance:**
 
 ```rust
 // In plugin module init()
-let registry = ctx.client_hub().get::<dyn TypesRegistryApi>()?;
+let registry = ctx.client_hub().get::<dyn TypesRegistryClient>()?;
 
 // Register instance only (schema is already registered by gateway)
 let instance = BaseModkitPluginV1::<MyModulePluginSpecV1> {
@@ -190,7 +190,7 @@ let instance = BaseModkitPluginV1::<MyModulePluginSpecV1> {
 };
 let instance_json = serde_json::to_value(&instance)?;
 let _ = registry
-    .register(&SecurityCtx::root_ctx(), vec![instance_json])
+    .register(vec![instance_json])
     .await?;
 ```
 
@@ -220,10 +220,10 @@ modules/<gateway-name>/
 │       ├── lib.rs              # Re-exports SDK + module struct
 │       ├── module.rs           # Module declaration, init, REST registration
 │       ├── config.rs           # Gateway config (e.g., vendor selection)
-│       ├── local_client.rs     # Public client adapter (implements PublicClient)
 │       ├── api/rest/           # REST handlers, DTOs, routes
 │       └── domain/
 │           ├── service.rs      # Plugin resolution and delegation
+│           ├── local_client.rs # Public client adapter (implements PublicClient)
 │           └── error.rs        # Domain errors
 │
 └── plugins/                    # Plugin implementations
@@ -313,11 +313,11 @@ use async_trait::async_trait;
 use modkit::{Module, ModuleCtx};
 use modkit_security::SecurityCtx;
 use my_sdk::{MyModuleGatewayClient, MyModulePluginSpecV1};
-use types_registry_sdk::TypesRegistryApi;
+use types_registry_sdk::TypesRegistryClient;
 
 #[modkit::module(
     name = "my_gateway",
-    deps = ["types_registry", "plugin_a", "plugin_b"],  // Depend on all plugins
+    deps = ["types_registry"],  // Gateway depends on the types_registry and any other required modules, but not on plugins. Plugins are resolved indirectly via GTS.
     capabilities = [rest]
 )]
 pub struct MyGateway {
@@ -332,11 +332,11 @@ impl Module for MyGateway {
         // === SCHEMA REGISTRATION ===
         // Gateway is responsible for registering the plugin SCHEMA.
         // Plugins only register their INSTANCES.
-        let registry = ctx.client_hub().get::<dyn TypesRegistryApi>()?;
+        let registry = ctx.client_hub().get::<dyn TypesRegistryClient>()?;
         let schema_str = MyModulePluginSpecV1::gts_schema_with_refs_as_string();
         let schema_json: serde_json::Value = serde_json::from_str(&schema_str)?;
         let _ = registry
-            .register(&SecurityCtx::root_ctx(), vec![schema_json])
+            .register(vec![schema_json])
             .await?;
         info!("Registered {} schema in types-registry",
             MyModulePluginSpecV1::gts_schema_id().clone());
@@ -393,7 +393,7 @@ The domain service handles plugin resolution:
 use modkit::client_hub::{ClientHub, ClientScope};
 use my_sdk::{MyModulePluginClient, MyModulePluginSpec};
 use tokio::sync::OnceCell;
-use types_registry_sdk::TypesRegistryApi;
+use types_registry_sdk::TypesRegistryClient;
 
 pub struct Service {
     hub: Arc<ClientHub>,
@@ -414,13 +414,12 @@ impl Service {
     }
 
     async fn resolve_plugin(&self) -> Result<ClientScope, DomainError> {
-        let registry = self.hub.get::<dyn TypesRegistryApi>()?;
+        let registry = self.hub.get::<dyn TypesRegistryClient>()?;
 
         // Query for plugin instances
         let plugin_type_id = MyModulePluginSpecV1::gts_schema_id().clone();
         let instances = registry
             .list(
-                &SecurityCtx::root_ctx(),
                 ListQuery::new()
                     .with_pattern(format!("{}*", plugin_type_id))
                     .with_is_type(false),
@@ -457,7 +456,7 @@ use modkit::gts::BaseModkitPluginV1;
 use modkit::{Module, ModuleCtx};
 use modkit_security::SecurityCtx;
 use my_sdk::{MyModulePluginClient, MyModulePluginSpecV1};
-use types_registry_sdk::TypesRegistryApi;
+use types_registry_sdk::TypesRegistryClient;
 
 #[modkit::module(
     name = "vendor_a_plugin",
@@ -477,7 +476,7 @@ impl Module for VendorAPlugin {
 
         // 2. Register plugin INSTANCE in types-registry
         //    Note: The plugin SCHEMA is registered by the gateway module
-        let registry = ctx.client_hub().get::<dyn TypesRegistryApi>()?;
+        let registry = ctx.client_hub().get::<dyn TypesRegistryClient>()?;
         let instance = BaseModkitPluginV1::<MyModulePluginSpecV1> {
             id: instance_id.clone(),
             vendor: cfg.vendor,
@@ -486,7 +485,7 @@ impl Module for VendorAPlugin {
         };
         let instance_json = serde_json::to_value(&instance)?;
         let _ = registry
-            .register(&SecurityCtx::root_ctx(), vec![instance_json])
+            .register(vec![instance_json])
             .await?;
 
         // 3. Create service and register SCOPED client
@@ -709,15 +708,14 @@ pub enum MyError {
 Ensure proper initialization order by declaring dependencies:
 
 ```rust
-// Gateway depends on types_registry AND all plugins
+// Gateway depends on the types_registry and any other required modules, but not on plugins. Plugins are resolved indirectly via GTS.
 #[modkit::module(
     name = "my_gateway",
-    deps = ["types_registry", "plugin_a", "plugin_b", "plugin_c"],
+    deps = ["types_registry"],
     capabilities = [rest]
 )]
 pub struct MyGateway { /* ... */ }
 
-// Each plugin depends only on types_registry
 #[modkit::module(
     name = "plugin_a",
     deps = ["types_registry"],
@@ -741,7 +739,8 @@ This ensures:
 #[tokio::test]
 async fn test_plugin_implementation() {
     let service = Service::new();
-    let ctx = SecurityCtx::root_ctx();
+    let tenant_id = Uuid::new_v4();
+    let ctx = SecurityCtx::for_tenant(tenant_id, Uuid::new_v4());
 
     let result = service.get_data(&ctx, "test-id").await;
     assert!(result.is_ok());
@@ -757,7 +756,7 @@ async fn test_gateway_plugin_resolution() {
 
     // Register mock types-registry
     let mock_registry = Arc::new(MockTypesRegistry::new());
-    hub.register::<dyn TypesRegistryApi>(mock_registry);
+    hub.register::<dyn TypesRegistryClient>(mock_registry);
 
     // Register mock plugin
     let instance_id = "gts.x.core.modkit.plugin.v1~vendor.pkg.my_module.plugin.v1~fabrikam.test._.plugin.v1";
@@ -766,7 +765,8 @@ async fn test_gateway_plugin_resolution() {
 
     // Test gateway service
     let svc = Service::new(hub, "Test".to_owned());
-    let ctx = SecurityCtx::root_ctx();
+    let tenant_id = Uuid::new_v4();
+    let ctx = SecurityCtx::for_tenant(tenant_id, Uuid::new_v4());
     let result = svc.get_data(&ctx, "id").await;
     assert!(result.is_ok());
 }

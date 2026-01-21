@@ -4,7 +4,7 @@
 //! at compile time. Uncomment the failing tests to see compile errors.
 
 use modkit_odata::SortDir;
-use modkit_sdk::odata::{FieldRef, FilterExpr, QueryBuilder, Schema};
+use modkit_sdk::odata::{FieldRef, QueryBuilder, Schema, items_stream, pages_stream};
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 enum TestField {
@@ -158,4 +158,17 @@ fn test_complex_type_safe_query() {
     assert_eq!(query.order.0.len(), 2);
     assert!(query.has_select());
     assert_eq!(query.limit, Some(25));
+}
+
+#[test]
+fn test_pager_helpers_typecheck() {
+    let _pages = pages_stream(
+        QueryBuilder::<TestSchema>::new().page_size(1),
+        |_| async move { Ok::<modkit_odata::Page<i32>, ()>(modkit_odata::Page::empty(1)) },
+    );
+
+    let _items = items_stream(
+        QueryBuilder::<TestSchema>::new().page_size(1),
+        |_| async move { Ok::<modkit_odata::Page<i32>, ()>(modkit_odata::Page::empty(1)) },
+    );
 }

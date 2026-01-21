@@ -8,7 +8,7 @@ description = "gRPC transport layer for module orchestrator"
 build = "build.rs"
 
 [dependencies]
-module_orchestrator-contracts = { path = "../module_orchestrator-contracts" }
+module_orchestrator-sdk = { path = "../module_orchestrator-sdk" }
 modkit-transport-grpc = { path = "../../../../libs/modkit-transport-grpc" }
 tonic = { workspace = true, features = ["transport"] }
 tonic-prost = { workspace = true }

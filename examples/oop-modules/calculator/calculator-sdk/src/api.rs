@@ -3,16 +3,16 @@
 //! Contract trait and types for the calculator service.
 
 use async_trait::async_trait;
-use modkit_security::SecurityCtx;
+use modkit_security::SecurityContext;
 
 /// Calculator API trait
 ///
 /// A simple service that performs addition operations.
-/// All methods require a SecurityCtx for authorization.
+/// All methods require a SecurityContext for authorization.
 #[async_trait]
 pub trait CalculatorClient: Send + Sync {
     /// Add two numbers and return the sum.
-    async fn add(&self, ctx: &SecurityCtx, a: i64, b: i64) -> Result<i64, CalculatorError>;
+    async fn add(&self, ctx: &SecurityContext, a: i64, b: i64) -> Result<i64, CalculatorError>;
 }
 
 /// Error type for Calculator operations

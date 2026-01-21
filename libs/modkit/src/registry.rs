@@ -8,19 +8,178 @@ use thiserror::Error;
 use crate::contracts;
 
 /// Type alias for REST host module configuration.
-type RestHostEntry = (&'static str, Arc<dyn contracts::RestHostModule>);
+type RestHostEntry = (&'static str, Arc<dyn contracts::ApiGatewayCapability>);
+
+// ============================================================================
+// Capability System
+// ============================================================================
+
+/// A single capability variant that a module can provide.
+#[derive(Clone)]
+pub enum Capability {
+    Database(Arc<dyn contracts::DatabaseCapability>),
+    RestApi(Arc<dyn contracts::RestApiCapability>),
+    ApiGateway(Arc<dyn contracts::ApiGatewayCapability>),
+    Runnable(Arc<dyn contracts::RunnableCapability>),
+    System(Arc<dyn contracts::SystemCapability>),
+    GrpcHub(Arc<dyn contracts::GrpcHubCapability>),
+    GrpcService(Arc<dyn contracts::GrpcServiceCapability>),
+}
+
+impl std::fmt::Debug for Capability {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Capability::Database(_) => write!(f, "Database(<impl DatabaseCapability>)"),
+            Capability::RestApi(_) => write!(f, "RestApi(<impl RestApiCapability>)"),
+            Capability::ApiGateway(_) => write!(f, "ApiGateway(<impl ApiGatewayCapability>)"),
+            Capability::Runnable(_) => write!(f, "Runnable(<impl RunnableCapability>)"),
+            Capability::System(_) => write!(f, "System(<impl SystemCapability>)"),
+            Capability::GrpcHub(_) => write!(f, "GrpcHub(<impl GrpcHubCapability>)"),
+            Capability::GrpcService(_) => write!(f, "GrpcService(<impl GrpcServiceCapability>)"),
+        }
+    }
+}
+
+/// Trait for capability tags that allow type-safe querying.
+pub trait CapTag {
+    type Out: ?Sized + 'static;
+    fn try_get(cap: &Capability) -> Option<&Arc<Self::Out>>;
+}
+
+/// Tag for querying `DatabaseCapability`.
+pub struct DatabaseCap;
+impl CapTag for DatabaseCap {
+    type Out = dyn contracts::DatabaseCapability;
+    fn try_get(cap: &Capability) -> Option<&Arc<Self::Out>> {
+        match cap {
+            Capability::Database(v) => Some(v),
+            _ => None,
+        }
+    }
+}
+
+/// Tag for querying `RestApiCapability`.
+pub struct RestApiCap;
+impl CapTag for RestApiCap {
+    type Out = dyn contracts::RestApiCapability;
+    fn try_get(cap: &Capability) -> Option<&Arc<Self::Out>> {
+        match cap {
+            Capability::RestApi(v) => Some(v),
+            _ => None,
+        }
+    }
+}
+
+/// Tag for querying `ApiGatewayCapability`.
+pub struct ApiGatewayCap;
+impl CapTag for ApiGatewayCap {
+    type Out = dyn contracts::ApiGatewayCapability;
+    fn try_get(cap: &Capability) -> Option<&Arc<Self::Out>> {
+        match cap {
+            Capability::ApiGateway(v) => Some(v),
+            _ => None,
+        }
+    }
+}
+
+/// Tag for querying `RunnableCapability`.
+pub struct RunnableCap;
+impl CapTag for RunnableCap {
+    type Out = dyn contracts::RunnableCapability;
+    fn try_get(cap: &Capability) -> Option<&Arc<Self::Out>> {
+        match cap {
+            Capability::Runnable(v) => Some(v),
+            _ => None,
+        }
+    }
+}
+
+/// Tag for querying `SystemCapability`.
+pub struct SystemCap;
+impl CapTag for SystemCap {
+    type Out = dyn contracts::SystemCapability;
+    fn try_get(cap: &Capability) -> Option<&Arc<Self::Out>> {
+        match cap {
+            Capability::System(v) => Some(v),
+            _ => None,
+        }
+    }
+}
+
+/// Tag for querying `GrpcHubCapability`.
+pub struct GrpcHubCap;
+impl CapTag for GrpcHubCap {
+    type Out = dyn contracts::GrpcHubCapability;
+    fn try_get(cap: &Capability) -> Option<&Arc<Self::Out>> {
+        match cap {
+            Capability::GrpcHub(v) => Some(v),
+            _ => None,
+        }
+    }
+}
+
+/// Tag for querying `GrpcServiceCapability`.
+pub struct GrpcServiceCap;
+impl CapTag for GrpcServiceCap {
+    type Out = dyn contracts::GrpcServiceCapability;
+    fn try_get(cap: &Capability) -> Option<&Arc<Self::Out>> {
+        match cap {
+            Capability::GrpcService(v) => Some(v),
+            _ => None,
+        }
+    }
+}
+
+/// A set of capabilities that a module provides.
+#[derive(Clone)]
+pub struct CapabilitySet {
+    caps: Vec<Capability>,
+}
+
+impl std::fmt::Debug for CapabilitySet {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CapabilitySet")
+            .field("caps", &self.caps)
+            .finish()
+    }
+}
+
+impl CapabilitySet {
+    /// Create an empty capability set.
+    #[must_use]
+    pub fn new() -> Self {
+        Self { caps: Vec::new() }
+    }
+
+    /// Add a capability to the set.
+    pub fn push(&mut self, cap: Capability) {
+        self.caps.push(cap);
+    }
+
+    /// Check if the set contains a specific capability type.
+    #[must_use]
+    pub fn has<T: CapTag>(&self) -> bool {
+        self.caps.iter().any(|cap| T::try_get(cap).is_some())
+    }
+
+    /// Query for a specific capability type.
+    #[must_use]
+    pub fn query<T: CapTag>(&self) -> Option<Arc<T::Out>> {
+        self.caps.iter().find_map(|cap| T::try_get(cap).cloned())
+    }
+}
+
+impl Default for CapabilitySet {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 pub struct ModuleEntry {
     pub(crate) name: &'static str,
     pub(crate) deps: &'static [&'static str],
     pub(crate) core: Arc<dyn contracts::Module>,
-    pub(crate) rest: Option<Arc<dyn contracts::RestfulModule>>,
-    pub(crate) rest_host: Option<Arc<dyn contracts::RestHostModule>>,
-    pub(crate) db: Option<Arc<dyn contracts::DbModule>>,
-    pub(crate) stateful: Option<Arc<dyn contracts::StatefulModule>>,
-    pub(crate) system: Option<Arc<dyn contracts::SystemModule>>,
-    pub(crate) grpc_hub: Option<Arc<dyn contracts::GrpcHubModule>>,
-    pub(crate) grpc_service: Option<Arc<dyn contracts::GrpcServiceModule>>,
+    pub(crate) caps: CapabilitySet,
 }
 
 impl std::fmt::Debug for ModuleEntry {
@@ -28,13 +187,13 @@ impl std::fmt::Debug for ModuleEntry {
         f.debug_struct("ModuleEntry")
             .field("name", &self.name)
             .field("deps", &self.deps)
-            .field("has_rest", &self.rest.is_some())
-            .field("is_rest_host", &self.rest_host.is_some())
-            .field("has_db", &self.db.is_some())
-            .field("has_stateful", &self.stateful.is_some())
-            .field("is_system", &self.system.is_some())
-            .field("is_grpc_hub", &self.grpc_hub.is_some())
-            .field("has_grpc_service", &self.grpc_service.is_some())
+            .field("has_rest", &self.caps.has::<RestApiCap>())
+            .field("is_rest_host", &self.caps.has::<ApiGatewayCap>())
+            .field("has_db", &self.caps.has::<DatabaseCap>())
+            .field("has_stateful", &self.caps.has::<RunnableCap>())
+            .field("is_system", &self.caps.has::<SystemCap>())
+            .field("is_grpc_hub", &self.caps.has::<GrpcHubCap>())
+            .field("has_grpc_service", &self.caps.has::<GrpcServiceCap>())
             .finish_non_exhaustive()
     }
 }
@@ -49,7 +208,7 @@ inventory::collect!(Registrator);
 pub struct ModuleRegistry {
     modules: Vec<ModuleEntry>, // topo-sorted
     pub grpc_hub: Option<String>,
-    pub grpc_services: Vec<(String, Arc<dyn contracts::GrpcServiceModule>)>,
+    pub grpc_services: Vec<(String, Arc<dyn contracts::GrpcServiceCapability>)>,
 }
 
 impl std::fmt::Debug for ModuleRegistry {
@@ -78,7 +237,7 @@ impl ModuleRegistry {
         let mut non_system_mods = Vec::new();
 
         for entry in &self.modules {
-            if entry.system.is_some() {
+            if entry.caps.has::<SystemCap>() {
                 system_mods.push(entry);
             } else {
                 non_system_mods.push(entry);
@@ -112,7 +271,7 @@ impl ModuleRegistry {
 }
 
 /// Type alias for gRPC hub module configuration.
-type GrpcHubEntry = (&'static str, Arc<dyn contracts::GrpcHubModule>);
+type GrpcHubEntry = (&'static str, Arc<dyn contracts::GrpcHubCapability>);
 
 /// Internal builder that macro registrators will feed.
 /// Keys are module **names**; uniqueness enforced at build time.
@@ -120,13 +279,9 @@ type GrpcHubEntry = (&'static str, Arc<dyn contracts::GrpcHubModule>);
 pub struct RegistryBuilder {
     core: HashMap<&'static str, Arc<dyn contracts::Module>>,
     deps: HashMap<&'static str, &'static [&'static str]>,
-    rest: HashMap<&'static str, Arc<dyn contracts::RestfulModule>>,
+    capabilities: HashMap<&'static str, Vec<Capability>>,
     rest_host: Option<RestHostEntry>,
-    db: HashMap<&'static str, Arc<dyn contracts::DbModule>>,
-    stateful: HashMap<&'static str, Arc<dyn contracts::StatefulModule>>,
-    system: HashMap<&'static str, Arc<dyn contracts::SystemModule>>,
     grpc_hub: Option<GrpcHubEntry>,
-    grpc_services: HashMap<&'static str, Arc<dyn contracts::GrpcServiceModule>>,
     errors: Vec<String>,
 }
 
@@ -156,15 +311,18 @@ impl RegistryBuilder {
     pub fn register_rest_with_meta(
         &mut self,
         name: &'static str,
-        m: Arc<dyn contracts::RestfulModule>,
+        m: Arc<dyn contracts::RestApiCapability>,
     ) {
-        self.rest.insert(name, m);
+        self.capabilities
+            .entry(name)
+            .or_default()
+            .push(Capability::RestApi(m));
     }
 
     pub fn register_rest_host_with_meta(
         &mut self,
         name: &'static str,
-        m: Arc<dyn contracts::RestHostModule>,
+        m: Arc<dyn contracts::ApiGatewayCapability>,
     ) {
         if let Some((existing, _)) = &self.rest_host {
             self.errors.push(format!(
@@ -175,30 +333,43 @@ impl RegistryBuilder {
         self.rest_host = Some((name, m));
     }
 
-    pub fn register_db_with_meta(&mut self, name: &'static str, m: Arc<dyn contracts::DbModule>) {
-        self.db.insert(name, m);
+    pub fn register_db_with_meta(
+        &mut self,
+        name: &'static str,
+        m: Arc<dyn contracts::DatabaseCapability>,
+    ) {
+        self.capabilities
+            .entry(name)
+            .or_default()
+            .push(Capability::Database(m));
     }
 
     pub fn register_stateful_with_meta(
         &mut self,
         name: &'static str,
-        m: Arc<dyn contracts::StatefulModule>,
+        m: Arc<dyn contracts::RunnableCapability>,
     ) {
-        self.stateful.insert(name, m);
+        self.capabilities
+            .entry(name)
+            .or_default()
+            .push(Capability::Runnable(m));
     }
 
     pub fn register_system_with_meta(
         &mut self,
         name: &'static str,
-        m: Arc<dyn contracts::SystemModule>,
+        m: Arc<dyn contracts::SystemCapability>,
     ) {
-        self.system.insert(name, m);
+        self.capabilities
+            .entry(name)
+            .or_default()
+            .push(Capability::System(m));
     }
 
     pub fn register_grpc_hub_with_meta(
         &mut self,
         name: &'static str,
-        m: Arc<dyn contracts::GrpcHubModule>,
+        m: Arc<dyn contracts::GrpcHubCapability>,
     ) {
         if let Some((existing, _)) = &self.grpc_hub {
             self.errors.push(format!(
@@ -212,9 +383,12 @@ impl RegistryBuilder {
     pub fn register_grpc_service_with_meta(
         &mut self,
         name: &'static str,
-        m: Arc<dyn contracts::GrpcServiceModule>,
+        m: Arc<dyn contracts::GrpcServiceCapability>,
     ) {
-        self.grpc_services.insert(name, m);
+        self.capabilities
+            .entry(name)
+            .or_default()
+            .push(Capability::GrpcService(m));
     }
 
     /// Detect cycles in the dependency graph using DFS with path tracking.
@@ -274,10 +448,10 @@ impl RegistryBuilder {
         let mut path = Vec::new();
 
         for i in 0..names.len() {
-            if colors[i] == Color::White {
-                if let Some(cycle) = dfs(i, names, adj, &mut colors, &mut path) {
-                    return Some(cycle);
-                }
+            if colors[i] == Color::White
+                && let Some(cycle) = dfs(i, names, adj, &mut colors, &mut path)
+            {
+                return Some(cycle);
             }
         }
 
@@ -287,10 +461,10 @@ impl RegistryBuilder {
     /// Validate that all capabilities reference known core modules.
     fn validate_capabilities(&self) -> Result<(), RegistryError> {
         // Check rest_host early
-        if let Some((host_name, _)) = &self.rest_host {
-            if !self.core.contains_key(host_name) {
-                return Err(RegistryError::UnknownModule((*host_name).to_owned()));
-            }
+        if let Some((host_name, _)) = &self.rest_host
+            && !self.core.contains_key(host_name)
+        {
+            return Err(RegistryError::UnknownModule((*host_name).to_owned()));
         }
 
         // Check for configuration errors
@@ -300,46 +474,18 @@ impl RegistryBuilder {
             });
         }
 
-        // Validate rest capabilities
-        for n in self.rest.keys() {
-            if !self.core.contains_key(n) {
-                return Err(RegistryError::UnknownModule((*n).to_owned()));
-            }
-        }
-
-        // Validate rest_host again (redundant but explicit)
-        if let Some((n, _)) = &self.rest_host {
-            if !self.core.contains_key(n) {
-                return Err(RegistryError::UnknownModule((*n).to_owned()));
-            }
-        }
-
-        // Validate db capabilities
-        for n in self.db.keys() {
-            if !self.core.contains_key(n) {
-                return Err(RegistryError::UnknownModule((*n).to_owned()));
-            }
-        }
-
-        // Validate stateful capabilities
-        for n in self.stateful.keys() {
-            if !self.core.contains_key(n) {
-                return Err(RegistryError::UnknownModule((*n).to_owned()));
-            }
-        }
-
-        // Validate grpc_hub
-        if let Some((name, _)) = &self.grpc_hub {
+        // Validate all capability module names reference known core modules
+        for name in self.capabilities.keys() {
             if !self.core.contains_key(name) {
                 return Err(RegistryError::UnknownModule((*name).to_owned()));
             }
         }
 
-        // Validate grpc_services
-        for n in self.grpc_services.keys() {
-            if !self.core.contains_key(n) {
-                return Err(RegistryError::UnknownModule((*n).to_owned()));
-            }
+        // Validate grpc_hub
+        if let Some((name, _)) = &self.grpc_hub
+            && !self.core.contains_key(name)
+        {
+            return Err(RegistryError::UnknownModule((*name).to_owned()));
         }
 
         Ok(())
@@ -392,24 +538,35 @@ impl RegistryBuilder {
                 .cloned()
                 .ok_or_else(|| RegistryError::CoreNotFound(name.to_owned()))?;
 
+            // Build the capability set for this module
+            let mut caps = CapabilitySet::new();
+
+            // Add capabilities from the main capabilities map
+            if let Some(module_caps) = self.capabilities.get(name) {
+                for cap in module_caps {
+                    caps.push(cap.clone());
+                }
+            }
+
+            // Add rest_host if this module is the host
+            if let Some((host_name, module)) = &self.rest_host
+                && *host_name == name
+            {
+                caps.push(Capability::ApiGateway(module.clone()));
+            }
+
+            // Add grpc_hub if this module is the hub
+            if let Some((hub_name, module)) = &self.grpc_hub
+                && *hub_name == name
+            {
+                caps.push(Capability::GrpcHub(module.clone()));
+            }
+
             let entry = ModuleEntry {
                 name,
                 deps,
                 core,
-                rest: self.rest.get(name).cloned(),
-                rest_host: self
-                    .rest_host
-                    .as_ref()
-                    .filter(|(host_name, _)| *host_name == name)
-                    .map(|(_, module)| module.clone()),
-                db: self.db.get(name).cloned(),
-                stateful: self.stateful.get(name).cloned(),
-                system: self.system.get(name).cloned(),
-                grpc_hub: self
-                    .grpc_hub
-                    .as_ref()
-                    .and_then(|(hub_name, module)| (*hub_name == name).then(|| module.clone())),
-                grpc_service: self.grpc_services.get(name).cloned(),
+                caps,
             };
             entries.push(entry);
         }
@@ -464,11 +621,16 @@ impl RegistryBuilder {
         // Collect grpc_hub and grpc_services for the final registry
         let grpc_hub = self.grpc_hub.as_ref().map(|(name, _)| (*name).to_owned());
 
-        let grpc_services: Vec<(String, Arc<dyn contracts::GrpcServiceModule>)> = self
-            .grpc_services
-            .iter()
-            .map(|(name, module)| ((*name).to_owned(), module.clone()))
-            .collect();
+        // Collect grpc_services from capabilities
+        let mut grpc_services: Vec<(String, Arc<dyn contracts::GrpcServiceCapability>)> =
+            Vec::new();
+        for (name, caps) in &self.capabilities {
+            for cap in caps {
+                if let Capability::GrpcService(service) = cap {
+                    grpc_services.push(((*name).to_owned(), service.clone()));
+                }
+            }
+        }
 
         tracing::info!(
             modules = ?entries.iter().map(|e| e.name).collect::<Vec<_>>(),
@@ -536,7 +698,9 @@ pub enum RegistryError {
         #[source]
         source: anyhow::Error,
     },
-    #[error("REST phase requires an gateway host: modules with capability 'rest' found, but no module with capability 'rest_host'")]
+    #[error(
+        "REST phase requires an gateway host: modules with capability 'rest' found, but no module with capability 'rest_host'"
+    )]
     RestRequiresHost,
     #[error("multiple 'rest_host' modules detected; exactly one is allowed")]
     MultipleRestHosts,
@@ -552,7 +716,9 @@ pub enum RegistryError {
         #[source]
         source: anyhow::Error,
     },
-    #[error("gRPC phase requires a hub: modules with capability 'grpc' found, but no module with capability 'grpc_hub'")]
+    #[error(
+        "gRPC phase requires a hub: modules with capability 'grpc' found, but no module with capability 'grpc_hub'"
+    )]
     GrpcRequiresHub,
     #[error("multiple 'grpc_hub' modules detected; exactly one is allowed")]
     MultipleGrpcHubs,
@@ -744,6 +910,26 @@ mod tests {
     }
 
     #[test]
+    fn capability_query_works() {
+        let mut b = RegistryBuilder::default();
+        let module = Arc::new(DummyCore);
+        b.register_core_with_meta("test", &[], module);
+        b.register_db_with_meta("test", Arc::new(DummyDb));
+        b.register_rest_with_meta("test", Arc::new(DummyRest));
+
+        let reg = b.build_topo_sorted().unwrap();
+        let entry = &reg.modules()[0];
+
+        assert!(entry.caps.has::<DatabaseCap>());
+        assert!(entry.caps.has::<RestApiCap>());
+        assert!(!entry.caps.has::<SystemCap>());
+
+        assert!(entry.caps.query::<DatabaseCap>().is_some());
+        assert!(entry.caps.query::<RestApiCap>().is_some());
+        assert!(entry.caps.query::<SystemCap>().is_none());
+    }
+
+    #[test]
     fn rest_host_capability_without_core_fails() {
         let mut b = RegistryBuilder::default();
         b.register_core_with_meta("core_a", &[], Arc::new(DummyCore));
@@ -766,9 +952,9 @@ mod tests {
     }
 
     /* Test helper implementations */
-    #[derive(Default)]
+    #[derive(Default, Clone)]
     struct DummyRest;
-    impl contracts::RestfulModule for DummyRest {
+    impl contracts::RestApiCapability for DummyRest {
         fn register_rest(
             &self,
             _ctx: &crate::context::ModuleCtx,
@@ -782,7 +968,7 @@ mod tests {
     #[derive(Default)]
     struct DummyDb;
     #[async_trait::async_trait]
-    impl contracts::DbModule for DummyDb {
+    impl contracts::DatabaseCapability for DummyDb {
         async fn migrate(&self, _db: &modkit_db::DbHandle) -> anyhow::Result<()> {
             Ok(())
         }
@@ -791,7 +977,7 @@ mod tests {
     #[derive(Default)]
     struct DummyStateful;
     #[async_trait::async_trait]
-    impl contracts::StatefulModule for DummyStateful {
+    impl contracts::RunnableCapability for DummyStateful {
         async fn start(&self, _cancel: tokio_util::sync::CancellationToken) -> anyhow::Result<()> {
             Ok(())
         }
@@ -802,7 +988,7 @@ mod tests {
 
     #[derive(Default)]
     struct DummyRestHost;
-    impl contracts::RestHostModule for DummyRestHost {
+    impl contracts::ApiGatewayCapability for DummyRestHost {
         fn rest_prepare(
             &self,
             _ctx: &crate::context::ModuleCtx,

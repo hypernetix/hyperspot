@@ -2,12 +2,14 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use modkit::api::OpenApiRegistry;
-use modkit::{Module, ModuleCtx, RestfulModule};
+use modkit::{Module, ModuleCtx, RestApiCapability};
 use tracing::{debug, info};
 
 use crate::config::FileParserConfig;
-use crate::domain::parsers::{DocxParser, HtmlParser, PdfParser, PlainTextParser, StubParser};
 use crate::domain::service::{FileParserService, ServiceConfig};
+use crate::infra::parsers::{
+    DocxParser, HtmlParser, ImageParser, PdfParser, PlainTextParser, StubParser,
+};
 
 /// Main module struct for file parsing
 #[modkit::module(
@@ -56,6 +58,7 @@ impl Module for FileParserModule {
             Arc::new(HtmlParser::new()),
             Arc::new(PdfParser::new()),
             Arc::new(DocxParser::new()),
+            Arc::new(ImageParser::new()),
             Arc::new(StubParser::new()),
         ];
 
@@ -79,7 +82,7 @@ impl Module for FileParserModule {
     }
 }
 
-impl RestfulModule for FileParserModule {
+impl RestApiCapability for FileParserModule {
     fn register_rest(
         &self,
         _ctx: &ModuleCtx,

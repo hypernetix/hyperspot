@@ -138,7 +138,7 @@ impl ClientHub {
 
 impl ClientHub {
     /// Register a client under the interface type `T`.
-    /// `T` can be a trait object like `dyn my_module::contract::MyApi`.
+    /// `T` can be a trait object like `dyn my_module::api::MyClient`.
     pub fn register<T>(&self, client: Arc<T>)
     where
         T: ?Sized + Send + Sync + 'static,
@@ -320,8 +320,12 @@ mod tests {
     #[tokio::test]
     async fn scoped_register_and_get_dyn_trait() {
         let hub = ClientHub::new();
-        let scope_a = ClientScope::gts_id("gts.x.core.modkit.plugins.v1~x.core.tenant_resolver.plugin.v1~contoso.app._.plugin.v1.0");
-        let scope_b = ClientScope::gts_id("gts.x.core.modkit.plugins.v1~x.core.tenant_resolver.plugin.v1~fabrikam.app._.plugin.v1.0");
+        let scope_a = ClientScope::gts_id(
+            "gts.x.core.modkit.plugins.v1~x.core.tenant_resolver.plugin.v1~contoso.app._.plugin.v1.0",
+        );
+        let scope_b = ClientScope::gts_id(
+            "gts.x.core.modkit.plugins.v1~x.core.tenant_resolver.plugin.v1~fabrikam.app._.plugin.v1.0",
+        );
 
         let api_a: Arc<dyn TestApi> = Arc::new(ImplA(1));
         let api_b: Arc<dyn TestApi> = Arc::new(ImplA(2));
@@ -342,7 +346,9 @@ mod tests {
     #[test]
     fn scoped_get_is_independent_from_global_get() {
         let hub = ClientHub::new();
-        let scope = ClientScope::gts_id("gts.x.core.modkit.plugins.v1~x.core.tenant_resolver.plugin.v1~fabrikam.app._.plugin.v1.0");
+        let scope = ClientScope::gts_id(
+            "gts.x.core.modkit.plugins.v1~x.core.tenant_resolver.plugin.v1~fabrikam.app._.plugin.v1.0",
+        );
         hub.register::<str>(Arc::from("global"));
         hub.register_scoped::<str>(scope.clone(), Arc::from("scoped"));
 

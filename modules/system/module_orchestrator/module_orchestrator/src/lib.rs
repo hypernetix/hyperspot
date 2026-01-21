@@ -12,7 +12,5 @@ pub use module::{ModuleOrchestrator, ModuleOrchestratorConfig};
 mod server;
 
 // === RE-EXPORTS ===
-pub use module_orchestrator_contracts::{
-    RegisterInstanceInfo, ServiceEndpoint, ServiceInstanceInfo,
-};
 pub use module_orchestrator_grpc::DirectoryGrpcClient;
+pub use module_orchestrator_sdk::{RegisterInstanceInfo, ServiceEndpoint, ServiceInstanceInfo};

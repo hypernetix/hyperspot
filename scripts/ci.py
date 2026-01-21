@@ -117,6 +117,33 @@ def cmd_security(_args):
     print("All security checks passed")
 
 
+def cmd_gts_docs(args):
+    step("Validating GTS identifiers in documentation files (DE0903)")
+    cmd_args = [
+        "cargo",
+        "run",
+        "-p",
+        "gts-docs-validator",
+        "--",
+        "--exclude",
+        "target/*",
+        "--exclude",
+        "docs/api/*",
+        "docs",
+        "modules",
+        "libs",
+        "examples",
+    ]
+    if getattr(args, 'verbose', False):
+        cmd_args.append("--verbose")  # Append to end, after all other args
+    result = run_cmd_allow_fail(cmd_args)
+    if result.returncode == 0:
+        print("All GTS identifiers in documentation are valid")
+    else:
+        print("Invalid GTS identifiers found in documentation files")
+        sys.exit(result.returncode)
+
+
 def cmd_check(args):
     step("Running full check suite")
     cmd_fmt(args)
@@ -124,6 +151,7 @@ def cmd_check(args):
     cmd_test(args)
     cmd_dylint_test(args)
     cmd_dylint(args)
+    cmd_gts_docs(args)
     cmd_security(args)
     print("All checks passed")
 
@@ -152,17 +180,21 @@ def wait_for_health(base_url, timeout_secs=30):
     url = f"{base_url.rstrip('/')}/healthz"
     step(f"Waiting for API to be ready at {url}")
     start = time.time()
+    attempt = 0
     while True:
         try:
+            attempt += 1
             with urlopen(url, timeout=1) as resp:
                 if 200 <= resp.status < 300:
-                    print("API is ready")
+                    print(f"API is ready (after {attempt} attempts)")
                     return
-        except (URLError, HTTPError):
-            pass
+        except (URLError, HTTPError, ConnectionResetError, OSError) as e:
+            # Server may be starting up or restarting
+            if attempt % 10 == 0:  # Log every 10 attempts
+                print(f"Still waiting... (attempt {attempt}, error: {type(e).__name__})")
 
         if time.time() - start > timeout_secs:
-            print("ERROR: The API readiness check timed out")
+            print(f"ERROR: The API readiness check timed out after {attempt} attempts")
             sys.exit(1)
         time.sleep(1)
 
@@ -213,6 +245,7 @@ def cmd_e2e(args):
     kill_existing_server(port)
 
     docker_env_started = False
+    server_process = None
 
     if args.docker:
         step("Running E2E tests in Docker mode")
@@ -230,17 +263,21 @@ def cmd_e2e(args):
 
         # Build image
         step("Building Docker image for E2E tests")
-        run_cmd(
-            [
-                "docker",
-                "build",
-                "-f",
-                "testing/docker/hyperspot.Dockerfile",
-                "-t",
-                "hyperspot-api:e2e",
-                ".",
-            ]
-        )
+        build_cmd = [
+            "docker",
+            "build",
+            "-f",
+            "testing/docker/hyperspot.Dockerfile",
+            "-t",
+            "hyperspot-api:e2e",
+        ]
+        
+        # Add build args for cargo features if specified
+        if args.features:
+            build_cmd.extend(["--build-arg", f"CARGO_FEATURES={args.features}"])
+        
+        build_cmd.append(".")
+        run_cmd(build_cmd)
 
         # Start environment
         step("Starting E2E docker-compose environment")
@@ -251,6 +288,7 @@ def cmd_e2e(args):
                 "-f",
                 "testing/docker/docker-compose.yml",
                 "up",
+                "--force-recreate",
                 "-d",
             ]
         )
@@ -532,6 +570,11 @@ def build_parser():
         help="Run tests in Docker environment instead of local server",
     )
     p_e2e.add_argument(
+        "--features",
+        default="users-info-example",
+        help="Cargo features to enable for Docker build (default: users-info-example)",
+    )
+    p_e2e.add_argument(
         "pytest_args",
         nargs=argparse.REMAINDER,
         help="Extra arguments passed to pytest (use -- to separate)",
@@ -549,6 +592,11 @@ def build_parser():
     # dylint-list
     p_dylint_list = subparsers.add_parser("dylint-list", help="List available dylint lints")
     p_dylint_list.set_defaults(func=cmd_dylint_list)
+
+    # gts-docs
+    p_gts_docs = subparsers.add_parser("gts-docs", help="Validate GTS identifiers in .md and .json files (DE0903)")
+    p_gts_docs.add_argument("-v", "--verbose", action="store_true", help="Show verbose output")
+    p_gts_docs.set_defaults(func=cmd_gts_docs)
 
     # all
     p_all = subparsers.add_parser("all", help="Run full pipeline (Makefile all equivalent)")

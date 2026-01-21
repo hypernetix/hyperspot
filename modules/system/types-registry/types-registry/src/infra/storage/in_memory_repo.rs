@@ -87,22 +87,22 @@ impl InMemoryGtsRepository {
 
     /// Checks if an entity matches the given query filters.
     fn matches_query(entity: &GtsEntity, query: &ListQuery) -> bool {
-        if let Some(ref pattern) = query.pattern {
-            if let Ok(wildcard) = GtsWildcard::new(pattern) {
-                if let Ok(gts_id) = GtsID::new(&entity.gts_id) {
-                    if !gts_id.wildcard_match(&wildcard) {
-                        return false;
-                    }
-                } else {
+        if let Some(ref pattern) = query.pattern
+            && let Ok(wildcard) = GtsWildcard::new(pattern)
+        {
+            if let Ok(gts_id) = GtsID::new(&entity.gts_id) {
+                if !gts_id.wildcard_match(&wildcard) {
                     return false;
                 }
+            } else {
+                return false;
             }
         }
 
-        if let Some(is_type) = query.is_type {
-            if entity.is_type() != is_type {
-                return false;
-            }
+        if let Some(is_type) = query.is_type
+            && entity.is_type() != is_type
+        {
+            return false;
         }
 
         let segments_to_check: Vec<&GtsIdSegment> = match query.segment_scope {
@@ -110,22 +110,22 @@ impl InMemoryGtsRepository {
             SegmentMatchScope::Any => entity.segments.iter().collect(),
         };
 
-        if let Some(ref vendor) = query.vendor {
-            if !segments_to_check.iter().any(|s| s.vendor == *vendor) {
-                return false;
-            }
+        if let Some(ref vendor) = query.vendor
+            && !segments_to_check.iter().any(|s| s.vendor == *vendor)
+        {
+            return false;
         }
 
-        if let Some(ref package) = query.package {
-            if !segments_to_check.iter().any(|s| s.package == *package) {
-                return false;
-            }
+        if let Some(ref package) = query.package
+            && !segments_to_check.iter().any(|s| s.package == *package)
+        {
+            return false;
         }
 
-        if let Some(ref namespace) = query.namespace {
-            if !segments_to_check.iter().any(|s| s.namespace == *namespace) {
-                return false;
-            }
+        if let Some(ref namespace) = query.namespace
+            && !segments_to_check.iter().any(|s| s.namespace == *namespace)
+        {
+            return false;
         }
 
         true
@@ -194,10 +194,10 @@ impl GtsRepository for InMemoryGtsRepository {
         let mut results = Vec::new();
 
         for (gts_id, gts_entity) in persistent.store.items() {
-            if let Ok(entity) = Self::to_gts_entity(gts_id, &gts_entity.content) {
-                if Self::matches_query(&entity, query) {
-                    results.push(entity);
-                }
+            if let Ok(entity) = Self::to_gts_entity(gts_id, &gts_entity.content)
+                && Self::matches_query(&entity, query)
+            {
+                results.push(entity);
             }
         }
 
@@ -285,6 +285,8 @@ mod tests {
     use super::*;
     use serde_json::json;
 
+    const JSON_SCHEMA_DRAFT_07: &str = "http://json-schema.org/draft-07/schema#";
+
     fn default_config() -> GtsConfig {
         crate::config::TypesRegistryConfig::default().to_gts_config()
     }
@@ -295,7 +297,7 @@ mod tests {
 
         let entity = json!({
             "$id": "gts://gts.acme.core.events.user_created.v1~",
-            "$schema": "http://json-schema.org/draft-07/schema#",
+            "$schema": JSON_SCHEMA_DRAFT_07,
             "type": "object",
             "properties": {
                 "userId": { "type": "string" }
@@ -316,7 +318,7 @@ mod tests {
 
         let entity = json!({
             "$id": "gts://gts.acme.core.events.user_created.v1~",
-            "$schema": "http://json-schema.org/draft-07/schema#",
+            "$schema": JSON_SCHEMA_DRAFT_07,
             "type": "object"
         });
 
@@ -333,13 +335,13 @@ mod tests {
 
         let entity1 = json!({
             "$id": "gts://gts.acme.core.events.user_created.v1~",
-            "$schema": "http://json-schema.org/draft-07/schema#",
+            "$schema": JSON_SCHEMA_DRAFT_07,
             "type": "object"
         });
 
         let entity2 = json!({
             "$id": "gts://gts.acme.core.events.user_created.v1~",
-            "$schema": "http://json-schema.org/draft-07/schema#",
+            "$schema": JSON_SCHEMA_DRAFT_07,
             "type": "object",
             "description": "Different content"
         });
@@ -357,7 +359,7 @@ mod tests {
 
         let entity = json!({
             "$id": "invalid-gts-id",
-            "$schema": "http://json-schema.org/draft-07/schema#",
+            "$schema": JSON_SCHEMA_DRAFT_07,
             "type": "object"
         });
 
@@ -370,7 +372,7 @@ mod tests {
         let repo = InMemoryGtsRepository::new(default_config());
 
         let entity = json!({
-            "$schema": "http://json-schema.org/draft-07/schema#",
+            "$schema": JSON_SCHEMA_DRAFT_07,
             "type": "object"
         });
 
@@ -384,7 +386,7 @@ mod tests {
 
         let entity = json!({
             "$id": "gts://gts.acme.core.events.user_created.v1~",
-            "$schema": "http://json-schema.org/draft-07/schema#",
+            "$schema": JSON_SCHEMA_DRAFT_07,
             "type": "object",
             "properties": {
                 "userId": { "type": "string" }
@@ -409,12 +411,12 @@ mod tests {
 
         let type1 = json!({
             "$id": "gts://gts.acme.core.events.user_created.v1~",
-            "$schema": "http://json-schema.org/draft-07/schema#",
+            "$schema": JSON_SCHEMA_DRAFT_07,
             "type": "object"
         });
         let type2 = json!({
             "$id": "gts://gts.globex.core.events.order_placed.v1~",
-            "$schema": "http://json-schema.org/draft-07/schema#",
+            "$schema": JSON_SCHEMA_DRAFT_07,
             "type": "object"
         });
 
@@ -448,7 +450,7 @@ mod tests {
 
         let entity = json!({
             "$id": "gts://gts.acme.core.events.user_created.v1~",
-            "$schema": "http://json-schema.org/draft-07/schema#",
+            "$schema": JSON_SCHEMA_DRAFT_07,
             "type": "object"
         });
 
@@ -466,7 +468,7 @@ mod tests {
 
         let entity = json!({
             "$id": "gts://gts.acme.core.events.user_created.v1~",
-            "$schema": "http://json-schema.org/draft-07/schema#",
+            "$schema": JSON_SCHEMA_DRAFT_07,
             "type": "object"
         });
 
@@ -485,13 +487,13 @@ mod tests {
 
         let entity1 = json!({
             "$id": "gts://gts.acme.core.events.user_created.v1~",
-            "$schema": "http://json-schema.org/draft-07/schema#",
+            "$schema": JSON_SCHEMA_DRAFT_07,
             "type": "object"
         });
 
         let entity2 = json!({
             "$id": "gts://gts.acme.core.events.user_created.v1~",
-            "$schema": "http://json-schema.org/draft-07/schema#",
+            "$schema": JSON_SCHEMA_DRAFT_07,
             "type": "object",
             "description": "Different content"
         });
@@ -507,7 +509,7 @@ mod tests {
 
         let entity = json!({
             "$id": "gts://gts.acme.core.events.user_created.v1~",
-            "$schema": "http://json-schema.org/draft-07/schema#",
+            "$schema": JSON_SCHEMA_DRAFT_07,
             "type": "object"
         });
 
@@ -524,7 +526,7 @@ mod tests {
 
         let type_entity = json!({
             "$id": "gts://gts.acme.core.events.user_created.v1~",
-            "$schema": "http://json-schema.org/draft-07/schema#",
+            "$schema": JSON_SCHEMA_DRAFT_07,
             "type": "object"
         });
 
@@ -546,7 +548,7 @@ mod tests {
 
         let entity = json!({
             "$id": "gts://gts.acme.core.events.user_created.v1~",
-            "$schema": "http://json-schema.org/draft-07/schema#",
+            "$schema": JSON_SCHEMA_DRAFT_07,
             "type": "object"
         });
 
@@ -568,7 +570,7 @@ mod tests {
 
         let entity = json!({
             "$id": "gts://gts.acme.core.events.user_created.v1~",
-            "$schema": "http://json-schema.org/draft-07/schema#",
+            "$schema": JSON_SCHEMA_DRAFT_07,
             "type": "object"
         });
 
@@ -590,7 +592,7 @@ mod tests {
 
         let entity = json!({
             "$id": "gts://gts.acme.core.events.user_created.v1~",
-            "$schema": "http://json-schema.org/draft-07/schema#",
+            "$schema": JSON_SCHEMA_DRAFT_07,
             "type": "object"
         });
 
@@ -612,7 +614,7 @@ mod tests {
 
         let entity = json!({
             "$id": "gts://gts.acme.core.events.user_created.v1~",
-            "$schema": "http://json-schema.org/draft-07/schema#",
+            "$schema": JSON_SCHEMA_DRAFT_07,
             "type": "object"
         });
 
@@ -632,7 +634,7 @@ mod tests {
 
         let entity = json!({
             "$id": "gts://gts.acme.core.events.user_created.v1~",
-            "$schema": "http://json-schema.org/draft-07/schema#",
+            "$schema": JSON_SCHEMA_DRAFT_07,
             "type": "object",
             "description": "A user created event"
         });
@@ -660,7 +662,7 @@ mod tests {
 
         let entity = json!({
             "gtsId": "gts.acme.core.events.user_created.v1~",
-            "$schema": "http://json-schema.org/draft-07/schema#",
+            "$schema": JSON_SCHEMA_DRAFT_07,
             "type": "object"
         });
 
@@ -674,7 +676,7 @@ mod tests {
 
         let entity = json!({
             "id": "gts.acme.core.events.user_created.v1~",
-            "$schema": "http://json-schema.org/draft-07/schema#",
+            "$schema": JSON_SCHEMA_DRAFT_07,
             "type": "object"
         });
 

@@ -1,7 +1,4 @@
 //! Directory API - contract for service discovery and instance resolution
-//!
-//! This module re-exports the `DirectoryApi` trait and related types from
-//! `module_orchestrator_contracts` and provides the `LocalDirectoryApi` implementation.
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -11,19 +8,19 @@ use uuid::Uuid;
 use crate::runtime::{Endpoint, ModuleInstance, ModuleManager};
 
 // Re-export all types from contracts - this is the single source of truth
-pub use module_orchestrator_contracts::{
-    DirectoryApi, RegisterInstanceInfo, ServiceEndpoint, ServiceInstanceInfo,
+pub use module_orchestrator_sdk::{
+    DirectoryClient, RegisterInstanceInfo, ServiceEndpoint, ServiceInstanceInfo,
 };
 
-/// Local implementation of `DirectoryApi` that delegates to `ModuleManager`
+/// Local implementation of `DirectoryClient` that delegates to `ModuleManager`
 ///
 /// This is the in-process implementation used by modules running in the same
 /// process as the module orchestrator.
-pub struct LocalDirectoryApi {
+pub struct LocalDirectoryClient {
     mgr: Arc<ModuleManager>,
 }
 
-impl LocalDirectoryApi {
+impl LocalDirectoryClient {
     #[must_use]
     pub fn new(mgr: Arc<ModuleManager>) -> Self {
         Self { mgr }
@@ -31,7 +28,7 @@ impl LocalDirectoryApi {
 }
 
 #[async_trait]
-impl DirectoryApi for LocalDirectoryApi {
+impl DirectoryClient for LocalDirectoryClient {
     async fn resolve_grpc_service(&self, service_name: &str) -> Result<ServiceEndpoint> {
         if let Some((_module, _inst, ep)) = self.mgr.pick_service_round_robin(service_name) {
             return Ok(ServiceEndpoint::new(ep.uri));
@@ -105,7 +102,7 @@ mod tests {
     #[tokio::test]
     async fn test_resolve_grpc_service_not_found() {
         let dir = Arc::new(ModuleManager::new());
-        let api = LocalDirectoryApi::new(dir);
+        let api = LocalDirectoryClient::new(dir);
 
         let result = api.resolve_grpc_service("nonexistent.Service").await;
         assert!(result.is_err());
@@ -114,7 +111,7 @@ mod tests {
     #[tokio::test]
     async fn test_register_instance_via_api() {
         let dir = Arc::new(ModuleManager::new());
-        let api = LocalDirectoryApi::new(dir.clone());
+        let api = LocalDirectoryClient::new(dir.clone());
 
         let instance_id = Uuid::new_v4();
         // Register an instance through the API
@@ -141,7 +138,7 @@ mod tests {
     #[tokio::test]
     async fn test_deregister_instance_via_api() {
         let dir = Arc::new(ModuleManager::new());
-        let api = LocalDirectoryApi::new(dir.clone());
+        let api = LocalDirectoryClient::new(dir.clone());
 
         let instance_id = Uuid::new_v4();
         // Register an instance first
@@ -165,7 +162,7 @@ mod tests {
         use crate::runtime::InstanceState;
 
         let dir = Arc::new(ModuleManager::new());
-        let api = LocalDirectoryApi::new(dir.clone());
+        let api = LocalDirectoryClient::new(dir.clone());
 
         let instance_id = Uuid::new_v4();
         // Register an instance first

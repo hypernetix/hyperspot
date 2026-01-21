@@ -1,8 +1,8 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use modkit_auth::{
-    build_auth_dispatcher, AuthConfig, AuthModeConfig, Claims, ClaimsError, JwksConfig,
-    PluginConfig,
+    AuthConfig, AuthModeConfig, Claims, ClaimsError, JwksConfig, PluginConfig,
+    build_auth_dispatcher,
 };
 use serde_json::json;
 use std::collections::HashMap;

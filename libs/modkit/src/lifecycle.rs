@@ -1,11 +1,11 @@
 use async_trait::async_trait;
 use parking_lot::Mutex;
 use std::sync::{
-    atomic::{AtomicBool, AtomicU8, Ordering},
     Arc,
+    atomic::{AtomicBool, AtomicU8, Ordering},
 };
 use std::time::Duration;
-use tokio::sync::{oneshot, Notify};
+use tokio::sync::{Notify, oneshot};
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 
@@ -382,26 +382,29 @@ impl Lifecycle {
                 }
                 Err(e) if e.is_panic() => {
                     // Extract panic information if possible
-                    if let Ok(panic_payload) = e.try_into_panic() {
-                        let panic_msg = panic_payload
-                            .downcast_ref::<&str>()
-                            .copied()
-                            .map(str::to_owned)
-                            .or_else(|| panic_payload.downcast_ref::<String>().cloned())
-                            .unwrap_or_else(|| "unknown panic".to_owned());
+                    match e.try_into_panic() {
+                        Ok(panic_payload) => {
+                            let panic_msg = panic_payload
+                                .downcast_ref::<&str>()
+                                .copied()
+                                .map(str::to_owned)
+                                .or_else(|| panic_payload.downcast_ref::<String>().cloned())
+                                .unwrap_or_else(|| "unknown panic".to_owned());
 
-                        tracing::error!(
-                            task_id = %task_id,
-                            module = %module_name,
-                            panic_message = %panic_msg,
-                            "lifecycle task panicked - this indicates a serious bug"
-                        );
-                    } else {
-                        tracing::error!(
-                            task_id = %task_id,
-                            module = %module_name,
-                            "lifecycle task panicked (could not extract panic message)"
-                        );
+                            tracing::error!(
+                                task_id = %task_id,
+                                module = %module_name,
+                                panic_message = %panic_msg,
+                                "lifecycle task panicked - this indicates a serious bug"
+                            );
+                        }
+                        _ => {
+                            tracing::error!(
+                                task_id = %task_id,
+                                module = %module_name,
+                                "lifecycle task panicked (could not extract panic message)"
+                            );
+                        }
                     }
                 }
                 Err(e) => {
@@ -573,7 +576,7 @@ impl<T: Runnable + Default> Default for WithLifecycle<T> {
 }
 
 #[async_trait]
-impl<T: Runnable> crate::contracts::StatefulModule for WithLifecycle<T> {
+impl<T: Runnable> crate::contracts::RunnableCapability for WithLifecycle<T> {
     #[tracing::instrument(skip(self, external_cancel), level = "debug")]
     async fn start(&self, external_cancel: CancellationToken) -> TaskResult<()> {
         let inner = self.inner.clone();
@@ -637,7 +640,7 @@ impl<T: Runnable> Drop for WithLifecycle<T> {
 mod tests {
     use super::*;
     use std::sync::atomic::{AtomicU32, Ordering as AOrd};
-    use tokio::time::{sleep, Duration};
+    use tokio::time::{Duration, sleep};
 
     struct TestRunnable {
         counter: AtomicU32,
@@ -827,7 +830,7 @@ mod tests {
 
     #[tokio::test]
     async fn stateful_wrapper_start_stop_roundtrip() {
-        use crate::contracts::StatefulModule;
+        use crate::contracts::RunnableCapability;
 
         let wrapper = WithLifecycle::new(TestRunnable::new());
         assert_eq!(wrapper.status(), Status::Stopped);
@@ -841,7 +844,7 @@ mod tests {
 
     #[tokio::test]
     async fn with_lifecycle_double_start_fails() {
-        use crate::contracts::StatefulModule;
+        use crate::contracts::RunnableCapability;
 
         let wrapper = WithLifecycle::new(TestRunnable::new());
         let cancel = CancellationToken::new();
@@ -853,7 +856,7 @@ mod tests {
 
     #[tokio::test]
     async fn with_lifecycle_concurrent_stop_calls() {
-        use crate::contracts::StatefulModule;
+        use crate::contracts::RunnableCapability;
         let wrapper = Arc::new(WithLifecycle::new(TestRunnable::new()));
         wrapper.start(CancellationToken::new()).await.unwrap();
         let a = wrapper.clone();

@@ -139,7 +139,7 @@ pub fn expand_derive_odata_filterable(input: DeriveInput) -> TokenStream {
             let kind_str = &f.kind;
             let kind_ident = Ident::new(kind_str, f.span);
             quote! {
-                #filter_enum_name::#variant => ::modkit_db::odata::FieldKind::#kind_ident
+                #filter_enum_name::#variant => ::modkit_odata::filter::FieldKind::#kind_ident
             }
         });
 
@@ -151,7 +151,7 @@ pub fn expand_derive_odata_filterable(input: DeriveInput) -> TokenStream {
             #(#enum_variants),*
         }
 
-        impl ::modkit_db::odata::filter::FilterField for #filter_enum_name {
+        impl ::modkit_odata::filter::FilterField for #filter_enum_name {
             const FIELDS: &'static [Self] = &[
                 #(#fields_array),*
             ];
@@ -162,7 +162,7 @@ pub fn expand_derive_odata_filterable(input: DeriveInput) -> TokenStream {
                 }
             }
 
-            fn kind(&self) -> ::modkit_db::odata::FieldKind {
+            fn kind(&self) -> ::modkit_odata::filter::FieldKind {
                 match self {
                     #(#kind_match_arms),*
                 }

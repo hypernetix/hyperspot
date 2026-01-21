@@ -10,5 +10,5 @@ pub mod paths;
 pub mod signals;
 
 pub use logging::*;
-pub use paths::{expand_tilde, normalize_executable_path, HomeDirError};
+pub use paths::{HomeDirError, expand_tilde, normalize_executable_path};
 pub use signals::*;

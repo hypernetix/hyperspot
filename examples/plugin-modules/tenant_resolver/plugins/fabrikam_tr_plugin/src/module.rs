@@ -3,14 +3,13 @@
 use std::sync::{Arc, OnceLock};
 
 use async_trait::async_trait;
+use modkit::Module;
 use modkit::client_hub::ClientScope;
 use modkit::context::ModuleCtx;
 use modkit::gts::BaseModkitPluginV1;
-use modkit::Module;
-use modkit_security::SecurityCtx;
 use tenant_resolver_sdk::{TenantResolverPluginClient, TenantResolverPluginSpecV1};
 use tracing::info;
-use types_registry_sdk::TypesRegistryApi;
+use types_registry_sdk::TypesRegistryClient;
 
 use crate::config::FabrikamPluginConfig;
 use crate::domain::Service;
@@ -54,7 +53,7 @@ impl Module for FabrikamTrPlugin {
         // === INSTANCE REGISTRATION ===
         // Register the plugin INSTANCE in types-registry.
         // Note: The plugin SCHEMA is registered by the gateway module.
-        let registry = ctx.client_hub().get::<dyn TypesRegistryApi>()?;
+        let registry = ctx.client_hub().get::<dyn TypesRegistryClient>()?;
         let vendor_clone = cfg.vendor.clone();
         let instance = BaseModkitPluginV1::<TenantResolverPluginSpecV1> {
             id: instance_id.clone(),
@@ -64,10 +63,7 @@ impl Module for FabrikamTrPlugin {
         };
         let instance_json = serde_json::to_value(&instance)?;
 
-        #[allow(deprecated)]
-        let _ = registry
-            .register(&SecurityCtx::root_ctx(), vec![instance_json])
-            .await?;
+        let _ = registry.register(vec![instance_json]).await?;
 
         // Create service with tenant tree from config
         let domain_service = Arc::new(

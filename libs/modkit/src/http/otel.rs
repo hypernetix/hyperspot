@@ -39,9 +39,8 @@ mod imp {
     use super::{get_traceparent, parse_trace_id};
     use http::{HeaderMap, HeaderName, HeaderValue};
     use opentelemetry::{
-        global,
+        Context, global,
         propagation::{Extractor, Injector},
-        Context,
     };
     use tracing::Span;
     use tracing_opentelemetry::OpenTelemetrySpanExt;
@@ -64,10 +63,10 @@ mod imp {
 
     impl Injector for HeadersInjector<'_> {
         fn set(&mut self, key: &str, value: String) {
-            if let Ok(name) = HeaderName::from_bytes(key.as_bytes()) {
-                if let Ok(val) = HeaderValue::from_str(&value) {
-                    self.0.insert(name, val);
-                }
+            if let Ok(name) = HeaderName::from_bytes(key.as_bytes())
+                && let Ok(val) = HeaderValue::from_str(&value)
+            {
+                self.0.insert(name, val);
             }
         }
     }
@@ -93,11 +92,11 @@ mod imp {
         let _ = span.set_parent(parent_cx);
 
         // Also record trace IDs for log correlation
-        if let Some(traceparent) = get_traceparent(headers) {
-            if let Some(trace_id) = parse_trace_id(traceparent) {
-                span.record("trace_id", &trace_id);
-                span.record("parent.trace_id", &trace_id);
-            }
+        if let Some(traceparent) = get_traceparent(headers)
+            && let Some(trace_id) = parse_trace_id(traceparent)
+        {
+            span.record("trace_id", &trace_id);
+            span.record("parent.trace_id", &trace_id);
         }
     }
 }
@@ -117,11 +116,11 @@ mod imp {
     /// Records trace IDs if present in headers for log correlation only.
     pub fn set_parent_from_headers(span: &Span, headers: &HeaderMap) {
         // Without OTEL, just record trace IDs for log correlation if present
-        if let Some(traceparent) = get_traceparent(headers) {
-            if let Some(trace_id) = parse_trace_id(traceparent) {
-                span.record("trace_id", &trace_id);
-                span.record("parent.trace_id", &trace_id);
-            }
+        if let Some(traceparent) = get_traceparent(headers)
+            && let Some(trace_id) = parse_trace_id(traceparent)
+        {
+            span.record("trace_id", &trace_id);
+            span.record("parent.trace_id", &trace_id);
         }
     }
 }

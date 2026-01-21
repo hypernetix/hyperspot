@@ -27,7 +27,7 @@ modkit-errors = { path = "../modkit-errors", features = ["utoipa", "axum"] }
 modkit-db = { path = "../modkit-db" }
 modkit-odata = { path = "../modkit-odata", features = ["with-odata-params"] }
 modkit-sdk = { path = "../modkit-sdk" }
-module_orchestrator-contracts = { path = "../../modules/system/module_orchestrator/module_orchestrator-contracts" } # TODO: probably we need remove this dependency at the future
+module_orchestrator-sdk = { path = "../../modules/system/module_orchestrator/module_orchestrator-sdk" } # TODO: probably we need remove this dependency at the future
 module_orchestrator-grpc = { path = "../../modules/system/module_orchestrator/module_orchestrator-grpc", optional = true }
 
 # Core deps
@@ -68,7 +68,6 @@ parking_lot = { workspace = true }
 dashmap = { workspace = true }
 arc-swap = { workspace = true }
 thiserror = { workspace = true }
-odata-params = { workspace = true }
 uuid = { workspace = true, features = ["v7"] }
 urlencoding = { workspace = true }
 

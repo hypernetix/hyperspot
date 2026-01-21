@@ -5,11 +5,11 @@ use async_trait::async_trait;
 use std::sync::{Arc, OnceLock};
 use tokio::sync::RwLock;
 
+use modkit::DirectoryClient;
 use modkit::context::ModuleCtx;
-use modkit::contracts::{GrpcServiceModule, RegisterGrpcServiceFn, SystemModule};
-use modkit::directory::LocalDirectoryApi;
+use modkit::contracts::{GrpcServiceCapability, RegisterGrpcServiceFn, SystemCapability};
+use modkit::directory::LocalDirectoryClient;
 use modkit::runtime::ModuleManager;
-use modkit::DirectoryApi;
 
 use module_orchestrator_grpc::DIRECTORY_SERVICE_NAME;
 
@@ -22,17 +22,17 @@ pub struct ModuleOrchestratorConfig;
 /// Module Orchestrator - system module for service discovery
 ///
 /// This module:
-/// - Provides `DirectoryApi` to the `ClientHub` for in-process modules
+/// - Provides `DirectoryClient` to the `ClientHub` for in-process modules
 /// - Exposes `DirectoryService` gRPC service via `grpc_hub`
 /// - Tracks module instances and provides service resolution
 #[modkit::module(
     name = "module_orchestrator",
     capabilities = [grpc, system],
-    client = module_orchestrator_contracts::DirectoryApi
+    client = module_orchestrator_sdk::DirectoryClient
 )]
 pub struct ModuleOrchestrator {
     config: RwLock<ModuleOrchestratorConfig>,
-    directory_api: OnceLock<Arc<dyn DirectoryApi>>,
+    directory_api: OnceLock<Arc<dyn DirectoryClient>>,
     module_manager: OnceLock<Arc<ModuleManager>>,
 }
 
@@ -47,7 +47,7 @@ impl Default for ModuleOrchestrator {
 }
 
 #[async_trait]
-impl SystemModule for ModuleOrchestrator {
+impl SystemCapability for ModuleOrchestrator {
     fn pre_init(&self, sys: &modkit::runtime::SystemContext) -> anyhow::Result<()> {
         self.module_manager
             .set(Arc::clone(&sys.module_manager))
@@ -63,21 +63,21 @@ impl modkit::Module for ModuleOrchestrator {
         let cfg = ctx.config::<ModuleOrchestratorConfig>().unwrap_or_default();
         *self.config.write().await = cfg;
 
-        // Use the injected ModuleManager to create the LocalDirectoryApi
+        // Use the injected ModuleManager to create the DirectoryClient
         let manager =
             self.module_manager.get().cloned().ok_or_else(|| {
                 anyhow::anyhow!("ModuleManager not wired into ModuleOrchestrator")
             })?;
 
-        let api_impl: Arc<dyn DirectoryApi> = Arc::new(LocalDirectoryApi::new(manager));
+        let api_impl: Arc<dyn DirectoryClient> = Arc::new(LocalDirectoryClient::new(manager));
 
         // Register in ClientHub directly
         ctx.client_hub()
-            .register::<dyn DirectoryApi>(api_impl.clone());
+            .register::<dyn DirectoryClient>(api_impl.clone());
 
         self.directory_api
             .set(api_impl)
-            .map_err(|_| anyhow::anyhow!("DirectoryApi already set (init called twice?)"))?;
+            .map_err(|_| anyhow::anyhow!("DirectoryClient already set (init called twice?)"))?;
 
         tracing::info!("ModuleOrchestrator initialized");
 
@@ -87,13 +87,13 @@ impl modkit::Module for ModuleOrchestrator {
 
 /// Export gRPC services to `grpc_hub`
 #[async_trait]
-impl GrpcServiceModule for ModuleOrchestrator {
+impl GrpcServiceCapability for ModuleOrchestrator {
     async fn get_grpc_services(&self, _ctx: &ModuleCtx) -> Result<Vec<RegisterGrpcServiceFn>> {
         let api = self
             .directory_api
             .get()
             .cloned()
-            .ok_or_else(|| anyhow::anyhow!("DirectoryApi not initialized"))?;
+            .ok_or_else(|| anyhow::anyhow!("DirectoryClient not initialized"))?;
 
         // Build DirectoryService
         let directory_svc = server::make_directory_service(api);

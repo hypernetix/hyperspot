@@ -2,7 +2,7 @@
 #[cfg_attr(coverage_nightly, coverage(off))]
 #[allow(clippy::module_inception)]
 mod tests {
-    use crate::{base64_url, CursorV1, Error, ODataOrderBy, ODataQuery, OrderKey, SortDir};
+    use crate::{CursorV1, Error, ODataOrderBy, ODataQuery, OrderKey, SortDir, base64_url};
 
     #[test]
     fn test_cursor_v1_encode_decode_round_trip() {

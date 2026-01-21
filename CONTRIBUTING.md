@@ -16,7 +16,7 @@ We welcome contributions in:
 
 ### 1.1 Prerequisites
 
-- **Rust stable** with Cargo (Edition 2021)
+- **Rust stable** with Cargo (Edition 2024)
 - **Git** for version control
 - **Your favorite editor** (VS Code with rust-analyzer recommended)
 

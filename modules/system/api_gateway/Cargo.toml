@@ -39,6 +39,7 @@ matchit = { workspace = true }
 governor = { workspace = true }
 
 chrono = { workspace = true }
+uuid = { workspace = true }
 
 utoipa = { workspace = true }
 http = { workspace = true }
@@ -47,6 +48,8 @@ rust-embed = { workspace = true }
 [dev-dependencies]
 futures-core = { workspace = true }
 uuid = { workspace = true }
+modkit-odata = { path = "../../../libs/modkit-odata" }
+hs-tenant-resolver-sdk = { path = "../tenant_resolver/tenant_resolver-sdk" }
 
 [features]
 grpc = []

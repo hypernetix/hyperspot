@@ -5,11 +5,11 @@
 use anyhow::Context;
 use async_trait::async_trait;
 use modkit::{
+    DirectoryClient,
     context::ModuleCtx,
-    contracts::{Module, SystemModule},
+    contracts::{Module, SystemCapability},
     lifecycle::ReadySignal,
     runtime::{GrpcInstallerData, GrpcInstallerStore, ModuleInstallers},
-    DirectoryApi,
 };
 
 use parking_lot::RwLock;
@@ -74,7 +74,7 @@ pub(crate) enum ListenConfig {
 pub struct GrpcHub {
     pub(crate) listen_cfg: RwLock<ListenConfig>,
     pub(crate) installer_store: OnceLock<Arc<GrpcInstallerStore>>,
-    pub(crate) directory: OnceLock<Option<Arc<dyn DirectoryApi>>>,
+    pub(crate) directory: OnceLock<Option<Arc<dyn DirectoryClient>>>,
     pub(crate) instance_id: OnceLock<String>,
     pub(crate) bound_endpoint: RwLock<Option<String>>,
 }
@@ -444,7 +444,7 @@ impl GrpcHub {
     ) -> anyhow::Result<()> {
         let directory = self.directory.get().cloned().unwrap_or(None);
         let Some(directory) = directory else {
-            tracing::info!("DirectoryApi not available; skipping Directory registration");
+            tracing::info!("DirectoryClient not available; skipping Directory registration");
             return Ok(());
         };
 
@@ -462,7 +462,7 @@ impl GrpcHub {
                     .map(|i| i.service_name.to_owned())
                     .collect();
 
-                let info = module_orchestrator_contracts::RegisterInstanceInfo {
+                let info = module_orchestrator_sdk::RegisterInstanceInfo {
                     module: module_data.module_name.clone(),
                     instance_id: instance_id.clone(),
                     grpc_services: service_names
@@ -470,7 +470,7 @@ impl GrpcHub {
                         .map(|n| {
                             (
                                 n.clone(),
-                                module_orchestrator_contracts::ServiceEndpoint::new(endpoint),
+                                module_orchestrator_sdk::ServiceEndpoint::new(endpoint),
                             )
                         })
                         .collect(),
@@ -507,7 +507,7 @@ impl GrpcHub {
 }
 
 #[async_trait]
-impl SystemModule for GrpcHub {
+impl SystemCapability for GrpcHub {
     fn pre_init(&self, sys: &modkit::runtime::SystemContext) -> anyhow::Result<()> {
         self.installer_store
             .set(Arc::clone(&sys.grpc_installers))
@@ -522,7 +522,7 @@ impl SystemModule for GrpcHub {
     }
 }
 
-impl modkit::contracts::GrpcHubModule for GrpcHub {
+impl modkit::contracts::GrpcHubCapability for GrpcHub {
     fn bound_endpoint(&self) -> Option<String> {
         self.get_bound_endpoint()
     }
@@ -538,11 +538,11 @@ impl Module for GrpcHub {
         // Parse listen_addr into appropriate transport type
         self.apply_listen_config(&cfg.listen_addr)?;
 
-        // Fetch DirectoryApi from ClientHub if available and persist the decision exactly once.
-        let dir = ctx.client_hub().get::<dyn DirectoryApi>().ok();
+        // Fetch DirectoryClient from ClientHub if available and persist the decision exactly once.
+        let dir = ctx.client_hub().get::<dyn DirectoryClient>().ok();
         self.directory
             .set(dir)
-            .map_err(|_| anyhow::anyhow!("DirectoryApi already set (init called twice?)"))?;
+            .map_err(|_| anyhow::anyhow!("DirectoryClient already set (init called twice?)"))?;
 
         Ok(())
     }
@@ -563,7 +563,7 @@ mod tests {
         sync::Arc,
         task::{Context as TaskContext, Poll},
     };
-    use tokio::time::{sleep, Duration};
+    use tokio::time::{Duration, sleep};
     use tokio_util::sync::CancellationToken;
     use tonic::{body::Body, server::NamedService};
     use tower::Service;

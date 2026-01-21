@@ -22,9 +22,9 @@ pub mod oop;
 
 // Re-export commonly used config types at crate root for convenience
 pub use config::{
-    AppConfig, CliArgs, LoggingConfig, ModuleConfig, ModuleRuntime, RenderedModuleConfig,
-    RuntimeKind, Section, ServerConfig, MODKIT_MODULE_CONFIG_ENV,
+    AppConfig, CliArgs, LoggingConfig, MODKIT_MODULE_CONFIG_ENV, ModuleConfig, ModuleRuntime,
+    RenderedModuleConfig, RuntimeKind, Section, ServerConfig,
 };
 
 // Re-export host types for convenience
-pub use oop::{run_oop_with_options, OopRunOptions};
+pub use oop::{OopRunOptions, run_oop_with_options};

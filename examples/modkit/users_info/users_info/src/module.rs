@@ -2,33 +2,46 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use modkit::api::OpenApiRegistry;
-use modkit::{DbModule, Module, ModuleCtx, RestfulModule, SseBroadcaster, TracedClient};
+use modkit::{
+    DatabaseCapability, Module, ModuleCtx, RestApiCapability, SseBroadcaster, TracedClient,
+};
 use sea_orm_migration::MigratorTrait;
 use tracing::{debug, info};
 use url::Url;
 
-// Import the API trait from SDK
-use user_info_sdk::UsersInfoApi;
+// Import the client trait from SDK
+#[allow(unused_imports)]
+use user_info_sdk::UsersInfoClient;
+
+// Import tenant resolver for multi-tenant access
+use hs_tenant_resolver_sdk::TenantResolverGatewayClient;
 
 use crate::api::rest::dto::UserEvent;
 use crate::api::rest::routes;
 use crate::api::rest::sse_adapter::SseUserEventPublisher;
 use crate::config::UsersInfoConfig;
 use crate::domain::events::UserDomainEvent;
+use crate::domain::local_client::client::UsersInfoLocalClient;
 use crate::domain::ports::{AuditPort, EventPublisher};
-use crate::domain::service::{Service, ServiceConfig};
+use crate::domain::service::{AppServices, ServiceConfig};
 use crate::infra::audit::HttpAuditClient;
-use crate::infra::storage::sea_orm_repo::SeaOrmUsersRepository;
-use crate::local_client::UsersInfoLocalClient;
+use crate::infra::storage::{OrmAddressesRepository, OrmCitiesRepository, OrmUsersRepository};
+
+/// Type alias for the concrete `AppServices` type used with ORM repositories.
+/// This lives in the composition root (module.rs) to avoid infra dependencies in domain.
+/// May be converted to `AppState` if we need additional fields like metrics, config and etc
+pub(crate) type ConcreteAppServices =
+    AppServices<OrmUsersRepository, OrmCitiesRepository, OrmAddressesRepository>;
 
 /// Main module struct with DDD-light layout and proper `ClientHub` integration
 #[modkit::module(
     name = "users_info",
+    deps = ["tenant_resolver"],
     capabilities = [db, rest]
 )]
 pub struct UsersInfo {
     // Keep the domain service behind ArcSwap for cheap read-mostly access.
-    service: arc_swap::ArcSwapOption<Service>,
+    service: arc_swap::ArcSwapOption<ConcreteAppServices>,
     // SSE broadcaster for user events
     sse: SseBroadcaster<UserEvent>,
 }
@@ -67,10 +80,6 @@ impl Module for UsersInfo {
         let db = ctx.db_required()?;
         let sec_conn = db.sea_secure(); // SecureConn - enforces access control on all queries
 
-        // Wire repository (testing) to domain service (port)
-        // Repository now uses SecureConn to automatically apply security filtering
-        let repo = SeaOrmUsersRepository::new(sec_conn);
-
         // Create event publisher adapter that bridges domain events to SSE
         let publisher: Arc<dyn EventPublisher<UserDomainEvent>> =
             Arc::new(SseUserEventPublisher::new(self.sse.clone()));
@@ -88,34 +97,52 @@ impl Module for UsersInfo {
         let audit_adapter: Arc<dyn AuditPort> =
             Arc::new(HttpAuditClient::new(traced_client, audit_base, notify_base));
 
+        // Fetch tenant resolver from ClientHub
+        let resolver = ctx
+            .client_hub()
+            .get::<dyn TenantResolverGatewayClient>()
+            .map_err(|e| anyhow::anyhow!("failed to get tenant resolver: {e}"))?;
+
         let service_config = ServiceConfig {
             max_display_name_length: 100,
             default_page_size: cfg.default_page_size,
             max_page_size: cfg.max_page_size,
         };
-        let domain_service = Arc::new(Service::new(
-            Arc::new(repo),
+
+        // Create repository implementations
+        let limit_cfg = service_config.limit_cfg();
+        let users_repo = OrmUsersRepository::new(limit_cfg);
+        let cities_repo = OrmCitiesRepository::new(limit_cfg);
+        let addresses_repo = OrmAddressesRepository::new(limit_cfg);
+
+        // Create services with repository dependencies
+        let services = Arc::new(AppServices::new(
+            users_repo,
+            cities_repo,
+            addresses_repo,
+            sec_conn,
             publisher,
             audit_adapter,
+            resolver,
             service_config,
         ));
 
         // Store service for REST and internal usage
-        self.service.store(Some(domain_service.clone()));
+        self.service.store(Some(services.clone()));
 
-        // Create local client adapter that implements UsersInfoApi
-        let local = UsersInfoLocalClient::new(domain_service);
-        let api: Arc<dyn UsersInfoApi> = Arc::new(local);
+        // Create local client adapter that implements object-safe UsersInfoClient
+        let local = UsersInfoLocalClient::new(services);
 
-        // Register in ClientHub directly - consumers use hub.get::<dyn UsersInfoApi>()?
-        ctx.client_hub().register::<dyn UsersInfoApi>(api);
-        info!("UsersInfo local client registered into ClientHub");
+        // Register under the SDK trait for transport-agnostic consumption
+        ctx.client_hub()
+            .register::<dyn UsersInfoClient>(Arc::new(local));
+        info!("UsersInfo client registered into ClientHub as dyn UsersInfoClient");
         Ok(())
     }
 }
 
 #[async_trait]
-impl DbModule for UsersInfo {
+impl DatabaseCapability for UsersInfo {
     async fn migrate(&self, db: &modkit_db::DbHandle) -> anyhow::Result<()> {
         info!("Running users_info database migrations");
         let conn = db.sea();
@@ -125,7 +152,7 @@ impl DbModule for UsersInfo {
     }
 }
 
-impl RestfulModule for UsersInfo {
+impl RestApiCapability for UsersInfo {
     fn register_rest(
         &self,
         _ctx: &ModuleCtx,

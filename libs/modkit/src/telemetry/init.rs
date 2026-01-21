@@ -6,7 +6,7 @@
 #[cfg(feature = "otel")]
 use anyhow::Context;
 #[cfg(feature = "otel")]
-use opentelemetry::{global, trace::TracerProvider as _, KeyValue};
+use opentelemetry::{KeyValue, global, trace::TracerProvider as _};
 
 #[cfg(feature = "otel")]
 use opentelemetry_otlp::{Protocol, WithExportConfig};
@@ -16,9 +16,9 @@ use opentelemetry_otlp::{WithHttpConfig, WithTonicConfig};
 
 #[cfg(feature = "otel")]
 use opentelemetry_sdk::{
+    Resource,
     propagation::TraceContextPropagator,
     trace::{Sampler, SdkTracerProvider},
-    Resource,
 };
 
 #[cfg(feature = "otel")]
@@ -192,11 +192,11 @@ fn build_headers_from_cfg_and_env(
     let mut out: HashMap<String, String> = HashMap::new();
 
     // From config file
-    if let Some(exp) = &cfg.exporter {
-        if let Some(hdrs) = &exp.headers {
-            for (k, v) in hdrs {
-                out.insert(k.clone(), v.clone());
-            }
+    if let Some(exp) = &cfg.exporter
+        && let Some(hdrs) = &exp.headers
+    {
+        for (k, v) in hdrs {
+            out.insert(k.clone(), v.clone());
         }
     }
 
@@ -209,11 +209,7 @@ fn build_headers_from_cfg_and_env(
         }
     }
 
-    if out.is_empty() {
-        None
-    } else {
-        Some(out)
-    }
+    if out.is_empty() { None } else { Some(out) }
 }
 
 #[cfg(feature = "otel")]
@@ -243,11 +239,11 @@ fn build_metadata_from_cfg_and_env(cfg: &TracingConfig) -> Option<MetadataMap> {
     let mut md = MetadataMap::new();
 
     // From config file
-    if let Some(exp) = &cfg.exporter {
-        if let Some(hdrs) = &exp.headers {
-            let iter = hdrs.iter().map(|(k, v)| (k.as_str(), v.as_str()));
-            extend_metadata_from_source(&mut md, iter, "config");
-        }
+    if let Some(exp) = &cfg.exporter
+        && let Some(hdrs) = &exp.headers
+    {
+        let iter = hdrs.iter().map(|(k, v)| (k.as_str(), v.as_str()));
+        extend_metadata_from_source(&mut md, iter, "config");
     }
 
     // From ENV OTEL_EXPORTER_OTLP_HEADERS (format: k=v,k2=v2)
@@ -263,11 +259,7 @@ fn build_metadata_from_cfg_and_env(cfg: &TracingConfig) -> Option<MetadataMap> {
         extend_metadata_from_source(&mut md, iter, "env");
     }
 
-    if md.is_empty() {
-        None
-    } else {
-        Some(md)
-    }
+    if md.is_empty() { None } else { Some(md) }
 }
 
 // ===== init_tracing (feature disabled) ========================================

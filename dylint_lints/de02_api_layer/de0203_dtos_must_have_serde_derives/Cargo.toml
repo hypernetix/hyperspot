@@ -3,7 +3,7 @@ name = "de0203_dtos_must_have_serde_derives"
 version = "0.1.0"
 authors = ["authors go here"]
 description = "description goes here"
-edition = "2024"
+edition.workspace = true
 publish = false
 
 [lib]

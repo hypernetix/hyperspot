@@ -3,7 +3,7 @@ name = "de0103_no_http_types_in_contract"
 version = "0.1.0"
 authors = ["authors go here"]
 description = "Contract modules should not reference HTTP types (DE0103)"
-edition = "2024"
+edition.workspace = true
 publish = false
 
 [lib]

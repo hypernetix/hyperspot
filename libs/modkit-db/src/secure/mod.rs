@@ -109,11 +109,12 @@ pub mod docs;
 #[allow(clippy::module_inception)]
 mod entity_traits;
 mod error;
-pub mod migrate;
 pub mod provider;
 mod secure_conn;
 mod select;
 mod tests;
+mod tx_config;
+mod tx_error;
 
 // Public API re-exports
 
@@ -122,18 +123,27 @@ pub use entity_traits::ScopableEntity;
 pub use error::ScopeError;
 
 // Security types from modkit-security
-pub use modkit_security::{AccessScope, SecurityCtx, Subject};
+pub use modkit_security::AccessScope;
 
 // High-level secure database wrapper
 pub use secure_conn::SecureConn;
+
+// Transaction type re-export for use in transaction closures
+pub use sea_orm::DatabaseTransaction as Tx;
+
+// Transaction error types (no SeaORM types leaked)
+pub use tx_error::{InfraError, TxError};
+
+// Transaction configuration (no SeaORM types leaked)
+pub use tx_config::{TxAccessMode, TxConfig, TxIsolationLevel};
 
 // Select operations
 pub use select::{Scoped, SecureEntityExt, SecureSelect, Unscoped};
 
 // Update operations
 pub use db_ops::{
-    secure_insert, validate_tenant_in_scope, SecureDeleteExt, SecureDeleteMany, SecureUpdateExt,
-    SecureUpdateMany,
+    SecureDeleteExt, SecureDeleteMany, SecureUpdateExt, SecureUpdateMany, secure_insert,
+    validate_tenant_in_scope,
 };
 
 // Provider pattern for advanced tenant filtering

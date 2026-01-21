@@ -13,3 +13,5 @@ pub mod api;
 pub mod config;
 #[doc(hidden)]
 pub mod domain;
+#[doc(hidden)]
+pub mod infra;

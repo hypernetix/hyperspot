@@ -3,7 +3,7 @@
 //! This module provides utilities for projecting DTOs based on selected fields.
 //! It allows handlers to filter response objects to only include requested fields.
 
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 use std::collections::HashSet;
 
 /// Project a JSON value to only include selected fields.

@@ -9,32 +9,17 @@ The `types-registry` module provides:
 - **Two-phase registration**: Configuration phase (no validation) → Production phase (full validation)
 - **GTS entity storage**: In-memory storage using `gts-rust` for Phase 1.1
 - **REST API**: Endpoints for registering, listing, and retrieving GTS entities
-- **ClientHub integration**: Other modules access via `hub.get::<dyn TypesRegistryApi>()?`
-
-## Architecture
-
-```
-types-registry/
-├── src/
-│   ├── api/rest/          # REST API layer (DTOs, handlers, routes)
-│   ├── domain/            # Domain layer (error, repo trait, service)
-│   ├── infra/storage/     # Infrastructure (in-memory repository)
-│   ├── config.rs          # Module configuration
-│   ├── local_client.rs    # TypesRegistryApi implementation
-│   ├── module.rs          # Module declaration
-│   └── lib.rs             # Crate root
-└── Cargo.toml
-```
+- **ClientHub integration**: Other modules access via `hub.get::<dyn TypesRegistryClient>()?`
 
 ## Usage
 
 ### Via ClientHub (Rust)
 
 ```rust
-use types_registry_sdk::TypesRegistryApi;
+use types_registry_sdk::TypesRegistryClient;
 
 // Get the client from ClientHub
-let client = hub.get::<dyn TypesRegistryApi>()?;
+let client = hub.get::<dyn TypesRegistryClient>()?;
 
 // Register entities
 let results = client.register(&ctx, entities).await?;
@@ -109,12 +94,6 @@ registry.register(&ctx, entities).await?;
 // When ready for production
 module.switch_to_production()?;
 ```
-
-## Dependencies
-
-- `types-registry-sdk`: Public API trait, models, and errors
-- `gts-rust`: Official GTS library for ID validation, parsing, and schema operations
-- `modkit`: HyperSpot module framework
 
 ## Testing
 

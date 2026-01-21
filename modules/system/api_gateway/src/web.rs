@@ -1,10 +1,10 @@
 use axum::{
     http::StatusCode,
     response::{Html, Json},
-    routing::{get, MethodRouter},
+    routing::{MethodRouter, get},
 };
 use chrono::{SecondsFormat, Utc};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 /// Returns a 501 Not Implemented handler for operations without implementations
 #[allow(dead_code)]

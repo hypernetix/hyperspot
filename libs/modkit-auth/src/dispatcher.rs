@@ -7,7 +7,7 @@ use crate::{
     errors::AuthError,
     plugin_traits::{ClaimsPlugin, IntrospectionProvider, KeyProvider},
     traits::TokenValidator,
-    validation::{validate_claims, ValidationConfig},
+    validation::{ValidationConfig, validate_claims},
 };
 use async_trait::async_trait;
 use std::sync::Arc;
@@ -237,10 +237,9 @@ impl AuthDispatcher {
         if let Some(active) = introspection_result
             .get("active")
             .and_then(serde_json::Value::as_bool)
+            && !active
         {
-            if !active {
-                return Err(ClaimsError::IntrospectionDenied);
-            }
+            return Err(ClaimsError::IntrospectionDenied);
         }
         Ok(())
     }

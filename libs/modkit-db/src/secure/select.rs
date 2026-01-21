@@ -1,6 +1,6 @@
 use sea_orm::{
-    sea_query::Expr, ColumnTrait, ConnectionTrait, EntityTrait, QueryFilter, QueryOrder,
-    QuerySelect,
+    ColumnTrait, ConnectionTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
+    QuerySelect, sea_query::Expr,
 };
 use std::marker::PhantomData;
 
@@ -10,10 +10,12 @@ use crate::secure::{AccessScope, ScopableEntity};
 
 /// Typestate marker: query has not yet been scoped.
 /// Cannot execute queries in this state.
+#[derive(Debug, Clone, Copy)]
 pub struct Unscoped;
 
 /// Typestate marker: query has been scoped with access control.
 /// Can now execute queries safely.
+#[derive(Debug, Clone, Copy)]
 pub struct Scoped;
 
 /// A type-safe wrapper around `SeaORM`'s `Select` that enforces scoping.
@@ -37,6 +39,7 @@ pub struct Scoped;
 ///     .await?;
 /// ```
 #[must_use]
+#[derive(Clone, Debug)]
 pub struct SecureSelect<E: EntityTrait, S> {
     pub(crate) inner: sea_orm::Select<E>,
     pub(crate) _state: PhantomData<S>,
@@ -113,7 +116,20 @@ where
         Ok(self.inner.one(conn).await?)
     }
 
-    // Note: count() is not directly available; use `into_inner()` and call `.count()` on the inner select
+    /// Execute the query and return the number of matching results.
+    ///
+    /// # Errors
+    /// Returns `ScopeError::Db` if the database query fails.
+    #[allow(clippy::disallowed_methods)]
+    pub async fn count<C>(self, conn: &C) -> Result<u64, ScopeError>
+    where
+        C: ConnectionTrait + Send + Sync,
+        E::Model: sea_orm::FromQueryResult + Send + Sync,
+    {
+        Ok(self.inner.count(conn).await?)
+    }
+
+    // Note: count() uses SeaORM's `PaginatorTrait::count` internally.
 
     // Note: For pagination, use `into_inner().paginate()` due to complex lifetime bounds
 
@@ -212,12 +228,12 @@ where
         J: ScopableEntity + EntityTrait,
         J::Column: ColumnTrait + Copy,
     {
-        if !scope.tenant_ids().is_empty() {
-            if let Some(tcol) = J::tenant_col() {
-                let condition = sea_orm::Condition::all()
-                    .add(Expr::col((J::default(), tcol)).is_in(scope.tenant_ids().to_vec()));
-                self.inner = QueryFilter::filter(self.inner, condition);
-            }
+        if !scope.tenant_ids().is_empty()
+            && let Some(tcol) = J::tenant_col()
+        {
+            let condition = sea_orm::Condition::all()
+                .add(Expr::col((J::default(), tcol)).is_in(scope.tenant_ids().to_vec()));
+            self.inner = QueryFilter::filter(self.inner, condition);
         }
         self
     }
@@ -246,21 +262,19 @@ where
         J: ScopableEntity + EntityTrait,
         J::Column: ColumnTrait + Copy,
     {
-        if !scope.tenant_ids().is_empty() {
-            if let Some(tcol) = J::tenant_col() {
-                // Build EXISTS clause with tenant filter on joined entity
-                use sea_orm::sea_query::Query;
+        if !scope.tenant_ids().is_empty()
+            && let Some(tcol) = J::tenant_col()
+        {
+            // Build EXISTS clause with tenant filter on joined entity
+            use sea_orm::sea_query::Query;
 
-                let mut sub = Query::select();
-                sub.expr(Expr::value(1))
-                    .from(J::default())
-                    .cond_where(Expr::col((J::default(), tcol)).is_in(scope.tenant_ids().to_vec()));
+            let mut sub = Query::select();
+            sub.expr(Expr::value(1))
+                .from(J::default())
+                .cond_where(Expr::col((J::default(), tcol)).is_in(scope.tenant_ids().to_vec()));
 
-                self.inner = QueryFilter::filter(
-                    self.inner,
-                    sea_orm::Condition::all().add(Expr::exists(sub)),
-                );
-            }
+            self.inner =
+                QueryFilter::filter(self.inner, sea_orm::Condition::all().add(Expr::exists(sub)));
         }
         self
     }

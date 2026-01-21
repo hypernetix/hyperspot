@@ -8,12 +8,12 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use axum::{
+    Router,
     extract::{Json, Path},
     routing::get,
-    Router,
 };
 use modkit::{
-    config::ConfigProvider, contracts::OpenApiRegistry, Module, ModuleCtx, RestfulModule,
+    Module, ModuleCtx, RestApiCapability, config::ConfigProvider, contracts::OpenApiRegistry,
 };
 use std::sync::Arc;
 use uuid::Uuid;
@@ -67,7 +67,7 @@ impl Module for TestUsersModule {
     }
 }
 
-impl RestfulModule for TestUsersModule {
+impl RestApiCapability for TestUsersModule {
     fn register_rest(
         &self,
         _ctx: &modkit::ModuleCtx,

@@ -1,7 +1,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::use_debug)]
 
 use file_parser::domain::parser::FileParserBackend;
-use file_parser::domain::parsers::docx_parser::DocxParser;
+use file_parser::infra::parsers::docx_parser::DocxParser;
 use std::path::PathBuf;
 
 /// Helper to get the path to test data files

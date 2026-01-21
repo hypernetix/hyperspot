@@ -6,8 +6,9 @@ mod tests {
     use sea_orm::entity::prelude::*;
     use std::str::FromStr;
 
-    use modkit_db::odata::{expr_to_condition, FieldKind, FieldMap};
+    use modkit_db::odata::{FieldMap, expr_to_condition};
     use modkit_odata::ast::{CompareOperator, Expr, Value};
+    use modkit_odata::filter::FieldKind;
 
     // Simple test entity for compilation tests
     #[derive(Debug, Clone, PartialEq, Eq, DeriveEntityModel)]

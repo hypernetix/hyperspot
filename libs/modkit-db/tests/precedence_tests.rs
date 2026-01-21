@@ -4,8 +4,8 @@
 
 mod common;
 
-use figment::{providers::Serialized, Figment};
-use modkit_db::{config::*, manager::DbManager, DbError};
+use figment::{Figment, providers::Serialized};
+use modkit_db::{DbError, config::*, manager::DbManager};
 use std::collections::HashMap;
 use tempfile::TempDir;
 

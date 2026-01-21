@@ -8,7 +8,7 @@
 
 Phase 1.1 focuses on establishing the foundational contracts, in-memory storage, and REST API, deferring database persistence (Phase 1.2) to later phases.
 
-The Types Registry module implements the `TypesRegistryApi` trait from `types-registry-sdk` and provides:
+The Types Registry module implements the `TypesRegistryClient` trait from `types-registry-sdk` and provides:
 - Two-phase registration (configuration → production)
 - In-memory storage using gts-rust `GtsOps`
 - REST API endpoints
@@ -18,7 +18,7 @@ The Types Registry module implements the `TypesRegistryApi` trait from `types-re
 
 ## Goals
 
-- Implement `TypesRegistryApi` trait
+- Implement `TypesRegistryClient` trait
 - Provide two-phase storage with validation
 - Expose REST API endpoints
 - Integrate all gts-rust operations
@@ -124,12 +124,12 @@ impl Module for TypesRegistryModule {
         self.storage.store(Some(storage.clone()));
         
         // Create local client and register in ClientHub
-        let api: Arc<dyn TypesRegistryApi> = Arc::new(
+        let api: Arc<dyn TypesRegistryClient> = Arc::new(
             TypesRegistryLocalClient::new(storage)
         );
         
-        // Register in ClientHub directly - consumers use hub.get::<dyn TypesRegistryApi>()?
-        ctx.client_hub().register::<dyn TypesRegistryApi>(api);
+        // Register in ClientHub directly - consumers use hub.get::<dyn TypesRegistryClient>()?
+        ctx.client_hub().register::<dyn TypesRegistryClient>(api);
         
         tracing::info!("Types registry module initialized");
         Ok(())
@@ -181,7 +181,7 @@ pub struct TypesRegistryStorage {
 - After commit: `register()` validates immediately on each call
 
 ```rust
-impl TypesRegistryApi for TypesRegistryLocalClient {
+impl TypesRegistryClient for TypesRegistryLocalClient {
     async fn register(&self, ctx: &SecurityCtx, entities: Vec<Value>) -> Result<Vec<RegisterResult>, TypesRegistryError> {
         let mut results = Vec::with_capacity(entities.len());
         

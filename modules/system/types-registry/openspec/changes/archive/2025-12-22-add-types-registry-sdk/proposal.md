@@ -7,7 +7,7 @@ HyperSpot needs a lightweight SDK crate (`types-registry-sdk`) that defines the 
 ## What Changes
 
 **New Crate: `types-registry-sdk`**
-- `TypesRegistryApi` trait with 3 core methods: `register`, `list`, `get`
+- `TypesRegistryClient` trait with 3 core methods: `register`, `list`, `get`
 - `GtsEntity<C>` generic model using `GtsIdSegment` from gts-rust
 - `GtsEntityKind` enum (`Type` / `Instance`)
 - `TypeSchema` and `InstanceObject` newtype wrappers for semantic clarity

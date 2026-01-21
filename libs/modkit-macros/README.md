@@ -90,26 +90,6 @@ impl UsersApi for UsersGrpcClient {
 }
 ```
 
-## Local (In-Process) Clients
-
-**Note:** ModKit no longer provides macro-based local client generation. For local (in-process) communication:
-
-- **Recommended:** Register your service directly in `ClientHub` as `Arc<dyn YourTrait>`
-- No wrapper or client struct is needed for local communication
-- This provides zero-overhead, direct method calls
-
-Example:
-
-```rust
-// Register service directly in ClientHub
-let service: Arc<dyn UsersApi> = Arc::new(UsersService::new());
-client_hub.register::<dyn UsersApi>(service);
-
-// Retrieve and use
-let api = client_hub.get::<dyn UsersApi>()?;
-let user = api.get_user(request).await?;
-```
-
 ## API Requirements
 
 All API traits used with these macros must follow strict signature rules:

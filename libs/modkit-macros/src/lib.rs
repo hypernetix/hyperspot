@@ -4,9 +4,9 @@ use proc_macro::TokenStream;
 use proc_macro2::Span;
 use quote::{format_ident, quote};
 use syn::{
-    parse::Parse, parse::ParseStream, parse_macro_input, punctuated::Punctuated, DeriveInput, Expr,
-    Ident, ImplItem, ItemImpl, Lit, LitBool, LitStr, Meta, MetaList, MetaNameValue, Path, Token,
-    TypePath,
+    DeriveInput, Expr, Ident, ImplItem, ItemImpl, Lit, LitBool, LitStr, Meta, MetaList,
+    MetaNameValue, Path, Token, TypePath, parse::Parse, parse::ParseStream, parse_macro_input,
+    punctuated::Punctuated,
 };
 
 mod api_dto;
@@ -73,7 +73,9 @@ impl Capability {
             other => {
                 let suggestions = Self::suggest_similar(other);
                 let error_msg = if suggestions.is_empty() {
-                    format!("unknown capability '{other}', expected one of: db, rest, rest_host, stateful, system, grpc_hub, grpc")
+                    format!(
+                        "unknown capability '{other}', expected one of: db, rest, rest_host, stateful, system, grpc_hub, grpc"
+                    )
                 } else {
                     format!(
                         "unknown capability '{other}'\n       = help: did you mean one of: {}?",
@@ -98,7 +100,9 @@ impl Capability {
             other => {
                 let suggestions = Self::suggest_similar(other);
                 let error_msg = if suggestions.is_empty() {
-                    format!("unknown capability '{other}', expected one of: db, rest, rest_host, stateful, system, grpc_hub, grpc")
+                    format!(
+                        "unknown capability '{other}', expected one of: db, rest, rest_host, stateful, system, grpc_hub, grpc"
+                    )
                 } else {
                     format!(
                         "unknown capability '{other}'\n       = help: did you mean one of: {}?",
@@ -456,39 +460,39 @@ pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
             Capability::Db => quote! {
                 const _: () = {
                     #[allow(dead_code)]
-                    fn __modkit_require_DbModule_impl()
+                    fn __modkit_require_DatabaseCapability_impl()
                     where
-                        #struct_ident #ty_generics: ::modkit::contracts::DbModule,
+                        #struct_ident #ty_generics: ::modkit::contracts::DatabaseCapability,
                     {}
                 };
             },
             Capability::Rest => quote! {
                 const _: () = {
                     #[allow(dead_code)]
-                    fn __modkit_require_RestfulModule_impl()
+                    fn __modkit_require_RestApiCapability_impl()
                     where
-                        #struct_ident #ty_generics: ::modkit::contracts::RestfulModule,
+                        #struct_ident #ty_generics: ::modkit::contracts::RestApiCapability,
                     {}
                 };
             },
             Capability::RestHost => quote! {
                 const _: () = {
                     #[allow(dead_code)]
-                    fn __modkit_require_RestHostModule_impl()
+                    fn __modkit_require_ApiGatewayCapability_impl()
                     where
-                        #struct_ident #ty_generics: ::modkit::contracts::RestHostModule,
+                        #struct_ident #ty_generics: ::modkit::contracts::ApiGatewayCapability,
                     {}
                 };
             },
             Capability::Stateful => {
                 if lifecycle_cfg_opt.is_none() {
-                    // Only require direct StatefulModule impl when lifecycle(...) is NOT used.
+                    // Only require direct RunnableCapability impl when lifecycle(...) is NOT used.
                     quote! {
                         const _: () = {
                             #[allow(dead_code)]
-                            fn __modkit_require_StatefulModule_impl()
+                            fn __modkit_require_RunnableCapability_impl()
                             where
-                                #struct_ident #ty_generics: ::modkit::contracts::StatefulModule,
+                                #struct_ident #ty_generics: ::modkit::contracts::RunnableCapability,
                             {}
                         };
                     }
@@ -503,18 +507,18 @@ pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
             Capability::GrpcHub => quote! {
                 const _: () = {
                     #[allow(dead_code)]
-                    fn __modkit_require_GrpcHubModule_impl()
+                    fn __modkit_require_GrpcHubCapability_impl()
                     where
-                        #struct_ident #ty_generics: ::modkit::contracts::GrpcHubModule,
+                        #struct_ident #ty_generics: ::modkit::contracts::GrpcHubCapability,
                     {}
                 };
             },
             Capability::Grpc => quote! {
                 const _: () = {
                     #[allow(dead_code)]
-                    fn __modkit_require_GrpcServiceModule_impl()
+                    fn __modkit_require_GrpcServiceCapability_impl()
                     where
-                        #struct_ident #ty_generics: ::modkit::contracts::GrpcServiceModule,
+                        #struct_ident #ty_generics: ::modkit::contracts::GrpcServiceCapability,
                     {}
                 };
             },
@@ -600,15 +604,15 @@ pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
         match cap {
             Capability::Db => quote! {
                 b.register_db_with_meta(#name_lit,
-                    module.clone() as ::std::sync::Arc<dyn ::modkit::contracts::DbModule>);
+                    module.clone() as ::std::sync::Arc<dyn ::modkit::contracts::DatabaseCapability>);
             },
             Capability::Rest => quote! {
                 b.register_rest_with_meta(#name_lit,
-                    module.clone() as ::std::sync::Arc<dyn ::modkit::contracts::RestfulModule>);
+                    module.clone() as ::std::sync::Arc<dyn ::modkit::contracts::RestApiCapability>);
             },
             Capability::RestHost => quote! {
                 b.register_rest_host_with_meta(#name_lit,
-                    module.clone() as ::std::sync::Arc<dyn ::modkit::contracts::RestHostModule>);
+                    module.clone() as ::std::sync::Arc<dyn ::modkit::contracts::ApiGatewayCapability>);
             },
             Capability::Stateful => {
                 if let Some(lc) = &lifecycle_cfg_opt {
@@ -629,7 +633,7 @@ pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
 
                             b.register_stateful_with_meta(
                                 #name_lit,
-                                ::std::sync::Arc::new(wl) as ::std::sync::Arc<dyn ::modkit::contracts::StatefulModule>
+                                ::std::sync::Arc::new(wl) as ::std::sync::Arc<dyn ::modkit::contracts::RunnableCapability>
                             );
                         }
                     } else {
@@ -643,29 +647,29 @@ pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
 
                             b.register_stateful_with_meta(
                                 #name_lit,
-                                ::std::sync::Arc::new(wl) as ::std::sync::Arc<dyn ::modkit::contracts::StatefulModule>
+                                ::std::sync::Arc::new(wl) as ::std::sync::Arc<dyn ::modkit::contracts::RunnableCapability>
                             );
                         }
                     }
                 } else {
-                    // Alternative path: the type itself must implement StatefulModule
+                    // Alternative path: the type itself must implement RunnableCapability
                     quote! {
                         b.register_stateful_with_meta(#name_lit,
-                            module.clone() as ::std::sync::Arc<dyn ::modkit::contracts::StatefulModule>);
+                            module.clone() as ::std::sync::Arc<dyn ::modkit::contracts::RunnableCapability>);
                     }
                 }
             },
             Capability::System => quote! {
                 b.register_system_with_meta(#name_lit,
-                    module.clone() as ::std::sync::Arc<dyn ::modkit::contracts::SystemModule>);
+                    module.clone() as ::std::sync::Arc<dyn ::modkit::contracts::SystemCapability>);
             },
             Capability::GrpcHub => quote! {
                 b.register_grpc_hub_with_meta(#name_lit,
-                    module.clone() as ::std::sync::Arc<dyn ::modkit::contracts::GrpcHubModule>);
+                    module.clone() as ::std::sync::Arc<dyn ::modkit::contracts::GrpcHubCapability>);
             },
             Capability::Grpc => quote! {
                 b.register_grpc_service_with_meta(#name_lit,
-                    module.clone() as ::std::sync::Arc<dyn ::modkit::contracts::GrpcServiceModule>);
+                    module.clone() as ::std::sync::Arc<dyn ::modkit::contracts::GrpcServiceCapability>);
             },
         }
     });
@@ -673,7 +677,7 @@ pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
     // ClientHub DX helpers (optional)
     // Note: The `client` parameter now only triggers compile-time trait checks.
     // For client registration/access, use `hub.register::<dyn Trait>(client)` and
-    // `hub.get::<dyn Trait>()` directly, or provide helpers in your *-contracts crate.
+    // `hub.get::<dyn Trait>()` directly, or provide helpers in your *-sdk crate.
     let client_code = if let Some(client_trait_path) = &client_trait_opt {
         quote! {
             // Compile-time trait checks: object-safe + Send + Sync + 'static
@@ -768,53 +772,53 @@ pub fn lifecycle(attr: TokenStream, item: TokenStream) -> TokenStream {
     let mut has_runner = false;
     let mut takes_ready_signal = false;
     for it in &impl_item.items {
-        if let ImplItem::Fn(f) = it {
-            if f.sig.ident == runner_ident {
-                has_runner = true;
-                if f.sig.asyncness.is_none() {
-                    return syn::Error::new_spanned(f.sig.fn_token, "runner must be async")
-                        .to_compile_error()
-                        .into();
-                }
-                let input_count = f.sig.inputs.len();
-                match input_count {
-                    2 => {}
-                    3 => {
-                        if let Some(syn::FnArg::Typed(pat_ty)) = f.sig.inputs.iter().nth(2) {
-                            match &*pat_ty.ty {
-                                syn::Type::Path(tp) => {
-                                    if let Some(seg) = tp.path.segments.last() {
-                                        if seg.ident == "ReadySignal" {
-                                            takes_ready_signal = true;
-                                        } else {
-                                            return syn::Error::new_spanned(
-                                                &pat_ty.ty,
-                                                "third parameter must be ReadySignal when await_ready=true",
-                                            )
-                                                .to_compile_error()
-                                                .into();
-                                        }
+        if let ImplItem::Fn(f) = it
+            && f.sig.ident == runner_ident
+        {
+            has_runner = true;
+            if f.sig.asyncness.is_none() {
+                return syn::Error::new_spanned(f.sig.fn_token, "runner must be async")
+                    .to_compile_error()
+                    .into();
+            }
+            let input_count = f.sig.inputs.len();
+            match input_count {
+                2 => {}
+                3 => {
+                    if let Some(syn::FnArg::Typed(pat_ty)) = f.sig.inputs.iter().nth(2) {
+                        match &*pat_ty.ty {
+                            syn::Type::Path(tp) => {
+                                if let Some(seg) = tp.path.segments.last() {
+                                    if seg.ident == "ReadySignal" {
+                                        takes_ready_signal = true;
+                                    } else {
+                                        return syn::Error::new_spanned(
+                                            &pat_ty.ty,
+                                            "third parameter must be ReadySignal when await_ready=true",
+                                        )
+                                            .to_compile_error()
+                                            .into();
                                     }
                                 }
-                                other => {
-                                    return syn::Error::new_spanned(
-                                        other,
-                                        "third parameter must be ReadySignal when await_ready=true",
-                                    )
-                                    .to_compile_error()
-                                    .into();
-                                }
+                            }
+                            other => {
+                                return syn::Error::new_spanned(
+                                    other,
+                                    "third parameter must be ReadySignal when await_ready=true",
+                                )
+                                .to_compile_error()
+                                .into();
                             }
                         }
                     }
-                    _ => {
-                        return syn::Error::new_spanned(
-                            f.sig.inputs.clone(),
-                            "invalid runner signature; expected (&self, CancellationToken) or (&self, CancellationToken, ReadySignal)",
-                        )
-                            .to_compile_error()
-                            .into();
-                    }
+                }
+                _ => {
+                    return syn::Error::new_spanned(
+                        f.sig.inputs.clone(),
+                        "invalid runner signature; expected (&self, CancellationToken) or (&self, CancellationToken, ReadySignal)",
+                    )
+                        .to_compile_error()
+                        .into();
                 }
             }
         }
@@ -970,7 +974,10 @@ fn parse_lifecycle_args(args: Punctuated<Meta, Token![,]>) -> syn::Result<LcCfg>
                 await_ready = true;
             }
             other => {
-                return Err(syn::Error::new_spanned(other, "expected named args: method=\"...\", stop_timeout=\"...\", await_ready=true|false"));
+                return Err(syn::Error::new_spanned(
+                    other,
+                    "expected named args: method=\"...\", stop_timeout=\"...\", await_ready=true|false",
+                ));
             }
         }
     }

@@ -3,7 +3,7 @@ name = "de0801_api_endpoint_version"
 version = "0.1.0"
 authors = ["Hypernetix"]
 description = "DE0801: API endpoints must follow /{service-name}/v{N}/{resource} format"
-edition = "2024"
+edition.workspace = true
 publish = false
 
 [lib]

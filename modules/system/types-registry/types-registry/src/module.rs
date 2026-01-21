@@ -4,17 +4,16 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use modkit::api::OpenApiRegistry;
-use modkit::contracts::SystemModule;
+use modkit::contracts::SystemCapability;
 use modkit::gts::get_core_gts_schemas; // NOTE: This is temporary logic until <https://github.com/hypernetix/hyperspot/issues/156> resolved
-use modkit::{Module, ModuleCtx, RestfulModule};
-use modkit_security::SecurityCtx;
+use modkit::{Module, ModuleCtx, RestApiCapability};
 use tracing::{debug, info};
-use types_registry_sdk::TypesRegistryApi;
+use types_registry_sdk::TypesRegistryClient;
 
 use crate::config::TypesRegistryConfig;
+use crate::domain::local_client::TypesRegistryLocalClient;
 use crate::domain::service::TypesRegistryService;
 use crate::infra::InMemoryGtsRepository;
-use crate::local_client::TypesRegistryLocalClient;
 
 /// Types Registry module.
 ///
@@ -73,18 +72,17 @@ impl Module for TypesRegistryModule {
 
         self.service.store(Some(service.clone()));
 
-        let api: Arc<dyn TypesRegistryApi> = Arc::new(TypesRegistryLocalClient::new(service));
+        let api: Arc<dyn TypesRegistryClient> = Arc::new(TypesRegistryLocalClient::new(service));
 
         // === REGISTER CORE GTS TYPES ===
         // NOTE: This is temporary logic until <https://github.com/hypernetix/hyperspot/issues/156> resolved
         // Register core GTS types that other modules depend on.
         // This must happen before any module registers derived schemas/instances.
         let core_schemas = get_core_gts_schemas()?;
-        #[allow(deprecated)]
-        api.register(&SecurityCtx::root_ctx(), core_schemas).await?;
+        api.register(core_schemas).await?;
         info!("Core GTS types registered");
 
-        ctx.client_hub().register::<dyn TypesRegistryApi>(api);
+        ctx.client_hub().register::<dyn TypesRegistryClient>(api);
 
         info!("Types registry module initialized");
         Ok(())
@@ -92,7 +90,7 @@ impl Module for TypesRegistryModule {
 }
 
 #[async_trait]
-impl SystemModule for TypesRegistryModule {
+impl SystemCapability for TypesRegistryModule {
     /// Post-init hook: switches the registry to ready mode.
     ///
     /// This runs AFTER `init()` has completed for ALL modules.
@@ -112,11 +110,10 @@ impl SystemModule for TypesRegistryModule {
             if let Some(errors) = e.validation_errors() {
                 for err in errors {
                     // Try to get the entity content for debugging
-                    let entity_content = if let Ok(entity) = service.get(&err.gts_id) {
-                        serde_json::to_string_pretty(&entity.content)
-                            .unwrap_or_else(|_| "Failed to serialize".to_owned())
-                    } else {
-                        "Entity not found or failed to retrieve".to_owned()
+                    let entity_content = match service.get(&err.gts_id) {
+                        Ok(entity) => serde_json::to_string_pretty(&entity.content)
+                            .unwrap_or_else(|_| "Failed to serialize".to_owned()),
+                        _ => "Entity not found or failed to retrieve".to_owned(),
                     };
 
                     tracing::error!(
@@ -135,7 +132,7 @@ impl SystemModule for TypesRegistryModule {
     }
 }
 
-impl RestfulModule for TypesRegistryModule {
+impl RestApiCapability for TypesRegistryModule {
     fn register_rest(
         &self,
         _ctx: &ModuleCtx,

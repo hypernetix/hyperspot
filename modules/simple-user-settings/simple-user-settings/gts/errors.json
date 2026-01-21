@@ -1,0 +1,17 @@
+[
+  {
+    "status": 404,
+    "title": "Settings Not Found",
+    "code": "gts.hx.core.errors.err.v1~hx.settings.simple_user_settings.not_found.v1"
+  },
+  {
+    "status": 422,
+    "title": "Validation Error",
+    "code": "gts.hx.core.errors.err.v1~hx.settings.simple_user_settings.validation.v1"
+  },
+  {
+    "status": 500,
+    "title": "Internal Database Error",
+    "code": "gts.hx.core.errors.err.v1~hx.settings.simple_user_settings.internal_database.v1"
+  }
+]

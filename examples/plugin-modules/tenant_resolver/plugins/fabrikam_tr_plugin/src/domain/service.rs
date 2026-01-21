@@ -4,9 +4,9 @@ use std::collections::HashMap;
 
 use async_trait::async_trait;
 use modkit_odata::{
-    validate_cursor_against, CursorV1, ODataOrderBy, ODataQuery, OrderKey, Page, PageInfo, SortDir,
+    CursorV1, ODataOrderBy, ODataQuery, OrderKey, Page, PageInfo, SortDir, validate_cursor_against,
 };
-use modkit_security::SecurityCtx;
+use modkit_security::SecurityContext;
 use tenant_resolver_sdk::{
     AccessOptions, GetParentsResponse, Tenant, TenantFilter, TenantResolverError,
     TenantResolverPluginClient, TenantSpecV1,
@@ -218,7 +218,7 @@ impl Service {
 
 #[async_trait]
 impl TenantResolverPluginClient for Service {
-    async fn get_root_tenant(&self, _ctx: &SecurityCtx) -> Result<Tenant, TenantResolverError> {
+    async fn get_root_tenant(&self, _ctx: &SecurityContext) -> Result<Tenant, TenantResolverError> {
         self.root_id
             .as_ref()
             .and_then(|id| self.tenants.get(id))
@@ -228,7 +228,7 @@ impl TenantResolverPluginClient for Service {
 
     async fn list_tenants(
         &self,
-        _ctx: &SecurityCtx,
+        _ctx: &SecurityContext,
         filter: TenantFilter,
         query: ODataQuery,
     ) -> Result<Page<Tenant>, TenantResolverError> {
@@ -316,7 +316,7 @@ impl TenantResolverPluginClient for Service {
 
     async fn get_parents(
         &self,
-        _ctx: &SecurityCtx,
+        _ctx: &SecurityContext,
         id: &str,
         filter: TenantFilter,
         access_options: AccessOptions,
@@ -370,7 +370,7 @@ impl TenantResolverPluginClient for Service {
 
     async fn get_children(
         &self,
-        _ctx: &SecurityCtx,
+        _ctx: &SecurityContext,
         id: &str,
         filter: TenantFilter,
         access_options: AccessOptions,

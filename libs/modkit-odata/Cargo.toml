@@ -1,7 +1,7 @@
 [package]
 name = "modkit-odata"
 version.workspace = true
-edition = "2021"
+edition.workspace = true
 license.workspace = true
 
 [lints]
@@ -10,6 +10,7 @@ workspace = true
 [features]
 with-odata-params = ["dep:odata-params"]
 with-utoipa = ["dep:utoipa"]
+chrono = []
 
 [dependencies]
 modkit-errors = { path = "../modkit-errors" }

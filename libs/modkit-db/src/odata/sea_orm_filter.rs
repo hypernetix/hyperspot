@@ -4,14 +4,15 @@
 //! into `SeaORM` conditions. Concrete modules only need to provide a mapping from
 //! their DTO field enum to `SeaORM` Column types via the `FieldToColumn` trait.
 
-use crate::odata::filter::{FilterField, FilterNode, FilterOp, ODataValue};
-use crate::odata::{convert_expr_to_filter_node, FieldKind};
 use bigdecimal::ToPrimitive;
 use chrono::SecondsFormat;
+use modkit_odata::filter::{
+    FieldKind, FilterField, FilterNode, FilterOp, ODataValue, convert_expr_to_filter_node,
+};
 use modkit_odata::{CursorV1, Error as ODataError, ODataOrderBy, Page, PageInfo, SortDir};
 use sea_orm::{
-    sea_query::{Expr, Order},
     Condition, ConnectionTrait, EntityTrait, QueryFilter, QueryOrder, QuerySelect,
+    sea_query::{Expr, Order},
 };
 
 /// Trait for mapping DTO filter fields to `SeaORM` columns.
@@ -472,12 +473,11 @@ where
     };
 
     // Validate cursor consistency (filter hash only)
-    if let Some(cur) = &query.cursor {
-        if let (Some(h), Some(cf)) = (query.filter_hash.as_deref(), cur.f.as_deref()) {
-            if h != cf {
-                return Err(ODataError::FilterMismatch);
-            }
-        }
+    if let Some(cur) = &query.cursor
+        && let (Some(h), Some(cf)) = (query.filter_hash.as_deref(), cur.f.as_deref())
+        && h != cf
+    {
+        return Err(ODataError::FilterMismatch);
     }
 
     let mut s = select;
