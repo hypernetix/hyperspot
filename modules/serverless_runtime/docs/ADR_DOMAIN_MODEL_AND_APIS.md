@@ -2179,7 +2179,7 @@ Valid actions and state requirements:
 
 - `dry_run`: Validates readiness without creating a durable record or side effects.
 - `Idempotency-Key` header prevents duplicate starts. Retention is configurable per tenant via
-  `TenantRuntimePolicy.idempotency.deduplication_window_seconds` (default: 1 hour, per BR-134).
+  `TenantRuntimePolicy.idempotency.deduplication_window_seconds` (default: 24 hours, per BR-134).
 
 ---
 
