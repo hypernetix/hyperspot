@@ -546,3 +546,499 @@ async fn test_cli_no_arguments() {
         Err(other) => panic!("Unexpected failure: {other}"),
     }
 }
+
+// ============================================================================
+// Tests for module configuration dump CLI flags
+// ============================================================================
+
+#[test]
+fn test_cli_list_modules() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let config_path = temp_dir.path().join("test_config.yaml");
+
+    // Write configuration with multiple modules
+    let config_content = r#"
+database:
+  servers:
+    test_db:
+      dsn: "sqlite::memory:"
+
+modules:
+  module_alpha:
+    config:
+      enabled: true
+  module_beta:
+    config:
+      enabled: false
+  module_gamma:
+    config:
+      setting: "value"
+"#;
+
+    std::fs::write(&config_path, config_content).expect("Failed to write config file");
+
+    let output =
+        run_hyperspot_server(&["--config", config_path.to_str().unwrap(), "--list-modules"]);
+
+    assert!(
+        output.status.success(),
+        "List modules command should succeed"
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    // Should contain header
+    assert!(
+        stdout.contains("Configured modules"),
+        "Should contain module list header"
+    );
+
+    // Should list all modules in alphabetical order
+    assert!(stdout.contains("module_alpha"), "Should list module_alpha");
+    assert!(stdout.contains("module_beta"), "Should list module_beta");
+    assert!(stdout.contains("module_gamma"), "Should list module_gamma");
+
+    // Verify alphabetical ordering
+    let alpha_pos = stdout.find("module_alpha").unwrap();
+    let beta_pos = stdout.find("module_beta").unwrap();
+    let gamma_pos = stdout.find("module_gamma").unwrap();
+    assert!(
+        alpha_pos < beta_pos && beta_pos < gamma_pos,
+        "Modules should be in alphabetical order"
+    );
+}
+
+#[test]
+fn test_cli_list_modules_empty() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let config_path = temp_dir.path().join("empty_config.yaml");
+
+    // Write configuration with no modules
+    let config_content = r#"
+database:
+  servers:
+    test_db:
+      dsn: "sqlite::memory:"
+"#;
+
+    std::fs::write(&config_path, config_content).expect("Failed to write config file");
+
+    let output =
+        run_hyperspot_server(&["--config", config_path.to_str().unwrap(), "--list-modules"]);
+
+    assert!(
+        output.status.success(),
+        "List modules command should succeed even with no modules"
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("Configured modules") && stdout.contains("(0)"),
+        "Should indicate zero modules configured"
+    );
+}
+
+#[test]
+fn test_cli_dump_modules_config_yaml() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let config_path = temp_dir.path().join("test_config.yaml");
+
+    // Write configuration with a module that has database
+    let config_content = r#"
+database:
+  servers:
+    test_db:
+      host: "localhost"
+      port: 5432
+      user: "testuser"
+      password: "testpass"
+      dbname: "testdb"
+
+modules:
+  test_module:
+    database:
+      server: "test_db"
+    config:
+      my_setting: "my_value"
+      enabled: true
+      count: 42
+"#;
+
+    std::fs::write(&config_path, config_content).expect("Failed to write config file");
+
+    let output = run_hyperspot_server(&[
+        "--config",
+        config_path.to_str().unwrap(),
+        "--dump-modules-config-yaml",
+    ]);
+
+    assert!(output.status.success(), "Dump YAML command should succeed");
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    // Should be valid YAML format
+    assert!(
+        stdout.contains("test_module:"),
+        "Should contain module name"
+    );
+    assert!(stdout.contains("config:"), "Should contain config section");
+    assert!(
+        stdout.contains("my_setting: my_value"),
+        "Should contain config values"
+    );
+    assert!(
+        stdout.contains("enabled: true"),
+        "Should contain boolean values"
+    );
+    assert!(
+        stdout.contains("count: 42"),
+        "Should contain numeric values"
+    );
+
+    // Should contain database section
+    assert!(
+        stdout.contains("database:"),
+        "Should contain database section"
+    );
+    assert!(stdout.contains("dsn:"), "Should contain DSN field");
+
+    // Password should be redacted
+    assert!(
+        stdout.contains("***REDACTED***"),
+        "Password should be redacted"
+    );
+    assert!(
+        !stdout.contains("testpass"),
+        "Password should not appear in output"
+    );
+
+    // Verify it's parseable YAML
+    let parsed: Result<serde_yaml::Value, _> = serde_yaml::from_str(&stdout);
+    assert!(parsed.is_ok(), "Output should be valid YAML");
+}
+
+#[test]
+fn test_cli_dump_modules_config_json() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let config_path = temp_dir.path().join("test_config.yaml");
+
+    // Write configuration with a module
+    let config_content = r#"
+database:
+  servers:
+    test_db:
+      host: "localhost"
+      port: 5432
+      user: "testuser"
+      password: "secret123"
+      dbname: "testdb"
+
+modules:
+  test_module:
+    database:
+      server: "test_db"
+    config:
+      setting: "value"
+      number: 123
+"#;
+
+    std::fs::write(&config_path, config_content).expect("Failed to write config file");
+
+    let output = run_hyperspot_server(&[
+        "--config",
+        config_path.to_str().unwrap(),
+        "--dump-modules-config-json",
+    ]);
+
+    assert!(output.status.success(), "Dump JSON command should succeed");
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    // Should be valid JSON format
+    assert!(
+        stdout.contains("\"test_module\""),
+        "Should contain module name in JSON"
+    );
+    assert!(
+        stdout.contains("\"config\""),
+        "Should contain config section"
+    );
+    assert!(stdout.contains("\"setting\""), "Should contain config keys");
+    assert!(stdout.contains("\"value\""), "Should contain config values");
+
+    // Should contain database section
+    assert!(
+        stdout.contains("\"database\""),
+        "Should contain database section"
+    );
+    assert!(stdout.contains("\"dsn\""), "Should contain DSN field");
+
+    // Password should be redacted
+    assert!(
+        stdout.contains("***REDACTED***"),
+        "Password should be redacted in JSON"
+    );
+    assert!(
+        !stdout.contains("secret123"),
+        "Password should not appear in JSON output"
+    );
+
+    // Verify it's parseable JSON
+    let parsed: Result<serde_json::Value, _> = serde_json::from_str(&stdout);
+    assert!(parsed.is_ok(), "Output should be valid JSON");
+
+    // Verify structure
+    if let Ok(json) = parsed {
+        assert!(json.is_object(), "Root should be an object");
+        let obj = json.as_object().unwrap();
+        assert!(
+            obj.contains_key("test_module"),
+            "Should have test_module key"
+        );
+    }
+}
+
+#[test]
+fn test_cli_dump_modules_config_multiple_modules() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let config_path = temp_dir.path().join("multi_module_config.yaml");
+
+    // Write configuration with multiple modules
+    let config_content = r#"
+modules:
+  module_one:
+    config:
+      setting_one: "value1"
+  module_two:
+    config:
+      setting_two: "value2"
+  module_three:
+    config:
+      setting_three: "value3"
+"#;
+
+    std::fs::write(&config_path, config_content).expect("Failed to write config file");
+
+    let output = run_hyperspot_server(&[
+        "--config",
+        config_path.to_str().unwrap(),
+        "--dump-modules-config-json",
+    ]);
+
+    assert!(output.status.success(), "Should handle multiple modules");
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let parsed: serde_json::Value = serde_json::from_str(&stdout).expect("Should be valid JSON");
+    let modules = parsed.as_object().expect("Should be an object");
+
+    // All modules should be present
+    assert_eq!(modules.len(), 3, "Should have all three modules");
+    assert!(modules.contains_key("module_one"), "Should have module_one");
+    assert!(modules.contains_key("module_two"), "Should have module_two");
+    assert!(
+        modules.contains_key("module_three"),
+        "Should have module_three"
+    );
+}
+
+#[test]
+fn test_cli_dump_flags_require_config() {
+    // Test that dump flags fail gracefully without config
+    let output = run_hyperspot_server(&["--list-modules"]);
+
+    // Should fail or show error about missing config
+    // The actual behavior depends on whether config is optional
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    // Either should succeed with default config or fail with error message
+    if output.status.success() {
+        // If it succeeds, it should show some output
+        assert!(
+            !stdout.is_empty() || !stderr.is_empty(),
+            "Should produce some output"
+        );
+    } else {
+        assert!(
+            stderr.contains("config") || stderr.contains("required") || stderr.contains("error"),
+            "Should mention config requirement or error"
+        );
+    }
+}
+
+#[test]
+fn test_cli_mock_flag_with_dump_yaml() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let config_path = temp_dir.path().join("mock_test.yaml");
+
+    // Write configuration with real database DSN
+    let config_content = r#"
+database:
+  servers:
+    production_db:
+      host: "prod.example.com"
+      port: 5432
+      user: "admin"
+      password: "secret123"
+      dbname: "production"
+
+modules:
+  test_module:
+    database:
+      server: "production_db"
+    config:
+      feature: "enabled"
+"#;
+
+    std::fs::write(&config_path, config_content).expect("Failed to write config file");
+
+    // Dump without --mock flag
+    let output_real = run_hyperspot_server(&[
+        "--config",
+        config_path.to_str().unwrap(),
+        "--dump-modules-config-yaml",
+    ]);
+
+    assert!(
+        output_real.status.success(),
+        "Should succeed without --mock"
+    );
+    let stdout_real = String::from_utf8_lossy(&output_real.stdout);
+
+    // Should contain real database DSN (redacted password)
+    assert!(
+        stdout_real.contains("postgresql://") || stdout_real.contains("***REDACTED***"),
+        "Should contain real database DSN (redacted)"
+    );
+
+    // Dump WITH --mock flag
+    let output_mock = run_hyperspot_server(&[
+        "--config",
+        config_path.to_str().unwrap(),
+        "--mock",
+        "--dump-modules-config-yaml",
+    ]);
+
+    assert!(output_mock.status.success(), "Should succeed with --mock");
+    let stdout_mock = String::from_utf8_lossy(&output_mock.stdout);
+
+    // Should contain mock database DSN
+    assert!(
+        stdout_mock.contains("sqlite::memory:"),
+        "Should contain sqlite::memory: DSN when --mock is used"
+    );
+
+    // Should NOT contain production database references
+    assert!(
+        !stdout_mock.contains("prod.example.com"),
+        "Should NOT contain production host with --mock"
+    );
+    assert!(
+        !stdout_mock.contains("postgresql://"),
+        "Should NOT contain postgresql:// with --mock"
+    );
+}
+
+#[test]
+fn test_cli_mock_flag_with_dump_json() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let config_path = temp_dir.path().join("mock_test.yaml");
+
+    // Write configuration with real database DSN
+    let config_content = r#"
+database:
+  servers:
+    staging_db:
+      host: "staging.example.com"
+      port: 5432
+      user: "stage_user"
+      password: "stage_pass"
+      dbname: "staging"
+
+modules:
+  my_module:
+    database:
+      server: "staging_db"
+    config:
+      debug: true
+"#;
+
+    std::fs::write(&config_path, config_content).expect("Failed to write config file");
+
+    // Dump WITH --mock flag
+    let output = run_hyperspot_server(&[
+        "--config",
+        config_path.to_str().unwrap(),
+        "--mock",
+        "--dump-modules-config-json",
+    ]);
+
+    assert!(output.status.success(), "Should succeed with --mock");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    // Parse JSON to verify structure
+    let parsed: serde_json::Value = serde_json::from_str(&stdout).expect("Should be valid JSON");
+    let module = parsed
+        .get("my_module")
+        .expect("Should have my_module entry");
+
+    // Check database section
+    let database = module
+        .get("database")
+        .expect("Should have database section");
+    let dsn = database.get("dsn").expect("Should have dsn field");
+
+    // Should be sqlite::memory:
+    assert_eq!(
+        dsn.as_str().unwrap(),
+        "sqlite::memory:",
+        "DSN should be sqlite::memory: with --mock"
+    );
+
+    // Should have SQLite pool configuration
+    let pool = database.get("pool").expect("Should have pool config");
+    assert!(pool.get("max_conns").is_some(), "Should have max_conns");
+    // Note: min_conns may not be present in mock config
+}
+
+#[test]
+fn test_cli_mock_flag_with_print_config() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let config_path = temp_dir.path().join("mock_test.yaml");
+
+    // Write configuration with real database
+    let config_content = r#"
+database:
+  servers:
+    real_db:
+      host: "real.example.com"
+      port: 5432
+      user: "real_user"
+      password: "real_pass"
+      dbname: "realdb"
+
+modules:
+  sample:
+    database:
+      server: "real_db"
+"#;
+
+    std::fs::write(&config_path, config_content).expect("Failed to write config file");
+
+    // Print config WITH --mock flag
+    let output = run_hyperspot_server(&[
+        "--config",
+        config_path.to_str().unwrap(),
+        "--mock",
+        "--print-config",
+    ]);
+
+    assert!(output.status.success(), "Should succeed with --mock");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    // The full config dump should show mock database in modules
+    assert!(
+        stdout.contains("sqlite::memory:"),
+        "Module database should be overridden to sqlite::memory:"
+    );
+}

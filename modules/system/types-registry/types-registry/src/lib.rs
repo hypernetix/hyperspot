@@ -7,7 +7,7 @@
 //!
 //! - **Two-phase storage**: Configuration phase (no validation) → Ready phase (full validation)
 //! - **gts-rust integration**: Uses the official GTS library for all operations
-//! - **`ClientHub` registration**: Other modules access via `hub.get::<dyn TypesRegistryApi>()?`
+//! - **`ClientHub` registration**: Other modules access via `hub.get::<dyn TypesRegistryClient>()?`
 
 #![forbid(unsafe_code)]
 #![deny(rust_2018_idioms)]
