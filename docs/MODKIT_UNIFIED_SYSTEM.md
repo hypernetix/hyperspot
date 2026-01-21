@@ -332,7 +332,7 @@ Shutdown is driven by a single root `CancellationToken` per process:
 ## Module Orchestrator & Directory API
 
 The **Module Orchestrator** provides service discovery and instance management for both in-process and OoP modules.
-**From the master host** — the Module Orchestrator registers itself as the DirectoryApi implementation.
+**From the master host** — the Module Orchestrator registers itself as the DirectoryClient implementation.
 
 ---
 
@@ -554,7 +554,7 @@ use module_orchestrator_sdk::DirectoryClient;
 use crate::{MyModuleApi, MyModuleGrpcClient, SERVICE_NAME};
 
 /// Wire the gRPC client into ClientHub
-pub async fn wire_client(hub: &ClientHub, resolver: &dyn DirectoryApi) -> Result<()> {
+pub async fn wire_client(hub: &ClientHub, resolver: &dyn DirectoryClient) -> Result<()> {
     let endpoint = resolver.resolve_grpc_service(SERVICE_NAME).await?;
     let client = MyModuleGrpcClient::connect(&endpoint.uri).await?;
     hub.register::<dyn MyModuleApi>(Arc::new(client));
@@ -563,7 +563,7 @@ pub async fn wire_client(hub: &ClientHub, resolver: &dyn DirectoryApi) -> Result
 }
 
 /// Build client directly (without registering in hub)
-pub async fn build_client(resolver: &dyn DirectoryApi) -> Result<Arc<dyn MyModuleApi>> {
+pub async fn build_client(resolver: &dyn DirectoryClient) -> Result<Arc<dyn MyModuleApi>> {
     let endpoint = resolver.resolve_grpc_service(SERVICE_NAME).await?;
     let client = MyModuleGrpcClient::connect(&endpoint.uri).await?;
     Ok(Arc::new(client))
@@ -577,7 +577,7 @@ pub async fn build_client(resolver: &dyn DirectoryApi) -> Result<Arc<dyn MyModul
 use my_module_sdk::{MyModuleApi, wire_client};
 
 async fn init(&self, ctx: &ModuleCtx) -> Result<()> {
-    let directory = ctx.client_hub().get::<dyn DirectoryApi>()?;
+    let directory = ctx.client_hub().get::<dyn DirectoryClient>()?;
 
     // Wire the client into ClientHub
     wire_client(ctx.client_hub(), directory.as_ref()).await?;
@@ -1458,7 +1458,7 @@ The **ClientHub** provides type-safe client resolution for inter-module communic
 remote clients:
 
 * **In-process clients** — direct function calls within the same process
-* **Remote clients** — gRPC clients for OoP modules (resolved via DirectoryApi)
+* **Remote clients** — gRPC clients for OoP modules (resolved via DirectoryClient)
 * **Scoped clients** — multiple implementations of the same interface keyed by scope (for plugins)
 
 **Client types:**
@@ -1476,7 +1476,7 @@ remote clients:
 | Latency      | Nanoseconds             | Milliseconds               |
 | Isolation    | Shared process          | Separate process           |
 | Contract     | Trait in `*-sdk/` crate | Trait in `*-sdk/` crate    |
-| Registration | `expose_*_client()`     | DirectoryApi + gRPC client |
+| Registration | `expose_*_client()`     | DirectoryClient + gRPC client |
 
 **Publish in `init`**
 

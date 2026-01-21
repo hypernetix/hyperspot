@@ -2,6 +2,8 @@
 //!
 //! This module provides configuration types and utilities for both host and `OoP` modules.
 
+mod dump;
+
 use anyhow::{Context, Result};
 // Use DB config types from modkit-db
 pub use modkit_db::{DbConnConfig, GlobalDatabaseConfig, PoolCfg};
@@ -14,6 +16,12 @@ use super::host::paths::home_dir::resolve_home_dir;
 use crate::ConfigProvider;
 use crate::telemetry::TracingConfig;
 use url::Url;
+
+// Re-export dump functions
+pub use dump::{
+    dump_effective_modules_config_json, dump_effective_modules_config_yaml, list_module_names,
+    redact_dsn_password, render_effective_modules_config,
+};
 
 /// Small typed view to parse each module entry.
 #[derive(Debug, Clone, Deserialize)]
@@ -411,7 +419,12 @@ pub fn validate_dsn(dsn: &str) -> Result<()> {
 /// - `sqlite://@file(users.sqlite)` → `$HOME/.hyperspot/<module>/users.sqlite`
 /// - `sqlite://@file(/abs/path/file.db)` → use absolute path
 /// - `sqlite://` or `sqlite:///` → `$HOME/.hyperspot/<module>/<module>.sqlite`
-fn resolve_sqlite_dsn(dsn: &str, home_dir: &Path, module_name: &str) -> Result<String> {
+fn resolve_sqlite_dsn(
+    dsn: &str,
+    home_dir: &Path,
+    module_name: &str,
+    dry_run: bool,
+) -> Result<String> {
     if dsn.contains("@file(") {
         // Extract the file path from @file(...)
         if let Some(start) = dsn.find("@file(")
@@ -427,12 +440,14 @@ fn resolve_sqlite_dsn(dsn: &str, home_dir: &Path, module_name: &str) -> Result<S
             } else {
                 // Relative path - resolve under module directory
                 let module_dir = home_dir.join(module_name);
-                std::fs::create_dir_all(&module_dir).with_context(|| {
-                    format!(
-                        "Failed to create module directory: {}",
-                        module_dir.display()
-                    )
-                })?;
+                if !dry_run {
+                    std::fs::create_dir_all(&module_dir).with_context(|| {
+                        format!(
+                            "Failed to create module directory: {}",
+                            module_dir.display()
+                        )
+                    })?;
+                }
                 module_dir.join(file_path)
             };
 
@@ -454,12 +469,14 @@ fn resolve_sqlite_dsn(dsn: &str, home_dir: &Path, module_name: &str) -> Result<S
     // Handle empty DSN or just sqlite:// - default to module.sqlite
     if dsn == "sqlite://" || dsn == "sqlite:///" || dsn == "sqlite:" {
         let module_dir = home_dir.join(module_name);
-        std::fs::create_dir_all(&module_dir).with_context(|| {
-            format!(
-                "Failed to create module directory: {}",
-                module_dir.display()
-            )
-        })?;
+        if !dry_run {
+            std::fs::create_dir_all(&module_dir).with_context(|| {
+                format!(
+                    "Failed to create module directory: {}",
+                    module_dir.display()
+                )
+            })?;
+        }
         let db_path = module_dir.join(format!("{module_name}.sqlite"));
         let normalized_path = db_path.to_string_lossy().replace('\\', "/");
         // For Windows absolute paths (C:/...), use sqlite:path format
@@ -542,6 +559,7 @@ fn build_sqlite_dsn_with_dbname_override(
     dbname: &str,
     module_name: &str,
     home_dir: &Path,
+    dry_run: bool,
 ) -> Result<String> {
     // Parse the original DSN to extract query parameters
     let query_params = if let Some(query_start) = original_dsn.find('?') {
@@ -552,12 +570,14 @@ fn build_sqlite_dsn_with_dbname_override(
 
     // Build the correct path for the database file
     let module_dir = home_dir.join(module_name);
-    std::fs::create_dir_all(&module_dir).with_context(|| {
-        format!(
-            "Failed to create module directory: {}",
-            module_dir.display()
-        )
-    })?;
+    if !dry_run {
+        std::fs::create_dir_all(&module_dir).with_context(|| {
+            format!(
+                "Failed to create module directory: {}",
+                module_dir.display()
+            )
+        })?;
+    }
     let db_path = module_dir.join(dbname);
     let normalized_path = db_path.to_string_lossy().replace('\\', "/");
 
@@ -575,6 +595,9 @@ fn build_sqlite_dsn_with_dbname_override(
 
 /// Builds a `SQLite` DSN from file/path or validates existing DSN.
 /// If dbname is provided, it overrides the database file in the DSN.
+///
+/// # Arguments
+/// * `dry_run` - If true, skip directory creation (for read-only inspection)
 fn build_sqlite_dsn(
     dsn: Option<&str>,
     file: Option<&str>,
@@ -582,10 +605,11 @@ fn build_sqlite_dsn(
     dbname: Option<&str>,
     module_name: &str,
     home_dir: &Path,
+    dry_run: bool,
 ) -> Result<String> {
     // If full DSN provided, resolve @file() syntax and validate
     if let Some(dsn) = dsn {
-        let resolved_dsn = resolve_sqlite_dsn(dsn, home_dir, module_name)?;
+        let resolved_dsn = resolve_sqlite_dsn(dsn, home_dir, module_name, dry_run)?;
 
         // If dbname is provided, we need to replace the database file path while preserving query params
         if let Some(dbname) = dbname {
@@ -594,6 +618,7 @@ fn build_sqlite_dsn(
                 dbname,
                 module_name,
                 home_dir,
+                dry_run,
             );
         }
 
@@ -622,12 +647,14 @@ fn build_sqlite_dsn(
     // Build from file (relative under module dir)
     if let Some(file) = file {
         let module_dir = home_dir.join(module_name);
-        std::fs::create_dir_all(&module_dir).with_context(|| {
-            format!(
-                "Failed to create module directory: {}",
-                module_dir.display()
-            )
-        })?;
+        if !dry_run {
+            std::fs::create_dir_all(&module_dir).with_context(|| {
+                format!(
+                    "Failed to create module directory: {}",
+                    module_dir.display()
+                )
+            })?;
+        }
         let db_path = module_dir.join(file);
         let normalized_path = db_path.to_string_lossy().replace('\\', "/");
         // For Windows absolute paths (C:/...), use sqlite:path format
@@ -642,12 +669,14 @@ fn build_sqlite_dsn(
 
     // Default to module.sqlite
     let module_dir = home_dir.join(module_name);
-    std::fs::create_dir_all(&module_dir).with_context(|| {
-        format!(
-            "Failed to create module directory: {}",
-            module_dir.display()
-        )
-    })?;
+    if !dry_run {
+        std::fs::create_dir_all(&module_dir).with_context(|| {
+            format!(
+                "Failed to create module directory: {}",
+                module_dir.display()
+            )
+        })?;
+    }
     let db_path = module_dir.join(format!("{module_name}.sqlite"));
     let normalized_path = db_path.to_string_lossy().replace('\\', "/");
     // For Windows absolute paths (C:/...), use sqlite:path format
@@ -688,13 +717,14 @@ impl DbConfigBuilder {
         global_server: &DbConnConfig,
         home_dir: &Path,
         module_name: &str,
+        dry_run: bool,
     ) -> Result<()> {
         // Apply global server DSN
         if let Some(global_dsn) = &global_server.dsn {
             let expanded_dsn = expand_env_in_dsn(global_dsn)?;
             // For SQLite, resolve @file() syntax before validation
             let resolved_dsn = if expanded_dsn.starts_with("sqlite") {
-                resolve_sqlite_dsn(&expanded_dsn, home_dir, module_name)?
+                resolve_sqlite_dsn(&expanded_dsn, home_dir, module_name, dry_run)?
             } else {
                 expanded_dsn
             };
@@ -734,10 +764,11 @@ impl DbConfigBuilder {
         module_dsn: &str,
         home_dir: &Path,
         module_name: &str,
+        dry_run: bool,
     ) -> Result<()> {
         // For SQLite, resolve @file() syntax before validation
         let resolved_dsn = if module_dsn.starts_with("sqlite") {
-            resolve_sqlite_dsn(module_dsn, home_dir, module_name)?
+            resolve_sqlite_dsn(module_dsn, home_dir, module_name, dry_run)?
         } else {
             module_dsn.to_owned()
         };
@@ -807,6 +838,7 @@ fn finalize_sqlite_dsn(
     module_db_config: &DbConnConfig,
     module_name: &str,
     home_dir: &Path,
+    dry_run: bool,
 ) -> Result<String> {
     build_sqlite_dsn(
         builder.dsn.as_deref(),
@@ -815,6 +847,7 @@ fn finalize_sqlite_dsn(
         builder.dbname.as_deref(),
         module_name,
         home_dir,
+        dry_run,
     )
 }
 
@@ -1065,12 +1098,16 @@ pub fn get_module_runtime_config(
 /// For server-based, returns error if final dbname is missing.
 /// For `SQLite`, builds/normalizes sqlite DSN from file/path or uses a full DSN as-is.
 ///
+/// # Arguments
+/// * `dry_run` - If true, skip directory creation (for read-only inspection)
+///
 /// # Errors
 /// Returns an error if database configuration is invalid or resolution fails.
 pub fn build_final_db_for_module(
     app: &AppConfig,
     module_name: &str,
     home_dir: &Path,
+    dry_run: bool,
 ) -> DbConfigResult {
     // Parse module entry from raw JSON
     let Some(module_raw) = app.modules.get(module_name) else {
@@ -1102,12 +1139,12 @@ pub fn build_final_db_for_module(
                 anyhow::anyhow!("Referenced server '{server_name}' not found in global config")
             })?;
 
-        builder.apply_global_server(global_server, home_dir, module_name)?;
+        builder.apply_global_server(global_server, home_dir, module_name, dry_run)?;
     }
 
     // Step 2: Apply module DSN (override global)
     if let Some(module_dsn) = &module_db_config.dsn {
-        builder.apply_module_dsn(module_dsn, home_dir, module_name)?;
+        builder.apply_module_dsn(module_dsn, home_dir, module_name, dry_run)?;
     }
 
     // Step 3: Apply module fields (override everything)
@@ -1117,7 +1154,7 @@ pub fn build_final_db_for_module(
     let is_sqlite = decide_backend(&builder, &module_db_config);
 
     let result_dsn = if is_sqlite {
-        finalize_sqlite_dsn(&builder, &module_db_config, module_name, home_dir)?
+        finalize_sqlite_dsn(&builder, &module_db_config, module_name, home_dir, dry_run)?
     } else {
         finalize_server_dsn(&builder, module_name)?
     };
@@ -1433,6 +1470,26 @@ logging:
         );
     }
 
+    /// Helper function to add a module with custom config to `AppConfig`
+    fn add_module_with_config(app: &mut AppConfig, module_name: &str, config: &serde_json::Value) {
+        app.modules.insert(
+            module_name.to_owned(),
+            serde_json::json!({
+                "database": {},
+                "config": config
+            }),
+        );
+    }
+
+    /// Helper function to create a minimal `AppConfig` for testing
+    fn create_minimal_app() -> AppConfig {
+        AppConfig {
+            database: None,
+            modules: HashMap::new(),
+            ..Default::default()
+        }
+    }
+
     #[test]
     fn test_precedence_global_dsn_only() {
         let tmp = tempdir().unwrap();
@@ -1457,7 +1514,7 @@ logging:
             }),
         );
 
-        let result = build_final_db_for_module(&app, "test_module", home_dir).unwrap();
+        let result = build_final_db_for_module(&app, "test_module", home_dir, false).unwrap();
         assert!(result.is_some());
 
         let (dsn, _pool) = result.unwrap();
@@ -1491,7 +1548,7 @@ logging:
             }),
         );
 
-        let result = build_final_db_for_module(&app, "test_module", home_dir).unwrap();
+        let result = build_final_db_for_module(&app, "test_module", home_dir, false).unwrap();
         assert!(result.is_some());
 
         let (dsn, _pool) = result.unwrap();
@@ -1523,7 +1580,7 @@ logging:
             ..Default::default()
         };
 
-        let result = build_final_db_for_module(&app, "test_module", home_dir).unwrap();
+        let result = build_final_db_for_module(&app, "test_module", home_dir, false).unwrap();
         assert!(result.is_some());
 
         let (dsn, _pool) = result.unwrap();
@@ -1553,7 +1610,7 @@ logging:
             ..Default::default()
         };
 
-        let result = build_final_db_for_module(&app, "test_module", home_dir).unwrap();
+        let result = build_final_db_for_module(&app, "test_module", home_dir, false).unwrap();
         assert!(result.is_some());
 
         let (dsn, _pool) = result.unwrap();
@@ -1592,7 +1649,7 @@ logging:
             }),
         );
 
-        let result = build_final_db_for_module(&app, "test_module", home_dir).unwrap();
+        let result = build_final_db_for_module(&app, "test_module", home_dir, false).unwrap();
         assert!(result.is_some());
 
         let (dsn, _pool) = result.unwrap();
@@ -1634,7 +1691,7 @@ logging:
                 }),
             );
 
-            let result = build_final_db_for_module(&app, "test_module", home_dir).unwrap();
+            let result = build_final_db_for_module(&app, "test_module", home_dir, false).unwrap();
             assert!(result.is_some());
 
             let (dsn, _pool) = result.unwrap();
@@ -1671,7 +1728,8 @@ logging:
                     }),
                 );
 
-                let result = build_final_db_for_module(&app, "test_module", home_dir).unwrap();
+                let result =
+                    build_final_db_for_module(&app, "test_module", home_dir, false).unwrap();
                 assert!(result.is_some());
 
                 let (dsn, _pool) = result.unwrap();
@@ -1707,7 +1765,7 @@ logging:
             ..Default::default()
         };
 
-        let result1 = build_final_db_for_module(&app1, "test_module", home_dir).unwrap();
+        let result1 = build_final_db_for_module(&app1, "test_module", home_dir, false).unwrap();
         assert!(result1.is_some());
         let (dsn1, _) = result1.unwrap();
         assert!(dsn1.contains("test_module"));
@@ -1732,7 +1790,7 @@ logging:
             ..Default::default()
         };
 
-        let result2 = build_final_db_for_module(&app2, "test_module", home_dir).unwrap();
+        let result2 = build_final_db_for_module(&app2, "test_module", home_dir, false).unwrap();
         assert!(result2.is_some());
         let (dsn2, _) = result2.unwrap();
         assert!(dsn2.contains("absolute.db"));
@@ -1753,7 +1811,7 @@ logging:
             ..Default::default()
         };
 
-        let result3 = build_final_db_for_module(&app3, "test_module", home_dir).unwrap();
+        let result3 = build_final_db_for_module(&app3, "test_module", home_dir, false).unwrap();
         assert!(result3.is_some());
         let (dsn3, _) = result3.unwrap();
         assert!(dsn3.contains("test_module.sqlite"));
@@ -1782,7 +1840,7 @@ logging:
             ..Default::default()
         };
 
-        let result = build_final_db_for_module(&app, "test_module", home_dir).unwrap();
+        let result = build_final_db_for_module(&app, "test_module", home_dir, false).unwrap();
         assert!(result.is_some());
         let (dsn, _) = result.unwrap();
 
@@ -1837,7 +1895,7 @@ logging:
             }),
         );
 
-        let result = build_final_db_for_module(&app, "users_info", home_dir).unwrap();
+        let result = build_final_db_for_module(&app, "users_info", home_dir, false).unwrap();
         assert!(result.is_some());
         let (dsn, _) = result.unwrap();
 
@@ -1883,7 +1941,7 @@ logging:
             ..Default::default()
         };
 
-        let result = build_final_db_for_module(&app, "test_module", home_dir).unwrap();
+        let result = build_final_db_for_module(&app, "test_module", home_dir, false).unwrap();
         assert!(result.is_some());
         let (dsn, _) = result.unwrap();
 
@@ -1916,7 +1974,7 @@ logging:
             }),
         );
 
-        let result = build_final_db_for_module(&app, "test_module", home_dir);
+        let result = build_final_db_for_module(&app, "test_module", home_dir, false);
         assert!(result.is_err());
         let error_msg = result.unwrap_err().to_string();
         assert!(error_msg.contains("missing required 'dbname'"));
@@ -1944,7 +2002,7 @@ logging:
             ..Default::default()
         };
 
-        let result = build_final_db_for_module(&app, "no_db_module", home_dir).unwrap();
+        let result = build_final_db_for_module(&app, "no_db_module", home_dir, false).unwrap();
         assert!(result.is_none());
     }
 
@@ -1969,7 +2027,7 @@ logging:
             ..Default::default()
         };
 
-        let result = build_final_db_for_module(&app, "empty_db_module", home_dir).unwrap();
+        let result = build_final_db_for_module(&app, "empty_db_module", home_dir, false).unwrap();
         assert!(result.is_none());
     }
 
@@ -1995,7 +2053,7 @@ logging:
             ..Default::default()
         };
 
-        let result = build_final_db_for_module(&app, "test_module", home_dir);
+        let result = build_final_db_for_module(&app, "test_module", home_dir, false);
         assert!(result.is_err());
         let error_msg = result.unwrap_err().to_string();
         assert!(error_msg.contains("Referenced server 'nonexistent_server' not found"));
@@ -2023,7 +2081,7 @@ logging:
             ..Default::default()
         };
 
-        let result = build_final_db_for_module(&app, "test_module", home_dir);
+        let result = build_final_db_for_module(&app, "test_module", home_dir, false);
         assert!(result.is_err());
     }
 
@@ -2052,7 +2110,7 @@ logging:
                 }),
             );
 
-            let result = build_final_db_for_module(&app, "test_module", home_dir);
+            let result = build_final_db_for_module(&app, "test_module", home_dir, false);
             assert!(result.is_err());
             let error_msg = result.unwrap_err().to_string();
             assert!(error_msg.contains("NONEXISTENT_PASSWORD"));
@@ -2081,7 +2139,7 @@ logging:
             ..Default::default()
         };
 
-        let result = build_final_db_for_module(&app, "test_module", home_dir).unwrap();
+        let result = build_final_db_for_module(&app, "test_module", home_dir, false).unwrap();
         assert!(result.is_some());
 
         let (dsn, _pool) = result.unwrap();
@@ -2117,7 +2175,7 @@ logging:
             ..Default::default()
         };
 
-        let result = build_final_db_for_module(&app, "test_module", home_dir).unwrap();
+        let result = build_final_db_for_module(&app, "test_module", home_dir, false).unwrap();
         assert!(result.is_some());
 
         let (dsn, _pool) = result.unwrap();
@@ -2151,7 +2209,7 @@ logging:
             ..Default::default()
         };
 
-        let result = build_final_db_for_module(&app, "test_module", home_dir).unwrap();
+        let result = build_final_db_for_module(&app, "test_module", home_dir, false).unwrap();
         assert!(result.is_some());
 
         let (dsn, _pool) = result.unwrap();
@@ -2186,7 +2244,7 @@ logging:
             ..Default::default()
         };
 
-        let result = build_final_db_for_module(&app, "test_module", home_dir);
+        let result = build_final_db_for_module(&app, "test_module", home_dir, false);
         assert!(result.is_err());
         let error_msg = result.unwrap_err().to_string();
         assert!(error_msg.contains("Invalid @file() syntax"));
@@ -2218,7 +2276,7 @@ logging:
             }),
         );
 
-        let result = build_final_db_for_module(&app, "test_module", home_dir).unwrap();
+        let result = build_final_db_for_module(&app, "test_module", home_dir, false).unwrap();
         assert!(result.is_some());
 
         let (dsn, _pool) = result.unwrap();
@@ -2267,7 +2325,7 @@ logging:
             }),
         );
 
-        let result = build_final_db_for_module(&app, "test_module", home_dir).unwrap();
+        let result = build_final_db_for_module(&app, "test_module", home_dir, false).unwrap();
         assert!(result.is_some());
 
         let (dsn, _pool) = result.unwrap();
@@ -2309,7 +2367,7 @@ logging:
             }),
         );
 
-        let result = build_final_db_for_module(&app, "test_module", home_dir).unwrap();
+        let result = build_final_db_for_module(&app, "test_module", home_dir, false).unwrap();
         assert!(result.is_some());
 
         let (dsn, _pool) = result.unwrap();
@@ -2359,7 +2417,7 @@ logging:
             }),
         );
 
-        let result = build_final_db_for_module(&app, "test_module", home_dir).unwrap();
+        let result = build_final_db_for_module(&app, "test_module", home_dir, false).unwrap();
         assert!(result.is_some());
 
         let (_dsn, pool) = result.unwrap();
@@ -2405,12 +2463,208 @@ logging:
             }),
         );
 
-        let result = build_final_db_for_module(&app, "test_module", home_dir).unwrap();
+        let result = build_final_db_for_module(&app, "test_module", home_dir, false).unwrap();
         assert!(result.is_some());
 
         let (_dsn, pool) = result.unwrap();
         assert_eq!(pool.max_conns, Some(30));
         assert_eq!(pool.acquire_timeout, Some(Duration::from_secs(10)));
+    }
+
+    #[test]
+    fn test_list_module_names() {
+        let mut app = create_minimal_app();
+        add_module_with_config(&mut app, "zebra_module", &serde_json::json!({}));
+        add_module_with_config(&mut app, "alpha_module", &serde_json::json!({}));
+        add_module_with_config(&mut app, "beta_module", &serde_json::json!({}));
+
+        let module_names = list_module_names(&app);
+
+        // Should be sorted alphabetically
+        assert_eq!(module_names.len(), 3);
+        assert_eq!(module_names[0], "alpha_module");
+        assert_eq!(module_names[1], "beta_module");
+        assert_eq!(module_names[2], "zebra_module");
+    }
+
+    #[test]
+    fn test_list_module_names_empty() {
+        let app = create_minimal_app();
+        let module_names = list_module_names(&app);
+        assert_eq!(module_names.len(), 0);
+    }
+
+    #[test]
+    fn test_redact_dsn_password_postgres() {
+        let dsn = "postgres://user:secretpass@localhost:5432/mydb";
+        let redacted = redact_dsn_password(dsn).unwrap();
+        assert_eq!(
+            redacted,
+            "postgres://user:***REDACTED***@localhost:5432/mydb"
+        );
+    }
+
+    #[test]
+    fn test_redact_dsn_password_no_password() {
+        let dsn = "postgres://user@localhost:5432/mydb";
+        let redacted = redact_dsn_password(dsn).unwrap();
+        // No password means no redaction needed
+        assert_eq!(redacted, "postgres://user@localhost:5432/mydb");
+    }
+
+    #[test]
+    fn test_redact_dsn_password_special_chars() {
+        let dsn = "postgres://user:p@ss%40word@localhost:5432/mydb";
+        let redacted = redact_dsn_password(dsn).unwrap();
+        assert_eq!(
+            redacted,
+            "postgres://user:***REDACTED***@localhost:5432/mydb"
+        );
+    }
+
+    #[test]
+    fn test_render_effective_modules_config() {
+        let mut app = create_minimal_app();
+        add_module_with_config(
+            &mut app,
+            "test_module",
+            &serde_json::json!({
+                "my_setting": "my_value",
+                "enabled": true
+            }),
+        );
+
+        let result = render_effective_modules_config(&app).unwrap();
+
+        // Check structure
+        assert!(result.is_object());
+        let modules = result.as_object().unwrap();
+        assert!(modules.contains_key("test_module"));
+
+        let test_module = modules.get("test_module").unwrap();
+        assert!(test_module.is_object());
+        let test_module_obj = test_module.as_object().unwrap();
+
+        // Should have config section
+        assert!(test_module_obj.contains_key("config"));
+
+        // Check config section
+        let config = test_module_obj.get("config").unwrap();
+        assert_eq!(config.get("my_setting").unwrap(), "my_value");
+        assert_eq!(config.get("enabled").unwrap(), true);
+    }
+
+    #[test]
+    fn test_render_effective_modules_config_with_database() {
+        let mut app = create_app_with_server(
+            "test_server",
+            DbConnConfig {
+                host: Some("localhost".to_owned()),
+                port: Some(5432),
+                user: Some("user".to_owned()),
+                password: Some("pass".to_owned()),
+                dbname: Some("db".to_owned()),
+                ..Default::default()
+            },
+        );
+
+        // Module with database config
+        add_module_to_app(
+            &mut app,
+            "test_module",
+            &serde_json::json!({
+                "server": "test_server"
+            }),
+        );
+
+        let result = render_effective_modules_config(&app).unwrap();
+        let modules = result.as_object().unwrap();
+        let test_module = modules.get("test_module").unwrap().as_object().unwrap();
+
+        // Should have database section
+        assert!(test_module.contains_key("database"));
+        let database = test_module.get("database").unwrap().as_object().unwrap();
+        assert!(database.contains_key("dsn"));
+
+        // DSN should be redacted
+        let dsn = database.get("dsn").unwrap().as_str().unwrap();
+        assert!(dsn.contains("***REDACTED***"));
+        assert!(!dsn.contains("pass"));
+    }
+
+    #[test]
+    fn test_render_effective_modules_config_minimal() {
+        // Test that modules with minimal/no config can be rendered
+        let mut app = create_minimal_app();
+
+        // Manually add a module with no database or config sections
+        app.modules
+            .insert("minimal_module".to_owned(), serde_json::json!({}));
+
+        let result = render_effective_modules_config(&app).unwrap();
+
+        // Module should be present in output (or excluded if truly empty)
+        // Either way, rendering should succeed
+        assert!(result.is_object());
+    }
+
+    #[test]
+    fn test_dump_effective_modules_config_yaml() {
+        let mut app = create_minimal_app();
+        add_module_with_config(
+            &mut app,
+            "test_module",
+            &serde_json::json!({
+                "setting": "value"
+            }),
+        );
+
+        let yaml = dump_effective_modules_config_yaml(&app).unwrap();
+
+        // Should be valid YAML
+        assert!(yaml.contains("test_module:"));
+        assert!(yaml.contains("config:"));
+        assert!(yaml.contains("setting: value"));
+    }
+
+    #[test]
+    fn test_dump_effective_modules_config_json() {
+        let mut app = create_minimal_app();
+        add_module_with_config(
+            &mut app,
+            "test_module",
+            &serde_json::json!({
+                "setting": "value"
+            }),
+        );
+
+        let json = dump_effective_modules_config_json(&app).unwrap();
+
+        // Should be valid JSON
+        assert!(json.contains("\"test_module\""));
+        assert!(json.contains("\"config\""));
+        assert!(json.contains("\"setting\""));
+        assert!(json.contains("\"value\""));
+
+        // Verify it's parseable
+        let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert!(parsed.is_object());
+    }
+
+    #[test]
+    fn test_render_multiple_modules() {
+        let mut app = create_minimal_app();
+        add_module_with_config(&mut app, "module_a", &serde_json::json!({"a": 1}));
+        add_module_with_config(&mut app, "module_b", &serde_json::json!({"b": 2}));
+        add_module_with_config(&mut app, "module_c", &serde_json::json!({"c": 3}));
+
+        let result = render_effective_modules_config(&app).unwrap();
+        let modules = result.as_object().unwrap();
+
+        assert_eq!(modules.len(), 3);
+        assert!(modules.contains_key("module_a"));
+        assert!(modules.contains_key("module_b"));
+        assert!(modules.contains_key("module_c"));
     }
 }
 
