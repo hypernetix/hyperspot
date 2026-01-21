@@ -1,7 +1,6 @@
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::collections::HashMap;
 use time::OffsetDateTime;
-use utoipa::ToSchema;
 use uuid::Uuid;
 
 /// REST DTO for file parser info response
@@ -34,7 +33,8 @@ pub struct UploadQuery {
 }
 
 /// REST DTO for parsed document metadata
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request, response)]
 pub struct ParsedDocMetadataDto {
     pub source: ParsedDocSourceDto,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -52,8 +52,9 @@ pub struct ParsedDocMetadataDto {
 }
 
 /// REST DTO for document source
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-#[serde(tag = "type", rename_all = "snake_case")]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request, response)]
+#[serde(tag = "type")]
 pub enum ParsedDocSourceDto {
     LocalPath { path: String },
     Uploaded { original_name: String },
@@ -61,7 +62,8 @@ pub enum ParsedDocSourceDto {
 }
 
 /// REST DTO for inline text styling
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Default)]
+#[derive(Debug, Clone, Default)]
+#[modkit_macros::api_dto(request, response)]
 #[allow(clippy::struct_excessive_bools)]
 pub struct InlineStyleDto {
     #[serde(skip_serializing_if = "std::ops::Not::not")]
@@ -77,8 +79,9 @@ pub struct InlineStyleDto {
 }
 
 /// REST DTO for inline content
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-#[serde(tag = "type", rename_all = "snake_case")]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request, response)]
+#[serde(tag = "type")]
 pub enum InlineDto {
     Text {
         text: String,
@@ -96,28 +99,32 @@ pub enum InlineDto {
 }
 
 /// REST DTO for table cell
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request, response)]
 pub struct TableCellDto {
     #[schema(no_recursion)]
     pub blocks: Vec<ParsedBlockDto>,
 }
 
 /// REST DTO for table row
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request, response)]
 pub struct TableRowDto {
     pub is_header: bool,
     pub cells: Vec<TableCellDto>,
 }
 
 /// REST DTO for table block
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request, response)]
 pub struct TableBlockDto {
     pub rows: Vec<TableRowDto>,
 }
 
 /// REST DTO for parsed block
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-#[serde(tag = "type", rename_all = "snake_case")]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request, response)]
+#[serde(tag = "type")]
 pub enum ParsedBlockDto {
     Heading {
         level: u8,
@@ -154,7 +161,8 @@ pub enum ParsedBlockDto {
 }
 
 /// REST DTO for parsed document (IR)
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request, response)]
 pub struct ParsedDocumentDto {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<Uuid>,

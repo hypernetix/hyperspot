@@ -243,15 +243,13 @@ pub fn validate_gts_id(
     if gts_id.contains('*') {
         if let Some(expected) = expected_vendor {
             let rest = &gts_id[4..]; // Remove 'gts.' prefix
-            if let Some(first_seg) = rest.split('~').next() {
-                if let Some(vendor) = first_seg.split('.').next() {
-                    if !vendor.contains('*') && vendor != expected && !is_example_vendor(vendor) {
+            if let Some(first_seg) = rest.split('~').next()
+                && let Some(vendor) = first_seg.split('.').next()
+                    && !vendor.contains('*') && vendor != expected && !is_example_vendor(vendor) {
                         return vec![format!(
                             "Vendor mismatch: expected '{expected}', found '{vendor}' in '{original}'"
                         )];
                     }
-                }
-            }
         }
         return vec![];
     }
@@ -259,8 +257,8 @@ pub fn validate_gts_id(
     // Try to validate using the gts library
     if let Ok(parsed) = GtsID::new(gts_id) {
         // Check vendor if specified
-        if let Some(expected) = expected_vendor {
-            if let Some(first_segment) = parsed.gts_id_segments.first() {
+        if let Some(expected) = expected_vendor
+            && let Some(first_segment) = parsed.gts_id_segments.first() {
                 let actual_vendor = &first_segment.vendor;
                 // Skip vendor check for example/placeholder vendors
                 if actual_vendor != expected && !is_example_vendor(actual_vendor) {
@@ -269,7 +267,6 @@ pub fn validate_gts_id(
                     ));
                 }
             }
-        }
     } else {
         // The gts library failed to parse, do our own validation
         // to provide more specific error messages
@@ -300,18 +297,16 @@ pub fn validate_gts_id(
         }
 
         // Even if gts library failed, still check vendor
-        if let Some(expected) = expected_vendor {
-            if let Some(first_seg) = non_empty_segments.first() {
+        if let Some(expected) = expected_vendor
+            && let Some(first_seg) = non_empty_segments.first() {
                 let parts: Vec<&str> = first_seg.split('.').collect();
-                if let Some(vendor) = parts.first() {
-                    if *vendor != expected && !is_example_vendor(vendor) {
+                if let Some(vendor) = parts.first()
+                    && *vendor != expected && !is_example_vendor(vendor) {
                         errors.push(format!(
                             "Vendor mismatch: expected '{expected}', found '{vendor}' in '{original}'"
                         ));
                     }
-                }
             }
-        }
     }
 
     errors

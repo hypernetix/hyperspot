@@ -86,5 +86,13 @@ path = "ui/pass_field_snake_case.rs"
 name = "pass_field_lowercase"
 path = "ui/pass_field_lowercase.rs"
 
+[[example]]
+name = "fail_field_name_camel_case"
+path = "ui/fail_field_name_camel_case.rs"
+
+[[example]]
+name = "pass_field_name_with_snake_rename"
+path = "ui/pass_field_name_with_snake_rename.rs"
+
 [package.metadata.rust-analyzer]
 rustc_private = true

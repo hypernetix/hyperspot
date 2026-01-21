@@ -17,7 +17,6 @@ use modkit::{
 };
 
 use modkit_security::SecurityContext;
-use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use uuid::Uuid;
 

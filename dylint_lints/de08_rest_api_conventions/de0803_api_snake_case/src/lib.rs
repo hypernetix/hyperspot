@@ -4,7 +4,7 @@
 extern crate rustc_ast;
 extern crate rustc_span;
 
-use rustc_ast::{Attribute, Item, ItemKind, VariantData};
+use rustc_ast::{Attribute, FieldDef, Item, ItemKind, VariantData};
 use rustc_lint::{EarlyContext, EarlyLintPass, LintContext};
 
 use lint_utils::is_in_api_rest_folder;
@@ -99,11 +99,51 @@ fn check_type_rename_all(cx: &EarlyContext<'_>, attrs: &[Attribute]) {
     }
 }
 
-/// Validates that field `rename` attributes use snake_case.
+/// Validates that fields use snake_case names or have a serde rename to snake_case.
 fn check_fields(cx: &EarlyContext<'_>, variant_data: &VariantData) {
     for field in variant_data.fields() {
-        for (span, value) in find_serde_attribute_value(&field.attrs, "rename") {
-            if !is_valid_case(&value) {
+        check_field_snake_case(cx, field);
+    }
+}
+
+/// Checks a single field for snake_case compliance.
+/// 
+/// A field is valid if:
+/// 1. The field name is snake_case, OR
+/// 2. The field has a `#[serde(rename = "snake_case_value")]` attribute
+///
+/// A field is invalid if:
+/// 1. The field name is not snake_case AND has no serde rename, OR
+/// 2. The field has a serde rename to a non-snake_case value
+fn check_field_snake_case(cx: &EarlyContext<'_>, field: &FieldDef) {
+    let field_name = match &field.ident {
+        Some(ident) => ident.name.as_str().to_string(),
+        None => return, // Tuple struct fields have no name
+    };
+    
+    let rename_values = find_serde_attribute_value(&field.attrs, "rename");
+    
+    if rename_values.is_empty() {
+        // No serde rename - field name must be snake_case
+        if !is_snake_case(&field_name) {
+            cx.span_lint(
+                DE0803_API_SNAKE_CASE,
+                field.ident.unwrap().span,
+                |diag| {
+                    diag.primary_message(
+                        "DTO field name must be snake_case or have a serde rename to snake_case (DE0803)"
+                    );
+                    diag.help(format!(
+                        "rename field to snake_case or add #[serde(rename = \"{}\")]",
+                        to_snake_case(&field_name)
+                    ));
+                },
+            );
+        }
+    } else {
+        // Has serde rename - the rename value must be snake_case
+        for (span, value) in rename_values {
+            if !is_snake_case(&value) {
                 cx.span_lint(
                     DE0803_API_SNAKE_CASE,
                     span,
@@ -119,18 +159,43 @@ fn check_fields(cx: &EarlyContext<'_>, variant_data: &VariantData) {
     }
 }
 
-/// Checks if a string uses valid snake_case, SCREAMING_SNAKE_CASE, or plain upper/lowercase.
-fn is_valid_case(s: &str) -> bool {
+/// Checks if a string is valid snake_case.
+/// 
+/// Snake case: lowercase letters, digits, and underscores only.
+/// Examples: "my_field", "user_id", "field_123"
+fn is_snake_case(s: &str) -> bool {
     if s.is_empty() {
         return false;
     }
-
-    if s.contains('-') || s.contains(' ') {
+    
+    // Must not start or end with underscore
+    if s.starts_with('_') || s.ends_with('_') {
         return false;
     }
+    
+    // Must not have consecutive underscores
+    if s.contains("__") {
+        return false;
+    }
+    
+    // All characters must be lowercase, digits, or underscore
+    s.chars().all(|c| c.is_lowercase() || c.is_ascii_digit() || c == '_')
+}
 
-    // Accept uppercase and lowercase, as well as snake_case and SCREAMING_SNAKE_CASE
-    s.chars().all(|c| c.is_uppercase() || c.is_numeric() || c == '_') || s.chars().all(|c| c.is_lowercase() || c.is_numeric() || c == '_')
+/// Converts a string to snake_case.
+fn to_snake_case(s: &str) -> String {
+    let mut result = String::new();
+    for (i, c) in s.chars().enumerate() {
+        if c.is_uppercase() {
+            if i > 0 {
+                result.push('_');
+            }
+            result.push(c.to_lowercase().next().unwrap());
+        } else {
+            result.push(c);
+        }
+    }
+    result
 }
 
 #[cfg(test)]

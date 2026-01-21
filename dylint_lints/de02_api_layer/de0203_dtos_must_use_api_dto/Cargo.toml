@@ -1,5 +1,5 @@
 [package]
-name = "de0203_dtos_must_have_serde_derives"
+name = "de0203_dtos_must_use_api_dto"
 version = "0.1.0"
 authors = ["authors go here"]
 description = "description goes here"
@@ -10,16 +10,8 @@ publish = false
 crate-type = ["cdylib"]
 
 [[example]]
-name = "missing_serde"
-path = "ui/missing_serde.rs"
-
-[[example]]
-name = "has_serde"
-path = "ui/has_serde.rs"
-
-[[example]]
-name = "missing_one_derive"
-path = "ui/missing_one_derive.rs"
+name = "missing_api_dto"
+path = "ui/missing_api_dto.rs"
 
 [dependencies]
 clippy_utils.workspace = true

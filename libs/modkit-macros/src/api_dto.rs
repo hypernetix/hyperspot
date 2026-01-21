@@ -3,7 +3,7 @@ use syn::punctuated::Punctuated;
 use quote::quote;
 use proc_macro2::TokenStream;
 
-pub fn expand_api_dto(args: Punctuated<Ident, Token![,]>, input: DeriveInput) -> TokenStream {
+pub fn expand_api_dto(args: &Punctuated<Ident, Token![,]>, input: &DeriveInput) -> TokenStream {
     let has_request = args.iter().any(|id| id == "request");
     let has_response = args.iter().any(|id| id == "response");
     

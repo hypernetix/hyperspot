@@ -87,6 +87,98 @@ pub fn is_serde_trait(segments: &[&str], trait_name: &str) -> bool {
     }
 }
 
+/// Check if an item has the `#[modkit_macros::api_dto(...)]` attribute.
+///
+/// The `api_dto` macro automatically adds:
+/// - `#[derive(serde::Serialize)]` (if `response` is specified)
+/// - `#[derive(serde::Deserialize)]` (if `request` is specified)
+/// - `#[derive(utoipa::ToSchema)]` (always)
+/// - `#[serde(rename_all = "snake_case")]` (always)
+///
+/// Lints checking for these derives/attributes should skip items with this attribute.
+pub fn has_api_dto_attribute(item: &rustc_ast::Item) -> bool {
+    for attr in &item.attrs {
+        // Check for modkit_macros::api_dto or just api_dto
+        if let rustc_ast::AttrKind::Normal(attr_item) = &attr.kind {
+            let path = &attr_item.item.path;
+            let segments: Vec<&str> = path.segments.iter().map(|s| s.ident.name.as_str()).collect();
+
+            // Match: api_dto, modkit_macros::api_dto
+            if segments.last() == Some(&"api_dto") {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+/// Returns the api_dto arguments (request, response) if present.
+/// Returns None if the attribute is not present.
+/// Returns Some with flags indicating which modes are enabled.
+pub fn get_api_dto_args(item: &rustc_ast::Item) -> Option<ApiDtoArgs> {
+    for attr in &item.attrs {
+        if let rustc_ast::AttrKind::Normal(attr_item) = &attr.kind {
+            let path = &attr_item.item.path;
+            let segments: Vec<&str> = path.segments.iter().map(|s| s.ident.name.as_str()).collect();
+
+            if segments.last() != Some(&"api_dto") {
+                continue;
+            }
+
+            // Parse the arguments
+            let mut has_request = false;
+            let mut has_response = false;
+
+            if let Some(args) = attr_item.item.meta_item_list() {
+                for arg in args {
+                    if let Some(ident) = arg.ident() {
+                        match ident.name.as_str() {
+                            "request" => has_request = true,
+                            "response" => has_response = true,
+                            _ => {}
+                        }
+                    }
+                }
+            }
+
+            return Some(ApiDtoArgs {
+                has_request,
+                has_response,
+            });
+        }
+    }
+    None
+}
+
+/// Arguments parsed from `#[api_dto(request, response)]`
+#[derive(Debug, Clone, Copy)]
+pub struct ApiDtoArgs {
+    pub has_request: bool,
+    pub has_response: bool,
+}
+
+impl ApiDtoArgs {
+    /// Returns true if the macro will add Serialize derive (response mode)
+    pub fn adds_serialize(&self) -> bool {
+        self.has_response
+    }
+
+    /// Returns true if the macro will add Deserialize derive (request mode)
+    pub fn adds_deserialize(&self) -> bool {
+        self.has_request
+    }
+
+    /// Returns true if the macro will add ToSchema derive (always)
+    pub fn adds_toschema(&self) -> bool {
+        true
+    }
+
+    /// Returns true if the macro will add serde(rename_all = "snake_case") (always)
+    pub fn adds_snake_case_rename(&self) -> bool {
+        true
+    }
+}
+
 // Check if path segments represent a utoipa trait
 // Examples: ["ToSchema"], ["utoipa", "ToSchema"], ["utoipa", "ToSchema"]
 pub fn is_utoipa_trait(segments: &[&str], trait_name: &str) -> bool {

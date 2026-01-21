@@ -32,7 +32,6 @@ use modkit::{
 use modkit_auth::axum_ext::Authz;
 
 use modkit_security::SecurityContext;
-use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::sync::Arc;
 use tower::ServiceExt;

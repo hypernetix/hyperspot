@@ -1,7 +1,6 @@
 //! REST API DTOs for tenant resolver gateway.
 
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
+use serde::Deserialize;
 
 use tenant_resolver_sdk::{GetParentsResponse, GtsSchemaId, Tenant, TenantStatus};
 
@@ -24,8 +23,8 @@ fn default_schema_id() -> GtsSchemaId {
     tenant_resolver_sdk::TenantSpecV1::<()>::gts_schema_id().clone()
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[derive(Debug, Clone, Copy)]
+#[modkit_macros::api_dto(request, response)]
 pub enum TenantStatusDto {
     Unspecified,
     Active,
@@ -69,7 +68,8 @@ impl From<Tenant> for TenantDto {
 // ============================================================================
 
 /// Filter for tenant queries.
-#[derive(Debug, Clone, Default, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Default)]
+#[modkit_macros::api_dto(request, response)]
 pub struct TenantFilterDto {
     /// List of statuses to filter by. Empty = ACTIVE only.
     #[serde(default)]
@@ -112,7 +112,8 @@ fn parse_statuses_csv(statuses: Option<&str>) -> Vec<TenantStatus> {
 }
 
 /// Access control options.
-#[derive(Debug, Clone, Default, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Default)]
+#[modkit_macros::api_dto(request, response)]
 pub struct AccessOptionsDto {
     /// Ignore parent access constraints when resolving hierarchy.
     #[serde(default)]

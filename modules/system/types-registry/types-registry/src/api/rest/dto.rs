@@ -1,14 +1,13 @@
 //! REST DTOs for the Types Registry module.
 
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 use uuid::Uuid;
 
 use gts::GtsIdSegment;
 use types_registry_sdk::{GtsEntity, RegisterResult, RegisterSummary, SegmentMatchScope};
 
 /// DTO for a GTS ID segment.
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request, response)]
 pub struct GtsIdSegmentDto {
     /// Vendor component of the segment.
     pub vendor: String,
@@ -78,7 +77,8 @@ pub struct RegisterEntitiesRequest {
 }
 
 /// Result of registering a single entity.
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request, response)]
 #[serde(tag = "status")]
 pub enum RegisterResultDto {
     /// Successfully registered entity.
@@ -123,7 +123,8 @@ pub struct RegisterEntitiesResponse {
 }
 
 /// Summary of a batch registration operation.
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request, response)]
 pub struct RegisterSummaryDto {
     /// Total number of entities processed.
     pub total: usize,
@@ -144,7 +145,8 @@ impl From<RegisterSummary> for RegisterSummaryDto {
 }
 
 /// Query parameters for listing GTS entities.
-#[derive(Debug, Clone, Default, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Default)]
+#[modkit_macros::api_dto(request)]
 pub struct ListEntitiesQuery {
     /// Optional wildcard pattern for GTS ID matching.
     #[serde(default)]

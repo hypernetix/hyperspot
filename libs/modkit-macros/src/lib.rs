@@ -1067,5 +1067,5 @@ pub fn grpc_client(attr: TokenStream, item: TokenStream) -> TokenStream {
 pub fn api_dto(attr: TokenStream, item: TokenStream) -> TokenStream {
     let attrs = parse_macro_input!(attr with Punctuated::<Ident, Token![,]>::parse_terminated);
     let input = parse_macro_input!(item as DeriveInput);
-    TokenStream::from(api_dto::expand_api_dto(attrs, input))
+    TokenStream::from(api_dto::expand_api_dto(&attrs, &input))
 }
