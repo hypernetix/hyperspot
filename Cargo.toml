@@ -364,7 +364,6 @@ nanoid = "0.4"
 # GTS dependencies
 jsonschema = "0.18"
 walkdir = "2.5"
-serde_yaml = "0.9"
 shellexpand = "3.1"
 
 # GTS library

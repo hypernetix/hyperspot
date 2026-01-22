@@ -18,7 +18,7 @@ coverage_nightly = []
 
 # OpenTelemetry support for distributed tracing
 otel = ["dep:opentelemetry", "dep:opentelemetry_sdk", "dep:tracing-opentelemetry", "dep:tracing-subscriber", "dep:opentelemetry-otlp", "dep:tonic"]
-bootstrap = ["dep:serde-saphyr", "dep:serde_yaml", "dep:module_orchestrator-grpc", "dep:tracing-appender", "dep:file-rotate", "dep:tracing-log", "dep:chrono", "dep:regex", "dep:url", "dep:dsn"]
+bootstrap = ["dep:serde-saphyr", "dep:module_orchestrator-grpc", "dep:tracing-appender", "dep:file-rotate", "dep:tracing-log", "dep:chrono", "dep:regex", "dep:url", "dep:dsn"]
 
 [dependencies]
 # Project-local crates
@@ -57,7 +57,6 @@ utoipa = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 serde-saphyr = { workspace = true, optional = true }
-serde_yaml = { workspace = true, optional = true }
 schemars = { workspace = true, features = ["derive"] }
 
 # GTS support
