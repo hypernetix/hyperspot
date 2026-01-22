@@ -332,10 +332,14 @@ def cmd_e2e(args):
             with open(server_log_file, "w") as out_file, open(
                 server_error_file, "w"
             ) as err_file:
+                # Set RUST_LOG to enable debug logging for types_registry module
+                server_env = os.environ.copy()
+                server_env["RUST_LOG"] = "types_registry=debug,info"
                 server_process = subprocess.Popen(
                     server_cmd,
                     stdout=out_file,
                     stderr=err_file,
+                    env=server_env,
                 )
 
             print("Server logs redirected to:")
@@ -362,7 +366,12 @@ def cmd_e2e(args):
 
     pytest_cmd = [PYTHON, "-m", "pytest", "testing/e2e", "-vv"]
     if args.pytest_args:
-        pytest_cmd.extend(args.pytest_args)
+        # argparse.REMAINDER includes the '--' separator if used
+        # We need to strip it so pytest doesn't treat following flags as files
+        extra_args = args.pytest_args
+        if extra_args and extra_args[0] == "--":
+            extra_args = extra_args[1:]
+        pytest_cmd.extend(extra_args)
 
     result = run_cmd_allow_fail(pytest_cmd, env=env)
     exit_code = result.returncode
