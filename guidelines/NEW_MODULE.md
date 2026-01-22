@@ -63,8 +63,9 @@ This SDK pattern provides:
 
 All modules MUST adhere to the following directory structure:
 
-```
+```text
 modules/<your-module>/
+├─ QUICKSTART.md                # API quickstart with curl examples (see below)
 ├─ <your-module>-sdk/           # SDK crate: public API for consumers
 │  ├─ Cargo.toml
 │  └─ src/
@@ -101,6 +102,38 @@ modules/<your-module>/
             ├─ sea_orm_repo.rs  # SeaORM repository implementation
             └─ migrations/      # SeaORM migrations
 ```
+
+### Module Documentation: QUICKSTART.md
+
+Every module with REST endpoints MUST include a `QUICKSTART.md` file with:
+
+1. **Module description** - What the module does
+2. **Curl examples** - Copy-paste commands with sample outputs
+
+> **Note:** Do NOT include an Endpoints table. The OpenAPI spec at `/docs` and `/openapi.json` is the authoritative source for API documentation.
+
+**Template:**
+
+    # <Module Name> - Quickstart
+    
+    <One-line description of what the module does.>
+    
+    ## Examples
+    
+    ### List Resources
+    
+    ```bash
+    curl -s http://127.0.0.1:8087/<module>/v1/resource | python3 -m json.tool
+    ```
+    
+    **Output:**
+    ```json
+    {
+        "items": [...]
+    }
+    ```
+
+The main [QUICKSTART_GUIDE.md](../docs/QUICKSTART_GUIDE.md) references all module quickstarts.
 
 ---
 
