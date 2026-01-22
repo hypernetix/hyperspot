@@ -6,9 +6,11 @@
 
 ## Context and Problem Statement
 
-OAGW currently supports HTTP/1.1 requests. Modern APIs increasingly use gRPC for efficient service-to-service communication. OAGW needs to proxy gRPC requests to upstream services while maintaining the same routing, authentication, and policy enforcement as HTTP.
+OAGW currently supports HTTP/1.1 requests. Modern APIs increasingly use gRPC for efficient service-to-service communication. OAGW needs to proxy gRPC requests to upstream services
+while maintaining the same routing, authentication, and policy enforcement as HTTP.
 
 **Key challenges**:
+
 - gRPC uses HTTP/2 exclusively
 - gRPC requires specific headers (`content-type: application/grpc`)
 - gRPC uses bidirectional streaming
@@ -37,6 +39,7 @@ Client → :50051 (gRPC only)
 ```
 
 **Configuration**:
+
 ```json
 {
   "server": {
@@ -47,12 +50,14 @@ Client → :50051 (gRPC only)
 ```
 
 **Pros**:
+
 - Simple implementation (no protocol detection)
 - Clear separation of concerns
 - No ambiguity about protocol
 - Easy to configure separate TLS settings
 
 **Cons**:
+
 - Extra port management (firewall rules, load balancer config)
 - Clients must know which port to use
 - Doesn't work well with API gateways that expect single endpoint
@@ -75,6 +80,7 @@ Client → :443
 ```
 
 **Implementation**:
+
 ```rust
 async fn handle_connection(stream: TcpStream, tls_acceptor: TlsAcceptor) {
     let tls_stream = tls_acceptor.accept(stream).await?;
@@ -107,6 +113,7 @@ fn is_grpc_content_type(headers: &[u8]) -> bool {
 ```
 
 **Pros**:
+
 - Single port (443) for all traffic
 - Works with standard cloud load balancers
 - Transparent to clients (just use gRPC client libraries)
@@ -114,6 +121,7 @@ fn is_grpc_content_type(headers: &[u8]) -> bool {
 - Better for Kubernetes ingress
 
 **Cons**:
+
 - Complex protocol detection logic
 - Small overhead for first request analysis
 - Requires HTTP/2 support in OAGW core
@@ -143,6 +151,7 @@ async fn handle_request(req: Request<Body>) -> Response<Body> {
 ```
 
 **Configuration** (unified):
+
 ```json
 {
   "server": {
@@ -162,6 +171,7 @@ async fn handle_request(req: Request<Body>) -> Response<Body> {
 ```
 
 **Pros**:
+
 - Single port, single TLS config
 - Native HTTP/2 (gRPC is just HTTP/2 with specific headers)
 - ALPN negotiation handled by TLS library
@@ -170,21 +180,22 @@ async fn handle_request(req: Request<Body>) -> Response<Body> {
 - Standard approach (matches Envoy, Istio)
 
 **Cons**:
+
 - Must implement HTTP/2 server (but hyper supports this)
 - All OAGW nodes must support HTTP/2
 
 ## Comparison Matrix
 
-| Criteria                     | Option 1 (Separate Port) | Option 2 (Hijacking) | Option 3 (Multiplexing) |
-|------------------------------|:------------------------:|:--------------------:|:-----------------------:|
-| Single ingress point         |            No            |         Yes          |           Yes           |
-| Implementation complexity    |           Low            |         High         |         Medium          |
-| Protocol detection           |        Not needed        |   ALPN + peeking     |    Content-type hdr     |
-| Works with cloud LB          |         Partial          |         Yes          |           Yes           |
-| HTTP/2 requirement           |         Optional         |      Mandatory       |       Mandatory         |
-| Performance overhead         |          Minimal         |   Small (detection)  |        Minimal          |
-| Kubernetes-friendly          |            No            |         Yes          |           Yes           |
-| Streaming support            |           Full           |         Full         |          Full           |
+| Criteria                  | Option 1 (Separate Port) | Option 2 (Hijacking) | Option 3 (Multiplexing) |
+|---------------------------|:------------------------:|:--------------------:|:-----------------------:|
+| Single ingress point      |            No            |         Yes          |           Yes           |
+| Implementation complexity |           Low            |         High         |         Medium          |
+| Protocol detection        |        Not needed        |    ALPN + peeking    |    Content-type hdr     |
+| Works with cloud LB       |         Partial          |         Yes          |           Yes           |
+| HTTP/2 requirement        |         Optional         |      Mandatory       |        Mandatory        |
+| Performance overhead      |         Minimal          |  Small (detection)   |         Minimal         |
+| Kubernetes-friendly       |            No            |         Yes          |           Yes           |
+| Streaming support         |           Full           |         Full         |          Full           |
 
 ## Decision Outcome
 
@@ -199,10 +210,12 @@ async fn handle_request(req: Request<Body>) -> Response<Body> {
 5. **Cloud native**: Works seamlessly with Kubernetes ingress, cloud load balancers.
 
 **Trade-offs accepted**:
+
 - All OAGW nodes must support HTTP/2 (modern Rust stacks do)
 - Slightly more complex than HTTP/1.1-only (but hyper handles this)
 
 Options 1 and 2 rejected:
+
 - Option 1: Multiple ports add operational complexity, poor cloud integration
 - Option 2: Hijacking adds unnecessary complexity for same outcome as Option 3
 
@@ -229,26 +242,26 @@ Internally maps to HTTP/2 path: `/example.v1.UserService/GetUser`
 
 Preserve gRPC headers during proxying:
 
-| Header                  | Required | Action      |
-|-------------------------|----------|-------------|
-| `content-type`          | Yes      | Validate    |
-| `grpc-encoding`         | No       | Passthrough |
-| `grpc-timeout`          | No       | Enforce     |
-| `grpc-status`           | Response | Passthrough |
-| `grpc-message`          | Response | Passthrough |
+| Header          | Required | Action      |
+|-----------------|----------|-------------|
+| `content-type`  | Yes      | Validate    |
+| `grpc-encoding` | No       | Passthrough |
+| `grpc-timeout`  | No       | Enforce     |
+| `grpc-status`   | Response | Passthrough |
+| `grpc-message`  | Response | Passthrough |
 
 ### Error Mapping
 
 gRPC status codes map to OAGW errors:
 
-| gRPC Status       | Code | OAGW Error                    |
-|-------------------|------|-------------------------------|
-| OK                | 0    | Success                       |
-| UNAUTHENTICATED   | 16   | AuthenticationFailed          |
-| PERMISSION_DENIED | 7    | Forbidden                     |
-| RESOURCE_EXHAUSTED| 8    | RateLimitExceeded             |
-| UNAVAILABLE       | 14   | LinkUnavailable               |
-| DEADLINE_EXCEEDED | 4    | RequestTimeout                |
+| gRPC Status        | Code | OAGW Error           |
+|--------------------|------|----------------------|
+| OK                 | 0    | Success              |
+| UNAUTHENTICATED    | 16   | AuthenticationFailed |
+| PERMISSION_DENIED  | 7    | Forbidden            |
+| RESOURCE_EXHAUSTED | 8    | RateLimitExceeded    |
+| UNAVAILABLE        | 14   | LinkUnavailable      |
+| DEADLINE_EXCEEDED  | 4    | RequestTimeout       |
 
 ### Streaming Support
 
@@ -282,6 +295,7 @@ Before implementation, prototype must validate:
 6. **HTTP/1.1 coexistence**: Both protocols work on same port without interference
 
 **Acceptance criteria**:
+
 - gRPC health check (`grpc.health.v1.Health/Check`) works end-to-end
 - HTTP/1.1 REST request to same port succeeds
 - gRPC streaming (server/client/bidi) works without timeouts

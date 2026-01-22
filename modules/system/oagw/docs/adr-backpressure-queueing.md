@@ -51,13 +51,15 @@ X-OAGW-Error-Source: gateway
 ```
 
 **Advantages**:
-- ✅ No memory overhead
-- ✅ Predictable latency (no queueing delay)
-- ✅ Simple to implement
+
+- No memory overhead
+- Predictable latency (no queueing delay)
+- Simple to implement
 
 **Disadvantages**:
-- ❌ Poor UX during spikes
-- ❌ Clients must implement retry logic
+
+- No Poor UX during spikes
+- No Clients must implement retry logic
 
 ### Strategy 2: `queue`
 
@@ -96,14 +98,16 @@ Request arrives
 ```
 
 **Advantages**:
-- ✅ Absorbs traffic spikes
-- ✅ Better UX (fewer errors)
-- ✅ Automatic retry handling
+
+- Absorbs traffic spikes
+- Better UX (fewer errors)
+- Automatic retry handling
 
 **Disadvantages**:
-- ❌ Memory overhead (queue storage)
-- ❌ Increased latency (queueing delay)
-- ❌ Risk of timeout cascade (clients timeout before queue timeout)
+
+- No Memory overhead (queue storage)
+- No Increased latency (queueing delay)
+- No Risk of timeout cascade (clients timeout before queue timeout)
 
 ### Strategy 3: `degrade`
 
@@ -112,6 +116,7 @@ Request arrives
 **Use case**: Graceful degradation with circuit breaker or alternative backends.
 
 **Examples**:
+
 - Route to lower-priority endpoint pool
 - Return cached response (if available)
 - Reduce request priority (if upstream supports)
@@ -136,14 +141,16 @@ Request arrives
 ```
 
 **Advantages**:
-- ✅ Maintains availability
-- ✅ Graceful degradation
-- ✅ No complete service outage
+
+- Maintains availability
+- Graceful degradation
+- No complete service outage
 
 **Disadvantages**:
-- ❌ Complex configuration
-- ❌ Requires fallback infrastructure
-- ❌ May provide degraded results
+
+- Complex configuration
+- Requires fallback infrastructure
+- May provide degraded results
 
 **Decision**: Implement `reject` and `queue` first. `degrade` is future enhancement.
 
@@ -174,9 +181,9 @@ Request arrives
 When queue is full (`queue_depth >= max_depth`):
 
 1. Check `overflow_strategy`:
-   - `"reject"`: Return 503 immediately
-   - `"drop_oldest"`: Evict oldest queued request, enqueue new one
-   - `"drop_newest"`: Reject new request (default)
+    - `"reject"`: Return 503 immediately
+    - `"drop_oldest"`: Evict oldest queued request, enqueue new one
+    - `"drop_newest"`: Reject new request (default)
 
 **Recommendation**: `drop_newest` (default) - preserves FIFO fairness.
 
@@ -383,10 +390,12 @@ async fn queue_consumer(queue: RequestQueue, limiter: ConcurrencyLimiter) {
 ## Interaction with Circuit Breaker
 
 When circuit breaker is **OPEN**:
+
 - Queue does not accumulate requests (immediate rejection)
 - Prevents queue from filling with requests that will fail anyway
 
 When circuit breaker is **HALF-OPEN**:
+
 - Queue continues operating normally
 - Allows probe requests to test recovery
 
@@ -516,18 +525,21 @@ If not specified:
 ## Testing Strategy
 
 **Unit Tests**:
+
 - Queue enqueue/dequeue correctness
 - Timeout expiration handling
 - Memory limit enforcement
 - FIFO ordering
 
 **Integration Tests**:
+
 - Queueing under concurrency limit
 - Timeout cascade scenarios
 - Queue overflow behavior
 - Permit release triggers queue consumer
 
 **Load Tests**:
+
 - Sustain queue at max_depth
 - Verify no memory leaks
 - Measure queueing latency overhead
@@ -540,6 +552,7 @@ If not specified:
 **Attack**: Malicious client floods OAGW to fill queues.
 
 **Mitigations**:
+
 1. Per-tenant rate limiting (limits requests before queueing)
 2. Memory limits (prevents unbounded queue growth)
 3. Authentication required (prevents anonymous flooding)
@@ -550,6 +563,7 @@ If not specified:
 **Attack**: Client claims high priority for all requests.
 
 **Mitigations**:
+
 1. `allow_client_override: false` by default
 2. Priority assigned by authentication context (tenant tier)
 3. Audit high-priority requests
@@ -557,32 +571,37 @@ If not specified:
 ## Implementation Phases
 
 **Phase 1: Basic Queueing**
-- ✅ `reject` and `queue` strategies
-- ✅ FIFO ordering
-- ✅ Timeout handling
-- ✅ Max depth enforcement
-- ✅ Metrics
+
+- `reject` and `queue` strategies
+- FIFO ordering
+- Timeout handling
+- Max depth enforcement
+- Metrics
 
 **Phase 2: Memory Management**
-- ✅ Memory tracking and limits
-- ✅ Large request handling
-- ✅ Overflow strategies
+
+- Memory tracking and limits
+- Large request handling
+- Overflow strategies
 
 **Phase 3: Priority Queueing** (Future)
-- ⏸ Priority-based ordering
-- ⏸ Client priority override (optional)
-- ⏸ Priority fairness algorithms
+
+- Priority-based ordering
+- Client priority override (optional)
+- Priority fairness algorithms
 
 **Phase 4: Degradation** (Future)
-- ⏸ `degrade` strategy
-- ⏸ Fallback upstream routing
-- ⏸ Cached response fallback
+
+- `degrade` strategy
+- Fallback upstream routing
+- Cached response fallback
 
 ## Decision
 
 **Accepted**: Implement backpressure with `reject` and `queue` strategies (Phase 1-2).
 
 **Rationale**:
+
 - Provides graceful degradation during traffic spikes
 - Improves user experience (fewer hard errors)
 - Bounded resource usage (queue limits)
@@ -594,18 +613,21 @@ If not specified:
 ## Consequences
 
 **Positive**:
-- ✅ Smoother traffic handling during bursts
-- ✅ Better UX (fewer immediate rejections)
-- ✅ Automatic retry handling via queueing
-- ✅ Observable queue behavior
+
+- Smoother traffic handling during bursts
+- Better UX (fewer immediate rejections)
+- Automatic retry handling via queueing
+- Observable queue behavior
 
 **Negative**:
-- ❌ Memory overhead for queues
-- ❌ Increased latency (queueing delay)
-- ❌ Complexity in queue management
-- ❌ Risk of timeout cascades (client timeout < queue timeout)
+
+- Memory overhead for queues
+- Increased latency (queueing delay)
+- Complexity in queue management
+- Risk of timeout cascades (client timeout < queue timeout)
 
 **Mitigations**:
+
 - Memory limits prevent unbounded growth
 - Queue timeout < typical client timeout (e.g., 5s queue vs 30s client)
 - Monitor queue metrics to detect issues

@@ -1,4 +1,4 @@
-# PRD — Outbound API Gateway (OAGW)
+# PRD: Outbound API Gateway (OAGW)
 
 <!-- TOC START -->
 ## Table of Contents
@@ -8,12 +8,14 @@
   - [Target Users](#target-users)
   - [Problems Solved](#problems-solved)
   - [Success Criteria](#success-criteria)
+  - [Deployment Flexibility](#deployment-flexibility)
 - [Actors](#actors)
   - [Human](#human)
   - [System](#system)
 - [Functional Requirements](#functional-requirements)
   - [Upstream Management](#upstream-management)
   - [Route Management](#route-management)
+  - [Enable/Disable Semantics](#enabledisable-semantics)
   - [Request Proxying](#request-proxying)
   - [Authentication Injection](#authentication-injection)
   - [Rate Limiting](#rate-limiting)
@@ -34,722 +36,380 @@
   - [Auth Plugins (`gts.x.core.oagw.plugin.auth.v1~*`)](#auth-plugins-gtsxcoreoagwpluginauthv1)
   - [Guard Plugins (`gts.x.core.oagw.plugin.guard.v1~*`)](#guard-plugins-gtsxcoreoagwpluginguardv1)
   - [Transform Plugins (`gts.x.core.oagw.plugin.transform.v1~*`)](#transform-plugins-gtsxcoreoagwplugintransformv1)
-  - [Error Codes](#error-codes)
+- [Error Codes](#error-codes)
 - [API Endpoints](#api-endpoints)
 - [Dependencies](#dependencies)
 
 <!-- TOC END -->
 
-## 1. Overview
+## Overview
 
-### 1.1 Purpose
+OAGW manages all outbound API requests from CyberFabric to external services.
 
-OAGW manages all outbound API requests from CyberFabric to external services, centralizing credential management, rate limiting, and security policies.
+**Component Architecture**: OAGW is composed of three distinct components that work together:
+- **API Handler**: Entry point for all requests, handles incoming auth/rate limiting, routes to CP or DP
+- **Data Plane (CP)**: Orchestrates proxy requests, executes calls to external services
+- **Control Plane (DP)**: Manages configuration data (upstreams/routes/plugins) with multi-layer caching
 
-### 1.2 Background / Problem Statement
+**Deployment Flexibility**: Modkit framework supports both single-executable (all components in-process) and microservice (components deployed separately) deployment modes.
 
-Applications consuming external APIs (OpenAI, Stripe, etc.) need a secure, centralized way to manage credentials, enforce rate limits, and apply consistent policies. Direct API integration exposes credentials in application code, lacks unified rate limiting, and complicates SSRF protection and audit trails.
+See [DESIGN.md](./DESIGN.md#component-architecture) for detailed architecture.
 
-OAGW solves this by providing a proxy endpoint with credential injection, configurable routing, plugin-based transformations, and hierarchical configuration inheritance across tenant boundaries.
+**Terminology Note**: Due to historical naming, crate names don't match component terminology:
+- `oagw-cp` crate implements the **Data Plane** (proxy/request processing)
+- `oagw-dp` crate implements the **Control Plane** (config management)
 
-### 1.3 Goals (Business Outcomes)
+Throughout this document we use industry-standard terminology. See DESIGN.md for full mapping details.
 
-- <10ms added latency (p95) for proxied requests
-- Zero credential exposure in logs or error responses
-- 99.9% availability with circuit breaker protection
-- Complete audit trail for all outbound API requests
+### Key Concepts
 
-### 1.4 Glossary
+| Concept  | Definition                                                                                |
+|----------|-------------------------------------------------------------------------------------------|
+| Upstream | External service target (scheme/host/port, protocol, auth, headers, rate limits)          |
+| Route    | API path on an upstream. Matches by method/path/query (HTTP), service/method (gRPC), etc. |
+| Plugin   | Modular processor: Auth (credential injection), Guard (validation), Transform (mutation)  |
+| API Handler | Entry point component that routes requests based on path                               |
+| Data Plane | Orchestrates proxy requests and executes calls to external services                  |
+| Control Plane | Manages configuration data with database access and multi-layer caching                 |
 
-| Term | Definition |
-|------|------------|
-| Upstream | External service target (scheme/host/port, protocol, auth, headers, rate limits) |
-| Route | API path on an upstream. Matches by method/path/query (HTTP), service/method (gRPC) |
-| Plugin | Modular processor - Auth (credential injection), Guard (validation), Transform (mutation) |
-| Alias | Human-readable identifier for upstream resolution in proxy URLs |
-| Shadowing | Descendant tenant upstream overriding ancestor upstream with same alias |
+### Target Users
 
-## 2. Actors
+- **Platform Operators** - Configure upstreams, routes, global policies
+- **Tenant Administrators** - Manage tenant-specific configs, credentials, rate limits
+- **Application Developers** - Consume external APIs via proxy endpoint
 
-### 2.1 Human Actors
+### Problems Solved
 
-#### Platform Operator
+- Centralizes credential management (apps don't handle API keys/tokens)
+- Unified interface for external services with consistent error handling
+- Rate limiting to prevent abuse and cost overruns
+- SSRF protection, header validation, security policies
 
-- [ ] `p1` - **ID**: `fdd-oagw-actor-platform-operator-v1`
+### Success Criteria
 
-**Role**: Manages global configuration including upstreams, routes, system-wide plugins, and security policies.
+- <10ms added latency (p95)
+- Zero credential exposure in logs/errors
+- 99.9% availability
+- Complete audit trail
 
-**Needs**: Administrative access to configure gateway-wide settings, enforce policies across tenants, monitor system health.
+### Deployment Flexibility
 
-#### Tenant Administrator
+OAGW supports two deployment modes via the modkit framework:
 
-- [ ] `p1` - **ID**: `fdd-oagw-actor-tenant-admin-v1`
+**Single-Executable Mode**:
+- All three components (API Handler, CP, DP) run in a single process
+- Communication via direct in-process function calls (zero serialization overhead)
+- Simpler deployment, ideal for development and small-scale deployments
+- Shared in-memory resources (L1 cache, connection pools)
 
-**Role**: Manages tenant-specific settings including credentials, rate limits, and custom plugins.
+**Microservice Mode**:
+- Components deployed as separate services (each horizontally scalable)
+- Communication via RPC (modkit provides transparent transport)
+- Independent scaling: scale CP for proxy load, scale DP for config operations
+- Example topology: 1 API Handler, 10 CP instances, 2 DP instances
+- Shared L2 cache (Redis) for config across DP instances
 
-**Needs**: Ability to configure tenant-scoped upstreams, override inherited configurations, manage secrets.
+**Deployment Abstraction**: OAGW code is deployment-agnostic. Modkit handles service discovery, load balancing, and transparent RPC based on deployment configuration.
 
-#### Application Developer
+For module structure and deployment architecture, see [DESIGN.md](./DESIGN.md#module-structure).
 
-- [ ] `p2` - **ID**: `fdd-oagw-actor-app-developer-v1`
+## Actors
 
-**Role**: Consumes external APIs via proxy endpoint without managing credentials directly.
+### Human
 
-**Needs**: Simple proxy interface, reliable request forwarding, clear error messages, no credential handling.
+| Actor                 | Role                                                                    |
+|-----------------------|-------------------------------------------------------------------------|
+| Platform Operator     | Manages global config: upstreams, routes, system-wide plugins, security |
+| Tenant Administrator  | Tenant-specific settings: credentials, rate limits, custom plugins      |
+| Application Developer | Consumes APIs via proxy endpoint, no credential management              |
 
-### 2.2 System Actors
+### System
 
-#### Credential Store
+| Actor            | Role                                                  |
+|------------------|-------------------------------------------------------|
+| Credential Store | Secure storage/retrieval of secrets by UUID reference |
+| Types Registry   | GTS schema/instance registration, validation          |
+| Upstream Service | External third-party service (OpenAI, Stripe, etc.)   |
 
-- [ ] `p1` - **ID**: `fdd-oagw-actor-cred-store-v1`
+## Functional Requirements
 
-**Role**: Secure storage and retrieval of secrets by UUID reference, tenant-isolated.
+### Upstream Management
 
-#### Types Registry
+CRUD for upstream configurations. Each upstream defines: server endpoints, protocol, auth, headers, rate limits.
 
-- [ ] `p1` - **ID**: `fdd-oagw-actor-types-registry-v1`
+**Component**: Control Plane handles all upstream CRUD operations via `/api/oagw/v1/upstreams/*` endpoints.
 
-**Role**: GTS schema and instance registration, validation of configuration payloads.
+### Route Management
 
-#### Upstream Service
+CRUD for routes. Routes define matching rules (method, path, query allowlist) mapping requests to upstreams.
 
-- [ ] `p1` - **ID**: `fdd-oagw-actor-upstream-service-v1`
+**Component**: Control Plane handles all route CRUD operations via `/api/oagw/v1/routes/*` endpoints.
 
-**Role**: External third-party service (OpenAI, Stripe, etc.) receiving proxied requests.
+### Enable/Disable Semantics
 
-## 3. Scope
+Upstreams and routes support an `enabled` boolean field (default: `true`).
 
-### 3.1 In Scope
+**Behavior**:
+- **Disabled upstream**: All proxy requests rejected with `503 Service Unavailable` (gateway error). Upstream remains visible in list/get operations.
+- **Disabled route**: Route excluded from matching; request falls through to next match or returns 404
 
-- HTTP family traffic proxying (HTTP, SSE, WebSocket, WebTransport)
-- Upstream and route CRUD operations
-- Multi-protocol authentication (API Key, OAuth2, Basic, Bearer)
-- Tenant-scoped rate limiting with hierarchical enforcement
-- Plugin system (Auth, Guard, Transform)
-- Hierarchical configuration with sharing modes
-- Alias-based upstream resolution with shadowing
-- Streaming support (SSE, WebSocket)
+**Hierarchical Inheritance**:
+- If ancestor tenant disables an upstream, it is disabled for all descendants
+- Descendant cannot re-enable an ancestor-disabled resource
 
-### 3.2 Out of Scope
+**Use Cases**:
+- Temporary maintenance without deleting configuration
+- Emergency circuit break at management layer
+- Gradual rollout (enable route for subset of tenants)
 
-- gRPC support (planned for later phase, p4)
-- Automatic request retries (client-managed)
-- Response caching (future consideration)
+### Request Proxying
 
-## 4. Functional Requirements
+Proxy requests via `{METHOD} /api/oagw/v1/proxy/{alias}[/{path}][?{query}]`. Resolves upstream by alias, matches route, transforms and forwards.
 
-### 4.1 Upstream Management
+**Component Flow**:
+1. API Handler receives request at `/api/oagw/v1/proxy/*`
+2. Routes to Data Plane
+3. Data Plane calls Control Plane for config resolution (upstream, route)
+4. Data Plane executes plugins and proxies to external service
+5. Returns response to client
 
-#### CRUD Upstream Configurations
+No automatic retries are performed by OAGW. Each inbound request results in at most one upstream attempt; retry behavior is client-managed.
 
-- [ ] `p1` - **ID**: `fdd-oagw-fr-upstream-crud-v1`
+### Authentication Injection
 
-The system **MUST** provide REST API endpoints for creating, reading, updating, and deleting upstream configurations.
+Inject credentials into outbound requests. Supported: API Key, Basic Auth, OAuth2 Client Credentials, Bearer Token. Credentials retrieved from credential store at request time.
 
-**Rationale**: Platform operators and tenant administrators need to manage external service targets dynamically.
+**Component**: Data Plane executes auth plugins during proxy request processing.
 
-**Actors**: `fdd-oagw-actor-platform-operator-v1`, `fdd-oagw-actor-tenant-admin-v1`
+### Rate Limiting
 
-#### Upstream Definition
+Enforce rate limits at upstream/route levels. Configurable: rate, window, capacity, cost, scope (global/tenant/user/IP), strategy (reject/queue/degrade).
 
-- [ ] `p1` - **ID**: `fdd-oagw-fr-upstream-schema-v1`
+### Header Transformation
 
-The system **MUST** support upstream definitions including server endpoints (host, port, scheme), protocol, authentication configuration, request/response headers, and rate limits.
+Transform request/response headers: set/add/remove, passthrough control, automatic hop-by-hop stripping.
 
-**Rationale**: Complete upstream specification enables flexible integration with diverse external services.
+### Plugin System
 
-**Actors**: `fdd-oagw-actor-platform-operator-v1`
+OAGW provides extensibility through a plugin system with three plugin types:
 
-### 4.2 Route Management
+- **Auth** (`gts.x.core.oagw.plugin.auth.v1~*`): Credential injection (API key, OAuth2, Bearer token, Basic auth)
+- **Guard** (`gts.x.core.oagw.plugin.guard.v1~*`): Validation/policy enforcement, can reject requests (timeout, CORS, rate limiting)
+- **Transform** (`gts.x.core.oagw.plugin.transform.v1~*`): Request/response mutation (logging, metrics, request ID)
 
-#### CRUD Route Configurations
+**Component**: Data Plane executes all plugins during proxy request processing. Plugins are defined in Control Plane (CRUD via `/api/oagw/v1/plugins/*`) and loaded by Data Plane.
 
-- [ ] `p1` - **ID**: `fdd-oagw-fr-route-crud-v1`
+**Plugin Types**:
+- **Built-in plugins**: Included in Data Plane crate (`oagw-cp`), implemented in Rust
+- **External plugins**: Separate modkit modules implementing plugin traits from `oagw-core`
 
-The system **MUST** provide REST API endpoints for creating, reading, updating, and deleting route configurations.
+**Execution order**: Auth → Guards → Transform(request) → Upstream → Transform(response/error)
 
-**Rationale**: Routes map API paths to upstreams with granular matching rules.
+Plugin chain composition: upstream plugins execute before route plugins.
 
-**Actors**: `fdd-oagw-actor-platform-operator-v1`, `fdd-oagw-actor-tenant-admin-v1`
+Plugin API contract: plugin definitions are immutable after creation.
 
-#### Route Matching Rules
+Justification: immutability guarantees deterministic behavior for attached routes/upstreams, improves auditability, and avoids in-place source mutation risks. Updates are performed by creating a new plugin version and re-binding references.
 
-- [ ] `p1` - **ID**: `fdd-oagw-fr-route-matching-v1`
+Circuit breaker is a core gateway resilience capability (configured as core policy), not a plugin.
 
-The system **MUST** support route matching by HTTP method, path pattern, and query parameter allowlist.
+For plugin trait definitions and architecture, see [DESIGN.md](./DESIGN.md#plugin-system-overview).
 
-**Rationale**: Flexible routing enables fine-grained control over which requests reach specific upstreams.
+### Streaming Support
 
-**Actors**: `fdd-oagw-actor-platform-operator-v1`
+Main protocol focus is HTTP family traffic: HTTP request/response, SSE, WebSocket, and WebTransport session flows.
+gRPC support is planned for a later phase (p4).
 
-### 4.3 Request Proxying
+### Configuration Layering
 
-#### Proxy Endpoint
+Merge configs: Upstream (base) < Route < Tenant (highest priority).
 
-- [ ] `p1` - **ID**: `fdd-oagw-fr-proxy-endpoint-v1`
+### Hierarchical Configuration Override
 
-The system **MUST** expose proxy endpoint at `{METHOD} /api/oagw/v1/proxy/{alias}[/{path}][?{query}]`.
+Configurations defined by ancestor tenants can be overridden by descendants based on visibility and permissions.
 
-**Rationale**: Single entry point for all proxied requests with alias-based upstream resolution.
+**Sharing Modes**:
 
-**Actors**: `fdd-oagw-actor-app-developer-v1`
+| Mode      | Behavior                                      |
+|-----------|-----------------------------------------------|
+| `private` | Not visible to descendants (default)          |
+| `inherit` | Visible; descendant can override if specified |
+| `enforce` | Visible; descendant cannot override           |
 
-#### Alias Resolution
+**Override Rules**:
 
-- [ ] `p1` - **ID**: `fdd-oagw-fr-alias-resolution-v1`
+- **Auth**: With `sharing: inherit`, descendant with permission can use own credentials
+- **Rate limits**: Descendant can only be stricter: `effective = min(ancestor.enforced, descendant)`
+- **Plugins**: Descendant's plugins append; enforced plugins cannot be removed
+- **Tags (discovery metadata)**: Merged top-to-bottom with add-only semantics:
+  `effective_tags = union(ancestor_tags..., descendant_tags)`. Descendants can add tags but cannot remove inherited tags.
 
-The system **MUST** resolve upstream by alias from tenant hierarchy (descendant to root), with closest match winning.
+If upstream creation resolves to an existing upstream definition (binding-style flow), request tags are treated as tenant-local additions for effective discovery; they do not mutate ancestor tags.
 
-**Rationale**: Hierarchical resolution enables tenant shadowing and configuration inheritance.
+**Example**:
 
-**Actors**: `fdd-oagw-actor-app-developer-v1`
+```
+Partner Tenant:
+  upstream: api.openai.com
+  auth: { secret_ref: "cred://partner-openai-key", sharing: "inherit" }
+  rate_limit: { rate: 10000/min, sharing: "enforce" }
 
-#### No Automatic Retries
+Leaf Tenant (with permission):
+  auth: { secret_ref: "cred://my-own-openai-key" }  ← overrides partner's key
+  rate_limit: { rate: 100/min }  ← effective: min(10000, 100) = 100
 
-- [ ] `p1` - **ID**: `fdd-oagw-fr-no-retries-v1`
+Leaf Tenant (without permission):
+  auth: inherited from partner  ← uses partner's key
+```
 
-The system **MUST** perform at most one upstream attempt per inbound request without automatic retries.
+### Alias Resolution and Shadowing
 
-**Rationale**: Retry behavior is client-managed to avoid idempotency issues and duplicate operations.
+Upstreams are identified by alias in proxy URLs: `{METHOD} /api/oagw/v1/proxy/{alias}/{path}`.
 
-**Actors**: `fdd-oagw-actor-app-developer-v1`
+**Alias Resolution Rules**:
 
-### 4.4 Authentication Injection
+| Scenario                          | Enforced Alias            | Example                                                |
+|-----------------------------------|---------------------------|--------------------------------------------------------|
+| Single host                       | `hostname` (without port) | `api.openai.com:443` → alias: `api.openai.com`         |
+| Multiple hosts with common suffix | Common domain suffix      | `us.vendor.com`, `eu.vendor.com` → alias: `vendor.com` |
+| No common suffix or IP addresses  | Explicit alias required   | `10.0.1.1`, `10.0.1.2` → alias: `my-service`           |
 
-#### Credential Retrieval
+**Alias Defaults**:
 
-- [ ] `p1` - **ID**: `fdd-oagw-fr-auth-credential-retrieval-v1`
+- Single endpoint: alias defaults to `server.endpoints[0].host` (without port)
+- Multiple endpoints: system extracts common domain suffix
+- IP-based or heterogeneous hosts: explicit alias is mandatory
 
-The system **MUST** retrieve credentials from credential store by UUID reference at request time.
+**Shadowing Behavior**:
 
-**Rationale**: Credentials are never stored in gateway configuration, only secure references.
+When resolving an alias, OAGW searches the tenant hierarchy from descendant to root. The closest match wins (descendant shadows ancestor).
 
-**Actors**: `fdd-oagw-actor-cred-store-v1`
+```
+Request from: subsub-tenant
+Alias: "api.openai.com"
 
-#### Supported Auth Methods
+Resolution order:
+1. subsub-tenant's upstreams  ← wins if found
+2. sub-tenant's upstreams
+3. root-tenant's upstreams
+```
 
-- [ ] `p1` - **ID**: `fdd-oagw-fr-auth-methods-v1`
+**Example - Port Differentiation**:
 
-The system **MUST** support API Key, Basic Auth, OAuth2 Client Credentials, and Bearer Token authentication methods.
+```json
+// Production upstream (same host, different port)
+{
+  "server": { "endpoints": [ { "host": "api.openai.com", "port": 443 } ] },
+  "alias": "openai-prod"  // explicit alias needed to differentiate
+}
 
-**Rationale**: Covers most common external API authentication schemes.
+// Staging upstream
+{
+  "server": { "endpoints": [ { "host": "api.openai.com", "port": 8443 } ] },
+  "alias": "openai-staging"
+}
+```
 
-**Actors**: `fdd-oagw-actor-upstream-service-v1`
+**Example - Multi-Region with Common Suffix**:
 
-### 4.5 Rate Limiting
+```json
+// Multi-region upstream with auto-generated alias
+{
+  "server": {
+    "endpoints": [
+      { "host": "us.vendor.com", "port": 443 },
+      { "host": "eu.vendor.com", "port": 443 }
+    ]
+  }
+  // alias automatically set to "vendor.com" (common suffix)
+}
+```
 
-#### Rate Limit Enforcement
+**Example - IP-Based Endpoints**:
 
-- [ ] `p1` - **ID**: `fdd-oagw-fr-rate-limit-enforce-v1`
+```json
+// IP-based upstream requires explicit alias
+{
+  "server": {
+    "endpoints": [
+      { "host": "10.0.1.1", "port": 443 },
+      { "host": "10.0.1.2", "port": 443 }
+    ]
+  },
+  "alias": "my-internal-service"  // mandatory for IP addresses
+}
+```
 
-The system **MUST** enforce rate limits at upstream and route levels with configurable rate, window, capacity, cost, scope, and strategy.
+**Multi-Endpoint Pooling**:
 
-**Rationale**: Prevents abuse and cost overruns from excessive external API usage.
+Multiple endpoints within same upstream form a load-balance pool. Requests are distributed across endpoints.
 
-**Actors**: `fdd-oagw-actor-platform-operator-v1`
+**Compatibility Requirements**:
 
-#### Rate Limit Scope
+Endpoints in a pool must have identical:
 
-- [ ] `p1` - **ID**: `fdd-oagw-fr-rate-limit-scope-v1`
+- `protocol` (can't mix HTTP and gRPC)
+- `scheme` (can't mix https and wss)
+- `port` (all endpoints must use same port)
 
-The system **MUST** support rate limiting scopes: global, tenant, user, and IP address.
+**Enforced Limits Across Shadowing**:
 
-**Rationale**: Granular scoping enables precise control over different traffic sources.
+When descendant shadows ancestor's alias, enforced limits from ancestor still apply:
 
-**Actors**: `fdd-oagw-actor-tenant-admin-v1`
+```
+Root: alias "api.openai.com", rate_limit: { sharing: "enforce", rate: 10000 }
+Sub:  alias "api.openai.com" (shadows root)
 
-#### Rate Limit Strategies
+Effective for sub: min(root.enforced:10000, sub:500) = 500
+```
 
-- [ ] `p1` - **ID**: `fdd-oagw-fr-rate-limit-strategies-v1`
+For detailed alias resolution implementation, see [ADR: Resource Identification and Discovery](./docs/adr-resource-identification.md).
 
-The system **MUST** support rate limit strategies: reject (429 with Retry-After), queue, and degrade.
+## Use Cases
 
-**Rationale**: Different strategies for graceful degradation versus strict enforcement.
+### Proxy HTTP Request
 
-**Actors**: `fdd-oagw-actor-platform-operator-v1`
-
-### 4.6 Header Transformation
-
-#### Header Operations
-
-- [ ] `p1` - **ID**: `fdd-oagw-fr-header-transform-v1`
-
-The system **MUST** support header transformations: set, add, remove, and passthrough control.
-
-**Rationale**: Enables header injection, sanitization, and protocol compliance.
-
-**Actors**: `fdd-oagw-actor-platform-operator-v1`
-
-#### Hop-by-Hop Stripping
-
-- [ ] `p1` - **ID**: `fdd-oagw-fr-header-hop-strip-v1`
-
-The system **MUST** automatically strip hop-by-hop headers (Connection, Keep-Alive, etc.) from proxied requests/responses.
-
-**Rationale**: Protocol compliance and security best practices require removing proxy-specific headers.
-
-**Actors**: `fdd-oagw-actor-platform-operator-v1`
-
-### 4.7 Plugin System
-
-#### Plugin Types
-
-- [ ] `p1` - **ID**: `fdd-oagw-fr-plugin-types-v1`
-
-The system **MUST** support three plugin types: Auth (`gts.x.core.oagw.plugin.auth.v1~*`), Guard (`gts.x.core.oagw.plugin.guard.v1~*`), and Transform (`gts.x.core.oagw.plugin.transform.v1~*`).
-
-**Rationale**: Modular architecture enables credential injection, validation, and request/response mutation.
-
-**Actors**: `fdd-oagw-actor-platform-operator-v1`
-
-#### Plugin Execution Order
-
-- [ ] `p1` - **ID**: `fdd-oagw-fr-plugin-execution-order-v1`
-
-The system **MUST** execute plugins in order: Auth → Guards → Transform(request) → Upstream → Transform(response/error).
-
-**Rationale**: Deterministic execution order ensures predictable behavior and proper credential injection before request forwarding.
-
-**Actors**: `fdd-oagw-actor-platform-operator-v1`
-
-#### Plugin Chain Composition
-
-- [ ] `p1` - **ID**: `fdd-oagw-fr-plugin-chain-v1`
-
-The system **MUST** execute upstream plugins before route plugins in the plugin chain.
-
-**Rationale**: Upstream-level policies apply first, then route-specific overrides.
-
-**Actors**: `fdd-oagw-actor-platform-operator-v1`
-
-#### Plugin Immutability
-
-- [ ] `p1` - **ID**: `fdd-oagw-fr-plugin-immutability-v1`
-
-The system **MUST** enforce plugin definition immutability after creation; updates require creating new plugin version and re-binding references.
-
-**Rationale**: Immutability guarantees deterministic behavior for attached routes/upstreams, improves auditability, and avoids in-place source mutation risks.
-
-**Actors**: `fdd-oagw-actor-platform-operator-v1`
-
-#### Circuit Breaker Policy
-
-- [ ] `p1` - **ID**: `fdd-oagw-fr-circuit-breaker-v1`
-
-The system **MUST** implement circuit breaker as core gateway resilience capability (configured as core policy, not a plugin).
-
-**Rationale**: Circuit breaker is fundamental resilience mechanism preventing cascade failures.
-
-**Actors**: `fdd-oagw-actor-platform-operator-v1`
-
-### 4.8 Streaming Support
-
-#### HTTP Family Streaming
-
-- [ ] `p1` - **ID**: `fdd-oagw-fr-streaming-http-v1`
-
-The system **MUST** support HTTP request/response, SSE, WebSocket, and WebTransport session flows.
-
-**Rationale**: Modern external APIs use streaming protocols for real-time data.
-
-**Actors**: `fdd-oagw-actor-app-developer-v1`
-
-#### SSE Event Forwarding
-
-- [ ] `p1` - **ID**: `fdd-oagw-fr-streaming-sse-v1`
-
-The system **MUST** forward SSE events as received and handle connection lifecycle (open/close/error).
-
-**Rationale**: Low-latency event streaming requires immediate forwarding without buffering.
-
-**Actors**: `fdd-oagw-actor-app-developer-v1`
-
-### 4.9 Configuration Layering
-
-#### Configuration Merge
-
-- [ ] `p1` - **ID**: `fdd-oagw-fr-config-merge-v1`
-
-The system **MUST** merge configurations with priority: Upstream (base) < Route < Tenant (highest priority).
-
-**Rationale**: Hierarchical merging enables sensible defaults with targeted overrides.
-
-**Actors**: `fdd-oagw-actor-platform-operator-v1`
-
-### 4.10 Hierarchical Configuration Override
-
-#### Sharing Modes
-
-- [ ] `p1` - **ID**: `fdd-oagw-fr-sharing-modes-v1`
-
-The system **MUST** support configuration sharing modes: `private` (not visible to descendants), `inherit` (visible, descendant can override), and `enforce` (visible, descendant cannot override).
-
-**Rationale**: Fine-grained control over configuration inheritance across tenant boundaries.
-
-**Actors**: `fdd-oagw-actor-platform-operator-v1`, `fdd-oagw-actor-tenant-admin-v1`
-
-#### Auth Override
-
-- [ ] `p1` - **ID**: `fdd-oagw-fr-auth-override-v1`
-
-The system **MUST** allow descendant tenant with permission to override inherited auth configuration when `sharing: inherit`.
-
-**Rationale**: Enables tenants to use own credentials while inheriting upstream configuration.
-
-**Actors**: `fdd-oagw-actor-tenant-admin-v1`
-
-#### Rate Limit Enforcement Hierarchy
-
-- [ ] `p1` - **ID**: `fdd-oagw-fr-rate-limit-hierarchy-v1`
-
-The system **MUST** calculate effective rate limit as `min(ancestor.enforced, descendant)` when ancestor enforces rate limits.
-
-**Rationale**: Descendants can only be stricter, preventing bypass of parent limits.
-
-**Actors**: `fdd-oagw-actor-tenant-admin-v1`
-
-#### Plugin Layering
-
-- [ ] `p1` - **ID**: `fdd-oagw-fr-plugin-layering-v1`
-
-The system **MUST** append descendant plugins to inherited plugin chain; enforced plugins cannot be removed.
-
-**Rationale**: Ensures mandatory policies from ancestors remain active.
-
-**Actors**: `fdd-oagw-actor-tenant-admin-v1`
-
-#### Tag Merging
-
-- [ ] `p1` - **ID**: `fdd-oagw-fr-tag-merging-v1`
-
-The system **MUST** merge tags using `union(ancestor_tags..., descendant_tags)` with add-only semantics; descendants cannot remove inherited tags.
-
-**Rationale**: Discovery metadata accumulates through hierarchy without deletion.
-
-**Actors**: `fdd-oagw-actor-tenant-admin-v1`
-
-### 4.11 Alias Resolution and Shadowing
-
-#### Alias Defaults Single Host
-
-- [ ] `p1` - **ID**: `fdd-oagw-fr-alias-default-single-v1`
-
-The system **MUST** default alias to `hostname` (without port) for single-endpoint upstreams.
-
-**Rationale**: Automatic alias generation reduces configuration burden for simple cases.
-
-**Actors**: `fdd-oagw-actor-platform-operator-v1`
-
-#### Alias Defaults Multi-Host
-
-- [ ] `p1` - **ID**: `fdd-oagw-fr-alias-default-multi-v1`
-
-The system **MUST** extract common domain suffix as default alias for multi-endpoint upstreams with common suffix.
-
-**Rationale**: Load-balanced upstreams share logical identity via common domain.
-
-**Actors**: `fdd-oagw-actor-platform-operator-v1`
-
-#### Alias Explicit Requirement
-
-- [ ] `p1` - **ID**: `fdd-oagw-fr-alias-explicit-v1`
-
-The system **MUST** require explicit alias for IP-based or heterogeneous host endpoints.
-
-**Rationale**: No logical alias can be inferred from IP addresses or unrelated hostnames.
-
-**Actors**: `fdd-oagw-actor-platform-operator-v1`
-
-#### Shadowing Resolution
-
-- [ ] `p1` - **ID**: `fdd-oagw-fr-shadowing-resolution-v1`
-
-The system **MUST** resolve alias by searching tenant hierarchy from descendant to root, with closest match winning.
-
-**Rationale**: Descendant upstreams shadow ancestor upstreams with same alias.
-
-**Actors**: `fdd-oagw-actor-tenant-admin-v1`
-
-#### Multi-Endpoint Pooling
-
-- [ ] `p1` - **ID**: `fdd-oagw-fr-multi-endpoint-pool-v1`
-
-The system **MUST** treat multiple endpoints within same upstream as load-balance pool, distributing requests across endpoints.
-
-**Rationale**: High availability and load distribution for upstream services.
-
-**Actors**: `fdd-oagw-actor-platform-operator-v1`
-
-#### Endpoint Compatibility
-
-- [ ] `p1` - **ID**: `fdd-oagw-fr-endpoint-compatibility-v1`
-
-The system **MUST** enforce identical protocol, scheme, and port across all endpoints in a pool.
-
-**Rationale**: Mixed protocols/schemes/ports would create routing ambiguity.
-
-**Actors**: `fdd-oagw-actor-platform-operator-v1`
-
-#### Enforced Limits Across Shadowing
-
-- [ ] `p1` - **ID**: `fdd-oagw-fr-enforced-limits-shadowing-v1`
-
-The system **MUST** apply enforced limits from ancestor even when descendant shadows alias.
-
-**Rationale**: Shadowing does not bypass ancestor-enforced policies.
-
-**Actors**: `fdd-oagw-actor-tenant-admin-v1`
-
-## 5. Use Cases
-
-#### UC: Proxy HTTP Request
-
-- [ ] `p1` - **ID**: `fdd-oagw-usecase-proxy-request-v1`
-
-**Actor**: `fdd-oagw-actor-app-developer-v1`
-
-**Preconditions**:
-- Upstream and route configured
-- Credentials stored in credential store
-- Request matches route pattern
-
-**Main Flow**:
 1. App sends request to `/api/oagw/v1/proxy/{alias}/{path}`
-2. System resolves upstream by alias from tenant hierarchy
-3. System matches route by method/path
-4. System merges configurations (upstream < route < tenant)
-5. System retrieves credentials from credential store
-6. System transforms request headers
-7. System executes plugin chain (Auth → Guards → Transform)
-8. System forwards request to upstream
-9. System returns response to app
+2. Resolve upstream by alias
+3. Match route by method/path
+4. Merge configs (upstream < route < tenant)
+5. Retrieve credentials, transform request
+6. Execute plugin chain
+7. Forward to upstream, return response
 
-**Postconditions**:
-- Request logged with correlation ID
-- Metrics recorded (latency, status, upstream)
+### Configure Upstream
 
-#### UC: Configure Upstream
+POST to `/api/oagw/v1/upstreams` with server endpoints, protocol, auth config. System validates and persists.
 
-- [ ] `p1` - **ID**: `fdd-oagw-usecase-config-upstream-v1`
+### Configure Route
 
-**Actor**: `fdd-oagw-actor-platform-operator-v1`, `fdd-oagw-actor-tenant-admin-v1`
+POST to `/api/oagw/v1/routes` with upstream_id and match rules. System validates upstream reference and persists.
 
-**Preconditions**:
-- User has upstream configuration permission
-- Server endpoints valid and reachable
+### Rate Limit Exceeded
 
-**Main Flow**:
-1. User POSTs to `/api/oagw/v1/upstreams` with server endpoints, protocol, auth config
-2. System validates endpoint format and protocol compatibility
-3. System generates or validates alias
-4. System persists upstream configuration
-5. System returns created upstream with ID
+When limit hit: reject (429 with Retry-After), queue, or degrade based on strategy.
 
-**Postconditions**:
-- Upstream available for route binding
-- Configuration logged to audit trail
+### SSE Streaming
 
-#### UC: Configure Route
+Forward events as received, handle connection lifecycle (open/close/error).
 
-- [ ] `p1` - **ID**: `fdd-oagw-usecase-config-route-v1`
+## Non-Functional Requirements
 
-**Actor**: `fdd-oagw-actor-platform-operator-v1`, `fdd-oagw-actor-tenant-admin-v1`
+| Requirement          | Description                                                |
+|----------------------|------------------------------------------------------------|
+| Low Latency          | <10ms overhead (p95), plugin timeout enforced              |
+| High Availability    | 99.9%, circuit breakers prevent cascade failures           |
+| SSRF Protection      | DNS validation, IP pinning, header stripping               |
+| Credential Isolation | Never in logs/errors, UUID reference only, tenant-isolated |
+| Input Validation     | Path, query, headers, body size validated; reject with 400 |
+| Observability        | Request logs with correlation ID, Prometheus metrics       |
+| Starlark Sandbox     | No network/file I/O, no imports, timeout/memory limits     |
+| Multi-tenancy        | All resources tenant-scoped, isolation at data layer       |
 
-**Preconditions**:
-- Upstream exists and is accessible
-- User has route configuration permission
+## Built-in Plugins
 
-**Main Flow**:
-1. User POSTs to `/api/oagw/v1/routes` with upstream_id and match rules
-2. System validates upstream reference exists
-3. System validates match rules (method, path pattern, query allowlist)
-4. System persists route configuration
-5. System returns created route with ID
+### Auth Plugins (`gts.x.core.oagw.plugin.auth.v1~*`)
 
-**Postconditions**:
-- Route active for request matching
-- Configuration logged to audit trail
-
-#### UC: Rate Limit Exceeded
-
-- [ ] `p1` - **ID**: `fdd-oagw-usecase-rate-limit-exceeded-v1`
-
-**Actor**: `fdd-oagw-actor-app-developer-v1`
-
-**Preconditions**:
-- Rate limit configured for upstream/route
-- Request count exceeds rate limit threshold
-
-**Main Flow**:
-1. System detects rate limit exceeded for scope (tenant/user/IP)
-2. System applies configured strategy (reject/queue/degrade)
-
-**Alternative Flows**:
-- **Strategy: reject**: System returns 429 with Retry-After header
-- **Strategy: queue**: System queues request for later processing
-- **Strategy: degrade**: System applies degraded service mode
-
-**Postconditions**:
-- Rate limit event logged with scope and threshold
-- Metrics recorded (rate limit hits by scope)
-
-#### UC: SSE Streaming
-
-- [ ] `p1` - **ID**: `fdd-oagw-usecase-sse-streaming-v1`
-
-**Actor**: `fdd-oagw-actor-app-developer-v1`
-
-**Preconditions**:
-- Upstream supports SSE protocol
-- Route configured for streaming
-
-**Main Flow**:
-1. App opens SSE connection to `/api/oagw/v1/proxy/{alias}/{path}`
-2. System establishes upstream SSE connection
-3. System forwards events as received without buffering
-4. System handles connection lifecycle (open/close/error)
-5. System closes downstream connection when upstream closes
-
-**Postconditions**:
-- Connection duration logged
-- Event count metrics recorded
-
-## 6. Non-Functional Requirements
-
-### 6.1 Module-Specific NFRs
-
-#### Low Latency
-
-- [ ] `p1` - **ID**: `fdd-oagw-nfr-latency-v1`
-
-The system **MUST** add <10ms overhead (p95) for proxied requests.
-
-**Threshold**: p95 latency ≤ 10ms measured from proxy entry to upstream forwarding
-
-**Rationale**: Gateway latency directly impacts user-facing response times; minimal overhead critical for real-time APIs.
-
-**Architecture Allocation**: See DESIGN.md § NFR Allocation for caching and connection pooling strategies
-
-#### High Availability
-
-- [ ] `p1` - **ID**: `fdd-oagw-nfr-availability-v1`
-
-The system **MUST** maintain 99.9% availability with circuit breaker protection.
-
-**Threshold**: 99.9% uptime (43 minutes/month max downtime), circuit breaker trips at 50% error rate
-
-**Rationale**: Gateway is critical path for all external API access; downtime blocks all outbound integrations.
-
-**Architecture Allocation**: See DESIGN.md § Circuit Breaker for failure detection and recovery
-
-#### SSRF Protection
-
-- [ ] `p1` - **ID**: `fdd-oagw-nfr-ssrf-protection-v1`
-
-The system **MUST** validate DNS resolution, pin IP addresses, and strip sensitive headers.
-
-**Threshold**: 100% of requests validated against allowlist/denylist, no internal IP ranges reachable
-
-**Rationale**: Prevents Server-Side Request Forgery attacks targeting internal infrastructure.
-
-**Architecture Allocation**: See DESIGN.md § Security for DNS validation and header filtering
-
-#### Credential Isolation
-
-- [ ] `p1` - **ID**: `fdd-oagw-nfr-credential-isolation-v1`
-
-The system **MUST** never expose credentials in logs or error responses, using UUID references only.
-
-**Threshold**: Zero credential leakage in logs/errors/responses, 100% tenant-isolated credential access
-
-**Rationale**: Credential exposure violates security policy and creates compliance risk.
-
-**Architecture Allocation**: See DESIGN.md § Security for credential store integration
-
-#### Input Validation
-
-- [ ] `p1` - **ID**: `fdd-oagw-nfr-input-validation-v1`
-
-The system **MUST** validate path, query, headers, and body size; reject invalid requests with 400.
-
-**Threshold**: 100% of requests validated before forwarding, max body size 10MB
-
-**Rationale**: Prevents injection attacks and resource exhaustion from malformed requests.
-
-**Architecture Allocation**: See DESIGN.md § Request Validation for validation pipeline
-
-#### Observability
-
-- [ ] `p1` - **ID**: `fdd-oagw-nfr-observability-v1`
-
-The system **MUST** log requests with correlation ID and expose Prometheus metrics.
-
-**Threshold**: 100% request logging, <50ms metric collection overhead, 7-day log retention
-
-**Rationale**: Enables troubleshooting, performance analysis, and SLA monitoring.
-
-**Architecture Allocation**: See DESIGN.md § Observability for logging and metrics architecture
-
-#### Starlark Sandbox
-
-- [ ] `p1` - **ID**: `fdd-oagw-nfr-starlark-sandbox-v1`
-
-The system **MUST** enforce Starlark sandbox restrictions: no network/file I/O, no imports, timeout/memory limits.
-
-**Threshold**: Network/file access blocked, 100ms execution timeout, 10MB memory limit per plugin
-
-**Rationale**: Custom plugins must not access external resources or consume excessive resources.
-
-**Architecture Allocation**: See DESIGN.md § Plugin System for sandbox implementation
-
-#### Multi-tenancy
-
-- [ ] `p1` - **ID**: `fdd-oagw-nfr-multi-tenancy-v1`
-
-The system **MUST** scope all resources by tenant with isolation at data layer.
-
-**Threshold**: 100% tenant-scoped queries, zero cross-tenant data leakage
-
-**Rationale**: Tenant isolation is fundamental security requirement for multi-tenant architecture.
-
-**Architecture Allocation**: See DESIGN.md § Multi-Tenancy for data isolation strategy
-
-## 7. Public Library Interfaces
-
-### 7.1 Public API Surface
-
-#### REST API Endpoints
-
-- [ ] `p1` - **ID**: `fdd-oagw-interface-rest-api-v1`
-
-**Type**: REST API
-
-**Stability**: stable
-
-**Description**: CRUD operations for upstreams, routes, plugins; proxy endpoint for request forwarding.
-
-**Breaking Change Policy**: Major version bump required for endpoint path, method, or request/response schema changes.
-
-**Endpoints**:
-- `POST/GET/PUT/DELETE /api/oagw/v1/upstreams[/{id}]`
-- `POST/GET/PUT/DELETE /api/oagw/v1/routes[/{id}]`
-- `POST/GET/DELETE /api/oagw/v1/plugins[/{id}]`
-- `GET /api/oagw/v1/plugins/{id}/source`
-- `{METHOD} /api/oagw/v1/proxy/{alias}[/{path}][?{query}]`
-
-#### Built-in Auth Plugins
-
-- [ ] `p1` - **ID**: `fdd-oagw-interface-auth-plugins-v1`
-
-**Type**: Plugin Interface
-
-**Stability**: stable
-
-**Description**: GTS-identified auth plugins for credential injection.
-
-**Breaking Change Policy**: Plugin GTS ID immutable; config schema changes require new version.
-
-**Plugins**:
 - `gts.x.core.oagw.plugin.auth.v1~x.core.oagw.noop.v1` - No authentication
 - `gts.x.core.oagw.plugin.auth.v1~x.core.oagw.apikey.v1` - API key injection (header/query)
 - `gts.x.core.oagw.plugin.auth.v1~x.core.oagw.basic.v1` - HTTP Basic authentication
@@ -757,80 +417,58 @@ The system **MUST** scope all resources by tenant with isolation at data layer.
 - `gts.x.core.oagw.plugin.auth.v1~x.core.oagw.oauth2.client_cred_basic.v1` - OAuth2 with Basic auth
 - `gts.x.core.oagw.plugin.auth.v1~x.core.oagw.bearer.v1` - Bearer token injection
 
-#### Built-in Guard Plugins
+### Guard Plugins (`gts.x.core.oagw.plugin.guard.v1~*`)
 
-- [ ] `p1` - **ID**: `fdd-oagw-interface-guard-plugins-v1`
-
-**Type**: Plugin Interface
-
-**Stability**: stable
-
-**Description**: GTS-identified guard plugins for validation and policy enforcement.
-
-**Breaking Change Policy**: Plugin GTS ID immutable; config schema changes require new version.
-
-**Plugins**:
 - `gts.x.core.oagw.plugin.guard.v1~x.core.oagw.timeout.v1` - Request timeout enforcement
 - `gts.x.core.oagw.plugin.guard.v1~x.core.oagw.cors.v1` - CORS preflight validation
 
-#### Built-in Transform Plugins
+### Transform Plugins (`gts.x.core.oagw.plugin.transform.v1~*`)
 
-- [ ] `p1` - **ID**: `fdd-oagw-interface-transform-plugins-v1`
-
-**Type**: Plugin Interface
-
-**Stability**: stable
-
-**Description**: GTS-identified transform plugins for request/response mutation.
-
-**Breaking Change Policy**: Plugin GTS ID immutable; config schema changes require new version.
-
-**Plugins**:
 - `gts.x.core.oagw.plugin.transform.v1~x.core.oagw.logging.v1` - Request/response logging
 - `gts.x.core.oagw.plugin.transform.v1~x.core.oagw.metrics.v1` - Prometheus metrics collection
 - `gts.x.core.oagw.plugin.transform.v1~x.core.oagw.request_id.v1` - X-Request-ID propagation
 
-## 8. Error Codes
+## Error Codes
 
-| HTTP | Error                | Retriable | Description |
-|------|----------------------|-----------|-------------|
-| 400  | ValidationError      | No        | Invalid request format, path, query, or headers |
-| 401  | AuthenticationFailed | No        | Credential retrieval failed or invalid |
-| 404  | RouteNotFound        | No        | No route matches request pattern |
-| 413  | PayloadTooLarge      | No        | Request body exceeds size limit |
-| 429  | RateLimitExceeded    | Yes       | Rate limit threshold exceeded for scope |
-| 500  | SecretNotFound       | No        | Credential UUID reference not found in store |
-| 502  | DownstreamError      | Depends   | Upstream service returned error |
-| 503  | CircuitBreakerOpen   | Yes       | Circuit breaker protecting upstream |
-| 504  | Timeout              | Yes       | Upstream request timeout exceeded |
+| HTTP | Error                | Retriable |
+|------|----------------------|-----------|
+| 400  | ValidationError      | No        |
+| 401  | AuthenticationFailed | No        |
+| 404  | RouteNotFound        | No        |
+| 413  | PayloadTooLarge      | No        |
+| 429  | RateLimitExceeded    | Yes       |
+| 500  | SecretNotFound       | No        |
+| 502  | DownstreamError      | Depends   |
+| 503  | CircuitBreakerOpen   | Yes       |
+| 504  | Timeout              | Yes       |
 
-## 9. Dependencies
+## API Endpoints
 
-| Dependency | Description | Criticality |
-|------------|-------------|-------------|
-| `types-registry` | GTS schema/instance registration and validation | p1 |
-| `cred_store` | Secure secret retrieval by UUID reference | p1 |
-| `api_ingress` | REST API hosting and routing | p1 |
-| `modkit-db` | Database persistence for upstreams/routes/plugins | p1 |
-| `modkit-auth` | Authorization and tenant context | p1 |
+All requests enter through API Handler, which routes based on path:
 
-## 10. Assumptions
+**Management API** (routed to Control Plane):
+```
+POST/GET/PUT/DELETE /api/oagw/v1/upstreams[/{id}]
+POST/GET/PUT/DELETE /api/oagw/v1/routes[/{id}]
+POST/GET/DELETE /api/oagw/v1/plugins[/{id}]
+GET /api/oagw/v1/plugins/{id}/source
+```
 
-- Upstream services support HTTP family protocols (HTTP, SSE, WebSocket)
-- Credential store provides tenant-isolated secret access
-- DNS resolution is reliable and SSRF-protected
-- Plugin execution completes within timeout (100ms default)
+**Proxy API** (routed to Data Plane):
+```
+{METHOD} /api/oagw/v1/proxy/{alias}[/{path}][?{query}]
+```
 
-## 11. Risks
+**Request Flow**:
+- Management operations: `API Handler → Control Plane`
+- Proxy operations: `API Handler → Data Plane → Control Plane (config) → Data Plane (execute)`
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| Upstream service downtime | Gateway cannot forward requests | Circuit breaker prevents cascade failures |
-| Plugin timeout or infinite loop | Request delays or gateway hangs | Strict timeout enforcement (100ms), memory limits |
-| Credential store unavailability | Cannot inject auth credentials | Fail-safe: reject requests with 500 SecretNotFound |
-| DNS rebinding attack | SSRF access to internal services | IP pinning, allowlist/denylist validation |
+See [DESIGN.md](./DESIGN.md#request-flow) for detailed flow diagrams.
 
-## 12. Traceability
+## Dependencies
 
-- **Design**: [DESIGN.md](./DESIGN.md)
-- **ADRs**: [docs/adr-resource-identification.md](./docs/adr-resource-identification.md)
+- `types_registry` - GTS schema/instance registration
+- `cred_store` - Secret retrieval
+- `api_ingress` - REST API hosting
+- `modkit-db` - Database persistence
+- `modkit-auth` - Authorization

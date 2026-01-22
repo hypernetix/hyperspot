@@ -126,6 +126,24 @@ Legend (used in checks):
   - Over N requests, endpoints are selected round-robin (or documented strategy).
   - Endpoint selection is stable across keep-alive connections (or explicitly not).
 
+### [x] 2.11 Justification: Re-enable upstream restores proxy traffic
+- Scenario: [`positive-2.11-re-enable-upstream-restores-proxy-traffic.md`](management-api/upstreams/positive-2.11-re-enable-upstream-restores-proxy-traffic.md)
+- Why it matters:
+  - Maintenance windows should be reversible.
+- What to check:
+  - Upstream with `enabled=false` blocks traffic.
+  - `PUT /upstreams/{id}` with `enabled=true` restores traffic.
+  - Subsequent proxy requests succeed.
+
+### [x] 2.12 Justification: List upstreams includes disabled resources
+- Scenario: [`positive-2.12-list-upstreams-includes-disabled-resources.md`](management-api/upstreams/positive-2.12-list-upstreams-includes-disabled-resources.md)
+- Why it matters:
+  - Operators need visibility into all config, not just active.
+- What to check:
+  - `GET /upstreams` returns both enabled and disabled upstreams.
+  - Response includes `enabled` field for each resource.
+  - Optional: `$filter=enabled eq true` can filter to active only.
+
 ---
 
 ## 3) Management API: route lifecycle + matching fields
@@ -189,6 +207,23 @@ Legend (used in checks):
 - What to check:
   - `match.grpc.service` + `match.grpc.method` routes to HTTP/2 `:path` `/Service/Method`.
   - Wrong service/method yields `404 ROUTE_NOT_FOUND` (gateway).
+
+### [x] 3.9 Justification: Re-enable route restores proxy traffic
+- Scenario: [`positive-3.9-re-enable-route-restores-proxy-traffic.md`](management-api/routes/positive-3.9-re-enable-route-restores-proxy-traffic.md)
+- Why it matters:
+  - Route-level maintenance should be reversible.
+- What to check:
+  - Route with `enabled=false` is skipped in matching.
+  - `PUT /routes/{id}` with `enabled=true` restores matching.
+  - Subsequent proxy requests succeed.
+
+### [x] 3.10 Justification: List routes includes disabled resources
+- Scenario: [`positive-3.10-list-routes-includes-disabled-resources.md`](management-api/routes/positive-3.10-list-routes-includes-disabled-resources.md)
+- Why it matters:
+  - Operators need visibility into all route config.
+- What to check:
+  - `GET /routes` returns both enabled and disabled routes.
+  - Response includes `enabled` field for each resource.
 
 ## 4) Management API: plugin lifecycle
 
@@ -299,15 +334,16 @@ Legend (used in checks):
 - What to check:
   - Parent `rate_limit.sharing=enforce` still constrains child effective limit.
 
-### [x] 6.3 Justification: Multi-endpoint common-suffix alias requires `Host` header
+### [x] 6.3 Justification: Multi-endpoint common-suffix alias requires `X-OAGW-Target-Host` header
 - Scenario: [`negative-6.3-multi-endpoint-common-suffix-alias-requires-host-header.md`](proxy-api/alias-resolution/negative-6.3-multi-endpoint-common-suffix-alias-requires-host-header.md)
+- **Note**: This scenario filename uses legacy "host-header" terminology. The header is `X-OAGW-Target-Host`. See section 6.5 for comprehensive custom header routing scenarios.
 - Why it matters:
   - Avoid ambiguous endpoint selection and SSRF-by-host-header tricks.
 - What to check:
   - For alias `vendor.com` backed by endpoints `us.vendor.com`, `eu.vendor.com`:
-    - Missing inbound `Host` yields `400 HOST_HEADER_REQUIRED` (or defined error), `ESrc=gateway`.
-    - With `Host: us.vendor.com` routes to that endpoint.
-    - With `Host` not in pool rejects.
+    - Missing `X-OAGW-Target-Host` header yields `400` error, `ESrc=gateway`.
+    - With valid `X-OAGW-Target-Host` header routes to that endpoint.
+    - With `X-OAGW-Target-Host` header value not in pool rejects.
 
 ### [x] 6.4 Justification: Alias not found returns stable 404
 - Scenario: [`negative-6.4-alias-not-found-returns-stable-404.md`](proxy-api/alias-resolution/negative-6.4-alias-not-found-returns-stable-404.md)
@@ -315,6 +351,120 @@ Legend (used in checks):
   - Client can distinguish config vs upstream failure.
 - What to check:
   - Unknown alias returns `404` `PD`, `ESrc=gateway`, `type` = `...upstream.not_found...` (or `UPSTREAM_NOT_FOUND`).
+
+---
+
+## 6.5) Proxy API: Custom Header Routing (X-OAGW-Target-Host)
+
+### Positive Scenarios
+
+### [x] 6.5.1 Justification: Single-endpoint upstream without X-OAGW-Target-Host header
+- Scenario: [`positive-1.1-single-endpoint-no-header.md`](proxy-api/custom-header-routing/positive-1.1-single-endpoint-no-header.md)
+- Why it matters:
+  - Ensures backward compatibility for most common use case.
+- What to check:
+  - Single-endpoint upstreams route successfully without the custom header.
+  - Behavior unchanged from current implementation.
+
+### [x] 6.5.2 Justification: Single-endpoint upstream with valid X-OAGW-Target-Host header
+- Scenario: [`positive-1.2-single-endpoint-with-header.md`](proxy-api/custom-header-routing/positive-1.2-single-endpoint-with-header.md)
+- Why it matters:
+  - Header is validated but optional for single-endpoint upstreams.
+- What to check:
+  - Header value must match the single endpoint.
+  - Header is stripped before forwarding to upstream.
+
+### [x] 6.5.3 Justification: Multi-endpoint explicit alias without header uses round-robin
+- Scenario: [`positive-2.1-multi-endpoint-explicit-alias-no-header.md`](proxy-api/custom-header-routing/positive-2.1-multi-endpoint-explicit-alias-no-header.md)
+- Why it matters:
+  - Preserves load balancing for explicit aliases.
+- What to check:
+  - Requests distribute across endpoints via round-robin.
+  - No header required for explicit alias.
+
+### [x] 6.5.4 Justification: Multi-endpoint explicit alias with header bypasses load balancing
+- Scenario: [`positive-2.2-multi-endpoint-explicit-alias-with-header.md`](proxy-api/custom-header-routing/positive-2.2-multi-endpoint-explicit-alias-with-header.md)
+- Why it matters:
+  - Allows explicit endpoint selection for debugging/testing.
+- What to check:
+  - Header value selects specific endpoint.
+  - Round-robin is bypassed when header present.
+
+### [x] 6.5.5 Justification: Multi-endpoint common suffix alias with header succeeds
+- Scenario: [`positive-3.1-multi-endpoint-common-suffix-with-header.md`](proxy-api/custom-header-routing/positive-3.1-multi-endpoint-common-suffix-with-header.md)
+- Why it matters:
+  - Core use case for custom header routing.
+- What to check:
+  - Header disambiguates endpoints with common suffix.
+  - Request routes to specified endpoint.
+
+### [x] 6.5.6 Justification: Case-insensitive X-OAGW-Target-Host matching
+- Scenario: [`positive-3.2-case-insensitive-matching.md`](proxy-api/custom-header-routing/positive-3.2-case-insensitive-matching.md)
+- Why it matters:
+  - DNS is case-insensitive; header matching should follow DNS standards.
+- What to check:
+  - Mixed case header values match endpoints.
+  - Comparison follows DNS conventions.
+
+### [x] 6.5.7 Justification: X-OAGW-Target-Host bypasses round-robin load balancing
+- Scenario: [`positive-3.3-load-balancing-bypass.md`](proxy-api/custom-header-routing/positive-3.3-load-balancing-bypass.md)
+- Why it matters:
+  - Explicit routing for operational needs (debugging, region-specific routing).
+- What to check:
+  - Header consistently routes to same endpoint.
+  - Load balancing state preserved for requests without header.
+
+### Negative Scenarios
+
+### [x] 6.5.8 Justification: Missing X-OAGW-Target-Host for common suffix alias returns 400
+- Scenario: [`negative-1.1-missing-header-common-suffix.md`](proxy-api/custom-header-routing/negative-1.1-missing-header-common-suffix.md)
+- Why it matters:
+  - Prevents ambiguous routing and enforces explicit endpoint selection.
+- What to check:
+  - Missing header for common suffix alias returns `400` `PD`.
+  - Error includes list of valid endpoint hosts.
+  - Error type: `gts.x.core.errors.err.v1~x.oagw.routing.missing_target_host.v1`.
+
+### [x] 6.5.9 Justification: Invalid X-OAGW-Target-Host format with port returns 400
+- Scenario: [`negative-1.2-invalid-format-with-port.md`](proxy-api/custom-header-routing/negative-1.2-invalid-format-with-port.md)
+- Why it matters:
+  - Port is defined in upstream configuration, not header.
+- What to check:
+  - Header with port number rejected with `400` `PD`.
+  - Error type: `gts.x.core.errors.err.v1~x.oagw.routing.invalid_target_host.v1`.
+
+### [x] 6.5.10 Justification: Invalid X-OAGW-Target-Host format with path returns 400
+- Scenario: [`negative-1.3-invalid-format-with-path.md`](proxy-api/custom-header-routing/negative-1.3-invalid-format-with-path.md)
+- Why it matters:
+  - Path components are not part of host specification.
+- What to check:
+  - Header with path component rejected with `400` `PD`.
+  - Error type: `gts.x.core.errors.err.v1~x.oagw.routing.invalid_target_host.v1`.
+
+### [x] 6.5.11 Justification: Invalid X-OAGW-Target-Host format with special chars returns 400
+- Scenario: [`negative-1.4-invalid-format-special-chars.md`](proxy-api/custom-header-routing/negative-1.4-invalid-format-special-chars.md)
+- Why it matters:
+  - Prevents injection attacks and malformed routing.
+- What to check:
+  - Header with query params or special characters rejected with `400` `PD`.
+  - Error type: `gts.x.core.errors.err.v1~x.oagw.routing.invalid_target_host.v1`.
+
+### [x] 6.5.12 Justification: Unknown X-OAGW-Target-Host not in endpoint list returns 400
+- Scenario: [`negative-2.1-unknown-host.md`](proxy-api/custom-header-routing/negative-2.1-unknown-host.md)
+- Why it matters:
+  - Allowlist validation prevents routing to arbitrary servers (SSRF protection).
+- What to check:
+  - Header value not matching any endpoint rejected with `400` `PD`.
+  - Error includes list of valid hosts.
+  - Error type: `gts.x.core.errors.err.v1~x.oagw.routing.unknown_target_host.v1`.
+
+### [x] 6.5.13 Justification: IP address when hostname expected returns 400
+- Scenario: [`negative-2.2-ip-address-when-hostname-expected.md`](proxy-api/custom-header-routing/negative-2.2-ip-address-when-hostname-expected.md)
+- Why it matters:
+  - Type mismatch (IP vs hostname) treated as unknown host.
+- What to check:
+  - IP address when endpoints use hostnames rejected with `400` `PD`.
+  - Error type: `gts.x.core.errors.err.v1~x.oagw.routing.unknown_target_host.v1`.
 
 ---
 

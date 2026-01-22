@@ -58,6 +58,7 @@ Content-Type: application/json
 | Client adoption       | Clients must explicitly check header      |
 
 **Used by**
+
 - Kong Gateway: `X-Kong-Upstream-Status` header
 - Apigee: `X-Apigee-fault-source` header
 
@@ -144,6 +145,7 @@ OAGW uses specific status codes for gateway-originated errors:
 5. **Streaming support**: Works with SSE, WebSockets, gRPC streams. Envelope approach (Option 2) fails here.
 
 **Trade-offs accepted**:
+
 - Headers can be stripped by intermediaries (rare in practice, acceptable risk).
 - Clients must check header explicitly (simple conditional logic).
 

@@ -586,24 +586,24 @@ Customer Tenant:
 
 **Rate Limit Configuration**:
 
-| Parent Sharing | Child Value | Result                                  |
-|----------------|-------------|-----------------------------------------|
-| `private`      | null        | ✅ No rate limit from parent             |
-| `private`      | set         | ✅ Use child's limit                     |
-| `inherit`      | null        | ✅ Use parent's limit                    |
-| `inherit`      | set         | ✅ Use **min**(parent, child) - stricter |
-| `enforce`      | null        | ✅ Use parent's limit                    |
-| `enforce`      | set         | ✅ Use **min**(parent, child) - stricter |
+| Parent Sharing | Child Value | Result                                |
+|----------------|-------------|---------------------------------------|
+| `private`      | null        | No rate limit from parent             |
+| `private`      | set         | Use child's limit                     |
+| `inherit`      | null        | Use parent's limit                    |
+| `inherit`      | set         | Use **min**(parent, child) - stricter |
+| `enforce`      | null        | Use parent's limit                    |
+| `enforce`      | set         | Use **min**(parent, child) - stricter |
 
 **Plugins Configuration**:
 
-| Parent Sharing | Child Value | Result                                   |
-|----------------|-------------|------------------------------------------|
-| `private`      | any         | ✅ Use child's plugins only               |
-| `inherit`      | null        | ✅ Use parent's plugins                   |
-| `inherit`      | set         | ✅ Concat: parent.plugins + child.plugins |
-| `enforce`      | null        | ✅ Use parent's plugins                   |
-| `enforce`      | set         | ✅ Concat: parent.plugins + child.plugins |
+| Parent Sharing | Child Value | Result                                 |
+|----------------|-------------|----------------------------------------|
+| `private`      | any         | Use child's plugins only               |
+| `inherit`      | null        | Use parent's plugins                   |
+| `inherit`      | set         | Concat: parent.plugins + child.plugins |
+| `enforce`      | null        | Use parent's plugins                   |
+| `enforce`      | set         | Concat: parent.plugins + child.plugins |
 
 #### Binding Schema with Sharing
 

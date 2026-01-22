@@ -1,0 +1,13 @@
+[workspace]
+resolver = "2"
+members = [
+    "oagw-sdk",
+    "oagw-core",
+    "oagw-api",
+    "oagw-cp",
+    "oagw-dp",
+]
+
+[workspace.package]
+edition = "2021"
+version = "0.1.0"

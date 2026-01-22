@@ -13,6 +13,7 @@ OAGW needs a rate limiting strategy that addresses:
 3. **Distributed State**: How to share rate limit counters across OAGW nodes
 
 Current state in PRD/DESIGN defines basic rate limit fields (`rate`, `window`, `capacity`, `cost`, `scope`, `strategy`) but lacks:
+
 - Algorithm selection
 - Distributed synchronization strategy
 - Budget allocation across hierarchy
@@ -31,12 +32,12 @@ Current state in PRD/DESIGN defines basic rate limit fields (`rate`, `window`, `
 
 ### Option 1: Algorithm Selection
 
-| Algorithm | Pros | Cons | Use Case |
-|-----------|------|------|----------|
-| **Token Bucket** | Allows bursts, simple, memory efficient | Burst at window boundary | Default for most APIs |
-| **Leaky Bucket** | Smooth output rate | No burst tolerance, queue management | Steady-rate backends |
-| **Fixed Window** | Simple, predictable reset | 2x burst at boundary | Simple quotas |
-| **Sliding Window** | No boundary burst, accurate | Slightly more compute | Strict rate enforcement |
+| Algorithm          | Pros                                    | Cons                                 | Use Case                |
+|--------------------|-----------------------------------------|--------------------------------------|-------------------------|
+| **Token Bucket**   | Allows bursts, simple, memory efficient | Burst at window boundary             | Default for most APIs   |
+| **Leaky Bucket**   | Smooth output rate                      | No burst tolerance, queue management | Steady-rate backends    |
+| **Fixed Window**   | Simple, predictable reset               | 2x burst at boundary                 | Simple quotas           |
+| **Sliding Window** | No boundary burst, accurate             | Slightly more compute                | Strict rate enforcement |
 
 **Recommendation**: Token Bucket as default (industry standard: AWS API Gateway, Kong, Envoy). Sliding Window as option for strict enforcement.
 
@@ -128,6 +129,7 @@ System: 10,000/min (total capacity)
 ```
 
 **Enforcement rules**:
+
 - Child limit ≤ parent allocation
 - Sum of child allocations ≤ parent allocation (optional: allow overcommit with `overcommit_ratio`)
 - Effective limit = `min(own_limit, parent_effective_limit)`
@@ -204,15 +206,17 @@ Local token bucket with periodic sync to central store.
 ```
 
 **Sync algorithm**:
+
 1. Each node maintains local token bucket
 2. Periodically (configurable, default 100ms):
-   - Push: `INCRBY global_counter local_consumed`
-   - Pull: `GET global_counter`
-   - Adjust local bucket based on global state
+    - Push: `INCRBY global_counter local_consumed`
+    - Pull: `GET global_counter`
+    - Adjust local bucket based on global state
 3. Local check is fast (in-memory)
 4. Global accuracy within sync interval
 
 **Trade-offs**:
+
 - Sync interval short → more accurate, more Redis load
 - Sync interval long → less accurate, less Redis load
 - Burst can exceed limit by `burst_capacity * node_count` in worst case
@@ -232,6 +236,9 @@ Node 1: Uses tokens locally, requests more when low
 - Requires quota service
 
 ## Decision Outcome
+
+**Component Architecture Note**: Rate limiting executes in **Data Plane (CP)**. CP owns rate limiters per-instance for MVP. Configuration is resolved from Control Plane (DP) caches
+during upstream/route resolution. See [ADR: State Management](./adr-state-management.md) for component responsibilities.
 
 ### 1. Algorithm: Token Bucket (default), Sliding Window (optional)
 
@@ -260,17 +267,17 @@ Token bucket is industry standard, handles bursts well, simple to implement.
 
 **Fields**:
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `sharing` | enum | `private` | `private`, `inherit`, `enforce` |
-| `algorithm` | enum | `token_bucket` | `token_bucket`, `sliding_window` |
-| `sustained.rate` | int | required | Tokens replenished per window |
-| `sustained.window` | enum | `second` | `second`, `minute`, `hour`, `day` |
-| `burst.capacity` | int | `sustained.rate` | Max bucket size (burst allowance) |
-| `scope` | enum | `tenant` | Counter scope: `global`, `tenant`, `user`, `ip`, `route` |
-| `strategy` | enum | `reject` | `reject` (429), `queue`, `degrade` |
-| `response_headers` | bool | `true` | Include `X-RateLimit-*` headers |
-| `cost` | int | `1` | Tokens consumed per request |
+| Field              | Type | Default          | Description                                              |
+|--------------------|------|------------------|----------------------------------------------------------|
+| `sharing`          | enum | `private`        | `private`, `inherit`, `enforce`                          |
+| `algorithm`        | enum | `token_bucket`   | `token_bucket`, `sliding_window`                         |
+| `sustained.rate`   | int  | required         | Tokens replenished per window                            |
+| `sustained.window` | enum | `second`         | `second`, `minute`, `hour`, `day`                        |
+| `burst.capacity`   | int  | `sustained.rate` | Max bucket size (burst allowance)                        |
+| `scope`            | enum | `tenant`         | Counter scope: `global`, `tenant`, `user`, `ip`, `route` |
+| `strategy`         | enum | `reject`         | `reject` (429), `queue`, `degrade`                       |
+| `response_headers` | bool | `true`           | Include `X-RateLimit-*` headers                          |
+| `cost`             | int  | `1`              | Tokens consumed per request                              |
 
 ### 3. Hierarchical Inheritance: Budget Allocation (Option 3B)
 
@@ -293,20 +300,20 @@ Token bucket is industry standard, handles bursts well, simple to implement.
 
 **Budget modes**:
 
-| Mode | Description |
-|------|-------------|
-| `unlimited` | No budget tracking (default for leaf tenants) |
-| `allocated` | Parent allocates fixed budget to children |
-| `shared` | Children share parent's budget (first-come-first-served) |
+| Mode        | Description                                              |
+|-------------|----------------------------------------------------------|
+| `unlimited` | No budget tracking (default for leaf tenants)            |
+| `allocated` | Parent allocates fixed budget to children                |
+| `shared`    | Children share parent's budget (first-come-first-served) |
 
 **Inheritance rules**:
 
-| Parent Sharing | Child Specifies | Effective Limit |
-|----------------|-----------------|-----------------|
-| `private` | any | Child's limit only |
-| `inherit` | none | Parent's limit |
-| `inherit` | own limit | `min(parent, child)` |
-| `enforce` | any | `min(parent, child)` - cannot exceed parent |
+| Parent Sharing | Child Specifies | Effective Limit                             |
+|----------------|-----------------|---------------------------------------------|
+| `private`      | any             | Child's limit only                          |
+| `inherit`      | none            | Parent's limit                              |
+| `inherit`      | own limit       | `min(parent, child)`                        |
+| `enforce`      | any             | `min(parent, child)` - cannot exceed parent |
 
 **Budget validation on child creation**:
 
@@ -324,6 +331,11 @@ If overcommit_ratio = 1.5:
 
 ### 4. Distributed State: Hybrid Local + Periodic Sync (Option 4C)
 
+**MVP Implementation**: Per-instance rate limiting in Data Plane (no distributed coordination). Each CP instance maintains local token buckets. Acceptable for MVP since traffic
+is typically distributed evenly by load balancer.
+
+**Future (Phase 2)**: Redis-backed distributed rate limiting for strict global enforcement across CP instances.
+
 **Configuration**:
 
 ```json
@@ -338,6 +350,7 @@ If overcommit_ratio = 1.5:
 ```
 
 **Behavior**:
+
 - Normal: Local bucket + periodic sync
 - Redis unavailable: Fall back to local-only (degraded accuracy)
 - High load: Adaptive sync interval (more frequent when near limit)
@@ -370,12 +383,12 @@ Retry-After: 30
     "properties": {
       "sharing": {
         "type": "string",
-        "enum": ["private", "inherit", "enforce"],
+        "enum": [ "private", "inherit", "enforce" ],
         "default": "private"
       },
       "algorithm": {
         "type": "string",
-        "enum": ["token_bucket", "sliding_window"],
+        "enum": [ "token_bucket", "sliding_window" ],
         "default": "token_bucket"
       },
       "sustained": {
@@ -384,11 +397,11 @@ Retry-After: 30
           "rate": { "type": "integer", "minimum": 1 },
           "window": {
             "type": "string",
-            "enum": ["second", "minute", "hour", "day"],
+            "enum": [ "second", "minute", "hour", "day" ],
             "default": "second"
           }
         },
-        "required": ["rate"]
+        "required": [ "rate" ]
       },
       "burst": {
         "type": "object",
@@ -401,7 +414,7 @@ Retry-After: 30
         "properties": {
           "mode": {
             "type": "string",
-            "enum": ["unlimited", "allocated", "shared"],
+            "enum": [ "unlimited", "allocated", "shared" ],
             "default": "unlimited"
           },
           "total": { "type": "integer", "minimum": 1 },
@@ -415,12 +428,12 @@ Retry-After: 30
       },
       "scope": {
         "type": "string",
-        "enum": ["global", "tenant", "user", "ip", "route"],
+        "enum": [ "global", "tenant", "user", "ip", "route" ],
         "default": "tenant"
       },
       "strategy": {
         "type": "string",
-        "enum": ["reject", "queue", "degrade"],
+        "enum": [ "reject", "queue", "degrade" ],
         "default": "reject"
       },
       "cost": {
@@ -433,7 +446,7 @@ Retry-After: 30
         "default": true
       }
     },
-    "required": ["sustained"]
+    "required": [ "sustained" ]
   }
 }
 ```
@@ -480,6 +493,7 @@ Retry-After: 30
 ```
 
 **Effective for tenant**:
+
 - Sustained: `min(system:10000, partner:5000, tenant:1000)` = 1000/min
 - Burst: `min(system:1000, partner:500, tenant:100)` = 100
 
@@ -519,6 +533,7 @@ Different endpoints have different costs:
 ```
 
 Tenant with 1000 tokens/min can call:
+
 - 100 chat completions, or
 - 1000 model listings, or
 - 50 chat + 500 models
@@ -563,10 +578,10 @@ async fn sync_with_redis(local: &mut TokenBucket, key: &str, redis: &Redis) {
     // 1. Push local consumption
     let consumed = local.consumed_since_last_sync();
     redis.incrby(key, consumed).await;
-    
+
     // 2. Pull global state
     let global_count = redis.get(key).await;
-    
+
     // 3. Adjust local bucket
     // If global is higher than expected, reduce local tokens
     local.adjust_from_global(global_count);
