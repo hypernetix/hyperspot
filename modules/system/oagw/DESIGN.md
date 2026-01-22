@@ -148,7 +148,7 @@ OAGW uses adaptive per-host HTTP version detection:
 3. **Failure**: Fallback to HTTP/1.1, cache "HTTP/1.1 only" for this host/IP
 4. **Subsequent requests**: Use cached protocol version
 
-Cache entry TTL: 1 hour. Automatic retry on connection errors.
+Cache entry TTL: 1 hour. OAGW does not retry failed requests.
 
 HTTP/3 (QUIC) support is future work.
 
@@ -180,7 +180,7 @@ Authorization checks:
 
 **Outbound Authentication** (OAGW → Upstream):
 
-Handled by auth plugins. Token refresh, caching, and retry on 401 managed automatically by builtin auth plugins. No manual token management required.
+Handled by auth plugins. Token refresh/caching may occur as part of credential preparation, but OAGW does not re-issue failed upstream requests.
 
 **Credential Management**:
 
@@ -364,8 +364,8 @@ Upstreams are identified by alias in proxy requests: `{METHOD} /api/oagw/v1/prox
 - HTTP: 80
 - HTTPS: 443
 - WebSocket: 80 (ws), 443 (wss)
+- WebTransport: 443
 - gRPC: 443
-- AMQP: 5672
 
 **Non-standard ports** (included in alias): Any port not in standard list.
 
@@ -375,24 +375,38 @@ Upstreams are identified by alias in proxy requests: `{METHOD} /api/oagw/v1/prox
 def resolve_upstream_by_alias(tenant_id, alias, req):
     # Walk tenant hierarchy from descendant to root
     hierarchy = get_tenant_hierarchy(tenant_id)  # [child, parent, grandparent, root]
-    
+    matches = []
+
     for tid in hierarchy:
         upstream = find_upstream_by_alias(tid, alias)
-        
         if upstream is not None:
-            # Multiple endpoints with common suffix alias require Host header
-            if len(upstream.endpoints) > 1:
-                has_common_suffix = any(
-                    ep.host != alias and ep.host.endswith("." + alias)
-                    for ep in upstream.endpoints
-                )
-                
-                if has_common_suffix and "Host" not in req.headers:
-                    return return Response(status=400) # Missing Host header
-            
-            return upstream
-    
-    return Response(status=404)  # Not found
+            matches.append(upstream)
+
+    if len(matches) == 0:
+        return Response(status=404)  # Not found
+
+    # Closest tenant wins for routing target
+    selected = matches[0]
+
+    # Multiple endpoints with common suffix alias require Host header
+    if len(selected.endpoints) > 1:
+        has_common_suffix = any(
+            ep.host != alias and ep.host.endswith("." + alias)
+            for ep in selected.endpoints
+        )
+        if has_common_suffix and "Host" not in req.headers:
+            return Response(status=400)  # Missing Host header
+
+    # Shadowing does not bypass ancestor sharing="enforce" constraints.
+    enforced_ancestors = []
+    for ancestor in matches[1:]:
+        if has_enforced_constraints(ancestor):
+            enforced_ancestors.append(ancestor)
+
+    return ResolvedAlias(
+        upstream=selected,
+        enforced_ancestors=enforced_ancestors
+    )
 ```
 
 #### Shadowing Behavior
@@ -411,6 +425,20 @@ Search order:
 
 **Shadowing allows intentional override**: Descendant tenant can create upstream with same alias as ancestor to override behavior (e.g., point to different server, use different
 auth).
+
+**Clarification - shadowing does not bypass enforced ancestor policy**:
+
+- Shadowing selects the routing target only.
+- Ancestor constraints configured with `sharing: enforce` remain active.
+- Effective limits are computed with enforced ancestors included, for example:
+  `effective_rate = min(selected_rate, route_rate, all_ancestor_enforced_rates)`.
+
+```
+Root:  alias="api.openai.com", rate_limit={sharing:"enforce", rate:10000/min}
+Child: alias="api.openai.com", rate_limit={sharing:"private", rate:500/min}  # shadowing winner
+
+Effective for child requests: min(10000, 500) = 500/min
+```
 
 #### Alias Uniqueness
 
@@ -643,6 +671,7 @@ The following configuration fields support sharing modes:
 - **Rate Limits** (`rate_limit.sharing`): Rate limiting rules (sustained rate, burst capacity, scope). See [ADR: Rate Limiting](./docs/adr-rate-limiting.md) for algorithm details.
 - **CORS** (`cors.sharing`): Cross-origin resource sharing configuration (allowed origins, methods, headers). See [ADR: CORS](./docs/adr-cors.md) for details.
 - **Plugins** (`plugins.sharing`): Plugin chains for guards and transforms
+- **Tags** (`tags`): Discovery metadata uses additive merge (top-to-bottom union). No `sharing` field; inherited tags cannot be removed by descendants.
 
 ### Merge Strategies
 
@@ -666,6 +695,8 @@ When a descendant tenant creates a binding to an ancestor's upstream, configurat
 | `inherit`        | Yes                  | `min(ancestor, descendant)` (stricter) |
 | `enforce`        | Any                  | `min(ancestor, descendant)` (stricter) |
 
+When alias shadowing occurs (child and ancestor define same alias), ancestor `sharing: enforce` rate limits are still included in the `min(...)` merge and cannot be bypassed by shadowing.
+
 **Plugins Configuration**:
 
 | Ancestor Sharing | Descendant Specifies | Effective Plugin Chain                  |
@@ -674,6 +705,14 @@ When a descendant tenant creates a binding to an ancestor's upstream, configurat
 | `inherit`        | No                   | Use ancestor's plugins                  |
 | `inherit`        | Yes                  | `ancestor.plugins + descendant.plugins` |
 | `enforce`        | Any                  | `ancestor.plugins + descendant.plugins` |
+
+**Tags Metadata (Discovery/UI)**:
+
+- Effective tags are merged top-to-bottom with add-only semantics:
+  `effective_tags = union(ancestor_tags..., descendant_tags)`.
+- Descendant tenants can add local tags but cannot remove inherited tags.
+- If create-upstream resolves to an existing upstream definition (binding flow), request tags are treated as local binding additions and do not mutate ancestor tags.
+- Tags are metadata only (discovery/UI), not authorization or routing policy inputs.
 
 ### Configuration Resolution Algorithm
 
@@ -708,6 +747,9 @@ def resolve_effective_config(tenant_id, upstream_id):
         # Plugins - concatenate chains
         result.plugins = merge_plugins(result.plugins, b.plugins, is_own)
 
+        # Tags - additive union, no descendant removal of inherited tags
+        result.tags = merge_tags(result.tags, b.tags)
+
     return result
 
 
@@ -740,6 +782,16 @@ def merge_plugins(ancestor, descendant, is_own):
         result.extend(descendant.items)
 
     return result
+
+
+def merge_tags(ancestor_tags, descendant_tags):
+    # Add-only metadata merge for discovery and UI
+    result = set()
+    if ancestor_tags is not None:
+        result.update(ancestor_tags)
+    if descendant_tags is not None:
+        result.update(descendant_tags)
+    return sorted(result)
 ```
 
 ### Example: Partner Shares OpenAI Upstream with Customer
@@ -949,7 +1001,7 @@ For detailed resource identification and binding model, see [ADR: Resource Ident
     "alias": {
       "type": "string",
       "pattern": "^[a-z0-9]([a-z0-9.:-]*[a-z0-9])?$",
-      "description": "Human-readable routing identifier. Auto-generated if not specified: single host with standard port (80,443,5672) → hostname; single host with non-standard port → hostname:port; multiple hosts with common suffix → common suffix (e.g., us.vendor.com + eu.vendor.com → vendor.com); IP addresses or heterogeneous hosts → explicit alias required."
+      "description": "Human-readable routing identifier. Auto-generated if not specified: single host with standard port (80,443) → hostname; single host with non-standard port → hostname:port; multiple hosts with common suffix → common suffix (e.g., us.vendor.com + eu.vendor.com → vendor.com); IP addresses or heterogeneous hosts → explicit alias required."
     },
     "tags": {
       "type": "array",
@@ -957,7 +1009,7 @@ For detailed resource identification and binding model, see [ADR: Resource Ident
         "type": "string",
         "pattern": "^[a-z0-9_-]+$"
       },
-      "description": "Flat tags for categorization and discovery (e.g., openai, llm)."
+      "description": "Flat tags for categorization and discovery (e.g., openai, llm). Effective tags are additive across hierarchy (ancestor + descendant union); descendants can add, not remove inherited tags."
     },
     "server": {
       "type": "object",
@@ -968,7 +1020,7 @@ For detailed resource identification and binding model, see [ADR: Resource Ident
             "type": "object",
             "properties": {
               "scheme": {
-                "enum": [ "https", "wss", "wt", "amqp", "grpc" ],
+                "enum": [ "https", "wss", "wt", "grpc" ],
                 "type": "string",
                 "default": "https"
               },
@@ -994,7 +1046,6 @@ For detailed resource identification and binding model, see [ADR: Resource Ident
       "type": "string",
       "enum": [
         "gts.x.core.oagw.protocol.v1~x.core.http.v1",
-        "gts.x.core.oagw.protocol.v1~x.core.amqp.v1",
         "gts.x.core.oagw.protocol.v1~x.core.grpc.v1"
       ],
       "format": "gts-identifier",
@@ -1280,17 +1331,15 @@ Examples:
     },
     "match": {
       "type": "object",
-      "description": "Protocol-scoped inbound matching rules. Exactly one of {http|grpc|amqp} must be present.",
+      "description": "Protocol-scoped inbound matching rules. Exactly one of {http|grpc} must be present.",
       "additionalProperties": false,
       "properties": {
         "http": { "$ref": "#/definitions/http_match" },
-        "grpc": { "$ref": "#/definitions/grpc_match" },
-        "amqp": { "$ref": "#/definitions/amqp_match" }
+        "grpc": { "$ref": "#/definitions/grpc_match" }
       },
       "oneOf": [
         { "required": [ "http" ] },
-        { "required": [ "grpc" ] },
-        { "required": [ "amqp" ] }
+        { "required": [ "grpc" ] }
       ]
     },
     "plugins": {
@@ -1372,24 +1421,7 @@ Examples:
       },
       "required": [ "service", "method" ]
     },
-    "amqp_match": {
-      "type": "object",
-      "additionalProperties": false,
-      "description": "AMQP match rules (used when the upstream protocol is AMQP).",
-      "properties": {
-        "exchange": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Exchange name to publish to or consume from, depending on your OAGW AMQP mode."
-        },
-        "routing_key": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Routing key pattern for matching/publishing."
-        }
-      },
-      "required": [ "exchange", "routing_key" ]
-    },
+    
     "rate_limit": {
       "type": "object",
       "additionalProperties": false,
@@ -2067,7 +2099,6 @@ Where:
 - [Server-Sent Events (SSE)](./examples/2.sse.positive.md)
 - [Streaming WebSockets](./examples/3.websocket.positive.md)
 - [Streaming gRPC](./examples/4.grpc.positive.md)
-- [AMQP publish](./examples/5.amqp.positive.md)
 
 ## Database Persistence
 
@@ -2119,7 +2150,7 @@ CREATE TABLE oagw_upstream
 
     -- Identity
     alias      VARCHAR(255) NOT NULL,
-    tags       TEXT[] DEFAULT '{}',
+    tags       TEXT[] DEFAULT '{}', -- Tenant-local tags; effective tags may include inherited tags at read time
 
     -- Server configuration (JSONB for flexibility)
     server     JSONB        NOT NULL,
@@ -2177,7 +2208,7 @@ CREATE TABLE oagw_route
     -- Tags for categorization
     tags        TEXT[] DEFAULT '{}',
 
-    -- Match rules (JSONB, one of http/grpc/amqp)
+    -- Match rules (JSONB, one of http/grpc)
     match       JSONB NOT NULL,
     -- HTTP example: {"http": {"methods": ["GET", "POST"], "path": "/v1/chat/completions", ...}}
     -- gRPC example: {"grpc": {"service": "foo.v1.UserService", "method": "GetUser"}}
@@ -2295,6 +2326,9 @@ WHERE NOT EXISTS (
 ORDER BY c.pos LIMIT 1;
 ```
 
+**Clarification**: this query selects the routing winner only (closest alias match).
+Effective policy resolution must also evaluate ancestor rows for the same alias and apply any `sharing: enforce` constraints.
+
 #### List Upstreams for Tenant (with shadowing and enabled inheritance)
 
 ```sql
@@ -2323,6 +2357,10 @@ ORDER BY alias, pos
     LIMIT $2
 OFFSET $3;
 ```
+
+**Clarification**: list/discovery returns the visible winner per alias.
+Ancestor `sharing: enforce` constraints can still affect runtime effective configuration.
+For tags, effective discovery should use additive union across hierarchy (`ancestor ∪ descendant`) rather than mutating ancestor rows.
 
 #### Find Matching Route for Request
 
@@ -2551,7 +2589,7 @@ Structured JSON logs sent to stdout, ingested by centralized logging system (e.g
 ### Log Levels
 
 - `INFO`: Successful requests, normal operations
-- `WARN`: Rate limit exceeded, circuit breaker open, retries
+- `WARN`: Rate limit exceeded, circuit breaker open, retry guidance emitted (`Retry-After`)
 - `ERROR`: Upstream failures, timeouts, auth failures
 - `DEBUG`: Detailed plugin execution (disabled in production)
 
@@ -2594,3 +2632,397 @@ Structured JSON logs sent to stdout, ingested by centralized logging system (e.g
 5. [Security] TLS certificate pinning - Pin specific certificates/public keys for critical upstreams to prevent MITM attacks
 6. [Security] mTLS support - Mutual TLS for client certificate authentication with upstream services
 7. [Protocol] gRPC support - HTTP/2 multiplexing with content-type detection [ADR: gRPC Support](./docs/adr-grpc-support.md) **Requires prototype**
+
+## Feature Breakdown by Phase
+
+### Phase 0 (p0): MVP - OpenAI Integration Ready
+
+**Goal**: Platform can proxy requests to OpenAI Chat/Completions API with basic security and usability.
+
+**Deliverables**:
+
+#### [ ] F-P0-001: Module Scaffold + SDK Boundary
+- Create `oagw-sdk` crate with public models (Upstream/Route request/response DTOs) and error types (Problem `type` identifiers).
+- Create `oagw` module crate wired into ModKit module lifecycle + REST registration (OperationBuilder), exposing Management + Proxy routers.
+- Define minimal config surface (env/config): database handle, `cred_store` client, `types_registry` client, outbound HTTP client settings.
+- Add scenario-driven acceptance checklist mapping `scenarios/case-*.md` to integration tests (start with HTTP + SSE cases).
+
+#### [ ] F-P0-002: DB Schema + SeaORM Entities (Upstream, Route)
+- Add migrations for `oagw_upstream` and `oagw_route` tables (tenant-scoped, UUID PKs, `enabled`, tags, JSONB config columns).
+- Implement SeaORM entities with `#[derive(Scopable)]` and `SecureConn`-scoped repositories (no raw SQL; SQL in DESIGN is illustrative).
+- Enforce constraints/indexes needed for MVP: `UNIQUE (tenant_id, alias)`, indexes for `(tenant_id, enabled)` and route `(upstream_id, priority)`.
+- Include minimal query helpers: find upstream by alias, list upstreams, find route by (upstream_id, method, path prefix).
+
+#### [ ] F-P0-003: Types Registry Registration (Schemas + Builtins)
+- Register GTS schemas for `gts.x.core.oagw.upstream.v1~`, `gts.x.core.oagw.route.v1~`, and HTTP protocol identifier.
+- Register builtin plugin identifiers needed for MVP: `gts.x.core.oagw.plugin.auth.v1~x.core.oagw.noop.v1` and `...~x.core.oagw.apikey.v1`.
+- Ensure API layer parses anonymous GTS IDs (`...~{uuid}`) and validates schema/type correctness before DB operations.
+- Add OpenAPI schema exposure for upstream/route DTOs (enough to test Management API from generated clients).
+
+#### [ ] F-P0-004: Management API - Upstream CRUD (Minimal)
+- Implement `/api/oagw/v1/upstreams` CRUD (POST/GET list/GET by id/PUT/DELETE) using Secure ORM repositories (requires F-P0-002).
+- Enforce bearer auth on all endpoints (authentication only; fine-grained permissions in p1) (requires F-P0-001).
+- Validate alias format + defaulting rules (single endpoint default alias; reject missing alias for IP/heterogeneous hosts).
+- Add minimal list pagination (`$top`/`$skip` only; full OData in p3).
+
+#### [ ] F-P0-005: Management API - Route CRUD (HTTP Only)
+- Implement `/api/oagw/v1/routes` CRUD for HTTP match rules: methods allowlist, path prefix, query allowlist, `path_suffix_mode`, priority (requires F-P0-002).
+- Enforce upstream ownership link (`route.upstream_id` must belong to same tenant in MVP mode).
+- Validate route invariants: non-empty methods, path starts with `/`, priority integer ordering semantics.
+- Add minimal list pagination (`$top`/`$skip` only; full OData in p3).
+
+#### [ ] F-P0-006: Proxy Endpoint - Basic Routing (HTTP)
+- Implement `{METHOD} /api/oagw/v1/proxy/{alias}[/{path_suffix}][?{query}]` handler (requires F-P0-002).
+- Resolve upstream by `alias` (single-tenant, no hierarchy) and match HTTP route by (upstream_id, method, longest path prefix, priority).
+- Apply route transformation rules: `match.http.path` + `path_suffix_mode=append`, validate `path_suffix_mode=disabled`.
+- Build outbound URL from upstream endpoint + transformed path + allowlisted query params.
+
+#### [ ] F-P0-007: Request/Body Validation Guardrail Set (HTTP)
+- Enforce query allowlist (reject unknown query keys) and method validation against route config (requires F-P0-006).
+- Enforce body limits: hard cap 100MB; reject early without buffering; support `Transfer-Encoding: chunked` only.
+- Validate `Content-Length` (integer, matches observed bytes when present); reject ambiguous TE/CL combinations.
+- Add baseline status mapping for these validation failures (400/413) (full Problem coverage in p1).
+
+#### [ ] F-P0-008: Header Transformation + SSRF Baseline
+- Strip hop-by-hop headers and replace `Host` with upstream host by default (requires F-P0-006).
+- Implement simple configured header transforms via `upstream.headers` (set/add/remove/overwrite) before outbound dispatch.
+- Validate well-known headers: reject invalid names/values (CR/LF) and multiple `Host`; normalize/deny unsafe characters.
+- Enforce scheme allowlist (`https` for MVP) to prevent accidental SSRF via plaintext upstreams.
+
+#### [ ] F-P0-009: Builtin Auth Plugin - API Key Injection (OpenAI)
+- Implement builtin auth plugin resolution for `...auth...~x.core.oagw.apikey.v1` and `...noop...` (requires F-P0-003).
+- Integrate `cred_store` lookup for `secret_ref` in upstream auth config; inject into `Authorization: Bearer <key>` (or configured header).
+- Ensure secrets never appear in logs/errors; redact auth headers on outbound request logging.
+- Add scenario coverage: `scenarios/case-9.1-auth-noop.md`, `scenarios/case-9.2-auth-apikey.md`.
+
+#### [ ] F-P0-010: Rate Limiting (Basic Token Bucket)
+- Implement token bucket limiter (per upstream+route scope) with in-memory storage suitable for single-node MVP.
+- Support `rate_limit` config on upstream/route (JSONB) with `rate` + `window`; apply route limit first then upstream.
+- Return `429` with `Retry-After` seconds when exceeded; do not buffer request bodies before decision.
+- Add scenario coverage: `scenarios/case-18.1-rate-limit-token-bucket.md`.
+
+#### [ ] F-P0-011: Streaming Proxy Support (HTTP + SSE)
+- Stream request bodies to upstream without buffering (backpressure-safe) where possible (requires F-P0-006).
+- Stream responses to client as-is, supporting OpenAI SSE (`text/event-stream`) and large responses.
+- On client disconnect, abort upstream request and release any acquired resources (rate limit permits, in-flight counters).
+- Add scenario coverage: `scenarios/case-13.1-sse-forwarding.md`, `scenarios/case-13.2-sse-client-disconnect.md`.
+
+#### [ ] F-P0-012: Minimal Error Surface (Gateway vs Upstream)
+- Implement baseline gateway errors: 400 validation, 401 auth failed, 404 route/upstream not found, 413 payload too large, 429 rate limit, 502/504 upstream timeouts.
+- Passthrough upstream errors (status + headers + body) without modification when response is not a gateway-generated Problem.
+- Add `X-OAGW-Error-Source: upstream|gateway` header for errors where applicable (full semantics in p1) (see ADR: Error Source Distinction).
+- Add scenario coverage: `scenarios/case-12.1-http-passthrough.md`, `scenarios/case-12.2-upstream-error-passthrough.md`.
+
+**Exclusions** (explicitly out of scope for p0):
+- Multi-tenancy hierarchy and configuration sharing/merge semantics
+- Custom plugins (Starlark) and plugin CRUD APIs
+- Circuit breakers, distributed concurrency limits, backpressure queues
+- WebSocket, WebTransport, and gRPC proxying
+- CORS handling (preflight) and protocol capability cache (HTTP/2 detection cache)
+- Full OData (`$filter`, `$select`, `$orderby`) on list endpoints
+
+---
+
+### Phase 1 (p1): Production-Ready Minimal
+
+**Goal**: Harden MVP for production deployment with monitoring, logging, strict security, and comprehensive error handling (no new product features).
+
+**Deliverables**:
+
+#### [ ] F-P1-001: RFC 9457 Problem Details Everywhere
+- Standardize gateway error responses as `application/problem+json` per RFC 9457 with stable GTS `type` identifiers.
+- Implement all error types listed in DESIGN error table (even if triggered by later phases) with correct HTTP codes and retriable hints.
+- Include `X-OAGW-Error-Source` for all error responses (gateway vs upstream) (ADR: Error Source Distinction).
+- Register standard errors in OpenAPI for Management + Proxy operations (ModKit `standard_errors()` patterns).
+
+#### [ ] F-P1-002: AuthN/Z + Tenant Scoping (Management + Proxy)
+- Enforce bearer auth on all endpoints using ModKit auth extractors (requires F-P0-001).
+- Implement permission checks exactly as specified (Management permissions per resource type; Proxy requires `gts.x.core.oagw.proxy.v1~:invoke`).
+- Ensure DB access always uses `SecurityContext` tenant scope; deny-by-default on empty scopes (SECURE-ORM invariant).
+- Add scenario coverage: `scenarios/case-1.1-management-bearer-auth.md`, `scenarios/case-1.2-management-permissions.md`, `scenarios/case-5.1-proxy-invoke-permission.md`.
+
+#### [ ] F-P1-003: Secure ORM Repository Hardening (No Raw SQL)
+- Convert all lookups/matching queries to Secure ORM query builders (SeaORM + SecureConn), keeping tenant/resource scoping explicit.
+- Add repository tests proving: cross-tenant reads/writes are impossible; empty scope returns deny-all results.
+- Validate that route matching query respects `enabled`, `priority`, and longest-path semantics without unsafe SQL string building.
+- Address design-review finding: treat SQL in DESIGN as illustrative only, not implementation.
+
+#### [ ] F-P1-004: Outbound HTTP Client Reliability (Pooling + Timeouts)
+- Use a shared HTTP client with connection pooling, keepalive, and sane defaults (no per-request client construction).
+- Implement timeout policy: connection timeout, request timeout, idle timeout mapped to specific error types (504 variants).
+- Implement safe cancellation propagation: client disconnect cancels upstream request promptly, avoiding leaked tasks.
+- Add scenario coverage: `scenarios/case-10.1-timeout-guard.md`.
+
+#### [ ] F-P1-005: Structured Audit Logging (Proxy + Config Changes)
+- Emit structured JSON logs for proxy requests and management CRUD actions with stable fields (tenant_id, principal_id, host, path, status, duration_ms).
+- Guarantee “no secrets/PII” invariant: never log headers/bodies; redact sensitive fields; rate-limit auth failure logs.
+- Add logging for security events: forbidden upstream access, validation rejects, rate-limit rejects.
+- Ensure plugin-generated logs (when added later) pass through a redaction/size-limiting layer by default.
+
+#### [ ] F-P1-006: Metrics + /metrics Endpoint (Auth-Protected)
+- Expose Prometheus metrics at `/metrics` with admin-only access.
+- Implement core counters/gauges/histograms from DESIGN (requests_total, duration_seconds, errors_total, in_flight, rate_limit metrics).
+- Enforce cardinality limits: no tenant labels, normalized path from route config.
+- Add scenario coverage for metric presence/sanity (smoke tests; full dashboards later).
+
+#### [ ] F-P1-007: Header/Request Smuggling Defenses (Strict Parsing)
+- Reject invalid header names/values and all line terminators (CR/LF plus Unicode separators); disallow obs-fold.
+- Reject multiple `Content-Length`, multiple `Host`, and ambiguous CL/TE combinations; ensure hyper/HTTP stack is configured to be strict.
+- Strip/override any internal steering headers used by OAGW before forwarding to upstream.
+- Add scenario coverage: `scenarios/case-7.2-hop-by-hop-headers-stripped.md`, `scenarios/case-7.4-content-length-validation.md`, `scenarios/case-8.2-transfer-encoding-validation.md`.
+
+#### [ ] F-P1-008: SSRF Guardrails (DNS/IP + Scheme Rules)
+- Enforce endpoint allow/deny rules (no link-local/private IPs unless explicitly allowed), and validate resolved IPs per request.
+- Define safe semantics for any protocol capability caches: key by upstream endpoint + resolved IP; avoid cross-tenant coupling.
+- Harden multi-endpoint host selection to prevent Host-header spoof steering (prefer dedicated internal header, validated and stripped).
+- Add scenario coverage for alias + host header behaviors: `scenarios/case-6.3-common-suffix-alias-host-header-required.md`.
+
+#### [ ] F-P1-009: OpenAI “Usable in Prod” E2E Test Suite
+- Add integration tests covering: management create upstream/route, proxy request to OpenAI-compatible mock, SSE streaming, rate limiting, error mapping.
+- Use scenario markdown as acceptance criteria and keep a one-to-one mapping to test cases (no silent scope drift).
+- Add load-smoke: sustained small RPS for 10 minutes, assert no memory growth and stable p95 latency.
+- Document operational runbook basics (env vars, DB migration step, health checks).
+
+**Exclusions** (explicitly out of scope for p1):
+- New protocols (WebSocket/WebTransport/gRPC), CORS, custom plugins, hierarchical configuration
+- Circuit breakers/backpressure queues/distributed rate limits (these are p2+)
+- OData `$filter/$select/$orderby` enhancements (p3)
+
+---
+
+### Phase 2 (p2): Scalability & Operational Maturity
+
+**Goal**: Scale under load, degrade gracefully on failures, and add operational controls for reliable day-2 operation.
+
+**Deliverables**:
+
+#### [ ] F-P2-001: Circuit Breaker (Config + Enforcement)
+- Implement circuit breaker states and transitions per [ADR: Circuit Breaker](./docs/adr-circuit-breaker.md).
+- Add upstream/route config fields for breaker thresholds and fallback behavior; expose in OpenAPI schemas.
+- Record breaker metrics (state gauge, transitions counter) and log state changes as audit events.
+- Ensure half-open probe gating is atomic in distributed mode (avoid multi-node probe floods).
+
+#### [ ] F-P2-002: Concurrency Control (In-Flight Limits)
+- Implement per-scope in-flight request limits per [ADR: Concurrency Control](./docs/adr-concurrency-control.md).
+- Support local limiter first; document limits/risks and optionally support a distributed coordinator for strict enforcement.
+- Return `503 LinkUnavailable` when saturated; include Retry-After guidance where applicable.
+- Add scenario coverage: `scenarios/case-12.6-no-automatic-retries.md` (no retry behaviors) + concurrency cases from ADR.
+
+#### [ ] F-P2-003: Backpressure Queueing (Bounded, Worker-Pool)
+- Implement queueing strategy per [ADR: Backpressure](./docs/adr-backpressure-queueing.md) with explicit bounds (queue length, worker count).
+- Ensure consumers do not unboundedly `spawn`; use a fixed worker pool and cooperative cancellation.
+- Add graceful degradation strategies (reject/queue/degrade) selectable per route.
+- Emit queue metrics (depth, dropped, latency) and log overload events.
+
+#### [ ] F-P2-004: Multi-Endpoint Load Balancing + Health
+- Implement round-robin distribution across compatible endpoint pools (same scheme/port/protocol) with endpoint-level stats.
+- Add endpoint health tracking and temporary ejection on repeated failures; expose `oagw_upstream_available` gauge.
+- Coordinate selection with connection pools to avoid slow-endpoint pile-ups; bias away from saturated endpoints.
+- Add scenario coverage: `scenarios/case-2.10-load-balancing-round-robin.md`.
+
+#### [ ] F-P2-005: HTTP/2 Negotiation + Safe Capability Cache
+- Implement adaptive HTTP/2→HTTP/1.1 fallback with cached capability per upstream endpoint (TTL 1h) as described in DESIGN.
+- Define cache key semantics explicitly (endpoint_id + resolved_ip + ALPN result) and invalidation triggers (DNS change, repeated failures).
+- Ensure cache is tenant-safe and cannot be used for cross-tenant inference.
+- Add scenario coverage: `scenarios/case-12.4-http2-negotiation-fallback.md`.
+
+#### [ ] F-P2-006: Config Caching + Invalidation
+- Cache effective upstream/route config in-memory to avoid DB reads on every proxy request (bounded size + TTL).
+- Invalidate on management writes (upstream/route update/delete) and on tenant-scoped access changes where applicable.
+- Add metrics for cache hit/miss and a protected admin endpoint to inspect cache stats.
+- Ensure cache stores only non-secret configuration (secrets still fetched via `cred_store`).
+
+#### [ ] F-P2-007: Graceful Shutdown + Draining
+- Implement coordinated shutdown: stop accepting new requests, drain in-flight, and cancel background tasks using cancellation tokens.
+- Ensure streaming connections terminate cleanly with bounded timeouts (SSE/WebSocket later phases).
+- Add health/readiness endpoints reflecting draining state and dependency health (DB, cred_store, types_registry).
+- Add chaos test: SIGTERM during high traffic, verify no deadlocks/leaks.
+
+#### [ ] F-P2-008: Operational Admin Surface (Protected)
+- Add admin-only endpoints to inspect circuit breaker state, limiter state, queue depth, and recent error counts.
+- Provide safe redaction: never expose secrets, raw request/response bodies, or tenant-specific identifiers unless authorized.
+- Emit audit log entries for admin reads of sensitive operational state.
+- Document minimal operational playbooks (overload, upstream outage, breaker stuck open).
+
+**Exclusions** (explicitly out of scope for p2):
+- Hierarchical configuration sharing/override model
+- Starlark custom plugins and plugin CRUD APIs
+- WebSocket and WebTransport proxying, plus CORS (p3)
+- gRPC proxying and transcoding (p4)
+
+---
+
+### Phase 3 (p3): Advanced Product Features / Enterprise
+
+**Goal**: Add enterprise flexibility: multi-tenant hierarchical configuration, plugin extensibility, additional protocols, and full management query capabilities.
+
+**Deliverables**:
+
+#### [ ] F-P3-001: Tenant Hierarchy Awareness (Core)
+- Integrate tenant hierarchy resolution for requests (child→parent→root) for config discovery and authorization decisions.
+- Ensure all DB reads are tenant-scoped via Secure ORM, with explicit “visible to tenant” semantics.
+- Implement “enabled inheritance”: ancestor disable disables for all descendants, including list/discovery behavior.
+- Add scenario coverage: `scenarios/case-5.2-proxy-cannot-access-unshared-upstream.md`, `scenarios/case-5.3-upstream-sharing-ancestor-to-descendant.md`.
+
+#### [ ] F-P3-002: Alias Resolution + Shadowing (Hierarchy)
+- Implement alias resolution algorithm walking tenant hierarchy with shadowing (closest tenant wins).
+- Enforce alias uniqueness per tenant and correct behavior for non-standard ports and IP endpoints.
+- Handle multi-endpoint common-suffix alias selection safely (require validated steering input, not raw Host header).
+- Add scenario coverage: `scenarios/case-6.1-alias-shadowing.md`, `scenarios/case-6.4-alias-not-found.md`, `scenarios/case-2.2-alias-nonstandard-port.md`, `scenarios/case-2.3-ip-endpoint-requires-alias.md`.
+
+#### [ ] F-P3-003: Hierarchical Configuration Sharing Modes (Upstream + Route)
+- Implement `private|inherit|enforce` sharing modes for auth, rate limits, and plugins as specified in DESIGN.
+- Implement merge strategies: auth override gated by permission; rate limits merged by `min(enforced_ancestor, descendant)`; plugin lists append-only under inherit/enforce.
+- Add explicit override permissions (`oagw:upstream:bind`, `override_auth`, `override_rate`, `add_plugins`) and enforce them.
+- Add scenario coverage: `scenarios/case-9.8-auth-sharing-modes.md`, `scenarios/case-9.9-descendant-override-permissions.md`, `scenarios/case-18.6-rate-limit-hierarchy-min-merge.md`.
+
+#### [ ] F-P3-004: Resource Identification & Binding Model Alignment
+- Implement the resource identification/binding semantics per [ADR: Resource Identification and Discovery](./docs/adr-resource-identification.md).
+- Resolve the “single upstream table vs binding entity” mismatch: either introduce explicit binding records or formalize the chosen model in persistence/API.
+- Ensure auditability: record which tenant/ancestor supplied each effective field (optional debug output for admins).
+- Add migration + API changes as needed to support bindings without breaking p0/p1 contracts.
+
+#### [ ] F-P3-005: Rate Limiting Advanced Semantics
+- Support additional rate limit shapes per [ADR: Rate Limiting](./docs/adr-rate-limiting.md): cost, capacity, multiple windows, and scope variants (tenant/user/ip).
+- Support strategy variants (reject/queue/degrade) and budget modes where specified in scenarios.
+- Add stable response headers behavior (enable/disable; Retry-After; optional remaining tokens) without leaking tenant info.
+- Add scenario coverage: `scenarios/case-18.3-rate-limit-scope-variants.md`, `scenarios/case-18.4-rate-limit-cost.md`, `scenarios/case-18.5-rate-limit-strategy-variants.md`.
+
+#### [ ] F-P3-006: Plugin Framework (Builtin + Custom)
+- Implement plugin chain composition (upstream plugins then route plugins) and execution order: Auth → Guards → Transform(on_request) → Upstream → Transform(on_response/on_error).
+- Implement plugin identifier resolution: named builtin IDs vs anonymous UUID-backed custom plugins; enforce plugin_type matches schema.
+- Define a consistent plugin lifecycle (immutable custom plugins; deletion only when unreferenced; GC eligibility tracking).
+- Add scenario coverage: `scenarios/case-11.6-plugin-ordering-layering.md`, `scenarios/case-11.7-plugin-control-flow.md`.
+
+#### [ ] F-P3-007: Starlark Runtime + Sandbox
+- Embed Starlark execution with strict sandbox restrictions (no network/file IO, timeout, memory limits) as specified in DESIGN.
+- Provide `ctx` API (request/response/error/config/route/log/time) with safe mutators; ensure short-circuit (`reject/respond`) cleans up permits/resources.
+- Add log redaction and message size limits for `ctx.log.*` to prevent secret/PII leakage.
+- Add scenario coverage: `scenarios/case-11.8-starlark-sandbox-restrictions.md`, `scenarios/case-10.4-custom-starlark-guard.md`.
+
+#### [ ] F-P3-008: Plugin Persistence + Management API
+- Add migrations + SeaORM entity for `oagw_plugin` (tenant-scoped, immutable source, config_schema JSONB, phases, lifecycle fields).
+- Implement `/api/oagw/v1/plugins` endpoints (POST/GET list/GET by id/DELETE) and `/source` retrieval with strict permissions.
+- Enforce delete semantics: return `409 PluginInUse` with `referenced_by` lists when referenced by upstream/route.
+- Add scenario coverage: `scenarios/case-4.1-create-custom-guard-plugin.md`, `scenarios/case-4.2-plugin-immutability.md`, `scenarios/case-4.3-delete-plugin-only-when-unreferenced.md`.
+
+#### [ ] F-P3-009: Plugin Usage Tracking + Garbage Collection Job
+- Implement periodic reference scan to update `last_used_at` and set/clear `gc_eligible_at` (bounded work per tick).
+- Implement background deletion of plugins past GC TTL with cancellation support and safe rate limiting.
+- Expose minimal admin metrics/logs for GC activity (deleted_count, scan_duration).
+- Add scenario coverage: `scenarios/case-4.7-plugin-usage-tracking-gc.md`.
+
+#### [ ] F-P3-010: Builtin Plugin Suite (Auth/Guard/Transform)
+- Auth builtins: noop, apikey, basic, bearer, oauth2 client credentials (incl basic client auth) with token caching/refresh support and no automatic request replay.
+- Guard builtins: timeout enforcement, circuit breaker enforcement (bridging p2), CORS preflight validation.
+- Transform builtins: request_id propagation, structured logging, metrics collection hooks (bridging p1).
+- Add scenario coverage: `scenarios/case-9.3-auth-basic.md`, `scenarios/case-9.4-auth-bearer.md`, `scenarios/case-9.5-auth-oauth2-client-cred.md`, `scenarios/case-9.6-auth-oauth2-client-cred-basic.md`.
+
+#### [ ] F-P3-011: CORS (Preflight + Policy Enforcement)
+- Implement CORS policies configurable per upstream/route (origins/methods/headers/credentials), with local OPTIONS handling (no upstream round-trip).
+- Enforce secure defaults (no wildcard-with-credentials), emit clear validation errors (Problem details).
+- Ensure CORS evaluation occurs before sending requests upstream; log rejections without leaking request bodies.
+- Add scenario coverage: `scenarios/case-10.2-cors-preflight.md`, `scenarios/case-10.3-cors-credentials-wildcard-invalid.md`.
+
+#### [ ] F-P3-012: Protocol Expansion (WebSocket + WebTransport)
+- Implement WebSocket proxying (upgrade, bi-directional streaming, auth on handshake, idle timeout, close propagation).
+- Implement WebTransport session forwarding (`wt`) with auth at session establishment and bounded idle semantics.
+- Add scenario coverage: `scenarios/case-14.1-websocket-upgrade-proxied.md`, `scenarios/case-17.1-webtransport-session-establishment.md`.
+
+#### [ ] F-P3-013: Streaming Lifecycle Semantics (Non-HTTP/1)
+- Define consistent lifecycle handling for long-lived streams: rate limit applied on establish, concurrency permits held/released, idle timeout enforcement.
+- Implement client disconnect handling across WebSocket and WebTransport sessions with guaranteed cleanup.
+- Map streaming aborts to `StreamAborted` with correct `X-OAGW-Error-Source` semantics where possible.
+- Add scenario coverage: `scenarios/case-14.4-websocket-idle-timeout.md`, `scenarios/case-17.1-webtransport-session-establishment.md`.
+
+#### [ ] F-P3-014: Full OData Query Support on List Endpoints
+- Implement `$filter`, `$select`, `$orderby`, `$top`, `$skip` for upstream/route/plugin list endpoints using ModKit OData helpers.
+- Implement field projection via `apply_select` / `page_to_projected_json` (docs/ODATA_SELECT.md), including dot-notation for nested JSON fields where supported.
+- Enforce safe filter allowlists (no arbitrary SQL); validate field names and operations; return validation Problems on invalid queries.
+- Add scenario coverage: management list query behaviors (extend `scenarios/` as needed).
+
+**Exclusions** (explicitly out of scope for p3):
+- TLS pinning and mTLS (p4)
+- gRPC proxying/transcoding (p4)
+- Starlark stdlib extensions that require network I/O (p4)
+
+---
+
+### Phase 4 (p4): Nice-to-Have / Long Tail
+
+**Goal**: Add advanced security and convenience features, plus long-tail protocol refinements and richer diagnostics.
+
+**Deliverables**:
+
+#### [ ] F-P4-001: TLS Certificate Pinning
+- Add optional pin sets per upstream endpoint (SPKI/public key or certificate pins) with rotation-friendly configuration.
+- Enforce pin checks on TLS handshake failures with clear `ProtocolError` Problems (no secret leakage).
+- Provide safe admin diagnostics (pin mismatch counts, last failure time) without exposing pin material.
+- Add scenario coverage (new): pin mismatch and rotation.
+
+#### [ ] F-P4-002: Mutual TLS (mTLS) to Upstreams
+- Support client certificate/key material via `cred_store` refs; attach per upstream endpoint.
+- Implement secure defaults: minimum TLS version, certificate validation, SNI/ALPN correctness.
+- Ensure secrets are never logged; add explicit audit events for mTLS configuration changes.
+- Add scenario coverage (new): mTLS handshake success/failure.
+
+#### [ ] F-P4-003: Distributed Tracing (OpenTelemetry)
+- Integrate tracing spans across phases (routing/auth/guard/transform/upstream) and propagate trace context (`traceparent`) where applicable.
+- Include `trace_id` in RFC 9457 Problem responses (as in DESIGN example) and in structured logs.
+- Add sampling controls and cardinality safeguards for span attributes.
+- Add scenario coverage (new): trace_id presence and correlation.
+
+#### [ ] F-P4-004: gRPC Proxying + Optional JSON Transcoding
+- Implement gRPC proxying (unary + server streaming) with content-type detection and error mapping (ADR: gRPC Support).
+- Add optional gRPC JSON transcoding for selected routes (scenario-driven) with explicit schemas and strict validation.
+- Ensure error mapping preserves upstream vs gateway source semantics and does not break streaming.
+- Add caching of transcoding descriptors with bounded size and invalidation on config update.
+- Add scenario coverage: `scenarios/case-15.1-grpc-unary-native-proxy.md`, `scenarios/case-15.2-grpc-server-streaming-proxy.md`, `scenarios/case-15.3-grpc-json-transcoding.md`, `scenarios/case-15.4-grpc-status-mapping-error-source.md`.
+
+#### [ ] F-P4-005: WebTransport (wt) Advanced Refinements
+- Improve p3 baseline with session migration/reconnect semantics where supported by client/upstream capabilities.
+- Add deep observability for multiplexed streams (per-session counters, queue pressure, abort reasons).
+- Validate p95 latency/error budgets for long-lived WT sessions under load.
+- Add scenario coverage (new): WT reconnect and sustained-session load behavior.
+
+#### [ ] F-P4-006: Starlark Standard Library Extensions (Carefully Scoped)
+- Add safe, vetted extensions (e.g., deterministic caching helpers) without enabling general network/file I/O.
+- If HTTP client support is added, gate it behind explicit allowlists and strict quotas; document security model clearly.
+- Add tests for sandbox escape attempts and resource exhaustion boundaries.
+- Reference future-dev item #4 for scope constraints.
+
+#### [ ] F-P4-007: Advanced Metrics and Diagnostics
+- Add per-plugin timing histograms, per-endpoint latency breakdown, and queue/circuit diagnostics dashboards.
+- Provide “debug headers” mode for admins (e.g., selected route id, upstream id) with explicit opt-in and stripping.
+- Add automated SLO checks (p95 latency budgets, error rate alerts) tied to Prometheus rules.
+- Ensure all diagnostic output is safe-by-default for multi-tenant deployments.
+
+#### [ ] F-P4-008: No-Automatic-Retry Invariant
+- Keep OAGW behavior strict: no automatic retries in core or plugins.
+- Ensure scenario `scenarios/case-12.6-no-automatic-retries.md` remains true across all phases.
+- Document client-side retry responsibility and recommended backoff/jitter guidance for callers.
+
+**Exclusions** (explicitly out of scope for p4):
+- HTTP/3 (QUIC) support
+
+---
+
+## Implementation Tracking
+
+**Phase Summary**:
+- p0: 12 features (0/12 complete)
+- p1: 9 features (0/9 complete)
+- p2: 8 features (0/8 complete)
+- p3: 14 features (0/14 complete)
+- p4: 8 features (0/8 complete)
+
+**Total**: 51 features across all phases
+
+| Phase | Feature Count |
+|------:|--------------:|
+| p0    | 12            |
+| p1    | 9             |
+| p2    | 8             |
+| p3    | 14            |
+| p4    | 8             |
+| Total | 51            |

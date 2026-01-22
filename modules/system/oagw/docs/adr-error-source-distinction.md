@@ -19,7 +19,7 @@ Without clear distinction, clients cannot determine the appropriate error handli
 - Compatibility with existing HTTP clients and tooling
 - Support for non-JSON response bodies
 - Minimal overhead for success path
-- Works across all supported protocols (HTTP, gRPC, AMQP)
+- Works across all supported protocols (HTTP, gRPC, WebSocket, WebTransport, SSE)
 
 ## Considered Options
 

@@ -20,7 +20,7 @@ OAGW needs a client library abstraction for executing HTTP requests to upstream 
 - No streaming-aware API design
 - No plugin context API implementation details
 
-**Scope**: This ADR covers HTTP/HTTPS protocols only. gRPC and AMQP are future work.
+**Scope**: This ADR covers HTTP/HTTPS protocols only. gRPC is future work.
 
 ## Decision Drivers
 

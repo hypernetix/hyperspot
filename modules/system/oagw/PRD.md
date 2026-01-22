@@ -104,6 +104,8 @@ CRUD for routes. Routes define matching rules (method, path, query allowlist) ma
 
 Proxy requests via `{METHOD} /api/oagw/v1/proxy/{alias}[/{path}][?{query}]`. Resolves upstream by alias, matches route, transforms and forwards.
 
+No automatic retries are performed by OAGW. Each inbound request results in at most one upstream attempt; retry behavior is client-managed.
+
 ### Authentication Injection
 
 Inject credentials into outbound requests. Supported: API Key, Basic Auth, OAuth2 Client Credentials, Bearer Token. Credentials retrieved from credential store at request time.
@@ -128,9 +130,16 @@ Execution order: Auth → Guards → Transform(request) → Upstream → Transfo
 
 Plugin chain composition: upstream plugins execute before route plugins.
 
+Plugin API contract: plugin definitions are immutable after creation.
+
+Justification: immutability guarantees deterministic behavior for attached routes/upstreams, improves auditability, and avoids in-place source mutation risks. Updates are performed by creating a new plugin version and re-binding references.
+
+Circuit breaker is a core gateway resilience capability (configured as core policy), not a plugin.
+
 ### Streaming Support
 
-SSE, WebSocket, gRPC streaming with proper lifecycle handling.
+Main protocol focus is HTTP family traffic: HTTP request/response, SSE, WebSocket, and WebTransport session flows.
+gRPC support is planned for a later phase (p4).
 
 ### Configuration Layering
 
@@ -153,6 +162,10 @@ Configurations defined by ancestor tenants can be overridden by descendants base
 - **Auth**: With `sharing: inherit`, descendant with permission can use own credentials
 - **Rate limits**: Descendant can only be stricter: `effective = min(ancestor.enforced, descendant)`
 - **Plugins**: Descendant's plugins append; enforced plugins cannot be removed
+- **Tags (discovery metadata)**: Merged top-to-bottom with add-only semantics:
+  `effective_tags = union(ancestor_tags..., descendant_tags)`. Descendants can add tags but cannot remove inherited tags.
+
+If upstream creation resolves to an existing upstream definition (binding-style flow), request tags are treated as tenant-local additions for effective discovery; they do not mutate ancestor tags.
 
 **Example**:
 
@@ -328,14 +341,12 @@ Forward events as received, handle connection lifecycle (open/close/error).
 ### Guard Plugins (`gts.x.core.oagw.plugin.guard.v1~*`)
 
 - `gts.x.core.oagw.plugin.guard.v1~x.core.oagw.timeout.v1` - Request timeout enforcement
-- `gts.x.core.oagw.plugin.guard.v1~x.core.oagw.circuit_breaker.v1` - Circuit breaker pattern
 - `gts.x.core.oagw.plugin.guard.v1~x.core.oagw.cors.v1` - CORS preflight validation
 
 ### Transform Plugins (`gts.x.core.oagw.plugin.transform.v1~*`)
 
 - `gts.x.core.oagw.plugin.transform.v1~x.core.oagw.logging.v1` - Request/response logging
 - `gts.x.core.oagw.plugin.transform.v1~x.core.oagw.metrics.v1` - Prometheus metrics collection
-- `gts.x.core.oagw.plugin.transform.v1~x.core.oagw.retry.v1` - Retry on failure
 - `gts.x.core.oagw.plugin.transform.v1~x.core.oagw.request_id.v1` - X-Request-ID propagation
 
 ## Error Codes
@@ -357,8 +368,8 @@ Forward events as received, handle connection lifecycle (open/close/error).
 ```
 POST/GET/PUT/DELETE /api/oagw/v1/upstreams[/{id}]
 POST/GET/PUT/DELETE /api/oagw/v1/routes[/{id}]
-POST/GET/PUT/DELETE /api/oagw/v1/plugins[/{id}]
-GET/PUT /api/oagw/v1/plugins/{id}/source
+POST/GET/DELETE /api/oagw/v1/plugins[/{id}]
+GET /api/oagw/v1/plugins/{id}/source
 {METHOD} /api/oagw/v1/proxy/{alias}[/{path}][?{query}]
 ```
 
