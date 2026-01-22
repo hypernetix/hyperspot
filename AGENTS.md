@@ -10,4 +10,6 @@ Always open `@/docs/SECURE-ORM.md` to learn about the project's database interac
 
 Always open `@/docs/ODATA_SELECT.md` to learn about the OData `$select` field projection feature.
 
+Always open `@/guidelines/DEPENDENCIES.md` to learn about preferred dependencies and libraries.
+
 Always follow the guidelines specified in `@/guidelines/README.md`.

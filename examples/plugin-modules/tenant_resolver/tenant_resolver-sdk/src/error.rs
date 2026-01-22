@@ -12,6 +12,9 @@ pub enum TenantResolverError {
     #[error("not found: {0}")]
     NotFound(String),
 
+    #[error("service unavailable: {0}")]
+    ServiceUnavailable(String),
+
     #[error("internal error: {0}")]
     Internal(String),
 }

@@ -10,9 +10,9 @@ use simple_user_settings_sdk::SimpleUserSettingsClient;
 
 use crate::api::rest::routes;
 use crate::config::SettingsConfig;
+use crate::domain::local_client::LocalClient;
 use crate::domain::service::{Service, ServiceConfig};
 use crate::infra::storage::sea_orm_repo::SeaOrmSettingsRepository;
-use crate::local_client::LocalClient;
 
 #[modkit::module(
     name = "simple-user-settings",

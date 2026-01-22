@@ -30,6 +30,10 @@ pub enum TenantResolverError {
     #[error("no plugin available")]
     NoPluginAvailable,
 
+    /// The plugin is not available yet.
+    #[error("service unavailable: {0}")]
+    ServiceUnavailable(String),
+
     /// An internal error occurred.
     #[error("internal error: {0}")]
     Internal(String),

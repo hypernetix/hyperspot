@@ -115,6 +115,7 @@ pub mod telemetry;
 
 pub mod backends;
 pub mod lifecycle;
+pub mod plugins;
 pub mod runtime;
 
 // Error catalog runtime support
@@ -142,6 +143,7 @@ pub use backends::{
     OopModuleConfig, OopSpawnConfig,
 };
 pub use lifecycle::{Lifecycle, Runnable, Status, StopReason, WithLifecycle};
+pub use plugins::GtsPluginSelector;
 pub use runtime::{
     DbOptions, Endpoint, ModuleInstance, ModuleManager, OopModuleSpawnConfig, OopSpawnOptions,
     RunOptions, ShutdownOptions, run,
