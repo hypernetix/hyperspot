@@ -53,7 +53,7 @@ pub fn expand_api_dto(args: &Punctuated<Ident, Token![,]>, input: &DeriveInput) 
     let (serialize, deserialize) = (has_response, has_request);
     let name = &input.ident;
     let ser = if serialize {
-        quote! { serde::Serialize, }
+        quote! { ::serde::Serialize, }
     } else {
         quote! {}
     };
@@ -63,7 +63,7 @@ pub fn expand_api_dto(args: &Punctuated<Ident, Token![,]>, input: &DeriveInput) 
         quote! {}
     };
     let de = if deserialize {
-        quote! { serde::Deserialize, }
+        quote! { ::serde::Deserialize, }
     } else {
         quote! {}
     };

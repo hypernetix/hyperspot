@@ -1,7 +1,6 @@
 use uuid::Uuid;
 
 /// Node response DTO
-#[derive(Debug, Clone)]
 #[modkit_macros::api_dto(request, response)]
 pub struct NodeDto {
     pub id: Uuid,
@@ -19,7 +18,6 @@ pub struct NodeDto {
 }
 
 /// System information response DTO
-#[derive(Debug, Clone)]
 #[modkit_macros::api_dto(request, response)]
 pub struct NodeSysInfoDto {
     pub node_id: uuid::Uuid,
@@ -34,14 +32,12 @@ pub struct NodeSysInfoDto {
 }
 
 #[modkit_macros::api_dto(request, response)]
-#[derive(Debug, Clone)]
 pub struct OsInfoDto {
     pub name: String,
     pub version: String,
     pub arch: String,
 }
 
-#[derive(Debug, Clone)]
 #[modkit_macros::api_dto(request, response)]
 pub struct CpuInfoDto {
     pub model: String,
@@ -50,7 +46,6 @@ pub struct CpuInfoDto {
     pub frequency_mhz: f64,
 }
 
-#[derive(Debug, Clone)]
 #[modkit_macros::api_dto(request, response)]
 pub struct MemoryInfoDto {
     pub total_bytes: u64,
@@ -59,7 +54,6 @@ pub struct MemoryInfoDto {
     pub used_percent: u32,
 }
 
-#[derive(Debug, Clone)]
 #[modkit_macros::api_dto(request, response)]
 pub struct HostInfoDto {
     pub hostname: String,
@@ -68,7 +62,6 @@ pub struct HostInfoDto {
     pub ip_addresses: Vec<String>,
 }
 
-#[derive(Debug, Clone)]
 #[modkit_macros::api_dto(request, response)]
 pub struct GpuInfoDto {
     pub model: String,
@@ -80,7 +73,6 @@ pub struct GpuInfoDto {
     pub used_memory_mb: Option<f64>,
 }
 
-#[derive(Debug, Clone)]
 #[modkit_macros::api_dto(request, response)]
 pub struct BatteryInfoDto {
     pub on_battery: bool,
@@ -88,7 +80,6 @@ pub struct BatteryInfoDto {
 }
 
 /// System capabilities response DTO
-#[derive(Debug, Clone)]
 #[modkit_macros::api_dto(request, response)]
 pub struct NodeSysCapDto {
     pub node_id: uuid::Uuid,
@@ -96,7 +87,6 @@ pub struct NodeSysCapDto {
     pub collected_at: chrono::DateTime<chrono::Utc>,
 }
 
-#[derive(Debug, Clone)]
 #[modkit_macros::api_dto(request, response)]
 pub struct SysCapDto {
     pub key: String,
