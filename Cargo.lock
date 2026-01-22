@@ -790,14 +790,12 @@ dependencies = [
  "jsonwebtoken",
  "reqwest",
  "serde",
- "serde-saphyr",
  "serde_json",
  "thiserror 2.0.17",
  "time",
  "tokio",
  "tower",
  "tracing",
- "tracing-subscriber",
  "uuid",
 ]
 
@@ -901,7 +899,6 @@ dependencies = [
  "local-ip-address",
  "machine-uid",
  "nvml-wrapper",
- "once_cell",
  "regex",
  "starship-battery",
  "sysinfo",

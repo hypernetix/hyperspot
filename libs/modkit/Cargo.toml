@@ -8,6 +8,7 @@ repository.workspace = true
 rust-version.workspace = true
 description = "Core ModKit library"
 readme.workspace = true
+keywords = ["cyberfabric", "cyberfabric-modkit"]
 
 [lib]
 name = "modkit"

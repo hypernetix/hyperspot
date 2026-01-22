@@ -7,8 +7,9 @@ authors.workspace = true
 repository.workspace = true
 description = "Directory service SDK module"
 rust-version.workspace = true
+keywords = ["cyberfabric", "cyberfabric-system"]
 build = "build.rs"
-include = ["proto", "src", "build.rs"]
+include = ["proto/", "src/", "build.rs", "Cargo.toml"]
 
 [lib]
 name = "cf_system_sdk_directory"
