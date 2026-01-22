@@ -12,10 +12,10 @@ impl From<DomainError> for Problem {
                 "PluginNotFound",
                 format!("No plugin instances found for vendor '{vendor}'"),
             ),
-            DomainError::PluginClientNotFound { gts_id } => Problem::new(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "PluginClientNotFound",
-                format!("Plugin client not found in ClientHub for '{gts_id}'"),
+            DomainError::PluginUnavailable { gts_id, reason } => Problem::new(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "PluginUnavailable",
+                format!("Plugin '{gts_id}' is not available: {reason}"),
             ),
             DomainError::InvalidPluginInstance { gts_id, reason } => Problem::new(
                 StatusCode::BAD_REQUEST,

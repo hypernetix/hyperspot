@@ -216,6 +216,23 @@ impl ClientHub {
         })
     }
 
+    /// Try to fetch a scoped client by interface type `T` and scope.
+    ///
+    /// Returns `None` if not found or if the stored type doesn't match.
+    pub fn try_get_scoped<T>(&self, scope: &ClientScope) -> Option<Arc<T>>
+    where
+        T: ?Sized + Send + Sync + 'static,
+    {
+        let key = ScopedKey {
+            type_key: TypeKey::of::<T>(),
+            scope: scope.clone(),
+        };
+        let r = self.scoped_map.read();
+        let boxed = r.get(&key)?;
+
+        boxed.downcast_ref::<Arc<T>>().cloned()
+    }
+
     /// Remove a client by interface type; returns the removed client if it was present.
     pub fn remove<T>(&self) -> Option<Arc<T>>
     where
@@ -354,5 +371,24 @@ mod tests {
 
         assert_eq!(&*hub.get::<str>().unwrap(), "global");
         assert_eq!(&*hub.get_scoped::<str>(&scope).unwrap(), "scoped");
+    }
+
+    #[test]
+    fn try_get_scoped_returns_some_on_hit() {
+        let hub = ClientHub::new();
+        let scope = ClientScope::gts_id("gts.x.core.modkit.plugins.v1~x.core.tenant_resolver.plugin.v1~contoso.app._.plugin.v1.0");
+        hub.register_scoped::<str>(scope.clone(), Arc::from("scoped"));
+
+        let got = hub.try_get_scoped::<str>(&scope);
+        assert_eq!(got.as_deref(), Some("scoped"));
+    }
+
+    #[test]
+    fn try_get_scoped_returns_none_on_miss() {
+        let hub = ClientHub::new();
+        let scope = ClientScope::gts_id("gts.x.core.modkit.plugins.v1~x.core.tenant_resolver.plugin.v1~fabrikam.app._.plugin.v1.0");
+
+        let got = hub.try_get_scoped::<str>(&scope);
+        assert!(got.is_none());
     }
 }

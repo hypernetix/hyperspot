@@ -15,8 +15,8 @@ pub enum DomainError {
     #[error("invalid plugin instance content for '{gts_id}': {reason}")]
     InvalidPluginInstance { gts_id: String, reason: String },
 
-    #[error("plugin client not registered in ClientHub for '{gts_id}'")]
-    PluginClientNotFound { gts_id: String },
+    #[error("plugin not available for '{gts_id}': {reason}")]
+    PluginUnavailable { gts_id: String, reason: String },
 
     #[error("tenant not found: {tenant_id}")]
     TenantNotFound { tenant_id: Uuid },
@@ -60,6 +60,10 @@ impl From<TenantResolverError> for DomainError {
             TenantResolverError::NoPluginAvailable => Self::PluginNotFound {
                 vendor: "unknown".to_owned(),
             },
+            TenantResolverError::ServiceUnavailable(msg) => Self::PluginUnavailable {
+                gts_id: "unknown".to_owned(),
+                reason: msg,
+            },
             TenantResolverError::Internal(msg) => Self::Internal(msg),
         }
     }
@@ -72,8 +76,8 @@ impl From<DomainError> for TenantResolverError {
             DomainError::InvalidPluginInstance { gts_id, reason } => {
                 Self::Internal(format!("invalid plugin instance '{gts_id}': {reason}"))
             }
-            DomainError::PluginClientNotFound { gts_id } => {
-                Self::Internal(format!("plugin client not registered for '{gts_id}'"))
+            DomainError::PluginUnavailable { gts_id, reason } => {
+                Self::ServiceUnavailable(format!("plugin not available for '{gts_id}': {reason}"))
             }
             DomainError::TenantNotFound { tenant_id } => Self::TenantNotFound { tenant_id },
             DomainError::AccessDenied { target_tenant } => Self::AccessDenied { target_tenant },
