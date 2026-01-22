@@ -24,9 +24,9 @@ HyperSpot needs a Resource Group module that provides hierarchical resource orga
 - ClientHub registration for inter-module access
 
 **Core Features:**
-1. **Type Management**: Define resource group types with allowed parent types and application permissions
+1. **Type Management**: Define resource group types with allowed parent types and owner info
 2. **Hierarchical Organization**: Create, update, move, and delete entities in tree structures
-3. **Access Control**: Application-based authorization with owner vs. allowed application permissions
+3. **Access Control**: Application-based authorization with owner permissions
 4. **Reference Management**: Link resource groups to external resources with reference counting
 
 ## Impact

@@ -99,7 +99,7 @@ graph TD
 
 ### C.4: Security Model
 - **Authentication**: JWT via SecurityCtx.
-- **Authorization**: Application-level ownership for types; Hierarchy-based permissions for groups.
+- **Authorization**: Owner-based ownership for types; Hierarchy-based permissions for groups.
 
 ### C.5: Non-Functional Requirements
 - **Scalability**: Horizontal scaling of read replicas.

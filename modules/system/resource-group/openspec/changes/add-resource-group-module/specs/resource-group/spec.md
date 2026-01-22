@@ -7,14 +7,14 @@ The system SHALL provide an API to manage resource group types that define the s
 A resource group type consists of:
 - **Code**: Unique identifier (1-63 chars, no whitespace, case-insensitive)
 - **Parents**: Array of type codes that can be parents of this type
-- **Application ID**: Owner application that created the type
-- **Allowed App IDs**: Applications allowed to create/modify groups of this type
+- **Owner ID**: UUID of the owner
+- **Owner Type**: Type of the owner (e.g., "app", "user")
 
 Type management SHALL support:
 - Creating new types with validation
 - Listing all types
 - Retrieving a specific type by code
-- Updating type properties (parents, allowed apps)
+- Updating type properties (parents, owner info)
 - Deleting types (only if no entities of this type exist)
 
 #### Scenario: Create a new resource group type
@@ -23,7 +23,7 @@ Type management SHALL support:
 - **AND** an authenticated application with ID `app-uuid`
 - **WHEN** the user calls `create_type` with type data
 - **THEN** the system creates the type with the application as owner
-- **AND** returns the created type with `application_id` set
+- **AND** returns the created type with `owner_id`
 
 #### Scenario: Reject duplicate type code
 
@@ -195,22 +195,14 @@ The system SHALL enforce application-based authorization for all operations.
 Authorization rules:
 - Only authenticated applications can modify resource groups
 - Type owners can modify their types
-- Applications in `allowed_app_ids` can create/modify entities of that type
 - All operations require valid `SecurityCtx` for tenant isolation
 
 #### Scenario: Authorize type creation
 
 - **GIVEN** an authenticated application `app-uuid`
 - **WHEN** the application creates a type
-- **THEN** the system sets `application_id = app-uuid` as owner
+- **THEN** the system sets `owner_id = app-uuid` as owner
 - **AND** allows the application to modify the type
-
-#### Scenario: Reject unauthorized entity creation
-
-- **GIVEN** a type `DEPARTMENT` with `allowed_app_ids = [app1-uuid]`
-- **AND** an authenticated application `app2-uuid` not in allowed list
-- **WHEN** `app2-uuid` attempts to create an entity of type `DEPARTMENT`
-- **THEN** the system returns `ResourceGroupError::Unauthorized`
 
 ---
 
@@ -305,8 +297,8 @@ The system SHALL use SeaORM with the following tables:
 **`resource_group_type`:**
 - `code` (PK): String, unique, case-insensitive
 - `parents`: JSON array of type codes
-- `application_id`: UUID (owner)
-- `allowed_app_ids`: JSON array of UUIDs
+- `owner_id`: UUID (owner)
+- `owner_type`: String (owner type)
 - `created_at`, `updated_at`: Timestamps
 
 **`resource_group`:**

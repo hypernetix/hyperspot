@@ -27,13 +27,13 @@ To allow applications to model complex organizational structures (e.g., Organiza
 
 - [ ] **ID**: `fdd-hyperspot-feature-resource-group-flow-create-type`
 <!-- fdd-id-content -->
-1. [ ] - `ph-1` - **Actor** provides type code, allowed parents, and allowed app IDs - `inst-provide-data`
+1. [ ] - `ph-1` - **Actor** provides type code, allowed parents, and owner info - `inst-provide-data`
 2. [ ] - `ph-1` - **System** validates type code format (no whitespace, length limit) - `inst-validate-format`
 3. [ ] - `ph-1` - **System** checks if type code already exists - `inst-check-duplicate`
 4. [ ] - `ph-1` - **IF** type exists: - `inst-check-exists`
    1. [ ] - `ph-1` - **System** returns error `TypeAlreadyExists` - `inst-err-duplicate`
    2. [ ] - `ph-1` - **RETURN** - `inst-ret-duplicate`
-5. [ ] - `ph-1` - **System** creates new type record with current app as owner - `inst-create-record`
+5. [ ] - `ph-1` - **System** creates new type record with provided owner info - `inst-create-record`
 6. [ ] - `ph-1` - **System** returns created type - `inst-return-success`
 <!-- fdd-id-content -->
 
@@ -130,8 +130,8 @@ To allow applications to model complex organizational structures (e.g., Organiza
 1. `resource_group_type`
    - `code` (PK): String
    - `parents`: JSON
-   - `application_id`: UUID
-   - `allowed_app_ids`: JSON
+   - `owner_id`: UUID
+   - `owner_type`: String
 2. `resource_group`
    - `id` (PK): UUIDv7
    - `type_code` (FK): String
@@ -161,7 +161,7 @@ To allow applications to model complex organizational structures (e.g., Organiza
 ### Security
 - All operations require `SecurityCtx`.
 - Tenant isolation enforced via Secure ORM.
-- Application ownership checks for Types.
+- Owner checks for Types.
 
 ### Error Handling
 - `TypeAlreadyExists` (409)

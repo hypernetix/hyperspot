@@ -79,7 +79,7 @@
 ## 7. Authorization & Security
 
 - [ ] 7.1 Implement application-based authorization checks
-- [ ] 7.2 Validate type permissions (owner vs. allowed applications)
+- [ ] 7.2 Validate type permissions (owner)
 - [ ] 7.3 Ensure all repository methods use SecureConn with SecurityCtx
 - [ ] 7.4 Add tenant isolation via Secure ORM
 - [ ] 7.5 Validate input data (code format, name length, etc.)
