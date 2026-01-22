@@ -353,6 +353,7 @@ mime = "0.3"
 # Document parsing libraries
 tl = "0.7"
 pdf-extract = "0.10"
+docx-rust = "0.1.11"
 
 # Additional testing utilities
 tokio-test = "0.4"
