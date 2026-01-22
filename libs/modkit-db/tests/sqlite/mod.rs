@@ -5,9 +5,10 @@
 
 #![cfg(feature = "sqlite")]
 
+mod concurrency_tests;
+mod manager;
+mod options;
+mod pooling_tests;
 #[cfg_attr(coverage_nightly, coverage(off))]
-
 mod sqlite_tests;
 mod transaction;
-mod concurrency_tests;
-mod pooling_tests;

@@ -1,6 +1,6 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-#[cfg(feature = "sea-orm")]
+#[cfg(any(feature = "pg", feature = "mysql", feature = "sqlite"))]
 mod tests {
     use bigdecimal::BigDecimal;
     use sea_orm::entity::prelude::*;

@@ -5,8 +5,8 @@
 use std::sync::Arc;
 
 use anyhow::Result;
+use cf_system_sdks::directory::DirectoryClient;
 use modkit::client_hub::ClientHub;
-use module_orchestrator_sdk::DirectoryClient;
 
 use crate::SERVICE_NAME;
 use crate::api::CalculatorClient;

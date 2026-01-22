@@ -12,9 +12,9 @@ workspace = true
 [dependencies]
 tenant-resolver-sdk = { path = "../../tenant_resolver-sdk" }
 types-registry-sdk = { path = "../../../../../modules/system/types-registry/types-registry-sdk" }
-modkit = { path = "../../../../../libs/modkit" }
-modkit-security = { path = "../../../../../libs/modkit-security" }
-modkit-odata = { path = "../../../../../libs/modkit-odata" }
+modkit = { workspace = true }
+modkit-security = { workspace = true }
+modkit-odata = { workspace = true }
 async-trait = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
@@ -24,5 +24,3 @@ serde_json = { workspace = true }
 schemars = { workspace = true }
 arc-swap = { workspace = true }
 inventory = { workspace = true }
-
-

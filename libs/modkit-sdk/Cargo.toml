@@ -1,15 +1,19 @@
 [package]
-name = "modkit-sdk"
-version.workspace = true
+name = "cf-modkit-sdk"
+version = "0.1.0"
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
-
-[lints]
-workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "ModKit SDK"
+keywords = ["cyberfabric", "cyberfabric-modkit"]
 
 [lib]
 name = "modkit_sdk"
+
+[lints]
+workspace = true
 
 [features]
 default = []
@@ -18,9 +22,9 @@ chrono = ["dep:chrono"]
 
 [dependencies]
 # Project-local crates
-modkit-security = { path = "../modkit-security" }
-modkit-odata = { path = "../modkit-odata" }
-modkit-odata-macros = { path = "../modkit-odata-macros", optional = true }
+modkit-security = { workspace = true }
+modkit-odata = { workspace = true }
+modkit-odata-macros = { workspace = true, optional = true }
 
 # Core deps
 futures-core = { workspace = true }

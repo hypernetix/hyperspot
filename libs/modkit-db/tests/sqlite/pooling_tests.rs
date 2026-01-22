@@ -2,7 +2,7 @@
 
 //! Tests for pool configuration and inheritance.
 
-use figment::{providers::Serialized, Figment};
+use figment::{Figment, providers::Serialized};
 use modkit_db::{config::*, manager::DbManager};
 use std::collections::HashMap;
 use std::time::Duration;
@@ -205,32 +205,32 @@ fn test_pool_cfg_helper_methods() {
     // Test SQLite helper
     #[cfg(feature = "sqlite")]
     {
-        let sqlite_opts = pool_cfg.apply_sqlite(sqlx::sqlite::SqlitePoolOptions::new());
+        let sqlite_opts = pool_cfg.apply_sqlite(sea_orm::sqlx::sqlite::SqlitePoolOptions::new());
         // We can't easily test the internal state of the options,
         // but we can verify the method doesn't panic and returns the right type
         assert_eq!(
             std::mem::size_of_val(&sqlite_opts),
-            std::mem::size_of::<sqlx::sqlite::SqlitePoolOptions>()
+            std::mem::size_of::<sea_orm::sqlx::sqlite::SqlitePoolOptions>()
         );
     }
 
     // Test PostgreSQL helper
     #[cfg(feature = "pg")]
     {
-        let pg_opts = pool_cfg.apply_pg(sqlx::postgres::PgPoolOptions::new());
+        let pg_opts = pool_cfg.apply_pg(sea_orm::sqlx::postgres::PgPoolOptions::new());
         assert_eq!(
             std::mem::size_of_val(&pg_opts),
-            std::mem::size_of::<sqlx::postgres::PgPoolOptions>()
+            std::mem::size_of::<sea_orm::sqlx::postgres::PgPoolOptions>()
         );
     }
 
     // Test MySQL helper
     #[cfg(feature = "mysql")]
     {
-        let mysql_opts = pool_cfg.apply_mysql(sqlx::mysql::MySqlPoolOptions::new());
+        let mysql_opts = pool_cfg.apply_mysql(sea_orm::sqlx::mysql::MySqlPoolOptions::new());
         assert_eq!(
             std::mem::size_of_val(&mysql_opts),
-            std::mem::size_of::<sqlx::mysql::MySqlPoolOptions>()
+            std::mem::size_of::<sea_orm::sqlx::mysql::MySqlPoolOptions>()
         );
     }
 }

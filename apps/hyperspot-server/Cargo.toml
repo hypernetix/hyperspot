@@ -12,7 +12,11 @@ workspace = true
 default = []
 users-info-example = ["dep:users_info"]
 oop-example = ["dep:calculator_gateway", "dep:calculator"]
-tenant-resolver-example = ["dep:tenant_resolver_gw", "dep:contoso_tr_plugin", "dep:fabrikam_tr_plugin"]
+tenant-resolver-example = [
+    "dep:tenant_resolver_gw",
+    "dep:contoso_tr_plugin",
+    "dep:fabrikam_tr_plugin",
+]
 single-tenant = ["dep:hs-single-tenant-tr-plugin"]
 static-tenants = ["dep:hs-static-tr-plugin"]
 otel = ["modkit/otel"]
@@ -24,13 +28,13 @@ path = "src/main.rs"
 [dependencies]
 mimalloc = { version = "0.1" }
 # Local crates
-modkit = { path = "../../libs/modkit", features = ["otel", "bootstrap"] }
-modkit-db = { path = "../../libs/modkit-db", features = ["sqlite"] }
+modkit = { workspace = true, features = ["otel", "bootstrap"] }
+modkit-db = { workspace = true, features = ["sqlite", "pg"] }
 
 # System modules
 api_gateway = { path = "../../modules/system/api_gateway" }
 grpc_hub = { path = "../../modules/system/grpc_hub" }
-module_orchestrator = { path = "../../modules/system/module_orchestrator/module_orchestrator" }
+module_orchestrator = { path = "../../modules/system/module_orchestrator" }
 types-registry = { path = "../../modules/system/types-registry/types-registry" }
 hs-tenant-resolver-gw = { path = "../../modules/system/tenant_resolver/tenant_resolver-gw" }
 
@@ -51,9 +55,6 @@ clap = { workspace = true }
 serde_json = { workspace = true }
 figment = { workspace = true, features = ["yaml", "env"] }
 uuid = { workspace = true }
-
-# SQLx for driver registration workaround
-sqlx = { workspace = true, features = ["postgres", "sqlite"] }
 
 # Optional example module
 users_info = { path = "../../examples/modkit/users_info/users_info", optional = true }

@@ -1,15 +1,20 @@
 [package]
-name = "modkit-db-macros"
-version.workspace = true
+name = "cf-modkit-db-macros"
+version = "0.1.0"
 edition.workspace = true
-description = "Proc-macro derives for modkit-db secure ORM layer"
 license.workspace = true
-
-[lints]
-workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "Proc-macro derives for modkit-db secure ORM layer"
+keywords = ["cyberfabric", "cyberfabric-modkit"]
 
 [lib]
 proc-macro = true
+name = "modkit_db_macros"
+
+[lints]
+workspace = true
 
 [dependencies]
 syn = { workspace = true }
@@ -20,4 +25,3 @@ proc-macro-error2 = { workspace = true }
 
 [dev-dependencies]
 trybuild = "1"
-

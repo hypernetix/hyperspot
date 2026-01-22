@@ -462,7 +462,7 @@ impl GrpcHub {
                     .map(|i| i.service_name.to_owned())
                     .collect();
 
-                let info = module_orchestrator_sdk::RegisterInstanceInfo {
+                let info = cf_system_sdks::directory::RegisterInstanceInfo {
                     module: module_data.module_name.clone(),
                     instance_id: instance_id.clone(),
                     grpc_services: service_names
@@ -470,7 +470,7 @@ impl GrpcHub {
                         .map(|n| {
                             (
                                 n.clone(),
-                                module_orchestrator_sdk::ServiceEndpoint::new(endpoint),
+                                cf_system_sdks::directory::ServiceEndpoint::new(endpoint),
                             )
                         })
                         .collect(),

@@ -11,8 +11,8 @@ description = "Calculator gateway module - example in-process REST service"
 calculator-sdk = { path = "../../calculator/calculator-sdk" }
 
 # ModKit
-modkit = { path = "../../../../libs/modkit" }
-modkit-security = { path = "../../../../libs/modkit-security" }
+modkit = { workspace = true }
+modkit-security = { workspace = true }
 
 # Axum & HTTP
 axum = { workspace = true }

@@ -1,8 +1,16 @@
 [package]
-name = "modkit-odata"
-version.workspace = true
+name = "cf-modkit-odata"
+version = "0.1.0"
 edition.workspace = true
 license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "ModKit OData library"
+keywords = ["cyberfabric", "cyberfabric-modkit"]
+
+[lib]
+name = "modkit_odata"
 
 [lints]
 workspace = true
@@ -13,8 +21,8 @@ with-utoipa = ["dep:utoipa"]
 chrono = []
 
 [dependencies]
-modkit-errors = { path = "../modkit-errors" }
-modkit-errors-macro = { path = "../modkit-errors-macro" }
+modkit-errors = { workspace = true }
+modkit-errors-macro = { workspace = true }
 bigdecimal = { workspace = true }
 uuid = { workspace = true }
 chrono = { workspace = true, default-features = false, features = ["clock"] }

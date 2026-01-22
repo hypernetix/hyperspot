@@ -63,6 +63,5 @@ mime = { workspace = true }
 docx-rust = { workspace = true }
 
 # Local dependencies
-modkit = { path = "../../libs/modkit" }
-modkit-auth = { path = "../../libs/modkit-auth" }
-
+modkit = { workspace = true }
+modkit-auth = { workspace = true }

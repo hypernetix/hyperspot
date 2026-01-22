@@ -11,8 +11,8 @@ workspace = true
 
 [features]
 default = ["odata"]
-odata = []         # enable streaming API with typed queries
-integration = []   # gate integration tests
+odata = []          # enable streaming API with typed queries
+integration = []    # gate integration tests
 
 [dependencies]
 # SDK - public API, models, and errors
@@ -36,7 +36,7 @@ utoipa = { workspace = true, features = ["time"] }
 # HTTP and REST
 axum = { workspace = true, features = ["macros"] }
 tower-http = { workspace = true, features = ["timeout"] }
-futures-util  = { workspace = true }
+futures-util = { workspace = true }
 http = { workspace = true }
 
 # Time handling
@@ -57,7 +57,7 @@ sea-orm = { workspace = true, features = [
     "runtime-tokio-rustls",
     "macros",
     "with-time",
-    "with-uuid"
+    "with-uuid",
 ] }
 sea-orm-migration = { workspace = true, features = ["sqlx-sqlite"] }
 
@@ -65,16 +65,16 @@ sea-orm-migration = { workspace = true, features = ["sqlx-sqlite"] }
 thiserror = { workspace = true }
 
 # Local dependencies
-modkit = { path = "../../../../libs/modkit" }
+modkit = { workspace = true }
 # NOTE: insecure-escape enabled for migrations and example infrastructure code
-modkit-db = { path = "../../../../libs/modkit-db", default-features = false, features = ["pg", "sea-orm", "insecure-escape"] }
-modkit-db-macros = { path = "../../../../libs/modkit-db-macros" }
-modkit-auth = { path = "../../../../libs/modkit-auth" }
-modkit-security = { path = "../../../../libs/modkit-security" }
-modkit-errors = { path = "../../../../libs/modkit-errors" }
-modkit-errors-macro = { path = "../../../../libs/modkit-errors-macro" }
-modkit-odata = { path = "../../../../libs/modkit-odata", features = ["with-utoipa"] }
-modkit-sdk = { path = "../../../../libs/modkit-sdk" }
+modkit-db = { workspace = true, features = ["sqlite", "pg", "insecure-escape"] }
+modkit-db-macros = { workspace = true }
+modkit-auth = { workspace = true }
+modkit-security = { workspace = true }
+modkit-errors = { workspace = true }
+modkit-errors-macro = { workspace = true }
+modkit-odata = { workspace = true, features = ["with-utoipa"] }
+modkit-sdk = { workspace = true }
 
 [dev-dependencies]
 tokio-util = { workspace = true }

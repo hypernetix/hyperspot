@@ -149,6 +149,4 @@ pub use db_ops::{
 // Provider pattern for advanced tenant filtering
 pub use provider::{SimpleTenantFilter, TenantFilterProvider};
 
-// Re-export the derive macro when the feature is enabled
-#[cfg(feature = "sea-orm")]
 pub use modkit_db_macros::Scopable;
