@@ -35,12 +35,10 @@ fn gts_pattern() -> Regex {
 fn matches_exclude(path: &Path, exclude_patterns: &[Pattern]) -> bool {
     let path_str = path.to_string_lossy();
     for pattern in exclude_patterns {
-        if pattern.matches(&path_str) {
-            return true;
-        }
-        // Also try matching just the file/dir name
-        if let Some(name) = path.file_name()
-            && pattern.matches(&name.to_string_lossy())
+        if pattern.matches(&path_str)
+            || path
+                .file_name()
+                .is_some_and(|name| pattern.matches(&name.to_string_lossy()))
         {
             return true;
         }
