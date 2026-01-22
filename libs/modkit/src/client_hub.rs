@@ -376,7 +376,9 @@ mod tests {
     #[test]
     fn try_get_scoped_returns_some_on_hit() {
         let hub = ClientHub::new();
-        let scope = ClientScope::gts_id("gts.x.core.modkit.plugins.v1~x.core.tenant_resolver.plugin.v1~contoso.app._.plugin.v1.0");
+        let scope = ClientScope::gts_id(
+            "gts.x.core.modkit.plugins.v1~x.core.tenant_resolver.plugin.v1~contoso.app._.plugin.v1.0",
+        );
         hub.register_scoped::<str>(scope.clone(), Arc::from("scoped"));
 
         let got = hub.try_get_scoped::<str>(&scope);
@@ -386,7 +388,9 @@ mod tests {
     #[test]
     fn try_get_scoped_returns_none_on_miss() {
         let hub = ClientHub::new();
-        let scope = ClientScope::gts_id("gts.x.core.modkit.plugins.v1~x.core.tenant_resolver.plugin.v1~fabrikam.app._.plugin.v1.0");
+        let scope = ClientScope::gts_id(
+            "gts.x.core.modkit.plugins.v1~x.core.tenant_resolver.plugin.v1~fabrikam.app._.plugin.v1.0",
+        );
 
         let got = hub.try_get_scoped::<str>(&scope);
         assert!(got.is_none());
