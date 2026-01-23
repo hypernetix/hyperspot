@@ -11,9 +11,10 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Update Rust toolchain to nightly (project requires Rust 1.92+)
+# Install latest nightly toolchain (project requires Rust 1.92+)
 # rust-src is required for sanitizer builds
-RUN rustup default nightly && rustup update && \
+RUN rustup toolchain install nightly --force && \
+    rustup default nightly && \
     rustup component add rust-src --toolchain nightly
 
 # Copy source code
