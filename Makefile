@@ -313,6 +313,56 @@ coverage-e2e-local: check-prereq-e2e-local
 	@command -v cargo-llvm-cov >/dev/null || (echo "Installing cargo-llvm-cov..." && cargo install cargo-llvm-cov)
 	python3 scripts/coverage.py e2e-local
 
+# -------- Fuzzing --------
+
+.PHONY: fuzz fuzz-build fuzz-list fuzz-run fuzz-clean fuzz-corpus
+
+## Install cargo-fuzz (required for fuzzing)
+fuzz-install:
+	@command -v cargo-fuzz >/dev/null || \
+		(echo "Installing cargo-fuzz..." && cargo install cargo-fuzz)
+
+## Build all fuzz targets
+fuzz-build: fuzz-install
+	cd fuzz && cargo +nightly fuzz build
+
+## List all available fuzz targets
+fuzz-list: fuzz-install
+	cd fuzz && cargo +nightly fuzz list
+
+## Run a specific fuzz target (use FUZZ_TARGET=name)
+## Example: make fuzz-run FUZZ_TARGET=fuzz_odata_filter FUZZ_SECONDS=60
+fuzz-run: fuzz-install
+	@if [ -z "$(FUZZ_TARGET)" ]; then \
+		echo "ERROR: FUZZ_TARGET is required. Example: make fuzz-run FUZZ_TARGET=fuzz_odata_filter"; \
+		exit 1; \
+	fi
+	cd fuzz && cargo +nightly fuzz run $(FUZZ_TARGET) -- -max_total_time=$(or $(FUZZ_SECONDS),60)
+
+## Run all fuzz targets for a short time (smoke test)
+fuzz: fuzz-build
+	@echo "Running all fuzz targets for 30 seconds each..."
+	@cd fuzz && \
+	for target in $$(cargo +nightly fuzz list); do \
+		echo "=== Fuzzing $$target ==="; \
+		cargo +nightly fuzz run $$target -- -max_total_time=30 || true; \
+	done
+	@echo "Fuzzing complete. Check fuzz/artifacts/ for crashes."
+
+## Clean fuzzing artifacts and corpus
+fuzz-clean:
+	rm -rf fuzz/artifacts/
+	rm -rf fuzz/corpus/*/
+	rm -rf fuzz/target/
+
+## Minimize corpus for a specific target
+fuzz-corpus: fuzz-install
+	@if [ -z "$(FUZZ_TARGET)" ]; then \
+		echo "ERROR: FUZZ_TARGET is required. Example: make fuzz-corpus FUZZ_TARGET=fuzz_odata_filter"; \
+		exit 1; \
+	fi
+	cd fuzz && cargo +nightly fuzz cmin $(FUZZ_TARGET)
+
 # -------- Main targets --------
 
 .PHONY: all check ci build quickstart example
@@ -341,5 +391,5 @@ build:
 	cargo +stable build --release
 
 # Run all necessary quality checks and tests and then build the release binary
-all: build check test-sqlite e2e-local
+all: build check test-sqlite e2e-local fuzz
 	@echo "consider to run 'make test-db' as well"

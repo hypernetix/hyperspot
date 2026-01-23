@@ -33,3 +33,9 @@ logs
 
 # Code coverage reports
 /coverage/
+
+# Fuzzing artifacts
+/fuzz/target/
+/fuzz/artifacts/
+/fuzz/corpus/*/
+!/fuzz/corpus/*/.gitkeep

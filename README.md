@@ -189,6 +189,23 @@ cargo test --test integration
 make coverage-unit
 ```
 
+### Fuzzing
+
+HyperSpot uses continuous fuzzing to find bugs and security issues:
+
+```bash
+# Run fuzzing smoke tests
+make fuzz
+
+# Fuzz specific component
+make fuzz-run FUZZ_TARGET=fuzz_odata_filter FUZZ_SECONDS=300
+
+# See all available targets
+make fuzz-list
+```
+
+Fuzzing runs automatically in CI via ClusterFuzzLite. See `fuzz/README.md` for details.
+
 ### CI / Development Commands
 
 

@@ -97,6 +97,29 @@ make coverage-unit # Run only unit tests with code coverage
 make coverage-e2e # Run only e2e tests with code coverage
 ```
 
+### 2.4. Run Fuzzing Tests (Recommended)
+
+Before submitting changes to parsers or validation logic, run fuzzing:
+
+```bash
+# Quick smoke test (30s per target)
+make fuzz
+
+# Longer test for critical changes (5 minutes per target)
+python scripts/ci.py fuzz --seconds 300
+
+# Target specific component
+make fuzz-run FUZZ_TARGET=fuzz_odata_filter FUZZ_SECONDS=600
+```
+
+Fuzzing helps catch:
+- Memory safety issues
+- Parser crashes
+- Performance problems
+- Edge cases
+
+See `fuzz/README.md` for detailed fuzzing documentation.
+
 Helpful environment variables:
 
 ```bash
@@ -111,7 +134,7 @@ export RUST_BACKTRACE=full
 ```
 
 
-### 2.4. Sign Your Commits (DCO)
+### 2.5. Sign Your Commits (DCO)
 
 This project uses the Developer Certificate of Origin (DCO) version 1.1.
 - The DCO text is included in `guidelines/DNA/DCO.txt` (Version 1.1). This is the current and widely adopted version; please keep it as 1.1.
@@ -131,7 +154,7 @@ git config --global format.signoff true
 ```
 
 
-### 2.5. Commit Changes
+### 2.6. Commit Changes
 
 Follow a structured commit message format:
 
@@ -189,7 +212,7 @@ New functionality development:
 - Prefer soft-deletion for entities; provide hard-deletion with retention routines
 - Include unit tests (and integration tests when relevant)
 
-### 2.6. Push and Create PR
+### 2.7. Push and Create PR
 
 ```bash
 git push origin feature/your-feature-name
@@ -235,7 +258,7 @@ Brief description of the changes made.
 Closes #issue_number
 ```
 
-### 2.7 Review Process
+### 2.8. Review Process
 
 1. **Automated checks** must pass (CI/CD pipeline)
 2. **At least one approval** from maintainer required
