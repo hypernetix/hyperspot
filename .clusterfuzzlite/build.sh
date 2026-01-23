@@ -3,10 +3,13 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Update Rust toolchain to latest nightly (project requires Rust 1.92+)
-# This runs in ClusterFuzzLite context where RUSTUP_HOME=/rust/rustup
+# Force update the toolchain at /rust/rustup (ClusterFuzzLite's RUSTUP_HOME)
+export RUSTUP_HOME=/rust/rustup
+export CARGO_HOME=/rust/cargo
 rustup toolchain install nightly --force
 rustup default nightly
 rustup component add rust-src --toolchain nightly
+echo "Rust version: $(rustc --version)"
 
 cd $SRC/hyperspot
 
