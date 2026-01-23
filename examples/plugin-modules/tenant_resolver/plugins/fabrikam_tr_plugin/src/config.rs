@@ -1,7 +1,7 @@
 //! Configuration for Fabrikam tenant resolver plugin.
 
 use serde::Deserialize;
-use tenant_resolver_sdk::TenantStatus;
+use tenant_resolver_example_sdk::TenantStatus;
 
 /// Plugin configuration loaded from module config section.
 #[derive(Debug, Clone, Deserialize)]

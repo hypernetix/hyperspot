@@ -1,5 +1,5 @@
 [package]
-name = "types-registry-sdk"
+name = "cf-types-registry-sdk"
 version = "0.1.0"
 edition.workspace = true
 license.workspace = true
@@ -7,6 +7,9 @@ authors.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 description = "SDK for types-registry module: API trait, GTS entity types, and error definitions"
+
+[lib]
+name = "types_registry_sdk"
 
 [lints]
 workspace = true

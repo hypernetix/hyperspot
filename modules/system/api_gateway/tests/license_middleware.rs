@@ -8,10 +8,6 @@ use axum::{
     http::{Request, StatusCode},
     response::IntoResponse,
 };
-use hs_tenant_resolver_sdk::{
-    AccessOptions, TenantFilter, TenantId, TenantInfo, TenantResolverError,
-    TenantResolverGatewayClient, TenantStatus,
-};
 use modkit::{
     ClientHub, Module,
     api::OperationBuilder,
@@ -19,6 +15,10 @@ use modkit::{
     config::ConfigProvider,
     context::ModuleCtx,
     contracts::{ApiGatewayCapability, OpenApiRegistry, RestApiCapability},
+};
+use tenant_resolver_sdk::{
+    AccessOptions, TenantFilter, TenantId, TenantInfo, TenantResolverError,
+    TenantResolverGatewayClient, TenantStatus,
 };
 
 use modkit_security::SecurityContext;

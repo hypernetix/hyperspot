@@ -3,11 +3,11 @@
 use std::sync::{Arc, OnceLock};
 
 use async_trait::async_trait;
-use hs_tenant_resolver_sdk::{TenantResolverPluginClient, TenantResolverPluginSpecV1};
 use modkit::Module;
 use modkit::client_hub::ClientScope;
 use modkit::context::ModuleCtx;
 use modkit::gts::BaseModkitPluginV1;
+use tenant_resolver_sdk::{TenantResolverPluginClient, TenantResolverPluginSpecV1};
 use tracing::info;
 use types_registry_sdk::TypesRegistryClient;
 

@@ -6,15 +6,15 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use hs_tenant_resolver_sdk::{
-    AccessOptions, TenantFilter, TenantId, TenantInfo, TenantResolverPluginClient,
-    TenantResolverPluginSpecV1,
-};
 use modkit::client_hub::{ClientHub, ClientScope};
 use modkit::gts::BaseModkitPluginV1;
 use modkit::plugins::GtsPluginSelector;
 use modkit::telemetry::ThrottledLog;
 use modkit_security::SecurityContext;
+use tenant_resolver_sdk::{
+    AccessOptions, TenantFilter, TenantId, TenantInfo, TenantResolverPluginClient,
+    TenantResolverPluginSpecV1,
+};
 use tracing::info;
 use types_registry_sdk::{GtsEntity, ListQuery, TypesRegistryClient};
 use uuid::Uuid;

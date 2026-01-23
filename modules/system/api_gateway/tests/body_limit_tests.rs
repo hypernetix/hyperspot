@@ -5,15 +5,15 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use axum::{Router, extract::Json, routing::post};
-use hs_tenant_resolver_sdk::{
-    AccessOptions, TenantFilter, TenantId, TenantInfo, TenantResolverError,
-    TenantResolverGatewayClient, TenantStatus,
-};
 use modkit::{
     Module, ModuleCtx, RestApiCapability,
     api::OperationBuilder,
     config::ConfigProvider,
     contracts::{ApiGatewayCapability, OpenApiRegistry},
+};
+use tenant_resolver_sdk::{
+    AccessOptions, TenantFilter, TenantId, TenantInfo, TenantResolverError,
+    TenantResolverGatewayClient, TenantStatus,
 };
 
 use modkit_security::SecurityContext;

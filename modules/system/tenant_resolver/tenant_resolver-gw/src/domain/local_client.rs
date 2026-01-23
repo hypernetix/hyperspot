@@ -3,11 +3,11 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use hs_tenant_resolver_sdk::{
+use modkit_security::SecurityContext;
+use tenant_resolver_sdk::{
     AccessOptions, TenantFilter, TenantId, TenantInfo, TenantResolverError,
     TenantResolverGatewayClient,
 };
-use modkit_security::SecurityContext;
 
 use super::{DomainError, Service};
 

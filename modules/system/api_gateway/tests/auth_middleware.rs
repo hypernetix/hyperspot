@@ -15,10 +15,6 @@ use axum::{
     body::Body,
     http::{Request, StatusCode},
 };
-use hs_tenant_resolver_sdk::{
-    AccessOptions, TenantFilter, TenantId, TenantInfo, TenantResolverError,
-    TenantResolverGatewayClient, TenantStatus,
-};
 use modkit::{
     ClientHub, Module,
     api::{
@@ -30,6 +26,10 @@ use modkit::{
     contracts::{ApiGatewayCapability, OpenApiRegistry, RestApiCapability},
 };
 use modkit_auth::axum_ext::Authz;
+use tenant_resolver_sdk::{
+    AccessOptions, TenantFilter, TenantId, TenantInfo, TenantResolverError,
+    TenantResolverGatewayClient, TenantStatus,
+};
 
 use modkit_security::SecurityContext;
 use serde::{Deserialize, Serialize};
