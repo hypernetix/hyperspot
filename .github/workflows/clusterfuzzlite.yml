@@ -16,7 +16,7 @@ jobs:
   PR:
     runs-on: ubuntu-latest
     concurrency:
-      group: ${{ github.workflow }}-${{ matrix.sanitizer }}-${{ github.ref }}
+      group: ${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: true
     timeout-minutes: 60
     strategy:

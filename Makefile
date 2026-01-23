@@ -343,11 +343,16 @@ fuzz-run: fuzz-install
 fuzz: fuzz-build
 	@echo "Running all fuzz targets for 30 seconds each..."
 	@cd fuzz && \
+	FAILED=0; \
 	for target in $$(cargo +nightly fuzz list); do \
 		echo "=== Fuzzing $$target ==="; \
-		cargo +nightly fuzz run $$target -- -max_total_time=30 || true; \
-	done
-	@echo "Fuzzing complete. Check fuzz/artifacts/ for crashes."
+		cargo +nightly fuzz run $$target -- -max_total_time=30 || FAILED=1; \
+	done; \
+	if [ $$FAILED -ne 0 ]; then \
+		echo "Fuzzing found crashes. Check fuzz/artifacts/ for details."; \
+		exit 1; \
+	fi
+	@echo "Fuzzing complete. No crashes found."
 
 ## Clean fuzzing artifacts and corpus
 fuzz-clean:
@@ -391,5 +396,5 @@ build:
 	cargo +stable build --release
 
 # Run all necessary quality checks and tests and then build the release binary
-all: build check test-sqlite e2e-local fuzz
+all: build check test-sqlite e2e-local
 	@echo "consider to run 'make test-db' as well"
