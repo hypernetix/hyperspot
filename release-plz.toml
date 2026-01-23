@@ -9,5 +9,7 @@ git_release_enable = true
 changelog_path = "CHANGELOG.md"
 
 # Enable semver checks by default (can be overridden per package if needed later).
-semver_check = true
+# NOTE: For the initial bootstrap (when crates may not exist on crates.io yet),
+# semver checks are noisy and can fail. Re-enable after the first successful publish.
+semver_check = false
 
