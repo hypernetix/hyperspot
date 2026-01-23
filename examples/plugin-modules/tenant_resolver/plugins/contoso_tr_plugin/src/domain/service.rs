@@ -3,7 +3,7 @@
 use async_trait::async_trait;
 use modkit_odata::{ODataQuery, Page, PageInfo};
 use modkit_security::SecurityContext;
-use tenant_resolver_sdk::{
+use tenant_resolver_example_sdk::{
     AccessOptions, GetParentsResponse, Tenant, TenantFilter, TenantResolverError,
     TenantResolverPluginClient, TenantSpecV1, TenantStatus,
 };

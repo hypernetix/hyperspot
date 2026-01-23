@@ -41,7 +41,7 @@ pub enum TenantStatus {
 /// # Example
 ///
 /// ```
-/// use hs_tenant_resolver_sdk::{TenantFilter, TenantStatus};
+/// use tenant_resolver_sdk::{TenantFilter, TenantStatus};
 /// use uuid::Uuid;
 ///
 /// // No filter (all tenants)
@@ -85,7 +85,7 @@ impl TenantFilter {
 /// # Example
 ///
 /// ```
-/// use hs_tenant_resolver_sdk::AccessOptions;
+/// use tenant_resolver_sdk::AccessOptions;
 ///
 /// // Basic access check (no specific permission required)
 /// let options = AccessOptions::default();

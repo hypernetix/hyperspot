@@ -5,7 +5,7 @@ use modkit::Module;
 use modkit::api::OpenApiRegistry;
 use modkit::context::ModuleCtx;
 use modkit::contracts::RestApiCapability;
-use tenant_resolver_sdk::{TenantResolverClient, TenantResolverPluginSpecV1};
+use tenant_resolver_example_sdk::{TenantResolverClient, TenantResolverPluginSpecV1};
 use tracing::info;
 use types_registry_sdk::TypesRegistryClient;
 

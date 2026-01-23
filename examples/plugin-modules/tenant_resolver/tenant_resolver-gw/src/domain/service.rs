@@ -12,7 +12,7 @@ use modkit::plugins::GtsPluginSelector;
 use modkit::telemetry::ThrottledLog;
 use modkit_odata::{ODataQuery, Page};
 use modkit_security::SecurityContext;
-use tenant_resolver_sdk::{
+use tenant_resolver_example_sdk::{
     AccessOptions, GetParentsResponse, Tenant, TenantFilter, TenantResolverPluginClient,
     TenantResolverPluginSpecV1,
 };

@@ -23,9 +23,9 @@ pub enum DomainError {
     Internal(String),
 }
 
-impl From<tenant_resolver_sdk::TenantResolverError> for DomainError {
-    fn from(e: tenant_resolver_sdk::TenantResolverError) -> Self {
-        use tenant_resolver_sdk::TenantResolverError;
+impl From<tenant_resolver_example_sdk::TenantResolverError> for DomainError {
+    fn from(e: tenant_resolver_example_sdk::TenantResolverError) -> Self {
+        use tenant_resolver_example_sdk::TenantResolverError;
         match e {
             TenantResolverError::NotFound(msg) => Self::TenantNotFound(msg),
             // Unauthorized maps to PermissionDenied since this is a gateway
@@ -60,7 +60,7 @@ impl From<serde_json::Error> for DomainError {
     }
 }
 
-impl From<DomainError> for tenant_resolver_sdk::TenantResolverError {
+impl From<DomainError> for tenant_resolver_example_sdk::TenantResolverError {
     fn from(e: DomainError) -> Self {
         match e {
             DomainError::PluginNotFound { vendor } => {

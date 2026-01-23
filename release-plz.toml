@@ -1,0 +1,13 @@
+[workspace]
+# Keep the defaults simple and explicit. We rely on Cargo manifests for:
+# - which crates are publishable (`publish = false` disables)
+# - per-crate versioning (explicit `version = ...` for modules/sdks, and `version.workspace = true` for ModKit libs)
+changelog_update = true
+git_release_enable = true
+
+# We keep a single changelog for the repo. release-plz will update it in the release PR.
+changelog_path = "CHANGELOG.md"
+
+# Enable semver checks by default (can be overridden per package if needed later).
+semver_check = true
+

@@ -1,6 +1,7 @@
 [package]
 name = "calculator_gateway-sdk"
 version = "0.1.0"
+publish = false
 edition.workspace = true
 license.workspace = true
 authors.workspace = true

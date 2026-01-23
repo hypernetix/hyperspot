@@ -1,7 +1,7 @@
 #![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 
 // === PUBLIC CONTRACT ===
-pub use tenant_resolver_sdk as contract;
+pub use tenant_resolver_example_sdk as contract;
 
 // === MODULE DEFINITION ===
 pub mod module;

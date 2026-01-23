@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use tenant_resolver_sdk::{GetParentsResponse, GtsSchemaId, Tenant, TenantStatus};
+use tenant_resolver_example_sdk::{GetParentsResponse, GtsSchemaId, Tenant, TenantStatus};
 
 // ============================================================================
 // Tenant DTOs
@@ -21,7 +21,7 @@ pub struct TenantDto {
 }
 
 fn default_schema_id() -> GtsSchemaId {
-    tenant_resolver_sdk::TenantSpecV1::<()>::gts_schema_id().clone()
+    tenant_resolver_example_sdk::TenantSpecV1::<()>::gts_schema_id().clone()
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema)]
@@ -77,7 +77,7 @@ pub struct TenantFilterDto {
     pub statuses: Vec<TenantStatusDto>,
 }
 
-impl From<TenantFilterDto> for tenant_resolver_sdk::TenantFilter {
+impl From<TenantFilterDto> for tenant_resolver_example_sdk::TenantFilter {
     fn from(v: TenantFilterDto) -> Self {
         Self {
             statuses: v.statuses.into_iter().map(Into::into).collect(),
@@ -121,7 +121,7 @@ pub struct AccessOptionsDto {
     pub ignore_parent_access_constraints: bool,
 }
 
-impl From<AccessOptionsDto> for tenant_resolver_sdk::AccessOptions {
+impl From<AccessOptionsDto> for tenant_resolver_example_sdk::AccessOptions {
     fn from(v: AccessOptionsDto) -> Self {
         Self {
             ignore_parent_access_constraints: v.ignore_parent_access_constraints,
@@ -139,8 +139,8 @@ pub struct ListTenantsQuery {
 impl ListTenantsQuery {
     /// Converts query params to `TenantFilter`.
     #[must_use]
-    pub fn to_filter(&self) -> tenant_resolver_sdk::TenantFilter {
-        tenant_resolver_sdk::TenantFilter {
+    pub fn to_filter(&self) -> tenant_resolver_example_sdk::TenantFilter {
+        tenant_resolver_example_sdk::TenantFilter {
             statuses: parse_statuses_csv(self.statuses.as_deref()),
         }
     }
@@ -158,16 +158,16 @@ pub struct GetParentsQuery {
 impl GetParentsQuery {
     /// Converts query params to `TenantFilter`.
     #[must_use]
-    pub fn to_filter(&self) -> tenant_resolver_sdk::TenantFilter {
-        tenant_resolver_sdk::TenantFilter {
+    pub fn to_filter(&self) -> tenant_resolver_example_sdk::TenantFilter {
+        tenant_resolver_example_sdk::TenantFilter {
             statuses: parse_statuses_csv(self.statuses.as_deref()),
         }
     }
 
     /// Converts query params to `AccessOptions`.
     #[must_use]
-    pub fn to_access_options(&self) -> tenant_resolver_sdk::AccessOptions {
-        tenant_resolver_sdk::AccessOptions {
+    pub fn to_access_options(&self) -> tenant_resolver_example_sdk::AccessOptions {
+        tenant_resolver_example_sdk::AccessOptions {
             ignore_parent_access_constraints: self.ignore_access.unwrap_or(false),
         }
     }
@@ -187,16 +187,16 @@ pub struct GetChildrenQuery {
 impl GetChildrenQuery {
     /// Converts query params to `TenantFilter`.
     #[must_use]
-    pub fn to_filter(&self) -> tenant_resolver_sdk::TenantFilter {
-        tenant_resolver_sdk::TenantFilter {
+    pub fn to_filter(&self) -> tenant_resolver_example_sdk::TenantFilter {
+        tenant_resolver_example_sdk::TenantFilter {
             statuses: parse_statuses_csv(self.statuses.as_deref()),
         }
     }
 
     /// Converts query params to `AccessOptions`.
     #[must_use]
-    pub fn to_access_options(&self) -> tenant_resolver_sdk::AccessOptions {
-        tenant_resolver_sdk::AccessOptions {
+    pub fn to_access_options(&self) -> tenant_resolver_example_sdk::AccessOptions {
+        tenant_resolver_example_sdk::AccessOptions {
             ignore_parent_access_constraints: self.ignore_access.unwrap_or(false),
         }
     }

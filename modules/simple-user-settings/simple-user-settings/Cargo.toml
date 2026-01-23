@@ -1,16 +1,18 @@
 [package]
-name = "simple-user-settings"
-version.workspace = true
-publish = false
+name = "cf-simple-user-settings"
+version = "0.1.0"
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
+
+[lib]
+name = "simple_user_settings"
 
 [lints]
 workspace = true
 
 [dependencies]
-simple-user-settings-sdk = { path = "../simple-user-settings-sdk" }
+simple-user-settings-sdk = { package = "cf-simple-user-settings-sdk", version = "0.1.0", path = "../simple-user-settings-sdk" }
 
 anyhow = { workspace = true }
 async-trait = { workspace = true }

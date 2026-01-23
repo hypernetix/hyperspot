@@ -1,18 +1,21 @@
 [package]
-name = "hs-tenant-resolver-gw"
-version.workspace = true
+name = "cf-tenant-resolver-gw"
+version = "0.1.0"
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 description = "Tenant resolver gateway module - discovers and routes to plugins"
+
+[lib]
+name = "tenant_resolver_gw"
 
 [lints]
 workspace = true
 
 [dependencies]
 # Local dependencies
-hs-tenant-resolver-sdk = { path = "../tenant_resolver-sdk" }
-types-registry-sdk = { path = "../../types-registry/types-registry-sdk" }
+tenant-resolver-sdk = { package = "cf-tenant-resolver-sdk", version = "0.1.0", path = "../tenant_resolver-sdk" }
+types-registry-sdk = { package = "cf-types-registry-sdk", version = "0.1.0", path = "../../types-registry/types-registry-sdk" }
 
 # ModKit dependencies
 modkit = { workspace = true }
