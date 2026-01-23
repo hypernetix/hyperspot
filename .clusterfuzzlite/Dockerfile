@@ -12,7 +12,9 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Update Rust toolchain to nightly (project requires Rust 1.92+)
-RUN rustup default nightly && rustup update
+# rust-src is required for sanitizer builds
+RUN rustup default nightly && rustup update && \
+    rustup component add rust-src --toolchain nightly
 
 # Copy source code
 COPY . $SRC/hyperspot

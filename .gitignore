@@ -37,5 +37,6 @@ logs
 # Fuzzing artifacts
 /fuzz/target/
 /fuzz/artifacts/
-/fuzz/corpus/*/
+/fuzz/corpus/**
+!/fuzz/corpus/*/
 !/fuzz/corpus/*/.gitkeep
