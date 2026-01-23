@@ -42,6 +42,12 @@ fn matches_exclude(path: &Path, exclude_patterns: &[Pattern]) -> bool {
         {
             return true;
         }
+        // Also try matching just the file/dir name
+        if let Some(name) = path.file_name()
+            && pattern.matches(&name.to_string_lossy())
+        {
+            return true;
+        }
     }
     false
 }

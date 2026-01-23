@@ -6,6 +6,9 @@ use gts::{GtsConfig, GtsID, GtsIdSegment, GtsOps, GtsWildcard};
 use parking_lot::Mutex;
 use types_registry_sdk::{GtsEntity, ListQuery, SegmentMatchScope};
 
+use super::debug_diagnostics::{
+    log_instance_validation_failure, log_registration_failure, log_schema_validation_failure,
+};
 use crate::domain::error::DomainError;
 use crate::domain::repo::GtsRepository;
 
@@ -156,6 +159,17 @@ impl GtsRepository for InMemoryGtsRepository {
 
             let result = persistent.add_entity(entity, validate);
             if !result.ok {
+                // Debug logging for registration failure
+                if gts_id.ends_with('~') {
+                    log_schema_validation_failure(&gts_id, entity, &result.error);
+                } else {
+                    log_instance_validation_failure(
+                        &gts_id,
+                        entity,
+                        &result.error,
+                        &mut persistent,
+                    );
+                }
                 return Err(DomainError::validation_failed(result.error));
             }
 
@@ -172,6 +186,8 @@ impl GtsRepository for InMemoryGtsRepository {
 
             let result = temporary.add_entity(entity, false);
             if !result.ok {
+                // Debug logging for registration failure (even in config phase)
+                log_registration_failure(Some(&gts_id), entity, &result.error);
                 return Err(DomainError::validation_failed(result.error));
             }
 
@@ -232,6 +248,20 @@ impl GtsRepository for InMemoryGtsRepository {
             for gts_id in schema_ids.iter().chain(instance_ids.iter()) {
                 let result = temporary.validate_entity(gts_id);
                 if !result.ok {
+                    // Debug logging for validation failure
+                    if let Some(entity) = temporary.store.get(gts_id) {
+                        let content = entity.content.clone();
+                        if gts_id.ends_with('~') {
+                            log_schema_validation_failure(gts_id, &content, &result.error);
+                        } else {
+                            log_instance_validation_failure(
+                                gts_id,
+                                &content,
+                                &result.error,
+                                &mut temporary,
+                            );
+                        }
+                    }
                     errors.push(format!("{gts_id}: {}", result.error));
                 }
             }
@@ -253,6 +283,8 @@ impl GtsRepository for InMemoryGtsRepository {
                     let content = entity.content.clone();
                     let result = persistent.add_entity(&content, true);
                     if !result.ok {
+                        // Debug logging for schema commit failure
+                        log_schema_validation_failure(gts_id, &content, &result.error);
                         errors.push(format!("{gts_id}: {}", result.error));
                     }
                 }
@@ -264,6 +296,13 @@ impl GtsRepository for InMemoryGtsRepository {
                     let content = entity.content.clone();
                     let result = persistent.add_entity(&content, true);
                     if !result.ok {
+                        // Debug logging for instance commit failure
+                        log_instance_validation_failure(
+                            gts_id,
+                            &content,
+                            &result.error,
+                            &mut persistent,
+                        );
                         errors.push(format!("{gts_id}: {}", result.error));
                     }
                 }
