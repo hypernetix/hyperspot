@@ -2,6 +2,12 @@
 # Copyright 2026 HyperSpot Contributors
 # SPDX-License-Identifier: Apache-2.0
 
+# Update Rust toolchain to latest nightly (project requires Rust 1.92+)
+# This runs in ClusterFuzzLite context where RUSTUP_HOME=/rust/rustup
+rustup toolchain install nightly --force
+rustup default nightly
+rustup component add rust-src --toolchain nightly
+
 cd $SRC/hyperspot
 
 # Build all fuzz targets with optimization
