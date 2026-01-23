@@ -2,7 +2,7 @@
 
 //! Tests for concurrency and caching behavior of `DbManager`.
 
-use figment::{providers::Serialized, Figment};
+use figment::{Figment, providers::Serialized};
 use modkit_db::manager::DbManager;
 use std::sync::Arc;
 use std::time::Duration;

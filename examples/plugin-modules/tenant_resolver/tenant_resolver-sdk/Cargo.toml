@@ -12,9 +12,9 @@ workspace = true
 [dependencies]
 async-trait = { workspace = true }
 thiserror = { workspace = true }
-modkit = { path = "../../../../libs/modkit" }
-modkit-security = { path = "../../../../libs/modkit-security" }
-modkit-odata = { path = "../../../../libs/modkit-odata" }
+modkit = { workspace = true }
+modkit-security = { workspace = true }
+modkit-odata = { workspace = true }
 schemars = { workspace = true, features = ["derive"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }

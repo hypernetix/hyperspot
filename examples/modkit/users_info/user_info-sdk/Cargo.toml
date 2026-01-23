@@ -27,21 +27,20 @@ time = { workspace = true }
 async-trait = { workspace = true }
 
 # OData macros (for #[derive(ODataFilterable)])
-modkit-odata-macros = { path = "../../../../libs/modkit-odata-macros", optional = true }
+modkit-odata-macros = { workspace = true, optional = true }
 
 # Streaming support
 futures-core = { workspace = true, optional = true }
 futures = { workspace = true, optional = true }
 
 # Security context for API methods
-modkit-security = { path = "../../../../libs/modkit-security" }
+modkit-security = { workspace = true }
 
 # SDK utilities (streaming, typed OData queries)
-modkit-sdk = { path = "../../../../libs/modkit-sdk", optional = true }
+modkit-sdk = { workspace = true, optional = true }
 
 # OData support for pagination
-modkit-odata = { path = "../../../../libs/modkit-odata", optional = true }
+modkit-odata = { workspace = true, optional = true }
 
 [dev-dependencies]
 tokio = { workspace = true }
-

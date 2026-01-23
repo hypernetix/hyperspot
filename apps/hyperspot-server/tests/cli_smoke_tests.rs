@@ -713,7 +713,8 @@ modules:
     );
 
     // Verify it's parseable YAML
-    let parsed: Result<serde_yaml::Value, _> = serde_yaml::from_str(&stdout);
+    let parsed: Result<std::collections::HashMap<String, serde_json::Value>, _> =
+        serde_saphyr::from_str(&stdout);
     assert!(parsed.is_ok(), "Output should be valid YAML");
 }
 

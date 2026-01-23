@@ -147,6 +147,11 @@ dependencies = [
  "arc-swap",
  "async-trait",
  "axum",
+ "cf-modkit",
+ "cf-modkit-auth",
+ "cf-modkit-macros",
+ "cf-modkit-odata",
+ "cf-modkit-security",
  "chrono",
  "dashmap",
  "futures-core",
@@ -155,11 +160,6 @@ dependencies = [
  "http",
  "inventory",
  "matchit 0.9.1",
- "modkit",
- "modkit-auth",
- "modkit-macros",
- "modkit-odata",
- "modkit-security",
  "nanoid",
  "parking_lot",
  "reqwest",
@@ -643,12 +643,12 @@ dependencies = [
  "anyhow",
  "async-trait",
  "calculator-sdk",
+ "cf-modkit",
+ "cf-modkit-security",
+ "cf-modkit-transport-grpc",
  "clap",
  "grpc_hub",
  "inventory",
- "modkit",
- "modkit-security",
- "modkit-transport-grpc",
  "tokio",
  "tonic",
  "tracing",
@@ -660,10 +660,10 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
- "modkit",
- "modkit-security",
- "modkit-transport-grpc",
- "module_orchestrator-sdk",
+ "cf-modkit",
+ "cf-modkit-security",
+ "cf-modkit-transport-grpc",
+ "cf-system-sdks",
  "prost",
  "thiserror 2.0.18",
  "tokio",
@@ -681,11 +681,11 @@ dependencies = [
  "async-trait",
  "axum",
  "calculator-sdk",
+ "cf-modkit",
+ "cf-modkit-macros",
+ "cf-modkit-security",
  "http",
  "inventory",
- "modkit",
- "modkit-macros",
- "modkit-security",
  "serde",
  "serde_json",
  "thiserror 2.0.18",
@@ -700,8 +700,8 @@ dependencies = [
  "anyhow",
  "async-trait",
  "calculator_gateway",
- "modkit",
- "modkit-security",
+ "cf-modkit",
+ "cf-modkit-security",
  "thiserror 2.0.18",
  "tracing",
 ]
@@ -717,12 +717,303 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.2.53"
+version = "1.2.54"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "755d2fce177175ffca841e9a06afdb2c4ab0f593d53b4dee48147dfaade85932"
+checksum = "6354c81bbfd62d9cfa9cb3c773c2b7b2a3a482d569de977fd0e961f6e7c00583"
 dependencies = [
  "find-msvc-tools",
  "shlex",
+]
+
+[[package]]
+name = "cf-modkit"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "arc-swap",
+ "async-trait",
+ "axum",
+ "cf-modkit-db",
+ "cf-modkit-errors",
+ "cf-modkit-macros",
+ "cf-modkit-odata",
+ "cf-modkit-sdk",
+ "cf-system-sdks",
+ "chrono",
+ "dashmap",
+ "dsn",
+ "figment",
+ "file-rotate",
+ "futures-core",
+ "futures-util",
+ "gts",
+ "gts-macros",
+ "http",
+ "httpmock",
+ "inventory",
+ "nix 0.29.0",
+ "opentelemetry",
+ "opentelemetry-otlp",
+ "opentelemetry_sdk",
+ "parking_lot",
+ "regex",
+ "reqwest",
+ "schemars 0.8.22",
+ "serde",
+ "serde-saphyr",
+ "serde_json",
+ "temp-env",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-stream",
+ "tokio-util",
+ "tonic",
+ "tower",
+ "tracing",
+ "tracing-appender",
+ "tracing-log",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
+ "trybuild",
+ "url",
+ "urlencoding",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "cf-modkit-auth"
+version = "0.1.0"
+dependencies = [
+ "arc-swap",
+ "async-trait",
+ "axum",
+ "cf-modkit-security",
+ "http",
+ "jsonwebtoken",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "time",
+ "tokio",
+ "tower",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "cf-modkit-db"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bigdecimal",
+ "cf-modkit-db-macros",
+ "cf-modkit-odata",
+ "cf-modkit-security",
+ "cf-modkit-utils",
+ "chrono",
+ "dashmap",
+ "dirs",
+ "figment",
+ "regex",
+ "rust_decimal",
+ "ryu",
+ "sea-orm",
+ "serde",
+ "serde-saphyr",
+ "serde_json",
+ "temp-env",
+ "tempfile",
+ "testcontainers",
+ "testcontainers-modules",
+ "thiserror 2.0.18",
+ "time",
+ "tokio",
+ "tracing",
+ "url",
+ "uuid",
+ "xxhash-rust",
+]
+
+[[package]]
+name = "cf-modkit-db-macros"
+version = "0.1.0"
+dependencies = [
+ "heck 0.5.0",
+ "proc-macro-error2",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.114",
+ "trybuild",
+]
+
+[[package]]
+name = "cf-modkit-errors"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "http",
+ "serde",
+ "serde_json",
+ "tracing",
+ "utoipa",
+]
+
+[[package]]
+name = "cf-modkit-errors-macro"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "serde",
+ "serde_json",
+ "syn 2.0.114",
+]
+
+[[package]]
+name = "cf-modkit-macros"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "cf-modkit",
+ "cf-modkit-security",
+ "cf-modkit-transport-grpc",
+ "heck 0.5.0",
+ "inventory",
+ "proc-macro2",
+ "quote",
+ "strsim",
+ "syn 2.0.114",
+ "tokio",
+ "tokio-util",
+ "tonic",
+ "trybuild",
+]
+
+[[package]]
+name = "cf-modkit-node-info"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "hostname",
+ "local-ip-address",
+ "machine-uid",
+ "nvml-wrapper",
+ "regex",
+ "starship-battery",
+ "sysinfo",
+ "thiserror 2.0.18",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "cf-modkit-odata"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "bigdecimal",
+ "cf-modkit-errors",
+ "cf-modkit-errors-macro",
+ "chrono",
+ "hex",
+ "http",
+ "odata-params",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror 2.0.18",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "cf-modkit-odata-macros"
+version = "0.1.0"
+dependencies = [
+ "cf-modkit-odata",
+ "heck 0.5.0",
+ "proc-macro-error2",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.114",
+ "trybuild",
+ "uuid",
+]
+
+[[package]]
+name = "cf-modkit-sdk"
+version = "0.1.0"
+dependencies = [
+ "cf-modkit-odata",
+ "cf-modkit-odata-macros",
+ "cf-modkit-security",
+ "chrono",
+ "futures-core",
+ "futures-util",
+ "pin-project-lite",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
+name = "cf-modkit-security"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "postcard",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "uuid",
+]
+
+[[package]]
+name = "cf-modkit-transport-grpc"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "cf-modkit-security",
+ "tokio",
+ "tokio-stream",
+ "tokio-util",
+ "tonic",
+ "tracing",
+]
+
+[[package]]
+name = "cf-modkit-utils"
+version = "0.1.0"
+dependencies = [
+ "humantime",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "cf-system-sdk-directory"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "cf-modkit-transport-grpc",
+ "prost",
+ "tokio",
+ "tonic",
+ "tonic-prost",
+ "tonic-prost-build",
+ "tracing",
+]
+
+[[package]]
+name = "cf-system-sdks"
+version = "0.1.0"
+dependencies = [
+ "cf-system-sdk-directory",
 ]
 
 [[package]]
@@ -876,10 +1167,10 @@ dependencies = [
  "anyhow",
  "arc-swap",
  "async-trait",
+ "cf-modkit",
+ "cf-modkit-odata",
+ "cf-modkit-security",
  "inventory",
- "modkit",
- "modkit-odata",
- "modkit-security",
  "schemars 0.8.22",
  "serde",
  "serde_json",
@@ -1262,8 +1553,9 @@ dependencies = [
 
 [[package]]
 name = "docx-rust"
-version = "0.1.10"
-source = "git+https://github.com/modcrafter77/docx-rs?branch=master#f4e4f20fbb92f6f47643822b6b69ab4fff8374b8"
+version = "0.1.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "384002ebe1137c2602121f43e7c1329b88cb5d78074e4a13b041db360b4e57f1"
 dependencies = [
  "derive_more 0.99.20",
  "hard-xml",
@@ -1474,10 +1766,10 @@ dependencies = [
  "anyhow",
  "arc-swap",
  "async-trait",
+ "cf-modkit",
+ "cf-modkit-odata",
+ "cf-modkit-security",
  "inventory",
- "modkit",
- "modkit-odata",
- "modkit-security",
  "schemars 0.8.22",
  "serde",
  "serde_json",
@@ -1565,14 +1857,14 @@ dependencies = [
  "axum",
  "base64 0.22.1",
  "bytes",
+ "cf-modkit",
+ "cf-modkit-auth",
+ "cf-modkit-macros",
  "docx-rust",
  "futures-util",
  "http",
  "inventory",
  "mime",
- "modkit",
- "modkit-auth",
- "modkit-macros",
  "pdf-extract",
  "reqwest",
  "serde",
@@ -1877,11 +2169,11 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "cf-modkit",
+ "cf-modkit-transport-grpc",
+ "cf-system-sdks",
  "http",
  "inventory",
- "modkit",
- "modkit-transport-grpc",
- "module_orchestrator-sdk",
  "parking_lot",
  "serde",
  "serde_json",
@@ -2140,11 +2432,11 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "cf-modkit",
+ "cf-modkit-odata",
+ "cf-modkit-security",
  "hs-tenant-resolver-sdk",
  "inventory",
- "modkit",
- "modkit-odata",
- "modkit-security",
  "serde",
  "serde_json",
  "tokio",
@@ -2159,11 +2451,11 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "cf-modkit",
+ "cf-modkit-odata",
+ "cf-modkit-security",
  "hs-tenant-resolver-sdk",
  "inventory",
- "modkit",
- "modkit-odata",
- "modkit-security",
  "serde",
  "serde_json",
  "tokio",
@@ -2178,11 +2470,11 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "cf-modkit",
+ "cf-modkit-odata",
+ "cf-modkit-security",
  "hs-tenant-resolver-sdk",
  "inventory",
- "modkit",
- "modkit-odata",
- "modkit-security",
  "serde",
  "serde_json",
  "thiserror 2.0.18",
@@ -2197,11 +2489,11 @@ name = "hs-tenant-resolver-sdk"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "cf-modkit",
+ "cf-modkit-odata",
+ "cf-modkit-security",
  "gts",
  "gts-macros",
- "modkit",
- "modkit-odata",
- "modkit-security",
  "schemars 0.8.22",
  "serde",
  "serde_json",
@@ -2409,6 +2701,8 @@ dependencies = [
  "api_gateway",
  "calculator",
  "calculator_gateway",
+ "cf-modkit",
+ "cf-modkit-db",
  "clap",
  "contoso_tr_plugin",
  "fabrikam_tr_plugin",
@@ -2419,14 +2713,11 @@ dependencies = [
  "hs-static-tr-plugin",
  "hs-tenant-resolver-gw",
  "mimalloc",
- "modkit",
- "modkit-db",
  "module_orchestrator",
  "nodes_registry",
+ "serde-saphyr",
  "serde_json",
- "serde_yaml",
  "simple-user-settings",
- "sqlx",
  "tempfile",
  "tenant_resolver-gw",
  "tokio",
@@ -2978,319 +3269,19 @@ dependencies = [
 ]
 
 [[package]]
-name = "modkit"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "arc-swap",
- "async-trait",
- "axum",
- "chrono",
- "dashmap",
- "dsn",
- "figment",
- "file-rotate",
- "futures-core",
- "futures-util",
- "gts",
- "gts-macros",
- "http",
- "httpmock",
- "inventory",
- "modkit-db",
- "modkit-errors",
- "modkit-macros",
- "modkit-odata",
- "modkit-sdk",
- "module_orchestrator-grpc",
- "module_orchestrator-sdk",
- "nix 0.29.0",
- "opentelemetry",
- "opentelemetry-otlp",
- "opentelemetry_sdk",
- "parking_lot",
- "regex",
- "reqwest",
- "schemars 0.8.22",
- "serde",
- "serde-saphyr",
- "serde_json",
- "serde_yaml",
- "temp-env",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
- "tokio-stream",
- "tokio-util",
- "tonic",
- "tower",
- "tracing",
- "tracing-appender",
- "tracing-log",
- "tracing-opentelemetry",
- "tracing-subscriber",
- "trybuild",
- "url",
- "urlencoding",
- "utoipa",
- "uuid",
-]
-
-[[package]]
-name = "modkit-auth"
-version = "0.1.0"
-dependencies = [
- "arc-swap",
- "async-trait",
- "axum",
- "http",
- "jsonwebtoken",
- "modkit-security",
- "reqwest",
- "serde",
- "serde-saphyr",
- "serde_json",
- "thiserror 2.0.18",
- "time",
- "tokio",
- "tower",
- "tracing",
- "tracing-subscriber",
- "uuid",
-]
-
-[[package]]
-name = "modkit-db"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bigdecimal",
- "chrono",
- "dashmap",
- "dirs",
- "figment",
- "modkit-db-macros",
- "modkit-odata",
- "modkit-security",
- "modkit-utils",
- "regex",
- "rust_decimal",
- "ryu",
- "sea-orm",
- "serde",
- "serde-saphyr",
- "serde_json",
- "sqlx",
- "temp-env",
- "tempfile",
- "testcontainers",
- "testcontainers-modules",
- "thiserror 2.0.18",
- "time",
- "tokio",
- "tracing",
- "url",
- "uuid",
- "xxhash-rust",
-]
-
-[[package]]
-name = "modkit-db-macros"
-version = "0.1.0"
-dependencies = [
- "heck 0.5.0",
- "proc-macro-error2",
- "proc-macro2",
- "quote",
- "syn 2.0.114",
- "trybuild",
-]
-
-[[package]]
-name = "modkit-errors"
-version = "0.1.0"
-dependencies = [
- "axum",
- "http",
- "serde",
- "serde_json",
- "tracing",
- "utoipa",
-]
-
-[[package]]
-name = "modkit-errors-macro"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "serde",
- "serde_json",
- "syn 2.0.114",
-]
-
-[[package]]
-name = "modkit-macros"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "heck 0.5.0",
- "inventory",
- "modkit",
- "modkit-security",
- "modkit-transport-grpc",
- "proc-macro2",
- "quote",
- "strsim",
- "syn 2.0.114",
- "tokio",
- "tokio-util",
- "tonic",
- "trybuild",
-]
-
-[[package]]
-name = "modkit-node-info"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "chrono",
- "hostname",
- "local-ip-address",
- "machine-uid",
- "nvml-wrapper",
- "once_cell",
- "regex",
- "starship-battery",
- "sysinfo",
- "thiserror 2.0.18",
- "tracing",
- "uuid",
-]
-
-[[package]]
-name = "modkit-odata"
-version = "0.1.0"
-dependencies = [
- "base64 0.22.1",
- "bigdecimal",
- "chrono",
- "hex",
- "http",
- "modkit-errors",
- "modkit-errors-macro",
- "odata-params",
- "serde",
- "serde_json",
- "sha2",
- "thiserror 2.0.18",
- "utoipa",
- "uuid",
-]
-
-[[package]]
-name = "modkit-odata-macros"
-version = "0.1.0"
-dependencies = [
- "heck 0.5.0",
- "modkit-odata",
- "proc-macro-error2",
- "proc-macro2",
- "quote",
- "syn 2.0.114",
- "trybuild",
- "uuid",
-]
-
-[[package]]
-name = "modkit-sdk"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "futures-core",
- "futures-util",
- "modkit-odata",
- "modkit-odata-macros",
- "modkit-security",
- "pin-project-lite",
- "tokio",
- "uuid",
-]
-
-[[package]]
-name = "modkit-security"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "postcard",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "uuid",
-]
-
-[[package]]
-name = "modkit-transport-grpc"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "modkit-security",
- "tokio",
- "tokio-stream",
- "tokio-util",
- "tonic",
- "tracing",
-]
-
-[[package]]
-name = "modkit-utils"
-version = "0.1.0"
-dependencies = [
- "humantime",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "module_orchestrator"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "cf-modkit",
+ "cf-system-sdks",
  "inventory",
- "modkit",
- "module_orchestrator-grpc",
- "module_orchestrator-sdk",
  "parking_lot",
  "serde",
  "tokio",
  "tonic",
  "tracing",
-]
-
-[[package]]
-name = "module_orchestrator-grpc"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "modkit-transport-grpc",
- "module_orchestrator-sdk",
- "prost",
- "tokio",
- "tonic",
- "tonic-prost",
- "tonic-prost-build",
- "tracing",
-]
-
-[[package]]
-name = "module_orchestrator-sdk"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
 ]
 
 [[package]]
@@ -3386,11 +3377,11 @@ dependencies = [
  "arc-swap",
  "async-trait",
  "axum",
+ "cf-modkit",
+ "cf-modkit-macros",
+ "cf-modkit-node-info",
  "chrono",
  "inventory",
- "modkit",
- "modkit-macros",
- "modkit-node-info",
  "nodes_registry-sdk",
  "serde",
  "thiserror 2.0.18",
@@ -3404,7 +3395,7 @@ name = "nodes_registry-sdk"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "modkit-node-info",
+ "cf-modkit-node-info",
  "thiserror 2.0.18",
  "uuid",
 ]
@@ -4175,9 +4166,9 @@ dependencies = [
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.105"
+version = "1.0.106"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "535d180e0ecab6268a3e718bb9fd44db66bbbc256257165fc699dadf70d16fe7"
+checksum = "8fd00f0bb2e90d81d1044c2b32617f68fcb9fa3bb7640c23e9c748e53fb30934"
 dependencies = [
  "unicode-ident",
 ]
@@ -4369,9 +4360,9 @@ dependencies = [
 
 [[package]]
 name = "quote"
-version = "1.0.43"
+version = "1.0.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc74d9a594b72ae6656596548f56f667211f8a97b3d4c3d467150794690dc40a"
+checksum = "21b2ebcf727b7760c461f091f9f0f539b77b8e87f2fd88131e7f1b433b3cece4"
 dependencies = [
  "proc-macro2",
 ]
@@ -5361,15 +5352,15 @@ dependencies = [
  "arc-swap",
  "async-trait",
  "axum",
+ "cf-modkit",
+ "cf-modkit-auth",
+ "cf-modkit-db",
+ "cf-modkit-db-macros",
+ "cf-modkit-errors",
+ "cf-modkit-errors-macro",
+ "cf-modkit-macros",
+ "cf-modkit-security",
  "inventory",
- "modkit",
- "modkit-auth",
- "modkit-db",
- "modkit-db-macros",
- "modkit-errors",
- "modkit-errors-macro",
- "modkit-macros",
- "modkit-security",
  "sea-orm",
  "sea-orm-migration",
  "serde",
@@ -5388,7 +5379,7 @@ name = "simple-user-settings-sdk"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "modkit-security",
+ "cf-modkit-security",
  "thiserror 2.0.18",
  "time",
  "uuid",
@@ -5868,11 +5859,11 @@ name = "tenant-resolver-sdk"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "cf-modkit",
+ "cf-modkit-odata",
+ "cf-modkit-security",
  "gts",
  "gts-macros",
- "modkit",
- "modkit-odata",
- "modkit-security",
  "schemars 0.8.22",
  "serde",
  "serde_json",
@@ -5888,12 +5879,12 @@ dependencies = [
  "arc-swap",
  "async-trait",
  "axum",
+ "cf-modkit",
+ "cf-modkit-macros",
+ "cf-modkit-odata",
+ "cf-modkit-security",
  "http",
  "inventory",
- "modkit",
- "modkit-macros",
- "modkit-odata",
- "modkit-security",
  "serde",
  "serde_json",
  "tenant-resolver-sdk",
@@ -6488,13 +6479,13 @@ dependencies = [
  "arc-swap",
  "async-trait",
  "axum",
+ "cf-modkit",
+ "cf-modkit-auth",
+ "cf-modkit-macros",
+ "cf-modkit-security",
  "futures",
  "gts",
  "inventory",
- "modkit",
- "modkit-auth",
- "modkit-macros",
- "modkit-security",
  "parking_lot",
  "serde",
  "serde_json",
@@ -6512,8 +6503,8 @@ name = "types-registry-sdk"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "cf-modkit-security",
  "gts",
- "modkit-security",
  "serde",
  "serde_json",
  "thiserror 2.0.18",
@@ -6648,12 +6639,12 @@ name = "user_info-sdk"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "cf-modkit-odata",
+ "cf-modkit-odata-macros",
+ "cf-modkit-sdk",
+ "cf-modkit-security",
  "futures",
  "futures-core",
- "modkit-odata",
- "modkit-odata-macros",
- "modkit-sdk",
- "modkit-security",
  "thiserror 2.0.18",
  "time",
  "tokio",
@@ -6669,21 +6660,21 @@ dependencies = [
  "arc-swap",
  "async-trait",
  "axum",
+ "cf-modkit",
+ "cf-modkit-auth",
+ "cf-modkit-db",
+ "cf-modkit-db-macros",
+ "cf-modkit-errors",
+ "cf-modkit-errors-macro",
+ "cf-modkit-macros",
+ "cf-modkit-odata",
+ "cf-modkit-sdk",
+ "cf-modkit-security",
  "futures-util",
  "hs-tenant-resolver-sdk",
  "http",
  "httpmock",
  "inventory",
- "modkit",
- "modkit-auth",
- "modkit-db",
- "modkit-db-macros",
- "modkit-errors",
- "modkit-errors-macro",
- "modkit-macros",
- "modkit-odata",
- "modkit-sdk",
- "modkit-security",
  "opentelemetry",
  "opentelemetry_sdk",
  "sea-orm",

@@ -16,8 +16,8 @@ lint_utils.workspace = true
 
 [dev-dependencies]
 dylint_testing.workspace = true
-modkit-macros = { path = "../../../libs/modkit-macros" }
-modkit = { path = "../../../libs/modkit" }
+modkit-macros.workspace = true
+modkit.workspace = true
 serde.workspace = true
 utoipa.workspace = true
 

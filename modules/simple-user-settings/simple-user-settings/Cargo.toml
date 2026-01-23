@@ -23,18 +23,24 @@ utoipa = { workspace = true }
 axum = { workspace = true, features = ["macros"] }
 uuid = { workspace = true }
 arc-swap = { workspace = true }
-sea-orm = { workspace = true, features = ["sqlx-sqlite", "runtime-tokio-rustls", "macros", "with-time", "with-uuid"] }
+sea-orm = { workspace = true, features = [
+    "sqlx-sqlite",
+    "runtime-tokio-rustls",
+    "macros",
+    "with-time",
+    "with-uuid",
+] }
 sea-orm-migration = { workspace = true }
 thiserror = { workspace = true }
 
-modkit = { path = "../../../libs/modkit" }
-modkit-auth = { path = "../../../libs/modkit-auth" }
-modkit-db = { path = "../../../libs/modkit-db" }
-modkit-db-macros = { path = "../../../libs/modkit-db-macros" }
-modkit-errors = { path = "../../../libs/modkit-errors" }
-modkit-errors-macro = { path = "../../../libs/modkit-errors-macro" }
-modkit-security = { path = "../../../libs/modkit-security" }
-modkit-macros = { path = "../../../libs/modkit-macros" }
+modkit = { workspace = true }
+modkit-auth = { workspace = true }
+modkit-db = { workspace = true }
+modkit-db-macros = { workspace = true }
+modkit-errors = { workspace = true }
+modkit-errors-macro = { workspace = true }
+modkit-security = { workspace = true }
+modkit-macros = { workspace = true }
 
 [dev-dependencies]
 tower = { workspace = true, features = ["util"] }

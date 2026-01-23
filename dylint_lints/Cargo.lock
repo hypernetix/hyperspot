@@ -498,6 +498,187 @@ dependencies = [
 ]
 
 [[package]]
+name = "cf-modkit"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "arc-swap",
+ "async-trait",
+ "axum 0.8.8",
+ "cf-modkit-db",
+ "cf-modkit-errors",
+ "cf-modkit-macros",
+ "cf-modkit-odata",
+ "cf-modkit-sdk",
+ "cf-system-sdks",
+ "dashmap",
+ "figment",
+ "futures-core",
+ "futures-util",
+ "gts",
+ "gts-macros",
+ "http",
+ "inventory",
+ "nix",
+ "opentelemetry",
+ "opentelemetry-otlp",
+ "opentelemetry_sdk",
+ "parking_lot",
+ "reqwest",
+ "schemars",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.17",
+ "tokio",
+ "tokio-stream",
+ "tokio-util",
+ "tonic",
+ "tracing",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
+ "urlencoding",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "cf-modkit-db"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bigdecimal",
+ "cf-modkit-db-macros",
+ "cf-modkit-odata",
+ "cf-modkit-security",
+ "cf-modkit-utils",
+ "chrono",
+ "dashmap",
+ "dirs",
+ "figment",
+ "regex",
+ "rust_decimal",
+ "ryu",
+ "sea-orm",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.17",
+ "time",
+ "tokio",
+ "tracing",
+ "url",
+ "uuid",
+ "xxhash-rust",
+]
+
+[[package]]
+name = "cf-modkit-db-macros"
+version = "0.1.0"
+dependencies = [
+ "heck 0.5.0",
+ "proc-macro-error2",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.111",
+]
+
+[[package]]
+name = "cf-modkit-errors"
+version = "0.1.0"
+dependencies = [
+ "axum 0.8.8",
+ "http",
+ "serde",
+ "tracing",
+ "utoipa",
+]
+
+[[package]]
+name = "cf-modkit-errors-macro"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "serde",
+ "serde_json",
+ "syn 2.0.111",
+]
+
+[[package]]
+name = "cf-modkit-macros"
+version = "0.1.0"
+dependencies = [
+ "heck 0.5.0",
+ "proc-macro2",
+ "quote",
+ "strsim",
+ "syn 2.0.111",
+]
+
+[[package]]
+name = "cf-modkit-odata"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "bigdecimal",
+ "cf-modkit-errors",
+ "cf-modkit-errors-macro",
+ "chrono",
+ "hex",
+ "http",
+ "odata-params",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror 2.0.17",
+ "uuid",
+]
+
+[[package]]
+name = "cf-modkit-sdk"
+version = "0.1.0"
+dependencies = [
+ "cf-modkit-odata",
+ "cf-modkit-security",
+ "futures-core",
+ "pin-project-lite",
+]
+
+[[package]]
+name = "cf-modkit-security"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "postcard",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.17",
+ "uuid",
+]
+
+[[package]]
+name = "cf-modkit-utils"
+version = "0.1.0"
+dependencies = [
+ "humantime",
+ "serde",
+]
+
+[[package]]
+name = "cf-system-sdk-directory"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+]
+
+[[package]]
+name = "cf-system-sdks"
+version = "0.1.0"
+dependencies = [
+ "cf-system-sdk-directory",
+]
+
+[[package]]
 name = "cfg-if"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -761,12 +942,12 @@ dependencies = [
 name = "de0104_no_api_dto_in_contract"
 version = "0.1.0"
 dependencies = [
+ "cf-modkit",
+ "cf-modkit-macros",
  "clippy_utils",
  "dylint_linting",
  "dylint_testing",
  "lint_utils",
- "modkit",
- "modkit-macros",
  "serde",
  "utoipa",
 ]
@@ -2042,7 +2223,6 @@ version = "0.30.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2e99fb7a497b1e3339bc746195567ed8d3e24945ecd636e3619d20b9de9e9149"
 dependencies = [
- "cc",
  "pkg-config",
  "vcpkg",
 ]
@@ -2175,181 +2355,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "536bfad37a309d62069485248eeaba1e8d9853aaf951caaeaed0585a95346f08"
 dependencies = [
  "windows-sys 0.61.2",
-]
-
-[[package]]
-name = "modkit"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "arc-swap",
- "async-trait",
- "axum 0.8.8",
- "dashmap",
- "figment",
- "futures-core",
- "futures-util",
- "gts",
- "gts-macros",
- "http",
- "inventory",
- "modkit-db",
- "modkit-errors",
- "modkit-macros",
- "modkit-odata",
- "modkit-sdk",
- "module_orchestrator-sdk",
- "nix",
- "opentelemetry",
- "opentelemetry-otlp",
- "opentelemetry_sdk",
- "parking_lot",
- "reqwest",
- "schemars",
- "serde",
- "serde_json",
- "thiserror 2.0.17",
- "tokio",
- "tokio-stream",
- "tokio-util",
- "tonic",
- "tracing",
- "tracing-opentelemetry",
- "tracing-subscriber",
- "urlencoding",
- "utoipa",
- "uuid",
-]
-
-[[package]]
-name = "modkit-db"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bigdecimal",
- "chrono",
- "dashmap",
- "dirs",
- "figment",
- "modkit-db-macros",
- "modkit-odata",
- "modkit-security",
- "modkit-utils",
- "regex",
- "rust_decimal",
- "ryu",
- "sea-orm",
- "serde",
- "serde_json",
- "sqlx",
- "thiserror 2.0.17",
- "time",
- "tokio",
- "tracing",
- "url",
- "uuid",
- "xxhash-rust",
-]
-
-[[package]]
-name = "modkit-db-macros"
-version = "0.1.0"
-dependencies = [
- "heck 0.5.0",
- "proc-macro-error2",
- "proc-macro2",
- "quote",
- "syn 2.0.111",
-]
-
-[[package]]
-name = "modkit-errors"
-version = "0.1.0"
-dependencies = [
- "axum 0.8.8",
- "http",
- "serde",
- "tracing",
- "utoipa",
-]
-
-[[package]]
-name = "modkit-errors-macro"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "serde",
- "serde_json",
- "syn 2.0.111",
-]
-
-[[package]]
-name = "modkit-macros"
-version = "0.1.0"
-dependencies = [
- "heck 0.5.0",
- "proc-macro2",
- "quote",
- "strsim",
- "syn 2.0.111",
-]
-
-[[package]]
-name = "modkit-odata"
-version = "0.1.0"
-dependencies = [
- "base64",
- "bigdecimal",
- "chrono",
- "hex",
- "http",
- "modkit-errors",
- "modkit-errors-macro",
- "odata-params",
- "serde",
- "serde_json",
- "sha2",
- "thiserror 2.0.17",
- "uuid",
-]
-
-[[package]]
-name = "modkit-sdk"
-version = "0.1.0"
-dependencies = [
- "futures-core",
- "modkit-odata",
- "modkit-security",
- "pin-project-lite",
-]
-
-[[package]]
-name = "modkit-security"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "postcard",
- "serde",
- "serde_json",
- "thiserror 2.0.17",
- "uuid",
-]
-
-[[package]]
-name = "modkit-utils"
-version = "0.1.0"
-dependencies = [
- "humantime",
- "serde",
-]
-
-[[package]]
-name = "module_orchestrator-sdk"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
 ]
 
 [[package]]

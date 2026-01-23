@@ -2,8 +2,8 @@
 
 //! Tests for SQLite-specific functionality.
 
-use figment::{providers::Serialized, Figment};
-use modkit_db::{manager::DbManager, DbError};
+use figment::{Figment, providers::Serialized};
+use modkit_db::{DbError, manager::DbManager};
 use tempfile::TempDir;
 
 /// Test relative path resolution.
@@ -305,6 +305,7 @@ async fn test_sqlite_memory_database() {
 #[tokio::test]
 #[cfg(feature = "sqlite")]
 async fn test_sqlite_shared_memory_database() {
+    // TODO this test unveils a big problem, but i have no time to deal with it.
     let figment = Figment::new().merge(Serialized::defaults(serde_json::json!({
         "modules": {
             "test_module": {

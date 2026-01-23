@@ -8,7 +8,7 @@ use uuid::Uuid;
 use crate::runtime::{Endpoint, ModuleInstance, ModuleManager};
 
 // Re-export all types from contracts - this is the single source of truth
-pub use module_orchestrator_sdk::{
+pub use cf_system_sdks::directory::{
     DirectoryClient, RegisterInstanceInfo, ServiceEndpoint, ServiceInstanceInfo,
 };
 

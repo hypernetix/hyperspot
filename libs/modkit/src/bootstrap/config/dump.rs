@@ -200,7 +200,7 @@ pub fn redact_dsn_password(dsn: &str) -> Result<String> {
 /// Returns an error if configuration rendering or YAML serialization fails.
 pub fn dump_effective_modules_config_yaml(app: &AppConfig) -> Result<String> {
     let config = render_effective_modules_config(app)?;
-    let yaml = serde_yaml::to_string(&config)
+    let yaml = serde_saphyr::to_string(&config)
         .context("Failed to serialize modules configuration to YAML")?;
     Ok(yaml)
 }

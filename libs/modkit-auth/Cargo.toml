@@ -1,16 +1,23 @@
 [package]
-name = "modkit-auth"
-version.workspace = true
+name = "cf-modkit-auth"
+version = "0.1.0"
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "ModKit authentication library"
+keywords = ["cyberfabric", "cyberfabric-modkit"]
+
+[lib]
+name = "modkit_auth"
+
+[lints]
+workspace = true
 
 [[example]]
 name = "dispatcher_usage"
 path = "examples/dispatcher_usage.rs"
-
-[lints]
-workspace = true
 
 [dependencies]
 # Core dependencies
@@ -24,17 +31,15 @@ time = { workspace = true }
 arc-swap = { workspace = true }
 tracing = { workspace = true }
 jsonwebtoken = { workspace = true }
-reqwest = { workspace = true, features = ["json", "rustls-tls"], default-features = false }
+reqwest = { workspace = true, features = [
+    "json",
+    "rustls-tls",
+], default-features = false }
 axum = { workspace = true, optional = true }
 tower = { workspace = true, optional = true }
 http = { workspace = true, optional = true }
-modkit-security = { path = "../modkit-security" }
+modkit-security = { workspace = true }
 
 [features]
 default = ["axum-ext"]
 axum-ext = ["axum", "tower", "http"]
-
-[dev-dependencies]
-serde-saphyr = { workspace = true }
-tracing-subscriber = { workspace = true }
-

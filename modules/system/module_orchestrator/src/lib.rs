@@ -12,5 +12,6 @@ pub use module::{ModuleOrchestrator, ModuleOrchestratorConfig};
 mod server;
 
 // === RE-EXPORTS ===
-pub use module_orchestrator_grpc::DirectoryGrpcClient;
-pub use module_orchestrator_sdk::{RegisterInstanceInfo, ServiceEndpoint, ServiceInstanceInfo};
+pub use cf_system_sdks::directory::{
+    DirectoryGrpcClient, RegisterInstanceInfo, ServiceEndpoint, ServiceInstanceInfo,
+};

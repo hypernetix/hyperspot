@@ -276,7 +276,7 @@ modules/<module-dir>/
         │       ├── error.rs              # DomainError -> Problem mapping
         │       └── mappers.rs            # DTO <-> domain mapping
         ├── domain/                       # Business logic
-        ├── local_client.rs               # Local adapter implementing an SDK API trait (optional)
+        │   └── local_client.rs           # Local adapter implementing an SDK API trait (optional)
         ├── infra/                        # Infrastructure adapters (optional)
         ├── tests/                        # Optional
         └── (optional extras: gts/, openspec/, build.rs, etc.)

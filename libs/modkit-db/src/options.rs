@@ -10,11 +10,11 @@ use thiserror::Error;
 #[derive(Debug, Clone)]
 pub enum DbConnectOptions {
     #[cfg(feature = "sqlite")]
-    Sqlite(sqlx::sqlite::SqliteConnectOptions),
+    Sqlite(sea_orm::sqlx::sqlite::SqliteConnectOptions),
     #[cfg(feature = "pg")]
-    Postgres(sqlx::postgres::PgConnectOptions),
+    Postgres(sea_orm::sqlx::postgres::PgConnectOptions),
     #[cfg(feature = "mysql")]
-    MySql(sqlx::mysql::MySqlConnectOptions),
+    MySql(sea_orm::sqlx::mysql::MySqlConnectOptions),
 }
 
 /// Errors that can occur during connection option building.
@@ -81,23 +81,21 @@ impl DbConnectOptions {
     ///
     /// # Errors
     /// Returns an error if the database connection fails.
-    pub async fn connect(&self, pool: PoolCfg) -> Result<crate::DbHandle> {
+    pub async fn connect(&self, pool: PoolCfg) -> Result<DbHandle> {
         match self {
             #[cfg(feature = "sqlite")]
             DbConnectOptions::Sqlite(opts) => {
-                let pool_opts = pool.apply_sqlite(sqlx::sqlite::SqlitePoolOptions::new());
+                let pool_opts = pool.apply_sqlite(sea_orm::sqlx::sqlite::SqlitePoolOptions::new());
 
                 let sqlx_pool = pool_opts.connect_with(opts.clone()).await?;
 
-                #[cfg(feature = "sea-orm")]
                 let sea = sea_orm::SqlxSqliteConnector::from_sqlx_sqlite_pool(sqlx_pool.clone());
 
                 let filename = opts.get_filename().display().to_string();
-                let handle = crate::DbHandle {
+                let handle = DbHandle {
                     engine: crate::DbEngine::Sqlite,
                     pool: crate::DbPool::Sqlite(sqlx_pool),
                     dsn: format!("sqlite://{filename}"),
-                    #[cfg(feature = "sea-orm")]
                     sea,
                 };
 
@@ -105,15 +103,14 @@ impl DbConnectOptions {
             }
             #[cfg(feature = "pg")]
             DbConnectOptions::Postgres(opts) => {
-                let pool_opts = pool.apply_pg(sqlx::postgres::PgPoolOptions::new());
+                let pool_opts = pool.apply_pg(sea_orm::sqlx::postgres::PgPoolOptions::new());
 
                 let sqlx_pool = pool_opts.connect_with(opts.clone()).await?;
 
-                #[cfg(feature = "sea-orm")]
                 let sea =
                     sea_orm::SqlxPostgresConnector::from_sqlx_postgres_pool(sqlx_pool.clone());
 
-                let handle = crate::DbHandle {
+                let handle = DbHandle {
                     engine: crate::DbEngine::Postgres,
                     pool: crate::DbPool::Postgres(sqlx_pool),
                     dsn: format!(
@@ -122,7 +119,6 @@ impl DbConnectOptions {
                         opts.get_port(),
                         opts.get_database().unwrap_or("")
                     ),
-                    #[cfg(feature = "sea-orm")]
                     sea,
                 };
 
@@ -130,18 +126,16 @@ impl DbConnectOptions {
             }
             #[cfg(feature = "mysql")]
             DbConnectOptions::MySql(opts) => {
-                let pool_opts = pool.apply_mysql(sqlx::mysql::MySqlPoolOptions::new());
+                let pool_opts = pool.apply_mysql(sea_orm::sqlx::mysql::MySqlPoolOptions::new());
 
                 let sqlx_pool = pool_opts.connect_with(opts.clone()).await?;
 
-                #[cfg(feature = "sea-orm")]
                 let sea = sea_orm::SqlxMySqlConnector::from_sqlx_mysql_pool(sqlx_pool.clone());
 
-                let handle = crate::DbHandle {
+                let handle = DbHandle {
                     engine: crate::DbEngine::MySql,
                     pool: crate::DbPool::MySql(sqlx_pool),
                     dsn: "mysql://<redacted>@...".to_owned(),
-                    #[cfg(feature = "sea-orm")]
                     sea,
                 };
 
@@ -156,6 +150,7 @@ impl DbConnectOptions {
 }
 
 /// `SQLite` PRAGMA whitelist and validation.
+#[cfg(feature = "sqlite")]
 pub mod sqlite_pragma {
     use crate::DbError;
     use std::collections::HashMap;
@@ -170,9 +165,9 @@ pub mod sqlite_pragma {
     /// Returns `DbError::UnknownSqlitePragma` if an unsupported pragma is provided.
     /// Returns `DbError::InvalidSqlitePragmaValue` if a pragma value is invalid.
     pub fn apply_pragmas<S: BuildHasher>(
-        mut opts: sqlx::sqlite::SqliteConnectOptions,
+        mut opts: sea_orm::sqlx::sqlite::SqliteConnectOptions,
         params: &HashMap<String, String, S>,
-    ) -> crate::Result<sqlx::sqlite::SqliteConnectOptions> {
+    ) -> crate::Result<sea_orm::sqlx::sqlite::SqliteConnectOptions> {
         for (key, value) in params {
             let key_lower = key.to_lowercase();
 
@@ -322,44 +317,43 @@ pub async fn build_db_handle(
 }
 
 /// Build `SQLite` connection options from configuration.
+#[cfg(feature = "sqlite")]
 fn build_sqlite_options(cfg: &DbConnConfig) -> Result<DbConnectOptions> {
-    #[cfg(feature = "sqlite")]
-    {
-        let db_path = if let Some(dsn) = &cfg.dsn {
-            parse_sqlite_path_from_dsn(dsn)?
-        } else if let Some(path) = &cfg.path {
-            path.clone()
-        } else if let Some(_file) = &cfg.file {
-            // This should not happen as manager.rs should have resolved file to path
-            return Err(DbError::InvalidParameter(
-                "File path should have been resolved to absolute path".to_owned(),
-            ));
-        } else {
-            return Err(DbError::InvalidParameter(
-                "SQLite connection requires either DSN, path, or file".to_owned(),
-            ));
-        };
+    let db_path = if let Some(dsn) = &cfg.dsn {
+        parse_sqlite_path_from_dsn(dsn)?
+    } else if let Some(path) = &cfg.path {
+        path.clone()
+    } else if let Some(_file) = &cfg.file {
+        // This should not happen as manager.rs should have resolved file to path
+        return Err(DbError::InvalidParameter(
+            "File path should have been resolved to absolute path".to_owned(),
+        ));
+    } else {
+        return Err(DbError::InvalidParameter(
+            "SQLite connection requires either DSN, path, or file".to_owned(),
+        ));
+    };
 
-        // Ensure parent directory exists
-        if let Some(parent) = db_path.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
-
-        let mut opts = sqlx::sqlite::SqliteConnectOptions::new()
-            .filename(&db_path)
-            .create_if_missing(true);
-
-        // Apply PRAGMA parameters with whitelist validation
-        if let Some(params) = &cfg.params {
-            opts = sqlite_pragma::apply_pragmas(opts, params)?;
-        }
-
-        Ok(DbConnectOptions::Sqlite(opts))
+    // Ensure parent directory exists
+    if let Some(parent) = db_path.parent() {
+        std::fs::create_dir_all(parent)?;
     }
-    #[cfg(not(feature = "sqlite"))]
-    {
-        Err(DbError::FeatureDisabled("SQLite feature not enabled"))
+
+    let mut opts = sea_orm::sqlx::sqlite::SqliteConnectOptions::new()
+        .filename(&db_path)
+        .create_if_missing(true);
+
+    // Apply PRAGMA parameters with whitelist validation
+    if let Some(params) = &cfg.params {
+        opts = sqlite_pragma::apply_pragmas(opts, params)?;
     }
+
+    Ok(DbConnectOptions::Sqlite(opts))
+}
+
+#[cfg(not(feature = "sqlite"))]
+fn build_sqlite_options(_: &DbConnConfig) -> Result<DbConnectOptions> {
+    Err(DbError::FeatureDisabled("SQLite feature not enabled"))
 }
 
 /// Build server-based connection options from configuration.
@@ -377,10 +371,10 @@ fn build_server_options(cfg: &DbConnConfig) -> Result<DbConnectOptions> {
             #[cfg(feature = "pg")]
             {
                 let mut opts = if let Some(dsn) = &cfg.dsn {
-                    dsn.parse::<sqlx::postgres::PgConnectOptions>()
+                    dsn.parse::<sea_orm::sqlx::postgres::PgConnectOptions>()
                         .map_err(|e| DbError::InvalidParameter(e.to_string()))?
                 } else {
-                    sqlx::postgres::PgConnectOptions::new()
+                    sea_orm::sqlx::postgres::PgConnectOptions::new()
                 };
 
                 // Override with individual fields
@@ -422,10 +416,10 @@ fn build_server_options(cfg: &DbConnConfig) -> Result<DbConnectOptions> {
             #[cfg(feature = "mysql")]
             {
                 let mut opts = if let Some(dsn) = &cfg.dsn {
-                    dsn.parse::<sqlx::mysql::MySqlConnectOptions>()
+                    dsn.parse::<sea_orm::sqlx::mysql::MySqlConnectOptions>()
                         .map_err(|e| DbError::InvalidParameter(e.to_string()))?
                 } else {
-                    sqlx::mysql::MySqlConnectOptions::new()
+                    sea_orm::sqlx::mysql::MySqlConnectOptions::new()
                 };
 
                 // Override with individual fields
@@ -463,6 +457,7 @@ fn build_server_options(cfg: &DbConnConfig) -> Result<DbConnectOptions> {
 }
 
 /// Parse `SQLite` path from DSN.
+#[cfg(feature = "sqlite")]
 fn parse_sqlite_path_from_dsn(dsn: &str) -> Result<std::path::PathBuf> {
     if dsn.starts_with("sqlite:") {
         let path_part = dsn

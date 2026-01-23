@@ -56,13 +56,13 @@ tempfile = { workspace = true }
 # Document parsing libraries
 tl = { workspace = true }
 pdf-extract = { workspace = true }
-# Using local docx-rust with fixes for XML parsing issues
-docx-rust = { git = "https://github.com/modcrafter77/docx-rs", branch = "master" }
 
 # MIME type parsing
 mime = { workspace = true }
 
+docx-rust = { workspace = true }
+
 # Local dependencies
-modkit = { path = "../../libs/modkit" }
-modkit-auth = { path = "../../libs/modkit-auth" }
-modkit-macros = { path = "../../libs/modkit-macros" }
+modkit = { workspace = true }
+modkit-auth = { workspace = true }
+modkit-macros = { workspace = true }

@@ -61,8 +61,7 @@ use crate::runtime::{
     ClientRegistration, DbOptions, MODKIT_DIRECTORY_ENDPOINT_ENV, RunOptions, ShutdownOptions, run,
     shutdown,
 };
-use module_orchestrator_grpc::DirectoryGrpcClient;
-use module_orchestrator_sdk::DirectoryClient;
+use cf_system_sdks::directory::{DirectoryClient, DirectoryGrpcClient};
 
 /// Configuration options for `OoP` module bootstrap
 #[derive(Debug, Clone)]

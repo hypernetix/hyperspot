@@ -1,22 +1,27 @@
 [package]
-name = "modkit-db"
-version.workspace = true
+name = "cf-modkit-db"
+version = "0.1.0"
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "ModKit database library"
+keywords = ["cyberfabric", "cyberfabric-modkit"]
+
+[lib]
+name = "modkit_db"
 
 [lints]
 workspace = true
 
 [features]
-pg = ["sqlx/postgres", "sea-orm?/sqlx-postgres"]
-mysql = ["sqlx/mysql", "sea-orm?/sqlx-mysql"]
-sqlite = ["sqlx/sqlite", "sea-orm?/sqlx-sqlite"]
-sea-orm = ["dep:sea-orm", "dep:modkit-db-macros"]
+# You can use: sqlite + sea-orm for local development
+default = []
+pg = ["sea-orm/sqlx-postgres"]
+mysql = ["sea-orm/sqlx-mysql"]
+sqlite = ["sea-orm/sqlx-sqlite"]
 integration = []
-
-# Default: sqlite + sea-orm for local development
-default = ["sqlite", "sea-orm"]
 
 # SECURITY: Escape hatch for administrative operations (OFF by default)
 # NEVER enable in production builds
@@ -26,19 +31,18 @@ insecure-escape = []
 [dependencies]
 anyhow = { workspace = true }
 tokio = { workspace = true }
-sqlx = { workspace = true, features = ["runtime-tokio", "tls-rustls", "macros", "uuid", "chrono"] }
 xxhash-rust = { workspace = true }
 dirs = { workspace = true }
 chrono = { workspace = true, features = ["serde", "clock"] }
 time = { workspace = true }
-sea-orm = { workspace = true, features = ["with-time"], optional = true }
-modkit-db-macros = { path = "../modkit-db-macros", optional = true }
+sea-orm = { workspace = true, features = ["with-time"] }
+modkit-db-macros = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
-uuid = { workspace = true, features = ["v4"]}
-modkit-security = { path = "../modkit-security" }
-modkit-odata = { path = "../modkit-odata" }
-modkit-utils = { path = "../modkit-utils", features = ["humantime-serde"] }
+uuid = { workspace = true, features = ["v4"] }
+modkit-security = { workspace = true }
+modkit-odata = { workspace = true }
+modkit-utils = { workspace = true, features = ["humantime-serde"] }
 bigdecimal = { workspace = true }
 rust_decimal = { workspace = true }
 ryu = { workspace = true }
@@ -57,4 +61,3 @@ testcontainers-modules = { workspace = true }
 tokio = { workspace = true }
 anyhow = { workspace = true }
 temp-env = { workspace = true }
-

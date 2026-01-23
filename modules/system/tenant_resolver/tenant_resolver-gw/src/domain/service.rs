@@ -4,6 +4,7 @@
 //! types-registry is ready.
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use hs_tenant_resolver_sdk::{
     AccessOptions, TenantFilter, TenantId, TenantInfo, TenantResolverPluginClient,
@@ -11,19 +12,17 @@ use hs_tenant_resolver_sdk::{
 };
 use modkit::client_hub::{ClientHub, ClientScope};
 use modkit::gts::BaseModkitPluginV1;
+use modkit::plugins::GtsPluginSelector;
+use modkit::telemetry::ThrottledLog;
 use modkit_security::SecurityContext;
-use tokio::sync::OnceCell;
 use tracing::info;
 use types_registry_sdk::{GtsEntity, ListQuery, TypesRegistryClient};
 use uuid::Uuid;
 
 use super::error::DomainError;
 
-/// Cached result of plugin resolution.
-struct ResolvedPlugin {
-    gts_id: String,
-    scope: ClientScope,
-}
+/// Throttle interval for unavailable plugin warnings.
+const UNAVAILABLE_LOG_THROTTLE: Duration = Duration::from_secs(10);
 
 /// Tenant resolver gateway service.
 ///
@@ -31,8 +30,10 @@ struct ResolvedPlugin {
 pub struct Service {
     hub: Arc<ClientHub>,
     vendor: String,
-    /// Lazily resolved plugin (cached after first call).
-    resolved: OnceCell<ResolvedPlugin>,
+    /// Shared selector for plugin instance IDs.
+    selector: GtsPluginSelector,
+    /// Throttle for plugin unavailable warnings.
+    unavailable_log_throttle: ThrottledLog,
 }
 
 impl Service {
@@ -42,27 +43,39 @@ impl Service {
         Self {
             hub,
             vendor,
-            resolved: OnceCell::new(),
+            selector: GtsPluginSelector::new(),
+            unavailable_log_throttle: ThrottledLog::new(UNAVAILABLE_LOG_THROTTLE),
         }
     }
 
     /// Lazily resolves and returns the plugin client.
     async fn get_plugin(&self) -> Result<Arc<dyn TenantResolverPluginClient>, DomainError> {
-        let resolved = self
-            .resolved
-            .get_or_try_init(|| self.resolve_plugin())
-            .await?;
+        let instance_id = self.selector.get_or_init(|| self.resolve_plugin()).await?;
+        let scope = ClientScope::gts_id(instance_id.as_ref());
 
-        self.hub
-            .get_scoped::<dyn TenantResolverPluginClient>(&resolved.scope)
-            .map_err(|_| DomainError::PluginClientNotFound {
-                gts_id: resolved.gts_id.clone(),
+        if let Some(client) = self
+            .hub
+            .try_get_scoped::<dyn TenantResolverPluginClient>(&scope)
+        {
+            Ok(client)
+        } else {
+            if self.unavailable_log_throttle.should_log() {
+                tracing::warn!(
+                    plugin_gts_id = %instance_id,
+                    vendor = %self.vendor,
+                    "Plugin client not registered yet"
+                );
+            }
+            Err(DomainError::PluginUnavailable {
+                gts_id: instance_id.to_string(),
+                reason: "client not registered yet".into(),
             })
+        }
     }
 
     /// Resolves the plugin instance from types-registry.
     #[tracing::instrument(skip_all, fields(vendor = %self.vendor))]
-    async fn resolve_plugin(&self) -> Result<ResolvedPlugin, DomainError> {
+    async fn resolve_plugin(&self) -> Result<String, DomainError> {
         info!("Resolving tenant resolver plugin");
 
         let registry = self
@@ -83,8 +96,7 @@ impl Service {
         let gts_id = choose_plugin_instance(&self.vendor, &instances)?;
         info!(plugin_gts_id = %gts_id, "Selected tenant resolver plugin instance");
 
-        let scope = ClientScope::gts_id(&gts_id);
-        Ok(ResolvedPlugin { gts_id, scope })
+        Ok(gts_id)
     }
 
     /// Get tenant information by ID.
