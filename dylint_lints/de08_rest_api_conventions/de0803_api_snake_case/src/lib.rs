@@ -218,7 +218,7 @@ fn is_snake_case(s: &str) -> bool {
 
 /// Converts a string to snake_case.
 fn to_snake_case(s: &str) -> String {
-    let mut result = String::new();
+    let mut result = String::with_capacity(s.len());
     for (i, c) in s.chars().enumerate() {
         if c.is_uppercase() {
             if i > 0 {
