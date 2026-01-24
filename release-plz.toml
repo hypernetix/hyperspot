@@ -2,6 +2,13 @@
 # Keep the defaults simple and explicit. We rely on Cargo manifests for:
 # - which crates are publishable (`publish = false` disables)
 # - per-crate versioning (explicit `version = ...` for modules/sdks, and `version.workspace = true` for ModKit libs)
+#
+# NOTE: release-plz may temporarily checkout commits while computing diffs.
+# Some repos can end up "dirty" due to generated/normalized files, so we allow it.
+allow_dirty = true
+
+# Add a stable label to the release PR so the publish workflow can filter on it.
+pr_labels = ["release-plz"]
 changelog_update = true
 git_release_enable = true
 

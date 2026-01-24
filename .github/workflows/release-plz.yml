@@ -47,36 +47,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Label release PR
-        # release-plz PRs are the only ones that should trigger publishing.
-        # We add a stable label so the publish job can filter on it.
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-
-          prs="$(gh pr list \
-            --state open \
-            --base main \
-            --json number,headRefName,title,author \
-            --jq '.[]
-              | select(
-                  (.headRefName | startswith("release-plz-"))
-                  or (.author.login | test("release-plz"))
-                )
-              | .number
-            ')"
-
-          if [ -z "${prs}" ]; then
-            echo "No release PRs found to label."
-            exit 0
-          fi
-
-          for pr in ${prs}; do
-            echo "Adding label 'release-plz' to PR #${pr}"
-            gh pr edit "${pr}" --add-label "release-plz" || true
-          done
-
   release:
     name: Publish crates
     runs-on: ubuntu-latest
