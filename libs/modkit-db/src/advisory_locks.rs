@@ -557,7 +557,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_namespaced_locks() -> Result<()> {
-        let dsn = "sqlite:file:memdb3?mode=memory&cache=shared";
+        let dsn = "sqlite::memory:";
         let pool = sea_orm::sqlx::SqlitePool::connect(dsn).await?;
         let lock_manager = LockManager::new(
             crate::DbEngine::Sqlite,
@@ -591,7 +591,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_try_lock_with_timeout() -> Result<()> {
-        let dsn = "sqlite:file:memdb4?mode=memory&cache=shared";
+        let dsn = "sqlite::memory:";
         let pool = sea_orm::sqlx::SqlitePool::connect(dsn).await?;
         let lock_manager = Arc::new(LockManager::new(
             DbEngine::Sqlite,
@@ -628,7 +628,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_try_lock_success() -> Result<()> {
-        let dsn = "sqlite:file:memdb5?mode=memory&cache=shared";
+        let dsn = "sqlite::memory:";
         let pool = sea_orm::sqlx::SqlitePool::connect(dsn).await?;
         let lock_manager = LockManager::new(DbEngine::Sqlite, DbPool::Sqlite(pool), dsn.to_owned());
 
@@ -653,7 +653,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_double_lock_same_key_errors() -> Result<()> {
-        let dsn = "sqlite:file:memdb6?mode=memory&cache=shared";
+        let dsn = "sqlite::memory:";
         let pool = sea_orm::sqlx::SqlitePool::connect(dsn).await?;
         let lock_manager = LockManager::new(DbEngine::Sqlite, DbPool::Sqlite(pool), dsn.to_owned());
 
@@ -683,7 +683,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_try_lock_conflict_returns_none() -> Result<()> {
-        let dsn = "sqlite:file:memdb7?mode=memory&cache=shared";
+        let dsn = "sqlite::memory:";
         let pool = sea_orm::sqlx::SqlitePool::connect(dsn).await?;
         let lock_manager = LockManager::new(DbEngine::Sqlite, DbPool::Sqlite(pool), dsn.to_owned());
 

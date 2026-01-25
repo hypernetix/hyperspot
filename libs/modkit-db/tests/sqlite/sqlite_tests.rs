@@ -305,32 +305,39 @@ async fn test_sqlite_memory_database() {
 #[tokio::test]
 #[cfg(feature = "sqlite")]
 async fn test_sqlite_shared_memory_database() {
-    // TODO this test unveils a big problem, but i have no time to deal with it.
+    let temp_dir = TempDir::new().unwrap();
+    let memdb_path = temp_dir
+        .path()
+        .join(format!("memdb_shared_{}", std::process::id()));
     let figment = Figment::new().merge(Serialized::defaults(serde_json::json!({
         "modules": {
             "test_module": {
                 "database": {
-                    "dsn": "sqlite:file:memdb?mode=memory&cache=shared"
+                    "dsn": format!(
+                        "sqlite://{}?mode=memory&cache=shared",
+                        memdb_path.display()
+                    )
                 }
             }
         }
     })));
 
-    let temp_dir = TempDir::new().unwrap();
     let manager = DbManager::from_figment(figment, temp_dir.path().to_path_buf()).unwrap();
 
-    let result = manager.get("test_module").await;
+    {
+        let result = manager.get("test_module").await;
 
-    match result {
-        Ok(Some(_handle)) => {
-            // Connection succeeded - this proves the shared memory DSN was used correctly.
-            // The handle's DSN is simplified for security/logging and doesn't preserve query params.
-        }
-        Ok(None) => {
-            panic!("Expected database handle for shared memory SQLite");
-        }
-        Err(err) => {
-            panic!("Expected successful shared memory SQLite connection, got: {err:?}");
+        match result {
+            Ok(Some(_handle)) => {
+                // Connection succeeded - this proves the shared memory DSN was used correctly.
+                // The handle's DSN is simplified for security/logging and doesn't preserve query params.
+            }
+            Ok(None) => {
+                panic!("Expected database handle for shared memory SQLite");
+            }
+            Err(err) => {
+                panic!("Expected successful shared memory SQLite connection, got: {err:?}");
+            }
         }
     }
 }
