@@ -6,8 +6,10 @@ license.workspace = true
 authors.workspace = true
 repository.workspace = true
 description = "Collection of system modules SDKs"
+readme = "README.md"
 rust-version.workspace = true
 keywords = ["cyberfabric", "cyberfabric-system"]
+categories = ["development-tools"]
 
 [lib]
 name = "cf_system_sdks"

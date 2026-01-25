@@ -6,6 +6,10 @@ license.workspace = true
 authors.workspace = true
 rust-version.workspace = true
 description = "API Gateway module"
+repository.workspace = true
+readme = "README.md"
+keywords = ["cyberfabric", "cyberfabric-system"]
+categories = ["web-programming"]
 
 [lib]
 name = "api_gateway"

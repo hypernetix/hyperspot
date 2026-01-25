@@ -2,7 +2,8 @@
 
 ## Why
 
-With the `types-registry-sdk` crate providing the public API contracts, we need the actual module implementation that provides GTS entity registration, storage, validation, and REST API endpoints. This module integrates with gts-rust for all GTS operations and follows the HyperSpot module patterns.
+With the `types-registry-sdk` crate providing the public API contracts, we need the actual module implementation that provides GTS entity registration, storage, validation, and REST API endpoints.
+This module integrates with gts-rust for all GTS operations and follows the CyberFabric module patterns.
 
 **Depends on**: `add-types-registry-sdk` (must be implemented first)
 

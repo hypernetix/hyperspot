@@ -2,45 +2,13 @@
 
 ## Overview
 
-The Nodes Registry module manages node information in the Hyperspot deployment. A node represents a deployment unit (host, VM, container) where Hyperspot is running.
+The Nodes Registry module manages node information in the CyberFabric deployment. A node represents a deployment unit (host, VM, container) where CyberFabric is running.
 
 Each node contains:
 - **System Information (sysinfo)**: OS, CPU, memory, GPU, battery, host details with all IP addresses
 - **System Capabilities (syscap)**: Hardware and software capabilities with cache metadata
 - **Node Metadata**: Hardware-based UUID, hostname, IP address
 - **Custom Capabilities**: Software capabilities reported by modules (e.g., LM Studio)
-
-## Architecture
-
-```
-modules/system/nodes_registry/
-├── nodes_registry-sdk/    # Public contract for other crates (SDK)
-│   ├── src/
-│   │   ├── api.rs         # NodesRegistryClient trait
-│   │   ├── error.rs       # Transport-agnostic errors
-│   │   └── lib.rs         # Re-exports (client, errors, models)
-│   └── Cargo.toml
-├── nodes_registry/        # Module implementation crate
-│   ├── src/
-│   │   ├── domain/            # Business logic
-│   │   │   ├── service.rs     # Node management service with caching
-│   │   │   ├── node_storage.rs # In-memory storage with cache metadata
-│   │   │   └── error.rs       # Domain errors
-│   │   ├── api/rest/          # REST API layer
-│   │   │   ├── dto.rs         # DTOs with serde/ToSchema
-│   │   │   ├── handlers.rs    # Axum handlers
-│   │   │   ├── routes.rs      # Route + OpenAPI registration
-│   │   │   ├── mapper.rs      # Domain/SDK -> DTO mapping
-│   │   │   └── error.rs       # Problem response mapping
-│   │   ├── gateways/          # Client implementations
-│   │   │   └── local.rs       # Local client for ClientHub
-│   │   ├── config.rs          # Module configuration
-│   │   ├── module.rs          # Module registration
-│   │   └── lib.rs             # Re-exports SDK types + module entry
-│   ├── tests/
-│   └── Cargo.toml
-└── README.md
-```
 
 ## Features
 

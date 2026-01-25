@@ -7,7 +7,9 @@ authors.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 description = "ModKit errors macro"
+readme = "README.md"
 keywords = ["cyberfabric", "cyberfabric-modkit"]
+categories = ["development-tools::procedural-macro-helpers"]
 
 [lib]
 proc-macro = true

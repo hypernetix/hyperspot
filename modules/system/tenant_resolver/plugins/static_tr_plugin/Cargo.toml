@@ -5,6 +5,10 @@ edition.workspace = true
 license.workspace = true
 authors.workspace = true
 description = "Tenant resolver plugin with static config-based tenant data and access rules"
+repository.workspace = true
+readme = "README.md"
+keywords = ["cyberfabric", "cyberfabric-system"]
+categories = ["web-programming"]
 
 [lib]
 name = "static_tr_plugin"

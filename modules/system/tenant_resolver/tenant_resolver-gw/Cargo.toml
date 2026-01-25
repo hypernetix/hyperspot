@@ -5,6 +5,10 @@ edition.workspace = true
 license.workspace = true
 authors.workspace = true
 description = "Tenant resolver gateway module - discovers and routes to plugins"
+repository.workspace = true
+readme = "README.md"
+keywords = ["cyberfabric", "cyberfabric-system"]
+categories = ["web-programming"]
 
 [lib]
 name = "tenant_resolver_gw"

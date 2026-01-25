@@ -7,7 +7,9 @@ authors.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 description = "ModKit SDK"
+readme = "README.md"
 keywords = ["cyberfabric", "cyberfabric-modkit"]
+categories = ["development-tools"]
 
 [lib]
 name = "modkit_sdk"

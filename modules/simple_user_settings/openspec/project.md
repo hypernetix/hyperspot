@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This module is part of **HyperSpot** — a modular, high-performance AI services platform built in Rust.
+This module is part of **CyberFabric** — a modular, high-performance AI services platform built in Rust.
 
 > Module-specific purpose will be defined in the module spec.
 

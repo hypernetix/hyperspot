@@ -7,7 +7,7 @@ Checks that plugin client traits in `*-sdk` crates use the `*Client` suffix inst
 
 ### Why is this bad?
 
-In the SDK pattern used by HyperSpot, `*-sdk` crates define public API traits for consumers (often wired through the ClientHub). If those traits use inconsistent suffixes like `*Api` or `*PluginApi`:
+In the SDK pattern used by CyberFabric, `*-sdk` crates define public API traits for consumers (often wired through the ClientHub). If those traits use inconsistent suffixes like `*Api` or `*PluginApi`:
 
 - **The role of the trait is unclear**: is it a server-side API surface or a client interface?
 - **Naming becomes inconsistent across SDK crates**: harder to find and standardize clients.

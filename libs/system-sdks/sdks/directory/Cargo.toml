@@ -6,8 +6,10 @@ license.workspace = true
 authors.workspace = true
 repository.workspace = true
 description = "Directory service SDK module"
+readme = "README.md"
 rust-version.workspace = true
 keywords = ["cyberfabric", "cyberfabric-system"]
+categories = ["web-programming"]
 build = "build.rs"
 include = ["proto/", "src/", "build.rs", "Cargo.toml"]
 

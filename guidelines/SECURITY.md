@@ -43,7 +43,7 @@ let api_key = std::env::var("API_KEY")
 
 ## Secure ORM
 
-HyperSpot provides a secure-by-default ORM layer that enforces access control at compile time using the typestate pattern. This prevents unscoped database queries from executing and ensures tenant isolation.
+CyberFabric provides a secure-by-default ORM layer that enforces access control at compile time using the typestate pattern. This prevents unscoped database queries from executing and ensures tenant isolation.
 
 For complete documentation on the Secure ORM layer, see [SECURE-ORM.md](../docs/SECURE-ORM.md).
 
