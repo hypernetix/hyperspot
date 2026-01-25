@@ -4,6 +4,7 @@ version = "0.1.0"
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
+description = "Simple settings module"
 
 [lib]
 name = "simple_user_settings"
