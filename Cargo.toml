@@ -426,5 +426,5 @@ walkdir = "2.5"
 shellexpand = "3.1"
 
 # GTS library
-gts = { git = "https://github.com/globaltypesystem/gts-rust.git", tag = "v0.7.7" }
-gts-macros = { git = "https://github.com/globaltypesystem/gts-rust.git", tag = "v0.7.7" }
+gts = "0.1"
+gts-macros = "0.1"
