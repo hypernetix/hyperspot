@@ -84,49 +84,6 @@ def create_xlsx_multi_sheet():
     return wb
 
 
-def create_xlsx_merged_cells():
-    """Create an XLSX file with merged cells."""
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "MergedCells"
-
-    # Merge cells A1:B1 for header
-    ws.merge_cells('A1:B1')
-    ws['A1'] = 'Merged Header'
-    ws['A1'].font = Font(bold=True)
-
-    # Add data rows
-    ws['A2'] = 'Column A'
-    ws['B2'] = 'Column B'
-    ws['A3'] = 'Data 1'
-    ws['B3'] = 'Data 2'
-    ws['A4'] = 'Data 3'
-    ws['B4'] = 'Data 4'
-
-    return wb
-
-
-def create_xlsx_formula_cells():
-    """Create an XLSX file with formula cells."""
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Formulas"
-
-    # Add numeric cells
-    ws['A1'] = 10
-    ws['A2'] = 20
-
-    # Add formula cell
-    ws['A3'] = '=SUM(A1:A2)'
-
-    # Add more examples
-    ws['B1'] = 5
-    ws['B2'] = 15
-    ws['B3'] = '=AVERAGE(B1:B2)'
-
-    return wb
-
-
 def create_pptx_simple():
     """Create a simple PPTX with one slide."""
     prs = Presentation()
@@ -251,14 +208,6 @@ def main():
     wb = create_xlsx_multi_sheet()
     wb.save(xlsx_dir / "multi_sheet.xlsx")
     print(f"  Created: {xlsx_dir / 'multi_sheet.xlsx'}")
-
-    wb = create_xlsx_merged_cells()
-    wb.save(xlsx_dir / "merged_cells.xlsx")
-    print(f"  Created: {xlsx_dir / 'merged_cells.xlsx'}")
-
-    wb = create_xlsx_formula_cells()
-    wb.save(xlsx_dir / "formula_cells.xlsx")
-    print(f"  Created: {xlsx_dir / 'formula_cells.xlsx'}")
 
     # Generate PPTX files
     print("Generating PPTX test files...")
