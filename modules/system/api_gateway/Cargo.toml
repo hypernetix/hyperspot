@@ -1,6 +1,6 @@
 [package]
 name = "cf-api-gateway"
-version = "0.1.0"
+version = "0.1.1"
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
@@ -49,7 +49,7 @@ rust-embed = { workspace = true }
 futures-core = { workspace = true }
 uuid = { workspace = true }
 modkit-odata = { workspace = true }
-tenant-resolver-sdk = { package = "cf-tenant-resolver-sdk", version = "0.1.0", path = "../tenant_resolver/tenant_resolver-sdk" }
+tenant-resolver-sdk = { package = "cf-tenant-resolver-sdk", version = "0.1.1", path = "../tenant_resolver/tenant_resolver-sdk" }
 
 [features]
 grpc = []
