@@ -60,6 +60,8 @@ tempfile = { workspace = true }
 # Document parsing libraries
 tl = { workspace = true }
 pdf-extract = { workspace = true }
+calamine = { workspace = true }
+pptx-to-md = { workspace = true }
 
 # MIME type parsing
 mime = { workspace = true }
