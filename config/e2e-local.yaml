@@ -81,7 +81,7 @@ logging:
     max_size_mb: 100
   types_registry:
     console_level: info
-    file: "logs/types-registry.log"
+    file: "logs/types_registry.log"
     file_level: debug
     max_age_days: 7
     max_backups: 3
@@ -201,7 +201,7 @@ modules:
       default_page_size: 5
       max_page_size: 100
 
-  simple-user-settings:
+  simple_user_settings:
     # Module-specific database configuration
     database:
       server: "sqlite_users"
