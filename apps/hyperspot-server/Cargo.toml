@@ -36,7 +36,7 @@ modkit-db = { workspace = true, features = ["sqlite", "pg"] }
 api_gateway = { package = "cf-api-gateway", path = "../../modules/system/api_gateway" }
 grpc_hub = { package = "cf-grpc-hub", path = "../../modules/system/grpc_hub" }
 module_orchestrator = { package = "cf-module-orchestrator", path = "../../modules/system/module_orchestrator" }
-types-registry = { package = "cf-types-registry", path = "../../modules/system/types-registry/types-registry" }
+types_registry = { package = "cf-types-registry", path = "../../modules/system/types_registry/types_registry" }
 tenant-resolver-gw = { package = "cf-tenant-resolver-gw", path = "../../modules/system/tenant_resolver/tenant_resolver-gw" }
 
 # Optional tenant resolver plugins
@@ -46,7 +46,7 @@ static-tr-plugin = { package = "cf-static-tr-plugin", path = "../../modules/syst
 # user modules
 file_parser = { package = "cf-file-parser", path = "../../modules/file_parser" }
 nodes_registry = { package = "cf-nodes-registry", path = "../../modules/system/nodes_registry/nodes_registry" }
-simple-user-settings = { package = "cf-simple-user-settings", path = "../../modules/simple-user-settings/simple-user-settings" }
+simple_user_settings = { package = "cf-simple-user-settings", path = "../../modules/simple_user_settings/simple_user_settings" }
 
 anyhow = { workspace = true }
 tokio = { workspace = true }
