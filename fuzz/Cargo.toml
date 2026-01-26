@@ -12,7 +12,7 @@ libfuzzer-sys = "0.4"
 
 # Dependencies for fuzzing
 modkit-odata = { package = "cf-modkit-odata", path = "../libs/modkit-odata", features = ["with-odata-params"] }
-file_parser = { path = "../modules/file_parser" }
+file_parser = { package = "cf-file-parser", path = "../modules/file_parser" }
 figment = { version = "0.10", features = ["yaml", "env"] }
 serde_json = "1.0"
 serde_yaml = "0.9"
