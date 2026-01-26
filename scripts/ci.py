@@ -588,6 +588,9 @@ def cmd_fuzz(args):
 
     targets = result.stdout.strip().split('\n')
     smoke_time = args.seconds or 30
+    if smoke_time <= 0:
+        print("ERROR: --seconds must be a positive integer")
+        sys.exit(1)
 
     failed_targets = []
 
