@@ -204,11 +204,11 @@ def check_pytest():
     # First try "python -m pytest"
     result = run_cmd_allow_fail([PYTHON, "-m", "pytest", "--version"])
     if result.returncode == 0:
-        return [PYTHON, "-m", "pytest"]
+        return
     # Then try "pytest" directly
     result = run_cmd_allow_fail(["pytest", "--version"])
     if result.returncode == 0:
-        return ["pytest"]
+        return
     print(
         "ERROR: pytest is not installed. Install with: "
         "pip install -r testing/e2e/requirements.txt"
@@ -238,7 +238,7 @@ def kill_existing_server(port):
 
 def cmd_e2e(args):
     base_url = os.environ.get("E2E_BASE_URL", "http://localhost:8086")
-    pytest_base_cmd = check_pytest()
+    check_pytest()
 
     # Kill any existing server on the port before starting
     port = base_url.split(":")[-1]
@@ -364,7 +364,7 @@ def cmd_e2e(args):
     if args.docker:
         env["E2E_DOCKER_MODE"] = "1"
 
-    pytest_cmd = [*pytest_base_cmd, "testing/e2e", "-vv"]
+    pytest_cmd = [PYTHON, "-m", "pytest", "testing/e2e", "-vv"]
     if args.pytest_args:
         # argparse.REMAINDER includes the '--' separator if used
         # We need to strip it so pytest doesn't treat following flags as files

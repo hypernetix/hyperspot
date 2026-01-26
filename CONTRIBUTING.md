@@ -113,7 +113,6 @@ make fuzz-run FUZZ_TARGET=fuzz_odata_filter FUZZ_SECONDS=600
 ```
 
 Fuzzing helps catch:
-- Memory safety issues
 - Parser crashes
 - Performance problems
 - Edge cases

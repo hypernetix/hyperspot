@@ -5,7 +5,6 @@ This directory contains fuzzing infrastructure using [cargo-fuzz](https://github
 ## Overview
 
 Continuous fuzzing helps discover:
-- Memory safety issues (buffer overflows, use-after-free)
 - Panics and crashes
 - Logic bugs in parsers and validators
 - Performance issues (algorithmic complexity attacks)
