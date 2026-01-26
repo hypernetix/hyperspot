@@ -10,16 +10,8 @@ cargo-fuzz = true
 [dependencies]
 libfuzzer-sys = "0.4"
 
-# Dependencies for fuzzing
+# Dependencies for fuzzing internal crates
 modkit-odata = { package = "cf-modkit-odata", path = "../libs/modkit-odata", features = ["with-odata-params"] }
-file_parser = { package = "cf-file-parser", path = "../modules/file_parser" }
-figment = { version = "0.10", features = ["yaml", "env"] }
-serde_json = "1.0"
-serde_yaml = "0.9"
-
-# For PDF/HTML parsing
-pdf-extract = "0.10"
-tl = "0.7"
 
 [[bin]]
 name = "fuzz_odata_filter"
@@ -30,36 +22,6 @@ doc = false
 [[bin]]
 name = "fuzz_odata_cursor"
 path = "fuzz_targets/fuzz_odata_cursor.rs"
-test = false
-doc = false
-
-[[bin]]
-name = "fuzz_html_parser"
-path = "fuzz_targets/fuzz_html_parser.rs"
-test = false
-doc = false
-
-[[bin]]
-name = "fuzz_pdf_parser"
-path = "fuzz_targets/fuzz_pdf_parser.rs"
-test = false
-doc = false
-
-[[bin]]
-name = "fuzz_yaml_config"
-path = "fuzz_targets/fuzz_yaml_config.rs"
-test = false
-doc = false
-
-[[bin]]
-name = "fuzz_json_config"
-path = "fuzz_targets/fuzz_json_config.rs"
-test = false
-doc = false
-
-[[bin]]
-name = "fuzz_markdown_parser"
-path = "fuzz_targets/fuzz_markdown_parser.rs"
 test = false
 doc = false
 

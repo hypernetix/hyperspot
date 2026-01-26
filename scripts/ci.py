@@ -506,15 +506,30 @@ def cmd_dylint_list(_args):
         run_cmd(["cargo", "dylint", "list", "--lib-path", lib], cwd=PROJECT_ROOT)
 
 
-def cmd_fuzz_build(_args):
-    step("Building fuzz targets")
-    fuzz_dir = os.path.join(PROJECT_ROOT, "fuzz")
+def ensure_nightly_toolchain():
+    """Ensure Rust nightly toolchain is installed."""
+    result = run_cmd_allow_fail(["rustup", "run", "nightly", "rustc", "--version"])
+    if result.returncode != 0:
+        print(
+            "ERROR: Rust nightly toolchain not installed. "
+            "Install with: rustup toolchain install nightly"
+        )
+        sys.exit(1)
 
-    # Check if cargo-fuzz is installed
+
+def ensure_cargo_fuzz():
+    """Ensure cargo-fuzz is installed."""
+    ensure_nightly_toolchain()
     result = run_cmd_allow_fail(["cargo", "+nightly", "fuzz", "--version"])
     if result.returncode != 0:
         print("Installing cargo-fuzz...")
         run_cmd(["cargo", "install", "cargo-fuzz"])
+
+
+def cmd_fuzz_build(_args):
+    step("Building fuzz targets")
+    fuzz_dir = os.path.join(PROJECT_ROOT, "fuzz")
+    ensure_cargo_fuzz()
 
     # Build all fuzz targets (no TARGET argument = build all)
     run_cmd(["cargo", "+nightly", "fuzz", "build"], cwd=fuzz_dir)
@@ -524,12 +539,7 @@ def cmd_fuzz_build(_args):
 def cmd_fuzz_list(_args):
     step("Listing fuzz targets")
     fuzz_dir = os.path.join(PROJECT_ROOT, "fuzz")
-
-    # Check if cargo-fuzz is installed
-    result = run_cmd_allow_fail(["cargo", "+nightly", "fuzz", "--version"])
-    if result.returncode != 0:
-        print("Installing cargo-fuzz...")
-        run_cmd(["cargo", "install", "cargo-fuzz"])
+    ensure_cargo_fuzz()
 
     run_cmd(["cargo", "+nightly", "fuzz", "list"], cwd=fuzz_dir)
 
@@ -537,14 +547,12 @@ def cmd_fuzz_list(_args):
 def cmd_fuzz_run(args):
     step(f"Running fuzz target: {args.target}")
     fuzz_dir = os.path.join(PROJECT_ROOT, "fuzz")
-
-    # Check if cargo-fuzz is installed
-    result = run_cmd_allow_fail(["cargo", "+nightly", "fuzz", "--version"])
-    if result.returncode != 0:
-        print("Installing cargo-fuzz...")
-        run_cmd(["cargo", "install", "cargo-fuzz"])
+    ensure_cargo_fuzz()
 
     fuzz_seconds = args.seconds or 60
+    if fuzz_seconds <= 0:
+        print("ERROR: --seconds must be a positive integer")
+        sys.exit(1)
     fuzz_cmd = [
         "cargo", "+nightly", "fuzz", "run", args.target,
         "--", f"-max_total_time={fuzz_seconds}"
