@@ -2400,7 +2400,8 @@ Use the plugin pattern when:
 modules/<gateway-name>/
 ├── <gateway>-sdk/              # SDK: API traits, models, errors, GTS types
 │   └── src/
-│       ├── api.rs              # PublicClient trait + PluginClient trait
+│       ├── api.rs              # Public API trait (gateway client)
+│       ├── plugin_api.rs       # Plugin API trait (implemented by plugins)
 │       ├── models.rs           # Shared models
 │       ├── error.rs            # Errors
 │       └── gts.rs              # GTS schema for plugin instances
@@ -2408,6 +2409,7 @@ modules/<gateway-name>/
 ├── <gateway>-gw/               # Gateway module
 │   └── src/
 │       ├── module.rs           # Module with plugin discovery
+│       ├── config.rs           # Gateway config (e.g., vendor selector)
 │       └── domain/
 │           ├── service.rs      # Plugin resolution and delegation
 │           └── local_client.rs # Public client adapter
@@ -2416,6 +2418,7 @@ modules/<gateway-name>/
     ├── <vendor_a>_plugin/
     │   └── src/
     │       ├── module.rs       # Registers GTS instance + scoped client
+    │       ├── config.rs       # Plugin config (e.g., vendor + priority)
     │       └── domain/service.rs
     └── <vendor_b>_plugin/
         └── ...
@@ -2425,6 +2428,11 @@ modules/<gateway-name>/
 
 **1. Define Two API Traits in SDK**
 
+**Rule:** Mirror `modules/system/tenant_resolver/tenant_resolver-sdk`:
+
+- `src/api.rs` defines `<Module>GatewayClient`
+- `src/plugin_api.rs` defines `<Module>PluginClient`
+
 ```rust
 // <gateway>-sdk/src/api.rs
 
@@ -2433,6 +2441,8 @@ modules/<gateway-name>/
 pub trait MyModuleGatewayClient: Send + Sync {
     async fn do_work(&self, ctx: &SecurityContext, input: Input) -> Result<Output, MyError>;
 }
+
+// <gateway>-sdk/src/plugin_api.rs
 
 /// Plugin API — implemented by plugins, called by gateway
 #[async_trait]
@@ -2495,7 +2505,9 @@ impl Module for MyGateway {
         let api: Arc<dyn MyModuleGatewayClient> = Arc::new(LocalClient::new(svc.clone()));
         ctx.client_hub().register::<dyn MyModuleGatewayClient>(api);
 
-        self.service.store(Some(svc));
+        self.service
+            .set(svc)
+            .map_err(|_| anyhow::anyhow!("Service already initialized"))?;
         Ok(())
     }
 }
@@ -2537,7 +2549,9 @@ impl Module for VendorPlugin {
 
         // Create service
         let service = Arc::new(Service::new());
-        self.service.store(Some(service.clone()));
+        self.service
+            .set(service.clone())
+            .map_err(|_| anyhow::anyhow!("Service already initialized"))?;
 
         // Register SCOPED client (with GTS instance ID as scope)
         let api: Arc<dyn MyModulePluginClient> = service;
@@ -2551,35 +2565,50 @@ impl Module for VendorPlugin {
 
 **5. Gateway Service Resolves Plugin**
 
+**Rule:** Mirror `modules/system/tenant_resolver/tenant_resolver-gw/src/domain/service.rs`:
+
+- Resolve plugin instance lazily (on first use)
+- Query types-registry for instances of `<Module>PluginSpecV1`
+- Choose by `vendor` and lowest `priority`
+- Get scoped client via `ClientScope::gts_id(instance_id)`
+
 ```rust
 // <gateway>-gw/src/domain/service.rs
-use modkit::client_hub::ClientScope;
-use tokio::sync::OnceCell;
+use std::sync::Arc;
+
+use modkit::client_hub::{ClientHub, ClientScope};
+use modkit::plugins::GtsPluginSelector;
+use types_registry_sdk::{ListQuery, TypesRegistryClient};
 
 pub struct Service {
     hub: Arc<ClientHub>,
     vendor: String,
-    resolved: OnceCell<ClientScope>,  // Lazy resolution
+    selector: GtsPluginSelector,
 }
 
 impl Service {
     async fn get_plugin(&self) -> Result<Arc<dyn MyModulePluginClient>, DomainError> {
-        let scope = self.resolved
-            .get_or_try_init(|| self.resolve_plugin())
-            .await?;
-
-        self.hub.get_scoped::<dyn MyModulePluginClient>(scope)
-            .map_err(|_| DomainError::PluginClientNotFound)
+        let instance_id = self.selector.get_or_init(|| self.resolve_plugin()).await?;
+        let scope = ClientScope::gts_id(instance_id.as_ref());
+        self.hub
+            .get_scoped::<dyn MyModulePluginClient>(&scope)
+            .map_err(|_| DomainError::PluginClientNotFound {
+                gts_id: instance_id.to_string(),
+            })
     }
 
-    async fn resolve_plugin(&self) -> Result<ClientScope, DomainError> {
-        // Query types-registry for plugin instances (tenant-agnostic)
+    async fn resolve_plugin(&self) -> Result<String, DomainError> {
         let registry = self.hub.get::<dyn TypesRegistryClient>()?;
-        let instances = registry.list(/* query */).await?;
+        let plugin_type_id = MyModulePluginSpecV1::gts_schema_id().clone();
+        let instances = registry
+            .list(
+                ListQuery::new()
+                    .with_pattern(format!("{plugin_type_id}*"))
+                    .with_is_type(false),
+            )
+            .await?;
 
-        // Select best plugin based on vendor + priority
-        let selected = choose_plugin(&self.vendor, &instances)?;
-        Ok(ClientScope::gts_id(&selected.gts_id))
+        choose_plugin_instance(&self.vendor, &instances)
     }
 }
 ```
@@ -2642,21 +2671,22 @@ modules:
 
 #### Reference Example
 
-See `examples/plugin-modules/tenant_resolver/` for a complete working example:
+For a complete reference, study the real, production-style implementation:
 
-- **`tenant_resolver-sdk/`** — SDK with `TenantResolverClient` and `TenantResolverPluginClient` traits
-- **`tenant_resolver-gw/`** — Gateway that registers schema and selects plugin by vendor config
-- **`plugins/contoso_tr_plugin/`** — Contoso vendor implementation (registers instance only)
-- **`plugins/fabrikam_tr_plugin/`** — Fabrikam vendor implementation (registers instance only)
+- `modules/system/tenant_resolver/`
 
-```bash
-# Run the example
-cargo run -p hyperspot-server --features tenant-resolver-example -- \
-    --config config/quickstart.yaml run
+It contains:
 
-# Test
-curl http://127.0.0.1:8087/tenant-resolver/v1/root
-```
+- `tenant_resolver-sdk/` — SDK with `TenantResolverGatewayClient`, `TenantResolverPluginClient`, and `TenantResolverPluginSpecV1`
+- `tenant_resolver-gw/` — Gateway that registers schema and selects plugin by vendor config
+- `plugins/static_tr_plugin/` — Config-based plugin (registers instance + scoped client)
+- `plugins/single_tenant_tr_plugin/` — Zero-config plugin (registers instance + scoped client)
+
+There is also a smaller example copy under:
+
+- `examples/plugin-modules/tenant_resolver/`
+
+
 
 ---
 
