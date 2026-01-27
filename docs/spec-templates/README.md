@@ -100,11 +100,33 @@ Both ADR and Feature files MUST use the prefix `NNNN-{fdd-id}.md`:
 
 ## FDD ID Convention
 
-All artifacts use stable FDD IDs for traceability:
+FDD IDs enable traceability across all specification artifacts.
 
+### FDD ID Definition
+
+An FDD ID **defines** a unique identifier for a specification element (actor, requirement, feature, etc.). Each ID must be **globally unique** within the module.
+
+**Format**:
 ```
 fdd-{module-name}-{kind}-{slug}
 ```
+
+**Placement**: Use `**ID**: \`fdd-...\`` in the artifact where the element is defined.
+
+### FDD ID Reference
+
+An FDD ID **reference** links to an element defined elsewhere. References create traceability between documents — for example, a Feature can reference Actors from PRD, or an ADR can reference Requirements it addresses.
+
+**Placement**: Use backtick notation `` `fdd-...` `` when referencing an ID defined in another section or file.
+
+### Validation
+
+FDD IDs must be unique. When FDD tooling is connected, `fdd validate` will:
+- Check that all referenced IDs exist
+- Detect duplicate definitions
+- Verify cross-document consistency
+
+### Kind Reference
 
 | Kind | Description |
 |------|-------------|
