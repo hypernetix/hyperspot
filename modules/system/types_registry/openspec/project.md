@@ -37,7 +37,7 @@ Follow the new module guideline: [`@/guidelines/NEW_MODULE.md`](../../../../guid
 modules/<module>/
 ├─ <module>-sdk/           # Public API: trait, models, errors (NO serde)
 │  └─ src/
-│     ├─ api.rs            # API trait (all methods take &SecurityContext)
+│     ├─ api.rs            # API trait (tenant-scoped methods take &SecurityContext)
 │     ├─ models.rs         # Transport-agnostic models
 │     └─ errors.rs         # Transport-agnostic errors
 └─ <module>/               # Implementation
@@ -82,7 +82,8 @@ Follow the REST API guidelines: [`@/guidelines/DNA/REST/API.md`](../../../../gui
 Follow security guidelines: [`@/guidelines/SECURITY.md`](../../../guidelines/SECURITY.md)
 
 **Key requirements:**
-- **All API methods MUST accept `&SecurityContext`** as first parameter
+- **All tenant-scoped API methods MUST accept `&SecurityContext`** as first parameter
+- **Global/system-wide APIs** (like registries) do not require `SecurityContext`
 - **Use SecureConn** for database access with automatic tenant isolation
 - **Input validation** via `validator` crate
 - **No secrets in code** — use environment variables

@@ -17,7 +17,7 @@ ModKit provides a framework for building modules:
 
 ## HyperSpot Modular architecture
 
-A module is a composable unit implementing typically some business logic with either REST API and/or peristent storage.
+A module is a composable unit implementing typically some business logic with either REST API and/or persistent storage.
 Common and stateless logic that can be reusable across modules should be implemented in the `libs` crate.
 
 ## Task Routing (for agents and focused work)
@@ -572,7 +572,7 @@ Consumers depend only on this crate — not the full module implementation.
 
 ```rust
 // Example from user_info-sdk
-use time::{OffsetDateTime, Utc};
+use time::OffsetDateTime;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -848,8 +848,9 @@ All service methods receive `&SecurityContext` for authorization and access cont
            ctx: &SecurityContext,
            id: Uuid,
        ) -> Result<User, DomainError> {
+           let scope = ctx.as_access_scope();
            self.repo
-               .find_by_id(ctx, id)
+               .find_by_id(&scope, id)
                .await?
                .ok_or(DomainError::UserNotFound { id })
        }
@@ -859,7 +860,8 @@ All service methods receive `&SecurityContext` for authorization and access cont
            ctx: &SecurityContext,
            query: ODataQuery,
        ) -> Result<Page<User>, DomainError> {
-           self.repo.list_page(ctx, query).await.map_err(Into::into)
+           let scope = ctx.as_access_scope();
+           self.repo.list_page(&scope, query).await.map_err(Into::into)
        }
 
        pub async fn create_user(
@@ -867,15 +869,17 @@ All service methods receive `&SecurityContext` for authorization and access cont
            ctx: &SecurityContext,
            new_user: NewUser,
        ) -> Result<User, DomainError> {
+           let scope = ctx.as_access_scope();
+           
            // Validate email uniqueness
-           if self.repo.email_exists(ctx, &new_user.email).await? {
+           if self.repo.email_exists(&scope, &new_user.email).await? {
                return Err(DomainError::EmailAlreadyExists {
                    email: new_user.email,
                });
            }
 
            // Insert user
-           let user = self.repo.insert(ctx, new_user).await?;
+           let user = self.repo.insert(&scope, new_user).await?;
 
            // Publish domain event
            self.events.publish(&UserDomainEvent::Created {
@@ -895,8 +899,9 @@ All service methods receive `&SecurityContext` for authorization and access cont
            // Ensure user exists
            let _ = self.get_user(ctx, id).await?;
 
+           let scope = ctx.as_access_scope();
            // Update
-           let user = self.repo.update(ctx, id, patch).await?;
+           let user = self.repo.update(&scope, id, patch).await?;
 
            // Publish domain event
            self.events.publish(&UserDomainEvent::Updated {
@@ -912,7 +917,8 @@ All service methods receive `&SecurityContext` for authorization and access cont
            ctx: &SecurityContext,
            id: Uuid,
        ) -> Result<(), DomainError> {
-           let deleted = self.repo.delete(ctx, id).await?;
+           let scope = ctx.as_access_scope();
+           let deleted = self.repo.delete(&scope, id).await?;
            if !deleted {
                return Err(DomainError::UserNotFound { id });
            }
@@ -954,7 +960,8 @@ pub struct MyModule {
 }
 ```
 
-> **Note:** The `client = ...` attribute is no longer used. Clients are registered **explicitly** in `init()`.
+> **Note:** The `client = ...` attribute does **not** auto‑register clients; registration must be done **explicitly** in `init()`.  
+> You may still use `client = ...` for compile‑time trait checks, but it is optional.
 
 #### `ModuleCtx` Runtime Context
 
@@ -1458,7 +1465,8 @@ The Secure ORM layer provides:
 API Handler (per-request)
     ↓ Creates SecurityContext from auth
 SecureConn (stateless wrapper)
-    ↓ Receives AccessScope per-operation
+    ↓ Receives SecurityContext per-operation
+    ↓ (Repo derives AccessScope as needed)
     ↓ Applies implicit tenant/resource scope
 SeaORM
     ↓
@@ -1486,8 +1494,8 @@ Database
        pub tenant_id: Uuid,
        pub email: String,
        pub display_name: String,
-       pub created_at: DateTimeUtc,
-       pub updated_at: DateTimeUtc,
+       pub created_at: time::OffsetDateTime,
+       pub updated_at: time::OffsetDateTime,
    }
    ```
 
@@ -1610,7 +1618,7 @@ Database
            match field {
                UserDtoFilterField::Id => sea_orm::Value::Uuid(Some(Box::new(model.id))),
                UserDtoFilterField::Email => sea_orm::Value::String(Some(Box::new(model.email.clone()))),
-               UserDtoFilterField::CreatedAt => sea_orm::Value::ChronoDateTimeUtc(Some(Box::new(model.created_at))),
+               UserDtoFilterField::CreatedAt => sea_orm::Value::TimeDateTimeWithTimeZone(Some(Box::new(model.created_at))),
            }
        }
    }
@@ -1982,7 +1990,7 @@ async fn test_sse_broadcaster() {
     let event = UserEvent {
         kind: "created".to_string(),
         id: Uuid::new_v4(),
-        at: Utc::now(),
+        at: time::OffsetDateTime::now_utc(),
     };
 
     broadcaster.send(event.clone());
