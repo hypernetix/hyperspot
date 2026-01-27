@@ -6,6 +6,10 @@ license.workspace = true
 authors.workspace = true
 rust-version.workspace = true
 description = "File Parser module"
+repository.workspace = true
+readme = "README.md"
+keywords = ["cyberfabric", "cyberfabric-system"]
+categories = ["parsing"]
 
 [lib]
 name = "file_parser"

@@ -2,8 +2,6 @@
 
 Zero-config plugin for single-tenant deployments.
 
-See [../../README.md](../../README.md) for full documentation.
-
 ## Quick Reference
 
 - No configuration required

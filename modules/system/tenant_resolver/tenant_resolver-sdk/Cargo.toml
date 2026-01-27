@@ -5,6 +5,10 @@ edition.workspace = true
 license.workspace = true
 authors.workspace = true
 description = "SDK for tenant_resolver module: API traits, models, and error definitions"
+repository.workspace = true
+readme = "README.md"
+keywords = ["cyberfabric", "cyberfabric-system"]
+categories = ["web-programming"]
 
 [lib]
 name = "tenant_resolver_sdk"

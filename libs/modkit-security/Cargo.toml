@@ -7,7 +7,9 @@ authors.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 description = "ModKit security library"
+readme = "README.md"
 keywords = ["cyberfabric", "cyberfabric-modkit"]
+categories = ["authentication"]
 
 [lib]
 name = "modkit_security"

@@ -1,6 +1,6 @@
 # E2E Tests for nodes_registry Module
 
-This directory contains comprehensive end-to-end tests for the `nodes_registry` module, which manages node information in HyperSpot deployments.
+This directory contains comprehensive end-to-end tests for the `nodes_registry` module, which manages node information in CyberFabric deployments.
 
 ## Test Files
 

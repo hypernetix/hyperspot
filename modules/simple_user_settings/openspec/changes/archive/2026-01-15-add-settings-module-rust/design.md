@@ -2,7 +2,7 @@
 
 ## Context
 
-The settings module is being migrated from Go to Rust as part of HyperSpot's modular architecture initiative. The module provides per-user settings (theme, language) with automatic tenant and user isolation. This is a foundational capability that demonstrates ModKit patterns and Secure ORM usage.
+The settings module is being migrated from Go to Rust as part of CyberFabric's modular architecture initiative. The module provides per-user settings (theme, language) with automatic tenant and user isolation. This is a foundational capability that demonstrates ModKit patterns and Secure ORM usage.
 
 **Constraints:**
 - Must follow SDK pattern (separate SDK crate for public API)
@@ -103,7 +103,7 @@ The settings module is being migrated from Go to Rust as part of HyperSpot's mod
 - Compile-time safety (unscoped queries cannot execute)
 - Automatic tenant/user filtering on all queries
 - Deny-by-default security (empty scope returns WHERE 1=0)
-- Consistent with HyperSpot security model
+- Consistent with CyberFabric security model
 
 **Alternatives considered:**
 - Manual WHERE clause addition: Rejected - error-prone, not compile-time safe

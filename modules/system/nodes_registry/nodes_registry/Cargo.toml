@@ -5,6 +5,10 @@ edition.workspace = true
 license.workspace = true
 authors.workspace = true
 description = "Nodes registry module"
+repository.workspace = true
+readme = "README.md"
+keywords = ["cyberfabric", "cyberfabric-system"]
+categories = ["development-tools"]
 
 [lib]
 name = "nodes_registry"

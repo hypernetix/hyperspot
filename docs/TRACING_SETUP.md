@@ -2,11 +2,11 @@
 # Distributed Tracing Setup
 
 This guide walks you through setting up **OpenTelemetry distributed tracing** with **Jaeger** or **Uptrace** for the
-hyperspot framework for testing purposes.
+CyberFabric framework for testing purposes.
 
 ## Overview
 
-The hyperspot framework includes first-class support for distributed tracing with:
+The CyberFabric framework includes first-class support for distributed tracing with:
 
 - **Automatic trace context extraction** from incoming HTTP requests (W3C Trace Context)
 - **Automatic trace context injection** for outgoing HTTP requests

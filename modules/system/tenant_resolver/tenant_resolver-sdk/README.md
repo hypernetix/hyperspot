@@ -2,8 +2,6 @@
 
 Public API traits and models for tenant resolution.
 
-See [../README.md](../README.md) for full documentation.
-
 ## Quick Reference
 
 - `TenantResolverGatewayClient` - Public API for consumers

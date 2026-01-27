@@ -7,6 +7,9 @@ authors.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 description = "SDK for types-registry module: API trait, GTS entity types, and error definitions"
+readme = "README.md"
+keywords = ["cyberfabric", "cyberfabric-system"]
+categories = ["development-tools"]
 
 [lib]
 name = "types_registry_sdk"
