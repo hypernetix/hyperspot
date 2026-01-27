@@ -4,7 +4,7 @@
 
 **Status**: {Proposed | Rejected | Accepted | Deprecated | Superseded}
 
-**ADR ID**: `fdd-{module-name}-adr-{slug}`
+**ID**: `fdd-{module-name}-adr-{slug}`
 
 ## Context and Problem Statement
 
