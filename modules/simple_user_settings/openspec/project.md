@@ -9,7 +9,7 @@ This module is part of **CyberFabric** — a modular, high-performance AI servic
 ## Tech Stack
 
 - **Language**: Rust (see [`@/guidelines/DNA/languages/RUST.md`](../../../guidelines/DNA/languages/RUST.md))
-- **Framework**: ModKit (see [`@/docs/MODKIT_UNIFIED_SYSTEM.md`](../../../docs/MODKIT_UNIFIED_SYSTEM.md))
+- **Framework**: ModKit (see [`@/docs/modkit_unified_system/README.md`](../../../docs/modkit_unified_system/README.md))
 - **HTTP**: Axum with `tower-http` middleware
 - **Database**: SeaORM / SQLx with secure ORM layer (see [`@/docs/SECURE-ORM.md`](../../../docs/SECURE-ORM.md))
 - **Observability**: `tracing` + OpenTelemetry (see [`@/docs/TRACING_SETUP.md`](../../../docs/TRACING_SETUP.md))
@@ -125,7 +125,7 @@ Follow tracing setup: [`@/docs/TRACING_SETUP.md`](../../../docs/TRACING_SETUP.md
 | Document | Purpose |
 |----------|---------|
 | [`@/docs/ARCHITECTURE_MANIFEST.md`](../../../docs/ARCHITECTURE_MANIFEST.md) | System architecture and design principles |
-| [`@/docs/MODKIT_UNIFIED_SYSTEM.md`](../../../docs/MODKIT_UNIFIED_SYSTEM.md) | ModKit framework guide |
+| [`@/docs/modkit_unified_system/README.md`](../../../docs/modkit_unified_system/README.md) | ModKit framework guide |
 | [`@/docs/SECURE-ORM.md`](../../../docs/SECURE-ORM.md) | Secure database access patterns |
 | [`@/docs/TRACING_SETUP.md`](../../../docs/TRACING_SETUP.md) | Observability configuration |
 | [`@/guidelines/NEW_MODULE.md`](../../../guidelines/NEW_MODULE.md) | Step-by-step module creation |

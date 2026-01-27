@@ -875,6 +875,6 @@ curl http://127.0.0.1:8087/tenant-resolver/v1/tenants?limit=50
 
 ## Further Reading
 
-- [MODKIT_UNIFIED_SYSTEM.md](./MODKIT_UNIFIED_SYSTEM.md) — Complete ModKit architecture guide
+- [MODKIT UNIFIED SYSTEM](./modkit_unified_system/README.md) — Complete ModKit architecture guide
 - [NEW_MODULE.md](../guidelines/NEW_MODULE.md) — Step-by-step module creation guide
 - [ARCHITECTURE_MANIFEST.md](./ARCHITECTURE_MANIFEST.md) — HyperSpot architecture overview

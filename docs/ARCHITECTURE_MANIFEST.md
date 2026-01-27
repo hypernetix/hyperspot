@@ -8,7 +8,7 @@ HyperSpot is a modular Rust-based foundation for building SaaS products where Ge
 
 ## Overview
 
-HyperSpot is a **modular, high-performance AI services platform** built in Rust. It provides a comprehensive framework for building scalable and highly-customizable AI applications with automatic REST API generation, comprehensive OpenAPI documentation, and a flexible modular architecture.
+HyperSpot is a **modular, high-performance AI services platform** built in Rust. It provides a framework for building scalable and highly-customizable AI applications with automatic REST API generation, OpenAPI documentation, and a flexible modular architecture.
 
 **Key Philosophy:**
 - **Modular by Design**: Everything is a Module - composable, independent units with gateway patterns for pluggable workers
@@ -90,7 +90,7 @@ A **Module** is a logical component that provides a specific set of functionalit
 - Modules are self-contained with their own configuration, API, and business logic
 - Modules are discovered automatically via the `inventory` crate
 - Modules can depend on each other
-- Modules can run either **in-process** (linked into the main binary) or **out-of-process** (as separate binaries communicating via gRPC) — see [MODKIT_UNIFIED_SYSTEM.md](MODKIT_UNIFIED_SYSTEM.md) for OoP details
+- Modules can run either **in-process** (linked into the main binary) or **out-of-process** (as separate binaries communicating via gRPC) — see [MODKIT UNIFIED SYSTEM](modkit_unified_system/README.md) for OoP details
 
 **Example modules:**
 - `file_parser` - Document parsing and extraction
@@ -117,7 +117,7 @@ See below typical modules categories, internal layout and typical modules relati
 
 ![module_structure.png](img/module_categories.drawio.png)
 
-See more in [MODKIT_UNIFIED_SYSTEM.md](MODKIT_UNIFIED_SYSTEM.md)
+See more in [MODKIT UNIFIED SYSTEM](modkit_unified_system/README.md)
 
 ### 1.2. Deployment Units
 
@@ -517,7 +517,7 @@ HyperSpot modules are built on **ModKit**, which provides enterprise-grade opera
 **Developer Productivity:**
 - [ ] **Hot Reload**: Fast development iteration with cargo watch
 - [ ] **Mock Support**: In-memory mocks for databases and external services
-- [ ] **Test Utilities**: Comprehensive testing helpers and fixtures
+- [ ] **Test Utilities**: testing helpers and fixtures
 - [ ] **Documentation**: Auto-generated API docs and rustdoc comments
 - [ ] **Type Safety**: Compile-time guarantees preventing runtime errors
 

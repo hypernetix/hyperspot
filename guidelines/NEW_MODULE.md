@@ -1908,7 +1908,7 @@ async fn test_sse_broadcaster() {
 ModKit supports running modules as separate processes with gRPC-based inter-process communication.
 This enables process isolation, language flexibility, and independent scaling.
 
-> **See also:** [MODKIT_UNIFIED_SYSTEM.md](../docs/MODKIT_UNIFIED_SYSTEM.md) for comprehensive OoP documentation.
+> **See also:** [MODKIT UNIFIED SYSTEM](../docs/modkit_unified_system/README.md) for comprehensive OoP documentation.
 
 #### When to Use OoP
 
@@ -2609,7 +2609,7 @@ errors (add explicit types), missing `chrono::Utc`, handler/service name mismatc
 
 ## Further Reading
 
-- [MODKIT_UNIFIED_SYSTEM.md](../docs/MODKIT_UNIFIED_SYSTEM.md) — Complete ModKit architecture and developer guide
+- [MODKIT UNIFIED SYSTEM](../docs/modkit_unified_system/README.md) — Complete ModKit architecture and developer guide
 - [MODKIT_PLUGINS.md](../docs/MODKIT_PLUGINS.md) — Plugin architecture with Gateway + Plugins pattern
 - [SECURE-ORM.md](../docs/SECURE-ORM.md) — Secure ORM layer with tenant isolation
 - [TRACING_SETUP.md](../docs/TRACING_SETUP.md) — Distributed tracing with OpenTelemetry
