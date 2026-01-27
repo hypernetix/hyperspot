@@ -8,11 +8,11 @@ This module is part of **HyperSpot** — a modular, high-performance AI services
 
 ## Tech Stack
 
-- **Language**: Rust (see [`@/guidelines/DNA/languages/RUST.md`](../../../guidelines/DNA/languages/RUST.md))
-- **Framework**: ModKit (see [`@/docs/MODKIT_UNIFIED_SYSTEM.md`](../../../docs/MODKIT_UNIFIED_SYSTEM.md))
+- **Language**: Rust (see [`@/guidelines/DNA/languages/RUST.md`](../../../../guidelines/DNA/languages/RUST.md))
+- **Framework**: ModKit (see [`@/docs/MODKIT_UNIFIED_SYSTEM.md`](../../../../docs/MODKIT_UNIFIED_SYSTEM.md))
 - **HTTP**: Axum with `tower-http` middleware
-- **Database**: SeaORM / SQLx with secure ORM layer (see [`@/docs/SECURE-ORM.md`](../../../docs/SECURE-ORM.md))
-- **Observability**: `tracing` + OpenTelemetry (see [`@/docs/TRACING_SETUP.md`](../../../docs/TRACING_SETUP.md))
+- **Database**: SeaORM / SQLx with secure ORM layer (see [`@/docs/SECURE-ORM.md`](../../../../docs/SECURE-ORM.md))
+- **Observability**: `tracing` + OpenTelemetry (see [`@/docs/TRACING_SETUP.md`](../../../../docs/TRACING_SETUP.md))
 - **OpenAPI**: `utoipa` for automatic documentation generation
 - **IDs**: UUIDv7 for all identifiers
 - **Time**: `chrono` with UTC timestamps
@@ -21,7 +21,7 @@ This module is part of **HyperSpot** — a modular, high-performance AI services
 
 ### Architecture
 
-Follow the architecture manifest: [`@/docs/ARCHITECTURE_MANIFEST.md`](../../../docs/ARCHITECTURE_MANIFEST.md)
+Follow the architecture manifest: [`@/docs/ARCHITECTURE_MANIFEST.md`](../../../../docs/ARCHITECTURE_MANIFEST.md)
 
 **Key principles:**
 - **Everything is a Module** — composable, independent units
@@ -31,7 +31,7 @@ Follow the architecture manifest: [`@/docs/ARCHITECTURE_MANIFEST.md`](../../../d
 
 ### Module Structure
 
-Follow the new module guideline: [`@/guidelines/NEW_MODULE.md`](../../../guidelines/NEW_MODULE.md)
+Follow the new module guideline: [`@/guidelines/NEW_MODULE.md`](../../../../guidelines/NEW_MODULE.md)
 
 ```
 modules/<module>/
@@ -51,7 +51,7 @@ modules/<module>/
 
 ### Code Style
 
-See [`@/guidelines/DNA/languages/RUST.md`](../../../guidelines/DNA/languages/RUST.md)
+See [`@/guidelines/DNA/languages/RUST.md`](../../../../guidelines/DNA/languages/RUST.md)
 
 - **Formatting**: `cargo fmt` with max line length 100, 4-space indentation
 - **Linting**: `cargo clippy --workspace --all-targets -- -D warnings`
@@ -61,13 +61,13 @@ See [`@/guidelines/DNA/languages/RUST.md`](../../../guidelines/DNA/languages/RUS
 
 ### REST API Design
 
-Follow the REST API guidelines: [`@/guidelines/DNA/REST/API.md`](../../../guidelines/DNA/REST/API.md)
+Follow the REST API guidelines: [`@/guidelines/DNA/REST/API.md`](../../../../guidelines/DNA/REST/API.md)
 
 **Key conventions:**
 - **Resource URLs**: Nouns, plural (`/users`, `/types`)
-- **Status codes**: See [`@/guidelines/DNA/REST/STATUS_CODES.md`](../../../guidelines/DNA/REST/STATUS_CODES.md)
+- **Status codes**: See [`@/guidelines/DNA/REST/STATUS_CODES.md`](../../../../guidelines/DNA/REST/STATUS_CODES.md)
 - **Errors**: RFC-9457 Problem Details (`application/problem+json`)
-- **Pagination**: Cursor-based with OData filtering (see [`@/guidelines/DNA/REST/PAGINATION.md`](../../../guidelines/DNA/REST/PAGINATION.md))
+- **Pagination**: Cursor-based with OData filtering (see [`@/guidelines/DNA/REST/PAGINATION.md`](../../../../guidelines/DNA/REST/PAGINATION.md))
 - **Timestamps**: ISO-8601 UTC with milliseconds (`2025-09-01T20:00:00.000Z`)
 
 ### Error Handling
@@ -89,7 +89,7 @@ Follow security guidelines: [`@/guidelines/SECURITY.md`](../../../guidelines/SEC
 
 ### Database Access
 
-Follow secure ORM patterns: [`@/docs/SECURE-ORM.md`](../../../docs/SECURE-ORM.md)
+Follow secure ORM patterns: [`@/docs/SECURE-ORM.md`](../../../../docs/SECURE-ORM.md)
 
 - **Typestate enforcement**: Unscoped queries cannot execute
 - **Deny-by-default**: Empty scopes return `WHERE 1=0`
@@ -107,7 +107,7 @@ Target: **90%+ code coverage**
 
 ### Observability
 
-Follow tracing setup: [`@/docs/TRACING_SETUP.md`](../../../docs/TRACING_SETUP.md)
+Follow tracing setup: [`@/docs/TRACING_SETUP.md`](../../../../docs/TRACING_SETUP.md)
 
 - **Structured logging** via `tracing` with contextual fields
 - **Distributed tracing** with OpenTelemetry and W3C Trace Context
@@ -124,13 +124,13 @@ Follow tracing setup: [`@/docs/TRACING_SETUP.md`](../../../docs/TRACING_SETUP.md
 
 | Document | Purpose |
 |----------|---------|
-| [`@/docs/ARCHITECTURE_MANIFEST.md`](../../../docs/ARCHITECTURE_MANIFEST.md) | System architecture and design principles |
-| [`@/docs/MODKIT_UNIFIED_SYSTEM.md`](../../../docs/MODKIT_UNIFIED_SYSTEM.md) | ModKit framework guide |
-| [`@/docs/SECURE-ORM.md`](../../../docs/SECURE-ORM.md) | Secure database access patterns |
-| [`@/docs/TRACING_SETUP.md`](../../../docs/TRACING_SETUP.md) | Observability configuration |
-| [`@/guidelines/NEW_MODULE.md`](../../../guidelines/NEW_MODULE.md) | Step-by-step module creation |
-| [`@/guidelines/SECURITY.md`](../../../guidelines/SECURITY.md) | Security best practices |
-| [`@/guidelines/DNA/REST/API.md`](../../../guidelines/DNA/REST/API.md) | REST API design |
-| [`@/guidelines/DNA/REST/STATUS_CODES.md`](../../../guidelines/DNA/REST/STATUS_CODES.md) | HTTP status code usage |
-| [`@/guidelines/DNA/REST/PAGINATION.md`](../../../guidelines/DNA/REST/PAGINATION.md) | Cursor pagination spec |
-| [`@/guidelines/DNA/languages/RUST.md`](../../../guidelines/DNA/languages/RUST.md) | Rust coding standards |
+| [`@/docs/ARCHITECTURE_MANIFEST.md`](../../../../docs/ARCHITECTURE_MANIFEST.md) | System architecture and design principles |
+| [`@/docs/MODKIT_UNIFIED_SYSTEM.md`](../../../../docs/MODKIT_UNIFIED_SYSTEM.md) | ModKit framework guide |
+| [`@/docs/SECURE-ORM.md`](../../../../docs/SECURE-ORM.md) | Secure database access patterns |
+| [`@/docs/TRACING_SETUP.md`](../../../../docs/TRACING_SETUP.md) | Observability configuration |
+| [`@/guidelines/NEW_MODULE.md`](../../../../guidelines/NEW_MODULE.md) | Step-by-step module creation |
+| [`@/guidelines/SECURITY.md`](../../../../guidelines/SECURITY.md) | Security best practices |
+| [`@/guidelines/DNA/REST/API.md`](../../../../guidelines/DNA/REST/API.md) | REST API design |
+| [`@/guidelines/DNA/REST/STATUS_CODES.md`](../../../../guidelines/DNA/REST/STATUS_CODES.md) | HTTP status code usage |
+| [`@/guidelines/DNA/REST/PAGINATION.md`](../../../../guidelines/DNA/REST/PAGINATION.md) | Cursor pagination spec |
+| [`@/guidelines/DNA/languages/RUST.md`](../../../../guidelines/DNA/languages/RUST.md) | Rust coding standards |
