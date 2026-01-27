@@ -1,4 +1,4 @@
-name: PR → Project Governance Sync
+name: PR → Pull Request Project Sync
 
 on:
   schedule:
@@ -10,7 +10,7 @@ on:
 permissions:
   contents: read
   pull-requests: read
-  issues: read
+  issues: write
 
 jobs:
   sync:
@@ -65,9 +65,10 @@ jobs:
                       nodes {
                         id
                         content {
-                          ... on PullRequest {
+                          ... on Issue {
                             number
                             id
+                            title
                             closed
                           }
                         }
@@ -87,15 +88,24 @@ jobs:
             const projectItemsByPR = new Map();
 
             for (const item of items) {
-              if (item.content?.number) {
-                projectItemsByPR.set(
-                  item.content.number,
-                  {
-                    itemId: item.id,
-                    closed: item.content.closed
-                  }
-                );
-              }
+              const title = item.content?.title;
+              if (!title) continue;
+
+              const m = title.match(/^PR #(\d+) - /);
+              if (!m) continue;
+
+              const prNumber = Number(m[1]);
+              if (!Number.isFinite(prNumber)) continue;
+
+              projectItemsByPR.set(
+                prNumber,
+                {
+                  itemId: item.id,
+                  issueNumber: item.content.number,
+                  issueNodeId: item.content.id,
+                  closed: item.content.closed
+                }
+              );
             }
 
             /*
@@ -177,14 +187,67 @@ jobs:
                ------------------------------------------------------------
               */
 
+              const issueTitle = `PR #${pr.number} - ${pr.title}`;
+
+              const body =
+                "Pull request:\n" +
+                pr.html_url + "\n\n" +
+                "Unreplied review comments:\n" +
+                (links.length
+                  ? links.map(l => "- " + l).join("\n")
+                  : "None");
+
+              let issue;
+
+              {
+                const searchTitle = issueTitle.replaceAll('"', '\\"');
+                const search = await github.rest.search.issuesAndPullRequests({
+                  q: `repo:${owner}/${repo} type:issue in:title "${searchTitle}"`,
+                  per_page: 10
+                });
+
+                const match =
+                  (search.data.items || []).find(i =>
+                    i.title === issueTitle && !i.pull_request
+                  );
+
+                if (match) {
+                  const existing = await github.rest.issues.get({
+                    owner,
+                    repo,
+                    issue_number: match.number
+                  });
+
+                  issue = existing.data;
+                }
+              }
+
+              if (!issue) {
+                const created = await github.rest.issues.create({
+                  owner,
+                  repo,
+                  title: issueTitle,
+                  body
+                });
+
+                issue = created.data;
+              } else {
+                await github.rest.issues.update({
+                  owner,
+                  repo,
+                  issue_number: issue.number,
+                  title: issueTitle,
+                  body
+                });
+              }
+
               let projectItem =
                 projectItemsByPR.get(pr.number);
 
               let itemId;
 
               if (!projectItem) {
-
-                const created = await github.graphql(`
+                const added = await github.graphql(`
                   mutation($project:ID!, $content:ID!) {
                     addProjectV2ItemById(
                       input:{
@@ -197,11 +260,11 @@ jobs:
                   }
                 `, {
                   project: PROJECT_ID,
-                  content: pr.node_id
+                  content: issue.node_id
                 });
 
                 itemId =
-                  created.addProjectV2ItemById.item.id;
+                  added.addProjectV2ItemById.item.id;
 
               } else {
                 itemId = projectItem.itemId;
@@ -261,36 +324,6 @@ jobs:
                 threads: unrepliedThreads,
                 comments: unrepliedComments
               });
-
-              /*
-               ------------------------------------------------------------
-               Update project item body
-               ------------------------------------------------------------
-              */
-
-              const body =
-                "Pull request:\n" +
-                pr.html_url + "\n\n" +
-                "Unreplied review comments:\n" +
-                (links.length
-                  ? links.map(l => "- " + l).join("\n")
-                  : "None");
-
-              await github.graphql(`
-                mutation($item:ID!, $body:String!) {
-                  updateProjectV2Item(
-                    input:{
-                      id:$item
-                      body:$body
-                    }
-                  ) {
-                    projectV2Item { id }
-                  }
-                }
-              `, {
-                item: itemId,
-                body
-              });
             }
 
             /*
@@ -301,6 +334,15 @@ jobs:
 
             for (const [prNumber, item] of projectItemsByPR.entries()) {
               if (!activePRs.has(prNumber)) {
+                if (item.issueNumber) {
+                  await github.rest.issues.update({
+                    owner,
+                    repo,
+                    issue_number: item.issueNumber,
+                    state: "closed"
+                  });
+                }
+
                 await github.graphql(`
                   mutation($item:ID!) {
                     archiveProjectV2Item(
