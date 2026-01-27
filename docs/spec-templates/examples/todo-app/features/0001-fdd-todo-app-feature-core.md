@@ -1,29 +1,29 @@
 # Feature: Task Management Core
 
-## A. Feature Context
+## 1. Feature Context
 
 **Feature ID**: `fdd-todo-app-feature-core`
 **Status**: NOT_STARTED
 
-### 1. Overview
+### 1.1 Overview
 
 Core CRUD operations for tasks including creation, reading, updating, and deletion of tasks.
 
-### 2. Purpose
+### 1.2 Purpose
 
 Provides the fundamental task management capabilities that all other features depend on.
 
-### 3. Actors
+### 1.3 Actors
 
 - `fdd-todo-app-actor-user` - Creates and manages tasks
 - `fdd-todo-app-actor-sync-service` - Synchronizes task changes
 
-### 4. References
+### 1.4 References
 
 - Overall Design: [DESIGN.md](../DESIGN.md)
 - Dependencies: None
 
-## B. Actor Flows (FDL)
+## 2. Actor Flows (FDL)
 
 ### Create Task Flow
 
@@ -82,7 +82,7 @@ Provides the fundamental task management capabilities that all other features de
    1. [ ] - `ph-1` - **RETURN** not found error (404) - `inst-delete-7a`
 <!-- fdd-id-content -->
 
-## C. Algorithms (FDL)
+## 3. Algorithms (FDL)
 
 ### Task Validation Algorithm
 
@@ -109,7 +109,7 @@ Provides the fundamental task management capabilities that all other features de
 7. [ ] - `ph-1` - **RETURN** { valid: errors.length === 0, errors, warnings } - `inst-val-7`
 <!-- fdd-id-content -->
 
-## D. States (FDL)
+## 4. States (FDL)
 
 ### Task State Machine
 
@@ -127,7 +127,7 @@ Provides the fundamental task management capabilities that all other features de
 4. [ ] - `ph-1` - **FROM** completed **TO** deleted **WHEN** user deletes completed task - `inst-state-4`
 <!-- fdd-id-content -->
 
-## E. Requirements
+## 5. Requirements
 
 ### Implement Task CRUD Operations
 
@@ -153,7 +153,7 @@ Provides the fundamental task management capabilities that all other features de
 - [ ] `ph-1`: Basic CRUD with validation
 <!-- fdd-id-content -->
 
-## F. Additional Context (optional)
+## 6. Additional Context (optional)
 
 ### Performance Considerations
 

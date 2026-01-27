@@ -1,28 +1,28 @@
 # Feature: Task Filtering and Logic
 
-## A. Feature Context
+## 1. Feature Context
 
 **Feature ID**: `fdd-todo-app-feature-logic`
 **Status**: NOT_STARTED
 
-### 1. Overview
+### 1.1 Overview
 
 Advanced filtering, sorting, and search capabilities for tasks including status filtering, priority sorting, and full-text search.
 
-### 2. Purpose
+### 1.2 Purpose
 
 Enables users to efficiently navigate and manage large numbers of tasks by applying filters and organizing tasks by various criteria.
 
-### 3. Actors
+### 1.3 Actors
 
 - `fdd-todo-app-actor-user` - Applies filters and searches tasks
 
-### 4. References
+### 1.4 References
 
 - Overall Design: [DESIGN.md](../DESIGN.md)
 - Dependencies: `fdd-todo-app-feature-core`
 
-## B. Actor Flows (FDL)
+## 2. Actor Flows (FDL)
 
 ### Filter Tasks Flow
 
@@ -71,7 +71,7 @@ Enables users to efficiently navigate and manage large numbers of tasks by apply
 5. [ ] - `ph-1` - **RETURN** matching tasks with highlighted matches - `inst-search-5`
 <!-- fdd-id-content -->
 
-## C. Algorithms (FDL)
+## 3. Algorithms (FDL)
 
 ### Task Sorting Algorithm
 
@@ -118,7 +118,7 @@ Enables users to efficiently navigate and manage large numbers of tasks by apply
 6. [ ] - `ph-1` - **RETURN** { isOverdue: false, urgency: 'low' } - `inst-overdue-6`
 <!-- fdd-id-content -->
 
-## D. States (FDL)
+## 4. States (FDL)
 
 ### Filter State Machine
 
@@ -138,7 +138,7 @@ Enables users to efficiently navigate and manage large numbers of tasks by apply
 6. [ ] - `ph-1` - **FROM** completed **TO** active **WHEN** user clicks "Active" tab - `inst-fstate-6`
 <!-- fdd-id-content -->
 
-## E. Requirements
+## 5. Requirements
 
 ### Implement Task Filtering
 
@@ -205,7 +205,7 @@ Enables users to efficiently navigate and manage large numbers of tasks by apply
 - [ ] `ph-1`: Basic sorting by all fields
 <!-- fdd-id-content -->
 
-## F. Additional Context (optional)
+## 6. Additional Context (optional)
 
 ### UX Considerations
 

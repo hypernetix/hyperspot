@@ -1,12 +1,12 @@
 # Technical Design: {MODULE NAME}
 
-## A. Architecture Overview
+## 1. Architecture Overview
 
-### Architectural Vision
+### 1.1 Architectural Vision
 
 {2-3 paragraphs describing the technical approach, key architectural decisions, and design philosophy}
 
-### Architecture drivers
+### 1.2 Architecture Drivers
 
 #### Product requirements
 
@@ -22,7 +22,7 @@
 |--------|----------------------------|
 | `fdd-{module-name}-nfr-{slug}` | {short description of how to solve} |
 
-### Architecture Layers
+### 1.3 Architecture Layers
 
 <!-- TODO: Add architecture diagram (draw.io, Mermaid, or embedded image) -->
 
@@ -33,9 +33,9 @@
 | Domain | {description} | {tech} |
 | Infrastructure | {description} | {tech} |
 
-## B. Principles & Constraints
+## 2. Principles & Constraints
 
-### B.1: Design Principles
+### 2.1: Design Principles
 
 #### {Principle Name}
 
@@ -49,7 +49,7 @@
 
 <!-- TODO: Add more design principles as needed -->
 
-### B.2: Constraints
+### 2.2: Constraints
 
 #### {Constraint Name}
 
@@ -63,9 +63,9 @@
 
 <!-- TODO: Add more constraints as needed -->
 
-## C. Technical Architecture
+## 3. Technical Architecture
 
-### C.1: Domain Model
+### 3.1: Domain Model
 
 **Technology**: {GTS}
 
@@ -77,7 +77,7 @@
 **Relationships**:
 - {Entity1} → {Entity2}: {Relationship description}
 
-### C.2: Component Model
+### 3.2: Component Model
 
 <!-- TODO: Add component diagram (draw.io, Mermaid, or ASCII) -->
 ```mermaid
@@ -90,7 +90,7 @@
 **Interactions**:
 - {Component 1} → {Component 2}: {Description of interaction}
 
-### C.3: API Contracts
+### 3.3: API Contracts
 
 **Technology**: {REST/OpenAPI | GraphQL | gRPC | CLISPEC}
 
@@ -99,7 +99,7 @@
 **Endpoints Overview**:
 - `{METHOD} {/path}` - {Description}
 
-### C.4: Interactions & Sequences
+### 3.4: Interactions & Sequences
 
 <!-- TODO: Add sequence diagram (draw.io, Mermaid, or ASCII) -->
 ```mermaid
@@ -109,7 +109,7 @@
 
 **Actors**: FDD ID from PRD.
 
-### C.5 Database schemas & tables
+### 3.5: Database schemas & tables
 
 <!-- Keep empty if not relevant. -->
 
@@ -134,17 +134,17 @@
 |------------|---|---|
 | values     |   |   |
 
-### C.6: Topology (optional)
+### 3.6: Topology (optional)
 
 Physical view, files, pods, containers, DC, virtual machines, etc.
 
 **ID**: `fdd-{module-name}-topology-{slug}`
 
-### C.7: Tech stack (optional)
+### 3.7: Tech stack (optional)
 
 **ID**: `fdd-{module-name}-tech-{slug}`
 
-## D. Additional Context
+## 4. Additional Context
 
 **ID**: `fdd-{module-name}-design-context-{slug}`
 

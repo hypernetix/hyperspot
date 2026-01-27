@@ -1,6 +1,6 @@
 # PRD
 
-## A. Vision
+## 1. Overview
 
 **Purpose**: A web application for managing personal tasks with support for categories, priorities, and filtering.
 
@@ -27,9 +27,9 @@ The application is designed for individual use with cross-device synchronization
 - Filtering and search
 - Cross-device synchronization
 
-## B. Actors
+## 2. Actors
 
-### Human Actors
+### 2.1 Human Actors
 
 #### User
 
@@ -39,7 +39,7 @@ The application is designed for individual use with cross-device synchronization
 **Role**: Primary user who creates, manages, and completes tasks in the application.
 <!-- fdd-id-content -->
 
-### System Actors
+### 2.2 System Actors
 
 #### Sync Service
 
@@ -57,7 +57,7 @@ The application is designed for individual use with cross-device synchronization
 **Role**: Sends reminders and notifications to users about upcoming or overdue tasks.
 <!-- fdd-id-content -->
 
-## C. Functional Requirements
+## 3. Functional Requirements
 
 #### Create Task
 
@@ -107,7 +107,7 @@ The system must allow users to delete a task permanently.
 **Actors**: `fdd-todo-app-actor-user`
 <!-- fdd-id-content -->
 
-## D. Use Cases
+## 4. Use Cases
 
 #### UC-001: Create a New Task
 
@@ -158,7 +158,7 @@ The system must allow users to delete a task permanently.
 
 <!-- fdd-id-content -->
 
-## E. Non-functional requirements
+## 5. Non-functional requirements
 
 #### Response Time
 
@@ -184,7 +184,7 @@ User data must be persisted locally and synced to cloud storage within 5 seconds
 The application must function fully offline with automatic sync when connectivity is restored.
 <!-- fdd-id-content -->
 
-## F. Additional context
+## 6. Additional context
 
 #### Market Research
 

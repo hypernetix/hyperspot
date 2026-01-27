@@ -1,6 +1,6 @@
 # PRD
 
-## A. Vision
+## 1. Overview
 
 **Purpose**: {1-2 sentences describing what the system does}
 
@@ -24,9 +24,9 @@
 - {Capability 2}
 - {Capability 3}
 
-## B. Actors
+## 2. Actors
 
-### Human Actors
+### 2.1 Human Actors
 
 #### {Actor Name}
 
@@ -38,7 +38,7 @@
 
 <!-- TODO: Add more human actors as needed -->
 
-### System Actors
+### 2.2 System Actors
 
 #### {System Actor Name}
 
@@ -50,7 +50,7 @@
 
 <!-- TODO: Add more system actors as needed -->
 
-## C. Functional Requirements
+## 3. Functional Requirements
 
 #### {Requirement Name}
 
@@ -66,7 +66,7 @@
 
 <!-- TODO: Add more functional requirements as needed -->
 
-## D. Use Cases
+## 4. Use Cases
 
 #### UC-{NNN}: {Use Case Name}
 
@@ -92,7 +92,7 @@
 
 <!-- TODO: Add more use cases as needed -->
 
-## E. Non-functional requirements
+## 5. Non-functional requirements
 
 #### {NFR Name}
 
@@ -104,7 +104,7 @@
 
 <!-- TODO: Add more NFRs as needed -->
 
-## F. Additional context
+## 6. Additional context
 
 #### {Context Item Name}
 

@@ -1,29 +1,33 @@
 # Feature: {Feature Name}
 
-## A. Feature Context
+## 1. Feature Context
 
 **Feature ID**: `fdd-{module-name}-feature-{feature-slug}`
 
 **Status**: NOT_STARTED | IN_PROGRESS | IMPLEMENTED
 
-### 1. Overview
+### 1.1 Overview
 
 {Brief overview of what this feature does}
 
-### 2. Purpose
+### 1.2 Purpose
 
 {Why this feature exists, what problem it solves}
 
-### 3. Actors
+### 1.3 Actors
 
 - `fdd-{module-name}-actor-{actor-slug}` - {Role in this feature}
 
-### 4. References
+### 1.4 References
 
 - Overall Design: [DESIGN.md](../../DESIGN.md)
 - Dependencies: {List feature dependencies or "None"}
 
-## B. Actor Flows (FDL)
+## 2. Actor Flows (FDL)
+
+User-facing interactions that start with an actor (human or external system) and describe the end-to-end flow of a use case. Each flow has a triggering actor and shows how the system responds to actor actions.
+
+> **FDL pseudo-code is optional.** Use detailed steps for early-stage projects, complex domains, or when you need to clearly communicate expected behavior. Skip for mature teams or simple features to avoid documentation overhead.
 
 ### {Flow Name}
 
@@ -51,7 +55,11 @@
 
 <!-- TODO: Add more flows as needed -->
 
-## C. Algorithms (FDL)
+## 3. Algorithms (FDL)
+
+Internal system functions and procedures that do not interact with actors directly. Examples: database layer operations, authorization logic, middleware, validation routines, library functions, background jobs. These are reusable building blocks called by Actor Flows or other Algorithms.
+
+> **FDL pseudo-code is optional.** Same guidance as Actor Flows — use when clarity matters, skip when it becomes overhead.
 
 ### {Algorithm Name}
 
@@ -77,7 +85,7 @@
 
 <!-- TODO: Add more algorithms as needed -->
 
-## D. States (FDL)
+## 4. States (FDL)
 
 ### {Entity Name} State Machine
 
@@ -97,7 +105,7 @@
 <!-- Note: This section is optional if feature has no state management -->
 
 <!-- TODO: What should be done, a list of requirements to be implemented -->
-## E. Requirements
+## 5. Requirements
 
 ### {Requirement Title}
 
@@ -125,7 +133,7 @@
 
 <!-- TODO: Add more requirements as needed -->
 
-## F. Additional Context (optional)
+## 6. Additional Context (optional)
 
 ### {Context Item Title}
 

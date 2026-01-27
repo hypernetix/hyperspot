@@ -1,8 +1,8 @@
 # Technical Design: TODO-APP
 
-## A. Architecture Overview
+## 1. Architecture Overview
 
-### Architectural Vision
+### 1.1 Architectural Vision
 
 The Todo App follows a clean architecture approach with clear separation between presentation, business logic, and data layers. The frontend is built as a single-page application (SPA) communicating with a RESTful backend API.
 
@@ -10,7 +10,7 @@ The system prioritizes offline-first capabilities using local storage with backg
 
 Event-driven architecture is employed for real-time updates and cross-device synchronization via WebSockets.
 
-### Architecture drivers
+### 1.2 Architecture Drivers
 
 #### Product requirements
 
@@ -21,7 +21,7 @@ Event-driven architecture is employed for real-time updates and cross-device syn
 | `fdd-todo-app-fr-filter-tasks` | Query parameters on GET /tasks |
 | `fdd-todo-app-nfr-offline-support` | IndexedDB local storage with sync queue |
 
-### Architecture Layers
+### 1.3 Architecture Layers
 
 | Layer | Responsibility | Technology |
 |-------|---------------|------------|
@@ -30,9 +30,9 @@ Event-driven architecture is employed for real-time updates and cross-device syn
 | Domain | Business logic, entities, validation | TypeScript classes |
 | Infrastructure | Data persistence, external APIs | PostgreSQL, Redis |
 
-## B. Principles & Constraints
+## 2. Principles & Constraints
 
-### B.1: Design Principles
+### 2.1: Design Principles
 
 #### Offline-First
 
@@ -54,7 +54,7 @@ All operations must work without network connectivity. Data is persisted locally
 UI updates immediately on user action without waiting for server confirmation. Rollback occurs only on server rejection.
 <!-- fdd-id-content -->
 
-### B.2: Constraints
+### 2.2: Constraints
 
 #### Browser Compatibility
 
@@ -66,9 +66,9 @@ UI updates immediately on user action without waiting for server confirmation. R
 Application must support latest 2 versions of Chrome, Firefox, Safari, and Edge.
 <!-- fdd-id-content -->
 
-## C. Technical Architecture
+## 3. Technical Architecture
 
-### C.1: Domain Model
+### 3.1: Domain Model
 
 **Technology**: TypeScript
 
@@ -84,7 +84,7 @@ Application must support latest 2 versions of Chrome, Firefox, Safari, and Edge.
 - Task → User: Many-to-one (task belongs to user)
 - Category → User: Many-to-one (category belongs to user)
 
-### C.2: Component Model
+### 3.2: Component Model
 
 ```mermaid
 flowchart LR
@@ -132,7 +132,7 @@ flowchart LR
 - TaskForm → TaskService: Submits task data for creation/update
 - FilterBar → TaskList: Passes filter criteria for rendering
 
-### C.3: API Contracts
+### 3.3: API Contracts
 
 **Technology**: REST/OpenAPI
 
@@ -145,7 +145,7 @@ flowchart LR
 - `PATCH /tasks/:id` - Update task fields
 - `DELETE /tasks/:id` - Delete a task
 
-### C.4: Interactions & Sequences
+### 3.4: Interactions & Sequences
 
 ```mermaid
 sequenceDiagram
@@ -176,7 +176,7 @@ sequenceDiagram
 
 **Actors**: `fdd-todo-app-actor-user`, `fdd-todo-app-actor-sync-service`
 
-### C.5 Database schemas & tables
+### 3.5: Database schemas & tables
 
 #### Table tasks
 
@@ -209,7 +209,7 @@ sequenceDiagram
 |----|---------|-------|--------|----------|
 | abc-123 | user-1 | Buy groceries | active | medium |
 
-### C.6: Topology (optional)
+### 3.6: Topology (optional)
 
 **ID**: `fdd-todo-app-topology-cloud`
 
@@ -218,7 +218,7 @@ sequenceDiagram
 - Database: Managed PostgreSQL
 - Cache: Redis cluster
 
-### C.7: Tech stack (optional)
+### 3.7: Tech stack (optional)
 
 **ID**: `fdd-todo-app-tech-stack`
 
@@ -227,7 +227,7 @@ sequenceDiagram
 - Database: PostgreSQL 15, Redis 7
 - Infrastructure: Docker, Kubernetes, GitHub Actions
 
-## D. Additional Context
+## 4. Additional Context
 
 **ID**: `fdd-todo-app-design-context-decisions`
 
