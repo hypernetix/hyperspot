@@ -53,7 +53,6 @@ rust-embed = { workspace = true }
 [dev-dependencies]
 futures-core = { workspace = true }
 uuid = { workspace = true }
-modkit-odata = { workspace = true }
 tenant-resolver-sdk = { package = "cf-tenant-resolver-sdk", version = "0.1.1", path = "../tenant_resolver/tenant_resolver-sdk" }
 
 [features]
