@@ -16,7 +16,7 @@
 |--------|----------------------------|
 | `fdd-{module-name}-fr-{slug}` | {short description of how to solve} |
 
-#### Non-fcuntional requirements
+#### Non-functional requirements
 
 | FDD ID | Solution short description |
 |--------|----------------------------|
