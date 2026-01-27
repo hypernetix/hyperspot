@@ -9,6 +9,18 @@ release-plz updates this file in the Release PR.
 
 ## [Unreleased]
 
+## [0.1.3](https://github.com/hypernetix/hyperspot/compare/cf-system-sdks-v0.1.2...cf-system-sdks-v0.1.3) - 2026-01-27
+
+### Other
+
+- updated the following local packages: cf-system-sdk-directory
+
+## [0.1.3](https://github.com/hypernetix/hyperspot/compare/cf-system-sdk-directory-v0.1.2...cf-system-sdk-directory-v0.1.3) - 2026-01-27
+
+### Other
+
+- updated the following local packages: cf-modkit-transport-grpc
+
 ## [0.1.1](https://github.com/hypernetix/hyperspot/releases/tag/cf-types-registry-v0.1.1) - 2026-01-27
 
 ### Other
