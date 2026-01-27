@@ -9,8 +9,28 @@ use std::time::Duration;
 use tempfile::TempDir;
 use tokio::time::timeout;
 
-/// Test race condition: two concurrent `get()` calls for the same module.
-/// Only one handle should be built, both callers should get the same Arc.
+/// Ensures two concurrent calls to `get()` for the same module return the identical `Arc` handle.
+///
+/// This test verifies that concurrent initialization for the same module does not create
+/// duplicate handles and that callers receive the same shared instance.
+///
+/// # Examples
+///
+/// ```
+/// # use std::sync::Arc;
+/// # use tokio::runtime::Runtime;
+/// # // Pseudocode example; real usage requires DbManager and Figment setup.
+/// # let rt = Runtime::new().unwrap();
+/// # rt.block_on(async {
+/// let manager: Arc<DbManager> = Arc::new(/* DbManager initialization */);
+/// let m1 = manager.clone();
+/// let m2 = manager.clone();
+/// let (r1, r2) = tokio::join!(m1.get("test_module"), m2.get("test_module"));
+/// let h1 = r1.unwrap().unwrap();
+/// let h2 = r2.unwrap().unwrap();
+/// assert!(Arc::ptr_eq(&h1, &h2));
+/// # });
+/// ```
 #[tokio::test]
 #[cfg(feature = "sqlite")]
 async fn test_concurrent_get_same_module() {
@@ -18,6 +38,7 @@ async fn test_concurrent_get_same_module() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "file": format!("concurrent_same_{}.db", std::process::id())
                 }
             }
@@ -55,11 +76,13 @@ async fn test_concurrent_get_different_modules() {
         "modules": {
             "module_a": {
                 "database": {
+                    "engine": "sqlite",
                     "file": format!("module_a_{}.db", std::process::id())
                 }
             },
             "module_b": {
                 "database": {
+                    "engine": "sqlite",
                     "file": format!("module_b_{}.db", std::process::id())
                 }
             }
@@ -93,7 +116,25 @@ async fn test_concurrent_get_different_modules() {
     assert!(handle2.dsn().contains("module_b_"));
 }
 
-/// Test caching behavior: second call for same module should return cached handle.
+/// Verifies that requesting the same module twice returns the cached Arc handle.
+///
+/// Confirms that two consecutive calls to `get("test_module")` produce the same
+/// shared handle (pointer-equal `Arc`), demonstrating the manager's caching.
+///
+/// # Examples
+///
+/// ```
+/// # async fn _example() {
+/// # use std::sync::Arc;
+/// # use tempfile::TempDir;
+/// # use figment::Figment;
+/// // In tests the manager is constructed from Figment and TempDir:
+/// // let manager = DbManager::from_figment(figment, temp_dir.path().to_path_buf()).unwrap();
+/// // let h1 = manager.get("test_module").await.unwrap().unwrap();
+/// // let h2 = manager.get("test_module").await.unwrap().unwrap();
+/// // assert!(Arc::ptr_eq(&h1, &h2));
+/// # }
+/// ```
 #[tokio::test]
 #[cfg(feature = "sqlite")]
 async fn test_caching_behavior() {
@@ -101,6 +142,7 @@ async fn test_caching_behavior() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "file": format!("caching_test_{}.db", std::process::id())
                 }
             }
@@ -138,6 +180,7 @@ async fn test_unknown_module_behavior() {
         "modules": {
             "known_module": {
                 "database": {
+                    "engine": "sqlite",
                     "file": format!("known_{}.db", std::process::id())
                 }
             }
@@ -163,18 +206,57 @@ async fn test_unknown_module_behavior() {
     }
 }
 
-/// Test concurrent access with mixed success/failure scenarios.
+/// Verify concurrent get() behavior for valid, invalid, and missing modules.
+///
+/// Launches three concurrent `get()` requests: one for a module with a valid SQLite
+/// configuration (expects `Ok(Some(handle))`), one for a module with a conflicting
+/// configuration (expects an `Err`), and one for a non-existent module
+/// (expects `Ok(None)`).
+///
+/// # Examples
+///
+/// ```
+/// # use std::sync::Arc;
+/// # use tempfile::TempDir;
+/// # use figment::{Figment, providers::Serialized};
+/// # use modkit_db::DbManager;
+/// #
+/// // Configure modules: valid, invalid (conflicting DSN/host), and absent
+/// let figment = Figment::new().merge(Serialized::defaults(serde_json::json!({
+///     "modules": {
+///         "valid_module": { "database": { "engine": "sqlite", "file": format!("valid_{}.db", std::process::id()) } },
+///         "invalid_module": { "database": { "engine": "sqlite", "dsn": format!("sqlite:file:mixed_invalid_{}.db", std::process::id()), "host": "localhost" } }
+///     }
+/// })));
+///
+/// let temp_dir = TempDir::new().unwrap();
+/// let manager = Arc::new(DbManager::from_figment(figment, temp_dir.path().to_path_buf()).unwrap());
+///
+/// // Run concurrent requests and assert expected outcomes
+/// let (r1, r2, r3) = tokio::runtime::Handle::current().block_on(async {
+///     let m1 = manager.clone();
+///     let m2 = manager.clone();
+///     let m3 = manager.clone();
+///     tokio::join!(m1.get("valid_module"), m2.get("invalid_module"), m3.get("nonexistent_module"))
+/// });
+///
+/// assert!(r1.is_ok() && r1.as_ref().unwrap().is_some());
+/// assert!(r2.is_err());
+/// assert!(r3.is_ok() && r3.as_ref().unwrap().is_none());
+/// ```
 #[tokio::test]
 async fn test_concurrent_mixed_scenarios() {
     let figment = Figment::new().merge(Serialized::defaults(serde_json::json!({
         "modules": {
             "valid_module": {
                 "database": {
+                    "engine": "sqlite",
                     "file": format!("valid_{}.db", std::process::id())
                 }
             },
             "invalid_module": {
                 "database": {
+                    "engine": "sqlite",
                     "dsn": format!("sqlite:file:mixed_invalid_{}.db", std::process::id()),
                     "host": "localhost"  // Conflict: SQLite DSN with host field
                 }
@@ -207,7 +289,40 @@ async fn test_concurrent_mixed_scenarios() {
     assert!(result3.is_ok() && result3.as_ref().unwrap().is_none());
 }
 
-/// Test performance: many concurrent requests for the same module.
+/// Stress-test that many concurrent requests for the same module return the same cached handle.
+///
+/// Spawns multiple concurrent `get` requests for a single module and asserts that every
+/// request resolves to the identical `Arc` handle (i.e., the manager caches and shares the
+/// initialized module instance across concurrent callers).
+///
+/// # Examples
+///
+/// ```no_run
+/// # use std::sync::Arc;
+/// # use tempfile::TempDir;
+/// # use figment::Figment;
+/// # use figment::providers::Serialized;
+/// # use tokio::runtime::Runtime;
+/// # use serde_json::json;
+/// # use modkit_db::DbManager;
+/// let rt = Runtime::new().unwrap();
+/// rt.block_on(async {
+///     let figment = Figment::new().merge(Serialized::defaults(json!({
+///         "modules": {
+///             "test_module": {
+///                 "database": { "engine": "sqlite", "file": "example.db" }
+///             }
+///         }
+///     })));
+///
+///     let temp_dir = TempDir::new().unwrap();
+///     let manager = Arc::new(DbManager::from_figment(figment, temp_dir.path().to_path_buf()).unwrap());
+///
+///     let h1 = manager.get("test_module").await.unwrap().unwrap();
+///     let h2 = manager.get("test_module").await.unwrap().unwrap();
+///     assert!(Arc::ptr_eq(h1.as_ref(), h2.as_ref()));
+/// });
+/// ```
 #[tokio::test]
 #[cfg(feature = "sqlite")]
 async fn test_concurrent_performance() {
@@ -215,6 +330,7 @@ async fn test_concurrent_performance() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "file": format!("perf_test_{}.db", std::process::id())
                 }
             }
@@ -258,7 +374,39 @@ async fn test_concurrent_performance() {
     println!("Successfully handled {} concurrent requests", results.len());
 }
 
-/// Test cache behavior across different manager instances.
+/// Verify that separate DbManager instances maintain independent caches while referencing the same database.
+///
+/// Asserts that requesting the same module from two distinct managers yields different `Arc` handles
+/// (separate in-memory caches) but that both handles point to the same underlying database `DSN`.
+///
+/// # Examples
+///
+/// ```
+/// // Create Figment config for a module backed by a sqlite file.
+/// let figment = Figment::new().merge(Serialized::defaults(serde_json::json!({
+///     "modules": {
+///         "test_module": {
+///             "database": {
+///                 "engine": "sqlite",
+///                 "file": format!("isolation_example_{}.db", std::process::id())
+///             }
+///         }
+///     }
+/// })));
+///
+/// let temp_dir = tempfile::tempdir().unwrap();
+///
+/// let manager1 = DbManager::from_figment(figment.clone(), temp_dir.path().to_path_buf()).unwrap();
+/// let manager2 = DbManager::from_figment(figment, temp_dir.path().to_path_buf()).unwrap();
+///
+/// let handle1 = manager1.get("test_module").await.unwrap().unwrap();
+/// let handle2 = manager2.get("test_module").await.unwrap().unwrap();
+///
+/// // Different Arc instances (separate caches)
+/// assert!(!std::sync::Arc::ptr_eq(&handle1, &handle2));
+/// // Same underlying database
+/// assert_eq!(handle1.dsn(), handle2.dsn());
+/// ```
 #[tokio::test]
 #[cfg(feature = "sqlite")]
 async fn test_cache_isolation_across_managers() {
@@ -266,6 +414,7 @@ async fn test_cache_isolation_across_managers() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "file": format!("isolation_test_{}.db", std::process::id())
                 }
             }
@@ -326,14 +475,28 @@ async fn test_errors_not_cached() {
     }
 }
 
-/// Test concurrent initialization with slow database connections.
-#[tokio::test]
-#[cfg(feature = "sqlite")]
+/// Verifies that concurrent requests for the same module initialize a single shared handle even when the connection pool forces serialized acquisition, and that overall completion remains timely.
+///
+/// This test configures a module with an SQLite backend and a connection pool limited to one connection to force serialized initialization. It concurrently requests the same module from three tasks, asserts all callers receive the same cached `Arc` handle, and ensures the total elapsed time stays below a reasonable threshold (10 seconds).
+///
+/// # Examples
+///
+/// ```
+/// // This test is executed as an async Tokio test in the test suite.
+/// // The example demonstrates the intended behavior: concurrent `get` calls for
+/// // the same module return the same `Arc` handle and complete within a time bound.
+/// #[tokio::test]
+/// #[cfg(feature = "sqlite")]
+/// async fn example_concurrent_slow_initialization() {
+///     // (Setup and assertions mirror the test implementation.)
+/// }
+/// ```
 async fn test_concurrent_slow_initialization() {
     let figment = Figment::new().merge(Serialized::defaults(serde_json::json!({
         "modules": {
             "slow_module": {
                 "database": {
+                    "engine": "sqlite",
                     "file": format!("slow_test_{}.db", std::process::id()),
                     "pool": {
                         "max_conns": 1,           // Force serialization

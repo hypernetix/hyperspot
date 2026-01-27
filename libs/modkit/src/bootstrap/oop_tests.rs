@@ -354,11 +354,27 @@ mod database_merge {
     use super::*;
     use serde_json::json;
 
+    /// Creates a GlobalDatabaseConfig preconfigured with a single `sqlite_main` server.
+    ///
+    /// The returned config contains a `sqlite_main` DbConnConfig with the SQLite engine set,
+    /// `WAL=true` in `params`, a connection pool `max_conns` of 5, and `auto_provision` enabled.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let cfg = create_global_db_config();
+    /// let server = cfg.servers.get("sqlite_main").expect("sqlite_main present");
+    /// assert!(matches!(server.engine, Some(modkit_db::config::DbEngineCfg::Sqlite)));
+    /// assert_eq!(server.params.as_ref().and_then(|p| p.get("WAL")).map(String::as_str), Some("true"));
+    /// assert_eq!(server.pool.as_ref().and_then(|p| p.max_conns), Some(5));
+    /// assert_eq!(cfg.auto_provision, Some(true));
+    /// ```
     fn create_global_db_config() -> GlobalDatabaseConfig {
         let mut servers = HashMap::new();
         servers.insert(
             "sqlite_main".to_owned(),
             DbConnConfig {
+                engine: Some(modkit_db::config::DbEngineCfg::Sqlite),
                 server: None,
                 dsn: None,
                 host: None,
@@ -385,8 +401,22 @@ mod database_merge {
         }
     }
 
+    /// Create a DbConnConfig configured for a module: uses the `sqlite_main` server, `Sqlite` engine,
+    /// and `module.db` file; all other connection fields are unset.
+    ///
+    /// The returned value is suitable as a module-local database reference in tests and examples.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let cfg = create_module_db_config();
+    /// assert_eq!(cfg.server.as_deref(), Some("sqlite_main"));
+    /// assert_eq!(cfg.file.as_deref(), Some("module.db"));
+    /// assert!(matches!(cfg.engine, Some(modkit_db::config::DbEngineCfg::Sqlite)));
+    /// ```
     fn create_module_db_config() -> DbConnConfig {
         DbConnConfig {
+            engine: Some(modkit_db::config::DbEngineCfg::Sqlite),
             server: Some("sqlite_main".to_owned()),
             dsn: None,
             host: None,
@@ -548,6 +578,41 @@ mod database_merge {
         assert!(matches!(result.unwrap(), DbOptions::Manager(_)));
     }
 
+    /// Verifies that a local global database configuration merges into the rendered master's global configuration,
+    /// resulting in a manager-style `DbOptions`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// // Creates a rendered master config and a local AppConfig that adds a new global DB server,
+    /// // then ensures build_merged_db_options returns DbOptions::Manager.
+    /// let home_dir = std::env::temp_dir().join("modkit_test_global_merge");
+    /// let _ = std::fs::create_dir_all(&home_dir);
+    /// let rendered_db = RenderedDbConfig::new(Some(create_global_db_config()), Some(create_module_db_config()));
+    /// let mut local_config = minimal_app_config();
+    /// let mut new_servers = std::collections::HashMap::new();
+    /// new_servers.insert(
+    ///     "new_server".to_owned(),
+    ///     DbConnConfig {
+    ///         engine: Some(modkit_db::config::DbEngineCfg::Sqlite),
+    ///         server: None,
+    ///         dsn: Some("sqlite://new.db".to_owned()),
+    ///         host: None,
+    ///         port: None,
+    ///         user: None,
+    ///         password: None,
+    ///         dbname: None,
+    ///         file: None,
+    ///         path: None,
+    ///         params: None,
+    ///         pool: None,
+    ///     },
+    /// );
+    /// local_config.database = Some(GlobalDatabaseConfig { servers: new_servers, auto_provision: None });
+    /// let result = build_merged_db_options(&home_dir, "test_module", Some(&rendered_db), &local_config);
+    /// assert!(result.is_ok());
+    /// assert!(matches!(result.unwrap(), DbOptions::Manager(_)));
+    /// ```
     #[test]
     fn test_rendered_db_config_local_global_merges_with_master() {
         // Local global database config merges with master's global config
@@ -565,6 +630,7 @@ mod database_merge {
         new_servers.insert(
             "new_server".to_owned(),
             DbConnConfig {
+                engine: Some(modkit_db::config::DbEngineCfg::Sqlite),
                 server: None,
                 dsn: Some("sqlite://new.db".to_owned()),
                 host: None,

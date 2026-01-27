@@ -18,6 +18,7 @@ async fn test_precedence_module_fields_override_server() {
             servers.insert(
                 "sqlite_server".to_owned(),
                 DbConnConfig {
+                    engine: Some(DbEngineCfg::Sqlite),
                     params: Some({
                         let mut params = HashMap::new();
                         params.insert("synchronous".to_owned(), "FULL".to_owned());
@@ -38,6 +39,7 @@ async fn test_precedence_module_fields_override_server() {
                 "test_module": {
                     "database": {
                         "server": "sqlite_server",
+                        "engine": "sqlite",
                         "file": format!("precedence_test_{}.db", std::process::id()),
                         "params": {
                             "synchronous": "NORMAL",    // Should override server value
@@ -73,7 +75,19 @@ async fn test_precedence_module_fields_override_server() {
     }
 }
 
-/// Test that module DSN completely overrides server DSN using `SQLite`.
+/// Verifies that a module-level DSN fully overrides its referenced server's DSN for SQLite.
+///
+/// This test builds a global configuration with a server DSN and a module configuration that
+/// supplies its own DSN. It asserts that the resulting connection for the module uses the
+/// module-provided DSN and not the server's.
+///
+/// # Examples
+///
+/// ```
+/// // Construct a global config with a server DSN and a module that provides its own DSN.
+/// // Create a DbManager from that configuration and assert the module's handle uses the
+/// // module DSN (contains "module_" and does not contain "server_").
+/// ```
 #[cfg(feature = "sqlite")]
 #[tokio::test]
 async fn test_precedence_module_dsn_override_server() {
@@ -87,6 +101,7 @@ async fn test_precedence_module_dsn_override_server() {
             servers.insert(
                 "sqlite_server".to_owned(),
                 DbConnConfig {
+                    engine: Some(DbEngineCfg::Sqlite),
                     dsn: Some(format!("sqlite://{}?synchronous=FULL", server_db.display())),
                     ..Default::default()
                 },
@@ -102,6 +117,7 @@ async fn test_precedence_module_dsn_override_server() {
             "test_module": {
                 "database": {
                     "server": "sqlite_server",
+                    "engine": "sqlite",
                     "dsn": format!("sqlite://{}?synchronous=NORMAL", module_db.display())  // Should completely override server DSN
                 }
             }
@@ -247,8 +263,16 @@ async fn test_conflict_detection_nonsqlite_dsn_with_sqlite_fields() {
     }
 }
 
-/// Test graceful handling when both file and path are specified.
-/// The system should prioritize 'file' (converted to absolute path) and ignore 'path'.
+/// Ensure a module's `file` setting takes precedence over `path` and is used as the module's database file (converted to an absolute path).
+///
+/// The manager must ignore a configured `path` when `file` is present and produce a DSN that references the module's file, not the ignored path.
+///
+/// # Examples
+///
+/// ```
+/// // Given a module configured with both `file = "module.db"` and `path = "/ignored/abs.db"`,
+/// // the generated DSN should reference "module.db" (as an absolute path) and must not contain "/ignored/abs.db".
+/// ```
 #[cfg(feature = "sqlite")]
 #[tokio::test]
 async fn test_file_and_path_handling() {
@@ -261,6 +285,7 @@ async fn test_file_and_path_handling() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "file": format!("file_path_test_{}.db", std::process::id()),            // Should be used (converted to absolute)
                     "path": absolute_path         // Should be ignored in favor of 'file'
                 }

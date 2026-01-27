@@ -133,13 +133,52 @@ impl DbManager {
         Ok(Some(Arc::new(handle)))
     }
 
-    /// Merge global server configuration into module configuration.
-    /// Module fields override server fields. Params maps are merged with module taking precedence.
+    /// Merge a global server database configuration into a module configuration, with the module taking precedence.
+    ///
+    /// The returned `DbConnConfig` uses values from `module_cfg` when present; otherwise it inherits corresponding values from `server_cfg`. `engine`, `dsn`, `host`, `port`, `user`, `password`, `dbname`, and `pool` follow this precedence. When both configs provide `params` maps, the maps are merged so that server entries are included first and module entries override conflicting keys. The `file`, `path`, and `server` fields are considered module-only and are not merged.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::collections::HashMap;
+    ///
+    /// let mut server_params = HashMap::new();
+    /// server_params.insert("timeout".to_string(), "30".to_string());
+    ///
+    /// let mut module_params = HashMap::new();
+    /// module_params.insert("timeout".to_string(), "10".to_string());
+    /// module_params.insert("mode".to_string(), "read".to_string());
+    ///
+    /// let server = DbConnConfig {
+    ///     host: Some("server.example".into()),
+    ///     params: Some(server_params),
+    ///     ..Default::default()
+    /// };
+    ///
+    /// let module = DbConnConfig {
+    ///     dsn: None,
+    ///     host: None,
+    ///     params: Some(module_params),
+    ///     ..Default::default()
+    /// };
+    ///
+    /// let merged = merge_server_into_module(module, server);
+    ///
+    /// // module overrides server for "timeout"
+    /// assert_eq!(merged.params.unwrap().get("timeout").map(String::as_str), Some("10"));
+    /// // server value is preserved when module doesn't provide it
+    /// assert_eq!(merged.host.as_deref(), Some("server.example"));
+    /// ```
     fn merge_server_into_module(
         mut module_cfg: DbConnConfig,
         server_cfg: DbConnConfig,
     ) -> DbConnConfig {
         // Start with server config as base, then apply module overrides
+
+        // Engine: module takes precedence (important for field-based configs)
+        if module_cfg.engine.is_none() {
+            module_cfg.engine = server_cfg.engine;
+        }
 
         // DSN: module takes precedence
         if module_cfg.dsn.is_none() {

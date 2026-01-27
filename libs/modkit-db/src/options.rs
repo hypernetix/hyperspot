@@ -1,6 +1,6 @@
 //! Database connection options and configuration types.
 
-use crate::config::{DbConnConfig, GlobalDatabaseConfig, PoolCfg};
+use crate::config::{DbConnConfig, DbEngineCfg, GlobalDatabaseConfig, PoolCfg};
 use crate::{DbError, DbHandle, Result};
 use thiserror::Error;
 
@@ -255,11 +255,38 @@ pub mod sqlite_pragma {
     }
 }
 
-/// Build a database handle from configuration.
-/// This is the unified entry point for building database handles from configuration.
+/// Build a DbHandle from a DbConnConfig by resolving environment variables, validating
+/// configuration, selecting the engine, and establishing the connection.
+///
+/// This function expands environment variables in the DSN, password, and parameter values,
+/// ensures configuration consistency, determines the target database engine (SQLite, PostgreSQL,
+/// or MySQL), constructs engine-specific connection options, applies pool settings, logs the
+/// connection attempt with credentials redacted, and then opens the connection.
+///
+/// # Returns
+///
+/// An established `DbHandle` representing the connected database.
 ///
 /// # Errors
-/// Returns an error if the database connection fails or configuration is invalid.
+///
+/// Returns an error if configuration validation fails, required parameters are missing or
+/// inconsistent, environment-variable expansion fails, or the underlying connection attempt fails.
+///
+/// # Examples
+///
+/// ```
+/// # use crate::config::DbConnConfig;
+/// # use crate::options::build_db_handle;
+/// # async fn doc_example() -> anyhow::Result<()> {
+/// let cfg = DbConnConfig {
+///     dsn: Some("sqlite::memory:".into()),
+///     ..Default::default()
+/// };
+/// let handle = build_db_handle(cfg, None).await?;
+/// // use `handle`...
+/// # Ok(())
+/// # }
+/// ```
 pub async fn build_db_handle(
     mut cfg: DbConnConfig,
     _global: Option<&GlobalDatabaseConfig>,
@@ -284,19 +311,11 @@ pub async fn build_db_handle(
     // Validate configuration for conflicts
     validate_config_consistency(&cfg)?;
 
-    // Determine database type and build connection options
-    let is_sqlite = cfg.file.is_some()
-        || cfg.path.is_some()
-        || cfg
-            .dsn
-            .as_ref()
-            .is_some_and(|dsn| dsn.starts_with("sqlite"))
-        || (cfg.server.is_none() && cfg.dsn.is_none());
-
-    let connect_options = if is_sqlite {
-        build_sqlite_options(&cfg)?
-    } else {
-        build_server_options(&cfg)?
+    // Determine database engine and build connection options.
+    let engine = determine_engine(&cfg)?;
+    let connect_options = match engine {
+        DbEngineCfg::Sqlite => build_sqlite_options(&cfg)?,
+        DbEngineCfg::Postgres | DbEngineCfg::Mysql => build_server_options(&cfg, engine)?,
     };
 
     // Build pool configuration
@@ -304,11 +323,7 @@ pub async fn build_db_handle(
 
     // Log connection attempt (without credentials)
     let log_dsn = redact_credentials_in_dsn(cfg.dsn.as_deref());
-    tracing::debug!(
-        dsn = log_dsn,
-        is_sqlite = is_sqlite,
-        "Building database connection"
-    );
+    tracing::debug!(dsn = log_dsn, engine = ?engine, "Building database connection");
 
     // Connect to database
     let handle = connect_options.connect(pool_cfg).await?;
@@ -316,7 +331,126 @@ pub async fn build_db_handle(
     Ok(handle)
 }
 
-/// Build `SQLite` connection options from configuration.
+/// Resolve the database engine from a connection configuration, validating consistency with any provided DSN.
+///
+/// If `cfg.engine` is set it is returned after verifying that a provided `cfg.dsn`, if any, implies the same engine.
+/// If `cfg.engine` is not set, the engine is inferred from `cfg.dsn`.
+///
+/// # Returns
+///
+/// `Ok(DbEngineCfg)` with the resolved engine.
+/// `Err(DbError::ConfigConflict)` when an explicit `engine` conflicts with the DSN scheme.
+/// `Err(DbError::InvalidParameter)` when neither `engine` nor `dsn` provide enough information to determine the engine.
+///
+/// # Examples
+///
+/// ```
+/// use crate::config::{DbConnConfig, DbEngineCfg};
+/// use crate::options::determine_engine;
+///
+/// // Explicit engine
+/// let cfg = DbConnConfig { engine: Some(DbEngineCfg::Sqlite), dsn: None, ..Default::default() };
+/// assert_eq!(determine_engine(&cfg).unwrap(), DbEngineCfg::Sqlite);
+///
+/// // Infer from DSN
+/// let cfg = DbConnConfig { engine: None, dsn: Some("postgres://user@localhost/db".to_owned()), ..Default::default() };
+/// assert_eq!(determine_engine(&cfg).unwrap(), DbEngineCfg::Postgres);
+/// ```
+fn determine_engine(cfg: &DbConnConfig) -> Result<DbEngineCfg> {
+    // If both engine and DSN are provided, validate they don't conflict.
+    // (We do the same check in validate_config_consistency, but keep this here to ensure
+    // determine_engine() never returns a misleading value.)
+    if let Some(engine) = cfg.engine {
+        if let Some(dsn) = cfg.dsn.as_deref() {
+            let inferred = engine_from_dsn(dsn)?;
+            if inferred != engine {
+                return Err(DbError::ConfigConflict(format!(
+                    "engine='{engine:?}' conflicts with DSN scheme inferred as '{inferred:?}'"
+                )));
+            }
+        }
+        return Ok(engine);
+    }
+
+    // If DSN is not provided, engine is required.
+    //
+    // Rationale:
+    // - Without DSN we cannot reliably distinguish Postgres vs MySQL.
+    // - For SQLite we also want explicit intent (file/path alone is not a transport selector).
+    if cfg.dsn.is_none() {
+        return Err(DbError::InvalidParameter(
+            "Missing 'engine': required when 'dsn' is not provided".to_owned(),
+        ));
+    }
+
+    // Infer from DSN scheme when present.
+    if let Some(dsn) = cfg.dsn.as_deref() {
+        return engine_from_dsn(dsn);
+    }
+
+    // No usable hints: configuration is incomplete.
+    Err(DbError::InvalidParameter(
+        "Cannot infer database engine: set 'engine' or provide 'dsn' (or sqlite 'file/path')"
+            .to_owned(),
+    ))
+}
+
+/// Infer the database engine from a DSN string.
+///
+/// Maps common DSN scheme prefixes to the corresponding `DbEngineCfg`.
+///
+/// # Returns
+///
+/// `DbEngineCfg::Postgres` for DSNs starting with `postgres://` or `postgresql://`,
+/// `DbEngineCfg::Mysql` for DSNs starting with `mysql://`,
+/// `DbEngineCfg::Sqlite` for DSNs starting with `sqlite:` or `sqlite://`.
+/// Returns `DbError::UnknownDsn` if the DSN scheme is not recognized.
+///
+/// # Examples
+///
+/// ```
+/// assert_eq!(engine_from_dsn("postgres://user@localhost/db").unwrap(), DbEngineCfg::Postgres);
+/// assert_eq!(engine_from_dsn("mysql://localhost/db").unwrap(), DbEngineCfg::Mysql);
+/// assert_eq!(engine_from_dsn("sqlite:memory").unwrap(), DbEngineCfg::Sqlite);
+/// assert!(engine_from_dsn("unsupported://x").is_err());
+/// ```
+fn engine_from_dsn(dsn: &str) -> Result<DbEngineCfg> {
+    let s = dsn.trim_start();
+    if s.starts_with("postgres://") || s.starts_with("postgresql://") {
+        Ok(DbEngineCfg::Postgres)
+    } else if s.starts_with("mysql://") {
+        Ok(DbEngineCfg::Mysql)
+    } else if s.starts_with("sqlite:") || s.starts_with("sqlite://") {
+        Ok(DbEngineCfg::Sqlite)
+    } else {
+        Err(DbError::UnknownDsn(dsn.to_owned()))
+    }
+}
+
+/// Build SQLite connection options from the provided database configuration.
+///
+/// This resolves the SQLite file path from `cfg.dsn`, `cfg.path`, or `cfg.file`, ensures the
+/// parent directory exists, applies any whitelisted PRAGMA parameters from `cfg.params`, and
+/// returns a `DbConnectOptions::Sqlite` configured to create the database file if missing.
+///
+/// Returns `DbConnectOptions::Sqlite` on success. May return an `InvalidParameter` error if no
+/// valid path/DSN/file is provided or if a file path was expected to be resolved by the manager,
+/// I/O errors from creating directories, or SQLite PRAGMA validation errors when applying params.
+///
+/// # Examples
+///
+/// ```
+/// use crate::config::DbConnConfig;
+/// // Example: provide a memory DSN (no filesystem operations)
+/// let cfg = DbConnConfig {
+///     dsn: Some("sqlite::memory:".to_string()),
+///     path: None,
+///     file: None,
+///     params: None,
+///     ..Default::default()
+/// };
+/// let opts = build_sqlite_options(&cfg).expect("should build sqlite options");
+/// ```
 #[cfg(feature = "sqlite")]
 fn build_sqlite_options(cfg: &DbConnConfig) -> Result<DbConnectOptions> {
     let db_path = if let Some(dsn) = &cfg.dsn {
@@ -351,26 +485,68 @@ fn build_sqlite_options(cfg: &DbConnConfig) -> Result<DbConnectOptions> {
     Ok(DbConnectOptions::Sqlite(opts))
 }
 
+/// Return an error when attempting to build SQLite connection options while the SQLite feature is not enabled.
+///
+/// # Errors
+///
+/// Returns `DbError::FeatureDisabled("SQLite feature not enabled")` to indicate SQLite support was not compiled into the binary.
+///
+/// # Examples
+///
+/// ```
+/// # use crate::options::build_sqlite_options;
+/// # use crate::{DbConnConfig, DbError};
+/// let cfg = DbConnConfig::default();
+/// let res = build_sqlite_options(&cfg);
+/// assert!(matches!(res, Err(DbError::FeatureDisabled(_))));
+/// ```
 #[cfg(not(feature = "sqlite"))]
 fn build_sqlite_options(_: &DbConnConfig) -> Result<DbConnectOptions> {
     Err(DbError::FeatureDisabled("SQLite feature not enabled"))
 }
 
-/// Build server-based connection options from configuration.
-fn build_server_options(cfg: &DbConnConfig) -> Result<DbConnectOptions> {
-    // Determine the database type from DSN or default to PostgreSQL
-    let scheme = if let Some(dsn) = &cfg.dsn {
-        let parsed = url::Url::parse(dsn)?;
-        parsed.scheme().to_owned()
-    } else {
-        "postgresql".to_owned()
-    };
-
-    match scheme.as_str() {
-        "postgresql" | "postgres" => {
+/// Build connection options for a server-based database engine (Postgres or MySQL).
+///
+/// Parses the optional DSN in `cfg` when present, then applies explicit overrides from
+/// individual fields (host, port, user, password, dbname). If no DSN is provided, a
+/// `dbname` is required. Any `params` present are added as driver options. Returns an
+/// engine-specific `DbConnectOptions` when the corresponding feature is enabled; returns
+/// a `FeatureDisabled` error when the requested engine's feature is not compiled in.
+/// Calling this function with `DbEngineCfg::Sqlite` is an error.
+///
+/// # Parameters
+///
+/// - `_cfg` — connection configuration containing optional `dsn`, host, port, user, password,
+///   dbname and params.
+/// - `engine` — the resolved database engine to build options for (Postgres or MySQL).
+///
+/// # Returns
+///
+/// `DbConnectOptions` configured for the requested engine on success; an error describing
+/// invalid parameters or missing features otherwise.
+///
+/// # Examples
+///
+/// ```
+/// # use crate::config::DbConnConfig;
+/// # use crate::config::DbEngineCfg;
+/// # use crate::options::{build_server_options, DbConnectOptions};
+/// let cfg = DbConnConfig {
+///     dsn: Some("postgres://user:pass@localhost/mydb".into()),
+///     ..Default::default()
+/// };
+/// let opts = build_server_options(&cfg, DbEngineCfg::Postgres).unwrap();
+/// match opts {
+///     DbConnectOptions::Postgres(_) => (),
+///     _ => panic!("expected Postgres options"),
+/// }
+/// ```
+fn build_server_options(_cfg: &DbConnConfig, engine: DbEngineCfg) -> Result<DbConnectOptions> {
+    match engine {
+        DbEngineCfg::Postgres => {
             #[cfg(feature = "pg")]
             {
-                let mut opts = if let Some(dsn) = &cfg.dsn {
+                let mut opts = if let Some(dsn) = &_cfg.dsn {
                     dsn.parse::<sea_orm::sqlx::postgres::PgConnectOptions>()
                         .map_err(|e| DbError::InvalidParameter(e.to_string()))?
                 } else {
@@ -378,28 +554,28 @@ fn build_server_options(cfg: &DbConnConfig) -> Result<DbConnectOptions> {
                 };
 
                 // Override with individual fields
-                if let Some(host) = &cfg.host {
+                if let Some(host) = &_cfg.host {
                     opts = opts.host(host);
                 }
-                if let Some(port) = cfg.port {
+                if let Some(port) = _cfg.port {
                     opts = opts.port(port);
                 }
-                if let Some(user) = &cfg.user {
+                if let Some(user) = &_cfg.user {
                     opts = opts.username(user);
                 }
-                if let Some(password) = &cfg.password {
+                if let Some(password) = &_cfg.password {
                     opts = opts.password(password);
                 }
-                if let Some(dbname) = &cfg.dbname {
+                if let Some(dbname) = &_cfg.dbname {
                     opts = opts.database(dbname);
-                } else if cfg.dsn.is_none() {
+                } else if _cfg.dsn.is_none() {
                     return Err(DbError::InvalidParameter(
                         "dbname is required for PostgreSQL connections".to_owned(),
                     ));
                 }
 
                 // Apply additional parameters
-                if let Some(params) = &cfg.params {
+                if let Some(params) = &_cfg.params {
                     for (key, value) in params {
                         opts = opts.options([(key.as_str(), value.as_str())]);
                     }
@@ -412,10 +588,10 @@ fn build_server_options(cfg: &DbConnConfig) -> Result<DbConnectOptions> {
                 Err(DbError::FeatureDisabled("PostgreSQL feature not enabled"))
             }
         }
-        "mysql" => {
+        DbEngineCfg::Mysql => {
             #[cfg(feature = "mysql")]
             {
-                let mut opts = if let Some(dsn) = &cfg.dsn {
+                let mut opts = if let Some(dsn) = &_cfg.dsn {
                     dsn.parse::<sea_orm::sqlx::mysql::MySqlConnectOptions>()
                         .map_err(|e| DbError::InvalidParameter(e.to_string()))?
                 } else {
@@ -423,21 +599,21 @@ fn build_server_options(cfg: &DbConnConfig) -> Result<DbConnectOptions> {
                 };
 
                 // Override with individual fields
-                if let Some(host) = &cfg.host {
+                if let Some(host) = &_cfg.host {
                     opts = opts.host(host);
                 }
-                if let Some(port) = cfg.port {
+                if let Some(port) = _cfg.port {
                     opts = opts.port(port);
                 }
-                if let Some(user) = &cfg.user {
+                if let Some(user) = &_cfg.user {
                     opts = opts.username(user);
                 }
-                if let Some(password) = &cfg.password {
+                if let Some(password) = &_cfg.password {
                     opts = opts.password(password);
                 }
-                if let Some(dbname) = &cfg.dbname {
+                if let Some(dbname) = &_cfg.dbname {
                     opts = opts.database(dbname);
-                } else if cfg.dsn.is_none() {
+                } else if _cfg.dsn.is_none() {
                     return Err(DbError::InvalidParameter(
                         "dbname is required for MySQL connections".to_owned(),
                     ));
@@ -450,9 +626,9 @@ fn build_server_options(cfg: &DbConnConfig) -> Result<DbConnectOptions> {
                 Err(DbError::FeatureDisabled("MySQL feature not enabled"))
             }
         }
-        _ => Err(DbError::InvalidParameter(format!(
-            "Unsupported database scheme: {scheme}"
-        ))),
+        DbEngineCfg::Sqlite => Err(DbError::InvalidParameter(
+            "build_server_options called with sqlite engine".to_owned(),
+        )),
     }
 }
 
@@ -512,8 +688,38 @@ fn resolve_password(password: &str) -> Result<String> {
     }
 }
 
-/// Validate configuration for consistency and detect conflicts.
+/// Validate a database connection configuration for mutually incompatible or conflicting fields.
+///
+/// Performs checks such as:
+/// - Ensuring an explicit `engine` (when present) is consistent with a provided DSN.
+/// - Rejecting combinations of SQLite-specific fields (file/path) with server fields (host/port/user/password/dbname).
+/// - Rejecting server-based engine values (Postgres/MySQL) together with SQLite file/path fields, and vice versa.
+/// - Rejecting simultaneous `file` and `path` for SQLite.
+///
+/// Returns `Ok(())` when the configuration is consistent. Returns `Err(DbError::ConfigConflict)` for detected conflicts,
+/// or other `DbError` variants propagated from engine inference (for example when the DSN cannot be parsed).
+///
+/// # Examples
+///
+/// ```
+/// use crate::config::DbConnConfig;
+/// use crate::options::validate_config_consistency;
+///
+/// let cfg = DbConnConfig::default();
+/// // Should succeed for an empty/default configuration
+/// validate_config_consistency(&cfg).unwrap();
+/// ```
 fn validate_config_consistency(cfg: &DbConnConfig) -> Result<()> {
+    // Validate engine against DSN if both are present
+    if let (Some(engine), Some(dsn)) = (cfg.engine, cfg.dsn.as_deref()) {
+        let inferred = engine_from_dsn(dsn)?;
+        if inferred != engine {
+            return Err(DbError::ConfigConflict(format!(
+                "engine='{engine:?}' conflicts with DSN scheme inferred as '{inferred:?}'"
+            )));
+        }
+    }
+
     // Check for SQLite vs server engine conflicts
     if let Some(dsn) = &cfg.dsn {
         let is_sqlite_dsn = dsn.starts_with("sqlite");
@@ -559,11 +765,50 @@ fn validate_config_consistency(cfg: &DbConnConfig) -> Result<()> {
         ));
     }
 
+    // If engine explicitly says SQLite, reject server connection fields early (even without DSN)
+    if cfg.engine == Some(DbEngineCfg::Sqlite)
+        && (cfg.host.is_some()
+            || cfg.port.is_some()
+            || cfg.user.is_some()
+            || cfg.password.is_some()
+            || cfg.dbname.is_some())
+    {
+        return Err(DbError::ConfigConflict(
+            "engine=sqlite cannot be used with host/port/user/password/dbname fields".to_owned(),
+        ));
+    }
+
+    // If engine explicitly says server-based, reject sqlite file/path early (even without DSN)
+    if matches!(cfg.engine, Some(DbEngineCfg::Postgres | DbEngineCfg::Mysql))
+        && (cfg.file.is_some() || cfg.path.is_some())
+    {
+        return Err(DbError::ConfigConflict(
+            "engine=postgres/mysql cannot be used with file/path fields".to_owned(),
+        ));
+    }
+
     Ok(())
 }
 
-/// Redact credentials from DSN for logging.
-#[must_use]
+/// Return a DSN string with any password redacted for safe logging.
+///
+/// If `None` is provided, returns `"none"`. If the input contains an `@` and parses as a URL,
+/// the URL password is replaced with `"***"`. If parsing fails for a DSN that contains `@`,
+/// returns `"***"`. If the input does not contain credentials, the original DSN is returned unchanged.
+///
+/// # Examples
+///
+/// ```
+/// assert_eq!(redact_credentials_in_dsn(None), "none");
+/// assert_eq!(
+///     redact_credentials_in_dsn(Some("postgres://user:secret@localhost/db")),
+///     "postgres://user:***@localhost/db"
+/// );
+/// assert_eq!(
+///     redact_credentials_in_dsn(Some("sqlite::memory:")),
+///     "sqlite::memory:"
+/// );
+/// ```
 pub fn redact_credentials_in_dsn(dsn: Option<&str>) -> String {
     match dsn {
         Some(dsn) if dsn.contains('@') => {
@@ -578,5 +823,91 @@ pub fn redact_credentials_in_dsn(dsn: Option<&str>) -> String {
         }
         Some(dsn) => dsn.to_owned(),
         None => "none".to_owned(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn determine_engine_requires_engine_when_dsn_missing() {
+        let cfg = DbConnConfig {
+            dsn: None,
+            engine: None,
+            ..Default::default()
+        };
+
+        let err = determine_engine(&cfg).unwrap_err();
+        assert!(matches!(err, DbError::InvalidParameter(_)));
+        assert!(err.to_string().contains("Missing 'engine'"));
+    }
+
+    #[test]
+    fn determine_engine_infers_from_dsn_when_engine_missing() {
+        let cfg = DbConnConfig {
+            engine: None,
+            dsn: Some("sqlite::memory:".to_owned()),
+            ..Default::default()
+        };
+
+        let engine = determine_engine(&cfg).unwrap();
+        assert_eq!(engine, DbEngineCfg::Sqlite);
+    }
+
+    #[test]
+    fn engine_and_dsn_match_ok() {
+        let cases = [
+            (DbEngineCfg::Postgres, "postgres://user:pass@localhost/db"),
+            (DbEngineCfg::Postgres, "postgresql://user:pass@localhost/db"),
+            (DbEngineCfg::Mysql, "mysql://user:pass@localhost/db"),
+            (DbEngineCfg::Sqlite, "sqlite::memory:"),
+            (DbEngineCfg::Sqlite, "sqlite:///tmp/test.db"),
+        ];
+
+        for (engine, dsn) in cases {
+            let cfg = DbConnConfig {
+                engine: Some(engine),
+                dsn: Some(dsn.to_owned()),
+                ..Default::default()
+            };
+            validate_config_consistency(&cfg).unwrap();
+            assert_eq!(determine_engine(&cfg).unwrap(), engine);
+        }
+    }
+
+    #[test]
+    fn engine_and_dsn_mismatch_is_error() {
+        let cases = [
+            (DbEngineCfg::Postgres, "mysql://user:pass@localhost/db"),
+            (DbEngineCfg::Mysql, "postgres://user:pass@localhost/db"),
+            (DbEngineCfg::Sqlite, "postgresql://user:pass@localhost/db"),
+        ];
+
+        for (engine, dsn) in cases {
+            let cfg = DbConnConfig {
+                engine: Some(engine),
+                dsn: Some(dsn.to_owned()),
+                ..Default::default()
+            };
+
+            let err = validate_config_consistency(&cfg).unwrap_err();
+            assert!(matches!(err, DbError::ConfigConflict(_)));
+        }
+    }
+
+    #[test]
+    fn unknown_dsn_is_error() {
+        let cfg = DbConnConfig {
+            engine: None,
+            dsn: Some("unknown://localhost/db".to_owned()),
+            ..Default::default()
+        };
+
+        // Consistency validation doesn't validate unknown schemes unless `engine` is set,
+        // but engine determination must fail.
+        validate_config_consistency(&cfg).unwrap();
+        let err = determine_engine(&cfg).unwrap_err();
+        assert!(matches!(err, DbError::UnknownDsn(_)));
     }
 }

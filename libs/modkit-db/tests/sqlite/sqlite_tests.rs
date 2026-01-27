@@ -6,7 +6,16 @@ use figment::{Figment, providers::Serialized};
 use modkit_db::{DbError, manager::DbManager};
 use tempfile::TempDir;
 
-/// Test relative path resolution.
+/// Verifies that a SQLite database file specified by a relative path is created under the module's directory.
+///
+/// This test configures a module with an SQLite file name (relative path), obtains a DbManager rooted at a temporary
+/// directory, opens the database for the module, and asserts the database file exists at `temp_dir/test_module/{file}`.
+///
+/// # Examples
+///
+/// ```
+/// // Configure a module with a relative sqlite file and ensure the file is created under the module directory.
+/// ```
 #[tokio::test]
 #[cfg(feature = "sqlite")]
 async fn test_sqlite_relative_path_resolution() {
@@ -17,6 +26,7 @@ async fn test_sqlite_relative_path_resolution() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "file": db_filename
                 }
             }
@@ -53,6 +63,7 @@ async fn test_sqlite_absolute_path() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "path": db_path
                 }
             }
@@ -122,7 +133,19 @@ async fn test_pragma_precedence() {
     }
 }
 
-/// Test invalid PRAGMA values.
+/// Verifies that invalid SQLite PRAGMA parameter values are rejected with `InvalidSqlitePragma`.
+///
+/// Connects using a module configuration where `params.synchronous` is set to an invalid value
+/// and asserts that `DbManager::get` returns `Err(DbError::InvalidSqlitePragma)` with `key == "synchronous"`
+/// and an explanatory message mentioning allowed values.
+///
+/// # Examples
+///
+/// ```no_run
+/// // Example (conceptual): configure a module with an invalid synchronous PRAGMA and expect an error.
+/// // let result = manager.get("test_module").await;
+/// // assert!(matches!(result, Err(DbError::InvalidSqlitePragma{ key, .. }) if key == "synchronous"));
+/// ```
 #[tokio::test]
 #[cfg(feature = "sqlite")]
 async fn test_invalid_pragma_values() {
@@ -133,6 +156,7 @@ async fn test_invalid_pragma_values() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "file": db_filename,
                     "params": {
                         "synchronous": "INVALID_VALUE"
@@ -166,6 +190,7 @@ async fn test_unknown_pragma_parameters() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "file": db_filename,
                     "params": {
                         "unknown_pragma": "some_value"
@@ -201,6 +226,7 @@ async fn test_auto_provision_creates_directories() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "path": nested_path.join("test.db")
                 }
             }
@@ -229,7 +255,29 @@ async fn test_auto_provision_creates_directories() {
     }
 }
 
-/// Test auto-provision disabled (should fail if directories don't exist).
+/// Verifies that connecting to a SQLite database fails when auto_provision is disabled and the required directory hierarchy for the database file does not exist.
+///
+/// # Examples
+///
+/// ```no_run
+/// # use figment::Figment;
+/// # use serde_json::json;
+/// # use tempfile::TempDir;
+/// # async fn example() {
+/// let figment = Figment::new().merge(Serialized::defaults(json!({
+///     "database": { "auto_provision": false },
+///     "modules": {
+///         "test_module": {
+///             "database": { "engine": "sqlite", "file": "nested/directories/test.db" }
+///         }
+///     }
+/// })));
+///
+/// let temp_dir = TempDir::new().unwrap();
+/// let manager = DbManager::from_figment(figment, temp_dir.path().to_path_buf()).unwrap();
+/// assert!(manager.get("test_module").await.is_err());
+/// # }
+/// ```
 #[tokio::test]
 #[cfg(feature = "sqlite")]
 async fn test_auto_provision_disabled() {
@@ -240,6 +288,7 @@ async fn test_auto_provision_disabled() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "file": "nested/directories/test.db"  // This requires creating nested dirs
                 }
             }
@@ -275,6 +324,7 @@ async fn test_sqlite_memory_database() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "dsn": "sqlite::memory:"
                 }
             }
@@ -301,7 +351,35 @@ async fn test_sqlite_memory_database() {
     }
 }
 
-/// Test shared memory database with mode=memory.
+/// Verifies that a SQLite shared in-memory database can be opened using a DSN with `mode=memory&cache=shared`.
+///
+/// This test ensures that a DSN targeting a filesystem path with `mode=memory` and `cache=shared` yields a usable
+/// database handle (i.e., `DbManager::get` returns `Some(handle)`).
+///
+/// # Examples
+///
+/// ```ignore
+/// #[tokio::test]
+/// async fn example_shared_memory_dsn() {
+///     let tmp = tempfile::tempdir().unwrap();
+///     let memdb_path = tmp.path().join(format!("memdb_shared_{}", std::process::id()));
+///     let figment = figment::Figment::new().merge(figment::providers::Serialized::defaults(serde_json::json!({
+///         "modules": {
+///             "test_module": {
+///                 "database": {
+///                     "engine": "sqlite",
+///                     "dsn": format!("sqlite://{}?mode=memory&cache=shared", memdb_path.display())
+///                 }
+///             }
+///         }
+///     })));
+///
+///     let manager = DbManager::from_figment(figment, tmp.path().to_path_buf()).unwrap();
+///     let result = manager.get("test_module").await;
+///     let handle = result.unwrap().expect("Expected database handle for shared memory SQLite");
+///     assert!(handle.dsn().contains(":memory:") || handle.dsn().contains("mode=memory"));
+/// }
+/// ```
 #[tokio::test]
 #[cfg(feature = "sqlite")]
 async fn test_sqlite_shared_memory_database() {
@@ -313,6 +391,7 @@ async fn test_sqlite_shared_memory_database() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "dsn": format!(
                         "sqlite://{}?mode=memory&cache=shared",
                         memdb_path.display()
@@ -355,6 +434,7 @@ async fn test_wal_pragma_validation() {
             "modules": {
                 "test_module": {
                     "database": {
+                        "engine": "sqlite",
                         "file": db_filename,
                         "params": {
                             "wal": wal_value
@@ -386,6 +466,7 @@ async fn test_wal_pragma_validation() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "file": db_filename,
                     "params": {
                         "wal": "invalid"
@@ -421,6 +502,7 @@ async fn test_busy_timeout_pragma_validation() {
             "modules": {
                 "test_module": {
                     "database": {
+                        "engine": "sqlite",
                         "file": db_filename,
                         "params": {
                             "busy_timeout": timeout_value
@@ -454,6 +536,7 @@ async fn test_busy_timeout_pragma_validation() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "file": db_filename,
                     "params": {
                         "busy_timeout": "-1000"
@@ -483,6 +566,7 @@ async fn test_busy_timeout_pragma_validation() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "file": db_filename,
                     "params": {
                         "busy_timeout": "not_a_number"

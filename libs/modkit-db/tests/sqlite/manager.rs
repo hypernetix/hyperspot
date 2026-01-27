@@ -14,6 +14,7 @@ async fn test_dbmanager_sqlite_with_file() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "file": db_filename,
                     "params": {
                         "journal_mode": "WAL"
@@ -35,6 +36,40 @@ async fn test_dbmanager_sqlite_with_file() {
     assert_eq!(db_handle.engine(), DbEngine::Sqlite);
 }
 
+/// Ensures a DbManager creates and returns a SQLite handle when a module specifies an absolute database file path.
+///
+/// Configures a temporary home directory and a Figment configuration where the module's database uses the `sqlite` engine
+/// and an absolute `path`. Verifies that `DbManager::get` returns a handle and that the handle's engine is `DbEngine::Sqlite`.
+///
+/// # Examples
+///
+/// ```
+/// #[tokio::test]
+/// async fn example_dbmanager_sqlite_with_path() {
+///     let temp_dir = tempfile::TempDir::new().unwrap();
+///     let db_path = temp_dir.path().join("absolute.db");
+///
+///     let figment = figment::Figment::new().merge(figment::providers::Serialized::defaults(serde_json::json!({
+///         "modules": {
+///             "test_module": {
+///                 "database": {
+///                     "engine": "sqlite",
+///                     "path": db_path,
+///                     "params": { "journal_mode": "DELETE" }
+///                 }
+///             }
+///         }
+///     })));
+///
+///     let home_dir = temp_dir.path().to_path_buf();
+///     let manager = modkit_db::DbManager::from_figment(figment, home_dir).unwrap();
+///
+///     let result = manager.get("test_module").await.unwrap();
+///     assert!(result.is_some());
+///     let db_handle = result.unwrap();
+///     assert_eq!(db_handle.engine(), modkit_db::DbEngine::Sqlite);
+/// }
+/// ```
 #[tokio::test]
 async fn test_dbmanager_sqlite_with_path() {
     let temp_dir = TempDir::new().unwrap();
@@ -44,6 +79,7 @@ async fn test_dbmanager_sqlite_with_path() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "path": db_path,
                     "params": {
                         "journal_mode": "DELETE"
@@ -65,6 +101,38 @@ async fn test_dbmanager_sqlite_with_path() {
     assert_eq!(db_handle.engine(), DbEngine::Sqlite);
 }
 
+/// Verifies that DbManager caches database handles so repeated `get` calls return the same Arc for a module.
+///
+/// This test ensures that requesting the same module twice yields the identical handle instance (pointer-equal),
+/// demonstrating handle caching for SQLite-backed modules.
+///
+/// # Examples
+///
+/// ```
+/// // Configure an in-memory SQLite module
+/// let figment = Figment::new().merge(Serialized::defaults(serde_json::json!({
+///     "modules": {
+///         "test_module": {
+///             "database": {
+///                 "engine": "sqlite",
+///                 "dsn": "sqlite::memory:",
+///                 "params": { "journal_mode": "WAL" }
+///             }
+///         }
+///     }
+/// })));
+///
+/// let temp_dir = TempDir::new().unwrap();
+/// let home_dir = temp_dir.path().to_path_buf();
+/// let manager = DbManager::from_figment(figment, home_dir).unwrap();
+///
+/// // First call creates the handle; second call must return the cached Arc
+/// let result1 = manager.get("test_module").await.unwrap();
+/// let result2 = manager.get("test_module").await.unwrap();
+/// let handle1 = result1.unwrap();
+/// let handle2 = result2.unwrap();
+/// assert!(std::ptr::eq(handle1.as_ref(), handle2.as_ref()));
+/// ```
 #[cfg(feature = "sqlite")]
 #[tokio::test]
 async fn test_dbmanager_caching() {
@@ -72,6 +140,7 @@ async fn test_dbmanager_caching() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "dsn": "sqlite::memory:",
                     "params": {
                         "journal_mode": "WAL"
@@ -110,6 +179,7 @@ async fn test_dbmanager_sqlite_server_without_dsn() {
             servers.insert(
                 "sqlite_server".to_owned(),
                 DbConnConfig {
+                    engine: Some(modkit_db::config::DbEngineCfg::Sqlite),
                     params: Some({
                         let mut params = HashMap::new();
                         params.insert("WAL".to_owned(), "true".to_owned());
@@ -134,6 +204,7 @@ async fn test_dbmanager_sqlite_server_without_dsn() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "server": "sqlite_server",
                     "file": format!("module_{}.db", std::process::id())  // Should be placed in module home directory
                 }
