@@ -10,9 +10,17 @@
 
 #### Product requirements
 
+#### Functional requirements
+
 | FDD ID | Solution short description |
 |--------|----------------------------|
-| `fdd-{module-name}-{kind}-{slug}` | {short description of how to solve} |
+| `fdd-{module-name}-fr-{slug}` | {short description of how to solve} |
+
+#### Non-fcuntional requirements
+
+| FDD ID | Solution short description |
+|--------|----------------------------|
+| `fdd-{module-name}-nfr-{slug}` | {short description of how to solve} |
 
 ### Architecture Layers
 
