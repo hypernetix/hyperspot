@@ -62,8 +62,3 @@ pub struct ProductDto {
 This lint is configured to **deny** by default.
 
 It checks all types with names ending in `Dto` (case-insensitive) in `*/api/rest/*.rs` files.
-
-### See Also
-
-- [DE0201](../de0201_dtos_only_in_api_rest) - DTOs Only in API Rest Folder
-- [DE0203](../de0203_dtos_must_have_serde_derives) - DTOs Must Have Serde Derives

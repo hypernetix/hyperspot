@@ -46,9 +46,3 @@ pub struct User {
 This lint is configured to **deny** by default.
 
 Types matching the pattern `*Dto` (case-insensitive) must be in files matching `*/api/rest/*.rs`.
-
-### See Also
-
-- [DE0202](../de0202_dtos_not_referenced_outside_api) - DTOs Not Referenced Outside API
-- [DE0203](../de0203_dtos_must_have_serde_derives) - DTOs Must Have Serde Derives
-- [DE0204](../de0204_dtos_must_have_toschema_derive) - DTOs Must Have ToSchema Derive
