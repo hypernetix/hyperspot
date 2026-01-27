@@ -1,0 +1,258 @@
+name: PR Governance
+
+on:
+  pull_request:
+    types: [opened]
+
+  schedule:
+    - cron: "0 8 * * *"
+    - cron: "0 13 * * *"
+
+  workflow_dispatch:
+
+permissions:
+  pull-requests: write
+  issues: write
+  contents: read
+
+jobs:
+
+  reviewers-after-10-min:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Wait 5 minutes
+        run: sleep 300
+
+      - name: Check reviewers and notify
+        uses: actions/github-script@v7
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            const title = pr.title.toLowerCase();
+
+            if (title.startsWith("chore: release")) {
+              console.log("Release PR ignored");
+              return;
+            }
+
+            const ignoredReviewers = new Set([
+              "coderabbitai[bot]",
+              "graphite-app[bot]",
+              "dependabot[bot]"
+            ]);
+
+            const prData = await github.rest.pulls.get({
+              owner,
+              repo,
+              pull_number: pr.number
+            });
+
+            const humanReviewers =
+              prData.data.requested_reviewers
+                .map(r => r.login)
+                .filter(login =>
+                  !login.endsWith("[bot]") &&
+                  !ignoredReviewers.has(login)
+                );
+
+            const humanTeams =
+              prData.data.requested_teams || [];
+
+            const hasValidReviewers =
+              humanReviewers.length > 0 ||
+              humanTeams.length > 0;
+
+            if (hasValidReviewers) {
+              console.log("Human reviewers present");
+              return;
+            }
+
+            const prUrl = pr.html_url;
+
+            const message =
+              "PR has no human reviewers assigned 5 minutes after creation.\n\n" +
+              "Repository: " + owner + "/" + repo + "\n" +
+              "PR: #" + pr.number + "\n" +
+              "Title: " + pr.title + "\n" +
+              "URL: " + prUrl + "\n" +
+              prUrl;
+
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: pr.number,
+              body:
+                "PR was created more than 5 minutes ago but has no human reviewers assigned"
+            });
+
+            await fetch(
+              `https://api.telegram.org/bot${
+                process.env.TELEGRAM_BOT_TOKEN
+              }/sendMessage`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  chat_id: process.env.TELEGRAM_CHAT_ID,
+                  text: message
+                })
+              }
+            );
+
+  unanswered-review-check:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Scan unanswered review comments
+        uses: actions/github-script@v7
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            const ignoredBots = new Set([
+              "coderabbitai[bot]",
+              "graphite-app[bot]",
+              "dependabot[bot]"
+            ]);
+
+            const prs = await github.paginate(
+              github.rest.pulls.list,
+              {
+                owner,
+                repo,
+                state: "open",
+                per_page: 100
+              }
+            );
+
+            const fetch = require("node-fetch");
+
+            for (const pr of prs) {
+
+              const title = pr.title.toLowerCase();
+
+              if (title.startsWith("chore: release")) {
+                continue;
+              }
+
+              const reviewData = await github.graphql(
+                `
+                query($owner:String!, $repo:String!, $number:Int!) {
+                  repository(owner:$owner, name:$repo) {
+                    pullRequest(number:$number) {
+                      author { login }
+                      reviewThreads(first:100) {
+                        nodes {
+                          isResolved
+                          comments(last:10) {
+                            totalCount
+                            nodes {
+                              author { login }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+                `,
+                {
+                  owner,
+                  repo,
+                  number: pr.number
+                }
+              );
+
+              const author =
+                reviewData.repository.pullRequest.author?.login;
+              if (!author) {
+                console.log(`Skipping PR #${pr.number} - author is null`);
+                continue;
+              }
+
+              const threads =
+                reviewData.repository.pullRequest.reviewThreads.nodes;
+
+              let unanswered = 0;
+              let unresolvedComments = 0;
+
+              for (const thread of threads) {
+                if (thread.isResolved) continue;
+
+                const comments = thread.comments.nodes;
+                if (!comments.length) continue;
+
+                unresolvedComments += thread.comments.totalCount;
+
+                const lastHuman =
+                  [...comments]
+                    .reverse()
+                    .find(c => {
+                      const login = c.author?.login;
+                      return (
+                        !!login &&
+                        !login.endsWith("[bot]") &&
+                        !ignoredBots.has(login)
+                      );
+                    });
+
+                if (!lastHuman) continue;
+
+                const lastHumanLogin = lastHuman.author.login;
+
+                if (lastHumanLogin !== author) {
+                  unanswered++;
+                }
+              }
+
+              if (unanswered === 0) continue;
+
+              const prUrl = pr.html_url;
+
+              const message =
+                "PR has unanswered reviewer comments.\n\n" +
+                "Repository: " + owner + "/" + repo + "\n" +
+                "PR: #" + pr.number + "\n" +
+                "Title: " + pr.title + "\n" +
+                "Unanswered threads: " + unanswered + "\n" +
+                "Unresolved comments: " + unresolvedComments + "\n" +
+                "URL: " + prUrl + "\n" +
+                prUrl;
+
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: pr.number,
+                body:
+                  "There are unresolved review comments awaiting response.\n\n" +
+                  "Unanswered human review threads: " + unanswered + "\n" +
+                  "Unresolved comments: " + unresolvedComments
+              });
+
+              await fetch(
+                "https://api.telegram.org/bot" +
+                  process.env.TELEGRAM_BOT_TOKEN +
+                  "/sendMessage",
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    chat_id: process.env.TELEGRAM_CHAT_ID,
+                    text: message
+                  })
+                }
+              );
+            }
