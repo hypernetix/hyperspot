@@ -381,6 +381,8 @@ impl MyModule {
 }
 ```
 
+> The `client = ...` attribute validates the trait at compile time and exposes MODULE_NAME, but does not auto-register the client into ClientHub. You must still register it explicitly in your `init()` method using `ctx.client_hub().register::<dyn my_module_sdk::MyModuleApi>(client)`. 
+
 ## Client Registration (in gateway)
 
 ### Register both local and remote clients

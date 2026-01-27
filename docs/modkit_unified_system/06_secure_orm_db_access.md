@@ -218,6 +218,8 @@ pub async fn transfer_user(
 
 ### Raw SQL with SecureConn
 
+> **Note**: This example uses PostgreSQL-specific placeholder syntax (`$1`, `$2`). For MySQL/SQLite, use `?` instead, or use SeaQuery/SeaORM query builders for backend-agnostic queries.
+
 ```rust
 use sea_orm::Statement;
 use sea_orm::FromQueryResult;
@@ -236,6 +238,7 @@ pub async fn get_user_summary(
 ) -> Result<UserSummary, DomainError> {
     let secure_conn = self.db.sea_secure();
     
+    // Postgres-specific placeholders ($1, $2)
     let stmt = Statement::from_sql_and_values(
         secure_conn.conn().get_database_backend(),
         r#"

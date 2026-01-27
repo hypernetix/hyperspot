@@ -127,7 +127,7 @@ impl MyService {
 ```rust
 pub async fn process_with_shutdown(
     cancel: CancellationToken,
-) -> Result<(), DomainError> {
+) -> Result<Vec<TaskResult>, DomainError> {
     let mut tasks = Vec::new();
     
     for item in items {

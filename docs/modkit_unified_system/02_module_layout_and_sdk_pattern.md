@@ -229,6 +229,8 @@ pub struct MyModule {
 }
 ```
 
+Clients must be registered explicitly in `init()`: `ctx.client_hub().register::<dyn my_module_sdk::MyModuleApi>(api)`.
+
 ### Module `src/api/rest/dto.rs` (REST DTOs, OData)
 
 ```rust
