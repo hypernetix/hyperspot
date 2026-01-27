@@ -4,7 +4,7 @@
 
 **Status**: Accepted
 
-**ADR ID**: `fdd-todo-app-adr-local-storage`
+**ID**: `fdd-todo-app-adr-local-storage`
 
 ## Context and Problem Statement
 
