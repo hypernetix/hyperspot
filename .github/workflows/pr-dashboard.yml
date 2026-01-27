@@ -1,0 +1,316 @@
+name: PR → Project Governance Sync
+
+on:
+  schedule:
+    - cron: "0 8 * * *"
+    - cron: "0 13 * * *"
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    env:
+      # -----------------------------
+      # Organization / project
+      # -----------------------------
+      ORG: hypernetix
+      PROJECT_NUMBER: 6
+
+      # -----------------------------
+      # GitHub Project IDs
+      # -----------------------------
+      PROJECT_ID: PVT_kwDOC9Ozis4BNo9m
+
+      FIELD_LINK: PVTF_lADOC9Ozis4BNo9mzg8k3Co
+      FIELD_UNREPLIED_THREADS: PVTF_lADOC9Ozis4BNo9mzg8k3Fg
+      FIELD_UNREPLIED_COMMENTS: PVTF_lADOC9Ozis4BNo9mzg8k3HM
+
+    steps:
+      - name: Sync pull requests into GitHub Project
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PR_DASHBOARD_PROJECTS_TOKEN }}
+
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            const {
+              ORG,
+              PROJECT_NUMBER,
+              PROJECT_ID,
+              FIELD_LINK,
+              FIELD_UNREPLIED_THREADS,
+              FIELD_UNREPLIED_COMMENTS
+            } = process.env;
+
+            /*
+             ------------------------------------------------------------
+             Load existing project items
+             ------------------------------------------------------------
+            */
+
+            const projectData = await github.graphql(`
+              query($org:String!, $number:Int!) {
+                organization(login:$org) {
+                  projectV2(number:$number) {
+                    items(first:100) {
+                      nodes {
+                        id
+                        content {
+                          ... on PullRequest {
+                            number
+                            id
+                            closed
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            `, {
+              org: ORG,
+              number: Number(PROJECT_NUMBER)
+            });
+
+            const items =
+              projectData.organization.projectV2.items.nodes;
+
+            const projectItemsByPR = new Map();
+
+            for (const item of items) {
+              if (item.content?.number) {
+                projectItemsByPR.set(
+                  item.content.number,
+                  {
+                    itemId: item.id,
+                    closed: item.content.closed
+                  }
+                );
+              }
+            }
+
+            /*
+             ------------------------------------------------------------
+             Fetch open PRs
+             ------------------------------------------------------------
+            */
+
+            const prs = await github.paginate(
+              github.rest.pulls.list,
+              {
+                owner,
+                repo,
+                state: "open",
+                per_page: 100
+              }
+            );
+
+            const activePRs = new Set(prs.map(p => p.number));
+
+            /*
+             ------------------------------------------------------------
+             Process each open PR
+             ------------------------------------------------------------
+            */
+
+            for (const pr of prs) {
+
+              const reviewData = await github.graphql(`
+                query($owner:String!, $repo:String!, $number:Int!) {
+                  repository(owner:$owner, name:$repo) {
+                    pullRequest(number:$number) {
+                      author { login }
+                      reviewThreads(first:100) {
+                        nodes {
+                          isResolved
+                          comments(last:50) {
+                            nodes {
+                              author { login }
+                              url
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              `, {
+                owner,
+                repo,
+                number: pr.number
+              });
+
+              const author =
+                reviewData.repository.pullRequest.author.login;
+
+              let unrepliedThreads = 0;
+              let unrepliedComments = 0;
+              const links = [];
+
+              for (const thread of reviewData.repository.pullRequest.reviewThreads.nodes) {
+                if (thread.isResolved) continue;
+
+                const comments = thread.comments.nodes;
+                if (!comments.length) continue;
+
+                const last = comments[comments.length - 1];
+
+                if (last.author.login !== author) {
+                  unrepliedThreads++;
+                  unrepliedComments++;
+                  links.push(last.url);
+                }
+              }
+
+              /*
+               ------------------------------------------------------------
+               Ensure project item exists
+               ------------------------------------------------------------
+              */
+
+              let projectItem =
+                projectItemsByPR.get(pr.number);
+
+              let itemId;
+
+              if (!projectItem) {
+
+                const created = await github.graphql(`
+                  mutation($project:ID!, $content:ID!) {
+                    addProjectV2ItemById(
+                      input:{
+                        projectId:$project
+                        contentId:$content
+                      }
+                    ) {
+                      item { id }
+                    }
+                  }
+                `, {
+                  project: PROJECT_ID,
+                  content: pr.node_id
+                });
+
+                itemId =
+                  created.addProjectV2ItemById.item.id;
+
+              } else {
+                itemId = projectItem.itemId;
+              }
+
+              /*
+               ------------------------------------------------------------
+               Update project fields
+               ------------------------------------------------------------
+              */
+
+              await github.graphql(`
+                mutation(
+                  $project:ID!,
+                  $item:ID!,
+                  $link:String!,
+                  $threads:Float!,
+                  $comments:Float!
+                ) {
+                  updateProjectV2ItemFieldValue(
+                    input:{
+                      projectId:$project
+                      itemId:$item
+                      fieldId:"${FIELD_LINK}"
+                      value:{ text:$link }
+                    }
+                  ) {
+                    projectV2Item { id }
+                  }
+
+                  updateProjectV2ItemFieldValue(
+                    input:{
+                      projectId:$project
+                      itemId:$item
+                      fieldId:"${FIELD_UNREPLIED_THREADS}"
+                      value:{ number:$threads }
+                    }
+                  ) {
+                    projectV2Item { id }
+                  }
+
+                  updateProjectV2ItemFieldValue(
+                    input:{
+                      projectId:$project
+                      itemId:$item
+                      fieldId:"${FIELD_UNREPLIED_COMMENTS}"
+                      value:{ number:$comments }
+                    }
+                  ) {
+                    projectV2Item { id }
+                  }
+                }
+              `, {
+                project: PROJECT_ID,
+                item: itemId,
+                link: pr.html_url,
+                threads: unrepliedThreads,
+                comments: unrepliedComments
+              });
+
+              /*
+               ------------------------------------------------------------
+               Update project item body
+               ------------------------------------------------------------
+              */
+
+              const body =
+                "Pull request:\n" +
+                pr.html_url + "\n\n" +
+                "Unreplied review comments:\n" +
+                (links.length
+                  ? links.map(l => "- " + l).join("\n")
+                  : "None");
+
+              await github.graphql(`
+                mutation($item:ID!, $body:String!) {
+                  updateProjectV2Item(
+                    input:{
+                      id:$item
+                      body:$body
+                    }
+                  ) {
+                    projectV2Item { id }
+                  }
+                }
+              `, {
+                item: itemId,
+                body
+              });
+            }
+
+            /*
+             ------------------------------------------------------------
+             Archive project items for closed PRs
+             ------------------------------------------------------------
+            */
+
+            for (const [prNumber, item] of projectItemsByPR.entries()) {
+              if (!activePRs.has(prNumber)) {
+                await github.graphql(`
+                  mutation($item:ID!) {
+                    archiveProjectV2Item(
+                      input:{ itemId:$item }
+                    ) {
+                      projectV2Item { id }
+                    }
+                  }
+                `, {
+                  item: item.itemId
+                });
+              }
+            }
