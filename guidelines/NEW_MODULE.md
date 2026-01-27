@@ -720,10 +720,6 @@ All service methods receive `&SecurityContext` for authorization and access cont
 1. **`src/domain/events.rs`:**
    **Rule:** Define transport-agnostic domain events for important business actions.
 
-```rust
-// Example from users_info
-use time::OffsetDateTime;
-use uuid::Uuid;
    ```rust
    // Example from users_info
    use time::OffsetDateTime;

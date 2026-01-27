@@ -405,7 +405,7 @@ pub struct Service {
 
 impl Service {
     /// Lazily resolve the plugin on first call
-    async fn get_plugin(&self) -> Result<Arc<dyn MyMoodulePluginClient>, DomainError> {
+    async fn get_plugin(&self) -> Result<Arc<dyn MyModulePluginClient>, DomainError> {
         let scope = self.resolved
             .get_or_try_init(|| self.resolve_plugin())
             .await?;

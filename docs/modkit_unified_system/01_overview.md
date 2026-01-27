@@ -56,10 +56,3 @@ OperationBuilder::get("/users")
     .standard_errors(openapi)
     .register(router, openapi);
 ```
-
-## Non-goals
-
-- Do not maintain two divergent truths. This folder is the source of truth.
-- Do not load the entire folder at once; use selective, task-driven loading.
-- Do not mix transport concerns in SDK crates.
-- Do not bypass SecureConn without explicit justification and `insecure-escape`.
