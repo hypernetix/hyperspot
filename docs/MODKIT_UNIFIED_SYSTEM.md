@@ -68,6 +68,99 @@ Notes:
 
 ---
 
+## Domain Layer Enforcement — `#[domain_model]`
+
+ModKit enforces DDD boundaries at compile time using marker traits and the `#[domain_model]` attribute macro.
+
+### Problem
+
+Domain models should be free of infrastructure dependencies (sqlx, sea_orm, http, axum). Traditional linting approaches can be circumvented through qualified paths or turbofish syntax.
+
+### Solution
+
+The `#[domain_model]` macro marks types as domain-safe and validates at compile time that all fields also implement `DomainSafe`:
+
+```rust
+use modkit_macros::domain_model;
+use uuid::Uuid;
+
+#[domain_model]
+#[derive(Debug, Clone)]
+pub struct User {
+    pub id: Uuid,
+    pub email: String,
+    pub active: bool,
+}
+```
+
+This generates:
+
+* `impl DomainSafe for User {}`
+* `impl DomainModel for User {}`
+* Compile-time assertion that all fields implement `DomainSafe`
+
+### Compile-Time Enforcement
+
+If any field uses an infrastructure type, compilation fails:
+
+```rust
+#[domain_model]
+pub struct BadModel {
+    pub status: http::StatusCode,  // ERROR: `DomainSafe` is not implemented
+}
+```
+
+### Pre-approved Types
+
+The following types implement `DomainSafe`:
+
+* **Primitives**: `bool`, `i8`..`i128`, `u8`..`u128`, `f32`, `f64`, `char`, `String`
+* **Collections**: `Vec<T>`, `Option<T>`, `HashMap<K, V>`, `HashSet<T>`, `BTreeMap<K, V>`
+* **Wrappers**: `Box<T>`, `Arc<T>`, `Result<T, E>`
+* **Common crates**: `uuid::Uuid`, `serde_json::Value`
+* **ModKit types**: `Page<T>`, `PageInfo`
+
+### Usage in SDK Models
+
+Mark all contract/SDK models with `#[domain_model]`:
+
+```rust
+// modules/my-module/my-module-sdk/src/models.rs
+use modkit_macros::domain_model;
+
+#[domain_model]
+#[derive(Debug, Clone)]
+pub struct MyEntity {
+    pub id: Uuid,
+    pub name: String,
+}
+```
+
+### Enforcing in Repository Traits
+
+Add trait bounds to repository traits to require `DomainModel`:
+
+```rust
+// domain/repo.rs
+use modkit::domain::DomainModel;
+
+#[async_trait]
+pub trait MyRepository: Send + Sync
+where
+    MyEntity: DomainModel,  // Compile-time enforcement!
+{
+    async fn find(&self, id: Uuid) -> Result<Option<MyEntity>>;
+}
+```
+
+If `MyEntity` is missing `#[domain_model]`, compilation fails:
+
+```
+error[E0277]: the trait bound `MyEntity: DomainModel` is not satisfied
+```
+
+---
+
 ## ModuleCtx (what you get at runtime)
 
 ```rust

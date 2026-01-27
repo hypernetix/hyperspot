@@ -1,9 +1,14 @@
 use async_trait::async_trait;
+use modkit::domain::DomainModel;
 use modkit_security::SecurityContext;
 use simple_user_settings_sdk::models::{SimpleUserSettings, SimpleUserSettingsPatch};
 
 #[async_trait]
-pub trait SettingsRepository: Send + Sync {
+pub trait SettingsRepository: Send + Sync
+where
+    SimpleUserSettings: DomainModel,
+    SimpleUserSettingsPatch: DomainModel,
+{
     async fn find_by_user(
         &self,
         ctx: &SecurityContext,
