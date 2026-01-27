@@ -215,40 +215,40 @@ jobs:
 
               await github.graphql(`
                 mutation(
-                  $project:ID!,
-                  $item:ID!,
-                  $link:String!,
-                  $threads:Float!,
-                  $comments:Float!
+                  $project: ID!
+                  $item: ID!
+                  $link: String!
+                  $threads: Float!
+                  $comments: Float!
                 ) {
-                  updateProjectV2ItemFieldValue(
-                    input:{
-                      projectId:$project
-                      itemId:$item
-                      fieldId:"${FIELD_LINK}"
-                      value:{ text:$link }
+                  linkField: updateProjectV2ItemFieldValue(
+                    input: {
+                      projectId: $project
+                      itemId: $item
+                      fieldId: "${FIELD_LINK}"
+                      value: { text: $link }
                     }
                   ) {
                     projectV2Item { id }
                   }
 
-                  updateProjectV2ItemFieldValue(
-                    input:{
-                      projectId:$project
-                      itemId:$item
-                      fieldId:"${FIELD_UNREPLIED_THREADS}"
-                      value:{ number:$threads }
+                  threadsField: updateProjectV2ItemFieldValue(
+                    input: {
+                      projectId: $project
+                      itemId: $item
+                      fieldId: "${FIELD_UNREPLIED_THREADS}"
+                      value: { number: $threads }
                     }
                   ) {
                     projectV2Item { id }
                   }
 
-                  updateProjectV2ItemFieldValue(
-                    input:{
-                      projectId:$project
-                      itemId:$item
-                      fieldId:"${FIELD_UNREPLIED_COMMENTS}"
-                      value:{ number:$comments }
+                  commentsField: updateProjectV2ItemFieldValue(
+                    input: {
+                      projectId: $project
+                      itemId: $item
+                      fieldId: "${FIELD_UNREPLIED_COMMENTS}"
+                      value: { number: $comments }
                     }
                   ) {
                     projectV2Item { id }
