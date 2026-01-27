@@ -73,4 +73,4 @@ When full FDD framework is connected:
 2. **Traceability** — IDs will be linked across PRD → DESIGN → ADR → FEATURE → code
 3. **Deterministic gates** — CI/CD can enforce document quality before code changes
 
-For more details on FDD taxonomy and artifact relationships, see `.fdd/guides/TAXONOMY.md`.
+For more details on FDD taxonomy and artifact relationships, see [`TAXONOMY.md`](https://github.com/cyberfabric/FDD/blob/main/guides/TAXONOMY.md).
