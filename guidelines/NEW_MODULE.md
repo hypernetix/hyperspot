@@ -1,18 +1,16 @@
 # New Module Guideline (Hyperspot / ModKit)
 
-This guide provides a comprehensive, step-by-step process for creating production-grade Hyperspot modules. It is
-designed to be actionable for both human developers and LLM-based code generators, consolidating best practices from
-across the Hyperspot ecosystem.
+This guide provides a process for creating Hyperspot modules. It targets both human developers and LLM-based code generators.
 
 ## ModKit Core Concepts
 
-ModKit provides a powerful framework for building production-grade modules:
+ModKit provides a framework for building modules:
 
 - **Composable Modules**: Discovered via `inventory` and initialized in dependency order.
 - **Gateway as a Module**: `api_gateway` owns the Axum router and OpenAPI document.
 - **Type-Safe REST**: An operation builder prevents half-wired routes at compile time.
 - **Server-Sent Events (SSE)**: Type-safe broadcasters for real-time domain event integration.
-- **Standardized HTTP Errors**: Built-in support for RFC-9457 `Problem` and `ProblemResponse`.
+- **Standardized HTTP Errors**: Built-in support for RFC-9457 `Problem`.
 - **Typed ClientHub**: For in-process clients, resolved by interface type (with optional scope for plugins).
 - **Plugin Architecture**: Scoped ClientHub + GTS-based discovery for gateway + plugins pattern.
 - **Lifecycle Management**: Helpers for long-running tasks and graceful shutdown.
@@ -235,7 +233,7 @@ pub mod infra;
 
 **Rule:** Use the following naming matrix for your data types:
 
-| Operation              | DB Layer (sqlx/SeaORM)<br/>`src/infra/storage/entity.rs` | Domain Layer (contract model)<br/>`src/contract/model.rs` | API Request (in)<br/>`src/api/rest/dto.rs`      | API Response (out)<br/>`src/api/rest/dto.rs`                                                    |
+| Operation              | DB Layer (sqlx/SeaORM)<br/>`src/infra/storage/entity.rs` | Domain Layer (SDK / domain types)<br/>`<module>-sdk/src/models.rs` | API Request (in)<br/>`src/api/rest/dto.rs`      | API Response (out)<br/>`src/api/rest/dto.rs`                                                    |
 |------------------------|----------------------------------------------------------|-----------------------------------------------------------|-------------------------------------------------|-------------------------------------------------------------------------------------------------|
 | Create                 | ActiveModel                                              | NewUser                                                   | CreateUserRequest                               | UserResponse                                                                                    |
 | Read/Get by id         | UserEntity                                               | User                                                      | Path params (id)<br/>`routes.rs` registers path | UserResponse                                                                                    |
@@ -248,7 +246,7 @@ pub mod infra;
 
 Notes:
 
-- Keep all transport-agnostic types in `src/contract/model.rs`. Handlers and DTOs must not leak into `contract`.
+- Keep all transport-agnostic types in the SDK crate (e.g. `<module>-sdk/src/models.rs`). Handlers and DTOs must not leak into the SDK.
 - SeaORM entities live in `src/infra/storage/entity.rs` (or submodules). Repository queries go in
   `src/infra/storage/repositories.rs`.
 - All REST DTOs (requests/responses/views) live in `src/api/rest/dto.rs`; provide `From` conversions in
@@ -1118,7 +1116,7 @@ external API clients.
 
    ```rust
    use chrono::{DateTime, Utc};
-   use modkit_db_macros::ODataFilterable;
+   use modkit_odata_macros::ODataFilterable;
    use serde::{Deserialize, Serialize};
    use utoipa::ToSchema;
    use uuid::Uuid;
@@ -1147,7 +1145,7 @@ external API clients.
    ```
 
 3. **`src/api/rest/mapper.rs`:**
-   **Rule:** Provide `From` implementations to convert between DTOs and `contract` models.
+   **Rule:** Provide `From` implementations to convert between DTOs and SDK models.
 
 4. **`src/api/rest/handlers.rs`:**
    **Rule:** Handlers must be thin. They extract data, call the domain service, and map results.
@@ -1363,7 +1361,7 @@ If no database required: skip `DatabaseCapability`, remove `db` from capabilitie
 
 This layer implements the domain's repository traits with **Secure ORM** for tenant isolation.
 
-> **See also:** [SECURE-ORM.md](../docs/SECURE-ORM.md) for comprehensive documentation on the secure ORM layer.
+> **See also:** [SECURE-ORM.md](../docs/SECURE-ORM.md) for documentation on the secure ORM layer.
 
 #### Security Model
 

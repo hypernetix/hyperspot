@@ -245,9 +245,9 @@ struct SystemConfig { /* ... */ }
 - `cond.rs` - Condition builder implementing implicit policy
 - `provider.rs` - TenantFilterProvider pattern for advanced use cases
 - `error.rs` - ScopeError type
-- `docs.rs` - Comprehensive documentation
+- `docs.rs` - Documentation
 - `tests.rs` - Unit tests
-- `USAGE_EXAMPLE.md` - Complete usage examples
+- `USAGE_EXAMPLE.md` - Usage examples
 - `README.md` - This file
 
 ## Design Decisions
@@ -460,7 +460,7 @@ impl<'a> UserRepository<'a> {
 
 ## Testing
 
-The module includes comprehensive test coverage:
+The module test coverage consists of the following layers:
 
 - **Unit tests**: AccessScope, condition builder, typestate markers, policy enforcement
 - **Integration tests**: Scoped queries, mutations, and SecureConn API
@@ -587,15 +587,5 @@ impl<'a> UserService<'a> {
     }
 }
 ```
-
-**Status**: Production Ready
-
-The secure ORM layer is fully implemented with:
-- Request-scoped security model for explicit, auditable access control
-- Compile-time safety guarantees via typestate pattern
-- Derive macro with enhanced diagnostics and validation
-- Feature flag protection for raw database access
-- Comprehensive testing (49 unit tests, compile-fail tests, trybuild tests)
-- Complete documentation and usage examples
 
 

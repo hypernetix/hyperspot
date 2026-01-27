@@ -1,6 +1,6 @@
 # ModKit — Architecture & Developer Guide (DDD-light)
 
-This guide explains how to build production-grade modules on **ModKit**: how to lay out a module, declare it with a
+This guide explains how to build modules using **ModKit**: how to lay out a module, declare it with a
 macro, wire REST with a type-safe builder, publish typed clients, and run background services with a clean lifecycle. It
 also describes the DDD-light layering and conventions used across modules.
 
@@ -27,44 +27,40 @@ Place each module under `modules/<name>/`:
 
 ```
 modules/<name>/
-  ├─ src/
-  │  ├─ lib.rs                       # module declaration, exports
-  │  ├─ module.rs                    # main struct + Module/Db/Rest/Stateful impls
-  │  ├─ config.rs                    # typed config (optional)
-  │  ├─ api/
-  │  │  └─ rest/
-  │  │     ├─ dto.rs                 # HTTP DTOs (serde/utoipa) — REST-only types
-  │  │     ├─ handlers.rs            # Axum handlers (web controllers)
-  │  │     └─ routes.rs              # route & OpenAPI registration (OperationBuilder)
-  │  ├─ contract/                    # public API surface (for other modules)
-  │  │  ├─ mod.rs
-  │  │  ├─ client.rs                 # traits for ClientHub and DTOs
-  │  │  ├─ model.rs                  # DTOs exposed to other modules (no REST specifics)
-  │  │  └─ error.rs
-  │  ├─ domain/                      # internal business logic
-  │  │  ├─ mod.rs
-  │  │  ├─ model.rs                  # rich domain models
-  │  │  ├─ error.rs
-  │  │  └─ service.rs                # orchestration/business rules
-  │  └─ infra/                       # “low-level”: DB, system, IO, adapters
-  │     ├─ storage/
-  │     │  ├─ entity.rs              # e.g., SeaORM entities / SQL mappings
-  │     │  ├─ mapper.rs              # entity <-> contract conversions (From impls)
-  │     │  └─ migrations/
-  │     │     ├─ mod.rs
-  │     │     └─ initial_001.rs
-  │     └─ (other platform adapters)
-  ├─ spec/
-  │  └─ proto/                       # proto files (if present)
-  └─ Cargo.toml
+  ├─ <name>-sdk/                     # public API surface for consumers (traits, models, errors)
+  │  ├─ Cargo.toml
+  │  └─ src/
+  │     ├─ lib.rs
+  │     ├─ client.rs|api.rs          # ClientHub trait(s)
+  │     ├─ models.rs                 # transport-agnostic models (no REST specifics)
+  │     └─ errors.rs                 # transport-agnostic errors
+  └─ <name>/                         # module implementation
+     ├─ Cargo.toml
+     └─ src/
+        ├─ lib.rs                    # re-exports SDK types + module struct
+        ├─ module.rs                 # main struct + Module/Db/Rest/Stateful impls
+        ├─ config.rs                 # typed config (optional)
+        ├─ api/
+        │  └─ rest/
+        │     ├─ dto.rs              # HTTP DTOs (serde/utoipa) — REST-only types
+        │     ├─ handlers.rs         # Axum handlers (web controllers)
+        │     └─ routes.rs           # route & OpenAPI registration (OperationBuilder)
+        ├─ domain/                   # internal business logic
+        └─ infra/                    # “low-level”: DB, system, IO, adapters
+           └─ storage/
+              ├─ entity.rs           # e.g., SeaORM entities / SQL mappings
+              ├─ mapper.rs           # entity <-> SDK conversions (From impls)
+              └─ migrations/
+                 ├─ mod.rs
+                 └─ initial_001.rs
 ```
 
 Notes:
 
 * Handlers may call `domain::service` directly.
-* For simple internal modules you may re-export domain models via `contract::model`.
-* Gateways host client implementations (e.g., local). Traits & DTOs live in `contract`.
-* Infra may use SeaORM or raw SQL (SQLx or your choice).
+* For simple internal modules you may re-export domain models via the module crate `lib.rs`.
+* Module crates host local client adapters that implement SDK traits; consumers resolve them via `ClientHub`.
+* Infra typically uses SeaORM via the secure ORM layer (`SecureConn`) to enforce scoping. Raw SQL / direct DB access is allowed only for exceptional cases (e.g. migrations/admin tools) and must follow `SECURE-ORM.md` (may require `insecure-escape`).
 
 ---
 
@@ -102,23 +98,29 @@ pub struct MyModuleConfig {
 }
 ```
 
-**DB access (SeaORM / SQLx)**
+**DB access (secure-by-default)**
 
 ```rust
-let sea = db.sea();      // SeaORM connection
-let pool = db.sqlx_pool();  // SQLx pool
+// Preferred: use SecureConn for scoped, request-scoped access
+let secure_conn = db.sea_secure();
+let users = secure_conn
+    .find::<user::Entity>(&security_ctx)?
+    .all(secure_conn.conn())
+    .await?;
+
+// Exceptional: raw access (migrations, admin tools, or with insecure-escape feature)
+let sea = db.sea();      // Direct SeaORM connection
+let pool = db.sqlx_pool();  // Direct SQLx pool
 ```
 
 **Clients (publish & consume)**
 
 ```rust
 // publish (provider module, in init()):
-expose_my_module_client( & ctx, & api) ?;
+ctx.client_hub().register::<dyn my_module_sdk::MyModuleApi>(api);
 
 // consume (consumer module, in init()):
-let api = my_module_client( & ctx.client_hub);
-// or without helpers:
-let api = ctx.client_hub.get::<dyn my_module::contract::client::MyModuleApi>() ?;
+let api = ctx.client_hub().get::<dyn my_module_sdk::MyModuleApi>()?;
 ```
 
 **Cancellation**
@@ -137,7 +139,7 @@ Attach the attribute to your main struct. The macro:
 * Adds inventory entry for auto-discovery.
 * Registers **name**, **deps**, **caps** (capabilities).
 * Instantiates via `ctor = <expr>` or `Default` if `ctor` is omitted.
-* Optionally emits **ClientHub** helpers.
+* Optionally validates a **client trait** (object-safe + `Send + Sync + 'static`) for ClientHub usage.
 * Optionally wires **lifecycle** when you add `lifecycle(...)`.
 
 ### Full syntax
@@ -147,7 +149,7 @@ Attach the attribute to your main struct. The macro:
     name = "my_module",
     deps = ["foo", "bar"], // api_gateway dependency will be added automatically for rest module capability
     capabilities = [db, rest, stateful, /* rest_host if you own the HTTP server */],
-    client = contract::client::MyModuleApi,
+    client = my_module_sdk::MyModuleApi,
     ctor = MyModule::new(),
     lifecycle(entry = "serve", stop_timeout = "30s", await_ready)
 )]
@@ -168,12 +170,8 @@ pub struct MyModule {
 
 ### Client helpers (when `client` is set)
 
-Generated helpers:
-
-* `expose_<module>_client(ctx, &Arc<dyn Trait>) -> anyhow::Result<()>`
-* `expose_<module>_client_in(ctx, scope: &str, &Arc<dyn Trait>) -> anyhow::Result<()>`
-* `<module>_client(hub: &ClientHub) -> Arc<dyn Trait>`
-* `<module>_client_in(hub: &ClientHub, scope: &str) -> Arc<dyn Trait>`
+The `#[modkit::module(..., client = ...)]` parameter performs compile-time validation and defines `MODULE_NAME`.
+It does not generate ClientHub registration helpers.
 
 ---
 
@@ -839,7 +837,7 @@ OperationBuilder::post("/user-management/v1/users")
 
 - `modkit-odata`: AST, ODataQuery, CursorV1, ODataOrderBy, SortDir, ODataPageError, **Page<T>/PageInfo**.
 - `modkit`: HTTP extractor for OData (`$filter`, `$orderby`, `limit`, `cursor`) with budgets + Problem mapper.
-- `modkit-db`: Type-safe OData filter system with `FilterField` trait, `FilterNode<F>` AST, and SeaORM integration.
+- `modkit-db`: SeaORM integration for `modkit-odata` filtering/pagination (mapping filter fields to columns, pagination helpers).
 
 ## Architecture (Type-Safe OData)
 
@@ -850,7 +848,7 @@ The OData system uses a **three-layer architecture** for type safety:
 Use `#[derive(ODataFilterable)]` on your REST DTOs to auto-generate a `FilterField` enum:
 
 ```rust
-use modkit_db_macros::ODataFilterable;
+use modkit_odata_macros::ODataFilterable;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -888,7 +886,7 @@ When exposing OData on REST endpoints, register the corresponding query options 
 Work with transport-agnostic `FilterNode<F>` AST - no HTTP or SeaORM dependencies:
 
 ```rust
-use modkit_db::odata::filter::FilterNode;
+use modkit_odata::filter::FilterNode;
 use crate::api::rest::dto::UserDtoFilterField;
 
 pub struct UserService {
@@ -978,7 +976,7 @@ pub async fn list_with_odata(
 1. In REST DTO: `#[derive(ODataFilterable)]` with `#[odata(filter(kind = "..."))]` on filterable fields.
 2. In the handler: `OData(q)` extractor (Axum) → pass `q` down to service.
 3. In repo/infra: implement `ODataFieldMapping<F>` mapper, call `paginate_odata(...)` and return `Page<T>`.
-4. In REST: map `ODataError` to Problem via `odata_page_error_to_problem`.
+4. In REST: map `ODataError` to Problem via `odata_error_to_problem`.
 
 ### Notes
 
@@ -1337,7 +1335,7 @@ manually in your handler.
 Prefer `From` over ad-hoc mapper functions.
 
 ```rust
-// Convert DB entity to contract model (by value)
+// Convert DB entity to SDK model (by value)
 impl From<UserEntity> for User {
     fn from(e: UserEntity) -> Self {
         Self {
@@ -1463,9 +1461,9 @@ remote clients:
 
 **Client types:**
 
-* **`contract::client`** defines the trait & DTOs exposed to other modules.
-* **`gateways/local.rs`** implements that trait for in-process communication.
-* **`*-grpc/src/client.rs`** implements the trait for remote gRPC communication.
+* **`*-sdk` crate** defines the trait & types exposed to other modules.
+* **Module crate** implements a local adapter that implements the SDK trait for in-process communication.
+* **gRPC clients** implement the same SDK trait for remote communication.
 * Consumers resolve the typed client from ClientHub by interface type (+ optional scope).
 
 ### In-Process vs Remote Clients
@@ -1476,7 +1474,7 @@ remote clients:
 | Latency      | Nanoseconds             | Milliseconds               |
 | Isolation    | Shared process          | Separate process           |
 | Contract     | Trait in `*-sdk/` crate | Trait in `*-sdk/` crate    |
-| Registration | `expose_*_client()`     | DirectoryClient + gRPC client |
+| Registration | `ClientHub::register()` | DirectoryClient + gRPC client + `ClientHub::register()` |
 
 **Publish in `init`**
 
@@ -1488,10 +1486,10 @@ impl Module for MyModule {
         let svc = std::sync::Arc::new(domain::service::MyService::new(ctx.db.clone(), cfg));
         self.service.store(Some(svc.clone()));
 
-        let api: std::sync::Arc<dyn contract::client::MyModuleApi> =
-            std::sync::Arc::new(gateways::local::MyModuleLocalClient::new(svc));
+        let api: std::sync::Arc<dyn my_module_sdk::MyModuleApi> =
+            std::sync::Arc::new(crate::domain::local_client::MyModuleLocalClient::new(svc));
 
-        expose_my_module_client(ctx, &api)?;
+        ctx.client_hub().register::<dyn my_module_sdk::MyModuleApi>(api);
         Ok(())
     }
 }
@@ -1500,9 +1498,7 @@ impl Module for MyModule {
 **Consume**
 
 ```rust
-let api = my_module_client( & ctx.client_hub);
-// or:
-let api = ctx.client_hub.get::<dyn my_module::contract::client::MyModuleApi>() ?;
+let api = ctx.client_hub().get::<dyn my_module_sdk::MyModuleApi>()?;
 ```
 
 ### Scoped Clients (for Plugins)
@@ -1583,20 +1579,20 @@ pub trait StatefulModule: Send + Sync {
 
 3. **Where to keep “glue”?**
    Glue that adapts domain to transport lives in **api/rest** (HTTP DTOs, handlers). Glue that adapts domain to **other
-   modules** lives in **gateways/** (client implementations). DB mapping glue sits in **infra/storage**.
+   modules** lives in local adapters / transport clients that implement SDK traits and are registered in `ClientHub`. DB mapping glue sits in **infra/storage**.
 
 4. **Why not put platform-dependent logic into service?**
    To keep business rules portable/testable. Platform logic churns often; isolating it in infra avoids leaking OS/DB
    concerns into your domain.
 
-5. **What is `contract` and why separate?**
-   It’s the **public API** of your module for **other modules**: traits + DTOs + domain errors safe to expose. This
+5. **What is `*-sdk` and why separate?**
+   It’s the **public API** of your module for **other modules**: traits + types + domain errors safe to expose. This
    separation allows swapping local/remote clients without changing consumers. For simple internal modules you may
-   re-export a subset of domain models via `contract::model`.
+   re-export a subset of domain models via the module crate `lib.rs`.
 
 6. **How to hide domain & internals from other modules?**
-   Re-export only what’s needed via `contract`. Consumers depend on `contract` and `gateways` through the ClientHub;
-   they never import your domain/infra directly.
+   Re-export only what’s needed via the `*-sdk` crate (and optionally re-exports in the module crate). Consumers depend on
+   SDK traits through the ClientHub; they never import your domain/infra directly.
 
 ---
 
