@@ -55,6 +55,25 @@ All artifacts use stable FDD IDs for traceability:
 fdd-{module-name}-{kind}-{slug}
 ```
 
+| Kind | Description |
+|------|-------------|
+| `actor` | Actor (human or system) |
+| `fr` | Functional requirement |
+| `nfr` | Non-functional requirement |
+| `usecase` | Use case |
+| `adr` | Architecture decision record |
+| `feature` | Feature |
+| `flow` | Actor flow (within feature) |
+| `algo` | Algorithm (within feature) |
+| `state` | State machine (within feature) |
+| `req` | Feature requirement |
+| `principle` | Design principle |
+| `constraint` | Constraint |
+| `context` | Additional context |
+| `db-table` | Database table |
+| `topology` | Topology |
+| `tech` | Tech stack |
+
 **Examples**:
 - `fdd-todo-app-actor-user` — Actor ID
 - `fdd-todo-app-fr-create-task` — Functional Requirement ID
