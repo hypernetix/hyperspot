@@ -1,6 +1,7 @@
 [package]
 name = "contoso_tr_plugin"
 version = "0.1.0"
+publish = false
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
@@ -10,8 +11,8 @@ description = "Contoso tenant resolver plugin (example)"
 workspace = true
 
 [dependencies]
-tenant-resolver-sdk = { path = "../../tenant_resolver-sdk" }
-types-registry-sdk = { path = "../../../../../modules/system/types-registry/types-registry-sdk" }
+tenant-resolver-example-sdk = { package = "tenant-resolver-sdk", path = "../../tenant_resolver-sdk" }
+types-registry-sdk = { workspace = true }
 modkit = { workspace = true }
 modkit-security = { workspace = true }
 modkit-odata = { workspace = true }

@@ -79,6 +79,13 @@ logging:
     max_age_days: 28
     max_backups: 3
     max_size_mb: 100
+  types_registry:
+    console_level: info
+    file: "logs/types-registry.log"
+    file_level: debug
+    max_age_days: 7
+    max_backups: 3
+    max_size_mb: 50
 
 
 # Per-module configurations using new structure

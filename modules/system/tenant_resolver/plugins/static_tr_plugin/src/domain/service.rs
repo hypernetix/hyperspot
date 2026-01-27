@@ -2,7 +2,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use hs_tenant_resolver_sdk::{TenantFilter, TenantId, TenantInfo};
+use tenant_resolver_sdk::{TenantFilter, TenantId, TenantInfo};
 
 use crate::config::StaticTrPluginConfig;
 
@@ -85,7 +85,7 @@ impl Service {
 mod tests {
     use super::*;
     use crate::config::{AccessRuleConfig, TenantConfig};
-    use hs_tenant_resolver_sdk::TenantStatus;
+    use tenant_resolver_sdk::TenantStatus;
     use uuid::Uuid;
 
     // Helper to create a test tenant config

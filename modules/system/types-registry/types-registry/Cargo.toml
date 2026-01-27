@@ -1,7 +1,6 @@
 [package]
-name = "types-registry"
-version.workspace = true
-publish = false
+name = "cf-types-registry"
+version = "0.1.0"
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
@@ -11,11 +10,12 @@ description = "Types Registry module: GTS entity registration, storage, and REST
 workspace = true
 
 [lib]
+name = "types_registry"
 doctest = false
 
 [dependencies]
 # SDK - public API, models, and errors
-types-registry-sdk = { path = "../types-registry-sdk" }
+types-registry-sdk = { package = "cf-types-registry-sdk", version = "0.1.0", path = "../types-registry-sdk" }
 
 # GTS types (from git dependency)
 gts = { workspace = true }
@@ -44,5 +44,5 @@ modkit-macros = { workspace = true }
 
 [dev-dependencies]
 tower = { workspace = true, features = ["util"] }
-api_gateway = { path = "../../api_gateway" }
+api_gateway = { package = "cf-api-gateway", version = "0.1.0", path = "../../api_gateway" }
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }

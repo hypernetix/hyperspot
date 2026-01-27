@@ -3,10 +3,10 @@ use tracing::{debug, info, instrument};
 
 use crate::domain::error::DomainError;
 use crate::domain::repos::CitiesRepository;
-use hs_tenant_resolver_sdk::TenantResolverGatewayClient;
 use modkit_db::secure::SecureConn;
 use modkit_odata::{ODataQuery, Page};
 use modkit_security::{PolicyEngineRef, SecurityContext};
+use tenant_resolver_sdk::TenantResolverGatewayClient;
 use time::OffsetDateTime;
 use user_info_sdk::{City, CityPatch, NewCity};
 use uuid::Uuid;

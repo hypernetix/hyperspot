@@ -140,43 +140,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a23eb6b1614318a8071c9b2521f36b424b2c83db5eb3a0fead4a6c0809af6e61"
 
 [[package]]
-name = "api_gateway"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "arc-swap",
- "async-trait",
- "axum",
- "cf-modkit",
- "cf-modkit-auth",
- "cf-modkit-macros",
- "cf-modkit-odata",
- "cf-modkit-security",
- "chrono",
- "dashmap",
- "futures-core",
- "governor",
- "hs-tenant-resolver-sdk",
- "http",
- "inventory",
- "matchit 0.9.1",
- "nanoid",
- "parking_lot",
- "reqwest",
- "rust-embed",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "tokio",
- "tokio-util",
- "tower",
- "tower-http",
- "tracing",
- "utoipa",
- "uuid",
-]
-
-[[package]]
 name = "arbitrary"
 version = "1.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -643,11 +606,11 @@ dependencies = [
  "anyhow",
  "async-trait",
  "calculator-sdk",
+ "cf-grpc-hub",
  "cf-modkit",
  "cf-modkit-security",
  "cf-modkit-transport-grpc",
  "clap",
- "grpc_hub",
  "inventory",
  "tokio",
  "tonic",
@@ -723,6 +686,99 @@ checksum = "6354c81bbfd62d9cfa9cb3c773c2b7b2a3a482d569de977fd0e961f6e7c00583"
 dependencies = [
  "find-msvc-tools",
  "shlex",
+]
+
+[[package]]
+name = "cf-api-gateway"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "arc-swap",
+ "async-trait",
+ "axum",
+ "cf-modkit",
+ "cf-modkit-auth",
+ "cf-modkit-macros",
+ "cf-modkit-odata",
+ "cf-modkit-security",
+ "cf-tenant-resolver-sdk",
+ "chrono",
+ "dashmap",
+ "futures-core",
+ "governor",
+ "http",
+ "inventory",
+ "matchit 0.9.1",
+ "nanoid",
+ "parking_lot",
+ "reqwest",
+ "rust-embed",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-util",
+ "tower",
+ "tower-http",
+ "tracing",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "cf-file-parser"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "arc-swap",
+ "async-trait",
+ "axum",
+ "base64 0.22.1",
+ "bytes",
+ "cf-modkit",
+ "cf-modkit-auth",
+ "cf-modkit-macros",
+ "docx-rust",
+ "futures-util",
+ "http",
+ "inventory",
+ "mime",
+ "pdf-extract",
+ "reqwest",
+ "serde",
+ "tempfile",
+ "thiserror 2.0.18",
+ "time",
+ "tl",
+ "tokio",
+ "tracing",
+ "url",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "cf-grpc-hub"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "cf-modkit",
+ "cf-modkit-transport-grpc",
+ "cf-system-sdks",
+ "http",
+ "inventory",
+ "parking_lot",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "tokio-stream",
+ "tokio-util",
+ "tonic",
+ "tower",
+ "tracing",
+ "uuid",
 ]
 
 [[package]]
@@ -995,6 +1051,132 @@ dependencies = [
 ]
 
 [[package]]
+name = "cf-module-orchestrator"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "cf-modkit",
+ "cf-system-sdks",
+ "inventory",
+ "parking_lot",
+ "serde",
+ "tokio",
+ "tonic",
+ "tracing",
+]
+
+[[package]]
+name = "cf-nodes-registry"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "arc-swap",
+ "async-trait",
+ "axum",
+ "cf-modkit",
+ "cf-modkit-macros",
+ "cf-modkit-node-info",
+ "cf-nodes-registry-sdk",
+ "chrono",
+ "inventory",
+ "serde",
+ "thiserror 2.0.18",
+ "tracing",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "cf-nodes-registry-sdk"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "cf-modkit-node-info",
+ "thiserror 2.0.18",
+ "uuid",
+]
+
+[[package]]
+name = "cf-simple-user-settings"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "arc-swap",
+ "async-trait",
+ "axum",
+ "cf-modkit",
+ "cf-modkit-auth",
+ "cf-modkit-db",
+ "cf-modkit-db-macros",
+ "cf-modkit-errors",
+ "cf-modkit-errors-macro",
+ "cf-modkit-macros",
+ "cf-modkit-security",
+ "cf-simple-user-settings-sdk",
+ "inventory",
+ "sea-orm",
+ "sea-orm-migration",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
+ "tower",
+ "tracing",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "cf-simple-user-settings-sdk"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "cf-modkit-security",
+ "thiserror 2.0.18",
+ "time",
+ "uuid",
+]
+
+[[package]]
+name = "cf-single-tenant-tr-plugin"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "cf-modkit",
+ "cf-modkit-odata",
+ "cf-modkit-security",
+ "cf-tenant-resolver-sdk",
+ "cf-types-registry-sdk",
+ "inventory",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "cf-static-tr-plugin"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "cf-modkit",
+ "cf-modkit-odata",
+ "cf-modkit-security",
+ "cf-tenant-resolver-sdk",
+ "cf-types-registry-sdk",
+ "inventory",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "cf-system-sdk-directory"
 version = "0.1.0"
 dependencies = [
@@ -1014,6 +1196,84 @@ name = "cf-system-sdks"
 version = "0.1.0"
 dependencies = [
  "cf-system-sdk-directory",
+]
+
+[[package]]
+name = "cf-tenant-resolver-gw"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "cf-modkit",
+ "cf-modkit-odata",
+ "cf-modkit-security",
+ "cf-tenant-resolver-sdk",
+ "cf-types-registry-sdk",
+ "inventory",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "cf-tenant-resolver-sdk"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "cf-modkit",
+ "cf-modkit-odata",
+ "cf-modkit-security",
+ "gts",
+ "gts-macros",
+ "schemars 0.8.22",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "uuid",
+]
+
+[[package]]
+name = "cf-types-registry"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "arc-swap",
+ "async-trait",
+ "axum",
+ "cf-api-gateway",
+ "cf-modkit",
+ "cf-modkit-auth",
+ "cf-modkit-macros",
+ "cf-modkit-security",
+ "cf-types-registry-sdk",
+ "futures",
+ "gts",
+ "inventory",
+ "parking_lot",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
+ "tower",
+ "tracing",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "cf-types-registry-sdk"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "cf-modkit-security",
+ "gts",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "uuid",
 ]
 
 [[package]]
@@ -1170,6 +1430,7 @@ dependencies = [
  "cf-modkit",
  "cf-modkit-odata",
  "cf-modkit-security",
+ "cf-types-registry-sdk",
  "inventory",
  "schemars 0.8.22",
  "serde",
@@ -1177,7 +1438,6 @@ dependencies = [
  "tenant-resolver-sdk",
  "thiserror 2.0.18",
  "tracing",
- "types-registry-sdk",
 ]
 
 [[package]]
@@ -1769,6 +2029,7 @@ dependencies = [
  "cf-modkit",
  "cf-modkit-odata",
  "cf-modkit-security",
+ "cf-types-registry-sdk",
  "inventory",
  "schemars 0.8.22",
  "serde",
@@ -1776,7 +2037,6 @@ dependencies = [
  "tenant-resolver-sdk",
  "thiserror 2.0.18",
  "tracing",
- "types-registry-sdk",
 ]
 
 [[package]]
@@ -1845,38 +2105,6 @@ checksum = "6e8e2fa049328a1f3295991407a88585805d126dfaadf74b9fe8c194c730aafc"
 dependencies = [
  "chrono",
  "flate2",
-]
-
-[[package]]
-name = "file_parser"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "arc-swap",
- "async-trait",
- "axum",
- "base64 0.22.1",
- "bytes",
- "cf-modkit",
- "cf-modkit-auth",
- "cf-modkit-macros",
- "docx-rust",
- "futures-util",
- "http",
- "inventory",
- "mime",
- "pdf-extract",
- "reqwest",
- "serde",
- "tempfile",
- "thiserror 2.0.18",
- "time",
- "tl",
- "tokio",
- "tracing",
- "url",
- "utoipa",
- "uuid",
 ]
 
 [[package]]
@@ -2164,30 +2392,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "grpc_hub"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "cf-modkit",
- "cf-modkit-transport-grpc",
- "cf-system-sdks",
- "http",
- "inventory",
- "parking_lot",
- "serde",
- "serde_json",
- "tempfile",
- "tokio",
- "tokio-stream",
- "tokio-util",
- "tonic",
- "tower",
- "tracing",
- "uuid",
-]
-
-[[package]]
 name = "gts"
 version = "0.1.0"
 source = "git+https://github.com/globaltypesystem/gts-rust.git?tag=v0.7.7#eb53551654ce97426ee891ba99ced0fd56b72d59"
@@ -2427,81 +2631,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "hs-single-tenant-tr-plugin"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "cf-modkit",
- "cf-modkit-odata",
- "cf-modkit-security",
- "hs-tenant-resolver-sdk",
- "inventory",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
- "types-registry-sdk",
- "uuid",
-]
-
-[[package]]
-name = "hs-static-tr-plugin"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "cf-modkit",
- "cf-modkit-odata",
- "cf-modkit-security",
- "hs-tenant-resolver-sdk",
- "inventory",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
- "types-registry-sdk",
- "uuid",
-]
-
-[[package]]
-name = "hs-tenant-resolver-gw"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "cf-modkit",
- "cf-modkit-odata",
- "cf-modkit-security",
- "hs-tenant-resolver-sdk",
- "inventory",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "tokio",
- "tracing",
- "types-registry-sdk",
- "uuid",
-]
-
-[[package]]
-name = "hs-tenant-resolver-sdk"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "cf-modkit",
- "cf-modkit-odata",
- "cf-modkit-security",
- "gts",
- "gts-macros",
- "schemars 0.8.22",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "uuid",
-]
-
-[[package]]
 name = "http"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2698,32 +2827,32 @@ name = "hyperspot-server"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "api_gateway",
  "calculator",
  "calculator_gateway",
+ "cf-api-gateway",
+ "cf-file-parser",
+ "cf-grpc-hub",
  "cf-modkit",
  "cf-modkit-db",
+ "cf-module-orchestrator",
+ "cf-nodes-registry",
+ "cf-simple-user-settings",
+ "cf-single-tenant-tr-plugin",
+ "cf-static-tr-plugin",
+ "cf-tenant-resolver-gw",
+ "cf-types-registry",
  "clap",
  "contoso_tr_plugin",
  "fabrikam_tr_plugin",
  "figment",
- "file_parser",
- "grpc_hub",
- "hs-single-tenant-tr-plugin",
- "hs-static-tr-plugin",
- "hs-tenant-resolver-gw",
  "mimalloc",
- "module_orchestrator",
- "nodes_registry",
  "serde-saphyr",
  "serde_json",
- "simple-user-settings",
  "tempfile",
  "tenant_resolver-gw",
  "tokio",
  "tokio-util",
  "tracing",
- "types-registry",
  "users_info",
  "uuid",
 ]
@@ -3013,9 +3142,9 @@ dependencies = [
 
 [[package]]
 name = "jsonwebtoken"
-version = "10.2.0"
+version = "10.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c76e1c7d7df3e34443b3621b459b066a7b79644f059fc8b2db7070c825fd417e"
+checksum = "0529410abe238729a60b108898784df8984c87f6054c9c4fcacc47e4803c1ce1"
 dependencies = [
  "base64 0.22.1",
  "ed25519-dalek",
@@ -3067,9 +3196,9 @@ dependencies = [
 
 [[package]]
 name = "libm"
-version = "0.2.15"
+version = "0.2.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f9fbbcab51052fe104eb5e5d351cf728d30a5be1fe14d9be8a3b097481fb97de"
+checksum = "b6d2cec3eae94f9f509c767b45932f1ada8350c4bdb85af2fcab4a3c14807981"
 
 [[package]]
 name = "libmimalloc-sys"
@@ -3269,22 +3398,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "module_orchestrator"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "cf-modkit",
- "cf-system-sdks",
- "inventory",
- "parking_lot",
- "serde",
- "tokio",
- "tonic",
- "tracing",
-]
-
-[[package]]
 name = "multer"
 version = "3.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3367,37 +3480,6 @@ dependencies = [
  "cfg-if",
  "cfg_aliases",
  "libc",
-]
-
-[[package]]
-name = "nodes_registry"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "arc-swap",
- "async-trait",
- "axum",
- "cf-modkit",
- "cf-modkit-macros",
- "cf-modkit-node-info",
- "chrono",
- "inventory",
- "nodes_registry-sdk",
- "serde",
- "thiserror 2.0.18",
- "tracing",
- "utoipa",
- "uuid",
-]
-
-[[package]]
-name = "nodes_registry-sdk"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "cf-modkit-node-info",
- "thiserror 2.0.18",
- "uuid",
 ]
 
 [[package]]
@@ -3507,9 +3589,9 @@ dependencies = [
 
 [[package]]
 name = "num-conv"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "51d515d32fb182ee37cda2ccdcb92950d6a3c2893aa280e540671c2cd0f3b1d9"
+checksum = "cf97ec579c3c42f953ef76dbf8d55ac91fb219dde70e49aa4a6b7d74e9919050"
 
 [[package]]
 name = "num-integer"
@@ -5345,47 +5427,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bbbb5d9659141646ae647b42fe094daf6c6192d1620870b449d9557f748b2daa"
 
 [[package]]
-name = "simple-user-settings"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "arc-swap",
- "async-trait",
- "axum",
- "cf-modkit",
- "cf-modkit-auth",
- "cf-modkit-db",
- "cf-modkit-db-macros",
- "cf-modkit-errors",
- "cf-modkit-errors-macro",
- "cf-modkit-macros",
- "cf-modkit-security",
- "inventory",
- "sea-orm",
- "sea-orm-migration",
- "serde",
- "serde_json",
- "simple-user-settings-sdk",
- "thiserror 2.0.18",
- "tokio",
- "tower",
- "tracing",
- "utoipa",
- "uuid",
-]
-
-[[package]]
-name = "simple-user-settings-sdk"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "cf-modkit-security",
- "thiserror 2.0.18",
- "time",
- "uuid",
-]
-
-[[package]]
 name = "simple_asn1"
 version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5399,9 +5440,9 @@ dependencies = [
 
 [[package]]
 name = "siphasher"
-version = "1.0.1"
+version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "56199f7ddabf13fe5074ce809e7d3f42b42ae711800501b5b16ea82ad029c39d"
+checksum = "b2aa850e253778c88a04c3d7323b043aeda9d3e30d5971937c1855769763678e"
 
 [[package]]
 name = "slab"
@@ -5426,9 +5467,9 @@ checksum = "ef784004ca8777809dcdad6ac37629f0a97caee4c685fcea805278d81dd8b857"
 
 [[package]]
 name = "socket2"
-version = "0.6.1"
+version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "17129e116933cf371d018bb80ae557e889637989d8638274fb25622827b03881"
+checksum = "86f4aa3ad99f2088c990dfa82d367e19cb29268ed67c574d10d0a4bfe71f07e0"
 dependencies = [
  "libc",
  "windows-sys 0.60.2",
@@ -5883,6 +5924,7 @@ dependencies = [
  "cf-modkit-macros",
  "cf-modkit-odata",
  "cf-modkit-security",
+ "cf-types-registry-sdk",
  "http",
  "inventory",
  "serde",
@@ -5891,7 +5933,6 @@ dependencies = [
  "thiserror 2.0.18",
  "tokio",
  "tracing",
- "types-registry-sdk",
  "utoipa",
 ]
 
@@ -5994,9 +6035,9 @@ dependencies = [
 
 [[package]]
 name = "time"
-version = "0.3.45"
+version = "0.3.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f9e442fc33d7fdb45aa9bfeb312c095964abdf596f7567261062b2a7107aaabd"
+checksum = "9da98b7d9b7dad93488a84b8248efc35352b0b2657397d4167e7ad67e5d535e5"
 dependencies = [
  "deranged",
  "itoa",
@@ -6011,15 +6052,15 @@ dependencies = [
 
 [[package]]
 name = "time-core"
-version = "0.1.7"
+version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8b36ee98fd31ec7426d599183e8fe26932a8dc1fb76ddb6214d05493377d34ca"
+checksum = "7694e1cfe791f8d31026952abf09c69ca6f6fa4e1a1229e18988f06a04a12dca"
 
 [[package]]
 name = "time-macros"
-version = "0.2.25"
+version = "0.2.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "71e552d1249bf61ac2a52db88179fd0673def1e1ad8243a00d9ec9ed71fee3dd"
+checksum = "78cc610bac2dcee56805c99642447d4c5dbde4d01f752ffea0199aee1f601dc4"
 dependencies = [
  "num-conv",
  "time-core",
@@ -6471,47 +6512,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "562d481066bde0658276a35467c4af00bdc6ee726305698a55b86e61d7ad82bb"
 
 [[package]]
-name = "types-registry"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "api_gateway",
- "arc-swap",
- "async-trait",
- "axum",
- "cf-modkit",
- "cf-modkit-auth",
- "cf-modkit-macros",
- "cf-modkit-security",
- "futures",
- "gts",
- "inventory",
- "parking_lot",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "tokio",
- "tower",
- "tracing",
- "types-registry-sdk",
- "utoipa",
- "uuid",
-]
-
-[[package]]
-name = "types-registry-sdk"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "cf-modkit-security",
- "gts",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "uuid",
-]
-
-[[package]]
 name = "uncased"
 version = "0.9.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6656,10 +6656,10 @@ name = "users_info"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "api_gateway",
  "arc-swap",
  "async-trait",
  "axum",
+ "cf-api-gateway",
  "cf-modkit",
  "cf-modkit-auth",
  "cf-modkit-db",
@@ -6670,8 +6670,8 @@ dependencies = [
  "cf-modkit-odata",
  "cf-modkit-sdk",
  "cf-modkit-security",
+ "cf-tenant-resolver-sdk",
  "futures-util",
- "hs-tenant-resolver-sdk",
  "http",
  "httpmock",
  "inventory",
@@ -6742,9 +6742,9 @@ dependencies = [
 
 [[package]]
 name = "uuid"
-version = "1.19.0"
+version = "1.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e2e054861b4bd027cd373e18e8d8d8e6548085000e41290d95ce0c373a654b4a"
+checksum = "ee48d38b119b0cd71fe4141b30f5ba9c7c5d9f4e7a3a8b4a674e4b6ef789976f"
 dependencies = [
  "getrandom 0.3.4",
  "js-sys",
@@ -7440,18 +7440,18 @@ dependencies = [
 
 [[package]]
 name = "zerocopy"
-version = "0.8.33"
+version = "0.8.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "668f5168d10b9ee831de31933dc111a459c97ec93225beb307aed970d1372dfd"
+checksum = "71ddd76bcebeed25db614f82bf31a9f4222d3fbba300e6fb6c00afa26cbd4d9d"
 dependencies = [
  "zerocopy-derive",
 ]
 
 [[package]]
 name = "zerocopy-derive"
-version = "0.8.33"
+version = "0.8.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2c7962b26b0a8685668b671ee4b54d007a67d4eaf05fda79ac0ecf41e32270f1"
+checksum = "d8187381b52e32220d50b255276aa16a084ec0a9017a0ca2152a1f55c539758d"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -7540,9 +7540,9 @@ checksum = "40990edd51aae2c2b6907af74ffb635029d5788228222c4bb811e9351c0caad3"
 
 [[package]]
 name = "zmij"
-version = "1.0.16"
+version = "1.0.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dfcd145825aace48cff44a8844de64bf75feec3080e0aa5cdbde72961ae51a65"
+checksum = "02aae0f83f69aafc94776e879363e9771d7ecbffe2c7fbb6c14c5e00dfe88439"
 
 [[package]]
 name = "zopfli"

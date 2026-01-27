@@ -1,9 +1,12 @@
 [package]
-name = "nodes_registry"
-version.workspace = true
-publish = false
+name = "cf-nodes-registry"
+version = "0.1.0"
 edition.workspace = true
 license.workspace = true
+authors.workspace = true
+
+[lib]
+name = "nodes_registry"
 
 [lints]
 workspace = true
@@ -24,4 +27,4 @@ thiserror = { workspace = true }
 modkit = { workspace = true }
 modkit-node-info = { workspace = true }
 modkit-macros = { workspace = true }
-nodes_registry-sdk = { path = "../nodes_registry-sdk" }
+nodes_registry-sdk = { package = "cf-nodes-registry-sdk", version = "0.1.0", path = "../nodes_registry-sdk" }

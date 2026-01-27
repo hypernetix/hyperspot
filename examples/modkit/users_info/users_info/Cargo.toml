@@ -19,7 +19,7 @@ integration = []    # gate integration tests
 user_info-sdk = { path = "../user_info-sdk", features = ["odata"] }
 
 # Tenant resolver for multi-tenant access
-hs-tenant-resolver-sdk = { path = "../../../../modules/system/tenant_resolver/tenant_resolver-sdk" }
+tenant-resolver-sdk = { package = "cf-tenant-resolver-sdk", path = "../../../../modules/system/tenant_resolver/tenant_resolver-sdk" }
 
 # Core dependencies
 anyhow = { workspace = true }
@@ -80,7 +80,7 @@ modkit-macros = { workspace = true }
 [dev-dependencies]
 tokio-util = { workspace = true }
 tower = { workspace = true, features = ["util"] }
-api_gateway = { path = "../../../../modules/system/api_gateway" }
+api_gateway = { package = "cf-api-gateway", path = "../../../../modules/system/api_gateway" }
 serde_json = { workspace = true }
 testcontainers = { workspace = true }
 testcontainers-modules = { workspace = true, features = ["postgres"] }

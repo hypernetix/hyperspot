@@ -1,18 +1,22 @@
 [package]
 name = "tenant_resolver-gw"
 version = "0.1.0"
+publish = false
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 description = "Tenant resolver gateway module (plugin example)"
+
+[lib]
+name = "tenant_resolver_example_gw"
 
 [lints]
 workspace = true
 
 [dependencies]
 # SDKs
-tenant-resolver-sdk = { path = "../tenant_resolver-sdk" }
-types-registry-sdk = { path = "../../../../modules/system/types-registry/types-registry-sdk" }
+tenant-resolver-example-sdk = { package = "tenant-resolver-sdk", path = "../tenant_resolver-sdk" }
+types-registry-sdk = { workspace = true }
 
 # ModKit
 modkit = { workspace = true }

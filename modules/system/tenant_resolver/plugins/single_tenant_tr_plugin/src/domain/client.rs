@@ -3,11 +3,11 @@
 //! Implements `TenantResolverPluginClient` using single-tenant semantics.
 
 use async_trait::async_trait;
-use hs_tenant_resolver_sdk::{
+use modkit_security::SecurityContext;
+use tenant_resolver_sdk::{
     AccessOptions, TenantFilter, TenantId, TenantInfo, TenantResolverError,
     TenantResolverPluginClient, TenantStatus,
 };
-use modkit_security::SecurityContext;
 
 use super::service::Service;
 
@@ -80,7 +80,7 @@ impl TenantResolverPluginClient for Service {
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
-    use hs_tenant_resolver_sdk::TenantStatus;
+    use tenant_resolver_sdk::TenantStatus;
     use uuid::Uuid;
 
     fn ctx_for_tenant(tenant_id: Uuid) -> SecurityContext {

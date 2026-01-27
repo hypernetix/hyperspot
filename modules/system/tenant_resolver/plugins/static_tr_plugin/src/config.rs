@@ -1,7 +1,7 @@
 //! Configuration for the static tenant resolver plugin.
 
-use hs_tenant_resolver_sdk::TenantStatus;
 use serde::Deserialize;
+use tenant_resolver_sdk::TenantStatus;
 use uuid::Uuid;
 
 /// Plugin configuration.

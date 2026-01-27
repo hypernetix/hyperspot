@@ -15,13 +15,13 @@ use axum::{
     http::{Request, StatusCode},
     response::IntoResponse,
 };
-use hs_tenant_resolver_sdk::{
-    AccessOptions, TenantFilter, TenantId, TenantInfo, TenantResolverError,
-    TenantResolverGatewayClient, TenantStatus,
-};
 use modkit::{
     Module, api::OperationBuilder, config::ConfigProvider, context::ModuleCtx,
     contracts::ApiGatewayCapability,
+};
+use tenant_resolver_sdk::{
+    AccessOptions, TenantFilter, TenantId, TenantInfo, TenantResolverError,
+    TenantResolverGatewayClient, TenantStatus,
 };
 
 use modkit_security::SecurityContext;

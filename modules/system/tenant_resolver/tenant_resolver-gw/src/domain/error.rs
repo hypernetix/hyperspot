@@ -1,6 +1,6 @@
 //! Domain errors for the tenant resolver gateway.
 
-use hs_tenant_resolver_sdk::TenantResolverError;
+use tenant_resolver_sdk::TenantResolverError;
 use uuid::Uuid;
 
 /// Internal domain errors.

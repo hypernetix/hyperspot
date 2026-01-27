@@ -35,10 +35,10 @@ use crate::domain::error::DomainError;
 use crate::domain::events::UserDomainEvent;
 use crate::domain::ports::{AuditPort, EventPublisher};
 use crate::domain::repos::{AddressesRepository, CitiesRepository, UsersRepository};
-use hs_tenant_resolver_sdk::{TenantFilter, TenantResolverGatewayClient, TenantStatus};
 use modkit_db::odata::LimitCfg;
 use modkit_db::secure::SecureConn;
 use modkit_security::{PolicyEngineRef, SecurityContext};
+use tenant_resolver_sdk::{TenantFilter, TenantResolverGatewayClient, TenantStatus};
 use uuid::Uuid;
 
 mod addresses;

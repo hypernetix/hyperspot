@@ -3,7 +3,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use modkit_odata::{ODataQuery, Page};
 use modkit_security::SecurityContext;
-use tenant_resolver_sdk::{
+use tenant_resolver_example_sdk::{
     GetParentsResponse, Tenant, TenantFilter, TenantResolverClient, TenantResolverError,
 };
 
@@ -56,7 +56,7 @@ impl TenantResolverClient for TenantResolverGwClient {
         ctx: &SecurityContext,
         id: &str,
         filter: TenantFilter,
-        access_options: tenant_resolver_sdk::AccessOptions,
+        access_options: tenant_resolver_example_sdk::AccessOptions,
     ) -> Result<GetParentsResponse, TenantResolverError> {
         self.svc
             .get_parents(ctx, id, filter, access_options)
@@ -72,7 +72,7 @@ impl TenantResolverClient for TenantResolverGwClient {
         ctx: &SecurityContext,
         id: &str,
         filter: TenantFilter,
-        access_options: tenant_resolver_sdk::AccessOptions,
+        access_options: tenant_resolver_example_sdk::AccessOptions,
         max_depth: u32,
     ) -> Result<Vec<Tenant>, TenantResolverError> {
         self.svc

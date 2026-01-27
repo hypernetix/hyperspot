@@ -1,18 +1,21 @@
 [package]
-name = "hs-static-tr-plugin"
-version.workspace = true
+name = "cf-static-tr-plugin"
+version = "0.1.0"
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 description = "Tenant resolver plugin with static config-based tenant data and access rules"
+
+[lib]
+name = "static_tr_plugin"
 
 [lints]
 workspace = true
 
 [dependencies]
 # Local dependencies
-hs-tenant-resolver-sdk = { path = "../../tenant_resolver-sdk" }
-types-registry-sdk = { path = "../../../types-registry/types-registry-sdk" }
+tenant-resolver-sdk = { package = "cf-tenant-resolver-sdk", version = "0.1.0", path = "../../tenant_resolver-sdk" }
+types-registry-sdk = { package = "cf-types-registry-sdk", version = "0.1.0", path = "../../../types-registry/types-registry-sdk" }
 
 # ModKit dependencies
 modkit = { workspace = true }

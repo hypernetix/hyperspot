@@ -5,10 +5,6 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use axum::{Router, extract::Json, routing::get};
-use hs_tenant_resolver_sdk::{
-    AccessOptions, TenantFilter, TenantId, TenantInfo, TenantResolverError,
-    TenantResolverGatewayClient, TenantStatus,
-};
 use modkit::{
     Module, ModuleCtx, RestApiCapability,
     api::OperationBuilder,
@@ -18,6 +14,10 @@ use modkit::{
 use modkit_security::SecurityContext;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use tenant_resolver_sdk::{
+    AccessOptions, TenantFilter, TenantId, TenantInfo, TenantResolverError,
+    TenantResolverGatewayClient, TenantStatus,
+};
 use tokio::time::{Duration, sleep};
 use utoipa::ToSchema;
 use uuid::Uuid;

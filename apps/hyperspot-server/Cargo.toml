@@ -1,6 +1,7 @@
 [package]
 name = "hyperspot-server"
 version.workspace = true
+publish = false
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
@@ -13,12 +14,12 @@ default = []
 users-info-example = ["dep:users_info"]
 oop-example = ["dep:calculator_gateway", "dep:calculator"]
 tenant-resolver-example = [
-    "dep:tenant_resolver_gw",
+    "dep:tenant_resolver_example_gw",
     "dep:contoso_tr_plugin",
     "dep:fabrikam_tr_plugin",
 ]
-single-tenant = ["dep:hs-single-tenant-tr-plugin"]
-static-tenants = ["dep:hs-static-tr-plugin"]
+single-tenant = ["dep:single-tenant-tr-plugin"]
+static-tenants = ["dep:static-tr-plugin"]
 otel = ["modkit/otel"]
 
 [[bin]]
@@ -32,20 +33,20 @@ modkit = { workspace = true, features = ["otel", "bootstrap"] }
 modkit-db = { workspace = true, features = ["sqlite", "pg"] }
 
 # System modules
-api_gateway = { path = "../../modules/system/api_gateway" }
-grpc_hub = { path = "../../modules/system/grpc_hub" }
-module_orchestrator = { path = "../../modules/system/module_orchestrator" }
-types-registry = { path = "../../modules/system/types-registry/types-registry" }
-hs-tenant-resolver-gw = { path = "../../modules/system/tenant_resolver/tenant_resolver-gw" }
+api_gateway = { package = "cf-api-gateway", path = "../../modules/system/api_gateway" }
+grpc_hub = { package = "cf-grpc-hub", path = "../../modules/system/grpc_hub" }
+module_orchestrator = { package = "cf-module-orchestrator", path = "../../modules/system/module_orchestrator" }
+types-registry = { package = "cf-types-registry", path = "../../modules/system/types-registry/types-registry" }
+tenant-resolver-gw = { package = "cf-tenant-resolver-gw", path = "../../modules/system/tenant_resolver/tenant_resolver-gw" }
 
 # Optional tenant resolver plugins
-hs-single-tenant-tr-plugin = { path = "../../modules/system/tenant_resolver/plugins/single_tenant_tr_plugin", optional = true }
-hs-static-tr-plugin = { path = "../../modules/system/tenant_resolver/plugins/static_tr_plugin", optional = true }
+single-tenant-tr-plugin = { package = "cf-single-tenant-tr-plugin", path = "../../modules/system/tenant_resolver/plugins/single_tenant_tr_plugin", optional = true }
+static-tr-plugin = { package = "cf-static-tr-plugin", path = "../../modules/system/tenant_resolver/plugins/static_tr_plugin", optional = true }
 
 # user modules
-file_parser = { path = "../../modules/file_parser" }
-nodes_registry = { path = "../../modules/system/nodes_registry/nodes_registry" }
-simple-user-settings = { path = "../../modules/simple-user-settings/simple-user-settings" }
+file_parser = { package = "cf-file-parser", path = "../../modules/file_parser" }
+nodes_registry = { package = "cf-nodes-registry", path = "../../modules/system/nodes_registry/nodes_registry" }
+simple-user-settings = { package = "cf-simple-user-settings", path = "../../modules/simple-user-settings/simple-user-settings" }
 
 anyhow = { workspace = true }
 tokio = { workspace = true }
@@ -62,7 +63,7 @@ calculator_gateway = { path = "../../examples/oop-modules/calculator_gateway/cal
 calculator = { path = "../../examples/oop-modules/calculator/calculator", optional = true }
 
 # tenant_resolver plugin example
-tenant_resolver_gw = { package = "tenant_resolver-gw", path = "../../examples/plugin-modules/tenant_resolver/tenant_resolver-gw", optional = true }
+tenant_resolver_example_gw = { package = "tenant_resolver-gw", path = "../../examples/plugin-modules/tenant_resolver/tenant_resolver-gw", optional = true }
 contoso_tr_plugin = { path = "../../examples/plugin-modules/tenant_resolver/plugins/contoso_tr_plugin", optional = true }
 fabrikam_tr_plugin = { path = "../../examples/plugin-modules/tenant_resolver/plugins/fabrikam_tr_plugin", optional = true }
 

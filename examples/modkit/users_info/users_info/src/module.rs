@@ -14,7 +14,7 @@ use url::Url;
 use user_info_sdk::UsersInfoClient;
 
 // Import tenant resolver for multi-tenant access
-use hs_tenant_resolver_sdk::TenantResolverGatewayClient;
+use tenant_resolver_sdk::TenantResolverGatewayClient;
 
 use crate::api::rest::dto::UserEvent;
 use crate::api::rest::routes;

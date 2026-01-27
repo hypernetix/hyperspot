@@ -7,7 +7,7 @@ use modkit_odata::{
     CursorV1, ODataOrderBy, ODataQuery, OrderKey, Page, PageInfo, SortDir, validate_cursor_against,
 };
 use modkit_security::SecurityContext;
-use tenant_resolver_sdk::{
+use tenant_resolver_example_sdk::{
     AccessOptions, GetParentsResponse, Tenant, TenantFilter, TenantResolverError,
     TenantResolverPluginClient, TenantSpecV1,
 };
