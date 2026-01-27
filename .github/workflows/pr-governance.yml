@@ -138,8 +138,6 @@ jobs:
               }
             );
 
-            const fetch = require("node-fetch");
-
             for (const pr of prs) {
 
               const title = pr.title.toLowerCase();
