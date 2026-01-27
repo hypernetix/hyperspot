@@ -49,6 +49,7 @@ async fn test_dbmanager_server_merge() {
     servers.insert(
         "test_server".to_owned(),
         DbConnConfig {
+            engine: None,
             dsn: None,
             host: Some("localhost".to_owned()),
             port: Some(5432),

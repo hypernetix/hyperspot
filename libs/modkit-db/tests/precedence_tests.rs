@@ -18,6 +18,7 @@ async fn test_precedence_module_fields_override_server() {
             servers.insert(
                 "sqlite_server".to_owned(),
                 DbConnConfig {
+                    engine: Some(DbEngineCfg::Sqlite),
                     params: Some({
                         let mut params = HashMap::new();
                         params.insert("synchronous".to_owned(), "FULL".to_owned());
@@ -38,6 +39,7 @@ async fn test_precedence_module_fields_override_server() {
                 "test_module": {
                     "database": {
                         "server": "sqlite_server",
+                        "engine": "sqlite",
                         "file": format!("precedence_test_{}.db", std::process::id()),
                         "params": {
                             "synchronous": "NORMAL",    // Should override server value
@@ -87,6 +89,7 @@ async fn test_precedence_module_dsn_override_server() {
             servers.insert(
                 "sqlite_server".to_owned(),
                 DbConnConfig {
+                    engine: Some(DbEngineCfg::Sqlite),
                     dsn: Some(format!("sqlite://{}?synchronous=FULL", server_db.display())),
                     ..Default::default()
                 },
@@ -102,6 +105,7 @@ async fn test_precedence_module_dsn_override_server() {
             "test_module": {
                 "database": {
                     "server": "sqlite_server",
+                    "engine": "sqlite",
                     "dsn": format!("sqlite://{}?synchronous=NORMAL", module_db.display())  // Should completely override server DSN
                 }
             }
@@ -261,6 +265,7 @@ async fn test_file_and_path_handling() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "file": format!("file_path_test_{}.db", std::process::id()),            // Should be used (converted to absolute)
                     "path": absolute_path         // Should be ignored in favor of 'file'
                 }
@@ -325,6 +330,7 @@ async fn test_feature_disabled_error() {
         "modules": {
                 "test_module": {
                     "database": {
+                        "engine": "sqlite",
                         "file": format!("feature_test_{}.db", std::process::id())
                     }
                 }

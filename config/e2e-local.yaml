@@ -44,6 +44,7 @@ database:
     # Note: No DSN or file specified here - modules specify their own database files
     # This prevents accidental sharing of SQLite databases between modules
     sqlite_users:
+      engine: "sqlite"
       # SQLite PRAGMA parameters applied to all connections using this server
       params:
         WAL: "true"              # Enable Write-Ahead Logging for better concurrency

@@ -359,6 +359,7 @@ mod database_merge {
         servers.insert(
             "sqlite_main".to_owned(),
             DbConnConfig {
+                engine: Some(modkit_db::config::DbEngineCfg::Sqlite),
                 server: None,
                 dsn: None,
                 host: None,
@@ -387,6 +388,7 @@ mod database_merge {
 
     fn create_module_db_config() -> DbConnConfig {
         DbConnConfig {
+            engine: Some(modkit_db::config::DbEngineCfg::Sqlite),
             server: Some("sqlite_main".to_owned()),
             dsn: None,
             host: None,
@@ -565,6 +567,7 @@ mod database_merge {
         new_servers.insert(
             "new_server".to_owned(),
             DbConnConfig {
+                engine: Some(modkit_db::config::DbEngineCfg::Sqlite),
                 server: None,
                 dsn: Some("sqlite://new.db".to_owned()),
                 host: None,

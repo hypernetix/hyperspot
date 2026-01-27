@@ -69,6 +69,15 @@ pub struct GlobalDatabaseConfig {
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 #[serde(deny_unknown_fields)]
 pub struct DbConnConfig {
+    /// Explicit database engine for this connection.
+    ///
+    /// This is required for configurations without `dsn`, where the engine cannot be inferred
+    /// reliably (e.g. distinguishing `MySQL` vs `PostgreSQL`, or selecting `SQLite` for file/path configs).
+    ///
+    /// If both `engine` and `dsn` are provided, they must not conflict (validated at runtime).
+    #[serde(default)]
+    pub engine: Option<DbEngineCfg>,
+
     // DSN-style (full, valid). Optional: can be absent and rely on fields.
     pub dsn: Option<String>,
 
@@ -92,6 +101,17 @@ pub struct DbConnConfig {
     // Module-level only: reference to a global server by name.
     // If absent, this module config must be fully self-sufficient (dsn or fields).
     pub server: Option<String>,
+}
+
+/// Serializable engine selector for configuration.
+///
+/// Keep this separate from `modkit_db::DbEngine` (runtime type) to avoid coupling it to serde.
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum DbEngineCfg {
+    Postgres,
+    Mysql,
+    Sqlite,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq)]

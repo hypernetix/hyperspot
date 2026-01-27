@@ -16,6 +16,7 @@ async fn test_pool_cfg_options_applied() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "dsn": "sqlite::memory:",
                     "pool": {
                         "max_conns": 20,
@@ -79,6 +80,7 @@ async fn test_module_pool_overrides_server_pool() {
             "test_module": {
                 "database": {
                     "server": "sqlite_server",
+                    "engine": "sqlite",
                     "dsn": "sqlite::memory:",
                     "pool": {
                         "max_conns": 25,          // Should override server value (10)
@@ -138,8 +140,8 @@ async fn test_pool_config_inheritance() {
             "test_module": {
                 "database": {
                     "server": "sqlite_server",
-                        "dsn": "sqlite::memory:"
-                    // No pool config - should inherit from server
+                    "engine": "sqlite",
+                    "dsn": "sqlite::memory:"
                 }
             }
         }

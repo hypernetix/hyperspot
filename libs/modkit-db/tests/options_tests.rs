@@ -7,6 +7,7 @@
 async fn test_build_db_handle_postgres_missing_dbname() {
     use modkit_db::{DbConnConfig, build_db_handle};
     let config = DbConnConfig {
+        engine: Some(modkit_db::config::DbEngineCfg::Postgres),
         server: Some("postgres".to_owned()),
         host: Some("localhost".to_owned()),
         port: Some(5432),

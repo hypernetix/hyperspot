@@ -17,6 +17,7 @@ async fn test_sqlite_relative_path_resolution() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "file": db_filename
                 }
             }
@@ -53,6 +54,7 @@ async fn test_sqlite_absolute_path() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "path": db_path
                 }
             }
@@ -133,6 +135,7 @@ async fn test_invalid_pragma_values() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "file": db_filename,
                     "params": {
                         "synchronous": "INVALID_VALUE"
@@ -166,6 +169,7 @@ async fn test_unknown_pragma_parameters() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "file": db_filename,
                     "params": {
                         "unknown_pragma": "some_value"
@@ -201,6 +205,7 @@ async fn test_auto_provision_creates_directories() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "path": nested_path.join("test.db")
                 }
             }
@@ -240,6 +245,7 @@ async fn test_auto_provision_disabled() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "file": "nested/directories/test.db"  // This requires creating nested dirs
                 }
             }
@@ -275,6 +281,7 @@ async fn test_sqlite_memory_database() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "dsn": "sqlite::memory:"
                 }
             }
@@ -313,6 +320,7 @@ async fn test_sqlite_shared_memory_database() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "dsn": format!(
                         "sqlite://{}?mode=memory&cache=shared",
                         memdb_path.display()
@@ -355,6 +363,7 @@ async fn test_wal_pragma_validation() {
             "modules": {
                 "test_module": {
                     "database": {
+                        "engine": "sqlite",
                         "file": db_filename,
                         "params": {
                             "wal": wal_value
@@ -386,6 +395,7 @@ async fn test_wal_pragma_validation() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "file": db_filename,
                     "params": {
                         "wal": "invalid"
@@ -421,6 +431,7 @@ async fn test_busy_timeout_pragma_validation() {
             "modules": {
                 "test_module": {
                     "database": {
+                        "engine": "sqlite",
                         "file": db_filename,
                         "params": {
                             "busy_timeout": timeout_value
@@ -454,6 +465,7 @@ async fn test_busy_timeout_pragma_validation() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "file": db_filename,
                     "params": {
                         "busy_timeout": "-1000"
@@ -483,6 +495,7 @@ async fn test_busy_timeout_pragma_validation() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "file": db_filename,
                     "params": {
                         "busy_timeout": "not_a_number"

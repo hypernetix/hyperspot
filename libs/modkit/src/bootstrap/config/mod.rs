@@ -1861,6 +1861,7 @@ logging:
         servers.insert(
             "sqlite_users".to_owned(),
             DbConnConfig {
+                engine: None,
                 dsn: Some(
                     "sqlite://users_info.db?WAL=true&synchronous=NORMAL&busy_timeout=5000"
                         .to_owned(),

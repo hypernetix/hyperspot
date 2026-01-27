@@ -10,6 +10,7 @@ use std::time::Duration;
 #[test]
 fn test_dbconnconfig_serialization() {
     let config = DbConnConfig {
+        engine: None,
         dsn: Some("postgresql://user:pass@localhost/db".to_owned()),
         host: Some("localhost".to_owned()),
         port: Some(5432),
@@ -48,6 +49,7 @@ fn test_dbconnconfig_serialization() {
 #[test]
 fn test_dbconnconfig_defaults() {
     let config = DbConnConfig::default();
+    assert!(config.engine.is_none());
     assert!(config.dsn.is_none());
     assert!(config.host.is_none());
     assert!(config.port.is_none());
@@ -165,6 +167,7 @@ fn test_deny_unknown_fields() {
 fn test_minimal_configs() {
     // Test minimal SQLite config
     let sqlite_config = DbConnConfig {
+        engine: Some(modkit_db::config::DbEngineCfg::Sqlite),
         file: Some("data.db".to_owned()),
         ..Default::default()
     };
@@ -174,6 +177,7 @@ fn test_minimal_configs() {
 
     // Test minimal server reference config
     let server_ref_config = DbConnConfig {
+        engine: Some(modkit_db::config::DbEngineCfg::Postgres),
         server: Some("main_db".to_owned()),
         dbname: Some("myapp".to_owned()),
         ..Default::default()
