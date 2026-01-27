@@ -20,6 +20,32 @@ ModKit provides a framework for building modules:
 A module is a composable unit implementing typically some business logic with either REST API and/or peristent storage.
 Common and stateless logic that can be reusable across modules should be implemented in the `libs` crate.
 
+## Task Routing (for agents and focused work)
+
+| Task / Goal | Primary section(s) to read | Related docs |
+|-------------|---------------------------|--------------|
+| **Create module skeleton** | Step 1 (Project layout), Step 2 (Naming matrix) | `docs/modkit_unified_system/02_module_layout_and_sdk_pattern.md` |
+| **Add SDK traits/models/errors** | Step 4 (SDK crate) | `docs/modkit_unified_system/02_module_layout_and_sdk_pattern.md` |
+| **Add DB entities/repositories** | Step 5 (Domain layer), Step 6 (Infra storage) | `docs/SECURE-ORM.md`, `docs/modkit_unified_system/06_secure_orm_db_access.md` |
+| **Add REST endpoints** | Step 7 (REST API layer) | `docs/modkit_unified_system/04_rest_operation_builder.md` |
+| **Add OData $filter/$select** | Step 7 (REST API layer, OData subsection) | `docs/ODATA_SELECT.md`, `docs/modkit_unified_system/07_odata_pagination_select_filter.md` |
+| **Add errors/Problem mapping** | Step 3 (Errors management) | `docs/modkit_unified_system/05_errors_rfc9457.md` |
+| **Add ClientHub inter-module calls** | Step 4 (SDK crate), Step 5 (Domain layer) | `docs/modkit_unified_system/03_clienthub_and_plugins.md` |
+| **Add background tasks/lifecycle** | Step 5 (Domain layer, events) | `docs/modkit_unified_system/08_lifecycle_stateful_tasks.md` |
+| **Wire module in main app** | Step 8 (Module wiring) | |
+| **Write tests** | Step 7 (REST API layer, tests) | |
+
+## Quick TOC (top-level)
+
+- **Step 1**: Project layout (SDK + module crates)
+- **Step 2**: Data types naming matrix
+- **Step 3**: Errors management (Domain → SDK → Problem)
+- **Step 4**: SDK crate (trait, models, errors)
+- **Step 5**: Domain layer (service, events, local client)
+- **Step 6**: Infra layer (config, storage, entities, repositories)
+- **Step 7**: REST API layer (DTOs, handlers, routes, tests)
+- **Step 8**: Module wiring (workspace, main app, registration)
+
 ## Canonical Project Layout
 
 Modules follow a DDD-light architecture with an **SDK pattern** for public API separation:
@@ -43,7 +69,7 @@ modules/<your-module>/
 │  ├─ Cargo.toml
 │  └─ src/
 │     ├─ lib.rs                 # Re-exports: Client trait, models, errors
-│     ├─ api.rs                 # Client trait (all methods take &SecurityCtx)
+│     ├─ api.rs                 # Client trait (all methods take &SecurityContext)
 │     ├─ models.rs              # Transport-agnostic models (NO serde)
 │     └─ errors.rs              # Transport-agnostic errors
 │
@@ -88,6 +114,15 @@ modules/<your-module>/
 
 ### Step 1: Project & Cargo Setup
 
+### Rules / Invariants
+- **Rule**: Use SDK pattern: `<module>-sdk` for public API, `<module>` for implementation.
+- **Rule**: SDK crate contains trait, models, errors; no transport specifics.
+- **Rule**: Module crate implements SDK trait and registers via ClientHub.
+- **Rule**: Use workspace dependencies (`{ workspace = true }`) where available.
+- **Rule**: Use `time::OffsetDateTime` instead of `chrono`.
+- **Rule**: Use `modkit_odata_macros::ODataFilterable` for OData filtering.
+- **Rule**: Use `modkit-*` workspace dependencies, not local paths.
+
 #### 1a. Create SDK crate `<your-module>-sdk/Cargo.toml`
 
 **Rule:** The SDK crate contains only the public API surface with minimal dependencies.
@@ -109,13 +144,13 @@ workspace = true
 async-trait = { workspace = true }
 thiserror = { workspace = true }
 uuid = { workspace = true }
-chrono = { workspace = true }
+time = { workspace = true }
 
 # Security context for API methods
-modkit-security = { path = "../../libs/modkit-security" }
+modkit-security = { workspace = true }
 
 # OData support for pagination (if needed)
-modkit-odata = { path = "../../libs/modkit-odata" }
+modkit-odata = { workspace = true }
 ```
 
 #### 1b. Create module crate `<your-module>/Cargo.toml`
@@ -150,24 +185,27 @@ utoipa = { workspace = true }
 axum = { workspace = true, features = ["macros"] }
 tower-http = { workspace = true, features = ["timeout"] }
 futures = { workspace = true }
-chrono = { workspace = true, features = ["serde"] }
+time = { workspace = true, features = ["serde"] }
 uuid = { workspace = true }
 arc-swap = { workspace = true }
-sea-orm = { workspace = true, features = ["sqlx-sqlite", "runtime-tokio-rustls", "macros", "with-chrono", "with-uuid"] }
+sea-orm = { workspace = true, features = ["sqlx-sqlite", "runtime-tokio-rustls", "macros", "with-time", "with-uuid"] }
 sea-orm-migration = { workspace = true }
 thiserror = { workspace = true }
 
 # Local dependencies
-modkit = { path = "../../libs/modkit" }
-modkit-db = { path = "../../libs/modkit-db" }
-modkit-db-macros = { path = "../../libs/modkit-db-macros" }
-modkit-auth = { path = "../../libs/modkit-auth" }
-modkit-security = { path = "../../libs/modkit-security" }
-modkit-odata = { path = "../../libs/modkit-odata" }
+modkit = { workspace = true }
+modkit-db = { workspace = true }
+modkit-db-macros = { workspace = true }
+modkit-auth = { workspace = true }
+modkit-security = { workspace = true }
+modkit-odata = { workspace = true }
+modkit-errors = { workspace = true }
+modkit-errors-macro = { workspace = true }
+modkit-macros = { workspace = true }
 
 [dev-dependencies]
 tower = { workspace = true, features = ["util"] }
-api_gateway = { path = "../../modules/system/api_gateway" }
+api_gateway = { package = "cf-api-gateway", path = "../../modules/system/api_gateway" }
 ```
 
 #### 1c. Create SDK `src/lib.rs`
@@ -209,7 +247,7 @@ pub use models::{NewUser, User, UserPatch, UpdateUserRequest};
 //! The public API is defined in `<your-module>-sdk` and re-exported here.
 
 // === PUBLIC API (from SDK) ===
-pub use < your_module>_sdk::{
+pub use <your_module>_sdk::{
 YourModuleClient, YourModuleError,
 User, NewUser, UserPatch, UpdateUserRequest,
 };
@@ -229,7 +267,14 @@ pub mod domain;
 pub mod infra;
 ```
 
-### Step 2: Data types naming matrix
+### Step 2: Data Types Naming Matrix
+
+### Rules / Invariants
+- **Rule**: Keep transport-agnostic types in the SDK crate (`<module>-sdk/src/models.rs`).
+- **Rule**: SeaORM entities live in `src/infra/storage/entity.rs` with `#[derive(Scopable)]`.
+- **Rule**: REST DTOs live in `src/api/rest/dto.rs` with `#[derive(ODataFilterable)]`.
+- **Rule**: Use `time::OffsetDateTime` for timestamps.
+- **Rule**: Conversions go in `dto.rs` or optional `mapper.rs`.
 
 **Rule:** Use the following naming matrix for your data types:
 
@@ -247,12 +292,18 @@ pub mod infra;
 Notes:
 
 - Keep all transport-agnostic types in the SDK crate (e.g. `<module>-sdk/src/models.rs`). Handlers and DTOs must not leak into the SDK.
-- SeaORM entities live in `src/infra/storage/entity.rs` (or submodules). Repository queries go in
-  `src/infra/storage/repositories.rs`.
-- All REST DTOs (requests/responses/views) live in `src/api/rest/dto.rs`; provide `From` conversions in
-  `src/api/rest/mapper.rs`.
+- SeaORM entities live in `src/infra/storage/entity.rs` (or submodules). Repository queries go in `src/infra/storage/sea_orm_repo.rs` or per-aggregate repo files.
+- All REST DTOs (requests/responses/views) live in `src/api/rest/dto.rs`; provide `From` conversions in `dto.rs` or an optional `mapper.rs`.
 
-### Step 3: Errors management
+### Step 3: Errors Management
+
+### Rules / Invariants
+- **Rule**: Define `DomainError` in `domain/error.rs` with `thiserror::Error`.
+- **Rule**: Define SDK error in `<module>-sdk/src/errors.rs` (transport-agnostic).
+- **Rule**: Implement `From<DomainError> for <Sdk>Error` in module crate.
+- **Rule**: Implement `From<DomainError> for Problem` in `api/rest/error.rs`.
+- **Rule**: Use `ApiResult<T>` in handlers and `?` for error propagation.
+- **Rule**: Do not use `ProblemResponse` (doesn’t exist).
 
 ModKit provides a unified error handling system with `Problem` (RFC-9457) for type-safe error
 propagation.
@@ -491,7 +542,16 @@ router = OperationBuilder::get("/users-info/v1/users/{id}")
 - Keep all SDK errors free of `serde` and any transport specifics.
 - Validation errors SHOULD use `400 Bad Request` (or `422` for structured validation).
 
-### Step 4: SDK Crate (Public API for Rust Clients)
+### Step 4: SDK Crate (Public API Surface)
+
+### Rules / Invariants
+- **Rule**: SDK trait methods take `&SecurityContext` as first parameter.
+- **Rule**: Use `async_trait` for the SDK trait.
+- **Rule**: Models are transport-agnostic (no serde, no HTTP specifics).
+- **Rule**: Errors are transport-agnostic (no serde, no Problem).
+- **Rule**: Re-export all public types at crate root in `lib.rs`.
+
+#### 4a. SDK `src/lib.rs` (re-exports)
 
 The SDK crate (`<module>-sdk`) defines the transport-agnostic interface for your module.
 Consumers depend only on this crate — not the full module implementation.
@@ -503,7 +563,7 @@ Consumers depend only on this crate — not the full module implementation.
 - Accept `impl AsRef<Path>` for file paths.
 - Use inherent methods for core functionality; use traits for extensions.
 - Public SDK types MUST implement `Debug`. Types intended for display SHOULD implement `Display`.
-- **All API methods MUST accept `&SecurityCtx`** as the first parameter for authorization and tenant isolation.
+- **All API methods MUST accept `&SecurityContext`** as the first parameter for authorization and tenant isolation.
 - **SDK types MUST NOT have `serde`** or any other transport-specific derives.
 
 #### 4a. `<module>-sdk/src/models.rs`
@@ -512,7 +572,7 @@ Consumers depend only on this crate — not the full module implementation.
 
 ```rust
 // Example from user_info-sdk
-use chrono::{DateTime, Utc};
+use time::{OffsetDateTime, Utc};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -521,8 +581,8 @@ pub struct User {
     pub tenant_id: Uuid,
     pub email: String,
     pub display_name: String,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
+    pub created_at: OffsetDateTime,
+    pub updated_at: OffsetDateTime,
 }
 
 /// Data for creating a new user
@@ -589,12 +649,12 @@ impl UsersInfoError {
 
 **Rule:** Define the native async trait for ClientHub. Name it `<PascalCaseModule>Client`.
 
-**Rule:** All methods MUST accept `&SecurityCtx` as the first parameter.
+**Rule:** All methods MUST accept `&SecurityContext` as the first parameter.
 
 ```rust
 // Example from user_info-sdk
 use async_trait::async_trait;
-use modkit_security::SecurityCtx;
+use modkit_security::SecurityContext;
 use uuid::Uuid;
 
 use crate::{
@@ -605,64 +665,75 @@ use modkit_odata::{ODataQuery, Page};
 
 /// Public API trait for users_info module.
 ///
-/// All methods require SecurityCtx for authorization.
+/// All methods require SecurityContext for authorization.
 /// Obtain via ClientHub: `hub.get::<dyn UsersInfoClient>()?`
 #[async_trait]
 pub trait UsersInfoClient: Send + Sync {
     /// Get a user by ID
-    async fn get_user(&self, ctx: &SecurityCtx, id: Uuid) -> Result<User, UsersInfoError>;
+    async fn get_user(&self, ctx: &SecurityContext, id: Uuid) -> Result<User, UsersInfoError>;
 
     /// List users with cursor-based pagination
     async fn list_users(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         query: ODataQuery,
     ) -> Result<Page<User>, UsersInfoError>;
 
     /// Create a new user
     async fn create_user(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         new_user: NewUser,
     ) -> Result<User, UsersInfoError>;
 
     /// Update a user
     async fn update_user(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         req: UpdateUserRequest,
     ) -> Result<User, UsersInfoError>;
 
     /// Delete a user by ID
-    async fn delete_user(&self, ctx: &SecurityCtx, id: Uuid) -> Result<(), UsersInfoError>;
+    async fn delete_user(&self, ctx: &SecurityContext, id: Uuid) -> Result<(), UsersInfoError>;
 }
 ```
 
-**Why SecurityCtx is required:**
+**Why SecurityContext is required:**
 
 - Enables tenant isolation (user can only access data within their tenant)
 - Provides authorization context for access control checks
 - Propagates user identity for audit logging
 - Works seamlessly across local and gRPC transports
 
-### Step 5: Domain Layer
+### Step 5: Domain Layer (Business Logic)
 
-This layer contains the core business logic, free from API specifics and infrastructure concerns.
-All service methods receive `&SecurityCtx` for authorization and access control.
+### Rules / Invariants
+- **Rule**: Service methods take `&SecurityContext` and `&SecureConn` (or `&DbHandle`).
+- **Rule**: Use `SecureConn` for all DB operations (secure-by-default).
+- **Rule**: Domain events are transport-agnostic (use SDK types).
+- **Rule**: Local client implements SDK trait and calls domain service.
+- **Rule**: Use `CancellationToken` for background tasks.
+
+The domain layer contains the business logic, domain events, and a local client adapter that implements the SDK trait for in-process communication.
+All service methods receive `&SecurityContext` for authorization and access control.
 
 1. **`src/domain/events.rs`:**
    **Rule:** Define transport-agnostic domain events for important business actions.
 
+```rust
+// Example from users_info
+use time::OffsetDateTime;
+use uuid::Uuid;
    ```rust
    // Example from users_info
-   use chrono::{DateTime, Utc};
+   use time::OffsetDateTime;
    use uuid::Uuid;
 
    #[derive(Debug, Clone)]
    pub enum UserDomainEvent {
-       Created { id: Uuid, at: DateTime<Utc> },
-       Updated { id: Uuid, at: DateTime<Utc> },
-       Deleted { id: Uuid, at: DateTime<Utc> },
+       Created { id: Uuid, at: OffsetDateTime },
+       Updated { id: Uuid, at: OffsetDateTime },
+       Deleted { id: Uuid, at: OffsetDateTime },
    }
    ```
 
@@ -680,12 +751,12 @@ All service methods receive `&SecurityCtx` for authorization and access control.
    **Rule:** Define repository traits (ports) that the service will depend on. This decouples the domain from the
    database implementation.
 
-   **Rule:** Repository methods receive `&SecurityCtx` for secure data access via SecureConn.
+   **Rule:** Repository methods receive `&AccessScope` for secure data access.
 
    ```rust
    // Example from users_info
    use async_trait::async_trait;
-   use modkit_security::SecurityCtx;
+   use modkit_security::AccessScope;
    use uuid::Uuid;
 
    // Import models from SDK crate
@@ -697,41 +768,41 @@ All service methods receive `&SecurityCtx` for authorization and access control.
        /// Find user by ID with security scoping
        async fn find_by_id(
            &self,
-           ctx: &SecurityCtx,
+           scope: &AccessScope,
            id: Uuid,
        ) -> anyhow::Result<Option<User>>;
 
        /// Check if email exists within security scope
        async fn email_exists(
            &self,
-           ctx: &SecurityCtx,
+           scope: &AccessScope,
            email: &str,
        ) -> anyhow::Result<bool>;
 
        /// List users with OData pagination
        async fn list_page(
            &self,
-           ctx: &SecurityCtx,
+           scope: &AccessScope,
            query: ODataQuery,
        ) -> anyhow::Result<Page<User>>;
 
        /// Insert a new user
        async fn insert(
            &self,
-           ctx: &SecurityCtx,
+           scope: &AccessScope,
            new_user: NewUser,
        ) -> anyhow::Result<User>;
 
        /// Update user with patch
        async fn update(
            &self,
-           ctx: &SecurityCtx,
+           scope: &AccessScope,
            id: Uuid,
            patch: UserPatch,
        ) -> anyhow::Result<User>;
 
        /// Delete user by ID
-       async fn delete(&self, ctx: &SecurityCtx, id: Uuid) -> anyhow::Result<bool>;
+       async fn delete(&self, scope: &AccessScope, id: Uuid) -> anyhow::Result<bool>;
    }
    ```
 
@@ -739,12 +810,12 @@ All service methods receive `&SecurityCtx` for authorization and access control.
    **Rule:** The `Service` struct encapsulates all business logic. It depends on repository traits and event publishers,
    not concrete implementations.
 
-   **Rule:** All service methods accept `&SecurityCtx` as the first parameter.
+   **Rule:** All service methods accept `&SecurityContext` as the first parameter.
 
    ```rust
    // Example from users_info
    use std::sync::Arc;
-   use modkit_security::SecurityCtx;
+   use modkit_security::SecurityContext;
    use uuid::Uuid;
 
    use super::error::DomainError;
@@ -778,7 +849,7 @@ All service methods receive `&SecurityCtx` for authorization and access control.
 
        pub async fn get_user(
            &self,
-           ctx: &SecurityCtx,
+           ctx: &SecurityContext,
            id: Uuid,
        ) -> Result<User, DomainError> {
            self.repo
@@ -789,7 +860,7 @@ All service methods receive `&SecurityCtx` for authorization and access control.
 
        pub async fn list_users_page(
            &self,
-           ctx: &SecurityCtx,
+           ctx: &SecurityContext,
            query: ODataQuery,
        ) -> Result<Page<User>, DomainError> {
            self.repo.list_page(ctx, query).await.map_err(Into::into)
@@ -797,7 +868,7 @@ All service methods receive `&SecurityCtx` for authorization and access control.
 
        pub async fn create_user(
            &self,
-           ctx: &SecurityCtx,
+           ctx: &SecurityContext,
            new_user: NewUser,
        ) -> Result<User, DomainError> {
            // Validate email uniqueness
@@ -821,7 +892,7 @@ All service methods receive `&SecurityCtx` for authorization and access control.
 
        pub async fn update_user(
            &self,
-           ctx: &SecurityCtx,
+           ctx: &SecurityContext,
            id: Uuid,
            patch: UserPatch,
        ) -> Result<User, DomainError> {
@@ -842,7 +913,7 @@ All service methods receive `&SecurityCtx` for authorization and access control.
 
        pub async fn delete_user(
            &self,
-           ctx: &SecurityCtx,
+           ctx: &SecurityContext,
            id: Uuid,
        ) -> Result<(), DomainError> {
            let deleted = self.repo.delete(ctx, id).await?;
@@ -853,7 +924,7 @@ All service methods receive `&SecurityCtx` for authorization and access control.
            // Publish domain event
            self.events.publish(&UserDomainEvent::Deleted {
                id,
-               at: chrono::Utc::now(),
+               at: time::OffsetDateTime::now_utc(),
            });
 
            Ok(())
@@ -862,6 +933,13 @@ All service methods receive `&SecurityCtx` for authorization and access control.
    ```
 
 ### Step 6: Module Wiring & Lifecycle
+
+### Rules / Invariants
+- **Rule**: Use `#[modkit::module(...)]` for declarative registration.
+- **Rule**: Register clients explicitly in `init()` via `ctx.client_hub().register()`.
+- **Rule**: Use `CancellationToken` for coordinated shutdown.
+- **Rule**: Use `WithLifecycle` for background tasks.
+- **Rule**: Attach service once after all routes: `router.layer(Extension(service))`.
 
 #### `#[modkit::module]` Full Syntax
 
@@ -1088,8 +1166,16 @@ fn _ensure_modules_linked() {
 
 ### Step 7: REST API Layer (Optional)
 
-This layer adapts HTTP requests to domain calls. It is required only for modules exposing their own REST API to UI or
-external API clients.
+### Rules / Invariants
+- **Rule**: Use `OperationBuilder` for every route (no manual routing).
+- **Rule**: Add `.require_auth()` for protected endpoints.
+- **Rule**: Use `Extension<Arc<Service>>` and attach once after all routes.
+- **Rule**: Use `Authz(ctx): Authz` to get `SecurityContext`.
+- **Rule**: Use `ApiResult<T>` and `?` for error propagation.
+- **Rule**: For OData: use `OperationBuilderODataExt` helpers and `OData(query)` extractor.
+- **Rule**: Use `modkit_odata_macros::ODataFilterable` on DTOs.
+
+This layer adapts HTTP requests to domain calls. It is required only for modules exposing their own REST API to UI or external API clients.
 
 #### Common principles
 
@@ -1099,7 +1185,7 @@ external API clients.
    via `register_routes(...)`.
    **Rule:** Use `Extension<Arc<Service>>` for dependency injection and attach the service ONCE after all
    routes are registered: `router = router.layer(Extension(service.clone()));`.
-   **Rule:** Use `Authz(ctx): Authz` extractor for authorization — it extracts `SecurityCtx` from the request.
+   **Rule:** Use `Authz(ctx): Authz` extractor for authorization — it extracts `SecurityContext` from the request.
    **Rule:** Follow the `<crate>.<resource>.<action>` convention for `operation_id` naming.
    **Rule:** Use `modkit::api::prelude::*` for ergonomic handler types (ApiResult, created_json, no_content).
    **Rule:** Always return RFC 9457 Problem Details for all 4xx/5xx errors via `Problem` (implements `IntoResponse`).
@@ -1112,10 +1198,10 @@ external API clients.
    **Rule:** For OData filtering, add `#[derive(ODataFilterable)]` with `#[odata(filter(kind = "..."))]` on fields.
    **Rule:** Only fields annotated with `#[odata(filter(kind = "..."))]` become available for `$filter` / `$orderby` (unannotated fields are not filterable/orderable).
    **Rule:** Map OpenAPI types correctly: `string: uuid` -> `uuid::Uuid`, `string: date-time` ->
-   `chrono::DateTime<chrono::Utc>`.
+   `time::OffsetDateTime`.
 
    ```rust
-   use chrono::{DateTime, Utc};
+   use time::OffsetDateTime;
    use modkit_odata_macros::ODataFilterable;
    use serde::{Deserialize, Serialize};
    use utoipa::ToSchema;
@@ -1130,9 +1216,9 @@ external API clients.
        #[odata(filter(kind = "String"))]
        pub email: String,
        pub display_name: String,
-       #[odata(filter(kind = "DateTimeUtc"))]
-       pub created_at: DateTime<Utc>,
-       pub updated_at: DateTime<Utc>,
+       #[odata(filter(kind = "OffsetDateTime"))]
+       pub created_at: OffsetDateTime,
+       pub updated_at: OffsetDateTime,
    }
 
    /// REST DTO for creating a new user
@@ -1144,12 +1230,12 @@ external API clients.
    }
    ```
 
-3. **`src/api/rest/mapper.rs`:**
-   **Rule:** Provide `From` implementations to convert between DTOs and SDK models.
+3. **`src/api/rest/mapper.rs` (optional):**
+   **Rule:** Provide `From` implementations to convert between DTOs and SDK models. Keep conversions near DTO definitions unless they become large.
 
 4. **`src/api/rest/handlers.rs`:**
    **Rule:** Handlers must be thin. They extract data, call the domain service, and map results.
-   **Rule:** Use `Authz(ctx): Authz` extractor to get `SecurityCtx` for authorization.
+   **Rule:** Use `Authz(ctx): Authz` extractor to get `SecurityContext` for authorization.
    **Rule:** Use `Extension<Arc<Service>>` for dependency injection.
    **Rule:** Handler return types use the prelude helpers:
 
@@ -1168,7 +1254,7 @@ external API clients.
 
    /// List users with cursor-based pagination
    pub async fn list_users(
-       Authz(ctx): Authz,                              // Extract SecurityCtx
+       Authz(ctx): Authz,                              // Extract SecurityContext
        Extension(svc): Extension<Arc<Service>>,
        OData(query): OData,                            // OData query parameters
    ) -> ApiResult<JsonPage<UserDto>> {
@@ -1368,15 +1454,15 @@ This layer implements the domain's repository traits with **Secure ORM** for ten
 The Secure ORM layer provides:
 
 - **Typestate enforcement**: Unscoped queries cannot be executed (compile-time safety)
-- **Request-scoped security**: SecurityCtx passed per-operation from handlers
+- **Request-scoped security**: SecurityContext passed per-request from handlers
 - **Tenant isolation**: Automatic WHERE clauses for multi-tenant data
 - **Zero runtime overhead**: All checks happen at compile time
 
 ```
 API Handler (per-request)
-    ↓ Creates SecurityCtx from auth
+    ↓ Creates SecurityContext from auth
 SecureConn (stateless wrapper)
-    ↓ Receives SecurityCtx per-operation
+    ↓ Receives AccessScope per-operation
     ↓ Applies implicit tenant/resource scope
 SeaORM
     ↓
@@ -1409,13 +1495,13 @@ Database
    }
    ```
 
-2. **`src/infra/storage/repositories.rs`:**
-   **Rule:** Use `SecureConn` for all database operations. Pass `SecurityCtx` to all methods.
+2. **`src/infra/storage/sea_orm_repo.rs` (or per-aggregate repos):**
+   **Rule:** Use `SecureConn` for all database operations. Pass `AccessScope` to all methods.
 
    ```rust
    use async_trait::async_trait;
    use modkit_db::secure::SecureConn;
-   use modkit_security::SecurityCtx;
+   use modkit_security::AccessScope;
    use uuid::Uuid;
 
    // Import models from SDK crate
@@ -1438,12 +1524,12 @@ Database
    impl UsersRepository for SeaOrmUsersRepository {
        async fn find_by_id(
            &self,
-           ctx: &SecurityCtx,
+           scope: &AccessScope,
            id: Uuid,
        ) -> anyhow::Result<Option<User>> {
-           // SecureConn automatically applies tenant scope from SecurityCtx
+           // SecureConn automatically applies tenant/resource scope from AccessScope
            let found = self.conn
-               .find_by_id::<entity::Entity>(ctx, id)?
+               .find_by_id::<entity::Entity>(scope, id)?
                .one(self.conn.conn())
                .await?;
            Ok(found.map(Into::into))
@@ -1451,14 +1537,14 @@ Database
 
        async fn list_page(
            &self,
-           ctx: &SecurityCtx,
+           scope: &AccessScope,
            query: ODataQuery,
        ) -> anyhow::Result<Page<User>> {
            use modkit_db::odata::sea_orm_filter::{paginate_odata, LimitCfg};
            use crate::infra::storage::odata_mapper::UserODataMapper;
            use crate::api::rest::dto::UserDtoFilterField;
 
-           let base_query = self.conn.find::<entity::Entity>(ctx)?;
+           let base_query = self.conn.find::<entity::Entity>(scope)?;
 
            let page = paginate_odata::<UserDtoFilterField, UserODataMapper, _, _, _, _>(
                base_query.into_inner(),
@@ -1474,11 +1560,11 @@ Database
 
        async fn insert(
            &self,
-           ctx: &SecurityCtx,
+           scope: &AccessScope,
            new_user: NewUser,
        ) -> anyhow::Result<User> {
            let id = new_user.id.unwrap_or_else(uuid::Uuid::now_v7);
-           let now = chrono::Utc::now();
+           let now = time::OffsetDateTime::now_utc();
 
            let active_model = entity::ActiveModel {
                id: sea_orm::ActiveValue::Set(id),
@@ -1489,12 +1575,12 @@ Database
                updated_at: sea_orm::ActiveValue::Set(now),
            };
 
-           let model = self.conn.insert::<entity::Entity>(ctx, active_model).await?;
+           let model = self.conn.insert::<entity::Entity>(scope, active_model).await?;
            Ok(model.into())
        }
 
-       async fn delete(&self, ctx: &SecurityCtx, id: Uuid) -> anyhow::Result<bool> {
-           self.conn.delete_by_id::<entity::Entity>(ctx, id).await
+       async fn delete(&self, scope: &AccessScope, id: Uuid) -> anyhow::Result<bool> {
+           self.conn.delete_by_id::<entity::Entity>(scope, id).await
        }
    }
    ```
@@ -1617,7 +1703,7 @@ The local client implements the SDK trait and forwards calls to domain service m
 - Implements the SDK API trait (`<module>_sdk::api::YourModuleClient`)
 - Imports types from the SDK, not from a local `contract` module
 - Delegates all calls to the domain `Service`
-- Passes `SecurityCtx` directly to service methods
+- Passes `SecurityContext` directly to service methods
 - Converts `DomainError` to SDK `<Module>Error` via `From` impl
 
 ```rust
@@ -1635,7 +1721,7 @@ use user_info_sdk::{
 
 use crate::domain::service::Service;
 use modkit_odata::{ODataQuery, Page};
-use modkit_security::SecurityCtx;
+use modkit_security::SecurityContext;
 
 /// Local client adapter implementing the SDK API trait.
 /// Registered in ClientHub during module init().
@@ -1651,7 +1737,7 @@ impl UsersInfoLocalClient {
 
 #[async_trait]
 impl UsersInfoClient for UsersInfoLocalClient {
-    async fn get_user(&self, ctx: &SecurityCtx, id: Uuid) -> Result<User, UsersInfoError> {
+    async fn get_user(&self, ctx: &SecurityContext, id: Uuid) -> Result<User, UsersInfoError> {
         self.service
             .get_user(ctx, id)
             .await
@@ -1660,7 +1746,7 @@ impl UsersInfoClient for UsersInfoLocalClient {
 
     async fn list_users(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         query: ODataQuery,
     ) -> Result<Page<User>, UsersInfoError> {
         self.service
@@ -1671,7 +1757,7 @@ impl UsersInfoClient for UsersInfoLocalClient {
 
     async fn create_user(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         new_user: NewUser,
     ) -> Result<User, UsersInfoError> {
         self.service
@@ -1682,7 +1768,7 @@ impl UsersInfoClient for UsersInfoLocalClient {
 
     async fn update_user(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         req: UpdateUserRequest,
     ) -> Result<User, UsersInfoError> {
         self.service
@@ -1691,7 +1777,7 @@ impl UsersInfoClient for UsersInfoLocalClient {
             .map_err(Into::into)
     }
 
-    async fn delete_user(&self, ctx: &SecurityCtx, id: Uuid) -> Result<(), UsersInfoError> {
+    async fn delete_user(&self, ctx: &SecurityContext, id: Uuid) -> Result<(), UsersInfoError> {
         self.service
             .delete_user(ctx, id)
             .await
@@ -1731,9 +1817,9 @@ discoverable and include its API endpoints in the OpenAPI documentation.
 
    ```toml
    # user modules
-   file_parser = { path = "../../modules/file_parser" }
-   nodes_registry = { path = "../../modules/system/nodes_registry/nodes_registry" }
-   your_module = { path = "../../modules/your_module" }  # ADD THIS LINE
+   file_parser = { package = "cf-file-parser", path = "../../modules/file_parser" }
+   nodes_registry = { package = "cf-nodes-registry", path = "../../modules/system/nodes_registry/nodes_registry" }
+   your_module = { package = "cf-your-module", path = "../../modules/your_module/your_module" }  # ADD THIS LINE
    ```
 
 2. **Import module in `apps/hyperspot-server/src/registered_modules.rs`:**
@@ -1771,23 +1857,33 @@ Then check the OpenAPI documentation at `http://127.0.0.1:8087/docs` to verify y
 
 ### Step 12: Testing
 
+### Rules / Invariants
+- **Rule**: Use `SecurityContext::builder()` (or `SecurityContext::anonymous()` if tenant/subject is not needed) in tests.
+- **Rule**: Mock repository traits for unit tests of domain logic.
+- **Rule**: Use `Router::oneshot` for integration tests with real routes.
+- **Rule**: Test both success and error paths (including RFC 9457 Problem responses).
+- **Rule**: Use `tokio::test` for async tests.
+
 - **Unit Tests:** Place next to the code being tested. Mock repository traits to test domain service logic in isolation.
 - **Integration/REST Tests:** Place in the `tests/` directory. Use `Router::oneshot` with a stubbed service or a real
   service connected to a test database to verify handlers, serialization, and error mapping.
 
-#### Testing with SecurityCtx
+#### Testing with SecurityContext
 
-All service and repository tests need a `SecurityCtx`. Use explicit tenant IDs for test contexts:
+All service and repository tests need a `SecurityContext`. Use explicit tenant IDs for test contexts:
 
 ```rust
-use modkit_security::SecurityCtx;
+use modkit_security::SecurityContext;
 use uuid::Uuid;
 
 #[tokio::test]
 async fn test_service_method() {
     let tenant_id = Uuid::new_v4();
     let subject_id = Uuid::new_v4();
-    let ctx = SecurityCtx::for_tenant(tenant_id, subject_id);
+    let ctx = SecurityContext::builder()
+        .tenant_id(tenant_id)
+        .subject_id(subject_id)
+        .build();
     let service = create_test_service().await;
 
     let result = service.get_user(&ctx, test_user_id).await;
@@ -1798,14 +1894,17 @@ async fn test_service_method() {
 For multi-tenant tests:
 
 ```rust
-use modkit_security::SecurityCtx;
+use modkit_security::SecurityContext;
 use uuid::Uuid;
 
 #[tokio::test]
 async fn test_tenant_isolation() {
     let tenant_id = Uuid::new_v4();
     let user_id = Uuid::new_v4();
-    let ctx = SecurityCtx::for_tenants(vec![tenant_id], user_id);
+    let ctx = SecurityContext::builder()
+        .tenant_id(tenant_id)
+        .subject_id(user_id)
+        .build();
 
     let service = create_test_service().await;
 
@@ -1905,6 +2004,13 @@ async fn test_sse_broadcaster() {
 
 ### Step 13: Out-of-Process (OoP) Module Support (Optional)
 
+### Rules / Invariants
+- **Rule**: Use SDK pattern for OoP (single `*-sdk` crate with trait, types, gRPC client).
+- **Rule**: Server implementations live in module crate; SDK provides only client.
+- **Rule**: Use `modkit_transport_grpc::client` utilities (`connect_with_stack`, `connect_with_retry`).
+- **Rule**: Use `CancellationToken` for coordinated shutdown.
+- **Rule**: Use `modkit::bootstrap::oop` for OoP bootstrap.
+
 ModKit supports running modules as separate processes with gRPC-based inter-process communication.
 This enables process isolation, language flexibility, and independent scaling.
 
@@ -1947,15 +2053,15 @@ Define the API trait and types in a separate crate (no transport dependencies):
 ```rust
 // <name>-sdk/src/lib.rs
 use async_trait::async_trait;
-use modkit_security::SecurityCtx;
+use modkit_security::SecurityContext;
 
 /// Client trait for MyModule
-/// All methods require SecurityCtx for authorization.
+/// All methods require SecurityContext for authorization.
 #[async_trait]
 pub trait MyModuleClient: Send + Sync {
     async fn do_something(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         input: String,
     ) -> Result<String, MyModuleError>;
 }
@@ -1983,7 +2089,7 @@ edition.workspace = true
 
 [dependencies]
 async-trait = { workspace = true }
-modkit-security = { path = "../../libs/modkit-security" }
+modkit-security = { workspace = true }
 thiserror = { workspace = true }
 ```
 
@@ -2013,9 +2119,9 @@ message DoSomethingResponse {
 // <name>-grpc/src/client.rs
 use anyhow::Result;
 use async_trait::async_trait;
-use modkit_security::SecurityCtx;
+use modkit_security::SecurityContext;
 use modkit_transport_grpc::client::{connect_with_retry, GrpcClientConfig};
-use modkit_transport_grpc::inject_secctx;
+use modkit_transport_grpc::attach_secctx;
 use tonic::transport::Channel;
 
 use mymodule_sdk::{MyModuleClient, MyModuleError};
@@ -2046,11 +2152,12 @@ impl MyModuleGrpcClient {
 impl MyModuleClient for MyModuleGrpcClient {
     async fn do_something(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         input: String,
     ) -> Result<String, MyModuleError> {
         let mut request = tonic::Request::new(crate::mymodule::DoSomethingRequest { input });
-        inject_secctx(request.metadata_mut(), ctx);
+        attach_secctx(request.metadata_mut(), ctx)
+            .map_err(|e| MyModuleError::Transport(e.to_string()))?;
 
         let response = self.inner.clone()
             .do_something(request)
@@ -2089,7 +2196,7 @@ use tonic::{Request, Response, Status};
 
 use modkit::context::ModuleCtx;
 use modkit::contracts::{GrpcServiceModule, RegisterGrpcServiceFn};
-use modkit_security::SecurityCtx;
+use modkit_security::SecurityContext;
 use modkit_transport_grpc::extract_secctx;
 
 // Re-export contracts and grpc for consumers
@@ -2125,7 +2232,7 @@ struct LocalImpl;
 impl MyModuleClient for LocalImpl {
     async fn do_something(
         &self,
-        _ctx: &SecurityCtx,
+        _ctx: &SecurityContext,
         input: String,
     ) -> Result<String, MyModuleError> {
         Ok(format!("Processed: {}", input))
@@ -2143,7 +2250,7 @@ impl MyModuleService for GrpcServer {
         &self,
         request: Request<mymodule_grpc::mymodule::DoSomethingRequest>,
     ) -> Result<Response<mymodule_grpc::mymodule::DoSomethingResponse>, Status> {
-        // Extract SecurityCtx from gRPC metadata
+        // Extract SecurityContext from gRPC metadata
         let ctx = extract_secctx(request.metadata())?;
         let req = request.into_inner();
 
@@ -2324,13 +2431,13 @@ modules/<gateway-name>/
 /// Public API — exposed by gateway, consumed by other modules
 #[async_trait]
 pub trait MyModuleGatewayClient: Send + Sync {
-    async fn do_work(&self, ctx: &SecurityCtx, input: Input) -> Result<Output, MyError>;
+    async fn do_work(&self, ctx: &SecurityContext, input: Input) -> Result<Output, MyError>;
 }
 
 /// Plugin API — implemented by plugins, called by gateway
 #[async_trait]
 pub trait MyModulePluginClient: Send + Sync {
-    async fn do_work(&self, ctx: &SecurityCtx, input: Input) -> Result<Output, MyError>;
+    async fn do_work(&self, ctx: &SecurityContext, input: Input) -> Result<Output, MyError>;
 }
 ```
 
@@ -2362,7 +2469,6 @@ Plugins only register their **instances**.
 
 ```rust
 // <gateway>-gw/src/module.rs
-use modkit_security::SecurityCtx;
 use types_registry_sdk::TypesRegistryClient;
 
 #[async_trait]
@@ -2373,7 +2479,7 @@ impl Module for MyGateway {
         // === SCHEMA REGISTRATION ===
         // Gateway registers the plugin SCHEMA in types-registry.
         // Plugins only register their INSTANCES.
-        // Note: types-registry is tenant-agnostic, no SecurityCtx needed.
+        // Note: types-registry is tenant-agnostic, no SecurityContext needed.
         let registry = ctx.client_hub().get::<dyn TypesRegistryClient>()?;
         let schema_str = MyModulePluginV1::gts_schema_with_refs_as_string();
         let schema_json: serde_json::Value = serde_json::from_str(&schema_str)?;
@@ -2416,7 +2522,7 @@ impl Module for VendorPlugin {
         // === INSTANCE REGISTRATION ===
         // Register the plugin INSTANCE in types-registry.
         // Note: The plugin SCHEMA is registered by the gateway module.
-        // types-registry is tenant-agnostic, no SecurityCtx needed.
+        // types-registry is tenant-agnostic, no SecurityContext needed.
         let registry = ctx.client_hub().get::<dyn TypesRegistryClient>()?;
         let instance = BaseModkitPluginV1::<MyModulePluginV1> {
             id: instance_id.clone(),
@@ -2601,7 +2707,7 @@ cargo test --manifest-path modules/your-module/Cargo.toml
 **Rule:** Clean imports (remove unused `DateTime`, test imports, trait imports).
 
 **Rule:** Fix common issues: missing test imports (`OpenApiRegistry`, `OperationSpec`, `Schema`), type inference
-errors (add explicit types), missing `chrono::Utc`, handler/service name mismatches.
+errors (add explicit types), missing `time::OffsetDateTime`, handler/service name mismatches.
 
 **Rule:** make and CI should run: `clippy --all-targets --all-features`, `fmt --check`, `deny check`.
 
