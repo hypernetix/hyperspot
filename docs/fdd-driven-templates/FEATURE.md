@@ -3,6 +3,7 @@
 ## A. Feature Context
 
 **Feature ID**: `fdd-{module-name}-feature-{feature-slug}`
+
 **Status**: NOT_STARTED | IN_PROGRESS | IMPLEMENTED
 
 ### 1. Overview
