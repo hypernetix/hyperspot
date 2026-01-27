@@ -22,6 +22,7 @@ types-registry-sdk = { workspace = true }
 modkit = { workspace = true }
 modkit-security = { workspace = true }
 modkit-odata = { workspace = true, features = ["with-utoipa"] }
+modkit-macros = { workspace = true }
 
 # HTTP/REST
 axum = { workspace = true }

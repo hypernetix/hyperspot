@@ -75,6 +75,7 @@ modkit-errors = { workspace = true }
 modkit-errors-macro = { workspace = true }
 modkit-odata = { workspace = true, features = ["with-utoipa"] }
 modkit-sdk = { workspace = true }
+modkit-macros = { workspace = true }
 
 [dev-dependencies]
 tokio-util = { workspace = true }

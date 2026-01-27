@@ -17,9 +17,7 @@ use tenant_resolver_sdk::{
 };
 
 use modkit_security::SecurityContext;
-use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use utoipa::ToSchema;
 use uuid::Uuid;
 
 struct MockTenantResolver;
@@ -126,7 +124,8 @@ fn create_test_module_ctx_permissive_cors() -> ModuleCtx {
     )
 }
 
-#[derive(Serialize, Deserialize, ToSchema, Debug, Clone)]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request, response)]
 struct TestData {
     value: String,
 }

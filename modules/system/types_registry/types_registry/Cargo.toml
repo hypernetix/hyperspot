@@ -44,6 +44,7 @@ parking_lot = { workspace = true }
 modkit = { workspace = true }
 modkit-auth = { workspace = true }
 modkit-security = { workspace = true }
+modkit-macros = { workspace = true }
 
 [dev-dependencies]
 tower = { workspace = true, features = ["util"] }

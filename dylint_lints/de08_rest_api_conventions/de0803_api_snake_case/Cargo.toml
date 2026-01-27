@@ -1,0 +1,126 @@
+[package]
+name = "de0803_api_snake_case"
+version = "0.1.0"
+authors = ["Hypernetix"]
+description = "DTOs must not use CamelCase or PascalCase in serde rename_all, only snake_case is allowed"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+clippy_utils.workspace = true
+dylint_linting.workspace = true
+lint_utils.workspace = true
+
+[dev-dependencies]
+dylint_testing.workspace = true
+serde.workspace = true
+
+[[example]]
+name = "pass"
+path = "ui/pass.rs"
+
+[[example]]
+name = "fail_camel_case"
+path = "ui/fail_camel_case.rs"
+
+[[example]]
+name = "fail_lowercase"
+path = "ui/fail_lowercase.rs"
+
+[[example]]
+name = "fail_pascal_case"
+path = "ui/fail_pascal_case.rs"
+
+[[example]]
+name = "fail_uppercase"
+path = "ui/fail_uppercase.rs"
+
+[[example]]
+name = "fail_screaming_snake_case"
+path = "ui/fail_screaming_snake_case.rs"
+
+[[example]]
+name = "fail_kebab_case"
+path = "ui/fail_kebab_case.rs"
+
+[[example]]
+name = "fail_screaming_kebab_case"
+path = "ui/fail_screaming_kebab_case.rs"
+
+[[example]]
+name = "pass_outside_api"
+path = "ui/pass_outside_api.rs"
+
+[[example]]
+name = "fail_field_camel_case"
+path = "ui/fail_field_camel_case.rs"
+
+[[example]]
+name = "fail_field_pascal_case"
+path = "ui/fail_field_pascal_case.rs"
+
+[[example]]
+name = "fail_field_kebab_case"
+path = "ui/fail_field_kebab_case.rs"
+
+[[example]]
+name = "fail_field_uppercase"
+path = "ui/fail_field_uppercase.rs"
+
+[[example]]
+name = "fail_field_screaming_snake_case"
+path = "ui/fail_field_screaming_snake_case.rs"
+
+[[example]]
+name = "fail_field_screaming_kebab_case"
+path = "ui/fail_field_screaming_kebab_case.rs"
+
+[[example]]
+name = "pass_field_snake_case"
+path = "ui/pass_field_snake_case.rs"
+
+[[example]]
+name = "pass_field_lowercase"
+path = "ui/pass_field_lowercase.rs"
+
+[[example]]
+name = "fail_field_name_camel_case"
+path = "ui/fail_field_name_camel_case.rs"
+
+[[example]]
+name = "pass_field_name_with_snake_rename"
+path = "ui/pass_field_name_with_snake_rename.rs"
+
+[[example]]
+name = "fail_rename_all_nested_camel_case"
+path = "ui/fail_rename_all_nested_camel_case.rs"
+
+[[example]]
+name = "pass_rename_all_nested_snake_case"
+path = "ui/pass_rename_all_nested_snake_case.rs"
+
+[[example]]
+name = "fail_field_rename_nested_camel_case"
+path = "ui/fail_field_rename_nested_camel_case.rs"
+
+[[example]]
+name = "pass_field_rename_nested_snake_case"
+path = "ui/pass_field_rename_nested_snake_case.rs"
+
+[[example]]
+name = "fail_enum_variant_rename_camel_case"
+path = "ui/fail_enum_variant_rename_camel_case.rs"
+
+[[example]]
+name = "pass_enum_variant_rename_snake_case"
+path = "ui/pass_enum_variant_rename_snake_case.rs"
+
+[[example]]
+name = "fail_enum_variant_rename_nested_pascal_case"
+path = "ui/fail_enum_variant_rename_nested_pascal_case.rs"
+
+[package.metadata.rust-analyzer]
+rustc_private = true

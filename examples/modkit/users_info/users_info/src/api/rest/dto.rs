@@ -1,11 +1,11 @@
-use serde::{Deserialize, Serialize};
+/// REST DTO for user representation with serde/utoipa
 use time::OffsetDateTime;
 use user_info_sdk::{Address, City, NewAddress, NewCity, NewUser, User, UserFull, UserPatch};
-use utoipa::ToSchema;
 use uuid::Uuid;
 
 /// REST DTO for user representation with serde/utoipa
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request, response)]
 pub struct UserDto {
     pub id: Uuid,
     pub tenant_id: Uuid,
@@ -18,7 +18,8 @@ pub struct UserDto {
 }
 
 /// REST DTO for creating a new user
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request)]
 pub struct CreateUserReq {
     /// Optional ID for the user. If not provided, a UUID v7 will be generated
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -29,14 +30,16 @@ pub struct CreateUserReq {
 }
 
 /// REST DTO for updating a user (partial)
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Default)]
+#[derive(Debug, Clone, Default)]
+#[modkit_macros::api_dto(request)]
 pub struct UpdateUserReq {
     pub email: Option<String>,
     pub display_name: Option<String>,
 }
 
 /// REST DTO for aggregated user response with related entities
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request, response)]
 pub struct UserFullDto {
     pub user: UserDto,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -92,7 +95,8 @@ impl From<UserFull> for UserFullDto {
 // ==================== City DTOs ====================
 
 /// REST DTO for city representation
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request, response)]
 pub struct CityDto {
     pub id: Uuid,
     pub tenant_id: Uuid,
@@ -105,7 +109,8 @@ pub struct CityDto {
 }
 
 /// REST DTO for creating a new city
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request)]
 pub struct CreateCityReq {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<Uuid>,
@@ -115,7 +120,8 @@ pub struct CreateCityReq {
 }
 
 /// REST DTO for updating a city (partial)
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Default)]
+#[derive(Debug, Clone, Default)]
+#[modkit_macros::api_dto(request)]
 pub struct UpdateCityReq {
     pub name: Option<String>,
     pub country: Option<String>,
@@ -157,7 +163,8 @@ impl From<UpdateCityReq> for user_info_sdk::CityPatch {
 // ==================== Address DTOs ====================
 
 /// REST DTO for address representation
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request, response)]
 pub struct AddressDto {
     pub id: Uuid,
     pub tenant_id: Uuid,
@@ -172,7 +179,8 @@ pub struct AddressDto {
 }
 
 /// REST DTO for creating/upserting an address
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request)]
 pub struct PutAddressReq {
     pub city_id: Uuid,
     pub street: String,
@@ -209,7 +217,8 @@ impl PutAddressReq {
 }
 
 /// Transport-level SSE payload.
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request, response)]
 #[schema(title = "UserEvent", description = "Server-sent user event")]
 pub struct UserEvent {
     pub kind: String,

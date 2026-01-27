@@ -712,7 +712,8 @@ mod sse_openapi_tests {
     use modkit::api::{Missing, OperationBuilder};
     use serde_json::Value;
 
-    #[derive(Clone, serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+    #[derive(Clone)]
+    #[modkit_macros::api_dto(request, response)]
     struct UserEvent {
         id: u32,
         message: String,

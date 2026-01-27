@@ -64,6 +64,11 @@ fn check_dto_toschema_derive(cx: &EarlyContext<'_>, item: &Item) {
         return;
     }
 
+    // Check for api_dto macro which adds ToSchema derive automatically
+    if lint_utils::has_api_dto_attribute(item) {
+        return;
+    }
+
     // Check for ToSchema derive
     let mut has_toschema = false;
     lint_utils::check_derive_attrs(item, |meta_item, _attr| {

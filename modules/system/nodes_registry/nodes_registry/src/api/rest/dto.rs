@@ -1,9 +1,7 @@
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 use uuid::Uuid;
 
 /// Node response DTO
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[modkit_macros::api_dto(request, response)]
 pub struct NodeDto {
     pub id: Uuid,
     pub hostname: String,
@@ -20,7 +18,7 @@ pub struct NodeDto {
 }
 
 /// System information response DTO
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[modkit_macros::api_dto(request, response)]
 pub struct NodeSysInfoDto {
     pub node_id: uuid::Uuid,
     pub os: OsInfoDto,
@@ -33,14 +31,14 @@ pub struct NodeSysInfoDto {
     pub collected_at: chrono::DateTime<chrono::Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[modkit_macros::api_dto(request, response)]
 pub struct OsInfoDto {
     pub name: String,
     pub version: String,
     pub arch: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[modkit_macros::api_dto(request, response)]
 pub struct CpuInfoDto {
     pub model: String,
     pub num_cpus: u32,
@@ -48,7 +46,7 @@ pub struct CpuInfoDto {
     pub frequency_mhz: f64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[modkit_macros::api_dto(request, response)]
 pub struct MemoryInfoDto {
     pub total_bytes: u64,
     pub available_bytes: u64,
@@ -56,7 +54,7 @@ pub struct MemoryInfoDto {
     pub used_percent: u32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[modkit_macros::api_dto(request, response)]
 pub struct HostInfoDto {
     pub hostname: String,
     pub uptime_seconds: u64,
@@ -64,7 +62,7 @@ pub struct HostInfoDto {
     pub ip_addresses: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[modkit_macros::api_dto(request, response)]
 pub struct GpuInfoDto {
     pub model: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -75,21 +73,21 @@ pub struct GpuInfoDto {
     pub used_memory_mb: Option<f64>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[modkit_macros::api_dto(request, response)]
 pub struct BatteryInfoDto {
     pub on_battery: bool,
     pub percentage: u32,
 }
 
 /// System capabilities response DTO
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[modkit_macros::api_dto(request, response)]
 pub struct NodeSysCapDto {
     pub node_id: uuid::Uuid,
     pub capabilities: Vec<SysCapDto>,
     pub collected_at: chrono::DateTime<chrono::Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[modkit_macros::api_dto(request, response)]
 pub struct SysCapDto {
     pub key: String,
     pub category: String,

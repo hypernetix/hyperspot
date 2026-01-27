@@ -4,12 +4,14 @@ members = [
     "de01_contract_layer/de0101_no_serde_in_contract",
     "de01_contract_layer/de0102_no_toschema_in_contract",
     "de01_contract_layer/de0103_no_http_types_in_contract",
+    "de01_contract_layer/de0104_no_api_dto_in_contract",
     "de02_api_layer/de0201_dtos_only_in_api_rest",
     "de02_api_layer/de0202_dtos_not_referenced_outside_api",
-    "de02_api_layer/de0203_dtos_must_have_serde_derives",
+    "de02_api_layer/de0203_dtos_must_use_api_dto",
     "de02_api_layer/de0204_dtos_must_have_toschema_derive",
     "de08_rest_api_conventions/de0801_api_endpoint_version",
     "de08_rest_api_conventions/de0802_use_odata_ext",
+    "de08_rest_api_conventions/de0803_api_snake_case",
     "de09_gts_layer/de0901_gts_string_pattern",
     "de09_gts_layer/de0902_no_schema_for_on_gts_structs",
     "de05_client_layer/de0503_plugin_client_suffix",
@@ -38,6 +40,11 @@ dylint_linting = "5.0.0"
 dylint_testing = "5.0.0"
 lint_utils = { path = "lint_utils" }
 # NOTE: Keep gts version in sync with /Cargo.toml workspace dependencies
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+utoipa = "5.2"
+modkit-macros = { package = "cf-modkit-macros", version = "0.1.0", path = "../libs/modkit-macros" }
+modkit = { package = "cf-modkit", version = "0.1.0", path = "../libs/modkit" }
 gts = "0.1.0"
 gts-macros = "0.1.0"
 

@@ -1,0 +1,26 @@
+[package]
+name = "de0203_dtos_must_use_api_dto"
+version = "0.1.0"
+authors = ["Hypernetix"]
+description = "description goes here"
+edition.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[[example]]
+name = "missing_api_dto"
+path = "ui/missing_api_dto.rs"
+
+[dependencies]
+clippy_utils.workspace = true
+dylint_linting.workspace = true
+lint_utils.workspace = true
+
+[dev-dependencies]
+dylint_testing.workspace = true
+serde.workspace = true
+
+[package.metadata.rust-analyzer]
+rustc_private = true

@@ -32,13 +32,11 @@ use tenant_resolver_sdk::{
 };
 
 use modkit_security::SecurityContext;
-use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::sync::Arc;
 use tower::ServiceExt;
 use uuid::Uuid;
 // for oneshot
-use utoipa::ToSchema;
 
 /// Mock tenant resolver for tests
 struct MockTenantResolver;
@@ -118,7 +116,8 @@ fn create_test_module_ctx() -> ModuleCtx {
 }
 
 /// Test response type
-#[derive(Serialize, Deserialize, ToSchema, Clone)]
+#[derive(Clone)]
+#[modkit_macros::api_dto(response)]
 struct TestResponse {
     message: String,
     user_id: String,

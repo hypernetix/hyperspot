@@ -64,8 +64,3 @@ pub async fn create_user(dto: UserDto) -> Result<()> {
 This lint is configured to **deny** by default.
 
 It checks that paths in domain, contract, and infra layers do not reference types ending with `Dto`.
-
-### See Also
-
-- [DE0201](../de0201_dtos_only_in_api_rest) - DTOs Only in API Rest Folder
-- [DE0203](../de0203_dtos_must_have_serde_derives) - DTOs Must Have Serde Derives

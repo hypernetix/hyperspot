@@ -63,6 +63,10 @@
 //! // Implement the declared capabilities...
 //! ```
 
+// When running tests, make ::modkit resolve to this crate so macros work
+#[cfg(test)]
+extern crate self as modkit;
+
 pub use anyhow::Result;
 pub use async_trait::async_trait;
 

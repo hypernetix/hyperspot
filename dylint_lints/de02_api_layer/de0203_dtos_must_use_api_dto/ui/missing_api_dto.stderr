@@ -1,0 +1,23 @@
+error: api/rest DTO type must use the api_dto macro (DE0203)
+  --> $DIR/missing_api_dto.rs:7:1
+   |
+LL | / pub struct UserDto {
+LL | |     pub id: String,
+LL | | }
+   | |_^
+   |
+   = help: Use #[modkit_macros::api_dto(request)] for request DTOs, #[modkit_macros::api_dto(response)] for response DTOs, or #[modkit_macros::api_dto(request, response)] for both
+   = note: `#[deny(de0203_dtos_must_use_api_dto)]` on by default
+
+error: api/rest DTO type must use the api_dto macro (DE0203)
+  --> $DIR/missing_api_dto.rs:14:1
+   |
+LL | / pub struct ProductDto {
+LL | |     pub name: String,
+LL | | }
+   | |_^
+   |
+   = help: Use #[modkit_macros::api_dto(request)] for request DTOs, #[modkit_macros::api_dto(response)] for response DTOs, or #[modkit_macros::api_dto(request, response)] for both
+
+error: aborting due to 2 previous errors
+

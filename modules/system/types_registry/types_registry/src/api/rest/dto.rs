@@ -1,15 +1,13 @@
 //! REST DTOs for the Types Registry module.
 
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 use uuid::Uuid;
 
 use gts::GtsIdSegment;
 use types_registry_sdk::{GtsEntity, RegisterResult, RegisterSummary, SegmentMatchScope};
 
 /// DTO for a GTS ID segment.
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request, response)]
 pub struct GtsIdSegmentDto {
     /// Vendor component of the segment.
     pub vendor: String,
@@ -36,8 +34,8 @@ impl From<&GtsIdSegment> for GtsIdSegmentDto {
 }
 
 /// Response DTO for a GTS entity.
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request, response)]
 pub struct GtsEntityDto {
     /// Deterministic UUID generated from the GTS ID.
     pub id: Uuid,
@@ -71,15 +69,17 @@ impl From<GtsEntity> for GtsEntityDto {
 }
 
 /// Request DTO for registering GTS entities.
-#[derive(Debug, Clone, Deserialize, ToSchema)]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request)]
 pub struct RegisterEntitiesRequest {
     /// Array of GTS entities to register.
     pub entities: Vec<serde_json::Value>,
 }
 
 /// Result of registering a single entity.
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "camelCase", tag = "status")]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request, response)]
+#[serde(tag = "status")]
 pub enum RegisterResultDto {
     /// Successfully registered entity.
     #[serde(rename = "ok")]
@@ -113,8 +113,8 @@ impl From<RegisterResult> for RegisterResultDto {
 }
 
 /// Response DTO for batch registration.
-#[derive(Debug, Clone, Serialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(response)]
 pub struct RegisterEntitiesResponse {
     /// Summary of the registration operation.
     pub summary: RegisterSummaryDto,
@@ -123,8 +123,8 @@ pub struct RegisterEntitiesResponse {
 }
 
 /// Summary of a batch registration operation.
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(request, response)]
 pub struct RegisterSummaryDto {
     /// Total number of entities processed.
     pub total: usize,
@@ -145,8 +145,8 @@ impl From<RegisterSummary> for RegisterSummaryDto {
 }
 
 /// Query parameters for listing GTS entities.
-#[derive(Debug, Clone, Default, Deserialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Default)]
+#[modkit_macros::api_dto(request)]
 pub struct ListEntitiesQuery {
     /// Optional wildcard pattern for GTS ID matching.
     #[serde(default)]
@@ -207,8 +207,8 @@ impl ListEntitiesQuery {
 }
 
 /// Response DTO for listing GTS entities.
-#[derive(Debug, Clone, Serialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
+#[modkit_macros::api_dto(response)]
 pub struct ListEntitiesResponse {
     /// The list of entities.
     pub entities: Vec<GtsEntityDto>,
@@ -326,8 +326,8 @@ mod tests {
         assert_eq!(json["vendor"], "acme");
         assert_eq!(json["package"], "billing");
         assert_eq!(json["namespace"], "invoices");
-        assert_eq!(json["typeName"], "invoice"); // camelCase
-        assert_eq!(json["verMajor"], 2); // camelCase
+        assert_eq!(json["type_name"], "invoice");
+        assert_eq!(json["ver_major"], 2);
     }
 
     #[test]

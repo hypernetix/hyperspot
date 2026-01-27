@@ -48,6 +48,7 @@ modkit-db-macros = { workspace = true }
 modkit-errors = { workspace = true }
 modkit-errors-macro = { workspace = true }
 modkit-security = { workspace = true }
+modkit-macros = { workspace = true }
 
 [dev-dependencies]
 tower = { workspace = true, features = ["util"] }

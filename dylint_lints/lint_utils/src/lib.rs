@@ -6,8 +6,12 @@ extern crate rustc_lint;
 extern crate rustc_session;
 extern crate rustc_span;
 
+use rustc_lint::LintContext;
 use rustc_span::source_map::SourceMap;
 use rustc_span::{FileName, Span};
+use std::collections::HashSet;
+
+const ALLOWED_FLAGS: &[&str] = &["request", "response"];
 
 pub fn is_in_domain_path(source_map: &SourceMap, span: Span) -> bool {
     check_span_path(source_map, span, "/domain/")
@@ -19,6 +23,12 @@ pub fn is_in_infra_path(source_map: &SourceMap, span: Span) -> bool {
 
 pub fn is_in_contract_path(source_map: &SourceMap, span: Span) -> bool {
     check_span_path(source_map, span, "/contract/")
+}
+
+/// AST-based helper to check if an item is in a contract module.
+/// This works with EarlyLintPass and checks both file paths and simulated_dir comments.
+pub fn is_in_contract_module_ast(cx: &rustc_lint::EarlyContext<'_>, item: &rustc_ast::Item) -> bool {
+    is_in_contract_path(cx.sess().source_map(), item.span)
 }
 
 pub fn is_in_api_rest_folder(source_map: &SourceMap, span: Span) -> bool {
@@ -84,6 +94,151 @@ pub fn is_serde_trait(segments: &[&str], trait_name: &str) -> bool {
         // Bare identifier: Serialize or Deserialize
         // We accept this as it's commonly used with `use serde::{Serialize, Deserialize}`
         true
+    }
+}
+
+/// Check if an item has the `#[modkit_macros::api_dto(...)]` attribute.
+///
+/// The `api_dto` macro automatically adds:
+/// - `#[derive(serde::Serialize)]` (if `response` is specified)
+/// - `#[derive(serde::Deserialize)]` (if `request` is specified)
+/// - `#[derive(utoipa::ToSchema)]` (always)
+/// - `#[serde(rename_all = "snake_case")]` (if `request` or `response` are specified)
+///
+/// Lints checking for these derives/attributes should skip items with this attribute.
+pub fn has_api_dto_attribute(item: &rustc_ast::Item) -> bool {
+    for attr in &item.attrs {
+        // Check for modkit_macros::api_dto or just api_dto
+        if let rustc_ast::AttrKind::Normal(attr_item) = &attr.kind {
+            let path = &attr_item.item.path;
+            let segments: Vec<&str> = path.segments.iter().map(|s| s.ident.name.as_str()).collect();
+
+            // Match: api_dto, modkit_macros::api_dto
+            if segments.last() == Some(&"api_dto") {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+/// Returns the api_dto arguments (request, response) if present and valid.
+/// Returns None if the attribute is not present OR if it contains invalid flags.
+/// Returns Some with flags indicating which modes are enabled.
+///
+/// # Validation
+///
+/// This function validates the attribute arguments to match the proc-macro's behavior:
+/// - Only "request" and "response" flags are allowed
+/// - Duplicate flags are rejected
+/// - Unknown flags are rejected
+/// - At least one of "request" or "response" must be present
+///
+/// If any validation fails, this function returns `None`, treating the invalid
+/// attribute the same as an absent attribute. This ensures lint behavior stays
+/// in sync with the proc-macro, which would reject these attributes at compile time.
+pub fn get_api_dto_args(item: &rustc_ast::Item) -> Option<ApiDtoArgs> {
+    for attr in &item.attrs {
+        if let rustc_ast::AttrKind::Normal(attr_item) = &attr.kind {
+            let path = &attr_item.item.path;
+            let segments: Vec<&str> = path.segments.iter().map(|s| s.ident.name.as_str()).collect();
+
+            if segments.last() != Some(&"api_dto") {
+                continue;
+            }
+
+            // Parse and validate the arguments
+            let mut has_request = false;
+            let mut has_response = false;
+            let mut seen_flags = HashSet::new();
+            let mut has_invalid = false;
+
+            if let Some(args) = attr_item.item.meta_item_list() {
+                for arg in args {
+                    if let Some(ident) = arg.ident() {
+                        let flag_str = ident.name.as_str();
+                        
+                        // Check if flag is allowed
+                        if !ALLOWED_FLAGS.contains(&flag_str) {
+                            has_invalid = true;
+                            break;
+                        }
+                        
+                        // Check for duplicates (convert to String for storage)
+                        if !seen_flags.insert(flag_str.to_string()) {
+                            has_invalid = true;
+                            break;
+                        }
+                        
+                        match flag_str {
+                            "request" => has_request = true,
+                            "response" => has_response = true,
+                            _ => unreachable!(),
+                        }
+                    }
+                }
+            }
+
+            // Reject invalid attributes by returning None
+            if has_invalid {
+                return None;
+            }
+            
+            // Reject empty attributes (no request or response)
+            if !has_request && !has_response {
+                return None;
+            }
+
+            return Some(ApiDtoArgs {
+                has_request,
+                has_response,
+            });
+        }
+    }
+    None
+}
+
+/// Arguments parsed from a valid `#[api_dto(request, response)]` attribute.
+///
+/// # Validity
+///
+/// This struct is only returned by `get_api_dto_args()` for valid attributes.
+/// Invalid attributes (unknown flags, duplicates, or empty) cause `get_api_dto_args()`
+/// to return `None` instead.
+///
+/// A valid `api_dto` attribute has:
+/// - At least one of `request` or `response`
+/// - Only "request" and "response" flags (no unknown flags)
+/// - No duplicate flags
+#[derive(Debug, Clone, Copy)]
+pub struct ApiDtoArgs {
+    pub has_request: bool,
+    pub has_response: bool,
+}
+
+impl ApiDtoArgs {
+    /// Returns true if the macro will add Serialize derive (response mode)
+    pub fn adds_serialize(&self) -> bool {
+        self.has_response
+    }
+
+    /// Returns true if the macro will add Deserialize derive (request mode)
+    pub fn adds_deserialize(&self) -> bool {
+        self.has_request
+    }
+
+    /// Returns true if the macro will add ToSchema derive.
+    /// Always returns true because `ApiDtoArgs` only exists for valid attributes.
+    pub fn adds_toschema(&self) -> bool {
+        true
+    }
+
+    /// Returns true if the macro will add serde(rename_all = "snake_case").
+    /// This is added when serde derives are present (i.e., at least one mode is enabled).
+    /// Always returns true for valid `ApiDtoArgs` since validation requires at least one mode.
+    pub fn adds_snake_case_rename(&self) -> bool {
+        // Matches proc-macro logic: has_serde = serialize || deserialize
+        self.has_request || self.has_response
     }
 }
 

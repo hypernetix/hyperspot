@@ -1,10 +1,8 @@
-use serde::{Deserialize, Serialize};
 use simple_user_settings_sdk::models::{SimpleUserSettings, SimpleUserSettingsPatch};
-use utoipa::ToSchema;
 use uuid::Uuid;
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "snake_case")]
+#[derive(Debug)]
+#[modkit_macros::api_dto(request, response)]
 pub struct SimpleUserSettingsDto {
     #[schema(value_type = String)]
     pub user_id: Uuid,
@@ -25,15 +23,15 @@ impl From<SimpleUserSettings> for SimpleUserSettingsDto {
     }
 }
 
-#[derive(Debug, Deserialize, ToSchema)]
-#[serde(rename_all = "snake_case")]
+#[derive(Debug)]
+#[modkit_macros::api_dto(request)]
 pub struct UpdateSimpleUserSettingsRequest {
     pub theme: String,
     pub language: String,
 }
 
-#[derive(Debug, Deserialize, ToSchema)]
-#[serde(rename_all = "snake_case")]
+#[derive(Debug)]
+#[modkit_macros::api_dto(request)]
 pub struct PatchSimpleUserSettingsRequest {
     #[serde(default)]
     pub theme: Option<String>,
