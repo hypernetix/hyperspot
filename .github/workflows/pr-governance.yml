@@ -177,7 +177,11 @@ jobs:
               );
 
               const author =
-                reviewData.repository.pullRequest.author.login;
+                reviewData.repository.pullRequest.author?.login;
+              if (!author) {
+                console.log(`Skipping PR #${pr.number} - author is null`);
+                continue;
+              }
 
               const threads =
                 reviewData.repository.pullRequest.reviewThreads.nodes;
