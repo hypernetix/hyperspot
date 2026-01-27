@@ -15,7 +15,7 @@ These templates allow teams to start documenting projects in a structured, FDD-c
 | [PRD.md](./PRD.md) | Product Requirements Document — vision, actors, capabilities, use cases, FR, NFR | Foundation |
 | [DESIGN.md](./DESIGN.md) | Technical Design — architecture, principles, constraints, domain model, API contracts | System-level |
 | [ADR.md](./ADR.md) | Architecture Decision Record — capture decisions, options, trade-offs, consequences | Cross-cutting |
-| [FEATURE.md](./FEATURE.md) | Feature Specification — flows, algorithms, states, requirements (FDL format) | Feature-level |
+| [FEATURE.md](./FEATURE.md) | Feature Specification — requirements, flows and algorithms (in FDL format), states  | Feature-level |
 
 ## Document Placement
 
