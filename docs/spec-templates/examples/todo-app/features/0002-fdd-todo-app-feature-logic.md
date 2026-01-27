@@ -2,7 +2,7 @@
 
 ## 1. Feature Context
 
-**Feature ID**: `fdd-todo-app-feature-logic`
+**ID**: `fdd-todo-app-feature-logic`
 **Status**: NOT_STARTED
 
 ### 1.1 Overview

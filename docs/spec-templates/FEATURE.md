@@ -2,7 +2,7 @@
 
 ## 1. Feature Context
 
-**Feature ID**: `fdd-{module-name}-feature-{feature-slug}`
+**ID**: `fdd-{module-name}-feature-{feature-slug}`
 
 **Status**: NOT_STARTED | IN_PROGRESS | IMPLEMENTED
 
