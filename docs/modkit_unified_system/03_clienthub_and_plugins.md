@@ -163,7 +163,7 @@ match ctx.client_hub().get::<dyn MyModuleApi>() {
 
 ## Quick checklist
 
-- [ ] Define SDK trait with `async_trait` and `SecurityCtx` first param.
+- [ ] Define SDK trait with `async_trait` and `SecurityContext` first param.
 - [ ] Implement local adapter in module crate.
 - [ ] Register client in `init()`: `ctx.client_hub().register::<dyn Trait>(api)`.
 - [ ] Consume client: `ctx.client_hub().get::<dyn Trait>()?`.

@@ -40,7 +40,7 @@ All modules can be divided into several categories:
 The **Core Platform Integration Modules** layer abstracts integration with core platform services, such as IdP, policy management, licensing, and credentials management that is out of scope of HyperSpot. This keeps HyperSpot reusable: it can run as a standalone platform, or it can integrate into an existing enterprise platform by wiring adapters to the platform’s services.
 
 ## Dependency rules
-- Authentication/authorization: all **external HTTP** traffic is enforced by `api_gateway` middleware, and secure ORM access is scoped by `SecurityCtx`. In-process calls must propagate `SecurityCtx` and use SDK/clients; bypassing middlewares is not permitted for gateway paths.
+- Authentication/authorization: all **external HTTP** traffic is enforced by `api_gateway` middleware, and secure ORM access is scoped by `SecurityContext`. In-process calls must propagate `SecurityContext` and use SDK/clients; bypassing middlewares is not permitted for gateway paths.
 - Generative AI Modules MAY depend on Shared Control Plane Modules
 - Generative AI Modules MUST NOT depend on Core Platform Services directly
 - Control Plane Modules MUST NOT depend on GenAI Modules
@@ -652,7 +652,7 @@ This diagram reflects the **actual middleware stack** from `api_gateway` (see `a
 6. MIME validation
 7. **Rate limiting** (per-route RPS + in-flight semaphore)
 8. Error mapping (converts errors to RFC-9457 Problem)
-9. **Auth** (JWT validation → RBAC check → build SecurityCtx with tenant from claims)
+9. **Auth** (JWT validation → RBAC check → build SecurityContext with tenant from claims)
 10. Policy engine injection
 11. **License validation** (checks `license_requirement` from OperationSpec)
 12. Router → Handler
@@ -701,7 +701,7 @@ sequenceDiagram
   Note over I: 9. Auth layer (AuthPolicyLayer)
   I->>I: Resolve route policy (public / required / optional)
   alt Route is public
-    I->>I: Insert anonymous SecurityCtx
+    I->>I: Insert anonymous SecurityContext
   else Route requires auth
     I->>IdP: Validate JWT (cached JWKS)
     IdP-->>I: Token valid + claims (subject, tenant_id, permissions[])
@@ -709,7 +709,7 @@ sequenceDiagram
     alt RBAC denied
       I-->>C: 403 Forbidden (Problem)
     end
-    I->>I: Build SecurityCtx(tenant_id, subject_id, scope)
+    I->>I: Build SecurityContext(tenant_id, subject_id, scope)
   end
 
   Note over I: 10. Inject PolicyEngine into extensions
@@ -724,7 +724,7 @@ sequenceDiagram
   end
 
   Note over I: 12. Router dispatches to handler
-  I->>M: Call handler (SecurityCtx in Extension)
+  I->>M: Call handler (SecurityContext in Extension)
   M->>D: Execute domain logic (ctx, command/query)
   D->>DB: SecureConn.find/insert/update (ctx applies tenant filter)
   DB-->>D: Scoped results (WHERE tenant_id IN ...)
@@ -887,7 +887,7 @@ sequenceDiagram
   U->>C: Attach file + type message
 
   Note over C,FS: [ ] p2 - Step 1a: Upload file (store blob only)
-  C->>I: POST /files/v1/upload (multipart, SecurityCtx)
+  C->>I: POST /files/v1/upload (multipart, SecurityContext)
   I->>FS: Store blob (tenant_id, content_hash)
   FS-->>I: file_id, size, mime_type
   I-->>C: 201 Created {file_id, size, mime_type}
@@ -895,7 +895,7 @@ sequenceDiagram
   Note over C,CE: [ ] p1 - Step 1b: Create chat message + trigger ingestion
   C->>I: POST /chat/v1/conversations/{conv_id}/messages
   Note right of C: {content: "Analyze this document", attachments: [{file_id}]}
-  I->>CE: Create user message (SecurityCtx)
+  I->>CE: Create user message (SecurityContext)
 
   Note over CE,HK: [ ] p2 - HOOK: user_message.pre_store (see hook sub-scenario)
   CE->>HK: Invoke hook (user_message.pre_store, {content, attachments})
@@ -918,7 +918,7 @@ sequenceDiagram
 
   Note over C,JM: [ ] p3 - Step 1c: UI tracks job progress (SSE preferred)
   C->>I: GET /jobs/v1/{job_id}/stream (Accept: text/event-stream)
-  I->>JM: Subscribe to job progress (SecurityCtx, job_id)
+  I->>JM: Subscribe to job progress (SecurityContext, job_id)
   loop Job progress events
     JM-->>I: SSE: {status: "queued" | "parsing" | "chunking" | "embedding" | "indexing"}
     I-->>C: SSE: {status, progress_pct, details}
@@ -1191,7 +1191,7 @@ sequenceDiagram
       CE->>DB: Persist assistant message (tool_calls pending)
 
       loop For each tool_call in tool_calls[]
-        CE->>PM: Authorize tool (SecurityCtx, tool_id, args_hash)
+        CE->>PM: Authorize tool (SecurityContext, tool_id, args_hash)
         PM-->>CE: Allow | Deny (+ reason)
 
         alt Denied by policy
@@ -1248,7 +1248,7 @@ sequenceDiagram
 
   Note over C,I: [ ] p1 - Client opens SSE connection
   C->>I: GET /chat/v1/conversations/{conv_id}/stream (Accept: text/event-stream)
-  I->>CE: Subscribe to conversation stream (SecurityCtx, conv_id)
+  I->>CE: Subscribe to conversation stream (SecurityContext, conv_id)
   CE-->>I: SSE connection established
   I-->>C: HTTP 200 (Content-Type: text/event-stream)
 
@@ -1338,7 +1338,7 @@ sequenceDiagram
 
   Note over C,CE: [ ] p1 - Option A: Upload to existing thread
   C->>I: POST /chat/v1/threads/{thread_id}/attachment (multipart)
-  I->>CE: Handle attachment upload (SecurityCtx, thread_id, file)
+  I->>CE: Handle attachment upload (SecurityContext, thread_id, file)
 
   Note over CE,FP: [ ] p1 - Synchronous file parsing
   CE->>CE: Validate file size (max_size_kb from config)
@@ -1365,7 +1365,7 @@ sequenceDiagram
 
   Note over C,CE: [ ] p1 - Option B: Create new thread with attachment
   C->>I: POST /chat/v1/attachments (multipart, ?group_id)
-  I->>CE: Create thread + attachment (SecurityCtx, group_id?, file)
+  I->>CE: Create thread + attachment (SecurityContext, group_id?, file)
   CE->>DB: Create new thread (group_id)
   CE->>FP: Parse file (same as above)
   FP-->>CE: Parsed result
@@ -1402,7 +1402,7 @@ sequenceDiagram
   Note over C,CE: [ ] p1 - User sends message
   C->>I: POST /chat/v1/threads/{thread_id}/messages
   Note right of C: {content: "Summarize this document", model_name, stream: true}
-  I->>CE: Create user message (SecurityCtx)
+  I->>CE: Create user message (SecurityContext)
 
   Note over CE,HK: [ ] p3 - HOOK: user_message.pre_store
   CE->>HK: Invoke hook (user_message.pre_store, {content, attachments})

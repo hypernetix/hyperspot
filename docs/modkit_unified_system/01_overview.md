@@ -16,7 +16,7 @@
 ## Core invariants (apply everywhere)
 
 - **SDK pattern is the public API**: Use `<module>-sdk` crate for traits, models, errors. Do not expose internals.
-- **Secure-by-default DB access**: Use `SecureConn` + `SecurityCtx`. Raw access only for migrations/admin tools and requires `insecure-escape`.
+- **Secure-by-default DB access**: Use `SecureConn` + `SecurityContext`. Raw access only for migrations/admin tools and requires `insecure-escape`.
 - **RFC-9457 errors everywhere**: Use `Problem` (implements `IntoResponse`). Do not use `ProblemResponse`.
 - **Type-safe REST**: Use `OperationBuilder` with `.require_auth()` and `.standard_errors()`.
 - **OData macros are in `modkit-odata-macros`**: Use `modkit_odata_macros::ODataFilterable`.

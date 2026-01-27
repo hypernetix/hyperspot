@@ -113,7 +113,7 @@ pub async fn list_users(
 impl UserService {
     pub async fn list_users_page(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         query: &ODataQuery,
     ) -> Result<Page<User>, DomainError> {
         let secure_conn = self.db.sea_secure();
@@ -211,7 +211,7 @@ pub struct Page<T> {
 impl UserService {
     pub async fn list_users_page(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         query: &ODataQuery,
     ) -> Result<Page<User>, DomainError> {
         let secure_conn = self.db.sea_secure();

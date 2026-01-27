@@ -139,7 +139,7 @@ impl UsersInfoError {
 
 ```rust
 use async_trait::async_trait;
-use modkit_security::SecurityCtx;
+use modkit_security::SecurityContext;
 use uuid::Uuid;
 
 use crate::{
@@ -150,36 +150,36 @@ use modkit_odata::{ODataQuery, Page};
 
 /// Public API trait for users_info module.
 ///
-/// All methods require SecurityCtx for authorization.
+/// All methods require SecurityContext for authorization.
 /// Obtain via ClientHub: `hub.get::<dyn UsersInfoClient>()?`
 #[async_trait]
 pub trait UsersInfoClient: Send + Sync {
     /// Get a user by ID
-    async fn get_user(&self, ctx: &SecurityCtx, id: Uuid) -> Result<User, UsersInfoError>;
+    async fn get_user(&self, ctx: &SecurityContext, id: Uuid) -> Result<User, UsersInfoError>;
 
     /// List users with cursor-based pagination
     async fn list_users(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         query: ODataQuery,
     ) -> Result<Page<User>, UsersInfoError>;
 
     /// Create a new user
     async fn create_user(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         new_user: NewUser,
     ) -> Result<User, UsersInfoError>;
 
     /// Update a user
     async fn update_user(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         req: UpdateUserRequest,
     ) -> Result<User, UsersInfoError>;
 
     /// Delete a user by ID
-    async fn delete_user(&self, ctx: &SecurityCtx, id: Uuid) -> Result<(), UsersInfoError>;
+    async fn delete_user(&self, ctx: &SecurityContext, id: Uuid) -> Result<(), UsersInfoError>;
 }
 ```
 
@@ -284,9 +284,9 @@ pub struct Model {
 
 - [ ] Create `<module>-sdk` crate with `api.rs`, `models.rs`, `errors.rs`, `lib.rs`.
 - [ ] Create `<module>` crate with `module.rs`, `api/rest/`, `domain/`, `infra/storage/`.
-- [ ] Implement SDK trait with `async_trait` and `SecurityCtx` first param.
+- [ ] Implement SDK trait with `async_trait` and `SecurityContext` first param.
 - [ ] Add `#[derive(ODataFilterable)]` on REST DTOs (import `modkit_odata_macros::ODataFilterable`).
 - [ ] Add `#[derive(Scopable)]` on SeaORM entities (import `modkit_db_macros::Scopable`).
-- [ ] Use `SecureConn` + `SecurityCtx` for all DB operations.
+- [ ] Use `SecureConn` + `SecurityContext` for all DB operations.
 - [ ] Register client in `init()`: `ctx.client_hub().register::<dyn MyModuleApi>(api)`.
 - [ ] Export SDK types from module crate `lib.rs`.

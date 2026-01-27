@@ -257,7 +257,7 @@ modules/<module-dir>/
 │   ├── Cargo.toml
 │   └── src/
 │       ├── lib.rs                    # Re-exports
-│       ├── api.rs                    # ClientHub API trait (methods take &SecurityCtx)
+│       ├── api.rs                    # ClientHub API trait (methods take &SecurityContext)
 │       ├── models.rs                 # Transport-agnostic models (no serde)
 │       ├── error.rs|errors.rs         # Transport-agnostic errors
 │       ├── (optional) proto/         # Generated gRPC/proto types for OoP modules
@@ -320,7 +320,7 @@ Every HyperSpot module uses the **ModKit** framework, which provides:
  - `modkit` - Core module framework: lifecycle, REST host/contracts, OpenAPI registry, ClientHub, tracing helpers
  - `modkit-macros` - Procedural macros for module registration (`#[modkit::module(...)]`)
  - `modkit-auth` - Authn/z plumbing for gateway and route policies
- - `modkit-security` - `SecurityCtx` and security-scoping primitives used across modules (request-scoped context)
+ - `modkit-security` - `SecurityContext` and security-scoping primitives used across modules (request-scoped context)
  - `modkit-errors` - Shared error types and RFC-9457 Problem modeling utilities
  - `modkit-errors-macro` - Macros/codegen for error catalogs
  - `modkit-db` - Database runtime integration (DbHandle/DbManager) + Secure ORM patterns

@@ -5,7 +5,7 @@ ModKit provides a secure-by-default ORM layer that enforces request-scoped secur
 ## Core invariants
 
 - **Rule**: Use `SecureConn` for all DB access in handlers/services.
-- **Rule**: Use `SecurityCtx` for tenant/resource scoping.
+- **Rule**: Use `SecurityContext` for tenant/resource scoping.
 - **Rule**: Derive `Scopable` on SeaORM entities with tenant/resource columns.
 - **Rule**: Raw access only for migrations/admin tools and requires `insecure-escape` feature.
 - **Rule**: Do not bypass SecureConn without explicit justification.
@@ -16,7 +16,7 @@ ModKit provides a secure-by-default ORM layer that enforces request-scoped secur
 
 ```rust
 use modkit_db::SecureConn;
-use modkit_security::SecurityCtx;
+use modkit_security::SecurityContext;
 
 pub async fn list_users(
     Authz(ctx): Authz,
@@ -80,7 +80,7 @@ impl ActiveModelBehavior for ActiveModel {}
 - `no_owner`: Skip owner-based scoping
 - `no_type`: Skip type-based scoping
 
-## SecurityCtx in queries
+## SecurityContext in queries
 
 ### Auto-scoped queries
 
@@ -127,7 +127,7 @@ impl UserRepository {
 
     pub async fn find_by_id(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         id: Uuid,
     ) -> Result<Option<user::Model>, DomainError> {
         let secure_conn = self.db.sea_secure();
@@ -140,7 +140,7 @@ impl UserRepository {
 
     pub async fn list(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         limit: u64,
         offset: u64,
     ) -> Result<Vec<user::Model>, DomainError> {
@@ -156,7 +156,7 @@ impl UserRepository {
 
     pub async fn create(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         new_user: user_info_sdk::NewUser,
     ) -> Result<user::Model, DomainError> {
         let secure_conn = self.db.sea_secure();
@@ -182,7 +182,7 @@ impl UserRepository {
 ```rust
 pub async fn transfer_user(
     &self,
-    ctx: &SecurityCtx,
+    ctx: &SecurityContext,
     from_tenant: Uuid,
     to_tenant: Uuid,
     user_id: Uuid,
@@ -231,7 +231,7 @@ struct UserSummary {
 
 pub async fn get_user_summary(
     &self,
-    ctx: &SecurityCtx,
+    ctx: &SecurityContext,
     user_id: Uuid,
 ) -> Result<UserSummary, DomainError> {
     let secure_conn = self.db.sea_secure();
@@ -312,12 +312,12 @@ impl MigrationTrait for Migration {
 
 ```rust
 use modkit_db::DbHandle;
-use modkit_security::SecurityCtx;
+use modkit_security::SecurityContext;
 
 #[tokio::test]
 async fn test_user_repository() {
     let db = setup_test_db().await;
-    let ctx = SecurityCtx::test_tenant(Uuid::new_v4());
+    let ctx = SecurityContext::test_tenant(Uuid::new_v4());
     let repo = UserRepository::new(db);
 
     // Test operations
@@ -331,8 +331,8 @@ async fn test_user_repository() {
 
 - [ ] Derive `Scopable` on SeaORM entities with `tenant_col` (required).
 - [ ] Use `db.sea_secure()` for all DB access in handlers/services.
-- [ ] Pass `SecurityCtx` to repository methods.
+- [ ] Pass `SecurityContext` to repository methods.
 - [ ] Use `secure_conn.find::<Entity>(&ctx)?` for auto-scoped queries.
 - [ ] Use raw SQL only for exceptional cases (migrations, admin tools).
 - [ ] Add indexes on security columns (tenant_id, resource_id).
-- [ ] Test with `SecurityCtx::test_tenant()` for unit tests.
+- [ ] Test with `SecurityContext::test_tenant()` for unit tests.

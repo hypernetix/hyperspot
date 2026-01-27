@@ -26,9 +26,9 @@ The secure ORM follows a **request-scoped security model**:
 
 ```
 API Handler (per-request)
-    ↓ Creates SecurityCtx from auth/session
+    ↓ Creates SecurityContext from auth/session
 SecureConn (stateless wrapper)
-    ↓ Receives SecurityCtx per-operation
+    ↓ Receives SecurityContext per-operation
     ↓ Enforces implicit policy
 SeaORM
     ↓
@@ -36,7 +36,7 @@ Database
 ```
 
 Key principles:
-- **Request-scoped context**: Security context (`SecurityCtx`) passed per-operation, not stored
+- **Request-scoped context**: Security context (`SecurityContext`) passed per-operation, not stored
 - **Stateless services**: No security state in service layer
 - **Explicit security**: Every operation requires explicit context
 - **Safe by default**: Raw database access requires opt-in via `insecure-escape` feature
@@ -46,7 +46,7 @@ Key principles:
 ```rust
 // High-level API
 pub use SecureConn;        // Stateless connection wrapper
-pub use SecurityCtx;       // Request-scoped security context
+pub use SecurityContext;       // Request-scoped security context
 
 // Types
 pub use AccessScope;       // Scope with tenant/resource IDs
@@ -65,15 +65,15 @@ pub use ScopeError;
 
 ### SecureConn API
 
-All methods require `&SecurityCtx` parameter:
+All methods require `&SecurityContext` parameter:
 
-- `find<E>(&self, ctx: &SecurityCtx) -> Result<SecureSelect<E, Scoped>>`
-- `find_by_id<E>(&self, ctx: &SecurityCtx, id: Uuid) -> Result<SecureSelect<E, Scoped>>`
-- `update_many<E>(&self, ctx: &SecurityCtx) -> Result<SecureUpdateMany<E, Scoped>>`
-- `delete_many<E>(&self, ctx: &SecurityCtx) -> Result<SecureDeleteMany<E, Scoped>>`
-- `insert<E>(&self, ctx: &SecurityCtx, am: E::ActiveModel) -> Result<E::Model>`
-- `update_one<E>(&self, ctx: &SecurityCtx, am: E::ActiveModel) -> Result<E::Model>`
-- `delete_by_id<E>(&self, ctx: &SecurityCtx, id: Uuid) -> Result<bool>`
+- `find<E>(&self, ctx: &SecurityContext) -> Result<SecureSelect<E, Scoped>>`
+- `find_by_id<E>(&self, ctx: &SecurityContext, id: Uuid) -> Result<SecureSelect<E, Scoped>>`
+- `update_many<E>(&self, ctx: &SecurityContext) -> Result<SecureUpdateMany<E, Scoped>>`
+- `delete_many<E>(&self, ctx: &SecurityContext) -> Result<SecureDeleteMany<E, Scoped>>`
+- `insert<E>(&self, ctx: &SecurityContext, am: E::ActiveModel) -> Result<E::Model>`
+- `update_one<E>(&self, ctx: &SecurityContext, am: E::ActiveModel) -> Result<E::Model>`
+- `delete_by_id<E>(&self, ctx: &SecurityContext, id: Uuid) -> Result<bool>`
 
 ## Implicit Security Policy
 
@@ -153,10 +153,10 @@ pub struct Model {
 ### 2. Use SecureConn (Recommended)
 
 ```rust
-use modkit_db::secure::{SecurityCtx, SecureConn};
+use modkit_db::secure::{SecurityContext, SecureConn};
 
 // In API handler: create context from request
-let ctx = SecurityCtx::for_tenants(vec![tenant_id], user_id);
+let ctx = SecurityContext::for_tenants(vec![tenant_id], user_id);
 
 // Get secure connection (stateless wrapper)
 let secure_conn = db_handle.sea_secure();
@@ -239,7 +239,7 @@ struct SystemConfig { /* ... */ }
 - `mod.rs` - Module exports and documentation
 - `types.rs` - AccessScope definition
 - `entity_traits.rs` - ScopableEntity trait
-- `secure_conn.rs` - SecureConn high-level API and SecurityCtx
+- `secure_conn.rs` - SecureConn high-level API and SecurityContext
 - `select.rs` - SecureSelect wrapper with typestates
 - `db_ops.rs` - SecureUpdateMany, SecureDeleteMany, and secure_insert
 - `cond.rs` - Condition builder implementing implicit policy
@@ -297,16 +297,16 @@ Security context is passed **per-operation**, not stored in services:
 - **Request lifecycle**: Context tied to HTTP request, not service lifetime
 - **Audit-friendly**: Easy to trace which context was used for each operation
 
-**Creating SecurityCtx:**
+**Creating SecurityContext:**
 ```rust
 // From tenant IDs (multi-tenant isolation)
-let ctx = SecurityCtx::for_tenants(vec![tenant_id], user_id);
+let ctx = SecurityContext::for_tenants(vec![tenant_id], user_id);
 
 // From resource IDs (specific resources)
-let ctx = SecurityCtx::for_resources(vec![resource_id], user_id);
+let ctx = SecurityContext::for_resources(vec![resource_id], user_id);
 
 // Combined (tenant + specific resources)
-let ctx = SecurityCtx::for_tenants_and_resources(
+let ctx = SecurityContext::for_tenants_and_resources(
     vec![tenant_id],
     vec![resource_id],
     user_id
@@ -330,7 +330,7 @@ The secure ORM layer works seamlessly with ModKit's type-safe OData pagination s
 
 ```rust
 use modkit_db::odata::sea_orm_filter::{paginate_odata, LimitCfg};
-use modkit_db::secure::{SecurityCtx, SecureConn};
+use modkit_db::secure::{SecurityContext, SecureConn};
 
 pub struct UserRepository<'a> {
     conn: &'a SecureConn,
@@ -339,7 +339,7 @@ pub struct UserRepository<'a> {
 impl<'a> UserRepository<'a> {
     pub async fn list_paginated(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         odata_query: &ODataQuery,
     ) -> Result<Page<User>, RepoError> {
         // 1. Start with security-scoped query
@@ -364,7 +364,7 @@ impl<'a> UserRepository<'a> {
 ### Security + OData Flow
 
 ```
-1. SecurityCtx created from request auth
+1. SecurityContext created from request auth
    ↓
 2. SecureConn applies tenant/resource scope
    ↓ WHERE tenant_id IN (...) AND ...
@@ -393,7 +393,7 @@ pub struct UserService<'a> {
 impl<'a> UserService<'a> {
     pub async fn list_users(
         &self,
-        ctx: &SecurityCtx,  // Context per-operation
+        ctx: &SecurityContext,  // Context per-operation
     ) -> Result<Vec<user::Model>, ServiceError> {
         self.db
             .find::<user::Entity>(ctx)?
@@ -404,7 +404,7 @@ impl<'a> UserService<'a> {
     
     pub async fn get_user(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
         id: Uuid,
     ) -> Result<Option<user::Model>, ServiceError> {
         self.db
@@ -424,7 +424,7 @@ pub async fn list_users_handler(
     Extension(db): Extension<DbHandle>,
 ) -> Result<Json<Vec<UserDto>>, Problem> {
     // Create context from request auth
-    let ctx = SecurityCtx::for_tenants(vec![auth.tenant_id], auth.user_id);
+    let ctx = SecurityContext::for_tenants(vec![auth.tenant_id], auth.user_id);
     
     // Get secure connection (stateless)
     let secure_conn = db.sea_secure();
@@ -447,7 +447,7 @@ pub struct UserRepository<'a> {
 impl<'a> UserRepository<'a> {
     pub async fn find_all(
         &self,
-        ctx: &SecurityCtx,
+        ctx: &SecurityContext,
     ) -> Result<Vec<user::Model>, DbError> {
         self.conn
             .find::<user::Entity>(ctx)?
@@ -486,7 +486,7 @@ All tests are located in the respective module files and in `libs/modkit-db-macr
 
 ## Implemented Features
 
-1. **Request-scoped security model**: `SecurityCtx` passed per-operation for explicit, auditable security
+1. **Request-scoped security model**: `SecurityContext` passed per-operation for explicit, auditable security
 2. **Derive macro**: `#[derive(Scopable)]` with enhanced diagnostics and duplicate detection
 3. **Scoped mutations**: UPDATE and DELETE operations with scope enforcement
 4. **Global entities**: `#[secure(unrestricted)]` flag for system-wide tables
@@ -559,7 +559,7 @@ If you're using an older version with stored context, update your code:
 
 **Before (deprecated):**
 ```rust
-let ctx = SecurityCtx::for_tenants(vec![tenant_id], user_id);
+let ctx = SecurityContext::for_tenants(vec![tenant_id], user_id);
 let secure_db = db.sea_secure(ctx);  // Context stored
 let users = secure_db.find::<user::Entity>()?
     .all(secure_db.conn()).await?;
@@ -568,20 +568,20 @@ let users = secure_db.find::<user::Entity>()?
 **After (current):**
 ```rust
 let secure_conn = db.sea_secure();  // No context
-let ctx = SecurityCtx::for_tenants(vec![tenant_id], user_id);
+let ctx = SecurityContext::for_tenants(vec![tenant_id], user_id);
 let users = secure_conn.find::<user::Entity>(&ctx)?  // Context per-operation
     .all(secure_conn.conn()).await?;
 ```
 
 **Service layer changes:**
 ```rust
-// Add &SecurityCtx parameter to all methods
+// Add &SecurityContext parameter to all methods
 pub struct UserService<'a> {
     db: &'a SecureConn,  // Renamed from SecureDb
 }
 
 impl<'a> UserService<'a> {
-    pub async fn get_user(&self, ctx: &SecurityCtx, id: Uuid) -> Result<User> {
+    pub async fn get_user(&self, ctx: &SecurityContext, id: Uuid) -> Result<User> {
         self.db.find_by_id::<user::Entity>(ctx, id)?  // Pass context
             .one(self.db.conn()).await
     }

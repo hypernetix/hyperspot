@@ -25,7 +25,7 @@ This folder contains the ModKit developer documentation, split by topic for focu
 ## Core invariants (apply everywhere)
 
 - **SDK pattern is the public API**: Use `<module>-sdk` crate for traits, models, errors. Do not expose internals.
-- **Secure-by-default DB access**: Use `SecureConn` + `SecurityCtx`. Raw access only for migrations/admin tools and requires `insecure-escape`.
+- **Secure-by-default DB access**: Use `SecureConn` + `SecurityContext`. Raw access only for migrations/admin tools and requires `insecure-escape`.
 - **RFC-9457 errors everywhere**: Use `Problem` (implements `IntoResponse`). Do not use `ProblemResponse`.
 - **Type-safe REST**: Use `OperationBuilder` with `.require_auth()` and `.standard_errors()`.
 - **OData macros are in `modkit-odata-macros`**: Use `modkit_odata_macros::ODataFilterable`.
@@ -40,7 +40,7 @@ This folder contains the ModKit developer documentation, split by topic for focu
 - `03_clienthub_and_plugins.md` – Typed ClientHub, in-process vs remote clients, scoped clients, GTS-based plugin discovery.
 - `04_rest_operation_builder.md` – OperationBuilder usage, auth, error registration, SSE, content types.
 - `05_errors_rfc9457.md` – Problem error type, From impls, handler patterns, OpenAPI error registration.
-- `06_secure_orm_db_access.md` – SecureConn, SecurityCtx, Scopable derive, raw access rules.
+- `06_secure_orm_db_access.md` – SecureConn, SecurityContext, Scopable derive, raw access rules.
 - `07_odata_pagination_select_filter.md` – OData $filter/$orderby/$select, pagination, macro usage, field projection.
 - `08_lifecycle_stateful_tasks.md` – WithLifecycle, cancellation tokens, stateful module patterns.
 - `09_oop_grpc_sdk_pattern.md` – Out-of-Process modules, gRPC, SDK pattern for OoP, client utilities.

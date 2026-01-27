@@ -7,7 +7,7 @@ ModKit provides a type-safe operation builder that prevents half-wired routes at
 - **Rule**: Strictly follow the API guideline (`guidelines/DNA/REST/API.md`).
 - **Rule**: Do NOT implement a REST host. `api_gateway` owns the Axum server and OpenAPI. Modules only register routes via `register_routes(...)`.
 - **Rule**: Use `Extension<Arc<Service>>` for dependency injection and attach the service ONCE after all routes are registered: `router = router.layer(Extension(service.clone()));`.
-- **Rule**: Use `Authz(ctx): Authz` extractor for authorization — it extracts `SecurityCtx` from the request.
+- **Rule**: Use `Authz(ctx): Authz` extractor for authorization — it extracts `SecurityContext` from the request.
 - **Rule**: Follow the `<crate>.<resource>.<action>` convention for `operation_id` naming.
 - **Rule**: Use `modkit::api::prelude::*` for ergonomic handler types (ApiResult, created_json, no_content).
 - **Rule**: Always return RFC 9457 Problem Details for all 4xx/5xx errors via `Problem` (implements `IntoResponse`).
@@ -273,7 +273,7 @@ pub async fn list_users(
 - [ ] Add `.standard_errors(openapi)` or specific errors.
 - [ ] Use `.json_response_with_schema()` for typed responses.
 - [ ] Use `Extension<Arc<Service>>` and attach once after all routes.
-- [ ] Use `Authz(ctx): Authz` to get `SecurityCtx`.
+- [ ] Use `Authz(ctx): Authz` to get `SecurityContext`.
 - [ ] Use `ApiResult<T>` and `?` for error propagation.
 - [ ] For OData: add `.with_odata_*()` helpers and use `OData(query)` extractor.
 - [ ] For SSE: use `.sse_json()` and `SseBroadcaster`.

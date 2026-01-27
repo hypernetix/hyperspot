@@ -433,7 +433,7 @@ impl Service {
         Ok(ClientScope::gts_id(&selected.gts_id))
     }
 
-    pub async fn get_data(&self, ctx: &SecurityCtx, id: &str) -> Result<Data, DomainError> {
+    pub async fn get_data(&self, ctx: &SecurityContext, id: &str) -> Result<Data, DomainError> {
         let plugin = self.get_plugin().await?;
         plugin.get_data(ctx, id).await.map_err(Into::into)
     }

@@ -8,10 +8,10 @@ This section provides minimal checklists and code templates for common ModKit ta
 
 - [ ] Create `<module>-sdk` crate with `api.rs`, `models.rs`, `errors.rs`, `lib.rs`
 - [ ] Create `<module>` crate with `module.rs`, `api/rest/`, `domain/`, `infra/storage/`
-- [ ] Implement SDK trait with `async_trait` and `SecurityCtx` first param
+- [ ] Implement SDK trait with `async_trait` and `SecurityContext` first param
 - [ ] Add `#[derive(ODataFilterable)]` on REST DTOs (import `modkit_odata_macros::ODataFilterable`)
 - [ ] Add `#[derive(Scopable)]` on SeaORM entities (import `modkit_db_macros::Scopable`)
-- [ ] Use `SecureConn` + `SecurityCtx` for all DB operations
+- [ ] Use `SecureConn` + `SecurityContext` for all DB operations
 - [ ] Register client in `init()`: `ctx.client_hub().register::<dyn MyModuleApi>(api)`
 - [ ] Export SDK types from module crate `lib.rs`
 - [ ] Add module to `Cargo.toml` workspace and `main.rs` type_name check
@@ -66,11 +66,11 @@ pub struct MyModule {
 
 - [ ] Derive `Scopable` on SeaORM entities with `tenant_col` (required)
 - [ ] Use `db.sea_secure()` for all DB access in handlers/services
-- [ ] Pass `SecurityCtx` to repository methods
+- [ ] Pass `SecurityContext` to repository methods
 - [ ] Use `secure_conn.find::<Entity>(&ctx)?` for auto-scoped queries
 - [ ] Use raw SQL only for exceptional cases (migrations, admin tools)
 - [ ] Add indexes on security columns (tenant_id, resource_id)
-- [ ] Test with `SecurityCtx::test_tenant()` for unit tests
+- [ ] Test with `SecurityContext::test_tenant()` for unit tests
 
 ### Entity template
 
@@ -99,7 +99,7 @@ pub struct Model {
 ```rust
 pub async fn find_by_id(
     &self,
-    ctx: &SecurityCtx,
+    ctx: &SecurityContext,
     id: Uuid,
 ) -> Result<Option<user::Model>, DomainError> {
     let secure_conn = self.db.sea_secure();
@@ -120,7 +120,7 @@ pub async fn find_by_id(
 - [ ] Add `.standard_errors(openapi)` or specific errors
 - [ ] Use `.json_response_with_schema()` for typed responses
 - [ ] Use `Extension<Arc<Service>>` and attach once after all routes
-- [ ] Use `Authz(ctx): Authz` to get `SecurityCtx`
+- [ ] Use `Authz(ctx): Authz` to get `SecurityContext`
 - [ ] Use `ApiResult<T>` and `?` for error propagation
 - [ ] For OData: add `.with_odata_*()` helpers and use `OData(query)` extractor
 
@@ -221,7 +221,7 @@ pub enum DomainError {
 
 ### Checklist
 
-- [ ] Define SDK trait with `async_trait` and `SecurityCtx` first param
+- [ ] Define SDK trait with `async_trait` and `SecurityContext` first param
 - [ ] Implement local adapter in module crate
 - [ ] Register client in `init()`: `ctx.client_hub().register::<dyn Trait>(api)`
 - [ ] Consume client: `ctx.client_hub().get::<dyn Trait>()?`
@@ -327,7 +327,7 @@ async fn main() -> anyhow::Result<()> {
 #[tokio::test]
 async fn test_service() {
     let db = setup_test_db().await;
-    let ctx = SecurityCtx::test_tenant(Uuid::new_v4());
+    let ctx = SecurityContext::test_tenant(Uuid::new_v4());
     let service = Service::new(db);
     
     // Test operations
@@ -342,7 +342,7 @@ async fn test_service() {
 #[tokio::test]
 async fn test_error_handling() {
     let service = setup_test_service().await;
-    let ctx = SecurityCtx::test_tenant(Uuid::new_v4());
+    let ctx = SecurityContext::test_tenant(Uuid::new_v4());
     
     let result = service.get_nonexistent(&ctx, Uuid::new_v4()).await;
     assert!(matches!(result, Err(DomainError::UserNotFound { .. })));
