@@ -6,7 +6,7 @@ This example demonstrates a **gateway module** that routes calls to one of many 
 - **types-registry** as the runtime storage for GTS types and instances
 - **ClientHub scoped clients** to bind a runtime instance (`gts_id`) to a concrete implementation
 
-The goal is to show a clean pattern for “modules with plugins” in HyperSpot/ModKit.
+The goal is to show a clean pattern for “modules with plugins” in CyberFabric/ModKit.
 
 ## What you get in this folder
 

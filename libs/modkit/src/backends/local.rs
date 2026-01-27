@@ -27,6 +27,13 @@ const FORWARDER_DRAIN_TIMEOUT: Duration = Duration::from_millis(100);
 
 /// Send graceful termination signal to a child process.
 ///
+/// # Returns
+/// - `true` if signal was successfully sent
+/// - `false` if:
+///   - Process has no PID (already exited)
+///   - PID cannot be converted to i32 (extremely rare: PID > 2,147,483,647)
+///   - Signal delivery fails
+///
 /// On Unix: Sends SIGTERM which the process can handle for cleanup.
 /// On Windows: Returns false since there's no reliable graceful termination
 /// method for console applications.
@@ -35,15 +42,26 @@ fn send_terminate_signal(child: &Child) -> bool {
     use nix::sys::signal::{Signal, kill};
     use nix::unistd::Pid;
 
-    if let Some(pid) = child.id() {
-        let pid_i32 = i32::try_from(pid).unwrap_or(0);
-        kill(Pid::from_raw(pid_i32), Signal::SIGTERM).is_ok()
-    } else {
-        false
-    }
+    let Some(pid) = child.id() else {
+        return false;
+    };
+
+    let Ok(pid_i32) = i32::try_from(pid) else {
+        tracing::warn!(
+            pid = pid,
+            "Failed to convert PID to i32, cannot send SIGTERM (PID exceeds i32::MAX: {})",
+            i32::MAX
+        );
+        return false;
+    };
+
+    kill(Pid::from_raw(pid_i32), Signal::SIGTERM).is_ok()
 }
 
 /// Send graceful termination signal to a child process.
+///
+/// # Returns
+/// - `false` always on Windows (no reliable graceful termination available)
 ///
 /// On Windows there's no reliable SIGTERM equivalent for console applications.
 /// We return false to indicate that graceful termination is not available,
@@ -66,6 +84,16 @@ async fn stop_child_with_grace(
 ) {
     let pid = child.id();
     let sent = send_terminate_signal(child);
+
+    // Log with module context if termination signal failed
+    if !sent && pid.is_some() {
+        tracing::debug!(
+            module = %handle.module,
+            instance_id = %handle.instance_id,
+            pid = ?pid,
+            "{context}: graceful termination not available, will force kill"
+        );
+    }
 
     tracing::debug!(
         module = %handle.module,
@@ -508,5 +536,85 @@ mod tests {
             .await
             .expect("should list instances");
         assert_eq!(instances.len(), 0);
+    }
+
+    mod send_terminate_signal_tests {
+        #[cfg(unix)]
+        use {super::send_terminate_signal, std::time::Duration};
+
+        #[cfg(unix)]
+        #[tokio::test]
+        async fn test_send_terminate_signal_to_valid_process() {
+            // Spawn a long-running process using sh -c 'sleep 30'
+            // This works on all Unix systems (Linux, macOS, BSD)
+            let mut cmd = tokio::process::Command::new("/bin/sh");
+            cmd.args(["-c", "sleep 30"]);
+
+            let mut child = cmd.spawn().expect("should spawn test process");
+
+            // Send termination signal
+            let result = send_terminate_signal(&child);
+
+            // Should return true indicating signal was sent
+            assert!(result, "Should successfully send SIGTERM to valid process");
+
+            // Wait briefly for graceful shutdown
+            tokio::time::timeout(Duration::from_millis(100), child.wait())
+                .await
+                .expect("process should exit within timeout")
+                .expect("wait should succeed");
+        }
+
+        #[cfg(unix)]
+        #[tokio::test]
+        async fn test_send_terminate_signal_to_exited_process() {
+            // Spawn a process that exits immediately using sh -c 'exit 0'
+            // This works on all Unix systems (Linux, macOS, BSD)
+            let mut cmd = tokio::process::Command::new("/bin/sh");
+            cmd.args(["-c", "exit 0"]);
+            let mut child = cmd.spawn().expect("should spawn test process");
+
+            // Wait for it to exit
+            tokio::time::timeout(Duration::from_millis(100), child.wait())
+                .await
+                .expect("process should exit within timeout")
+                .expect("wait should succeed");
+
+            // Try to send termination signal to exited process
+            let result = send_terminate_signal(&child);
+
+            // Should return false because PID is no longer available
+            assert!(!result, "Should return false for already-exited process");
+        }
+
+        #[cfg(unix)]
+        #[test]
+        fn test_pid_conversion_edge_case_documentation() {
+            // This test documents the edge case behavior for PIDs > i32::MAX
+            // In practice, this is extremely rare as it would require:
+            // 1. System uptime of weeks/months without reboot
+            // 2. PID counter to wrap around multiple times
+            // 3. Specific kernel configuration
+
+            // The maximum value a u32 PID can have
+            let max_u32_pid: u32 = u32::MAX;
+
+            // This would fail to convert to i32
+            let result = i32::try_from(max_u32_pid);
+            assert!(result.is_err(), "u32::MAX should not fit in i32");
+
+            // Our code handles this by logging a warning and returning false
+            // preventing the dangerous unwrap_or(0) that would signal PID 0
+        }
+
+        #[cfg(unix)]
+        #[test]
+        fn test_pid_conversion_normal_range() {
+            // Test that normal PIDs convert successfully
+            let normal_pid: u32 = 12345;
+            let result = i32::try_from(normal_pid);
+            assert!(result.is_ok(), "Normal PID should convert to i32");
+            assert_eq!(result.unwrap(), 12345);
+        }
     }
 }

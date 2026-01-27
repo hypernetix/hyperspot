@@ -7,7 +7,9 @@ authors.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 description = "Proc-macro derives for OData protocol (FilterField, Schema, etc)"
+readme = "README.md"
 keywords = ["cyberfabric", "cyberfabric-modkit"]
+categories = ["development-tools::procedural-macro-helpers"]
 
 [lib]
 proc-macro = true

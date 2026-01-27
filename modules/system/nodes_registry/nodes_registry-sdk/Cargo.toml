@@ -1,12 +1,15 @@
 [package]
 name = "cf-nodes-registry-sdk"
-version = "0.1.0"
+version = "0.1.1"
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 description = "SDK for nodes_registry module: API trait, node models, and error definitions"
+readme = "README.md"
+keywords = ["cyberfabric", "cyberfabric-system"]
+categories = ["development-tools"]
 
 [lib]
 name = "nodes_registry_sdk"

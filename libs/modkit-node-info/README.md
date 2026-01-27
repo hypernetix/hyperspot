@@ -4,7 +4,7 @@ A standalone library for collecting system information about the current node wh
 
 ## Purpose
 
-This library provides comprehensive system information collection without any transport layer dependencies. It can be used by any Hyperspot module that needs to gather information about the execution environment.
+This library provides comprehensive system information collection without any transport layer dependencies. It can be used by any CyberFabric module that needs to gather information about the execution environment.
 
 ## Features
 
@@ -146,20 +146,3 @@ This library is designed to be used by the `nodes_registry` module and any other
 modkit-node-info = { path = "../../libs/modkit-node-info" }
 ```
 
-## Architecture
-
-```
-modkit-node-info/
-├── src/
-│   ├── lib.rs                    # Public exports
-│   ├── error.rs                  # NodeInfoError
-│   ├── model.rs                  # All data models
-│   ├── collector.rs              # NodeInfoCollector
-│   ├── hardware_uuid.rs          # Hardware UUID detection
-│   ├── sysinfo_collector.rs      # System info collection
-│   ├── syscap_collector.rs       # Capabilities collection
-│   ├── gpu_collector_macos.rs    # macOS GPU detection
-│   ├── gpu_collector_linux.rs    # Linux GPU detection
-│   └── gpu_collector_windows.rs  # Windows GPU detection
-└── Cargo.toml
-```

@@ -2,6 +2,13 @@
 # Keep the defaults simple and explicit. We rely on Cargo manifests for:
 # - which crates are publishable (`publish = false` disables)
 # - per-crate versioning (explicit `version = ...` for modules/sdks, and `version.workspace = true` for ModKit libs)
+#
+# NOTE: release-plz may temporarily checkout commits while computing diffs.
+# Some repos can end up "dirty" due to generated/normalized files, so we allow it.
+allow_dirty = true
+
+# Add a stable label to the release PR so the publish workflow can filter on it.
+pr_labels = ["release-plz"]
 changelog_update = true
 git_release_enable = true
 
@@ -9,5 +16,7 @@ git_release_enable = true
 changelog_path = "CHANGELOG.md"
 
 # Enable semver checks by default (can be overridden per package if needed later).
-semver_check = true
+# NOTE: For the initial bootstrap (when crates may not exist on crates.io yet),
+# semver checks are noisy and can fail. Re-enable after the first successful publish.
+semver_check = false
 

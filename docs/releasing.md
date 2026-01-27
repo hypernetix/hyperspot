@@ -12,7 +12,8 @@ This repository uses **release-plz** to automate:
 - If there are releasable changes, release-plz opens a **Release PR** updating:
   - crate versions (per-crate, based on each crate’s `Cargo.toml`)
   - the root [`CHANGELOG.md`](../CHANGELOG.md)
-- **After the Release PR is merged**, the workflow runs `release-plz release` which:
+- The workflow automatically applies the label **`release-plz`** to that PR.
+- **After the Release PR (labeled `release-plz`) is merged**, the workflow runs `release-plz release` which:
   - publishes crates to crates.io (only crates that are publishable and have a new version)
   - creates GitHub Releases
 
@@ -67,4 +68,10 @@ Fallback if CI is unavailable: publish locally from a clean checkout (you must h
 export CARGO_REGISTRY_TOKEN=***   # your crates.io token
 cargo publish -p <crate_name>
 ```
+
+### Notes for the very first publish (bootstrap)
+
+- **crates.io rate limiting (HTTP 429)** can happen when publishing many crates for the first time.
+  If the publish job fails with 429, just re-run the same workflow after the timestamp shown in the error.
+  The process is idempotent: already-published crates will be skipped on retry.
 

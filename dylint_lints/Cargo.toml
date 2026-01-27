@@ -40,13 +40,13 @@ dylint_linting = "5.0.0"
 dylint_testing = "5.0.0"
 lint_utils = { path = "lint_utils" }
 # NOTE: Keep gts version in sync with /Cargo.toml workspace dependencies
-gts = { git = "https://github.com/globaltypesystem/gts-rust.git", tag = "v0.7.7" }
-gts-macros = { git = "https://github.com/globaltypesystem/gts-rust.git", tag = "v0.7.7" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 utoipa = "5.2"
 modkit-macros = { package = "cf-modkit-macros", version = "0.1.0", path = "../libs/modkit-macros" }
 modkit = { package = "cf-modkit", version = "0.1.0", path = "../libs/modkit" }
+gts = "0.1.0"
+gts-macros = "0.1.0"
 
 [workspace.lints.clippy]
 all = "warn"

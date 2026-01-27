@@ -499,7 +499,7 @@ dependencies = [
 
 [[package]]
 name = "cf-modkit"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -543,7 +543,7 @@ dependencies = [
 
 [[package]]
 name = "cf-modkit-db"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "bigdecimal",
@@ -572,7 +572,7 @@ dependencies = [
 
 [[package]]
 name = "cf-modkit-db-macros"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "heck 0.5.0",
  "proc-macro-error2",
@@ -583,7 +583,7 @@ dependencies = [
 
 [[package]]
 name = "cf-modkit-errors"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "axum 0.8.8",
  "http",
@@ -594,7 +594,7 @@ dependencies = [
 
 [[package]]
 name = "cf-modkit-errors-macro"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -605,7 +605,7 @@ dependencies = [
 
 [[package]]
 name = "cf-modkit-macros"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "heck 0.5.0",
  "proc-macro2",
@@ -616,7 +616,7 @@ dependencies = [
 
 [[package]]
 name = "cf-modkit-odata"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "base64",
  "bigdecimal",
@@ -635,7 +635,7 @@ dependencies = [
 
 [[package]]
 name = "cf-modkit-sdk"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "cf-modkit-odata",
  "cf-modkit-security",
@@ -645,7 +645,7 @@ dependencies = [
 
 [[package]]
 name = "cf-modkit-security"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "postcard",
@@ -657,7 +657,7 @@ dependencies = [
 
 [[package]]
 name = "cf-modkit-utils"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "humantime",
  "serde",
@@ -665,7 +665,7 @@ dependencies = [
 
 [[package]]
 name = "cf-system-sdk-directory"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -673,7 +673,7 @@ dependencies = [
 
 [[package]]
 name = "cf-system-sdks"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "cf-system-sdk-directory",
 ]
@@ -1593,16 +1593,16 @@ dependencies = [
 [[package]]
 name = "gts"
 version = "0.1.0"
-source = "git+https://github.com/globaltypesystem/gts-rust.git?tag=v0.7.7#eb53551654ce97426ee891ba99ced0fd56b72d59"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f055f25975351d3d37bf518b64125171d19ab1294bdfb83177b8d94e161317a7"
 dependencies = [
- "anyhow",
  "jsonschema",
  "schemars",
  "serde",
  "serde_json",
  "serde_yaml",
  "shellexpand",
- "thiserror 1.0.69",
+ "thiserror 2.0.17",
  "tracing",
  "uuid",
  "walkdir",
@@ -1611,7 +1611,8 @@ dependencies = [
 [[package]]
 name = "gts-macros"
 version = "0.1.0"
-source = "git+https://github.com/globaltypesystem/gts-rust.git?tag=v0.7.7#eb53551654ce97426ee891ba99ced0fd56b72d59"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c4ab1a912320944290ca2836681f3f706e91584f5d05d6e5b72cd99987a179ec"
 dependencies = [
  "proc-macro2",
  "quote",

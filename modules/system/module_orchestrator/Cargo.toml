@@ -1,10 +1,14 @@
 [package]
 name = "cf-module-orchestrator"
-version = "0.1.0"
+version = "0.1.1"
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 description = "Module Orchestrator - system module for service discovery and module management"
+repository.workspace = true
+readme = "README.md"
+keywords = ["cyberfabric", "cyberfabric-system"]
+categories = ["development-tools"]
 
 [lib]
 name = "module_orchestrator"

@@ -1,6 +1,6 @@
 # Dependencies Guidelines
 
-This document outlines the preferred dependencies and libraries to use in the HyperSpot project.
+This document outlines the preferred dependencies and libraries to use in the CyberFabric project.
 
 ## Serialization
 

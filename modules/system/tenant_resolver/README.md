@@ -1,6 +1,6 @@
 # Tenant Resolver
 
-Tenant information and access resolution for HyperSpot's security layer.
+Tenant information and access resolution for CyberFabric's security layer.
 
 ## Overview
 
@@ -10,23 +10,6 @@ The **tenant_resolver** module answers two fundamental questions:
 2. **Can I access this tenant's data?** — Resolve access relationships from the current security context
 
 The module is **topology-agnostic** — it makes no assumptions about tenant hierarchy structure. Whether the integrating system uses flat tenants, tree hierarchies, DAGs (directed acyclic graph) with multiple parents, or arbitrary graphs, the API remains the same.
-
-## Architecture
-
-```
-modules/system/tenant_resolver/
-├── tenant_resolver-sdk/         # Public API traits and models
-├── tenant_resolver-gw/          # Gateway module (routes to plugins)
-└── plugins/
-    ├── static_tr_plugin/        # Config-based multi-tenant plugin
-    └── single_tenant_tr_plugin/ # Zero-config single-tenant plugin
-```
-
-| Layer | Responsibility |
-|-------|----------------|
-| **SDK** | Public API, plugin API, models |
-| **Gateway** | Plugin discovery via GTS, request routing |
-| **Plugins** | Actual tenant data and access rule implementations |
 
 ## Public API
 
@@ -115,21 +98,22 @@ See [`error.rs`](tenant_resolver-sdk/src/error.rs): `NotFound`, `AccessDenied`, 
 
 Plugins implement [`TenantResolverPluginClient`](tenant_resolver-sdk/src/plugin_api.rs) and register via GTS. The gateway handles self-access before delegating to plugins.
 
-HyperSpot includes two plugins out of the box:
+CyberFabric includes two plugins out of the box:
 - [`static_tr_plugin`](plugins/static_tr_plugin/) — Config-based plugin for testing multi-tenant deployments
 - [`single_tenant_tr_plugin`](plugins/single_tenant_tr_plugin/) — Zero-config plugin for single-tenant deployments
 
 ## Integration with External Systems
 
-The plugin architecture enables HyperSpot to integrate with existing multi-tenant systems where tenant data and access rules are managed externally.
+The plugin architecture enables CyberFabric to integrate with existing multi-tenant systems where tenant data and access rules are managed externally.
 
 **Example: Integration with [Zanzibar](https://research.google/pubs/zanzibar-googles-consistent-global-authorization-system/)-style authorization**
 
-Systems like [SpiceDB](https://authzed.com/spicedb), [OpenFGA](https://openfga.dev/), or [Ory Keto](https://www.ory.sh/keto/) provide relationship-based access control. A plugin can bridge HyperSpot to these systems:
+Systems like [SpiceDB](https://authzed.com/spicedb), [OpenFGA](https://openfga.dev/), or [Ory Keto](https://www.ory.sh/keto/) provide relationship-based access control.
+A plugin can bridge CyberFabric to these systems:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                      HyperSpot                          │
+│                      CyberFabric                          │
 │                                                         │
 │  ┌─────────────────┐      ┌─────────────────────────┐   │
 │  │ tenant_resolver │      │  zanzibar_tr_plugin     │   │
@@ -149,7 +133,7 @@ Systems like [SpiceDB](https://authzed.com/spicedb), [OpenFGA](https://openfga.d
 In this scenario:
 - **Tenant DB** — External database storing tenant metadata (name, status)
 - **Zanzibar** — External authorization service storing access relationships
-- **Plugin** — Adapter that bridges HyperSpot to both external systems
+- **Plugin** — Adapter that bridges CyberFabric to both external systems
 
 | Method | Data Source |
 |--------|-------------|
@@ -172,7 +156,7 @@ definition tenant {
 // tenant:acme#parent@tenant:corp         → corp (and its accessors) can access acme
 ```
 
-This pattern allows HyperSpot to operate as a component within a larger system without owning the tenant or authorization data.
+This pattern allows CyberFabric to operate as a component within a larger system without owning the tenant or authorization data.
 
 Similar plugins can integrate with other authorization systems (LDAP, custom APIs, etc.) — the gateway remains agnostic to the backend.
 

@@ -2,8 +2,6 @@
 
 Config-based plugin for testing multi-tenant deployments.
 
-See [../../README.md](../../README.md) for full documentation.
-
 ## Quick Reference
 
 - Tenants and access rules defined in YAML config

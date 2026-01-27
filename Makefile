@@ -284,6 +284,12 @@ e2e-local:
 e2e-docker:
 	python3 scripts/ci.py e2e --docker $(E2E_ARGS)
 
+markdown-check:
+	broken-md-links docs
+	broken-md-links examples
+	broken-md-links dylint_lints
+	broken-md-links guidelines
+
 # -------- Code coverage --------
 
 .PHONY: coverage coverage-unit coverage-e2e-local check-prereq-e2e-local

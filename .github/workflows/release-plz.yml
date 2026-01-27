@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    types: [closed]
+    branches: [main]
   workflow_dispatch:
     inputs:
       mode:
@@ -47,7 +50,18 @@ jobs:
   release:
     name: Publish crates
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' || github.event.inputs.mode == 'release' }}
+    # IMPORTANT: don't publish on every push. Publish only:
+    # - manually via workflow_dispatch (mode=release), or
+    # - when a release PR (labeled `release-plz`) is merged into main.
+    if: >-
+      ${{
+        (github.event_name == 'workflow_dispatch' && github.event.inputs.mode == 'release')
+        || (
+          github.event_name == 'pull_request'
+          && github.event.pull_request.merged == true
+          && contains(join(github.event.pull_request.labels.*.name, ','), 'release-plz')
+        )
+      }}
     permissions:
       contents: write
     steps:
