@@ -1,4 +1,4 @@
-# Technical Design: {PROJECT_NAME}
+# Technical Design: {MODULE NAME}
 
 ## A. Architecture Overview
 
