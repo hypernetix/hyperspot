@@ -37,7 +37,7 @@ Follow the new module guideline: [`@/guidelines/NEW_MODULE.md`](../../../guideli
 modules/<module>/
 ├─ <module>-sdk/           # Public API: trait, models, errors (NO serde)
 │  └─ src/
-│     ├─ api.rs            # API trait (all methods take &SecurityCtx)
+│     ├─ api.rs            # API trait (all methods take &SecurityContext)
 │     ├─ models.rs         # Transport-agnostic models
 │     └─ errors.rs         # Transport-agnostic errors
 └─ <module>/               # Implementation
@@ -82,7 +82,7 @@ Follow the REST API guidelines: [`@/guidelines/DNA/REST/API.md`](../../../guidel
 Follow security guidelines: [`@/guidelines/SECURITY.md`](../../../guidelines/SECURITY.md)
 
 **Key requirements:**
-- **All API methods MUST accept `&SecurityCtx`** as first parameter
+- **All API methods MUST accept `&SecurityContext`** as first parameter
 - **Use SecureConn** for database access with automatic tenant isolation
 - **Input validation** via `validator` crate
 - **No secrets in code** — use environment variables
@@ -94,7 +94,7 @@ Follow secure ORM patterns: [`@/docs/SECURE-ORM.md`](../../../docs/SECURE-ORM.md
 - **Typestate enforcement**: Unscoped queries cannot execute
 - **Deny-by-default**: Empty scopes return `WHERE 1=0`
 - **Derive macro**: `#[derive(Scopable)]` with explicit dimension declarations
-- **Request-scoped**: `SecurityCtx` passed per-operation
+- **Request-scoped**: `SecurityContext` passed per-operation
 
 ### Testing Strategy
 
