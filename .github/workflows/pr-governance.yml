@@ -93,12 +93,10 @@ jobs:
                 "PR was created more than 5 minutes ago but has no human reviewers assigned"
             });
 
-            const fetch = require("node-fetch");
-
             await fetch(
-              "https://api.telegram.org/bot" +
-                process.env.TELEGRAM_BOT_TOKEN +
-                "/sendMessage",
+              `https://api.telegram.org/bot${
+                process.env.TELEGRAM_BOT_TOKEN
+              }/sendMessage`,
               {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
