@@ -1,3 +1,13 @@
+//! Domain errors for the tenant resolver gateway example.
+//!
+//! # HTTP Response Mapping
+//!
+//! - Domain errors are transport-agnostic (no HTTP knowledge)
+//! - API layer handles HTTP concerns (status codes, RFC 9457)
+//! - Different APIs (REST, gRPC) may map errors differently
+//!
+//! See `guidelines/NEW_MODULE.md` for full explanation.
+
 /// Domain error for the `tenant_resolver` gateway example.
 #[derive(thiserror::Error, Debug)]
 pub enum DomainError {

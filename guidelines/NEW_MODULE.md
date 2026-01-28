@@ -350,6 +350,13 @@ impl From<DomainError> for UsersInfoError {
 
 **Rule:** `Problem` implements `IntoResponse` directly — no wrapper needed.
 
+**Rule:** `From<DomainError> for Problem` lives in `api/rest/error.rs`.
+
+**Why location:**
+- **Domain layer stays transport-agnostic**: `DomainError` represents business logic failures ("User not found", "Validation failed"). It should not know about HTTP status codes or RFC 9457.
+- **Dependency direction**: The API layer depends on Domain, not the other way around. Putting HTTP mapping in domain would invert this.
+- **Different APIs, different mappings**: A `DomainError::NotFound` might map to HTTP 404, gRPC `NOT_FOUND`, or a GraphQL error — each API layer handles its own translation.
+
 ```rust
 // src/api/rest/error.rs
 use http::StatusCode;

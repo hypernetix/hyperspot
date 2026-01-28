@@ -1,3 +1,13 @@
+//! HTTP error mapping for the tenant resolver gateway example.
+//!
+//! This module converts domain errors to RFC 9457 Problem responses.
+//!
+//! - **Domain stays transport-agnostic**: `DomainError` should not know about HTTP
+//! - **Correct dependency direction**: API depends on Domain, not vice versa
+//! - **Different APIs, different mappings**: REST → 404, gRPC → `NOT_FOUND`, etc.
+//!
+//! See `guidelines/NEW_MODULE.md` for full explanation.
+
 use modkit::api::problem::Problem;
 
 use crate::domain::error::DomainError;
