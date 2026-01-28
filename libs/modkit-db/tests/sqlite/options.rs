@@ -5,20 +5,26 @@ use tempfile::TempDir;
 
 #[test]
 fn test_build_db_handle_env_expansion() {
-    temp_env::with_var("TEST_DB_PASSWORD", Some("secret123"), || {
+    temp_env::with_var("TEST_SQLITE_SYNC", Some("NORMAL"), || {
         let rt = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()
             .unwrap();
         rt.block_on(async {
             let config = DbConnConfig {
+                engine: Some(modkit_db::config::DbEngineCfg::Sqlite),
                 dsn: Some("sqlite::memory:".to_owned()),
-                password: Some("${TEST_DB_PASSWORD}".to_owned()),
+                params: Some({
+                    let mut params = HashMap::new();
+                    // Exercise env expansion in params
+                    params.insert("synchronous".to_owned(), "${TEST_SQLITE_SYNC}".to_owned());
+                    params
+                }),
                 ..Default::default()
             };
 
             let result = build_db_handle(config, None).await;
-            assert!(result.is_ok());
+            assert!(result.is_ok(), "Expected Ok, got: {result:?}");
         });
     });
 }
@@ -26,6 +32,7 @@ fn test_build_db_handle_env_expansion() {
 #[tokio::test]
 async fn test_build_db_handle_sqlite_memory() {
     let config = DbConnConfig {
+        engine: Some(modkit_db::config::DbEngineCfg::Sqlite),
         dsn: Some("sqlite::memory:".to_owned()),
         params: Some({
             let mut params = HashMap::new();
@@ -48,6 +55,7 @@ async fn test_build_db_handle_sqlite_file() {
     let db_path = temp_dir.path().join("test.db");
 
     let config = DbConnConfig {
+        engine: Some(modkit_db::config::DbEngineCfg::Sqlite),
         path: Some(db_path),
         params: Some({
             let mut params = HashMap::new();
@@ -102,6 +110,7 @@ fn test_display_sqlite_relative_path() {
 #[tokio::test]
 async fn test_build_db_handle_invalid_env_var() {
     let config = DbConnConfig {
+        engine: Some(modkit_db::config::DbEngineCfg::Sqlite),
         dsn: Some("sqlite::memory:".to_owned()),
         password: Some("${NONEXISTENT_VAR}".to_owned()),
         ..Default::default()
@@ -118,6 +127,7 @@ async fn test_build_db_handle_invalid_env_var() {
 #[tokio::test]
 async fn test_build_db_handle_invalid_sqlite_pragma() {
     let config = DbConnConfig {
+        engine: Some(modkit_db::config::DbEngineCfg::Sqlite),
         dsn: Some("sqlite::memory:".to_owned()),
         params: Some({
             let mut params = HashMap::new();
@@ -138,6 +148,7 @@ async fn test_build_db_handle_invalid_sqlite_pragma() {
 #[tokio::test]
 async fn test_build_db_handle_invalid_journal_mode() {
     let config = DbConnConfig {
+        engine: Some(modkit_db::config::DbEngineCfg::Sqlite),
         dsn: Some("sqlite::memory:".to_owned()),
         params: Some({
             let mut params = HashMap::new();
@@ -163,6 +174,7 @@ async fn test_build_db_handle_invalid_journal_mode() {
 #[tokio::test]
 async fn test_build_db_handle_pool_config() {
     let config = DbConnConfig {
+        engine: Some(modkit_db::config::DbEngineCfg::Sqlite),
         dsn: Some("sqlite::memory:".to_owned()),
         pool: Some(PoolCfg {
             max_conns: Some(5),

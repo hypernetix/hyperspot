@@ -12,6 +12,7 @@ server:
 database:
   servers:
     sqlite_test:
+      engine: "sqlite"
       params:
         WAL: "true"
       pool:

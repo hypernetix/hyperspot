@@ -18,6 +18,7 @@ async fn test_concurrent_get_same_module() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "file": format!("concurrent_same_{}.db", std::process::id())
                 }
             }
@@ -55,11 +56,13 @@ async fn test_concurrent_get_different_modules() {
         "modules": {
             "module_a": {
                 "database": {
+                    "engine": "sqlite",
                     "file": format!("module_a_{}.db", std::process::id())
                 }
             },
             "module_b": {
                 "database": {
+                    "engine": "sqlite",
                     "file": format!("module_b_{}.db", std::process::id())
                 }
             }
@@ -101,6 +104,7 @@ async fn test_caching_behavior() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "file": format!("caching_test_{}.db", std::process::id())
                 }
             }
@@ -138,6 +142,7 @@ async fn test_unknown_module_behavior() {
         "modules": {
             "known_module": {
                 "database": {
+                    "engine": "sqlite",
                     "file": format!("known_{}.db", std::process::id())
                 }
             }
@@ -170,11 +175,13 @@ async fn test_concurrent_mixed_scenarios() {
         "modules": {
             "valid_module": {
                 "database": {
+                    "engine": "sqlite",
                     "file": format!("valid_{}.db", std::process::id())
                 }
             },
             "invalid_module": {
                 "database": {
+                    "engine": "sqlite",
                     "dsn": format!("sqlite:file:mixed_invalid_{}.db", std::process::id()),
                     "host": "localhost"  // Conflict: SQLite DSN with host field
                 }
@@ -215,6 +222,7 @@ async fn test_concurrent_performance() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "file": format!("perf_test_{}.db", std::process::id())
                 }
             }
@@ -266,6 +274,7 @@ async fn test_cache_isolation_across_managers() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "file": format!("isolation_test_{}.db", std::process::id())
                 }
             }
@@ -334,6 +343,7 @@ async fn test_concurrent_slow_initialization() {
         "modules": {
             "slow_module": {
                 "database": {
+                    "engine": "sqlite",
                     "file": format!("slow_test_{}.db", std::process::id()),
                     "pool": {
                         "max_conns": 1,           // Force serialization

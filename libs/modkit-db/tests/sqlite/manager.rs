@@ -14,6 +14,7 @@ async fn test_dbmanager_sqlite_with_file() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "file": db_filename,
                     "params": {
                         "journal_mode": "WAL"
@@ -44,6 +45,7 @@ async fn test_dbmanager_sqlite_with_path() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "path": db_path,
                     "params": {
                         "journal_mode": "DELETE"
@@ -72,6 +74,7 @@ async fn test_dbmanager_caching() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "dsn": "sqlite::memory:",
                     "params": {
                         "journal_mode": "WAL"
@@ -110,6 +113,7 @@ async fn test_dbmanager_sqlite_server_without_dsn() {
             servers.insert(
                 "sqlite_server".to_owned(),
                 DbConnConfig {
+                    engine: Some(modkit_db::config::DbEngineCfg::Sqlite),
                     params: Some({
                         let mut params = HashMap::new();
                         params.insert("WAL".to_owned(), "true".to_owned());
@@ -134,6 +138,7 @@ async fn test_dbmanager_sqlite_server_without_dsn() {
         "modules": {
             "test_module": {
                 "database": {
+                    "engine": "sqlite",
                     "server": "sqlite_server",
                     "file": format!("module_{}.db", std::process::id())  // Should be placed in module home directory
                 }

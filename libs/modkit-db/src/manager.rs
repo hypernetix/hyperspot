@@ -141,6 +141,11 @@ impl DbManager {
     ) -> DbConnConfig {
         // Start with server config as base, then apply module overrides
 
+        // Engine: module takes precedence (important for field-based configs)
+        if module_cfg.engine.is_none() {
+            module_cfg.engine = server_cfg.engine;
+        }
+
         // DSN: module takes precedence
         if module_cfg.dsn.is_none() {
             module_cfg.dsn = server_cfg.dsn;
