@@ -523,7 +523,7 @@ def ensure_cargo_fuzz():
     result = run_cmd_allow_fail(["cargo", "+nightly", "fuzz", "--version"])
     if result.returncode != 0:
         print("Installing cargo-fuzz...")
-        run_cmd(["cargo", "install", "cargo-fuzz"])
+        run_cmd(["cargo", "+nightly", "install", "cargo-fuzz"])
 
 
 def cmd_fuzz_build(_args):
