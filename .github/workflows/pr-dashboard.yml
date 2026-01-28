@@ -2,8 +2,7 @@ name: PR → Pull Request Project Sync
 
 on:
   schedule:
-    - cron: "0 8 * * *"
-    - cron: "0 13 * * *"
+    - cron: "0 8-23 * * *"
 
   workflow_dispatch:
 
@@ -50,6 +49,28 @@ jobs:
               FIELD_UNREPLIED_THREADS,
               FIELD_UNREPLIED_COMMENTS
             } = process.env;
+
+            const ignoredBots = new Set([
+              "coderabbitai[bot]",
+              "graphite-app[bot]",
+              "dependabot[bot]"
+            ]);
+
+            function fmtDuration(ms) {
+              const totalMinutes = Math.max(0, Math.floor(ms / 60000));
+              const days = Math.floor(totalMinutes / (60 * 24));
+              const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+              const minutes = totalMinutes % 60;
+              return `${days}d ${hours}h ${minutes}m`;
+            }
+
+            function guessAskedUser(body, asker, fallback) {
+              const text = body || "";
+              const mentions = [...text.matchAll(/@([A-Za-z0-9-]+)/g)]
+                .map(m => m[1]);
+              const asked = mentions.find(u => u && u !== asker);
+              return asked || fallback;
+            }
 
             /*
              ------------------------------------------------------------
@@ -134,18 +155,37 @@ jobs:
 
             for (const pr of prs) {
 
+              const prFull = await github.rest.pulls.get({
+                owner,
+                repo,
+                pull_number: pr.number
+              });
+
+              const prData = prFull.data;
+              const author = prData.user?.login;
+              if (!author) {
+                console.log(`Skipping PR #${pr.number} - author is null`);
+                continue;
+              }
+
+              const now = new Date();
+              const createdAt = new Date(prData.created_at);
+              const updatedAt = new Date(prData.updated_at);
+
               const reviewData = await github.graphql(`
                 query($owner:String!, $repo:String!, $number:Int!) {
                   repository(owner:$owner, name:$repo) {
                     pullRequest(number:$number) {
-                      author { login }
                       reviewThreads(first:100) {
                         nodes {
                           isResolved
                           comments(last:50) {
+                            totalCount
                             nodes {
                               author { login }
                               url
+                              bodyText
+                              createdAt
                             }
                           }
                         }
@@ -159,27 +199,90 @@ jobs:
                 number: pr.number
               });
 
-              const author =
-                reviewData.repository.pullRequest.author.login;
+              let openReviewThreads = 0;
+              let resolvedReviewThreads = 0;
+              let openReviewComments = 0;
+              let resolvedReviewComments = 0;
 
-              let unrepliedThreads = 0;
-              let unrepliedComments = 0;
-              const links = [];
+              let unrepliedReviewThreads = 0;
+              const unrepliedReviewLinks = [];
 
               for (const thread of reviewData.repository.pullRequest.reviewThreads.nodes) {
-                if (thread.isResolved) continue;
+                const total = thread.comments.totalCount;
+
+                if (thread.isResolved) {
+                  resolvedReviewThreads++;
+                  resolvedReviewComments += total;
+                  continue;
+                }
+
+                openReviewThreads++;
+                openReviewComments += total;
 
                 const comments = thread.comments.nodes;
                 if (!comments.length) continue;
 
-                const last = comments[comments.length - 1];
+                const lastHuman =
+                  [...comments]
+                    .reverse()
+                    .find(c => {
+                      const login = c.author?.login;
+                      return (
+                        !!login &&
+                        !login.endsWith("[bot]") &&
+                        !ignoredBots.has(login)
+                      );
+                    });
 
-                if (last.author.login !== author) {
-                  unrepliedThreads++;
-                  unrepliedComments++;
-                  links.push(last.url);
+                if (!lastHuman) continue;
+
+                const asker = lastHuman.author.login;
+                if (asker === author) continue;
+
+                const asked = guessAskedUser(lastHuman.bodyText, asker, author);
+                unrepliedReviewThreads++;
+                unrepliedReviewLinks.push(`@${asker} asks @${asked} - ${lastHuman.url}`);
+              }
+
+              const prComments = await github.paginate(
+                github.rest.issues.listComments,
+                {
+                  owner,
+                  repo,
+                  issue_number: pr.number,
+                  per_page: 100
+                }
+              );
+
+              const humanPrComments = (prComments || [])
+                .filter(c => {
+                  const login = c.user?.login;
+                  return (
+                    !!login &&
+                    !login.endsWith("[bot]") &&
+                    !ignoredBots.has(login)
+                  );
+                });
+
+              let lastAuthorIndex = -1;
+              for (let i = humanPrComments.length - 1; i >= 0; i--) {
+                if (humanPrComments[i].user.login === author) {
+                  lastAuthorIndex = i;
+                  break;
                 }
               }
+
+              const pendingPrComments =
+                humanPrComments
+                  .slice(lastAuthorIndex + 1)
+                  .filter(c => c.user.login !== author);
+
+              const unrepliedPrCommentsCount = pendingPrComments.length;
+              const unrepliedPrCommentLinks = pendingPrComments.map(c => {
+                const asker = c.user.login;
+                const asked = guessAskedUser(c.body, asker, author);
+                return `@${asker} asks @${asked} - ${c.html_url}`;
+              });
 
               /*
                ------------------------------------------------------------
@@ -190,11 +293,24 @@ jobs:
               const issueTitle = `PR #${pr.number} - ${pr.title}`;
 
               const body =
-                "Pull request:\n" +
-                pr.html_url + "\n\n" +
-                "Unreplied review comments:\n" +
-                (links.length
-                  ? links.map(l => "- " + l).join("\n")
+                `${issueTitle}\n\n` +
+                `PR: ${pr.html_url}\n` +
+                `Author: @${author}\n` +
+                `Opened: ${createdAt.toISOString()} (${fmtDuration(now - createdAt)} ago)\n` +
+                `Last update: ${updatedAt.toISOString()} (${fmtDuration(now - updatedAt)} ago)\n` +
+                `Draft: ${prData.draft ? "yes" : "no"}\n\n` +
+                `Review threads: ${openReviewThreads} open / ${resolvedReviewThreads} resolved\n` +
+                `Review comments: ${openReviewComments} open / ${resolvedReviewComments} resolved\n` +
+                `Unreplied review threads: ${unrepliedReviewThreads}\n` +
+                `Unreplied PR comments: ${unrepliedPrCommentsCount}\n\n` +
+                `Unreplied review threads:\n` +
+                (unrepliedReviewLinks.length
+                  ? unrepliedReviewLinks.map(l => "- " + l).join("\n")
+                  : "None") +
+                `\n\n` +
+                `Unreplied PR comments:\n` +
+                (unrepliedPrCommentLinks.length
+                  ? unrepliedPrCommentLinks.map(l => "- " + l).join("\n")
                   : "None");
 
               let issue;
@@ -321,8 +437,8 @@ jobs:
                 project: PROJECT_ID,
                 item: itemId,
                 link: pr.html_url,
-                threads: unrepliedThreads,
-                comments: unrepliedComments
+                threads: unrepliedReviewThreads,
+                comments: unrepliedPrCommentsCount
               });
             }
 
