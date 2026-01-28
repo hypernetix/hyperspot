@@ -63,8 +63,9 @@ This SDK pattern provides:
 
 All modules MUST adhere to the following directory structure:
 
-```
+```text
 modules/<your-module>/
+├─ QUICKSTART.md                # API quickstart with curl examples (see below)
 ├─ <your-module>-sdk/           # SDK crate: public API for consumers
 │  ├─ Cargo.toml
 │  └─ src/
@@ -101,6 +102,50 @@ modules/<your-module>/
             ├─ sea_orm_repo.rs  # SeaORM repository implementation
             └─ migrations/      # SeaORM migrations
 ```
+
+### Module Documentation: QUICKSTART.md
+
+Every module with REST endpoints MUST include a `QUICKSTART.md` file with:
+
+1. **Module description** - One-line summary of what the module does
+2. **Link to /docs** - Reference to full API documentation
+3. **1-2 minimal examples** - Basic curl commands showing typical usage
+4. **Reference to /docs** - Direct users to complete API reference
+
+Keep examples minimal. The documentation at `/docs` is auto-generated from OpenAPI spec and always current.
+
+**Template:**
+
+    # <Module Name> - Quickstart
+    
+    <One-line description of what the module does.>
+    
+    Full API documentation: <http://127.0.0.1:8087/docs>
+    
+    ## Examples
+    
+    ### List Resources
+    
+    ```bash
+    curl -s http://127.0.0.1:8087/<module>/v1/resource | python3 -m json.tool
+    ```
+    
+    **Output:**
+    ```json
+    {
+        "items": [...]
+    }
+    ```
+    
+    For additional endpoints, see <http://127.0.0.1:8087/docs>.
+
+**Key principles:**
+- Avoid duplication - `/docs` is auto-generated and always current
+- Show, don't list - 1-2 working examples, not comprehensive tables
+- No fluff - State facts, avoid marketing language
+- Stay minimal - Less documentation = less maintenance
+
+The main [QUICKSTART_GUIDE.md](../docs/QUICKSTART_GUIDE.md) references all module quickstarts.
 
 ---
 
