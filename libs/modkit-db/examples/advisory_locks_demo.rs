@@ -3,7 +3,7 @@
 
 //! Demo of the enhanced advisory locks with namespacing and `try_lock` functionality.
 
-use modkit_db::{ConnectOpts, DbHandle, LockConfig};
+use modkit_db::{ConnectOpts, LockConfig};
 use std::time::Duration;
 
 #[tokio::main]
@@ -13,7 +13,7 @@ async fn main() -> anyhow::Result<()> {
     let db_path = temp_dir.path().join("demo.db");
     let dsn = format!("sqlite://{}", db_path.display());
 
-    let db = DbHandle::connect(&dsn, ConnectOpts::default()).await?;
+    let db = modkit_db::connect_db(&dsn, ConnectOpts::default()).await?;
     println!("Connected to database: {dsn}");
 
     // Demo 1: Basic namespaced locking

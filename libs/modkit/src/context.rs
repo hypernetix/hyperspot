@@ -8,6 +8,21 @@ use crate::config::{ConfigError, ConfigProvider, module_config_or_default};
 
 // Note: runtime-dependent features are conditionally compiled
 
+// DB types are available only when feature "db" is enabled.
+// We keep local aliases so the rest of this file can compile without importing `modkit_db`.
+#[cfg(feature = "db")]
+pub(crate) type DbManager = modkit_db::DbManager;
+#[cfg(feature = "db")]
+pub(crate) type DbProvider = modkit_db::DBProvider<modkit_db::DbError>;
+
+// Stub types for no-db builds (never exposed; methods that would use them are cfg'd out).
+#[cfg(not(feature = "db"))]
+#[derive(Clone, Debug)]
+pub struct DbManager;
+#[cfg(not(feature = "db"))]
+#[derive(Clone, Debug)]
+pub struct DbProvider;
+
 #[derive(Clone)]
 #[must_use]
 pub struct ModuleCtx {
@@ -16,19 +31,19 @@ pub struct ModuleCtx {
     config_provider: Arc<dyn ConfigProvider>,
     client_hub: Arc<crate::client_hub::ClientHub>,
     cancellation_token: CancellationToken,
-    db_handle: Option<Arc<modkit_db::DbHandle>>,
+    db: Option<DbProvider>,
 }
 
 /// Builder for creating module-scoped contexts with resolved database handles.
 ///
-/// This builder internally uses `DbManager` to resolve per-module `DbHandle` instances
-/// at build time, ensuring `ModuleCtx` contains only the final, ready-to-use handle.
+/// This builder internally uses `DbManager` to resolve per-module `Db` instances
+/// at build time, ensuring `ModuleCtx` contains only the final, ready-to-use entrypoint.
 pub struct ModuleContextBuilder {
     instance_id: Uuid,
     config_provider: Arc<dyn ConfigProvider>,
     client_hub: Arc<crate::client_hub::ClientHub>,
     root_token: CancellationToken,
-    db_manager: Option<Arc<modkit_db::DbManager>>, // internal only, never exposed to modules
+    db_manager: Option<Arc<DbManager>>, // internal only, never exposed to modules
 }
 
 impl ModuleContextBuilder {
@@ -37,7 +52,7 @@ impl ModuleContextBuilder {
         config_provider: Arc<dyn ConfigProvider>,
         client_hub: Arc<crate::client_hub::ClientHub>,
         root_token: CancellationToken,
-        db_manager: Option<Arc<modkit_db::DbManager>>,
+        db_manager: Option<Arc<DbManager>>,
     ) -> Self {
         Self {
             instance_id,
@@ -59,10 +74,20 @@ impl ModuleContextBuilder {
     /// # Errors
     /// Returns an error if database resolution fails.
     pub async fn for_module(&self, module_name: &str) -> anyhow::Result<ModuleCtx> {
-        let db_handle = if let Some(mgr) = &self.db_manager {
-            mgr.get(module_name).await?
-        } else {
-            None
+        let db: Option<DbProvider> = {
+            #[cfg(feature = "db")]
+            {
+                if let Some(mgr) = &self.db_manager {
+                    mgr.get(module_name).await?.map(modkit_db::DBProvider::new)
+                } else {
+                    None
+                }
+            }
+            #[cfg(not(feature = "db"))]
+            {
+                let _ = module_name; // avoid unused in no-db builds
+                None
+            }
         };
 
         Ok(ModuleCtx::new(
@@ -71,7 +96,7 @@ impl ModuleContextBuilder {
             self.config_provider.clone(),
             self.client_hub.clone(),
             self.root_token.child_token(),
-            db_handle,
+            db,
         ))
     }
 }
@@ -84,7 +109,7 @@ impl ModuleCtx {
         config_provider: Arc<dyn ConfigProvider>,
         client_hub: Arc<crate::client_hub::ClientHub>,
         cancellation_token: CancellationToken,
-        db_handle: Option<Arc<modkit_db::DbHandle>>,
+        db: Option<DbProvider>,
     ) -> Self {
         Self {
             module_name: module_name.into(),
@@ -92,7 +117,7 @@ impl ModuleCtx {
             config_provider,
             client_hub,
             cancellation_token,
-            db_handle,
+            db,
         }
     }
 
@@ -133,17 +158,49 @@ impl ModuleCtx {
         &self.cancellation_token
     }
 
+    /// Get a module-scoped DB entrypoint for secure database operations.
+    ///
+    /// Returns `None` if no database is configured for this module.
+    ///
+    /// # Security
+    ///
+    /// The returned `DBProvider<modkit_db::DbError>`:
+    /// - Is cheap to clone (shares an internal `Db`)
+    /// - Provides `conn()` for non-transactional access (fails inside tx via guard)
+    /// - Provides `transaction(..)` for transactional operations
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let db = ctx.db().ok_or_else(|| anyhow!("no db"))?;
+    /// let conn = db.conn()?;
+    /// let user = svc.get_user(&conn, &scope, id).await?;
+    /// ```
     #[must_use]
-    pub fn db_optional(&self) -> Option<Arc<modkit_db::DbHandle>> {
-        self.db_handle.clone()
+    #[cfg(feature = "db")]
+    pub fn db(&self) -> Option<modkit_db::DBProvider<modkit_db::DbError>> {
+        self.db.clone()
     }
 
-    /// Get the database handle, returning an error if not configured.
+    /// Get a database handle, returning an error if not configured.
+    ///
+    /// This is a convenience method that combines `db()` with an error for
+    /// modules that require database access.
     ///
     /// # Errors
+    ///
     /// Returns an error if the database is not configured for this module.
-    pub fn db_required(&self) -> anyhow::Result<Arc<modkit_db::DbHandle>> {
-        self.db_handle.clone().ok_or_else(|| {
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let db = ctx.db_required()?;
+    /// let conn = db.conn()?;
+    /// let user = svc.get_user(&conn, &scope, id).await?;
+    /// ```
+    #[cfg(feature = "db")]
+    pub fn db_required(&self) -> anyhow::Result<modkit_db::DBProvider<modkit_db::DbError>> {
+        self.db().ok_or_else(|| {
             anyhow::anyhow!(
                 "Database is not configured for module '{}'",
                 self.module_name
@@ -202,19 +259,6 @@ impl ModuleCtx {
         &EMPTY
     }
 
-    /// Create a derivative context with the same references but a different DB handle.
-    /// This allows reusing the stable base context while providing per-module DB access.
-    pub fn with_db(&self, db: Arc<modkit_db::DbHandle>) -> ModuleCtx {
-        ModuleCtx {
-            module_name: self.module_name.clone(),
-            instance_id: self.instance_id,
-            config_provider: self.config_provider.clone(),
-            client_hub: self.client_hub.clone(),
-            cancellation_token: self.cancellation_token.clone(),
-            db_handle: Some(db),
-        }
-    }
-
     /// Create a derivative context with the same references but no DB handle.
     /// Useful for modules that don't require database access.
     pub fn without_db(&self) -> ModuleCtx {
@@ -224,7 +268,7 @@ impl ModuleCtx {
             config_provider: self.config_provider.clone(),
             client_hub: self.client_hub.clone(),
             cancellation_token: self.cancellation_token.clone(),
-            db_handle: None,
+            db: None,
         }
     }
 }

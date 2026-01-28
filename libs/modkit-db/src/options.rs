@@ -2,44 +2,18 @@
 
 use crate::config::{DbConnConfig, DbEngineCfg, GlobalDatabaseConfig, PoolCfg};
 use crate::{DbError, DbHandle, Result};
-use thiserror::Error;
 
 // Pool configuration moved to config.rs
 
 /// Database connection options using typed sqlx `ConnectOptions`.
 #[derive(Debug, Clone)]
-pub enum DbConnectOptions {
+pub(crate) enum DbConnectOptions {
     #[cfg(feature = "sqlite")]
-    Sqlite(sea_orm::sqlx::sqlite::SqliteConnectOptions),
+    Sqlite(sqlx::sqlite::SqliteConnectOptions),
     #[cfg(feature = "pg")]
-    Postgres(sea_orm::sqlx::postgres::PgConnectOptions),
+    Postgres(sqlx::postgres::PgConnectOptions),
     #[cfg(feature = "mysql")]
-    MySql(sea_orm::sqlx::mysql::MySqlConnectOptions),
-}
-
-/// Errors that can occur during connection option building.
-#[derive(Debug, Error)]
-pub enum ConnectionOptionsError {
-    #[error("Invalid SQLite PRAGMA parameter '{key}': {message}")]
-    InvalidSqlitePragma { key: String, message: String },
-
-    #[error("Unknown SQLite PRAGMA parameter: {0}")]
-    UnknownSqlitePragma(String),
-
-    #[error("Invalid connection parameter: {0}")]
-    InvalidParameter(String),
-
-    #[error("Feature not enabled: {0}")]
-    FeatureDisabled(&'static str),
-
-    #[error("IO error: {0}")]
-    Io(#[from] std::io::Error),
-
-    #[error("URL parsing error: {0}")]
-    UrlParse(#[from] url::ParseError),
-
-    #[error("Environment variable error: {0}")]
-    EnvVar(#[from] std::env::VarError),
+    MySql(sqlx::mysql::MySqlConnectOptions),
 }
 
 impl std::fmt::Display for DbConnectOptions {
@@ -76,6 +50,21 @@ impl std::fmt::Display for DbConnectOptions {
     }
 }
 
+#[cfg(feature = "sqlite")]
+fn is_memory_filename(path: &std::path::Path) -> bool {
+    if path.as_os_str().is_empty() {
+        return true;
+    }
+
+    match path.to_str() {
+        Some(raw) => matches!(
+            raw.trim(),
+            ":memory:" | "memory:" | "file::memory:" | "file:memory:" | ""
+        ),
+        None => false,
+    }
+}
+
 impl DbConnectOptions {
     /// Connect to the database using the configured options.
     ///
@@ -85,16 +74,20 @@ impl DbConnectOptions {
         match self {
             #[cfg(feature = "sqlite")]
             DbConnectOptions::Sqlite(opts) => {
-                let pool_opts = pool.apply_sqlite(sea_orm::sqlx::sqlite::SqlitePoolOptions::new());
+                let mut pool_opts = pool.apply_sqlite(sqlx::sqlite::SqlitePoolOptions::new());
+
+                if is_memory_filename(opts.get_filename()) {
+                    pool_opts = pool_opts.max_connections(1).min_connections(1);
+                    tracing::info!("Using single connection pool for in-memory SQLite database");
+                }
 
                 let sqlx_pool = pool_opts.connect_with(opts.clone()).await?;
 
-                let sea = sea_orm::SqlxSqliteConnector::from_sqlx_sqlite_pool(sqlx_pool.clone());
+                let sea = sea_orm::SqlxSqliteConnector::from_sqlx_sqlite_pool(sqlx_pool);
 
                 let filename = opts.get_filename().display().to_string();
                 let handle = DbHandle {
                     engine: crate::DbEngine::Sqlite,
-                    pool: crate::DbPool::Sqlite(sqlx_pool),
                     dsn: format!("sqlite://{filename}"),
                     sea,
                 };
@@ -103,16 +96,14 @@ impl DbConnectOptions {
             }
             #[cfg(feature = "pg")]
             DbConnectOptions::Postgres(opts) => {
-                let pool_opts = pool.apply_pg(sea_orm::sqlx::postgres::PgPoolOptions::new());
+                let pool_opts = pool.apply_pg(sqlx::postgres::PgPoolOptions::new());
 
                 let sqlx_pool = pool_opts.connect_with(opts.clone()).await?;
 
-                let sea =
-                    sea_orm::SqlxPostgresConnector::from_sqlx_postgres_pool(sqlx_pool.clone());
+                let sea = sea_orm::SqlxPostgresConnector::from_sqlx_postgres_pool(sqlx_pool);
 
                 let handle = DbHandle {
                     engine: crate::DbEngine::Postgres,
-                    pool: crate::DbPool::Postgres(sqlx_pool),
                     dsn: format!(
                         "postgresql://<redacted>@{}:{}/{}",
                         opts.get_host(),
@@ -126,15 +117,14 @@ impl DbConnectOptions {
             }
             #[cfg(feature = "mysql")]
             DbConnectOptions::MySql(opts) => {
-                let pool_opts = pool.apply_mysql(sea_orm::sqlx::mysql::MySqlPoolOptions::new());
+                let pool_opts = pool.apply_mysql(sqlx::mysql::MySqlPoolOptions::new());
 
                 let sqlx_pool = pool_opts.connect_with(opts.clone()).await?;
 
-                let sea = sea_orm::SqlxMySqlConnector::from_sqlx_mysql_pool(sqlx_pool.clone());
+                let sea = sea_orm::SqlxMySqlConnector::from_sqlx_mysql_pool(sqlx_pool);
 
                 let handle = DbHandle {
                     engine: crate::DbEngine::MySql,
-                    pool: crate::DbPool::MySql(sqlx_pool),
                     dsn: "mysql://<redacted>@...".to_owned(),
                     sea,
                 };
@@ -165,9 +155,9 @@ pub mod sqlite_pragma {
     /// Returns `DbError::UnknownSqlitePragma` if an unsupported pragma is provided.
     /// Returns `DbError::InvalidSqlitePragmaValue` if a pragma value is invalid.
     pub fn apply_pragmas<S: BuildHasher>(
-        mut opts: sea_orm::sqlx::sqlite::SqliteConnectOptions,
+        mut opts: sqlx::sqlite::SqliteConnectOptions,
         params: &HashMap<String, String, S>,
-    ) -> crate::Result<sea_orm::sqlx::sqlite::SqliteConnectOptions> {
+    ) -> crate::Result<sqlx::sqlite::SqliteConnectOptions> {
         for (key, value) in params {
             let key_lower = key.to_lowercase();
 
@@ -255,12 +245,14 @@ pub mod sqlite_pragma {
     }
 }
 
-/// Build a database handle from configuration.
-/// This is the unified entry point for building database handles from configuration.
+/// Build a database handle from configuration (internal).
+///
+/// This is an internal entry point used by `DbManager` / runtime wiring. Module code must
+/// never observe `DbHandle`; it should use `Db` or `DBProvider<E>` only.
 ///
 /// # Errors
 /// Returns an error if the database connection fails or configuration is invalid.
-pub async fn build_db_handle(
+pub(crate) async fn build_db_handle(
     mut cfg: DbConnConfig,
     _global: Option<&GlobalDatabaseConfig>,
 ) -> Result<DbHandle> {
@@ -377,7 +369,7 @@ fn build_sqlite_options(cfg: &DbConnConfig) -> Result<DbConnectOptions> {
         std::fs::create_dir_all(parent)?;
     }
 
-    let mut opts = sea_orm::sqlx::sqlite::SqliteConnectOptions::new()
+    let mut opts = sqlx::sqlite::SqliteConnectOptions::new()
         .filename(&db_path)
         .create_if_missing(true);
 
@@ -394,6 +386,177 @@ fn build_sqlite_options(_: &DbConnConfig) -> Result<DbConnectOptions> {
     Err(DbError::FeatureDisabled("SQLite feature not enabled"))
 }
 
+/// Apply PostgreSQL-specific parameters, distinguishing connection-level params from runtime options.
+#[cfg(feature = "pg")]
+fn apply_pg_params<S: std::hash::BuildHasher>(
+    mut opts: sqlx::postgres::PgConnectOptions,
+    params: &std::collections::HashMap<String, String, S>,
+) -> Result<sqlx::postgres::PgConnectOptions> {
+    use sqlx::postgres::PgSslMode;
+
+    for (key, value) in params {
+        let key_lower = key.to_lowercase();
+        match key_lower.as_str() {
+            // Connection-level SSL parameters
+            "sslmode" | "ssl_mode" => {
+                let mode = value.parse::<PgSslMode>().map_err(|_| {
+                    DbError::InvalidParameter(format!(
+                        "Invalid ssl_mode '{value}': expected disable, allow, prefer, require, verify-ca, or verify-full"
+                    ))
+                })?;
+                opts = opts.ssl_mode(mode);
+            }
+            "sslrootcert" | "ssl_root_cert" => {
+                opts = opts.ssl_root_cert(value.as_str());
+            }
+            "sslcert" | "ssl_client_cert" => {
+                opts = opts.ssl_client_cert(value.as_str());
+            }
+            "sslkey" | "ssl_client_key" => {
+                opts = opts.ssl_client_key(value.as_str());
+            }
+            // Other connection-level parameters
+            "application_name" => {
+                opts = opts.application_name(value);
+            }
+            "statement_cache_capacity" => {
+                let capacity = value.parse::<usize>().map_err(|_| {
+                    DbError::InvalidParameter(format!(
+                        "Invalid statement_cache_capacity '{value}': expected positive integer"
+                    ))
+                })?;
+                opts = opts.statement_cache_capacity(capacity);
+            }
+            "extra_float_digits" => {
+                let val = value.parse::<i8>().map_err(|_| {
+                    DbError::InvalidParameter(format!(
+                        "Invalid extra_float_digits '{value}': expected integer between -15 and 3"
+                    ))
+                })?;
+                if !(-15..=3).contains(&val) {
+                    return Err(DbError::InvalidParameter(format!(
+                        "Invalid extra_float_digits '{value}': expected integer between -15 and 3"
+                    )));
+                }
+                opts = opts.extra_float_digits(val);
+            }
+            // Server runtime parameters go to options()
+            _ => {
+                opts = opts.options([(key.as_str(), value.as_str())]);
+            }
+        }
+    }
+
+    Ok(opts)
+}
+
+/// Apply `MySQL`-specific parameters. `MySQL` has no runtime options like `PostgreSQL`,
+/// so all params are connection-level settings.
+#[cfg(feature = "mysql")]
+fn apply_mysql_params<S: std::hash::BuildHasher>(
+    mut opts: sqlx::mysql::MySqlConnectOptions,
+    params: &std::collections::HashMap<String, String, S>,
+) -> Result<sqlx::mysql::MySqlConnectOptions> {
+    use sqlx::mysql::MySqlSslMode;
+
+    for (key, value) in params {
+        let key_lower = key.to_lowercase();
+        match key_lower.as_str() {
+            // SSL parameters
+            "sslmode" | "ssl_mode" | "ssl-mode" => {
+                let mode = value.parse::<MySqlSslMode>().map_err(|_| {
+                    DbError::InvalidParameter(format!(
+                        "Invalid ssl_mode '{value}': expected disabled, preferred, required, verify_ca, or verify_identity"
+                    ))
+                })?;
+                opts = opts.ssl_mode(mode);
+            }
+            "sslca" | "ssl_ca" | "ssl-ca" => {
+                opts = opts.ssl_ca(value.as_str());
+            }
+            "sslcert" | "ssl_client_cert" | "ssl-cert" => {
+                opts = opts.ssl_client_cert(value.as_str());
+            }
+            "sslkey" | "ssl_client_key" | "ssl-key" => {
+                opts = opts.ssl_client_key(value.as_str());
+            }
+            // Connection parameters
+            "charset" => {
+                opts = opts.charset(value);
+            }
+            "collation" => {
+                opts = opts.collation(value);
+            }
+            "statement_cache_capacity" => {
+                let capacity = value.parse::<usize>().map_err(|_| {
+                    DbError::InvalidParameter(format!(
+                        "Invalid statement_cache_capacity '{value}': expected positive integer"
+                    ))
+                })?;
+                opts = opts.statement_cache_capacity(capacity);
+            }
+            "connect_timeout" | "connect-timeout" => {
+                // NOTE: `sqlx::mysql::MySqlConnectOptions` does not expose a typed connect-timeout
+                // setter. We still accept and validate this parameter for compatibility with
+                // DSN-style configuration and integration tests, but it currently does not
+                // change runtime behavior.
+                let _secs = value.parse::<u64>().map_err(|_| {
+                    DbError::InvalidParameter(format!(
+                        "Invalid connect_timeout '{value}': expected non-negative integer seconds"
+                    ))
+                })?;
+            }
+            "socket" => {
+                opts = opts.socket(value.as_str());
+            }
+            "timezone" => {
+                let tz = if value.eq_ignore_ascii_case("none") || value.is_empty() {
+                    None
+                } else {
+                    Some(value.clone())
+                };
+                opts = opts.timezone(tz);
+            }
+            "pipes_as_concat" => {
+                let flag = parse_bool_param("pipes_as_concat", value)?;
+                opts = opts.pipes_as_concat(flag);
+            }
+            "no_engine_substitution" => {
+                let flag = parse_bool_param("no_engine_substitution", value)?;
+                opts = opts.no_engine_substitution(flag);
+            }
+            "enable_cleartext_plugin" => {
+                let flag = parse_bool_param("enable_cleartext_plugin", value)?;
+                opts = opts.enable_cleartext_plugin(flag);
+            }
+            "set_names" => {
+                let flag = parse_bool_param("set_names", value)?;
+                opts = opts.set_names(flag);
+            }
+            // Unknown parameters - MySQL doesn't support arbitrary runtime params
+            _ => {
+                return Err(DbError::InvalidParameter(format!(
+                    "Unknown MySQL connection parameter: '{key}'"
+                )));
+            }
+        }
+    }
+
+    Ok(opts)
+}
+
+/// Parse a boolean parameter value.
+#[cfg(feature = "mysql")]
+fn parse_bool_param(name: &str, value: &str) -> Result<bool> {
+    match value.to_lowercase().as_str() {
+        "true" | "1" | "yes" | "on" => Ok(true),
+        "false" | "0" | "no" | "off" => Ok(false),
+        _ => Err(DbError::InvalidParameter(format!(
+            "Invalid {name} '{value}': expected true/false/1/0/yes/no/on/off"
+        ))),
+    }
+}
+
 /// Build server-based connection options from configuration.
 fn build_server_options(cfg: &DbConnConfig, engine: DbEngineCfg) -> Result<DbConnectOptions> {
     // When neither `pg` nor `mysql` features are enabled, the match arms that would use `cfg`
@@ -406,10 +569,10 @@ fn build_server_options(cfg: &DbConnConfig, engine: DbEngineCfg) -> Result<DbCon
             #[cfg(feature = "pg")]
             {
                 let mut opts = if let Some(dsn) = &cfg.dsn {
-                    dsn.parse::<sea_orm::sqlx::postgres::PgConnectOptions>()
+                    dsn.parse::<sqlx::postgres::PgConnectOptions>()
                         .map_err(|e| DbError::InvalidParameter(e.to_string()))?
                 } else {
-                    sea_orm::sqlx::postgres::PgConnectOptions::new()
+                    sqlx::postgres::PgConnectOptions::new()
                 };
 
                 // Override with individual fields
@@ -435,9 +598,7 @@ fn build_server_options(cfg: &DbConnConfig, engine: DbEngineCfg) -> Result<DbCon
 
                 // Apply additional parameters
                 if let Some(params) = &cfg.params {
-                    for (key, value) in params {
-                        opts = opts.options([(key.as_str(), value.as_str())]);
-                    }
+                    opts = apply_pg_params(opts, params)?;
                 }
 
                 Ok(DbConnectOptions::Postgres(opts))
@@ -451,10 +612,10 @@ fn build_server_options(cfg: &DbConnConfig, engine: DbEngineCfg) -> Result<DbCon
             #[cfg(feature = "mysql")]
             {
                 let mut opts = if let Some(dsn) = &cfg.dsn {
-                    dsn.parse::<sea_orm::sqlx::mysql::MySqlConnectOptions>()
+                    dsn.parse::<sqlx::mysql::MySqlConnectOptions>()
                         .map_err(|e| DbError::InvalidParameter(e.to_string()))?
                 } else {
-                    sea_orm::sqlx::mysql::MySqlConnectOptions::new()
+                    sqlx::mysql::MySqlConnectOptions::new()
                 };
 
                 // Override with individual fields
@@ -476,6 +637,11 @@ fn build_server_options(cfg: &DbConnConfig, engine: DbEngineCfg) -> Result<DbCon
                     return Err(DbError::InvalidParameter(
                         "dbname is required for MySQL connections".to_owned(),
                     ));
+                }
+
+                // Apply additional parameters
+                if let Some(params) = &cfg.params {
+                    opts = apply_mysql_params(opts, params)?;
                 }
 
                 Ok(DbConnectOptions::MySql(opts))

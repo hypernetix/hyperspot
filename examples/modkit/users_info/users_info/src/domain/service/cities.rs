@@ -3,7 +3,7 @@ use tracing::{debug, info, instrument};
 
 use crate::domain::error::DomainError;
 use crate::domain::repos::CitiesRepository;
-use modkit_db::secure::SecureConn;
+use crate::domain::service::DbProvider;
 use modkit_odata::{ODataQuery, Page};
 use modkit_security::{PolicyEngineRef, SecurityContext};
 use tenant_resolver_sdk::TenantResolverGatewayClient;
@@ -11,25 +11,35 @@ use time::OffsetDateTime;
 use user_info_sdk::{City, CityPatch, NewCity};
 use uuid::Uuid;
 
-#[derive(Clone)]
+/// Cities service.
+///
+/// # Design
+///
+/// Services acquire database connections internally via `DBProvider`. Handlers
+/// call service methods with business parameters only - no DB objects.
+///
+/// This design:
+/// - Keeps handlers clean and focused on HTTP concerns
+/// - Centralizes DB error mapping in the domain layer
+/// - Maintains transaction safety via the task-local guard
 pub struct CitiesService<R: CitiesRepository> {
+    db: Arc<DbProvider>,
     policy_engine: PolicyEngineRef,
     repo: Arc<R>,
-    db: SecureConn,
     resolver: Arc<dyn TenantResolverGatewayClient>,
 }
 
 impl<R: CitiesRepository> CitiesService<R> {
     pub fn new(
+        db: Arc<DbProvider>,
         repo: Arc<R>,
-        db: SecureConn,
         policy_engine: PolicyEngineRef,
         resolver: Arc<dyn TenantResolverGatewayClient>,
     ) -> Self {
         Self {
+            db,
             policy_engine,
             repo,
-            db,
             resolver,
         }
     }
@@ -41,6 +51,8 @@ impl<R: CitiesRepository> CitiesService<R> {
     pub async fn get_city(&self, ctx: &SecurityContext, id: Uuid) -> Result<City, DomainError> {
         debug!("Getting city by id");
 
+        let conn = self.db.conn().map_err(DomainError::from)?;
+
         let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
         let scope = ctx
             .scope(self.policy_engine.clone())
@@ -48,7 +60,7 @@ impl<R: CitiesRepository> CitiesService<R> {
             .prepare()
             .await?;
 
-        let found = self.repo.get(self.db.conn(), &scope, id).await?;
+        let found = self.repo.get(&conn, &scope, id).await?;
 
         found.ok_or_else(|| DomainError::not_found("City", id))
     }
@@ -61,6 +73,8 @@ impl<R: CitiesRepository> CitiesService<R> {
     ) -> Result<Page<City>, DomainError> {
         debug!("Listing cities with cursor pagination");
 
+        let conn = self.db.conn().map_err(DomainError::from)?;
+
         let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
         let scope = ctx
             .scope(self.policy_engine.clone())
@@ -68,7 +82,7 @@ impl<R: CitiesRepository> CitiesService<R> {
             .prepare()
             .await?;
 
-        let page = self.repo.list_page(self.db.conn(), &scope, query).await?;
+        let page = self.repo.list_page(&conn, &scope, query).await?;
 
         debug!("Successfully listed {} cities in page", page.items.len());
         Ok(page)
@@ -81,6 +95,8 @@ impl<R: CitiesRepository> CitiesService<R> {
         new_city: NewCity,
     ) -> Result<City, DomainError> {
         info!("Creating new city");
+
+        let conn = self.db.conn().map_err(DomainError::from)?;
 
         let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
         let scope = ctx
@@ -101,10 +117,7 @@ impl<R: CitiesRepository> CitiesService<R> {
             updated_at: now,
         };
 
-        let _ = self
-            .repo
-            .create(self.db.conn(), &scope, city.clone())
-            .await?;
+        let _ = self.repo.create(&conn, &scope, city.clone()).await?;
 
         info!("Successfully created city with id={}", city.id);
         Ok(city)
@@ -119,6 +132,8 @@ impl<R: CitiesRepository> CitiesService<R> {
     ) -> Result<City, DomainError> {
         info!("Updating city");
 
+        let conn = self.db.conn().map_err(DomainError::from)?;
+
         let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
         let scope = ctx
             .scope(self.policy_engine.clone())
@@ -126,7 +141,7 @@ impl<R: CitiesRepository> CitiesService<R> {
             .prepare()
             .await?;
 
-        let found = self.repo.get(self.db.conn(), &scope, id).await?;
+        let found = self.repo.get(&conn, &scope, id).await?;
 
         let mut current: City = found.ok_or_else(|| DomainError::not_found("City", id))?;
 
@@ -138,10 +153,7 @@ impl<R: CitiesRepository> CitiesService<R> {
         }
         current.updated_at = OffsetDateTime::now_utc();
 
-        let _ = self
-            .repo
-            .update(self.db.conn(), &scope, current.clone())
-            .await?;
+        let _ = self.repo.update(&conn, &scope, current.clone()).await?;
 
         info!("Successfully updated city");
         Ok(current)
@@ -151,6 +163,8 @@ impl<R: CitiesRepository> CitiesService<R> {
     pub async fn delete_city(&self, ctx: &SecurityContext, id: Uuid) -> Result<(), DomainError> {
         info!("Deleting city");
 
+        let conn = self.db.conn().map_err(DomainError::from)?;
+
         let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
         let scope = ctx
             .scope(self.policy_engine.clone())
@@ -158,7 +172,7 @@ impl<R: CitiesRepository> CitiesService<R> {
             .prepare()
             .await?;
 
-        let deleted = self.repo.delete(self.db.conn(), &scope, id).await?;
+        let deleted = self.repo.delete(&conn, &scope, id).await?;
 
         if !deleted {
             return Err(DomainError::not_found("City", id));

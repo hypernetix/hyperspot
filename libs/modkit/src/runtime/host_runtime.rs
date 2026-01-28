@@ -24,10 +24,13 @@ use crate::client_hub::ClientHub;
 use crate::config::ConfigProvider;
 use crate::context::ModuleContextBuilder;
 use crate::registry::{
-    ApiGatewayCap, DatabaseCap, GrpcHubCap, ModuleEntry, ModuleRegistry, RegistryError, RestApiCap,
-    RunnableCap, SystemCap,
+    ApiGatewayCap, GrpcHubCap, ModuleEntry, ModuleRegistry, RegistryError, RestApiCap, RunnableCap,
+    SystemCap,
 };
 use crate::runtime::{GrpcInstallerStore, ModuleManager, OopSpawnOptions, SystemContext};
+
+#[cfg(feature = "db")]
+use crate::registry::DatabaseCap;
 
 /// How the runtime should provide DBs to modules.
 #[derive(Clone)]
@@ -35,6 +38,7 @@ pub enum DbOptions {
     /// No database integration. `ModuleCtx::db()` will be `None`, `db_required()` will error.
     None,
     /// Use a `DbManager` to handle database connections with Figment-based configuration.
+    #[cfg(feature = "db")]
     Manager(Arc<modkit_db::DbManager>),
 }
 
@@ -81,6 +85,7 @@ impl HostRuntime {
 
         // Build the context builder that will resolve per-module DbHandles
         let db_manager = match &db_options {
+            #[cfg(feature = "db")]
             DbOptions::Manager(mgr) => Some(mgr.clone()),
             DbOptions::None => None,
         };
@@ -151,38 +156,90 @@ impl HostRuntime {
     }
 
     /// Helper: extract DB handle and module if both exist.
-    fn db_migration_target(
+    #[cfg(feature = "db")]
+    async fn db_migration_target(
+        &self,
+        module_name: &'static str,
         ctx: &crate::context::ModuleCtx,
         db_module: Option<Arc<dyn crate::contracts::DatabaseCapability>>,
-    ) -> Option<(
-        Arc<modkit_db::DbHandle>,
-        Arc<dyn crate::contracts::DatabaseCapability>,
-    )> {
-        match (ctx.db_optional(), db_module) {
-            (Some(db), Some(dbm)) => Some((db, dbm)),
-            _ => None,
-        }
+    ) -> Result<Option<(modkit_db::Db, Arc<dyn crate::contracts::DatabaseCapability>)>, RegistryError>
+    {
+        let Some(dbm) = db_module else {
+            return Ok(None);
+        };
+
+        // Important: DB migrations require access to the underlying `Db`, not just `DBProvider`.
+        // `ModuleCtx` intentionally exposes only `DBProvider` for better DX and to reduce mistakes.
+        // So the runtime resolves the `Db` directly from its `DbManager`.
+        let db = match &self.db_options {
+            DbOptions::None => None,
+            #[cfg(feature = "db")]
+            DbOptions::Manager(mgr) => {
+                mgr.get(module_name)
+                    .await
+                    .map_err(|e| RegistryError::DbMigrate {
+                        module: module_name,
+                        source: e.into(),
+                    })?
+            }
+        };
+
+        let _ = ctx; // ctx is kept for parity/error context; DB is resolved from manager above.
+        Ok(db.map(|db| (db, dbm)))
     }
 
-    /// Helper: run migration for a single module.
+    /// Helper: run migrations for a single module using the new migration runner.
+    ///
+    /// This collects migrations from the module and executes them via the
+    /// runtime's privileged connection. Modules never see the raw connection.
+    #[cfg(feature = "db")]
     async fn migrate_module(
         module_name: &'static str,
-        db: &modkit_db::DbHandle,
+        db: &modkit_db::Db,
         db_module: Arc<dyn crate::contracts::DatabaseCapability>,
     ) -> Result<(), RegistryError> {
-        tracing::debug!(module = module_name, "Running DB migration");
-        db_module
-            .migrate(db)
-            .await
-            .map_err(|source| RegistryError::DbMigrate {
-                module: module_name,
-                source,
-            })
+        // Collect migrations from the module
+        let migrations = db_module.migrations();
+
+        if migrations.is_empty() {
+            tracing::debug!(module = module_name, "No migrations to run");
+            return Ok(());
+        }
+
+        tracing::debug!(
+            module = module_name,
+            count = migrations.len(),
+            "Running DB migrations"
+        );
+
+        // Execute migrations using the migration runner
+        let result =
+            modkit_db::migration_runner::run_migrations_for_module(db, module_name, migrations)
+                .await
+                .map_err(|e| RegistryError::DbMigrate {
+                    module: module_name,
+                    source: anyhow::Error::new(e),
+                })?;
+
+        tracing::info!(
+            module = module_name,
+            applied = result.applied,
+            skipped = result.skipped,
+            "DB migrations completed"
+        );
+
+        Ok(())
     }
 
     /// DB MIGRATION phase: run migrations for all modules with DB capability.
     ///
     /// Runs before init, with system modules processed first.
+    ///
+    /// Modules provide migrations via `DatabaseCapability::migrations()`.
+    /// The runtime executes them with a privileged connection that modules
+    /// never receive directly. Each module gets a separate migration history
+    /// table, preventing cross-module interference.
+    #[cfg(feature = "db")]
     async fn run_db_phase(&self) -> Result<(), RegistryError> {
         tracing::info!("Phase: db (before init)");
 
@@ -190,7 +247,10 @@ impl HostRuntime {
             let ctx = self.module_context(entry.name).await?;
             let db_module = entry.caps.query::<DatabaseCap>();
 
-            match Self::db_migration_target(&ctx, db_module.clone()) {
+            match self
+                .db_migration_target(entry.name, &ctx, db_module.clone())
+                .await?
+            {
                 Some((db, dbm)) => {
                     Self::migrate_module(entry.name, &db, dbm).await?;
                 }
@@ -596,7 +656,14 @@ impl HostRuntime {
         self.run_pre_init_phase()?;
 
         // 2. DB migration phase (system modules first)
-        self.run_db_phase().await?;
+        #[cfg(feature = "db")]
+        {
+            self.run_db_phase().await?;
+        }
+        #[cfg(not(feature = "db"))]
+        {
+            // No DB integration in this build.
+        }
 
         // 3. Init phase (system modules first)
         self.run_init_phase().await?;

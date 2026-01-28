@@ -118,13 +118,18 @@ async fn test_precedence_module_dsn_override_server() {
     let result = manager.get("test_module").await;
 
     match result {
-        Ok(Some(handle)) => {
-            // Verify that the module DSN was used, not the server DSN
-            let dsn = handle.dsn();
-            assert!(dsn.contains("module_"), "Should use module DSN, got: {dsn}");
+        Ok(Some(_db)) => {
+            // Verify that the module DSN was used, not the server DSN:
+            // connecting should have created the module file but not the server file.
             assert!(
-                !dsn.contains("server_"),
-                "Should not use server DSN, got: {dsn}"
+                module_db.exists(),
+                "Expected module DB file to exist at {}",
+                module_db.display()
+            );
+            assert!(
+                !server_db.exists(),
+                "Expected server DB file to NOT exist at {}",
+                server_db.display()
             );
         }
         Ok(None) => {
@@ -260,13 +265,14 @@ async fn test_file_and_path_handling() {
     let absolute_path = temp_dir
         .path()
         .join(format!("ignored_{}.db", std::process::id()));
+    let file = format!("file_path_test_{}.db", std::process::id());
 
     let figment = Figment::new().merge(Serialized::defaults(serde_json::json!({
         "modules": {
             "test_module": {
                 "database": {
                     "engine": "sqlite",
-                    "file": format!("file_path_test_{}.db", std::process::id()),            // Should be used (converted to absolute)
+                    "file": file,            // Should be used (converted to absolute)
                     "path": absolute_path         // Should be ignored in favor of 'file'
                 }
             }
@@ -278,13 +284,17 @@ async fn test_file_and_path_handling() {
     let result = manager.get("test_module").await;
 
     match result {
-        Ok(Some(handle)) => {
-            // Should have used the 'file' path, not the 'path' value
-            let dsn = handle.dsn();
-            // Check that it uses the file path under module directory, not the ignored absolute path
+        Ok(Some(_db)) => {
+            let expected_path = temp_dir.path().join("test_module").join(&file);
             assert!(
-                dsn.contains("file_path_test_") && !dsn.contains("ignored_"),
-                "Should use file path, not ignored path. DSN: {dsn}"
+                expected_path.exists(),
+                "Expected DB file to exist at {}",
+                expected_path.display()
+            );
+            assert!(
+                !absolute_path.exists(),
+                "Expected ignored path to NOT exist at {}",
+                absolute_path.display()
             );
         }
         Ok(None) => {

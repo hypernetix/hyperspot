@@ -10,6 +10,9 @@ pub enum SettingsError {
     #[error("Validation error on field '{field}': {message}")]
     Validation { field: String, message: String },
 
+    #[error("Access forbidden")]
+    Forbidden,
+
     #[error("Internal error")]
     Internal,
 }
@@ -26,6 +29,11 @@ impl SettingsError {
             field: field.into(),
             message: message.into(),
         }
+    }
+
+    #[must_use]
+    pub fn forbidden() -> Self {
+        Self::Forbidden
     }
 
     #[must_use]

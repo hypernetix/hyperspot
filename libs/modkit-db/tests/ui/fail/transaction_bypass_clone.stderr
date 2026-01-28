@@ -1,0 +1,5 @@
+error[E0599]: no method named `clone` found for struct `SecureConn` in the current scope
+  --> tests/ui/fail/transaction_bypass_clone.rs:10:24
+   |
+10 |     let _cloned = conn.clone();
+   |                        ^^^^^ method not found in `SecureConn`

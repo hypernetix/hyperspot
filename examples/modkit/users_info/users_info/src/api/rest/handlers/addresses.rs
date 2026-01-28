@@ -17,8 +17,7 @@ pub(super) async fn get_user_address(
         "Getting user address"
     );
 
-    let address: Option<user_info_sdk::Address> =
-        svc.addresses.get_user_address(&ctx, user_id).await?;
+    let address = svc.addresses.get_user_address(&ctx, user_id).await?;
 
     let address =
         address.ok_or_else(|| crate::domain::error::DomainError::not_found("Address", user_id))?;

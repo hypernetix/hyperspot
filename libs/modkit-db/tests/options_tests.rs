@@ -5,7 +5,7 @@
 #[cfg(feature = "pg")]
 #[tokio::test]
 async fn test_build_db_handle_postgres_missing_dbname() {
-    use modkit_db::{DbConnConfig, build_db_handle};
+    use modkit_db::{DbConnConfig, build_db};
     let config = DbConnConfig {
         engine: Some(modkit_db::config::DbEngineCfg::Postgres),
         server: Some("postgres".to_owned()),
@@ -17,7 +17,7 @@ async fn test_build_db_handle_postgres_missing_dbname() {
         ..Default::default()
     };
 
-    let result = build_db_handle(config, None).await;
+    let result = build_db(config, None).await;
     assert!(result.is_err());
 
     let error = result.unwrap_err();
@@ -48,78 +48,5 @@ async fn test_credential_redaction() {
     assert_eq!(no_dsn, "none");
 }
 
-#[cfg(feature = "pg")]
-#[test]
-fn test_display_postgres() {
-    use modkit_db::DbConnectOptions;
-
-    let opts = sea_orm::sqlx::postgres::PgConnectOptions::new()
-        .host("localhost")
-        .port(5432)
-        .database("testdb")
-        .username("user")
-        .password("secret");
-
-    let db_opts = DbConnectOptions::Postgres(opts);
-
-    let display_str = format!("{db_opts}");
-    assert_eq!(display_str, "postgresql://<redacted>@localhost:5432/testdb");
-    assert!(!display_str.contains("secret"));
-    assert!(!display_str.contains("user"));
-}
-
-#[cfg(feature = "pg")]
-#[test]
-fn test_display_postgres_custom_port() {
-    use modkit_db::DbConnectOptions;
-
-    let opts = sea_orm::sqlx::postgres::PgConnectOptions::new()
-        .host("db.example.com")
-        .port(15432)
-        .database("myapp");
-
-    let db_opts = DbConnectOptions::Postgres(opts);
-
-    let display_str = format!("{db_opts}");
-    assert_eq!(
-        display_str,
-        "postgresql://<redacted>@db.example.com:15432/myapp"
-    );
-}
-
-#[cfg(feature = "pg")]
-#[test]
-fn test_display_postgres_no_database() {
-    use modkit_db::DbConnectOptions;
-
-    let opts = sea_orm::sqlx::postgres::PgConnectOptions::new()
-        .host("localhost")
-        .port(5432);
-
-    let db_opts = DbConnectOptions::Postgres(opts);
-
-    let display_str = format!("{db_opts}");
-    assert_eq!(display_str, "postgresql://<redacted>@localhost:5432/");
-}
-
-#[cfg(feature = "mysql")]
-#[test]
-fn test_display_mysql() {
-    use modkit_db::DbConnectOptions;
-
-    let opts = sea_orm::sqlx::mysql::MySqlConnectOptions::new()
-        .host("localhost")
-        .port(3306)
-        .database("testdb")
-        .username("user")
-        .password("secret");
-
-    let db_opts = DbConnectOptions::MySql(opts);
-
-    let display_str = format!("{db_opts}");
-    assert_eq!(display_str, "mysql://<redacted>@...");
-    assert!(!display_str.contains("secret"));
-    assert!(!display_str.contains("user"));
-    assert!(!display_str.contains("localhost"));
-    assert!(!display_str.contains("testdb"));
-}
+// NOTE: `DbConnectOptions` is crate-internal and intentionally not exposed to downstream crates.
+// Its formatting behavior is exercised indirectly via `build_db()` and DSN redaction helpers.

@@ -1,51 +1,67 @@
 use async_trait::async_trait;
-use modkit_db::secure::SecureConn;
+use modkit_db::secure::{DBRunner, ScopeError, SecureEntityExt, SecureInsertExt, SecureOnConflict};
 use modkit_security::{AccessScope, SecurityContext};
-use sea_orm::{
-    ActiveValue, EntityTrait,
-    sea_query::{Expr, OnConflict, SimpleExpr},
-};
+use sea_orm::{ActiveValue, EntityTrait};
 use simple_user_settings_sdk::models::{SimpleUserSettings, SimpleUserSettingsPatch};
 
+use crate::domain::error::DomainError;
 use crate::domain::repo::SettingsRepository;
 
 use super::entity::{self, Entity as SettingsEntity};
 
-pub struct SeaOrmSettingsRepository {
-    db: SecureConn,
-}
+pub struct SeaOrmSettingsRepository;
 
 impl SeaOrmSettingsRepository {
     #[must_use]
-    pub fn new(db: SecureConn) -> Self {
-        Self { db }
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+impl Default for SeaOrmSettingsRepository {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Map scope errors to domain errors.
+fn map_scope_error(e: ScopeError) -> DomainError {
+    match e {
+        ScopeError::Denied(msg) => DomainError::forbidden(msg),
+        ScopeError::Invalid(msg) => DomainError::internal(format!("scope invalid: {msg}")),
+        ScopeError::Db(e) => DomainError::internal(format!("database error: {e}")),
+        ScopeError::TenantNotInScope { tenant_id } => {
+            DomainError::forbidden(format!("tenant {tenant_id} not in scope"))
+        }
     }
 }
 
 #[async_trait]
 impl SettingsRepository for SeaOrmSettingsRepository {
-    async fn find_by_user(
+    async fn find_by_user<C: DBRunner>(
         &self,
-        ctx: &SecurityContext,
-    ) -> anyhow::Result<Option<SimpleUserSettings>> {
-        let tenant_id = ctx.tenant_id();
-        let scope = AccessScope::both(vec![tenant_id], vec![ctx.subject_id()]);
-
-        let result = self
-            .db
-            .find::<SettingsEntity>(&scope)
-            .one(self.db.conn())
-            .await?;
+        conn: &C,
+        scope: &AccessScope,
+        _ctx: &SecurityContext,
+    ) -> Result<Option<SimpleUserSettings>, DomainError> {
+        let result = SettingsEntity::find()
+            .secure()
+            .scope_with(scope)
+            .one(conn)
+            .await
+            .map_err(map_scope_error)?;
 
         Ok(result.map(Into::into))
     }
 
-    async fn upsert_full(
+    async fn upsert_full<C: DBRunner>(
         &self,
+        conn: &C,
+        scope: &AccessScope,
         ctx: &SecurityContext,
         theme: Option<String>,
         language: Option<String>,
-    ) -> anyhow::Result<SimpleUserSettings> {
+    ) -> Result<SimpleUserSettings, DomainError> {
         let user_id = ctx.subject_id();
         let tenant_id = ctx.tenant_id();
 
@@ -56,15 +72,30 @@ impl SettingsRepository for SeaOrmSettingsRepository {
             language: ActiveValue::Set(language.clone()),
         };
 
-        // Full replacement - overwrites all columns
+        // Full replacement - overwrites all columns (SecureOnConflict validates tenant immutability)
+        let on_conflict = SecureOnConflict::<SettingsEntity>::columns([
+            entity::Column::TenantId,
+            entity::Column::UserId,
+        ])
+        .update_columns([entity::Column::Theme, entity::Column::Language])
+        .map_err(map_scope_error)?;
+
         SettingsEntity::insert(active_model)
-            .on_conflict(
-                OnConflict::columns([entity::Column::TenantId, entity::Column::UserId])
-                    .update_columns([entity::Column::Theme, entity::Column::Language])
-                    .to_owned(),
+            .secure()
+            .scope_with_model(
+                scope,
+                &entity::ActiveModel {
+                    tenant_id: ActiveValue::Set(tenant_id),
+                    user_id: ActiveValue::Set(user_id),
+                    theme: ActiveValue::Set(theme.clone()),
+                    language: ActiveValue::Set(language.clone()),
+                },
             )
-            .exec(self.db.conn())
-            .await?;
+            .map_err(map_scope_error)?
+            .on_conflict(on_conflict)
+            .exec(conn)
+            .await
+            .map_err(map_scope_error)?;
 
         Ok(SimpleUserSettings {
             user_id,
@@ -74,77 +105,36 @@ impl SettingsRepository for SeaOrmSettingsRepository {
         })
     }
 
-    async fn upsert_patch(
+    async fn upsert_patch<C: DBRunner>(
         &self,
+        conn: &C,
+        scope: &AccessScope,
         ctx: &SecurityContext,
         patch: SimpleUserSettingsPatch,
-    ) -> anyhow::Result<SimpleUserSettings> {
-        let user_id = ctx.subject_id();
-        let tenant_id = ctx.tenant_id();
+    ) -> Result<SimpleUserSettings, DomainError> {
+        // Read existing settings to merge with patch
+        // This approach is database-agnostic and avoids SQLite COALESCE type issues
+        let existing = SettingsEntity::find()
+            .secure()
+            .scope_with(scope)
+            .one(conn)
+            .await
+            .map_err(map_scope_error)?;
 
-        // Build COALESCE expressions: use patch value if provided, else keep existing
-        // SQL: COALESCE(excluded.theme, settings.theme)
-        let theme_expr = coalesce_patch_expr(entity::Column::Theme, patch.theme.as_ref());
-        let language_expr = coalesce_patch_expr(entity::Column::Language, patch.language.as_ref());
-
-        let active_model = entity::ActiveModel {
-            tenant_id: ActiveValue::Set(tenant_id),
-            user_id: ActiveValue::Set(user_id),
-            theme: ActiveValue::Set(patch.theme.clone()),
-            language: ActiveValue::Set(patch.language.clone()),
+        // Merge patch with existing values
+        let (theme, language) = match existing {
+            Some(e) => {
+                let theme = patch.theme.or(e.theme);
+                let language = patch.language.or(e.language);
+                (theme, language)
+            }
+            None => {
+                // No existing record - use patch values directly
+                (patch.theme, patch.language)
+            }
         };
 
-        // Single atomic upsert with COALESCE - no read-before-write needed
-        SettingsEntity::insert(active_model)
-            .on_conflict(
-                OnConflict::columns([entity::Column::TenantId, entity::Column::UserId])
-                    .value(entity::Column::Theme, theme_expr)
-                    .value(entity::Column::Language, language_expr)
-                    .to_owned(),
-            )
-            .exec(self.db.conn())
-            .await?;
-
-        // NOTE: We need a second query because SeaORM's on_conflict() doesn't support
-        // RETURNING clause. Ideally we'd use:
-        //   INSERT ... ON CONFLICT ... DO UPDATE ... RETURNING *
-        // but this requires raw SQL. The extra SELECT is acceptable since it's a
-        // simple primary key lookup and settings updates are infrequent.
-        let scope = AccessScope::both(vec![tenant_id], vec![user_id]);
-        let result = self
-            .db
-            .find::<SettingsEntity>(&scope)
-            .one(self.db.conn())
-            .await?
-            .map(Into::into)
-            .ok_or_else(|| anyhow::anyhow!("row must exist after successful upsert"))?;
-
-        Ok(result)
-    }
-}
-
-/// Build COALESCE expression for patch semantics:
-/// - If patch value is Some: use the new value
-/// - If patch value is None: keep existing value (COALESCE(excluded.col, table.col))
-fn coalesce_patch_expr<C: sea_orm::sea_query::IntoIden + Copy + 'static>(
-    column: C,
-    patch_value: Option<&String>,
-) -> SimpleExpr {
-    match patch_value {
-        Some(_) => {
-            // Patch has a value - use excluded (the new value from INSERT)
-            Expr::col((sea_orm::sea_query::Alias::new("excluded"), column)).into()
-        }
-        None => {
-            // Patch is None - keep existing value using COALESCE
-            // COALESCE(excluded.column, settings.column)
-            Expr::cust_with_exprs(
-                "COALESCE($1, $2)",
-                [
-                    Expr::col((sea_orm::sea_query::Alias::new("excluded"), column)).into(),
-                    Expr::col((entity::Entity, column)).into(),
-                ],
-            )
-        }
+        // Use upsert_full with merged values
+        self.upsert_full(conn, scope, ctx, theme, language).await
     }
 }

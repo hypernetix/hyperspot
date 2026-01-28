@@ -153,16 +153,41 @@ impl Module for TestModule {
     }
 }
 
-#[async_trait::async_trait]
 impl DatabaseCapability for TestModule {
-    async fn migrate(&self, _db: &modkit_db::DbHandle) -> anyhow::Result<()> {
+    fn migrations(&self) -> Vec<Box<dyn sea_orm_migration::MigrationTrait>> {
         self.calls
             .lock()
             .unwrap()
-            .push(format!("{}.migrate", self.name));
+            .push(format!("{}.migrations", self.name));
         if self.should_fail_db.load(Ordering::SeqCst) {
-            anyhow::bail!("DB migration failed for module {}", self.name);
+            vec![Box::new(FailingMigration)]
+        } else {
+            vec![]
         }
+    }
+}
+
+struct FailingMigration;
+impl sea_orm_migration::MigrationName for FailingMigration {
+    #[allow(clippy::unnecessary_literal_bound)]
+    fn name(&self) -> &str {
+        "m000_fail"
+    }
+}
+#[async_trait::async_trait]
+impl sea_orm_migration::MigrationTrait for FailingMigration {
+    async fn up(
+        &self,
+        _manager: &sea_orm_migration::SchemaManager,
+    ) -> Result<(), sea_orm_migration::sea_orm::DbErr> {
+        Err(sea_orm_migration::sea_orm::DbErr::Custom(
+            "intentional migration failure".to_owned(),
+        ))
+    }
+    async fn down(
+        &self,
+        _manager: &sea_orm_migration::SchemaManager,
+    ) -> Result<(), sea_orm_migration::sea_orm::DbErr> {
         Ok(())
     }
 }
@@ -257,6 +282,80 @@ fn create_mock_db_manager() -> Arc<modkit_db::DbManager> {
     let home_dir = std::path::PathBuf::from("/tmp/test");
 
     Arc::new(modkit_db::DbManager::from_figment(figment, home_dir).unwrap())
+}
+
+#[tokio::test]
+async fn test_db_phase_failure_stops_lifecycle() {
+    use modkit::runtime::HostRuntime;
+
+    let calls: CallTracker = Arc::new(Mutex::new(Vec::new()));
+    let failing = TestModule::new("fail_db", calls.clone()).fail_db();
+
+    let registry = create_test_registry(vec![failing]).expect("registry build");
+
+    // Provide DB config for this module so DB handle exists.
+    let db_manager = {
+        use figment::{Figment, providers::Serialized};
+        let figment = Figment::new().merge(Serialized::defaults(serde_json::json!({
+            "modules": {
+                "fail_db": {
+                    "database": {
+                        "dsn": "sqlite::memory:",
+                        "pool": { "max_conns": 1 }
+                    }
+                }
+            }
+        })));
+        let home_dir = std::path::PathBuf::from("/tmp/test");
+        Arc::new(modkit_db::DbManager::from_figment(figment, home_dir).unwrap())
+    };
+
+    let cancel = CancellationToken::new();
+    let hr = HostRuntime::new(
+        registry,
+        Arc::new(MockConfigProvider::new().with_config(
+            "fail_db",
+            serde_json::json!({
+                "database": { "dsn": "sqlite::memory:", "pool": { "max_conns": 1 } },
+                "config": {}
+            }),
+        )),
+        DbOptions::Manager(db_manager),
+        Arc::new(modkit::client_hub::ClientHub::default()),
+        cancel,
+        Uuid::new_v4(),
+        None,
+    );
+
+    let err = hr.run_module_phases().await.unwrap_err();
+    let chain = format!("{err:#}");
+    assert!(
+        chain.contains("intentional migration failure"),
+        "expected migration failure in error chain, got: {chain}"
+    );
+
+    let events = calls.lock().unwrap().clone();
+    assert!(events.contains(&"fail_db.migrations".to_owned()));
+    assert!(
+        !events.iter().any(|e| {
+            std::path::Path::new(e)
+                .extension()
+                .is_some_and(|ext| ext.eq_ignore_ascii_case("init"))
+        }),
+        "init must not run after db phase failure: {events:?}"
+    );
+    assert!(
+        !events.iter().any(|e| e.ends_with(".register_rest")),
+        "rest must not run after db phase failure: {events:?}"
+    );
+    assert!(
+        !events.iter().any(|e| {
+            std::path::Path::new(e)
+                .extension()
+                .is_some_and(|ext| ext.eq_ignore_ascii_case("start"))
+        }),
+        "start must not run after db phase failure: {events:?}"
+    );
 }
 
 #[tokio::test]

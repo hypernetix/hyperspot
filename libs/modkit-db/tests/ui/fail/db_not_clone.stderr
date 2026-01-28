@@ -1,0 +1,13 @@
+warning: unused import: `Db`
+ --> tests/ui/fail/db_not_clone.rs:9:17
+  |
+9 | use modkit_db::{Db, DbHandle, ConnectOpts};
+  |                 ^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+error[E0599]: no method named `clone` found for struct `modkit_db::Db` in the current scope
+  --> tests/ui/fail/db_not_clone.rs:19:23
+   |
+19 |     let db_clone = db.clone();
+   |                       ^^^^^ method not found in `modkit_db::Db`

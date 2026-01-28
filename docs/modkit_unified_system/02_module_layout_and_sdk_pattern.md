@@ -39,7 +39,7 @@ modules/<name>/
 - Handlers may call `domain::service` directly.
 - For simple internal modules you may re-export domain models via the module crate `lib.rs`.
 - Module crates host local client adapters that implement SDK traits; consumers resolve them via `ClientHub`.
-- Infra typically uses SeaORM via the secure ORM layer (`SecureConn`) to enforce scoping. Raw SQL / direct DB access is allowed only for exceptional cases (e.g. migrations/admin tools) and must follow `docs/SECURE-ORM.md` (may require `insecure-escape`).
+- Infra uses SeaORM via the secure ORM layer (`SecureConn`) to enforce scoping. Modules cannot access raw database connections—they provide migration definitions that the runtime executes.
 
 ## SDK Crate (`<module>-sdk`)
 
