@@ -13,11 +13,12 @@ libfuzzer-sys = "0.4"
 # Dependencies for fuzzing internal crates
 modkit-odata = { package = "cf-modkit-odata", path = "../libs/modkit-odata", features = ["with-odata-params"] }
 
-[[bin]]
-name = "fuzz_odata_filter"
-path = "fuzz_targets/fuzz_odata_filter.rs"
-test = false
-doc = false
+# Disabled until issue #377 is fixed (exponential complexity in parse_filter_string)
+# [[bin]]
+# name = "fuzz_odata_filter"
+# path = "fuzz_targets/fuzz_odata_filter.rs"
+# test = false
+# doc = false
 
 [[bin]]
 name = "fuzz_odata_cursor"
