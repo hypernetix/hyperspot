@@ -30,6 +30,7 @@ jobs:
       FIELD_LINK: PVTF_lADOC9Ozis4BNo9mzg8k3Co
       FIELD_UNREPLIED_THREADS: PVTF_lADOC9Ozis4BNo9mzg8k3Fg
       FIELD_UNREPLIED_COMMENTS: PVTF_lADOC9Ozis4BNo9mzg8k3HM
+      FIELD_UNFINISHED_REVIEWS: PVTF_lADOC9Ozis4BNo9mzg8lD3g
 
     steps:
       - name: Sync pull requests into GitHub Project
@@ -47,7 +48,8 @@ jobs:
               PROJECT_ID,
               FIELD_LINK,
               FIELD_UNREPLIED_THREADS,
-              FIELD_UNREPLIED_COMMENTS
+              FIELD_UNREPLIED_COMMENTS,
+              FIELD_UNFINISHED_REVIEWS
             } = process.env;
 
             const blockedMentions = new Set([
@@ -222,6 +224,59 @@ jobs:
               const createdAt = new Date(prData.created_at);
               const updatedAt = new Date(prData.updated_at);
 
+              const requestedReviewers =
+                (prData.requested_reviewers || [])
+                  .map(u => u?.login)
+                  .filter(Boolean);
+
+              let unfinishedReviews = requestedReviewers.length;
+              let unfinishedReviewers = [...requestedReviewers];
+
+              try {
+                const reviews = await github.paginate(
+                  github.rest.pulls.listReviews,
+                  {
+                    owner,
+                    repo,
+                    pull_number: pr.number,
+                    per_page: 100
+                  }
+                );
+
+                const latestByUser = new Map();
+                for (const r of (reviews || [])) {
+                  const login = r.user?.login;
+                  if (!login) continue;
+                  if (login.endsWith("[bot]") || ignoredBots.has(login)) continue;
+
+                  const submittedAt = r.submitted_at
+                    ? new Date(r.submitted_at).getTime()
+                    : 0;
+
+                  const prev = latestByUser.get(login);
+                  if (!prev || submittedAt >= prev.submittedAt) {
+                    latestByUser.set(login, {
+                      state: r.state,
+                      submittedAt
+                    });
+                  }
+                }
+
+                const approvedBy = new Set(
+                  [...latestByUser.entries()]
+                    .filter(([, v]) => v.state === "APPROVED")
+                    .map(([k]) => k)
+                );
+
+                unfinishedReviewers =
+                  requestedReviewers.filter(u => !approvedBy.has(u));
+                unfinishedReviews = unfinishedReviewers.length;
+              } catch (e) {
+                console.log(
+                  `Could not load reviews for PR #${pr.number}: ${e.message}`
+                );
+              }
+
               const reviewData = await github.graphql(`
                 query($owner:String!, $repo:String!, $number:Int!) {
                   repository(owner:$owner, name:$repo) {
@@ -350,6 +405,8 @@ jobs:
                 `Draft: ${prData.draft ? "yes" : "no"}\n\n` +
                 `Review threads: ${openReviewThreads} open / ${resolvedReviewThreads} resolved\n` +
                 `Review comments: ${openReviewComments} open / ${resolvedReviewComments} resolved\n` +
+                `Unfinished reviews: ${unfinishedReviews}\n` +
+                `Unfinished reviewers: ${unfinishedReviewers.length ? unfinishedReviewers.map(u => "@" + u).join(", ") : "None"}\n` +
                 `Unreplied review threads: ${unrepliedReviewThreads}\n` +
                 `Unreplied PR comments: ${unrepliedPrCommentsCount}\n\n` +
                 `Unreplied review threads:\n` +
@@ -467,6 +524,7 @@ jobs:
                   $link: String!
                   $threads: Float!
                   $comments: Float!
+                  $unfinished: Float!
                 ) {
                   linkField: updateProjectV2ItemFieldValue(
                     input: {
@@ -500,13 +558,25 @@ jobs:
                   ) {
                     projectV2Item { id }
                   }
+
+                  unfinishedReviewsField: updateProjectV2ItemFieldValue(
+                    input: {
+                      projectId: $project
+                      itemId: $item
+                      fieldId: "${FIELD_UNFINISHED_REVIEWS}"
+                      value: { number: $unfinished }
+                    }
+                  ) {
+                    projectV2Item { id }
+                  }
                 }
               `, {
                 project: PROJECT_ID,
                 item: itemId,
                 link: pr.html_url,
                 threads: unrepliedReviewThreads,
-                comments: unrepliedPrCommentsCount
+                comments: unrepliedPrCommentsCount,
+                unfinished: unfinishedReviews
               });
             }
 
