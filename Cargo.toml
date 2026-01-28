@@ -64,6 +64,7 @@ members = [
     "modules/system/tenant_resolver/plugins/static_tr_plugin",
     "modules/system/tenant_resolver/plugins/single_tenant_tr_plugin",
 ]
+exclude = ["fuzz"]
 resolver = "3"
 
 # Note: dylint_lints is a separate workspace for custom linters

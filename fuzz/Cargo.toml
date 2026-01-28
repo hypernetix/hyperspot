@@ -1,0 +1,33 @@
+[package]
+name = "hyperspot-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+
+# Dependencies for fuzzing internal crates
+modkit-odata = { package = "cf-modkit-odata", path = "../libs/modkit-odata", features = ["with-odata-params"] }
+
+# Disabled until issue #377 is fixed (exponential complexity in parse_filter_string)
+# [[bin]]
+# name = "fuzz_odata_filter"
+# path = "fuzz_targets/fuzz_odata_filter.rs"
+# test = false
+# doc = false
+
+[[bin]]
+name = "fuzz_odata_cursor"
+path = "fuzz_targets/fuzz_odata_cursor.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_odata_orderby"
+path = "fuzz_targets/fuzz_odata_orderby.rs"
+test = false
+doc = false
