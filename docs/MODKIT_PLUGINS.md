@@ -17,7 +17,7 @@ This pattern enables:
 
 - **Vendor-specific implementations** — e.g., different authentication providers, search engines, or parsers
 - **Runtime selection** — choose which plugin to use based on configuration, tenant, or other context
-- **Hot-pluggable extensions** — add new plugins without modifying the gateway
+- **Hot-pluggable extensions** — add new plugins without modifying the gateway code (but the plugin module must be included in the server build/registration)
 
 > [!IMPORTANT]
 > **Plugin Isolation Rule:** Regular modules **cannot** depend on or consume plugin modules directly. All plugin functionality must be accessed through the Gateway Module's public API (`hub.get::<dyn GatewayClient>()`). This ensures plugin implementations remain swappable, isolated, and decoupled from consumers.
@@ -84,14 +84,14 @@ The SDK defines **two separate traits**:
 /// Registered WITHOUT a scope in ClientHub
 #[async_trait]
 pub trait MyModuleGatewayClient: Send + Sync {
-    async fn do_something(&self, ctx: &SecurityCtx, input: Input) -> Result<Output, MyError>;
+    async fn do_something(&self, ctx: &SecurityContext, input: Input) -> Result<Output, MyError>;
 }
 
 /// Plugin API — implemented by plugins, called by the gateway
 /// Registered WITH a scope (GTS instance ID) in ClientHub
 #[async_trait]
 pub trait MyModulePluginClient: Send + Sync {
-    async fn do_something(&self, ctx: &SecurityCtx, input: Input) -> Result<Output, MyError>;
+    async fn do_something(&self, ctx: &SecurityContext, input: Input) -> Result<Output, MyError>;
 }
 ```
 
@@ -252,20 +252,20 @@ Create `<gateway>-sdk/` with both API traits:
 // <gateway>-sdk/src/api.rs
 
 use async_trait::async_trait;
-use modkit_security::SecurityCtx;
+use modkit_security::SecurityContext;
 
 /// Public API for consumers (registered without scope by gateway)
 #[async_trait]
 pub trait MyModuleGatewayClient: Send + Sync {
-    async fn get_data(&self, ctx: &SecurityCtx, id: &str) -> Result<Data, MyError>;
-    async fn list_data(&self, ctx: &SecurityCtx, query: Query) -> Result<Page<Data>, MyError>;
+    async fn get_data(&self, ctx: &SecurityContext, id: &str) -> Result<Data, MyError>;
+    async fn list_data(&self, ctx: &SecurityContext, query: Query) -> Result<Page<Data>, MyError>;
 }
 
 /// Plugin API (registered with scope by each plugin)
 #[async_trait]
 pub trait MyModulePluginClient: Send + Sync {
-    async fn get_data(&self, ctx: &SecurityCtx, id: &str) -> Result<Data, MyError>;
-    async fn list_data(&self, ctx: &SecurityCtx, query: Query) -> Result<Page<Data>, MyError>;
+    async fn get_data(&self, ctx: &SecurityContext, id: &str) -> Result<Data, MyError>;
+    async fn list_data(&self, ctx: &SecurityContext, query: Query) -> Result<Page<Data>, MyError>;
 }
 ```
 
@@ -311,13 +311,13 @@ The gateway module:
 use std::sync::Arc;
 use async_trait::async_trait;
 use modkit::{Module, ModuleCtx};
-use modkit_security::SecurityCtx;
+use modkit_security::SecurityContext;
 use my_sdk::{MyModuleGatewayClient, MyModulePluginSpecV1};
 use types_registry_sdk::TypesRegistryClient;
 
 #[modkit::module(
     name = "my_gateway",
-    deps = ["types_registry"],  // Gateway depends on the types_registry and any other required modules, but not on plugins. Plugins are resolved indirectly via GTS.
+    deps = ["types_registry"],  // Gateway depends on types_registry; plugins are resolved dynamically via GTS, not hard dependencies.
     capabilities = [rest]
 )]
 pub struct MyGateway {
@@ -354,7 +354,7 @@ impl Module for MyGateway {
 }
 ```
 
-#### Gateway REST requirements (access control, licensing, OData)
+### Gateway REST requirements (access control, licensing, OData)
 
 When the gateway exposes REST endpoints, route definitions follow the same ModKit conventions as regular modules:
 
@@ -362,6 +362,8 @@ When the gateway exposes REST endpoints, route definitions follow the same ModKi
 - **License check**: for authenticated operations, calling `.require_license_features::<F>(...)` is mandatory (use `[]` to explicitly declare no license feature requirement).
 - **OData query options**: for list endpoints, use `OperationBuilderODataExt` helpers instead of manually registering `$filter`, `$orderby`, and `$select` query params.
 - **OData DTO annotations**: list DTOs must derive `ODataFilterable`, and each filterable/orderable field must be annotated with `#[odata(filter(kind = "..."))]` to generate the `*FilterField` enum used by `.with_odata_filter::<...>()` and `.with_odata_orderby::<...>()`.
+
+> **Note:** These are general ModKit REST conventions. For guidance, see `docs/modkit_unified_system/04_rest_operation_builder.md`.
 
 Example (gateway `routes.rs`):
 
@@ -403,7 +405,7 @@ pub struct Service {
 
 impl Service {
     /// Lazily resolve the plugin on first call
-    async fn get_plugin(&self) -> Result<Arc<dyn MyMoodulePluginClient>, DomainError> {
+    async fn get_plugin(&self) -> Result<Arc<dyn MyModulePluginClient>, DomainError> {
         let scope = self.resolved
             .get_or_try_init(|| self.resolve_plugin())
             .await?;
@@ -431,7 +433,7 @@ impl Service {
         Ok(ClientScope::gts_id(&selected.gts_id))
     }
 
-    pub async fn get_data(&self, ctx: &SecurityCtx, id: &str) -> Result<Data, DomainError> {
+    pub async fn get_data(&self, ctx: &SecurityContext, id: &str) -> Result<Data, DomainError> {
         let plugin = self.get_plugin().await?;
         plugin.get_data(ctx, id).await.map_err(Into::into)
     }
@@ -454,7 +456,7 @@ use async_trait::async_trait;
 use modkit::client_hub::ClientScope;
 use modkit::gts::BaseModkitPluginV1;
 use modkit::{Module, ModuleCtx};
-use modkit_security::SecurityCtx;
+use modkit_security::SecurityContext;
 use my_sdk::{MyModulePluginClient, MyModulePluginSpecV1};
 use types_registry_sdk::TypesRegistryClient;
 
@@ -508,19 +510,19 @@ The plugin service implements the plugin API:
 // plugins/<vendor>_plugin/src/domain/service.rs
 
 use async_trait::async_trait;
-use modkit_security::SecurityCtx;
+use modkit_security::SecurityContext;
 use my_sdk::{Data, MyError, MyModulePluginClient, Query, Page};
 
 pub struct Service;
 
 #[async_trait]
 impl MyModulePluginClient for Service {
-    async fn get_data(&self, _ctx: &SecurityCtx, id: &str) -> Result<Data, MyError> {
+    async fn get_data(&self, _ctx: &SecurityContext, id: &str) -> Result<Data, MyError> {
         // Vendor-specific implementation
         Ok(Data { id: id.to_owned(), /* ... */ })
     }
 
-    async fn list_data(&self, _ctx: &SecurityCtx, query: Query) -> Result<Page<Data>, MyError> {
+    async fn list_data(&self, _ctx: &SecurityContext, query: Query) -> Result<Page<Data>, MyError> {
         // Vendor-specific implementation
         todo!()
     }
@@ -545,16 +547,49 @@ modules:
 
 ```rust
 fn choose_plugin(vendor: &str, instances: &[GtsEntity]) -> Result<&GtsEntity, DomainError> {
-    instances
-        .iter()
-        .filter(|e| {
-            let spec: MyModulePluginSpecV1 = serde_json::from_value(e.content.clone()).ok()?;
-            spec.vendor == vendor
-        })
-        .min_by_key(|e| {
-            let spec: MyModulePluginSpecV1 = serde_json::from_value(e.content.clone()).unwrap();
-            spec.priority
-        })
+    let mut best: Option<(&GtsEntity, i16)> = None;
+
+    for ent in instances {
+        // Deserialize the plugin instance content using the SDK type
+        let content: BaseModkitPluginV1<MyModulePluginSpecV1> =
+            serde_json::from_value(ent.content.clone()).map_err(|e| {
+                tracing::error!(
+                    gts_id = %ent.gts_id,
+                    error = %e,
+                    "Failed to deserialize plugin instance content"
+                );
+                DomainError::InvalidPluginInstance {
+                    gts_id: ent.gts_id.clone(),
+                    reason: e.to_string(),
+                }
+            })?;
+
+        // Ensure the instance content self-identifies with the same full instance id
+        if content.id != ent.gts_id {
+            return Err(DomainError::InvalidPluginInstance {
+                gts_id: ent.gts_id.clone(),
+                reason: format!(
+                    "content.id mismatch: expected {:?}, got {:?}",
+                    ent.gts_id, content.id
+                ),
+            });
+        }
+
+        if content.vendor != vendor {
+            continue;
+        }
+
+        match best {
+            None => best = Some((ent, content.priority)),
+            Some((_, cur_priority)) => {
+                if content.priority < cur_priority {
+                    best = Some((ent, content.priority));
+                }
+            }
+        }
+    }
+
+    best.map(|(ent, _)| ent)
         .ok_or(DomainError::PluginNotFound { vendor: vendor.to_owned() })
 }
 ```
@@ -564,13 +599,13 @@ fn choose_plugin(vendor: &str, instances: &[GtsEntity]) -> Result<&GtsEntity, Do
 ```rust
 async fn get_plugin_for_tenant(
     &self,
-    ctx: &SecurityCtx,
+    ctx: &SecurityContext,
 ) -> Result<Arc<dyn MyModulePluginClient>, DomainError> {
     // Look up tenant-specific plugin configuration
     let tenant_id = ctx.tenant_id();
     let plugin_id = self.tenant_plugin_map.get(&tenant_id)?;
     let scope = ClientScope::gts_id(plugin_id);
-    self.hub.get_scoped::<dyn PluginClient>(&scope)
+    self.hub.get_scoped::<dyn MyModulePluginClient>(&scope)
 }
 ```
 
@@ -579,7 +614,7 @@ async fn get_plugin_for_tenant(
 ```rust
 pub async fn handle_request(
     &self,
-    ctx: &SecurityCtx,
+    ctx: &SecurityContext,
     provider: &str,  // e.g., "openai", "anthropic"
 ) -> Result<Response, DomainError> {
     let plugin_id = format!("gts.x.core.modkit.plugin.v1~x.llm_gateway.llm_gateway.plugin.v1~{}.llm_gateway._.plugin.v1", provider);
@@ -739,8 +774,10 @@ This ensures:
 #[tokio::test]
 async fn test_plugin_implementation() {
     let service = Service::new();
-    let tenant_id = Uuid::new_v4();
-    let ctx = SecurityCtx::for_tenant(tenant_id, Uuid::new_v4());
+    let ctx = SecurityContext::builder()
+        .tenant_id(Uuid::new_v4())
+        .subject_id(Uuid::new_v4())
+        .build();
 
     let result = service.get_data(&ctx, "test-id").await;
     assert!(result.is_ok());
@@ -765,8 +802,10 @@ async fn test_gateway_plugin_resolution() {
 
     // Test gateway service
     let svc = Service::new(hub, "Test".to_owned());
-    let tenant_id = Uuid::new_v4();
-    let ctx = SecurityCtx::for_tenant(tenant_id, Uuid::new_v4());
+    let ctx = SecurityContext::builder()
+        .tenant_id(Uuid::new_v4())
+        .subject_id(Uuid::new_v4())
+        .build();
     let result = svc.get_data(&ctx, "id").await;
     assert!(result.is_ok());
 }
@@ -875,6 +914,7 @@ curl http://127.0.0.1:8087/tenant-resolver/v1/tenants?limit=50
 
 ## Further Reading
 
-- [MODKIT_UNIFIED_SYSTEM.md](./MODKIT_UNIFIED_SYSTEM.md) — Complete ModKit architecture guide
+- [docs/modkit_unified_system/03_clienthub_and_plugins.md](./modkit_unified_system/03_clienthub_and_plugins.md) — Typed ClientHub and plugin architecture
+- [docs/modkit_unified_system/04_rest_operation_builder.md](./modkit_unified_system/04_rest_operation_builder.md) — REST wiring with OperationBuilder
 - [NEW_MODULE.md](../guidelines/NEW_MODULE.md) — Step-by-step module creation guide
 - [ARCHITECTURE_MANIFEST.md](./ARCHITECTURE_MANIFEST.md) — HyperSpot architecture overview

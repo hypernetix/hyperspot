@@ -9,7 +9,7 @@ This module is part of **HyperSpot** — a modular, high-performance AI services
 ## Tech Stack
 
 - **Language**: Rust (see [`@/guidelines/DNA/languages/RUST.md`](../../../../guidelines/DNA/languages/RUST.md))
-- **Framework**: ModKit (see [`@/docs/MODKIT_UNIFIED_SYSTEM.md`](../../../../docs/MODKIT_UNIFIED_SYSTEM.md))
+- **Framework**: ModKit (see [`@/docs/modkit_unified_system/README.md`](../../../../docs/modkit_unified_system/README.md))
 - **HTTP**: Axum with `tower-http` middleware
 - **Database**: SeaORM / SQLx with secure ORM layer (see [`@/docs/SECURE-ORM.md`](../../../../docs/SECURE-ORM.md))
 - **Observability**: `tracing` + OpenTelemetry (see [`@/docs/TRACING_SETUP.md`](../../../../docs/TRACING_SETUP.md))
@@ -37,7 +37,7 @@ Follow the new module guideline: [`@/guidelines/NEW_MODULE.md`](../../../../guid
 modules/<module>/
 ├─ <module>-sdk/           # Public API: trait, models, errors (NO serde)
 │  └─ src/
-│     ├─ api.rs            # API trait (all methods take &SecurityCtx)
+│     ├─ api.rs            # API trait (tenant-scoped methods take &SecurityContext)
 │     ├─ models.rs         # Transport-agnostic models
 │     └─ errors.rs         # Transport-agnostic errors
 └─ <module>/               # Implementation
@@ -82,7 +82,8 @@ Follow the REST API guidelines: [`@/guidelines/DNA/REST/API.md`](../../../../gui
 Follow security guidelines: [`@/guidelines/SECURITY.md`](../../../guidelines/SECURITY.md)
 
 **Key requirements:**
-- **All API methods MUST accept `&SecurityCtx`** as first parameter
+- **All tenant-scoped API methods MUST accept `&SecurityContext`** as first parameter
+- **Global/system-wide APIs** (like registries) do not require `SecurityContext`
 - **Use SecureConn** for database access with automatic tenant isolation
 - **Input validation** via `validator` crate
 - **No secrets in code** — use environment variables
@@ -94,7 +95,7 @@ Follow secure ORM patterns: [`@/docs/SECURE-ORM.md`](../../../../docs/SECURE-ORM
 - **Typestate enforcement**: Unscoped queries cannot execute
 - **Deny-by-default**: Empty scopes return `WHERE 1=0`
 - **Derive macro**: `#[derive(Scopable)]` with explicit dimension declarations
-- **Request-scoped**: `SecurityCtx` passed per-operation
+- **Request-scoped**: `SecurityContext` passed per-operation
 
 ### Testing Strategy
 
@@ -125,7 +126,7 @@ Follow tracing setup: [`@/docs/TRACING_SETUP.md`](../../../../docs/TRACING_SETUP
 | Document | Purpose |
 |----------|---------|
 | [`@/docs/ARCHITECTURE_MANIFEST.md`](../../../../docs/ARCHITECTURE_MANIFEST.md) | System architecture and design principles |
-| [`@/docs/MODKIT_UNIFIED_SYSTEM.md`](../../../../docs/MODKIT_UNIFIED_SYSTEM.md) | ModKit framework guide |
+| [`@/docs/modkit_unified_system/README.md`](../../../../docs/modkit_unified_system/README.md) | ModKit framework guide |
 | [`@/docs/SECURE-ORM.md`](../../../../docs/SECURE-ORM.md) | Secure database access patterns |
 | [`@/docs/TRACING_SETUP.md`](../../../../docs/TRACING_SETUP.md) | Observability configuration |
 | [`@/guidelines/NEW_MODULE.md`](../../../../guidelines/NEW_MODULE.md) | Step-by-step module creation |

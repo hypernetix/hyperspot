@@ -127,5 +127,5 @@ pub struct MyGrpcClient;
 
 ## See also
 
-- [ModKit unified system](../../docs/MODKIT_UNIFIED_SYSTEM.md)
+- [ModKit unified system](../../docs/modkit_unified_system/README.md)
 - [New module guideline](../../guidelines/NEW_MODULE.md)

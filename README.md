@@ -102,13 +102,13 @@ modules:
 
 ### Creating Your First Module
 
-See [NEW_MODULE.md](guidelines/NEW_MODULE.md), but also [MODKIT_UNIFIED_SYSTEM.md](docs/MODKIT_UNIFIED_SYSTEM.md) and [MODKIT_PLUGINS.md](docs/MODKIT_PLUGINS.md) for more details.
+See [NEW_MODULE.md](guidelines/NEW_MODULE.md), but also [MODKIT UNIFIED SYSTEM](docs/modkit_unified_system/README.md) and [MODKIT_PLUGINS.md](docs/MODKIT_PLUGINS.md) for more details.
 
 ## Documentation
 
 - **[Architecture manifest](docs/ARCHITECTURE_MANIFEST.md)** - High-level overview of the architecture
 - **[Components](docs/COMPONENTS.md)** - List of all components and their roles
-- **[NEW_MODULE.md](guidelines/NEW_MODULE.md), [MODKIT_UNIFIED_SYSTEM.md](docs/MODKIT_UNIFIED_SYSTEM.md) and [MODKIT_PLUGINS.md](docs/MODKIT_PLUGINS.md)** - how to add new modules.
+- **[NEW_MODULE.md](guidelines/NEW_MODULE.md), [MODKIT UNIFIED SYSTEM](docs/modkit_unified_system/README.md) and [MODKIT_PLUGINS.md](docs/MODKIT_PLUGINS.md)** - how to add new modules.
 - **[Contributing](CONTRIBUTING.md)** - Development workflow and coding standards
 
 ## Configuration

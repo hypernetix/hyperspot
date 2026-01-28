@@ -59,7 +59,7 @@ For complete documentation on the Secure ORM layer, see [SECURE-ORM.md](../docs/
 ### Quick Example
 
 ```rust
-use modkit_db::secure::{SecurityCtx, SecureConn};
+use modkit_db::secure::{SecurityContext, SecureConn};
 use modkit_db_macros::Scopable;
 
 // Define a scopable entity
@@ -79,7 +79,7 @@ pub async fn list_users_handler(
     Extension(db): Extension<DbHandle>,
 ) -> Result<Json<Vec<User>>, Problem> {
     // Create security context from request
-    let ctx = SecurityCtx::for_tenants(vec![auth.tenant_id], auth.user_id);
+    let ctx = SecurityContext::for_tenants(vec![auth.tenant_id], auth.user_id);
 
     // Get secure connection
     let secure_conn = db.sea_secure();
