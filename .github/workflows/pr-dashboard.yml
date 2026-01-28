@@ -9,6 +9,7 @@ on:
 permissions:
   contents: read
   pull-requests: read
+  checks: read
   issues: write
 
 jobs:
@@ -31,6 +32,7 @@ jobs:
       FIELD_UNREPLIED_THREADS: PVTF_lADOC9Ozis4BNo9mzg8k3Fg
       FIELD_UNREPLIED_COMMENTS: PVTF_lADOC9Ozis4BNo9mzg8k3HM
       FIELD_UNFINISHED_REVIEWS: PVTF_lADOC9Ozis4BNo9mzg8lD3g
+      FIELD_MERGE_ISSUES: PVTF_lADOC9Ozis4BNo9mzg8lHlU
 
     steps:
       - name: Sync pull requests into GitHub Project
@@ -49,7 +51,8 @@ jobs:
               FIELD_LINK,
               FIELD_UNREPLIED_THREADS,
               FIELD_UNREPLIED_COMMENTS,
-              FIELD_UNFINISHED_REVIEWS
+              FIELD_UNFINISHED_REVIEWS,
+              FIELD_MERGE_ISSUES
             } = process.env;
 
             const blockedMentions = new Set([
@@ -237,6 +240,43 @@ jobs:
               let unfinishedReviews = requestedReviewers.length;
               let unfinishedReviewers = [...requestedReviewers];
 
+              let ciFailedChecks = 0;
+              let ciStatus = "OK";
+
+              try {
+                const checks = await github.rest.checks.listForRef({
+                  owner,
+                  repo,
+                  ref: prData.head.sha,
+                  per_page: 100
+                });
+
+                const runs = checks.data.check_runs || [];
+                ciFailedChecks = runs.filter(r => r.conclusion === "failure").length;
+              } catch (e) {
+                try {
+                  const status = await github.rest.repos.getCombinedStatusForRef({
+                    owner,
+                    repo,
+                    ref: prData.head.sha
+                  });
+                  const statuses = status.data.statuses || [];
+                  ciFailedChecks = statuses.filter(s => s.state === "failure" || s.state === "error").length;
+                } catch (e2) {
+                  console.log(
+                    `Could not load CI status for PR #${pr.number}: ${e2.message}`
+                  );
+                }
+              }
+
+              if (ciFailedChecks > 0) {
+                ciStatus = `${ciFailedChecks} tests failed`;
+              }
+
+              const mergeConflict = prData.mergeable_state === "dirty";
+              const mergeStatus = mergeConflict ? "CONFLICT" : "OK";
+              const mergeIssues = ciFailedChecks + (mergeConflict ? 1 : 0);
+
               try {
                 const reviews = await github.paginate(
                   github.rest.pulls.listReviews,
@@ -419,7 +459,8 @@ jobs:
                 `Review comments: ${openReviewComments} open / ${resolvedReviewComments} resolved\n` +
                 `Unfinished reviews: ${unfinishedReviews} (${unfinishedReviewers.length ? unfinishedReviewers.map(u => "@" + u).join(", ") : "None"})\n` +
                 `Unreplied review threads: ${unrepliedReviewThreads}\n` +
-                `Unreplied PR comments: ${unrepliedPrCommentsCount}\n\n` +
+                `Unreplied PR comments: ${unrepliedPrCommentsCount}\n` +
+                `CI status: ${ciStatus}, merge status: ${mergeStatus}\n\n` +
                 `Unreplied review threads:\n` +
                 (unrepliedReviewLinks.length
                   ? unrepliedReviewLinks.map(l => "- " + l).join("\n")
@@ -536,6 +577,7 @@ jobs:
                   $threads: Float!
                   $comments: Float!
                   $unfinished: Float!
+                  $mergeIssues: Float!
                 ) {
                   linkField: updateProjectV2ItemFieldValue(
                     input: {
@@ -580,6 +622,17 @@ jobs:
                   ) {
                     projectV2Item { id }
                   }
+
+                  mergeIssuesField: updateProjectV2ItemFieldValue(
+                    input: {
+                      projectId: $project
+                      itemId: $item
+                      fieldId: "${FIELD_MERGE_ISSUES}"
+                      value: { number: $mergeIssues }
+                    }
+                  ) {
+                    projectV2Item { id }
+                  }
                 }
               `, {
                 project: PROJECT_ID,
@@ -587,7 +640,8 @@ jobs:
                 link: pr.html_url,
                 threads: unrepliedReviewThreads,
                 comments: unrepliedPrCommentsCount,
-                unfinished: unfinishedReviews
+                unfinished: unfinishedReviews,
+                mergeIssues
               });
             }
 
