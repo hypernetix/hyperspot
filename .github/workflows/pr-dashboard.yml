@@ -50,6 +50,26 @@ jobs:
               FIELD_UNREPLIED_COMMENTS
             } = process.env;
 
+            const blockedMentions = new Set([
+              "modules"
+            ]);
+
+            let allowedUsers = new Set();
+
+            try {
+              const collaborators = await github.paginate(
+                github.rest.repos.listCollaborators,
+                {
+                  owner,
+                  repo,
+                  per_page: 100
+                }
+              );
+              allowedUsers = new Set((collaborators || []).map(u => u.login));
+            } catch (e) {
+              console.log(`Could not load collaborators: ${e.message}`);
+            }
+
             const ignoredBots = new Set([
               "coderabbitai[bot]",
               "graphite-app[bot]",
@@ -68,8 +88,17 @@ jobs:
               const text = body || "";
               const mentions = [...text.matchAll(/@([A-Za-z0-9-]+)/g)]
                 .map(m => m[1]);
-              const asked = mentions.find(u => u && u !== asker);
+              const asked = mentions.find(u => {
+                if (!u || u === asker) return false;
+                if (blockedMentions.has(u)) return false;
+                if (allowedUsers.size === 0) return true;
+                return allowedUsers.has(u);
+              });
               return asked || fallback;
+            }
+
+            function isReleasePr(title) {
+              return (title || "").toLowerCase().startsWith("chore: release");
             }
 
             /*
@@ -78,33 +107,46 @@ jobs:
              ------------------------------------------------------------
             */
 
-            const projectData = await github.graphql(`
-              query($org:String!, $number:Int!) {
-                organization(login:$org) {
-                  projectV2(number:$number) {
-                    items(first:100) {
-                      nodes {
-                        id
-                        content {
-                          ... on Issue {
-                            number
-                            id
-                            title
-                            closed
+            const items = [];
+            let cursor = null;
+
+            while (true) {
+              const projectData = await github.graphql(`
+                query($org:String!, $number:Int!, $after:String) {
+                  organization(login:$org) {
+                    projectV2(number:$number) {
+                      items(first:100, after:$after) {
+                        pageInfo {
+                          hasNextPage
+                          endCursor
+                        }
+                        nodes {
+                          id
+                          content {
+                            ... on Issue {
+                              number
+                              id
+                              title
+                              closed
+                            }
                           }
                         }
                       }
                     }
                   }
                 }
-              }
-            `, {
-              org: ORG,
-              number: Number(PROJECT_NUMBER)
-            });
+              `, {
+                org: ORG,
+                number: Number(PROJECT_NUMBER),
+                after: cursor
+              });
 
-            const items =
-              projectData.organization.projectV2.items.nodes;
+              const page = projectData.organization.projectV2.items;
+              items.push(...page.nodes);
+
+              if (!page.pageInfo.hasNextPage) break;
+              cursor = page.pageInfo.endCursor;
+            }
 
             const projectItemsByPR = new Map();
 
@@ -145,7 +187,11 @@ jobs:
               }
             );
 
-            const activePRs = new Set(prs.map(p => p.number));
+            const activePRs = new Set(
+              prs
+                .filter(p => !isReleasePr(p.title))
+                .map(p => p.number)
+            );
 
             /*
              ------------------------------------------------------------
@@ -154,6 +200,10 @@ jobs:
             */
 
             for (const pr of prs) {
+
+              if (isReleasePr(pr.title)) {
+                continue;
+              }
 
               const prFull = await github.rest.pulls.get({
                 owner,
@@ -356,17 +406,23 @@ jobs:
                 });
               }
 
-              try {
-                await github.rest.issues.update({
-                  owner,
-                  repo,
-                  issue_number: issue.number,
-                  assignees: [author]
-                });
-              } catch (e) {
+              if (allowedUsers.size > 0 && !allowedUsers.has(author)) {
                 console.log(
-                  `Could not assign @${author} to issue #${issue.number}: ${e.message}`
+                  `Skipping assignee for issue #${issue.number} - @${author} is not a repo collaborator`
                 );
+              } else {
+                try {
+                  await github.rest.issues.update({
+                    owner,
+                    repo,
+                    issue_number: issue.number,
+                    assignees: [author]
+                  });
+                } catch (e) {
+                  console.log(
+                    `Could not assign @${author} to issue #${issue.number}: ${e.message}`
+                  );
+                }
               }
 
               let projectItem =
