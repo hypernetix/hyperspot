@@ -48,7 +48,7 @@ impl<R: CitiesRepository> CitiesService<R> {
             .prepare()
             .await?;
 
-        let found = self.repo.get(self.db.conn(), &scope, id).await?;
+        let found = self.repo.get(&self.db, &scope, id).await?;
 
         found.ok_or_else(|| DomainError::not_found("City", id))
     }
@@ -68,7 +68,7 @@ impl<R: CitiesRepository> CitiesService<R> {
             .prepare()
             .await?;
 
-        let page = self.repo.list_page(self.db.conn(), &scope, query).await?;
+        let page = self.repo.list_page(&self.db, &scope, query).await?;
 
         debug!("Successfully listed {} cities in page", page.items.len());
         Ok(page)
@@ -101,10 +101,7 @@ impl<R: CitiesRepository> CitiesService<R> {
             updated_at: now,
         };
 
-        let _ = self
-            .repo
-            .create(self.db.conn(), &scope, city.clone())
-            .await?;
+        let _ = self.repo.create(&self.db, &scope, city.clone()).await?;
 
         info!("Successfully created city with id={}", city.id);
         Ok(city)
@@ -126,7 +123,7 @@ impl<R: CitiesRepository> CitiesService<R> {
             .prepare()
             .await?;
 
-        let found = self.repo.get(self.db.conn(), &scope, id).await?;
+        let found = self.repo.get(&self.db, &scope, id).await?;
 
         let mut current: City = found.ok_or_else(|| DomainError::not_found("City", id))?;
 
@@ -138,10 +135,7 @@ impl<R: CitiesRepository> CitiesService<R> {
         }
         current.updated_at = OffsetDateTime::now_utc();
 
-        let _ = self
-            .repo
-            .update(self.db.conn(), &scope, current.clone())
-            .await?;
+        let _ = self.repo.update(&self.db, &scope, current.clone()).await?;
 
         info!("Successfully updated city");
         Ok(current)
@@ -158,7 +152,7 @@ impl<R: CitiesRepository> CitiesService<R> {
             .prepare()
             .await?;
 
-        let deleted = self.repo.delete(self.db.conn(), &scope, id).await?;
+        let deleted = self.repo.delete(&self.db, &scope, id).await?;
 
         if !deleted {
             return Err(DomainError::not_found("City", id));

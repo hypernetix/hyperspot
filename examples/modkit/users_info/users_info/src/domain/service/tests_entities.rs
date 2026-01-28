@@ -3,7 +3,7 @@
 #![allow(clippy::uninlined_format_args)]
 #![allow(clippy::default_trait_access)]
 
-use sea_orm::{ActiveModelTrait, Set};
+use sea_orm::Set;
 use time::OffsetDateTime;
 use uuid::Uuid;
 
@@ -11,15 +11,16 @@ use user_info_sdk::{CityPatch, NewAddress, NewCity};
 
 use crate::domain::service::ServiceConfig;
 use crate::infra::storage::entity::city::ActiveModel as CityAM;
+use crate::infra::storage::entity::city::Entity as CityEntity;
 use crate::test_support::{build_services, ctx_allow_tenants, inmem_db, seed_user};
-use modkit_db::secure::SecureConn;
+use modkit_db::secure::{AccessScope, secure_insert};
 
 #[tokio::test]
 async fn create_city_success() {
     let db = inmem_db().await;
     let tenant_id = Uuid::new_v4();
 
-    let services = build_services(SecureConn::new(db), ServiceConfig::default());
+    let services = build_services(db.clone(), ServiceConfig::default());
     let ctx = ctx_allow_tenants(&[tenant_id]);
 
     let new_city = NewCity {
@@ -51,9 +52,12 @@ async fn get_city_respects_tenant_scope() {
         created_at: Set(now),
         updated_at: Set(now),
     };
-    city_am.insert(&db).await.expect("Failed to seed city");
+    let scope = AccessScope::tenants_only(vec![tenant1]);
+    let _ = secure_insert::<CityEntity>(city_am, &scope, &db)
+        .await
+        .expect("Failed to seed city");
 
-    let services = build_services(SecureConn::new(db), ServiceConfig::default());
+    let services = build_services(db.clone(), ServiceConfig::default());
     let ctx_ok = ctx_allow_tenants(&[tenant1]);
     let ctx_deny = ctx_allow_tenants(&[tenant2]);
 
@@ -84,9 +88,12 @@ async fn update_city_success() {
         created_at: Set(now),
         updated_at: Set(now),
     };
-    city_am.insert(&db).await.expect("Failed to seed city");
+    let scope = AccessScope::tenants_only(vec![tenant_id]);
+    let _ = secure_insert::<CityEntity>(city_am, &scope, &db)
+        .await
+        .expect("Failed to seed city");
 
-    let services = build_services(SecureConn::new(db), ServiceConfig::default());
+    let services = build_services(db.clone(), ServiceConfig::default());
     let ctx = ctx_allow_tenants(&[tenant_id]);
     let patch = CityPatch {
         name: Some("New Name".to_string()),
@@ -110,7 +117,7 @@ async fn address_crud_and_scope() {
     let user_id = Uuid::new_v4();
     seed_user(&db, user_id, tenant1, "u@example.com", "U").await;
 
-    let services = build_services(SecureConn::new(db), ServiceConfig::default());
+    let services = build_services(db.clone(), ServiceConfig::default());
     let ctx1 = ctx_allow_tenants(&[tenant1]);
     let ctx2 = ctx_allow_tenants(&[tenant2]);
 

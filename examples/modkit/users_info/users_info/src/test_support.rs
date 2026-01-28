@@ -2,9 +2,11 @@
 
 use std::sync::Arc;
 
+use modkit_db::migration_runner::run_migrations_for_testing;
 use modkit_db::secure::SecureConn;
+use modkit_db::secure::{AccessScope, secure_insert};
+use modkit_db::{ConnectOpts, DbHandle};
 use modkit_security::SecurityContext;
-use sea_orm::{Database, DatabaseConnection};
 use sea_orm_migration::MigratorTrait;
 use tenant_resolver_sdk::{
     TenantFilter, TenantResolverError, TenantResolverGatewayClient, TenantStatus,
@@ -32,27 +34,32 @@ pub fn ctx_deny_all() -> SecurityContext {
     SecurityContext::anonymous()
 }
 
-pub async fn inmem_db() -> DatabaseConnection {
-    let db = Database::connect("sqlite::memory:")
+pub async fn inmem_db() -> SecureConn {
+    let db = DbHandle::connect("sqlite::memory:", ConnectOpts::default())
         .await
         .expect("Failed to connect to in-memory database");
 
-    crate::infra::storage::migrations::Migrator::up(&db, None)
-        .await
-        .expect("Failed to run migrations");
+    run_migrations_for_testing(
+        &db,
+        crate::infra::storage::migrations::Migrator::migrations(),
+    )
+    .await
+    .map_err(|e| e.to_string())
+    .expect("Failed to run migrations");
 
-    db
+    db.sea_secure()
 }
 
 pub async fn seed_user(
-    db: &DatabaseConnection,
+    db: &SecureConn,
     id: Uuid,
     tenant_id: Uuid,
     email: &str,
     display_name: &str,
 ) {
     use crate::infra::storage::entity::user::ActiveModel;
-    use sea_orm::{ActiveModelTrait, Set};
+    use crate::infra::storage::entity::user::Entity as UserEntity;
+    use sea_orm::Set;
 
     let now = OffsetDateTime::now_utc();
     let user = ActiveModel {
@@ -64,7 +71,10 @@ pub async fn seed_user(
         updated_at: Set(now),
     };
 
-    user.insert(db).await.expect("Failed to seed user");
+    let scope = AccessScope::tenants_only(vec![tenant_id]);
+    let _ = secure_insert::<UserEntity>(user, &scope, db)
+        .await
+        .expect("Failed to seed user");
 }
 
 pub struct MockEventPublisher;

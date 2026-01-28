@@ -8,7 +8,7 @@ use chrono::{NaiveDate, NaiveTime, Utc};
 use modkit_odata::{CursorV1, Error as ODataError, ODataOrderBy, ODataQuery, SortDir, ast as core};
 use rust_decimal::Decimal;
 use sea_orm::{
-    ColumnTrait, Condition, ConnectionTrait, EntityTrait, QueryFilter, QueryOrder, QuerySelect,
+    ColumnTrait, Condition, EntityTrait, QueryFilter, QueryOrder, QuerySelect,
     sea_query::{Expr, Order},
 };
 use thiserror::Error;
@@ -16,6 +16,7 @@ use thiserror::Error;
 use modkit_odata::filter::FieldKind;
 
 use crate::odata::LimitCfg;
+use crate::secure::{DBRunner, DBRunnerInternal, SeaOrmRunner};
 
 /// Type alias for cursor extraction function to reduce type complexity
 type CursorExtractor<E> = fn(&<E as EntityTrait>::Model) -> String;
@@ -532,7 +533,7 @@ where
             let vals = coerce_many(f.kind, list)?;
             if vals.is_empty() {
                 // IN () → always false
-                Condition::all().add(Expr::cust("1=0"))
+                Condition::all().add(Expr::value(1).eq(0))
             } else {
                 Condition::all().add(Expr::col(col).is_in(vals))
             }
@@ -800,7 +801,7 @@ where
     E: EntityTrait,
     E::Column: ColumnTrait + Copy,
     F: Fn(E::Model) -> D + Copy,
-    C: ConnectionTrait + Send + Sync,
+    C: DBRunner,
 {
     let limit = clamp_limit(q.limit, limit_cfg);
     let fetch = limit + 1;
@@ -859,10 +860,11 @@ where
     s = s.limit(fetch);
 
     #[allow(clippy::disallowed_methods)]
-    let mut rows = s
-        .all(conn)
-        .await
-        .map_err(|e| ODataError::Db(e.to_string()))?;
+    let mut rows = match DBRunnerInternal::as_seaorm(conn) {
+        SeaOrmRunner::Conn(db) => s.all(db).await,
+        SeaOrmRunner::Tx(tx) => s.all(tx).await,
+    }
+    .map_err(|e| ODataError::Db(e.to_string()))?;
 
     let has_more = (rows.len() as u64) > limit;
 

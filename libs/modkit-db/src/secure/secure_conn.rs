@@ -1,9 +1,7 @@
 //! High-level secure database wrapper for ergonomic, type-safe access.
 //!
-//! This module provides `SecureConn`, a wrapper around `SeaORM`'s `DatabaseConnection`
+//! This module provides `SecureConn`, a wrapper around a private `SeaORM` connection
 //! that enforces access control policies on all operations.
-//!
-//! # Design Philosophy
 //!
 //! Plugin/module developers should never handle raw `DatabaseConnection` or manually
 //! apply scopes. Instead, they receive a `SecureConn` instance that guarantees:
@@ -25,7 +23,7 @@
 //!     pub async fn find_by_id(&self, id: Uuid) -> Result<Option<User>, ScopeError> {
 //!         let user = self.db
 //!             .find_by_id::<user::Entity>(id)?
-//!             .one(self.db.conn())
+//!             .one(self.db)
 //!             .await?;
 //!         Ok(user.map(Into::into))
 //!     }
@@ -33,7 +31,7 @@
 //!     pub async fn find_all(&self) -> Result<Vec<User>, ScopeError> {
 //!         let users = self.db
 //!             .find::<user::Entity>()?
-//!             .all(self.db.conn())
+//!             .all(self.db)
 //!             .await?;
 //!         Ok(users.into_iter().map(Into::into).collect())
 //!     }
@@ -42,7 +40,7 @@
 //!         let result = self.db
 //!             .update_many::<user::Entity>()?
 //!             .col_expr(user::Column::Status, Expr::value(status))
-//!             .exec(self.db.conn())
+//!             .exec(self.db)
 //!             .await?;
 //!         Ok(result.rows_affected)
 //!     }
@@ -52,9 +50,8 @@
 use std::{future::Future, pin::Pin};
 
 use sea_orm::{
-    AccessMode, ActiveModelTrait, ColumnTrait, ConnectionTrait, DatabaseConnection,
-    DatabaseTransaction, DbErr, EntityTrait, IsolationLevel, QueryFilter, TransactionTrait,
-    sea_query::Expr,
+    AccessMode, ColumnTrait, ConnectionTrait, DatabaseConnection, DatabaseTransaction, EntityTrait,
+    IsolationLevel, QueryFilter, TransactionTrait, sea_query::Expr,
 };
 use uuid::Uuid;
 
@@ -67,6 +64,20 @@ use crate::secure::tx_config::TxConfig;
 use crate::secure::{ScopableEntity, ScopeError, Scoped, SecureEntityExt, SecureSelect};
 
 use crate::secure::db_ops::{SecureDeleteExt, SecureDeleteMany, SecureUpdateExt, SecureUpdateMany};
+
+/// Secure transaction wrapper (capability).
+///
+/// This type intentionally does not expose any raw transaction or executor API.
+pub struct SecureTx<'a> {
+    pub(crate) tx: &'a DatabaseTransaction,
+}
+
+impl<'a> SecureTx<'a> {
+    #[must_use]
+    pub(crate) fn new(tx: &'a DatabaseTransaction) -> Self {
+        Self { tx }
+    }
+}
 
 /// Secure database connection wrapper.
 ///
@@ -85,7 +96,7 @@ use crate::secure::db_ops::{SecureDeleteExt, SecureDeleteMany, SecureUpdateExt, 
 /// impl<'a> MyService<'a> {
 ///     pub async fn get_user(&self, scope: &AccessScope, id: Uuid) -> Result<Option<User>> {
 ///         self.db.find_by_id::<user::Entity>(ctx, id)?
-///             .one(self.db.conn())
+///             .one(self.db)
 ///             .await
 ///     }
 /// }
@@ -97,10 +108,10 @@ use crate::secure::db_ops::{SecureDeleteExt, SecureDeleteMany, SecureUpdateExt, 
 /// - Queries are scoped by tenant/resource from the context
 /// - Empty scopes result in deny-all (no data returned)
 /// - Type system prevents unscoped queries from compiling
-/// - Cannot bypass security without `insecure-escape` feature
+/// - Modules cannot access raw database connections
 #[derive(Clone)]
 pub struct SecureConn {
-    conn: DatabaseConnection,
+    pub(crate) conn: DatabaseConnection,
 }
 
 impl SecureConn {
@@ -108,35 +119,30 @@ impl SecureConn {
     ///
     /// Typically created via `DbHandle::sea_secure()` rather than directly.
     #[must_use]
-    pub fn new(conn: DatabaseConnection) -> Self {
+    pub(crate) fn new(conn: DatabaseConnection) -> Self {
         Self { conn }
     }
 
-    /// Get a reference to the underlying database connection.
+    /// Internal-only accessor to the raw database connection.
     ///
-    /// # Safety
+    /// # Security
     ///
-    /// Use with caution. Direct connection access bypasses automatic scoping.
-    /// Prefer the high-level methods (`find`, `update_many`, etc.) whenever possible.
-    ///
-    /// Valid use cases:
-    /// - Executing already-scoped queries (`.one()`, `.all()`, `.exec()`)
-    /// - Complex joins that need custom `SeaORM` building
-    /// - Internal infrastructure code (not module business logic)
+    /// This MUST NOT be exposed publicly. Any public raw access to the underlying database
+    /// handle would allow bypassing scoping and tenant isolation.
     #[must_use]
-    pub fn conn(&self) -> &DatabaseConnection {
+    pub(crate) fn conn_internal(&self) -> &DatabaseConnection {
         &self.conn
     }
 
     /// Return database engine identifier for tracing / logging.
     #[must_use]
     pub fn db_engine(&self) -> &'static str {
-        use sea_orm::DatabaseBackend;
+        use sea_orm::DbBackend;
 
         match self.conn.get_database_backend() {
-            DatabaseBackend::Postgres => "postgres",
-            DatabaseBackend::MySql => "mysql",
-            DatabaseBackend::Sqlite => "sqlite",
+            DbBackend::Postgres => "postgres",
+            DbBackend::MySql => "mysql",
+            DbBackend::Sqlite => "sqlite",
         }
     }
 
@@ -152,7 +158,7 @@ impl SecureConn {
     /// let users = db.find::<user::Entity>(&ctx)?
     ///     .filter(user::Column::Status.eq("active"))
     ///     .order_by_asc(user::Column::Email)
-    ///     .all(db.conn())
+    ///     .all(db)
     ///     .await?;
     /// ```
     ///
@@ -176,7 +182,7 @@ impl SecureConn {
     /// ```ignore
     /// let ctx = SecurityCtx::for_tenants(vec![tenant_id], user_id);
     /// let user = db.find_by_id::<user::Entity>(&ctx, user_id)?
-    ///     .one(db.conn())
+    ///     .one(db)
     ///     .await?;
     /// ```
     ///
@@ -207,7 +213,7 @@ impl SecureConn {
     /// let result = db.update_many::<user::Entity>(&ctx)?
     ///     .col_expr(user::Column::Status, Expr::value("active"))
     ///     .col_expr(user::Column::UpdatedAt, Expr::value(Utc::now()))
-    ///     .exec(db.conn())
+    ///     .exec(db)
     ///     .await?;
     /// println!("Updated {} rows", result.rows_affected);
     /// ```
@@ -232,7 +238,7 @@ impl SecureConn {
     /// ```ignore
     /// let ctx = SecurityCtx::for_tenants(vec![tenant_id], user_id);
     /// let result = db.delete_many::<user::Entity>(&ctx)?
-    ///     .exec(db.conn())
+    ///     .exec(db)
     ///     .await?;
     /// println!("Deleted {} rows", result.rows_affected);
     /// ```
@@ -282,41 +288,7 @@ impl SecureConn {
         E::ActiveModel: sea_orm::ActiveModelTrait<Entity = E> + Send,
         E::Model: sea_orm::IntoActiveModel<E::ActiveModel>,
     {
-        crate::secure::secure_insert::<E>(am, scope, &self.conn).await
-    }
-
-    /// Update a single entity by ID (unscoped).
-    ///
-    /// **Warning**: This method does NOT validate security scope.
-    /// Use `update_with_ctx()` for scope-validated updates.
-    ///
-    /// This is a convenience method for the common pattern of updating one record
-    /// when you've already validated access separately.
-    ///
-    /// # Example
-    ///
-    /// ```ignore
-    /// let mut user: user::ActiveModel = db.find_by_id::<user::Entity>(id)?
-    ///     .one(db.conn())
-    ///     .await?
-    ///     .ok_or(NotFound)?
-    ///     .into();
-    ///
-    /// user.email = Set("newemail@example.com".to_string());
-    /// user.updated_at = Set(Utc::now());
-    ///
-    /// let updated = db.update_one(user).await?;
-    /// ```
-    ///
-    /// # Errors
-    /// Returns `ScopeError::Db` if the database update fails.
-    pub async fn update_one<E>(&self, am: E::ActiveModel) -> Result<E::Model, ScopeError>
-    where
-        E: EntityTrait,
-        E::ActiveModel: sea_orm::ActiveModelTrait<Entity = E> + Send,
-        E::Model: sea_orm::IntoActiveModel<E::ActiveModel>,
-    {
-        Ok(am.update(&self.conn).await?)
+        crate::secure::secure_insert::<E>(am, scope, self).await
     }
 
     /// Update a single entity with security scope validation.
@@ -338,7 +310,7 @@ impl SecureConn {
     ///
     /// // Load and modify
     /// let user_model = db.find_by_id::<user::Entity>(&ctx, id)?
-    ///     .one(db.conn())
+    ///     .one(db)
     ///     .await?
     ///     .ok_or(NotFound)?;
     ///
@@ -364,21 +336,9 @@ impl SecureConn {
         E: ScopableEntity + EntityTrait,
         E::Column: ColumnTrait + Copy,
         E::ActiveModel: sea_orm::ActiveModelTrait<Entity = E> + Send,
-        E::Model: sea_orm::IntoActiveModel<E::ActiveModel>,
+        E::Model: sea_orm::IntoActiveModel<E::ActiveModel> + sea_orm::ModelTrait<Entity = E>,
     {
-        let exists = self
-            .find_by_id::<E>(scope, id)?
-            .one(&self.conn)
-            .await?
-            .is_some();
-
-        if !exists {
-            return Err(ScopeError::Denied(
-                "entity not found or not accessible in current security scope",
-            ));
-        }
-
-        Ok(am.update(&self.conn).await?)
+        crate::secure::secure_update_with_scope::<E>(am, scope, id, self).await
     }
 
     /// Delete a single entity by ID (scoped).
@@ -413,7 +373,7 @@ impl SecureConn {
             .filter(sea_orm::Condition::all().add(Expr::col(resource_col).eq(id)))
             .secure()
             .scope_with(scope)
-            .exec(&self.conn)
+            .exec(self)
             .await?;
 
         Ok(result.rows_affected > 0)
@@ -426,7 +386,7 @@ impl SecureConn {
     /// Execute a closure inside a database transaction.
     ///
     /// This method starts a `SeaORM` transaction, provides the transaction handle
-    /// to the closure as `&dyn ConnectionTrait`, and handles commit/rollback.
+    /// to the closure as `&SecureTx`, and handles commit/rollback.
     ///
     /// # Return Type
     ///
@@ -476,22 +436,27 @@ impl SecureConn {
     pub async fn transaction<T, F>(&self, f: F) -> anyhow::Result<T>
     where
         T: Send + 'static,
-        F: for<'c> FnOnce(
-                &'c DatabaseTransaction,
+        F: for<'a> FnOnce(
+                &'a SecureTx<'a>,
             )
-                -> Pin<Box<dyn Future<Output = anyhow::Result<T>> + Send + 'c>>
+                -> Pin<Box<dyn Future<Output = anyhow::Result<T>> + Send + 'a>>
             + Send,
     {
-        self.conn
-            .transaction::<_, T, DbErr>(|txn| {
-                let fut = f(txn);
-                Box::pin(async move {
-                    fut.await
-                        .map_err(|e| DbErr::Custom(format!("transaction callback failed: {e:#}")))
-                })
-            })
-            .await
-            .map_err(|e| anyhow::anyhow!("transaction failed: {e}"))
+        let txn = self.conn_internal().begin().await?;
+        let tx = SecureTx::new(&txn);
+
+        let res = f(&tx).await;
+
+        match res {
+            Ok(v) => {
+                txn.commit().await?;
+                Ok(v)
+            }
+            Err(e) => {
+                let _ = txn.rollback().await;
+                Err(e)
+            }
+        }
     }
 
     /// Execute a closure inside a database transaction with custom configuration.
@@ -550,30 +515,33 @@ impl SecureConn {
     pub async fn transaction_with_config<T, F>(&self, cfg: TxConfig, f: F) -> anyhow::Result<T>
     where
         T: Send + 'static,
-        F: for<'c> FnOnce(
-                &'c DatabaseTransaction,
+        F: for<'a> FnOnce(
+                &'a SecureTx<'a>,
             )
-                -> Pin<Box<dyn Future<Output = anyhow::Result<T>> + Send + 'c>>
+                -> Pin<Box<dyn Future<Output = anyhow::Result<T>> + Send + 'a>>
             + Send,
     {
         let isolation: Option<IsolationLevel> = cfg.isolation.map(Into::into);
         let access_mode: Option<AccessMode> = cfg.access_mode.map(Into::into);
 
-        self.conn
-            .transaction_with_config::<_, T, DbErr>(
-                |txn| {
-                    let fut = f(txn);
-                    Box::pin(async move {
-                        fut.await.map_err(|e| {
-                            DbErr::Custom(format!("transaction callback failed: {e:#}"))
-                        })
-                    })
-                },
-                isolation,
-                access_mode,
-            )
-            .await
-            .map_err(|e| anyhow::anyhow!("transaction_with_config failed: {e}"))
+        let txn = self
+            .conn_internal()
+            .begin_with_config(isolation, access_mode)
+            .await?;
+        let tx = SecureTx::new(&txn);
+
+        let res = f(&tx).await;
+
+        match res {
+            Ok(v) => {
+                txn.commit().await?;
+                Ok(v)
+            }
+            Err(e) => {
+                let _ = txn.rollback().await;
+                Err(e)
+            }
+        }
     }
 
     /// Execute a closure inside a typed domain transaction.
@@ -614,23 +582,31 @@ impl SecureConn {
     where
         T: Send + 'static,
         E: std::fmt::Debug + std::fmt::Display + Send + 'static,
-        F: for<'c> FnOnce(
-                &'c DatabaseTransaction,
-            ) -> Pin<Box<dyn Future<Output = Result<T, E>> + Send + 'c>>
+        F: for<'a> FnOnce(
+                &'a SecureTx<'a>,
+            ) -> Pin<Box<dyn Future<Output = Result<T, E>> + Send + 'a>>
             + Send,
     {
-        self.conn
-            .transaction::<_, T, TxError<E>>(|txn| {
-                let fut = f(txn);
-                Box::pin(async move { fut.await.map_err(TxError::Domain) })
-            })
+        let txn = self
+            .conn_internal()
+            .begin()
             .await
-            .map_err(|e| match e {
-                sea_orm::TransactionError::Transaction(tx_err) => tx_err,
-                sea_orm::TransactionError::Connection(db_err) => {
-                    TxError::Infra(InfraError::new(db_err.to_string()))
-                }
-            })
+            .map_err(|e| TxError::Infra(InfraError::new(e.to_string())))?;
+        let tx = SecureTx::new(&txn);
+
+        let res = f(&tx).await;
+
+        match res {
+            Ok(v) => txn
+                .commit()
+                .await
+                .map_err(|e| TxError::Infra(InfraError::new(e.to_string())))
+                .map(|()| v),
+            Err(e) => {
+                let _ = txn.rollback().await;
+                Err(TxError::Domain(e))
+            }
+        }
     }
 
     /// Execute a typed domain transaction with automatic infrastructure error mapping.
@@ -664,9 +640,9 @@ impl SecureConn {
         T: Send + 'static,
         E: std::fmt::Debug + std::fmt::Display + Send + 'static,
         M: FnOnce(InfraError) -> E + Send,
-        F: for<'c> FnOnce(
-                &'c DatabaseTransaction,
-            ) -> Pin<Box<dyn Future<Output = Result<T, E>> + Send + 'c>>
+        F: for<'a> FnOnce(
+                &'a SecureTx<'a>,
+            ) -> Pin<Box<dyn Future<Output = Result<T, E>> + Send + 'a>>
             + Send,
     {
         self.in_transaction(f)

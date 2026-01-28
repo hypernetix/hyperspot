@@ -7,13 +7,14 @@ use crate::infra::storage::entity::address::{
     ActiveModel as AddressAM, Column as AddressColumn, Entity as AddressEntity,
 };
 use crate::infra::storage::odata_mapper::AddressODataMapper;
-use modkit_db::DbConnTrait;
 use modkit_db::odata::{LimitCfg, paginate_odata};
-use modkit_db::secure::{SecureDeleteExt, SecureEntityExt};
+use modkit_db::secure::{
+    DBRunner, SecureDeleteExt, SecureEntityExt, secure_insert, secure_update_with_scope,
+};
 use modkit_odata::{ODataQuery, Page, SortDir};
 use modkit_security::AccessScope;
 use sea_orm::sea_query::Expr;
-use sea_orm::{ActiveModelTrait, EntityTrait, QueryFilter, Set};
+use sea_orm::{EntityTrait, QueryFilter, Set};
 use user_info_sdk::Address;
 use user_info_sdk::odata::AddressFilterField;
 use uuid::Uuid;
@@ -33,7 +34,7 @@ impl OrmAddressesRepository {
 
 #[async_trait]
 impl AddressesRepository for OrmAddressesRepository {
-    async fn get<C: DbConnTrait + Send + Sync>(
+    async fn get<C: DBRunner>(
         &self,
         conn: &C,
         scope: &AccessScope,
@@ -49,16 +50,13 @@ impl AddressesRepository for OrmAddressesRepository {
         Ok(found.map(Into::into))
     }
 
-    async fn list_page<C: DbConnTrait + Send + Sync>(
+    async fn list_page<C: DBRunner>(
         &self,
         conn: &C,
         scope: &AccessScope,
         query: &ODataQuery,
     ) -> Result<Page<Address>, DomainError> {
-        let base_query = AddressEntity::find()
-            .secure()
-            .scope_with(scope)
-            .into_inner();
+        let base_query = AddressEntity::find().secure().scope_with(scope);
 
         let page = paginate_odata::<AddressFilterField, AddressODataMapper, _, _, _, _>(
             base_query,
@@ -74,7 +72,7 @@ impl AddressesRepository for OrmAddressesRepository {
         Ok(page)
     }
 
-    async fn get_by_user_id<C: DbConnTrait + Send + Sync>(
+    async fn get_by_user_id<C: DBRunner>(
         &self,
         conn: &C,
         scope: &AccessScope,
@@ -90,19 +88,12 @@ impl AddressesRepository for OrmAddressesRepository {
         Ok(found.map(Into::into))
     }
 
-    async fn create<C: DbConnTrait + Send + Sync>(
+    async fn create<C: DBRunner>(
         &self,
         conn: &C,
         scope: &AccessScope,
         address: Address,
     ) -> Result<Address, DomainError> {
-        if !scope.has_tenants() {
-            return Err(DomainError::validation(
-                "scope",
-                "Security scope must contain tenant for insert operation",
-            ));
-        }
-
         let m = AddressAM {
             id: Set(address.id),
             tenant_id: Set(address.tenant_id),
@@ -114,11 +105,13 @@ impl AddressesRepository for OrmAddressesRepository {
             updated_at: Set(address.updated_at),
         };
 
-        let _ = m.insert(conn).await.map_err(db_err)?;
+        let _ = secure_insert::<AddressEntity>(m, scope, conn)
+            .await
+            .map_err(db_err)?;
         Ok(address)
     }
 
-    async fn update<C: DbConnTrait + Send + Sync>(
+    async fn update<C: DBRunner>(
         &self,
         conn: &C,
         scope: &AccessScope,
@@ -148,11 +141,13 @@ impl AddressesRepository for OrmAddressesRepository {
             updated_at: Set(address.updated_at),
         };
 
-        let _ = m.update(conn).await.map_err(db_err)?;
+        let _ = secure_update_with_scope::<AddressEntity>(m, scope, address.id, conn)
+            .await
+            .map_err(db_err)?;
         Ok(address)
     }
 
-    async fn delete<C: DbConnTrait + Send + Sync>(
+    async fn delete<C: DBRunner>(
         &self,
         conn: &C,
         scope: &AccessScope,
@@ -169,7 +164,7 @@ impl AddressesRepository for OrmAddressesRepository {
         Ok(result.rows_affected > 0)
     }
 
-    async fn delete_by_user_id<C: DbConnTrait + Send + Sync>(
+    async fn delete_by_user_id<C: DBRunner>(
         &self,
         conn: &C,
         scope: &AccessScope,

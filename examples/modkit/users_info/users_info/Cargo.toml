@@ -66,8 +66,7 @@ thiserror = { workspace = true }
 
 # Local dependencies
 modkit = { workspace = true }
-# NOTE: insecure-escape enabled for migrations and example infrastructure code
-modkit-db = { workspace = true, features = ["sqlite", "pg", "insecure-escape"] }
+modkit-db = { workspace = true, features = ["sqlite", "pg"] }
 modkit-db-macros = { workspace = true }
 modkit-auth = { workspace = true }
 modkit-security = { workspace = true }

@@ -29,7 +29,6 @@ use modkit_odata_macros::ODataFilterable;
 ### Define filterable DTO
 
 ```rust
-use chrono::{DateTime, Utc};
 use modkit_odata_macros::ODataFilterable;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -46,9 +45,9 @@ pub struct UserDto {
     pub email: String,
     pub display_name: String,
     #[odata(filter(kind = "DateTimeUtc"))]
-    pub created_at: DateTime<Utc>,
+    pub created_at: chrono::DateTime<chrono::Utc>,
     #[odata(filter(kind = "DateTimeUtc"))]
-    pub updated_at: DateTime<Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 ```
 
@@ -58,7 +57,7 @@ pub struct UserDto {
 |------|------|---------|
 | `String` | `String` | `email eq 'test@example.com'` |
 | `Uuid` | `uuid::Uuid` | `id eq 550e8400-e29b-41d4-a716-446655440000` |
-| `DateTimeUtc` | `chrono::DateTime<Utc>` | `created_at gt 2024-01-01T00:00:00Z` |
+| `DateTimeUtc` | `chrono::DateTime<chrono::Utc>` | `created_at gt 2024-01-01T00:00:00Z` |
 | `I32` | `i32` | `age gt 18` |
 | `I64` | `i64` | `count ge 100` |
 | `Bool` | `bool` | `is_active eq true` |
@@ -117,29 +116,24 @@ impl UserService {
         query: &ODataQuery,
     ) -> Result<Page<User>, DomainError> {
         let secure_conn = self.db.sea_secure();
+        let scope = modkit_db::secure::AccessScope::tenant(ctx.tenant_id());
         
-        // Build base query with OData filter
-        let mut db_query = secure_conn.find::<user::Entity>(ctx)?;
-        
-        // Apply $filter
-        if let Some(filter) = query.filter() {
-            db_query = db_query.filter(filter.to_sea_condition::<user::Entity>());
-        }
-        
-        // Apply $orderby
-        if let Some(order) = query.orderby() {
-            db_query = db_query.order_by(order.to_sea_order::<user::Entity>());
-        }
-        
-        // Apply pagination
-        let limit = query.limit().unwrap_or(50);
-        let cursor = query.cursor();
-        
-        let page = if let Some(cursor) = cursor {
-            db_query.find_after_cursor(cursor, Some(limit), None).await?
-        } else {
-            db_query.paginate(secure_conn.conn(), limit).await?
-        };
+        // Recommended: compose security + OData in one call, without raw connection access.
+        use modkit_db::odata::sea_orm_filter::{paginate_odata, LimitCfg};
+        use modkit_odata::SortDir;
+        use crate::infra::storage::odata_mapper::UserODataMapper;
+        use crate::api::rest::dto::UserDtoFilterField;
+
+        let base_query = secure_conn.find::<user::Entity>(&scope);
+        let page = paginate_odata::<UserDtoFilterField, UserODataMapper>(
+            base_query,
+            &secure_conn,
+            query,
+            ("id", SortDir::Desc),
+            LimitCfg { default: 50, max: 500 },
+            |model| model.into(),
+        )
+        .await?;
         
         Ok(page)
     }
@@ -215,23 +209,22 @@ impl UserService {
         query: &ODataQuery,
     ) -> Result<Page<User>, DomainError> {
         let secure_conn = self.db.sea_secure();
-        let mut db_query = secure_conn.find::<user::Entity>(ctx)?;
-        
-        // Apply filter and order
-        if let Some(filter) = query.filter() {
-            db_query = db_query.filter(filter.to_sea_condition::<user::Entity>());
-        }
-        if let Some(order) = query.orderby() {
-            db_query = db_query.order_by(order.to_sea_order::<user::Entity>());
-        }
-        
-        // Apply cursor pagination
-        let limit = query.limit().unwrap_or(50);
-        let page = if let Some(cursor) = query.cursor() {
-            db_query.find_after_cursor(cursor, Some(limit), None).await?
-        } else {
-            db_query.paginate(secure_conn.conn(), limit).await?
-        };
+        let scope = modkit_db::secure::AccessScope::tenant(ctx.tenant_id());
+        use modkit_db::odata::sea_orm_filter::{paginate_odata, LimitCfg};
+        use modkit_odata::SortDir;
+        use crate::infra::storage::odata_mapper::UserODataMapper;
+        use crate::api::rest::dto::UserDtoFilterField;
+
+        let base_query = secure_conn.find::<user::Entity>(&scope);
+        let page = paginate_odata::<UserDtoFilterField, UserODataMapper>(
+            base_query,
+            &secure_conn,
+            query,
+            ("id", SortDir::Desc),
+            LimitCfg { default: 50, max: 500 },
+            |model| model.into(),
+        )
+        .await?;
         
         Ok(page)
     }

@@ -9,7 +9,7 @@
 //!
 //! ```ignore
 //! use modkit_db::odata::{FieldMap, FieldKind, pager::OPager};
-//! use modkit_db::secure::{SecureConn, SecurityCtx};
+//! use modkit_db::secure::{SecureConn, AccessScope};
 //! use modkit_odata::{ODataQuery, SortDir, Page, Error as ODataError};
 //!
 //! // Define field mappings once (typically as a static or const)
@@ -24,10 +24,10 @@
 //! // In your repository or service layer
 //! pub async fn list_users(
 //!     db: &SecureConn,
-//!     ctx: &SecurityCtx,
+//!     scope: &AccessScope,
 //!     q: &ODataQuery,
 //! ) -> Result<Page<UserDto>, ODataError> {
-//!     OPager::<user::Entity, _>::new(db, ctx, db.conn(), &user_field_map())
+//!     OPager::<user::Entity, _>::new(db, scope, db, &user_field_map())
 //!         .tiebreaker("created_at", SortDir::Desc)
 //!         .limits(50, 500)
 //!         .fetch(q, |model| UserDto {
@@ -43,7 +43,7 @@
 //!
 //! ```ignore
 //! use modkit_db::odata::{FieldMap, FieldKind, pager::OPager};
-//! use modkit_db::secure::{SecureConn, SecurityCtx, ScopableEntity};
+//! use modkit_db::secure::{SecureConn, AccessScope, ScopableEntity};
 //! use modkit_odata::{ODataQuery, SortDir};
 //! use sea_orm::entity::prelude::*;
 //! use uuid::Uuid;
@@ -78,10 +78,10 @@
 //! impl<'a> UserService<'a> {
 //!     pub async fn list_users(
 //!         &self,
-//!         ctx: &SecurityCtx,
+//!         scope: &AccessScope,
 //!         odata_query: &ODataQuery,
 //!     ) -> Result<Page<UserDto>, ODataError> {
-//!         OPager::<Entity, _>::new(self.db, ctx, self.db.conn(), &USER_FIELD_MAP)
+//!         OPager::<Entity, _>::new(self.db, scope, self.db, &USER_FIELD_MAP)
 //!             .tiebreaker("id", SortDir::Desc)
 //!             .limits(25, 1000)
 //!             .fetch(odata_query, |m| UserDto {
@@ -109,10 +109,10 @@
 //! - Supports indexed columns via field mappings for optimal query performance
 
 use crate::odata::{FieldMap, LimitCfg, paginate_with_odata};
-use crate::secure::{ScopableEntity, SecureConn};
+use crate::secure::{DBRunner, ScopableEntity, SecureConn};
 use modkit_odata::{Error as ODataError, ODataQuery, Page, SortDir};
 use modkit_security::AccessScope;
-use sea_orm::{ColumnTrait, ConnectionTrait, EntityTrait};
+use sea_orm::{ColumnTrait, EntityTrait};
 
 /// Minimal fluent builder for Secure + `OData` pagination.
 ///
@@ -124,12 +124,12 @@ use sea_orm::{ColumnTrait, ConnectionTrait, EntityTrait};
 /// # Type Parameters
 ///
 /// - `E`: The `SeaORM` entity type (must implement `ScopableEntity`)
-/// - `C`: The database connection type (any `ConnectionTrait`)
+/// - `C`: The secure database capability (e.g. `&SecureConn` or `&SecureTx`)
 ///
 /// # Usage
 ///
 /// ```ignore
-/// OPager::<UserEntity, _>::new(db, ctx, db.conn(), &FMAP)
+/// OPager::<UserEntity, _>::new(db, ctx, db, &FMAP)
 ///   .tiebreaker("id", SortDir::Desc)  // optional, defaults to ("id", Desc)
 ///   .limits(25, 1000)                  // optional, defaults to (25, 1000)
 ///   .fetch(&query, |m| dto_from(m))
@@ -145,7 +145,7 @@ pub struct OPager<'a, E, C>
 where
     E: EntityTrait,
     E::Column: ColumnTrait + Copy,
-    C: ConnectionTrait + Send + Sync,
+    C: DBRunner,
 {
     db: &'a SecureConn,
     scope: &'a AccessScope,
@@ -159,7 +159,7 @@ impl<'a, E, C> OPager<'a, E, C>
 where
     E: EntityTrait,
     E::Column: ColumnTrait + Copy,
-    C: ConnectionTrait + Send + Sync,
+    C: DBRunner,
 {
     /// Construct a new pager over a secured, scoped Select<E>.
     ///
@@ -176,7 +176,7 @@ where
     /// let pager = OPager::<UserEntity, _>::new(
     ///     db,
     ///     &SecurityCtx::for_tenant(tenant_id, user_id),
-    ///     db.conn(),
+    ///     db,
     ///     &USER_FIELD_MAP
     /// );
     /// ```
@@ -286,7 +286,7 @@ where
         F: Fn(E::Model) -> D + Copy,
     {
         // Apply security scope first - this enforces tenant isolation
-        let select = self.db.find::<E>(self.scope).into_inner();
+        let select = self.db.find::<E>(self.scope).inner;
 
         // Now apply OData filters, cursor, order, and limits
         paginate_with_odata::<E, D, _, _>(

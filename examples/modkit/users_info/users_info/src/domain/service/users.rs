@@ -8,7 +8,7 @@ use crate::domain::events::UserDomainEvent;
 use crate::domain::ports::{AuditPort, EventPublisher};
 use crate::domain::repos::{AddressesRepository, CitiesRepository, UsersRepository};
 use crate::domain::service::{AddressesService, CitiesService, ServiceConfig};
-use modkit_db::secure::{SecureConn, Tx};
+use modkit_db::secure::{SecureConn, SecureTx};
 use modkit_odata::{ODataQuery, Page};
 use modkit_security::{PolicyEngineRef, SecurityContext};
 use tenant_resolver_sdk::TenantResolverGatewayClient;
@@ -62,10 +62,10 @@ impl<R: UsersRepository + 'static, CR: CitiesRepository, AR: AddressesRepository
     async fn tx<T, F>(&self, f: F) -> Result<T, DomainError>
     where
         T: Send + 'static,
-        F: for<'c> FnOnce(
-                &'c Tx,
+        F: for<'a> FnOnce(
+                &'a SecureTx<'a>,
             )
-                -> Pin<Box<dyn Future<Output = Result<T, DomainError>> + Send + 'c>>
+                -> Pin<Box<dyn Future<Output = Result<T, DomainError>> + Send + 'a>>
             + Send,
     {
         self.db
@@ -105,7 +105,7 @@ impl<R: UsersRepository + 'static, CR: CitiesRepository, AR: AddressesRepository
             .prepare()
             .await?;
 
-        let found = self.repo.get(self.db.conn(), &scope, id).await?;
+        let found = self.repo.get(&self.db, &scope, id).await?;
 
         let user = found.ok_or_else(|| DomainError::user_not_found(id))?;
 
@@ -129,7 +129,7 @@ impl<R: UsersRepository + 'static, CR: CitiesRepository, AR: AddressesRepository
             .prepare()
             .await?;
 
-        let page = self.repo.list_page(self.db.conn(), &scope, query).await?;
+        let page = self.repo.list_page(&self.db, &scope, query).await?;
 
         tracing::debug!("Successfully listed {} users in page", page.items.len());
         Ok(page)
@@ -286,7 +286,7 @@ impl<R: UsersRepository + 'static, CR: CitiesRepository, AR: AddressesRepository
             .prepare()
             .await?;
 
-        let deleted = self.repo.delete(self.db.conn(), &scope, id).await?;
+        let deleted = self.repo.delete(&self.db, &scope, id).await?;
 
         if !deleted {
             return Err(DomainError::user_not_found(id));

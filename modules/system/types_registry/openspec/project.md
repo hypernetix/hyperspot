@@ -11,7 +11,7 @@ This module is part of **HyperSpot** — a modular, high-performance AI services
 - **Language**: Rust (see [`@/guidelines/DNA/languages/RUST.md`](../../../../guidelines/DNA/languages/RUST.md))
 - **Framework**: ModKit (see [`@/docs/modkit_unified_system/README.md`](../../../../docs/modkit_unified_system/README.md))
 - **HTTP**: Axum with `tower-http` middleware
-- **Database**: SeaORM / SQLx with secure ORM layer (see [`@/docs/SECURE-ORM.md`](../../../../docs/SECURE-ORM.md))
+- **Database**: SeaORM / SQLx with secure ORM layer (see [`@/docs/modkit_unified_system/06_secure_orm_db_access.md`](../../../../docs/modkit_unified_system/06_secure_orm_db_access.md))
 - **Observability**: `tracing` + OpenTelemetry (see [`@/docs/TRACING_SETUP.md`](../../../../docs/TRACING_SETUP.md))
 - **OpenAPI**: `utoipa` for automatic documentation generation
 - **IDs**: UUIDv7 for all identifiers
@@ -90,7 +90,7 @@ Follow security guidelines: [`@/guidelines/SECURITY.md`](../../../guidelines/SEC
 
 ### Database Access
 
-Follow secure ORM patterns: [`@/docs/SECURE-ORM.md`](../../../../docs/SECURE-ORM.md)
+Follow secure ORM patterns: [`@/docs/modkit_unified_system/06_secure_orm_db_access.md`](../../../../docs/modkit_unified_system/06_secure_orm_db_access.md)
 
 - **Typestate enforcement**: Unscoped queries cannot execute
 - **Deny-by-default**: Empty scopes return `WHERE 1=0`
@@ -127,7 +127,7 @@ Follow tracing setup: [`@/docs/TRACING_SETUP.md`](../../../../docs/TRACING_SETUP
 |----------|---------|
 | [`@/docs/ARCHITECTURE_MANIFEST.md`](../../../../docs/ARCHITECTURE_MANIFEST.md) | System architecture and design principles |
 | [`@/docs/modkit_unified_system/README.md`](../../../../docs/modkit_unified_system/README.md) | ModKit framework guide |
-| [`@/docs/SECURE-ORM.md`](../../../../docs/SECURE-ORM.md) | Secure database access patterns |
+| [`@/docs/modkit_unified_system/06_secure_orm_db_access.md`](../../../../docs/modkit_unified_system/06_secure_orm_db_access.md) | Secure database access patterns |
 | [`@/docs/TRACING_SETUP.md`](../../../../docs/TRACING_SETUP.md) | Observability configuration |
 | [`@/guidelines/NEW_MODULE.md`](../../../../guidelines/NEW_MODULE.md) | Step-by-step module creation |
 | [`@/guidelines/SECURITY.md`](../../../../guidelines/SECURITY.md) | Security best practices |

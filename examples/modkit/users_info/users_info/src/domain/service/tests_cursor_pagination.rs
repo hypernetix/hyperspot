@@ -7,11 +7,7 @@ use uuid::Uuid;
 use crate::domain::service::ServiceConfig;
 use crate::test_support::{build_services, ctx_allow_tenants, ctx_deny_all, inmem_db, seed_user};
 
-async fn seed_users_sequential(
-    db: &sea_orm::DatabaseConnection,
-    count: usize,
-    tenant_id: Uuid,
-) -> Vec<Uuid> {
+async fn seed_users_sequential(db: &SecureConn, count: usize, tenant_id: Uuid) -> Vec<Uuid> {
     let mut ids = Vec::with_capacity(count);
     for i in 0..count {
         let id = Uuid::new_v4();
@@ -37,7 +33,7 @@ async fn forward_pagination_over_multiple_pages() {
     let tenant_id = Uuid::new_v4();
     let seeded = seed_users_sequential(&db, 25, tenant_id).await;
 
-    let services = build_services(SecureConn::new(db), ServiceConfig::default());
+    let services = build_services(db.clone(), ServiceConfig::default());
     let ctx = ctx_allow_tenants(&[tenant_id]);
 
     let mut query = ODataQuery::default().with_limit(10);
@@ -68,7 +64,7 @@ async fn deny_all_returns_empty_page() {
     let tenant_id = Uuid::new_v4();
     seed_user(&db, Uuid::new_v4(), tenant_id, "u@example.com", "U").await;
 
-    let services = build_services(SecureConn::new(db), ServiceConfig::default());
+    let services = build_services(db.clone(), ServiceConfig::default());
     let ctx = ctx_deny_all();
 
     let page = services

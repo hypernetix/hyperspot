@@ -5,6 +5,7 @@ use std::sync::Arc;
 
 use modkit::config::ConfigProvider;
 use modkit::{ClientHub, DatabaseCapability, Module, ModuleCtx};
+use modkit_db::migration_runner::run_migrations_for_module;
 use modkit_db::{ConnectOpts, DbHandle};
 use modkit_security::SecurityContext;
 use serde_json::json;
@@ -96,9 +97,15 @@ impl ConfigProvider for MockConfigProvider {
 #[tokio::test]
 async fn users_info_registers_sdk_client_and_handles_basic_crud() {
     // Arrange: build a real DbHandle for sqlite in-memory, run module migrations, then init module.
-    let db = DbHandle::connect("sqlite::memory:", ConnectOpts::default())
-        .await
-        .expect("db connect");
+    let db = DbHandle::connect(
+        "sqlite::memory:",
+        ConnectOpts {
+            max_conns: Some(1),
+            ..Default::default()
+        },
+    )
+    .await
+    .expect("db connect");
     let db = Arc::new(db);
 
     let hub = Arc::new(ClientHub::new());
@@ -116,7 +123,9 @@ async fn users_info_registers_sdk_client_and_handles_basic_crud() {
     );
 
     let module = UsersInfo::default();
-    module.migrate(db.as_ref()).await.expect("migrate");
+    run_migrations_for_module(db.as_ref(), "users_info", module.migrations())
+        .await
+        .expect("migrate");
     module.init(&ctx).await.expect("init");
 
     // Act: resolve SDK client from hub and do basic CRUD.

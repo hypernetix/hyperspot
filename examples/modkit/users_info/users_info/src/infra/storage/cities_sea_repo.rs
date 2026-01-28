@@ -7,13 +7,14 @@ use crate::infra::storage::entity::city::{
     ActiveModel as CityAM, Column as CityColumn, Entity as CityEntity,
 };
 use crate::infra::storage::odata_mapper::CityODataMapper;
-use modkit_db::DbConnTrait;
 use modkit_db::odata::{LimitCfg, paginate_odata};
-use modkit_db::secure::{SecureDeleteExt, SecureEntityExt};
+use modkit_db::secure::{
+    DBRunner, SecureDeleteExt, SecureEntityExt, secure_insert, secure_update_with_scope,
+};
 use modkit_odata::{ODataQuery, Page, SortDir};
 use modkit_security::AccessScope;
 use sea_orm::sea_query::Expr;
-use sea_orm::{ActiveModelTrait, EntityTrait, QueryFilter, Set};
+use sea_orm::{EntityTrait, QueryFilter, Set};
 use user_info_sdk::City;
 use user_info_sdk::odata::CityFilterField;
 use uuid::Uuid;
@@ -33,7 +34,7 @@ impl OrmCitiesRepository {
 
 #[async_trait]
 impl CitiesRepository for OrmCitiesRepository {
-    async fn get<C: DbConnTrait + Send + Sync>(
+    async fn get<C: DBRunner>(
         &self,
         conn: &C,
         scope: &AccessScope,
@@ -49,13 +50,13 @@ impl CitiesRepository for OrmCitiesRepository {
         Ok(found.map(Into::into))
     }
 
-    async fn list_page<C: DbConnTrait + Send + Sync>(
+    async fn list_page<C: DBRunner>(
         &self,
         conn: &C,
         scope: &AccessScope,
         query: &ODataQuery,
     ) -> Result<Page<City>, DomainError> {
-        let base_query = CityEntity::find().secure().scope_with(scope).into_inner();
+        let base_query = CityEntity::find().secure().scope_with(scope);
 
         let page = paginate_odata::<CityFilterField, CityODataMapper, _, _, _, _>(
             base_query,
@@ -71,19 +72,12 @@ impl CitiesRepository for OrmCitiesRepository {
         Ok(page)
     }
 
-    async fn create<C: DbConnTrait + Send + Sync>(
+    async fn create<C: DBRunner>(
         &self,
         conn: &C,
         scope: &AccessScope,
         city: City,
     ) -> Result<City, DomainError> {
-        if !scope.has_tenants() {
-            return Err(DomainError::validation(
-                "scope",
-                "Security scope must contain tenant for insert operation",
-            ));
-        }
-
         let m = CityAM {
             id: Set(city.id),
             tenant_id: Set(city.tenant_id),
@@ -93,11 +87,13 @@ impl CitiesRepository for OrmCitiesRepository {
             updated_at: Set(city.updated_at),
         };
 
-        let _ = m.insert(conn).await.map_err(db_err)?;
+        let _ = secure_insert::<CityEntity>(m, scope, conn)
+            .await
+            .map_err(db_err)?;
         Ok(city)
     }
 
-    async fn update<C: DbConnTrait + Send + Sync>(
+    async fn update<C: DBRunner>(
         &self,
         conn: &C,
         scope: &AccessScope,
@@ -125,11 +121,13 @@ impl CitiesRepository for OrmCitiesRepository {
             updated_at: Set(city.updated_at),
         };
 
-        let _ = m.update(conn).await.map_err(db_err)?;
+        let _ = secure_update_with_scope::<CityEntity>(m, scope, city.id, conn)
+            .await
+            .map_err(db_err)?;
         Ok(city)
     }
 
-    async fn delete<C: DbConnTrait + Send + Sync>(
+    async fn delete<C: DBRunner>(
         &self,
         conn: &C,
         scope: &AccessScope,

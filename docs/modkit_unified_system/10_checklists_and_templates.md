@@ -69,8 +69,8 @@ pub struct MyModule {
 - [ ] Derive `Scopable` on SeaORM entities with `tenant_col` (required)
 - [ ] Use `db.sea_secure()` for all DB access in handlers/services
 - [ ] Pass `SecurityContext` to repository methods
-- [ ] Use `secure_conn.find::<Entity>(&ctx)?` for auto-scoped queries
-- [ ] Use raw SQL only for exceptional cases (migrations, admin tools)
+- [ ] Use `secure_conn.find::<Entity>(&scope).all(&secure_conn)` for auto-scoped queries
+- [ ] Use raw SQL only in `migrations/*.rs` (enforced later via dylint)
 - [ ] Add indexes on security columns (tenant_id, resource_id)
 - [ ] Test with `SecurityContext::test_tenant()` for unit tests
 
@@ -105,9 +105,10 @@ pub async fn find_by_id(
     id: Uuid,
 ) -> Result<Option<user::Model>, DomainError> {
     let secure_conn = self.db.sea_secure();
+    let scope = modkit_db::secure::AccessScope::tenant(ctx.tenant_id());
     let user = secure_conn
-        .find_by_id::<user::Entity>(ctx, id)?
-        .one(secure_conn.conn())
+        .find_by_id::<user::Entity>(&scope, id)?
+        .one(&secure_conn)
         .await?;
     Ok(user)
 }

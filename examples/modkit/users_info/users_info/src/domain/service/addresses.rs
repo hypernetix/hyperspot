@@ -55,7 +55,7 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
             .prepare()
             .await?;
 
-        let found = self.repo.get(self.db.conn(), &scope, id).await?;
+        let found = self.repo.get(&self.db, &scope, id).await?;
 
         found.ok_or_else(|| DomainError::not_found("Address", id))
     }
@@ -76,7 +76,7 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
             .prepare()
             .await?;
 
-        let page = self.repo.list_page(self.db.conn(), &scope, query).await?;
+        let page = self.repo.list_page(&self.db, &scope, query).await?;
 
         debug!("Successfully listed {} addresses in page", page.items.len());
         Ok(page)
@@ -97,10 +97,7 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
             .prepare()
             .await?;
 
-        let found = self
-            .repo
-            .get_by_user_id(self.db.conn(), &scope, user_id)
-            .await?;
+        let found = self.repo.get_by_user_id(&self.db, &scope, user_id).await?;
 
         Ok(found)
     }
@@ -133,14 +130,11 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
 
         let user = self
             .users_repo
-            .get(self.db.conn(), &scope, user_id)
+            .get(&self.db, &scope, user_id)
             .await?
             .ok_or_else(|| DomainError::user_not_found(user_id))?;
 
-        let existing = self
-            .repo
-            .get_by_user_id(self.db.conn(), &scope, user_id)
-            .await?;
+        let existing = self.repo.get_by_user_id(&self.db, &scope, user_id).await?;
 
         let now = OffsetDateTime::now_utc();
 
@@ -151,10 +145,7 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
             updated.postal_code = address.postal_code;
             updated.updated_at = now;
 
-            let _ = self
-                .repo
-                .update(self.db.conn(), &scope, updated.clone())
-                .await?;
+            let _ = self.repo.update(&self.db, &scope, updated.clone()).await?;
 
             info!("Successfully updated address for user");
             Ok(updated)
@@ -174,7 +165,7 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
 
             let _ = self
                 .repo
-                .create(self.db.conn(), &scope, new_address.clone())
+                .create(&self.db, &scope, new_address.clone())
                 .await?;
 
             info!("Successfully created address for user");
@@ -199,7 +190,7 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
 
         let rows_affected = self
             .repo
-            .delete_by_user_id(self.db.conn(), &scope, user_id)
+            .delete_by_user_id(&self.db, &scope, user_id)
             .await?;
 
         if rows_affected == 0 {
@@ -239,10 +230,7 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
             updated_at: now,
         };
 
-        let _ = self
-            .repo
-            .create(self.db.conn(), &scope, address.clone())
-            .await?;
+        let _ = self.repo.create(&self.db, &scope, address.clone()).await?;
 
         info!("Successfully created address with id={}", address.id);
         Ok(address)
@@ -264,7 +252,7 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
             .prepare()
             .await?;
 
-        let found = self.repo.get(self.db.conn(), &scope, id).await?;
+        let found = self.repo.get(&self.db, &scope, id).await?;
 
         let mut current: Address = found.ok_or_else(|| DomainError::not_found("Address", id))?;
 
@@ -279,10 +267,7 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
         }
         current.updated_at = OffsetDateTime::now_utc();
 
-        let _ = self
-            .repo
-            .update(self.db.conn(), &scope, current.clone())
-            .await?;
+        let _ = self.repo.update(&self.db, &scope, current.clone()).await?;
 
         info!("Successfully updated address");
         Ok(current)
@@ -299,7 +284,7 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
             .prepare()
             .await?;
 
-        let deleted = self.repo.delete(self.db.conn(), &scope, id).await?;
+        let deleted = self.repo.delete(&self.db, &scope, id).await?;
 
         if !deleted {
             return Err(DomainError::not_found("Address", id));

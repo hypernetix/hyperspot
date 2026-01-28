@@ -1,6 +1,117 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
+//! Transaction tests for the **secure** transaction API.
+//!
+//! Security contract:
+//! - Tests must not use raw SQL execution from test code.
+//! - All DB access happens via `SecureConn` / `SecureTx` + secure wrappers.
+
+use modkit_db::migration_runner::run_migrations_for_testing;
+use modkit_db::secure::{ScopableEntity, SecureConn, SecureEntityExt, secure_insert};
 use modkit_db::{ConnectOpts, DbHandle};
+use modkit_security::AccessScope;
+use sea_orm::Set;
+use sea_orm::entity::prelude::*;
+use sea_orm_migration::prelude as mig;
+use uuid::Uuid;
+
+mod ent {
+    use super::*;
+
+    #[derive(Debug, Clone, PartialEq, Eq, DeriveEntityModel)]
+    #[sea_orm(table_name = "tx_test")]
+    pub struct Model {
+        #[sea_orm(primary_key)]
+        pub id: i64,
+        pub tenant_id: Uuid,
+        pub resource_id: Uuid,
+        pub val: String,
+    }
+
+    #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+    pub enum Relation {}
+
+    impl ActiveModelBehavior for ActiveModel {}
+}
+
+impl ScopableEntity for ent::Entity {
+    fn tenant_col() -> Option<<Self as EntityTrait>::Column> {
+        Some(ent::Column::TenantId)
+    }
+
+    fn resource_col() -> Option<<Self as EntityTrait>::Column> {
+        Some(ent::Column::ResourceId)
+    }
+
+    fn owner_col() -> Option<<Self as EntityTrait>::Column> {
+        None
+    }
+
+    fn type_col() -> Option<<Self as EntityTrait>::Column> {
+        None
+    }
+}
+
+struct CreateTxTest;
+
+impl mig::MigrationName for CreateTxTest {
+    fn name(&self) -> &'static str {
+        "m001_create_tx_test"
+    }
+}
+
+#[async_trait::async_trait]
+impl mig::MigrationTrait for CreateTxTest {
+    async fn up(&self, manager: &mig::SchemaManager) -> Result<(), mig::DbErr> {
+        manager
+            .create_table(
+                mig::Table::create()
+                    .table(mig::Alias::new("tx_test"))
+                    .if_not_exists()
+                    .col(
+                        mig::ColumnDef::new(mig::Alias::new("id"))
+                            .big_integer()
+                            .not_null()
+                            .auto_increment()
+                            .primary_key(),
+                    )
+                    .col(
+                        mig::ColumnDef::new(mig::Alias::new("tenant_id"))
+                            .uuid()
+                            .not_null(),
+                    )
+                    .col(
+                        mig::ColumnDef::new(mig::Alias::new("resource_id"))
+                            .uuid()
+                            .not_null(),
+                    )
+                    .col(
+                        mig::ColumnDef::new(mig::Alias::new("val"))
+                            .string()
+                            .not_null(),
+                    )
+                    .to_owned(),
+            )
+            .await
+    }
+
+    async fn down(&self, manager: &mig::SchemaManager) -> Result<(), mig::DbErr> {
+        manager
+            .drop_table(
+                mig::Table::drop()
+                    .table(mig::Alias::new("tx_test"))
+                    .to_owned(),
+            )
+            .await
+    }
+}
+
+async fn setup(db: &DbHandle) -> SecureConn {
+    run_migrations_for_testing(db, vec![Box::new(CreateTxTest)])
+        .await
+        .expect("migrate");
+    db.sea_secure()
+}
 
 #[tokio::test]
 async fn sqlite_with_tx_commit_persists_changes() {
@@ -8,33 +119,38 @@ async fn sqlite_with_tx_commit_persists_changes() {
         max_conns: Some(1),
         ..Default::default()
     };
-    let db = DbHandle::connect("sqlite::memory:", opts)
+    let db = DbHandle::connect("sqlite:file:memdb_commit?mode=memory&cache=shared", opts)
         .await
         .expect("Failed to connect to database");
-    let pool = db.sqlx_sqlite().unwrap();
+    let conn = setup(&db).await;
 
-    sea_orm::sqlx::query("CREATE TABLE tx_test (id INTEGER PRIMARY KEY, val TEXT NOT NULL)")
-        .execute(pool)
-        .await
-        .expect("Failed to create table");
+    let tenant_id = Uuid::new_v4();
+    let scope = AccessScope::tenants_only(vec![tenant_id]);
+    let scope_for_tx = scope.clone();
+    let resource_id = Uuid::new_v4();
 
-    db.with_sqlite_tx(|tx| {
+    conn.transaction(move |tx| {
+        let scope = scope_for_tx.clone();
         Box::pin(async move {
-            sea_orm::sqlx::query("INSERT INTO tx_test (id, val) VALUES (?, ?)")
-                .bind(1_i64)
-                .bind("committed")
-                .execute(&mut **tx)
-                .await?;
-            Ok(())
+            let am = ent::ActiveModel {
+                tenant_id: Set(tenant_id),
+                resource_id: Set(resource_id),
+                val: Set("committed".to_owned()),
+                ..Default::default()
+            };
+            let _ = secure_insert::<ent::Entity>(am, &scope, tx).await?;
+            Ok::<(), anyhow::Error>(())
         })
     })
     .await
     .expect("Transaction failed");
 
-    let count: i64 = sea_orm::sqlx::query_scalar("SELECT COUNT(*) FROM tx_test")
-        .fetch_one(pool)
+    let count = ent::Entity::find()
+        .secure()
+        .scope_with(&scope)
+        .count(&conn)
         .await
-        .expect("Failed to query count");
+        .expect("count");
     assert_eq!(count, 1);
 }
 
@@ -44,37 +160,40 @@ async fn sqlite_with_tx_error_rolls_back() {
         max_conns: Some(1),
         ..Default::default()
     };
-    let db = DbHandle::connect("sqlite::memory:", opts)
+    let db = DbHandle::connect("sqlite:file:memdb_rollback?mode=memory&cache=shared", opts)
         .await
         .expect("Failed to connect to database");
-    let pool = db.sqlx_sqlite().unwrap();
+    let conn = setup(&db).await;
 
-    sea_orm::sqlx::query("CREATE TABLE tx_test (id INTEGER PRIMARY KEY, val TEXT NOT NULL)")
-        .execute(pool)
-        .await
-        .expect("Failed to create table");
+    let tenant_id = Uuid::new_v4();
+    let scope = AccessScope::tenants_only(vec![tenant_id]);
+    let scope_for_tx = scope.clone();
+    let resource_id = Uuid::new_v4();
 
-    let result: Result<(), _> = db
-        .with_sqlite_tx(|tx| {
+    let res: anyhow::Result<()> = conn
+        .transaction(move |tx| {
+            let scope = scope_for_tx.clone();
             Box::pin(async move {
-                sea_orm::sqlx::query("INSERT INTO tx_test (id, val) VALUES (?, ?)")
-                    .bind(1_i64)
-                    .bind("should_rollback")
-                    .execute(&mut **tx)
-                    .await?;
-                Err(modkit_db::DbError::Other(anyhow::anyhow!(
-                    "Simulated error"
-                )))
+                let am = ent::ActiveModel {
+                    tenant_id: Set(tenant_id),
+                    resource_id: Set(resource_id),
+                    val: Set("should_rollback".to_owned()),
+                    ..Default::default()
+                };
+                let _ = secure_insert::<ent::Entity>(am, &scope, tx).await?;
+                anyhow::bail!("Simulated error");
             })
         })
         .await;
 
-    assert!(result.is_err());
+    assert!(res.is_err());
 
-    let count: i64 = sea_orm::sqlx::query_scalar("SELECT COUNT(*) FROM tx_test")
-        .fetch_one(pool)
+    let count = ent::Entity::find()
+        .secure()
+        .scope_with(&scope)
+        .count(&conn)
         .await
-        .expect("Failed to query count");
+        .expect("count");
     assert_eq!(count, 0);
 }
 
@@ -84,36 +203,40 @@ async fn sqlite_with_tx_returns_value() {
         max_conns: Some(1),
         ..Default::default()
     };
-    let db = DbHandle::connect("sqlite::memory:", opts)
+    let db = DbHandle::connect("sqlite:file:memdb_returns?mode=memory&cache=shared", opts)
         .await
         .expect("Failed to connect to database");
-    let pool = db.sqlx_sqlite().unwrap();
+    let conn = setup(&db).await;
 
-    sea_orm::sqlx::query("CREATE TABLE tx_test (id INTEGER PRIMARY KEY, val TEXT NOT NULL)")
-        .execute(pool)
-        .await
-        .expect("Failed to create table");
+    let tenant_id = Uuid::new_v4();
+    let scope = AccessScope::tenants_only(vec![tenant_id]);
+    let resource_id = Uuid::new_v4();
 
-    let inserted_id = db
-        .with_sqlite_tx(|tx| {
+    let inserted_id: Uuid = conn
+        .transaction(move |tx| {
+            let scope = scope.clone();
             Box::pin(async move {
-                sea_orm::sqlx::query("INSERT INTO tx_test (id, val) VALUES (?, ?)")
-                    .bind(42_i64)
-                    .bind("test_value")
-                    .execute(&mut **tx)
-                    .await?;
-                Ok(42_i64)
+                let am = ent::ActiveModel {
+                    tenant_id: Set(tenant_id),
+                    resource_id: Set(resource_id),
+                    val: Set("test_value".to_owned()),
+                    ..Default::default()
+                };
+                let _ = secure_insert::<ent::Entity>(am, &scope, tx).await?;
+                Ok::<Uuid, anyhow::Error>(resource_id)
             })
         })
         .await
         .expect("Transaction failed");
 
-    assert_eq!(inserted_id, 42);
+    assert_eq!(inserted_id, resource_id);
 
-    let val: String = sea_orm::sqlx::query_scalar("SELECT val FROM tx_test WHERE id = ?")
-        .bind(42_i64)
-        .fetch_one(pool)
+    let found = ent::Entity::find()
+        .secure()
+        .scope_with(&AccessScope::both(vec![tenant_id], vec![resource_id]))
+        .one(&conn)
         .await
-        .expect("Failed to query value");
-    assert_eq!(val, "test_value");
+        .expect("select")
+        .expect("row must exist");
+    assert_eq!(found.val, "test_value");
 }

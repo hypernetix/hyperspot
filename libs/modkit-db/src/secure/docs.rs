@@ -110,7 +110,7 @@
 //! use modkit_db::secure::{AccessScope, SecureEntityExt};
 //!
 //! pub async fn list_tenant_users(
-//!     conn: &DatabaseConnection,
+//!     db: &modkit_db::secure::SecureConn,
 //!     tenant_id: Uuid,
 //! ) -> Result<Vec<user::Model>, anyhow::Error> {
 //!     let scope = AccessScope::tenants_only(vec![tenant_id]);
@@ -118,7 +118,7 @@
 //!     let users = user::Entity::find()
 //!         .secure()
 //!         .scope_with(&scope)?
-//!         .all(conn)
+//!         .all(db)
 //!         .await?;
 //!     
 //!     Ok(users)
@@ -131,7 +131,7 @@
 //! use modkit_db::secure::{AccessScope, SecureEntityExt};
 //!
 //! pub async fn get_user(
-//!     conn: &DatabaseConnection,
+//!     db: &modkit_db::secure::SecureConn,
 //!     tenant_id: Uuid,
 //!     user_id: Uuid,
 //! ) -> Result<Option<user::Model>, anyhow::Error> {
@@ -141,7 +141,7 @@
 //!     let user = user::Entity::find()
 //!         .secure()
 //!         .scope_with(&scope)?
-//!         .one(conn)
+//!         .one(db)
 //!         .await?;
 //!     
 //!     Ok(user)
@@ -153,7 +153,7 @@
 //! ```rust,ignore
 //! // Useful for admin operations or cross-tenant reports
 //! pub async fn get_users_by_ids(
-//!     conn: &DatabaseConnection,
+//!     db: &modkit_db::secure::SecureConn,
 //!     user_ids: Vec<Uuid>,
 //! ) -> Result<Vec<user::Model>, anyhow::Error> {
 //!     let scope = AccessScope::resources_only(user_ids);
@@ -161,7 +161,7 @@
 //!     let users = user::Entity::find()
 //!         .secure()
 //!         .scope_with(&scope)?
-//!         .all(conn)
+//!         .all(db)
 //!         .await?;
 //!     
 //!     Ok(users)
@@ -174,7 +174,7 @@
 //! use sea_orm::{ColumnTrait, QueryFilter};
 //!
 //! pub async fn list_active_users(
-//!     conn: &DatabaseConnection,
+//!     db: &modkit_db::secure::SecureConn,
 //!     tenant_id: Uuid,
 //! ) -> Result<Vec<user::Model>, anyhow::Error> {
 //!     let scope = AccessScope::tenants_only(vec![tenant_id]);
@@ -185,7 +185,7 @@
 //!         .filter(user::Column::IsActive.eq(true))  // Additional filter
 //!         .order_by(user::Column::Email, Order::Asc)
 //!         .limit(100)
-//!         .all(conn)
+//!         .all(db)
 //!         .await?;
 //!     
 //!     Ok(users)
@@ -197,7 +197,7 @@
 //! ```rust,ignore
 //! // Global entities (no tenant column) work with resource IDs only
 //! pub async fn get_system_config(
-//!     conn: &DatabaseConnection,
+//!     db: &modkit_db::secure::SecureConn,
 //!     config_id: Uuid,
 //! ) -> Result<Option<system_config::Model>, anyhow::Error> {
 //!     let scope = AccessScope::resources_only(vec![config_id]);
@@ -205,49 +205,29 @@
 //!     let config = system_config::Entity::find()
 //!         .secure()
 //!         .scope_with(&scope)?
-//!         .one(conn)
+//!         .one(db)
 //!         .await?;
 //!     
 //!     Ok(config)
 //! }
 //! ```
 //!
-//! ### Example 6: Escape hatch for advanced queries
+//! ### Example 6: Advanced composition (no raw escape hatch)
 //!
-//! ```rust,ignore
-//! use sea_orm::JoinType;
-//!
-//! pub async fn complex_query(
-//!     conn: &DatabaseConnection,
-//!     tenant_id: Uuid,
-//! ) -> Result<Vec<user::Model>, anyhow::Error> {
-//!     let scope = AccessScope::tenants_only(vec![tenant_id]);
-//!     
-//!     let scoped = user::Entity::find()
-//!         .secure()
-//!         .scope_with(&scope)?;
-//!     
-//!     // Use into_inner() to access full SeaORM API
-//!     let users = scoped.into_inner()
-//!         .join(JoinType::InnerJoin, user::Relation::Profile.def())
-//!         .all(conn)
-//!         .await?;
-//!     
-//!     Ok(users)
-//! }
-//! ```
+//! If you need more advanced query composition, prefer extending the secure wrappers in `modkit-db`
+//! (or using higher-level helpers like `OData` pagination). Module code should not unwrap raw `SeaORM`
+//! builders.
 //!
 //! ## Integration with Repository Pattern
 //!
 //! A typical repository would look like:
 //!
 //! ```rust,ignore
-//! use modkit_db::secure::{AccessScope, SecureEntityExt, ScopeError};
-//! use sea_orm::DatabaseConnection;
+//! use modkit_db::secure::{AccessScope, SecureConn, SecureEntityExt, ScopeError};
 //! use uuid::Uuid;
 //!
 //! pub struct UserRepository {
-//!     conn: DatabaseConnection,
+//!     conn: SecureConn,
 //! }
 //!
 //! impl UserRepository {

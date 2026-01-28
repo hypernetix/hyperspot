@@ -16,7 +16,7 @@
 ## Core invariants (apply everywhere)
 
 - **SDK pattern is the public API**: Use `<module>-sdk` crate for traits, models, errors. Do not expose internals.
-- **Secure-by-default DB access**: Use `SecureConn` + `SecurityContext`. Raw access only for migrations/admin tools and requires `insecure-escape`.
+- **Secure-by-default DB access**: Use `SecureConn` + `AccessScope`. Modules cannot access raw database connections.
 - **RFC-9457 errors everywhere**: Use `Problem` (implements `IntoResponse`). Do not use `ProblemResponse`.
 - **Type-safe REST**: Use `OperationBuilder` with `.require_auth()` and `.standard_errors()`.
 - **OData macros are in `modkit-odata-macros`**: Use `modkit_odata_macros::ODataFilterable`.
@@ -38,7 +38,11 @@ pub struct MyModule { /* ... */ }
 
 // Secure DB access
 let secure_conn = db.sea_secure();
-let users = secure_conn.find::<user::Entity>(&ctx)?.all(secure_conn.conn()).await?;
+let scope = modkit_db::secure::AccessScope::tenant(ctx.tenant_id());
+let users = secure_conn
+    .find::<user::Entity>(&scope)
+    .all(&secure_conn)
+    .await?;
 
 // ClientHub
 ctx.client_hub().register::<dyn my_module_sdk::MyModuleApi>(api);
