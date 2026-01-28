@@ -227,7 +227,12 @@ jobs:
               const requestedReviewers =
                 (prData.requested_reviewers || [])
                   .map(u => u?.login)
-                  .filter(Boolean);
+                  .filter(login => {
+                    if (!login) return false;
+                    if (login.endsWith("[bot]")) return false;
+                    if (ignoredBots.has(login)) return false;
+                    return true;
+                  });
 
               let unfinishedReviews = requestedReviewers.length;
               let unfinishedReviewers = [...requestedReviewers];
@@ -262,6 +267,11 @@ jobs:
                   }
                 }
 
+                const allReviewers = new Set([
+                  ...requestedReviewers,
+                  ...latestByUser.keys()
+                ]);
+
                 const approvedBy = new Set(
                   [...latestByUser.entries()]
                     .filter(([, v]) => v.state === "APPROVED")
@@ -269,7 +279,9 @@ jobs:
                 );
 
                 unfinishedReviewers =
-                  requestedReviewers.filter(u => !approvedBy.has(u));
+                  [...allReviewers]
+                    .filter(u => !approvedBy.has(u))
+                    .sort((a, b) => a.localeCompare(b));
                 unfinishedReviews = unfinishedReviewers.length;
               } catch (e) {
                 console.log(
@@ -405,8 +417,7 @@ jobs:
                 `Draft: ${prData.draft ? "yes" : "no"}\n\n` +
                 `Review threads: ${openReviewThreads} open / ${resolvedReviewThreads} resolved\n` +
                 `Review comments: ${openReviewComments} open / ${resolvedReviewComments} resolved\n` +
-                `Unfinished reviews: ${unfinishedReviews}\n` +
-                `Unfinished reviewers: ${unfinishedReviewers.length ? unfinishedReviewers.map(u => "@" + u).join(", ") : "None"}\n` +
+                `Unfinished reviews: ${unfinishedReviews} (${unfinishedReviewers.length ? unfinishedReviewers.map(u => "@" + u).join(", ") : "None"})\n` +
                 `Unreplied review threads: ${unrepliedReviewThreads}\n` +
                 `Unreplied PR comments: ${unrepliedPrCommentsCount}\n\n` +
                 `Unreplied review threads:\n` +
