@@ -515,7 +515,8 @@ jobs:
                 });
               }
 
-              if (allowedUsers.size > 0 && !allowedUsers.has(author)) {
+              if (author.endsWith("[bot]") || ignoredBots.has(author)) {
+              } else if (allowedUsers.size > 0 && !allowedUsers.has(author)) {
                 console.log(
                   `Skipping assignee for issue #${issue.number} - @${author} is not a repo collaborator`
                 );
@@ -577,7 +578,6 @@ jobs:
                   $threads: Float!
                   $comments: Float!
                   $unfinished: Float!
-                  $mergeIssues: Float!
                 ) {
                   linkField: updateProjectV2ItemFieldValue(
                     input: {
@@ -622,17 +622,6 @@ jobs:
                   ) {
                     projectV2Item { id }
                   }
-
-                  mergeIssuesField: updateProjectV2ItemFieldValue(
-                    input: {
-                      projectId: $project
-                      itemId: $item
-                      fieldId: "${FIELD_MERGE_ISSUES}"
-                      value: { number: $mergeIssues }
-                    }
-                  ) {
-                    projectV2Item { id }
-                  }
                 }
               `, {
                 project: PROJECT_ID,
@@ -640,9 +629,54 @@ jobs:
                 link: pr.html_url,
                 threads: unrepliedReviewThreads,
                 comments: unrepliedPrCommentsCount,
-                unfinished: unfinishedReviews,
-                mergeIssues
+                unfinished: unfinishedReviews
               });
+
+              try {
+                await github.graphql(`
+                  mutation($project: ID!, $item: ID!, $mergeIssues: Float!) {
+                    mergeIssuesField: updateProjectV2ItemFieldValue(
+                      input: {
+                        projectId: $project
+                        itemId: $item
+                        fieldId: "${FIELD_MERGE_ISSUES}"
+                        value: { number: $mergeIssues }
+                      }
+                    ) {
+                      projectV2Item { id }
+                    }
+                  }
+                `, {
+                  project: PROJECT_ID,
+                  item: itemId,
+                  mergeIssues
+                });
+              } catch (e) {
+                try {
+                  await github.graphql(`
+                    mutation($project: ID!, $item: ID!, $mergeIssuesText: String!) {
+                      mergeIssuesField: updateProjectV2ItemFieldValue(
+                        input: {
+                          projectId: $project
+                          itemId: $item
+                          fieldId: "${FIELD_MERGE_ISSUES}"
+                          value: { text: $mergeIssuesText }
+                        }
+                      ) {
+                        projectV2Item { id }
+                      }
+                    }
+                  `, {
+                    project: PROJECT_ID,
+                    item: itemId,
+                    mergeIssuesText: String(mergeIssues)
+                  });
+                } catch (e2) {
+                  console.log(
+                    `Could not update merge issues field for PR #${pr.number}: ${e2.message}`
+                  );
+                }
+              }
             }
 
             /*
