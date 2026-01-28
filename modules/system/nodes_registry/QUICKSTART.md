@@ -2,7 +2,9 @@
 
 Provides hardware and system information for all running HyperSpot nodes.
 
-## Examples
+> **Full API Documentation:** <http://127.0.0.1:8087/docs> - Interactive docs with all endpoints, parameters, and "Try it out" buttons.
+
+## Quick Example
 
 ### List All Nodes
 
@@ -23,46 +25,6 @@ curl -s http://127.0.0.1:8087/nodes-registry/v1/nodes | python3 -m json.tool
 ]
 ```
 
-### Get Node by ID
+## More Examples
 
-```bash
-NODE_ID=$(curl -s http://127.0.0.1:8087/nodes-registry/v1/nodes | python3 -c "import sys,json; print(json.load(sys.stdin)[0]['id'])")
-curl -s "http://127.0.0.1:8087/nodes-registry/v1/nodes/$NODE_ID" | python3 -m json.tool
-```
-
-### Get System Info
-
-```bash
-curl -s "http://127.0.0.1:8087/nodes-registry/v1/nodes/$NODE_ID/sysinfo" | python3 -m json.tool
-```
-
-**Output:**
-```json
-{
-    "node_id": "35b975fc-3c13-c04e-d62a-43c7623895e5",
-    "os": {"name": "Ubuntu", "version": "24.04", "arch": "x86_64"},
-    "cpu": {"model": "Intel Core i7-1165G7", "num_cpus": 8, "cores": 4, "frequency_mhz": 2803.0},
-    "memory": {"total_bytes": 16624349184, "used_bytes": 9171423232, "used_percent": 55},
-    "host": {"hostname": "your-hostname", "uptime_seconds": 26268},
-    "gpus": [],
-    "collected_at": "2026-01-15T15:05:11.234Z"
-}
-```
-
-### Get System Capabilities
-
-```bash
-curl -s "http://127.0.0.1:8087/nodes-registry/v1/nodes/$NODE_ID/syscap" | python3 -m json.tool
-```
-
-**Output:**
-```json
-{
-    "node_id": "35b975fc-3c13-c04e-d62a-43c7623895e5",
-    "capabilities": [
-        {"key": "hardware:ram", "category": "hardware", "name": "ram", "present": true, "amount": 15.48, "amount_dimension": "GB"},
-        {"key": "hardware:cpu", "category": "hardware", "name": "cpu", "present": true, "amount": 4.0, "amount_dimension": "cores"},
-        {"key": "os:linux", "category": "os", "name": "linux", "present": true, "version": "24.04"}
-    ]
-}
-```
+For additional endpoints (`/nodes/{id}`, `/nodes/{id}/sysinfo`, `/nodes/{id}/syscap`, etc.), see the interactive documentation at <http://127.0.0.1:8087/docs>.

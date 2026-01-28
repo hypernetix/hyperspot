@@ -1,6 +1,6 @@
 # HyperSpot Server - Quickstart Guide
 
-Copy-paste commands to explore HyperSpot's API. For project overview, see [README.md](../README.md).
+Start HyperSpot server and verify it works. For project overview, see [README.md](../README.md).
 
 ---
 
@@ -14,39 +14,41 @@ make example
 make quickstart
 ```
 
-Server runs on `http://127.0.0.1:8087`. Open a **new terminal** to test.
+Server runs on `http://127.0.0.1:8087`.
 
 ---
 
-## Health & OpenAPI
+## Verify It's Running
 
 ```bash
-# Health check (JSON)
-curl -s http://127.0.0.1:8087/health | python3 -m json.tool
-# {"status": "healthy", "timestamp": "2026-01-15T15:01:02.000Z"}
-
-# Kubernetes liveness probe
-curl -s http://127.0.0.1:8087/healthz
-# ok
-
-# OpenAPI 3.1 spec
-curl -s http://127.0.0.1:8087/openapi.json | python3 -m json.tool | head -50
+curl -s http://127.0.0.1:8087/health
+# {"status": "healthy", "timestamp": "..."}
 ```
-
-**Interactive docs:** <http://127.0.0.1:8087/docs>
 
 ---
 
-## Module APIs
+## API Documentation
 
-Each module has its own QUICKSTART.md with detailed examples:
+### Interactive Documentation
 
-| Module | Description | Quickstart |
-|--------|-------------|------------|
-| File Parser | Parse PDF, DOCX, HTML, Markdown, images into structured blocks | [QUICKSTART.md](../modules/file_parser/QUICKSTART.md) |
-| Nodes Registry | Hardware and system information for HyperSpot nodes | [QUICKSTART.md](../modules/system/nodes_registry/QUICKSTART.md) |
-| Tenant Resolver | Multi-tenant hierarchy management | [QUICKSTART.md](../modules/system/tenant_resolver/QUICKSTART.md) |
-| Types Registry | GTS (Global Type System) schema registry | [QUICKSTART.md](../modules/system/types-registry/QUICKSTART.md) |
+Open <http://127.0.0.1:8087/docs> in your browser for the full API reference with interactive testing.
+
+### OpenAPI Spec
+
+```bash
+curl -s http://127.0.0.1:8087/openapi.json > openapi.json
+```
+
+### Module Examples
+
+Each module has a QUICKSTART.md with minimal curl examples:
+
+- [File Parser](../modules/file_parser/QUICKSTART.md) - Parse documents into structured blocks
+- [Nodes Registry](../modules/system/nodes_registry/QUICKSTART.md) - Hardware and system info
+- [Tenant Resolver](../modules/system/tenant_resolver/QUICKSTART.md) - Multi-tenant hierarchy
+- [Types Registry](../modules/system/types-registry/QUICKSTART.md) - GTS schema registry
+
+> **Note:** Module quickstarts show basic usage only. Use `/docs` for complete API documentation.
 
 ---
 
@@ -63,13 +65,14 @@ pkill -f hyperspot-server
 | Issue | Solution |
 |-------|----------|
 | Port 8087 in use | `pkill -f hyperspot-server` |
-| Empty tenant-resolver | Use `make example` |
-| Connection refused | Server not running |
+| Empty tenant-resolver | Use `make example` instead of `make quickstart` |
+| Connection refused | Server not running - check logs |
 
 ---
 
 ## Further Reading
 
+- [/docs](http://127.0.0.1:8087/docs) - Full API reference
 - [ARCHITECTURE_MANIFEST.md](ARCHITECTURE_MANIFEST.md) - Architecture principles
 - [MODKIT_UNIFIED_SYSTEM.md](MODKIT_UNIFIED_SYSTEM.md) - Module system
 - [../guidelines/NEW_MODULE.md](../guidelines/NEW_MODULE.md) - Create modules
