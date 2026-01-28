@@ -18,6 +18,10 @@ on:
           - release
           - release-pr
 
+# Restrict default permissions to read-only
+permissions:
+  contents: read
+
 concurrency:
   group: release-plz-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false

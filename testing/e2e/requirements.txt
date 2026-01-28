@@ -1,5 +1,5 @@
 pytest>=7.0.0
-httpx>=0.24.0
+httpx>=0.28.0  # Previously 0.23.0 minimum for PYSEC-2022-183 fix
 pytest-asyncio
 
 
