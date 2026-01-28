@@ -6,7 +6,11 @@ extern crate rustc_lint;
 extern crate rustc_session;
 extern crate rustc_span;
 
+
 use rustc_lint::LintContext;
+
+use rustc_ast::{UseTree, UseTreeKind};
+
 use rustc_span::source_map::SourceMap;
 use rustc_span::{FileName, Span};
 use std::collections::HashSet;
@@ -37,6 +41,30 @@ pub fn is_in_api_rest_folder(source_map: &SourceMap, span: Span) -> bool {
 
 pub fn is_in_module_folder(source_map: &SourceMap, span: Span) -> bool {
     check_span_path(source_map, span, "/modules/")
+}
+
+/// Check if span is within libs/modkit-db/ - the internal sqlx wrapper library
+/// This path is excluded from sqlx restrictions as it provides the abstraction layer
+pub fn is_in_modkit_db_path(source_map: &SourceMap, span: Span) -> bool {
+    // Multiple checks handle different path contexts:
+    // - "/libs/modkit-db/" - absolute path from workspace root
+    // - "libs/modkit-db/" - relative path in some contexts
+    // - "modkit-db/src/" - simulated_dir paths in tests
+    check_span_path(source_map, span, "/libs/modkit-db/") 
+        || check_span_path(source_map, span, "libs/modkit-db/")
+        || check_span_path(source_map, span, "modkit-db/src/")
+}
+
+/// Check if span is within apps/hyperspot-server - the main server binary
+/// This path is excluded from sqlx restrictions as it needs driver linkage workaround
+pub fn is_in_hyperspot_server_path(source_map: &SourceMap, span: Span) -> bool {
+    // Multiple checks handle different path contexts:
+    // - "/apps/hyperspot-server/" - absolute path from workspace root
+    // - "apps/hyperspot-server/" - relative path in some contexts
+    // - "hyperspot-server/src/" - simulated_dir paths in tests
+    check_span_path(source_map, span, "/apps/hyperspot-server/") 
+        || check_span_path(source_map, span, "apps/hyperspot-server/")
+        || check_span_path(source_map, span, "hyperspot-server/src/")
 }
 
 pub fn check_derive_attrs<F>(item: &rustc_ast::Item, mut f: F)
@@ -262,6 +290,44 @@ pub fn is_utoipa_trait(segments: &[&str], trait_name: &str) -> bool {
         // Bare identifier: ToSchema
         // We accept this as it's commonly used with `use utoipa::ToSchema`
         true
+    }
+}
+
+/// Converts a UseTree to a vector of fully qualified path strings.
+/// Handles Simple, Glob, and Nested use tree kinds.
+///
+/// Examples:
+/// - `use foo::bar` -> `["foo::bar"]`
+/// - `use foo::{bar, baz}` -> `["foo::bar", "foo::baz"]`
+/// - `use foo::*` -> `["foo"]`
+pub fn use_tree_to_strings(tree: &UseTree) -> Vec<String> {
+    match &tree.kind {
+        UseTreeKind::Simple(..) | UseTreeKind::Glob => {
+            vec![tree.prefix.segments.iter()
+                .map(|seg| seg.ident.name.as_str())
+                .collect::<Vec<_>>()
+                .join("::")]
+        }
+        UseTreeKind::Nested { items, .. } => {
+            let prefix = tree.prefix.segments.iter()
+                .map(|seg| seg.ident.name.as_str())
+                .collect::<Vec<_>>()
+                .join("::");
+            
+            let mut paths = Vec::new();
+            for (nested_tree, _) in items {
+                for nested_str in use_tree_to_strings(nested_tree) {
+                    if nested_str.is_empty() {
+                        paths.push(prefix.clone());
+                    } else if prefix.is_empty() {
+                        paths.push(nested_str);
+                    } else {
+                        paths.push(format!("{}::{}", prefix, nested_str));
+                    }
+                }
+            }
+            if paths.is_empty() { vec![prefix] } else { paths }
+        }
     }
 }
 

@@ -1,0 +1,11 @@
+error: domain module imports infrastructure dependency `sea_orm` (DE0301)
+  --> $DIR/mixed_imports_0301.rs:10:1
+   |
+LL | use sea_orm::DatabaseConnection;
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: domain should depend only on abstractions; move infrastructure code to infra/ layer
+   = note: `#[deny(de0301_no_infra_in_domain)]` on by default
+
+error: aborting due to 1 previous error
+
