@@ -241,7 +241,6 @@ jobs:
               let unfinishedReviewers = [...requestedReviewers];
 
               let ciFailedChecks = 0;
-              let ciStatus = "OK";
 
               try {
                 const checks = await github.rest.checks.listForRef({
@@ -269,13 +268,20 @@ jobs:
                 }
               }
 
+              const mergeConflict = prData.mergeable_state === "dirty";
+              const mergeIssues = ciFailedChecks + (mergeConflict ? 1 : 0);
+
+              const ciParts = [];
+
               if (ciFailedChecks > 0) {
-                ciStatus = `${ciFailedChecks} tests failed`;
+                ciParts.push(`${ciFailedChecks} tests failed`);
               }
 
-              const mergeConflict = prData.mergeable_state === "dirty";
-              const mergeStatus = mergeConflict ? "CONFLICT" : "OK";
-              const mergeIssues = ciFailedChecks + (mergeConflict ? 1 : 0);
+              if (mergeConflict) {
+                ciParts.push("CONFLICT");
+              }
+
+              const ciStatus = ciParts.length ? ciParts.join(", ") : "OK";
 
               try {
                 const reviews = await github.paginate(
@@ -460,7 +466,7 @@ jobs:
                 `Unfinished reviews: ${unfinishedReviews} (${unfinishedReviewers.length ? unfinishedReviewers.map(u => "@" + u).join(", ") : "None"})\n` +
                 `Unreplied review threads: ${unrepliedReviewThreads}\n` +
                 `Unreplied PR comments: ${unrepliedPrCommentsCount}\n` +
-                `CI status: ${ciStatus}, merge status: ${mergeStatus}\n\n` +
+                `CI status: ${ciStatus}\n\n` +
                 `Unreplied review threads:\n` +
                 (unrepliedReviewLinks.length
                   ? unrepliedReviewLinks.map(l => "- " + l).join("\n")
