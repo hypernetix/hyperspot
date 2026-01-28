@@ -1,0 +1,8 @@
+# Lychee link checker configuration
+# https://lychee.cli.rs/
+
+# Exclude paths from checking (templates with intentional placeholder links)
+exclude_path = ["docs/spec-templates/**"]
+
+# Only check local file links, not external URLs
+offline = true
