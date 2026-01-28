@@ -294,7 +294,6 @@ jobs:
 
               const body =
                 `${issueTitle}\n\n` +
-                `PR: ${pr.html_url}\n` +
                 `Author: @${author}\n` +
                 `Opened: ${createdAt.toISOString()} (${fmtDuration(now - createdAt)} ago)\n` +
                 `Last update: ${updatedAt.toISOString()} (${fmtDuration(now - updatedAt)} ago)\n` +
@@ -355,6 +354,19 @@ jobs:
                   title: issueTitle,
                   body
                 });
+              }
+
+              try {
+                await github.rest.issues.update({
+                  owner,
+                  repo,
+                  issue_number: issue.number,
+                  assignees: [author]
+                });
+              } catch (e) {
+                console.log(
+                  `Could not assign @${author} to issue #${issue.number}: ${e.message}`
+                );
               }
 
               let projectItem =
@@ -460,14 +472,15 @@ jobs:
                 }
 
                 await github.graphql(`
-                  mutation($item:ID!) {
+                  mutation($project:ID!, $item:ID!) {
                     archiveProjectV2Item(
-                      input:{ itemId:$item }
+                      input:{ projectId:$project, itemId:$item }
                     ) {
-                      projectV2Item { id }
+                      item { id }
                     }
                   }
                 `, {
+                  project: PROJECT_ID,
                   item: item.itemId
                 });
               }
