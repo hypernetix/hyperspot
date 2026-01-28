@@ -4,23 +4,9 @@ Multi-tenant hierarchy management. Tenants form a tree structure with parent/chi
 
 > **Note:** Requires `make example` (includes `--features tenant-resolver-example`)
 
-## Examples
+> **Full API Documentation:** <http://127.0.0.1:8087/docs> - Interactive docs with all endpoints, parameters, and "Try it out" buttons.
 
-### Get Root Tenant
-
-```bash
-curl -s http://127.0.0.1:8087/tenant-resolver/v1/root | python3 -m json.tool
-```
-
-**Output:**
-```json
-{
-    "id": "00000000000000000000000000000001",
-    "parentId": "",
-    "status": "ACTIVE",
-    "isAccessibleByParent": true
-}
-```
+## Quick Example
 
 ### List All Tenants
 
@@ -39,15 +25,6 @@ curl -s http://127.0.0.1:8087/tenant-resolver/v1/tenants | python3 -m json.tool
 }
 ```
 
-### Get Children of a Tenant
+## More Examples
 
-```bash
-TENANT_ID="00000000000000000000000000000001"
-curl -s "http://127.0.0.1:8087/tenant-resolver/v1/tenants/$TENANT_ID/children" | python3 -m json.tool
-```
-
-### Get Parent Chain
-
-```bash
-curl -s "http://127.0.0.1:8087/tenant-resolver/v1/tenants/$TENANT_ID/parents" | python3 -m json.tool
-```
+For additional endpoints (`/root`, `/tenants/{id}`, `/tenants/{id}/children`, `/tenants/{id}/parents`, etc.), see the interactive documentation at <http://127.0.0.1:8087/docs>.

@@ -2,7 +2,9 @@
 
 Parses PDF, DOCX, HTML, Markdown, images, and more into structured document blocks.
 
-## Examples
+> **Full API Documentation:** <http://127.0.0.1:8087/docs> - Interactive docs with all endpoints, parameters, and "Try it out" buttons.
+
+## Quick Example
 
 ### List Supported File Types
 
@@ -22,22 +24,6 @@ curl -s http://127.0.0.1:8087/file-parser/v1/info | python3 -m json.tool
         "generic_stub": ["doc", "rtf", "odt", "xls", "xlsx", "ppt", "pptx"]
     }
 }
-```
-
-### Parse a Local File
-
-```bash
-curl -s -X POST http://127.0.0.1:8087/file-parser/v1/parse-local \
-  -H "Content-Type: application/json" \
-  -d '{"file_path": "'$PWD'/README.md"}' | python3 -m json.tool | head -40
-```
-
-### Parse a File from URL
-
-```bash
-curl -s -X POST http://127.0.0.1:8087/file-parser/v1/parse-url \
-  -H "Content-Type: application/json" \
-  -d '{"url": "https://example.com/document.pdf"}' | python3 -m json.tool | head -40
 ```
 
 ### Upload and Parse a File
@@ -69,10 +55,6 @@ curl -s -X POST "http://127.0.0.1:8087/file-parser/v1/upload?filename=test.txt" 
 }
 ```
 
-### Stream Parsed Content as Markdown
+## More Examples
 
-```bash
-curl -s -X POST http://127.0.0.1:8087/file-parser/v1/parse-local/markdown \
-  -H "Content-Type: application/json" \
-  -d '{"file_path": "'$PWD'/README.md"}'
-```
+For additional endpoints (`parse-local`, `parse-url`, `parse-local/markdown`, etc.), see the interactive documentation at <http://127.0.0.1:8087/docs>.

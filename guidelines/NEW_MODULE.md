@@ -107,10 +107,12 @@ modules/<your-module>/
 
 Every module with REST endpoints MUST include a `QUICKSTART.md` file with:
 
-1. **Module description** - What the module does
-2. **Curl examples** - Copy-paste commands with sample outputs
+1. **Module description** - One-line summary of what the module does
+2. **Link to /docs** - Prominent reference to interactive API documentation
+3. **1-2 minimal examples** - Basic curl commands showing typical usage
+4. **"More Examples" section** - Directing users to `/docs` for complete API reference
 
-> **Note:** Do NOT include an Endpoints table. The OpenAPI spec at `/docs` and `/openapi.json` is the authoritative source for API documentation.
+> **Important:** Keep examples minimal to avoid maintenance burden. The interactive documentation at `/docs` is the authoritative and always up-to-date API reference.
 
 **Template:**
 
@@ -118,7 +120,9 @@ Every module with REST endpoints MUST include a `QUICKSTART.md` file with:
     
     <One-line description of what the module does.>
     
-    ## Examples
+    > **Full API Documentation:** <http://127.0.0.1:8087/docs> - Interactive docs with all endpoints, parameters, and "Try it out" buttons.
+    
+    ## Quick Example
     
     ### List Resources
     
@@ -132,6 +136,16 @@ Every module with REST endpoints MUST include a `QUICKSTART.md` file with:
         "items": [...]
     }
     ```
+    
+    ## More Examples
+    
+    For additional endpoints, see the interactive documentation at <http://127.0.0.1:8087/docs>.
+
+**Key principles:**
+- **Avoid duplication** - `/docs` is auto-generated from OpenAPI spec and always current
+- **Show, don't list** - 1-2 working examples > comprehensive endpoint tables
+- **Guide to /docs** - Make it obvious where to find complete API documentation
+- **Stay minimal** - Less documentation = less maintenance burden
 
 The main [QUICKSTART_GUIDE.md](../docs/QUICKSTART_GUIDE.md) references all module quickstarts.
 
