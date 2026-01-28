@@ -2,9 +2,9 @@
 
 Parses PDF, DOCX, HTML, Markdown, images, and more into structured document blocks.
 
-> **Full API Documentation:** <http://127.0.0.1:8087/docs> - Interactive docs with all endpoints, parameters, and "Try it out" buttons.
+Full API documentation: <http://127.0.0.1:8087/docs>
 
-## Quick Example
+## Examples
 
 ### List Supported File Types
 
@@ -55,6 +55,4 @@ curl -s -X POST "http://127.0.0.1:8087/file-parser/v1/upload?filename=test.txt" 
 }
 ```
 
-## More Examples
-
-For additional endpoints (`parse-local`, `parse-url`, `parse-local/markdown`, etc.), see the interactive documentation at <http://127.0.0.1:8087/docs>.
+For additional endpoints, see <http://127.0.0.1:8087/docs>.
