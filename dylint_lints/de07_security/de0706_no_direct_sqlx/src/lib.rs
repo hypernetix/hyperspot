@@ -49,11 +49,11 @@ dylint_linting::declare_early_lint! {
 /// Sqlx crate pattern to detect
 const SQLX_PATTERN: &str = "sqlx";
 
-fn starts_with_sqlx(tree: &rustc_ast::UseTree) -> bool {
-    if let Some(first_seg) = tree.prefix.segments.first() {
-        return first_seg.ident.name.as_str() == SQLX_PATTERN;
-    }
-    false
+/// Find any sqlx path in the use tree (handles grouped imports like `use {sqlx::PgPool, other};`)
+fn find_sqlx_path(tree: &rustc_ast::UseTree) -> Option<String> {
+    use_tree_to_strings(tree)
+        .into_iter()
+        .find(|path| path.split("::").next() == Some(SQLX_PATTERN))
 }
 
 fn check_use_for_sqlx(cx: &rustc_lint::EarlyContext<'_>, item: &Item) {
@@ -61,9 +61,7 @@ fn check_use_for_sqlx(cx: &rustc_lint::EarlyContext<'_>, item: &Item) {
         return;
     };
 
-    if starts_with_sqlx(use_tree) {
-        let paths = use_tree_to_strings(use_tree);
-        let path_str = paths.first().map(|s| s.as_str()).unwrap_or("sqlx");
+    if let Some(path_str) = find_sqlx_path(use_tree) {
         cx.span_lint(DE0706_NO_DIRECT_SQLX, item.span, |diag| {
             diag.primary_message(format!(
                 "direct sqlx import detected: `{}` (DE0706)",
