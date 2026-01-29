@@ -1,6 +1,16 @@
 # File Parser - Quickstart
 
-Parses PDF, DOCX, HTML, Markdown, images, and more into structured document blocks.
+Converts various document formats into a unified structured representation. Extracts text, formatting, and metadata from files and returns them as document blocks with inline elements.
+
+**Supported formats:**
+- Documents: PDF, DOCX, plain text, Markdown, HTML
+- Images: PNG, JPG, JPEG, WebP, GIF (OCR-capable)
+- Legacy formats: DOC, RTF, ODT, XLS, XLSX, PPT, PPTX (basic support)
+
+**Input methods:**
+- Upload files directly
+- Parse from local file paths
+- Fetch and parse from URLs
 
 Full API documentation: <http://127.0.0.1:8087/docs>
 

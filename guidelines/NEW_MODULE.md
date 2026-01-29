@@ -107,10 +107,11 @@ modules/<your-module>/
 
 Every module with REST endpoints MUST include a `QUICKSTART.md` file with:
 
-1. **Module description** - One-line summary of what the module does
-2. **Link to /docs** - Reference to full API documentation
-3. **1-2 minimal examples** - Basic curl commands showing typical usage
-4. **Reference to /docs** - Direct users to complete API reference
+1. **Module description** - Brief explanation of what the module does and why it exists
+2. **Features/capabilities** - Bulleted list of key functionality (stable, won't drift)
+3. **Use cases** - Practical scenarios where the module applies (optional but recommended)
+4. **Link to /docs** - Reference to full API documentation
+5. **1-2 minimal examples** - Basic curl commands showing typical usage
 
 Keep examples minimal. The documentation at `/docs` is auto-generated from OpenAPI spec and always current.
 
@@ -118,7 +119,16 @@ Keep examples minimal. The documentation at `/docs` is auto-generated from OpenA
 
     # <Module Name> - Quickstart
     
-    <One-line description of what the module does.>
+    <2-3 sentence description of what the module does and its purpose.>
+    
+    **Features:**
+    - Key capability 1
+    - Key capability 2
+    - Key capability 3
+    
+    **Use cases:**
+    - Practical scenario 1
+    - Practical scenario 2
     
     Full API documentation: <http://127.0.0.1:8087/docs>
     
@@ -143,7 +153,8 @@ Keep examples minimal. The documentation at `/docs` is auto-generated from OpenA
 - Avoid duplication - `/docs` is auto-generated and always current
 - Show, don't list - 1-2 working examples, not comprehensive tables
 - No fluff - State facts, avoid marketing language
-- Stay minimal - Less documentation = less maintenance
+- Describe stable features - Capabilities that won't change frequently
+- Stay actionable - Focus on what users can do with the module
 
 The main [QUICKSTART_GUIDE.md](../docs/QUICKSTART_GUIDE.md) references all module quickstarts.
 

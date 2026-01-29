@@ -1,6 +1,17 @@
 # Nodes Registry - Quickstart
 
-Provides hardware and system information for all running HyperSpot nodes.
+Tracks and reports information about all HyperSpot server instances in your deployment.
+
+**Provides:**
+- Node identification (ID, hostname, IP address)
+- System information (OS, CPU, memory, disk)
+- System capabilities (available features, resource limits)
+- Registration timestamps
+
+**Use cases:**
+- Monitor distributed HyperSpot deployments
+- Load balancing and resource allocation
+- Health checks and diagnostics
 
 Full API documentation: <http://127.0.0.1:8087/docs>
 

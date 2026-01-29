@@ -1,6 +1,17 @@
 # Tenant Resolver - Quickstart
 
-Multi-tenant hierarchy management. Tenants form a tree structure with parent/child relationships.
+Manages multi-tenant hierarchies for data isolation and access control. Tenants are organized in a tree structure where child tenants inherit access constraints from parents.
+
+**Features:**
+- Hierarchical tenant relationships (parent/child)
+- Tenant status management (ACTIVE, INACTIVE)
+- Ancestor and descendant queries
+- Root tenant identification
+
+**Use cases:**
+- SaaS applications with organizational hierarchies
+- Data isolation between customers
+- Role-based access control at tenant level
 
 > **Note:** Requires `make example` (includes `--features tenant-resolver-example`)
 
