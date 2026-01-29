@@ -108,11 +108,11 @@ modules/<your-module>/
 Every module with REST endpoints MUST include a `QUICKSTART.md` file with:
 
 1. **Module description** - One-line summary of what the module does
-2. **Link to /docs** - Prominent reference to interactive API documentation
+2. **Link to /docs** - Reference to full API documentation
 3. **1-2 minimal examples** - Basic curl commands showing typical usage
-4. **"More Examples" section** - Directing users to `/docs` for complete API reference
+4. **Reference to /docs** - Direct users to complete API reference
 
-> **Important:** Keep examples minimal to avoid maintenance burden. The interactive documentation at `/docs` is the authoritative and always up-to-date API reference.
+Keep examples minimal. The documentation at `/docs` is auto-generated from OpenAPI spec and always current.
 
 **Template:**
 
@@ -120,9 +120,9 @@ Every module with REST endpoints MUST include a `QUICKSTART.md` file with:
     
     <One-line description of what the module does.>
     
-    > **Full API Documentation:** <http://127.0.0.1:8087/docs> - Interactive docs with all endpoints, parameters, and "Try it out" buttons.
+    Full API documentation: <http://127.0.0.1:8087/docs>
     
-    ## Quick Example
+    ## Examples
     
     ### List Resources
     
@@ -137,15 +137,13 @@ Every module with REST endpoints MUST include a `QUICKSTART.md` file with:
     }
     ```
     
-    ## More Examples
-    
-    For additional endpoints, see the interactive documentation at <http://127.0.0.1:8087/docs>.
+    For additional endpoints, see <http://127.0.0.1:8087/docs>.
 
 **Key principles:**
-- **Avoid duplication** - `/docs` is auto-generated from OpenAPI spec and always current
-- **Show, don't list** - 1-2 working examples > comprehensive endpoint tables
-- **Guide to /docs** - Make it obvious where to find complete API documentation
-- **Stay minimal** - Less documentation = less maintenance burden
+- Avoid duplication - `/docs` is auto-generated and always current
+- Show, don't list - 1-2 working examples, not comprehensive tables
+- No fluff - State facts, avoid marketing language
+- Stay minimal - Less documentation = less maintenance
 
 The main [QUICKSTART_GUIDE.md](../docs/QUICKSTART_GUIDE.md) references all module quickstarts.
 

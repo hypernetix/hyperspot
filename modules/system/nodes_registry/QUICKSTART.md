@@ -2,9 +2,9 @@
 
 Provides hardware and system information for all running HyperSpot nodes.
 
-> **Full API Documentation:** <http://127.0.0.1:8087/docs> - Interactive docs with all endpoints, parameters, and "Try it out" buttons.
+Full API documentation: <http://127.0.0.1:8087/docs>
 
-## Quick Example
+## Examples
 
 ### List All Nodes
 
@@ -25,6 +25,4 @@ curl -s http://127.0.0.1:8087/nodes-registry/v1/nodes | python3 -m json.tool
 ]
 ```
 
-## More Examples
-
-For additional endpoints (`/nodes/{id}`, `/nodes/{id}/sysinfo`, `/nodes/{id}/syscap`, etc.), see the interactive documentation at <http://127.0.0.1:8087/docs>.
+For additional endpoints, see <http://127.0.0.1:8087/docs>.
