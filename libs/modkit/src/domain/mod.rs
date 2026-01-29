@@ -56,7 +56,7 @@ use uuid::Uuid;
 /// Common standard library and third-party types have blanket implementations:
 /// - Primitives: `bool`, `i8`..`i128`, `u8`..`u128`, `f32`, `f64`, `char`, `String`, `&str`
 /// - Collections: `Vec<T>`, `Option<T>`, `Result<T, E>`, `HashMap<K, V>`, etc.
-/// - Common crates: `uuid::Uuid`, `chrono::DateTime`, `rust_decimal::Decimal`
+/// - Common crates: `uuid::Uuid`, `serde_json::Value`
 pub trait DomainSafe {}
 
 /// Marker trait for domain models (business entities).
@@ -117,6 +117,8 @@ impl DomainSafe for f64 {}
 // =============================================================================
 
 impl<T: DomainSafe> DomainSafe for Option<T> {}
+impl<T: DomainSafe + ?Sized> DomainSafe for &T {}
+impl<T: DomainSafe + ?Sized> DomainSafe for &mut T {}
 impl<T: DomainSafe> DomainSafe for Box<T> {}
 impl<T: DomainSafe> DomainSafe for std::sync::Arc<T> {}
 impl<T: DomainSafe> DomainSafe for std::rc::Rc<T> {}
