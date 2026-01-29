@@ -94,16 +94,20 @@ impl EarlyLintPass for De0706NoDirectSqlx {
         }
         
         // Check extern crate declarations
-        if let ItemKind::ExternCrate(name, _ident) = &item.kind {
-            if let Some(sym) = name {
-                let sym_str: &str = sym.as_str();
-                if sym_str == SQLX_PATTERN {
-                    cx.span_lint(DE0706_NO_DIRECT_SQLX, item.span, |diag| {
-                        diag.primary_message("extern crate sqlx is prohibited (DE0706)");
-                        diag.help("use Sea-ORM EntityTrait or SecORM abstractions instead");
-                        diag.note("sqlx bypasses security enforcement and architectural patterns");
-                    });
-                }
+        // ExternCrate(rename, ident): rename is Some for `extern crate foo as bar`
+        // For plain `extern crate sqlx;`, rename is None and we check ident
+        if let ItemKind::ExternCrate(rename, ident) = &item.kind {
+            let is_sqlx = match rename {
+                Some(sym) => sym.as_str() == SQLX_PATTERN,
+                None => ident.name.as_str() == SQLX_PATTERN,
+            };
+            
+            if is_sqlx {
+                cx.span_lint(DE0706_NO_DIRECT_SQLX, item.span, |diag| {
+                    diag.primary_message("extern crate sqlx is prohibited (DE0706)");
+                    diag.help("use Sea-ORM EntityTrait or SecORM abstractions instead");
+                    diag.note("sqlx bypasses security enforcement and architectural patterns");
+                });
             }
         }
     }

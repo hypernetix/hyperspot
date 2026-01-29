@@ -3,7 +3,7 @@ name = "de0803_api_snake_case"
 version = "0.1.0"
 authors = ["Cyber Fabric"]
 description = "DTOs must not use CamelCase or PascalCase in serde rename_all, only snake_case is allowed"
-edition = "2024"
+edition.workspace = true
 publish = false
 
 [lib]

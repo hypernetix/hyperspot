@@ -3,7 +3,7 @@ name = "de0308_no_http_in_domain"
 version = "0.1.0"
 authors = ["Hypernetix"]
 description = "Domain modules should not reference HTTP types or status codes (DE0308)"
-edition = "2024"
+edition.workspace = true
 publish = false
 
 [lib]
