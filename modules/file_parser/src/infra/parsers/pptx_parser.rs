@@ -11,10 +11,45 @@ use crate::domain::parser::FileParserBackend;
 /// PPTX parser that extracts text from `PowerPoint` presentations using `pptx-to-md`
 pub struct PptxParser;
 
+/// File extension constants
+const EXT_PPTX: &str = "pptx";
+
+/// Supported file extensions for `PowerPoint`
+const SUPPORTED_EXTENSIONS: &[&str] = &[EXT_PPTX];
+
+/// MIME type constants
+const MIME_TYPE_PPTX: &str =
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+
 impl PptxParser {
     #[must_use]
     pub fn new() -> Self {
         Self
+    }
+
+    /// Determine MIME type from filename or provided content type
+    fn determine_mime_type(
+        filename_hint: Option<&str>,
+        content_type: Option<&str>,
+    ) -> Result<String, DomainError> {
+        // Priority 1: Use provided content-type if it's PPTX
+        if let Some(ct) = content_type
+            && ct == MIME_TYPE_PPTX
+        {
+            return Ok(ct.to_owned());
+        }
+
+        // Priority 2: Infer from filename extension
+        if let Some(filename) = filename_hint
+            && let Some(ext) = Path::new(filename).extension().and_then(|s| s.to_str())
+            && ext.to_lowercase() == EXT_PPTX
+        {
+            return Ok(MIME_TYPE_PPTX.to_owned());
+        }
+
+        Err(DomainError::unsupported_file_type(
+            "Unable to determine PowerPoint format",
+        ))
     }
 }
 
@@ -27,17 +62,18 @@ impl Default for PptxParser {
 #[async_trait]
 impl FileParserBackend for PptxParser {
     fn id(&self) -> &'static str {
-        "pptx"
+        EXT_PPTX
     }
 
     fn supported_extensions(&self) -> &'static [&'static str] {
-        &["pptx"]
+        SUPPORTED_EXTENSIONS
     }
 
     async fn parse_local_path(
         &self,
         path: &Path,
     ) -> Result<crate::domain::ir::ParsedDocument, DomainError> {
+        tracing::debug!(path = %path.display(), "Parsing PPTX from local path");
         let path_buf = path.to_path_buf();
 
         let blocks =
@@ -47,10 +83,12 @@ impl FileParserBackend for PptxParser {
             .await
             .map_err(|e| DomainError::parse_error(format!("Task join error: {e}")))??;
 
+        let filename = path.file_name().and_then(|s| s.to_str());
+        let content_type =
+            Self::determine_mime_type(filename, None).unwrap_or_else(|_| MIME_TYPE_PPTX.to_owned());
+
         let mut builder = DocumentBuilder::new(ParsedSource::LocalPath(path.display().to_string()))
-            .content_type(
-                "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-            )
+            .content_type(content_type)
             .blocks(blocks);
 
         if let Some(filename) = path.file_name().and_then(|s| s.to_str()) {
@@ -63,9 +101,15 @@ impl FileParserBackend for PptxParser {
     async fn parse_bytes(
         &self,
         filename_hint: Option<&str>,
-        _content_type: Option<&str>,
+        content_type: Option<&str>,
         bytes: bytes::Bytes,
     ) -> Result<crate::domain::ir::ParsedDocument, DomainError> {
+        let filename = filename_hint.unwrap_or("unknown.pptx").to_owned();
+        tracing::debug!(filename = %filename, "Parsing PPTX from bytes");
+
+        // Determine MIME type
+        let mime_type = Self::determine_mime_type(Some(&filename), content_type)?;
+
         let blocks =
             tokio::task::spawn_blocking(move || -> Result<Vec<ParsedBlock>, DomainError> {
                 parse_pptx_from_bytes(&bytes)
@@ -74,18 +118,14 @@ impl FileParserBackend for PptxParser {
             .map_err(|e| DomainError::parse_error(format!("Task join error: {e}")))??;
 
         let source = ParsedSource::Uploaded {
-            original_name: filename_hint.unwrap_or("unknown.pptx").to_owned(),
+            original_name: filename.clone(),
         };
 
         let mut builder = DocumentBuilder::new(source)
-            .content_type(
-                "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-            )
+            .content_type(mime_type)
             .blocks(blocks);
 
-        if let Some(filename) = filename_hint {
-            builder = builder.title(filename).original_filename(filename);
-        }
+        builder = builder.title(&filename).original_filename(&filename);
 
         Ok(builder.build())
     }
@@ -128,6 +168,7 @@ fn extract_blocks_from_slides(slides: &[pptx_to_md::Slide]) -> Vec<ParsedBlock> 
     let mut blocks = Vec::with_capacity(slides.len());
 
     for (slide_idx, slide) in slides.iter().enumerate() {
+        tracing::trace!(slide = slide_idx + 1, "Processing PPTX slide");
         // Add slide separator as heading
         blocks.push(ParsedBlock::Heading {
             level: 2,
@@ -244,8 +285,25 @@ mod tests {
     }
 
     #[test]
+    fn test_determine_mime_type() {
+        let mime = PptxParser::determine_mime_type(Some("test.pptx"), None).unwrap();
+        assert_eq!(mime, MIME_TYPE_PPTX);
+
+        let mime = PptxParser::determine_mime_type(None, Some(MIME_TYPE_PPTX)).unwrap();
+        assert_eq!(mime, MIME_TYPE_PPTX);
+
+        assert!(PptxParser::determine_mime_type(Some("test.txt"), None).is_err());
+    }
+
+    #[test]
     fn test_supported_extensions() {
         let parser = PptxParser::new();
-        assert_eq!(parser.supported_extensions(), &["pptx"]);
+        assert_eq!(parser.supported_extensions(), &[EXT_PPTX]);
+    }
+
+    #[test]
+    fn test_convert_pptx_table_empty() {
+        let table = TableElement { rows: Vec::new() };
+        assert!(convert_pptx_table(&table).is_none());
     }
 }

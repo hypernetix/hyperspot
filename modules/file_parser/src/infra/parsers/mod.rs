@@ -14,4 +14,4 @@ pub use pdf_parser::PdfParser;
 pub use plain_text::PlainTextParser;
 pub use pptx_parser::PptxParser;
 pub use stub::StubParser;
-pub use xlsx_parser::{ExcelFormat, XlsxParser};
+pub use xlsx_parser::XlsxParser;
