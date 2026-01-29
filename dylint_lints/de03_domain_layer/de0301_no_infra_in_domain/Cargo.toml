@@ -3,7 +3,7 @@ name = "de0301_no_infra_in_domain"
 version = "0.1.0"
 authors = ["Hypernetix"]
 description = "Domain modules should not import infrastructure dependencies (DE0301)"
-edition = "2024"
+edition.workspace = true
 publish = false
 
 [lib]
