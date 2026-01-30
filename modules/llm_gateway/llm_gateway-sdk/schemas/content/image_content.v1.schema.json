@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.x.llm_gateway.content.image_content.v1~",
+  "title": "ImageContent",
+  "description": "Image content part with FileStorage URL",
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "image",
+      "description": "Content type discriminator"
+    },
+    "url": {
+      "type": "string",
+      "format": "uri",
+      "description": "FileStorage URL for the image"
+    }
+  },
+  "required": ["type", "url"],
+  "additionalProperties": false
+}

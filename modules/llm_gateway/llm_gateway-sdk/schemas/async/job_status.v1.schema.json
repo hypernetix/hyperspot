@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.x.llm_gateway.async.job_status.v1~",
+  "title": "JobStatus",
+  "description": "Status of an async job",
+  "type": "string",
+  "enum": ["pending", "running", "completed", "failed", "cancelled"]
+}

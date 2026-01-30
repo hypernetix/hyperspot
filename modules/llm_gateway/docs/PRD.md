@@ -1,392 +1,230 @@
-# LLM Gateway PRD
+# PRD
 
-## Notation
+## 1. Overview
 
-- `[ ]` — not implemented
-- `[x]` — implemented
+**Purpose**: LLM Gateway provides unified access to multiple LLM providers. Consumers interact with a single interface regardless of underlying provider. Gateway normalizes requests and responses but does not execute tools or interpret content — this is consumer responsibility.
 
----
+LLM Gateway is the central integration point between platform consumers and external AI providers. It abstracts provider differences — request formats, authentication, error handling, rate limits — behind a unified API. Consumers send requests in a normalized format; Gateway translates them to provider-specific calls and normalizes responses back.
 
-## Overview
+The Gateway supports diverse modalities: text generation, embeddings, vision, audio, video, and document processing. It handles both synchronous and asynchronous operations, including streaming responses and long-running jobs. All interactions go through the Outbound API Gateway for reliability and credential management.
 
-LLM Gateway provides unified access to multiple LLM providers. Consumers interact with a single interface regardless of underlying provider.
+Gateway is stateless by design. It does not store conversation history or execute tools — these are consumer responsibilities. The only exception is temporary state for async job tracking.
 
-**Core capabilities**:
+**Target Users**:
+- **Platform Developers** — build AI-powered features using Gateway API
+- **External API Consumers** — third-party developers accessing AI capabilities via public API
+
+**Key Problems Solved**:
+- **Provider fragmentation**: single API abstracts differences between OpenAI, Anthropic, Google, and other providers
+- **Governance**: budget enforcement, rate limiting, usage tracking, and audit logging at tenant level
+- **Security**: pre-call and post-response interceptors for content moderation and PII filtering
+
+**Success Criteria**:
+- Gateway overhead < 50ms P99 (excluding provider latency)
+- Availability ≥ 99.9%
+
+**Capabilities**:
 - Text generation (chat completion)
 - Multimodal input/output (images, audio, video, documents)
 - Embeddings generation
 - Tool/function calling
 - Structured output with schema validation
 
----
+## 2. Actors
 
-## Content Model
+### 2.1 Human Actors
 
-Gateway supports multimodal content in messages:
-- Text
-- Images (input and output)
-- Audio (input and output)
-- Video (input and output)
-- Documents
-- Tool calls and results
+#### API User
 
-Media can be provided via FileStorage URL or inline data URL. Generated media is stored in FileStorage and returned as URL.
+**ID**: `fdd-llm-gateway-actor-api-user`
 
----
+<!-- fdd-id-content -->
+**Role**: End user who interacts with LLM Gateway directly via API. Sends chat completion requests, manages async jobs, uses streaming responses.
+<!-- fdd-id-content -->
 
-## Tools
+### 2.2 System Actors
 
-Consumer can provide tools for function calling:
-- Reference to Type Registry schema
-- Inline schema definition
-- Provider-compatible format
+#### Consumer
 
-Gateway resolves references, converts to provider format, and returns tool calls with preserved identifiers. Tool execution is consumer responsibility.
+**ID**: `fdd-llm-gateway-actor-consumer`
 
----
+<!-- fdd-id-content -->
+**Role**: Sends requests to the Gateway.
+<!-- fdd-id-content -->
 
-## Plugins
+#### Provider
 
-Gateway supports configurable plugins with noop defaults:
+**ID**: `fdd-llm-gateway-actor-provider`
 
-| Plugin | Purpose |
-|--------|---------|
-| Hook Plugin | Pre-call and post-response interception (moderation, PII, transformation) |
-| Usage Plugin | Budget checks and usage reporting |
-| Audit Plugin | Compliance event logging |
+<!-- fdd-id-content -->
+**Role**: External AI service that processes requests. Accessed via Outbound API Gateway.
+<!-- fdd-id-content -->
 
----
+#### Hook Plugin
 
-## Dependencies
+**ID**: `fdd-llm-gateway-actor-hook-plugin`
 
-| Dependency | Role |
-|------------|------|
-| Model Registry | Model catalog, availability checks |
-| Outbound API Gateway | External API calls to providers |
-| FileStorage | Media storage and retrieval |
-| Type Registry | Tool schema resolution |
+<!-- fdd-id-content -->
+**Role**: Pre-call and post-response interception (moderation, PII, transformation).
+<!-- fdd-id-content -->
 
----
+#### Usage Tracker
 
-## Design Principles
+**ID**: `fdd-llm-gateway-actor-usage-tracker`
 
-**Stateless**: Gateway does not store conversation history. Consumer provides full context with each request. Exception: temporary async job state.
+<!-- fdd-id-content -->
+**Role**: Budget checks and usage reporting.
+<!-- fdd-id-content -->
 
-**Pass-through**: Gateway normalizes but does not interpret content. Tool execution and response parsing are consumer responsibility.
+#### Audit Module
 
----
+**ID**: `fdd-llm-gateway-actor-audit-module`
 
-## P1 — Core
+<!-- fdd-id-content -->
+**Role**: Compliance event logging.
+<!-- fdd-id-content -->
 
-### [ ] S1.1 Chat Completion
+## 3. Functional Requirements
+
+### P1 — Core
+
+#### Chat Completion
+
+**ID**: [ ] `p1` `fdd-llm-gateway-fr-chat-completion-v1`
+
+<!-- fdd-id-content -->
 
 Consumer sends messages, Gateway routes to provider based on model, returns response with usage.
 
-```mermaid
-sequenceDiagram
-    participant C as Consumer
-    participant GW as LLM Gateway
-    participant OB as Outbound API Gateway
-    participant P as Provider
+**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-provider`
+<!-- fdd-id-content -->
 
-    C->>GW: chat_completion(model, messages)
-    GW->>GW: Resolve provider
-    GW->>OB: Provider API call
-    OB->>P: Request
-    P-->>OB: Response
-    OB-->>GW: Response
-    GW-->>C: Normalized response + usage
-```
+#### Streaming Chat Completion
 
----
+**ID**: [ ] `p1` `fdd-llm-gateway-fr-streaming-v1`
 
-### [ ] S1.2 Streaming Chat Completion
+<!-- fdd-id-content -->
 
-Same as S1.1, but response is streamed. Gateway normalizes provider events to unified format.
+Same as chat completion, but response is streamed. Gateway normalizes provider events to unified format.
 
-```mermaid
-sequenceDiagram
-    participant C as Consumer
-    participant GW as LLM Gateway
-    participant OB as Outbound API Gateway
-    participant P as Provider
+**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-provider`
+<!-- fdd-id-content -->
 
-    C->>GW: chat_completion(stream=true)
-    GW->>OB: Streaming request
-    OB->>P: Request
-    loop Content chunks
-        P-->>OB: chunk
-        OB-->>GW: chunk
-        GW-->>C: normalized chunk
-    end
-    GW-->>C: usage + done
-```
+#### Embeddings Generation
 
----
+**ID**: [ ] `p1` `fdd-llm-gateway-fr-embeddings-v1`
 
-### [ ] S1.3 Embeddings Generation
+<!-- fdd-id-content -->
 
 Consumer sends text(s), Gateway returns vector embeddings.
 
-```mermaid
-sequenceDiagram
-    participant C as Consumer
-    participant GW as LLM Gateway
-    participant OB as Outbound API Gateway
-    participant P as Provider
+**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-provider`
+<!-- fdd-id-content -->
 
-    C->>GW: embed(model, input[])
-    GW->>OB: Embeddings request
-    OB->>P: Request
-    P-->>OB: vectors[]
-    OB-->>GW: vectors[]
-    GW-->>C: vectors[] + usage
-```
+#### Vision (Image Analysis)
 
----
+**ID**: [ ] `p1` `fdd-llm-gateway-fr-vision-v1`
 
-### [ ] S1.4 Vision (Image Analysis)
+<!-- fdd-id-content -->
 
 Consumer sends message with image URLs. Gateway fetches from FileStorage, routes to vision-capable model.
 
-```mermaid
-sequenceDiagram
-    participant C as Consumer
-    participant FS as FileStorage
-    participant GW as LLM Gateway
-    participant OB as Outbound API Gateway
-    participant P as Provider
+**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-provider`
+<!-- fdd-id-content -->
 
-    C->>GW: chat_completion(messages with image URLs)
-    GW->>FS: Fetch images
-    FS-->>GW: image content
-    GW->>OB: Request with images
-    OB->>P: Request
-    P-->>OB: Analysis
-    OB-->>GW: Analysis
-    GW-->>C: Response + usage
-```
+#### Image Generation
 
----
+**ID**: [ ] `p1` `fdd-llm-gateway-fr-image-generation-v1`
 
-### [ ] S1.5 Image Generation
+<!-- fdd-id-content -->
 
 Consumer sends text prompt. Gateway generates image, stores in FileStorage, returns URL.
 
-```mermaid
-sequenceDiagram
-    participant C as Consumer
-    participant GW as LLM Gateway
-    participant OB as Outbound API Gateway
-    participant P as Provider
-    participant FS as FileStorage
+**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-provider`
+<!-- fdd-id-content -->
 
-    C->>GW: chat_completion(image gen model, prompt)
-    GW->>OB: Generation request
-    OB->>P: Request
-    P-->>OB: Generated image
-    OB-->>GW: Generated image
-    GW->>FS: Store image
-    FS-->>GW: URL
-    GW-->>C: Response with URL + usage
-```
+#### Speech-to-Text
 
----
+**ID**: [ ] `p1` `fdd-llm-gateway-fr-speech-to-text-v1`
 
-### [ ] S1.6 Speech-to-Text
+<!-- fdd-id-content -->
 
 Consumer sends message with audio URL. Gateway fetches audio, returns transcription.
 
-```mermaid
-sequenceDiagram
-    participant C as Consumer
-    participant FS as FileStorage
-    participant GW as LLM Gateway
-    participant OB as Outbound API Gateway
-    participant P as Provider
+**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-provider`
+<!-- fdd-id-content -->
 
-    C->>GW: chat_completion(messages with audio URL)
-    GW->>FS: Fetch audio
-    FS-->>GW: audio content
-    GW->>OB: Transcription request
-    OB->>P: Request
-    P-->>OB: Transcription
-    OB-->>GW: Transcription
-    GW-->>C: Text response + usage
-```
+#### Text-to-Speech
 
----
+**ID**: [ ] `p1` `fdd-llm-gateway-fr-text-to-speech-v1`
 
-### [ ] S1.7 Text-to-Speech
+<!-- fdd-id-content -->
 
 Consumer sends text. Gateway synthesizes audio, stores in FileStorage, returns URL. Supports streaming mode.
 
-```mermaid
-sequenceDiagram
-    participant C as Consumer
-    participant GW as LLM Gateway
-    participant OB as Outbound API Gateway
-    participant P as Provider
-    participant FS as FileStorage
+**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-provider`
+<!-- fdd-id-content -->
 
-    C->>GW: chat_completion(TTS model, text)
-    GW->>OB: Synthesis request
-    OB->>P: Request
-    P-->>OB: Audio
-    OB-->>GW: Audio
-    GW->>FS: Store audio
-    FS-->>GW: URL
-    GW-->>C: Response with URL + usage
-```
+#### Video Understanding
 
----
+**ID**: [ ] `p1` `fdd-llm-gateway-fr-video-understanding-v1`
 
-### [ ] S1.8 Video Understanding
+<!-- fdd-id-content -->
 
 Consumer sends message with video URL. Gateway fetches video, returns analysis.
 
-```mermaid
-sequenceDiagram
-    participant C as Consumer
-    participant FS as FileStorage
-    participant GW as LLM Gateway
-    participant OB as Outbound API Gateway
-    participant P as Provider
+**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-provider`
+<!-- fdd-id-content -->
 
-    C->>GW: chat_completion(messages with video URL)
-    GW->>FS: Fetch video
-    FS-->>GW: video content
-    GW->>OB: Analysis request
-    OB->>P: Request
-    P-->>OB: Analysis
-    OB-->>GW: Analysis
-    GW-->>C: Response + usage
-```
+#### Video Generation
 
----
+**ID**: [ ] `p1` `fdd-llm-gateway-fr-video-generation-v1`
 
-### [ ] S1.9 Video Generation
+<!-- fdd-id-content -->
 
 Consumer sends text prompt. Gateway generates video, stores in FileStorage, returns URL. Typically requires async mode due to long processing.
 
-```mermaid
-sequenceDiagram
-    participant C as Consumer
-    participant GW as LLM Gateway
-    participant OB as Outbound API Gateway
-    participant P as Provider
-    participant FS as FileStorage
+**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-provider`
+<!-- fdd-id-content -->
 
-    C->>GW: chat_completion(video gen model, prompt)
-    GW->>OB: Generation request
-    OB->>P: Request
-    P-->>OB: Generated video
-    OB-->>GW: Generated video
-    GW->>FS: Store video
-    FS-->>GW: URL
-    GW-->>C: Response with URL + usage
-```
+#### Tool/Function Calling
 
----
+**ID**: [ ] `p1` `fdd-llm-gateway-fr-tool-calling-v1`
 
-### [ ] S1.10 Tool/Function Calling
+<!-- fdd-id-content -->
 
-Consumer sends request with tool definitions. Gateway resolves schema references, converts to provider format. Model returns tool calls for consumer to execute.
+Consumer sends request with tool definitions. Gateway resolves schema references, converts to provider format. Model returns tool calls for consumer to execute. Gateway does not execute tools — this is consumer responsibility.
 
-```mermaid
-sequenceDiagram
-    participant C as Consumer
-    participant GW as LLM Gateway
-    participant TR as Type Registry
-    participant OB as Outbound API Gateway
-    participant P as Provider
+**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-provider`
+<!-- fdd-id-content -->
 
-    C->>GW: chat_completion(messages, tools)
-    GW->>TR: Resolve schema references
-    TR-->>GW: schemas
-    GW->>OB: Request with tools
-    OB->>P: Request
-    P-->>OB: tool_calls[]
-    OB-->>GW: tool_calls[]
-    GW-->>C: Response with tool_calls[]
-    Note over C: Consumer executes tools
-    C->>GW: chat_completion(messages + tool_results)
-    GW->>OB: Request
-    OB->>P: Request
-    P-->>OB: Final response
-    OB-->>GW: Final response
-    GW-->>C: Response
-```
+#### Structured Output
 
----
+**ID**: [ ] `p1` `fdd-llm-gateway-fr-structured-output-v1`
 
-### [ ] S1.11 Structured Output
+<!-- fdd-id-content -->
 
-Consumer requests response matching JSON schema. Gateway validates response against schema. On validation failure, Gateway retries with error context.
+Consumer requests response matching JSON schema. Gateway validates response against schema.
 
-```mermaid
-sequenceDiagram
-    participant C as Consumer
-    participant GW as LLM Gateway
-    participant OB as Outbound API Gateway
-    participant P as Provider
+**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-provider`
+<!-- fdd-id-content -->
 
-    C->>GW: chat_completion(messages, response_schema)
-    GW->>OB: Request with schema
-    OB->>P: Request
-    P-->>OB: JSON response
-    OB-->>GW: JSON response
-    GW->>GW: Validate against schema
-    GW-->>C: Validated response + usage
-```
+#### Document Understanding
 
----
+**ID**: [ ] `p1` `fdd-llm-gateway-fr-document-understanding-v1`
 
-### [ ] S1.12 Model Discovery
-
-Consumer queries available models and capabilities. Gateway delegates to Model Registry.
-
-```mermaid
-sequenceDiagram
-    participant C as Consumer
-    participant GW as LLM Gateway
-    participant MR as Model Registry
-
-    C->>GW: list_models(filter?)
-    GW->>MR: list_tenant_models(filter)
-    MR-->>GW: models[]
-    GW-->>C: models[]
-```
-
-Model info includes: capabilities, context limits, pricing.
-
----
-
-### [ ] S1.13 Document Understanding
+<!-- fdd-id-content -->
 
 Consumer sends message with document URL. Gateway fetches document, routes to capable model.
 
-```mermaid
-sequenceDiagram
-    participant C as Consumer
-    participant FS as FileStorage
-    participant GW as LLM Gateway
-    participant OB as Outbound API Gateway
-    participant P as Provider
+**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-provider`
+<!-- fdd-id-content -->
 
-    C->>GW: chat_completion(messages with document URL)
-    GW->>FS: Fetch document
-    FS-->>GW: document content
-    GW->>OB: Analysis request
-    OB->>P: Request
-    P-->>OB: Analysis
-    OB-->>GW: Analysis
-    GW-->>C: Response + usage
-```
+#### Async Jobs
 
----
+**ID**: [ ] `p1` `fdd-llm-gateway-fr-async-jobs-v1`
 
-### [ ] S1.14 Async Jobs
+<!-- fdd-id-content -->
 
 Consumer can request async execution for long-running operations. Gateway returns job ID, consumer polls for result.
 
@@ -394,320 +232,639 @@ Gateway abstracts provider behavior:
 - Sync provider + async request → Gateway simulates job
 - Async provider + sync request → Gateway polls internally
 
-```mermaid
-sequenceDiagram
-    participant C as Consumer
-    participant GW as LLM Gateway
-    participant OB as Outbound API Gateway
-    participant P as Provider
+**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-provider`
+<!-- fdd-id-content -->
 
-    C->>GW: chat_completion(async=true)
-    GW->>OB: Start request
-    OB->>P: Request
-    P-->>OB: job started
-    OB-->>GW: job started
-    GW-->>C: job_id
+#### Realtime Audio
 
-    C->>GW: get_job(job_id)
-    GW->>OB: Check status
-    OB->>P: Poll
-    P-->>OB: result
-    OB-->>GW: result
-    GW-->>C: result
-```
+**ID**: [ ] `p1` `fdd-llm-gateway-fr-realtime-audio-v1`
 
----
-
-### [ ] S1.15 Realtime Audio
+<!-- fdd-id-content -->
 
 Bidirectional audio streaming via WebSocket for voice conversations.
 
-```mermaid
-sequenceDiagram
-    participant C as Consumer
-    participant GW as LLM Gateway
-    participant OB as Outbound API Gateway
-    participant P as Provider
+**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-provider`
+<!-- fdd-id-content -->
 
-    C->>GW: WebSocket connect
-    GW->>OB: WebSocket connect
-    OB->>P: WebSocket connect
+#### Usage Tracking
 
-    loop Session
-        C->>GW: audio chunk
-        GW->>OB: audio chunk
-        OB->>P: audio chunk
-        P-->>OB: audio/text
-        OB-->>GW: audio/text
-        GW-->>C: audio/text
-    end
+**ID**: [ ] `p1` `fdd-llm-gateway-fr-usage-tracking-v1`
 
-    C->>GW: close
-    GW-->>C: usage summary
-```
+<!-- fdd-id-content -->
 
----
+Gateway reports usage after each request via Usage Tracker: tokens, cost estimate, latency, attribution (tenant, user, conversation, model).
 
-### [ ] S1.16 Usage Tracking
+Cross-cutting concern — applies to all operations, no dedicated UC.
 
-Gateway reports usage after each request via Usage Plugin: tokens, cost estimate, latency, attribution (tenant, user, conversation, model).
+**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-usage-tracker`
+<!-- fdd-id-content -->
 
----
+### P2 — Reliability & Governance
 
-## P2 — Reliability & Governance
+#### Provider Fallback
 
-### [ ] S2.1 Provider Fallback
+**ID**: [ ] `p2` `fdd-llm-gateway-fr-provider-fallback-v1`
+
+<!-- fdd-id-content -->
 
 When primary provider fails, Gateway automatically switches to fallback provider with matching capabilities.
 
-```mermaid
-sequenceDiagram
-    participant C as Consumer
-    participant GW as LLM Gateway
-    participant OB as Outbound API Gateway
-    participant P1 as Primary Provider
-    participant P2 as Fallback Provider
+**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-provider`
+<!-- fdd-id-content -->
 
-    C->>GW: chat_completion(model)
-    GW->>OB: Request
-    OB->>P1: Request
-    P1-->>OB: failure
-    OB-->>GW: failure
-    GW->>GW: Select fallback
-    GW->>OB: Request
-    OB->>P2: Request
-    P2-->>OB: Response
-    OB-->>GW: Response
-    GW-->>C: Response (fallback indicated)
-```
+#### Timeout Enforcement
 
----
+**ID**: [ ] `p2` `fdd-llm-gateway-fr-timeout-v1`
 
-### [ ] S2.2 Retry with Backoff
-
-Transient failures trigger automatic retry with exponential backoff before fallback.
-
-```mermaid
-sequenceDiagram
-    participant GW as LLM Gateway
-    participant OB as Outbound API Gateway
-    participant P as Provider
-
-    GW->>OB: Request
-    OB->>P: Request
-    P-->>OB: transient error
-    OB-->>GW: transient error
-    GW->>GW: Wait (backoff)
-    GW->>OB: Retry
-    OB->>P: Request
-    P-->>OB: Success
-    OB-->>GW: Success
-```
-
----
-
-### [ ] S2.3 Timeout Enforcement
+<!-- fdd-id-content -->
 
 Gateway enforces timeout types:
-- **Time-to-first-token (TTFT)**: max wait for initial response chunk
-- **Total generation timeout**: max duration for complete response
+- Time-to-first-token (TTFT): max wait for initial response chunk
+- Total generation timeout: max duration for complete response
 
-On timeout → retry → fallback → error.
+On timeout → fallback (if configured) → error.
 
----
+**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-provider`
+<!-- fdd-id-content -->
 
-### [ ] S2.4 Pre-Call Interceptor
+#### Pre-Call Interceptor
+
+**ID**: [ ] `p2` `fdd-llm-gateway-fr-pre-call-interceptor-v1`
+
+<!-- fdd-id-content -->
 
 Before sending to provider, Gateway invokes Hook Plugin. Plugin can allow, block, or modify request.
 
-```mermaid
-sequenceDiagram
-    participant C as Consumer
-    participant GW as LLM Gateway
-    participant HP as Hook Plugin
-    participant OB as Outbound API Gateway
-    participant P as Provider
+**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-hook-plugin`
+<!-- fdd-id-content -->
 
-    C->>GW: chat_completion(...)
-    GW->>HP: pre_call(request)
-    alt Blocked
-        HP-->>GW: blocked
-        GW-->>C: request_blocked
-    else Allowed/Modified
-        HP-->>GW: proceed
-        GW->>OB: Request
-        OB->>P: Request
-    end
-```
+#### Post-Response Interceptor
 
----
+**ID**: [ ] `p2` `fdd-llm-gateway-fr-post-response-interceptor-v1`
 
-### [ ] S2.5 Post-Response Interceptor
+<!-- fdd-id-content -->
 
 After receiving response, Gateway invokes Hook Plugin. Plugin can allow, block, or modify response.
 
-```mermaid
-sequenceDiagram
-    participant GW as LLM Gateway
-    participant OB as Outbound API Gateway
-    participant P as Provider
-    participant HP as Hook Plugin
-    participant C as Consumer
+**Actors**: `fdd-llm-gateway-actor-hook-plugin`, `fdd-llm-gateway-actor-consumer`
+<!-- fdd-id-content -->
 
-    GW->>OB: Request
-    OB->>P: Request
-    P-->>OB: Response
-    OB-->>GW: Response
-    GW->>HP: post_response(response)
-    alt Blocked
-        HP-->>GW: blocked
-        GW-->>C: response_blocked
-    else Allowed/Modified
-        HP-->>GW: proceed
-        GW-->>C: Response
-    end
-```
+#### Per-Tenant Budget Enforcement
 
----
+**ID**: [ ] `p2` `fdd-llm-gateway-fr-budget-enforcement-v1`
 
-### [ ] S2.6 Per-Tenant Budget Enforcement
+<!-- fdd-id-content -->
 
-Gateway checks budget before execution via Usage Plugin. Rejects if exhausted, reports actual usage after completion.
+Gateway checks budget before execution via Usage Tracker. Rejects if exhausted, reports actual usage after completion.
 
-```mermaid
-sequenceDiagram
-    participant C as Consumer
-    participant GW as LLM Gateway
-    participant UP as Usage Plugin
-    participant OB as Outbound API Gateway
-    participant P as Provider
+Cross-cutting concern — applies to all operations, no dedicated UC.
 
-    C->>GW: chat_completion(...)
-    GW->>UP: check_budget
-    alt Budget exhausted
-        UP-->>GW: denied
-        GW-->>C: budget_exceeded
-    else Budget available
-        UP-->>GW: ok
-        GW->>OB: Request
-        OB->>P: Request
-        P-->>OB: Response
-        OB-->>GW: Response
-        GW->>UP: report_usage
-        GW-->>C: Response
-    end
-```
+**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-usage-tracker`
+<!-- fdd-id-content -->
 
----
+#### Rate Limiting
 
-### [ ] S2.7 Request Cancellation
+**ID**: [ ] `p2` `fdd-llm-gateway-fr-rate-limiting-v1`
 
-Consumer can cancel in-progress request. Gateway propagates cancellation to provider.
-
-```mermaid
-sequenceDiagram
-    participant C as Consumer
-    participant GW as LLM Gateway
-    participant OB as Outbound API Gateway
-    participant P as Provider
-
-    C->>GW: chat_completion(request_id)
-    GW->>OB: Request
-    OB->>P: Request
-    C->>GW: cancel(request_id)
-    GW->>OB: Cancel
-    OB->>P: Cancel
-    GW-->>C: cancelled
-```
-
----
-
-### [ ] S2.8 Rate Limiting
+<!-- fdd-id-content -->
 
 Gateway enforces rate limits at tenant and user levels. Rejects requests exceeding limits.
 
-```mermaid
-sequenceDiagram
-    participant C as Consumer
-    participant GW as LLM Gateway
-    participant OB as Outbound API Gateway
-    participant P as Provider
+**Actors**: `fdd-llm-gateway-actor-consumer`
+<!-- fdd-id-content -->
 
-    C->>GW: chat_completion(...)
-    GW->>GW: Check rate limits
-    alt Limit exceeded
-        GW-->>C: rate_limited
-    else Within limits
-        GW->>OB: Request
-        OB->>P: Request
-        P-->>OB: Response
-        OB-->>GW: Response
-        GW-->>C: Response
-    end
-```
+### P3 — Optimization
 
----
+#### Batch Processing
 
-## P3 — Optimization
+**ID**: [ ] `p3` `fdd-llm-gateway-fr-batch-processing-v1`
 
-### [ ] S3.1 Cost-Aware Routing
+<!-- fdd-id-content -->
 
-When multiple providers can serve request, Gateway selects based on cost and latency optimization.
+Consumer submits batch of requests for async processing at reduced cost. Gateway abstracts provider batch APIs (OpenAI Batch API, Anthropic Message Batches).
 
----
+**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-provider`
+<!-- fdd-id-content -->
 
-### [ ] S3.2 Embeddings Batching
+### P4 — Enterprise
 
-Gateway batches embedding requests within time window for efficiency. No cross-tenant batching. Supports partial failure reporting.
+#### Audit Events
 
----
+**ID**: [ ] `p4` `fdd-llm-gateway-fr-audit-events-v1`
 
-### [ ] S3.3 Batch Processing
+<!-- fdd-id-content -->
 
-Consumer submits batch of requests for async processing at reduced cost.
+Gateway emits audit events via Audit Module for compliance: request started, completed, failed, blocked, fallback triggered.
 
-Gateway abstracts provider batch APIs (OpenAI Batch API, Anthropic Message Batches).
+Cross-cutting concern — applies to all operations, no dedicated UC.
 
-```mermaid
-sequenceDiagram
-    participant C as Consumer
-    participant GW as LLM Gateway
-    participant OB as Outbound API Gateway
-    participant P as Provider
+**Actors**: `fdd-llm-gateway-actor-audit-module`
+<!-- fdd-id-content -->
 
-    C->>GW: create_batch(requests[])
-    GW->>OB: Submit batch
-    OB->>P: Provider batch API
-    P-->>OB: batch_id
-    OB-->>GW: batch_id
-    GW-->>C: batch_id
+## 4. Use Cases
 
-    C->>GW: get_batch(batch_id)
-    GW->>OB: Check status
-    OB->>P: Poll batch
-    P-->>OB: status + results[]
-    OB-->>GW: status + results[]
-    GW-->>C: status + results[]
-```
+#### UC-001: Chat Completion
 
----
+**ID**: [ ] `p1` `fdd-llm-gateway-usecase-chat-completion-v1`
 
-## P4 — Enterprise
+<!-- fdd-id-content -->
+**Actor**: `fdd-llm-gateway-actor-consumer`
 
-### [ ] S4.1 Audit Events
+**Preconditions**: Model available for tenant.
 
-Gateway emits audit events via Audit Plugin for compliance: request started, completed, failed, blocked, fallback triggered.
+**Flow**:
+1. Consumer sends chat_completion(model, messages)
+2. Gateway resolves provider via Model Registry
+3. Gateway sends request via Outbound API Gateway
+4. Provider returns response
+5. Gateway returns normalized response with usage
 
----
+**Postconditions**: Response returned, usage reported.
 
-## Errors
+**Acceptance criteria**:
+- Response in normalized format regardless of provider
+- Usage metrics included (tokens, cost estimate)
+- Provider errors normalized to Gateway error format
+<!-- fdd-id-content -->
 
-Gateway returns errors for:
-- Model not found / not approved
-- Validation errors
-- Capability not supported
-- Budget exceeded
-- Rate limited
-- Request/response blocked by hook
-- Provider errors and timeouts
-- Job not found / expired
+#### UC-002: Streaming Chat Completion
+
+**ID**: [ ] `p1` `fdd-llm-gateway-usecase-streaming-v1`
+
+<!-- fdd-id-content -->
+**Actor**: `fdd-llm-gateway-actor-consumer`
+
+**Preconditions**: Model available for tenant, model supports streaming.
+
+**Flow**:
+1. Consumer sends chat_completion(stream=true)
+2. Gateway resolves provider via Model Registry
+3. Gateway establishes streaming connection to provider
+4. Gateway normalizes each chunk
+5. Gateway streams chunks to Consumer
+6. Gateway sends final usage summary
+
+**Postconditions**: Stream completed, usage reported.
+
+**Acceptance criteria**:
+- Chunks normalized from provider format
+- Final message includes usage metrics
+- Connection errors propagated to consumer
+<!-- fdd-id-content -->
+
+#### UC-003: Embeddings Generation
+
+**ID**: [ ] `p1` `fdd-llm-gateway-usecase-embeddings-v1`
+
+<!-- fdd-id-content -->
+**Actor**: `fdd-llm-gateway-actor-consumer`
+
+**Preconditions**: Embedding model available for tenant.
+
+**Flow**:
+1. Consumer sends embed(model, input[])
+2. Gateway resolves provider via Model Registry
+3. Gateway sends request via Outbound API Gateway
+4. Provider returns vectors
+5. Gateway returns vectors with usage
+
+**Postconditions**: Vectors returned, usage reported.
+
+**Acceptance criteria**:
+- Vectors returned in normalized format
+- Usage metrics included (tokens)
+<!-- fdd-id-content -->
+
+#### UC-004: Vision (Image Analysis)
+
+**ID**: [ ] `p1` `fdd-llm-gateway-usecase-vision-v1`
+
+<!-- fdd-id-content -->
+**Actor**: `fdd-llm-gateway-actor-consumer`
+
+**Preconditions**: Model available for tenant, model supports required content type.
+
+**Flow**:
+1. Consumer sends chat_completion with image URLs
+2. Gateway resolves provider via Model Registry
+3. Gateway fetches images from FileStorage
+4. Gateway sends request via Outbound API Gateway
+5. Provider returns analysis
+6. Gateway returns response with usage
+
+**Postconditions**: Response returned, usage reported.
+
+**Acceptance criteria**:
+- Multiple images supported per request
+- Response in normalized format
+- Usage metrics included
+<!-- fdd-id-content -->
+
+#### UC-005: Image Generation
+
+**ID**: [ ] `p1` `fdd-llm-gateway-usecase-image-generation-v1`
+
+<!-- fdd-id-content -->
+**Actor**: `fdd-llm-gateway-actor-consumer`
+
+**Preconditions**: Image generation model available for tenant.
+
+**Flow**:
+1. Consumer sends generation request with prompt
+2. Gateway resolves provider via Model Registry
+3. Gateway sends request via Outbound API Gateway
+4. Provider returns generated image
+5. Gateway stores image in FileStorage
+6. Gateway returns URL with usage
+
+**Postconditions**: Image stored, URL returned, usage reported.
+
+**Acceptance criteria**:
+- Generated image accessible via returned URL
+- Response in normalized format
+- Usage metrics included
+<!-- fdd-id-content -->
+
+#### UC-006: Speech-to-Text
+
+**ID**: [ ] `p1` `fdd-llm-gateway-usecase-speech-to-text-v1`
+
+<!-- fdd-id-content -->
+**Actor**: `fdd-llm-gateway-actor-consumer`
+
+**Preconditions**: STT model available for tenant.
+
+**Flow**:
+1. Consumer sends message with audio URL
+2. Gateway resolves provider via Model Registry
+3. Gateway fetches audio from FileStorage
+4. Gateway sends request via Outbound API Gateway
+5. Provider returns transcription
+6. Gateway returns text response with usage
+
+**Postconditions**: Transcription returned, usage reported.
+
+**Acceptance criteria**:
+- Transcription in normalized format
+- Usage metrics included
+<!-- fdd-id-content -->
+
+#### UC-007: Text-to-Speech
+
+**ID**: [ ] `p1` `fdd-llm-gateway-usecase-text-to-speech-v1`
+
+<!-- fdd-id-content -->
+**Actor**: `fdd-llm-gateway-actor-consumer`
+
+**Preconditions**: TTS model available for tenant.
+
+**Flow**:
+1. Consumer sends TTS request with text
+2. Gateway resolves provider via Model Registry
+3. Gateway sends request via Outbound API Gateway
+4. Provider returns audio
+5. Gateway stores audio in FileStorage
+6. Gateway returns URL with usage
+
+**Postconditions**: Audio stored, URL returned, usage reported.
+
+**Acceptance criteria**:
+- Generated audio accessible via returned URL
+- Streaming mode supported (audio chunks returned directly)
+- Usage metrics included
+<!-- fdd-id-content -->
+
+#### UC-008: Video Understanding
+
+**ID**: [ ] `p1` `fdd-llm-gateway-usecase-video-understanding-v1`
+
+<!-- fdd-id-content -->
+**Actor**: `fdd-llm-gateway-actor-consumer`
+
+**Preconditions**: Model available for tenant, model supports required content type.
+
+**Flow**:
+1. Consumer sends message with video URL
+2. Gateway resolves provider via Model Registry
+3. Gateway fetches video from FileStorage
+4. Gateway sends request via Outbound API Gateway
+5. Provider returns analysis
+6. Gateway returns response with usage
+
+**Postconditions**: Response returned, usage reported.
+
+**Acceptance criteria**:
+- Response in normalized format
+- Usage metrics included
+<!-- fdd-id-content -->
+
+#### UC-009: Video Generation
+
+**ID**: [ ] `p1` `fdd-llm-gateway-usecase-video-generation-v1`
+
+<!-- fdd-id-content -->
+**Actor**: `fdd-llm-gateway-actor-consumer`
+
+**Preconditions**: Video generation model available for tenant.
+
+**Flow**:
+1. Consumer sends generation request with prompt
+2. Gateway resolves provider via Model Registry
+3. Gateway sends request via Outbound API Gateway
+4. Provider returns generated video
+5. Gateway stores video in FileStorage
+6. Gateway returns URL with usage
+
+**Postconditions**: Video stored, URL returned, usage reported.
+
+**Acceptance criteria**:
+- Generated video accessible via returned URL
+- Async mode supported (typically required due to long processing)
+- Usage metrics included
+<!-- fdd-id-content -->
+
+#### UC-010: Tool/Function Calling
+
+**ID**: [ ] `p1` `fdd-llm-gateway-usecase-tool-calling-v1`
+
+<!-- fdd-id-content -->
+**Actor**: `fdd-llm-gateway-actor-consumer`
+
+**Preconditions**: Model available for tenant, model supports function calling.
+
+**Flow**:
+1. Consumer sends chat_completion with tool definitions
+2. Gateway resolves provider via Model Registry
+3. Gateway resolves schemas via Type Registry (for reference and inline GTS formats)
+4. Gateway converts tools to provider format
+5. Gateway sends request via Outbound API Gateway
+6. Provider returns tool_calls
+7. Gateway returns tool_calls in unified format
+8. Consumer executes tools, sends results
+9. Gateway forwards tool results to provider
+10. Provider returns final response
+11. Gateway returns response with usage
+
+**Postconditions**: Response returned, usage reported.
+
+**Acceptance criteria**:
+- Tool definitions supported: reference, inline GTS, unified format (OpenAI-like)
+- Tool calls returned in unified format
+- Response in normalized format
+<!-- fdd-id-content -->
+
+#### UC-011: Structured Output
+
+**ID**: [ ] `p1` `fdd-llm-gateway-usecase-structured-output-v1`
+
+<!-- fdd-id-content -->
+**Actor**: `fdd-llm-gateway-actor-consumer`
+
+**Preconditions**: Model available for tenant.
+
+**Flow**:
+1. Consumer sends chat_completion with response_schema
+2. Gateway resolves provider via Model Registry
+3. Gateway sends request via Outbound API Gateway
+4. Provider returns JSON response
+5. Gateway validates response against schema
+6. Gateway returns validated response with usage (or validation_error if invalid)
+
+**Postconditions**: Valid JSON returned, usage reported.
+
+**Acceptance criteria**:
+- Response validated against provided schema
+- Returns validation_error with details if schema validation fails
+- Response in normalized format
+<!-- fdd-id-content -->
+
+#### UC-012: Document Understanding
+
+**ID**: [ ] `p1` `fdd-llm-gateway-usecase-document-understanding-v1`
+
+<!-- fdd-id-content -->
+**Actor**: `fdd-llm-gateway-actor-consumer`
+
+**Preconditions**: Model available for tenant, model supports required content type.
+
+**Flow**:
+1. Consumer sends message with document URL
+2. Gateway resolves provider via Model Registry
+3. Gateway fetches document from FileStorage
+4. Gateway sends request via Outbound API Gateway
+5. Provider returns analysis
+6. Gateway returns response with usage
+
+**Postconditions**: Response returned, usage reported.
+
+**Acceptance criteria**:
+- Response in normalized format
+- Usage metrics included
+<!-- fdd-id-content -->
+
+#### UC-013: Async Jobs
+
+**ID**: [ ] `p1` `fdd-llm-gateway-usecase-async-jobs-v1`
+
+<!-- fdd-id-content -->
+**Actor**: `fdd-llm-gateway-actor-consumer`
+
+**Preconditions**: Model available for tenant.
+
+**Flow**:
+1. Consumer sends request with async=true
+2. Gateway resolves provider via Model Registry
+3. Gateway initiates async job
+4. Gateway returns job_id
+5. Consumer polls get_job(job_id)
+6. Gateway returns status/result
+7. (Optional) Consumer cancels job via cancel_job(job_id)
+
+**Postconditions**: Job completed, cancelled, or result returned.
+
+**Acceptance criteria**:
+- Sync provider + async request: Gateway simulates job
+- Async provider + sync request: Gateway polls internally
+- Job status: pending, running, completed, failed, cancelled
+- Job cancellation supported
+<!-- fdd-id-content -->
+
+#### UC-014: Realtime Audio
+
+**ID**: [ ] `p1` `fdd-llm-gateway-usecase-realtime-audio-v1`
+
+<!-- fdd-id-content -->
+**Actor**: `fdd-llm-gateway-actor-consumer`
+
+**Preconditions**: Model available for tenant, model supports realtime audio.
+
+**Flow**:
+1. Consumer establishes WebSocket connection
+2. Gateway resolves provider via Model Registry
+3. Gateway connects to provider WebSocket
+4. Bidirectional audio/text streaming
+5. Consumer closes connection
+6. Gateway returns usage summary
+
+**Postconditions**: Session closed, usage reported.
+
+**Acceptance criteria**:
+- Bidirectional streaming supported
+- Usage summary on close
+<!-- fdd-id-content -->
+
+#### UC-015: Provider Fallback
+
+**ID**: [ ] `p2` `fdd-llm-gateway-usecase-provider-fallback-v1`
+
+<!-- fdd-id-content -->
+**Actor**: `fdd-llm-gateway-actor-consumer`
+
+**Preconditions**: Model available for tenant.
+
+**Flow**:
+1. Consumer sends request with fallback configuration
+2. Gateway resolves provider via Model Registry
+3. Gateway sends request to primary provider
+4. Primary provider fails
+5. Gateway selects fallback from request configuration
+6. Gateway sends request to fallback provider
+7. Gateway returns response (fallback indicated)
+
+**Postconditions**: Response returned via fallback.
+
+**Acceptance criteria**:
+- Fallback configuration provided in request
+- Fallback selection based on capability match
+- Response includes fallback indicator
+<!-- fdd-id-content -->
+
+#### UC-016: Timeout Enforcement
+
+**ID**: [ ] `p2` `fdd-llm-gateway-usecase-timeout-v1`
+
+<!-- fdd-id-content -->
+**Actor**: `fdd-llm-gateway-actor-consumer`
+
+**Preconditions**: Model available for tenant.
+
+**Flow**:
+1. Consumer sends request
+2. Gateway starts timeout tracking (TTFT, total)
+3. Gateway sends request to provider
+4. If TTFT timeout: Gateway triggers fallback or error
+5. If total timeout: Gateway triggers fallback or error
+6. Gateway returns response or error
+
+**Postconditions**: Response returned or timeout error.
+
+**Acceptance criteria**:
+- TTFT (time-to-first-token) timeout enforced
+- Total generation timeout enforced
+- On timeout: fallback (if configured) or error
+<!-- fdd-id-content -->
+
+#### UC-017: Pre-Call Interceptor
+
+**ID**: [ ] `p2` `fdd-llm-gateway-usecase-pre-call-interceptor-v1`
+
+<!-- fdd-id-content -->
+**Actor**: `fdd-llm-gateway-actor-consumer`
+
+**Preconditions**: Hook Plugin configured for tenant.
+
+**Flow**:
+1. Consumer sends request
+2. Gateway invokes Hook Plugin pre_call
+3. Plugin allows, blocks, or modifies request
+4. If blocked: Gateway returns request_blocked error
+5. If allowed/modified: Gateway proceeds with request
+
+**Postconditions**: Request processed or blocked.
+
+**Acceptance criteria**:
+- Plugin can allow, block, or modify request
+- Blocked requests return request_blocked error
+<!-- fdd-id-content -->
+
+#### UC-018: Post-Response Interceptor
+
+**ID**: [ ] `p2` `fdd-llm-gateway-usecase-post-response-interceptor-v1`
+
+<!-- fdd-id-content -->
+**Actor**: `fdd-llm-gateway-actor-consumer`
+
+**Preconditions**: Hook Plugin configured for tenant.
+
+**Flow**:
+1. Provider returns response
+2. Gateway invokes Hook Plugin post_response
+3. Plugin allows, blocks, or modifies response
+4. If blocked: Gateway returns response_blocked error
+5. If allowed/modified: Gateway returns response to consumer
+
+**Postconditions**: Response returned or blocked.
+
+**Acceptance criteria**:
+- Plugin can allow, block, or modify response
+- Blocked responses return response_blocked error
+<!-- fdd-id-content -->
+
+#### UC-019: Rate Limiting
+
+**ID**: [ ] `p2` `fdd-llm-gateway-usecase-rate-limiting-v1`
+
+<!-- fdd-id-content -->
+**Actor**: `fdd-llm-gateway-actor-consumer`
+
+**Preconditions**: Rate limits configured for tenant.
+
+**Flow**:
+1. Consumer sends request
+2. Gateway checks rate limits
+3. If limit exceeded: Gateway returns rate_limited error
+4. If within limits: Gateway proceeds with request
+
+**Postconditions**: Request processed or rejected.
+
+**Acceptance criteria**:
+- Rate limits enforced at tenant level
+- Rate limits enforced at user level
+- Exceeded requests return rate_limited error
+<!-- fdd-id-content -->
+
+#### UC-020: Batch Processing
+
+**ID**: [ ] `p3` `fdd-llm-gateway-usecase-batch-processing-v1`
+
+<!-- fdd-id-content -->
+**Actor**: `fdd-llm-gateway-actor-consumer`
+
+**Preconditions**: Model available for tenant, provider supports batch API.
+
+**Flow**:
+1. Consumer submits batch of requests
+2. Gateway resolves provider via Model Registry
+3. Gateway submits to provider batch API
+4. Gateway returns batch_id
+5. Consumer polls for results
+6. Gateway returns status and results
+7. (Optional) Consumer cancels batch
+
+**Postconditions**: Batch completed, results returned.
+
+**Acceptance criteria**:
+- Abstracts OpenAI Batch API, Anthropic Message Batches
+- Partial results available as completed
+- Batch cancellation supported
+<!-- fdd-id-content -->
+
+## 5. Non-functional requirements
+
+#### Scalability
+
+**ID**: [ ] `p1` `fdd-llm-gateway-nfr-scalability-v1`
+
+<!-- fdd-id-content -->
+Horizontal scaling without state coordination. Stateless design with exception for temporary async job state.
+<!-- fdd-id-content -->

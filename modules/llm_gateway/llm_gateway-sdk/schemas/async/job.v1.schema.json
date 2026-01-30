@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.x.llm_gateway.async.job.v1~",
+  "title": "Job",
+  "description": "Async job state",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique job identifier"
+    },
+    "status": {
+      "$ref": "gts://gts.x.llm_gateway.async.job_status.v1~",
+      "description": "Current job status"
+    },
+    "request": {
+      "$ref": "gts://gts.x.llm_gateway.core.request.v1~",
+      "description": "Original request"
+    },
+    "result": {
+      "$ref": "gts://gts.x.llm_gateway.core.response.v1~",
+      "description": "Job result (when completed)"
+    },
+    "error": {
+      "$ref": "gts://gts.x.llm_gateway.async.error.v1~",
+      "description": "Error details (when failed)"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Job creation timestamp"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Result expiration timestamp"
+    }
+  },
+  "required": ["id", "status", "request", "created_at", "expires_at"],
+  "additionalProperties": false
+}

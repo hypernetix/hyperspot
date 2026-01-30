@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.x.llm_gateway.core.request.v1~",
+  "title": "Request",
+  "description": "LLM Gateway request from consumer",
+  "type": "object",
+  "properties": {
+    "model": {
+      "type": "string",
+      "description": "Model identifier from Model Registry"
+    },
+    "messages": {
+      "type": "array",
+      "items": {
+        "$ref": "gts://gts.x.llm_gateway.core.message.v1~"
+      },
+      "minItems": 1,
+      "description": "Conversation messages"
+    },
+    "tools": {
+      "type": "array",
+      "items": {
+        "$ref": "gts://gts.x.llm_gateway.tools.tool.v1~"
+      },
+      "description": "Available tools for the model"
+    },
+    "stream": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable streaming response"
+    },
+    "async": {
+      "type": "boolean",
+      "default": false,
+      "description": "Run as async job"
+    },
+    "response_schema": {
+      "$ref": "gts://gts.x.llm_gateway.tools.schema.v1~",
+      "description": "JSON Schema for structured output"
+    },
+    "fallback": {
+      "$ref": "gts://gts.x.llm_gateway.core.fallback_config.v1~",
+      "description": "Fallback configuration"
+    }
+  },
+  "required": ["model", "messages"],
+  "additionalProperties": false
+}
