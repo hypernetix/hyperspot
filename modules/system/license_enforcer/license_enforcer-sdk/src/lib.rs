@@ -13,14 +13,23 @@
 //!
 //! Consumers obtain the client from `ClientHub`:
 //!
-//! ```ignore
-//! use license_enforcer_sdk::LicenseEnforcerGatewayClient;
-//!
+//! ```
+//! # use license_enforcer_sdk::{LicenseEnforcerGatewayClient, global_features};
+//! # use modkit::client_hub::ClientHub;
+//! # use modkit_security::SecurityContext;
+//! # use std::sync::Arc;
+//! # use uuid::Uuid;
+//! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+//! # let hub = Arc::new(ClientHub::new());
+//! # let ctx = SecurityContext::builder().tenant_id(Uuid::new_v4()).subject_id(Uuid::new_v4()).build();
+//! # let feature_id = global_features::to_feature_id(global_features::BASE);
 //! // Get the client from ClientHub
 //! let enforcer = hub.get::<dyn LicenseEnforcerGatewayClient>()?;
 //!
 //! // Check license access
-//! let can_access = enforcer.check_access(&ctx, feature_id).await?;
+//! let is_enabled = enforcer.is_global_feature_enabled(&ctx, &feature_id).await?;
+//! # Ok(())
+//! # }
 //! ```
 #![forbid(unsafe_code)]
 #![deny(rust_2018_idioms)]
@@ -38,6 +47,6 @@ pub use api::LicenseEnforcerGatewayClient;
 pub use error::LicenseEnforcerError;
 pub use gts_cache::LicenseCachePluginSpecV1;
 pub use gts_platform::LicensePlatformPluginSpecV1;
-pub use models::{LicenseCheckRequest, LicenseCheckResponse, LicenseFeature, LicenseStatus};
+pub use models::{EnabledGlobalFeatures, LicenseFeatureID, global_features};
 pub use plugin_cache::CachePluginClient;
 pub use plugin_platform::PlatformPluginClient;

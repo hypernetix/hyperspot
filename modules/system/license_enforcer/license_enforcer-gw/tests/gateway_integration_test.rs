@@ -6,12 +6,13 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
 use inmemory_cache_plugin::InMemoryCachePlugin;
 use license_enforcer_gw::LicenseEnforcerGateway;
 use license_enforcer_sdk::{
-    LicenseCachePluginSpecV1, LicenseCheckRequest, LicenseEnforcerGatewayClient, LicenseFeature,
+    LicenseCachePluginSpecV1, LicenseEnforcerGatewayClient, LicensePlatformPluginSpecV1,
     global_features,
 };
 use modkit::config::ConfigProvider;
@@ -41,23 +42,6 @@ impl MockTypesRegistry {
 
     fn get_registered(&self) -> Vec<serde_json::Value> {
         self.registered.lock().unwrap().clone()
-    }
-
-    fn find_schema(&self, schema_id: &str) -> Option<serde_json::Value> {
-        let with_prefix = format!("gts://{schema_id}");
-        self.get_registered()
-            .into_iter()
-            .find(|v| {
-                v.get("$id")
-                    .and_then(|id| id.as_str())
-                    .is_some_and(|id| id == with_prefix || id == schema_id)
-            })
-    }
-
-    fn find_instance(&self, instance_id: &str) -> Option<serde_json::Value> {
-        self.get_registered()
-            .into_iter()
-            .find(|v| v.get("id").and_then(|id| id.as_str()) == Some(instance_id))
     }
 }
 
@@ -123,6 +107,89 @@ impl TypesRegistryClient for MockTypesRegistry {
     }
 }
 
+/// Counting platform plugin that tracks invocations.
+#[derive(Clone)]
+struct CountingPlatformPlugin {
+    call_count: Arc<AtomicUsize>,
+}
+
+impl CountingPlatformPlugin {
+    fn new() -> Self {
+        Self {
+            call_count: Arc::new(AtomicUsize::new(0)),
+        }
+    }
+
+    fn get_call_count(&self) -> usize {
+        self.call_count.load(Ordering::SeqCst)
+    }
+}
+
+#[async_trait::async_trait]
+impl license_enforcer_sdk::PlatformPluginClient for CountingPlatformPlugin {
+    async fn get_enabled_global_features(
+        &self,
+        _ctx: &SecurityContext,
+    ) -> Result<
+        license_enforcer_sdk::EnabledGlobalFeatures,
+        license_enforcer_sdk::LicenseEnforcerError,
+    > {
+        self.call_count.fetch_add(1, Ordering::SeqCst);
+        let mut features = license_enforcer_sdk::EnabledGlobalFeatures::new();
+        features.insert(license_enforcer_sdk::global_features::to_feature_id(
+            license_enforcer_sdk::global_features::BASE,
+        ));
+        Ok(features)
+    }
+}
+
+/// Counting cache plugin that tracks invocations.
+#[derive(Clone)]
+struct CountingCachePlugin {
+    get_call_count: Arc<AtomicUsize>,
+    set_call_count: Arc<AtomicUsize>,
+}
+
+impl CountingCachePlugin {
+    fn new() -> Self {
+        Self {
+            get_call_count: Arc::new(AtomicUsize::new(0)),
+            set_call_count: Arc::new(AtomicUsize::new(0)),
+        }
+    }
+
+    fn get_get_call_count(&self) -> usize {
+        self.get_call_count.load(Ordering::SeqCst)
+    }
+
+    fn get_set_call_count(&self) -> usize {
+        self.set_call_count.load(Ordering::SeqCst)
+    }
+}
+
+#[async_trait::async_trait]
+impl license_enforcer_sdk::CachePluginClient for CountingCachePlugin {
+    async fn get_tenant_features(
+        &self,
+        _ctx: &SecurityContext,
+    ) -> Result<
+        Option<license_enforcer_sdk::EnabledGlobalFeatures>,
+        license_enforcer_sdk::LicenseEnforcerError,
+    > {
+        self.get_call_count.fetch_add(1, Ordering::SeqCst);
+        Ok(None)
+    }
+
+    async fn set_tenant_features(
+        &self,
+        _ctx: &SecurityContext,
+        _features: &license_enforcer_sdk::EnabledGlobalFeatures,
+    ) -> Result<(), license_enforcer_sdk::LicenseEnforcerError> {
+        self.set_call_count.fetch_add(1, Ordering::SeqCst);
+        Ok(())
+    }
+}
+
 /// Mock config provider for test modules.
 struct MockConfigProvider {
     modules: HashMap<String, serde_json::Value>,
@@ -175,126 +242,6 @@ impl ConfigProvider for MockConfigProvider {
 }
 
 #[tokio::test]
-async fn test_gateway_end_to_end_wiring() {
-    // Arrange: Set up ClientHub and mock types-registry
-    let hub = Arc::new(ClientHub::new());
-    let registry = MockTypesRegistry::new();
-    hub.register::<dyn TypesRegistryClient>(Arc::new(registry.clone()));
-
-    let config_provider = Arc::new(MockConfigProvider::new());
-    let cancel = CancellationToken::new();
-
-    // Initialize gateway module first (registers schemas)
-    let gateway_ctx = ModuleCtx::new(
-        "license_enforcer_gateway",
-        Uuid::new_v4(),
-        config_provider.clone(),
-        hub.clone(),
-        cancel.clone(),
-        None,
-    );
-    let gateway = LicenseEnforcerGateway::default();
-    gateway
-        .init(&gateway_ctx)
-        .await
-        .expect("gateway init failed");
-
-    // Assert: Verify both plugin schemas were registered
-    let platform_schema_id = LicensePlatformPluginSpecV1::gts_schema_id();
-    let cache_schema_id = LicenseCachePluginSpecV1::gts_schema_id();
-
-    assert!(
-        registry.find_schema(platform_schema_id.as_ref()).is_some(),
-        "Platform plugin schema should be registered"
-    );
-    assert!(
-        registry.find_schema(cache_schema_id.as_ref()).is_some(),
-        "Cache plugin schema should be registered"
-    );
-
-    // Initialize platform plugin (registers instance and scoped client)
-    let platform_ctx = ModuleCtx::new(
-        "static_licenses_plugin",
-        Uuid::new_v4(),
-        config_provider.clone(),
-        hub.clone(),
-        cancel.clone(),
-        None,
-    );
-    let platform_plugin = StaticLicensesPlugin::default();
-    platform_plugin
-        .init(&platform_ctx)
-        .await
-        .expect("platform plugin init failed");
-
-    // Initialize cache plugin (registers instance and scoped client)
-    let cache_ctx = ModuleCtx::new(
-        "nocache_plugin",
-        Uuid::new_v4(),
-        config_provider,
-        hub.clone(),
-        cancel,
-        None,
-    );
-    let cache_plugin = NoCachePlugin::default();
-    cache_plugin
-        .init(&cache_ctx)
-        .await
-        .expect("cache plugin init failed");
-
-    // Assert: Verify plugin instances were registered
-    let platform_instance_id = LicensePlatformPluginSpecV1::gts_make_instance_id(
-        "hyperspot.builtin.static_licenses.integration.plugin.v1",
-    );
-    let cache_instance_id = LicenseCachePluginSpecV1::gts_make_instance_id(
-        "hyperspot.builtin.nocache.cache.plugin.v1",
-    );
-
-    assert!(
-        registry
-            .find_instance(platform_instance_id.as_ref())
-            .is_some(),
-        "Platform plugin instance should be registered"
-    );
-    assert!(
-        registry.find_instance(cache_instance_id.as_ref()).is_some(),
-        "Cache plugin instance should be registered"
-    );
-
-    // Act: Get gateway client from ClientHub and make a license check
-    let client = hub
-        .get::<dyn LicenseEnforcerGatewayClient>()
-        .expect("Gateway client should be registered");
-
-    let tenant_id = Uuid::new_v4();
-    let ctx = SecurityContext::builder()
-        .tenant_id(tenant_id)
-        .subject_id(Uuid::new_v4())
-        .build();
-
-    let request = LicenseCheckRequest {
-        tenant_id,
-        feature: LicenseFeature::new("gts.x.core.lic.feat.v1~x.core.test.feature.v1".to_owned()),
-    };
-
-    let response = client
-        .check_license(&ctx, request)
-        .await
-        .expect("License check should succeed");
-
-    // Assert: Verify response from platform plugin stub
-    assert!(
-        response.allowed,
-        "Static licenses plugin should allow access"
-    );
-    assert_eq!(
-        response.status,
-        license_enforcer_sdk::LicenseStatus::Active,
-        "License status should be Active"
-    );
-}
-
-#[tokio::test]
 async fn test_gateway_client_registered_in_hub() {
     // This test verifies that gateway module registers its client in ClientHub
     let hub = Arc::new(ClientHub::new());
@@ -334,25 +281,292 @@ async fn test_gateway_client_registered_in_hub() {
 #[test]
 fn test_platform_plugin_instance_id_matches_design() {
     let instance_id = LicensePlatformPluginSpecV1::gts_make_instance_id(
-        "hyperspot.builtin.static_licenses.integration.plugin.v1",
+        "hyperspot.builtin.static_licenses.plugin.v1",
     );
 
     assert_eq!(
         instance_id.as_ref(),
-        "gts.x.core.modkit.plugin.v1~x.core.license_enforcer.integration.plugin.v1~hyperspot.builtin.static_licenses.integration.plugin.v1",
+        "gts.x.core.modkit.plugin.v1~x.core.license_enforcer.integration.plugin.v1~hyperspot.builtin.static_licenses.plugin.v1",
         "Platform plugin instance ID must match design spec"
     );
 }
 
 #[test]
 fn test_cache_plugin_instance_id_matches_design() {
-    let instance_id = LicenseCachePluginSpecV1::gts_make_instance_id(
-        "hyperspot.builtin.nocache.cache.plugin.v1",
-    );
+    let instance_id =
+        LicenseCachePluginSpecV1::gts_make_instance_id("hyperspot.builtin.nocache.plugin.v1");
 
     assert_eq!(
         instance_id.as_ref(),
-        "gts.x.core.modkit.plugin.v1~x.core.license_enforcer.cache.plugin.v1~hyperspot.builtin.nocache.cache.plugin.v1",
+        "gts.x.core.modkit.plugin.v1~x.core.license_enforcer.cache.plugin.v1~hyperspot.builtin.nocache.plugin.v1",
         "Cache plugin instance ID must match design spec"
+    );
+}
+
+#[tokio::test]
+async fn test_is_global_feature_enabled() {
+    // Arrange: Set up ClientHub and mock types-registry
+    let hub = Arc::new(ClientHub::new());
+    let registry = MockTypesRegistry::new();
+    hub.register::<dyn TypesRegistryClient>(Arc::new(registry.clone()));
+
+    let config_provider = Arc::new(MockConfigProvider::new());
+    let cancel = CancellationToken::new();
+
+    // Initialize gateway module
+    let gateway_ctx = ModuleCtx::new(
+        "license_enforcer_gateway",
+        Uuid::new_v4(),
+        config_provider.clone(),
+        hub.clone(),
+        cancel.clone(),
+        None,
+    );
+    let gateway = LicenseEnforcerGateway::default();
+    gateway
+        .init(&gateway_ctx)
+        .await
+        .expect("gateway init failed");
+
+    // Initialize platform plugin
+    let platform_ctx = ModuleCtx::new(
+        "static_licenses_plugin",
+        Uuid::new_v4(),
+        config_provider.clone(),
+        hub.clone(),
+        cancel.clone(),
+        None,
+    );
+    let platform_plugin = StaticLicensesPlugin::default();
+    platform_plugin
+        .init(&platform_ctx)
+        .await
+        .expect("platform plugin init failed");
+
+    // Initialize cache plugin
+    let cache_ctx = ModuleCtx::new(
+        "nocache_plugin",
+        Uuid::new_v4(),
+        config_provider,
+        hub.clone(),
+        cancel,
+        None,
+    );
+    let cache_plugin = NoCachePlugin::default();
+    cache_plugin
+        .init(&cache_ctx)
+        .await
+        .expect("cache plugin init failed");
+
+    // Act: Get gateway client and check feature
+    let client = hub
+        .get::<dyn LicenseEnforcerGatewayClient>()
+        .expect("Gateway client should be registered");
+
+    let ctx = SecurityContext::builder()
+        .tenant_id(Uuid::new_v4())
+        .subject_id(Uuid::new_v4())
+        .build();
+
+    // Check base feature (should be enabled by stub implementation)
+    let base_feature = global_features::to_feature_id(global_features::BASE);
+    let is_enabled = client
+        .is_global_feature_enabled(&ctx, &base_feature)
+        .await
+        .expect("Feature check should succeed");
+
+    // Assert: Base feature should be enabled
+    assert!(is_enabled, "Base feature should be enabled");
+
+    // Check a non-existent feature (should not be enabled)
+    let non_existent =
+        global_features::to_feature_id("gts.x.core.lic.feat.v1~x.core.global.nonexistent.v1");
+    let is_enabled = client
+        .is_global_feature_enabled(&ctx, &non_existent)
+        .await
+        .expect("Feature check should succeed");
+
+    assert!(!is_enabled, "Non-existent feature should not be enabled");
+}
+
+#[tokio::test]
+async fn test_enabled_global_features() {
+    // Arrange: Set up ClientHub and mock types-registry
+    let hub = Arc::new(ClientHub::new());
+    let registry = MockTypesRegistry::new();
+    hub.register::<dyn TypesRegistryClient>(Arc::new(registry.clone()));
+
+    let config_provider = Arc::new(MockConfigProvider::new());
+    let cancel = CancellationToken::new();
+
+    // Initialize gateway module
+    let gateway_ctx = ModuleCtx::new(
+        "license_enforcer_gateway",
+        Uuid::new_v4(),
+        config_provider.clone(),
+        hub.clone(),
+        cancel.clone(),
+        None,
+    );
+    let gateway = LicenseEnforcerGateway::default();
+    gateway
+        .init(&gateway_ctx)
+        .await
+        .expect("gateway init failed");
+
+    // Initialize platform plugin
+    let platform_ctx = ModuleCtx::new(
+        "static_licenses_plugin",
+        Uuid::new_v4(),
+        config_provider.clone(),
+        hub.clone(),
+        cancel.clone(),
+        None,
+    );
+    let platform_plugin = StaticLicensesPlugin::default();
+    platform_plugin
+        .init(&platform_ctx)
+        .await
+        .expect("platform plugin init failed");
+
+    // Initialize cache plugin
+    let cache_ctx = ModuleCtx::new(
+        "nocache_plugin",
+        Uuid::new_v4(),
+        config_provider,
+        hub.clone(),
+        cancel,
+        None,
+    );
+    let cache_plugin = NoCachePlugin::default();
+    cache_plugin
+        .init(&cache_ctx)
+        .await
+        .expect("cache plugin init failed");
+
+    // Act: Get gateway client and list features
+    let client = hub
+        .get::<dyn LicenseEnforcerGatewayClient>()
+        .expect("Gateway client should be registered");
+
+    let ctx = SecurityContext::builder()
+        .tenant_id(Uuid::new_v4())
+        .subject_id(Uuid::new_v4())
+        .build();
+
+    let features = client
+        .enabled_global_features(&ctx)
+        .await
+        .expect("Features list should succeed");
+
+    // Assert: Should contain base feature
+    let base_feature = global_features::to_feature_id(global_features::BASE);
+    assert!(
+        features.contains(&base_feature),
+        "Features should contain base feature"
+    );
+    assert_eq!(features.len(), 1, "Should only have one feature");
+}
+
+#[tokio::test]
+async fn test_missing_tenant_scope() {
+    // Arrange: Set up ClientHub with counting plugins
+    let hub = Arc::new(ClientHub::new());
+    let registry = MockTypesRegistry::new();
+    hub.register::<dyn TypesRegistryClient>(Arc::new(registry.clone()));
+
+    let config_provider = Arc::new(MockConfigProvider::new());
+    let cancel = CancellationToken::new();
+
+    // Initialize gateway module (registers schemas)
+    let gateway_ctx = ModuleCtx::new(
+        "license_enforcer_gateway",
+        Uuid::new_v4(),
+        config_provider.clone(),
+        hub.clone(),
+        cancel.clone(),
+        None,
+    );
+    let gateway = LicenseEnforcerGateway::default();
+    gateway
+        .init(&gateway_ctx)
+        .await
+        .expect("gateway init failed");
+
+    // Register counting plugins with types-registry
+    let platform_instance_id =
+        license_enforcer_sdk::LicensePlatformPluginSpecV1::gts_make_instance_id(
+            "test.counting.platform.v1",
+        );
+    let cache_instance_id = license_enforcer_sdk::LicenseCachePluginSpecV1::gts_make_instance_id(
+        "test.counting.cache.v1",
+    );
+
+    registry
+        .register(vec![
+            serde_json::json!({
+                "id": platform_instance_id.as_ref(),
+                "vendor": "hyperspot",
+                "priority": 100
+            }),
+            serde_json::json!({
+                "id": cache_instance_id.as_ref(),
+                "vendor": "hyperspot",
+                "priority": 100
+            }),
+        ])
+        .await
+        .expect("Plugin registration failed");
+
+    // Register counting plugin clients with scoped registration
+    let platform_plugin = Arc::new(CountingPlatformPlugin::new());
+    let cache_plugin = Arc::new(CountingCachePlugin::new());
+
+    hub.register_scoped::<dyn license_enforcer_sdk::PlatformPluginClient>(
+        modkit::client_hub::ClientScope::gts_id(platform_instance_id.as_ref()),
+        platform_plugin.clone(),
+    );
+    hub.register_scoped::<dyn license_enforcer_sdk::CachePluginClient>(
+        modkit::client_hub::ClientScope::gts_id(cache_instance_id.as_ref()),
+        cache_plugin.clone(),
+    );
+
+    // Get gateway client
+    let client = hub
+        .get::<dyn LicenseEnforcerGatewayClient>()
+        .expect("Gateway client should be registered");
+
+    // Act: Call with anonymous context (nil tenant UUID)
+    let ctx = SecurityContext::anonymous();
+    let base_feature = global_features::to_feature_id(global_features::BASE);
+
+    let result = client.is_global_feature_enabled(&ctx, &base_feature).await;
+
+    // Assert 1: Should return missing tenant error
+    assert!(result.is_err(), "Should return error for missing tenant");
+    match result {
+        Err(license_enforcer_sdk::LicenseEnforcerError::MissingTenantScope) => {
+            // Expected
+        }
+        other => panic!("Expected MissingTenantScope error, got: {other:?}"),
+    }
+
+    // Assert 2: Platform plugin MUST NOT have been called (per spec requirement)
+    assert_eq!(
+        platform_plugin.get_call_count(),
+        0,
+        "Platform plugin MUST NOT be called when tenant scope is missing (spec violation)"
+    );
+
+    // Assert 3: Cache plugin MUST NOT have been called (per spec requirement)
+    assert_eq!(
+        cache_plugin.get_get_call_count(),
+        0,
+        "Cache plugin get MUST NOT be called when tenant scope is missing (spec violation)"
+    );
+    assert_eq!(
+        cache_plugin.get_set_call_count(),
+        0,
+        "Cache plugin set MUST NOT be called when tenant scope is missing (spec violation)"
     );
 }

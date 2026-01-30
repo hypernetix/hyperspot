@@ -6,6 +6,10 @@ use thiserror::Error;
 /// Domain-level errors for license enforcer gateway operations.
 #[derive(Debug, Error)]
 pub enum DomainError {
+    /// Security context lacks tenant scope
+    #[error("Security context lacks tenant scope")]
+    MissingTenantScope,
+
     /// Platform plugin not found for vendor
     #[error("Platform plugin not found for vendor: {vendor}")]
     PlatformPluginNotFound { vendor: String },
@@ -43,6 +47,7 @@ pub enum DomainError {
 impl From<DomainError> for LicenseEnforcerError {
     fn from(err: DomainError) -> Self {
         match err {
+            DomainError::MissingTenantScope => LicenseEnforcerError::MissingTenantScope,
             DomainError::PlatformPluginNotFound { vendor } => LicenseEnforcerError::platform(
                 format!("Platform plugin not found for vendor: {vendor}"),
             ),

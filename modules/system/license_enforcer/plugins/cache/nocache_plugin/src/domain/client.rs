@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use license_enforcer_sdk::{
-    CachePluginClient, LicenseCheckRequest, LicenseCheckResponse, LicenseEnforcerError,
+    CachePluginClient, EnabledGlobalFeatures, LicenseEnforcerError,
 };
 use modkit_security::SecurityContext;
 
@@ -25,20 +25,18 @@ impl Client {
 
 #[async_trait]
 impl CachePluginClient for Client {
-    async fn get(
+    async fn get_tenant_features(
         &self,
         ctx: &SecurityContext,
-        request: &LicenseCheckRequest,
-    ) -> Result<Option<LicenseCheckResponse>, LicenseEnforcerError> {
-        self.service.get(ctx, request).await
+    ) -> Result<Option<EnabledGlobalFeatures>, LicenseEnforcerError> {
+        self.service.get_tenant_features(ctx).await
     }
 
-    async fn set(
+    async fn set_tenant_features(
         &self,
         ctx: &SecurityContext,
-        request: &LicenseCheckRequest,
-        response: &LicenseCheckResponse,
+        features: &EnabledGlobalFeatures,
     ) -> Result<(), LicenseEnforcerError> {
-        self.service.set(ctx, request, response).await
+        self.service.set_tenant_features(ctx, features).await
     }
 }

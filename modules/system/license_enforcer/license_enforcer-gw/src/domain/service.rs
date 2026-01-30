@@ -7,7 +7,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use license_enforcer_sdk::{
-    CachePluginClient, LicenseCachePluginSpecV1, LicenseCheckRequest, LicenseCheckResponse,
+    CachePluginClient, EnabledGlobalFeatures, LicenseCachePluginSpecV1, LicenseFeatureID,
     LicensePlatformPluginSpecV1, PlatformPluginClient,
 };
 use modkit::client_hub::{ClientHub, ClientScope};
@@ -156,42 +156,107 @@ impl Service {
         Ok(gts_id)
     }
 
-    /// Check license with cache-aside pattern.
-    ///
-    /// 1. Try cache plugin (non-blocking on failure)
-    /// 2. If cache miss, call platform plugin
-    /// 3. Store result in cache (non-blocking on failure)
+    /// Extract tenant ID from security context.
     ///
     /// # Errors
     ///
-    /// Returns error if platform plugin is unavailable or license validation fails
-    #[tracing::instrument(skip_all, fields(
-        tenant_id = %request.tenant_id,
-        feature = %request.feature.gts_id
-    ))]
-    pub async fn check_license(
+    /// Returns error if security context lacks tenant scope
+    fn extract_tenant_id(ctx: &SecurityContext) -> Result<uuid::Uuid, DomainError> {
+        let tenant_id = ctx.tenant_id();
+        if tenant_id.is_nil() {
+            return Err(DomainError::MissingTenantScope);
+        }
+        Ok(tenant_id)
+    }
+
+    /// Get enabled global features with cache-aside pattern.
+    ///
+    /// 1. Validate tenant scope in security context
+    /// 2. Try cache plugin (non-blocking on failure)
+    /// 3. If cache miss, call platform plugin
+    /// 4. Store result in cache (non-blocking on failure)
+    ///
+    /// # Errors
+    ///
+    /// Returns error if:
+    /// - Security context lacks tenant scope
+    /// - Platform plugin is unavailable
+    /// - Platform query fails
+    #[tracing::instrument(skip_all, fields(tenant_id = tracing::field::Empty))]
+    async fn get_tenant_features(
         &self,
         ctx: &SecurityContext,
-        request: LicenseCheckRequest,
-    ) -> Result<LicenseCheckResponse, DomainError> {
+    ) -> Result<EnabledGlobalFeatures, DomainError> {
+        // Validate tenant scope first
+        let tenant_id = Self::extract_tenant_id(ctx)?;
+        tracing::Span::current().record("tenant_id", tracing::field::display(tenant_id));
+
         // Try cache first (non-blocking on failure)
         if let Ok(cache) = self.get_cache_plugin().await
-            && let Ok(Some(cached)) = cache.get(ctx, &request).await
+            && let Ok(Some(cached)) = cache.get_tenant_features(ctx).await
         {
-            tracing::debug!("Cache hit for license check");
+            tracing::debug!("Cache hit for tenant features");
             return Ok(cached);
         }
 
         // Cache miss or unavailable, query platform
+        tracing::debug!("Cache miss, fetching from platform");
         let platform = self.get_platform_plugin().await?;
-        let response = platform.check_license(ctx, request.clone()).await?;
+        let features = platform.get_enabled_global_features(ctx).await?;
 
         // Store in cache (non-blocking on failure)
         if let Ok(cache) = self.get_cache_plugin().await {
-            let _ = cache.set(ctx, &request, &response).await;
+            let _ = cache.set_tenant_features(ctx, &features).await;
         }
 
-        Ok(response)
+        Ok(features)
+    }
+
+    /// Check if a single global feature is enabled for the tenant.
+    ///
+    /// Uses cache-aside pattern to minimize platform calls.
+    ///
+    /// # Errors
+    ///
+    /// Returns error if:
+    /// - Security context lacks tenant scope
+    /// - Platform plugin is unavailable
+    /// - Platform query fails
+    #[tracing::instrument(skip_all, fields(
+        tenant_id = tracing::field::Empty,
+        feature = %feature_id.as_str()
+    ))]
+    pub async fn is_global_feature_enabled(
+        &self,
+        ctx: &SecurityContext,
+        feature_id: &LicenseFeatureID,
+    ) -> Result<bool, DomainError> {
+        let tenant_id = Self::extract_tenant_id(ctx)?;
+        tracing::Span::current().record("tenant_id", tracing::field::display(tenant_id));
+
+        let features = self.get_tenant_features(ctx).await?;
+        Ok(features.contains(feature_id))
+    }
+
+    /// List all enabled global features for the tenant.
+    ///
+    /// Uses cache-aside pattern to minimize platform calls.
+    ///
+    /// # Errors
+    ///
+    /// Returns error if:
+    /// - Security context lacks tenant scope
+    /// - Platform plugin is unavailable
+    /// - Platform query fails
+    #[tracing::instrument(skip_all, fields(tenant_id = tracing::field::Empty))]
+    pub async fn enabled_global_features(
+        &self,
+        ctx: &SecurityContext,
+    ) -> Result<EnabledGlobalFeatures, DomainError> {
+        let tenant_id = Self::extract_tenant_id(ctx)?;
+        tracing::Span::current().record("tenant_id", tracing::field::display(tenant_id));
+
+        self.get_tenant_features(ctx).await
     }
 }
 

@@ -27,7 +27,10 @@ use modkit::gts::BaseModkitPluginV1;
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```
+/// use license_enforcer_sdk::LicenseCachePluginSpecV1;
+/// use modkit::gts::BaseModkitPluginV1;
+///
 /// // Plugin generates its instance ID
 /// let instance_id = LicenseCachePluginSpecV1::gts_make_instance_id(
 ///     "hyperspot.builtin.nocache.plugin.v1"
@@ -41,8 +44,9 @@ use modkit::gts::BaseModkitPluginV1;
 ///     properties: LicenseCachePluginSpecV1,
 /// };
 ///
-/// // Register with types-registry
-/// registry.register(vec![serde_json::to_value(&instance)?]).await?;
+/// // Serialize for registration
+/// let _json = serde_json::to_value(&instance).unwrap();
+/// // Then register with types-registry: registry.register(vec![json]).await
 /// ```
 #[struct_to_gts_schema(
     dir_path = "schemas",

@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use license_enforcer_sdk::{
-    LicenseCheckRequest, LicenseCheckResponse, LicenseEnforcerError, PlatformPluginClient,
+    EnabledGlobalFeatures, LicenseEnforcerError, PlatformPluginClient,
 };
 use modkit_security::SecurityContext;
 
@@ -25,11 +25,10 @@ impl Client {
 
 #[async_trait]
 impl PlatformPluginClient for Client {
-    async fn check_license(
+    async fn get_enabled_global_features(
         &self,
         ctx: &SecurityContext,
-        request: LicenseCheckRequest,
-    ) -> Result<LicenseCheckResponse, LicenseEnforcerError> {
-        self.service.check_license(ctx, request).await
+    ) -> Result<EnabledGlobalFeatures, LicenseEnforcerError> {
+        self.service.get_enabled_global_features(ctx).await
     }
 }
