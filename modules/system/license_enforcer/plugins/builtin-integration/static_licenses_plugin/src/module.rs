@@ -5,6 +5,7 @@ use std::sync::{Arc, OnceLock};
 use async_trait::async_trait;
 use gts::GtsID;
 use license_enforcer_sdk::{LicenseFeatureID, LicensePlatformPluginSpecV1, PlatformPluginClient};
+use modkit::Module;
 use modkit::client_hub::ClientScope;
 use modkit::context::ModuleCtx;
 use modkit::gts::BaseModkitPluginV1;
