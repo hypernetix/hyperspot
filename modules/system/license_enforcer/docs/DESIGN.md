@@ -70,7 +70,7 @@ Feature checks and cached data are always resolved using the tenant in `Security
 **ID**: `fdd-license-enforcer-principle-feature-id-mapping`
 
 <!-- fdd-id-content -->
-**ADRs**: `fdd-license-enforcer-adr-feature-id-mapping`
+**ADRs**: `fdd-license-enforcer-adr-feature-id-mapping`, `fdd-license-enforcer-adr-plugin-feature-validation`
 
 Platform feature identifiers can be arbitrary; the license enforcer plugin maps HyperSpot GTS feature IDs to the Platform format and back.
 <!-- fdd-id-content -->
