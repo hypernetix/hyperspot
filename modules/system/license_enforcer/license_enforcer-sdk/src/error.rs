@@ -5,6 +5,10 @@ use thiserror::Error;
 /// Errors that can occur during license enforcement operations.
 #[derive(Debug, Error)]
 pub enum LicenseEnforcerError {
+    /// Security context lacks tenant scope
+    #[error("Security context lacks tenant scope")]
+    MissingTenantScope,
+
     /// License not found for the specified tenant/feature
     #[error("License not found for tenant {tenant_id}: {feature}")]
     LicenseNotFound {

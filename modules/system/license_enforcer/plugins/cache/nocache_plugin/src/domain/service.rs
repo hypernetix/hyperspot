@@ -2,14 +2,12 @@
 //!
 //! This is a trivial stub that provides no caching (always cache miss).
 
-use license_enforcer_sdk::{
-    LicenseCheckRequest, LicenseCheckResponse, LicenseEnforcerError,
-};
+use license_enforcer_sdk::{EnabledGlobalFeatures, LicenseEnforcerError};
 use modkit_security::SecurityContext;
 
 /// No-cache service.
 ///
-/// Provides no caching - always returns None for `get()` and succeeds for `set()`.
+/// Provides no caching - always returns None for gets and succeeds for sets.
 /// This is a bootstrap stub implementation.
 pub struct Service;
 
@@ -20,33 +18,43 @@ impl Service {
         Self
     }
 
-    /// Get cached value (stub - always returns None).
+    /// Get cached tenant features (stub - always returns None).
     ///
     /// # Errors
     ///
-    /// This stub implementation never returns errors
+    /// Returns error if security context lacks tenant scope
     #[allow(clippy::unused_async)]
-    pub async fn get(
+    pub async fn get_tenant_features(
         &self,
-        _ctx: &SecurityContext,
-        _request: &LicenseCheckRequest,
-    ) -> Result<Option<LicenseCheckResponse>, LicenseEnforcerError> {
+        ctx: &SecurityContext,
+    ) -> Result<Option<EnabledGlobalFeatures>, LicenseEnforcerError> {
+        // Validate tenant scope
+        let tenant_id = ctx.tenant_id();
+        if tenant_id.is_nil() {
+            return Err(LicenseEnforcerError::MissingTenantScope);
+        }
+
         // Stub implementation: always cache miss
         Ok(None)
     }
 
-    /// Set cached value (stub - no-op).
+    /// Set cached tenant features (stub - no-op).
     ///
     /// # Errors
     ///
-    /// This stub implementation never returns errors
+    /// Returns error if security context lacks tenant scope
     #[allow(clippy::unused_async)]
-    pub async fn set(
+    pub async fn set_tenant_features(
         &self,
-        _ctx: &SecurityContext,
-        _request: &LicenseCheckRequest,
-        _response: &LicenseCheckResponse,
+        ctx: &SecurityContext,
+        _features: &EnabledGlobalFeatures,
     ) -> Result<(), LicenseEnforcerError> {
+        // Validate tenant scope
+        let tenant_id = ctx.tenant_id();
+        if tenant_id.is_nil() {
+            return Err(LicenseEnforcerError::MissingTenantScope);
+        }
+
         // Stub implementation: no-op
         Ok(())
     }

@@ -3,14 +3,14 @@
 //! This is a trivial stub that returns fixed data for bootstrap/testing.
 
 use license_enforcer_sdk::{
-    LicenseCheckRequest, LicenseCheckResponse, LicenseEnforcerError, LicenseStatus,
+    EnabledGlobalFeatures, LicenseEnforcerError, LicenseFeatureID, global_features,
 };
 use modkit_security::SecurityContext;
 
 /// Static licenses service.
 ///
 /// Provides fixed license data. This is a bootstrap stub implementation
-/// that always returns Active status for any feature.
+/// that returns the base global feature for all tenants.
 pub struct Service;
 
 impl Service {
@@ -20,25 +20,30 @@ impl Service {
         Self
     }
 
-    /// Check license (stub implementation).
+    /// Get enabled global features (stub implementation).
     ///
-    /// Always returns Active status for bootstrap/testing purposes.
+    /// Always returns the base global feature for bootstrap/testing purposes.
+    /// Real implementations would query an external platform.
     ///
     /// # Errors
     ///
-    /// This stub implementation never returns errors
+    /// Returns error if security context lacks tenant scope
     #[allow(clippy::unused_async)]
-    pub async fn check_license(
+    pub async fn get_enabled_global_features(
         &self,
-        _ctx: &SecurityContext,
-        _request: LicenseCheckRequest,
-    ) -> Result<LicenseCheckResponse, LicenseEnforcerError> {
-        // Stub implementation: always allow access
-        Ok(LicenseCheckResponse {
-            allowed: true,
-            status: LicenseStatus::Active,
-            reason: None,
-        })
+        ctx: &SecurityContext,
+    ) -> Result<EnabledGlobalFeatures, LicenseEnforcerError> {
+        // Validate tenant scope
+        let tenant_id = ctx.tenant_id();
+        if tenant_id.is_nil() {
+            return Err(LicenseEnforcerError::MissingTenantScope);
+        }
+
+        // Stub implementation: return base feature only
+        let mut features = EnabledGlobalFeatures::new();
+        features.insert(LicenseFeatureID::from(global_features::BASE));
+
+        Ok(features)
     }
 }
 
