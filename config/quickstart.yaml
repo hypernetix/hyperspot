@@ -121,7 +121,7 @@ modules:
       # Use ephemeral port; OoP modules receive the actual bound address from master host
       listen_addr: "uds:///tmp/hyperspot-grpc"
 
-  simple_user_settings:
+  simple-user-settings:
     # Module-specific database configuration
     database:
       server: "sqlite_users"
@@ -163,7 +163,24 @@ modules:
 
   tenant_resolver_gateway:
     config:
-      vendor: "Fabrikam"
+      vendor: "hyperspot"
+
+  # Static tenant resolver plugin - provides tenant data for auth_disabled mode
+  # Used by `make example` (static-tenants feature)
+  static_tr_plugin:
+    config:
+      vendor: "hyperspot"
+      priority: 100
+      tenants:
+        # Default tenant (matches DEFAULT_TENANT_ID from modkit-security/constants.rs)
+        # Used when auth_disabled=true
+        - id: "00000000-df51-5b42-9538-d2b56b7ee953"
+          name: "Dev Tenant"
+          status: active
+          type: development
+
+  # Fabrikam tenant resolver plugin - example for multi-vendor scenarios
+  # Used by `tenant-resolver-example` feature (with vendor: "Fabrikam" in tenant_resolver_gateway)
   contoso_tr_plugin:
     config: {}
   fabrikam_tr_plugin:
