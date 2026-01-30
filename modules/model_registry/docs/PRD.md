@@ -177,7 +177,7 @@ The system must track provider health metrics (latency, error rate, availability
 **ID**: [ ] `p1` `fdd-model-registry-usecase-model-discovery-v1`
 
 <!-- fdd-id-content -->
-**Actor**: `fdd-model-registry-actor-provider-api`
+**Actor**: Internal (scheduled job)
 
 **Preconditions**: Provider configured in registry.
 
@@ -224,7 +224,7 @@ The system must track provider health metrics (latency, error rate, availability
 **ID**: [ ] `p1` `fdd-model-registry-usecase-health-monitoring-v1`
 
 <!-- fdd-id-content -->
-**Actor**: `fdd-model-registry-actor-provider-api`
+**Actor**: Internal (scheduled job)
 
 **Preconditions**: Provider configured with health endpoint.
 

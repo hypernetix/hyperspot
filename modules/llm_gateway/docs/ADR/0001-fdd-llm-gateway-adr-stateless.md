@@ -35,5 +35,5 @@ Chosen option: "Stateless", because it enables horizontal scaling without coordi
 ## Related Design Elements
 
 **Requirements**:
-* `fdd-llm-gateway-nfr-scalability` - Horizontal scaling requirement
-* `fdd-llm-gateway-fr-async-jobs` - Exception for temporary job state
+* `fdd-llm-gateway-nfr-scalability-v1` - Horizontal scaling requirement
+* `fdd-llm-gateway-fr-async-jobs-v1` - Exception for temporary job state

@@ -35,4 +35,4 @@ Chosen option: "Pass-through", because tool execution is consumer responsibility
 ## Related Design Elements
 
 **Requirements**:
-* `fdd-llm-gateway-fr-tool-calling` - Tool calls returned to consumer
+* `fdd-llm-gateway-fr-tool-calling-v1` - Tool calls returned to consumer
