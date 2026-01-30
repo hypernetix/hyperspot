@@ -3,9 +3,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use license_enforcer_sdk::{
-    CachePluginClient, EnabledGlobalFeatures, LicenseEnforcerError,
-};
+use license_enforcer_sdk::{CachePluginClient, EnabledGlobalFeatures, LicenseEnforcerError};
 use modkit_security::SecurityContext;
 
 use super::service::Service;
