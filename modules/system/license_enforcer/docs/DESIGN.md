@@ -4,11 +4,11 @@
 
 ### 1.1 Architectural Vision
 
-The License Enforcer module provides a tenant-scoped feature-gating capability that keeps Platform licensing logic out of modules. It exposes an SDK for feature checks and centralizes caching, while delegating all Platform-specific calls and feature ID mapping to plugins.
+The License Enforcer gateway (`license_enforcer_gateway`) provides a tenant-scoped feature-gating capability that keeps Platform licensing logic out of modules. It exposes an SDK (`LicenseEnforcerGatewayClient`) for feature checks and centralizes caching via a swappable cache plugin, while delegating all Platform-specific calls to a platform plugin.
 
 Phase 1 delivers read-only checks over a tenant’s **global feature set** with best-effort freshness via a configurable TTL cache. Quotas, per-user/per-resource licensing, and usage reporting remain out of scope; these are handled by the Platform and the usage module.
 
-The architecture follows the ModKit **Gateway + Plugin** pattern: the gateway implements the SDK, performs caching via a swappable cache plugin, and selects a Platform plugin based on configuration and context.
+The architecture follows the ModKit **Gateway + Plugin** pattern: the gateway implements the SDK, performs cache-aside via a cache plugin, and discovers/selects both platform and cache plugins via `types-registry` + `ClientHub` using GTS instance IDs.
 
 ### 1.2 Architecture Drivers
 
@@ -36,10 +36,10 @@ The architecture follows the ModKit **Gateway + Plugin** pattern: the gateway im
 
 | Layer | Responsibility | Technology |
 |-------|---------------|------------|
-| Presentation | API surface to other modules (SDK) | Rust traits in SDK crate |
-| Application | Orchestrates cache lookup and plugin delegation | Gateway module |
+| Presentation | API surface to other modules (SDK) | Rust traits in `license_enforcer_sdk` |
+| Application | Orchestrates cache-aside and plugin delegation | `license_enforcer_gateway` module |
 | Domain | Licensing concepts: feature IDs, tenant scope | LicenseEnforcer domain types |
-| Infrastructure | Cache plugin and Platform plugins | In-memory/Redis cache, Platform API clients |
+| Infrastructure | Cache plugin and Platform plugins | In-memory cache, no-cache, external Platform integrations |
 
 ## 2. Principles & Constraints
 
@@ -116,17 +116,17 @@ The module does not manage subscriptions, usage, or quotas; it only reads enable
 
 ```mermaid
 flowchart LR
-    subgraph SDK[LicenseEnforcement SDK]
-        Client[LicenseEnforcementClient]
+    subgraph SDK[License Enforcer SDK]
+        Client[LicenseEnforcerGatewayClient]
     end
 
-    subgraph GW[LicenseEnforcement Gateway]
+    subgraph GW[License Enforcer Gateway]
         Gateway[Gateway]
-        Cache[FeatureCache Plugin]
+        Cache[CachePluginClient]
     end
 
-    subgraph Plugins[Platform Plugins]
-        Plugin[LicenseEnforcementPlugin]
+    subgraph Plugins[Plugins]
+        Plugin[PlatformPluginClient]
     end
 
     Client --> Gateway
@@ -135,10 +135,10 @@ flowchart LR
 ```
 
 **Components**:
-- **LicenseEnforcementClient**: Public SDK for modules to check and list enabled features.
-- **Gateway**: Implements SDK methods, performs cache lookups, and delegates to plugins.
-- **FeatureCache Plugin**: Swappable cache backend (in-memory, Redis) for tenant feature sets.
-- **LicenseEnforcementPlugin**: Platform integration and feature ID mapping.
+- **LicenseEnforcerGatewayClient**: Public SDK for modules to check and list enabled global features.
+- **Gateway**: Implements SDK methods, performs cache-aside, and delegates to plugins.
+- **Cache Plugin (`CachePluginClient`)**: Swappable cache backend (in-memory, no-cache) for tenant feature sets.
+- **Platform Plugin (`PlatformPluginClient`)**: Platform integration that returns enabled global features for the tenant.
 
 **Interactions**:
 - SDK → Gateway: request feature checks
@@ -147,32 +147,32 @@ flowchart LR
 
 ### 3.3: API Contracts
 
-**Technology**: Rust SDK traits
+**Technology**: Rust SDK traits (ClientHub-registered)
 
 **Location**: SDK crate in `modules/system/license_enforcer` (public client interface)
 
 **Interfaces**:
 
 ```rust,ignore
-trait LicenseEnforcementClient: Send + Sync {
+trait LicenseEnforcerGatewayClient: Send + Sync {
     async fn is_global_feature_enabled(
         &self,
         ctx: &SecurityContext,
         feature_id: &LicenseFeatureID,
-    ) -> Result<bool, LicenseEnforcementError>;
+    ) -> Result<bool, LicenseEnforcerError>;
 
     async fn enabled_global_features(
         &self,
         ctx: &SecurityContext,
-    ) -> Result<Set<LicenseFeatureID>, LicenseEnforcementError>;
+    ) -> Result<Set<LicenseFeatureID>, LicenseEnforcerError>;
 }
 ```
 
 **Error handling**:
-- `MissingTenant` when `SecurityContext` has no tenant scope (explicit deny).
-- `PluginUnavailable` for plugin resolution failures.
-- `PluginTimeout` when Platform calls exceed configured timeout.
-- `CacheError` when the cache plugin fails or is unreachable.
+- `MissingTenantScope` when `SecurityContext` lacks tenant scope (explicit deny, no plugin calls).
+- `PlatformError` when the platform plugin cannot be discovered/resolved or returns an error.
+- `CacheError` when the cache plugin cannot be discovered/resolved or fails (the gateway still attempts to fall back to the platform plugin).
+- `Internal` for unexpected internal failures.
 
 **Concurrency**:
 - Implementations must be safe for concurrent calls across threads (`Send + Sync`).
@@ -186,27 +186,27 @@ trait LicenseEnforcementClient: Send + Sync {
 sequenceDiagram
     autonumber
     participant M as Module
-    participant SDK as LicenseEnforcementSDK
-    participant GW as LicenseEnforcementGateway
-    participant C as FeatureCache
+    participant SDK as LicenseEnforcerSDK
+    participant GW as LicenseEnforcerGateway
+    participant C as CachePlugin
     participant P as PlatformPlugin
     participant PL as Platform
 
     M->>SDK: is_global_feature_enabled(ctx, feature_id)
     SDK->>GW: is_global_feature_enabled(ctx, feature_id)
 
-    GW->>C: get(tenant_id)
+    GW->>C: get_tenant_features(ctx)
     alt cache hit
         C-->>GW: features
         GW-->>SDK: feature_id in features
         SDK-->>M: bool
     else cache miss
         C-->>GW: miss
-        GW->>P: enabled_global_features(ctx)
-        P->>PL: fetch enabled features
+        GW->>P: get_enabled_global_features(ctx)
+        P->>PL: fetch enabled global features
         PL-->>P: features
         P-->>GW: features
-        GW->>C: put(tenant_id, features, ttl)
+        GW->>C: set_tenant_features(ctx, features)
         GW-->>SDK: feature_id in features
         SDK-->>M: bool
     end
@@ -233,6 +233,19 @@ Gateway runs within the HyperSpot service process. Cache plugin can be in-proces
 - Rust
 - ModKit Gateway + Plugin pattern
 - Cache plugin: in-memory or Redis
+
+### 3.8: Plugin discovery and identifiers
+
+The gateway discovers plugins via `types-registry` and resolves their scoped clients from `ClientHub`.
+
+**Plugin schema IDs**:
+- Platform: `gts.x.core.modkit.plugin.v1~x.core.license_enforcer.integration.plugin.v1~`
+- Cache: `gts.x.core.modkit.plugin.v1~x.core.license_enforcer.cache.plugin.v1~`
+
+**Baseline plugin instance IDs**:
+- Static platform integration: `gts.x.core.modkit.plugin.v1~x.core.license_enforcer.integration.plugin.v1~hyperspot.builtin.static_licenses.integration.plugin.v1`
+- No-cache: `gts.x.core.modkit.plugin.v1~x.core.license_enforcer.cache.plugin.v1~hyperspot.builtin.nocache.cache.plugin.v1`
+- In-memory cache: `gts.x.core.modkit.plugin.v1~x.core.license_enforcer.cache.plugin.v1~hyperspot.builtin.inmemory.cache.plugin.v1`
 
 ## 4. Additional Context
 

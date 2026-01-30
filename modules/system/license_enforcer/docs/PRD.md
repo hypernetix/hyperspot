@@ -2,7 +2,7 @@
 
 ## 1. Overview
 
-**Purpose**: The License Enforcer module is HyperSpot’s centralized feature-gating service that asks the Platform which features are enabled for a tenant and exposes a stable SDK to the rest of the system.
+**Purpose**: The License Enforcer gateway (`license_enforcer_gateway`) is HyperSpot’s centralized feature-gating service that asks the configured Platform integration which global features are enabled for a tenant and exposes a stable SDK to the rest of the system.
 
 License enforcement must be consistent across all modules without embedding Platform-specific licensing logic in each module. The License Enforcer achieves this by providing a common client API for feature checks and delegating Platform calls to configurable plugins.
 
@@ -19,12 +19,22 @@ Phase 1 focuses on tenant-scoped, read-only checks for **global features** (tena
 - Feature checks always resolve using the tenant scope from `SecurityContext` and return only that tenant’s enabled global features.
 - Tenant feature caching uses a swappable cache plugin (in-memory, Redis, etc.), respects a configurable TTL, and refreshes on cache misses.
 - Platform feature identifiers can be mapped to HyperSpot `LicenseFeatureID`s through plugins.
+- Gateway and plugins are discovered and wired through ModKit `ClientHub` and `types-registry` using GTS instance IDs.
 
 **Capabilities**:
-- Tenant-scoped `is_global_feature_enabled` checks
-- Fetching the full set of enabled global features for a tenant
-- Tenant feature caching via swappable cache plugin with configurable TTL
+- Tenant-scoped `is_global_feature_enabled` checks via `LicenseEnforcerGatewayClient`
+- Fetching the full set of enabled global features for a tenant via `enabled_global_features`
+- Tenant feature caching via swappable cache plugin (with TTL support in the in-memory cache plugin)
 - Plugin-based Platform integration and feature ID mapping
+- GTS schema registration and plugin discovery through `types-registry`
+
+**Global feature constants (consumer convenience)**:
+- `gts.x.core.lic.feat.v1~x.core.global.base.v1`
+- `gts.x.core.lic.feat.v1~x.core.global.cyber_chat.v1`
+- `gts.x.core.lic.feat.v1~x.core.global.cyber_employee_agents.v1`
+- `gts.x.core.lic.feat.v1~x.core.global.cyber_employee_units.v1`
+
+The gateway does not validate checks against this list; it is provided as a convenience in the SDK.
 
 ## 2. Actors
 
@@ -122,6 +132,50 @@ The system must delegate Platform-specific feature retrieval and feature ID mapp
 **Actors**: `fdd-license-enforcer-actor-system-operator`, `fdd-license-enforcer-actor-plugin`
 <!-- fdd-id-content -->
 
+#### Reject Missing Tenant Scope
+
+**ID**: `fdd-license-enforcer-fr-missing-tenant-scope`
+
+<!-- fdd-id-content -->
+**Priority**: Critical
+
+If `SecurityContext` lacks tenant scope, the gateway must return an explicit missing-tenant error and must not call platform or cache plugins.
+
+**Actors**: `fdd-license-enforcer-actor-hs-module`
+<!-- fdd-id-content -->
+
+#### Register and Discover Plugins via GTS
+
+**ID**: `fdd-license-enforcer-fr-plugin-discovery`
+
+<!-- fdd-id-content -->
+**Priority**: High
+
+The gateway must register plugin schemas (GTS type definitions) for platform and cache plugins, and then discover plugin instances through `types-registry` and resolve scoped clients from `ClientHub` by GTS instance ID.
+
+**Actors**: `fdd-license-enforcer-actor-system-operator`, `fdd-license-enforcer-actor-plugin`
+<!-- fdd-id-content -->
+
+#### Provide Baseline Plugins
+
+**ID**: `fdd-license-enforcer-fr-baseline-plugins`
+
+<!-- fdd-id-content -->
+**Priority**: Medium
+
+The system must provide baseline plugins:
+- Platform integration: `plugins/builtin-integration/static_licenses_plugin`
+- Cache: `plugins/cache/nocache_plugin`
+- Cache: `plugins/cache/inmemory_cache_plugin`
+
+The baseline plugins register the following instance IDs:
+- `gts.x.core.modkit.plugin.v1~x.core.license_enforcer.integration.plugin.v1~hyperspot.builtin.static_licenses.integration.plugin.v1`
+- `gts.x.core.modkit.plugin.v1~x.core.license_enforcer.cache.plugin.v1~hyperspot.builtin.nocache.cache.plugin.v1`
+- `gts.x.core.modkit.plugin.v1~x.core.license_enforcer.cache.plugin.v1~hyperspot.builtin.inmemory.cache.plugin.v1`
+
+**Actors**: `fdd-license-enforcer-actor-system-operator`, `fdd-license-enforcer-actor-plugin`
+<!-- fdd-id-content -->
+
 #### Map Platform Feature IDs to HyperSpot IDs
 
 **ID**: `fdd-license-enforcer-fr-feature-id-mapping`
@@ -201,6 +255,28 @@ The system must support mapping Platform feature identifiers (for example, Cyber
 - Platform feature IDs are translated consistently for all tenant checks.
 - Modules do not need to reference Platform-specific identifiers directly.
 
+<!-- fdd-id-content -->
+
+#### UC-004: Bootstrap Gateway and Plugin Wiring
+
+**ID**: `fdd-license-enforcer-usecase-bootstrap-gateway`
+
+<!-- fdd-id-content -->
+**Actor**: `fdd-license-enforcer-actor-system-operator`
+
+**Preconditions**: The deployment includes `types-registry`, the gateway module, and at least one platform and cache plugin module.
+
+**Flow**:
+1. Operator configures gateway vendor (used for plugin selection).
+2. Gateway initializes and registers plugin schemas in `types-registry`.
+3. Plugins initialize, register their plugin instances in `types-registry`, and register scoped clients in `ClientHub` using `ClientScope::gts_id(instance_id)`.
+4. On first SDK call, the gateway discovers the matching plugin instances via `types-registry` and resolves scoped clients from `ClientHub`.
+
+**Acceptance criteria**:
+- Plugin schema IDs are:
+  - `gts.x.core.modkit.plugin.v1~x.core.license_enforcer.integration.plugin.v1~`
+  - `gts.x.core.modkit.plugin.v1~x.core.license_enforcer.cache.plugin.v1~`
+- Gateway registers a single unscoped client `LicenseEnforcerGatewayClient` in `ClientHub`.
 <!-- fdd-id-content -->
 
 ## 5. Non-functional requirements
