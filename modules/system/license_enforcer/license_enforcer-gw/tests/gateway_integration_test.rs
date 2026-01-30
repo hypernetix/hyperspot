@@ -190,6 +190,61 @@ impl license_enforcer_sdk::CachePluginClient for CountingCachePlugin {
     }
 }
 
+/// Cache plugin that always returns a cache hit with predefined features.
+#[derive(Clone)]
+struct AlwaysHitCachePlugin {
+    get_call_count: Arc<AtomicUsize>,
+    cached_features: license_enforcer_sdk::EnabledGlobalFeatures,
+}
+
+impl AlwaysHitCachePlugin {
+    fn new() -> Self {
+        let mut features = license_enforcer_sdk::EnabledGlobalFeatures::new();
+        features.insert(license_enforcer_sdk::global_features::to_feature_id(
+            license_enforcer_sdk::global_features::BASE,
+        ));
+        Self {
+            get_call_count: Arc::new(AtomicUsize::new(0)),
+            cached_features: features,
+        }
+    }
+
+    fn get_call_count(&self) -> usize {
+        self.get_call_count.load(Ordering::SeqCst)
+    }
+}
+
+#[async_trait::async_trait]
+impl license_enforcer_sdk::CachePluginClient for AlwaysHitCachePlugin {
+    async fn get_tenant_features(
+        &self,
+        ctx: &SecurityContext,
+    ) -> Result<
+        Option<license_enforcer_sdk::EnabledGlobalFeatures>,
+        license_enforcer_sdk::LicenseEnforcerError,
+    > {
+        self.get_call_count.fetch_add(1, Ordering::SeqCst);
+
+        // Validate tenant scope (like real cache implementations)
+        let tenant_id = ctx.tenant_id();
+        if tenant_id.is_nil() {
+            return Err(license_enforcer_sdk::LicenseEnforcerError::MissingTenantScope);
+        }
+
+        // Always return cache hit
+        Ok(Some(self.cached_features.clone()))
+    }
+
+    async fn set_tenant_features(
+        &self,
+        _ctx: &SecurityContext,
+        _features: &license_enforcer_sdk::EnabledGlobalFeatures,
+    ) -> Result<(), license_enforcer_sdk::LicenseEnforcerError> {
+        // No-op for this test plugin
+        Ok(())
+    }
+}
+
 /// Mock config provider for test modules.
 struct MockConfigProvider {
     modules: HashMap<String, serde_json::Value>,
@@ -568,5 +623,562 @@ async fn test_missing_tenant_scope() {
         cache_plugin.get_set_call_count(),
         0,
         "Cache plugin set MUST NOT be called when tenant scope is missing (spec violation)"
+    );
+}
+
+// ============================================================================
+// In-Memory Cache Plugin Integration Tests
+// ============================================================================
+
+#[tokio::test]
+async fn test_inmemory_cache_miss_triggers_platform_call() {
+    // This test verifies cache-aside behavior on cache miss:
+    // - First call should miss cache and fetch from platform
+    // - Platform plugin should be called exactly once
+    // - Result should be stored in cache
+
+    // Arrange: Set up ClientHub and mock types-registry
+    let hub = Arc::new(ClientHub::new());
+    let registry = MockTypesRegistry::new();
+    hub.register::<dyn TypesRegistryClient>(Arc::new(registry.clone()));
+
+    let mut modules = HashMap::new();
+
+    // Gateway config
+    modules.insert(
+        "license_enforcer_gateway".to_owned(),
+        json!({
+            "config": {
+                "vendor": "hyperspot"
+            }
+        }),
+    );
+
+    // In-memory cache plugin config with short TTL for testing
+    modules.insert(
+        "inmemory_cache_plugin".to_owned(),
+        json!({
+            "config": {
+                "vendor": "hyperspot",
+                "priority": 100,
+                "ttl": "60s",
+                "max_entries": 1000
+            }
+        }),
+    );
+
+    let config_provider = Arc::new(MockConfigProvider { modules });
+    let cancel = CancellationToken::new();
+
+    // Initialize gateway module
+    let gateway_ctx = ModuleCtx::new(
+        "license_enforcer_gateway",
+        Uuid::new_v4(),
+        config_provider.clone(),
+        hub.clone(),
+        cancel.clone(),
+        None,
+    );
+    let gateway = LicenseEnforcerGateway::default();
+    gateway
+        .init(&gateway_ctx)
+        .await
+        .expect("gateway init failed");
+
+    // Initialize in-memory cache plugin
+    let cache_ctx = ModuleCtx::new(
+        "inmemory_cache_plugin",
+        Uuid::new_v4(),
+        config_provider.clone(),
+        hub.clone(),
+        cancel.clone(),
+        None,
+    );
+    let cache_plugin = InMemoryCachePlugin::default();
+    cache_plugin
+        .init(&cache_ctx)
+        .await
+        .expect("cache plugin init failed");
+
+    // Register counting platform plugin
+    let platform_instance_id =
+        license_enforcer_sdk::LicensePlatformPluginSpecV1::gts_make_instance_id(
+            "test.counting.platform.v1",
+        );
+
+    let platform_instance = modkit::gts::BaseModkitPluginV1::<LicensePlatformPluginSpecV1> {
+        id: platform_instance_id.clone(),
+        vendor: "hyperspot".to_owned(),
+        priority: 100,
+        properties: LicensePlatformPluginSpecV1,
+    };
+
+    registry
+        .register(vec![serde_json::to_value(&platform_instance).unwrap()])
+        .await
+        .expect("Platform registration failed");
+
+    let platform_plugin = Arc::new(CountingPlatformPlugin::new());
+    hub.register_scoped::<dyn license_enforcer_sdk::PlatformPluginClient>(
+        modkit::client_hub::ClientScope::gts_id(platform_instance_id.as_ref()),
+        platform_plugin.clone(),
+    );
+
+    // Get gateway client
+    let client = hub
+        .get::<dyn LicenseEnforcerGatewayClient>()
+        .expect("Gateway client should be registered");
+
+    let ctx = SecurityContext::builder()
+        .tenant_id(Uuid::new_v4())
+        .subject_id(Uuid::new_v4())
+        .build();
+
+    // Act: Call gateway (should miss cache, fetch from platform, and store)
+    let base_feature = global_features::to_feature_id(global_features::BASE);
+    let is_enabled = client
+        .is_global_feature_enabled(&ctx, &base_feature)
+        .await
+        .expect("Feature check should succeed");
+
+    // Assert: Feature should be enabled (from platform)
+    assert!(is_enabled, "Base feature should be enabled");
+
+    // Assert: Platform should have been called exactly once
+    assert_eq!(
+        platform_plugin.get_call_count(),
+        1,
+        "Platform plugin should be called on cache miss"
+    );
+}
+
+#[tokio::test]
+async fn test_inmemory_cache_hit_avoids_platform_call() {
+    // This test verifies cache-aside behavior on cache hit:
+    // - First call should miss cache and fetch from platform
+    // - Second call should hit cache and NOT call platform
+    // - Platform plugin should be called exactly once (not twice)
+
+    // Arrange: Set up ClientHub and mock types-registry
+    let hub = Arc::new(ClientHub::new());
+    let registry = MockTypesRegistry::new();
+    hub.register::<dyn TypesRegistryClient>(Arc::new(registry.clone()));
+
+    let mut modules = HashMap::new();
+
+    // Gateway config
+    modules.insert(
+        "license_enforcer_gateway".to_owned(),
+        json!({
+            "config": {
+                "vendor": "hyperspot"
+            }
+        }),
+    );
+
+    // In-memory cache plugin config with long TTL
+    modules.insert(
+        "inmemory_cache_plugin".to_owned(),
+        json!({
+            "config": {
+                "vendor": "hyperspot",
+                "priority": 100,
+                "ttl": "300s",
+                "max_entries": 1000
+            }
+        }),
+    );
+
+    let config_provider = Arc::new(MockConfigProvider { modules });
+    let cancel = CancellationToken::new();
+
+    // Initialize gateway module
+    let gateway_ctx = ModuleCtx::new(
+        "license_enforcer_gateway",
+        Uuid::new_v4(),
+        config_provider.clone(),
+        hub.clone(),
+        cancel.clone(),
+        None,
+    );
+    let gateway = LicenseEnforcerGateway::default();
+    gateway
+        .init(&gateway_ctx)
+        .await
+        .expect("gateway init failed");
+
+    // Initialize in-memory cache plugin
+    let cache_ctx = ModuleCtx::new(
+        "inmemory_cache_plugin",
+        Uuid::new_v4(),
+        config_provider.clone(),
+        hub.clone(),
+        cancel.clone(),
+        None,
+    );
+    let cache_plugin = InMemoryCachePlugin::default();
+    cache_plugin
+        .init(&cache_ctx)
+        .await
+        .expect("cache plugin init failed");
+
+    // Register counting platform plugin
+    let platform_instance_id =
+        license_enforcer_sdk::LicensePlatformPluginSpecV1::gts_make_instance_id(
+            "test.counting.platform.v1",
+        );
+
+    let platform_instance = modkit::gts::BaseModkitPluginV1::<LicensePlatformPluginSpecV1> {
+        id: platform_instance_id.clone(),
+        vendor: "hyperspot".to_owned(),
+        priority: 100,
+        properties: LicensePlatformPluginSpecV1,
+    };
+
+    registry
+        .register(vec![serde_json::to_value(&platform_instance).unwrap()])
+        .await
+        .expect("Platform registration failed");
+
+    let platform_plugin = Arc::new(CountingPlatformPlugin::new());
+    hub.register_scoped::<dyn license_enforcer_sdk::PlatformPluginClient>(
+        modkit::client_hub::ClientScope::gts_id(platform_instance_id.as_ref()),
+        platform_plugin.clone(),
+    );
+
+    // Get gateway client
+    let client = hub
+        .get::<dyn LicenseEnforcerGatewayClient>()
+        .expect("Gateway client should be registered");
+
+    let ctx = SecurityContext::builder()
+        .tenant_id(Uuid::new_v4())
+        .subject_id(Uuid::new_v4())
+        .build();
+
+    let base_feature = global_features::to_feature_id(global_features::BASE);
+
+    // Act: First call (cache miss)
+    let is_enabled_1 = client
+        .is_global_feature_enabled(&ctx, &base_feature)
+        .await
+        .expect("First feature check should succeed");
+
+    assert!(is_enabled_1, "Base feature should be enabled on first call");
+    assert_eq!(
+        platform_plugin.get_call_count(),
+        1,
+        "Platform should be called on first request (cache miss)"
+    );
+
+    // Act: Second call (cache hit)
+    let is_enabled_2 = client
+        .is_global_feature_enabled(&ctx, &base_feature)
+        .await
+        .expect("Second feature check should succeed");
+
+    // Assert: Feature should still be enabled
+    assert!(
+        is_enabled_2,
+        "Base feature should be enabled on second call"
+    );
+
+    // Assert: Platform should NOT be called again (cache hit)
+    assert_eq!(
+        platform_plugin.get_call_count(),
+        1,
+        "Platform plugin should NOT be called on second request (cache hit should avoid platform)"
+    );
+}
+
+#[tokio::test]
+async fn test_inmemory_cache_ttl_expiry_refreshes_from_platform() {
+    // This test verifies TTL expiry behavior:
+    // - First call should miss cache and fetch from platform
+    // - Second call should hit cache (no platform call)
+    // - After TTL expires, third call should miss cache and fetch from platform again
+    // - Platform should be called exactly twice (initial + after expiry)
+
+    // Arrange: Set up ClientHub and mock types-registry
+    let hub = Arc::new(ClientHub::new());
+    let registry = MockTypesRegistry::new();
+    hub.register::<dyn TypesRegistryClient>(Arc::new(registry.clone()));
+
+    let mut modules = HashMap::new();
+
+    // Gateway config
+    modules.insert(
+        "license_enforcer_gateway".to_owned(),
+        json!({
+            "config": {
+                "vendor": "hyperspot"
+            }
+        }),
+    );
+
+    // In-memory cache plugin config with very short TTL for testing
+    modules.insert(
+        "inmemory_cache_plugin".to_owned(),
+        json!({
+            "config": {
+                "vendor": "hyperspot",
+                "priority": 100,
+                "ttl": "1s",
+                "max_entries": 1000
+            }
+        }),
+    );
+
+    let config_provider = Arc::new(MockConfigProvider { modules });
+    let cancel = CancellationToken::new();
+
+    // Initialize gateway module
+    let gateway_ctx = ModuleCtx::new(
+        "license_enforcer_gateway",
+        Uuid::new_v4(),
+        config_provider.clone(),
+        hub.clone(),
+        cancel.clone(),
+        None,
+    );
+    let gateway = LicenseEnforcerGateway::default();
+    gateway
+        .init(&gateway_ctx)
+        .await
+        .expect("gateway init failed");
+
+    // Initialize in-memory cache plugin
+    let cache_ctx = ModuleCtx::new(
+        "inmemory_cache_plugin",
+        Uuid::new_v4(),
+        config_provider.clone(),
+        hub.clone(),
+        cancel.clone(),
+        None,
+    );
+    let cache_plugin = InMemoryCachePlugin::default();
+    cache_plugin
+        .init(&cache_ctx)
+        .await
+        .expect("cache plugin init failed");
+
+    // Register counting platform plugin
+    let platform_instance_id =
+        license_enforcer_sdk::LicensePlatformPluginSpecV1::gts_make_instance_id(
+            "test.counting.platform.v1",
+        );
+
+    let platform_instance = modkit::gts::BaseModkitPluginV1::<LicensePlatformPluginSpecV1> {
+        id: platform_instance_id.clone(),
+        vendor: "hyperspot".to_owned(),
+        priority: 100,
+        properties: LicensePlatformPluginSpecV1,
+    };
+
+    registry
+        .register(vec![serde_json::to_value(&platform_instance).unwrap()])
+        .await
+        .expect("Platform registration failed");
+
+    let platform_plugin = Arc::new(CountingPlatformPlugin::new());
+    hub.register_scoped::<dyn license_enforcer_sdk::PlatformPluginClient>(
+        modkit::client_hub::ClientScope::gts_id(platform_instance_id.as_ref()),
+        platform_plugin.clone(),
+    );
+
+    // Get gateway client
+    let client = hub
+        .get::<dyn LicenseEnforcerGatewayClient>()
+        .expect("Gateway client should be registered");
+
+    let ctx = SecurityContext::builder()
+        .tenant_id(Uuid::new_v4())
+        .subject_id(Uuid::new_v4())
+        .build();
+
+    let base_feature = global_features::to_feature_id(global_features::BASE);
+
+    // Act: First call (cache miss)
+    let is_enabled_1 = client
+        .is_global_feature_enabled(&ctx, &base_feature)
+        .await
+        .expect("First feature check should succeed");
+
+    assert!(is_enabled_1, "Base feature should be enabled");
+    assert_eq!(
+        platform_plugin.get_call_count(),
+        1,
+        "Platform should be called on first request"
+    );
+
+    // Act: Second call immediately (cache hit)
+    let is_enabled_2 = client
+        .is_global_feature_enabled(&ctx, &base_feature)
+        .await
+        .expect("Second feature check should succeed");
+
+    assert!(is_enabled_2, "Base feature should be enabled");
+    assert_eq!(
+        platform_plugin.get_call_count(),
+        1,
+        "Platform should NOT be called on second request (cache hit)"
+    );
+
+    // Wait for TTL to expire (1 second + margin)
+    // Note: Using real sleep here because Moka cache uses std::time::Instant internally,
+    // not tokio::time::Instant, so tokio::time::pause()/advance() would not work.
+    tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+
+    // Act: Third call after TTL expiry (cache miss due to expiry)
+    let is_enabled_3 = client
+        .is_global_feature_enabled(&ctx, &base_feature)
+        .await
+        .expect("Third feature check should succeed");
+
+    // Assert: Feature should still be enabled
+    assert!(
+        is_enabled_3,
+        "Base feature should be enabled after TTL expiry"
+    );
+
+    // Assert: Platform should be called again after TTL expiry
+    assert_eq!(
+        platform_plugin.get_call_count(),
+        2,
+        "Platform plugin should be called again after TTL expiry (cache refresh)"
+    );
+}
+
+#[tokio::test]
+async fn test_cache_hit_completely_avoids_platform_call() {
+    // This test verifies that when cache returns a hit immediately,
+    // the platform plugin is NEVER called (not even once).
+    // This proves the cache-aside pattern works correctly for cache hits.
+
+    // Arrange: Set up ClientHub and mock types-registry
+    let hub = Arc::new(ClientHub::new());
+    let registry = MockTypesRegistry::new();
+    hub.register::<dyn TypesRegistryClient>(Arc::new(registry.clone()));
+
+    let config_provider = Arc::new(MockConfigProvider::new());
+    let cancel = CancellationToken::new();
+
+    // Initialize gateway module (registers schemas)
+    let gateway_ctx = ModuleCtx::new(
+        "license_enforcer_gateway",
+        Uuid::new_v4(),
+        config_provider.clone(),
+        hub.clone(),
+        cancel.clone(),
+        None,
+    );
+    let gateway = LicenseEnforcerGateway::default();
+    gateway
+        .init(&gateway_ctx)
+        .await
+        .expect("gateway init failed");
+
+    // Register plugins with types-registry
+    let platform_instance_id =
+        license_enforcer_sdk::LicensePlatformPluginSpecV1::gts_make_instance_id(
+            "test.counting.platform.v1",
+        );
+    let cache_instance_id = license_enforcer_sdk::LicenseCachePluginSpecV1::gts_make_instance_id(
+        "test.always_hit.cache.v1",
+    );
+
+    let platform_instance = modkit::gts::BaseModkitPluginV1::<LicensePlatformPluginSpecV1> {
+        id: platform_instance_id.clone(),
+        vendor: "hyperspot".to_owned(),
+        priority: 100,
+        properties: LicensePlatformPluginSpecV1,
+    };
+    let cache_instance = modkit::gts::BaseModkitPluginV1::<LicenseCachePluginSpecV1> {
+        id: cache_instance_id.clone(),
+        vendor: "hyperspot".to_owned(),
+        priority: 100,
+        properties: LicenseCachePluginSpecV1,
+    };
+
+    registry
+        .register(vec![
+            serde_json::to_value(&platform_instance).unwrap(),
+            serde_json::to_value(&cache_instance).unwrap(),
+        ])
+        .await
+        .expect("Plugin registration failed");
+
+    // Register counting platform plugin
+    let platform_plugin = Arc::new(CountingPlatformPlugin::new());
+    hub.register_scoped::<dyn license_enforcer_sdk::PlatformPluginClient>(
+        modkit::client_hub::ClientScope::gts_id(platform_instance_id.as_ref()),
+        platform_plugin.clone(),
+    );
+
+    // Register always-hit cache plugin
+    let cache_plugin = Arc::new(AlwaysHitCachePlugin::new());
+    hub.register_scoped::<dyn license_enforcer_sdk::CachePluginClient>(
+        modkit::client_hub::ClientScope::gts_id(cache_instance_id.as_ref()),
+        cache_plugin.clone(),
+    );
+
+    // Get gateway client
+    let client = hub
+        .get::<dyn LicenseEnforcerGatewayClient>()
+        .expect("Gateway client should be registered");
+
+    let ctx = SecurityContext::builder()
+        .tenant_id(Uuid::new_v4())
+        .subject_id(Uuid::new_v4())
+        .build();
+
+    let base_feature = global_features::to_feature_id(global_features::BASE);
+
+    // Act: Call gateway (cache will return hit immediately)
+    let is_enabled = client
+        .is_global_feature_enabled(&ctx, &base_feature)
+        .await
+        .expect("Feature check should succeed");
+
+    // Assert: Feature should be enabled (from cache)
+    assert!(is_enabled, "Base feature should be enabled from cache");
+
+    // Assert: Cache plugin should have been called
+    assert_eq!(
+        cache_plugin.get_call_count(),
+        1,
+        "Cache plugin should be called to check for cached data"
+    );
+
+    // Assert: Platform plugin should NEVER be called when cache hits
+    assert_eq!(
+        platform_plugin.get_call_count(),
+        0,
+        "Platform plugin MUST NOT be called when cache returns a hit (cache-aside pattern)"
+    );
+
+    // Act: Second call (should also hit cache)
+    let is_enabled_2 = client
+        .is_global_feature_enabled(&ctx, &base_feature)
+        .await
+        .expect("Second feature check should succeed");
+
+    assert!(
+        is_enabled_2,
+        "Base feature should still be enabled from cache"
+    );
+
+    // Assert: Platform should still never be called
+    assert_eq!(
+        platform_plugin.get_call_count(),
+        0,
+        "Platform plugin MUST still be at 0 calls after second request (both cache hits)"
+    );
+
+    // Assert: Cache was called twice
+    assert_eq!(
+        cache_plugin.get_call_count(),
+        2,
+        "Cache plugin should be called on both requests"
     );
 }

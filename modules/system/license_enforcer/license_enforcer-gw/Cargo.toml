@@ -51,7 +51,8 @@ tracing = { workspace = true }
 # Plugin dependencies for integration tests
 static-licenses-plugin = { package = "cf-static-licenses-plugin", version = "0.1.0", path = "../plugins/builtin-integration/static_licenses_plugin" }
 nocache-plugin = { package = "cf-nocache-plugin", version = "0.1.0", path = "../plugins/cache/nocache_plugin" }
+inmemory-cache-plugin = { package = "cf-inmemory-cache-plugin", version = "0.1.0", path = "../plugins/cache/inmemory_cache_plugin" }
 
 # Test runtime
-tokio = { workspace = true, features = ["rt", "macros"] }
+tokio = { workspace = true, features = ["rt", "macros", "time"] }
 tokio-util = { workspace = true }
