@@ -1318,6 +1318,7 @@ dependencies = [
  "cf-modkit",
  "cf-modkit-security",
  "cf-types-registry-sdk",
+ "gts",
  "inventory",
  "serde",
  "serde_json",

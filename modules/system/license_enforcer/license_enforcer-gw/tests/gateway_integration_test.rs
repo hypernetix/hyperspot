@@ -270,7 +270,8 @@ impl MockConfigProvider {
             json!({
                 "config": {
                     "vendor": "hyperspot",
-                    "priority": 100
+                    "priority": 100,
+                    "static_licenses_features": []
                 }
             }),
         );
@@ -1180,5 +1181,304 @@ async fn test_cache_hit_completely_avoids_platform_call() {
         cache_plugin.get_call_count(),
         2,
         "Cache plugin should be called on both requests"
+    );
+}
+
+// ============================================================================
+// Static Licenses Plugin Configuration Tests
+// ============================================================================
+
+#[tokio::test]
+async fn test_static_licenses_plugin_init_fails_without_static_licenses_features() {
+    // This test verifies that the static_licenses_plugin fails to initialize
+    // when the required `static_licenses_features` field is missing from config.
+    // This is a BREAKING requirement from the update-static-licenses-features-config proposal.
+
+    // Arrange: Set up ClientHub and mock types-registry
+    let hub = Arc::new(ClientHub::new());
+    let registry = MockTypesRegistry::new();
+    hub.register::<dyn TypesRegistryClient>(Arc::new(registry.clone()));
+
+    // Create config WITHOUT static_licenses_features field
+    let mut modules = HashMap::new();
+    modules.insert(
+        "static_licenses_plugin".to_owned(),
+        json!({
+            "config": {
+                "vendor": "hyperspot",
+                "priority": 100
+                // INTENTIONALLY MISSING: "static_licenses_features"
+            }
+        }),
+    );
+    let config_provider = Arc::new(MockConfigProvider { modules });
+    let cancel = CancellationToken::new();
+
+    // Act: Try to initialize static_licenses_plugin without the required field
+    let platform_ctx = ModuleCtx::new(
+        "static_licenses_plugin",
+        Uuid::new_v4(),
+        config_provider,
+        hub.clone(),
+        cancel,
+        None,
+    );
+    let platform_plugin = StaticLicensesPlugin::default();
+    let result = platform_plugin.init(&platform_ctx).await;
+
+    // Assert: Initialization should fail
+    assert!(
+        result.is_err(),
+        "Plugin initialization should fail when static_licenses_features is missing"
+    );
+
+    // Assert: Error should mention the missing field
+    let err_msg = result.unwrap_err().to_string();
+    assert!(
+        err_msg.contains("static_licenses_features") || err_msg.contains("missing field"),
+        "Error message should mention missing static_licenses_features field, got: {err_msg}"
+    );
+}
+
+#[tokio::test]
+async fn test_static_licenses_plugin_returns_configured_features() {
+    // This test verifies that the static_licenses_plugin returns the configured
+    // features in addition to the base feature.
+
+    // Arrange: Set up ClientHub and mock types-registry
+    let hub = Arc::new(ClientHub::new());
+    let registry = MockTypesRegistry::new();
+    hub.register::<dyn TypesRegistryClient>(Arc::new(registry.clone()));
+
+    let mut modules = HashMap::new();
+
+    // Gateway config
+    modules.insert(
+        "license_enforcer_gateway".to_owned(),
+        json!({
+            "config": {
+                "vendor": "hyperspot"
+            }
+        }),
+    );
+
+    // Static licenses plugin with configured features
+    modules.insert(
+        "static_licenses_plugin".to_owned(),
+        json!({
+            "config": {
+                "vendor": "hyperspot",
+                "priority": 100,
+                "static_licenses_features": [
+                    "gts.x.core.lic.feat.v1~x.core.global.advanced_analytics.v1",
+                    "gts.x.core.lic.feat.v1~x.core.global.export.v1"
+                ]
+            }
+        }),
+    );
+
+    // Cache plugin config
+    modules.insert(
+        "nocache_plugin".to_owned(),
+        json!({
+            "config": {
+                "vendor": "hyperspot",
+                "priority": 100
+            }
+        }),
+    );
+
+    let config_provider = Arc::new(MockConfigProvider { modules });
+    let cancel = CancellationToken::new();
+
+    // Initialize gateway module
+    let gateway_ctx = ModuleCtx::new(
+        "license_enforcer_gateway",
+        Uuid::new_v4(),
+        config_provider.clone(),
+        hub.clone(),
+        cancel.clone(),
+        None,
+    );
+    let gateway = LicenseEnforcerGateway::default();
+    gateway
+        .init(&gateway_ctx)
+        .await
+        .expect("gateway init failed");
+
+    // Initialize platform plugin with configured features
+    let platform_ctx = ModuleCtx::new(
+        "static_licenses_plugin",
+        Uuid::new_v4(),
+        config_provider.clone(),
+        hub.clone(),
+        cancel.clone(),
+        None,
+    );
+    let platform_plugin = StaticLicensesPlugin::default();
+    platform_plugin
+        .init(&platform_ctx)
+        .await
+        .expect("platform plugin init should succeed with static_licenses_features");
+
+    // Initialize cache plugin
+    let cache_ctx = ModuleCtx::new(
+        "nocache_plugin",
+        Uuid::new_v4(),
+        config_provider,
+        hub.clone(),
+        cancel,
+        None,
+    );
+    let cache_plugin = NoCachePlugin::default();
+    cache_plugin
+        .init(&cache_ctx)
+        .await
+        .expect("cache plugin init failed");
+
+    // Act: Get gateway client and list features
+    let client = hub
+        .get::<dyn LicenseEnforcerGatewayClient>()
+        .expect("Gateway client should be registered");
+
+    let ctx = SecurityContext::builder()
+        .tenant_id(Uuid::new_v4())
+        .subject_id(Uuid::new_v4())
+        .build();
+
+    let features = client
+        .enabled_global_features(&ctx)
+        .await
+        .expect("Features list should succeed");
+
+    // Assert: Should contain base feature + configured features
+    let base_feature = global_features::to_feature_id(global_features::BASE);
+    assert!(
+        features.contains(&base_feature),
+        "Features should contain base feature"
+    );
+
+    let analytics_feature = license_enforcer_sdk::LicenseFeatureID::from(
+        "gts.x.core.lic.feat.v1~x.core.global.advanced_analytics.v1",
+    );
+    let export_feature = license_enforcer_sdk::LicenseFeatureID::from(
+        "gts.x.core.lic.feat.v1~x.core.global.export.v1",
+    );
+
+    assert!(
+        features.contains(&analytics_feature),
+        "Features should contain configured advanced-analytics feature"
+    );
+    assert!(
+        features.contains(&export_feature),
+        "Features should contain configured export feature"
+    );
+
+    assert_eq!(
+        features.len(),
+        3,
+        "Should have base feature + 2 configured features"
+    );
+}
+
+#[tokio::test]
+async fn test_static_licenses_plugin_init_fails_with_invalid_gts_id() {
+    // This test verifies that module init performs basic GTS ID format validation.
+    // Per design: "no registry validation at config-load time (parsing/structure validation only)".
+    // However, basic format checks (starts with "gts.") are acceptable.
+
+    // Arrange: Set up ClientHub and mock types-registry
+    let hub = Arc::new(ClientHub::new());
+    let registry = MockTypesRegistry::new();
+    hub.register::<dyn TypesRegistryClient>(Arc::new(registry.clone()));
+
+    // Create config with invalid GTS ID (doesn't start with "gts.")
+    let mut modules = HashMap::new();
+    modules.insert(
+        "static_licenses_plugin".to_owned(),
+        json!({
+            "config": {
+                "vendor": "hyperspot",
+                "priority": 100,
+                "static_licenses_features": ["invalid-id-without-gts-prefix"]
+            }
+        }),
+    );
+    let config_provider = Arc::new(MockConfigProvider { modules });
+    let cancel = CancellationToken::new();
+
+    // Act: Try to initialize static_licenses_plugin with invalid GTS ID
+    let platform_ctx = ModuleCtx::new(
+        "static_licenses_plugin",
+        Uuid::new_v4(),
+        config_provider,
+        hub.clone(),
+        cancel,
+        None,
+    );
+    let platform_plugin = StaticLicensesPlugin::default();
+    let result = platform_plugin.init(&platform_ctx).await;
+
+    // Assert: Initialization should fail
+    assert!(
+        result.is_err(),
+        "Plugin initialization should fail with invalid GTS ID"
+    );
+
+    // Assert: Error should mention GTS format
+    let err_msg = result.unwrap_err().to_string();
+    assert!(
+        err_msg.contains("gts.") || err_msg.contains("GTS"),
+        "Error message should mention GTS format requirement, got: {err_msg}"
+    );
+}
+
+#[tokio::test]
+async fn test_static_licenses_plugin_init_fails_with_empty_feature_id() {
+    // This test verifies that empty feature IDs are rejected during init.
+
+    // Arrange: Set up ClientHub and mock types-registry
+    let hub = Arc::new(ClientHub::new());
+    let registry = MockTypesRegistry::new();
+    hub.register::<dyn TypesRegistryClient>(Arc::new(registry.clone()));
+
+    // Create config with empty feature ID
+    let mut modules = HashMap::new();
+    modules.insert(
+        "static_licenses_plugin".to_owned(),
+        json!({
+            "config": {
+                "vendor": "hyperspot",
+                "priority": 100,
+                "static_licenses_features": [""]
+            }
+        }),
+    );
+    let config_provider = Arc::new(MockConfigProvider { modules });
+    let cancel = CancellationToken::new();
+
+    // Act: Try to initialize static_licenses_plugin with empty feature ID
+    let platform_ctx = ModuleCtx::new(
+        "static_licenses_plugin",
+        Uuid::new_v4(),
+        config_provider,
+        hub.clone(),
+        cancel,
+        None,
+    );
+    let platform_plugin = StaticLicensesPlugin::default();
+    let result = platform_plugin.init(&platform_ctx).await;
+
+    // Assert: Initialization should fail
+    assert!(
+        result.is_err(),
+        "Plugin initialization should fail with empty feature ID"
+    );
+
+    // Assert: Error should mention invalid GTS ID
+    let err_msg = result.unwrap_err().to_string();
+    assert!(
+        err_msg.contains("not a valid GTS ID") || err_msg.contains("Invalid"),
+        "Error message should mention invalid GTS ID, got: {err_msg}"
     );
 }

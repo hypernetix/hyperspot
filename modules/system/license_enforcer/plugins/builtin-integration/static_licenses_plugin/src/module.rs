@@ -3,7 +3,8 @@
 use std::sync::{Arc, OnceLock};
 
 use async_trait::async_trait;
-use license_enforcer_sdk::{LicensePlatformPluginSpecV1, PlatformPluginClient};
+use gts::GtsID;
+use license_enforcer_sdk::{LicenseFeatureID, LicensePlatformPluginSpecV1, PlatformPluginClient};
 use modkit::client_hub::ClientScope;
 use modkit::context::ModuleCtx;
 use modkit::gts::BaseModkitPluginV1;
@@ -47,8 +48,25 @@ impl Module for StaticLicensesPlugin {
         info!(
             vendor = %cfg.vendor,
             priority = cfg.priority,
+            features_count = cfg.static_licenses_features.len(),
             "Loaded plugin configuration"
         );
+
+        // Validate and convert configured features from strings to LicenseFeatureID
+        // Use gts crate for proper GTS ID validation (structure only, no registry validation)
+        for feature_id in &cfg.static_licenses_features {
+            if !GtsID::is_valid(feature_id) {
+                anyhow::bail!(
+                    "Invalid static_licenses_features: '{feature_id}' is not a valid GTS ID"
+                );
+            }
+        }
+
+        let configured_features: Vec<LicenseFeatureID> = cfg
+            .static_licenses_features
+            .iter()
+            .map(|s| LicenseFeatureID::from(s.as_str()))
+            .collect();
 
         // Generate plugin instance ID
         let instance_id = LicensePlatformPluginSpecV1::gts_make_instance_id(
@@ -67,8 +85,8 @@ impl Module for StaticLicensesPlugin {
 
         let _ = registry.register(vec![instance_json]).await?;
 
-        // Create service
-        let service = Arc::new(Service::new());
+        // Create service with configured features
+        let service = Arc::new(Service::new(configured_features));
         self.service
             .set(service.clone())
             .map_err(|_| anyhow::anyhow!("Service already initialized"))?;
