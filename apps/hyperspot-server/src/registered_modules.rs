@@ -20,8 +20,11 @@ use single_tenant_tr_plugin as _;
 #[cfg(feature = "static-tenants")]
 use static_tr_plugin as _;
 
-#[cfg(feature = "nocache")]
+#[cfg(feature = "no-licensing-cache")]
 use nocache_plugin as _;
+
+#[cfg(feature = "inmemory-licensing-cache")]
+use inmemory_cache_plugin as _;
 
 #[cfg(feature = "static-licenses")]
 use static_licenses_plugin as _;

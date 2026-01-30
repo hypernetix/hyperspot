@@ -70,6 +70,7 @@ members = [
     "modules/system/license_enforcer/license_enforcer-gw",
     "modules/system/license_enforcer/plugins/builtin-integration/static_licenses_plugin",
     "modules/system/license_enforcer/plugins/cache/nocache_plugin",
+    "modules/system/license_enforcer/plugins/cache/inmemory_cache_plugin",
 ]
 exclude = ["fuzz"]
 resolver = "3"

@@ -17,7 +17,7 @@ workspace = true
 
 [dependencies]
 # Local dependencies
-license-enforcer-sdk = { package = "cf-license-enforcer-sdk", version = "0.1.0", path = "../../../license_enforcer-sdk" }
+license-enforcer-sdk = { package = "cf-license-enforcer-sdk", version = "0.2.0", path = "../../../license_enforcer-sdk" }
 types-registry-sdk = { package = "cf-types-registry-sdk", version = "0.1.1", path = "../../../../types_registry/types_registry-sdk" }
 
 # ModKit dependencies

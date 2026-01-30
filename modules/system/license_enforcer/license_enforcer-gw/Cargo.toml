@@ -17,7 +17,7 @@ workspace = true
 
 [dependencies]
 # Local dependencies
-license-enforcer-sdk = { package = "cf-license-enforcer-sdk", version = "0.1.0", path = "../license_enforcer-sdk" }
+license-enforcer-sdk = { package = "cf-license-enforcer-sdk", version = "0.2.0", path = "../license_enforcer-sdk" }
 types-registry-sdk = { package = "cf-types-registry-sdk", version = "0.1.1", path = "../../types_registry/types_registry-sdk" }
 
 # GTS dependencies
@@ -51,7 +51,8 @@ tracing = { workspace = true }
 # Plugin dependencies for integration tests
 static-licenses-plugin = { package = "cf-static-licenses-plugin", version = "0.1.0", path = "../plugins/builtin-integration/static_licenses_plugin" }
 nocache-plugin = { package = "cf-nocache-plugin", version = "0.1.0", path = "../plugins/cache/nocache_plugin" }
+inmemory-cache-plugin = { package = "cf-inmemory-cache-plugin", version = "0.1.0", path = "../plugins/cache/inmemory_cache_plugin" }
 
 # Test runtime
-tokio = { workspace = true, features = ["rt", "macros"] }
+tokio = { workspace = true, features = ["rt", "macros", "time"] }
 tokio-util = { workspace = true }

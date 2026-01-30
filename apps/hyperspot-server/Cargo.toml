@@ -20,7 +20,8 @@ tenant-resolver-example = [
 ]
 single-tenant = ["dep:single-tenant-tr-plugin"]
 static-tenants = ["dep:static-tr-plugin"]
-nocache = ["dep:nocache-plugin"]
+no-licensing-cache = ["dep:nocache-plugin"]
+inmemory-licensing-cache = ["dep:inmemory-cache-plugin"]
 static-licenses = ["dep:static-licenses-plugin"]
 otel = ["modkit/otel"]
 
@@ -49,6 +50,7 @@ static-tr-plugin = { package = "cf-static-tr-plugin", path = "../../modules/syst
 
 # Optional license enforcer plugins
 nocache-plugin = { package = "cf-nocache-plugin", path = "../../modules/system/license_enforcer/plugins/cache/nocache_plugin", optional = true }
+inmemory-cache-plugin = { package = "cf-inmemory-cache-plugin", path = "../../modules/system/license_enforcer/plugins/cache/inmemory_cache_plugin", optional = true }
 static-licenses-plugin = { package = "cf-static-licenses-plugin", path = "../../modules/system/license_enforcer/plugins/builtin-integration/static_licenses_plugin", optional = true }
 
 # user modules
