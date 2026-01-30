@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.x.llm_gateway.tools.tool_inline_gts.v1~",
+  "title": "ToolInlineGTS",
+  "description": "Inline GTS schema definition for a tool",
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "inline_gts",
+      "description": "Discriminator for tool type"
+    },
+    "schema": {
+      "$ref": "gts://gts.x.llm_gateway.tools.schema.v1~",
+      "description": "Inline GTS schema definition"
+    }
+  },
+  "required": ["type", "schema"],
+  "additionalProperties": false
+}

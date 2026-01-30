@@ -19,7 +19,6 @@ Unified interface for LLM inference across providers. Stateless, pass-through de
 | [ ] | Document understanding |
 | [ ] | Tool/function calling |
 | [ ] | Structured output (JSON mode) |
-| [ ] | Model discovery |
 | [ ] | Async jobs (long-running operations) |
 | [ ] | Realtime audio (WebSocket) |
 | [ ] | Usage tracking |
@@ -29,20 +28,17 @@ Unified interface for LLM inference across providers. Stateless, pass-through de
 | Done | Capability |
 |------|------------|
 | [ ] | Provider fallback |
-| [ ] | Retry with backoff |
 | [ ] | Timeout enforcement |
 | [ ] | Pre-call interceptor |
 | [ ] | Post-response interceptor |
 | [ ] | Per-tenant budget enforcement |
-| [ ] | Request cancellation |
 | [ ] | Rate limiting (tenant/user) |
 
 ### P3 — Optimization
 
 | Done | Capability |
 |------|------------|
-| [ ] | Cost-aware routing |
-| [ ] | Embeddings batching |
+| [ ] | Batch processing |
 
 ### P4 — Enterprise
 
@@ -54,9 +50,14 @@ Unified interface for LLM inference across providers. Stateless, pass-through de
 
 ```plaintext
 modules/llm_gateway/
+├── docs/                    # Documentation
+│   ├── PRD.md
+│   ├── DESIGN.md
+│   └── ADR/
 ├── llm_gateway-sdk/         # Public API traits, models, errors
-├── llm_gateway-gw/          # Gateway implementation
-└── plugins/
+│   └── schemas/             # GTS domain model schemas
+├── llm_gateway-gw/          # Gateway implementation (planned)
+└── plugins/                 # (planned)
     ├── providers/
     │   ├── openai_plugin/       # OpenAI-compatible providers
     │   ├── anthropic_plugin/    # Claude API
@@ -65,17 +66,17 @@ modules/llm_gateway/
     │   ├── noop_hook_plugin/    # Default no-op (passthrough)
     │   └── ...                  # Custom hook plugins
     ├── usage/
-    │   ├── noop_usage_plugin/   # Default no-op
+    │   ├── noop_usage_tracker/  # Default no-op
     │   └── ...                  # Custom usage tracking
     └── audit/
-        ├── noop_audit_plugin/   # Default no-op
+        ├── noop_audit_module/   # Default no-op
         └── ...                  # Custom audit logging
 ```
 
 ## Documentation
 
-- [PRD.md](docs/PRD.md) — Product requirements, scenarios with sequence diagrams
-- ARCHITECTURE.md — Gateway + Plugin design, component interactions `TODO`
+- [PRD.md](docs/PRD.md) — Product requirements, use cases, acceptance criteria
+- [DESIGN.md](docs/DESIGN.md) — Technical architecture, components, sequence diagrams
 - API.md — SDK traits, request/response models, errors `TODO`
 - PROVIDERS.md — Provider abstraction, capability matrix `TODO`
 - CONFIGURATION.md — Gateway and plugin configuration `TODO`

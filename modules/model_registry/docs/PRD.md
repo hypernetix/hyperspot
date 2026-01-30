@@ -1,94 +1,247 @@
-# Model Registry — PRD
+# PRD
 
-Model catalog with tenant-level availability and approval workflow.
+## 1. Overview
 
-## Scenarios
+**Purpose**: Model Registry provides a centralized catalog of AI models with tenant-level availability and approval workflow.
 
-### S1 Get Tenant Model
+Model Registry is the authoritative source for model metadata, capabilities, and tenant access control. It tracks which models are available from which providers, manages approval workflows for new models, and monitors provider health for routing decisions. LLM Gateway queries the registry to resolve model identifiers to provider endpoints and verify tenant access.
 
-LLM Gateway resolves model availability for current tenant.
+The registry supports automatic model discovery from providers, requiring tenant admin approval before models become available. It also tracks provider health metrics (latency, error rates) to inform Gateway routing decisions.
 
-```mermaid
-sequenceDiagram
-    participant LLM as LLM Gateway
-    participant MR as Model Registry
+**Target Users**:
+- **LLM Gateway** - Primary consumer for model resolution and availability checks
+- **Tenant Administrators** - Approve/reject models for their tenant
 
-    LLM->>MR: get_tenant_model(ctx, model_id)
-    MR-->>LLM: model info + provider
-```
+**Key Problems Solved**:
+- **Model discovery**: Automatic polling of provider APIs to discover available models
+- **Access control**: Tenant-level approval workflow for model access
+- **Health tracking**: Provider health metrics for intelligent routing
 
-### S2 List Tenant Models
+**Success Criteria**:
+- All scenarios (S1-S5) implemented and operational
+- Model resolution latency < 10ms P99
+- Provider health status updated within health check interval
 
-LLM Gateway queries available models for current tenant.
+**Capabilities**:
+- Model catalog management
+- Tenant-level model availability
+- Model approval workflow
+- Provider health monitoring
+- Model capability and pricing metadata
 
-```mermaid
-sequenceDiagram
-    participant LLM as LLM Gateway
-    participant MR as Model Registry
+## 2. Actors
 
-    LLM->>MR: list_tenant_models(ctx, filter)
-    MR-->>LLM: models[]
-```
+### 2.1 Human Actors
 
-### S3 Model Discovery
+#### Tenant Administrator
 
-Registry polls providers for available models via Outbound API Gateway.
+**ID**: `fdd-model-registry-actor-tenant-admin`
 
-```mermaid
-sequenceDiagram
-    participant MR as Model Registry
-    participant OB as Outbound API Gateway
-    participant P as Provider API
+<!-- fdd-id-content -->
+**Role**: Approves or rejects models for tenant access. Configures auto-approval policies per provider.
+<!-- fdd-id-content -->
 
-    MR->>OB: GET /models
-    OB->>P: Request (with credentials)
-    P-->>OB: models[]
-    OB-->>MR: models[]
-    MR->>MR: Upsert + create pending approvals
-```
+### 2.2 System Actors
 
-### S4 Model Approval
+#### LLM Gateway
 
-New models require tenant admin approval before becoming available.
+**ID**: `fdd-model-registry-actor-llm-gateway`
 
-**Statuses**: `pending` → `approved` | `rejected` | `revoked`
+<!-- fdd-id-content -->
+**Role**: Queries registry to resolve model to provider, check tenant availability, and get model capabilities.
+<!-- fdd-id-content -->
 
-**Auto-approval**: configurable per tenant/provider
+#### Outbound API Gateway
 
-### S5 Provider Health Monitoring
+**ID**: `fdd-model-registry-actor-outbound-api-gateway`
 
-Registry tracks provider health metrics for LLM Gateway routing decisions.
+<!-- fdd-id-content -->
+**Role**: Executes provider API calls for model discovery and health probes.
+<!-- fdd-id-content -->
 
-```mermaid
-sequenceDiagram
-    participant MR as Model Registry
-    participant OB as Outbound API Gateway
-    participant P as Provider API
+#### Provider API
 
-    loop Health check interval
-        MR->>OB: Health probe
-        OB->>P: Request
-        P-->>OB: Response / timeout / error
-        OB-->>MR: latency, status
-        MR->>MR: Update provider health state
-    end
-```
+**ID**: `fdd-model-registry-actor-provider-api`
 
-Metrics: latency, error rate, availability status.
+<!-- fdd-id-content -->
+**Role**: External provider endpoint that returns available models list and responds to health probes.
+<!-- fdd-id-content -->
 
----
+## 3. Functional Requirements
 
-## Dependencies
+#### Get Tenant Model
 
-| Module | Role |
-|--------|------|
-| Outbound API Gateway | Provider API calls |
-| Tenant Resolver | Tenant context |
+**ID**: [ ] `p1` `fdd-model-registry-fr-get-tenant-model-v1`
 
-## Errors
+<!-- fdd-id-content -->
 
-| Error | HTTP | Description |
-|-------|------|-------------|
-| `model_not_found` | 404 | Model not in catalog |
-| `model_not_approved` | 403 | Model not approved for tenant |
-| `model_deprecated` | 410 | Model sunset |
+The system must resolve model availability for a tenant, returning model info and provider details if approved.
+
+**Actors**: `fdd-model-registry-actor-llm-gateway`
+<!-- fdd-id-content -->
+
+#### List Tenant Models
+
+**ID**: [ ] `p1` `fdd-model-registry-fr-list-tenant-models-v1`
+
+<!-- fdd-id-content -->
+
+The system must return all models available for a tenant, supporting filtering by capability and provider.
+
+**Actors**: `fdd-model-registry-actor-llm-gateway`
+<!-- fdd-id-content -->
+
+#### Model Discovery
+
+**ID**: [ ] `p1` `fdd-model-registry-fr-model-discovery-v1`
+
+<!-- fdd-id-content -->
+
+The system must poll providers for available models via Outbound API Gateway, upserting new models and creating pending approvals.
+
+**Actors**: `fdd-model-registry-actor-outbound-api-gateway`, `fdd-model-registry-actor-provider-api`
+<!-- fdd-id-content -->
+
+#### Model Approval
+
+**ID**: [ ] `p1` `fdd-model-registry-fr-model-approval-v1`
+
+<!-- fdd-id-content -->
+
+The system must support model approval workflow with statuses: pending, approved, rejected, revoked. Must support auto-approval configuration per tenant/provider.
+
+**Actors**: `fdd-model-registry-actor-tenant-admin`
+<!-- fdd-id-content -->
+
+#### Provider Health Monitoring
+
+**ID**: [ ] `p1` `fdd-model-registry-fr-health-monitoring-v1`
+
+<!-- fdd-id-content -->
+
+The system must track provider health metrics (latency, error rate, availability status) via periodic health probes for LLM Gateway routing decisions.
+
+**Actors**: `fdd-model-registry-actor-outbound-api-gateway`, `fdd-model-registry-actor-provider-api`
+<!-- fdd-id-content -->
+
+## 4. Use Cases
+
+#### UC-001: Get Tenant Model
+
+**ID**: [ ] `p1` `fdd-model-registry-usecase-get-tenant-model-v1`
+
+<!-- fdd-id-content -->
+**Actor**: `fdd-model-registry-actor-llm-gateway`
+
+**Preconditions**: Model exists in catalog.
+
+**Flow**:
+1. LLM Gateway sends get_tenant_model(ctx, model_id)
+2. Registry looks up model in catalog
+3. Registry checks tenant approval status
+4. Registry returns model info + provider
+
+**Postconditions**: Model info returned or error.
+
+**Acceptance criteria**:
+- Returns model_not_found if model not in catalog
+- Returns model_not_approved if not approved for tenant
+- Returns model_deprecated if model sunset
+<!-- fdd-id-content -->
+
+#### UC-002: List Tenant Models
+
+**ID**: [ ] `p1` `fdd-model-registry-usecase-list-tenant-models-v1`
+
+<!-- fdd-id-content -->
+**Actor**: `fdd-model-registry-actor-llm-gateway`
+
+**Preconditions**: Tenant context available.
+
+**Flow**:
+1. LLM Gateway sends list_tenant_models(ctx, filter)
+2. Registry queries approved models for tenant
+3. Registry applies filters
+4. Registry returns models list
+
+**Postconditions**: Filtered models list returned.
+
+**Acceptance criteria**:
+- Supports filtering by capability, provider, modality
+- Returns only approved models
+- Includes capabilities, context limits, pricing
+<!-- fdd-id-content -->
+
+#### UC-003: Model Discovery
+
+**ID**: [ ] `p1` `fdd-model-registry-usecase-model-discovery-v1`
+
+<!-- fdd-id-content -->
+**Actor**: `fdd-model-registry-actor-provider-api`
+
+**Preconditions**: Provider configured in registry.
+
+**Flow**:
+1. Registry triggers discovery (scheduled or manual)
+2. Registry sends GET /models via Outbound API Gateway
+3. Provider returns models list
+4. Registry upserts models
+5. Registry creates pending approvals for new models
+
+**Postconditions**: Catalog updated, pending approvals created.
+
+**Acceptance criteria**:
+- New models create pending approvals
+- Existing models updated with latest metadata
+- Removed models marked as deprecated
+<!-- fdd-id-content -->
+
+#### UC-004: Model Approval
+
+**ID**: [ ] `p1` `fdd-model-registry-usecase-model-approval-v1`
+
+<!-- fdd-id-content -->
+**Actor**: `fdd-model-registry-actor-tenant-admin`
+
+**Preconditions**: Model in pending status for tenant.
+
+**Flow**:
+1. Tenant admin reviews pending model
+2. Admin approves or rejects
+3. Registry updates approval status
+4. Model becomes available (if approved)
+
+**Postconditions**: Model approval status updated.
+
+**Acceptance criteria**:
+- Statuses: pending → approved | rejected | revoked
+- Auto-approval configurable per tenant/provider
+- Revoked models immediately unavailable
+<!-- fdd-id-content -->
+
+#### UC-005: Provider Health Monitoring
+
+**ID**: [ ] `p1` `fdd-model-registry-usecase-health-monitoring-v1`
+
+<!-- fdd-id-content -->
+**Actor**: `fdd-model-registry-actor-provider-api`
+
+**Preconditions**: Provider configured with health endpoint.
+
+**Flow**:
+1. Registry triggers health probe (on interval)
+2. Registry sends probe via Outbound API Gateway
+3. Provider responds (or times out/errors)
+4. Registry updates provider health state
+
+**Postconditions**: Provider health metrics updated.
+
+**Acceptance criteria**:
+- Metrics: latency, error rate, availability status
+- Health state available for Gateway routing
+- Configurable health check interval
+<!-- fdd-id-content -->
+
+## 5. Non-functional requirements
+
+<!-- NFRs to be defined later -->
