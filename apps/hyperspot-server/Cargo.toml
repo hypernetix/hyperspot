@@ -10,7 +10,7 @@ authors.workspace = true
 workspace = true
 
 [features]
-default = []
+default = ["inmemory-licensing-cache", "static-licenses"]
 users-info-example = ["dep:users_info"]
 oop-example = ["dep:calculator_gateway", "dep:calculator"]
 tenant-resolver-example = [
