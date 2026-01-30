@@ -6,6 +6,7 @@
 use api_gateway as _;
 use file_parser as _;
 use grpc_hub as _;
+use license_enforcer_gw as _;
 use module_orchestrator as _;
 use nodes_registry as _;
 use simple_user_settings as _;
@@ -18,6 +19,12 @@ use single_tenant_tr_plugin as _;
 
 #[cfg(feature = "static-tenants")]
 use static_tr_plugin as _;
+
+#[cfg(feature = "nocache")]
+use nocache_plugin as _;
+
+#[cfg(feature = "static-licenses")]
+use static_licenses_plugin as _;
 
 // === Example Features ===
 
