@@ -40,6 +40,9 @@ serde_json = { workspace = true }
 # Logging
 tracing = { workspace = true }
 
+# GTS validation
+gts = { workspace = true }
+
 # Required by modkit::module macro
 inventory = { workspace = true }
 
