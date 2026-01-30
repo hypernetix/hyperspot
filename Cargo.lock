@@ -852,6 +852,47 @@ dependencies = [
 ]
 
 [[package]]
+name = "cf-license-enforcer-gw"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "cf-license-enforcer-sdk",
+ "cf-modkit",
+ "cf-modkit-odata",
+ "cf-modkit-security",
+ "cf-nocache-plugin",
+ "cf-static-licenses-plugin",
+ "cf-types-registry-sdk",
+ "gts",
+ "inventory",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "cf-license-enforcer-sdk"
+version = "0.1.5"
+dependencies = [
+ "async-trait",
+ "cf-modkit",
+ "cf-modkit-odata",
+ "cf-modkit-security",
+ "gts",
+ "gts-macros",
+ "schemars 0.8.22",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "uuid",
+]
+
+[[package]]
 name = "cf-modkit"
 version = "0.2.0"
 dependencies = [
@@ -1150,6 +1191,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "cf-nocache-plugin"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "cf-license-enforcer-sdk",
+ "cf-modkit",
+ "cf-modkit-security",
+ "cf-types-registry-sdk",
+ "inventory",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "cf-nodes-registry"
 version = "0.1.1"
 dependencies = [
@@ -1231,6 +1290,24 @@ dependencies = [
  "cf-modkit-odata",
  "cf-modkit-security",
  "cf-tenant-resolver-sdk",
+ "cf-types-registry-sdk",
+ "inventory",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "cf-static-licenses-plugin"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "cf-license-enforcer-sdk",
+ "cf-modkit",
+ "cf-modkit-security",
  "cf-types-registry-sdk",
  "inventory",
  "serde",

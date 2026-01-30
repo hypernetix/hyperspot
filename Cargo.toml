@@ -66,6 +66,10 @@ members = [
     "modules/system/tenant_resolver/tenant_resolver-gw",
     "modules/system/tenant_resolver/plugins/static_tr_plugin",
     "modules/system/tenant_resolver/plugins/single_tenant_tr_plugin",
+    "modules/system/license_enforcer/license_enforcer-sdk",
+    "modules/system/license_enforcer/license_enforcer-gw",
+    "modules/system/license_enforcer/plugins/builtin-integration/static_licenses_plugin",
+    "modules/system/license_enforcer/plugins/cache/nocache_plugin",
 ]
 exclude = ["fuzz"]
 resolver = "3"

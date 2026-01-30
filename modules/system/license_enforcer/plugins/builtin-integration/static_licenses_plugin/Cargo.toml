@@ -1,0 +1,47 @@
+[package]
+name = "cf-static-licenses-plugin"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "License enforcer platform plugin with static license data"
+repository.workspace = true
+keywords = ["cyberfabric", "cyberfabric-system"]
+categories = ["web-programming"]
+
+[lib]
+name = "static_licenses_plugin"
+
+[lints]
+workspace = true
+
+[dependencies]
+# Local dependencies
+license-enforcer-sdk = { package = "cf-license-enforcer-sdk", version = "0.1.0", path = "../../../license_enforcer-sdk" }
+types-registry-sdk = { package = "cf-types-registry-sdk", version = "0.1.1", path = "../../../../types_registry/types_registry-sdk" }
+
+# ModKit dependencies
+modkit = { workspace = true }
+modkit-security = { workspace = true }
+
+# Async runtime
+async-trait = { workspace = true }
+
+# Data structures
+uuid = { workspace = true }
+
+# Error handling
+anyhow = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+
+# Required by modkit::module macro
+inventory = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt", "macros"] }
