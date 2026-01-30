@@ -223,6 +223,7 @@ cf-system-sdk-directory = { version = "0.1.5", path = "libs/system-sdks/sdks/dir
 
 # system modules SDKs
 types-registry-sdk = { package = "cf-types-registry-sdk", version = "0.1.1", path = "modules/system/types_registry/types_registry-sdk" }
+license-enforcer-sdk = { package = "cf-license-enforcer-sdk", version = "0.1.0", path = "modules/system/license_enforcer/license_enforcer-sdk" }
 
 # system modules
 grpc_hub = { package = "cf-grpc-hub", version = "0.1.1", path = "modules/system/grpc_hub" }

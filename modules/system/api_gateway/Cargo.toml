@@ -50,6 +50,8 @@ utoipa = { workspace = true }
 http = { workspace = true }
 rust-embed = { workspace = true }
 
+license-enforcer-sdk = { workspace = true }
+
 [dev-dependencies]
 futures-core = { workspace = true }
 uuid = { workspace = true }

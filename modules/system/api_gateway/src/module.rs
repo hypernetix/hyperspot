@@ -13,6 +13,7 @@ use axum::extract::State;
 use axum::http::Method;
 use axum::middleware::from_fn_with_state;
 use axum::{Router, extract::DefaultBodyLimit, middleware::from_fn, routing::get};
+use license_enforcer_sdk::LicenseEnforcerGatewayClient;
 use modkit::api::{OpenApiRegistry, OpenApiRegistryImpl};
 use modkit::lifecycle::ReadySignal;
 use parking_lot::Mutex;
@@ -160,7 +161,17 @@ impl ApiGateway {
     }
 
     /// Apply all middleware layers to a router (request ID, tracing, timeout, body limit, CORS, rate limiting, error mapping, auth)
-    pub(crate) fn apply_middleware_stack(&self, mut router: Router) -> Result<Router> {
+    ///
+    /// # Arguments
+    ///
+    /// * `router` - The router to apply middleware to
+    /// * `license_client` - Optional license enforcer client for license validation.
+    ///   When `None`, license validation falls back to stub behavior (BASE feature only).
+    pub(crate) fn apply_middleware_stack(
+        &self,
+        mut router: Router,
+        license_client: Option<middleware::license_validation::LicenseClient>,
+    ) -> Result<Router> {
         // Build auth state and route policy once
         let (auth_state, route_policy) = self.build_auth_state_from_specs()?;
 
@@ -186,10 +197,24 @@ impl ApiGateway {
 
         // 12) License validation
         let license_map = middleware::license_validation::LicenseRequirementMap::from_specs(&specs);
+
+        if license_client.is_some() {
+            tracing::info!("License enforcer client found, enabling dynamic license validation");
+        } else {
+            tracing::debug!(
+                "License enforcer client not registered, using stub behavior (BASE feature only)"
+            );
+        }
+
+        let license_state = middleware::license_validation::LicenseValidationState {
+            client: license_client,
+            map: license_map,
+        };
+
         router = router.layer(from_fn(
             move |req: axum::extract::Request, next: axum::middleware::Next| {
-                let map = license_map.clone();
-                middleware::license_validation::license_validation_middleware(map, req, next)
+                let state = license_state.clone();
+                middleware::license_validation::license_validation_middleware(state, req, next)
             },
         ));
 
@@ -366,7 +391,9 @@ impl ApiGateway {
             .route("/healthz", get(|| async { "ok" }));
 
         // Apply all middleware layers including auth, above the router
-        router = self.apply_middleware_stack(router)?;
+        // Note: In standalone mode, we don't have access to ClientHub, so license
+        // validation falls back to stub behavior (BASE feature only)
+        router = self.apply_middleware_stack(router, None)?;
 
         // Cache the built router for future use
         self.router_cache.store(router.clone());
@@ -567,7 +594,7 @@ impl modkit::contracts::ApiGatewayCapability for ApiGateway {
 
     fn rest_finalize(
         &self,
-        _ctx: &modkit::context::ModuleCtx,
+        ctx: &modkit::context::ModuleCtx,
         mut router: axum::Router,
     ) -> anyhow::Result<axum::Router> {
         let config = self.get_cached_config();
@@ -577,8 +604,13 @@ impl modkit::contracts::ApiGatewayCapability for ApiGateway {
         }
 
         // Apply middleware stack (including auth) to the final router
+        // Resolve license client at composition time (graceful degradation if not available)
+        let license_client = ctx
+            .client_hub()
+            .get::<dyn LicenseEnforcerGatewayClient>()
+            .ok();
         tracing::debug!("Applying middleware stack to finalized router");
-        router = self.apply_middleware_stack(router)?;
+        router = self.apply_middleware_stack(router, license_client)?;
 
         // Keep the finalized router to be used by `serve()`
         *self.final_router.lock() = Some(router.clone());
