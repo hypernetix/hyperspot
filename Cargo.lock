@@ -765,6 +765,7 @@ dependencies = [
  "arc-swap",
  "async-trait",
  "axum",
+ "cf-license-enforcer-sdk",
  "cf-modkit",
  "cf-modkit-auth",
  "cf-modkit-macros",
