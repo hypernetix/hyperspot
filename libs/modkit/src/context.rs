@@ -8,6 +8,21 @@ use crate::config::{ConfigError, ConfigProvider, module_config_or_default};
 
 // Note: runtime-dependent features are conditionally compiled
 
+// DB types are available only when feature "db" is enabled.
+// We keep local aliases so the rest of this file can compile without importing `modkit_db`.
+#[cfg(feature = "db")]
+pub type DbHandle = modkit_db::DbHandle;
+#[cfg(feature = "db")]
+pub type DbManager = modkit_db::DbManager;
+
+// Stub types for no-db builds (never exposed; methods that would use them are cfg'd out).
+#[cfg(not(feature = "db"))]
+#[derive(Clone, Debug)]
+pub struct DbHandle;
+#[cfg(not(feature = "db"))]
+#[derive(Clone, Debug)]
+pub struct DbManager;
+
 #[derive(Clone)]
 #[must_use]
 pub struct ModuleCtx {
@@ -16,7 +31,7 @@ pub struct ModuleCtx {
     config_provider: Arc<dyn ConfigProvider>,
     client_hub: Arc<crate::client_hub::ClientHub>,
     cancellation_token: CancellationToken,
-    db_handle: Option<Arc<modkit_db::DbHandle>>,
+    db_handle: Option<Arc<DbHandle>>,
 }
 
 /// Builder for creating module-scoped contexts with resolved database handles.
@@ -28,7 +43,7 @@ pub struct ModuleContextBuilder {
     config_provider: Arc<dyn ConfigProvider>,
     client_hub: Arc<crate::client_hub::ClientHub>,
     root_token: CancellationToken,
-    db_manager: Option<Arc<modkit_db::DbManager>>, // internal only, never exposed to modules
+    db_manager: Option<Arc<DbManager>>, // internal only, never exposed to modules
 }
 
 impl ModuleContextBuilder {
@@ -37,7 +52,7 @@ impl ModuleContextBuilder {
         config_provider: Arc<dyn ConfigProvider>,
         client_hub: Arc<crate::client_hub::ClientHub>,
         root_token: CancellationToken,
-        db_manager: Option<Arc<modkit_db::DbManager>>,
+        db_manager: Option<Arc<DbManager>>,
     ) -> Self {
         Self {
             instance_id,
@@ -59,10 +74,20 @@ impl ModuleContextBuilder {
     /// # Errors
     /// Returns an error if database resolution fails.
     pub async fn for_module(&self, module_name: &str) -> anyhow::Result<ModuleCtx> {
-        let db_handle = if let Some(mgr) = &self.db_manager {
-            mgr.get(module_name).await?
-        } else {
-            None
+        let db_handle = {
+            #[cfg(feature = "db")]
+            {
+                if let Some(mgr) = &self.db_manager {
+                    mgr.get(module_name).await?
+                } else {
+                    None
+                }
+            }
+            #[cfg(not(feature = "db"))]
+            {
+                let _ = module_name; // avoid unused in no-db builds
+                None
+            }
         };
 
         Ok(ModuleCtx::new(
@@ -84,7 +109,7 @@ impl ModuleCtx {
         config_provider: Arc<dyn ConfigProvider>,
         client_hub: Arc<crate::client_hub::ClientHub>,
         cancellation_token: CancellationToken,
-        db_handle: Option<Arc<modkit_db::DbHandle>>,
+        db_handle: Option<Arc<DbHandle>>,
     ) -> Self {
         Self {
             module_name: module_name.into(),
@@ -134,7 +159,8 @@ impl ModuleCtx {
     }
 
     #[must_use]
-    pub fn db_optional(&self) -> Option<Arc<modkit_db::DbHandle>> {
+    #[cfg(feature = "db")]
+    pub fn db_optional(&self) -> Option<Arc<DbHandle>> {
         self.db_handle.clone()
     }
 
@@ -142,7 +168,8 @@ impl ModuleCtx {
     ///
     /// # Errors
     /// Returns an error if the database is not configured for this module.
-    pub fn db_required(&self) -> anyhow::Result<Arc<modkit_db::DbHandle>> {
+    #[cfg(feature = "db")]
+    pub fn db_required(&self) -> anyhow::Result<Arc<DbHandle>> {
         self.db_handle.clone().ok_or_else(|| {
             anyhow::anyhow!(
                 "Database is not configured for module '{}'",
@@ -204,7 +231,8 @@ impl ModuleCtx {
 
     /// Create a derivative context with the same references but a different DB handle.
     /// This allows reusing the stable base context while providing per-module DB access.
-    pub fn with_db(&self, db: Arc<modkit_db::DbHandle>) -> ModuleCtx {
+    #[cfg(feature = "db")]
+    pub fn with_db(&self, db: Arc<DbHandle>) -> ModuleCtx {
         ModuleCtx {
             module_name: self.module_name.clone(),
             instance_id: self.instance_id,

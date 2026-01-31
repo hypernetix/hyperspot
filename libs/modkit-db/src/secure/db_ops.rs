@@ -1,16 +1,60 @@
-use sea_orm::{ActiveModelTrait, ColumnTrait, ConnectionTrait, EntityTrait, QueryFilter};
+use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, ModelTrait, QueryFilter};
 use std::marker::PhantomData;
 
 use crate::secure::cond::build_scope_condition;
 use crate::secure::error::ScopeError;
-use crate::secure::{AccessScope, ScopableEntity, Scoped, Unscoped};
+use crate::secure::{
+    AccessScope, DBRunner, DBRunnerInternal, ScopableEntity, Scoped, SeaOrmRunner, SecureEntityExt,
+    Unscoped,
+};
+
+fn extract_tenant_id<E>(am: &E::ActiveModel) -> Result<Option<uuid::Uuid>, ScopeError>
+where
+    E: ScopableEntity + EntityTrait,
+    E::Column: ColumnTrait + Copy,
+    E::ActiveModel: ActiveModelTrait<Entity = E>,
+{
+    let Some(tcol) = E::tenant_col() else {
+        // Unrestricted/global table: no tenant dimension.
+        return Ok(None);
+    };
+
+    match am.get(tcol) {
+        sea_orm::ActiveValue::NotSet => Err(ScopeError::Invalid("tenant_id is required")),
+        sea_orm::ActiveValue::Set(v) | sea_orm::ActiveValue::Unchanged(v) => match v {
+            sea_orm::Value::Uuid(Some(u)) => Ok(Some(*u)),
+            sea_orm::Value::Uuid(None) => Err(ScopeError::Invalid("tenant_id is required")),
+            _ => Err(ScopeError::Invalid("tenant_id has unexpected type")),
+        },
+    }
+}
+
+fn extract_tenant_id_if_present<E>(am: &E::ActiveModel) -> Result<Option<uuid::Uuid>, ScopeError>
+where
+    E: ScopableEntity + EntityTrait,
+    E::Column: ColumnTrait + Copy,
+    E::ActiveModel: ActiveModelTrait<Entity = E>,
+{
+    let Some(tcol) = E::tenant_col() else {
+        return Ok(None);
+    };
+
+    match am.get(tcol) {
+        sea_orm::ActiveValue::NotSet => Ok(None),
+        sea_orm::ActiveValue::Set(v) | sea_orm::ActiveValue::Unchanged(v) => match v {
+            sea_orm::Value::Uuid(Some(u)) => Ok(Some(*u)),
+            sea_orm::Value::Uuid(None) => Err(ScopeError::Invalid("tenant_id is required")),
+            _ => Err(ScopeError::Invalid("tenant_id has unexpected type")),
+        },
+    }
+}
 
 /// Secure insert helper for Scopable entities.
 ///
 /// This helper performs a standard `INSERT` through `SeaORM` but wraps database
 /// errors into a unified `ScopeError` type for consistent error handling across
-/// secure data-access code. It does **not** enforce any authorization or tenant
-/// checks on its own.
+/// secure data-access code. For tenant-scoped entities it enforces tenant isolation
+/// by validating the `ActiveModel`'s `tenant_id` against the provided `AccessScope`.
 ///
 /// # Responsibilities
 ///
@@ -60,12 +104,11 @@ use crate::secure::{AccessScope, ScopableEntity, Scoped, Unscoped};
 /// # Errors
 ///
 /// - Returns `ScopeError::Db` if the database insert fails.
-/// - Does **not** return scope or authorization errors; these must be handled
-///   in higher layers (e.g., service logic or request handlers).
+/// - Returns `ScopeError::Denied` / `ScopeError::TenantNotInScope` for tenant isolation violations.
 pub async fn secure_insert<E>(
     am: E::ActiveModel,
-    _scope: &AccessScope,
-    conn: &impl ConnectionTrait,
+    scope: &AccessScope,
+    runner: &impl DBRunner,
 ) -> Result<E::Model, ScopeError>
 where
     E: ScopableEntity + EntityTrait,
@@ -73,8 +116,67 @@ where
     E::ActiveModel: ActiveModelTrait<Entity = E> + Send,
     E::Model: sea_orm::IntoActiveModel<E::ActiveModel>,
 {
-    // No tenant validation is performed here — caller is responsible.
-    Ok(am.insert(conn).await?)
+    if let Some(tenant_id) = extract_tenant_id::<E>(&am)? {
+        validate_tenant_in_scope(tenant_id, scope)?;
+    }
+
+    match DBRunnerInternal::as_seaorm(runner) {
+        SeaOrmRunner::Conn(db) => Ok(am.insert(db).await?),
+        SeaOrmRunner::Tx(tx) => Ok(am.insert(tx).await?),
+    }
+}
+
+/// Secure update helper for updating a single entity by ID inside a scope.
+///
+/// # Security
+/// - Verifies the target row exists **within the scope** before updating.
+/// - For tenant-scoped entities, forbids changing `tenant_id` (immutable).
+///
+/// # Errors
+/// - `ScopeError::Denied` if the row is not accessible in the scope.
+/// - `ScopeError::Denied("tenant_id is immutable")` if caller attempts to change `tenant_id`.
+pub async fn secure_update_with_scope<E>(
+    am: E::ActiveModel,
+    scope: &AccessScope,
+    id: uuid::Uuid,
+    runner: &impl DBRunner,
+) -> Result<E::Model, ScopeError>
+where
+    E: ScopableEntity + EntityTrait,
+    E::Column: ColumnTrait + Copy,
+    E::ActiveModel: ActiveModelTrait<Entity = E> + Send,
+    E::Model: sea_orm::IntoActiveModel<E::ActiveModel> + sea_orm::ModelTrait<Entity = E>,
+{
+    let existing = E::find()
+        .secure()
+        .scope_with(scope)
+        .and_id(id)?
+        .one(runner)
+        .await?;
+
+    let Some(existing) = existing else {
+        return Err(ScopeError::Denied(
+            "entity not found or not accessible in current security scope",
+        ));
+    };
+
+    if let Some(tcol) = E::tenant_col() {
+        let stored = match existing.get(tcol) {
+            sea_orm::Value::Uuid(Some(u)) => *u,
+            _ => return Err(ScopeError::Invalid("tenant_id has unexpected type")),
+        };
+
+        if let Some(incoming) = extract_tenant_id_if_present::<E>(&am)?
+            && incoming != stored
+        {
+            return Err(ScopeError::Denied("tenant_id is immutable"));
+        }
+    }
+
+    match DBRunnerInternal::as_seaorm(runner) {
+        SeaOrmRunner::Conn(db) => Ok(am.update(db).await?),
+        SeaOrmRunner::Tx(tx) => Ok(am.update(tx).await?),
+    }
 }
 
 /// Helper to validate a tenant ID is in the scope.
@@ -88,13 +190,15 @@ pub fn validate_tenant_in_scope(
     tenant_id: uuid::Uuid,
     scope: &AccessScope,
 ) -> Result<(), ScopeError> {
-    if scope.tenant_ids().contains(&tenant_id) {
-        Ok(())
-    } else {
-        Err(ScopeError::Invalid(
-            "tenant_id not present in security scope",
-        ))
+    if !scope.has_tenants() {
+        return Err(ScopeError::Denied(
+            "tenant scope required for tenant-scoped insert",
+        ));
     }
+    if scope.tenant_ids().contains(&tenant_id) {
+        return Ok(());
+    }
+    Err(ScopeError::TenantNotInScope { tenant_id })
 }
 
 /// A type-safe wrapper around `SeaORM`'s `UpdateMany` that enforces scoping.
@@ -118,6 +222,33 @@ pub fn validate_tenant_in_scope(
 pub struct SecureUpdateMany<E: EntityTrait, S> {
     pub(crate) inner: sea_orm::UpdateMany<E>,
     pub(crate) _state: PhantomData<S>,
+    pub(crate) tenant_update_attempted: bool,
+}
+
+// Fluent builder methods (available in all typestates).
+impl<E, S> SecureUpdateMany<E, S>
+where
+    E: ScopableEntity + EntityTrait,
+    E::Column: ColumnTrait + Copy,
+{
+    /// Set a column expression (mirrors `SeaORM`'s `UpdateMany::col_expr`).
+    #[must_use]
+    pub fn col_expr(mut self, col: E::Column, expr: sea_orm::sea_query::SimpleExpr) -> Self {
+        if let Some(tcol) = E::tenant_col()
+            && std::mem::discriminant(&col) == std::mem::discriminant(&tcol)
+        {
+            self.tenant_update_attempted = true;
+        }
+        self.inner = self.inner.col_expr(col, expr);
+        self
+    }
+
+    /// Add an additional filter. Scope conditions remain in place once applied.
+    #[must_use]
+    pub fn filter(mut self, filter: sea_orm::Condition) -> Self {
+        self.inner = QueryFilter::filter(self.inner, filter);
+        self
+    }
 }
 
 /// Extension trait to convert a regular `SeaORM` `UpdateMany` into a `SecureUpdateMany`.
@@ -135,6 +266,7 @@ where
         SecureUpdateMany {
             inner: self,
             _state: PhantomData,
+            tenant_update_attempted: false,
         }
     }
 }
@@ -159,6 +291,7 @@ where
         SecureUpdateMany {
             inner: self.inner.filter(cond),
             _state: PhantomData,
+            tenant_update_attempted: self.tenant_update_attempted,
         }
     }
 }
@@ -173,11 +306,14 @@ where
     /// # Errors
     /// Returns `ScopeError::Db` if the database operation fails.
     #[allow(clippy::disallowed_methods)]
-    pub async fn exec<C: ConnectionTrait + Send + Sync>(
-        self,
-        conn: &C,
-    ) -> Result<sea_orm::UpdateResult, ScopeError> {
-        Ok(self.inner.exec(conn).await?)
+    pub async fn exec(self, runner: &impl DBRunner) -> Result<sea_orm::UpdateResult, ScopeError> {
+        if self.tenant_update_attempted {
+            return Err(ScopeError::Denied("tenant_id is immutable"));
+        }
+        match DBRunnerInternal::as_seaorm(runner) {
+            SeaOrmRunner::Conn(db) => Ok(self.inner.exec(db).await?),
+            SeaOrmRunner::Tx(tx) => Ok(self.inner.exec(tx).await?),
+        }
     }
 
     /// Unwrap the inner `SeaORM` `UpdateMany` for advanced use cases.
@@ -275,11 +411,11 @@ where
     /// # Errors
     /// Returns `ScopeError::Db` if the database operation fails.
     #[allow(clippy::disallowed_methods)]
-    pub async fn exec<C: ConnectionTrait + Send + Sync>(
-        self,
-        conn: &C,
-    ) -> Result<sea_orm::DeleteResult, ScopeError> {
-        Ok(self.inner.exec(conn).await?)
+    pub async fn exec(self, runner: &impl DBRunner) -> Result<sea_orm::DeleteResult, ScopeError> {
+        match DBRunnerInternal::as_seaorm(runner) {
+            SeaOrmRunner::Conn(db) => Ok(self.inner.exec(db).await?),
+            SeaOrmRunner::Tx(tx) => Ok(self.inner.exec(tx).await?),
+        }
     }
 
     /// Unwrap the inner `SeaORM` `DeleteMany` for advanced use cases.

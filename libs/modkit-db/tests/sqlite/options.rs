@@ -73,39 +73,6 @@ async fn test_build_db_handle_sqlite_file() {
     assert_eq!(handle.engine(), DbEngine::Sqlite);
 }
 
-#[test]
-fn test_display_sqlite_memory() {
-    use modkit_db::DbConnectOptions;
-
-    let opts = sea_orm::sqlx::sqlite::SqliteConnectOptions::new().filename(":memory:");
-    let db_opts = DbConnectOptions::Sqlite(opts);
-
-    let display_str = format!("{db_opts}");
-    assert_eq!(display_str, "sqlite://:memory:");
-}
-
-#[test]
-fn test_display_sqlite_file() {
-    use modkit_db::DbConnectOptions;
-
-    let opts = sea_orm::sqlx::sqlite::SqliteConnectOptions::new().filename("/tmp/test.db");
-    let db_opts = DbConnectOptions::Sqlite(opts);
-
-    let display_str = format!("{db_opts}");
-    assert_eq!(display_str, "sqlite:///tmp/test.db");
-}
-
-#[test]
-fn test_display_sqlite_relative_path() {
-    use modkit_db::DbConnectOptions;
-
-    let opts = sea_orm::sqlx::sqlite::SqliteConnectOptions::new().filename("./data/test.db");
-    let db_opts = DbConnectOptions::Sqlite(opts);
-
-    let display_str = format!("{db_opts}");
-    assert_eq!(display_str, "sqlite://./data/test.db");
-}
-
 #[cfg(feature = "sqlite")]
 #[tokio::test]
 async fn test_build_db_handle_invalid_env_var() {

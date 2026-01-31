@@ -885,6 +885,7 @@ dependencies = [
  "regex",
  "reqwest",
  "schemars 0.8.22",
+ "sea-orm-migration",
  "serde",
  "serde-saphyr",
  "serde_json",
@@ -934,6 +935,7 @@ name = "cf-modkit-db"
 version = "0.1.5"
 dependencies = [
  "anyhow",
+ "async-trait",
  "bigdecimal",
  "cf-modkit-db-macros",
  "cf-modkit-odata",
@@ -947,9 +949,11 @@ dependencies = [
  "rust_decimal",
  "ryu",
  "sea-orm",
+ "sea-orm-migration",
  "serde",
  "serde-saphyr",
  "serde_json",
+ "sqlx",
  "temp-env",
  "tempfile",
  "testcontainers",

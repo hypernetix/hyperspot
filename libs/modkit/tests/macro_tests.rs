@@ -80,10 +80,9 @@ impl Module for FullFeaturedModule {
         Ok(())
     }
 }
-#[async_trait]
 impl DatabaseCapability for FullFeaturedModule {
-    async fn migrate(&self, _db: &modkit_db::DbHandle) -> Result<()> {
-        Ok(())
+    fn migrations(&self) -> Vec<Box<dyn sea_orm_migration::MigrationTrait>> {
+        vec![]
     }
 }
 impl RestApiCapability for FullFeaturedModule {
@@ -145,10 +144,9 @@ impl Module for DbOnlyModule {
         Ok(())
     }
 }
-#[async_trait]
 impl DatabaseCapability for DbOnlyModule {
-    async fn migrate(&self, _db: &modkit_db::DbHandle) -> Result<()> {
-        Ok(())
+    fn migrations(&self) -> Vec<Box<dyn sea_orm_migration::MigrationTrait>> {
+        vec![]
     }
 }
 

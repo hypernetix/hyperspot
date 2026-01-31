@@ -1,12 +1,11 @@
 use sea_orm::{
-    ColumnTrait, ConnectionTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
-    QuerySelect, sea_query::Expr,
+    ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, sea_query::Expr,
 };
 use std::marker::PhantomData;
 
 use crate::secure::cond::build_scope_condition;
 use crate::secure::error::ScopeError;
-use crate::secure::{AccessScope, ScopableEntity};
+use crate::secure::{AccessScope, DBRunner, DBRunnerInternal, ScopableEntity, SeaOrmRunner};
 
 /// Typestate marker: query has not yet been scoped.
 /// Cannot execute queries in this state.
@@ -97,11 +96,11 @@ where
     /// # Errors
     /// Returns `ScopeError::Db` if the database query fails.
     #[allow(clippy::disallowed_methods)]
-    pub async fn all<C>(self, conn: &C) -> Result<Vec<E::Model>, ScopeError>
-    where
-        C: ConnectionTrait + Send + Sync,
-    {
-        Ok(self.inner.all(conn).await?)
+    pub async fn all(self, runner: &impl DBRunner) -> Result<Vec<E::Model>, ScopeError> {
+        match DBRunnerInternal::as_seaorm(runner) {
+            SeaOrmRunner::Conn(db) => Ok(self.inner.all(db).await?),
+            SeaOrmRunner::Tx(tx) => Ok(self.inner.all(tx).await?),
+        }
     }
 
     /// Execute the query and return at most one result.
@@ -109,11 +108,11 @@ where
     /// # Errors
     /// Returns `ScopeError::Db` if the database query fails.
     #[allow(clippy::disallowed_methods)]
-    pub async fn one<C>(self, conn: &C) -> Result<Option<E::Model>, ScopeError>
-    where
-        C: ConnectionTrait + Send + Sync,
-    {
-        Ok(self.inner.one(conn).await?)
+    pub async fn one(self, runner: &impl DBRunner) -> Result<Option<E::Model>, ScopeError> {
+        match DBRunnerInternal::as_seaorm(runner) {
+            SeaOrmRunner::Conn(db) => Ok(self.inner.one(db).await?),
+            SeaOrmRunner::Tx(tx) => Ok(self.inner.one(tx).await?),
+        }
     }
 
     /// Execute the query and return the number of matching results.
@@ -121,12 +120,14 @@ where
     /// # Errors
     /// Returns `ScopeError::Db` if the database query fails.
     #[allow(clippy::disallowed_methods)]
-    pub async fn count<C>(self, conn: &C) -> Result<u64, ScopeError>
+    pub async fn count(self, runner: &impl DBRunner) -> Result<u64, ScopeError>
     where
-        C: ConnectionTrait + Send + Sync,
         E::Model: sea_orm::FromQueryResult + Send + Sync,
     {
-        Ok(self.inner.count(conn).await?)
+        match DBRunnerInternal::as_seaorm(runner) {
+            SeaOrmRunner::Conn(db) => Ok(self.inner.count(db).await?),
+            SeaOrmRunner::Tx(tx) => Ok(self.inner.count(tx).await?),
+        }
     }
 
     // Note: count() uses SeaORM's `PaginatorTrait::count` internally.
@@ -160,19 +161,6 @@ where
         ))?;
         let cond = sea_orm::Condition::all().add(Expr::col(resource_col).eq(id));
         Ok(self.filter(cond))
-    }
-
-    /// Unwrap the inner `SeaORM` `Select` for advanced use cases.
-    ///
-    /// This is an escape hatch if you need to add additional filters,
-    /// joins, or ordering after scoping has been applied.
-    ///
-    /// # Safety
-    /// The caller must ensure they don't remove or bypass the security
-    /// conditions that were applied during `.scope_with()`.
-    #[must_use]
-    pub fn into_inner(self) -> sea_orm::Select<E> {
-        self.inner
     }
 }
 

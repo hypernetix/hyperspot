@@ -14,18 +14,6 @@ pub enum JournalMode {
 }
 
 impl JournalMode {
-    /// Convert to SQL string representation.
-    pub(crate) fn as_sql(&self) -> &'static str {
-        match self {
-            JournalMode::Delete => "DELETE",
-            JournalMode::Wal => "WAL",
-            JournalMode::Memory => "MEMORY",
-            JournalMode::Truncate => "TRUNCATE",
-            JournalMode::Persist => "PERSIST",
-            JournalMode::Off => "OFF",
-        }
-    }
-
     /// Parse from string (case-insensitive).
     fn from_str(s: &str) -> Option<Self> {
         match s.to_uppercase().as_str() {
@@ -50,16 +38,6 @@ pub enum SyncMode {
 }
 
 impl SyncMode {
-    /// Convert to SQL string representation.
-    pub(crate) fn as_sql(&self) -> &'static str {
-        match self {
-            SyncMode::Off => "OFF",
-            SyncMode::Normal => "NORMAL",
-            SyncMode::Full => "FULL",
-            SyncMode::Extra => "EXTRA",
-        }
-    }
-
     /// Parse from string (case-insensitive).
     fn from_str(s: &str) -> Option<Self> {
         match s.to_uppercase().as_str() {

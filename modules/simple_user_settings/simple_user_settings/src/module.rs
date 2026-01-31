@@ -38,16 +38,11 @@ impl Clone for SettingsModule {
     }
 }
 
-#[async_trait]
 impl modkit::contracts::DatabaseCapability for SettingsModule {
-    async fn migrate(&self, db: &modkit_db::DbHandle) -> anyhow::Result<()> {
+    fn migrations(&self) -> Vec<Box<dyn sea_orm_migration::MigrationTrait>> {
         use sea_orm_migration::MigratorTrait;
-
-        info!("Running settings database migrations");
-        let conn = db.sea_secure();
-        crate::infra::storage::migrations::Migrator::up(conn.conn(), None).await?;
-        info!("Settings database migrations completed");
-        Ok(())
+        info!("Providing settings database migrations");
+        crate::infra::storage::migrations::Migrator::migrations()
     }
 }
 

@@ -5,7 +5,7 @@ use modkit::api::OpenApiRegistry;
 use modkit::{
     DatabaseCapability, Module, ModuleCtx, RestApiCapability, SseBroadcaster, TracedClient,
 };
-use sea_orm_migration::MigratorTrait;
+use sea_orm_migration::MigrationTrait;
 use tracing::{debug, info};
 use url::Url;
 
@@ -141,14 +141,11 @@ impl Module for UsersInfo {
     }
 }
 
-#[async_trait]
 impl DatabaseCapability for UsersInfo {
-    async fn migrate(&self, db: &modkit_db::DbHandle) -> anyhow::Result<()> {
-        info!("Running users_info database migrations");
-        let conn = db.sea();
-        crate::infra::storage::migrations::Migrator::up(&conn, None).await?;
-        info!("Users database migrations completed successfully");
-        Ok(())
+    fn migrations(&self) -> Vec<Box<dyn MigrationTrait>> {
+        use sea_orm_migration::MigratorTrait;
+        info!("Providing users_info database migrations");
+        crate::infra::storage::migrations::Migrator::migrations()
     }
 }
 

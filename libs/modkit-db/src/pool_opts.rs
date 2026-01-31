@@ -12,9 +12,7 @@ pub trait ApplyPoolOpts<T> {
 }
 
 #[cfg(feature = "pg")]
-impl ApplyPoolOpts<sea_orm::sqlx::postgres::PgPoolOptions>
-    for sea_orm::sqlx::postgres::PgPoolOptions
-{
+impl ApplyPoolOpts<sqlx::postgres::PgPoolOptions> for sqlx::postgres::PgPoolOptions {
     fn apply(mut self, opts: &ConnectOpts) -> Self {
         if let Some(n) = opts.max_conns {
             self = self.max_connections(n);
@@ -39,9 +37,7 @@ impl ApplyPoolOpts<sea_orm::sqlx::postgres::PgPoolOptions>
 }
 
 #[cfg(feature = "mysql")]
-impl ApplyPoolOpts<sea_orm::sqlx::mysql::MySqlPoolOptions>
-    for sea_orm::sqlx::mysql::MySqlPoolOptions
-{
+impl ApplyPoolOpts<sqlx::mysql::MySqlPoolOptions> for sqlx::mysql::MySqlPoolOptions {
     fn apply(mut self, opts: &ConnectOpts) -> Self {
         if let Some(n) = opts.max_conns {
             self = self.max_connections(n);
@@ -66,9 +62,7 @@ impl ApplyPoolOpts<sea_orm::sqlx::mysql::MySqlPoolOptions>
 }
 
 #[cfg(feature = "sqlite")]
-impl ApplyPoolOpts<sea_orm::sqlx::sqlite::SqlitePoolOptions>
-    for sea_orm::sqlx::sqlite::SqlitePoolOptions
-{
+impl ApplyPoolOpts<sqlx::sqlite::SqlitePoolOptions> for sqlx::sqlite::SqlitePoolOptions {
     fn apply(mut self, opts: &ConnectOpts) -> Self {
         if let Some(n) = opts.max_conns {
             self = self.max_connections(n);

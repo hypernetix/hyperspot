@@ -38,10 +38,14 @@ pub trait Module: Send + Sync + 'static {
     async fn init(&self, ctx: &crate::context::ModuleCtx) -> anyhow::Result<()>;
 }
 
-#[async_trait]
+/// Database capability: modules provide migrations, runtime executes them.
+///
+/// # Security
+///
+/// Modules MUST NOT receive raw database connections. They only return migration definitions.
+#[cfg(feature = "db")]
 pub trait DatabaseCapability: Send + Sync {
-    /// Runs AFTER init, BEFORE REST/start.
-    async fn migrate(&self, db: &modkit_db::DbHandle) -> anyhow::Result<()>;
+    fn migrations(&self) -> Vec<Box<dyn sea_orm_migration::MigrationTrait>>;
 }
 
 /// REST API capability: Pure wiring; must be sync. Runs AFTER DB migrations.

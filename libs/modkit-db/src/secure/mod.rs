@@ -110,6 +110,7 @@ pub mod docs;
 mod entity_traits;
 mod error;
 pub mod provider;
+mod runner;
 mod secure_conn;
 mod select;
 mod tests;
@@ -125,11 +126,17 @@ pub use error::ScopeError;
 // Security types from modkit-security
 pub use modkit_security::AccessScope;
 
+// Hidden runner capability used by repositories.
+#[doc(hidden)]
+pub use runner::DBRunner;
+
+pub(crate) use runner::{DBRunnerInternal, SeaOrmRunner};
+
 // High-level secure database wrapper
 pub use secure_conn::SecureConn;
 
-// Transaction type re-export for use in transaction closures
-pub use sea_orm::DatabaseTransaction as Tx;
+// Transaction capability
+pub use secure_conn::SecureTx;
 
 // Transaction error types (no SeaORM types leaked)
 pub use tx_error::{InfraError, TxError};
@@ -143,7 +150,7 @@ pub use select::{Scoped, SecureEntityExt, SecureSelect, Unscoped};
 // Update operations
 pub use db_ops::{
     SecureDeleteExt, SecureDeleteMany, SecureUpdateExt, SecureUpdateMany, secure_insert,
-    validate_tenant_in_scope,
+    secure_update_with_scope, validate_tenant_in_scope,
 };
 
 // Provider pattern for advanced tenant filtering

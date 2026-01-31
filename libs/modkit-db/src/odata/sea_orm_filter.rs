@@ -4,6 +4,7 @@
 //! into `SeaORM` conditions. Concrete modules only need to provide a mapping from
 //! their DTO field enum to `SeaORM` Column types via the `FieldToColumn` trait.
 
+use crate::secure::{Scoped, SecureSelect};
 use bigdecimal::ToPrimitive;
 use chrono::SecondsFormat;
 use modkit_odata::filter::{
@@ -11,9 +12,11 @@ use modkit_odata::filter::{
 };
 use modkit_odata::{CursorV1, Error as ODataError, ODataOrderBy, Page, PageInfo, SortDir};
 use sea_orm::{
-    Condition, ConnectionTrait, EntityTrait, QueryFilter, QueryOrder, QuerySelect,
+    Condition, EntityTrait, QueryFilter, QueryOrder, QuerySelect,
     sea_query::{Expr, Order},
 };
+
+use crate::secure::{DBRunner, DBRunnerInternal, SeaOrmRunner};
 
 /// Trait for mapping DTO filter fields to `SeaORM` columns.
 ///
@@ -434,7 +437,7 @@ fn clamp_limit(req: Option<u64>, cfg: LimitCfg) -> u64 {
 /// ```ignore
 /// let page = paginate_odata::<UserDtoFilterField, UserODataMapper, _, _, _, _>(
 ///     base_query,
-///     db.conn(),
+///     db,
 ///     &odata_query,
 ///     ("id", SortDir::Desc),
 ///     LimitCfg { default: 25, max: 1000 },
@@ -445,7 +448,7 @@ fn clamp_limit(req: Option<u64>, cfg: LimitCfg) -> u64 {
 /// # Errors
 /// Returns `ODataError` if filter application, cursor validation, or database query fails.
 pub async fn paginate_odata<F, M, E, D, Mapper, C>(
-    select: sea_orm::Select<E>,
+    select: SecureSelect<E, Scoped>,
     conn: &C,
     query: &modkit_odata::ODataQuery,
     tiebreaker: (&str, SortDir),
@@ -457,7 +460,7 @@ where
     M: ODataFieldMapping<F, Entity = E>,
     E: EntityTrait,
     Mapper: Fn(E::Model) -> D,
-    C: ConnectionTrait + Send + Sync,
+    C: DBRunner,
 {
     let limit = clamp_limit(query.limit, limit_cfg);
     let fetch = limit + 1;
@@ -480,7 +483,7 @@ where
         return Err(ODataError::FilterMismatch);
     }
 
-    let mut s = select;
+    let mut s = select.inner;
 
     // Apply filter using type-safe FilterNode
     if let Some(ast) = query.filter.as_deref() {
@@ -521,10 +524,11 @@ where
     s = s.limit(fetch);
 
     #[allow(clippy::disallowed_methods)]
-    let mut rows = s
-        .all(conn)
-        .await
-        .map_err(|e| ODataError::Db(e.to_string()))?;
+    let mut rows = match DBRunnerInternal::as_seaorm(conn) {
+        SeaOrmRunner::Conn(db) => s.all(db).await,
+        SeaOrmRunner::Tx(tx) => s.all(tx).await,
+    }
+    .map_err(|e| ODataError::Db(e.to_string()))?;
 
     let has_more = (rows.len() as u64) > limit;
 

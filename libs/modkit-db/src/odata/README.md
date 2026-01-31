@@ -65,7 +65,7 @@ async fn list_users(
     ctx: &SecurityContext,
     query: &ODataQuery,
 ) -> Result<Page<UserDto>, ODataError> {
-    OPager::<user::Entity, _>::new(db, ctx, db.conn(), &USER_FMAP)
+    OPager::<user::Entity, _>::new(db, ctx, db, &USER_FMAP)
         .tiebreaker("id", SortDir::Desc)
         .limits(25, 1000)
         .fetch(query, |m| UserDto::from(m))
@@ -92,7 +92,7 @@ async fn list_users(
 
 1. `OPager::new()` receives `SecureConn` and `SecurityContext`
 2. `fetch()` calls `SecureConn::find::<E>(&ctx)` to create a scoped `SecureSelect`
-3. `into_inner()` extracts the raw `sea_orm::Select<E>` (already scoped)
+3. Internal code unwraps the scoped `SeaORM` select (crate-only)
 4. `paginate_with_odata()` applies OData filters, cursor, and ordering
 5. Query executes with both security scope AND OData constraints
 
@@ -109,7 +109,7 @@ async fn list_users(
 
 ## Migration Guide
 
-### Before (Manual Approach)
+### Recommended (With OPager)
 
 ```rust
 async fn list_users(
@@ -117,32 +117,7 @@ async fn list_users(
     ctx: &SecurityContext,
     query: &ODataQuery,
 ) -> Result<Page<User>, ODataError> {
-    // 1. Create scoped select
-    let select = db.find::<user::Entity>(ctx)?
-        .into_inner();
-    
-    // 2. Manually call paginate_with_odata
-    paginate_with_odata::<user::Entity, User, _, _>(
-        select,
-        db.conn(),
-        query,
-        &USER_FMAP,
-        ("id", SortDir::Desc),
-        LimitCfg { default: 25, max: 1000 },
-        |m| m.into(),
-    ).await
-}
-```
-
-### After (With OPager)
-
-```rust
-async fn list_users(
-    db: &SecureConn,
-    ctx: &SecurityContext,
-    query: &ODataQuery,
-) -> Result<Page<User>, ODataError> {
-    OPager::<user::Entity, _>::new(db, ctx, db.conn(), &USER_FMAP)
+    OPager::<user::Entity, _>::new(db, ctx, db, &USER_FMAP)
         .fetch(query, |m| m.into())
         .await
 }

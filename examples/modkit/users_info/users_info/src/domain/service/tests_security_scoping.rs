@@ -4,7 +4,6 @@ use uuid::Uuid;
 
 use crate::domain::service::ServiceConfig;
 use crate::test_support::{build_services, ctx_allow_tenants, ctx_deny_all, inmem_db, seed_user};
-use modkit_db::secure::SecureConn;
 use user_info_sdk::NewUser;
 
 #[tokio::test]
@@ -18,7 +17,7 @@ async fn tenant_scope_only_sees_its_tenant() {
     seed_user(&db, user1, tenant1, "u1@example.com", "U1").await;
     seed_user(&db, user2, tenant2, "u2@example.com", "U2").await;
 
-    let services = build_services(SecureConn::new(db), ServiceConfig::default());
+    let services = build_services(db.clone(), ServiceConfig::default());
     let ctx_t1 = ctx_allow_tenants(&[tenant1]);
 
     let page = services
@@ -36,7 +35,7 @@ async fn deny_all_sees_nothing() {
     let tenant = Uuid::new_v4();
     seed_user(&db, Uuid::new_v4(), tenant, "u@example.com", "U").await;
 
-    let services = build_services(SecureConn::new(db), ServiceConfig::default());
+    let services = build_services(db.clone(), ServiceConfig::default());
     let ctx = ctx_deny_all();
 
     let page = services
@@ -52,7 +51,7 @@ async fn create_user_with_transaction() {
     let db = inmem_db().await;
     let tenant_id = Uuid::new_v4();
 
-    let services = build_services(SecureConn::new(db), ServiceConfig::default());
+    let services = build_services(db.clone(), ServiceConfig::default());
     // Use a context with tenants, not root, because insert requires tenant scope
     let ctx = ctx_allow_tenants(&[tenant_id]);
 
