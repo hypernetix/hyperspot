@@ -78,7 +78,8 @@ jobs:
             const ignoredBots = new Set([
               "coderabbitai[bot]",
               "graphite-app[bot]",
-              "dependabot[bot]"
+              "dependabot[bot]",
+              "codecov-commenter"
             ]);
 
             function fmtDuration(ms) {
