@@ -1,0 +1,33 @@
+[package]
+name = "types"
+version.workspace = true
+publish = false
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Core types registration system module - implementation crate"
+
+[lints]
+workspace = true
+
+[lib]
+name = "types"
+path = "src/lib.rs"
+
+[dependencies]
+# Core dependencies
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+tracing = { workspace = true }
+inventory = { workspace = true }
+arc-swap = { workspace = true }
+
+# ModKit dependencies
+modkit = { workspace = true }
+modkit-security = { workspace = true }
+
+# Types SDK (public API, errors, models)
+types-sdk = { path = "../types-sdk" }
+
+# Types registry for registering core types
+types-registry-sdk = { workspace = true }

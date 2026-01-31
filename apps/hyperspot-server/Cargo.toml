@@ -36,6 +36,7 @@ modkit-db = { workspace = true, features = ["sqlite", "pg"] }
 api_gateway = { package = "cf-api-gateway", path = "../../modules/system/api_gateway" }
 grpc_hub = { package = "cf-grpc-hub", path = "../../modules/system/grpc_hub" }
 module_orchestrator = { package = "cf-module-orchestrator", path = "../../modules/system/module_orchestrator" }
+types = { path = "../../modules/system/types" }
 types_registry = { package = "cf-types-registry", path = "../../modules/system/types_registry/types_registry" }
 tenant-resolver-gw = { package = "cf-tenant-resolver-gw", path = "../../modules/system/tenant_resolver/tenant_resolver-gw" }
 

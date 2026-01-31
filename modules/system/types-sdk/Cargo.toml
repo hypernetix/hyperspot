@@ -1,0 +1,25 @@
+[package]
+name = "types-sdk"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "SDK for types module: API trait, domain models and error definitions"
+
+[lints]
+workspace = true
+
+[dependencies]
+# Core dependencies for API trait
+async-trait = { workspace = true }
+thiserror = { workspace = true }
+
+# Domain model dependencies
+uuid = { workspace = true }
+time = { workspace = true }
+
+# Security context for API methods
+modkit-security = { workspace = true }
+
+# Optional: OData filtering/pagination support
+modkit-odata = { workspace = true }
