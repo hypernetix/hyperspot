@@ -21,7 +21,11 @@ See the full architecture [MANIFEST](docs/ARCHITECTURE_MANIFEST.md) for more det
 
 ### Prerequisites
 
-- Rust stable with Cargo
+- Rust stable with Cargo ([Install via rustup](https://rustup.rs/))
+- Protocol Buffers compiler (`protoc`):
+  - macOS: `brew install protobuf`
+  - Linux: `apt-get install protobuf-compiler`
+  - Windows: Download from https://github.com/protocolbuffers/protobuf/releases
 - MariaDB/PostgreSQL/SQLite or in-memory database
 
 ### CI/Development Commands

@@ -1,6 +1,6 @@
 //! Settings Module Implementation
 //!
-//! The public API is defined in `simple-user-settings-sdk` and re-exported here.
+//! The public API is defined in `simple_user_settings_sdk` and re-exported here.
 
 pub use simple_user_settings_sdk::{
     SettingsError, SimpleUserSettings, SimpleUserSettingsClient, SimpleUserSettingsPatch,
