@@ -1,13 +1,21 @@
 [package]
-name = "de0104_no_api_dto_in_contract"
+name = "de0706_no_direct_sqlx"
 version = "0.1.0"
 authors = ["Hypernetix"]
-description = "Prevents use of api_dto macro in contract layer"
+description = "Prohibits direct usage of sqlx; use Sea-ORM or SecORM instead (DE0706)"
 edition.workspace = true
 publish = false
 
 [lib]
 crate-type = ["cdylib"]
+
+[[example]]
+name = "bad_direct_sqlx"
+path = "ui/bad_direct_sqlx.rs"
+
+[[example]]
+name = "good_sea_orm"
+path = "ui/good_sea_orm.rs"
 
 [dependencies]
 clippy_utils.workspace = true
@@ -16,18 +24,8 @@ lint_utils.workspace = true
 
 [dev-dependencies]
 dylint_testing.workspace = true
-modkit-macros.workspace = true
-modkit.workspace = true
-serde.workspace = true
-utoipa.workspace = true
+sqlx.workspace = true
+sea-orm.workspace = true
 
 [package.metadata.rust-analyzer]
 rustc_private = true
-
-[[example]]
-name = "with_api_dto"
-path = "ui/with_api_dto.rs"
-
-[[example]]
-name = "without_api_dto"
-path = "ui/without_api_dto.rs"
