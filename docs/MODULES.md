@@ -102,18 +102,19 @@ Provide conversational capabilities (chat messages, conversation history) as a c
 - TODO: API link
 - TODO: SDK link
 
-### Models Registry
+### Model Registry
 #### Responsibility
-Maintain a catalog of available models (local/remote), including metadata, capabilities, and compatibility for runtime selection.
+Maintain a catalog of available models with tenant-level availability and approval workflow.
 #### High Level Scenarios
-- [ ] p1 - register and list models with basic metadata
-- [ ] p2 - HuggingFace model catalog sync
+- [ ] p1 - get tenant model (availability check)
+- [ ] p1 - list tenant models with filtering
+- [ ] p2 - model discovery from providers (via Outbound API Gateway)
+- [ ] p2 - model approval workflow (pending → approved | rejected | revoked)
 - [ ] p2 - capability tagging (embeddings, vision, tools, function calling)
-- [ ] p3 - multi-tenant model availability and allowlists
-- [ ] p4 - model lifecycle tracking (deprecated, archived, pinned)
-- [ ] p5 - automated recommendations and governance policies
+- [ ] p3 - auto-approval configuration per tenant/provider
+- [ ] p4 - model lifecycle tracking (deprecated, archived)
 #### More details
-- TODO: Design link
+- [PRD](../modules/model_registry/docs/PRD.md)
 - TODO: Scenarios link
 - TODO: API link
 - TODO: SDK link
@@ -133,20 +134,30 @@ Manage versioned prompt assets (system prompts, templates, chains) with governan
 - TODO: API link
 - TODO: SDK link
 
-### LLM gateway (inference, embeddings)
+### LLM Gateway
 #### Responsibility
-Provide a unified interface for LLM inference and embedding generation across providers, enforcing consistent contracts and observability.
+Provide unified access to multiple LLM providers with multimodal support, tool calling, and enterprise-governance controls.
 #### High Level Scenarios
-- [ ] p1 - completion/chat requests routed to configured provider
-- [ ] p1 - embeddings generation for downstream RAG/search
-- [ ] p2 - provider routing, fallbacks, retries, and timeouts
-- [ ] p2 - request/response interceptors for policy, redaction, safety
-- [ ] p2 - per-tenant budgets
-- [ ] p3 - cost/latency-aware routing and batching
-- [ ] p3 - usage tracking
-- [ ] p4 - audit integration
+- [ ] p1 - chat completion routed to configured provider
+- [ ] p1 - streaming chat completion (SSE)
+- [ ] p1 - embeddings generation
+- [ ] p1 - multimodal input/output (vision, audio, video, documents)
+- [ ] p1 - tool/function calling with schema resolution
+- [ ] p1 - structured output with schema validation
+- [ ] p1 - model discovery (delegation to Model Registry)
+- [ ] p2 - provider fallback on failure
+- [ ] p2 - retry with exponential backoff
+- [ ] p2 - request/response interceptors (hook plugins)
+- [ ] p2 - per-tenant budget enforcement (usage plugin)
+- [ ] p2 - rate limiting (tenant and user levels)
+- [ ] p2 - async jobs for long-running operations
+- [ ] p2 - realtime audio (WebSocket)
+- [ ] p2 - request cancellation
+- [ ] p3 - cost/latency-aware routing
+- [ ] p3 - embeddings batching
+- [ ] p4 - audit events (audit plugin)
 #### More details
-- TODO: Design link
+- [PRD](../modules/llm_gateway/docs/PRD.md)
 - TODO: Scenarios link
 - TODO: API link
 - TODO: SDK link
@@ -248,15 +259,17 @@ Parse and extract structured content from user files for downstream indexing, RA
 
 ### File Storage
 #### Responsibility
-Store and retrieve files and artifacts (uploads, parsed outputs, model assets) with policy-driven retention.
+Store and retrieve files and media for LLM Gateway (input-media assets, generated content).
 #### High Level Scenarios
-- [ ] p1 - store/retrieve files with content addressing and metadata
+- [ ] p1 - fetch media by URL for LLM input
+- [ ] p1 - store generated content (images, audio, video)
+- [ ] p1 - get file metadata
 - [ ] p2 - tenant quotas and usage reporting integration
 - [ ] p2 - pluggable backends (filesystem, object storage)
 - [ ] p3 - encryption, retention, and lifecycle policies
 - [ ] p4 - compliance exports and legal hold support
 #### More details
-- TODO: Design link
+- [PRD](../modules/file_storage/docs/PRD.md)
 - TODO: Scenarios link
 - TODO: API link
 - TODO: SDK link
@@ -420,14 +433,15 @@ Run and coordinate background jobs (download/upload, benchmarks, parsing, indexi
 
 ### Type Registry
 #### Responsibility
-Provide centralized type and contract registration (GTS-backed), enabling extensible schemas and versioned interoperability.
+GTS schema-storage service for tool definitions and contracts.
 #### High Level Scenarios
-- [ ] p1 - validate, register and resolve types and instances by versioned identifiers
+- [ ] p1 - get schema by ID (for LLM Gateway tool resolution)
+- [ ] p1 - batch get schemas
+- [ ] p2 - validate, register and resolve types and instances by versioned identifiers
 - [ ] p2 - distribute GTS instances and schemas updates across modules safely via events generation
-- [ ] p2 - runtime validation and registration
 - [ ] p3 - schemas and instances import/export in different formats (YAML, RAML)
 #### More details
-- TODO: Design link
+- [PRD](../modules/type_registry/docs/PRD.md)
 - TODO: Scenarios link
 - TODO: API link
 - TODO: SDK link
@@ -622,17 +636,21 @@ Core platform service managing credentials lifecycle and access control, coordin
 - TODO: API link
 - TODO: SDK link
 
-### Outbound API gateway
+### Outbound API Gateway
 #### Responsibility
-Core platform egress policy enforcement and governance layer (outbound controls, allowlists, audit, and risk posture).
+Centralized gateway for external-API calls with credentials injection, reliability, and observability.
 #### High Level Scenarios
-- [ ] p1 - define outbound endpoints and execute calls with tracing
-- [ ] p1 - credential injection via Credential Store adapter
-- [ ] p2 - rate limiting, retries, and circuit breakers
+- [ ] p1 - HTTP requests to external APIs
+- [ ] p1 - SSE streaming
+- [ ] p1 - WebSocket connections
+- [ ] p1 - credential injection via Credential Resolver
+- [ ] p2 - retry with exponential backoff
+- [ ] p2 - circuit breaker
+- [ ] p2 - rate limiting (per-target)
+- [ ] p2 - timeouts (connect, read, total)
 - [ ] p3 - audit with retention
-- [ ] p4 - auditability and compliance controls for egress traffic
 #### More details
-- TODO: Design link
+- [PRD](../modules/outbound_api_gateway/docs/PRD.md)
 - TODO: Scenarios link
 - TODO: API link
 - TODO: SDK link

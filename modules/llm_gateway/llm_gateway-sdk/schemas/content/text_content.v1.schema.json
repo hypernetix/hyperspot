@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.x.llm_gateway.content.text_content.v1~",
+  "title": "TextContent",
+  "description": "Plain text content part",
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "text",
+      "description": "Content type discriminator"
+    },
+    "text": {
+      "type": "string",
+      "description": "Text content"
+    }
+  },
+  "required": ["type", "text"],
+  "additionalProperties": false
+}
