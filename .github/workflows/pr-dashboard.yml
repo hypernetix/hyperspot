@@ -103,6 +103,50 @@ jobs:
               return asked || fallback;
             }
 
+            function normalizeTextForOverlap(text) {
+              return (text || "")
+                .replace(/\r\n/g, "\n")
+                .split("\n")
+                .map(l => l.trim())
+                .filter(l => l.length > 0)
+                .join("\n")
+                .replace(/\s+/g, " ")
+                .trim();
+            }
+
+            function extractQuotedText(body) {
+              const lines = (body || "").replace(/\r\n/g, "\n").split("\n");
+              const quoted = [];
+              for (const line of lines) {
+                const match = line.match(/^\s*>+\s?(.*)$/);
+                if (!match) continue;
+                const content = (match[1] || "").trim();
+                if (!content) continue;
+                quoted.push(content);
+              }
+              return quoted.join("\n").trim();
+            }
+
+            function hasQuotedOverlapAtLeast(quotedText, otherText, minChars) {
+              const quoted = normalizeTextForOverlap(quotedText);
+              const other = normalizeTextForOverlap(otherText);
+
+              if (!quoted || !other) return false;
+              if (quoted.length < minChars || other.length < minChars) return false;
+
+              const maxLen = 8000;
+              const q = quoted.slice(0, maxLen);
+              const o = other.slice(0, maxLen);
+
+              for (let i = 0; i + minChars <= o.length; i++) {
+                const chunk = o.slice(i, i + minChars);
+                if (q.includes(chunk)) return true;
+              }
+
+              const endChunk = o.slice(Math.max(0, o.length - minChars));
+              return !!endChunk && q.includes(endChunk);
+            }
+
             function isReleasePr(title) {
               return (title || "").toLowerCase().startsWith("chore: release");
             }
@@ -428,18 +472,38 @@ jobs:
                   );
                 });
 
-              let lastAuthorIndex = -1;
-              for (let i = humanPrComments.length - 1; i >= 0; i--) {
-                if (humanPrComments[i].user.login === author) {
-                  lastAuthorIndex = i;
+              const sortedHumanPrComments = [...humanPrComments]
+                .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
+              const resolvedPrCommentIds = new Set();
+              const replyPrCommentIds = new Set();
+
+              for (let i = 0; i < sortedHumanPrComments.length; i++) {
+                const comment = sortedHumanPrComments[i];
+                const quotedText = extractQuotedText(comment.body);
+                if (!quotedText) continue;
+
+                let isReply = false;
+                for (let j = i - 1; j >= 0; j--) {
+                  const other = sortedHumanPrComments[j];
+                  if (other.id === comment.id) continue;
+                  if (other.user?.login === comment.user?.login) continue;
+                  if (!hasQuotedOverlapAtLeast(quotedText, other.body, 100)) continue;
+                  resolvedPrCommentIds.add(other.id);
+                  isReply = true;
                   break;
+                }
+
+                if (isReply) {
+                  replyPrCommentIds.add(comment.id);
                 }
               }
 
               const pendingPrComments =
-                humanPrComments
-                  .slice(lastAuthorIndex + 1)
-                  .filter(c => c.user.login !== author);
+                sortedHumanPrComments
+                  .filter(c => c.user.login !== author)
+                  .filter(c => !resolvedPrCommentIds.has(c.id))
+                  .filter(c => !replyPrCommentIds.has(c.id));
 
               const unrepliedPrCommentsCount = pendingPrComments.length;
               const unrepliedPrCommentLinks = pendingPrComments.map(c => {
