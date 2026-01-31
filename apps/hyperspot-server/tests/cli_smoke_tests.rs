@@ -218,7 +218,7 @@ modules:
       cors_enabled: false
       auth_disabled: true
   users_info: {{}}
-  simple-user-settings: {{}}
+  simple_user_settings: {{}}
 "#,
         temp_dir
             .path()

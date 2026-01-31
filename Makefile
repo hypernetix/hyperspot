@@ -3,9 +3,6 @@ CI := 1
 OPENAPI_URL ?= http://127.0.0.1:8087/openapi.json
 OPENAPI_OUT ?= docs/api/api.json
 
-# E2E Docker args
-E2E_ARGS ?= --features users-info-example
-
 # -------- Utility macros --------
 
 define ensure_tool
@@ -252,15 +249,15 @@ test:
 
 ## Run SQLite integration tests
 test-sqlite:
-	cargo test -p modkit-db --features "sqlite,integration" -- --nocapture
+	cargo test -p cf-modkit-db --features "sqlite,integration" -- --nocapture
 
 ## Run PostgreSQL integration tests
 test-pg:
-	cargo test -p modkit-db --features "pg,integration" -- --nocapture
+	cargo test -p cf-modkit-db --features "pg,integration" -- --nocapture
 
 ## Run MySQL integration tests
 test-mysql:
-	cargo test -p modkit-db --features "mysql,integration" -- --nocapture
+	cargo test -p cf-modkit-db --features "mysql,integration" -- --nocapture
 
 # Run all database integration tests
 test-db: test-sqlite test-pg test-mysql
@@ -271,7 +268,7 @@ test-users-info-pg:
 
 # -------- E2E tests --------
 
-.PHONY: e2e e2e-local e2e-docker
+.PHONY: e2e e2e-local e2e-docker e2e-docker-pg e2e-docker-mysql
 
 # Run E2E tests in Docker (default)
 e2e: e2e-docker
@@ -280,9 +277,15 @@ e2e: e2e-docker
 e2e-local:
 	python3 scripts/ci.py e2e
 
-## Run E2E tests in Docker environment
+## Run E2E tests in Docker environment (default: sqlite)
 e2e-docker:
-	python3 scripts/ci.py e2e --docker $(E2E_ARGS)
+	python3 scripts/ci.py e2e --docker --cargo-build-args="--features users-info-example,tenant-resolver-example" $(E2E_ARGS)
+
+e2e-docker-pg:
+	python3 scripts/ci.py e2e --docker --cargo-build-args="--features db-pg,users-info-example,tenant-resolver-example" --profile postgres $(E2E_ARGS)
+
+e2e-docker-mysql:
+	python3 scripts/ci.py e2e --docker --cargo-build-args="--features db-mysql,users-info-example,tenant-resolver-example" --profile mariadb $(E2E_ARGS)
 
 markdown-check:
 	broken-md-links docs
