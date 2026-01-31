@@ -277,6 +277,7 @@ jobs:
                   .map(u => u?.login)
                   .filter(login => {
                     if (!login) return false;
+                    if (login === author) return false;
                     if (login.endsWith("[bot]")) return false;
                     if (ignoredBots.has(login)) return false;
                     return true;
@@ -371,6 +372,7 @@ jobs:
 
                 unfinishedReviewers =
                   [...allReviewers]
+                    .filter(u => u !== author)
                     .filter(u => !approvedBy.has(u))
                     .sort((a, b) => a.localeCompare(b));
                 unfinishedReviews = unfinishedReviewers.length;
@@ -572,7 +574,8 @@ jobs:
                   owner,
                   repo,
                   title: issueTitle,
-                  body
+                  body,
+                  labels: ["pr-issue"]
                 });
 
                 issue = created.data;
@@ -582,7 +585,8 @@ jobs:
                   repo,
                   issue_number: issue.number,
                   title: issueTitle,
-                  body
+                  body,
+                  labels: ["pr-issue"]
                 });
               }
 
