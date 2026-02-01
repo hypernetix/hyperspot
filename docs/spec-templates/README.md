@@ -113,6 +113,49 @@ fdd-{module-name}-{kind}-{slug}
 
 **Placement**: Use `**ID**: \`fdd-...\`` in the artifact where the element is defined.
 
+### ID Scope
+
+An FDD ID covers the **markdown section where it's defined and all its subsections**:
+
+- ID on `#` (H1) → covers the entire document
+- ID on `##` (H2) → covers that section and all H3/H4/... within it
+- ID on `####` (H4) → covers only that specific element
+
+This allows flexible granularity — define IDs at whatever level makes sense for traceability.
+
+### Implementation Status and Priority
+
+Requirements and design elements can include **implementation status** and **priority** directly in the ID line. This bridges the gap between specifications and actual implementation — specs come first, and we need visibility into what's implemented and in what order.
+
+**Format**:
+```
+**ID**: [status] `priority` - `fdd-{module}-{kind}-{slug}`
+```
+
+| Element | Values | Description |
+|---------|--------|-------------|
+| Status | `[ ]` / `[x]` | Implementation checkbox — unchecked = pending, checked = done |
+| Priority | `p1` `p2` `p3` `p4` | Relative priority — p1 highest |
+
+**Examples**:
+```markdown
+#### User roles requirement
+
+**ID**: [ ] `p1` - `fdd-auth-fr-user-roles`
+
+The system must support 1-N user roles associated with the user...
+```
+
+```markdown
+#### Response time
+
+**ID**: [x] `p2` - `fdd-api-nfr-response-time`
+
+API responses must complete within 200ms at p95...
+```
+
+> **Note**: Implementation status and priority are **informative only** — they don't replace your issue tracking system. Keep them simple. The value is having spec-to-implementation traceability directly in version-controlled documentation, reducing uncertainty between what's specified and what's actually built.
+
 ### FDD ID Reference
 
 An FDD ID **reference** links to an element defined elsewhere. References create traceability between documents — for example, a Feature can reference Actors from PRD, or an ADR can reference Requirements it addresses.
