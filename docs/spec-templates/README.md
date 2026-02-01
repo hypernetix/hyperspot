@@ -128,30 +128,26 @@ FDD IDs must be unique. When FDD tooling is connected, `fdd validate` will:
 
 ### Kind Reference
 
+These are **suggested** kind names for common artifact types. FDD does not enforce specific kind values — use whatever naming makes sense for your project. The important thing is consistency within your codebase.
+
 | Kind | Description |
 |------|-------------|
-| `actor` | Actor (human or system) |
-| `fr` | Functional requirement |
-| `nfr` | Non-functional requirement |
-| `usecase` | Use case |
+| `actor` | Stakeholder or system actor |
+| `req` | Requirement (functional or non-functional) |
+| `feature` | Feature specification |
 | `adr` | Architecture decision record |
-| `feature` | Feature |
-| `flow` | Actor flow (within feature) |
-| `algo` | Algorithm (within feature) |
-| `state` | State machine (within feature) |
-| `req` | Feature requirement |
-| `principle` | Design principle |
-| `constraint` | Constraint |
-| `context` | Additional context |
-| `db-table` | Database table |
-| `topology` | Topology |
-| `tech` | Tech stack |
+| `design` | Design element (component, API, schema, etc.) |
+| `flow` | Behavioral flow (use case, algorithm, state machine) |
 
 **Examples**:
 - `fdd-todo-app-actor-user` — Actor ID
-- `fdd-todo-app-fr-create-task` — Functional Requirement ID
+- `fdd-todo-app-req-create-task` — Requirement ID
+- `fdd-todo-app-req-response-time` — NFR (still uses `req`)
 - `fdd-todo-app-adr-local-storage` — ADR ID
 - `fdd-todo-app-feature-core` — Feature ID
+- `fdd-todo-app-design-task-api` — Design element ID
+
+> **Note**: You can use any slug that fits your domain. For example, `fdd-billing-uc-checkout` or `fdd-auth-nfr-token-expiry` are equally valid if your team prefers more specific kinds. FDD validation only checks that referenced IDs exist — it does not validate kind names.
 
 ## Example
 
