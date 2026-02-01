@@ -69,12 +69,17 @@ fmt:
 # |             | - Use 'make dylint-list' to see all available custom lints           |
 # +-------------+----------------------------------------------------------------------+
 
-.PHONY: clippy kani geiger safety lint dylint dylint-list dylint-test gts-docs gts-docs-vendor gts-docs-release gts-docs-vendor-release gts-docs-test
+.PHONY: clippy lychee kani geiger safety lint dylint dylint-list dylint-test gts-docs gts-docs-vendor gts-docs-release gts-docs-vendor-release gts-docs-test
 
 # Run clippy linter (excludes gts-rust submodule which has its own lint settings)
 clippy:
 	$(call ensure_tool,cargo-clippy)
 	cargo clippy --workspace --all-targets --all-features -- -D warnings -D clippy::perf
+
+# Run markdown checks with 'lychee'
+lychee:
+	$(call ensure_tool,lychee)
+	lychee docs examples dylint_lints guidelines
 
 ## The Kani Rust Verifier for checking safety of the code
 kani:
@@ -284,12 +289,6 @@ e2e-local:
 e2e-docker:
 	python3 scripts/ci.py e2e --docker $(E2E_ARGS)
 
-markdown-check:
-	broken-md-links docs
-	broken-md-links examples
-	broken-md-links dylint_lints
-	broken-md-links guidelines
-
 # -------- Code coverage --------
 
 .PHONY: coverage coverage-unit coverage-e2e-local check-prereq-e2e-local
@@ -386,7 +385,7 @@ oop-example:
 	cargo run --bin hyperspot-server --features oop-example,users-info-example,tenant-resolver-example -- --config config/quickstart.yaml run
 
 # Run all quality checks
-check: fmt clippy security dylint-test dylint gts-docs test
+check: fmt clippy lychee security dylint-test dylint gts-docs test
 
 # Run CI pipeline
 ci: check
