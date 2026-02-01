@@ -1,12 +1,33 @@
 # Spec Templates
 
-Lightweight specification templates for software projects. Optionally compatible with [Flow-Driven Development (FDD)](https://github.com/cyberfabric/FDD) for validation and traceability.
+Industry-standard specification templates incorporating best practices from IEEE, ISO, and modern software development methodologies. Compatible with [Flow-Driven Development (FDD)](https://github.com/cyberfabric/FDD) for validation and traceability.
 
 ## Purpose
 
-These templates provide a structured way to document product requirements, technical design, architecture decisions, and feature specifications. They work standalone or can be enhanced with FDD annotations (`fdd-id`) for cross-document validation and traceability.
+These templates provide a structured way to document product requirements, technical design, architecture decisions, and feature specifications. They incorporate proven practices from:
+
+- **IEEE 830 / ISO/IEC/IEEE 29148:2018** — Requirements specification, key reference
+- **IEEE 1233** — System requirements
+- **IEEE 1016-2009** — Software design description
+- **IEEE 42010** — Architecture description
+- **ISO/IEC 15288 / 12207** — Systems and software life cycle processes
+- **MADR** — Markdown Any Decision Records
+
+Templates work standalone or can be enhanced with FDD annotations (`fdd-id`) for cross-document validation and traceability.
 
 **FDD integration is optional** — templates are useful on their own for clear, consistent documentation.
+
+## Governance & Process
+
+**Governance**: Steering committee with vote/veto authority on major requirements and architecture decisions. Escalation paths documented separately.
+
+**Global Guidelines**: Project-wide standards defined in root PRD, DESIGN, and [guidelines/](guidelines/) covering architecture, security, performance, operations, runtime environments, testing strategy.
+
+**Module-level specs**: Document only **deviations** or **extensions** from global standards. Avoid duplicating project-wide requirements.
+
+**Testing Strategy**: All requirements verified via automated tests (unit, integration, e2e, security, performance) targeting 90%+ code coverage. Document verification method only for non-test approaches (analysis, inspection, demonstration).
+
+**Document Format**: All specification documents **MUST be Markdown**. Use standard Markdown syntax. Mermaid diagrams supported for architecture visualizations.
 
 ## Templates
 
@@ -22,66 +43,97 @@ These templates provide a structured way to document product requirements, techn
 Quick reference for what goes where:
 
 ### PRD.md
-1. **Overview** — Purpose, target users, problems solved, success criteria, capabilities
-2. **Actors** — Human actors, system actors
-3. **Functional Requirements** — What the system must do (WHAT, not HOW)
-4. **Use Cases** — Actor interactions with preconditions, flow, postconditions
-5. **Non-functional Requirements** — Quality attributes (performance, security, etc.)
-6. **Additional Context** — Market notes, assumptions, stakeholder feedback
+1. **Overview** — Purpose, background, goals, glossary
+2. **Actors** — Human and system actors that interact with this module (stakeholders managed at project/task level)
+3. **Operational Concept & Environment** (optional) — Module-specific environment constraints (delete if none)
+4. **Scope** — In/out of scope boundaries
+5. **Functional Requirements** — What the system MUST do (WHAT, not HOW) with rationale; verification method optional (default: automated tests 90%+ coverage)
+6. **Non-Functional Requirements** — Module-specific NFRs only (exclusions/extensions from project defaults)
+7. **Public Library Interfaces** — Public API surface, stability guarantees, integration contracts
+8. **Use Cases** — Optional interaction flows
+9. **Acceptance Criteria** — Business-level validation
+10. **Dependencies** — External factors
+11. **Assumptions** — Environment, users, dependent systems
+12. **Risks** — Risks and mitigation strategies
+13. **Open Questions** — Unresolved questions
+14. **Traceability** — Links to DESIGN, ADR, features
+
+Standards alignment:
+  - IEEE 830 / ISO/IEC/IEEE 29148:2018 (requirements specification)
+  - IEEE 1233 (system requirements)
+  - ISO/IEC 15288 / 12207 (requirements definition)
+
+Note: Stakeholder needs (per ISO 29148) managed at project/task level by steering committee.
 
 ### DESIGN.md
-1. **Architecture Overview** — Vision, drivers, layers
-2. **Principles & Constraints** — Design principles, technical constraints
-3. **Technical Architecture** — Domain model, components, API contracts, sequences, DB schemas, topology, tech stack
-4. **Additional Context** — Architect notes, rationale
+1. **Architecture Overview** — Vision, drivers (functional + NFR allocation table), layers
+2. **Principles & Constraints** — Design principles and constraints with ADR links
+3. **Technical Architecture** — Domain model, components, API contracts, external interfaces & protocols, sequences, DB schemas, topology, tech stack
+4. **Additional Context** — Extra context that helps implementers
+5. **Traceability** — Links to PRD, ADR, features
 
-### ADR.md
+Standards alignment:
+  - IEEE 1016-2009 (Software Design Description)
+  - IEEE 42010 (Architecture Description — viewpoints, views, concerns)
+  - ISO/IEC 15288 / 12207 (Architecture & Design Definition processes)
+
+### ADR/*.md
 - **Context and Problem Statement** — What problem are we solving?
-- **Decision Drivers** — Key factors influencing the decision
+- **Decides For Requirements** — Explicit links to requirements/design elements this decision addresses
+- **Decision Drivers** — Forces/concerns that matter
 - **Considered Options** — Alternatives evaluated
-- **Decision Outcome** — Chosen option with consequences
-- **Related Design Elements** — Linked actors and requirements
+- **Decision Outcome** — Chosen option with rationale
+- **Consequences** — Trade-offs accepted
+- **Confirmation** — How compliance will be confirmed
+- **Pros and Cons of the Options** — Detailed analysis
+- **More Information** — Links/evidence
+- **Traceability** — Links to PRD/DESIGN
 
-### FEATURE.md
-1. **Feature Context** — Overview, purpose, actors, references
+Standards alignment:
+  - MADR (Markdown Any Decision Records)
+  - IEEE 42010 (architecture decisions as first-class elements)
+  - ISO/IEC 15288 / 12207 (decision analysis process)
+
+### features/*.md
+1. **Feature Context** — Overview, purpose, actors, PRD requirement references
 2. **Actor Flows (FDL)** — User-facing interactions step by step
 3. **Algorithms (FDL)** — Internal functions and procedures
-4. **States (FDL)** — State machines for entities
-5. **Requirements** — Implementation tasks with phases
-6. **Additional Context** — Performance notes, UX considerations
+4. **States (FDL)** — State machines for entities (optional)
+5. **Implementation Requirements** — Specific tasks to build
+6. **Acceptance Criteria** — Feature-level validation
 
 ---
 
-### About ADR Files
+### About ADR Files (ADR/*.md)
 
 Architecture Decision Records capture **why** a technical decision was made, not just what was decided. Each ADR documents the context, problem statement, considered options, and the chosen solution with its trade-offs. This creates an institutional memory that prevents re-debating settled decisions and helps new team members understand the rationale behind the architecture.
 
-ADRs are immutable once accepted — if a decision changes, a new ADR supersedes the old one. This preserves the historical context and evolution of the system's architecture over time.
+Use ADRs for real decision dilemmas and final decision state. Decision history is in git; keep one ADR per decision.
 
-### About Feature Files
+### About Feature Files (features/*.md)
 
 Feature files bridge the gap between high-level requirements (PRD) and implementation. Each feature describes **what the system does** in enough detail for a developer or AI agent to implement it without ambiguity. Features contain Actor Flows (user-facing interactions), Algorithms (internal logic), States (state machines), and Requirements (implementation tasks).
 
 Unlike PRD which answers "what do we need?", Feature files answer "how exactly does it work?" — step by step, with precise inputs, outputs, conditions, and error handling. This makes them directly translatable to code and testable against acceptance criteria.
 
 **FDL pseudo-code is optional:**
-- ✅ **Use** for early-stage projects, complex domains, onboarding new team members, or when precise behavior must be communicated
-- ⏭️ **Skip** for mature teams or simple features — avoid documentation overhead when everyone already understands the flow
+- **Use** for early-stage projects, complex domains, onboarding new team members, or when precise behavior must be communicated
+- **Skip** for mature teams or simple features — avoid documentation overhead when everyone already understands the flow
 
 ## Document Placement
 
-Documents should be placed **inside the module folder** following this structure:
+Documents should be placed **inside appropriate subsystem or module folder** following this structure:
 
 ```
-{module}/
-├── PRD.md                      # Product requirements
-├── DESIGN.md                   # Technical design
-├── ADR/                        # Architecture Decision Records
+docs/arch/common/ or docs/arch/{subsystem}/ or {module}/
+├── PRD.md                     # Product requirements
+├── DESIGN.md                  # Technical design
+├── ADR/                       # Architecture Decision Records
 │   ├── 0001-{fdd-id}.md       # ADR with sequential prefix
 │   ├── 0002-{fdd-id}.md
 │   └── ...
-└── features/                   # Feature specifications
-    ├── 0001-{fdd-id}.md        # Feature with sequential prefix
+└── features/                  # Feature specifications
+    ├── 0001-{fdd-id}.md       # Feature with sequential prefix
     ├── 0002-{fdd-id}.md
     └── ...
 ```
@@ -104,7 +156,7 @@ FDD IDs enable traceability across all specification artifacts.
 
 ### FDD ID Definition
 
-An FDD ID **defines** a unique identifier for a specification element (actor, requirement, feature, etc.). Each ID must be **globally unique** within the module.
+An FDD ID **defines** a unique identifier for a specification element (actor, requirement, feature, etc.). Each ID must be **globally unique** within the module, subsystem or global project depending on where it's defined
 
 **Format**:
 ```
@@ -119,7 +171,7 @@ An FDD ID covers the **markdown section where it's defined and all its subsectio
 
 - ID on `#` (H1) → covers the entire document
 - ID on `##` (H2) → covers that section and all H3/H4/... within it
-- ID on `####` (H4) → covers only that specific element
+- ID on `####` (H4) → covers section H4 and nested content ...
 
 This allows flexible granularity — define IDs at whatever level makes sense for traceability.
 
@@ -129,7 +181,7 @@ Requirements and design elements can include **implementation status** and **pri
 
 **Format**:
 ```
-**ID**: [status] `priority` - `fdd-{module}-{kind}-{slug}`
+- [status] `priority` - **ID**: `fdd-{module}-{kind}-{slug}`
 ```
 
 | Element | Values | Description |
@@ -141,7 +193,7 @@ Requirements and design elements can include **implementation status** and **pri
 ```markdown
 #### User roles requirement
 
-**ID**: [ ] `p1` - `fdd-auth-fr-user-roles`
+- [ ] `p1` - **ID**: `fdd-auth-req-user-roles`
 
 The system must support 1-N user roles associated with the user...
 ```
@@ -149,7 +201,7 @@ The system must support 1-N user roles associated with the user...
 ```markdown
 #### Response time
 
-**ID**: [x] `p2` - `fdd-api-nfr-response-time`
+- [x] `p2` - **ID**: `fdd-api-req-response-time`
 
 API responses must complete within 200ms at p95...
 ```
@@ -180,7 +232,9 @@ These are **suggested** kind names for common artifact types. FDD does not enfor
 | `feature` | Feature specification |
 | `adr` | Architecture decision record |
 | `design` | Design element (component, API, schema, etc.) |
-| `flow` | Behavioral flow (use case, algorithm, state machine) |
+| `flow` | Actor flow / use case flow |
+| `algo` | Algorithm / internal procedure |
+| `state` | State machine |
 
 **Examples**:
 - `fdd-todo-app-actor-user` — Actor ID
@@ -188,7 +242,6 @@ These are **suggested** kind names for common artifact types. FDD does not enfor
 - `fdd-todo-app-req-response-time` — NFR (still uses `req`)
 - `fdd-todo-app-adr-local-storage` — ADR ID
 - `fdd-todo-app-feature-core` — Feature ID
-- `fdd-todo-app-design-task-api` — Design element ID
 
 > **Note**: You can use any slug that fits your domain. For example, `fdd-billing-uc-checkout` or `fdd-auth-nfr-token-expiry` are equally valid if your team prefers more specific kinds. FDD validation only checks that referenced IDs exist — it does not validate kind names.
 
