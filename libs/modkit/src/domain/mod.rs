@@ -20,53 +20,46 @@
 //! ```
 //!
 //! The macro will:
-//! - Implement `DomainSafe` and `DomainModel` for the type
-//! - Verify at compile-time that all fields are also `DomainSafe`
+//! - Implement `DomainModel` for the type
+//! - Validate at macro-expansion time that all fields are free of infrastructure types
+//! - Generate clear error messages if forbidden types are detected
 //!
 //! # Enforcement
 //!
-//! Domain services can use trait bounds to ensure they only work with domain-safe types:
+//! Domain services can use trait bounds to ensure they only work with domain types:
 //!
 //! ```rust,ignore
 //! pub trait UserRepository: Send + Sync {
 //!     type Model: DomainModel;
-//!     
+//!
 //!     async fn find(&self, id: Uuid) -> Result<Option<Self::Model>>;
 //! }
 //! ```
+//!
+//! # Validation Strategy
+//!
+//! The `#[domain_model]` macro performs validation by checking field type names against
+//! a list of forbidden patterns (e.g., `sqlx::`, `http::`, `sea_orm::`). This provides
+//! clear error messages at macro expansion time, similar to how `#[api_dto]` validates
+//! its arguments.
+//!
+//! Additional enforcement is provided by Dylint lints:
+//! - `DE0301`: Prohibits infrastructure imports in domain layer
+//! - `DE0308`: Prohibits HTTP types in domain layer
 
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+// Re-export uuid for use in domain models
 use uuid::Uuid;
-
-/// Marker trait for types that are safe to use in the domain layer.
-///
-/// Types implementing this trait are guaranteed to be free of infrastructure
-/// dependencies such as:
-/// - Database types (`sqlx`, `sea_orm`)
-/// - HTTP types (http, axum, hyper)
-/// - Framework-specific types
-///
-/// # Implementing
-///
-/// Do NOT implement this trait manually. Use the `#[domain_model]` attribute macro
-/// which performs compile-time validation that all fields are also `DomainSafe`.
-///
-/// # Blanket Implementations
-///
-/// Common standard library and third-party types have blanket implementations:
-/// - Primitives: `bool`, `i8`..`i128`, `u8`..`u128`, `f32`, `f64`, `char`, `String`, `&str`
-/// - Collections: `Vec<T>`, `Option<T>`, `Result<T, E>`, `HashMap<K, V>`, etc.
-/// - Common crates: `uuid::Uuid`, `serde_json::Value`
-pub trait DomainSafe {}
 
 /// Marker trait for domain models (business entities).
 ///
 /// Domain models represent core business concepts and should:
 /// - Contain only business-relevant data
 /// - Be independent of persistence mechanisms
-/// - Be serializable for transfer between layers
+/// - Be free of infrastructure dependencies
 ///
 /// # Usage
+///
+/// Use the `#[domain_model]` attribute macro to implement this trait:
 ///
 /// ```rust,ignore
 /// #[domain_model]
@@ -77,126 +70,57 @@ pub trait DomainSafe {}
 ///     pub status: OrderStatus,
 /// }
 /// ```
-pub trait DomainModel: DomainSafe + Send + Sync {}
+///
+/// The macro validates field types at expansion time and generates clear error
+/// messages if forbidden types (e.g., `sqlx::PgPool`, `http::StatusCode`) are detected.
+///
+/// # Thread Safety
+///
+/// This trait does not require `Send + Sync`. If you need thread-safe domain models,
+/// wrap them in `Arc<T>` at the point of use.
+pub trait DomainModel {}
+
+/// Internal marker trait (deprecated).
+///
+/// This trait is kept for backward compatibility but should not be used directly.
+/// Use `DomainModel` instead.
+#[doc(hidden)]
+#[deprecated(since = "0.1.6", note = "Use DomainModel instead")]
+pub trait DomainSafe {}
 
 /// Marker trait for domain errors.
 ///
 /// Domain errors represent business rule violations and should not
 /// contain infrastructure-specific error types.
-pub trait DomainErrorMarker: DomainSafe + std::error::Error + Send + Sync {}
+pub trait DomainErrorMarker: std::error::Error + Send + Sync {}
 
 // =============================================================================
-// Blanket implementations for primitives
+// Backward compatibility implementations for DomainSafe (deprecated)
 // =============================================================================
 
-impl DomainSafe for () {}
-impl DomainSafe for bool {}
-impl DomainSafe for char {}
-impl DomainSafe for str {}
-impl DomainSafe for String {}
+#[allow(deprecated)]
+mod compat {
+    use super::*;
 
-impl DomainSafe for i8 {}
-impl DomainSafe for i16 {}
-impl DomainSafe for i32 {}
-impl DomainSafe for i64 {}
-impl DomainSafe for i128 {}
-impl DomainSafe for isize {}
-
-impl DomainSafe for u8 {}
-impl DomainSafe for u16 {}
-impl DomainSafe for u32 {}
-impl DomainSafe for u64 {}
-impl DomainSafe for u128 {}
-impl DomainSafe for usize {}
-
-impl DomainSafe for f32 {}
-impl DomainSafe for f64 {}
-
-// =============================================================================
-// Blanket implementations for common wrappers
-// =============================================================================
-
-impl<T: DomainSafe> DomainSafe for Option<T> {}
-impl<T: DomainSafe + ?Sized> DomainSafe for &T {}
-impl<T: DomainSafe + ?Sized> DomainSafe for &mut T {}
-impl<T: DomainSafe> DomainSafe for Box<T> {}
-impl<T: DomainSafe> DomainSafe for std::sync::Arc<T> {}
-impl<T: DomainSafe> DomainSafe for std::rc::Rc<T> {}
-impl<T: DomainSafe, E: DomainSafe> DomainSafe for Result<T, E> {}
-
-// =============================================================================
-// Blanket implementations for collections
-// =============================================================================
-
-impl<T: DomainSafe> DomainSafe for Vec<T> {}
-impl<T: DomainSafe> DomainSafe for [T] {}
-impl<T: DomainSafe, const N: usize> DomainSafe for [T; N] {}
-
-impl<K: DomainSafe, V: DomainSafe, S: std::hash::BuildHasher> DomainSafe for HashMap<K, V, S> {}
-impl<K: DomainSafe, V: DomainSafe> DomainSafe for BTreeMap<K, V> {}
-impl<T: DomainSafe, S: std::hash::BuildHasher> DomainSafe for HashSet<T, S> {}
-impl<T: DomainSafe> DomainSafe for BTreeSet<T> {}
-
-// =============================================================================
-// Blanket implementations for tuples
-// =============================================================================
-
-impl<A: DomainSafe> DomainSafe for (A,) {}
-impl<A: DomainSafe, B: DomainSafe> DomainSafe for (A, B) {}
-impl<A: DomainSafe, B: DomainSafe, C: DomainSafe> DomainSafe for (A, B, C) {}
-impl<A: DomainSafe, B: DomainSafe, C: DomainSafe, D: DomainSafe> DomainSafe for (A, B, C, D) {}
-
-// =============================================================================
-// Blanket implementations for common third-party crates
-// =============================================================================
-
-// uuid
-impl DomainSafe for Uuid {}
-
-// serde_json::Value (for flexible JSON data)
-impl DomainSafe for serde_json::Value {}
-
-// =============================================================================
-// Implementations for modkit types that are domain-safe
-// =============================================================================
-
-// Page and PageInfo are domain-safe as they're just pagination wrappers
-impl<T: DomainSafe> DomainSafe for modkit_odata::Page<T> {}
-impl DomainSafe for modkit_odata::PageInfo {}
+    // Keep minimal implementations for backward compatibility
+    impl DomainSafe for () {}
+    impl DomainSafe for bool {}
+    impl DomainSafe for String {}
+    impl DomainSafe for Uuid {}
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    // Compile-time test: these should compile
+    // DomainModel is a simple marker trait - no trait bounds to test
     #[allow(dead_code)]
-    fn assert_domain_safe<T: DomainSafe>() {}
+    fn assert_domain_model<T: DomainModel>() {}
 
     #[test]
-    fn test_primitives_are_domain_safe() {
-        assert_domain_safe::<bool>();
-        assert_domain_safe::<i32>();
-        assert_domain_safe::<String>();
-        assert_domain_safe::<f64>();
-    }
-
-    #[test]
-    fn test_collections_are_domain_safe() {
-        assert_domain_safe::<Vec<String>>();
-        assert_domain_safe::<Option<i32>>();
-        assert_domain_safe::<HashMap<String, i32>>();
-    }
-
-    #[test]
-    fn test_third_party_types_are_domain_safe() {
-        assert_domain_safe::<Uuid>();
-        assert_domain_safe::<serde_json::Value>();
-    }
-
-    #[test]
-    fn test_nested_types_are_domain_safe() {
-        assert_domain_safe::<Vec<Option<Uuid>>>();
-        assert_domain_safe::<HashMap<String, Vec<i32>>>();
-        assert_domain_safe::<Result<String, String>>();
+    fn test_domain_model_trait_exists() {
+        // Test that the trait is defined and can be used as a bound
+        // Actual validation is done by the #[domain_model] macro
+        fn _accepts_domain_model<T: DomainModel>(_: T) {}
     }
 }

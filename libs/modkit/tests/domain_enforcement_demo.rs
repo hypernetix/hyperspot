@@ -2,20 +2,23 @@
 //!
 //! This test file demonstrates TWO levels of enforcement:
 //!
-//! 1. **Field-level**: `#[domain_model]` macro checks that all fields implement `DomainSafe`
-//! 2. **Repository-level**: Trait bounds require types to implement `DomainModel`
+//! 1. **Macro-level**: `#[domain_model]` macro validates field types at macro expansion time
+//! 2. **Trait-level**: Trait bounds require types to implement `DomainModel`
+//!
+//! The validation happens during macro expansion by checking field type names
+//! against forbidden patterns (e.g., `sqlx::`, `http::`, `sea_orm::`).
 //!
 //! To verify enforcement works, uncomment the `ENFORCEMENT_TEST_*` sections below
 //! and run `cargo check -p cf-modkit`. Each should produce a compile error.
 
 #![allow(clippy::str_to_string)]
 
-use modkit::domain::{DomainModel, DomainSafe};
+use modkit::domain::DomainModel;
 use modkit_macros::domain_model;
 use uuid::Uuid;
 
 // ============================================================================
-// VALID: Domain model with only DomainSafe fields - COMPILES
+// VALID: Domain model with only allowed field types - COMPILES
 // ============================================================================
 
 #[domain_model]
@@ -27,18 +30,29 @@ pub struct ValidUser {
 }
 
 // ============================================================================
-// ENFORCEMENT_TEST_1: Field-level enforcement
-// Error: `DomainSafe` is not implemented for `http::StatusCode`
+// ENFORCEMENT_TEST_1: Macro-level validation
+// Error: field 'status' has type 'http::StatusCode' which matches forbidden pattern
 // ============================================================================
 
 // #[domain_model]
-// pub struct BadModelWithInfraField {
+// pub struct BadModelWithHttpType {
 //     pub id: Uuid,
-//     pub status: http::StatusCode,  // INFRA TYPE - will fail!
+//     pub status: http::StatusCode,  // FORBIDDEN - will fail at macro expansion!
 // }
 
 // ============================================================================
-// ENFORCEMENT_TEST_2: Uncomment to see repository-level enforcement
+// ENFORCEMENT_TEST_2: Macro-level validation with database type
+// Error: field 'pool' has type 'sqlx::PgPool' which matches forbidden pattern
+// ============================================================================
+
+// #[domain_model]
+// pub struct BadModelWithDbType {
+//     pub id: Uuid,
+//     pub pool: sqlx::PgPool,  // FORBIDDEN - will fail at macro expansion!
+// }
+
+// ============================================================================
+// ENFORCEMENT_TEST_3: Trait-level enforcement
 // Error: `DomainModel` is not implemented for `UnmarkedModel`
 // ============================================================================
 
@@ -48,23 +62,20 @@ pub struct ValidUser {
 //
 // pub trait TestRepository
 // where
-//     UnmarkedModel: DomainModel,  // This bound will fail!
+//     UnmarkedModel: DomainModel,  // This bound will fail - no #[domain_model] macro!
 // {
 //     fn find(&self) -> Option<UnmarkedModel>;
 // }
 
 // ============================================================================
-// Compile-time assertion that ValidUser implements required traits
+// Compile-time assertion that ValidUser implements DomainModel
 // ============================================================================
 
 const _: () = {
     #[allow(dead_code)]
-    fn assert_domain_safe<T: DomainSafe>() {}
-    #[allow(dead_code)]
     fn assert_domain_model<T: DomainModel>() {}
 
     fn _compile_time_checks() {
-        assert_domain_safe::<ValidUser>();
         assert_domain_model::<ValidUser>();
     }
 };
