@@ -24,14 +24,10 @@ pub enum OrderStatus {
 }
 
 fn main() {
-    // Verify that traits are implemented
-    fn assert_domain_safe<T: modkit::domain::DomainSafe>() {}
+    // Verify that DomainModel trait is implemented
     fn assert_domain_model<T: modkit::domain::DomainModel>() {}
-    
-    assert_domain_safe::<User>();
+
     assert_domain_model::<User>();
-    assert_domain_safe::<UserId>();
     assert_domain_model::<UserId>();
-    assert_domain_safe::<OrderStatus>();
     assert_domain_model::<OrderStatus>();
 }

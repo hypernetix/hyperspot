@@ -22,58 +22,107 @@ fn domain_model_compile_fail_tests() {
 
 #[cfg(test)]
 mod unit_tests {
-    use modkit::domain::{DomainModel, DomainSafe};
+    use modkit::domain::DomainModel;
+    use modkit_macros::domain_model;
 
-    // Test that marker traits work correctly
-    #[allow(dead_code)]
-    fn assert_domain_safe<T: DomainSafe>() {}
+    // Test that DomainModel trait works correctly
     #[allow(dead_code)]
     fn assert_domain_model<T: DomainModel>() {}
 
     #[test]
-    fn test_primitives_are_domain_safe() {
-        assert_domain_safe::<bool>();
-        assert_domain_safe::<i32>();
-        assert_domain_safe::<i64>();
-        assert_domain_safe::<u32>();
-        assert_domain_safe::<f64>();
-        assert_domain_safe::<String>();
-        assert_domain_safe::<char>();
+    fn test_domain_model_macro_with_primitives() {
+        #[domain_model]
+        struct User {
+            id: i32,
+            name: String,
+            active: bool,
+        }
+
+        assert_domain_model::<User>();
     }
 
     #[test]
-    fn test_collections_are_domain_safe() {
-        assert_domain_safe::<Vec<String>>();
-        assert_domain_safe::<Option<i32>>();
-        assert_domain_safe::<std::collections::HashMap<String, i32>>();
-        assert_domain_safe::<std::collections::HashSet<String>>();
-        assert_domain_safe::<std::collections::BTreeMap<String, i32>>();
+    fn test_domain_model_macro_with_collections() {
+        #[domain_model]
+        struct Container {
+            items: Vec<String>,
+            maybe_value: Option<i32>,
+            tags: std::collections::HashSet<String>,
+        }
+
+        assert_domain_model::<Container>();
     }
 
     #[test]
-    fn test_uuid_is_domain_safe() {
-        assert_domain_safe::<uuid::Uuid>();
+    fn test_domain_model_macro_with_uuid() {
+        #[domain_model]
+        struct Entity {
+            id: uuid::Uuid,
+            name: String,
+        }
+
+        assert_domain_model::<Entity>();
     }
 
     #[test]
-    fn test_nested_types_are_domain_safe() {
-        assert_domain_safe::<Vec<Option<uuid::Uuid>>>();
-        assert_domain_safe::<Option<Vec<String>>>();
-        assert_domain_safe::<Result<String, String>>();
-        assert_domain_safe::<Box<String>>();
-        assert_domain_safe::<std::sync::Arc<String>>();
+    fn test_domain_model_macro_with_nested_types() {
+        #[domain_model]
+        struct Nested {
+            maybe_items: Vec<Option<uuid::Uuid>>,
+            boxed: Box<String>,
+            arc: std::sync::Arc<String>,
+        }
+
+        assert_domain_model::<Nested>();
     }
 
     #[test]
-    fn test_tuples_are_domain_safe() {
-        assert_domain_safe::<(i32,)>();
-        assert_domain_safe::<(i32, String)>();
-        assert_domain_safe::<(i32, String, bool)>();
+    fn test_domain_model_macro_with_tuples() {
+        #[domain_model]
+        struct WithTuples {
+            pair: (i32, String),
+            triple: (i32, String, bool),
+        }
+
+        assert_domain_model::<WithTuples>();
     }
 
     #[test]
-    fn test_modkit_page_is_domain_safe() {
-        assert_domain_safe::<modkit_odata::Page<String>>();
-        assert_domain_safe::<modkit_odata::PageInfo>();
+    fn test_domain_model_macro_with_page() {
+        #[domain_model]
+        struct WithPagination {
+            results: modkit_odata::Page<String>,
+            page_info: modkit_odata::PageInfo,
+        }
+
+        assert_domain_model::<WithPagination>();
+    }
+
+    #[test]
+    fn test_domain_model_macro_with_enum() {
+        #[domain_model]
+        enum Status {
+            Active,
+            Inactive { reason: String },
+            Pending(i32),
+        }
+
+        assert_domain_model::<Status>();
+    }
+
+    #[test]
+    fn test_domain_model_macro_unit_struct() {
+        #[domain_model]
+        struct Marker;
+
+        assert_domain_model::<Marker>();
+    }
+
+    #[test]
+    fn test_domain_model_macro_tuple_struct() {
+        #[domain_model]
+        struct UserId(uuid::Uuid);
+
+        assert_domain_model::<UserId>();
     }
 }

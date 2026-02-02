@@ -1403,6 +1403,8 @@ name = "cf-simple-user-settings-sdk"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "cf-modkit",
+ "cf-modkit-macros",
  "cf-modkit-security",
  "thiserror 2.0.18",
  "time",

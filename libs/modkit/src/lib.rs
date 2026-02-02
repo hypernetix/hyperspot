@@ -145,6 +145,7 @@ pub mod gts;
 
 // Domain layer marker traits for DDD enforcement
 pub mod domain;
+#[allow(deprecated)]
 pub use domain::{DomainErrorMarker, DomainModel, DomainSafe};
 
 // Security context scoping wrapper (re-exported from modkit-sdk)
