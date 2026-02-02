@@ -7,7 +7,7 @@
 // Should trigger DE0301 - infra in domain
 use sea_orm::entity::*;
 
-// Should trigger DE0301 - infra in domain  
+// Should trigger DE0301 - infra in domain
 use sqlx::Pool;
 
 // Should trigger DE0301 - infra in domain

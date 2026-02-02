@@ -25,7 +25,7 @@ dylint_linting::declare_early_lint! {
     /// // Bad - HTTP types in contract
     /// mod contract {
     ///     use http::StatusCode\;
-    ///     
+    ///
     ///     pub struct OrderResult {
     ///         pub status: StatusCode,  // ❌ HTTP-specific
     ///     }
@@ -42,12 +42,12 @@ dylint_linting::declare_early_lint! {
     ///         Confirmed,
     ///         Shipped,
     ///     }
-    ///     
+    ///
     ///     pub struct OrderResult {
     ///         pub status: OrderStatus,  // ✅ Domain type
     ///     }
     /// }
-    /// 
+    ///
     /// // HTTP types in API layer
     /// mod api {
     ///     use http::StatusCode\;
@@ -74,18 +74,22 @@ const HTTP_TYPE_PATTERNS: &[&str] = &[
 
 fn use_tree_to_string(tree: &UseTree) -> String {
     match &tree.kind {
-        UseTreeKind::Simple(..) | UseTreeKind::Glob => {
-            tree.prefix.segments.iter()
-                .map(|seg| seg.ident.name.as_str())
-                .collect::<Vec<_>>()
-                .join("::")
-        }
+        UseTreeKind::Simple(..) | UseTreeKind::Glob => tree
+            .prefix
+            .segments
+            .iter()
+            .map(|seg| seg.ident.name.as_str())
+            .collect::<Vec<_>>()
+            .join("::"),
         UseTreeKind::Nested { items, .. } => {
-            let prefix = tree.prefix.segments.iter()
+            let prefix = tree
+                .prefix
+                .segments
+                .iter()
                 .map(|seg| seg.ident.name.as_str())
                 .collect::<Vec<_>>()
                 .join("::");
-            
+
             for (nested_tree, _) in items {
                 let nested_str = use_tree_to_string(nested_tree);
                 if !nested_str.is_empty() {
@@ -106,10 +110,10 @@ fn check_use_in_contract(cx: &rustc_lint::EarlyContext<'_>, item: &Item) {
     for pattern in HTTP_TYPE_PATTERNS {
         if path_str.contains(pattern) {
             cx.span_lint(DE0103_NO_HTTP_TYPES_IN_CONTRACT, item.span, |diag| {
-                diag.primary_message(
-                    "contract module imports HTTP type (DE0103)"
+                diag.primary_message("contract module imports HTTP type (DE0103)");
+                diag.help(
+                    "contract modules should be transport-agnostic; move HTTP types to api/rest/",
                 );
-                diag.help("contract modules should be transport-agnostic; move HTTP types to api/rest/");
             });
             break;
         }
@@ -120,7 +124,8 @@ impl EarlyLintPass for De0103NoHttpTypesInContract {
     fn check_item(&mut self, cx: &rustc_lint::EarlyContext<'_>, item: &Item) {
         // Check use statements in file-based contract modules
         if matches!(item.kind, ItemKind::Use(_))
-            && is_in_contract_path(cx.sess().source_map(), item.span) {
+            && is_in_contract_path(cx.sess().source_map(), item.span)
+        {
             check_use_in_contract(cx, item);
         }
     }
@@ -136,6 +141,10 @@ mod tests {
     #[test]
     fn test_comment_annotations_match_stderr() {
         let ui_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("ui");
-        lint_utils::test_comment_annotations_match_stderr(&ui_dir, "DE0103", "HTTP types in contract");
+        lint_utils::test_comment_annotations_match_stderr(
+            &ui_dir,
+            "DE0103",
+            "HTTP types in contract",
+        );
     }
 }

@@ -98,7 +98,9 @@ impl<'tcx> LateLintPass<'tcx> for De0902NoSchemaForOnGtsStructs {
 
                 // Check if the callsite is a schema_for! macro call by looking at the source
                 let source_map = cx.sess().source_map();
-                let snippet = source_map.span_to_snippet(callsite_span).unwrap_or_default();
+                let snippet = source_map
+                    .span_to_snippet(callsite_span)
+                    .unwrap_or_default();
                 if !snippet.contains("schema_for!") {
                     return;
                 }

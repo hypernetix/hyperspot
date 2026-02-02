@@ -63,8 +63,12 @@ impl EarlyLintPass for De0104NoApiDtoInContract {
         for attr in &item.attrs {
             if let rustc_ast::AttrKind::Normal(attr_item) = &attr.kind {
                 let path = &attr_item.item.path;
-                let segments: Vec<&str> = path.segments.iter().map(|s| s.ident.name.as_str()).collect();
-                
+                let segments: Vec<&str> = path
+                    .segments
+                    .iter()
+                    .map(|s| s.ident.name.as_str())
+                    .collect();
+
                 // Check if this is an api_dto attribute
                 // Handles: api_dto, modkit_macros::api_dto, ::modkit_macros::api_dto
                 let is_api_dto = match segments.as_slice() {

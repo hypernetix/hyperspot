@@ -1,5 +1,4 @@
 #[allow(dead_code)]
-
 use async_trait::async_trait;
 
 // Should not trigger DE0503 - PluginApi suffix

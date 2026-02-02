@@ -3,9 +3,9 @@
 
 extern crate rustc_ast;
 
+use lint_utils::{is_in_hyperspot_server_path, is_in_modkit_db_path, use_tree_to_strings};
 use rustc_ast::{Item, ItemKind};
 use rustc_lint::{EarlyLintPass, LintContext};
-use lint_utils::{is_in_modkit_db_path, is_in_hyperspot_server_path, use_tree_to_strings};
 
 dylint_linting::declare_early_lint! {
     /// ### What it does
@@ -80,17 +80,17 @@ impl EarlyLintPass for De0706NoDirectSqlx {
         if is_in_modkit_db_path(cx.sess().source_map(), item.span) {
             return;
         }
-        
+
         // Skip apps/hyperspot-server/ - it needs sqlx driver linkage workaround
         if is_in_hyperspot_server_path(cx.sess().source_map(), item.span) {
             return;
         }
-        
+
         // Check use statements for sqlx imports
         if matches!(item.kind, ItemKind::Use(_)) {
             check_use_for_sqlx(cx, item);
         }
-        
+
         // Check extern crate declarations
         // ExternCrate(rename, ident): rename is Some for `extern crate foo as bar`
         // For plain `extern crate sqlx;`, rename is None and we check ident
@@ -99,7 +99,7 @@ impl EarlyLintPass for De0706NoDirectSqlx {
                 Some(sym) => sym.as_str() == SQLX_PATTERN,
                 None => ident.name.as_str() == SQLX_PATTERN,
             };
-            
+
             if is_sqlx {
                 cx.span_lint(DE0706_NO_DIRECT_SQLX, item.span, |diag| {
                     diag.primary_message("extern crate sqlx is prohibited (DE0706)");
@@ -121,10 +121,6 @@ mod tests {
     #[test]
     fn test_comment_annotations_match_stderr() {
         let ui_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("ui");
-        lint_utils::test_comment_annotations_match_stderr(
-            &ui_dir,
-            "DE0706",
-            "sqlx"
-        );
+        lint_utils::test_comment_annotations_match_stderr(&ui_dir, "DE0706", "sqlx");
     }
 }
