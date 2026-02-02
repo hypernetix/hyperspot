@@ -9,6 +9,18 @@ release-plz updates this file in the Release PR.
 
 ## [Unreleased]
 
+## [0.1.5](https://github.com/hypernetix/hyperspot/compare/cf-system-sdks-v0.1.4...cf-system-sdks-v0.1.5) - 2026-02-02
+
+### Other
+
+- updated the following local packages: cf-system-sdk-directory
+
+## [0.1.5](https://github.com/hypernetix/hyperspot/compare/cf-system-sdk-directory-v0.1.4...cf-system-sdk-directory-v0.1.5) - 2026-02-02
+
+### Other
+
+- updated the following local packages: cf-modkit-transport-grpc
+
 ### Breaking Changes
 
 - **DatabaseCapability refactored**: Modules no longer receive raw database connections.
