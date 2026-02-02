@@ -1,4 +1,10 @@
-#![allow(clippy::unwrap_used, clippy::expect_used)]
+#![allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    dead_code,
+    clippy::box_collection,
+    clippy::rc_buffer
+)]
 
 //! Compile-fail tests for `domain_model` macro enforcement.
 //!
