@@ -162,7 +162,7 @@ mod tests {
         let client = TracedClient::default();
 
         // Just verify all methods can be called (they'll fail without a server, but that's ok)
-        let url = "http://example.com/test";
+        let url = "https://example.com/test";
 
         // These will error due to no server, but we're just testing the API exists
         let _ = client.get(url).await;
