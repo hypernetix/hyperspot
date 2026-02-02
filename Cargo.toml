@@ -25,6 +25,7 @@ members = [
     "apps/gts-docs-validator",
     "libs/modkit",
     "libs/modkit-macros",
+    "libs/modkit-macros-tests",
     "libs/modkit-db",
     "libs/modkit-db-macros",
     "libs/modkit-auth",

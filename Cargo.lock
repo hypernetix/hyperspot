@@ -1003,17 +1003,24 @@ dependencies = [
 name = "cf-modkit-macros"
 version = "0.1.5"
 dependencies = [
- "anyhow",
- "async-trait",
- "cf-modkit",
- "cf-modkit-security",
- "cf-modkit-transport-grpc",
  "heck 0.5.0",
- "inventory",
  "proc-macro2",
  "quote",
  "strsim",
  "syn 2.0.114",
+]
+
+[[package]]
+name = "cf-modkit-macros-tests"
+version = "0.1.5"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "cf-modkit",
+ "cf-modkit-macros",
+ "cf-modkit-security",
+ "cf-modkit-transport-grpc",
+ "inventory",
  "tokio",
  "tokio-util",
  "tonic",
