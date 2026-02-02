@@ -53,6 +53,8 @@ members = [
     "examples/oop-modules/calculator/calculator",
     "modules/system/types_registry/types_registry-sdk",
     "modules/system/types_registry/types_registry",
+    "modules/system/types-sdk",
+    "modules/system/types",
     "modules/simple_user_settings/simple_user_settings_sdk",
     "modules/simple_user_settings/simple_user_settings",
     "examples/plugin-modules/tenant_resolver/tenant_resolver-sdk",
