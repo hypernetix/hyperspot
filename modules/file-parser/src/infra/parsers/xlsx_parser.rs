@@ -55,9 +55,7 @@ impl ExcelFormat {
             .extension()
             .and_then(|os| os.to_str())
             .ok_or_else(|| {
-                DomainError::parse_error(format!(
-                    "Unrecognized Excel file extension: '{filename}'"
-                ))
+                DomainError::parse_error(format!("Unrecognized Excel file extension: '{filename}'"))
             })?;
 
         match ext.to_lowercase().as_str() {
