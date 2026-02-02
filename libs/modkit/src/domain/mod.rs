@@ -100,7 +100,7 @@ pub trait DomainErrorMarker: std::error::Error + Send + Sync {}
 
 #[allow(deprecated)]
 mod compat {
-    use super::*;
+    use super::{DomainSafe, Uuid};
 
     // Keep minimal implementations for backward compatibility
     impl DomainSafe for () {}
