@@ -3,7 +3,10 @@
 
 extern crate rustc_ast;
 
-use lint_utils::{is_in_hyperspot_server_path, is_in_modkit_db_path, use_tree_to_strings};
+use lint_utils::{
+    is_in_contract_module_ast, is_in_hyperspot_server_path, is_in_modkit_db_path,
+    use_tree_to_strings,
+};
 use rustc_ast::{Item, ItemKind};
 use rustc_lint::{EarlyLintPass, LintContext};
 
@@ -83,6 +86,11 @@ impl EarlyLintPass for De0706NoDirectSqlx {
 
         // Skip apps/hyperspot-server/ - it needs sqlx driver linkage workaround
         if is_in_hyperspot_server_path(cx.sess().source_map(), item.span) {
+            return;
+        }
+
+        // Skip contract/ modules - they may need sqlx types for test fixtures
+        if is_in_contract_module_ast(cx, item) {
             return;
         }
 
