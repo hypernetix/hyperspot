@@ -1,0 +1,18 @@
+warning: unused import: `ConnectOpts`
+ --> tests/ui/fail/module_cannot_access_sea_internal.rs:9:27
+  |
+9 | use modkit_db::{DbHandle, ConnectOpts};
+  |                           ^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+error[E0624]: method `sea_internal` is private
+  --> tests/ui/fail/module_cannot_access_sea_internal.rs:14:28
+   |
+14 |     let _raw_conn = handle.sea_internal();
+   |                            ^^^^^^^^^^^^ private method
+   |
+  ::: src/lib.rs
+   |
+   |     pub(crate) fn sea_internal(&self) -> DatabaseConnection {
+   |     ------------------------------------------------------- private method defined here

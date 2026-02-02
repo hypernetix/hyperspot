@@ -1,43 +1,83 @@
 # Secure ORM and Database Access
 
-ModKit provides a secure-by-default ORM layer that enforces request-scoped security with compile-time guarantees. See `docs/SECURE-ORM.md` for the complete guide.
+This document describes how to use the secure ORM layer (`SecureConn` + `AccessScope`) and what is forbidden (raw DB handles, plain SQL in module code).
 
 ## Core invariants
 
 - **Rule**: Use `SecureConn` for all DB access in handlers/services.
-- **Rule**: Use `SecurityContext` for tenant/resource scoping.
+- **Rule**: Use `AccessScope` for tenant/resource scoping. Build it from request context (e.g., `SecurityContext` + resolved accessible tenants).
 - **Rule**: Derive `Scopable` on SeaORM entities with tenant/resource columns.
-- **Rule**: Raw access only for migrations/admin tools and requires `insecure-escape` feature.
-- **Rule**: Do not bypass SecureConn without explicit justification.
+- **Rule**: Modules cannot access raw database connections/pools.
+- **Rule**: No plain SQL in handlers/services/repos. Raw SQL is allowed only in migration infrastructure.
+
+## Implicit security policy (how `AccessScope` is applied)
+
+| Scope | Entity has column? | Result |
+|------|---------------------|--------|
+| Empty (`tenant_ids` and `resource_ids` empty) | N/A | deny all (`WHERE false`) |
+| Tenants only | has `tenant_col` | `tenant_col IN (tenant_ids)` |
+| Tenants only | no `tenant_col` | deny all |
+| Resources only | has `resource_col` | `resource_col IN (resource_ids)` |
+| Resources only | no `resource_col` | deny all |
+| Tenants + resources | has both | AND them |
+| Tenants + resources | missing either column | deny all |
+
+This is enforced inside `modkit-db` when you call `.scope_with(&scope)` / `SecureConn::find*` / `SecureConn::update_many` / `SecureConn::delete_many`.
 
 ## SecureConn usage
 
 ### Preferred: SecureConn for scoped access
 
 ```rust
-use modkit_db::SecureConn;
-use modkit_security::SecurityContext;
+use modkit_db::secure::AccessScope;
 
 pub async fn list_users(
     Authz(ctx): Authz,
     Extension(db): Extension<Arc<DbHandle>>,
 ) -> ApiResult<JsonPage<UserDto>> {
     let secure_conn = db.sea_secure();
+    let scope = AccessScope::tenant(ctx.tenant_id());
     let users = secure_conn
-        .find::<user::Entity>(&ctx)?
-        .all(secure_conn.conn())
+        .find::<user::Entity>(&scope)
+        .all(&secure_conn)
         .await?;
     Ok(Json(users.into_iter().map(UserDto::from).collect()))
 }
 ```
 
-### Exceptional: Raw access (migrations, admin tools)
+## Executors: `DBRunner` and `SecureTx`
+
+- Repository methods should accept **`runner: &impl DBRunner`**, not `&SecureConn`.
+- Inside a transaction callback, you get **`&SecureTx`**. It also implements `DBRunner`, so the same repository methods work both inside and outside a transaction.
+
+Example signature:
 
 ```rust
-// Requires insecure-escape feature
-let sea = db.sea();      // Direct SeaORM connection
-let pool = db.sqlx_pool();  // Direct SQLx pool
+use modkit_db::secure::{AccessScope, DBRunner};
+
+pub async fn create_user(
+    runner: &impl DBRunner,
+    scope: &AccessScope,
+    user: user::ActiveModel,
+) -> Result<user::Model, ScopeError> {
+    // ...
+}
 ```
+
+## Database Migrations
+
+Modules provide migration definitions that the runtime executes with a privileged connection:
+
+```rust
+impl DatabaseCapability for MyModule {
+    fn migrations(&self) -> Vec<Box<dyn sea_orm_migration::MigrationTrait>> {
+        use sea_orm_migration::MigratorTrait;
+        crate::infra::storage::migrations::Migrator::migrations()
+    }
+}
+```
+
+Each module gets its own migration history table (`modkit_migrations__<prefix>__<hash8>`), ensuring isolation between modules.
 
 ## Scopable entities
 
@@ -73,107 +113,125 @@ impl ActiveModelBehavior for ActiveModel {}
 
 ### Scopable attributes
 
-- `tenant_col`: Column name for tenant scoping (required for multi-tenant)
-- `resource_col`: Column name for resource-level scoping (optional)
-- `owner_col`: Column name for owner-based scoping (optional)
-- `type_col`: Column name for type-based scoping (optional)
-- `no_owner`: Skip owner-based scoping
-- `no_type`: Skip type-based scoping
+- `tenant_col = "..."` / `no_tenant`
+- `resource_col = "..."` / `no_resource`
+- `owner_col = "..."` / `no_owner`
+- `type_col = "..."` / `no_type`
+- `unrestricted` (special case; cannot be combined with other attributes)
 
-## SecurityContext in queries
+Rule: all four dimensions must be declared (either `*_col` or `no_*`), unless `unrestricted` is used.
+
+### Unrestricted entities (`#[secure(unrestricted)]`)
+
+Use `#[secure(unrestricted)]` only for truly global tables where the entity has **no scoping columns**. Notes:
+
+- `secure_insert` does not require `tenant_id` for such entities.
+- Queries with a scope that contains tenant IDs will be denied (by policy: tenants requested but entity has no `tenant_col`).
+- If you need to read/write a global table within a tenant-scoped request, do not use `unrestricted`. Model it with explicit columns and use an appropriate scope shape (often `resources_only`).
+
+## AccessScope in queries
 
 ### Auto-scoped queries
 
 ```rust
 let secure_conn = db.sea_secure();
+let scope = AccessScope::tenant(ctx.tenant_id());
 
 // Automatically adds tenant_id = ? filter
 let users = secure_conn
-    .find::<user::Entity>(&ctx)?
-    .all(secure_conn.conn())
+    .find::<user::Entity>(&scope)
+    .all(&secure_conn)
     .await?;
 
 // Automatically adds tenant_id = ? AND id = ? filters
 let user = secure_conn
-    .find_by_id::<user::Entity>(&ctx, user_id)?
-    .one(secure_conn.conn())
+    .find_by_id::<user::Entity>(&scope, user_id)?
+    .one(&secure_conn)
     .await?;
 ```
 
 ### Manual scoping
 
 ```rust
-// For complex queries, use with_security_ctx
-let query = user::Entity::find()
-    .filter(user::Column::Email.eq(email))
-    .with_security_ctx(&ctx);
+use modkit_db::secure::SecureEntityExt;
 
-let user = query.one(secure_conn.conn()).await?;
+// For complex queries, build your filters first, then apply scope and execute via SecureConn.
+let user = user::Entity::find()
+    .filter(user::Column::Email.eq(email))
+    .secure()
+    .scope_with(&scope)
+    .one(&secure_conn)
+    .await?;
 ```
+
+### Advanced scoping for joins / related entities
+
+Use these when the base entity cannot be tenant-filtered directly:
+
+- `SecureSelect::and_scope_for::<J>(&scope)` — apply tenant scoping on a joined entity `J`.
+- `SecureSelect::scope_via_exists::<J>(&scope)` — apply tenant scoping via an `EXISTS` subquery on `J`.
 
 ## Repository pattern
 
-### Repository with SecureConn
+### Repository with `DBRunner` (works with both `SecureConn` and `SecureTx`)
 
 ```rust
-pub struct UserRepository {
-    db: Arc<DbHandle>,
-}
+use modkit_db::secure::{AccessScope, DBRunner, ScopeError, SecureEntityExt};
+use sea_orm::Set;
+
+pub struct UserRepository;
 
 impl UserRepository {
-    pub fn new(db: Arc<DbHandle>) -> Self {
-        Self { db }
-    }
-
     pub async fn find_by_id(
         &self,
-        ctx: &SecurityContext,
+        runner: &impl DBRunner,
+        scope: &AccessScope,
         id: Uuid,
-    ) -> Result<Option<user::Model>, DomainError> {
-        let secure_conn = self.db.sea_secure();
-        let user = secure_conn
-            .find_by_id::<user::Entity>(ctx, id)?
-            .one(secure_conn.conn())
-            .await?;
-        Ok(user)
-    }
-
-    pub async fn list(
-        &self,
-        ctx: &SecurityContext,
-        limit: u64,
-        offset: u64,
-    ) -> Result<Vec<user::Model>, DomainError> {
-        let secure_conn = self.db.sea_secure();
-        let users = secure_conn
-            .find::<user::Entity>(ctx)?
-            .limit(limit)
-            .offset(offset)
-            .all(secure_conn.conn())
-            .await?;
-        Ok(users)
+    ) -> Result<Option<user::Model>, ScopeError> {
+        Ok(user::Entity::find_by_id(id)
+            .secure()
+            .scope_with(scope)
+            .one(runner)
+            .await?)
     }
 
     pub async fn create(
         &self,
-        ctx: &SecurityContext,
+        runner: &impl DBRunner,
+        scope: &AccessScope,
         new_user: user_info_sdk::NewUser,
-    ) -> Result<user::Model, DomainError> {
-        let secure_conn = self.db.sea_secure();
-        let user = user::ActiveModel {
+    ) -> Result<user::Model, ScopeError> {
+        let am = user::ActiveModel {
             id: Set(new_user.id.unwrap_or_else(Uuid::new_v4)),
-            tenant_id: Set(ctx.tenant_id()),
+            tenant_id: Set(new_user.tenant_id),
             email: Set(new_user.email),
             display_name: Set(new_user.display_name),
-            created_at: Set(Utc::now()),
-            updated_at: Set(Utc::now()),
+            ..Default::default()
         };
 
-        let result = user.insert(secure_conn.conn()).await?;
-        Ok(result)
+        modkit_db::secure::secure_insert::<user::Entity>(am, scope, runner).await
     }
 }
 ```
+
+## Mutations (security rules)
+
+### Insert (`secure_insert` / `SecureConn::insert`)
+
+- If the entity has a `tenant_col`, the `ActiveModel` MUST include `tenant_id`.
+- The inserted `tenant_id` MUST be inside `scope.tenant_ids()`.
+- Violations are errors (`Denied` / `TenantNotInScope` / `Invalid("tenant_id is required")`).
+
+### Update one record (`SecureConn::update_with_ctx`)
+
+- There is no public unscoped update-one API.
+- `update_with_ctx(scope, id, am)` first checks the row exists in scope.
+- For tenant-scoped entities, `tenant_id` is immutable. Attempts to change it are denied.
+
+### Update many (`SecureConn::update_many`)
+
+- Must be scoped via `scope_with` / `SecureConn::update_many(scope)`.
+- Attempts to set the `tenant_id` column are denied at runtime (`Denied("tenant_id is immutable")`).
 
 ## Transactions
 
@@ -188,87 +246,33 @@ pub async fn transfer_user(
     user_id: Uuid,
 ) -> Result<(), DomainError> {
     let secure_conn = self.db.sea_secure();
-    let txn = secure_conn.conn().begin().await?;
+    let scope = AccessScope::tenant(ctx.tenant_id());
 
-    // Use transaction for all operations
-    let txn_conn = &txn;
-    
-    // Update user tenant
-    let user = user::ActiveModel {
-        id: Set(user_id),
-        tenant_id: Set(to_tenant),
-        updated_at: Set(Utc::now()),
-        ..Default::default()
-    };
-    
-    user.update(txn_conn).await?;
-    
-    txn.commit().await?;
-    Ok(())
+    secure_conn
+        .in_transaction_mapped(DomainError::database_infra, move |tx| {
+            Box::pin(async move {
+                // Use `tx` as the connection for repository calls.
+                // Example:
+                // repo.transfer_user(tx, &scope, from_tenant, to_tenant, user_id).await?;
+                Ok(())
+            })
+        })
+        .await
 }
 ```
 
-## Raw SQL (exceptional)
+## Raw SQL (policy)
 
-### When to use raw SQL
+Raw SQL is **allowed only in migration infrastructure** (migration runner + migration definitions).
 
-- Complex queries not expressible with SeaORM
-- Performance-critical bulk operations
-- Migrations and admin tools
-
-### Raw SQL with SecureConn
-
-> **Note**: This example uses PostgreSQL-specific placeholder syntax (`$1`, `$2`). For MySQL/SQLite, use `?` instead, or use SeaQuery/SeaORM query builders for backend-agnostic queries.
-
-```rust
-use sea_orm::Statement;
-use sea_orm::FromQueryResult;
-
-#[derive(FromQueryResult)]
-struct UserSummary {
-    id: Uuid,
-    email: String,
-    post_count: i64,
-}
-
-pub async fn get_user_summary(
-    &self,
-    ctx: &SecurityContext,
-    user_id: Uuid,
-) -> Result<UserSummary, DomainError> {
-    let secure_conn = self.db.sea_secure();
-    
-    // Postgres-specific placeholders ($1, $2)
-    let stmt = Statement::from_sql_and_values(
-        secure_conn.conn().get_database_backend(),
-        r#"
-        SELECT 
-            u.id,
-            u.email,
-            COUNT(p.id) as post_count
-        FROM users u
-        LEFT JOIN posts p ON u.id = p.user_id
-        WHERE u.tenant_id = $1 AND u.id = $2
-        GROUP BY u.id, u.email
-        "#,
-        [ctx.tenant_id().into(), user_id.into()],
-    );
-
-    let result = UserSummary::find_by_statement(stmt)
-        .one(secure_conn.conn())
-        .await?
-        .ok_or(DomainError::UserNotFound { id: user_id })?;
-
-    Ok(result)
-}
-```
+- Module code (handlers/services/repos) must use the Secure ORM (`SecureConn` / `SecureTx` + secure wrappers).
+- Direct SQL execution from module code is forbidden.
 
 ## Migration considerations
 
-### Migrations use raw access
+### Migrations use raw SQL
 
 ```rust
-// In migration files, use raw access
 use sea_orm_migration::prelude::*;
 
 #[derive(DeriveMigrationName)]
@@ -277,35 +281,32 @@ pub struct Migration;
 #[async_trait::async_trait]
 impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
-        // Use raw SQL for schema changes
         manager
             .create_table(
                 Table::create()
                     .table(Users::Table)
                     .if_not_exists()
-                    .col(ColumnDef::new(Users::Id).uuid().primary_key())
+                    .col(ColumnDef::new(Users::Id).uuid().not_null().primary_key())
                     .col(ColumnDef::new(Users::TenantId).uuid().not_null())
                     .col(ColumnDef::new(Users::Email).string().not_null())
-                    .col(ColumnDef::new(Users::DisplayName).string().not_null())
-                    .col(ColumnDef::new(Users::CreatedAt).timestamp_with_time_zone().not_null())
-                    .col(ColumnDef::new(Users::UpdatedAt).timestamp_with_time_zone().not_null())
                     .to_owned(),
             )
-            .await?;
-
-        // Add indexes for security columns
-        manager
-            .create_index(
-                Index::create()
-                    .name("idx_users_tenant_id")
-                    .table(Users::Table)
-                    .col(Users::TenantId)
-                    .to_owned(),
-            )
-            .await?;
-
-        Ok(())
+            .await
     }
+
+    async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+        manager
+            .drop_table(Table::drop().table(Users::Table).to_owned())
+            .await
+    }
+}
+
+#[derive(DeriveIden)]
+enum Users {
+    Table,
+    Id,
+    TenantId,
+    Email,
 }
 ```
 
@@ -315,17 +316,18 @@ impl MigrationTrait for Migration {
 
 ```rust
 use modkit_db::DbHandle;
-use modkit_security::SecurityContext;
+use modkit_security::AccessScope;
 
 #[tokio::test]
 async fn test_user_repository() {
     let db = setup_test_db().await;
-    let ctx = SecurityContext::test_tenant(Uuid::new_v4());
-    let repo = UserRepository::new(db);
+    let scope = AccessScope::tenant(Uuid::new_v4());
+    let repo = UserRepository;
+    let conn = db.sea_secure();
 
     // Test operations
-    let user = repo.create(&ctx, new_user).await.unwrap();
-    let found = repo.find_by_id(&ctx, user.id).await.unwrap();
+    let user = repo.create(&conn, &scope, new_user).await.unwrap();
+    let found = repo.find_by_id(&conn, &scope, user.id).await.unwrap();
     assert_eq!(found.id, user.id);
 }
 ```
@@ -334,8 +336,13 @@ async fn test_user_repository() {
 
 - [ ] Derive `Scopable` on SeaORM entities with `tenant_col` (required).
 - [ ] Use `db.sea_secure()` for all DB access in handlers/services.
-- [ ] Pass `SecurityContext` to repository methods.
-- [ ] Use `secure_conn.find::<Entity>(&ctx)?` for auto-scoped queries.
-- [ ] Use raw SQL only for exceptional cases (migrations, admin tools).
+- [ ] Build `AccessScope` from request context (and resolved accessible tenants if applicable).
+- [ ] Use `secure_conn.find::<Entity>(&scope).all(&secure_conn)` for auto-scoped queries.
+- [ ] Use `secure_conn.update_with_ctx::<Entity>(&scope, id, am)` for single-record updates.
+- [ ] Use raw SQL only in `migrations/*.rs` (enforced later via dylint).
 - [ ] Add indexes on security columns (tenant_id, resource_id).
-- [ ] Test with `SecurityContext::test_tenant()` for unit tests.
+- [ ] In tests, build scopes explicitly (`AccessScope::tenant(...)`, `AccessScope::tenants_only(...)`, `AccessScope::resources_only(...)`).
+
+## Related docs
+
+- OData pagination / filtering: `docs/modkit_unified_system/07_odata_pagination_select_filter.md`

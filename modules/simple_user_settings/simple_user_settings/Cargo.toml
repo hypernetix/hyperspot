@@ -52,3 +52,4 @@ modkit-macros = { workspace = true }
 
 [dev-dependencies]
 tower = { workspace = true, features = ["util"] }
+modkit-db = { workspace = true, features = ["sqlite"] }

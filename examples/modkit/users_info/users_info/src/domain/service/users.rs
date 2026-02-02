@@ -1,5 +1,3 @@
-use std::future::Future;
-use std::pin::Pin;
 use std::sync::Arc;
 use tracing::instrument;
 
@@ -7,8 +5,8 @@ use crate::domain::error::DomainError;
 use crate::domain::events::UserDomainEvent;
 use crate::domain::ports::{AuditPort, EventPublisher};
 use crate::domain::repos::{AddressesRepository, CitiesRepository, UsersRepository};
+use crate::domain::service::DbProvider;
 use crate::domain::service::{AddressesService, CitiesService, ServiceConfig};
-use modkit_db::secure::{SecureConn, Tx};
 use modkit_odata::{ODataQuery, Page};
 use modkit_security::{PolicyEngineRef, SecurityContext};
 use tenant_resolver_sdk::TenantResolverGatewayClient;
@@ -16,12 +14,22 @@ use time::OffsetDateTime;
 use user_info_sdk::{NewUser, User, UserFull, UserPatch};
 use uuid::Uuid;
 
-#[derive(Clone)]
+/// Users service.
+///
+/// # Design
+///
+/// Services acquire database connections internally via `DBProvider`. Handlers
+/// call service methods with business parameters only - no DB objects.
+///
+/// This design:
+/// - Keeps handlers clean and focused on HTTP concerns
+/// - Centralizes DB error mapping in the domain layer
+/// - Maintains transaction safety via the task-local guard
 pub struct UsersService<R: UsersRepository + 'static, CR: CitiesRepository, AR: AddressesRepository>
 {
+    db: Arc<DbProvider>,
     policy_engine: PolicyEngineRef,
     repo: Arc<R>,
-    db: SecureConn,
     events: Arc<dyn EventPublisher<UserDomainEvent>>,
     audit: Arc<dyn AuditPort>,
     resolver: Arc<dyn TenantResolverGatewayClient>,
@@ -35,8 +43,8 @@ impl<R: UsersRepository + 'static, CR: CitiesRepository, AR: AddressesRepository
 {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
+        db: Arc<DbProvider>,
         repo: Arc<R>,
-        db: SecureConn,
         events: Arc<dyn EventPublisher<UserDomainEvent>>,
         audit: Arc<dyn AuditPort>,
         policy_engine: PolicyEngineRef,
@@ -46,9 +54,9 @@ impl<R: UsersRepository + 'static, CR: CitiesRepository, AR: AddressesRepository
         addresses: Arc<AddressesService<AR, R>>,
     ) -> Self {
         Self {
+            db,
             policy_engine,
             repo,
-            db,
             events,
             audit,
             resolver,
@@ -56,21 +64,6 @@ impl<R: UsersRepository + 'static, CR: CitiesRepository, AR: AddressesRepository
             cities,
             addresses,
         }
-    }
-
-    /// Execute a transaction with automatic infrastructure error mapping.
-    async fn tx<T, F>(&self, f: F) -> Result<T, DomainError>
-    where
-        T: Send + 'static,
-        F: for<'c> FnOnce(
-                &'c Tx,
-            )
-                -> Pin<Box<dyn Future<Output = Result<T, DomainError>> + Send + 'c>>
-            + Send,
-    {
-        self.db
-            .in_transaction_mapped(DomainError::database_infra, f)
-            .await
     }
 }
 
@@ -96,6 +89,8 @@ impl<R: UsersRepository + 'static, CR: CitiesRepository, AR: AddressesRepository
     pub async fn get_user(&self, ctx: &SecurityContext, id: Uuid) -> Result<User, DomainError> {
         tracing::debug!("Getting user by id");
 
+        let conn = self.db.conn().map_err(DomainError::from)?;
+
         audit_get_user_access_best_effort(self, id).await;
 
         let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
@@ -105,7 +100,7 @@ impl<R: UsersRepository + 'static, CR: CitiesRepository, AR: AddressesRepository
             .prepare()
             .await?;
 
-        let found = self.repo.get(self.db.conn(), &scope, id).await?;
+        let found = self.repo.get(&conn, &scope, id).await?;
 
         let user = found.ok_or_else(|| DomainError::user_not_found(id))?;
 
@@ -122,6 +117,8 @@ impl<R: UsersRepository + 'static, CR: CitiesRepository, AR: AddressesRepository
     ) -> Result<Page<User>, DomainError> {
         tracing::debug!("Listing users with cursor pagination");
 
+        let conn = self.db.conn().map_err(DomainError::from)?;
+
         let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
         let scope = ctx
             .scope(self.policy_engine.clone())
@@ -129,12 +126,13 @@ impl<R: UsersRepository + 'static, CR: CitiesRepository, AR: AddressesRepository
             .prepare()
             .await?;
 
-        let page = self.repo.list_page(self.db.conn(), &scope, query).await?;
+        let page = self.repo.list_page(&conn, &scope, query).await?;
 
         tracing::debug!("Successfully listed {} users in page", page.items.len());
         Ok(page)
     }
 
+    /// Create a new user.
     #[allow(clippy::cognitive_complexity)]
     #[instrument(
         skip(self, ctx),
@@ -148,6 +146,8 @@ impl<R: UsersRepository + 'static, CR: CitiesRepository, AR: AddressesRepository
         tracing::info!("Creating new user");
 
         self.validate_new_user(&new_user)?;
+
+        let conn = self.db.conn().map_err(DomainError::from)?;
 
         let NewUser {
             id: provided_id,
@@ -176,27 +176,19 @@ impl<R: UsersRepository + 'static, CR: CitiesRepository, AR: AddressesRepository
             updated_at: now,
         };
 
-        let repo = Arc::clone(&self.repo);
-        let check_id = provided_id.is_some();
+        // Uniqueness checks and insert
+        if provided_id.is_some() && self.repo.exists(&conn, &scope, id).await? {
+            return Err(DomainError::validation(
+                "id",
+                "User with this ID already exists",
+            ));
+        }
 
-        let created_user = self
-            .tx(move |tx| {
-                Box::pin(async move {
-                    if check_id && repo.exists(tx, &scope, id).await? {
-                        return Err(DomainError::validation(
-                            "id",
-                            "User with this ID already exists",
-                        ));
-                    }
+        if self.repo.count_by_email(&conn, &scope, &user.email).await? > 0 {
+            return Err(DomainError::email_already_exists(user.email.clone()));
+        }
 
-                    if repo.count_by_email(tx, &scope, &user.email).await? > 0 {
-                        return Err(DomainError::email_already_exists(user.email.clone()));
-                    }
-
-                    repo.create(tx, &scope, user).await
-                })
-            })
-            .await?;
+        let created_user = self.repo.create(&conn, &scope, user).await?;
 
         let notification_result = self.audit.notify_user_created().await;
         if let Err(e) = notification_result {
@@ -212,6 +204,7 @@ impl<R: UsersRepository + 'static, CR: CitiesRepository, AR: AddressesRepository
         Ok(created_user)
     }
 
+    /// Update an existing user.
     #[instrument(skip(self, ctx), fields(user_id = %id))]
     pub async fn update_user(
         &self,
@@ -223,6 +216,8 @@ impl<R: UsersRepository + 'static, CR: CitiesRepository, AR: AddressesRepository
 
         self.validate_user_patch(&patch)?;
 
+        let conn = self.db.conn().map_err(DomainError::from)?;
+
         let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
         let scope = ctx
             .scope(self.policy_engine.clone())
@@ -230,41 +225,30 @@ impl<R: UsersRepository + 'static, CR: CitiesRepository, AR: AddressesRepository
             .prepare()
             .await?;
 
-        let repo = Arc::clone(&self.repo);
+        let found = self.repo.get(&conn, &scope, id).await?;
+        let mut current: User = match found {
+            Some(u) => u,
+            None => return Err(DomainError::user_not_found(id)),
+        };
 
-        let updated_user = self
-            .tx(move |tx| {
-                let repo = repo.clone();
-                let scope = scope.clone();
-                let patch = patch.clone();
-                Box::pin(async move {
-                    let found = repo.get(tx, &scope, id).await?;
-                    let mut current: User = match found {
-                        Some(u) => u,
-                        None => return Err(DomainError::user_not_found(id)),
-                    };
+        if let Some(ref new_email) = patch.email
+            && new_email != &current.email
+        {
+            let count = self.repo.count_by_email(&conn, &scope, new_email).await?;
+            if count > 0 {
+                return Err(DomainError::email_already_exists(new_email.clone()));
+            }
+        }
 
-                    if let Some(ref new_email) = patch.email
-                        && new_email != &current.email
-                    {
-                        let count = repo.count_by_email(tx, &scope, new_email).await?;
-                        if count > 0 {
-                            return Err(DomainError::email_already_exists(new_email.clone()));
-                        }
-                    }
+        if let Some(email) = patch.email {
+            current.email = email;
+        }
+        if let Some(display_name) = patch.display_name {
+            current.display_name = display_name;
+        }
+        current.updated_at = OffsetDateTime::now_utc();
 
-                    if let Some(email) = patch.email {
-                        current.email = email;
-                    }
-                    if let Some(display_name) = patch.display_name {
-                        current.display_name = display_name;
-                    }
-                    current.updated_at = OffsetDateTime::now_utc();
-
-                    repo.update(tx, &scope, current).await
-                })
-            })
-            .await?;
+        let updated_user = self.repo.update(&conn, &scope, current).await?;
 
         self.events.publish(&UserDomainEvent::Updated {
             id: updated_user.id,
@@ -279,6 +263,8 @@ impl<R: UsersRepository + 'static, CR: CitiesRepository, AR: AddressesRepository
     pub async fn delete_user(&self, ctx: &SecurityContext, id: Uuid) -> Result<(), DomainError> {
         tracing::info!("Deleting user");
 
+        let conn = self.db.conn().map_err(DomainError::from)?;
+
         let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
         let scope = ctx
             .scope(self.policy_engine.clone())
@@ -286,7 +272,7 @@ impl<R: UsersRepository + 'static, CR: CitiesRepository, AR: AddressesRepository
             .prepare()
             .await?;
 
-        let deleted = self.repo.delete(self.db.conn(), &scope, id).await?;
+        let deleted = self.repo.delete(&conn, &scope, id).await?;
 
         if !deleted {
             return Err(DomainError::user_not_found(id));

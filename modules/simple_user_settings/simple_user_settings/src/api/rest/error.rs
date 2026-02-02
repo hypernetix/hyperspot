@@ -19,6 +19,24 @@ pub fn domain_error_to_problem(e: &DomainError, instance: &str) -> Problem {
                 trace_id,
             )
         }
+        DomainError::Forbidden(msg) => {
+            tracing::warn!(error = ?e, "Access forbidden: {}", msg);
+            // TODO: Add settings_simple_user_settings_forbidden_v1 to errors catalog
+            // For now, use not_found to avoid exposing sensitive scope information
+            ErrorCode::settings_simple_user_settings_not_found_v1().with_context(
+                "Settings not found or not accessible",
+                instance,
+                trace_id,
+            )
+        }
+        DomainError::Internal(msg) => {
+            tracing::error!(error = ?e, "Internal error: {}", msg);
+            ErrorCode::settings_simple_user_settings_internal_database_v1().with_context(
+                "An internal error occurred",
+                instance,
+                trace_id,
+            )
+        }
         DomainError::Database(_) => {
             tracing::error!(error = ?e, "Database error occurred");
             ErrorCode::settings_simple_user_settings_internal_database_v1().with_context(

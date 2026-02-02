@@ -7,11 +7,10 @@
 
 use crate::config::{DbConnConfig, GlobalDatabaseConfig};
 use crate::options::build_db_handle;
-use crate::{DbError, DbHandle, Result};
+use crate::{Db, DbError, Result};
 use dashmap::DashMap;
 use figment::Figment;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 
 /// Central database manager that handles per-module database connections.
 pub struct DbManager {
@@ -21,8 +20,8 @@ pub struct DbManager {
     figment: Figment,
     /// Base home directory for modules
     home_dir: PathBuf,
-    /// Cache of database handles per module
-    cache: DashMap<String, Arc<DbHandle>>,
+    /// Cache of secure DB entrypoints per module
+    cache: DashMap<String, Db>,
 }
 
 impl DbManager {
@@ -53,15 +52,15 @@ impl DbManager {
     ///
     /// # Errors
     /// Returns an error if the database connection cannot be established.
-    pub async fn get(&self, module: &str) -> Result<Option<Arc<DbHandle>>> {
+    pub async fn get(&self, module: &str) -> Result<Option<Db>> {
         // Check cache first
-        if let Some(handle) = self.cache.get(module) {
-            return Ok(Some(handle.clone()));
+        if let Some(db) = self.cache.get(module) {
+            return Ok(Some(db.clone()));
         }
 
-        // Build new handle
+        // Build new Db
         match self.build_for_module(module).await? {
-            Some(handle) => {
+            Some(db) => {
                 // Use entry API to handle race conditions properly
                 match self.cache.entry(module.to_owned()) {
                     dashmap::mapref::entry::Entry::Occupied(entry) => {
@@ -69,9 +68,9 @@ impl DbManager {
                         Ok(Some(entry.get().clone()))
                     }
                     dashmap::mapref::entry::Entry::Vacant(entry) => {
-                        // We're first, insert our handle
-                        entry.insert(handle.clone());
-                        Ok(Some(handle))
+                        // We're first, insert our Db
+                        entry.insert(db.clone());
+                        Ok(Some(db))
                     }
                 }
             }
@@ -80,7 +79,7 @@ impl DbManager {
     }
 
     /// Build a database handle for the specified module.
-    async fn build_for_module(&self, module: &str) -> Result<Option<Arc<DbHandle>>> {
+    async fn build_for_module(&self, module: &str) -> Result<Option<Db>> {
         // Read module database configuration from Figment
         let module_data: serde_json::Value = self
             .figment
@@ -130,7 +129,7 @@ impl DbManager {
             "Built database handle for module"
         );
 
-        Ok(Some(Arc::new(handle)))
+        Ok(Some(Db::new(handle)))
     }
 
     /// Merge global server configuration into module configuration.

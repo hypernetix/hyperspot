@@ -1,17 +1,8 @@
-error: Cannot use 'unrestricted' with 'tenant_col'
-
-         = note: tenant_col defined here
-
- --> tests/ui/err_unrestricted_with_tenant.rs:6:10
+error: Cannot use 'tenant_col' with 'unrestricted'
+ --> tests/ui/err_unrestricted_with_tenant.rs:6:24
   |
 6 | #[secure(unrestricted, tenant_col = "tenant_id")]
-  |          ^^^^^^^^^^^^
-
-error: When using 'unrestricted', no other column attributes are allowed
- --> tests/ui/err_unrestricted_with_tenant.rs:6:10
-  |
-6 | #[secure(unrestricted, tenant_col = "tenant_id")]
-  |          ^^^^^^^^^^^^
+  |                        ^^^^^^^^^^
 
 error[E0601]: `main` function not found in crate `$CRATE`
  --> tests/ui/err_unrestricted_with_tenant.rs:7:14

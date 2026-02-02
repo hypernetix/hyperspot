@@ -1,4 +1,4 @@
-use modkit_db::{DbConnConfig, DbEngine, PoolCfg, build_db_handle};
+use modkit_db::{DbConnConfig, PoolCfg, build_db};
 use std::collections::HashMap;
 use std::time::Duration;
 use tempfile::TempDir;
@@ -23,8 +23,10 @@ fn test_build_db_handle_env_expansion() {
                 ..Default::default()
             };
 
-            let result = build_db_handle(config, None).await;
+            let result = build_db(config, None).await;
             assert!(result.is_ok(), "Expected Ok, got: {result:?}");
+            let db = result.unwrap();
+            assert!(db.conn().is_ok(), "conn() should succeed");
         });
     });
 }
@@ -42,11 +44,11 @@ async fn test_build_db_handle_sqlite_memory() {
         ..Default::default()
     };
 
-    let result = build_db_handle(config, None).await;
+    let result = build_db(config, None).await;
     assert!(result.is_ok());
 
-    let handle = result.unwrap();
-    assert_eq!(handle.engine(), DbEngine::Sqlite);
+    let db = result.unwrap();
+    assert!(db.conn().is_ok(), "conn() should succeed");
 }
 
 #[tokio::test]
@@ -66,44 +68,11 @@ async fn test_build_db_handle_sqlite_file() {
         ..Default::default()
     };
 
-    let result = build_db_handle(config, None).await;
+    let result = build_db(config, None).await;
     assert!(result.is_ok());
 
-    let handle = result.unwrap();
-    assert_eq!(handle.engine(), DbEngine::Sqlite);
-}
-
-#[test]
-fn test_display_sqlite_memory() {
-    use modkit_db::DbConnectOptions;
-
-    let opts = sea_orm::sqlx::sqlite::SqliteConnectOptions::new().filename(":memory:");
-    let db_opts = DbConnectOptions::Sqlite(opts);
-
-    let display_str = format!("{db_opts}");
-    assert_eq!(display_str, "sqlite://:memory:");
-}
-
-#[test]
-fn test_display_sqlite_file() {
-    use modkit_db::DbConnectOptions;
-
-    let opts = sea_orm::sqlx::sqlite::SqliteConnectOptions::new().filename("/tmp/test.db");
-    let db_opts = DbConnectOptions::Sqlite(opts);
-
-    let display_str = format!("{db_opts}");
-    assert_eq!(display_str, "sqlite:///tmp/test.db");
-}
-
-#[test]
-fn test_display_sqlite_relative_path() {
-    use modkit_db::DbConnectOptions;
-
-    let opts = sea_orm::sqlx::sqlite::SqliteConnectOptions::new().filename("./data/test.db");
-    let db_opts = DbConnectOptions::Sqlite(opts);
-
-    let display_str = format!("{db_opts}");
-    assert_eq!(display_str, "sqlite://./data/test.db");
+    let db = result.unwrap();
+    assert!(db.conn().is_ok(), "conn() should succeed");
 }
 
 #[cfg(feature = "sqlite")]
@@ -116,7 +85,7 @@ async fn test_build_db_handle_invalid_env_var() {
         ..Default::default()
     };
 
-    let result = build_db_handle(config, None).await;
+    let result = build_db(config, None).await;
     assert!(result.is_err());
 
     let error = result.unwrap_err();
@@ -137,7 +106,7 @@ async fn test_build_db_handle_invalid_sqlite_pragma() {
         ..Default::default()
     };
 
-    let result = build_db_handle(config, None).await;
+    let result = build_db(config, None).await;
     assert!(result.is_err());
 
     let error = result.unwrap_err();
@@ -158,7 +127,7 @@ async fn test_build_db_handle_invalid_journal_mode() {
         ..Default::default()
     };
 
-    let result = build_db_handle(config, None).await;
+    let result = build_db(config, None).await;
     assert!(result.is_err());
 
     let error = result.unwrap_err();
@@ -184,9 +153,9 @@ async fn test_build_db_handle_pool_config() {
         ..Default::default()
     };
 
-    let result = build_db_handle(config, None).await;
+    let result = build_db(config, None).await;
     assert!(result.is_ok());
 
-    let handle = result.unwrap();
-    assert_eq!(handle.engine(), DbEngine::Sqlite);
+    let db = result.unwrap();
+    assert!(db.conn().is_ok(), "conn() should succeed");
 }

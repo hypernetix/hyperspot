@@ -18,8 +18,7 @@ pub(super) async fn list_users(
         "Listing users with cursor pagination"
     );
 
-    let page: modkit_odata::Page<user_info_sdk::User> =
-        svc.users.list_users_page(&ctx, &query).await?;
+    let page = svc.users.list_users_page(&ctx, &query).await?;
     let page = page.map_items(UserDto::from);
 
     Ok(Json(page_to_projected_json(&page, query.selected_fields())))

@@ -36,16 +36,6 @@
 //! - Both `file` and `path` specified for `SQLite`
 //! - `SQLite` fields mixed with server connection fields
 //!
-//! ## Test Coverage
-//!
-//! These precedence rules are verified by:
-//! - [`test_precedence_module_fields_override_server`]
-//! - [`test_precedence_module_dsn_override_server`]
-//! - [`test_precedence_params_merging`]
-//! - [`test_conflict_detection_sqlite_dsn_with_server_fields`]
-//! - [`test_conflict_detection_nonsqlite_dsn_with_sqlite_fields`]
-//!
-//! See the test suite in `tests/precedence_tests.rs` for complete verification.
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -134,8 +124,8 @@ impl PoolCfg {
     #[must_use]
     pub fn apply_pg(
         &self,
-        mut opts: sea_orm::sqlx::postgres::PgPoolOptions,
-    ) -> sea_orm::sqlx::postgres::PgPoolOptions {
+        mut opts: sqlx::postgres::PgPoolOptions,
+    ) -> sqlx::postgres::PgPoolOptions {
         if let Some(max_conns) = self.max_conns {
             opts = opts.max_connections(max_conns);
         }
@@ -162,8 +152,8 @@ impl PoolCfg {
     #[must_use]
     pub fn apply_mysql(
         &self,
-        mut opts: sea_orm::sqlx::mysql::MySqlPoolOptions,
-    ) -> sea_orm::sqlx::mysql::MySqlPoolOptions {
+        mut opts: sqlx::mysql::MySqlPoolOptions,
+    ) -> sqlx::mysql::MySqlPoolOptions {
         if let Some(max_conns) = self.max_conns {
             opts = opts.max_connections(max_conns);
         }
@@ -190,8 +180,8 @@ impl PoolCfg {
     #[must_use]
     pub fn apply_sqlite(
         &self,
-        mut opts: sea_orm::sqlx::sqlite::SqlitePoolOptions,
-    ) -> sea_orm::sqlx::sqlite::SqlitePoolOptions {
+        mut opts: sqlx::sqlite::SqlitePoolOptions,
+    ) -> sqlx::sqlite::SqlitePoolOptions {
         if let Some(max_conns) = self.max_conns {
             opts = opts.max_connections(max_conns);
         }

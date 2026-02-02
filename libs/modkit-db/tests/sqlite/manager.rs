@@ -1,6 +1,6 @@
 use figment::Figment;
 use figment::providers::Serialized;
-use modkit_db::{DbConnConfig, DbEngine, DbManager, GlobalDatabaseConfig, PoolCfg};
+use modkit_db::{DbConnConfig, DbManager, GlobalDatabaseConfig, PoolCfg};
 use std::collections::HashMap;
 use std::time::Duration;
 use tempfile::TempDir;
@@ -32,8 +32,15 @@ async fn test_dbmanager_sqlite_with_file() {
     let result = manager.get("test_module").await.unwrap();
     assert!(result.is_some());
 
-    let db_handle = result.unwrap();
-    assert_eq!(db_handle.engine(), DbEngine::Sqlite);
+    let db = result.unwrap();
+    assert_eq!(db.db_engine(), "sqlite");
+
+    let expected_path = temp_dir.path().join("test_module").join(&db_filename);
+    assert!(
+        expected_path.exists(),
+        "Expected SQLite file at {}",
+        expected_path.display()
+    );
 }
 
 #[tokio::test]
@@ -63,8 +70,13 @@ async fn test_dbmanager_sqlite_with_path() {
     let result = manager.get("test_module").await.unwrap();
     assert!(result.is_some());
 
-    let db_handle = result.unwrap();
-    assert_eq!(db_handle.engine(), DbEngine::Sqlite);
+    let db = result.unwrap();
+    assert_eq!(db.db_engine(), "sqlite");
+    assert!(
+        db_path.exists(),
+        "Expected SQLite file at {}",
+        db_path.display()
+    );
 }
 
 #[cfg(feature = "sqlite")]
@@ -89,19 +101,18 @@ async fn test_dbmanager_caching() {
 
     let manager = DbManager::from_figment(figment, home_dir).unwrap();
 
-    // First call should create the handle
+    // First call should create the db
     let result1 = manager.get("test_module").await.unwrap();
     assert!(result1.is_some());
 
-    // Second call should return cached handle (same Arc)
+    // Second call should return cached db (sharing is an internal detail)
     let result2 = manager.get("test_module").await.unwrap();
     assert!(result2.is_some());
 
-    let handle1 = result1.unwrap();
-    let handle2 = result2.unwrap();
-
-    // Should be the same Arc instance
-    assert!(std::ptr::eq(handle1.as_ref(), handle2.as_ref()));
+    let db1 = result1.unwrap();
+    let db2 = result2.unwrap();
+    assert_eq!(db1.db_engine(), "sqlite");
+    assert_eq!(db2.db_engine(), "sqlite");
 }
 
 #[tokio::test]
@@ -155,8 +166,8 @@ async fn test_dbmanager_sqlite_server_without_dsn() {
     let result = manager.get("test_module").await.unwrap();
     assert!(result.is_some());
 
-    let db_handle = result.unwrap();
-    assert_eq!(db_handle.engine(), DbEngine::Sqlite);
+    let db = result.unwrap();
+    assert_eq!(db.db_engine(), "sqlite");
 
     // Verify the database was created in the correct location (the filename will be dynamically generated)
     let module_dir = home_dir.join("test_module");

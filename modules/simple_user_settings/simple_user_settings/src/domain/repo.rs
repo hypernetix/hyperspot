@@ -1,24 +1,33 @@
 use async_trait::async_trait;
-use modkit_security::SecurityContext;
+use modkit_db::secure::DBRunner;
+use modkit_security::{AccessScope, SecurityContext};
 use simple_user_settings_sdk::models::{SimpleUserSettings, SimpleUserSettingsPatch};
+
+use super::error::DomainError;
 
 #[async_trait]
 pub trait SettingsRepository: Send + Sync {
-    async fn find_by_user(
+    async fn find_by_user<C: DBRunner>(
         &self,
+        conn: &C,
+        scope: &AccessScope,
         ctx: &SecurityContext,
-    ) -> anyhow::Result<Option<SimpleUserSettings>>;
+    ) -> Result<Option<SimpleUserSettings>, DomainError>;
 
-    async fn upsert_full(
+    async fn upsert_full<C: DBRunner>(
         &self,
+        conn: &C,
+        scope: &AccessScope,
         ctx: &SecurityContext,
         theme: Option<String>,
         language: Option<String>,
-    ) -> anyhow::Result<SimpleUserSettings>;
+    ) -> Result<SimpleUserSettings, DomainError>;
 
-    async fn upsert_patch(
+    async fn upsert_patch<C: DBRunner>(
         &self,
+        conn: &C,
+        scope: &AccessScope,
         ctx: &SecurityContext,
         patch: SimpleUserSettingsPatch,
-    ) -> anyhow::Result<SimpleUserSettings>;
+    ) -> Result<SimpleUserSettings, DomainError>;
 }

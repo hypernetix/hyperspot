@@ -1,14 +1,5 @@
-error: Cannot use 'unrestricted' with 'resource_col'
-
-         = note: resource_col defined here
-
- --> tests/ui/err_unrestricted_with_resource.rs:6:10
+error: Cannot use 'resource_col' with 'unrestricted'
+ --> tests/ui/err_unrestricted_with_resource.rs:6:24
   |
 6 | #[secure(unrestricted, resource_col = "id")]
-  |          ^^^^^^^^^^^^
-
-error: When using 'unrestricted', no other column attributes are allowed
- --> tests/ui/err_unrestricted_with_resource.rs:6:10
-  |
-6 | #[secure(unrestricted, resource_col = "id")]
-  |          ^^^^^^^^^^^^
+  |                        ^^^^^^^^^^^^

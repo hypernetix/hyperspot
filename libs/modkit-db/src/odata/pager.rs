@@ -1,7 +1,7 @@
 //! Minimal fluent builder for combining Secure ORM scoping with `OData` pagination.
 //!
 //! This module provides `OPager`, a small ergonomic builder that:
-//! - Applies security scope via `SecureConn::find::<E>(&SecurityCtx)`
+//! - Applies security scope via `Entity::find().secure().scope_with(&scope)`
 //! - Applies `OData` filter + cursor + order + limit via `paginate_with_odata`
 //! - Keeps all existing types without introducing facades or macros
 //!
@@ -9,7 +9,8 @@
 //!
 //! ```ignore
 //! use modkit_db::odata::{FieldMap, FieldKind, pager::OPager};
-//! use modkit_db::secure::{SecureConn, SecurityCtx};
+//! use modkit_db::secure::DBRunner;
+//! use modkit_security::AccessScope;
 //! use modkit_odata::{ODataQuery, SortDir, Page, Error as ODataError};
 //!
 //! // Define field mappings once (typically as a static or const)
@@ -23,11 +24,11 @@
 //!
 //! // In your repository or service layer
 //! pub async fn list_users(
-//!     db: &SecureConn,
-//!     ctx: &SecurityCtx,
+//!     conn: &impl DBRunner,
+//!     scope: &AccessScope,
 //!     q: &ODataQuery,
 //! ) -> Result<Page<UserDto>, ODataError> {
-//!     OPager::<user::Entity, _>::new(db, ctx, db.conn(), &user_field_map())
+//!     OPager::<user::Entity, _>::new(scope, conn, &user_field_map())
 //!         .tiebreaker("created_at", SortDir::Desc)
 //!         .limits(50, 500)
 //!         .fetch(q, |model| UserDto {
@@ -43,7 +44,8 @@
 //!
 //! ```ignore
 //! use modkit_db::odata::{FieldMap, FieldKind, pager::OPager};
-//! use modkit_db::secure::{SecureConn, SecurityCtx, ScopableEntity};
+//! use modkit_db::secure::{DBRunner, ScopableEntity};
+//! use modkit_security::AccessScope;
 //! use modkit_odata::{ODataQuery, SortDir};
 //! use sea_orm::entity::prelude::*;
 //! use uuid::Uuid;
@@ -70,27 +72,21 @@
 //!         .insert("created_at", Column::CreatedAt, FieldKind::DateTimeUtc)
 //! });
 //!
-//! // 3. Use in your service
-//! pub struct UserService<'a> {
-//!     db: &'a SecureConn,
-//! }
-//!
-//! impl<'a> UserService<'a> {
-//!     pub async fn list_users(
-//!         &self,
-//!         ctx: &SecurityCtx,
-//!         odata_query: &ODataQuery,
-//!     ) -> Result<Page<UserDto>, ODataError> {
-//!         OPager::<Entity, _>::new(self.db, ctx, self.db.conn(), &USER_FIELD_MAP)
-//!             .tiebreaker("id", SortDir::Desc)
-//!             .limits(25, 1000)
-//!             .fetch(odata_query, |m| UserDto {
-//!                 id: m.id,
-//!                 name: m.name,
-//!                 email: m.email,
-//!             })
-//!             .await
-//!     }
+//! // 3. Use in your service - services receive &impl DBRunner as a parameter
+//! pub async fn list_users(
+//!     conn: &impl DBRunner,
+//!     scope: &AccessScope,
+//!     odata_query: &ODataQuery,
+//! ) -> Result<Page<UserDto>, ODataError> {
+//!     OPager::<Entity, _>::new(scope, conn, &USER_FIELD_MAP)
+//!         .tiebreaker("id", SortDir::Desc)
+//!         .limits(25, 1000)
+//!         .fetch(odata_query, |m| UserDto {
+//!             id: m.id,
+//!             name: m.name,
+//!             email: m.email,
+//!         })
+//!         .await
 //! }
 //! ```
 //!
@@ -109,10 +105,10 @@
 //! - Supports indexed columns via field mappings for optimal query performance
 
 use crate::odata::{FieldMap, LimitCfg, paginate_with_odata};
-use crate::secure::{ScopableEntity, SecureConn};
+use crate::secure::{DBRunner, ScopableEntity, SecureEntityExt};
 use modkit_odata::{Error as ODataError, ODataQuery, Page, SortDir};
 use modkit_security::AccessScope;
-use sea_orm::{ColumnTrait, ConnectionTrait, EntityTrait};
+use sea_orm::{ColumnTrait, EntityTrait};
 
 /// Minimal fluent builder for Secure + `OData` pagination.
 ///
@@ -124,12 +120,12 @@ use sea_orm::{ColumnTrait, ConnectionTrait, EntityTrait};
 /// # Type Parameters
 ///
 /// - `E`: The `SeaORM` entity type (must implement `ScopableEntity`)
-/// - `C`: The database connection type (any `ConnectionTrait`)
+/// - `C`: The secure database capability (e.g. `&SecureConn` or `&SecureTx`)
 ///
 /// # Usage
 ///
 /// ```ignore
-/// OPager::<UserEntity, _>::new(db, ctx, db.conn(), &FMAP)
+/// OPager::<UserEntity, _>::new(db, ctx, db, &FMAP)
 ///   .tiebreaker("id", SortDir::Desc)  // optional, defaults to ("id", Desc)
 ///   .limits(25, 1000)                  // optional, defaults to (25, 1000)
 ///   .fetch(&query, |m| dto_from(m))
@@ -145,9 +141,8 @@ pub struct OPager<'a, E, C>
 where
     E: EntityTrait,
     E::Column: ColumnTrait + Copy,
-    C: ConnectionTrait + Send + Sync,
+    C: DBRunner,
 {
-    db: &'a SecureConn,
     scope: &'a AccessScope,
     conn: &'a C,
     fmap: &'a FieldMap<E>,
@@ -159,35 +154,27 @@ impl<'a, E, C> OPager<'a, E, C>
 where
     E: EntityTrait,
     E::Column: ColumnTrait + Copy,
-    C: ConnectionTrait + Send + Sync,
+    C: DBRunner,
 {
     /// Construct a new pager over a secured, scoped Select<E>.
     ///
     /// # Parameters
     ///
-    /// - `db`: Secure database connection wrapper
-    /// - `ctx`: Security context defining access scope (tenant/resource boundaries)
-    /// - `conn`: Raw connection for executing queries
+    /// - `scope`: Security scope defining access boundaries (tenant/resource)
+    /// - `conn`: Database connection runner for executing queries
     /// - `fmap`: Field map defining `OData` field → entity column mappings
     ///
     /// # Example
     ///
     /// ```ignore
     /// let pager = OPager::<UserEntity, _>::new(
-    ///     db,
-    ///     &SecurityCtx::for_tenant(tenant_id, user_id),
-    ///     db.conn(),
+    ///     &scope,
+    ///     &conn,
     ///     &USER_FIELD_MAP
     /// );
     /// ```
-    pub fn new(
-        db: &'a SecureConn,
-        scope: &'a AccessScope,
-        conn: &'a C,
-        fmap: &'a FieldMap<E>,
-    ) -> Self {
+    pub fn new(scope: &'a AccessScope, conn: &'a C, fmap: &'a FieldMap<E>) -> Self {
         Self {
-            db,
             scope,
             conn,
             fmap,
@@ -286,7 +273,7 @@ where
         F: Fn(E::Model) -> D + Copy,
     {
         // Apply security scope first - this enforces tenant isolation
-        let select = self.db.find::<E>(self.scope).into_inner();
+        let select = E::find().secure().scope_with(self.scope).inner;
 
         // Now apply OData filters, cursor, order, and limits
         paginate_with_odata::<E, D, _, _>(
