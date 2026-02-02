@@ -62,3 +62,81 @@ body = """
     {% if commit.remote.pr_number %} - #{{ commit.remote.pr_number }}{% endif -%}
 {% endmacro -%}
 """
+
+# ModKit Framework - unified release
+# Only cf-modkit gets changelog entries and GitHub releases
+# All other cf-modkit-* crates are published to crates.io but without separate changelog/releases
+[[package]]
+name = "cf-modkit"
+changelog_update = true
+git_release_enable = true
+
+[[package]]
+name = "cf-modkit-auth"
+changelog_update = false
+git_release_enable = false
+
+[[package]]
+name = "cf-modkit-db"
+changelog_update = false
+git_release_enable = false
+
+[[package]]
+name = "cf-modkit-db-macros"
+changelog_update = false
+git_release_enable = false
+
+[[package]]
+name = "cf-modkit-errors"
+changelog_update = false
+git_release_enable = false
+
+[[package]]
+name = "cf-modkit-errors-macro"
+changelog_update = false
+git_release_enable = false
+
+[[package]]
+name = "cf-modkit-macros"
+changelog_update = false
+git_release_enable = false
+
+[[package]]
+name = "cf-modkit-macros-tests"
+changelog_update = false
+git_release_enable = false
+
+[[package]]
+name = "cf-modkit-node-info"
+changelog_update = false
+git_release_enable = false
+
+[[package]]
+name = "cf-modkit-odata"
+changelog_update = false
+git_release_enable = false
+
+[[package]]
+name = "cf-modkit-odata-macros"
+changelog_update = false
+git_release_enable = false
+
+[[package]]
+name = "cf-modkit-sdk"
+changelog_update = false
+git_release_enable = false
+
+[[package]]
+name = "cf-modkit-security"
+changelog_update = false
+git_release_enable = false
+
+[[package]]
+name = "cf-modkit-transport-grpc"
+changelog_update = false
+git_release_enable = false
+
+[[package]]
+name = "cf-modkit-utils"
+changelog_update = false
+git_release_enable = false
