@@ -6,7 +6,7 @@ extern crate rustc_ast;
 use rustc_ast::{Item, ItemKind, UseTree, UseTreeKind};
 use rustc_lint::{EarlyLintPass, LintContext};
 
-use lint_utils::is_in_contract_path;
+use lint_utils::is_in_contract_module_ast;
 
 dylint_linting::declare_early_lint! {
     /// ### What it does
@@ -124,7 +124,7 @@ impl EarlyLintPass for De0103NoHttpTypesInContract {
     fn check_item(&mut self, cx: &rustc_lint::EarlyContext<'_>, item: &Item) {
         // Check use statements in file-based contract modules
         if matches!(item.kind, ItemKind::Use(_))
-            && is_in_contract_path(cx.sess().source_map(), item.span)
+            && is_in_contract_module_ast(cx, item)
         {
             check_use_in_contract(cx, item);
         }

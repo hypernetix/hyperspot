@@ -73,8 +73,10 @@ impl FileParserBackend for PptxParser {
             .await
             .map_err(|e| DomainError::parse_error(format!("Task join error: {e}")))??;
 
+        let filename = filename_hint.unwrap_or("unknown.pptx");
+
         let source = ParsedSource::Uploaded {
-            original_name: filename_hint.unwrap_or("unknown.pptx").to_owned(),
+            original_name: filename.to_owned(),
         };
 
         let mut builder = DocumentBuilder::new(source)
@@ -83,9 +85,7 @@ impl FileParserBackend for PptxParser {
             )
             .blocks(blocks);
 
-        if let Some(filename) = filename_hint {
-            builder = builder.title(filename).original_filename(filename);
-        }
+        builder = builder.title(filename).original_filename(filename);
 
         Ok(builder.build())
     }
