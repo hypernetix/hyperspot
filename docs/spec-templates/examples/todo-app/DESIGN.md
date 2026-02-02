@@ -19,7 +19,7 @@ Event-driven architecture is employed for real-time updates and cross-device syn
 | `fdd-todo-app-req-create-task` | REST API endpoint POST /tasks with validation |
 | `fdd-todo-app-req-complete-task` | PATCH /tasks/:id with status toggle |
 | `fdd-todo-app-req-filter-tasks` | Query parameters on GET /tasks |
-| `fdd-todo-app-req-offline-support` | IndexedDB local storage with sync queue |
+| `fdd-todo-app-req-data-persistence` | IndexedDB local storage with sync queue |
 
 #### NFR Allocation
 
