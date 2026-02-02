@@ -10,7 +10,13 @@ authors.workspace = true
 workspace = true
 
 [features]
-default = []
+default = ["db-sqlite"]
+
+# Database driver selection - propagates to all modules
+db-sqlite = ["modkit-db/sqlite", "simple_user_settings/db-sqlite", "users_info?/db-sqlite"]
+db-pg = ["modkit-db/pg", "simple_user_settings/db-pg", "users_info?/db-pg"]
+db-mysql = ["modkit-db/mysql", "simple_user_settings/db-mysql", "users_info?/db-mysql"]
+
 users-info-example = ["dep:users_info"]
 oop-example = ["dep:calculator_gateway", "dep:calculator"]
 tenant-resolver-example = [
@@ -30,7 +36,7 @@ path = "src/main.rs"
 mimalloc = { version = "0.1" }
 # Local crates
 modkit = { workspace = true, features = ["otel", "bootstrap"] }
-modkit-db = { workspace = true, features = ["sqlite", "pg"] }
+modkit-db = { workspace = true }
 
 # System modules
 api_gateway = { package = "cf-api-gateway", path = "../../modules/system/api_gateway" }

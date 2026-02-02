@@ -12,10 +12,10 @@ use crate::api::rest::routes;
 use crate::config::SettingsConfig;
 use crate::domain::local_client::LocalClient;
 use crate::domain::service::{Service, ServiceConfig};
-use crate::infra::storage::sea_orm_repo::SeaOrmSettingsRepository;
+use crate::infra::storage::sea_orm_repo::new_settings_repository;
 
 #[modkit::module(
-    name = "simple-user-settings",
+    name = "simple_user_settings",
     capabilities = [rest, db]
 )]
 pub struct SettingsModule {
@@ -61,12 +61,12 @@ impl Module for SettingsModule {
         let db = ctx.db_required()?;
         let sec_conn = db.sea_secure();
 
-        let repo = SeaOrmSettingsRepository::new(sec_conn);
+        let repo = new_settings_repository(sec_conn);
 
         let service_config = ServiceConfig {
             max_field_length: cfg.max_field_length,
         };
-        let service = Arc::new(Service::new(Arc::new(repo), service_config));
+        let service = Arc::new(Service::new(Arc::from(repo), service_config));
 
         let local_client: Arc<dyn SimpleUserSettingsClient> =
             Arc::new(LocalClient::new(service.clone()));
