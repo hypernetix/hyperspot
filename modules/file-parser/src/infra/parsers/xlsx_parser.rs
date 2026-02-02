@@ -154,7 +154,7 @@ impl FileParserBackend for XlsxParser {
             .await
             .map_err(|e| DomainError::parse_error(format!("Task join error: {e}")))??;
 
-        let default_filename = format!("unknown.{:?}", ExcelFormat::default());
+        let default_filename = format!("unknown.{}", ExcelFormat::default().as_str());
         let filename = path
             .file_name()
             .and_then(|s| s.to_str())
@@ -180,7 +180,7 @@ impl FileParserBackend for XlsxParser {
         _content_type: Option<&str>,
         bytes: bytes::Bytes,
     ) -> Result<crate::domain::ir::ParsedDocument, DomainError> {
-        let default_filename = format!("unknown.{:?}", ExcelFormat::default());
+        let default_filename = format!("unknown.{}", ExcelFormat::default().as_str());
         let filename = filename_hint.unwrap_or(&default_filename).to_owned();
 
         // Detect format from magic bytes first, fall back to filename
