@@ -11,7 +11,7 @@ LL |     OperationBuilder::get("/users");
 error: API endpoint `/users/list` has invalid version format `list` (DE0801)
   --> $DIR/invalid_endpoints.rs:38:27
    |
-LL |     OperationBuilder::get("/users/list")
+LL |     OperationBuilder::get("/users/list").handler(dummy_handler);
    |                           ^^^^^^^^^^^^^
    |
    = help: version must be lowercase 'v' followed by digits (v1, v2, v10)
