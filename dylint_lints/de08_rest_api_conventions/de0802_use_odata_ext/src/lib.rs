@@ -109,8 +109,7 @@ fn path_contains_operation_builder(qpath: &rustc_hir::QPath<'_>) -> bool {
             .iter()
             .any(|seg| seg.ident.name.as_str() == "OperationBuilder"),
         rustc_hir::QPath::TypeRelative(ty, segment) => {
-            segment.ident.name.as_str() == "OperationBuilder"
-                || type_contains_operation_builder(ty)
+            segment.ident.name.as_str() == "OperationBuilder" || type_contains_operation_builder(ty)
         }
         _ => false,
     }

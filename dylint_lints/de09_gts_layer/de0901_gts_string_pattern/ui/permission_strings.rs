@@ -54,7 +54,9 @@ struct MockPermissionBuilder {
 
 impl Default for MockPermissionBuilder {
     fn default() -> Self {
-        Self { resource_pattern: None }
+        Self {
+            resource_pattern: None,
+        }
     }
 }
 

@@ -3,9 +3,9 @@
 
 extern crate rustc_ast;
 
+use lint_utils::{is_in_domain_path, use_tree_to_strings};
 use rustc_ast::{Item, ItemKind, Ty, TyKind};
 use rustc_lint::{EarlyLintPass, LintContext};
-use lint_utils::{is_in_domain_path, use_tree_to_strings};
 
 dylint_linting::declare_early_lint! {
     /// ### What it does
@@ -35,11 +35,11 @@ dylint_linting::declare_early_lint! {
     /// // Good - domain depends on abstractions
     /// mod domain {
     ///     use std::sync::Arc;
-    ///     
+    ///
     ///     pub trait UsersRepository: Send + Sync {
     ///         async fn find_by_id(&self, id: Uuid) -> Result<User, DomainError>;
     ///     }
-    ///     
+    ///
     ///     pub struct Service {
     ///         repo: Arc<dyn UsersRepository>,  // ✅ trait object
     ///     }
@@ -64,7 +64,7 @@ const INFRA_PATTERNS: &[&str] = &[
     "http::",
     // API layer
     "crate::api",
-    // External service clients  
+    // External service clients
     "reqwest",
     "tonic",
     // File system (should be abstracted)
@@ -96,11 +96,13 @@ fn check_type_in_domain(cx: &rustc_lint::EarlyContext<'_>, ty: &Ty) {
     match &ty.kind {
         TyKind::Path(_, path) => {
             // Check the path itself
-            let path_str = path.segments.iter()
+            let path_str = path
+                .segments
+                .iter()
                 .map(|seg| seg.ident.name.as_str())
                 .collect::<Vec<_>>()
                 .join("::");
-            
+
             for pattern in INFRA_PATTERNS {
                 if path_str.starts_with(pattern) {
                     cx.span_lint(DE0301_NO_INFRA_IN_DOMAIN, ty.span, |diag| {
@@ -112,13 +114,16 @@ fn check_type_in_domain(cx: &rustc_lint::EarlyContext<'_>, ty: &Ty) {
                     return;
                 }
             }
-            
+
             // Recursively check generic arguments (e.g., Option<sqlx::PgPool>)
             for segment in &path.segments {
                 if let Some(args) = &segment.args {
                     if let rustc_ast::GenericArgs::AngleBracketed(ref angle_args) = **args {
                         for arg in &angle_args.args {
-                            if let rustc_ast::AngleBracketedArg::Arg(rustc_ast::GenericArg::Type(inner_ty)) = arg {
+                            if let rustc_ast::AngleBracketedArg::Arg(rustc_ast::GenericArg::Type(
+                                inner_ty,
+                            )) = arg
+                            {
                                 check_type_in_domain(cx, inner_ty);
                             }
                         }
@@ -154,11 +159,13 @@ fn check_type_in_domain(cx: &rustc_lint::EarlyContext<'_>, ty: &Ty) {
                 if let rustc_ast::GenericBound::Trait(trait_ref) = bound {
                     // Check the trait path itself
                     let path = &trait_ref.trait_ref.path;
-                    let path_str = path.segments.iter()
+                    let path_str = path
+                        .segments
+                        .iter()
                         .map(|seg| seg.ident.name.as_str())
                         .collect::<Vec<_>>()
                         .join("::");
-                    
+
                     for pattern in INFRA_PATTERNS {
                         if path_str.starts_with(pattern) {
                             cx.span_lint(DE0301_NO_INFRA_IN_DOMAIN, ty.span, |diag| {
@@ -179,11 +186,13 @@ fn check_type_in_domain(cx: &rustc_lint::EarlyContext<'_>, ty: &Ty) {
                 if let rustc_ast::GenericBound::Trait(trait_ref) = bound {
                     // Check the trait path itself
                     let path = &trait_ref.trait_ref.path;
-                    let path_str = path.segments.iter()
+                    let path_str = path
+                        .segments
+                        .iter()
                         .map(|seg| seg.ident.name.as_str())
                         .collect::<Vec<_>>()
                         .join("::");
-                    
+
                     for pattern in INFRA_PATTERNS {
                         if path_str.starts_with(pattern) {
                             cx.span_lint(DE0301_NO_INFRA_IN_DOMAIN, ty.span, |diag| {

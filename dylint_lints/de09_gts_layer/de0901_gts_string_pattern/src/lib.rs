@@ -4,13 +4,13 @@
 extern crate rustc_ast;
 extern crate rustc_span;
 
-use std::cell::RefCell;
-use std::collections::HashSet;
-use rustc_ast::{AttrKind, Attribute, Expr, ExprKind};
+use gts::{GtsIdSegment, GtsOps};
 use rustc_ast::token::LitKind;
+use rustc_ast::{AttrKind, Attribute, Expr, ExprKind};
 use rustc_lint::{EarlyContext, EarlyLintPass, LintContext};
 use rustc_span::Span;
-use gts::{GtsIdSegment, GtsOps};
+use std::cell::RefCell;
+use std::collections::HashSet;
 
 // Thread-local storage for spans to skip (inside starts_with calls)
 thread_local! {
@@ -140,7 +140,12 @@ impl De0901GtsStringPattern {
         self.check_gts_string_literal_with_wildcard_flag(cx, expr, true);
     }
 
-    fn check_gts_string_literal_with_wildcard_flag(&self, cx: &EarlyContext<'_>, expr: &Expr, allow_wildcards: bool) {
+    fn check_gts_string_literal_with_wildcard_flag(
+        &self,
+        cx: &EarlyContext<'_>,
+        expr: &Expr,
+        allow_wildcards: bool,
+    ) {
         if let Some(s) = Self::string_lit_value(expr) {
             let s = s.trim();
 
@@ -198,7 +203,8 @@ impl De0901GtsStringPattern {
                 continue;
             };
 
-            if mi.path.segments.len() != 1 || mi.path.segments[0].ident.name.as_str() != "schema_id" {
+            if mi.path.segments.len() != 1 || mi.path.segments[0].ident.name.as_str() != "schema_id"
+            {
                 continue;
             }
 
@@ -241,19 +247,17 @@ impl De0901GtsStringPattern {
         // Ensure it's actually a schema (type), not an instance
         if result.is_schema != Some(true) {
             cx.span_lint(DE0901_GTS_STRING_PATTERN, span, |diag| {
-                diag.primary_message(format!("schema_id must be a type schema, not an instance: '{}' (DE0901)", s));
+                diag.primary_message(format!(
+                    "schema_id must be a type schema, not an instance: '{}' (DE0901)",
+                    s
+                ));
                 diag.note("schema_id must end with '~' to indicate it's a type schema");
                 diag.help("Example: gts.x.core.events.type.v1~");
             });
         }
     }
 
-    fn validate_instance_id_segment(
-        &self,
-        cx: &EarlyContext<'_>,
-        span: rustc_span::Span,
-        s: &str,
-    ) {
+    fn validate_instance_id_segment(&self, cx: &EarlyContext<'_>, span: rustc_span::Span, s: &str) {
         let s = s.trim();
 
         // `gts_make_instance_id` accepts a single *segment id* (no `gts.` prefix),
@@ -315,7 +319,12 @@ impl De0901GtsStringPattern {
         }
     }
 
-    fn validate_any_gts_id_allow_wildcards(&self, cx: &EarlyContext<'_>, span: rustc_span::Span, s: &str) {
+    fn validate_any_gts_id_allow_wildcards(
+        &self,
+        cx: &EarlyContext<'_>,
+        span: rustc_span::Span,
+        s: &str,
+    ) {
         let s = s.trim();
 
         // For resource_pattern calls, we allow wildcards but still validate the GTS structure
@@ -344,7 +353,7 @@ mod tests {
         lint_utils::test_comment_annotations_match_stderr(
             &ui_dir,
             "DE0901",
-            "invalid GTS"  // Matches both "invalid GTS string" and "invalid GTS schema_id string"
+            "invalid GTS", // Matches both "invalid GTS string" and "invalid GTS schema_id string"
         );
     }
 }

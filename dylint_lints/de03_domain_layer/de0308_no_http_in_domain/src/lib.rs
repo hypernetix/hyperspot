@@ -3,9 +3,9 @@
 
 extern crate rustc_ast;
 
+use lint_utils::{is_in_domain_path, use_tree_to_strings};
 use rustc_ast::{Item, ItemKind, Ty, TyKind};
 use rustc_lint::{EarlyContext, EarlyLintPass, LintContext};
-use lint_utils::{is_in_domain_path, use_tree_to_strings};
 
 dylint_linting::declare_early_lint! {
     /// ### What it does
@@ -24,7 +24,7 @@ dylint_linting::declare_early_lint! {
     /// // Bad - HTTP types in domain
     /// mod domain {
     ///     use http::StatusCode;
-    ///     
+    ///
     ///     pub fn check_result() -> StatusCode {
     ///         StatusCode::OK  // ❌ HTTP-specific
     ///     }
@@ -68,9 +68,7 @@ fn check_use_item(cx: &EarlyContext<'_>, item: &Item, tree: &rustc_ast::UseTree)
         for pattern in HTTP_PATTERNS {
             if path_str.starts_with(pattern) {
                 cx.span_lint(DE0308_NO_HTTP_IN_DOMAIN, item.span, |diag| {
-                    diag.primary_message(
-                        "domain module imports HTTP type (DE0308)"
-                    );
+                    diag.primary_message("domain module imports HTTP type (DE0308)");
                     diag.help("domain should be transport-agnostic; handle HTTP in api/ layer");
                 });
                 return;
@@ -83,29 +81,35 @@ fn check_type_in_domain(cx: &rustc_lint::EarlyContext<'_>, ty: &Ty) {
     match &ty.kind {
         TyKind::Path(_, path) => {
             // Check the path itself
-            let path_str = path.segments.iter()
+            let path_str = path
+                .segments
+                .iter()
                 .map(|seg| seg.ident.name.as_str())
                 .collect::<Vec<_>>()
                 .join("::");
-            
+
             for pattern in HTTP_PATTERNS {
                 if path_str.starts_with(pattern) {
                     cx.span_lint(DE0308_NO_HTTP_IN_DOMAIN, ty.span, |diag| {
-                        diag.primary_message(
-                            format!("domain module uses HTTP type `{}` (DE0308)", path_str)
-                        );
+                        diag.primary_message(format!(
+                            "domain module uses HTTP type `{}` (DE0308)",
+                            path_str
+                        ));
                         diag.help("domain should be transport-agnostic; handle HTTP in api/ layer");
                     });
                     return;
                 }
             }
-            
+
             // Recursively check generic arguments (e.g., Option<http::StatusCode>)
             for segment in &path.segments {
                 if let Some(args) = &segment.args {
                     if let rustc_ast::GenericArgs::AngleBracketed(ref angle_args) = **args {
                         for arg in &angle_args.args {
-                            if let rustc_ast::AngleBracketedArg::Arg(rustc_ast::GenericArg::Type(inner_ty)) = arg {
+                            if let rustc_ast::AngleBracketedArg::Arg(rustc_ast::GenericArg::Type(
+                                inner_ty,
+                            )) = arg
+                            {
                                 check_type_in_domain(cx, inner_ty);
                             }
                         }
@@ -141,11 +145,13 @@ fn check_type_in_domain(cx: &rustc_lint::EarlyContext<'_>, ty: &Ty) {
                 if let rustc_ast::GenericBound::Trait(trait_ref) = bound {
                     // Check the trait path itself
                     let path = &trait_ref.trait_ref.path;
-                    let path_str = path.segments.iter()
+                    let path_str = path
+                        .segments
+                        .iter()
                         .map(|seg| seg.ident.name.as_str())
                         .collect::<Vec<_>>()
                         .join("::");
-                    
+
                     for pattern in HTTP_PATTERNS {
                         if path_str.starts_with(pattern) {
                             cx.span_lint(DE0308_NO_HTTP_IN_DOMAIN, ty.span, |diag| {
@@ -166,11 +172,13 @@ fn check_type_in_domain(cx: &rustc_lint::EarlyContext<'_>, ty: &Ty) {
                 if let rustc_ast::GenericBound::Trait(trait_ref) = bound {
                     // Check the trait path itself
                     let path = &trait_ref.trait_ref.path;
-                    let path_str = path.segments.iter()
+                    let path_str = path
+                        .segments
+                        .iter()
                         .map(|seg| seg.ident.name.as_str())
                         .collect::<Vec<_>>()
                         .join("::");
-                    
+
                     for pattern in HTTP_PATTERNS {
                         if path_str.starts_with(pattern) {
                             cx.span_lint(DE0308_NO_HTTP_IN_DOMAIN, ty.span, |diag| {

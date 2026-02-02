@@ -87,6 +87,10 @@ mod tests {
     #[test]
     fn test_comment_annotations_match_stderr() {
         let ui_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("ui");
-        lint_utils::test_comment_annotations_match_stderr(&ui_dir, "DE0102", "ToSchema in contract");
+        lint_utils::test_comment_annotations_match_stderr(
+            &ui_dir,
+            "DE0102",
+            "ToSchema in contract",
+        );
     }
 }

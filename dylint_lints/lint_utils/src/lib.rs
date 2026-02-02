@@ -7,7 +7,6 @@ extern crate rustc_lint;
 extern crate rustc_session;
 extern crate rustc_span;
 
-
 use rustc_lint::LintContext;
 
 use rustc_ast::{UseTree, UseTreeKind};
@@ -32,7 +31,10 @@ pub fn is_in_contract_path(source_map: &SourceMap, span: Span) -> bool {
 
 /// AST-based helper to check if an item is in a contract module.
 /// This works with EarlyLintPass and checks both file paths and simulated_dir comments.
-pub fn is_in_contract_module_ast(cx: &rustc_lint::EarlyContext<'_>, item: &rustc_ast::Item) -> bool {
+pub fn is_in_contract_module_ast(
+    cx: &rustc_lint::EarlyContext<'_>,
+    item: &rustc_ast::Item,
+) -> bool {
     is_in_contract_path(cx.sess().source_map(), item.span)
 }
 
@@ -294,7 +296,11 @@ pub fn has_api_dto_attribute(item: &rustc_ast::Item) -> bool {
         // Check for modkit_macros::api_dto or just api_dto
         if let rustc_ast::AttrKind::Normal(attr_item) = &attr.kind {
             let path = &attr_item.item.path;
-            let segments: Vec<&str> = path.segments.iter().map(|s| s.ident.name.as_str()).collect();
+            let segments: Vec<&str> = path
+                .segments
+                .iter()
+                .map(|s| s.ident.name.as_str())
+                .collect();
 
             // Match: api_dto, modkit_macros::api_dto
             if segments.last() == Some(&"api_dto") {
@@ -324,7 +330,11 @@ pub fn get_api_dto_args(item: &rustc_ast::Item) -> Option<ApiDtoArgs> {
     for attr in &item.attrs {
         if let rustc_ast::AttrKind::Normal(attr_item) = &attr.kind {
             let path = &attr_item.item.path;
-            let segments: Vec<&str> = path.segments.iter().map(|s| s.ident.name.as_str()).collect();
+            let segments: Vec<&str> = path
+                .segments
+                .iter()
+                .map(|s| s.ident.name.as_str())
+                .collect();
 
             if segments.last() != Some(&"api_dto") {
                 continue;
@@ -340,19 +350,19 @@ pub fn get_api_dto_args(item: &rustc_ast::Item) -> Option<ApiDtoArgs> {
                 for arg in args {
                     if let Some(ident) = arg.ident() {
                         let flag_str = ident.name.as_str();
-                        
+
                         // Check if flag is allowed
                         if !ALLOWED_FLAGS.contains(&flag_str) {
                             has_invalid = true;
                             break;
                         }
-                        
+
                         // Check for duplicates (convert to String for storage)
                         if !seen_flags.insert(flag_str.to_string()) {
                             has_invalid = true;
                             break;
                         }
-                        
+
                         match flag_str {
                             "request" => has_request = true,
                             "response" => has_response = true,
@@ -366,7 +376,7 @@ pub fn get_api_dto_args(item: &rustc_ast::Item) -> Option<ApiDtoArgs> {
             if has_invalid {
                 return None;
             }
-            
+
             // Reject empty attributes (no request or response)
             if !has_request && !has_response {
                 return None;
@@ -458,17 +468,24 @@ pub fn is_utoipa_trait(segments: &[&str], trait_name: &str) -> bool {
 pub fn use_tree_to_strings(tree: &UseTree) -> Vec<String> {
     match &tree.kind {
         UseTreeKind::Simple(..) | UseTreeKind::Glob => {
-            vec![tree.prefix.segments.iter()
-                .map(|seg| seg.ident.name.as_str())
-                .collect::<Vec<_>>()
-                .join("::")]
+            vec![
+                tree.prefix
+                    .segments
+                    .iter()
+                    .map(|seg| seg.ident.name.as_str())
+                    .collect::<Vec<_>>()
+                    .join("::"),
+            ]
         }
         UseTreeKind::Nested { items, .. } => {
-            let prefix = tree.prefix.segments.iter()
+            let prefix = tree
+                .prefix
+                .segments
+                .iter()
                 .map(|seg| seg.ident.name.as_str())
                 .collect::<Vec<_>>()
                 .join("::");
-            
+
             let mut paths = Vec::new();
             for (nested_tree, _) in items {
                 for nested_str in use_tree_to_strings(nested_tree) {
@@ -481,15 +498,21 @@ pub fn use_tree_to_strings(tree: &UseTree) -> Vec<String> {
                     }
                 }
             }
-            if paths.is_empty() { vec![prefix] } else { paths }
+            if paths.is_empty() {
+                vec![prefix]
+            } else {
+                paths
+            }
         }
     }
 }
 
 fn check_span_path(source_map: &SourceMap, span: Span, pattern: &str) -> bool {
     let pattern_windows = pattern.replace('/', "\\");
-    let path_str =
-        get_path_str_from_session(source_map, span).expect("Failed to get test file path");
+    let Some(path_str) = get_path_str_from_session(source_map, span) else {
+        // If we can't get the path (e.g., synthetic/virtual files), assume not matching
+        return false;
+    };
 
     // Check for simulated directory in test files first
     if let Some(simulated) = extract_simulated_dir(&path_str) {
@@ -582,14 +605,17 @@ pub fn test_comment_annotations_match_stderr(
         })
         .collect();
 
-    assert!(!rs_files.is_empty(), "No .rs test files found in ui directory");
+    assert!(
+        !rs_files.is_empty(),
+        "No .rs test files found in ui directory"
+    );
 
     for rs_file in rs_files {
         let stderr_file = rs_file.with_extension("stderr");
 
         // Read the .rs file
-        let rs_content = fs::read_to_string(&rs_file)
-            .unwrap_or_else(|_| panic!("Failed to read {:?}", rs_file));
+        let rs_content =
+            fs::read_to_string(&rs_file).unwrap_or_else(|_| panic!("Failed to read {:?}", rs_file));
 
         // Read the .stderr file (if it exists)
         let stderr_content = fs::read_to_string(&stderr_file).unwrap_or_default();
