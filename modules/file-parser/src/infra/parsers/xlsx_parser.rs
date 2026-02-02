@@ -27,8 +27,14 @@ const OLE_MAGIC: [u8; 4] = [0xD0, 0xCF, 0x11, 0xE0];
 const ZIP_MAGIC: [u8; 4] = [0x50, 0x4B, 0x03, 0x04];
 
 impl From<&str> for ExcelFormat {
-    fn from(value: &str) -> Self {
-        Self::from_filename(value).unwrap_or_default()
+    fn from(ext: &str) -> Self {
+        match ext.to_lowercase().as_str() {
+            "xls" => Self::Xls,
+            "xlsx" => Self::Xlsx,
+            "xlsm" => Self::Xlsm,
+            "xlsb" => Self::Xlsb,
+            _ => Self::default(),
+        }
     }
 }
 
@@ -45,15 +51,24 @@ impl ExcelFormat {
     /// Determine format from filename extension (used as hint for MIME type)
     /// Returns an error if the extension is not a recognized Excel format
     pub fn from_filename(filename: &str) -> Result<Self, DomainError> {
-        let ext = Path::new(filename).extension().and_then(|os| os.to_str());
+        let ext = Path::new(filename)
+            .extension()
+            .and_then(|os| os.to_str())
+            .ok_or_else(|| {
+                DomainError::parse_error(format!(
+                    "Unrecognized Excel file extension: '{filename}'"
+                ))
+            })?;
 
-        if let Some(ext) = ext {
-            return Ok(ExcelFormat::from(ext));
+        match ext.to_lowercase().as_str() {
+            "xls" => Ok(Self::Xls),
+            "xlsx" => Ok(Self::Xlsx),
+            "xlsm" => Ok(Self::Xlsm),
+            "xlsb" => Ok(Self::Xlsb),
+            _ => Err(DomainError::parse_error(format!(
+                "Unrecognized Excel file extension: '{filename}'"
+            ))),
         }
-
-        Err(DomainError::parse_error(format!(
-            "Unrecognized Excel file extension: '{filename}'"
-        )))
     }
 
     /// Detect format from file magic bytes
