@@ -79,7 +79,7 @@ clippy:
 # Run markdown checks with 'lychee'
 lychee:
 	$(call ensure_tool,lychee)
-	lychee docs examples dylint_lints guidelines
+	lychee --no-progress docs examples dylint_lints guidelines
 
 ## The Kani Rust Verifier for checking safety of the code
 kani:

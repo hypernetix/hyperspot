@@ -141,7 +141,7 @@ Requirements and design elements can include **implementation status** and **pri
 ```markdown
 #### User roles requirement
 
-**ID**: [ ] `p1` - `fdd-auth-fr-user-roles`
+**ID**: [ ] `p1` - `fdd-auth-req-user-roles`
 
 The system must support 1-N user roles associated with the user...
 ```
@@ -149,7 +149,7 @@ The system must support 1-N user roles associated with the user...
 ```markdown
 #### Response time
 
-**ID**: [x] `p2` - `fdd-api-nfr-response-time`
+**ID**: [x] `p2` - `fdd-api-req-response-time`
 
 API responses must complete within 200ms at p95...
 ```

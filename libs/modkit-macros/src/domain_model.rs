@@ -14,6 +14,9 @@ use syn::{DeriveInput, Fields, Type, TypePath};
 /// These patterns match infrastructure types that should not appear in domain models.
 /// The list is synchronized with Dylint lints `DE0301` (`no_infra_in_domain`) and
 /// `DE0308` (`no_http_in_domain`).
+///
+/// Note: Both root-prefixed (`::infra::`) and non-prefixed (`infra::`) variants are included
+/// because `type_path_to_string()` strips the leading `::` from paths.
 const FORBIDDEN_PATTERNS: &[&str] = &[
     // Database frameworks
     "sqlx::",
@@ -25,7 +28,10 @@ const FORBIDDEN_PATTERNS: &[&str] = &[
     // External service clients
     "reqwest::",
     "tonic::",
-    // Infrastructure/API layer
+    // Infrastructure/API layer (both prefixed and non-prefixed forms)
+    "infra::",
+    "infrastructure::",
+    "api::",
     "::infra::",
     "::infrastructure::",
     "::api::",
@@ -452,5 +458,50 @@ mod tests {
 
         assert!(output_str.contains("compile_error"));
         assert!(output_str.contains("union"));
+    }
+
+    #[test]
+    fn test_forbidden_infra_module_path() {
+        let input: DeriveInput = parse_quote! {
+            pub struct BadModel {
+                pub repo: infra::Repo,
+            }
+        };
+
+        let output = expand_domain_model(&input);
+        let output_str = output.to_string();
+
+        assert!(output_str.contains("compile_error"));
+        assert!(output_str.contains("infra::"));
+    }
+
+    #[test]
+    fn test_forbidden_api_module_path() {
+        let input: DeriveInput = parse_quote! {
+            pub struct BadModel {
+                pub handler: api::Handler,
+            }
+        };
+
+        let output = expand_domain_model(&input);
+        let output_str = output.to_string();
+
+        assert!(output_str.contains("compile_error"));
+        assert!(output_str.contains("api::"));
+    }
+
+    #[test]
+    fn test_forbidden_infrastructure_module_path() {
+        let input: DeriveInput = parse_quote! {
+            pub struct BadModel {
+                pub db: infrastructure::Database,
+            }
+        };
+
+        let output = expand_domain_model(&input);
+        let output_str = output.to_string();
+
+        assert!(output_str.contains("compile_error"));
+        assert!(output_str.contains("infrastructure::"));
     }
 }
