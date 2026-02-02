@@ -3,7 +3,7 @@
 
 extern crate rustc_ast;
 
-use lint_utils::{is_in_domain_path, use_tree_to_strings};
+use lint_utils::{is_in_contract_module_ast, is_in_domain_path, use_tree_to_strings};
 use rustc_ast::{Item, ItemKind, Ty, TyKind};
 use rustc_lint::{EarlyLintPass, LintContext};
 
@@ -213,7 +213,10 @@ fn check_type_in_domain(cx: &rustc_lint::EarlyContext<'_>, ty: &Ty) {
 
 impl EarlyLintPass for De0301NoInfraInDomain {
     fn check_item(&mut self, cx: &rustc_lint::EarlyContext<'_>, item: &Item) {
-        if !is_in_domain_path(cx.sess().source_map(), item.span) {
+        // Skip if not in domain path or if in contract module (contracts can have infra types)
+        if !is_in_domain_path(cx.sess().source_map(), item.span)
+            || is_in_contract_module_ast(cx, item)
+        {
             return;
         }
 
