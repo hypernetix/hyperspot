@@ -50,6 +50,12 @@ impl TypesError {
     pub const fn is_registration_failed(&self) -> bool {
         matches!(self, Self::RegistrationFailed(_))
     }
+
+    /// Returns `true` if this is an internal error.
+    #[must_use]
+    pub const fn is_internal(&self) -> bool {
+        matches!(self, Self::Internal(_))
+    }
 }
 
 #[cfg(test)]

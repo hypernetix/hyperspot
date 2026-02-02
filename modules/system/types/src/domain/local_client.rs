@@ -24,13 +24,13 @@ impl TypesLocalClient {
 
     /// Marks the types module as ready.
     pub fn set_ready(&self) {
-        self.ready.store(true, Ordering::SeqCst);
+        self.ready.store(true, Ordering::Release);
     }
 }
 
 #[async_trait]
 impl TypesClient for TypesLocalClient {
     async fn is_ready(&self) -> Result<bool, TypesError> {
-        Ok(self.ready.load(Ordering::SeqCst))
+        Ok(self.ready.load(Ordering::Acquire))
     }
 }
