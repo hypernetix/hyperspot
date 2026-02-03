@@ -9,7 +9,7 @@ description = "gRPC Hub module"
 repository.workspace = true
 readme = "README.md"
 keywords = ["cyberfabric", "cyberfabric-system"]
-categories = ["network-programming", "grpc"]
+categories = ["network-programming"]
 
 [lib]
 name = "grpc_hub"
