@@ -1,25 +1,16 @@
 //! Demonstration test proving domain enforcement works at compile time.
 //!
-//! This test file demonstrates TWO levels of enforcement:
+//! This test file demonstrates that `#[domain_model]` macro validates field types
+//! at macro expansion time. The validation checks field type names against
+//! forbidden patterns (e.g., `sqlx::`, `http::`, `sea_orm::`).
 //!
-//! 1. **Macro-level**: `#[domain_model]` macro validates field types at macro expansion time
-//! 2. **Trait-level**: Trait bounds require types to implement `DomainModel`
-//!
-//! The validation happens during macro expansion by checking field type names
-//! against forbidden patterns (e.g., `sqlx::`, `http::`, `sea_orm::`).
-//!
-//! To verify enforcement works, uncomment the `ENFORCEMENT_TEST_*` sections below
-//! and run `cargo check -p cf-modkit`. Each should produce a compile error.
+//! For compile-fail tests, see `domain_model_tests.rs` which uses trybuild.
 
 #![allow(clippy::str_to_string)]
 
 use modkit::domain::DomainModel;
 use modkit_macros::domain_model;
 use uuid::Uuid;
-
-// ============================================================================
-// VALID: Domain model with only allowed field types - COMPILES
-// ============================================================================
 
 #[domain_model]
 #[derive(Debug, Clone)]
@@ -28,48 +19,6 @@ pub struct ValidUser {
     pub email: String,
     pub active: bool,
 }
-
-// ============================================================================
-// ENFORCEMENT_TEST_1: Macro-level validation
-// Error: field 'status' has type 'http::StatusCode' which matches forbidden pattern
-// ============================================================================
-
-// #[domain_model]
-// pub struct BadModelWithHttpType {
-//     pub id: Uuid,
-//     pub status: http::StatusCode,  // FORBIDDEN - will fail at macro expansion!
-// }
-
-// ============================================================================
-// ENFORCEMENT_TEST_2: Macro-level validation with database type
-// Error: field 'pool' has type 'sqlx::PgPool' which matches forbidden pattern
-// ============================================================================
-
-// #[domain_model]
-// pub struct BadModelWithDbType {
-//     pub id: Uuid,
-//     pub pool: sqlx::PgPool,  // FORBIDDEN - will fail at macro expansion!
-// }
-
-// ============================================================================
-// ENFORCEMENT_TEST_3: Trait-level enforcement
-// Error: `DomainModel` is not implemented for `UnmarkedModel`
-// ============================================================================
-
-// pub struct UnmarkedModel {
-//     pub id: Uuid,
-// }
-//
-// pub trait TestRepository
-// where
-//     UnmarkedModel: DomainModel,  // This bound will fail - no #[domain_model] macro!
-// {
-//     fn find(&self) -> Option<UnmarkedModel>;
-// }
-
-// ============================================================================
-// Compile-time assertion that ValidUser implements DomainModel
-// ============================================================================
 
 const _: () = {
     #[allow(dead_code)]
