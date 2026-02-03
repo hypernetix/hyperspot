@@ -37,7 +37,7 @@ STANDARDS ALIGNMENT:
 
 # {Short title describing problem and chosen solution}
 
-- [ ] `p2` - **ID**: `fdd-{module}-adr-{slug}`
+**ID**: `fdd-{module}-adr-{slug}`
 
 ## Context and Problem Statement
 
