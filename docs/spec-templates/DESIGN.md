@@ -37,8 +37,8 @@ ARCHITECTURE VIEWS (per IEEE 42010):
 
 DESIGN LANGUAGE:
   - Be specific and clear; no fluff, bloat, or emoji
-  - Reference PRD requirements using `fdd-...` IDs
-  - Reference ADR documents using `fdd-...` IDs
+  - Reference PRD requirements using `fdd-{module}-req-{slug}` IDs
+  - Reference ADR documents using `fdd-{module}-adr-{slug}` IDs
 =============================================================================
 -->
 
