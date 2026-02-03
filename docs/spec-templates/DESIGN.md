@@ -7,6 +7,10 @@ TECHNICAL DESIGN DOCUMENT (TDD / SDD)
 PURPOSE: Define HOW the system is built — architecture, components, APIs,
 data models, and technical decisions that realize the requirements.
 
+DESIGN IS PRIMARY: DESIGN defines the "what" (architecture and behavior).
+ADRs record the "why" (rationale and trade-offs) for selected design
+decisions; ADRs are not a parallel spec, it's a traceability artifact.
+
 SCOPE:
   ✓ Architecture overview and vision
   ✓ Design principles and constraints

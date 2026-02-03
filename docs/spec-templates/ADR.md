@@ -23,6 +23,8 @@ NOT IN THIS DOCUMENT (see other templates):
 
 RULES:
   - ADRs represent actual decision dilemma and decision state
+  - DESIGN is the primary artifact ("what"); ADRs annotate DESIGN with rationale ("why")
+  - Avoid "everything is a decision"; write ADRs only when the rationale needs to be explained and recorded for traceability
   - Decision history is in git, not in documents
   - Use single ADR per decision
 
