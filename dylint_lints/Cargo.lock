@@ -531,8 +531,8 @@ dependencies = [
  "figment",
  "futures-core",
  "futures-util",
- "gts 0.7.8",
- "gts-macros 0.7.8",
+ "gts",
+ "gts-macros",
  "http",
  "inventory",
  "nix",
@@ -1090,7 +1090,7 @@ dependencies = [
 
 [[package]]
 name = "de0503_plugin_client_suffix"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "async-trait",
  "clippy_utils",
@@ -1149,8 +1149,8 @@ dependencies = [
  "clippy_utils",
  "dylint_linting",
  "dylint_testing",
- "gts 0.1.0",
- "gts-macros 0.1.0",
+ "gts",
+ "gts-macros",
  "lint_utils",
  "schemars",
  "serde",
@@ -1164,8 +1164,8 @@ dependencies = [
  "clippy_utils",
  "dylint_linting",
  "dylint_testing",
- "gts 0.1.0",
- "gts-macros 0.1.0",
+ "gts",
+ "gts-macros",
  "lint_utils",
  "schemars",
  "serde",
@@ -1738,24 +1738,6 @@ checksum = "0cc23270f6e1808e30a928bdc84dea0b9b4136a8bc82338574f23baf47bbd280"
 
 [[package]]
 name = "gts"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f055f25975351d3d37bf518b64125171d19ab1294bdfb83177b8d94e161317a7"
-dependencies = [
- "jsonschema",
- "schemars",
- "serde",
- "serde_json",
- "serde_yaml",
- "shellexpand",
- "thiserror 2.0.17",
- "tracing",
- "uuid",
- "walkdir",
-]
-
-[[package]]
-name = "gts"
 version = "0.7.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f8840cf9fc88c433ff5fe294ba1c6064826fba7dafaae69441b4969f22e191b"
@@ -1770,18 +1752,6 @@ dependencies = [
  "tracing",
  "uuid",
  "walkdir",
-]
-
-[[package]]
-name = "gts-macros"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c4ab1a912320944290ca2836681f3f706e91584f5d05d6e5b72cd99987a179ec"
-dependencies = [
- "proc-macro2",
- "quote",
- "serde_json",
- "syn 2.0.111",
 ]
 
 [[package]]

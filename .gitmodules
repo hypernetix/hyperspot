@@ -1,3 +1,6 @@
 [submodule "guidelines/DNA"]
 	path = guidelines/DNA
 	url = https://github.com/hypernetix/DNA
+[submodule "docs/DNA"]
+	path = docs/DNA
+	url = https://github.com/hypernetix/DNA
