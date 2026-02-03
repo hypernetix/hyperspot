@@ -18,7 +18,7 @@ The registry supports automatic model discovery from providers, requiring tenant
 - **Health tracking**: Provider health metrics for intelligent routing
 
 **Success Criteria**:
-- All scenarios (S1-S5) implemented and operational
+- All scenarios (S1-S6) implemented and operational
 - Model resolution latency < 10ms P99
 - Provider health status updated within health check interval
 
@@ -217,9 +217,52 @@ The system must track provider health metrics (latency, error rate, availability
 - Statuses: pending → approved | rejected | revoked
 - Auto-approval configurable per tenant/provider
 - Revoked models immediately unavailable
+
+**State Machine**:
+
+```mermaid
+stateDiagram-v2
+    [*] --> pending: Model discovered
+    pending --> approved: Admin approves
+    pending --> approved: Auto-approval rule matches
+    pending --> rejected: Admin rejects
+    approved --> revoked: Admin revokes
+    rejected --> approved: Admin reconsiders
+    revoked --> approved: Admin reinstates
+```
+
+**State descriptions**:
+- **pending**: New model discovered, awaiting tenant admin decision
+- **approved**: Model available for tenant use
+- **rejected**: Model explicitly denied for tenant
+- **revoked**: Previously approved model access withdrawn
 <!-- fdd-id-content -->
 
-#### UC-005: Provider Health Monitoring
+#### UC-005: Model Revocation
+
+**ID**: [ ] `p1` `fdd-model-registry-usecase-model-revocation-v1`
+
+<!-- fdd-id-content -->
+**Actor**: `fdd-model-registry-actor-tenant-admin`
+
+**Preconditions**: Model in approved status for tenant.
+
+**Flow**:
+1. Tenant admin selects approved model
+2. Admin initiates revocation
+3. Registry updates status to revoked
+4. Model immediately becomes unavailable for tenant
+
+**Postconditions**: Model access revoked.
+
+**Acceptance criteria**:
+- Revoked models return model_not_approved on access attempts
+- Active streaming requests may continue, new requests rejected
+- Revocation is auditable (timestamp, admin who revoked)
+- Model can be reinstated (revoked → approved)
+<!-- fdd-id-content -->
+
+#### UC-006: Provider Health Monitoring
 
 **ID**: [ ] `p1` `fdd-model-registry-usecase-health-monitoring-v1`
 

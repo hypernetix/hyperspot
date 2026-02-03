@@ -6,7 +6,7 @@
 
 LLM Gateway provides unified access to multiple LLM providers. Consumers interact with a single interface regardless of underlying provider.
 
-The architecture follows a pass-through design: Gateway normalizes requests and responses but does not interpret content or execute tools. Provider-specific adapters handle translation to/from each provider's API format. All external calls route through Outbound API Gateway for credential injection and circuit breaking.
+The architecture follows a pass-through design: Gateway normalizes requests and responses but does not interpret content or execute tools. Provider-specific adapters handle translation to/from each provider's API format. All external calls route through Outbound API Gateway for credential injection and circuit breaking. Gateway also performs health-based routing using Model Registry metrics — see [ADR-0004](./ADR/0004-fdd-llm-gateway-adr-circuit-breaking.md) for the distinction between infrastructure-level circuit breaking (OAGW) and business-level health routing (Gateway).
 
 The system is horizontally scalable and stateless. No conversation history is stored; consumers provide full context with each request. The only state is temporary async job tracking, which can be stored in distributed cache.
 
@@ -139,8 +139,11 @@ Full request/response content is not logged due to PII concerns. Only metadata (
 **Core Entities**:
 
 *Request/Response (`core/`):*
-- [Request](../llm_gateway-sdk/schemas/core/request.v1.schema.json) - Incoming request (model, messages, tools, stream, async, response_schema, fallback)
-- [Response](../llm_gateway-sdk/schemas/core/response.v1.schema.json) - Response to consumer (content, tool_calls, usage, fallback_used, model_used)
+- [Request](../llm_gateway-sdk/schemas/core/request.v1.schema.json) - Chat completion request (model, messages, tools, stream, async, response_schema, fallback)
+- [Response](../llm_gateway-sdk/schemas/core/response.v1.schema.json) - Chat completion response (content, tool_calls, usage, fallback_used, model_used)
+- [EmbeddingRequest](../llm_gateway-sdk/schemas/core/embedding_request.v1.schema.json) - Embedding request (model, input, dimensions, encoding_format)
+- [EmbeddingResponse](../llm_gateway-sdk/schemas/core/embedding_response.v1.schema.json) - Embedding response (model, data[], usage)
+- [StreamChunk](../llm_gateway-sdk/schemas/core/stream_chunk.v1.schema.json) - Streaming response chunk (id, model, delta, finish_reason, usage)
 - [Message](../llm_gateway-sdk/schemas/core/message.v1.schema.json) - Conversation element (role, content)
 - [Usage](../llm_gateway-sdk/schemas/core/usage.v1.schema.json) - Token counts and cost estimate (input_tokens, output_tokens, cost_estimate)
 - [FallbackConfig](../llm_gateway-sdk/schemas/core/fallback_config.v1.schema.json) - Fallback configuration (models[], strategy)
@@ -179,6 +182,8 @@ Full request/response content is not logged due to PII concerns. Only metadata (
 - Request → Tool: contains 0..*
 - Request → Schema: optional response_schema
 - Request → FallbackConfig: optional
+- EmbeddingRequest → Usage: returns
+- EmbeddingResponse → Usage: contains
 - Message → Role: has
 - Message → ContentPart: contains 1..*
 - Response → ContentPart: contains 0..*
@@ -274,7 +279,62 @@ graph TB
 | `job_not_found` | Job ID does not exist |
 | `job_expired` | Job result TTL exceeded |
 
+**Streaming Contract**:
+
+Streaming responses use Server-Sent Events (SSE) format. Each event contains a [StreamChunk](../llm_gateway-sdk/schemas/core/stream_chunk.v1.schema.json).
+
+Format:
+```
+data: {"id":"chunk-1","model":"gpt-4","delta":{"role":"assistant"}}\n\n
+data: {"id":"chunk-2","model":"gpt-4","delta":{"content":"Hello"}}\n\n
+data: {"id":"chunk-3","model":"gpt-4","delta":{"content":" world"}}\n\n
+data: {"id":"chunk-4","model":"gpt-4","delta":{},"finish_reason":"stop","usage":{"input_tokens":10,"output_tokens":5}}\n\n
+data: [DONE]\n\n
+```
+
+Chunk structure:
+- `id` — Chunk identifier
+- `model` — Model used for generation
+- `delta.role` — Role (first chunk only)
+- `delta.content` — Content fragment
+- `delta.tool_calls` — Tool call fragments (index, id, function.name, function.arguments)
+- `finish_reason` — Completion reason (final chunk): stop, length, tool_calls, content_filter
+- `usage` — Token counts (final chunk only)
+
+The stream terminates with `data: [DONE]` event.
+
 ### 3.4: Interactions & Sequences
+
+> **Note**: In the sequence diagrams below, "LLM Gateway" (GW) represents the full gateway stack including Provider Adapters. In practice, the Application Layer delegates to provider-specific adapters, which then call Outbound API Gateway. This is simplified for diagram readability. See Component Model (section 3.2) for the detailed layer structure.
+
+#### Provider Resolution
+
+This sequence is used by all request flows to resolve the target provider. Other diagrams show "Resolve provider" as a simplified step — this is the detailed flow.
+
+```mermaid
+sequenceDiagram
+    participant GW as LLM Gateway
+    participant MR as Model Registry
+
+    GW->>MR: get_tenant_model(ctx, model_id)
+    MR->>MR: Check model exists
+    MR->>MR: Check tenant approval
+    MR->>MR: Get provider health status
+    MR-->>GW: ModelInfo + provider + health
+
+    alt Fallback configured
+        GW->>GW: Rank providers by health
+        GW->>GW: Select best available
+    else Single provider
+        GW->>GW: Use primary provider
+    end
+```
+
+**Resolution outcomes**:
+- `model_not_found` — model not in catalog
+- `model_not_approved` — model not approved for tenant
+- `model_deprecated` — model sunset by provider
+- Success — returns provider endpoint + health metrics
 
 #### Chat Completion
 
@@ -748,6 +808,43 @@ sequenceDiagram
     end
 ```
 
+#### Budget Enforcement
+
+**Use cases**: `fdd-llm-gateway-fr-budget-enforcement-v1`
+**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-usage-tracker`
+
+```mermaid
+sequenceDiagram
+    participant C as Consumer
+    participant GW as LLM Gateway
+    participant UT as Usage Tracker
+    participant OB as Outbound API Gateway
+    participant P as Provider
+
+    C->>GW: chat_completion(...)
+    GW->>UT: check_budget(tenant, model)
+    alt Budget exceeded
+        UT-->>GW: budget_exceeded
+        GW-->>C: budget_exceeded
+    else Budget available
+        UT-->>GW: ok (remaining quota)
+        GW->>OB: Request
+        OB->>P: Request
+        P-->>OB: Response
+        OB-->>GW: Response
+        GW->>UT: report_usage(tenant, model, tokens)
+        UT-->>GW: ok
+        GW-->>C: Response
+    end
+```
+
+**Budget enforcement flow**:
+1. **Pre-request check**: Gateway calls `check_budget()` before processing
+2. **Reject if exceeded**: Returns `budget_exceeded` error immediately
+3. **Process request**: If budget available, proceed with provider call
+4. **Report usage**: After response, report actual token usage to Usage Tracker
+5. **Usage Tracker**: Maintains running totals per tenant/model, enforces configured limits
+
 #### Batch Processing
 
 **Use cases**: `fdd-llm-gateway-usecase-batch-processing-v1`
@@ -774,6 +871,13 @@ sequenceDiagram
     OB-->>GW: status + results[]
     GW-->>C: status + results[]
 ```
+
+**Tenant isolation**: Gateway is stateless, but batch metadata is stored in distributed cache:
+- On `create_batch`: Gateway stores `{batch_id → tenant_id, provider_batch_id, created_at}` in cache
+- On `get_batch`: Gateway retrieves tenant_id from cache, validates caller has access
+- Cache TTL matches batch expiration policy
+
+This is the same pattern used for async jobs (see ADR-0001).
 
 ### 3.5: Database schemas & tables
 
