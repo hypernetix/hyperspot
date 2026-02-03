@@ -56,16 +56,28 @@ const HTTP_PATTERNS: &[&str] = &[
     "hyper",
 ];
 
+/// Check if a path matches an HTTP pattern.
+/// Returns true only if path equals pattern exactly or starts with "pattern::"
+/// This avoids false positives like "http_client" matching "http".
+fn matches_http_pattern(path: &str) -> Option<&'static str> {
+    for pattern in HTTP_PATTERNS {
+        if path == *pattern || path.starts_with(&format!("{pattern}::")) {
+            return Some(pattern);
+        }
+    }
+    None
+}
+
 fn check_use_item(cx: &EarlyContext<'_>, item: &Item, tree: &rustc_ast::UseTree) {
     for path_str in use_tree_to_strings(tree) {
-        for pattern in HTTP_PATTERNS {
-            if path_str.starts_with(pattern) {
-                cx.span_lint(DE0308_NO_HTTP_IN_DOMAIN, item.span, |diag| {
-                    diag.primary_message("domain module imports HTTP type (DE0308)");
-                    diag.help("domain should be transport-agnostic; handle HTTP in api/ layer");
-                });
-                return;
-            }
+        if let Some(pattern) = matches_http_pattern(&path_str) {
+            cx.span_lint(DE0308_NO_HTTP_IN_DOMAIN, item.span, |diag| {
+                diag.primary_message(format!(
+                    "domain module imports HTTP type `{pattern}` (DE0308)"
+                ));
+                diag.help("domain should be transport-agnostic; handle HTTP in api/ layer");
+            });
+            return;
         }
     }
 }
@@ -81,17 +93,15 @@ fn check_type_in_domain(cx: &rustc_lint::EarlyContext<'_>, ty: &Ty) {
                 .collect::<Vec<_>>()
                 .join("::");
 
-            for pattern in HTTP_PATTERNS {
-                if path_str.starts_with(pattern) {
-                    cx.span_lint(DE0308_NO_HTTP_IN_DOMAIN, ty.span, |diag| {
-                        diag.primary_message(format!(
-                            "domain module uses HTTP type `{}` (DE0308)",
-                            path_str
-                        ));
-                        diag.help("domain should be transport-agnostic; handle HTTP in api/ layer");
-                    });
-                    return;
-                }
+            if matches_http_pattern(&path_str).is_some() {
+                cx.span_lint(DE0308_NO_HTTP_IN_DOMAIN, ty.span, |diag| {
+                    diag.primary_message(format!(
+                        "domain module uses HTTP type `{}` (DE0308)",
+                        path_str
+                    ));
+                    diag.help("domain should be transport-agnostic; handle HTTP in api/ layer");
+                });
+                return;
             }
 
             // Recursively check generic arguments (e.g., Option<http::StatusCode>)
@@ -145,16 +155,17 @@ fn check_type_in_domain(cx: &rustc_lint::EarlyContext<'_>, ty: &Ty) {
                         .collect::<Vec<_>>()
                         .join("::");
 
-                    for pattern in HTTP_PATTERNS {
-                        if path_str.starts_with(pattern) {
-                            cx.span_lint(DE0308_NO_HTTP_IN_DOMAIN, ty.span, |diag| {
-                                diag.primary_message(
-                                    format!("domain module uses HTTP trait `{}` (DE0308)", path_str)
-                                );
-                                diag.help("domain should be transport-agnostic; handle HTTP in api/ layer");
-                            });
-                            return;
-                        }
+                    if matches_http_pattern(&path_str).is_some() {
+                        cx.span_lint(DE0308_NO_HTTP_IN_DOMAIN, ty.span, |diag| {
+                            diag.primary_message(format!(
+                                "domain module uses HTTP trait `{}` (DE0308)",
+                                path_str
+                            ));
+                            diag.help(
+                                "domain should be transport-agnostic; handle HTTP in api/ layer",
+                            );
+                        });
+                        return;
                     }
                 }
             }
@@ -172,16 +183,17 @@ fn check_type_in_domain(cx: &rustc_lint::EarlyContext<'_>, ty: &Ty) {
                         .collect::<Vec<_>>()
                         .join("::");
 
-                    for pattern in HTTP_PATTERNS {
-                        if path_str.starts_with(pattern) {
-                            cx.span_lint(DE0308_NO_HTTP_IN_DOMAIN, ty.span, |diag| {
-                                diag.primary_message(
-                                    format!("domain module uses HTTP trait `{}` (DE0308)", path_str)
-                                );
-                                diag.help("domain should be transport-agnostic; handle HTTP in api/ layer");
-                            });
-                            return;
-                        }
+                    if matches_http_pattern(&path_str).is_some() {
+                        cx.span_lint(DE0308_NO_HTTP_IN_DOMAIN, ty.span, |diag| {
+                            diag.primary_message(format!(
+                                "domain module uses HTTP trait `{}` (DE0308)",
+                                path_str
+                            ));
+                            diag.help(
+                                "domain should be transport-agnostic; handle HTTP in api/ layer",
+                            );
+                        });
+                        return;
                     }
                 }
             }
