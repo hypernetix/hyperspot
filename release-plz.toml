@@ -105,6 +105,7 @@ git_release_enable = false
 name = "cf-modkit-macros-tests"
 changelog_update = false
 git_release_enable = false
+publish = false
 
 [[package]]
 name = "cf-modkit-node-info"
