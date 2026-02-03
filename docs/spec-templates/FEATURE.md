@@ -9,7 +9,7 @@ and implementation requirements that bridge PRD and DESIGN to code.
 
 SCOPE:
   ✓ Actor flows (user-facing interactions, step by step)
-  ✓ Algorithms (internal logic, validation, processing)
+  ✓ Processes / Business Logic (incl. internal logic, validation, async jobs, etc)
   ✓ State machines (entity lifecycle)
   ✓ Implementation requirements (what to build)
   ✓ Acceptance criteria (how to verify)
@@ -83,13 +83,13 @@ User-facing interactions that start with an actor (human or external system) and
    1. [ ] - `p1` - {Action if false} - `inst-{step-id}`
 6. [ ] - `p1` - **RETURN** {result} - `inst-{step-id}`
 
-## 3. Algorithms (FDL)
+## 3. Processes / Business Logic (FDL)
 
-Internal system functions and procedures that do not interact with actors directly. Examples: database layer operations, authorization logic, middleware, validation routines, library functions, background jobs. These are reusable building blocks called by Actor Flows or other Algorithms.
+Internal system functions and procedures that do not interact with actors directly. Examples: database layer operations, authorization logic, middleware, validation routines, library functions, background jobs. These are reusable building blocks called by Actor Flows or other processes.
 
 > **FDL pseudo-code is optional.** Same guidance as Actor Flows — use when clarity matters, skip when it becomes overhead.
 
-### {Algorithm Name}
+### {Process Name}
 
 - [ ] `p2` - **ID**: `fdd-{module}-algo-{slug}`
 
