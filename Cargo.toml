@@ -409,7 +409,7 @@ matchit = "0.9"
 
 # Document and file handling
 rust-embed = "8"
-bytes = "1.5"
+bytes = "1.11"
 mime = "0.3"
 
 # Document parsing libraries
