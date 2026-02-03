@@ -63,8 +63,9 @@ This SDK pattern provides:
 
 All modules MUST adhere to the following directory structure:
 
-```
+```text
 modules/<your-module>/
+├─ QUICKSTART.md                # API quickstart with curl examples (see below)
 ├─ <your-module>-sdk/           # SDK crate: public API for consumers
 │  ├─ Cargo.toml
 │  └─ src/
@@ -101,6 +102,61 @@ modules/<your-module>/
             ├─ sea_orm_repo.rs  # SeaORM repository implementation
             └─ migrations/      # SeaORM migrations
 ```
+
+### Module Documentation: QUICKSTART.md
+
+Every module with REST endpoints MUST include a `QUICKSTART.md` file with:
+
+1. **Module description** - Brief explanation of what the module does and why it exists
+2. **Features/capabilities** - Bulleted list of key functionality (stable, won't drift)
+3. **Use cases** - Practical scenarios where the module applies (optional but recommended)
+4. **Link to /docs** - Reference to full API documentation
+5. **1-2 minimal examples** - Basic curl commands showing typical usage
+
+Keep examples minimal. The documentation at `/docs` is auto-generated from OpenAPI spec and always current.
+
+**Template:**
+
+    # <Module Name> - Quickstart
+    
+    <2-3 sentence description of what the module does and its purpose.>
+    
+    **Features:**
+    - Key capability 1
+    - Key capability 2
+    - Key capability 3
+    
+    **Use cases:**
+    - Practical scenario 1
+    - Practical scenario 2
+    
+    Full API documentation: <http://127.0.0.1:8087/docs>
+    
+    ## Examples
+    
+    ### List Resources
+    
+    ```bash
+    curl -s http://127.0.0.1:8087/<module>/v1/resource | python3 -m json.tool
+    ```
+    
+    **Output:**
+    ```json
+    {
+        "items": [...]
+    }
+    ```
+    
+    For additional endpoints, see <http://127.0.0.1:8087/docs>.
+
+**Key principles:**
+- Avoid duplication - `/docs` is auto-generated and always current
+- Show, don't list - 1-2 working examples, not comprehensive tables
+- No fluff - State facts, avoid marketing language
+- Describe stable features - Capabilities that won't change frequently
+- Stay actionable - Focus on what users can do with the module
+
+The main [QUICKSTART_GUIDE.md](../docs/QUICKSTART_GUIDE.md) references all module quickstarts.
 
 ---
 
