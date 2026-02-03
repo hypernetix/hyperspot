@@ -90,8 +90,6 @@ pub fn expand_domain_model(input: &DeriveInput) -> TokenStream {
     quote! {
         #input
 
-        #[allow(deprecated)]
-        impl #impl_generics ::modkit::domain::DomainSafe for #name #ty_generics #where_clause {}
         impl #impl_generics ::modkit::domain::DomainModel for #name #ty_generics #where_clause {}
     }
 }

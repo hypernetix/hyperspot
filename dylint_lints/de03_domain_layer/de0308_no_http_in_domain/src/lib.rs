@@ -51,16 +51,9 @@ dylint_linting::declare_early_lint! {
 /// HTTP-related patterns forbidden in domain code
 /// Only includes frameworks actually used in the project: axum, hyper, http
 const HTTP_PATTERNS: &[&str] = &[
-    "http::",
-    "http::StatusCode",
-    "http::Method",
-    "http::HeaderMap",
-    "http::Request",
-    "http::Response",
-    "axum::http",
-    "hyper::StatusCode",
-    "hyper::Method",
-    "reqwest::StatusCode",
+    "http",
+    "axum",
+    "hyper",
 ];
 
 fn check_use_item(cx: &EarlyContext<'_>, item: &Item, tree: &rustc_ast::UseTree) {

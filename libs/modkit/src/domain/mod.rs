@@ -47,9 +47,6 @@
 //! - `DE0301`: Prohibits infrastructure imports in domain layer
 //! - `DE0308`: Prohibits HTTP types in domain layer
 
-// Re-export uuid for use in domain models
-use uuid::Uuid;
-
 /// Marker trait for domain models (business entities).
 ///
 /// Domain models represent core business concepts and should:
@@ -80,34 +77,11 @@ use uuid::Uuid;
 /// wrap them in `Arc<T>` at the point of use.
 pub trait DomainModel {}
 
-/// Internal marker trait (deprecated).
-///
-/// This trait is kept for backward compatibility but should not be used directly.
-/// Use `DomainModel` instead.
-#[doc(hidden)]
-#[deprecated(since = "0.1.6", note = "Use DomainModel instead")]
-pub trait DomainSafe {}
-
 /// Marker trait for domain errors.
 ///
 /// Domain errors represent business rule violations and should not
 /// contain infrastructure-specific error types.
 pub trait DomainErrorMarker: std::error::Error + Send + Sync {}
-
-// =============================================================================
-// Backward compatibility implementations for DomainSafe (deprecated)
-// =============================================================================
-
-#[allow(deprecated)]
-mod compat {
-    use super::{DomainSafe, Uuid};
-
-    // Keep minimal implementations for backward compatibility
-    impl DomainSafe for () {}
-    impl DomainSafe for bool {}
-    impl DomainSafe for String {}
-    impl DomainSafe for Uuid {}
-}
 
 #[cfg(test)]
 mod tests {

@@ -55,13 +55,17 @@ const INFRA_PATTERNS: &[&str] = &[
     // Infrastructure layer
     "crate::infra",
     "crate::infrastructure",
-    // Database frameworks (direct access forbidden, use modkit_db abstractions instead)
+    // Database frameworks (direct access forbidden)
     "sea_orm",
     "sqlx",
+    // ModKit infrastructure crates (should not leak into domain)
+    "modkit_db",
+    "modkit_db_macros",
+    "modkit_transport_grpc",
     // HTTP/Web frameworks (only used ones: axum, hyper, http)
     "axum",
     "hyper",
-    "http::",
+    "http",
     // API layer
     "crate::api",
     // External service clients
