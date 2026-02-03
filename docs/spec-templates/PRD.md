@@ -56,7 +56,7 @@ REQUIREMENT LANGUAGE:
 
 ## 2. Actors
 
-> **Note**: Stakeholder needs managed at project/task level by steering committee. Document **actors** (users, systems) that interact with this module.
+> **Note**: Stakeholder needs are managed at project/task level by steering committee. Document **actors** (users, systems) that interact with this module.
 
 ### 2.1 Human Actors
 
