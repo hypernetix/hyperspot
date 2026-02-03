@@ -9,10 +9,6 @@ use http::HeaderMap;
 /// W3C Trace Context header name
 pub const TRACEPARENT: &str = "traceparent";
 
-// ========================================
-// Shared helpers (available in all builds)
-// ========================================
-
 /// Extract traceparent header value from HTTP headers
 #[must_use]
 pub fn get_traceparent(headers: &HeaderMap) -> Option<&str> {
@@ -29,10 +25,6 @@ pub fn parse_trace_id(traceparent: &str) -> Option<String> {
         None
     }
 }
-
-// ========================================
-// OpenTelemetry integration (feature-gated)
-// ========================================
 
 #[cfg(feature = "otel")]
 mod imp {
@@ -125,10 +117,6 @@ mod imp {
     }
 }
 
-// ========================================
-// Public API
-// ========================================
-
 pub use imp::{inject_current_span, set_parent_from_headers};
 
 #[cfg(test)]
@@ -150,13 +138,13 @@ mod tests {
             TRACEPARENT,
             "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
                 .parse()
-                .unwrap(),
+                .expect("valid header"),
         );
 
         let tp = get_traceparent(&headers);
         assert!(tp.is_some());
         assert_eq!(
-            tp.unwrap(),
+            tp.expect("should be some"),
             "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
         );
     }
@@ -207,7 +195,7 @@ mod tests {
             TRACEPARENT,
             "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
                 .parse()
-                .unwrap(),
+                .expect("valid header"),
         );
 
         let span = info_span!(

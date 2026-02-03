@@ -1,7 +1,9 @@
 use std::path::Path;
 use std::sync::Arc;
+use std::time::Duration;
 
 use bytes::Bytes;
+use modkit_http::HttpClient;
 use tracing::{debug, info, instrument};
 
 use crate::domain::error::DomainError;
@@ -30,6 +32,9 @@ const EXTENSION_MIME_MAPPINGS: &[(&str, &str)] = &[
 pub struct FileParserService {
     parsers: Vec<Arc<dyn FileParserBackend>>,
     config: ServiceConfig,
+    /// Shared HTTP client for URL downloads (connection pooling).
+    /// `HttpClient` is `Clone + Send + Sync`, no external locking needed.
+    http_client: HttpClient,
 }
 
 /// Configuration for the file parser service
@@ -56,9 +61,24 @@ pub struct FileParserInfo {
 
 impl FileParserService {
     /// Create a new service with the given parsers
-    #[must_use]
-    pub fn new(parsers: Vec<Arc<dyn FileParserBackend>>, config: ServiceConfig) -> Self {
-        Self { parsers, config }
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the HTTP client cannot be built.
+    pub fn new(
+        parsers: Vec<Arc<dyn FileParserBackend>>,
+        config: ServiceConfig,
+    ) -> Result<Self, modkit_http::HttpError> {
+        let http_client = HttpClient::builder()
+            .timeout(Duration::from_secs(config.download_timeout_secs))
+            .max_body_size(config.max_file_size_bytes)
+            .build()?;
+
+        Ok(Self {
+            parsers,
+            config,
+            http_client,
+        })
     }
 
     /// Get information about available parsers
@@ -205,20 +225,15 @@ impl FileParserService {
 
         // Download file
         debug!("Downloading file from URL");
-        let client = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(
-                self.config.download_timeout_secs,
-            ))
-            .build()
+        let response = self
+            .http_client
+            .get(url.as_str())
+            .send()
+            .await
             .map_err(|e| {
-                tracing::error!(?e, "FileParserService: failed to create HTTP client");
-                DomainError::download_error(format!("Failed to create HTTP client: {e}"))
+                tracing::error!(?e, "FileParserService: failed to download file");
+                DomainError::download_error(format!("Failed to download file: {e}"))
             })?;
-
-        let response = client.get(url.as_str()).send().await.map_err(|e| {
-            tracing::error!(?e, "FileParserService: failed to download file");
-            DomainError::download_error(format!("Failed to download file: {e}"))
-        })?;
 
         if !response.status().is_success() {
             let status = response.status();
@@ -228,7 +243,7 @@ impl FileParserService {
 
         let content_type = response
             .headers()
-            .get("content-type")
+            .get(http::header::CONTENT_TYPE)
             .and_then(|v| v.to_str().ok())
             .map(ToString::to_string);
 
@@ -242,7 +257,9 @@ impl FileParserService {
             DomainError::download_error(format!("Failed to read response: {e}"))
         })?;
 
-        // Check file size
+        // Defense-in-depth: HttpClient's max_body_size should enforce this limit during
+        // download, but we check again here in case the client config changes or as a
+        // safeguard against implementation differences.
         if bytes.len() > self.config.max_file_size_bytes {
             return Err(DomainError::invalid_request(format!(
                 "File size {} exceeds maximum of {} bytes",

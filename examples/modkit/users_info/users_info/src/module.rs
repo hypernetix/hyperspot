@@ -2,11 +2,10 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use modkit::api::OpenApiRegistry;
-use modkit::{
-    DatabaseCapability, Module, ModuleCtx, RestApiCapability, SseBroadcaster, TracedClient,
-};
+use modkit::{DatabaseCapability, Module, ModuleCtx, RestApiCapability, SseBroadcaster};
 use modkit_db::DBProvider;
 use modkit_db::DbError;
+use modkit_http::HttpClient;
 use sea_orm_migration::MigrationTrait;
 use tracing::{debug, info};
 use url::Url;
@@ -86,8 +85,11 @@ impl Module for UsersInfo {
         let publisher: Arc<dyn EventPublisher<UserDomainEvent>> =
             Arc::new(SseUserEventPublisher::new(self.sse.clone()));
 
-        // Build traced HTTP client
-        let traced_client = TracedClient::default();
+        // Build HTTP client with OTEL tracing enabled
+        let http_client = HttpClient::builder()
+            .with_otel()
+            .build()
+            .map_err(|e| anyhow::anyhow!("failed to build HTTP client: {e}"))?;
 
         // Parse audit service URLs from config
         let audit_base = Url::parse(&cfg.audit_base_url)
@@ -97,7 +99,7 @@ impl Module for UsersInfo {
 
         // Create audit adapter
         let audit_adapter: Arc<dyn AuditPort> =
-            Arc::new(HttpAuditClient::new(traced_client, audit_base, notify_base));
+            Arc::new(HttpAuditClient::new(http_client, audit_base, notify_base));
 
         // Fetch tenant resolver from ClientHub
         let resolver = ctx

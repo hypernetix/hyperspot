@@ -9,6 +9,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::RwLock;
 use tokio::time::Instant;
+use tokio_util::sync::CancellationToken;
 
 #[derive(Debug, Clone, Deserialize)]
 struct Jwk {
@@ -42,8 +43,9 @@ pub struct JwksKeyProvider {
     /// Last refresh time and error tracking for backoff
     refresh_state: Arc<RwLock<RefreshState>>,
 
-    /// HTTP client for fetching JWKS
-    client: reqwest::Client,
+    /// Shared HTTP client for JWKS fetches (pooled connections)
+    /// `HttpClient` is `Clone + Send + Sync`, no external locking needed.
+    client: modkit_http::HttpClient,
 
     /// Refresh interval (default: 5 minutes)
     refresh_interval: Duration,
@@ -68,19 +70,41 @@ impl JwksKeyProvider {
     /// Create a new JWKS key provider
     ///
     /// # Errors
-    /// Returns an error if the HTTP client fails to build.
-    pub fn new(jwks_uri: impl Into<String>) -> Result<Self, reqwest::Error> {
+    /// Returns error if HTTP client initialization fails (e.g., TLS setup)
+    pub fn new(jwks_uri: impl Into<String>) -> Result<Self, modkit_http::HttpError> {
+        Self::with_http_timeout(jwks_uri, Duration::from_secs(10))
+    }
+
+    /// Create a new JWKS key provider with custom HTTP timeout
+    ///
+    /// # Errors
+    /// Returns error if HTTP client initialization fails (e.g., TLS setup)
+    pub fn with_http_timeout(
+        jwks_uri: impl Into<String>,
+        timeout: Duration,
+    ) -> Result<Self, modkit_http::HttpError> {
+        let client = modkit_http::HttpClient::builder()
+            .timeout(timeout)
+            .retry(None) // JWKS provider handles its own retry logic
+            .build()?;
+
         Ok(Self {
             jwks_uri: jwks_uri.into(),
             keys: Arc::new(ArcSwap::from_pointee(HashMap::new())),
             refresh_state: Arc::new(RwLock::new(RefreshState::default())),
-            client: reqwest::Client::builder()
-                .timeout(Duration::from_secs(10))
-                .build()?,
+            client,
             refresh_interval: Duration::from_secs(300), // 5 minutes
             max_backoff: Duration::from_secs(3600),     // 1 hour
             on_demand_refresh_cooldown: Duration::from_secs(60), // 1 minute
         })
+    }
+
+    /// Create a new JWKS key provider (alias for new, kept for compatibility)
+    ///
+    /// # Errors
+    /// Returns error if HTTP client initialization fails (e.g., TLS setup)
+    pub fn try_new(jwks_uri: impl Into<String>) -> Result<Self, modkit_http::HttpError> {
+        Self::new(jwks_uri)
     }
 
     /// Create with custom refresh interval
@@ -103,24 +127,16 @@ impl JwksKeyProvider {
 
     /// Fetch JWKS from the endpoint
     async fn fetch_jwks(&self) -> Result<HashMap<String, DecodingKey>, ClaimsError> {
-        let response = self
+        // HttpClient is Clone + Send + Sync, no locking needed
+        let jwks: JwksResponse = self
             .client
             .get(&self.jwks_uri)
             .send()
             .await
-            .map_err(|e| ClaimsError::JwksFetchFailed(format!("HTTP request failed: {e}")))?;
-
-        if !response.status().is_success() {
-            return Err(ClaimsError::JwksFetchFailed(format!(
-                "HTTP error: {}",
-                response.status()
-            )));
-        }
-
-        let jwks: JwksResponse = response
+            .map_err(map_http_error)?
             .json()
             .await
-            .map_err(|e| ClaimsError::JwksFetchFailed(format!("Failed to parse JWKS: {e}")))?;
+            .map_err(map_http_error)?;
 
         let mut keys = HashMap::new();
         for jwk in jwks.keys {
@@ -355,15 +371,104 @@ impl KeyProvider for JwksKeyProvider {
 }
 
 /// Background task to periodically refresh JWKS
-pub async fn run_jwks_refresh_task(provider: Arc<JwksKeyProvider>) {
+///
+/// This task will run until the `cancellation_token` is cancelled, enabling
+/// graceful shutdown per `ModKit` patterns. Without cancellation support, this
+/// task would run indefinitely and potentially cause process hang on shutdown.
+///
+/// # Example
+///
+/// ```ignore
+/// use tokio_util::sync::CancellationToken;
+/// use std::sync::Arc;
+///
+/// let provider = Arc::new(JwksKeyProvider::new("https://issuer/.well-known/jwks.json")?);
+/// let cancel_token = CancellationToken::new();
+///
+/// // Spawn the refresh task
+/// let task_handle = tokio::spawn(run_jwks_refresh_task(provider.clone(), cancel_token.clone()));
+///
+/// // On shutdown:
+/// cancel_token.cancel();
+/// task_handle.await?;
+/// ```
+pub async fn run_jwks_refresh_task(
+    provider: Arc<JwksKeyProvider>,
+    cancellation_token: CancellationToken,
+) {
     let mut interval = tokio::time::interval(Duration::from_secs(60)); // Check every minute
 
     loop {
-        interval.tick().await;
-
-        if let Err(e) = provider.refresh_keys().await {
-            tracing::warn!("JWKS refresh failed: {}", e);
+        tokio::select! {
+            () = cancellation_token.cancelled() => {
+                tracing::info!("JWKS refresh task shutting down");
+                break;
+            }
+            _ = interval.tick() => {
+                if let Err(e) = provider.refresh_keys().await {
+                    tracing::warn!("JWKS refresh failed: {}", e);
+                }
+            }
         }
+    }
+}
+
+/// Map `HttpError` variants to appropriate `ClaimsError` messages
+fn map_http_error(e: modkit_http::HttpError) -> ClaimsError {
+    use modkit_http::HttpError;
+
+    match e {
+        HttpError::HttpStatus {
+            status,
+            body_preview,
+            ..
+        } => {
+            if body_preview.is_empty() {
+                ClaimsError::JwksFetchFailed(format!("JWKS HTTP {status}"))
+            } else {
+                ClaimsError::JwksFetchFailed(format!("JWKS HTTP {status}: {body_preview}"))
+            }
+        }
+        HttpError::Json(err) => {
+            ClaimsError::JwksFetchFailed(format!("JWKS JSON parse failed: {err}"))
+        }
+        HttpError::Timeout(duration) => {
+            ClaimsError::JwksFetchFailed(format!("JWKS request timed out after {duration:?}"))
+        }
+        HttpError::DeadlineExceeded(duration) => {
+            ClaimsError::JwksFetchFailed(format!("JWKS total deadline exceeded after {duration:?}"))
+        }
+        HttpError::Transport(err) => {
+            ClaimsError::JwksFetchFailed(format!("JWKS transport error: {err}"))
+        }
+        HttpError::BodyTooLarge { limit, actual } => ClaimsError::JwksFetchFailed(format!(
+            "JWKS response too large: limit {limit} bytes, got {actual} bytes"
+        )),
+        HttpError::Tls(err) => ClaimsError::JwksFetchFailed(format!("JWKS TLS error: {err}")),
+        HttpError::RequestBuild(err) => {
+            ClaimsError::JwksFetchFailed(format!("JWKS request build failed: {err}"))
+        }
+        HttpError::InvalidHeaderName(err) => {
+            ClaimsError::JwksFetchFailed(format!("JWKS invalid header name: {err}"))
+        }
+        HttpError::InvalidHeaderValue(err) => {
+            ClaimsError::JwksFetchFailed(format!("JWKS invalid header value: {err}"))
+        }
+        HttpError::FormEncode(err) => {
+            ClaimsError::JwksFetchFailed(format!("JWKS form encode error: {err}"))
+        }
+        HttpError::Overloaded => {
+            ClaimsError::JwksFetchFailed("JWKS request rejected: service overloaded".into())
+        }
+        HttpError::ServiceClosed => ClaimsError::JwksFetchFailed("JWKS service unavailable".into()),
+        HttpError::InvalidUri { url, reason, .. } => {
+            ClaimsError::JwksFetchFailed(format!("JWKS invalid URL '{url}': {reason}"))
+        }
+        HttpError::InvalidScheme { scheme, reason } => {
+            ClaimsError::JwksFetchFailed(format!("JWKS invalid scheme '{scheme}': {reason}"))
+        }
+        // Handle future variants (HttpError is #[non_exhaustive])
+        _ => ClaimsError::JwksFetchFailed(format!("JWKS fetch failed: {e}")),
     }
 }
 
@@ -371,10 +476,50 @@ pub async fn run_jwks_refresh_task(provider: Arc<JwksKeyProvider>) {
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
+    use httpmock::prelude::*;
 
-    #[test]
-    fn test_calculate_backoff() -> Result<(), reqwest::Error> {
-        let provider = JwksKeyProvider::new("https://example.com/jwks")?;
+    /// Create a test provider with insecure HTTP allowed (for httpmock) and no retries
+    fn test_provider_with_http(uri: &str) -> JwksKeyProvider {
+        let client = modkit_http::HttpClient::builder()
+            .timeout(Duration::from_secs(5))
+            .retry(None)
+            .allow_insecure_http()
+            .build()
+            .expect("failed to create test HTTP client");
+
+        JwksKeyProvider {
+            jwks_uri: uri.to_owned(),
+            keys: Arc::new(ArcSwap::from_pointee(HashMap::new())),
+            refresh_state: Arc::new(RwLock::new(RefreshState::default())),
+            client,
+            refresh_interval: Duration::from_secs(300),
+            max_backoff: Duration::from_secs(3600),
+            on_demand_refresh_cooldown: Duration::from_secs(60),
+        }
+    }
+
+    /// Create a basic test provider (HTTPS only, for non-network tests)
+    fn test_provider(uri: &str) -> JwksKeyProvider {
+        JwksKeyProvider::new(uri).expect("failed to create test provider")
+    }
+
+    /// Valid JWKS JSON response with a single RSA key
+    fn valid_jwks_json() -> &'static str {
+        r#"{
+            "keys": [{
+                "kty": "RSA",
+                "kid": "test-key-1",
+                "use": "sig",
+                "n": "0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw",
+                "e": "AQAB",
+                "alg": "RS256"
+            }]
+        }"#
+    }
+
+    #[tokio::test]
+    async fn test_calculate_backoff() {
+        let provider = test_provider("https://example.com/jwks");
 
         assert_eq!(provider.calculate_backoff(0), Duration::from_secs(60));
         assert_eq!(provider.calculate_backoff(1), Duration::from_secs(120));
@@ -383,19 +528,17 @@ mod tests {
 
         // Should cap at max_backoff
         assert_eq!(provider.calculate_backoff(100), provider.max_backoff);
-        Ok(())
     }
 
     #[tokio::test]
-    async fn test_should_refresh_on_first_call() -> Result<(), reqwest::Error> {
-        let provider = JwksKeyProvider::new("https://example.com/jwks")?;
+    async fn test_should_refresh_on_first_call() {
+        let provider = test_provider("https://example.com/jwks");
         assert!(provider.should_refresh().await);
-        Ok(())
     }
 
     #[tokio::test]
-    async fn test_key_storage() -> Result<(), reqwest::Error> {
-        let provider = JwksKeyProvider::new("https://example.com/jwks")?;
+    async fn test_key_storage() {
+        let provider = test_provider("https://example.com/jwks");
 
         // Initially empty
         assert!(provider.get_key("test-kid").is_none());
@@ -407,12 +550,11 @@ mod tests {
 
         // Should be retrievable
         assert!(provider.get_key("test-kid").is_some());
-        Ok(())
     }
 
     #[tokio::test]
-    async fn test_on_demand_refresh_returns_ok_when_key_exists() -> Result<(), reqwest::Error> {
-        let provider = JwksKeyProvider::new("https://example.com/jwks")?;
+    async fn test_on_demand_refresh_returns_ok_when_key_exists() {
+        let provider = test_provider("https://example.com/jwks");
 
         // Pre-populate with a key
         let mut keys = HashMap::new();
@@ -425,51 +567,195 @@ mod tests {
         // Should return Ok immediately without any refresh
         let result = provider.on_demand_refresh("existing-kid").await;
         assert!(result.is_ok());
-        Ok(())
     }
 
     #[tokio::test]
-    async fn test_on_demand_refresh_returns_error_for_missing_key_on_failed_fetch()
-    -> Result<(), reqwest::Error> {
-        let provider =
-            JwksKeyProvider::new("https://invalid-domain-that-does-not-exist.local/jwks")?;
+    async fn test_try_new_returns_result() {
+        // Valid URL should work
+        let result = JwksKeyProvider::try_new("https://example.com/jwks");
+        assert!(result.is_ok());
+    }
 
-        // Attempting to refresh a missing key should fail (network error)
-        let result = provider.on_demand_refresh("missing-kid").await;
+    // ==================== httpmock-based tests ====================
+
+    #[tokio::test]
+    async fn test_fetch_jwks_success_with_valid_json() {
+        let server = MockServer::start();
+
+        let mock = server.mock(|when, then| {
+            when.method(GET).path("/jwks");
+            then.status(200)
+                .header("content-type", "application/json")
+                .body(valid_jwks_json());
+        });
+
+        let jwks_url = server.url("/jwks");
+        let provider = test_provider_with_http(&jwks_url);
+
+        let result = provider.perform_refresh().await;
+        assert!(result.is_ok(), "Expected success, got: {result:?}");
+
+        // Verify key was stored
+        assert!(
+            provider.get_key("test-key-1").is_some(),
+            "Expected key 'test-key-1' to be stored"
+        );
+
+        mock.assert();
+    }
+
+    #[tokio::test]
+    async fn test_fetch_jwks_http_404_error_mapping() {
+        let server = MockServer::start();
+
+        let mock = server.mock(|when, then| {
+            when.method(GET).path("/jwks");
+            then.status(404).body("Not Found");
+        });
+
+        let jwks_url = server.url("/jwks");
+        let provider = test_provider_with_http(&jwks_url);
+
+        let result = provider.perform_refresh().await;
         assert!(result.is_err());
 
-        // The error should be related to fetch failure
-        match result.expect_err("expected error for missing key") {
-            ClaimsError::JwksFetchFailed(_) | ClaimsError::UnknownKeyId(_) => {}
-            other => panic!("Expected JwksFetchFailed or UnknownKeyId, got: {other:?}"),
-        }
-        Ok(())
+        let err = result.unwrap_err();
+        let err_msg = err.to_string();
+        assert!(
+            err_msg.contains("JWKS HTTP 404"),
+            "Expected error to contain 'JWKS HTTP 404', got: {err_msg}"
+        );
+        // Must NOT say "parse"
+        assert!(
+            !err_msg.to_lowercase().contains("parse"),
+            "HTTP status error should not mention 'parse', got: {err_msg}"
+        );
+
+        mock.assert();
     }
 
     #[tokio::test]
-    async fn test_on_demand_refresh_respects_cooldown() -> Result<(), reqwest::Error> {
-        let provider = JwksKeyProvider::new("https://invalid-domain.local/jwks")?
-            .with_on_demand_refresh_cooldown(Duration::from_secs(5));
+    async fn test_fetch_jwks_http_500_error_mapping() {
+        let server = MockServer::start();
 
-        // First attempt - should try to refresh
+        let mock = server.mock(|when, then| {
+            when.method(GET).path("/jwks");
+            then.status(500).body("Internal Server Error");
+        });
+
+        let jwks_url = server.url("/jwks");
+        let provider = test_provider_with_http(&jwks_url);
+
+        let result = provider.perform_refresh().await;
+        assert!(result.is_err());
+
+        let err = result.unwrap_err();
+        let err_msg = err.to_string();
+        assert!(
+            err_msg.contains("JWKS HTTP 500"),
+            "Expected error to contain 'JWKS HTTP 500', got: {err_msg}"
+        );
+
+        mock.assert();
+    }
+
+    #[tokio::test]
+    async fn test_fetch_jwks_invalid_json_error_mapping() {
+        let server = MockServer::start();
+
+        let mock = server.mock(|when, then| {
+            when.method(GET).path("/jwks");
+            then.status(200)
+                .header("content-type", "application/json")
+                .body("this is not valid json");
+        });
+
+        let jwks_url = server.url("/jwks");
+        let provider = test_provider_with_http(&jwks_url);
+
+        let result = provider.perform_refresh().await;
+        assert!(result.is_err());
+
+        let err = result.unwrap_err();
+        let err_msg = err.to_string();
+        assert!(
+            err_msg.contains("JWKS JSON parse failed"),
+            "Expected error to contain 'JWKS JSON parse failed', got: {err_msg}"
+        );
+
+        mock.assert();
+    }
+
+    #[tokio::test]
+    async fn test_fetch_jwks_empty_keys_error() {
+        let server = MockServer::start();
+
+        let mock = server.mock(|when, then| {
+            when.method(GET).path("/jwks");
+            then.status(200)
+                .header("content-type", "application/json")
+                .body(r#"{"keys": []}"#);
+        });
+
+        let jwks_url = server.url("/jwks");
+        let provider = test_provider_with_http(&jwks_url);
+
+        let result = provider.perform_refresh().await;
+        assert!(result.is_err());
+
+        let err = result.unwrap_err();
+        let err_msg = err.to_string();
+        assert!(
+            err_msg.contains("No valid RSA keys"),
+            "Expected error about no RSA keys, got: {err_msg}"
+        );
+
+        mock.assert();
+    }
+
+    #[tokio::test]
+    async fn test_on_demand_refresh_respects_cooldown() {
+        let server = MockServer::start();
+
+        // First request will return 404
+        let mock = server.mock(|when, then| {
+            when.method(GET).path("/jwks");
+            then.status(404).body("Not Found");
+        });
+
+        let jwks_url = server.url("/jwks");
+        let provider = test_provider_with_http(&jwks_url)
+            .with_on_demand_refresh_cooldown(Duration::from_secs(60));
+
+        // First attempt - should try to refresh and fail
         let result1 = provider.on_demand_refresh("test-kid").await;
-        assert!(result1.is_err()); // Will fail due to invalid domain
+        assert!(result1.is_err());
 
-        // Immediate second attempt - should be throttled
+        // Immediate second attempt - should be throttled (no network call)
         let result2 = provider.on_demand_refresh("test-kid").await;
         assert!(result2.is_err());
 
         // Should return UnknownKeyId due to cooldown
-        match result2.expect_err("expected throttle error") {
+        match result2.unwrap_err() {
             ClaimsError::UnknownKeyId(_) => {}
             other => panic!("Expected UnknownKeyId during cooldown, got: {other:?}"),
         }
-        Ok(())
+
+        // Only one request should have been made (first attempt)
+        mock.assert_calls(1);
     }
 
     #[tokio::test]
-    async fn test_on_demand_refresh_tracks_failed_kids() -> Result<(), reqwest::Error> {
-        let provider = JwksKeyProvider::new("https://invalid-domain.local/jwks")?
+    async fn test_on_demand_refresh_tracks_failed_kids() {
+        let server = MockServer::start();
+
+        server.mock(|when, then| {
+            when.method(GET).path("/jwks");
+            then.status(404).body("Not Found");
+        });
+
+        let jwks_url = server.url("/jwks");
+        let provider = test_provider_with_http(&jwks_url)
             .with_on_demand_refresh_cooldown(Duration::from_millis(100));
 
         // Attempt refresh - will fail and track the kid
@@ -479,27 +765,19 @@ mod tests {
         // Check that failed_kids contains the kid
         let state = provider.refresh_state.read().await;
         assert!(state.failed_kids.contains("failed-kid"));
-        Ok(())
     }
 
     #[tokio::test]
-    async fn test_validate_and_decode_with_missing_kid() -> Result<(), reqwest::Error> {
-        let provider = JwksKeyProvider::new("https://invalid-domain.local/jwks")?
-            .with_on_demand_refresh_cooldown(Duration::from_millis(100));
+    async fn test_perform_refresh_updates_state_on_failure() {
+        let server = MockServer::start();
 
-        // Create a minimal JWT with a kid header but invalid signature
-        let token =
-            "eyJhbGciOiJSUzI1NiIsImtpZCI6InRlc3Qta2lkIn0.eyJzdWIiOiIxMjM0NTY3ODkwIn0.invalid";
+        server.mock(|when, then| {
+            when.method(GET).path("/jwks");
+            then.status(500).body("Server Error");
+        });
 
-        // Should attempt on-demand refresh and fail
-        let result = provider.validate_and_decode(token).await;
-        assert!(result.is_err());
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_perform_refresh_updates_state_on_success() -> Result<(), reqwest::Error> {
-        let provider = JwksKeyProvider::new("https://invalid-domain.local/jwks")?;
+        let jwks_url = server.url("/jwks");
+        let provider = test_provider_with_http(&jwks_url);
 
         // Mark as previously failed
         {
@@ -508,13 +786,76 @@ mod tests {
             state.last_error = Some("Previous error".to_owned());
         }
 
-        // This will fail, but we're testing state update logic
+        // This will fail
         let _ = provider.perform_refresh().await;
 
         // Check that consecutive_failures increased
         let state = provider.refresh_state.read().await;
         assert_eq!(state.consecutive_failures, 4);
         assert!(state.last_error.is_some());
-        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_perform_refresh_resets_state_on_success() {
+        let server = MockServer::start();
+
+        server.mock(|when, then| {
+            when.method(GET).path("/jwks");
+            then.status(200)
+                .header("content-type", "application/json")
+                .body(valid_jwks_json());
+        });
+
+        let jwks_url = server.url("/jwks");
+        let provider = test_provider_with_http(&jwks_url);
+
+        // Mark as previously failed
+        {
+            let mut state = provider.refresh_state.write().await;
+            state.consecutive_failures = 5;
+            state.last_error = Some("Previous error".to_owned());
+        }
+
+        // This should succeed
+        let result = provider.perform_refresh().await;
+        assert!(result.is_ok());
+
+        // Check that state was reset
+        let state = provider.refresh_state.read().await;
+        assert_eq!(state.consecutive_failures, 0);
+        assert!(state.last_error.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_validate_and_decode_with_missing_kid() {
+        let server = MockServer::start();
+
+        // Return valid JWKS but without the requested kid
+        server.mock(|when, then| {
+            when.method(GET).path("/jwks");
+            then.status(200)
+                .header("content-type", "application/json")
+                .body(valid_jwks_json());
+        });
+
+        let jwks_url = server.url("/jwks");
+        let provider = test_provider_with_http(&jwks_url)
+            .with_on_demand_refresh_cooldown(Duration::from_millis(100));
+
+        // Create a minimal JWT with a kid that doesn't exist in JWKS
+        // Header: {"alg":"RS256","kid":"nonexistent-kid"}
+        let token = "eyJhbGciOiJSUzI1NiIsImtpZCI6Im5vbmV4aXN0ZW50LWtpZCJ9.\
+                     eyJzdWIiOiIxMjM0NTY3ODkwIn0.invalid";
+
+        // Should attempt on-demand refresh but kid still won't exist
+        let result = provider.validate_and_decode(token).await;
+        assert!(result.is_err());
+
+        match result.unwrap_err() {
+            ClaimsError::UnknownKeyId(kid) => {
+                assert_eq!(kid, "nonexistent-kid");
+            }
+            other => panic!("Expected UnknownKeyId, got: {other:?}"),
+        }
     }
 }

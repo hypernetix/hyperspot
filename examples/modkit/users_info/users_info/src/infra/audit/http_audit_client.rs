@@ -1,26 +1,28 @@
 use anyhow::Context;
 use async_trait::async_trait;
+use modkit_http::HttpClient;
 use tracing::instrument;
 use url::Url;
 use uuid::Uuid;
 
 use crate::domain::error::DomainError;
 use crate::domain::ports::AuditPort;
-use modkit::TracedClient;
 
 /// Single HTTP adapter implementing the `AuditPort`.
 /// Holds two base URLs:
 ///  - `audit_base` (e.g., <https://audit.local>)
 ///  - `notify_base` (e.g., <https://notifications.local>)
+///
+/// `HttpClient` is `Clone + Send + Sync`, so no external locking is needed.
 pub struct HttpAuditClient {
-    client: TracedClient,
+    client: HttpClient,
     audit_base: Url,
     notify_base: Url,
 }
 
 impl HttpAuditClient {
     #[must_use]
-    pub fn new(client: TracedClient, audit_base: Url, notify_base: Url) -> Self {
+    pub fn new(client: HttpClient, audit_base: Url, notify_base: Url) -> Self {
         Self {
             client,
             audit_base,
@@ -44,6 +46,7 @@ impl AuditPort for HttpAuditClient {
         let response = self
             .client
             .get(url.as_str())
+            .send()
             .await
             .with_context(|| format!("GET /api/user-access/{id}"))
             .map_err(|e| DomainError::validation("user_access", e.to_string()))?;
@@ -74,6 +77,7 @@ impl AuditPort for HttpAuditClient {
         let response = self
             .client
             .post(url.as_str())
+            .send()
             .await
             .with_context(|| "POST /api/user-created")
             .map_err(|e| DomainError::validation("notifications", e.to_string()))?;

@@ -99,9 +99,6 @@ thiserror = { workspace = true }
 uuid = { workspace = true, features = ["v7"] }
 urlencoding = { workspace = true }
 
-# HTTP client for traced requests
-reqwest = { workspace = true }
-
 # OpenTelemetry tracing support (optional) - full implementation
 opentelemetry = { workspace = true, optional = true }
 opentelemetry_sdk = { workspace = true, optional = true }
