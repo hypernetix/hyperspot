@@ -76,22 +76,40 @@ const INFRA_PATTERNS: &[&str] = &[
     "tokio::fs",
 ];
 
+/// Check if a path matches an infrastructure pattern.
+/// Returns the matched pattern if path equals pattern exactly or starts with "pattern::"
+/// This avoids false positives like "http_client" matching "http".
+fn matches_infra_pattern(path: &str) -> Option<&'static str> {
+    for pattern in INFRA_PATTERNS {
+        // Patterns containing "::" are already specific (e.g., "crate::infra")
+        // Other patterns need exact match or "::" suffix to avoid false positives
+        if pattern.contains("::") {
+            if path.starts_with(pattern) {
+                return Some(pattern);
+            }
+        } else if path == *pattern || path.starts_with(&format!("{pattern}::")) {
+            return Some(pattern);
+        }
+    }
+    None
+}
+
 fn check_use_in_domain(cx: &rustc_lint::EarlyContext<'_>, item: &Item) {
     let ItemKind::Use(use_tree) = &item.kind else {
         return;
     };
 
     for path_str in use_tree_to_strings(use_tree) {
-        for pattern in INFRA_PATTERNS {
-            if path_str.starts_with(pattern) {
-                cx.span_lint(DE0301_NO_INFRA_IN_DOMAIN, item.span, |diag| {
-                    diag.primary_message(
-                        format!("domain module imports infrastructure dependency `{}` (DE0301)", pattern)
-                    );
-                    diag.help("domain should depend only on abstractions; move infrastructure code to infra/ layer");
-                });
-                return;
-            }
+        if let Some(pattern) = matches_infra_pattern(&path_str) {
+            cx.span_lint(DE0301_NO_INFRA_IN_DOMAIN, item.span, |diag| {
+                diag.primary_message(format!(
+                    "domain module imports infrastructure dependency `{pattern}` (DE0301)"
+                ));
+                diag.help(
+                    "domain should depend only on abstractions; move infrastructure code to infra/ layer",
+                );
+            });
+            return;
         }
     }
 }
@@ -107,16 +125,16 @@ fn check_type_in_domain(cx: &rustc_lint::EarlyContext<'_>, ty: &Ty) {
                 .collect::<Vec<_>>()
                 .join("::");
 
-            for pattern in INFRA_PATTERNS {
-                if path_str.starts_with(pattern) {
-                    cx.span_lint(DE0301_NO_INFRA_IN_DOMAIN, ty.span, |diag| {
-                        diag.primary_message(
-                            format!("domain module uses infrastructure type `{}` (DE0301)", path_str)
-                        );
-                        diag.help("domain should depend only on abstractions; move infrastructure code to infra/ layer");
-                    });
-                    return;
-                }
+            if matches_infra_pattern(&path_str).is_some() {
+                cx.span_lint(DE0301_NO_INFRA_IN_DOMAIN, ty.span, |diag| {
+                    diag.primary_message(format!(
+                        "domain module uses infrastructure type `{path_str}` (DE0301)"
+                    ));
+                    diag.help(
+                        "domain should depend only on abstractions; move infrastructure code to infra/ layer",
+                    );
+                });
+                return;
             }
 
             // Recursively check generic arguments (e.g., Option<sqlx::PgPool>)
@@ -170,16 +188,16 @@ fn check_type_in_domain(cx: &rustc_lint::EarlyContext<'_>, ty: &Ty) {
                         .collect::<Vec<_>>()
                         .join("::");
 
-                    for pattern in INFRA_PATTERNS {
-                        if path_str.starts_with(pattern) {
-                            cx.span_lint(DE0301_NO_INFRA_IN_DOMAIN, ty.span, |diag| {
-                                diag.primary_message(
-                                    format!("domain module uses infrastructure trait `{}` (DE0301)", path_str)
-                                );
-                                diag.help("domain should depend only on abstractions; move infrastructure code to infra/ layer");
-                            });
-                            return;
-                        }
+                    if matches_infra_pattern(&path_str).is_some() {
+                        cx.span_lint(DE0301_NO_INFRA_IN_DOMAIN, ty.span, |diag| {
+                            diag.primary_message(format!(
+                                "domain module uses infrastructure trait `{path_str}` (DE0301)"
+                            ));
+                            diag.help(
+                                "domain should depend only on abstractions; move infrastructure code to infra/ layer",
+                            );
+                        });
+                        return;
                     }
                 }
             }
@@ -197,16 +215,16 @@ fn check_type_in_domain(cx: &rustc_lint::EarlyContext<'_>, ty: &Ty) {
                         .collect::<Vec<_>>()
                         .join("::");
 
-                    for pattern in INFRA_PATTERNS {
-                        if path_str.starts_with(pattern) {
-                            cx.span_lint(DE0301_NO_INFRA_IN_DOMAIN, ty.span, |diag| {
-                                diag.primary_message(
-                                    format!("domain module uses infrastructure trait `{}` (DE0301)", path_str)
-                                );
-                                diag.help("domain should depend only on abstractions; move infrastructure code to infra/ layer");
-                            });
-                            return;
-                        }
+                    if matches_infra_pattern(&path_str).is_some() {
+                        cx.span_lint(DE0301_NO_INFRA_IN_DOMAIN, ty.span, |diag| {
+                            diag.primary_message(format!(
+                                "domain module uses infrastructure trait `{path_str}` (DE0301)"
+                            ));
+                            diag.help(
+                                "domain should depend only on abstractions; move infrastructure code to infra/ layer",
+                            );
+                        });
+                        return;
                     }
                 }
             }
