@@ -1,5 +1,5 @@
 ---
-status: "{proposed | accepted | deprecated | superseded by ADR-NNNN}"
+status: "{accepted | deprecated | superseded by ADR-NNNN}"
 date: {YYYY-MM-DD}
 ---
 <!--
