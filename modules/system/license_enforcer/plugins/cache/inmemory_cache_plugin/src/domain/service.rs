@@ -29,17 +29,13 @@ impl Service {
     ///
     /// # Errors
     ///
-    /// Returns error if security context lacks tenant scope
+    /// This function currently never returns an error but is defined to return
+    /// a `Result` for consistency with the plugin trait interface.
     pub async fn get_tenant_features(
         &self,
-        ctx: &SecurityContext,
+        _ctx: &SecurityContext,
+        tenant_id: uuid::Uuid,
     ) -> Result<Option<EnabledGlobalFeatures>, LicenseEnforcerError> {
-        // Validate tenant scope
-        let tenant_id = ctx.tenant_id();
-        if tenant_id.is_nil() {
-            return Err(LicenseEnforcerError::MissingTenantScope);
-        }
-
         // Get from cache (returns None if not found or expired)
         Ok(self.cache.get(&tenant_id).await)
     }
@@ -48,18 +44,14 @@ impl Service {
     ///
     /// # Errors
     ///
-    /// Returns error if security context lacks tenant scope
+    /// This function currently never returns an error but is defined to return
+    /// a `Result` for consistency with the plugin trait interface.
     pub async fn set_tenant_features(
         &self,
-        ctx: &SecurityContext,
+        _ctx: &SecurityContext,
+        tenant_id: uuid::Uuid,
         features: &EnabledGlobalFeatures,
     ) -> Result<(), LicenseEnforcerError> {
-        // Validate tenant scope
-        let tenant_id = ctx.tenant_id();
-        if tenant_id.is_nil() {
-            return Err(LicenseEnforcerError::MissingTenantScope);
-        }
-
         // Store in cache with TTL
         self.cache.insert(tenant_id, features.clone()).await;
 
@@ -97,7 +89,7 @@ mod tests {
         let ctx = make_test_context(tenant_id);
 
         // Act
-        let result = service.get_tenant_features(&ctx).await;
+        let result = service.get_tenant_features(&ctx, tenant_id).await;
 
         // Assert
         assert!(
@@ -119,11 +111,13 @@ mod tests {
         let features = make_test_features();
 
         // Act - Set features
-        let set_result = service.set_tenant_features(&ctx, &features).await;
+        let set_result = service
+            .set_tenant_features(&ctx, tenant_id, &features)
+            .await;
         assert!(set_result.is_ok(), "set_tenant_features should succeed");
 
         // Act - Get features
-        let get_result = service.get_tenant_features(&ctx).await;
+        let get_result = service.get_tenant_features(&ctx, tenant_id).await;
 
         // Assert
         assert!(get_result.is_ok(), "get_tenant_features should not error");
@@ -145,10 +139,13 @@ mod tests {
         let features = make_test_features();
 
         // Act - Set features
-        service.set_tenant_features(&ctx, &features).await.unwrap();
+        service
+            .set_tenant_features(&ctx, tenant_id, &features)
+            .await
+            .unwrap();
 
         // Verify cache hit before expiry
-        let result_before = service.get_tenant_features(&ctx).await.unwrap();
+        let result_before = service.get_tenant_features(&ctx, tenant_id).await.unwrap();
         assert!(
             result_before.is_some(),
             "Should be cached before TTL expires"
@@ -158,7 +155,7 @@ mod tests {
         tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
 
         // Act - Get features after expiry
-        let result_after = service.get_tenant_features(&ctx).await;
+        let result_after = service.get_tenant_features(&ctx, tenant_id).await;
 
         // Assert
         assert!(
@@ -183,16 +180,16 @@ mod tests {
 
         // Act - Set features for tenant A
         service
-            .set_tenant_features(&ctx_a, &features_a)
+            .set_tenant_features(&ctx_a, tenant_a, &features_a)
             .await
             .unwrap();
 
         // Verify tenant A can read its own features
-        let result_a = service.get_tenant_features(&ctx_a).await.unwrap();
+        let result_a = service.get_tenant_features(&ctx_a, tenant_a).await.unwrap();
         assert!(result_a.is_some(), "Tenant A should have cached features");
 
         // Act - Try to get features for tenant B
-        let result_b = service.get_tenant_features(&ctx_b).await;
+        let result_b = service.get_tenant_features(&ctx_b, tenant_b).await;
 
         // Assert
         assert!(
@@ -223,19 +220,25 @@ mod tests {
         });
 
         // Act - Set initial features
-        service.set_tenant_features(&ctx, &features1).await.unwrap();
+        service
+            .set_tenant_features(&ctx, tenant_id, &features1)
+            .await
+            .unwrap();
 
         // Wait 1 second (halfway to expiry)
         tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
         // Overwrite with new features (should reset TTL)
-        service.set_tenant_features(&ctx, &features2).await.unwrap();
+        service
+            .set_tenant_features(&ctx, tenant_id, &features2)
+            .await
+            .unwrap();
 
         // Wait another 1.5 seconds (would have expired if TTL wasn't reset)
         tokio::time::sleep(tokio::time::Duration::from_millis(1500)).await;
 
         // Act - Get features
-        let result = service.get_tenant_features(&ctx).await.unwrap();
+        let result = service.get_tenant_features(&ctx, tenant_id).await.unwrap();
 
         // Assert - Should still be cached with new value
         assert!(
@@ -243,47 +246,6 @@ mod tests {
             "Entry should still be cached (TTL was reset)"
         );
         assert_eq!(result.unwrap(), features2, "Should have updated value");
-    }
-
-    #[tokio::test]
-    async fn test_missing_tenant_scope_on_get() {
-        // Arrange
-        let service = Service::new(Duration::from_secs(60), 10_000);
-        let ctx = SecurityContext::anonymous(); // No tenant ID
-
-        // Act
-        let result = service.get_tenant_features(&ctx).await;
-
-        // Assert
-        assert!(result.is_err(), "Should error when tenant scope is missing");
-        assert!(
-            matches!(
-                result.unwrap_err(),
-                LicenseEnforcerError::MissingTenantScope
-            ),
-            "Should return MissingTenantScope error"
-        );
-    }
-
-    #[tokio::test]
-    async fn test_missing_tenant_scope_on_set() {
-        // Arrange
-        let service = Service::new(Duration::from_secs(60), 10_000);
-        let ctx = SecurityContext::anonymous(); // No tenant ID
-        let features = make_test_features();
-
-        // Act
-        let result = service.set_tenant_features(&ctx, &features).await;
-
-        // Assert
-        assert!(result.is_err(), "Should error when tenant scope is missing");
-        assert!(
-            matches!(
-                result.unwrap_err(),
-                LicenseEnforcerError::MissingTenantScope
-            ),
-            "Should return MissingTenantScope error"
-        );
     }
 
     #[tokio::test]
@@ -298,18 +260,21 @@ mod tests {
         let features = make_test_features();
 
         // Act - Set features
-        service.set_tenant_features(&ctx, &features).await.unwrap();
+        service
+            .set_tenant_features(&ctx, tenant_id, &features)
+            .await
+            .unwrap();
 
         // Verify cached before 500ms
         tokio::time::sleep(Duration::from_millis(200)).await;
-        let result_before = service.get_tenant_features(&ctx).await.unwrap();
+        let result_before = service.get_tenant_features(&ctx, tenant_id).await.unwrap();
         assert!(result_before.is_some(), "Should be cached at 200ms");
 
         // Wait for expiry
         tokio::time::sleep(Duration::from_millis(400)).await;
 
         // Act - Get features after 600ms total (past 500ms TTL)
-        let result_after = service.get_tenant_features(&ctx).await.unwrap();
+        let result_after = service.get_tenant_features(&ctx, tenant_id).await.unwrap();
 
         // Assert - Should be expired
         assert!(

@@ -141,15 +141,59 @@ fn handle_no_context(method: &Method, path: &str) -> Response {
     unauthorized_response()
 }
 
+/// Map license enforcer error to HTTP response.
+fn map_license_error_to_response(
+    error: &license_enforcer_sdk::LicenseEnforcerError,
+    method: &Method,
+    path: &str,
+) -> Response {
+    use license_enforcer_sdk::LicenseEnforcerError;
+
+    match error {
+        LicenseEnforcerError::Authorization { message } => {
+            tracing::warn!(
+                error = %message,
+                method = %method,
+                path = %path,
+                "License check failed due to authorization error"
+            );
+            Problem::new(
+                StatusCode::FORBIDDEN,
+                "Forbidden",
+                format!("License authorization failed: {message}"),
+            )
+            .into_response()
+        }
+        LicenseEnforcerError::MissingTenantScope => {
+            tracing::warn!(
+                method = %method,
+                path = %path,
+                "License check failed due to missing tenant scope"
+            );
+            unauthorized_response()
+        }
+        _ => {
+            tracing::error!(
+                error = ?error,
+                method = %method,
+                path = %path,
+                "License check failed due to service error"
+            );
+            service_unavailable_response()
+        }
+    }
+}
+
 /// Perform actual license check with client and context.
 async fn check_features(
     client: &LicenseClient,
     ctx: &SecurityContext,
+    tenant_id: uuid::Uuid,
     method: &Method,
     path: &str,
     required: &[String],
 ) -> Option<Response> {
-    match client.enabled_global_features(ctx).await {
+    match client.enabled_global_features(ctx, tenant_id).await {
         Ok(enabled) => {
             for feature_name in required {
                 let feature_id = LicenseFeatureID::from(feature_name.as_str());
@@ -158,7 +202,7 @@ async fn check_features(
                         method = %method,
                         path = %path,
                         feature = %feature_name,
-                        tenant_id = ?ctx.tenant_id(),
+                        tenant_id = ?tenant_id,
                         "License feature not enabled for tenant"
                     );
                     return Some(forbidden_feature_response(feature_name));
@@ -166,15 +210,7 @@ async fn check_features(
             }
             None
         }
-        Err(e) => {
-            tracing::error!(
-                error = ?e,
-                method = %method,
-                path = %path,
-                "License check failed due to service error"
-            );
-            Some(service_unavailable_response())
-        }
+        Err(ref e) => Some(map_license_error_to_response(e, method, path)),
     }
 }
 
@@ -225,7 +261,20 @@ pub async fn license_validation_middleware(
             return handle_no_context(&method, &path);
         }
         (Some(client), Some(ctx)) => {
-            if let Some(response) = check_features(client, ctx, &method, &path, &required).await {
+            // Extract explicit tenant ID from context
+            let tenant_id = ctx.tenant_id();
+            if tenant_id.is_nil() {
+                tracing::warn!(
+                    method = %method,
+                    path = %path,
+                    "License check requires tenant scope but context has no tenant ID"
+                );
+                return unauthorized_response();
+            }
+
+            if let Some(response) =
+                check_features(client, ctx, tenant_id, &method, &path, &required).await
+            {
                 return response;
             }
         }

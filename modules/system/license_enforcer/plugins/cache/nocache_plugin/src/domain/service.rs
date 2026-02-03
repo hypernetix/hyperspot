@@ -22,18 +22,14 @@ impl Service {
     ///
     /// # Errors
     ///
-    /// Returns error if security context lacks tenant scope
+    /// This function currently never returns an error but is defined to return
+    /// a `Result` for consistency with the plugin trait interface.
     #[allow(clippy::unused_async)]
     pub async fn get_tenant_features(
         &self,
-        ctx: &SecurityContext,
+        _ctx: &SecurityContext,
+        _tenant_id: uuid::Uuid,
     ) -> Result<Option<EnabledGlobalFeatures>, LicenseEnforcerError> {
-        // Validate tenant scope
-        let tenant_id = ctx.tenant_id();
-        if tenant_id.is_nil() {
-            return Err(LicenseEnforcerError::MissingTenantScope);
-        }
-
         // Stub implementation: always cache miss
         Ok(None)
     }
@@ -42,19 +38,15 @@ impl Service {
     ///
     /// # Errors
     ///
-    /// Returns error if security context lacks tenant scope
+    /// This function currently never returns an error but is defined to return
+    /// a `Result` for consistency with the plugin trait interface.
     #[allow(clippy::unused_async)]
     pub async fn set_tenant_features(
         &self,
-        ctx: &SecurityContext,
+        _ctx: &SecurityContext,
+        _tenant_id: uuid::Uuid,
         _features: &EnabledGlobalFeatures,
     ) -> Result<(), LicenseEnforcerError> {
-        // Validate tenant scope
-        let tenant_id = ctx.tenant_id();
-        if tenant_id.is_nil() {
-            return Err(LicenseEnforcerError::MissingTenantScope);
-        }
-
         // Stub implementation: no-op
         Ok(())
     }

@@ -9,6 +9,13 @@ pub enum LicenseEnforcerError {
     #[error("Security context lacks tenant scope")]
     MissingTenantScope,
 
+    /// Authorization error (access denied)
+    #[error("Authorization error: {message}")]
+    Authorization {
+        /// Error message
+        message: String,
+    },
+
     /// License not found for the specified tenant/feature
     #[error("License not found for tenant {tenant_id}: {feature}")]
     LicenseNotFound {
@@ -71,6 +78,13 @@ pub enum LicenseEnforcerError {
 }
 
 impl LicenseEnforcerError {
+    /// Create an authorization error.
+    pub fn authorization(message: impl Into<String>) -> Self {
+        Self::Authorization {
+            message: message.into(),
+        }
+    }
+
     /// Create a platform error with a message only.
     pub fn platform(message: impl Into<String>) -> Self {
         Self::PlatformError {

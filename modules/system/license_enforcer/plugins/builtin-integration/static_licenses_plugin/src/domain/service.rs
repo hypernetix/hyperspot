@@ -34,18 +34,14 @@ impl Service {
     ///
     /// # Errors
     ///
-    /// Returns error if security context lacks tenant scope
+    /// This function currently never returns an error but is defined to return
+    /// a `Result` for consistency with the plugin trait interface.
     #[allow(clippy::unused_async)]
     pub async fn get_enabled_global_features(
         &self,
-        ctx: &SecurityContext,
+        _ctx: &SecurityContext,
+        _tenant_id: uuid::Uuid,
     ) -> Result<EnabledGlobalFeatures, LicenseEnforcerError> {
-        // Validate tenant scope
-        let tenant_id = ctx.tenant_id();
-        if tenant_id.is_nil() {
-            return Err(LicenseEnforcerError::MissingTenantScope);
-        }
-
         // Return base feature plus configured features
         let mut features = EnabledGlobalFeatures::new();
         features.insert(LicenseFeatureID::from(global_features::BASE));
@@ -72,8 +68,9 @@ mod tests {
     async fn test_service_returns_base_feature_with_empty_config() {
         let service = Service::new(vec![]);
         let ctx = make_test_context();
+        let tenant_id = ctx.tenant_id();
 
-        let result = service.get_enabled_global_features(&ctx).await;
+        let result = service.get_enabled_global_features(&ctx, tenant_id).await;
         assert!(result.is_ok());
 
         let features = result.unwrap();
@@ -92,8 +89,9 @@ mod tests {
         ];
         let service = Service::new(configured);
         let ctx = make_test_context();
+        let tenant_id = ctx.tenant_id();
 
-        let result = service.get_enabled_global_features(&ctx).await;
+        let result = service.get_enabled_global_features(&ctx, tenant_id).await;
         assert!(result.is_ok());
 
         let features = result.unwrap();
@@ -129,8 +127,9 @@ mod tests {
         ];
         let service = Service::new(configured);
         let ctx = make_test_context();
+        let tenant_id = ctx.tenant_id();
 
-        let result = service.get_enabled_global_features(&ctx).await;
+        let result = service.get_enabled_global_features(&ctx, tenant_id).await;
         assert!(result.is_ok());
 
         let features = result.unwrap();
@@ -145,22 +144,6 @@ mod tests {
                 "gts.x.core.lic.feat.v1~x.core.global.test.v1"
             )),
             "Should contain test feature"
-        );
-    }
-
-    #[tokio::test]
-    async fn test_service_fails_without_tenant_context() {
-        let service = Service::new(vec![]);
-        // Anonymous context has nil tenant ID
-        let ctx = SecurityContext::anonymous();
-
-        let result = service.get_enabled_global_features(&ctx).await;
-        assert!(result.is_err());
-
-        let err = result.unwrap_err();
-        assert!(
-            matches!(err, LicenseEnforcerError::MissingTenantScope),
-            "Should fail with MissingTenantScope"
         );
     }
 }

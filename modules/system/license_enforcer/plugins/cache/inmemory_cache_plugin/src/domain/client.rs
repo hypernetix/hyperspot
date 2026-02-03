@@ -26,15 +26,19 @@ impl CachePluginClient for Client {
     async fn get_tenant_features(
         &self,
         ctx: &SecurityContext,
+        tenant_id: uuid::Uuid,
     ) -> Result<Option<EnabledGlobalFeatures>, LicenseEnforcerError> {
-        self.service.get_tenant_features(ctx).await
+        self.service.get_tenant_features(ctx, tenant_id).await
     }
 
     async fn set_tenant_features(
         &self,
         ctx: &SecurityContext,
+        tenant_id: uuid::Uuid,
         features: &EnabledGlobalFeatures,
     ) -> Result<(), LicenseEnforcerError> {
-        self.service.set_tenant_features(ctx, features).await
+        self.service
+            .set_tenant_features(ctx, tenant_id, features)
+            .await
     }
 }

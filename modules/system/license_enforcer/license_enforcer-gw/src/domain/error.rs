@@ -10,6 +10,13 @@ pub enum DomainError {
     #[error("Security context lacks tenant scope")]
     MissingTenantScope,
 
+    /// Security context does not have access to requested tenant
+    #[error("Access denied to tenant {requested_tenant}: {reason}")]
+    TenantAccessDenied {
+        requested_tenant: uuid::Uuid,
+        reason: String,
+    },
+
     /// Platform plugin not found for vendor
     #[error("Platform plugin not found for vendor: {vendor}")]
     PlatformPluginNotFound { vendor: String },
@@ -48,6 +55,12 @@ impl From<DomainError> for LicenseEnforcerError {
     fn from(err: DomainError) -> Self {
         match err {
             DomainError::MissingTenantScope => LicenseEnforcerError::MissingTenantScope,
+            DomainError::TenantAccessDenied {
+                requested_tenant,
+                reason,
+            } => LicenseEnforcerError::authorization(format!(
+                "Access denied to tenant {requested_tenant}: {reason}"
+            )),
             DomainError::PlatformPluginNotFound { vendor } => LicenseEnforcerError::platform(
                 format!("Platform plugin not found for vendor: {vendor}"),
             ),

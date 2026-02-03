@@ -21,13 +21,14 @@
 //! # use uuid::Uuid;
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! # let hub = Arc::new(ClientHub::new());
-//! # let ctx = SecurityContext::builder().tenant_id(Uuid::new_v4()).subject_id(Uuid::new_v4()).build();
+//! # let tenant_id = Uuid::new_v4();
+//! # let ctx = SecurityContext::builder().tenant_id(tenant_id).subject_id(Uuid::new_v4()).build();
 //! # let feature_id = global_features::to_feature_id(global_features::BASE);
 //! // Get the client from ClientHub
 //! let enforcer = hub.get::<dyn LicenseEnforcerGatewayClient>()?;
 //!
 //! // Check license access
-//! let is_enabled = enforcer.is_global_feature_enabled(&ctx, &feature_id).await?;
+//! let is_enabled = enforcer.is_global_feature_enabled(&ctx, tenant_id, &feature_id).await?;
 //! # Ok(())
 //! # }
 //! ```

@@ -35,11 +35,20 @@ use uuid::Uuid;
 // Mock License Client
 // ============================================================================
 
+/// Error mode for mock license client
+#[derive(Clone, Copy)]
+enum MockErrorMode {
+    None,
+    Internal,
+    Authorization,
+    MissingTenantScope,
+}
+
 /// Mock license client for testing.
 /// Can be configured to return specific features or errors.
 struct MockLicenseClient {
     features: Mutex<EnabledGlobalFeatures>,
-    should_error: Mutex<bool>,
+    error_mode: Mutex<MockErrorMode>,
 }
 
 impl MockLicenseClient {
@@ -48,14 +57,28 @@ impl MockLicenseClient {
             features.into_iter().map(LicenseFeatureID::from).collect();
         Self {
             features: Mutex::new(feature_set),
-            should_error: Mutex::new(false),
+            error_mode: Mutex::new(MockErrorMode::None),
         }
     }
 
     fn with_error() -> Self {
         Self {
             features: Mutex::new(EnabledGlobalFeatures::new()),
-            should_error: Mutex::new(true),
+            error_mode: Mutex::new(MockErrorMode::Internal),
+        }
+    }
+
+    fn with_authorization_error() -> Self {
+        Self {
+            features: Mutex::new(EnabledGlobalFeatures::new()),
+            error_mode: Mutex::new(MockErrorMode::Authorization),
+        }
+    }
+
+    fn with_missing_tenant_scope_error() -> Self {
+        Self {
+            features: Mutex::new(EnabledGlobalFeatures::new()),
+            error_mode: Mutex::new(MockErrorMode::MissingTenantScope),
         }
     }
 }
@@ -65,28 +88,38 @@ impl LicenseEnforcerGatewayClient for MockLicenseClient {
     async fn is_global_feature_enabled(
         &self,
         _ctx: &SecurityContext,
+        _tenant_id: uuid::Uuid,
         feature_id: &LicenseFeatureID,
     ) -> std::result::Result<bool, LicenseEnforcerError> {
-        if *self.should_error.lock() {
-            return Err(LicenseEnforcerError::Internal {
+        match *self.error_mode.lock() {
+            MockErrorMode::None => Ok(self.features.lock().contains(feature_id)),
+            MockErrorMode::Internal => Err(LicenseEnforcerError::Internal {
                 message: "Test error".to_owned(),
                 source: None,
-            });
+            }),
+            MockErrorMode::Authorization => {
+                Err(LicenseEnforcerError::authorization("Tenant access denied"))
+            }
+            MockErrorMode::MissingTenantScope => Err(LicenseEnforcerError::MissingTenantScope),
         }
-        Ok(self.features.lock().contains(feature_id))
     }
 
     async fn enabled_global_features(
         &self,
         _ctx: &SecurityContext,
+        _tenant_id: uuid::Uuid,
     ) -> std::result::Result<EnabledGlobalFeatures, LicenseEnforcerError> {
-        if *self.should_error.lock() {
-            return Err(LicenseEnforcerError::Internal {
+        match *self.error_mode.lock() {
+            MockErrorMode::None => Ok(self.features.lock().clone()),
+            MockErrorMode::Internal => Err(LicenseEnforcerError::Internal {
                 message: "Test error".to_owned(),
                 source: None,
-            });
+            }),
+            MockErrorMode::Authorization => {
+                Err(LicenseEnforcerError::authorization("Tenant access denied"))
+            }
+            MockErrorMode::MissingTenantScope => Err(LicenseEnforcerError::MissingTenantScope),
         }
-        Ok(self.features.lock().clone())
     }
 }
 
@@ -640,4 +673,96 @@ async fn with_license_client_base_feature_still_works() {
         .expect("Request failed");
 
     assert_eq!(response.status(), StatusCode::OK);
+}
+
+#[tokio::test]
+async fn with_license_client_returns_403_on_authorization_error() {
+    let config = json!({
+        "api_gateway": {
+            "config": {
+                "bind_addr": "0.0.0.0:8080",
+                "enable_docs": false,
+                "cors_enabled": false,
+                "auth_disabled": true
+            }
+        }
+    });
+
+    // Create mock client that returns authorization errors
+    let mock_client = Arc::new(MockLicenseClient::with_authorization_error());
+
+    let api_ctx = create_api_gateway_ctx_with_license_client(config, mock_client);
+    let test_ctx = create_test_module_ctx();
+
+    let api_gateway = api_gateway::ApiGateway::default();
+    api_gateway.init(&api_ctx).await.expect("Failed to init");
+
+    let router = Router::new();
+    let test_module = TestCyberChatModule;
+    let router = test_module
+        .register_rest(&test_ctx, router, &api_gateway)
+        .expect("Failed to register routes");
+
+    let router = api_gateway
+        .rest_finalize(&api_ctx, router)
+        .expect("Failed to finalize");
+
+    let response = router
+        .oneshot(
+            Request::builder()
+                .uri("/tests/v1/chat")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .expect("Request failed");
+
+    // Authorization errors should return 403, not 503
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn with_license_client_returns_401_on_missing_tenant_scope() {
+    let config = json!({
+        "api_gateway": {
+            "config": {
+                "bind_addr": "0.0.0.0:8080",
+                "enable_docs": false,
+                "cors_enabled": false,
+                "auth_disabled": true
+            }
+        }
+    });
+
+    // Create mock client that returns missing tenant scope errors
+    let mock_client = Arc::new(MockLicenseClient::with_missing_tenant_scope_error());
+
+    let api_ctx = create_api_gateway_ctx_with_license_client(config, mock_client);
+    let test_ctx = create_test_module_ctx();
+
+    let api_gateway = api_gateway::ApiGateway::default();
+    api_gateway.init(&api_ctx).await.expect("Failed to init");
+
+    let router = Router::new();
+    let test_module = TestCyberChatModule;
+    let router = test_module
+        .register_rest(&test_ctx, router, &api_gateway)
+        .expect("Failed to register routes");
+
+    let router = api_gateway
+        .rest_finalize(&api_ctx, router)
+        .expect("Failed to finalize");
+
+    let response = router
+        .oneshot(
+            Request::builder()
+                .uri("/tests/v1/chat")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .expect("Request failed");
+
+    // Missing tenant scope errors should return 401
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 }

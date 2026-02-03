@@ -29,27 +29,29 @@ impl LocalClient {
 #[async_trait]
 impl LicenseEnforcerGatewayClient for LocalClient {
     #[tracing::instrument(skip_all, fields(
-        tenant_id = tracing::field::Empty,
+        tenant_id = %tenant_id,
         feature = %feature_id.as_str()
     ))]
     async fn is_global_feature_enabled(
         &self,
         ctx: &SecurityContext,
+        tenant_id: uuid::Uuid,
         feature_id: &LicenseFeatureID,
     ) -> Result<bool, LicenseEnforcerError> {
         self.service
-            .is_global_feature_enabled(ctx, feature_id)
+            .is_global_feature_enabled(ctx, tenant_id, feature_id)
             .await
             .map_err(Into::into)
     }
 
-    #[tracing::instrument(skip_all, fields(tenant_id = tracing::field::Empty))]
+    #[tracing::instrument(skip_all, fields(tenant_id = %tenant_id))]
     async fn enabled_global_features(
         &self,
         ctx: &SecurityContext,
+        tenant_id: uuid::Uuid,
     ) -> Result<EnabledGlobalFeatures, LicenseEnforcerError> {
         self.service
-            .enabled_global_features(ctx)
+            .enabled_global_features(ctx, tenant_id)
             .await
             .map_err(Into::into)
     }

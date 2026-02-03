@@ -15,8 +15,8 @@ use crate::models::{EnabledGlobalFeatures, LicenseFeatureID};
 /// This trait is registered unscoped in `ClientHub` and consumed by other modules.
 /// The gateway implementation discovers and delegates to platform and cache plugins.
 ///
-/// The tenant scope is derived exclusively from `SecurityContext`. If the context
-/// lacks tenant scope, requests will return an error.
+/// Methods require both `SecurityContext` and an explicit tenant ID. The explicit
+/// tenant ID parameter ensures callers cannot accidentally use the wrong tenant scope.
 ///
 /// # Example
 ///
@@ -30,14 +30,15 @@ use crate::models::{EnabledGlobalFeatures, LicenseFeatureID};
 /// # let hub = Arc::new(ClientHub::new());
 /// # // Note: In real usage, the gateway would be registered by the gateway module
 /// let client = hub.get::<dyn LicenseEnforcerGatewayClient>()?;
-/// # let ctx = SecurityContext::builder().tenant_id(Uuid::new_v4()).subject_id(Uuid::new_v4()).build();
+/// # let tenant_id = Uuid::new_v4();
+/// # let ctx = SecurityContext::builder().tenant_id(tenant_id).subject_id(Uuid::new_v4()).build();
 ///
 /// // Check a single feature
 /// let feature = global_features::to_feature_id(global_features::CYBER_CHAT);
-/// let enabled = client.is_global_feature_enabled(&ctx, &feature).await?;
+/// let enabled = client.is_global_feature_enabled(&ctx, tenant_id, &feature).await?;
 ///
 /// // List all enabled features
-/// let features = client.enabled_global_features(&ctx).await?;
+/// let features = client.enabled_global_features(&ctx, tenant_id).await?;
 /// # Ok(())
 /// # }
 /// ```
@@ -45,12 +46,12 @@ use crate::models::{EnabledGlobalFeatures, LicenseFeatureID};
 pub trait LicenseEnforcerGatewayClient: Send + Sync {
     /// Check if a single global feature is enabled for the tenant.
     ///
-    /// The tenant is derived from `SecurityContext`. If the context lacks tenant
-    /// scope, this method returns a missing-tenant error.
+    /// Requires both `SecurityContext` and explicit tenant ID for security.
     ///
     /// # Arguments
     ///
-    /// * `ctx` - Security context with tenant information
+    /// * `ctx` - Security context for authentication and authorization
+    /// * `tenant_id` - Explicit tenant ID to check features for
     /// * `feature_id` - Global feature ID to check
     ///
     /// # Returns
@@ -60,25 +61,25 @@ pub trait LicenseEnforcerGatewayClient: Send + Sync {
     /// # Errors
     ///
     /// Returns error if:
-    /// - Security context lacks tenant scope
     /// - Platform plugin is unavailable
     /// - Platform query fails
     async fn is_global_feature_enabled(
         &self,
         ctx: &SecurityContext,
+        tenant_id: uuid::Uuid,
         feature_id: &LicenseFeatureID,
     ) -> Result<bool, LicenseEnforcerError>;
 
     /// List all enabled global features for the tenant.
     ///
-    /// The tenant is derived from `SecurityContext`. If the context lacks tenant
-    /// scope, this method returns a missing-tenant error.
+    /// Requires both `SecurityContext` and explicit tenant ID for security.
     ///
     /// Returns the complete set of enabled features without pagination.
     ///
     /// # Arguments
     ///
-    /// * `ctx` - Security context with tenant information
+    /// * `ctx` - Security context for authentication and authorization
+    /// * `tenant_id` - Explicit tenant ID to check features for
     ///
     /// # Returns
     ///
@@ -87,11 +88,11 @@ pub trait LicenseEnforcerGatewayClient: Send + Sync {
     /// # Errors
     ///
     /// Returns error if:
-    /// - Security context lacks tenant scope
     /// - Platform plugin is unavailable
     /// - Platform query fails
     async fn enabled_global_features(
         &self,
         ctx: &SecurityContext,
+        tenant_id: uuid::Uuid,
     ) -> Result<EnabledGlobalFeatures, LicenseEnforcerError>;
 }

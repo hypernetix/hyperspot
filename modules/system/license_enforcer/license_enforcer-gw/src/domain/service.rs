@@ -156,22 +156,46 @@ impl Service {
         Ok(gts_id)
     }
 
-    /// Extract tenant ID from security context.
+    /// Validate that the security context has access to the specified tenant.
+    ///
+    /// Uses `SecurityContext::scope()` to check if the `tenant_id` is accessible.
     ///
     /// # Errors
     ///
-    /// Returns error if security context lacks tenant scope
-    fn extract_tenant_id(ctx: &SecurityContext) -> Result<uuid::Uuid, DomainError> {
-        let tenant_id = ctx.tenant_id();
-        if tenant_id.is_nil() {
-            return Err(DomainError::MissingTenantScope);
+    /// Returns error if the security context does not have access to the tenant.
+    async fn validate_tenant_access(
+        &self,
+        ctx: &SecurityContext,
+        tenant_id: uuid::Uuid,
+    ) -> Result<(), DomainError> {
+        // TODO: Replace NoopPolicyEngine with real policy engine from ClientHub
+        let policy_engine = std::sync::Arc::new(modkit_security::NoopPolicyEngine);
+
+        let scope = ctx.scope(policy_engine).prepare().await.map_err(|e| {
+            DomainError::TenantAccessDenied {
+                requested_tenant: tenant_id,
+                reason: format!("Failed to prepare access scope: {e}"),
+            }
+        })?;
+
+        // Check if the requested tenant is in the accessible tenants
+        if !scope.tenant_ids().contains(&tenant_id) {
+            return Err(DomainError::TenantAccessDenied {
+                requested_tenant: tenant_id,
+                reason: format!(
+                    "Tenant {} not in accessible scope (accessible: {:?})",
+                    tenant_id,
+                    scope.tenant_ids()
+                ),
+            });
         }
-        Ok(tenant_id)
+
+        Ok(())
     }
 
     /// Get enabled global features with cache-aside pattern.
     ///
-    /// 1. Validate tenant scope in security context
+    /// 1. Validate tenant access
     /// 2. Try cache plugin (non-blocking on failure)
     /// 3. If cache miss, call platform plugin
     /// 4. Store result in cache (non-blocking on failure)
@@ -179,21 +203,20 @@ impl Service {
     /// # Errors
     ///
     /// Returns error if:
-    /// - Security context lacks tenant scope
+    /// - Tenant access is denied
     /// - Platform plugin is unavailable
     /// - Platform query fails
-    #[tracing::instrument(skip_all, fields(tenant_id = tracing::field::Empty))]
+    #[tracing::instrument(skip_all, fields(tenant_id = %tenant_id))]
     async fn get_tenant_features(
         &self,
         ctx: &SecurityContext,
+        tenant_id: uuid::Uuid,
     ) -> Result<EnabledGlobalFeatures, DomainError> {
-        // Validate tenant scope first
-        let tenant_id = Self::extract_tenant_id(ctx)?;
-        tracing::Span::current().record("tenant_id", tracing::field::display(tenant_id));
-
+        // Validate tenant access first
+        self.validate_tenant_access(ctx, tenant_id).await?;
         // Try cache first (non-blocking on failure)
         if let Ok(cache) = self.get_cache_plugin().await
-            && let Ok(Some(cached)) = cache.get_tenant_features(ctx).await
+            && let Ok(Some(cached)) = cache.get_tenant_features(ctx, tenant_id).await
         {
             tracing::debug!("Cache hit for tenant features");
             return Ok(cached);
@@ -202,11 +225,11 @@ impl Service {
         // Cache miss or unavailable, query platform
         tracing::debug!("Cache miss, fetching from platform");
         let platform = self.get_platform_plugin().await?;
-        let features = platform.get_enabled_global_features(ctx).await?;
+        let features = platform.get_enabled_global_features(ctx, tenant_id).await?;
 
         // Store in cache (non-blocking on failure)
         if let Ok(cache) = self.get_cache_plugin().await {
-            let _ = cache.set_tenant_features(ctx, &features).await;
+            let _ = cache.set_tenant_features(ctx, tenant_id, &features).await;
         }
 
         Ok(features)
@@ -219,22 +242,19 @@ impl Service {
     /// # Errors
     ///
     /// Returns error if:
-    /// - Security context lacks tenant scope
     /// - Platform plugin is unavailable
     /// - Platform query fails
     #[tracing::instrument(skip_all, fields(
-        tenant_id = tracing::field::Empty,
+        tenant_id = %tenant_id,
         feature = %feature_id.as_str()
     ))]
     pub async fn is_global_feature_enabled(
         &self,
         ctx: &SecurityContext,
+        tenant_id: uuid::Uuid,
         feature_id: &LicenseFeatureID,
     ) -> Result<bool, DomainError> {
-        let tenant_id = Self::extract_tenant_id(ctx)?;
-        tracing::Span::current().record("tenant_id", tracing::field::display(tenant_id));
-
-        let features = self.get_tenant_features(ctx).await?;
+        let features = self.get_tenant_features(ctx, tenant_id).await?;
         Ok(features.contains(feature_id))
     }
 
@@ -245,18 +265,15 @@ impl Service {
     /// # Errors
     ///
     /// Returns error if:
-    /// - Security context lacks tenant scope
     /// - Platform plugin is unavailable
     /// - Platform query fails
-    #[tracing::instrument(skip_all, fields(tenant_id = tracing::field::Empty))]
+    #[tracing::instrument(skip_all, fields(tenant_id = %tenant_id))]
     pub async fn enabled_global_features(
         &self,
         ctx: &SecurityContext,
+        tenant_id: uuid::Uuid,
     ) -> Result<EnabledGlobalFeatures, DomainError> {
-        let tenant_id = Self::extract_tenant_id(ctx)?;
-        tracing::Span::current().record("tenant_id", tracing::field::display(tenant_id));
-
-        self.get_tenant_features(ctx).await
+        self.get_tenant_features(ctx, tenant_id).await
     }
 }
 

@@ -26,7 +26,10 @@ impl PlatformPluginClient for Client {
     async fn get_enabled_global_features(
         &self,
         ctx: &SecurityContext,
+        tenant_id: uuid::Uuid,
     ) -> Result<EnabledGlobalFeatures, LicenseEnforcerError> {
-        self.service.get_enabled_global_features(ctx).await
+        self.service
+            .get_enabled_global_features(ctx, tenant_id)
+            .await
     }
 }
