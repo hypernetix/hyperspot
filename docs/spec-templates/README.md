@@ -21,7 +21,7 @@ Templates work standalone or can be enhanced with FDD annotations (`fdd-id`) for
 
 **Governance**: Steering committee with vote/veto authority on major requirements and architecture decisions. Escalation paths documented separately.
 
-**Global Guidelines**: Project-wide standards defined in root PRD, DESIGN, and [guidelines/](guidelines/) covering architecture, security, performance, operations, runtime environments, testing strategy.
+**Global Guidelines**: Project-wide standards defined in root PRD, DESIGN, and [guidelines/](../../guidelines/) covering architecture, security, performance, operations, runtime environments, testing strategy.
 
 **Module-level specs**: Document only **deviations** or **extensions** from global standards. Avoid duplicating project-wide requirements.
 

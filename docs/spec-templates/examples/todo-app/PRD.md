@@ -109,7 +109,7 @@ The system **MUST** allow users to delete a task permanently.
 **Rationale**: Users need to remove irrelevant or mistaken tasks.
 **Actors**: `fdd-todo-app-actor-user`
 
-### 4.2 Organization
+### 5.2 Organization
 
 #### Filter Tasks
 
@@ -122,7 +122,7 @@ The system **MUST** allow users to filter tasks by status (all, active, complete
 
 ## 6. Non-Functional Requirements
 
-> **Default guidelines**: Project-wide NFR baselines (performance, security, reliability, scalability) are defined in root [PRD.md](../../PRD.md) and [docs/guidelines/](../../guidelines/). Only document module-specific NFRs here — either **exclusions** from defaults or **standalone** requirements unique to this module.
+> **Default guidelines**: Project-wide NFR baselines (performance, security, reliability, scalability) are defined in root [PRD.md](../../PRD.md) and [docs/guidelines/](../../../guidelines/). Only document module-specific NFRs here — either **exclusions** from defaults or **standalone** requirements unique to this module.
 >
 > **Testing strategy**: NFRs are verified via automated benchmarks, security scans, and monitoring unless otherwise specified.
 

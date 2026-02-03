@@ -139,7 +139,7 @@ flowchart LR
 
 **Technology**: REST/OpenAPI
 
-**Location**: [api/openapi.yaml](../api/openapi.yaml)
+**Location**: [api/openapi.yaml](./api/openapi.yaml)
 
 **Endpoints Overview**:
 
