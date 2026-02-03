@@ -146,15 +146,21 @@ Two different tenant concepts appear in authorization:
 - Context tenant: T2 (where operation is scoped)
 
 **In authorization requests:**
-```json
+```jsonc
 {
   "subject": {
-    "properties": { "tenant_id": "T1" }  // Subject tenant
+    "properties": { "tenant_id": "T1" }  // Subject tenant (optional)
   },
   "context": {
-    "tenant_id": "T2"  // Context tenant (single tenant)
-    // OR
-    "tenant_subtree": { "root_id": "T1" }  // Context tenant subtree
+    "tenant_context": {
+      "mode": "root_only",  // Single tenant T2
+      "root_id": "T2"
+    }
+    // OR for subtree:
+    // "tenant_context": {
+    //   "mode": "subtree",   // T1 + descendants
+    //   "root_id": "T1"
+    // }
   }
 }
 ```
@@ -175,12 +181,13 @@ Many operations need to query "all resources in tenant T and its children". This
 
 HyperSpot recommends **closure tables** for production deployments with hierarchical tenants.
 
-**Subtree query parameters:**
+**Tenant scope parameters (in `context.tenant_context`):**
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `root_id` | required | Root tenant of the subtree |
-| `include_root` | `true` | Include root tenant in results |
+| `mode` | `"subtree"` | `"root_only"` (single tenant) or `"subtree"` (tenant + descendants) |
+| `root_id` | — | Root tenant. Optional — PDP can determine from `token_scopes` or `subject.properties.tenant_id` |
+| `include_root` | `true` | Include root tenant in subtree results. Ignored for `root_only` mode |
 | `barrier_mode` | `"all"` | `"all"` (respect barriers) or `"none"` (ignore). See [AUTH.md](./AUTH.md#3-tenant-subtree-predicate-type-in_tenant_subtree). |
 | `tenant_status` | all | Filter by tenant status (`active`, `suspended`) |
 

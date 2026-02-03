@@ -31,7 +31,7 @@ All examples use a Task Management domain:
       - [S02: GET, tenant subtree, PEP has tenant\_closure](#s02-get-tenant-subtree-pep-has-tenant_closure)
       - [S03: UPDATE, tenant subtree, PEP has tenant\_closure](#s03-update-tenant-subtree-pep-has-tenant_closure)
       - [S04: CREATE, tenant context](#s04-create-tenant-context)
-      - [S05: LIST, tenant subtree with barrier, PEP has tenant\_closure](#s05-list-tenant-subtree-with-barrier-pep-has-tenant_closure)
+      - [S05: LIST, billing data, ignore barriers (barrier\_mode: "none")](#s05-list-billing-data-ignore-barriers-barrier_mode-none)
     - [Without `tenant_closure`](#without-tenant_closure)
       - [S06: LIST, tenant subtree, PEP without tenant\_closure](#s06-list-tenant-subtree-pep-without-tenant_closure)
       - [S07: GET, tenant subtree, PEP without tenant\_closure](#s07-get-tenant-subtree-pep-without-tenant_closure)
@@ -183,9 +183,9 @@ Authorization: Bearer <token>
   "action": { "name": "list" },
   "resource": { "type": "gts.x.tasks.task.v1~" },
   "context": {
-    "tenant_subtree": {
+    "tenant_context": {
+      "mode": "subtree",
       "root_id": "T1",
-      "include_root": true,
       "barrier_mode": "all"
     },
     "require_constraints": true,
@@ -254,9 +254,9 @@ Authorization: Bearer <token>
     "id": "task-456"
   },
   "context": {
-    "tenant_subtree": {
-      "root_id": "T1",
-      "include_root": true
+    "tenant_context": {
+      "mode": "subtree",
+      "root_id": "T1"
     },
     "require_constraints": true,
     "capabilities": ["tenant_hierarchy"],
@@ -331,9 +331,9 @@ Content-Type: application/json
     "id": "task-456"
   },
   "context": {
-    "tenant_subtree": {
-      "root_id": "T1",
-      "include_root": true
+    "tenant_context": {
+      "mode": "subtree",
+      "root_id": "T1"
     },
     "require_constraints": true,
     "capabilities": ["tenant_hierarchy"],
@@ -411,7 +411,10 @@ Content-Type: application/json
     }
   },
   "context": {
-    "tenant_id": "T2",
+    "tenant_context": {
+      "mode": "root_only",
+      "root_id": "T2"
+    },
     "require_constraints": false,
     "capabilities": ["tenant_hierarchy"],
     "supported_properties": ["owner_tenant_id", "id"]
@@ -436,23 +439,23 @@ VALUES ('task-new', 'T2', 'New Task', 'pending')
 
 ---
 
-#### S05: LIST, tenant subtree with barrier, PEP has tenant_closure
+#### S05: LIST, billing data, ignore barriers (barrier_mode: "none")
 
-`GET /tasks?tenant_subtree=true&barrier_mode=all`
+`GET /billing/usage?tenant_subtree=true&barrier_mode=none`
 
-User in parent tenant T1 requests tasks, but child tenant T2 is self-managed (barrier). Tasks in T2 subtree should be excluded.
+Billing service needs usage data from all tenants in subtree, including self-managed tenants (barriers ignored). This is a cross-barrier operation for administrative purposes.
 
 **Tenant hierarchy:**
 ```
 T1 (parent)
-├── T2 (self_managed=true)  ← barrier
+├── T2 (self_managed=true)  ← barrier (ignored for billing)
 │   └── T3
 └── T4
 ```
 
 **Request:**
 ```http
-GET /tasks?tenant_subtree=true&barrier_mode=all
+GET /billing/usage?tenant_subtree=true&barrier_mode=none
 Authorization: Bearer <token>
 ```
 
@@ -465,12 +468,12 @@ Authorization: Bearer <token>
     "properties": { "tenant_id": "T1" }
   },
   "action": { "name": "list" },
-  "resource": { "type": "gts.x.tasks.task.v1~" },
+  "resource": { "type": "gts.x.billing.usage.v1~" },
   "context": {
-    "tenant_subtree": {
+    "tenant_context": {
+      "mode": "subtree",
       "root_id": "T1",
-      "include_root": true,
-      "barrier_mode": "all"
+      "barrier_mode": "none"
     },
     "require_constraints": true,
     "capabilities": ["tenant_hierarchy"],
@@ -491,7 +494,7 @@ Authorization: Bearer <token>
             "type": "in_tenant_subtree",
             "resource_property": "owner_tenant_id",
             "root_tenant_id": "T1",
-            "barrier_mode": "all"
+            "barrier_mode": "none"
           }
         ]
       }
@@ -502,15 +505,15 @@ Authorization: Bearer <token>
 
 **SQL:**
 ```sql
-SELECT * FROM tasks
+SELECT * FROM billing_usage
 WHERE owner_tenant_id IN (
   SELECT descendant_id FROM tenant_closure
   WHERE ancestor_id = 'T1'
-    AND barrier = 0
+  -- no barrier clause because barrier_mode = "none"
 )
 ```
 
-**Result:** Returns tasks from T1 and T4 only. Tasks from T2 and T3 are excluded because barrier = 1.
+**Result:** Returns usage data from T1, T2, T3, and T4. Barriers are ignored for billing operations.
 
 **tenant_closure data example:**
 
@@ -558,9 +561,9 @@ Authorization: Bearer <token>
   "action": { "name": "list" },
   "resource": { "type": "gts.x.tasks.task.v1~" },
   "context": {
-    "tenant_subtree": {
-      "root_id": "T1",
-      "include_root": true
+    "tenant_context": {
+      "mode": "subtree",
+      "root_id": "T1"
     },
     "require_constraints": true,
     "capabilities": [],
@@ -637,9 +640,9 @@ Result: full task record with `owner_tenant_id = 'T2'`
     }
   },
   "context": {
-    "tenant_subtree": {
-      "root_id": "T1",
-      "include_root": true
+    "tenant_context": {
+      "mode": "subtree",
+      "root_id": "T1"
     },
     "require_constraints": false,
     "capabilities": [],
@@ -705,9 +708,9 @@ Result: `owner_tenant_id = 'T2'`
     }
   },
   "context": {
-    "tenant_subtree": {
-      "root_id": "T1",
-      "include_root": true
+    "tenant_context": {
+      "mode": "subtree",
+      "root_id": "T1"
     },
     "require_constraints": true,
     "capabilities": [],
@@ -774,7 +777,10 @@ Authorization: Bearer <token>
     "id": "task-456"
   },
   "context": {
-    "tenant_id": "T1",
+    "tenant_context": {
+      "mode": "root_only",
+      "root_id": "T1"
+    },
     "require_constraints": true,
     "capabilities": [],
     "supported_properties": ["owner_tenant_id", "id"]
@@ -844,7 +850,10 @@ Authorization: Bearer <token>
   "action": { "name": "list" },
   "resource": { "type": "gts.x.tasks.task.v1~" },
   "context": {
-    "tenant_id": "T1",
+    "tenant_context": {
+      "mode": "root_only",
+      "root_id": "T1"
+    },
     "require_constraints": true,
     "capabilities": ["group_membership"],
     "supported_properties": ["owner_tenant_id", "id"]
@@ -915,7 +924,10 @@ Authorization: Bearer <token>
   "action": { "name": "list" },
   "resource": { "type": "gts.x.tasks.task.v1~" },
   "context": {
-    "tenant_id": "T1",
+    "tenant_context": {
+      "mode": "root_only",
+      "root_id": "T1"
+    },
     "require_constraints": true,
     "capabilities": ["group_hierarchy"],
     "supported_properties": ["owner_tenant_id", "id"]
@@ -995,7 +1007,10 @@ Content-Type: application/json
     "id": "task-456"
   },
   "context": {
-    "tenant_id": "T1",
+    "tenant_context": {
+      "mode": "root_only",
+      "root_id": "T1"
+    },
     "require_constraints": true,
     "capabilities": ["group_membership"],
     "supported_properties": ["owner_tenant_id", "id"]
@@ -1078,7 +1093,10 @@ Content-Type: application/json
     "id": "task-456"
   },
   "context": {
-    "tenant_id": "T1",
+    "tenant_context": {
+      "mode": "root_only",
+      "root_id": "T1"
+    },
     "require_constraints": true,
     "capabilities": ["group_hierarchy"],
     "supported_properties": ["owner_tenant_id", "id"]
@@ -1157,7 +1175,10 @@ Authorization: Bearer <token>
     "id": "task-456"
   },
   "context": {
-    "tenant_id": "T1",
+    "tenant_context": {
+      "mode": "root_only",
+      "root_id": "T1"
+    },
     "require_constraints": true,
     "capabilities": [],
     "supported_properties": ["owner_tenant_id", "id"]
@@ -1231,7 +1252,10 @@ Authorization: Bearer <token>
   "action": { "name": "list" },
   "resource": { "type": "gts.x.tasks.task.v1~" },
   "context": {
-    "tenant_id": "T1",
+    "tenant_context": {
+      "mode": "root_only",
+      "root_id": "T1"
+    },
     "require_constraints": true,
     "capabilities": ["group_membership"],
     "supported_properties": ["owner_tenant_id", "id"]
@@ -1310,9 +1334,9 @@ Authorization: Bearer <token>
   "action": { "name": "list" },
   "resource": { "type": "gts.x.tasks.task.v1~" },
   "context": {
-    "tenant_subtree": {
-      "root_id": "T1",
-      "include_root": true
+    "tenant_context": {
+      "mode": "subtree",
+      "root_id": "T1"
     },
     "require_constraints": true,
     "capabilities": ["tenant_hierarchy", "group_membership"],
@@ -1390,9 +1414,9 @@ Authorization: Bearer <token>
   "action": { "name": "list" },
   "resource": { "type": "gts.x.tasks.task.v1~" },
   "context": {
-    "tenant_subtree": {
-      "root_id": "T1",
-      "include_root": true
+    "tenant_context": {
+      "mode": "subtree",
+      "root_id": "T1"
     },
     "require_constraints": true,
     "capabilities": ["tenant_hierarchy", "group_hierarchy"],
@@ -1478,7 +1502,10 @@ Authorization: Bearer <token>
   "action": { "name": "list" },
   "resource": { "type": "gts.x.tasks.task.v1~" },
   "context": {
-    "tenant_id": "T1",
+    "tenant_context": {
+      "mode": "root_only",
+      "root_id": "T1"
+    },
     "require_constraints": true,
     "capabilities": ["group_membership"],
     "supported_properties": ["owner_tenant_id", "id"]
@@ -1569,7 +1596,10 @@ Authorization: Bearer <token>
   "action": { "name": "list" },
   "resource": { "type": "gts.x.tasks.task.v1~" },
   "context": {
-    "tenant_id": "T1",
+    "tenant_context": {
+      "mode": "root_only",
+      "root_id": "T1"
+    },
     "require_constraints": true,
     "capabilities": ["tenant_hierarchy"],
     "supported_properties": ["owner_tenant_id", "id"]

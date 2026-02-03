@@ -54,7 +54,7 @@ In HyperSpot's architecture:
 - **Resource Group** - Optional container for resources, used for access control. See [RESOURCE_GROUP_MODEL.md](./RESOURCE_GROUP_MODEL.md)
 - **Permission** - `{ resource_type, action }` - allowed operation identifier
 - **Access Constraints** - Structured predicates returned by the PDP for query-time enforcement. NOT policies (stored vendor-side) or "grants" (OAuth flows, Zanzibar tuples), but compiled, time-bound enforcement artifacts computed at evaluation time.
-- **Security Context** - Result of successful authentication containing subject identity, tenant information, and optionally the original bearer token. Flows from authentication to authorization. Contains: `subject_id`, `subject_type`, `subject_tenant_id`, `token_scopes`, `bearer_token`.
+- **Security Context** - Result of successful authentication containing subject identity, tenant information, and optionally the original bearer token. Flows from authentication to authorization. Required fields: `subject_id`, `token_scopes`. Optional fields: `subject_type`, `subject_tenant_id`, `bearer_token`.
 - **Token Scopes** - Capability restrictions extracted from the access token. Act as a "ceiling" on what an application can do, regardless of user's actual permissions. See [Token Scopes](#token-scopes).
 
 ### Request Flow
@@ -293,9 +293,9 @@ AuthN Resolver plugin is responsible for:
 ```rust
 SecurityContext {
     subject_id: "user-123",
-    subject_type: "gts.x.core.security.subject.user.v1~",
-    subject_tenant_id: "tenant-456",
-    bearer_token: "eyJ...",
+    subject_type: Some("gts.x.core.security.subject.user.v1~"),  // optional
+    subject_tenant_id: Some("tenant-456"),                       // optional
+    bearer_token: Some("eyJ..."),                                // optional
     token_scopes: ["*"],  // first-party: full access
     // OR
     token_scopes: ["read:events", "write:tasks"],  // third-party: limited
@@ -446,23 +446,23 @@ The `SecurityContext` is extracted from `AuthenticationResult` and flows from Au
 
 ```rust
 SecurityContext {
-    subject_id: String,           // from `sub` claim or IdP response
-    subject_type: GtsTypeId,      // vendor-specific subject type
-    subject_tenant_id: TenantId,  // Subject Owner Tenant - tenant the subject belongs to
-    token_scopes: Vec<String>,    // capability restrictions (["*"] for first-party)
-    bearer_token: Option<String>, // original token for forwarding to PDP
+    subject_id: String,                    // required - from `sub` claim or IdP response
+    subject_type: Option<GtsTypeId>,       // optional - vendor-specific subject type
+    subject_tenant_id: Option<TenantId>,   // optional - Subject Owner Tenant
+    token_scopes: Vec<String>,             // required - capability restrictions (["*"] for first-party)
+    bearer_token: Option<String>,          // optional - original token for forwarding to PDP
 }
 ```
 
 **Field Semantics:**
 
-| Field | Description | Used By |
-|-------|-------------|---------|
-| `subject_id` | Unique identifier for the subject | All authorization decisions |
-| `subject_type` | GTS type identifier (e.g., `gts.x.core.security.subject.user.v1~`) | PDP for role/permission mapping |
-| `subject_tenant_id` | Subject Owner Tenant — tenant the subject belongs to | PDP for tenant context |
-| `token_scopes` | Capability restrictions from token (see [Token Scopes](#token-scopes)) | PDP for scope narrowing |
-| `bearer_token` | Original bearer token (optional) | PDP validation, external API calls |
+| Field | Required | Description | Used By |
+|-------|----------|-------------|---------|
+| `subject_id` | Yes | Unique identifier for the subject | All authorization decisions |
+| `subject_type` | No | GTS type identifier (e.g., `gts.x.core.security.subject.user.v1~`) | PDP for role/permission mapping |
+| `subject_tenant_id` | No | Subject Owner Tenant — tenant the subject belongs to | PDP for tenant context |
+| `token_scopes` | Yes | Capability restrictions from token (see [Token Scopes](#token-scopes)) | PDP for scope narrowing |
+| `bearer_token` | No | Original bearer token | PDP validation, external API calls |
 
 **Security Notes:**
 - Token expiration (`exp`) is validated during authentication but not included in SecurityContext (expiration is token metadata, not identity)
@@ -723,10 +723,10 @@ Content-Type: application/json
 {
   // Subject — from SecurityContext (produced by AuthN Resolver)
   "subject": {
-    "type": "gts.x.core.security.subject.user.v1~",  // SecurityContext.subject_type
-    "id": "a254d252-7129-4240-bae5-847c59008fb6",    // SecurityContext.subject_id
+    "type": "gts.x.core.security.subject.user.v1~",  // optional - SecurityContext.subject_type
+    "id": "a254d252-7129-4240-bae5-847c59008fb6",    // required - SecurityContext.subject_id
     "properties": {
-      "tenant_id": "51f18034-3b2f-4bfa-bb99-22113bddee68"  // SecurityContext.subject_tenant_id
+      "tenant_id": "51f18034-3b2f-4bfa-bb99-22113bddee68"  // optional - SecurityContext.subject_tenant_id
     }
   },
 
@@ -746,13 +746,13 @@ Content-Type: application/json
 
   // Context — mix of SecurityContext, request params, and handler config
   "context": {
-    // Tenant context (from request header/query param) — use ONE of: tenant_id OR tenant_subtree
-    // "tenant_id": "...",  // Option 1: single tenant
-    "tenant_subtree": {     // Option 2: tenant subtree
-      "root_id": "51f18034-3b2f-4bfa-bb99-22113bddee68",  // request header: X-Tenant-Id
-      "include_root": true,        // request param, default: true
-      "barrier_mode": "all",       // request param, default: "all"
-      "tenant_status": ["active", "suspended"]  // request param, optional
+    // Context Tenant (optional) — PDP, for example, can determine from token_scopes or subject.tenant_id if absent
+    "tenant_context": {
+      "mode": "subtree",           // "root_only" | "subtree", default: "subtree"
+      "root_id": "51f18034-3b2f-4bfa-bb99-22113bddee68",  // optional - request param (URL query, header), handler can set
+      "include_root": true,        // subtree mode only, default: true, ignored for root_only
+      "barrier_mode": "all",       // default: "all"
+      "tenant_status": ["active", "suspended"]  // optional filter
     },
 
     "token_scopes": ["read:events", "write:tasks"],  // SecurityContext.token_scopes
@@ -799,6 +799,18 @@ The response contains a `decision` and, when `decision: true`, optional `context
 ```
 
 **Note on `bearer_token`:** The `context.bearer_token` field is optional. Include it when PDP needs to: (1) validate token independently (defense-in-depth in OoP deployments), (2) call external vendor APIs requiring authentication, or (3) extract token-embedded policies/scopes. Omit it if PDP fully trusts PEP's claim extraction. Security: bearer_token is a credential — PDP MUST NOT log it or persist it.
+
+**Note on `tenant_context`:** The `context.tenant_context` object is optional. It defines the tenant context for the operation:
+
+| Field | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `mode` | No | `"subtree"` | `"root_only"` (single tenant) or `"subtree"` (tenant + descendants) |
+| `root_id` | No | — | Root tenant ID. If absent, PDP determines from `token_scopes`, `bearer_token`, or `subject.properties.tenant_id` |
+| `include_root` | No | `true` | For `subtree` mode: include root in results. Ignored for `root_only` |
+| `barrier_mode` | No | `"all"` | `"all"` (respect barriers) or `"none"` (ignore barriers) |
+| `tenant_status` | No | — | Filter by tenant status (e.g., `["active", "suspended"]`) |
+
+The `barrier_mode` and `tenant_status` parameters apply to any scope source — whether explicitly provided via `root_id` or derived from the token/subject.
 
 #### PEP Decision Matrix
 
@@ -1017,6 +1029,8 @@ Filters resources by tenant subtree using the closure table. The `resource_prope
 | `"none"` | (omit clause) | Ignore barriers. Use for billing, tenant metadata, or other cross-barrier operations. |
 
 **Future extensibility:** The `barrier` column is INT to allow future use as a bitmask for multiple barrier types. Future modes (e.g., `"data_sovereignty_only"`) can be added with selective checks like `(barrier & mask) = 0` without breaking existing consumers.
+
+**Relationship to request `tenant_context`:** The PDP uses `context.tenant_context` from the request to determine the tenant context, then generates `in_tenant_subtree` predicates in the response. The predicate's `root_tenant_id` comes from either the request's `tenant_context.root_id` or PDP's resolution from token/subject. The `barrier_mode` and `tenant_status` parameters flow through from request to predicate.
 
 #### 4. Group Membership Predicate (`type: "in_group"`)
 
