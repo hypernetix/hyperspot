@@ -2,7 +2,7 @@
 
 <!--
 =============================================================================
-TECHNICAL DESIGN DOCUMENT (TDD / SDD)
+TECHNICAL DESIGN DOCUMENT
 =============================================================================
 PURPOSE: Define HOW the system is built — architecture, components, APIs,
 data models, and technical decisions that realize the requirements.
