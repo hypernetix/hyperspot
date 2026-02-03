@@ -19,12 +19,6 @@ NOT IN THIS DOCUMENT (see other templates):
   ✗ Architecture, components, APIs → DESIGN.md
   ✗ Why a specific approach was chosen → ADR/
 
-RELATIONSHIP TO OTHER DOCS:
-  - PRD defines WHAT and WHY (requirements)
-  - DESIGN defines HOW at system level (architecture)
-  - FEATURE defines HOW at implementation level (behavior)
-  - refer to `fdd-...` id's wherever it's possible for traceability
-
 FDL PSEUDO-CODE:
   Optional. Use for complex flows or when precise behavior must be
   communicated. Skip for simple features to avoid overhead.
