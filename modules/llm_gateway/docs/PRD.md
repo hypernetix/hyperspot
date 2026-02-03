@@ -127,7 +127,7 @@ Consumer sends text(s), Gateway returns vector embeddings.
 
 <!-- fdd-id-content -->
 
-Consumer sends message with image URLs. Gateway fetches from FileStorage, routes to vision-capable model.
+Consumer sends message with image URLs. Gateway fetches media from FileStorage (direct) or external URLs (via OAGW), routes to vision-capable model via OAGW.
 
 **Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-provider`
 <!-- fdd-id-content -->
@@ -138,7 +138,7 @@ Consumer sends message with image URLs. Gateway fetches from FileStorage, routes
 
 <!-- fdd-id-content -->
 
-Consumer sends text prompt. Gateway generates image, stores in FileStorage, returns URL.
+Consumer sends text prompt. Gateway sends request to provider via OAGW, stores generated image in FileStorage (direct), returns URL.
 
 **Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-provider`
 <!-- fdd-id-content -->
@@ -149,7 +149,7 @@ Consumer sends text prompt. Gateway generates image, stores in FileStorage, retu
 
 <!-- fdd-id-content -->
 
-Consumer sends message with audio URL. Gateway fetches audio, returns transcription.
+Consumer sends message with audio URL. Gateway fetches audio from FileStorage (direct) or external URLs (via OAGW), sends to provider via OAGW, returns transcription.
 
 **Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-provider`
 <!-- fdd-id-content -->
@@ -160,7 +160,7 @@ Consumer sends message with audio URL. Gateway fetches audio, returns transcript
 
 <!-- fdd-id-content -->
 
-Consumer sends text. Gateway synthesizes audio, stores in FileStorage, returns URL. Supports streaming mode.
+Consumer sends text. Gateway sends request to provider via OAGW, stores synthesized audio in FileStorage (direct), returns URL. Supports streaming mode.
 
 **Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-provider`
 <!-- fdd-id-content -->
@@ -171,7 +171,7 @@ Consumer sends text. Gateway synthesizes audio, stores in FileStorage, returns U
 
 <!-- fdd-id-content -->
 
-Consumer sends message with video URL. Gateway fetches video, returns analysis.
+Consumer sends message with video URL. Gateway fetches video from FileStorage (direct) or external URLs (via OAGW), sends to provider via OAGW, returns analysis.
 
 **Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-provider`
 <!-- fdd-id-content -->
@@ -182,7 +182,7 @@ Consumer sends message with video URL. Gateway fetches video, returns analysis.
 
 <!-- fdd-id-content -->
 
-Consumer sends text prompt. Gateway generates video, stores in FileStorage, returns URL. Typically requires async mode due to long processing.
+Consumer sends text prompt. Gateway sends request to provider via OAGW, stores generated video in FileStorage (direct), returns URL. Typically requires async mode due to long processing.
 
 **Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-provider`
 <!-- fdd-id-content -->
