@@ -139,6 +139,10 @@ pub use directory::{
 // GTS schema support
 pub mod gts;
 
+// Domain layer marker traits for DDD enforcement
+pub mod domain;
+pub use domain::{DomainErrorMarker, DomainModel};
+
 // Security context scoping wrapper (re-exported from modkit-sdk)
 pub use modkit_sdk::{Secured, WithSecurityContext};
 

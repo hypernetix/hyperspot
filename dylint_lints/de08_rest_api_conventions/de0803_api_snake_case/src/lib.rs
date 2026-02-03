@@ -53,9 +53,12 @@ impl EarlyLintPass for De0803ApiSnakeCase {
 /// `rename(serialize = "value1", deserialize = "value2")`.
 ///
 /// Returns spans and string values for all matching attributes.
-fn find_serde_attribute_value(attrs: &[Attribute], attribute_name: &str) -> Vec<(rustc_span::Span, String)> {
+fn find_serde_attribute_value(
+    attrs: &[Attribute],
+    attribute_name: &str,
+) -> Vec<(rustc_span::Span, String)> {
     let mut results = Vec::new();
-    
+
     for attr in attrs {
         if !attr.has_name(rustc_span::Symbol::intern("serde")) {
             continue;
@@ -78,14 +81,14 @@ fn find_serde_attribute_value(attrs: &[Attribute], attribute_name: &str) -> Vec<
             if let Some(value) = meta_item.value_str() {
                 results.push((meta_item.span, value.as_str().to_string()));
             }
-            
+
             // Try to get nested list values: rename(serialize = "value1", deserialize = "value2")
             if let Some(inner_list) = meta_item.meta_item_list() {
                 for inner_nested in inner_list {
                     let Some(inner_meta_item) = inner_nested.meta_item() else {
                         continue;
                     };
-                    
+
                     if let Some(inner_value) = inner_meta_item.value_str() {
                         results.push((inner_meta_item.span, inner_value.as_str().to_string()));
                     }
@@ -93,7 +96,7 @@ fn find_serde_attribute_value(attrs: &[Attribute], attribute_name: &str) -> Vec<
             }
         }
     }
-    
+
     results
 }
 
@@ -101,16 +104,14 @@ fn find_serde_attribute_value(attrs: &[Attribute], attribute_name: &str) -> Vec<
 fn check_type_rename_all(cx: &EarlyContext<'_>, attrs: &[Attribute]) {
     for (span, value) in find_serde_attribute_value(attrs, "rename_all") {
         if value != "snake_case" {
-            cx.span_lint(
-                DE0803_API_SNAKE_CASE,
-                span,
-                |diag| {
-                    diag.primary_message(
-                        "DTOs must not use non-snake_case in serde rename_all (DE0803)"
-                    );
-                    diag.help("DTOs in api/rest must use snake_case (or default) to match API standards");
-                },
-            );
+            cx.span_lint(DE0803_API_SNAKE_CASE, span, |diag| {
+                diag.primary_message(
+                    "DTOs must not use non-snake_case in serde rename_all (DE0803)",
+                );
+                diag.help(
+                    "DTOs in api/rest must use snake_case (or default) to match API standards",
+                );
+            });
         }
     }
 }
@@ -119,29 +120,25 @@ fn check_type_rename_all(cx: &EarlyContext<'_>, attrs: &[Attribute]) {
 fn check_variant_rename(cx: &EarlyContext<'_>, attrs: &[Attribute]) {
     for (span, value) in find_serde_attribute_value(attrs, "rename") {
         if !is_snake_case(&value) {
-            cx.span_lint(
-                DE0803_API_SNAKE_CASE,
-                span,
-                |diag| {
-                    diag.primary_message(
-                        "Enum variants must not use non-snake_case in serde rename (DE0803)"
-                    );
-                    diag.help("Enum variants in api/rest must use snake_case to match API standards");
-                },
-            );
+            cx.span_lint(DE0803_API_SNAKE_CASE, span, |diag| {
+                diag.primary_message(
+                    "Enum variants must not use non-snake_case in serde rename (DE0803)",
+                );
+                diag.help("Enum variants in api/rest must use snake_case to match API standards");
+            });
         }
     }
 }
 
 /// Validates that fields use snake_case names or have a serde rename to snake_case.
-fn check_fields(cx: &EarlyContext<'_>, variant_data: &VariantData) {    
+fn check_fields(cx: &EarlyContext<'_>, variant_data: &VariantData) {
     for field in variant_data.fields() {
         check_field_snake_case(cx, field);
     }
 }
 
 /// Checks a single field for snake_case compliance.
-/// 
+///
 /// A field is valid if:
 /// 1. The field name is snake_case, OR
 /// 2. The field has a `#[serde(rename = "snake_case_value")]` attribute
@@ -154,9 +151,9 @@ fn check_field_snake_case(cx: &EarlyContext<'_>, field: &FieldDef) {
         Some(ident) => ident.name.as_str().to_string(),
         None => return, // Tuple struct fields have no name
     };
-    
+
     let rename_values = find_serde_attribute_value(&field.attrs, "rename");
-    
+
     if rename_values.is_empty() {
         // No field-level serde rename - field name must be snake_case
         if !is_snake_case(&field_name) {
@@ -178,42 +175,39 @@ fn check_field_snake_case(cx: &EarlyContext<'_>, field: &FieldDef) {
         // Has field-level serde rename - the rename value must be snake_case
         for (span, value) in rename_values {
             if !is_snake_case(&value) {
-                cx.span_lint(
-                    DE0803_API_SNAKE_CASE,
-                    span,
-                    |diag| {
-                        diag.primary_message(
-                            "DTO fields must not use non-snake_case in serde rename (DE0803)"
-                        );
-                        diag.help("DTO fields in api/rest must use snake_case to match API standards");
-                    },
-                );
+                cx.span_lint(DE0803_API_SNAKE_CASE, span, |diag| {
+                    diag.primary_message(
+                        "DTO fields must not use non-snake_case in serde rename (DE0803)",
+                    );
+                    diag.help("DTO fields in api/rest must use snake_case to match API standards");
+                });
             }
         }
     }
 }
 
 /// Checks if a string is valid snake_case.
-/// 
+///
 /// Snake case: lowercase letters, digits, and underscores only.
 /// Examples: "my_field", "user_id", "field_123"
 fn is_snake_case(s: &str) -> bool {
     if s.is_empty() {
         return false;
     }
-    
+
     // Must not start or end with underscore
     if s.starts_with('_') || s.ends_with('_') {
         return false;
     }
-    
+
     // Must not have consecutive underscores
     if s.contains("__") {
         return false;
     }
-    
+
     // All characters must be lowercase, digits, or underscore
-    s.chars().all(|c| c.is_lowercase() || c.is_ascii_digit() || c == '_')
+    s.chars()
+        .all(|c| c.is_lowercase() || c.is_ascii_digit() || c == '_')
 }
 
 /// Converts a string to snake_case.
@@ -243,9 +237,9 @@ mod tests {
     fn test_comment_annotations_match_stderr() {
         let ui_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("ui");
         lint_utils::test_comment_annotations_match_stderr(
-            &ui_dir, 
-            "DE0803", 
-            "DTO fields must not use non-snake_case in serde rename/rename_all"
+            &ui_dir,
+            "DE0803",
+            "DTO fields must not use non-snake_case in serde rename/rename_all",
         );
     }
 }

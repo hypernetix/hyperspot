@@ -1,5 +1,4 @@
 #[allow(dead_code)]
-
 use async_trait::async_trait;
 
 #[async_trait]

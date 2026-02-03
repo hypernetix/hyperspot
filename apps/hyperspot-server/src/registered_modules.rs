@@ -10,7 +10,6 @@ use module_orchestrator as _;
 use nodes_registry as _;
 use simple_user_settings as _;
 use tenant_resolver_gw as _;
-use types as _;
 use types_registry as _;
 
 #[cfg(feature = "single-tenant")]

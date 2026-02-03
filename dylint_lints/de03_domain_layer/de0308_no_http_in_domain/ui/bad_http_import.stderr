@@ -1,0 +1,19 @@
+error: domain module imports HTTP type `http` (DE0308)
+  --> $DIR/bad_http_import.rs:7:1
+   |
+LL | use http::StatusCode;
+   | ^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: domain should be transport-agnostic; handle HTTP in api/ layer
+   = note: `#[deny(de0308_no_http_in_domain)]` on by default
+
+error: domain module imports HTTP type `axum` (DE0308)
+  --> $DIR/bad_http_import.rs:10:1
+   |
+LL | use axum::http::HeaderMap;
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: domain should be transport-agnostic; handle HTTP in api/ layer
+
+error: aborting due to 2 previous errors
+
