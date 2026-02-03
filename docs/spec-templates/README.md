@@ -108,7 +108,7 @@ Standards alignment:
 
 Architecture Decision Records capture **why** a technical decision was made, not just what was decided. Each ADR documents the context, problem statement, considered options, and the chosen solution with its trade-offs. This creates an institutional memory that prevents re-debating settled decisions and helps new team members understand the rationale behind the architecture.
 
-Use ADRs for real decision dilemmas and final decision state. Decision history is in git; keep one ADR per decision.
+Use ADRs only when there was a meaningful discussion/debate and the rationale needs to be preserved as a historical decision record. Use ADRs for real decision dilemmas and final decision state. Decision history is in git; keep one ADR per decision.
 
 ### About Feature Files (features/*.md)
 
