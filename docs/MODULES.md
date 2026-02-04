@@ -650,7 +650,7 @@ Centralized gateway for external-API calls with credentials injection, reliabili
 - [ ] p2 - timeouts (connect, read, total)
 - [ ] p3 - audit with retention
 #### More details
-- [PRD](../modules/outbound_api_gateway/docs/PRD.md)
+- TODO: PRD
 - TODO: Scenarios link
 - TODO: API link
 - TODO: SDK link
