@@ -1164,7 +1164,7 @@ pub fn api_dto(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// - HTTP/Web: `http::*`, `axum::*`, `hyper::*`
 /// - External clients: `reqwest::*`, `tonic::*`
 /// - File system: `std::fs::*`, `tokio::fs::*`
-/// - Database-specific names: `PgPool`, `MySqlPool`, `DatabaseConnection`
+/// - Database-specific names: `PgPool`, `MySqlPool`, `SqlitePool`, `DatabaseConnection`
 #[proc_macro_attribute]
 pub fn domain_model(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);
