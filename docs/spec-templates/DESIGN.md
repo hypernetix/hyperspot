@@ -167,10 +167,10 @@ Define how this library/module interacts with external systems, including protoc
 
 ```mermaid
 sequenceDiagram
-    Actor ->> System: Request
+    User ->> System: Request
     System ->> Database: Query
     Database -->> System: Result
-    System -->> Actor: Response
+    System -->> User: Response
 ```
 
 **Key Flows**: Reference use cases from PRD via FDD IDs.
