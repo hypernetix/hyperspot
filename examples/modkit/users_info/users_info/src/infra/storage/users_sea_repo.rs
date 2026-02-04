@@ -1,17 +1,17 @@
 use async_trait::async_trait;
 
-use crate::domain::error::DomainError;
-use crate::domain::repos::UsersRepository;
 use crate::infra::storage::db::db_err;
 use crate::infra::storage::entity::user::{ActiveModel as UserAM, Column, Entity as UserEntity};
 use crate::infra::storage::odata_mapper::UserODataMapper;
-use modkit_db::DbConnTrait;
+use crate::{domain::error::DomainError, domain::repos::UsersRepository};
 use modkit_db::odata::{LimitCfg, paginate_odata};
-use modkit_db::secure::{SecureDeleteExt, SecureEntityExt};
+use modkit_db::secure::{
+    DBRunner, SecureDeleteExt, SecureEntityExt, secure_insert, secure_update_with_scope,
+};
 use modkit_odata::{ODataQuery, Page, SortDir};
 use modkit_security::AccessScope;
 use sea_orm::sea_query::Expr;
-use sea_orm::{ActiveModelTrait, EntityTrait, QueryFilter, Set};
+use sea_orm::{EntityTrait, QueryFilter, Set};
 use user_info_sdk::User;
 use user_info_sdk::odata::UserFilterField;
 use uuid::Uuid;
@@ -31,7 +31,7 @@ impl OrmUsersRepository {
 
 #[async_trait]
 impl UsersRepository for OrmUsersRepository {
-    async fn get<C: DbConnTrait + Send + Sync>(
+    async fn get<C: DBRunner>(
         &self,
         conn: &C,
         scope: &AccessScope,
@@ -47,13 +47,13 @@ impl UsersRepository for OrmUsersRepository {
         Ok(found.map(Into::into))
     }
 
-    async fn list_page<C: DbConnTrait + Send + Sync>(
+    async fn list_page<C: DBRunner>(
         &self,
         conn: &C,
         scope: &AccessScope,
         query: &ODataQuery,
     ) -> Result<Page<User>, DomainError> {
-        let base_query = UserEntity::find().secure().scope_with(scope).into_inner();
+        let base_query = UserEntity::find().secure().scope_with(scope);
 
         let page = paginate_odata::<UserFilterField, UserODataMapper, _, _, _, _>(
             base_query,
@@ -69,19 +69,12 @@ impl UsersRepository for OrmUsersRepository {
         Ok(page)
     }
 
-    async fn create<C: DbConnTrait + Send + Sync>(
+    async fn create<C: DBRunner>(
         &self,
         conn: &C,
         scope: &AccessScope,
         user: User,
     ) -> Result<User, DomainError> {
-        if !scope.has_tenants() {
-            return Err(DomainError::validation(
-                "scope",
-                "Security scope must contain tenant for insert operation",
-            ));
-        }
-
         let m = UserAM {
             id: Set(user.id),
             tenant_id: Set(user.tenant_id),
@@ -91,11 +84,13 @@ impl UsersRepository for OrmUsersRepository {
             updated_at: Set(user.updated_at),
         };
 
-        let _ = m.insert(conn).await.map_err(db_err)?;
+        let _ = secure_insert::<UserEntity>(m, scope, conn)
+            .await
+            .map_err(db_err)?;
         Ok(user)
     }
 
-    async fn update<C: DbConnTrait + Send + Sync>(
+    async fn update<C: DBRunner>(
         &self,
         conn: &C,
         scope: &AccessScope,
@@ -123,11 +118,13 @@ impl UsersRepository for OrmUsersRepository {
             updated_at: Set(user.updated_at),
         };
 
-        let _ = m.update(conn).await.map_err(db_err)?;
+        let _ = secure_update_with_scope::<UserEntity>(m, scope, user.id, conn)
+            .await
+            .map_err(db_err)?;
         Ok(user)
     }
 
-    async fn delete<C: DbConnTrait + Send + Sync>(
+    async fn delete<C: DBRunner>(
         &self,
         conn: &C,
         scope: &AccessScope,
@@ -144,7 +141,7 @@ impl UsersRepository for OrmUsersRepository {
         Ok(result.rows_affected > 0)
     }
 
-    async fn exists<C: DbConnTrait + Send + Sync>(
+    async fn exists<C: DBRunner>(
         &self,
         conn: &C,
         scope: &AccessScope,
@@ -160,7 +157,7 @@ impl UsersRepository for OrmUsersRepository {
         Ok(found.is_some())
     }
 
-    async fn count_by_email<C: DbConnTrait + Send + Sync>(
+    async fn count_by_email<C: DBRunner>(
         &self,
         conn: &C,
         scope: &AccessScope,

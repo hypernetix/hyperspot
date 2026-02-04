@@ -18,6 +18,10 @@ on:
           - release
           - release-pr
 
+# Restrict default permissions to read-only
+permissions:
+  contents: read
+
 concurrency:
   group: release-plz-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
@@ -83,7 +87,7 @@ jobs:
         uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
 
       - name: cargo test (workspace)
-        run: cargo test --workspace --no-fail-fast --exclude cf-modkit-macros --exclude cf-modkit-db-macros
+        run: cargo test --workspace --no-fail-fast --exclude cf-modkit-macros-tests --exclude cf-modkit-db-macros
 
       - name: release-plz release
         uses: release-plz/action@5ab144c9d67d4346240190d0f95ed08668677928

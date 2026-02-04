@@ -69,15 +69,20 @@
 // Re-export key types for public API
 pub use advisory_locks::{DbLockGuard, LockConfig};
 
-pub use sea_orm::ConnectionTrait as DbConnTrait;
+// Re-export sea_orm_migration for modules that implement DatabaseCapability
+pub use sea_orm_migration;
 
 // Core modules
 pub mod advisory_locks;
 pub mod config;
 pub mod manager;
+pub mod migration_runner;
 pub mod odata;
 pub mod options;
+
 pub mod secure;
+
+mod db_provider;
 
 // Internal modules
 mod pool_opts;
@@ -87,9 +92,35 @@ mod sqlite;
 // Re-export important types from new modules
 pub use config::{DbConnConfig, GlobalDatabaseConfig, PoolCfg};
 pub use manager::DbManager;
-pub use options::{
-    ConnectionOptionsError, DbConnectOptions, build_db_handle, redact_credentials_in_dsn,
-};
+pub use options::redact_credentials_in_dsn;
+
+// Re-export secure database types for convenience
+pub use secure::{Db, DbConn, DbTx};
+
+// Re-export service-friendly provider
+pub use db_provider::DBProvider;
+
+/// Connect and return a secure `Db` (no `DbHandle` exposure).
+///
+/// This is the public constructor intended for module code and tests.
+///
+/// # Errors
+///
+/// Returns `DbError` if the connection fails or the DSN/options are invalid.
+pub async fn connect_db(dsn: &str, opts: ConnectOpts) -> Result<Db> {
+    let handle = DbHandle::connect(dsn, opts).await?;
+    Ok(Db::new(handle))
+}
+
+/// Build a secure `Db` from config (no `DbHandle` exposure).
+///
+/// # Errors
+///
+/// Returns `DbError` if configuration is invalid or connection fails.
+pub async fn build_db(cfg: DbConnConfig, global: Option<&GlobalDatabaseConfig>) -> Result<Db> {
+    let handle = options::build_db_handle(cfg, global).await?;
+    Ok(Db::new(handle))
+}
 
 use std::time::Duration;
 
@@ -102,11 +133,13 @@ use sqlite::{Pragmas, extract_sqlite_pragmas, is_memory_dsn, prepare_sqlite_path
 // Used for parsing SQLite DSN query parameters
 
 #[cfg(feature = "mysql")]
-use sea_orm::sqlx::{MySql, MySqlPool, mysql::MySqlPoolOptions};
+use sqlx::mysql::MySqlPoolOptions;
 #[cfg(feature = "pg")]
-use sea_orm::sqlx::{PgPool, Postgres, postgres::PgPoolOptions};
+use sqlx::postgres::PgPoolOptions;
 #[cfg(feature = "sqlite")]
-use sea_orm::sqlx::{Sqlite, SqlitePool, sqlite::SqlitePoolOptions};
+use sqlx::sqlite::SqlitePoolOptions;
+#[cfg(feature = "sqlite")]
+use std::str::FromStr;
 
 use sea_orm::DatabaseConnection;
 #[cfg(feature = "mysql")]
@@ -156,7 +189,7 @@ pub enum DbError {
 
     #[cfg(any(feature = "pg", feature = "mysql", feature = "sqlite"))]
     #[error(transparent)]
-    Sqlx(#[from] sea_orm::sqlx::Error),
+    Sqlx(#[from] sqlx::Error),
 
     #[error(transparent)]
     Sea(#[from] sea_orm::DbErr),
@@ -168,12 +201,43 @@ pub enum DbError {
     #[error(transparent)]
     Lock(#[from] advisory_locks::DbLockError),
 
-    // Convert from the old ConnectionOptionsError
-    #[error(transparent)]
-    ConnectionOptions(#[from] ConnectionOptionsError),
-
     #[error(transparent)]
     Other(#[from] anyhow::Error),
+
+    /// Attempted to create a non-transactional connection inside an active transaction.
+    ///
+    /// This error occurs when `Db::conn()` is called from within a transaction closure.
+    /// The transaction guard prevents this to avoid accidental data bypass where writes
+    /// would persist outside the transaction scope.
+    ///
+    /// # Resolution
+    ///
+    /// Use the transaction runner (`tx`) provided to the closure instead of creating
+    /// a new connection:
+    ///
+    /// ```ignore
+    /// // Wrong - fails with ConnRequestedInsideTx
+    /// db.transaction(|_tx| {
+    ///     let conn = some_db.conn()?;  // Error!
+    ///     ...
+    /// });
+    ///
+    /// // Correct - use the transaction runner
+    /// db.transaction(|tx| {
+    ///     Entity::find().secure().scope_with(&scope).one(tx).await?;
+    ///     ...
+    /// });
+    /// ```
+    #[error("Cannot create non-transactional connection inside an active transaction")]
+    ConnRequestedInsideTx,
+}
+
+impl From<crate::secure::ScopeError> for DbError {
+    fn from(value: crate::secure::ScopeError) -> Self {
+        // Scope errors are not infra connection errors, but they still originate from the DB
+        // access layer. We keep the wrapper thin and preserve the message for callers.
+        DbError::Other(anyhow::Error::new(value))
+    }
 }
 
 /// Supported engines.
@@ -218,72 +282,10 @@ impl Default for ConnectOpts {
     }
 }
 
-/// One concrete sqlx pool.
-#[derive(Clone, Debug)]
-pub enum DbPool {
-    #[cfg(feature = "pg")]
-    Postgres(PgPool),
-    #[cfg(feature = "mysql")]
-    MySql(MySqlPool),
-    #[cfg(feature = "sqlite")]
-    Sqlite(SqlitePool),
-}
-
-/// Database transaction wrapper (lifetime-bound to the pool).
-pub enum DbTransaction<'a> {
-    #[cfg(feature = "pg")]
-    Postgres(sea_orm::sqlx::Transaction<'a, Postgres>),
-    #[cfg(feature = "mysql")]
-    MySql(sea_orm::sqlx::Transaction<'a, MySql>),
-    #[cfg(feature = "sqlite")]
-    Sqlite(sea_orm::sqlx::Transaction<'a, Sqlite>),
-    // When no concrete DB feature is enabled, keep a variant to tie `'a` so
-    // the type still compiles and can be referenced in signatures.
-    #[cfg(not(any(feature = "pg", feature = "mysql", feature = "sqlite")))]
-    _Phantom(std::marker::PhantomData<&'a ()>),
-}
-
-impl DbTransaction<'_> {
-    /// Commit the transaction.
-    ///
-    /// # Errors
-    /// Returns an error if the commit operation fails.
-    pub async fn commit(self) -> Result<()> {
-        match self {
-            #[cfg(feature = "pg")]
-            DbTransaction::Postgres(tx) => tx.commit().await.map_err(Into::into),
-            #[cfg(feature = "mysql")]
-            DbTransaction::MySql(tx) => tx.commit().await.map_err(Into::into),
-            #[cfg(feature = "sqlite")]
-            DbTransaction::Sqlite(tx) => tx.commit().await.map_err(Into::into),
-            #[cfg(not(any(feature = "pg", feature = "mysql", feature = "sqlite")))]
-            DbTransaction::_Phantom(_) => Ok(()),
-        }
-    }
-
-    /// Roll back the transaction.
-    ///
-    /// # Errors
-    /// Returns an error if the rollback operation fails.
-    pub async fn rollback(self) -> Result<()> {
-        match self {
-            #[cfg(feature = "pg")]
-            DbTransaction::Postgres(tx) => tx.rollback().await.map_err(Into::into),
-            #[cfg(feature = "mysql")]
-            DbTransaction::MySql(tx) => tx.rollback().await.map_err(Into::into),
-            #[cfg(feature = "sqlite")]
-            DbTransaction::Sqlite(tx) => tx.rollback().await.map_err(Into::into),
-            #[cfg(not(any(feature = "pg", feature = "mysql", feature = "sqlite")))]
-            DbTransaction::_Phantom(_) => Ok(()),
-        }
-    }
-}
-
 /// Main handle.
 #[derive(Debug, Clone)]
-pub struct DbHandle {
+pub(crate) struct DbHandle {
     engine: DbEngine,
-    pool: DbPool,
     dsn: String,
     sea: DatabaseConnection,
 }
@@ -298,7 +300,7 @@ impl DbHandle {
     ///
     /// # Errors
     /// Returns `DbError::UnknownDsn` if the DSN scheme is not recognized.
-    pub fn detect(dsn: &str) -> Result<DbEngine> {
+    pub(crate) fn detect(dsn: &str) -> Result<DbEngine> {
         // Trim only leading spaces/newlines to be forgiving with env files.
         let s = dsn.trim_start();
 
@@ -319,17 +321,16 @@ impl DbHandle {
     ///
     /// # Errors
     /// Returns an error if the connection fails or the DSN is invalid.
-    pub async fn connect(dsn: &str, opts: ConnectOpts) -> Result<Self> {
+    pub(crate) async fn connect(dsn: &str, opts: ConnectOpts) -> Result<Self> {
         let engine = Self::detect(dsn)?;
         match engine {
             #[cfg(feature = "pg")]
             DbEngine::Postgres => {
                 let o = PgPoolOptions::new().apply(&opts);
                 let pool = o.connect(dsn).await?;
-                let sea = SqlxPostgresConnector::from_sqlx_postgres_pool(pool.clone());
+                let sea = SqlxPostgresConnector::from_sqlx_postgres_pool(pool);
                 Ok(Self {
                     engine,
-                    pool: DbPool::Postgres(pool),
                     dsn: dsn.to_owned(),
                     sea,
                 })
@@ -340,10 +341,9 @@ impl DbHandle {
             DbEngine::MySql => {
                 let o = MySqlPoolOptions::new().apply(&opts);
                 let pool = o.connect(dsn).await?;
-                let sea = SqlxMySqlConnector::from_sqlx_mysql_pool(pool.clone());
+                let sea = SqlxMySqlConnector::from_sqlx_mysql_pool(pool);
                 Ok(Self {
                     engine,
-                    pool: DbPool::MySql(pool),
                     dsn: dsn.to_owned(),
                     sea,
                 })
@@ -359,75 +359,76 @@ impl DbHandle {
                 let pragmas = Pragmas::from_pairs(&pairs);
 
                 // Build pool options with shared trait
-                let mut o = SqlitePoolOptions::new().apply(&opts);
+                let o = SqlitePoolOptions::new().apply(&opts);
 
-                // Apply SQLite pragmas with special handling for in-memory databases
+                // Apply SQLite pragmas using typed `sqlx` connect options (no raw SQL).
                 let is_memory = is_memory_dsn(&clean_dsn);
-                o = o.after_connect(move |conn, _meta| {
-                    let pragmas = pragmas.clone();
-                    Box::pin(async move {
-                        // Apply journal_mode
-                        let journal_mode = if let Some(mode) = &pragmas.journal_mode {
-                            mode.as_sql()
-                        } else if let Some(wal_toggle) = pragmas.wal_toggle {
-                            if wal_toggle { "WAL" } else { "DELETE" }
-                        } else if is_memory {
-                            // Default: DELETE for memory, WAL for file
-                            "DELETE"
-                        } else {
-                            "WAL"
-                        };
+                let mut conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str(&clean_dsn)?;
 
-                        let stmt = format!("PRAGMA journal_mode = {journal_mode}");
-                        sea_orm::sqlx::query(&stmt).execute(&mut *conn).await?;
-
-                        // Apply synchronous mode
-                        let sync_mode = pragmas
-                            .synchronous
-                            .as_ref()
-                            .map_or("NORMAL", |s| s.as_sql());
-                        let stmt = format!("PRAGMA synchronous = {sync_mode}");
-                        sea_orm::sqlx::query(&stmt).execute(&mut *conn).await?;
-
-                        // Apply busy timeout (skip for in-memory databases)
-                        if !is_memory {
-                            let timeout = pragmas
-                                .busy_timeout_ms
-                                .unwrap_or(DEFAULT_SQLITE_BUSY_TIMEOUT.into());
-                            sea_orm::sqlx::query("PRAGMA busy_timeout = ?")
-                                .bind(timeout)
-                                .execute(&mut *conn)
-                                .await?;
+                let journal_mode = if let Some(mode) = &pragmas.journal_mode {
+                    match mode {
+                        sqlite::pragmas::JournalMode::Delete => {
+                            sqlx::sqlite::SqliteJournalMode::Delete
                         }
+                        sqlite::pragmas::JournalMode::Wal => sqlx::sqlite::SqliteJournalMode::Wal,
+                        sqlite::pragmas::JournalMode::Memory => {
+                            sqlx::sqlite::SqliteJournalMode::Memory
+                        }
+                        sqlite::pragmas::JournalMode::Truncate => {
+                            sqlx::sqlite::SqliteJournalMode::Truncate
+                        }
+                        sqlite::pragmas::JournalMode::Persist => {
+                            sqlx::sqlite::SqliteJournalMode::Persist
+                        }
+                        sqlite::pragmas::JournalMode::Off => sqlx::sqlite::SqliteJournalMode::Off,
+                    }
+                } else if let Some(wal_toggle) = pragmas.wal_toggle {
+                    if wal_toggle {
+                        sqlx::sqlite::SqliteJournalMode::Wal
+                    } else {
+                        sqlx::sqlite::SqliteJournalMode::Delete
+                    }
+                } else if is_memory {
+                    sqlx::sqlite::SqliteJournalMode::Delete
+                } else {
+                    sqlx::sqlite::SqliteJournalMode::Wal
+                };
+                conn_opts = conn_opts.journal_mode(journal_mode);
 
-                        Ok(())
-                    })
-                });
+                let sync_mode = pragmas.synchronous.as_ref().map_or(
+                    sqlx::sqlite::SqliteSynchronous::Normal,
+                    |s| match s {
+                        sqlite::pragmas::SyncMode::Off => sqlx::sqlite::SqliteSynchronous::Off,
+                        sqlite::pragmas::SyncMode::Normal => {
+                            sqlx::sqlite::SqliteSynchronous::Normal
+                        }
+                        sqlite::pragmas::SyncMode::Full => sqlx::sqlite::SqliteSynchronous::Full,
+                        sqlite::pragmas::SyncMode::Extra => sqlx::sqlite::SqliteSynchronous::Extra,
+                    },
+                );
+                conn_opts = conn_opts.synchronous(sync_mode);
 
-                let pool = o.connect(&clean_dsn).await?;
-                let sea = SqlxSqliteConnector::from_sqlx_sqlite_pool(pool.clone());
+                if !is_memory {
+                    let busy_timeout_ms_i64 = pragmas
+                        .busy_timeout_ms
+                        .unwrap_or(DEFAULT_SQLITE_BUSY_TIMEOUT.into())
+                        .max(0);
+                    let busy_timeout_ms = u64::try_from(busy_timeout_ms_i64).unwrap_or(0);
+                    conn_opts =
+                        conn_opts.busy_timeout(std::time::Duration::from_millis(busy_timeout_ms));
+                }
+
+                let pool = o.connect_with(conn_opts).await?;
+                let sea = SqlxSqliteConnector::from_sqlx_sqlite_pool(pool);
 
                 Ok(Self {
                     engine,
-                    pool: DbPool::Sqlite(pool),
                     dsn: clean_dsn,
                     sea,
                 })
             }
             #[cfg(not(feature = "sqlite"))]
             DbEngine::Sqlite => Err(DbError::FeatureDisabled("SQLite feature not enabled")),
-        }
-    }
-
-    /// Graceful pool close. (Dropping the pool also closes it; this just makes it explicit.)
-    pub async fn close(self) {
-        match self.pool {
-            #[cfg(feature = "pg")]
-            DbPool::Postgres(p) => p.close().await,
-            #[cfg(feature = "mysql")]
-            DbPool::MySql(p) => p.close().await,
-            #[cfg(feature = "sqlite")]
-            DbPool::Sqlite(p) => p.close().await,
         }
     }
 
@@ -443,187 +444,39 @@ impl DbHandle {
         &self.dsn
     }
 
-    // --- sqlx accessors ---
-    #[cfg(feature = "pg")]
-    #[must_use]
-    pub fn sqlx_postgres(&self) -> Option<&PgPool> {
-        match self.pool {
-            DbPool::Postgres(ref p) => Some(p),
-            #[cfg(any(feature = "mysql", feature = "sqlite"))]
-            _ => None,
-        }
-    }
-    #[cfg(feature = "mysql")]
-    #[must_use]
-    pub fn sqlx_mysql(&self) -> Option<&MySqlPool> {
-        match self.pool {
-            DbPool::MySql(ref p) => Some(p),
-            #[cfg(any(feature = "pg", feature = "sqlite"))]
-            _ => None,
-        }
-    }
-    #[cfg(feature = "sqlite")]
-    #[must_use]
-    pub fn sqlx_sqlite(&self) -> Option<&SqlitePool> {
-        match self.pool {
-            DbPool::Sqlite(ref p) => Some(p),
-            #[cfg(any(feature = "pg", feature = "mysql"))]
-            _ => None,
-        }
-    }
+    // NOTE: We intentionally do not expose raw `SQLx` pools from `DbHandle`.
+    // Use `SecureConn` for all application-level DB access.
 
     // --- SeaORM accessor ---
 
-    /// Create a secure database connection for scoped operations.
+    /// Create a secure database wrapper for module code.
     ///
-    /// Returns a `SecureConn` wrapper that requires `SecurityCtx` for each operation.
-    /// This is the **recommended** way to access the database from application code.
+    /// This returns a `Db` which provides controlled access to the database
+    /// via `conn()` and `transaction()` methods.
     ///
-    /// # Example
+    /// # Security
     ///
-    /// ```ignore
-    /// use modkit_db::secure::{SecurityCtx, AccessScope};
+    /// **INTERNAL**: Get raw `SeaORM` connection for internal runtime operations.
     ///
-    /// let secure_conn = db_handle.sea_secure();
+    /// This is `pub(crate)` and should **only** be used by:
+    /// - The migration runner (for executing module migrations)
+    /// - Internal infrastructure code within `modkit-db`
     ///
-    /// // Security context from API request
-    /// let ctx = SecurityCtx::for_tenants(vec![tenant_id], user_id);
-    ///
-    /// // All queries require context and are automatically scoped
-    /// let users = secure_conn.find::<user::Entity>(&ctx)?
-    ///     .all(secure_conn.conn())
-    ///     .await?;
-    /// ```
     #[must_use]
-    pub fn sea_secure(&self) -> crate::secure::SecureConn {
-        crate::secure::SecureConn::new(self.sea.clone())
-    }
-
-    /// **INSECURE**: Get raw `SeaORM` connection (bypasses all security).
-    ///
-    /// This method is **only available** when compiled with `--features insecure-escape`.
-    /// It provides direct access to the database connection, bypassing all tenant
-    /// isolation and access control.
-    ///
-    /// # Security Warning
-    ///
-    /// This completely bypasses the secure ORM layer. Use only for:
-    /// - Administrative maintenance tools
-    /// - Database migrations
-    /// - Emergency data recovery
-    /// - Internal infrastructure code
-    ///
-    /// **Never use in application/business logic code.**
-    ///
-    /// # Example
-    ///
-    /// ```ignore
-    /// #[cfg(feature = "insecure-escape")]
-    /// async fn admin_operation(db: &DbHandle) {
-    ///     let raw_conn = db.sea();  // No security!
-    ///     // Direct database access...
-    /// }
-    /// ```
-    #[cfg(feature = "insecure-escape")]
-    pub fn sea(&self) -> DatabaseConnection {
-        tracing::warn!(
-            target: "security",
-            "DbHandle::sea() called - bypassing secure ORM layer"
-        );
+    pub(crate) fn sea_internal(&self) -> DatabaseConnection {
         self.sea.clone()
     }
 
-    // --- Transaction helpers (engine-specific) ---
-
-    /// Execute a closure within a `PostgreSQL` transaction.
+    /// **INTERNAL**: Get a reference to the raw `SeaORM` connection.
     ///
-    /// # Errors
-    /// Returns an error if the transaction fails or the closure returns an error.
-    #[cfg(feature = "pg")]
-    pub async fn with_pg_tx<F, T>(&self, f: F) -> Result<T>
-    where
-        F: for<'a> FnOnce(
-            &'a mut sea_orm::sqlx::Transaction<'_, Postgres>,
-        ) -> std::pin::Pin<
-            Box<dyn std::future::Future<Output = Result<T>> + Send + 'a>,
-        >,
-    {
-        let pool = self
-            .sqlx_postgres()
-            .ok_or(DbError::FeatureDisabled("not a postgres pool"))?;
-        let mut tx = pool.begin().await?;
-        let res = f(&mut tx).await;
-        match res {
-            Ok(v) => {
-                tx.commit().await?;
-                Ok(v)
-            }
-            Err(e) => {
-                // Best-effort rollback; keep the original error.
-                let _ = tx.rollback().await;
-                Err(e)
-            }
-        }
-    }
-
-    /// Execute a closure within a `MySQL` transaction.
+    /// This is `pub(crate)` and should **only** be used by:
+    /// - The `Db` wrapper for creating runners
+    /// - Internal infrastructure code within `modkit-db`
     ///
-    /// # Errors
-    /// Returns an error if the transaction fails or the closure returns an error.
-    #[cfg(feature = "mysql")]
-    pub async fn with_mysql_tx<F, T>(&self, f: F) -> Result<T>
-    where
-        F: for<'a> FnOnce(
-            &'a mut sea_orm::sqlx::Transaction<'_, MySql>,
-        ) -> std::pin::Pin<
-            Box<dyn std::future::Future<Output = Result<T>> + Send + 'a>,
-        >,
-    {
-        let pool = self
-            .sqlx_mysql()
-            .ok_or(DbError::FeatureDisabled("not a mysql pool"))?;
-        let mut tx = pool.begin().await?;
-        let res = f(&mut tx).await;
-        match res {
-            Ok(v) => {
-                tx.commit().await?;
-                Ok(v)
-            }
-            Err(e) => {
-                let _ = tx.rollback().await;
-                Err(e)
-            }
-        }
-    }
-
-    /// Execute a closure within a `SQLite` transaction.
-    ///
-    /// # Errors
-    /// Returns an error if the transaction fails or the closure returns an error.
-    #[cfg(feature = "sqlite")]
-    pub async fn with_sqlite_tx<F, T>(&self, f: F) -> Result<T>
-    where
-        F: for<'a> FnOnce(
-            &'a mut sea_orm::sqlx::Transaction<'_, Sqlite>,
-        ) -> std::pin::Pin<
-            Box<dyn std::future::Future<Output = Result<T>> + Send + 'a>,
-        >,
-    {
-        let pool = self
-            .sqlx_sqlite()
-            .ok_or(DbError::FeatureDisabled("not a sqlite pool"))?;
-        let mut tx = pool.begin().await?;
-        let res = f(&mut tx).await;
-        match res {
-            Ok(v) => {
-                tx.commit().await?;
-                Ok(v)
-            }
-            Err(e) => {
-                let _ = tx.rollback().await;
-                Err(e)
-            }
-        }
+    /// **NEVER expose this to modules.**
+    #[must_use]
+    pub(crate) fn sea_internal_ref(&self) -> &DatabaseConnection {
+        &self.sea
     }
 
     // --- Advisory locks ---
@@ -633,8 +486,7 @@ impl DbHandle {
     /// # Errors
     /// Returns an error if the lock cannot be acquired.
     pub async fn lock(&self, module: &str, key: &str) -> Result<DbLockGuard> {
-        let lock_manager =
-            advisory_locks::LockManager::new(self.engine, self.pool.clone(), self.dsn.clone());
+        let lock_manager = advisory_locks::LockManager::new(self.dsn.clone());
         let guard = lock_manager.lock(module, key).await?;
         Ok(guard)
     }
@@ -649,39 +501,13 @@ impl DbHandle {
         key: &str,
         config: LockConfig,
     ) -> Result<Option<DbLockGuard>> {
-        let lock_manager =
-            advisory_locks::LockManager::new(self.engine, self.pool.clone(), self.dsn.clone());
+        let lock_manager = advisory_locks::LockManager::new(self.dsn.clone());
         let res = lock_manager.try_lock(module, key, config).await?;
         Ok(res)
     }
 
-    // --- Generic transaction begin (returns proper enum with lifetime) ---
-
-    /// Begin a transaction (returns appropriate transaction type based on backend).
-    ///
-    /// # Errors
-    /// Returns an error if the transaction cannot be started.
-    pub async fn begin(&self) -> Result<DbTransaction<'_>> {
-        match &self.pool {
-            #[cfg(feature = "pg")]
-            DbPool::Postgres(pool) => {
-                let tx = pool.begin().await?;
-                Ok(DbTransaction::Postgres(tx))
-            }
-            #[cfg(feature = "mysql")]
-            DbPool::MySql(pool) => {
-                let tx = pool.begin().await?;
-                Ok(DbTransaction::MySql(tx))
-            }
-            #[cfg(feature = "sqlite")]
-            DbPool::Sqlite(pool) => {
-                let tx = pool.begin().await?;
-                Ok(DbTransaction::Sqlite(tx))
-            }
-            #[cfg(not(any(feature = "pg", feature = "mysql", feature = "sqlite")))]
-            _ => Err(DbError::FeatureDisabled("no database backends enabled")),
-        }
-    }
+    // NOTE: We intentionally do not expose raw SQL transactions from `DbHandle`.
+    // Use `SecureConn::transaction` for application-level atomic operations.
 }
 
 // ===================== tests =====================
@@ -715,23 +541,6 @@ mod tests {
         // Verify that the stored DSN has been cleaned (SQLite parameters removed)
         // Note: For memory databases, the DSN should still be sqlite::memory: after cleaning
         assert!(db.dsn == "sqlite::memory:" || db.dsn.starts_with("sqlite::memory:"));
-
-        // Test that we can execute queries (confirming the connection works)
-        let pool = db.sqlx_sqlite().unwrap();
-        sea_orm::sqlx::query("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
-            .execute(pool)
-            .await?;
-        sea_orm::sqlx::query("INSERT INTO test (name) VALUES (?)")
-            .bind("test_value")
-            .execute(pool)
-            .await?;
-
-        let row: (i64, String) = sea_orm::sqlx::query_as("SELECT id, name FROM test WHERE id = 1")
-            .fetch_one(pool)
-            .await?;
-
-        assert_eq!(row.0, 1);
-        assert_eq!(row.1, "test_value");
 
         Ok(())
     }
@@ -825,32 +634,12 @@ mod tests {
 
     #[cfg(feature = "sqlite")]
     #[tokio::test]
-    async fn test_transaction() -> Result<()> {
-        let dsn = "sqlite::memory:";
-        let db = DbHandle::connect(dsn, ConnectOpts::default()).await?;
-        let tx = db.begin().await?;
-        tx.commit().await?;
-        Ok(())
-    }
-
-    #[cfg(feature = "sqlite")]
-    #[tokio::test]
-    async fn test_secure_conn() -> Result<()> {
+    async fn test_sea_internal_access() -> Result<()> {
         let dsn = "sqlite::memory:";
         let db = DbHandle::connect(dsn, ConnectOpts::default()).await?;
 
-        let _secure_conn = db.sea_secure();
-        Ok(())
-    }
-
-    #[cfg(all(feature = "sqlite", feature = "insecure-escape"))]
-    #[tokio::test]
-    async fn test_insecure_sea_access() -> Result<()> {
-        let dsn = "sqlite::memory:";
-        let db = DbHandle::connect(dsn, ConnectOpts::default()).await?;
-
-        // Only available with insecure-escape feature
-        let _raw = db.sea();
+        // Internal method for migrations
+        let _raw = db.sea_internal();
         Ok(())
     }
 }

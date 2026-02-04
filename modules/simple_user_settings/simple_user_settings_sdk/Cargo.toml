@@ -9,7 +9,7 @@ description = "SDK for simple-user-settings module: API trait, types, and error 
 repository.workspace = true
 readme = "README.md"
 keywords = ["cyberfabric", "cyberfabric-system"]
-categories = ["web-programming", "settings"]
+categories = ["web-programming"]
 
 [lib]
 name = "simple_user_settings_sdk"

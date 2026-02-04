@@ -5,7 +5,9 @@ use modkit::api::OpenApiRegistry;
 use modkit::{
     DatabaseCapability, Module, ModuleCtx, RestApiCapability, SseBroadcaster, TracedClient,
 };
-use sea_orm_migration::MigratorTrait;
+use modkit_db::DBProvider;
+use modkit_db::DbError;
+use sea_orm_migration::MigrationTrait;
 use tracing::{debug, info};
 use url::Url;
 
@@ -41,6 +43,7 @@ pub(crate) type ConcreteAppServices =
 )]
 pub struct UsersInfo {
     // Keep the domain service behind ArcSwap for cheap read-mostly access.
+    // AppServices contains the db_handle and provides db() for per-request Db instances.
     service: arc_swap::ArcSwapOption<ConcreteAppServices>,
     // SSE broadcaster for user events
     sse: SseBroadcaster<UserEvent>,
@@ -76,9 +79,8 @@ impl Module for UsersInfo {
             cfg.default_page_size, cfg.max_page_size
         );
 
-        // Acquire DB (SeaORM connection handle with security enforcement)
-        let db = ctx.db_required()?;
-        let sec_conn = db.sea_secure(); // SecureConn - enforces access control on all queries
+        // Acquire DB capability (secure wrapper, no DbHandle exposed to modules)
+        let db: Arc<DBProvider<DbError>> = Arc::new(ctx.db_required()?);
 
         // Create event publisher adapter that bridges domain events to SSE
         let publisher: Arc<dyn EventPublisher<UserDomainEvent>> =
@@ -120,7 +122,7 @@ impl Module for UsersInfo {
             users_repo,
             cities_repo,
             addresses_repo,
-            sec_conn,
+            db,
             publisher,
             audit_adapter,
             resolver,
@@ -141,14 +143,11 @@ impl Module for UsersInfo {
     }
 }
 
-#[async_trait]
 impl DatabaseCapability for UsersInfo {
-    async fn migrate(&self, db: &modkit_db::DbHandle) -> anyhow::Result<()> {
-        info!("Running users_info database migrations");
-        let conn = db.sea();
-        crate::infra::storage::migrations::Migrator::up(&conn, None).await?;
-        info!("Users database migrations completed successfully");
-        Ok(())
+    fn migrations(&self) -> Vec<Box<dyn MigrationTrait>> {
+        use sea_orm_migration::MigratorTrait;
+        info!("Providing users_info database migrations");
+        crate::infra::storage::migrations::Migrator::migrations()
     }
 }
 

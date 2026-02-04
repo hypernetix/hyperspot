@@ -1,0 +1,31 @@
+[package]
+name = "cf-modkit-macros-tests"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "UI tests for ModKit macros (not published)"
+publish = false
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+# The macro crate being tested
+modkit-macros = { workspace = true }
+
+# Test framework
+trybuild = { workspace = true }
+
+# Dependencies needed by UI test cases (that import modkit traits/types)
+tokio = { workspace = true, features = ["full"] }
+tokio-util = { workspace = true }
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+inventory = { workspace = true }
+modkit = { workspace = true }
+modkit-security = { workspace = true }
+modkit-transport-grpc = { workspace = true }
+tonic = { workspace = true }

@@ -1,101 +1,66 @@
+//! Integration tests for the Settings service.
+//!
+//! These tests use an in-memory `SQLite` database since `DBRunner` is a sealed trait
+//! and cannot be mocked. All tests use real database operations.
+
 #[cfg(test)]
 mod tests {
-    use super::super::*;
-    use async_trait::async_trait;
-    use modkit_security::SecurityContext;
-    use simple_user_settings_sdk::models::{
-        SimpleUserSettings, SimpleUserSettingsPatch, SimpleUserSettingsUpdate,
-    };
     use std::sync::Arc;
+
+    use modkit_db::migration_runner::run_migrations_for_testing;
+    use modkit_db::{ConnectOpts, DBProvider, Db, connect_db};
+    use modkit_security::SecurityContext;
+    use simple_user_settings_sdk::models::{SimpleUserSettingsPatch, SimpleUserSettingsUpdate};
     use uuid::Uuid;
 
-    // Mock repository for testing
-    struct MockRepository {
-        find_result: Option<SimpleUserSettings>,
-        upsert_result: SimpleUserSettings,
-    }
+    use crate::domain::error::DomainError;
+    use crate::domain::service::{Service, ServiceConfig};
+    use crate::infra::storage::migrations::Migrator;
+    use crate::infra::storage::sea_orm_repo::SeaOrmSettingsRepository;
 
-    #[async_trait]
-    impl repo::SettingsRepository for MockRepository {
-        async fn find_by_user(
-            &self,
-            _ctx: &SecurityContext,
-        ) -> anyhow::Result<Option<SimpleUserSettings>> {
-            Ok(self.find_result.clone())
-        }
+    type ConcreteService = Service<SeaOrmSettingsRepository>;
 
-        async fn upsert_full(
-            &self,
-            _ctx: &SecurityContext,
-            theme: Option<String>,
-            language: Option<String>,
-        ) -> anyhow::Result<SimpleUserSettings> {
-            Ok(SimpleUserSettings {
-                user_id: self.upsert_result.user_id,
-                tenant_id: self.upsert_result.tenant_id,
-                theme,
-                language,
-            })
-        }
+    /// Create an in-memory database with migrations applied.
+    async fn inmem_db() -> Db {
+        use sea_orm_migration::MigratorTrait;
 
-        async fn upsert_patch(
-            &self,
-            _ctx: &SecurityContext,
-            patch: SimpleUserSettingsPatch,
-        ) -> anyhow::Result<SimpleUserSettings> {
-            let mut result = self.upsert_result.clone();
-            if let Some(theme) = patch.theme {
-                result.theme = Some(theme);
-            }
-            if let Some(language) = patch.language {
-                result.language = Some(language);
-            }
-            Ok(result)
-        }
+        let opts = ConnectOpts {
+            max_conns: Some(1),
+            min_conns: Some(1),
+            ..Default::default()
+        };
+        let db = connect_db("sqlite::memory:", opts)
+            .await
+            .expect("Failed to connect to in-memory database");
+
+        run_migrations_for_testing(&db, Migrator::migrations())
+            .await
+            .expect("Failed to run migrations");
+
+        db
     }
 
     fn create_test_context() -> SecurityContext {
-        SecurityContext::anonymous()
+        SecurityContext::builder()
+            .tenant_id(Uuid::new_v4())
+            .subject_id(Uuid::new_v4())
+            .build()
     }
 
-    #[tokio::test]
-    async fn test_get_settings_returns_existing() {
-        let user_id = Uuid::new_v4();
-        let tenant_id = Uuid::new_v4();
-        let existing = SimpleUserSettings {
-            user_id,
-            tenant_id,
-            theme: Some("dark".to_owned()),
-            language: Some("en".to_owned()),
-        };
-
-        let repo = Arc::new(MockRepository {
-            find_result: Some(existing.clone()),
-            upsert_result: existing.clone(),
-        });
-
-        let service = service::Service::new(repo, service::ServiceConfig::default());
-        let ctx = create_test_context();
-
-        let result = service.get_settings(&ctx).await.unwrap();
-
-        assert_eq!(result.theme, Some("dark".to_owned()));
-        assert_eq!(result.language, Some("en".to_owned()));
+    fn build_service(db: Db, config: ServiceConfig) -> ConcreteService {
+        let repo = Arc::new(SeaOrmSettingsRepository::new());
+        let db: Arc<DBProvider<modkit_db::DbError>> = Arc::new(DBProvider::new(db));
+        Service::new(db, repo, config)
     }
+
+    // =========================================================================
+    // get_settings tests
+    // =========================================================================
 
     #[tokio::test]
     async fn test_get_settings_returns_defaults_when_not_found() {
-        let repo = Arc::new(MockRepository {
-            find_result: None,
-            upsert_result: SimpleUserSettings {
-                user_id: Uuid::default(),
-                tenant_id: Uuid::default(),
-                theme: None,
-                language: None,
-            },
-        });
-
-        let service = service::Service::new(repo, service::ServiceConfig::default());
+        let db = inmem_db().await;
+        let service = build_service(db, ServiceConfig::default());
         let ctx = create_test_context();
 
         let result = service.get_settings(&ctx).await.unwrap();
@@ -107,21 +72,38 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_get_settings_returns_existing() {
+        let db = inmem_db().await;
+        let service = build_service(db, ServiceConfig::default());
+        let ctx = create_test_context();
+
+        // First, create settings
+        let _ = service
+            .update_settings(
+                &ctx,
+                SimpleUserSettingsUpdate {
+                    theme: "dark".to_owned(),
+                    language: "en".to_owned(),
+                },
+            )
+            .await
+            .unwrap();
+
+        // Then retrieve them
+        let result = service.get_settings(&ctx).await.unwrap();
+
+        assert_eq!(result.theme, Some("dark".to_owned()));
+        assert_eq!(result.language, Some("en".to_owned()));
+    }
+
+    // =========================================================================
+    // update_settings tests
+    // =========================================================================
+
+    #[tokio::test]
     async fn test_update_settings_success() {
-        let user_id = Uuid::new_v4();
-        let tenant_id = Uuid::new_v4();
-
-        let repo = Arc::new(MockRepository {
-            find_result: None,
-            upsert_result: SimpleUserSettings {
-                user_id,
-                tenant_id,
-                theme: None,
-                language: None,
-            },
-        });
-
-        let service = service::Service::new(repo, service::ServiceConfig::default());
+        let db = inmem_db().await;
+        let service = build_service(db, ServiceConfig::default());
         let ctx = create_test_context();
 
         let result = service
@@ -137,26 +119,16 @@ mod tests {
 
         assert_eq!(result.theme, Some("light".to_owned()));
         assert_eq!(result.language, Some("es".to_owned()));
+        assert_eq!(result.user_id, ctx.subject_id());
+        assert_eq!(result.tenant_id, ctx.tenant_id());
     }
 
     #[tokio::test]
-    async fn test_update_settings_validates_max_length() {
-        let user_id = Uuid::new_v4();
-        let tenant_id = Uuid::new_v4();
-
-        let repo = Arc::new(MockRepository {
-            find_result: None,
-            upsert_result: SimpleUserSettings {
-                user_id,
-                tenant_id,
-                theme: None,
-                language: None,
-            },
-        });
-
-        let service = service::Service::new(
-            repo,
-            service::ServiceConfig {
+    async fn test_update_settings_validates_max_length_for_theme() {
+        let db = inmem_db().await;
+        let service = build_service(
+            db,
+            ServiceConfig {
                 max_field_length: 10,
             },
         );
@@ -175,39 +147,69 @@ mod tests {
 
         assert!(result.is_err());
         let err = result.unwrap_err();
-        assert!(matches!(err, error::DomainError::Validation { .. }));
+        assert!(matches!(err, DomainError::Validation { field, .. } if field == "theme"));
     }
 
     #[tokio::test]
-    async fn test_patch_settings_updates_only_provided_fields() {
-        let user_id = Uuid::new_v4();
-        let tenant_id = Uuid::new_v4();
-
-        let repo = Arc::new(MockRepository {
-            find_result: Some(SimpleUserSettings {
-                user_id,
-                tenant_id,
-                theme: Some("dark".to_owned()),
-                language: Some("en".to_owned()),
-            }),
-            upsert_result: SimpleUserSettings {
-                user_id,
-                tenant_id,
-                theme: Some("dark".to_owned()),
-                language: Some("en".to_owned()),
+    async fn test_update_settings_validates_max_length_for_language() {
+        let db = inmem_db().await;
+        let service = build_service(
+            db,
+            ServiceConfig {
+                max_field_length: 10,
             },
-        });
-
-        let service = service::Service::new(repo, service::ServiceConfig::default());
+        );
         let ctx = create_test_context();
 
-        // Only update theme
-        let patch = SimpleUserSettingsPatch {
-            theme: Some("light".to_owned()),
-            language: None,
-        };
+        let too_long = "a".repeat(11);
+        let result = service
+            .update_settings(
+                &ctx,
+                SimpleUserSettingsUpdate {
+                    theme: "dark".to_owned(),
+                    language: too_long,
+                },
+            )
+            .await;
 
-        let result = service.patch_settings(&ctx, patch).await.unwrap();
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(matches!(err, DomainError::Validation { field, .. } if field == "language"));
+    }
+
+    // =========================================================================
+    // patch_settings tests
+    // =========================================================================
+
+    #[tokio::test]
+    async fn test_patch_settings_updates_only_provided_fields() {
+        let db = inmem_db().await;
+        let service = build_service(db, ServiceConfig::default());
+        let ctx = create_test_context();
+
+        // First create initial settings
+        let _ = service
+            .update_settings(
+                &ctx,
+                SimpleUserSettingsUpdate {
+                    theme: "dark".to_owned(),
+                    language: "en".to_owned(),
+                },
+            )
+            .await
+            .unwrap();
+
+        // Patch only theme
+        let result = service
+            .patch_settings(
+                &ctx,
+                SimpleUserSettingsPatch {
+                    theme: Some("light".to_owned()),
+                    language: None,
+                },
+            )
+            .await
+            .unwrap();
 
         assert_eq!(result.theme, Some("light".to_owned()));
         assert_eq!(result.language, Some("en".to_owned())); // Should remain unchanged
@@ -215,70 +217,157 @@ mod tests {
 
     #[tokio::test]
     async fn test_patch_settings_validates_max_length() {
-        let user_id = Uuid::new_v4();
-        let tenant_id = Uuid::new_v4();
-
-        let repo = Arc::new(MockRepository {
-            find_result: None,
-            upsert_result: SimpleUserSettings {
-                user_id,
-                tenant_id,
-                theme: None,
-                language: None,
-            },
-        });
-
-        let service = service::Service::new(
-            repo,
-            service::ServiceConfig {
+        let db = inmem_db().await;
+        let service = build_service(
+            db,
+            ServiceConfig {
                 max_field_length: 10,
             },
         );
         let ctx = create_test_context();
 
         let too_long = "a".repeat(11);
-        let patch = SimpleUserSettingsPatch {
-            theme: None,
-            language: Some(too_long),
-        };
-
-        let result = service.patch_settings(&ctx, patch).await;
+        let result = service
+            .patch_settings(
+                &ctx,
+                SimpleUserSettingsPatch {
+                    theme: None,
+                    language: Some(too_long),
+                },
+            )
+            .await;
 
         assert!(result.is_err());
         let err = result.unwrap_err();
-        assert!(matches!(err, error::DomainError::Validation { .. }));
+        assert!(matches!(err, DomainError::Validation { field, .. } if field == "language"));
     }
 
     #[tokio::test]
-    async fn test_patch_settings_empty_patch_succeeds() {
-        let user_id = Uuid::new_v4();
-        let tenant_id = Uuid::new_v4();
-
-        let existing = SimpleUserSettings {
-            user_id,
-            tenant_id,
-            theme: Some("dark".to_owned()),
-            language: Some("en".to_owned()),
-        };
-
-        let repo = Arc::new(MockRepository {
-            find_result: Some(existing.clone()),
-            upsert_result: existing.clone(),
-        });
-
-        let service = service::Service::new(repo, service::ServiceConfig::default());
+    async fn test_patch_settings_empty_patch_returns_existing() {
+        let db = inmem_db().await;
+        let service = build_service(db, ServiceConfig::default());
         let ctx = create_test_context();
 
-        // Empty patch - no fields to update
-        let patch = SimpleUserSettingsPatch {
-            theme: None,
-            language: None,
-        };
+        // First create settings
+        let _ = service
+            .update_settings(
+                &ctx,
+                SimpleUserSettingsUpdate {
+                    theme: "dark".to_owned(),
+                    language: "en".to_owned(),
+                },
+            )
+            .await
+            .unwrap();
 
-        let result = service.patch_settings(&ctx, patch).await.unwrap();
+        // Empty patch - no fields to update
+        let result = service
+            .patch_settings(
+                &ctx,
+                SimpleUserSettingsPatch {
+                    theme: None,
+                    language: None,
+                },
+            )
+            .await
+            .unwrap();
 
         // Should return existing values unchanged
         assert_eq!(result.theme, Some("dark".to_owned()));
         assert_eq!(result.language, Some("en".to_owned()));
+    }
+
+    #[tokio::test]
+    async fn test_patch_settings_creates_if_not_exists() {
+        let db = inmem_db().await;
+        let service = build_service(db, ServiceConfig::default());
+        let ctx = create_test_context();
+
+        // Patch without existing settings
+        let result = service
+            .patch_settings(
+                &ctx,
+                SimpleUserSettingsPatch {
+                    theme: Some("dark".to_owned()),
+                    language: None,
+                },
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(result.theme, Some("dark".to_owned()));
+        assert_eq!(result.language, None);
+    }
+
+    // =========================================================================
+    // Tenant isolation tests
+    // =========================================================================
+
+    #[tokio::test]
+    async fn test_settings_isolated_by_user() {
+        let db = inmem_db().await;
+        let service = build_service(db, ServiceConfig::default());
+
+        let tenant_id = Uuid::new_v4();
+        let user1 = SecurityContext::builder()
+            .tenant_id(tenant_id)
+            .subject_id(Uuid::new_v4())
+            .build();
+        let user2 = SecurityContext::builder()
+            .tenant_id(tenant_id)
+            .subject_id(Uuid::new_v4())
+            .build();
+
+        // User 1 creates settings
+        let _ = service
+            .update_settings(
+                &user1,
+                SimpleUserSettingsUpdate {
+                    theme: "dark".to_owned(),
+                    language: "en".to_owned(),
+                },
+            )
+            .await
+            .unwrap();
+
+        // User 2 should get default settings
+        let result = service.get_settings(&user2).await.unwrap();
+        assert_eq!(result.theme, None);
+        assert_eq!(result.language, None);
+        assert_eq!(result.user_id, user2.subject_id());
+    }
+
+    #[tokio::test]
+    async fn test_settings_isolated_by_tenant() {
+        let db = inmem_db().await;
+        let service = build_service(db, ServiceConfig::default());
+
+        let user_id = Uuid::new_v4();
+        let tenant1 = SecurityContext::builder()
+            .tenant_id(Uuid::new_v4())
+            .subject_id(user_id)
+            .build();
+        let tenant2 = SecurityContext::builder()
+            .tenant_id(Uuid::new_v4())
+            .subject_id(user_id)
+            .build();
+
+        // Same user in tenant 1 creates settings
+        let _ = service
+            .update_settings(
+                &tenant1,
+                SimpleUserSettingsUpdate {
+                    theme: "dark".to_owned(),
+                    language: "en".to_owned(),
+                },
+            )
+            .await
+            .unwrap();
+
+        // Same user in tenant 2 should get default settings
+        let result = service.get_settings(&tenant2).await.unwrap();
+        assert_eq!(result.theme, None);
+        assert_eq!(result.language, None);
+        assert_eq!(result.tenant_id, tenant2.tenant_id());
     }
 }

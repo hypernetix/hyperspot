@@ -20,6 +20,7 @@ types-registry-sdk = { workspace = true }
 
 # ModKit
 modkit = { workspace = true }
+types = { path = "../../../../modules/system/types" }
 modkit-security = { workspace = true }
 modkit-odata = { workspace = true, features = ["with-utoipa"] }
 modkit-macros = { workspace = true }

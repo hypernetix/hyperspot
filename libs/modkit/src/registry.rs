@@ -17,6 +17,7 @@ type RestHostEntry = (&'static str, Arc<dyn contracts::ApiGatewayCapability>);
 /// A single capability variant that a module can provide.
 #[derive(Clone)]
 pub enum Capability {
+    #[cfg(feature = "db")]
     Database(Arc<dyn contracts::DatabaseCapability>),
     RestApi(Arc<dyn contracts::RestApiCapability>),
     ApiGateway(Arc<dyn contracts::ApiGatewayCapability>),
@@ -29,6 +30,7 @@ pub enum Capability {
 impl std::fmt::Debug for Capability {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            #[cfg(feature = "db")]
             Capability::Database(_) => write!(f, "Database(<impl DatabaseCapability>)"),
             Capability::RestApi(_) => write!(f, "RestApi(<impl RestApiCapability>)"),
             Capability::ApiGateway(_) => write!(f, "ApiGateway(<impl ApiGatewayCapability>)"),
@@ -47,7 +49,9 @@ pub trait CapTag {
 }
 
 /// Tag for querying `DatabaseCapability`.
+#[cfg(feature = "db")]
 pub struct DatabaseCap;
+#[cfg(feature = "db")]
 impl CapTag for DatabaseCap {
     type Out = dyn contracts::DatabaseCapability;
     fn try_get(cap: &Capability) -> Option<&Arc<Self::Out>> {
@@ -167,6 +171,19 @@ impl CapabilitySet {
     pub fn query<T: CapTag>(&self) -> Option<Arc<T::Out>> {
         self.caps.iter().find_map(|cap| T::try_get(cap).cloned())
     }
+
+    /// Convenience helper for DB presence.
+    #[must_use]
+    pub fn has_db(&self) -> bool {
+        #[cfg(feature = "db")]
+        {
+            self.has::<DatabaseCap>()
+        }
+        #[cfg(not(feature = "db"))]
+        {
+            false
+        }
+    }
 }
 
 impl Default for CapabilitySet {
@@ -189,7 +206,7 @@ impl std::fmt::Debug for ModuleEntry {
             .field("deps", &self.deps)
             .field("has_rest", &self.caps.has::<RestApiCap>())
             .field("is_rest_host", &self.caps.has::<ApiGatewayCap>())
-            .field("has_db", &self.caps.has::<DatabaseCap>())
+            .field("has_db", &self.caps.has_db())
             .field("has_stateful", &self.caps.has::<RunnableCap>())
             .field("is_system", &self.caps.has::<SystemCap>())
             .field("is_grpc_hub", &self.caps.has::<GrpcHubCap>())
@@ -333,6 +350,7 @@ impl RegistryBuilder {
         self.rest_host = Some((name, m));
     }
 
+    #[cfg(feature = "db")]
     pub fn register_db_with_meta(
         &mut self,
         name: &'static str,
@@ -967,10 +985,9 @@ mod tests {
 
     #[derive(Default)]
     struct DummyDb;
-    #[async_trait::async_trait]
     impl contracts::DatabaseCapability for DummyDb {
-        async fn migrate(&self, _db: &modkit_db::DbHandle) -> anyhow::Result<()> {
-            Ok(())
+        fn migrations(&self) -> Vec<Box<dyn sea_orm_migration::MigrationTrait>> {
+            vec![]
         }
     }
 

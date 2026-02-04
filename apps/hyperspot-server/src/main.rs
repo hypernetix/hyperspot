@@ -228,13 +228,23 @@ fn resolve_db_options(config: &AppConfig, args: &Cli) -> Result<DbOptions> {
     }
 
     if args.mock {
-        tracing::info!("Mock mode enabled: using in-memory SQLite for all modules");
-        let mock_figment = create_mock_figment(config);
-        let home_dir = PathBuf::from(&config.server.home_dir);
-        let db_manager = Arc::new(modkit_db::DbManager::from_figment(mock_figment, home_dir)?);
-        return Ok(DbOptions::Manager(db_manager));
+        return create_mock_db_manager(config);
     }
 
+    create_standard_db_manager(config)
+}
+
+/// Create mock `DbManager` with in-memory `SQLite`
+fn create_mock_db_manager(config: &AppConfig) -> Result<DbOptions> {
+    tracing::info!("Mock mode enabled: using in-memory SQLite for all modules");
+    let mock_figment = create_mock_figment(config);
+    let home_dir = PathBuf::from(&config.server.home_dir);
+    let db_manager = Arc::new(modkit_db::DbManager::from_figment(mock_figment, home_dir)?);
+    Ok(DbOptions::Manager(db_manager))
+}
+
+/// Create standard `DbManager` from configuration
+fn create_standard_db_manager(config: &AppConfig) -> Result<DbOptions> {
     tracing::info!("Using DbManager with Figment-based configuration");
     let figment = create_figment_from_config(config);
     let home_dir = PathBuf::from(&config.server.home_dir);
@@ -316,41 +326,8 @@ fn build_oop_spawn_options(
     let mut modules = Vec::new();
 
     for module_name in config.modules.keys() {
-        if let Some(runtime_cfg) = get_module_runtime_config(config, module_name)?
-            && runtime_cfg.mod_type == RuntimeKind::Oop
-        {
-            let exec_cfg = runtime_cfg.execution.as_ref().ok_or_else(|| {
-                anyhow::anyhow!(
-                    "module '{module_name}' is type=oop but execution config is missing"
-                )
-            })?;
-
-            let binary = normalize_executable_path(&exec_cfg.executable_path)?;
-
-            // Copy args from execution config as-is
-            // User controls --config via execution.args in master config
-            let spawn_args = exec_cfg.args.clone();
-
-            // Copy environment from execution config
-            let env = exec_cfg.environment.clone();
-
-            // Render the complete module config (with resolved DB)
-            let rendered_config = render_module_config_for_oop(config, module_name, &home_dir)?;
-            let rendered_json = rendered_config.to_json()?;
-            tracing::debug!(
-                module = %module_name,
-                "Prepared OoP module config: db={}",
-                rendered_config.database.is_some()
-            );
-
-            modules.push(OopModuleSpawnConfig {
-                module_name: module_name.clone(),
-                binary,
-                args: spawn_args,
-                env,
-                working_directory: exec_cfg.working_directory.clone(),
-                rendered_config_json: rendered_json,
-            });
+        if let Some(spawn_config) = try_build_oop_module_config(config, module_name, &home_dir)? {
+            modules.push(spawn_config);
         }
     }
 
@@ -363,4 +340,46 @@ fn build_oop_spawn_options(
             backend: Box::new(backend),
         }))
     }
+}
+
+/// Try to build `OoP` module spawn config if module is of type `OoP`
+fn try_build_oop_module_config(
+    config: &AppConfig,
+    module_name: &str,
+    home_dir: &Path,
+) -> Result<Option<OopModuleSpawnConfig>> {
+    let Some(runtime_cfg) = get_module_runtime_config(config, module_name)? else {
+        return Ok(None);
+    };
+
+    if runtime_cfg.mod_type != RuntimeKind::Oop {
+        return Ok(None);
+    }
+
+    let exec_cfg = runtime_cfg.execution.as_ref().ok_or_else(|| {
+        anyhow::anyhow!("module '{module_name}' is type=oop but execution config is missing")
+    })?;
+
+    let binary = normalize_executable_path(&exec_cfg.executable_path)?;
+    let spawn_args = exec_cfg.args.clone();
+    let env = exec_cfg.environment.clone();
+
+    // Render the complete module config (with resolved DB)
+    let rendered_config = render_module_config_for_oop(config, module_name, home_dir)?;
+    let rendered_json = rendered_config.to_json()?;
+
+    tracing::debug!(
+        module = %module_name,
+        "Prepared OoP module config: db={}",
+        rendered_config.database.is_some()
+    );
+
+    Ok(Some(OopModuleSpawnConfig {
+        module_name: module_name.to_owned(),
+        binary,
+        args: spawn_args,
+        env,
+        working_directory: exec_cfg.working_directory.clone(),
+        rendered_config_json: rendered_json,
+    }))
 }

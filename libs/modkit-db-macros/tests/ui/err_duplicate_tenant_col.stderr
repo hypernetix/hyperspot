@@ -1,7 +1,4 @@
 error: duplicate attribute 'tenant_col'
-
-         = note: first defined here
-
  --> tests/ui/err_duplicate_tenant_col.rs:7:10
   |
 7 | #[secure(tenant_col = "tenant2_id")]

@@ -1,14 +1,5 @@
-error: secure: conflicting attributes for tenant
-
-         = note: no_tenant also defined here
-
- --> tests/ui/err_conflicting_tenant.rs:7:5
-  |
-7 |     tenant_col = "tenant_id",
-  |     ^^^^^^^^^^
-
 error: secure: specify either `tenant_col` or `no_tenant`, not both
- --> tests/ui/err_conflicting_tenant.rs:6:1
+ --> tests/ui/err_conflicting_tenant.rs:8:5
   |
-6 | #[secure(
-  | ^
+8 |     no_tenant,
+  |     ^^^^^^^^^

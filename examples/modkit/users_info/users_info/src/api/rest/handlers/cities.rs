@@ -18,8 +18,7 @@ pub(super) async fn list_cities(
         "Listing cities with cursor pagination"
     );
 
-    let page: modkit_odata::Page<user_info_sdk::City> =
-        svc.cities.list_cities_page(&ctx, &query).await?;
+    let page = svc.cities.list_cities_page(&ctx, &query).await?;
     let page = page.map_items(CityDto::from);
 
     Ok(Json(page_to_projected_json(&page, query.selected_fields())))

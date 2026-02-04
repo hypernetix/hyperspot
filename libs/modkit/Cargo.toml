@@ -19,8 +19,11 @@ workspace = true
 
 [features]
 # Enable the runner and the runtime integration by default.
-default = ["otel"]
+default = ["otel", "db"]
 coverage_nightly = []
+
+# Database integration (modkit-db, migrations, DbManager/DbHandle in contexts/runtime)
+db = ["dep:modkit-db", "dep:sea-orm-migration"]
 
 # OpenTelemetry support for distributed tracing
 otel = [
@@ -32,6 +35,7 @@ otel = [
     "dep:tonic",
 ]
 bootstrap = [
+    "db",
     "dep:serde-saphyr",
     "cf-system-sdks/directory_grpc",
     "dep:tracing-appender",
@@ -47,7 +51,8 @@ bootstrap = [
 # Project-local crates
 modkit-macros = { workspace = true }
 modkit-errors = { workspace = true, features = ["utoipa", "axum"] }
-modkit-db = { workspace = true }
+modkit-db = { workspace = true, optional = true }
+sea-orm-migration = { workspace = true, optional = true }
 modkit-odata = { workspace = true, features = ["with-odata-params"] }
 modkit-sdk = { workspace = true }
 cf-system-sdks = { workspace = true, features = ["directory"] }
@@ -84,6 +89,7 @@ schemars = { workspace = true, features = ["derive"] }
 # GTS support
 gts = { workspace = true }
 gts-macros = { workspace = true }
+zip = { version = "2.3", default-features = false, features = ["deflate"] }
 
 # Performance / lock-free structures
 parking_lot = { workspace = true }
@@ -112,9 +118,13 @@ tonic = { workspace = true, optional = true }
 [target.'cfg(unix)'.dependencies]
 nix = { version = "0.29", default-features = false, features = ["signal"] }
 
+[build-dependencies]
+zip = { version = "2.3", default-features = false, features = ["deflate"] }
+
 [dev-dependencies]
 tower = { workspace = true }
 trybuild = { workspace = true }
 httpmock = { workspace = true }
 tempfile = { workspace = true }
 temp-env = { workspace = true }
+modkit-db = { workspace = true, features = ["sqlite"] }

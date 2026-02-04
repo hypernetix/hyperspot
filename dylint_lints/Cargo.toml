@@ -19,7 +19,7 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 license = "Apache-2.0"
 authors = ["Hypernetix"]
@@ -43,10 +43,10 @@ lint_utils = { path = "lint_utils" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 utoipa = "5.2"
-modkit-macros = { package = "cf-modkit-macros", version = "0.1.0", path = "../libs/modkit-macros" }
-modkit = { package = "cf-modkit", version = "0.1.0", path = "../libs/modkit" }
-gts = "0.1.0"
-gts-macros = "0.1.0"
+modkit-macros = { package = "cf-modkit-macros", version = "0.2.0", path = "../libs/modkit-macros" }
+modkit = { package = "cf-modkit", version = "0.2.0", path = "../libs/modkit" }
+gts = "0.7.8"
+gts-macros = "0.7.8"
 
 [workspace.lints.clippy]
 all = "warn"

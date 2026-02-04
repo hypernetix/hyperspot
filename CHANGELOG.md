@@ -9,6 +9,71 @@ release-plz updates this file in the Release PR.
 
 ## [Unreleased]
 
+## [0.1.5](https://github.com/hypernetix/hyperspot/compare/cf-system-sdks-v0.1.4...cf-system-sdks-v0.1.5) - 2026-02-02
+
+### Other
+
+- updated the following local packages: cf-system-sdk-directory
+
+## [0.1.5](https://github.com/hypernetix/hyperspot/compare/cf-system-sdk-directory-v0.1.4...cf-system-sdk-directory-v0.1.5) - 2026-02-02
+
+### Other
+
+- updated the following local packages: cf-modkit-transport-grpc
+
+### Breaking Changes
+
+- **DatabaseCapability refactored**: Modules no longer receive raw database connections.
+  - `DatabaseCapability::migrate(&self, db: &DbHandle)` removed
+  - New signature: `DatabaseCapability::migrations(&self) -> Vec<Box<dyn MigrationTrait>>`
+  - Runtime collects migrations and executes them with privileged connection
+  - Each module gets its own migration history table (`modkit_migrations__<prefix>__<hash8>`)
+
+- **Raw database access removed from public API**:
+  - `DbHandle::sea()` is now `pub(crate)` (was `pub` with `insecure-escape` feature)
+  - `DbHandle::sqlx_postgres()`, `sqlx_mysql()`, `sqlx_sqlite()` are now `pub(crate)`
+  - The `insecure-escape` feature has been removed entirely
+
+- **SecureConn no longer exposes raw connection**:
+  - `SecureConn::conn()` removed from public API
+  - Secure query/ops execute via `&SecureConn` (e.g. `.one(&secure_conn)`, `.all(&secure_conn)`, `.exec(&secure_conn)`)
+
+### Added
+
+- **Migration runner** (`modkit_db::migration_runner`):
+  - `run_migrations_for_module(db, module_name, migrations)` - runtime entry point
+  - `run_migrations_for_testing(db, migrations)` - test helper
+  - `get_pending_migrations(db, module_name, migrations)` - check pending migrations
+  - Per-module migration tables prevent cross-module conflicts
+  - Deterministic ordering by migration name
+  - Idempotent execution (skips already applied migrations)
+  - Duplicate migration names rejected
+  - Best-effort atomicity (transaction around `up()` + version record)
+
+### Migration Guide for Module Authors
+
+Before (old API):
+```rust
+#[async_trait]
+impl DatabaseCapability for MyModule {
+    async fn migrate(&self, db: &modkit_db::DbHandle) -> anyhow::Result<()> {
+        let conn = db.sea();  // Direct access - REMOVED
+        Migrator::up(&conn, None).await?;
+        Ok(())
+    }
+}
+```
+
+After (new API):
+```rust
+impl DatabaseCapability for MyModule {
+    fn migrations(&self) -> Vec<Box<dyn sea_orm_migration::MigrationTrait>> {
+        use sea_orm_migration::MigratorTrait;
+        crate::infra::storage::migrations::Migrator::migrations()
+    }
+}
+```
+
 ## [0.1.4](https://github.com/hypernetix/hyperspot/compare/cf-system-sdks-v0.1.3...cf-system-sdks-v0.1.4) - 2026-01-28
 
 ### Other

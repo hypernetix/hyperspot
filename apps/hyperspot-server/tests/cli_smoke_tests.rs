@@ -211,14 +211,14 @@ server:
   home_dir: "{}"
 
 modules:
-  api_gateway:
-    config:
-      bind_addr: "127.0.0.1:{}"
-      enable_docs: false
-      cors_enabled: false
-      auth_disabled: true
-  users_info: {{}}
-  simple-user-settings: {{}}
+    api_gateway:
+        config:
+            bind_addr: "127.0.0.1:{}"
+            enable_docs: false
+            cors_enabled: false
+            auth_disabled: true
+    users_info: {{}}
+    simple_user_settings: {{}}
 "#,
         temp_dir
             .path()

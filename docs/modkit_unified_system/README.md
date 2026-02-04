@@ -12,7 +12,7 @@ This folder contains the ModKit developer documentation, split by topic for focu
 | Task / Goal | Primary file(s) to read | Related external docs |
 |-------------|------------------------|----------------------|
 | Adding a new module | `02_module_layout_and_sdk_pattern.md` | `guidelines/NEW_MODULE.md` |
-| DB/persistence, SecureConn | `06_secure_orm_db_access.md` | `docs/SECURE-ORM.md` |
+| DB/persistence, SecureConn | `06_secure_orm_db_access.md` | |
 | REST endpoint wiring, OperationBuilder | `04_rest_operation_builder.md` | |
 | OData, $select, pagination, filtering | `07_odata_pagination_select_filter.md` | `docs/ODATA_SELECT.md`, `docs/ODATA_MACRO_MIGRATION.md` |
 | ClientHub, inter-module clients | `03_clienthub_and_plugins.md` | |
@@ -25,7 +25,7 @@ This folder contains the ModKit developer documentation, split by topic for focu
 ## Core invariants (apply everywhere)
 
 - **SDK pattern is the public API**: Use `<module>-sdk` crate for traits, models, errors. Do not expose internals.
-- **Secure-by-default DB access**: Use `SecureConn` + `SecurityContext`. Raw access only for migrations/admin tools and requires `insecure-escape`.
+- **Secure-by-default DB access**: Use `SecureConn` + `AccessScope`. Modules cannot access raw database connections.
 - **RFC-9457 errors everywhere**: Use `Problem` (implements `IntoResponse`). Do not use `ProblemResponse`.
 - **Type-safe REST**: Use `OperationBuilder` with `.require_auth()` and `.standard_errors()`.
 - **OData macros are in `modkit-odata-macros`**: Use `modkit_odata_macros::ODataFilterable`.

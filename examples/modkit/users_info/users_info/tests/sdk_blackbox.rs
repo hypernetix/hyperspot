@@ -5,7 +5,8 @@ use std::sync::Arc;
 
 use modkit::config::ConfigProvider;
 use modkit::{ClientHub, DatabaseCapability, Module, ModuleCtx};
-use modkit_db::{ConnectOpts, DbHandle};
+use modkit_db::migration_runner::run_migrations_for_module;
+use modkit_db::{ConnectOpts, DBProvider, Db, DbError, connect_db};
 use modkit_security::SecurityContext;
 use serde_json::json;
 use tenant_resolver_sdk::{
@@ -95,11 +96,17 @@ impl ConfigProvider for MockConfigProvider {
 
 #[tokio::test]
 async fn users_info_registers_sdk_client_and_handles_basic_crud() {
-    // Arrange: build a real DbHandle for sqlite in-memory, run module migrations, then init module.
-    let db = DbHandle::connect("sqlite::memory:", ConnectOpts::default())
-        .await
-        .expect("db connect");
-    let db = Arc::new(db);
+    // Arrange: build a real Db for sqlite in-memory, run module migrations, then init module.
+    let db: Db = connect_db(
+        "sqlite::memory:",
+        ConnectOpts {
+            max_conns: Some(1),
+            ..Default::default()
+        },
+    )
+    .await
+    .expect("db connect");
+    let dbp: DBProvider<DbError> = DBProvider::new(db.clone());
 
     let hub = Arc::new(ClientHub::new());
 
@@ -112,11 +119,13 @@ async fn users_info_registers_sdk_client_and_handles_basic_crud() {
         Arc::new(MockConfigProvider::new_users_info_default()),
         hub.clone(),
         CancellationToken::new(),
-        Some(db.clone()),
+        Some(dbp),
     );
 
     let module = UsersInfo::default();
-    module.migrate(db.as_ref()).await.expect("migrate");
+    run_migrations_for_module(&db, "users_info", module.migrations())
+        .await
+        .expect("migrate");
     module.init(&ctx).await.expect("init");
 
     // Act: resolve SDK client from hub and do basic CRUD.

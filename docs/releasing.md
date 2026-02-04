@@ -45,7 +45,7 @@ release-plz publishes crates in the correct order for intra-workspace dependenci
 Before publishing, the root release workflow runs:
 
 ```bash
-cargo test --workspace --no-fail-fast --exclude cf-modkit-macros --exclude cf-modkit-db-macros
+cargo test --workspace --no-fail-fast --exclude cf-modkit-macros-tests --exclude cf-modkit-db-macros
 ```
 
 ### Emergency / manual release
@@ -59,7 +59,7 @@ If you need a hotfix / manual release, prefer triggering the GitHub Actions work
 Note: the workflow already runs tests before publishing. Running tests locally is optional and just gives faster feedback.
 
 ```bash
-cargo test --workspace --no-fail-fast --exclude cf-modkit-macros --exclude cf-modkit-db-macros
+cargo test --workspace --no-fail-fast --exclude cf-modkit-macros-tests --exclude cf-modkit-db-macros
 ```
 
 Fallback if CI is unavailable: publish locally from a clean checkout (you must have `CARGO_REGISTRY_TOKEN` set):

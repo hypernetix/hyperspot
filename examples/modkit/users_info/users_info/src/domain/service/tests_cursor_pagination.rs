@@ -1,17 +1,13 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-use modkit_db::secure::SecureConn;
+use modkit_db::secure::DBRunner;
 use modkit_odata::{CursorV1, ODataQuery};
 use uuid::Uuid;
 
 use crate::domain::service::ServiceConfig;
 use crate::test_support::{build_services, ctx_allow_tenants, ctx_deny_all, inmem_db, seed_user};
 
-async fn seed_users_sequential(
-    db: &sea_orm::DatabaseConnection,
-    count: usize,
-    tenant_id: Uuid,
-) -> Vec<Uuid> {
+async fn seed_users_sequential(db: &impl DBRunner, count: usize, tenant_id: Uuid) -> Vec<Uuid> {
     let mut ids = Vec::with_capacity(count);
     for i in 0..count {
         let id = Uuid::new_v4();
@@ -35,9 +31,10 @@ async fn seed_users_sequential(
 async fn forward_pagination_over_multiple_pages() {
     let db = inmem_db().await;
     let tenant_id = Uuid::new_v4();
-    let seeded = seed_users_sequential(&db, 25, tenant_id).await;
+    let conn = db.conn().unwrap();
+    let seeded = seed_users_sequential(&conn, 25, tenant_id).await;
 
-    let services = build_services(SecureConn::new(db), ServiceConfig::default());
+    let services = build_services(db.clone(), ServiceConfig::default());
     let ctx = ctx_allow_tenants(&[tenant_id]);
 
     let mut query = ODataQuery::default().with_limit(10);
@@ -66,9 +63,10 @@ async fn forward_pagination_over_multiple_pages() {
 async fn deny_all_returns_empty_page() {
     let db = inmem_db().await;
     let tenant_id = Uuid::new_v4();
-    seed_user(&db, Uuid::new_v4(), tenant_id, "u@example.com", "U").await;
+    let conn = db.conn().unwrap();
+    seed_user(&conn, Uuid::new_v4(), tenant_id, "u@example.com", "U").await;
 
-    let services = build_services(SecureConn::new(db), ServiceConfig::default());
+    let services = build_services(db.clone(), ServiceConfig::default());
     let ctx = ctx_deny_all();
 
     let page = services

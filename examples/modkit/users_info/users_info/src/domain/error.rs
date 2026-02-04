@@ -1,4 +1,6 @@
+use modkit_db::DbError;
 use modkit_db::secure::InfraError;
+use modkit_db::secure::ScopeError;
 use thiserror::Error;
 use user_info_sdk::UsersInfoError;
 use uuid::Uuid;
@@ -119,5 +121,17 @@ impl From<Box<dyn std::error::Error>> for DomainError {
         tracing::debug!(error = %value, "Converting boxed error to DomainError");
 
         DomainError::InternalError
+    }
+}
+
+impl From<DbError> for DomainError {
+    fn from(e: DbError) -> Self {
+        DomainError::database(e.to_string())
+    }
+}
+
+impl From<ScopeError> for DomainError {
+    fn from(e: ScopeError) -> Self {
+        DomainError::database(e.to_string())
     }
 }

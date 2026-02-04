@@ -31,7 +31,9 @@ mod tests {
 
     #[test]
     fn test_database_error_to_problem() {
-        let error = DomainError::Database(anyhow::anyhow!("connection failed"));
+        let error = DomainError::Database(modkit_db::DbError::InvalidConfig(
+            "connection failed".to_owned(),
+        ));
         let problem = domain_error_to_problem(&error, "/db/error");
 
         assert_eq!(problem.status, StatusCode::INTERNAL_SERVER_ERROR);
@@ -62,7 +64,7 @@ mod tests {
 
     #[test]
     fn test_from_domain_error_for_problem_database() {
-        let error = DomainError::Database(anyhow::anyhow!("db error"));
+        let error = DomainError::Database(modkit_db::DbError::InvalidConfig("db error".to_owned()));
         let problem: Problem = error.into();
 
         assert_eq!(problem.status, StatusCode::INTERNAL_SERVER_ERROR);

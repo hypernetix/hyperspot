@@ -24,15 +24,3 @@ quote = { workspace = true }
 syn = { workspace = true }
 heck = { workspace = true }
 strsim = { workspace = true }
-
-[dev-dependencies]
-trybuild = { workspace = true }
-tokio = { workspace = true, features = ["full"] }
-tokio-util = { workspace = true }
-anyhow = { workspace = true }
-async-trait = { workspace = true }
-inventory = { workspace = true }
-modkit = { workspace = true }
-modkit-security = { workspace = true }
-modkit-transport-grpc = { workspace = true }
-tonic = { workspace = true }

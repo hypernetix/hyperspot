@@ -49,7 +49,7 @@ fn main() {
     let query = QueryBuilder::<UserSchema>::new()
         .filter(ID.eq(user_id))
         .build();
-    println!("   Filter: id eq {user_id}");
+    println!("   Filter: id eq <uuid>");
     println!("   Filter hash: {:#?}\n", query.filter_hash);
 
     // Example 2: String contains filter
@@ -128,7 +128,7 @@ fn main() {
         .page_size(25)
         .build();
     println!(
-        "   Filter: id ne {user_id} AND is_active eq true AND age ge 18 AND contains(name, 'smith')"
+        "   Filter: id ne <uuid> AND is_active eq true AND age ge 18 AND contains(name, 'smith')"
     );
     println!("   Order: name asc, age desc");
     if let Some(fields) = query.selected_fields() {

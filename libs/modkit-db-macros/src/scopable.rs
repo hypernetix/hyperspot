@@ -1,5 +1,5 @@
 use heck::ToUpperCamelCase;
-use proc_macro_error2::{abort, emit_error};
+use proc_macro_error2::abort;
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::{Data, DeriveInput, spanned::Spanned};
@@ -135,68 +135,16 @@ fn validate_config(config: &SecureConfig, input: &DeriveInput) {
 
     // If unrestricted is set, no other attributes should be present
     if let Some(unrestricted_span) = config.unrestricted {
-        let has_error = [
-            config.tenant_col.as_ref().map(|(_, span)| {
-                emit_error!(
-                    unrestricted_span,
-                    "Cannot use 'unrestricted' with 'tenant_col'";
-                    note = *span => "tenant_col defined here"
-                );
-            }),
-            config.no_tenant.as_ref().map(|span| {
-                emit_error!(
-                    unrestricted_span,
-                    "Cannot use 'unrestricted' with 'no_tenant'";
-                    note = *span => "no_tenant defined here"
-                );
-            }),
-            config.resource_col.as_ref().map(|(_, span)| {
-                emit_error!(
-                    unrestricted_span,
-                    "Cannot use 'unrestricted' with 'resource_col'";
-                    note = *span => "resource_col defined here"
-                );
-            }),
-            config.no_resource.as_ref().map(|span| {
-                emit_error!(
-                    unrestricted_span,
-                    "Cannot use 'unrestricted' with 'no_resource'";
-                    note = *span => "no_resource defined here"
-                );
-            }),
-            config.owner_col.as_ref().map(|(_, span)| {
-                emit_error!(
-                    unrestricted_span,
-                    "Cannot use 'unrestricted' with 'owner_col'";
-                    note = *span => "owner_col defined here"
-                );
-            }),
-            config.no_owner.as_ref().map(|span| {
-                emit_error!(
-                    unrestricted_span,
-                    "Cannot use 'unrestricted' with 'no_owner'";
-                    note = *span => "no_owner defined here"
-                );
-            }),
-            config.type_col.as_ref().map(|(_, span)| {
-                emit_error!(
-                    unrestricted_span,
-                    "Cannot use 'unrestricted' with 'type_col'";
-                    note = *span => "type_col defined here"
-                );
-            }),
-            config.no_type.as_ref().map(|span| {
-                emit_error!(
-                    unrestricted_span,
-                    "Cannot use 'unrestricted' with 'no_type'";
-                    note = *span => "no_type defined here"
-                );
-            }),
-        ]
-        .iter()
-        .any(Option::is_some);
+        let has_other = config.tenant_col.is_some()
+            || config.no_tenant.is_some()
+            || config.resource_col.is_some()
+            || config.no_resource.is_some()
+            || config.owner_col.is_some()
+            || config.no_owner.is_some()
+            || config.type_col.is_some()
+            || config.no_type.is_some();
 
-        if has_error {
+        if has_other {
             abort!(
                 unrestricted_span,
                 "When using 'unrestricted', no other column attributes are allowed"
@@ -248,17 +196,10 @@ fn validate_dimension(
             );
             abort!(struct_span, msg);
         }
-        (Some((_, col_span)), Some(no_span)) => {
+        (Some((_, col_span)), Some(_no_span)) => {
             // Both specified
-            let msg = format!("secure: conflicting attributes for {name}");
-            let note_msg = format!("no_{name} also defined here");
-            emit_error!(
-                *col_span,
-                msg;
-                note = *no_span => note_msg
-            );
             let abort_msg = format!("secure: specify either `{name}_col` or `no_{name}`, not both");
-            abort!(struct_span, abort_msg);
+            abort!(*col_span, abort_msg);
         }
         _ => {
             // Valid: exactly one is specified
@@ -280,23 +221,27 @@ fn parse_secure_attrs(input: &DeriveInput) -> SecureConfig {
 
             // Check if this is a flag (no_* or unrestricted)
             if meta.path.is_ident("unrestricted") {
-                if let Some(prev_span) = config.unrestricted {
-                    abort!(
-                        span,
-                        "duplicate attribute 'unrestricted'";
-                        note = prev_span => "first defined here"
-                    );
+                if config.unrestricted.is_some() {
+                    abort!(span, "duplicate attribute 'unrestricted'");
                 }
                 config.unrestricted = Some(span);
                 return Ok(());
             }
 
             if meta.path.is_ident("no_tenant") {
-                if let Some(prev_span) = config.no_tenant {
+                if config.unrestricted.is_some() {
                     abort!(
                         span,
-                        "duplicate attribute 'no_tenant'";
-                        note = prev_span => "first defined here"
+                        "Cannot use 'no_tenant' with 'unrestricted'"
+                    );
+                }
+                if config.no_tenant.is_some() {
+                    abort!(span, "duplicate attribute 'no_tenant'");
+                }
+                if config.tenant_col.is_some() {
+                    abort!(
+                        span,
+                        "secure: specify either `tenant_col` or `no_tenant`, not both"
                     );
                 }
                 config.no_tenant = Some(span);
@@ -304,11 +249,19 @@ fn parse_secure_attrs(input: &DeriveInput) -> SecureConfig {
             }
 
             if meta.path.is_ident("no_resource") {
-                if let Some(prev_span) = config.no_resource {
+                if config.unrestricted.is_some() {
                     abort!(
                         span,
-                        "duplicate attribute 'no_resource'";
-                        note = prev_span => "first defined here"
+                        "Cannot use 'no_resource' with 'unrestricted'"
+                    );
+                }
+                if config.no_resource.is_some() {
+                    abort!(span, "duplicate attribute 'no_resource'");
+                }
+                if config.resource_col.is_some() {
+                    abort!(
+                        span,
+                        "secure: specify either `resource_col` or `no_resource`, not both"
                     );
                 }
                 config.no_resource = Some(span);
@@ -316,11 +269,19 @@ fn parse_secure_attrs(input: &DeriveInput) -> SecureConfig {
             }
 
             if meta.path.is_ident("no_owner") {
-                if let Some(prev_span) = config.no_owner {
+                if config.unrestricted.is_some() {
                     abort!(
                         span,
-                        "duplicate attribute 'no_owner'";
-                        note = prev_span => "first defined here"
+                        "Cannot use 'no_owner' with 'unrestricted'"
+                    );
+                }
+                if config.no_owner.is_some() {
+                    abort!(span, "duplicate attribute 'no_owner'");
+                }
+                if config.owner_col.is_some() {
+                    abort!(
+                        span,
+                        "secure: specify either `owner_col` or `no_owner`, not both"
                     );
                 }
                 config.no_owner = Some(span);
@@ -328,11 +289,19 @@ fn parse_secure_attrs(input: &DeriveInput) -> SecureConfig {
             }
 
             if meta.path.is_ident("no_type") {
-                if let Some(prev_span) = config.no_type {
+                if config.unrestricted.is_some() {
                     abort!(
                         span,
-                        "duplicate attribute 'no_type'";
-                        note = prev_span => "first defined here"
+                        "Cannot use 'no_type' with 'unrestricted'"
+                    );
+                }
+                if config.no_type.is_some() {
+                    abort!(span, "duplicate attribute 'no_type'");
+                }
+                if config.type_col.is_some() {
+                    abort!(
+                        span,
+                        "secure: specify either `type_col` or `no_type`, not both"
                     );
                 }
                 config.no_type = Some(span);
@@ -360,41 +329,73 @@ fn parse_secure_attrs(input: &DeriveInput) -> SecureConfig {
 
             match key.as_str() {
                 "tenant_col" => {
-                    if let Some((_, prev_span)) = config.tenant_col {
+                    if config.unrestricted.is_some() {
                         abort!(
                             span,
-                            "duplicate attribute 'tenant_col'";
-                            note = prev_span => "first defined here"
+                            "Cannot use 'tenant_col' with 'unrestricted'"
+                        );
+                    }
+                    if config.tenant_col.is_some() {
+                        abort!(span, "duplicate attribute 'tenant_col'");
+                    }
+                    if config.no_tenant.is_some() {
+                        abort!(
+                            span,
+                            "secure: specify either `tenant_col` or `no_tenant`, not both"
                         );
                     }
                     config.tenant_col = Some((value, span));
                 }
                 "resource_col" => {
-                    if let Some((_, prev_span)) = config.resource_col {
+                    if config.unrestricted.is_some() {
                         abort!(
                             span,
-                            "duplicate attribute 'resource_col'";
-                            note = prev_span => "first defined here"
+                            "Cannot use 'resource_col' with 'unrestricted'"
+                        );
+                    }
+                    if config.resource_col.is_some() {
+                        abort!(span, "duplicate attribute 'resource_col'");
+                    }
+                    if config.no_resource.is_some() {
+                        abort!(
+                            span,
+                            "secure: specify either `resource_col` or `no_resource`, not both"
                         );
                     }
                     config.resource_col = Some((value, span));
                 }
                 "owner_col" => {
-                    if let Some((_, prev_span)) = config.owner_col {
+                    if config.unrestricted.is_some() {
                         abort!(
                             span,
-                            "duplicate attribute 'owner_col'";
-                            note = prev_span => "first defined here"
+                            "Cannot use 'owner_col' with 'unrestricted'"
+                        );
+                    }
+                    if config.owner_col.is_some() {
+                        abort!(span, "duplicate attribute 'owner_col'");
+                    }
+                    if config.no_owner.is_some() {
+                        abort!(
+                            span,
+                            "secure: specify either `owner_col` or `no_owner`, not both"
                         );
                     }
                     config.owner_col = Some((value, span));
                 }
                 "type_col" => {
-                    if let Some((_, prev_span)) = config.type_col {
+                    if config.unrestricted.is_some() {
                         abort!(
                             span,
-                            "duplicate attribute 'type_col'";
-                            note = prev_span => "first defined here"
+                            "Cannot use 'type_col' with 'unrestricted'"
+                        );
+                    }
+                    if config.type_col.is_some() {
+                        abort!(span, "duplicate attribute 'type_col'");
+                    }
+                    if config.no_type.is_some() {
+                        abort!(
+                            span,
+                            "secure: specify either `type_col` or `no_type`, not both"
                         );
                     }
                     config.type_col = Some((value, span));
@@ -412,7 +413,7 @@ fn parse_secure_attrs(input: &DeriveInput) -> SecureConfig {
         });
 
         if let Err(err) = result {
-            emit_error!(err.span(), "{}", err);
+            abort!(err.span(), "{}", err);
         }
     }
 

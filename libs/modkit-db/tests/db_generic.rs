@@ -3,8 +3,91 @@
 
 mod common;
 use anyhow::Result;
-#[cfg(feature = "pg")]
-use sea_orm::sqlx::Row;
+use modkit_db::secure::SecureEntityExt;
+use sea_orm::EntityTrait;
+use sea_orm_migration::prelude as mig;
+use sea_orm_migration::prelude::Iden;
+use sea_orm_migration::sea_query;
+
+// Create a simple table via migrations (runtime-privileged path).
+#[derive(Iden)]
+enum GenericTbl {
+    #[iden = "test_generic"]
+    Table,
+    Id,
+    TenantId,
+    Name,
+}
+
+struct CreateGeneric;
+impl mig::MigrationName for CreateGeneric {
+    #[allow(clippy::unnecessary_literal_bound)]
+    fn name(&self) -> &str {
+        "m001_create_test_generic"
+    }
+}
+#[async_trait::async_trait]
+impl mig::MigrationTrait for CreateGeneric {
+    async fn up(&self, manager: &mig::SchemaManager) -> Result<(), mig::DbErr> {
+        manager
+            .create_table(
+                mig::Table::create()
+                    .table(GenericTbl::Table)
+                    .if_not_exists()
+                    .col(
+                        mig::ColumnDef::new(GenericTbl::Id)
+                            .uuid()
+                            .not_null()
+                            .primary_key(),
+                    )
+                    .col(mig::ColumnDef::new(GenericTbl::TenantId).uuid().not_null())
+                    .col(mig::ColumnDef::new(GenericTbl::Name).string().not_null())
+                    .to_owned(),
+            )
+            .await
+    }
+
+    async fn down(&self, manager: &mig::SchemaManager) -> Result<(), mig::DbErr> {
+        manager
+            .drop_table(mig::Table::drop().table(GenericTbl::Table).to_owned())
+            .await
+    }
+}
+
+// Define a minimal entity mapping for secure query execution.
+mod ent {
+    use sea_orm::entity::prelude::*;
+    use uuid::Uuid;
+
+    #[derive(Debug, Clone, PartialEq, Eq, DeriveEntityModel)]
+    #[sea_orm(table_name = "test_generic")]
+    pub struct Model {
+        #[sea_orm(primary_key, auto_increment = false)]
+        pub id: Uuid,
+        pub tenant_id: Uuid,
+        pub name: String,
+    }
+
+    #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+    pub enum Relation {}
+
+    impl ActiveModelBehavior for ActiveModel {}
+}
+
+impl modkit_db::secure::ScopableEntity for ent::Entity {
+    fn tenant_col() -> Option<<Self as sea_orm::EntityTrait>::Column> {
+        Some(ent::Column::TenantId)
+    }
+    fn resource_col() -> Option<<Self as sea_orm::EntityTrait>::Column> {
+        Some(ent::Column::Id)
+    }
+    fn owner_col() -> Option<<Self as sea_orm::EntityTrait>::Column> {
+        None
+    }
+    fn type_col() -> Option<<Self as sea_orm::EntityTrait>::Column> {
+        None
+    }
+}
 
 #[cfg(feature = "sqlite")]
 #[tokio::test]
@@ -28,89 +111,53 @@ async fn generic_mysql() -> Result<()> {
 }
 
 /// Runs the same assertions for any backend.
-/// Tests basic `DbHandle` functionality without requiring migrations.
 async fn run_common_suite(database_url: &str) -> Result<()> {
     // Test basic connection
-    let db = modkit_db::DbHandle::connect(database_url, modkit_db::ConnectOpts::default()).await?;
-
-    // Verify engine detection
-    let engine = modkit_db::DbHandle::detect(database_url)?;
-    assert_eq!(db.engine(), engine);
+    let db = modkit_db::connect_db(database_url, modkit_db::ConnectOpts::default()).await?;
 
     // Test DSN redaction (should not panic)
     let redacted = modkit_db::redact_credentials_in_dsn(Some(database_url));
     assert!(!redacted.contains("pass"));
 
-    // Test basic SQL execution based on engine
-    match engine {
-        #[cfg(feature = "pg")]
-        modkit_db::DbEngine::Postgres => {
-            let pool = db.sqlx_postgres().unwrap();
-            // Create a simple test table and verify
-            sea_orm::sqlx::query(
-                "CREATE TABLE IF NOT EXISTS test_pg (id SERIAL PRIMARY KEY, name TEXT)",
-            )
-            .execute(pool)
-            .await?;
+    // Test basic transaction + ORM ops using the secure API (no raw SQLx/SeaORM connections).
+    modkit_db::migration_runner::run_migrations_for_testing(&db, vec![Box::new(CreateGeneric)])
+        .await
+        .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
-            let result =
-                sea_orm::sqlx::query("INSERT INTO test_pg (name) VALUES ($1) RETURNING id")
-                    .bind("test_user")
-                    .fetch_one(pool)
-                    .await?;
+    // Use the secure Db API
+    let secure_db = db;
 
-            let id: i32 = result.get("id");
-            assert!(id > 0);
+    let tenant_id = uuid::Uuid::new_v4();
+    let scope = modkit_security::AccessScope::tenants_only(vec![tenant_id]);
+    let scope_for_tx = scope.clone();
+    let id = uuid::Uuid::new_v4();
 
-            let count: i64 = sea_orm::sqlx::query_scalar("SELECT COUNT(*) FROM test_pg")
-                .fetch_one(pool)
-                .await?;
-            assert_eq!(count, 1);
-        }
-        #[cfg(feature = "mysql")]
-        modkit_db::DbEngine::MySql => {
-            let pool = db.sqlx_mysql().unwrap();
-            // Create a simple test table and verify
-            sea_orm::sqlx::query("CREATE TABLE IF NOT EXISTS test_mysql (id INT AUTO_INCREMENT PRIMARY KEY, name TEXT)")
-                .execute(pool)
-                .await?;
+    let (secure_db, res) = secure_db
+        .transaction(move |tx| {
+            let scope = scope_for_tx.clone();
+            Box::pin(async move {
+                let am = ent::ActiveModel {
+                    id: sea_orm::Set(id),
+                    tenant_id: sea_orm::Set(tenant_id),
+                    name: sea_orm::Set("test_user".to_owned()),
+                };
+                let _ = modkit_db::secure::secure_insert::<ent::Entity>(am, &scope, tx).await?;
+                Ok::<(), anyhow::Error>(())
+            })
+        })
+        .await;
+    res?;
 
-            sea_orm::sqlx::query("INSERT INTO test_mysql (name) VALUES (?)")
-                .bind("test_user")
-                .execute(pool)
-                .await?;
+    let conn = secure_db
+        .conn()
+        .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+    let count = ent::Entity::find()
+        .secure()
+        .scope_with(&scope)
+        .count(&conn)
+        .await
+        .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+    assert_eq!(count, 1);
 
-            let count: i64 = sea_orm::sqlx::query_scalar("SELECT COUNT(*) FROM test_mysql")
-                .fetch_one(pool)
-                .await?;
-            assert_eq!(count, 1);
-        }
-        #[cfg(feature = "sqlite")]
-        modkit_db::DbEngine::Sqlite => {
-            let pool = db.sqlx_sqlite().unwrap();
-            // Create a simple test table and verify
-            sea_orm::sqlx::query(
-                "CREATE TABLE IF NOT EXISTS test_sqlite (id INTEGER PRIMARY KEY, name TEXT)",
-            )
-            .execute(pool)
-            .await?;
-
-            sea_orm::sqlx::query("INSERT INTO test_sqlite (name) VALUES (?)")
-                .bind("test_user")
-                .execute(pool)
-                .await?;
-
-            let count: i64 = sea_orm::sqlx::query_scalar("SELECT COUNT(*) FROM test_sqlite")
-                .fetch_one(pool)
-                .await?;
-            assert_eq!(count, 1);
-        }
-        #[cfg(not(all(feature = "pg", feature = "mysql", feature = "sqlite")))]
-        _ => {
-            anyhow::bail!("Unsupported engine: {:?}", engine);
-        }
-    }
-
-    db.close().await;
     Ok(())
 }

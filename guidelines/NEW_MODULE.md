@@ -26,7 +26,7 @@ Common and stateless logic that can be reusable across modules should be impleme
 |-------------|---------------------------|--------------|
 | **Create module skeleton** | Step 1 (Project layout), Step 2 (Naming matrix) | `docs/modkit_unified_system/02_module_layout_and_sdk_pattern.md` |
 | **Add SDK traits/models/errors** | Step 4 (SDK crate) | `docs/modkit_unified_system/02_module_layout_and_sdk_pattern.md` |
-| **Add DB entities/repositories** | Step 5 (Domain layer), Step 6 (Infra storage) | `docs/SECURE-ORM.md`, `docs/modkit_unified_system/06_secure_orm_db_access.md` |
+| **Add DB entities/repositories** | Step 5 (Domain layer), Step 6 (Infra storage) | `docs/modkit_unified_system/06_secure_orm_db_access.md` |
 | **Add REST endpoints** | Step 7 (REST API layer) | `docs/modkit_unified_system/04_rest_operation_builder.md` |
 | **Add OData $filter/$select** | Step 7 (REST API layer, OData subsection) | `docs/ODATA_SELECT.md`, `docs/modkit_unified_system/07_odata_pagination_select_filter.md` |
 | **Add errors/Problem mapping** | Step 3 (Errors management) | `docs/modkit_unified_system/05_errors_rfc9457.md` |
@@ -63,8 +63,9 @@ This SDK pattern provides:
 
 All modules MUST adhere to the following directory structure:
 
-```
+```text
 modules/<your-module>/
+├─ QUICKSTART.md                # API quickstart with curl examples (see below)
 ├─ <your-module>-sdk/           # SDK crate: public API for consumers
 │  ├─ Cargo.toml
 │  └─ src/
@@ -101,6 +102,61 @@ modules/<your-module>/
             ├─ sea_orm_repo.rs  # SeaORM repository implementation
             └─ migrations/      # SeaORM migrations
 ```
+
+### Module Documentation: QUICKSTART.md
+
+Every module with REST endpoints MUST include a `QUICKSTART.md` file with:
+
+1. **Module description** - Brief explanation of what the module does and why it exists
+2. **Features/capabilities** - Bulleted list of key functionality (stable, won't drift)
+3. **Use cases** - Practical scenarios where the module applies (optional but recommended)
+4. **Link to /docs** - Reference to full API documentation
+5. **1-2 minimal examples** - Basic curl commands showing typical usage
+
+Keep examples minimal. The documentation at `/docs` is auto-generated from OpenAPI spec and always current.
+
+**Template:**
+
+    # <Module Name> - Quickstart
+    
+    <2-3 sentence description of what the module does and its purpose.>
+    
+    **Features:**
+    - Key capability 1
+    - Key capability 2
+    - Key capability 3
+    
+    **Use cases:**
+    - Practical scenario 1
+    - Practical scenario 2
+    
+    Full API documentation: <http://127.0.0.1:8087/docs>
+    
+    ## Examples
+    
+    ### List Resources
+    
+    ```bash
+    curl -s http://127.0.0.1:8087/<module>/v1/resource | python3 -m json.tool
+    ```
+    
+    **Output:**
+    ```json
+    {
+        "items": [...]
+    }
+    ```
+    
+    For additional endpoints, see <http://127.0.0.1:8087/docs>.
+
+**Key principles:**
+- Avoid duplication - `/docs` is auto-generated and always current
+- Show, don't list - 1-2 working examples, not comprehensive tables
+- No fluff - State facts, avoid marketing language
+- Describe stable features - Capabilities that won't change frequently
+- Stay actionable - Focus on what users can do with the module
+
+The main [QUICKSTART_GUIDE.md](../docs/QUICKSTART_GUIDE.md) references all module quickstarts.
 
 ---
 
@@ -1016,7 +1072,7 @@ This is where all components are assembled and registered with ModKit.
     7. Config structs SHOULD use `#[serde(deny_unknown_fields)]` and provide safe defaults.
 
 3. **`src/module.rs` - `impl DatabaseCapability` and `impl RestApiCapability`:**
-   **Rule:** `DatabaseCapability::migrate` MUST be implemented to run your SeaORM migrations.
+   **Rule:** `DatabaseCapability::migrations` MUST return your SeaORM migration definitions. The runtime executes these.
    **Rule:** `RestApiCapability::register_rest` MUST fail if the service is not yet initialized, then call your single
    `register_routes` function.
 
@@ -1026,7 +1082,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use modkit::api::OpenApiRegistry;
 use modkit::{DatabaseCapability, Module, ModuleCtx, RestApiCapability, SseBroadcaster};
-use sea_orm_migration::MigratorTrait;
+use sea_orm_migration::MigrationTrait;
 use tracing::info;
 
 use crate::api::rest::dto::UserEvent;
@@ -1107,13 +1163,13 @@ impl Module for UsersInfo {
     }
 }
 
-#[async_trait]
+// Modules return migration definitions; the runtime executes them with a privileged connection.
+// This ensures modules cannot access raw database connections and bypass tenant isolation.
 impl DatabaseCapability for UsersInfo {
-    async fn migrate(&self, db: &modkit_db::DbHandle) -> anyhow::Result<()> {
-        info!("Running users_info database migrations");
-        let conn = db.sea();
-        crate::infra::storage::migrations::Migrator::up(&conn, None).await?;
-        Ok(())
+    fn migrations(&self) -> Vec<Box<dyn MigrationTrait>> {
+        use sea_orm_migration::MigratorTrait;
+        info!("Providing users_info database migrations");
+        crate::infra::storage::migrations::Migrator::migrations()
     }
 }
 
@@ -1457,7 +1513,7 @@ If no database required: skip `DatabaseCapability`, remove `db` from capabilitie
 
 This layer implements the domain's repository traits with **Secure ORM** for tenant isolation.
 
-> **See also:** [SECURE-ORM.md](../docs/SECURE-ORM.md) for documentation on the secure ORM layer.
+> **See also:** `docs/modkit_unified_system/06_secure_orm_db_access.md` for secure ORM usage.
 
 #### Security Model
 
@@ -1541,7 +1597,7 @@ Database
            // SecureConn automatically applies tenant/resource scope from AccessScope
            let found = self.conn
                .find_by_id::<entity::Entity>(scope, id)?
-               .one(self.conn.conn())
+               .one(&self.conn)
                .await?;
            Ok(found.map(Into::into))
        }
@@ -1557,9 +1613,9 @@ Database
 
            let base_query = self.conn.find::<entity::Entity>(scope)?;
 
-           let page = paginate_odata::<UserDtoFilterField, UserODataMapper, _, _, _, _>(
-               base_query.into_inner(),
-               self.conn.conn(),
+           let page = paginate_odata::<UserDtoFilterField, UserODataMapper, _, _, _>(
+               base_query,
+               &self.conn,
                &query,
                ("id", modkit_odata::SortDir::Desc),
                LimitCfg { default: 25, max: 1000 },
@@ -2758,7 +2814,7 @@ errors (add explicit types), missing `time::OffsetDateTime`, handler/service nam
 
 - [MODKIT UNIFIED SYSTEM](../docs/modkit_unified_system/README.md) — Complete ModKit architecture and developer guide
 - [MODKIT_PLUGINS.md](../docs/MODKIT_PLUGINS.md) — Plugin architecture with Gateway + Plugins pattern
-- [SECURE-ORM.md](../docs/SECURE-ORM.md) — Secure ORM layer with tenant isolation
+- `docs/modkit_unified_system/06_secure_orm_db_access.md` — Secure ORM layer with tenant isolation
 - [TRACING_SETUP.md](../docs/TRACING_SETUP.md) — Distributed tracing with OpenTelemetry
 - [DNA/REST/API.md](./DNA/REST/API.md) — REST API design principles
 - [examples/modkit/users_info/](../examples/modkit/users_info/) — Reference implementation of a local module with SDK
