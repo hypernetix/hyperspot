@@ -10,6 +10,7 @@ use syn::{
 };
 
 mod api_dto;
+mod domain_model;
 mod grpc_client;
 mod utils;
 
@@ -1120,4 +1121,52 @@ pub fn api_dto(attr: TokenStream, item: TokenStream) -> TokenStream {
     let attrs = parse_macro_input!(attr with Punctuated::<Ident, Token![,]>::parse_terminated);
     let input = parse_macro_input!(item as DeriveInput);
     TokenStream::from(api_dto::expand_api_dto(&attrs, &input))
+}
+
+/// Marks a struct or enum as a domain model, enforcing DDD boundaries at compile time.
+///
+/// This macro:
+/// - Implements `DomainModel` for the type
+/// - Validates at compile-time that fields do not use forbidden infrastructure types
+///
+/// # Usage
+///
+/// ```ignore
+/// // Note: This example requires `modkit` crate which is not available in proc-macro doctest context
+/// use modkit_macros::domain_model;
+///
+/// #[domain_model]
+/// pub struct User {
+///     pub id: i64,
+///     pub email: String,
+///     pub active: bool,
+/// }
+/// ```
+///
+/// # Compile-Time Enforcement
+///
+/// If any field uses an infrastructure type (e.g., `http::StatusCode`, `sqlx::Pool`),
+/// the code will fail to compile with a clear error message:
+///
+/// ```compile_fail
+/// use modkit_macros::domain_model;
+///
+/// #[domain_model]
+/// pub struct BadModel {
+///     pub status: http::StatusCode,  // ERROR: forbidden crate 'http'
+/// }
+/// ```
+///
+/// # Forbidden Types
+///
+/// The macro blocks types from infrastructure crates:
+/// - Database: `sqlx::*`, `sea_orm::*`
+/// - HTTP/Web: `http::*`, `axum::*`, `hyper::*`
+/// - External clients: `reqwest::*`, `tonic::*`
+/// - File system: `std::fs::*`, `tokio::fs::*`
+/// - Database-specific names: `PgPool`, `MySqlPool`, `DatabaseConnection`
+#[proc_macro_attribute]
+pub fn domain_model(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(item as DeriveInput);
+    TokenStream::from(domain_model::expand_domain_model(&input))
 }
