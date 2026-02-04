@@ -206,7 +206,7 @@ auth:
     cache:
       enabled: true  # default: true
       max_entries: 10000  # default: 10000
-      ttl: 5m  # default: 5m (upper bound, actual TTL = min(exp, ttl))
+      ttl: 60s  # default: 60s (upper bound, actual TTL = min(exp, ttl))
 
     # Discovery endpoint caching (per-issuer introspection endpoint URLs)
     endpoint_discovery_cache:
@@ -357,7 +357,7 @@ Introspection result caching configuration.
 **Fields:**
 - `enabled` (bool) — Enable caching (default: `true`)
 - `max_entries` (int) — Max cached introspection results (default: `10000`)
-- `ttl` (duration) — Cache TTL upper bound (default: `5m`)
+- `ttl` (duration) — Cache TTL upper bound (default: `60s`). See [Security Considerations](#security-considerations) for guidance on tuning this value.
 
 **Cache TTL calculation:**
 ```
@@ -609,7 +609,7 @@ The claim mapping is configured via [jwt.claim_mapping](#jwtclaim_mapping) and [
 | SecurityContext Field | Default Claim/Field | Configurable Via | Notes |
 |-----------------------|---------------------|------------------|-------|
 | `subject_id` | `sub` | `claim_mapping.subject_id` | Required, unique subject identifier |
-| `subject_type` | (vendor-defined) | `claim_mapping.subject_type` | Optional, GTS type ID (e.g., `gts.x.core.security.subject.user.v1~`) |
+| `subject_type` | (vendor-defined) | `claim_mapping.subject_type` | Optional, GTS type ID (e.g., `gts.x.core.security.subject_user.v1~`) |
 | `subject_tenant_id` | (vendor-defined) | `claim_mapping.subject_tenant_id` | Required, Subject Owner Tenant |
 | `token_scopes` | `scope` (space-separated) | `claim_mapping.token_scopes` | Array of scopes, split on spaces |
 | `bearer_token` | Original from `Authorization` header | N/A | Optional, for PDP forwarding |
@@ -683,6 +683,24 @@ The plugin returns `AuthNError` variants for different failure scenarios:
 - MUST NOT include token values (credentials)
 - SHOULD include actionable information (e.g., "Token expired", "Untrusted issuer: example.com")
 - SHOULD include correlation IDs for debugging
+
+---
+
+## Security Considerations
+
+### Introspection Cache and Token Revocation
+
+Caching introspection results creates a trade-off between performance and revocation latency:
+
+| `introspection.cache.ttl` | Revocation Latency | IdP Load | Use Case |
+|---------------------------|-------------------|----------|----------|
+| `0` (disabled) | Immediate | High (every request) | Highly regulated systems (finance, healthcare), strict compliance requirements |
+| `30s` - `60s` | Up to 60 seconds | Moderate | General production systems (default: `60s`) |
+| `5m` - `15m` | Up to 15 minutes | Low | Internal tools, low-sensitivity data, high-traffic systems |
+
+**Recommendation for regulated systems:**
+
+For systems with strict security requirements (PCI-DSS, HIPAA, SOC2), set `ttl: 0` to disable caching. This ensures that revoked tokens are rejected immediately, at the cost of increased IdP load and latency.
 
 ---
 

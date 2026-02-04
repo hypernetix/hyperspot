@@ -176,12 +176,12 @@ Authorization: Bearer <token>
 ```json
 {
   "subject": {
-    "type": "gts.x.core.security.subject.user.v1~",
+    "type": "gts.x.core.security.subject_user.v1~",
     "id": "user-123",
     "properties": { "tenant_id": "T1" }
   },
   "action": { "name": "list" },
-  "resource": { "type": "gts.x.tasks.task.v1~" },
+  "resource": { "type": "gts.x.core.tasks.task.v1~" },
   "context": {
     "tenant_context": {
       "mode": "subtree",
@@ -244,13 +244,13 @@ Authorization: Bearer <token>
 ```json
 {
   "subject": {
-    "type": "gts.x.core.security.subject.user.v1~",
+    "type": "gts.x.core.security.subject_user.v1~",
     "id": "user-123",
     "properties": { "tenant_id": "T1" }
   },
   "action": { "name": "read" },
   "resource": {
-    "type": "gts.x.tasks.task.v1~",
+    "type": "gts.x.core.tasks.task.v1~",
     "id": "task-456"
   },
   "context": {
@@ -321,13 +321,13 @@ Content-Type: application/json
 ```json
 {
   "subject": {
-    "type": "gts.x.core.security.subject.user.v1~",
+    "type": "gts.x.core.security.subject_user.v1~",
     "id": "user-123",
     "properties": { "tenant_id": "T1" }
   },
   "action": { "name": "update" },
   "resource": {
-    "type": "gts.x.tasks.task.v1~",
+    "type": "gts.x.core.tasks.task.v1~",
     "id": "task-456"
   },
   "context": {
@@ -399,13 +399,13 @@ Content-Type: application/json
 ```json
 {
   "subject": {
-    "type": "gts.x.core.security.subject.user.v1~",
+    "type": "gts.x.core.security.subject_user.v1~",
     "id": "user-123",
     "properties": { "tenant_id": "T1" }
   },
   "action": { "name": "create" },
   "resource": {
-    "type": "gts.x.tasks.task.v1~",
+    "type": "gts.x.core.tasks.task.v1~",
     "properties": {
       "owner_tenant_id": "T2"
     }
@@ -463,12 +463,12 @@ Authorization: Bearer <token>
 ```json
 {
   "subject": {
-    "type": "gts.x.core.security.subject.user.v1~",
+    "type": "gts.x.core.security.subject_user.v1~",
     "id": "user-123",
     "properties": { "tenant_id": "T1" }
   },
   "action": { "name": "list" },
-  "resource": { "type": "gts.x.billing.usage.v1~" },
+  "resource": { "type": "gts.x.core.billing.usage.v1~" },
   "context": {
     "tenant_context": {
       "mode": "subtree",
@@ -554,12 +554,12 @@ Authorization: Bearer <token>
 ```json
 {
   "subject": {
-    "type": "gts.x.core.security.subject.user.v1~",
+    "type": "gts.x.core.security.subject_user.v1~",
     "id": "user-123",
     "properties": { "tenant_id": "T1" }
   },
   "action": { "name": "list" },
-  "resource": { "type": "gts.x.tasks.task.v1~" },
+  "resource": { "type": "gts.x.core.tasks.task.v1~" },
   "context": {
     "tenant_context": {
       "mode": "subtree",
@@ -627,13 +627,13 @@ Result: full task record with `owner_tenant_id = 'T2'`
 ```json
 {
   "subject": {
-    "type": "gts.x.core.security.subject.user.v1~",
+    "type": "gts.x.core.security.subject_user.v1~",
     "id": "user-123",
     "properties": { "tenant_id": "T1" }
   },
   "action": { "name": "read" },
   "resource": {
-    "type": "gts.x.tasks.task.v1~",
+    "type": "gts.x.core.tasks.task.v1~",
     "id": "task-456",
     "properties": {
       "owner_tenant_id": "T2"
@@ -695,13 +695,13 @@ Result: `owner_tenant_id = 'T2'`
 ```json
 {
   "subject": {
-    "type": "gts.x.core.security.subject.user.v1~",
+    "type": "gts.x.core.security.subject_user.v1~",
     "id": "user-123",
     "properties": { "tenant_id": "T1" }
   },
   "action": { "name": "update" },
   "resource": {
-    "type": "gts.x.tasks.task.v1~",
+    "type": "gts.x.core.tasks.task.v1~",
     "id": "task-456",
     "properties": {
       "owner_tenant_id": "T2"
@@ -767,13 +767,13 @@ Authorization: Bearer <token>
 ```json
 {
   "subject": {
-    "type": "gts.x.core.security.subject.user.v1~",
+    "type": "gts.x.core.security.subject_user.v1~",
     "id": "user-123",
     "properties": { "tenant_id": "T1" }
   },
   "action": { "name": "read" },
   "resource": {
-    "type": "gts.x.tasks.task.v1~",
+    "type": "gts.x.core.tasks.task.v1~",
     "id": "task-456"
   },
   "context": {
@@ -843,12 +843,12 @@ Authorization: Bearer <token>
 ```json
 {
   "subject": {
-    "type": "gts.x.core.security.subject.user.v1~",
+    "type": "gts.x.core.security.subject_user.v1~",
     "id": "user-123",
     "properties": { "tenant_id": "T1" }
   },
   "action": { "name": "list" },
-  "resource": { "type": "gts.x.tasks.task.v1~" },
+  "resource": { "type": "gts.x.core.tasks.task.v1~" },
   "context": {
     "tenant_context": {
       "mode": "root_only",
@@ -917,12 +917,12 @@ Authorization: Bearer <token>
 ```json
 {
   "subject": {
-    "type": "gts.x.core.security.subject.user.v1~",
+    "type": "gts.x.core.security.subject_user.v1~",
     "id": "user-123",
     "properties": { "tenant_id": "T1" }
   },
   "action": { "name": "list" },
-  "resource": { "type": "gts.x.tasks.task.v1~" },
+  "resource": { "type": "gts.x.core.tasks.task.v1~" },
   "context": {
     "tenant_context": {
       "mode": "root_only",
@@ -997,13 +997,13 @@ Content-Type: application/json
 ```json
 {
   "subject": {
-    "type": "gts.x.core.security.subject.user.v1~",
+    "type": "gts.x.core.security.subject_user.v1~",
     "id": "user-123",
     "properties": { "tenant_id": "T1" }
   },
   "action": { "name": "update" },
   "resource": {
-    "type": "gts.x.tasks.task.v1~",
+    "type": "gts.x.core.tasks.task.v1~",
     "id": "task-456"
   },
   "context": {
@@ -1083,13 +1083,13 @@ Content-Type: application/json
 ```json
 {
   "subject": {
-    "type": "gts.x.core.security.subject.user.v1~",
+    "type": "gts.x.core.security.subject_user.v1~",
     "id": "user-123",
     "properties": { "tenant_id": "T1" }
   },
   "action": { "name": "update" },
   "resource": {
-    "type": "gts.x.tasks.task.v1~",
+    "type": "gts.x.core.tasks.task.v1~",
     "id": "task-456"
   },
   "context": {
@@ -1165,13 +1165,13 @@ Authorization: Bearer <token>
 ```json
 {
   "subject": {
-    "type": "gts.x.core.security.subject.user.v1~",
+    "type": "gts.x.core.security.subject_user.v1~",
     "id": "user-123",
     "properties": { "tenant_id": "T1" }
   },
   "action": { "name": "read" },
   "resource": {
-    "type": "gts.x.tasks.task.v1~",
+    "type": "gts.x.core.tasks.task.v1~",
     "id": "task-456"
   },
   "context": {
@@ -1245,12 +1245,12 @@ Authorization: Bearer <token>
 ```json
 {
   "subject": {
-    "type": "gts.x.core.security.subject.user.v1~",
+    "type": "gts.x.core.security.subject_user.v1~",
     "id": "user-123",
     "properties": { "tenant_id": "T1" }
   },
   "action": { "name": "list" },
-  "resource": { "type": "gts.x.tasks.task.v1~" },
+  "resource": { "type": "gts.x.core.tasks.task.v1~" },
   "context": {
     "tenant_context": {
       "mode": "root_only",
@@ -1327,12 +1327,12 @@ Authorization: Bearer <token>
 ```json
 {
   "subject": {
-    "type": "gts.x.core.security.subject.user.v1~",
+    "type": "gts.x.core.security.subject_user.v1~",
     "id": "user-123",
     "properties": { "tenant_id": "T1" }
   },
   "action": { "name": "list" },
-  "resource": { "type": "gts.x.tasks.task.v1~" },
+  "resource": { "type": "gts.x.core.tasks.task.v1~" },
   "context": {
     "tenant_context": {
       "mode": "subtree",
@@ -1407,12 +1407,12 @@ Authorization: Bearer <token>
 ```json
 {
   "subject": {
-    "type": "gts.x.core.security.subject.user.v1~",
+    "type": "gts.x.core.security.subject_user.v1~",
     "id": "user-123",
     "properties": { "tenant_id": "T1" }
   },
   "action": { "name": "list" },
-  "resource": { "type": "gts.x.tasks.task.v1~" },
+  "resource": { "type": "gts.x.core.tasks.task.v1~" },
   "context": {
     "tenant_context": {
       "mode": "subtree",
@@ -1495,12 +1495,12 @@ Authorization: Bearer <token>
 ```json
 {
   "subject": {
-    "type": "gts.x.core.security.subject.user.v1~",
+    "type": "gts.x.core.security.subject_user.v1~",
     "id": "user-123",
     "properties": { "tenant_id": "T1" }
   },
   "action": { "name": "list" },
-  "resource": { "type": "gts.x.tasks.task.v1~" },
+  "resource": { "type": "gts.x.core.tasks.task.v1~" },
   "context": {
     "tenant_context": {
       "mode": "root_only",
@@ -1589,12 +1589,12 @@ Authorization: Bearer <token>
 ```json
 {
   "subject": {
-    "type": "gts.x.core.security.subject.user.v1~",
+    "type": "gts.x.core.security.subject_user.v1~",
     "id": "user-123",
     "properties": { "tenant_id": "T1" }
   },
   "action": { "name": "list" },
-  "resource": { "type": "gts.x.tasks.task.v1~" },
+  "resource": { "type": "gts.x.core.tasks.task.v1~" },
   "context": {
     "tenant_context": {
       "mode": "root_only",
@@ -1614,7 +1614,7 @@ Authorization: Bearer <token>
   "context": {
     "deny_reason": {
       "error_code": "gts.x.core.errors.err.v1~x.authz.errors.insufficient_permissions.v1",
-      "details": "Subject 'user-123' lacks 'list' permission on 'gts.x.tasks.task.v1~' in tenant 'T1'"
+      "details": "Subject 'user-123' lacks 'list' permission on 'gts.x.core.tasks.task.v1~' in tenant 'T1'"
     }
   }
 }

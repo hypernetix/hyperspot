@@ -262,7 +262,7 @@ Token scopes provide capability narrowing for third-party applications. They act
 | Aspect | Scope | Permission |
 |--------|-------|------------|
 | Granularity | Coarse (human-readable) | Fine (technical) |
-| Example | `read:calendar` | `gts.x.events.event.v1~:read` |
+| Example | `read:calendar` | `gts.x.core.events.event.v1~:read` |
 | Who defines | OAuth consent / IdP | PDP policies |
 | Purpose | Limit app capabilities | Grant user access |
 
@@ -293,7 +293,7 @@ AuthN Resolver plugin is responsible for:
 ```rust
 SecurityContext {
     subject_id: "user-123",
-    subject_type: Some("gts.x.core.security.subject.user.v1~"),  // optional
+    subject_type: Some("gts.x.core.security.subject_user.v1~"),  // optional
     subject_tenant_id: Some("tenant-456"),                       // optional
     bearer_token: Some("eyJ..."),                                // optional
     token_scopes: ["*"],  // first-party: full access
@@ -459,7 +459,7 @@ SecurityContext {
 | Field | Required | Description | Used By |
 |-------|----------|-------------|---------|
 | `subject_id` | Yes | Unique identifier for the subject | All authorization decisions |
-| `subject_type` | No | GTS type identifier (e.g., `gts.x.core.security.subject.user.v1~`) | PDP for role/permission mapping |
+| `subject_type` | No | GTS type identifier (e.g., `gts.x.core.security.subject_user.v1~`) | PDP for role/permission mapping |
 | `subject_tenant_id` | No | Subject Owner Tenant — tenant the subject belongs to | PDP for tenant context |
 | `token_scopes` | Yes | Capability restrictions from token (see [Token Scopes](#token-scopes)) | PDP for scope narrowing |
 | `bearer_token` | No | Original bearer token | PDP validation, external API calls |
@@ -578,7 +578,7 @@ We extend AuthZEN's evaluation response with optional `context.constraints`. Ins
     ]
   }
 }
-// PEP compiles to: WHERE owner_tenant_id IN (SELECT descendant_id FROM tenant_closure WHERE ancestor_id = 'tenant-123')
+// PEP compiles to: WHERE owner_tenant_id IN (SELECT descendant_id FROM tenant_closure WHERE ancestor_id = 'tenant-123' AND barrier = 0)
 // Result: SELECT * FROM events WHERE (constraints) LIMIT 10 — correct pagination!
 ```
 
@@ -723,7 +723,7 @@ Content-Type: application/json
 {
   // Subject — from SecurityContext (produced by AuthN Resolver)
   "subject": {
-    "type": "gts.x.core.security.subject.user.v1~",  // optional - SecurityContext.subject_type
+    "type": "gts.x.core.security.user.v1~",          // optional - SecurityContext.subject_type
     "id": "a254d252-7129-4240-bae5-847c59008fb6",    // required - SecurityContext.subject_id
     "properties": {
       "tenant_id": "51f18034-3b2f-4bfa-bb99-22113bddee68"  // optional - SecurityContext.subject_tenant_id
@@ -737,7 +737,7 @@ Content-Type: application/json
 
   // Resource — handler sets type; id/properties from HTTP request
   "resource": {
-    "type": "gts.x.events.event.v1~",               // handler: module's resource GTS type
+    "type": "gts.x.core.events.event.v1~",               // handler: module's resource GTS type
     "id": "e81307e5-5ee8-4c0a-8d1f-bd98a65c517e",   // URL path param (point ops only, absent for list)
     "properties": {
       "topic_id": "gts.x.core.events.topic.v1~z.app._.some_topic.v1"  // from query param ?topic=...
@@ -811,7 +811,7 @@ The response contains a `decision` and, when `decision: true`, optional `context
       // GTS-formatted error code for programmatic handling (required)
       "error_code": "gts.x.core.errors.err.v1~x.authz.errors.insufficient_permissions.v1",
       // Human-readable details for logging (optional)
-      "details": "Subject lacks permission for action 'list' on resource type 'gts.x.events.event.v1~'"
+      "details": "Subject lacks permission for action 'list' on resource type 'gts.x.core.events.event.v1~'"
     }
   }
 }
@@ -850,7 +850,7 @@ The `barrier_mode` and `tenant_status` parameters apply to any scope source — 
 {
   "action": { "name": "create" },
   "resource": {
-    "type": "gts.x.events.event.v1~",
+    "type": "gts.x.core.events.event.v1~",
     "properties": { "owner_tenant_id": "tenant-B", "topic_id": "..." }
   }
   // ... subject, context
@@ -867,7 +867,7 @@ The `barrier_mode` and `tenant_status` parameters apply to any scope source — 
 // PEP -> PDP
 {
   "action": { "name": "list" },
-  "resource": { "type": "gts.x.events.event.v1~" }  // no id
+  "resource": { "type": "gts.x.core.events.event.v1~" }  // no id
   // ... subject, context
 }
 
@@ -893,7 +893,7 @@ The `barrier_mode` and `tenant_status` parameters apply to any scope source — 
 // PEP -> PDP
 {
   "action": { "name": "read" },
-  "resource": { "type": "gts.x.events.event.v1~", "id": "evt-123" }
+  "resource": { "type": "gts.x.core.events.event.v1~", "id": "evt-123" }
   // ... subject, context
 }
 
@@ -1307,6 +1307,8 @@ These questions require further design work before implementation.
 5. **Authorization decision caching** - See [Authorization Decision Caching](#authorization-decision-caching) section for detailed open questions: cache key structure, cache-control protocol, invalidation strategy, token expiration handling.
 
 6. **Observability** - Logging, tracing, and metrics for authorization flow. What to log (decisions, constraint compilation, PDP latency)? How to correlate authorization events with request traces? What metrics to expose (decision rates, cache hit/miss, PDP response times)? Privacy considerations for audit logs.
+
+7. **ABAC with related entity attributes** - Current predicates filter by resource's own properties (`owner_tenant_id`, `id`). Some ABAC policies require filtering by attributes of related entities (e.g., "tasks where project.status = 'active'" or "events where creator.department = 'engineering'"). This requires JOINs with other tables. Open questions: Should PDP return join-aware predicates? How to declare joinable relations in `supported_properties`? Performance implications of cross-table constraint compilation? Alternative: require denormalization of frequently-filtered attributes into the resource table.
 
 ---
 
