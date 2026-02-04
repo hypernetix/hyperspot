@@ -109,6 +109,26 @@ fn log_schema_chain_recursive(
     depth: usize,
 ) {
     // Cycle detection
+    if check_and_mark_visited(visited, schema_id, depth) {
+        return;
+    }
+
+    // Try to get the schema from the store
+    let Some(schema_content) = try_get_schema(ops, schema_id, depth) else {
+        return;
+    };
+
+    // Log the schema content
+    log_schema_content(schema_id, &schema_content, depth);
+
+    // Walk $ref and allOf references
+    for ref_id in collect_schema_refs(&schema_content) {
+        log_schema_chain_recursive(ops, &ref_id, visited, depth + 1);
+    }
+}
+
+/// Check if schema was already visited (cycle detection) and mark as visited
+fn check_and_mark_visited(visited: &mut HashSet<String>, schema_id: &str, depth: usize) -> bool {
     if visited.contains(schema_id) {
         warn!(
             schema_id = %schema_id,
@@ -116,24 +136,30 @@ fn log_schema_chain_recursive(
             "Cycle detected in schema chain at ID: {}",
             schema_id
         );
-        return;
+        return true;
     }
     visited.insert(schema_id.to_owned());
+    false
+}
 
-    // Try to get the schema from the store
-    let schema_content = if let Some(entity) = ops.store.get(schema_id) {
-        entity.content.clone()
+/// Try to retrieve schema content from the store
+fn try_get_schema(ops: &mut GtsOps, schema_id: &str, depth: usize) -> Option<Value> {
+    if let Some(entity) = ops.store.get(schema_id) {
+        Some(entity.content.clone())
     } else {
         debug!(
             schema_id = %schema_id,
             depth = depth,
             "Schema not found in store"
         );
-        return;
-    };
+        None
+    }
+}
 
-    let schema_json = serde_json::to_string_pretty(&schema_content)
-        .unwrap_or_else(|_| schema_content.to_string());
+/// Log the schema content with depth and role information
+fn log_schema_content(schema_id: &str, schema_content: &Value, depth: usize) {
+    let schema_json =
+        serde_json::to_string_pretty(schema_content).unwrap_or_else(|_| schema_content.to_string());
 
     let role = if depth == 0 {
         "Instance Schema"
@@ -148,11 +174,6 @@ fn log_schema_chain_recursive(
         role,
         schema_json
     );
-
-    // Walk $ref and allOf references
-    for ref_id in collect_schema_refs(&schema_content) {
-        log_schema_chain_recursive(ops, &ref_id, visited, depth + 1);
-    }
 }
 
 /// Collects all schema references from a JSON Schema.

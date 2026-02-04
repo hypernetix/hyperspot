@@ -440,6 +440,86 @@ impl ApiGateway {
             .await
             .map_err(|e| anyhow::anyhow!(e))
     }
+
+    /// Check if `handler_id` is already registered (returns true if duplicate)
+    fn check_duplicate_handler(&self, spec: &modkit::api::OperationSpec) -> bool {
+        if self
+            .registered_handlers
+            .insert(spec.handler_id.clone(), ())
+            .is_some()
+        {
+            tracing::error!(
+                handler_id = %spec.handler_id,
+                method = %spec.method.as_str(),
+                path = %spec.path,
+                "Duplicate handler_id detected; ignoring subsequent registration"
+            );
+            return true;
+        }
+        false
+    }
+
+    /// Check if route (method, path) is already registered (returns true if duplicate)
+    fn check_duplicate_route(&self, spec: &modkit::api::OperationSpec) -> bool {
+        let route_key = (spec.method.clone(), spec.path.clone());
+        if self.registered_routes.insert(route_key, ()).is_some() {
+            tracing::error!(
+                method = %spec.method.as_str(),
+                path = %spec.path,
+                "Duplicate (method, path) detected; ignoring subsequent registration"
+            );
+            return true;
+        }
+        false
+    }
+
+    /// Log successful operation registration
+    fn log_operation_registration(&self, spec: &modkit::api::OperationSpec) {
+        let current_count = self.openapi_registry.operation_specs.len();
+        tracing::debug!(
+            handler_id = %spec.handler_id,
+            method = %spec.method.as_str(),
+            path = %spec.path,
+            summary = %spec.summary.as_deref().unwrap_or("No summary"),
+            total_operations = current_count,
+            "Registered API operation"
+        );
+    }
+
+    /// Add `OpenAPI` documentation routes to the router
+    fn add_openapi_routes(&self, mut router: axum::Router) -> anyhow::Result<axum::Router> {
+        // Build once, serve as static JSON (no per-request parsing)
+        let op_count = self.openapi_registry.operation_specs.len();
+        tracing::info!(
+            "rest_finalize: emitting OpenAPI with {} operations",
+            op_count
+        );
+
+        let openapi_doc = Arc::new(self.build_openapi()?);
+
+        router = router
+            .route(
+                "/openapi.json",
+                get({
+                    use axum::{Json, http::header, response::IntoResponse};
+                    let doc = openapi_doc;
+                    move || async move {
+                        ([(header::CACHE_CONTROL, "no-store")], Json(doc.as_ref())).into_response()
+                    }
+                }),
+            )
+            .route("/docs", get(web::serve_docs));
+
+        #[cfg(feature = "embed_elements")]
+        {
+            router = router.route(
+                "/docs/assets/{*file}",
+                get(crate::assets::serve_elements_asset),
+            );
+        }
+
+        Ok(router)
+    }
 }
 
 // Manual implementation of Module trait with config loading
@@ -493,36 +573,7 @@ impl modkit::contracts::ApiGatewayCapability for ApiGateway {
         let config = self.get_cached_config();
 
         if config.enable_docs {
-            // Build once, serve as static JSON (no per-request parsing)
-            let op_count = self.openapi_registry.operation_specs.len();
-            tracing::info!(
-                "rest_finalize: emitting OpenAPI with {} operations",
-                op_count
-            );
-
-            let openapi_doc = Arc::new(self.build_openapi()?);
-
-            router = router
-                .route(
-                    "/openapi.json",
-                    get({
-                        use axum::{Json, http::header, response::IntoResponse};
-                        let doc = openapi_doc;
-                        move || async move {
-                            ([(header::CACHE_CONTROL, "no-store")], Json(doc.as_ref()))
-                                .into_response()
-                        }
-                    }),
-                )
-                .route("/docs", get(web::serve_docs));
-
-            #[cfg(feature = "embed_elements")]
-            {
-                router = router.route(
-                    "/docs/assets/{*file}",
-                    get(crate::assets::serve_elements_asset),
-                );
-            }
+            router = self.add_openapi_routes(router)?;
         }
 
         // Apply middleware stack (including auth) to the final router
@@ -557,42 +608,17 @@ impl modkit::contracts::RestApiCapability for ApiGateway {
 impl OpenApiRegistry for ApiGateway {
     fn register_operation(&self, spec: &modkit::api::OperationSpec) {
         // Reject duplicates with "first wins" policy (second registration = programmer error).
-        if self
-            .registered_handlers
-            .insert(spec.handler_id.clone(), ())
-            .is_some()
-        {
-            tracing::error!(
-                handler_id = %spec.handler_id,
-                method = %spec.method.as_str(),
-                path = %spec.path,
-                "Duplicate handler_id detected; ignoring subsequent registration"
-            );
+        if self.check_duplicate_handler(spec) {
             return;
         }
 
-        let route_key = (spec.method.clone(), spec.path.clone());
-        if self.registered_routes.insert(route_key, ()).is_some() {
-            tracing::error!(
-                method = %spec.method.as_str(),
-                path = %spec.path,
-                "Duplicate (method, path) detected; ignoring subsequent registration"
-            );
+        if self.check_duplicate_route(spec) {
             return;
         }
 
         // Delegate to the internal registry
         self.openapi_registry.register_operation(spec);
-
-        let current_count = self.openapi_registry.operation_specs.len();
-        tracing::debug!(
-            handler_id = %spec.handler_id,
-            method = %spec.method.as_str(),
-            path = %spec.path,
-            summary = %spec.summary.as_deref().unwrap_or("No summary"),
-            total_operations = current_count,
-            "Registered API operation"
-        );
+        self.log_operation_registration(spec);
     }
 
     fn ensure_schema_raw(
