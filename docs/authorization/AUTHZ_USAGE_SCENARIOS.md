@@ -1610,15 +1610,25 @@ Authorization: Bearer <token>
 **PDP → PEP Response:**
 ```json
 {
-  "decision": false
+  "decision": false,
+  "context": {
+    "deny_reason": {
+      "error_code": "gts.x.core.errors.err.v1~x.authz.errors.insufficient_permissions.v1",
+      "details": "Subject 'user-123' lacks 'list' permission on 'gts.x.tasks.task.v1~' in tenant 'T1'"
+    }
+  }
 }
 ```
 
 **PEP Action:**
 - No SQL query is executed
-- Return **403 Forbidden** immediately
+- Use `error_code` for programmatic handling (e.g., metrics, error categorization)
+- Log `deny_reason` for audit/debugging (includes `error_code` and `details`)
+- Return **403 Forbidden** to client without exposing `details`
 
 **Fail-closed principle:** The PEP never executes a database query when `decision: false`. This prevents any data leakage and ensures authorization is enforced before resource access.
+
+**Note on deny_reason:** The `deny_reason` is required when `decision: false`. PEP uses `error_code` for programmatic handling and logs `details` for troubleshooting, but returns a generic 403 response to prevent leaking authorization policy details to clients.
 
 ---
 

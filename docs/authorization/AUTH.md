@@ -768,6 +768,8 @@ Content-Type: application/json
 
 The response contains a `decision` and, when `decision: true`, optional `context.constraints`. Each constraint is an object with a `predicates` array that the PEP compiles to SQL.
 
+**Allow Response:**
+
 ```jsonc
 {
   "decision": true,
@@ -794,6 +796,23 @@ The response contains a `decision` and, when `decision: true`, optional `context
         ]
       }
     ]
+  }
+}
+```
+
+**Deny Response:**
+
+```jsonc
+{
+  "decision": false,
+  "context": {
+    // deny_reason is required when decision is false
+    "deny_reason": {
+      // GTS-formatted error code for programmatic handling (required)
+      "error_code": "gts.x.core.errors.err.v1~x.authz.errors.insufficient_permissions.v1",
+      // Human-readable details for logging (optional)
+      "details": "Subject lacks permission for action 'list' on resource type 'gts.x.events.event.v1~'"
+    }
   }
 }
 ```
@@ -927,11 +946,41 @@ The `barrier_mode` and `tenant_status` parameters apply to any scope source — 
 
 #### Deny Response
 
-```jsonc
-{
-  "decision": false
-}
+When the PDP denies access, it returns `decision: false` with a required `deny_reason` in the context (see example in [Response](#response) section above).
+
+##### Deny Reason Structure
+
+The `deny_reason` object is **required** when `decision: false` and provides structured information about why access was denied:
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `error_code` | Yes | GTS-formatted error code from Type Registry. Used for programmatic handling (e.g., retry logic, user messaging, metrics) |
+| `details` | No | Human-readable description for logging/debugging |
+
+##### Standard Error Codes
+
+| Code | When to use |
+|------|-------------|
+| `gts.x.core.errors.err.v1~x.authz.errors.insufficient_permissions.v1` | No matching policy, scope restricted, tenant boundary violation, missing role/permission |
+| `gts.x.core.errors.err.v1~x.authz.errors.invalid_request.v1` | Malformed request (missing required fields, invalid format, unknown resource type) |
+
+##### Vendor Extensibility
+
+Vendors can define custom error codes via GTS namespace for domain-specific denial reasons:
+
 ```
+gts.x.core.errors.err.v1~vendor.acme.license_expired.v1
+gts.x.core.errors.err.v1~vendor.acme.quota_exceeded.v1
+```
+
+##### PEP Handling of Deny Reason
+
+The PEP MUST:
+1. **Use `error_code` for programmatic handling** — Route to appropriate logic based on error type (e.g., distinguish `invalid_request` from `insufficient_permissions` for different error responses or retry strategies)
+2. **Log the deny_reason** — Include `error_code` and `details` in audit/debug logs for troubleshooting
+3. **NOT expose details to client** — Return generic 403 Forbidden without leaking `details` or internal denial reasons
+
+**Security rationale:** The `details` field may contain information about authorization policies, tenant structure, or resource existence. The PEP uses `error_code` for handling logic and logs `details` internally, but returns only a generic 403 to the client.
 
 ---
 
