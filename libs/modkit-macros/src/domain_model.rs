@@ -219,6 +219,11 @@ fn validate_field_type(ty: &Type, context: &str) -> syn::Result<()> {
 fn validate_type_path(type_path: &TypePath, context: &str) -> syn::Result<()> {
     let path = &type_path.path;
 
+    // Check qualified self type if present (e.g., <http::StatusCode as Trait>::Output)
+    if let Some(qself) = &type_path.qself {
+        validate_field_type(&qself.ty, context)?;
+    }
+
     // Check if the type path is forbidden
     if let Some(reason) = check_forbidden_path(path) {
         let path_str = type_path_to_string(path);
@@ -233,13 +238,14 @@ fn validate_type_path(type_path: &TypePath, context: &str) -> syn::Result<()> {
         ));
     }
 
-    // Recursively check generic arguments (e.g., Option<http::StatusCode>)
-    if let Some(last_segment) = path.segments.last()
-        && let syn::PathArguments::AngleBracketed(args) = &last_segment.arguments
-    {
-        for arg in &args.args {
-            if let syn::GenericArgument::Type(inner_ty) = arg {
-                validate_field_type(inner_ty, context)?;
+    // Recursively check generic arguments in ALL segments (not just last)
+    // This catches cases like Outer<http::StatusCode>::Inner
+    for segment in &path.segments {
+        if let syn::PathArguments::AngleBracketed(args) = &segment.arguments {
+            for arg in &args.args {
+                if let syn::GenericArgument::Type(inner_ty) = arg {
+                    validate_field_type(inner_ty, context)?;
+                }
             }
         }
     }
@@ -499,6 +505,38 @@ mod tests {
         let input: DeriveInput = parse_quote! {
             pub struct BadModel {
                 pub iter: Box<dyn Iterator<Item = http::StatusCode>>,
+            }
+        };
+
+        let output = expand_domain_model(&input);
+        let output_str = output.to_string();
+
+        assert!(output_str.contains("compile_error"));
+        assert!(output_str.contains("http"));
+    }
+
+    #[test]
+    fn test_forbidden_type_in_intermediate_segment_generic() {
+        // Outer<http::StatusCode>::Inner should be blocked
+        let input: DeriveInput = parse_quote! {
+            pub struct BadModel {
+                pub field: Outer<http::StatusCode>::Inner,
+            }
+        };
+
+        let output = expand_domain_model(&input);
+        let output_str = output.to_string();
+
+        assert!(output_str.contains("compile_error"));
+        assert!(output_str.contains("http"));
+    }
+
+    #[test]
+    fn test_forbidden_type_in_qself() {
+        // <http::StatusCode as SomeTrait>::Output should be blocked
+        let input: DeriveInput = parse_quote! {
+            pub struct BadModel {
+                pub field: <http::StatusCode as Default>::Output,
             }
         };
 
