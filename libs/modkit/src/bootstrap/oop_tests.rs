@@ -19,10 +19,7 @@ use tracing::Level;
 fn minimal_app_config() -> AppConfig {
     AppConfig {
         server: ServerConfig {
-            home_dir: std::env::temp_dir()
-                .join("modkit_test")
-                .to_string_lossy()
-                .to_string(),
+            home_dir: std::env::temp_dir().join("modkit_test"),
         },
         database: None,
         logging: None,

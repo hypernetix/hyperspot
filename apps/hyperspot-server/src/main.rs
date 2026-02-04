@@ -9,7 +9,7 @@ use modkit::bootstrap::config::{
     AppConfig, RuntimeKind, dump_effective_modules_config_json, dump_effective_modules_config_yaml,
     get_module_runtime_config, list_module_names, render_module_config_for_oop,
 };
-use modkit::bootstrap::host::{init_logging_unified, normalize_executable_path};
+use modkit::bootstrap::host::{init_logging_unified, normalize_path};
 use tokio_util::sync::CancellationToken;
 
 use std::path::{Path, PathBuf};
@@ -78,17 +78,10 @@ enum Commands {
 async fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    if let Some(ref path) = cli.config {
-        let path_str = path.to_string_lossy();
-        if !Path::new(path).is_file() {
-            anyhow::bail!("config file does not exist: {path_str}");
-        }
-    }
-
     // Layered config:
     // 1) defaults -> 2) YAML (if provided) -> 3) env (APP__*) -> 4) CLI overrides
     // Also normalizes + creates server.home_dir.
-    let mut config = AppConfig::load_or_default(cli.config.as_deref())?;
+    let mut config = AppConfig::load_or_default(&cli.config)?;
     config.apply_cli_overrides(cli.verbose);
 
     // Build OpenTelemetry layer before logging
@@ -100,10 +93,13 @@ async fn main() -> Result<()> {
         .and_then(|tc| serde_json::to_value(tc).ok())
         .and_then(|v| serde_json::from_value(v).ok());
     #[cfg(feature = "otel")]
-    let otel_layer = modkit_tracing_config
-        .as_ref()
-        .map(modkit::telemetry::init::init_tracing)
-        .transpose()?;
+    let otel_layer = if let Some(tc) = modkit_tracing_config.as_ref()
+        && tc.enabled
+    {
+        Some(modkit::telemetry::init::init_tracing(tc)?)
+    } else {
+        None
+    };
     #[cfg(not(feature = "otel"))]
     let otel_layer = None;
 
@@ -360,7 +356,7 @@ fn try_build_oop_module_config(
         anyhow::anyhow!("module '{module_name}' is type=oop but execution config is missing")
     })?;
 
-    let binary = normalize_executable_path(&exec_cfg.executable_path)?;
+    let binary = normalize_path(&exec_cfg.executable_path)?;
     let spawn_args = exec_cfg.args.clone();
     let env = exec_cfg.environment.clone();
 
