@@ -74,5 +74,5 @@ pkill -f hyperspot-server
 
 - [/docs](http://127.0.0.1:8087/docs) - Full API reference
 - [ARCHITECTURE_MANIFEST.md](ARCHITECTURE_MANIFEST.md) - Architecture principles
-- [MODKIT_UNIFIED_SYSTEM.md](MODKIT_UNIFIED_SYSTEM.md) - Module system
+- [MODKIT_UNIFIED_SYSTEM/README.md](./modkit_unified_system/README.md) - Module system
 - [../guidelines/NEW_MODULE.md](../guidelines/NEW_MODULE.md) - Create modules
