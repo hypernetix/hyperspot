@@ -2,7 +2,7 @@ name: PR Governance
 
 on:
   pull_request:
-    types: [opened]
+    types: [ opened ]
 
   schedule:
     - cron: "0 8 * * *"
@@ -22,9 +22,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Wait 5 minutes
-        run: sleep 300
-
       - name: Check reviewers and notify
         uses: actions/github-script@v7
         env:
