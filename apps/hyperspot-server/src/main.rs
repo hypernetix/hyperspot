@@ -48,10 +48,6 @@ struct Cli {
     #[arg(short, long, action = clap::ArgAction::Count)]
     verbose: u8,
 
-    /// Use mock database (`sqlite::memory`:) for all modules
-    #[arg(long)]
-    mock: bool,
-
     #[command(subcommand)]
     command: Option<Commands>,
 }
@@ -112,11 +108,6 @@ async fn main() -> Result<()> {
 
     tracing::info!("HyperSpot Server starting");
 
-    // Apply --mock override to config if requested (before any dumps)
-    if cli.mock {
-        override_modules_with_mock_db(&mut config);
-    }
-
     // Print config and exit if requested
     if cli.print_config {
         println!("Effective configuration:\n{}", config.to_yaml()?);
@@ -160,25 +151,4 @@ fn check_config(config: &AppConfig) -> Result<()> {
     println!("Configuration is valid");
     println!("{}", config.to_yaml()?);
     Ok(())
-}
-
-/// Override all module database configurations with in-memory `SQLite`
-fn override_modules_with_mock_db(config: &mut AppConfig) {
-    for module_value in config.modules.values_mut() {
-        if let Some(obj) = module_value.as_object_mut() {
-            obj.insert(
-                "database".to_owned(),
-                serde_json::json!({
-                    "dsn": "sqlite::memory:",
-                    "pool": {
-                        "max_conns": 1,
-                        "min_conns": 1
-                    },
-                    "params": {
-                        "journal_mode": "WAL"
-                    }
-                }),
-            );
-        }
-    }
 }
