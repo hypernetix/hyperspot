@@ -749,6 +749,10 @@ pub enum RegistryError {
         source: anyhow::Error,
     },
 
+    // Cancellation error
+    #[error("operation cancelled by termination signal")]
+    Cancelled,
+
     // Build/topo-sort errors
     #[error("unknown module '{0}'")]
     UnknownModule(String),
