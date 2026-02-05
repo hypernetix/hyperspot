@@ -47,6 +47,8 @@ ALWAYS open and follow `specs/reliability.md` WHEN adding retries/timeouts, shut
 
 ALWAYS open and follow `specs/compliance.md` WHEN changing supply-chain security, licenses, release governance, or policy tooling
 
+ALWAYS sign commits with DCO: use `git commit -s` for all commits, or enable auto-signing with `git config --global format.signoff true`
+
 ALWAYS open and follow `specs/patterns.md` WHEN designing modules/layers, ClientHub usage, or refactoring architecture
 
 ALWAYS open and follow `specs/gts.md` WHEN working with GTS identifiers, types registry, or docs validation
