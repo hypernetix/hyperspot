@@ -141,6 +141,44 @@ fn handle_no_context(method: &Method, path: &str) -> Response {
     unauthorized_response()
 }
 
+fn handle_authorization_error(message: &str, method: &Method, path: &str) -> Response {
+    tracing::warn!(
+        error = %message,
+        method = %method,
+        path = %path,
+        "License check failed due to authorization error"
+    );
+    Problem::new(
+        StatusCode::FORBIDDEN,
+        "Forbidden",
+        format!("License authorization failed: {message}"),
+    )
+    .into_response()
+}
+
+fn handle_missing_tenant_scope(method: &Method, path: &str) -> Response {
+    tracing::warn!(
+        method = %method,
+        path = %path,
+        "License check failed due to missing tenant scope"
+    );
+    unauthorized_response()
+}
+
+fn handle_generic_license_error(
+    error: &license_enforcer_sdk::LicenseEnforcerError,
+    method: &Method,
+    path: &str,
+) -> Response {
+    tracing::error!(
+        error = ?error,
+        method = %method,
+        path = %path,
+        "License check failed due to service error"
+    );
+    service_unavailable_response()
+}
+
 /// Map license enforcer error to HTTP response.
 fn map_license_error_to_response(
     error: &license_enforcer_sdk::LicenseEnforcerError,
@@ -151,36 +189,10 @@ fn map_license_error_to_response(
 
     match error {
         LicenseEnforcerError::Authorization { message } => {
-            tracing::warn!(
-                error = %message,
-                method = %method,
-                path = %path,
-                "License check failed due to authorization error"
-            );
-            Problem::new(
-                StatusCode::FORBIDDEN,
-                "Forbidden",
-                format!("License authorization failed: {message}"),
-            )
-            .into_response()
+            handle_authorization_error(message, method, path)
         }
-        LicenseEnforcerError::MissingTenantScope => {
-            tracing::warn!(
-                method = %method,
-                path = %path,
-                "License check failed due to missing tenant scope"
-            );
-            unauthorized_response()
-        }
-        _ => {
-            tracing::error!(
-                error = ?error,
-                method = %method,
-                path = %path,
-                "License check failed due to service error"
-            );
-            service_unavailable_response()
-        }
+        LicenseEnforcerError::MissingTenantScope => handle_missing_tenant_scope(method, path),
+        _ => handle_generic_license_error(error, method, path),
     }
 }
 

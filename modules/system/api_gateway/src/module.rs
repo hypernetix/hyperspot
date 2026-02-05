@@ -160,43 +160,13 @@ impl ApiGateway {
         Ok((auth_state, route_policy))
     }
 
-    /// Apply all middleware layers to a router (request ID, tracing, timeout, body limit, CORS, rate limiting, error mapping, auth)
-    ///
-    /// # Arguments
-    ///
-    /// * `router` - The router to apply middleware to
-    /// * `license_client` - Optional license enforcer client for license validation.
-    ///   When `None`, license validation falls back to stub behavior (BASE feature only).
-    pub(crate) fn apply_middleware_stack(
-        &self,
-        mut router: Router,
+    /// Apply license validation layer to router.
+    fn apply_license_layer(
+        router: Router,
         license_client: Option<middleware::license_validation::LicenseClient>,
-    ) -> Result<Router> {
-        // Build auth state and route policy once
-        let (auth_state, route_policy) = self.build_auth_state_from_specs()?;
-
-        // IMPORTANT: `axum::Router::layer(...)` behaves like Tower layers: the **last** added layer
-        // becomes the **outermost** layer and therefore runs **first** on the request path.
-        //
-        // Desired request execution order (outermost -> innermost):
-        // SetRequestId -> PropagateRequestId -> Trace -> push_req_id_to_extensions
-        // -> Timeout -> BodyLimit -> CORS -> MIME validation -> RateLimit -> ErrorMapping -> Auth -> Router
-        //
-        // Therefore we must add layers in the reverse order (innermost -> outermost) below.
-        // Due future refactoring, this order must be maintained.
-
-        let config = self.get_cached_config();
-
-        // Collect specs once; used by MIME validation + rate limiting maps.
-        let specs: Vec<_> = self
-            .openapi_registry
-            .operation_specs
-            .iter()
-            .map(|e| e.value().clone())
-            .collect();
-
-        // 12) License validation
-        let license_map = middleware::license_validation::LicenseRequirementMap::from_specs(&specs);
+        specs: &[modkit::api::OperationSpec],
+    ) -> Router {
+        let license_map = middleware::license_validation::LicenseRequirementMap::from_specs(specs);
 
         if license_client.is_some() {
             tracing::info!("License enforcer client found, enabling dynamic license validation");
@@ -211,27 +181,22 @@ impl ApiGateway {
             map: license_map,
         };
 
-        router = router.layer(from_fn(
+        router.layer(from_fn(
             move |req: axum::extract::Request, next: axum::middleware::Next| {
                 let state = license_state.clone();
                 middleware::license_validation::license_validation_middleware(state, req, next)
             },
-        ));
+        ))
+    }
 
-        // 11) Inject Policy Engine
-        router = router.layer(from_fn_with_state(
-            auth_state.policy_engine,
-            |State(engine): State<PolicyEngineRef>,
-             mut req: axum::extract::Request,
-             next: axum::middleware::Next| async move {
-                req.extensions_mut().insert(engine);
-                next.run(req).await
-            },
-        ));
-
-        // 10) Auth
+    /// Apply auth layer to router based on configuration.
+    fn apply_auth_layer(
+        router: Router,
+        config: &ApiGatewayConfig,
+        auth_state: &auth::AuthState,
+        route_policy: auth::GatewayRoutePolicy,
+    ) -> Router {
         if config.auth_disabled {
-            // Build security contexts for compatibility during migration
             let default_security_context = SecurityContext::builder()
                 .tenant_id(DEFAULT_TENANT_ID)
                 .subject_id(DEFAULT_SUBJECT_ID)
@@ -242,71 +207,34 @@ impl ApiGateway {
                  This mode bypasses authentication and is intended ONLY for single-user on-premises deployments without an IdP. \
                  Permission checks and secure ORM still apply. DO NOT use this mode in multi-tenant or production environments."
             );
-            router = router.layer(from_fn(
+
+            router.layer(from_fn(
                 move |mut req: axum::extract::Request, next: axum::middleware::Next| {
                     let sec_context = default_security_context.clone();
                     async move {
-                        // Insert both context types for compatibility during migration
                         req.extensions_mut().insert(sec_context);
                         next.run(req).await
                     }
                 },
-            ));
+            ))
         } else {
             let validator = auth_state.validator.clone();
             let authorizer = auth_state.authorizer.clone();
             let policy = Arc::new(route_policy) as Arc<dyn modkit_auth::RoutePolicy>;
 
-            router = router.layer(modkit_auth::axum_ext::AuthPolicyLayer::new(
+            router.layer(modkit_auth::axum_ext::AuthPolicyLayer::new(
                 validator, authorizer, policy,
-            ));
+            ))
         }
+    }
 
-        // 9) Error mapping (outer to auth so it can translate auth/handler errors)
-        router = router.layer(from_fn(modkit::api::error_layer::error_mapping_middleware));
+    /// Apply trace layer with OpenTelemetry integration to router.
+    fn apply_trace_layer(router: Router) -> Router {
+        use modkit::http::otel;
+        use tower_http::trace::TraceLayer;
+        use tracing::field::Empty;
 
-        // 8) Per-route rate limiting & in-flight limits
-        let rate_map = middleware::rate_limit::RateLimiterMap::from_specs(&specs, &config)?;
-        router = router.layer(from_fn(
-            move |req: axum::extract::Request, next: axum::middleware::Next| {
-                let map = rate_map.clone();
-                middleware::rate_limit::rate_limit_middleware(map, req, next)
-            },
-        ));
-
-        // 7) MIME type validation
-        let mime_map = middleware::mime_validation::build_mime_validation_map(&specs);
-        router = router.layer(from_fn(
-            move |req: axum::extract::Request, next: axum::middleware::Next| {
-                let map = mime_map.clone();
-                middleware::mime_validation::mime_validation_middleware(map, req, next)
-            },
-        ));
-
-        // 6) CORS (must be outer to auth/limits so OPTIONS preflight short-circuits)
-        if config.cors_enabled {
-            router = router.layer(crate::cors::build_cors_layer(&config));
-        }
-
-        // 5) Body limit
-        router = router.layer(RequestBodyLimitLayer::new(config.defaults.body_limit_bytes));
-        router = router.layer(DefaultBodyLimit::max(config.defaults.body_limit_bytes));
-
-        // 4) Timeout
-        router = router.layer(TimeoutLayer::with_status_code(
-            axum::http::StatusCode::GATEWAY_TIMEOUT,
-            Duration::from_secs(30),
-        ));
-
-        // 3) Record request_id into span + extensions (requires span to exist first => must be inner to Trace)
-        router = router.layer(from_fn(middleware::request_id::push_req_id_to_extensions));
-
-        // 2) Trace (outer to push_req_id_to_extensions)
-        router = router.layer({
-            use modkit::http::otel;
-            use tower_http::trace::TraceLayer;
-            use tracing::field::Empty;
-
+        router.layer(
             TraceLayer::new_for_http()
                 .make_span_with(move |req: &axum::http::Request<axum::body::Body>| {
                     let hdr = middleware::request_id::header();
@@ -326,7 +254,6 @@ impl ApiGateway {
                         request_id = %rid,
                         status = Empty,
                         latency_ms = Empty,
-                        // OpenTelemetry semantic conventions
                         "http.method" = %req.method(),
                         "http.target" = %req.uri().path(),
                         "http.scheme" = req.uri().scheme_str().unwrap_or("http"),
@@ -336,15 +263,11 @@ impl ApiGateway {
                         "user_agent.original" = req.headers().get("user-agent")
                             .and_then(|h| h.to_str().ok())
                             .unwrap_or("unknown"),
-                        // Trace context placeholders (for log correlation)
                         trace_id = Empty,
                         parent.trace_id = Empty
                     );
 
-                    // Set parent OTel trace context (W3C traceparent), if any
-                    // This also populates trace_id and parent.trace_id from headers
                     otel::set_parent_from_headers(&span, req.headers());
-
                     span
                 })
                 .on_response(
@@ -355,13 +278,120 @@ impl ApiGateway {
                         span.record("status", res.status().as_u16());
                         span.record("latency_ms", ms);
                     },
-                )
-        });
+                ),
+        )
+    }
 
-        // 1) Request ID handling
+    /// Apply all middleware layers to a router.
+    ///
+    /// This function applies the complete middleware stack in reverse order (innermost to outermost).
+    /// At runtime, requests flow through the stack from outermost to innermost:
+    /// SetRequestId → PropagateRequestId → Trace → push_req_id_to_extensions → Timeout →
+    /// BodyLimit → CORS → MIME → RateLimit → ErrorMapping → Auth → PolicyEngine →
+    /// LicenseValidation → Router.
+    ///
+    /// # Arguments
+    ///
+    /// * `router` - The router to apply middleware to
+    /// * `license_client` - Optional license enforcer client for license validation.
+    ///   When `None`, license validation falls back to stub behavior (BASE feature only).
+    pub(crate) fn apply_middleware_stack(
+        &self,
+        mut router: Router,
+        license_client: Option<middleware::license_validation::LicenseClient>,
+    ) -> Result<Router> {
+        let (auth_state, route_policy) = self.build_auth_state_from_specs()?;
+        let config = self.get_cached_config();
+
+        let specs: Vec<_> = self
+            .openapi_registry
+            .operation_specs
+            .iter()
+            .map(|e| e.value().clone())
+            .collect();
+
+        // Layer registration order (reverse of execution): innermost -> outermost
+        // Runtime execution order (outermost -> innermost):
+        //   1. SetRequestId         - Generate/extract request ID
+        //   2. PropagateRequestId   - Propagate request ID to response headers
+        //   3. Trace                - OpenTelemetry tracing and logging
+        //   4. push_req_id_to_extensions - Record request ID in span and extensions
+        //   5. Timeout              - Request timeout (30s gateway timeout)
+        //   6. BodyLimit            - Request body size limit
+        //   7. CORS                 - Cross-origin resource sharing (if enabled)
+        //   8. MIME                 - MIME type validation for request bodies
+        //   9. RateLimit            - Per-route rate limiting
+        //  10. ErrorMapping         - Map errors to Problem+JSON responses
+        //  11. Auth                 - Authentication and authorization (JWT validation, RBAC)
+        //  12. PolicyEngine         - Inject policy engine into request extensions
+        //  13. LicenseValidation    - Feature license validation per route
+        //  14. Router               - Route to handler (innermost)
+
+        // 13) License validation (registered first, runs late in pipeline)
+        router = Self::apply_license_layer(router, license_client, &specs);
+
+        // 12) Inject Policy Engine
+        let policy_engine = auth_state.policy_engine.clone();
+        router = router.layer(from_fn_with_state(
+            policy_engine,
+            |State(engine): State<PolicyEngineRef>,
+             mut req: axum::extract::Request,
+             next: axum::middleware::Next| async move {
+                req.extensions_mut().insert(engine);
+                next.run(req).await
+            },
+        ));
+
+        // 11) Auth
+        router = Self::apply_auth_layer(router, &config, &auth_state, route_policy);
+
+        // 10) Error mapping
+        router = router.layer(from_fn(modkit::api::error_layer::error_mapping_middleware));
+
+        // 9) Per-route rate limiting
+        let rate_map = middleware::rate_limit::RateLimiterMap::from_specs(&specs, &config)?;
+        router = router.layer(from_fn(
+            move |req: axum::extract::Request, next: axum::middleware::Next| {
+                let map = rate_map.clone();
+                middleware::rate_limit::rate_limit_middleware(map, req, next)
+            },
+        ));
+
+        // 8) MIME type validation
+        let mime_map = middleware::mime_validation::build_mime_validation_map(&specs);
+        router = router.layer(from_fn(
+            move |req: axum::extract::Request, next: axum::middleware::Next| {
+                let map = mime_map.clone();
+                middleware::mime_validation::mime_validation_middleware(map, req, next)
+            },
+        ));
+
+        // 7) CORS
+        if config.cors_enabled {
+            router = router.layer(crate::cors::build_cors_layer(&config));
+        }
+
+        // 6) Body limit
+        router = router.layer(RequestBodyLimitLayer::new(config.defaults.body_limit_bytes));
+        router = router.layer(DefaultBodyLimit::max(config.defaults.body_limit_bytes));
+
+        // 5) Timeout
+        router = router.layer(TimeoutLayer::with_status_code(
+            axum::http::StatusCode::GATEWAY_TIMEOUT,
+            Duration::from_secs(30),
+        ));
+
+        // 4) Record request_id into span + extensions
+        router = router.layer(from_fn(middleware::request_id::push_req_id_to_extensions));
+
+        // 3) Trace
+        router = Self::apply_trace_layer(router);
+
+        // 2) PropagateRequestId (propagate request ID to response headers)
         let x_request_id = crate::middleware::request_id::header();
-        // If missing, generate x-request-id first; then propagate it to the response.
         router = router.layer(PropagateRequestIdLayer::new(x_request_id.clone()));
+
+        // 1) SetRequestId (registered last, runs first - outermost layer)
         router = router.layer(SetRequestIdLayer::new(
             x_request_id,
             crate::middleware::request_id::MakeReqId,
