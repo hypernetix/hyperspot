@@ -3026,7 +3026,6 @@ dependencies = [
  "cf-file-parser",
  "cf-grpc-hub",
  "cf-modkit",
- "cf-modkit-db",
  "cf-module-orchestrator",
  "cf-nodes-registry",
  "cf-simple-user-settings",
@@ -3037,18 +3036,15 @@ dependencies = [
  "clap",
  "contoso_tr_plugin",
  "fabrikam_tr_plugin",
- "figment",
  "mimalloc",
  "serde-saphyr",
  "serde_json",
  "tempfile",
  "tenant_resolver-gw",
  "tokio",
- "tokio-util",
  "tracing",
  "types",
  "users_info",
- "uuid",
 ]
 
 [[package]]
