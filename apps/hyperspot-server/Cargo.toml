@@ -22,15 +22,10 @@ single-tenant = ["dep:single-tenant-tr-plugin"]
 static-tenants = ["dep:static-tr-plugin"]
 otel = ["modkit/otel"]
 
-[[bin]]
-name = "hyperspot-server"
-path = "src/main.rs"
-
 [dependencies]
 mimalloc = { version = "0.1" }
 # Local crates
-modkit = { workspace = true, features = ["otel", "bootstrap"] }
-modkit-db = { workspace = true, features = ["sqlite", "pg"] }
+modkit = { workspace = true, features = ["bootstrap"] }
 
 # System modules
 api_gateway = { package = "cf-api-gateway", path = "../../modules/system/api_gateway" }
@@ -51,12 +46,9 @@ simple_user_settings = { package = "cf-simple-user-settings", path = "../../modu
 
 anyhow = { workspace = true }
 tokio = { workspace = true }
-tokio-util = { workspace = true, features = ["rt"] }
 tracing = { workspace = true }
 clap = { workspace = true }
 serde_json = { workspace = true }
-figment = { workspace = true, features = ["yaml", "env"] }
-uuid = { workspace = true }
 
 # Optional example module
 users_info = { path = "../../examples/modkit/users_info/users_info", optional = true }

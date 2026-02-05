@@ -477,11 +477,7 @@ pub async fn run_oop_with_options(opts: OopRunOptions) -> Result<()> {
     let otel_layer = None;
 
     // Initialize logging with MERGED config (master base + local override)
-    init_logging_unified(
-        &merged_logging,
-        std::path::Path::new(&config.server.home_dir),
-        otel_layer,
-    );
+    init_logging_unified(&merged_logging, &config.server.home_dir, otel_layer);
 
     // Now we can log - report what we received from master
     if let Some(ref rc) = rendered_config {
