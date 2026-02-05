@@ -34,6 +34,7 @@ Templates work standalone or can be enhanced with FDD annotations (`fdd-id`) for
 | Template | Purpose | Layer |
 |----------|---------|-------|
 | [PRD.md](./PRD.md) | Product Requirements Document — vision, actors, capabilities, use cases, FR, NFR | Foundation |
+| [UPSTREAM_REQS.md](./UPSTREAM_REQS.md) | Upstream Requirements — technical requirements FROM other modules TO this module | Integration |
 | [DESIGN.md](./DESIGN.md) | Technical Design — architecture, principles, constraints, domain model, API contracts | System-level |
 | [ADR.md](./ADR.md) | Architecture Decision Record — capture decisions, options, trade-offs, consequences | Cross-cutting |
 | [FEATURE.md](./FEATURE.md) | Feature Specification — flows, algorithms, states, requirements (FDL format) | Feature-level |
@@ -64,6 +65,20 @@ Standards alignment:
   - ISO/IEC 15288 / 12207 (requirements definition)
 
 Note: Stakeholder needs (per ISO 29148) managed at project/task level by steering committee.
+
+### UPSTREAM_REQS.md
+**Per upstream module** (repeat for each upstream module):
+1. **UPSTREAM: {upstream module name}** — H1 section for each upstream module
+2. **System Actor Definition** — How the upstream module interacts with target module
+3. **Functional Requirements** — Capabilities the target module must provide
+4. **Non-Functional Requirements** — NFRs imposed by upstream module
+5. **Public Interface Requirements** — Interfaces that must be exposed
+
+Standards alignment:
+  - IEEE 830 / ISO/IEC/IEEE 29148:2018 (requirements specification)
+  - ISO/IEC 15288 / 12207 (interface requirements)
+
+Note: Optional document. UPSTREAM_REQS captures what OTHER modules need FROM this module. Each upstream module gets its own H1 section. Use when upstream requirements are known before the module's PRD is complete, or for API-first design.
 
 ### DESIGN.md
 1. **Architecture Overview** — Vision, drivers (functional + NFR allocation table), layers
@@ -109,6 +124,28 @@ Standards alignment:
 Architecture Decision Records capture **why** a technical decision was made, not just what was decided. Each ADR documents the context, problem statement, considered options, and the chosen solution with its trade-offs. This creates an institutional memory that prevents re-debating settled decisions and helps new team members understand the rationale behind the architecture.
 
 Use ADRs only when there was a meaningful discussion/debate and the rationale needs to be preserved as a historical decision record. Use ADRs for real decision dilemmas and final decision state. Decision history is in git; keep one ADR per decision.
+
+### About Upstream Requirements (UPSTREAM_REQS.md)
+
+Upstream Requirements documents are optional and capture technical requirements **imposed ON** a module **BY** other modules (consumers, dependencies, surrounding systems). This creates an external perspective complementing the internal perspective of PRD.md.
+
+**Key differences from PRD:**
+- **PRD.md**: "What does THIS module do?" (internal goals and capabilities)
+- **UPSTREAM_REQS.md**: "What do OTHER modules need FROM this module?" (external obligations)
+
+**When to use:**
+- **Early-stage development**: Upstream needs are known before the module's full PRD exists
+- **API-first design**: Consumers define interface requirements before implementation
+- **Integration planning**: Capture cross-module dependencies explicitly
+- **Incremental development**: Build features driven by actual consumer needs rather than speculation
+
+**Structure benefits:**
+- Requirements grouped by source module for clear ownership
+- Each upstream module has its own section with actors, FRs, NFRs, and interfaces
+- Cross-module requirements section for shared needs
+- Integration contract matrix for visibility across all consumers
+
+A single UPSTREAM_REQS.md can contain requirements from multiple upstream modules, making it a central integration point for the target module.
 
 ### About Feature Files (features/*.md)
 
