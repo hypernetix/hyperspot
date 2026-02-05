@@ -58,9 +58,20 @@ jobs:
                 );
 
               const humanTeams = pr.requested_teams || [];
-              const hasValidReviewers = humanReviewers.length > 0 || humanTeams.length > 0;
-
-              if (hasValidReviewers) continue;
+              if (humanReviewers.length > 0 || humanTeams.length > 0) continue;
+              const reviews = await github.paginate(github.rest.pulls.listReviews, {
+                owner,
+                repo,
+                pull_number: pr.number
+              });
+              const humanReviewed = reviews
+                .map(r => r.user?.login)
+                .filter(login =>
+                  login &&
+                  !login.endsWith("[bot]") &&
+                  !ignoredReviewers.has(login)
+                );
+              if (humanReviewed.length > 0) continue;
 
               // Check if we already commented
               const comments = await github.paginate(github.rest.issues.listComments, {
@@ -100,7 +111,7 @@ jobs:
               });
 
               try {
-                await fetch(
+                const resp = await fetch(
                   `https://api.telegram.org/bot${
                     process.env.TELEGRAM_BOT_TOKEN
                   }/sendMessage`,
@@ -113,6 +124,13 @@ jobs:
                     })
                   }
                 );
+                if (!resp.ok) {
+                  const body = await resp.text().catch(() => "");
+                  console.error(
+                    `Telegram API error ${resp.status} ${resp.statusText}`,
+                    body
+                  );
+                }
               } catch (error) {
                 console.error("Failed to send Telegram message", error);
               }
