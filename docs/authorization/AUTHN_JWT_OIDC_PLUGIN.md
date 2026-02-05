@@ -636,7 +636,7 @@ auth:
 
 **Notes:**
 - Token expiration (`exp`) is validated during authentication but not included in SecurityContext. Expiration is token metadata, not identity. The caching layer uses `exp` as upper bound for cache entry TTL.
-- **Security:** `bearer_token` is a credential. It MUST NOT be logged, serialized to persistent storage, or included in error messages. Implementations should use opaque wrapper types (e.g., `Secret<String>`) and exclude from `Debug` output. The token is included for two purposes:
+- **Security:** `bearer_token` is a credential. It MUST NOT be logged, serialized to persistent storage, or included in error messages. The field uses `Secret<String>` from the [secrecy](https://crates.io/crates/secrecy) crate which provides: redacted `Debug` output (`[REDACTED]`), no `Display` impl, and zeroization on drop. The token is included for two purposes:
   1. **Forwarding** — AuthZ Resolver plugin may need to call external vendor services that require the original bearer token for authentication
   2. **PDP validation** — In out-of-process deployments, AuthZ Resolver (PDP) may independently validate the token as defence-in-depth, not trusting the PEP's claim extraction
 

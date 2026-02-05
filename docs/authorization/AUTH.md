@@ -295,7 +295,7 @@ SecurityContext {
     subject_id: "user-123",
     subject_type: Some("gts.x.core.security.subject_user.v1~"),  // optional
     subject_tenant_id: Some("tenant-456"),                       // optional
-    bearer_token: Some("eyJ..."),                                // optional
+    bearer_token: Some(Secret::new("eyJ...".into())),            // optional, Secret<String>
     token_scopes: ["*"],  // first-party: full access
     // OR
     token_scopes: ["read:events", "write:tasks"],  // third-party: limited
@@ -445,12 +445,14 @@ pub struct AuthenticationResult {
 The `SecurityContext` is extracted from `AuthenticationResult` and flows from AuthN Resolver to PEPs (via handlers):
 
 ```rust
+use secrecy::Secret;
+
 SecurityContext {
     subject_id: String,                    // required - from `sub` claim or IdP response
     subject_type: Option<GtsTypeId>,       // optional - vendor-specific subject type
     subject_tenant_id: Option<TenantId>,   // optional - Subject Owner Tenant
     token_scopes: Vec<String>,             // required - capability restrictions (["*"] for first-party)
-    bearer_token: Option<String>,          // optional - original token for forwarding to PDP
+    bearer_token: Option<Secret<String>>,  // optional - original token for forwarding to PDP
 }
 ```
 
@@ -462,11 +464,12 @@ SecurityContext {
 | `subject_type` | No | GTS type identifier (e.g., `gts.x.core.security.subject_user.v1~`) | PDP for role/permission mapping |
 | `subject_tenant_id` | No | Subject Owner Tenant — tenant the subject belongs to | PDP for tenant context |
 | `token_scopes` | Yes | Capability restrictions from token (see [Token Scopes](#token-scopes)) | PDP for scope narrowing |
-| `bearer_token` | No | Original bearer token | PDP validation, external API calls |
+| `bearer_token` | No | Original bearer token (wrapped in `Secret` from [secrecy](https://crates.io/crates/secrecy) crate) | PDP validation, external API calls |
 
 **Security Notes:**
 - Token expiration (`exp`) is validated during authentication but not included in SecurityContext (expiration is token metadata, not identity)
-- `bearer_token` is a credential and MUST NOT be logged, serialized to persistent storage, or included in error messages
+- `bearer_token` uses `Secret<String>` from the `secrecy` crate which provides: redacted `Debug` output, no `Display` impl, and zeroization on drop
+- `bearer_token` MUST NOT be logged, serialized to persistent storage, or included in error messages
 - The token is included for:
   1. **PDP validation** — In out-of-process deployments, AuthZ Resolver may independently validate the token for defense-in-depth
   2. **Forwarding** — AuthZ Resolver plugin may need to call external vendor services requiring authentication
@@ -759,7 +762,7 @@ Content-Type: application/json
     "require_constraints": true,   // handler config: LIST requires constraints
     "capabilities": ["tenant_hierarchy"],  // module config: has tenant_closure table
     "supported_properties": ["owner_tenant_id", "topic_id", "id"],  // handler config: properties PEP can map to SQL
-    "bearer_token": "eyJhbGciOiJSUzI1NiIs..."  // SecurityContext.bearer_token (optional, see notes below)
+    "bearer_token": "eyJhbGciOiJSUzI1NiIs..."  // SecurityContext.bearer_token: Secret<String> (optional, see notes below)
   }
 }
 ```
@@ -817,7 +820,7 @@ The response contains a `decision` and, when `decision: true`, optional `context
 }
 ```
 
-**Note on `bearer_token`:** The `context.bearer_token` field is optional. Include it when PDP needs to: (1) validate token independently (defense-in-depth in OoP deployments), (2) call external vendor APIs requiring authentication, or (3) extract token-embedded policies/scopes. Omit it if PDP fully trusts PEP's claim extraction. Security: bearer_token is a credential — PDP MUST NOT log it or persist it.
+**Note on `bearer_token`:** The `context.bearer_token` field is optional. Include it when PDP needs to: (1) validate token independently (defense-in-depth in OoP deployments), (2) call external vendor APIs requiring authentication, or (3) extract token-embedded policies/scopes. Omit it if PDP fully trusts PEP's claim extraction. Security: `bearer_token` is a credential — PDP MUST NOT log it or persist it. In Rust code, use `Secret<String>` from the `secrecy` crate (serializes to plain string in JSON).
 
 **Note on `tenant_context`:** The `context.tenant_context` object is optional. It defines the tenant context for the operation:
 
