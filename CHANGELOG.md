@@ -9,6 +9,72 @@ release-plz updates this file in the Release PR.
 
 ## [Unreleased]
 
+## [0.1.2](https://github.com/hypernetix/hyperspot/compare/cf-tenant-resolver-gw-v0.1.1...cf-tenant-resolver-gw-v0.1.2) - 2026-02-05
+
+### Other
+
+- updated the following local packages: cf-modkit-security, cf-modkit-odata, cf-modkit, cf-types-registry-sdk, cf-tenant-resolver-sdk
+
+## [0.1.2](https://github.com/hypernetix/hyperspot/compare/cf-static-tr-plugin-v0.1.1...cf-static-tr-plugin-v0.1.2) - 2026-02-05
+
+### Other
+
+- updated the following local packages: cf-modkit-security, cf-modkit-odata, cf-modkit, cf-types-registry-sdk, cf-tenant-resolver-sdk
+
+## [0.1.2](https://github.com/hypernetix/hyperspot/compare/cf-single-tenant-tr-plugin-v0.1.1...cf-single-tenant-tr-plugin-v0.1.2) - 2026-02-05
+
+### Other
+
+- updated the following local packages: cf-modkit-security, cf-modkit-odata, cf-modkit, cf-types-registry-sdk, cf-tenant-resolver-sdk
+
+## [0.1.2](https://github.com/hypernetix/hyperspot/compare/cf-tenant-resolver-sdk-v0.1.1...cf-tenant-resolver-sdk-v0.1.2) - 2026-02-05
+
+### Other
+
+- updated the following local packages: cf-modkit-security, cf-modkit-odata, cf-modkit
+
+## [0.1.2](https://github.com/hypernetix/hyperspot/compare/cf-nodes-registry-v0.1.1...cf-nodes-registry-v0.1.2) - 2026-02-05
+
+### Other
+
+- updated the following local packages: cf-modkit-macros, cf-modkit, cf-modkit-node-info, cf-nodes-registry-sdk
+
+## [0.1.2](https://github.com/hypernetix/hyperspot/compare/cf-nodes-registry-sdk-v0.1.1...cf-nodes-registry-sdk-v0.1.2) - 2026-02-05
+
+### Other
+
+- updated the following local packages: cf-modkit-node-info
+
+## [0.1.2](https://github.com/hypernetix/hyperspot/compare/cf-module-orchestrator-v0.1.1...cf-module-orchestrator-v0.1.2) - 2026-02-05
+
+### Other
+
+- updated the following local packages: cf-modkit, cf-system-sdks
+
+## [0.1.2](https://github.com/hypernetix/hyperspot/compare/cf-types-registry-sdk-v0.1.1...cf-types-registry-sdk-v0.1.2) - 2026-02-05
+
+### Other
+
+- updated the following local packages: cf-modkit-security
+
+## [0.1.2](https://github.com/hypernetix/hyperspot/compare/cf-grpc-hub-v0.1.1...cf-grpc-hub-v0.1.2) - 2026-02-05
+
+### Other
+
+- updated the following local packages: cf-modkit-transport-grpc, cf-modkit, cf-system-sdks
+
+## [0.1.6](https://github.com/hypernetix/hyperspot/compare/cf-system-sdks-v0.1.5...cf-system-sdks-v0.1.6) - 2026-02-05
+
+### Other
+
+- updated the following local packages: cf-system-sdk-directory
+
+## [0.1.6](https://github.com/hypernetix/hyperspot/compare/cf-system-sdk-directory-v0.1.5...cf-system-sdk-directory-v0.1.6) - 2026-02-05
+
+### Other
+
+- updated the following local packages: cf-modkit-transport-grpc
+
 ## [0.1.5](https://github.com/hypernetix/hyperspot/compare/cf-system-sdks-v0.1.4...cf-system-sdks-v0.1.5) - 2026-02-02
 
 ### Other
