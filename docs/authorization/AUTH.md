@@ -753,7 +753,6 @@ Content-Type: application/json
     "tenant_context": {
       "mode": "subtree",           // "root_only" | "subtree", default: "subtree"
       "root_id": "51f18034-3b2f-4bfa-bb99-22113bddee68",  // optional - request param (URL query, header), handler can set
-      "include_root": true,        // subtree mode only, default: true, ignored for root_only
       "barrier_mode": "all",       // default: "all"
       "tenant_status": ["active", "suspended"]  // optional filter
     },
@@ -828,7 +827,6 @@ The response contains a `decision` and, when `decision: true`, optional `context
 |-------|----------|---------|-------------|
 | `mode` | No | `"subtree"` | `"root_only"` (single tenant) or `"subtree"` (tenant + descendants) |
 | `root_id` | No | — | Root tenant ID. If absent, PDP determines from `token_scopes`, `bearer_token`, or `subject.properties.tenant_id` |
-| `include_root` | No | `true` | For `subtree` mode: include root in results. Ignored for `root_only` |
 | `barrier_mode` | No | `"all"` | `"all"` (respect barriers) or `"none"` (ignore barriers) |
 | `tenant_status` | No | — | Filter by tenant status (e.g., `["active", "suspended"]`) |
 
@@ -1333,4 +1331,4 @@ These questions require further design work before implementation.
 - [TENANT_MODEL.md](./TENANT_MODEL.md) — Tenant topology, barriers, closure tables
 - [RESOURCE_GROUP_MODEL.md](./RESOURCE_GROUP_MODEL.md) — Resource group topology, membership, hierarchy
 - [AUTHZ_USAGE_SCENARIOS.md](./AUTHZ_USAGE_SCENARIOS.md) — Authorization usage scenarios
-- [HyperSpot GTS (Global Type System)](../../modules/types-registry/)
+- [HyperSpot GTS (Global Type System)](../../modules/system/types-registry/)

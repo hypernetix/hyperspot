@@ -281,8 +281,8 @@ claim_mapping:
 
 **Behavior:**
 - Plugin extracts claim value using specified name
-- If claim is missing and field is required (`subject_id`, `subject_tenant_id`) → authentication fails
-- If claim is missing and field is optional (`subject_type`) → field is omitted from SecurityContext
+- If claim is missing and field is required (`subject_id`) → authentication fails
+- If claim is missing and field is optional (`subject_type`, `subject_tenant_id`) → field is omitted from SecurityContext
 
 #### jwks.cache.ttl
 
@@ -610,7 +610,7 @@ The claim mapping is configured via [jwt.claim_mapping](#jwtclaim_mapping) and [
 |-----------------------|---------------------|------------------|-------|
 | `subject_id` | `sub` | `claim_mapping.subject_id` | Required, unique subject identifier |
 | `subject_type` | (vendor-defined) | `claim_mapping.subject_type` | Optional, GTS type ID (e.g., `gts.x.core.security.subject_user.v1~`) |
-| `subject_tenant_id` | (vendor-defined) | `claim_mapping.subject_tenant_id` | Required, Subject Owner Tenant |
+| `subject_tenant_id` | (vendor-defined) | `claim_mapping.subject_tenant_id` | Optional, Subject Owner Tenant |
 | `token_scopes` | `scope` (space-separated) | `claim_mapping.token_scopes` | Array of scopes, split on spaces |
 | `bearer_token` | Original from `Authorization` header | N/A | Optional, for PDP forwarding |
 
@@ -628,7 +628,7 @@ auth:
 **Mapping Process:**
 1. Plugin reads token claims (JWT) or introspection response fields
 2. Applies claim mapping configuration to extract values
-3. Validates required fields are present (`subject_id`, `subject_tenant_id`)
+3. Validates required fields are present (`subject_id`)
 4. Splits `token_scopes` on spaces if it's a string
 5. Constructs `SecurityContext` from extracted claims
 6. Wraps `SecurityContext` in `AuthenticationResult`

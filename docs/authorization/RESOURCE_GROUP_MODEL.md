@@ -241,4 +241,4 @@ Resource groups operate **within** tenant boundaries. They provide additional or
 
 - [AUTH.md](./AUTH.md) — Core authorization design
 - [TENANT_MODEL.md](./TENANT_MODEL.md) — Tenant topology, barriers, closure tables
-- [SCENARIOS.md](./SCENARIOS.md) — Authorization scenarios with resource group examples
+- [AUTHZ_USAGE_SCENARIOS.md](./AUTHZ_USAGE_SCENARIOS.md) — Authorization scenarios with resource group examples
