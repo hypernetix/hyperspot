@@ -69,7 +69,18 @@ impl Module for InMemoryCachePlugin {
             properties: LicenseCachePluginSpecV1,
         };
         let instance_json = serde_json::to_value(&instance)?;
-        let _ = registry.register(vec![instance_json]).await?;
+
+        // Register plugin instance and check for per-entity failures
+        let results = registry.register(vec![instance_json]).await?;
+        for result in results {
+            if let types_registry_sdk::RegisterResult::Err { gts_id, error } = result {
+                let instance_id_str = instance_id.to_string();
+                let gts_id_str = gts_id.as_deref().unwrap_or(&instance_id_str);
+                return Err(anyhow::anyhow!(
+                    "Failed to register plugin instance '{gts_id_str}': {error}"
+                ));
+            }
+        }
 
         // Register scoped client in ClientHub
         let client = Arc::new(Client::new(service));

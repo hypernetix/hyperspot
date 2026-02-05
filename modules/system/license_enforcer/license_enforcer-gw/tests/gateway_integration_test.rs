@@ -17,6 +17,7 @@ use license_enforcer_sdk::{
     global_features,
 };
 use modkit::config::ConfigProvider;
+use modkit::gts::BaseModkitPluginV1;
 use modkit::{ClientHub, Module, ModuleCtx};
 use modkit_security::SecurityContext;
 use nocache_plugin::NoCachePlugin;
@@ -556,18 +557,25 @@ async fn test_missing_tenant_scope() {
         "test.counting.cache.v1",
     );
 
+    // Construct proper BaseModkitPluginV1 instances with properties field
+    let platform_instance = BaseModkitPluginV1::<LicensePlatformPluginSpecV1> {
+        id: platform_instance_id.clone(),
+        vendor: "hyperspot".to_owned(),
+        priority: 100,
+        properties: LicensePlatformPluginSpecV1,
+    };
+    let cache_instance = BaseModkitPluginV1::<LicenseCachePluginSpecV1> {
+        id: cache_instance_id.clone(),
+        vendor: "hyperspot".to_owned(),
+        priority: 100,
+        properties: LicenseCachePluginSpecV1,
+    };
+
     registry
         .register(vec![
-            serde_json::json!({
-                "id": platform_instance_id.as_ref(),
-                "vendor": "hyperspot",
-                "priority": 100
-            }),
-            serde_json::json!({
-                "id": cache_instance_id.as_ref(),
-                "vendor": "hyperspot",
-                "priority": 100
-            }),
+            serde_json::to_value(&platform_instance)
+                .expect("Failed to serialize platform instance"),
+            serde_json::to_value(&cache_instance).expect("Failed to serialize cache instance"),
         ])
         .await
         .expect("Plugin registration failed");
