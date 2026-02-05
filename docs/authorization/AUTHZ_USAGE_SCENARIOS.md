@@ -815,7 +815,7 @@ WHERE id = 'task-456'
   AND owner_tenant_id = 'T1'
 ```
 
-**Note:** No prefetch needed, no closure table required. PDP returns direct `eq` constraint based on context tenant. This pattern applies when the endpoint operates within a single tenant context, regardless of whether the overall tenant model is hierarchical.
+**Note:** No prefetch needed, no closure table required. PDP returns direct `eq` constraint based on context tenant. This pattern applies when the endpoint operates within a single-tenant context, regardless of whether the overall tenant model is hierarchical.
 
 ---
 
