@@ -4,7 +4,8 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use license_enforcer_sdk::{
-    EnabledGlobalFeatures, LicenseEnforcerError, LicenseEnforcerGatewayClient, LicenseFeatureID,
+    EnabledGlobalFeatures, LicenseEnforcerError, LicenseEnforcerGatewayClient,
+    models::LicenseFeatureId,
 };
 use modkit_security::SecurityContext;
 
@@ -30,13 +31,13 @@ impl LocalClient {
 impl LicenseEnforcerGatewayClient for LocalClient {
     #[tracing::instrument(skip_all, fields(
         tenant_id = %tenant_id,
-        feature = %feature_id.as_str()
+        feature = %feature_id.as_ref()
     ))]
     async fn is_global_feature_enabled(
         &self,
         ctx: &SecurityContext,
         tenant_id: uuid::Uuid,
-        feature_id: &LicenseFeatureID,
+        feature_id: &dyn LicenseFeatureId,
     ) -> Result<bool, LicenseEnforcerError> {
         self.service
             .is_global_feature_enabled(ctx, tenant_id, feature_id)
@@ -45,7 +46,7 @@ impl LicenseEnforcerGatewayClient for LocalClient {
     }
 
     #[tracing::instrument(skip_all, fields(tenant_id = %tenant_id))]
-    async fn enabled_global_features(
+    async fn list_enabled_global_features(
         &self,
         ctx: &SecurityContext,
         tenant_id: uuid::Uuid,

@@ -7,8 +7,7 @@
 use async_trait::async_trait;
 use modkit_security::SecurityContext;
 
-use crate::error::LicenseEnforcerError;
-use crate::models::{EnabledGlobalFeatures, LicenseFeatureID};
+use crate::{EnabledGlobalFeatures, error::LicenseEnforcerError, models::LicenseFeatureId};
 
 /// Public API trait for license enforcement gateway.
 ///
@@ -34,11 +33,11 @@ use crate::models::{EnabledGlobalFeatures, LicenseFeatureID};
 /// # let ctx = SecurityContext::builder().tenant_id(tenant_id).subject_id(Uuid::new_v4()).build();
 ///
 /// // Check a single feature
-/// let feature = global_features::to_feature_id(global_features::CYBER_CHAT);
+/// let feature = global_features::CyberChatFeature;
 /// let enabled = client.is_global_feature_enabled(&ctx, tenant_id, &feature).await?;
 ///
 /// // List all enabled features
-/// let features = client.enabled_global_features(&ctx, tenant_id).await?;
+/// let features = client.list_enabled_global_features(&ctx, tenant_id).await?;
 /// # Ok(())
 /// # }
 /// ```
@@ -67,7 +66,7 @@ pub trait LicenseEnforcerGatewayClient: Send + Sync {
         &self,
         ctx: &SecurityContext,
         tenant_id: uuid::Uuid,
-        feature_id: &LicenseFeatureID,
+        feature_id: &dyn LicenseFeatureId,
     ) -> Result<bool, LicenseEnforcerError>;
 
     /// List all enabled global features for the tenant.
@@ -90,7 +89,7 @@ pub trait LicenseEnforcerGatewayClient: Send + Sync {
     /// Returns error if:
     /// - Platform plugin is unavailable
     /// - Platform query fails
-    async fn enabled_global_features(
+    async fn list_enabled_global_features(
         &self,
         ctx: &SecurityContext,
         tenant_id: uuid::Uuid,

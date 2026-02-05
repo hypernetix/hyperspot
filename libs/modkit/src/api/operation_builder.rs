@@ -13,6 +13,7 @@
 
 use crate::api::{api_dto, problem};
 use axum::{Router, handler::Handler, routing::MethodRouter};
+use gts::GtsID;
 use http::Method;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -142,9 +143,7 @@ pub trait AuthReqResource: AsRef<str> {}
 
 pub trait AuthReqAction: AsRef<str> {}
 
-pub trait LicenseFeature: AsRef<str> {}
-
-impl<T: LicenseFeature + ?Sized> LicenseFeature for &T {}
+pub trait LicenseFeature: Into<GtsID> {}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ParamLocation {
@@ -199,7 +198,7 @@ pub struct OperationSecRequirement {
 /// License requirement specification for an operation
 #[derive(Clone, Debug)]
 pub struct LicenseReqSpec {
-    pub license_names: Vec<String>,
+    pub license_ids: Vec<GtsID>,
 }
 
 /// Simplified operation specification for the type-safe builder
@@ -837,14 +836,33 @@ where
     where
         F: LicenseFeature,
     {
-        let license_names: Vec<String> = licenses
-            .into_iter()
-            .map(|l| l.as_ref().to_owned())
-            .collect();
+        let license_ids: Vec<GtsID> = licenses.into_iter().map(Into::into).collect();
 
         self.spec.license_requirement =
-            (!license_names.is_empty()).then_some(LicenseReqSpec { license_names });
+            (!license_ids.is_empty()).then_some(LicenseReqSpec { license_ids });
+        OperationBuilder {
+            spec: self.spec,
+            method_router: self.method_router,
+            _has_handler: self._has_handler,
+            _has_response: self._has_response,
+            _state: self._state,
+            _auth_state: self._auth_state,
+            _license_state: PhantomData,
+        }
+    }
 
+    /// Explicitly declare that no license features are required for this operation.
+    ///
+    /// This method is only available after the auth requirement has been decided
+    /// (i.e. after calling `require_auth(...)` or `public()`).
+    ///
+    /// For authenticated endpoints, this must be called before `register()` to transition
+    /// the license requirement state to `LicenseSet`. It sets the license requirement to `None`,
+    /// indicating that the operation does not require any specific license features.
+    ///
+    /// This is equivalent to calling `require_license_features([])` with an empty list.
+    pub fn require_no_license_features(mut self) -> OperationBuilder<H, R, S, AuthSet, LicenseSet> {
+        self.spec.license_requirement = None;
         OperationBuilder {
             spec: self.spec,
             method_router: self.method_router,
@@ -877,6 +895,7 @@ where
     /// # use modkit::api::operation_builder::{OperationBuilder, AuthReqResource, AuthReqAction, LicenseFeature};
     /// # use axum::{extract::Json, Router };
     /// # use serde::{Serialize};
+    /// # use gts::GtsID;
     /// #
     /// # #[derive(Serialize)]
     /// # pub struct User;
@@ -909,19 +928,20 @@ where
     ///
     /// impl AuthReqAction for Action {}
     ///
+    /// #[derive(Copy, Clone)]
     /// enum License {
     ///     Base,
     /// }
     ///
-    /// impl AsRef<str> for License {
-    ///     fn as_ref(&self) -> &str {
-    ///         match self {
-    ///             License::Base => "gts.x.core.lic.feat.v1~x.core.global.base.v1",
+    /// impl LicenseFeature for License {}
+    ///
+    /// impl From<License> for GtsID {
+    ///     fn from(license: License) -> Self {
+    ///         match license {
+    ///             License::Base => GtsID::new("gts.x.core.lic.feat.v1~x.core.global.base.v1").unwrap(),
     ///         }
     ///     }
     /// }
-    ///
-    /// impl LicenseFeature for License {}
     ///
     /// #
     /// # fn register_rest(
@@ -1603,19 +1623,26 @@ mod tests {
         }
     }
 
+    #[derive(Copy, Clone)]
     enum TestLicenseFeatures {
         FeatureA,
         FeatureB,
     }
-    impl AsRef<str> for TestLicenseFeatures {
-        fn as_ref(&self) -> &str {
-            match self {
-                TestLicenseFeatures::FeatureA => "feature_a",
-                TestLicenseFeatures::FeatureB => "feature_b",
+
+    impl LicenseFeature for TestLicenseFeatures {}
+
+    impl From<TestLicenseFeatures> for GtsID {
+        fn from(feature: TestLicenseFeatures) -> Self {
+            match feature {
+                TestLicenseFeatures::FeatureA => {
+                    GtsID::new("gts.x.core.lic.feat.v1~x.core.feature.a.v1").unwrap()
+                }
+                TestLicenseFeatures::FeatureB => {
+                    GtsID::new("gts.x.core.lic.feat.v1~x.core.feature.b.v1").unwrap()
+                }
             }
         }
     }
-    impl LicenseFeature for TestLicenseFeatures {}
 
     impl OpenApiRegistry for MockRegistry {
         fn register_operation(&self, spec: &OperationSpec) {
@@ -1900,7 +1927,7 @@ mod tests {
 
         let builder = OperationBuilder::<Missing, Missing, ()>::get("/tests/v1/test")
             .require_auth(&TestResource::Users, &TestAction::Read)
-            .require_license_features([&feature])
+            .require_license_features([feature])
             .handler(|| async {})
             .json_response(http::StatusCode::OK, "OK");
 
@@ -1909,7 +1936,7 @@ mod tests {
             .license_requirement
             .as_ref()
             .expect("Should have license requirement");
-        assert_eq!(license_req.license_names, vec!["feature_a".to_owned()]);
+        assert_eq!(license_req.license_ids, vec![GtsID::from(feature)]);
     }
 
     #[test]
@@ -1919,7 +1946,7 @@ mod tests {
 
         let builder = OperationBuilder::<Missing, Missing, ()>::get("/tests/v1/test")
             .require_auth(&TestResource::Users, &TestAction::Read)
-            .require_license_features([&feature_a, &feature_b])
+            .require_license_features([feature_a, feature_b])
             .handler(|| async {})
             .json_response(http::StatusCode::OK, "OK");
 
@@ -1929,8 +1956,8 @@ mod tests {
             .as_ref()
             .expect("Should have license requirement");
         assert_eq!(
-            license_req.license_names,
-            vec!["feature_a".to_owned(), "feature_b".to_owned()]
+            license_req.license_ids,
+            vec![GtsID::from(feature_a), GtsID::from(feature_b)]
         );
     }
 

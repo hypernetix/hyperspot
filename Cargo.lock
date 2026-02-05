@@ -775,6 +775,7 @@ dependencies = [
  "dashmap",
  "futures-core",
  "governor",
+ "gts",
  "http",
  "inventory",
  "matchit 0.9.1",
@@ -863,6 +864,7 @@ dependencies = [
  "cf-modkit-security",
  "cf-modkit-utils",
  "cf-types-registry-sdk",
+ "gts",
  "inventory",
  "moka",
  "serde",
@@ -900,7 +902,7 @@ dependencies = [
 
 [[package]]
 name = "cf-license-enforcer-sdk"
-version = "0.2.0"
+version = "0.1.0"
 dependencies = [
  "async-trait",
  "cf-modkit",

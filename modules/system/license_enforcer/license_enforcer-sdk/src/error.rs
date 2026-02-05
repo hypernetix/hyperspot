@@ -9,41 +9,20 @@ pub enum LicenseEnforcerError {
     #[error("Security context lacks tenant scope")]
     MissingTenantScope,
 
+    /// Invalid license feature ID
+    #[error("Invalid license feature ID: {message}")]
+    InvalidLicenseFeatureId {
+        message: String,
+        /// Source error for invalid ID
+        #[source]
+        source: Option<Box<dyn std::error::Error + Send + Sync>>,
+    },
+
     /// Authorization error (access denied)
     #[error("Authorization error: {message}")]
     Authorization {
         /// Error message
         message: String,
-    },
-
-    /// License not found for the specified tenant/feature
-    #[error("License not found for tenant {tenant_id}: {feature}")]
-    LicenseNotFound {
-        /// Tenant ID
-        tenant_id: String,
-        /// Feature identifier
-        feature: String,
-    },
-
-    /// License has expired
-    #[error("License expired for feature {feature}")]
-    LicenseExpired {
-        /// Feature identifier
-        feature: String,
-    },
-
-    /// License is suspended
-    #[error("License suspended for feature {feature}")]
-    LicenseSuspended {
-        /// Feature identifier
-        feature: String,
-    },
-
-    /// Invalid license data
-    #[error("Invalid license data: {reason}")]
-    InvalidLicense {
-        /// Reason for invalidity
-        reason: String,
     },
 
     /// Platform integration error

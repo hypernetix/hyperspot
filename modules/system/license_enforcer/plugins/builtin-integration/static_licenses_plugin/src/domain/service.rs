@@ -2,8 +2,9 @@
 //!
 //! This is a configuration-driven stub that returns configured features for bootstrap/testing.
 
+use gts::GtsID;
 use license_enforcer_sdk::{
-    EnabledGlobalFeatures, LicenseEnforcerError, LicenseFeatureID, global_features,
+    EnabledGlobalFeatures, LicenseEnforcerError, global_features, models::LicenseFeatureId,
 };
 use modkit_security::SecurityContext;
 
@@ -13,7 +14,7 @@ use modkit_security::SecurityContext;
 /// any additional features specified in configuration.
 pub struct Service {
     /// Configured enabled global features (in addition to base feature).
-    configured_features: Vec<LicenseFeatureID>,
+    configured_features: Vec<GtsID>,
 }
 
 impl Service {
@@ -22,7 +23,7 @@ impl Service {
     /// The service will return the base feature plus any features
     /// provided in the configuration.
     #[must_use]
-    pub fn new(configured_features: Vec<LicenseFeatureID>) -> Self {
+    pub fn new(configured_features: Vec<GtsID>) -> Self {
         Self {
             configured_features,
         }
@@ -43,8 +44,9 @@ impl Service {
         _tenant_id: uuid::Uuid,
     ) -> Result<EnabledGlobalFeatures, LicenseEnforcerError> {
         // Return base feature plus configured features
+        let base_feature = &global_features::BaseFeature;
         let mut features = EnabledGlobalFeatures::new();
-        features.insert(LicenseFeatureID::from(global_features::BASE));
+        features.insert(base_feature.to_gts());
 
         // Add configured features
         for feature in &self.configured_features {
@@ -58,6 +60,7 @@ impl Service {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use license_enforcer_sdk::models::LicenseFeatureId;
     use uuid::Uuid;
 
     fn make_test_context() -> SecurityContext {
@@ -74,9 +77,10 @@ mod tests {
         assert!(result.is_ok());
 
         let features = result.unwrap();
+        let base_feature = &global_features::BaseFeature;
         assert_eq!(features.len(), 1, "Should return only base feature");
         assert!(
-            features.contains(&LicenseFeatureID::from(global_features::BASE)),
+            features.contains(&base_feature.to_gts()),
             "Should contain base feature"
         );
     }
@@ -84,8 +88,8 @@ mod tests {
     #[tokio::test]
     async fn test_service_returns_base_plus_configured_features() {
         let configured = vec![
-            LicenseFeatureID::from("gts.x.core.lic.feat.v1~x.core.global.advanced_analytics.v1"),
-            LicenseFeatureID::from("gts.x.core.lic.feat.v1~x.core.global.export.v1"),
+            global_features::CyberChatFeature.to_gts(),
+            global_features::CyberEmployeeAgentsFeature.to_gts(),
         ];
         let service = Service::new(configured);
         let ctx = make_test_context();
@@ -101,20 +105,16 @@ mod tests {
             "Should return base + 2 configured features"
         );
         assert!(
-            features.contains(&LicenseFeatureID::from(global_features::BASE)),
+            features.contains(&global_features::BaseFeature.to_gts()),
             "Should contain base feature"
         );
         assert!(
-            features.contains(&LicenseFeatureID::from(
-                "gts.x.core.lic.feat.v1~x.core.global.advanced_analytics.v1"
-            )),
-            "Should contain advanced_analytics feature"
+            features.contains(&global_features::CyberChatFeature.to_gts()),
+            "Should contain cyber_chat feature"
         );
         assert!(
-            features.contains(&LicenseFeatureID::from(
-                "gts.x.core.lic.feat.v1~x.core.global.export.v1"
-            )),
-            "Should contain export feature"
+            features.contains(&global_features::CyberEmployeeAgentsFeature.to_gts()),
+            "Should contain cyber_employee_agents feature"
         );
     }
 
@@ -122,8 +122,8 @@ mod tests {
     async fn test_service_handles_duplicate_base_feature() {
         // If base feature is included in config, should not duplicate
         let configured = vec![
-            LicenseFeatureID::from(global_features::BASE),
-            LicenseFeatureID::from("gts.x.core.lic.feat.v1~x.core.global.test.v1"),
+            global_features::BaseFeature.to_gts(),
+            global_features::CyberEmployeeUnitsFeature.to_gts(),
         ];
         let service = Service::new(configured);
         let ctx = make_test_context();
@@ -136,14 +136,12 @@ mod tests {
         // HashSet should de-duplicate, so we expect 2 unique features
         assert_eq!(features.len(), 2, "Should deduplicate base feature");
         assert!(
-            features.contains(&LicenseFeatureID::from(global_features::BASE)),
+            features.contains(&global_features::BaseFeature.to_gts()),
             "Should contain base feature"
         );
         assert!(
-            features.contains(&LicenseFeatureID::from(
-                "gts.x.core.lic.feat.v1~x.core.global.test.v1"
-            )),
-            "Should contain test feature"
+            features.contains(&global_features::CyberEmployeeUnitsFeature.to_gts()),
+            "Should contain cyber_employee_units feature"
         );
     }
 }

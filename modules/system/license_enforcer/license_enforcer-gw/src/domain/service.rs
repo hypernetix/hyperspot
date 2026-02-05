@@ -6,8 +6,9 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use license_enforcer_sdk::models::LicenseFeatureId;
 use license_enforcer_sdk::{
-    CachePluginClient, EnabledGlobalFeatures, LicenseCachePluginSpecV1, LicenseFeatureID,
+    CachePluginClient, EnabledGlobalFeatures, LicenseCachePluginSpecV1,
     LicensePlatformPluginSpecV1, PlatformPluginClient,
 };
 use modkit::client_hub::{ClientHub, ClientScope};
@@ -246,16 +247,16 @@ impl Service {
     /// - Platform query fails
     #[tracing::instrument(skip_all, fields(
         tenant_id = %tenant_id,
-        feature = %feature_id.as_str()
+        feature = %feature_id.as_ref()
     ))]
     pub async fn is_global_feature_enabled(
         &self,
         ctx: &SecurityContext,
         tenant_id: uuid::Uuid,
-        feature_id: &LicenseFeatureID,
+        feature_id: &dyn LicenseFeatureId,
     ) -> Result<bool, DomainError> {
         let features = self.get_tenant_features(ctx, tenant_id).await?;
-        Ok(features.contains(feature_id))
+        Ok(features.contains(&feature_id.to_gts()))
     }
 
     /// List all enabled global features for the tenant.

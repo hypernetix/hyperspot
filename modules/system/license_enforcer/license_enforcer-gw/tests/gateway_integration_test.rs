@@ -11,6 +11,7 @@ use std::sync::{Arc, Mutex};
 
 use inmemory_cache_plugin::InMemoryCachePlugin;
 use license_enforcer_gw::LicenseEnforcerGateway;
+use license_enforcer_gw::models::{LicenseFeatureId, parse_license_feature_id};
 use license_enforcer_sdk::{
     LicenseCachePluginSpecV1, LicenseEnforcerGatewayClient, LicensePlatformPluginSpecV1,
     global_features,
@@ -137,9 +138,8 @@ impl license_enforcer_sdk::PlatformPluginClient for CountingPlatformPlugin {
     > {
         self.call_count.fetch_add(1, Ordering::SeqCst);
         let mut features = license_enforcer_sdk::EnabledGlobalFeatures::new();
-        features.insert(license_enforcer_sdk::global_features::to_feature_id(
-            license_enforcer_sdk::global_features::BASE,
-        ));
+        let base_feature = &license_enforcer_sdk::global_features::BaseFeature;
+        features.insert(base_feature.to_gts());
         Ok(features)
     }
 }
@@ -202,10 +202,9 @@ struct AlwaysHitCachePlugin {
 
 impl AlwaysHitCachePlugin {
     fn new() -> Self {
+        let base_feature = &license_enforcer_sdk::global_features::BaseFeature;
         let mut features = license_enforcer_sdk::EnabledGlobalFeatures::new();
-        features.insert(license_enforcer_sdk::global_features::to_feature_id(
-            license_enforcer_sdk::global_features::BASE,
-        ));
+        features.insert(base_feature.to_gts());
         Self {
             get_call_count: Arc::new(AtomicUsize::new(0)),
             cached_features: features,
@@ -424,9 +423,9 @@ async fn test_is_global_feature_enabled() {
         .build();
 
     // Check base feature (should be enabled by stub implementation)
-    let base_feature = global_features::to_feature_id(global_features::BASE);
+    let base_feature = &global_features::BaseFeature;
     let is_enabled = client
-        .is_global_feature_enabled(&ctx, ctx.tenant_id(), &base_feature)
+        .is_global_feature_enabled(&ctx, ctx.tenant_id(), base_feature)
         .await
         .expect("Feature check should succeed");
 
@@ -435,9 +434,9 @@ async fn test_is_global_feature_enabled() {
 
     // Check a non-existent feature (should not be enabled)
     let non_existent =
-        global_features::to_feature_id("gts.x.core.lic.feat.v1~x.core.global.nonexistent.v1");
+        parse_license_feature_id("gts.x.core.lic.feat.v1~x.core.global.nonexistent.v1").unwrap();
     let is_enabled = client
-        .is_global_feature_enabled(&ctx, ctx.tenant_id(), &non_existent)
+        .is_global_feature_enabled(&ctx, ctx.tenant_id(), &*non_existent)
         .await
         .expect("Feature check should succeed");
 
@@ -510,14 +509,14 @@ async fn test_enabled_global_features() {
         .build();
 
     let features = client
-        .enabled_global_features(&ctx, ctx.tenant_id())
+        .list_enabled_global_features(&ctx, ctx.tenant_id())
         .await
         .expect("Features list should succeed");
 
     // Assert: Should contain base feature
-    let base_feature = global_features::to_feature_id(global_features::BASE);
+    let base_feature = &global_features::BaseFeature;
     assert!(
-        features.contains(&base_feature),
+        features.contains(&base_feature.to_gts()),
         "Features should contain base feature"
     );
     assert_eq!(features.len(), 1, "Should only have one feature");
@@ -593,10 +592,10 @@ async fn test_missing_tenant_scope() {
 
     // Act: Call with anonymous context (nil tenant UUID)
     let ctx = SecurityContext::anonymous();
-    let base_feature = global_features::to_feature_id(global_features::BASE);
+    let base_feature = &global_features::BaseFeature;
 
     let result = client
-        .is_global_feature_enabled(&ctx, ctx.tenant_id(), &base_feature)
+        .is_global_feature_enabled(&ctx, ctx.tenant_id(), base_feature)
         .await;
 
     // Assert 1: Should return error (platform plugin will fail to resolve due to invalid instance)
@@ -733,9 +732,9 @@ async fn test_inmemory_cache_miss_triggers_platform_call() {
         .build();
 
     // Act: Call gateway (should miss cache, fetch from platform, and store)
-    let base_feature = global_features::to_feature_id(global_features::BASE);
+    let base_feature = &global_features::BaseFeature;
     let is_enabled = client
-        .is_global_feature_enabled(&ctx, ctx.tenant_id(), &base_feature)
+        .is_global_feature_enabled(&ctx, ctx.tenant_id(), base_feature)
         .await
         .expect("Feature check should succeed");
 
@@ -854,11 +853,11 @@ async fn test_inmemory_cache_hit_avoids_platform_call() {
         .subject_id(Uuid::new_v4())
         .build();
 
-    let base_feature = global_features::to_feature_id(global_features::BASE);
+    let base_feature = &global_features::BaseFeature;
 
     // Act: First call (cache miss)
     let is_enabled_1 = client
-        .is_global_feature_enabled(&ctx, ctx.tenant_id(), &base_feature)
+        .is_global_feature_enabled(&ctx, ctx.tenant_id(), base_feature)
         .await
         .expect("First feature check should succeed");
 
@@ -871,7 +870,7 @@ async fn test_inmemory_cache_hit_avoids_platform_call() {
 
     // Act: Second call (cache hit)
     let is_enabled_2 = client
-        .is_global_feature_enabled(&ctx, ctx.tenant_id(), &base_feature)
+        .is_global_feature_enabled(&ctx, ctx.tenant_id(), base_feature)
         .await
         .expect("Second feature check should succeed");
 
@@ -994,11 +993,10 @@ async fn test_inmemory_cache_ttl_expiry_refreshes_from_platform() {
         .subject_id(Uuid::new_v4())
         .build();
 
-    let base_feature = global_features::to_feature_id(global_features::BASE);
-
+    let base_feature = &global_features::BaseFeature;
     // Act: First call (cache miss)
     let is_enabled_1 = client
-        .is_global_feature_enabled(&ctx, ctx.tenant_id(), &base_feature)
+        .is_global_feature_enabled(&ctx, ctx.tenant_id(), base_feature)
         .await
         .expect("First feature check should succeed");
 
@@ -1011,7 +1009,7 @@ async fn test_inmemory_cache_ttl_expiry_refreshes_from_platform() {
 
     // Act: Second call immediately (cache hit)
     let is_enabled_2 = client
-        .is_global_feature_enabled(&ctx, ctx.tenant_id(), &base_feature)
+        .is_global_feature_enabled(&ctx, ctx.tenant_id(), base_feature)
         .await
         .expect("Second feature check should succeed");
 
@@ -1029,7 +1027,7 @@ async fn test_inmemory_cache_ttl_expiry_refreshes_from_platform() {
 
     // Act: Third call after TTL expiry (cache miss due to expiry)
     let is_enabled_3 = client
-        .is_global_feature_enabled(&ctx, ctx.tenant_id(), &base_feature)
+        .is_global_feature_enabled(&ctx, ctx.tenant_id(), base_feature)
         .await
         .expect("Third feature check should succeed");
 
@@ -1130,11 +1128,10 @@ async fn test_cache_hit_completely_avoids_platform_call() {
         .subject_id(Uuid::new_v4())
         .build();
 
-    let base_feature = global_features::to_feature_id(global_features::BASE);
-
+    let base_feature = &global_features::BaseFeature;
     // Act: Call gateway (cache will return hit immediately)
     let is_enabled = client
-        .is_global_feature_enabled(&ctx, ctx.tenant_id(), &base_feature)
+        .is_global_feature_enabled(&ctx, ctx.tenant_id(), base_feature)
         .await
         .expect("Feature check should succeed");
 
@@ -1157,7 +1154,7 @@ async fn test_cache_hit_completely_avoids_platform_call() {
 
     // Act: Second call (should also hit cache)
     let is_enabled_2 = client
-        .is_global_feature_enabled(&ctx, ctx.tenant_id(), &base_feature)
+        .is_global_feature_enabled(&ctx, ctx.tenant_id(), base_feature)
         .await
         .expect("Second feature check should succeed");
 
@@ -1344,30 +1341,28 @@ async fn test_static_licenses_plugin_returns_configured_features() {
         .build();
 
     let features = client
-        .enabled_global_features(&ctx, ctx.tenant_id())
+        .list_enabled_global_features(&ctx, ctx.tenant_id())
         .await
         .expect("Features list should succeed");
-
     // Assert: Should contain base feature + configured features
-    let base_feature = global_features::to_feature_id(global_features::BASE);
+    let base_feature = &global_features::BaseFeature;
     assert!(
-        features.contains(&base_feature),
+        features.contains(&base_feature.to_gts()),
         "Features should contain base feature"
     );
 
-    let analytics_feature = license_enforcer_sdk::LicenseFeatureID::from(
-        "gts.x.core.lic.feat.v1~x.core.global.advanced_analytics.v1",
-    );
-    let export_feature = license_enforcer_sdk::LicenseFeatureID::from(
-        "gts.x.core.lic.feat.v1~x.core.global.export.v1",
-    );
+    let analytics_feature =
+        parse_license_feature_id("gts.x.core.lic.feat.v1~x.core.global.advanced_analytics.v1")
+            .unwrap();
+    let export_feature =
+        parse_license_feature_id("gts.x.core.lic.feat.v1~x.core.global.export.v1").unwrap();
 
     assert!(
-        features.contains(&analytics_feature),
+        features.contains(&analytics_feature.to_gts()),
         "Features should contain configured advanced-analytics feature"
     );
     assert!(
-        features.contains(&export_feature),
+        features.contains(&export_feature.to_gts()),
         "Features should contain configured export feature"
     );
 
@@ -1544,9 +1539,9 @@ async fn test_tenant_access_validation_denies_unauthorized_tenant() {
 
     // Act: Try to access tenant B (unauthorized)
     let tenant_b = Uuid::new_v4();
-    let base_feature = global_features::to_feature_id(global_features::BASE);
+    let base_feature = &global_features::BaseFeature;
     let result = client
-        .is_global_feature_enabled(&ctx_for_tenant_a, tenant_b, &base_feature)
+        .is_global_feature_enabled(&ctx_for_tenant_a, tenant_b, base_feature)
         .await;
 
     // Assert: Should fail with access denied error
@@ -1627,9 +1622,9 @@ async fn test_tenant_access_validation_allows_authorized_tenant() {
         .build();
 
     // Act: Access tenant A (authorized - matching context)
-    let base_feature = global_features::to_feature_id(global_features::BASE);
+    let base_feature = &global_features::BaseFeature;
     let result = client
-        .is_global_feature_enabled(&ctx_for_tenant_a, tenant_a, &base_feature)
+        .is_global_feature_enabled(&ctx_for_tenant_a, tenant_a, base_feature)
         .await;
 
     // Assert: Should succeed

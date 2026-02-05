@@ -23,12 +23,12 @@
 //! # let hub = Arc::new(ClientHub::new());
 //! # let tenant_id = Uuid::new_v4();
 //! # let ctx = SecurityContext::builder().tenant_id(tenant_id).subject_id(Uuid::new_v4()).build();
-//! # let feature_id = global_features::to_feature_id(global_features::BASE);
 //! // Get the client from ClientHub
 //! let enforcer = hub.get::<dyn LicenseEnforcerGatewayClient>()?;
 //!
 //! // Check license access
-//! let is_enabled = enforcer.is_global_feature_enabled(&ctx, tenant_id, &feature_id).await?;
+//! let feature = global_features::BaseFeature;
+//! let is_enabled = enforcer.is_global_feature_enabled(&ctx, tenant_id, &feature).await?;
 //! # Ok(())
 //! # }
 //! ```
@@ -48,6 +48,6 @@ pub use api::LicenseEnforcerGatewayClient;
 pub use error::LicenseEnforcerError;
 pub use gts_cache::LicenseCachePluginSpecV1;
 pub use gts_platform::LicensePlatformPluginSpecV1;
-pub use models::{EnabledGlobalFeatures, LicenseFeatureID, global_features};
+pub use models::{EnabledGlobalFeatures, global_features};
 pub use plugin_cache::CachePluginClient;
 pub use plugin_platform::PlatformPluginClient;

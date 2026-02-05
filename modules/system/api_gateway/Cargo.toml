@@ -33,6 +33,8 @@ serde_json = { workspace = true }
 parking_lot = { workspace = true }
 thiserror = { workspace = true }
 
+gts = { workspace = true }
+
 dashmap = { workspace = true }
 arc-swap = { workspace = true }
 nanoid = { workspace = true }

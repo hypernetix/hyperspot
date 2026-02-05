@@ -62,7 +62,7 @@ impl Service {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use license_enforcer_sdk::LicenseFeatureID;
+    use license_enforcer_sdk::{global_features, models::LicenseFeatureId};
     use std::collections::HashSet;
     use uuid::Uuid;
 
@@ -72,12 +72,8 @@ mod tests {
 
     fn make_test_features() -> EnabledGlobalFeatures {
         let mut features = HashSet::new();
-        features.insert(LicenseFeatureID {
-            gts_id: "test.feature.v1".to_owned(),
-        });
-        features.insert(LicenseFeatureID {
-            gts_id: "test.feature2.v1".to_owned(),
-        });
+        features.insert(global_features::BaseFeature.to_gts());
+        features.insert(global_features::CyberChatFeature.to_gts());
         features
     }
 
@@ -210,14 +206,10 @@ mod tests {
         let ctx = make_test_context(tenant_id);
 
         let mut features1 = HashSet::new();
-        features1.insert(LicenseFeatureID {
-            gts_id: "test.feature1.v1".to_owned(),
-        });
+        features1.insert(global_features::BaseFeature.to_gts());
 
         let mut features2 = HashSet::new();
-        features2.insert(LicenseFeatureID {
-            gts_id: "test.feature2.v1".to_owned(),
-        });
+        features2.insert(global_features::CyberChatFeature.to_gts());
 
         // Act - Set initial features
         service

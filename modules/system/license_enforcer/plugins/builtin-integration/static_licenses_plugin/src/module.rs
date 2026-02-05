@@ -3,8 +3,8 @@
 use std::sync::{Arc, OnceLock};
 
 use async_trait::async_trait;
-use gts::GtsID;
-use license_enforcer_sdk::{LicenseFeatureID, LicensePlatformPluginSpecV1, PlatformPluginClient};
+use license_enforcer_sdk::models::parse_license_feature_id;
+use license_enforcer_sdk::{LicensePlatformPluginSpecV1, PlatformPluginClient};
 use modkit::Module;
 use modkit::client_hub::ClientScope;
 use modkit::context::ModuleCtx;
@@ -53,21 +53,15 @@ impl Module for StaticLicensesPlugin {
             "Loaded plugin configuration"
         );
 
-        // Validate and convert configured features from strings to LicenseFeatureID
-        // Use gts crate for proper GTS ID validation (structure only, no registry validation)
+        // Validate and convert configured features from strings to GtsInstanceId
+        // Uses SDK's parse_license_feature_id for proper validation
+        let mut configured_features = Vec::new();
         for feature_id in &cfg.static_licenses_features {
-            if !GtsID::is_valid(feature_id) {
-                anyhow::bail!(
-                    "Invalid static_licenses_features: '{feature_id}' is not a valid GTS ID"
-                );
-            }
+            let parsed = parse_license_feature_id(feature_id).map_err(|e| {
+                anyhow::anyhow!("Invalid static_licenses_features: '{feature_id}' - {e}")
+            })?;
+            configured_features.push(parsed.to_gts());
         }
-
-        let configured_features: Vec<LicenseFeatureID> = cfg
-            .static_licenses_features
-            .iter()
-            .map(|s| LicenseFeatureID::from(s.as_str()))
-            .collect();
 
         // Generate plugin instance ID
         let instance_id = LicensePlatformPluginSpecV1::gts_make_instance_id(
@@ -84,7 +78,18 @@ impl Module for StaticLicensesPlugin {
         };
         let instance_json = serde_json::to_value(&instance)?;
 
-        let _ = registry.register(vec![instance_json]).await?;
+        // Register plugin instance and check for per-entity failures
+        let results = registry.register(vec![instance_json]).await?;
+        for result in results {
+            if let types_registry_sdk::RegisterResult::Err { gts_id, error } = result {
+                let gts_id_str = gts_id.as_deref().unwrap_or(&instance_id.to_string());
+                return Err(anyhow::anyhow!(
+                    "Failed to register plugin instance '{}': {}",
+                    gts_id_str,
+                    error
+                ));
+            }
+        }
 
         // Create service with configured features
         let service = Arc::new(Service::new(configured_features));

@@ -8,8 +8,11 @@ use axum::{
     http::{Request, StatusCode},
     response::IntoResponse,
 };
+use gts::GtsID;
 use license_enforcer_sdk::{
-    EnabledGlobalFeatures, LicenseEnforcerError, LicenseEnforcerGatewayClient, LicenseFeatureID,
+    EnabledGlobalFeatures, LicenseEnforcerError, LicenseEnforcerGatewayClient,
+    global_features::{self, BaseFeature},
+    models::LicenseFeatureId,
 };
 use modkit::{
     ClientHub, Module,
@@ -52,9 +55,8 @@ struct MockLicenseClient {
 }
 
 impl MockLicenseClient {
-    fn new(features: Vec<&str>) -> Self {
-        let feature_set: EnabledGlobalFeatures =
-            features.into_iter().map(LicenseFeatureID::from).collect();
+    fn new(features: Vec<GtsID>) -> Self {
+        let feature_set: EnabledGlobalFeatures = features.into_iter().collect();
         Self {
             features: Mutex::new(feature_set),
             error_mode: Mutex::new(MockErrorMode::None),
@@ -89,10 +91,10 @@ impl LicenseEnforcerGatewayClient for MockLicenseClient {
         &self,
         _ctx: &SecurityContext,
         _tenant_id: uuid::Uuid,
-        feature_id: &LicenseFeatureID,
+        feature_id: &dyn LicenseFeatureId,
     ) -> std::result::Result<bool, LicenseEnforcerError> {
         match *self.error_mode.lock() {
-            MockErrorMode::None => Ok(self.features.lock().contains(feature_id)),
+            MockErrorMode::None => Ok(self.features.lock().contains(&feature_id.to_gts())),
             MockErrorMode::Internal => Err(LicenseEnforcerError::Internal {
                 message: "Test error".to_owned(),
                 source: None,
@@ -104,7 +106,7 @@ impl LicenseEnforcerGatewayClient for MockLicenseClient {
         }
     }
 
-    async fn enabled_global_features(
+    async fn list_enabled_global_features(
         &self,
         _ctx: &SecurityContext,
         _tenant_id: uuid::Uuid,
@@ -258,7 +260,7 @@ impl AsRef<str> for TestAction {
 
 impl AuthReqAction for TestAction {}
 
-struct NonBaseFeature;
+/*struct NonBaseFeature;
 
 impl AsRef<str> for NonBaseFeature {
     fn as_ref(&self) -> &'static str {
@@ -276,7 +278,7 @@ impl AsRef<str> for BaseFeature {
     }
 }
 
-impl LicenseFeature for BaseFeature {}
+impl LicenseFeature for BaseFeature {}*/
 
 impl RestApiCapability for TestLicenseModule {
     fn register_rest(
@@ -285,22 +287,22 @@ impl RestApiCapability for TestLicenseModule {
         router: Router,
         openapi: &dyn OpenApiRegistry,
     ) -> Result<Router> {
-        let feature = NonBaseFeature;
+        let non_base_feature: &dyn LicenseFeatureId = &global_features::CyberChatFeature;
 
         let router = OperationBuilder::get("/tests/v1/license/bad")
             .operation_id("test.license.bad")
             .require_auth(&TestResource::Test, &TestAction::Read)
-            .require_license_features([&feature])
+            .require_license_features([non_base_feature])
             .handler(ok_handler)
             .json_response(http::StatusCode::OK, "OK")
             .register(router, openapi);
 
-        let base_feature = BaseFeature;
+        let base_feature: &dyn LicenseFeatureId = &BaseFeature;
 
         let router = OperationBuilder::get("/tests/v1/license/good")
             .operation_id("test.license.good")
             .require_auth(&TestResource::Test, &TestAction::Read)
-            .require_license_features([&base_feature])
+            .require_license_features([base_feature])
             .handler(ok_handler)
             .json_response(http::StatusCode::OK, "OK")
             .register(router, openapi);
@@ -308,7 +310,7 @@ impl RestApiCapability for TestLicenseModule {
         let router = OperationBuilder::get("/tests/v1/license/none")
             .operation_id("test.license.none")
             .require_auth(&TestResource::Test, &TestAction::Read)
-            .require_license_features::<BaseFeature>([])
+            .require_license_features::<&dyn LicenseFeatureId>([])
             .handler(ok_handler)
             .json_response(http::StatusCode::OK, "OK")
             .register(router, openapi);
@@ -450,13 +452,13 @@ async fn allows_no_license_requirement() {
 /// Feature type for `CYBER_CHAT`
 struct CyberChatFeature;
 
-impl AsRef<str> for CyberChatFeature {
-    fn as_ref(&self) -> &'static str {
-        "gts.x.core.lic.feat.v1~x.core.global.cyber_chat.v1"
+impl LicenseFeature for &CyberChatFeature {}
+
+impl From<&CyberChatFeature> for gts::GtsID {
+    fn from(_value: &CyberChatFeature) -> Self {
+        global_features::CyberChatFeature.to_gts()
     }
 }
-
-impl LicenseFeature for CyberChatFeature {}
 
 /// Module that registers a route requiring `CYBER_CHAT` feature
 pub struct TestCyberChatModule;
@@ -502,8 +504,8 @@ async fn with_license_client_allows_when_feature_enabled() {
 
     // Create mock client with CYBER_CHAT feature enabled
     let mock_client = Arc::new(MockLicenseClient::new(vec![
-        "gts.x.core.lic.feat.v1~x.core.global.base.v1",
-        "gts.x.core.lic.feat.v1~x.core.global.cyber_chat.v1",
+        global_features::BaseFeature.to_gts(),
+        global_features::CyberChatFeature.to_gts(),
     ]));
 
     let api_ctx = create_api_gateway_ctx_with_license_client(config, mock_client);
@@ -550,7 +552,7 @@ async fn with_license_client_denies_when_feature_missing() {
 
     // Create mock client with only BASE feature (no CYBER_CHAT)
     let mock_client = Arc::new(MockLicenseClient::new(vec![
-        "gts.x.core.lic.feat.v1~x.core.global.base.v1",
+        global_features::BaseFeature.to_gts(),
     ]));
 
     let api_ctx = create_api_gateway_ctx_with_license_client(config, mock_client);
@@ -642,7 +644,7 @@ async fn with_license_client_base_feature_still_works() {
 
     // Create mock client with BASE feature
     let mock_client = Arc::new(MockLicenseClient::new(vec![
-        "gts.x.core.lic.feat.v1~x.core.global.base.v1",
+        global_features::BaseFeature.to_gts(),
     ]));
 
     let api_ctx = create_api_gateway_ctx_with_license_client(config, mock_client);

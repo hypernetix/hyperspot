@@ -19,15 +19,13 @@ use axum::extract::Request;
 use axum::http::StatusCode;
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
+use gts::GtsID;
 use http::Method;
 
-use license_enforcer_sdk::{LicenseEnforcerGatewayClient, LicenseFeatureID};
+use license_enforcer_sdk::models::{LicenseFeatureId, license_feature_id_from_gts_id};
+use license_enforcer_sdk::{LicenseEnforcerGatewayClient, global_features};
 use modkit::api::{OperationSpec, Problem};
 use modkit_security::SecurityContext;
-
-/// Base platform feature - included in all licenses.
-/// Used as fallback when license client is not available.
-const BASE_FEATURE: &str = "gts.x.core.lic.feat.v1~x.core.global.base.v1";
 
 type LicenseKey = (Method, String);
 
@@ -38,7 +36,7 @@ pub type LicenseClient = Arc<dyn LicenseEnforcerGatewayClient>;
 /// Immutable after construction - built once at startup from operation specs.
 #[derive(Clone)]
 pub struct LicenseRequirementMap {
-    requirements: Arc<HashMap<LicenseKey, Arc<[String]>>>,
+    requirements: Arc<HashMap<LicenseKey, Arc<[GtsID]>>>,
 }
 
 impl LicenseRequirementMap {
@@ -51,7 +49,7 @@ impl LicenseRequirementMap {
             if let Some(req) = spec.license_requirement.as_ref() {
                 requirements.insert(
                     (spec.method.clone(), spec.path.clone()),
-                    Arc::from(req.license_names.as_slice()),
+                    Arc::from(req.license_ids.as_slice()),
                 );
             }
         }
@@ -61,7 +59,7 @@ impl LicenseRequirementMap {
         }
     }
 
-    fn get(&self, method: &Method, path: &str) -> Option<Arc<[String]>> {
+    fn get(&self, method: &Method, path: &str) -> Option<Arc<[GtsID]>> {
         self.requirements
             .get(&(method.clone(), path.to_owned()))
             .cloned()
@@ -79,12 +77,13 @@ pub struct LicenseValidationState {
 
 // Helper functions to reduce cognitive complexity
 
-fn forbidden_stub_response(required: &[String]) -> Response {
+fn forbidden_stub_response(required: &[GtsID]) -> Response {
+    let base_feature_id = global_features::BaseFeature.as_ref();
     Problem::new(
         StatusCode::FORBIDDEN,
         "Forbidden",
         format!(
-            "Endpoint requires unsupported license features '{required:?}'; only '{BASE_FEATURE}' is allowed",
+            "Endpoint requires unsupported license features '{required:?}'; only '{base_feature_id}' is allowed",
         ),
     )
     .into_response()
@@ -118,8 +117,9 @@ fn service_unavailable_response() -> Response {
 }
 
 /// Handle the case when no license client is available (stub behavior).
-fn handle_no_client(method: &Method, path: &str, required: &[String]) -> Option<Response> {
-    if required.iter().any(|r| r != BASE_FEATURE) {
+fn handle_no_client(method: &Method, path: &str, required: &[GtsID]) -> Option<Response> {
+    let base_feature = global_features::BaseFeature;
+    if required.iter().any(|r| *r != base_feature.to_gts()) {
         tracing::warn!(
             method = %method,
             path = %path,
@@ -191,13 +191,27 @@ async fn check_features(
     tenant_id: uuid::Uuid,
     method: &Method,
     path: &str,
-    required: &[String],
+    required: &[GtsID],
 ) -> Option<Response> {
-    match client.enabled_global_features(ctx, tenant_id).await {
+    match client.list_enabled_global_features(ctx, tenant_id).await {
         Ok(enabled) => {
             for feature_name in required {
-                let feature_id = LicenseFeatureID::from(feature_name.as_str());
-                if !enabled.contains(&feature_id) {
+                let feature_id = match license_feature_id_from_gts_id(feature_name.clone()) {
+                    Err(e) => {
+                        tracing::error!(
+                            error = %e,
+                            method = %method,
+                            path = %path,
+                            feature = %feature_name,
+                            tenant_id = ?tenant_id,
+                            "Failed to parse required license feature ID"
+                        );
+                        return Some(service_unavailable_response());
+                    }
+                    Ok(feature_id) => feature_id,
+                };
+
+                if !enabled.contains(&feature_id.to_gts()) {
                     tracing::info!(
                         method = %method,
                         path = %path,
@@ -205,7 +219,7 @@ async fn check_features(
                         tenant_id = ?tenant_id,
                         "License feature not enabled for tenant"
                     );
-                    return Some(forbidden_feature_response(feature_name));
+                    return Some(forbidden_feature_response(feature_name.as_ref()));
                 }
             }
             None

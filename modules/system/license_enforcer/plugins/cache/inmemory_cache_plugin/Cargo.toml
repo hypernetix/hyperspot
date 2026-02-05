@@ -25,6 +25,9 @@ modkit = { workspace = true }
 modkit-security = { workspace = true }
 modkit-utils = { workspace = true }
 
+# GTS
+gts = { workspace = true }
+
 # Async runtime
 async-trait = { workspace = true }
 
