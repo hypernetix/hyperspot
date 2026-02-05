@@ -4,6 +4,8 @@ use async_trait::async_trait;
 use axum::Router;
 use modkit::api::OpenApiRegistry;
 use modkit::{Module, ModuleCtx};
+use modkit_db::DBProvider;
+use modkit_db::DbError;
 use tracing::info;
 
 use simple_user_settings_sdk::SimpleUserSettingsClient;
@@ -14,12 +16,15 @@ use crate::domain::local_client::LocalClient;
 use crate::domain::service::{Service, ServiceConfig};
 use crate::infra::storage::sea_orm_repo::SeaOrmSettingsRepository;
 
+/// Type alias for the concrete service type with ORM repository.
+type ConcreteService = Service<SeaOrmSettingsRepository>;
+
 #[modkit::module(
-    name = "simple-user-settings",
+    name = "simple_user_settings",
     capabilities = [rest, db]
 )]
 pub struct SettingsModule {
-    service: arc_swap::ArcSwapOption<Service>,
+    service: arc_swap::ArcSwapOption<ConcreteService>,
 }
 
 impl Default for SettingsModule {
@@ -38,16 +43,11 @@ impl Clone for SettingsModule {
     }
 }
 
-#[async_trait]
 impl modkit::contracts::DatabaseCapability for SettingsModule {
-    async fn migrate(&self, db: &modkit_db::DbHandle) -> anyhow::Result<()> {
+    fn migrations(&self) -> Vec<Box<dyn sea_orm_migration::MigrationTrait>> {
         use sea_orm_migration::MigratorTrait;
-
-        info!("Running settings database migrations");
-        let conn = db.sea_secure();
-        crate::infra::storage::migrations::Migrator::up(conn.conn(), None).await?;
-        info!("Settings database migrations completed");
-        Ok(())
+        info!("Providing settings database migrations");
+        crate::infra::storage::migrations::Migrator::migrations()
     }
 }
 
@@ -58,15 +58,15 @@ impl Module for SettingsModule {
 
         let cfg: SettingsConfig = ctx.config()?;
 
-        let db = ctx.db_required()?;
-        let sec_conn = db.sea_secure();
+        let db: Arc<DBProvider<DbError>> = Arc::new(ctx.db_required()?);
 
-        let repo = SeaOrmSettingsRepository::new(sec_conn);
+        // Repository no longer stores connection - uses &impl DBRunner per-method
+        let repo = Arc::new(SeaOrmSettingsRepository::new());
 
         let service_config = ServiceConfig {
             max_field_length: cfg.max_field_length,
         };
-        let service = Arc::new(Service::new(Arc::new(repo), service_config));
+        let service = Arc::new(Service::new(db, repo, service_config));
 
         let local_client: Arc<dyn SimpleUserSettingsClient> =
             Arc::new(LocalClient::new(service.clone()));

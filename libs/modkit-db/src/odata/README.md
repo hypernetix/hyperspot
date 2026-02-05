@@ -6,7 +6,7 @@ This module provides a minimal, ergonomic fluent builder (`OPager`) that combine
 
 - **No new dependencies**: Uses existing `modkit-odata`, `sea_orm`, and secure ORM types
 - **No macros**: Simple, explicit builder pattern
-- **No facades**: Works directly with existing `SecureConn`, `SecurityCtx`, `ODataQuery`, etc.
+- **No facades**: Works directly with existing `SecureConn`, `SecurityContext`, `ODataQuery`, etc.
 - **Type-safe**: Leverages Rust's type system for compile-time correctness
 - **Zero overhead**: Thin wrapper over existing pagination logic
 
@@ -28,7 +28,7 @@ This module provides a minimal, ergonomic fluent builder (`OPager`) that combine
                     │           └───────────────┘
                     │
            ┌────────▼────────┐
-           │  SecurityCtx    │
+           │  SecurityContext    │
            │  (Tenant/       │
            │   resource      │
            │   boundaries)   │
@@ -48,7 +48,7 @@ This module provides a minimal, ergonomic fluent builder (`OPager`) that combine
 
 ```rust
 use modkit_db::odata::{FieldMap, FieldKind, pager::OPager};
-use modkit_db::secure::{SecureConn, SecurityCtx};
+use modkit_db::secure::{SecureConn, SecurityContext};
 use modkit_odata::{ODataQuery, SortDir};
 
 // Define field mappings once
@@ -62,10 +62,10 @@ static USER_FMAP: Lazy<FieldMap<user::Entity>> = Lazy::new(|| {
 // Use in your service
 async fn list_users(
     db: &SecureConn,
-    ctx: &SecurityCtx,
+    ctx: &SecurityContext,
     query: &ODataQuery,
 ) -> Result<Page<UserDto>, ODataError> {
-    OPager::<user::Entity, _>::new(db, ctx, db.conn(), &USER_FMAP)
+    OPager::<user::Entity, _>::new(db, ctx, db, &USER_FMAP)
         .tiebreaker("id", SortDir::Desc)
         .limits(25, 1000)
         .fetch(query, |m| UserDto::from(m))
@@ -90,16 +90,16 @@ async fn list_users(
 
 ### Security Flow
 
-1. `OPager::new()` receives `SecureConn` and `SecurityCtx`
+1. `OPager::new()` receives `SecureConn` and `SecurityContext`
 2. `fetch()` calls `SecureConn::find::<E>(&ctx)` to create a scoped `SecureSelect`
-3. `into_inner()` extracts the raw `sea_orm::Select<E>` (already scoped)
+3. Internal code unwraps the scoped `SeaORM` select (crate-only)
 4. `paginate_with_odata()` applies OData filters, cursor, and ordering
 5. Query executes with both security scope AND OData constraints
 
 ### OData Flow
 
 1. Parse filter (done by caller, we receive `ODataQuery`)
-2. Apply security scope (from `SecurityCtx`)
+2. Apply security scope (from `SecurityContext`)
 3. Apply OData filter (if present)
 4. Apply cursor predicate (for pagination)
 5. Apply ordering (with tiebreaker)
@@ -109,40 +109,15 @@ async fn list_users(
 
 ## Migration Guide
 
-### Before (Manual Approach)
+### Recommended (With OPager)
 
 ```rust
 async fn list_users(
     db: &SecureConn,
-    ctx: &SecurityCtx,
+    ctx: &SecurityContext,
     query: &ODataQuery,
 ) -> Result<Page<User>, ODataError> {
-    // 1. Create scoped select
-    let select = db.find::<user::Entity>(ctx)?
-        .into_inner();
-    
-    // 2. Manually call paginate_with_odata
-    paginate_with_odata::<user::Entity, User, _, _>(
-        select,
-        db.conn(),
-        query,
-        &USER_FMAP,
-        ("id", SortDir::Desc),
-        LimitCfg { default: 25, max: 1000 },
-        |m| m.into(),
-    ).await
-}
-```
-
-### After (With OPager)
-
-```rust
-async fn list_users(
-    db: &SecureConn,
-    ctx: &SecurityCtx,
-    query: &ODataQuery,
-) -> Result<Page<User>, ODataError> {
-    OPager::<user::Entity, _>::new(db, ctx, db.conn(), &USER_FMAP)
+    OPager::<user::Entity, _>::new(db, ctx, db, &USER_FMAP)
         .fetch(query, |m| m.into())
         .await
 }

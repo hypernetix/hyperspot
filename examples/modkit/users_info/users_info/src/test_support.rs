@@ -2,9 +2,11 @@
 
 use std::sync::Arc;
 
-use modkit_db::secure::SecureConn;
+use modkit_db::migration_runner::run_migrations_for_testing;
+use modkit_db::secure::DBRunner;
+use modkit_db::secure::{AccessScope, secure_insert};
+use modkit_db::{ConnectOpts, DBProvider, Db, DbError, connect_db};
 use modkit_security::SecurityContext;
-use sea_orm::{Database, DatabaseConnection};
 use sea_orm_migration::MigratorTrait;
 use tenant_resolver_sdk::{
     TenantFilter, TenantResolverError, TenantResolverGatewayClient, TenantStatus,
@@ -32,27 +34,38 @@ pub fn ctx_deny_all() -> SecurityContext {
     SecurityContext::anonymous()
 }
 
-pub async fn inmem_db() -> DatabaseConnection {
-    let db = Database::connect("sqlite::memory:")
+/// Create an in-memory database for testing.
+pub async fn inmem_db() -> Db {
+    let opts = ConnectOpts {
+        max_conns: Some(1),
+        min_conns: Some(1),
+        ..Default::default()
+    };
+    let db = connect_db("sqlite::memory:", opts)
         .await
         .expect("Failed to connect to in-memory database");
 
-    crate::infra::storage::migrations::Migrator::up(&db, None)
-        .await
-        .expect("Failed to run migrations");
+    run_migrations_for_testing(
+        &db,
+        crate::infra::storage::migrations::Migrator::migrations(),
+    )
+    .await
+    .map_err(|e| e.to_string())
+    .expect("Failed to run migrations");
 
     db
 }
 
 pub async fn seed_user(
-    db: &DatabaseConnection,
+    db: &impl DBRunner,
     id: Uuid,
     tenant_id: Uuid,
     email: &str,
     display_name: &str,
 ) {
     use crate::infra::storage::entity::user::ActiveModel;
-    use sea_orm::{ActiveModelTrait, Set};
+    use crate::infra::storage::entity::user::Entity as UserEntity;
+    use sea_orm::Set;
 
     let now = OffsetDateTime::now_utc();
     let user = ActiveModel {
@@ -64,7 +77,10 @@ pub async fn seed_user(
         updated_at: Set(now),
     };
 
-    user.insert(db).await.expect("Failed to seed user");
+    let scope = AccessScope::tenants_only(vec![tenant_id]);
+    let _ = secure_insert::<UserEntity>(user, &scope, db)
+        .await
+        .expect("Failed to seed user");
 }
 
 pub struct MockEventPublisher;
@@ -134,18 +150,20 @@ impl TenantResolverGatewayClient for MockTenantResolver {
     }
 }
 
-pub fn build_services(sec: SecureConn, config: ServiceConfig) -> Arc<ConcreteAppServices> {
+pub fn build_services(db: Db, config: ServiceConfig) -> Arc<ConcreteAppServices> {
     let limit_cfg = config.limit_cfg();
 
     let users_repo = OrmUsersRepository::new(limit_cfg);
     let cities_repo = OrmCitiesRepository::new(limit_cfg);
     let addresses_repo = OrmAddressesRepository::new(limit_cfg);
 
+    let db: Arc<DBProvider<DbError>> = Arc::new(DBProvider::new(db));
+
     Arc::new(ConcreteAppServices::new(
         users_repo,
         cities_repo,
         addresses_repo,
-        sec,
+        db,
         Arc::new(MockEventPublisher),
         Arc::new(MockAuditPort),
         Arc::new(MockTenantResolver),

@@ -6,21 +6,22 @@ use simple_user_settings_sdk::{
 };
 use std::sync::Arc;
 
+use crate::domain::repo::SettingsRepository;
 use crate::domain::service::Service;
 
-pub struct LocalClient {
-    service: Arc<Service>,
+pub struct LocalClient<R: SettingsRepository + 'static> {
+    service: Arc<Service<R>>,
 }
 
-impl LocalClient {
+impl<R: SettingsRepository + 'static> LocalClient<R> {
     #[must_use]
-    pub fn new(service: Arc<Service>) -> Self {
+    pub fn new(service: Arc<Service<R>>) -> Self {
         Self { service }
     }
 }
 
 #[async_trait]
-impl SimpleUserSettingsClient for LocalClient {
+impl<R: SettingsRepository + 'static> SimpleUserSettingsClient for LocalClient<R> {
     async fn get_settings(
         &self,
         ctx: &SecurityContext,

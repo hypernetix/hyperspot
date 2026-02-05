@@ -4,7 +4,7 @@ A standalone library for collecting system information about the current node wh
 
 ## Purpose
 
-This library provides comprehensive system information collection without any transport layer dependencies. It can be used by any CyberFabric module that needs to gather information about the execution environment.
+This library provides system information collection without any transport layer dependencies. It can be used by any CyberFabric module that needs to gather information about the execution environment.
 
 ## Features
 

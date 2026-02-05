@@ -20,24 +20,21 @@ workspace = true
 [features]
 # You can use: sqlite + sea-orm for local development
 default = []
-pg = ["sea-orm/sqlx-postgres"]
-mysql = ["sea-orm/sqlx-mysql"]
-sqlite = ["sea-orm/sqlx-sqlite"]
+pg = ["sea-orm/sqlx-postgres", "sqlx/postgres"]
+mysql = ["sea-orm/sqlx-mysql", "sqlx/mysql"]
+sqlite = ["sea-orm/sqlx-sqlite", "sqlx/sqlite"]
 integration = []
-
-# SECURITY: Escape hatch for administrative operations (OFF by default)
-# NEVER enable in production builds
-# Requires INSECURE_ESCAPE_ALLOW=1 environment variable at runtime
-insecure-escape = []
 
 [dependencies]
 anyhow = { workspace = true }
+async-trait = { workspace = true }
 tokio = { workspace = true }
 xxhash-rust = { workspace = true }
 dirs = { workspace = true }
 chrono = { workspace = true, features = ["serde", "clock"] }
 time = { workspace = true }
 sea-orm = { workspace = true, features = ["with-time"] }
+sea-orm-migration = { workspace = true }
 modkit-db-macros = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
@@ -54,6 +51,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 dashmap = { workspace = true }
 figment = { workspace = true }
+sqlx = { version = "0.8.6", default-features = false, features = ["runtime-tokio-rustls"] }
 
 [dev-dependencies]
 tempfile = { workspace = true }
@@ -63,3 +61,4 @@ testcontainers-modules = { workspace = true }
 tokio = { workspace = true }
 anyhow = { workspace = true }
 temp-env = { workspace = true }
+trybuild = { workspace = true }

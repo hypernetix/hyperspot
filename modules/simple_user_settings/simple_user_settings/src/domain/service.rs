@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
-use modkit_security::SecurityContext;
+use modkit_db::DBProvider;
+use modkit_security::{AccessScope, SecurityContext};
 use simple_user_settings_sdk::models::{
     SimpleUserSettings, SimpleUserSettingsPatch, SimpleUserSettingsUpdate,
 };
@@ -8,6 +9,12 @@ use simple_user_settings_sdk::models::{
 use super::error::DomainError;
 use super::fields::SettingsFields;
 use super::repo::SettingsRepository;
+
+pub(crate) type DbProvider = DBProvider<modkit_db::DbError>;
+
+// ============================================================================
+// Service Configuration
+// ============================================================================
 
 pub struct ServiceConfig {
     pub max_field_length: usize,
@@ -21,21 +28,29 @@ impl Default for ServiceConfig {
     }
 }
 
-pub struct Service {
-    repo: Arc<dyn SettingsRepository>,
+// ============================================================================
+// Service Implementation
+// ============================================================================
+
+pub struct Service<R: SettingsRepository> {
+    db: Arc<DbProvider>,
+    repo: Arc<R>,
     config: ServiceConfig,
 }
 
-impl Service {
-    pub fn new(repo: Arc<dyn SettingsRepository>, config: ServiceConfig) -> Self {
-        Self { repo, config }
+impl<R: SettingsRepository> Service<R> {
+    pub fn new(db: Arc<DbProvider>, repo: Arc<R>, config: ServiceConfig) -> Self {
+        Self { db, repo, config }
     }
 
     pub async fn get_settings(
         &self,
         ctx: &SecurityContext,
     ) -> Result<SimpleUserSettings, DomainError> {
-        if let Some(settings) = self.repo.find_by_user(ctx).await? {
+        let conn = self.db.conn().map_err(DomainError::from)?;
+        let scope = build_scope(ctx);
+
+        if let Some(settings) = self.repo.find_by_user(&conn, &scope, ctx).await? {
             Ok(settings)
         } else {
             let user_id = ctx.subject_id();
@@ -58,9 +73,18 @@ impl Service {
         self.validate_field(SettingsFields::THEME, &update.theme)?;
         self.validate_field(SettingsFields::LANGUAGE, &update.language)?;
 
+        let conn = self.db.conn().map_err(DomainError::from)?;
+        let scope = build_scope(ctx);
+
         let settings = self
             .repo
-            .upsert_full(ctx, Some(update.theme), Some(update.language))
+            .upsert_full(
+                &conn,
+                &scope,
+                ctx,
+                Some(update.theme),
+                Some(update.language),
+            )
             .await?;
         Ok(settings)
     }
@@ -77,7 +101,10 @@ impl Service {
             self.validate_field(SettingsFields::LANGUAGE, language)?;
         }
 
-        let settings = self.repo.upsert_patch(ctx, patch).await?;
+        let conn = self.db.conn().map_err(DomainError::from)?;
+        let scope = build_scope(ctx);
+
+        let settings = self.repo.upsert_patch(&conn, &scope, ctx, patch).await?;
         Ok(settings)
     }
 
@@ -90,4 +117,11 @@ impl Service {
         }
         Ok(())
     }
+}
+
+/// Build an access scope from the security context.
+///
+/// Settings are scoped to tenant + user (resource).
+fn build_scope(ctx: &SecurityContext) -> AccessScope {
+    AccessScope::both(vec![ctx.tenant_id()], vec![ctx.subject_id()])
 }

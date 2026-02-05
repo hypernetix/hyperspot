@@ -1,10 +1,14 @@
 use crate::api::rest::{dto, handlers};
 use crate::domain::service::Service;
+use crate::infra::storage::sea_orm_repo::SeaOrmSettingsRepository;
 use axum::http::StatusCode;
 use axum::{Extension, Router};
 use modkit::api::operation_builder::{AuthReqAction, AuthReqResource, LicenseFeature};
 use modkit::api::{OpenApiRegistry, OperationBuilder};
 use std::sync::Arc;
+
+/// Type alias for the concrete service type.
+pub type ConcreteService = Service<SeaOrmSettingsRepository>;
 
 enum Resource {
     Settings,
@@ -49,7 +53,7 @@ impl LicenseFeature for License {}
 pub fn register_routes(
     mut router: Router,
     openapi: &dyn OpenApiRegistry,
-    service: Arc<Service>,
+    service: Arc<ConcreteService>,
 ) -> Router {
     router = OperationBuilder::get("/simple-user-settings/v1/settings")
         .operation_id("settings.get_settings")

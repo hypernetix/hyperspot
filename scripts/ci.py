@@ -506,6 +506,151 @@ def cmd_dylint_list(_args):
         run_cmd(["cargo", "dylint", "list", "--lib-path", lib], cwd=PROJECT_ROOT)
 
 
+def ensure_nightly_toolchain():
+    """Ensure Rust nightly toolchain is installed."""
+    result = run_cmd_allow_fail(["rustup", "run", "nightly", "rustc", "--version"])
+    if result.returncode != 0:
+        print(
+            "ERROR: Rust nightly toolchain not installed. "
+            "Install with: rustup toolchain install nightly"
+        )
+        sys.exit(1)
+
+
+def ensure_cargo_fuzz():
+    """Ensure cargo-fuzz is installed."""
+    ensure_nightly_toolchain()
+    result = run_cmd_allow_fail(["cargo", "+nightly", "fuzz", "--version"])
+    if result.returncode != 0:
+        print("Installing cargo-fuzz...")
+        run_cmd(["cargo", "+nightly", "install", "cargo-fuzz"])
+
+
+def cmd_fuzz_build(_args):
+    step("Building fuzz targets")
+    fuzz_dir = os.path.join(PROJECT_ROOT, "fuzz")
+    ensure_cargo_fuzz()
+
+    # Build all fuzz targets (no TARGET argument = build all)
+    run_cmd(["cargo", "+nightly", "fuzz", "build"], cwd=fuzz_dir)
+    print("All fuzz targets built successfully")
+
+
+def cmd_fuzz_list(_args):
+    step("Listing fuzz targets")
+    fuzz_dir = os.path.join(PROJECT_ROOT, "fuzz")
+    ensure_cargo_fuzz()
+
+    run_cmd(["cargo", "+nightly", "fuzz", "list"], cwd=fuzz_dir)
+
+
+def cmd_fuzz_run(args):
+    step(f"Running fuzz target: {args.target}")
+    fuzz_dir = os.path.join(PROJECT_ROOT, "fuzz")
+    ensure_cargo_fuzz()
+
+    fuzz_seconds = args.seconds or 60
+    if fuzz_seconds <= 0:
+        print("ERROR: --seconds must be a positive integer")
+        sys.exit(1)
+    fuzz_cmd = [
+        "cargo", "+nightly", "fuzz", "run", args.target,
+        "--", f"-max_total_time={fuzz_seconds}"
+    ]
+
+    result = run_cmd_allow_fail(fuzz_cmd, cwd=fuzz_dir)
+
+    if result.returncode != 0:
+        print(f"Fuzzing found issues. Check fuzz/artifacts/{args.target}/")
+        sys.exit(result.returncode)
+
+    print(f"Fuzzing completed successfully ({fuzz_seconds}s)")
+
+
+def cmd_fuzz(args):
+    step("Running smoke test fuzzing on all targets")
+    fuzz_dir = os.path.join(PROJECT_ROOT, "fuzz")
+
+    # Build all targets first
+    cmd_fuzz_build(args)
+
+    # Get list of targets
+    result = subprocess.run(
+        ["cargo", "+nightly", "fuzz", "list"],
+        cwd=fuzz_dir,
+        capture_output=True,
+        text=True
+    )
+
+    if result.returncode != 0:
+        print("Failed to list fuzz targets")
+        sys.exit(1)
+
+    targets = result.stdout.strip().split('\n')
+    smoke_time = args.seconds or 30
+    if smoke_time <= 0:
+        print("ERROR: --seconds must be a positive integer")
+        sys.exit(1)
+
+    failed_targets = []
+
+    for target in targets:
+        target = target.strip()
+        if not target:
+            continue
+
+        print(f"\n=== Fuzzing {target} for {smoke_time}s ===")
+        fuzz_cmd = [
+            "cargo", "+nightly", "fuzz", "run", target,
+            "--", f"-max_total_time={smoke_time}"
+        ]
+
+        result = run_cmd_allow_fail(fuzz_cmd, cwd=fuzz_dir)
+
+        if result.returncode != 0:
+            failed_targets.append(target)
+            print(f"❌ {target} found issues")
+        else:
+            print(f"✅ {target} passed")
+
+    if failed_targets:
+        print(f"\n❌ Fuzzing found issues in: {', '.join(failed_targets)}")
+        print("Check fuzz/artifacts/ for crash details")
+        sys.exit(1)
+
+    print(f"\n✅ All fuzz targets passed ({smoke_time}s each)")
+
+
+def cmd_fuzz_clean(_args):
+    step("Cleaning fuzzing artifacts")
+    fuzz_dir = os.path.join(PROJECT_ROOT, "fuzz")
+
+    artifacts_dir = os.path.join(fuzz_dir, "artifacts")
+    corpus_dir = os.path.join(fuzz_dir, "corpus")
+    target_dir = os.path.join(fuzz_dir, "target")
+
+    for d in [artifacts_dir, target_dir]:
+        if os.path.exists(d):
+            shutil.rmtree(d)
+            print(f"Removed {d}")
+
+    # Clean corpus but keep .gitkeep files
+    if os.path.exists(corpus_dir):
+        for item in os.listdir(corpus_dir):
+            item_path = os.path.join(corpus_dir, item)
+            if os.path.isdir(item_path):
+                # Remove contents but keep the directory and .gitkeep
+                for subitem in os.listdir(item_path):
+                    if subitem != ".gitkeep":
+                        subitem_path = os.path.join(item_path, subitem)
+                        if os.path.isfile(subitem_path):
+                            os.remove(subitem_path)
+                        elif os.path.isdir(subitem_path):
+                            shutil.rmtree(subitem_path)
+
+    print("Fuzzing artifacts cleaned")
+
+
 def cmd_all(args):
     step("Running full build and testing pipeline")
     cmd_check(args)
@@ -601,6 +746,29 @@ def build_parser():
     # dylint-list
     p_dylint_list = subparsers.add_parser("dylint-list", help="List available dylint lints")
     p_dylint_list.set_defaults(func=cmd_dylint_list)
+
+    # fuzz-build
+    p_fuzz_build = subparsers.add_parser("fuzz-build", help="Build all fuzz targets")
+    p_fuzz_build.set_defaults(func=cmd_fuzz_build)
+
+    # fuzz-list
+    p_fuzz_list = subparsers.add_parser("fuzz-list", help="List all fuzz targets")
+    p_fuzz_list.set_defaults(func=cmd_fuzz_list)
+
+    # fuzz-run
+    p_fuzz_run = subparsers.add_parser("fuzz-run", help="Run specific fuzz target")
+    p_fuzz_run.add_argument("target", help="Name of fuzz target to run")
+    p_fuzz_run.add_argument("--seconds", type=int, help="Fuzzing duration in seconds (default: 60)")
+    p_fuzz_run.set_defaults(func=cmd_fuzz_run)
+
+    # fuzz
+    p_fuzz = subparsers.add_parser("fuzz", help="Run smoke test fuzzing on all targets")
+    p_fuzz.add_argument("--seconds", type=int, default=30, help="Seconds per target (default: 30)")
+    p_fuzz.set_defaults(func=cmd_fuzz)
+
+    # fuzz-clean
+    p_fuzz_clean = subparsers.add_parser("fuzz-clean", help="Clean fuzzing artifacts")
+    p_fuzz_clean.set_defaults(func=cmd_fuzz_clean)
 
     # gts-docs
     p_gts_docs = subparsers.add_parser("gts-docs", help="Validate GTS identifiers in .md and .json files (DE0903)")

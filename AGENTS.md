@@ -2,14 +2,16 @@ These instructions are for AI assistants working in this project.
 
 If the instruction sounds unclear, vague or requires more context. Ask for clarification.
 
-Always open `@/docs/MODKIT_UNIFIED_SYSTEM.md` to learn about the project's `@/lib/modkit*` unified system.
+Always open `@/guidelines/README.md` first (entry point for project-wide guidelines).
 
-Always open `@/guidelines/NEW_MODULE.md` to learn about how to create a new module.
+Open additional docs only when relevant:
 
-Always open `@/docs/SECURE-ORM.md` to learn about the project's database interactions with ORM.
+- If the task adds/changes dependencies (Cargo.toml), introduces a new crate, involves working with 3rd-party crates (such as those for serialization/deserialization), open `@/guidelines/DEPENDENCIES.md`.
 
-Always open `@/docs/ODATA_SELECT.md` to learn about the OData `$select` field projection feature.
+- If the task touches ModKit/module architecture (modules layout, `@/lib/modkit*`, plugins, REST wiring, ClientHub, OpenAPI, lifecycle/stateful tasks, SSE, standardized HTTP errors), open `@/docs/modkit_unified_system/README.md`.
 
-Always open `@/guidelines/DEPENDENCIES.md` to learn about preferred dependencies and libraries.
+- If the task involves creating a new module (new `modules/<name>/...`, SDK pattern, crate layout, naming), open `@/guidelines/NEW_MODULE.md`.
 
-Always follow the guidelines specified in `@/guidelines/README.md`.
+- If the task involves persistence/DB access (SeaORM entities, migrations, repositories, tenant scoping/security context), open `@/docs/modkit_unified_system/06_secure_orm_db_access.md`. Never use raw SQL or SeaORM without prior reading of this document.
+
+- If the task involves OData `$select` field projection (or implementing endpoints that support `$select`), open `@/docs/ODATA_SELECT.md`.

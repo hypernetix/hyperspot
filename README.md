@@ -21,7 +21,11 @@ See the full architecture [MANIFEST](docs/ARCHITECTURE_MANIFEST.md) for more det
 
 ### Prerequisites
 
-- Rust stable with Cargo
+- Rust stable with Cargo ([Install via rustup](https://rustup.rs/))
+- Protocol Buffers compiler (`protoc`):
+  - macOS: `brew install protobuf`
+  - Linux: `apt-get install protobuf-compiler`
+  - Windows: Download from https://github.com/protocolbuffers/protobuf/releases
 - MariaDB/PostgreSQL/SQLite or in-memory database
 
 ### CI/Development Commands
@@ -102,13 +106,13 @@ modules:
 
 ### Creating Your First Module
 
-See [NEW_MODULE.md](guidelines/NEW_MODULE.md), but also [MODKIT_UNIFIED_SYSTEM.md](docs/MODKIT_UNIFIED_SYSTEM.md) and [MODKIT_PLUGINS.md](docs/MODKIT_PLUGINS.md) for more details.
+See [NEW_MODULE.md](guidelines/NEW_MODULE.md), but also [MODKIT UNIFIED SYSTEM](docs/modkit_unified_system/README.md) and [MODKIT_PLUGINS.md](docs/MODKIT_PLUGINS.md) for more details.
 
 ## Documentation
 
 - **[Architecture manifest](docs/ARCHITECTURE_MANIFEST.md)** - High-level overview of the architecture
 - **[Components](docs/COMPONENTS.md)** - List of all components and their roles
-- **[NEW_MODULE.md](guidelines/NEW_MODULE.md), [MODKIT_UNIFIED_SYSTEM.md](docs/MODKIT_UNIFIED_SYSTEM.md) and [MODKIT_PLUGINS.md](docs/MODKIT_PLUGINS.md)** - how to add new modules.
+- **[NEW_MODULE.md](guidelines/NEW_MODULE.md), [MODKIT UNIFIED SYSTEM](docs/modkit_unified_system/README.md) and [MODKIT_PLUGINS.md](docs/MODKIT_PLUGINS.md)** - how to add new modules.
 - **[Contributing](CONTRIBUTING.md)** - Development workflow and coding standards
 
 ## Configuration
@@ -188,6 +192,23 @@ cargo test --test integration
 # Unit tests code coverage
 make coverage-unit
 ```
+
+### Fuzzing
+
+HyperSpot uses continuous fuzzing to find bugs and security issues:
+
+```bash
+# Run fuzzing smoke tests
+make fuzz
+
+# Fuzz specific component
+make fuzz-run FUZZ_TARGET=fuzz_odata_filter FUZZ_SECONDS=300
+
+# See all available targets
+make fuzz-list
+```
+
+Fuzzing runs automatically in CI via ClusterFuzzLite. See `fuzz/README.md` for details.
 
 ### CI / Development Commands
 

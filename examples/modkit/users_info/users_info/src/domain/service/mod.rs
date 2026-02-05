@@ -24,10 +24,20 @@
 //!
 //! ## Security
 //!
-//! All operations use `SecureConn` for tenant isolation and RBAC:
+//! All operations use `DBRunner` for tenant isolation and RBAC:
 //! - Queries filtered by security context automatically
 //! - Operations checked against policy engine
 //! - Audit events published for compliance
+//!
+//! ## Connection Management
+//!
+//! Services acquire database connections internally via `DBProvider`. Handlers
+//! do NOT touch database objects - they simply call service methods with
+//! business parameters only.
+//!
+//! This design:
+//! - Keeps handlers clean and focused on HTTP concerns
+//! - Maintains transaction safety via the task-local guard
 
 use std::sync::Arc;
 
@@ -35,8 +45,8 @@ use crate::domain::error::DomainError;
 use crate::domain::events::UserDomainEvent;
 use crate::domain::ports::{AuditPort, EventPublisher};
 use crate::domain::repos::{AddressesRepository, CitiesRepository, UsersRepository};
+use modkit_db::DBProvider;
 use modkit_db::odata::LimitCfg;
-use modkit_db::secure::SecureConn;
 use modkit_security::{PolicyEngineRef, SecurityContext};
 use tenant_resolver_sdk::{TenantFilter, TenantResolverGatewayClient, TenantStatus};
 use uuid::Uuid;
@@ -48,6 +58,8 @@ mod users;
 pub(crate) use addresses::AddressesService;
 pub(crate) use cities::CitiesService;
 pub(crate) use users::UsersService;
+
+pub(crate) type DbProvider = DBProvider<modkit_db::DbError>;
 
 /// Resolve accessible tenants for the current security context.
 /// Only returns active tenants.
@@ -98,7 +110,15 @@ impl ServiceConfig {
 }
 
 // DI Container - aggregates all domain services
-#[derive(Clone)]
+//
+// # Database Access
+//
+// Services acquire database connections internally via `DBProvider`. Handlers
+// do NOT touch database objects - they call service methods with business
+// parameters only (e.g., `svc.users.get_user(&ctx, id)`).
+//
+// **Security**: A task-local guard prevents `Db::conn()` from being called
+// inside transaction closures, eliminating the factory bypass vulnerability.
 pub(crate) struct AppServices<UR, CR, AR>
 where
     UR: UsersRepository + 'static,
@@ -130,7 +150,7 @@ where
         users_repo: UR,
         cities_repo: CR,
         addresses_repo: AR,
-        db: SecureConn,
+        db: Arc<DbProvider>,
         events: Arc<dyn EventPublisher<UserDomainEvent>>,
         audit: Arc<dyn AuditPort>,
         resolver: Arc<dyn TenantResolverGatewayClient>,
@@ -143,23 +163,23 @@ where
         let addresses_repo = Arc::new(addresses_repo);
 
         let cities = Arc::new(CitiesService::new(
+            Arc::clone(&db),
             Arc::clone(&cities_repo),
-            db.clone(),
             policy_engine.clone(),
             resolver.clone(),
         ));
         let addresses = Arc::new(AddressesService::new(
+            Arc::clone(&db),
             Arc::clone(&addresses_repo),
             Arc::clone(&users_repo),
-            db.clone(),
             policy_engine.clone(),
             resolver.clone(),
         ));
 
         Self {
             users: UsersService::new(
-                Arc::clone(&users_repo),
                 db,
+                Arc::clone(&users_repo),
                 events,
                 audit,
                 policy_engine.clone(),

@@ -202,7 +202,7 @@ Additional types can be supported by implementing the `IntoODataValue` trait.
 
 ### Examples
 
-See `examples/typed_odata_query.rs` for comprehensive examples demonstrating:
+See `examples/typed_odata_query.rs` for examples demonstrating:
 
 - Simple equality filters
 - String operations (contains, startswith, endswith)

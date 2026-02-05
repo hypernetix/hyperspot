@@ -397,6 +397,9 @@ fn merge_json_objects(target: &mut serde_json::Value, source: &serde_json::Value
 ///     run_oop_with_options(opts).await
 /// }
 /// ```
+///
+/// # Errors
+/// Returns an error if the `OoP` module fails to start or run.
 #[tracing::instrument(
     level = "info",
     name = "oop_bootstrap",
@@ -406,8 +409,6 @@ fn merge_json_objects(target: &mut serde_json::Value, source: &serde_json::Value
         directory = %opts.directory_endpoint
     )
 )]
-/// # Errors
-/// Returns an error if the `OoP` module fails to start or run.
 pub async fn run_oop_with_options(opts: OopRunOptions) -> Result<()> {
     // Generate instance ID if not provided
     let instance_id = opts.instance_id.unwrap_or_else(Uuid::new_v4);
@@ -447,7 +448,7 @@ pub async fn run_oop_with_options(opts: OopRunOptions) -> Result<()> {
     };
 
     // Load configuration
-    let mut config = AppConfig::load_or_default(opts.config_path.as_deref())?;
+    let mut config = AppConfig::load_or_default(&opts.config_path)?;
     config.apply_cli_overrides(args.verbose);
 
     // Try to read rendered module config from master host via env var BEFORE logging init
@@ -476,11 +477,7 @@ pub async fn run_oop_with_options(opts: OopRunOptions) -> Result<()> {
     let otel_layer = None;
 
     // Initialize logging with MERGED config (master base + local override)
-    init_logging_unified(
-        &merged_logging,
-        std::path::Path::new(&config.server.home_dir),
-        otel_layer,
-    );
+    init_logging_unified(&merged_logging, &config.server.home_dir, otel_layer);
 
     // Now we can log - report what we received from master
     if let Some(ref rc) = rendered_config {

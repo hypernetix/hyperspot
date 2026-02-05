@@ -104,12 +104,14 @@
 
 // Module declarations
 mod cond;
+mod db;
 mod db_ops;
 pub mod docs;
 #[allow(clippy::module_inception)]
 mod entity_traits;
 mod error;
 pub mod provider;
+mod runner;
 mod secure_conn;
 mod select;
 mod tests;
@@ -125,11 +127,17 @@ pub use error::ScopeError;
 // Security types from modkit-security
 pub use modkit_security::AccessScope;
 
-// High-level secure database wrapper
-pub use secure_conn::SecureConn;
+// Ergonomic secure connection API (no raw SeaORM types leaked)
+pub use secure_conn::{SecureConn, SecureTx};
 
-// Transaction type re-export for use in transaction closures
-pub use sea_orm::DatabaseTransaction as Tx;
+// Hidden runner capability used by repositories.
+#[doc(hidden)]
+pub use runner::DBRunner;
+
+pub(crate) use runner::{DBRunnerInternal, SeaOrmRunner};
+
+// Primary database types (new secure API)
+pub use db::{Db, DbConn, DbTx};
 
 // Transaction error types (no SeaORM types leaked)
 pub use tx_error::{InfraError, TxError};
@@ -138,11 +146,15 @@ pub use tx_error::{InfraError, TxError};
 pub use tx_config::{TxAccessMode, TxConfig, TxIsolationLevel};
 
 // Select operations
-pub use select::{Scoped, SecureEntityExt, SecureSelect, Unscoped};
+pub use select::{
+    Scoped, SecureEntityExt, SecureFindRelatedExt, SecureSelect, SecureSelectTwo,
+    SecureSelectTwoMany, Unscoped,
+};
 
-// Update operations
+// Update/Delete/Insert operations
 pub use db_ops::{
-    SecureDeleteExt, SecureDeleteMany, SecureUpdateExt, SecureUpdateMany, secure_insert,
+    SecureDeleteExt, SecureDeleteMany, SecureInsertExt, SecureInsertOne, SecureOnConflict,
+    SecureUpdateExt, SecureUpdateMany, secure_insert, secure_update_with_scope,
     validate_tenant_in_scope,
 };
 

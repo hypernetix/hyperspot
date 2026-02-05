@@ -3,7 +3,7 @@ use tracing::{debug, info, instrument};
 
 use crate::domain::error::DomainError;
 use crate::domain::repos::{AddressesRepository, UsersRepository};
-use modkit_db::secure::SecureConn;
+use crate::domain::service::DbProvider;
 use modkit_odata::{ODataQuery, Page};
 use modkit_security::{PolicyEngineRef, SecurityContext};
 use tenant_resolver_sdk::TenantResolverGatewayClient;
@@ -11,28 +11,27 @@ use time::OffsetDateTime;
 use user_info_sdk::{Address, AddressPatch, NewAddress};
 use uuid::Uuid;
 
-#[derive(Clone)]
 pub struct AddressesService<R: AddressesRepository, U: UsersRepository> {
+    db: Arc<DbProvider>,
     policy_engine: PolicyEngineRef,
     repo: Arc<R>,
     users_repo: Arc<U>,
-    db: SecureConn,
     resolver: Arc<dyn TenantResolverGatewayClient>,
 }
 
 impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
     pub fn new(
+        db: Arc<DbProvider>,
         repo: Arc<R>,
         users_repo: Arc<U>,
-        db: SecureConn,
         policy_engine: PolicyEngineRef,
         resolver: Arc<dyn TenantResolverGatewayClient>,
     ) -> Self {
         Self {
+            db,
             policy_engine,
             repo,
             users_repo,
-            db,
             resolver,
         }
     }
@@ -48,6 +47,8 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
     ) -> Result<Address, DomainError> {
         debug!("Getting address by id");
 
+        let conn = self.db.conn().map_err(DomainError::from)?;
+
         let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
         let scope = ctx
             .scope(self.policy_engine.clone())
@@ -55,7 +56,7 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
             .prepare()
             .await?;
 
-        let found = self.repo.get(self.db.conn(), &scope, id).await?;
+        let found = self.repo.get(&conn, &scope, id).await?;
 
         found.ok_or_else(|| DomainError::not_found("Address", id))
     }
@@ -69,6 +70,8 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
     ) -> Result<Page<Address>, DomainError> {
         debug!("Listing addresses with cursor pagination");
 
+        let conn = self.db.conn().map_err(DomainError::from)?;
+
         let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
         let scope = ctx
             .scope(self.policy_engine.clone())
@@ -76,7 +79,7 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
             .prepare()
             .await?;
 
-        let page = self.repo.list_page(self.db.conn(), &scope, query).await?;
+        let page = self.repo.list_page(&conn, &scope, query).await?;
 
         debug!("Successfully listed {} addresses in page", page.items.len());
         Ok(page)
@@ -90,6 +93,8 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
     ) -> Result<Option<Address>, DomainError> {
         debug!("Getting address by user_id");
 
+        let conn = self.db.conn().map_err(DomainError::from)?;
+
         let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
         let scope = ctx
             .scope(self.policy_engine.clone())
@@ -97,10 +102,7 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
             .prepare()
             .await?;
 
-        let found = self
-            .repo
-            .get_by_user_id(self.db.conn(), &scope, user_id)
-            .await?;
+        let found = self.repo.get_by_user_id(&conn, &scope, user_id).await?;
 
         Ok(found)
     }
@@ -124,6 +126,8 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
     ) -> Result<Address, DomainError> {
         info!("Upserting address for user");
 
+        let conn = self.db.conn().map_err(DomainError::from)?;
+
         let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
         let scope = ctx
             .scope(self.policy_engine.clone())
@@ -133,14 +137,11 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
 
         let user = self
             .users_repo
-            .get(self.db.conn(), &scope, user_id)
+            .get(&conn, &scope, user_id)
             .await?
             .ok_or_else(|| DomainError::user_not_found(user_id))?;
 
-        let existing = self
-            .repo
-            .get_by_user_id(self.db.conn(), &scope, user_id)
-            .await?;
+        let existing = self.repo.get_by_user_id(&conn, &scope, user_id).await?;
 
         let now = OffsetDateTime::now_utc();
 
@@ -151,10 +152,7 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
             updated.postal_code = address.postal_code;
             updated.updated_at = now;
 
-            let _ = self
-                .repo
-                .update(self.db.conn(), &scope, updated.clone())
-                .await?;
+            let _ = self.repo.update(&conn, &scope, updated.clone()).await?;
 
             info!("Successfully updated address for user");
             Ok(updated)
@@ -172,10 +170,7 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
                 updated_at: now,
             };
 
-            let _ = self
-                .repo
-                .create(self.db.conn(), &scope, new_address.clone())
-                .await?;
+            let _ = self.repo.create(&conn, &scope, new_address.clone()).await?;
 
             info!("Successfully created address for user");
             Ok(new_address)
@@ -190,6 +185,8 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
     ) -> Result<(), DomainError> {
         info!("Deleting address for user");
 
+        let conn = self.db.conn().map_err(DomainError::from)?;
+
         let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
         let scope = ctx
             .scope(self.policy_engine.clone())
@@ -197,10 +194,7 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
             .prepare()
             .await?;
 
-        let rows_affected = self
-            .repo
-            .delete_by_user_id(self.db.conn(), &scope, user_id)
-            .await?;
+        let rows_affected = self.repo.delete_by_user_id(&conn, &scope, user_id).await?;
 
         if rows_affected == 0 {
             return Err(DomainError::not_found("Address", user_id));
@@ -217,6 +211,8 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
         new_address: NewAddress,
     ) -> Result<Address, DomainError> {
         info!("Creating new address");
+
+        let conn = self.db.conn().map_err(DomainError::from)?;
 
         let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
         let scope = ctx
@@ -239,10 +235,7 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
             updated_at: now,
         };
 
-        let _ = self
-            .repo
-            .create(self.db.conn(), &scope, address.clone())
-            .await?;
+        let _ = self.repo.create(&conn, &scope, address.clone()).await?;
 
         info!("Successfully created address with id={}", address.id);
         Ok(address)
@@ -257,6 +250,8 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
     ) -> Result<Address, DomainError> {
         info!("Updating address");
 
+        let conn = self.db.conn().map_err(DomainError::from)?;
+
         let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
         let scope = ctx
             .scope(self.policy_engine.clone())
@@ -264,7 +259,7 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
             .prepare()
             .await?;
 
-        let found = self.repo.get(self.db.conn(), &scope, id).await?;
+        let found = self.repo.get(&conn, &scope, id).await?;
 
         let mut current: Address = found.ok_or_else(|| DomainError::not_found("Address", id))?;
 
@@ -279,10 +274,7 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
         }
         current.updated_at = OffsetDateTime::now_utc();
 
-        let _ = self
-            .repo
-            .update(self.db.conn(), &scope, current.clone())
-            .await?;
+        let _ = self.repo.update(&conn, &scope, current.clone()).await?;
 
         info!("Successfully updated address");
         Ok(current)
@@ -292,6 +284,8 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
     pub async fn delete_address(&self, ctx: &SecurityContext, id: Uuid) -> Result<(), DomainError> {
         info!("Deleting address");
 
+        let conn = self.db.conn().map_err(DomainError::from)?;
+
         let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
         let scope = ctx
             .scope(self.policy_engine.clone())
@@ -299,7 +293,7 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
             .prepare()
             .await?;
 
-        let deleted = self.repo.delete(self.db.conn(), &scope, id).await?;
+        let deleted = self.repo.delete(&conn, &scope, id).await?;
 
         if !deleted {
             return Err(DomainError::not_found("Address", id));

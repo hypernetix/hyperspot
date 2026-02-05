@@ -9,9 +9,9 @@ This module is part of **CyberFabric** — a modular, high-performance AI servic
 ## Tech Stack
 
 - **Language**: Rust (see [`@/guidelines/DNA/languages/RUST.md`](../../../guidelines/DNA/languages/RUST.md))
-- **Framework**: ModKit (see [`@/docs/MODKIT_UNIFIED_SYSTEM.md`](../../../docs/MODKIT_UNIFIED_SYSTEM.md))
+- **Framework**: ModKit (see [`@/docs/modkit_unified_system/README.md`](../../../docs/modkit_unified_system/README.md))
 - **HTTP**: Axum with `tower-http` middleware
-- **Database**: SeaORM / SQLx with secure ORM layer (see [`@/docs/SECURE-ORM.md`](../../../docs/SECURE-ORM.md))
+- **Database**: SeaORM / SQLx with secure ORM layer (see [`@/docs/modkit_unified_system/06_secure_orm_db_access.md`](../../../docs/modkit_unified_system/06_secure_orm_db_access.md))
 - **Observability**: `tracing` + OpenTelemetry (see [`@/docs/TRACING_SETUP.md`](../../../docs/TRACING_SETUP.md))
 - **OpenAPI**: `utoipa` for automatic documentation generation
 - **IDs**: UUIDv7 for all identifiers
@@ -37,7 +37,7 @@ Follow the new module guideline: [`@/guidelines/NEW_MODULE.md`](../../../guideli
 modules/<module>/
 ├─ <module>-sdk/           # Public API: trait, models, errors (NO serde)
 │  └─ src/
-│     ├─ api.rs            # API trait (all methods take &SecurityCtx)
+│     ├─ api.rs            # API trait (all methods take &SecurityContext)
 │     ├─ models.rs         # Transport-agnostic models
 │     └─ errors.rs         # Transport-agnostic errors
 └─ <module>/               # Implementation
@@ -82,19 +82,19 @@ Follow the REST API guidelines: [`@/guidelines/DNA/REST/API.md`](../../../guidel
 Follow security guidelines: [`@/guidelines/SECURITY.md`](../../../guidelines/SECURITY.md)
 
 **Key requirements:**
-- **All API methods MUST accept `&SecurityCtx`** as first parameter
+- **All API methods MUST accept `&SecurityContext`** as first parameter
 - **Use SecureConn** for database access with automatic tenant isolation
 - **Input validation** via `validator` crate
 - **No secrets in code** — use environment variables
 
 ### Database Access
 
-Follow secure ORM patterns: [`@/docs/SECURE-ORM.md`](../../../docs/SECURE-ORM.md)
+Follow secure ORM patterns: [`@/docs/modkit_unified_system/06_secure_orm_db_access.md`](../../../docs/modkit_unified_system/06_secure_orm_db_access.md)
 
 - **Typestate enforcement**: Unscoped queries cannot execute
 - **Deny-by-default**: Empty scopes return `WHERE 1=0`
 - **Derive macro**: `#[derive(Scopable)]` with explicit dimension declarations
-- **Request-scoped**: `SecurityCtx` passed per-operation
+- **Request-scoped**: `SecurityContext` passed per-operation
 
 ### Testing Strategy
 
@@ -125,8 +125,8 @@ Follow tracing setup: [`@/docs/TRACING_SETUP.md`](../../../docs/TRACING_SETUP.md
 | Document | Purpose |
 |----------|---------|
 | [`@/docs/ARCHITECTURE_MANIFEST.md`](../../../docs/ARCHITECTURE_MANIFEST.md) | System architecture and design principles |
-| [`@/docs/MODKIT_UNIFIED_SYSTEM.md`](../../../docs/MODKIT_UNIFIED_SYSTEM.md) | ModKit framework guide |
-| [`@/docs/SECURE-ORM.md`](../../../docs/SECURE-ORM.md) | Secure database access patterns |
+| [`@/docs/modkit_unified_system/README.md`](../../../docs/modkit_unified_system/README.md) | ModKit framework guide |
+| [`@/docs/modkit_unified_system/06_secure_orm_db_access.md`](../../../docs/modkit_unified_system/06_secure_orm_db_access.md) | Secure database access patterns |
 | [`@/docs/TRACING_SETUP.md`](../../../docs/TRACING_SETUP.md) | Observability configuration |
 | [`@/guidelines/NEW_MODULE.md`](../../../guidelines/NEW_MODULE.md) | Step-by-step module creation |
 | [`@/guidelines/SECURITY.md`](../../../guidelines/SECURITY.md) | Security best practices |

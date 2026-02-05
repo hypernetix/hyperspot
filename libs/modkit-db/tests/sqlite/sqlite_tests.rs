@@ -294,10 +294,8 @@ async fn test_sqlite_memory_database() {
     let result = manager.get("test_module").await;
 
     match result {
-        Ok(Some(handle)) => {
-            // Verify it's an in-memory database
-            let dsn = handle.dsn();
-            assert!(dsn.contains(":memory:") || dsn.contains("mode=memory"));
+        Ok(Some(db)) => {
+            assert_eq!(db.db_engine(), "sqlite");
         }
         Ok(None) => {
             panic!("Expected database handle for in-memory SQLite");

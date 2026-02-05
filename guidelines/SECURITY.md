@@ -45,7 +45,7 @@ let api_key = std::env::var("API_KEY")
 
 CyberFabric provides a secure-by-default ORM layer that enforces access control at compile time using the typestate pattern. This prevents unscoped database queries from executing and ensures tenant isolation.
 
-For complete documentation on the Secure ORM layer, see [SECURE-ORM.md](../docs/SECURE-ORM.md).
+For secure ORM usage, see `docs/modkit_unified_system/06_secure_orm_db_access.md`.
 
 ### Key Features
 
@@ -59,7 +59,7 @@ For complete documentation on the Secure ORM layer, see [SECURE-ORM.md](../docs/
 ### Quick Example
 
 ```rust
-use modkit_db::secure::{SecurityCtx, SecureConn};
+use modkit_db::secure::{SecurityContext, SecureConn};
 use modkit_db_macros::Scopable;
 
 // Define a scopable entity
@@ -79,15 +79,16 @@ pub async fn list_users_handler(
     Extension(db): Extension<DbHandle>,
 ) -> Result<Json<Vec<User>>, Problem> {
     // Create security context from request
-    let ctx = SecurityCtx::for_tenants(vec![auth.tenant_id], auth.user_id);
+    let ctx = SecurityContext::for_tenants(vec![auth.tenant_id], auth.user_id);
 
     // Get secure connection
     let secure_conn = db.sea_secure();
 
     // Query with automatic tenant isolation
+    let scope = modkit_db::secure::AccessScope::tenant(ctx.tenant_id());
     let users = secure_conn
-        .find::<user::Entity>(&ctx)?
-        .all(secure_conn.conn())
+        .find::<user::Entity>(&scope)
+        .all(&secure_conn)
         .await?;
 
     Ok(Json(users))

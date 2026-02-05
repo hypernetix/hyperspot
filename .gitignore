@@ -33,4 +33,13 @@ logs
 
 # Code coverage reports
 /coverage/
+
+# Fuzzing artifacts
+/fuzz/target/
+/fuzz/artifacts/
+/fuzz/corpus/**
+!/fuzz/corpus/*/
+!/fuzz/corpus/*/.gitkeep
+
+# Claude Code local settings
 .claude/settings.local.json

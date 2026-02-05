@@ -8,8 +8,13 @@ E2E_ARGS ?= --features users-info-example
 
 # -------- Utility macros --------
 
-define ensure_tool
-	@command -v $(1) >/dev/null || (echo "Installing $(1)..." && cargo install $(1))
+define check_tool
+    @command -v $(1) >/dev/null || (echo "ERROR: $(1) is not installed. Run 'make setup' to install required tools." && exit 1)
+endef
+
+define check_rustup_component
+    @command -v rustup >/dev/null || (echo "ERROR: rustup not installed. Install rustup or run 'make setup'." && exit 1)
+	@rustup component list --installed | grep -q '^$(1)' || (echo "ERROR: $(1) component not installed. Run 'rustup component add $(1)' or 'make setup'." && exit 1)
 endef
 
 # -------- Defaults --------
@@ -17,6 +22,31 @@ endef
 # Show the help message with list of commands (default target)
 help:
 	@python3 scripts/make_help.py Makefile
+
+
+# -------- Set up --------
+
+.PHONY: setup
+
+## Install all required development tools
+setup:
+	@echo "Installing required development tools..."
+	rustup component add clippy
+	cargo install lychee
+	cargo install cargo-geiger
+	cargo install cargo-deny
+	cargo install cargo-dylint
+	cargo install dylint-link
+	cargo install cargo-fuzz
+	@if echo "$$OS" | grep -iq windows || [ -n "$$COMSPEC" ]; then \
+		echo "WARNING: kani-verifier and cargo-llvm-cov installation skipped on Windows."; \
+		echo "These tools are not supported on Windows. Use WSL2 or Docker to install instead."; \
+	else \
+		cargo install --locked kani-verifier && \
+		cargo kani setup && \
+		cargo install cargo-llvm-cov; \
+	fi
+	@echo "Setup complete. All tools installed."
 
 # -------- Code formatting --------
 
@@ -69,23 +99,26 @@ fmt:
 # |             | - Use 'make dylint-list' to see all available custom lints           |
 # +-------------+----------------------------------------------------------------------+
 
-.PHONY: clippy kani geiger safety lint dylint dylint-list dylint-test gts-docs gts-docs-vendor gts-docs-release gts-docs-vendor-release gts-docs-test
+.PHONY: clippy lychee kani geiger safety lint dylint dylint-list dylint-test gts-docs gts-docs-vendor gts-docs-release gts-docs-vendor-release gts-docs-test
 
 # Run clippy linter (excludes gts-rust submodule which has its own lint settings)
 clippy:
-	$(call ensure_tool,cargo-clippy)
+	$(call check_rustup_component,clippy)
 	cargo clippy --workspace --all-targets --all-features -- -D warnings -D clippy::perf
+
+# Run markdown checks with 'lychee'
+lychee:
+	$(call check_tool,lychee)
+	lychee docs examples dylint_lints guidelines
 
 ## The Kani Rust Verifier for checking safety of the code
 kani:
-	@command -v kani >/dev/null || \
-		(echo "Installing Kani verifier..." && \
-		 cargo install --locked kani-verifier)
+	$(call check_tool,kani)
 	cargo kani --workspace --all-features
 
 ## Run Geiger scanner for unsafe code in dependencies
 geiger:
-	$(call ensure_tool,cargo-geiger)
+	$(call check_tool,cargo-geiger)
 	cd apps/hyperspot-server && cargo geiger --all-features
 
 ## Check there are no compile time warnings
@@ -147,8 +180,8 @@ dylint-test:
 
 # Run project compliance dylint lints on the workspace (see `make dylint-list`)
 dylint:
-	@command -v cargo-dylint >/dev/null || (echo "Installing cargo-dylint..." && cargo install cargo-dylint)
-	@command -v dylint-link >/dev/null || (echo "Installing dylint-link..." && cargo install dylint-link)
+	$(call check_tool,cargo-dylint)
+	$(call check_tool,dylint-link)
 	@cd dylint_lints && cargo build --release
 	@TOOLCHAIN=$$(rustc --version --verbose | grep 'host:' | cut -d' ' -f2); \
 	RUSTUP_TOOLCHAIN=$$(cat dylint_lints/rust-toolchain.toml 2>/dev/null | grep 'channel' | cut -d'"' -f2 || echo "nightly"); \
@@ -185,7 +218,7 @@ safety: clippy kani lint dylint # geiger
 
 ## Check licenses and dependencies
 deny:
-	$(call ensure_tool,cargo-deny)
+	$(call check_tool,cargo-deny)
 	cargo deny check
 
 # Run all security checks
@@ -284,24 +317,18 @@ e2e-local:
 e2e-docker:
 	python3 scripts/ci.py e2e --docker $(E2E_ARGS)
 
-markdown-check:
-	broken-md-links docs
-	broken-md-links examples
-	broken-md-links dylint_lints
-	broken-md-links guidelines
-
 # -------- Code coverage --------
 
 .PHONY: coverage coverage-unit coverage-e2e-local check-prereq-e2e-local
 
 # Generate code coverage report (unit + e2e-local tests)
 coverage:
-	@command -v cargo-llvm-cov >/dev/null || (echo "Installing cargo-llvm-cov..." && cargo install cargo-llvm-cov)
+	$(call check_tool,cargo-llvm-cov)
 	python3 scripts/coverage.py combined
 
 # Generate code coverage report (unit tests only)
 coverage-unit:
-	@command -v cargo-llvm-cov >/dev/null || (echo "Installing cargo-llvm-cov..." && cargo install cargo-llvm-cov)
+	$(call check_tool,cargo-llvm-cov)
 	python3 scripts/coverage.py unit
 
 ## Ensure needed packages and programs installed for local e2e testing
@@ -310,8 +337,62 @@ check-prereq-e2e-local:
 
 # Generate code coverage report (e2e-local tests only)
 coverage-e2e-local: check-prereq-e2e-local
-	@command -v cargo-llvm-cov >/dev/null || (echo "Installing cargo-llvm-cov..." && cargo install cargo-llvm-cov)
+	$(call check_tool,cargo-llvm-cov)
 	python3 scripts/coverage.py e2e-local
+
+# -------- Fuzzing --------
+
+.PHONY: fuzz fuzz-build fuzz-list fuzz-run fuzz-clean fuzz-corpus
+
+## Check cargo-fuzz is installed (required for fuzzing)
+fuzz-install:
+	$(call check_tool,cargo-fuzz)
+
+## Build all fuzz targets
+fuzz-build: fuzz-install
+	cd fuzz && cargo +nightly fuzz build
+
+## List all available fuzz targets
+fuzz-list: fuzz-install
+	cd fuzz && cargo +nightly fuzz list
+
+## Run a specific fuzz target (use FUZZ_TARGET=name)
+## Example: make fuzz-run FUZZ_TARGET=fuzz_odata_filter FUZZ_SECONDS=60
+fuzz-run: fuzz-install
+	@if [ -z "$(FUZZ_TARGET)" ]; then \
+		echo "ERROR: FUZZ_TARGET is required. Example: make fuzz-run FUZZ_TARGET=fuzz_odata_filter"; \
+		exit 1; \
+	fi
+	cd fuzz && cargo +nightly fuzz run $(FUZZ_TARGET) -- -max_total_time=$(or $(FUZZ_SECONDS),60)
+
+## Run all fuzz targets for a short time (smoke test)
+fuzz: fuzz-build
+	@echo "Running all fuzz targets for 30 seconds each..."
+	@cd fuzz && \
+	FAILED=0; \
+	for target in $$(cargo +nightly fuzz list); do \
+		echo "=== Fuzzing $$target ==="; \
+		cargo +nightly fuzz run $$target -- -max_total_time=30 || FAILED=1; \
+	done; \
+	if [ $$FAILED -ne 0 ]; then \
+		echo "Fuzzing found crashes. Check fuzz/artifacts/ for details."; \
+		exit 1; \
+	fi
+	@echo "Fuzzing complete. No crashes found."
+
+## Clean fuzzing artifacts and corpus
+fuzz-clean:
+	rm -rf fuzz/artifacts/
+	rm -rf fuzz/corpus/*/
+	rm -rf fuzz/target/
+
+## Minimize corpus for a specific target
+fuzz-corpus: fuzz-install
+	@if [ -z "$(FUZZ_TARGET)" ]; then \
+		echo "ERROR: FUZZ_TARGET is required. Example: make fuzz-corpus FUZZ_TARGET=fuzz_odata_filter"; \
+		exit 1; \
+	fi
+	cd fuzz && cargo +nightly fuzz cmin $(FUZZ_TARGET)
 
 # -------- Main targets --------
 
@@ -331,7 +412,7 @@ oop-example:
 	cargo run --bin hyperspot-server --features oop-example,users-info-example,tenant-resolver-example -- --config config/quickstart.yaml run
 
 # Run all quality checks
-check: fmt clippy security dylint-test dylint gts-docs test
+check: fmt clippy lychee security dylint-test dylint gts-docs test
 
 # Run CI pipeline
 ci: check

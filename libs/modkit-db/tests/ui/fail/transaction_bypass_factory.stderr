@@ -1,0 +1,70 @@
+warning: unused import: `Db`
+ --> tests/ui/fail/transaction_bypass_factory.rs:9:17
+  |
+9 | use modkit_db::{Db, DbHandle, ConnectOpts};
+  |                 ^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `std::pin::Pin`
+  --> tests/ui/fail/transaction_bypass_factory.rs:10:5
+   |
+10 | use std::pin::Pin;
+   |     ^^^^^^^^^^^^^
+
+warning: unused import: `std::future::Future`
+  --> tests/ui/fail/transaction_bypass_factory.rs:11:5
+   |
+11 | use std::future::Future;
+   |     ^^^^^^^^^^^^^^^^^^^
+
+error[E0382]: borrow of moved value: `db`
+  --> tests/ui/fail/transaction_bypass_factory.rs:21:39
+   |
+18 |       let db = handle.into_db();
+   |           -- move occurs because `db` has type `modkit_db::Db`, which does not implement the `Copy` trait
+...
+21 |       let (db, result) = db.transaction(|tx| {
+   |                             -           ^^^^ value borrowed here after move
+   |  ___________________________|
+   | |
+22 | |         // ERROR: db is moved, cannot access it here
+23 | |         let conn = db.conn();
+   | |                    -- borrow occurs due to use in closure
+24 | |         Box::pin(async move {
+...  |
+27 | |         })
+28 | |     }).await;
+   | |______- `db` moved due to this method call
+   |
+note: `modkit_db::Db::transaction` takes ownership of the receiver `self`, which moves `db`
+  --> src/secure/db.rs
+   |
+   |     pub async fn transaction<F, T>(self, f: F) -> (Self, anyhow::Result<T>)
+   |                                    ^^^^
+
+warning: unused variable: `tx`
+  --> tests/ui/fail/transaction_bypass_factory.rs:21:40
+   |
+21 |     let (db, result) = db.transaction(|tx| {
+   |                                        ^^ help: if this is intentional, prefix it with an underscore: `_tx`
+   |
+   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `conn`
+  --> tests/ui/fail/transaction_bypass_factory.rs:23:13
+   |
+23 |         let conn = db.conn();
+   |             ^^^^ help: if this is intentional, prefix it with an underscore: `_conn`
+
+warning: unused variable: `db`
+  --> tests/ui/fail/transaction_bypass_factory.rs:21:10
+   |
+21 |     let (db, result) = db.transaction(|tx| {
+   |          ^^ help: if this is intentional, prefix it with an underscore: `_db`
+
+warning: unused variable: `result`
+  --> tests/ui/fail/transaction_bypass_factory.rs:21:14
+   |
+21 |     let (db, result) = db.transaction(|tx| {
+   |              ^^^^^^ help: if this is intentional, prefix it with an underscore: `_result`

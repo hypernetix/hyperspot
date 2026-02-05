@@ -9,7 +9,7 @@ description = "Simple settings module"
 repository.workspace = true
 readme = "README.md"
 keywords = ["cyberfabric", "cyberfabric-system"]
-categories = ["web-programming", "settings"]
+categories = ["web-programming"]
 
 [lib]
 name = "simple_user_settings"
@@ -52,3 +52,4 @@ modkit-macros = { workspace = true }
 
 [dev-dependencies]
 tower = { workspace = true, features = ["util"] }
+modkit-db = { workspace = true, features = ["sqlite"] }

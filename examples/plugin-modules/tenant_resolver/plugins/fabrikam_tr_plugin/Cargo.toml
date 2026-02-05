@@ -14,6 +14,7 @@ workspace = true
 tenant-resolver-example-sdk = { package = "tenant-resolver-sdk", path = "../../tenant_resolver-sdk" }
 types-registry-sdk = { workspace = true }
 modkit = { workspace = true }
+types = { path = "../../../../../modules/system/types" }
 modkit-security = { workspace = true }
 modkit-odata = { workspace = true }
 async-trait = { workspace = true }
