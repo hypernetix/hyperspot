@@ -23,7 +23,7 @@ Provides the fundamental task management capabilities that all other features de
 - Overall Design: [DESIGN.md](../DESIGN.md)
 - Dependencies: None
 
-## 2. Actor Flows (FDL)
+## 2. Actor Flows (SDSL)
 
 ### Create Task Flow
 
@@ -82,7 +82,7 @@ Provides the fundamental task management capabilities that all other features de
    1. [ ] - `ph-1` - **RETURN** not found error (404) - `inst-delete-7a`
 
 
-## 3. Algorithms (FDL)
+## 3. Algorithms (SDSL)
 
 ### Task Validation Algorithm
 
@@ -109,7 +109,7 @@ Provides the fundamental task management capabilities that all other features de
 7. [ ] - `ph-1` - **RETURN** { valid: errors.length === 0, errors, warnings } - `inst-val-7`
 
 
-## 4. States (FDL)
+## 4. States (SDSL)
 
 ### Task State Machine
 

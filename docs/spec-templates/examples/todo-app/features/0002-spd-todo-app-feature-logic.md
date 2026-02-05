@@ -22,7 +22,7 @@ Enables users to efficiently navigate and manage large numbers of tasks by apply
 - Overall Design: [DESIGN.md](../DESIGN.md)
 - Dependencies: `spd-todo-app-feature-core`
 
-## 2. Actor Flows (FDL)
+## 2. Actor Flows (SDSL)
 
 ### Filter Tasks Flow
 
@@ -71,7 +71,7 @@ Enables users to efficiently navigate and manage large numbers of tasks by apply
 5. [ ] - `ph-1` - **RETURN** matching tasks with highlighted matches - `inst-search-5`
 
 
-## 3. Algorithms (FDL)
+## 3. Algorithms (SDSL)
 
 ### Task Sorting Algorithm
 
@@ -118,7 +118,7 @@ Enables users to efficiently navigate and manage large numbers of tasks by apply
 6. [ ] - `ph-1` - **RETURN** { isOverdue: false, urgency: 'low' } - `inst-overdue-6`
 
 
-## 4. States (FDL)
+## 4. States (SDSL)
 
 ### Filter State Machine
 
