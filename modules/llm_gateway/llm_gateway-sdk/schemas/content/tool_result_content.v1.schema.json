@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "gts://gts.x.llm_gateway.content.tool_result_content.v1~",
+  "$id": "gts://gts.x.llmgw.content.tool_result_content.v1~",
   "title": "ToolResultContent",
   "description": "Tool result wrapped as content part",
   "type": "object",
@@ -11,7 +11,7 @@
       "description": "Content type discriminator"
     },
     "tool_result": {
-      "$ref": "gts://gts.x.llm_gateway.content.tool_result.v1~",
+      "$ref": "gts://gts.x.llmgw.content.tool_result.v1~",
       "description": "The tool result"
     }
   },

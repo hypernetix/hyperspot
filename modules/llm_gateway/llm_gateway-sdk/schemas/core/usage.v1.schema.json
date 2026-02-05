@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "gts://gts.x.llm_gateway.core.usage.v1~",
+  "$id": "gts://gts.x.llmgw.core.usage.v1~",
   "title": "Usage",
   "description": "Token usage and cost information",
   "type": "object",

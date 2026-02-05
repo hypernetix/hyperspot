@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "gts://gts.x.llm_gateway.core.stream_chunk.v1~",
+  "$id": "gts://gts.x.llmgw.core.stream_chunk.v1~",
   "title": "StreamChunk",
   "description": "Single chunk in streaming response",
   "type": "object",
@@ -17,7 +17,7 @@
       "type": "object",
       "properties": {
         "role": {
-          "$ref": "gts://gts.x.llm_gateway.core.role.v1~",
+          "$ref": "gts://gts.x.llmgw.core.role.v1~",
           "description": "Role (only in first chunk)"
         },
         "content": {
@@ -59,7 +59,7 @@
       "description": "Incremental content"
     },
     "usage": {
-      "$ref": "gts://gts.x.llm_gateway.core.usage.v1~",
+      "$ref": "gts://gts.x.llmgw.core.usage.v1~",
       "description": "Token usage (only in final chunk)"
     },
     "finish_reason": {

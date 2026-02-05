@@ -4,7 +4,7 @@
 
 **Status**: Accepted
 
-**ID**: `fdd-llm-gateway-adr-circuit-breaking`
+**ID**: `fdd-llmgw-adr-circuit-breaking`
 
 ## Context and Problem Statement
 
@@ -63,5 +63,5 @@ Characteristics:
 ## Related Design Elements
 
 **Requirements**:
-* `fdd-llm-gateway-fr-provider-fallback-v1` - Fallback on provider failure
+* `fdd-llmgw-fr-provider-fallback-v1` - Fallback on provider failure
 * `fdd-model-registry-fr-health-monitoring-v1` - Provider health metrics

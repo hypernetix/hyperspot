@@ -36,7 +36,7 @@ Gateway is stateless by design. It does not store conversation history or execut
 
 #### API User
 
-**ID**: `fdd-llm-gateway-actor-api-user`
+**ID**: `fdd-llmgw-actor-api-user`
 
 <!-- fdd-id-content -->
 **Role**: End user who interacts with LLM Gateway directly via API. Sends chat completion requests, manages async jobs, uses streaming responses.
@@ -46,7 +46,7 @@ Gateway is stateless by design. It does not store conversation history or execut
 
 #### Consumer
 
-**ID**: `fdd-llm-gateway-actor-consumer`
+**ID**: `fdd-llmgw-actor-consumer`
 
 <!-- fdd-id-content -->
 **Role**: Sends requests to the Gateway.
@@ -54,7 +54,7 @@ Gateway is stateless by design. It does not store conversation history or execut
 
 #### Provider
 
-**ID**: `fdd-llm-gateway-actor-provider`
+**ID**: `fdd-llmgw-actor-provider`
 
 <!-- fdd-id-content -->
 **Role**: External AI service that processes requests. Accessed via Outbound API Gateway.
@@ -62,7 +62,7 @@ Gateway is stateless by design. It does not store conversation history or execut
 
 #### Hook Plugin
 
-**ID**: `fdd-llm-gateway-actor-hook-plugin`
+**ID**: `fdd-llmgw-actor-hook-plugin`
 
 <!-- fdd-id-content -->
 **Role**: Pre-call and post-response interception (moderation, PII, transformation).
@@ -70,7 +70,7 @@ Gateway is stateless by design. It does not store conversation history or execut
 
 #### Usage Tracker
 
-**ID**: `fdd-llm-gateway-actor-usage-tracker`
+**ID**: `fdd-llmgw-actor-usage-tracker`
 
 <!-- fdd-id-content -->
 **Role**: Budget checks and usage reporting.
@@ -78,7 +78,7 @@ Gateway is stateless by design. It does not store conversation history or execut
 
 #### Audit Module
 
-**ID**: `fdd-llm-gateway-actor-audit-module`
+**ID**: `fdd-llmgw-actor-audit-module`
 
 <!-- fdd-id-content -->
 **Role**: Compliance event logging.
@@ -90,139 +90,139 @@ Gateway is stateless by design. It does not store conversation history or execut
 
 #### Chat Completion
 
-**ID**: [ ] `p1` `fdd-llm-gateway-fr-chat-completion-v1`
+**ID**: [ ] `p1` `fdd-llmgw-fr-chat-completion-v1`
 
 <!-- fdd-id-content -->
 
 Consumer sends messages, Gateway routes to provider based on model, returns response with usage.
 
-**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-provider`
+**Actors**: `fdd-llmgw-actor-consumer`, `fdd-llmgw-actor-provider`
 <!-- fdd-id-content -->
 
 #### Streaming Chat Completion
 
-**ID**: [ ] `p1` `fdd-llm-gateway-fr-streaming-v1`
+**ID**: [ ] `p1` `fdd-llmgw-fr-streaming-v1`
 
 <!-- fdd-id-content -->
 
 Same as chat completion, but response is streamed. Gateway normalizes provider events to unified format.
 
-**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-provider`
+**Actors**: `fdd-llmgw-actor-consumer`, `fdd-llmgw-actor-provider`
 <!-- fdd-id-content -->
 
 #### Embeddings Generation
 
-**ID**: [ ] `p1` `fdd-llm-gateway-fr-embeddings-v1`
+**ID**: [ ] `p1` `fdd-llmgw-fr-embeddings-v1`
 
 <!-- fdd-id-content -->
 
 Consumer sends text(s), Gateway returns vector embeddings.
 
-**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-provider`
+**Actors**: `fdd-llmgw-actor-consumer`, `fdd-llmgw-actor-provider`
 <!-- fdd-id-content -->
 
 #### Vision (Image Analysis)
 
-**ID**: [ ] `p1` `fdd-llm-gateway-fr-vision-v1`
+**ID**: [ ] `p1` `fdd-llmgw-fr-vision-v1`
 
 <!-- fdd-id-content -->
 
 Consumer sends message with image URLs. Gateway fetches media from FileStorage (direct) or external URLs (via OAGW), routes to vision-capable model via OAGW.
 
-**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-provider`
+**Actors**: `fdd-llmgw-actor-consumer`, `fdd-llmgw-actor-provider`
 <!-- fdd-id-content -->
 
 #### Image Generation
 
-**ID**: [ ] `p1` `fdd-llm-gateway-fr-image-generation-v1`
+**ID**: [ ] `p1` `fdd-llmgw-fr-image-generation-v1`
 
 <!-- fdd-id-content -->
 
 Consumer sends text prompt. Gateway sends request to provider via OAGW, stores generated image in FileStorage (direct), returns URL.
 
-**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-provider`
+**Actors**: `fdd-llmgw-actor-consumer`, `fdd-llmgw-actor-provider`
 <!-- fdd-id-content -->
 
 #### Speech-to-Text
 
-**ID**: [ ] `p1` `fdd-llm-gateway-fr-speech-to-text-v1`
+**ID**: [ ] `p1` `fdd-llmgw-fr-speech-to-text-v1`
 
 <!-- fdd-id-content -->
 
 Consumer sends message with audio URL. Gateway fetches audio from FileStorage (direct) or external URLs (via OAGW), sends to provider via OAGW, returns transcription.
 
-**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-provider`
+**Actors**: `fdd-llmgw-actor-consumer`, `fdd-llmgw-actor-provider`
 <!-- fdd-id-content -->
 
 #### Text-to-Speech
 
-**ID**: [ ] `p1` `fdd-llm-gateway-fr-text-to-speech-v1`
+**ID**: [ ] `p1` `fdd-llmgw-fr-text-to-speech-v1`
 
 <!-- fdd-id-content -->
 
 Consumer sends text. Gateway sends request to provider via OAGW, stores synthesized audio in FileStorage (direct), returns URL. Supports streaming mode.
 
-**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-provider`
+**Actors**: `fdd-llmgw-actor-consumer`, `fdd-llmgw-actor-provider`
 <!-- fdd-id-content -->
 
 #### Video Understanding
 
-**ID**: [ ] `p1` `fdd-llm-gateway-fr-video-understanding-v1`
+**ID**: [ ] `p1` `fdd-llmgw-fr-video-understanding-v1`
 
 <!-- fdd-id-content -->
 
 Consumer sends message with video URL. Gateway fetches video from FileStorage (direct) or external URLs (via OAGW), sends to provider via OAGW, returns analysis.
 
-**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-provider`
+**Actors**: `fdd-llmgw-actor-consumer`, `fdd-llmgw-actor-provider`
 <!-- fdd-id-content -->
 
 #### Video Generation
 
-**ID**: [ ] `p1` `fdd-llm-gateway-fr-video-generation-v1`
+**ID**: [ ] `p1` `fdd-llmgw-fr-video-generation-v1`
 
 <!-- fdd-id-content -->
 
 Consumer sends text prompt. Gateway sends request to provider via OAGW, stores generated video in FileStorage (direct), returns URL. Typically requires async mode due to long processing.
 
-**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-provider`
+**Actors**: `fdd-llmgw-actor-consumer`, `fdd-llmgw-actor-provider`
 <!-- fdd-id-content -->
 
 #### Tool/Function Calling
 
-**ID**: [ ] `p1` `fdd-llm-gateway-fr-tool-calling-v1`
+**ID**: [ ] `p1` `fdd-llmgw-fr-tool-calling-v1`
 
 <!-- fdd-id-content -->
 
 Consumer sends request with tool definitions. Gateway resolves schema references, converts to provider format. Model returns tool calls for consumer to execute. Gateway does not execute tools — this is consumer responsibility.
 
-**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-provider`
+**Actors**: `fdd-llmgw-actor-consumer`, `fdd-llmgw-actor-provider`
 <!-- fdd-id-content -->
 
 #### Structured Output
 
-**ID**: [ ] `p1` `fdd-llm-gateway-fr-structured-output-v1`
+**ID**: [ ] `p1` `fdd-llmgw-fr-structured-output-v1`
 
 <!-- fdd-id-content -->
 
 Consumer requests response matching JSON schema. Gateway validates response against schema.
 
-**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-provider`
+**Actors**: `fdd-llmgw-actor-consumer`, `fdd-llmgw-actor-provider`
 <!-- fdd-id-content -->
 
 #### Document Understanding
 
-**ID**: [ ] `p1` `fdd-llm-gateway-fr-document-understanding-v1`
+**ID**: [ ] `p1` `fdd-llmgw-fr-document-understanding-v1`
 
 <!-- fdd-id-content -->
 
 Consumer sends message with document URL. Gateway fetches document, routes to capable model.
 
-**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-provider`
+**Actors**: `fdd-llmgw-actor-consumer`, `fdd-llmgw-actor-provider`
 <!-- fdd-id-content -->
 
 #### Async Jobs
 
-**ID**: [ ] `p1` `fdd-llm-gateway-fr-async-jobs-v1`
+**ID**: [ ] `p1` `fdd-llmgw-fr-async-jobs-v1`
 
 <!-- fdd-id-content -->
 
@@ -232,23 +232,23 @@ Gateway abstracts provider behavior:
 - Sync provider + async request → Gateway simulates job
 - Async provider + sync request → Gateway polls internally
 
-**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-provider`
+**Actors**: `fdd-llmgw-actor-consumer`, `fdd-llmgw-actor-provider`
 <!-- fdd-id-content -->
 
 #### Realtime Audio
 
-**ID**: [ ] `p1` `fdd-llm-gateway-fr-realtime-audio-v1`
+**ID**: [ ] `p1` `fdd-llmgw-fr-realtime-audio-v1`
 
 <!-- fdd-id-content -->
 
 Bidirectional audio streaming via WebSocket for voice conversations.
 
-**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-provider`
+**Actors**: `fdd-llmgw-actor-consumer`, `fdd-llmgw-actor-provider`
 <!-- fdd-id-content -->
 
 #### Usage Tracking
 
-**ID**: [ ] `p1` `fdd-llm-gateway-fr-usage-tracking-v1`
+**ID**: [ ] `p1` `fdd-llmgw-fr-usage-tracking-v1`
 
 <!-- fdd-id-content -->
 
@@ -256,25 +256,25 @@ Gateway reports usage after each request via Usage Tracker: tokens, cost estimat
 
 Cross-cutting concern — applies to all operations, no dedicated UC.
 
-**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-usage-tracker`
+**Actors**: `fdd-llmgw-actor-consumer`, `fdd-llmgw-actor-usage-tracker`
 <!-- fdd-id-content -->
 
 ### P2 — Reliability & Governance
 
 #### Provider Fallback
 
-**ID**: [ ] `p2` `fdd-llm-gateway-fr-provider-fallback-v1`
+**ID**: [ ] `p2` `fdd-llmgw-fr-provider-fallback-v1`
 
 <!-- fdd-id-content -->
 
 When primary provider fails, Gateway automatically switches to fallback provider with matching capabilities.
 
-**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-provider`
+**Actors**: `fdd-llmgw-actor-consumer`, `fdd-llmgw-actor-provider`
 <!-- fdd-id-content -->
 
 #### Timeout Enforcement
 
-**ID**: [ ] `p2` `fdd-llm-gateway-fr-timeout-v1`
+**ID**: [ ] `p2` `fdd-llmgw-fr-timeout-v1`
 
 <!-- fdd-id-content -->
 
@@ -284,34 +284,34 @@ Gateway enforces timeout types:
 
 On timeout → fallback (if configured) → error.
 
-**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-provider`
+**Actors**: `fdd-llmgw-actor-consumer`, `fdd-llmgw-actor-provider`
 <!-- fdd-id-content -->
 
 #### Pre-Call Interceptor
 
-**ID**: [ ] `p2` `fdd-llm-gateway-fr-pre-call-interceptor-v1`
+**ID**: [ ] `p2` `fdd-llmgw-fr-pre-call-interceptor-v1`
 
 <!-- fdd-id-content -->
 
 Before sending to provider, Gateway invokes Hook Plugin. Plugin can allow, block, or modify request.
 
-**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-hook-plugin`
+**Actors**: `fdd-llmgw-actor-consumer`, `fdd-llmgw-actor-hook-plugin`
 <!-- fdd-id-content -->
 
 #### Post-Response Interceptor
 
-**ID**: [ ] `p2` `fdd-llm-gateway-fr-post-response-interceptor-v1`
+**ID**: [ ] `p2` `fdd-llmgw-fr-post-response-interceptor-v1`
 
 <!-- fdd-id-content -->
 
 After receiving response, Gateway invokes Hook Plugin. Plugin can allow, block, or modify response.
 
-**Actors**: `fdd-llm-gateway-actor-hook-plugin`, `fdd-llm-gateway-actor-consumer`
+**Actors**: `fdd-llmgw-actor-hook-plugin`, `fdd-llmgw-actor-consumer`
 <!-- fdd-id-content -->
 
 #### Per-Tenant Budget Enforcement
 
-**ID**: [ ] `p2` `fdd-llm-gateway-fr-budget-enforcement-v1`
+**ID**: [ ] `p2` `fdd-llmgw-fr-budget-enforcement-v1`
 
 <!-- fdd-id-content -->
 
@@ -319,38 +319,38 @@ Gateway checks budget before execution via Usage Tracker. Rejects if exhausted, 
 
 Cross-cutting concern — applies to all operations, no dedicated UC.
 
-**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-usage-tracker`
+**Actors**: `fdd-llmgw-actor-consumer`, `fdd-llmgw-actor-usage-tracker`
 <!-- fdd-id-content -->
 
 #### Rate Limiting
 
-**ID**: [ ] `p2` `fdd-llm-gateway-fr-rate-limiting-v1`
+**ID**: [ ] `p2` `fdd-llmgw-fr-rate-limiting-v1`
 
 <!-- fdd-id-content -->
 
 Gateway enforces rate limits at tenant and user levels. Rejects requests exceeding limits.
 
-**Actors**: `fdd-llm-gateway-actor-consumer`
+**Actors**: `fdd-llmgw-actor-consumer`
 <!-- fdd-id-content -->
 
 ### P3 — Optimization
 
 #### Batch Processing
 
-**ID**: [ ] `p3` `fdd-llm-gateway-fr-batch-processing-v1`
+**ID**: [ ] `p3` `fdd-llmgw-fr-batch-processing-v1`
 
 <!-- fdd-id-content -->
 
 Consumer submits batch of requests for async processing at reduced cost. Gateway abstracts provider batch APIs (OpenAI Batch API, Anthropic Message Batches).
 
-**Actors**: `fdd-llm-gateway-actor-consumer`, `fdd-llm-gateway-actor-provider`
+**Actors**: `fdd-llmgw-actor-consumer`, `fdd-llmgw-actor-provider`
 <!-- fdd-id-content -->
 
 ### P4 — Enterprise
 
 #### Audit Events
 
-**ID**: [ ] `p4` `fdd-llm-gateway-fr-audit-events-v1`
+**ID**: [ ] `p4` `fdd-llmgw-fr-audit-events-v1`
 
 <!-- fdd-id-content -->
 
@@ -358,17 +358,17 @@ Gateway emits audit events via Audit Module for compliance: request started, com
 
 Cross-cutting concern — applies to all operations, no dedicated UC.
 
-**Actors**: `fdd-llm-gateway-actor-audit-module`
+**Actors**: `fdd-llmgw-actor-audit-module`
 <!-- fdd-id-content -->
 
 ## 4. Use Cases
 
 #### UC-001: Chat Completion
 
-**ID**: [ ] `p1` `fdd-llm-gateway-usecase-chat-completion-v1`
+**ID**: [ ] `p1` `fdd-llmgw-usecase-chat-completion-v1`
 
 <!-- fdd-id-content -->
-**Actor**: `fdd-llm-gateway-actor-consumer`
+**Actor**: `fdd-llmgw-actor-consumer`
 
 **Preconditions**: Model available for tenant.
 
@@ -389,10 +389,10 @@ Cross-cutting concern — applies to all operations, no dedicated UC.
 
 #### UC-002: Streaming Chat Completion
 
-**ID**: [ ] `p1` `fdd-llm-gateway-usecase-streaming-v1`
+**ID**: [ ] `p1` `fdd-llmgw-usecase-streaming-v1`
 
 <!-- fdd-id-content -->
-**Actor**: `fdd-llm-gateway-actor-consumer`
+**Actor**: `fdd-llmgw-actor-consumer`
 
 **Preconditions**: Model available for tenant, model supports streaming.
 
@@ -414,10 +414,10 @@ Cross-cutting concern — applies to all operations, no dedicated UC.
 
 #### UC-003: Embeddings Generation
 
-**ID**: [ ] `p1` `fdd-llm-gateway-usecase-embeddings-v1`
+**ID**: [ ] `p1` `fdd-llmgw-usecase-embeddings-v1`
 
 <!-- fdd-id-content -->
-**Actor**: `fdd-llm-gateway-actor-consumer`
+**Actor**: `fdd-llmgw-actor-consumer`
 
 **Preconditions**: Embedding model available for tenant.
 
@@ -437,10 +437,10 @@ Cross-cutting concern — applies to all operations, no dedicated UC.
 
 #### UC-004: Vision (Image Analysis)
 
-**ID**: [ ] `p1` `fdd-llm-gateway-usecase-vision-v1`
+**ID**: [ ] `p1` `fdd-llmgw-usecase-vision-v1`
 
 <!-- fdd-id-content -->
-**Actor**: `fdd-llm-gateway-actor-consumer`
+**Actor**: `fdd-llmgw-actor-consumer`
 
 **Preconditions**: Model available for tenant, model supports required content type.
 
@@ -462,10 +462,10 @@ Cross-cutting concern — applies to all operations, no dedicated UC.
 
 #### UC-005: Image Generation
 
-**ID**: [ ] `p1` `fdd-llm-gateway-usecase-image-generation-v1`
+**ID**: [ ] `p1` `fdd-llmgw-usecase-image-generation-v1`
 
 <!-- fdd-id-content -->
-**Actor**: `fdd-llm-gateway-actor-consumer`
+**Actor**: `fdd-llmgw-actor-consumer`
 
 **Preconditions**: Image generation model available for tenant.
 
@@ -487,10 +487,10 @@ Cross-cutting concern — applies to all operations, no dedicated UC.
 
 #### UC-006: Speech-to-Text
 
-**ID**: [ ] `p1` `fdd-llm-gateway-usecase-speech-to-text-v1`
+**ID**: [ ] `p1` `fdd-llmgw-usecase-speech-to-text-v1`
 
 <!-- fdd-id-content -->
-**Actor**: `fdd-llm-gateway-actor-consumer`
+**Actor**: `fdd-llmgw-actor-consumer`
 
 **Preconditions**: STT model available for tenant.
 
@@ -511,10 +511,10 @@ Cross-cutting concern — applies to all operations, no dedicated UC.
 
 #### UC-007: Text-to-Speech
 
-**ID**: [ ] `p1` `fdd-llm-gateway-usecase-text-to-speech-v1`
+**ID**: [ ] `p1` `fdd-llmgw-usecase-text-to-speech-v1`
 
 <!-- fdd-id-content -->
-**Actor**: `fdd-llm-gateway-actor-consumer`
+**Actor**: `fdd-llmgw-actor-consumer`
 
 **Preconditions**: TTS model available for tenant.
 
@@ -536,10 +536,10 @@ Cross-cutting concern — applies to all operations, no dedicated UC.
 
 #### UC-008: Video Understanding
 
-**ID**: [ ] `p1` `fdd-llm-gateway-usecase-video-understanding-v1`
+**ID**: [ ] `p1` `fdd-llmgw-usecase-video-understanding-v1`
 
 <!-- fdd-id-content -->
-**Actor**: `fdd-llm-gateway-actor-consumer`
+**Actor**: `fdd-llmgw-actor-consumer`
 
 **Preconditions**: Model available for tenant, model supports required content type.
 
@@ -560,10 +560,10 @@ Cross-cutting concern — applies to all operations, no dedicated UC.
 
 #### UC-009: Video Generation
 
-**ID**: [ ] `p1` `fdd-llm-gateway-usecase-video-generation-v1`
+**ID**: [ ] `p1` `fdd-llmgw-usecase-video-generation-v1`
 
 <!-- fdd-id-content -->
-**Actor**: `fdd-llm-gateway-actor-consumer`
+**Actor**: `fdd-llmgw-actor-consumer`
 
 **Preconditions**: Video generation model available for tenant.
 
@@ -585,10 +585,10 @@ Cross-cutting concern — applies to all operations, no dedicated UC.
 
 #### UC-010: Tool/Function Calling
 
-**ID**: [ ] `p1` `fdd-llm-gateway-usecase-tool-calling-v1`
+**ID**: [ ] `p1` `fdd-llmgw-usecase-tool-calling-v1`
 
 <!-- fdd-id-content -->
-**Actor**: `fdd-llm-gateway-actor-consumer`
+**Actor**: `fdd-llmgw-actor-consumer`
 
 **Preconditions**: Model available for tenant, model supports function calling.
 
@@ -615,10 +615,10 @@ Cross-cutting concern — applies to all operations, no dedicated UC.
 
 #### UC-011: Structured Output
 
-**ID**: [ ] `p1` `fdd-llm-gateway-usecase-structured-output-v1`
+**ID**: [ ] `p1` `fdd-llmgw-usecase-structured-output-v1`
 
 <!-- fdd-id-content -->
-**Actor**: `fdd-llm-gateway-actor-consumer`
+**Actor**: `fdd-llmgw-actor-consumer`
 
 **Preconditions**: Model available for tenant.
 
@@ -640,10 +640,10 @@ Cross-cutting concern — applies to all operations, no dedicated UC.
 
 #### UC-012: Document Understanding
 
-**ID**: [ ] `p1` `fdd-llm-gateway-usecase-document-understanding-v1`
+**ID**: [ ] `p1` `fdd-llmgw-usecase-document-understanding-v1`
 
 <!-- fdd-id-content -->
-**Actor**: `fdd-llm-gateway-actor-consumer`
+**Actor**: `fdd-llmgw-actor-consumer`
 
 **Preconditions**: Model available for tenant, model supports required content type.
 
@@ -664,10 +664,10 @@ Cross-cutting concern — applies to all operations, no dedicated UC.
 
 #### UC-013: Async Jobs
 
-**ID**: [ ] `p1` `fdd-llm-gateway-usecase-async-jobs-v1`
+**ID**: [ ] `p1` `fdd-llmgw-usecase-async-jobs-v1`
 
 <!-- fdd-id-content -->
-**Actor**: `fdd-llm-gateway-actor-consumer`
+**Actor**: `fdd-llmgw-actor-consumer`
 
 **Preconditions**: Model available for tenant.
 
@@ -691,10 +691,10 @@ Cross-cutting concern — applies to all operations, no dedicated UC.
 
 #### UC-014: Realtime Audio
 
-**ID**: [ ] `p1` `fdd-llm-gateway-usecase-realtime-audio-v1`
+**ID**: [ ] `p1` `fdd-llmgw-usecase-realtime-audio-v1`
 
 <!-- fdd-id-content -->
-**Actor**: `fdd-llm-gateway-actor-consumer`
+**Actor**: `fdd-llmgw-actor-consumer`
 
 **Preconditions**: Model available for tenant, model supports realtime audio.
 
@@ -715,10 +715,10 @@ Cross-cutting concern — applies to all operations, no dedicated UC.
 
 #### UC-015: Provider Fallback
 
-**ID**: [ ] `p2` `fdd-llm-gateway-usecase-provider-fallback-v1`
+**ID**: [ ] `p2` `fdd-llmgw-usecase-provider-fallback-v1`
 
 <!-- fdd-id-content -->
-**Actor**: `fdd-llm-gateway-actor-consumer`
+**Actor**: `fdd-llmgw-actor-consumer`
 
 **Preconditions**: Model available for tenant.
 
@@ -741,10 +741,10 @@ Cross-cutting concern — applies to all operations, no dedicated UC.
 
 #### UC-016: Timeout Enforcement
 
-**ID**: [ ] `p2` `fdd-llm-gateway-usecase-timeout-v1`
+**ID**: [ ] `p2` `fdd-llmgw-usecase-timeout-v1`
 
 <!-- fdd-id-content -->
-**Actor**: `fdd-llm-gateway-actor-consumer`
+**Actor**: `fdd-llmgw-actor-consumer`
 
 **Preconditions**: Model available for tenant.
 
@@ -766,10 +766,10 @@ Cross-cutting concern — applies to all operations, no dedicated UC.
 
 #### UC-017: Pre-Call Interceptor
 
-**ID**: [ ] `p2` `fdd-llm-gateway-usecase-pre-call-interceptor-v1`
+**ID**: [ ] `p2` `fdd-llmgw-usecase-pre-call-interceptor-v1`
 
 <!-- fdd-id-content -->
-**Actor**: `fdd-llm-gateway-actor-consumer`
+**Actor**: `fdd-llmgw-actor-consumer`
 
 **Preconditions**: Hook Plugin configured for tenant.
 
@@ -789,10 +789,10 @@ Cross-cutting concern — applies to all operations, no dedicated UC.
 
 #### UC-018: Post-Response Interceptor
 
-**ID**: [ ] `p2` `fdd-llm-gateway-usecase-post-response-interceptor-v1`
+**ID**: [ ] `p2` `fdd-llmgw-usecase-post-response-interceptor-v1`
 
 <!-- fdd-id-content -->
-**Actor**: `fdd-llm-gateway-actor-consumer`
+**Actor**: `fdd-llmgw-actor-consumer`
 
 **Preconditions**: Hook Plugin configured for tenant.
 
@@ -812,10 +812,10 @@ Cross-cutting concern — applies to all operations, no dedicated UC.
 
 #### UC-019: Rate Limiting
 
-**ID**: [ ] `p2` `fdd-llm-gateway-usecase-rate-limiting-v1`
+**ID**: [ ] `p2` `fdd-llmgw-usecase-rate-limiting-v1`
 
 <!-- fdd-id-content -->
-**Actor**: `fdd-llm-gateway-actor-consumer`
+**Actor**: `fdd-llmgw-actor-consumer`
 
 **Preconditions**: Rate limits configured for tenant.
 
@@ -835,10 +835,10 @@ Cross-cutting concern — applies to all operations, no dedicated UC.
 
 #### UC-020: Batch Processing
 
-**ID**: [ ] `p3` `fdd-llm-gateway-usecase-batch-processing-v1`
+**ID**: [ ] `p3` `fdd-llmgw-usecase-batch-processing-v1`
 
 <!-- fdd-id-content -->
-**Actor**: `fdd-llm-gateway-actor-consumer`
+**Actor**: `fdd-llmgw-actor-consumer`
 
 **Preconditions**: Model available for tenant, provider supports batch API.
 
@@ -863,7 +863,7 @@ Cross-cutting concern — applies to all operations, no dedicated UC.
 
 #### Scalability
 
-**ID**: [ ] `p1` `fdd-llm-gateway-nfr-scalability-v1`
+**ID**: [ ] `p1` `fdd-llmgw-nfr-scalability-v1`
 
 <!-- fdd-id-content -->
 Horizontal scaling without state coordination. Stateless design with exception for temporary async job state.

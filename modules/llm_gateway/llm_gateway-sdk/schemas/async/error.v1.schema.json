@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "gts://gts.x.llm_gateway.async.error.v1~",
+  "$id": "gts://gts.x.llmgw.async.error.v1~",
   "title": "Error",
   "description": "Error information for failed operations",
   "type": "object",

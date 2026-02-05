@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "gts://gts.x.llm_gateway.core.role.v1~",
+  "$id": "gts://gts.x.llmgw.core.role.v1~",
   "title": "Role",
   "description": "Message author role",
   "type": "string",

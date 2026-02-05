@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "gts://gts.x.llm_gateway.core.fallback_config.v1~",
+  "$id": "gts://gts.x.llmgw.core.fallback_config.v1~",
   "title": "FallbackConfig",
   "description": "Configuration for provider fallback behavior",
   "type": "object",
@@ -12,7 +12,7 @@
       "description": "Ordered list of fallback model identifiers"
     },
     "strategy": {
-      "$ref": "gts://gts.x.llm_gateway.core.fallback_strategy.v1~",
+      "$ref": "gts://gts.x.llmgw.core.fallback_strategy.v1~",
       "description": "Fallback execution strategy"
     }
   },

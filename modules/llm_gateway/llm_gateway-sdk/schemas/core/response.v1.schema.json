@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "gts://gts.x.llm_gateway.core.response.v1~",
+  "$id": "gts://gts.x.llmgw.core.response.v1~",
   "title": "Response",
   "description": "LLM Gateway response to consumer",
   "type": "object",
@@ -8,19 +8,19 @@
     "content": {
       "type": "array",
       "items": {
-        "$ref": "gts://gts.x.llm_gateway.content.content_part.v1~"
+        "$ref": "gts://gts.x.llmgw.content.content_part.v1~"
       },
       "description": "Response content parts"
     },
     "tool_calls": {
       "type": "array",
       "items": {
-        "$ref": "gts://gts.x.llm_gateway.content.tool_call.v1~"
+        "$ref": "gts://gts.x.llmgw.content.tool_call.v1~"
       },
       "description": "Tool calls requested by the model"
     },
     "usage": {
-      "$ref": "gts://gts.x.llm_gateway.core.usage.v1~",
+      "$ref": "gts://gts.x.llmgw.core.usage.v1~",
       "description": "Token usage information"
     },
     "fallback_used": {

@@ -6,45 +6,37 @@ Unified interface for LLM inference across providers. Stateless, pass-through de
 
 ### P1 — Core
 
-| Done | Capability |
-|------|------------|
-| [ ] | Chat completion (sync and streaming) |
-| [ ] | Embeddings generation |
-| [ ] | Vision (image analysis) |
-| [ ] | Image generation |
-| [ ] | Speech-to-text (transcription) |
-| [ ] | Text-to-speech (synthesis) |
-| [ ] | Video understanding |
-| [ ] | Video generation |
-| [ ] | Document understanding |
-| [ ] | Tool/function calling |
-| [ ] | Structured output (JSON mode) |
-| [ ] | Async jobs (long-running operations) |
-| [ ] | Realtime audio (WebSocket) |
-| [ ] | Usage tracking |
+- [ ] Chat completion (sync and streaming)
+- [ ] Embeddings generation
+- [ ] Vision (image analysis)
+- [ ] Image generation
+- [ ] Speech-to-text (transcription)
+- [ ] Text-to-speech (synthesis)
+- [ ] Video understanding
+- [ ] Video generation
+- [ ] Document understanding
+- [ ] Tool/function calling
+- [ ] Structured output (JSON mode)
+- [ ] Async jobs (long-running operations)
+- [ ] Realtime audio (WebSocket)
+- [ ] Usage tracking
 
 ### P2 — Reliability & Governance
 
-| Done | Capability |
-|------|------------|
-| [ ] | Provider fallback |
-| [ ] | Timeout enforcement |
-| [ ] | Pre-call interceptor |
-| [ ] | Post-response interceptor |
-| [ ] | Per-tenant budget enforcement |
-| [ ] | Rate limiting (tenant/user) |
+- [ ] Provider fallback
+- [ ] Timeout enforcement
+- [ ] Pre-call interceptor
+- [ ] Post-response interceptor
+- [ ] Per-tenant budget enforcement
+- [ ] Rate limiting (tenant/user)
 
 ### P3 — Optimization
 
-| Done | Capability |
-|------|------------|
-| [ ] | Batch processing |
+- [ ] Batch processing
 
 ### P4 — Enterprise
 
-| Done | Capability |
-|------|------------|
-| [ ] | Audit events |
+- [ ] Audit events
 
 ## Module Structure
 

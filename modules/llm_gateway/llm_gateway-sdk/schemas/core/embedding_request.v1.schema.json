@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "gts://gts.x.llm_gateway.core.embedding_request.v1~",
+  "$id": "gts://gts.x.llmgw.core.embedding_request.v1~",
   "title": "EmbeddingRequest",
   "description": "LLM Gateway embedding request from consumer",
   "type": "object",

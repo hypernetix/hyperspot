@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "gts://gts.x.llm_gateway.core.embedding_response.v1~",
+  "$id": "gts://gts.x.llmgw.core.embedding_response.v1~",
   "title": "EmbeddingResponse",
   "description": "LLM Gateway embedding response to consumer",
   "type": "object",
@@ -31,7 +31,7 @@
       "description": "Embedding results"
     },
     "usage": {
-      "$ref": "gts://gts.x.llm_gateway.core.usage.v1~",
+      "$ref": "gts://gts.x.llmgw.core.usage.v1~",
       "description": "Token usage"
     }
   },

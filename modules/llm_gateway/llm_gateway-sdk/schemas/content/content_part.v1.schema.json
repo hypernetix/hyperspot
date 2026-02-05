@@ -1,15 +1,15 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "gts://gts.x.llm_gateway.content.content_part.v1~",
+  "$id": "gts://gts.x.llmgw.content.content_part.v1~",
   "title": "ContentPart",
   "description": "Abstract base for message content parts. Use one of: TextContent, ImageContent, AudioContent, VideoContent, DocumentContent, ToolCallContent, ToolResultContent",
   "oneOf": [
-    { "$ref": "gts://gts.x.llm_gateway.content.text_content.v1~" },
-    { "$ref": "gts://gts.x.llm_gateway.content.image_content.v1~" },
-    { "$ref": "gts://gts.x.llm_gateway.content.audio_content.v1~" },
-    { "$ref": "gts://gts.x.llm_gateway.content.video_content.v1~" },
-    { "$ref": "gts://gts.x.llm_gateway.content.document_content.v1~" },
-    { "$ref": "gts://gts.x.llm_gateway.content.tool_call_content.v1~" },
-    { "$ref": "gts://gts.x.llm_gateway.content.tool_result_content.v1~" }
+    { "$ref": "gts://gts.x.llmgw.content.text_content.v1~" },
+    { "$ref": "gts://gts.x.llmgw.content.image_content.v1~" },
+    { "$ref": "gts://gts.x.llmgw.content.audio_content.v1~" },
+    { "$ref": "gts://gts.x.llmgw.content.video_content.v1~" },
+    { "$ref": "gts://gts.x.llmgw.content.document_content.v1~" },
+    { "$ref": "gts://gts.x.llmgw.content.tool_call_content.v1~" },
+    { "$ref": "gts://gts.x.llmgw.content.tool_result_content.v1~" }
   ]
 }

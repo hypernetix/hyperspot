@@ -4,7 +4,7 @@
 
 **Status**: Accepted
 
-**ID**: `fdd-llm-gateway-adr-file-storage`
+**ID**: `fdd-llmgw-adr-file-storage`
 
 ## Context and Problem Statement
 
@@ -39,10 +39,10 @@ Chosen option: "FileStorage URLs", because it keeps API requests small, provides
 ## Related Design Elements
 
 **Requirements**:
-* `fdd-llm-gateway-fr-vision-v1` - Fetches images from FileStorage
-* `fdd-llm-gateway-fr-image-generation-v1` - Stores generated images
-* `fdd-llm-gateway-fr-speech-to-text-v1` - Fetches audio from FileStorage
-* `fdd-llm-gateway-fr-text-to-speech-v1` - Stores generated audio
-* `fdd-llm-gateway-fr-video-understanding-v1` - Fetches video from FileStorage
-* `fdd-llm-gateway-fr-video-generation-v1` - Stores generated video
-* `fdd-llm-gateway-fr-document-understanding-v1` - Fetches documents from FileStorage
+* `fdd-llmgw-fr-vision-v1` - Fetches images from FileStorage
+* `fdd-llmgw-fr-image-generation-v1` - Stores generated images
+* `fdd-llmgw-fr-speech-to-text-v1` - Fetches audio from FileStorage
+* `fdd-llmgw-fr-text-to-speech-v1` - Stores generated audio
+* `fdd-llmgw-fr-video-understanding-v1` - Fetches video from FileStorage
+* `fdd-llmgw-fr-video-generation-v1` - Stores generated video
+* `fdd-llmgw-fr-document-understanding-v1` - Fetches documents from FileStorage

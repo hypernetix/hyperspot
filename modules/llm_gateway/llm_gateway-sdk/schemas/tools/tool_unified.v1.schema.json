@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "gts://gts.x.llm_gateway.tools.tool_unified.v1~",
+  "$id": "gts://gts.x.llmgw.tools.tool_unified.v1~",
   "title": "ToolUnified",
   "description": "Unified tool format compatible with OpenAI/Anthropic function calling",
   "type": "object",
@@ -19,7 +19,7 @@
       "description": "Tool description for the model"
     },
     "parameters": {
-      "$ref": "gts://gts.x.llm_gateway.tools.schema.v1~",
+      "$ref": "gts://gts.x.llmgw.tools.schema.v1~",
       "description": "JSON Schema for tool parameters"
     }
   },

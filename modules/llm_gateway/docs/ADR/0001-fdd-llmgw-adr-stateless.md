@@ -4,7 +4,7 @@
 
 **Status**: Accepted
 
-**ID**: `fdd-llm-gateway-adr-stateless`
+**ID**: `fdd-llmgw-adr-stateless`
 
 ## Context and Problem Statement
 
@@ -35,5 +35,5 @@ Chosen option: "Stateless", because it enables horizontal scaling without coordi
 ## Related Design Elements
 
 **Requirements**:
-* `fdd-llm-gateway-nfr-scalability-v1` - Horizontal scaling requirement
-* `fdd-llm-gateway-fr-async-jobs-v1` - Exception for temporary job state
+* `fdd-llmgw-nfr-scalability-v1` - Horizontal scaling requirement
+* `fdd-llmgw-fr-async-jobs-v1` - Exception for temporary job state

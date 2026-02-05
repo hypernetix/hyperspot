@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "gts://gts.x.llm_gateway.tools.tool_reference.v1~",
+  "$id": "gts://gts.x.llmgw.tools.tool_reference.v1~",
   "title": "ToolReference",
   "description": "Reference to a tool schema in Type Registry",
   "type": "object",

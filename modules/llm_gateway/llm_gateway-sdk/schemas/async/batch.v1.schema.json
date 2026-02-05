@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "gts://gts.x.llm_gateway.async.batch.v1~",
+  "$id": "gts://gts.x.llmgw.async.batch.v1~",
   "title": "Batch",
   "description": "Batch request state",
   "type": "object",
@@ -10,13 +10,13 @@
       "description": "Unique batch identifier"
     },
     "status": {
-      "$ref": "gts://gts.x.llm_gateway.async.batch_status.v1~",
+      "$ref": "gts://gts.x.llmgw.async.batch_status.v1~",
       "description": "Current batch status"
     },
     "requests": {
       "type": "array",
       "items": {
-        "$ref": "gts://gts.x.llm_gateway.async.batch_request.v1~"
+        "$ref": "gts://gts.x.llmgw.async.batch_request.v1~"
       },
       "minItems": 1,
       "description": "Batch requests"

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "gts://gts.x.llm_gateway.content.text_content.v1~",
+  "$id": "gts://gts.x.llmgw.content.text_content.v1~",
   "title": "TextContent",
   "description": "Plain text content part",
   "type": "object",

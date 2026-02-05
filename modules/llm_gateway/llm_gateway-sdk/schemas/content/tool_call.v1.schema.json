@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "gts://gts.x.llm_gateway.content.tool_call.v1~",
+  "$id": "gts://gts.x.llmgw.content.tool_call.v1~",
   "title": "ToolCall",
   "description": "Provider's tool invocation request",
   "type": "object",

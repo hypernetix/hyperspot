@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "gts://gts.x.llm_gateway.async.batch_status.v1~",
+  "$id": "gts://gts.x.llmgw.async.batch_status.v1~",
   "title": "BatchStatus",
   "description": "Status of a batch request",
   "type": "string",

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "gts://gts.x.llm_gateway.core.fallback_strategy.v1~",
+  "$id": "gts://gts.x.llmgw.core.fallback_strategy.v1~",
   "title": "FallbackStrategy",
   "description": "Strategy for provider fallback",
   "type": "string",

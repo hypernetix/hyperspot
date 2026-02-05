@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "gts://gts.x.llm_gateway.content.document_content.v1~",
+  "$id": "gts://gts.x.llmgw.content.document_content.v1~",
   "title": "DocumentContent",
   "description": "Document content part with FileStorage URL",
   "type": "object",

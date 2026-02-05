@@ -1,11 +1,11 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "gts://gts.x.llm_gateway.tools.tool.v1~",
+  "$id": "gts://gts.x.llmgw.tools.tool.v1~",
   "title": "Tool",
   "description": "Abstract base for tool definitions. Use one of: ToolReference, ToolInlineGTS, ToolUnified",
   "oneOf": [
-    { "$ref": "gts://gts.x.llm_gateway.tools.tool_reference.v1~" },
-    { "$ref": "gts://gts.x.llm_gateway.tools.tool_inline_gts.v1~" },
-    { "$ref": "gts://gts.x.llm_gateway.tools.tool_unified.v1~" }
+    { "$ref": "gts://gts.x.llmgw.tools.tool_reference.v1~" },
+    { "$ref": "gts://gts.x.llmgw.tools.tool_inline_gts.v1~" },
+    { "$ref": "gts://gts.x.llmgw.tools.tool_unified.v1~" }
   ]
 }

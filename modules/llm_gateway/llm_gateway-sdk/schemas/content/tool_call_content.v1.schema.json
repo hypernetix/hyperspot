@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "gts://gts.x.llm_gateway.content.tool_call_content.v1~",
+  "$id": "gts://gts.x.llmgw.content.tool_call_content.v1~",
   "title": "ToolCallContent",
   "description": "Tool call wrapped as content part",
   "type": "object",
@@ -11,7 +11,7 @@
       "description": "Content type discriminator"
     },
     "tool_call": {
-      "$ref": "gts://gts.x.llm_gateway.content.tool_call.v1~",
+      "$ref": "gts://gts.x.llmgw.content.tool_call.v1~",
       "description": "The tool call"
     }
   },
