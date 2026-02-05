@@ -66,7 +66,7 @@ use cf_system_sdks::directory::{DirectoryClient, DirectoryGrpcClient};
 /// Configuration options for `OoP` module bootstrap
 #[derive(Debug, Clone)]
 pub struct OopRunOptions {
-    /// Logical module name (e.g., "`file_parser`")
+    /// Logical module name (e.g., "`file-parser`")
     pub module_name: String,
 
     /// Instance ID (defaults to a random UUID if None)
@@ -385,7 +385,7 @@ fn merge_json_objects(target: &mut serde_json::Value, source: &serde_json::Value
 /// #[tokio::main]
 /// async fn main() -> anyhow::Result<()> {
 ///     let opts = OopRunOptions {
-///         module_name: "file_parser".to_string(),
+///         module_name: "file-parser".to_string(),
 ///         instance_id: None,
 ///         directory_endpoint: "http://127.0.0.1:50051".to_string(),
 ///         config_path: None,

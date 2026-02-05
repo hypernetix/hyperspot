@@ -112,27 +112,27 @@ The types-registry module has comprehensive E2E test coverage for GTS entity man
 
 ## File Parser Test Suite
 
-The file_parser module has comprehensive E2E test coverage including golden-reference Markdown comparison:
+The file-parser module has comprehensive E2E test coverage including golden-reference Markdown comparison:
 
 ### Test Files
 
-- **`modules/file_parser/test_file_parser_info.py`**: Tests the `/file-parser/v1/info` endpoint
-- **`modules/file_parser/test_file_parser_upload.py`**: Tests the `/file-parser/v1/upload` endpoint (binary upload)
-- **`modules/file_parser/test_file_parser_upload_markdown.py`**: Tests the `/file-parser/v1/upload/markdown` endpoint (
+- **`modules/file-parser/test_file-parser_info.py`**: Tests the `/file-parser/v1/info` endpoint
+- **`modules/file-parser/test_file-parser_upload.py`**: Tests the `/file-parser/v1/upload` endpoint (binary upload)
+- **`modules/file-parser/test_file-parser_upload_markdown.py`**: Tests the `/file-parser/v1/upload/markdown` endpoint (
   multipart)
-- **`modules/file_parser/test_file_parser_parse_local.py`**: Tests the `/file-parser/v1/parse-local*` endpoints
-- **`modules/file_parser/test_file_parser_parse_url.py`**: Tests the `/file-parser/v1/parse-url*` endpoints
+- **`modules/file-parser/test_file-parser_parse_local.py`**: Tests the `/file-parser/v1/parse-local*` endpoints
+- **`modules/file-parser/test_file-parser_parse_url.py`**: Tests the `/file-parser/v1/parse-url*` endpoints
 
 ### Golden Markdown Generation
 
-Before running file_parser tests, you need to generate golden Markdown reference files:
+Before running file-parser tests, you need to generate golden Markdown reference files:
 
 ```bash
 # Make sure the server is running first
 make example
 
 # Generate golden markdown files
-python -m e2e.modules.file_parser.generate_file_parser_golden
+python -m e2e.modules.file-parser.generate_file-parser_golden
 ```
 
 This will:
@@ -145,7 +145,7 @@ The tests will then compare API responses against these golden files.
 
 ## Writing Tests
 
-Tests are written using pytest and httpx. See `modules/file_parser/test_file_parser_info.py` for an example.
+Tests are written using pytest and httpx. See `modules/file-parser/test_file-parser_info.py` for an example.
 
 Key fixtures available:
 

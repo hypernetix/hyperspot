@@ -18,7 +18,7 @@ name = "simple_user_settings"
 workspace = true
 
 [dependencies]
-simple-user-settings-sdk = { package = "cf-simple-user-settings-sdk", version = "0.1.0", path = "../simple_user_settings_sdk" }
+simple-user-settings-sdk = { package = "cf-simple-user-settings-sdk", version = "0.1.0", path = "../simple-user-settings-sdk" }
 
 anyhow = { workspace = true }
 async-trait = { workspace = true }

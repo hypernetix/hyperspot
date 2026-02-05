@@ -14,7 +14,7 @@ use crate::infra::parsers::{
 
 /// Main module struct for file parsing
 #[modkit::module(
-    name = "file_parser",
+    name = "file-parser",
     capabilities = [rest]
 )]
 pub struct FileParserModule {
@@ -44,12 +44,12 @@ impl Module for FileParserModule {
     async fn init(&self, ctx: &ModuleCtx) -> anyhow::Result<()> {
         const BYTES_IN_MB: u64 = 1024_u64 * 1024;
 
-        info!("Initializing file_parser module");
+        info!("Initializing file-parser module");
 
         // Load module configuration
         let cfg: FileParserConfig = ctx.config()?;
         debug!(
-            "Loaded file_parser config: max_file_size_mb={}, download_timeout_secs={}",
+            "Loaded file-parser config: max_file_size_mb={}, download_timeout_secs={}",
             cfg.max_file_size_mb, cfg.download_timeout_secs
         );
 
@@ -92,7 +92,7 @@ impl RestApiCapability for FileParserModule {
         router: axum::Router,
         openapi: &dyn OpenApiRegistry,
     ) -> anyhow::Result<axum::Router> {
-        info!("Registering file_parser REST routes");
+        info!("Registering file-parser REST routes");
 
         let service = self
             .service

@@ -15,7 +15,7 @@ pub struct Permission {
     /// A pattern that can include wildcards to match multiple resources
     /// examples:
     ///   - `gts.x.core.events.topic.v1~vendor.*`
-    ///   - `gts.x.mod.v1~x.file_parser.v1`
+    ///   - `gts.x.mod.v1~x.file-parser.v1`
     resource_pattern: String,
 
     /// Optional specific resource ID the permission applies to

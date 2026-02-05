@@ -266,7 +266,7 @@ modules:
         username: "user"
 
   # File parser module configuration (no database needed)
-  file_parser:
+  file-parser:
     config:
       parser_extension_map:
       builtin:

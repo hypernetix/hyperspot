@@ -20,7 +20,7 @@ use crate::infra::storage::sea_orm_repo::SeaOrmSettingsRepository;
 type ConcreteService = Service<SeaOrmSettingsRepository>;
 
 #[modkit::module(
-    name = "simple_user_settings",
+    name = "simple-user-settings",
     capabilities = [rest, db]
 )]
 pub struct SettingsModule {

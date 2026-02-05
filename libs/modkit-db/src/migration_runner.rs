@@ -578,7 +578,7 @@ mod tests {
         assert!(a.len() <= 63);
 
         let c = migration_table_name("simple-user-settings");
-        assert!(c.contains("simple_user_settings"));
+        assert!(c.contains("simple-user-settings"));
         assert!(c.len() <= 63);
     }
 

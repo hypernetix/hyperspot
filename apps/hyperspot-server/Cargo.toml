@@ -40,9 +40,9 @@ single-tenant-tr-plugin = { package = "cf-single-tenant-tr-plugin", path = "../.
 static-tr-plugin = { package = "cf-static-tr-plugin", path = "../../modules/system/tenant_resolver/plugins/static_tr_plugin", optional = true }
 
 # user modules
-file_parser = { package = "cf-file-parser", path = "../../modules/file_parser" }
+file_parser = { package = "cf-file-parser", path = "../../modules/file-parser" }
 nodes_registry = { package = "cf-nodes-registry", path = "../../modules/system/nodes_registry/nodes_registry" }
-simple_user_settings = { package = "cf-simple-user-settings", path = "../../modules/simple_user_settings/simple_user_settings" }
+simple_user_settings = { package = "cf-simple-user-settings", path = "../../modules/simple-user-settings/simple-user-settings" }
 
 anyhow = { workspace = true }
 tokio = { workspace = true }

@@ -12,7 +12,7 @@
           "File Parser"
         ],
         "summary": "Get information about available file parsers",
-        "operationId": "file_parser.get_parser_info",
+        "operationId": "file-parser.get_parser_info",
         "responses": {
           "200": {
             "description": "Information about available parsers",
@@ -118,7 +118,7 @@
           "File Parser"
         ],
         "summary": "Parse a file from a local path",
-        "operationId": "file_parser.parse_local",
+        "operationId": "file-parser.parse_local",
         "parameters": [
           {
             "name": "render_markdown",
@@ -256,7 +256,7 @@
           "File Parser"
         ],
         "summary": "Parse a local file and stream Markdown",
-        "operationId": "file_parser.parse_local_markdown",
+        "operationId": "file-parser.parse_local_markdown",
         "requestBody": {
           "description": "Local file path",
           "content": {
@@ -374,7 +374,7 @@
           "File Parser"
         ],
         "summary": "Parse a file from a URL",
-        "operationId": "file_parser.parse_url",
+        "operationId": "file-parser.parse_url",
         "parameters": [
           {
             "name": "render_markdown",
@@ -512,7 +512,7 @@
           "File Parser"
         ],
         "summary": "Parse a file from a URL and stream Markdown",
-        "operationId": "file_parser.parse_url_markdown",
+        "operationId": "file-parser.parse_url_markdown",
         "requestBody": {
           "description": "URL to file",
           "content": {
@@ -640,7 +640,7 @@
           "File Parser"
         ],
         "summary": "Upload and parse a file",
-        "operationId": "file_parser.upload",
+        "operationId": "file-parser.upload",
         "parameters": [
           {
             "name": "render_markdown",
@@ -788,7 +788,7 @@
           "File Parser"
         ],
         "summary": "Upload and parse a file, streaming Markdown",
-        "operationId": "file_parser.upload_markdown",
+        "operationId": "file-parser.upload_markdown",
         "requestBody": {
           "description": "File to parse and stream as Markdown (expects field 'file' with file data)",
           "content": {

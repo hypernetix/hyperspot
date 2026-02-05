@@ -1,10 +1,10 @@
-"""E2E tests for file_parser API module."""
+"""E2E tests for file-parser API module."""
 import httpx
 import pytest
 
 
 @pytest.mark.asyncio
-async def test_file_parser_info_basic(base_url, auth_headers):
+async def test_file-parser_info_basic(base_url, auth_headers):
     """
     Test GET /file-parser/v1/info endpoint.
 

@@ -4,7 +4,7 @@ File parsing module for CyberFabric / ModKit.
 
 ## Overview
 
-The `cf-file-parser` crate implements the `file_parser` module and registers REST routes.
+The `cf-file-parser` crate implements the `file-parser` module and registers REST routes.
 
 Parsing backends currently include:
 
@@ -19,7 +19,7 @@ Parsing backends currently include:
 
 ```yaml
 modules:
-  file_parser:
+  file-parser:
     config:
       max_file_size_mb: 100
       download_timeout_secs: 60

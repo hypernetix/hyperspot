@@ -1,4 +1,4 @@
-"""E2E tests for file_parser XLSX and PPTX support."""
+"""E2E tests for file-parser XLSX and PPTX support."""
 import httpx
 import pytest
 from pathlib import Path

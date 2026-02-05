@@ -5,7 +5,7 @@ use uuid::Uuid;
 /// where `tenant_id` and `resource_id` are "*" if None
 /// Examples:
 ///  - "550e8400-e29b-41d4-a716-446655440000:gts.x.core.events.topic.v1~vendor.*:*:publish"
-///  - "`*:file_parser:*:edit`"
+///  - "`*:file-parser:*:edit`"
 ///  - "550e8400-e29b-41d4-a716-446655440001:gts.x.core.events.type.v1~:660e8400-e29b-41d4-a716-446655440002:edit"
 #[derive(Debug, Clone)]
 pub struct Permission {
@@ -16,7 +16,7 @@ pub struct Permission {
     /// A pattern that can include wildcards to match multiple resources
     /// examples:
     ///   - "gts.x.events.topic.v1~vendor.*"
-    ///   - "`gts.x.module.v1~x.file_parser.v1`"
+    ///   - "`gts.x.module.v1~x.file-parser.v1`"
     resource_pattern: String,
 
     /// Optional specific resource ID the permission applies to
@@ -214,13 +214,13 @@ mod tests {
     #[test]
     fn test_permission_builder_without_tenant_id() {
         let permission = Permission::builder()
-            .resource_pattern("file_parser")
+            .resource_pattern("file-parser")
             .action("edit")
             .build()
             .unwrap();
 
         assert_eq!(permission.tenant_id(), None);
-        assert_eq!(permission.resource_pattern(), "file_parser");
+        assert_eq!(permission.resource_pattern(), "file-parser");
         assert_eq!(permission.action(), "edit");
     }
 
@@ -239,7 +239,7 @@ mod tests {
     #[test]
     fn test_permission_builder_missing_action() {
         let result = Permission::builder()
-            .resource_pattern("file_parser")
+            .resource_pattern("file-parser")
             .build();
         assert!(result.is_err());
         assert!(
@@ -270,13 +270,13 @@ mod tests {
     #[test]
     fn test_serialize_permission_without_tenant_id() {
         let permission = Permission::builder()
-            .resource_pattern("file_parser")
+            .resource_pattern("file-parser")
             .action("edit")
             .build()
             .unwrap();
 
         let serialized = serde_json::to_string(&permission).unwrap();
-        assert_eq!(serialized, r#""*:file_parser:*:edit""#);
+        assert_eq!(serialized, r#""*:file-parser:*:edit""#);
     }
 
     #[test]
@@ -296,18 +296,18 @@ mod tests {
 
     #[test]
     fn test_deserialize_permission_without_tenant_id() {
-        let json = r#""*:file_parser:*:edit""#;
+        let json = r#""*:file-parser:*:edit""#;
         let permission: Permission = serde_json::from_str(json).unwrap();
 
         assert_eq!(permission.tenant_id(), None);
-        assert_eq!(permission.resource_pattern(), "file_parser");
+        assert_eq!(permission.resource_pattern(), "file-parser");
         assert_eq!(permission.resource_id(), None);
         assert_eq!(permission.action(), "edit");
     }
 
     #[test]
     fn test_deserialize_permission_invalid_action_with_colons() {
-        let json = r#""*:file_parser:*:action:with:colons""#;
+        let json = r#""*:file-parser:*:action:with:colons""#;
         let result: Result<Permission, _> = serde_json::from_str(json);
 
         assert!(result.is_err());
@@ -320,7 +320,7 @@ mod tests {
 
     #[test]
     fn test_deserialize_permission_invalid_action_with_special_chars() {
-        let json = r#""*:file_parser:*:edit-action""#;
+        let json = r#""*:file-parser:*:edit-action""#;
         let result: Result<Permission, _> = serde_json::from_str(json);
 
         assert!(result.is_err());
@@ -334,7 +334,7 @@ mod tests {
     #[test]
     fn test_permission_builder_invalid_action() {
         let result = Permission::builder()
-            .resource_pattern("file_parser")
+            .resource_pattern("file-parser")
             .action("invalid:action")
             .build();
 
@@ -361,7 +361,7 @@ mod tests {
 
     #[test]
     fn test_deserialize_permission_invalid_uuid() {
-        let json = r#""not-a-uuid:file_parser:edit""#;
+        let json = r#""not-a-uuid:file-parser:edit""#;
         let result: Result<Permission, _> = serde_json::from_str(json);
 
         assert!(result.is_err());
@@ -412,7 +412,7 @@ mod tests {
                 .build()
                 .unwrap(),
             Permission::builder()
-                .resource_pattern("file_parser")
+                .resource_pattern("file-parser")
                 .action("edit")
                 .build()
                 .unwrap(),
@@ -429,7 +429,7 @@ mod tests {
         );
         assert_eq!(deserialized[0].action(), "publish");
         assert_eq!(deserialized[1].tenant_id(), None);
-        assert_eq!(deserialized[1].resource_pattern(), "file_parser");
+        assert_eq!(deserialized[1].resource_pattern(), "file-parser");
         assert_eq!(deserialized[1].action(), "edit");
     }
 

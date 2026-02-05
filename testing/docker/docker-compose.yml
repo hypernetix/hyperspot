@@ -12,7 +12,7 @@ services:
       retries: 3
       start_period: 5s
 
-  file_parser_api:
+  file-parser-api:
     image: hyperspot-api:e2e
     build:
       context: ../..
@@ -23,7 +23,7 @@ services:
       # Allow container to access host machine via host.docker.internal
       - "host.docker.internal:host-gateway"
     environment:
-      # No external dependencies needed for file_parser module
+      # No external dependencies needed for file-parser module
       - RUST_LOG=info
       - APP__MODULES__api_gateway__CONFIG__BIND_ADDR=0.0.0.0:8086
       - APP__MODULES__api_gateway__CONFIG__ENABLE_DOCS=true
@@ -31,7 +31,7 @@ services:
     depends_on:
       mock:
         condition: service_healthy
-    # No external dependencies required for file_parser module
-    # (file_parser doesn't need Postgres, MinIO, etc.)
+    # No external dependencies required for file-parser module
+    # (file-parser doesn't need Postgres, MinIO, etc.)
     # Readiness is checked by the Makefile e2e target
 
