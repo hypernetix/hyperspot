@@ -1746,10 +1746,10 @@ Database
 #### Repository Pattern: Single File vs Per-Aggregate
 
 **Recommended: Single `repo.rs` file** (as shown in section 3 above)
-- ✅ **Simpler transaction management**: All DB operations in one place
-- ✅ **Easier DB backend migration**: Only one file to modify per module
-- ✅ **Consistent patterns**: All repository methods follow the same structure
-- ✅ **Suitable for most modules**: Works well for modules with 1-5 aggregates
+- **Simpler transaction management**: All DB operations in one place
+- **Easier DB backend migration**: Only one file to modify per module
+- **Consistent patterns**: All repository methods follow the same structure
+- **Suitable for most modules**: Works well for modules with 1-5 aggregates
 
 **Alternative: Per-aggregate files** (e.g., `users_sea_repo.rs`, `addresses_sea_repo.rs`)
 - Use when:
@@ -1757,9 +1757,9 @@ Database
   - Each aggregate has 20+ repository methods
   - Different aggregates have distinct transaction patterns
 - Trade-offs:
-  - ⚠️ **More files to maintain**: Harder to coordinate cross-aggregate transactions
-  - ⚠️ **Duplicated patterns**: Each file needs similar boilerplate
-  - ⚠️ **Migration complexity**: Must update multiple files when changing DB backends
+  - **More files to maintain**: Harder to coordinate cross-aggregate transactions
+  - **Duplicated patterns**: Each file needs similar boilerplate
+  - **Migration complexity**: Must update multiple files when changing DB backends
 
 **Example of per-aggregate pattern:**
 ```rust
