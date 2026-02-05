@@ -4,7 +4,7 @@
 
 mod dump;
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, ensure};
 // Use DB config types from modkit-db
 pub use modkit_db::{DbConnConfig, GlobalDatabaseConfig, PoolCfg};
 use serde::{Deserialize, Serialize};
@@ -12,7 +12,6 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use tracing::Level;
 
-use super::host::paths::home_dir::resolve_home_dir;
 use crate::ConfigProvider;
 use crate::telemetry::TracingConfig;
 use url::Url;
@@ -99,10 +98,33 @@ impl ConfigProvider for AppConfig {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct ServerConfig {
-    pub home_dir: String, // will be normalized to absolute path
+    pub home_dir: PathBuf, // will be normalized to absolute path
+}
+
+impl Default for ServerConfig {
+    fn default() -> Self {
+        Self {
+            home_dir: super::host::paths::default_home_dir().join(".hyperspot"),
+        }
+    }
+}
+
+impl ServerConfig {
+    fn normalize_home_dir_inplace(&mut self) -> Result<()> {
+        self.home_dir = super::host::normalize_path(
+            self.home_dir
+                .to_str()
+                .context("home directory configuration is not a valid path")?,
+        )
+        .context("home_dir normalization failed")?;
+
+        std::fs::create_dir_all(&self.home_dir).context("Failed to create home_dir")?;
+
+        Ok(())
+    }
 }
 
 /// Logging configuration - maps subsystem names to their logging settings.
@@ -208,7 +230,7 @@ impl AppConfig {
     ///
     /// # Errors
     /// Returns an error if configuration loading or `home_dir` resolution fails.
-    pub fn load_layered<P: AsRef<Path>>(config_path: P) -> Result<Self> {
+    pub fn load_layered(config_path: &PathBuf) -> Result<Self> {
         use figment::{
             Figment,
             providers::{Env, Format, Serialized, Yaml},
@@ -227,7 +249,7 @@ impl AppConfig {
 
         let figment = Figment::new()
             .merge(Serialized::defaults(base))
-            .merge(Yaml::file(config_path.as_ref()))
+            .merge(Yaml::file(config_path))
             // Example: APP__SERVER__PORT=8087 maps to server.port
             .merge(Env::prefixed("APP__").split("__"));
 
@@ -236,7 +258,9 @@ impl AppConfig {
             .with_context(|| "Failed to extract config from figment".to_owned())?;
 
         // Normalize + create home_dir immediately.
-        normalize_home_dir_inplace(&mut config.server)
+        config
+            .server
+            .normalize_home_dir_inplace()
             .context("Failed to resolve server.home_dir")?;
 
         // Merge module files if modules_dir is specified.
@@ -252,12 +276,18 @@ impl AppConfig {
     ///
     /// # Errors
     /// Returns an error if configuration loading or `home_dir` resolution fails.
-    pub fn load_or_default<P: AsRef<Path>>(config_path: Option<P>) -> Result<Self> {
+    pub fn load_or_default(config_path: &Option<PathBuf>) -> Result<Self> {
         if let Some(path) = config_path {
+            ensure!(
+                path.is_file(),
+                "config file does not exist: {}",
+                path.to_string_lossy()
+            );
             Self::load_layered(path)
         } else {
             let mut c = Self::default();
-            normalize_home_dir_inplace(&mut c.server)
+            c.server
+                .normalize_home_dir_inplace()
                 .context("Failed to resolve server.home_dir (defaults)")?;
             Ok(c)
         }
@@ -292,27 +322,6 @@ pub struct CliArgs {
     pub print_config: bool,
     pub verbose: u8,
     pub mock: bool,
-}
-
-// TODO: should be pass from outside
-const fn default_subdir() -> &'static str {
-    ".hyperspot"
-}
-
-/// Normalize `server.home_dir` using `home_dirs::resolve_home_dir` and store the absolute path back.
-fn normalize_home_dir_inplace(server: &mut ServerConfig) -> Result<()> {
-    // Treat empty string as "not provided" => None.
-    let opt = if server.home_dir.trim().is_empty() {
-        None
-    } else {
-        Some(server.home_dir.clone())
-    };
-
-    let resolved: PathBuf = resolve_home_dir(opt, default_subdir(), /*create*/ true)
-        .context("home_dir normalization failed")?;
-
-    server.home_dir = resolved.to_string_lossy().to_string();
-    Ok(())
 }
 
 fn merge_module_files(
@@ -1199,9 +1208,8 @@ mod tests {
     use tempfile::tempdir;
 
     /// Helper: a normalized `home_dir` should be absolute and not start with '~'.
-    fn is_normalized_path(p: &str) -> bool {
-        let pb = PathBuf::from(p);
-        pb.is_absolute() && !p.starts_with('~')
+    fn is_normalized_path(p: &Path) -> bool {
+        p.is_absolute() && !p.starts_with("~")
     }
 
     /// Helper: platform default subdirectory name.
@@ -1284,7 +1292,7 @@ logging:
             "HOME"
         };
         with_var(env_var, Some(tmp.path().to_str().unwrap()), || {
-            let config = AppConfig::load_or_default(None::<&str>).unwrap();
+            let config = AppConfig::load_or_default(&None).unwrap();
             assert!(is_normalized_path(&config.server.home_dir));
             assert!(config.server.home_dir.ends_with(default_subdir()));
         });
