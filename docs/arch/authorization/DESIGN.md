@@ -1295,7 +1295,7 @@ For concrete examples demonstrating the authorization model in practice, see [AU
 
 ## Open Questions
 
-These questions require further design work before implementation.
+These questions require further design work.
 
 1. **Batch evaluation optimization** - We support `/access/v1/evaluations` for batch requests. Should PDP optimize constraint generation when multiple evaluations share the same subject/context? Use cases: bulk operations, permission checks for UI rendering (checking permissions for 50 list items at once).
 
@@ -1315,6 +1315,11 @@ These questions require further design work before implementation.
    - **Schema versioning** — How are closure table schemas versioned? (semantic versioning, version column, schema_version table?)
    - **Migration protocol** — When closure table schema changes, how do PEPs discover and adapt? Is there a capabilities negotiation mechanism?
    - **Backward compatibility** — Can old PEPs work with new schema, or is coordinated upgrade required? What's the compatibility matrix?
+
+9. **S2S token issuance** — Should AuthN Resolver support token issuance for service-to-service communication, or is it sufficient to rely on standard [OAuth 2.0 Client Credentials Grant](https://datatracker.ietf.org/doc/html/rfc6749#section-4.4)? Open questions:
+   - **Scope** — Is token issuance AuthN Resolver's responsibility, or should services obtain tokens directly from the IdP?
+   - **Use cases** — What S2S scenarios require HyperSpot involvement vs. direct IdP integration?
+   - **Token types** — Should S2S tokens differ from user tokens (e.g., different scopes, shorter TTL)?
 
 ---
 
