@@ -14,12 +14,12 @@ Event-driven architecture is employed for real-time updates and cross-device syn
 
 #### Product requirements
 
-| FDD ID | Solution short description |
+| ID | Solution short description |
 |--------|----------------------------|
-| `fdd-todo-app-fr-create-task` | REST API endpoint POST /tasks with validation |
-| `fdd-todo-app-fr-complete-task` | PATCH /tasks/:id with status toggle |
-| `fdd-todo-app-fr-filter-tasks` | Query parameters on GET /tasks |
-| `fdd-todo-app-nfr-offline-support` | IndexedDB local storage with sync queue |
+| `spd-todo-app-fr-create-task` | REST API endpoint POST /tasks with validation |
+| `spd-todo-app-fr-complete-task` | PATCH /tasks/:id with status toggle |
+| `spd-todo-app-fr-filter-tasks` | Query parameters on GET /tasks |
+| `spd-todo-app-nfr-offline-support` | IndexedDB local storage with sync queue |
 
 ### 1.3 Architecture Layers
 
@@ -36,35 +36,35 @@ Event-driven architecture is employed for real-time updates and cross-device syn
 
 #### Offline-First
 
-**ID**: `fdd-todo-app-principle-offline-first`
+**ID**: `spd-todo-app-principle-offline-first`
 
-<!-- fdd-id-content -->
-**ADRs**: `fdd-todo-app-adr-local-storage`
+
+**ADRs**: `spd-todo-app-adr-local-storage`
 
 All operations must work without network connectivity. Data is persisted locally first, then synchronized to the server when connection is available.
-<!-- fdd-id-content -->
+
 
 #### Optimistic Updates
 
-**ID**: `fdd-todo-app-principle-optimistic-updates`
+**ID**: `spd-todo-app-principle-optimistic-updates`
 
-<!-- fdd-id-content -->
-**ADRs**: `fdd-todo-app-adr-optimistic-ui`
+
+**ADRs**: `spd-todo-app-adr-optimistic-ui`
 
 UI updates immediately on user action without waiting for server confirmation. Rollback occurs only on server rejection.
-<!-- fdd-id-content -->
+
 
 ### 2.2: Constraints
 
 #### Browser Compatibility
 
-**ID**: `fdd-todo-app-constraint-browser-compat`
+**ID**: `spd-todo-app-constraint-browser-compat`
 
-<!-- fdd-id-content -->
-**ADRs**: `fdd-todo-app-adr-browser-support`
+
+**ADRs**: `spd-todo-app-adr-browser-support`
 
 Application must support latest 2 versions of Chrome, Firefox, Safari, and Edge.
-<!-- fdd-id-content -->
+
 
 ## 3. Technical Architecture
 
@@ -172,15 +172,15 @@ sequenceDiagram
     TS->>IDB: markSynced(task.id)
 ```
 
-**Use cases**: `fdd-todo-app-usecase-create-task`, `fdd-todo-app-usecase-complete-task`
+**Use cases**: `spd-todo-app-usecase-create-task`, `spd-todo-app-usecase-complete-task`
 
-**Actors**: `fdd-todo-app-actor-user`, `fdd-todo-app-actor-sync-service`
+**Actors**: `spd-todo-app-actor-user`, `spd-todo-app-actor-sync-service`
 
 ### 3.5: Database schemas & tables
 
 #### Table tasks
 
-**ID**: `fdd-todo-app-db-table-tasks`
+**ID**: `spd-todo-app-dbtable-tasks`
 
 **Schema**
 
@@ -211,7 +211,7 @@ sequenceDiagram
 
 ### 3.6: Topology (optional)
 
-**ID**: `fdd-todo-app-topology-cloud`
+**ID**: `spd-todo-app-topology-cloud`
 
 - Frontend: Static files on CDN
 - Backend: Containerized Node.js on Kubernetes
@@ -220,7 +220,7 @@ sequenceDiagram
 
 ### 3.7: Tech stack (optional)
 
-**ID**: `fdd-todo-app-tech-stack`
+**ID**: `spd-todo-app-tech-stack`
 
 - Frontend: React 18, TypeScript, TailwindCSS, Zustand
 - Backend: Node.js, Express, TypeScript
@@ -229,6 +229,6 @@ sequenceDiagram
 
 ## 4. Additional Context
 
-**ID**: `fdd-todo-app-design-context-decisions`
+**ID**: `spd-todo-app-designcontext-decisions`
 
 The choice of React over other frameworks was driven by team expertise and ecosystem maturity. PostgreSQL was selected for its reliability and JSON support for flexible task metadata.

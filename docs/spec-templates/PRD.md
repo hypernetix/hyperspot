@@ -30,11 +30,9 @@
 
 #### {Actor Name}
 
-**ID**: `fdd-{module-name}-actor-{actor-slug}`
+**ID**: `spd-{system}-actor-{actor-slug}`
 
-<!-- fdd-id-content -->
 **Role**: {Description of what this actor does (1-2 sentences)}
-<!-- fdd-id-content -->
 
 <!-- TODO: Add more human actors as needed -->
 
@@ -42,11 +40,9 @@
 
 #### {System Actor Name}
 
-**ID**: `fdd-{module-name}-actor-{actor-slug}`
+**ID**: `spd-{system}-actor-{actor-slug}`
 
-<!-- fdd-id-content -->
 **Role**: {Description of what this system actor does (1-2 sentences)}
-<!-- fdd-id-content -->
 
 <!-- TODO: Add more system actors as needed -->
 
@@ -54,15 +50,13 @@
 
 #### {Requirement Name}
 
-**ID**: `fdd-{module-name}-fr-{requirement-slug}`
+**ID**: `spd-{system}-fr-{requirement-slug}`
 
-<!-- fdd-id-content -->
 **Priority**: {Low | Medium | High}
 
 {Description of what the system must do (WHAT, not HOW)}
 
-**Actors**: `fdd-{module-name}-actor-{actor1}`, `fdd-{module-name}-actor-{actor2}`
-<!-- fdd-id-content -->
+**Actors**: `spd-{system}-actor-{actor1}`, `spd-{system}-actor-{actor2}`
 
 <!-- TODO: Add more functional requirements as needed -->
 
@@ -70,10 +64,9 @@
 
 #### UC-{NNN}: {Use Case Name}
 
-**ID**: `fdd-{module-name}-usecase-{usecase-slug}`
+**ID**: `spd-{system}-usecase-{usecase-slug}`
 
-<!-- fdd-id-content -->
-**Actor**: `fdd-{module-name}-actor-{actor-slug}`
+**Actor**: `spd-{system}-actor-{actor-slug}`
 
 **Preconditions**: {Description of required state before execution}
 
@@ -88,19 +81,15 @@
 - {Acceptance criteria 1}
 - {Acceptance criteria 2}
 
-<!-- fdd-id-content -->
-
 <!-- TODO: Add more use cases as needed -->
 
 ## 5. Non-functional requirements
 
 #### {NFR Name}
 
-**ID**: `fdd-{module-name}-nfr-{nfr-slug}`
+**ID**: `spd-{system}-nfr-{nfr-slug}`
 
-<!-- fdd-id-content -->
 {Description of constraints/quality attributes (e.g., latency, security, compliance)}
-<!-- fdd-id-content -->
 
 <!-- TODO: Add more NFRs as needed -->
 
@@ -108,11 +97,9 @@
 
 #### {Context Item Name}
 
-**ID**: `fdd-{module-name}-prd-context-{context-slug}`
+**ID**: `spd-{system}-prdcontext-{context-slug}`
 
-<!-- fdd-id-content -->
 {Anything relevant: market notes, stakeholder feedback, assumptions, etc.}
-<!-- fdd-id-content -->
 
 <!-- TODO: Add any additional PRD, market notes, stakeholder feedback, etc. -->
-<!-- This section is optional and not validated by FDD -->
+<!-- This section is optional and not validated by tooling -->

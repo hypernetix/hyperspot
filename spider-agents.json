@@ -1,0 +1,240 @@
+{
+  "version": 1,
+  "agents": {
+    "windsurf": {
+      "workflows": {
+        "workflow_dir": ".windsurf/workflows",
+        "workflow_command_prefix": "spider-",
+        "workflow_filename_format": "{command}.md",
+        "custom_content": "",
+        "template": [
+          "# /{command}",
+          "",
+          "{custom_content}",
+          "ALWAYS open and follow `{target_workflow_path}`"
+        ]
+      },
+      "skills": {
+        "skill_name": "spider",
+        "custom_content": "",
+        "outputs": [
+          {
+            "path": ".windsurf/skills/spider/SKILL.md",
+            "template": [
+              "---",
+              "name: {name}",
+              "description: {description}",
+              "---",
+              "",
+              "{custom_content}",
+              "ALWAYS open and follow `{target_skill_path}`"
+            ]
+          },
+          {
+            "path": ".windsurf/workflows/spider.md",
+            "template": [
+              "# /spider",
+              "",
+              "{custom_content}",
+              "ALWAYS open and follow `{target_skill_path}`"
+            ]
+          }
+        ]
+      }
+    },
+    "cursor": {
+      "workflows": {
+        "workflow_dir": ".cursor/commands",
+        "workflow_command_prefix": "spider-",
+        "workflow_filename_format": "{command}.md",
+        "custom_content": "",
+        "template": [
+          "# /{command}",
+          "",
+          "{custom_content}",
+          "ALWAYS open and follow `{target_workflow_path}`"
+        ]
+      },
+      "skills": {
+        "custom_content": "",
+        "outputs": [
+          {
+            "path": ".cursor/weavers/spider.mdc",
+            "template": [
+              "---",
+              "description: {description}",
+              "alwaysApply: true",
+              "---",
+              "",
+              "{custom_content}",
+              "ALWAYS open and follow `{target_skill_path}`"
+            ]
+          },
+          {
+            "path": ".cursor/commands/spider.md",
+            "template": [
+              "# /spider",
+              "",
+              "{custom_content}",
+              "ALWAYS open and follow `{target_skill_path}`"
+            ]
+          }
+        ]
+      }
+    },
+    "claude": {
+      "workflows": {
+        "workflow_dir": ".claude/commands",
+        "workflow_command_prefix": "spider-",
+        "workflow_filename_format": "{command}.md",
+        "custom_content": "",
+        "template": [
+          "---",
+          "description: {description}",
+          "---",
+          "",
+          "{custom_content}",
+          "ALWAYS open and follow `{target_workflow_path}`"
+        ]
+      },
+      "skills": {
+        "custom_content": "",
+        "outputs": [
+          {
+            "path": ".claude/commands/spider.md",
+            "template": [
+              "---",
+              "description: {description}",
+              "---",
+              "",
+              "{custom_content}",
+              "ALWAYS open and follow `{target_skill_path}`"
+            ]
+          },
+          {
+            "path": ".claude/skills/spider/SKILL.md",
+            "template": [
+              "---",
+              "name: spider",
+              "description: {description}",
+              "disable-model-invocation: false",
+              "user-invocable: true",
+              "allowed-tools: Bash, Read, Write, Edit, Glob, Grep, Task, WebFetch",
+              "---",
+              "",
+              "{custom_content}",
+              "ALWAYS open and follow `{target_skill_path}`"
+            ]
+          },
+          {
+            "path": ".claude/skills/spider-adapter/SKILL.md",
+            "target": "workflows/adapter.md",
+            "template": [
+              "---",
+              "name: spider-adapter",
+              "description: {description}",
+              "disable-model-invocation: false",
+              "user-invocable: true",
+              "allowed-tools: Bash, Read, Write, Edit, Glob, Grep",
+              "---",
+              "",
+              "ALWAYS open and follow `{target_path}`"
+            ]
+          },
+          {
+            "path": ".claude/skills/spider-generate/SKILL.md",
+            "target": "workflows/generate.md",
+            "template": [
+              "---",
+              "name: spider-generate",
+              "description: {description}",
+              "disable-model-invocation: false",
+              "user-invocable: true",
+              "allowed-tools: Bash, Read, Write, Edit, Glob, Grep, Task",
+              "---",
+              "",
+              "ALWAYS open and follow `{target_path}`"
+            ]
+          },
+          {
+            "path": ".claude/skills/spider-analyze/SKILL.md",
+            "target": "workflows/analyze.md",
+            "template": [
+              "---",
+              "name: spider-analyze",
+              "description: {description}",
+              "disable-model-invocation: false",
+              "user-invocable: true",
+              "allowed-tools: Bash, Read, Glob, Grep",
+              "---",
+              "",
+              "ALWAYS open and follow `{target_path}`"
+            ]
+          }
+        ]
+      }
+    },
+    "copilot": {
+      "workflows": {
+        "workflow_dir": ".github/prompts",
+        "workflow_command_prefix": "spider-",
+        "workflow_filename_format": "{command}.prompt.md",
+        "custom_content": "",
+        "template": [
+          "---",
+          "name: {name}",
+          "description: {description}",
+          "---",
+          "",
+          "{custom_content}",
+          "ALWAYS open and follow `{target_workflow_path}`"
+        ]
+      },
+      "skills": {
+        "custom_content": "",
+        "outputs": [
+          {
+            "path": ".github/copilot-instructions.md",
+            "template": [
+              "# Spider",
+              "",
+              "{custom_content}",
+              "ALWAYS open and follow `{target_skill_path}`"
+            ]
+          },
+          {
+            "path": ".github/prompts/spider.prompt.md",
+            "template": [
+              "---",
+              "name: {name}",
+              "description: {description}",
+              "---",
+              "",
+              "{custom_content}",
+              "ALWAYS open and follow `{target_skill_path}`"
+            ]
+          }
+        ]
+      }
+    },
+    "openai": {
+      "skills": {
+        "custom_content": "",
+        "outputs": [
+          {
+            "path": ".agents/skills/spider/SKILL.md",
+            "template": [
+              "---",
+              "name: {name}",
+              "description: {description}",
+              "---",
+              "",
+              "{custom_content}",
+              "ALWAYS open and follow `{target_skill_path}`"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

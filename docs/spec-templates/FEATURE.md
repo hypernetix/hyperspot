@@ -2,7 +2,7 @@
 
 ## 1. Feature Context
 
-**ID**: `fdd-{module-name}-feature-{feature-slug}`
+**ID**: `spd-{system}-feature-{feature-slug}`
 
 **Status**: NOT_STARTED | IN_PROGRESS | IMPLEMENTED
 
@@ -16,14 +16,14 @@
 
 ### 1.3 Actors
 
-- `fdd-{module-name}-actor-{actor-slug}` - {Role in this feature}
+- `spd-{system}-actor-{actor-slug}` - {Role in this feature}
 
 ### 1.4 References
 
 - Overall Design: [DESIGN.md](../../DESIGN.md)
 - Dependencies: {List feature dependencies or "None"}
 
-## 2. Actor Flows (FDL)
+## 2. Actor Flows (SDSL)
 
 User-facing interactions that start with an actor (human or external system) and describe the end-to-end flow of a use case. Each flow has a triggering actor and shows how the system responds to actor actions.
 
@@ -31,10 +31,9 @@ User-facing interactions that start with an actor (human or external system) and
 
 ### {Flow Name}
 
-- [ ] **ID**: `fdd-{module-name}-feature-{feature-slug}-flow-{flow-slug}`
+- [ ] **ID**: `spd-{system}-feature-{feature-slug}-flow-{flow-slug}`
 
-<!-- fdd-id-content -->
-**Actor**: `fdd-{module-name}-actor-{actor-slug}`
+**Actor**: `spd-{system}-actor-{actor-slug}`
 
 **Success Scenarios**:
 - {Scenario 1}
@@ -51,11 +50,10 @@ User-facing interactions that start with an actor (human or external system) and
 5. [ ] - `ph-1` - **ELSE** - `inst-{step-id}`
    1. [ ] - `ph-1` - {Action if false (include API/DB/Integration details)} - `inst-{step-id}`
 6. [ ] - `ph-1` - **RETURN** {result} - `inst-{step-id}`
-<!-- fdd-id-content -->
 
 <!-- TODO: Add more flows as needed -->
 
-## 3. Algorithms (FDL)
+## 3. Algorithms (SDSL)
 
 Internal system functions and procedures that do not interact with actors directly. Examples: database layer operations, authorization logic, middleware, validation routines, library functions, background jobs. These are reusable building blocks called by Actor Flows or other Algorithms.
 
@@ -63,9 +61,8 @@ Internal system functions and procedures that do not interact with actors direct
 
 ### {Algorithm Name}
 
-- [ ] **ID**: `fdd-{module-name}-feature-{feature-slug}-algo-{algo-slug}`
+- [ ] **ID**: `spd-{system}-feature-{feature-slug}-algo-{algo-slug}`
 
-<!-- fdd-id-content -->
 **Input**: {Input description}
 
 **Output**: {Output description}
@@ -81,17 +78,15 @@ Internal system functions and procedures that do not interact with actors direct
 6. [ ] - `ph-1` - **CATCH** {error} - `inst-{step-id}`
    1. [ ] - `ph-1` - {Handle error} - `inst-{step-id}`
 7. [ ] - `ph-1` - **RETURN** {result} - `inst-{step-id}`
-<!-- fdd-id-content -->
 
 <!-- TODO: Add more algorithms as needed -->
 
-## 4. States (FDL)
+## 4. States (SDSL)
 
 ### {Entity Name} State Machine
 
-- [ ] **ID**: `fdd-{module-name}-feature-{feature-slug}-state-{entity-slug}`
+- [ ] **ID**: `spd-{system}-feature-{feature-slug}-state-{entity-slug}`
 
-<!-- fdd-id-content -->
 **States**: {State1}, {State2}, {State3}
 
 **Initial State**: {State1}
@@ -99,7 +94,6 @@ Internal system functions and procedures that do not interact with actors direct
 **Transitions**:
 1. [ ] - `ph-1` - **FROM** {State1} **TO** {State2} **WHEN** {condition} - `inst-{step-id}`
 2. [ ] - `ph-1` - **FROM** {State2} **TO** {State3} **WHEN** {condition} - `inst-{step-id}`
-<!-- fdd-id-content -->
 
 <!-- TODO: Add more state machines as needed -->
 <!-- Note: This section is optional if feature has no state management -->
@@ -109,9 +103,8 @@ Internal system functions and procedures that do not interact with actors direct
 
 ### {Requirement Title}
 
-- [ ] **ID**: `fdd-{module-name}-feature-{feature-slug}-req-{req-slug}`
+- [ ] **ID**: `spd-{system}-feature-{feature-slug}-req-{req-slug}`
 
-<!-- fdd-id-content -->
 **Status**: NOT_STARTED | IN_PROGRESS | COMPLETED
 
 **Description**: {Clear description with SHALL/MUST statements}
@@ -123,13 +116,12 @@ Internal system functions and procedures that do not interact with actors direct
 
 <!-- Algorithms, flows, states which should be implemented -->
 **Implements**:
-- `fdd-{module-name}-feature-{feature-slug}-flow-{flow-slug}`
-- `fdd-{module-name}-feature-{feature-slug}-algo-{algo-slug}`
-- `fdd-{module-name}-feature-{feature-slug}-state-{entity-slug}`
+- `spd-{system}-feature-{feature-slug}-flow-{flow-slug}`
+- `spd-{system}-feature-{feature-slug}-algo-{algo-slug}`
+- `spd-{system}-feature-{feature-slug}-state-{entity-slug}`
 
 **Phases**:
 - [ ] `ph-1`: {What is implemented in this phase}
-<!-- fdd-id-content -->
 
 <!-- TODO: Add more requirements as needed -->
 
@@ -137,8 +129,6 @@ Internal system functions and procedures that do not interact with actors direct
 
 ### {Context Item Title}
 
-**ID**: `fdd-{module-name}-feature-{feature-slug}-context-{context-slug}`
+**ID**: `spd-{system}-feature-{feature-slug}-context-{context-slug}`
 
-<!-- fdd-id-content -->
 {Additional notes and context that inform implementation.}
-<!-- fdd-id-content -->

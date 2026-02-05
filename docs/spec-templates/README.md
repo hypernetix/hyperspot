@@ -1,12 +1,10 @@
 # Spec Templates
 
-Lightweight specification templates for software projects. Optionally compatible with [Flow-Driven Development (FDD)](https://github.com/cyberfabric/FDD) for validation and traceability.
+Lightweight specification templates for software projects. Uses Spider-style IDs (`spd-...`) for cross-document traceability.
 
 ## Purpose
 
-These templates provide a structured way to document product requirements, technical design, architecture decisions, and feature specifications. They work standalone or can be enhanced with FDD annotations (`fdd-id`) for cross-document validation and traceability.
-
-**FDD integration is optional** — templates are useful on their own for clear, consistent documentation.
+These templates provide a structured way to document product requirements, technical design, architecture decisions, and feature specifications. They work standalone and can be enhanced later with deterministic validation tooling if desired.
 
 ## Templates
 
@@ -73,58 +71,55 @@ Unlike PRD which answers "what do we need?", Feature files answer "how exactly d
 Documents should be placed **inside the module folder** following this structure:
 
 ```
-{module}/
+{module-or-system}/
 ├── PRD.md                      # Product requirements
 ├── DESIGN.md                   # Technical design
 ├── ADR/                        # Architecture Decision Records
-│   ├── 0001-{fdd-id}.md       # ADR with sequential prefix
-│   ├── 0002-{fdd-id}.md
+│   ├── 0001-{id}.md            # ADR with sequential prefix
+│   ├── 0002-{id}.md
 │   └── ...
 └── features/                   # Feature specifications
-    ├── 0001-{fdd-id}.md        # Feature with sequential prefix
-    ├── 0002-{fdd-id}.md
+    ├── 0001-{id}.md            # Feature with sequential prefix
+    ├── 0002-{id}.md
     └── ...
 ```
 
 ### ADR & Feature Naming Convention
 
-Both ADR and Feature files MUST use the prefix `NNNN-{fdd-id}.md`:
+Both ADR and Feature files MUST use the prefix `NNNN-{id}.md`:
 
 **ADRs**:
-- `ADR/0001-fdd-todo-app-adr-local-storage.md`
-- `ADR/0002-fdd-todo-app-adr-optimistic-ui.md`
+- `ADR/0001-spd-todo-app-adr-local-storage.md`
+- `ADR/0002-spd-todo-app-adr-optimistic-ui.md`
 
 **Features**:
-- `features/0001-fdd-todo-app-feature-core.md`
-- `features/0002-fdd-todo-app-feature-logic.md`
+- `features/0001-spd-todo-app-feature-core.md`
+- `features/0002-spd-todo-app-feature-logic.md`
 
-## FDD ID Convention
+## ID Convention
 
-FDD IDs enable traceability across all specification artifacts.
+IDs enable traceability across all specification artifacts.
 
-### FDD ID Definition
+### ID Definition
 
-An FDD ID **defines** a unique identifier for a specification element (actor, requirement, feature, etc.). Each ID must be **globally unique** within the module.
+An ID **defines** a unique identifier for a specification element (actor, requirement, feature, etc.). Each ID must be **globally unique** within the scope you choose (system/module).
 
 **Format**:
 ```
-fdd-{module-name}-{kind}-{slug}
+spd-{system}-{kind}-{slug}
 ```
 
-**Placement**: Use `**ID**: \`fdd-...\`` in the artifact where the element is defined.
+**Placement**: Use `**ID**: \`spd-...\`` in the artifact where the element is defined.
 
-### FDD ID Reference
+### ID Reference
 
-An FDD ID **reference** links to an element defined elsewhere. References create traceability between documents — for example, a Feature can reference Actors from PRD, or an ADR can reference Requirements it addresses.
+An ID **reference** links to an element defined elsewhere. References create traceability between documents — for example, a Feature can reference Actors from PRD, or an ADR can reference Requirements it addresses.
 
-**Placement**: Use backtick notation `` `fdd-...` `` when referencing an ID defined in another section or file.
+**Placement**: Use backtick notation `` `spd-...` `` when referencing an ID defined in another section or file.
 
 ### Validation
 
-FDD IDs must be unique. When FDD tooling is connected, `fdd validate` will:
-- Check that all referenced IDs exist
-- Detect duplicate definitions
-- Verify cross-document consistency
+IDs must be unique. If/when you connect deterministic tooling, you can validate cross-document consistency (references exist, duplicates do not exist).
 
 ### Kind Reference
 
@@ -142,27 +137,23 @@ FDD IDs must be unique. When FDD tooling is connected, `fdd validate` will:
 | `req` | Feature requirement |
 | `principle` | Design principle |
 | `constraint` | Constraint |
-| `context` | Additional context |
-| `db-table` | Database table |
+| `prdcontext` | PRD additional context |
+| `designcontext` | DESIGN additional context |
+| `featurecontext` | FEATURE additional context |
+| `dbtable` | Database table |
 | `topology` | Topology |
 | `tech` | Tech stack |
 
 **Examples**:
-- `fdd-todo-app-actor-user` — Actor ID
-- `fdd-todo-app-fr-create-task` — Functional Requirement ID
-- `fdd-todo-app-adr-local-storage` — ADR ID
-- `fdd-todo-app-feature-core` — Feature ID
+- `spd-todo-app-actor-user` — Actor ID
+- `spd-todo-app-fr-create-task` — Functional Requirement ID
+- `spd-todo-app-adr-local-storage` — ADR ID
+- `spd-todo-app-feature-core` — Feature ID
 
 ## Example
 
 See [examples/todo-app/](./examples/todo-app/) for a complete example using a universally understood Todo App theme.
 
-## FDD Compatibility
+## Tooling (Optional)
 
-When full FDD framework is connected:
-
-1. **Validation** — `fdd validate` will check document structure and cross-references
-2. **Traceability** — IDs will be linked across PRD → DESIGN → ADR → FEATURE → code
-3. **Deterministic gates** — CI/CD can enforce document quality before code changes
-
-For more details on FDD taxonomy and artifact relationships, see [`TAXONOMY.md`](https://github.com/cyberfabric/FDD/blob/main/guides/TAXONOMY.md).
+If/when you decide to adopt deterministic validation (e.g., Spider templates + artifact registry), these IDs can become the foundation for automated cross-artifact traceability (PRD → DESIGN → ADR → FEATURE → code).

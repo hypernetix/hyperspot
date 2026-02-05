@@ -33,3 +33,4 @@ logs
 
 # Code coverage reports
 /coverage/
+.claude/settings.local.json

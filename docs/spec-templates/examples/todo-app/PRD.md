@@ -33,88 +33,73 @@ The application is designed for individual use with cross-device synchronization
 
 #### User
 
-**ID**: `fdd-todo-app-actor-user`
+**ID**: `spd-todo-app-actor-user`
 
-<!-- fdd-id-content -->
 **Role**: Primary user who creates, manages, and completes tasks in the application.
-<!-- fdd-id-content -->
 
 ### 2.2 System Actors
 
 #### Sync Service
 
-**ID**: `fdd-todo-app-actor-sync-service`
+**ID**: `spd-todo-app-actor-sync-service`
 
-<!-- fdd-id-content -->
 **Role**: Background service that synchronizes tasks across user devices in real-time.
-<!-- fdd-id-content -->
 
 #### Notification Service
 
-**ID**: `fdd-todo-app-actor-notification-service`
+**ID**: `spd-todo-app-actor-notification-service`
 
-<!-- fdd-id-content -->
 **Role**: Sends reminders and notifications to users about upcoming or overdue tasks.
-<!-- fdd-id-content -->
 
 ## 3. Functional Requirements
 
 #### Create Task
 
-**ID**: `fdd-todo-app-fr-create-task`
+**ID**: `spd-todo-app-fr-create-task`
 
-<!-- fdd-id-content -->
 **Priority**: High
 
 The system must allow users to create a new task with a title, optional description, due date, priority level, and category.
 
-**Actors**: `fdd-todo-app-actor-user`
-<!-- fdd-id-content -->
+**Actors**: `spd-todo-app-actor-user`
 
 #### Complete Task
 
-**ID**: `fdd-todo-app-fr-complete-task`
+**ID**: `spd-todo-app-fr-complete-task`
 
-<!-- fdd-id-content -->
 **Priority**: High
 
 The system must allow users to mark a task as completed or revert it to incomplete status.
 
-**Actors**: `fdd-todo-app-actor-user`
-<!-- fdd-id-content -->
+**Actors**: `spd-todo-app-actor-user`
 
 #### Filter Tasks
 
-**ID**: `fdd-todo-app-fr-filter-tasks`
+**ID**: `spd-todo-app-fr-filter-tasks`
 
-<!-- fdd-id-content -->
 **Priority**: Medium
 
 The system must allow users to filter tasks by status (all, active, completed), category, and priority.
 
-**Actors**: `fdd-todo-app-actor-user`
-<!-- fdd-id-content -->
+**Actors**: `spd-todo-app-actor-user`
 
 #### Delete Task
 
-**ID**: `fdd-todo-app-fr-delete-task`
+**ID**: `spd-todo-app-fr-delete-task`
 
-<!-- fdd-id-content -->
 **Priority**: High
 
 The system must allow users to delete a task permanently.
 
-**Actors**: `fdd-todo-app-actor-user`
-<!-- fdd-id-content -->
+**Actors**: `spd-todo-app-actor-user`
 
 ## 4. Use Cases
 
 #### UC-001: Create a New Task
 
-**ID**: `fdd-todo-app-usecase-create-task`
+**ID**: `spd-todo-app-usecase-create-task`
 
-<!-- fdd-id-content -->
-**Actor**: `fdd-todo-app-actor-user`
+**Actor**: `spd-todo-app-actor-user`
 
 **Preconditions**: User is authenticated and on the main task list view.
 
@@ -133,14 +118,11 @@ The system must allow users to delete a task permanently.
 - All entered fields are correctly saved
 - Validation errors are shown for invalid input
 
-<!-- fdd-id-content -->
-
 #### UC-002: Complete a Task
 
-**ID**: `fdd-todo-app-usecase-complete-task`
+**ID**: `spd-todo-app-usecase-complete-task`
 
-<!-- fdd-id-content -->
-**Actor**: `fdd-todo-app-actor-user`
+**Actor**: `spd-todo-app-actor-user`
 
 **Preconditions**: User has at least one active task in the list.
 
@@ -156,40 +138,31 @@ The system must allow users to delete a task permanently.
 - Task can be reverted to active status
 - Completion timestamp is recorded
 
-<!-- fdd-id-content -->
-
 ## 5. Non-functional requirements
 
 #### Response Time
 
-**ID**: `fdd-todo-app-nfr-response-time`
+**ID**: `spd-todo-app-nfr-response-time`
 
-<!-- fdd-id-content -->
 All user interactions must complete within 200ms under normal load conditions.
-<!-- fdd-id-content -->
 
 #### Data Persistence
 
-**ID**: `fdd-todo-app-nfr-data-persistence`
+**ID**: `spd-todo-app-nfr-data-persistence`
 
-<!-- fdd-id-content -->
 User data must be persisted locally and synced to cloud storage within 5 seconds of any change.
-<!-- fdd-id-content -->
 
 #### Offline Support
 
-**ID**: `fdd-todo-app-nfr-offline-support`
+**ID**: `spd-todo-app-nfr-offline-support`
 
-<!-- fdd-id-content -->
 The application must function fully offline with automatic sync when connectivity is restored.
-<!-- fdd-id-content -->
 
 ## 6. Additional context
 
 #### Market Research
 
-**ID**: `fdd-todo-app-prd-context-market-research`
+**ID**: `spd-todo-app-prdcontext-market-research`
 
-<!-- fdd-id-content -->
 Primary competitors include Todoist, Microsoft To Do, and Apple Reminders. Our differentiator is the combination of simplicity with powerful filtering capabilities.
-<!-- fdd-id-content -->
+

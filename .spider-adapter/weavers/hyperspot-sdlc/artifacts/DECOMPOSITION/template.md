@@ -1,0 +1,1 @@
+../../../../../docs/spec-templates/DECOMPOSITION.md

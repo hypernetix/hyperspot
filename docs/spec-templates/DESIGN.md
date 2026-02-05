@@ -12,15 +12,15 @@
 
 #### Functional requirements
 
-| FDD ID | Solution short description |
+| ID | Solution short description |
 |--------|----------------------------|
-| `fdd-{module-name}-fr-{slug}` | {short description of how to solve} |
+| `spd-{system}-fr-{slug}` | {short description of how to solve} |
 
 #### Non-functional requirements
 
-| FDD ID | Solution short description |
+| ID | Solution short description |
 |--------|----------------------------|
-| `fdd-{module-name}-nfr-{slug}` | {short description of how to solve} |
+| `spd-{system}-nfr-{slug}` | {short description of how to solve} |
 
 ### 1.3 Architecture Layers
 
@@ -39,13 +39,11 @@
 
 #### {Principle Name}
 
-**ID**: `fdd-{module-name}-principle-{principle-slug}`
+**ID**: `spd-{system}-principle-{principle-slug}`
 
-<!-- fdd-id-content -->
-**ADRs**: `fdd-{module-name}-adr-{adr-slug}`
+**ADRs**: `spd-{system}-adr-{adr-slug}`
 
 {Description of the principle and why it matters}
-<!-- fdd-id-content -->
 
 <!-- TODO: Add more design principles as needed -->
 
@@ -53,13 +51,11 @@
 
 #### {Constraint Name}
 
-**ID**: `fdd-{module-name}-constraint-{constraint-slug}`
+**ID**: `spd-{system}-constraint-{constraint-slug}`
 
-<!-- fdd-id-content -->
-**ADRs**: `fdd-{module-name}-adr-{adr-slug}`
+**ADRs**: `spd-{system}-adr-{adr-slug}`
 
 {Description of the constraint and its impact}
-<!-- fdd-id-content -->
 
 <!-- TODO: Add more constraints as needed -->
 
@@ -101,13 +97,26 @@
 
 ### 3.4: Interactions & Sequences
 
+#### {Sequence Name}
+
+**ID**: `spd-{system}-seq-{slug}`
+
+**Use cases**: `spd-{system}-usecase-{slug}` (ID from PRD)
+
+**Actors**: `spd-{system}-actor-{slug}` (ID from PRD)
+
 <!-- TODO: Add sequence diagram (draw.io, Mermaid, or ASCII) -->
 ```mermaid
+sequenceDiagram
+    participant A as Actor
+    participant B as System
+    A->>B: Action
+    B-->>A: Response
 ```
 
-**Use cases**: FDD ID from PRD.
+**Description**: {Brief description of what this sequence accomplishes}
 
-**Actors**: FDD ID from PRD.
+<!-- TODO: Add more sequences as needed -->
 
 ### 3.5: Database schemas & tables
 
@@ -115,7 +124,7 @@
 
 #### Table {name}
 
-**ID**: `fdd-{module-name}-db-table-{slug}`
+**ID**: `spd-{system}-dbtable-{slug}`
 
 **Schema**
 
@@ -138,15 +147,15 @@
 
 Physical view, files, pods, containers, DC, virtual machines, etc.
 
-**ID**: `fdd-{module-name}-topology-{slug}`
+**ID**: `spd-{system}-topology-{slug}`
 
 ### 3.7: Tech stack (optional)
 
-**ID**: `fdd-{module-name}-tech-{slug}`
+**ID**: `spd-{system}-tech-{slug}`
 
 ## 4. Additional Context
 
-**ID**: `fdd-{module-name}-design-context-{slug}`
+**ID**: `spd-{system}-designcontext-{slug}`
 
 <!-- TODO: Add any additional technical context, architect notes, rationale, etc. -->
-<!-- This section is optional and not validated by FDD -->
+<!-- This section is optional and not validated by tooling -->

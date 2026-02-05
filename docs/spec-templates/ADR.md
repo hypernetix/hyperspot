@@ -4,7 +4,7 @@
 
 **Status**: {Proposed | Rejected | Accepted | Deprecated | Superseded}
 
-**ID**: `fdd-{module-name}-adr-{slug}`
+**ID**: `spd-{system}-adr-{slug}`
 
 ## Context and Problem Statement
 
@@ -32,8 +32,8 @@ Chosen option: "{option 1}", because {justification}.
 ## Related Design Elements
 
 **Actors**:
-* `fdd-{module-name}-actor-{actor-slug}` - {Brief description}
+* `spd-{system}-actor-{actor-slug}` - {Brief description}
 
 **Requirements**:
-* `fdd-{module-name}-fr-{req-slug}` - {Brief description}
-* `fdd-{module-name}-nfr-{req-slug}` - {Brief description}
+* `spd-{system}-fr-{req-slug}` - {Brief description}
+* `spd-{system}-nfr-{req-slug}` - {Brief description}

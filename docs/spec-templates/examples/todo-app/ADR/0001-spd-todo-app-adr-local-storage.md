@@ -4,7 +4,7 @@
 
 **Status**: Accepted
 
-**ID**: `fdd-todo-app-adr-local-storage`
+**ID**: `spd-todo-app-adr-local-storage`
 
 ## Context and Problem Statement
 
@@ -38,9 +38,9 @@ Chosen option: "IndexedDB with Dexie.js wrapper", because it provides native bro
 ## Related Design Elements
 
 **Actors**:
-* `fdd-todo-app-actor-user` - Primary beneficiary of offline functionality
-* `fdd-todo-app-actor-sync-service` - Syncs IndexedDB changes to server
+* `spd-todo-app-actor-user` - Primary beneficiary of offline functionality
+* `spd-todo-app-actor-sync-service` - Syncs IndexedDB changes to server
 
 **Requirements**:
-* `fdd-todo-app-nfr-offline-support` - Core requirement driving this decision
-* `fdd-todo-app-nfr-response-time` - IndexedDB enables fast local reads
+* `spd-todo-app-nfr-offline-support` - Core requirement driving this decision
+* `spd-todo-app-nfr-response-time` - IndexedDB enables fast local reads

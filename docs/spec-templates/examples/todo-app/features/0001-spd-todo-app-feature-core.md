@@ -2,7 +2,7 @@
 
 ## 1. Feature Context
 
-**ID**: `fdd-todo-app-feature-core`
+**ID**: `spd-todo-app-feature-core`
 **Status**: NOT_STARTED
 
 ### 1.1 Overview
@@ -15,8 +15,8 @@ Provides the fundamental task management capabilities that all other features de
 
 ### 1.3 Actors
 
-- `fdd-todo-app-actor-user` - Creates and manages tasks
-- `fdd-todo-app-actor-sync-service` - Synchronizes task changes
+- `spd-todo-app-actor-user` - Creates and manages tasks
+- `spd-todo-app-actor-sync-service` - Synchronizes task changes
 
 ### 1.4 References
 
@@ -27,10 +27,10 @@ Provides the fundamental task management capabilities that all other features de
 
 ### Create Task Flow
 
-- [ ] **ID**: `fdd-todo-app-feature-core-flow-create-task`
+- [ ] **ID**: `spd-todo-app-flow-core-create-task`
 
-<!-- fdd-id-content -->
-**Actor**: `fdd-todo-app-actor-user`
+
+**Actor**: `spd-todo-app-actor-user`
 
 **Success Scenarios**:
 - Task is created with all provided fields
@@ -53,14 +53,14 @@ Provides the fundamental task management capabilities that all other features de
    2. [ ] - `ph-1` - **RETURN** created task with generated ID - `inst-create-8b`
 9. [ ] - `ph-1` - **ELSE** - `inst-create-9`
    1. [ ] - `ph-1` - **RETURN** validation error response - `inst-create-9a`
-<!-- fdd-id-content -->
+
 
 ### Delete Task Flow
 
-- [ ] **ID**: `fdd-todo-app-feature-core-flow-delete-task`
+- [ ] **ID**: `spd-todo-app-flow-core-delete-task`
 
-<!-- fdd-id-content -->
-**Actor**: `fdd-todo-app-actor-user`
+
+**Actor**: `spd-todo-app-actor-user`
 
 **Success Scenarios**:
 - Task is permanently removed from storage
@@ -80,15 +80,15 @@ Provides the fundamental task management capabilities that all other features de
    1. [ ] - `ph-1` - **RETURN** success (204 No Content) - `inst-delete-6a`
 7. [ ] - `ph-1` - **ELSE** - `inst-delete-7`
    1. [ ] - `ph-1` - **RETURN** not found error (404) - `inst-delete-7a`
-<!-- fdd-id-content -->
+
 
 ## 3. Algorithms (FDL)
 
 ### Task Validation Algorithm
 
-- [ ] **ID**: `fdd-todo-app-feature-core-algo-validate-task`
+- [ ] **ID**: `spd-todo-app-algo-core-validate-task`
 
-<!-- fdd-id-content -->
+
 **Input**: Task creation/update payload
 
 **Output**: Validation result with errors array
@@ -107,15 +107,15 @@ Provides the fundamental task management capabilities that all other features de
    1. [ ] - `ph-1` - DB: SELECT id FROM categories WHERE id = :categoryId AND user_id = :userId - `inst-val-6a`
    2. [ ] - `ph-1` - **IF** category not found, add error - `inst-val-6b`
 7. [ ] - `ph-1` - **RETURN** { valid: errors.length === 0, errors, warnings } - `inst-val-7`
-<!-- fdd-id-content -->
+
 
 ## 4. States (FDL)
 
 ### Task State Machine
 
-- [ ] **ID**: `fdd-todo-app-feature-core-state-task`
+- [ ] **ID**: `spd-todo-app-state-core-task`
 
-<!-- fdd-id-content -->
+
 **States**: draft, active, completed, deleted
 
 **Initial State**: active
@@ -125,15 +125,15 @@ Provides the fundamental task management capabilities that all other features de
 2. [ ] - `ph-1` - **FROM** completed **TO** active **WHEN** user unchecks completed task - `inst-state-2`
 3. [ ] - `ph-1` - **FROM** active **TO** deleted **WHEN** user deletes task - `inst-state-3`
 4. [ ] - `ph-1` - **FROM** completed **TO** deleted **WHEN** user deletes completed task - `inst-state-4`
-<!-- fdd-id-content -->
+
 
 ## 5. Requirements
 
 ### Implement Task CRUD Operations
 
-- [ ] **ID**: `fdd-todo-app-feature-core-req-crud`
+- [ ] **ID**: `spd-todo-app-req-core-crud`
 
-<!-- fdd-id-content -->
+
 **Status**: NOT_STARTED
 
 **Description**: The system SHALL provide full Create, Read, Update, Delete operations for tasks. All operations MUST validate input and return appropriate error responses.
@@ -144,21 +144,21 @@ Provides the fundamental task management capabilities that all other features de
 - Domain: Task entity with validation rules
 
 **Implements**:
-- `fdd-todo-app-feature-core-flow-create-task`
-- `fdd-todo-app-feature-core-flow-delete-task`
-- `fdd-todo-app-feature-core-algo-validate-task`
-- `fdd-todo-app-feature-core-state-task`
+- `spd-todo-app-flow-core-create-task`
+- `spd-todo-app-flow-core-delete-task`
+- `spd-todo-app-algo-core-validate-task`
+- `spd-todo-app-state-core-task`
 
 **Phases**:
 - [ ] `ph-1`: Basic CRUD with validation
-<!-- fdd-id-content -->
+
 
 ## 6. Additional Context (optional)
 
 ### Performance Considerations
 
-**ID**: `fdd-todo-app-feature-core-context-performance`
+**ID**: `spd-todo-app-featurecontext-core-performance`
 
-<!-- fdd-id-content -->
+
 Task list queries should use cursor-based pagination for lists > 100 items. Consider implementing virtual scrolling on the frontend for smooth UX with large datasets.
-<!-- fdd-id-content -->
+
