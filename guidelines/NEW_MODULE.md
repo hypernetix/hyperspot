@@ -1265,7 +1265,7 @@ This layer adapts HTTP requests to domain calls. It is required only for modules
 
 2. **`src/api/rest/dto.rs`:**
    **Rule:** Create Data Transfer Objects (DTOs) for the REST API. These structs derive `serde` and `utoipa::ToSchema`.
-   **Rule:** For OData filtering, add `#[derive(ODataFilterable)]` with `#[odata(filter(kind = "..."))]` on fields.
+   **Rule:** For OData filtering, add `#[derive(ODataFilterable)]` with `#[odata(filter(kind = "..."))]` on fields. The macro automatically generates a `<TypeName>FilterField` enum used for column mapping (e.g., `UserDto` → `UserDtoFilterField`).
    **Rule:** Only fields annotated with `#[odata(filter(kind = "..."))]` become available for `$filter` / `$orderby` (unannotated fields are not filterable/orderable).
    **Rule:** Map OpenAPI types correctly: `string: uuid` -> `uuid::Uuid`, `string: date-time` ->
    `time::OffsetDateTime`.
@@ -1783,7 +1783,7 @@ impl UsersRepository for OrmUsersRepository {
     async fn find_by_id(&self, scope: &AccessScope, id: Uuid) -> anyhow::Result<Option<User>> {
         let found = self.conn
             .find_by_id::<entity::user::Entity>(scope, id)?
-            .one(self.conn.conn())
+            .one(&self.conn)
             .await?;
         Ok(found.map(Into::into))
     }
@@ -1823,7 +1823,11 @@ touch src/infra/storage/entity/address.rs
 pub mod address;
 pub mod user;
 
-// Re-export primary entity for convenience (optional)
+// Re-export primary entity for convenience (optional).
+// Note: Only use this pattern if you have a single primary entity.
+// With multiple entities (user + address), qualified imports are clearer:
+//   use crate::infra::storage::entity::user::{Entity as UserEntity, Model as User};
+//   use crate::infra::storage::entity::address::{Entity as AddressEntity, Model as Address};
 pub use user::{ActiveModel, Column, Entity, Model, Relation};
 ```
 

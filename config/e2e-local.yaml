@@ -162,7 +162,7 @@ modules:
           status: ACTIVE
           is_accessible_by_parent: true
 
-  tenant_resolver:
+  tenant_resolver_gateway:
     config:
       vendor: "Fabrikam"
 
