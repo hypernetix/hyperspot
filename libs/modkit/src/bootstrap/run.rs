@@ -35,6 +35,7 @@ pub async fn run_server(config: AppConfig) -> anyhow::Result<()> {
     tokio::spawn(async move {
         match shutdown::wait_for_shutdown().await {
             Ok(()) => {
+                tracing::info!(target: "", "------------------");
                 tracing::info!("shutdown: signal received in master host");
             }
             Err(e) => {

@@ -142,6 +142,7 @@ pub async fn run(opts: RunOptions) -> anyhow::Result<()> {
             tokio::spawn(async move {
                 match shutdown::wait_for_shutdown().await {
                     Ok(()) => {
+                        tracing::info!(target: "", "------------------");
                         tracing::info!("shutdown: signal received");
                     }
                     Err(e) => {

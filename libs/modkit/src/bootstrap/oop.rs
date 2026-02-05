@@ -423,6 +423,7 @@ pub async fn run_oop_with_options(opts: OopRunOptions) -> Result<()> {
     tokio::spawn(async move {
         match shutdown::wait_for_shutdown().await {
             Ok(()) => {
+                info!(target: "", "------------------");
                 info!("shutdown: signal received in OoP bootstrap");
             }
             Err(e) => {
