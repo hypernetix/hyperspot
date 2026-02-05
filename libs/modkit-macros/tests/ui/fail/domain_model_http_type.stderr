@@ -1,0 +1,5 @@
+error: field 'status' has type 'http::StatusCode' which is forbidden (crate 'http'). Domain models must be free of infrastructure dependencies like database types (sqlx, sea_orm) or HTTP types (http, axum, hyper). Move infrastructure types to the infra/ or api/ layers.
+ --> tests/ui/fail/domain_model_http_type.rs:5:17
+  |
+5 |     pub status: http::StatusCode,
+  |                 ^^^^^^^^^^^^^^^^
