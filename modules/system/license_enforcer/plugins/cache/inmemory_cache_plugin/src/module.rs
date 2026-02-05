@@ -48,10 +48,17 @@ impl Module for InMemoryCachePlugin {
             "Loaded plugin configuration"
         );
 
+        // Create service and set it immediately to guard against concurrent re-init.
+        // This must happen before any external side-effects (registry, client_hub)
+        // so that a duplicate init fails early without causing duplicate registrations.
+        let service = Arc::new(Service::new(cfg.ttl, cfg.max_entries));
+        self.service
+            .set(service.clone())
+            .map_err(|_| anyhow::anyhow!("Service already initialized"))?;
+
         // Generate plugin instance ID
-        let instance_id = LicenseCachePluginSpecV1::gts_make_instance_id(
-            "hyperspot.builtin.inmemory_cache.plugin.v1",
-        );
+        let instance_id =
+            LicenseCachePluginSpecV1::gts_make_instance_id("hyperspot.builtin.cache.inmemory.v1");
 
         // Register plugin instance in types-registry
         let registry = ctx.client_hub().get::<dyn TypesRegistryClient>()?;
@@ -62,14 +69,7 @@ impl Module for InMemoryCachePlugin {
             properties: LicenseCachePluginSpecV1,
         };
         let instance_json = serde_json::to_value(&instance)?;
-
         let _ = registry.register(vec![instance_json]).await?;
-
-        // Create service with configured TTL and max_entries
-        let service = Arc::new(Service::new(cfg.ttl, cfg.max_entries));
-        self.service
-            .set(service.clone())
-            .map_err(|_| anyhow::anyhow!("Service already initialized"))?;
 
         // Register scoped client in ClientHub
         let client = Arc::new(Client::new(service));

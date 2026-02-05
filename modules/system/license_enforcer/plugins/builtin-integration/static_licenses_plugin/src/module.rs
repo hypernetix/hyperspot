@@ -82,11 +82,10 @@ impl Module for StaticLicensesPlugin {
         let results = registry.register(vec![instance_json]).await?;
         for result in results {
             if let types_registry_sdk::RegisterResult::Err { gts_id, error } = result {
-                let gts_id_str = gts_id.as_deref().unwrap_or(&instance_id.to_string());
+                let instance_id_str = instance_id.to_string();
+                let gts_id_str = gts_id.as_deref().unwrap_or(&instance_id_str);
                 return Err(anyhow::anyhow!(
-                    "Failed to register plugin instance '{}': {}",
-                    gts_id_str,
-                    error
+                    "Failed to register plugin instance '{gts_id_str}': {error}"
                 ));
             }
         }

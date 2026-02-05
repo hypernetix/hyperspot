@@ -16,13 +16,13 @@ use modkit::gts::BaseModkitPluginV1;
 /// # Schema ID
 ///
 /// ```text
-/// gts.x.core.modkit.plugin.v1~x.core.license_enforcer.cache.plugin.v1~
+/// gts.x.core.modkit.plugin.v1~x.core.license_cache.plugin.v1~
 /// ```
 ///
 /// # Instance ID Format
 ///
 /// ```text
-/// gts.x.core.modkit.plugin.v1~x.core.license_enforcer.cache.plugin.v1~<vendor>.<package>.cache.plugin.v1
+/// gts.x.core.modkit.plugin.v1~x.core.license_cache.plugin.v1~<vendor>.<package>.cache_plugin.v1
 /// ```
 ///
 /// # Example
@@ -33,7 +33,7 @@ use modkit::gts::BaseModkitPluginV1;
 ///
 /// // Plugin generates its instance ID
 /// let instance_id = LicenseCachePluginSpecV1::gts_make_instance_id(
-///     "hyperspot.builtin.nocache.plugin.v1"
+///     "hyperspot.builtin.nocache_plugin.v1"
 /// );
 ///
 /// // Plugin creates instance data
@@ -51,7 +51,7 @@ use modkit::gts::BaseModkitPluginV1;
 #[struct_to_gts_schema(
     dir_path = "schemas",
     base = BaseModkitPluginV1,
-    schema_id = "gts.x.core.modkit.plugin.v1~x.core.license_enforcer.cache.plugin.v1~",
+    schema_id = "gts.x.core.modkit.plugin.v1~x.core.license_cache.plugin.v1~",
     description = "License Enforcer cache plugin specification",
     properties = ""
 )]

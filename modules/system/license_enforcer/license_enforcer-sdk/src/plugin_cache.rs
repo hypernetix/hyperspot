@@ -23,7 +23,7 @@ use crate::models::EnabledGlobalFeatures;
 /// # use license_enforcer_sdk::CachePluginClient;
 /// # use std::sync::Arc;
 /// # let hub = Arc::new(ClientHub::new());
-/// # let instance_id = "gts.x.core.modkit.plugin.v1~x.core.license_enforcer.cache.plugin.v1~example";
+/// # let instance_id = "gts.x.core.modkit.plugin.v1~x.core.license_cache.plugin.v1~example";
 /// # struct MyPlugin;
 /// # #[async_trait::async_trait]
 /// # impl CachePluginClient for MyPlugin {

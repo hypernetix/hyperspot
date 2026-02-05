@@ -286,9 +286,9 @@ impl ApiGateway {
     ///
     /// This function applies the complete middleware stack in reverse order (innermost to outermost).
     /// At runtime, requests flow through the stack from outermost to innermost:
-    /// SetRequestId → PropagateRequestId → Trace → push_req_id_to_extensions → Timeout →
-    /// BodyLimit → CORS → MIME → RateLimit → ErrorMapping → Auth → PolicyEngine →
-    /// LicenseValidation → Router.
+    /// `SetRequestId` → `PropagateRequestId` → Trace → `push_req_id_to_extensions` → Timeout →
+    /// `BodyLimit` → CORS → MIME → `RateLimit` → `ErrorMapping` → Auth → `PolicyEngine` →
+    /// `LicenseValidation` → Router.
     ///
     /// # Arguments
     ///

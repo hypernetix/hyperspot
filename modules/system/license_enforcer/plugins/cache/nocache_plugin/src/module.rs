@@ -53,7 +53,7 @@ impl Module for NoCachePlugin {
 
         // Generate plugin instance ID
         let instance_id =
-            LicenseCachePluginSpecV1::gts_make_instance_id("hyperspot.builtin.nocache.plugin.v1");
+            LicenseCachePluginSpecV1::gts_make_instance_id("hyperspot.builtin.nocache_plugin.v1");
 
         // Register plugin instance in types-registry
         let registry = ctx.client_hub().get::<dyn TypesRegistryClient>()?;

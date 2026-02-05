@@ -340,7 +340,7 @@ fn test_platform_plugin_instance_id_matches_design() {
 
     assert_eq!(
         instance_id.as_ref(),
-        "gts.x.core.modkit.plugin.v1~x.core.license_enforcer.integration.plugin.v1~hyperspot.builtin.static_licenses.plugin.v1",
+        "gts.x.core.modkit.plugin.v1~x.core.license_resolver.plugin.v1~hyperspot.builtin.static_licenses.plugin.v1",
         "Platform plugin instance ID must match design spec"
     );
 }
@@ -352,7 +352,7 @@ fn test_cache_plugin_instance_id_matches_design() {
 
     assert_eq!(
         instance_id.as_ref(),
-        "gts.x.core.modkit.plugin.v1~x.core.license_enforcer.cache.plugin.v1~hyperspot.builtin.nocache.plugin.v1",
+        "gts.x.core.modkit.plugin.v1~x.core.license_cache.plugin.v1~hyperspot.builtin.nocache.plugin.v1",
         "Cache plugin instance ID must match design spec"
     );
 }

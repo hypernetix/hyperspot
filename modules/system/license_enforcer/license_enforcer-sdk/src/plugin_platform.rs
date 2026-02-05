@@ -23,7 +23,7 @@ use crate::models::EnabledGlobalFeatures;
 /// # use license_enforcer_sdk::PlatformPluginClient;
 /// # use std::sync::Arc;
 /// # let hub = Arc::new(ClientHub::new());
-/// # let instance_id = "gts.x.core.modkit.plugin.v1~x.core.license_enforcer.integration.plugin.v1~example";
+/// # let instance_id = "gts.x.core.modkit.plugin.v1~x.core.license_resolver.plugin.v1~example";
 /// # struct MyPlugin;
 /// # #[async_trait::async_trait]
 /// # impl PlatformPluginClient for MyPlugin {

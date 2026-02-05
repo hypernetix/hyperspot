@@ -12,8 +12,8 @@
 //! ## Plugin Discovery
 //!
 //! Plugins are discovered via types-registry using GTS schema IDs:
-//! - Platform: `gts.x.core.modkit.plugin.v1~x.core.license_enforcer.integration.plugin.v1~`
-//! - Cache: `gts.x.core.modkit.plugin.v1~x.core.license_enforcer.cache.plugin.v1~`
+//! - Platform: `gts.x.core.modkit.plugin.v1~x.core.license_resolver.plugin.v1~`
+//! - Cache: `gts.x.core.modkit.plugin.v1~x.core.license_cache.plugin.v1~`
 
 // Re-export SDK types
 pub use license_enforcer_sdk::*;
