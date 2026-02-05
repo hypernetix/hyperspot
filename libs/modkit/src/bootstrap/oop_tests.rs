@@ -7,8 +7,8 @@
 
 use super::*;
 use crate::bootstrap::config::{
-    AppConfig, GlobalDatabaseConfig, LoggingConfig, RenderedDbConfig, RenderedModuleConfig,
-    Section, ServerConfig,
+    AppConfig, GlobalDatabaseConfig, LoggingConfig, PrometheusConfig, RenderedDbConfig,
+    RenderedModuleConfig, Section, ServerConfig,
 };
 use modkit_db::{DbConnConfig, PoolCfg};
 use std::collections::HashMap;
@@ -20,6 +20,8 @@ fn minimal_app_config() -> AppConfig {
     AppConfig {
         server: ServerConfig {
             home_dir: std::env::temp_dir().join("modkit_test"),
+            app_name: "test_app".to_owned(),
+            prometheus: PrometheusConfig::default(),
         },
         database: None,
         logging: None,
