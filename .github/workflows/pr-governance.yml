@@ -1,9 +1,6 @@
 name: PR Governance
 
 on:
-  pull_request:
-    types: [ opened ]
-
   schedule:
     - cron: "0 8 * * *"
     - cron: "0 13 * * *"
@@ -16,94 +13,6 @@ permissions:
   contents: read
 
 jobs:
-
-  reviewers-after-10-min:
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Check reviewers and notify
-        uses: actions/github-script@v7
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        with:
-          script: |
-            const pr = context.payload.pull_request;
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-
-            const title = pr.title.toLowerCase();
-
-            if (title.startsWith("chore: release")) {
-              console.log("Release PR ignored");
-              return;
-            }
-
-            const ignoredReviewers = new Set([
-              "coderabbitai[bot]",
-              "graphite-app[bot]",
-              "dependabot[bot]"
-            ]);
-
-            const prData = await github.rest.pulls.get({
-              owner,
-              repo,
-              pull_number: pr.number
-            });
-
-            const humanReviewers =
-              prData.data.requested_reviewers
-                .map(r => r.login)
-                .filter(login =>
-                  !login.endsWith("[bot]") &&
-                  !ignoredReviewers.has(login)
-                );
-
-            const humanTeams =
-              prData.data.requested_teams || [];
-
-            const hasValidReviewers =
-              humanReviewers.length > 0 ||
-              humanTeams.length > 0;
-
-            if (hasValidReviewers) {
-              console.log("Human reviewers present");
-              return;
-            }
-
-            const prUrl = pr.html_url;
-
-            const message =
-              "PR has no human reviewers assigned 5 minutes after creation.\n\n" +
-              "Repository: " + owner + "/" + repo + "\n" +
-              "PR: #" + pr.number + "\n" +
-              "Title: " + pr.title + "\n" +
-              "URL: " + prUrl + "\n" +
-              prUrl;
-
-            await github.rest.issues.createComment({
-              owner,
-              repo,
-              issue_number: pr.number,
-              body:
-                "PR was created more than 5 minutes ago but has no human reviewers assigned"
-            });
-
-            await fetch(
-              `https://api.telegram.org/bot${
-                process.env.TELEGRAM_BOT_TOKEN
-              }/sendMessage`,
-              {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  chat_id: process.env.TELEGRAM_CHAT_ID,
-                  text: message
-                })
-              }
-            );
-
   unanswered-review-check:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
