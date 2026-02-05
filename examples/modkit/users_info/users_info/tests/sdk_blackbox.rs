@@ -15,7 +15,7 @@ use tenant_resolver_sdk::{
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
-use user_info_sdk::{NewUser, UsersInfoClient};
+use user_info_sdk::{NewUser, UsersInfoClientV1};
 use users_info::UsersInfo;
 
 /// Mock tenant resolver for tests.
@@ -131,8 +131,8 @@ async fn users_info_registers_sdk_client_and_handles_basic_crud() {
     // Act: resolve SDK client from hub and do basic CRUD.
     let client = ctx
         .client_hub()
-        .get::<dyn UsersInfoClient>()
-        .expect("UsersInfoClient must be registered");
+        .get::<dyn UsersInfoClientV1>()
+        .expect("UsersInfoClientV1 must be registered");
 
     // Create a security context with tenant access
     let tenant_id = Uuid::new_v4();

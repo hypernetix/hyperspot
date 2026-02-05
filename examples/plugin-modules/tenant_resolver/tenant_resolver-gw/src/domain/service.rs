@@ -13,7 +13,7 @@ use modkit::telemetry::ThrottledLog;
 use modkit_odata::{ODataQuery, Page};
 use modkit_security::SecurityContext;
 use tenant_resolver_example_sdk::{
-    AccessOptions, GetParentsResponse, Tenant, TenantFilter, TenantResolverPluginClient,
+    AccessOptions, GetParentsResponse, Tenant, TenantFilter, TenantResolverPluginClientV1,
     TenantResolverPluginSpecV1,
 };
 use tracing::info;
@@ -56,13 +56,13 @@ impl Service {
     ///
     /// On first call, queries `types_registry` to find the plugin instance
     /// matching the configured vendor. Result is cached for subsequent calls.
-    async fn get_plugin(&self) -> Result<Arc<dyn TenantResolverPluginClient>, DomainError> {
+    async fn get_plugin(&self) -> Result<Arc<dyn TenantResolverPluginClientV1>, DomainError> {
         let instance_id = self.selector.get_or_init(|| self.resolve_plugin()).await?;
         let scope = ClientScope::gts_id(instance_id.as_ref());
 
         if let Some(client) = self
             .hub
-            .try_get_scoped::<dyn TenantResolverPluginClient>(&scope)
+            .try_get_scoped::<dyn TenantResolverPluginClientV1>(&scope)
         {
             Ok(client)
         } else {

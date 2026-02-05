@@ -16,6 +16,7 @@ members = [
     "de08_rest_api_conventions/de0803_api_snake_case",
     "de09_gts_layer/de0901_gts_string_pattern",
     "de09_gts_layer/de0902_no_schema_for_on_gts_structs",
+    "de05_client_layer/de0504_client_versioning",
     "de13_common_patterns/de1301_no_print_macros",
 ]
 resolver = "3"
@@ -26,11 +27,14 @@ edition = "2024"
 license = "Apache-2.0"
 authors = ["Hypernetix"]
 
-# This workspace contains dylint linter crates
-# Each linter will be added as a member as it's implemented
+# This workspace contains dylint linter crates for Hypernetix architecture enforcement
 #
 # Current linters:
-# - contract_lints: DE0101, DE0102, DE0103, DE0110 (contract layer validation)
+# - DE0101-DE0104: Contract layer validation (serde, toschema, http types, api_dto)
+# - DE0201-DE0204: API layer validation (DTOs location, references, derives)
+# - DE0503-DE0504: Client layer validation (naming conventions, versioning)
+# - DE0801-DE0803: REST API conventions (endpoints, odata, snake_case)
+# - DE0901-DE0902: GTS layer validation (string patterns, schema_for)
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

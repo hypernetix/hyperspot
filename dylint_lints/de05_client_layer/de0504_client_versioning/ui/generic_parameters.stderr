@@ -1,0 +1,27 @@
+error: Client trait `UsersInfoClient` in non-system module must have a version suffix (DE0504)
+  --> $DIR/generic_parameters.rs:6:1
+   |
+LL | / pub trait UsersInfoClient<T>: Send + Sync {
+LL | |     async fn get_user(&self) -> Result<T, ()>;
+LL | | }
+   | |_^
+   |
+   = help: rename trait to `UsersInfoClientV1` to indicate API version
+   = note: `#[deny(de0504_client_versioning)]` on by default
+
+error: Client trait `CalculatorClient` in non-system module must have a version suffix (DE0504)
+  --> $DIR/generic_parameters.rs:12:1
+   |
+LL | / pub trait CalculatorClient<T, E>: Send + Sync
+LL | | where
+LL | |     T: Send + Sync,
+LL | |     E: std::error::Error,
+LL | | {
+LL | |     async fn calculate(&self) -> Result<T, E>;
+LL | | }
+   | |_^
+   |
+   = help: rename trait to `CalculatorClientV1` to indicate API version
+
+error: aborting due to 2 previous errors
+

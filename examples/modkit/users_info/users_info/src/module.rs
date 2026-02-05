@@ -13,7 +13,7 @@ use url::Url;
 
 // Import the client trait from SDK
 #[allow(unused_imports)]
-use user_info_sdk::UsersInfoClient;
+use user_info_sdk::UsersInfoClientV1;
 
 // Import tenant resolver for multi-tenant access
 use tenant_resolver_sdk::TenantResolverGatewayClient;
@@ -132,13 +132,13 @@ impl Module for UsersInfo {
         // Store service for REST and internal usage
         self.service.store(Some(services.clone()));
 
-        // Create local client adapter that implements object-safe UsersInfoClient
+        // Create local client adapter that implements object-safe UsersInfoClientV1
         let local = UsersInfoLocalClient::new(services);
 
         // Register under the SDK trait for transport-agnostic consumption
         ctx.client_hub()
-            .register::<dyn UsersInfoClient>(Arc::new(local));
-        info!("UsersInfo client registered into ClientHub as dyn UsersInfoClient");
+            .register::<dyn UsersInfoClientV1>(Arc::new(local));
+        info!("UsersInfo client registered into ClientHub as dyn UsersInfoClientV1");
         Ok(())
     }
 }

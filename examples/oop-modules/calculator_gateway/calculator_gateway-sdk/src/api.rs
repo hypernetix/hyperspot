@@ -3,15 +3,20 @@
 use async_trait::async_trait;
 use modkit_security::SecurityContext;
 
-/// Calculator Gateway API trait
+/// Calculator Gateway API trait (Version 1)
 ///
 /// A simple service that performs addition operations.
 /// All methods require a SecurityContext for authorization.
 ///
+/// This trait is registered in `ClientHub`:
+/// ```ignore
+/// let gateway = hub.get::<dyn CalculatorGatewayClientV1>()?;
+/// ```
+///
 /// This trait is implemented by `CalculatorGatewayLocalClient` which
 /// delegates to the module's internal Service.
 #[async_trait]
-pub trait CalculatorGatewayClient: Send + Sync {
+pub trait CalculatorGatewayClientV1: Send + Sync {
     /// Add two numbers and return the sum.
     async fn add(
         &self,

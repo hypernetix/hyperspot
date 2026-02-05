@@ -1,6 +1,6 @@
-//! `SimpleUserSettingsClient` trait definition.
+//! `SimpleUserSettingsClientV1` trait definition.
 //!
-//! This trait defines the public API for the settings module.
+//! This trait defines the public API for the settings module (Version 1).
 //! All methods require a `SecurityContext` for authorization and access control.
 
 use async_trait::async_trait;
@@ -9,12 +9,16 @@ use modkit_security::SecurityContext;
 use crate::errors::SettingsError;
 use crate::models::{SimpleUserSettings, SimpleUserSettingsPatch, SimpleUserSettingsUpdate};
 
-/// Public API trait for the settings module.
+/// Public API trait for the settings module (Version 1).
 ///
-/// This trait can be consumed by other modules via `ClientHub`.
+/// This trait is registered in `ClientHub` by the settings module:
+/// ```ignore
+/// let settings = hub.get::<dyn SimpleUserSettingsClientV1>()?;
+/// ```
+///
 /// All methods require a `SecurityContext` for proper authorization and access control.
 #[async_trait]
-pub trait SimpleUserSettingsClient: Send + Sync {
+pub trait SimpleUserSettingsClientV1: Send + Sync {
     /// Get settings for the current user.
     /// Returns default empty values if no settings record exists.
     async fn get_settings(

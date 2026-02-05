@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use modkit_security::SecurityContext;
 use simple_user_settings_sdk::{
-    SettingsError, SimpleUserSettings, SimpleUserSettingsClient, SimpleUserSettingsPatch,
+    SettingsError, SimpleUserSettings, SimpleUserSettingsClientV1, SimpleUserSettingsPatch,
     SimpleUserSettingsUpdate,
 };
 use std::sync::Arc;
@@ -21,7 +21,7 @@ impl<R: SettingsRepository + 'static> LocalClient<R> {
 }
 
 #[async_trait]
-impl<R: SettingsRepository + 'static> SimpleUserSettingsClient for LocalClient<R> {
+impl<R: SettingsRepository + 'static> SimpleUserSettingsClientV1 for LocalClient<R> {
     async fn get_settings(
         &self,
         ctx: &SecurityContext,

@@ -1,4 +1,4 @@
-//! gRPC client implementation of CalculatorClient
+//! gRPC client implementation of CalculatorClientV1
 //!
 //! Internal client used by `wire_client()`. Not exported from SDK.
 
@@ -10,11 +10,11 @@ use modkit_security::SecurityContext;
 use modkit_transport_grpc::attach_secctx;
 use modkit_transport_grpc::client::{GrpcClientConfig, connect_with_retry};
 
-use crate::api::{CalculatorClient, CalculatorError};
+use crate::api::{CalculatorClientV1, CalculatorError};
 use crate::proto::AddRequest;
 use crate::proto::calculator_service_client::CalculatorServiceClient;
 
-/// gRPC client implementation of CalculatorClient
+/// gRPC client implementation of CalculatorClientV1
 pub(crate) struct CalculatorGrpcClient {
     inner: CalculatorServiceClient<Channel>,
 }
@@ -31,7 +31,7 @@ impl CalculatorGrpcClient {
 }
 
 #[async_trait]
-impl CalculatorClient for CalculatorGrpcClient {
+impl CalculatorClientV1 for CalculatorGrpcClient {
     async fn add(&self, ctx: &SecurityContext, a: i64, b: i64) -> Result<i64, CalculatorError> {
         let mut client = self.inner.clone();
 

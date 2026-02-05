@@ -7,7 +7,7 @@ use modkit::Module;
 use modkit::client_hub::ClientScope;
 use modkit::context::ModuleCtx;
 use modkit::gts::BaseModkitPluginV1;
-use tenant_resolver_example_sdk::{TenantResolverPluginClient, TenantResolverPluginSpecV1};
+use tenant_resolver_example_sdk::{TenantResolverPluginClientV1, TenantResolverPluginSpecV1};
 use tracing::info;
 use types_registry_sdk::TypesRegistryClient;
 
@@ -75,9 +75,9 @@ impl Module for FabrikamTrPlugin {
             .map_err(|_| anyhow::anyhow!("Service already initialized"))?;
 
         // Register scoped client in ClientHub
-        let api: Arc<dyn TenantResolverPluginClient> = domain_service;
+        let api: Arc<dyn TenantResolverPluginClientV1> = domain_service;
         ctx.client_hub()
-            .register_scoped::<dyn TenantResolverPluginClient>(
+            .register_scoped::<dyn TenantResolverPluginClientV1>(
                 ClientScope::gts_id(&instance_id),
                 api,
             );

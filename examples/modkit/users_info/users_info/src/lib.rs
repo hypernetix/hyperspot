@@ -54,11 +54,11 @@
 //! ## Public API
 //!
 //! The public API is defined in the `user_info-sdk` crate and re-exported here:
-//! - `UsersInfoClient` - trait for inter-module communication
+//! - `UsersInfoClientV1` - trait for inter-module communication
 //! - User, Address and City models and their request/patch types
 //! - `UsersInfoError` - error types
 //!
-//! Other modules should use `hub.get::<dyn UsersInfoClient>()?` to obtain the client.
+//! Other modules should use `hub.get::<dyn UsersInfoClientV1>()?` to obtain the client.
 //!
 //! ## `OData` Support
 //!
@@ -70,7 +70,7 @@
 // === PUBLIC API (from SDK) ===
 pub use user_info_sdk::{
     Address, AddressPatch, City, CityPatch, NewAddress, NewCity, NewUser, UpdateAddressRequest,
-    UpdateCityRequest, UpdateUserRequest, User, UserPatch, UsersInfoClient, UsersInfoError,
+    UpdateCityRequest, UpdateUserRequest, User, UserPatch, UsersInfoClientV1, UsersInfoError,
 };
 
 // === ERROR CATALOG ===

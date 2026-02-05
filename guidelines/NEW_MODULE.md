@@ -737,9 +737,9 @@ use modkit_odata::{ODataQuery, Page};
 /// Public API trait for users_info module.
 ///
 /// All methods require SecurityContext for authorization.
-/// Obtain via ClientHub: `hub.get::<dyn UsersInfoClient>()?`
+/// Obtain via ClientHub: `hub.get::<dyn UsersInfoClientV1>()?`
 #[async_trait]
-pub trait UsersInfoClient: Send + Sync {
+pub trait UsersInfoClientV1: Send + Sync {
     /// Get a user by ID
     async fn get_user(&self, ctx: &SecurityContext, id: Uuid) -> Result<User, UsersInfoError>;
 
@@ -1103,7 +1103,7 @@ use crate::domain::service::{Service, ServiceConfig};
 use crate::infra::storage::sea_orm_repo::SeaOrmUsersRepository;
 
 // Import API trait from SDK (not local contract module)
-use user_info_sdk::api::UsersInfoClient;
+use user_info_sdk::api::UsersInfoClientV1;
 // Import local client adapter
 use crate::domain::local_client::UsersInfoLocalClient;
 
@@ -1162,10 +1162,10 @@ impl Module for UsersInfo {
         // === EXPLICIT CLIENT REGISTRATION ===
         // Create local client adapter that implements the SDK API trait
         let local_client = UsersInfoLocalClient::new(domain_service);
-        let api: Arc<dyn UsersInfoClient> = Arc::new(local_client);
+        let api: Arc<dyn UsersInfoClientV1> = Arc::new(local_client);
 
         // Register directly in ClientHub — no expose_* helper, no macro glue
-        ctx.client_hub().register::<dyn UsersInfoClient>(api);
+        ctx.client_hub().register::<dyn UsersInfoClientV1>(api);
         info!("UsersInfo API registered in ClientHub via local adapter");
         Ok(())
     }
@@ -1789,7 +1789,7 @@ use uuid::Uuid;
 
 // Import API trait and types from SDK crate
 use user_info_sdk::{
-    api::UsersInfoClient,
+    api::UsersInfoClientV1,
     errors::UsersInfoError,
     models::{NewUser, UpdateUserRequest, User},
 };
@@ -1811,7 +1811,7 @@ impl UsersInfoLocalClient {
 }
 
 #[async_trait]
-impl UsersInfoClient for UsersInfoLocalClient {
+impl UsersInfoClientV1 for UsersInfoLocalClient {
     async fn get_user(&self, ctx: &SecurityContext, id: Uuid) -> Result<User, UsersInfoError> {
         self.service
             .get_user(ctx, id)

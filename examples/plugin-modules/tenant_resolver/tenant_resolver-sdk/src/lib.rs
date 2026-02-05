@@ -5,8 +5,8 @@
 //!
 //! ## API Traits
 //!
-//! - `TenantResolverClient` - Public API exposed by the gateway to other modules
-//! - `TenantResolverPluginClient` - Internal API implemented by plugins
+//! - `TenantResolverClientV1` - Public API exposed by the gateway to other modules
+//! - `TenantResolverPluginClientV1` - Internal API implemented by plugins
 //!
 //! ## GTS Types
 //!
@@ -22,7 +22,7 @@ pub mod gts;
 pub mod models;
 
 // API traits
-pub use api::{TenantResolverClient, TenantResolverPluginClient};
+pub use api::{TenantResolverClientV1, TenantResolverPluginClientV1};
 
 // Error types
 pub use error::TenantResolverError;

@@ -1,0 +1,23 @@
+error: plugin client trait `ThrPluginApi2` should use `*PluginClient` suffix, not `*PluginApi` (DE0503)
+  --> $DIR/malformed_versioned_api.rs:6:1
+   |
+LL | / pub trait ThrPluginApi2: Send + Sync {
+LL | |     async fn get_data(&self) -> Result<(), ()>;
+LL | | }
+   | |_^
+   |
+   = help: rename trait to `ThrPluginClientV2` to follow plugin client naming conventions
+   = note: `#[deny(de0503_plugin_client_suffix)]` on by default
+
+error: plugin client trait `DataPluginApiV` should use `*PluginClient` suffix, not `*PluginApi` (DE0503)
+  --> $DIR/malformed_versioned_api.rs:12:1
+   |
+LL | / pub trait DataPluginApiV: Send + Sync {
+LL | |     async fn process(&self) -> Result<(), ()>;
+LL | | }
+   | |_^
+   |
+   = help: rename trait to `DataPluginClient` to follow plugin client naming conventions
+
+error: aborting due to 2 previous errors
+

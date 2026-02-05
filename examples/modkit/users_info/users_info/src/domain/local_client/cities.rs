@@ -5,7 +5,7 @@ use futures_util::{Stream, StreamExt};
 use modkit_sdk::odata::{QueryBuilder, items_stream_boxed};
 use modkit_security::SecurityContext;
 use user_info_sdk::odata::CitySchema;
-use user_info_sdk::{City, UsersInfoError, client::CitiesStreamingClient};
+use user_info_sdk::{CitiesStreamingClientV1, City, UsersInfoError};
 
 use crate::module::ConcreteAppServices;
 
@@ -20,7 +20,7 @@ impl LocalCitiesStreamingClient {
     }
 }
 
-impl CitiesStreamingClient for LocalCitiesStreamingClient {
+impl CitiesStreamingClientV1 for LocalCitiesStreamingClient {
     fn stream(
         &self,
         ctx: SecurityContext,

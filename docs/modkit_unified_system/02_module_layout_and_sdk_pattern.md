@@ -151,9 +151,9 @@ use modkit_odata::{ODataQuery, Page};
 /// Public API trait for users_info module.
 ///
 /// All methods require SecurityContext for authorization.
-/// Obtain via ClientHub: `hub.get::<dyn UsersInfoClient>()?`
+/// Obtain via ClientHub: `hub.get::<dyn UsersInfoClientV1>()?`
 #[async_trait]
-pub trait UsersInfoClient: Send + Sync {
+pub trait UsersInfoClientV1: Send + Sync {
     /// Get a user by ID
     async fn get_user(&self, ctx: &SecurityContext, id: Uuid) -> Result<User, UsersInfoError>;
 

@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use modkit_odata::{ODataQuery, Page};
 use modkit_security::SecurityContext;
 use tenant_resolver_example_sdk::{
-    GetParentsResponse, Tenant, TenantFilter, TenantResolverClient, TenantResolverError,
+    GetParentsResponse, Tenant, TenantFilter, TenantResolverClientV1, TenantResolverError,
 };
 
 use crate::domain::error::DomainError;
@@ -25,7 +25,7 @@ impl TenantResolverGwClient {
 }
 
 #[async_trait]
-impl TenantResolverClient for TenantResolverGwClient {
+impl TenantResolverClientV1 for TenantResolverGwClient {
     async fn get_root_tenant(&self, ctx: &SecurityContext) -> Result<Tenant, TenantResolverError> {
         self.svc
             .get_root_tenant(ctx)

@@ -1,0 +1,23 @@
+error: plugin client trait `ThrPluginApi` should use `*PluginClient` suffix, not `*PluginApi` (DE0503)
+  --> $DIR/plugin_api_bad.rs:7:1
+   |
+LL | / pub trait ThrPluginApi: Send + Sync {
+LL | |     async fn get_root_tenant(&self) -> Result<(), ()>;
+LL | | }
+   | |_^
+   |
+   = help: rename trait to `ThrPluginClient` to follow plugin client naming conventions
+   = note: `#[deny(de0503_plugin_client_suffix)]` on by default
+
+error: plugin client trait `OagwPluginApi` should use `*PluginClient` suffix, not `*PluginApi` (DE0503)
+  --> $DIR/plugin_api_bad.rs:13:1
+   |
+LL | / pub trait OagwPluginApi: Send + Sync {
+LL | |     async fn execute(&self) -> Result<(), ()>;
+LL | | }
+   | |_^
+   |
+   = help: rename trait to `OagwPluginClient` to follow plugin client naming conventions
+
+error: aborting due to 2 previous errors
+

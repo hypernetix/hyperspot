@@ -340,6 +340,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "de0504_client_versioning"
+version = "0.2.0"
+dependencies = [
+ "async-trait",
+ "clippy_utils",
+ "dylint_linting",
+ "dylint_testing",
+ "lint_utils",
+]
+
+[[package]]
 name = "de0801_api_endpoint_version"
 version = "0.1.0"
 dependencies = [

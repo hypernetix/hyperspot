@@ -1,8 +1,8 @@
 //! API traits for `tenant_resolver`.
 //!
 //! This module defines two separate API traits:
-//! - `TenantResolverClient` - Public API exposed by the gateway to other modules
-//! - `TenantResolverPluginClient` - Internal API implemented by plugins, called by the gateway
+//! - `TenantResolverClientV1` - Public API exposed by the gateway to other modules
+//! - `TenantResolverPluginClientV1` - Internal API implemented by plugins, called by the gateway
 
 use async_trait::async_trait;
 use modkit_odata::{ODataQuery, Page};
@@ -10,12 +10,17 @@ use modkit_security::SecurityContext;
 
 use crate::{AccessOptions, GetParentsResponse, Tenant, TenantFilter, TenantResolverError};
 
-/// Public API trait for the `tenant_resolver` gateway.
+/// Public API trait for the `tenant_resolver` gateway (Version 1).
+///
+/// This trait is registered in `ClientHub`:
+/// ```ignore
+/// let resolver = hub.get::<dyn TenantResolverClientV1>()?;
+/// ```
 ///
 /// Other modules use this trait to interact with the tenant resolver gateway.
 /// The gateway implementation selects the appropriate plugin and delegates the call.
 #[async_trait]
-pub trait TenantResolverClient: Send + Sync {
+pub trait TenantResolverClientV1: Send + Sync {
     /// Resolves and returns the root tenant.
     async fn get_root_tenant(&self, ctx: &SecurityContext) -> Result<Tenant, TenantResolverError>;
 
@@ -55,12 +60,15 @@ pub trait TenantResolverClient: Send + Sync {
     ) -> Result<Vec<Tenant>, TenantResolverError>;
 }
 
-/// Internal plugin API trait.
+/// Internal plugin API trait (Version 1).
+///
+/// Each plugin registers this trait with a scoped `ClientHub` entry
+/// using its GTS instance ID as the scope.
 ///
 /// Plugins implement this trait to provide tenant resolution functionality.
 /// The gateway calls this on the selected plugin implementation.
 #[async_trait]
-pub trait TenantResolverPluginClient: Send + Sync {
+pub trait TenantResolverPluginClientV1: Send + Sync {
     /// Returns the root tenant as resolved by this plugin.
     async fn get_root_tenant(&self, ctx: &SecurityContext) -> Result<Tenant, TenantResolverError>;
 

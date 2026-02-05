@@ -5,9 +5,9 @@ use modkit_security::SecurityContext;
 use uuid::Uuid;
 
 use user_info_sdk::{
-    Address, City, NewAddress, NewCity, NewUser, UpdateAddressRequest, UpdateCityRequest,
-    UpdateUserRequest, User, UserFull, UsersInfoClient, UsersInfoError,
-    client::{AddressesStreamingClient, CitiesStreamingClient, UsersStreamingClient},
+    Address, AddressesStreamingClientV1, CitiesStreamingClientV1, City, NewAddress, NewCity,
+    NewUser, UpdateAddressRequest, UpdateCityRequest, UpdateUserRequest, User, UserFull,
+    UsersInfoClientV1, UsersInfoError, UsersStreamingClientV1,
 };
 
 use crate::domain::local_client::{
@@ -16,7 +16,7 @@ use crate::domain::local_client::{
 };
 use crate::module::ConcreteAppServices;
 
-/// Local implementation of the object-safe `UsersInfoClient`.
+/// Local implementation of the object-safe `UsersInfoClientV1`.
 ///
 /// Acts as the SDK boundary adapter: converts `DomainError` into `UsersInfoError`,
 /// and exposes streaming-first APIs via boxed streaming client facades.
@@ -33,16 +33,16 @@ impl UsersInfoLocalClient {
 }
 
 #[async_trait]
-impl UsersInfoClient for UsersInfoLocalClient {
-    fn users(&self) -> Box<dyn UsersStreamingClient> {
+impl UsersInfoClientV1 for UsersInfoLocalClient {
+    fn users(&self) -> Box<dyn UsersStreamingClientV1> {
         Box::new(LocalUsersStreamingClient::new(Arc::clone(&self.services)))
     }
 
-    fn cities(&self) -> Box<dyn CitiesStreamingClient> {
+    fn cities(&self) -> Box<dyn CitiesStreamingClientV1> {
         Box::new(LocalCitiesStreamingClient::new(Arc::clone(&self.services)))
     }
 
-    fn addresses(&self) -> Box<dyn AddressesStreamingClient> {
+    fn addresses(&self) -> Box<dyn AddressesStreamingClientV1> {
         Box::new(LocalAddressesStreamingClient::new(Arc::clone(
             &self.services,
         )))
