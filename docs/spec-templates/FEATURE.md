@@ -1,55 +1,29 @@
 # Feature: {Feature Name}
 
-<!--
-=============================================================================
-FEATURE SPECIFICATION
-=============================================================================
-PURPOSE: Define detailed implementation behavior — flows, algorithms, states,
-and implementation requirements that bridge PRD and DESIGN to code.
-
-SCOPE:
-  ✓ Actor flows (user-facing interactions, step by step)
-  ✓ Processes / Business Logic (incl. internal logic, validation, async jobs, etc)
-  ✓ State machines (entity lifecycle)
-  ✓ Implementation requirements (what to build)
-  ✓ Acceptance criteria (how to verify)
-
-NOT IN THIS DOCUMENT (see other templates):
-  ✗ Requirements → PRD.md
-  ✗ Architecture, components, APIs → DESIGN.md
-  ✗ Why a specific approach was chosen → ADR/
-
-FDL PSEUDO-CODE:
-  Optional. Use for complex flows or when precise behavior must be
-  communicated. Skip for simple features to avoid overhead.
-=============================================================================
--->
-
 ## 1. Feature Context
 
-- [ ] `p2` - **ID**: `fdd-{module}-feature-{slug}`
+**ID**: `spd-{system}-feature-{feature-slug}`
+
+**Status**: NOT_STARTED | IN_PROGRESS | IMPLEMENTED
 
 ### 1.1 Overview
 
-{Brief overview of what this feature does — 1-2 sentences.}
+{Brief overview of what this feature does}
 
 ### 1.2 Purpose
 
-{Why this feature exists, what PRD requirements or DESIGN element it addresses.}
+{Why this feature exists, what problem it solves}
 
 ### 1.3 Actors
 
-| Actor | Role in Feature |
-|-------|-----------------|
-| `fdd-{module}-actor-{slug}` | {What this actor does in this feature} |
+- `spd-{system}-actor-{actor-slug}` - {Role in this feature}
 
 ### 1.4 References
 
-- **PRD**: [PRD.md](../PRD.md)
-- **Design**: [DESIGN.md](../DESIGN.md)
-- **Dependencies**: {List feature dependencies or "None"}
+- Overall Design: [DESIGN.md](../../DESIGN.md)
+- Dependencies: {List feature dependencies or "None"}
 
-## 2. Actor Flows (FDL)
+## 2. Actor Flows (SDSL)
 
 User-facing interactions that start with an actor (human or external system) and describe the end-to-end flow of a use case. Each flow has a triggering actor and shows how the system responds to actor actions.
 
@@ -57,9 +31,9 @@ User-facing interactions that start with an actor (human or external system) and
 
 ### {Flow Name}
 
-- [ ] `p1` - **ID**: `fdd-{module}-flow-{slug}`
+- [ ] **ID**: `spd-{system}-feature-{feature-slug}-flow-{flow-slug}`
 
-**Actor**: `fdd-{module}-actor-{slug}`
+**Actor**: `spd-{system}-actor-{actor-slug}`
 
 **Success Scenarios**:
 - {Scenario 1}
@@ -68,76 +42,93 @@ User-facing interactions that start with an actor (human or external system) and
 - {Error scenario 1}
 
 **Steps**:
-1. [ ] - `p1` - {Actor action} - `inst-{step-id}`
-2. [ ] - `p1` - {API: METHOD /path (request/response summary)} - `inst-{step-id}`
-3. [ ] - `p1` - {DB: OPERATION table(s) (key columns/filters)} - `inst-{step-id}`
-4. [ ] - `p1` - **IF** {condition} - `inst-{step-id}`
-   1. [ ] - `p1` - {Action if true} - `inst-{step-id}`
-5. [ ] - `p1` - **ELSE** - `inst-{step-id}`
-   1. [ ] - `p1` - {Action if false} - `inst-{step-id}`
-6. [ ] - `p1` - **RETURN** {result} - `inst-{step-id}`
+1. [ ] - `ph-1` - {Actor action} - `inst-{step-id}`
+2. [ ] - `ph-1` - {API: METHOD /path (request/response summary)} - `inst-{step-id}`
+3. [ ] - `ph-1` - {DB: OPERATION table(s) (key columns/filters)} - `inst-{step-id}`
+4. [ ] - `ph-1` - **IF** {condition} - `inst-{step-id}`
+   1. [ ] - `ph-1` - {Action if true (include API/DB/Integration details)} - `inst-{step-id}`
+5. [ ] - `ph-1` - **ELSE** - `inst-{step-id}`
+   1. [ ] - `ph-1` - {Action if false (include API/DB/Integration details)} - `inst-{step-id}`
+6. [ ] - `ph-1` - **RETURN** {result} - `inst-{step-id}`
 
-## 3. Processes / Business Logic (FDL)
+<!-- TODO: Add more flows as needed -->
 
-Internal system functions and procedures that do not interact with actors directly. Examples: database layer operations, authorization logic, middleware, validation routines, library functions, background jobs. These are reusable building blocks called by Actor Flows or other processes.
+## 3. Algorithms (SDSL)
+
+Internal system functions and procedures that do not interact with actors directly. Examples: database layer operations, authorization logic, middleware, validation routines, library functions, background jobs. These are reusable building blocks called by Actor Flows or other Algorithms.
 
 > **FDL pseudo-code is optional.** Same guidance as Actor Flows — use when clarity matters, skip when it becomes overhead.
 
-### {Process Name}
+### {Algorithm Name}
 
-- [ ] `p2` - **ID**: `fdd-{module}-algo-{slug}`
+- [ ] **ID**: `spd-{system}-feature-{feature-slug}-algo-{algo-slug}`
 
 **Input**: {Input description}
 
 **Output**: {Output description}
 
 **Steps**:
-1. [ ] - `p1` - {Parse/normalize input} - `inst-{step-id}`
-2. [ ] - `p1` - {DB: OPERATION table(s) (key columns/filters)} - `inst-{step-id}`
-3. [ ] - `p1` - {API: METHOD /path (request/response summary)} - `inst-{step-id}`
-4. [ ] - `p1` - **FOR EACH** {item} in {collection} - `inst-{step-id}`
-   1. [ ] - `p1` - {Process item} - `inst-{step-id}`
-5. [ ] - `p1` - **TRY** - `inst-{step-id}`
-   1. [ ] - `p1` - {Risky operation} - `inst-{step-id}`
-6. [ ] - `p1` - **CATCH** {error} - `inst-{step-id}`
-   1. [ ] - `p1` - {Handle error} - `inst-{step-id}`
-7. [ ] - `p1` - **RETURN** {result} - `inst-{step-id}`
+1. [ ] - `ph-1` - {Parse/normalize input} - `inst-{step-id}`
+2. [ ] - `ph-1` - {DB: OPERATION table(s) (key columns/filters)} - `inst-{step-id}`
+3. [ ] - `ph-1` - {API: METHOD /path (request/response summary)} - `inst-{step-id}`
+4. [ ] - `ph-1` - **FOR EACH** {item} in {collection} - `inst-{step-id}`
+   1. [ ] - `ph-1` - {Process item (include API/DB/Integration details)} - `inst-{step-id}`
+5. [ ] - `ph-1` - **TRY** - `inst-{step-id}`
+   1. [ ] - `ph-1` - {Risky operation (include API/DB/Integration details)} - `inst-{step-id}`
+6. [ ] - `ph-1` - **CATCH** {error} - `inst-{step-id}`
+   1. [ ] - `ph-1` - {Handle error} - `inst-{step-id}`
+7. [ ] - `ph-1` - **RETURN** {result} - `inst-{step-id}`
 
-## 4. States (FDL)
+<!-- TODO: Add more algorithms as needed -->
 
-Optional: Include when entities have explicit lifecycle states.
+## 4. States (SDSL)
 
 ### {Entity Name} State Machine
 
-- [ ] `p2` - **ID**: `fdd-{module}-state-{slug}`
+- [ ] **ID**: `spd-{system}-feature-{feature-slug}-state-{entity-slug}`
 
 **States**: {State1}, {State2}, {State3}
 
 **Initial State**: {State1}
 
 **Transitions**:
-1. [ ] - `p1` - **FROM** {State1} **TO** {State2} **WHEN** {condition} - `inst-{step-id}`
-2. [ ] - `p1` - **FROM** {State2} **TO** {State3} **WHEN** {condition} - `inst-{step-id}`
+1. [ ] - `ph-1` - **FROM** {State1} **TO** {State2} **WHEN** {condition} - `inst-{step-id}`
+2. [ ] - `ph-1` - **FROM** {State2} **TO** {State3} **WHEN** {condition} - `inst-{step-id}`
 
-## 5. Implementation Requirements
+<!-- TODO: Add more state machines as needed -->
+<!-- Note: This section is optional if feature has no state management -->
 
-Specific implementation tasks derived from flows/algorithms above.
+<!-- TODO: What should be done, a list of requirements to be implemented -->
+## 5. Requirements
 
 ### {Requirement Title}
 
-- [ ] `p1` - **ID**: `fdd-{module}-req-{slug}`
+- [ ] **ID**: `spd-{system}-feature-{feature-slug}-req-{req-slug}`
 
-The system **MUST** {clear description of what to implement}.
+**Status**: NOT_STARTED | IN_PROGRESS | COMPLETED
 
+**Description**: {Clear description with SHALL/MUST statements}
+
+**Implementation details**:
+- {If this requirement touches API: specify endpoint/method + request/response}
+- {If this requirement touches DB: specify exact query shape and tables}
+- {If this requirement touches domain entities: list entity names and identifiers}
+
+<!-- Algorithms, flows, states which should be implemented -->
 **Implements**:
-- `fdd-{module}-flow-{slug}`
+- `spd-{system}-feature-{feature-slug}-flow-{flow-slug}`
+- `spd-{system}-feature-{feature-slug}-algo-{algo-slug}`
+- `spd-{system}-feature-{feature-slug}-state-{entity-slug}`
 
-**Touches**:
-- API: `{METHOD} {/path}`
-- DB: `{table}`
-- Entities: `{EntityName}`
+**Phases**:
+- [ ] `ph-1`: {What is implemented in this phase}
 
-## 6. Acceptance Criteria
+<!-- TODO: Add more requirements as needed -->
 
-- [ ] {Testable criterion for this feature}
-- [ ] {Another testable criterion}
+## 6. Additional Context (optional)
+
+### {Context Item Title}
+
+**ID**: `spd-{system}-feature-{feature-slug}-context-{context-slug}`
+
+{Additional notes and context that inform implementation.}

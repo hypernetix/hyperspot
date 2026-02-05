@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "project_root": "..",
+  "weavers": {
+    "hyperspot-sdlc": {
+      "format": "Spider",
+      "path": ".spider-adapter/weavers/hyperspot-sdlc"
+    }
+  },
+  "systems": [
+    {
+      "name": "hyperspot",
+      "slug": "hyperspot",
+      "weaver": "hyperspot-sdlc",
+      "artifacts": [],
+      "artifacts_dir": "docs",
+      "codebase": [
+        { "name": "Apps", "path": "apps", "extensions": [".rs"] },
+        { "name": "Libraries", "path": "libs", "extensions": [".rs"] },
+        { "name": "Modules", "path": "modules", "extensions": [".rs"] },
+        { "name": "Examples", "path": "examples", "extensions": [".rs"] },
+        { "name": "Dylint Lints", "path": "dylint_lints", "extensions": [".rs"] }
+      ],
+      "children": []
+    },
+    {
+      "name": "hyperspot-examples",
+      "slug": "hyperspot-examples",
+      "weaver": "hyperspot-sdlc",
+      "artifacts": [
+        {
+          "name": "HyperSpot PRD Example",
+          "kind": "PRD",
+          "path": "docs/spec-templates/examples/hyperspot/PRD.md"
+        },
+        {
+          "name": "HyperSpot DESIGN Example",
+          "kind": "DESIGN",
+          "path": "docs/spec-templates/examples/hyperspot/DESIGN.md"
+        },
+        {
+          "name": "HyperSpot DECOMPOSITION Example",
+          "kind": "DECOMPOSITION",
+          "path": "docs/spec-templates/examples/hyperspot/DECOMPOSITION.md"
+        },
+        {
+          "name": "ADR-0001: Module Boundaries",
+          "kind": "ADR",
+          "path": "docs/spec-templates/examples/hyperspot/ADR/0001-spd-hyperspot-adr-module-boundaries.md"
+        },
+        {
+          "name": "ADR-0002: Type Safety",
+          "kind": "ADR",
+          "path": "docs/spec-templates/examples/hyperspot/ADR/0002-spd-hyperspot-adr-type-safety.md"
+        },
+        {
+          "name": "ADR-0003: Explicit Design",
+          "kind": "ADR",
+          "path": "docs/spec-templates/examples/hyperspot/ADR/0003-spd-hyperspot-adr-explicit-design.md"
+        },
+        {
+          "name": "ADR-0004: Security Context",
+          "kind": "ADR",
+          "path": "docs/spec-templates/examples/hyperspot/ADR/0004-spd-hyperspot-adr-security-ctx.md"
+        },
+        {
+          "name": "ADR-0005: Plugin Architecture",
+          "kind": "ADR",
+          "path": "docs/spec-templates/examples/hyperspot/ADR/0005-spd-hyperspot-adr-plugin-architecture.md"
+        },
+        {
+          "name": "ADR-0006: Rust Version",
+          "kind": "ADR",
+          "path": "docs/spec-templates/examples/hyperspot/ADR/0006-spd-hyperspot-adr-rust-version.md"
+        },
+        {
+          "name": "ADR-0007: Unsafe Policy",
+          "kind": "ADR",
+          "path": "docs/spec-templates/examples/hyperspot/ADR/0007-spd-hyperspot-adr-unsafe-policy.md"
+        },
+        {
+          "name": "ADR-0008: Database Abstraction",
+          "kind": "ADR",
+          "path": "docs/spec-templates/examples/hyperspot/ADR/0008-spd-hyperspot-adr-database-abstraction.md"
+        },
+        {
+          "name": "ADR-0009: Monorepo Strategy",
+          "kind": "ADR",
+          "path": "docs/spec-templates/examples/hyperspot/ADR/0009-spd-hyperspot-adr-monorepo-strategy.md"
+        }
+      ],
+      "artifacts_dir": "docs/spec-templates/examples/hyperspot",
+      "codebase": [],
+      "children": []
+    }
+  ]
+}

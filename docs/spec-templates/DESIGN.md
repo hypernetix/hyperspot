@@ -1,74 +1,30 @@
-# Technical Design — {Module Name}
-
-<!--
-=============================================================================
-TECHNICAL DESIGN DOCUMENT
-=============================================================================
-PURPOSE: Define HOW the system is built — architecture, components, APIs,
-data models, and technical decisions that realize the requirements.
-
-DESIGN IS PRIMARY: DESIGN defines the "what" (architecture and behavior).
-ADRs record the "why" (rationale and trade-offs) for selected design
-decisions; ADRs are not a parallel spec, it's a traceability artifact.
-
-SCOPE:
-  ✓ Architecture overview and vision
-  ✓ Design principles and constraints
-  ✓ Component model and interactions
-  ✓ API contracts and interfaces
-  ✓ Data models and database schemas
-  ✓ Technology stack choices
-
-NOT IN THIS DOCUMENT (see other templates):
-  ✗ Requirements → PRD.md
-  ✗ Detailed rationale for decisions → ADR/
-  ✗ Step-by-step implementation flows → features/
-
-STANDARDS ALIGNMENT:
-  - IEEE 1016-2009 (Software Design Description)
-  - IEEE 42010 (Architecture Description — viewpoints, views, concerns)
-  - ISO/IEC 15288 / 12207 (Architecture & Design Definition processes)
-
-ARCHITECTURE VIEWS (per IEEE 42010):
-  - Context view: system boundaries and external actors
-  - Functional view: components and their responsibilities
-  - Information view: data models and flows
-  - Deployment view: infrastructure topology
-
-DESIGN LANGUAGE:
-  - Be specific and clear; no fluff, bloat, or emoji
-  - Reference PRD requirements using `fdd-{module}-req-{slug}` IDs
-  - Reference ADR documents using `fdd-{module}-adr-{slug}` IDs
-=============================================================================
--->
+# Technical Design: {MODULE NAME}
 
 ## 1. Architecture Overview
 
 ### 1.1 Architectural Vision
 
-{2-3 paragraphs: Technical approach, key decisions, design philosophy. How does this architecture satisfy the requirements?}
+{2-3 paragraphs describing the technical approach, key architectural decisions, and design philosophy}
 
 ### 1.2 Architecture Drivers
 
-Requirements that significantly influence architecture decisions.
+#### Product requirements
 
-#### Functional Drivers
+#### Functional requirements
 
-| Requirement | Design Response |
-|-------------|-----------------|
-| `fdd-{module}-req-{slug}` | {How architecture addresses this requirement} |
+| ID | Solution short description |
+|--------|----------------------------|
+| `spd-{system}-fr-{slug}` | {short description of how to solve} |
 
-#### NFR Allocation
+#### Non-functional requirements
 
-This table maps non-functional requirements from PRD to specific design/architecture responses, demonstrating how quality attributes are realized.
-
-| NFR ID | NFR Summary | Allocated To | Design Response | Verification Approach |
-|--------|-------------|--------------|-----------------|----------------------|
-| `fdd-{module}-req-{nfr-slug}` | {Brief NFR description} | {Component/layer/mechanism} | {How this design element realizes the NFR} | {How compliance is verified} |
+| ID | Solution short description |
+|--------|----------------------------|
+| `spd-{system}-nfr-{slug}` | {short description of how to solve} |
 
 ### 1.3 Architecture Layers
 
-{Add architecture diagram here: Mermaid or ASCII}
+<!-- TODO: Add architecture diagram (draw.io, Mermaid, or embedded image) -->
 
 | Layer | Responsibility | Technology |
 |-------|---------------|------------|
@@ -79,151 +35,127 @@ This table maps non-functional requirements from PRD to specific design/architec
 
 ## 2. Principles & Constraints
 
-### 2.1 Design Principles
+### 2.1: Design Principles
 
 #### {Principle Name}
 
-- [ ] `p2` - **ID**: `fdd-{module}-design-{slug}`
+**ID**: `spd-{system}-principle-{principle-slug}`
 
-{Description of the principle and why it matters for this system.}
+**ADRs**: `spd-{system}-adr-{adr-slug}`
 
-**ADRs**: `fdd-{module}-adr-{slug}`
+{Description of the principle and why it matters}
 
-### 2.2 Constraints
+<!-- TODO: Add more design principles as needed -->
+
+### 2.2: Constraints
 
 #### {Constraint Name}
 
-- [ ] `p2` - **ID**: `fdd-{module}-design-{slug}`
+**ID**: `spd-{system}-constraint-{constraint-slug}`
 
-{Description of the constraint (technical, regulatory, organizational) and its impact on design.}
+**ADRs**: `spd-{system}-adr-{adr-slug}`
 
-**ADRs**: `fdd-{module}-adr-{slug}`
+{Description of the constraint and its impact}
+
+<!-- TODO: Add more constraints as needed -->
 
 ## 3. Technical Architecture
 
-### 3.1 Domain Model
+### 3.1: Domain Model
 
-**Technology**: {GTS, Rust structs},
+**Technology**: {GTS}
 
 **Location**: [{domain-model-file}]({path/to/domain-model})
 
 **Core Entities**:
-
-| Entity | Description | Schema |
-|--------|-------------|--------|
-| {EntityName} | {Purpose} | [{file}]({path}) |
+- [{EntityName}]({path/to/entity.schema}) - {Description}
 
 **Relationships**:
 - {Entity1} → {Entity2}: {Relationship description}
 
-### 3.2 Component Model
+### 3.2: Component Model
 
-{Add component diagram here: Mermaid or ASCII}
-
+<!-- TODO: Add component diagram (draw.io, Mermaid, or ASCII) -->
 ```mermaid
-graph TD
-    A[Component A] --> B[Component B]
-    B --> C[Component C]
 ```
 
 **Components**:
-
-| Component | Responsibility | Interface |
-|-----------|---------------|-----------|
-| {Component 1} | {Purpose} | {API/Events/etc.} |
+- **{Component 1}**: {Purpose and responsibility}
+- **{Component 2}**: {Purpose and responsibility}
 
 **Interactions**:
-- {Component 1} → {Component 2}: {Protocol, data exchanged}
+- {Component 1} → {Component 2}: {Description of interaction}
 
-### 3.3 API Contracts
+### 3.3: API Contracts
 
-**Technology**: {REST/OpenAPI | GraphQL | gRPC | etc.}
+**Technology**: {REST/OpenAPI | GraphQL | gRPC | CLISPEC}
 
 **Location**: [{api-spec-file}]({path/to/api-spec})
 
 **Endpoints Overview**:
+- `{METHOD} {/path}` - {Description}
 
-| Method | Path | Description | Stability |
-|--------|------|-------------|-----------|
-| `{METHOD}` | `{/path}` | {Description} | {stable/unstable} |
+### 3.4: Interactions & Sequences
 
-### 3.4 External Interfaces & Protocols
+#### {Sequence Name}
 
-Define how this library/module interacts with external systems, including protocols, data formats, and integration points.
+**ID**: `spd-{system}-seq-{slug}`
 
-#### {Interface/Protocol Name}
+**Use cases**: `spd-{system}-usecase-{slug}` (ID from PRD)
 
-- [ ] `p2` - **ID**: `fdd-{module}-design-interface-{slug}`
+**Actors**: `spd-{system}-actor-{slug}` (ID from PRD)
 
-**Type**: {Protocol | Data Format | External System | Hardware Interface}
-
-**Direction**: {inbound | outbound | bidirectional}
-
-**Specification**: {Protocol spec reference, RFC, standard}
-
-**Data Format**: {JSON Schema, Protocol Buffers, binary format, etc.}
-
-**Compatibility**: {Versioning/backward compatibility guarantees}
-
-**References**: Links to PRD § Public Library Interfaces
-
-### 3.5 Sequences & Interactions
-
+<!-- TODO: Add sequence diagram (draw.io, Mermaid, or ASCII) -->
 ```mermaid
 sequenceDiagram
-    User ->> System: Request
-    System ->> Database: Query
-    Database -->> System: Result
-    System -->> User: Response
+    participant A as Actor
+    participant B as System
+    A->>B: Action
+    B-->>A: Response
 ```
 
-**Key Flows**: Reference use cases from PRD via FDD IDs.
+**Description**: {Brief description of what this sequence accomplishes}
 
-### 3.6 Database Schema
+<!-- TODO: Add more sequences as needed -->
 
-#### Table: {name}
+### 3.5: Database schemas & tables
 
-**ID**: `fdd-{module}-design-{slug}`
+<!-- Keep empty if not relevant. -->
 
-| Column | Type | Constraints | Description |
-|--------|------|-------------|-------------|
-| {col} | {type} | {PK/FK/NOT NULL/etc.} | {description} |
+#### Table {name}
 
-**Indexes**: {Index definitions}
+**ID**: `spd-{system}-dbtable-{slug}`
 
-**Notes**: {Additional constraints, triggers, etc.}
+**Schema**
 
-### 3.7 Deployment Topology
+| Column | Type | Description |
+|--------|------|-------------|
 
-**ID**: `fdd-{module}-design-{slug}`
+**PK**: {PK}
 
-{Infrastructure view: pods, containers, services, regions, etc.}
+**Constraints**: {Constraints}
 
-```mermaid
-graph LR
-    LB[Load Balancer] --> S1[Service Pod 1]
-    LB --> S2[Service Pod 2]
-    S1 --> DB[(Database)]
-    S2 --> DB
-```
+**Additional info**: {Additional info}
 
-### 3.8 Technology Stack
+**Example**
 
-Optional. Document only deviations from project-wide tech stack (see root DESIGN.md).
+| Col name A | B | C |
+|------------|---|---|
+| values     |   |   |
 
-| Layer | Technology | Rationale |
-|-------|------------|-----------|
-| Runtime | {e.g., Rust} | {Why chosen} |
-| Framework | {e.g., Axum} | {Why chosen} |
-| Database | {e.g., PostgreSQL} | {Why chosen} |
-| Messaging | {e.g., Kafka} | {Why chosen} |
+### 3.6: Topology (optional)
 
-## 4. Additional context
+Physical view, files, pods, containers, DC, virtual machines, etc.
 
-{whatever useful additional context}
+**ID**: `spd-{system}-topology-{slug}`
 
-## 5. Traceability
+### 3.7: Tech stack (optional)
 
-- **PRD**: [PRD.md](./PRD.md)
-- **ADRs**: [ADR/](./ADR/)
-- **Features**: [features/](./features/)
+**ID**: `spd-{system}-tech-{slug}`
+
+## 4. Additional Context
+
+**ID**: `spd-{system}-designcontext-{slug}`
+
+<!-- TODO: Add any additional technical context, architect notes, rationale, etc. -->
+<!-- This section is optional and not validated by tooling -->

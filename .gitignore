@@ -40,3 +40,6 @@ logs
 /fuzz/corpus/**
 !/fuzz/corpus/*/
 !/fuzz/corpus/*/.gitkeep
+
+# Claude Code local settings
+.claude/settings.local.json
