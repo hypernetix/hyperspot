@@ -5,7 +5,7 @@ use clap::{Parser, Subcommand};
 use mimalloc::MiMalloc;
 use modkit::bootstrap::{
     AppConfig, dump_effective_modules_config_json, dump_effective_modules_config_yaml,
-    host::init_logging_unified, list_module_names, run_server,
+    host::init_logging_unified, list_module_names, run_migrate, run_server,
 };
 
 use std::path::PathBuf;
@@ -58,6 +58,8 @@ enum Commands {
     Run,
     /// Validate configuration and exit
     Check,
+    /// Run database migrations and exit (for cloud deployments)
+    Migrate,
 }
 
 #[tokio::main]
@@ -142,6 +144,7 @@ async fn main() -> Result<()> {
     match cli.command.as_ref().unwrap_or(&Commands::Run) {
         Commands::Run => run_server(config).await,
         Commands::Check => check_config(&config),
+        Commands::Migrate => run_migrate(config).await,
     }
 }
 
