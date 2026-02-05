@@ -1,4 +1,4 @@
-# Technical Design: TODO-APP
+# Technical Design — Todo App
 
 ## 1. Architecture Overview
 
@@ -12,14 +12,23 @@ Event-driven architecture is employed for real-time updates and cross-device syn
 
 ### 1.2 Architecture Drivers
 
-#### Product requirements
+#### Functional Drivers
 
-| ID | Solution short description |
-|--------|----------------------------|
-| `spd-todo-app-fr-create-task` | REST API endpoint POST /tasks with validation |
-| `spd-todo-app-fr-complete-task` | PATCH /tasks/:id with status toggle |
-| `spd-todo-app-fr-filter-tasks` | Query parameters on GET /tasks |
-| `spd-todo-app-nfr-offline-support` | IndexedDB local storage with sync queue |
+| Requirement | Design Response |
+|-------------|-----------------|
+| `spd-todo-app-req-create-task` | REST API endpoint POST /tasks with validation |
+| `spd-todo-app-req-complete-task` | PATCH /tasks/:id with status toggle |
+| `spd-todo-app-req-filter-tasks` | Query parameters on GET /tasks |
+| `spd-todo-app-req-offline-support` | IndexedDB local storage with sync queue |
+
+#### NFR Allocation
+
+This table maps non-functional requirements from PRD to specific design/architecture responses, demonstrating how quality attributes are realized.
+
+| NFR ID | NFR Summary | Allocated To | Design Response | Verification Approach |
+|--------|-------------|--------------|-----------------|----------------------|
+| `spd-todo-app-req-response-time` | UI interactions <200ms p95 | TaskService + IndexedDB | Local-first architecture: all reads from IndexedDB (sub-10ms), writes optimistic with background sync | Performance benchmarks measure p95 latency |
+| `spd-todo-app-req-data-persistence` | Local persist <50ms, cloud sync <5s | SyncService + IndexedDB + REST API | IndexedDB for immediate local persistence; background WebSocket sync with retry queue | Integration tests verify timing + recovery scenarios |
 
 ### 1.3 Architecture Layers
 
@@ -32,43 +41,37 @@ Event-driven architecture is employed for real-time updates and cross-device syn
 
 ## 2. Principles & Constraints
 
-### 2.1: Design Principles
+### 2.1 Design Principles
 
 #### Offline-First
 
-**ID**: `spd-todo-app-principle-offline-first`
-
+- [ ] `p2` - **ID**: `spd-todo-app-design-principle-offline-first`
 
 **ADRs**: `spd-todo-app-adr-local-storage`
 
 All operations must work without network connectivity. Data is persisted locally first, then synchronized to the server when connection is available.
 
-
 #### Optimistic Updates
 
-**ID**: `spd-todo-app-principle-optimistic-updates`
-
+- [ ] `p2` - **ID**: `spd-todo-app-design-principle-optimistic-updates`
 
 **ADRs**: `spd-todo-app-adr-optimistic-ui`
 
 UI updates immediately on user action without waiting for server confirmation. Rollback occurs only on server rejection.
 
-
-### 2.2: Constraints
+### 2.2 Constraints
 
 #### Browser Compatibility
 
-**ID**: `spd-todo-app-constraint-browser-compat`
-
+- [ ] `p2` - **ID**: `spd-todo-app-design-constraint-browser-compat`
 
 **ADRs**: `spd-todo-app-adr-browser-support`
 
 Application must support latest 2 versions of Chrome, Firefox, Safari, and Edge.
 
-
 ## 3. Technical Architecture
 
-### 3.1: Domain Model
+### 3.1 Domain Model
 
 **Technology**: TypeScript
 
@@ -84,7 +87,7 @@ Application must support latest 2 versions of Chrome, Firefox, Safari, and Edge.
 - Task → User: Many-to-one (task belongs to user)
 - Category → User: Many-to-one (category belongs to user)
 
-### 3.2: Component Model
+### 3.2 Component Model
 
 ```mermaid
 flowchart LR
@@ -95,27 +98,27 @@ flowchart LR
         FilterBar[FilterBar]
         SyncIndicator[SyncIndicator]
     end
-    
+
     subgraph Services["Services"]
         TaskService[TaskService]
         SyncService[SyncService]
     end
-    
+
     subgraph Storage["Storage"]
         IDB[(IndexedDB)]
         API[REST API]
     end
-    
+
     App --> TaskList
     App --> TaskForm
     App --> FilterBar
     App --> SyncIndicator
-    
+
     TaskList --> TaskService
     TaskForm --> TaskService
     FilterBar --> TaskService
     SyncIndicator --> SyncService
-    
+
     TaskService --> IDB
     TaskService --> API
     SyncService --> IDB
@@ -132,20 +135,46 @@ flowchart LR
 - TaskForm → TaskService: Submits task data for creation/update
 - FilterBar → TaskList: Passes filter criteria for rendering
 
-### 3.3: API Contracts
+### 3.3 API Contracts
 
 **Technology**: REST/OpenAPI
 
 **Location**: [api/openapi.yaml](../api/openapi.yaml)
 
 **Endpoints Overview**:
-- `GET /tasks` - List tasks with optional filters
-- `POST /tasks` - Create a new task
-- `GET /tasks/:id` - Get task by ID
-- `PATCH /tasks/:id` - Update task fields
-- `DELETE /tasks/:id` - Delete a task
 
-### 3.4: Interactions & Sequences
+| Method | Path | Description | Stability |
+|--------|------|-------------|-----------|
+| `GET` | `/tasks` | List tasks with optional filters | stable |
+| `POST` | `/tasks` | Create a new task | stable |
+| `GET` | `/tasks/:id` | Get task by ID | stable |
+| `PATCH` | `/tasks/:id` | Update task fields | stable |
+| `DELETE` | `/tasks/:id` | Delete a task | stable |
+
+### 3.4 External Interfaces & Protocols
+
+#### WebSocket Sync Protocol
+
+- [x] `p1` - **ID**: `spd-todo-app-design-interface-websocket`
+
+**Type**: Protocol (WebSocket + JSON)
+**Direction**: bidirectional
+**Specification**: Custom sync protocol over WebSocket; messages follow format: `{ type: "sync" | "update" | "delete", payload: Task }`
+**Data Format**: JSON (follows Task model from `spd-todo-app-interface-task-model`)
+**Compatibility**: Protocol version negotiated on connection; supports fallback to HTTP polling
+**References**: Links to PRD § Public Library Interfaces (`spd-todo-app-contract-sync`)
+
+#### IndexedDB Storage Schema
+
+- [x] `p1` - **ID**: `spd-todo-app-design-interface-indexeddb`
+
+**Type**: Data Format (IndexedDB schema)
+**Direction**: internal (library storage)
+**Specification**: Dexie.js schema with indexes on userId, status, categoryId, dueDate
+**Data Format**: Task objects stored as-is with additional metadata (syncState, lastModified)
+**Compatibility**: Schema migrations handled by Dexie.js version upgrade hooks
+
+### 3.5 Interactions & Sequences
 
 ```mermaid
 sequenceDiagram
@@ -155,7 +184,7 @@ sequenceDiagram
     participant IDB as IndexedDB
     participant API as REST API
     participant DB as PostgreSQL
-    
+
     User->>UI: Click "Add Task"
     UI->>UI: Show TaskForm
     User->>UI: Enter task data & Save
@@ -164,7 +193,7 @@ sequenceDiagram
     IDB-->>TS: stored
     TS-->>UI: task (optimistic)
     UI-->>User: Show new task
-    
+
     TS->>API: POST /tasks
     API->>DB: INSERT task
     DB-->>API: created
@@ -172,15 +201,15 @@ sequenceDiagram
     TS->>IDB: markSynced(task.id)
 ```
 
-**Use cases**: `spd-todo-app-usecase-create-task`, `spd-todo-app-usecase-complete-task`
+**Use cases**: `spd-todo-app-req-uc-create-task`
 
 **Actors**: `spd-todo-app-actor-user`, `spd-todo-app-actor-sync-service`
 
-### 3.5: Database schemas & tables
+### 3.6 Database schemas & tables
 
 #### Table tasks
 
-**ID**: `spd-todo-app-dbtable-tasks`
+**ID**: `spd-todo-app-db-table-tasks`
 
 **Schema**
 
@@ -209,7 +238,7 @@ sequenceDiagram
 |----|---------|-------|--------|----------|
 | abc-123 | user-1 | Buy groceries | active | medium |
 
-### 3.6: Topology (optional)
+### 3.7 Topology (optional)
 
 **ID**: `spd-todo-app-topology-cloud`
 
@@ -218,7 +247,7 @@ sequenceDiagram
 - Database: Managed PostgreSQL
 - Cache: Redis cluster
 
-### 3.7: Tech stack (optional)
+### 3.8 Tech stack (optional)
 
 **ID**: `spd-todo-app-tech-stack`
 
@@ -229,6 +258,12 @@ sequenceDiagram
 
 ## 4. Additional Context
 
-**ID**: `spd-todo-app-designcontext-decisions`
+**ID**: `spd-todo-app-design-context-decisions`
 
 The choice of React over other frameworks was driven by team expertise and ecosystem maturity. PostgreSQL was selected for its reliability and JSON support for flexible task metadata.
+
+## 5. Traceability
+
+- **PRD**: [PRD.md](./PRD.md)
+- **ADRs**: [ADR/](./ADR/)
+- **Features**: [features/](./features/)
