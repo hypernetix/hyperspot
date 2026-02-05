@@ -187,7 +187,7 @@ HyperSpot recommends **closure tables** for production deployments with hierarch
 |-----------|---------|-------------|
 | `mode` | `"subtree"` | `"root_only"` (single tenant) or `"subtree"` (tenant + descendants) |
 | `root_id` | — | Root tenant. Optional — PDP can determine from `token_scopes` or `subject.properties.tenant_id` |
-| `barrier_mode` | `"all"` | `"all"` (respect barriers) or `"none"` (ignore). See [AUTH.md](./AUTH.md#3-tenant-subtree-predicate-type-in_tenant_subtree). |
+| `barrier_mode` | `"all"` | `"all"` (respect barriers) or `"none"` (ignore). See [DESIGN.md](./DESIGN.md#3-tenant-subtree-predicate-type-in_tenant_subtree). |
 | `tenant_status` | all | Filter by tenant status (`active`, `suspended`) |
 
 ---
@@ -262,6 +262,6 @@ Result: T2, T3 (barrier = 0 for both rows because T2 is the ancestor, not betwee
 
 ## References
 
-- [AUTH.md](./AUTH.md) — Core authorization design
+- [DESIGN.md](./DESIGN.md) — Core authorization design
 - [RESOURCE_GROUP_MODEL.md](./RESOURCE_GROUP_MODEL.md) — Resource group topology, membership, hierarchy
 - [AUTHZ_USAGE_SCENARIOS.md](./AUTHZ_USAGE_SCENARIOS.md) — Authorization scenarios with tenant examples

@@ -706,9 +706,9 @@ For systems with strict security requirements (PCI-DSS, HIPAA, SOC2), set `ttl: 
 
 ## References
 
-- [AUTH.md](./AUTH.md) — Main authentication and authorization design
+- [DESIGN.md](./DESIGN.md) — Main authentication and authorization design
 - [RFC 7519: JSON Web Token (JWT)](https://datatracker.ietf.org/doc/html/rfc7519)
 - [RFC 7662: OAuth 2.0 Token Introspection](https://datatracker.ietf.org/doc/html/rfc7662)
 - [OpenID Connect Core 1.0](https://openid.net/specs/openid-connect-core-1_0.html)
 - [OpenID Connect Discovery 1.0](https://openid.net/specs/openid-connect-discovery-1_0.html)
-- [ADR 0002: Split AuthN and AuthZ Resolvers](../adrs/authorization/0002-split-authn-authz-resolvers.md)
+- [ADR 0002: Split AuthN and AuthZ Resolvers](./ADR/0002-split-authn-authz-resolvers.md)

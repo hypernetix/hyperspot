@@ -233,12 +233,12 @@ Resource groups operate **within** tenant boundaries. They provide additional or
 
 1. **Groups are tenant-scoped** — a group belongs to exactly one tenant
 2. **Cross-tenant groups are forbidden** — a group cannot span multiple tenants
-3. **Tenant constraint always applies** — authorization always includes a tenant constraint alongside group predicates (see [AUTH.md](./AUTH.md) for details)
+3. **Tenant constraint always applies** — authorization always includes a tenant constraint alongside group predicates (see [DESIGN.md](./DESIGN.md) for details)
 
 ---
 
 ## References
 
-- [AUTH.md](./AUTH.md) — Core authorization design
+- [DESIGN.md](./DESIGN.md) — Core authorization design
 - [TENANT_MODEL.md](./TENANT_MODEL.md) — Tenant topology, barriers, closure tables
 - [AUTHZ_USAGE_SCENARIOS.md](./AUTHZ_USAGE_SCENARIOS.md) — Authorization scenarios with resource group examples

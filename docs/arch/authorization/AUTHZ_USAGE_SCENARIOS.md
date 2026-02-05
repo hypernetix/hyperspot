@@ -3,7 +3,7 @@
 This document demonstrates the authorization model through concrete examples.
 Each scenario shows the full flow: HTTP request → PDP evaluation → SQL execution.
 
-For the core authorization design, see [AUTH.md](./AUTH.md).
+For the core authorization design, see [DESIGN.md](./DESIGN.md).
 
 All examples use a Task Management domain:
 - **Resource:** `tasks` table with `id`, `owner_tenant_id`, `title`, `status`
@@ -1475,7 +1475,7 @@ WHERE owner_tenant_id IN (
 - `resource_group_closure` — resolves folder hierarchy (FolderA and all subfolders)
 - `resource_group_membership` — maps resources to groups
 
-**Note:** This is the most demanding query pattern. For large datasets, ensure proper indexing on all three projection tables and consider the scalability considerations in [AUTH.md Open Questions](./AUTH.md#open-questions).
+**Note:** This is the most demanding query pattern. For large datasets, ensure proper indexing on all three projection tables and consider the scalability considerations in [DESIGN.md Open Questions](./DESIGN.md#open-questions).
 
 ---
 
@@ -1634,7 +1634,7 @@ Authorization: Bearer <token>
 
 ## TOCTOU Analysis
 
-[Time-of-check to time-of-use (TOCTOU)](https://en.wikipedia.org/wiki/Time-of-check_to_time-of-use) is a class of race condition where a security check is performed at one point in time, but the protected action occurs later when conditions may have changed.
+[Time-of-check to time-of-use (TOCTOU)](https://en.wikipedia.org/wiki/Time-of-check_to_time-of-use) is a class of race condition where a security check is performed at one point, but the protected action occurs later when conditions may have changed.
 
 ### When TOCTOU Matters
 
@@ -1685,7 +1685,7 @@ The constraint acts as a [compare-and-swap](https://en.wikipedia.org/wiki/Compar
 
 ## References
 
-- [AUTH.md](./AUTH.md) — Core authorization design
+- [DESIGN.md](./DESIGN.md) — Core authorization design
 - [TENANT_MODEL.md](./TENANT_MODEL.md) — Tenant topology, barriers, closure tables
 - [RESOURCE_GROUP_MODEL.md](./RESOURCE_GROUP_MODEL.md) — Resource group topology, membership, hierarchy
 - [TOCTOU - Wikipedia](https://en.wikipedia.org/wiki/Time-of-check_to_time-of-use)

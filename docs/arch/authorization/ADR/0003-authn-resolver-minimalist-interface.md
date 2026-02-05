@@ -76,7 +76,7 @@ pub trait AuthNResolverPluginClient: Send + Sync {
 
 **Mitigations:**
 
-- Reference implementation ([AUTHN_JWT_OIDC_PLUGIN.md](../../authorization/AUTHN_JWT_OIDC_PLUGIN.md)) provides canonical patterns
+- Reference implementation ([AUTHN_JWT_OIDC_PLUGIN.md](../AUTHN_JWT_OIDC_PLUGIN.md)) provides canonical patterns
 - Clear documentation of `SecurityContext` field semantics
 - Explicit error type definitions guide plugin error handling
 
@@ -121,8 +121,8 @@ trait AuthNResolverPluginClient {
 
 **Related Documentation:**
 
-- [AUTH.md](../../authorization/AUTH.md) — Authentication and authorization design specification
-- [AUTHN_JWT_OIDC_PLUGIN.md](../../authorization/AUTHN_JWT_OIDC_PLUGIN.md) — Reference implementation for JWT + OIDC
+- [DESIGN.md](../DESIGN.md) — Authentication and authorization design specification
+- [AUTHN_JWT_OIDC_PLUGIN.md](../AUTHN_JWT_OIDC_PLUGIN.md) — Reference implementation for JWT + OIDC
 - [ADR 0002: Split AuthN and AuthZ Resolvers](./0002-split-authn-authz-resolvers.md) — Why AuthN and AuthZ are separate modules
 
 **Standards References:**

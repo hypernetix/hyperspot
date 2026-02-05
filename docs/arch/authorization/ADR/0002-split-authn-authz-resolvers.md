@@ -174,7 +174,7 @@ Two independent gateway modules with separate plugin interfaces.
 
 **Related Documentation:**
 
-- [AUTH.md](../../authorization/AUTH.md) — Authentication and authorization design specification
+- [DESIGN.md](../DESIGN.md) — Authentication and authorization design specification
 - [ADR 0001: PDP/PEP Authorization Model](./0001-pdp-pep-authorization-model.md) — Authorization architecture foundation
 
 **Standards References:**

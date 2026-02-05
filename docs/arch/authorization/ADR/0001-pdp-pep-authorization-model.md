@@ -171,7 +171,7 @@ Option E provides a cleaner contract between PDP and PEP with less implementatio
 
 **Technical Specification:**
 
-- [`docs/authorization/AUTH.md`](../../authorization/AUTH.md)
+- [`DESIGN.md`](../DESIGN.md)
 
 **Authorization Architecture:**
 
@@ -192,7 +192,7 @@ Option E provides a cleaner contract between PDP and PEP with less implementatio
   - OPA Documentation: https://www.openpolicyagent.org/docs/latest/
 - **Option E** (AuthZEN + Constraints - CHOSEN):
   - OpenID AuthZEN 1.0 (base): https://openid.net/specs/authorization-api-1_0.html
-  - HyperSpot constraint extension: [`AUTH.md`](../../authorization/AUTH.md)
+  - HyperSpot constraint extension: [`DESIGN.md`](../DESIGN.md)
 
 **Prior Art (Data Filtering / Query-time Authorization):**
 

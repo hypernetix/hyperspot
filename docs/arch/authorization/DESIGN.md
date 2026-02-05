@@ -28,7 +28,7 @@ This document describes HyperSpot's approach to authentication (AuthN) and autho
 
 **Authorization** determines what the authenticated subject can do. HyperSpot uses the **AuthZ Resolver** module (acting as PDP) to obtain access decisions and query-level constraints. The core challenge: HyperSpot modules need to enforce authorization at the **query level** (SQL WHERE clauses), not just perform point-in-time access checks.
 
-See [ADR 0001](../adrs/authorization/0001-pdp-pep-authorization-model.md) for the authorization model and [ADR 0002](../adrs/authorization/0002-split-authn-authz-resolvers.md) for the rationale behind separating AuthN and AuthZ.
+See [ADR 0001](./ADR/0001-pdp-pep-authorization-model.md) for the authorization model and [ADR 0002](./ADR/0002-split-authn-authz-resolvers.md) for the rationale behind separating AuthN and AuthZ.
 
 ### PDP/PEP Model
 
@@ -102,7 +102,7 @@ This separation provides:
 - **Security boundaries** — Credentials (tokens) isolated in AuthN layer, AuthZ works with validated identity
 - **Mix & match vendors** — Use different vendors for IdP (AuthN) and Policy Engine (AuthZ)
 
-Each vendor develops their own AuthN and AuthZ plugins (or a unified plugin implementing both interfaces) that bridge to their specific systems. See [ADR 0002](../adrs/authorization/0002-split-authn-authz-resolvers.md) for the rationale behind this separation.
+Each vendor develops their own AuthN and AuthZ plugins (or a unified plugin implementing both interfaces) that bridge to their specific systems. See [ADR 0002](./ADR/0002-split-authn-authz-resolvers.md) for the rationale behind this separation.
 
 ### Plugin Roles
 
@@ -142,7 +142,7 @@ The plugin is responsible for evaluating policies (in whatever internal format a
 
 **Unified Plugin Pattern:**
 
-Vendors with integrated AuthN+AuthZ APIs can provide a unified plugin implementing both interfaces, allowing single API calls to vendor services, shared caching between AuthN and AuthZ operations, and coordinated version updates. See [ADR 0002](../adrs/authorization/0002-split-authn-authz-resolvers.md) for details.
+Vendors with integrated AuthN+AuthZ APIs can provide a unified plugin implementing both interfaces, allowing single API calls to vendor services, shared caching between AuthN and AuthZ operations, and coordinated version updates. See [ADR 0002](./ADR/0002-split-authn-authz-resolvers.md) for details.
 
 ### Integration Architecture
 
@@ -486,7 +486,7 @@ The AuthN Resolver plugin bridges HyperSpot to the vendor's IdP. Plugin responsi
 
 ### Rationale: Minimalist Interface
 
-For the rationale behind this single-method interface design, see [ADR 0003: AuthN Resolver Minimalist Interface](../adrs/authorization/0003-authn-resolver-minimalist-interface.md).
+For the rationale behind this single-method interface design, see [ADR 0003: AuthN Resolver Minimalist Interface](./ADR/0003-authn-resolver-minimalist-interface.md).
 
 ### Implementation Reference
 
@@ -505,7 +505,7 @@ This reference implementation covers:
 
 ### Why AuthZEN (and Why It's Not Enough)
 
-We chose [OpenID AuthZEN Authorization API 1.0](https://openid.net/specs/authorization-api-1_0.html) (approved 2026-01-12) as the foundation for AuthZ Resolver. See [ADR 0001](../adrs/authorization/0001-pdp-pep-authorization-model.md) for the full analysis of considered options.
+We chose [OpenID AuthZEN Authorization API 1.0](https://openid.net/specs/authorization-api-1_0.html) (approved 2026-01-12) as the foundation for AuthZ Resolver. See [ADR 0001](./ADR/0001-pdp-pep-authorization-model.md) for the full analysis of considered options.
 
 **Why AuthZEN:**
 - Industry standard with growing ecosystem
@@ -1329,11 +1329,11 @@ These questions require further design work before implementation.
 
 ### Authorization
 - [OpenID AuthZEN Authorization API 1.0](https://openid.net/specs/authorization-api-1_0.html) (approved 2026-01-12)
-- [ADR 0001: PDP/PEP Authorization Model](../adrs/authorization/0001-pdp-pep-authorization-model.md)
-- [ADR 0002: Split AuthN and AuthZ Resolvers](../adrs/authorization/0002-split-authn-authz-resolvers.md)
+- [ADR 0001: PDP/PEP Authorization Model](./ADR/0001-pdp-pep-authorization-model.md)
+- [ADR 0002: Split AuthN and AuthZ Resolvers](./ADR/0002-split-authn-authz-resolvers.md)
 
 ### Internal
 - [TENANT_MODEL.md](./TENANT_MODEL.md) — Tenant topology, barriers, closure tables
 - [RESOURCE_GROUP_MODEL.md](./RESOURCE_GROUP_MODEL.md) — Resource group topology, membership, hierarchy
 - [AUTHZ_USAGE_SCENARIOS.md](./AUTHZ_USAGE_SCENARIOS.md) — Authorization usage scenarios
-- [HyperSpot GTS (Global Type System)](../../modules/system/types-registry/)
+- [HyperSpot GTS (Global Type System)](../../../modules/system/types-registry/)
