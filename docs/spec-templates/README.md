@@ -35,6 +35,7 @@ Templates work standalone or can be enhanced with Spider annotations (`spd-id`) 
 |----------|---------|-------|
 | [PRD.md](./PRD.md) | Product Requirements Document — vision, actors, capabilities, use cases, FR, NFR | Foundation |
 | [DESIGN.md](./DESIGN.md) | Technical Design — architecture, principles, constraints, domain model, API contracts | System-level |
+| [DECOMPOSITION.md](./DECOMPOSITION.md) | Decomposition — break down features into implementation units with traceability | Feature-level |
 | [ADR.md](./ADR.md) | Architecture Decision Record — capture decisions, options, trade-offs, consequences | Cross-cutting |
 | [FEATURE.md](./FEATURE.md) | Feature Specification — flows, algorithms, states, requirements (SDSL format) | Feature-level |
 
@@ -76,6 +77,13 @@ Standards alignment:
   - IEEE 1016-2009 (Software Design Description)
   - IEEE 42010 (Architecture Description — viewpoints, views, concerns)
   - ISO/IEC 15288 / 12207 (Architecture & Design Definition processes)
+
+### DECOMPOSITION.md
+
+1. **Overview** — Feature context, scope, related artifacts
+2. **Requirements Coverage** — Map PRD requirements to implementation units
+3. **Implementation Units** — Break down into phases/tasks with dependencies
+4. **Traceability** — Links to PRD, DESIGN, features
 
 ### ADR/*.md
 - **Context and Problem Statement** — What problem are we solving?
@@ -129,26 +137,26 @@ docs/arch/common/ or docs/arch/{subsystem}/ or {module}/
 ├── PRD.md                     # Product requirements
 ├── DESIGN.md                  # Technical design
 ├── ADR/                       # Architecture Decision Records
-│   ├── 0001-{fdd-id}.md       # ADR with sequential prefix
-│   ├── 0002-{fdd-id}.md
+│   ├── 0001-{spd-id}.md       # ADR with sequential prefix
+│   ├── 0002-{spd-id}.md
 │   └── ...
 └── features/                  # Feature specifications
-    ├── 0001-{fdd-id}.md       # Feature with sequential prefix
-    ├── 0002-{fdd-id}.md
+    ├── 0001-{spd-id}.md       # Feature with sequential prefix
+    ├── 0002-{spd-id}.md
     └── ...
 ```
 
 ### ADR & Feature Naming Convention
 
-Both ADR and Feature files MUST use the prefix `NNNN-{fdd-id}.md`:
+Both ADR and Feature files MUST use the prefix `NNNN-{spd-id}.md`:
 
 **ADRs**:
-- `ADR/0001-fdd-todo-app-adr-local-storage.md`
-- `ADR/0002-fdd-todo-app-adr-optimistic-ui.md`
+- `ADR/0001-spd-todo-app-adr-local-storage.md`
+- `ADR/0002-spd-todo-app-adr-optimistic-ui.md`
 
 **Features**:
-- `features/0001-fdd-todo-app-feature-core.md`
-- `features/0002-fdd-todo-app-feature-logic.md`
+- `features/0001-spd-todo-app-feature-core.md`
+- `features/0002-spd-todo-app-feature-logic.md`
 
 ## Spider ID Convention
 
@@ -160,7 +168,7 @@ An Spider ID **defines** a unique identifier for a specification element (actor,
 
 **Format**:
 ```
-fdd-{module-name}-{kind}-{slug}
+spd-{system}-{kind}-{slug}
 ```
 
 **Placement**: Use `**ID**: \`spd-...\`` in the artifact where the element is defined.

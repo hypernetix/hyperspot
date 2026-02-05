@@ -1,1 +1,0 @@
-../../../../../docs/spec-templates/ADR.md

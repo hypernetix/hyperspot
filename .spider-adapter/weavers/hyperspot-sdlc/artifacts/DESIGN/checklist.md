@@ -1,1 +1,0 @@
-../../../../../docs/checklists/DESIGN.md

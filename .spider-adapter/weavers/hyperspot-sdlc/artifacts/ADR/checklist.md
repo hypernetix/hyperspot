@@ -1,1 +1,0 @@
-../../../../../docs/checklists/ADR.md
