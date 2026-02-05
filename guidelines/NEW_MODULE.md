@@ -60,6 +60,14 @@ This SDK pattern provides:
 - Clear separation between public API and implementation
 - Consumers only need one lightweight dependency (`<module>-sdk`)
 - Direct ClientHub registration: `hub.get::<dyn MyModuleClient>()?`
+- Elimination of cyclic dependencies between interdependent modules
+
+  ```mermaid
+    graph LR
+      module1 & module2 --> module1-sdk & module2-sdk
+      module1-sdk x--x module2-sdk
+      module1 x--x module2
+  ```
 
 All modules MUST adhere to the following directory structure:
 
