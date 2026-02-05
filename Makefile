@@ -246,7 +246,7 @@ openapi:
 			kill $$SERVER_PID >/dev/null 2>&1 || true; \
 			exit 1; \
 		fi; \
-		sleep 1; \
+		sleep 10; \
 	done; \
 	echo "Server is ready, fetching OpenAPI spec..."; \
 	mkdir -p $$(dirname "$(OPENAPI_OUT)"); \
