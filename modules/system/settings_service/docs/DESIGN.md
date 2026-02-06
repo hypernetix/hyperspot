@@ -638,6 +638,7 @@ GET /api/settings/v1/settings/data.retention?tenant_id=f3e557f0-8bc1-421e-9781-1
 ```
 
 **Query Parameters**:
+
 - `tenant_id` (required): Target tenant UUID
 - `domain_object_id` (optional): Domain object ID or "generic" (default: "generic")
 - `explicit_only` (optional): Return only explicit values, skip inheritance (default: false)
@@ -645,6 +646,7 @@ GET /api/settings/v1/settings/data.retention?tenant_id=f3e557f0-8bc1-421e-9781-1
 - `include_metadata` (optional): Include GTS schema and type metadata (default: false)
 
 **Response Variations**:
+
 - Single value: Returns object when domain_object_id specified
 - Multiple values: Returns array when subtree_root_id specified
 - Value source always included: EXPLICIT, INHERITED, GENERIC, or DEFAULT
@@ -669,6 +671,7 @@ GET /api/settings/v1/settings/data.retention?tenant_id=f3e557f0-8bc1-421e-9781-1
 ```
 
 **Validation Flow**:
+
 1. Validate JWT token and extract tenant context
 2. Check tenant hierarchy access (can only modify own tenant or descendants)
 3. Validate MFA requirement (if `is_mfa_required` trait enabled)
@@ -682,6 +685,7 @@ GET /api/settings/v1/settings/data.retention?tenant_id=f3e557f0-8bc1-421e-9781-1
 - **Unauthorized**: Returns HTTP 401 if token missing or invalid
 
 **Errors**:
+
 - 400: Schema validation failed
 - 403: MFA required, compliance lock active, or access denied
 - 404: Setting type not found
@@ -696,6 +700,7 @@ Response: 204 No Content
 ```
 
 **Behavior**:
+
 - Removes explicit value for tenant/domain_object
 - Subsequent GET will return inherited or default value
 - Soft deletion: Sets `deleted_at` timestamp
@@ -753,6 +758,7 @@ Response: 204 No Content
 ```
 
 **Behavior**:
+
 - Processes all tenants in parallel (with concurrency limit)
 - Returns 200 OK even with partial failures
 - Each tenant validated independently
@@ -778,6 +784,7 @@ Response: 204 No Content
 ```
 
 **Behavior**:
+
 - Locks setting value for specified tenant/domain_object
 - If `subtree: true`, locks for all child tenants recursively
 - Self-service tenants are not affected by parent locks
@@ -785,6 +792,7 @@ Response: 204 No Content
 - Lock metadata stored in `compliance_locks` table
 
 **Requirements**:
+
 - Setting type must have `enable_compliance: true` in options
 - Caller must have `settings:admin` scope
 - Lock reason required for audit trail
@@ -793,6 +801,7 @@ Response: 204 No Content
 - **Unauthorized**: Returns HTTP 401 if token missing or invalid
 
 **Errors**:
+
 - 400: Compliance not enabled for this setting type
 - 403: Insufficient permissions
 - 404: Setting type not found
@@ -806,6 +815,7 @@ Response: 204 No Content
 ```
 
 **Behavior**:
+
 - Removes compliance lock
 - Subtree locks removed recursively
 - Audit event generated with unlock reason
@@ -865,6 +875,7 @@ Response: 204 No Content
 ```
 
 **Behavior**:
+
 - Fetches multiple setting values in single request
 - Cartesian product: setting_types × tenant_ids × domain_object_ids
 - Inheritance resolution applied for each combination
@@ -872,6 +883,7 @@ Response: 204 No Content
 - Maximum 100 combinations per request
 
 **Performance**:
+
 - Parallel queries with connection pooling
 - Results cached for 30 seconds
 - Optimized for dashboard/UI bulk loading
@@ -882,6 +894,7 @@ Response: 204 No Content
 **OData Query Support** (on collection endpoints):
 
 **Supported Operations**:
+
 - `$filter`: Field-based filtering with operators (eq, ne, gt, lt, ge, le, in, contains)
 - `$orderby`: Multi-field sorting (e.g., `$orderby=domain_type asc,created_at desc`)
 - `$select`: Field projection to reduce response size
@@ -890,6 +903,7 @@ Response: 204 No Content
 - `$expand`: Include related entities (e.g., `$expand=gts_schema`)
 
 **Filter Examples**:
+
 ```text
 $filter=domain_type eq 'TENANT'
 $filter=created_at gt '2026-01-01T00:00:00Z'
@@ -898,6 +912,7 @@ $filter=domain_type in ('TENANT','USER') and options/is_mfa_required eq true
 ```
 
 **Pagination**:
+
 - **Offset-based**: Use `$top` and `$skip` for simple pagination
 - **Cursor-based**: Use `after` parameter for efficient large dataset traversal
 - Cursor format: Base64-encoded JSON with last item ID and sort keys
@@ -933,23 +948,39 @@ $filter=domain_type in ('TENANT','USER') and options/is_mfa_required eq true
 **Use Case**: `fdd-settings-service-usecase-create-setting-type`  
 **Actor**: `fdd-settings-service-actor-service-developer`
 
-```text
-Developer → API Gateway → REST Handler → SettingsService → GTS Registry → Repository
+```mermaid
+sequenceDiagram
+    participant Dev as Developer
+    participant GW as API Gateway
+    participant REST as REST Handler
+    participant Svc as SettingsService
+    participant GTS as GTS Registry
+    participant Repo as Repository
+    participant Event as Event Publisher
 
-1. Developer sends POST /api/settings/v1/types with GTS schema
-2. REST Handler validates request DTO, extracts SecurityContext
-3. SettingsService.create_setting_type(&ctx, request)
-   a. Validate GTS schema structure
-   b. Call GTS Type Registry to register schema
-   c. Validate trait configuration (options, events, operations)
-   d. Check domain type is registered (or predefined)
-   e. Ensure default value exists in GTS schema
-4. Repository.create_setting_type() via SecureConn
-   a. Insert setting_type record
-   b. Insert trait configuration
-5. Event Publisher publishes setting_type.created event
-6. Return SettingType to handler
-7. Handler maps to DTO, returns 201 Created
+    Dev->>GW: POST /api/settings/v1/types with GTS schema
+    GW->>REST: Forward request
+    REST->>REST: Validate request DTO
+    REST->>REST: Extract SecurityContext
+    REST->>Svc: create_setting_type(&ctx, request)
+    
+    Svc->>Svc: Validate GTS schema structure
+    Svc->>GTS: Register schema
+    GTS-->>Svc: Schema registered
+    Svc->>Svc: Validate trait configuration<br/>(options, events, operations)
+    Svc->>Svc: Check domain type is registered<br/>(or predefined)
+    Svc->>Svc: Ensure default value exists<br/>in GTS schema
+    
+    Svc->>Repo: create_setting_type() via SecureConn
+    Repo->>Repo: Insert setting_type record
+    Repo->>Repo: Insert trait configuration
+    Repo-->>Svc: SettingType created
+    
+    Svc->>Event: Publish setting_type.created event
+    Svc-->>REST: Return SettingType
+    REST->>REST: Map to DTO
+    REST-->>GW: 201 Created
+    GW-->>Dev: 201 Created with SettingType
 ```
 
 #### Sequence: Get Setting Value with Inheritance Resolution
@@ -957,25 +988,57 @@ Developer → API Gateway → REST Handler → SettingsService → GTS Registry 
 **Use Case**: `fdd-settings-service-usecase-get-values-hierarchy`  
 **Actor**: `fdd-settings-service-actor-service-developer`
 
-```text
-Client → API Gateway → REST Handler → SettingsService → ValueResolver → Repository
+```mermaid
+sequenceDiagram
+    participant Client
+    participant GW as API Gateway
+    participant REST as REST Handler
+    participant Svc as SettingsService
+    participant TAM as TenantAccessManager
+    participant Resolver as ValueResolver
+    participant Repo as Repository
 
-1. Client sends GET /api/settings/v1/settings/{type}?tenant_id=X&domain_object_id=Y
-2. REST Handler validates SecurityContext, parses query params
-3. SettingsService.get_setting_values(&ctx, type, tenant_id, domain_object_id)
-   a. TenantAccessManager.check_read_access(ctx, tenant_id)
-   b. Repository.get_setting_type(type) to load traits
-   c. ValueResolver.resolve_value(type, tenant_id, domain_object_id)
-      i. Query explicit value for tenant/domain_object
-      ii. If not found and is_value_inheritable:
-          - Query tenant/generic value
-          - If not found, traverse parent hierarchy
-          - TenantAccessManager.get_tenant_path(tenant_id, is_barrier_inheritance)
-          - Query each parent tenant until value found
-      iii. If still not found, return GTS schema default
-      iv. Set value_source metadata (Explicit/Inherited/Generic/Default)
-4. Return SettingValue with value_source to handler
-5. Handler maps to DTO, returns 200 OK
+    Client->>GW: GET /api/settings/v1/settings/{type}?tenant_id=X&domain_object_id=Y
+    GW->>REST: Forward request
+    REST->>REST: Validate SecurityContext
+    REST->>REST: Parse query params
+    REST->>Svc: get_setting_values(&ctx, type, tenant_id, domain_object_id)
+    
+    Svc->>TAM: check_read_access(ctx, tenant_id)
+    TAM-->>Svc: Access granted
+    
+    Svc->>Repo: get_setting_type(type)
+    Repo-->>Svc: Setting type with traits
+    
+    Svc->>Resolver: resolve_value(type, tenant_id, domain_object_id)
+    
+    Resolver->>Repo: Query explicit value for tenant/domain_object
+    alt Explicit value found
+        Repo-->>Resolver: Value (Explicit)
+    else Not found and is_value_inheritable
+        Resolver->>Repo: Query tenant/generic value
+        alt Generic value found
+            Repo-->>Resolver: Value (Generic)
+        else Not found
+            Resolver->>TAM: get_tenant_path(tenant_id, is_barrier_inheritance)
+            TAM-->>Resolver: Parent tenant path
+            Resolver->>Repo: Query each parent tenant
+            alt Parent value found
+                Repo-->>Resolver: Value (Inherited)
+            else Still not found
+                Resolver->>Resolver: Return GTS schema default
+                Note over Resolver: Value source: Default
+            end
+        end
+    end
+    
+    Resolver->>Resolver: Set value_source metadata<br/>(Explicit/Inherited/Generic/Default)
+    Resolver-->>Svc: SettingValue with value_source
+    
+    Svc-->>REST: Return SettingValue
+    REST->>REST: Map to DTO
+    REST-->>GW: 200 OK
+    GW-->>Client: 200 OK with SettingValue
 ```
 
 #### Sequence: Update Setting Value with Compliance Check
@@ -983,25 +1046,61 @@ Client → API Gateway → REST Handler → SettingsService → ValueResolver �
 **Use Case**: `fdd-settings-service-usecase-update-value-inheritance`  
 **Actor**: `fdd-settings-service-actor-system-administrator`
 
-```text
-Admin → API Gateway → REST Handler → SettingsService → TraitsManager → Repository
+```mermaid
+sequenceDiagram
+    participant Admin
+    participant GW as API Gateway
+    participant REST as REST Handler
+    participant Svc as SettingsService
+    participant TAM as TenantAccessManager
+    participant TM as TraitsManager
+    participant Repo as Repository
+    participant Event as Event Publisher
 
-1. Admin sends PUT /api/settings/v1/settings/{type} with new value
-2. REST Handler validates JWT token, extracts SecurityContext
-3. SettingsService.update_setting_value(&ctx, type, tenant_id, domain_object_id, data)
-   a. Repository.get_setting_type(type) to load traits
-   b. TenantAccessManager.check_write_access(ctx, tenant_id)
-   c. TraitsManager.check_compliance_lock(type, tenant_id, domain_object_id)
-      - If locked, return ComplianceLockError
-   d. TraitsManager.check_mfa_required(type, tenant_id)
-      - If MFA required and tenant MFA disabled, return MfaRequiredError
-   e. TraitsManager.check_mutable_access_scope(type, ctx, tenant_id, data)
-      - Validate tenant_kind and subject_tenant_kind constraints
-   f. Validate data against GTS schema
-   g. Repository.upsert_setting_value() via SecureConn
-4. Event Publisher publishes setting_value.updated event (based on trait config)
-5. Return success to handler
-6. Handler returns 204 No Content
+    Admin->>GW: PUT /api/settings/v1/settings/{type} with new value
+    GW->>REST: Forward request
+    REST->>REST: Validate JWT token
+    REST->>REST: Extract SecurityContext
+    REST->>Svc: update_setting_value(&ctx, type, tenant_id, domain_object_id, data)
+    
+    Svc->>Repo: get_setting_type(type)
+    Repo-->>Svc: Setting type with traits
+    
+    Svc->>TAM: check_write_access(ctx, tenant_id)
+    TAM-->>Svc: Access granted
+    
+    Svc->>TM: check_compliance_lock(type, tenant_id, domain_object_id)
+    alt Setting is locked
+        TM-->>Svc: ComplianceLockError
+        Svc-->>REST: Error
+        REST-->>GW: 403 Forbidden
+        GW-->>Admin: 403 Compliance Lock Active
+    else Not locked
+        TM-->>Svc: OK
+        
+        Svc->>TM: check_mfa_required(type, tenant_id)
+        alt MFA required and tenant MFA disabled
+            TM-->>Svc: MfaRequiredError
+            Svc-->>REST: Error
+            REST-->>GW: 403 Forbidden
+            GW-->>Admin: 403 MFA Required
+        else MFA check passed
+            TM-->>Svc: OK
+            
+            Svc->>TM: check_mutable_access_scope(type, ctx, tenant_id, data)
+            Note over TM: Validate tenant_kind and<br/>subject_tenant_kind constraints
+            TM-->>Svc: OK
+            
+            Svc->>Svc: Validate data against GTS schema
+            Svc->>Repo: upsert_setting_value() via SecureConn
+            Repo-->>Svc: Value updated
+            
+            Svc->>Event: Publish setting_value.updated event<br/>(based on trait config)
+            Svc-->>REST: Success
+            REST-->>GW: 204 No Content
+            GW-->>Admin: 204 No Content
+        end
+    end
 ```
 
 #### Sequence: Batch Update with Partial Success
@@ -1009,63 +1108,92 @@ Admin → API Gateway → REST Handler → SettingsService → TraitsManager →
 **Use Case**: `fdd-settings-service-usecase-batch-update`  
 **Actor**: `fdd-settings-service-actor-system-administrator`
 
-```text
-Admin → API Gateway → REST Handler → SettingsService → Repository
+```mermaid
+sequenceDiagram
+    participant Admin
+    participant GW as API Gateway
+    participant REST as REST Handler
+    participant Svc as SettingsService
+    participant Repo as Repository
 
-1. Admin sends PUT /api/settings/v1/settings/{type}:batch
-   Body: { tenant_ids: [T1, T2, T3], domain_object_id: D, data: {...} }
-2. REST Handler validates SecurityContext
-3. SettingsService.batch_update(&ctx, type, tenant_ids, domain_object_id, data)
-   a. For each tenant_id in parallel (with concurrency limit):
-      i. Try update_setting_value(ctx, type, tenant_id, domain_object_id, data)
-      ii. On success: Add to successes list
-      iii. On error: Add to failures list with error details
-   b. Collect all results
-4. Return BatchResult { successes, failures } to handler
-5. Handler maps to DTO with detailed error info:
-   {
-     "successes": ["T1", "T3"],
-     "failures": [
-       {
-         "tenant_id": "T2",
-         "error": {
-           "type": "compliance-lock",
-           "detail": "Setting is locked for compliance"
-         }
-       }
-     ]
-   }
-6. Handler returns 200 OK (even with partial failures)
+    Admin->>GW: PUT /api/settings/v1/settings/{type}:batch
+    Note over Admin: Body: { tenant_ids: [T1, T2, T3],<br/>domain_object_id: D, data: {...} }
+    GW->>REST: Forward request
+    REST->>REST: Validate SecurityContext
+    REST->>Svc: batch_update(&ctx, type, tenant_ids, domain_object_id, data)
+    
+    Note over Svc: Process each tenant_id in parallel<br/>(with concurrency limit)
+    
+    par Tenant T1
+        Svc->>Svc: update_setting_value(ctx, type, T1, domain_object_id, data)
+        Svc->>Repo: upsert_setting_value(T1)
+        Repo-->>Svc: Success
+        Note over Svc: Add T1 to successes list
+    and Tenant T2
+        Svc->>Svc: update_setting_value(ctx, type, T2, domain_object_id, data)
+        Note over Svc: Compliance lock detected
+        Note over Svc: Add T2 to failures list<br/>with error details
+    and Tenant T3
+        Svc->>Svc: update_setting_value(ctx, type, T3, domain_object_id, data)
+        Svc->>Repo: upsert_setting_value(T3)
+        Repo-->>Svc: Success
+        Note over Svc: Add T3 to successes list
+    end
+    
+    Svc->>Svc: Collect all results
+    Svc-->>REST: BatchResult { successes, failures }
+    REST->>REST: Map to DTO with detailed error info
+    Note over REST: {<br/>"successes": ["T1", "T3"],<br/>"failures": [{<br/>"tenant_id": "T2",<br/>"error": {<br/>"type": "compliance-lock",<br/>"detail": "Setting is locked"<br/>}<br/>}]<br/>}
+    REST-->>GW: 200 OK (even with partial failures)
+    GW-->>Admin: 200 OK with BatchResult
 ```
 
-#### Sequence: Register Dynamic Domain Type
+#### Sequence: Register Dynamic Domain Type (Future Enhancement)
 
 **Use Case**: `fdd-settings-service-usecase-register-domain-type`  
 **Actor**: `fdd-settings-service-actor-service-developer`
 
-```text
-Developer → API Gateway → REST Handler → SettingsService → GTS Registry → Event Bus
+> **Note**: This feature is planned for a future phase. The initial implementation will support only predefined domain types (TENANT, USER). Dynamic domain type registration via API will be implemented later.
 
-1. Developer sends POST /api/settings/v1/domain-types
-   Body: {
-     name: "WORKSPACE",
-     domain_id_type: "uuid",
-     validation_endpoint: "GET /workspaces/{id}",
-     deletion_event_type: "workspace.deleted"
-   }
-2. REST Handler validates SecurityContext (service developer role)
-3. SettingsService.register_domain_type(&ctx, request)
-   a. Validate domain type name uniqueness
-   b. Validate validation_endpoint accessibility (HTTP HEAD request)
-   c. Validate deletion_event_type exists in Event Bus
-   d. Register as GTS entity in GTS Type Registry
-   e. Repository.create_domain_type()
-   f. Event Bus subscribe to deletion_event_type
-4. Return DomainType to handler
-5. Handler returns 201 Created
-6. Background: Event Bus delivers workspace.deleted events
-   → SettingsService.handle_domain_object_deleted(workspace_id)
-   → Repository.delete_values_by_domain_object(workspace_id)
+```mermaid
+sequenceDiagram
+    participant Dev as Developer
+    participant GW as API Gateway
+    participant REST as REST Handler
+    participant Svc as SettingsService
+    participant GTS as GTS Registry
+    participant Repo as Repository
+    participant EB as Event Bus
+
+    Dev->>GW: POST /api/settings/v1/domain-types
+    Note over Dev: Body: {<br/>name: "WORKSPACE",<br/>domain_id_type: "uuid",<br/>validation_endpoint: "GET /workspaces/{id}",<br/>deletion_event_type: "workspace.deleted"<br/>}
+    GW->>REST: Forward request
+    REST->>REST: Validate SecurityContext<br/>(service developer role)
+    REST->>Svc: register_domain_type(&ctx, request)
+    
+    Svc->>Svc: Validate domain type name uniqueness
+    Svc->>Svc: Validate validation_endpoint accessibility<br/>(HTTP HEAD request)
+    Svc->>EB: Validate deletion_event_type exists
+    EB-->>Svc: Event type exists
+    
+    Svc->>GTS: Register as GTS entity
+    GTS-->>Svc: Registered
+    
+    Svc->>Repo: create_domain_type()
+    Repo-->>Svc: Domain type created
+    
+    Svc->>EB: Subscribe to deletion_event_type
+    EB-->>Svc: Subscribed
+    
+    Svc-->>REST: Return DomainType
+    REST-->>GW: 201 Created
+    GW-->>Dev: 201 Created with DomainType
+    
+    Note over EB,Svc: Background: Event delivery
+    EB->>Svc: workspace.deleted event (workspace_id)
+    Svc->>Svc: handle_domain_object_deleted(workspace_id)
+    Svc->>Repo: delete_values_by_domain_object(workspace_id)
+    Repo-->>Svc: Values deleted
 ```
 
 ### C.5: Database Schemas & Tables
@@ -1246,15 +1374,15 @@ Developer → API Gateway → REST Handler → SettingsService → GTS Registry 
 <!-- fdd-id-content -->
 **Schema**:
 
-| Column              | Type         | Description                        |
-| ------------------- | ------------ | ---------------------------------- |
-| id                  | UUID         | Primary key                        |
-| name                | VARCHAR(50)  | Domain type name (e.g., WORKSPACE) |
-| domain_id_type      | VARCHAR(20)  | Data type (uuid, string, integer)  |
-| validation_endpoint | VARCHAR(500) | REST API endpoint for validation   |
-| deletion_event_type | VARCHAR(100) | Event type for deletion            |
-| is_predefined       | BOOLEAN      | True for built-in types            |
-| created_at          | TIMESTAMP    | Creation timestamp                 |
+| Column              | Type         | Description                                            |
+| ------------------- | ------------ | ------------------------------------------------------ |
+| id                  | UUID         | Primary key                                            |
+| name                | VARCHAR(50)  | Domain type name (e.g., WORKSPACE)                     |
+| domain_id_type      | VARCHAR(20)  | Data type (uuid, string, integer)                      |
+| validation_endpoint | VARCHAR(500) | REST API endpoint for validation (future enhancement) |
+| deletion_event_type | VARCHAR(100) | Event type for deletion                                |
+| is_predefined       | BOOLEAN      | True for built-in types                                |
+| created_at          | TIMESTAMP    | Creation timestamp                                     |
 
 **Primary Key**: `id`
 
@@ -1270,7 +1398,8 @@ Developer → API Gateway → REST Handler → SettingsService → GTS Registry 
 
 - Supports dynamic domain type registration at runtime
 - Predefined types (TENANT, USER) seeded on initialization
-- `validation_endpoint` enables optional domain object existence checks
+- **Future Enhancement**: `validation_endpoint` will enable optional domain object existence checks (not implemented in initial version)
+- **Future Enhancement**: Domain API registration endpoint `/api/settings/v1/domain-types` will be implemented in a future phase
 - `deletion_event_type` enables automatic cleanup on domain object deletion
 <!-- fdd-id-content -->
 
@@ -1281,50 +1410,58 @@ Developer → API Gateway → REST Handler → SettingsService → GTS Registry 
 <!-- fdd-id-content -->
 **Deployment Architecture**:
 
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│                         Kubernetes Cluster                       │
-│                                                                  │
-│  ┌────────────────────────────────────────────────────────────┐ │
-│  │              Hyperspot API Gateway Pod                      │ │
-│  │  - Axum HTTP server                                        │ │
-│  │  - OpenAPI documentation at /docs                          │ │
-│  │  - Routes requests to module handlers                      │ │
-│  │  - TLS termination                                         │ │
-│  └────────────────────────────────────────────────────────────┘ │
-│                              ↓                                   │
-│  ┌────────────────────────────────────────────────────────────┐ │
-│  │         Settings Service Module (in-process)                │ │
-│  │  - Registered via ModKit                                   │ │
-│  │  - REST handlers + domain logic                            │ │
-│  │  - ClientHub registration for inter-module calls           │ │
-│  └────────────────────────────────────────────────────────────┘ │
-│                              ↓                                   │
-│  ┌────────────────────────────────────────────────────────────┐ │
-│  │              Database Connection Pool                       │ │
-│  │  - SeaORM with SecureConn                                  │ │
-│  │  - Tenant-scoped queries                                   │ │
-│  │  - Connection pooling (max 100 connections)                │ │
-│  └────────────────────────────────────────────────────────────┘ │
-│                              ↓                                   │
-└──────────────────────────────┼───────────────────────────────────┘
-                               ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                    External Dependencies                         │
-│                                                                  │
-│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────┐  │
-│  │  PostgreSQL      │  │  Event Bus       │  │  GTS Type    │  │
-│  │  (Primary DB)    │  │  (Kafka/NATS)    │  │  Registry    │  │
-│  │  - Multi-AZ      │  │  - Pub/Sub       │  │  (HTTP API)  │  │
-│  │  - Replicated    │  │  - Event Stream  │  │              │  │
-│  └──────────────────┘  └──────────────────┘  └──────────────┘  │
-│                                                                  │
-│  ┌──────────────────┐  ┌──────────────────┐                    │
-│  │  Tenant Mgmt     │  │  Domain          │                    │
-│  │  Module          │  │  Validation      │                    │
-│  │  (ClientHub)     │  │  Modules         │                    │
-│  └──────────────────┘  └──────────────────┘                    │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph K8s["Kubernetes Cluster"]
+        subgraph Gateway["Hyperspot API Gateway Pod"]
+            GW[Axum HTTP Server]
+            GW_Docs[OpenAPI /docs]
+            GW_Routes[Request Router]
+            GW_TLS[TLS Termination]
+        end
+        
+        subgraph Module["Settings Service Module (in-process)"]
+            ModKit[ModKit Registration]
+            REST[REST Handlers]
+            Domain[Domain Logic]
+            ClientHub[ClientHub Registration]
+        end
+        
+        subgraph ConnPool["Database Connection Pool"]
+            SeaORM[SeaORM with SecureConn]
+            TenantScope[Tenant-scoped Queries]
+            Pool[Connection Pool<br/>max 100 connections]
+        end
+    end
+    
+    subgraph External["External Dependencies"]
+        subgraph Data["Data Layer"]
+            PG[(PostgreSQL<br/>Primary DB<br/>Multi-AZ<br/>Replicated)]
+            EB[Event Bus<br/>Kafka/NATS<br/>Pub/Sub<br/>Event Stream]
+            GTS[GTS Type Registry<br/>HTTP API]
+        end
+        
+        subgraph Services["Service Layer"]
+            TM[Tenant Management<br/>Module<br/>ClientHub]
+            DV[Domain Validation<br/>Modules]
+        end
+    end
+    
+    Gateway -->|Routes to| Module
+    Module -->|Uses| ConnPool
+    ConnPool -->|Queries| PG
+    Module -->|Publishes/Subscribes| EB
+    Module -->|HTTP API| GTS
+    Module -->|ClientHub| TM
+    Module -->|HTTP API| DV
+    
+    style K8s fill:#e1f5ff,stroke:#01579b,stroke-width:2px
+    style External fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    style Gateway fill:#f3e5f5,stroke:#4a148c
+    style Module fill:#e8f5e9,stroke:#1b5e20
+    style ConnPool fill:#fff9c4,stroke:#f57f17
+    style Data fill:#fce4ec,stroke:#880e4f
+    style Services fill:#e0f2f1,stroke:#004d40
 ```
 
 **Scaling Strategy**:
@@ -1455,25 +1592,25 @@ The Settings Service uses GTS (Global Type System) for all schema definitions an
 
 **Integration Points**:
 
-1. **Setting Type Creation**: 
+1. **Setting Type Creation**:
    - Validate GTS schema exists in Type Registry
    - Verify schema has required default values
    - Cache schema definition locally for performance
    - Register schema version in setting type metadata
 
-2. **Value Validation**: 
+2. **Value Validation**:
    - Fetch GTS schema by version from Type Registry
    - Validate setting value data against JSON Schema
    - Apply custom validation rules from schema
    - Return detailed validation errors with field paths
 
-3. **Schema Evolution**: 
+3. **Schema Evolution**:
    - Support multiple schema versions simultaneously
    - Setting types reference specific schema version
    - New versions deployed without breaking existing settings
    - Validation uses version specified in setting type
 
-4. **Default Values**: 
+4. **Default Values**:
    - Extract default values from GTS schema definitions
    - Use as fallback when no explicit/inherited value exists
    - Ensure all setting types have valid defaults
@@ -1481,6 +1618,7 @@ The Settings Service uses GTS (Global Type System) for all schema definitions an
 **Schema Reference Format**: `gts://registry.hyperspot.dev/schemas/data-retention/v1.2.0`
 
 **Schema Caching Strategy**:
+
 - In-memory cache per instance with 1 hour TTL (configurable via `cache_gts_schema_ttl`)
 - Invalidate on Type Registry webhook notifications
 - Fallback to cached version if registry unavailable
