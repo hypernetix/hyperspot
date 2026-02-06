@@ -414,6 +414,10 @@ oop-example:
 # Run all quality checks
 check: fmt clippy lychee security dylint-test dylint gts-docs test
 
+ci_test: fmt clippy
+
+ci_docs: lychee
+
 # Run CI pipeline
 ci: check
 

@@ -1,0 +1,141 @@
+name: PR Reviewer Check
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  pull-requests: write
+  issues: write
+  contents: read
+
+jobs:
+  check-reviewers:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check reviewers and notify
+        uses: actions/github-script@v7
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            const ignoredReviewers = new Set([
+              "coderabbitai[bot]",
+              "graphite-app[bot]",
+              "dependabot[bot]"
+            ]);
+
+            const NOTIFICATION_MARKER = "<!-- pr-reviewer-check-notify -->";
+
+            // Fetch all open PRs
+            const prs = await github.paginate(github.rest.pulls.list, {
+              owner,
+              repo,
+              state: "open",
+              per_page: 100
+            });
+
+            const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+
+            for (const pr of prs) {
+              const title = pr.title.toLowerCase();
+              if (title.startsWith("chore: release")) continue;
+
+              const isInternal = pr.head.repo && pr.head.repo.full_name === `${owner}/${repo}`;
+              if (!isInternal) continue;
+
+              const createdAt = new Date(pr.created_at);
+              if (createdAt > tenMinutesAgo) continue;
+
+              const humanReviewers = (pr.requested_reviewers || [])
+                .map(r => r.login)
+                .filter(login =>
+                  !login.endsWith("[bot]") &&
+                  !ignoredReviewers.has(login)
+                );
+
+              const humanTeams = pr.requested_teams || [];
+              if (humanReviewers.length > 0 || humanTeams.length > 0) continue;
+              const reviews = await github.paginate(github.rest.pulls.listReviews, {
+                owner,
+                repo,
+                pull_number: pr.number
+              });
+              const humanReviewed = reviews
+                .map(r => r.user?.login)
+                .filter(login =>
+                  login &&
+                  !login.endsWith("[bot]") &&
+                  !ignoredReviewers.has(login)
+                );
+              if (humanReviewed.length > 0) continue;
+
+              // Check if we already commented
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                owner,
+                repo,
+                issue_number: pr.number
+              });
+
+              const alreadyCommented = comments.some(c =>
+                c.body.includes(NOTIFICATION_MARKER) ||
+                (c.user &&
+                c.user.type === 'Bot' &&
+                c.body.includes("PR was created more than") &&
+                c.body.includes("has no human reviewers assigned"))
+              );
+
+              if (alreadyCommented) {
+                console.log(`PR #${pr.number} already has notification comment`);
+                continue;
+              }
+
+              const prUrl = pr.html_url;
+              const message =
+                "PR has no human reviewers assigned 10 minutes after creation.\n\n" +
+                "Repository: " + owner + "/" + repo + "\n" +
+                "PR: #" + pr.number + "\n" +
+                "Title: " + pr.title + "\n" +
+                "URL: " + prUrl + "\n" +
+                prUrl;
+
+              console.log(`Notifying for PR #${pr.number}`);
+
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: pr.number,
+                body:
+                  "PR was created more than 10 minutes ago but has no human reviewers assigned\n" + NOTIFICATION_MARKER
+              });
+
+              try {
+                const resp = await fetch(
+                  `https://api.telegram.org/bot${
+                    process.env.TELEGRAM_BOT_TOKEN
+                  }/sendMessage`,
+                  {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      chat_id: process.env.TELEGRAM_CHAT_ID,
+                      text: message
+                    })
+                  }
+                );
+                if (!resp.ok) {
+                  const body = await resp.text().catch(() => "");
+                  console.error(
+                    `Telegram API error ${resp.status} ${resp.statusText}`,
+                    body
+                  );
+                }
+              } catch (error) {
+                console.error("Failed to send Telegram message", error);
+              }
+            }

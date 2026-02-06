@@ -44,10 +44,7 @@ jobs:
           git config --global core.eol lf
 
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          clean: 'true'
-          submodules: recursive
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Install protoc
         uses: arduino/setup-protoc@c65c819552d16ad3c9b72d9dfd5ba5237b9c906b # v3.0.0
@@ -58,7 +55,7 @@ jobs:
         uses: dtolnay/rust-toolchain@4be9e76fd7c4901c61fb841f559994984270fce7 # stable
         with:
           toolchain: ${{ matrix.rust }}
-          components: rustfmt, clippy
+          components: rustfmt,clippy
 
       # Cache Cargo registry/git + target/ across platforms.
       - name: Cache Cargo/target
@@ -140,10 +137,7 @@ jobs:
       CARGO_INCREMENTAL: "0"
     steps:
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          clean: 'true'
-          submodules: recursive
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Install protoc
         uses: arduino/setup-protoc@c65c819552d16ad3c9b72d9dfd5ba5237b9c906b # v3.0.0
@@ -185,9 +179,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          submodules: recursive
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Install protoc
         uses: arduino/setup-protoc@c65c819552d16ad3c9b72d9dfd5ba5237b9c906b # v3.0.0
@@ -302,10 +294,7 @@ jobs:
       CARGO_INCREMENTAL: "0"
     steps:
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          clean: 'true'
-          submodules: recursive
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Install protoc
         uses: arduino/setup-protoc@c65c819552d16ad3c9b72d9dfd5ba5237b9c906b # v3.0.0
@@ -361,8 +350,8 @@ jobs:
       - name: cargo clippy (modkit-db only)
         run: cargo clippy -p cf-modkit-db --all-targets --features "${{ matrix.backend }}" -- -D warnings
 
-      - name: Build modkit-db
-        run: cargo build -p cf-modkit-db --features "${{ matrix.backend }}"
+      - name: Check modkit-db
+        run: cargo check -p cf-modkit-db --features "${{ matrix.backend }}"
 
       - name: Test modkit-db (integration)
         run: cargo test -p cf-modkit-db --features "${{ matrix.backend }},integration" -- --nocapture
@@ -381,10 +370,7 @@ jobs:
       CARGO_INCREMENTAL: "0"
     steps:
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          clean: 'true'
-          submodules: recursive
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Install protoc
         uses: arduino/setup-protoc@c65c819552d16ad3c9b72d9dfd5ba5237b9c906b # v3.0.0
@@ -440,8 +426,8 @@ jobs:
       - name: cargo clippy (users_info only)
         run: cargo clippy -p users_info --all-targets -- -D warnings
 
-      - name: Build users_info (pg)
-        run: cargo build -p users_info
+      - name: Check users_info (pg)
+        run: cargo check -p users_info
 
       - name: Test users_info with Postgres (integration)
         run: cargo test -p users_info --features "integration" -- --nocapture
@@ -450,8 +436,8 @@ jobs:
         if: env.SCCACHE_OK == '1'
         run: sccache --show-stats
 
-  dylint_tests:
-    name: Dylint Lints Tests
+  dylint:
+    name: Dylint Tests
     runs-on: ubuntu-latest
     env:
       CARGO_TERM_COLOR: always
@@ -459,10 +445,7 @@ jobs:
       CARGO_INCREMENTAL: "0"
     steps:
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          clean: 'true'
-          submodules: recursive
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Install Rust nightly toolchain
         uses: dtolnay/rust-toolchain@f7ccc83f9ed1e5b9c81d8a67d7ad1a747e22a561 # master
@@ -470,58 +453,19 @@ jobs:
           toolchain: nightly-2025-09-18
           components: llvm-tools-preview, rustc-dev
 
-      - name: Cache Cargo/target
-        uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
-        with:
-          shared-key: dylint-tests
-          workspaces: dylint_lints
-
-      - name: Install dylint-link
-        uses: taiki-e/install-action@30eab0fabba9ea3f522099957e668b21876aa39e # v2.66.6
-        with:
-          tool: dylint-link
-
-      - name: Run dylint tests
-        working-directory: dylint_lints
-        run: cargo test
-
-  dylint_check:
-    name: Run Dylint Lints
-    runs-on: ubuntu-latest
-    env:
-      CARGO_TERM_COLOR: always
-      RUST_BACKTRACE: 1
-      CARGO_INCREMENTAL: "0"
-    steps:
-      - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          clean: 'true'
-          submodules: recursive
-
       - name: Install protoc
         uses: arduino/setup-protoc@c65c819552d16ad3c9b72d9dfd5ba5237b9c906b # v3.0.0
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install Rust stable toolchain
-        uses: dtolnay/rust-toolchain@4be9e76fd7c4901c61fb841f559994984270fce7 # stable
-
-      - name: Install Rust nightly toolchain for dylint
-        uses: dtolnay/rust-toolchain@f7ccc83f9ed1e5b9c81d8a67d7ad1a747e22a561 # master
-        with:
-          toolchain: nightly-2025-09-18
-          components: llvm-tools-preview, rustc-dev
-
-      - name: Cache Cargo/target
-        uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
-        with:
-          shared-key: dylint-check
-
-      - name: Install cargo-dylint and dylint-link
+      - name: Install dylint-link
         uses: taiki-e/install-action@30eab0fabba9ea3f522099957e668b21876aa39e # v2.66.6
         with:
           tool: cargo-dylint,dylint-link
+
+      - name: Run dylint tests
+        working-directory: dylint_lints
+        run: cargo test
 
       - name: Run dylint on all crates
         run: cargo dylint --all --workspace
