@@ -1,0 +1,35 @@
+# Static Licenses Plugin - Example Configuration
+#
+# This plugin provides configurable license feature data for bootstrap,
+# testing, and local development purposes.
+
+static_licenses_plugin:
+  # Vendor identifier (optional, defaults to "hyperspot")
+  vendor: "hyperspot"
+
+  # Plugin selection priority (optional, defaults to 100)
+  # Lower values = higher priority
+  priority: 100
+
+  # List of enabled global features (REQUIRED)
+  # Must be HyperSpot GTS identifiers for licensed features
+  # Empty array is valid (returns base feature only)
+  static_licenses_features:
+    - "gts.x.core.lic.feat.v1~x.core.global.advanced-analytics.v1"
+    - "gts.x.core.lic.feat.v1~x.core.global.export.v1"
+    - "gts.x.core.lic.feat.v1~x.core.global.api-access.v1"
+
+# Minimal configuration (base feature only):
+# static_licenses_plugin:
+#   static_licenses_features: []
+
+# Bootstrap configuration (no additional features):
+# static_licenses_plugin:
+#   static_licenses_features: []
+
+# Testing configuration (custom vendor):
+# static_licenses_plugin:
+#   vendor: "test-vendor"
+#   priority: 200
+#   static_licenses_features:
+#     - "gts.x.core.lic.feat.v1~x.core.global.test.v1"

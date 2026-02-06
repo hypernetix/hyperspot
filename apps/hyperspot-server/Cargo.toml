@@ -10,7 +10,7 @@ authors.workspace = true
 workspace = true
 
 [features]
-default = []
+default = ["inmemory-licensing-cache", "static-licenses"]
 users-info-example = ["dep:users_info"]
 oop-example = ["dep:calculator_gateway", "dep:calculator"]
 tenant-resolver-example = [
@@ -20,6 +20,9 @@ tenant-resolver-example = [
 ]
 single-tenant = ["dep:single-tenant-tr-plugin"]
 static-tenants = ["dep:static-tr-plugin"]
+no-licensing-cache = ["dep:nocache-plugin"]
+inmemory-licensing-cache = ["dep:inmemory-cache-plugin"]
+static-licenses = ["dep:static-licenses-plugin"]
 otel = ["modkit/otel"]
 
 [dependencies]
@@ -34,10 +37,16 @@ module_orchestrator = { package = "cf-module-orchestrator", path = "../../module
 types = { path = "../../modules/system/types" }
 types_registry = { package = "cf-types-registry", path = "../../modules/system/types_registry/types_registry" }
 tenant-resolver-gw = { package = "cf-tenant-resolver-gw", path = "../../modules/system/tenant_resolver/tenant_resolver-gw" }
+license-enforcer-gw = { package = "cf-license-enforcer-gw", path = "../../modules/system/license_enforcer/license_enforcer-gw" }
 
 # Optional tenant resolver plugins
 single-tenant-tr-plugin = { package = "cf-single-tenant-tr-plugin", path = "../../modules/system/tenant_resolver/plugins/single_tenant_tr_plugin", optional = true }
 static-tr-plugin = { package = "cf-static-tr-plugin", path = "../../modules/system/tenant_resolver/plugins/static_tr_plugin", optional = true }
+
+# Optional license enforcer plugins
+nocache-plugin = { package = "cf-nocache-plugin", path = "../../modules/system/license_enforcer/plugins/cache/nocache_plugin", optional = true }
+inmemory-cache-plugin = { package = "cf-inmemory-cache-plugin", path = "../../modules/system/license_enforcer/plugins/cache/inmemory_cache_plugin", optional = true }
+static-licenses-plugin = { package = "cf-static-licenses-plugin", path = "../../modules/system/license_enforcer/plugins/builtin-integration/static_licenses_plugin", optional = true }
 
 # user modules
 file_parser = { package = "cf-file-parser", path = "../../modules/file_parser" }

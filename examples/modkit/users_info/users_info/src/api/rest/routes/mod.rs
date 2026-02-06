@@ -27,7 +27,7 @@ use crate::api::rest::{dto, handlers};
 use crate::module::ConcreteAppServices;
 use axum::Router;
 use modkit::api::OpenApiRegistry;
-use modkit::api::operation_builder::{AuthReqAction, AuthReqResource, LicenseFeature};
+use modkit::api::operation_builder::{AuthReqAction, AuthReqResource};
 use std::sync::Arc;
 
 mod addresses;
@@ -74,16 +74,6 @@ impl AsRef<str> for Action {
 }
 
 impl AuthReqAction for Action {}
-
-pub(super) struct License;
-
-impl AsRef<str> for License {
-    fn as_ref(&self) -> &'static str {
-        "gts.x.core.lic.feat.v1~x.core.global.base.v1"
-    }
-}
-
-impl LicenseFeature for License {}
 
 /// Register all routes for the `users_info` module
 #[allow(clippy::needless_pass_by_value)]

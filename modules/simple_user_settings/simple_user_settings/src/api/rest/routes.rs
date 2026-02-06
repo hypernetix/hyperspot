@@ -3,7 +3,7 @@ use crate::domain::service::Service;
 use crate::infra::storage::sea_orm_repo::SeaOrmSettingsRepository;
 use axum::http::StatusCode;
 use axum::{Extension, Router};
-use modkit::api::operation_builder::{AuthReqAction, AuthReqResource, LicenseFeature};
+use modkit::api::operation_builder::{AuthReqAction, AuthReqResource};
 use modkit::api::{OpenApiRegistry, OperationBuilder};
 use std::sync::Arc;
 
@@ -40,16 +40,6 @@ impl AsRef<str> for Action {
 
 impl AuthReqAction for Action {}
 
-struct License;
-
-impl AsRef<str> for License {
-    fn as_ref(&self) -> &'static str {
-        "gts.x.core.lic.feat.v1~x.core.global.base.v1"
-    }
-}
-
-impl LicenseFeature for License {}
-
 pub fn register_routes(
     mut router: Router,
     openapi: &dyn OpenApiRegistry,
@@ -61,7 +51,7 @@ pub fn register_routes(
         .description("Retrieve settings for the authenticated user")
         .tag("Settings")
         .require_auth(&Resource::Settings, &Action::Read)
-        .require_license_features::<License>([])
+        .require_no_license_features()
         .handler(handlers::get_settings)
         .json_response_with_schema::<dto::SimpleUserSettingsDto>(
             openapi,
@@ -79,7 +69,7 @@ pub fn register_routes(
         .description("Full update of user settings (POST semantics)")
         .tag("Settings")
         .require_auth(&Resource::Settings, &Action::Write)
-        .require_license_features::<License>([])
+        .require_no_license_features()
         .json_request::<dto::UpdateSimpleUserSettingsRequest>(openapi, "Settings update data")
         .handler(handlers::update_settings)
         .json_response_with_schema::<dto::SimpleUserSettingsDto>(
@@ -100,7 +90,7 @@ pub fn register_routes(
         .description("Partial update of user settings (PATCH semantics)")
         .tag("Settings")
         .require_auth(&Resource::Settings, &Action::Write)
-        .require_license_features::<License>([])
+        .require_no_license_features()
         .json_request::<dto::PatchSimpleUserSettingsRequest>(openapi, "Settings patch data")
         .handler(handlers::patch_settings)
         .json_response_with_schema::<dto::SimpleUserSettingsDto>(
@@ -143,15 +133,6 @@ mod tests {
     }
 
     #[test]
-    fn test_license_as_ref() {
-        let license = License;
-        assert_eq!(
-            license.as_ref(),
-            "gts.x.core.lic.feat.v1~x.core.global.base.v1"
-        );
-    }
-
-    #[test]
     fn test_resource_implements_auth_req_resource() {
         fn assert_auth_req_resource<T: AuthReqResource>(_: &T) {}
         let resource = Resource::Settings;
@@ -163,12 +144,5 @@ mod tests {
         fn assert_auth_req_action<T: AuthReqAction>(_: &T) {}
         let action = Action::Read;
         assert_auth_req_action(&action);
-    }
-
-    #[test]
-    fn test_license_implements_license_feature() {
-        fn assert_license_feature<T: LicenseFeature>(_: &T) {}
-        let license = License;
-        assert_license_feature(&license);
     }
 }

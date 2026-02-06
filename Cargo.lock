@@ -765,6 +765,7 @@ dependencies = [
  "arc-swap",
  "async-trait",
  "axum",
+ "cf-license-enforcer-sdk",
  "cf-modkit",
  "cf-modkit-auth",
  "cf-modkit-macros",
@@ -774,6 +775,7 @@ dependencies = [
  "dashmap",
  "futures-core",
  "governor",
+ "gts",
  "http",
  "inventory",
  "matchit 0.9.1",
@@ -848,6 +850,70 @@ dependencies = [
  "tonic",
  "tower",
  "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "cf-inmemory-cache-plugin"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "cf-license-enforcer-sdk",
+ "cf-modkit",
+ "cf-modkit-security",
+ "cf-modkit-utils",
+ "cf-types-registry-sdk",
+ "gts",
+ "inventory",
+ "moka",
+ "serde",
+ "serde-saphyr",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "cf-license-enforcer-gw"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "cf-inmemory-cache-plugin",
+ "cf-license-enforcer-sdk",
+ "cf-modkit",
+ "cf-modkit-odata",
+ "cf-modkit-security",
+ "cf-nocache-plugin",
+ "cf-static-licenses-plugin",
+ "cf-types-registry-sdk",
+ "gts",
+ "inventory",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "cf-license-enforcer-sdk"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "cf-modkit",
+ "cf-modkit-odata",
+ "cf-modkit-security",
+ "gts",
+ "gts-macros",
+ "schemars 0.8.22",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
  "uuid",
 ]
 
@@ -1150,6 +1216,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "cf-nocache-plugin"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "cf-license-enforcer-sdk",
+ "cf-modkit",
+ "cf-modkit-security",
+ "cf-types-registry-sdk",
+ "inventory",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "cf-nodes-registry"
 version = "0.1.1"
 dependencies = [
@@ -1232,6 +1316,25 @@ dependencies = [
  "cf-modkit-security",
  "cf-tenant-resolver-sdk",
  "cf-types-registry-sdk",
+ "inventory",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "cf-static-licenses-plugin"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "cf-license-enforcer-sdk",
+ "cf-modkit",
+ "cf-modkit-security",
+ "cf-types-registry-sdk",
+ "gts",
  "inventory",
  "serde",
  "serde_json",
@@ -3025,11 +3128,15 @@ dependencies = [
  "cf-api-gateway",
  "cf-file-parser",
  "cf-grpc-hub",
+ "cf-inmemory-cache-plugin",
+ "cf-license-enforcer-gw",
  "cf-modkit",
  "cf-module-orchestrator",
+ "cf-nocache-plugin",
  "cf-nodes-registry",
  "cf-simple-user-settings",
  "cf-single-tenant-tr-plugin",
+ "cf-static-licenses-plugin",
  "cf-static-tr-plugin",
  "cf-tenant-resolver-gw",
  "cf-types-registry",
@@ -3649,6 +3756,26 @@ dependencies = [
  "libc",
  "wasi",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "moka"
+version = "0.12.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b4ac832c50ced444ef6be0767a008b02c106a909ba79d1d830501e94b96f6b7e"
+dependencies = [
+ "async-lock",
+ "crossbeam-channel",
+ "crossbeam-epoch",
+ "crossbeam-utils",
+ "equivalent",
+ "event-listener",
+ "futures-util",
+ "parking_lot",
+ "portable-atomic",
+ "smallvec 1.15.1",
+ "tagptr",
+ "uuid",
 ]
 
 [[package]]
@@ -6191,6 +6318,12 @@ checksum = "fce91f2f0ec87dff7e6bcbbeb267439aa1188703003c6055193c821487400432"
 dependencies = [
  "unicode-width",
 ]
+
+[[package]]
+name = "tagptr"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7b2093cf4c8eb1e67749a6762251bc9cd836b6fc171623bd0a9d324d37af2417"
 
 [[package]]
 name = "tap"

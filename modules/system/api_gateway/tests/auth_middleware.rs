@@ -15,6 +15,7 @@ use axum::{
     body::Body,
     http::{Request, StatusCode},
 };
+use license_enforcer_sdk::{global_features, models::LicenseFeatureId};
 use modkit::{
     ClientHub, Module,
     api::{
@@ -178,14 +179,13 @@ impl AsRef<str> for Action {
 impl AuthReqAction for Action {}
 
 struct License;
+impl LicenseFeature for License {}
 
-impl AsRef<str> for License {
-    fn as_ref(&self) -> &'static str {
-        "gts.x.core.lic.feat.v1~x.core.global.base.v1"
+impl From<License> for gts::GtsID {
+    fn from(_value: License) -> Self {
+        global_features::BaseFeature.to_gts()
     }
 }
-
-impl LicenseFeature for License {}
 
 impl RestApiCapability for TestAuthModule {
     fn register_rest(
