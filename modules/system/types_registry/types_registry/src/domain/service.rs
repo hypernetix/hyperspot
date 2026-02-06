@@ -2,6 +2,7 @@
 
 use std::sync::Arc;
 
+use modkit_macros::domain_model;
 use types_registry_sdk::{GtsEntity, ListQuery, RegisterResult};
 
 use super::error::DomainError;
@@ -12,6 +13,7 @@ use crate::config::TypesRegistryConfig;
 ///
 /// This service orchestrates business logic and delegates storage
 /// operations to the repository.
+#[domain_model]
 pub struct TypesRegistryService {
     repo: Arc<dyn GtsRepository>,
     config: TypesRegistryConfig,
@@ -131,10 +133,12 @@ impl TypesRegistryService {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use modkit_macros::domain_model;
     use serde_json::json;
     use std::sync::atomic::{AtomicBool, Ordering};
     use uuid::Uuid;
 
+    #[domain_model]
     struct MockRepo {
         is_ready: AtomicBool,
         fail_switch: bool,

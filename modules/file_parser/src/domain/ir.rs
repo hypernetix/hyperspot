@@ -1,7 +1,9 @@
+use modkit_macros::domain_model;
 use time::OffsetDateTime;
 use uuid::Uuid;
 
 /// Intermediate representation of a parsed document
+#[domain_model]
 #[derive(Debug, Clone, PartialEq)]
 pub struct ParsedDocument {
     pub id: Option<Uuid>,
@@ -12,6 +14,7 @@ pub struct ParsedDocument {
 }
 
 /// Metadata about the parsed document
+#[domain_model]
 #[derive(Debug, Clone, PartialEq)]
 pub struct ParsedMetadata {
     pub source: ParsedSource,
@@ -23,6 +26,7 @@ pub struct ParsedMetadata {
 }
 
 /// Source of the parsed document
+#[domain_model]
 #[derive(Debug, Clone, PartialEq)]
 pub enum ParsedSource {
     LocalPath(String),
@@ -31,6 +35,7 @@ pub enum ParsedSource {
 }
 
 /// Inline-level text styling
+#[domain_model]
 #[derive(Debug, Clone, PartialEq, Default)]
 #[allow(clippy::struct_excessive_bools)]
 pub struct InlineStyle {
@@ -42,6 +47,7 @@ pub struct InlineStyle {
 }
 
 /// Inline-level content elements
+#[domain_model]
 #[derive(Debug, Clone, PartialEq)]
 pub enum Inline {
     Text {
@@ -95,12 +101,14 @@ impl Inline {
 }
 
 /// Structured table representation
+#[domain_model]
 #[derive(Debug, Clone, PartialEq)]
 pub struct TableBlock {
     pub rows: Vec<TableRow>,
 }
 
 /// A single row in a table
+#[domain_model]
 #[derive(Debug, Clone, PartialEq)]
 pub struct TableRow {
     pub is_header: bool,
@@ -108,12 +116,14 @@ pub struct TableRow {
 }
 
 /// A single cell in a table, containing block-level content
+#[domain_model]
 #[derive(Debug, Clone, PartialEq)]
 pub struct TableCell {
     pub blocks: Vec<ParsedBlock>,
 }
 
 /// Block-level elements in the document
+#[domain_model]
 #[derive(Debug, Clone, PartialEq)]
 pub enum ParsedBlock {
     Heading {
@@ -146,6 +156,7 @@ pub enum ParsedBlock {
 }
 
 /// Builder for constructing `ParsedDocument` in a fluent style
+#[domain_model]
 #[must_use]
 pub struct DocumentBuilder {
     id: Option<Uuid>,

@@ -329,6 +329,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "de0309_must_have_domain_model"
+version = "0.1.0"
+dependencies = [
+ "cf-modkit",
+ "cf-modkit-macros",
+ "clippy_utils",
+ "dylint_linting",
+ "dylint_testing",
+ "lint_utils",
+]
+
+[[package]]
 name = "de0503_plugin_client_suffix"
 version = "0.2.0"
 dependencies = [

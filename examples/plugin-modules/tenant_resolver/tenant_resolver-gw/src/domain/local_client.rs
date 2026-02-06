@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use modkit_macros::domain_model;
 use modkit_odata::{ODataQuery, Page};
 use modkit_security::SecurityContext;
 use tenant_resolver_example_sdk::{
@@ -13,6 +14,7 @@ use crate::domain::service::Service;
 /// Local (in-process) client for the tenant resolver gateway.
 ///
 /// Registered in `ClientHub` by the gateway module during `init()`.
+#[domain_model]
 pub struct TenantResolverGwClient {
     svc: Arc<Service>,
 }

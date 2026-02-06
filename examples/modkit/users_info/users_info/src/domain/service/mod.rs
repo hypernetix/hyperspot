@@ -41,6 +41,8 @@
 
 use std::sync::Arc;
 
+use modkit_macros::domain_model;
+
 use crate::domain::error::DomainError;
 use crate::domain::events::UserDomainEvent;
 use crate::domain::ports::{AuditPort, EventPublisher};
@@ -99,6 +101,7 @@ pub(crate) async fn resolve_accessible_tenants(
 }
 
 /// Configuration for the domain service
+#[domain_model]
 #[derive(Debug, Clone)]
 pub struct ServiceConfig {
     pub max_display_name_length: usize,
@@ -136,6 +139,7 @@ impl ServiceConfig {
 //
 // **Security**: A task-local guard prevents `Db::conn()` from being called
 // inside transaction closures, eliminating the factory bypass vulnerability.
+#[domain_model]
 pub(crate) struct AppServices<UR, CR, AR>
 where
     UR: UsersRepository + 'static,

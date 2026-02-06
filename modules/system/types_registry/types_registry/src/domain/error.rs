@@ -1,10 +1,12 @@
 //! Domain error types for the Types Registry module.
 
+use modkit_macros::domain_model;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use types_registry_sdk::TypesRegistryError;
 
 /// A structured validation error with typed fields.
+#[domain_model]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ValidationError {
     /// The GTS ID of the entity that failed validation.
@@ -41,6 +43,7 @@ impl std::fmt::Display for ValidationError {
 }
 
 /// Domain-level errors for the Types Registry module.
+#[domain_model]
 #[derive(Error, Debug)]
 pub enum DomainError {
     /// The GTS ID format is invalid.

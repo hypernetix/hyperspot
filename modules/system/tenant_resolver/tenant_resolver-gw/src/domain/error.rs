@@ -1,9 +1,11 @@
 //! Domain errors for the tenant resolver gateway.
 
+use modkit_macros::domain_model;
 use tenant_resolver_sdk::TenantResolverError;
 use uuid::Uuid;
 
 /// Internal domain errors.
+#[domain_model]
 #[derive(thiserror::Error, Debug)]
 pub enum DomainError {
     #[error("types registry is not available: {0}")]

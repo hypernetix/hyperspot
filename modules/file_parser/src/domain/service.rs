@@ -4,6 +4,7 @@ use std::time::Duration;
 
 use bytes::Bytes;
 use modkit_http::HttpClient;
+use modkit_macros::domain_model;
 use tracing::{debug, info, instrument};
 
 use crate::domain::error::DomainError;
@@ -28,6 +29,7 @@ const EXTENSION_MIME_MAPPINGS: &[(&str, &str)] = &[
 ];
 
 /// File parser service that routes to appropriate backends
+#[domain_model]
 #[derive(Clone)]
 pub struct FileParserService {
     parsers: Vec<Arc<dyn FileParserBackend>>,
@@ -38,6 +40,7 @@ pub struct FileParserService {
 }
 
 /// Configuration for the file parser service
+#[domain_model]
 #[derive(Debug, Clone)]
 pub struct ServiceConfig {
     pub max_file_size_bytes: usize,
@@ -54,6 +57,7 @@ impl Default for ServiceConfig {
 }
 
 /// Information about available parsers
+#[domain_model]
 #[derive(Debug, Clone)]
 pub struct FileParserInfo {
     pub supported_extensions: std::collections::HashMap<String, Vec<String>>,
