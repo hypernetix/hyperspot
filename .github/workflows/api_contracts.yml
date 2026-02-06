@@ -9,7 +9,7 @@ on:
       - '**/*.rs'
 
 concurrency:
-  group: api-contract-${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
