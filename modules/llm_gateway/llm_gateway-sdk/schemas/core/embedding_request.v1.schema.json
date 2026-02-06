@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.x.llmgw.core.embedding_request.v1~",
+  "title": "EmbeddingRequest",
+  "description": "LLM Gateway embedding request from consumer",
+  "type": "object",
+  "properties": {
+    "model": {
+      "type": "string",
+      "description": "Model identifier from Model Registry"
+    },
+    "input": {
+      "oneOf": [
+        { "type": "string" },
+        { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+      ],
+      "description": "Text or array of texts to embed"
+    },
+    "dimensions": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Desired output dimensions (if model supports)"
+    },
+    "encoding_format": {
+      "type": "string",
+      "enum": ["float", "base64"],
+      "default": "float",
+      "description": "Output encoding format"
+    }
+  },
+  "required": ["model", "input"],
+  "additionalProperties": false
+}

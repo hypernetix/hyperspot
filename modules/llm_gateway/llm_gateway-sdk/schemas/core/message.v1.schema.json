@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.x.llmgw.core.message.v1~",
+  "title": "Message",
+  "description": "Conversation message with role and content",
+  "type": "object",
+  "properties": {
+    "role": {
+      "$ref": "gts://gts.x.llmgw.core.role.v1~",
+      "description": "Message author role"
+    },
+    "content": {
+      "type": "array",
+      "items": {
+        "$ref": "gts://gts.x.llmgw.content.content_part.v1~"
+      },
+      "minItems": 1,
+      "description": "Message content parts"
+    }
+  },
+  "required": ["role", "content"],
+  "additionalProperties": false
+}

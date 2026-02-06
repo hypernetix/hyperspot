@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.x.llmgw.tools.tool_unified.v1~",
+  "title": "ToolUnified",
+  "description": "Unified tool format compatible with OpenAI/Anthropic function calling",
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "unified",
+      "description": "Discriminator for tool type"
+    },
+    "name": {
+      "type": "string",
+      "description": "Tool name"
+    },
+    "description": {
+      "type": "string",
+      "description": "Tool description for the model"
+    },
+    "parameters": {
+      "$ref": "gts://gts.x.llmgw.tools.schema.v1~",
+      "description": "JSON Schema for tool parameters"
+    }
+  },
+  "required": ["type", "name", "description", "parameters"],
+  "additionalProperties": false
+}

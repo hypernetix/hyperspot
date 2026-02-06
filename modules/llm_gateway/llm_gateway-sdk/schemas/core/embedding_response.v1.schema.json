@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.x.llmgw.core.embedding_response.v1~",
+  "title": "EmbeddingResponse",
+  "description": "LLM Gateway embedding response to consumer",
+  "type": "object",
+  "properties": {
+    "model": {
+      "type": "string",
+      "description": "Model used for embedding"
+    },
+    "data": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "index": {
+            "type": "integer",
+            "description": "Index of the input text"
+          },
+          "embedding": {
+            "oneOf": [
+              { "type": "array", "items": { "type": "number" } },
+              { "type": "string", "description": "Base64-encoded embedding" }
+            ],
+            "description": "Embedding vector"
+          }
+        },
+        "required": ["index", "embedding"]
+      },
+      "description": "Embedding results"
+    },
+    "usage": {
+      "$ref": "gts://gts.x.llmgw.core.usage.v1~",
+      "description": "Token usage"
+    }
+  },
+  "required": ["model", "data", "usage"],
+  "additionalProperties": false
+}

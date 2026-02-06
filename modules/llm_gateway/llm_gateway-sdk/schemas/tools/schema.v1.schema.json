@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.x.llmgw.tools.schema.v1~",
+  "title": "Schema",
+  "description": "JSON Schema wrapper for structured output or tool parameters",
+  "type": "object",
+  "properties": {
+    "json_schema": {
+      "type": "object",
+      "description": "JSON Schema definition",
+      "additionalProperties": true
+    }
+  },
+  "required": ["json_schema"],
+  "additionalProperties": false
+}

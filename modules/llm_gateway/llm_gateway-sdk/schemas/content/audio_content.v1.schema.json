@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.x.llmgw.content.audio_content.v1~",
+  "title": "AudioContent",
+  "description": "Audio content part with FileStorage URL",
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "audio",
+      "description": "Content type discriminator"
+    },
+    "url": {
+      "type": "string",
+      "format": "uri",
+      "description": "FileStorage URL for the audio"
+    }
+  },
+  "required": ["type", "url"],
+  "additionalProperties": false
+}

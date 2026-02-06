@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.x.llmgw.async.error.v1~",
+  "title": "Error",
+  "description": "Error information for failed operations",
+  "type": "object",
+  "properties": {
+    "code": {
+      "type": "string",
+      "description": "Error code"
+    },
+    "message": {
+      "type": "string",
+      "description": "Human-readable error message"
+    }
+  },
+  "required": ["code", "message"],
+  "additionalProperties": false
+}
