@@ -2,7 +2,7 @@
 name = "de1301_no_print_macros"
 version = "0.1.0"
 authors = ["Hypernetix"]
-description = "Forbids println!/eprintln!/print!/eprint!/dbg! macros in production code (DE1301)"
+description = "description goes here"
 edition.workspace = true
 publish = false
 
