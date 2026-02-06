@@ -162,7 +162,12 @@ impl<'ast, 'a, 'cx> visit::Visitor<'ast> for ForbiddenMacroVisitor<'a, 'cx> {
                 visit::walk_item(self, item);
                 self.allow_stack.pop();
             }
-            _ => visit::walk_item(self, item),
+            _ => {
+                let allow_here = parent_allow || is_test_item(&item.attrs);
+                self.allow_stack.push(allow_here);
+                visit::walk_item(self, item);
+                self.allow_stack.pop();
+            }
         }
     }
 

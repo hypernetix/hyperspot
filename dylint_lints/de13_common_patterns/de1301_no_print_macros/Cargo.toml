@@ -2,7 +2,7 @@
 name = "de1301_no_print_macros"
 version = "0.1.0"
 authors = ["Hypernetix"]
-description = "description goes here"
+description = "Forbids println!/eprintln!/print!/eprint!/dbg! macros in production code (DE1301)"
 edition.workspace = true
 publish = false
 
@@ -38,6 +38,10 @@ crate-type = ["proc-macro"]
 [[example]]
 name = "allowed_in_tests"
 path = "ui/allowed_in_tests.rs"
+
+[[example]]
+name = "allowed_in_cfg_test_impl"
+path = "ui/allowed_in_cfg_test_impl.rs"
 
 [dependencies]
 clippy_utils.workspace = true
