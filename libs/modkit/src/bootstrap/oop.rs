@@ -593,7 +593,14 @@ pub async fn run_oop_with_options(opts: OopRunOptions) -> Result<()> {
 
 #[allow(unknown_lints, de1301_no_print_macros)] // direct stdout config print before exit
 fn print_config(config: &AppConfig) {
-    println!("{}", config.to_yaml().unwrap());
+    match config.to_yaml() {
+        Ok(yaml) => {
+            println!("{yaml}");
+        }
+        Err(e) => {
+            eprintln!("Failed to render config as YAML: {e}");
+        }
+    }
 }
 
 #[cfg(test)]
