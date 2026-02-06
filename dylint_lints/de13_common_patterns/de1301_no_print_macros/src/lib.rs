@@ -4,7 +4,7 @@
 extern crate rustc_ast;
 extern crate rustc_span;
 
-use rustc_ast::{visit, AttrKind, Attribute, ExprKind, Item, ItemKind, MacCall, VisibilityKind, visit::Visitor};
+use rustc_ast::{Attribute, AttrKind, ExprKind, Item, ItemKind, MacCall, VisibilityKind, visit, visit::Visitor};
 use rustc_lint::{EarlyContext, EarlyLintPass, LintContext};
 use rustc_session::config::CrateType;
 use rustc_span::{FileName, sym};
@@ -169,6 +169,23 @@ impl<'ast, 'a, 'cx> visit::Visitor<'ast> for ForbiddenMacroVisitor<'a, 'cx> {
                 self.allow_stack.pop();
             }
         }
+    }
+
+    fn visit_assoc_item(
+        &mut self,
+        assoc_item: &'ast rustc_ast::Item<rustc_ast::AssocItemKind>,
+        ctxt: visit::AssocCtxt,
+    ) {
+        let parent_allow = self.allow_stack.last().copied().unwrap_or(false);
+
+        let is_private = matches!(assoc_item.vis.kind, VisibilityKind::Inherited);
+        let allow_here = parent_allow
+            || is_test_item(&assoc_item.attrs)
+            || (self.in_proc_macro_crate && (is_private || has_proc_macro_attr(&assoc_item.attrs)));
+
+        self.allow_stack.push(allow_here);
+        visit::walk_assoc_item(self, assoc_item, ctxt);
+        self.allow_stack.pop();
     }
 
     fn visit_expr(&mut self, expr: &'ast rustc_ast::Expr) {

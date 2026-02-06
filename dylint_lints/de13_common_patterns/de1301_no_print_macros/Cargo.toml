@@ -2,7 +2,7 @@
 name = "de1301_no_print_macros"
 version = "0.1.0"
 authors = ["Hypernetix"]
-description = "description goes here"
+description = "Forbids println!/eprintln!/print!/eprint!/dbg! macros in production code (DE1301)"
 edition.workspace = true
 publish = false
 
@@ -28,6 +28,11 @@ path = "ui/allowed_in_build_rs.rs"
 [[example]]
 name = "allowed_in_proc_macro"
 path = "ui/allowed_in_proc_macro.rs"
+crate-type = ["proc-macro"]
+
+[[example]]
+name = "allowed_in_proc_macro_impl_method"
+path = "ui/allowed_in_proc_macro_impl_method.rs"
 crate-type = ["proc-macro"]
 
 [[example]]
