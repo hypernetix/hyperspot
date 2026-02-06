@@ -40,8 +40,10 @@ Chosen option: "Option 3 - Balanced approach with selective caching and indexed 
 ## Related Design Elements
 
 **Principles**:
+
 * `fdd-settings-service-constraint-performance` - Performance requirements
 
 **Requirements**:
-* `fdd-settings-service-fr-setting-value-crud` - CRUD operations requiring optimization
+
+* `fdd-settings-service-fr-setting-value-crud` - CRUD operations with performance constraints
 * `fdd-settings-service-fr-tenant-inheritance` - Hierarchy traversal requiring indexes

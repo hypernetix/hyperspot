@@ -40,5 +40,6 @@ Chosen option: "Option 1 - Per-tenant transactions with independent commits", be
 ## Related Design Elements
 
 **Requirements**:
-* `fdd-settings-service-fr-batch-operations` - Batch update with partial success
+
+* `fdd-settings-service-fr-batch-operations` - Batch update operations with partial success
 * `fdd-settings-service-fr-event-generation` - Audit events for successful updates

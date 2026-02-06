@@ -40,8 +40,10 @@ Chosen option: "Option 1 - Schema-based defaults stored in GTS schema definition
 ## Related Design Elements
 
 **Principles**:
+
 * `fdd-settings-service-principle-default-fallback` - Always return a value
 
 **Requirements**:
+
 * `fdd-settings-service-fr-tenant-inheritance` - Value resolution with defaults
 * `fdd-settings-service-fr-gts-base-setting-type` - Default value in schema

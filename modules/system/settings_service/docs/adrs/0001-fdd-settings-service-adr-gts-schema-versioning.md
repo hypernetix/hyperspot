@@ -40,10 +40,12 @@ Chosen option: "Option 1 - Semantic versioning with GTS Type Registry", because 
 ## Related Design Elements
 
 **Principles**:
+
 * `fdd-settings-service-principle-api-compatibility` - API stability with semantic versioning
 * `fdd-settings-service-constraint-gts-transition` - GTS schema versioning requirement
 
 **Requirements**:
+
 * `fdd-settings-service-fr-gts-versioning` - GTS-based type versioning support
 * `fdd-settings-service-fr-gts-base-setting-type` - Base GTS type definition
 * `fdd-settings-service-fr-gts-extension-point` - Extension point registration

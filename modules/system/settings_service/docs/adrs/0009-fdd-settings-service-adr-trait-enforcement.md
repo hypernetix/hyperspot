@@ -42,46 +42,49 @@ Chosen option: "Option 1 - Domain layer enforcement with TraitsManager component
 ### Performance Requirements
 
 **Target Evaluation SLA**:
-- **p95 latency**: <100ms for CEL expression evaluation
-- **p99 latency**: <200ms for complex expressions
-- **Timeout**: 500ms hard limit per expression evaluation
-- **Memory limit**: 10MB per expression evaluation context
+
+* **p95 latency**: <100ms for CEL expression evaluation
+* **p99 latency**: <200ms for complex expressions
+* **Timeout**: 500ms hard limit per expression evaluation
+* **Memory limit**: 10MB per expression evaluation context
 
 **Optimization Strategy**:
 
 1. **Precompile Expressions**:
-   - Parse and compile CEL expressions at setting type creation time
-   - Store compiled AST in memory alongside setting type metadata
-   - Reject invalid expressions during type creation (fail-fast)
+   * Parse and compile CEL expressions at setting type creation time
+   * Store compiled AST in memory alongside setting type metadata
+   * Reject invalid expressions during type creation (fail-fast)
 
 2. **Memoize Parsed ASTs**:
-   - Cache compiled expressions in-memory per instance
-   - Key: `setting_type_id:expression_hash`
-   - TTL: Indefinite (invalidate only on setting type update)
-   - Max cache size: 10,000 compiled expressions per instance
+   * Cache compiled expressions in-memory per instance
+   * Key: `setting_type_id:expression_hash`
+   * TTL: Indefinite (invalidate only on setting type update)
+   * Max cache size: 10,000 compiled expressions per instance
 
 3. **Per-Tenant Expression Caches**:
-   - Cache evaluation results for identical context
-   - Key: `setting_type_id:tenant_id:context_hash`
-   - TTL: 60 seconds (balance freshness vs performance)
-   - Max cache size: 50,000 results per instance
-   - LRU eviction when limit reached
+   * Cache evaluation results for identical context
+   * Key: `setting_type_id:tenant_id:context_hash`
+   * TTL: 60 seconds (balance freshness vs performance)
+   * Max cache size: 50,000 results per instance
+   * LRU eviction when limit reached
 
 4. **Short-Circuiting**:
-   - Evaluate `mutable_access_scope` conditions in order
-   - Stop evaluation on first `false` result (AND semantics)
-   - Skip expression evaluation if tenant context unchanged
+   * Evaluate `mutable_access_scope` conditions in order
+   * Stop evaluation on first `false` result (AND semantics)
+   * Skip expression evaluation if tenant context unchanged
 
 ### Validation at Setting Type Creation
 
 **Syntax Validation**:
-- Parse CEL expression using CEL parser
-- Verify expression compiles without errors
-- Check for balanced parentheses, valid operators, proper quoting
-- Reject expressions with syntax errors immediately
+
+* Parse CEL expression using CEL parser
+* Verify expression compiles without errors
+* Check for balanced parentheses, valid operators, proper quoting
+* Reject expressions with syntax errors immediately
 
 **Operator Whitelist**:
-```
+
+```text
 Allowed operators:
 - Comparison: ==, !=, <, <=, >, >=
 - Logical: &&, ||, !
@@ -96,12 +99,14 @@ Disallowed operators:
 ```
 
 **Type Checking**:
-- Validate variable references: `$tenant_kind`, `$subject_tenant_kind`, `$tenant_id`, `$user_id`, `$mfa_enabled`
-- Ensure comparison types match (string vs string, bool vs bool)
-- Verify function arguments match expected types
-- Reject expressions with type mismatches
+
+* Validate variable references: `$tenant_kind`, `$subject_tenant_kind`, `$tenant_id`, `$user_id`, `$mfa_enabled`
+* Ensure comparison types match (string vs string, bool vs bool)
+* Verify function arguments match expected types
+* Reject expressions with type mismatches
 
 **Example Validation**:
+
 ```rust
 // Valid expressions
 "$tenant_kind == 'PARTNER'"
@@ -116,46 +121,49 @@ Disallowed operators:
 ```
 
 **Validation Response**:
-- **On syntax error**: Return HTTP 400 with detailed error message
-- **On type error**: Return HTTP 400 with type mismatch details
-- **On security violation**: Return HTTP 400 with security policy violation
-- **Warning mode**: Log warnings for deprecated patterns but allow creation
+
+* **On syntax error**: Return HTTP 400 with detailed error message
+* **On type error**: Return HTTP 400 with type mismatch details
+* **On security violation**: Return HTTP 400 with security policy violation
+* **Warning mode**: Log warnings for deprecated patterns but allow creation
 
 ### Runtime Error Handling
 
 **Evaluation Failure Scenarios**:
 
 1. **Expression Timeout** (>500ms):
-   - Fallback: Deny access (fail-secure)
-   - Audit log: `trait_evaluation_timeout`
-   - Error code: `TRAIT_EVAL_TIMEOUT`
-   - User message: "Access control evaluation timed out. Contact administrator."
+   * Fallback: Deny access (fail-secure)
+   * Audit log: `trait_evaluation_timeout`
+   * Error code: `TRAIT_EVAL_TIMEOUT`
+   * User message: "Access control evaluation timed out. Contact administrator."
 
 2. **Evaluation Exception** (runtime error):
-   - Fallback: Deny access (fail-secure)
-   - Audit log: `trait_evaluation_error` with exception details
-   - Error code: `TRAIT_EVAL_ERROR`
-   - User message: "Access control evaluation failed. Contact administrator."
+   * Fallback: Deny access (fail-secure)
+   * Audit log: `trait_evaluation_error` with exception details
+   * Error code: `TRAIT_EVAL_ERROR`
+   * User message: "Access control evaluation failed. Contact administrator."
 
 3. **Missing Context Variable**:
-   - Fallback: Treat as `null` or deny access based on expression
-   - Audit log: `trait_evaluation_missing_context`
-   - Error code: `TRAIT_EVAL_MISSING_VAR`
-   - User message: "Required context not available for access check."
+   * Fallback: Treat as `null` or deny access based on expression
+   * Audit log: `trait_evaluation_missing_context`
+   * Error code: `TRAIT_EVAL_MISSING_VAR`
+   * User message: "Required context not available for access check."
 
 4. **Memory Limit Exceeded**:
-   - Fallback: Deny access (fail-secure)
-   - Audit log: `trait_evaluation_oom`
-   - Error code: `TRAIT_EVAL_OOM`
-   - User message: "Access control evaluation exceeded memory limit."
+   * Fallback: Deny access (fail-secure)
+   * Audit log: `trait_evaluation_oom`
+   * Error code: `TRAIT_EVAL_OOM`
+   * User message: "Access control evaluation exceeded memory limit."
 
 **Fallback Policies**:
-- **Default**: Deny access on any evaluation failure (fail-secure)
-- **Audit**: Log all evaluation failures with full context
-- **Metrics**: Track failure rate per setting type
-- **Alerting**: Alert on >1% evaluation failure rate
+
+* **Default**: Deny access on any evaluation failure (fail-secure)
+* **Audit**: Log all evaluation failures with full context
+* **Metrics**: Track failure rate per setting type
+* **Alerting**: Alert on >1% evaluation failure rate
 
 **User-Facing Error Messages**:
+
 ```json
 {
   "type": "https://hyperspot.dev/problems/settings/trait-evaluation-failed",
@@ -176,7 +184,8 @@ Disallowed operators:
 ### Supported CEL Operators and Functions
 
 **Available Variables**:
-```
+
+```text
 $tenant_kind          : string  - Kind of tenant (ROOT, PARTNER, RESELLER, CUSTOMER, etc.)
 $subject_tenant_kind  : string  - Kind of subject tenant (for hierarchy checks)
 $tenant_id            : string  - UUID of tenant
@@ -187,7 +196,8 @@ $is_barrier_tenant    : bool    - Whether tenant is a barrier tenant
 ```
 
 **Supported Functions**:
-```
+
+```text
 // String functions
 contains(str, substr)     - Check if string contains substring
 startsWith(str, prefix)   - Check if string starts with prefix
@@ -204,20 +214,22 @@ type(value)              - Get type of value (for debugging)
 ```
 
 **Security Restrictions**:
-- **No file system access**: Cannot read/write files
-- **No network access**: Cannot make HTTP requests
-- **No code execution**: Cannot execute arbitrary code
-- **No reflection**: Cannot inspect or modify runtime state
-- **Sandboxed evaluation**: Runs in isolated context
-- **Resource limits**: CPU time, memory, stack depth limits enforced
-- **No recursion**: Recursive expressions rejected at validation
+
+* **No file system access**: Cannot read/write files
+* **No network access**: Cannot make HTTP requests
+* **No code execution**: Cannot execute arbitrary code
+* **No reflection**: Cannot inspect or modify runtime state
+* **Sandboxed evaluation**: Runs in isolated context
+* **Resource limits**: CPU time, memory, stack depth limits enforced
+* **No recursion**: Recursive expressions rejected at validation
 
 ### Debugging Guidance
 
 **Logging Levels**:
 
 1. **DEBUG**: Log all expression evaluations with context
-   ```
+
+   ```text
    [DEBUG] TraitsManager: Evaluating mutable_access_scope
      setting_type: data.retention
      expression: $tenant_kind == $subject_tenant_kind
@@ -227,7 +239,8 @@ type(value)              - Get type of value (for debugging)
    ```
 
 2. **INFO**: Log evaluation failures and slow evaluations (>50ms)
-   ```
+
+   ```text
    [INFO] TraitsManager: Slow expression evaluation
      setting_type: data.retention
      expression: $tenant_kind in ['ENTERPRISE', 'PARTNER'] && $mfa_enabled
@@ -235,7 +248,8 @@ type(value)              - Get type of value (for debugging)
    ```
 
 3. **WARN**: Log evaluation timeouts and errors
-   ```
+
+   ```text
    [WARN] TraitsManager: Expression evaluation timeout
      setting_type: data.retention
      expression: complex_expression_here
@@ -243,14 +257,16 @@ type(value)              - Get type of value (for debugging)
    ```
 
 4. **ERROR**: Log critical failures affecting multiple evaluations
-   ```
+
+   ```text
    [ERROR] TraitsManager: Expression cache corruption detected
      affected_types: 15
      action: Rebuilding cache
    ```
 
 **Example Trace Output**:
-```
+
+```text
 [TRACE] TraitsManager::check_mutable_access_scope START
   setting_type_id: 550e8400-e29b-41d4-a716-446655440000
   tenant_id: f3e557f0-8bc1-421e-9781-1f3456d21742
@@ -270,7 +286,7 @@ type(value)              - Get type of value (for debugging)
 
 **Sample Expressions for Testing**:
 
-```rust
+```cel
 // Basic equality checks
 "$tenant_kind == 'PARTNER'"
 "$tenant_kind == $subject_tenant_kind"
@@ -342,32 +358,35 @@ fn bench_expression_evaluation(b: &mut Bencher) {
 
 ## Implementation Checklist
 
-- [ ] Implement CEL parser integration with precompilation
-- [ ] Add expression validation at setting type creation
-- [ ] Implement in-memory AST cache with LRU eviction
-- [ ] Add per-tenant evaluation result cache
-- [ ] Implement timeout and resource limits
-- [ ] Add comprehensive error handling with fallback policies
-- [ ] Create audit log entries for evaluation failures
-- [ ] Implement debug logging with configurable levels
-- [ ] Add performance metrics and alerting
-- [ ] Create test harness for expression validation
-- [ ] Write integration tests for all supported operators
-- [ ] Document security restrictions and operator whitelist
-- [ ] Add performance benchmarks (target: p95 <100ms)
+* [ ] Implement CEL parser integration with precompilation
+* [ ] Add expression validation at setting type creation
+* [ ] Implement in-memory AST cache with LRU eviction
+* [ ] Add per-tenant evaluation result cache
+* [ ] Implement timeout and resource limits
+* [ ] Add comprehensive error handling with fallback policies
+* [ ] Create audit log entries for evaluation failures
+* [ ] Implement debug logging with configurable levels
+* [ ] Add performance metrics and alerting
+* [ ] Create test harness for expression validation
+* [ ] Write integration tests for all supported operators
+* [ ] Document security restrictions and operator whitelist
+* [ ] Add performance benchmarks (target: p95 <100ms)
 
 ## Related Design Elements
 
 **Principles**:
+
 * `fdd-settings-service-principle-trait-configuration` - Trait-based configuration
 * `fdd-settings-service-principle-ddd-light` - Domain-driven design
 
 **Requirements**:
+
 * `fdd-settings-service-fr-setting-type-definition` - Trait configuration
 * `fdd-settings-service-fr-compliance-mode` - Compliance trait enforcement
 * `fdd-settings-service-fr-access-control` - Access control trait enforcement
 
 **Design Components**:
+
 * TraitsManager - Domain component responsible for trait enforcement
 * SettingsOperations.mutable_access_scope - CEL expressions for write access control
 * SettingsOperations.read_access_scope - CEL expressions for read access control (future)

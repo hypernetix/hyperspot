@@ -40,5 +40,6 @@ Chosen option: "Option 3 - Separate locks table with foreign key constraints", b
 ## Related Design Elements
 
 **Requirements**:
+
 * `fdd-settings-service-fr-compliance-mode` - Compliance lock support
 * `fdd-settings-service-fr-event-generation` - Lock audit events

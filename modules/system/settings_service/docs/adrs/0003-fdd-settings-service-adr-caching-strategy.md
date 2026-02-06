@@ -40,32 +40,33 @@ Chosen option: "Option 2 - In-memory caching per instance with event-based inval
 The following parameters MUST be configurable at Settings Service module bootstrap:
 
 1. **`cache_tenant_hierarchy_depth`** (integer, default: 5)
-   - Maximum number of tenant hierarchy levels to cache per tenant
-   - Prevents OOM by limiting cached hierarchy depth
-   - Example: depth=5 caches tenant + 4 ancestors, ignoring deeper ancestors
-   - Rationale: Most inheritance resolution occurs within 5 levels; deeper hierarchies are rare
+   * Maximum number of tenant hierarchy levels to cache per tenant
+   * Prevents OOM by limiting cached hierarchy depth
+   * Example: depth=5 caches tenant + 4 ancestors, ignoring deeper ancestors
+   * Rationale: Most inheritance resolution occurs within 5 levels; deeper hierarchies are rare
 
 2. **`cache_sliding_window_size`** (duration, default: 300 seconds)
-   - Time window for sliding window cache invalidation
-   - Cached items are invalidated if not accessed within this window
-   - Balances cache freshness with hit rate
-   - Example: 300s means items unused for 5 minutes are evicted
+   * Time window for sliding window cache invalidation
+   * Cached items are invalidated if not accessed within this window
+   * Balances cache freshness with hit rate
+   * Example: 300s means items unused for 5 minutes are evicted
 
 3. **`cache_max_entries`** (integer, default: 10000)
-   - Maximum number of cached setting values per instance
-   - Hard limit to prevent unbounded memory growth
-   - LRU eviction when limit reached
+   * Maximum number of cached setting values per instance
+   * Hard limit to prevent unbounded memory growth
+   * LRU eviction when limit reached
 
 4. **`cache_gts_schema_ttl`** (duration, default: 3600 seconds)
-   - Time-to-live for cached GTS schema definitions
-   - Longer TTL acceptable as schemas change infrequently
+   * Time-to-live for cached GTS schema definitions
+   * Longer TTL acceptable as schemas change infrequently
 
 5. **`cache_enabled`** (boolean, default: true)
-   - Master switch to disable all caching (for debugging/testing)
+   * Master switch to disable all caching (for debugging/testing)
 
 ### Sliding Window Invalidation
 
 Cache invalidation uses a sliding window mechanism:
+
 * Each cached item tracks last access timestamp
 * Background task runs every `cache_sliding_window_size / 2` seconds
 * Items with `last_access < now - cache_sliding_window_size` are evicted
@@ -88,11 +89,14 @@ Cache invalidation uses a sliding window mechanism:
 ## Related Design Elements
 
 **Principles**:
+
 * `fdd-settings-service-constraint-performance` - Performance requirements
 
 **Requirements**:
+
 * `fdd-settings-service-fr-setting-value-crud` - Read operations requiring caching
 * `fdd-settings-service-fr-tenant-inheritance` - Tenant hierarchy caching for resolution
 
 **Related ADRs**:
+
 * ADR-0016 (Database Schema Design for Tenant Hierarchy) - Materialized path model implementation

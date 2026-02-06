@@ -40,9 +40,11 @@ Chosen option: "Option 2 - External GTS Registry Service", because it enables sc
 ## Related Design Elements
 
 **Principles**:
-* `fdd-settings-service-constraint-gts-transition` - GTS schema versioning
+
+* `fdd-settings-service-constraint-gts-transition` - GTS schema versioning requirement
 
 **Requirements**:
-* `fdd-settings-service-fr-gts-versioning` - GTS type versioning support
+
+* `fdd-settings-service-fr-gts-versioning` - GTS-based type versioning support
 * `fdd-settings-service-fr-gts-base-setting-type` - Base type registration
 * `fdd-settings-service-fr-gts-extension-point` - Derived type registration

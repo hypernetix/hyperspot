@@ -37,30 +37,35 @@ Chosen option: "Option 2 - Materialized Path Model", because it provides the bes
 **Schema Additions**:
 
 1. **Setting Values Table**:
+
 ```sql
 ALTER TABLE setting_values ADD COLUMN tenant_path VARCHAR(1024);
 CREATE INDEX idx_setting_values_tenant_path ON setting_values(tenant_path);
 ```
 
-2. **Tenant Hierarchy Cache Table** (see `fdd-settings-service-db-table-tenant-hierarchy`):
+1. **Tenant Hierarchy Cache Table** (see `fdd-settings-service-db-table-tenant-hierarchy`):
+
 ```sql
 ALTER TABLE tenant_hierarchy_cache ADD COLUMN materialized_path VARCHAR(1024);
 CREATE INDEX idx_tenant_hierarchy_materialized_path ON tenant_hierarchy_cache(materialized_path);
 ```
 
 The materialized path is stored in both tables:
-- `tenant_hierarchy_cache`: For efficient hierarchy lookups during value resolution
-- `setting_values`: For optimized setting queries with hierarchy context
+
+* `tenant_hierarchy_cache`: For efficient hierarchy lookups during value resolution
+* `setting_values`: For optimized setting queries with hierarchy context
 
 **Path Format**: `/dc52a314-6d47-44f7-90e8-48d5219cbc61/259a8820-ef53-40e8-b3a7-a0f78a076c06/2e7c1d4f-ecd0-4fcb-9f08-6e9d9f5d909e/`
-- Leading and trailing slashes for consistent prefix matching
-- Tenant UUIDs separated by slashes (e.g., root tenant UUID / partner UUID / customer UUID)
-- Each segment is a UUID (36 characters)
-- Maximum depth: ~27 levels (1024 bytes / 37 chars per segment including slash)
+
+* Leading and trailing slashes for consistent prefix matching
+* Tenant UUIDs separated by slashes (e.g., root tenant UUID / partner UUID / customer UUID)
+* Each segment is a UUID (36 characters)
+* Maximum depth: ~27 levels (1024 bytes / 37 chars per segment including slash)
 
 **Query Examples**:
 
 1. **Get all ancestor settings for inheritance**:
+
 ```sql
 SELECT * FROM setting_values 
 WHERE setting_type_id = ? 
@@ -72,13 +77,15 @@ WHERE setting_type_id = ?
 ORDER BY LENGTH(tenant_path) DESC;
 ```
 
-2. **Get all settings in hierarchy subtree**:
+1. **Get all settings in hierarchy subtree**:
+
 ```sql
 SELECT * FROM setting_values 
 WHERE tenant_path LIKE '/dc52a314-6d47-44f7-90e8-48d5219cbc61/259a8820-ef53-40e8-b3a7-a0f78a076c06/%';
 ```
 
-3. **Cache warming for tenant and ancestors**:
+1. **Cache warming for tenant and ancestors**:
+
 ```sql
 SELECT * FROM setting_values 
 WHERE tenant_path IN (?, ?, ?, ?, ?)  -- batch query
@@ -86,11 +93,12 @@ WHERE tenant_path IN (?, ?, ?, ?, ?)  -- batch query
 ```
 
 **Path Maintenance**:
-- Computed on write from `tenant_hierarchy_cache` table
-- Materialized path in cache table updated via event-driven synchronization (ADR-0005)
-- Setting values inherit path from cache during write operations
-- Updated when tenant hierarchy changes (rare operation)
-- Validated against Tenant Management Module hierarchy
+
+* Computed on write from `tenant_hierarchy_cache` table
+* Materialized path in cache table updated via event-driven synchronization (ADR-0005)
+* Setting values inherit path from cache during write operations
+* Updated when tenant hierarchy changes (rare operation)
+* Validated against Tenant Management Module hierarchy
 
 ### Consequences
 
@@ -108,26 +116,31 @@ WHERE tenant_path IN (?, ?, ?, ?, ?)  -- batch query
 ### Comparison with Alternatives
 
 **Adjacency List (Option 1)**:
-- Pros: Simple writes, minimal storage
-- Cons: Requires recursive CTEs (not supported in SQLite), multiple queries, complex cache warming
-- Verdict: Poor performance for read-heavy workload
+
+* Pros: Simple writes, minimal storage
+* Cons: Requires recursive CTEs (not supported in SQLite), multiple queries, complex cache warming
+* Verdict: Poor performance for read-heavy workload
 
 **Nested Set (Option 3)**:
-- Pros: Efficient subtree queries, no recursion needed
-- Cons: Complex writes (rebalancing), difficult to understand, fragile under concurrent updates
-- Verdict: Too complex for benefit gained
+
+* Pros: Efficient subtree queries, no recursion needed
+* Cons: Complex writes (rebalancing), difficult to understand, fragile under concurrent updates
+* Verdict: Too complex for benefit gained
 
 ## Related Design Elements
 
 **Principles**:
+
 * `fdd-settings-service-constraint-performance` - Query performance requirements
 * `fdd-settings-service-constraint-database-compatibility` - Multi-database support
 
 **Requirements**:
+
 * `fdd-settings-service-fr-tenant-inheritance` - Hierarchy traversal for inheritance
 * `fdd-settings-service-fr-setting-value-crud` - Efficient read operations
 
 **Related ADRs**:
+
 * ADR-0002 (Database Technology Selection) - Database compatibility requirements
 * ADR-0003 (Caching Strategy Selection) - Cache warming and miss handling
 * ADR-0012 (Setting Value Inheritance Algorithm) - Hierarchy traversal algorithm

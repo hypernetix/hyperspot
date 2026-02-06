@@ -40,8 +40,10 @@ Chosen option: "Option 2 - Iterative algorithm with cached hierarchy paths", bec
 ## Related Design Elements
 
 **Principles**:
+
 * `fdd-settings-service-principle-default-fallback` - Value resolution chain
 
 **Requirements**:
+
 * `fdd-settings-service-fr-tenant-inheritance` - Inheritance resolution
 * `fdd-settings-service-fr-setting-value-crud` - Value retrieval with inheritance

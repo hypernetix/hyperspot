@@ -40,5 +40,6 @@ Chosen option: "Option 1 - Database storage with migration-based seeding", becau
 ## Related Design Elements
 
 **Requirements**:
+
 * `fdd-settings-service-fr-dynamic-domain-types` - Dynamic domain type registration
 * `fdd-settings-service-fr-domain-objects` - Domain object association

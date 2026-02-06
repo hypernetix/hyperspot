@@ -41,8 +41,10 @@ Chosen option: "Option 1 - PostgreSQL as primary with MariaDB/SQLite support", b
 ## Related Design Elements
 
 **Principles**:
-* `fdd-settings-service-constraint-database-compatibility` - Database compatibility requirement
+
+* `fdd-settings-service-constraint-database-compatibility` - Multi-database support requirement
 
 **Requirements**:
+
 * `fdd-settings-service-fr-setting-value-crud` - CRUD operations with database persistence
 * `fdd-settings-service-fr-tenant-inheritance` - Tenant hierarchy queries requiring indexes

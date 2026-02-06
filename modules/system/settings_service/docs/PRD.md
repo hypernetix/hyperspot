@@ -136,7 +136,7 @@ The Settings Service acts as a universal configuration management system that su
 
 ## C. Functional Requirements
 
-#### Setting Type Definition with GTS Schema and Traits
+### Setting Type Definition with GTS Schema and Traits
 
 **ID**: `fdd-settings-service-fr-setting-type-definition`
 
@@ -420,7 +420,7 @@ The system MUST support definition of setting type traits using GTS `gts-traits`
 
 ## D. Use Cases
 
-#### UC-001: Create Setting Type with GTS Schema
+## UC-001: Create Setting Type with GTS Schema
 
 **ID**: `fdd-settings-service-usecase-create-setting-type`
 
@@ -450,7 +450,7 @@ The system MUST support definition of setting type traits using GTS `gts-traits`
 **Postconditions**: Setting type is created and available for value assignments across tenant hierarchy
 <!-- fdd-id-content -->
 
-#### UC-002: Update Setting Value with Inheritance
+## UC-002: Update Setting Value with Inheritance
 
 **ID**: `fdd-settings-service-usecase-update-value-inheritance`
 
@@ -479,7 +479,7 @@ The system MUST support definition of setting type traits using GTS `gts-traits`
 **Postconditions**: Setting value is updated and inherited by child tenants according to inheritance rules
 <!-- fdd-id-content -->
 
-#### UC-003: Retrieve Setting Values with Hierarchy Resolution
+## UC-003: Retrieve Setting Values with Hierarchy Resolution
 
 **ID**: `fdd-settings-service-usecase-get-values-hierarchy`
 
@@ -515,7 +515,7 @@ The system MUST support definition of setting type traits using GTS `gts-traits`
 **Postconditions**: Service receives setting value with inheritance chain information
 <!-- fdd-id-content -->
 
-#### UC-004: Lock Setting for Compliance
+## UC-004: Lock Setting for Compliance
 
 **ID**: `fdd-settings-service-usecase-lock-compliance`
 
@@ -541,7 +541,7 @@ The system MUST support definition of setting type traits using GTS `gts-traits`
 **Postconditions**: Setting is locked and cannot be modified until explicitly unlocked
 <!-- fdd-id-content -->
 
-#### UC-005: Batch Update Setting Values
+## UC-005: Batch Update Setting Values
 
 **ID**: `fdd-settings-service-usecase-batch-update`
 
@@ -567,7 +567,7 @@ The system MUST support definition of setting type traits using GTS `gts-traits`
 **Postconditions**: Setting values are updated for successful tenants, failures are reported with reasons
 <!-- fdd-id-content -->
 
-#### UC-006: Reconcile Tenant Hierarchy
+## UC-006: Reconcile Tenant Hierarchy
 
 **ID**: `fdd-settings-service-usecase-reconcile-tenant`
 
@@ -592,7 +592,7 @@ The system MUST support definition of setting type traits using GTS `gts-traits`
 **Postconditions**: Tenant hierarchy is synchronized and access control uses updated tenant paths
 <!-- fdd-id-content -->
 
-#### UC-007: Query Setting Type with GTS Version Resolution
+## UC-007: Query Setting Type with GTS Version Resolution
 
 **ID**: `fdd-settings-service-usecase-gts-version-query`
 
@@ -616,7 +616,7 @@ The system MUST support definition of setting type traits using GTS `gts-traits`
 **Postconditions**: Service receives compatible setting type version from GTS Type Registry
 <!-- fdd-id-content -->
 
-#### UC-008: Bulk Get Setting Values
+## UC-008: Bulk Get Setting Values
 
 **ID**: `fdd-settings-service-usecase-bulk-get`
 
@@ -640,7 +640,7 @@ The system MUST support definition of setting type traits using GTS `gts-traits`
 **Postconditions**: Service receives setting values for multiple tenants and setting types in single request
 <!-- fdd-id-content -->
 
-#### UC-009: Register Dynamic Domain Type
+## UC-009: Register Dynamic Domain Type
 
 **ID**: `fdd-settings-service-usecase-register-domain-type`
 
@@ -672,7 +672,7 @@ The system MUST support definition of setting type traits using GTS `gts-traits`
 
 ## E. Non-functional requirements
 
-#### Performance and Scalability
+## Performance and Scalability
 
 **ID**: `fdd-settings-service-nfr-performance`
 
@@ -680,7 +680,7 @@ The system MUST support definition of setting type traits using GTS `gts-traits`
 The system MUST achieve sub-100ms response time for 95th percentile of setting value read operations and support 10,000+ write operations per minute. Database queries MUST use indexes for tenant hierarchy traversal and setting lookups. The system MUST handle tenant hierarchies with 10+ levels without performance degradation.
 <!-- fdd-id-content -->
 
-#### Availability and Reliability
+## Availability and Reliability
 
 **ID**: `fdd-settings-service-nfr-availability`
 
@@ -688,7 +688,7 @@ The system MUST achieve sub-100ms response time for 95th percentile of setting v
 The system MUST maintain 99.9% availability for read operations and 99.5% for write operations. The system MUST implement database transaction management to ensure data consistency. The system MUST handle message queue failures gracefully with retry mechanisms and dead letter queues.
 <!-- fdd-id-content -->
 
-#### Security and Access Control
+## Security and Access Control
 
 **ID**: `fdd-settings-service-nfr-security`
 
@@ -696,7 +696,7 @@ The system MUST maintain 99.9% availability for read operations and 99.5% for wr
 The system MUST enforce role-based access control with tenant hierarchy validation on all API endpoints. The system MUST support MFA requirements for sensitive settings configured through setting type traits. The system MUST validate all input data against GTS schemas to prevent injection attacks. The system MUST use secure communication channels (TLS) for all external API calls.
 <!-- fdd-id-content -->
 
-#### Audit and Compliance
+## Audit and Compliance
 
 **ID**: `fdd-settings-service-nfr-audit`
 
@@ -704,7 +704,7 @@ The system MUST enforce role-based access control with tenant hierarchy validati
 The system MUST generate audit events for all setting and setting value modifications with complete metadata including user ID, tenant ID, timestamp, and change details. The system MUST support compliance mode with setting locks that prevent unauthorized modifications. Audit events MUST be immutable and stored for minimum 90 days. Access to audit logs MUST be restricted to compliance officers and system administrators with appropriate role-based permissions. Audit log retention beyond 90 days MUST be configurable per tenant for regulatory compliance requirements.
 <!-- fdd-id-content -->
 
-#### Data Integrity and Consistency
+## Data Integrity and Consistency
 
 **ID**: `fdd-settings-service-nfr-data-integrity`
 
@@ -712,7 +712,7 @@ The system MUST generate audit events for all setting and setting value modifica
 The system MUST use database transactions for all write operations to ensure atomicity. The system MUST validate all setting values against their GTS schemas before persistence. The system MUST maintain referential integrity between setting types, setting values, tenants, and domain objects. Soft-deleted data MUST be retained for configured retention period before permanent deletion.
 <!-- fdd-id-content -->
 
-#### Backward Compatibility
+## Backward Compatibility
 
 **ID**: `fdd-settings-service-nfr-backward-compatibility`
 
@@ -720,7 +720,7 @@ The system MUST use database transactions for all write operations to ensure ato
 The system MUST support GTS-based type versioning to enable backward-compatible type evolution. API endpoints MUST maintain compatibility across versions. Type schema changes MUST not break existing clients using older type versions. The system MUST support GTS version resolution for automatic compatibility.
 <!-- fdd-id-content -->
 
-#### Monitoring and Observability
+## Monitoring and Observability
 
 **ID**: `fdd-settings-service-nfr-monitoring`
 
@@ -728,7 +728,7 @@ The system MUST support GTS-based type versioning to enable backward-compatible 
 The system MUST expose metrics for API request rates, response times, error rates, and database query performance. The system MUST implement distributed tracing for request flows across service boundaries. The system MUST log all errors with stack traces and context for debugging. Health check endpoints MUST validate database connectivity and message queue status.
 <!-- fdd-id-content -->
 
-#### Scalability and Multi-Tenancy
+## Scalability and Multi-Tenancy
 
 **ID**: `fdd-settings-service-nfr-scalability`
 
@@ -736,7 +736,7 @@ The system MUST expose metrics for API request rates, response times, error rate
 The system MUST support horizontal scaling with stateless API servers. The system MUST handle 100+ concurrent setting types and 10,000+ setting values per type. The system MUST support tenant hierarchies with 100,000+ tenants. Database connection pooling MUST be configured to handle concurrent requests efficiently.
 <!-- fdd-id-content -->
 
-#### Data Encryption
+## Data Encryption
 
 **ID**: `fdd-settings-service-nfr-data-encryption`
 
@@ -744,7 +744,7 @@ The system MUST support horizontal scaling with stateless API servers. The syste
 The system MUST encrypt sensitive setting values at rest using industry-standard encryption algorithms (AES-256 or equivalent). Encryption keys MUST be managed through a secure key management system with key rotation capabilities. Setting types MUST support marking fields as sensitive to enable automatic encryption. Encrypted data MUST be decrypted only when accessed by authorized users with valid security context.
 <!-- fdd-id-content -->
 
-#### Data Privacy Compliance
+## Data Privacy Compliance
 
 **ID**: `fdd-settings-service-nfr-data-privacy`
 
@@ -752,7 +752,7 @@ The system MUST encrypt sensitive setting values at rest using industry-standard
 The system MUST comply with data privacy regulations including GDPR, CCPA, and similar frameworks for user-scoped and tenant-scoped settings. The system MUST support data subject access requests (DSAR) to export all settings associated with a user or tenant. The system MUST implement the right to be forgotten by permanently deleting all user data upon request. Personal data MUST be processed with explicit consent and purpose limitation. Data residency requirements MUST be supported for region-specific data storage.
 <!-- fdd-id-content -->
 
-#### Network Security
+## Network Security
 
 **ID**: `fdd-settings-service-nfr-network-security`
 
@@ -760,7 +760,7 @@ The system MUST comply with data privacy regulations including GDPR, CCPA, and s
 The system MUST use TLS 1.2 or higher for all network communications including API endpoints, inter-module communication, and external service integrations. The system MUST enforce network isolation between tenants to prevent cross-tenant network access. API endpoints MUST be protected by rate limiting and DDoS protection mechanisms. The system MUST support IP allowlisting and network access control lists for restricted environments.
 <!-- fdd-id-content -->
 
-#### Rust Implementation and Type Safety
+## Rust Implementation and Type Safety
 
 **ID**: `fdd-settings-service-nfr-rust-safety`
 
@@ -768,7 +768,7 @@ The system MUST use TLS 1.2 or higher for all network communications including A
 The system MUST be implemented in Rust to leverage compile-time safety, memory safety without garbage collection, and deep static analysis. The system MUST pass all workspace lints including clippy with warnings denied, custom dylint lints for project compliance, and cargo deny for dependency licensing. The system MUST maintain 90%+ test coverage with unit, integration, and E2E tests.
 <!-- fdd-id-content -->
 
-#### Hyperspot Module Standards
+## Hyperspot Module Standards
 
 **ID**: `fdd-settings-service-nfr-module-standards`
 
@@ -776,7 +776,7 @@ The system MUST be implemented in Rust to leverage compile-time safety, memory s
 The system MUST follow Hyperspot module conventions including SDK pattern with separate crates, DDD-light architecture with domain/api/infra layers, SecureConn for all database access, OperationBuilder for REST endpoints, and YAML configuration under modules.settings_service. The system MUST NOT use raw SQL or bypass SecureConn - all database operations MUST use SeaORM queries executed via `&SecureConn`.
 <!-- fdd-id-content -->
 
-#### OpenAPI Documentation
+## OpenAPI Documentation
 
 **ID**: `fdd-settings-service-nfr-openapi`
 
@@ -786,7 +786,7 @@ The system MUST provide comprehensive OpenAPI 3.0 documentation automatically ge
 
 ## F. Additional context
 
-#### Hyperspot Platform Integration
+## Hyperspot Platform Integration
 
 **ID**: `fdd-settings-service-prd-context-hyperspot-platform`
 
@@ -794,7 +794,7 @@ The system MUST provide comprehensive OpenAPI 3.0 documentation automatically ge
 Settings Service is implemented as a Hyperspot module within the modular, high-performance Rust-based platform. It integrates with Hyperspot's core systems including ModKit for module lifecycle and REST API generation, API Gateway for HTTP routing and OpenAPI documentation, Tenant Resolver for multi-tenant security context, and ClientHub for type-safe inter-module communication. The service follows Hyperspot's "Everything is a Module" philosophy with composable, independent units. Reference: Hyperspot Server is a modular platform for building enterprise-grade SaaS services with automatic REST API generation, comprehensive OpenAPI documentation, and flexible modular architecture.
 <!-- fdd-id-content -->
 
-#### Integration with Platform Modules
+## Integration with Platform Modules
 
 **ID**: `fdd-settings-service-prd-context-platform-integration`
 
@@ -802,7 +802,7 @@ Settings Service is implemented as a Hyperspot module within the modular, high-p
 Settings Service integrates with other Hyperspot modules including Tenant Management Module for tenant hierarchy, Event Bus Module for audit and lifecycle events, and optional Domain Object Validation Module for domain object existence validation. Inter-module communication uses ClientHub with typed SDK interfaces, enabling loose coupling and independent deployment.
 <!-- fdd-id-content -->
 
-#### GTS Type System Integration
+## GTS Type System Integration
 
 **ID**: `fdd-settings-service-prd-context-gts-integration`
 
@@ -810,7 +810,7 @@ Settings Service integrates with other Hyperspot modules including Tenant Manage
 The service integrates with GTS (Global Type System) Type Registry for setting type definitions and versioning. Setting types are defined using GTS schemas which provide JSON Schema validation, type versioning, and backward compatibility. Reference: <https://github.com/GlobalTypeSystem/gts-spec>. GTS enables dynamic type evolution without breaking existing clients.
 <!-- fdd-id-content -->
 
-#### Event Bus Architecture
+## Event Bus Architecture
 
 **ID**: `fdd-settings-service-prd-context-event-bus`
 
@@ -818,7 +818,7 @@ The service integrates with GTS (Global Type System) Type Registry for setting t
 The service uses event bus for consuming tenant and user lifecycle events based on setting type trait configuration. Event handlers process messages asynchronously to maintain internal state consistency. The service publishes setting value change events (create, update, delete) to Event Bus Module for distribution to subscribers when configured in setting type traits.
 <!-- fdd-id-content -->
 
-#### Database Schema and Migrations
+## Database Schema and Migrations
 
 **ID**: `fdd-settings-service-prd-context-database`
 
@@ -826,7 +826,7 @@ The service uses event bus for consuming tenant and user lifecycle events based 
 The service uses PostgreSQL database with schema migrations managed through the build system. The database schema includes tables for setting types, setting values, tenants, users, and domain objects. Indexes are optimized for tenant hierarchy queries and setting type lookups. Setting type schemas are stored as GTS type references.
 <!-- fdd-id-content -->
 
-#### Generic Reporting Interface
+## Generic Reporting Interface
 
 **ID**: `fdd-settings-service-prd-context-reporting-interface`
 
@@ -834,7 +834,7 @@ The service uses PostgreSQL database with schema migrations managed through the 
 The service provides a generic reporting interface for setting values with configurable attribute mappings. The interface allows external systems to retrieve setting values in custom formats by mapping setting attributes to report column names. This replaces platform-specific reporting integrations with a flexible, configuration-driven approach.
 <!-- fdd-id-content -->
 
-#### Default Value Resolution Strategy
+## Default Value Resolution Strategy
 
 **ID**: `fdd-settings-service-prd-context-default-value-resolution`
 
@@ -842,7 +842,7 @@ The service provides a generic reporting interface for setting values with confi
 The service is designed with a "always return a value" philosophy to ensure applications never encounter null or missing configuration errors. The value resolution follows a cascading fallback strategy: (1) explicit value for tenant/domain object, (2) explicit value for tenant/generic object, (3) inherited value from parent tenant hierarchy (if inheritance enabled), (4) default value from setting type's GTS schema. Every setting type MUST define a default value in its GTS schema, which serves as the ultimate fallback. This design ensures predictable behavior, eliminates null-checking in consuming applications, and provides sensible defaults for all configurations. The response metadata indicates the value source (explicit, inherited, generic, or default) for transparency and debugging.
 <!-- fdd-id-content -->
 
-#### Domain Type Registry
+## Domain Type Registry
 
 **ID**: `fdd-settings-service-prd-context-domain-type-registry`
 
@@ -850,7 +850,7 @@ The service is designed with a "always return a value" philosophy to ensure appl
 The service maintains a domain type registry as GTS entities that stores metadata for each supported domain type. Each domain type registration includes: (1) domain_id data type specification defining the type of identifier used (e.g., uuid for TENANT, uuid for USER), (2) REST API endpoint for validating domain object existence before allowing setting creation, (3) event type for domain object deletion that triggers automatic cleanup of associated settings. The system ships with predefined domain types (TENANT, USER) and supports runtime registration of custom domain types without code changes. When a domain object deletion event is received, the system automatically removes all settings scoped to that domain object across all tenants.
 <!-- fdd-id-content -->
 
-#### SDK Pattern and Module Structure
+## SDK Pattern and Module Structure
 
 **ID**: `fdd-settings-service-prd-context-sdk-pattern`
 
@@ -858,7 +858,7 @@ The service maintains a domain type registry as GTS entities that stores metadat
 The service follows Hyperspot's SDK pattern with two separate crates: `settings-service-sdk` containing the public API trait, transport-agnostic models, and error types; and `settings-service` containing the implementation with domain logic, REST handlers, local client adapter, and infrastructure. This separation enables consumers to depend only on the lightweight SDK crate and access the service via `hub.get::<dyn SettingsServiceClient>()` without implementation dependencies. All SDK trait methods accept `&SecurityContext` as the first parameter for authorization and tenant isolation.
 <!-- fdd-id-content -->
 
-#### Module Configuration
+## Module Configuration
 
 **ID**: `fdd-settings-service-prd-context-configuration`
 
@@ -866,7 +866,7 @@ The service follows Hyperspot's SDK pattern with two separate crates: `settings-
 The service uses YAML-based configuration under the `modules.settings_service` section with support for environment variable overrides using `HYPERSPOT_MODULES_settings_service_` prefix. Configuration includes database connection settings, pagination settings (default: 50 items, maximum: 200 items), and module-specific options. The service supports multiple database backends (PostgreSQL, MariaDB, SQLite) through SeaORM with database-agnostic migrations.
 <!-- fdd-id-content -->
 
-#### Testing and Quality Assurance
+## Testing and Quality Assurance
 
 **ID**: `fdd-settings-service-prd-context-testing`
 

@@ -40,9 +40,11 @@ Chosen option: "Option 3 - Use Hyperspot's existing Event Bus Module abstraction
 ## Related Design Elements
 
 **Principles**:
+
 * `fdd-settings-service-principle-hyperspot-integration` - Hyperspot module integration
 
 **Requirements**:
+
 * `fdd-settings-service-fr-event-generation` - Event generation for setting changes
 * `fdd-settings-service-fr-tenant-reconciliation` - Tenant event consumption
 * `fdd-settings-service-fr-dynamic-domain-types` - Domain object deletion events

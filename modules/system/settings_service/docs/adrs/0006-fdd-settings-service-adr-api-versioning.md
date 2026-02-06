@@ -40,8 +40,10 @@ Chosen option: "Option 1 - URL path versioning", because it provides the cleares
 ## Related Design Elements
 
 **Principles**:
-* `fdd-settings-service-principle-api-compatibility` - API stability requirement
+
+* `fdd-settings-service-principle-api-compatibility` - API stability with semantic versioning
 
 **Requirements**:
-* `fdd-settings-service-fr-setting-type-api` - Setting type API endpoints
+
+* `fdd-settings-service-fr-setting-type-definition` - Setting type definition with versioningts
 * `fdd-settings-service-fr-setting-value-crud` - CRUD API endpoints

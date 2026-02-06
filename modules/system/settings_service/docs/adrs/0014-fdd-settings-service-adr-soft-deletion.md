@@ -40,5 +40,6 @@ Chosen option: "Option 1 - Tombstone pattern with deleted_at timestamp column", 
 ## Related Design Elements
 
 **Requirements**:
-* `fdd-settings-service-fr-soft-deletion` - Soft deletion with retention
+
+* `fdd-settings-service-fr-soft-deletion` - Soft deletion with retention periods
 * `fdd-settings-service-fr-data-deletion` - Permanent deletion for compliance

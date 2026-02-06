@@ -55,12 +55,15 @@ This ensures eventual consistency while maintaining query performance for the co
 ## Related Design Elements
 
 **Principles**:
+
 * `fdd-settings-service-principle-default-fallback` - Value resolution requiring hierarchy with cache miss handling
 
 **Requirements**:
+
 * `fdd-settings-service-fr-tenant-inheritance` - Tenant hierarchy inheritance
 * `fdd-settings-service-fr-tenant-reconciliation` - Tenant synchronization
 * `fdd-settings-service-fr-access-control` - Hierarchy validation for access control
 
 **Related ADRs**:
+
 * ADR-0016 (Database Schema Design for Tenant Hierarchy) - Materialized path in cache table
