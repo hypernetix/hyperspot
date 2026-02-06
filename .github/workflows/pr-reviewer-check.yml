@@ -30,6 +30,8 @@ jobs:
               "dependabot[bot]"
             ]);
 
+            const NOTIFICATION_MARKER = "<!-- pr-reviewer-check-notify -->";
+
             // Fetch all open PRs
             const prs = await github.paginate(github.rest.pulls.list, {
               owner,
@@ -81,9 +83,11 @@ jobs:
               });
 
               const alreadyCommented = comments.some(c =>
+                c.body.includes(NOTIFICATION_MARKER) ||
+                (c.user &&
                 c.user.type === 'Bot' &&
                 c.body.includes("PR was created more than") &&
-                c.body.includes("has no human reviewers assigned")
+                c.body.includes("has no human reviewers assigned"))
               );
 
               if (alreadyCommented) {
@@ -107,7 +111,7 @@ jobs:
                 repo,
                 issue_number: pr.number,
                 body:
-                  "PR was created more than 10 minutes ago but has no human reviewers assigned"
+                  "PR was created more than 10 minutes ago but has no human reviewers assigned\n" + NOTIFICATION_MARKER
               });
 
               try {
