@@ -1,0 +1,83 @@
+# This workflow intentionally runs only when Rust source files change.
+# OpenAPI output is assumed to be fully derived from .rs files.
+name: API Contracts
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - '**/*.rs'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  generate_api_json:
+    name: Generate api.json
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          clean: 'true'
+          submodules: recursive
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@c65c819552d16ad3c9b72d9dfd5ba5237b9c906b # v3.0.0
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Rust stable toolchain
+        uses: dtolnay/rust-toolchain@4be9e76fd7c4901c61fb841f559994984270fce7 # stable
+
+      - name: Cache Cargo/target
+        uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
+        with:
+          shared-key: api-json
+
+      - name: Fetch previous API spec from base branch
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -e
+          # fetch base branch
+          git fetch origin "$BASE_REF" --depth=1
+          # try to extract previous api.json
+          if git show "origin/$BASE_REF:docs/api/api.json" > docs/api/api.prev.json 2>/dev/null; then
+            echo "Previous API spec found"
+             echo "PREV_EXISTS=true" >> $GITHUB_ENV
+          else
+            echo "No previous API spec found"
+            echo "PREV_EXISTS=false" >> $GITHUB_ENV
+          fi
+
+      - name: Generate new API spec
+        run: |
+          set -e
+          make openapi OPENAPI_OUT=docs/api/api.new.json
+          if [ ! -f docs/api/api.new.json ]; then
+            echo "Error: make openapi did not generate docs/api/api.new.json"
+            exit 1
+          fi
+
+      - name: Download oasdiff
+        env:
+          OASDIFF_VERSION: "1.11.10"
+          OASDIFF_SHA256: "6d5880efb3422401f14c85f3c1347d6c41de3e4ea7c04e3ca7dc5c8f452e8ba2"
+        run: |
+          curl -sSL "https://github.com/oasdiff/oasdiff/releases/download/v${OASDIFF_VERSION}/oasdiff_${OASDIFF_VERSION}_linux_amd64.tar.gz" -o /tmp/oasdiff.tgz
+          echo "${OASDIFF_SHA256}  /tmp/oasdiff.tgz" | sha256sum -c -
+          tar -xzf /tmp/oasdiff.tgz -C /tmp
+          sudo mv /tmp/oasdiff /usr/local/bin/oasdiff
+          chmod +x /usr/local/bin/oasdiff
+
+      - name: Check OpenAPI breaking changes
+        if: env.PREV_EXISTS == 'true'
+        run: |
+          echo "Checking OpenAPI compatibility against previous version..."
+          # Compare old -> new (base branch to PR branch)
+          oasdiff breaking docs/api/api.prev.json docs/api/api.new.json
