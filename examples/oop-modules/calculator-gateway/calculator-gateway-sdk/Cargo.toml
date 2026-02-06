@@ -1,0 +1,26 @@
+[package]
+name = "calculator_gateway_sdk"
+version = "0.1.0"
+publish = false
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "SDK for calculator-gateway module: API trait, types, and client wiring"
+
+[dependencies]
+# The module itself (for Service access)
+calculator-gateway = { path = "../calculator-gateway" }
+
+# ModKit (for ClientHub)
+modkit = { workspace = true }
+modkit-security = { workspace = true }
+
+# Async
+async-trait = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# Logging
+tracing = { workspace = true }

@@ -1,0 +1,47 @@
+[package]
+name = "users-info-sdk"
+version.workspace = true
+publish = false
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "SDK for user_info module: API trait, types, and error definitions"
+
+[lints]
+workspace = true
+
+[features]
+default = ["odata"]
+odata = [
+    "dep:modkit-odata-macros",
+    "dep:futures",
+    "dep:futures-core",
+    "dep:modkit-sdk",
+    "dep:modkit-odata",
+]
+
+[dependencies]
+# Core dependencies for API trait
+thiserror = { workspace = true }
+uuid = { workspace = true }
+time = { workspace = true }
+async-trait = { workspace = true }
+
+# OData macros (for #[derive(ODataFilterable)])
+modkit-odata-macros = { workspace = true, optional = true }
+
+# Streaming support
+futures-core = { workspace = true, optional = true }
+futures = { workspace = true, optional = true }
+
+# Security context for API methods
+modkit-security = { workspace = true }
+
+# SDK utilities (streaming, typed OData queries)
+modkit-sdk = { workspace = true, optional = true }
+
+# OData support for pagination
+modkit-odata = { workspace = true, optional = true }
+
+[dev-dependencies]
+tokio = { workspace = true }
