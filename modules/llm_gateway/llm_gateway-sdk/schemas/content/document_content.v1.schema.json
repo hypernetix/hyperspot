@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.x.llmgw.content.document_content.v1~",
+  "title": "DocumentContent",
+  "description": "Document content part with FileStorage URL",
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "document",
+      "description": "Content type discriminator"
+    },
+    "url": {
+      "type": "string",
+      "format": "uri",
+      "description": "FileStorage URL for the document"
+    }
+  },
+  "required": ["type", "url"],
+  "additionalProperties": false
+}

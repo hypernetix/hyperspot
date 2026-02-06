@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.x.llmgw.content.tool_result.v1~",
+  "title": "ToolResult",
+  "description": "Consumer's tool execution result",
+  "type": "object",
+  "properties": {
+    "tool_call_id": {
+      "type": "string",
+      "description": "ID of the tool call this result corresponds to"
+    },
+    "content": {
+      "type": "string",
+      "description": "Result content from tool execution"
+    }
+  },
+  "required": ["tool_call_id", "content"],
+  "additionalProperties": false
+}

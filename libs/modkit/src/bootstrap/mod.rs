@@ -30,4 +30,4 @@ pub use config::{
 pub use oop::{OopRunOptions, run_oop_with_options};
 
 mod run;
-pub use run::run_server;
+pub use run::{run_migrate, run_server};

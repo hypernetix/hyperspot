@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.x.llmgw.async.batch_request.v1~",
+  "title": "BatchRequest",
+  "description": "Individual request within a batch",
+  "type": "object",
+  "properties": {
+    "custom_id": {
+      "type": "string",
+      "description": "Consumer-provided identifier for correlation"
+    },
+    "request": {
+      "$ref": "gts://gts.x.llmgw.core.request.v1~",
+      "description": "The request"
+    },
+    "result": {
+      "$ref": "gts://gts.x.llmgw.core.response.v1~",
+      "description": "Request result (when completed)"
+    },
+    "error": {
+      "$ref": "gts://gts.x.llmgw.async.error.v1~",
+      "description": "Error details (when failed)"
+    }
+  },
+  "required": ["custom_id", "request"],
+  "additionalProperties": false
+}

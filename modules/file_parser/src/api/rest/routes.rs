@@ -51,6 +51,15 @@ pub fn register_routes(
     openapi: &dyn OpenApiRegistry,
     service: Arc<FileParserService>,
 ) -> Router {
+    // Explicitly register nested schemas that are only transitively referenced
+    // These are used within ParsedBlockDto but not directly in any endpoint
+    use modkit::api::ensure_schema;
+    let _ = ensure_schema::<crate::api::rest::dto::TableBlockDto>(openapi);
+    let _ = ensure_schema::<crate::api::rest::dto::TableRowDto>(openapi);
+    let _ = ensure_schema::<crate::api::rest::dto::TableCellDto>(openapi);
+    let _ = ensure_schema::<crate::api::rest::dto::InlineStyleDto>(openapi);
+    let _ = ensure_schema::<crate::api::rest::dto::InlineDto>(openapi);
+
     // GET /file-parser/v1/info - Get information about available file parsers
     router = OperationBuilder::get("/file-parser/v1/info")
         .operation_id("file_parser.get_parser_info")
