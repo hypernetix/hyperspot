@@ -1,14 +1,15 @@
-name: Code
+# This workflow intentionally runs only when Rust source files change.
+# OpenAPI output is assumed to be fully derived from .rs files.
+name: API Contracts
 
 on:
   pull_request:
     branches: [ main ]
     paths:
-      - 'libs/**'
-      - 'modules/**'
+      - '**/*.rs'
 
 concurrency:
-  group: docs-${{ github.workflow }}-${{ github.ref }}
+  group: api-contract-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -79,8 +80,13 @@ jobs:
           sudo mv /tmp/oasdiff /usr/local/bin/oasdiff
           chmod +x /usr/local/bin/oasdiff
 
-      - name: Compare api.json with previous version
+      - name: Check OpenAPI breaking changes
         if: steps.save_prev.outputs.prev_exists == 'true'
         run: |
-          echo "Comparing new api.json with previous version..."
-          oasdiff diff docs/api/api.json.prev docs/api/api.json
+          echo "Checking OpenAPI compatibility against previous version..."
+          oasdiff diff --fail-on-breaking docs/api/api.json.prev docs/api/api.json
+
+      - name: Skip OpenAPI compatibility check (no previous spec)
+        if: steps.save_prev.outputs.prev_exists == 'false'
+        run: |
+          echo "No previous OpenAPI spec found; skipping compatibility check"

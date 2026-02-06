@@ -236,17 +236,18 @@ openapi:
 	# Run server in background
 	cargo run --bin hyperspot-server --features users-info-example -- --config config/quickstart.yaml &
 	@SERVER_PID=$$!; \
+	trap 'kill $$SERVER_PID >/dev/null 2>&1 || true' EXIT; \
 	echo "hyperspot-server PID: $$SERVER_PID"; \
 	echo "Waiting for $(OPENAPI_URL) to become ready..."; \
-	tries=0; \
-	until curl -fsS "$(OPENAPI_URL)" >/dev/null 2>&1; do \
-		tries=$$((tries+1)); \
-		if [ $$tries -gt 30 ]; then \
-			echo "ERROR: hyperspot-server did not become ready in time"; \
-			kill $$SERVER_PID >/dev/null 2>&1 || true; \
-			exit 1; \
+	ELAPSED=0; MAX_WAIT=120; SLEEP=1; \
+	while ! curl -fsS "$(OPENAPI_URL)" -o /dev/null >/dev/null 2>&1; do \
+		if [ $$ELAPSED -ge $$MAX_WAIT ]; then \
+			echo "ERROR: hyperspot-server did not become ready in time"; exit 1; \
 		fi; \
-		sleep 10; \
+		echo "Waiting for hyperspot-server... ($$ELAPSED s)"; \
+		sleep $$SLEEP; \
+		ELAPSED=$$((ELAPSED + SLEEP)); \
+		SLEEP=$$((SLEEP < 8 ? SLEEP*2 : 8)); \
 	done; \
 	echo "Server is ready, fetching OpenAPI spec..."; \
 	mkdir -p $$(dirname "$(OPENAPI_OUT)"); \
