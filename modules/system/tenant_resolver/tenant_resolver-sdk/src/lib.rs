@@ -21,11 +21,14 @@
 //! // Get tenant info
 //! let tenant = resolver.get_tenant(&ctx, tenant_id).await?;
 //!
-//! // Check access
-//! let can_access = resolver.can_access(&ctx, target_tenant_id).await?;
+//! // Get ancestors
+//! let response = resolver.get_ancestors(&ctx, tenant_id, None).await?;
 //!
-//! // Get all accessible tenants
-//! let accessible = resolver.get_accessible_tenants(&ctx, query).await?;
+//! // Get descendants
+//! let descendants = resolver.get_descendants(&ctx, tenant_id, None, None, None).await?;
+//!
+//! // Check ancestry
+//! let is_anc = resolver.is_ancestor(&ctx, parent_id, child_id, None).await?;
 //! ```
 
 pub mod api;
@@ -38,5 +41,8 @@ pub mod plugin_api;
 pub use api::TenantResolverGatewayClient;
 pub use error::TenantResolverError;
 pub use gts::TenantResolverPluginSpecV1;
-pub use models::{AccessOptions, TenantFilter, TenantId, TenantInfo, TenantStatus};
+pub use models::{
+    BarrierMode, GetAncestorsResponse, GetDescendantsResponse, HierarchyOptions, TenantFilter,
+    TenantId, TenantInfo, TenantRef, TenantStatus,
+};
 pub use plugin_api::TenantResolverPluginClient;
