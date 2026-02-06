@@ -25,8 +25,8 @@ const PRIORITY: i16 = 1000;
 /// Zero-configuration plugin for single-tenant deployments.
 /// Returns the tenant from security context as the only accessible tenant.
 #[modkit::module(
-    name = "single_tenant_tr_plugin",
-    deps = ["types_registry"]
+    name = "single-tenant-tr-plugin",
+    deps = ["types-registry"]
 )]
 pub struct SingleTenantTrPlugin;
 

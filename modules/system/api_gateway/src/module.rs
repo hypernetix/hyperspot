@@ -38,9 +38,9 @@ use crate::web;
 /// Main API Gateway module — owns the HTTP server (`rest_host`) and collects
 /// typed operation specs to emit a single `OpenAPI` document.
 #[modkit::module(
-	name = "api_gateway",
+	name = "api-gateway",
 	capabilities = [rest_host, rest, stateful],
-    deps = ["grpc_hub"],
+    deps = ["grpc-hub"],
 	lifecycle(entry = "serve", stop_timeout = "30s", await_ready)
 )]
 pub struct ApiGateway {

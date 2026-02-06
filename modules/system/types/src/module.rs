@@ -31,7 +31,7 @@ use crate::domain::TypesLocalClient;
 /// - Any future core framework types
 #[modkit::module(
     name = "types",
-    deps = ["types_registry"],
+    deps = ["types-registry"],
     capabilities = [system]
 )]
 pub struct Types {

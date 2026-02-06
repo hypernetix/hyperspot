@@ -19,7 +19,7 @@ use nodes_registry_sdk::NodesRegistryClient;
 /// - Accessing node system information (sysinfo)
 /// - Accessing node system capabilities (syscap)
 #[modkit::module(
-    name = "nodes_registry",
+    name = "nodes-registry",
     capabilities = [rest],
     client = nodes_registry_sdk::NodesRegistryClient
 )]

@@ -21,7 +21,7 @@ use crate::domain::Service;
 /// Exposes a REST API delegating to calculator service.
 /// Registers Service in ClientHub for SDK consumers to access.
 #[modkit::module(
-    name = "calculator_gateway",
+    name = "calculator-gateway",
     capabilities = [rest],
     deps = ["calculator"]
 )]

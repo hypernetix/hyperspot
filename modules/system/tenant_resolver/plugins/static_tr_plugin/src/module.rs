@@ -23,8 +23,8 @@ use crate::domain::Service;
 /// - This plugin registers its instance (implementation metadata)
 /// - This plugin registers its scoped client (implementation in `ClientHub`)
 #[modkit::module(
-    name = "static_tr_plugin",
-    deps = ["types_registry"]
+    name = "static-tr-plugin",
+    deps = ["types-registry"]
 )]
 pub struct StaticTrPlugin {
     service: OnceLock<Arc<Service>>,

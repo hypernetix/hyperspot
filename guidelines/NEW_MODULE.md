@@ -69,6 +69,19 @@ This SDK pattern provides:
       module1 x--x module2
   ```
 
+### Module Naming Convention
+
+**IMPORTANT**: All module names MUST use **kebab-case** (lowercase with hyphens).
+
+- ✅ **Correct**: `file-parser`, `simple-user-settings`, `api-gateway`, `types-registry`
+- ❌ **Incorrect**: `file_parser` (snake_case), `FileParser` (PascalCase), `fileParser` (camelCase)
+
+This naming convention is **enforced at compile time** by the `#[modkit::module]` macro. Module names:
+- Must contain only lowercase letters (a-z), digits (0-9), and hyphens (-)
+- Must start with a lowercase letter
+- Must not end with a hyphen
+- Must not contain consecutive hyphens or underscores
+
 All modules MUST adhere to the following directory structure:
 
 ```text

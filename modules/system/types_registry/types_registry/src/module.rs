@@ -29,7 +29,7 @@ use crate::infra::InMemoryGtsRepository;
 /// `types` module (`modules/system/types`), not here. This maintains proper
 /// separation of concerns and avoids circular dependencies.
 #[modkit::module(
-    name = "types_registry",
+    name = "types-registry",
     capabilities = [system, rest]
 )]
 pub struct TypesRegistryModule {

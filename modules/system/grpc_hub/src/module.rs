@@ -67,7 +67,7 @@ pub(crate) enum ListenConfig {
 /// The gRPC Hub module.
 /// This module is responsible for hosting the gRPC server and managing the gRPC services.
 #[modkit::module(
-    name = "grpc_hub",
+    name = "grpc-hub",
     capabilities = [stateful, system, grpc_hub],
     lifecycle(entry = "serve", await_ready)
 )]

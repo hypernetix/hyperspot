@@ -21,8 +21,8 @@ use crate::domain::Service;
 /// - This plugin registers its **instance** (specific implementation metadata)
 /// - This plugin registers its **scoped client** (implementation in `ClientHub`)
 #[modkit::module(
-    name = "fabrikam_tr_plugin",
-    deps = ["types_registry"],
+    name = "fabrikam-tr-plugin",
+    deps = ["types-registry"],
 )]
 pub struct FabrikamTrPlugin {
     /// Service instance, initialized once during `init()`.

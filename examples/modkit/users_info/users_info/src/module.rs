@@ -37,8 +37,8 @@ pub(crate) type ConcreteAppServices =
 
 /// Main module struct with DDD-light layout and proper `ClientHub` integration
 #[modkit::module(
-    name = "users_info",
-    deps = ["tenant_resolver"],
+    name = "users-info",
+    deps = ["tenant-resolver"],
     capabilities = [db, rest]
 )]
 pub struct UsersInfo {

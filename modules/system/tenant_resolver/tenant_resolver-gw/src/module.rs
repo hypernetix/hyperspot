@@ -22,8 +22,8 @@ use crate::domain::{Service, TenantResolverGwLocalClient};
 /// Plugin discovery is lazy: happens on first API call after types-registry
 /// is ready.
 #[modkit::module(
-    name = "tenant_resolver",
-    deps = ["types_registry"],
+    name = "tenant-resolver",
+    deps = ["types-registry"],
     capabilities = []
 )]
 pub(crate) struct TenantResolverGateway {

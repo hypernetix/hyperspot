@@ -33,8 +33,8 @@ use crate::domain::service::Service;
 /// plugins in a build, add them to `registered_modules.rs` in the server
 /// binary or use Cargo feature flags.
 #[modkit::module(
-    name = "tenant_resolver_gw",
-    deps = ["types_registry", "types"],
+    name = "tenant-resolver-gw",
+    deps = ["types-registry", "types"],
     capabilities = [rest]
 )]
 pub struct TenantResolverGateway {

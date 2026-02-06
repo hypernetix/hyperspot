@@ -26,7 +26,7 @@ pub struct ModuleOrchestratorConfig;
 /// - Exposes `DirectoryService` gRPC service via `grpc_hub`
 /// - Tracks module instances and provides service resolution
 #[modkit::module(
-    name = "module_orchestrator",
+    name = "module-orchestrator",
     capabilities = [grpc, system],
     client = cf_system_sdks::directory::DirectoryClient
 )]
