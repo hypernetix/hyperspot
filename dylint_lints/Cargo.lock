@@ -1131,6 +1131,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "de1301_no_print_macros"
+version = "0.1.0"
+dependencies = [
+ "clippy_utils",
+ "dylint_linting",
+ "dylint_testing",
+ "lint_utils",
+ "tokio",
+]
+
+[[package]]
 name = "der"
 version = "0.7.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"

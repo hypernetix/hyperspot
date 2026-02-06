@@ -37,7 +37,7 @@
 //!         print_config: false,
 //!         heartbeat_interval_secs: 5,
 //!     };
-//!     
+//!
 //!     run_oop_with_options(opts).await
 //! }
 //! ```
@@ -510,7 +510,7 @@ pub async fn run_oop_with_options(opts: OopRunOptions) -> Result<()> {
 
     // Print config and exit if requested
     if opts.print_config {
-        println!("{}", config.to_yaml()?);
+        print_config(&config);
         return Ok(());
     }
 
@@ -589,6 +589,11 @@ pub async fn run_oop_with_options(opts: OopRunOptions) -> Result<()> {
     }
 
     result
+}
+
+#[allow(unknown_lints, de1301_no_print_macros)] // direct stdout config print before exit
+fn print_config(config: &AppConfig) {
+    println!("{}", config.to_yaml().unwrap());
 }
 
 #[cfg(test)]
