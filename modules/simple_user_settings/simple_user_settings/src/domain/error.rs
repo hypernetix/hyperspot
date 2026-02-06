@@ -1,6 +1,8 @@
 use modkit_db::DbError;
+use modkit_macros::domain_model;
 use simple_user_settings_sdk::errors::SettingsError;
 
+#[domain_model]
 #[derive(Debug, thiserror::Error)]
 pub enum DomainError {
     #[error("Settings not found")]

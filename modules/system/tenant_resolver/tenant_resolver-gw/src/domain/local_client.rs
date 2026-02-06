@@ -3,6 +3,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use modkit_macros::domain_model;
 use modkit_security::SecurityContext;
 use tenant_resolver_sdk::{
     AccessOptions, TenantFilter, TenantId, TenantInfo, TenantResolverError,
@@ -14,6 +15,7 @@ use super::{DomainError, Service};
 /// Local client wrapping the gateway service.
 ///
 /// Registered in `ClientHub` by the gateway module during `init()`.
+#[domain_model]
 pub struct TenantResolverGwLocalClient {
     svc: Arc<Service>,
 }

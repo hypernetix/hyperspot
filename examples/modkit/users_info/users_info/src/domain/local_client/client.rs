@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use modkit_macros::domain_model;
 use modkit_security::SecurityContext;
 use uuid::Uuid;
 
@@ -20,6 +21,7 @@ use crate::module::ConcreteAppServices;
 ///
 /// Acts as the SDK boundary adapter: converts `DomainError` into `UsersInfoError`,
 /// and exposes streaming-first APIs via boxed streaming client facades.
+#[domain_model]
 #[derive(Clone)]
 pub struct UsersInfoLocalClient {
     services: Arc<ConcreteAppServices>,

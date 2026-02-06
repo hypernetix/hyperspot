@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 
 use async_trait::async_trait;
+use modkit_macros::domain_model;
 use modkit_odata::{
     CursorV1, ODataOrderBy, ODataQuery, OrderKey, Page, PageInfo, SortDir, validate_cursor_against,
 };
@@ -15,6 +16,7 @@ use tenant_resolver_example_sdk::{
 use crate::config::TenantConfig;
 
 /// DFS visit state for cycle detection.
+#[domain_model]
 #[derive(Clone, Copy)]
 enum VisitState {
     Enter,
@@ -24,6 +26,7 @@ enum VisitState {
 /// Fabrikam plugin service implementing the tenant resolver plugin API.
 ///
 /// Stores an in-memory tenant tree built from configuration.
+#[domain_model]
 pub struct Service {
     /// Map from tenant ID to tenant data.
     tenants: HashMap<String, Tenant>,

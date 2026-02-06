@@ -1,6 +1,9 @@
+use modkit_macros::domain_model;
+
 use crate::domain::ir::{ParsedBlock, ParsedDocument};
 
 /// Markdown renderer that converts `ParsedDocument` to Markdown string
+#[domain_model]
 pub struct MarkdownRenderer;
 
 impl Default for MarkdownRenderer {
@@ -11,6 +14,7 @@ impl Default for MarkdownRenderer {
 
 /// Iterator over Markdown chunks from a `ParsedDocument`
 /// This iterator owns the document to avoid lifetime issues with async streaming
+#[domain_model]
 pub struct MarkdownRenderIter {
     doc: ParsedDocument,
     header_emitted: bool,

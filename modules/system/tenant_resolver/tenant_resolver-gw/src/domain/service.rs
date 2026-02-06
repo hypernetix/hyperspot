@@ -10,6 +10,7 @@ use modkit::client_hub::{ClientHub, ClientScope};
 use modkit::gts::BaseModkitPluginV1;
 use modkit::plugins::GtsPluginSelector;
 use modkit::telemetry::ThrottledLog;
+use modkit_macros::domain_model;
 use modkit_security::SecurityContext;
 use tenant_resolver_sdk::{
     AccessOptions, TenantFilter, TenantId, TenantInfo, TenantResolverPluginClient,
@@ -27,6 +28,7 @@ const UNAVAILABLE_LOG_THROTTLE: Duration = Duration::from_secs(10);
 /// Tenant resolver gateway service.
 ///
 /// Discovers plugins via types-registry and delegates API calls.
+#[domain_model]
 pub struct Service {
     hub: Arc<ClientHub>,
     vendor: String,

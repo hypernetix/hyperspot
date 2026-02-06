@@ -1,11 +1,13 @@
 use modkit_db::DbError;
 use modkit_db::secure::InfraError;
 use modkit_db::secure::ScopeError;
+use modkit_macros::domain_model;
 use thiserror::Error;
 use user_info_sdk::UsersInfoError;
 use uuid::Uuid;
 
 /// Domain-specific errors using thiserror
+#[domain_model]
 #[derive(Error, Debug)]
 pub enum DomainError {
     #[error("User not found: {id}")]

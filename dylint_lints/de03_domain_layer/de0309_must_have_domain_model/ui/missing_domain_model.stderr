@@ -1,0 +1,35 @@
+error: domain type `User` is missing required #[domain_model] attribute (DE0309)
+  --> $DIR/missing_domain_model.rs:6:1
+   |
+LL | / pub struct User {
+LL | |     pub id: i64,
+LL | |     pub email: String,
+LL | | }
+   | |_^
+   |
+   = help: add #[domain_model] attribute to enforce DDD boundaries at compile time: use modkit_macros::domain_model; #[domain_model] pub struct ...
+   = note: `#[deny(de0309_must_have_domain_model)]` on by default
+
+error: domain type `UserStatus` is missing required #[domain_model] attribute (DE0309)
+  --> $DIR/missing_domain_model.rs:12:1
+   |
+LL | / pub enum UserStatus {
+LL | |     Active,
+LL | |     Inactive,
+LL | | }
+   | |_^
+   |
+   = help: add #[domain_model] attribute to enforce DDD boundaries at compile time: use modkit_macros::domain_model; #[domain_model] pub enum ...
+
+error: domain type `ServiceConfig` is missing required #[domain_model] attribute (DE0309)
+  --> $DIR/missing_domain_model.rs:18:1
+   |
+LL | / pub struct ServiceConfig {
+LL | |     pub timeout_ms: u64,
+LL | | }
+   | |_^
+   |
+   = help: add #[domain_model] attribute to enforce DDD boundaries at compile time: use modkit_macros::domain_model; #[domain_model] pub struct ...
+
+error: aborting due to 3 previous errors
+
