@@ -39,15 +39,12 @@ modules:
           name: "Dev Tenant"
           status: active
           type: development
-        # Another tenant that Dev Tenant can access
+        # Child of Dev Tenant
         - id: "22222222-2222-2222-2222-222222222222"
           name: "Partner Tenant"
           status: active
           type: partner
-      access_rules:
-        # Dev tenant can access Partner tenant
-        - source: "00000000-df51-5b42-9538-d2b56b7ee953"
-          target: "22222222-2222-2222-2222-222222222222"
+          parent_id: "00000000-df51-5b42-9538-d2b56b7ee953"
 
   tenant_resolver:
     config:

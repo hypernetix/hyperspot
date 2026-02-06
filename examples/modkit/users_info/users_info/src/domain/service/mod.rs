@@ -62,23 +62,41 @@ pub(crate) use users::UsersService;
 pub(crate) type DbProvider = DBProvider<modkit_db::DbError>;
 
 /// Resolve accessible tenants for the current security context.
-/// Only returns active tenants.
+/// Returns the context's tenant and all its active descendants.
 pub(crate) async fn resolve_accessible_tenants(
     resolver: &dyn TenantResolverGatewayClient,
     ctx: &SecurityContext,
 ) -> Result<Vec<Uuid>, DomainError> {
+    let tenant_id = ctx.tenant_id();
+    if tenant_id == Uuid::nil() {
+        // Anonymous context - no accessible tenants
+        return Ok(vec![]);
+    }
+
+    // Filter for active descendants only
     let filter = TenantFilter {
         status: vec![TenantStatus::Active],
-        ..Default::default()
     };
-    let accessible = resolver
-        .get_accessible_tenants(ctx, Some(&filter), None)
+
+    // Get tenant and all active descendants (max_depth=None means unlimited)
+    let response = resolver
+        .get_descendants(ctx, tenant_id, Some(&filter), None, None)
         .await
         .map_err(|e| {
-            tracing::error!(error = %e, "Failed to resolve accessible tenants");
+            tracing::error!(error = %e, "Failed to get descendants");
             DomainError::InternalError
         })?;
-    Ok(accessible.iter().map(|t| t.id).collect())
+
+    // Check if the starting tenant is active (filter doesn't apply to it)
+    if response.tenant.status != TenantStatus::Active {
+        return Ok(vec![]);
+    }
+
+    // Return tenant + all active descendants
+    let mut result = Vec::with_capacity(1 + response.descendants.len());
+    result.push(response.tenant.id);
+    result.extend(response.descendants.iter().map(|t| t.id));
+    Ok(result)
 }
 
 /// Configuration for the domain service
