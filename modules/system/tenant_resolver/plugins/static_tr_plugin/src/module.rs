@@ -16,7 +16,7 @@ use crate::domain::Service;
 
 /// Static tenant resolver plugin module.
 ///
-/// Provides tenant data and access rules from configuration.
+/// Provides tenant data from configuration with hierarchical support.
 ///
 /// **Plugin registration pattern:**
 /// - Gateway registers the plugin schema (GTS type definition)
@@ -49,7 +49,6 @@ impl Module for StaticTrPlugin {
             vendor = %cfg.vendor,
             priority = cfg.priority,
             tenant_count = cfg.tenants.len(),
-            access_rule_count = cfg.access_rules.len(),
             "Loaded plugin configuration"
         );
 

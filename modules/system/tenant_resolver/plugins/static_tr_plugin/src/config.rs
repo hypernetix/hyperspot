@@ -16,9 +16,6 @@ pub struct StaticTrPluginConfig {
 
     /// Static tenant definitions.
     pub tenants: Vec<TenantConfig>,
-
-    /// Static access rules.
-    pub access_rules: Vec<AccessRuleConfig>,
 }
 
 impl Default for StaticTrPluginConfig {
@@ -27,7 +24,6 @@ impl Default for StaticTrPluginConfig {
             vendor: "hyperspot".to_owned(),
             priority: 100,
             tenants: Vec::new(),
-            access_rules: Vec::new(),
         }
     }
 }
@@ -49,17 +45,14 @@ pub struct TenantConfig {
     /// Tenant type classification.
     #[serde(rename = "type", default)]
     pub tenant_type: Option<String>,
-}
 
-/// Configuration for an access rule.
-///
-/// Defines that `source` tenant can access `target` tenant's data.
-#[derive(Debug, Clone, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct AccessRuleConfig {
-    /// Source tenant ID (the one requesting access).
-    pub source: Uuid,
+    /// Parent tenant ID. `None` for root tenants.
+    #[serde(default)]
+    pub parent_id: Option<Uuid>,
 
-    /// Target tenant ID (the one being accessed).
-    pub target: Uuid,
+    /// Whether this tenant is self-managed (barrier).
+    /// When `true`, parent tenants cannot traverse into this subtree
+    /// unless `BarrierMode::Ignore` is used.
+    #[serde(default)]
+    pub self_managed: bool,
 }

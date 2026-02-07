@@ -75,14 +75,16 @@ impl AccessScopeResolver {
     /// # Example
     ///
     /// ```ignore
-    /// // Fetch accessible tenants from resolver
-    /// let accessible = resolver.get_accessible_tenants(&ctx, query).await?;
-    /// let tenant_ids: Vec<Uuid> = accessible.items.iter().map(|t| t.id).collect();
+    /// // Discover accessible tenants via hierarchy
+    /// let response = resolver.get_descendants(&ctx, tenant_id, None, None, None).await?;
+    /// let accessible: Vec<Uuid> = std::iter::once(response.tenant.id)
+    ///     .chain(response.descendants.iter().map(|t| t.id))
+    ///     .collect();
     ///
     /// // Build scope with accessible tenants
     /// let scope = ctx
     ///     .scope(policy_engine)
-    ///     .include_accessible_tenants(tenant_ids)
+    ///     .include_accessible_tenants(accessible)
     ///     .prepare()
     ///     .await?;
     /// ```

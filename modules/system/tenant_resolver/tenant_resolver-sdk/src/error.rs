@@ -13,16 +13,10 @@ pub enum TenantResolverError {
         tenant_id: Uuid,
     },
 
-    /// Access to target tenant is denied.
-    ///
-    /// The source tenant is available from the security context.
-    #[error("access denied to tenant: {target_tenant}")]
-    AccessDenied {
-        /// The target tenant being accessed.
-        target_tenant: Uuid,
-    },
-
     /// The request is not authorized.
+    ///
+    /// Reserved for future plugins that implement access control.
+    /// Built-in plugins currently use `TenantNotFound` for unauthorized access.
     #[error("unauthorized")]
     Unauthorized,
 

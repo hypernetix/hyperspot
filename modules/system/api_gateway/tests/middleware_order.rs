@@ -6,8 +6,10 @@
 //! set request id -> propagate request id -> trace -> push request id to extensions
 //! -> timeout -> body limit -> CORS -> MIME validation -> rate limit -> error mapping -> auth -> router
 //!
+mod common;
+
 use anyhow::Result;
-use async_trait::async_trait;
+use api_gateway::middleware::request_id::XRequestId;
 use axum::{
     Router,
     body::Body,
@@ -15,58 +17,16 @@ use axum::{
     http::{Request, StatusCode},
     response::IntoResponse,
 };
+use common::MockTenantResolver;
 use modkit::{
     Module, api::OperationBuilder, config::ConfigProvider, context::ModuleCtx,
     contracts::ApiGatewayCapability,
 };
-use tenant_resolver_sdk::{
-    AccessOptions, TenantFilter, TenantId, TenantInfo, TenantResolverError,
-    TenantResolverGatewayClient, TenantStatus,
-};
-
-use modkit_security::SecurityContext;
 use serde_json::json;
 use std::sync::Arc;
+use tenant_resolver_sdk::TenantResolverGatewayClient;
 use tower::ServiceExt;
 use uuid::Uuid;
-
-use api_gateway::middleware::request_id::XRequestId;
-
-struct MockTenantResolver;
-
-#[async_trait]
-impl TenantResolverGatewayClient for MockTenantResolver {
-    async fn get_tenant(
-        &self,
-        _ctx: &SecurityContext,
-        id: TenantId,
-    ) -> std::result::Result<TenantInfo, TenantResolverError> {
-        Ok(TenantInfo {
-            id,
-            name: format!("Tenant {id}"),
-            status: TenantStatus::Active,
-            tenant_type: None,
-        })
-    }
-
-    async fn can_access(
-        &self,
-        _ctx: &SecurityContext,
-        _target: TenantId,
-        _options: Option<&AccessOptions>,
-    ) -> std::result::Result<bool, TenantResolverError> {
-        Ok(true)
-    }
-
-    async fn get_accessible_tenants(
-        &self,
-        _ctx: &SecurityContext,
-        _filter: Option<&TenantFilter>,
-        _options: Option<&AccessOptions>,
-    ) -> std::result::Result<Vec<TenantInfo>, TenantResolverError> {
-        Ok(vec![])
-    }
-}
 
 struct TestConfigProvider {
     config: serde_json::Value,

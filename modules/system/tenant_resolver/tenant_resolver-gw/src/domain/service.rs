@@ -12,12 +12,11 @@ use modkit::plugins::GtsPluginSelector;
 use modkit::telemetry::ThrottledLog;
 use modkit_security::SecurityContext;
 use tenant_resolver_sdk::{
-    AccessOptions, TenantFilter, TenantId, TenantInfo, TenantResolverPluginClient,
-    TenantResolverPluginSpecV1,
+    GetAncestorsResponse, GetDescendantsResponse, HierarchyOptions, TenantFilter, TenantId,
+    TenantInfo, TenantResolverPluginClient, TenantResolverPluginSpecV1,
 };
 use tracing::info;
 use types_registry_sdk::{GtsEntity, ListQuery, TypesRegistryClient};
-use uuid::Uuid;
 
 use super::error::DomainError;
 
@@ -106,7 +105,6 @@ impl Service {
     ///
     /// # Errors
     ///
-    /// - `Unauthorized` if security context has no tenant
     /// - `TenantNotFound` if tenant doesn't exist
     /// - Plugin resolution errors
     #[tracing::instrument(skip_all, fields(tenant.id = %id))]
@@ -115,68 +113,93 @@ impl Service {
         ctx: &SecurityContext,
         id: TenantId,
     ) -> Result<TenantInfo, DomainError> {
-        require_tenant_context(ctx)?;
         let plugin = self.get_plugin().await?;
         plugin.get_tenant(ctx, id).await.map_err(DomainError::from)
     }
 
-    /// Check if current tenant can access target tenant.
+    /// Get multiple tenants by IDs (batch).
     ///
-    /// Access rules (including self-access, status-based, and permission-based)
-    /// are plugin-determined.
-    ///
-    /// # Returns
-    ///
-    /// - `Ok(true)` if access is allowed
-    /// - `Ok(false)` if target exists but access is denied
+    /// Returns only found tenants - missing IDs are silently skipped.
     ///
     /// # Errors
     ///
-    /// - `Unauthorized` if security context has no tenant
-    /// - `TenantNotFound` if target tenant doesn't exist
-    pub async fn can_access(
-        &self,
-        ctx: &SecurityContext,
-        target: TenantId,
-        options: Option<&AccessOptions>,
-    ) -> Result<bool, DomainError> {
-        require_tenant_context(ctx)?;
-        let plugin = self.get_plugin().await?;
-        plugin
-            .can_access(ctx, target, options)
-            .await
-            .map_err(DomainError::from)
-    }
-
-    /// Get all tenants accessible by the current tenant.
-    ///
-    /// # Errors
-    ///
-    /// - `Unauthorized` if security context has no tenant
     /// - Plugin resolution errors
-    pub async fn get_accessible_tenants(
+    #[tracing::instrument(skip_all, fields(ids_count = ids.len()))]
+    pub async fn get_tenants(
         &self,
         ctx: &SecurityContext,
+        ids: &[TenantId],
         filter: Option<&TenantFilter>,
-        options: Option<&AccessOptions>,
     ) -> Result<Vec<TenantInfo>, DomainError> {
-        require_tenant_context(ctx)?;
         let plugin = self.get_plugin().await?;
         plugin
-            .get_accessible_tenants(ctx, filter, options)
+            .get_tenants(ctx, ids, filter)
             .await
             .map_err(DomainError::from)
     }
-}
 
-/// Validates that the security context has a tenant ID.
-///
-/// Returns `Unauthorized` if the context has no tenant (nil UUID).
-fn require_tenant_context(ctx: &SecurityContext) -> Result<(), DomainError> {
-    if ctx.tenant_id() == Uuid::nil() {
-        return Err(DomainError::Unauthorized);
+    /// Get ancestor chain from tenant to root.
+    ///
+    /// # Errors
+    ///
+    /// - `TenantNotFound` if tenant doesn't exist
+    /// - Plugin resolution errors
+    #[tracing::instrument(skip_all, fields(tenant.id = %id))]
+    pub async fn get_ancestors(
+        &self,
+        ctx: &SecurityContext,
+        id: TenantId,
+        options: Option<&HierarchyOptions>,
+    ) -> Result<GetAncestorsResponse, DomainError> {
+        let plugin = self.get_plugin().await?;
+        plugin
+            .get_ancestors(ctx, id, options)
+            .await
+            .map_err(DomainError::from)
     }
-    Ok(())
+
+    /// Get descendants subtree of the given tenant.
+    ///
+    /// # Errors
+    ///
+    /// - `TenantNotFound` if tenant doesn't exist
+    /// - Plugin resolution errors
+    #[tracing::instrument(skip_all, fields(tenant.id = %id, max_depth))]
+    pub async fn get_descendants(
+        &self,
+        ctx: &SecurityContext,
+        id: TenantId,
+        filter: Option<&TenantFilter>,
+        options: Option<&HierarchyOptions>,
+        max_depth: Option<u32>,
+    ) -> Result<GetDescendantsResponse, DomainError> {
+        let plugin = self.get_plugin().await?;
+        plugin
+            .get_descendants(ctx, id, filter, options, max_depth)
+            .await
+            .map_err(DomainError::from)
+    }
+
+    /// Check if `ancestor_id` is an ancestor of `descendant_id`.
+    ///
+    /// # Errors
+    ///
+    /// - `TenantNotFound` if either tenant doesn't exist
+    /// - Plugin resolution errors
+    #[tracing::instrument(skip_all, fields(ancestor_id = %ancestor_id, descendant_id = %descendant_id))]
+    pub async fn is_ancestor(
+        &self,
+        ctx: &SecurityContext,
+        ancestor_id: TenantId,
+        descendant_id: TenantId,
+        options: Option<&HierarchyOptions>,
+    ) -> Result<bool, DomainError> {
+        let plugin = self.get_plugin().await?;
+        plugin
+            .is_ancestor(ctx, ancestor_id, descendant_id, options)
+            .await
+            .map_err(DomainError::from)
+    }
 }
 
 /// Selects the best plugin instance for the given vendor.
@@ -228,82 +251,4 @@ fn choose_plugin_instance(vendor: &str, instances: &[GtsEntity]) -> Result<Strin
         .ok_or_else(|| DomainError::PluginNotFound {
             vendor: vendor.to_owned(),
         })
-}
-
-#[cfg(test)]
-#[cfg_attr(coverage_nightly, coverage(off))]
-mod tests {
-    use super::*;
-
-    fn anonymous_ctx() -> SecurityContext {
-        SecurityContext::anonymous()
-    }
-
-    #[test]
-    fn require_tenant_context_rejects_anonymous() {
-        let ctx = anonymous_ctx();
-        let result = require_tenant_context(&ctx);
-
-        assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), DomainError::Unauthorized));
-    }
-
-    #[test]
-    fn require_tenant_context_accepts_valid_tenant() {
-        let ctx = SecurityContext::builder().tenant_id(Uuid::new_v4()).build();
-        let result = require_tenant_context(&ctx);
-
-        assert!(result.is_ok());
-    }
-
-    // Integration tests for Service methods require a mock plugin setup.
-    // These tests verify the early-return behavior for anonymous context.
-
-    mod service_anonymous_context {
-        use super::*;
-        use modkit::client_hub::ClientHub;
-        use std::sync::Arc;
-
-        fn create_service() -> Service {
-            // Create a minimal Service. Plugin resolution will never be reached
-            // because anonymous context check fails first.
-            let hub = Arc::new(ClientHub::new());
-            Service::new(hub, "test-vendor".to_owned())
-        }
-
-        #[tokio::test]
-        async fn get_tenant_rejects_anonymous_context() {
-            let service = create_service();
-            let ctx = anonymous_ctx();
-            let tenant_id = Uuid::new_v4();
-
-            let result = service.get_tenant(&ctx, tenant_id).await;
-
-            assert!(result.is_err());
-            assert!(matches!(result.unwrap_err(), DomainError::Unauthorized));
-        }
-
-        #[tokio::test]
-        async fn can_access_rejects_anonymous_context() {
-            let service = create_service();
-            let ctx = anonymous_ctx();
-            let target_id = Uuid::new_v4();
-
-            let result = service.can_access(&ctx, target_id, None).await;
-
-            assert!(result.is_err());
-            assert!(matches!(result.unwrap_err(), DomainError::Unauthorized));
-        }
-
-        #[tokio::test]
-        async fn get_accessible_tenants_rejects_anonymous_context() {
-            let service = create_service();
-            let ctx = anonymous_ctx();
-
-            let result = service.get_accessible_tenants(&ctx, None, None).await;
-
-            assert!(result.is_err());
-            assert!(matches!(result.unwrap_err(), DomainError::Unauthorized));
-        }
-    }
 }
