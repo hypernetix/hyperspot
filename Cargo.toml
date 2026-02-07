@@ -341,7 +341,7 @@ reqwest = { version = "0.12", default-features = false, features = [
 ] }
 
 # Time handling
-time = { version = "0.3", features = ["serde", "formatting", "parsing"] }
+time = { version = "0.3.47", features = ["serde", "formatting", "parsing"] }
 
 # Cryptographic utilities
 sha2 = "0.10"
