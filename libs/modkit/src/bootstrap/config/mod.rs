@@ -96,20 +96,38 @@ impl ConfigProvider for AppConfig {
     fn get_module_config(&self, module_name: &str) -> Option<&serde_json::Value> {
         self.modules.get(module_name)
     }
+
+    fn app_config(&self) -> Option<&AppConfig> {
+        Some(self)
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(deny_unknown_fields)]
+#[serde(deny_unknown_fields, default)]
 pub struct ServerConfig {
     pub home_dir: PathBuf, // will be normalized to absolute path
+    /// Application name used for metrics prefix and identification
+    pub app_name: String,
+    /// Prometheus metrics configuration
+    pub prometheus: PrometheusConfig,
 }
 
 impl Default for ServerConfig {
     fn default() -> Self {
         Self {
             home_dir: super::host::paths::default_home_dir().join(".hyperspot"),
+            app_name: "hyperspot".to_owned(),
+            prometheus: PrometheusConfig::default(),
         }
     }
+}
+
+/// Prometheus metrics configuration
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[serde(deny_unknown_fields, default)]
+pub struct PrometheusConfig {
+    /// Enable Prometheus metrics collection and endpoint
+    pub enabled: bool,
 }
 
 impl ServerConfig {
