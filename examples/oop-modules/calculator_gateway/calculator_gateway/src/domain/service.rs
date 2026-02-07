@@ -7,6 +7,7 @@ use std::sync::Arc;
 
 use calculator_sdk::CalculatorClientV1;
 use modkit::client_hub::ClientHub;
+use modkit_macros::domain_model;
 use modkit_security::SecurityContext;
 use tracing::{debug, instrument};
 
@@ -14,6 +15,7 @@ use tracing::{debug, instrument};
 ///
 /// This is the internal error type. SDK's CalculatorGatewayLocalClient
 /// converts these to CalculatorGatewayError for external consumers.
+#[domain_model]
 #[derive(thiserror::Error, Debug)]
 pub enum ServiceError {
     /// Remote service call failed
@@ -28,6 +30,7 @@ pub enum ServiceError {
 /// Domain service that orchestrates accumulator operations.
 ///
 /// Holds a reference to ClientHub for resolving dependencies at call time.
+#[domain_model]
 pub struct Service {
     client_hub: Arc<ClientHub>,
 }

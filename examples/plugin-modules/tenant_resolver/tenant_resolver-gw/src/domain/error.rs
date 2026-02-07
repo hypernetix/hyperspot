@@ -8,7 +8,10 @@
 //!
 //! See `guidelines/NEW_MODULE.md` for full explanation.
 
+use modkit_macros::domain_model;
+
 /// Domain error for the `tenant_resolver` gateway example.
+#[domain_model]
 #[derive(thiserror::Error, Debug)]
 pub enum DomainError {
     #[error("types registry is not available: {0}")]

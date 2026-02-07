@@ -1,3 +1,6 @@
+use modkit_macros::domain_model;
+
+#[domain_model]
 pub struct SettingsFields;
 
 impl SettingsFields {

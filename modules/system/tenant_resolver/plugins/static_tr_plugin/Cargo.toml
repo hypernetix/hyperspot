@@ -23,6 +23,7 @@ types-registry-sdk = { package = "cf-types-registry-sdk", version = "0.1.2", pat
 
 # ModKit dependencies
 modkit = { workspace = true }
+modkit-macros = { workspace = true }
 modkit-security = { workspace = true }
 modkit-odata = { workspace = true }
 

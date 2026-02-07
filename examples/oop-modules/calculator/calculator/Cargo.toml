@@ -23,6 +23,7 @@ calculator-sdk = { path = "../calculator-sdk" }
 
 # ModKit dependencies
 modkit = { workspace = true, features = ["bootstrap"] }
+modkit-macros = { workspace = true }
 modkit-security = { workspace = true }
 modkit-transport-grpc = { workspace = true }
 grpc_hub = { workspace = true }

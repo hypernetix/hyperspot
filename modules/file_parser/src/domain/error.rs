@@ -1,6 +1,8 @@
+use modkit_macros::domain_model;
 use thiserror::Error;
 
 /// Domain-level errors for file parsing operations
+#[domain_model]
 #[derive(Error, Debug, Clone)]
 pub enum DomainError {
     #[error("File not found: {path}")]

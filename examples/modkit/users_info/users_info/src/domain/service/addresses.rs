@@ -1,4 +1,6 @@
 use std::sync::Arc;
+
+use modkit_macros::domain_model;
 use tracing::{debug, info, instrument};
 
 use crate::domain::error::DomainError;
@@ -11,6 +13,7 @@ use time::OffsetDateTime;
 use user_info_sdk::{Address, AddressPatch, NewAddress};
 use uuid::Uuid;
 
+#[domain_model]
 pub struct AddressesService<R: AddressesRepository, U: UsersRepository> {
     db: Arc<DbProvider>,
     policy_engine: PolicyEngineRef,

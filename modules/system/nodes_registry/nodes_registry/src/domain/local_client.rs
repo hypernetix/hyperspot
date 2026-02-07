@@ -1,8 +1,10 @@
 use crate::domain::service::Service;
+use modkit_macros::domain_model;
 use nodes_registry_sdk::{Node, NodeSysCap, NodeSysInfo, NodesRegistryClient, NodesRegistryError};
 use std::sync::Arc;
 
 /// Local client implementation for the nodes registry
+#[domain_model]
 pub struct NodesRegistryLocalClient {
     service: Arc<Service>,
 }

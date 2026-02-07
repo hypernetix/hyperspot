@@ -2,6 +2,7 @@
 
 use std::collections::{HashMap, HashSet};
 
+use modkit_macros::domain_model;
 use tenant_resolver_sdk::{TenantFilter, TenantId, TenantInfo};
 
 use crate::config::StaticTrPluginConfig;
@@ -9,6 +10,7 @@ use crate::config::StaticTrPluginConfig;
 /// Static tenant resolver service.
 ///
 /// Stores tenant data and access rules in memory, loaded from configuration.
+#[domain_model]
 pub struct Service {
     /// Tenant info by ID.
     pub(super) tenants: HashMap<TenantId, TenantInfo>,

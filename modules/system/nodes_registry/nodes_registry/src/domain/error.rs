@@ -1,4 +1,7 @@
+use modkit_macros::domain_model;
+
 /// Domain-level errors for nodes registry
+#[domain_model]
 #[derive(Debug, thiserror::Error)]
 pub enum DomainError {
     #[error("Node not found: {0}")]

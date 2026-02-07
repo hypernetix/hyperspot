@@ -1,4 +1,6 @@
 use std::sync::Arc;
+
+use modkit_macros::domain_model;
 use tracing::instrument;
 
 use crate::domain::error::DomainError;
@@ -25,6 +27,7 @@ use uuid::Uuid;
 /// - Keeps handlers clean and focused on HTTP concerns
 /// - Centralizes DB error mapping in the domain layer
 /// - Maintains transaction safety via the task-local guard
+#[domain_model]
 pub struct UsersService<R: UsersRepository + 'static, CR: CitiesRepository, AR: AddressesRepository>
 {
     db: Arc<DbProvider>,

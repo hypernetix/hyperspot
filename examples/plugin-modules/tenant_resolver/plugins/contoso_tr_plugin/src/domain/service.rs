@@ -1,6 +1,7 @@
 //! Contoso plugin service implementing `TenantResolverPluginClientV1`.
 
 use async_trait::async_trait;
+use modkit_macros::domain_model;
 use modkit_odata::{ODataQuery, Page, PageInfo};
 use modkit_security::SecurityContext;
 use tenant_resolver_example_sdk::{
@@ -12,6 +13,7 @@ use tenant_resolver_example_sdk::{
 ///
 /// This is a stub implementation that only supports `get_root_tenant`.
 /// Other methods return appropriate errors or empty results.
+#[domain_model]
 pub struct Service;
 
 impl Service {
