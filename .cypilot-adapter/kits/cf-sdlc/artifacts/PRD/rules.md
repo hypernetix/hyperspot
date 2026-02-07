@@ -12,7 +12,7 @@ ALWAYS open and follow `docs/checklists/PRD.md` as a quality checklist
 
 ## Hyperspot Deltas vs Original Cypilot SDLC
 
-- Downstream chain is PRD → DESIGN → DECOMPOSITION → FEATURE.
+- Downstream chain is PRD → ADR → DESIGN → DECOMPOSITION → FEATURE.
 
 ## Generation Checklist
 

@@ -2,7 +2,7 @@
 
 ## 1. Overview
 
-{ Description of how the DESIGN was decomposed into specs, the decomposition strategy, and any relevant decomposition rationale. }
+{ Description of how the DESIGN was decomposed into features, the decomposition strategy, and any relevant decomposition rationale. }
 
 
 ## 2. Entries
@@ -10,9 +10,9 @@
 **Overall implementation status:**
 - [ ] `p1` - **ID**: `cpt-{system}-status-overall`
 
-### 1. [{Spec Title 1}](spec-{slug}/) - HIGH
+### 1. [{Feature Title 1}](feature-{slug}/) - HIGH
 
-- [ ] `p1` - **ID**: `cpt-{system}-spec-{slug}`
+- [ ] `p1` - **ID**: `cpt-{system}-feature-{slug}`
 
 - **Purpose**: {Few sentences describing what this feature accomplishes and why it matters}
 
@@ -54,13 +54,13 @@
 - **Data**:
   - [ ] `p1` - `cpt-{system}-dbtable-{slug}`
 
-### 2. [{Spec Title 2}](spec-{slug}/) - MEDIUM
+### 2. [{Feature Title 2}](feature-{slug}/) - MEDIUM
 
-- [ ] `p2` - **ID**: `cpt-{system}-spec-{slug}`
+- [ ] `p2` - **ID**: `cpt-{system}-feature-{slug}`
 
 - **Purpose**: {Few sentences describing what this feature accomplishes and why it matters}
 
-- **Depends On**: `cpt-{system}-spec-{slug}` (previous spec)
+- **Depends On**: `cpt-{system}-feature-{slug}` (previous feature)
 
 - **Scope**:
   - {in-scope item 1}
@@ -94,13 +94,13 @@
 - **Data**:
   - [ ] `p2` - `cpt-{system}-dbtable-{slug}`
 
-### 3. [{Spec Title 3}](spec-{slug}/) - LOW
+### 3. [{Feature Title 3}](feature-{slug}/) - LOW
 
-- [ ] `p3` - **ID**: `cpt-{system}-spec-{slug}`
+- [ ] `p3` - **ID**: `cpt-{system}-feature-{slug}`
 
 - **Purpose**: {Few sentences describing what this feature accomplishes and why it matters}
 
-- **Depends On**: `cpt-{system}-spec-{slug}`
+- **Depends On**: `cpt-{system}-feature-{slug}`
 
 - **Scope**:
   - {in-scope item}
