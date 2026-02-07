@@ -21,7 +21,7 @@ See [PRD.md](./PRD.md) section 1 "Overview" — Key Problems Solved:
 
 #### Functional requirements
 
-| FDD ID | Solution short description |
+| Cypilot ID | Solution short description |
 |--------|----------------------------|
 | `cpt-llmgw-fr-chat-completion-v1` | Provider adapters + Outbound API GW |
 | `cpt-llmgw-fr-streaming-v1` | SSE pass-through via adapters |
@@ -49,7 +49,7 @@ See [PRD.md](./PRD.md) section 1 "Overview" — Key Problems Solved:
 
 #### Non-functional requirements
 
-| FDD ID | Solution short description |
+| Cypilot ID | Solution short description |
 |--------|----------------------------|
 | `cpt-llmgw-nfr-scalability-v1` | Stateless design, distributed cache for async jobs |
 
