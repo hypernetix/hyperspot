@@ -9,6 +9,24 @@ release-plz updates this file in the Release PR.
 
 ## [Unreleased]
 
+## [0.1.3](https://github.com/hypernetix/hyperspot/compare/cf-tenant-resolver-sdk-v0.1.2...cf-tenant-resolver-sdk-v0.1.3) - 2026-02-07
+
+### Other
+
+- updated the following local packages: cf-modkit-security, cf-modkit-odata, cf-modkit
+
+## [0.1.7](https://github.com/hypernetix/hyperspot/compare/cf-system-sdks-v0.1.6...cf-system-sdks-v0.1.7) - 2026-02-07
+
+### Other
+
+- updated the following local packages: cf-system-sdk-directory
+
+## [0.1.7](https://github.com/hypernetix/hyperspot/compare/cf-system-sdk-directory-v0.1.6...cf-system-sdk-directory-v0.1.7) - 2026-02-07
+
+### Other
+
+- updated the following local packages: cf-modkit-transport-grpc
+
 ## [0.1.2](https://github.com/hypernetix/hyperspot/compare/cf-tenant-resolver-gw-v0.1.1...cf-tenant-resolver-gw-v0.1.2) - 2026-02-06
 
 ### Other
