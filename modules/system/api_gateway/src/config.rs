@@ -109,7 +109,12 @@ pub struct CorsConfig {
 impl Default for CorsConfig {
     fn default() -> Self {
         Self {
-            allowed_origins: vec!["*".to_owned()],
+            // Default to localhost origins only. Production deployments should
+            // explicitly configure their allowed origins in the YAML config.
+            allowed_origins: vec![
+                "http://localhost".to_owned(),
+                "http://127.0.0.1".to_owned(),
+            ],
             allowed_methods: vec![
                 "GET".to_owned(),
                 "POST".to_owned(),
