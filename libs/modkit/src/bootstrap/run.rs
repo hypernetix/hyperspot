@@ -20,6 +20,7 @@ fn spawn_signal_handler(cancel: CancellationToken, context: &str) {
     drop(tokio::spawn(async move {
         match shutdown::wait_for_shutdown().await {
             Ok(()) => {
+                tracing::info!(target: "", "------------------");
                 tracing::info!("{}: shutdown signal received", context_owned);
             }
             Err(e) => {
