@@ -109,7 +109,7 @@ The system **MUST** allow users to delete a task permanently.
 **Rationale**: Users need to remove irrelevant or mistaken tasks.
 **Actors**: `spd-todo-app-actor-user`
 
-### 4.2 Organization
+### 5.2 Organization
 
 #### Filter Tasks
 

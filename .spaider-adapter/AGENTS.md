@@ -21,7 +21,7 @@ Use `{spaider_adapter_path}` as the base path for all relative Spaider Adapter f
 
 ## Navigation Rules
 
-ALWAYS sign commits with DCO: use `git commit -s` for all commits, or enable auto-signing with `git config --global format.signoff true`
+ALWAYS sign commits with DCO: use `git commit -s` for all commits
 
 ALWAYS open and follow `{spaider_path}/requirements/artifacts-registry.md` WHEN working with artifacts.json
 
