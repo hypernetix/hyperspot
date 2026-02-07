@@ -1,14 +1,39 @@
+use tracing::warn;
 use tower_http::cors::CorsLayer;
 
 use crate::config::{ApiGatewayConfig, CorsConfig};
 
 /// Build a CORS layer from config.
+///
+/// # Panics
+///
+/// Panics if `allow_credentials` is `true` while `allowed_origins` contains `"*"`.
+/// This combination is forbidden by the CORS specification — browsers will reject the
+/// response, and it signals a likely misconfiguration.
 pub fn build_cors_layer(cfg: &ApiGatewayConfig) -> CorsLayer {
     let cors_cfg: CorsConfig = cfg.cors.clone().unwrap_or_default();
 
+    let has_wildcard_origin = cors_cfg.allowed_origins.iter().any(|o| o == "*");
+
+    // Reject invalid combination: wildcard origins + credentials
+    assert!(
+        !(has_wildcard_origin && cors_cfg.allow_credentials),
+        "CORS misconfiguration: allowed_origins=['*'] cannot be combined with \
+         allow_credentials=true. The CORS specification forbids this combination. \
+         Please specify explicit origins when using credentials."
+    );
+
+    if has_wildcard_origin {
+        warn!(
+            "CORS is configured with allowed_origins=['*']. \
+             This allows any website to make cross-origin requests to the API. \
+             Consider specifying explicit origins for production deployments."
+        );
+    }
+
     let mut layer = CorsLayer::new();
 
-    if cors_cfg.allowed_origins.iter().any(|o| o == "*") {
+    if has_wildcard_origin {
         layer = layer.allow_origin(tower_http::cors::Any);
     } else {
         let origins: Vec<axum::http::HeaderValue> = cors_cfg

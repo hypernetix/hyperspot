@@ -259,7 +259,7 @@ modules:
       ssh_python_default:
         code_executor_path: "/usr/local/bin/python3.11"
         host: "localhost"
-        password: "password"
+        password: "${SSH_PASSWORD}"
         port: 22
         private_key: "~/.ssh/id_rsa"
         timeout_sec: 30

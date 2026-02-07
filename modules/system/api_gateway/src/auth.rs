@@ -161,7 +161,7 @@ impl modkit_auth::RoutePolicy for GatewayRoutePolicy {
 /// - The router-level middleware injects `SecurityCtx::root_ctx()` directly
 /// - The `NoopValidator` exists only as a safety net in case someone accidentally
 ///   wires `auth_with_policy` while `auth_disabled == true`
-/// - If the `NoopValidator` is ever called, it will panic with a clear error message
+/// - If the `NoopValidator` is ever called, it returns an `AuthError::Internal` error
 ///
 /// When `cfg.auth_disabled == false`:
 /// - This function builds the real OIDC/JWKS validator and associated auth components
@@ -269,7 +269,11 @@ pub fn build_auth_state(
     Ok((auth_state, route_policy))
 }
 
-/// No-op validator for `auth_disabled` mode (should never be called)
+/// No-op validator for `auth_disabled` mode.
+///
+/// This should never be called in normal operation — when `auth_disabled=true`,
+/// the router bypasses token validation entirely. If it *is* reached due to a
+/// wiring bug, we return an error instead of panicking to avoid crashing the server.
 struct NoopValidator;
 
 #[async_trait::async_trait]
@@ -278,9 +282,13 @@ impl TokenValidator for NoopValidator {
         &self,
         _token: &str,
     ) -> Result<modkit_auth::Claims, modkit_auth::AuthError> {
-        panic!(
-            "NoopValidator should never be called - auth_disabled mode should bypass validation"
+        tracing::error!(
+            "NoopValidator was called — this indicates a configuration bug: \
+             auth_disabled mode should bypass token validation entirely"
         );
+        Err(modkit_auth::AuthError::Internal(
+            "Token validation is unavailable (auth_disabled mode)".to_owned(),
+        ))
     }
 }
 
