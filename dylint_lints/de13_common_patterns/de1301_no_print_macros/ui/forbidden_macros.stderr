@@ -1,0 +1,43 @@
+error: macro `println!` is forbidden in production code (DE1301)
+  --> $DIR/forbidden_macros.rs:3:5
+   |
+LL |     println!("hello");
+   |     ^^^^^^^^^^^^^^^^^
+   |
+   = help: use `tracing`/`log` for observability, or return the value and handle it at the boundary
+   = note: `#[deny(de1301_no_print_macros)]` on by default
+
+error: macro `eprintln!` is forbidden in production code (DE1301)
+  --> $DIR/forbidden_macros.rs:6:5
+   |
+LL |     eprintln!("hello");
+   |     ^^^^^^^^^^^^^^^^^^
+   |
+   = help: use `tracing`/`log` for observability, or return the value and handle it at the boundary
+
+error: macro `print!` is forbidden in production code (DE1301)
+  --> $DIR/forbidden_macros.rs:9:5
+   |
+LL |     print!("hello");
+   |     ^^^^^^^^^^^^^^^
+   |
+   = help: use `tracing`/`log` for observability, or return the value and handle it at the boundary
+
+error: macro `eprint!` is forbidden in production code (DE1301)
+  --> $DIR/forbidden_macros.rs:12:5
+   |
+LL |     eprint!("hello");
+   |     ^^^^^^^^^^^^^^^^
+   |
+   = help: use `tracing`/`log` for observability, or return the value and handle it at the boundary
+
+error: macro `dbg!` is forbidden in production code (DE1301)
+  --> $DIR/forbidden_macros.rs:15:5
+   |
+LL |     dbg!(42);
+   |     ^^^^^^^^
+   |
+   = help: use `tracing`/`log` for observability, or return the value and handle it at the boundary
+
+error: aborting due to 5 previous errors
+

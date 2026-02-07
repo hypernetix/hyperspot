@@ -919,6 +919,1366 @@
         ]
       }
     },
+    "/nodes-registry/v1/nodes": {
+      "get": {
+        "tags": [
+          "nodes"
+        ],
+        "summary": "List all nodes",
+        "description": "Get a list of all nodes in the deployment. Use ?details=true to include sysinfo and syscap. Use ?force_refresh=true to invalidate syscap cache.",
+        "operationId": "nodes_registry.list_nodes",
+        "parameters": [
+          {
+            "name": "details",
+            "in": "query",
+            "description": "Include detailed system information and capabilities",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "force_refresh",
+            "in": "query",
+            "description": "Force refresh syscap, ignoring cache (only applies when details=true)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of nodes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Vec"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/nodes-registry/v1/nodes/{id}": {
+      "get": {
+        "tags": [
+          "nodes"
+        ],
+        "summary": "Get node by ID",
+        "description": "Get detailed information about a specific node. Use ?details=true to include sysinfo and syscap. Use ?force_refresh=true to invalidate syscap cache.",
+        "operationId": "nodes_registry.get_node",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Node UUID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "details",
+            "in": "query",
+            "description": "Include detailed system information and capabilities",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "force_refresh",
+            "in": "query",
+            "description": "Force refresh syscap, ignoring cache (only applies when details=true)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Node details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NodeDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/nodes-registry/v1/nodes/{id}/syscap": {
+      "get": {
+        "tags": [
+          "nodes"
+        ],
+        "summary": "Get node system capabilities",
+        "description": "Get system capabilities (hardware, software features) for a specific node. Use ?force_refresh=true to invalidate cache and refresh all capabilities.",
+        "operationId": "nodes_registry.get_node_syscap",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Node UUID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "force_refresh",
+            "in": "query",
+            "description": "Force refresh all syscap, ignoring cache and TTL",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "System capabilities (merged)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NodeSysCapDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/nodes-registry/v1/nodes/{id}/sysinfo": {
+      "get": {
+        "tags": [
+          "nodes"
+        ],
+        "summary": "Get node system information",
+        "description": "Get detailed system information (OS, CPU, memory, etc.) for a specific node",
+        "operationId": "nodes_registry.get_node_sysinfo",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Node UUID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "System information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NodeSysInfoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/simple-user-settings/v1/settings": {
+      "get": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "Get user settings",
+        "description": "Retrieve settings for the authenticated user",
+        "operationId": "settings.get_settings",
+        "responses": {
+          "200": {
+            "description": "Settings retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimpleUserSettingsDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "Update user settings",
+        "description": "Full update of user settings (POST semantics)",
+        "operationId": "settings.update_settings",
+        "requestBody": {
+          "description": "Settings update data",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSimpleUserSettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Settings updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimpleUserSettingsDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "Partially update user settings",
+        "description": "Partial update of user settings (PATCH semantics)",
+        "operationId": "settings.patch_settings",
+        "requestBody": {
+          "description": "Settings patch data",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchSimpleUserSettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Settings patched",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimpleUserSettingsDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/types-registry/v1/entities": {
+      "get": {
+        "tags": [
+          "types-registry"
+        ],
+        "summary": "List GTS entities",
+        "description": "List registered GTS entities with optional filtering by pattern, kind, vendor, package, or namespace.",
+        "operationId": "types_registry.list",
+        "parameters": [
+          {
+            "name": "pattern",
+            "in": "query",
+            "description": "Wildcard pattern for GTS ID matching (e.g., gts.acme.*)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "description": "Filter by entity kind: 'type' or 'instance'",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vendor",
+            "in": "query",
+            "description": "Filter by vendor",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "package",
+            "in": "query",
+            "description": "Filter by package",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "namespace",
+            "in": "query",
+            "description": "Filter by namespace",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "segmentScope",
+            "in": "query",
+            "description": "Segment match scope: 'primary' or 'any' (default)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of entities",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListEntitiesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "types-registry"
+        ],
+        "summary": "Register GTS entities",
+        "description": "Register one or more GTS entities (types or instances) in batch. Returns per-item results.",
+        "operationId": "types_registry.register",
+        "requestBody": {
+          "description": "GTS entities to register",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterEntitiesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Registration results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegisterEntitiesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/types-registry/v1/entities/{gts_id}": {
+      "get": {
+        "tags": [
+          "types-registry"
+        ],
+        "summary": "Get GTS entity by ID",
+        "description": "Retrieve a single GTS entity by its identifier.",
+        "operationId": "types_registry.get",
+        "parameters": [
+          {
+            "name": "gts_id",
+            "in": "path",
+            "description": "The GTS identifier (e.g., gts.acme.core.events.user_created.v1~)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The requested entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GtsEntityDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/users-info/v1/cities": {
+      "get": {
+        "tags": [
+          "cities"
+        ],
+        "summary": "List cities with cursor pagination",
+        "description": "Retrieve a paginated list of cities using cursor-based pagination",
+        "operationId": "users_info.list_cities",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Maximum number of cities to return",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "Cursor for pagination",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$filter",
+            "in": "query",
+            "description": "OData v4 filter expression\n- id: eq|ne|in\n- name: eq|ne|contains|startswith|endswith|in\n- country: eq|ne|contains|startswith|endswith|in\n- created_at: eq|ne|gt|ge|lt|le|in",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$select",
+            "in": "query",
+            "description": "OData v4 select expression",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$orderby",
+            "in": "query",
+            "description": "OData v4 orderby expression\n- id asc\n- id desc\n- name asc\n- name desc\n- country asc\n- country desc\n- created_at asc\n- created_at desc",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of cities",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-odata-filter": {
+          "allowedFields": {
+            "country": [
+              "eq",
+              "ne",
+              "contains",
+              "startswith",
+              "endswith",
+              "in"
+            ],
+            "created_at": [
+              "eq",
+              "ne",
+              "gt",
+              "ge",
+              "lt",
+              "le",
+              "in"
+            ],
+            "id": [
+              "eq",
+              "ne",
+              "in"
+            ],
+            "name": [
+              "eq",
+              "ne",
+              "contains",
+              "startswith",
+              "endswith",
+              "in"
+            ]
+          }
+        },
+        "x-odata-orderby": {
+          "allowedFields": [
+            "id asc",
+            "id desc",
+            "name asc",
+            "name desc",
+            "country asc",
+            "country desc",
+            "created_at asc",
+            "created_at desc"
+          ]
+        }
+      },
+      "post": {
+        "tags": [
+          "cities"
+        ],
+        "summary": "Create a new city",
+        "description": "Create a new city with the provided information",
+        "operationId": "users_info.create_city",
+        "requestBody": {
+          "description": "City creation data",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCityReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created city",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CityDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/users-info/v1/cities/{id}": {
+      "get": {
+        "tags": [
+          "cities"
+        ],
+        "summary": "Get city by ID",
+        "description": "Retrieve a specific city by UUID",
+        "operationId": "users_info.get_city",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "City UUID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$select",
+            "in": "query",
+            "description": "OData v4 select expression",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "City found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CityDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "cities"
+        ],
+        "summary": "Delete city",
+        "description": "Delete a city by UUID",
+        "operationId": "users_info.delete_city",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "City UUID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "City deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "cities"
+        ],
+        "summary": "Update city",
+        "description": "Partially update a city with the provided fields",
+        "operationId": "users_info.update_city",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "City UUID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "City update data",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCityReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Updated city",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CityDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/users-info/v1/users": {
       "get": {
         "tags": [
@@ -949,16 +2309,7 @@
           {
             "name": "$filter",
             "in": "query",
-            "description": "OData v4 filter. Examples: `email eq 'test@example.com'`, `contains(email,'@acme.com')`",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "$orderby",
-            "in": "query",
-            "description": "OData orderby clause. Example: 'created_at desc, id desc'",
+            "description": "OData v4 filter expression\n- id: eq|ne|in\n- email: eq|ne|contains|startswith|endswith|in\n- created_at: eq|ne|gt|ge|lt|le|in",
             "required": false,
             "schema": {
               "type": "string"
@@ -967,7 +2318,16 @@
           {
             "name": "$select",
             "in": "query",
-            "description": "OData field projection. Select specific fields to return. Supports dot notation for nested fields. Examples: 'id,name', 'id,access_control.read,access_control.write'",
+            "description": "OData v4 select expression",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$orderby",
+            "in": "query",
+            "description": "OData v4 orderby expression\n- id asc\n- id desc\n- email asc\n- email desc\n- created_at asc\n- created_at desc",
             "required": false,
             "schema": {
               "type": "string"
@@ -1010,7 +2370,43 @@
           {
             "bearerAuth": []
           }
-        ]
+        ],
+        "x-odata-filter": {
+          "allowedFields": {
+            "created_at": [
+              "eq",
+              "ne",
+              "gt",
+              "ge",
+              "lt",
+              "le",
+              "in"
+            ],
+            "email": [
+              "eq",
+              "ne",
+              "contains",
+              "startswith",
+              "endswith",
+              "in"
+            ],
+            "id": [
+              "eq",
+              "ne",
+              "in"
+            ]
+          }
+        },
+        "x-odata-orderby": {
+          "allowedFields": [
+            "id asc",
+            "id desc",
+            "email asc",
+            "email desc",
+            "created_at asc",
+            "created_at desc"
+          ]
+        }
       },
       "post": {
         "tags": [
@@ -1143,6 +2539,15 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "$select",
+            "in": "query",
+            "description": "OData v4 select expression",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -1178,113 +2583,6 @@
           },
           "404": {
             "description": "Not Found",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ]
-      },
-      "put": {
-        "tags": [
-          "users"
-        ],
-        "summary": "Update user",
-        "description": "Update a user with partial data",
-        "operationId": "users_info.update_user",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "description": "User UUID",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "description": "User update data",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateUserReq"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Updated user",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UserDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1385,11 +2683,524 @@
             "bearerAuth": []
           }
         ]
+      },
+      "patch": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Update user",
+        "description": "Partially update a user with the provided fields",
+        "operationId": "users_info.update_user",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "User UUID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "User update data",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Updated user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/users-info/v1/users/{id}/address": {
+      "get": {
+        "tags": [
+          "addresses"
+        ],
+        "summary": "Get user address",
+        "description": "Retrieve the address for a specific user",
+        "operationId": "users_info.get_user_address",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "User UUID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddressDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "addresses"
+        ],
+        "summary": "Upsert user address",
+        "description": "Create or replace the address for a specific user",
+        "operationId": "users_info.put_user_address",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "User UUID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Address data",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutAddressReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Address created or updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddressDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "addresses"
+        ],
+        "summary": "Delete user address",
+        "description": "Delete the address for a specific user",
+        "operationId": "users_info.delete_user_address",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "User UUID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Address deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     }
   },
   "components": {
     "schemas": {
+      "AddressDto": {
+        "type": "object",
+        "description": "REST DTO for address representation",
+        "required": [
+          "id",
+          "tenant_id",
+          "user_id",
+          "city_id",
+          "street",
+          "postal_code",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "city_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "postal_code": {
+            "type": "string"
+          },
+          "street": {
+            "type": "string"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "BatteryInfoDto": {
+        "type": "object",
+        "required": [
+          "on_battery",
+          "percentage"
+        ],
+        "properties": {
+          "on_battery": {
+            "type": "boolean"
+          },
+          "percentage": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          }
+        }
+      },
+      "CityDto": {
+        "type": "object",
+        "description": "REST DTO for city representation",
+        "required": [
+          "id",
+          "tenant_id",
+          "name",
+          "country",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "country": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CpuInfoDto": {
+        "type": "object",
+        "required": [
+          "model",
+          "num_cpus",
+          "cores",
+          "frequency_mhz"
+        ],
+        "properties": {
+          "cores": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "frequency_mhz": {
+            "type": "number",
+            "format": "double"
+          },
+          "model": {
+            "type": "string"
+          },
+          "num_cpus": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          }
+        }
+      },
+      "CreateCityReq": {
+        "type": "object",
+        "description": "REST DTO for creating a new city",
+        "required": [
+          "tenant_id",
+          "name",
+          "country"
+        ],
+        "properties": {
+          "country": {
+            "type": "string"
+          },
+          "id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "CreateUserReq": {
         "type": "object",
         "description": "REST DTO for creating a new user",
@@ -1440,6 +3251,441 @@
           }
         }
       },
+      "GpuInfoDto": {
+        "type": "object",
+        "required": [
+          "model"
+        ],
+        "properties": {
+          "cores": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          },
+          "model": {
+            "type": "string"
+          },
+          "total_memory_mb": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "used_memory_mb": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          }
+        }
+      },
+      "GtsEntityDto": {
+        "type": "object",
+        "description": "Response DTO for a GTS entity.",
+        "required": [
+          "id",
+          "gts_id",
+          "segments",
+          "is_schema",
+          "content"
+        ],
+        "properties": {
+          "content": {
+            "description": "The entity content (schema for types, object for instances)."
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional description of the entity."
+          },
+          "gts_id": {
+            "type": "string",
+            "description": "The full GTS identifier string."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Deterministic UUID generated from the GTS ID."
+          },
+          "is_schema": {
+            "type": "boolean",
+            "description": "Whether this entity is a schema (type definition).\n\n- `true`: This is a type definition (GTS ID ends with `~`)\n- `false`: This is an instance (GTS ID does not end with `~`)"
+          },
+          "segments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GtsIdSegmentDto"
+            },
+            "description": "All parsed segments from the GTS ID."
+          }
+        }
+      },
+      "GtsIdSegmentDto": {
+        "type": "object",
+        "description": "DTO for a GTS ID segment.",
+        "required": [
+          "vendor",
+          "package",
+          "namespace",
+          "type_name",
+          "ver_major"
+        ],
+        "properties": {
+          "namespace": {
+            "type": "string",
+            "description": "Namespace component of the segment."
+          },
+          "package": {
+            "type": "string",
+            "description": "Package component of the segment."
+          },
+          "type_name": {
+            "type": "string",
+            "description": "Type name component of the segment."
+          },
+          "vendor": {
+            "type": "string",
+            "description": "Vendor component of the segment."
+          },
+          "ver_major": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Major version number.",
+            "minimum": 0
+          }
+        }
+      },
+      "HostInfoDto": {
+        "type": "object",
+        "required": [
+          "hostname",
+          "uptime_seconds",
+          "ip_addresses"
+        ],
+        "properties": {
+          "hostname": {
+            "type": "string"
+          },
+          "ip_addresses": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "All detected IP addresses. The first one is the primary IP (used for default route)."
+          },
+          "uptime_seconds": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        }
+      },
+      "InlineDto": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "text",
+              "style",
+              "type"
+            ],
+            "properties": {
+              "style": {
+                "$ref": "#/components/schemas/InlineStyleDto"
+              },
+              "text": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "text"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "text",
+              "target",
+              "style",
+              "type"
+            ],
+            "properties": {
+              "style": {
+                "$ref": "#/components/schemas/InlineStyleDto"
+              },
+              "target": {
+                "type": "string"
+              },
+              "text": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "link"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "text",
+              "style",
+              "type"
+            ],
+            "properties": {
+              "style": {
+                "$ref": "#/components/schemas/InlineStyleDto"
+              },
+              "text": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "code"
+                ]
+              }
+            }
+          }
+        ],
+        "description": "REST DTO for inline content"
+      },
+      "InlineStyleDto": {
+        "type": "object",
+        "description": "REST DTO for inline text styling",
+        "properties": {
+          "bold": {
+            "type": "boolean"
+          },
+          "code": {
+            "type": "boolean"
+          },
+          "italic": {
+            "type": "boolean"
+          },
+          "strike": {
+            "type": "boolean"
+          },
+          "underline": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ListEntitiesResponse": {
+        "type": "object",
+        "description": "Response DTO for listing GTS entities.",
+        "required": [
+          "entities",
+          "count"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "description": "Total count of entities returned.",
+            "minimum": 0
+          },
+          "entities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GtsEntityDto"
+            },
+            "description": "The list of entities."
+          }
+        }
+      },
+      "MemoryInfoDto": {
+        "type": "object",
+        "required": [
+          "total_bytes",
+          "available_bytes",
+          "used_bytes",
+          "used_percent"
+        ],
+        "properties": {
+          "available_bytes": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "total_bytes": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "used_bytes": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "used_percent": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          }
+        }
+      },
+      "NodeDto": {
+        "type": "object",
+        "description": "Node response DTO",
+        "required": [
+          "id",
+          "hostname",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "hostname": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ip_address": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "syscap": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/NodeSysCapDto",
+                "description": "System capabilities (included when details=true)"
+              }
+            ]
+          },
+          "sysinfo": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/NodeSysInfoDto",
+                "description": "System information (included when details=true)"
+              }
+            ]
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "NodeSysCapDto": {
+        "type": "object",
+        "description": "System capabilities response DTO",
+        "required": [
+          "node_id",
+          "capabilities",
+          "collected_at"
+        ],
+        "properties": {
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SysCapDto"
+            }
+          },
+          "collected_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "node_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "NodeSysInfoDto": {
+        "type": "object",
+        "description": "System information response DTO",
+        "required": [
+          "node_id",
+          "os",
+          "cpu",
+          "memory",
+          "host",
+          "gpus",
+          "collected_at"
+        ],
+        "properties": {
+          "battery": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BatteryInfoDto"
+              }
+            ]
+          },
+          "collected_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "cpu": {
+            "$ref": "#/components/schemas/CpuInfoDto"
+          },
+          "gpus": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GpuInfoDto"
+            }
+          },
+          "host": {
+            "$ref": "#/components/schemas/HostInfoDto"
+          },
+          "memory": {
+            "$ref": "#/components/schemas/MemoryInfoDto"
+          },
+          "node_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "os": {
+            "$ref": "#/components/schemas/OsInfoDto"
+          }
+        }
+      },
+      "OsInfoDto": {
+        "type": "object",
+        "required": [
+          "name",
+          "version",
+          "arch"
+        ],
+        "properties": {
+          "arch": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        }
+      },
       "Page": {
         "type": "object",
         "required": [
@@ -1450,7 +3696,7 @@
           "items": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/UserDto"
+              "$ref": "#/components/schemas/CityDto"
             }
           },
           "page_info": {
@@ -1513,17 +3759,20 @@
             "type": "object",
             "required": [
               "level",
-              "text",
+              "inlines",
               "type"
             ],
             "properties": {
+              "inlines": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/InlineDto"
+                }
+              },
               "level": {
                 "type": "integer",
                 "format": "int32",
                 "minimum": 0
-              },
-              "text": {
-                "type": "string"
               },
               "type": {
                 "type": "string",
@@ -1536,12 +3785,15 @@
           {
             "type": "object",
             "required": [
-              "text",
+              "inlines",
               "type"
             ],
             "properties": {
-              "text": {
-                "type": "string"
+              "inlines": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/InlineDto"
+                }
               },
               "type": {
                 "type": "string",
@@ -1556,10 +3808,16 @@
             "required": [
               "level",
               "ordered",
-              "text",
+              "blocks",
               "type"
             ],
             "properties": {
+              "blocks": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ParsedBlockDto"
+                }
+              },
               "level": {
                 "type": "integer",
                 "format": "int32",
@@ -1567,9 +3825,6 @@
               },
               "ordered": {
                 "type": "boolean"
-              },
-              "text": {
-                "type": "string"
               },
               "type": {
                 "type": "string",
@@ -1606,12 +3861,12 @@
           {
             "type": "object",
             "required": [
-              "markdown",
+              "table",
               "type"
             ],
             "properties": {
-              "markdown": {
-                "type": "string"
+              "table": {
+                "$ref": "#/components/schemas/TableBlockDto"
               },
               "type": {
                 "type": "string",
@@ -1624,12 +3879,15 @@
           {
             "type": "object",
             "required": [
-              "text",
+              "blocks",
               "type"
             ],
             "properties": {
-              "text": {
-                "type": "string"
+              "blocks": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ParsedBlockDto"
+                }
               },
               "type": {
                 "type": "string",
@@ -1759,7 +4017,7 @@
               "string",
               "null"
             ],
-            "description": "Rendered markdown (only present when render_markdown=true)"
+            "description": "Rendered markdown (only present when `render_markdown=true`)"
           }
         }
       },
@@ -1860,6 +4118,23 @@
           }
         }
       },
+      "PatchSimpleUserSettingsRequest": {
+        "type": "object",
+        "properties": {
+          "language": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "theme": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
       "Problem": {
         "type": "object",
         "title": "Problem",
@@ -1905,7 +4180,7 @@
             "type": "string",
             "description": "A short, human-readable summary of the problem type."
           },
-          "traceId": {
+          "trace_id": {
             "type": [
               "string",
               "null"
@@ -1915,6 +4190,314 @@
           "type": {
             "type": "string",
             "description": "A URI reference that identifies the problem type.\nWhen dereferenced, it might provide human-readable documentation."
+          }
+        }
+      },
+      "PutAddressReq": {
+        "type": "object",
+        "description": "REST DTO for creating/upserting an address",
+        "required": [
+          "city_id",
+          "street",
+          "postal_code"
+        ],
+        "properties": {
+          "city_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "postal_code": {
+            "type": "string"
+          },
+          "street": {
+            "type": "string"
+          }
+        }
+      },
+      "RegisterEntitiesRequest": {
+        "type": "object",
+        "description": "Request DTO for registering GTS entities.",
+        "required": [
+          "entities"
+        ],
+        "properties": {
+          "entities": {
+            "type": "array",
+            "items": {},
+            "description": "Array of GTS entities to register."
+          }
+        }
+      },
+      "RegisterEntitiesResponse": {
+        "type": "object",
+        "description": "Response DTO for batch registration.",
+        "required": [
+          "summary",
+          "results"
+        ],
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RegisterResultDto"
+            },
+            "description": "Results for each entity in the request."
+          },
+          "summary": {
+            "$ref": "#/components/schemas/RegisterSummaryDto",
+            "description": "Summary of the registration operation."
+          }
+        }
+      },
+      "RegisterResultDto": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "Successfully registered entity.",
+            "required": [
+              "entity",
+              "status"
+            ],
+            "properties": {
+              "entity": {
+                "$ref": "#/components/schemas/GtsEntityDto",
+                "description": "The registered entity."
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "ok"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Failed to register entity.",
+            "required": [
+              "error",
+              "status"
+            ],
+            "properties": {
+              "error": {
+                "type": "string",
+                "description": "Error message."
+              },
+              "gts_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "The GTS ID that was attempted, if available."
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "error"
+                ]
+              }
+            }
+          }
+        ],
+        "description": "Result of registering a single entity."
+      },
+      "RegisterSummaryDto": {
+        "type": "object",
+        "description": "Summary of a batch registration operation.",
+        "required": [
+          "total",
+          "succeeded",
+          "failed"
+        ],
+        "properties": {
+          "failed": {
+            "type": "integer",
+            "description": "Number of failed registrations.",
+            "minimum": 0
+          },
+          "succeeded": {
+            "type": "integer",
+            "description": "Number of successfully registered entities.",
+            "minimum": 0
+          },
+          "total": {
+            "type": "integer",
+            "description": "Total number of entities processed.",
+            "minimum": 0
+          }
+        }
+      },
+      "SimpleUserSettingsDto": {
+        "type": "object",
+        "required": [
+          "user_id",
+          "tenant_id"
+        ],
+        "properties": {
+          "language": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tenant_id": {
+            "type": "string"
+          },
+          "theme": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "user_id": {
+            "type": "string"
+          }
+        }
+      },
+      "SysCapDto": {
+        "type": "object",
+        "required": [
+          "key",
+          "category",
+          "name",
+          "display_name",
+          "present",
+          "cache_ttl_secs",
+          "fetched_at_secs"
+        ],
+        "properties": {
+          "amount": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "amount_dimension": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cache_ttl_secs": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Cache TTL in seconds",
+            "minimum": 0
+          },
+          "category": {
+            "type": "string"
+          },
+          "details": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "fetched_at_secs": {
+            "type": "integer",
+            "format": "int64",
+            "description": "When this capability was last fetched (Unix timestamp in seconds)"
+          },
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "present": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "TableBlockDto": {
+        "type": "object",
+        "description": "REST DTO for table block",
+        "required": [
+          "rows"
+        ],
+        "properties": {
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TableRowDto"
+            }
+          }
+        }
+      },
+      "TableCellDto": {
+        "type": "object",
+        "description": "REST DTO for table cell",
+        "required": [
+          "blocks"
+        ],
+        "properties": {
+          "blocks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ParsedBlockDto"
+            }
+          }
+        }
+      },
+      "TableRowDto": {
+        "type": "object",
+        "description": "REST DTO for table row",
+        "required": [
+          "is_header",
+          "cells"
+        ],
+        "properties": {
+          "cells": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TableCellDto"
+            }
+          },
+          "is_header": {
+            "type": "boolean"
+          }
+        }
+      },
+      "UpdateCityReq": {
+        "type": "object",
+        "description": "REST DTO for updating a city (partial)",
+        "properties": {
+          "country": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "UpdateSimpleUserSettingsRequest": {
+        "type": "object",
+        "required": [
+          "theme",
+          "language"
+        ],
+        "properties": {
+          "language": {
+            "type": "string"
+          },
+          "theme": {
+            "type": "string"
           }
         }
       },
@@ -2011,13 +4594,71 @@
             ],
             "description": "Optional machine-readable error code"
           },
+          "field": {
+            "type": "string",
+            "description": "field path, e.g. \"email\" or \"user.email\""
+          },
           "message": {
             "type": "string",
             "description": "Human-readable message describing the validation error"
-          },
-          "field": {
-            "type": "string",
-            "description": "Field path, e.g. \"email\" or \"user.email\""
+          }
+        }
+      },
+      "Vec": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "description": "Node response DTO",
+          "required": [
+            "id",
+            "hostname",
+            "created_at",
+            "updated_at"
+          ],
+          "properties": {
+            "created_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "hostname": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "ip_address": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "syscap": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/components/schemas/NodeSysCapDto",
+                  "description": "System capabilities (included when details=true)"
+                }
+              ]
+            },
+            "sysinfo": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/components/schemas/NodeSysInfoDto",
+                  "description": "System information (included when details=true)"
+                }
+              ]
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time"
+            }
           }
         }
       }

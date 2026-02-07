@@ -1,0 +1,11 @@
+error: macro `eprintln!` is forbidden in production code (DE1301)
+  --> $DIR/forbidden_public_in_proc_macro.rs:16:5
+   |
+LL |     eprintln!("not allowed in public helper");
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: use `tracing`/`log` for observability, or return the value and handle it at the boundary
+   = note: `#[deny(de1301_no_print_macros)]` on by default
+
+error: aborting due to 1 previous error
+
