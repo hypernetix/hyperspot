@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.x.llmgw.core.stream_chunk.v1~",
+  "title": "StreamChunk",
+  "description": "Single chunk in streaming response",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Chunk identifier"
+    },
+    "model": {
+      "type": "string",
+      "description": "Model used"
+    },
+    "delta": {
+      "type": "object",
+      "properties": {
+        "role": {
+          "$ref": "gts://gts.x.llmgw.core.role.v1~",
+          "description": "Role (only in first chunk)"
+        },
+        "content": {
+          "type": "string",
+          "description": "Content delta"
+        },
+        "tool_calls": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "index": {
+                "type": "integer",
+                "description": "Tool call index"
+              },
+              "id": {
+                "type": "string",
+                "description": "Tool call ID (only in first chunk for this tool)"
+              },
+              "function": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Function name (only in first chunk for this tool)"
+                  },
+                  "arguments": {
+                    "type": "string",
+                    "description": "Arguments delta (JSON string fragment)"
+                  }
+                }
+              }
+            },
+            "required": ["index"]
+          },
+          "description": "Tool calls delta"
+        }
+      },
+      "description": "Incremental content"
+    },
+    "usage": {
+      "$ref": "gts://gts.x.llmgw.core.usage.v1~",
+      "description": "Token usage (only in final chunk)"
+    },
+    "finish_reason": {
+      "type": "string",
+      "enum": ["stop", "length", "tool_calls", "content_filter"],
+      "description": "Completion reason (only in final chunk)"
+    }
+  },
+  "required": ["id", "model", "delta"],
+  "additionalProperties": false
+}

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.x.llmgw.tools.tool_reference.v1~",
+  "title": "ToolReference",
+  "description": "Reference to a tool schema in Type Registry",
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "reference",
+      "description": "Discriminator for tool type"
+    },
+    "schema_id": {
+      "type": "string",
+      "description": "GTS identifier of the tool schema in Type Registry"
+    }
+  },
+  "required": ["type", "schema_id"],
+  "additionalProperties": false
+}

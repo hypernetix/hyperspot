@@ -501,10 +501,24 @@ impl ApiGateway {
             .route(
                 "/openapi.json",
                 get({
-                    use axum::{Json, http::header, response::IntoResponse};
+                    use axum::{http::header, response::IntoResponse};
                     let doc = openapi_doc;
                     move || async move {
-                        ([(header::CACHE_CONTROL, "no-store")], Json(doc.as_ref())).into_response()
+                        let json_string = match serde_json::to_string_pretty(doc.as_ref()) {
+                            Ok(json) => json,
+                            Err(e) => {
+                                tracing::error!("Failed to serialize OpenAPI doc: {}", e);
+                                return (http::StatusCode::INTERNAL_SERVER_ERROR).into_response();
+                            }
+                        };
+                        (
+                            [
+                                (header::CONTENT_TYPE, "application/json"),
+                                (header::CACHE_CONTROL, "no-store"),
+                            ],
+                            json_string,
+                        )
+                            .into_response()
                     }
                 }),
             )

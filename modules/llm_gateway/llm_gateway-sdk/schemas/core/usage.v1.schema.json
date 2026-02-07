@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.x.llmgw.core.usage.v1~",
+  "title": "Usage",
+  "description": "Token usage and cost information",
+  "type": "object",
+  "properties": {
+    "input_tokens": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of input tokens consumed"
+    },
+    "output_tokens": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of output tokens generated"
+    },
+    "cost_estimate": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Estimated cost in USD"
+    }
+  },
+  "required": ["input_tokens", "output_tokens"],
+  "additionalProperties": false
+}
