@@ -176,9 +176,9 @@ Contracts this library expects from external systems or provides to downstream c
 
 Optional: Include when interaction flows add clarity beyond requirement statements.
 
-#### UC: {Use Case Name}
+#### {Use Case Name}
 
-- [ ] `p2` - **ID**: `cpt-{system}-req-{slug}`
+- [ ] `p2` - **ID**: `cpt-{system}-usecase-{slug}`
 
 **Actor**: `cpt-{system}-actor-{slug}`
 

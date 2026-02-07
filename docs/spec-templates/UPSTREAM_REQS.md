@@ -60,7 +60,7 @@ Requirements that the upstream module needs the target module to fulfill.
 
 ### {Requirement Name}
 
-- [ ] `p1` - **ID**: `cpt-{target-module}-upstream-req-{slug}`
+- [ ] `p1` - **ID**: `cpt-{target-module}-upstream-fr-{slug}`
 
 The target module **MUST** {specific capability or behavior needed by upstream}.
 
@@ -70,7 +70,7 @@ The target module **MUST** {specific capability or behavior needed by upstream}.
 
 ### {Another Requirement}
 
-- [ ] `p2` - **ID**: `cpt-{target-module}-upstream-req-{slug}`
+- [ ] `p2` - **ID**: `cpt-{target-module}-upstream-fr-{slug}`
 
 The target module **MUST** {another specific requirement}.
 

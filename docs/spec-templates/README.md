@@ -238,7 +238,7 @@ Requirements and design elements can include **implementation status** and **pri
 ```markdown
 #### User roles requirement
 
-- [ ] `p1` - **ID**: `cpt-auth-req-user-roles`
+- [ ] `p1` - **ID**: `cpt-auth-fr-user-roles`
 
 The system must support 1-N user roles associated with the user...
 ```
@@ -246,7 +246,7 @@ The system must support 1-N user roles associated with the user...
 ```markdown
 #### Response time
 
-- [x] `p2` - **ID**: `cpt-api-req-response-time`
+- [x] `p2` - **ID**: `cpt-api-nfr-response-time`
 
 API responses must complete within 200ms at p95...
 ```
@@ -265,30 +265,33 @@ Cypilot IDs must be unique. When Cypilot tooling is connected, `cypilot validate
 - Check that all referenced IDs exist
 - Detect duplicate definitions
 - Verify cross-document consistency
-
 ### Kind Reference
 
 These are **suggested** kind names for common artifact types. Cypilot does not enforce specific kind values — use whatever naming makes sense for your project. The important thing is consistency within your codebase.
 
-| Kind | Description |
+|Kind|Description|
 |------|-------------|
-| `actor` | Stakeholder or system actor |
-| `req` | Requirement (functional or non-functional) |
-| `feature` | Feature specification |
-| `adr` | Architecture decision record |
-| `design` | Design element (component, API, schema, etc.) |
-| `flow` | Actor flow / use case flow |
-| `algo` | Algorithm / internal procedure |
-| `state` | State machine |
+|`actor`|Stakeholder or system actor|
+|`fr`|Functional requirement|
+|`nfr`|Non-functional requirement|
+|`usecase`|Use case|
+|`feature`|Feature specification|
+|`adr`|Architecture decision record|
+|`design`|Design element (component, API, schema, etc.)|
+|`flow`|Actor flow / use case flow|
+|`algo`|Algorithm / internal procedure|
+|`state`|State machine|
+|`dod`|Definition of done / implementation requirement|
 
 **Examples**:
 - `cpt-todo-app-actor-user` — Actor ID
-- `cpt-todo-app-req-create-task` — Requirement ID
-- `cpt-todo-app-req-response-time` — NFR (still uses `req`)
+- `cpt-todo-app-fr-create-task` — Functional requirement ID
+- `cpt-todo-app-nfr-response-time` — Non-functional requirement ID
+- `cpt-todo-app-usecase-create-task` — Use case ID
 - `cpt-todo-app-adr-local-storage` — ADR ID
 - `cpt-todo-app-feature-core` — Feature ID
 
-> **Note**: You can use any slug that fits your domain. For example, `cpt-billing-uc-checkout` or `cpt-auth-nfr-token-expiry` are equally valid if your team prefers more specific kinds. Cypilot validation only checks that referenced IDs exist — it does not validate kind names.
+> **Note**: You can use any slug that fits your domain. For example, `cpt-billing-usecase-checkout` or `cpt-auth-nfr-token-expiry` are equally valid if your team prefers more specific kinds. Cypilot validation only checks that referenced IDs exist — it does not validate kind names.
 
 ## Example
 

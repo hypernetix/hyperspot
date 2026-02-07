@@ -37,7 +37,7 @@ ARCHITECTURE VIEWS (per IEEE 42010):
 
 DESIGN LANGUAGE:
   - Be specific and clear; no fluff, bloat, or emoji
-  - Reference PRD requirements using `cpt-{system}-{fr|nfr}-{slug}` IDs
+  - Reference PRD requirements using `cpt-{system}-fr-{slug}`, `cpt-{system}-nfr-{slug}`, and `cpt-{system}-usecase-{slug}` IDs
   - Reference ADR documents using `cpt-{system}-adr-{slug}` IDs
 =============================================================================
 -->

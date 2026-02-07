@@ -10,20 +10,6 @@
 
 The application requires offline-first functionality where users can create, edit, and complete tasks without network connectivity. We need to choose a client-side storage solution that can handle structured data with efficient querying.
 
-## Decides For Requirements
-
-This decision directly addresses the following requirements from PRD/DESIGN:
-
-* `cpt-todo-app-nfr-offline-support` — Enables full offline functionality by providing local storage for tasks
-* `cpt-todo-app-nfr-response-time` — IndexedDB's indexed queries enable <200ms response times for filtering/search operations
-* `cpt-todo-app-fr-filter-tasks` — Indexes on status/category/priority enable efficient filtering without loading all data
-* `cpt-todo-app-design-principle-offline-first` — This is the core technical decision enabling the offline-first design principle
-
-See:
-
-* **PRD**: [PRD.md](../PRD.md)
-* **DESIGN**: [DESIGN.md](../DESIGN.md)
-
 ## Decision Drivers
 
 * Must support structured data with indexes for filtering
@@ -96,13 +82,21 @@ Decision aligns with offline-first architecture principle. Dexie.js chosen over 
 
 ## Traceability
 
+- **PRD**: [PRD.md](../PRD.md)
+- **DESIGN**: [DESIGN.md](../DESIGN.md)
+
+This decision directly addresses the following requirements or design elements:
+
+* `cpt-todo-app-nfr-offline-support` — Enables full offline functionality by providing local storage for tasks
+* `cpt-todo-app-nfr-response-time` — IndexedDB's indexed queries enable <200ms response times for filtering/search operations
+* `cpt-todo-app-fr-filter-tasks` — Indexes on status/category/priority enable efficient filtering without loading all data
+* `cpt-todo-app-design-principle-offline-first` — This is the core technical decision enabling the offline-first design principle
+
 **Actors**:
 * `cpt-todo-app-actor-user` - Primary beneficiary of offline functionality
 * `cpt-todo-app-actor-sync-service` - Syncs IndexedDB changes to server
 * `cpt-todo-app-actor-notification-service` - Uses local persistence to schedule notifications reliably
-  
-**Requirements**:
-* `cpt-todo-app-nfr-offline-support` - Core requirement driving this decision
-* `cpt-todo-app-nfr-response-time` - IndexedDB enables fast local reads
+
+**Additional referenced IDs**:
 * `cpt-todo-app-nfr-data-persistence` - IndexedDB enables immediate local persistence
 * `cpt-todo-app-interface-task-model` - Task schema stored locally and exchanged with sync backend

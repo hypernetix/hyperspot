@@ -202,7 +202,7 @@ sequenceDiagram
     TS->>IDB: markSynced(task.id)
 ```
 
-**Use cases**: `cpt-todo-app-fr-uc-create-task`
+**Use cases**: `cpt-todo-app-usecase-create-task`
 
 **Actors**: `cpt-todo-app-actor-user`, `cpt-todo-app-actor-sync-service`
 

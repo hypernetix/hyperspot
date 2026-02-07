@@ -32,16 +32,21 @@ Chosen option: **Support latest 2 versions of Chrome, Firefox, Safari, and Edge*
 - Good, because aligns with modern browser update cadence
 - Bad, because we may need small compatibility shims across engines
 
-## Related Design Elements
+### Confirmation
 
-**Constraint**:
+Confirmed via:
+
+- Browser test matrix execution (latest 2 versions policy) in CI
+- Manual smoke test of offline-first flows across supported browsers
+
+## Traceability
+
+- **PRD**: [PRD.md](../PRD.md)
+- **DESIGN**: [DESIGN.md](../DESIGN.md)
+
+This decision directly addresses the following requirements or design elements:
+
 - `cpt-todo-app-design-constraint-browser-compat`
-
-**Requirements**:
 - `cpt-todo-app-nfr-offline-support`
-
-**Interfaces**:
 - `cpt-todo-app-design-interface-indexeddb`
-
-**Actors**:
 - `cpt-todo-app-actor-user`

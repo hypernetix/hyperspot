@@ -33,20 +33,26 @@ Chosen option: **Optimistically update UI and reconcile in background**.
 - Good, because actions work without network connectivity
 - Bad, because we need reconciliation/rollback logic for rare rejection/conflict cases
 
-## Related Design Elements
+### Confirmation
 
-**Principles**:
-- `cpt-todo-app-design-principle-optimistic-updates`
-- `cpt-todo-app-design-principle-offline-first`
+Confirmed via:
 
-**Requirements**:
+- UI performance benchmarks demonstrating perceived latency stays within `cpt-todo-app-nfr-response-time`
+- Integration tests that cover offline mode + background sync reconciliation
+- Code review ensuring rollback/retry logic exists for failed sync events
+
+## Traceability
+
+- **PRD**: [PRD.md](../PRD.md)
+- **DESIGN**: [DESIGN.md](../DESIGN.md)
+
+This decision directly addresses the following requirements or design elements:
+
 - `cpt-todo-app-nfr-response-time`
 - `cpt-todo-app-nfr-offline-support`
-
-**Features / Flows**:
+- `cpt-todo-app-design-principle-optimistic-updates`
+- `cpt-todo-app-design-principle-offline-first`
 - `cpt-todo-app-flow-core-create-task`
 - `cpt-todo-app-flow-core-delete-task`
-
-**Actors**:
 - `cpt-todo-app-actor-user`
 - `cpt-todo-app-actor-sync-service`

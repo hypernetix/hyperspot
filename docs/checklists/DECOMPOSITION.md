@@ -53,7 +53,7 @@ This checklist validates decomposition quality based on the following internatio
 
 Before starting the review, confirm:
 
-- [ ] I understand this checklist validates DECOMPOSITION artifacts (design breakdown into specs)
+- [ ] I understand this checklist validates DECOMPOSITION artifacts (design breakdown into features)
 - [ ] I have access to the source DESIGN artifact being decomposed
 - [ ] I will check ALL items in MUST HAVE sections
 - [ ] I will verify ALL items in MUST NOT HAVE sections
@@ -64,16 +64,16 @@ Before starting the review, confirm:
 
 ## Applicability Context
 
-**Purpose of DECOMPOSITION artifact**: Break down the overall DESIGN into implementable work packages (specs) that can be assigned, tracked, and implemented independently.
+**Purpose of DECOMPOSITION artifact**: Break down the overall DESIGN into implementable work packages (features) that can be assigned, tracked, and implemented independently.
 
 **What this checklist tests**: Quality of the decomposition itself — not the quality of requirements, design decisions, security, performance, or other concerns. Those belong in PRD and DESIGN checklists.
 
 **Key principle**: A perfect decomposition has:
-1. **100% coverage** — every design element appears in at least one spec
-2. **No overlap** — no design element appears in multiple specs without clear reason
+1. **100% coverage** — every design element appears in at least one feature
+2. **No overlap** — no design element appears in multiple features without clear reason
 3. **Complete attributes** — every feature has identification, purpose, scope, dependencies
-4. **Consistent granularity** — specs are at similar abstraction levels
-5. **Bidirectional traceability** — can trace both ways between design and specs
+4. **Consistent granularity** — features are at similar abstraction levels
+5. **Bidirectional traceability** — can trace both ways between design and features
 
 ---
 
@@ -124,12 +124,12 @@ Mark review as "PARTIAL" if not all domains completed.
 **Severity**: CRITICAL
 **Ref**: ISO 21511:2018 §4.2 (WBS 100% rule)
 
-- [ ] ALL components from DESIGN are assigned to at least one spec
-- [ ] ALL sequences/flows from DESIGN are assigned to at least one spec
-- [ ] ALL data entities from DESIGN are assigned to at least one spec
-- [ ] ALL design principles from DESIGN are assigned to at least one spec
-- [ ] ALL design constraints from DESIGN are assigned to at least one spec
-- [ ] No orphaned design elements (elements not in any spec)
+- [ ] ALL components from DESIGN are assigned to at least one feature
+- [ ] ALL sequences/flows from DESIGN are assigned to at least one feature
+- [ ] ALL data entities from DESIGN are assigned to at least one feature
+- [ ] ALL design principles from DESIGN are assigned to at least one feature
+- [ ] ALL design constraints from DESIGN are assigned to at least one feature
+- [ ] No orphaned design elements (elements not in any feature)
 
 **Verification method**: Cross-reference DESIGN IDs with DECOMPOSITION references.
 
@@ -137,9 +137,9 @@ Mark review as "PARTIAL" if not all domains completed.
 **Severity**: HIGH
 **Ref**: ISO/IEC/IEEE 29148:2018 §6.5 (Traceability)
 
-- [ ] ALL functional requirements (FR) from PRD are covered by at least one spec
-- [ ] ALL non-functional requirements (NFR) from PRD are covered by at least one spec
-- [ ] No orphaned requirements (requirements not in any spec)
+- [ ] ALL functional requirements (FR) from PRD are covered by at least one feature
+- [ ] ALL non-functional requirements (NFR) from PRD are covered by at least one feature
+- [ ] No orphaned requirements (requirements not in any feature)
 
 **Note**: This verifies that the decomposition covers requirements transitively through DESIGN.
 
@@ -164,19 +164,19 @@ Mark review as "PARTIAL" if not all domains completed.
 **Severity**: CRITICAL
 **Ref**: ISO 21511:2018 §4.2 (Mutual exclusivity)
 
-- [ ] Specs do not overlap in scope (each deliverable assigned to exactly one spec)
-- [ ] No duplicate coverage of the same design element by multiple specs without explicit reason
+- [ ] Features do not overlap in scope (each deliverable assigned to exactly one feature)
+- [ ] No duplicate coverage of the same design element by multiple features without explicit reason
 - [ ] Responsibility for each deliverable is unambiguous
 - [ ] No "shared" scope that could cause confusion about ownership
 
-**Verification method**: Check if any design element ID appears in multiple specs' references.
+**Verification method**: Check if any design element ID appears in multiple features' references.
 
 ### EXC-002: Boundary Clarity
 **Severity**: HIGH
 
 - [ ] Each feature has clear "Scope" boundaries (what's in)
 - [ ] Each feature has clear "Out of Scope" boundaries (what's explicitly excluded)
-- [ ] Boundaries between adjacent specs are explicit and non-ambiguous
+- [ ] Boundaries between adjacent features are explicit and non-ambiguous
 - [ ] Domain entities are assigned to single feature (or clear reason for sharing)
 
 ### EXC-003: Dependency vs Overlap Distinction
@@ -209,7 +209,7 @@ Mark review as "PARTIAL" if not all domains completed.
 
 - [ ] Each feature has **type** classification implied by priority/status (or explicit type field)
 - [ ] Type indicates nature: core, supporting, infrastructure, integration, etc.
-- [ ] Types are consistent across similar specs
+- [ ] Types are consistent across similar features
 
 ### ATTR-003: Entity Purpose
 **Severity**: HIGH
@@ -217,7 +217,7 @@ Mark review as "PARTIAL" if not all domains completed.
 
 - [ ] Each feature has clear one-line **Purpose** statement
 - [ ] Purpose explains WHY this feature exists
-- [ ] Purpose is distinct from other specs' purposes
+- [ ] Purpose is distinct from other features' purposes
 - [ ] Purpose is implementation-agnostic (describes intent, not approach)
 
 ### ATTR-004: Entity Function (Scope)
@@ -248,7 +248,7 @@ Mark review as "PARTIAL" if not all domains completed.
 **Severity**: MEDIUM
 **Ref**: ISO 21511:2018 §5.2 (decomposition levels)
 
-- [ ] All specs are at similar abstraction level (consistent granularity)
+- [ ] All features are at similar abstraction level (consistent granularity)
 - [ ] No feature is significantly larger than others (≤3x size difference)
 - [ ] No feature is significantly smaller than others (≥1/3x size difference)
 - [ ] Size is measured by scope items or estimated effort
@@ -257,14 +257,14 @@ Mark review as "PARTIAL" if not all domains completed.
 **Severity**: MEDIUM
 **Ref**: IEEE 1016-2009 §5.4.2 (decomposition hierarchy)
 
-- [ ] Specs are decomposed to implementable units (not too coarse)
-- [ ] Specs are not over-decomposed (not too granular for this artifact level)
-- [ ] Hierarchy is clear: DESIGN → DECOMPOSITION → (Spec specs)
+- [ ] Features are decomposed to implementable units (not too coarse)
+- [ ] Features are not over-decomposed (not too granular for this artifact level)
+- [ ] Hierarchy is clear: DESIGN → DECOMPOSITION → FEATURE
 
 ### LEV-003: Phase Balance
 **Severity**: LOW
 
-- [ ] Phase/milestone counts are roughly balanced across specs
+- [ ] Phase/milestone counts are roughly balanced across features
 - [ ] No feature has disproportionately many phases (>5x average)
 - [ ] No feature has zero phases without explicit reason
 
@@ -281,16 +281,16 @@ Mark review as "PARTIAL" if not all domains completed.
 **Ref**: ISO 10007:2017 §6.2 (CI selection)
 
 - [ ] Each feature represents a logical configuration item (CI)
-- [ ] Spec boundaries align with natural configuration/release boundaries
-- [ ] Specs can be versioned and baselined independently (where applicable)
+- [ ] Feature boundaries align with natural configuration/release boundaries
+- [ ] Features can be versioned and baselined independently (where applicable)
 
 ### CFG-002: Change Control Readiness
 **Severity**: LOW
 **Ref**: ISO 10007:2017 §6.3 (change control)
 
-- [ ] Spec status enables configuration status accounting
-- [ ] Changes to specs are trackable (ID versioning pattern documented)
-- [ ] Spec structure supports incremental delivery
+- [ ] Feature status enables configuration status accounting
+- [ ] Changes to features are trackable (ID versioning pattern documented)
+- [ ] Feature structure supports incremental delivery
 
 ---
 
@@ -298,15 +298,15 @@ Mark review as "PARTIAL" if not all domains completed.
 
 > **Standards**: [ISO/IEC/IEEE 29148:2018](https://www.iso.org/standard/72089.html) §6.5, [ISO/IEC/IEEE 42010:2022](https://www.iso.org/standard/74393.html) §5.6
 
-### TRC-001: Forward Traceability (Design → Specs)
+### TRC-001: Forward Traceability (Design → Features)
 **Severity**: HIGH
 **Ref**: ISO/IEC/IEEE 29148:2018 §6.5.2 (forward traceability)
 
-- [ ] Each design element can be traced to implementing spec(s)
+- [ ] Each design element can be traced to implementing feature(s)
 - [ ] Traceability links use valid design IDs
 - [ ] Coverage is explicit (listed in References sections)
 
-### TRC-002: Backward Traceability (Specs → Design)
+### TRC-002: Backward Traceability (Features → Design)
 **Severity**: HIGH
 **Ref**: ISO/IEC/IEEE 29148:2018 §6.5.2 (backward traceability)
 
@@ -318,7 +318,7 @@ Mark review as "PARTIAL" if not all domains completed.
 **Severity**: HIGH
 **Ref**: ISO/IEC/IEEE 42010:2022 §5.6 (architecture description consistency)
 
-- [ ] Spec IDs and slugs will match Spec Design (SPEC) artifacts
+- [ ] Feature IDs and slugs will match FEATURE artifacts
 - [ ] References between DECOMPOSITION and FEATURE artifacts are planned
 - [ ] Any missing feature design is documented as intentional
 
@@ -328,7 +328,7 @@ Mark review as "PARTIAL" if not all domains completed.
 
 - [ ] Dependency graph supports impact analysis (what is affected if X changes)
 - [ ] Cross-references support reverse lookup (what depends on X)
-- [ ] Changes to design can be traced to affected specs
+- [ ] Changes to design can be traced to affected features
 
 ---
 
@@ -343,22 +343,22 @@ Mark review as "PARTIAL" if not all domains completed.
 - [ ] All dependencies are explicit (Depends On field)
 - [ ] No circular dependencies
 - [ ] Dependencies form a valid DAG (Directed Acyclic Graph)
-- [ ] Foundation specs have no dependencies
-- [ ] Dependency links reference existing specs
+- [ ] Foundation features have no dependencies
+- [ ] Dependency links reference existing features
 
 ### DEP-002: Dependency Minimization
 **Severity**: HIGH
 
-- [ ] Specs have minimal dependencies (loose coupling)
-- [ ] Specs can be implemented independently (given dependencies)
-- [ ] Specs support parallel development where possible
+- [ ] Features have minimal dependencies (loose coupling)
+- [ ] Features can be implemented independently (given dependencies)
+- [ ] Features support parallel development where possible
 
 ### DEP-003: Implementation Order
 **Severity**: MEDIUM
 
 - [ ] Dependencies reflect valid implementation order
-- [ ] Foundation/infrastructure specs listed first
-- [ ] Spec ordering supports incremental delivery
+- [ ] Foundation/infrastructure features listed first
+- [ ] Feature ordering supports incremental delivery
 
 ---
 
@@ -387,7 +387,7 @@ Mark review as "PARTIAL" if not all domains completed.
 **Severity**: CRITICAL
 
 - [ ] If a design element is intentionally NOT covered, it is explicitly stated with reasoning
-- [ ] If specs intentionally overlap, the reason is documented
+- [ ] If features intentionally overlap, the reason is documented
 - [ ] No silent omissions — reviewer can distinguish "considered and excluded" from "forgot"
 
 ---
@@ -405,7 +405,7 @@ Mark review as "PARTIAL" if not all domains completed.
 - [ ] No user flows or state machines (belongs in FEATURE artifact)
 - [ ] No API request/response schemas (belongs in FEATURE artifact)
 
-**Where it belongs**: FEATURE (spec design) artifact
+**Where it belongs**: FEATURE (feature design) artifact
 
 ---
 
@@ -436,7 +436,7 @@ Mark review as "PARTIAL" if not all domains completed.
 
 # Format Validation
 
-## FMT-001: Spec Entry Format
+## FMT-001: Feature Entry Format
 **Severity**: HIGH
 
 - [ ] Each feature entry has unique title

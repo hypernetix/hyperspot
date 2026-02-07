@@ -125,7 +125,7 @@ Specific implementation tasks derived from flows/algorithms above.
 
 ### {Requirement Title}
 
-- [ ] `p1` - **ID**: `cpt-{system}-req-{slug}`
+- [ ] `p1` - **ID**: `cpt-{system}-dod-{slug}`
 
 The system **MUST** {clear description of what to implement}.
 
