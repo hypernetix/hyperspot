@@ -164,6 +164,23 @@ modules:
   tenant_resolver_gateway:
     config:
       vendor: "Fabrikam"
+
+  # Static tenant resolver plugin - provides tenant data for auth_disabled mode
+  # Used by `make example` (static-tenants feature)
+  static_tr_plugin:
+    config:
+      vendor: "hyperspot"
+      priority: 100
+      tenants:
+        # Default tenant (matches DEFAULT_TENANT_ID from modkit-security/constants.rs)
+        # Used when auth_disabled=true
+        - id: "00000000-df51-5b42-9538-d2b56b7ee953"
+          name: "Dev Tenant"
+          status: active
+          type: development
+
+  # Fabrikam tenant resolver plugin - example for multi-vendor scenarios
+  # Used by `tenant-resolver-example` feature (with vendor: "Fabrikam" in tenant_resolver_gateway)
   contoso_tr_plugin:
     config: {}
   fabrikam_tr_plugin:
@@ -309,4 +326,3 @@ tracing:
 #     # No database section - module won't get database access
 #     config:
 #       static_dir: "/var/www/static"
-

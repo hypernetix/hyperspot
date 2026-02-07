@@ -11,7 +11,7 @@ The public API surface is defined in `cf-simple-user-settings-sdk` and is re-exp
 
 ```yaml
 modules:
-  simple-user-settings:
+  simple_user_settings:
     config:
       max_field_length: 100
 ```
