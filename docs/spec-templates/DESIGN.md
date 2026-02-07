@@ -56,7 +56,7 @@ Requirements that significantly influence architecture decisions.
 
 | Requirement | Design Response |
 |-------------|-----------------|
-| `spd-{system}-req-{slug}` | {How architecture addresses this requirement} |
+| `spd-{system}-fr-{slug}` | {How architecture addresses this requirement} |
 
 #### NFR Allocation
 
@@ -64,7 +64,7 @@ This table maps non-functional requirements from PRD to specific design/architec
 
 | NFR ID | NFR Summary | Allocated To | Design Response | Verification Approach |
 |--------|-------------|--------------|-----------------|----------------------|
-| `spd-{system}-req-{nfr-slug}` | {Brief NFR description} | {Component/layer/mechanism} | {How this design element realizes the NFR} | {How compliance is verified} |
+| `spd-{system}-nfr-{slug}` | {Brief NFR description} | {Component/layer/mechanism} | {How this design element realizes the NFR} | {How compliance is verified} |
 
 ### 1.3 Architecture Layers
 

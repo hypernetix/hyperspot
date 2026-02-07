@@ -119,7 +119,7 @@ Optional: Include when entities have explicit lifecycle states.
 1. [ ] - `p1` - **FROM** {State1} **TO** {State2} **WHEN** {condition} - `inst-{step-id}`
 2. [ ] - `p1` - **FROM** {State2} **TO** {State3} **WHEN** {condition} - `inst-{step-id}`
 
-## 5. Implementation Requirements
+## 5. Definitions of Done
 
 Specific implementation tasks derived from flows/algorithms above.
 
