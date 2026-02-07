@@ -16,6 +16,7 @@ members = [
     "de08_rest_api_conventions/de0803_api_snake_case",
     "de09_gts_layer/de0901_gts_string_pattern",
     "de09_gts_layer/de0902_no_schema_for_on_gts_structs",
+    "de13_common_patterns/de1301_no_print_macros",
 ]
 resolver = "3"
 
@@ -40,6 +41,7 @@ clippy_utils = { git = "https://github.com/rust-lang/rust-clippy", rev = "20ce69
 dylint_linting = "=5.0.0"
 dylint_testing = "=5.0.0"
 lint_utils = { path = "lint_utils" }
+tokio = { version = "1.44", features = ["macros", "rt"] }
 # NOTE: Keep gts version in sync with /Cargo.toml workspace dependencies
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

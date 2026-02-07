@@ -59,6 +59,9 @@ make gts-docs-test       # Run unit tests for GTS validator
 ### Documentation (DE12xx)
 - TODO
 
+### Common patterns (DE13xx)
+- ✅ DE1301: No Print/Debug Macros in libraries/modules
+
 ## Examples
 
 Each lint includes bad/good examples in source comments. View them:
