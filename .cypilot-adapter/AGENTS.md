@@ -19,6 +19,17 @@ Use `{cypilot_adapter_path}` as the base path for all relative Cypilot Adapter f
 
 ---
 
+## Project Overview
+
+This repository is a **modular monolith** built on top of **CyberFabric**.
+
+- **CyberFabric base**: core apps/libraries live under `apps/`, `libs/`, etc.
+- **Subsystems / modules**: each subsystem is a module under `modules/<module_name>/`.
+- **Cypilot registry convention**: subsystems are registered as `children[]` of the root `cyberfabric` system in `{cypilot_adapter_path}/artifacts.json`.
+- **Docs convention**: each module keeps its artifacts under `modules/<module_name>/docs/`.
+
+---
+
 ## Navigation Rules
 
 ALWAYS sign commits with DCO: use `git commit -s` for all commits
@@ -32,6 +43,8 @@ ALWAYS open and follow `CONTRIBUTING.md` WHEN setting up development environment
 ---
 
 ## Module Rules
+
+ALWAYS register new modules under `modules/<module_name>/` as a `children[]` entry of the root `cyberfabric` system in `artifacts.json` WHEN adding a new module / subsystem
 
 ALWAYS open `guidelines/NEW_MODULE.md#table-of-contents` WHEN starting to define requirements or architecture design or implement any module — review structure before diving into specific steps
 

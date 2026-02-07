@@ -1,1 +1,0 @@
-Required file for Cypilot validator, cyber fabric template is in `docs/spec-templates/DESIGN.md`

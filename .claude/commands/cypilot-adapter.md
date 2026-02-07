@@ -1,5 +1,5 @@
 ---
-description: Create/update project Cypilot adapter - scan structure, configure rules, generate AGENTS.md and artifacts.json
+description: "Create/update project Cypilot adapter - scan structure, configure rules, generate AGENTS.md and artifacts.json"
 ---
 
 

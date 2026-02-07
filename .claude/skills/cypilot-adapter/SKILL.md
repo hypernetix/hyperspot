@@ -1,6 +1,6 @@
 ---
 name: cypilot-adapter
-description: Create/update project Cypilot adapter - scan structure, configure rules, generate AGENTS.md and artifacts.json
+description: "Create/update project Cypilot adapter - scan structure, configure rules, generate AGENTS.md and artifacts.json"
 disable-model-invocation: false
 user-invocable: true
 allowed-tools: Bash, Read, Write, Edit, Glob, Grep
