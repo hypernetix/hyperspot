@@ -11,6 +11,31 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio_util::sync::CancellationToken;
 
+/// Spawn a signal handler task that cancels the provided token on SIGTERM/SIGINT.
+///
+/// This helper consolidates signal handling logic used by both `run_server` and `run_migrate`.
+/// The `context` parameter customizes log messages for better diagnostics.
+fn spawn_signal_handler(cancel: CancellationToken, context: &str) {
+    let context_owned = context.to_owned();
+    drop(tokio::spawn(async move {
+        match shutdown::wait_for_shutdown().await {
+            Ok(()) => {
+                tracing::info!(target: "", "------------------");
+                tracing::info!("{}: shutdown signal received", context_owned);
+            }
+            Err(e) => {
+                tracing::warn!(
+                    error = %e,
+                    "{}: signal handler failed, falling back to ctrl_c()",
+                    context_owned
+                );
+                let _ = tokio::signal::ctrl_c().await;
+            }
+        }
+        cancel.cancel();
+    }));
+}
+
 /// # Errors
 ///
 /// Returns an error if:
@@ -31,23 +56,7 @@ pub async fn run_server(config: AppConfig) -> anyhow::Result<()> {
 
     // Hook OS signals to the root token at the host level.
     // This replaces the use of ShutdownOptions::Signals inside the runtime.
-    let cancel_for_signals = cancel.clone();
-    tokio::spawn(async move {
-        match shutdown::wait_for_shutdown().await {
-            Ok(()) => {
-                tracing::info!(target: "", "------------------");
-                tracing::info!("shutdown: signal received in master host");
-            }
-            Err(e) => {
-                tracing::warn!(
-                    error = %e,
-                    "shutdown: primary waiter failed in master host, falling back to ctrl_c()"
-                );
-                let _ = tokio::signal::ctrl_c().await;
-            }
-        }
-        cancel_for_signals.cancel();
-    });
+    spawn_signal_handler(cancel.clone(), "server");
 
     // Build config provider and resolve database options
     let db_options = resolve_db_options(&config)?;
@@ -77,6 +86,79 @@ pub async fn run_server(config: AppConfig) -> anyhow::Result<()> {
     crate::telemetry::init::shutdown_tracing();
 
     result
+}
+
+/// Run database migrations and exit.
+///
+/// This mode is designed for cloud deployment workflows where database
+/// migrations need to run as a separate step before starting the application.
+///
+/// Phases executed:
+/// - Pre-init (wire runtime internals)
+/// - DB migration (run all pending migrations)
+///
+/// The process exits after migrations complete. Any errors are reported
+/// and propagated as non-zero exit codes.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - No database configuration is found
+/// - Module discovery fails
+/// - Pre-init phase fails
+/// - Migration phase fails
+#[allow(unknown_lints, de1301_no_print_macros)]
+pub async fn run_migrate(config: AppConfig) -> anyhow::Result<()> {
+    tracing::info!("Starting migration mode...");
+
+    // Generate process-level instance ID for this migration run
+    let instance_id = uuid::Uuid::new_v4();
+    tracing::info!(instance_id = %instance_id, "Generated migration instance ID");
+
+    // Create cancellation token and wire it to OS signals
+    let cancel = CancellationToken::new();
+
+    // Hook OS signals to enable graceful cancellation of migrations
+    spawn_signal_handler(cancel.clone(), "migration");
+
+    // Build database options from configuration
+    let db_options = resolve_db_options(&config)?;
+
+    // Verify we have database configuration
+    if matches!(db_options, DbOptions::None) {
+        anyhow::bail!("Cannot run migrations: no database configuration found");
+    }
+
+    // Discover and build the module registry
+    let registry = crate::registry::ModuleRegistry::discover_and_build()?;
+    tracing::info!(
+        module_count = registry.modules().len(),
+        "Discovered modules for migration"
+    );
+
+    // Create the host runtime
+    let host = crate::runtime::HostRuntime::new(
+        registry,
+        Arc::new(config),
+        db_options,
+        Arc::new(crate::client_hub::ClientHub::new()),
+        cancel,
+        instance_id,
+        None, // No OoP spawning during migration
+    );
+
+    // Run only the migration phases (pre-init + DB migration)
+    let result = host.run_migration_phases().await;
+
+    // Graceful shutdown - flush any remaining traces
+    #[cfg(feature = "otel")]
+    crate::telemetry::init::shutdown_tracing();
+
+    result?;
+
+    tracing::info!("All migrations completed successfully");
+    println!("[OK] Database migrations completed successfully");
+    Ok(())
 }
 
 fn resolve_db_options(config: &AppConfig) -> anyhow::Result<DbOptions> {

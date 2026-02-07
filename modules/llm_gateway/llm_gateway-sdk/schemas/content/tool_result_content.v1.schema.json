@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gts://gts.x.llmgw.content.tool_result_content.v1~",
+  "title": "ToolResultContent",
+  "description": "Tool result wrapped as content part",
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "tool_result",
+      "description": "Content type discriminator"
+    },
+    "tool_result": {
+      "$ref": "gts://gts.x.llmgw.content.tool_result.v1~",
+      "description": "The tool result"
+    }
+  },
+  "required": ["type", "tool_result"],
+  "additionalProperties": false
+}

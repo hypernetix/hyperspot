@@ -190,6 +190,7 @@ fn create_rotating_writer_at_path(
 // ================= public init (drop-in API kept) =================
 
 /// Unified initializer used by both functions above.
+#[allow(unknown_lints, de1301_no_print_macros)] // runs before tracing subscriber is installed
 pub fn init_logging_unified(cfg: &LoggingConfig, base_dir: &Path, otel_layer: Option<OtelLayer>) {
     // Bridge `log` → `tracing` *before* installing the subscriber
     if let Err(e) = tracing_log::LogTracer::init() {
@@ -325,6 +326,7 @@ impl HasMaxSizeBytes for Section {
     }
 }
 
+#[allow(unknown_lints, de1301_no_print_macros)] // runs during logging init, before tracing is available
 fn create_default_file_writer(section: &Section, base_dir: &Path) -> Option<RotWriter> {
     if section.file.trim().is_empty() {
         return None;
@@ -349,6 +351,7 @@ fn create_default_file_writer(section: &Section, base_dir: &Path) -> Option<RotW
     }
 }
 
+#[allow(unknown_lints, de1301_no_print_macros)] // runs during logging init, before tracing is available
 fn create_crate_file_writer(
     crate_name: &str,
     section: &Section,

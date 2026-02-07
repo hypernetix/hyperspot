@@ -759,7 +759,7 @@ dependencies = [
 
 [[package]]
 name = "cf-api-gateway"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -795,7 +795,7 @@ dependencies = [
 
 [[package]]
 name = "cf-file-parser"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -829,7 +829,7 @@ dependencies = [
 
 [[package]]
 name = "cf-grpc-hub"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -853,7 +853,7 @@ dependencies = [
 
 [[package]]
 name = "cf-modkit"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -912,7 +912,7 @@ dependencies = [
 
 [[package]]
 name = "cf-modkit-auth"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "arc-swap",
  "async-trait",
@@ -933,7 +933,7 @@ dependencies = [
 
 [[package]]
 name = "cf-modkit-db"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -971,7 +971,7 @@ dependencies = [
 
 [[package]]
 name = "cf-modkit-db-macros"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "heck 0.5.0",
  "proc-macro-error2",
@@ -983,7 +983,7 @@ dependencies = [
 
 [[package]]
 name = "cf-modkit-errors"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "axum",
  "http",
@@ -995,7 +995,7 @@ dependencies = [
 
 [[package]]
 name = "cf-modkit-errors-macro"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1006,7 +1006,7 @@ dependencies = [
 
 [[package]]
 name = "cf-modkit-macros"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "heck 0.5.0",
  "proc-macro2",
@@ -1017,7 +1017,7 @@ dependencies = [
 
 [[package]]
 name = "cf-modkit-macros-tests"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1034,7 +1034,7 @@ dependencies = [
 
 [[package]]
 name = "cf-modkit-node-info"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "chrono",
@@ -1052,7 +1052,7 @@ dependencies = [
 
 [[package]]
 name = "cf-modkit-odata"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "base64 0.22.1",
  "bigdecimal",
@@ -1072,7 +1072,7 @@ dependencies = [
 
 [[package]]
 name = "cf-modkit-odata-macros"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "cf-modkit-odata",
  "heck 0.5.0",
@@ -1086,7 +1086,7 @@ dependencies = [
 
 [[package]]
 name = "cf-modkit-sdk"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "cf-modkit-odata",
  "cf-modkit-odata-macros",
@@ -1101,7 +1101,7 @@ dependencies = [
 
 [[package]]
 name = "cf-modkit-security"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "postcard",
@@ -1113,7 +1113,7 @@ dependencies = [
 
 [[package]]
 name = "cf-modkit-transport-grpc"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "cf-modkit-security",
@@ -1126,7 +1126,7 @@ dependencies = [
 
 [[package]]
 name = "cf-modkit-utils"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "humantime",
  "serde",
@@ -1135,7 +1135,7 @@ dependencies = [
 
 [[package]]
 name = "cf-module-orchestrator"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1151,7 +1151,7 @@ dependencies = [
 
 [[package]]
 name = "cf-nodes-registry"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -1172,7 +1172,7 @@ dependencies = [
 
 [[package]]
 name = "cf-nodes-registry-sdk"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "async-trait",
  "cf-modkit-node-info",
@@ -1223,7 +1223,7 @@ dependencies = [
 
 [[package]]
 name = "cf-single-tenant-tr-plugin"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1242,7 +1242,7 @@ dependencies = [
 
 [[package]]
 name = "cf-static-tr-plugin"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1261,7 +1261,7 @@ dependencies = [
 
 [[package]]
 name = "cf-system-sdk-directory"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1276,14 +1276,14 @@ dependencies = [
 
 [[package]]
 name = "cf-system-sdks"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "cf-system-sdk-directory",
 ]
 
 [[package]]
 name = "cf-tenant-resolver-gw"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1303,7 +1303,7 @@ dependencies = [
 
 [[package]]
 name = "cf-tenant-resolver-sdk"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "async-trait",
  "cf-modkit",
@@ -1320,7 +1320,7 @@ dependencies = [
 
 [[package]]
 name = "cf-types-registry"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -1348,7 +1348,7 @@ dependencies = [
 
 [[package]]
 name = "cf-types-registry-sdk"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "async-trait",
  "cf-modkit-security",
@@ -2593,7 +2593,7 @@ dependencies = [
 
 [[package]]
 name = "gts-docs-validator"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -3017,7 +3017,7 @@ dependencies = [
 
 [[package]]
 name = "hyperspot-server"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "calculator",
@@ -6228,7 +6228,7 @@ dependencies = [
 
 [[package]]
 name = "tenant-resolver-sdk"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "async-trait",
  "cf-modkit",
@@ -6378,9 +6378,9 @@ dependencies = [
 
 [[package]]
 name = "time"
-version = "0.3.46"
+version = "0.3.47"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9da98b7d9b7dad93488a84b8248efc35352b0b2657397d4167e7ad67e5d535e5"
+checksum = "743bd48c283afc0388f9b8827b976905fb217ad9e647fae3a379a9283c4def2c"
 dependencies = [
  "deranged",
  "itoa",
@@ -6401,9 +6401,9 @@ checksum = "7694e1cfe791f8d31026952abf09c69ca6f6fa4e1a1229e18988f06a04a12dca"
 
 [[package]]
 name = "time-macros"
-version = "0.2.26"
+version = "0.2.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "78cc610bac2dcee56805c99642447d4c5dbde4d01f752ffea0199aee1f601dc4"
+checksum = "2e70e4c5a0e0a8a4823ad65dfe1a6930e4f4d756dcd9dd7939022b5e8c501215"
 dependencies = [
  "num-conv",
  "time-core",
@@ -6856,7 +6856,7 @@ checksum = "562d481066bde0658276a35467c4af00bdc6ee726305698a55b86e61d7ad82bb"
 
 [[package]]
 name = "types"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -6871,7 +6871,7 @@ dependencies = [
 
 [[package]]
 name = "types-sdk"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "async-trait",
  "cf-modkit-odata",
@@ -7006,7 +7006,7 @@ checksum = "daf8dba3b7eb870caf1ddeed7bc9d2a049f3cfdfae7cb521b087cc33ae4c49da"
 
 [[package]]
 name = "user_info-sdk"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "async-trait",
  "cf-modkit-odata",
@@ -7023,7 +7023,7 @@ dependencies = [
 
 [[package]]
 name = "users_info"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "arc-swap",

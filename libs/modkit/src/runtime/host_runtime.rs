@@ -42,6 +42,15 @@ pub enum DbOptions {
     Manager(Arc<modkit_db::DbManager>),
 }
 
+/// Runtime execution mode that determines which phases to run.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RunMode {
+    /// Run all phases and wait for shutdown signal (normal application mode).
+    Full,
+    /// Run only pre-init and DB migration phases, then exit (for cloud deployments).
+    MigrateOnly,
+}
+
 /// Environment variable name for passing directory endpoint to `OoP` modules.
 pub const MODKIT_DIRECTORY_ENDPOINT_ENV: &str = "MODKIT_DIRECTORY_ENDPOINT";
 
@@ -127,6 +136,12 @@ impl HostRuntime {
         );
 
         for entry in self.registry.modules() {
+            // Check for cancellation before processing each module
+            if self.cancel.is_cancelled() {
+                tracing::warn!("Pre-init phase cancelled by signal");
+                return Err(RegistryError::Cancelled);
+            }
+
             if let Some(sys_mod) = entry.caps.query::<SystemCap>() {
                 tracing::debug!(module = entry.name, "Running system pre_init");
                 sys_mod
@@ -244,6 +259,12 @@ impl HostRuntime {
         tracing::info!("Phase: db (before init)");
 
         for entry in self.registry.modules_by_system_priority() {
+            // Check for cancellation before processing each module
+            if self.cancel.is_cancelled() {
+                tracing::warn!("DB migration phase cancelled by signal");
+                return Err(RegistryError::Cancelled);
+            }
+
             let ctx = self.module_context(entry.name).await?;
             let db_module = entry.caps.query::<DatabaseCap>();
 
@@ -645,13 +666,64 @@ impl HostRuntime {
         }
     }
 
-    /// Run the full lifecycle: `pre_init` → DB → init → `post_init` → REST → gRPC → start → `OoP` spawn → wait → stop.
+    /// Run the full module lifecycle (all phases).
     ///
-    /// This is the main entry point for orchestrating the complete module lifecycle.
+    /// This is the standard entry point for normal application execution.
+    /// It runs all phases from pre-init through shutdown.
     ///
     /// # Errors
-    /// Returns an error if any lifecycle phase fails.
+    ///
+    /// Returns an error if any module phase fails during execution.
     pub async fn run_module_phases(self) -> anyhow::Result<()> {
+        self.run_phases_internal(RunMode::Full).await
+    }
+
+    /// Run only the migration phases (pre-init + DB migration).
+    ///
+    /// This is designed for cloud deployment workflows where database migrations
+    /// need to run as a separate step before starting the application.
+    /// The process exits after migrations complete.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if pre-init or migration phases fail.
+    pub async fn run_migration_phases(self) -> anyhow::Result<()> {
+        self.run_phases_internal(RunMode::MigrateOnly).await
+    }
+
+    /// Internal implementation that runs module phases based on the mode.
+    ///
+    /// This private method contains the actual phase execution logic and is called
+    /// by both `run_module_phases()` and `run_migration_phases()`.
+    ///
+    /// # Modes
+    ///
+    /// - `RunMode::Full`: Executes all phases and waits for shutdown signal
+    /// - `RunMode::MigrateOnly`: Executes only pre-init and DB migration phases, then exits
+    ///
+    /// # Phases (Full Mode)
+    ///
+    /// 1. Pre-init (system modules only)
+    /// 2. DB migration (all modules with database capability)
+    /// 3. Init (all modules)
+    /// 4. Post-init (system modules only)
+    /// 5. REST (modules with REST capability)
+    /// 6. gRPC (modules with gRPC capability)
+    /// 7. Start (runnable modules)
+    /// 8. `OoP` spawn (out-of-process modules)
+    /// 9. Wait for cancellation
+    /// 10. Stop (runnable modules in reverse order)
+    async fn run_phases_internal(self, mode: RunMode) -> anyhow::Result<()> {
+        // Log execution mode
+        match mode {
+            RunMode::Full => {
+                tracing::info!("Running full lifecycle (all phases)");
+            }
+            RunMode::MigrateOnly => {
+                tracing::info!("Running in migration mode (pre-init + db phases only)");
+            }
+        }
+
         // 1. Pre-init phase (before init, only for system modules)
         self.run_pre_init_phase()?;
 
@@ -663,6 +735,12 @@ impl HostRuntime {
         #[cfg(not(feature = "db"))]
         {
             // No DB integration in this build.
+        }
+
+        // Exit early if running in migration-only mode
+        if mode == RunMode::MigrateOnly {
+            tracing::info!("Migration phases completed successfully");
+            return Ok(());
         }
 
         // 3. Init phase (system modules first)
