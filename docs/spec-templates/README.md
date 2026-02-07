@@ -1,6 +1,6 @@
 # Spec Templates
 
-Industry-standard specification templates incorporating best practices from IEEE, ISO, and modern software development methodologies. Compatible with [Flow-Driven Development (FDD)](https://github.com/cyberfabric/FDD) for validation and traceability.
+Industry-standard specification templates incorporating best practices from IEEE, ISO, and modern software development methodologies. Compatible with [Spaider-Driven Development](https://github.com/cyberfabric/Spaider) for validation and traceability.
 
 ## Purpose
 
@@ -13,9 +13,9 @@ These templates provide a structured way to document product requirements, techn
 - **ISO/IEC 15288 / 12207** — Systems and software life cycle processes
 - **MADR** — Markdown Any Decision Records
 
-Templates work standalone or can be enhanced with FDD annotations (`fdd-id`) for cross-document validation and traceability.
+Templates work standalone or can be enhanced with Spaider annotations (`spd-id`) for cross-document validation and traceability.
 
-**FDD integration is optional** — templates are useful on their own for clear, consistent documentation.
+**Spaider integration is optional** — templates are useful on their own for clear, consistent documentation.
 
 ## Governance & Process
 
@@ -36,8 +36,9 @@ Templates work standalone or can be enhanced with FDD annotations (`fdd-id`) for
 | [PRD.md](./PRD.md) | Product Requirements Document — vision, actors, capabilities, use cases, FR, NFR | Foundation |
 | [UPSTREAM_REQS.md](./UPSTREAM_REQS.md) | Upstream Requirements — technical requirements FROM other modules TO this module | Integration |
 | [DESIGN.md](./DESIGN.md) | Technical Design — architecture, principles, constraints, domain model, API contracts | System-level |
+| [DECOMPOSITION.md](./DECOMPOSITION.md) | Decomposition — break down features into implementation units with traceability | Feature-level |
 | [ADR.md](./ADR.md) | Architecture Decision Record — capture decisions, options, trade-offs, consequences | Cross-cutting |
-| [FEATURE.md](./FEATURE.md) | Feature Specification — flows, algorithms, states, requirements (FDL format) | Feature-level |
+| [FEATURE.md](./FEATURE.md) | Feature Specification — flows, algorithms, states, requirements (SDSL format) | Feature-level |
 
 ## Document Structure
 
@@ -92,6 +93,13 @@ Standards alignment:
   - IEEE 42010 (Architecture Description — viewpoints, views, concerns)
   - ISO/IEC 15288 / 12207 (Architecture & Design Definition processes)
 
+### DECOMPOSITION.md
+
+1. **Overview** — Feature context, scope, related artifacts
+2. **Requirements Coverage** — Map PRD requirements to implementation units
+3. **Implementation Units** — Break down into phases/tasks with dependencies
+4. **Traceability** — Links to PRD, DESIGN, features
+
 ### ADR/*.md
 - **Context and Problem Statement** — What problem are we solving?
 - **Decides For Requirements** — Explicit links to requirements/design elements this decision addresses
@@ -111,9 +119,9 @@ Standards alignment:
 
 ### features/*.md
 1. **Feature Context** — Overview, purpose, actors, PRD requirement references
-2. **Actor Flows (FDL)** — User-facing interactions step by step
-3. **Algorithms (FDL)** — Internal functions and procedures
-4. **States (FDL)** — State machines for entities (optional)
+2. **Actor Flows (SDSL)** — User-facing interactions step by step
+3. **Algorithms (SDSL)** — Internal functions and procedures
+4. **States (SDSL)** — State machines for entities (optional)
 5. **Implementation Requirements** — Specific tasks to build
 6. **Acceptance Criteria** — Feature-level validation
 
@@ -153,7 +161,7 @@ Feature files bridge the gap between high-level requirements (PRD) and implement
 
 Unlike PRD which answers "what do we need?", Feature files answer "how exactly does it work?" — step by step, with precise inputs, outputs, conditions, and error handling. This makes them directly translatable to code and testable against acceptance criteria.
 
-**FDL pseudo-code is optional:**
+**SDSL pseudo-code is optional:**
 - **Use** for early-stage projects, complex domains, onboarding new team members, or when precise behavior must be communicated
 - **Skip** for mature teams or simple features — avoid documentation overhead when everyone already understands the flow
 
@@ -166,45 +174,45 @@ docs/arch/common/ or docs/arch/{subsystem}/ or {module}/
 ├── PRD.md                     # Product requirements
 ├── DESIGN.md                  # Technical design
 ├── ADR/                       # Architecture Decision Records
-│   ├── 0001-{fdd-id}.md       # ADR with sequential prefix
-│   ├── 0002-{fdd-id}.md
+│   ├── 0001-{spd-id}.md       # ADR with sequential prefix
+│   ├── 0002-{spd-id}.md
 │   └── ...
 └── features/                  # Feature specifications
-    ├── 0001-{fdd-id}.md       # Feature with sequential prefix
-    ├── 0002-{fdd-id}.md
+    ├── 0001-{spd-id}.md       # Feature with sequential prefix
+    ├── 0002-{spd-id}.md
     └── ...
 ```
 
 ### ADR & Feature Naming Convention
 
-Both ADR and Feature files MUST use the prefix `NNNN-{fdd-id}.md`:
+Both ADR and Feature files MUST use the prefix `NNNN-{spd-id}.md`:
 
 **ADRs**:
-- `ADR/0001-fdd-todo-app-adr-local-storage.md`
-- `ADR/0002-fdd-todo-app-adr-optimistic-ui.md`
+- `ADR/0001-spd-todo-app-adr-local-storage.md`
+- `ADR/0002-spd-todo-app-adr-optimistic-ui.md`
 
 **Features**:
-- `features/0001-fdd-todo-app-feature-core.md`
-- `features/0002-fdd-todo-app-feature-logic.md`
+- `features/0001-spd-todo-app-feature-core.md`
+- `features/0002-spd-todo-app-feature-logic.md`
 
-## FDD ID Convention
+## Spaider ID Convention
 
-FDD IDs enable traceability across all specification artifacts.
+Spaider IDs enable traceability across all specification artifacts.
 
-### FDD ID Definition
+### Spaider ID Definition
 
-An FDD ID **defines** a unique identifier for a specification element (actor, requirement, feature, etc.). Each ID must be **globally unique** within the module, subsystem or global project depending on where it's defined
+An Spaider ID **defines** a unique identifier for a specification element (actor, requirement, feature, etc.). Each ID must be **globally unique** within the module, subsystem or global project depending on where it's defined
 
 **Format**:
 ```
-fdd-{module-name}-{kind}-{slug}
+spd-{system}-{kind}-{slug}
 ```
 
-**Placement**: Use `**ID**: \`fdd-...\`` in the artifact where the element is defined.
+**Placement**: Use `**ID**: \`spd-...\`` in the artifact where the element is defined.
 
 ### ID Scope
 
-An FDD ID covers the **markdown section where it's defined and all its subsections**:
+An Spaider ID covers the **markdown section where it's defined and all its subsections**:
 
 - ID on `#` (H1) → covers the entire document
 - ID on `##` (H2) → covers that section and all H3/H4/... within it
@@ -218,7 +226,7 @@ Requirements and design elements can include **implementation status** and **pri
 
 **Format**:
 ```
-- [status] `priority` - **ID**: `fdd-{module}-{kind}-{slug}`
+- [status] `priority` - **ID**: `spd-{system}-{kind}-{slug}`
 ```
 
 | Element | Values | Description |
@@ -230,7 +238,7 @@ Requirements and design elements can include **implementation status** and **pri
 ```markdown
 #### User roles requirement
 
-- [ ] `p1` - **ID**: `fdd-auth-req-user-roles`
+- [ ] `p1` - **ID**: `spd-auth-req-user-roles`
 
 The system must support 1-N user roles associated with the user...
 ```
@@ -238,29 +246,29 @@ The system must support 1-N user roles associated with the user...
 ```markdown
 #### Response time
 
-- [x] `p2` - **ID**: `fdd-api-req-response-time`
+- [x] `p2` - **ID**: `spd-api-req-response-time`
 
 API responses must complete within 200ms at p95...
 ```
 
 > **Note**: Implementation status and priority are **informative only** — they don't replace your issue tracking system. Keep them simple. The value is having spec-to-implementation traceability directly in version-controlled documentation, reducing uncertainty between what's specified and what's actually built.
 
-### FDD ID Reference
+### Spaider ID Reference
 
-An FDD ID **reference** links to an element defined elsewhere. References create traceability between documents — for example, a Feature can reference Actors from PRD, or an ADR can reference Requirements it addresses.
+An Spaider ID **reference** links to an element defined elsewhere. References create traceability between documents — for example, a Feature can reference Actors from PRD, or an ADR can reference Requirements it addresses.
 
-**Placement**: Use backtick notation `` `fdd-...` `` when referencing an ID defined in another section or file.
+**Placement**: Use backtick notation `` `spd-...` `` when referencing an ID defined in another section or file.
 
 ### Validation
 
-FDD IDs must be unique. When FDD tooling is connected, `fdd validate` will:
+Spaider IDs must be unique. When Spaider tooling is connected, `spaider validate` will:
 - Check that all referenced IDs exist
 - Detect duplicate definitions
 - Verify cross-document consistency
 
 ### Kind Reference
 
-These are **suggested** kind names for common artifact types. FDD does not enforce specific kind values — use whatever naming makes sense for your project. The important thing is consistency within your codebase.
+These are **suggested** kind names for common artifact types. Spaider does not enforce specific kind values — use whatever naming makes sense for your project. The important thing is consistency within your codebase.
 
 | Kind | Description |
 |------|-------------|
@@ -274,24 +282,24 @@ These are **suggested** kind names for common artifact types. FDD does not enfor
 | `state` | State machine |
 
 **Examples**:
-- `fdd-todo-app-actor-user` — Actor ID
-- `fdd-todo-app-req-create-task` — Requirement ID
-- `fdd-todo-app-req-response-time` — NFR (still uses `req`)
-- `fdd-todo-app-adr-local-storage` — ADR ID
-- `fdd-todo-app-feature-core` — Feature ID
+- `spd-todo-app-actor-user` — Actor ID
+- `spd-todo-app-req-create-task` — Requirement ID
+- `spd-todo-app-req-response-time` — NFR (still uses `req`)
+- `spd-todo-app-adr-local-storage` — ADR ID
+- `spd-todo-app-feature-core` — Feature ID
 
-> **Note**: You can use any slug that fits your domain. For example, `fdd-billing-uc-checkout` or `fdd-auth-nfr-token-expiry` are equally valid if your team prefers more specific kinds. FDD validation only checks that referenced IDs exist — it does not validate kind names.
+> **Note**: You can use any slug that fits your domain. For example, `spd-billing-uc-checkout` or `spd-auth-nfr-token-expiry` are equally valid if your team prefers more specific kinds. Spaider validation only checks that referenced IDs exist — it does not validate kind names.
 
 ## Example
 
 See [examples/todo-app/](./examples/todo-app/) for a complete example using a universally understood Todo App theme.
 
-## FDD Compatibility
+## Spaider Compatibility
 
-When full FDD framework is connected:
+When full Spaider framework is connected:
 
-1. **Validation** — `fdd validate` will check document structure and cross-references
+1. **Validation** — `spaider validate` will check document structure and cross-references
 2. **Traceability** — IDs will be linked across PRD → DESIGN → ADR → FEATURE → code
 3. **Deterministic gates** — CI/CD can enforce document quality before code changes
 
-For more details on FDD taxonomy and artifact relationships, see [`TAXONOMY.md`](https://github.com/cyberfabric/FDD/blob/main/guides/TAXONOMY.md).
+For more details on Spaider taxonomy and artifact relationships, see [`TAXONOMY.md`](https://github.com/cyberfabric/Spaider/blob/main/guides/TAXONOMY.md).

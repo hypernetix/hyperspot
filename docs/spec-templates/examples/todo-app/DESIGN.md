@@ -16,10 +16,10 @@ Event-driven architecture is employed for real-time updates and cross-device syn
 
 | Requirement | Design Response |
 |-------------|-----------------|
-| `fdd-todo-app-req-create-task` | REST API endpoint POST /tasks with validation |
-| `fdd-todo-app-req-complete-task` | PATCH /tasks/:id with status toggle |
-| `fdd-todo-app-req-filter-tasks` | Query parameters on GET /tasks |
-| `fdd-todo-app-req-data-persistence` | IndexedDB local storage with sync queue |
+| `spd-todo-app-req-create-task` | REST API endpoint POST /tasks with validation |
+| `spd-todo-app-req-complete-task` | PATCH /tasks/:id with status toggle |
+| `spd-todo-app-req-filter-tasks` | Query parameters on GET /tasks |
+| `spd-todo-app-req-offline-support` | IndexedDB local storage with sync queue |
 
 #### NFR Allocation
 
@@ -27,8 +27,8 @@ This table maps non-functional requirements from PRD to specific design/architec
 
 | NFR ID | NFR Summary | Allocated To | Design Response | Verification Approach |
 |--------|-------------|--------------|-----------------|----------------------|
-| `fdd-todo-app-req-response-time` | UI interactions <200ms p95 | TaskService + IndexedDB | Local-first architecture: all reads from IndexedDB (sub-10ms), writes optimistic with background sync | Performance benchmarks measure p95 latency |
-| `fdd-todo-app-req-data-persistence` | Local persist <50ms, cloud sync <5s | SyncService + IndexedDB + REST API | IndexedDB for immediate local persistence; background WebSocket sync with retry queue | Integration tests verify timing + recovery scenarios |
+| `spd-todo-app-req-response-time` | UI interactions <200ms p95 | TaskService + IndexedDB | Local-first architecture: all reads from IndexedDB (sub-10ms), writes optimistic with background sync | Performance benchmarks measure p95 latency |
+| `spd-todo-app-req-data-persistence` | Local persist <50ms, cloud sync <5s | SyncService + IndexedDB + REST API | IndexedDB for immediate local persistence; background WebSocket sync with retry queue | Integration tests verify timing + recovery scenarios |
 
 ### 1.3 Architecture Layers
 
@@ -45,17 +45,17 @@ This table maps non-functional requirements from PRD to specific design/architec
 
 #### Offline-First
 
-- [ ] `p2` - **ID**: `fdd-todo-app-design-principle-offline-first`
+- [ ] `p2` - **ID**: `spd-todo-app-design-principle-offline-first`
 
-**ADRs**: `fdd-todo-app-adr-local-storage`
+**ADRs**: `spd-todo-app-adr-local-storage`
 
 All operations must work without network connectivity. Data is persisted locally first, then synchronized to the server when connection is available.
 
 #### Optimistic Updates
 
-- [ ] `p2` - **ID**: `fdd-todo-app-design-principle-optimistic-updates`
+- [ ] `p2` - **ID**: `spd-todo-app-design-principle-optimistic-updates`
 
-**ADRs**: `fdd-todo-app-adr-optimistic-ui`
+**ADRs**: `spd-todo-app-adr-optimistic-ui`
 
 UI updates immediately on user action without waiting for server confirmation. Rollback occurs only on server rejection.
 
@@ -63,9 +63,9 @@ UI updates immediately on user action without waiting for server confirmation. R
 
 #### Browser Compatibility
 
-- [ ] `p2` - **ID**: `fdd-todo-app-design-constraint-browser-compat`
+- [ ] `p2` - **ID**: `spd-todo-app-design-constraint-browser-compat`
 
-**ADRs**: `fdd-todo-app-adr-browser-support`
+**ADRs**: `spd-todo-app-adr-browser-support`
 
 Application must support latest 2 versions of Chrome, Firefox, Safari, and Edge.
 
@@ -139,7 +139,7 @@ flowchart LR
 
 **Technology**: REST/OpenAPI
 
-**Location**: [api/openapi.yaml](./api/openapi.yaml)
+**Location**: [api/openapi.yaml](../api/openapi.yaml)
 
 **Endpoints Overview**:
 
@@ -155,18 +155,18 @@ flowchart LR
 
 #### WebSocket Sync Protocol
 
-- [x] `p1` - **ID**: `fdd-todo-app-design-interface-websocket`
+- [x] `p1` - **ID**: `spd-todo-app-design-interface-websocket`
 
 **Type**: Protocol (WebSocket + JSON)
 **Direction**: bidirectional
 **Specification**: Custom sync protocol over WebSocket; messages follow format: `{ type: "sync" | "update" | "delete", payload: Task }`
-**Data Format**: JSON (follows Task model from `fdd-todo-app-interface-task-model`)
+**Data Format**: JSON (follows Task model from `spd-todo-app-interface-task-model`)
 **Compatibility**: Protocol version negotiated on connection; supports fallback to HTTP polling
-**References**: Links to PRD § Public Library Interfaces (`fdd-todo-app-contract-sync`)
+**References**: Links to PRD § Public Library Interfaces (`spd-todo-app-contract-sync`)
 
 #### IndexedDB Storage Schema
 
-- [x] `p1` - **ID**: `fdd-todo-app-design-interface-indexeddb`
+- [x] `p1` - **ID**: `spd-todo-app-design-interface-indexeddb`
 
 **Type**: Data Format (IndexedDB schema)
 **Direction**: internal (library storage)
@@ -201,15 +201,15 @@ sequenceDiagram
     TS->>IDB: markSynced(task.id)
 ```
 
-**Use cases**: `fdd-todo-app-req-uc-create-task`
+**Use cases**: `spd-todo-app-req-uc-create-task`
 
-**Actors**: `fdd-todo-app-actor-user`, `fdd-todo-app-actor-sync-service`
+**Actors**: `spd-todo-app-actor-user`, `spd-todo-app-actor-sync-service`
 
 ### 3.6 Database schemas & tables
 
 #### Table tasks
 
-**ID**: `fdd-todo-app-db-table-tasks`
+**ID**: `spd-todo-app-db-table-tasks`
 
 **Schema**
 
@@ -240,7 +240,7 @@ sequenceDiagram
 
 ### 3.7 Topology (optional)
 
-**ID**: `fdd-todo-app-topology-cloud`
+**ID**: `spd-todo-app-topology-cloud`
 
 - Frontend: Static files on CDN
 - Backend: Containerized Node.js on Kubernetes
@@ -249,7 +249,7 @@ sequenceDiagram
 
 ### 3.8 Tech stack (optional)
 
-**ID**: `fdd-todo-app-tech-stack`
+**ID**: `spd-todo-app-tech-stack`
 
 - Frontend: React 18, TypeScript, TailwindCSS, Zustand
 - Backend: Node.js, Express, TypeScript
@@ -258,7 +258,7 @@ sequenceDiagram
 
 ## 4. Additional Context
 
-**ID**: `fdd-todo-app-design-context-decisions`
+**ID**: `spd-todo-app-design-context-decisions`
 
 The choice of React over other frameworks was driven by team expertise and ecosystem maturity. PostgreSQL was selected for its reliability and JSON support for flexible task metadata.
 

@@ -1,0 +1,9 @@
+---
+name: spaider-analyze
+description: Analyze Spaider artifacts against templates or code against design requirements with traceability verification (tool invocation is validate-only)
+disable-model-invocation: false
+user-invocable: true
+allowed-tools: Bash, Read, Glob, Grep
+---
+
+ALWAYS open and follow `../../../.spaider/workflows/analyze.md`

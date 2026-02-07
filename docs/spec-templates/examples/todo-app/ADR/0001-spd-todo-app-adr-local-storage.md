@@ -1,11 +1,10 @@
----
-status: accepted
-date: 2024-01-15
----
+# ADR-0001: Use IndexedDB for Offline Storage
 
-# Use IndexedDB for Offline Storage
+**Date**: 2024-01-15
 
-- [ ] `p1` - **ID**: `fdd-todo-app-adr-local-storage`
+**Status**: Accepted
+
+**ID**: `spd-todo-app-adr-local-storage`
 
 ## Context and Problem Statement
 
@@ -15,14 +14,15 @@ The application requires offline-first functionality where users can create, edi
 
 This decision directly addresses the following requirements from PRD/DESIGN:
 
-* `fdd-todo-app-req-offline-support` — Enables full offline functionality by providing local storage for tasks
-* `fdd-todo-app-req-response-time` — IndexedDB's indexed queries enable <200ms response times for filtering/search operations
-* `fdd-todo-app-req-filter-tasks` — Indexes on status/category/priority enable efficient filtering without loading all data
-* `fdd-todo-app-design-principle-offline-first` — This is the core technical decision enabling the offline-first design principle
+* `spd-todo-app-nfr-offline-support` — Enables full offline functionality by providing local storage for tasks
+* `spd-todo-app-nfr-response-time` — IndexedDB's indexed queries enable <200ms response times for filtering/search operations
+* `spd-todo-app-req-filter-tasks` — Indexes on status/category/priority enable efficient filtering without loading all data
+* `spd-todo-app-principle-offline-first` — This is the core technical decision enabling the offline-first design principle
 
 See:
-- **PRD**: [PRD.md](../PRD.md)
-- **DESIGN**: [DESIGN.md](../DESIGN.md)
+
+* **PRD**: [PRD.md](../PRD.md)
+* **DESIGN**: [DESIGN.md](../DESIGN.md)
 
 ## Decision Drivers
 
@@ -52,9 +52,10 @@ Chosen option: "IndexedDB with Dexie.js wrapper", because it provides native bro
 ### Confirmation
 
 Implementation verified via:
-- Unit tests for IndexedDB operations using fake-indexeddb
-- Integration tests with Dexie.js queries
-- Manual testing of offline scenarios in Chrome DevTools
+
+* Unit tests for IndexedDB operations using fake-indexeddb
+* Integration tests with Dexie.js queries
+* Manual testing of offline scenarios in Chrome DevTools
 
 ## Pros and Cons of the Options
 
@@ -92,3 +93,13 @@ Full SQL database compiled to WebAssembly.
 ## More Information
 
 Decision aligns with offline-first architecture principle. Dexie.js chosen over raw IndexedDB for developer productivity.
+
+## Traceability
+
+**Actors**:
+* `spd-todo-app-actor-user` - Primary beneficiary of offline functionality
+* `spd-todo-app-actor-sync-service` - Syncs IndexedDB changes to server
+
+**Requirements**:
+* `spd-todo-app-nfr-offline-support` - Core requirement driving this decision
+* `spd-todo-app-nfr-response-time` - IndexedDB enables fast local reads

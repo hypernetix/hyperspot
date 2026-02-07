@@ -1,0 +1,240 @@
+{
+  "version": 1,
+  "agents": {
+    "windsurf": {
+      "workflows": {
+        "workflow_dir": ".windsurf/workflows",
+        "workflow_command_prefix": "spaider-",
+        "workflow_filename_format": "{command}.md",
+        "custom_content": "",
+        "template": [
+          "# /{command}",
+          "",
+          "{custom_content}",
+          "ALWAYS open and follow `{target_workflow_path}`"
+        ]
+      },
+      "skills": {
+        "skill_name": "spaider",
+        "custom_content": "",
+        "outputs": [
+          {
+            "path": ".windsurf/skills/spaider/SKILL.md",
+            "template": [
+              "---",
+              "name: {name}",
+              "description: {description}",
+              "---",
+              "",
+              "{custom_content}",
+              "ALWAYS open and follow `{target_skill_path}`"
+            ]
+          },
+          {
+            "path": ".windsurf/workflows/spaider.md",
+            "template": [
+              "# /spaider",
+              "",
+              "{custom_content}",
+              "ALWAYS open and follow `{target_skill_path}`"
+            ]
+          }
+        ]
+      }
+    },
+    "cursor": {
+      "workflows": {
+        "workflow_dir": ".cursor/commands",
+        "workflow_command_prefix": "spaider-",
+        "workflow_filename_format": "{command}.md",
+        "custom_content": "",
+        "template": [
+          "# /{command}",
+          "",
+          "{custom_content}",
+          "ALWAYS open and follow `{target_workflow_path}`"
+        ]
+      },
+      "skills": {
+        "custom_content": "",
+        "outputs": [
+          {
+            "path": ".cursor/weavers/spaider.mdc",
+            "template": [
+              "---",
+              "description: {description}",
+              "alwaysApply: true",
+              "---",
+              "",
+              "{custom_content}",
+              "ALWAYS open and follow `{target_skill_path}`"
+            ]
+          },
+          {
+            "path": ".cursor/commands/spaider.md",
+            "template": [
+              "# /spaider",
+              "",
+              "{custom_content}",
+              "ALWAYS open and follow `{target_skill_path}`"
+            ]
+          }
+        ]
+      }
+    },
+    "claude": {
+      "workflows": {
+        "workflow_dir": ".claude/commands",
+        "workflow_command_prefix": "spaider-",
+        "workflow_filename_format": "{command}.md",
+        "custom_content": "",
+        "template": [
+          "---",
+          "description: {description}",
+          "---",
+          "",
+          "{custom_content}",
+          "ALWAYS open and follow `{target_workflow_path}`"
+        ]
+      },
+      "skills": {
+        "custom_content": "",
+        "outputs": [
+          {
+            "path": ".claude/commands/spaider.md",
+            "template": [
+              "---",
+              "description: {description}",
+              "---",
+              "",
+              "{custom_content}",
+              "ALWAYS open and follow `{target_skill_path}`"
+            ]
+          },
+          {
+            "path": ".claude/skills/spaider/SKILL.md",
+            "template": [
+              "---",
+              "name: spaider",
+              "description: {description}",
+              "disable-model-invocation: false",
+              "user-invocable: true",
+              "allowed-tools: Bash, Read, Write, Edit, Glob, Grep, Task, WebFetch",
+              "---",
+              "",
+              "{custom_content}",
+              "ALWAYS open and follow `{target_skill_path}`"
+            ]
+          },
+          {
+            "path": ".claude/skills/spaider-adapter/SKILL.md",
+            "target": "workflows/adapter.md",
+            "template": [
+              "---",
+              "name: spaider-adapter",
+              "description: {description}",
+              "disable-model-invocation: false",
+              "user-invocable: true",
+              "allowed-tools: Bash, Read, Write, Edit, Glob, Grep",
+              "---",
+              "",
+              "ALWAYS open and follow `{target_path}`"
+            ]
+          },
+          {
+            "path": ".claude/skills/spaider-generate/SKILL.md",
+            "target": "workflows/generate.md",
+            "template": [
+              "---",
+              "name: spaider-generate",
+              "description: {description}",
+              "disable-model-invocation: false",
+              "user-invocable: true",
+              "allowed-tools: Bash, Read, Write, Edit, Glob, Grep, Task",
+              "---",
+              "",
+              "ALWAYS open and follow `{target_path}`"
+            ]
+          },
+          {
+            "path": ".claude/skills/spaider-analyze/SKILL.md",
+            "target": "workflows/analyze.md",
+            "template": [
+              "---",
+              "name: spaider-analyze",
+              "description: {description}",
+              "disable-model-invocation: false",
+              "user-invocable: true",
+              "allowed-tools: Bash, Read, Glob, Grep",
+              "---",
+              "",
+              "ALWAYS open and follow `{target_path}`"
+            ]
+          }
+        ]
+      }
+    },
+    "copilot": {
+      "workflows": {
+        "workflow_dir": ".github/prompts",
+        "workflow_command_prefix": "spaider-",
+        "workflow_filename_format": "{command}.prompt.md",
+        "custom_content": "",
+        "template": [
+          "---",
+          "name: {name}",
+          "description: {description}",
+          "---",
+          "",
+          "{custom_content}",
+          "ALWAYS open and follow `{target_workflow_path}`"
+        ]
+      },
+      "skills": {
+        "custom_content": "",
+        "outputs": [
+          {
+            "path": ".github/copilot-instructions.md",
+            "template": [
+              "# Spaider",
+              "",
+              "{custom_content}",
+              "ALWAYS open and follow `{target_skill_path}`"
+            ]
+          },
+          {
+            "path": ".github/prompts/spaider.prompt.md",
+            "template": [
+              "---",
+              "name: {name}",
+              "description: {description}",
+              "---",
+              "",
+              "{custom_content}",
+              "ALWAYS open and follow `{target_skill_path}`"
+            ]
+          }
+        ]
+      }
+    },
+    "openai": {
+      "skills": {
+        "custom_content": "",
+        "outputs": [
+          {
+            "path": ".agents/skills/spaider/SKILL.md",
+            "template": [
+              "---",
+              "name: {name}",
+              "description: {description}",
+              "---",
+              "",
+              "{custom_content}",
+              "ALWAYS open and follow `{target_skill_path}`"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}
