@@ -77,7 +77,7 @@ async fn main() -> anyhow::Result<()> {
 
 | Field | Description |
 |-------|-------------|
-| `module_name` | Logical module name (e.g., "file_parser") |
+| `module_name` | Logical module name (e.g., "file-parser") |
 | `instance_id` | Instance ID (defaults to random UUID) |
 | `directory_endpoint` | DirectoryService gRPC endpoint |
 | `config_path` | Path to configuration file |

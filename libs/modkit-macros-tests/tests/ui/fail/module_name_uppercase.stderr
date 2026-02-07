@@ -1,0 +1,11 @@
+error: module name must start with a lowercase letter, found 'F'
+ --> tests/ui/fail/module_name_uppercase.rs:6:12
+  |
+6 |     name = "FileParser",  // Should fail: contains uppercase letters
+  |            ^^^^^^^^^^^^
+
+error[E0425]: cannot find type `TestModule` in this scope
+  --> tests/ui/fail/module_name_uppercase.rs:11:17
+   |
+11 | impl Module for TestModule {
+   |                 ^^^^^^^^^^ not found in this scope

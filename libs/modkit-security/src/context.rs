@@ -191,7 +191,7 @@ mod tests {
             .unwrap();
 
         let permission2 = Permission::builder()
-            .resource_pattern("file_parser")
+            .resource_pattern("file-parser")
             .action("edit")
             .build()
             .unwrap();
@@ -274,7 +274,7 @@ mod tests {
             .unwrap();
 
         let permission3 = Permission::builder()
-            .resource_pattern("file_parser")
+            .resource_pattern("file-parser")
             .action("edit")
             .build()
             .unwrap();
@@ -295,7 +295,7 @@ mod tests {
         );
         assert_eq!(perms[0].action(), "publish");
         assert_eq!(perms[1].action(), "subscribe");
-        assert_eq!(perms[2].resource_pattern(), "file_parser");
+        assert_eq!(perms[2].resource_pattern(), "file-parser");
     }
 
     #[test]
@@ -336,7 +336,7 @@ mod tests {
         let tenant_id = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap();
 
         let permission = Permission::builder()
-            .resource_pattern("file_parser")
+            .resource_pattern("file-parser")
             .action("edit")
             .build()
             .unwrap();
@@ -366,7 +366,7 @@ mod tests {
         let subject_id = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440001").unwrap();
 
         let permission = Permission::builder()
-            .resource_pattern("file_parser")
+            .resource_pattern("file-parser")
             .action("edit")
             .build()
             .unwrap();

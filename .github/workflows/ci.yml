@@ -361,7 +361,7 @@ jobs:
         run: sccache --show-stats
 
   users_info_integration_pg:
-    name: users_info integration (Postgres)
+    name: users-info integration (Postgres)
     runs-on: ubuntu-latest
     env:
       CARGO_TERM_COLOR: always
@@ -423,14 +423,14 @@ jobs:
       - name: cargo fmt (check)
         run: cargo fmt --all -- --check
 
-      - name: cargo clippy (users_info only)
-        run: cargo clippy -p users_info --all-targets -- -D warnings
+      - name: cargo clippy (users-info only)
+        run: cargo clippy -p users-info --all-targets -- -D warnings
 
-      - name: Check users_info (pg)
-        run: cargo check -p users_info
+      - name: Check users-info (pg)
+        run: cargo check -p users-info
 
-      - name: Test users_info with Postgres (integration)
-        run: cargo test -p users_info --features "integration" -- --nocapture
+      - name: Test users-info with Postgres (integration)
+        run: cargo test -p users-info --features "integration" -- --nocapture
 
       - name: sccache stats
         if: env.SCCACHE_OK == '1'

@@ -169,11 +169,20 @@ mod tests {
 
     #[test]
     fn test_prepare_sqlite_path_create_dirs() {
-        // This test would require filesystem operations, so we'll just verify
-        // it doesn't panic and returns the original DSN
-        let dsn = "sqlite:///tmp/test/db.sqlite";
-        let result = prepare_sqlite_path(dsn, true);
-        assert!(result.is_ok());
+        // Use a temp directory that we know we can create
+        let temp_dir = std::env::temp_dir();
+        let test_path = temp_dir.join("hyperspot_test").join("db.sqlite");
+        let dsn = format!("sqlite://{}", test_path.display());
+
+        let result = prepare_sqlite_path(&dsn, true);
+        assert!(result.is_ok(), "Failed to prepare path: {:?}", result.err());
         assert_eq!(result.unwrap(), dsn);
+
+        // Verify the directory was created
+        let parent = test_path.parent().unwrap();
+        assert!(parent.exists(), "Parent directory should exist");
+
+        // Clean up
+        let _ = std::fs::remove_dir_all(parent);
     }
 }

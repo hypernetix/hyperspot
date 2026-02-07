@@ -1,0 +1,11 @@
+error: module name must not contain consecutive hyphens
+ --> tests/ui/fail/module_name_consecutive_hyphens.rs:6:12
+  |
+6 |     name = "file--parser",  // Should fail: consecutive hyphens
+  |            ^^^^^^^^^^^^^^
+
+error[E0425]: cannot find type `TestModule` in this scope
+  --> tests/ui/fail/module_name_consecutive_hyphens.rs:11:17
+   |
+11 | impl Module for TestModule {
+   |                 ^^^^^^^^^^ not found in this scope
