@@ -59,7 +59,7 @@
         "custom_content": "",
         "outputs": [
           {
-            "path": ".cursor/weavers/spaider.mdc",
+            "path": ".cursor/rules/spaider.mdc",
             "template": [
               "---",
               "description: {description}",
