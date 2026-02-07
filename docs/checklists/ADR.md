@@ -222,7 +222,7 @@ For architectural decisions with broad impact, check ALL applicable domains.
 
 - [ ] Links to related requirements, risks, or constraints are provided
 - [ ] Links to impacted architecture and design documents are provided (when applicable)
-- [ ] Links to impacted spec specifications are provided (when applicable)
+- [ ] Links to impacted feature specifications are provided (when applicable)
 - [ ] Each link has a short explanation of relevance
 - [ ] Scope of impact is explicitly stated (what changes, what does not)
 
