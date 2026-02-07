@@ -109,7 +109,7 @@ Functional requirements define WHAT the system must do. Group by feature area or
 
 #### {Requirement Name}
 
-- [ ] `p1` - **ID**: `spd-{system}-req-{slug}`
+- [ ] `p1` - **ID**: `spd-{system}-fr-{slug}`
 
 The system **MUST** {do something specific and verifiable}.
 
@@ -130,7 +130,7 @@ The system **MUST** {do something specific and verifiable}.
 
 #### {NFR Name}
 
-- [ ] `p1` - **ID**: `spd-{system}-req-{slug}`
+- [ ] `p1` - **ID**: `spd-{system}-nfr-{slug}`
 
 The system **MUST** {measurable NFR with specific thresholds, e.g., "respond within 50ms at p95" (stricter than project default)}.
 
