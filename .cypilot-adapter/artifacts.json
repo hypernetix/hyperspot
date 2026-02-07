@@ -1,0 +1,262 @@
+{
+  "version": "1.0",
+  "project_root": "..",
+  "kits": {
+    "cf-sdlc": {
+      "format": "Cypilot",
+      "path": ".cypilot-adapter/kits/cf-sdlc"
+    }
+  },
+  "systems": [
+    {
+      "name": "cyberfabric",
+      "slug": "cyberfabric",
+      "kit": "cf-sdlc",
+      "artifacts": [],
+      "artifacts_dir": "docs",
+      "codebase": [
+        { "name": "Apps", "path": "apps", "extensions": [".rs"] },
+        { "name": "Libraries", "path": "libs", "extensions": [".rs"] },
+        { "name": "Examples", "path": "examples", "extensions": [".rs"] },
+        { "name": "Dylint Lints", "path": "dylint_lints", "extensions": [".rs"] }
+      ],
+      "children": [
+        {
+          "name": "llm_gateway",
+          "slug": "llm_gateway",
+          "kit": "cf-sdlc",
+          "artifacts_dir": "modules/llm_gateway/docs",
+          "artifacts": [
+            {
+              "name": "LLM Gateway PRD",
+              "path": "modules/llm_gateway/docs/PRD.md",
+              "kind": "PRD",
+              "traceability": "FULL"
+            },
+            {
+              "name": "LLM Gateway DESIGN",
+              "path": "modules/llm_gateway/docs/DESIGN.md",
+              "kind": "DESIGN",
+              "traceability": "FULL"
+            },
+            {
+              "name": "LLM Gateway ADR 0001",
+              "path": "modules/llm_gateway/docs/ADR/0001-cpt-llmgw-adr-stateless.md",
+              "kind": "ADR",
+              "traceability": "FULL"
+            },
+            {
+              "name": "LLM Gateway ADR 0002",
+              "path": "modules/llm_gateway/docs/ADR/0002-cpt-llmgw-adr-pass-through.md",
+              "kind": "ADR",
+              "traceability": "FULL"
+            },
+            {
+              "name": "LLM Gateway ADR 0003",
+              "path": "modules/llm_gateway/docs/ADR/0003-cpt-llmgw-adr-file-storage.md",
+              "kind": "ADR",
+              "traceability": "FULL"
+            },
+            {
+              "name": "LLM Gateway ADR 0004",
+              "path": "modules/llm_gateway/docs/ADR/0004-cpt-llmgw-adr-circuit-breaking.md",
+              "kind": "ADR",
+              "traceability": "FULL"
+            }
+          ],
+          "codebase": [
+            { "name": "LLM Gateway", "path": "modules/llm_gateway", "extensions": [".rs"] }
+          ]
+        },
+        {
+          "name": "file_storage",
+          "slug": "file_storage",
+          "kit": "cf-sdlc",
+          "artifacts_dir": "modules/file_storage/docs",
+          "artifacts": [
+            {
+              "name": "File Storage PRD",
+              "path": "modules/file_storage/docs/PRD.md",
+              "kind": "PRD",
+              "traceability": "DOCS-ONLY"
+            }
+          ],
+          "codebase": [
+            { "name": "File Storage", "path": "modules/file_storage", "extensions": [".rs"] }
+          ]
+        },
+        {
+          "name": "model_registry",
+          "slug": "model_registry",
+          "kit": "cf-sdlc",
+          "artifacts_dir": "modules/model_registry/docs",
+          "artifacts": [
+            {
+              "name": "Model Registry PRD",
+              "path": "modules/model_registry/docs/PRD.md",
+              "kind": "PRD",
+              "traceability": "DOCS-ONLY"
+            }
+          ],
+          "codebase": [
+            { "name": "Model Registry", "path": "modules/model_registry", "extensions": [".rs"] }
+          ]
+        },
+        {
+          "name": "type_registry",
+          "slug": "type_registry",
+          "kit": "cf-sdlc",
+          "artifacts_dir": "modules/type_registry/docs",
+          "artifacts": [
+            {
+              "name": "Type Registry PRD",
+              "path": "modules/type_registry/docs/PRD.md",
+              "kind": "PRD",
+              "traceability": "DOCS-ONLY"
+            }
+          ],
+          "codebase": [
+            { "name": "Type Registry", "path": "modules/type_registry", "extensions": [".rs"] }
+          ]
+        },
+        {
+          "name": "oagw",
+          "slug": "oagw",
+          "kit": "cf-sdlc",
+          "artifacts_dir": "modules/system/oagw",
+          "artifacts": [
+            {
+              "name": "OAGW PRD",
+              "path": "modules/system/oagw/PRD.md",
+              "kind": "PRD",
+              "traceability": "FULL"
+            },
+            {
+              "name": "OAGW DESIGN",
+              "path": "modules/system/oagw/DESIGN.md",
+              "kind": "DESIGN",
+              "traceability": "FULL"
+            },
+            {
+              "name": "OAGW ADR backpressure queueing",
+              "path": "modules/system/oagw/docs/adr-backpressure-queueing.md",
+              "kind": "ADR",
+              "traceability": "FULL"
+            },
+            {
+              "name": "OAGW ADR circuit breaker",
+              "path": "modules/system/oagw/docs/adr-circuit-breaker.md",
+              "kind": "ADR",
+              "traceability": "FULL"
+            },
+            {
+              "name": "OAGW ADR concurrency control",
+              "path": "modules/system/oagw/docs/adr-concurrency-control.md",
+              "kind": "ADR",
+              "traceability": "FULL"
+            },
+            {
+              "name": "OAGW ADR CORS",
+              "path": "modules/system/oagw/docs/adr-cors.md",
+              "kind": "ADR",
+              "traceability": "FULL"
+            },
+            {
+              "name": "OAGW ADR error source distinction",
+              "path": "modules/system/oagw/docs/adr-error-source-distinction.md",
+              "kind": "ADR",
+              "traceability": "FULL"
+            },
+            {
+              "name": "OAGW ADR gRPC support",
+              "path": "modules/system/oagw/docs/adr-grpc-support.md",
+              "kind": "ADR",
+              "traceability": "FULL"
+            },
+            {
+              "name": "OAGW ADR rate limiting",
+              "path": "modules/system/oagw/docs/adr-rate-limiting.md",
+              "kind": "ADR",
+              "traceability": "FULL"
+            },
+            {
+              "name": "OAGW ADR resource identification",
+              "path": "modules/system/oagw/docs/adr-resource-identification.md",
+              "kind": "ADR",
+              "traceability": "FULL"
+            },
+            {
+              "name": "OAGW ADR Rust ABI client library",
+              "path": "modules/system/oagw/docs/adr-rust-abi-client-library.md",
+              "kind": "ADR",
+              "traceability": "FULL"
+            }
+          ],
+          "codebase": [
+            { "name": "OAGW", "path": "modules/system/oagw", "extensions": [".rs"] }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "examples",
+      "slug": "examples",
+      "kit": "cf-sdlc",
+      "artifacts_dir": "docs/spec-templates/examples/",
+      "children": [
+        {
+          "name": "todo-app",
+          "slug": "todo-app",
+          "kit": "cf-sdlc",
+          "artifacts_dir": "docs/spec-templates/examples/",
+          "artifacts": [
+            {
+              "name": "Todo App PRD (example)",
+              "path": "docs/spec-templates/examples/todo-app/PRD.md",
+              "kind": "PRD",
+              "traceability": "DOCS-ONLY"
+            },
+            {
+              "name": "Todo App DESIGN (example)",
+              "path": "docs/spec-templates/examples/todo-app/DESIGN.md",
+              "kind": "DESIGN",
+              "traceability": "DOCS-ONLY"
+            },
+            {
+              "name": "Todo App ADR-0001 (example)",
+              "path": "docs/spec-templates/examples/todo-app/ADR/0001-spd-todo-app-adr-local-storage.md",
+              "kind": "ADR",
+              "traceability": "DOCS-ONLY"
+            },
+            {
+              "name": "Todo App ADR-0002 (example)",
+              "path": "docs/spec-templates/examples/todo-app/ADR/0002-spd-todo-app-adr-optimistic-ui.md",
+              "kind": "ADR",
+              "traceability": "DOCS-ONLY"
+            },
+            {
+              "name": "Todo App ADR-0003 (example)",
+              "path": "docs/spec-templates/examples/todo-app/ADR/0003-spd-todo-app-adr-browser-support.md",
+              "kind": "ADR",
+              "traceability": "DOCS-ONLY"
+            },
+            {
+              "name": "Todo App FEATURE core (example)",
+              "path": "docs/spec-templates/examples/todo-app/features/0001-spd-todo-app-feature-core.md",
+              "kind": "FEATURE",
+              "traceability": "DOCS-ONLY"
+            },
+            {
+              "name": "Todo App FEATURE logic (example)",
+              "path": "docs/spec-templates/examples/todo-app/features/0002-spd-todo-app-feature-logic.md",
+              "kind": "FEATURE",
+              "traceability": "DOCS-ONLY"
+            }
+          ],
+          "codebase": []
+        }
+      ],
+      "codebase": []
+    }
+  ]
+}

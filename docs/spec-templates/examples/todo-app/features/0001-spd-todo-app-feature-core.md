@@ -2,7 +2,7 @@
 
 ## 1. Feature Context
 
-- [ ] `p1` - **ID**: `fdd-todo-app-feature-core`
+- [ ] `p2` - **ID**: `cpt-todo-app-feature-core`
 
 ### 1.1 Overview
 
@@ -14,21 +14,24 @@ Provides the fundamental task management capabilities that all other features de
 
 ### 1.3 Actors
 
-- `fdd-todo-app-actor-user` - Creates and manages tasks
-- `fdd-todo-app-actor-sync-service` - Synchronizes task changes
+- `cpt-todo-app-actor-user` - Creates and manages tasks
+- `cpt-todo-app-actor-sync-service` - Synchronizes task changes
+- `cpt-todo-app-actor-notification-service` - Sends reminders based on task state changes
 
 ### 1.4 References
 
 - Overall Design: [DESIGN.md](../DESIGN.md)
+- PRD: [PRD.md](../PRD.md)
+- Requirements: `cpt-todo-app-fr-create-task`, `cpt-todo-app-fr-complete-task`, `cpt-todo-app-fr-delete-task`, `cpt-todo-app-nfr-offline-support`, `cpt-todo-app-nfr-data-persistence`, `cpt-todo-app-interface-rest-api`, `cpt-todo-app-interface-task-model`
 - Dependencies: None
 
-## 2. Actor Flows (FDL)
+## 2. Actor Flows (CDSL)
 
 ### Create Task Flow
 
-- [ ] `p1` - **ID**: `fdd-todo-app-feature-core-flow-create-task`
+- [ ] `p1` - **ID**: `cpt-todo-app-flow-core-create-task`
 
-**Actor**: `fdd-todo-app-actor-user`
+**Actor**: `cpt-todo-app-actor-user`
 
 **Success Scenarios**:
 - Task is created with all provided fields
@@ -54,9 +57,9 @@ Provides the fundamental task management capabilities that all other features de
 
 ### Delete Task Flow
 
-- [ ] `p1` - **ID**: `fdd-todo-app-feature-core-flow-delete-task`
+- [ ] `p1` - **ID**: `cpt-todo-app-flow-core-delete-task`
 
-**Actor**: `fdd-todo-app-actor-user`
+**Actor**: `cpt-todo-app-actor-user`
 
 **Success Scenarios**:
 - Task is permanently removed from storage
@@ -77,11 +80,11 @@ Provides the fundamental task management capabilities that all other features de
 7. [ ] - `p1` - **ELSE** - `inst-delete-7`
    1. [ ] - `p1` - **RETURN** not found error (404) - `inst-delete-7a`
 
-## 3. Algorithms (FDL)
+## 3. Algorithms (CDSL)
 
 ### Task Validation Algorithm
 
-- [ ] `p1` - **ID**: `fdd-todo-app-feature-core-algo-validate-task`
+- [ ] `p2` - **ID**: `cpt-todo-app-algo-core-validate-task`
 
 **Input**: Task creation/update payload
 
@@ -102,11 +105,11 @@ Provides the fundamental task management capabilities that all other features de
    2. [ ] - `p1` - **IF** category not found, add error - `inst-val-6b`
 7. [ ] - `p1` - **RETURN** { valid: errors.length === 0, errors, warnings } - `inst-val-7`
 
-## 4. States (FDL)
+## 4. States (CDSL)
 
 ### Task State Machine
 
-- [ ] `p1` - **ID**: `fdd-todo-app-feature-core-state-task`
+- [ ] `p2` - **ID**: `cpt-todo-app-state-core-task`
 
 **States**: draft, active, completed, deleted
 
@@ -118,32 +121,25 @@ Provides the fundamental task management capabilities that all other features de
 3. [ ] - `p1` - **FROM** active **TO** deleted **WHEN** user deletes task - `inst-state-3`
 4. [ ] - `p1` - **FROM** completed **TO** deleted **WHEN** user deletes completed task - `inst-state-4`
 
-## 5. Requirements
+## 5. Definitions of Done
 
 ### Implement Task CRUD Operations
 
-- [ ] `p1` - **ID**: `fdd-todo-app-feature-core-req-crud`
+- [ ] `p1` - **ID**: `cpt-todo-app-dod-core-crud`
 
-**Description**: The system SHALL provide full Create, Read, Update, Delete operations for tasks. All operations MUST validate input and return appropriate error responses.
-
-**Implementation details**:
-- API: POST/GET/PATCH/DELETE /tasks endpoints
-- DB: tasks table with indexes on user_id, status, due_date
-- Domain: Task entity with validation rules
+The system **MUST** provide full Create, Read, Update, Delete operations for tasks. All operations **MUST** validate input and return appropriate error responses.
 
 **Implements**:
-- `fdd-todo-app-feature-core-flow-create-task`
-- `fdd-todo-app-feature-core-flow-delete-task`
-- `fdd-todo-app-feature-core-algo-validate-task`
-- `fdd-todo-app-feature-core-state-task`
-
-**Phases**:
-- [ ] `p1`: Basic CRUD with validation
+- `cpt-todo-app-flow-core-create-task`
+- `cpt-todo-app-flow-core-delete-task`
+- `cpt-todo-app-algo-core-validate-task`
+- `cpt-todo-app-state-core-task`
 
 ## 6. Additional Context (optional)
 
 ### Performance Considerations
 
-**ID**: `fdd-todo-app-feature-core-context-performance`
+**ID**: `cpt-todo-app-featurecontext-core-performance`
 
 Task list queries should use cursor-based pagination for lists > 100 items. Consider implementing virtual scrolling on the frontend for smooth UX with large datasets.
+

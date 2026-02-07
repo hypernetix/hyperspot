@@ -1,0 +1,240 @@
+{
+  "version": 1,
+  "agents": {
+    "windsurf": {
+      "workflows": {
+        "workflow_dir": ".windsurf/workflows",
+        "workflow_command_prefix": "cypilot-",
+        "workflow_filename_format": "{command}.md",
+        "custom_content": "",
+        "template": [
+          "# /{command}",
+          "",
+          "{custom_content}",
+          "ALWAYS open and follow `{target_workflow_path}`"
+        ]
+      },
+      "skills": {
+        "skill_name": "cypilot",
+        "custom_content": "",
+        "outputs": [
+          {
+            "path": ".windsurf/skills/cypilot/SKILL.md",
+            "template": [
+              "---",
+              "name: {name}",
+              "description: {description}",
+              "---",
+              "",
+              "{custom_content}",
+              "ALWAYS open and follow `{target_skill_path}`"
+            ]
+          },
+          {
+            "path": ".windsurf/workflows/cypilot.md",
+            "template": [
+              "# /cypilot",
+              "",
+              "{custom_content}",
+              "ALWAYS open and follow `{target_skill_path}`"
+            ]
+          }
+        ]
+      }
+    },
+    "cursor": {
+      "workflows": {
+        "workflow_dir": ".cursor/commands",
+        "workflow_command_prefix": "cypilot-",
+        "workflow_filename_format": "{command}.md",
+        "custom_content": "",
+        "template": [
+          "# /{command}",
+          "",
+          "{custom_content}",
+          "ALWAYS open and follow `{target_workflow_path}`"
+        ]
+      },
+      "skills": {
+        "custom_content": "",
+        "outputs": [
+          {
+            "path": ".cursor/rules/cypilot.mdc",
+            "template": [
+              "---",
+              "description: {description}",
+              "alwaysApply: true",
+              "---",
+              "",
+              "{custom_content}",
+              "ALWAYS open and follow `{target_skill_path}`"
+            ]
+          },
+          {
+            "path": ".cursor/commands/cypilot.md",
+            "template": [
+              "# /cypilot",
+              "",
+              "{custom_content}",
+              "ALWAYS open and follow `{target_skill_path}`"
+            ]
+          }
+        ]
+      }
+    },
+    "claude": {
+      "workflows": {
+        "workflow_dir": ".claude/commands",
+        "workflow_command_prefix": "cypilot-",
+        "workflow_filename_format": "{command}.md",
+        "custom_content": "",
+        "template": [
+          "---",
+          "description: {description}",
+          "---",
+          "",
+          "{custom_content}",
+          "ALWAYS open and follow `{target_workflow_path}`"
+        ]
+      },
+      "skills": {
+        "custom_content": "",
+        "outputs": [
+          {
+            "path": ".claude/commands/cypilot.md",
+            "template": [
+              "---",
+              "description: {description}",
+              "---",
+              "",
+              "{custom_content}",
+              "ALWAYS open and follow `{target_skill_path}`"
+            ]
+          },
+          {
+            "path": ".claude/skills/cypilot/SKILL.md",
+            "template": [
+              "---",
+              "name: cypilot",
+              "description: {description}",
+              "disable-model-invocation: false",
+              "user-invocable: true",
+              "allowed-tools: Bash, Read, Write, Edit, Glob, Grep, Task, WebFetch",
+              "---",
+              "",
+              "{custom_content}",
+              "ALWAYS open and follow `{target_skill_path}`"
+            ]
+          },
+          {
+            "path": ".claude/skills/cypilot-adapter/SKILL.md",
+            "target": "workflows/adapter.md",
+            "template": [
+              "---",
+              "name: cypilot-adapter",
+              "description: {description}",
+              "disable-model-invocation: false",
+              "user-invocable: true",
+              "allowed-tools: Bash, Read, Write, Edit, Glob, Grep",
+              "---",
+              "",
+              "ALWAYS open and follow `{target_path}`"
+            ]
+          },
+          {
+            "path": ".claude/skills/cypilot-generate/SKILL.md",
+            "target": "workflows/generate.md",
+            "template": [
+              "---",
+              "name: cypilot-generate",
+              "description: {description}",
+              "disable-model-invocation: false",
+              "user-invocable: true",
+              "allowed-tools: Bash, Read, Write, Edit, Glob, Grep, Task",
+              "---",
+              "",
+              "ALWAYS open and follow `{target_path}`"
+            ]
+          },
+          {
+            "path": ".claude/skills/cypilot-analyze/SKILL.md",
+            "target": "workflows/analyze.md",
+            "template": [
+              "---",
+              "name: cypilot-analyze",
+              "description: {description}",
+              "disable-model-invocation: false",
+              "user-invocable: true",
+              "allowed-tools: Bash, Read, Glob, Grep",
+              "---",
+              "",
+              "ALWAYS open and follow `{target_path}`"
+            ]
+          }
+        ]
+      }
+    },
+    "copilot": {
+      "workflows": {
+        "workflow_dir": ".github/prompts",
+        "workflow_command_prefix": "cypilot-",
+        "workflow_filename_format": "{command}.prompt.md",
+        "custom_content": "",
+        "template": [
+          "---",
+          "name: {name}",
+          "description: {description}",
+          "---",
+          "",
+          "{custom_content}",
+          "ALWAYS open and follow `{target_workflow_path}`"
+        ]
+      },
+      "skills": {
+        "custom_content": "",
+        "outputs": [
+          {
+            "path": ".github/copilot-instructions.md",
+            "template": [
+              "# Cypilot",
+              "",
+              "{custom_content}",
+              "ALWAYS open and follow `{target_skill_path}`"
+            ]
+          },
+          {
+            "path": ".github/prompts/cypilot.prompt.md",
+            "template": [
+              "---",
+              "name: {name}",
+              "description: {description}",
+              "---",
+              "",
+              "{custom_content}",
+              "ALWAYS open and follow `{target_skill_path}`"
+            ]
+          }
+        ]
+      }
+    },
+    "openai": {
+      "skills": {
+        "custom_content": "",
+        "outputs": [
+          {
+            "path": ".agents/skills/cypilot/SKILL.md",
+            "template": [
+              "---",
+              "name: {name}",
+              "description: {description}",
+              "---",
+              "",
+              "{custom_content}",
+              "ALWAYS open and follow `{target_skill_path}`"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

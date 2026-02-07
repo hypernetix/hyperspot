@@ -49,7 +49,7 @@ REQUIREMENT LANGUAGE:
 
 ## System Actor Definition
 
-**ID**: `fdd-{target-module}-upstream-actor-{slug}`
+**ID**: `cpt-{target-module}-upstream-actor-{slug}`
 
 **Role**: {Description of how the upstream module interacts with target module}
 **Integration Pattern**: {e.g., REST API client, SDK consumer, Event subscriber, Direct library import}
@@ -60,7 +60,7 @@ Requirements that the upstream module needs the target module to fulfill.
 
 ### {Requirement Name}
 
-- [ ] `p1` - **ID**: `fdd-{target-module}-upstream-req-{slug}`
+- [ ] `p1` - **ID**: `cpt-{target-module}-upstream-fr-{slug}`
 
 The target module **MUST** {specific capability or behavior needed by upstream}.
 
@@ -70,7 +70,7 @@ The target module **MUST** {specific capability or behavior needed by upstream}.
 
 ### {Another Requirement}
 
-- [ ] `p2` - **ID**: `fdd-{target-module}-upstream-req-{slug}`
+- [ ] `p2` - **ID**: `cpt-{target-module}-upstream-fr-{slug}`
 
 The target module **MUST** {another specific requirement}.
 
@@ -83,7 +83,7 @@ NFRs that the upstream module requires from the target module.
 
 ### {NFR Name}
 
-- [ ] `p1` - **ID**: `fdd-{target-module}-upstream-nfr-{slug}`
+- [ ] `p1` - **ID**: `cpt-{target-module}-upstream-nfr-{slug}`
 
 The target module **MUST** {measurable NFR with specific thresholds}.
 
@@ -97,7 +97,7 @@ Interfaces that must be exposed to the upstream module.
 
 ### {Interface Name}
 
-- [ ] `p1` - **ID**: `fdd-{target-module}-upstream-interface-{slug}`
+- [ ] `p1` - **ID**: `cpt-{target-module}-upstream-interface-{slug}`
 
 **Type**: {REST API | gRPC | SDK method | Event | Data format}
 **Stability Required**: {stable | unstable acceptable}

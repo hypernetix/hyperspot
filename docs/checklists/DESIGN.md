@@ -1,8 +1,88 @@
 # DESIGN (Overall Design) Expert Checklist
 
-**Artifact**: Overall System Design (DESIGN)  
-**Version**: 1.0  
+**Artifact**: Overall System Design (DESIGN)
+**Version**: 2.0
+**Last Updated**: 2026-02-03
 **Purpose**: Comprehensive quality checklist for Overall Design artifacts
+
+---
+
+## Referenced Standards
+
+This checklist validates system design artifacts based on the following international standards:
+
+| Standard | Domain | Description |
+|----------|--------|-------------|
+| [IEEE 1016-2009](https://standards.ieee.org/ieee/1016/4502/) | **Design Description** | Software Design Descriptions — context, composition, logical, dependency viewpoints |
+| [ISO/IEC/IEEE 42010:2022](https://www.iso.org/standard/74393.html) | **Architecture Description** | Architecture viewpoints, stakeholders, concerns, model correspondences |
+| [ISO/IEC 25010:2011](https://www.iso.org/standard/35733.html) | **Quality Model** | SQuaRE — 8 quality characteristics: performance, security, reliability, maintainability |
+| [ISO/IEC/IEEE 29148:2018](https://www.iso.org/standard/72089.html) | **Requirements Traceability** | Bidirectional traceability, requirements-to-design mapping |
+| [OWASP ASVS 5.0](https://owasp.org/www-project-application-security-verification-standard/) | **Security Architecture** | Authentication, authorization, cryptography, data protection |
+| [ISO/IEC 27001:2022](https://www.iso.org/standard/27001) | **Information Security** | ISMS controls, security management framework |
+
+---
+
+## Table of Contents
+
+1. [Review Scope Selection](#review-scope-selection)
+2. [Prerequisites](#prerequisites)
+3. [Evidence Requirements (STRICT mode)](#evidence-requirements-strict-mode)
+4. [Applicability Context](#applicability-context)
+5. [Severity Dictionary](#severity-dictionary)
+6. [MUST HAVE](#must-have)
+   - [ARCHITECTURE Expertise (ARCH)](#️-architecture-expertise-arch)
+   - [PERFORMANCE Expertise (PERF)](#-performance-expertise-perf)
+   - [SECURITY Expertise (SEC)](#-security-expertise-sec)
+   - [RELIABILITY Expertise (REL)](#️-reliability-expertise-rel)
+   - [DATA Expertise (DATA)](#-data-expertise-data)
+   - [INTEGRATION Expertise (INT)](#-integration-expertise-int)
+   - [OPERATIONS Expertise (OPS)](#️-operations-expertise-ops)
+   - [MAINTAINABILITY Expertise (MAINT)](#-maintainability-expertise-maint)
+   - [TESTING Expertise (TEST)](#-testing-expertise-test)
+   - [COMPLIANCE Expertise (COMPL)](#-compliance-expertise-compl)
+   - [USABILITY Expertise (UX)](#-usability-expertise-ux)
+   - [BUSINESS Expertise (BIZ)](#-business-expertise-biz)
+   - [Semantic Alignment (SEM)](#semantic-alignment-sem)
+   - [Deliberate Omissions](#deliberate-omissions)
+7. [MUST NOT HAVE](#must-not-have)
+8. [Validation Summary](#validation-summary)
+   - [Final Checklist](#final-checklist)
+   - [Reporting Readiness Checklist](#reporting-readiness-checklist)
+   - [Reporting](#reporting)
+
+---
+
+## Review Scope Selection
+
+**Choose review mode based on DESIGN scope and change type**:
+
+| Review Mode | When to Use | Domains to Check |
+|-------------|-------------|------------------|
+| **Quick** | Minor updates, <3 sections changed | ARCH (core only) + changed domains |
+| **Standard** | New DESIGN, moderate changes | All applicable domains |
+| **Full** | Major architectural changes, compliance-critical | All 12 domains with evidence |
+
+### Quick Review (ARCH Core Only)
+
+**MUST CHECK** (blocking):
+- [ ] ARCH-DESIGN-001: Architecture Overview Completeness
+- [ ] ARCH-DESIGN-004: Component Model Quality
+- [ ] ARCH-DESIGN-005: Domain Model Authority
+- [ ] DOC-DESIGN-001: Explicit Non-Applicability
+
+**Changed sections** — also check relevant domain items for any sections modified.
+
+### Domain Prioritization by System Type
+
+| System Type | Priority Domains (check first) | Secondary Domains | Often N/A |
+|-------------|-------------------------------|-------------------|-----------|
+| **Web Service** | ARCH, SEC, REL, DATA, INT | PERF, OPS, TEST | UX, COMPL |
+| **CLI Tool** | ARCH, MAINT, TEST | DATA, INT | SEC, PERF, OPS, COMPL, UX |
+| **Data Pipeline** | ARCH, DATA, REL, PERF | INT, OPS | SEC, UX, COMPL |
+| **Methodology/Framework** | ARCH, MAINT | TEST | SEC, PERF, REL, DATA, INT, OPS, COMPL, UX |
+| **Mobile App** | ARCH, UX, SEC, PERF | DATA, TEST | OPS, INT, COMPL |
+
+**Applicability Rule**: Domains in "Often N/A" column still require explicit "Not applicable because..." statement in document if skipped.
 
 ---
 
@@ -17,6 +97,49 @@ Before starting the review, confirm:
 - [ ] I will document any violations found
 - [ ] I will provide specific feedback for each failed check
 - [ ] I will complete the Final Checklist and provide a review report
+
+---
+
+## Evidence Requirements (STRICT mode)
+
+**When Rules Mode = STRICT** (per `agent-compliance.md`):
+
+### For Each Checklist Category
+
+Agent MUST output evidence in this format:
+
+| Category ID | Status | Evidence |
+|-------------|--------|----------|
+| ARCH-DESIGN-001 | PASS | Lines 45-67: "System purpose is to provide..." |
+| ARCH-DESIGN-002 | PASS | Section B.1 contains 9 principles with unique IDs |
+| PERF-DESIGN-001 | N/A | Line 698: "Performance architecture not applicable..." |
+
+### Evidence Standards
+
+**For PASS**:
+- Quote 2-5 sentences from document proving requirement is met
+- Include line numbers or section references
+- Evidence must directly demonstrate compliance
+
+**For N/A (Not Applicable)**:
+- Quote the **explicit** "Not applicable because..." statement from document
+- If no explicit statement exists → report as VIOLATION, not N/A
+- Agent CANNOT decide N/A on author's behalf — document must state it
+
+**For FAIL**:
+- State what's missing or incorrect
+- Provide location where it should be
+- Quote surrounding context
+
+### Why Evidence Matters
+
+Without evidence requirements, agents exhibit anti-pattern AP-004 (BULK_PASS):
+- Report "all checks pass" without actually verifying each item
+- Skip tedious checklist review
+- Produce invalid validation that misses real issues
+
+**Real example of this failure**:
+> Agent reported "DESIGN validation PASS" without reading the file, because deterministic gate passed and agent assumed semantic review was optional.
 
 ---
 
@@ -60,8 +183,13 @@ Before evaluating each checklist item, the expert MUST:
 
 ## 🏗️ ARCHITECTURE Expertise (ARCH)
 
+> **Standards**:
+> - [IEEE 1016-2009](https://standards.ieee.org/ieee/1016/4502/) — Context (§5.2), Composition (§5.3), Logical (§5.4), Dependency (§5.5) viewpoints
+> - [ISO/IEC/IEEE 42010:2022](https://www.iso.org/standard/74393.html) — Stakeholders, concerns, architecture viewpoints (§5-6)
+
 ### ARCH-DESIGN-001: Architecture Overview Completeness
 **Severity**: CRITICAL
+**Ref**: ISO/IEC/IEEE 42010:2022 §5.3 (Stakeholders and concerns), IEEE 1016-2009 §5.2 (Context viewpoint)
 
 - [ ] System purpose clearly stated
 - [ ] High-level architecture described
@@ -96,6 +224,7 @@ Before evaluating each checklist item, the expert MUST:
 
 ### ARCH-DESIGN-004: Component Model Quality
 **Severity**: CRITICAL
+**Ref**: IEEE 1016-2009 §5.3 (Composition viewpoint), ISO/IEC/IEEE 42010:2022 §6 (Architecture views)
 
 - [ ] At least one architecture diagram present (image, Mermaid, or ASCII)
 - [ ] All major components/services identified
@@ -108,6 +237,7 @@ Before evaluating each checklist item, the expert MUST:
 
 ### ARCH-DESIGN-005: Domain Model Authority
 **Severity**: CRITICAL
+**Ref**: IEEE 1016-2009 §5.4 (Logical viewpoint), §5.6 (Information viewpoint)
 
 - [ ] Domain model section exists
 - [ ] Core entities/aggregates defined
@@ -153,6 +283,45 @@ Before evaluating each checklist item, the expert MUST:
 - [ ] Coupling between components minimized
 - [ ] Cohesion within components maximized
 
+---
+
+## Semantic Alignment (SEM)
+
+> **Standard**: [ISO/IEC/IEEE 29148:2018](https://www.iso.org/standard/72089.html) — Requirements Engineering
+>
+> "Bidirectional traceability between requirements and design" (§6.5)
+
+### SEM-DESIGN-001: PRD Intent Preservation
+**Severity**: CRITICAL
+**Ref**: ISO/IEC/IEEE 29148:2018 §6.5 (Traceability)
+
+- [ ] Design addresses all PRD FR and NFR IDs referenced in the design
+- [ ] Architecture drivers align with PRD problems, capabilities, and success criteria
+- [ ] Actors and use cases referenced in design match the PRD actor definitions
+- [ ] Non-goals and risks in PRD are respected and not contradicted
+
+### SEM-DESIGN-002: PRD Scope Consistency
+**Severity**: HIGH
+
+- [ ] No design scope extends beyond PRD boundaries without explicit approval
+- [ ] Assumptions and open questions are consistent with PRD assumptions
+- [ ] Any PRD trade-offs are explicitly documented in design context
+
+### SEM-DESIGN-003: ADR Consistency and Coverage
+**Severity**: CRITICAL
+
+- [ ] Each referenced ADR decision is reflected in architecture choices and rationale
+- [ ] ADR status is respected (Rejected/Deprecated decisions are not implemented)
+- [ ] ADR decision drivers are reflected in design principles and constraints
+- [ ] ADR consequences are incorporated into design risks or constraints
+
+### SEM-DESIGN-004: ADR/PRD Link Integrity
+**Severity**: HIGH
+
+- [ ] ADR links include a clear trace to PRD context or requirement IDs
+- [ ] Design references to ADRs are complete and do not omit critical decisions
+- [ ] Any deviation from ADR decisions is explicitly justified and approved
+
 ### ARCH-DESIGN-009: Technology Stack Alignment
 **Severity**: MEDIUM
 
@@ -175,8 +344,13 @@ Before evaluating each checklist item, the expert MUST:
 
 ## ⚡ PERFORMANCE Expertise (PERF)
 
+> **Standard**: [ISO/IEC 25010:2011](https://www.iso.org/standard/35733.html) — Performance Efficiency
+>
+> Sub-characteristics: time behavior, resource utilization, capacity
+
 ### PERF-DESIGN-001: Performance Architecture
 **Severity**: HIGH
+**Ref**: ISO/IEC 25010:2011 §4.2.2 (Performance efficiency)
 
 - [ ] Caching strategy documented
 - [ ] Database access patterns optimized
@@ -220,8 +394,14 @@ Before evaluating each checklist item, the expert MUST:
 
 ## 🔒 SECURITY Expertise (SEC)
 
+> **Standards**:
+> - [ISO/IEC 25010:2011](https://www.iso.org/standard/35733.html) — Security: confidentiality, integrity, non-repudiation, accountability, authenticity
+> - [OWASP ASVS 5.0](https://owasp.org/www-project-application-security-verification-standard/) — Architecture requirements (V1)
+> - [ISO/IEC 27001:2022](https://www.iso.org/standard/27001) — Information security controls
+
 ### SEC-DESIGN-001: Authentication Architecture
 **Severity**: CRITICAL
+**Ref**: OWASP ASVS V1.2 (Authentication Architecture), ISO 25010 §4.2.6
 
 - [ ] Authentication mechanism documented
 - [ ] Token/session management described
@@ -288,8 +468,13 @@ Before evaluating each checklist item, the expert MUST:
 
 ## 🛡️ RELIABILITY Expertise (REL)
 
+> **Standard**: [ISO/IEC 25010:2011](https://www.iso.org/standard/35733.html) — Reliability
+>
+> Sub-characteristics: maturity, availability, fault tolerance, recoverability
+
 ### REL-DESIGN-001: Fault Tolerance
 **Severity**: HIGH
+**Ref**: ISO/IEC 25010:2011 §4.2.5 (Fault tolerance)
 
 - [ ] Single points of failure identified and mitigated
 - [ ] Redundancy strategies documented
@@ -333,7 +518,7 @@ Before evaluating each checklist item, the expert MUST:
 **Severity**: MEDIUM
 
 - [ ] Graceful degradation patterns documented
-- [ ] Feature flags architecture documented
+- [ ] Spec flags architecture documented
 - [ ] Canary deployment support documented
 - [ ] Blue/green deployment support documented
 - [ ] Rollback procedures documented
@@ -343,8 +528,13 @@ Before evaluating each checklist item, the expert MUST:
 
 ## 📊 DATA Expertise (DATA)
 
+> **Standard**: [IEEE 1016-2009](https://standards.ieee.org/ieee/1016/4502/) — Information Viewpoint (§5.6)
+>
+> Data entities, persistent data stores, data flow
+
 ### DATA-DESIGN-001: Data Architecture
 **Severity**: CRITICAL
+**Ref**: IEEE 1016-2009 §5.6 (Information viewpoint)
 
 - [ ] Data stores identified
 - [ ] Data partitioning strategy documented
@@ -471,8 +661,13 @@ Before evaluating each checklist item, the expert MUST:
 
 ## 🔧 MAINTAINABILITY Expertise (MAINT)
 
+> **Standard**: [ISO/IEC 25010:2011](https://www.iso.org/standard/35733.html) — Maintainability
+>
+> Sub-characteristics: modularity, reusability, analysability, modifiability, testability
+
 ### MAINT-DESIGN-001: Code Organization
 **Severity**: HIGH
+**Ref**: ISO/IEC 25010:2011 §4.2.7 (Modularity)
 
 - [ ] Module structure documented
 - [ ] Package/namespace conventions documented
@@ -501,8 +696,11 @@ Before evaluating each checklist item, the expert MUST:
 
 ## 🧪 TESTING Expertise (TEST)
 
+> **Standard**: [ISO/IEC 25010:2011](https://www.iso.org/standard/35733.html) §4.2.7.5 — Testability
+
 ### TEST-DESIGN-001: Testability Architecture
 **Severity**: HIGH
+**Ref**: ISO/IEC 25010:2011 §4.2.7.5 (Testability)
 
 - [ ] Dependency injection for testability documented
 - [ ] Mock/stub boundaries documented
@@ -559,8 +757,13 @@ Before evaluating each checklist item, the expert MUST:
 
 ## 🏢 BUSINESS Expertise (BIZ)
 
+> **Standard**: [ISO/IEC/IEEE 29148:2018](https://www.iso.org/standard/72089.html) — Requirements Engineering
+>
+> Requirements-to-design allocation and traceability (§6.5)
+
 ### BIZ-DESIGN-001: Business Alignment
 **Severity**: HIGH
+**Ref**: ISO/IEC/IEEE 29148:2018 §6.5 (Requirements-design traceability)
 
 - [ ] All functional requirements are addressed
 - [ ] All non-functional requirements are addressed
@@ -585,17 +788,17 @@ Before evaluating each checklist item, the expert MUST:
 
 ---
 
-## ❌ ARCH-DESIGN-NO-001: No Feature-Level Details
+## ❌ ARCH-DESIGN-NO-001: No Spec-Level Details
 **Severity**: CRITICAL
 
 **What to check**:
-- [ ] No feature-specific user flows
-- [ ] No feature-specific algorithms
-- [ ] No feature-specific state machines
-- [ ] No feature-specific error handling details
+- [ ] No spec-specific user flows
+- [ ] No spec-specific algorithms
+- [ ] No spec-specific state machines
+- [ ] No spec-specific error handling details
 - [ ] No feature implementation steps
 
-**Where it belongs**: `Feature DESIGN`
+**Where it belongs**: `Spec DESIGN`
 
 ---
 
@@ -637,7 +840,7 @@ Before evaluating each checklist item, the expert MUST:
 - [ ] No implementation timelines
 - [ ] No TODO lists
 
-**Where it belongs**: Project management tools or Feature DESIGN
+**Where it belongs**: Project management tools or Spec DESIGN
 
 ---
 
@@ -772,7 +975,7 @@ For each issue include:
 - **Why it matters**: Impact (risk, cost, user harm, compliance)
 - **Proposal**: Concrete fix (what to change/add/remove) with clear acceptance criteria
 
-Recommended output format for chat:
+### Full Report Format (Standard/Full Reviews)
 
 ```markdown
 ## Review Report (Issues Only)
@@ -806,22 +1009,22 @@ Recommended output format for chat:
 ---
 
 ### 2. {Short issue title}
-
-**Checklist Item**: `{CHECKLIST-ID}` — {Checklist item title}
-
-**Severity**: CRITICAL|HIGH|MEDIUM|LOW
-
-#### Why Applicable
-
-{...}
-
-#### Issue
-
-{...}
-
----
-
 ...
+```
+
+### Compact Report Format (Quick Reviews)
+
+For quick reviews, use this condensed table format:
+
+```markdown
+## DESIGN Review Summary
+
+| ID | Severity | Issue | Proposal |
+|----|----------|-------|----------|
+| ARCH-DESIGN-001 | HIGH | Missing context diagram | Add system context diagram to Section A |
+| ARCH-DESIGN-005 | MEDIUM | No schema location | Add path to domain types in Section C.1 |
+
+**Applicability**: {System type} — checked {N} priority domains, {M} marked N/A
 ```
 
 ---

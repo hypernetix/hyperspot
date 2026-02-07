@@ -1,0 +1,36 @@
+{
+  "cypilotCorePath": ".cypilot",
+  "cypilotAdapterPath": ".cypilot-adapter",
+  "codeScanning": {
+    "fileExtensions": [
+      ".py",
+      ".md",
+      ".js",
+      ".ts",
+      ".tsx",
+      ".go",
+      ".rs",
+      ".java",
+      ".cs",
+      ".sql"
+    ],
+    "singleLineComments": [
+      "#",
+      "//",
+      "--"
+    ],
+    "multiLineComments": [
+      {
+        "start": "/*",
+        "end": "*/"
+      },
+      {
+        "start": "<!--",
+        "end": "-->"
+      }
+    ],
+    "blockCommentPrefixes": [
+      "*"
+    ]
+  }
+}

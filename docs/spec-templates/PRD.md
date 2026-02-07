@@ -62,7 +62,7 @@ REQUIREMENT LANGUAGE:
 
 #### {Actor Name}
 
-**ID**: `fdd-{module}-actor-{slug}`
+**ID**: `cpt-{system}-actor-{slug}`
 
 **Role**: {Description of what this actor does and their relationship to the system.}
 **Needs**: {What this actor needs from the system.}
@@ -71,7 +71,7 @@ REQUIREMENT LANGUAGE:
 
 #### {System Actor Name}
 
-**ID**: `fdd-{module}-actor-{slug}`
+**ID**: `cpt-{system}-actor-{slug}`
 
 **Role**: {Description of what this system actor does (external service, scheduler, etc.)}
 
@@ -109,12 +109,12 @@ Functional requirements define WHAT the system must do. Group by feature area or
 
 #### {Requirement Name}
 
-- [ ] `p1` - **ID**: `fdd-{module}-req-{slug}`
+- [ ] `p1` - **ID**: `cpt-{system}-fr-{slug}`
 
 The system **MUST** {do something specific and verifiable}.
 
 **Rationale**: {Why this requirement exists — business value or stakeholder need.}
-**Actors**: `fdd-{module}-actor-{slug}`
+**Actors**: `cpt-{system}-actor-{slug}`
 **Verification Method** (optional): {Only if non-standard: analysis | inspection | demonstration | specialized test approach}
 **Acceptance Evidence** (optional): {Only if non-obvious: specific test suite path, analysis report, review checklist}
 
@@ -130,7 +130,7 @@ The system **MUST** {do something specific and verifiable}.
 
 #### {NFR Name}
 
-- [ ] `p1` - **ID**: `fdd-{module}-req-{slug}`
+- [ ] `p1` - **ID**: `cpt-{system}-nfr-{slug}`
 
 The system **MUST** {measurable NFR with specific thresholds, e.g., "respond within 50ms at p95" (stricter than project default)}.
 
@@ -153,7 +153,7 @@ Define the public API surface, versioning/compatibility guarantees, and integrat
 
 #### {Interface Name}
 
-- [ ] `p1` - **ID**: `fdd-{module}-interface-{slug}`
+- [ ] `p1` - **ID**: `cpt-{system}-interface-{slug}`
 
 **Type**: {Rust module/trait/struct | REST API | CLI | Protocol | Data format}
 **Stability**: {stable | unstable | experimental}
@@ -166,7 +166,7 @@ Contracts this library expects from external systems or provides to downstream c
 
 #### {Contract Name}
 
-- [ ] `p2` - **ID**: `fdd-{module}-contract-{slug}`
+- [ ] `p2` - **ID**: `cpt-{system}-contract-{slug}`
 
 **Direction**: {provided by library | required from client}
 **Protocol/Format**: {e.g., HTTP/REST, gRPC, JSON Schema}
@@ -176,11 +176,11 @@ Contracts this library expects from external systems or provides to downstream c
 
 Optional: Include when interaction flows add clarity beyond requirement statements.
 
-#### UC: {Use Case Name}
+#### {Use Case Name}
 
-- [ ] `p2` - **ID**: `fdd-{module}-req-{slug}`
+- [ ] `p2` - **ID**: `cpt-{system}-usecase-{slug}`
 
-**Actor**: `fdd-{module}-actor-{slug}`
+**Actor**: `cpt-{system}-actor-{slug}`
 
 **Preconditions**:
 - {Required state before execution}
