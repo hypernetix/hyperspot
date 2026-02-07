@@ -64,8 +64,8 @@ This checklist incorporates requirements and best practices from the following i
    - [No Infrastructure Specs](#-ops-prd-no-001-no-infrastructure-specifications)
    - [No Security Implementation](#-sec-prd-no-001-no-security-implementation-details)
    - [No Code-Level Docs](#-maint-prd-no-001-no-code-level-documentation)
-8. [Validation Summary](#validation-summary)
-9. [Reporting](#reporting)
+9. [Validation Summary](#validation-summary)
+10. [Reporting](#reporting)
 
 **Review Priority**: BIZ → ARCH → SEC → TEST → (others as applicable)
 
