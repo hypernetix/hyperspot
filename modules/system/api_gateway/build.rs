@@ -2,7 +2,7 @@
 
 use std::env;
 use std::fs;
-use std::io::Write;
+use std::io::{Read, Write};
 use std::path::Path;
 
 // Using pinned version instead of @latest to ensure reproducible builds.
@@ -60,13 +60,13 @@ fn main() {
     }
 }
 
+/// Download a file from a URL to a local path.
 fn download_to(url: &str, dest: &Path) -> Result<(), Box<dyn std::error::Error>> {
     println!("cargo:rerun-if-changed={}", dest.display());
-    let resp = reqwest::blocking::get(url)?;
-    if !resp.status().is_success() {
-        return Err(format!("HTTP {} for {}", resp.status(), url).into());
-    }
-    let bytes = resp.bytes()?;
+    // ureq::call() returns Err(ureq::Error::Status(...)) for 4xx/5xx responses
+    let resp = ureq::get(url).call()?;
+    let mut bytes = Vec::new();
+    resp.into_reader().read_to_end(&mut bytes)?;
     let mut f = fs::File::create(dest)?;
     f.write_all(&bytes)?;
     Ok(())

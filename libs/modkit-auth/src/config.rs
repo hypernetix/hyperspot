@@ -284,8 +284,8 @@ mod tests {
         assert_eq!(deserialized.issuers.len(), 1);
     }
 
-    #[test]
-    fn test_build_dispatcher_with_jwks() {
+    #[tokio::test]
+    async fn test_build_dispatcher_with_jwks() {
         let mut plugins = HashMap::new();
         plugins.insert(
             "oidc".to_owned(),

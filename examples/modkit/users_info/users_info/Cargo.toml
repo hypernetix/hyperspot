@@ -66,6 +66,7 @@ thiserror = { workspace = true }
 
 # Local dependencies
 modkit = { workspace = true }
+modkit-http = { workspace = true }
 modkit-db = { workspace = true, features = ["sqlite", "pg"] }
 modkit-db-macros = { workspace = true }
 modkit-auth = { workspace = true }

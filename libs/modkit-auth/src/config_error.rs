@@ -10,5 +10,5 @@ pub enum ConfigError {
     InvalidMode(String),
 
     #[error("HTTP client error: {0}")]
-    HttpClient(#[from] reqwest::Error),
+    HttpClient(#[from] modkit_http::HttpError),
 }

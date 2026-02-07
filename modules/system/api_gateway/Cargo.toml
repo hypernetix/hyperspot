@@ -19,6 +19,7 @@ workspace = true
 
 [dependencies]
 modkit = { workspace = true }
+modkit-http = { workspace = true }
 modkit-auth = { workspace = true }
 modkit-security = { workspace = true }
 modkit-macros = { workspace = true }
@@ -62,4 +63,4 @@ embed_elements = []
 otel = []
 
 [build-dependencies]
-reqwest = { workspace = true, features = ["blocking", "rustls-tls"] }
+ureq = { workspace = true }
