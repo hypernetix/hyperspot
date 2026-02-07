@@ -1,8 +1,9 @@
+use std::net::IpAddr;
 use std::path::Path;
 use std::sync::Arc;
 
 use bytes::Bytes;
-use tracing::{debug, info, instrument};
+use tracing::{debug, info, instrument, warn};
 
 use crate::domain::error::DomainError;
 use crate::domain::ir::ParsedDocument;
@@ -37,6 +38,10 @@ pub struct FileParserService {
 pub struct ServiceConfig {
     pub max_file_size_bytes: usize,
     pub download_timeout_secs: u64,
+    /// Optional base directory for local file parsing.
+    /// When set, only files within this directory (and its subdirectories)
+    /// can be read via `parse_local`. This prevents path traversal attacks.
+    pub allowed_local_base_dir: Option<std::path::PathBuf>,
 }
 
 impl Default for ServiceConfig {
@@ -44,6 +49,7 @@ impl Default for ServiceConfig {
         Self {
             max_file_size_bytes: 100 * 1024 * 1024, // 100 MB
             download_timeout_secs: 60,
+            allowed_local_base_dir: None,
         }
     }
 }
@@ -87,6 +93,13 @@ impl FileParserService {
     #[instrument(skip(self), fields(path = %path.display()))]
     pub async fn parse_local(&self, path: &Path) -> Result<ParsedDocument, DomainError> {
         info!("Parsing file from local path");
+
+        // Path traversal protection: validate and canonicalize the path
+        let canonical_path = Self::validate_local_path(
+            path,
+            self.config.allowed_local_base_dir.as_deref(),
+        )?;
+        let path = canonical_path.as_path();
 
         // Check if file exists
         if !path.exists() {
@@ -190,6 +203,9 @@ impl FileParserService {
     #[instrument(skip(self), fields(url = %url))]
     pub async fn parse_url(&self, url: &url::Url) -> Result<ParsedDocument, DomainError> {
         info!("Parsing file from URL");
+
+        // SSRF protection: validate URL scheme and target address
+        Self::validate_url_for_ssrf(url)?;
 
         // Extract extension from URL path
         let path = Path::new(url.path());
@@ -327,6 +343,151 @@ impl FileParserService {
         }
 
         Ok(())
+    }
+
+    /// Validate that a URL is safe to fetch (SSRF protection).
+    ///
+    /// Rejects:
+    /// - Non-HTTP(S) schemes (e.g. `file://`, `ftp://`, `gopher://`)
+    /// - URLs targeting loopback addresses (`127.0.0.0/8`, `::1`)
+    /// - URLs targeting private network ranges (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`)
+    /// - URLs targeting link-local addresses (`169.254.0.0/16` — includes cloud metadata endpoints)
+    fn validate_url_for_ssrf(url: &url::Url) -> Result<(), DomainError> {
+        // Only allow http and https schemes
+        match url.scheme() {
+            "http" | "https" => {}
+            scheme => {
+                warn!(scheme = scheme, "Rejected URL with disallowed scheme");
+                return Err(DomainError::invalid_url(format!(
+                    "Only http and https schemes are allowed, got: {scheme}"
+                )));
+            }
+        }
+
+        // Resolve the hostname and check all resulting IPs
+        let host = url
+            .host_str()
+            .ok_or_else(|| DomainError::invalid_url("URL has no host"))?;
+
+        // Block well-known internal hostnames
+        let host_lower = host.to_lowercase();
+        if host_lower == "localhost"
+            || host_lower == "metadata.google.internal"
+            || host_lower.ends_with(".internal")
+        {
+            warn!(host = host, "Rejected URL targeting internal hostname");
+            return Err(DomainError::invalid_url(format!(
+                "URLs targeting internal hosts are not allowed: {host}"
+            )));
+        }
+
+        // If the host is an IP address literal, validate it directly
+        if let Some(url::Host::Ipv4(ip)) = url.host() {
+            if Self::is_private_ipv4(ip) {
+                warn!(%ip, "Rejected URL targeting private IPv4 address");
+                return Err(DomainError::invalid_url(
+                    "URLs targeting private or internal IP addresses are not allowed",
+                ));
+            }
+        }
+
+        if let Some(url::Host::Ipv6(ip)) = url.host() {
+            if Self::is_private_ipv6(ip) {
+                warn!(%ip, "Rejected URL targeting private IPv6 address");
+                return Err(DomainError::invalid_url(
+                    "URLs targeting private or internal IP addresses are not allowed",
+                ));
+            }
+        }
+
+        // Perform DNS resolution and check all resolved IPs
+        let port = url.port_or_known_default().unwrap_or(80);
+        let addr_str = format!("{host}:{port}");
+        if let Ok(addrs) = std::net::ToSocketAddrs::to_socket_addrs(&addr_str.as_str()) {
+            for addr in addrs {
+                match addr.ip() {
+                    IpAddr::V4(ip) if Self::is_private_ipv4(ip) => {
+                        warn!(%ip, resolved_from = host, "Rejected URL: hostname resolves to private IPv4");
+                        return Err(DomainError::invalid_url(
+                            "URLs targeting private or internal IP addresses are not allowed",
+                        ));
+                    }
+                    IpAddr::V6(ip) if Self::is_private_ipv6(ip) => {
+                        warn!(%ip, resolved_from = host, "Rejected URL: hostname resolves to private IPv6");
+                        return Err(DomainError::invalid_url(
+                            "URLs targeting private or internal IP addresses are not allowed",
+                        ));
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Check if an IPv4 address is in a private or reserved range.
+    fn is_private_ipv4(ip: std::net::Ipv4Addr) -> bool {
+        ip.is_loopback()             // 127.0.0.0/8
+            || ip.is_private()       // 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16
+            || ip.is_link_local()    // 169.254.0.0/16 (cloud metadata: 169.254.169.254)
+            || ip.is_broadcast()     // 255.255.255.255
+            || ip.is_unspecified()   // 0.0.0.0
+    }
+
+    /// Check if an IPv6 address is in a private or reserved range.
+    fn is_private_ipv6(ip: std::net::Ipv6Addr) -> bool {
+        ip.is_loopback()           // ::1
+            || ip.is_unspecified() // ::
+    }
+
+    /// Validate that a local file path is safe to read (path traversal protection).
+    ///
+    /// Rejects paths containing `..` components and verifies the canonical path
+    /// is within the configured `allowed_local_base_dir` (if set).
+    fn validate_local_path(
+        path: &Path,
+        allowed_base: Option<&Path>,
+    ) -> Result<std::path::PathBuf, DomainError> {
+        // Reject paths with .. components before canonicalization
+        for component in path.components() {
+            if matches!(component, std::path::Component::ParentDir) {
+                warn!(path = %path.display(), "Rejected path containing '..' traversal");
+                return Err(DomainError::invalid_request(
+                    "Path traversal ('..') is not allowed in file paths",
+                ));
+            }
+        }
+
+        // Canonicalize the path (resolves symlinks, normalizes)
+        let canonical = path.canonicalize().map_err(|e| {
+            DomainError::file_not_found(format!("{}: {e}", path.display()))
+        })?;
+
+        // If an allowed base directory is configured, verify the path is within it
+        if let Some(base) = allowed_base {
+            let canonical_base = base.canonicalize().map_err(|e| {
+                tracing::error!(base = %base.display(), error = %e, "Allowed base directory is invalid");
+                DomainError::io_error(format!(
+                    "Server misconfiguration: allowed_local_base_dir '{}' is invalid: {e}",
+                    base.display()
+                ))
+            })?;
+
+            if !canonical.starts_with(&canonical_base) {
+                warn!(
+                    path = %canonical.display(),
+                    base = %canonical_base.display(),
+                    "Rejected path outside allowed base directory"
+                );
+                return Err(DomainError::invalid_request(format!(
+                    "File path must be within the allowed directory: {}",
+                    canonical_base.display()
+                )));
+            }
+        }
+
+        Ok(canonical)
     }
 
     /// Find a parser by file extension

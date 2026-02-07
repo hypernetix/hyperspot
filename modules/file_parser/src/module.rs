@@ -72,6 +72,7 @@ impl Module for FileParserModule {
             max_file_size_bytes: usize::try_from(cfg.max_file_size_mb * BYTES_IN_MB)
                 .unwrap_or(usize::MAX),
             download_timeout_secs: cfg.download_timeout_secs,
+            allowed_local_base_dir: cfg.allowed_local_base_dir,
         };
 
         // Create file parser service
