@@ -32,5 +32,5 @@ ALWAYS open and follow `{spaider_adapter_path}/specs/observability.md`, `{spaide
 
 - [ ] `python3 {spaider_path}/skills/spaider/scripts/spaider.py validate --artifact <path>`
 - [ ] `python3 {spaider_path}/skills/spaider/scripts/spaider.py list-ids --artifact <path>` and confirm no duplicates.
-- [ ] Review against `docs/checklists/DESIGN.md` and `{spaider_path}/weavers/sdlc/artifacts/DESIGN/checklist.md`.
+- [ ] Review against `docs/checklists/DESIGN.md`.
 - [ ] Ensure referenced PRD IDs exist (use `where-defined` if needed).

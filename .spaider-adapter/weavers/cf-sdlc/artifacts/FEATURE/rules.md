@@ -31,4 +31,4 @@ ALWAYS open and follow `{spaider_adapter_path}/specs/performance.md` and `{spaid
 
 - [ ] `python3 {spaider_path}/skills/spaider/scripts/spaider.py validate --artifact <path>`
 - [ ] `python3 {spaider_path}/skills/spaider/scripts/spaider.py list-ids --artifact <path>` and confirm no duplicates.
-- [ ] Review against `docs/checklists/FEATURE.md` and `{spaider_path}/weavers/sdlc/artifacts/SPEC/checklist.md`.
+- [ ] Review against `docs/checklists/FEATURE.md`.

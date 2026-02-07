@@ -35,5 +35,5 @@ ALWAYS open and follow `{spaider_adapter_path}/specs/reliability.md` and `{spaid
 
 - [ ] `python3 {spaider_path}/skills/spaider/scripts/spaider.py validate --artifact <path>`
 - [ ] `python3 {spaider_path}/skills/spaider/scripts/spaider.py list-ids --artifact <path>` and confirm no duplicates.
-- [ ] Review against `docs/checklists/PRD.md` and `{spaider_path}/weavers/sdlc/artifacts/PRD/checklist.md`.
+- [ ] Review against `docs/checklists/PRD.md`.
 - [ ] Confirm `covered_by` warnings are expected until downstream artifacts exist (DESIGN/DECOMPOSITION/FEATURE).
