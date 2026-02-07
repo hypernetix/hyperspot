@@ -1,0 +1,23 @@
+error: Client trait `UsersInfoClient` in non-system module must have a version suffix (DE0504)
+  --> $DIR/non_system_missing_version.rs:6:1
+   |
+LL | / pub trait UsersInfoClient: Send + Sync {
+LL | |     async fn get_user(&self) -> Result<(), ()>;
+LL | | }
+   | |_^
+   |
+   = help: rename trait to `UsersInfoClientV1` to indicate API version
+   = note: `#[deny(de0504_client_versioning)]` on by default
+
+error: Client trait `CalculatorPluginClient` in non-system module must have a version suffix (DE0504)
+  --> $DIR/non_system_missing_version.rs:12:1
+   |
+LL | / pub trait CalculatorPluginClient: Send + Sync {
+LL | |     async fn calculate(&self) -> Result<(), ()>;
+LL | | }
+   | |_^
+   |
+   = help: rename trait to `CalculatorPluginClientV1` to indicate API version
+
+error: aborting due to 2 previous errors
+

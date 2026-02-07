@@ -138,7 +138,7 @@ The system SHALL provide a separate SDK crate (`simple-user-settings-sdk`) with 
 
 #### Scenario: SDK API trait usage
 - **WHEN** another module needs to access user settings
-- **THEN** it obtains the client via `ClientHub.get::<dyn SimpleUserSettingsClient>()?`
+- **THEN** it obtains the client via `ClientHub.get::<dyn SimpleUserSettingsClientV1>()?`
 - **AND** calls methods passing `SecurityContext` for authorization
 
 #### Scenario: SDK models have no transport dependencies

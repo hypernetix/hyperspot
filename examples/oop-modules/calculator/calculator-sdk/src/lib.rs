@@ -1,7 +1,7 @@
 //! Calculator SDK
 //!
 //! This crate provides everything needed to consume the calculator service:
-//! - API trait (`CalculatorClient`)
+//! - API trait (`CalculatorClientV1`)
 //! - Error types (`CalculatorError`)
 //! - Wiring function (`wire_client`)
 //! - Proto stubs for server implementation
@@ -9,13 +9,13 @@
 //! ## Usage
 //!
 //! ```ignore
-//! use calculator_sdk::{CalculatorClient, wire_client};
+//! use calculator_sdk::{CalculatorClientV1, wire_client};
 //!
 //! // Wire the client into ClientHub
 //! wire_client(&hub, &directory).await?;
 //!
 //! // Get the client from ClientHub
-//! let client = hub.get::<dyn CalculatorClient>()?;
+//! let client = hub.get::<dyn CalculatorClientV1>()?;
 //! let result = client.add(&ctx, 1, 2).await?;
 //! ```
 
@@ -24,7 +24,7 @@
 
 // === API TRAIT AND TYPES ===
 mod api;
-pub use api::{CalculatorClient, CalculatorError};
+pub use api::{CalculatorClientV1, CalculatorError};
 
 // === WIRING ===
 mod client;

@@ -1,6 +1,6 @@
 //! Object-safe streaming boundary for the `user_info` module.
 //!
-//! This API is designed for `ClientHub` registration as `Arc<dyn UsersInfoClient>`.
+//! This API is designed for `ClientHub` registration as `Arc<dyn UsersInfoClientV1>`.
 //! All type erasure (boxed streams/futures) lives here; internal implementations
 //! remain strongly typed and GAT-based.
 
@@ -24,12 +24,17 @@ use crate::odata::{AddressSchema, CitySchema, UserSchema};
 pub type UsersInfoStream<T> =
     Pin<Box<dyn Stream<Item = Result<T, UsersInfoError>> + Send + 'static>>;
 
-/// Object-safe client for inter-module consumption (`ClientHub` registered).
+/// Object-safe client for inter-module consumption (`ClientHub` registered) (Version 1).
+///
+/// This trait is registered in `ClientHub`:
+/// ```ignore
+/// let users_info = hub.get::<dyn UsersInfoClientV1>()?;
+/// ```
 #[async_trait]
-pub trait UsersInfoClient: Send + Sync {
-    fn users(&self) -> Box<dyn UsersStreamingClient>;
-    fn cities(&self) -> Box<dyn CitiesStreamingClient>;
-    fn addresses(&self) -> Box<dyn AddressesStreamingClient>;
+pub trait UsersInfoClientV1: Send + Sync {
+    fn users(&self) -> Box<dyn UsersStreamingClientV1>;
+    fn cities(&self) -> Box<dyn CitiesStreamingClientV1>;
+    fn addresses(&self) -> Box<dyn AddressesStreamingClientV1>;
 
     // ==================== Single-Item Operations ====================
 
@@ -110,8 +115,8 @@ pub trait UsersInfoClient: Send + Sync {
     async fn delete_address(&self, ctx: SecurityContext, id: Uuid) -> Result<(), UsersInfoError>;
 }
 
-/// Streaming interface for users.
-pub trait UsersStreamingClient: Send + Sync {
+/// Streaming interface for users (Version 1).
+pub trait UsersStreamingClientV1: Send + Sync {
     fn stream(
         &self,
         ctx: SecurityContext,
@@ -119,8 +124,8 @@ pub trait UsersStreamingClient: Send + Sync {
     ) -> UsersInfoStream<User>;
 }
 
-/// Streaming interface for cities.
-pub trait CitiesStreamingClient: Send + Sync {
+/// Streaming interface for cities (Version 1).
+pub trait CitiesStreamingClientV1: Send + Sync {
     fn stream(
         &self,
         ctx: SecurityContext,
@@ -128,8 +133,8 @@ pub trait CitiesStreamingClient: Send + Sync {
     ) -> UsersInfoStream<City>;
 }
 
-/// Streaming interface for addresses.
-pub trait AddressesStreamingClient: Send + Sync {
+/// Streaming interface for addresses (Version 1).
+pub trait AddressesStreamingClientV1: Send + Sync {
     fn stream(
         &self,
         ctx: SecurityContext,

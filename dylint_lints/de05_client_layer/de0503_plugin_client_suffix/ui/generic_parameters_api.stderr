@@ -1,0 +1,27 @@
+error: plugin client trait `ThrPluginApi` should use `*PluginClient` suffix, not `*PluginApi` (DE0503)
+  --> $DIR/generic_parameters_api.rs:6:1
+   |
+LL | / pub trait ThrPluginApi<T>: Send + Sync {
+LL | |     async fn get_data(&self) -> Result<T, ()>;
+LL | | }
+   | |_^
+   |
+   = help: rename trait to `ThrPluginClient` to follow plugin client naming conventions
+   = note: `#[deny(de0503_plugin_client_suffix)]` on by default
+
+error: plugin client trait `DataPluginApi` should use `*PluginClient` suffix, not `*PluginApi` (DE0503)
+  --> $DIR/generic_parameters_api.rs:12:1
+   |
+LL | / pub trait DataPluginApi<T, E>: Send + Sync
+LL | | where
+LL | |     T: Send + Sync,
+LL | |     E: std::error::Error,
+LL | | {
+LL | |     async fn process(&self) -> Result<T, E>;
+LL | | }
+   | |_^
+   |
+   = help: rename trait to `DataPluginClient` to follow plugin client naming conventions
+
+error: aborting due to 2 previous errors
+

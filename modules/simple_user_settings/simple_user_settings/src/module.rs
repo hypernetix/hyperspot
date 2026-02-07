@@ -8,7 +8,7 @@ use modkit_db::DBProvider;
 use modkit_db::DbError;
 use tracing::info;
 
-use simple_user_settings_sdk::SimpleUserSettingsClient;
+use simple_user_settings_sdk::SimpleUserSettingsClientV1;
 
 use crate::api::rest::routes;
 use crate::config::SettingsConfig;
@@ -68,7 +68,7 @@ impl Module for SettingsModule {
         };
         let service = Arc::new(Service::new(db, repo, service_config));
 
-        let local_client: Arc<dyn SimpleUserSettingsClient> =
+        let local_client: Arc<dyn SimpleUserSettingsClientV1> =
             Arc::new(LocalClient::new(service.clone()));
         ctx.client_hub().register(local_client);
 

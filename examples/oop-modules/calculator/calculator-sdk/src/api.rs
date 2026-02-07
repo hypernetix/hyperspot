@@ -5,12 +5,17 @@
 use async_trait::async_trait;
 use modkit_security::SecurityContext;
 
-/// Calculator API trait
+/// Calculator API trait (Version 1)
 ///
 /// A simple service that performs addition operations.
 /// All methods require a SecurityContext for authorization.
+///
+/// This trait is registered in `ClientHub`:
+/// ```ignore
+/// let calc = hub.get::<dyn CalculatorClientV1>()?;
+/// ```
 #[async_trait]
-pub trait CalculatorClient: Send + Sync {
+pub trait CalculatorClientV1: Send + Sync {
     /// Add two numbers and return the sum.
     async fn add(&self, ctx: &SecurityContext, a: i64, b: i64) -> Result<i64, CalculatorError>;
 }

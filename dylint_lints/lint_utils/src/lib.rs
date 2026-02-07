@@ -9,7 +9,7 @@ extern crate rustc_span;
 
 use rustc_lint::LintContext;
 use rustc_span::source_map::SourceMap;
-use rustc_span::{FileName, Span};
+use rustc_span::{FileName, RealFileName, Span};
 use std::collections::HashSet;
 
 const ALLOWED_FLAGS: &[&str] = &["request", "response"];
@@ -38,6 +38,160 @@ pub fn is_in_api_rest_folder(source_map: &SourceMap, span: Span) -> bool {
 
 pub fn is_in_module_folder(source_map: &SourceMap, span: Span) -> bool {
     check_span_path(source_map, span, "/modules/")
+}
+
+/// Extract the filename string from a span.
+/// Handles local paths and remapped paths with virtual name fallback.
+pub fn filename_str(source_map: &SourceMap, span: Span) -> Option<String> {
+    let file_name = source_map.span_to_filename(span);
+    match &file_name {
+        FileName::Real(real) => {
+            if let Some(local) = real.local_path() {
+                Some(local.to_string_lossy().to_string())
+            } else if let RealFileName::Remapped { virtual_name, .. } = real {
+                Some(virtual_name.to_string_lossy().to_string())
+            } else {
+                None
+            }
+        }
+        _ => None,
+    }
+}
+
+/// Check if a file path is in a temporary directory (used by test infrastructure).
+pub fn is_temp_path(path: &str) -> bool {
+    // Primary check: compare against the actual system temp directory
+    let temp_dir = std::env::temp_dir();
+    if let Some(temp_str) = temp_dir.to_str() {
+        if path.starts_with(temp_str) {
+            return true;
+        }
+    }
+    // Fallback patterns for known temp directory locations
+    path.contains("/tmp/")
+        || path.contains("/var/folders/")
+        || path.contains("\\Temp\\")
+}
+
+/// Result of parsing a version suffix from a name like `FooClientV1` or `FooClient2`.
+pub struct VersionParts<'a> {
+    /// Base name without version suffix or trailing digits (e.g., `FooClient`)
+    pub base: &'a str,
+    /// Valid version suffix like `V1`, `V2`, or empty string if none
+    pub version_suffix: &'a str,
+    /// Trailing digits without V prefix (e.g., `2` from `FooClient2`), or empty string
+    pub malformed_digits: &'a str,
+}
+
+impl VersionParts<'_> {
+    /// Returns true if a valid version suffix (V + digits) was found.
+    pub fn has_valid_version(&self) -> bool {
+        !self.version_suffix.is_empty()
+    }
+
+    /// Returns true if there are trailing digits but no V prefix (malformed version).
+    pub fn has_malformed_version(&self) -> bool {
+        !self.malformed_digits.is_empty() && self.version_suffix.is_empty()
+    }
+}
+
+/// Parse version suffix from a trait/type name.
+///
+/// - `FooClientV1`  -> base=`FooClient`, version_suffix=`V1`, malformed_digits=``
+/// - `FooClientV10` -> base=`FooClient`, version_suffix=`V10`, malformed_digits=``
+/// - `FooClient2`   -> base=`FooClient`, version_suffix=``, malformed_digits=`2`
+/// - `FooClient`    -> base=`FooClient`, version_suffix=``, malformed_digits=``
+/// - `FooClientV`   -> base=`FooClient`, version_suffix=``, malformed_digits=`` (bare V stripped)
+/// - `FooClientV0`  -> base=`FooClient`, version_suffix=``, malformed_digits=`` (V0 rejected)
+/// - `FooClientV01` -> base=`FooClient`, version_suffix=``, malformed_digits=`` (leading zero rejected)
+pub fn parse_version_suffix(name: &str) -> VersionParts<'_> {
+    if name.is_empty() {
+        return VersionParts {
+            base: name,
+            version_suffix: "",
+            malformed_digits: "",
+        };
+    }
+
+    let bytes = name.as_bytes();
+    let len = bytes.len();
+
+    let mut digit_count = 0;
+    for &b in bytes.iter().rev() {
+        if b.is_ascii_digit() {
+            digit_count += 1;
+        } else {
+            break;
+        }
+    }
+
+    if digit_count == 0 {
+        // No trailing digits — check for bare trailing V (e.g., `FooClientV`)
+        if len > 1 && bytes[len - 1] == b'V' {
+            return VersionParts {
+                base: &name[..len - 1],
+                version_suffix: "",
+                malformed_digits: "",
+            };
+        }
+        return VersionParts {
+            base: name,
+            version_suffix: "",
+            malformed_digits: "",
+        };
+    }
+
+    let digits_start = len - digit_count;
+
+    if digits_start > 0 && bytes[digits_start - 1] == b'V' {
+        let v_pos = digits_start - 1;
+        let digit_str = &name[digits_start..];
+
+        // Valid version: V followed by non-zero number without leading zeros (V1, V2, V10)
+        // Invalid: V0, V00, V01 (leading zeros or zero version)
+        if !digit_str.starts_with('0') {
+            VersionParts {
+                base: &name[..v_pos],
+                version_suffix: &name[v_pos..],
+                malformed_digits: "",
+            }
+        } else {
+            // V0, V00, V01 — strip the invalid V-prefix version from base
+            VersionParts {
+                base: &name[..v_pos],
+                version_suffix: "",
+                malformed_digits: "",
+            }
+        }
+    } else {
+        VersionParts {
+            base: &name[..digits_start],
+            version_suffix: "",
+            malformed_digits: &name[digits_start..],
+        }
+    }
+}
+
+/// Check if the current compilation target is an SDK crate (by crate name or file path).
+///
+/// Also returns true for files in temporary directories — this is required because
+/// `dylint_testing::ui_test_examples()` compiles UI test files from temp dirs without
+/// passing `--crate-name`, so the crate name check alone doesn't work for UI tests.
+pub fn is_in_sdk_crate(cx: &rustc_lint::EarlyContext<'_>, span: Span) -> bool {
+    if let Some(crate_name) = cx.sess().opts.crate_name.as_deref() {
+        // Cargo normalizes dashes to underscores for `--crate-name`.
+        if crate_name.ends_with("-sdk") || crate_name.ends_with("_sdk") {
+            return true;
+        }
+    }
+
+    let Some(file_path) = filename_str(cx.sess().source_map(), span) else {
+        return false;
+    };
+
+    file_path.contains("-sdk/")
+        || file_path.contains("-sdk\\")
+        || is_temp_path(&file_path)
 }
 
 pub fn check_derive_attrs<F>(item: &rustc_ast::Item, mut f: F)

@@ -1,4 +1,4 @@
-//! Local client implementation of CalculatorGatewayClient
+//! Local client implementation of CalculatorGatewayClientV1
 //!
 //! Internal client used by `wire_client()`. Not exported from SDK.
 
@@ -9,7 +9,7 @@ use modkit_security::SecurityContext;
 
 use calculator_gateway::{Service, ServiceError};
 
-use crate::api::{CalculatorGatewayClient, CalculatorGatewayError};
+use crate::api::{CalculatorGatewayClientV1, CalculatorGatewayError};
 
 /// Local client implementation that delegates to the module's Service.
 pub(crate) struct CalculatorGatewayLocalClient {
@@ -24,7 +24,7 @@ impl CalculatorGatewayLocalClient {
 }
 
 #[async_trait]
-impl CalculatorGatewayClient for CalculatorGatewayLocalClient {
+impl CalculatorGatewayClientV1 for CalculatorGatewayLocalClient {
     async fn add(
         &self,
         ctx: &SecurityContext,
