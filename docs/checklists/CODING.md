@@ -1,16 +1,16 @@
 ---
-spaider: true
+cypilot: true
 type: requirement
 name: Code Quality Expert Checklist
 version: 1.0
-purpose: Generic (weaver-agnostic) quality checklist for code changes and reviews
+purpose: Generic (kit-agnostic) quality checklist for code changes and reviews
 ---
 
 # Code Quality Expert Checklist (Generic)
 
 ## Overview
 
-Generic (weaver-agnostic) checklist for reviewing code changes. Use it to produce an issues-only report and to drive consistent, high-signal code reviews across any language and project.
+Generic (kit-agnostic) checklist for reviewing code changes. Use it to produce an issues-only report and to drive consistent, high-signal code reviews across any language and project.
 
 **Scope**: Any codebase (language-agnostic). This file contains only generic code-quality criteria.
 

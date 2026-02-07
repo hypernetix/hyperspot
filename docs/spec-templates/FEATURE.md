@@ -19,7 +19,7 @@ NOT IN THIS DOCUMENT (see other templates):
   ✗ Architecture, components, APIs → DESIGN.md
   ✗ Why a specific approach was chosen → ADR/
 
-SDSL PSEUDO-CODE:
+CDSL PSEUDO-CODE:
   Optional. Use for complex flows or when precise behavior must be
   communicated. Skip for simple features to avoid overhead.
 =============================================================================
@@ -27,7 +27,7 @@ SDSL PSEUDO-CODE:
 
 ## 1. Feature Context
 
-- [ ] `p2` - **ID**: `spd-{system}-feature-{slug}`
+- [ ] `p2` - **ID**: `cpt-{system}-feature-{slug}`
 
 ### 1.1 Overview
 
@@ -41,7 +41,7 @@ SDSL PSEUDO-CODE:
 
 | Actor | Role in Feature |
 |-------|-----------------|
-| `spd-{system}-actor-{slug}` | {What this actor does in this feature} |
+| `cpt-{system}-actor-{slug}` | {What this actor does in this feature} |
 
 ### 1.4 References
 
@@ -49,17 +49,17 @@ SDSL PSEUDO-CODE:
 - **Design**: [DESIGN.md](../DESIGN.md)
 - **Dependencies**: {List feature dependencies or "None"}
 
-## 2. Actor Flows (SDSL)
+## 2. Actor Flows (CDSL)
 
 User-facing interactions that start with an actor (human or external system) and describe the end-to-end flow of a use case. Each flow has a triggering actor and shows how the system responds to actor actions.
 
-> **SDSL pseudo-code is optional.** Use detailed steps for early-stage projects, complex domains, or when you need to clearly communicate expected behavior. Skip for mature teams or simple features to avoid documentation overhead.
+> **CDSL pseudo-code is optional.** Use detailed steps for early-stage projects, complex domains, or when you need to clearly communicate expected behavior. Skip for mature teams or simple features to avoid documentation overhead.
 
 ### {Flow Name}
 
-- [ ] `p1` - **ID**: `spd-{system}-flow-{slug}`
+- [ ] `p1` - **ID**: `cpt-{system}-flow-{slug}`
 
-**Actor**: `spd-{system}-actor-{slug}`
+**Actor**: `cpt-{system}-actor-{slug}`
 
 **Success Scenarios**:
 - {Scenario 1}
@@ -77,15 +77,15 @@ User-facing interactions that start with an actor (human or external system) and
    1. [ ] - `p1` - {Action if false} - `inst-{step-id}`
 6. [ ] - `p1` - **RETURN** {result} - `inst-{step-id}`
 
-## 3. Processes / Business Logic (SDSL)
+## 3. Processes / Business Logic (CDSL)
 
 Internal system functions and procedures that do not interact with actors directly. Examples: database layer operations, authorization logic, middleware, validation routines, library functions, background jobs. These are reusable building blocks called by Actor Flows or other processes.
 
-> **SDSL pseudo-code is optional.** Same guidance as Actor Flows — use when clarity matters, skip when it becomes overhead.
+> **CDSL pseudo-code is optional.** Same guidance as Actor Flows — use when clarity matters, skip when it becomes overhead.
 
 ### {Process Name}
 
-- [ ] `p2` - **ID**: `spd-{system}-algo-{slug}`
+- [ ] `p2` - **ID**: `cpt-{system}-algo-{slug}`
 
 **Input**: {Input description}
 
@@ -103,13 +103,13 @@ Internal system functions and procedures that do not interact with actors direct
    1. [ ] - `p1` - {Handle error} - `inst-{step-id}`
 7. [ ] - `p1` - **RETURN** {result} - `inst-{step-id}`
 
-## 4. States (SDSL)
+## 4. States (CDSL)
 
 Optional: Include when entities have explicit lifecycle states.
 
 ### {Entity Name} State Machine
 
-- [ ] `p2` - **ID**: `spd-{system}-state-{slug}`
+- [ ] `p2` - **ID**: `cpt-{system}-state-{slug}`
 
 **States**: {State1}, {State2}, {State3}
 
@@ -125,12 +125,12 @@ Specific implementation tasks derived from flows/algorithms above.
 
 ### {Requirement Title}
 
-- [ ] `p1` - **ID**: `spd-{system}-req-{slug}`
+- [ ] `p1` - **ID**: `cpt-{system}-req-{slug}`
 
 The system **MUST** {clear description of what to implement}.
 
 **Implements**:
-- `spd-{system}-flow-{slug}`
+- `cpt-{system}-flow-{slug}`
 
 **Touches**:
 - API: `{METHOD} {/path}`

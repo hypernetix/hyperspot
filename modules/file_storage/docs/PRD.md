@@ -38,55 +38,55 @@ The service provides URL-based access to files with metadata queries for validat
 
 #### LLM Gateway
 
-**ID**: `fdd-file-storage-actor-llm-gateway`
+**ID**: `cpt-file-storage-actor-llm-gateway`
 
-<!-- fdd-id-content -->
+<!-- cpt-id-content -->
 **Role**: Fetches input media (images, audio, video, documents) before provider calls and stores generated output media.
-<!-- fdd-id-content -->
+<!-- cpt-id-content -->
 
 ## 3. Functional Requirements
 
 #### Fetch Media by URL
 
-**ID**: [ ] `p1` `fdd-file-storage-fr-fetch-media-v1`
+**ID**: [ ] `p1` `cpt-file-storage-fr-fetch-media-v1`
 
-<!-- fdd-id-content -->
+<!-- cpt-id-content -->
 
 The system must retrieve file content and metadata by URL for LLM Gateway consumption.
 
-**Actors**: `fdd-file-storage-actor-llm-gateway`
-<!-- fdd-id-content -->
+**Actors**: `cpt-file-storage-actor-llm-gateway`
+<!-- cpt-id-content -->
 
 #### Store Generated Content
 
-**ID**: [ ] `p1` `fdd-file-storage-fr-store-content-v1`
+**ID**: [ ] `p1` `cpt-file-storage-fr-store-content-v1`
 
-<!-- fdd-id-content -->
+<!-- cpt-id-content -->
 
 The system must store generated media (images, audio, video) and return accessible URL.
 
-**Actors**: `fdd-file-storage-actor-llm-gateway`
-<!-- fdd-id-content -->
+**Actors**: `cpt-file-storage-actor-llm-gateway`
+<!-- cpt-id-content -->
 
 #### Get Metadata
 
-**ID**: [ ] `p1` `fdd-file-storage-fr-get-metadata-v1`
+**ID**: [ ] `p1` `cpt-file-storage-fr-get-metadata-v1`
 
-<!-- fdd-id-content -->
+<!-- cpt-id-content -->
 
 The system must return file metadata (size, mime_type) without fetching full content for validation purposes.
 
-**Actors**: `fdd-file-storage-actor-llm-gateway`
-<!-- fdd-id-content -->
+**Actors**: `cpt-file-storage-actor-llm-gateway`
+<!-- cpt-id-content -->
 
 ## 4. Use Cases
 
 #### UC-001: Fetch Media by URL
 
-**ID**: [ ] `p1` `fdd-file-storage-usecase-fetch-media-v1`
+**ID**: [ ] `p1` `cpt-file-storage-usecase-fetch-media-v1`
 
-<!-- fdd-id-content -->
-**Actor**: `fdd-file-storage-actor-llm-gateway`
+<!-- cpt-id-content -->
+**Actor**: `cpt-file-storage-actor-llm-gateway`
 
 **Preconditions**: File exists at URL.
 
@@ -101,14 +101,14 @@ The system must return file metadata (size, mime_type) without fetching full con
 - Returns file_not_found if file does not exist
 - Returns content with mime_type and size
 - Supports streaming for large files
-<!-- fdd-id-content -->
+<!-- cpt-id-content -->
 
 #### UC-002: Store Generated Content
 
-**ID**: [ ] `p1` `fdd-file-storage-usecase-store-content-v1`
+**ID**: [ ] `p1` `cpt-file-storage-usecase-store-content-v1`
 
-<!-- fdd-id-content -->
-**Actor**: `fdd-file-storage-actor-llm-gateway`
+<!-- cpt-id-content -->
+**Actor**: `cpt-file-storage-actor-llm-gateway`
 
 **Preconditions**: Content available for storage.
 
@@ -123,14 +123,14 @@ The system must return file metadata (size, mime_type) without fetching full con
 - URL immediately accessible after store returns
 - Metadata stored with file (mime_type, source, timestamps)
 - Storage_unavailable error if service down
-<!-- fdd-id-content -->
+<!-- cpt-id-content -->
 
 #### UC-003: Get Metadata
 
-**ID**: [ ] `p1` `fdd-file-storage-usecase-get-metadata-v1`
+**ID**: [ ] `p1` `cpt-file-storage-usecase-get-metadata-v1`
 
-<!-- fdd-id-content -->
-**Actor**: `fdd-file-storage-actor-llm-gateway`
+<!-- cpt-id-content -->
+**Actor**: `cpt-file-storage-actor-llm-gateway`
 
 **Preconditions**: File exists at URL.
 
@@ -144,7 +144,7 @@ The system must return file metadata (size, mime_type) without fetching full con
 - Returns file_not_found if file does not exist
 - Faster than full fetch (no content transfer)
 - Used for size limit validation before processing
-<!-- fdd-id-content -->
+<!-- cpt-id-content -->
 
 ## 5. Non-functional requirements
 

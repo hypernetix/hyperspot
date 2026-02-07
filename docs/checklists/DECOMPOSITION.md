@@ -71,7 +71,7 @@ Before starting the review, confirm:
 **Key principle**: A perfect decomposition has:
 1. **100% coverage** — every design element appears in at least one spec
 2. **No overlap** — no design element appears in multiple specs without clear reason
-3. **Complete attributes** — every spec has identification, purpose, scope, dependencies
+3. **Complete attributes** — every feature has identification, purpose, scope, dependencies
 4. **Consistent granularity** — specs are at similar abstraction levels
 5. **Bidirectional traceability** — can trace both ways between design and specs
 
@@ -146,10 +146,10 @@ Mark review as "PARTIAL" if not all domains completed.
 ### COV-003: Coverage Mapping Completeness
 **Severity**: HIGH
 
-- [ ] Each spec explicitly lists "Requirements Covered" with IDs
-- [ ] Each spec explicitly lists "Design Components" with IDs
-- [ ] Each spec explicitly lists "Sequences" with IDs (or "None")
-- [ ] Each spec explicitly lists "Data" with IDs (or "None")
+- [ ] Each feature explicitly lists "Requirements Covered" with IDs
+- [ ] Each feature explicitly lists "Design Components" with IDs
+- [ ] Each feature explicitly lists "Sequences" with IDs (or "None")
+- [ ] Each feature explicitly lists "Data" with IDs (or "None")
 - [ ] No implicit or assumed coverage
 
 ---
@@ -174,15 +174,15 @@ Mark review as "PARTIAL" if not all domains completed.
 ### EXC-002: Boundary Clarity
 **Severity**: HIGH
 
-- [ ] Each spec has clear "Scope" boundaries (what's in)
-- [ ] Each spec has clear "Out of Scope" boundaries (what's explicitly excluded)
+- [ ] Each feature has clear "Scope" boundaries (what's in)
+- [ ] Each feature has clear "Out of Scope" boundaries (what's explicitly excluded)
 - [ ] Boundaries between adjacent specs are explicit and non-ambiguous
-- [ ] Domain entities are assigned to single spec (or clear reason for sharing)
+- [ ] Domain entities are assigned to single feature (or clear reason for sharing)
 
 ### EXC-003: Dependency vs Overlap Distinction
 **Severity**: MEDIUM
 
-- [ ] Dependencies (one spec uses output of another) are clearly distinct from overlaps
+- [ ] Dependencies (one feature uses output of another) are clearly distinct from overlaps
 - [ ] Shared components are documented as dependencies, not duplicate scope
 - [ ] Integration points are explicit
 
@@ -198,7 +198,7 @@ Mark review as "PARTIAL" if not all domains completed.
 **Severity**: HIGH
 **Ref**: IEEE 1016-2009 §5.4.1 (identification attribute)
 
-- [ ] Each spec has unique **ID** following naming convention (`spd-{system}-spec-{slug}`)
+- [ ] Each feature has unique **ID** following naming convention (`cpt-{system}-feature-{slug}`)
 - [ ] IDs are stable (won't change during implementation)
 - [ ] IDs are human-readable and meaningful
 - [ ] No duplicate IDs within the decomposition
@@ -207,7 +207,7 @@ Mark review as "PARTIAL" if not all domains completed.
 **Severity**: MEDIUM
 **Ref**: IEEE 1016-2009 §5.4.1 (type attribute)
 
-- [ ] Each spec has **type** classification implied by priority/status (or explicit type field)
+- [ ] Each feature has **type** classification implied by priority/status (or explicit type field)
 - [ ] Type indicates nature: core, supporting, infrastructure, integration, etc.
 - [ ] Types are consistent across similar specs
 
@@ -215,8 +215,8 @@ Mark review as "PARTIAL" if not all domains completed.
 **Severity**: HIGH
 **Ref**: IEEE 1016-2009 §5.4.1 (purpose attribute)
 
-- [ ] Each spec has clear one-line **Purpose** statement
-- [ ] Purpose explains WHY this spec exists
+- [ ] Each feature has clear one-line **Purpose** statement
+- [ ] Purpose explains WHY this feature exists
 - [ ] Purpose is distinct from other specs' purposes
 - [ ] Purpose is implementation-agnostic (describes intent, not approach)
 
@@ -224,7 +224,7 @@ Mark review as "PARTIAL" if not all domains completed.
 **Severity**: HIGH
 **Ref**: IEEE 1016-2009 §5.4.1 (function attribute)
 
-- [ ] Each spec has concrete **Scope** bullets describing WHAT it does
+- [ ] Each feature has concrete **Scope** bullets describing WHAT it does
 - [ ] Scope items are actionable and verifiable
 - [ ] Scope aligns with Purpose
 - [ ] Scope is at appropriate abstraction level (not too detailed, not too vague)
@@ -233,7 +233,7 @@ Mark review as "PARTIAL" if not all domains completed.
 **Severity**: MEDIUM
 **Ref**: IEEE 1016-2009 §5.4.1 (subordinates attribute)
 
-- [ ] Each spec documents phases/milestones (subordinate decomposition)
+- [ ] Each feature documents phases/milestones (subordinate decomposition)
 - [ ] Or explicitly states "single phase" / no sub-decomposition needed
 - [ ] Subordinates represent meaningful implementation milestones
 - [ ] Subordinate relationships are hierarchically valid
@@ -249,8 +249,8 @@ Mark review as "PARTIAL" if not all domains completed.
 **Ref**: ISO 21511:2018 §5.2 (decomposition levels)
 
 - [ ] All specs are at similar abstraction level (consistent granularity)
-- [ ] No spec is significantly larger than others (≤3x size difference)
-- [ ] No spec is significantly smaller than others (≥1/3x size difference)
+- [ ] No feature is significantly larger than others (≤3x size difference)
+- [ ] No feature is significantly smaller than others (≥1/3x size difference)
 - [ ] Size is measured by scope items or estimated effort
 
 ### LEV-002: Decomposition Depth
@@ -265,8 +265,8 @@ Mark review as "PARTIAL" if not all domains completed.
 **Severity**: LOW
 
 - [ ] Phase/milestone counts are roughly balanced across specs
-- [ ] No spec has disproportionately many phases (>5x average)
-- [ ] No spec has zero phases without explicit reason
+- [ ] No feature has disproportionately many phases (>5x average)
+- [ ] No feature has zero phases without explicit reason
 
 ---
 
@@ -280,7 +280,7 @@ Mark review as "PARTIAL" if not all domains completed.
 **Severity**: MEDIUM
 **Ref**: ISO 10007:2017 §6.2 (CI selection)
 
-- [ ] Each spec represents a logical configuration item (CI)
+- [ ] Each feature represents a logical configuration item (CI)
 - [ ] Spec boundaries align with natural configuration/release boundaries
 - [ ] Specs can be versioned and baselined independently (where applicable)
 
@@ -310,17 +310,17 @@ Mark review as "PARTIAL" if not all domains completed.
 **Severity**: HIGH
 **Ref**: ISO/IEC/IEEE 29148:2018 §6.5.2 (backward traceability)
 
-- [ ] Each spec traces back to source design elements
+- [ ] Each feature traces back to source design elements
 - [ ] References to design IDs are valid and resolvable
-- [ ] No spec exists without design justification
+- [ ] No feature exists without design justification
 
 ### TRC-003: Cross-Artifact Consistency
 **Severity**: HIGH
 **Ref**: ISO/IEC/IEEE 42010:2022 §5.6 (architecture description consistency)
 
 - [ ] Spec IDs and slugs will match Spec Design (SPEC) artifacts
-- [ ] References between DECOMPOSITION and SPEC artifacts are planned
-- [ ] Any missing spec design is documented as intentional
+- [ ] References between DECOMPOSITION and FEATURE artifacts are planned
+- [ ] Any missing feature design is documented as intentional
 
 ### TRC-004: Impact Analysis Readiness
 **Severity**: MEDIUM
@@ -367,17 +367,17 @@ Mark review as "PARTIAL" if not all domains completed.
 ### CHK-001: Status Integrity
 **Severity**: HIGH
 
-- [ ] Overall status `id:status` is `[x]` only when ALL spec `id:spec` blocks are `[x]`
-- [ ] Spec `id:spec` is `[x]` only when ALL nested `id-ref` blocks within that spec are `[x]`
+- [ ] Overall status tasks is `[x]` only when ALL `cpt-{system}-*` blocks are `[x]`
+- [ ] `cpt-{system}-*` is `[x]` only when ALL nested `cpt-{system}-*` blocks within that feature are `[x]`
 - [ ] Priority markers (`p1`-`p9`) are consistent between definitions and references
 - [ ] Status emoji matches checkbox state (⏳ for in-progress, ✅ for done)
 
 ### CHK-002: Reference Validity
 **Severity**: HIGH
 
-- [ ] All `id-ref` IDs resolve to valid definitions in source artifacts (DESIGN, PRD)
+- [ ] All `cpt-{system}-*` references resolve to valid definitions in source artifacts (DESIGN, PRD)
 - [ ] No orphaned checked references (reference checked but definition unchecked)
-- [ ] No duplicate checkboxes for the same ID within a spec block
+- [ ] No duplicate checkboxes for the same ID within a feature block
 
 ---
 
@@ -401,11 +401,11 @@ Mark review as "PARTIAL" if not all domains completed.
 
 **What to check**:
 - [ ] No code snippets or algorithms
-- [ ] No detailed technical specifications (belongs in SPEC artifact)
-- [ ] No user flows or state machines (belongs in SPEC artifact)
-- [ ] No API request/response schemas (belongs in SPEC artifact)
+- [ ] No detailed technical specifications (belongs in FEATURE artifact)
+- [ ] No user flows or state machines (belongs in FEATURE artifact)
+- [ ] No API request/response schemas (belongs in FEATURE artifact)
 
-**Where it belongs**: SPEC (spec design) artifact
+**Where it belongs**: FEATURE (spec design) artifact
 
 ---
 
@@ -439,8 +439,8 @@ Mark review as "PARTIAL" if not all domains completed.
 ## FMT-001: Spec Entry Format
 **Severity**: HIGH
 
-- [ ] Each spec entry has unique title
-- [ ] Each spec entry has stable identifier
+- [ ] Each feature entry has unique title
+- [ ] Each feature entry has stable identifier
 - [ ] Entries are consistently formatted
 
 ## FMT-002: Required Fields Present
@@ -448,7 +448,7 @@ Mark review as "PARTIAL" if not all domains completed.
 
 - [ ] **ID**: Present and follows convention
 - [ ] **Purpose**: One-line description
-- [ ] **Depends On**: None or spec references
+- [ ] **Depends On**: None or feature references
 - [ ] **Scope**: Bulleted list
 - [ ] **Out of Scope**: Bulleted list (or explicit "None")
 - [ ] **Requirements Covered**: ID references

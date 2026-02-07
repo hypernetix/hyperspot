@@ -796,7 +796,7 @@ Before evaluating each checklist item, the expert MUST:
 - [ ] No spec-specific algorithms
 - [ ] No spec-specific state machines
 - [ ] No spec-specific error handling details
-- [ ] No spec implementation steps
+- [ ] No feature implementation steps
 
 **Where it belongs**: `Spec DESIGN`
 

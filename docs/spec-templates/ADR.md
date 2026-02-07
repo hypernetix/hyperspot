@@ -37,7 +37,7 @@ STANDARDS ALIGNMENT:
 
 # {Short title describing problem and chosen solution}
 
-**ID**: `spd-{system}-adr-{slug}`
+**ID**: `cpt-{system}-adr-{slug}`
 
 ## Context and Problem Statement
 
@@ -53,8 +53,8 @@ STANDARDS ALIGNMENT:
 
 This decision directly addresses the following requirements from PRD/DESIGN:
 
-* `spd-{system}-req-{slug}` — {Brief description of how this decision satisfies/constrains this requirement}
-* `spd-{system}-design-{slug}` — {Brief description of design element affected}
+* `cpt-{system}-req-{slug}` — {Brief description of how this decision satisfies/constrains this requirement}
+* `cpt-{system}-design-{slug}` — {Brief description of design element affected}
 
 ## Considered Options
 

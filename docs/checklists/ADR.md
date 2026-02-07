@@ -561,9 +561,9 @@ For architectural decisions with broad impact, check ALL applicable domains.
 **Severity**: HIGH
 
 **What to check**:
-- [ ] No spec user flows
-- [ ] No spec algorithms
-- [ ] No spec state machines
+- [ ] No feature user flows
+- [ ] No feature algorithms
+- [ ] No feature state machines
 - [ ] No step-by-step implementation guides
 - [ ] No low-level implementation pseudo-code
 

@@ -8,13 +8,13 @@
 ## 2. Entries
 
 **Overall implementation status:**
-- [ ] `p1` - **ID**: `spd-{system}-status-overall`
+- [ ] `p1` - **ID**: `cpt-{system}-status-overall`
 
 ### 1. [{Spec Title 1}](spec-{slug}/) - HIGH
 
-- [ ] `p1` - **ID**: `spd-{system}-spec-{slug}`
+- [ ] `p1` - **ID**: `cpt-{system}-spec-{slug}`
 
-- **Purpose**: {Few sentences describing what this spec accomplishes and why it matters}
+- **Purpose**: {Few sentences describing what this feature accomplishes and why it matters}
 
 - **Depends On**: None
 
@@ -27,21 +27,21 @@
   - {out-of-scope item 2}
 
 - **Requirements Covered**:
-  - [ ] `p1` - `spd-{system}-fr-{slug}`
-  - [ ] `p1` - `spd-{system}-nfr-{slug}`
+  - [ ] `p1` - `cpt-{system}-fr-{slug}`
+  - [ ] `p1` - `cpt-{system}-nfr-{slug}`
 
 - **Design Principles Covered**:
-  - [ ] `p1` - `spd-{system}-principle-{slug}`
+  - [ ] `p1` - `cpt-{system}-principle-{slug}`
 
 - **Design Constraints Covered**:
-  - [ ] `p1` - `spd-{system}-constraint-{slug}`
+  - [ ] `p1` - `cpt-{system}-constraint-{slug}`
 
 - **Domain Model Entities**:
   - {entity 1}
   - {entity 2}
 
 - **Design Components**:
-  - [ ] `p1` - `spd-{system}-component-{slug}`
+  - [ ] `p1` - `cpt-{system}-component-{slug}`
 
 - **API**:
   - POST /api/{resource}
@@ -49,18 +49,18 @@
   - {CLI command}
 
 - **Sequences**:
-  - [ ] `p1` - `spd-{system}-seq-{slug}`
+  - [ ] `p1` - `cpt-{system}-seq-{slug}`
 
 - **Data**:
-  - [ ] `p1` - `spd-{system}-dbtable-{slug}`
+  - [ ] `p1` - `cpt-{system}-dbtable-{slug}`
 
 ### 2. [{Spec Title 2}](spec-{slug}/) - MEDIUM
 
-- [ ] `p2` - **ID**: `spd-{system}-spec-{slug}`
+- [ ] `p2` - **ID**: `cpt-{system}-spec-{slug}`
 
-- **Purpose**: {Few sentences describing what this spec accomplishes and why it matters}
+- **Purpose**: {Few sentences describing what this feature accomplishes and why it matters}
 
-- **Depends On**: `spd-{system}-spec-{slug}` (previous spec)
+- **Depends On**: `cpt-{system}-spec-{slug}` (previous spec)
 
 - **Scope**:
   - {in-scope item 1}
@@ -70,37 +70,37 @@
   - {out-of-scope item 1}
 
 - **Requirements Covered**:
-  - [ ] `p2` - `spd-{system}-fr-{slug}`
+  - [ ] `p2` - `cpt-{system}-fr-{slug}`
 
 - **Design Principles Covered**:
-  - [ ] `p2` - `spd-{system}-principle-{slug}`
+  - [ ] `p2` - `cpt-{system}-principle-{slug}`
 
 - **Design Constraints Covered**:
-  - [ ] `p2` - `spd-{system}-constraint-{slug}`
+  - [ ] `p2` - `cpt-{system}-constraint-{slug}`
 
 - **Domain Model Entities**:
   - {entity}
 
 - **Design Components**:
-  - [ ] `p2` - `spd-{system}-component-{slug}`
+  - [ ] `p2` - `cpt-{system}-component-{slug}`
 
 - **API**:
   - PUT /api/{resource}/{id}
   - DELETE /api/{resource}/{id}
 
 - **Sequences**:
-  - [ ] `p2` - `spd-{system}-seq-{slug}`
+  - [ ] `p2` - `cpt-{system}-seq-{slug}`
 
 - **Data**:
-  - [ ] `p2` - `spd-{system}-dbtable-{slug}`
+  - [ ] `p2` - `cpt-{system}-dbtable-{slug}`
 
 ### 3. [{Spec Title 3}](spec-{slug}/) - LOW
 
-- [ ] `p3` - **ID**: `spd-{system}-spec-{slug}`
+- [ ] `p3` - **ID**: `cpt-{system}-spec-{slug}`
 
-- **Purpose**: {Few sentences describing what this spec accomplishes and why it matters}
+- **Purpose**: {Few sentences describing what this feature accomplishes and why it matters}
 
-- **Depends On**: `spd-{system}-spec-{slug}`
+- **Depends On**: `cpt-{system}-spec-{slug}`
 
 - **Scope**:
   - {in-scope item}
@@ -109,25 +109,25 @@
   - {out-of-scope item}
 
 - **Requirements Covered**:
-  - [ ] `p3` - `spd-{system}-fr-{slug}`
+  - [ ] `p3` - `cpt-{system}-fr-{slug}`
 
 - **Design Principles Covered**:
-  - [ ] `p3` - `spd-{system}-principle-{slug}`
+  - [ ] `p3` - `cpt-{system}-principle-{slug}`
 
 - **Design Constraints Covered**:
-  - [ ] `p3` - `spd-{system}-constraint-{slug}`
+  - [ ] `p3` - `cpt-{system}-constraint-{slug}`
 
 - **Domain Model Entities**:
   - {entity}
 
 - **Design Components**:
-  - [ ] `p3` - `spd-{system}-component-{slug}`
+  - [ ] `p3` - `cpt-{system}-component-{slug}`
 
 - **API**:
   - GET /api/{resource}/stats
 
 - **Sequences**:
-  - [ ] `p3` - `spd-{system}-seq-{slug}`
+  - [ ] `p3` - `cpt-{system}-seq-{slug}`
 
 - **Data**:
-  - [ ] `p3` - `spd-{system}-dbtable-{slug}`
+  - [ ] `p3` - `cpt-{system}-dbtable-{slug}`

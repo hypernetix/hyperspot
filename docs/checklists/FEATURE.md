@@ -53,7 +53,7 @@ This checklist validates specs based on the following international standards:
 
 ## Review Scope Selection
 
-**Choose review mode based on spec complexity and risk**:
+**Choose review mode based on feature complexity and risk**:
 
 | Review Mode | When to Use | Domains to Check |
 |-------------|-------------|------------------|
@@ -90,7 +90,7 @@ This checklist validates specs based on the following international standards:
 
 Before starting the review, confirm:
 
-- [ ] I understand this checklist validates SPEC artifacts
+- [ ] I understand this checklist validates FEATURE artifacts
 - [ ] I will follow the Applicability Context rules below
 - [ ] I will check ALL items in MUST HAVE sections
 - [ ] I will verify ALL items in MUST NOT HAVE sections
@@ -104,7 +104,7 @@ Before starting the review, confirm:
 
 Before evaluating each checklist item, the expert MUST:
 
-1. **Understand the spec's domain** — What kind of spec is this? (e.g., user-facing UI spec, backend API, data processing pipeline, CLI command)
+1. **Understand the spec's domain** — What kind of feature is this? (e.g., user-facing UI spec, backend API, data processing pipeline, CLI command)
 
 2. **Determine applicability for each requirement** — Not all checklist items apply to all specs:
    - A simple CRUD spec may not need complex State Management analysis
@@ -263,7 +263,7 @@ Before evaluating each checklist item, the expert MUST:
 
 - [ ] Spec ID matches the entry in the DECOMPOSITION
 - [ ] Purpose, scope, and out-of-scope items align with the DECOMPOSITION entry
-- [ ] Dependencies in the spec design match the DECOMPOSITION dependency list
+- [ ] Dependencies in the feature design match the DECOMPOSITION dependency list
 - [ ] Requirements covered (FR/NFR) match the DECOMPOSITION mapping
 - [ ] Design principles and constraints covered match the DECOMPOSITION mapping
 - [ ] Domain entities, components, APIs, sequences, and data tables match the DECOMPOSITION entry
@@ -588,7 +588,7 @@ Before evaluating each checklist item, the expert MUST:
 ### OPS-FDESIGN-004: Rollout & Rollback
 **Severity**: HIGH
 
-- [ ] Rollout strategy is documented (phased rollout, spec flag, etc.) when applicable
+- [ ] Rollout strategy is documented (phased rollout, feature flag, etc.) when applicable
 - [ ] Rollback strategy is documented
 - [ ] Data migration/backward compatibility considerations are addressed when applicable
 
@@ -733,7 +733,7 @@ Before evaluating each checklist item, the expert MUST:
 **Severity**: CRITICAL
 **Ref**: ISO/IEC/IEEE 29148:2018 §5.2 (Characteristics of requirements)
 
-- [ ] All spec requirements (Section E) documented
+- [ ] All feature requirements (Section E) documented
 - [ ] Requirements trace to PRD
 - [ ] Requirements trace to a roadmap/backlog item (if used)
 - [ ] Business rules accurately captured
@@ -938,7 +938,7 @@ Report **only** problems (do not list what is OK).
 
 For each issue include:
 
-- **Why Applicable**: Explain why this requirement applies to this specific spec's context (e.g., "This spec handles user authentication, therefore security analysis is required")
+- **Why Applicable**: Explain why this requirement applies to this specific spec's context (e.g., "This feature handles user authentication, therefore security analysis is required")
 - **Issue**: What is wrong (requirement missing or incomplete)
 - **Evidence**: Quote the exact text or describe the exact location in the artifact (or note "No mention found")
 - **Why it matters**: Impact (risk, cost, user harm, compliance)
@@ -957,7 +957,7 @@ For each issue include:
 
 #### Why Applicable
 
-{Explain why this requirement applies to this spec's context. E.g., "This spec processes user data, therefore data integrity analysis is required."}
+{Explain why this requirement applies to this spec's context. E.g., "This feature processes user data, therefore data integrity analysis is required."}
 
 #### Issue
 
@@ -986,11 +986,11 @@ For each issue include:
 For quick reviews, use this condensed table format:
 
 ```markdown
-## SPEC Review Summary
+## FEATURE Review Summary
 
 | ID | Severity | Issue | Proposal |
 |----|----------|-------|----------|
-| ARCH-FDESIGN-001 | HIGH | Missing spec scope | Add scope statement to Section A |
+| ARCH-FDESIGN-001 | HIGH | Missing feature scope | Add scope statement to Section A |
 | BIZ-FDESIGN-001 | MEDIUM | No PRD traceability | Add requirement references |
 
 **Applicability**: {Spec type} — checked {N} priority domains, {M} marked N/A

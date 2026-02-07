@@ -33,7 +33,7 @@ The application is designed for individual use with cross-device synchronization
 
 #### User
 
-**ID**: `spd-todo-app-actor-user`
+**ID**: `cpt-todo-app-actor-user`
 **Role**: Primary user who creates, manages, and completes tasks in the application.
 **Needs**: Simple task management, cross-device access, quick task entry.
 
@@ -41,12 +41,12 @@ The application is designed for individual use with cross-device synchronization
 
 #### Sync Service
 
-**ID**: `spd-todo-app-actor-sync-service`
+**ID**: `cpt-todo-app-actor-sync-service`
 **Role**: Background service that synchronizes tasks across user devices in real-time.
 
 #### Notification Service
 
-**ID**: `spd-todo-app-actor-notification-service`
+**ID**: `cpt-todo-app-actor-notification-service`
 **Role**: Sends reminders and notifications to users about upcoming or overdue tasks.
 
 ## 3. Operational Concept & Environment
@@ -82,43 +82,43 @@ The application is designed for individual use with cross-device synchronization
 
 #### Create Task
 
-- [x] `p1` - **ID**: `spd-todo-app-req-create-task`
+- [x] `p1` - **ID**: `cpt-todo-app-fr-create-task`
 
 The system **MUST** allow users to create a new task with a title, optional description, due date, priority level, and category.
 
 **Rationale**: Core functionality — users need to capture tasks quickly.
 **Source**: Task requirements from steering committee (ease of use goal: <3s task creation)
-**Actors**: `spd-todo-app-actor-user`
+**Actors**: `cpt-todo-app-actor-user`
 
 #### Complete Task
 
-- [x] `p1` - **ID**: `spd-todo-app-req-complete-task`
+- [x] `p1` - **ID**: `cpt-todo-app-fr-complete-task`
 
 The system **MUST** allow users to mark a task as completed or revert it to incomplete status.
 
 **Rationale**: Essential for task lifecycle management.
 **Source**: User stories and stakeholder interviews
-**Actors**: `spd-todo-app-actor-user`
+**Actors**: `cpt-todo-app-actor-user`
 
 #### Delete Task
 
-- [x] `p1` - **ID**: `spd-todo-app-req-delete-task`
+- [x] `p1` - **ID**: `cpt-todo-app-fr-delete-task`
 
 The system **MUST** allow users to delete a task permanently.
 
 **Rationale**: Users need to remove irrelevant or mistaken tasks.
-**Actors**: `spd-todo-app-actor-user`
+**Actors**: `cpt-todo-app-actor-user`
 
 ### 5.2 Organization
 
 #### Filter Tasks
 
-- [x] `p2` - **ID**: `spd-todo-app-req-filter-tasks`
+- [x] `p2` - **ID**: `cpt-todo-app-fr-filter-tasks`
 
 The system **MUST** allow users to filter tasks by status (all, active, completed), category, and priority.
 
 **Rationale**: Helps users focus on relevant tasks.
-**Actors**: `spd-todo-app-actor-user`
+**Actors**: `cpt-todo-app-actor-user`
 
 ## 6. Non-Functional Requirements
 
@@ -130,7 +130,7 @@ The system **MUST** allow users to filter tasks by status (all, active, complete
 
 #### Response Time
 
-- [x] `p1` - **ID**: `spd-todo-app-req-response-time`
+- [x] `p1` - **ID**: `cpt-todo-app-nfr-response-time`
 
 All user interactions **MUST** complete within 200ms at p95 under normal load (stricter than project default of 500ms).
 
@@ -141,7 +141,7 @@ All user interactions **MUST** complete within 200ms at p95 under normal load (s
 
 #### Data Persistence
 
-- [x] `p1` - **ID**: `spd-todo-app-req-data-persistence`
+- [x] `p1` - **ID**: `cpt-todo-app-nfr-data-persistence`
 
 User data **MUST** be persisted locally immediately and synced to cloud storage within 5 seconds of any change when online.
 
@@ -150,13 +150,23 @@ User data **MUST** be persisted locally immediately and synced to cloud storage 
 **Rationale**: Module-specific requirement (project default doesn't cover offline-first + sync pattern)
 **Architecture Allocation**: See DESIGN.md § NFR Allocation for how this is realized
 
+#### Offline Support
+
+- [x] `p1` - **ID**: `cpt-todo-app-nfr-offline-support`
+
+The system **MUST** support offline mode where task creation, completion, filtering, and deletion operate without network connectivity.
+
+**Threshold**: Offline operations succeed with no errors; synchronization begins automatically when connectivity resumes
+**Rationale**: Offline-first is a core product requirement for intermittent connectivity scenarios
+**Architecture Allocation**: See DESIGN.md § Architecture Drivers and § NFR Allocation for how this is realized
+
 ## 7. Public Library Interfaces
 
 ### 7.1 Public API Surface
 
 #### REST API
 
-- [x] `p1` - **ID**: `spd-todo-app-interface-rest-api`
+- [x] `p1` - **ID**: `cpt-todo-app-interface-rest-api`
 
 **Type**: REST API (OpenAPI 3.0)
 **Stability**: stable
@@ -165,7 +175,7 @@ User data **MUST** be persisted locally immediately and synced to cloud storage 
 
 #### Task Data Model
 
-- [x] `p1` - **ID**: `spd-todo-app-interface-task-model`
+- [x] `p1` - **ID**: `cpt-todo-app-interface-task-model`
 
 **Type**: JSON Schema
 **Stability**: stable
@@ -176,7 +186,7 @@ User data **MUST** be persisted locally immediately and synced to cloud storage 
 
 #### Sync Service Contract
 
-- [x] `p1` - **ID**: `spd-todo-app-contract-sync`
+- [x] `p1` - **ID**: `cpt-todo-app-contract-sync`
 
 **Direction**: required from client (external sync backend)
 **Protocol/Format**: WebSocket + JSON for real-time task updates
@@ -186,9 +196,9 @@ User data **MUST** be persisted locally immediately and synced to cloud storage 
 
 #### UC: Create a New Task
 
-- [ ] `p1` - **ID**: `spd-todo-app-req-uc-create-task`
+- [ ] `p1` - **ID**: `cpt-todo-app-fr-uc-create-task`
 
-**Actor**: `spd-todo-app-actor-user`
+**Actor**: `cpt-todo-app-actor-user`
 
 **Preconditions**:
 - User is authenticated and on the main task list view
@@ -243,6 +253,6 @@ User data **MUST** be persisted locally immediately and synced to cloud storage 
 
 ## 14. Traceability
 
-- **Design**: [DESIGN.md](./DESIGN.md)
+- **Design**: `cpt-todo-app-design-principle-offline-first`, `cpt-todo-app-design-principle-optimistic-updates`, `cpt-todo-app-design-constraint-browser-compat`, `cpt-todo-app-design-interface-websocket`, `cpt-todo-app-design-interface-indexeddb`, `cpt-todo-app-db-table-tasks`, `cpt-todo-app-topology-cloud`, `cpt-todo-app-tech-stack`, `cpt-todo-app-design-context-decisions`
 - **ADRs**: [ADR/](./ADR/)
-- **Features**: [features/](./features/)
+- **Features**: `cpt-todo-app-feature-core`, `cpt-todo-app-flow-core-create-task`, `cpt-todo-app-flow-core-delete-task`, `cpt-todo-app-algo-core-validate-task`, `cpt-todo-app-state-core-task`, `cpt-todo-app-fr-core-crud`, `cpt-todo-app-featurecontext-core-performance`, `cpt-todo-app-feature-logic`, `cpt-todo-app-flow-logic-filter-tasks`, `cpt-todo-app-flow-logic-search-tasks`, `cpt-todo-app-algo-logic-sort-tasks`, `cpt-todo-app-algo-logic-overdue-detection`, `cpt-todo-app-state-logic-filter`, `cpt-todo-app-fr-logic-filtering`, `cpt-todo-app-fr-logic-search`, `cpt-todo-app-fr-logic-sorting`, `cpt-todo-app-featurecontext-logic-ux`

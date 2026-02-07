@@ -1,6 +1,6 @@
 # Spec Templates
 
-Industry-standard specification templates incorporating best practices from IEEE, ISO, and modern software development methodologies. Compatible with [Spaider-Driven Development](https://github.com/cyberfabric/Spaider) for validation and traceability.
+Industry-standard specification templates incorporating best practices from IEEE, ISO, and modern software development methodologies. Compatible with [Cypilot-Driven Development](https://github.com/cyberfabric/Cypilot) for validation and traceability.
 
 ## Purpose
 
@@ -13,9 +13,9 @@ These templates provide a structured way to document product requirements, techn
 - **ISO/IEC 15288 / 12207** — Systems and software life cycle processes
 - **MADR** — Markdown Any Decision Records
 
-Templates work standalone or can be enhanced with Spaider annotations (`spd-id`) for cross-document validation and traceability.
+Templates work standalone or can be enhanced with Cypilot annotations (`cpt-id`) for cross-document validation and traceability.
 
-**Spaider integration is optional** — templates are useful on their own for clear, consistent documentation.
+**Cypilot integration is optional** — templates are useful on their own for clear, consistent documentation.
 
 ## Governance & Process
 
@@ -38,7 +38,7 @@ Templates work standalone or can be enhanced with Spaider annotations (`spd-id`)
 | [DESIGN.md](./DESIGN.md) | Technical Design — architecture, principles, constraints, domain model, API contracts | System-level |
 | [DECOMPOSITION.md](./DECOMPOSITION.md) | Decomposition — break down features into implementation units with traceability | Feature-level |
 | [ADR.md](./ADR.md) | Architecture Decision Record — capture decisions, options, trade-offs, consequences | Cross-cutting |
-| [FEATURE.md](./FEATURE.md) | Feature Specification — flows, algorithms, states, requirements (SDSL format) | Feature-level |
+| [FEATURE.md](./FEATURE.md) | Feature Specification — flows, algorithms, states, requirements (CDSL format) | Feature-level |
 
 ## Document Structure
 
@@ -119,9 +119,9 @@ Standards alignment:
 
 ### features/*.md
 1. **Feature Context** — Overview, purpose, actors, PRD requirement references
-2. **Actor Flows (SDSL)** — User-facing interactions step by step
-3. **Algorithms (SDSL)** — Internal functions and procedures
-4. **States (SDSL)** — State machines for entities (optional)
+2. **Actor Flows (CDSL)** — User-facing interactions step by step
+3. **Algorithms (CDSL)** — Internal functions and procedures
+4. **States (CDSL)** — State machines for entities (optional)
 5. **Implementation Requirements** — Specific tasks to build
 6. **Acceptance Criteria** — Feature-level validation
 
@@ -161,7 +161,7 @@ Feature files bridge the gap between high-level requirements (PRD) and implement
 
 Unlike PRD which answers "what do we need?", Feature files answer "how exactly does it work?" — step by step, with precise inputs, outputs, conditions, and error handling. This makes them directly translatable to code and testable against acceptance criteria.
 
-**SDSL pseudo-code is optional:**
+**CDSL pseudo-code is optional:**
 - **Use** for early-stage projects, complex domains, onboarding new team members, or when precise behavior must be communicated
 - **Skip** for mature teams or simple features — avoid documentation overhead when everyone already understands the flow
 
@@ -174,45 +174,45 @@ docs/arch/common/ or docs/arch/{subsystem}/ or {module}/
 ├── PRD.md                     # Product requirements
 ├── DESIGN.md                  # Technical design
 ├── ADR/                       # Architecture Decision Records
-│   ├── 0001-{spd-id}.md       # ADR with sequential prefix
-│   ├── 0002-{spd-id}.md
+│   ├── 0001-{cpt-id}.md       # ADR with sequential prefix
+│   ├── 0002-{cpt-id}.md
 │   └── ...
 └── features/                  # Feature specifications
-    ├── 0001-{spd-id}.md       # Feature with sequential prefix
-    ├── 0002-{spd-id}.md
+    ├── 0001-{cpt-id}.md       # Feature with sequential prefix
+    ├── 0002-{cpt-id}.md
     └── ...
 ```
 
 ### ADR & Feature Naming Convention
 
-Both ADR and Feature files MUST use the prefix `NNNN-{spd-id}.md`:
+Both ADR and Feature files MUST use the prefix `NNNN-{cpt-id}.md`:
 
 **ADRs**:
-- `ADR/0001-spd-todo-app-adr-local-storage.md`
-- `ADR/0002-spd-todo-app-adr-optimistic-ui.md`
+- `ADR/0001-cpt-todo-app-adr-local-storage.md`
+- `ADR/0002-cpt-todo-app-adr-optimistic-ui.md`
 
 **Features**:
-- `features/0001-spd-todo-app-feature-core.md`
-- `features/0002-spd-todo-app-feature-logic.md`
+- `features/0001-cpt-todo-app-feature-core.md`
+- `features/0002-cpt-todo-app-feature-logic.md`
 
-## Spaider ID Convention
+## Cypilot ID Convention
 
-Spaider IDs enable traceability across all specification artifacts.
+Cypilot IDs enable traceability across all specification artifacts.
 
-### Spaider ID Definition
+### Cypilot ID Definition
 
-An Spaider ID **defines** a unique identifier for a specification element (actor, requirement, feature, etc.). Each ID must be **globally unique** within the module, subsystem or global project depending on where it's defined
+An Cypilot ID **defines** a unique identifier for a specification element (actor, requirement, feature, etc.). Each ID must be **globally unique** within the module, subsystem or global project depending on where it's defined
 
 **Format**:
 ```
-spd-{system}-{kind}-{slug}
+cpt-{system}-{kind}-{slug}
 ```
 
-**Placement**: Use `**ID**: \`spd-...\`` in the artifact where the element is defined.
+**Placement**: Use `**ID**: \`cpt-...\`` in the artifact where the element is defined.
 
 ### ID Scope
 
-An Spaider ID covers the **markdown section where it's defined and all its subsections**:
+An Cypilot ID covers the **markdown section where it's defined and all its subsections**:
 
 - ID on `#` (H1) → covers the entire document
 - ID on `##` (H2) → covers that section and all H3/H4/... within it
@@ -226,7 +226,7 @@ Requirements and design elements can include **implementation status** and **pri
 
 **Format**:
 ```
-- [status] `priority` - **ID**: `spd-{system}-{kind}-{slug}`
+- [status] `priority` - **ID**: `cpt-{system}-{kind}-{slug}`
 ```
 
 | Element | Values | Description |
@@ -238,7 +238,7 @@ Requirements and design elements can include **implementation status** and **pri
 ```markdown
 #### User roles requirement
 
-- [ ] `p1` - **ID**: `spd-auth-req-user-roles`
+- [ ] `p1` - **ID**: `cpt-auth-req-user-roles`
 
 The system must support 1-N user roles associated with the user...
 ```
@@ -246,29 +246,29 @@ The system must support 1-N user roles associated with the user...
 ```markdown
 #### Response time
 
-- [x] `p2` - **ID**: `spd-api-req-response-time`
+- [x] `p2` - **ID**: `cpt-api-req-response-time`
 
 API responses must complete within 200ms at p95...
 ```
 
 > **Note**: Implementation status and priority are **informative only** — they don't replace your issue tracking system. Keep them simple. The value is having spec-to-implementation traceability directly in version-controlled documentation, reducing uncertainty between what's specified and what's actually built.
 
-### Spaider ID Reference
+### Cypilot ID Reference
 
-An Spaider ID **reference** links to an element defined elsewhere. References create traceability between documents — for example, a Feature can reference Actors from PRD, or an ADR can reference Requirements it addresses.
+An Cypilot ID **reference** links to an element defined elsewhere. References create traceability between documents — for example, a Feature can reference Actors from PRD, or an ADR can reference Requirements it addresses.
 
-**Placement**: Use backtick notation `` `spd-...` `` when referencing an ID defined in another section or file.
+**Placement**: Use backtick notation `` `cpt-...` `` when referencing an ID defined in another section or file.
 
 ### Validation
 
-Spaider IDs must be unique. When Spaider tooling is connected, `spaider validate` will:
+Cypilot IDs must be unique. When Cypilot tooling is connected, `cypilot validate` will:
 - Check that all referenced IDs exist
 - Detect duplicate definitions
 - Verify cross-document consistency
 
 ### Kind Reference
 
-These are **suggested** kind names for common artifact types. Spaider does not enforce specific kind values — use whatever naming makes sense for your project. The important thing is consistency within your codebase.
+These are **suggested** kind names for common artifact types. Cypilot does not enforce specific kind values — use whatever naming makes sense for your project. The important thing is consistency within your codebase.
 
 | Kind | Description |
 |------|-------------|
@@ -282,24 +282,24 @@ These are **suggested** kind names for common artifact types. Spaider does not e
 | `state` | State machine |
 
 **Examples**:
-- `spd-todo-app-actor-user` — Actor ID
-- `spd-todo-app-req-create-task` — Requirement ID
-- `spd-todo-app-req-response-time` — NFR (still uses `req`)
-- `spd-todo-app-adr-local-storage` — ADR ID
-- `spd-todo-app-feature-core` — Feature ID
+- `cpt-todo-app-actor-user` — Actor ID
+- `cpt-todo-app-req-create-task` — Requirement ID
+- `cpt-todo-app-req-response-time` — NFR (still uses `req`)
+- `cpt-todo-app-adr-local-storage` — ADR ID
+- `cpt-todo-app-feature-core` — Feature ID
 
-> **Note**: You can use any slug that fits your domain. For example, `spd-billing-uc-checkout` or `spd-auth-nfr-token-expiry` are equally valid if your team prefers more specific kinds. Spaider validation only checks that referenced IDs exist — it does not validate kind names.
+> **Note**: You can use any slug that fits your domain. For example, `cpt-billing-uc-checkout` or `cpt-auth-nfr-token-expiry` are equally valid if your team prefers more specific kinds. Cypilot validation only checks that referenced IDs exist — it does not validate kind names.
 
 ## Example
 
 See [examples/todo-app/](./examples/todo-app/) for a complete example using a universally understood Todo App theme.
 
-## Spaider Compatibility
+## Cypilot Compatibility
 
-When full Spaider framework is connected:
+When full Cypilot framework is connected:
 
-1. **Validation** — `spaider validate` will check document structure and cross-references
+1. **Validation** — `cypilot validate` will check document structure and cross-references
 2. **Traceability** — IDs will be linked across PRD → DESIGN → ADR → FEATURE → code
 3. **Deterministic gates** — CI/CD can enforce document quality before code changes
 
-For more details on Spaider taxonomy and artifact relationships, see [`TAXONOMY.md`](https://github.com/cyberfabric/Spaider/blob/main/guides/TAXONOMY.md).
+For more details on Cypilot taxonomy and artifact relationships, see [`TAXONOMY.md`](https://github.com/cyberfabric/Cypilot/blob/main/guides/TAXONOMY.md).

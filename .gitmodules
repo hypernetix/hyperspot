@@ -1,6 +1,6 @@
 [submodule "guidelines/DNA"]
 	path = guidelines/DNA
 	url = https://github.com/hypernetix/DNA
-[submodule ".spaider"]
-	path = .spaider
-	url = https://github.com/cyberfabric/spaider
+[submodule ".cypilot"]
+	path = .cypilot
+	url = https://github.com/cyberfabric/cyber-pilot

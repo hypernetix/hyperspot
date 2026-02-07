@@ -2,7 +2,7 @@
 
 ## 1. Feature Context
 
-**ID**: `spd-todo-app-feature-logic`
+**ID**: `cpt-todo-app-feature-logic`
 **Status**: NOT_STARTED
 
 ### 1.1 Overview
@@ -15,21 +15,22 @@ Enables users to efficiently navigate and manage large numbers of tasks by apply
 
 ### 1.3 Actors
 
-- `spd-todo-app-actor-user` - Applies filters and searches tasks
+- `cpt-todo-app-actor-user` - Applies filters and searches tasks
 
 ### 1.4 References
 
 - Overall Design: [DESIGN.md](../DESIGN.md)
-- Dependencies: `spd-todo-app-feature-core`
+- PRD: [PRD.md](../PRD.md)
+- Requirements: `cpt-todo-app-fr-filter-tasks`, `cpt-todo-app-nfr-response-time`, `cpt-todo-app-interface-rest-api`, `cpt-todo-app-interface-task-model`
+- Dependencies: `cpt-todo-app-feature-core`
 
-## 2. Actor Flows (SDSL)
+## 2. Actor Flows (CDSL)
 
 ### Filter Tasks Flow
 
-- [ ] **ID**: `spd-todo-app-flow-logic-filter-tasks`
+- [ ] **ID**: `cpt-todo-app-flow-logic-filter-tasks`
 
-
-**Actor**: `spd-todo-app-actor-user`
+**Actor**: `cpt-todo-app-actor-user`
 
 **Success Scenarios**:
 - Task list updates to show only matching tasks
@@ -47,13 +48,11 @@ Enables users to efficiently navigate and manage large numbers of tasks by apply
 6. [ ] - `ph-1` - DB: SELECT * FROM tasks WHERE user_id = :userId AND status = :status AND category_id = :categoryId AND priority = :priority - `inst-filter-6`
 7. [ ] - `ph-1` - **RETURN** filtered task list - `inst-filter-7`
 
-
 ### Search Tasks Flow
 
-- [ ] **ID**: `spd-todo-app-flow-logic-search-tasks`
+- [ ] **ID**: `cpt-todo-app-flow-logic-search-tasks`
 
-
-**Actor**: `spd-todo-app-actor-user`
+**Actor**: `cpt-todo-app-actor-user`
 
 **Success Scenarios**:
 - Tasks matching search query are displayed
@@ -70,13 +69,11 @@ Enables users to efficiently navigate and manage large numbers of tasks by apply
 4. [ ] - `ph-1` - DB: SELECT * FROM tasks WHERE user_id = :userId AND (title ILIKE :query OR description ILIKE :query) - `inst-search-4`
 5. [ ] - `ph-1` - **RETURN** matching tasks with highlighted matches - `inst-search-5`
 
-
-## 3. Algorithms (SDSL)
+## 3. Algorithms (CDSL)
 
 ### Task Sorting Algorithm
 
-- [ ] **ID**: `spd-todo-app-algo-logic-sort-tasks`
-
+- [ ] **ID**: `cpt-todo-app-algo-logic-sort-tasks`
 
 **Input**: Task list, sort field, sort direction
 
@@ -95,11 +92,9 @@ Enables users to efficiently navigate and manage large numbers of tasks by apply
 5. [ ] - `ph-1` - Apply direction (reverse if desc) - `inst-sort-5`
 6. [ ] - `ph-1` - **RETURN** sorted task list - `inst-sort-6`
 
-
 ### Overdue Detection Algorithm
 
-- [ ] **ID**: `spd-todo-app-algo-logic-overdue-detection`
-
+- [ ] **ID**: `cpt-todo-app-algo-logic-overdue-detection`
 
 **Input**: Task with due_date
 
@@ -117,13 +112,11 @@ Enables users to efficiently navigate and manage large numbers of tasks by apply
    1. [ ] - `ph-1` - **RETURN** { isOverdue: false, urgency: 'medium' } - `inst-overdue-5a`
 6. [ ] - `ph-1` - **RETURN** { isOverdue: false, urgency: 'low' } - `inst-overdue-6`
 
-
-## 4. States (SDSL)
+## 4. States (CDSL)
 
 ### Filter State Machine
 
-- [ ] **ID**: `spd-todo-app-state-logic-filter`
-
+- [ ] **ID**: `cpt-todo-app-state-logic-filter`
 
 **States**: all, active, completed
 
@@ -137,13 +130,11 @@ Enables users to efficiently navigate and manage large numbers of tasks by apply
 5. [ ] - `ph-1` - **FROM** completed **TO** all **WHEN** user clicks "All" tab - `inst-fstate-5`
 6. [ ] - `ph-1` - **FROM** completed **TO** active **WHEN** user clicks "Active" tab - `inst-fstate-6`
 
-
 ## 5. Requirements
 
 ### Implement Task Filtering
 
-- [ ] **ID**: `spd-todo-app-req-logic-filtering`
-
+- [ ] **ID**: `cpt-todo-app-fr-logic-filtering`
 
 **Status**: NOT_STARTED
 
@@ -155,17 +146,15 @@ Enables users to efficiently navigate and manage large numbers of tasks by apply
 - Domain: FilterCriteria value object
 
 **Implements**:
-- `spd-todo-app-flow-logic-filter-tasks`
-- `spd-todo-app-state-logic-filter`
+- `cpt-todo-app-flow-logic-filter-tasks`
+- `cpt-todo-app-state-logic-filter`
 
 **Phases**:
 - [ ] `ph-1`: Status and category filtering
 
-
 ### Implement Task Search
 
-- [ ] **ID**: `spd-todo-app-req-logic-search`
-
+- [ ] **ID**: `cpt-todo-app-fr-logic-search`
 
 **Status**: NOT_STARTED
 
@@ -177,16 +166,14 @@ Enables users to efficiently navigate and manage large numbers of tasks by apply
 - Domain: SearchQuery value object with sanitization
 
 **Implements**:
-- `spd-todo-app-flow-logic-search-tasks`
+- `cpt-todo-app-flow-logic-search-tasks`
 
 **Phases**:
 - [ ] `ph-1`: Basic ILIKE search
 
-
 ### Implement Task Sorting
 
-- [ ] **ID**: `spd-todo-app-req-logic-sorting`
-
+- [ ] **ID**: `cpt-todo-app-fr-logic-sorting`
 
 **Status**: NOT_STARTED
 
@@ -198,8 +185,8 @@ Enables users to efficiently navigate and manage large numbers of tasks by apply
 - Domain: SortCriteria value object
 
 **Implements**:
-- `spd-todo-app-algo-logic-sort-tasks`
-- `spd-todo-app-algo-logic-overdue-detection`
+- `cpt-todo-app-algo-logic-sort-tasks`
+- `cpt-todo-app-algo-logic-overdue-detection`
 
 **Phases**:
 - [ ] `ph-1`: Basic sorting by all fields
@@ -209,7 +196,7 @@ Enables users to efficiently navigate and manage large numbers of tasks by apply
 
 ### UX Considerations
 
-**ID**: `spd-todo-app-featurecontext-logic-ux`
+**ID**: `cpt-todo-app-featurecontext-logic-ux`
 
 
 Filter and sort preferences should persist in localStorage so users don't need to reapply them on each visit. Consider showing filter badges to indicate active filters.

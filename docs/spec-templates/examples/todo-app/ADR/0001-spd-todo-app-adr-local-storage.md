@@ -4,7 +4,7 @@
 
 **Status**: Accepted
 
-**ID**: `spd-todo-app-adr-local-storage`
+**ID**: `cpt-todo-app-adr-local-storage`
 
 ## Context and Problem Statement
 
@@ -14,10 +14,10 @@ The application requires offline-first functionality where users can create, edi
 
 This decision directly addresses the following requirements from PRD/DESIGN:
 
-* `spd-todo-app-nfr-offline-support` — Enables full offline functionality by providing local storage for tasks
-* `spd-todo-app-nfr-response-time` — IndexedDB's indexed queries enable <200ms response times for filtering/search operations
-* `spd-todo-app-req-filter-tasks` — Indexes on status/category/priority enable efficient filtering without loading all data
-* `spd-todo-app-principle-offline-first` — This is the core technical decision enabling the offline-first design principle
+* `cpt-todo-app-nfr-offline-support` — Enables full offline functionality by providing local storage for tasks
+* `cpt-todo-app-nfr-response-time` — IndexedDB's indexed queries enable <200ms response times for filtering/search operations
+* `cpt-todo-app-fr-filter-tasks` — Indexes on status/category/priority enable efficient filtering without loading all data
+* `cpt-todo-app-design-principle-offline-first` — This is the core technical decision enabling the offline-first design principle
 
 See:
 
@@ -97,9 +97,12 @@ Decision aligns with offline-first architecture principle. Dexie.js chosen over 
 ## Traceability
 
 **Actors**:
-* `spd-todo-app-actor-user` - Primary beneficiary of offline functionality
-* `spd-todo-app-actor-sync-service` - Syncs IndexedDB changes to server
-
+* `cpt-todo-app-actor-user` - Primary beneficiary of offline functionality
+* `cpt-todo-app-actor-sync-service` - Syncs IndexedDB changes to server
+* `cpt-todo-app-actor-notification-service` - Uses local persistence to schedule notifications reliably
+  
 **Requirements**:
-* `spd-todo-app-nfr-offline-support` - Core requirement driving this decision
-* `spd-todo-app-nfr-response-time` - IndexedDB enables fast local reads
+* `cpt-todo-app-nfr-offline-support` - Core requirement driving this decision
+* `cpt-todo-app-nfr-response-time` - IndexedDB enables fast local reads
+* `cpt-todo-app-nfr-data-persistence` - IndexedDB enables immediate local persistence
+* `cpt-todo-app-interface-task-model` - Task schema stored locally and exchanged with sync backend

@@ -37,8 +37,8 @@ ARCHITECTURE VIEWS (per IEEE 42010):
 
 DESIGN LANGUAGE:
   - Be specific and clear; no fluff, bloat, or emoji
-  - Reference PRD requirements using `spd-{system}-req-{slug}` IDs
-  - Reference ADR documents using `spd-{system}-adr-{slug}` IDs
+  - Reference PRD requirements using `cpt-{system}-{fr|nfr}-{slug}` IDs
+  - Reference ADR documents using `cpt-{system}-adr-{slug}` IDs
 =============================================================================
 -->
 
@@ -56,7 +56,7 @@ Requirements that significantly influence architecture decisions.
 
 | Requirement | Design Response |
 |-------------|-----------------|
-| `spd-{system}-fr-{slug}` | {How architecture addresses this requirement} |
+| `cpt-{system}-fr-{slug}` | {How architecture addresses this requirement} |
 
 #### NFR Allocation
 
@@ -64,7 +64,7 @@ This table maps non-functional requirements from PRD to specific design/architec
 
 | NFR ID | NFR Summary | Allocated To | Design Response | Verification Approach |
 |--------|-------------|--------------|-----------------|----------------------|
-| `spd-{system}-nfr-{slug}` | {Brief NFR description} | {Component/layer/mechanism} | {How this design element realizes the NFR} | {How compliance is verified} |
+| `cpt-{system}-nfr-{slug}` | {Brief NFR description} | {Component/layer/mechanism} | {How this design element realizes the NFR} | {How compliance is verified} |
 
 ### 1.3 Architecture Layers
 
@@ -83,21 +83,21 @@ This table maps non-functional requirements from PRD to specific design/architec
 
 #### {Principle Name}
 
-- [ ] `p2` - **ID**: `spd-{system}-principle-{slug}`
+- [ ] `p2` - **ID**: `cpt-{system}-principle-{slug}`
 
 {Description of the principle and why it matters for this system.}
 
-**ADRs**: `spd-{system}-adr-{slug}`
+**ADRs**: `cpt-{system}-adr-{slug}`
 
 ### 2.2 Constraints
 
 #### {Constraint Name}
 
-- [ ] `p2` - **ID**: `spd-{system}-constraint-{slug}`
+- [ ] `p2` - **ID**: `cpt-{system}-constraint-{slug}`
 
 {Description of the constraint (technical, regulatory, organizational) and its impact on design.}
 
-**ADRs**: `spd-{system}-adr-{slug}`
+**ADRs**: `cpt-{system}-adr-{slug}`
 
 ## 3. Technical Architecture
 
@@ -153,7 +153,7 @@ Define how this library/module interacts with external systems, including protoc
 
 #### {Interface/Protocol Name}
 
-- [ ] `p2` - **ID**: `spd-{system}-interface-{slug}`
+- [ ] `p2` - **ID**: `cpt-{system}-interface-{slug}`
 
 **Type**: {Protocol | Data Format | External System | Hardware Interface}
 
@@ -173,11 +173,11 @@ Document key interaction sequences and message flows between components.
 
 #### {Sequence Name}
 
-**ID**: `spd-{system}-seq-{slug}`
+**ID**: `cpt-{system}-seq-{slug}`
 
-**Use cases**: `spd-{system}-usecase-{slug}` (ID from PRD)
+**Use cases**: `cpt-{system}-usecase-{slug}` (ID from PRD)
 
-**Actors**: `spd-{system}-actor-{slug}` (ID from PRD)
+**Actors**: `cpt-{system}-actor-{slug}` (ID from PRD)
 
 ```mermaid
 sequenceDiagram
@@ -195,7 +195,7 @@ Document database tables, schemas, and data models.
 
 #### Table: {table_name}
 
-**ID**: `spd-{system}-dbtable-{slug}`
+**ID**: `cpt-{system}-dbtable-{slug}`
 
 **Schema**:
 
@@ -217,7 +217,7 @@ Document database tables, schemas, and data models.
 
 ### 3.7 Deployment Topology
 
-**ID**: `spd-{system}-topology-{slug}`
+**ID**: `cpt-{system}-topology-{slug}`
 
 {Infrastructure view: pods, containers, services, regions, etc.}
 

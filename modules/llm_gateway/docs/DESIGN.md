@@ -6,7 +6,7 @@
 
 LLM Gateway provides unified access to multiple LLM providers. Consumers interact with a single interface regardless of underlying provider.
 
-The architecture follows a pass-through design: Gateway normalizes requests and responses but does not interpret content or execute tools. Provider-specific adapters handle translation to/from each provider's API format. All external calls route through Outbound API Gateway for credential injection and circuit breaking. Gateway also performs health-based routing using Model Registry metrics — see [ADR-0004](./ADR/0004-fdd-llmgw-adr-circuit-breaking.md) for the distinction between infrastructure-level circuit breaking (OAGW) and business-level health routing (Gateway).
+The architecture follows a pass-through design: Gateway normalizes requests and responses but does not interpret content or execute tools. Provider-specific adapters handle translation to/from each provider's API format. All external calls route through Outbound API Gateway for credential injection and circuit breaking. Gateway also performs health-based routing using Model Registry metrics — see [ADR-0004](./ADR/0004-cpt-llmgw-adr-circuit-breaking.md) for the distinction between infrastructure-level circuit breaking (OAGW) and business-level health routing (Gateway).
 
 The system is horizontally scalable and stateless. No conversation history is stored; consumers provide full context with each request. The only state is temporary async job tracking, which can be stored in distributed cache.
 
@@ -23,35 +23,35 @@ See [PRD.md](./PRD.md) section 1 "Overview" — Key Problems Solved:
 
 | FDD ID | Solution short description |
 |--------|----------------------------|
-| `fdd-llmgw-fr-chat-completion-v1` | Provider adapters + Outbound API GW |
-| `fdd-llmgw-fr-streaming-v1` | SSE pass-through via adapters |
-| `fdd-llmgw-fr-embeddings-v1` | Provider adapters + Outbound API GW |
-| `fdd-llmgw-fr-vision-v1` | FileStorage fetch + provider adapters |
-| `fdd-llmgw-fr-image-generation-v1` | Provider adapters + FileStorage store |
-| `fdd-llmgw-fr-speech-to-text-v1` | FileStorage fetch + provider adapters |
-| `fdd-llmgw-fr-text-to-speech-v1` | Provider adapters + FileStorage store |
-| `fdd-llmgw-fr-video-understanding-v1` | FileStorage fetch + provider adapters |
-| `fdd-llmgw-fr-video-generation-v1` | Provider adapters + FileStorage store |
-| `fdd-llmgw-fr-tool-calling-v1` | Type Registry resolution + format conversion |
-| `fdd-llmgw-fr-structured-output-v1` | Schema validation |
-| `fdd-llmgw-fr-document-understanding-v1` | FileStorage fetch + provider adapters |
-| `fdd-llmgw-fr-async-jobs-v1` | Distributed cache for job state, polling abstraction |
-| `fdd-llmgw-fr-realtime-audio-v1` | WebSocket proxy via Outbound API GW |
-| `fdd-llmgw-fr-usage-tracking-v1` | Usage Tracker module integration |
-| `fdd-llmgw-fr-provider-fallback-v1` | Fallback chain from request config |
-| `fdd-llmgw-fr-timeout-v1` | TTFT + total timeout tracking |
-| `fdd-llmgw-fr-pre-call-interceptor-v1` | Hook Plugin pre_call invocation |
-| `fdd-llmgw-fr-post-response-interceptor-v1` | Hook Plugin post_response invocation |
-| `fdd-llmgw-fr-budget-enforcement-v1` | Usage Tracker check_budget / report_usage |
-| `fdd-llmgw-fr-rate-limiting-v1` | Distributed rate limiter |
-| `fdd-llmgw-fr-batch-processing-v1` | Provider batch API abstraction |
-| `fdd-llmgw-fr-audit-events-v1` | Audit Module event emission |
+| `cpt-llmgw-fr-chat-completion-v1` | Provider adapters + Outbound API GW |
+| `cpt-llmgw-fr-streaming-v1` | SSE pass-through via adapters |
+| `cpt-llmgw-fr-embeddings-v1` | Provider adapters + Outbound API GW |
+| `cpt-llmgw-fr-vision-v1` | FileStorage fetch + provider adapters |
+| `cpt-llmgw-fr-image-generation-v1` | Provider adapters + FileStorage store |
+| `cpt-llmgw-fr-speech-to-text-v1` | FileStorage fetch + provider adapters |
+| `cpt-llmgw-fr-text-to-speech-v1` | Provider adapters + FileStorage store |
+| `cpt-llmgw-fr-video-understanding-v1` | FileStorage fetch + provider adapters |
+| `cpt-llmgw-fr-video-generation-v1` | Provider adapters + FileStorage store |
+| `cpt-llmgw-fr-tool-calling-v1` | Type Registry resolution + format conversion |
+| `cpt-llmgw-fr-structured-output-v1` | Schema validation |
+| `cpt-llmgw-fr-document-understanding-v1` | FileStorage fetch + provider adapters |
+| `cpt-llmgw-fr-async-jobs-v1` | Distributed cache for job state, polling abstraction |
+| `cpt-llmgw-fr-realtime-audio-v1` | WebSocket proxy via Outbound API GW |
+| `cpt-llmgw-fr-usage-tracking-v1` | Usage Tracker module integration |
+| `cpt-llmgw-fr-provider-fallback-v1` | Fallback chain from request config |
+| `cpt-llmgw-fr-timeout-v1` | TTFT + total timeout tracking |
+| `cpt-llmgw-fr-pre-call-interceptor-v1` | Hook Plugin pre_call invocation |
+| `cpt-llmgw-fr-post-response-interceptor-v1` | Hook Plugin post_response invocation |
+| `cpt-llmgw-fr-budget-enforcement-v1` | Usage Tracker check_budget / report_usage |
+| `cpt-llmgw-fr-rate-limiting-v1` | Distributed rate limiter |
+| `cpt-llmgw-fr-batch-processing-v1` | Provider batch API abstraction |
+| `cpt-llmgw-fr-audit-events-v1` | Audit Module event emission |
 
 #### Non-functional requirements
 
 | FDD ID | Solution short description |
 |--------|----------------------------|
-| `fdd-llmgw-nfr-scalability-v1` | Stateless design, distributed cache for async jobs |
+| `cpt-llmgw-nfr-scalability-v1` | Stateless design, distributed cache for async jobs |
 
 ### 1.3 Architecture Layers
 
@@ -68,65 +68,65 @@ See [PRD.md](./PRD.md) section 1 "Overview" — Key Problems Solved:
 
 #### Stateless
 
-**ID**: `fdd-llmgw-principle-stateless`
+**ID**: `cpt-llmgw-principle-stateless`
 
-<!-- fdd-id-content -->
-**ADRs**: `fdd-llmgw-adr-stateless`
+<!-- cpt-id-content -->
+**ADRs**: `cpt-llmgw-adr-stateless`
 
 Gateway does not store conversation history. Consumer provides full context with each request. Exception: temporary async job state.
-<!-- fdd-id-content -->
+<!-- cpt-id-content -->
 
 #### Pass-through
 
-**ID**: `fdd-llmgw-principle-pass-through`
+**ID**: `cpt-llmgw-principle-pass-through`
 
-<!-- fdd-id-content -->
-**ADRs**: `fdd-llmgw-adr-pass-through`
+<!-- cpt-id-content -->
+**ADRs**: `cpt-llmgw-adr-pass-through`
 
 Gateway normalizes but does not interpret content. Tool execution and response parsing are consumer responsibility.
-<!-- fdd-id-content -->
+<!-- cpt-id-content -->
 
 ### 2.2: Constraints
 
 #### Provider Rate Limits
 
-**ID**: `fdd-llmgw-constraint-provider-rate-limits`
+**ID**: `cpt-llmgw-constraint-provider-rate-limits`
 
-<!-- fdd-id-content -->
+<!-- cpt-id-content -->
 Gateway is subject to provider TPM/RPM quotas. Cannot exceed limits imposed by external providers.
-<!-- fdd-id-content -->
+<!-- cpt-id-content -->
 
 #### Provider Context Windows
 
-**ID**: `fdd-llmgw-constraint-provider-context-windows`
+**ID**: `cpt-llmgw-constraint-provider-context-windows`
 
-<!-- fdd-id-content -->
+<!-- cpt-id-content -->
 Request size limited by provider context window. Gateway cannot send requests exceeding provider limits.
-<!-- fdd-id-content -->
+<!-- cpt-id-content -->
 
 #### Outbound API Gateway Dependency
 
-**ID**: `fdd-llmgw-constraint-outbound-dependency`
+**ID**: `cpt-llmgw-constraint-outbound-dependency`
 
-<!-- fdd-id-content -->
+<!-- cpt-id-content -->
 All external API calls must route through Outbound API Gateway. Direct provider calls are not permitted.
-<!-- fdd-id-content -->
+<!-- cpt-id-content -->
 
 #### No Credential Storage
 
-**ID**: `fdd-llmgw-constraint-no-credentials`
+**ID**: `cpt-llmgw-constraint-no-credentials`
 
-<!-- fdd-id-content -->
+<!-- cpt-id-content -->
 Gateway does not store provider credentials. Credential injection handled by Outbound API Gateway.
-<!-- fdd-id-content -->
+<!-- cpt-id-content -->
 
 #### Content Logging Restrictions
 
-**ID**: `fdd-llmgw-constraint-content-logging`
+**ID**: `cpt-llmgw-constraint-content-logging`
 
-<!-- fdd-id-content -->
+<!-- cpt-id-content -->
 Full request/response content is not logged due to PII concerns. Only metadata (tokens, latency, model, tenant) is logged.
-<!-- fdd-id-content -->
+<!-- cpt-id-content -->
 
 ## 3. Technical Architecture
 
@@ -338,8 +338,8 @@ sequenceDiagram
 
 #### Chat Completion
 
-**Use cases**: `fdd-llmgw-usecase-chat-completion-v1`
-**Actors**: `fdd-llmgw-actor-consumer`
+**Use cases**: `cpt-llmgw-usecase-chat-completion-v1`
+**Actors**: `cpt-llmgw-actor-consumer`
 
 ```mermaid
 sequenceDiagram
@@ -359,8 +359,8 @@ sequenceDiagram
 
 #### Streaming Chat Completion
 
-**Use cases**: `fdd-llmgw-usecase-streaming-v1`
-**Actors**: `fdd-llmgw-actor-consumer`
+**Use cases**: `cpt-llmgw-usecase-streaming-v1`
+**Actors**: `cpt-llmgw-actor-consumer`
 
 ```mermaid
 sequenceDiagram
@@ -382,8 +382,8 @@ sequenceDiagram
 
 #### Embeddings Generation
 
-**Use cases**: `fdd-llmgw-usecase-embeddings-v1`
-**Actors**: `fdd-llmgw-actor-consumer`
+**Use cases**: `cpt-llmgw-usecase-embeddings-v1`
+**Actors**: `cpt-llmgw-actor-consumer`
 
 ```mermaid
 sequenceDiagram
@@ -402,8 +402,8 @@ sequenceDiagram
 
 #### Vision (Image Analysis)
 
-**Use cases**: `fdd-llmgw-usecase-vision-v1`
-**Actors**: `fdd-llmgw-actor-consumer`
+**Use cases**: `cpt-llmgw-usecase-vision-v1`
+**Actors**: `cpt-llmgw-actor-consumer`
 
 ```mermaid
 sequenceDiagram
@@ -425,8 +425,8 @@ sequenceDiagram
 
 #### Image Generation
 
-**Use cases**: `fdd-llmgw-usecase-image-generation-v1`
-**Actors**: `fdd-llmgw-actor-consumer`
+**Use cases**: `cpt-llmgw-usecase-image-generation-v1`
+**Actors**: `cpt-llmgw-actor-consumer`
 
 ```mermaid
 sequenceDiagram
@@ -448,8 +448,8 @@ sequenceDiagram
 
 #### Speech-to-Text
 
-**Use cases**: `fdd-llmgw-usecase-speech-to-text-v1`
-**Actors**: `fdd-llmgw-actor-consumer`
+**Use cases**: `cpt-llmgw-usecase-speech-to-text-v1`
+**Actors**: `cpt-llmgw-actor-consumer`
 
 ```mermaid
 sequenceDiagram
@@ -471,8 +471,8 @@ sequenceDiagram
 
 #### Text-to-Speech
 
-**Use cases**: `fdd-llmgw-usecase-text-to-speech-v1`
-**Actors**: `fdd-llmgw-actor-consumer`
+**Use cases**: `cpt-llmgw-usecase-text-to-speech-v1`
+**Actors**: `cpt-llmgw-actor-consumer`
 
 ```mermaid
 sequenceDiagram
@@ -494,8 +494,8 @@ sequenceDiagram
 
 #### Video Understanding
 
-**Use cases**: `fdd-llmgw-usecase-video-understanding-v1`
-**Actors**: `fdd-llmgw-actor-consumer`
+**Use cases**: `cpt-llmgw-usecase-video-understanding-v1`
+**Actors**: `cpt-llmgw-actor-consumer`
 
 ```mermaid
 sequenceDiagram
@@ -517,8 +517,8 @@ sequenceDiagram
 
 #### Video Generation
 
-**Use cases**: `fdd-llmgw-usecase-video-generation-v1`
-**Actors**: `fdd-llmgw-actor-consumer`
+**Use cases**: `cpt-llmgw-usecase-video-generation-v1`
+**Actors**: `cpt-llmgw-actor-consumer`
 
 ```mermaid
 sequenceDiagram
@@ -540,8 +540,8 @@ sequenceDiagram
 
 #### Tool/Function Calling
 
-**Use cases**: `fdd-llmgw-usecase-tool-calling-v1`
-**Actors**: `fdd-llmgw-actor-consumer`
+**Use cases**: `cpt-llmgw-usecase-tool-calling-v1`
+**Actors**: `cpt-llmgw-actor-consumer`
 
 ```mermaid
 sequenceDiagram
@@ -570,8 +570,8 @@ sequenceDiagram
 
 #### Structured Output
 
-**Use cases**: `fdd-llmgw-usecase-structured-output-v1`
-**Actors**: `fdd-llmgw-actor-consumer`
+**Use cases**: `cpt-llmgw-usecase-structured-output-v1`
+**Actors**: `cpt-llmgw-actor-consumer`
 
 ```mermaid
 sequenceDiagram
@@ -591,8 +591,8 @@ sequenceDiagram
 
 #### Document Understanding
 
-**Use cases**: `fdd-llmgw-usecase-document-understanding-v1`
-**Actors**: `fdd-llmgw-actor-consumer`
+**Use cases**: `cpt-llmgw-usecase-document-understanding-v1`
+**Actors**: `cpt-llmgw-actor-consumer`
 
 ```mermaid
 sequenceDiagram
@@ -614,8 +614,8 @@ sequenceDiagram
 
 #### Async Jobs
 
-**Use cases**: `fdd-llmgw-usecase-async-jobs-v1`
-**Actors**: `fdd-llmgw-actor-consumer`
+**Use cases**: `cpt-llmgw-usecase-async-jobs-v1`
+**Actors**: `cpt-llmgw-actor-consumer`
 
 ```mermaid
 sequenceDiagram
@@ -641,8 +641,8 @@ sequenceDiagram
 
 #### Realtime Audio
 
-**Use cases**: `fdd-llmgw-usecase-realtime-audio-v1`
-**Actors**: `fdd-llmgw-actor-consumer`
+**Use cases**: `cpt-llmgw-usecase-realtime-audio-v1`
+**Actors**: `cpt-llmgw-actor-consumer`
 
 ```mermaid
 sequenceDiagram
@@ -670,8 +670,8 @@ sequenceDiagram
 
 #### Provider Fallback
 
-**Use cases**: `fdd-llmgw-usecase-provider-fallback-v1`
-**Actors**: `fdd-llmgw-actor-consumer`
+**Use cases**: `cpt-llmgw-usecase-provider-fallback-v1`
+**Actors**: `cpt-llmgw-actor-consumer`
 
 ```mermaid
 sequenceDiagram
@@ -696,8 +696,8 @@ sequenceDiagram
 
 #### Timeout Enforcement
 
-**Use cases**: `fdd-llmgw-usecase-timeout-v1`
-**Actors**: `fdd-llmgw-actor-consumer`
+**Use cases**: `cpt-llmgw-usecase-timeout-v1`
+**Actors**: `cpt-llmgw-actor-consumer`
 
 ```mermaid
 sequenceDiagram
@@ -733,8 +733,8 @@ sequenceDiagram
 
 #### Pre-Call Interceptor
 
-**Use cases**: `fdd-llmgw-usecase-pre-call-interceptor-v1`
-**Actors**: `fdd-llmgw-actor-consumer`
+**Use cases**: `cpt-llmgw-usecase-pre-call-interceptor-v1`
+**Actors**: `cpt-llmgw-actor-consumer`
 
 ```mermaid
 sequenceDiagram
@@ -758,8 +758,8 @@ sequenceDiagram
 
 #### Post-Response Interceptor
 
-**Use cases**: `fdd-llmgw-usecase-post-response-interceptor-v1`
-**Actors**: `fdd-llmgw-actor-consumer`
+**Use cases**: `cpt-llmgw-usecase-post-response-interceptor-v1`
+**Actors**: `cpt-llmgw-actor-consumer`
 
 ```mermaid
 sequenceDiagram
@@ -785,8 +785,8 @@ sequenceDiagram
 
 #### Rate Limiting
 
-**Use cases**: `fdd-llmgw-usecase-rate-limiting-v1`
-**Actors**: `fdd-llmgw-actor-consumer`
+**Use cases**: `cpt-llmgw-usecase-rate-limiting-v1`
+**Actors**: `cpt-llmgw-actor-consumer`
 
 ```mermaid
 sequenceDiagram
@@ -810,8 +810,8 @@ sequenceDiagram
 
 #### Budget Enforcement
 
-**Use cases**: `fdd-llmgw-fr-budget-enforcement-v1`
-**Actors**: `fdd-llmgw-actor-consumer`, `fdd-llmgw-actor-usage-tracker`
+**Use cases**: `cpt-llmgw-fr-budget-enforcement-v1`
+**Actors**: `cpt-llmgw-actor-consumer`, `cpt-llmgw-actor-usage-tracker`
 
 ```mermaid
 sequenceDiagram
@@ -847,8 +847,8 @@ sequenceDiagram
 
 #### Batch Processing
 
-**Use cases**: `fdd-llmgw-usecase-batch-processing-v1`
-**Actors**: `fdd-llmgw-actor-consumer`
+**Use cases**: `cpt-llmgw-usecase-batch-processing-v1`
+**Actors**: `cpt-llmgw-actor-consumer`
 
 ```mermaid
 sequenceDiagram
@@ -894,3 +894,11 @@ This is the same pattern used for async jobs (see ADR-0001).
 ## 4. Additional Context
 
 <!-- To be added as needed -->
+
+## 5. Traceability
+
+**PRD Actors**: `cpt-llmgw-actor-api-user`, `cpt-llmgw-actor-provider`, `cpt-llmgw-actor-hook-plugin`, `cpt-llmgw-actor-audit-module`
+ 
+**ADRs**: `cpt-llmgw-adr-file-storage`, `cpt-llmgw-adr-circuit-breaking`
+
+**Related module actors**: `cpt-file-storage-actor-llm-gateway`, `cpt-model-registry-actor-tenant-admin`, `cpt-model-registry-actor-llm-gateway`, `cpt-model-registry-actor-outbound-api-gateway`, `cpt-model-registry-actor-provider-api`, `cpt-type-registry-actor-llm-gateway`
