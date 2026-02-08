@@ -4,7 +4,7 @@
 
 **Status**: Accepted
 
-**ID**: `cpt-todo-app-adr-optimistic-ui`
+**ID**: `cpt-examples-todo-app-adr-optimistic-ui`
 
 ## Context and Problem Statement
 
@@ -37,7 +37,7 @@ Chosen option: **Optimistically update UI and reconcile in background**.
 
 Confirmed via:
 
-- UI performance benchmarks demonstrating perceived latency stays within `cpt-todo-app-nfr-response-time`
+- UI performance benchmarks demonstrating perceived latency stays within `cpt-examples-todo-app-nfr-response-time`
 - Integration tests that cover offline mode + background sync reconciliation
 - Code review ensuring rollback/retry logic exists for failed sync events
 
@@ -48,11 +48,11 @@ Confirmed via:
 
 This decision directly addresses the following requirements or design elements:
 
-- `cpt-todo-app-nfr-response-time`
-- `cpt-todo-app-nfr-offline-support`
-- `cpt-todo-app-design-principle-optimistic-updates`
-- `cpt-todo-app-design-principle-offline-first`
-- `cpt-todo-app-flow-core-create-task`
-- `cpt-todo-app-flow-core-delete-task`
-- `cpt-todo-app-actor-user`
-- `cpt-todo-app-actor-sync-service`
+- `cpt-examples-todo-app-nfr-response-time`
+- `cpt-examples-todo-app-nfr-offline-support`
+- `cpt-examples-todo-app-principle-optimistic-updates`
+- `cpt-examples-todo-app-principle-offline-first`
+- `cpt-examples-todo-app-flow-core-create-task`
+- `cpt-examples-todo-app-flow-core-delete-task`
+- `cpt-examples-todo-app-actor-user`
+- `cpt-examples-todo-app-actor-sync-service`

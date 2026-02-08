@@ -188,12 +188,12 @@ docs/arch/common/ or docs/arch/{subsystem}/ or {module}/
 Both ADR and Feature files MUST use the prefix `NNNN-{cpt-id}.md`:
 
 **ADRs**:
-- `ADR/0001-cpt-todo-app-adr-local-storage.md`
-- `ADR/0002-cpt-todo-app-adr-optimistic-ui.md`
+- `ADR/0001-cpt-examples-todo-app-adr-local-storage.md`
+- `ADR/0002-cpt-examples-todo-app-adr-optimistic-ui.md`
 
 **Features**:
-- `features/0001-cpt-todo-app-feature-core.md`
-- `features/0002-cpt-todo-app-feature-logic.md`
+- `features/0001-cpt-examples-todo-app-feature-core.md`
+- `features/0002-cpt-examples-todo-app-feature-logic.md`
 
 ## Cypilot ID Convention
 
@@ -284,12 +284,12 @@ These are **suggested** kind names for common artifact types. Cypilot does not e
 |`dod`|Definition of done / implementation requirement|
 
 **Examples**:
-- `cpt-todo-app-actor-user` — Actor ID
-- `cpt-todo-app-fr-create-task` — Functional requirement ID
-- `cpt-todo-app-nfr-response-time` — Non-functional requirement ID
-- `cpt-todo-app-usecase-create-task` — Use case ID
-- `cpt-todo-app-adr-local-storage` — ADR ID
-- `cpt-todo-app-feature-core` — Feature ID
+- `cpt-examples-todo-app-actor-user` — Actor ID
+- `cpt-examples-todo-app-fr-create-task` — Functional requirement ID
+- `cpt-examples-todo-app-nfr-response-time` — Non-functional requirement ID
+- `cpt-examples-todo-app-usecase-create-task` — Use case ID
+- `cpt-examples-todo-app-adr-local-storage` — ADR ID
+- `cpt-examples-todo-app-feature-core` — Feature ID
 
 > **Note**: You can use any slug that fits your domain. For example, `cpt-billing-usecase-checkout` or `cpt-auth-nfr-token-expiry` are equally valid if your team prefers more specific kinds. Cypilot validation only checks that referenced IDs exist — it does not validate kind names.
 

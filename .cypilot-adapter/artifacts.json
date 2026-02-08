@@ -23,7 +23,7 @@
       "children": [
         {
           "name": "llm_gateway",
-          "slug": "llm_gateway",
+          "slug": "llm-gateway",
           "kit": "cf-sdlc",
           "artifacts_dir": "modules/llm_gateway/docs",
           "artifacts": [
@@ -70,7 +70,7 @@
         },
         {
           "name": "file_storage",
-          "slug": "file_storage",
+          "slug": "file-storage",
           "kit": "cf-sdlc",
           "artifacts_dir": "modules/file_storage/docs",
           "artifacts": [
@@ -87,7 +87,7 @@
         },
         {
           "name": "model_registry",
-          "slug": "model_registry",
+          "slug": "model-registry",
           "kit": "cf-sdlc",
           "artifacts_dir": "modules/model_registry/docs",
           "artifacts": [
@@ -104,7 +104,7 @@
         },
         {
           "name": "type_registry",
-          "slug": "type_registry",
+          "slug": "type-registry",
           "kit": "cf-sdlc",
           "artifacts_dir": "modules/type_registry/docs",
           "artifacts": [
@@ -124,74 +124,7 @@
           "slug": "oagw",
           "kit": "cf-sdlc",
           "artifacts_dir": "modules/system/oagw",
-          "artifacts": [
-            {
-              "name": "OAGW PRD",
-              "path": "modules/system/oagw/PRD.md",
-              "kind": "PRD",
-              "traceability": "FULL"
-            },
-            {
-              "name": "OAGW DESIGN",
-              "path": "modules/system/oagw/DESIGN.md",
-              "kind": "DESIGN",
-              "traceability": "FULL"
-            },
-            {
-              "name": "OAGW ADR backpressure queueing",
-              "path": "modules/system/oagw/docs/adr-backpressure-queueing.md",
-              "kind": "ADR",
-              "traceability": "FULL"
-            },
-            {
-              "name": "OAGW ADR circuit breaker",
-              "path": "modules/system/oagw/docs/adr-circuit-breaker.md",
-              "kind": "ADR",
-              "traceability": "FULL"
-            },
-            {
-              "name": "OAGW ADR concurrency control",
-              "path": "modules/system/oagw/docs/adr-concurrency-control.md",
-              "kind": "ADR",
-              "traceability": "FULL"
-            },
-            {
-              "name": "OAGW ADR CORS",
-              "path": "modules/system/oagw/docs/adr-cors.md",
-              "kind": "ADR",
-              "traceability": "FULL"
-            },
-            {
-              "name": "OAGW ADR error source distinction",
-              "path": "modules/system/oagw/docs/adr-error-source-distinction.md",
-              "kind": "ADR",
-              "traceability": "FULL"
-            },
-            {
-              "name": "OAGW ADR gRPC support",
-              "path": "modules/system/oagw/docs/adr-grpc-support.md",
-              "kind": "ADR",
-              "traceability": "FULL"
-            },
-            {
-              "name": "OAGW ADR rate limiting",
-              "path": "modules/system/oagw/docs/adr-rate-limiting.md",
-              "kind": "ADR",
-              "traceability": "FULL"
-            },
-            {
-              "name": "OAGW ADR resource identification",
-              "path": "modules/system/oagw/docs/adr-resource-identification.md",
-              "kind": "ADR",
-              "traceability": "FULL"
-            },
-            {
-              "name": "OAGW ADR Rust ABI client library",
-              "path": "modules/system/oagw/docs/adr-rust-abi-client-library.md",
-              "kind": "ADR",
-              "traceability": "FULL"
-            }
-          ],
+          "artifacts": [],
           "codebase": [
             { "name": "OAGW", "path": "modules/system/oagw", "extensions": [".rs"] }
           ]

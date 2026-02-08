@@ -4,7 +4,7 @@
 
 **Status**: Accepted
 
-**ID**: `cpt-llmgw-adr-file-storage`
+**ID**: `cpt-cyberfabric-llm-gateway-adr-file-storage`
 
 ## Context and Problem Statement
 
@@ -39,22 +39,22 @@ Chosen option: "FileStorage URLs", because it keeps API requests small, provides
 ## Related Design Elements
 
 **Requirements**:
-* `cpt-llmgw-fr-vision-v1` - Fetches images from FileStorage
-* `cpt-llmgw-fr-image-generation-v1` - Stores generated images
-* `cpt-llmgw-fr-speech-to-text-v1` - Fetches audio from FileStorage
-* `cpt-llmgw-fr-text-to-speech-v1` - Stores generated audio
-* `cpt-llmgw-fr-video-understanding-v1` - Fetches video from FileStorage
-* `cpt-llmgw-fr-video-generation-v1` - Stores generated video
-* `cpt-llmgw-fr-document-understanding-v1` - Fetches documents from FileStorage
+* `cpt-cyberfabric-llm-gateway-fr-vision-v1` - Fetches images from FileStorage
+* `cpt-cyberfabric-llm-gateway-fr-image-generation-v1` - Stores generated images
+* `cpt-cyberfabric-llm-gateway-fr-speech-to-text-v1` - Fetches audio from FileStorage
+* `cpt-cyberfabric-llm-gateway-fr-text-to-speech-v1` - Stores generated audio
+* `cpt-cyberfabric-llm-gateway-fr-video-understanding-v1` - Fetches video from FileStorage
+* `cpt-cyberfabric-llm-gateway-fr-video-generation-v1` - Stores generated video
+* `cpt-cyberfabric-llm-gateway-fr-document-understanding-v1` - Fetches documents from FileStorage
 
 **Actors**:
-* `cpt-llmgw-actor-consumer` - Provides media URLs in requests
-* `cpt-llmgw-actor-provider` - Consumes media URLs for multimodal processing
+* `cpt-cyberfabric-llm-gateway-actor-consumer` - Provides media URLs in requests
+* `cpt-cyberfabric-llm-gateway-actor-provider` - Consumes media URLs for multimodal processing
 
 **Constraints**:
-* `cpt-llmgw-constraint-provider-context-windows` - Media must not bloat request payloads
-* `cpt-llmgw-constraint-content-logging` - Media content must not be logged
+* `cpt-cyberfabric-llm-gateway-constraint-provider-context-windows` - Media must not bloat request payloads
+* `cpt-cyberfabric-llm-gateway-constraint-content-logging` - Media content must not be logged
 
 **References**:
-* PRD: `cpt-llmgw-nfr-scalability-v1`
-* DESIGN: `cpt-llmgw-principle-pass-through`
+* PRD: `cpt-cyberfabric-llm-gateway-nfr-scalability-v1`
+* DESIGN: `cpt-cyberfabric-llm-gateway-principle-pass-through`

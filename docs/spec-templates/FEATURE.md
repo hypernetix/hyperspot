@@ -27,7 +27,8 @@ CDSL PSEUDO-CODE:
 
 ## 1. Feature Context
 
-- [ ] `p2` - **ID**: `cpt-{system}-feature-{slug}`
+<!-- reference to DECOMPOSITION entry -->
+- [ ] `p2` `cpt-{system}-feature-{slug}`
 
 ### 1.1 Overview
 

@@ -6,7 +6,7 @@
 
 LLM Gateway provides unified access to multiple LLM providers. Consumers interact with a single interface regardless of underlying provider.
 
-The architecture follows a pass-through design: Gateway normalizes requests and responses but does not interpret content or execute tools. Provider-specific adapters handle translation to/from each provider's API format. All external calls route through Outbound API Gateway for credential injection and circuit breaking. Gateway also performs health-based routing using Model Registry metrics — see [ADR-0004](./ADR/0004-cpt-llmgw-adr-circuit-breaking.md) for the distinction between infrastructure-level circuit breaking (OAGW) and business-level health routing (Gateway).
+The architecture follows a pass-through design: Gateway normalizes requests and responses but does not interpret content or execute tools. Provider-specific adapters handle translation to/from each provider's API format. All external calls route through Outbound API Gateway for credential injection and circuit breaking. Gateway also performs health-based routing using Model Registry metrics — see [ADR-0004](./ADR/0004-cpt-cyberfabric-llm-gateway-adr-circuit-breaking.md) for the distinction between infrastructure-level circuit breaking (OAGW) and business-level health routing (Gateway).
 
 The system is horizontally scalable and stateless. No conversation history is stored; consumers provide full context with each request. The only state is temporary async job tracking, which can be stored in distributed cache.
 
@@ -23,35 +23,35 @@ See [PRD.md](./PRD.md) section 1 "Overview" — Key Problems Solved:
 
 | Cypilot ID | Solution short description |
 |--------|----------------------------|
-| `cpt-llmgw-fr-chat-completion-v1` | Provider adapters + Outbound API GW |
-| `cpt-llmgw-fr-streaming-v1` | SSE pass-through via adapters |
-| `cpt-llmgw-fr-embeddings-v1` | Provider adapters + Outbound API GW |
-| `cpt-llmgw-fr-vision-v1` | FileStorage fetch + provider adapters |
-| `cpt-llmgw-fr-image-generation-v1` | Provider adapters + FileStorage store |
-| `cpt-llmgw-fr-speech-to-text-v1` | FileStorage fetch + provider adapters |
-| `cpt-llmgw-fr-text-to-speech-v1` | Provider adapters + FileStorage store |
-| `cpt-llmgw-fr-video-understanding-v1` | FileStorage fetch + provider adapters |
-| `cpt-llmgw-fr-video-generation-v1` | Provider adapters + FileStorage store |
-| `cpt-llmgw-fr-tool-calling-v1` | Type Registry resolution + format conversion |
-| `cpt-llmgw-fr-structured-output-v1` | Schema validation |
-| `cpt-llmgw-fr-document-understanding-v1` | FileStorage fetch + provider adapters |
-| `cpt-llmgw-fr-async-jobs-v1` | Distributed cache for job state, polling abstraction |
-| `cpt-llmgw-fr-realtime-audio-v1` | WebSocket proxy via Outbound API GW |
-| `cpt-llmgw-fr-usage-tracking-v1` | Usage Tracker module integration |
-| `cpt-llmgw-fr-provider-fallback-v1` | Fallback chain from request config |
-| `cpt-llmgw-fr-timeout-v1` | TTFT + total timeout tracking |
-| `cpt-llmgw-fr-pre-call-interceptor-v1` | Hook Plugin pre_call invocation |
-| `cpt-llmgw-fr-post-response-interceptor-v1` | Hook Plugin post_response invocation |
-| `cpt-llmgw-fr-budget-enforcement-v1` | Usage Tracker check_budget / report_usage |
-| `cpt-llmgw-fr-rate-limiting-v1` | Distributed rate limiter |
-| `cpt-llmgw-fr-batch-processing-v1` | Provider batch API abstraction |
-| `cpt-llmgw-fr-audit-events-v1` | Audit Module event emission |
+| `cpt-cyberfabric-llm-gateway-fr-chat-completion-v1` | Provider adapters + Outbound API GW |
+| `cpt-cyberfabric-llm-gateway-fr-streaming-v1` | SSE pass-through via adapters |
+| `cpt-cyberfabric-llm-gateway-fr-embeddings-v1` | Provider adapters + Outbound API GW |
+| `cpt-cyberfabric-llm-gateway-fr-vision-v1` | FileStorage fetch + provider adapters |
+| `cpt-cyberfabric-llm-gateway-fr-image-generation-v1` | Provider adapters + FileStorage store |
+| `cpt-cyberfabric-llm-gateway-fr-speech-to-text-v1` | FileStorage fetch + provider adapters |
+| `cpt-cyberfabric-llm-gateway-fr-text-to-speech-v1` | Provider adapters + FileStorage store |
+| `cpt-cyberfabric-llm-gateway-fr-video-understanding-v1` | FileStorage fetch + provider adapters |
+| `cpt-cyberfabric-llm-gateway-fr-video-generation-v1` | Provider adapters + FileStorage store |
+| `cpt-cyberfabric-llm-gateway-fr-tool-calling-v1` | Type Registry resolution + format conversion |
+| `cpt-cyberfabric-llm-gateway-fr-structured-output-v1` | Schema validation |
+| `cpt-cyberfabric-llm-gateway-fr-document-understanding-v1` | FileStorage fetch + provider adapters |
+| `cpt-cyberfabric-llm-gateway-fr-async-jobs-v1` | Distributed cache for job state, polling abstraction |
+| `cpt-cyberfabric-llm-gateway-fr-realtime-audio-v1` | WebSocket proxy via Outbound API GW |
+| `cpt-cyberfabric-llm-gateway-fr-usage-tracking-v1` | Usage Tracker module integration |
+| `cpt-cyberfabric-llm-gateway-fr-provider-fallback-v1` | Fallback chain from request config |
+| `cpt-cyberfabric-llm-gateway-fr-timeout-v1` | TTFT + total timeout tracking |
+| `cpt-cyberfabric-llm-gateway-fr-pre-call-interceptor-v1` | Hook Plugin pre_call invocation |
+| `cpt-cyberfabric-llm-gateway-fr-post-response-interceptor-v1` | Hook Plugin post_response invocation |
+| `cpt-cyberfabric-llm-gateway-fr-budget-enforcement-v1` | Usage Tracker check_budget / report_usage |
+| `cpt-cyberfabric-llm-gateway-fr-rate-limiting-v1` | Distributed rate limiter |
+| `cpt-cyberfabric-llm-gateway-fr-batch-processing-v1` | Provider batch API abstraction |
+| `cpt-cyberfabric-llm-gateway-fr-audit-events-v1` | Audit Module event emission |
 
 #### Non-functional requirements
 
 | Cypilot ID | Solution short description |
 |--------|----------------------------|
-| `cpt-llmgw-nfr-scalability-v1` | Stateless design, distributed cache for async jobs |
+| `cpt-cyberfabric-llm-gateway-nfr-scalability-v1` | Stateless design, distributed cache for async jobs |
 
 ### 1.3 Architecture Layers
 
@@ -68,20 +68,20 @@ See [PRD.md](./PRD.md) section 1 "Overview" — Key Problems Solved:
 
 #### Stateless
 
-**ID**: `cpt-llmgw-principle-stateless`
+**ID**: `cpt-cyberfabric-llm-gateway-principle-stateless`
 
 <!-- cpt-id-content -->
-**ADRs**: `cpt-llmgw-adr-stateless`
+**ADRs**: `cpt-cyberfabric-llm-gateway-adr-stateless`
 
 Gateway does not store conversation history. Consumer provides full context with each request. Exception: temporary async job state.
 <!-- cpt-id-content -->
 
 #### Pass-through
 
-**ID**: `cpt-llmgw-principle-pass-through`
+**ID**: `cpt-cyberfabric-llm-gateway-principle-pass-through`
 
 <!-- cpt-id-content -->
-**ADRs**: `cpt-llmgw-adr-pass-through`
+**ADRs**: `cpt-cyberfabric-llm-gateway-adr-pass-through`
 
 Gateway normalizes but does not interpret content. Tool execution and response parsing are consumer responsibility.
 <!-- cpt-id-content -->
@@ -90,7 +90,7 @@ Gateway normalizes but does not interpret content. Tool execution and response p
 
 #### Provider Rate Limits
 
-**ID**: `cpt-llmgw-constraint-provider-rate-limits`
+**ID**: `cpt-cyberfabric-llm-gateway-constraint-provider-rate-limits`
 
 <!-- cpt-id-content -->
 Gateway is subject to provider TPM/RPM quotas. Cannot exceed limits imposed by external providers.
@@ -98,7 +98,7 @@ Gateway is subject to provider TPM/RPM quotas. Cannot exceed limits imposed by e
 
 #### Provider Context Windows
 
-**ID**: `cpt-llmgw-constraint-provider-context-windows`
+**ID**: `cpt-cyberfabric-llm-gateway-constraint-provider-context-windows`
 
 <!-- cpt-id-content -->
 Request size limited by provider context window. Gateway cannot send requests exceeding provider limits.
@@ -106,7 +106,7 @@ Request size limited by provider context window. Gateway cannot send requests ex
 
 #### Outbound API Gateway Dependency
 
-**ID**: `cpt-llmgw-constraint-outbound-dependency`
+**ID**: `cpt-cyberfabric-llm-gateway-constraint-outbound-dependency`
 
 <!-- cpt-id-content -->
 All external API calls must route through Outbound API Gateway. Direct provider calls are not permitted.
@@ -114,7 +114,7 @@ All external API calls must route through Outbound API Gateway. Direct provider 
 
 #### No Credential Storage
 
-**ID**: `cpt-llmgw-constraint-no-credentials`
+**ID**: `cpt-cyberfabric-llm-gateway-constraint-no-credentials`
 
 <!-- cpt-id-content -->
 Gateway does not store provider credentials. Credential injection handled by Outbound API Gateway.
@@ -122,7 +122,7 @@ Gateway does not store provider credentials. Credential injection handled by Out
 
 #### Content Logging Restrictions
 
-**ID**: `cpt-llmgw-constraint-content-logging`
+**ID**: `cpt-cyberfabric-llm-gateway-constraint-content-logging`
 
 <!-- cpt-id-content -->
 Full request/response content is not logged due to PII concerns. Only metadata (tokens, latency, model, tenant) is logged.
@@ -223,12 +223,24 @@ graph TB
 ```
 
 **Components**:
-- **API Layer**: Request/response handling, validation, routing
-- **Application Layer**: Request orchestration, provider selection, response normalization
-- **Provider Adapters**: Provider-specific request/response translation
-- **Hook Plugin**: Pre-call and post-response interception (moderation, PII, transformation)
-- **Usage Tracker**: Budget checks and usage reporting
-- **Audit Module**: Compliance event logging
+ - [ ] `p1` - **ID**: `cpt-cyberfabric-llm-gateway-component-api-layer`
+   - API Layer
+   - Request/response handling, validation, routing
+ - [ ] `p1` - **ID**: `cpt-cyberfabric-llm-gateway-component-application-layer`
+   - Application Layer
+   - Request orchestration, provider selection, response normalization
+ - [ ] `p1` - **ID**: `cpt-cyberfabric-llm-gateway-component-provider-adapters`
+   - Provider Adapters
+   - Provider-specific request/response translation
+ - [ ] `p1` - **ID**: `cpt-cyberfabric-llm-gateway-component-hook-plugin`
+   - Hook Plugin
+   - Pre-call and post-response interception (moderation, PII, transformation)
+ - [ ] `p1` - **ID**: `cpt-cyberfabric-llm-gateway-component-usage-tracker`
+   - Usage Tracker
+   - Budget checks and usage reporting
+ - [ ] `p1` - **ID**: `cpt-cyberfabric-llm-gateway-component-audit-module`
+   - Audit Module
+   - Compliance event logging
 
 **Interactions**:
 - Consumer → API Layer: Normalized requests
@@ -309,6 +321,8 @@ The stream terminates with `data: [DONE]` event.
 
 #### Provider Resolution
 
+- [ ] `p1` - **ID**: `cpt-cyberfabric-llm-gateway-seq-provider-resolution-v1`
+
 This sequence is used by all request flows to resolve the target provider. Other diagrams show "Resolve provider" as a simplified step — this is the detailed flow.
 
 ```mermaid
@@ -338,8 +352,8 @@ sequenceDiagram
 
 #### Chat Completion
 
-**Use cases**: `cpt-llmgw-usecase-chat-completion-v1`
-**Actors**: `cpt-llmgw-actor-consumer`
+**Use cases**: `cpt-cyberfabric-llm-gateway-usecase-chat-completion-v1`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 ```mermaid
 sequenceDiagram
@@ -359,8 +373,8 @@ sequenceDiagram
 
 #### Streaming Chat Completion
 
-**Use cases**: `cpt-llmgw-usecase-streaming-v1`
-**Actors**: `cpt-llmgw-actor-consumer`
+**Use cases**: `cpt-cyberfabric-llm-gateway-usecase-streaming-v1`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 ```mermaid
 sequenceDiagram
@@ -382,8 +396,8 @@ sequenceDiagram
 
 #### Embeddings Generation
 
-**Use cases**: `cpt-llmgw-usecase-embeddings-v1`
-**Actors**: `cpt-llmgw-actor-consumer`
+**Use cases**: `cpt-cyberfabric-llm-gateway-usecase-embeddings-v1`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 ```mermaid
 sequenceDiagram
@@ -402,8 +416,8 @@ sequenceDiagram
 
 #### Vision (Image Analysis)
 
-**Use cases**: `cpt-llmgw-usecase-vision-v1`
-**Actors**: `cpt-llmgw-actor-consumer`
+**Use cases**: `cpt-cyberfabric-llm-gateway-usecase-vision-v1`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 ```mermaid
 sequenceDiagram
@@ -425,8 +439,8 @@ sequenceDiagram
 
 #### Image Generation
 
-**Use cases**: `cpt-llmgw-usecase-image-generation-v1`
-**Actors**: `cpt-llmgw-actor-consumer`
+**Use cases**: `cpt-cyberfabric-llm-gateway-usecase-image-generation-v1`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 ```mermaid
 sequenceDiagram
@@ -448,8 +462,8 @@ sequenceDiagram
 
 #### Speech-to-Text
 
-**Use cases**: `cpt-llmgw-usecase-speech-to-text-v1`
-**Actors**: `cpt-llmgw-actor-consumer`
+**Use cases**: `cpt-cyberfabric-llm-gateway-usecase-speech-to-text-v1`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 ```mermaid
 sequenceDiagram
@@ -471,8 +485,8 @@ sequenceDiagram
 
 #### Text-to-Speech
 
-**Use cases**: `cpt-llmgw-usecase-text-to-speech-v1`
-**Actors**: `cpt-llmgw-actor-consumer`
+**Use cases**: `cpt-cyberfabric-llm-gateway-usecase-text-to-speech-v1`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 ```mermaid
 sequenceDiagram
@@ -494,8 +508,8 @@ sequenceDiagram
 
 #### Video Understanding
 
-**Use cases**: `cpt-llmgw-usecase-video-understanding-v1`
-**Actors**: `cpt-llmgw-actor-consumer`
+**Use cases**: `cpt-cyberfabric-llm-gateway-usecase-video-understanding-v1`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 ```mermaid
 sequenceDiagram
@@ -517,8 +531,8 @@ sequenceDiagram
 
 #### Video Generation
 
-**Use cases**: `cpt-llmgw-usecase-video-generation-v1`
-**Actors**: `cpt-llmgw-actor-consumer`
+**Use cases**: `cpt-cyberfabric-llm-gateway-usecase-video-generation-v1`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 ```mermaid
 sequenceDiagram
@@ -540,8 +554,8 @@ sequenceDiagram
 
 #### Tool/Function Calling
 
-**Use cases**: `cpt-llmgw-usecase-tool-calling-v1`
-**Actors**: `cpt-llmgw-actor-consumer`
+**Use cases**: `cpt-cyberfabric-llm-gateway-usecase-tool-calling-v1`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 ```mermaid
 sequenceDiagram
@@ -570,8 +584,8 @@ sequenceDiagram
 
 #### Structured Output
 
-**Use cases**: `cpt-llmgw-usecase-structured-output-v1`
-**Actors**: `cpt-llmgw-actor-consumer`
+**Use cases**: `cpt-cyberfabric-llm-gateway-usecase-structured-output-v1`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 ```mermaid
 sequenceDiagram
@@ -591,8 +605,8 @@ sequenceDiagram
 
 #### Document Understanding
 
-**Use cases**: `cpt-llmgw-usecase-document-understanding-v1`
-**Actors**: `cpt-llmgw-actor-consumer`
+**Use cases**: `cpt-cyberfabric-llm-gateway-usecase-document-understanding-v1`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 ```mermaid
 sequenceDiagram
@@ -614,8 +628,8 @@ sequenceDiagram
 
 #### Async Jobs
 
-**Use cases**: `cpt-llmgw-usecase-async-jobs-v1`
-**Actors**: `cpt-llmgw-actor-consumer`
+**Use cases**: `cpt-cyberfabric-llm-gateway-usecase-async-jobs-v1`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 ```mermaid
 sequenceDiagram
@@ -641,8 +655,8 @@ sequenceDiagram
 
 #### Realtime Audio
 
-**Use cases**: `cpt-llmgw-usecase-realtime-audio-v1`
-**Actors**: `cpt-llmgw-actor-consumer`
+**Use cases**: `cpt-cyberfabric-llm-gateway-usecase-realtime-audio-v1`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 ```mermaid
 sequenceDiagram
@@ -670,8 +684,8 @@ sequenceDiagram
 
 #### Provider Fallback
 
-**Use cases**: `cpt-llmgw-usecase-provider-fallback-v1`
-**Actors**: `cpt-llmgw-actor-consumer`
+**Use cases**: `cpt-cyberfabric-llm-gateway-usecase-provider-fallback-v1`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 ```mermaid
 sequenceDiagram
@@ -696,8 +710,8 @@ sequenceDiagram
 
 #### Timeout Enforcement
 
-**Use cases**: `cpt-llmgw-usecase-timeout-v1`
-**Actors**: `cpt-llmgw-actor-consumer`
+**Use cases**: `cpt-cyberfabric-llm-gateway-usecase-timeout-v1`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 ```mermaid
 sequenceDiagram
@@ -733,8 +747,8 @@ sequenceDiagram
 
 #### Pre-Call Interceptor
 
-**Use cases**: `cpt-llmgw-usecase-pre-call-interceptor-v1`
-**Actors**: `cpt-llmgw-actor-consumer`
+**Use cases**: `cpt-cyberfabric-llm-gateway-usecase-pre-call-interceptor-v1`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 ```mermaid
 sequenceDiagram
@@ -758,8 +772,8 @@ sequenceDiagram
 
 #### Post-Response Interceptor
 
-**Use cases**: `cpt-llmgw-usecase-post-response-interceptor-v1`
-**Actors**: `cpt-llmgw-actor-consumer`
+**Use cases**: `cpt-cyberfabric-llm-gateway-usecase-post-response-interceptor-v1`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 ```mermaid
 sequenceDiagram
@@ -785,8 +799,8 @@ sequenceDiagram
 
 #### Rate Limiting
 
-**Use cases**: `cpt-llmgw-usecase-rate-limiting-v1`
-**Actors**: `cpt-llmgw-actor-consumer`
+**Use cases**: `cpt-cyberfabric-llm-gateway-usecase-rate-limiting-v1`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 ```mermaid
 sequenceDiagram
@@ -810,8 +824,8 @@ sequenceDiagram
 
 #### Budget Enforcement
 
-**Use cases**: `cpt-llmgw-fr-budget-enforcement-v1`
-**Actors**: `cpt-llmgw-actor-consumer`, `cpt-llmgw-actor-usage-tracker`
+**Use cases**: `cpt-cyberfabric-llm-gateway-fr-budget-enforcement-v1`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`, `cpt-cyberfabric-llm-gateway-actor-usage-tracker`
 
 ```mermaid
 sequenceDiagram
@@ -847,8 +861,8 @@ sequenceDiagram
 
 #### Batch Processing
 
-**Use cases**: `cpt-llmgw-usecase-batch-processing-v1`
-**Actors**: `cpt-llmgw-actor-consumer`
+**Use cases**: `cpt-cyberfabric-llm-gateway-usecase-batch-processing-v1`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 ```mermaid
 sequenceDiagram
@@ -896,9 +910,5 @@ This is the same pattern used for async jobs (see ADR-0001).
 <!-- To be added as needed -->
 
 ## 5. Traceability
-
-**PRD Actors**: `cpt-llmgw-actor-api-user`, `cpt-llmgw-actor-provider`, `cpt-llmgw-actor-hook-plugin`, `cpt-llmgw-actor-audit-module`
  
-**ADRs**: `cpt-llmgw-adr-file-storage`, `cpt-llmgw-adr-circuit-breaking`
-
-**Related module actors**: `cpt-file-storage-actor-llm-gateway`, `cpt-model-registry-actor-tenant-admin`, `cpt-model-registry-actor-llm-gateway`, `cpt-model-registry-actor-outbound-api-gateway`, `cpt-model-registry-actor-provider-api`, `cpt-type-registry-actor-llm-gateway`
+**ADRs**: `cpt-cyberfabric-llm-gateway-adr-file-storage`, `cpt-cyberfabric-llm-gateway-adr-circuit-breaking`

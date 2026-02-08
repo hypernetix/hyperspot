@@ -2,7 +2,7 @@
 
 ## 1. Feature Context
 
-- [ ] `p2` - **ID**: `cpt-todo-app-feature-logic`
+- [ ] `p2` - **ID**: `cpt-examples-todo-app-featurecontext-logic`
 
 ### 1.1 Overview
 
@@ -14,22 +14,22 @@ Enables users to efficiently navigate and manage large numbers of tasks by apply
 
 ### 1.3 Actors
 
-- `cpt-todo-app-actor-user` - Applies filters and searches tasks
+- `cpt-examples-todo-app-actor-user` - Applies filters and searches tasks
 
 ### 1.4 References
 
 - Overall Design: [DESIGN.md](../DESIGN.md)
 - PRD: [PRD.md](../PRD.md)
-- Requirements: `cpt-todo-app-fr-filter-tasks`, `cpt-todo-app-nfr-response-time`, `cpt-todo-app-interface-rest-api`, `cpt-todo-app-interface-task-model`
-- Dependencies: `cpt-todo-app-feature-core`
+- Requirements: `cpt-examples-todo-app-fr-filter-tasks`, `cpt-examples-todo-app-nfr-response-time`, `cpt-examples-todo-app-interface-rest-api`, `cpt-examples-todo-app-interface-task-model`
+- Dependencies: `cpt-examples-todo-app-featurecontext-core`
 
 ## 2. Actor Flows (CDSL)
 
 ### Filter Tasks Flow
 
-- [ ] `p1` - **ID**: `cpt-todo-app-flow-logic-filter-tasks`
+- [ ] `p1` - **ID**: `cpt-examples-todo-app-flow-logic-filter-tasks`
 
-**Actor**: `cpt-todo-app-actor-user`
+**Actor**: `cpt-examples-todo-app-actor-user`
 
 **Success Scenarios**:
 - Task list updates to show only matching tasks
@@ -49,9 +49,9 @@ Enables users to efficiently navigate and manage large numbers of tasks by apply
 
 ### Search Tasks Flow
 
-- [ ] `p1` - **ID**: `cpt-todo-app-flow-logic-search-tasks`
+- [ ] `p1` - **ID**: `cpt-examples-todo-app-flow-logic-search-tasks`
 
-**Actor**: `cpt-todo-app-actor-user`
+**Actor**: `cpt-examples-todo-app-actor-user`
 
 **Success Scenarios**:
 - Tasks matching search query are displayed
@@ -72,7 +72,7 @@ Enables users to efficiently navigate and manage large numbers of tasks by apply
 
 ### Task Sorting Algorithm
 
-- [ ] `p2` - **ID**: `cpt-todo-app-algo-logic-sort-tasks`
+- [ ] `p2` - **ID**: `cpt-examples-todo-app-algo-logic-sort-tasks`
 
 **Input**: Task list, sort field, sort direction
 
@@ -93,7 +93,7 @@ Enables users to efficiently navigate and manage large numbers of tasks by apply
 
 ### Overdue Detection Algorithm
 
-- [ ] `p2` - **ID**: `cpt-todo-app-algo-logic-overdue-detection`
+- [ ] `p2` - **ID**: `cpt-examples-todo-app-algo-logic-overdue-detection`
 
 **Input**: Task with due_date
 
@@ -115,7 +115,7 @@ Enables users to efficiently navigate and manage large numbers of tasks by apply
 
 ### Filter State Machine
 
-- [ ] `p2` - **ID**: `cpt-todo-app-state-logic-filter`
+- [ ] `p2` - **ID**: `cpt-examples-todo-app-state-logic-filter`
 
 **States**: all, active, completed
 
@@ -133,13 +133,13 @@ Enables users to efficiently navigate and manage large numbers of tasks by apply
 
 ### Implement Task Filtering
 
-- [ ] `p1` - **ID**: `cpt-todo-app-dod-logic-filtering`
+- [ ] `p1` - **ID**: `cpt-examples-todo-app-dod-logic-filtering`
 
 The system **MUST** allow filtering tasks by status, category, and priority. Filters **MUST** be combinable and reflected in the URL for shareability.
 
 **Implements**:
-- `cpt-todo-app-flow-logic-filter-tasks`
-- `cpt-todo-app-state-logic-filter`
+- `cpt-examples-todo-app-flow-logic-filter-tasks`
+- `cpt-examples-todo-app-state-logic-filter`
 
 **Touches**:
 - API: `GET /tasks`
@@ -148,12 +148,12 @@ The system **MUST** allow filtering tasks by status, category, and priority. Fil
 
 ### Implement Task Search
 
-- [ ] `p1` - **ID**: `cpt-todo-app-dod-logic-search`
+- [ ] `p1` - **ID**: `cpt-examples-todo-app-dod-logic-search`
 
 The system **MUST** provide full-text search across task titles and descriptions. Search **MUST** be case-insensitive and support partial matching.
 
 **Implements**:
-- `cpt-todo-app-flow-logic-search-tasks`
+- `cpt-examples-todo-app-flow-logic-search-tasks`
 
 **Touches**:
 - API: `GET /tasks`
@@ -162,13 +162,13 @@ The system **MUST** provide full-text search across task titles and descriptions
 
 ### Implement Task Sorting
 
-- [ ] `p1` - **ID**: `cpt-todo-app-dod-logic-sorting`
+- [ ] `p1` - **ID**: `cpt-examples-todo-app-dod-logic-sorting`
 
 The system **MUST** allow sorting tasks by due date, priority, and creation date in ascending or descending order.
 
 **Implements**:
-- `cpt-todo-app-algo-logic-sort-tasks`
-- `cpt-todo-app-algo-logic-overdue-detection`
+- `cpt-examples-todo-app-algo-logic-sort-tasks`
+- `cpt-examples-todo-app-algo-logic-overdue-detection`
 
 **Touches**:
 - API: `GET /tasks`
@@ -179,7 +179,7 @@ The system **MUST** allow sorting tasks by due date, priority, and creation date
 
 ### UX Considerations
 
-**ID**: `cpt-todo-app-featurecontext-logic-ux`
+**ID**: `cpt-examples-todo-app-featurecontext-logic-ux`
 
 
 Filter and sort preferences should persist in localStorage so users don't need to reapply them on each visit. Consider showing filter badges to indicate active filters.

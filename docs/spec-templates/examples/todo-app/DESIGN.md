@@ -16,11 +16,11 @@ Event-driven architecture is employed for real-time updates and cross-device syn
 
 | Requirement | Design Response |
 |-------------|-----------------|
-| `cpt-todo-app-fr-create-task` | REST API endpoint POST /tasks with validation |
-| `cpt-todo-app-fr-complete-task` | PATCH /tasks/:id with status toggle |
-| `cpt-todo-app-fr-delete-task` | DELETE /tasks/:id endpoint with authorization |
-| `cpt-todo-app-fr-filter-tasks` | Query parameters on GET /tasks |
-| `cpt-todo-app-nfr-offline-support` | IndexedDB local storage with sync queue |
+| `cpt-examples-todo-app-fr-create-task` | REST API endpoint POST /tasks with validation |
+| `cpt-examples-todo-app-fr-complete-task` | PATCH /tasks/:id with status toggle |
+| `cpt-examples-todo-app-fr-delete-task` | DELETE /tasks/:id endpoint with authorization |
+| `cpt-examples-todo-app-fr-filter-tasks` | Query parameters on GET /tasks |
+| `cpt-examples-todo-app-nfr-offline-support` | IndexedDB local storage with sync queue |
 
 #### NFR Allocation
 
@@ -28,8 +28,8 @@ This table maps non-functional requirements from PRD to specific design/architec
 
 | NFR ID | NFR Summary | Allocated To | Design Response | Verification Approach |
 |--------|-------------|--------------|-----------------|----------------------|
-| `cpt-todo-app-nfr-response-time` | UI interactions <200ms p95 | TaskService + IndexedDB | Local-first architecture: all reads from IndexedDB (sub-10ms), writes optimistic with background sync | Performance benchmarks measure p95 latency |
-| `cpt-todo-app-nfr-data-persistence` | Local persist <50ms, cloud sync <5s | SyncService + IndexedDB + REST API | IndexedDB for immediate local persistence; background WebSocket sync with retry queue | Integration tests verify timing + recovery scenarios |
+| `cpt-examples-todo-app-nfr-response-time` | UI interactions <200ms p95 | TaskService + IndexedDB | Local-first architecture: all reads from IndexedDB (sub-10ms), writes optimistic with background sync | Performance benchmarks measure p95 latency |
+| `cpt-examples-todo-app-nfr-data-persistence` | Local persist <50ms, cloud sync <5s | SyncService + IndexedDB + REST API | IndexedDB for immediate local persistence; background WebSocket sync with retry queue | Integration tests verify timing + recovery scenarios |
 
 ### 1.3 Architecture Layers
 
@@ -46,17 +46,17 @@ This table maps non-functional requirements from PRD to specific design/architec
 
 #### Offline-First
 
-- [ ] `p2` - **ID**: `cpt-todo-app-design-principle-offline-first`
+- [ ] `p2` - **ID**: `cpt-examples-todo-app-principle-offline-first`
 
-**ADRs**: `cpt-todo-app-adr-local-storage`
+**ADRs**: `cpt-examples-todo-app-adr-local-storage`
 
 All operations must work without network connectivity. Data is persisted locally first, then synchronized to the server when connection is available.
 
 #### Optimistic Updates
 
-- [ ] `p2` - **ID**: `cpt-todo-app-design-principle-optimistic-updates`
+- [ ] `p2` - **ID**: `cpt-examples-todo-app-principle-optimistic-updates`
 
-**ADRs**: `cpt-todo-app-adr-optimistic-ui`
+**ADRs**: `cpt-examples-todo-app-adr-optimistic-ui`
 
 UI updates immediately on user action without waiting for server confirmation. Rollback occurs only on server rejection.
 
@@ -64,9 +64,9 @@ UI updates immediately on user action without waiting for server confirmation. R
 
 #### Browser Compatibility
 
-- [ ] `p2` - **ID**: `cpt-todo-app-design-constraint-browser-compat`
+- [ ] `p2` - **ID**: `cpt-examples-todo-app-constraint-browser-compat`
 
-**ADRs**: `cpt-todo-app-adr-browser-support`
+**ADRs**: `cpt-examples-todo-app-adr-browser-support`
 
 Application must support latest 2 versions of Chrome, Firefox, Safari, and Edge.
 
@@ -127,10 +127,18 @@ flowchart LR
 ```
 
 **Components**:
-- **TaskList**: Displays filtered list of tasks with pagination
-- **TaskForm**: Form for creating and editing tasks
-- **FilterBar**: Controls for filtering and sorting tasks
-- **SyncIndicator**: Shows synchronization status
+- **TaskList**
+  - [ ] `p2` - **ID**: `cpt-examples-todo-app-component-task-list`
+  - Displays filtered list of tasks with pagination
+- **TaskForm**
+  - [ ] `p2` - **ID**: `cpt-examples-todo-app-component-task-form`
+  - Form for creating and editing tasks
+- **FilterBar**
+  - [ ] `p2` - **ID**: `cpt-examples-todo-app-component-filter-bar`
+  - Controls for filtering and sorting tasks
+- **SyncIndicator**
+  - [ ] `p2` - **ID**: `cpt-examples-todo-app-component-sync-indicator`
+  - Shows synchronization status
 
 **Interactions**:
 - TaskForm → TaskService: Submits task data for creation/update
@@ -139,6 +147,8 @@ flowchart LR
 ### 3.3 API Contracts
 
 **Technology**: REST/OpenAPI
+
+**Public interface**: `cpt-examples-todo-app-interface-rest-api`
 
 **Location**: [api/openapi.yaml](../api/openapi.yaml)
 
@@ -156,18 +166,23 @@ flowchart LR
 
 #### WebSocket Sync Protocol
 
-- [x] `p1` - **ID**: `cpt-todo-app-design-interface-websocket`
+- [x] `p1` - **ID**: `cpt-examples-todo-app-interface-websocket`
 
 **Type**: Protocol (WebSocket + JSON)
+
 **Direction**: bidirectional
+
 **Specification**: Custom sync protocol over WebSocket; messages follow format: `{ type: "sync" | "update" | "delete", payload: Task }`
-**Data Format**: JSON (follows Task model from `cpt-todo-app-interface-task-model`)
+
+**Data Format**: JSON (follows Task model from `cpt-examples-todo-app-interface-task-model`)
+
 **Compatibility**: Protocol version negotiated on connection; supports fallback to HTTP polling
-**References**: Links to PRD § Public Library Interfaces (`cpt-todo-app-contract-sync`)
+
+**References**: Links to PRD § Public Library Interfaces (`cpt-examples-todo-app-contract-sync`)
 
 #### IndexedDB Storage Schema
 
-- [x] `p1` - **ID**: `cpt-todo-app-design-interface-indexeddb`
+- [x] `p1` - **ID**: `cpt-examples-todo-app-interface-indexeddb`
 
 **Type**: Data Format (IndexedDB schema)
 **Direction**: internal (library storage)
@@ -176,6 +191,12 @@ flowchart LR
 **Compatibility**: Schema migrations handled by Dexie.js version upgrade hooks
 
 ### 3.5 Interactions & Sequences
+
+#### Create Task (Optimistic UI + Local Persistence + API Sync)
+
+- [ ] `p1` - **ID**: `cpt-examples-todo-app-seq-create-task-v1`
+
+Sequence showing how a new task is created with optimistic UI update, immediate IndexedDB persistence, and eventual server persistence via REST API.
 
 ```mermaid
 sequenceDiagram
@@ -202,15 +223,15 @@ sequenceDiagram
     TS->>IDB: markSynced(task.id)
 ```
 
-**Use cases**: `cpt-todo-app-usecase-create-task`
+**Use cases**: `cpt-examples-todo-app-usecase-create-task`
 
-**Actors**: `cpt-todo-app-actor-user`, `cpt-todo-app-actor-sync-service`
+**Actors**: `cpt-examples-todo-app-actor-user`, `cpt-examples-todo-app-actor-sync-service`
 
 ### 3.6 Database schemas & tables
 
 #### Table tasks
 
-**ID**: `cpt-todo-app-db-table-tasks`
+**ID**: `cpt-examples-todo-app-db-table-tasks`
 
 **Schema**
 
@@ -241,7 +262,7 @@ sequenceDiagram
 
 ### 3.7 Topology (optional)
 
-**ID**: `cpt-todo-app-topology-cloud`
+**ID**: `cpt-examples-todo-app-topology-cloud`
 
 - Frontend: Static files on CDN
 - Backend: Containerized Node.js on Kubernetes
@@ -250,7 +271,7 @@ sequenceDiagram
 
 ### 3.8 Tech stack (optional)
 
-**ID**: `cpt-todo-app-tech-stack`
+**ID**: `cpt-examples-todo-app-tech-stack`
 
 - Frontend: React 18, TypeScript, TailwindCSS, Zustand
 - Backend: Node.js, Express, TypeScript
@@ -259,7 +280,7 @@ sequenceDiagram
 
 ## 4. Additional Context
 
-**ID**: `cpt-todo-app-design-context-decisions`
+**ID**: `cpt-examples-todo-app-design-context-decisions`
 
 The choice of React over other frameworks was driven by team expertise and ecosystem maturity. PostgreSQL was selected for its reliability and JSON support for flexible task metadata.
 
@@ -268,5 +289,3 @@ The choice of React over other frameworks was driven by team expertise and ecosy
 - **PRD**: [PRD.md](./PRD.md)
 - **ADRs**: [ADR/](./ADR/)
 - **Features**: [features/](./features/)
-- **Feature IDs**: `cpt-todo-app-feature-core`, `cpt-todo-app-feature-logic`
-- **Feature elements**: `cpt-todo-app-algo-core-validate-task`, `cpt-todo-app-state-core-task`, `cpt-todo-app-dod-core-crud`, `cpt-todo-app-featurecontext-core-performance`, `cpt-todo-app-flow-logic-filter-tasks`, `cpt-todo-app-flow-logic-search-tasks`, `cpt-todo-app-algo-logic-sort-tasks`, `cpt-todo-app-algo-logic-overdue-detection`, `cpt-todo-app-state-logic-filter`, `cpt-todo-app-dod-logic-filtering`, `cpt-todo-app-dod-logic-search`, `cpt-todo-app-dod-logic-sorting`, `cpt-todo-app-featurecontext-logic-ux`

@@ -35,7 +35,7 @@ The registry supports automatic model discovery from providers, requiring tenant
 
 #### Tenant Administrator
 
-**ID**: `cpt-model-registry-actor-tenant-admin`
+**ID**: `cpt-cyberfabric-model-registry-actor-tenant-admin`
 
 <!-- cpt-id-content -->
 **Role**: Approves or rejects models for tenant access. Configures auto-approval policies per provider.
@@ -45,7 +45,7 @@ The registry supports automatic model discovery from providers, requiring tenant
 
 #### LLM Gateway
 
-**ID**: `cpt-model-registry-actor-llm-gateway`
+**ID**: `cpt-cyberfabric-model-registry-actor-llm-gateway`
 
 <!-- cpt-id-content -->
 **Role**: Queries registry to resolve model to provider, check tenant availability, and get model capabilities.
@@ -53,7 +53,7 @@ The registry supports automatic model discovery from providers, requiring tenant
 
 #### Outbound API Gateway
 
-**ID**: `cpt-model-registry-actor-outbound-api-gateway`
+**ID**: `cpt-cyberfabric-model-registry-actor-outbound-api-gateway`
 
 <!-- cpt-id-content -->
 **Role**: Executes provider API calls for model discovery and health probes.
@@ -61,7 +61,7 @@ The registry supports automatic model discovery from providers, requiring tenant
 
 #### Provider API
 
-**ID**: `cpt-model-registry-actor-provider-api`
+**ID**: `cpt-cyberfabric-model-registry-actor-provider-api`
 
 <!-- cpt-id-content -->
 **Role**: External provider endpoint that returns available models list and responds to health probes.
@@ -71,67 +71,61 @@ The registry supports automatic model discovery from providers, requiring tenant
 
 #### Get Tenant Model
 
-**ID**: [ ] `p1` `cpt-model-registry-fr-get-tenant-model-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-model-registry-fr-get-tenant-model-v1`
 <!-- cpt-id-content -->
 
 The system must resolve model availability for a tenant, returning model info and provider details if approved.
 
-**Actors**: `cpt-model-registry-actor-llm-gateway`
+**Actors**: `cpt-cyberfabric-model-registry-actor-llm-gateway`
 <!-- cpt-id-content -->
 
 #### List Tenant Models
 
-**ID**: [ ] `p1` `cpt-model-registry-fr-list-tenant-models-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-model-registry-fr-list-tenant-models-v1`
 <!-- cpt-id-content -->
 
 The system must return all models available for a tenant, supporting filtering by capability and provider.
 
-**Actors**: `cpt-model-registry-actor-llm-gateway`
+**Actors**: `cpt-cyberfabric-model-registry-actor-llm-gateway`
 <!-- cpt-id-content -->
 
 #### Model Discovery
 
-**ID**: [ ] `p1` `cpt-model-registry-fr-model-discovery-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-model-registry-fr-model-discovery-v1`
 <!-- cpt-id-content -->
 
 The system must poll providers for available models via Outbound API Gateway, upserting new models and creating pending approvals.
 
-**Actors**: `cpt-model-registry-actor-outbound-api-gateway`, `cpt-model-registry-actor-provider-api`
+**Actors**: `cpt-cyberfabric-model-registry-actor-outbound-api-gateway`, `cpt-cyberfabric-model-registry-actor-provider-api`
 <!-- cpt-id-content -->
 
 #### Model Approval
 
-**ID**: [ ] `p1` `cpt-model-registry-fr-model-approval-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-model-registry-fr-model-approval-v1`
 <!-- cpt-id-content -->
 
 The system must support model approval workflow with statuses: pending, approved, rejected, revoked. Must support auto-approval configuration per tenant/provider.
 
-**Actors**: `cpt-model-registry-actor-tenant-admin`
+**Actors**: `cpt-cyberfabric-model-registry-actor-tenant-admin`
 <!-- cpt-id-content -->
 
 #### Provider Health Monitoring
 
-**ID**: [ ] `p1` `cpt-model-registry-fr-health-monitoring-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-model-registry-fr-health-monitoring-v1`
 <!-- cpt-id-content -->
 
 The system must track provider health metrics (latency, error rate, availability status) via periodic health probes for LLM Gateway routing decisions.
 
-**Actors**: `cpt-model-registry-actor-outbound-api-gateway`, `cpt-model-registry-actor-provider-api`
+**Actors**: `cpt-cyberfabric-model-registry-actor-outbound-api-gateway`, `cpt-cyberfabric-model-registry-actor-provider-api`
 <!-- cpt-id-content -->
 
 ## 4. Use Cases
 
 #### UC-001: Get Tenant Model
 
-**ID**: [ ] `p1` `cpt-model-registry-usecase-get-tenant-model-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-model-registry-usecase-get-tenant-model-v1`
 <!-- cpt-id-content -->
-**Actor**: `cpt-model-registry-actor-llm-gateway`
+**Actor**: `cpt-cyberfabric-model-registry-actor-llm-gateway`
 
 **Preconditions**: Model exists in catalog.
 
@@ -151,10 +145,9 @@ The system must track provider health metrics (latency, error rate, availability
 
 #### UC-002: List Tenant Models
 
-**ID**: [ ] `p1` `cpt-model-registry-usecase-list-tenant-models-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-model-registry-usecase-list-tenant-models-v1`
 <!-- cpt-id-content -->
-**Actor**: `cpt-model-registry-actor-llm-gateway`
+**Actor**: `cpt-cyberfabric-model-registry-actor-llm-gateway`
 
 **Preconditions**: Tenant context available.
 
@@ -174,8 +167,7 @@ The system must track provider health metrics (latency, error rate, availability
 
 #### UC-003: Model Discovery
 
-**ID**: [ ] `p1` `cpt-model-registry-usecase-model-discovery-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-model-registry-usecase-model-discovery-v1`
 <!-- cpt-id-content -->
 **Actor**: Internal (scheduled job)
 
@@ -198,10 +190,9 @@ The system must track provider health metrics (latency, error rate, availability
 
 #### UC-004: Model Approval
 
-**ID**: [ ] `p1` `cpt-model-registry-usecase-model-approval-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-model-registry-usecase-model-approval-v1`
 <!-- cpt-id-content -->
-**Actor**: `cpt-model-registry-actor-tenant-admin`
+**Actor**: `cpt-cyberfabric-model-registry-actor-tenant-admin`
 
 **Preconditions**: Model in pending status for tenant.
 
@@ -240,10 +231,9 @@ stateDiagram-v2
 
 #### UC-005: Model Revocation
 
-**ID**: [ ] `p1` `cpt-model-registry-usecase-model-revocation-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-model-registry-usecase-model-revocation-v1`
 <!-- cpt-id-content -->
-**Actor**: `cpt-model-registry-actor-tenant-admin`
+**Actor**: `cpt-cyberfabric-model-registry-actor-tenant-admin`
 
 **Preconditions**: Model in approved status for tenant.
 
@@ -264,8 +254,7 @@ stateDiagram-v2
 
 #### UC-006: Provider Health Monitoring
 
-**ID**: [ ] `p1` `cpt-model-registry-usecase-health-monitoring-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-model-registry-usecase-health-monitoring-v1`
 <!-- cpt-id-content -->
 **Actor**: Internal (scheduled job)
 
@@ -286,5 +275,9 @@ stateDiagram-v2
 <!-- cpt-id-content -->
 
 ## 5. Non-functional requirements
+
+#### N/A
+
+- [ ] `p1` - **ID**: `cpt-cyberfabric-model-registry-nfr-na`
 
 <!-- NFRs to be defined later -->

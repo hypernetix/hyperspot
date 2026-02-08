@@ -4,7 +4,7 @@
 
 **Status**: Accepted
 
-**ID**: `cpt-todo-app-adr-browser-support`
+**ID**: `cpt-examples-todo-app-adr-browser-support`
 
 ## Context and Problem Statement
 
@@ -46,7 +46,7 @@ Confirmed via:
 
 This decision directly addresses the following requirements or design elements:
 
-- `cpt-todo-app-design-constraint-browser-compat`
-- `cpt-todo-app-nfr-offline-support`
-- `cpt-todo-app-design-interface-indexeddb`
-- `cpt-todo-app-actor-user`
+- `cpt-examples-todo-app-constraint-browser-compat`
+- `cpt-examples-todo-app-nfr-offline-support`
+- `cpt-examples-todo-app-interface-indexeddb`
+- `cpt-examples-todo-app-actor-user`

@@ -4,7 +4,7 @@
 
 **Status**: Accepted
 
-**ID**: `cpt-llmgw-adr-stateless`
+**ID**: `cpt-cyberfabric-llm-gateway-adr-stateless`
 
 ## Context and Problem Statement
 
@@ -35,5 +35,5 @@ Chosen option: "Stateless", because it enables horizontal scaling without coordi
 ## Related Design Elements
 
 **Requirements**:
-* `cpt-llmgw-nfr-scalability-v1` - Horizontal scaling requirement
-* `cpt-llmgw-fr-async-jobs-v1` - Exception for temporary job state
+* `cpt-cyberfabric-llm-gateway-nfr-scalability-v1` - Horizontal scaling requirement
+* `cpt-cyberfabric-llm-gateway-fr-async-jobs-v1` - Exception for temporary job state

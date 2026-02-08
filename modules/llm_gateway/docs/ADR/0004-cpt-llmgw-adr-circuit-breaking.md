@@ -4,7 +4,7 @@
 
 **Status**: Accepted
 
-**ID**: `cpt-llmgw-adr-circuit-breaking`
+**ID**: `cpt-cyberfabric-llm-gateway-adr-circuit-breaking`
 
 ## Context and Problem Statement
 
@@ -63,17 +63,17 @@ Characteristics:
 ## Related Design Elements
 
 **Requirements**:
-* `cpt-llmgw-fr-provider-fallback-v1` - Fallback on provider failure
+* `cpt-cyberfabric-llm-gateway-fr-provider-fallback-v1` - Fallback on provider failure
 * `cpt-model-registry-fr-health-monitoring-v1` - Provider health metrics
 
 **Actors**:
-* `cpt-llmgw-actor-consumer` - Triggers fallback behavior via request config
-* `cpt-llmgw-actor-provider` - Source of failures and latency degradation
+* `cpt-cyberfabric-llm-gateway-actor-consumer` - Triggers fallback behavior via request config
+* `cpt-cyberfabric-llm-gateway-actor-provider` - Source of failures and latency degradation
 
 **Constraints**:
-* `cpt-llmgw-constraint-provider-rate-limits` - Excessive retries/fallbacks must respect quotas
-* `cpt-llmgw-constraint-outbound-dependency` - Circuit breaking is enforced at Outbound API Gateway
+* `cpt-cyberfabric-llm-gateway-constraint-provider-rate-limits` - Excessive retries/fallbacks must respect quotas
+* `cpt-cyberfabric-llm-gateway-constraint-outbound-dependency` - Circuit breaking is enforced at Outbound API Gateway
 
 **References**:
-* PRD: `cpt-llmgw-fr-provider-fallback-v1`, `cpt-llmgw-fr-timeout-v1`
-* DESIGN: `cpt-llmgw-constraint-outbound-dependency`
+* PRD: `cpt-cyberfabric-llm-gateway-fr-provider-fallback-v1`, `cpt-cyberfabric-llm-gateway-fr-timeout-v1`
+* DESIGN: `cpt-cyberfabric-llm-gateway-constraint-outbound-dependency`

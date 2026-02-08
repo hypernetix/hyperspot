@@ -36,7 +36,7 @@ Gateway is stateless by design. It does not store conversation history or execut
 
 #### API User
 
-**ID**: `cpt-llmgw-actor-api-user`
+**ID**: `cpt-cyberfabric-llm-gateway-actor-api-user`
 
 <!-- cpt-id-content -->
 **Role**: End user who interacts with LLM Gateway directly via API. Sends chat completion requests, manages async jobs, uses streaming responses.
@@ -46,7 +46,7 @@ Gateway is stateless by design. It does not store conversation history or execut
 
 #### Consumer
 
-**ID**: `cpt-llmgw-actor-consumer`
+**ID**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 <!-- cpt-id-content -->
 **Role**: Sends requests to the Gateway.
@@ -54,7 +54,7 @@ Gateway is stateless by design. It does not store conversation history or execut
 
 #### Provider
 
-**ID**: `cpt-llmgw-actor-provider`
+**ID**: `cpt-cyberfabric-llm-gateway-actor-provider`
 
 <!-- cpt-id-content -->
 **Role**: External AI service that processes requests. Accessed via Outbound API Gateway.
@@ -62,7 +62,7 @@ Gateway is stateless by design. It does not store conversation history or execut
 
 #### Hook Plugin
 
-**ID**: `cpt-llmgw-actor-hook-plugin`
+**ID**: `cpt-cyberfabric-llm-gateway-actor-hook-plugin`
 
 <!-- cpt-id-content -->
 **Role**: Pre-call and post-response interception (moderation, PII, transformation).
@@ -70,7 +70,7 @@ Gateway is stateless by design. It does not store conversation history or execut
 
 #### Usage Tracker
 
-**ID**: `cpt-llmgw-actor-usage-tracker`
+**ID**: `cpt-cyberfabric-llm-gateway-actor-usage-tracker`
 
 <!-- cpt-id-content -->
 **Role**: Budget checks and usage reporting.
@@ -78,7 +78,7 @@ Gateway is stateless by design. It does not store conversation history or execut
 
 #### Audit Module
 
-**ID**: `cpt-llmgw-actor-audit-module`
+**ID**: `cpt-cyberfabric-llm-gateway-actor-audit-module`
 
 <!-- cpt-id-content -->
 **Role**: Compliance event logging.
@@ -90,140 +90,127 @@ Gateway is stateless by design. It does not store conversation history or execut
 
 #### Chat Completion
 
-**ID**: [ ] `p1` `cpt-llmgw-fr-chat-completion-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-llm-gateway-fr-chat-completion-v1`
 <!-- cpt-id-content -->
 
 Consumer sends messages, Gateway routes to provider based on model, returns response with usage.
 
-**Actors**: `cpt-llmgw-actor-consumer`, `cpt-llmgw-actor-provider`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`, `cpt-cyberfabric-llm-gateway-actor-provider`
 <!-- cpt-id-content -->
 
 #### Streaming Chat Completion
 
-**ID**: [ ] `p1` `cpt-llmgw-fr-streaming-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-llm-gateway-fr-streaming-v1`
 <!-- cpt-id-content -->
 
 Same as chat completion, but response is streamed. Gateway normalizes provider events to unified format.
 
-**Actors**: `cpt-llmgw-actor-consumer`, `cpt-llmgw-actor-provider`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`, `cpt-cyberfabric-llm-gateway-actor-provider`
 <!-- cpt-id-content -->
 
 #### Embeddings Generation
 
-**ID**: [ ] `p1` `cpt-llmgw-fr-embeddings-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-llm-gateway-fr-embeddings-v1`
 <!-- cpt-id-content -->
 
 Consumer sends text(s), Gateway returns vector embeddings.
 
-**Actors**: `cpt-llmgw-actor-consumer`, `cpt-llmgw-actor-provider`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`, `cpt-cyberfabric-llm-gateway-actor-provider`
 <!-- cpt-id-content -->
 
 #### Vision (Image Analysis)
 
-**ID**: [ ] `p1` `cpt-llmgw-fr-vision-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-llm-gateway-fr-vision-v1`
 <!-- cpt-id-content -->
 
 Consumer sends message with image URLs. Gateway fetches media from FileStorage (direct) or external URLs (via OAGW), routes to vision-capable model via OAGW.
 
-**Actors**: `cpt-llmgw-actor-consumer`, `cpt-llmgw-actor-provider`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`, `cpt-cyberfabric-llm-gateway-actor-provider`
 <!-- cpt-id-content -->
 
 #### Image Generation
 
-**ID**: [ ] `p1` `cpt-llmgw-fr-image-generation-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-llm-gateway-fr-image-generation-v1`
 <!-- cpt-id-content -->
 
 Consumer sends text prompt. Gateway sends request to provider via OAGW, stores generated image in FileStorage (direct), returns URL.
 
-**Actors**: `cpt-llmgw-actor-consumer`, `cpt-llmgw-actor-provider`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`, `cpt-cyberfabric-llm-gateway-actor-provider`
 <!-- cpt-id-content -->
 
 #### Speech-to-Text
 
-**ID**: [ ] `p1` `cpt-llmgw-fr-speech-to-text-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-llm-gateway-fr-speech-to-text-v1`
 <!-- cpt-id-content -->
 
 Consumer sends message with audio URL. Gateway fetches audio from FileStorage (direct) or external URLs (via OAGW), sends to provider via OAGW, returns transcription.
 
-**Actors**: `cpt-llmgw-actor-consumer`, `cpt-llmgw-actor-provider`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`, `cpt-cyberfabric-llm-gateway-actor-provider`
 <!-- cpt-id-content -->
 
 #### Text-to-Speech
 
-**ID**: [ ] `p1` `cpt-llmgw-fr-text-to-speech-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-llm-gateway-fr-text-to-speech-v1`
 <!-- cpt-id-content -->
 
 Consumer sends text. Gateway sends request to provider via OAGW, stores synthesized audio in FileStorage (direct), returns URL. Supports streaming mode.
 
-**Actors**: `cpt-llmgw-actor-consumer`, `cpt-llmgw-actor-provider`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`, `cpt-cyberfabric-llm-gateway-actor-provider`
 <!-- cpt-id-content -->
 
 #### Video Understanding
 
-**ID**: [ ] `p1` `cpt-llmgw-fr-video-understanding-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-llm-gateway-fr-video-understanding-v1`
 <!-- cpt-id-content -->
 
 Consumer sends message with video URL. Gateway fetches video from FileStorage (direct) or external URLs (via OAGW), sends to provider via OAGW, returns analysis.
 
-**Actors**: `cpt-llmgw-actor-consumer`, `cpt-llmgw-actor-provider`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`, `cpt-cyberfabric-llm-gateway-actor-provider`
 <!-- cpt-id-content -->
 
 #### Video Generation
 
-**ID**: [ ] `p1` `cpt-llmgw-fr-video-generation-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-llm-gateway-fr-video-generation-v1`
 <!-- cpt-id-content -->
 
 Consumer sends text prompt. Gateway sends request to provider via OAGW, stores generated video in FileStorage (direct), returns URL. Typically requires async mode due to long processing.
 
-**Actors**: `cpt-llmgw-actor-consumer`, `cpt-llmgw-actor-provider`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`, `cpt-cyberfabric-llm-gateway-actor-provider`
 <!-- cpt-id-content -->
 
 #### Tool/Function Calling
 
-**ID**: [ ] `p1` `cpt-llmgw-fr-tool-calling-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-llm-gateway-fr-tool-calling-v1`
 <!-- cpt-id-content -->
 
 Consumer sends request with tool definitions. Gateway resolves schema references, converts to provider format. Model returns tool calls for consumer to execute. Gateway does not execute tools — this is consumer responsibility.
 
-**Actors**: `cpt-llmgw-actor-consumer`, `cpt-llmgw-actor-provider`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`, `cpt-cyberfabric-llm-gateway-actor-provider`
 <!-- cpt-id-content -->
 
 #### Structured Output
 
-**ID**: [ ] `p1` `cpt-llmgw-fr-structured-output-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-llm-gateway-fr-structured-output-v1`
 <!-- cpt-id-content -->
 
 Consumer requests response matching JSON schema. Gateway validates response against schema.
 
-**Actors**: `cpt-llmgw-actor-consumer`, `cpt-llmgw-actor-provider`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`, `cpt-cyberfabric-llm-gateway-actor-provider`
 <!-- cpt-id-content -->
 
 #### Document Understanding
 
-**ID**: [ ] `p1` `cpt-llmgw-fr-document-understanding-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-llm-gateway-fr-document-understanding-v1`
 <!-- cpt-id-content -->
 
 Consumer sends message with document URL. Gateway fetches document, routes to capable model.
 
-**Actors**: `cpt-llmgw-actor-consumer`, `cpt-llmgw-actor-provider`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`, `cpt-cyberfabric-llm-gateway-actor-provider`
 <!-- cpt-id-content -->
 
 #### Async Jobs
 
-**ID**: [ ] `p1` `cpt-llmgw-fr-async-jobs-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-llm-gateway-fr-async-jobs-v1`
 <!-- cpt-id-content -->
 
 Consumer can request async execution for long-running operations. Gateway returns job ID, consumer polls for result.
@@ -232,50 +219,46 @@ Gateway abstracts provider behavior:
 - Sync provider + async request → Gateway simulates job
 - Async provider + sync request → Gateway polls internally
 
-**Actors**: `cpt-llmgw-actor-consumer`, `cpt-llmgw-actor-provider`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`, `cpt-cyberfabric-llm-gateway-actor-provider`
 <!-- cpt-id-content -->
 
 #### Realtime Audio
 
-**ID**: [ ] `p1` `cpt-llmgw-fr-realtime-audio-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-llm-gateway-fr-realtime-audio-v1`
 <!-- cpt-id-content -->
 
 Bidirectional audio streaming via WebSocket for voice conversations.
 
-**Actors**: `cpt-llmgw-actor-consumer`, `cpt-llmgw-actor-provider`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`, `cpt-cyberfabric-llm-gateway-actor-provider`
 <!-- cpt-id-content -->
 
 #### Usage Tracking
 
-**ID**: [ ] `p1` `cpt-llmgw-fr-usage-tracking-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-llm-gateway-fr-usage-tracking-v1`
 <!-- cpt-id-content -->
 
 Gateway reports usage after each request via Usage Tracker: tokens, cost estimate, latency, attribution (tenant, user, conversation, model).
 
 Cross-cutting concern — applies to all operations, no dedicated UC.
 
-**Actors**: `cpt-llmgw-actor-consumer`, `cpt-llmgw-actor-usage-tracker`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`, `cpt-cyberfabric-llm-gateway-actor-usage-tracker`
 <!-- cpt-id-content -->
 
 ### P2 — Reliability & Governance
 
 #### Provider Fallback
 
-**ID**: [ ] `p2` `cpt-llmgw-fr-provider-fallback-v1`
-
+- [ ] `p2` - **ID**: `cpt-cyberfabric-llm-gateway-fr-provider-fallback-v1`
 <!-- cpt-id-content -->
 
 When primary provider fails, Gateway automatically switches to fallback provider with matching capabilities.
 
-**Actors**: `cpt-llmgw-actor-consumer`, `cpt-llmgw-actor-provider`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`, `cpt-cyberfabric-llm-gateway-actor-provider`
 <!-- cpt-id-content -->
 
 #### Timeout Enforcement
 
-**ID**: [ ] `p2` `cpt-llmgw-fr-timeout-v1`
-
+- [ ] `p2` - **ID**: `cpt-cyberfabric-llm-gateway-fr-timeout-v1`
 <!-- cpt-id-content -->
 
 Gateway enforces timeout types:
@@ -284,91 +267,84 @@ Gateway enforces timeout types:
 
 On timeout → fallback (if configured) → error.
 
-**Actors**: `cpt-llmgw-actor-consumer`, `cpt-llmgw-actor-provider`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`, `cpt-cyberfabric-llm-gateway-actor-provider`
 <!-- cpt-id-content -->
 
 #### Pre-Call Interceptor
 
-**ID**: [ ] `p2` `cpt-llmgw-fr-pre-call-interceptor-v1`
-
+- [ ] `p2` - **ID**: `cpt-cyberfabric-llm-gateway-fr-pre-call-interceptor-v1`
 <!-- cpt-id-content -->
 
 Before sending to provider, Gateway invokes Hook Plugin. Plugin can allow, block, or modify request.
 
-**Actors**: `cpt-llmgw-actor-consumer`, `cpt-llmgw-actor-hook-plugin`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`, `cpt-cyberfabric-llm-gateway-actor-hook-plugin`
 <!-- cpt-id-content -->
 
 #### Post-Response Interceptor
 
-**ID**: [ ] `p2` `cpt-llmgw-fr-post-response-interceptor-v1`
-
+- [ ] `p2` - **ID**: `cpt-cyberfabric-llm-gateway-fr-post-response-interceptor-v1`
 <!-- cpt-id-content -->
 
 After receiving response, Gateway invokes Hook Plugin. Plugin can allow, block, or modify response.
 
-**Actors**: `cpt-llmgw-actor-hook-plugin`, `cpt-llmgw-actor-consumer`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-hook-plugin`, `cpt-cyberfabric-llm-gateway-actor-consumer`
 <!-- cpt-id-content -->
 
 #### Per-Tenant Budget Enforcement
 
-**ID**: [ ] `p2` `cpt-llmgw-fr-budget-enforcement-v1`
-
+- [ ] `p2` - **ID**: `cpt-cyberfabric-llm-gateway-fr-budget-enforcement-v1`
 <!-- cpt-id-content -->
 
 Gateway checks budget before execution via Usage Tracker. Rejects if exhausted, reports actual usage after completion.
 
 Cross-cutting concern — applies to all operations, no dedicated UC.
 
-**Actors**: `cpt-llmgw-actor-consumer`, `cpt-llmgw-actor-usage-tracker`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`, `cpt-cyberfabric-llm-gateway-actor-usage-tracker`
 <!-- cpt-id-content -->
 
 #### Rate Limiting
 
-**ID**: [ ] `p2` `cpt-llmgw-fr-rate-limiting-v1`
-
+- [ ] `p2` - **ID**: `cpt-cyberfabric-llm-gateway-fr-rate-limiting-v1`
 <!-- cpt-id-content -->
 
 Gateway enforces rate limits at tenant and user levels. Rejects requests exceeding limits.
 
-**Actors**: `cpt-llmgw-actor-consumer`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 <!-- cpt-id-content -->
 
 ### P3 — Optimization
 
 #### Batch Processing
 
-**ID**: [ ] `p3` `cpt-llmgw-fr-batch-processing-v1`
-
+- [ ] `p3` - **ID**: `cpt-cyberfabric-llm-gateway-fr-batch-processing-v1`
 <!-- cpt-id-content -->
 
 Consumer submits batch of requests for async processing at reduced cost. Gateway abstracts provider batch APIs (OpenAI Batch API, Anthropic Message Batches).
 
-**Actors**: `cpt-llmgw-actor-consumer`, `cpt-llmgw-actor-provider`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-consumer`, `cpt-cyberfabric-llm-gateway-actor-provider`
 <!-- cpt-id-content -->
 
 ### P4 — Enterprise
 
 #### Audit Events
 
-**ID**: [ ] `p4` `cpt-llmgw-fr-audit-events-v1`
-
+- [ ] `p4` - **ID**: `cpt-cyberfabric-llm-gateway-fr-audit-events-v1`
 <!-- cpt-id-content -->
 
 Gateway emits audit events via Audit Module for compliance: request started, completed, failed, blocked, fallback triggered.
 
 Cross-cutting concern — applies to all operations, no dedicated UC.
 
-**Actors**: `cpt-llmgw-actor-audit-module`
+**Actors**: `cpt-cyberfabric-llm-gateway-actor-audit-module`
 <!-- cpt-id-content -->
 
 ## 4. Use Cases
 
 #### UC-001: Chat Completion
 
-**ID**: [ ] `p1` `cpt-llmgw-usecase-chat-completion-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-llm-gateway-usecase-chat-completion-v1`
 <!-- cpt-id-content -->
-**Actor**: `cpt-llmgw-actor-consumer`
+**Actor**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 **Preconditions**: Model available for tenant.
 
@@ -389,10 +365,9 @@ Cross-cutting concern — applies to all operations, no dedicated UC.
 
 #### UC-002: Streaming Chat Completion
 
-**ID**: [ ] `p1` `cpt-llmgw-usecase-streaming-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-llm-gateway-usecase-streaming-v1`
 <!-- cpt-id-content -->
-**Actor**: `cpt-llmgw-actor-consumer`
+**Actor**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 **Preconditions**: Model available for tenant, model supports streaming.
 
@@ -414,10 +389,9 @@ Cross-cutting concern — applies to all operations, no dedicated UC.
 
 #### UC-003: Embeddings Generation
 
-**ID**: [ ] `p1` `cpt-llmgw-usecase-embeddings-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-llm-gateway-usecase-embeddings-v1`
 <!-- cpt-id-content -->
-**Actor**: `cpt-llmgw-actor-consumer`
+**Actor**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 **Preconditions**: Embedding model available for tenant.
 
@@ -437,10 +411,9 @@ Cross-cutting concern — applies to all operations, no dedicated UC.
 
 #### UC-004: Vision (Image Analysis)
 
-**ID**: [ ] `p1` `cpt-llmgw-usecase-vision-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-llm-gateway-usecase-vision-v1`
 <!-- cpt-id-content -->
-**Actor**: `cpt-llmgw-actor-consumer`
+**Actor**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 **Preconditions**: Model available for tenant, model supports required content type.
 
@@ -462,10 +435,9 @@ Cross-cutting concern — applies to all operations, no dedicated UC.
 
 #### UC-005: Image Generation
 
-**ID**: [ ] `p1` `cpt-llmgw-usecase-image-generation-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-llm-gateway-usecase-image-generation-v1`
 <!-- cpt-id-content -->
-**Actor**: `cpt-llmgw-actor-consumer`
+**Actor**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 **Preconditions**: Image generation model available for tenant.
 
@@ -487,10 +459,9 @@ Cross-cutting concern — applies to all operations, no dedicated UC.
 
 #### UC-006: Speech-to-Text
 
-**ID**: [ ] `p1` `cpt-llmgw-usecase-speech-to-text-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-llm-gateway-usecase-speech-to-text-v1`
 <!-- cpt-id-content -->
-**Actor**: `cpt-llmgw-actor-consumer`
+**Actor**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 **Preconditions**: STT model available for tenant.
 
@@ -511,10 +482,9 @@ Cross-cutting concern — applies to all operations, no dedicated UC.
 
 #### UC-007: Text-to-Speech
 
-**ID**: [ ] `p1` `cpt-llmgw-usecase-text-to-speech-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-llm-gateway-usecase-text-to-speech-v1`
 <!-- cpt-id-content -->
-**Actor**: `cpt-llmgw-actor-consumer`
+**Actor**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 **Preconditions**: TTS model available for tenant.
 
@@ -536,10 +506,9 @@ Cross-cutting concern — applies to all operations, no dedicated UC.
 
 #### UC-008: Video Understanding
 
-**ID**: [ ] `p1` `cpt-llmgw-usecase-video-understanding-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-llm-gateway-usecase-video-understanding-v1`
 <!-- cpt-id-content -->
-**Actor**: `cpt-llmgw-actor-consumer`
+**Actor**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 **Preconditions**: Model available for tenant, model supports required content type.
 
@@ -560,10 +529,9 @@ Cross-cutting concern — applies to all operations, no dedicated UC.
 
 #### UC-009: Video Generation
 
-**ID**: [ ] `p1` `cpt-llmgw-usecase-video-generation-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-llm-gateway-usecase-video-generation-v1`
 <!-- cpt-id-content -->
-**Actor**: `cpt-llmgw-actor-consumer`
+**Actor**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 **Preconditions**: Video generation model available for tenant.
 
@@ -585,10 +553,9 @@ Cross-cutting concern — applies to all operations, no dedicated UC.
 
 #### UC-010: Tool/Function Calling
 
-**ID**: [ ] `p1` `cpt-llmgw-usecase-tool-calling-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-llm-gateway-usecase-tool-calling-v1`
 <!-- cpt-id-content -->
-**Actor**: `cpt-llmgw-actor-consumer`
+**Actor**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 **Preconditions**: Model available for tenant, model supports function calling.
 
@@ -615,10 +582,9 @@ Cross-cutting concern — applies to all operations, no dedicated UC.
 
 #### UC-011: Structured Output
 
-**ID**: [ ] `p1` `cpt-llmgw-usecase-structured-output-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-llm-gateway-usecase-structured-output-v1`
 <!-- cpt-id-content -->
-**Actor**: `cpt-llmgw-actor-consumer`
+**Actor**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 **Preconditions**: Model available for tenant.
 
@@ -640,10 +606,9 @@ Cross-cutting concern — applies to all operations, no dedicated UC.
 
 #### UC-012: Document Understanding
 
-**ID**: [ ] `p1` `cpt-llmgw-usecase-document-understanding-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-llm-gateway-usecase-document-understanding-v1`
 <!-- cpt-id-content -->
-**Actor**: `cpt-llmgw-actor-consumer`
+**Actor**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 **Preconditions**: Model available for tenant, model supports required content type.
 
@@ -664,10 +629,9 @@ Cross-cutting concern — applies to all operations, no dedicated UC.
 
 #### UC-013: Async Jobs
 
-**ID**: [ ] `p1` `cpt-llmgw-usecase-async-jobs-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-llm-gateway-usecase-async-jobs-v1`
 <!-- cpt-id-content -->
-**Actor**: `cpt-llmgw-actor-consumer`
+**Actor**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 **Preconditions**: Model available for tenant.
 
@@ -691,10 +655,9 @@ Cross-cutting concern — applies to all operations, no dedicated UC.
 
 #### UC-014: Realtime Audio
 
-**ID**: [ ] `p1` `cpt-llmgw-usecase-realtime-audio-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-llm-gateway-usecase-realtime-audio-v1`
 <!-- cpt-id-content -->
-**Actor**: `cpt-llmgw-actor-consumer`
+**Actor**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 **Preconditions**: Model available for tenant, model supports realtime audio.
 
@@ -715,10 +678,9 @@ Cross-cutting concern — applies to all operations, no dedicated UC.
 
 #### UC-015: Provider Fallback
 
-**ID**: [ ] `p2` `cpt-llmgw-usecase-provider-fallback-v1`
-
+- [ ] `p2` - **ID**: `cpt-cyberfabric-llm-gateway-usecase-provider-fallback-v1`
 <!-- cpt-id-content -->
-**Actor**: `cpt-llmgw-actor-consumer`
+**Actor**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 **Preconditions**: Model available for tenant.
 
@@ -741,10 +703,9 @@ Cross-cutting concern — applies to all operations, no dedicated UC.
 
 #### UC-016: Timeout Enforcement
 
-**ID**: [ ] `p2` `cpt-llmgw-usecase-timeout-v1`
-
+- [ ] `p2` - **ID**: `cpt-cyberfabric-llm-gateway-usecase-timeout-v1`
 <!-- cpt-id-content -->
-**Actor**: `cpt-llmgw-actor-consumer`
+**Actor**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 **Preconditions**: Model available for tenant.
 
@@ -766,10 +727,9 @@ Cross-cutting concern — applies to all operations, no dedicated UC.
 
 #### UC-017: Pre-Call Interceptor
 
-**ID**: [ ] `p2` `cpt-llmgw-usecase-pre-call-interceptor-v1`
-
+- [ ] `p2` - **ID**: `cpt-cyberfabric-llm-gateway-usecase-pre-call-interceptor-v1`
 <!-- cpt-id-content -->
-**Actor**: `cpt-llmgw-actor-consumer`
+**Actor**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 **Preconditions**: Hook Plugin configured for tenant.
 
@@ -789,10 +749,9 @@ Cross-cutting concern — applies to all operations, no dedicated UC.
 
 #### UC-018: Post-Response Interceptor
 
-**ID**: [ ] `p2` `cpt-llmgw-usecase-post-response-interceptor-v1`
-
+- [ ] `p2` - **ID**: `cpt-cyberfabric-llm-gateway-usecase-post-response-interceptor-v1`
 <!-- cpt-id-content -->
-**Actor**: `cpt-llmgw-actor-consumer`
+**Actor**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 **Preconditions**: Hook Plugin configured for tenant.
 
@@ -812,10 +771,9 @@ Cross-cutting concern — applies to all operations, no dedicated UC.
 
 #### UC-019: Rate Limiting
 
-**ID**: [ ] `p2` `cpt-llmgw-usecase-rate-limiting-v1`
-
+- [ ] `p2` - **ID**: `cpt-cyberfabric-llm-gateway-usecase-rate-limiting-v1`
 <!-- cpt-id-content -->
-**Actor**: `cpt-llmgw-actor-consumer`
+**Actor**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 **Preconditions**: Rate limits configured for tenant.
 
@@ -835,10 +793,9 @@ Cross-cutting concern — applies to all operations, no dedicated UC.
 
 #### UC-020: Batch Processing
 
-**ID**: [ ] `p3` `cpt-llmgw-usecase-batch-processing-v1`
-
+- [ ] `p3` - **ID**: `cpt-cyberfabric-llm-gateway-usecase-batch-processing-v1`
 <!-- cpt-id-content -->
-**Actor**: `cpt-llmgw-actor-consumer`
+**Actor**: `cpt-cyberfabric-llm-gateway-actor-consumer`
 
 **Preconditions**: Model available for tenant, provider supports batch API.
 
@@ -863,16 +820,8 @@ Cross-cutting concern — applies to all operations, no dedicated UC.
 
 #### Scalability
 
-**ID**: [ ] `p1` `cpt-llmgw-nfr-scalability-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-llm-gateway-nfr-scalability-v1`
 <!-- cpt-id-content -->
 Horizontal scaling without state coordination. Stateless design with exception for temporary async job state.
 <!-- cpt-id-content -->
 
-## 6. Traceability
-
-**Design principles**: `cpt-llmgw-principle-stateless`, `cpt-llmgw-principle-pass-through`
-
-**Constraints**: `cpt-llmgw-constraint-provider-rate-limits`, `cpt-llmgw-constraint-provider-context-windows`, `cpt-llmgw-constraint-outbound-dependency`, `cpt-llmgw-constraint-no-credentials`, `cpt-llmgw-constraint-content-logging`
-
-**ADRs**: `cpt-llmgw-adr-file-storage`, `cpt-llmgw-adr-circuit-breaking`

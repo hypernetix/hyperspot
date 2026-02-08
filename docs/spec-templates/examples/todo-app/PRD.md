@@ -33,7 +33,7 @@ The application is designed for individual use with cross-device synchronization
 
 #### User
 
-**ID**: `cpt-todo-app-actor-user`
+**ID**: `cpt-examples-todo-app-actor-user`
 **Role**: Primary user who creates, manages, and completes tasks in the application.
 **Needs**: Simple task management, cross-device access, quick task entry.
 
@@ -41,12 +41,12 @@ The application is designed for individual use with cross-device synchronization
 
 #### Sync Service
 
-**ID**: `cpt-todo-app-actor-sync-service`
+**ID**: `cpt-examples-todo-app-actor-sync-service`
 **Role**: Background service that synchronizes tasks across user devices in real-time.
 
 #### Notification Service
 
-**ID**: `cpt-todo-app-actor-notification-service`
+**ID**: `cpt-examples-todo-app-actor-notification-service`
 **Role**: Sends reminders and notifications to users about upcoming or overdue tasks.
 
 ## 3. Operational Concept & Environment
@@ -82,43 +82,43 @@ The application is designed for individual use with cross-device synchronization
 
 #### Create Task
 
-- [x] `p1` - **ID**: `cpt-todo-app-fr-create-task`
+- [x] `p1` - **ID**: `cpt-examples-todo-app-fr-create-task`
 
 The system **MUST** allow users to create a new task with a title, optional description, due date, priority level, and category.
 
 **Rationale**: Core functionality — users need to capture tasks quickly.
 **Source**: Task requirements from steering committee (ease of use goal: <3s task creation)
-**Actors**: `cpt-todo-app-actor-user`
+**Actors**: `cpt-examples-todo-app-actor-user`
 
 #### Complete Task
 
-- [x] `p1` - **ID**: `cpt-todo-app-fr-complete-task`
+- [x] `p1` - **ID**: `cpt-examples-todo-app-fr-complete-task`
 
 The system **MUST** allow users to mark a task as completed or revert it to incomplete status.
 
 **Rationale**: Essential for task lifecycle management.
 **Source**: User stories and stakeholder interviews
-**Actors**: `cpt-todo-app-actor-user`
+**Actors**: `cpt-examples-todo-app-actor-user`
 
 #### Delete Task
 
-- [x] `p1` - **ID**: `cpt-todo-app-fr-delete-task`
+- [x] `p1` - **ID**: `cpt-examples-todo-app-fr-delete-task`
 
 The system **MUST** allow users to delete a task permanently.
 
 **Rationale**: Users need to remove irrelevant or mistaken tasks.
-**Actors**: `cpt-todo-app-actor-user`
+**Actors**: `cpt-examples-todo-app-actor-user`
 
 ### 5.2 Organization
 
 #### Filter Tasks
 
-- [x] `p2` - **ID**: `cpt-todo-app-fr-filter-tasks`
+- [x] `p2` - **ID**: `cpt-examples-todo-app-fr-filter-tasks`
 
 The system **MUST** allow users to filter tasks by status (all, active, completed), category, and priority.
 
 **Rationale**: Helps users focus on relevant tasks.
-**Actors**: `cpt-todo-app-actor-user`
+**Actors**: `cpt-examples-todo-app-actor-user`
 
 ## 6. Non-Functional Requirements
 
@@ -130,7 +130,7 @@ The system **MUST** allow users to filter tasks by status (all, active, complete
 
 #### Response Time
 
-- [x] `p1` - **ID**: `cpt-todo-app-nfr-response-time`
+- [x] `p1` - **ID**: `cpt-examples-todo-app-nfr-response-time`
 
 All user interactions **MUST** complete within 200ms at p95 under normal load (stricter than project default of 500ms).
 
@@ -141,7 +141,7 @@ All user interactions **MUST** complete within 200ms at p95 under normal load (s
 
 #### Data Persistence
 
-- [x] `p1` - **ID**: `cpt-todo-app-nfr-data-persistence`
+- [x] `p1` - **ID**: `cpt-examples-todo-app-nfr-data-persistence`
 
 User data **MUST** be persisted locally immediately and synced to cloud storage within 5 seconds of any change when online.
 
@@ -152,7 +152,7 @@ User data **MUST** be persisted locally immediately and synced to cloud storage 
 
 #### Offline Support
 
-- [x] `p1` - **ID**: `cpt-todo-app-nfr-offline-support`
+- [x] `p1` - **ID**: `cpt-examples-todo-app-nfr-offline-support`
 
 The system **MUST** support offline mode where task creation, completion, filtering, and deletion operate without network connectivity.
 
@@ -166,7 +166,7 @@ The system **MUST** support offline mode where task creation, completion, filter
 
 #### REST API
 
-- [x] `p1` - **ID**: `cpt-todo-app-interface-rest-api`
+- [x] `p1` - **ID**: `cpt-examples-todo-app-interface-rest-api`
 
 **Type**: REST API (OpenAPI 3.0)
 **Stability**: stable
@@ -175,7 +175,7 @@ The system **MUST** support offline mode where task creation, completion, filter
 
 #### Task Data Model
 
-- [x] `p1` - **ID**: `cpt-todo-app-interface-task-model`
+- [x] `p1` - **ID**: `cpt-examples-todo-app-interface-task-model`
 
 **Type**: JSON Schema
 **Stability**: stable
@@ -186,7 +186,7 @@ The system **MUST** support offline mode where task creation, completion, filter
 
 #### Sync Service Contract
 
-- [x] `p1` - **ID**: `cpt-todo-app-contract-sync`
+- [x] `p1` - **ID**: `cpt-examples-todo-app-contract-sync`
 
 **Direction**: required from client (external sync backend)
 **Protocol/Format**: WebSocket + JSON for real-time task updates
@@ -196,9 +196,9 @@ The system **MUST** support offline mode where task creation, completion, filter
 
 #### Create a New Task
 
-- [ ] `p1` - **ID**: `cpt-todo-app-usecase-create-task`
+- [ ] `p1` - **ID**: `cpt-examples-todo-app-usecase-create-task`
 
-**Actor**: `cpt-todo-app-actor-user`
+**Actor**: `cpt-examples-todo-app-actor-user`
 
 **Preconditions**:
 - User is authenticated and on the main task list view

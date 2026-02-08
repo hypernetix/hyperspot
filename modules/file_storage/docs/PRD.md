@@ -38,7 +38,7 @@ The service provides URL-based access to files with metadata queries for validat
 
 #### LLM Gateway
 
-**ID**: `cpt-file-storage-actor-llm-gateway`
+**ID**: `cpt-cyberfabric-file-storage-actor-llm-gateway`
 
 <!-- cpt-id-content -->
 **Role**: Fetches input media (images, audio, video, documents) before provider calls and stores generated output media.
@@ -48,45 +48,45 @@ The service provides URL-based access to files with metadata queries for validat
 
 #### Fetch Media by URL
 
-**ID**: [ ] `p1` `cpt-file-storage-fr-fetch-media-v1`
+- [ ] `p1` - **ID**: `cpt-cyberfabric-file-storage-fr-fetch-media-v1`
 
 <!-- cpt-id-content -->
 
 The system must retrieve file content and metadata by URL for LLM Gateway consumption.
 
-**Actors**: `cpt-file-storage-actor-llm-gateway`
+**Actors**: `cpt-cyberfabric-file-storage-actor-llm-gateway`
 <!-- cpt-id-content -->
 
 #### Store Generated Content
 
-**ID**: [ ] `p1` `cpt-file-storage-fr-store-content-v1`
+- [ ] `p1` - **ID**: `cpt-cyberfabric-file-storage-fr-store-content-v1`
 
 <!-- cpt-id-content -->
 
 The system must store generated media (images, audio, video) and return accessible URL.
 
-**Actors**: `cpt-file-storage-actor-llm-gateway`
+**Actors**: `cpt-cyberfabric-file-storage-actor-llm-gateway`
 <!-- cpt-id-content -->
 
 #### Get Metadata
 
-**ID**: [ ] `p1` `cpt-file-storage-fr-get-metadata-v1`
+- [ ] `p1` - **ID**: `cpt-cyberfabric-file-storage-fr-get-metadata-v1`
 
 <!-- cpt-id-content -->
 
 The system must return file metadata (size, mime_type) without fetching full content for validation purposes.
 
-**Actors**: `cpt-file-storage-actor-llm-gateway`
+**Actors**: `cpt-cyberfabric-file-storage-actor-llm-gateway`
 <!-- cpt-id-content -->
 
 ## 4. Use Cases
 
 #### UC-001: Fetch Media by URL
 
-**ID**: [ ] `p1` `cpt-file-storage-usecase-fetch-media-v1`
+- [ ] `p1` - **ID**: `cpt-cyberfabric-file-storage-usecase-fetch-media-v1`
 
 <!-- cpt-id-content -->
-**Actor**: `cpt-file-storage-actor-llm-gateway`
+**Actor**: `cpt-cyberfabric-file-storage-actor-llm-gateway`
 
 **Preconditions**: File exists at URL.
 
@@ -105,10 +105,10 @@ The system must return file metadata (size, mime_type) without fetching full con
 
 #### UC-002: Store Generated Content
 
-**ID**: [ ] `p1` `cpt-file-storage-usecase-store-content-v1`
+- [ ] `p1` - **ID**: `cpt-cyberfabric-file-storage-usecase-store-content-v1`
 
 <!-- cpt-id-content -->
-**Actor**: `cpt-file-storage-actor-llm-gateway`
+**Actor**: `cpt-cyberfabric-file-storage-actor-llm-gateway`
 
 **Preconditions**: Content available for storage.
 
@@ -127,10 +127,10 @@ The system must return file metadata (size, mime_type) without fetching full con
 
 #### UC-003: Get Metadata
 
-**ID**: [ ] `p1` `cpt-file-storage-usecase-get-metadata-v1`
+- [ ] `p1` - **ID**: `cpt-cyberfabric-file-storage-usecase-get-metadata-v1`
 
 <!-- cpt-id-content -->
-**Actor**: `cpt-file-storage-actor-llm-gateway`
+**Actor**: `cpt-cyberfabric-file-storage-actor-llm-gateway`
 
 **Preconditions**: File exists at URL.
 
@@ -147,5 +147,9 @@ The system must return file metadata (size, mime_type) without fetching full con
 <!-- cpt-id-content -->
 
 ## 5. Non-functional requirements
+
+#### N/A
+
+- [ ] `p1` - **ID**: `cpt-cyberfabric-file-storage-nfr-na`
 
 <!-- NFRs to be defined later -->

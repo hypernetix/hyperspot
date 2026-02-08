@@ -4,7 +4,7 @@
 
 **Status**: Accepted
 
-**ID**: `cpt-todo-app-adr-local-storage`
+**ID**: `cpt-examples-todo-app-adr-local-storage`
 
 ## Context and Problem Statement
 
@@ -87,16 +87,16 @@ Decision aligns with offline-first architecture principle. Dexie.js chosen over 
 
 This decision directly addresses the following requirements or design elements:
 
-* `cpt-todo-app-nfr-offline-support` — Enables full offline functionality by providing local storage for tasks
-* `cpt-todo-app-nfr-response-time` — IndexedDB's indexed queries enable <200ms response times for filtering/search operations
-* `cpt-todo-app-fr-filter-tasks` — Indexes on status/category/priority enable efficient filtering without loading all data
-* `cpt-todo-app-design-principle-offline-first` — This is the core technical decision enabling the offline-first design principle
+* `cpt-examples-todo-app-nfr-offline-support` — Enables full offline functionality by providing local storage for tasks
+* `cpt-examples-todo-app-nfr-response-time` — IndexedDB's indexed queries enable <200ms response times for filtering/search operations
+* `cpt-examples-todo-app-fr-filter-tasks` — Indexes on status/category/priority enable efficient filtering without loading all data
+* `cpt-examples-todo-app-principle-offline-first` — This is the core technical decision enabling the offline-first design principle
 
 **Actors**:
-* `cpt-todo-app-actor-user` - Primary beneficiary of offline functionality
-* `cpt-todo-app-actor-sync-service` - Syncs IndexedDB changes to server
-* `cpt-todo-app-actor-notification-service` - Uses local persistence to schedule notifications reliably
+* `cpt-examples-todo-app-actor-user` - Primary beneficiary of offline functionality
+* `cpt-examples-todo-app-actor-sync-service` - Syncs IndexedDB changes to server
+* `cpt-examples-todo-app-actor-notification-service` - Uses local persistence to schedule notifications reliably
 
 **Additional referenced IDs**:
-* `cpt-todo-app-nfr-data-persistence` - IndexedDB enables immediate local persistence
-* `cpt-todo-app-interface-task-model` - Task schema stored locally and exchanged with sync backend
+* `cpt-examples-todo-app-nfr-data-persistence` - IndexedDB enables immediate local persistence
+* `cpt-examples-todo-app-interface-task-model` - Task schema stored locally and exchanged with sync backend

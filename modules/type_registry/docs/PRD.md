@@ -36,7 +36,7 @@ The registry supports both single and batch schema lookups for efficient tool re
 
 #### LLM Gateway
 
-**ID**: `cpt-type-registry-actor-llm-gateway`
+**ID**: `cpt-cyberfabric-type-registry-actor-llm-gateway`
 
 <!-- cpt-id-content -->
 **Role**: Resolves tool schema references to full GTS schemas before provider calls.
@@ -46,45 +46,41 @@ The registry supports both single and batch schema lookups for efficient tool re
 
 #### Get Schema by ID
 
-**ID**: [ ] `p1` `cpt-type-registry-fr-get-schema-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-type-registry-fr-get-schema-v1`
 <!-- cpt-id-content -->
 
 The system must resolve a schema ID to full GTS schema for LLM Gateway tool resolution.
 
-**Actors**: `cpt-type-registry-actor-llm-gateway`
+**Actors**: `cpt-cyberfabric-type-registry-actor-llm-gateway`
 <!-- cpt-id-content -->
 
 #### Batch Get Schemas
 
-**ID**: [ ] `p1` `cpt-type-registry-fr-batch-get-schemas-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-type-registry-fr-batch-get-schemas-v1`
 <!-- cpt-id-content -->
 
 The system must resolve multiple schema IDs in a single request for efficient multi-tool resolution.
 
-**Actors**: `cpt-type-registry-actor-llm-gateway`
+**Actors**: `cpt-cyberfabric-type-registry-actor-llm-gateway`
 <!-- cpt-id-content -->
 
 #### Schema ID Validation
 
-**ID**: [ ] `p1` `cpt-type-registry-fr-validate-schema-id-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-type-registry-fr-validate-schema-id-v1`
 <!-- cpt-id-content -->
 
 The system must validate schema ID format before lookup.
 
-**Actors**: `cpt-type-registry-actor-llm-gateway`
+**Actors**: `cpt-cyberfabric-type-registry-actor-llm-gateway`
 <!-- cpt-id-content -->
 
 ## 4. Use Cases
 
 #### UC-001: Get Schema by ID
 
-**ID**: [ ] `p1` `cpt-type-registry-usecase-get-schema-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-type-registry-usecase-get-schema-v1`
 <!-- cpt-id-content -->
-**Actor**: `cpt-type-registry-actor-llm-gateway`
+**Actor**: `cpt-cyberfabric-type-registry-actor-llm-gateway`
 
 **Preconditions**: Schema exists in registry.
 
@@ -104,10 +100,9 @@ The system must validate schema ID format before lookup.
 
 #### UC-002: Batch Get Schemas
 
-**ID**: [ ] `p1` `cpt-type-registry-usecase-batch-get-schemas-v1`
-
+- [ ] `p1` - **ID**: `cpt-cyberfabric-type-registry-usecase-batch-get-schemas-v1`
 <!-- cpt-id-content -->
-**Actor**: `cpt-type-registry-actor-llm-gateway`
+**Actor**: `cpt-cyberfabric-type-registry-actor-llm-gateway`
 
 **Preconditions**: At least one schema ID provided.
 
@@ -126,5 +121,9 @@ The system must validate schema ID format before lookup.
 <!-- cpt-id-content -->
 
 ## 5. Non-functional requirements
+
+#### N/A
+
+- [ ] `p9` - **ID**: `cpt-cyberfabric-type-registry-nfr-na`
 
 <!-- NFRs to be defined later -->
