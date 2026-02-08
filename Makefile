@@ -58,6 +58,7 @@ setup: .setup-stamp
 
 # Check code formatting
 fmt:
+	$(call check_rustup_component,rustfmt)
 	cargo fmt --all -- --check
 
 # -------- Code safety checks --------
@@ -186,31 +187,7 @@ dylint-test:
 dylint:
 	$(call check_tool,cargo-dylint)
 	$(call check_tool,dylint-link)
-	@cd dylint_lints && cargo build --release
-	@TOOLCHAIN=$$(rustc --version --verbose | grep 'host:' | cut -d' ' -f2); \
-	RUSTUP_TOOLCHAIN=$$(cat dylint_lints/rust-toolchain.toml 2>/dev/null | grep 'channel' | cut -d'"' -f2 || echo "nightly"); \
-	cd dylint_lints/target/release && \
-	for lib in $$(ls libde*.dylib libde*.so de*.dll 2>/dev/null | grep -v '@'); do \
-		case "$$lib" in \
-			*.dylib) EXT=".dylib" ;; \
-			*.so) EXT=".so" ;; \
-			*.dll) EXT=".dll" ;; \
-		esac; \
-		BASE=$${lib%$$EXT}; \
-		TARGET="$$BASE@$$RUSTUP_TOOLCHAIN-$$TOOLCHAIN$$EXT"; \
-		cp -f "$$lib" "$$TARGET" 2>/dev/null || true; \
-	done; \
-	cd ../../.. && \
-	DYLINT_LIBS=$$(find dylint_lints/target/release -maxdepth 1 \( -name "libde*@*.so" -o -name "libde*@*.dylib" -o -name "de*@*.dll" \) -type f | sort -u); \
-	if [ -z "$$DYLINT_LIBS" ]; then \
-		echo "ERROR: No dylint libraries found after build."; \
-		exit 1; \
-	fi; \
-	LIB_ARGS=""; \
-	for lib in $$DYLINT_LIBS; do \
-		LIB_ARGS="$$LIB_ARGS --lib-path $$lib"; \
-	done; \
-	cargo +$$RUSTUP_TOOLCHAIN dylint $$LIB_ARGS --workspace
+	cargo +nightly-2025-09-18 dylint --all --workspace
 
 # Run all code safety checks
 safety: clippy kani lint dylint # geiger
@@ -224,10 +201,6 @@ safety: clippy kani lint dylint # geiger
 deny:
 	$(call check_tool,cargo-deny)
 	cargo deny check
-
-# Run all security checks
-security: deny
-	@echo "OK. Rust Security Pipeline complete"
 
 # -------- API and docs --------
 
@@ -275,30 +248,37 @@ dev-fmt:
 
 ## Auto-fix clippy warnings
 dev-clippy:
-	cargo clippy --workspace --all-targets --fix --allow-dirty
+	cargo clippy --workspace --all-targets --all-features --fix --allow-dirty
 
 # Auto-fix formatting and clippy warnings
 dev: dev-fmt dev-clippy dev-test
 
 # -------- Tests --------
 
-.PHONY: test test-sqlite test-pg test-mysql test-db test-users-info-pg
+.PHONY: test test-no-macros test-macros test-sqlite test-pg test-mysql test-db test-users-info-pg
 
 # Run all tests
 test:
 	cargo test --workspace
 
+test-no-macros:
+	cargo test --workspace --no-fail-fast --exclude cf-modkit-macros-tests --exclude cf-modkit-db-macros
+
+test-macros:
+	cargo test -p cf-modkit-db-macros
+	cargo test -p cf-modkit-macros-tests
+
 ## Run SQLite integration tests
 test-sqlite:
-	cargo test -p modkit-db --features "sqlite,integration" -- --nocapture
+	cargo test -p cf-modkit-db --features sqlite,integration
 
 ## Run PostgreSQL integration tests
 test-pg:
-	cargo test -p modkit-db --features "pg,integration" -- --nocapture
+	cargo test -p cf-modkit-db --features pg,integration
 
 ## Run MySQL integration tests
 test-mysql:
-	cargo test -p modkit-db --features "mysql,integration" -- --nocapture
+	cargo test -p cf-modkit-db --features mysql,integration
 
 # Run all database integration tests
 test-db: test-sqlite test-pg test-mysql
@@ -417,14 +397,10 @@ oop-example:
 	cargo run --bin hyperspot-server --features oop-example,users-info-example,tenant-resolver-example -- --config config/quickstart.yaml run
 
 # Run all quality checks
-check: .setup-stamp fmt clippy lychee security dylint-test dylint gts-docs test
+check: .setup-stamp ci gts-docs test
 
-ci_test: fmt clippy
-
-ci_docs: lychee
-
-# Run CI pipeline
-ci: check
+# Run CI pipeline locally
+ci: fmt clippy test-no-macros test-macros test-db deny test-users-info-pg lychee dylint dylint-test
 
 # Make a release build using stable toolchain
 build:
