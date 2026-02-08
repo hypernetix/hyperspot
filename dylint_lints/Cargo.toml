@@ -25,9 +25,9 @@ resolver = "3"
 version = "0.2.0"
 edition = "2024"
 license = "Apache-2.0"
-authors = ["Hypernetix"]
+authors = ["Cyber Fabric"]
 
-# This workspace contains dylint linter crates for Hypernetix architecture enforcement
+# This workspace contains dylint linter crates for Cyber Fabric architecture enforcement
 #
 # Current linters:
 # - DE0101-DE0104: Contract layer validation (serde, toschema, http types, api_dto)

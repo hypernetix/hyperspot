@@ -1,7 +1,7 @@
 [package]
 name = "de0801_api_endpoint_version"
 version = "0.1.0"
-authors = ["Hypernetix"]
+authors = ["Cyber Fabric"]
 description = "DE0801: API endpoints must follow /{service-name}/v{N}/{resource} format"
 edition.workspace = true
 publish = false

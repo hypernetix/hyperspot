@@ -9,97 +9,97 @@ release-plz updates this file in the Release PR.
 
 ## [Unreleased]
 
-## [0.1.3](https://github.com/hypernetix/hyperspot/compare/cf-tenant-resolver-sdk-v0.1.2...cf-tenant-resolver-sdk-v0.1.3) - 2026-02-07
+## [0.1.3](https://github.com/cyberfabric/cyberfabric-core/compare/cf-tenant-resolver-sdk-v0.1.2...cf-tenant-resolver-sdk-v0.1.3) - 2026-02-07
 
 ### Other
 
 - updated the following local packages: cf-modkit-security, cf-modkit-odata, cf-modkit
 
-## [0.1.7](https://github.com/hypernetix/hyperspot/compare/cf-system-sdks-v0.1.6...cf-system-sdks-v0.1.7) - 2026-02-07
+## [0.1.7](https://github.com/cyberfabric/cyberfabric-core/compare/cf-system-sdks-v0.1.6...cf-system-sdks-v0.1.7) - 2026-02-07
 
 ### Other
 
 - updated the following local packages: cf-system-sdk-directory
 
-## [0.1.7](https://github.com/hypernetix/hyperspot/compare/cf-system-sdk-directory-v0.1.6...cf-system-sdk-directory-v0.1.7) - 2026-02-07
+## [0.1.7](https://github.com/cyberfabric/cyberfabric-core/compare/cf-system-sdk-directory-v0.1.6...cf-system-sdk-directory-v0.1.7) - 2026-02-07
 
 ### Other
 
 - updated the following local packages: cf-modkit-transport-grpc
 
-## [0.1.2](https://github.com/hypernetix/hyperspot/compare/cf-tenant-resolver-gw-v0.1.1...cf-tenant-resolver-gw-v0.1.2) - 2026-02-06
+## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/compare/cf-tenant-resolver-gw-v0.1.1...cf-tenant-resolver-gw-v0.1.2) - 2026-02-06
 
 ### Other
 
 - updated the following local packages: cf-modkit-security, cf-modkit-odata, cf-modkit, cf-types-registry-sdk, cf-tenant-resolver-sdk
 
-## [0.1.2](https://github.com/hypernetix/hyperspot/compare/cf-static-tr-plugin-v0.1.1...cf-static-tr-plugin-v0.1.2) - 2026-02-06
+## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/compare/cf-static-tr-plugin-v0.1.1...cf-static-tr-plugin-v0.1.2) - 2026-02-06
 
 ### Other
 
 - updated the following local packages: cf-modkit-security, cf-modkit-odata, cf-modkit, cf-types-registry-sdk, cf-tenant-resolver-sdk
 
-## [0.1.2](https://github.com/hypernetix/hyperspot/compare/cf-single-tenant-tr-plugin-v0.1.1...cf-single-tenant-tr-plugin-v0.1.2) - 2026-02-06
+## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/compare/cf-single-tenant-tr-plugin-v0.1.1...cf-single-tenant-tr-plugin-v0.1.2) - 2026-02-06
 
 ### Other
 
 - updated the following local packages: cf-modkit-security, cf-modkit-odata, cf-modkit, cf-types-registry-sdk, cf-tenant-resolver-sdk
 
-## [0.1.2](https://github.com/hypernetix/hyperspot/compare/cf-tenant-resolver-sdk-v0.1.1...cf-tenant-resolver-sdk-v0.1.2) - 2026-02-06
+## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/compare/cf-tenant-resolver-sdk-v0.1.1...cf-tenant-resolver-sdk-v0.1.2) - 2026-02-06
 
 ### Other
 
 - updated the following local packages: cf-modkit-security, cf-modkit-odata, cf-modkit
 
-## [0.1.2](https://github.com/hypernetix/hyperspot/compare/cf-nodes-registry-v0.1.1...cf-nodes-registry-v0.1.2) - 2026-02-06
+## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/compare/cf-nodes-registry-v0.1.1...cf-nodes-registry-v0.1.2) - 2026-02-06
 
 ### Other
 
 - updated the following local packages: cf-modkit-macros, cf-modkit, cf-modkit-node-info, cf-nodes-registry-sdk
 
-## [0.1.2](https://github.com/hypernetix/hyperspot/compare/cf-nodes-registry-sdk-v0.1.1...cf-nodes-registry-sdk-v0.1.2) - 2026-02-06
+## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/compare/cf-nodes-registry-sdk-v0.1.1...cf-nodes-registry-sdk-v0.1.2) - 2026-02-06
 
 ### Other
 
 - updated the following local packages: cf-modkit-node-info
 
-## [0.1.2](https://github.com/hypernetix/hyperspot/compare/cf-module-orchestrator-v0.1.1...cf-module-orchestrator-v0.1.2) - 2026-02-06
+## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/compare/cf-module-orchestrator-v0.1.1...cf-module-orchestrator-v0.1.2) - 2026-02-06
 
 ### Other
 
 - updated the following local packages: cf-modkit, cf-system-sdks
 
-## [0.1.2](https://github.com/hypernetix/hyperspot/compare/cf-types-registry-sdk-v0.1.1...cf-types-registry-sdk-v0.1.2) - 2026-02-06
+## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/compare/cf-types-registry-sdk-v0.1.1...cf-types-registry-sdk-v0.1.2) - 2026-02-06
 
 ### Other
 
 - updated the following local packages: cf-modkit-security
 
-## [0.1.2](https://github.com/hypernetix/hyperspot/compare/cf-grpc-hub-v0.1.1...cf-grpc-hub-v0.1.2) - 2026-02-06
+## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/compare/cf-grpc-hub-v0.1.1...cf-grpc-hub-v0.1.2) - 2026-02-06
 
 ### Other
 
 - updated the following local packages: cf-modkit-transport-grpc, cf-modkit, cf-system-sdks
 
-## [0.1.6](https://github.com/hypernetix/hyperspot/compare/cf-system-sdks-v0.1.5...cf-system-sdks-v0.1.6) - 2026-02-06
+## [0.1.6](https://github.com/cyberfabric/cyberfabric-core/compare/cf-system-sdks-v0.1.5...cf-system-sdks-v0.1.6) - 2026-02-06
 
 ### Other
 
 - updated the following local packages: cf-system-sdk-directory
 
-## [0.1.6](https://github.com/hypernetix/hyperspot/compare/cf-system-sdk-directory-v0.1.5...cf-system-sdk-directory-v0.1.6) - 2026-02-06
+## [0.1.6](https://github.com/cyberfabric/cyberfabric-core/compare/cf-system-sdk-directory-v0.1.5...cf-system-sdk-directory-v0.1.6) - 2026-02-06
 
 ### Other
 
 - updated the following local packages: cf-modkit-transport-grpc
 
-## [0.1.5](https://github.com/hypernetix/hyperspot/compare/cf-system-sdks-v0.1.4...cf-system-sdks-v0.1.5) - 2026-02-02
+## [0.1.5](https://github.com/cyberfabric/cyberfabric-core/compare/cf-system-sdks-v0.1.4...cf-system-sdks-v0.1.5) - 2026-02-02
 
 ### Other
 
 - updated the following local packages: cf-system-sdk-directory
 
-## [0.1.5](https://github.com/hypernetix/hyperspot/compare/cf-system-sdk-directory-v0.1.4...cf-system-sdk-directory-v0.1.5) - 2026-02-02
+## [0.1.5](https://github.com/cyberfabric/cyberfabric-core/compare/cf-system-sdk-directory-v0.1.4...cf-system-sdk-directory-v0.1.5) - 2026-02-02
 
 ### Other
 
@@ -158,19 +158,19 @@ impl DatabaseCapability for MyModule {
 }
 ```
 
-## [0.1.4](https://github.com/hypernetix/hyperspot/compare/cf-system-sdks-v0.1.3...cf-system-sdks-v0.1.4) - 2026-01-28
+## [0.1.4](https://github.com/cyberfabric/cyberfabric-core/compare/cf-system-sdks-v0.1.3...cf-system-sdks-v0.1.4) - 2026-01-28
 
 ### Other
 
 - updated the following local packages: cf-system-sdk-directory
 
-## [0.1.4](https://github.com/hypernetix/hyperspot/compare/cf-system-sdk-directory-v0.1.3...cf-system-sdk-directory-v0.1.4) - 2026-01-28
+## [0.1.4](https://github.com/cyberfabric/cyberfabric-core/compare/cf-system-sdk-directory-v0.1.3...cf-system-sdk-directory-v0.1.4) - 2026-01-28
 
 ### Other
 
 - updated the following local packages: cf-modkit-transport-grpc
 
-## [0.1.1](https://github.com/hypernetix/hyperspot/releases/tag/cf-types-registry-v0.1.1) - 2026-01-27
+## [0.1.1](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-types-registry-v0.1.1) - 2026-01-27
 
 ### Other
 
@@ -186,7 +186,7 @@ impl DatabaseCapability for MyModule {
 * @github-actions[bot]
 * @alizid10
 
-## [0.1.1](https://github.com/hypernetix/hyperspot/releases/tag/cf-tenant-resolver-gw-v0.1.1) - 2026-01-27
+## [0.1.1](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-tenant-resolver-gw-v0.1.1) - 2026-01-27
 
 ### Other
 
@@ -200,7 +200,7 @@ impl DatabaseCapability for MyModule {
 * @github-actions[bot]
 * @alizid10
 
-## [0.1.1](https://github.com/hypernetix/hyperspot/releases/tag/cf-static-tr-plugin-v0.1.1) - 2026-01-27
+## [0.1.1](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-static-tr-plugin-v0.1.1) - 2026-01-27
 
 ### Other
 
@@ -214,7 +214,7 @@ impl DatabaseCapability for MyModule {
 * @github-actions[bot]
 * @alizid10
 
-## [0.1.1](https://github.com/hypernetix/hyperspot/releases/tag/cf-single-tenant-tr-plugin-v0.1.1) - 2026-01-27
+## [0.1.1](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-single-tenant-tr-plugin-v0.1.1) - 2026-01-27
 
 ### Other
 
@@ -228,7 +228,7 @@ impl DatabaseCapability for MyModule {
 * @github-actions[bot]
 * @alizid10
 
-## [0.1.1](https://github.com/hypernetix/hyperspot/releases/tag/cf-tenant-resolver-sdk-v0.1.1) - 2026-01-27
+## [0.1.1](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-tenant-resolver-sdk-v0.1.1) - 2026-01-27
 
 ### Other
 
@@ -240,7 +240,7 @@ impl DatabaseCapability for MyModule {
 * @MikeFalcon77
 * @github-actions[bot]
 
-## [0.1.1](https://github.com/hypernetix/hyperspot/releases/tag/cf-nodes-registry-v0.1.1) - 2026-01-27
+## [0.1.1](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-nodes-registry-v0.1.1) - 2026-01-27
 
 ### Other
 
@@ -251,7 +251,7 @@ impl DatabaseCapability for MyModule {
 
 * @nanoandrew4
 
-## [0.1.1](https://github.com/hypernetix/hyperspot/releases/tag/cf-nodes-registry-sdk-v0.1.1) - 2026-01-27
+## [0.1.1](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-nodes-registry-sdk-v0.1.1) - 2026-01-27
 
 ### Other
 
@@ -263,7 +263,7 @@ impl DatabaseCapability for MyModule {
 * @MikeFalcon77
 * @github-actions[bot]
 
-## [0.1.4](https://github.com/hypernetix/hyperspot/compare/cf-modkit-node-info-v0.1.3...cf-modkit-node-info-v0.1.4) - 2026-01-27
+## [0.1.4](https://github.com/cyberfabric/cyberfabric-core/compare/cf-modkit-node-info-v0.1.3...cf-modkit-node-info-v0.1.4) - 2026-01-27
 
 ### Other
 
@@ -273,7 +273,7 @@ impl DatabaseCapability for MyModule {
 
 * @MikeFalcon77
 
-## [0.1.1](https://github.com/hypernetix/hyperspot/releases/tag/cf-module-orchestrator-v0.1.1) - 2026-01-27
+## [0.1.1](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-module-orchestrator-v0.1.1) - 2026-01-27
 
 ### Other
 
@@ -285,7 +285,7 @@ impl DatabaseCapability for MyModule {
 * @MikeFalcon77
 * @github-actions[bot]
 
-## [0.1.1](https://github.com/hypernetix/hyperspot/releases/tag/cf-file-parser-v0.1.1) - 2026-01-27
+## [0.1.1](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-file-parser-v0.1.1) - 2026-01-27
 
 ### Other
 
@@ -296,7 +296,7 @@ impl DatabaseCapability for MyModule {
 
 * @nanoandrew4
 
-## [0.1.1](https://github.com/hypernetix/hyperspot/releases/tag/cf-types-registry-sdk-v0.1.1) - 2026-01-27
+## [0.1.1](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-types-registry-sdk-v0.1.1) - 2026-01-27
 
 ### Other
 
@@ -308,7 +308,7 @@ impl DatabaseCapability for MyModule {
 * @MikeFalcon77
 * @github-actions[bot]
 
-## [0.1.1](https://github.com/hypernetix/hyperspot/releases/tag/cf-grpc-hub-v0.1.1) - 2026-01-27
+## [0.1.1](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-grpc-hub-v0.1.1) - 2026-01-27
 
 ### Other
 
@@ -320,7 +320,7 @@ impl DatabaseCapability for MyModule {
 * @MikeFalcon77
 * @github-actions[bot]
 
-## [0.1.1](https://github.com/hypernetix/hyperspot/releases/tag/cf-api-gateway-v0.1.1) - 2026-01-27
+## [0.1.1](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-api-gateway-v0.1.1) - 2026-01-27
 
 ### Other
 
@@ -333,7 +333,7 @@ impl DatabaseCapability for MyModule {
 * @MikeFalcon77
 * @nanoandrew4
 
-## [0.1.4](https://github.com/hypernetix/hyperspot/compare/cf-modkit-auth-v0.1.3...cf-modkit-auth-v0.1.4) - 2026-01-27
+## [0.1.4](https://github.com/cyberfabric/cyberfabric-core/compare/cf-modkit-auth-v0.1.3...cf-modkit-auth-v0.1.4) - 2026-01-27
 
 ### Other
 
@@ -343,7 +343,7 @@ impl DatabaseCapability for MyModule {
 
 * @MikeFalcon77
 
-## [0.1.4](https://github.com/hypernetix/hyperspot/compare/cf-modkit-v0.1.3...cf-modkit-v0.1.4) - 2026-01-27
+## [0.1.4](https://github.com/cyberfabric/cyberfabric-core/compare/cf-modkit-v0.1.3...cf-modkit-v0.1.4) - 2026-01-27
 
 ### Other
 
@@ -354,7 +354,7 @@ impl DatabaseCapability for MyModule {
 
 * @nanoandrew4
 
-## [0.1.4](https://github.com/hypernetix/hyperspot/compare/cf-modkit-sdk-v0.1.3...cf-modkit-sdk-v0.1.4) - 2026-01-27
+## [0.1.4](https://github.com/cyberfabric/cyberfabric-core/compare/cf-modkit-sdk-v0.1.3...cf-modkit-sdk-v0.1.4) - 2026-01-27
 
 ### Other
 
@@ -364,7 +364,7 @@ impl DatabaseCapability for MyModule {
 
 * @MikeFalcon77
 
-## [0.1.4](https://github.com/hypernetix/hyperspot/compare/cf-modkit-odata-macros-v0.1.3...cf-modkit-odata-macros-v0.1.4) - 2026-01-27
+## [0.1.4](https://github.com/cyberfabric/cyberfabric-core/compare/cf-modkit-odata-macros-v0.1.3...cf-modkit-odata-macros-v0.1.4) - 2026-01-27
 
 ### Other
 
@@ -374,7 +374,7 @@ impl DatabaseCapability for MyModule {
 
 * @MikeFalcon77
 
-## [0.1.4](https://github.com/hypernetix/hyperspot/compare/cf-modkit-macros-v0.1.3...cf-modkit-macros-v0.1.4) - 2026-01-27
+## [0.1.4](https://github.com/cyberfabric/cyberfabric-core/compare/cf-modkit-macros-v0.1.3...cf-modkit-macros-v0.1.4) - 2026-01-27
 
 ### Other
 
@@ -385,13 +385,13 @@ impl DatabaseCapability for MyModule {
 
 * @nanoandrew4
 
-## [0.1.4](https://github.com/hypernetix/hyperspot/compare/cf-modkit-db-v0.1.3...cf-modkit-db-v0.1.4) - 2026-01-27
+## [0.1.4](https://github.com/cyberfabric/cyberfabric-core/compare/cf-modkit-db-v0.1.3...cf-modkit-db-v0.1.4) - 2026-01-27
 
 ### Other
 
 - update Cargo.toml dependencies
 
-## [0.1.3](https://github.com/hypernetix/hyperspot/releases/tag/cf-system-sdks-v0.1.3) - 2026-01-27
+## [0.1.3](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-system-sdks-v0.1.3) - 2026-01-27
 
 ### Other
 
@@ -401,7 +401,7 @@ impl DatabaseCapability for MyModule {
 
 * @github-actions[bot]
 
-## [0.1.3](https://github.com/hypernetix/hyperspot/releases/tag/cf-system-sdk-directory-v0.1.3) - 2026-01-27
+## [0.1.3](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-system-sdk-directory-v0.1.3) - 2026-01-27
 
 ### Other
 
@@ -411,25 +411,25 @@ impl DatabaseCapability for MyModule {
 
 * @github-actions[bot]
 
-## [0.1.4](https://github.com/hypernetix/hyperspot/compare/cf-modkit-security-v0.1.3...cf-modkit-security-v0.1.4) - 2026-01-27
+## [0.1.4](https://github.com/cyberfabric/cyberfabric-core/compare/cf-modkit-security-v0.1.3...cf-modkit-security-v0.1.4) - 2026-01-27
 
 ### Other
 
 - update Cargo.toml dependencies
 
-## [0.1.3](https://github.com/hypernetix/hyperspot/compare/cf-system-sdks-v0.1.2...cf-system-sdks-v0.1.3) - 2026-01-27
+## [0.1.3](https://github.com/cyberfabric/cyberfabric-core/compare/cf-system-sdks-v0.1.2...cf-system-sdks-v0.1.3) - 2026-01-27
 
 ### Other
 
 - updated the following local packages: cf-system-sdk-directory
 
-## [0.1.3](https://github.com/hypernetix/hyperspot/compare/cf-system-sdk-directory-v0.1.2...cf-system-sdk-directory-v0.1.3) - 2026-01-27
+## [0.1.3](https://github.com/cyberfabric/cyberfabric-core/compare/cf-system-sdk-directory-v0.1.2...cf-system-sdk-directory-v0.1.3) - 2026-01-27
 
 ### Other
 
 - updated the following local packages: cf-modkit-transport-grpc
 
-## [0.1.1](https://github.com/hypernetix/hyperspot/releases/tag/cf-types-registry-v0.1.1) - 2026-01-27
+## [0.1.1](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-types-registry-v0.1.1) - 2026-01-27
 
 ### Other
 
@@ -437,7 +437,7 @@ impl DatabaseCapability for MyModule {
 - release
 - Normalize modules (types registry and simple user settings) paths to snake_case
 
-## [0.1.1](https://github.com/hypernetix/hyperspot/releases/tag/cf-tenant-resolver-gw-v0.1.1) - 2026-01-27
+## [0.1.1](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-tenant-resolver-gw-v0.1.1) - 2026-01-27
 
 ### Other
 
@@ -445,7 +445,7 @@ impl DatabaseCapability for MyModule {
 - release
 - Normalize modules (types registry and simple user settings) paths to snake_case
 
-## [0.1.1](https://github.com/hypernetix/hyperspot/releases/tag/cf-static-tr-plugin-v0.1.1) - 2026-01-27
+## [0.1.1](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-static-tr-plugin-v0.1.1) - 2026-01-27
 
 ### Other
 
@@ -453,7 +453,7 @@ impl DatabaseCapability for MyModule {
 - release
 - Normalize modules (types registry and simple user settings) paths to snake_case
 
-## [0.1.1](https://github.com/hypernetix/hyperspot/releases/tag/cf-single-tenant-tr-plugin-v0.1.1) - 2026-01-27
+## [0.1.1](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-single-tenant-tr-plugin-v0.1.1) - 2026-01-27
 
 ### Other
 
@@ -461,75 +461,75 @@ impl DatabaseCapability for MyModule {
 - release
 - Normalize modules (types registry and simple user settings) paths to snake_case
 
-## [0.1.1](https://github.com/hypernetix/hyperspot/releases/tag/cf-tenant-resolver-sdk-v0.1.1) - 2026-01-27
+## [0.1.1](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-tenant-resolver-sdk-v0.1.1) - 2026-01-27
 
 ### Other
 
 - *(modules)* Add module descriptions, missed README.MD and some crate meta
 - release
 
-## [0.1.1](https://github.com/hypernetix/hyperspot/releases/tag/cf-nodes-registry-v0.1.1) - 2026-01-27
+## [0.1.1](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-nodes-registry-v0.1.1) - 2026-01-27
 
 ### Other
 
 - *(modules)* Add module descriptions, missed README.MD and some crate meta
 - release
 
-## [0.1.1](https://github.com/hypernetix/hyperspot/releases/tag/cf-nodes-registry-sdk-v0.1.1) - 2026-01-27
+## [0.1.1](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-nodes-registry-sdk-v0.1.1) - 2026-01-27
 
 ### Other
 
 - *(modules)* Add module descriptions, missed README.MD and some crate meta
 - release
 
-## [0.1.2](https://github.com/hypernetix/hyperspot/compare/cf-modkit-node-info-v0.1.1...cf-modkit-node-info-v0.1.2) - 2026-01-27
+## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/compare/cf-modkit-node-info-v0.1.1...cf-modkit-node-info-v0.1.2) - 2026-01-27
 
 ### Other
 
 - *(modules)* Add module descriptions, missed README.MD and some crate meta
 
-## [0.1.1](https://github.com/hypernetix/hyperspot/releases/tag/cf-module-orchestrator-v0.1.1) - 2026-01-27
-
-### Other
-
-- *(modules)* Add module descriptions, missed README.MD and some crate meta
-- release
-
-## [0.1.1](https://github.com/hypernetix/hyperspot/releases/tag/cf-file-parser-v0.1.1) - 2026-01-27
+## [0.1.1](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-module-orchestrator-v0.1.1) - 2026-01-27
 
 ### Other
 
 - *(modules)* Add module descriptions, missed README.MD and some crate meta
 - release
 
-## [0.1.1](https://github.com/hypernetix/hyperspot/releases/tag/cf-types-registry-sdk-v0.1.1) - 2026-01-27
+## [0.1.1](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-file-parser-v0.1.1) - 2026-01-27
 
 ### Other
 
 - *(modules)* Add module descriptions, missed README.MD and some crate meta
 - release
 
-## [0.1.1](https://github.com/hypernetix/hyperspot/releases/tag/cf-grpc-hub-v0.1.1) - 2026-01-27
+## [0.1.1](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-types-registry-sdk-v0.1.1) - 2026-01-27
 
 ### Other
 
 - *(modules)* Add module descriptions, missed README.MD and some crate meta
 - release
 
-## [0.1.1](https://github.com/hypernetix/hyperspot/releases/tag/cf-api-gateway-v0.1.1) - 2026-01-27
+## [0.1.1](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-grpc-hub-v0.1.1) - 2026-01-27
 
 ### Other
 
 - *(modules)* Add module descriptions, missed README.MD and some crate meta
 - release
 
-## [0.1.2](https://github.com/hypernetix/hyperspot/compare/cf-modkit-security-v0.1.1...cf-modkit-security-v0.1.2) - 2026-01-27
+## [0.1.1](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-api-gateway-v0.1.1) - 2026-01-27
+
+### Other
+
+- *(modules)* Add module descriptions, missed README.MD and some crate meta
+- release
+
+## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/compare/cf-modkit-security-v0.1.1...cf-modkit-security-v0.1.2) - 2026-01-27
 
 ### Other
 
 - *(modules)* Add module descriptions, missed README.MD and some crate meta
 
-## [0.1.1](https://github.com/hypernetix/hyperspot/compare/cf-system-sdk-directory-v0.1.0...cf-system-sdk-directory-v0.1.1) - 2026-01-26
+## [0.1.1](https://github.com/cyberfabric/cyberfabric-core/compare/cf-system-sdk-directory-v0.1.0...cf-system-sdk-directory-v0.1.1) - 2026-01-26
 
 ### Other
 

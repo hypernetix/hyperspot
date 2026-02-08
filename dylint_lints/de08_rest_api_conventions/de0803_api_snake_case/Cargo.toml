@@ -1,7 +1,7 @@
 [package]
 name = "de0803_api_snake_case"
 version = "0.1.0"
-authors = ["Hypernetix"]
+authors = ["Cyber Fabric"]
 description = "DTOs must not use CamelCase or PascalCase in serde rename_all, only snake_case is allowed"
 edition = "2024"
 publish = false

@@ -20,7 +20,7 @@ jobs:
       # -----------------------------
       # Organization / project
       # -----------------------------
-      ORG: hypernetix
+      ORG: cyberfabric
       PROJECT_NUMBER: 6
 
       # -----------------------------

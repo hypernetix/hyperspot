@@ -2,8 +2,8 @@
 version = "0.2.2"
 edition = "2024"
 license = "Apache-2.0"
-authors = ["Hypernetix"]
-repository = "https://github.com/hypernetix/hyperspot"
+authors = ["Cyber Fabric"]
+repository = "https://github.com/cyberfabric/cyberfabric-core"
 description = "HyperSpot Server"
 rust-version = "1.92.0"
 readme = "README.md"

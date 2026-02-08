@@ -1,7 +1,7 @@
 [package]
 name = "de0102_no_toschema_in_contract"
 version = "0.1.0"
-authors = ["Hypernetix"]
+authors = ["Cyber Fabric"]
 description = "Contract models should not have ToSchema derive (DE0102)"
 edition.workspace = true
 publish = false
