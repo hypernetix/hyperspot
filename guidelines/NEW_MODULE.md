@@ -1254,6 +1254,7 @@ This layer adapts HTTP requests to domain calls. It is required only for modules
 #### Common principles
 
 1. **Follow the rules below:**
+   **Rule:** Strictly follow the [API guideline](./DNA/REST/API.md).
    **Rule:** Do NOT implement a REST host. `api_gateway` owns the Axum server and OpenAPI. Modules only register routes
    via `register_routes(...)`.
    **Rule:** Use `Extension<Arc<Service>>` for dependency injection and attach the service ONCE after all
@@ -2823,6 +2824,7 @@ errors (add explicit types), missing `time::OffsetDateTime`, handler/service nam
 - [MODKIT_PLUGINS.md](../docs/MODKIT_PLUGINS.md) — Plugin architecture with Gateway + Plugins pattern
 - `docs/modkit_unified_system/06_secure_orm_db_access.md` — Secure ORM layer with tenant isolation
 - [TRACING_SETUP.md](../docs/TRACING_SETUP.md) — Distributed tracing with OpenTelemetry
+- [DNA/REST/API.md](./DNA/REST/API.md) — REST API design principles
 - [examples/modkit/users_info/](../examples/modkit/users_info/) — Reference implementation of a local module with SDK
   pattern
     - `user_info-sdk/` — SDK crate with public API trait, models, and errors
