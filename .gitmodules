@@ -1,0 +1,3 @@
+[submodule "guidelines/DNA"]
+	path = guidelines/DNA
+	url = https://github.com/cyberfabric/DNA
