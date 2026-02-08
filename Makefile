@@ -114,8 +114,7 @@ clippy:
 
 validate-artifacts:
 	@if git -C .cypilot rev-parse --is-inside-work-tree >/dev/null 2>&1 && git -C .cypilot symbolic-ref -q HEAD >/dev/null 2>&1; then \
-		echo "Updating .cypilot via git pull (branch checkout detected)"; \
-		git -C .cypilot pull --ff-only; \
+		echo "Skipping .cypilot update (branch checkout detected)"; \
 	else \
 		echo "Updating .cypilot via git submodule update (detached HEAD)"; \
 		git submodule update --init --recursive -- .cypilot; \
