@@ -16,7 +16,13 @@ ALWAYS open and follow `docs/checklists/DECOMPOSITION.md` as a quality checklist
 ## Hyperspot Deltas vs Original Cypilot SDLC
 
 - Hyperspot decomposes DESIGN into `FEATURE` entries.
-- Each entry MUST link to a corresponding FEATURE artifact; FEATURE references the feature ID via `cpt-{system}-feature-{slug}` (do not redefine).
+- Each entry MUST link to a corresponding FEATURE artifact and satisfy constraints.json coverage rules.
+
+## Constraints Alignment (REQUIRED)
+
+DECOMPOSITION MUST define at least one `feature` ID (Feature Entry).
+
+Each `feature` ID is expected to be covered by FEATURE artifacts according to constraints.json (coverage: required).
 
 ## Generation Checklist
 

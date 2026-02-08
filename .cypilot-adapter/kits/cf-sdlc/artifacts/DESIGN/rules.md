@@ -13,6 +13,21 @@ ALWAYS open and follow `docs/checklists/DESIGN.md` as a quality checklist
 - Downstream chain uses DECOMPOSITION → FEATURE.
 - Prefer decisions aligned with ModKit patterns and the secure ORM (`SecurityCtx` request-scoped).
 
+## Constraints Alignment (REQUIRED)
+
+DESIGN MUST define at least one ID of each required kind:
+
+- `principle` (Design Principle)
+- `constraint` (Design Constraint)
+- `component` (Component)
+- `seq` (Sequence)
+
+DESIGN SHOULD reference PRD FR/NFR IDs (so PRD IDs satisfy their required coverage to DESIGN).
+
+PRD MUST NOT reference DESIGN IDs (`principle`/`constraint`/`component`/`seq`) as backtick IDs.
+
+ADR IDs MUST be referenced from DESIGN (i.e., DESIGN should include backtick references to ADR IDs where decisions are material).
+
 ## Generation Checklist
 
 - [ ] Reference PRD FR/NFR IDs and map them to system-level design (WHAT → HOW at architecture level).

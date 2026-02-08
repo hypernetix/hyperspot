@@ -10,11 +10,25 @@ ALWAYS open and follow `docs/checklists/FEATURE.md` as a quality checklist
 ## Hyperspot Deltas vs Original Cypilot SDLC
 
 - Hyperspot uses `FEATURE` artifacts as the implementable unit.
-- The feature ID is defined in DECOMPOSITION; FEATURE references it via `cpt-{system}-feature-{slug}` (do not redefine).
+
+## Constraints Alignment (REQUIRED)
+
+FEATURE MUST define at least one `dod` ID.
+
+- `dod` requires task+priority → use checkbox ID definition form (`- [ ] `pN` - **ID**: ...`).
+- `dod` is `to_code: true` (intended to drive implementation + traceability).
+
+Optional ID kinds allowed in FEATURE:
+
+- `flow`
+- `algo`
+- `state`
+- `featurecontext`
 
 ## Generation Checklist
 
-- [ ] Reference the DECOMPOSITION feature ID via `cpt-{system}-feature-{slug}` (do not redefine the same feature ID).
+- [ ] Ensure at least one `dod` exists and is written as testable acceptance criteria.
+- [ ] Ensure the FEATURE references its corresponding DECOMPOSITION `feature` ID (as a backtick reference) so DECOMPOSITION coverage requirements can pass.
 - [ ] Define flows/algorithms/states/requirements at implementable detail level (inputs/outputs, errors, edge cases).
 - [ ] Keep details consistent with ModKit patterns, secure ORM, and OData/OpenAPI conventions.
 - [ ] Write acceptance criteria that are testable and map to `make test`/integration/E2E expectations.

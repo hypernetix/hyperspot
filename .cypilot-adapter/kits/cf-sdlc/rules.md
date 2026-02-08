@@ -15,9 +15,16 @@ All Cypilot IDs MUST:
 
 **ID definition**:
 
+When constraints require `task` and `priority` for an ID kind, ALWAYS use the checkbox form (`- [ ] `pN` - **ID**: ...`).
+
+```text
+- [ ] `p1` - **ID**: `cpt-...`
+```
+
+When constraints prohibit or allow `task` and `priority` for an ID kind, use the plain '**ID**:' form.
+
 ```text
 **ID**: `cpt-...`
-- [ ] `p1` - **ID**: `cpt-...`
 ```
 
 **ID reference**:

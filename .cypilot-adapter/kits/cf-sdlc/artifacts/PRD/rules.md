@@ -12,7 +12,22 @@ ALWAYS open and follow `docs/checklists/PRD.md` as a quality checklist
 
 ## Hyperspot Deltas vs Original Cypilot SDLC
 
-- Downstream chain is PRD → ADR → DESIGN → DECOMPOSITION → FEATURE.
+- This kit enforces constraints.json (allowed/required ID kinds and cross-artifact reference coverage).
+
+
+## Constraints Alignment (REQUIRED)
+
+PRD MUST define at least one ID of each required kind:
+
+- `fr` (Functional Requirement) — task+priority REQUIRED → use checkbox ID definition form.
+- `nfr` (Non-functional Requirement) — task+priority REQUIRED → use checkbox ID definition form.
+- `usecase` (Use Case) — task+priority allowed.
+
+PRD MUST NOT reference IDs from prohibited artifact kinds using backticks:
+
+- Do NOT include backtick references to DESIGN IDs (principle/constraint/component/seq).
+- Do NOT include backtick references to ADR IDs.
+
 
 ## Generation Checklist
 

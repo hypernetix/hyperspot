@@ -8,6 +8,14 @@ ALWAYS open and use `docs/spec-templates/ADR.md` as a template
 
 ALWAYS open and follow `docs/checklists/ADR.md` as a quality checklist
 
+## Constraints Alignment (REQUIRED)
+
+ADR MUST define an `adr` ID (plain `**ID**: `...`` form; task/priority prohibited).
+
+PRD MUST NOT reference ADR IDs as backtick IDs.
+
+ADR IDs MUST be referenced from DESIGN (ensure the DESIGN includes backtick references to relevant ADR IDs).
+
 ## Generation Checklist
 
 - [ ] Capture the problem statement, drivers, options considered, and the decision with consequences.
