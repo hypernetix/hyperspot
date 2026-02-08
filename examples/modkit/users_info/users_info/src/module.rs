@@ -2,18 +2,17 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use modkit::api::OpenApiRegistry;
-use modkit::{
-    DatabaseCapability, Module, ModuleCtx, RestApiCapability, SseBroadcaster, TracedClient,
-};
+use modkit::{DatabaseCapability, Module, ModuleCtx, RestApiCapability, SseBroadcaster};
 use modkit_db::DBProvider;
 use modkit_db::DbError;
+use modkit_http::HttpClient;
 use sea_orm_migration::MigrationTrait;
 use tracing::{debug, info};
 use url::Url;
 
 // Import the client trait from SDK
 #[allow(unused_imports)]
-use user_info_sdk::UsersInfoClient;
+use user_info_sdk::UsersInfoClientV1;
 
 // Import tenant resolver for multi-tenant access
 use tenant_resolver_sdk::TenantResolverGatewayClient;
@@ -86,8 +85,11 @@ impl Module for UsersInfo {
         let publisher: Arc<dyn EventPublisher<UserDomainEvent>> =
             Arc::new(SseUserEventPublisher::new(self.sse.clone()));
 
-        // Build traced HTTP client
-        let traced_client = TracedClient::default();
+        // Build HTTP client with OTEL tracing enabled
+        let http_client = HttpClient::builder()
+            .with_otel()
+            .build()
+            .map_err(|e| anyhow::anyhow!("failed to build HTTP client: {e}"))?;
 
         // Parse audit service URLs from config
         let audit_base = Url::parse(&cfg.audit_base_url)
@@ -97,7 +99,7 @@ impl Module for UsersInfo {
 
         // Create audit adapter
         let audit_adapter: Arc<dyn AuditPort> =
-            Arc::new(HttpAuditClient::new(traced_client, audit_base, notify_base));
+            Arc::new(HttpAuditClient::new(http_client, audit_base, notify_base));
 
         // Fetch tenant resolver from ClientHub
         let resolver = ctx
@@ -132,13 +134,13 @@ impl Module for UsersInfo {
         // Store service for REST and internal usage
         self.service.store(Some(services.clone()));
 
-        // Create local client adapter that implements object-safe UsersInfoClient
+        // Create local client adapter that implements object-safe UsersInfoClientV1
         let local = UsersInfoLocalClient::new(services);
 
         // Register under the SDK trait for transport-agnostic consumption
         ctx.client_hub()
-            .register::<dyn UsersInfoClient>(Arc::new(local));
-        info!("UsersInfo client registered into ClientHub as dyn UsersInfoClient");
+            .register::<dyn UsersInfoClientV1>(Arc::new(local));
+        info!("UsersInfo client registered into ClientHub as dyn UsersInfoClientV1");
         Ok(())
     }
 }

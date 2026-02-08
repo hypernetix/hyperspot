@@ -4,6 +4,7 @@ version.workspace = true
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
+description = "Dylint lint enforcing *Client suffix for plugin client traits instead of *Api or *PluginApi"
 publish = false
 
 [lib]
@@ -16,6 +17,30 @@ path = "ui/plugin_api_bad.rs"
 [[example]]
 name = "plugin_client_good-sdk"
 path = "ui/plugin_client_good.rs"
+
+[[example]]
+name = "generic_parameters_api-sdk"
+path = "ui/generic_parameters_api.rs"
+
+[[example]]
+name = "generic_parameters_good-sdk"
+path = "ui/generic_parameters_good.rs"
+
+[[example]]
+name = "versioned_api-sdk"
+path = "ui/versioned_api.rs"
+
+[[example]]
+name = "plugin_client_v1_good-sdk"
+path = "ui/plugin_client_v1_good.rs"
+
+[[example]]
+name = "malformed_versioned_api-sdk"
+path = "ui/malformed_versioned_api.rs"
+
+[[example]]
+name = "client_api_bad-sdk"
+path = "ui/client_api_bad.rs"
 
 [dependencies]
 clippy_utils.workspace = true

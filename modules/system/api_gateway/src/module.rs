@@ -278,7 +278,7 @@ impl ApiGateway {
 
         // 2) Trace (outer to push_req_id_to_extensions)
         router = router.layer({
-            use modkit::http::otel;
+            use modkit_http::otel;
             use tower_http::trace::TraceLayer;
             use tracing::field::Empty;
 

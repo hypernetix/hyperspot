@@ -75,7 +75,10 @@ impl Module for FileParserModule {
         };
 
         // Create file parser service
-        let file_parser_service = Arc::new(FileParserService::new(parsers, service_config));
+        let file_parser_service = Arc::new(
+            FileParserService::new(parsers, service_config)
+                .map_err(|e| anyhow::anyhow!("failed to create FileParserService: {e}"))?,
+        );
 
         // Store service for REST usage
         self.service.store(Some(file_parser_service));

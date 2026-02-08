@@ -6,16 +6,16 @@ SDK crate for the simple user settings module.
 
 The `cf-simple-user-settings-sdk` crate provides:
 
-- `SimpleUserSettingsClient` trait
+- `SimpleUserSettingsClientV1` trait
 - Model types (`SimpleUserSettings`, `SimpleUserSettingsPatch`, `SimpleUserSettingsUpdate`)
 - Error type (`SettingsError`)
 
 Consumers obtain the client from `ClientHub`.
 
 ```rust,ignore
-use simple_user_settings_sdk::SimpleUserSettingsClient;
+use simple_user_settings_sdk::SimpleUserSettingsClientV1;
 
-let client = hub.get::<dyn SimpleUserSettingsClient>()?;
+let client = hub.get::<dyn SimpleUserSettingsClientV1>()?;
 let settings = client.get_settings(&ctx).await?;
 ```
 

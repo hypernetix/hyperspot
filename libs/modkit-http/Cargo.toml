@@ -1,0 +1,66 @@
+[package]
+name = "cf-modkit-http"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "ModKit HTTP client library"
+readme = "README.md"
+keywords = ["cyberfabric", "cyberfabric-modkit"]
+categories = ["web-programming"]
+
+[lib]
+name = "modkit_http"
+
+[lints]
+workspace = true
+
+[features]
+default = []
+# OpenTelemetry integration for distributed tracing
+otel = ["dep:opentelemetry", "dep:tracing-opentelemetry"]
+# Allow insecure HTTP in release builds (for integration testing only)
+# By default, allow_insecure_http() is only available in debug builds
+allow-insecure-http = []
+
+[dependencies]
+# Core dependencies
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# HTTP stack
+hyper = { workspace = true, features = ["client", "http1", "http2"] }
+hyper-util = { workspace = true, features = ["client", "client-legacy", "http1", "http2", "tokio"] }
+hyper-rustls = { workspace = true, features = ["http1", "http2", "tls12", "native-tokio", "webpki-tokio"] }
+rustls = { workspace = true }
+rustls-native-certs = { workspace = true }
+rustls-pki-types = { workspace = true }
+http-body-util = { workspace = true }
+http-body = { workspace = true }
+bytes = { workspace = true }
+http = { workspace = true }
+httpdate = { workspace = true }
+pin-project-lite = { workspace = true }
+
+# Tower middleware
+tower = { workspace = true, features = ["timeout", "limit", "util", "load-shed", "buffer"] }
+tower-http = { workspace = true, features = ["decompression-gzip", "decompression-br", "decompression-deflate", "follow-redirect"] }
+
+# HTTP client helpers
+serde_urlencoded = { workspace = true }
+rand = { workspace = true }
+
+# OpenTelemetry (optional, for distributed tracing)
+opentelemetry = { workspace = true, optional = true }
+tracing-opentelemetry = { workspace = true, optional = true }
+
+[dev-dependencies]
+httpmock = { workspace = true }
+opentelemetry_sdk = { workspace = true }
+tracing-subscriber = { workspace = true }
+flate2 = { workspace = true }

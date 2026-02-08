@@ -1,0 +1,43 @@
+error: Client trait `UsersInfoClient2` in non-system module must have a version suffix (DE0504)
+  --> $DIR/invalid_version_suffix.rs:6:1
+   |
+LL | / pub trait UsersInfoClient2: Send + Sync {
+LL | |     async fn get_user(&self) -> Result<(), ()>;
+LL | | }
+   | |_^
+   |
+   = help: rename trait to `UsersInfoClientV2` to indicate API version
+   = note: `#[deny(de0504_client_versioning)]` on by default
+
+error: Client trait `Client123` in non-system module must have a version suffix (DE0504)
+  --> $DIR/invalid_version_suffix.rs:12:1
+   |
+LL | / pub trait Client123: Send + Sync {
+LL | |     async fn calculate(&self) -> Result<(), ()>;
+LL | | }
+   | |_^
+   |
+   = help: rename trait to `ClientV123` to indicate API version
+
+error: Client trait `UsersInfoClientV0` in non-system module must have a version suffix (DE0504)
+  --> $DIR/invalid_version_suffix.rs:18:1
+   |
+LL | / pub trait UsersInfoClientV0: Send + Sync {
+LL | |     async fn get_user_v0(&self) -> Result<(), ()>;
+LL | | }
+   | |_^
+   |
+   = help: rename trait to `UsersInfoClientV1` to indicate API version
+
+error: Client trait `UsersInfoClientV` in non-system module must have a version suffix (DE0504)
+  --> $DIR/invalid_version_suffix.rs:24:1
+   |
+LL | / pub trait UsersInfoClientV: Send + Sync {
+LL | |     async fn list_users(&self) -> Result<(), ()>;
+LL | | }
+   | |_^
+   |
+   = help: rename trait to `UsersInfoClientV1` to indicate API version
+
+error: aborting due to 4 previous errors
+

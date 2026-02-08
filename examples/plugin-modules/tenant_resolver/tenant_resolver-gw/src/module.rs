@@ -5,7 +5,7 @@ use modkit::Module;
 use modkit::api::OpenApiRegistry;
 use modkit::context::ModuleCtx;
 use modkit::contracts::RestApiCapability;
-use tenant_resolver_example_sdk::{TenantResolverClient, TenantResolverPluginSpecV1};
+use tenant_resolver_example_sdk::{TenantResolverClientV1, TenantResolverPluginSpecV1};
 use tracing::info;
 use types_registry_sdk::TypesRegistryClient;
 
@@ -76,8 +76,9 @@ impl Module for TenantResolverGateway {
         let svc = Arc::new(Service::new(hub, cfg.vendor));
 
         // Register gateway client into ClientHub for other modules
-        let api: Arc<dyn TenantResolverClient> = Arc::new(TenantResolverGwClient::new(svc.clone()));
-        ctx.client_hub().register::<dyn TenantResolverClient>(api);
+        let api: Arc<dyn TenantResolverClientV1> =
+            Arc::new(TenantResolverGwClient::new(svc.clone()));
+        ctx.client_hub().register::<dyn TenantResolverClientV1>(api);
 
         self.service
             .set(svc)

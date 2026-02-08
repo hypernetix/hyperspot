@@ -6,7 +6,7 @@ extern crate rustc_span;
 
 use rustc_ast::{Item, ItemKind};
 use rustc_lint::{EarlyContext, EarlyLintPass, LintContext};
-use rustc_span::{FileName, RealFileName, Span};
+use rustc_span::Span;
 
 dylint_linting::declare_early_lint! {
     /// ### What it does
@@ -51,81 +51,42 @@ dylint_linting::declare_early_lint! {
 impl EarlyLintPass for De0503PluginClientSuffix {
     fn check_item(&mut self, cx: &EarlyContext<'_>, item: &Item) {
         // Only check trait definitions
-        let ItemKind::Trait(_trait_data) = &item.kind else {
+        let ItemKind::Trait(trait_data) = &item.kind else {
             return;
         };
 
         // Only apply this lint to *-sdk crates
-        if !is_in_sdk_crate(cx, item.span) {
+        if !lint_utils::is_in_sdk_crate(cx, item.span) {
             return;
         }
 
-        // Get the trait name from the item
-        let trait_name = cx.sess().source_map().span_to_snippet(item.span);
-        let trait_name_str = if let Ok(snippet) = trait_name {
-            // Extract trait name from snippet like "pub trait MyTrait"
-            snippet
-                .split_whitespace()
-                .find(|word| !word.starts_with("pub") && word != &"trait")
-                .and_then(|name| {
-                    // Handle cases like "MyTrait:" or "MyTrait<"
-                    name.split(|c: char| c == ':' || c == '<' || c == '{')
-                        .next()
-                        .map(|s| s.to_string())
-                })
-                .unwrap_or_default()
-        } else {
-            return;
-        };
-
-        if trait_name_str.is_empty() {
+        let trait_name = trait_data.ident.name.as_str();
+        if trait_name.is_empty() {
             return;
         }
 
-        // Check if trait ends with "PluginApi" or just "Api" (but not already "Client")
-        if trait_name_str.ends_with("PluginApi") {
-            emit_lint(cx, item.span, &trait_name_str, "PluginApi", "PluginClient");
-        } else if trait_name_str.ends_with("Api") && !trait_name_str.ends_with("Client") {
-            // Only lint if it looks like a plugin/client pattern
-            // Check if name contains common plugin/client indicators
-            let name_lower = trait_name_str.to_lowercase();
-            if name_lower.contains("plugin") || name_lower.contains("client") {
-                let suggested_suffix = if name_lower.contains("plugin") {
-                    "PluginClient"
-                } else {
-                    "Client"
-                };
-                emit_lint(cx, item.span, &trait_name_str, "Api", suggested_suffix);
+        // Strip version suffix (valid or malformed) to check the base name
+        let version = lint_utils::parse_version_suffix(trait_name);
+        let base_name = version.base;
+
+        // Check if base name ends with "PluginApi" or just "Api"
+        if base_name.ends_with("PluginApi") {
+            emit_lint(cx, item.span, trait_name, "PluginApi", "PluginClient");
+        } else if base_name.ends_with("Api") {
+            let base_without_api = base_name.strip_suffix("Api").unwrap_or(base_name);
+            let name_lower = base_name.to_lowercase();
+
+            let is_plugin_api = base_without_api.ends_with("Plugin")
+                || name_lower.contains("plugin");
+
+            if is_plugin_api && !base_without_api.ends_with("Client") {
+                emit_lint(cx, item.span, trait_name, "Api", "PluginClient");
+            } else if base_without_api.ends_with("Client") {
+                // Trait like SomeClientApi — already has Client suffix, just drop Api
+                emit_lint(cx, item.span, trait_name, "ClientApi", "Client");
             }
         }
     }
-}
-
-fn is_in_sdk_crate(cx: &EarlyContext<'_>, span: Span) -> bool {
-    if let Some(crate_name) = cx.sess().opts.crate_name.as_deref() {
-        // Cargo normalizes dashes to underscores for `--crate-name`.
-        if crate_name.ends_with("-sdk") || crate_name.ends_with("_sdk") {
-            return true;
-        }
-    }
-
-    let file_name = cx.sess().source_map().span_to_filename(span);
-    let file_name = match file_name {
-        FileName::Real(real) => match real {
-            RealFileName::LocalPath(path) => path.to_string_lossy().to_string(),
-            RealFileName::Remapped {
-                local_path,
-                virtual_name,
-            } => local_path
-                .as_ref()
-                .map(|p| p.to_string_lossy().to_string())
-                .unwrap_or_else(|| virtual_name.to_string_lossy().to_string()),
-        },
-        other => format!("{other:?}"),
-    };
-
-    // Also support filtering by path, so the lint applies to any file under a `*-sdk` folder.
-    file_name.contains("-sdk/") || file_name.contains("-sdk\\")
 }
 
 fn emit_lint(
@@ -135,18 +96,29 @@ fn emit_lint(
     wrong_suffix: &str,
     suggested_suffix: &str,
 ) {
-    let suggestion = if trait_name.ends_with(wrong_suffix) {
-        trait_name
-            .strip_suffix(wrong_suffix)
-            .map(|base| format!("{base}{suggested_suffix}"))
-            .unwrap_or_else(|| format!("{trait_name}Client"))
+    let version = lint_utils::parse_version_suffix(trait_name);
+
+    let suggestion = if version.base.ends_with(wrong_suffix) {
+        let base = version.base.strip_suffix(wrong_suffix).unwrap();
+        if version.has_valid_version() {
+            format!("{base}{suggested_suffix}{}", version.version_suffix)
+        } else if version.has_malformed_version() {
+            // Only suggest Vn if digits don't start with 0 (e.g., ThrPluginApi2 -> ThrPluginClientV2)
+            if !version.malformed_digits.starts_with('0') {
+                format!("{base}{suggested_suffix}V{}", version.malformed_digits)
+            } else {
+                format!("{base}{suggested_suffix}")
+            }
+        } else {
+            format!("{base}{suggested_suffix}")
+        }
     } else {
         format!("{trait_name}Client")
     };
 
     cx.span_lint(DE0503_PLUGIN_CLIENT_SUFFIX, span, |diag| {
         diag.primary_message(format!(
-            "plugin client trait `{trait_name}` should use `*PluginClient` suffix, not `*{wrong_suffix}` (DE0503)"
+            "plugin client trait `{trait_name}` should use `*{suggested_suffix}` suffix, not `*{wrong_suffix}` (DE0503)"
         ));
         diag.help(format!(
             "rename trait to `{suggestion}` to follow plugin client naming conventions"

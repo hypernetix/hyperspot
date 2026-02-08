@@ -111,7 +111,6 @@ pub mod http;
 pub use api::problem::{
     Problem, ValidationError, bad_request, conflict, internal_error, not_found,
 };
-pub use http::client::TracedClient;
 pub use http::sse::SseBroadcaster;
 
 // Telemetry utilities

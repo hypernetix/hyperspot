@@ -65,4 +65,4 @@ It reports a violation when a trait name:
 
 ### See Also
 
-- [Issue #181](https://github.com/hypernetix/hyperspot/issues/181)
+- [Issue #181](https://github.com/cyberfabric/cyberfabric-core/issues/181)

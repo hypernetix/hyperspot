@@ -20,19 +20,19 @@ jobs:
       # -----------------------------
       # Organization / project
       # -----------------------------
-      ORG: hypernetix
-      PROJECT_NUMBER: 6
+      ORG: cyberfabric
+      PROJECT_NUMBER: 7
 
       # -----------------------------
       # GitHub Project IDs
       # -----------------------------
-      PROJECT_ID: PVT_kwDOC9Ozis4BNo9m
+      PROJECT_ID: PVT_kwDODtiyIs4BOnpi
 
-      FIELD_LINK: PVTF_lADOC9Ozis4BNo9mzg8k3Co
-      FIELD_UNREPLIED_THREADS: PVTF_lADOC9Ozis4BNo9mzg8k3Fg
-      FIELD_UNREPLIED_COMMENTS: PVTF_lADOC9Ozis4BNo9mzg8k3HM
-      FIELD_UNFINISHED_REVIEWS: PVTF_lADOC9Ozis4BNo9mzg8lD3g
-      FIELD_MERGE_ISSUES: PVTF_lADOC9Ozis4BNo9mzg8lHlU
+      FIELD_LINK: PVTF_lADODtiyIs4BOnpizg9RKEc
+      FIELD_UNREPLIED_THREADS: PVTF_lADODtiyIs4BOnpizg9RKEg
+      FIELD_UNREPLIED_COMMENTS: PVTF_lADODtiyIs4BOnpizg9RKEk
+      FIELD_UNFINISHED_REVIEWS: PVTF_lADODtiyIs4BOnpizg9RKEo
+      FIELD_MERGE_ISSUES: PVTF_lADODtiyIs4BOnpizg9RKEs
 
     steps:
       - name: Sync pull requests into GitHub Project

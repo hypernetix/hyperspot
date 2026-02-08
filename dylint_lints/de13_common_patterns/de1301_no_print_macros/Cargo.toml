@@ -1,0 +1,61 @@
+[package]
+name = "de1301_no_print_macros"
+version = "0.1.0"
+authors = ["Cyber Fabric"]
+description = "Forbids println!/eprintln!/print!/eprint!/dbg! macros in production code (DE1301)"
+edition.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[[example]]
+name = "forbidden_macros"
+path = "ui/forbidden_macros.rs"
+
+[[example]]
+name = "allowed"
+path = "ui/allowed.rs"
+
+[[example]]
+name = "allowed_in_apps"
+path = "ui/allowed_in_apps.rs"
+
+[[example]]
+name = "allowed_in_build_rs"
+path = "ui/allowed_in_build_rs.rs"
+
+[[example]]
+name = "allowed_in_proc_macro"
+path = "ui/allowed_in_proc_macro.rs"
+crate-type = ["proc-macro"]
+
+[[example]]
+name = "allowed_in_proc_macro_impl_method"
+path = "ui/allowed_in_proc_macro_impl_method.rs"
+crate-type = ["proc-macro"]
+
+[[example]]
+name = "forbidden_public_in_proc_macro"
+path = "ui/forbidden_public_in_proc_macro.rs"
+crate-type = ["proc-macro"]
+
+[[example]]
+name = "allowed_in_tests"
+path = "ui/allowed_in_tests.rs"
+
+[[example]]
+name = "allowed_in_cfg_test_impl"
+path = "ui/allowed_in_cfg_test_impl.rs"
+
+[dependencies]
+clippy_utils.workspace = true
+dylint_linting.workspace = true
+lint_utils.workspace = true
+
+[dev-dependencies]
+dylint_testing.workspace = true
+tokio = { workspace = true, features = ["macros", "rt"] }
+
+[package.metadata.rust-analyzer]
+rustc_private = true

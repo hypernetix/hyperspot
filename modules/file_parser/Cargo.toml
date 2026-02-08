@@ -38,7 +38,7 @@ time = { workspace = true }
 
 # URL parsing and HTTP client
 url = { workspace = true }
-reqwest = { workspace = true }
+modkit-http = { workspace = true }
 
 # UUID support
 uuid = { workspace = true }

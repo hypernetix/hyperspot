@@ -340,6 +340,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "de0504_client_versioning"
+version = "0.2.0"
+dependencies = [
+ "async-trait",
+ "clippy_utils",
+ "dylint_linting",
+ "dylint_testing",
+ "lint_utils",
+]
+
+[[package]]
 name = "de0801_api_endpoint_version"
 version = "0.1.0"
 dependencies = [
@@ -398,6 +409,17 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "de1301_no_print_macros"
+version = "0.1.0"
+dependencies = [
+ "clippy_utils",
+ "dylint_linting",
+ "dylint_testing",
+ "lint_utils",
+ "tokio",
 ]
 
 [[package]]
@@ -2000,7 +2022,19 @@ dependencies = [
  "mio",
  "pin-project-lite",
  "socket2",
+ "tokio-macros",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "tokio-macros"
+version = "2.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "af407857209536a95c8e56f8231ef2c2e2aff839b22e07a1ffcbc617e9db9fa5"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

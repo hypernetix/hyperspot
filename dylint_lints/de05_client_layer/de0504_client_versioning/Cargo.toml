@@ -1,0 +1,43 @@
+[package]
+name = "de0504_client_versioning"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Dylint lint enforcing version suffixes (V1, V2, etc.) for Client traits in non-system modules"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[[example]]
+name = "non_system_missing_version-sdk"
+path = "ui/non_system_missing_version.rs"
+
+[[example]]
+name = "non_system_versioned_good-sdk"
+path = "ui/non_system_versioned_good.rs"
+
+[[example]]
+name = "invalid_version_suffix-sdk"
+path = "ui/invalid_version_suffix.rs"
+
+[[example]]
+name = "generic_parameters-sdk"
+path = "ui/generic_parameters.rs"
+
+[[example]]
+name = "non_client_traits_good-sdk"
+path = "ui/non_client_traits_good.rs"
+
+[dependencies]
+clippy_utils.workspace = true
+dylint_linting.workspace = true
+lint_utils.workspace = true
+
+[dev-dependencies]
+dylint_testing.workspace = true
+async-trait = "0.1"
+
+[package.metadata.rust-analyzer]
+rustc_private = true

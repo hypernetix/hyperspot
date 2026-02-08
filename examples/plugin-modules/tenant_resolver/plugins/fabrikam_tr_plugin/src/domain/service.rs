@@ -1,4 +1,4 @@
-//! Fabrikam plugin service implementing `TenantResolverPluginClient`.
+//! Fabrikam plugin service implementing `TenantResolverPluginClientV1`.
 
 use std::collections::HashMap;
 
@@ -9,7 +9,7 @@ use modkit_odata::{
 use modkit_security::SecurityContext;
 use tenant_resolver_example_sdk::{
     AccessOptions, GetParentsResponse, Tenant, TenantFilter, TenantResolverError,
-    TenantResolverPluginClient, TenantSpecV1,
+    TenantResolverPluginClientV1, TenantSpecV1,
 };
 
 use crate::config::TenantConfig;
@@ -217,7 +217,7 @@ impl Service {
 }
 
 #[async_trait]
-impl TenantResolverPluginClient for Service {
+impl TenantResolverPluginClientV1 for Service {
     async fn get_root_tenant(&self, _ctx: &SecurityContext) -> Result<Tenant, TenantResolverError> {
         self.root_id
             .as_ref()

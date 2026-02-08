@@ -5,7 +5,7 @@
 
 use std::sync::Arc;
 
-use calculator_sdk::CalculatorClient;
+use calculator_sdk::CalculatorClientV1;
 use modkit::client_hub::ClientHub;
 use modkit_security::SecurityContext;
 use tracing::{debug, instrument};
@@ -43,9 +43,12 @@ impl Service {
     pub async fn add(&self, ctx: &SecurityContext, a: i64, b: i64) -> Result<i64, ServiceError> {
         debug!("Resolving calculator client from ClientHub");
 
-        let calculator = self.client_hub.get::<dyn CalculatorClient>().map_err(|e| {
-            ServiceError::Internal(format!("CalculatorClient not available: {}", e))
-        })?;
+        let calculator = self
+            .client_hub
+            .get::<dyn CalculatorClientV1>()
+            .map_err(|e| {
+                ServiceError::Internal(format!("CalculatorClientV1 not available: {}", e))
+            })?;
 
         debug!("Delegating addition to calculator service");
 

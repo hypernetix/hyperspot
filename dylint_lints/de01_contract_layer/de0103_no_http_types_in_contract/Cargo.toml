@@ -1,7 +1,7 @@
 [package]
 name = "de0103_no_http_types_in_contract"
 version = "0.1.0"
-authors = ["Hypernetix"]
+authors = ["Cyber Fabric"]
 description = "Contract modules should not reference HTTP types (DE0103)"
 edition.workspace = true
 publish = false

@@ -11,7 +11,7 @@ The CyberFabric framework includes first-class support for distributed tracing w
 - **Automatic trace context extraction** from incoming HTTP requests (W3C Trace Context)
 - **Automatic trace context injection** for outgoing HTTP requests
 - **Centralized configuration** via YAML
-- **TracedClient** for instrumented HTTP calls
+- **HttpClient with OTEL layer** for instrumented HTTP calls
 - **Integration with existing logging**
 
 ## Quick Start with Jaeger
@@ -239,64 +239,70 @@ tracing:
       - "authorization"  # Be careful with sensitive headers
 ```
 
-## Using TracedClient
+## Using HttpClient with OpenTelemetry
+
+> **Important: Feature Gate Required**
+>
+> The `.with_otel()` method on `HttpClientBuilder` requires the `otel` feature to be enabled.
+> Add this to your `Cargo.toml`:
+>
+> ```toml
+> [dependencies]
+> modkit-http = { workspace = true, features = ["otel"] }
+> ```
+>
+> Without this feature, the `with_otel()` method will not be available, and you'll get
+> a compile error.
 
 ### In Your Module
 
-```rust
-use modkit::TracedClient;
+```rust,ignore
+use modkit_http::{HttpClient, HttpClientBuilder};
 
 #[async_trait]
 impl MyModule {
     async fn call_external_api(&self) -> Result<String> {
-        let client = TracedClient::default();
+        // Build client with OTEL tracing enabled
+        let client = HttpClientBuilder::new()
+            .with_otel()  // Enable OpenTelemetry tracing
+            .build()?;
 
-        // Trace context is automatically injected
-        let response = client
+        // Trace context is automatically injected via W3C traceparent header
+        // RequestBuilder API: chain methods then send
+        let data = client
             .get("https://api.example.com/data")
+            .send()
+            .await?
+            .checked_bytes()
             .await?;
 
-        let data = response.text().await?;
-        Ok(data)
+        Ok(String::from_utf8_lossy(&data).into_owned())
     }
 }
 ```
 
-### Converting Existing reqwest::Client
+### Configuring the modkit_http::HttpClient
 
-```rust
-use modkit::TracedClient;
+```rust,ignore
+use modkit_http::{HttpClient, HttpClientBuilder};
+use std::time::Duration;
 
-let reqwest_client = reqwest::Client::new();
-let traced_client = TracedClient::from(reqwest_client);
-
-// Or using Into trait
-let traced_client: TracedClient = reqwest_client.into();
-```
-
-### Advanced Usage
-
-```rust
-use modkit::TracedClient;
-
-let client = TracedClient::default ();
-
-// Build custom requests
-let request = client.inner()
-.post("https://api.example.com/upload")
-.json( & my_data)
-.build() ?;
-
-// Execute with tracing
-let response = client.execute(request).await?;
+// Full configuration example
+let client = HttpClientBuilder::new()
+    .with_otel()                          // Enable OpenTelemetry tracing
+    .timeout(Duration::from_secs(30))     // Request timeout
+    .user_agent("my-service/1.0")         // Custom User-Agent
+    .max_body_size(10 * 1024 * 1024)      // 10MB body limit
+    .build()?;
 ```
 
 ## Manual Span Creation
 
 Create custom spans for business logic:
 
-```rust
-use tracing::{info_span, Instrument};
+```rust,ignore
+use modkit_http::HttpClientBuilder;
+use tracing::{info_span, Instrument, info};
 
 async fn process_user_data(user_id: u64) -> Result<()> {
     // Create a span for this operation
@@ -306,9 +312,13 @@ async fn process_user_data(user_id: u64) -> Result<()> {
         // Your business logic here
         info!("Processing user {}", user_id);
 
-        // Child operations will be traced automatically
-        let client = TracedClient::default();
-        let user_data = client.get(&format!("https://api.example.com/users/{}", user_id)).await?;
+        // Child operations will be traced automatically with OTEL-enabled client
+        let client = HttpClientBuilder::new()
+            .with_otel()
+            .build()?;
+
+        let url = format!("https://api.example.com/users/{}", user_id);
+        let user_data = client.get(&url).send().await?.checked_bytes().await?;
 
         Ok(())
     }.instrument(span).await
@@ -374,7 +384,7 @@ export APP__TRACING__SAMPLER__RATIO=0.01  # 1% sampling in prod
 
 1. **Check headers**: Ensure upstream sends `traceparent` header
 2. **Verify propagation**: Set `propagation.w3c_trace_context: true`
-3. **Use TracedClient**: Ensure outgoing calls use `TracedClient`
+3. **Use HttpClient with OTEL**: Ensure outgoing calls use `HttpClientBuilder::new().with_otel()`
 
 ## Observability Best Practices
 
@@ -382,7 +392,7 @@ export APP__TRACING__SAMPLER__RATIO=0.01  # 1% sampling in prod
 
 Use consistent attribute names:
 
-```rust
+```rust,ignore
 tracing::info_span!(
     "user_operation",
     user.id = user_id,
@@ -396,7 +406,7 @@ tracing::info_span!(
 
 Mark spans with errors:
 
-```rust
+```rust,ignore
 let span = tracing::info_span!("risky_operation");
 let _guard = span.enter();
 

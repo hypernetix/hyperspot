@@ -20,6 +20,7 @@ fn spawn_signal_handler(cancel: CancellationToken, context: &str) {
     drop(tokio::spawn(async move {
         match shutdown::wait_for_shutdown().await {
             Ok(()) => {
+                tracing::info!(target: "", "------------------");
                 tracing::info!("{}: shutdown signal received", context_owned);
             }
             Err(e) => {
@@ -106,6 +107,7 @@ pub async fn run_server(config: AppConfig) -> anyhow::Result<()> {
 /// - Module discovery fails
 /// - Pre-init phase fails
 /// - Migration phase fails
+#[allow(unknown_lints, de1301_no_print_macros)]
 pub async fn run_migrate(config: AppConfig) -> anyhow::Result<()> {
     tracing::info!("Starting migration mode...");
 

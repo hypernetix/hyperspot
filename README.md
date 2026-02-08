@@ -1,8 +1,8 @@
-# HyperSpot Server
+# Cyber Fabric
 ![Badge](./.github/badgeHN.svg)
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/hypernetix/hyperspot/badge)](https://scorecard.dev/viewer/?uri=github.com/hypernetix/hyperspot)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/cyberfabric/cyberfabric-core/badge)](https://scorecard.dev/viewer/?uri=github.com/cyberfabric/cyberfabric-core)
 
-**HyperSpot Server** is a modular, high-performance platform for building modern enterprise-grade SaaS services in Rust. It provides a comprehensive framework for building scalable AI-powered applications with automatic REST API generation, comprehensive OpenAPI documentation, and a extremely flexible modular architecture.
+**Cyber Fabric** is a modular, high-performance platform for building modern enterprise-grade SaaS services in Rust. It provides a comprehensive framework for building scalable AI-powered applications with automatic REST API generation, comprehensive OpenAPI documentation, and a extremely flexible modular architecture.
 
 **Key Philosophy:**
 - **Modular by Design**: Everything is a Module - composable, independent units with gateway patterns for pluggable workers
@@ -32,8 +32,8 @@ See the full architecture [MANIFEST](docs/ARCHITECTURE_MANIFEST.md) for more det
 
 ```bash
 # Clone the repository
-git clone <repository-url>
-cd hyperspot
+git clone --recurse-submodules <repository-url>
+cd cyberfabric-core
 
 make ci         # Run full CI pipeline
 make fmt        # Check formatting (no changes). Use 'make dev-fmt' to auto-format
@@ -74,7 +74,7 @@ curl http://127.0.0.1:8087/healthz
 ### Example Configuration (config/quickstart.yaml)
 
 ```yaml
-# HyperSpot Server Configuration
+# Cyber Fabric Configuration
 
 # Core server configuration (global section)
 server:
@@ -195,7 +195,7 @@ make coverage-unit
 
 ### Fuzzing
 
-HyperSpot uses continuous fuzzing to find bugs and security issues:
+Cyber Fabric uses continuous fuzzing to find bugs and security issues:
 
 ```bash
 # Run fuzzing smoke tests
@@ -213,12 +213,12 @@ Fuzzing runs automatically in CI via ClusterFuzzLite. See `fuzz/README.md` for d
 ### CI / Development Commands
 
 
-HyperSpot uses a unified, cross-platform Python CI script. Ensure you have Python 3.9+ installed.
+Cyber Fabric uses a unified, cross-platform Python CI script. Ensure you have Python 3.9+ installed.
 
 ```bash
 # Clone the repository
 git clone <repository-url>
-cd hyperspot
+cd cyberfabric-core
 
 # All code must pass these checks before merging
 python scripts/ci.py all          # Build and run all the checks

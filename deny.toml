@@ -58,6 +58,7 @@ allow = [
   "Unicode-3.0",
   "CDLA-Permissive-2.0",
   "MPL-2.0",
+  "OpenSSL",
   "Zlib"
 ]
 
