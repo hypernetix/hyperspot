@@ -59,22 +59,7 @@ jobs:
 
       # Install sccache (cross-platform)
       - name: Install sccache
-        uses: mozilla-actions/sccache-action@89e9040de88b577a072e3760aaf59f585da083af # v0.0.5
-
-      # Use a local disk dir for sccache and cache it with actions/cache (reliable).
-      - name: Prepare sccache dir
-        shell: bash
-        run: |
-          echo "SCCACHE_DIR=$RUNNER_TEMP/sccache" >> "$GITHUB_ENV"
-          mkdir -p "$RUNNER_TEMP/sccache"
-
-      - name: Cache sccache artifacts
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          path: ${{ runner.temp }}/sccache
-          key: sccache-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
-          restore-keys: |
-            sccache-${{ runner.os }}-
+        uses: mozilla-actions/sccache-action@7d986dd989559c6ecdb630a3fd2557667be217ad # v0.0.9
 
       # Probe sccache; if startup fails, fall back to plain rustc (no hard CI failure).
       - name: Probe sccache & set RUSTC_WRAPPER
@@ -82,11 +67,9 @@ jobs:
         run: |
           if sccache --start-server >/dev/null 2>&1; then
             echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
-            echo "SCCACHE_OK=1" >> "$GITHUB_ENV"
+            echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
           else
             echo "sccache failed, falling back to plain rustc"
-            echo "RUSTC_WRAPPER=" >> "$GITHUB_ENV"
-            echo "SCCACHE_OK=0" >> "$GITHUB_ENV"
           fi
 
       - name: cargo fmt (check)
@@ -103,9 +86,10 @@ jobs:
         env:
           RUSTFLAGS: "-C debuginfo=0 -C codegen-units=1"
         run: make test-no-macros
+
       # Print sccache stats when active
       - name: sccache stats
-        if: env.SCCACHE_OK == '1'
+        if: env.SCCACHE_GHA_ENABLED == 'true'
         run: sccache --show-stats
   test_macros:
     name: UI macro tests (trybuild)
@@ -122,8 +106,23 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@9bc92bc5598b4f3bec5d910d352094982cb0c3b9 # 1.92.0
 
-      - name: Cache Cargo (no target)
+      - name: Cache Cargo/target
         uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
+
+      # Install sccache (cross-platform)
+      - name: Install sccache
+        uses: mozilla-actions/sccache-action@7d986dd989559c6ecdb630a3fd2557667be217ad # v0.0.9
+
+      # Probe sccache; if startup fails, fall back to plain rustc (no hard CI failure).
+      - name: Probe sccache & set RUSTC_WRAPPER
+        shell: bash
+        run: |
+          if sccache --start-server >/dev/null 2>&1; then
+            echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
+            echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
+          else
+            echo "sccache failed, falling back to plain rustc"
+          fi
 
       - name: UI tests for modkit macros libraries
         env:
@@ -135,11 +134,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - name: Install protoc
-        uses: arduino/setup-protoc@c65c819552d16ad3c9b72d9dfd5ba5237b9c906b # v3.0.0
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@9bc92bc5598b4f3bec5d910d352094982cb0c3b9 # 1.92.0
@@ -176,35 +170,6 @@ jobs:
 
       - name: Cache Cargo/target
         uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
-
-      - name: Install sccache
-        uses: mozilla-actions/sccache-action@89e9040de88b577a072e3760aaf59f585da083af # v0.0.5
-
-      - name: Prepare sccache dir
-        shell: bash
-        run: |
-          echo "SCCACHE_DIR=$RUNNER_TEMP/sccache" >> "$GITHUB_ENV"
-          mkdir -p "$RUNNER_TEMP/sccache"
-
-      - name: Cache sccache artifacts
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          path: ${{ runner.temp }}/sccache
-          key: sccache-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
-          restore-keys: |
-            sccache-${{ runner.os }}-
-
-      - name: Probe sccache & set RUSTC_WRAPPER
-        shell: bash
-        run: |
-          if sccache --start-server >/dev/null 2>&1; then
-            echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
-            echo "SCCACHE_OK=1" >> "$GITHUB_ENV"
-          else
-            echo "sccache failed, falling back to plain rustc"
-            echo "RUSTC_WRAPPER=" >> "$GITHUB_ENV"
-            echo "SCCACHE_OK=0" >> "$GITHUB_ENV"
-          fi
 
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@30eab0fabba9ea3f522099957e668b21876aa39e # v2.66.6
@@ -252,39 +217,23 @@ jobs:
         uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
 
       - name: Install sccache
-        uses: mozilla-actions/sccache-action@89e9040de88b577a072e3760aaf59f585da083af # v0.0.5
-
-      - name: Prepare sccache dir
-        shell: bash
-        run: |
-          echo "SCCACHE_DIR=$RUNNER_TEMP/sccache" >> "$GITHUB_ENV"
-          mkdir -p "$RUNNER_TEMP/sccache"
-
-      - name: Cache sccache artifacts
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          path: ${{ runner.temp }}/sccache
-          key: sccache-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
-          restore-keys: |
-            sccache-${{ runner.os }}-
+        uses: mozilla-actions/sccache-action@7d986dd989559c6ecdb630a3fd2557667be217ad # v0.0.9
 
       - name: Probe sccache & set RUSTC_WRAPPER
         shell: bash
         run: |
           if sccache --start-server >/dev/null 2>&1; then
             echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
-            echo "SCCACHE_OK=1" >> "$GITHUB_ENV"
+            echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
           else
             echo "sccache failed, falling back to plain rustc"
-            echo "RUSTC_WRAPPER=" >> "$GITHUB_ENV"
-            echo "SCCACHE_OK=0" >> "$GITHUB_ENV"
           fi
 
       - name: Test modkit-db (integration)
         run: make test-${{ matrix.backend }}
 
       - name: sccache stats
-        if: env.SCCACHE_OK == '1'
+        if: env.SCCACHE_GHA_ENABLED == 'true'
         run: sccache --show-stats
 
   users_info_integration_pg:
@@ -306,39 +255,23 @@ jobs:
         uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
 
       - name: Install sccache
-        uses: mozilla-actions/sccache-action@89e9040de88b577a072e3760aaf59f585da083af # v0.0.5
-
-      - name: Prepare sccache dir
-        shell: bash
-        run: |
-          echo "SCCACHE_DIR=$RUNNER_TEMP/sccache" >> "$GITHUB_ENV"
-          mkdir -p "$RUNNER_TEMP/sccache"
-
-      - name: Cache sccache artifacts
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          path: ${{ runner.temp }}/sccache
-          key: sccache-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
-          restore-keys: |
-            sccache-${{ runner.os }}-
+        uses: mozilla-actions/sccache-action@7d986dd989559c6ecdb630a3fd2557667be217ad # v0.0.9
 
       - name: Probe sccache & set RUSTC_WRAPPER
         shell: bash
         run: |
           if sccache --start-server >/dev/null 2>&1; then
             echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
-            echo "SCCACHE_OK=1" >> "$GITHUB_ENV"
+            echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
           else
             echo "sccache failed, falling back to plain rustc"
-            echo "RUSTC_WRAPPER=" >> "$GITHUB_ENV"
-            echo "SCCACHE_OK=0" >> "$GITHUB_ENV"
           fi
 
       - name: Test users_info with Postgres (integration)
         run: make test-users-info-pg
 
       - name: sccache stats
-        if: env.SCCACHE_OK == '1'
+        if: env.SCCACHE_GHA_ENABLED == 'true'
         run: sccache --show-stats
 
   dylint:
@@ -352,7 +285,7 @@ jobs:
         uses: dtolnay/rust-toolchain@f7ccc83f9ed1e5b9c81d8a67d7ad1a747e22a561 # master
         with:
           toolchain: nightly-2025-09-18
-          components: llvm-tools-preview, rustc-dev
+          components: llvm-tools-preview,rustc-dev
 
       - name: Install protoc
         uses: arduino/setup-protoc@c65c819552d16ad3c9b72d9dfd5ba5237b9c906b # v3.0.0
