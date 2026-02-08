@@ -12,8 +12,8 @@
 
 Report vulnerabilities via:
 
-1. **GitHub Security Advisories**: Report privately at [hypernetix/hyperspot/security/advisories/new](https://github.com/hypernetix/hyperspot/security/advisories/new)
-2. **Direct Contact**: Email maintainers directly (see [MAINTAINERS](https://github.com/hypernetix/hyperspot/graphs/contributors) list)
+1. **GitHub Security Advisories**: Report privately at [cyberfabric/cyberfabric-core/security/advisories/new](https://github.com/cyberfabric/cyberfabric-core/security/advisories/new)
+2. **Direct Contact**: Email maintainers directly (see [MAINTAINERS](https://github.com/cyberfabric/cyberfabric-core/graphs/contributors) list)
 
 ### Required Information
 
