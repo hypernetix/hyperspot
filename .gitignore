@@ -42,3 +42,4 @@ logs
 !/fuzz/corpus/*/.gitkeep
 
 CLAUDE.local.md
+.setup-stamp

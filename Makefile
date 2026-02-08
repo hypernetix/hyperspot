@@ -25,11 +25,14 @@ help:
 
 
 # -------- Set up --------
+# Note: .setup-stamp should be added to .gitignore
 
 .PHONY: setup
 
 ## Install all required development tools
-setup:
+setup: .setup-stamp
+
+.setup-stamp:
 	@echo "Installing required development tools..."
 	rustup component add clippy
 	cargo install lychee
@@ -47,6 +50,7 @@ setup:
 		cargo install cargo-llvm-cov; \
 	fi
 	@echo "Setup complete. All tools installed."
+	@touch .setup-stamp
 
 # -------- Code formatting --------
 
@@ -413,7 +417,7 @@ oop-example:
 	cargo run --bin hyperspot-server --features oop-example,users-info-example,tenant-resolver-example -- --config config/quickstart.yaml run
 
 # Run all quality checks
-check: fmt clippy lychee security dylint-test dylint gts-docs test
+check: .setup-stamp fmt clippy lychee security dylint-test dylint gts-docs test
 
 ci_test: fmt clippy
 
