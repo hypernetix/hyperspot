@@ -1,0 +1,15 @@
+[package]
+name = "cli"
+version = "0.0.1"
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Command-line interface for CyberFabric"
+rust-version.workspace = true
+readme = "README.md"
+publish = false
+
+[dependencies]
+anyhow = { workspace = true }
+clap = { workspace = true, features = ["derive"] }

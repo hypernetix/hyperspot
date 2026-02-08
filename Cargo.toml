@@ -21,6 +21,7 @@ codegen-units = 1
 
 [workspace]
 members = [
+    "apps/cli",
     "apps/hyperspot-server",
     "apps/gts-docs-validator",
     "libs/modkit",
@@ -200,7 +201,7 @@ verbose_file_reads = "deny"
 [workspace.dependencies]
 # libs
 modkit = { package = "cf-modkit", version = "0.2.2", path = "libs/modkit" }
-modkit-http = { package = "cf-modkit-http",  version = "0.2.2", path = "libs/modkit-http" }
+modkit-http = { package = "cf-modkit-http", version = "0.2.2", path = "libs/modkit-http" }
 modkit-auth = { package = "cf-modkit-auth", version = "0.2.2", path = "libs/modkit-auth" }
 modkit-db = { package = "cf-modkit-db", version = "0.2.2", path = "libs/modkit-db" }
 modkit-db-macros = { package = "cf-modkit-db-macros", version = "0.2.2", path = "libs/modkit-db-macros" }
