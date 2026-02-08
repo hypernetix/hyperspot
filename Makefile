@@ -120,7 +120,7 @@ validate-artifacts:
 		echo "Updating .cypilot via git submodule update (detached HEAD)"; \
 		git submodule update --init --recursive -- .cypilot; \
 	fi
-	python3 .cypilot/skills/cypilot/scripts/cypilot.py validate
+	python3 .cypilot/skills/cypilot/scripts/cypilot.py validate --verbose
 
 # Run markdown checks with 'lychee'
 lychee:

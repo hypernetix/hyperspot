@@ -7,6 +7,32 @@
       "path": ".cypilot-adapter/kits/cf-sdlc"
     }
   },
+  "ignore": [
+    {
+      "reason": "Ignore module 'system' (not SDLC-documented yet: missing required PRD/DESIGN).",
+      "patterns": ["modules/system/*"]
+    },
+    {
+      "reason": "Ignore module 'simple_user_settings' (not SDLC-documented yet: missing required PRD/DESIGN).",
+      "patterns": ["modules/simple_user_settings/*"]
+    },
+    {
+      "reason": "Ignore module 'file_storage' (not SDLC-documented yet: missing required PRD/DESIGN).",
+      "patterns": ["modules/file_storage/*"]
+    },
+    {
+      "reason": "Ignore module 'model_registry' (not SDLC-documented yet: missing required PRD/DESIGN).",
+      "patterns": ["modules/model_registry/*"]
+    },
+    {
+      "reason": "Ignore module 'type_registry' (not SDLC-documented yet: missing required PRD/DESIGN).",
+      "patterns": ["modules/type_registry/*"]
+    },
+    {
+      "reason": "Ignore module 'file_parser' (not SDLC-documented yet: missing required PRD/DESIGN).",
+      "patterns": ["modules/file_parser/*"]
+    }
+  ],
   "systems": [
     {
       "name": "cyberfabric",
@@ -20,114 +46,26 @@
         { "name": "Examples", "path": "examples", "extensions": [".rs"] },
         { "name": "Dylint Lints", "path": "dylint_lints", "extensions": [".rs"] }
       ],
-      "children": [
+      "autodetect": [
         {
-          "name": "llm_gateway",
-          "slug": "llm-gateway",
-          "kit": "cf-sdlc",
-          "artifacts_dir": "modules/llm_gateway/docs",
-          "artifacts": [
-            {
-              "name": "LLM Gateway PRD",
-              "path": "modules/llm_gateway/docs/PRD.md",
-              "kind": "PRD",
-              "traceability": "FULL"
-            },
-            {
-              "name": "LLM Gateway DESIGN",
-              "path": "modules/llm_gateway/docs/DESIGN.md",
-              "kind": "DESIGN",
-              "traceability": "FULL"
-            },
-            {
-              "name": "LLM Gateway ADR 0001",
-              "path": "modules/llm_gateway/docs/ADR/0001-cpt-llmgw-adr-stateless.md",
-              "kind": "ADR",
-              "traceability": "FULL"
-            },
-            {
-              "name": "LLM Gateway ADR 0002",
-              "path": "modules/llm_gateway/docs/ADR/0002-cpt-llmgw-adr-pass-through.md",
-              "kind": "ADR",
-              "traceability": "FULL"
-            },
-            {
-              "name": "LLM Gateway ADR 0003",
-              "path": "modules/llm_gateway/docs/ADR/0003-cpt-llmgw-adr-file-storage.md",
-              "kind": "ADR",
-              "traceability": "FULL"
-            },
-            {
-              "name": "LLM Gateway ADR 0004",
-              "path": "modules/llm_gateway/docs/ADR/0004-cpt-llmgw-adr-circuit-breaking.md",
-              "kind": "ADR",
-              "traceability": "FULL"
-            }
+          "system_root": "{project_root}/modules/$system",
+          "artifacts_root": "{system_root}/docs",
+          "artifacts": {
+            "PRD": { "pattern": "PRD.md", "traceability": "FULL", "required": true },
+            "DESIGN": { "pattern": "DESIGN.md", "traceability": "FULL", "required": true },
+            "ADR": { "pattern": "ADR/*.md", "traceability": "FULL", "required": false },
+            "DECOMPOSITION": { "pattern": "DECOMPOSITION.md", "traceability": "FULL", "required": false },
+            "FEATURE": { "pattern": "features/*.md", "traceability": "FULL", "required": false }
+          },
+          "codebase": [
+            { "name": "Modules", "path": "{system_root}/src", "extensions": [".rs"] },
+            { "name": "Tests", "path": "{system_root}/tests", "extensions": [".rs"] }
           ],
-          "codebase": [
-            { "name": "LLM Gateway", "path": "modules/llm_gateway", "extensions": [".rs"] }
-          ]
-        },
-        {
-          "name": "file_storage",
-          "slug": "file-storage",
-          "kit": "cf-sdlc",
-          "artifacts_dir": "modules/file_storage/docs",
-          "artifacts": [
-            {
-              "name": "File Storage PRD",
-              "path": "modules/file_storage/docs/PRD.md",
-              "kind": "PRD",
-              "traceability": "DOCS-ONLY"
-            }
-          ],
-          "codebase": [
-            { "name": "File Storage", "path": "modules/file_storage", "extensions": [".rs"] }
-          ]
-        },
-        {
-          "name": "model_registry",
-          "slug": "model-registry",
-          "kit": "cf-sdlc",
-          "artifacts_dir": "modules/model_registry/docs",
-          "artifacts": [
-            {
-              "name": "Model Registry PRD",
-              "path": "modules/model_registry/docs/PRD.md",
-              "kind": "PRD",
-              "traceability": "DOCS-ONLY"
-            }
-          ],
-          "codebase": [
-            { "name": "Model Registry", "path": "modules/model_registry", "extensions": [".rs"] }
-          ]
-        },
-        {
-          "name": "type_registry",
-          "slug": "type-registry",
-          "kit": "cf-sdlc",
-          "artifacts_dir": "modules/type_registry/docs",
-          "artifacts": [
-            {
-              "name": "Type Registry PRD",
-              "path": "modules/type_registry/docs/PRD.md",
-              "kind": "PRD",
-              "traceability": "DOCS-ONLY"
-            }
-          ],
-          "codebase": [
-            { "name": "Type Registry", "path": "modules/type_registry", "extensions": [".rs"] }
-          ]
-        },
-        {
-          "name": "oagw",
-          "slug": "oagw",
-          "kit": "cf-sdlc",
-          "artifacts_dir": "modules/system/oagw",
-          "artifacts": [],
-          "codebase": [
-            { "name": "OAGW", "path": "modules/system/oagw", "extensions": [".rs"] }
-          ]
+          "validation": {
+            "require_kind_registered_in_kit": true,
+            "require_md_extension": true,
+            "fail_on_unmatched_markdown": true
+          }
         }
       ]
     },
@@ -136,59 +74,26 @@
       "slug": "examples",
       "kit": "cf-sdlc",
       "artifacts_dir": "docs/spec-templates/examples/",
-      "children": [
+      "autodetect": [
         {
-          "name": "todo-app",
-          "slug": "todo-app",
-          "kit": "cf-sdlc",
-          "artifacts_dir": "docs/spec-templates/examples/",
-          "artifacts": [
-            {
-              "name": "Todo App PRD (example)",
-              "path": "docs/spec-templates/examples/todo-app/PRD.md",
-              "kind": "PRD",
-              "traceability": "DOCS-ONLY"
-            },
-            {
-              "name": "Todo App DESIGN (example)",
-              "path": "docs/spec-templates/examples/todo-app/DESIGN.md",
-              "kind": "DESIGN",
-              "traceability": "DOCS-ONLY"
-            },
-            {
-              "name": "Todo App ADR-0001 (example)",
-              "path": "docs/spec-templates/examples/todo-app/ADR/0001-cpt-todo-app-adr-local-storage.md",
-              "kind": "ADR",
-              "traceability": "DOCS-ONLY"
-            },
-            {
-              "name": "Todo App ADR-0002 (example)",
-              "path": "docs/spec-templates/examples/todo-app/ADR/0002-cpt-todo-app-adr-optimistic-ui.md",
-              "kind": "ADR",
-              "traceability": "DOCS-ONLY"
-            },
-            {
-              "name": "Todo App ADR-0003 (example)",
-              "path": "docs/spec-templates/examples/todo-app/ADR/0003-cpt-todo-app-adr-browser-support.md",
-              "kind": "ADR",
-              "traceability": "DOCS-ONLY"
-            },
-            {
-              "name": "Todo App FEATURE core (example)",
-              "path": "docs/spec-templates/examples/todo-app/features/0001-cpt-todo-app-feature-core.md",
-              "kind": "FEATURE",
-              "traceability": "DOCS-ONLY"
-            },
-            {
-              "name": "Todo App FEATURE logic (example)",
-              "path": "docs/spec-templates/examples/todo-app/features/0002-cpt-todo-app-feature-logic.md",
-              "kind": "FEATURE",
-              "traceability": "DOCS-ONLY"
-            }
-          ],
-          "codebase": []
+          "system_root": "{project_root}/docs/spec-templates/examples/$system",
+          "artifacts_root": "{system_root}",
+          "artifacts": {
+            "PRD": { "pattern": "PRD.md", "traceability": "DOCS-ONLY", "required": true },
+            "DESIGN": { "pattern": "DESIGN.md", "traceability": "DOCS-ONLY", "required": true },
+            "ADR": { "pattern": "ADR/*.md", "traceability": "DOCS-ONLY", "required": false },
+            "DECOMPOSITION": { "pattern": "DECOMPOSITION.md", "traceability": "DOCS-ONLY", "required": false },
+            "FEATURE": { "pattern": "features/*.md", "traceability": "DOCS-ONLY", "required": false }
+          },
+          "codebase": [],
+          "validation": {
+            "require_kind_registered_in_kit": true,
+            "require_md_extension": true,
+            "fail_on_unmatched_markdown": true
+          }
         }
       ],
+      "children": [],
       "codebase": []
     }
   ]
