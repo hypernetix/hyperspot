@@ -1,6 +1,6 @@
 ---
 status: "accepted"
-date: 2025-02-08
+date: 2026-02-08
 ---
 
 # Use structured spec templates with FDD traceability for project documentation
