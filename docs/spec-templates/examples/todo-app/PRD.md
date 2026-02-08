@@ -250,9 +250,3 @@ The system **MUST** support offline mode where task creation, completion, filter
 - How long should completed tasks be retained before archival?
 - Should we support task sharing between users in future phases?
 - What is the maximum number of categories per user?
-
-## 14. Traceability
-
-- **Design**: `cpt-todo-app-design-principle-offline-first`, `cpt-todo-app-design-principle-optimistic-updates`, `cpt-todo-app-design-constraint-browser-compat`, `cpt-todo-app-design-interface-websocket`, `cpt-todo-app-design-interface-indexeddb`, `cpt-todo-app-db-table-tasks`, `cpt-todo-app-topology-cloud`, `cpt-todo-app-tech-stack`, `cpt-todo-app-design-context-decisions`
-- **ADRs**: [ADR/](./ADR/)
-- **Features**: `cpt-todo-app-feature-core`, `cpt-todo-app-flow-core-create-task`, `cpt-todo-app-flow-core-delete-task`, `cpt-todo-app-algo-core-validate-task`, `cpt-todo-app-state-core-task`, `cpt-todo-app-dod-core-crud`, `cpt-todo-app-featurecontext-core-performance`, `cpt-todo-app-feature-logic`, `cpt-todo-app-flow-logic-filter-tasks`, `cpt-todo-app-flow-logic-search-tasks`, `cpt-todo-app-algo-logic-sort-tasks`, `cpt-todo-app-algo-logic-overdue-detection`, `cpt-todo-app-state-logic-filter`, `cpt-todo-app-dod-logic-filtering`, `cpt-todo-app-dod-logic-search`, `cpt-todo-app-dod-logic-sorting`, `cpt-todo-app-featurecontext-logic-ux`

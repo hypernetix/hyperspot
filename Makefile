@@ -106,6 +106,12 @@ clippy:
 	$(call check_rustup_component,clippy)
 	cargo clippy --workspace --all-targets --all-features -- -D warnings -D clippy::perf
 
+.PHONY: validate-artifacts
+
+validate-artifacts:
+	git submodule update --init --recursive -- .cypilot
+	python3 .cypilot/skills/cypilot/scripts/cypilot.py validate
+
 # Run markdown checks with 'lychee'
 lychee:
 	$(call check_tool,lychee)

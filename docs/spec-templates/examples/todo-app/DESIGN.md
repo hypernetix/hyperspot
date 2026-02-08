@@ -268,3 +268,5 @@ The choice of React over other frameworks was driven by team expertise and ecosy
 - **PRD**: [PRD.md](./PRD.md)
 - **ADRs**: [ADR/](./ADR/)
 - **Features**: [features/](./features/)
+- **Feature IDs**: `cpt-todo-app-feature-core`, `cpt-todo-app-feature-logic`
+- **Feature elements**: `cpt-todo-app-algo-core-validate-task`, `cpt-todo-app-state-core-task`, `cpt-todo-app-dod-core-crud`, `cpt-todo-app-featurecontext-core-performance`, `cpt-todo-app-flow-logic-filter-tasks`, `cpt-todo-app-flow-logic-search-tasks`, `cpt-todo-app-algo-logic-sort-tasks`, `cpt-todo-app-algo-logic-overdue-detection`, `cpt-todo-app-state-logic-filter`, `cpt-todo-app-dod-logic-filtering`, `cpt-todo-app-dod-logic-search`, `cpt-todo-app-dod-logic-sorting`, `cpt-todo-app-featurecontext-logic-ux`

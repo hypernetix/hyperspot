@@ -224,31 +224,31 @@
             },
             {
               "name": "Todo App ADR-0001 (example)",
-              "path": "docs/spec-templates/examples/todo-app/ADR/0001-spd-todo-app-adr-local-storage.md",
+              "path": "docs/spec-templates/examples/todo-app/ADR/0001-cpt-todo-app-adr-local-storage.md",
               "kind": "ADR",
               "traceability": "DOCS-ONLY"
             },
             {
               "name": "Todo App ADR-0002 (example)",
-              "path": "docs/spec-templates/examples/todo-app/ADR/0002-spd-todo-app-adr-optimistic-ui.md",
+              "path": "docs/spec-templates/examples/todo-app/ADR/0002-cpt-todo-app-adr-optimistic-ui.md",
               "kind": "ADR",
               "traceability": "DOCS-ONLY"
             },
             {
               "name": "Todo App ADR-0003 (example)",
-              "path": "docs/spec-templates/examples/todo-app/ADR/0003-spd-todo-app-adr-browser-support.md",
+              "path": "docs/spec-templates/examples/todo-app/ADR/0003-cpt-todo-app-adr-browser-support.md",
               "kind": "ADR",
               "traceability": "DOCS-ONLY"
             },
             {
               "name": "Todo App FEATURE core (example)",
-              "path": "docs/spec-templates/examples/todo-app/features/0001-spd-todo-app-feature-core.md",
+              "path": "docs/spec-templates/examples/todo-app/features/0001-cpt-todo-app-feature-core.md",
               "kind": "FEATURE",
               "traceability": "DOCS-ONLY"
             },
             {
               "name": "Todo App FEATURE logic (example)",
-              "path": "docs/spec-templates/examples/todo-app/features/0002-spd-todo-app-feature-logic.md",
+              "path": "docs/spec-templates/examples/todo-app/features/0002-cpt-todo-app-feature-logic.md",
               "kind": "FEATURE",
               "traceability": "DOCS-ONLY"
             }

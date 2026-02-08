@@ -23,6 +23,7 @@ Provides the fundamental task management capabilities that all other features de
 - Overall Design: [DESIGN.md](../DESIGN.md)
 - PRD: [PRD.md](../PRD.md)
 - Requirements: `cpt-todo-app-fr-create-task`, `cpt-todo-app-fr-complete-task`, `cpt-todo-app-fr-delete-task`, `cpt-todo-app-nfr-offline-support`, `cpt-todo-app-nfr-data-persistence`, `cpt-todo-app-interface-rest-api`, `cpt-todo-app-interface-task-model`
+- Design elements: `cpt-todo-app-design-interface-websocket`, `cpt-todo-app-db-table-tasks`, `cpt-todo-app-topology-cloud`, `cpt-todo-app-tech-stack`, `cpt-todo-app-design-context-decisions`
 - Dependencies: None
 
 ## 2. Actor Flows (CDSL)

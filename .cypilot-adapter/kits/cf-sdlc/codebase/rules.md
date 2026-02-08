@@ -102,7 +102,7 @@ Any inline `` `cpt-...` `` in text is treated as an ID reference.
 
 - [ ] Traceability Mode determined per spec (FULL vs DOCS-ONLY)
 - [ ] If Mode ON: markers follow spec syntax (`@cpt-*`, `@cpt-begin`/`@cpt-end`)
-- [ ] If Mode ON: all SDLS instructions have corresponding markers `@cpt-begin`/`@cpt-end`
+- [ ] If Mode ON: all CDSL instructions have corresponding markers `@cpt-begin`/`@cpt-end`
 - [ ] If Mode ON: every implemented CDSL instruction (`[x] ... `inst-*``) has a paired `@cpt-begin/.../@cpt-end` block marker in code
 - [ ] If Mode ON: no orphaned/stale markers
 - [ ] If Mode ON: design checkboxes synced with code
@@ -283,9 +283,9 @@ def validate_credentials(username, password):
 
 **After each work package, sync checkboxes:**
 
-1. For each `...:ph-{N}:inst-{local}` implemented:
+1. For each `...:p{N}:inst-{local}` implemented:
    - Locate owning scope entry in the FEATURE artifact by base ID
-   - Find matching CDSL step line with `ph-{N}` and `inst-{local}`
+   - Find matching CDSL step line with `p{N}` and `inst-{local}`
    - Mark checkbox: `- [ ]` → `- [x]`
 
 2. For each requirement ID implemented:
