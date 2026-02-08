@@ -447,5 +447,5 @@ build:
 	cargo +stable build --release
 
 # Run all necessary quality checks and tests and then build the release binary
-all: build check test-sqlite e2e-local
+all: build check validate-artifacts test-sqlite e2e-local
 	@echo "consider to run 'make test-db' as well"
