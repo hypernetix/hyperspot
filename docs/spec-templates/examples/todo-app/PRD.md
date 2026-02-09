@@ -87,7 +87,6 @@ The application is designed for individual use with cross-device synchronization
 The system **MUST** allow users to create a new task with a title, optional description, due date, priority level, and category.
 
 **Rationale**: Core functionality — users need to capture tasks quickly.
-**Source**: Task requirements from steering committee (ease of use goal: <3s task creation)
 **Actors**: `fdd-todo-app-actor-user`
 
 #### Complete Task
@@ -97,7 +96,6 @@ The system **MUST** allow users to create a new task with a title, optional desc
 The system **MUST** allow users to mark a task as completed or revert it to incomplete status.
 
 **Rationale**: Essential for task lifecycle management.
-**Source**: User stories and stakeholder interviews
 **Actors**: `fdd-todo-app-actor-user`
 
 #### Delete Task
@@ -135,7 +133,6 @@ The system **MUST** allow users to filter tasks by status (all, active, complete
 All user interactions **MUST** complete within 200ms at p95 under normal load (stricter than project default of 500ms).
 
 **Threshold**: 200ms p95 latency for UI interactions
-**Source**: Task requirements from steering committee (ease of use: fast performance critical)
 **Rationale**: Todo app is a productivity tool where perceived speed directly impacts user satisfaction; willing to accept increased complexity (local-first architecture) to achieve this
 **Architecture Allocation**: See DESIGN.md § NFR Allocation for how this is realized
 
@@ -146,7 +143,6 @@ All user interactions **MUST** complete within 200ms at p95 under normal load (s
 User data **MUST** be persisted locally immediately and synced to cloud storage within 5 seconds of any change when online.
 
 **Threshold**: Local persistence: <50ms; cloud sync: <5s when online
-**Source**: Task requirements from steering committee (cross-device access: requires reliable sync)
 **Rationale**: Module-specific requirement (project default doesn't cover offline-first + sync pattern)
 **Architecture Allocation**: See DESIGN.md § NFR Allocation for how this is realized
 

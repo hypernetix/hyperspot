@@ -78,64 +78,19 @@ Application must support latest 2 versions of Chrome, Firefox, Safari, and Edge.
 **Location**: [src/domain/entities](../src/domain/entities)
 
 **Core Entities**:
-- [Task](../src/domain/entities/task.ts) - Core task entity with title, status, priority
-- [Category](../src/domain/entities/category.ts) - Task grouping entity
-- [User](../src/domain/entities/user.ts) - User account entity
+
+| Entity | Description | Schema |
+|--------|-------------|--------|
+| Task | Core task entity with title, status, priority | [task.ts](../src/domain/entities/task.ts) |
+| Category | Task grouping entity | [category.ts](../src/domain/entities/category.ts) |
+| User | User account entity | [user.ts](../src/domain/entities/user.ts) |
 
 **Relationships**:
 - Task → Category: Many-to-one (task belongs to optional category)
 - Task → User: Many-to-one (task belongs to user)
 - Category → User: Many-to-one (category belongs to user)
 
-### 3.2 Component Model
-
-```mermaid
-flowchart LR
-    subgraph Frontend["React Frontend"]
-        App[App]
-        TaskList[TaskList]
-        TaskForm[TaskForm]
-        FilterBar[FilterBar]
-        SyncIndicator[SyncIndicator]
-    end
-
-    subgraph Services["Services"]
-        TaskService[TaskService]
-        SyncService[SyncService]
-    end
-
-    subgraph Storage["Storage"]
-        IDB[(IndexedDB)]
-        API[REST API]
-    end
-
-    App --> TaskList
-    App --> TaskForm
-    App --> FilterBar
-    App --> SyncIndicator
-
-    TaskList --> TaskService
-    TaskForm --> TaskService
-    FilterBar --> TaskService
-    SyncIndicator --> SyncService
-
-    TaskService --> IDB
-    TaskService --> API
-    SyncService --> IDB
-    SyncService --> API
-```
-
-**Components**:
-- **TaskList**: Displays filtered list of tasks with pagination
-- **TaskForm**: Form for creating and editing tasks
-- **FilterBar**: Controls for filtering and sorting tasks
-- **SyncIndicator**: Shows synchronization status
-
-**Interactions**:
-- TaskForm → TaskService: Submits task data for creation/update
-- FilterBar → TaskList: Passes filter criteria for rendering
-
-### 3.3 API Contracts
+### 3.2 API Contracts
 
 **Technology**: REST/OpenAPI
 
@@ -151,30 +106,48 @@ flowchart LR
 | `PATCH` | `/tasks/:id` | Update task fields | stable |
 | `DELETE` | `/tasks/:id` | Delete a task | stable |
 
-### 3.4 External Interfaces & Protocols
+### 3.3 Module Dependencies
 
-#### WebSocket Sync Protocol
+No internal module dependencies — Todo App is a standalone module with no platform module consumers or providers.
 
-- [x] `p1` - **ID**: `fdd-todo-app-design-interface-websocket`
+| Dependency Module | Interface Used | Purpose |
+|-------------------|---------------|--------|
+| (none) | — | — |
 
-**Type**: Protocol (WebSocket + JSON)
+### 3.4 External Dependencies
+
+#### WebSocket Sync Backend
+
+- [x] `p1` - **ID**: `fdd-todo-app-design-ext-websocket-sync`
+
+**Type**: External API
 **Direction**: bidirectional
-**Specification**: Custom sync protocol over WebSocket; messages follow format: `{ type: "sync" | "update" | "delete", payload: Task }`
+**Protocol / Driver**: WebSocket + JSON; messages follow format: `{ type: "sync" | "update" | "delete", payload: Task }`
 **Data Format**: JSON (follows Task model from `fdd-todo-app-interface-task-model`)
 **Compatibility**: Protocol version negotiated on connection; supports fallback to HTTP polling
-**References**: Links to PRD § Public Library Interfaces (`fdd-todo-app-contract-sync`)
+**References**: PRD `fdd-todo-app-contract-sync`
 
-#### IndexedDB Storage Schema
+#### IndexedDB (Browser Local Storage)
 
-- [x] `p1` - **ID**: `fdd-todo-app-design-interface-indexeddb`
+- [x] `p1` - **ID**: `fdd-todo-app-design-ext-indexeddb`
 
-**Type**: Data Format (IndexedDB schema)
-**Direction**: internal (library storage)
-**Specification**: Dexie.js schema with indexes on userId, status, categoryId, dueDate
+**Type**: Database
+**Direction**: bidirectional
+**Protocol / Driver**: Dexie.js (IndexedDB wrapper) with indexes on userId, status, categoryId, dueDate
 **Data Format**: Task objects stored as-is with additional metadata (syncState, lastModified)
 **Compatibility**: Schema migrations handled by Dexie.js version upgrade hooks
 
-### 3.5 Interactions & Sequences
+#### PostgreSQL
+
+- [x] `p1` - **ID**: `fdd-todo-app-design-ext-postgresql`
+
+**Type**: Database
+**Direction**: outbound
+**Protocol / Driver**: PostgreSQL driver via Express backend
+**Data Format**: SQL (relational schema, see § 3.6)
+**Compatibility**: Schema migrations managed via migration tool
+
+### 3.5 Sequences & Interactions
 
 ```mermaid
 sequenceDiagram
@@ -205,56 +178,28 @@ sequenceDiagram
 
 **Actors**: `fdd-todo-app-actor-user`, `fdd-todo-app-actor-sync-service`
 
-### 3.6 Database schemas & tables
+### 3.6 Database Schema
 
-#### Table tasks
+#### Table: tasks
 
-**ID**: `fdd-todo-app-db-table-tasks`
+**ID**: `fdd-todo-app-design-db-tasks`
 
-**Schema**
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | UUID | PK | Primary key |
+| user_id | UUID | FK, NOT NULL | Foreign key to users |
+| title | VARCHAR(255) | NOT NULL | Task title |
+| description | TEXT | | Optional description |
+| status | ENUM | NOT NULL, DEFAULT 'active' | 'active', 'completed' |
+| priority | ENUM | NOT NULL | 'low', 'medium', 'high' |
+| category_id | UUID | FK | Optional foreign key to categories |
+| due_date | TIMESTAMP | | Optional due date |
+| created_at | TIMESTAMP | NOT NULL | Creation timestamp |
+| updated_at | TIMESTAMP | NOT NULL | Last update timestamp |
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | UUID | Primary key |
-| user_id | UUID | Foreign key to users |
-| title | VARCHAR(255) | Task title |
-| description | TEXT | Optional description |
-| status | ENUM | 'active', 'completed' |
-| priority | ENUM | 'low', 'medium', 'high' |
-| category_id | UUID | Optional foreign key |
-| due_date | TIMESTAMP | Optional due date |
-| created_at | TIMESTAMP | Creation timestamp |
-| updated_at | TIMESTAMP | Last update timestamp |
+**Indexes**: user_id, status, due_date
 
-**PK**: id
-
-**Constraints**: title NOT NULL, status NOT NULL DEFAULT 'active'
-
-**Additional info**: Indexed on user_id, status, due_date
-
-**Example**
-
-| id | user_id | title | status | priority |
-|----|---------|-------|--------|----------|
-| abc-123 | user-1 | Buy groceries | active | medium |
-
-### 3.7 Topology (optional)
-
-**ID**: `fdd-todo-app-topology-cloud`
-
-- Frontend: Static files on CDN
-- Backend: Containerized Node.js on Kubernetes
-- Database: Managed PostgreSQL
-- Cache: Redis cluster
-
-### 3.8 Tech stack (optional)
-
-**ID**: `fdd-todo-app-tech-stack`
-
-- Frontend: React 18, TypeScript, TailwindCSS, Zustand
-- Backend: Node.js, Express, TypeScript
-- Database: PostgreSQL 15, Redis 7
-- Infrastructure: Docker, Kubernetes, GitHub Actions
+**Notes**: status defaults to 'active' on insert
 
 ## 4. Additional Context
 
