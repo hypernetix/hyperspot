@@ -1867,8 +1867,12 @@ with tenant and correlation identifiers for traceability.
               "type": "string",
               "enum": [
                 "retryable",
-                "non_retryable"
+                "non_retryable",
+                "resource_limit",
+                "timeout",
+                "canceled"
               ],
+              "description": "Error category for retry decisions."
               "description": "Error category for retry decisions."
             },
             "details": {
