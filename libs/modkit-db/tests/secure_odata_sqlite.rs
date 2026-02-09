@@ -15,7 +15,7 @@ use modkit_db::secure::{Db, DbConn, ScopableEntity, secure_insert};
 use modkit_db::{ConnectOpts, connect_db};
 use modkit_odata::ODataQuery;
 use modkit_odata::filter::FieldKind;
-use modkit_security::AccessScope;
+use modkit_security::{AccessScope, pep_properties};
 use sea_orm::Set;
 use sea_orm::entity::prelude::*;
 use sea_orm_migration::prelude as mig;
@@ -53,6 +53,12 @@ impl ScopableEntity for ent::Entity {
     }
     fn type_col() -> Option<<Self as EntityTrait>::Column> {
         None
+    }
+    fn resolve_property(property: &str) -> Option<<Self as EntityTrait>::Column> {
+        match property {
+            p if p == pep_properties::OWNER_TENANT_ID => Self::tenant_col(),
+            _ => None,
+        }
     }
 }
 
@@ -129,7 +135,7 @@ impl TestDb {
             .expect("migrate");
 
         let tenant_id = Uuid::new_v4();
-        let scope = AccessScope::tenants_only(vec![tenant_id]);
+        let scope = AccessScope::for_tenants(vec![tenant_id]);
 
         Self {
             db,

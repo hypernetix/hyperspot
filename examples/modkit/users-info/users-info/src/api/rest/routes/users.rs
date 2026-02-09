@@ -1,4 +1,4 @@
-use super::{Action, License, Resource, dto, handlers};
+use super::{License, dto, handlers};
 use axum::Router;
 use modkit::api::OpenApiRegistry;
 use modkit::api::operation_builder::{OperationBuilder, OperationBuilderODataExt};
@@ -11,7 +11,7 @@ pub(super) fn register_user_routes(mut router: Router, openapi: &dyn OpenApiRegi
         .summary("List users with cursor pagination")
         .description("Retrieve a paginated list of users using cursor-based pagination")
         .tag("users")
-        .require_auth(&Resource::Users, &Action::Read)
+        .authenticated()
         .query_param_typed(
             "limit",
             false,
@@ -36,7 +36,7 @@ pub(super) fn register_user_routes(mut router: Router, openapi: &dyn OpenApiRegi
     // GET /users-info/v1/users/{id} - Get a specific user
     router = OperationBuilder::get("/users-info/v1/users/{id}")
         .operation_id("users_info.get_user")
-        .require_auth(&Resource::Users, &Action::Read)
+        .authenticated()
         .require_license_features::<License>([])
         .summary("Get user by ID")
         .description("Retrieve a specific user by their UUID")
@@ -54,7 +54,7 @@ pub(super) fn register_user_routes(mut router: Router, openapi: &dyn OpenApiRegi
     // POST /users-info/v1/users - Create a new user
     router = OperationBuilder::post("/users-info/v1/users")
         .operation_id("users_info.create_user")
-        .require_auth(&Resource::Users, &Action::Create)
+        .authenticated()
         .require_license_features::<License>([])
         .summary("Create a new user")
         .description("Create a new user with the provided information")
@@ -76,7 +76,7 @@ pub(super) fn register_user_routes(mut router: Router, openapi: &dyn OpenApiRegi
     // PATCH /users-info/v1/users/{id} - Partially update a user
     router = OperationBuilder::patch("/users-info/v1/users/{id}")
         .operation_id("users_info.update_user")
-        .require_auth(&Resource::Users, &Action::Update)
+        .authenticated()
         .require_license_features::<License>([])
         .summary("Update user")
         .description("Partially update a user with the provided fields")
@@ -96,7 +96,7 @@ pub(super) fn register_user_routes(mut router: Router, openapi: &dyn OpenApiRegi
     // DELETE /users-info/v1/users/{id} - Delete a user
     router = OperationBuilder::delete("/users-info/v1/users/{id}")
         .operation_id("users_info.delete_user")
-        .require_auth(&Resource::Users, &Action::Delete)
+        .authenticated()
         .require_license_features::<License>([])
         .summary("Delete user")
         .description("Delete a user by their UUID")

@@ -1,3 +1,4 @@
+#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 //! Single-Tenant Resolver Plugin
 //!
 //! Zero-configuration plugin for single-tenant deployments.
@@ -16,8 +17,6 @@
 //! No configuration required. The plugin registers itself automatically with:
 //! - Vendor: `hyperspot`
 //! - Priority: `1000` (lower than static plugin, so static wins when both are enabled)
-
-#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 
 pub mod domain;
 pub mod module;

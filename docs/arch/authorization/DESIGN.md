@@ -631,7 +631,7 @@ The PEP MUST:
 1. **Validate decision** - `decision: false` or missing -> deny all (403 Forbidden)
 2. **Enforce require_constraints** - If `require_constraints: true` and `decision: true` but no `constraints` -> deny all (403 Forbidden)
 3. **Apply constraints when present** - If `constraints` array is present, apply to SQL; if all constraints evaluate to false -> deny all
-4. **Trust decision when constraints not required** - `decision: true` without `constraints` AND `require_constraints: false` -> allow (e.g., CREATE operations)
+4. **Trust decision when constraints not required** - `decision: true` without `constraints` AND `require_constraints: false` -> allow (non-resource decisions only; all standard CRUD operations use `require_constraints: true`)
 5. **Handle unreachable PDP** - Network failure, timeout -> deny all
 6. **Handle unknown predicate types** - Treat containing constraint as false; if all constraints false -> deny all
 7. **Handle empty or missing predicates** - If a constraint has empty `predicates: []` or missing `predicates` field -> treat constraint as malformed -> deny all. Constraints MUST have at least one predicate.
@@ -826,7 +826,7 @@ The response contains a `decision` and, when `decision: true`, optional `context
 | Field | Required | Default | Description |
 |-------|----------|---------|-------------|
 | `mode` | No | `"subtree"` | `"root_only"` (single tenant) or `"subtree"` (tenant + descendants) |
-| `root_id` | No | — | Root tenant ID. If absent, PDP determines from `token_scopes`, `bearer_token`, or `subject.properties.tenant_id` |
+| `root_id` | No | — | Root context tenant ID. If absent, PDP determines from `token_scopes`, `subject.properties.tenant_id`, or something else - it's fully up to the PDP implementation |
 | `barrier_mode` | No | `"all"` | `"all"` (respect barriers) or `"none"` (ignore barriers) |
 | `tenant_status` | No | — | Filter by tenant status (e.g., `["active", "suspended"]`) |
 
@@ -845,7 +845,7 @@ The `barrier_mode` and `tenant_status` parameters apply to any scope source — 
 
 #### Operation-Specific Behavior
 
-**CREATE** (no constraints needed):
+**CREATE** (PDP returns constraints, same as other operations):
 ```jsonc
 // PEP -> PDP
 {
@@ -853,14 +853,23 @@ The `barrier_mode` and `tenant_status` parameters apply to any scope source — 
   "resource": {
     "type": "gts.x.core.events.event.v1~",
     "properties": { "owner_tenant_id": "tenant-B", "topic_id": "..." }
-  }
-  // ... subject, context
+  },
+  "context": { "require_constraints": true }
+  // ... subject, tenant_context
 }
 
 // PDP -> PEP
-{ "decision": true }  // no constraints - PEP trusts decision
+{
+  "decision": true,
+  "context": {
+    "constraints": [
+      { "predicates": [{ "type": "eq", "resource_property": "owner_tenant_id", "value": "tenant-B" }] }
+    ]
+  }
+}
 
-// PEP: INSERT INTO events ...
+// PEP: compiles constraints, validates INSERT against them
+// INSERT INTO events ...
 ```
 
 **LIST** (constraints required):
@@ -1181,7 +1190,7 @@ The `require_constraints` field (separate from capabilities array) controls PEP 
 
 **Usage:**
 - For LIST operations: typically `true` (constraints needed for SQL WHERE)
-- For CREATE operations: typically `false` (no query, just permission check)
+- For CREATE operations: typically `false` (no query, just permission check), but can be `true` if PEP wants to enforce constraints locally
 - For GET/UPDATE/DELETE: depends on whether PEP wants SQL-level enforcement or trusts PDP decision
 
 #### Capabilities Array

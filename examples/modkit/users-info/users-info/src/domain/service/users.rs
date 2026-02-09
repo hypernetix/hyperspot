@@ -9,9 +9,12 @@ use crate::domain::ports::{AuditPort, EventPublisher};
 use crate::domain::repos::{AddressesRepository, CitiesRepository, UsersRepository};
 use crate::domain::service::DbProvider;
 use crate::domain::service::{AddressesService, CitiesService, ServiceConfig};
+use authz_resolver_sdk::PolicyEnforcer;
+use authz_resolver_sdk::pep::AccessRequest;
+
+use super::{actions, resources};
 use modkit_odata::{ODataQuery, Page};
-use modkit_security::{PolicyEngineRef, SecurityContext};
-use tenant_resolver_sdk::TenantResolverClient;
+use modkit_security::{AccessScope, SecurityContext, pep_properties};
 use time::OffsetDateTime;
 use users_info_sdk::{NewUser, User, UserFull, UserPatch};
 use uuid::Uuid;
@@ -31,11 +34,10 @@ use uuid::Uuid;
 pub struct UsersService<R: UsersRepository + 'static, CR: CitiesRepository, AR: AddressesRepository>
 {
     db: Arc<DbProvider>,
-    policy_engine: PolicyEngineRef,
     repo: Arc<R>,
     events: Arc<dyn EventPublisher<UserDomainEvent>>,
     audit: Arc<dyn AuditPort>,
-    resolver: Arc<dyn TenantResolverClient>,
+    policy_enforcer: PolicyEnforcer,
     config: ServiceConfig,
     cities: Arc<CitiesService<CR>>,
     addresses: Arc<AddressesService<AR, R>>,
@@ -50,19 +52,17 @@ impl<R: UsersRepository + 'static, CR: CitiesRepository, AR: AddressesRepository
         repo: Arc<R>,
         events: Arc<dyn EventPublisher<UserDomainEvent>>,
         audit: Arc<dyn AuditPort>,
-        policy_engine: PolicyEngineRef,
-        resolver: Arc<dyn TenantResolverClient>,
+        policy_enforcer: PolicyEnforcer,
         config: ServiceConfig,
         cities: Arc<CitiesService<CR>>,
         addresses: Arc<AddressesService<AR, R>>,
     ) -> Self {
         Self {
             db,
-            policy_engine,
             repo,
             events,
             audit,
-            resolver,
+            policy_enforcer,
             config,
             cities,
             addresses,
@@ -96,16 +96,38 @@ impl<R: UsersRepository + 'static, CR: CitiesRepository, AR: AddressesRepository
 
         audit_get_user_access_best_effort(self, id).await;
 
-        let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
-        let scope = ctx
-            .scope(self.policy_engine.clone())
-            .include_accessible_tenants(tenant_ids)
-            .prepare()
+        // Prefetch: load user to extract owner_tenant_id for PDP.
+        // PDP returns a narrow `eq` constraint instead of expanding the subtree.
+        let prefetch_scope = AccessScope::allow_all();
+        let user = self
+            .repo
+            .get(&conn, &prefetch_scope, id)
+            .await?
+            .ok_or_else(|| DomainError::user_not_found(id))?;
+
+        let scope = self
+            .policy_enforcer
+            .access_scope_with(
+                ctx,
+                &resources::USER,
+                actions::GET,
+                Some(id),
+                &AccessRequest::new()
+                    .resource_property(pep_properties::OWNER_TENANT_ID, user.tenant_id)
+                    .require_constraints(false),
+            )
             .await?;
 
-        let found = self.repo.get(&conn, &scope, id).await?;
-
-        let user = found.ok_or_else(|| DomainError::user_not_found(id))?;
+        // Unconstrained → PDP said "yes" without row-level filters; return prefetch.
+        // Constrained  → scoped re-read validates against PDP constraints.
+        let user = if scope.is_unconstrained() {
+            user
+        } else {
+            self.repo
+                .get(&conn, &scope, id)
+                .await?
+                .ok_or_else(|| DomainError::user_not_found(id))?
+        };
 
         tracing::debug!("Successfully retrieved user");
         Ok(user)
@@ -122,11 +144,9 @@ impl<R: UsersRepository + 'static, CR: CitiesRepository, AR: AddressesRepository
 
         let conn = self.db.conn().map_err(DomainError::from)?;
 
-        let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
-        let scope = ctx
-            .scope(self.policy_engine.clone())
-            .include_accessible_tenants(tenant_ids)
-            .prepare()
+        let scope = self
+            .policy_enforcer
+            .access_scope(ctx, &resources::USER, actions::LIST, None)
             .await?;
 
         let page = self.repo.list_page(&conn, &scope, query).await?;
@@ -161,11 +181,15 @@ impl<R: UsersRepository + 'static, CR: CitiesRepository, AR: AddressesRepository
 
         let id = provided_id.unwrap_or_else(Uuid::now_v7);
 
-        let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
-        let scope = ctx
-            .scope(self.policy_engine.clone())
-            .include_accessible_tenants(tenant_ids)
-            .prepare()
+        let scope = self
+            .policy_enforcer
+            .access_scope_with(
+                ctx,
+                &resources::USER,
+                actions::CREATE,
+                None,
+                &AccessRequest::new().resource_property(pep_properties::OWNER_TENANT_ID, tenant_id),
+            )
             .await?;
 
         let now = OffsetDateTime::now_utc();
@@ -179,15 +203,25 @@ impl<R: UsersRepository + 'static, CR: CitiesRepository, AR: AddressesRepository
             updated_at: now,
         };
 
-        // Uniqueness checks and insert
-        if provided_id.is_some() && self.repo.exists(&conn, &scope, id).await? {
+        // SAFETY(multi-tenant bypass): Email and ID uniqueness are enforced
+        // globally across all tenants, not per-tenant. This intentionally
+        // bypasses tenant isolation so that a CREATE in tenant A is rejected
+        // if the same email/ID already exists in tenant B.
+        let global = AccessScope::allow_all();
+
+        if provided_id.is_some() && self.repo.exists(&conn, &global, id).await? {
             return Err(DomainError::validation(
                 "id",
                 "User with this ID already exists",
             ));
         }
 
-        if self.repo.count_by_email(&conn, &scope, &user.email).await? > 0 {
+        if self
+            .repo
+            .count_by_email(&conn, &global, &user.email)
+            .await?
+            > 0
+        {
             return Err(DomainError::email_already_exists(user.email.clone()));
         }
 
@@ -221,23 +255,33 @@ impl<R: UsersRepository + 'static, CR: CitiesRepository, AR: AddressesRepository
 
         let conn = self.db.conn().map_err(DomainError::from)?;
 
-        let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
-        let scope = ctx
-            .scope(self.policy_engine.clone())
-            .include_accessible_tenants(tenant_ids)
-            .prepare()
-            .await?;
+        // Prefetch: load user to extract owner_tenant_id for PDP.
+        // Narrow scope + WHERE constraint provides TOCTOU protection.
+        let prefetch_scope = AccessScope::allow_all();
+        let mut current = self
+            .repo
+            .get(&conn, &prefetch_scope, id)
+            .await?
+            .ok_or_else(|| DomainError::user_not_found(id))?;
 
-        let found = self.repo.get(&conn, &scope, id).await?;
-        let mut current: User = match found {
-            Some(u) => u,
-            None => return Err(DomainError::user_not_found(id)),
-        };
+        let scope = self
+            .policy_enforcer
+            .access_scope_with(
+                ctx,
+                &resources::USER,
+                actions::UPDATE,
+                Some(id),
+                &AccessRequest::new()
+                    .resource_property(pep_properties::OWNER_TENANT_ID, current.tenant_id),
+            )
+            .await?;
 
         if let Some(ref new_email) = patch.email
             && new_email != &current.email
         {
-            let count = self.repo.count_by_email(&conn, &scope, new_email).await?;
+            // SAFETY(multi-tenant bypass): see comment in create_user().
+            let global = AccessScope::allow_all();
+            let count = self.repo.count_by_email(&conn, &global, new_email).await?;
             if count > 0 {
                 return Err(DomainError::email_already_exists(new_email.clone()));
             }
@@ -251,6 +295,7 @@ impl<R: UsersRepository + 'static, CR: CitiesRepository, AR: AddressesRepository
         }
         current.updated_at = OffsetDateTime::now_utc();
 
+        // repo.update applies scope constraints via WHERE clause (TOCTOU-safe).
         let updated_user = self.repo.update(&conn, &scope, current).await?;
 
         self.events.publish(&UserDomainEvent::Updated {
@@ -268,11 +313,25 @@ impl<R: UsersRepository + 'static, CR: CitiesRepository, AR: AddressesRepository
 
         let conn = self.db.conn().map_err(DomainError::from)?;
 
-        let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
-        let scope = ctx
-            .scope(self.policy_engine.clone())
-            .include_accessible_tenants(tenant_ids)
-            .prepare()
+        // Prefetch: load user to extract owner_tenant_id for PDP.
+        // Narrow scope + WHERE constraint provides TOCTOU protection.
+        let prefetch_scope = AccessScope::allow_all();
+        let prefetched = self
+            .repo
+            .get(&conn, &prefetch_scope, id)
+            .await?
+            .ok_or_else(|| DomainError::user_not_found(id))?;
+
+        let scope = self
+            .policy_enforcer
+            .access_scope_with(
+                ctx,
+                &resources::USER,
+                actions::DELETE,
+                Some(id),
+                &AccessRequest::new()
+                    .resource_property(pep_properties::OWNER_TENANT_ID, prefetched.tenant_id),
+            )
             .await?;
 
         let deleted = self.repo.delete(&conn, &scope, id).await?;

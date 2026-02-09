@@ -9,7 +9,7 @@
 use modkit_db::migration_runner::run_migrations_for_testing;
 use modkit_db::secure::{Db, DbConn, ScopableEntity, ScopeError, secure_insert};
 use modkit_db::{ConnectOpts, connect_db};
-use modkit_security::AccessScope;
+use modkit_security::{AccessScope, pep_properties};
 use sea_orm::Set;
 use sea_orm::entity::prelude::*;
 use sea_orm_migration::prelude as mig;
@@ -46,6 +46,12 @@ impl ScopableEntity for tenant_ent::Entity {
     fn type_col() -> Option<<Self as EntityTrait>::Column> {
         None
     }
+    fn resolve_property(property: &str) -> Option<<Self as EntityTrait>::Column> {
+        match property {
+            p if p == pep_properties::OWNER_TENANT_ID => Self::tenant_col(),
+            _ => None,
+        }
+    }
 }
 
 mod unrestricted_ent {
@@ -66,6 +72,8 @@ mod unrestricted_ent {
 }
 
 impl ScopableEntity for unrestricted_ent::Entity {
+    const IS_UNRESTRICTED: bool = true;
+
     fn tenant_col() -> Option<<Self as EntityTrait>::Column> {
         None
     }
@@ -76,6 +84,9 @@ impl ScopableEntity for unrestricted_ent::Entity {
         None
     }
     fn type_col() -> Option<<Self as EntityTrait>::Column> {
+        None
+    }
+    fn resolve_property(_property: &str) -> Option<<Self as EntityTrait>::Column> {
         None
     }
 }
@@ -199,7 +210,7 @@ async fn tenant_scoped_insert_allows_tenant_in_scope() {
     let test_db = setup().await;
     let conn = test_db.conn();
     let tenant_a = Uuid::new_v4();
-    let scope = AccessScope::tenants_only(vec![tenant_a]);
+    let scope = AccessScope::for_tenants(vec![tenant_a]);
 
     let am = tenant_ent::ActiveModel {
         tenant_id: Set(tenant_a),
@@ -218,7 +229,7 @@ async fn tenant_scoped_insert_rejects_tenant_not_in_scope() {
     let conn = test_db.conn();
     let tenant_a = Uuid::new_v4();
     let tenant_b = Uuid::new_v4();
-    let scope = AccessScope::tenants_only(vec![tenant_a]);
+    let scope = AccessScope::for_tenants(vec![tenant_a]);
 
     let am = tenant_ent::ActiveModel {
         tenant_id: Set(tenant_b),
@@ -231,7 +242,7 @@ async fn tenant_scoped_insert_rejects_tenant_not_in_scope() {
         .expect_err("must be rejected");
 
     match err {
-        ScopeError::TenantNotInScope { tenant_id } => assert_eq!(tenant_id, tenant_b),
+        ScopeError::Denied(_) => {}
         other => panic!("unexpected error: {other:?}"),
     }
 }
@@ -264,7 +275,7 @@ async fn tenant_scoped_insert_requires_tenant_id_in_active_model() {
     let test_db = setup().await;
     let conn = test_db.conn();
     let tenant_a = Uuid::new_v4();
-    let scope = AccessScope::tenants_only(vec![tenant_a]);
+    let scope = AccessScope::for_tenants(vec![tenant_a]);
 
     let am = tenant_ent::ActiveModel {
         // tenant_id intentionally not set

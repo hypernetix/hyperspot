@@ -14,8 +14,8 @@ use url::Url;
 #[allow(unused_imports)]
 use users_info_sdk::UsersInfoClientV1;
 
-// Import tenant resolver for multi-tenant access
-use tenant_resolver_sdk::TenantResolverClient;
+// Import AuthZ resolver for authorization (PEP flow)
+use authz_resolver_sdk::AuthZResolverClient;
 
 use crate::api::rest::dto::UserEvent;
 use crate::api::rest::routes;
@@ -37,7 +37,7 @@ pub(crate) type ConcreteAppServices =
 /// Main module struct with DDD-light layout and proper `ClientHub` integration
 #[modkit::module(
     name = "users-info",
-    deps = ["tenant-resolver"],
+    deps = ["authz-resolver"],
     capabilities = [db, rest]
 )]
 pub struct UsersInfo {
@@ -101,11 +101,11 @@ impl Module for UsersInfo {
         let audit_adapter: Arc<dyn AuditPort> =
             Arc::new(HttpAuditClient::new(http_client, audit_base, notify_base));
 
-        // Fetch tenant resolver from ClientHub
-        let resolver = ctx
+        // Fetch AuthZ resolver from ClientHub
+        let authz = ctx
             .client_hub()
-            .get::<dyn TenantResolverClient>()
-            .map_err(|e| anyhow::anyhow!("failed to get tenant resolver: {e}"))?;
+            .get::<dyn AuthZResolverClient>()
+            .map_err(|e| anyhow::anyhow!("failed to get AuthZ resolver: {e}"))?;
 
         let service_config = ServiceConfig {
             max_display_name_length: 100,
@@ -127,7 +127,7 @@ impl Module for UsersInfo {
             db,
             publisher,
             audit_adapter,
-            resolver,
+            authz,
             service_config,
         ));
 

@@ -117,19 +117,6 @@ impl AddressesRepository for OrmAddressesRepository {
         scope: &AccessScope,
         address: Address,
     ) -> Result<Address, DomainError> {
-        let exists = AddressEntity::find()
-            .filter(sea_orm::Condition::all().add(Expr::col(AddressColumn::Id).eq(address.id)))
-            .secure()
-            .scope_with(scope)
-            .one(conn)
-            .await
-            .map_err(db_err)?
-            .is_some();
-
-        if !exists {
-            return Err(DomainError::not_found("Address", address.id));
-        }
-
         let m = AddressAM {
             id: Set(address.id),
             tenant_id: Set(address.tenant_id),

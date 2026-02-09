@@ -27,53 +27,13 @@ use crate::api::rest::{dto, handlers};
 use crate::module::ConcreteAppServices;
 use axum::Router;
 use modkit::api::OpenApiRegistry;
-use modkit::api::operation_builder::{AuthReqAction, AuthReqResource, LicenseFeature};
+use modkit::api::operation_builder::LicenseFeature;
 use std::sync::Arc;
 
 mod addresses;
 mod cities;
 mod events;
 mod users;
-
-// Shared authorization enums and types
-
-pub(super) enum Resource {
-    Users,
-    Cities,
-    Addresses,
-}
-
-pub(super) enum Action {
-    Read,
-    Delete,
-    Update,
-    Create,
-}
-
-impl AsRef<str> for Resource {
-    fn as_ref(&self) -> &'static str {
-        match self {
-            Resource::Users => "users",
-            Resource::Cities => "cities",
-            Resource::Addresses => "addresses",
-        }
-    }
-}
-
-impl AuthReqResource for Resource {}
-
-impl AsRef<str> for Action {
-    fn as_ref(&self) -> &'static str {
-        match self {
-            Action::Read => "read",
-            Action::Delete => "delete",
-            Action::Update => "update",
-            Action::Create => "create",
-        }
-    }
-}
-
-impl AuthReqAction for Action {}
 
 pub(super) struct License;
 

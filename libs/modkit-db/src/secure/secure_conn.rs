@@ -256,7 +256,7 @@ impl SecureConn {
     /// ```ignore
     /// use sea_orm::sea_query::OnConflict;
     ///
-    /// let scope = AccessScope::tenants_only(vec![tenant_id]);
+    /// let scope = AccessScope::for_tenants(vec![tenant_id]);
     /// let am = settings::ActiveModel {
     ///     tenant_id: Set(tenant_id),
     ///     user_id: Set(user_id),

@@ -20,6 +20,9 @@ workspace = true
 [dependencies]
 simple-user-settings-sdk = { package = "cf-simple-user-settings-sdk", version = "0.1.0", path = "../simple-user-settings-sdk" }
 
+# AuthZ resolver for authorization (PEP flow)
+authz-resolver-sdk = { package = "cf-authz-resolver-sdk", path = "../../../modules/system/authz-resolver/authz-resolver-sdk" }
+
 anyhow = { workspace = true }
 async-trait = { workspace = true }
 tokio = { workspace = true }

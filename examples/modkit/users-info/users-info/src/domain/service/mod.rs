@@ -24,10 +24,26 @@
 //!
 //! ## Security
 //!
-//! All operations use `DBRunner` for tenant isolation and RBAC:
-//! - Queries filtered by security context automatically
-//! - Operations checked against policy engine
-//! - Audit events published for compliance
+//! All operations use the `AuthZ` Resolver PEP (Policy Enforcement Point) pattern
+//! via [`PolicyEnforcer`](authz_resolver_sdk::PolicyEnforcer):
+//! 1. Construct a `PolicyEnforcer` (once, during init — serves all resource types)
+//! 2. Call `enforcer.access_scope(&ctx, &resource, action, resource_id)`
+//! 3. The enforcer builds the request, evaluates via PDP, and compiles to `AccessScope`
+//! 4. Pass scope to repository methods for tenant-isolated queries
+//!
+//! ### Subtree authorization (no closure table)
+//!
+//! Enforcers are created with empty `capabilities` (no `tenant_hierarchy`).
+//! This means the PDP must expand the subtree into explicit tenant IDs in
+//! the constraints it returns.
+//!
+//! For **point operations** (GET/UPDATE/DELETE by ID), a prefetch pattern
+//! would be more efficient: PEP fetches the resource first, sends its
+//! `owner_tenant_id` as a resource property, and PDP returns a narrow `eq`
+//! constraint instead of an expanded subtree. This also improves TOCTOU
+//! protection for mutations.
+//!
+//! Reference: `docs/arch/authorization/AUTHZ_USAGE_SCENARIOS.md`
 //!
 //! ## Connection Management
 //!
@@ -43,62 +59,94 @@ use std::sync::Arc;
 
 use modkit_macros::domain_model;
 
-use crate::domain::error::DomainError;
 use crate::domain::events::UserDomainEvent;
 use crate::domain::ports::{AuditPort, EventPublisher};
 use crate::domain::repos::{AddressesRepository, CitiesRepository, UsersRepository};
+use authz_resolver_sdk::AuthZResolverClient;
+use authz_resolver_sdk::PolicyEnforcer;
+use authz_resolver_sdk::pep::ResourceType;
 use modkit_db::DBProvider;
 use modkit_db::odata::LimitCfg;
-use modkit_security::{PolicyEngineRef, SecurityContext};
-use tenant_resolver_sdk::{GetDescendantsOptions, TenantResolverClient, TenantStatus};
-use uuid::Uuid;
 
 mod addresses;
 mod cities;
 mod users;
+
+/// Authorization resource types and their PEP-supported properties.
+///
+/// Each resource declares which properties the PEP can compile from PDP
+/// constraints into SQL WHERE clauses. The PDP uses `supported_properties`
+/// to decide which predicates it can return.
+///
+/// # Authorization model per resource
+///
+/// ## `USER`
+/// - **Tenant isolation**: `owner_tenant_id` — every query is scoped to the
+///   subject's tenant (or tenant subtree, depending on PDP policy).
+/// - **Resource-level access**: `id` — PDP may restrict access to specific
+///   user IDs (e.g., "user can only read their own profile").
+/// - No owner dimension — users don't "belong to" another user.
+///
+/// ## `CITY`
+/// - **Tenant isolation**: `owner_tenant_id` — cities are tenant-scoped.
+/// - **Resource-level access**: `id` — PDP may restrict to specific city IDs.
+/// - No owner or custom properties — cities are typically managed by admins;
+///   no per-user ownership rules.
+///
+/// ## `ADDRESS`
+/// - **Tenant isolation**: `owner_tenant_id` — addresses are tenant-scoped.
+/// - **Resource-level access**: `id` — PDP may restrict to specific address IDs.
+/// - **Owner-based access**: `owner_id` (maps to `user_id` column) — PDP can
+///   enforce "users may only create/update/delete their own addresses" by
+///   returning `eq(owner_id, <subject_id>)` predicates.
+/// - **City-based access**: `city_id` — PDP can enforce per-user city
+///   restrictions, e.g., "user A may only have addresses in city 1,
+///   user B — only in city 2". PDP returns `eq(city_id, <allowed_city>)`
+///   or `in(city_id, [city1, city2])` predicates.
+pub(crate) mod resources {
+    use super::ResourceType;
+    use modkit_security::pep_properties;
+
+    /// Domain-specific PEP properties for users-info.
+    pub mod properties {
+        /// City identifier property for address authorization.
+        pub const CITY_ID: &str = "city_id";
+    }
+
+    pub const USER: ResourceType = ResourceType {
+        name: "users_info.user",
+        supported_properties: &[pep_properties::OWNER_TENANT_ID, pep_properties::RESOURCE_ID],
+    };
+
+    pub const CITY: ResourceType = ResourceType {
+        name: "users_info.city",
+        supported_properties: &[pep_properties::OWNER_TENANT_ID, pep_properties::RESOURCE_ID],
+    };
+
+    pub const ADDRESS: ResourceType = ResourceType {
+        name: "users_info.address",
+        supported_properties: &[
+            pep_properties::OWNER_TENANT_ID,
+            pep_properties::RESOURCE_ID,
+            pep_properties::OWNER_ID,
+            properties::CITY_ID,
+        ],
+    };
+}
+
+pub(crate) mod actions {
+    pub const GET: &str = "get";
+    pub const LIST: &str = "list";
+    pub const CREATE: &str = "create";
+    pub const UPDATE: &str = "update";
+    pub const DELETE: &str = "delete";
+}
 
 pub(crate) use addresses::AddressesService;
 pub(crate) use cities::CitiesService;
 pub(crate) use users::UsersService;
 
 pub(crate) type DbProvider = DBProvider<modkit_db::DbError>;
-
-/// Resolve accessible tenants for the current security context.
-/// Returns the context's tenant and all its active descendants.
-pub(crate) async fn resolve_accessible_tenants(
-    resolver: &dyn TenantResolverClient,
-    ctx: &SecurityContext,
-) -> Result<Vec<Uuid>, DomainError> {
-    let tenant_id = ctx.tenant_id();
-    if tenant_id == Uuid::nil() {
-        // Anonymous context - no accessible tenants
-        return Ok(vec![]);
-    }
-
-    // Get tenant and all active descendants (max_depth=None means unlimited)
-    let opts = GetDescendantsOptions {
-        status: vec![TenantStatus::Active],
-        ..Default::default()
-    };
-    let response = resolver
-        .get_descendants(ctx, tenant_id, &opts)
-        .await
-        .map_err(|e| {
-            tracing::error!(error = %e, "Failed to get descendants");
-            DomainError::InternalError
-        })?;
-
-    // Check if the starting tenant is active (filter doesn't apply to it)
-    if response.tenant.status != TenantStatus::Active {
-        return Ok(vec![]);
-    }
-
-    // Return tenant + all active descendants
-    let mut result = Vec::with_capacity(1 + response.descendants.len());
-    result.push(response.tenant.id);
-    result.extend(response.descendants.iter().map(|t| t.id));
-    Ok(result)
-}
 
 /// Configuration for the domain service
 #[domain_model]
@@ -174,27 +222,25 @@ where
         db: Arc<DbProvider>,
         events: Arc<dyn EventPublisher<UserDomainEvent>>,
         audit: Arc<dyn AuditPort>,
-        resolver: Arc<dyn TenantResolverClient>,
+        authz: Arc<dyn AuthZResolverClient>,
         config: ServiceConfig,
     ) -> Self {
-        let policy_engine: PolicyEngineRef = Arc::new(modkit_security::NoopPolicyEngine);
-
         let users_repo = Arc::new(users_repo);
         let cities_repo = Arc::new(cities_repo);
         let addresses_repo = Arc::new(addresses_repo);
 
+        let enforcer = PolicyEnforcer::new(authz);
+
         let cities = Arc::new(CitiesService::new(
             Arc::clone(&db),
             Arc::clone(&cities_repo),
-            policy_engine.clone(),
-            resolver.clone(),
+            enforcer.clone(),
         ));
         let addresses = Arc::new(AddressesService::new(
             Arc::clone(&db),
             Arc::clone(&addresses_repo),
             Arc::clone(&users_repo),
-            policy_engine.clone(),
-            resolver.clone(),
+            enforcer.clone(),
         ));
 
         Self {
@@ -203,8 +249,7 @@ where
                 Arc::clone(&users_repo),
                 events,
                 audit,
-                policy_engine.clone(),
-                resolver,
+                enforcer,
                 config,
                 cities.clone(),
                 addresses.clone(),

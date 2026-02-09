@@ -13,7 +13,7 @@ use anyhow::Result;
 use modkit_db::migration_runner::run_migrations_for_testing;
 use modkit_db::secure::{ScopableEntity, SecureEntityExt, secure_insert};
 use modkit_db::{DbConnConfig, build_db};
-use modkit_security::AccessScope;
+use modkit_security::{AccessScope, pep_properties};
 use sea_orm::Set;
 use sea_orm::entity::prelude::*;
 use sea_orm_migration::prelude as mig;
@@ -100,6 +100,13 @@ impl ScopableEntity for ent::Entity {
     fn type_col() -> Option<<Self as EntityTrait>::Column> {
         None
     }
+    fn resolve_property(property: &str) -> Option<<Self as EntityTrait>::Column> {
+        match property {
+            p if p == pep_properties::OWNER_TENANT_ID => Self::tenant_col(),
+            p if p == pep_properties::RESOURCE_ID => Self::resource_col(),
+            _ => None,
+        }
+    }
 }
 
 async fn smoke_secure_tx(db: modkit_db::Db) -> Result<()> {
@@ -108,7 +115,7 @@ async fn smoke_secure_tx(db: modkit_db::Db) -> Result<()> {
         .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
     let tenant_id = Uuid::new_v4();
-    let scope = AccessScope::tenants_only(vec![tenant_id]);
+    let scope = AccessScope::for_tenants(vec![tenant_id]);
     let scope_for_tx = scope.clone();
     let id = Uuid::new_v4();
 

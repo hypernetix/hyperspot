@@ -8,23 +8,23 @@
 //! Creating and using access scopes:
 //!
 //! ```rust
-//! use modkit_db::secure::AccessScope;
+//! use modkit_db::secure::{AccessScope, pep_properties};
 //! use uuid::Uuid;
 //!
 //! // Create an empty scope (deny-all)
 //! let deny_scope = AccessScope::default();
-//! assert!(deny_scope.is_empty());
+//! assert!(deny_scope.is_deny_all());
 //!
 //! // Create a tenant-scoped access
 //! let tenant_id = Uuid::new_v4();
-//! let scope = AccessScope::tenant(tenant_id);
-//! assert!(scope.has_tenants());
-//! assert!(!scope.is_empty());
+//! let scope = AccessScope::for_tenant(tenant_id);
+//! assert!(scope.has_property(pep_properties::OWNER_TENANT_ID));
+//! assert!(!scope.is_deny_all());
 //!
 //! // Create a resource-scoped access
 //! let resource_id = Uuid::new_v4();
-//! let resource_scope = AccessScope::resource(resource_id);
-//! assert!(resource_scope.has_resources());
+//! let resource_scope = AccessScope::for_resource(resource_id);
+//! assert!(resource_scope.has_property(pep_properties::RESOURCE_ID));
 //! ```
 //!
 //! # Quick Start with `SeaORM`
@@ -50,7 +50,7 @@
 //! }
 //!
 //! // 2. Create an access scope
-//! let scope = AccessScope::tenants_only(vec![tenant_id]);
+//! let scope = AccessScope::for_tenants(vec![tenant_id]);
 //!
 //! // 3. Execute scoped queries
 //! let users = Entity::find()
@@ -125,7 +125,7 @@ pub use entity_traits::ScopableEntity;
 pub use error::ScopeError;
 
 // Security types from modkit-security
-pub use modkit_security::AccessScope;
+pub use modkit_security::{AccessScope, FilterOp, ScopeConstraint, ScopeFilter, pep_properties};
 
 // Ergonomic secure connection API (no raw SeaORM types leaked)
 pub use secure_conn::{SecureConn, SecureTx};

@@ -20,6 +20,10 @@ pub enum UsersInfoError {
     #[error("Validation error: {message}")]
     Validation { message: String },
 
+    /// Access denied (authorization failure).
+    #[error("Access denied")]
+    Forbidden,
+
     /// An internal error occurred.
     #[error("Internal error")]
     Internal,
@@ -52,6 +56,12 @@ impl UsersInfoError {
         Self::Validation {
             message: message.into(),
         }
+    }
+
+    /// Create a Forbidden error.
+    #[must_use]
+    pub fn forbidden() -> Self {
+        Self::Forbidden
     }
 
     /// Create an Internal error.

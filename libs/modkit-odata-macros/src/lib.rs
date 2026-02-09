@@ -1,3 +1,4 @@
+#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 //! # modkit-odata-macros
 //!
 //! Procedural macros for `OData` protocol types and schemas.
@@ -8,8 +9,6 @@
 //!
 //! These macros generate code referencing `modkit-odata` types and are independent
 //! of database or HTTP framework concerns.
-
-#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 
 use proc_macro::TokenStream;
 use proc_macro_error2::proc_macro_error;

@@ -1,8 +1,9 @@
 use async_trait::async_trait;
 use modkit::domain::DomainModel;
 use modkit_db::secure::DBRunner;
-use modkit_security::{AccessScope, SecurityContext};
+use modkit_security::AccessScope;
 use simple_user_settings_sdk::models::{SimpleUserSettings, SimpleUserSettingsPatch};
+use uuid::Uuid;
 
 use super::error::DomainError;
 
@@ -16,14 +17,14 @@ where
         &self,
         conn: &C,
         scope: &AccessScope,
-        ctx: &SecurityContext,
     ) -> Result<Option<SimpleUserSettings>, DomainError>;
 
     async fn upsert_full<C: DBRunner>(
         &self,
         conn: &C,
         scope: &AccessScope,
-        ctx: &SecurityContext,
+        user_id: Uuid,
+        tenant_id: Uuid,
         theme: Option<String>,
         language: Option<String>,
     ) -> Result<SimpleUserSettings, DomainError>;
@@ -32,7 +33,8 @@ where
         &self,
         conn: &C,
         scope: &AccessScope,
-        ctx: &SecurityContext,
+        user_id: Uuid,
+        tenant_id: Uuid,
         patch: SimpleUserSettingsPatch,
     ) -> Result<SimpleUserSettings, DomainError>;
 }

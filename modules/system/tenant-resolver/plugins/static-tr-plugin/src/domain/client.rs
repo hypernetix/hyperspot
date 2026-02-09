@@ -150,7 +150,7 @@ mod tests {
     // Helper to create a security context for a tenant
     fn ctx_for_tenant(tenant_id: &str) -> SecurityContext {
         SecurityContext::builder()
-            .tenant_id(Uuid::parse_str(tenant_id).unwrap())
+            .subject_tenant_id(Uuid::parse_str(tenant_id).unwrap())
             .build()
     }
 

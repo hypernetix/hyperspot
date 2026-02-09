@@ -289,8 +289,8 @@ impl OpenApiRegistryImpl {
             }
             op = op.responses(responses.build());
 
-            // Add security requirement if operation has explicit auth metadata
-            if spec.sec_requirement.is_some() {
+            // Add security requirement if operation requires authentication
+            if spec.authenticated {
                 let sec_req = utoipa::openapi::security::SecurityRequirement::new(
                     "bearerAuth",
                     Vec::<String>::new(),
@@ -431,7 +431,7 @@ mod tests {
                 schema_name: None,
             }],
             handler_id: "get_test".to_owned(),
-            sec_requirement: None,
+            authenticated: false,
             is_public: false,
             rate_limit: None,
             allowed_request_content_types: None,
@@ -494,7 +494,7 @@ mod tests {
                 schema_name: None,
             }],
             handler_id: "get_users_id".to_owned(),
-            sec_requirement: None,
+            authenticated: false,
             is_public: false,
             rate_limit: None,
             allowed_request_content_types: None,
@@ -554,7 +554,7 @@ mod tests {
                 schema_name: None,
             }],
             handler_id: "post_upload".to_owned(),
-            sec_requirement: None,
+            authenticated: false,
             is_public: false,
             rate_limit: None,
             allowed_request_content_types: Some(vec!["application/octet-stream"]),
@@ -633,7 +633,7 @@ mod tests {
                 schema_name: None,
             }],
             handler_id: "get_test".to_owned(),
-            sec_requirement: None,
+            authenticated: false,
             is_public: false,
             rate_limit: None,
             allowed_request_content_types: None,

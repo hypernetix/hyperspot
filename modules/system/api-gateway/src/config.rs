@@ -31,26 +31,14 @@ pub struct ApiGatewayConfig {
     pub defaults: Defaults,
 
     /// Disable authentication and authorization completely.
-    /// When true, middleware automatically injects `SecurityCtx::root_ctx()` for all requests,
-    /// providing full system-level access with no tenant filtering (`scope.is_root()` == true).
+    /// When true, middleware automatically injects a default `SecurityContext` for all requests,
+    /// providing access with no tenant filtering.
     /// This bypasses all tenant isolation and should only be used for single-user on-premise installations.
-    /// Default: false (authentication required).
+    /// Default: false (authentication required via `AuthN` Resolver).
     #[serde(default)]
     pub auth_disabled: bool,
 
-    /// JWKS endpoint to validate JWT tokens (OIDC-compliant).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub jwks_uri: Option<String>,
-
-    /// Expected token issuer (optional).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub issuer: Option<String>,
-
-    /// Expected token audience (optional).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub audience: Option<String>,
-
-    /// If true, routes without explicit role still require authentication (AuthN-only).
+    /// If true, routes without explicit security requirement still require authentication (AuthN-only).
     #[serde(default = "default_require_auth_by_default")]
     pub require_auth_by_default: bool,
 }

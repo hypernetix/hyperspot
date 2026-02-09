@@ -1,4 +1,4 @@
-use super::{Action, License, Resource, dto, handlers};
+use super::{License, dto, handlers};
 use axum::Router;
 use modkit::api::OpenApiRegistry;
 use modkit::api::operation_builder::{OperationBuilder, OperationBuilderODataExt};
@@ -11,7 +11,7 @@ pub(super) fn register_city_routes(mut router: Router, openapi: &dyn OpenApiRegi
         .summary("List cities with cursor pagination")
         .description("Retrieve a paginated list of cities using cursor-based pagination")
         .tag("cities")
-        .require_auth(&Resource::Cities, &Action::Read)
+        .authenticated()
         .require_license_features::<License>([])
         .query_param_typed(
             "limit",
@@ -36,7 +36,7 @@ pub(super) fn register_city_routes(mut router: Router, openapi: &dyn OpenApiRegi
     // GET /users-info/v1/cities/{id} - Get a specific city
     router = OperationBuilder::get("/users-info/v1/cities/{id}")
         .operation_id("users_info.get_city")
-        .require_auth(&Resource::Cities, &Action::Read)
+        .authenticated()
         .require_license_features::<License>([])
         .summary("Get city by ID")
         .description("Retrieve a specific city by UUID")
@@ -54,7 +54,7 @@ pub(super) fn register_city_routes(mut router: Router, openapi: &dyn OpenApiRegi
     // POST /users-info/v1/cities - Create a new city
     router = OperationBuilder::post("/users-info/v1/cities")
         .operation_id("users_info.create_city")
-        .require_auth(&Resource::Cities, &Action::Create)
+        .authenticated()
         .require_license_features::<License>([])
         .summary("Create a new city")
         .description("Create a new city with the provided information")
@@ -76,7 +76,7 @@ pub(super) fn register_city_routes(mut router: Router, openapi: &dyn OpenApiRegi
     // PATCH /users-info/v1/cities/{id} - Update a city
     router = OperationBuilder::patch("/users-info/v1/cities/{id}")
         .operation_id("users_info.update_city")
-        .require_auth(&Resource::Cities, &Action::Update)
+        .authenticated()
         .require_license_features::<License>([])
         .summary("Update city")
         .description("Partially update a city with the provided fields")
@@ -96,7 +96,7 @@ pub(super) fn register_city_routes(mut router: Router, openapi: &dyn OpenApiRegi
     // DELETE /users-info/v1/cities/{id} - Delete a city
     router = OperationBuilder::delete("/users-info/v1/cities/{id}")
         .operation_id("users_info.delete_city")
-        .require_auth(&Resource::Cities, &Action::Delete)
+        .authenticated()
         .require_license_features::<License>([])
         .summary("Delete city")
         .description("Delete a city by UUID")

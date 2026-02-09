@@ -30,25 +30,29 @@ All examples use a Task Management domain:
       - [S01: LIST, tenant subtree, PEP has tenant\_closure](#s01-list-tenant-subtree-pep-has-tenant_closure)
       - [S02: GET, tenant subtree, PEP has tenant\_closure](#s02-get-tenant-subtree-pep-has-tenant_closure)
       - [S03: UPDATE, tenant subtree, PEP has tenant\_closure](#s03-update-tenant-subtree-pep-has-tenant_closure)
-      - [S04: CREATE, tenant context](#s04-create-tenant-context)
-      - [S05: LIST, billing data, ignore barriers (barrier\_mode: "none")](#s05-list-billing-data-ignore-barriers-barrier_mode-none)
+      - [S04: DELETE, tenant subtree, PEP has tenant\_closure](#s04-delete-tenant-subtree-pep-has-tenant_closure)
+      - [S05: CREATE, PEP-provided tenant context](#s05-create-pep-provided-tenant-context)
+      - [S06: CREATE, PDP-resolved tenant context](#s06-create-pdp-resolved-tenant-context)
+      - [S07: LIST, billing data, ignore barriers (barrier\_mode: "none")](#s07-list-billing-data-ignore-barriers-barrier_mode-none)
     - [Without `tenant_closure`](#without-tenant_closure)
-      - [S06: LIST, tenant subtree, PEP without tenant\_closure](#s06-list-tenant-subtree-pep-without-tenant_closure)
-      - [S07: GET, tenant subtree, PEP without tenant\_closure](#s07-get-tenant-subtree-pep-without-tenant_closure)
-      - [S08: UPDATE, tenant subtree, PEP without tenant\_closure (prefetch)](#s08-update-tenant-subtree-pep-without-tenant_closure-prefetch)
-      - [S09: GET, context tenant only (no subtree)](#s09-get-context-tenant-only-no-subtree)
+      - [S08: LIST, tenant subtree, PEP without tenant\_closure](#s08-list-tenant-subtree-pep-without-tenant_closure)
+      - [S09: GET, tenant subtree, PEP without tenant\_closure](#s09-get-tenant-subtree-pep-without-tenant_closure)
+      - [S10: UPDATE, tenant subtree, PEP without tenant\_closure (prefetch)](#s10-update-tenant-subtree-pep-without-tenant_closure-prefetch)
+      - [S11: DELETE, tenant subtree, PEP without tenant\_closure (prefetch)](#s11-delete-tenant-subtree-pep-without-tenant_closure-prefetch)
+      - [S12: CREATE, PEP without tenant\_closure](#s12-create-pep-without-tenant_closure)
+      - [S13: GET, context tenant only (no subtree)](#s13-get-context-tenant-only-no-subtree)
     - [Resource Groups](#resource-groups)
-      - [S10: LIST, group membership, PEP has resource\_group\_membership](#s10-list-group-membership-pep-has-resource_group_membership)
-      - [S11: LIST, group subtree, PEP has resource\_group\_closure](#s11-list-group-subtree-pep-has-resource_group_closure)
-      - [S12: UPDATE, group membership, PEP has resource\_group\_membership](#s12-update-group-membership-pep-has-resource_group_membership)
-      - [S13: UPDATE, group subtree, PEP has resource\_group\_closure](#s13-update-group-subtree-pep-has-resource_group_closure)
-      - [S14: GET, group membership, PEP without resource\_group\_membership](#s14-get-group-membership-pep-without-resource_group_membership)
-      - [S15: LIST, group subtree, PEP has membership but no closure](#s15-list-group-subtree-pep-has-membership-but-no-closure)
+      - [S14: LIST, group membership, PEP has resource\_group\_membership](#s14-list-group-membership-pep-has-resource_group_membership)
+      - [S15: LIST, group subtree, PEP has resource\_group\_closure](#s15-list-group-subtree-pep-has-resource_group_closure)
+      - [S16: UPDATE, group membership, PEP has resource\_group\_membership](#s16-update-group-membership-pep-has-resource_group_membership)
+      - [S17: UPDATE, group subtree, PEP has resource\_group\_closure](#s17-update-group-subtree-pep-has-resource_group_closure)
+      - [S18: GET, group membership, PEP without resource\_group\_membership](#s18-get-group-membership-pep-without-resource_group_membership)
+      - [S19: LIST, group subtree, PEP has membership but no closure](#s19-list-group-subtree-pep-has-membership-but-no-closure)
     - [Advanced Patterns](#advanced-patterns)
-      - [S16: LIST, tenant subtree and group membership (AND)](#s16-list-tenant-subtree-and-group-membership-and)
-      - [S17: LIST, tenant subtree and group subtree](#s17-list-tenant-subtree-and-group-subtree)
-      - [S18: LIST, multiple access paths (OR)](#s18-list-multiple-access-paths-or)
-      - [S19: Access denied](#s19-access-denied)
+      - [S20: LIST, tenant subtree and group membership (AND)](#s20-list-tenant-subtree-and-group-membership-and)
+      - [S21: LIST, tenant subtree and group subtree](#s21-list-tenant-subtree-and-group-subtree)
+      - [S22: LIST, multiple access paths (OR)](#s22-list-multiple-access-paths-or)
+      - [S23: Access denied](#s23-access-denied)
   - [TOCTOU Analysis](#toctou-analysis)
     - [When TOCTOU Matters](#when-toctou-matters)
     - [How Each Scenario Handles TOCTOU](#how-each-scenario-handles-toctou)
@@ -81,7 +85,7 @@ Projection tables allow PEP to JOIN against local data, making authorization O(1
 
 ### Choosing Projection Tables
 
-The choice depends on the application's tenant structure, resource organization, and **endpoint requirements**. Even with a hierarchical tenant model, specific endpoints may operate within a single context tenant (see S09).
+The choice depends on the application's tenant structure, resource organization, and **endpoint requirements**. Even with a hierarchical tenant model, specific endpoints may operate within a single context tenant (see S13).
 
 ### Capabilities and PDP Response
 
@@ -97,7 +101,7 @@ The choice depends on the application's tenant structure, resource organization,
 
 | Condition | Why Tables Aren't Required |
 |-----------|---------------------------|
-| Endpoint operates in context tenant only | No subtree traversal → `eq` on `owner_tenant_id` is sufficient (see S09) |
+| Endpoint operates in context tenant only | No subtree traversal → `eq` on `owner_tenant_id` is sufficient (see S13) |
 | Few tenants per vendor | PDP can return explicit tenant IDs in `in` predicate |
 | Flat tenant structure | No hierarchy → `in_tenant_subtree` not needed |
 | No resource groups | `in_group*` predicates not used |
@@ -380,11 +384,34 @@ WHERE id = 'task-456'
 
 ---
 
-#### S04: CREATE, tenant context
+#### S04: DELETE, tenant subtree, PEP has tenant_closure
+
+`DELETE /tasks/{id}?tenant_subtree=true`
+
+DELETE follows the same pattern as UPDATE (S03). PDP returns `in_tenant_subtree` constraint, PEP applies it in the DELETE's WHERE clause.
+
+**SQL:**
+```sql
+DELETE FROM tasks
+WHERE id = 'task-456'
+  AND owner_tenant_id IN (
+    SELECT descendant_id FROM tenant_closure
+    WHERE ancestor_id = 'T1'
+      AND barrier = 0  -- barrier_mode defaults to "all"
+  )
+```
+
+**Result interpretation:**
+- 1 row affected → success
+- 0 rows affected → **404 Not Found** (task doesn't exist or no access)
+
+---
+
+#### S05: CREATE, PEP-provided tenant context
 
 `POST /tasks`
 
-User creates a new task. No constraints needed — PDP just validates permission.
+User creates a new task. PDP returns constraints for CREATE just like other operations — the PEP will enforce them before the INSERT.
 
 **Request:**
 ```http
@@ -415,7 +442,7 @@ Content-Type: application/json
       "mode": "root_only",
       "root_id": "T2"
     },
-    "require_constraints": false,
+    "require_constraints": true,
     "capabilities": ["tenant_hierarchy"],
     "supported_properties": ["owner_tenant_id", "id"]
   }
@@ -425,9 +452,24 @@ Content-Type: application/json
 **PDP → PEP Response:**
 ```json
 {
-  "decision": true
+  "decision": true,
+  "context": {
+    "constraints": [
+      {
+        "predicates": [
+          {
+            "type": "eq",
+            "resource_property": "owner_tenant_id",
+            "value": "T2"
+          }
+        ]
+      }
+    ]
+  }
 }
 ```
+
+**PEP compiles constraints**, then enforces them before the INSERT:
 
 **SQL:**
 ```sql
@@ -435,11 +477,85 @@ INSERT INTO tasks (id, owner_tenant_id, title, status)
 VALUES ('task-new', 'T2', 'New Task', 'pending')
 ```
 
-**Note:** No constraints returned — `require_constraints: false` allows PEP to trust the decision for CREATE operations.
+**Note:** PDP returns constraints for CREATE using the same flow as other operations. PEP validates that the INSERT's `owner_tenant_id` (or other resource properties in case of RBAC) matches the constraint. This prevents the caller from creating resources in tenants the PDP didn't authorize.
 
 ---
 
-#### S05: LIST, billing data, ignore barriers (barrier_mode: "none")
+#### S06: CREATE, PDP-resolved tenant context
+
+`POST /tasks`
+
+PEP's API does not include a target tenant — PDP determines it from the subject's identity, roles, or policy.
+
+**Request:**
+```http
+POST /tasks
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{"title": "New Task"}
+```
+
+**PEP → PDP Request:**
+```json
+{
+  "subject": {
+    "type": "gts.x.core.security.subject_user.v1~",
+    "id": "user-123",
+    "properties": { "tenant_id": "T1" }
+  },
+  "action": { "name": "create" },
+  "resource": {
+    "type": "gts.x.core.tasks.task.v1~"
+  },
+  "context": {
+    "require_constraints": true,
+    "capabilities": ["tenant_hierarchy"],
+    "supported_properties": ["owner_tenant_id", "id"]
+  }
+}
+```
+
+No `tenant_context` and no `resource.properties` — PDP resolves the target tenant on its own.
+
+**PDP → PEP Response:**
+
+PDP determines that user-123 should create in T2 (e.g., based on role assignment or org policy):
+
+```json
+{
+  "decision": true,
+  "context": {
+    "constraints": [
+      {
+        "predicates": [
+          {
+            "type": "eq",
+            "resource_property": "owner_tenant_id",
+            "value": "T2"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**PEP extracts tenant from constraint:** PEP reads `owner_tenant_id = T2` from the `eq` predicate and uses it as the `owner_tenant_id` for the INSERT.
+
+**SQL:**
+```sql
+INSERT INTO tasks (id, owner_tenant_id, title, status)
+VALUES ('task-new', 'T2', 'New Task', 'pending')
+```
+
+**Convention:** When PDP determines the target tenant for CREATE, it SHOULD return an `eq` predicate (single value). An `in` predicate with multiple values means "allowed in any of these" — PEP must apply its own selection logic.
+
+**Difference from S05:** In S05, PEP knows the target tenant from the request body and passes it to PDP for validation. Here, PEP delegates the tenant decision to PDP entirely, and reads the result back from the constraint.
+
+---
+
+#### S07: LIST, billing data, ignore barriers (barrier_mode: "none")
 
 `GET /billing/usage?tenant_subtree=true&barrier_mode=none`
 
@@ -538,7 +654,7 @@ PEP has no tenant_closure table → PDP returns explicit IDs or PEP prefetches a
 
 ---
 
-#### S06: LIST, tenant subtree, PEP without tenant_closure
+#### S08: LIST, tenant subtree, PEP without tenant_closure
 
 `GET /tasks?tenant_subtree=true`
 
@@ -605,11 +721,13 @@ WHERE owner_tenant_id IN ('T1', 'T2', 'T3')
 
 ---
 
-#### S07: GET, tenant subtree, PEP without tenant_closure
+#### S09: GET, tenant subtree, PEP without tenant_closure
 
 `GET /tasks/{id}?tenant_subtree=true`
 
-PEP doesn't have tenant_closure. For read-only operations, PEP fetches the resource first, then asks PDP for a decision based on resource attributes. No second query needed — TOCTOU is not a concern for reads.
+PEP doesn't have tenant_closure. PEP fetches the resource first (prefetch), then asks PDP for an access decision based on resource attributes with `require_constraints: false`. Since PEP already has the entity, it doesn't need row-level SQL constraints — the PDP decision alone is sufficient.
+
+If the PDP returns `decision: true` **without** constraints, PEP returns the prefetched entity directly (no second query). If the PDP returns constraints despite `require_constraints: false`, PEP compiles them and performs a scoped re-read as a fallback.
 
 **Request:**
 ```http
@@ -617,13 +735,13 @@ GET /tasks/task-456?tenant_subtree=true
 Authorization: Bearer <token>
 ```
 
-**Step 1 — PEP fetches resource:**
+**Step 1 — PEP prefetches resource:**
 ```sql
 SELECT * FROM tasks WHERE id = 'task-456'
 ```
 Result: full task record with `owner_tenant_id = 'T2'`
 
-**Step 2 — PEP → PDP Request (with resource properties):**
+**Step 2 — PEP → PDP Request (with resource properties, `require_constraints: false`):**
 ```json
 {
   "subject": {
@@ -653,28 +771,36 @@ Result: full task record with `owner_tenant_id = 'T2'`
 
 **PDP → PEP Response:**
 
-PDP validates that T2 is in T1's subtree and returns decision only (no constraints needed for read):
+PDP validates that T2 is in T1's subtree. Since `require_constraints: false`, PDP may return a decision-only response (no constraints):
 
 ```json
 {
-  "decision": true
+  "decision": true,
+  "context": {
+    "constraints": []
+  }
 }
 ```
 
-**Step 3 — Return result:**
-- `decision: true` → return already-fetched task
-- `decision: false` → **404 Not Found** (hides resource existence)
-- Resource not found in Step 1 → **404 Not Found**
+Alternatively, PDP may still return constraints (e.g., `eq(owner_tenant_id, T2)`) — the PEP handles both cases.
 
-**Why no TOCTOU concern:** For GET, the "use" is returning data to the client. Even if `owner_tenant_id` changed between check and response, no security violation occurs — the client either gets data they had access to at query time, or gets 404. For mutations (UPDATE/DELETE), see S08.
+**Step 3 — Enforce and return result:**
+
+PEP compiles the response into `AccessScope`:
+- **No constraints** (`scope.is_unconstrained()`) → return the prefetched entity directly. No second SQL query needed.
+- **Constraints returned** → compile to `AccessScope` and perform a scoped re-read (`SELECT ... WHERE id = 'task-456' AND owner_tenant_id = 'T2'`).
+- Resource not found in Step 1 → **404 Not Found**.
+- `decision: false` → **404 Not Found** (hides resource existence from unauthorized callers).
+
+**Why no TOCTOU concern:** For GET, the "use" is returning data to the client. Even if `owner_tenant_id` changed between prefetch and response, no security violation occurs — the client either gets data they had access to at query time, or gets 404. For mutations (UPDATE/DELETE), see S10.
 
 ---
 
-#### S08: UPDATE, tenant subtree, PEP without tenant_closure (prefetch)
+#### S10: UPDATE, tenant subtree, PEP without tenant_closure (prefetch)
 
 `PUT /tasks/{id}?tenant_subtree=true`
 
-Unlike S07 (GET), mutations require TOCTOU protection. PEP prefetches `owner_tenant_id`, gets `eq` constraint from PDP, and applies it in UPDATE's WHERE clause. This ensures atomic check-and-modify.
+Unlike S09 (GET), mutations require TOCTOU protection. PEP prefetches `owner_tenant_id`, gets `eq` constraint from PDP, and applies it in UPDATE's WHERE clause. This ensures atomic check-and-modify.
 
 **Request:**
 ```http
@@ -751,7 +877,32 @@ WHERE id = 'task-456'
 
 ---
 
-#### S09: GET, context tenant only (no subtree)
+#### S11: DELETE, tenant subtree, PEP without tenant_closure (prefetch)
+
+`DELETE /tasks/{id}?tenant_subtree=true`
+
+DELETE follows the same pattern as UPDATE (S10). PEP prefetches `owner_tenant_id`, gets `eq` constraint from PDP, and applies it in the DELETE's WHERE clause.
+
+**SQL:**
+```sql
+DELETE FROM tasks
+WHERE id = 'task-456'
+  AND owner_tenant_id = 'T2'
+```
+
+TOCTOU protection is identical to S10: if `owner_tenant_id` changed between prefetch and DELETE, the WHERE clause won't match → 0 rows → **404**.
+
+---
+
+#### S12: CREATE, PEP without tenant_closure
+
+CREATE does not query existing rows, so the presence of `tenant_closure` is irrelevant. Both PEP-provided and PDP-resolved tenant patterns work identically regardless of PEP capabilities. See S05 and S06.
+
+**`require_constraints: false` optimization:** When PEP sends resource properties (e.g., `owner_tenant_id` of the entity being created) to the PDP, it can set `require_constraints: false`. If the PDP returns `decision: true` without constraints, the resulting `AccessScope` is `allow_all()`, and `validate_insert_scope` skips validation (its `is_unconstrained()` fast path). If the PDP returns constraints, they are compiled and validated against the insert as usual. This avoids unnecessary constraint compilation when the PDP decision alone is sufficient.
+
+---
+
+#### S13: GET, context tenant only (no subtree)
 
 `GET /tasks/{id}`
 
@@ -827,7 +978,7 @@ WHERE id = 'task-456'
 
 ---
 
-#### S10: LIST, group membership, PEP has resource_group_membership
+#### S14: LIST, group membership, PEP has resource_group_membership
 
 `GET /tasks`
 
@@ -901,7 +1052,7 @@ WHERE owner_tenant_id = 'T1'
 
 ---
 
-#### S11: LIST, group subtree, PEP has resource_group_closure
+#### S15: LIST, group subtree, PEP has resource_group_closure
 
 `GET /tasks`
 
@@ -978,7 +1129,7 @@ WHERE owner_tenant_id = 'T1'
 
 ---
 
-#### S12: UPDATE, group membership, PEP has resource_group_membership
+#### S16: UPDATE, group membership, PEP has resource_group_membership
 
 `PUT /tasks/{id}`
 
@@ -1064,7 +1215,7 @@ WHERE id = 'task-456'
 
 ---
 
-#### S13: UPDATE, group subtree, PEP has resource_group_closure
+#### S17: UPDATE, group subtree, PEP has resource_group_closure
 
 `PUT /tasks/{id}`
 
@@ -1149,7 +1300,7 @@ WHERE id = 'task-456'
 
 ---
 
-#### S14: GET, group membership, PEP without resource_group_membership
+#### S18: GET, group membership, PEP without resource_group_membership
 
 `GET /tasks/{id}`
 
@@ -1229,7 +1380,7 @@ WHERE id = 'task-456'
 
 ---
 
-#### S15: LIST, group subtree, PEP has membership but no closure
+#### S19: LIST, group subtree, PEP has membership but no closure
 
 `GET /tasks`
 
@@ -1311,7 +1462,7 @@ WHERE owner_tenant_id = 'T1'
 
 ---
 
-#### S16: LIST, tenant subtree and group membership (AND)
+#### S20: LIST, tenant subtree and group membership (AND)
 
 `GET /tasks?tenant_subtree=true`
 
@@ -1389,7 +1540,7 @@ WHERE owner_tenant_id IN (
 
 ---
 
-#### S17: LIST, tenant subtree and group subtree
+#### S21: LIST, tenant subtree and group subtree
 
 `GET /tasks?tenant_subtree=true`
 
@@ -1479,7 +1630,7 @@ WHERE owner_tenant_id IN (
 
 ---
 
-#### S18: LIST, multiple access paths (OR)
+#### S22: LIST, multiple access paths (OR)
 
 `GET /tasks`
 
@@ -1573,7 +1724,7 @@ WHERE (
 
 ---
 
-#### S19: Access denied
+#### S23: Access denied
 
 `GET /tasks`
 
@@ -1654,19 +1805,19 @@ TOCTOU is a security concern only for **mutations** (UPDATE, DELETE). For **read
 
 | Scenario | Operation | Closure | Constraint | TOCTOU Protection |
 |----------|-----------|---------|------------|-------------------|
-| S01-S03, S05 | LIST/GET/UPDATE | ✅ | `in_tenant_subtree` | ✅ Atomic SQL check |
-| S07 | GET | ❌ | decision only | N/A (read-only) |
-| S08 | UPDATE | ❌ | `eq` (prefetched) | ✅ Atomic SQL check |
-| S04 | CREATE | N/A | None | N/A (no existing resource) |
+| S01-S04, S07 | LIST/GET/UPDATE/DELETE | ✅ | `in_tenant_subtree` | ✅ Atomic SQL check |
+| S09 | GET | ❌ | `eq` (prefetched) | N/A (read-only) |
+| S10, S11 | UPDATE/DELETE | ❌ | `eq` (prefetched) | ✅ Atomic SQL check |
+| S05, S06, S12 | CREATE | N/A | `eq` (from PDP) | N/A (no existing resource) |
 
 **Resource group scenarios:**
 
 | Scenario | Operation | Projection Tables | Constraint | TOCTOU Protection |
 |----------|-----------|-------------------|------------|-------------------|
-| S10, S11 | LIST | ✅ | `in_group` / `in_group_subtree` | ✅ Atomic SQL check |
-| S12, S13 | UPDATE | ✅ | `in_group` / `in_group_subtree` | ✅ Atomic SQL check |
-| S14 | GET | ❌ | `eq` (tenant) | N/A (read-only) |
-| S15 | LIST | membership only | `in_group` (expanded) | ✅ Atomic SQL check |
+| S14, S15 | LIST | ✅ | `in_group` / `in_group_subtree` | ✅ Atomic SQL check |
+| S16, S17 | UPDATE | ✅ | `in_group` / `in_group_subtree` | ✅ Atomic SQL check |
+| S18 | GET | ❌ | `eq` (tenant) | N/A (read-only) |
+| S19 | LIST | membership only | `in_group` (expanded) | ✅ Atomic SQL check |
 
 ### Key Insight: Prefetch + Constraint for Mutations
 
@@ -1679,7 +1830,7 @@ Without closure tables, mutations (UPDATE/DELETE) use a two-step pattern:
 
 The constraint acts as a [compare-and-swap](https://en.wikipedia.org/wiki/Compare-and-swap) mechanism — if the value changed between check and use, the operation atomically fails.
 
-**For reads (S07):** No second query needed. PEP fetches the resource, asks PDP for decision, and returns the already-fetched data if allowed.
+**For reads (S09):** PEP prefetches the resource, asks PDP with `require_constraints: false`, and returns the prefetched data if `decision: true` with no constraints. If constraints are returned, PEP falls back to a scoped re-read.
 
 ---
 

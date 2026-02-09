@@ -206,8 +206,8 @@ jobs:
           CARGO_LLVM_COV_TARGET_DIR: llvm-cov-target
           CARGO_LLVM_COV_BUILD_DIR: llvm-cov-build
         run: |
-          cargo llvm-cov clean --workspace
-          cargo llvm-cov --workspace --lcov --output-path lcov.info
+          cargo +${{ env.RUSTUP_TOOLCHAIN }} llvm-cov clean --workspace
+          cargo +${{ env.RUSTUP_TOOLCHAIN }} llvm-cov --workspace --lcov --output-path lcov.info
 
       # Upload to Codecov; do not fail CI if Codecov is down/misconfigured.
       - name: Upload to Codecov

@@ -236,7 +236,7 @@ openapi:
 	@command -v curl >/dev/null || (echo "curl is required to generate OpenAPI spec" && exit 1)
 	@echo "Starting hyperspot-server to generate OpenAPI spec..."
 	# Run server in background
-	cargo run --bin hyperspot-server --features users-info-example -- --config config/quickstart.yaml &
+	cargo run --bin hyperspot-server --features users-info-example,static-authn,static-authz -- --config config/quickstart.yaml &
 	@SERVER_PID=$$!; \
 	trap 'kill $$SERVER_PID >/dev/null 2>&1 || true' EXIT; \
 	echo "hyperspot-server PID: $$SERVER_PID"; \
@@ -419,11 +419,11 @@ quickstart:
 
 ## Run server with example module
 example:
-	cargo run --bin hyperspot-server --features users-info-example,static-tenants -- --config config/quickstart.yaml run
+	cargo run --bin hyperspot-server --features users-info-example,tenant-resolver-example,static-authn,static-authz -- --config config/quickstart.yaml run
 
 oop-example:
 	cargo build -p calculator --features oop_module
-	cargo run --bin hyperspot-server --features oop-example,users-info-example,tenant-resolver-example -- --config config/quickstart.yaml run
+	cargo run --bin hyperspot-server --features oop-example,users-info-example,tenant-resolver-example,static-authn,static-authz -- --config config/quickstart.yaml run
 
 # Run all quality checks
 check: .setup-stamp fmt cypilot-validate clippy lychee security dylint-test dylint gts-docs test

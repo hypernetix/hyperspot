@@ -6,8 +6,6 @@
 //! set request id -> propagate request id -> trace -> push request id to extensions
 //! -> timeout -> body limit -> CORS -> MIME validation -> rate limit -> error mapping -> auth -> router
 //!
-mod common;
-
 use anyhow::Result;
 use api_gateway::middleware::request_id::XRequestId;
 use axum::{
@@ -17,14 +15,12 @@ use axum::{
     http::{Request, StatusCode},
     response::IntoResponse,
 };
-use common::MockTenantResolver;
 use modkit::{
     Module, api::OperationBuilder, config::ConfigProvider, context::ModuleCtx,
     contracts::ApiGatewayCapability,
 };
 use serde_json::json;
 use std::sync::Arc;
-use tenant_resolver_sdk::TenantResolverClient;
 use tower::ServiceExt;
 use uuid::Uuid;
 
@@ -40,7 +36,6 @@ impl ConfigProvider for TestConfigProvider {
 
 fn create_api_gateway_ctx(config: serde_json::Value) -> ModuleCtx {
     let hub = Arc::new(modkit::ClientHub::new());
-    hub.register::<dyn TenantResolverClient>(Arc::new(MockTenantResolver));
 
     ModuleCtx::new(
         "api-gateway",

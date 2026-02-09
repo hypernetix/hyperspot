@@ -4,9 +4,7 @@ use std::sync::Arc;
 
 use axum::{Extension, Router};
 use modkit::api::OpenApiRegistry;
-use modkit::api::operation_builder::{
-    AuthReqAction, AuthReqResource, LicenseFeature, OperationBuilder,
-};
+use modkit::api::operation_builder::{LicenseFeature, OperationBuilder};
 use modkit::api::prelude::StatusCode;
 
 use super::dto::{
@@ -16,36 +14,6 @@ use super::handlers;
 use crate::domain::service::TypesRegistryService;
 
 const TAG: &str = "types-registry";
-
-enum Resource {
-    TypesRegistry,
-}
-
-enum Action {
-    Read,
-    Write,
-}
-
-impl AsRef<str> for Resource {
-    fn as_ref(&self) -> &'static str {
-        match self {
-            Resource::TypesRegistry => "types_registry",
-        }
-    }
-}
-
-impl AuthReqResource for Resource {}
-
-impl AsRef<str> for Action {
-    fn as_ref(&self) -> &'static str {
-        match self {
-            Action::Read => "read",
-            Action::Write => "write",
-        }
-    }
-}
-
-impl AuthReqAction for Action {}
 
 struct License;
 
@@ -72,7 +40,7 @@ pub fn register_routes(
             "Register one or more GTS entities (types or instances) in batch. Returns per-item results.",
         )
         .tag(TAG)
-        .require_auth(&Resource::TypesRegistry, &Action::Write)
+        .authenticated()
         .require_license_features::<License>([])
         .json_request::<RegisterEntitiesRequest>(openapi, "GTS entities to register")
         .handler(handlers::register_entities)
@@ -92,7 +60,7 @@ pub fn register_routes(
             "List registered GTS entities with optional filtering by pattern, kind, vendor, package, or namespace.",
         )
         .tag(TAG)
-        .require_auth(&Resource::TypesRegistry, &Action::Read)
+        .authenticated()
         .require_license_features::<License>([])
         .query_param("pattern", false, "Wildcard pattern for GTS ID matching (e.g., gts.acme.*)")
         .query_param("kind", false, "Filter by entity kind: 'type' or 'instance'")
@@ -115,7 +83,7 @@ pub fn register_routes(
         .summary("Get GTS entity by ID")
         .description("Retrieve a single GTS entity by its identifier.")
         .tag(TAG)
-        .require_auth(&Resource::TypesRegistry, &Action::Read)
+        .authenticated()
         .require_license_features::<License>([])
         .path_param(
             "gts_id",

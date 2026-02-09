@@ -4,6 +4,7 @@
 mod common;
 use anyhow::Result;
 use modkit_db::secure::SecureEntityExt;
+use modkit_security::pep_properties;
 use sea_orm::EntityTrait;
 use sea_orm_migration::prelude as mig;
 use sea_orm_migration::prelude::Iden;
@@ -87,6 +88,13 @@ impl modkit_db::secure::ScopableEntity for ent::Entity {
     fn type_col() -> Option<<Self as sea_orm::EntityTrait>::Column> {
         None
     }
+    fn resolve_property(property: &str) -> Option<<Self as sea_orm::EntityTrait>::Column> {
+        match property {
+            p if p == pep_properties::OWNER_TENANT_ID => Self::tenant_col(),
+            p if p == pep_properties::RESOURCE_ID => Self::resource_col(),
+            _ => None,
+        }
+    }
 }
 
 #[cfg(feature = "sqlite")]
@@ -128,7 +136,7 @@ async fn run_common_suite(database_url: &str) -> Result<()> {
     let secure_db = db;
 
     let tenant_id = uuid::Uuid::new_v4();
-    let scope = modkit_security::AccessScope::tenants_only(vec![tenant_id]);
+    let scope = modkit_security::AccessScope::for_tenants(vec![tenant_id]);
     let scope_for_tx = scope.clone();
     let id = uuid::Uuid::new_v4();
 

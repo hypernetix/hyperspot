@@ -1,0 +1,11 @@
+error: pep_prop: duplicate property name 'department_id'
+  --> tests/ui/err_pep_duplicate_property.rs:12:14
+   |
+12 |     pep_prop(department_id = "dept_id"),
+   |              ^^^^^^^^^^^^^
+
+error[E0601]: `main` function not found in crate `$CRATE`
+  --> tests/ui/err_pep_duplicate_property.rs:14:14
+   |
+14 | struct Model;
+   |              ^ consider adding a `main` function to `$DIR/tests/ui/err_pep_duplicate_property.rs`

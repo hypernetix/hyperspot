@@ -1,6 +1,7 @@
 use sea_orm::{ColumnTrait, Condition, EntityTrait, sea_query::Expr};
 
 use crate::secure::{AccessScope, ScopableEntity};
+use modkit_security::pep_properties;
 
 /// Provides tenant filtering logic for scoped queries.
 ///
@@ -20,7 +21,7 @@ pub trait TenantFilterProvider {
     /// Build a condition for tenant filtering based on the scope.
     ///
     /// Returns:
-    /// - `None` if no tenant filtering needed (empty `tenant_ids`)
+    /// - `None` if no tenant filtering needed (no tenant IDs in scope)
     /// - `Some(deny_all)` if entity has no tenant column but tenants requested
     /// - `Some(filter)` with appropriate tenant IN clause
     fn tenant_condition<E>(scope: &AccessScope) -> Option<Condition>
@@ -46,8 +47,10 @@ impl TenantFilterProvider for SimpleTenantFilter {
         E: ScopableEntity + EntityTrait,
         E::Column: ColumnTrait + Copy,
     {
+        let tenant_ids = scope.all_values_for(pep_properties::OWNER_TENANT_ID);
+
         // No tenant IDs in scope → no tenant filter
-        if scope.tenant_ids().is_empty() {
+        if tenant_ids.is_empty() {
             return None;
         }
 
@@ -57,7 +60,7 @@ impl TenantFilterProvider for SimpleTenantFilter {
         };
 
         // Build tenant IN filter
-        Some(Condition::all().add(Expr::col(tcol).is_in(scope.tenant_ids().to_vec())))
+        Some(Condition::all().add(Expr::col(tcol).is_in(tenant_ids)))
     }
 }
 
@@ -66,15 +69,9 @@ impl TenantFilterProvider for SimpleTenantFilter {
 mod tests {
     use super::*;
 
-    // Note: Full integration tests with SeaORM entities should be written in actual
-    // application code where real entities are defined. These are basic unit tests
-    // for the provider trait pattern.
-
     #[test]
     fn test_provider_trait_compiles() {
-        // This test verifies the provider trait compiles correctly
-        // The actual tenant filtering is tested in integration tests with real entities
         let scope = AccessScope::default();
-        assert!(scope.is_empty());
+        assert!(scope.is_deny_all());
     }
 }

@@ -10,8 +10,7 @@ use axum::{
     response::{IntoResponse, Response},
     routing::get,
 };
-use modkit_security::{NoopPolicyEngine, SecurityContext};
-use std::sync::Arc;
+use modkit_security::SecurityContext;
 use tower::ServiceExt;
 use uuid::{Uuid, uuid};
 
@@ -22,20 +21,8 @@ const TEST_DEFAULT_SUBJECT_ID: Uuid = uuid!("11111111-0000-0000-0000-00000000000
 
 /// Test handler that extracts `SecurityContext` and returns its properties as JSON
 async fn test_handler(Extension(ctx): Extension<SecurityContext>) -> impl IntoResponse {
-    let scope = ctx
-        .scope(Arc::new(NoopPolicyEngine))
-        .prepare()
-        .await
-        .unwrap();
-
-    let is_empty = scope.is_empty();
-    let tenant_ids = scope.tenant_ids().to_vec();
-    let tenant_count = tenant_ids.len();
-
     axum::Json(serde_json::json!({
-        "is_empty": is_empty,
-        "tenant_count": tenant_count,
-        "tenant_ids": tenant_ids,
+        "tenant_id": ctx.subject_tenant_id(),
         "subject_id": ctx.subject_id()
     }))
 }
@@ -44,7 +31,7 @@ async fn test_handler(Extension(ctx): Extension<SecurityContext>) -> impl IntoRe
 async fn inject_default_tenant_context(mut req: Request, next: Next) -> Response {
     // This simulates what api_gateway does in auth_disabled mode:
     let ctx = SecurityContext::builder()
-        .tenant_id(TEST_DEFAULT_TENANT_ID)
+        .subject_tenant_id(TEST_DEFAULT_TENANT_ID)
         .subject_id(TEST_DEFAULT_SUBJECT_ID)
         .build();
 
@@ -79,78 +66,16 @@ async fn test_auth_disabled_injects_default_tenant_context() {
         .unwrap();
     let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
 
-    // Verify default tenant context properties
     assert_eq!(
-        json["is_empty"], false,
-        "Default tenant scope should not be empty"
-    );
-    assert_eq!(
-        json["tenant_count"], 1,
-        "Should have exactly one tenant (the default)"
+        json["tenant_id"],
+        serde_json::json!(TEST_DEFAULT_TENANT_ID.to_string()),
+        "Should have the default tenant"
     );
     assert_eq!(
         json["subject_id"],
         TEST_DEFAULT_SUBJECT_ID.to_string(),
         "Subject should be TEST_DEFAULT_SUBJECT_ID"
     );
-}
-
-#[tokio::test]
-async fn test_auth_disabled_scoped_to_default_tenant() {
-    // Handler that verifies the context is scoped to the default tenant
-    async fn check_tenant_access(Extension(ctx): Extension<SecurityContext>) -> impl IntoResponse {
-        let scope = ctx
-            .scope(Arc::new(NoopPolicyEngine))
-            .prepare()
-            .await
-            .unwrap();
-
-        // In disabled mode, we should have access scoped to the default tenant
-        assert!(
-            !scope.is_empty(),
-            "Should have non-empty scope in disabled mode"
-        );
-
-        // Should have exactly the default tenant
-        let tenant_ids = scope.tenant_ids();
-        assert_eq!(tenant_ids.len(), 1, "Should have exactly one tenant");
-        assert_eq!(
-            tenant_ids[0], TEST_DEFAULT_TENANT_ID,
-            "Should be the default tenant"
-        );
-
-        axum::Json(serde_json::json!({
-            "access": "granted",
-            "mode": "default_tenant",
-            "tenant_id": tenant_ids[0]
-        }))
-    }
-
-    let app = Router::new()
-        .route("/check", get(check_tenant_access))
-        .layer(middleware::from_fn(inject_default_tenant_context));
-
-    let response = app
-        .oneshot(
-            Request::builder()
-                .method(Method::GET)
-                .uri("/check")
-                .body(Body::empty())
-                .unwrap(),
-        )
-        .await
-        .unwrap();
-
-    assert_eq!(response.status(), StatusCode::OK);
-
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
-
-    assert_eq!(json["access"], "granted");
-    assert_eq!(json["mode"], "default_tenant");
-    assert_eq!(json["tenant_id"], TEST_DEFAULT_TENANT_ID.to_string());
 }
 
 #[tokio::test]
@@ -189,48 +114,4 @@ async fn test_auth_disabled_uses_default_subject() {
         json["is_default_subject"], true,
         "Auth-disabled mode should use TEST_DEFAULT_SUBJECT_ID"
     );
-}
-
-#[tokio::test]
-async fn test_default_tenant_vs_normal_scope() {
-    // Handler that reports scope info
-    async fn scope_info(Extension(ctx): Extension<SecurityContext>) -> impl IntoResponse {
-        let scope = ctx
-            .scope(Arc::new(NoopPolicyEngine))
-            .prepare()
-            .await
-            .unwrap();
-
-        axum::Json(serde_json::json!({
-            "is_empty": scope.is_empty(),
-            "has_tenants": scope.has_tenants(),
-            "tenant_count": scope.tenant_ids().len(),
-        }))
-    }
-
-    // Test: Default tenant context (auth disabled)
-    let app = Router::new()
-        .route("/info", get(scope_info))
-        .layer(middleware::from_fn(inject_default_tenant_context));
-
-    let response = app
-        .oneshot(
-            Request::builder()
-                .method(Method::GET)
-                .uri("/info")
-                .body(Body::empty())
-                .unwrap(),
-        )
-        .await
-        .unwrap();
-
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
-
-    // Default tenant context has explicit tenant, not a bypass
-    assert_eq!(json["is_empty"], false);
-    assert_eq!(json["has_tenants"], true);
-    assert_eq!(json["tenant_count"], 1);
 }

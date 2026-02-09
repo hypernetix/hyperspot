@@ -1,0 +1,11 @@
+error: pep_prop: 'owner_tenant_id' is a reserved property name; use `tenant_col` instead
+  --> tests/ui/err_pep_reserved_owner_tenant_id.rs:11:14
+   |
+11 |     pep_prop(owner_tenant_id = "tenant_id"),
+   |              ^^^^^^^^^^^^^^^
+
+error[E0601]: `main` function not found in crate `$CRATE`
+  --> tests/ui/err_pep_reserved_owner_tenant_id.rs:13:14
+   |
+13 | struct Model;
+   |              ^ consider adding a `main` function to `$DIR/tests/ui/err_pep_reserved_owner_tenant_id.rs`

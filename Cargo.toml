@@ -63,6 +63,12 @@ members = [
     "modules/system/tenant-resolver/tenant-resolver",
     "modules/system/tenant-resolver/plugins/static-tr-plugin",
     "modules/system/tenant-resolver/plugins/single-tenant-tr-plugin",
+    "modules/system/authn-resolver/authn-resolver-sdk",
+    "modules/system/authn-resolver/authn-resolver",
+    "modules/system/authn-resolver/plugins/static-authn-plugin",
+    "modules/system/authz-resolver/authz-resolver-sdk",
+    "modules/system/authz-resolver/authz-resolver",
+    "modules/system/authz-resolver/plugins/static-authz-plugin",
 ]
 exclude = ["fuzz"]
 resolver = "3"
@@ -226,6 +232,7 @@ grpc_hub = { package = "cf-grpc-hub", version = "0.1.2", path = "modules/system/
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde-saphyr = "0.0.16"
+secrecy = { version = "0.10", features = ["serde"] }
 serde_urlencoded = "0.7"
 schemars = { version = "0.8", features = ["derive"] }
 

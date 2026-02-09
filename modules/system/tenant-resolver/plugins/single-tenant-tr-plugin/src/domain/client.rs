@@ -50,11 +50,11 @@ impl TenantResolverPluginClient for Service {
         id: TenantId,
     ) -> Result<TenantInfo, TenantResolverError> {
         // Reject nil UUID (anonymous context)
-        if ctx.tenant_id().is_nil() {
+        if ctx.subject_tenant_id().is_none_or(|id| id.is_nil()) {
             return Err(TenantResolverError::TenantNotFound { tenant_id: id });
         }
         // Only return tenant info if ID matches security context
-        if id == ctx.tenant_id() {
+        if id == ctx.subject_tenant_id().unwrap_or_default() {
             Ok(build_tenant_info(id))
         } else {
             Err(TenantResolverError::TenantNotFound { tenant_id: id })
@@ -68,7 +68,7 @@ impl TenantResolverPluginClient for Service {
         options: &GetTenantsOptions,
     ) -> Result<Vec<TenantInfo>, TenantResolverError> {
         // Nil UUID context means no tenant exists
-        if ctx.tenant_id().is_nil() {
+        if ctx.subject_tenant_id().is_none_or(|id| id.is_nil()) {
             return Ok(vec![]);
         }
 
@@ -80,7 +80,7 @@ impl TenantResolverPluginClient for Service {
                 continue; // Skip duplicate IDs
             }
             // Only the context tenant exists
-            if *id == ctx.tenant_id() {
+            if *id == ctx.subject_tenant_id().unwrap_or_default() {
                 let tenant = build_tenant_info(*id);
                 if matches_status(&tenant, &options.status) {
                     result.push(tenant);
@@ -99,11 +99,11 @@ impl TenantResolverPluginClient for Service {
         _options: &GetAncestorsOptions,
     ) -> Result<GetAncestorsResponse, TenantResolverError> {
         // Reject nil UUID (anonymous context)
-        if ctx.tenant_id().is_nil() {
+        if ctx.subject_tenant_id().is_none_or(|id| id.is_nil()) {
             return Err(TenantResolverError::TenantNotFound { tenant_id: id });
         }
         // Only the context tenant exists
-        if id != ctx.tenant_id() {
+        if id != ctx.subject_tenant_id().unwrap_or_default() {
             return Err(TenantResolverError::TenantNotFound { tenant_id: id });
         }
 
@@ -121,11 +121,11 @@ impl TenantResolverPluginClient for Service {
         _options: &GetDescendantsOptions,
     ) -> Result<GetDescendantsResponse, TenantResolverError> {
         // Reject nil UUID (anonymous context)
-        if ctx.tenant_id().is_nil() {
+        if ctx.subject_tenant_id().is_none_or(|id| id.is_nil()) {
             return Err(TenantResolverError::TenantNotFound { tenant_id: id });
         }
         // Only the context tenant exists
-        if id != ctx.tenant_id() {
+        if id != ctx.subject_tenant_id().unwrap_or_default() {
             return Err(TenantResolverError::TenantNotFound { tenant_id: id });
         }
 
@@ -144,13 +144,13 @@ impl TenantResolverPluginClient for Service {
         _options: &IsAncestorOptions,
     ) -> Result<bool, TenantResolverError> {
         // Reject nil UUID (anonymous context)
-        if ctx.tenant_id().is_nil() {
+        if ctx.subject_tenant_id().is_none_or(|id| id.is_nil()) {
             return Err(TenantResolverError::TenantNotFound {
                 tenant_id: ancestor_id,
             });
         }
 
-        let self_id = ctx.tenant_id();
+        let self_id = ctx.subject_tenant_id().unwrap_or_default();
 
         // Both must be the context tenant (only one tenant exists)
         if ancestor_id != self_id {
@@ -177,7 +177,9 @@ mod tests {
     use uuid::Uuid;
 
     fn ctx_for_tenant(tenant_id: Uuid) -> SecurityContext {
-        SecurityContext::builder().tenant_id(tenant_id).build()
+        SecurityContext::builder()
+            .subject_tenant_id(tenant_id)
+            .build()
     }
 
     const TENANT_A: &str = "11111111-1111-1111-1111-111111111111";
@@ -227,7 +229,7 @@ mod tests {
         let nil_id = Uuid::nil();
         let ctx = ctx_for_tenant(nil_id);
 
-        // Even if id matches ctx.tenant_id(), nil UUID is rejected
+        // Even if id matches ctx.subject_tenant_id().unwrap_or_default(), nil UUID is rejected
         let result = service.get_tenant(&ctx, nil_id).await;
 
         assert!(result.is_err());
