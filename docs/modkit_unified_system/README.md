@@ -22,6 +22,8 @@ This folder contains the ModKit developer documentation, split by topic for focu
 | Out-of-Process / gRPC / SDK pattern | `09_oop_grpc_sdk_pattern.md` | |
 | Domain model macro, DDD enforcement | `02_module_layout_and_sdk_pattern.md` (§ Domain types) | `dylint_lints/de03_domain_layer/de0309_must_have_domain_model/README.md` |
 | Quick checklists, templates | `10_checklists_and_templates.md` | |
+| HTTP client (TLS, retries, timeouts, concurrency, OTel tracing, auth hook) | | `docs/adrs/modkit/0001-modkit-hyper-tower-http-client.md` |
+| Authentication (inbound JWT/OIDC policies, outbound OAuth2 client-credentials) | | `docs/adrs/modkit/0002-modkit-auth-client-with-aliri.md` |
 
 ## Core invariants (apply everywhere)
 
@@ -47,3 +49,8 @@ This folder contains the ModKit developer documentation, split by topic for focu
 - `08_lifecycle_stateful_tasks.md` – WithLifecycle, cancellation tokens, stateful module patterns.
 - `09_oop_grpc_sdk_pattern.md` – Out-of-Process modules, gRPC, SDK pattern for OoP, client utilities.
 - `10_checklists_and_templates.md` – Quick checklists per task, minimal code templates.
+
+### Related ADRs
+
+- `docs/adrs/modkit/0001-modkit-hyper-tower-http-client.md` – **modkit-http**: Hyper+Tower HTTP client with TLS, retries, timeouts, concurrency limiting, decompression, OTel tracing, and extensible auth layer hook.
+- `docs/adrs/modkit/0002-modkit-auth-client-with-aliri.md` – **modkit-auth**: Inbound JWT/OIDC route-level policies and outbound OAuth2 client-credentials flow with automatic token refresh and `Authorization: Bearer` injection.

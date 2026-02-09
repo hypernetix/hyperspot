@@ -21,6 +21,10 @@ workspace = true
 name = "dispatcher_usage"
 path = "examples/dispatcher_usage.rs"
 
+[[example]]
+name = "oauth2_client_usage"
+path = "examples/oauth2_client_usage.rs"
+
 [dependencies]
 # Core dependencies
 uuid = { workspace = true }
@@ -41,8 +45,20 @@ modkit-security = { workspace = true }
 
 # HTTP client
 modkit-http = { workspace = true }
+url = { workspace = true }
+
+# OAuth2 token lifecycle
+aliri_tokens = { workspace = true }
+aliri_clock = { workspace = true }
+base64 = { workspace = true }
+
+# Shared utilities
+modkit-utils = { workspace = true }
+zeroize = { workspace = true }
 
 [dev-dependencies]
+bytes = { workspace = true }
+http-body-util = { workspace = true }
 httpmock = { workspace = true }
 
 [features]

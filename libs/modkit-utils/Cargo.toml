@@ -23,6 +23,7 @@ humantime-serde = ["dep:humantime", "dep:serde"]
 [dependencies]
 serde = { workspace = true, optional = true }
 humantime = { workspace = true, optional = true }
+zeroize = { workspace = true }
 
 [dev-dependencies]
 serde_json = { workspace = true }

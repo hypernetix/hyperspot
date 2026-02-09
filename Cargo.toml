@@ -246,6 +246,11 @@ async-trait = "0.1"
 dashmap = "6.1"
 arc-swap = "1.7"
 
+# Security
+zeroize = { version = "1", features = ["derive"] }
+aliri_tokens = { version = "0.3", default-features = false, features = ["rand"] }
+aliri_clock = "0.1"
+
 # Logging
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = [

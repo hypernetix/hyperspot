@@ -17,13 +17,19 @@ use tower::buffer::Buffer;
 use tower::limit::ConcurrencyLimitLayer;
 use tower::load_shed::LoadShedLayer;
 use tower::timeout::TimeoutLayer;
+use tower::util::BoxCloneService;
 use tower::{ServiceBuilder, ServiceExt};
 use tower_http::decompression::DecompressionLayer;
 use tower_http::follow_redirect::FollowRedirectLayer;
 
-/// Builder for constructing an HTTP client with configurable layers
+/// Type-erased inner service between layer composition steps in [`HttpClientBuilder::build`].
+type InnerService =
+    BoxCloneService<http::Request<Full<Bytes>>, http::Response<ResponseBody>, HttpError>;
+
+/// Builder for constructing an [`HttpClient`] with a layered tower middleware stack.
 pub struct HttpClientBuilder {
     config: HttpClientConfig,
+    auth_layer: Option<Box<dyn FnOnce(InnerService) -> InnerService + Send>>,
 }
 
 impl HttpClientBuilder {
@@ -32,13 +38,17 @@ impl HttpClientBuilder {
     pub fn new() -> Self {
         Self {
             config: HttpClientConfig::default(),
+            auth_layer: None,
         }
     }
 
     /// Create a builder with a specific configuration
     #[must_use]
     pub fn with_config(config: HttpClientConfig) -> Self {
-        Self { config }
+        Self {
+            config,
+            auth_layer: None,
+        }
     }
 
     /// Set the per-request timeout
@@ -94,7 +104,7 @@ impl HttpClientBuilder {
 
     /// Allow insecure HTTP connections (for testing only)
     ///
-    /// This is a convenience method equivalent to `.transport(TransportSecurity::AllowInsecureHttp)`.
+    /// Equivalent to `.transport(TransportSecurity::AllowInsecureHttp)`.
     ///
     /// **WARNING**: This should only be used for local testing with mock servers.
     /// Never use in production as it exposes traffic to interception.
@@ -127,6 +137,22 @@ impl HttpClientBuilder {
     #[must_use]
     pub fn with_otel(mut self) -> Self {
         self.config.otel = true;
+        self
+    }
+
+    /// Insert an optional auth layer between retry and timeout in the stack.
+    ///
+    /// Stack position: `… → Retry → **this layer** → Timeout → …`
+    ///
+    /// The layer sits inside the retry loop so each attempt re-executes it
+    /// (e.g. re-reads a refreshed bearer token). Only one auth layer can be
+    /// set; a second call replaces the first.
+    #[must_use]
+    pub fn with_auth_layer(
+        mut self,
+        wrap: impl FnOnce(InnerService) -> InnerService + Send + 'static,
+    ) -> Self {
+        self.auth_layer = Some(Box::new(wrap));
         self
     }
 
@@ -255,11 +281,17 @@ impl HttpClientBuilder {
         //
         // Request flow (outer → inner):
         //   Buffer → OtelLayer → LoadShed/Concurrency → RetryLayer →
-        //   ErrorMapping → Timeout → UserAgent → Decompression → FollowRedirect → hyper_client
+        //   [AuthLayer?] → ErrorMapping → Timeout → UserAgent →
+        //   Decompression → FollowRedirect → hyper_client
+        //
+        // AuthLayer (if set via with_auth_layer) sits inside the retry
+        // loop so each retry re-acquires credentials (e.g. refreshed
+        // bearer token).
         //
         // Response flow (inner → outer):
-        //   hyper_client → FollowRedirect → Decompression → UserAgent → Timeout →
-        //   ErrorMapping → RetryLayer → LoadShed/Concurrency → OtelLayer → Buffer
+        //   hyper_client → FollowRedirect → Decompression → UserAgent →
+        //   Timeout → ErrorMapping → [AuthLayer?] → RetryLayer →
+        //   LoadShed/Concurrency → OtelLayer → Buffer
         //
         // Key semantics (reqwest-like):
         //   - send() returns Ok(Response) for ALL HTTP statuses (including 4xx/5xx)
@@ -296,6 +328,12 @@ impl HttpClientBuilder {
 
         // Box the service for type erasure
         let mut boxed_service = service.boxed_clone();
+
+        // Apply auth layer (between timeout and retry).
+        // Inside retry so each retry attempt re-acquires the token.
+        if let Some(wrap) = self.auth_layer {
+            boxed_service = wrap(boxed_service);
+        }
 
         // Conditionally wrap with RetryLayer
         //
@@ -435,7 +473,8 @@ fn build_https_connector(
             let provider = tls::get_crypto_provider();
             let builder = hyper_rustls::HttpsConnectorBuilder::new()
                 .with_provider_and_webpki_roots(provider)
-                // Preserve source error for debugging - rustls::Error implements Error + Send + Sync
+                // Preserve source error for debugging —
+                // rustls::Error implements Error + Send + Sync
                 .map_err(|e| HttpError::Tls(Box::new(e)))?;
             let connector = if allow_http {
                 builder.https_or_http().enable_all_versions().build()
@@ -565,6 +604,15 @@ mod tests {
     #[tokio::test]
     async fn test_builder_build_with_otel() {
         let client = HttpClientBuilder::new().with_otel().build();
+        assert!(client.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_builder_with_auth_layer() {
+        let client = HttpClientBuilder::new()
+            .allow_insecure_http()
+            .with_auth_layer(|svc| svc) // identity transform
+            .build();
         assert!(client.is_ok());
     }
 
