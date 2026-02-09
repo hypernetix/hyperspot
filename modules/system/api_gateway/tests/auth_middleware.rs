@@ -8,6 +8,8 @@
 //! 3. Public routes work without authentication
 //! 4. Protected routes enforce authentication when enabled
 
+mod common;
+
 use anyhow::Result;
 use async_trait::async_trait;
 use axum::{
@@ -15,6 +17,7 @@ use axum::{
     body::Body,
     http::{Request, StatusCode},
 };
+use common::MockTenantResolver;
 use modkit::{
     ClientHub, Module,
     api::{
@@ -26,54 +29,11 @@ use modkit::{
     contracts::{ApiGatewayCapability, OpenApiRegistry, RestApiCapability},
 };
 use modkit_auth::axum_ext::Authz;
-use tenant_resolver_sdk::{
-    AccessOptions, TenantFilter, TenantId, TenantInfo, TenantResolverError,
-    TenantResolverGatewayClient, TenantStatus,
-};
-
-use modkit_security::SecurityContext;
 use serde_json::json;
 use std::sync::Arc;
+use tenant_resolver_sdk::TenantResolverGatewayClient;
 use tower::ServiceExt;
 use uuid::Uuid;
-// for oneshot
-
-/// Mock tenant resolver for tests
-struct MockTenantResolver;
-
-#[async_trait]
-impl TenantResolverGatewayClient for MockTenantResolver {
-    async fn get_tenant(
-        &self,
-        _ctx: &SecurityContext,
-        id: TenantId,
-    ) -> std::result::Result<TenantInfo, TenantResolverError> {
-        Ok(TenantInfo {
-            id,
-            name: format!("Tenant {id}"),
-            status: TenantStatus::Active,
-            tenant_type: None,
-        })
-    }
-
-    async fn can_access(
-        &self,
-        _ctx: &SecurityContext,
-        _target: TenantId,
-        _options: Option<&AccessOptions>,
-    ) -> std::result::Result<bool, TenantResolverError> {
-        Ok(true)
-    }
-
-    async fn get_accessible_tenants(
-        &self,
-        _ctx: &SecurityContext,
-        _filter: Option<&TenantFilter>,
-        _options: Option<&AccessOptions>,
-    ) -> std::result::Result<Vec<TenantInfo>, TenantResolverError> {
-        Ok(vec![])
-    }
-}
 
 /// Test configuration provider
 struct TestConfigProvider {
