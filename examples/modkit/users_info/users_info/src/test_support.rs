@@ -9,8 +9,9 @@ use modkit_db::{ConnectOpts, DBProvider, Db, DbError, connect_db};
 use modkit_security::SecurityContext;
 use sea_orm_migration::MigratorTrait;
 use tenant_resolver_sdk::{
-    GetAncestorsResponse, GetDescendantsResponse, HierarchyOptions, TenantFilter, TenantRef,
-    TenantResolverError, TenantResolverGatewayClient, TenantStatus,
+    GetAncestorsOptions, GetAncestorsResponse, GetDescendantsOptions, GetDescendantsResponse,
+    GetTenantsOptions, IsAncestorOptions, TenantRef, TenantResolverError,
+    TenantResolverGatewayClient, TenantStatus,
 };
 use time::OffsetDateTime;
 use uuid::Uuid;
@@ -126,7 +127,7 @@ impl TenantResolverGatewayClient for MockTenantResolver {
         &self,
         ctx: &SecurityContext,
         ids: &[tenant_resolver_sdk::TenantId],
-        _filter: Option<&TenantFilter>,
+        _options: &GetTenantsOptions,
     ) -> Result<Vec<tenant_resolver_sdk::TenantInfo>, TenantResolverError> {
         // Return only tenants that match the context's tenant
         let tenant_id = ctx.tenant_id();
@@ -148,7 +149,7 @@ impl TenantResolverGatewayClient for MockTenantResolver {
         &self,
         _ctx: &SecurityContext,
         id: tenant_resolver_sdk::TenantId,
-        _options: Option<&HierarchyOptions>,
+        _options: &GetAncestorsOptions,
     ) -> Result<GetAncestorsResponse, TenantResolverError> {
         // Single-tenant mock: no ancestors
         Ok(GetAncestorsResponse {
@@ -167,9 +168,7 @@ impl TenantResolverGatewayClient for MockTenantResolver {
         &self,
         _ctx: &SecurityContext,
         id: tenant_resolver_sdk::TenantId,
-        _filter: Option<&TenantFilter>,
-        _options: Option<&HierarchyOptions>,
-        _max_depth: Option<u32>,
+        _options: &GetDescendantsOptions,
     ) -> Result<GetDescendantsResponse, TenantResolverError> {
         // Single-tenant mock: no descendants
         Ok(GetDescendantsResponse {
@@ -189,7 +188,7 @@ impl TenantResolverGatewayClient for MockTenantResolver {
         _ctx: &SecurityContext,
         _ancestor_id: tenant_resolver_sdk::TenantId,
         _descendant_id: tenant_resolver_sdk::TenantId,
-        _options: Option<&HierarchyOptions>,
+        _options: &IsAncestorOptions,
     ) -> Result<bool, TenantResolverError> {
         // Self is not an ancestor of self
         Ok(false)

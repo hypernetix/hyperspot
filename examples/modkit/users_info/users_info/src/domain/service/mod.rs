@@ -48,7 +48,7 @@ use crate::domain::repos::{AddressesRepository, CitiesRepository, UsersRepositor
 use modkit_db::DBProvider;
 use modkit_db::odata::LimitCfg;
 use modkit_security::{PolicyEngineRef, SecurityContext};
-use tenant_resolver_sdk::{TenantFilter, TenantResolverGatewayClient, TenantStatus};
+use tenant_resolver_sdk::{GetDescendantsOptions, TenantResolverGatewayClient, TenantStatus};
 use uuid::Uuid;
 
 mod addresses;
@@ -73,14 +73,13 @@ pub(crate) async fn resolve_accessible_tenants(
         return Ok(vec![]);
     }
 
-    // Filter for active descendants only
-    let filter = TenantFilter {
-        status: vec![TenantStatus::Active],
-    };
-
     // Get tenant and all active descendants (max_depth=None means unlimited)
+    let opts = GetDescendantsOptions {
+        status: vec![TenantStatus::Active],
+        ..Default::default()
+    };
     let response = resolver
-        .get_descendants(ctx, tenant_id, Some(&filter), None, None)
+        .get_descendants(ctx, tenant_id, &opts)
         .await
         .map_err(|e| {
             tracing::error!(error = %e, "Failed to get descendants");

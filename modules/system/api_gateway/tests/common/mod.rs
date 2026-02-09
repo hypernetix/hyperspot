@@ -1,8 +1,9 @@
 use async_trait::async_trait;
 use modkit_security::SecurityContext;
 use tenant_resolver_sdk::{
-    GetAncestorsResponse, GetDescendantsResponse, HierarchyOptions, TenantFilter, TenantId,
-    TenantInfo, TenantRef, TenantResolverError, TenantResolverGatewayClient, TenantStatus,
+    GetAncestorsOptions, GetAncestorsResponse, GetDescendantsOptions, GetDescendantsResponse,
+    GetTenantsOptions, IsAncestorOptions, TenantId, TenantInfo, TenantRef, TenantResolverError,
+    TenantResolverGatewayClient, TenantStatus,
 };
 
 pub struct MockTenantResolver;
@@ -28,7 +29,7 @@ impl TenantResolverGatewayClient for MockTenantResolver {
         &self,
         _ctx: &SecurityContext,
         ids: &[TenantId],
-        _filter: Option<&TenantFilter>,
+        _options: &GetTenantsOptions,
     ) -> std::result::Result<Vec<TenantInfo>, TenantResolverError> {
         Ok(ids
             .iter()
@@ -47,7 +48,7 @@ impl TenantResolverGatewayClient for MockTenantResolver {
         &self,
         _ctx: &SecurityContext,
         id: TenantId,
-        _options: Option<&HierarchyOptions>,
+        _options: &GetAncestorsOptions,
     ) -> std::result::Result<GetAncestorsResponse, TenantResolverError> {
         Ok(GetAncestorsResponse {
             tenant: TenantRef {
@@ -65,9 +66,7 @@ impl TenantResolverGatewayClient for MockTenantResolver {
         &self,
         _ctx: &SecurityContext,
         id: TenantId,
-        _filter: Option<&TenantFilter>,
-        _options: Option<&HierarchyOptions>,
-        _max_depth: Option<u32>,
+        _options: &GetDescendantsOptions,
     ) -> std::result::Result<GetDescendantsResponse, TenantResolverError> {
         Ok(GetDescendantsResponse {
             tenant: TenantRef {
@@ -86,7 +85,7 @@ impl TenantResolverGatewayClient for MockTenantResolver {
         _ctx: &SecurityContext,
         _ancestor_id: TenantId,
         _descendant_id: TenantId,
-        _options: Option<&HierarchyOptions>,
+        _options: &IsAncestorOptions,
     ) -> std::result::Result<bool, TenantResolverError> {
         Ok(false)
     }

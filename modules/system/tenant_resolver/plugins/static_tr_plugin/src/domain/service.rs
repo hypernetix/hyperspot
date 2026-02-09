@@ -2,7 +2,9 @@
 
 use std::collections::{HashMap, HashSet};
 
-use tenant_resolver_sdk::{BarrierMode, TenantFilter, TenantId, TenantInfo, TenantRef};
+use tenant_resolver_sdk::{
+    BarrierMode, TenantId, TenantInfo, TenantRef, TenantResolverError, TenantStatus, matches_status,
+};
 
 use crate::config::StaticTrPluginConfig;
 
@@ -51,9 +53,9 @@ impl Service {
         Self { tenants, children }
     }
 
-    /// Check if a tenant matches the filter criteria.
-    pub(super) fn matches_filter(tenant: &TenantInfo, filter: Option<&TenantFilter>) -> bool {
-        filter.is_none_or(|f| f.matches(tenant))
+    /// Check if a tenant matches the status filter.
+    pub(super) fn matches_status_filter(tenant: &TenantInfo, statuses: &[TenantStatus]) -> bool {
+        matches_status(tenant, statuses)
     }
 
     /// Collect ancestors from a tenant to root.
@@ -120,77 +122,22 @@ impl Service {
     pub(super) fn collect_descendants(
         &self,
         id: TenantId,
-        filter: Option<&TenantFilter>,
+        statuses: &[TenantStatus],
         barrier_mode: BarrierMode,
         max_depth: Option<u32>,
     ) -> Vec<TenantRef> {
-        let mut result = Vec::new();
-        let mut visited = HashSet::new();
-        visited.insert(id);
-        self.collect_descendants_recursive(
-            id,
-            filter,
+        let mut collector = DescendantCollector {
+            tenants: &self.tenants,
+            children: &self.children,
+            statuses,
             barrier_mode,
             max_depth,
-            1,
-            &mut result,
-            &mut visited,
-        );
-        result
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    fn collect_descendants_recursive(
-        &self,
-        parent_id: TenantId,
-        filter: Option<&TenantFilter>,
-        barrier_mode: BarrierMode,
-        max_depth: Option<u32>,
-        current_depth: u32,
-        result: &mut Vec<TenantRef>,
-        visited: &mut HashSet<TenantId>,
-    ) {
-        // Check depth limit (None = unlimited)
-        if max_depth.is_some_and(|d| current_depth > d) {
-            return;
-        }
-
-        let Some(child_ids) = self.children.get(&parent_id) else {
-            return;
+            result: Vec::new(),
+            visited: HashSet::new(),
         };
-
-        for child_id in child_ids {
-            if !visited.insert(*child_id) {
-                continue;
-            }
-
-            let Some(child) = self.tenants.get(child_id) else {
-                continue;
-            };
-
-            // If respecting barriers and this child is self_managed, skip it and its subtree
-            if barrier_mode == BarrierMode::Respect && child.self_managed {
-                continue;
-            }
-
-            // If child doesn't pass filter, skip it AND its subtree
-            if !Self::matches_filter(child, filter) {
-                continue;
-            }
-
-            result.push(child.into());
-
-            // Recurse into children
-            self.collect_descendants_recursive(
-                *child_id,
-                filter,
-                barrier_mode,
-                max_depth,
-                current_depth + 1,
-                result,
-                visited,
-            );
-        }
+        collector.visited.insert(id);
+        collector.collect(id, 1);
+        collector.result
     }
 
     /// Check if `ancestor_id` is an ancestor of `descendant_id`.
@@ -199,31 +146,44 @@ impl Service {
     /// Returns `false` if `ancestor_id == descendant_id` (self is not an ancestor of self).
     ///
     /// Respects barriers: if there's a barrier between them, returns `false`.
+    ///
+    /// # Errors
+    ///
+    /// Returns `TenantNotFound` if either tenant does not exist.
     pub(super) fn is_ancestor_of(
         &self,
         ancestor_id: TenantId,
         descendant_id: TenantId,
         barrier_mode: BarrierMode,
-    ) -> Option<bool> {
+    ) -> Result<bool, TenantResolverError> {
         // Self is NOT an ancestor of self
         if ancestor_id == descendant_id {
             if self.tenants.contains_key(&ancestor_id) {
-                return Some(false);
+                return Ok(false);
             }
-            return None; // Tenant not found
+            return Err(TenantResolverError::TenantNotFound {
+                tenant_id: ancestor_id,
+            });
         }
 
         // Check both tenants exist
         if !self.tenants.contains_key(&ancestor_id) {
-            return None;
+            return Err(TenantResolverError::TenantNotFound {
+                tenant_id: ancestor_id,
+            });
         }
 
-        let descendant = self.tenants.get(&descendant_id)?;
+        let descendant =
+            self.tenants
+                .get(&descendant_id)
+                .ok_or(TenantResolverError::TenantNotFound {
+                    tenant_id: descendant_id,
+                })?;
 
         // If the descendant itself is a barrier, the ancestor cannot claim
         // parentage — consistent with get_descendants excluding barriers.
         if barrier_mode == BarrierMode::Respect && descendant.self_managed {
-            return Some(false);
+            return Ok(false);
         }
 
         // Walk up the chain from descendant
@@ -242,20 +202,71 @@ impl Service {
 
             // Found the ancestor
             if parent_id == ancestor_id {
-                return Some(true);
+                return Ok(true);
             }
 
             // Barrier semantics: if the parent is self_managed and not the target
             // ancestor, traversal is blocked beyond this point.
             if barrier_mode == BarrierMode::Respect && parent.self_managed {
-                return Some(false);
+                return Ok(false);
             }
 
             current_parent_id = parent.parent_id;
         }
 
         // Reached root without finding ancestor
-        Some(false)
+        Ok(false)
+    }
+}
+
+/// Encapsulates traversal state for collecting descendants.
+///
+/// Eliminates the need for passing many arguments through recursive calls.
+struct DescendantCollector<'a> {
+    tenants: &'a HashMap<TenantId, TenantInfo>,
+    children: &'a HashMap<TenantId, Vec<TenantId>>,
+    statuses: &'a [TenantStatus],
+    barrier_mode: BarrierMode,
+    max_depth: Option<u32>,
+    result: Vec<TenantRef>,
+    visited: HashSet<TenantId>,
+}
+
+impl DescendantCollector<'_> {
+    fn collect(&mut self, parent_id: TenantId, current_depth: u32) {
+        // Check depth limit (None = unlimited)
+        if self.max_depth.is_some_and(|d| current_depth > d) {
+            return;
+        }
+
+        let Some(child_ids) = self.children.get(&parent_id) else {
+            return;
+        };
+
+        for child_id in child_ids {
+            if !self.visited.insert(*child_id) {
+                continue;
+            }
+
+            let Some(child) = self.tenants.get(child_id) else {
+                continue;
+            };
+
+            // If respecting barriers and this child is self_managed, skip it and its subtree
+            if self.barrier_mode == BarrierMode::Respect && child.self_managed {
+                continue;
+            }
+
+            // If child doesn't pass status filter, skip it AND its subtree
+            if !Service::matches_status_filter(child, self.statuses) {
+                continue;
+            }
+
+            self.result.push(child.into());
+
+            // Recurse into children
+            self.collect(*child_id, current_depth + 1);
+        }
     }
 }
 
@@ -484,7 +495,7 @@ mod tests {
         let service = Service::from_config(&cfg);
         let a_id = Uuid::parse_str(TENANT_A).unwrap();
 
-        let descendants = service.collect_descendants(a_id, None, BarrierMode::Respect, None);
+        let descendants = service.collect_descendants(a_id, &[], BarrierMode::Respect, None);
         assert!(descendants.is_empty());
     }
 
@@ -506,14 +517,14 @@ mod tests {
         let c_id = Uuid::parse_str(TENANT_C).unwrap();
 
         // Descendants of A (unlimited depth)
-        let descendants = service.collect_descendants(a_id, None, BarrierMode::Respect, None);
+        let descendants = service.collect_descendants(a_id, &[], BarrierMode::Respect, None);
         assert_eq!(descendants.len(), 2);
         // Pre-order: B first, then C
         assert_eq!(descendants[0].id, b_id);
         assert_eq!(descendants[1].id, c_id);
 
         // Descendants of A (depth 1 = direct children only)
-        let descendants = service.collect_descendants(a_id, None, BarrierMode::Respect, Some(1));
+        let descendants = service.collect_descendants(a_id, &[], BarrierMode::Respect, Some(1));
         assert_eq!(descendants.len(), 1);
         assert_eq!(descendants[0].id, b_id);
     }
@@ -536,11 +547,11 @@ mod tests {
         let c_id = Uuid::parse_str(TENANT_C).unwrap();
 
         // With BarrierMode::Respect, descendants of A exclude B (barrier) and its subtree
-        let descendants = service.collect_descendants(a_id, None, BarrierMode::Respect, None);
+        let descendants = service.collect_descendants(a_id, &[], BarrierMode::Respect, None);
         assert!(descendants.is_empty());
 
         // With BarrierMode::Ignore, descendants include B and C
-        let descendants = service.collect_descendants(a_id, None, BarrierMode::Ignore, None);
+        let descendants = service.collect_descendants(a_id, &[], BarrierMode::Ignore, None);
         assert_eq!(descendants.len(), 2);
         assert_eq!(descendants[0].id, b_id);
         assert_eq!(descendants[1].id, c_id);
@@ -565,7 +576,7 @@ mod tests {
         let d_id = Uuid::parse_str(TENANT_D).unwrap();
 
         // With BarrierMode::Respect, only D is visible
-        let descendants = service.collect_descendants(a_id, None, BarrierMode::Respect, None);
+        let descendants = service.collect_descendants(a_id, &[], BarrierMode::Respect, None);
         assert_eq!(descendants.len(), 1);
         assert_eq!(descendants[0].id, d_id);
     }
@@ -582,9 +593,10 @@ mod tests {
         let a_id = Uuid::parse_str(TENANT_A).unwrap();
 
         // Self is NOT an ancestor of self
-        assert_eq!(
-            service.is_ancestor_of(a_id, a_id, BarrierMode::Respect),
-            Some(false)
+        assert!(
+            !service
+                .is_ancestor_of(a_id, a_id, BarrierMode::Respect)
+                .unwrap()
         );
     }
 
@@ -602,13 +614,15 @@ mod tests {
         let a_id = Uuid::parse_str(TENANT_A).unwrap();
         let b_id = Uuid::parse_str(TENANT_B).unwrap();
 
-        assert_eq!(
-            service.is_ancestor_of(a_id, b_id, BarrierMode::Respect),
-            Some(true)
+        assert!(
+            service
+                .is_ancestor_of(a_id, b_id, BarrierMode::Respect)
+                .unwrap()
         );
-        assert_eq!(
-            service.is_ancestor_of(b_id, a_id, BarrierMode::Respect),
-            Some(false)
+        assert!(
+            !service
+                .is_ancestor_of(b_id, a_id, BarrierMode::Respect)
+                .unwrap()
         );
     }
 
@@ -628,9 +642,10 @@ mod tests {
         let a_id = Uuid::parse_str(TENANT_A).unwrap();
         let c_id = Uuid::parse_str(TENANT_C).unwrap();
 
-        assert_eq!(
-            service.is_ancestor_of(a_id, c_id, BarrierMode::Respect),
-            Some(true)
+        assert!(
+            service
+                .is_ancestor_of(a_id, c_id, BarrierMode::Respect)
+                .unwrap()
         );
     }
 
@@ -652,21 +667,24 @@ mod tests {
         let c_id = Uuid::parse_str(TENANT_C).unwrap();
 
         // B is direct parent of C - no barrier crossed
-        assert_eq!(
-            service.is_ancestor_of(b_id, c_id, BarrierMode::Respect),
-            Some(true)
+        assert!(
+            service
+                .is_ancestor_of(b_id, c_id, BarrierMode::Respect)
+                .unwrap()
         );
 
         // A is blocked by barrier B
-        assert_eq!(
-            service.is_ancestor_of(a_id, c_id, BarrierMode::Respect),
-            Some(false)
+        assert!(
+            !service
+                .is_ancestor_of(a_id, c_id, BarrierMode::Respect)
+                .unwrap()
         );
 
         // With BarrierMode::Ignore, A is ancestor of C
-        assert_eq!(
-            service.is_ancestor_of(a_id, c_id, BarrierMode::Ignore),
-            Some(true)
+        assert!(
+            service
+                .is_ancestor_of(a_id, c_id, BarrierMode::Ignore)
+                .unwrap()
         );
     }
 
@@ -688,21 +706,24 @@ mod tests {
         let b_id = Uuid::parse_str(TENANT_B).unwrap();
 
         // A is NOT ancestor of B when B is a barrier (BarrierMode::Respect)
-        assert_eq!(
-            service.is_ancestor_of(a_id, b_id, BarrierMode::Respect),
-            Some(false)
+        assert!(
+            !service
+                .is_ancestor_of(a_id, b_id, BarrierMode::Respect)
+                .unwrap()
         );
 
         // With BarrierMode::Ignore, A IS ancestor of B
-        assert_eq!(
-            service.is_ancestor_of(a_id, b_id, BarrierMode::Ignore),
-            Some(true)
+        assert!(
+            service
+                .is_ancestor_of(a_id, b_id, BarrierMode::Ignore)
+                .unwrap()
         );
 
         // B is NOT ancestor of itself (self is not an ancestor of self)
-        assert_eq!(
-            service.is_ancestor_of(b_id, b_id, BarrierMode::Respect),
-            Some(false)
+        assert!(
+            !service
+                .is_ancestor_of(b_id, b_id, BarrierMode::Respect)
+                .unwrap()
         );
     }
 
@@ -718,16 +739,16 @@ mod tests {
         let nonexistent = Uuid::parse_str(TENANT_B).unwrap();
 
         // Nonexistent ancestor
-        assert_eq!(
+        assert!(matches!(
             service.is_ancestor_of(nonexistent, a_id, BarrierMode::Respect),
-            None
-        );
+            Err(TenantResolverError::TenantNotFound { tenant_id }) if tenant_id == nonexistent
+        ));
 
         // Nonexistent descendant
-        assert_eq!(
+        assert!(matches!(
             service.is_ancestor_of(a_id, nonexistent, BarrierMode::Respect),
-            None
-        );
+            Err(TenantResolverError::TenantNotFound { tenant_id }) if tenant_id == nonexistent
+        ));
     }
 
     #[test]
@@ -803,8 +824,11 @@ mod tests {
         let service = Service::from_config(&cfg);
 
         // Should terminate (not loop forever), C is not in the cycle
-        let result = service.is_ancestor_of(c_id, a_id, BarrierMode::Ignore);
-        assert_eq!(result, Some(false));
+        assert!(
+            !service
+                .is_ancestor_of(c_id, a_id, BarrierMode::Ignore)
+                .unwrap()
+        );
     }
 
     #[test]
@@ -822,13 +846,15 @@ mod tests {
         let a_id = Uuid::parse_str(TENANT_A).unwrap();
         let b_id = Uuid::parse_str(TENANT_B).unwrap();
 
-        assert_eq!(
-            service.is_ancestor_of(a_id, b_id, BarrierMode::Respect),
-            Some(false)
+        assert!(
+            !service
+                .is_ancestor_of(a_id, b_id, BarrierMode::Respect)
+                .unwrap()
         );
-        assert_eq!(
-            service.is_ancestor_of(b_id, a_id, BarrierMode::Respect),
-            Some(false)
+        assert!(
+            !service
+                .is_ancestor_of(b_id, a_id, BarrierMode::Respect)
+                .unwrap()
         );
     }
 }

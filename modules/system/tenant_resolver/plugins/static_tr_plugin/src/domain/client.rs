@@ -5,8 +5,9 @@
 use async_trait::async_trait;
 use modkit_security::SecurityContext;
 use tenant_resolver_sdk::{
-    BarrierMode, GetAncestorsResponse, GetDescendantsResponse, HierarchyOptions, TenantFilter,
-    TenantId, TenantInfo, TenantResolverError, TenantResolverPluginClient,
+    GetAncestorsOptions, GetAncestorsResponse, GetDescendantsOptions, GetDescendantsResponse,
+    GetTenantsOptions, IsAncestorOptions, TenantId, TenantInfo, TenantResolverError,
+    TenantResolverPluginClient, matches_status,
 };
 
 use super::service::Service;
@@ -28,7 +29,7 @@ impl TenantResolverPluginClient for Service {
         &self,
         _ctx: &SecurityContext,
         ids: &[TenantId],
-        filter: Option<&TenantFilter>,
+        options: &GetTenantsOptions,
     ) -> Result<Vec<TenantInfo>, TenantResolverError> {
         let mut result = Vec::new();
         let mut seen = std::collections::HashSet::new();
@@ -38,7 +39,7 @@ impl TenantResolverPluginClient for Service {
                 continue; // Skip duplicate IDs
             }
             if let Some(tenant) = self.tenants.get(id)
-                && Self::matches_filter(tenant, filter)
+                && matches_status(tenant, &options.status)
             {
                 result.push(tenant.clone());
             }
@@ -52,7 +53,7 @@ impl TenantResolverPluginClient for Service {
         &self,
         _ctx: &SecurityContext,
         id: TenantId,
-        options: Option<&HierarchyOptions>,
+        options: &GetAncestorsOptions,
     ) -> Result<GetAncestorsResponse, TenantResolverError> {
         // Get the tenant first
         let tenant = self
@@ -60,10 +61,8 @@ impl TenantResolverPluginClient for Service {
             .get(&id)
             .ok_or(TenantResolverError::TenantNotFound { tenant_id: id })?;
 
-        let barrier_mode = options.map_or(BarrierMode::Respect, |o| o.barrier_mode);
-
         // Collect ancestors
-        let ancestors = self.collect_ancestors(id, barrier_mode);
+        let ancestors = self.collect_ancestors(id, options.barrier_mode);
 
         Ok(GetAncestorsResponse {
             tenant: tenant.into(),
@@ -75,9 +74,7 @@ impl TenantResolverPluginClient for Service {
         &self,
         _ctx: &SecurityContext,
         id: TenantId,
-        filter: Option<&TenantFilter>,
-        options: Option<&HierarchyOptions>,
-        max_depth: Option<u32>,
+        options: &GetDescendantsOptions,
     ) -> Result<GetDescendantsResponse, TenantResolverError> {
         // Get the tenant first (filter does NOT apply to the starting tenant)
         let tenant = self
@@ -85,12 +82,11 @@ impl TenantResolverPluginClient for Service {
             .get(&id)
             .ok_or(TenantResolverError::TenantNotFound { tenant_id: id })?;
 
-        let barrier_mode = options.map_or(BarrierMode::Respect, |o| o.barrier_mode);
-
         // Collect descendants with filter applied during traversal:
         // - Results are in pre-order (parent before children)
         // - Nodes that don't pass filter are excluded along with their subtrees
-        let descendants = self.collect_descendants(id, filter, barrier_mode, max_depth);
+        let descendants =
+            self.collect_descendants(id, &options.status, options.barrier_mode, options.max_depth);
 
         Ok(GetDescendantsResponse {
             tenant: tenant.into(),
@@ -103,23 +99,9 @@ impl TenantResolverPluginClient for Service {
         _ctx: &SecurityContext,
         ancestor_id: TenantId,
         descendant_id: TenantId,
-        options: Option<&HierarchyOptions>,
+        options: &IsAncestorOptions,
     ) -> Result<bool, TenantResolverError> {
-        let barrier_mode = options.map_or(BarrierMode::Respect, |o| o.barrier_mode);
-
-        self.is_ancestor_of(ancestor_id, descendant_id, barrier_mode)
-            .ok_or_else(|| {
-                // Determine which tenant is missing
-                if self.tenants.contains_key(&ancestor_id) {
-                    TenantResolverError::TenantNotFound {
-                        tenant_id: descendant_id,
-                    }
-                } else {
-                    TenantResolverError::TenantNotFound {
-                        tenant_id: ancestor_id,
-                    }
-                }
-            })
+        self.is_ancestor_of(ancestor_id, descendant_id, options.barrier_mode)
     }
 }
 
@@ -128,7 +110,7 @@ impl TenantResolverPluginClient for Service {
 mod tests {
     use super::*;
     use crate::config::{StaticTrPluginConfig, TenantConfig};
-    use tenant_resolver_sdk::TenantStatus;
+    use tenant_resolver_sdk::{BarrierMode, TenantStatus};
     use uuid::Uuid;
 
     // Helper to create a test tenant config
@@ -170,13 +152,6 @@ mod tests {
         SecurityContext::builder()
             .tenant_id(Uuid::parse_str(tenant_id).unwrap())
             .build()
-    }
-
-    // Filter for active tenants only
-    fn active_filter() -> TenantFilter {
-        TenantFilter {
-            status: vec![TenantStatus::Active],
-        }
     }
 
     // Test UUIDs
@@ -248,7 +223,9 @@ mod tests {
             Uuid::parse_str(TENANT_B).unwrap(),
         ];
 
-        let result = service.get_tenants(&ctx, &ids, None).await;
+        let result = service
+            .get_tenants(&ctx, &ids, &GetTenantsOptions::default())
+            .await;
         assert!(result.is_ok());
         let tenants = result.unwrap();
         assert_eq!(tenants.len(), 2);
@@ -268,7 +245,9 @@ mod tests {
             Uuid::parse_str(NONEXISTENT).unwrap(), // This one doesn't exist
         ];
 
-        let result = service.get_tenants(&ctx, &ids, None).await;
+        let result = service
+            .get_tenants(&ctx, &ids, &GetTenantsOptions::default())
+            .await;
         assert!(result.is_ok());
         let tenants = result.unwrap();
         // Only found tenant is returned, missing is silently skipped
@@ -293,8 +272,10 @@ mod tests {
             Uuid::parse_str(TENANT_B).unwrap(),
         ];
 
-        let filter = active_filter();
-        let result = service.get_tenants(&ctx, &ids, Some(&filter)).await;
+        let opts = GetTenantsOptions {
+            status: vec![TenantStatus::Active],
+        };
+        let result = service.get_tenants(&ctx, &ids, &opts).await;
         assert!(result.is_ok());
         let tenants = result.unwrap();
         // Only active tenant is returned
@@ -314,7 +295,11 @@ mod tests {
         let ctx = ctx_for_tenant(TENANT_A);
 
         let result = service
-            .get_ancestors(&ctx, Uuid::parse_str(TENANT_A).unwrap(), None)
+            .get_ancestors(
+                &ctx,
+                Uuid::parse_str(TENANT_A).unwrap(),
+                &GetAncestorsOptions::default(),
+            )
             .await;
 
         assert!(result.is_ok());
@@ -338,7 +323,11 @@ mod tests {
         let ctx = ctx_for_tenant(TENANT_C);
 
         let result = service
-            .get_ancestors(&ctx, Uuid::parse_str(TENANT_C).unwrap(), None)
+            .get_ancestors(
+                &ctx,
+                Uuid::parse_str(TENANT_C).unwrap(),
+                &GetAncestorsOptions::default(),
+            )
             .await;
 
         assert!(result.is_ok());
@@ -365,7 +354,11 @@ mod tests {
 
         // Default (BarrierMode::Respect) - stops at barrier
         let result = service
-            .get_ancestors(&ctx, Uuid::parse_str(TENANT_C).unwrap(), None)
+            .get_ancestors(
+                &ctx,
+                Uuid::parse_str(TENANT_C).unwrap(),
+                &GetAncestorsOptions::default(),
+            )
             .await;
 
         assert!(result.is_ok());
@@ -374,11 +367,11 @@ mod tests {
         assert_eq!(response.ancestors[0].id, Uuid::parse_str(TENANT_B).unwrap());
 
         // BarrierMode::Ignore - traverses through
-        let opts = HierarchyOptions {
+        let req = GetAncestorsOptions {
             barrier_mode: BarrierMode::Ignore,
         };
         let result = service
-            .get_ancestors(&ctx, Uuid::parse_str(TENANT_C).unwrap(), Some(&opts))
+            .get_ancestors(&ctx, Uuid::parse_str(TENANT_C).unwrap(), &req)
             .await;
 
         assert!(result.is_ok());
@@ -393,7 +386,11 @@ mod tests {
         let ctx = ctx_for_tenant(TENANT_A);
 
         let result = service
-            .get_ancestors(&ctx, Uuid::parse_str(NONEXISTENT).unwrap(), None)
+            .get_ancestors(
+                &ctx,
+                Uuid::parse_str(NONEXISTENT).unwrap(),
+                &GetAncestorsOptions::default(),
+            )
             .await;
 
         assert!(result.is_err());
@@ -419,7 +416,11 @@ mod tests {
 
         // Default (BarrierMode::Respect) - B cannot see its parent chain
         let result = service
-            .get_ancestors(&ctx, Uuid::parse_str(TENANT_B).unwrap(), None)
+            .get_ancestors(
+                &ctx,
+                Uuid::parse_str(TENANT_B).unwrap(),
+                &GetAncestorsOptions::default(),
+            )
             .await;
 
         assert!(result.is_ok());
@@ -428,11 +429,11 @@ mod tests {
         assert!(response.ancestors.is_empty());
 
         // BarrierMode::Ignore - B can see A
-        let opts = HierarchyOptions {
+        let req = GetAncestorsOptions {
             barrier_mode: BarrierMode::Ignore,
         };
         let result = service
-            .get_ancestors(&ctx, Uuid::parse_str(TENANT_B).unwrap(), Some(&opts))
+            .get_ancestors(&ctx, Uuid::parse_str(TENANT_B).unwrap(), &req)
             .await;
 
         assert!(result.is_ok());
@@ -453,7 +454,11 @@ mod tests {
         let ctx = ctx_for_tenant(TENANT_A);
 
         let result = service
-            .get_descendants(&ctx, Uuid::parse_str(TENANT_A).unwrap(), None, None, None)
+            .get_descendants(
+                &ctx,
+                Uuid::parse_str(TENANT_A).unwrap(),
+                &GetDescendantsOptions::default(),
+            )
             .await;
 
         assert!(result.is_ok());
@@ -478,7 +483,11 @@ mod tests {
 
         // Unlimited depth
         let result = service
-            .get_descendants(&ctx, Uuid::parse_str(TENANT_A).unwrap(), None, None, None)
+            .get_descendants(
+                &ctx,
+                Uuid::parse_str(TENANT_A).unwrap(),
+                &GetDescendantsOptions::default(),
+            )
             .await;
 
         assert!(result.is_ok());
@@ -487,14 +496,12 @@ mod tests {
         assert_eq!(response.descendants.len(), 2);
 
         // Depth 1 only
+        let req = GetDescendantsOptions {
+            max_depth: Some(1),
+            ..Default::default()
+        };
         let result = service
-            .get_descendants(
-                &ctx,
-                Uuid::parse_str(TENANT_A).unwrap(),
-                None,
-                None,
-                Some(1),
-            )
+            .get_descendants(&ctx, Uuid::parse_str(TENANT_A).unwrap(), &req)
             .await;
 
         assert!(result.is_ok());
@@ -524,7 +531,11 @@ mod tests {
 
         // Default (BarrierMode::Respect) - only D is visible
         let result = service
-            .get_descendants(&ctx, Uuid::parse_str(TENANT_A).unwrap(), None, None, None)
+            .get_descendants(
+                &ctx,
+                Uuid::parse_str(TENANT_A).unwrap(),
+                &GetDescendantsOptions::default(),
+            )
             .await;
 
         assert!(result.is_ok());
@@ -536,17 +547,12 @@ mod tests {
         );
 
         // BarrierMode::Ignore - all descendants visible
-        let opts = HierarchyOptions {
+        let req = GetDescendantsOptions {
             barrier_mode: BarrierMode::Ignore,
+            ..Default::default()
         };
         let result = service
-            .get_descendants(
-                &ctx,
-                Uuid::parse_str(TENANT_A).unwrap(),
-                None,
-                Some(&opts),
-                None,
-            )
+            .get_descendants(&ctx, Uuid::parse_str(TENANT_A).unwrap(), &req)
             .await;
 
         assert!(result.is_ok());
@@ -564,9 +570,7 @@ mod tests {
             .get_descendants(
                 &ctx,
                 Uuid::parse_str(NONEXISTENT).unwrap(),
-                None,
-                None,
-                None,
+                &GetDescendantsOptions::default(),
             )
             .await;
 
@@ -601,21 +605,22 @@ mod tests {
 
         // Without filter: all 3 descendants (pre-order: B, C, D)
         let result = service
-            .get_descendants(&ctx, Uuid::parse_str(TENANT_A).unwrap(), None, None, None)
+            .get_descendants(
+                &ctx,
+                Uuid::parse_str(TENANT_A).unwrap(),
+                &GetDescendantsOptions::default(),
+            )
             .await
             .unwrap();
         assert_eq!(result.descendants.len(), 3);
 
         // With active-only filter: only D (B filtered out, so C is unreachable)
-        let filter = active_filter();
+        let req = GetDescendantsOptions {
+            status: vec![TenantStatus::Active],
+            ..Default::default()
+        };
         let result = service
-            .get_descendants(
-                &ctx,
-                Uuid::parse_str(TENANT_A).unwrap(),
-                Some(&filter),
-                None,
-                None,
-            )
+            .get_descendants(&ctx, Uuid::parse_str(TENANT_A).unwrap(), &req)
             .await
             .unwrap();
 
@@ -641,7 +646,11 @@ mod tests {
         let ctx = ctx_for_tenant(TENANT_A);
 
         let result = service
-            .get_descendants(&ctx, Uuid::parse_str(TENANT_A).unwrap(), None, None, None)
+            .get_descendants(
+                &ctx,
+                Uuid::parse_str(TENANT_A).unwrap(),
+                &GetDescendantsOptions::default(),
+            )
             .await
             .unwrap();
 
@@ -663,7 +672,9 @@ mod tests {
         let ctx = ctx_for_tenant(TENANT_A);
         let a_id = Uuid::parse_str(TENANT_A).unwrap();
 
-        let result = service.is_ancestor(&ctx, a_id, a_id, None).await;
+        let result = service
+            .is_ancestor(&ctx, a_id, a_id, &IsAncestorOptions::default())
+            .await;
         assert!(result.is_ok());
         assert!(!result.unwrap());
     }
@@ -684,12 +695,16 @@ mod tests {
         let b_id = Uuid::parse_str(TENANT_B).unwrap();
 
         // A is ancestor of B
-        let result = service.is_ancestor(&ctx, a_id, b_id, None).await;
+        let result = service
+            .is_ancestor(&ctx, a_id, b_id, &IsAncestorOptions::default())
+            .await;
         assert!(result.is_ok());
         assert!(result.unwrap());
 
         // B is NOT ancestor of A
-        let result = service.is_ancestor(&ctx, b_id, a_id, None).await;
+        let result = service
+            .is_ancestor(&ctx, b_id, a_id, &IsAncestorOptions::default())
+            .await;
         assert!(result.is_ok());
         assert!(!result.unwrap());
     }
@@ -713,18 +728,22 @@ mod tests {
         let c_id = Uuid::parse_str(TENANT_C).unwrap();
 
         // B is direct parent of C - allowed
-        let result = service.is_ancestor(&ctx, b_id, c_id, None).await;
+        let result = service
+            .is_ancestor(&ctx, b_id, c_id, &IsAncestorOptions::default())
+            .await;
         assert!(result.unwrap());
 
         // A blocked by barrier B
-        let result = service.is_ancestor(&ctx, a_id, c_id, None).await;
+        let result = service
+            .is_ancestor(&ctx, a_id, c_id, &IsAncestorOptions::default())
+            .await;
         assert!(!result.unwrap());
 
         // With BarrierMode::Ignore - A is ancestor of C
-        let opts = HierarchyOptions {
+        let req = IsAncestorOptions {
             barrier_mode: BarrierMode::Ignore,
         };
-        let result = service.is_ancestor(&ctx, a_id, c_id, Some(&opts)).await;
+        let result = service.is_ancestor(&ctx, a_id, c_id, &req).await;
         assert!(result.unwrap());
     }
 
@@ -746,14 +765,16 @@ mod tests {
         let b_id = Uuid::parse_str(TENANT_B).unwrap();
 
         // A is NOT ancestor of B when B is a barrier (default BarrierMode::Respect)
-        let result = service.is_ancestor(&ctx, a_id, b_id, None).await;
+        let result = service
+            .is_ancestor(&ctx, a_id, b_id, &IsAncestorOptions::default())
+            .await;
         assert!(!result.unwrap());
 
         // With BarrierMode::Ignore, A IS ancestor of B
-        let opts = HierarchyOptions {
+        let req = IsAncestorOptions {
             barrier_mode: BarrierMode::Ignore,
         };
-        let result = service.is_ancestor(&ctx, a_id, b_id, Some(&opts)).await;
+        let result = service.is_ancestor(&ctx, a_id, b_id, &req).await;
         assert!(result.unwrap());
     }
 
@@ -770,11 +791,15 @@ mod tests {
         let nonexistent = Uuid::parse_str(NONEXISTENT).unwrap();
 
         // Nonexistent ancestor
-        let result = service.is_ancestor(&ctx, nonexistent, a_id, None).await;
+        let result = service
+            .is_ancestor(&ctx, nonexistent, a_id, &IsAncestorOptions::default())
+            .await;
         assert!(result.is_err());
 
         // Nonexistent descendant
-        let result = service.is_ancestor(&ctx, a_id, nonexistent, None).await;
+        let result = service
+            .is_ancestor(&ctx, a_id, nonexistent, &IsAncestorOptions::default())
+            .await;
         assert!(result.is_err());
     }
 }

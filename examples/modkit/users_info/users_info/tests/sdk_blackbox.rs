@@ -10,8 +10,9 @@ use modkit_db::{ConnectOpts, DBProvider, Db, DbError, connect_db};
 use modkit_security::SecurityContext;
 use serde_json::json;
 use tenant_resolver_sdk::{
-    GetAncestorsResponse, GetDescendantsResponse, HierarchyOptions, TenantFilter, TenantRef,
-    TenantResolverError, TenantResolverGatewayClient, TenantStatus,
+    GetAncestorsOptions, GetAncestorsResponse, GetDescendantsOptions, GetDescendantsResponse,
+    GetTenantsOptions, IsAncestorOptions, TenantRef, TenantResolverError,
+    TenantResolverGatewayClient, TenantStatus,
 };
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
@@ -43,7 +44,7 @@ impl TenantResolverGatewayClient for MockTenantResolver {
         &self,
         ctx: &SecurityContext,
         ids: &[tenant_resolver_sdk::TenantId],
-        _filter: Option<&TenantFilter>,
+        _options: &GetTenantsOptions,
     ) -> Result<Vec<tenant_resolver_sdk::TenantInfo>, TenantResolverError> {
         let tenant_id = ctx.tenant_id();
         Ok(ids
@@ -64,7 +65,7 @@ impl TenantResolverGatewayClient for MockTenantResolver {
         &self,
         _ctx: &SecurityContext,
         id: tenant_resolver_sdk::TenantId,
-        _options: Option<&HierarchyOptions>,
+        _options: &GetAncestorsOptions,
     ) -> Result<GetAncestorsResponse, TenantResolverError> {
         Ok(GetAncestorsResponse {
             tenant: TenantRef {
@@ -82,9 +83,7 @@ impl TenantResolverGatewayClient for MockTenantResolver {
         &self,
         _ctx: &SecurityContext,
         id: tenant_resolver_sdk::TenantId,
-        _filter: Option<&TenantFilter>,
-        _options: Option<&HierarchyOptions>,
-        _max_depth: Option<u32>,
+        _options: &GetDescendantsOptions,
     ) -> Result<GetDescendantsResponse, TenantResolverError> {
         Ok(GetDescendantsResponse {
             tenant: TenantRef {
@@ -103,7 +102,7 @@ impl TenantResolverGatewayClient for MockTenantResolver {
         _ctx: &SecurityContext,
         _ancestor_id: tenant_resolver_sdk::TenantId,
         _descendant_id: tenant_resolver_sdk::TenantId,
-        _options: Option<&HierarchyOptions>,
+        _options: &IsAncestorOptions,
     ) -> Result<bool, TenantResolverError> {
         Ok(false)
     }

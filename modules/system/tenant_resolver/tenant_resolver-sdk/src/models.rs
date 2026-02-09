@@ -87,59 +87,33 @@ pub enum TenantStatus {
     Deleted,
 }
 
-/// Filter for tenant listing queries.
+/// Trait for types that expose a [`TenantStatus`].
 ///
-/// Used by `get_tenants` and `get_descendants` to filter results.
-/// An empty `status` vector means "no constraint" (include all statuses).
-///
-/// # Example
-///
-/// ```
-/// use tenant_resolver_sdk::{TenantFilter, TenantStatus};
-///
-/// // No filter (all tenants)
-/// let filter = TenantFilter::default();
-///
-/// // Only active tenants
-/// let filter = TenantFilter {
-///     status: vec![TenantStatus::Active],
-/// };
-/// ```
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct TenantFilter {
-    /// Filter by tenant status. Empty means all statuses are included.
-    pub status: Vec<TenantStatus>,
+/// Used by [`matches_status`] to filter both [`TenantInfo`] and
+/// [`TenantRef`] without duplicating logic.
+pub trait HasStatus {
+    /// Returns the tenant's current status.
+    fn status(&self) -> TenantStatus;
 }
 
-impl TenantFilter {
-    /// Returns `true` if no filter criteria are set.
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.status.is_empty()
-    }
+/// Returns `true` if the tenant matches the given status filter.
+///
+/// An empty `statuses` slice means "no constraint" (include all).
+/// Works with any type implementing [`HasStatus`].
+#[must_use]
+pub fn matches_status<T: HasStatus>(tenant: &T, statuses: &[TenantStatus]) -> bool {
+    statuses.is_empty() || statuses.contains(&tenant.status())
+}
 
-    /// Returns `true` if the given tenant matches all filter criteria.
-    ///
-    /// An empty `status` vector means "no constraint" (include all).
-    #[must_use]
-    pub fn matches(&self, tenant: &TenantInfo) -> bool {
-        if !self.status.is_empty() && !self.status.contains(&tenant.status) {
-            return false;
-        }
-        true
+impl HasStatus for TenantInfo {
+    fn status(&self) -> TenantStatus {
+        self.status
     }
+}
 
-    /// Returns `true` if the given tenant ref matches all filter criteria.
-    ///
-    /// Same as [`matches`](Self::matches) but for [`TenantRef`].
-    /// Intended for consumers that need to post-filter hierarchy responses
-    /// (e.g., filtering `GetAncestorsResponse::ancestors`).
-    #[must_use]
-    pub fn matches_ref(&self, tenant: &TenantRef) -> bool {
-        if !self.status.is_empty() && !self.status.contains(&tenant.status) {
-            return false;
-        }
-        true
+impl HasStatus for TenantRef {
+    fn status(&self) -> TenantStatus {
+        self.status
     }
 }
 
@@ -151,16 +125,14 @@ impl TenantFilter {
 /// # Example
 ///
 /// ```
-/// use tenant_resolver_sdk::{BarrierMode, HierarchyOptions};
+/// use tenant_resolver_sdk::BarrierMode;
 ///
 /// // Default: respect all barriers
-/// let opts = HierarchyOptions::default();
-/// assert_eq!(opts.barrier_mode, BarrierMode::Respect);
+/// let mode = BarrierMode::default();
+/// assert_eq!(mode, BarrierMode::Respect);
 ///
 /// // Ignore barriers (traverse through self-managed tenants)
-/// let opts = HierarchyOptions {
-///     barrier_mode: BarrierMode::Ignore,
-/// };
+/// let mode = BarrierMode::Ignore;
 /// ```
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum BarrierMode {
@@ -171,23 +143,95 @@ pub enum BarrierMode {
     Ignore,
 }
 
-/// Options for hierarchy traversal operations (`get_ancestors`, `get_descendants`, `is_ancestor`).
+/// Request parameters for [`get_ancestors`](crate::TenantResolverGatewayClient::get_ancestors).
 ///
 /// # Example
 ///
 /// ```
-/// use tenant_resolver_sdk::{BarrierMode, HierarchyOptions};
+/// use tenant_resolver_sdk::{BarrierMode, GetAncestorsOptions};
 ///
-/// // Default options (respect barriers)
-/// let opts = HierarchyOptions::default();
+/// // Default: respect barriers
+/// let req = GetAncestorsOptions::default();
 ///
 /// // Ignore barriers during traversal
-/// let opts = HierarchyOptions {
+/// let req = GetAncestorsOptions {
 ///     barrier_mode: BarrierMode::Ignore,
 /// };
 /// ```
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct HierarchyOptions {
+pub struct GetAncestorsOptions {
+    /// How to handle barriers during traversal.
+    pub barrier_mode: BarrierMode,
+}
+
+/// Options for [`get_tenants`](crate::TenantResolverGatewayClient::get_tenants).
+///
+/// # Example
+///
+/// ```
+/// use tenant_resolver_sdk::{GetTenantsOptions, TenantStatus};
+///
+/// // Default: no filter (all statuses)
+/// let opts = GetTenantsOptions::default();
+///
+/// // Only active tenants
+/// let opts = GetTenantsOptions {
+///     status: vec![TenantStatus::Active],
+/// };
+/// ```
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct GetTenantsOptions {
+    /// Filter by tenant status. Empty means all statuses are included.
+    #[serde(default)]
+    pub status: Vec<TenantStatus>,
+}
+
+/// Options for [`get_descendants`](crate::TenantResolverGatewayClient::get_descendants).
+///
+/// # Example
+///
+/// ```
+/// use tenant_resolver_sdk::{BarrierMode, GetDescendantsOptions, TenantStatus};
+///
+/// // Default: no filter, respect barriers, unlimited depth
+/// let opts = GetDescendantsOptions::default();
+///
+/// // Active tenants only, ignore barriers, depth 2
+/// let opts = GetDescendantsOptions {
+///     status: vec![TenantStatus::Active],
+///     barrier_mode: BarrierMode::Ignore,
+///     max_depth: Some(2),
+/// };
+/// ```
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct GetDescendantsOptions {
+    /// Filter descendants by status. Empty means all statuses are included.
+    /// Does NOT apply to the starting tenant.
+    #[serde(default)]
+    pub status: Vec<TenantStatus>,
+    /// How to handle barriers during traversal.
+    pub barrier_mode: BarrierMode,
+    /// Maximum depth to traverse (`None` = unlimited, `Some(1)` = direct children only).
+    pub max_depth: Option<u32>,
+}
+
+/// Request parameters for [`is_ancestor`](crate::TenantResolverGatewayClient::is_ancestor).
+///
+/// # Example
+///
+/// ```
+/// use tenant_resolver_sdk::{BarrierMode, IsAncestorOptions};
+///
+/// // Default: respect barriers
+/// let req = IsAncestorOptions::default();
+///
+/// // Ignore barriers
+/// let req = IsAncestorOptions {
+///     barrier_mode: BarrierMode::Ignore,
+/// };
+/// ```
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct IsAncestorOptions {
     /// How to handle barriers during traversal.
     pub barrier_mode: BarrierMode,
 }

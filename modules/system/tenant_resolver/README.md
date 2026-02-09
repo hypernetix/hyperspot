@@ -20,9 +20,9 @@ block hierarchy traversal from parent tenants (unless explicitly ignored).
 The gateway registers [`TenantResolverGatewayClient`](tenant_resolver-sdk/src/api.rs) in ClientHub:
 
 - `get_tenant(ctx, id)` — Retrieve single tenant by ID
-- `get_tenants(ctx, ids, filter)` — Retrieve multiple tenants by IDs (batch)
+- `get_tenants(ctx, ids, options)` — Retrieve multiple tenants by IDs (batch)
 - `get_ancestors(ctx, id, options)` — Get parent chain from tenant to root
-- `get_descendants(ctx, id, filter, options, max_depth)` — Get children subtree; `response.tenant` contains the starting tenant, `response.descendants` contains the subtree
+- `get_descendants(ctx, id, options)` — Get children subtree; `response.tenant` contains the starting tenant, `response.descendants` contains the subtree
 - `is_ancestor(ctx, ancestor_id, descendant_id, options)` — Check ancestry relationship
 
 The `SecurityContext` is passed to the plugin for use in access control decisions. Each plugin
@@ -40,36 +40,37 @@ T1 (root)
 - **`parent_id`**: Links a tenant to its parent (None for root tenants)
 - **`self_managed`**: When true, this tenant is a barrier that blocks parent traversal into its subtree
 
-### `TenantFilter`
+### Status Filtering
 
-Filter tenants by status:
+Filter tenants by status via options structs:
 
 ```rust
 // No filter (all tenants)
-let tenants = resolver.get_tenants(&ctx, &ids, None).await?;
+let tenants = resolver.get_tenants(&ctx, &ids, &GetTenantsOptions::default()).await?;
 
 // Only active tenants
-let filter = TenantFilter {
+let opts = GetTenantsOptions {
     status: vec![TenantStatus::Active],
 };
-let tenants = resolver.get_tenants(&ctx, &ids, Some(&filter)).await?;
+let tenants = resolver.get_tenants(&ctx, &ids, &opts).await?;
 ```
 
 An empty `status` vector means "no constraint" (include all statuses).
+`GetDescendantsOptions` has the same `status` field for filtering descendants.
 
-### `HierarchyOptions`
+### `BarrierMode`
 
-Control barrier behavior during hierarchy traversal:
+Control barrier behavior during hierarchy traversal via request structs:
 
 ```rust
 // Default: respect barriers
-let ancestors = resolver.get_ancestors(&ctx, id, None).await?;
+let ancestors = resolver.get_ancestors(&ctx, id, &GetAncestorsOptions::default()).await?;
 
 // Ignore barriers: traverse through self_managed tenants
-let options = HierarchyOptions {
+let opts = GetAncestorsOptions {
     barrier_mode: BarrierMode::Ignore,
 };
-let ancestors = resolver.get_ancestors(&ctx, id, Some(&options)).await?;
+let ancestors = resolver.get_ancestors(&ctx, id, &opts).await?;
 ```
 
 ### Barrier Semantics
@@ -100,9 +101,9 @@ Filter is supported only for methods where it provides significant value:
 | Method | `TenantNotFound` error | Filter support |
 |--------|------------------------|----------------|
 | `get_tenant(id)` | `id` doesn't exist | — (no filter) |
-| `get_tenants(ids, filter)` | — (skip missing) | filters results |
+| `get_tenants(ids, options)` | — (skip missing) | filters results |
 | `get_ancestors(id)` | `id` doesn't exist | — (no filter) |
-| `get_descendants(id, filter)` | `id` doesn't exist | filters descendants |
+| `get_descendants(id, options)` | `id` doesn't exist | filters descendants |
 | `is_ancestor(a, d)` | `a` or `d` doesn't exist | — (no filter) |
 
 **Design rationale:**
@@ -132,18 +133,22 @@ A (active) → B (suspended) → C (active)
 
 ```rust
 // Without filter: returns [B, C, D] (pre-order)
-resolver.get_descendants(&ctx, A, None, None, None).await?;
+resolver.get_descendants(&ctx, A, &GetDescendantsOptions::default()).await?;
 
 // With filter={status: Active}: returns [D] only
 // B is excluded (suspended), so C is unreachable
-resolver.get_descendants(&ctx, A, Some(&active_filter), None, None).await?;
+let opts = GetDescendantsOptions {
+    status: vec![TenantStatus::Active],
+    ..Default::default()
+};
+resolver.get_descendants(&ctx, A, &opts).await?;
 ```
 
 Note: Sibling order within the same parent is not guaranteed.
 
 ### Models
 
-See [`models.rs`](tenant_resolver-sdk/src/models.rs): `TenantId`, `TenantInfo`, `TenantRef`, `TenantStatus`, `TenantFilter`, `HierarchyOptions`, `BarrierMode`, `GetAncestorsResponse`, `GetDescendantsResponse`
+See [`models.rs`](tenant_resolver-sdk/src/models.rs): `TenantId`, `TenantInfo`, `TenantRef`, `TenantStatus`, `BarrierMode`, `GetTenantsOptions`, `GetAncestorsOptions`, `GetAncestorsResponse`, `GetDescendantsOptions`, `GetDescendantsResponse`, `IsAncestorOptions`
 
 **`TenantInfo`** — Full tenant information (for `get_tenant`, `get_tenants`):
 - `id` — Unique tenant identifier
@@ -211,22 +216,25 @@ let resolver = hub.get::<dyn TenantResolverGatewayClient>()?;
 let tenant = resolver.get_tenant(&ctx, tenant_id).await?;
 
 // Get multiple tenants (batch)
-let tenants = resolver.get_tenants(&ctx, &[id1, id2], None).await?;
+let tenants = resolver.get_tenants(&ctx, &[id1, id2], &GetTenantsOptions::default()).await?;
 
 // Get ancestor chain
-let response = resolver.get_ancestors(&ctx, tenant_id, None).await?;
+let response = resolver.get_ancestors(&ctx, tenant_id, &GetAncestorsOptions::default()).await?;
 println!("Tenant: {:?}, Ancestors: {:?}", response.tenant, response.ancestors);
 
 // Get descendants (max_depth=None means unlimited)
-let response = resolver.get_descendants(&ctx, tenant_id, None, None, None).await?;
+let response = resolver.get_descendants(&ctx, tenant_id, &GetDescendantsOptions::default()).await?;
 println!("Tenant: {:?}, Descendants: {:?}", response.tenant, response.descendants);
 
 // Get only active descendants
-let filter = TenantFilter { status: vec![TenantStatus::Active] };
-let response = resolver.get_descendants(&ctx, tenant_id, Some(&filter), None, None).await?;
+let opts = GetDescendantsOptions {
+    status: vec![TenantStatus::Active],
+    ..Default::default()
+};
+let response = resolver.get_descendants(&ctx, tenant_id, &opts).await?;
 
 // Check ancestry
-let is_parent = resolver.is_ancestor(&ctx, parent_id, child_id, None).await?;
+let is_parent = resolver.is_ancestor(&ctx, parent_id, child_id, &IsAncestorOptions::default()).await?;
 ```
 
 ## Technical Decisions
@@ -257,8 +265,8 @@ This simplifies callers who want to fetch multiple tenants without handling per-
 
 - `get_tenant`, `get_tenants` APIs
 - `get_ancestors`, `get_descendants`, `is_ancestor` for hierarchy traversal
-- `TenantFilter` for status-based filtering
-- `HierarchyOptions` with `BarrierMode` for traversal control
+- Status filtering via `GetTenantsOptions` and `GetDescendantsOptions`
+- `BarrierMode` for traversal control via options structs
 - Static plugin with config-driven hierarchy
 - Single-tenant plugin for simple deployments
 - ClientHub registration for in-process consumption

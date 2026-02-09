@@ -12,8 +12,9 @@ use modkit::plugins::GtsPluginSelector;
 use modkit::telemetry::ThrottledLog;
 use modkit_security::SecurityContext;
 use tenant_resolver_sdk::{
-    GetAncestorsResponse, GetDescendantsResponse, HierarchyOptions, TenantFilter, TenantId,
-    TenantInfo, TenantResolverPluginClient, TenantResolverPluginSpecV1,
+    GetAncestorsOptions, GetAncestorsResponse, GetDescendantsOptions, GetDescendantsResponse,
+    GetTenantsOptions, IsAncestorOptions, TenantId, TenantInfo, TenantResolverPluginClient,
+    TenantResolverPluginSpecV1,
 };
 use tracing::info;
 use types_registry_sdk::{GtsEntity, ListQuery, TypesRegistryClient};
@@ -26,6 +27,14 @@ const UNAVAILABLE_LOG_THROTTLE: Duration = Duration::from_secs(10);
 /// Tenant resolver gateway service.
 ///
 /// Discovers plugins via types-registry and delegates API calls.
+///
+/// # Security Context
+///
+/// The gateway does **not** perform its own access-control checks on the
+/// `SecurityContext`. It passes the context through to the selected plugin,
+/// which is responsible for deciding how (or whether) to enforce
+/// authorization. This is intentional — different plugins may have
+/// different access-control semantics.
 pub struct Service {
     hub: Arc<ClientHub>,
     vendor: String,
@@ -129,11 +138,11 @@ impl Service {
         &self,
         ctx: &SecurityContext,
         ids: &[TenantId],
-        filter: Option<&TenantFilter>,
+        options: &GetTenantsOptions,
     ) -> Result<Vec<TenantInfo>, DomainError> {
         let plugin = self.get_plugin().await?;
         plugin
-            .get_tenants(ctx, ids, filter)
+            .get_tenants(ctx, ids, options)
             .await
             .map_err(DomainError::from)
     }
@@ -149,7 +158,7 @@ impl Service {
         &self,
         ctx: &SecurityContext,
         id: TenantId,
-        options: Option<&HierarchyOptions>,
+        options: &GetAncestorsOptions,
     ) -> Result<GetAncestorsResponse, DomainError> {
         let plugin = self.get_plugin().await?;
         plugin
@@ -164,18 +173,16 @@ impl Service {
     ///
     /// - `TenantNotFound` if tenant doesn't exist
     /// - Plugin resolution errors
-    #[tracing::instrument(skip_all, fields(tenant.id = %id, max_depth))]
+    #[tracing::instrument(skip_all, fields(tenant.id = %id))]
     pub async fn get_descendants(
         &self,
         ctx: &SecurityContext,
         id: TenantId,
-        filter: Option<&TenantFilter>,
-        options: Option<&HierarchyOptions>,
-        max_depth: Option<u32>,
+        options: &GetDescendantsOptions,
     ) -> Result<GetDescendantsResponse, DomainError> {
         let plugin = self.get_plugin().await?;
         plugin
-            .get_descendants(ctx, id, filter, options, max_depth)
+            .get_descendants(ctx, id, options)
             .await
             .map_err(DomainError::from)
     }
@@ -192,7 +199,7 @@ impl Service {
         ctx: &SecurityContext,
         ancestor_id: TenantId,
         descendant_id: TenantId,
-        options: Option<&HierarchyOptions>,
+        options: &IsAncestorOptions,
     ) -> Result<bool, DomainError> {
         let plugin = self.get_plugin().await?;
         plugin

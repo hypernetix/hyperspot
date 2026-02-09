@@ -9,8 +9,8 @@ use modkit_security::SecurityContext;
 
 use crate::error::TenantResolverError;
 use crate::models::{
-    GetAncestorsResponse, GetDescendantsResponse, HierarchyOptions, TenantFilter, TenantId,
-    TenantInfo,
+    GetAncestorsOptions, GetAncestorsResponse, GetDescendantsOptions, GetDescendantsResponse,
+    GetTenantsOptions, IsAncestorOptions, TenantId, TenantInfo,
 };
 
 /// Public API trait for the tenant resolver gateway.
@@ -25,20 +25,24 @@ use crate::models::{
 /// let tenant = resolver.get_tenant(&ctx, tenant_id).await?;
 ///
 /// // Batch get tenants
-/// let tenants = resolver.get_tenants(&ctx, &[id1, id2], None).await?;
+/// let tenants = resolver.get_tenants(&ctx, &[id1, id2], &GetTenantsOptions::default()).await?;
 ///
 /// // Get ancestor chain
-/// let response = resolver.get_ancestors(&ctx, tenant_id, None).await?;
+/// let response = resolver.get_ancestors(&ctx, tenant_id, &GetAncestorsOptions::default()).await?;
 ///
 /// // Get descendants subtree
-/// let descendants = resolver.get_descendants(&ctx, tenant_id, None, None, None).await?;
+/// let descendants = resolver.get_descendants(&ctx, tenant_id, &GetDescendantsOptions::default()).await?;
 ///
 /// // Check ancestry
-/// let is_anc = resolver.is_ancestor(&ctx, parent_id, child_id, None).await?;
+/// let is_anc = resolver.is_ancestor(&ctx, parent_id, child_id, &IsAncestorOptions::default()).await?;
 /// ```
 ///
-/// The `SecurityContext` is passed to the plugin for access control decisions.
-/// Each plugin defines its own logic for using (or ignoring) the context.
+/// # Security Context
+///
+/// The gateway does **not** perform its own access-control checks.
+/// The `SecurityContext` is passed through to the plugin, which decides
+/// how (or whether) to enforce authorization. This is intentional —
+/// different plugins may have different access-control semantics.
 #[async_trait]
 pub trait TenantResolverGatewayClient: Send + Sync {
     /// Get tenant information by ID.
@@ -72,12 +76,12 @@ pub trait TenantResolverGatewayClient: Send + Sync {
     ///
     /// * `ctx` - Security context
     /// * `ids` - The tenant IDs to retrieve
-    /// * `filter` - Optional filter criteria (e.g., status)
+    /// * `options` - Filter options (e.g., status)
     async fn get_tenants(
         &self,
         ctx: &SecurityContext,
         ids: &[TenantId],
-        filter: Option<&TenantFilter>,
+        options: &GetTenantsOptions,
     ) -> Result<Vec<TenantInfo>, TenantResolverError>;
 
     /// Get ancestor chain from tenant to root.
@@ -92,8 +96,7 @@ pub trait TenantResolverGatewayClient: Send + Sync {
     /// - If a tenant in the chain has `self_managed = true`, it acts as a barrier
     ///   and ancestors above it are not included
     ///
-    /// Use `HierarchyOptions { barrier_mode: BarrierMode::Ignore }` to traverse
-    /// through barriers.
+    /// Use `BarrierMode::Ignore` to traverse through barriers.
     ///
     /// # Errors
     ///
@@ -103,12 +106,12 @@ pub trait TenantResolverGatewayClient: Send + Sync {
     ///
     /// * `ctx` - Security context
     /// * `id` - The tenant ID to get ancestors for
-    /// * `options` - Optional hierarchy traversal options
+    /// * `options` - Hierarchy traversal options
     async fn get_ancestors(
         &self,
         ctx: &SecurityContext,
         id: TenantId,
-        options: Option<&HierarchyOptions>,
+        options: &GetAncestorsOptions,
     ) -> Result<GetAncestorsResponse, TenantResolverError>;
 
     /// Get descendants subtree of the given tenant.
@@ -122,8 +125,7 @@ pub trait TenantResolverGatewayClient: Send + Sync {
     /// - The barrier tenant itself is NOT included in descendants
     /// - Its subtree is not traversed
     ///
-    /// Use `HierarchyOptions { barrier_mode: BarrierMode::Ignore }` to include
-    /// barrier tenants and their subtrees.
+    /// Use `BarrierMode::Ignore` to include barrier tenants and their subtrees.
     ///
     /// # Errors
     ///
@@ -133,16 +135,12 @@ pub trait TenantResolverGatewayClient: Send + Sync {
     ///
     /// * `ctx` - Security context
     /// * `id` - The tenant ID to get descendants for
-    /// * `filter` - Optional filter to apply to descendants (e.g., status)
-    /// * `options` - Optional hierarchy traversal options
-    /// * `max_depth` - Maximum depth to traverse (`None` = unlimited, `Some(1)` = direct children only)
+    /// * `options` - Filter, barrier mode, and depth options
     async fn get_descendants(
         &self,
         ctx: &SecurityContext,
         id: TenantId,
-        filter: Option<&TenantFilter>,
-        options: Option<&HierarchyOptions>,
-        max_depth: Option<u32>,
+        options: &GetDescendantsOptions,
     ) -> Result<GetDescendantsResponse, TenantResolverError>;
 
     /// Check if `ancestor_id` is an ancestor of `descendant_id`.
@@ -156,7 +154,7 @@ pub trait TenantResolverGatewayClient: Send + Sync {
     /// - If `descendant_id` is `self_managed`, returns `false` (barrier blocks parentage)
     /// - If there's a barrier tenant between ancestor and descendant, returns `false`
     ///
-    /// Use `HierarchyOptions { barrier_mode: BarrierMode::Ignore }` to ignore barriers.
+    /// Use `BarrierMode::Ignore` to ignore barriers.
     ///
     /// # Errors
     ///
@@ -167,12 +165,12 @@ pub trait TenantResolverGatewayClient: Send + Sync {
     /// * `ctx` - Security context
     /// * `ancestor_id` - The potential ancestor tenant ID
     /// * `descendant_id` - The potential descendant tenant ID
-    /// * `options` - Optional hierarchy traversal options
+    /// * `options` - Hierarchy traversal options
     async fn is_ancestor(
         &self,
         ctx: &SecurityContext,
         ancestor_id: TenantId,
         descendant_id: TenantId,
-        options: Option<&HierarchyOptions>,
+        options: &IsAncestorOptions,
     ) -> Result<bool, TenantResolverError>;
 }

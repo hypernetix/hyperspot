@@ -13,7 +13,10 @@
 //! Consumers obtain the client from `ClientHub`:
 //!
 //! ```ignore
-//! use tenant_resolver_sdk::TenantResolverGatewayClient;
+//! use tenant_resolver_sdk::{
+//!     TenantResolverGatewayClient, GetAncestorsOptions, GetDescendantsOptions,
+//!     GetTenantsOptions, IsAncestorOptions,
+//! };
 //!
 //! // Get the client from ClientHub
 //! let resolver = hub.get::<dyn TenantResolverGatewayClient>()?;
@@ -21,14 +24,17 @@
 //! // Get tenant info
 //! let tenant = resolver.get_tenant(&ctx, tenant_id).await?;
 //!
+//! // Get multiple tenants
+//! let tenants = resolver.get_tenants(&ctx, &[id1, id2], &GetTenantsOptions::default()).await?;
+//!
 //! // Get ancestors
-//! let response = resolver.get_ancestors(&ctx, tenant_id, None).await?;
+//! let response = resolver.get_ancestors(&ctx, tenant_id, &GetAncestorsOptions::default()).await?;
 //!
 //! // Get descendants
-//! let descendants = resolver.get_descendants(&ctx, tenant_id, None, None, None).await?;
+//! let descendants = resolver.get_descendants(&ctx, tenant_id, &GetDescendantsOptions::default()).await?;
 //!
 //! // Check ancestry
-//! let is_anc = resolver.is_ancestor(&ctx, parent_id, child_id, None).await?;
+//! let is_anc = resolver.is_ancestor(&ctx, parent_id, child_id, &IsAncestorOptions::default()).await?;
 //! ```
 
 pub mod api;
@@ -42,7 +48,8 @@ pub use api::TenantResolverGatewayClient;
 pub use error::TenantResolverError;
 pub use gts::TenantResolverPluginSpecV1;
 pub use models::{
-    BarrierMode, GetAncestorsResponse, GetDescendantsResponse, HierarchyOptions, TenantFilter,
-    TenantId, TenantInfo, TenantRef, TenantStatus,
+    BarrierMode, GetAncestorsOptions, GetAncestorsResponse, GetDescendantsOptions,
+    GetDescendantsResponse, GetTenantsOptions, HasStatus, IsAncestorOptions, TenantId, TenantInfo,
+    TenantRef, TenantStatus, matches_status,
 };
 pub use plugin_api::TenantResolverPluginClient;

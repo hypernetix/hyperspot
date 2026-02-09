@@ -9,8 +9,8 @@ use modkit_security::SecurityContext;
 
 use crate::error::TenantResolverError;
 use crate::models::{
-    GetAncestorsResponse, GetDescendantsResponse, HierarchyOptions, TenantFilter, TenantId,
-    TenantInfo,
+    GetAncestorsOptions, GetAncestorsResponse, GetDescendantsOptions, GetDescendantsResponse,
+    GetTenantsOptions, IsAncestorOptions, TenantId, TenantInfo,
 };
 
 /// Plugin API trait for tenant resolver implementations.
@@ -20,6 +20,11 @@ use crate::models::{
 ///
 /// The gateway delegates to these methods. Cross-cutting concerns (logging,
 /// metrics) may be added at the gateway level in the future.
+///
+/// # Security Context
+///
+/// The gateway passes the `SecurityContext` through without validation.
+/// Each plugin decides how (or whether) to enforce authorization.
 #[async_trait]
 pub trait TenantResolverPluginClient: Send + Sync {
     /// Get tenant information by ID.
@@ -51,12 +56,12 @@ pub trait TenantResolverPluginClient: Send + Sync {
     ///
     /// * `ctx` - Security context
     /// * `ids` - The tenant IDs to retrieve
-    /// * `filter` - Optional filter criteria (e.g., status)
+    /// * `options` - Filter options (e.g., status)
     async fn get_tenants(
         &self,
         ctx: &SecurityContext,
         ids: &[TenantId],
-        filter: Option<&TenantFilter>,
+        options: &GetTenantsOptions,
     ) -> Result<Vec<TenantInfo>, TenantResolverError>;
 
     /// Get ancestor chain from tenant to root.
@@ -74,12 +79,12 @@ pub trait TenantResolverPluginClient: Send + Sync {
     ///
     /// * `ctx` - Security context
     /// * `id` - The tenant ID to get ancestors for
-    /// * `options` - Optional hierarchy traversal options (barrier handling)
+    /// * `options` - Hierarchy traversal options
     async fn get_ancestors(
         &self,
         ctx: &SecurityContext,
         id: TenantId,
-        options: Option<&HierarchyOptions>,
+        options: &GetAncestorsOptions,
     ) -> Result<GetAncestorsResponse, TenantResolverError>;
 
     /// Get descendants subtree of the given tenant.
@@ -100,16 +105,12 @@ pub trait TenantResolverPluginClient: Send + Sync {
     ///
     /// * `ctx` - Security context
     /// * `id` - The tenant ID to get descendants for
-    /// * `filter` - Optional filter to apply to descendants (not to the requested tenant)
-    /// * `options` - Optional hierarchy traversal options (barrier handling)
-    /// * `max_depth` - Maximum depth to traverse (`None` = unlimited, `Some(1)` = direct children only)
+    /// * `options` - Filter, barrier mode, and depth options
     async fn get_descendants(
         &self,
         ctx: &SecurityContext,
         id: TenantId,
-        filter: Option<&TenantFilter>,
-        options: Option<&HierarchyOptions>,
-        max_depth: Option<u32>,
+        options: &GetDescendantsOptions,
     ) -> Result<GetDescendantsResponse, TenantResolverError>;
 
     /// Check if `ancestor_id` is an ancestor of `descendant_id`.
@@ -132,12 +133,12 @@ pub trait TenantResolverPluginClient: Send + Sync {
     /// * `ctx` - Security context
     /// * `ancestor_id` - The potential ancestor tenant ID
     /// * `descendant_id` - The potential descendant tenant ID
-    /// * `options` - Optional hierarchy traversal options (barrier handling)
+    /// * `options` - Hierarchy traversal options
     async fn is_ancestor(
         &self,
         ctx: &SecurityContext,
         ancestor_id: TenantId,
         descendant_id: TenantId,
-        options: Option<&HierarchyOptions>,
+        options: &IsAncestorOptions,
     ) -> Result<bool, TenantResolverError>;
 }

@@ -9,8 +9,9 @@
 use async_trait::async_trait;
 use modkit_security::SecurityContext;
 use tenant_resolver_sdk::{
-    GetAncestorsResponse, GetDescendantsResponse, HierarchyOptions, TenantFilter, TenantId,
-    TenantInfo, TenantRef, TenantResolverError, TenantResolverPluginClient, TenantStatus,
+    GetAncestorsOptions, GetAncestorsResponse, GetDescendantsOptions, GetDescendantsResponse,
+    GetTenantsOptions, IsAncestorOptions, TenantId, TenantInfo, TenantRef, TenantResolverError,
+    TenantResolverPluginClient, TenantStatus, matches_status,
 };
 
 use super::service::Service;
@@ -41,11 +42,6 @@ fn build_tenant_ref(id: TenantId) -> TenantRef {
     }
 }
 
-/// Check if a tenant info matches the filter.
-fn matches_filter(tenant: &TenantInfo, filter: Option<&TenantFilter>) -> bool {
-    filter.is_none_or(|f| f.matches(tenant))
-}
-
 #[async_trait]
 impl TenantResolverPluginClient for Service {
     async fn get_tenant(
@@ -69,7 +65,7 @@ impl TenantResolverPluginClient for Service {
         &self,
         ctx: &SecurityContext,
         ids: &[TenantId],
-        filter: Option<&TenantFilter>,
+        options: &GetTenantsOptions,
     ) -> Result<Vec<TenantInfo>, TenantResolverError> {
         // Nil UUID context means no tenant exists
         if ctx.tenant_id().is_nil() {
@@ -86,7 +82,7 @@ impl TenantResolverPluginClient for Service {
             // Only the context tenant exists
             if *id == ctx.tenant_id() {
                 let tenant = build_tenant_info(*id);
-                if matches_filter(&tenant, filter) {
+                if matches_status(&tenant, &options.status) {
                     result.push(tenant);
                 }
             }
@@ -100,7 +96,7 @@ impl TenantResolverPluginClient for Service {
         &self,
         ctx: &SecurityContext,
         id: TenantId,
-        _options: Option<&HierarchyOptions>,
+        _options: &GetAncestorsOptions,
     ) -> Result<GetAncestorsResponse, TenantResolverError> {
         // Reject nil UUID (anonymous context)
         if ctx.tenant_id().is_nil() {
@@ -122,9 +118,7 @@ impl TenantResolverPluginClient for Service {
         &self,
         ctx: &SecurityContext,
         id: TenantId,
-        _filter: Option<&TenantFilter>,
-        _options: Option<&HierarchyOptions>,
-        _max_depth: Option<u32>,
+        _options: &GetDescendantsOptions,
     ) -> Result<GetDescendantsResponse, TenantResolverError> {
         // Reject nil UUID (anonymous context)
         if ctx.tenant_id().is_nil() {
@@ -147,7 +141,7 @@ impl TenantResolverPluginClient for Service {
         ctx: &SecurityContext,
         ancestor_id: TenantId,
         descendant_id: TenantId,
-        _options: Option<&HierarchyOptions>,
+        _options: &IsAncestorOptions,
     ) -> Result<bool, TenantResolverError> {
         // Reject nil UUID (anonymous context)
         if ctx.tenant_id().is_nil() {
@@ -251,7 +245,9 @@ mod tests {
         let nil_id = Uuid::nil();
         let ctx = ctx_for_tenant(nil_id);
 
-        let result = service.get_tenants(&ctx, &[nil_id], None).await;
+        let result = service
+            .get_tenants(&ctx, &[nil_id], &GetTenantsOptions::default())
+            .await;
 
         assert!(result.is_ok());
         assert!(result.unwrap().is_empty());
@@ -263,7 +259,9 @@ mod tests {
         let nil_id = Uuid::nil();
         let ctx = ctx_for_tenant(nil_id);
 
-        let result = service.get_ancestors(&ctx, nil_id, None).await;
+        let result = service
+            .get_ancestors(&ctx, nil_id, &GetAncestorsOptions::default())
+            .await;
 
         assert!(result.is_err());
         assert!(matches!(
@@ -279,7 +277,7 @@ mod tests {
         let ctx = ctx_for_tenant(nil_id);
 
         let result = service
-            .get_descendants(&ctx, nil_id, None, None, None)
+            .get_descendants(&ctx, nil_id, &GetDescendantsOptions::default())
             .await;
 
         assert!(result.is_err());
@@ -295,7 +293,9 @@ mod tests {
         let nil_id = Uuid::nil();
         let ctx = ctx_for_tenant(nil_id);
 
-        let result = service.is_ancestor(&ctx, nil_id, nil_id, None).await;
+        let result = service
+            .is_ancestor(&ctx, nil_id, nil_id, &IsAncestorOptions::default())
+            .await;
 
         assert!(result.is_err());
         assert!(matches!(
@@ -312,7 +312,9 @@ mod tests {
         let tenant_id = Uuid::parse_str(TENANT_A).unwrap();
         let ctx = ctx_for_tenant(tenant_id);
 
-        let result = service.get_tenants(&ctx, &[tenant_id], None).await;
+        let result = service
+            .get_tenants(&ctx, &[tenant_id], &GetTenantsOptions::default())
+            .await;
 
         assert!(result.is_ok());
         let tenants = result.unwrap();
@@ -329,7 +331,11 @@ mod tests {
 
         // Request both the context tenant and a nonexistent one
         let result = service
-            .get_tenants(&ctx, &[ctx_tenant, other_tenant], None)
+            .get_tenants(
+                &ctx,
+                &[ctx_tenant, other_tenant],
+                &GetTenantsOptions::default(),
+            )
             .await;
 
         assert!(result.is_ok());
@@ -346,11 +352,10 @@ mod tests {
         let ctx = ctx_for_tenant(tenant_id);
 
         // Filter for suspended status (our tenant is Active)
-        let filter = TenantFilter {
+        let opts = GetTenantsOptions {
             status: vec![TenantStatus::Suspended],
         };
-
-        let result = service.get_tenants(&ctx, &[tenant_id], Some(&filter)).await;
+        let result = service.get_tenants(&ctx, &[tenant_id], &opts).await;
 
         assert!(result.is_ok());
         // Filtered out because status doesn't match
@@ -365,7 +370,9 @@ mod tests {
         let tenant_id = Uuid::parse_str(TENANT_A).unwrap();
         let ctx = ctx_for_tenant(tenant_id);
 
-        let result = service.get_ancestors(&ctx, tenant_id, None).await;
+        let result = service
+            .get_ancestors(&ctx, tenant_id, &GetAncestorsOptions::default())
+            .await;
 
         assert!(result.is_ok());
         let response = result.unwrap();
@@ -380,7 +387,9 @@ mod tests {
         let other_tenant = Uuid::parse_str(TENANT_B).unwrap();
         let ctx = ctx_for_tenant(ctx_tenant);
 
-        let result = service.get_ancestors(&ctx, other_tenant, None).await;
+        let result = service
+            .get_ancestors(&ctx, other_tenant, &GetAncestorsOptions::default())
+            .await;
 
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -400,7 +409,7 @@ mod tests {
         let ctx = ctx_for_tenant(tenant_id);
 
         let result = service
-            .get_descendants(&ctx, tenant_id, None, None, None)
+            .get_descendants(&ctx, tenant_id, &GetDescendantsOptions::default())
             .await;
 
         assert!(result.is_ok());
@@ -417,7 +426,7 @@ mod tests {
         let ctx = ctx_for_tenant(ctx_tenant);
 
         let result = service
-            .get_descendants(&ctx, other_tenant, None, None, None)
+            .get_descendants(&ctx, other_tenant, &GetDescendantsOptions::default())
             .await;
 
         assert!(result.is_err());
@@ -437,7 +446,9 @@ mod tests {
         let tenant_id = Uuid::parse_str(TENANT_A).unwrap();
         let ctx = ctx_for_tenant(tenant_id);
 
-        let result = service.is_ancestor(&ctx, tenant_id, tenant_id, None).await;
+        let result = service
+            .is_ancestor(&ctx, tenant_id, tenant_id, &IsAncestorOptions::default())
+            .await;
 
         assert!(result.is_ok());
         assert!(!result.unwrap());
@@ -451,7 +462,12 @@ mod tests {
         let ctx = ctx_for_tenant(ctx_tenant);
 
         let result = service
-            .is_ancestor(&ctx, other_tenant, ctx_tenant, None)
+            .is_ancestor(
+                &ctx,
+                other_tenant,
+                ctx_tenant,
+                &IsAncestorOptions::default(),
+            )
             .await;
 
         assert!(result.is_err());
@@ -471,7 +487,12 @@ mod tests {
         let ctx = ctx_for_tenant(ctx_tenant);
 
         let result = service
-            .is_ancestor(&ctx, ctx_tenant, other_tenant, None)
+            .is_ancestor(
+                &ctx,
+                ctx_tenant,
+                other_tenant,
+                &IsAncestorOptions::default(),
+            )
             .await;
 
         assert!(result.is_err());
