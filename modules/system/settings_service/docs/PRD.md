@@ -46,7 +46,7 @@ The Settings Service acts as a universal configuration management system that su
 - API for creating new setting types with GTS schema definitions
 - Automatic OpenAPI documentation via ModKit OperationBuilder
 - OData support for pagination, filtering, and field projection
-- Secure-by-default database access with automatic tenant scoping
+- Secure-by-default database access with automatic tenant and setting type (GTS) scoping
 
 ## B. Actors
 
