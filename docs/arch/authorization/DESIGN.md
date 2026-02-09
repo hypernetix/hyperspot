@@ -22,11 +22,11 @@
 
 ## Overview
 
-This document describes HyperSpot's approach to authentication (AuthN) and authorization (AuthZ).
+This document describes Cyber Fabric's approach to authentication (AuthN) and authorization (AuthZ).
 
-**Authentication** verifies the identity of the subject making a request. HyperSpot uses the **AuthN Resolver** module to integrate with vendor's Identity Provider (IdP), validate access tokens, and extract subject identity into a `SecurityContext`.
+**Authentication** verifies the identity of the subject making a request. Cyber Fabric uses the **AuthN Resolver** module to integrate with vendor's Identity Provider (IdP), validate access tokens, and extract subject identity into a `SecurityContext`.
 
-**Authorization** determines what the authenticated subject can do. HyperSpot uses the **AuthZ Resolver** module (acting as PDP) to obtain access decisions and query-level constraints. The core challenge: HyperSpot modules need to enforce authorization at the **query level** (SQL WHERE clauses), not just perform point-in-time access checks.
+**Authorization** determines what the authenticated subject can do. Cyber Fabric uses the **AuthZ Resolver** module (acting as PDP) to obtain access decisions and query-level constraints. The core challenge: Cyber Fabric modules need to enforce authorization at the **query level** (SQL WHERE clauses), not just perform point-in-time access checks.
 
 See [ADR 0001](./ADR/0001-pdp-pep-authorization-model.md) for the authorization model and [ADR 0002](./ADR/0002-split-authn-authz-resolvers.md) for the rationale behind separating AuthN and AuthZ.
 
@@ -37,7 +37,7 @@ This document uses the PDP/PEP authorization model (per NIST SP 800-162):
 - **PDP (Policy Decision Point)** — evaluates policies and returns access decisions with constraints
 - **PEP (Policy Enforcement Point)** — enforces PDP decisions at resource access points
 
-In HyperSpot's architecture:
+In Cyber Fabric's architecture:
 - **AuthN Resolver** validates tokens and produces SecurityContext (separate concern from PDP)
 - **AuthZ Resolver** (via vendor-specific plugin) serves as the **PDP**
 - **Domain modules** act as **PEPs**, applying constraints to database queries
@@ -90,10 +90,10 @@ sequenceDiagram
 
 ### AuthN Resolver and AuthZ Resolver: Gateway + Plugin Architecture
 
-Since IdP and PDP are vendor-specific, HyperSpot cannot implement authentication and authorization directly. Instead, we use the **gateway + plugin** pattern with two separate resolvers:
+Since IdP and PDP are vendor-specific, Cyber Fabric cannot implement authentication and authorization directly. Instead, we use the **gateway + plugin** pattern with two separate resolvers:
 
-- **AuthN Resolver** — a HyperSpot gateway module that defines a unified interface for authentication operations (token validation, introspection, SecurityContext production)
-- **AuthZ Resolver** — a HyperSpot gateway module that defines a unified interface for authorization operations (PDP functionality, policy evaluation, constraint generation)
+- **AuthN Resolver** — a Cyber Fabric gateway module that defines a unified interface for authentication operations (token validation, introspection, SecurityContext production)
+- **AuthZ Resolver** — a Cyber Fabric gateway module that defines a unified interface for authorization operations (PDP functionality, policy evaluation, constraint generation)
 - **Vendor Plugins** — implement the AuthN and/or AuthZ interfaces, integrating with vendor's IdP and Authorization API
 
 This separation provides:
@@ -108,7 +108,7 @@ Each vendor develops their own AuthN and AuthZ plugins (or a unified plugin impl
 
 **AuthN Plugin:**
 
-The AuthN Resolver plugin bridges HyperSpot to the vendor's IdP. The plugin is responsible for:
+The AuthN Resolver plugin bridges Cyber Fabric to the vendor's IdP. The plugin is responsible for:
 - **IdP communication** — calling introspection endpoints, handling IdP-specific protocols
 - **Claim enrichment** — if the IdP doesn't include `subject_type` or `subject_tenant_id` in tokens, the plugin fetches this information from vendor services
 - **Response mapping** — converting IdP-specific responses to `SecurityContext`
@@ -116,7 +116,7 @@ The AuthN Resolver plugin bridges HyperSpot to the vendor's IdP. The plugin is r
 
 **AuthZ Plugin:**
 
-The AuthZ Resolver plugin bridges HyperSpot to the vendor's Authorization Service (PDP). The plugin is responsible for:
+The AuthZ Resolver plugin bridges Cyber Fabric to the vendor's Authorization Service (PDP). The plugin is responsible for:
 - **Policy evaluation** — calling vendor's authorization API with subject, action, resource, context
 - **Constraint generation** — translating vendor's policy decisions into SQL-compilable constraints
 - **Hierarchy queries** — using Tenant Resolver and RG Resolver to query tenant and group hierarchies for constraint generation
@@ -124,7 +124,7 @@ The AuthZ Resolver plugin bridges HyperSpot to the vendor's Authorization Servic
 
 **Policy Storage and Retrieval (Out of Scope):**
 
-How authorization rules are stored, represented, and retrieved within the PDP is entirely a vendor implementation detail. HyperSpot defines only the PDP-PEP contract (request/response format via AuthZEN-extended API).
+How authorization rules are stored, represented, and retrieved within the PDP is entirely a vendor implementation detail. Cyber Fabric defines only the PDP-PEP contract (request/response format via AuthZEN-extended API).
 
 Vendors may use any policy model and storage mechanism:
 - **RBAC** — role-permission tables, role hierarchies
@@ -155,7 +155,7 @@ flowchart TB
         AuthzSvc["Authz Service"]
     end
 
-    subgraph HyperSpot
+    subgraph Cyber Fabric
         subgraph TenantResolver["Tenant Resolver"]
             TenantGW["Gateway"]
             TenantPlugin["Plugin"]
@@ -273,11 +273,11 @@ Token scopes provide capability narrowing for third-party applications. They act
 | First-party | UI, CLI | `["*"]` | No restrictions, full user permissions |
 | Third-party | Partner integrations | `["read:events"]` | Limited to granted scopes |
 
-**Detection:** AuthN Resolver plugin determines app type during introspection and sets `token_scopes` accordingly. HyperSpot does not maintain a trusted client list.
+**Detection:** AuthN Resolver plugin determines app type during introspection and sets `token_scopes` accordingly. Cyber Fabric does not maintain a trusted client list.
 
 ### Vendor Neutrality
 
-HyperSpot accepts scopes as opaque strings (`Vec<String>`). Different vendors use
+Cyber Fabric accepts scopes as opaque strings (`Vec<String>`). Different vendors use
 different formats:
 - Google-style: `https://api.vendor.com/auth/tasks.read`
 - Simple strings: `read_all`, `admin`
@@ -476,7 +476,7 @@ SecurityContext {
 
 ### Plugin Responsibilities
 
-The AuthN Resolver plugin bridges HyperSpot to the vendor's IdP. Plugin responsibilities:
+The AuthN Resolver plugin bridges Cyber Fabric to the vendor's IdP. Plugin responsibilities:
 
 1. **Token Validation** — Implement vendor-specific validation logic (JWT signature verification, introspection, custom protocols)
 2. **Claim Extraction** — Extract subject identity from token claims or introspection response
@@ -513,7 +513,7 @@ We chose [OpenID AuthZEN Authorization API 1.0](https://openid.net/specs/authori
 - Clean subject/action/resource/context structure
 - Extensible via `context` field
 
-However, AuthZEN out of the box doesn't solve HyperSpot's core requirement: **query-level authorization**.
+However, AuthZEN out of the box doesn't solve Cyber Fabric's core requirement: **query-level authorization**.
 
 #### Why Access Evaluation API Alone Isn't Enough
 
@@ -555,7 +555,7 @@ For **point operations**, Access Evaluation API could technically work, but requ
 
 AuthZEN's Resource Search API answers: "What resources can subject S perform action A on?" — returning a list of resource IDs.
 
-This **assumes the PDP has access to resource data**. In HyperSpot's architecture, resources live in the PEP's database — the PDP cannot enumerate what it doesn't have.
+This **assumes the PDP has access to resource data**. In Cyber Fabric's architecture, resources live in the PEP's database — the PDP cannot enumerate what it doesn't have.
 
 This creates an architectural mismatch:
 - **PDP** knows "who can access what" (authorization policies)
@@ -993,7 +993,7 @@ All predicates filter resources based on their properties. The `resource_propert
 
 The Rust SQL compilation library supports **extensible predicate types**:
 
-- **Standard predicates** — HyperSpot's built-in modules use only the standard predicates listed below (`eq`, `in`, `in_tenant_subtree`, `in_group`, `in_group_subtree`)
+- **Standard predicates** — Cyber Fabric's built-in modules use only the standard predicates listed below (`eq`, `in`, `in_tenant_subtree`, `in_group`, `in_group_subtree`)
 - **Custom predicates** — Vendors can extend the system by:
   1. Registering new predicate types with the SQL compilation library
   2. Providing SQL compilation handlers for these predicates
@@ -1215,7 +1215,7 @@ Capabilities declare what predicate types the PEP can enforce locally:
 
 ### Table Schemas (Local Projections)
 
-These tables are maintained locally by HyperSpot gateway modules (Tenant Resolver, Resource Group Resolver) and used by PEPs to execute constraint queries efficiently without calling back to the vendor platform.
+These tables are maintained locally by Cyber Fabric gateway modules (Tenant Resolver, Resource Group Resolver) and used by PEPs to execute constraint queries efficiently without calling back to the vendor platform.
 
 #### `tenant_closure`
 
@@ -1303,7 +1303,7 @@ These questions require further design work.
 
 3. **Local projections sync** - How to keep projection tables (tenant_closure, resource_group_closure, resource_group_membership) in sync with vendor's source of truth? Possible approaches: event-based sync (requires event broker), CDC-based (Debezium-like), or periodic polling via Resolver APIs. Each has trade-offs in consistency, latency, and infrastructure complexity.
 
-4. **Resource Group Service** - Should HyperSpot have its own Resource Group Service, or is Resource Group Resolver (gateway to vendor's service) sufficient? Having a HyperSpot-native service has pros and cons. Needs design.
+4. **Resource Group Service** - Should Cyber Fabric have its own Resource Group Service, or is Resource Group Resolver (gateway to vendor's service) sufficient? Having a Cyber Fabric-native service has pros and cons. Needs design.
 
 5. **Authorization decision caching** - See [Authorization Decision Caching](#authorization-decision-caching) section for detailed open questions: cache key structure, cache-control protocol, invalidation strategy, token expiration handling.
 
@@ -1318,8 +1318,23 @@ These questions require further design work.
 
 9. **S2S token issuance** — Should AuthN Resolver support token issuance for service-to-service communication, or is it sufficient to rely on standard [OAuth 2.0 Client Credentials Grant](https://datatracker.ietf.org/doc/html/rfc6749#section-4.4)? Open questions:
    - **Scope** — Is token issuance AuthN Resolver's responsibility, or should services obtain tokens directly from the IdP?
-   - **Use cases** — What S2S scenarios require HyperSpot involvement vs. direct IdP integration?
+   - **Use cases** — What S2S scenarios require Cyber Fabric involvement vs. direct IdP integration?
    - **Token types** — Should S2S tokens differ from user tokens (e.g., different scopes, shorter TTL)?
+
+10. **Multi-Factor Authentication (MFA) support** — How should Cyber Fabric handle MFA across both AuthN and AuthZ layers? Industry standards and best practices to study:
+    - **AuthN side:**
+      - **OIDC `acr` / `amr` claims** — [OpenID Connect Core §2 (acr, amr)](https://openid.net/specs/openid-connect-core-1_0.html#IDToken) defines Authentication Context Class Reference (`acr`) and Authentication Methods References (`amr`) claims. Should AuthN Resolver extract and propagate these in `SecurityContext`?
+      - **NIST SP 800-63B** — Authenticator Assurance Levels (AAL1/AAL2/AAL3). Should Cyber Fabric be aware of AAL and map `acr` values to AAL levels?
+      - **Step-up authentication** — [RFC 9470: OAuth 2.0 Step-Up Authentication Challenge Protocol](https://datatracker.ietf.org/doc/html/rfc9470) defines how a resource server can signal that a higher authentication level is required. Should AuthN Middleware or PEP be able to trigger step-up challenges (e.g., `WWW-Authenticate: Bearer ... acr_values="..."`)? How does this interact with the current single-method `authenticate()` interface?
+      - **SecurityContext changes** — Should `SecurityContext` include `acr`, `amr`, or an abstracted `authentication_assurance_level` field?
+    - **AuthZ side:**
+      - **MFA-aware policies** — Should PDP be able to require MFA for specific actions or resources (e.g., "delete operations require AAL2+")? How to pass authentication assurance level to PDP in the evaluation request context?
+      - **Constraint-level MFA** — Can MFA requirements be expressed as constraints, or is this a pre-constraint check (deny before constraint evaluation)?
+      - **Dynamic step-up** — If PDP determines MFA is needed but the current session lacks it, what should the PEP response be? HTTP 401 with step-up challenge vs 403?
+    - **Open sub-questions:**
+      - Should MFA enforcement be purely IdP-side (transparent to Cyber Fabric), or does Cyber Fabric need explicit awareness?
+      - How do industry multi-tenant platforms (Azure AD Conditional Access, AWS IAM, Google Cloud IAP) handle MFA in the context of delegated authorization?
+      - What is the interaction between MFA and token scopes? Should third-party apps be able to request MFA-elevated scopes?
 
 ---
 
@@ -1341,4 +1356,4 @@ These questions require further design work.
 - [TENANT_MODEL.md](./TENANT_MODEL.md) — Tenant topology, barriers, closure tables
 - [RESOURCE_GROUP_MODEL.md](./RESOURCE_GROUP_MODEL.md) — Resource group topology, membership, hierarchy
 - [AUTHZ_USAGE_SCENARIOS.md](./AUTHZ_USAGE_SCENARIOS.md) — Authorization usage scenarios
-- [HyperSpot GTS (Global Type System)](../../../modules/system/types-registry/)
+- [Cyber Fabric GTS (Global Type System)](../../../modules/system/types-registry/)
