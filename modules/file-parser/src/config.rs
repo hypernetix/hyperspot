@@ -8,6 +8,11 @@ pub struct FileParserConfig {
     pub max_file_size_mb: u64,
     #[serde(default = "default_download_timeout_secs")]
     pub download_timeout_secs: u64,
+    /// Allow HTTP (non-HTTPS) URLs for file downloads.
+    /// This should only be enabled in test/development environments.
+    /// Default: false (HTTPS required)
+    #[serde(default = "default_allow_insecure_http")]
+    pub allow_insecure_http: bool,
 }
 
 impl Default for FileParserConfig {
@@ -15,6 +20,7 @@ impl Default for FileParserConfig {
         Self {
             max_file_size_mb: default_max_file_size_mb(),
             download_timeout_secs: default_download_timeout_secs(),
+            allow_insecure_http: default_allow_insecure_http(),
         }
     }
 }
@@ -25,4 +31,8 @@ fn default_max_file_size_mb() -> u64 {
 
 fn default_download_timeout_secs() -> u64 {
     60
+}
+
+fn default_allow_insecure_http() -> bool {
+    false
 }

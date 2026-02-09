@@ -45,6 +45,7 @@ pub struct FileParserService {
 pub struct ServiceConfig {
     pub max_file_size_bytes: usize,
     pub download_timeout_secs: u64,
+    pub allow_insecure_http: bool,
 }
 
 impl Default for ServiceConfig {
@@ -52,6 +53,7 @@ impl Default for ServiceConfig {
         Self {
             max_file_size_bytes: 100 * 1024 * 1024, // 100 MB
             download_timeout_secs: 60,
+            allow_insecure_http: false,
         }
     }
 }
@@ -73,9 +75,16 @@ impl FileParserService {
         parsers: Vec<Arc<dyn FileParserBackend>>,
         config: ServiceConfig,
     ) -> Result<Self, modkit_http::HttpError> {
+        let transport = if config.allow_insecure_http {
+            modkit_http::TransportSecurity::AllowInsecureHttp
+        } else {
+            modkit_http::TransportSecurity::TlsOnly
+        };
+
         let http_client = HttpClient::builder()
             .timeout(Duration::from_secs(config.download_timeout_secs))
             .max_body_size(config.max_file_size_bytes)
+            .transport(transport)
             .build()?;
 
         Ok(Self {
