@@ -33,7 +33,7 @@ The application is designed for individual use with cross-device synchronization
 
 #### User
 
-**ID**: `fdd-todo-app-actor-user`
+**ID**: `cpt-examples-todo-app-actor-user`
 **Role**: Primary user who creates, manages, and completes tasks in the application.
 **Needs**: Simple task management, cross-device access, quick task entry.
 
@@ -41,12 +41,12 @@ The application is designed for individual use with cross-device synchronization
 
 #### Sync Service
 
-**ID**: `fdd-todo-app-actor-sync-service`
+**ID**: `cpt-examples-todo-app-actor-sync-service`
 **Role**: Background service that synchronizes tasks across user devices in real-time.
 
 #### Notification Service
 
-**ID**: `fdd-todo-app-actor-notification-service`
+**ID**: `cpt-examples-todo-app-actor-notification-service`
 **Role**: Sends reminders and notifications to users about upcoming or overdue tasks.
 
 ## 3. Operational Concept & Environment
@@ -82,45 +82,45 @@ The application is designed for individual use with cross-device synchronization
 
 #### Create Task
 
-- [x] `p1` - **ID**: `fdd-todo-app-req-create-task`
+- [x] `p1` - **ID**: `cpt-examples-todo-app-fr-create-task`
 
 The system **MUST** allow users to create a new task with a title, optional description, due date, priority level, and category.
 
 **Rationale**: Core functionality — users need to capture tasks quickly.
-**Actors**: `fdd-todo-app-actor-user`
+**Actors**: `cpt-examples-todo-app-actor-user`
 
 #### Complete Task
 
-- [x] `p1` - **ID**: `fdd-todo-app-req-complete-task`
+- [x] `p1` - **ID**: `cpt-examples-todo-app-fr-complete-task`
 
 The system **MUST** allow users to mark a task as completed or revert it to incomplete status.
 
 **Rationale**: Essential for task lifecycle management.
-**Actors**: `fdd-todo-app-actor-user`
+**Actors**: `cpt-examples-todo-app-actor-user`
 
 #### Delete Task
 
-- [x] `p1` - **ID**: `fdd-todo-app-req-delete-task`
+- [x] `p1` - **ID**: `cpt-examples-todo-app-fr-delete-task`
 
 The system **MUST** allow users to delete a task permanently.
 
 **Rationale**: Users need to remove irrelevant or mistaken tasks.
-**Actors**: `fdd-todo-app-actor-user`
+**Actors**: `cpt-examples-todo-app-actor-user`
 
 ### 5.2 Organization
 
 #### Filter Tasks
 
-- [x] `p2` - **ID**: `fdd-todo-app-req-filter-tasks`
+- [x] `p2` - **ID**: `cpt-examples-todo-app-fr-filter-tasks`
 
 The system **MUST** allow users to filter tasks by status (all, active, completed), category, and priority.
 
 **Rationale**: Helps users focus on relevant tasks.
-**Actors**: `fdd-todo-app-actor-user`
+**Actors**: `cpt-examples-todo-app-actor-user`
 
 ## 6. Non-Functional Requirements
 
-> **Default guidelines**: Project-wide NFR baselines (performance, security, reliability, scalability) are defined in root [PRD.md](../../PRD.md) and [docs/guidelines/](../../../guidelines/). Only document module-specific NFRs here — either **exclusions** from defaults or **standalone** requirements unique to this module.
+> **Default guidelines**: Project-wide NFR baselines (performance, security, reliability, scalability) are defined in root [PRD.md](../../PRD.md) and [docs/guidelines/](../../guidelines/). Only document module-specific NFRs here — either **exclusions** from defaults or **standalone** requirements unique to this module.
 >
 > **Testing strategy**: NFRs are verified via automated benchmarks, security scans, and monitoring unless otherwise specified.
 
@@ -128,7 +128,7 @@ The system **MUST** allow users to filter tasks by status (all, active, complete
 
 #### Response Time
 
-- [x] `p1` - **ID**: `fdd-todo-app-req-response-time`
+- [x] `p1` - **ID**: `cpt-examples-todo-app-nfr-response-time`
 
 All user interactions **MUST** complete within 200ms at p95 under normal load (stricter than project default of 500ms).
 
@@ -138,7 +138,7 @@ All user interactions **MUST** complete within 200ms at p95 under normal load (s
 
 #### Data Persistence
 
-- [x] `p1` - **ID**: `fdd-todo-app-req-data-persistence`
+- [x] `p1` - **ID**: `cpt-examples-todo-app-nfr-data-persistence`
 
 User data **MUST** be persisted locally immediately and synced to cloud storage within 5 seconds of any change when online.
 
@@ -146,13 +146,23 @@ User data **MUST** be persisted locally immediately and synced to cloud storage 
 **Rationale**: Module-specific requirement (project default doesn't cover offline-first + sync pattern)
 **Architecture Allocation**: See DESIGN.md § NFR Allocation for how this is realized
 
+#### Offline Support
+
+- [x] `p1` - **ID**: `cpt-examples-todo-app-nfr-offline-support`
+
+The system **MUST** support offline mode where task creation, completion, filtering, and deletion operate without network connectivity.
+
+**Threshold**: Offline operations succeed with no errors; synchronization begins automatically when connectivity resumes
+**Rationale**: Offline-first is a core product requirement for intermittent connectivity scenarios
+**Architecture Allocation**: See DESIGN.md § Architecture Drivers and § NFR Allocation for how this is realized
+
 ## 7. Public Library Interfaces
 
 ### 7.1 Public API Surface
 
 #### REST API
 
-- [x] `p1` - **ID**: `fdd-todo-app-interface-rest-api`
+- [x] `p1` - **ID**: `cpt-examples-todo-app-interface-rest-api`
 
 **Type**: REST API (OpenAPI 3.0)
 **Stability**: stable
@@ -161,7 +171,7 @@ User data **MUST** be persisted locally immediately and synced to cloud storage 
 
 #### Task Data Model
 
-- [x] `p1` - **ID**: `fdd-todo-app-interface-task-model`
+- [x] `p1` - **ID**: `cpt-examples-todo-app-interface-task-model`
 
 **Type**: JSON Schema
 **Stability**: stable
@@ -172,7 +182,7 @@ User data **MUST** be persisted locally immediately and synced to cloud storage 
 
 #### Sync Service Contract
 
-- [x] `p1` - **ID**: `fdd-todo-app-contract-sync`
+- [x] `p1` - **ID**: `cpt-examples-todo-app-contract-sync`
 
 **Direction**: required from client (external sync backend)
 **Protocol/Format**: WebSocket + JSON for real-time task updates
@@ -180,11 +190,11 @@ User data **MUST** be persisted locally immediately and synced to cloud storage 
 
 ## 8. Use Cases
 
-#### UC: Create a New Task
+#### Create a New Task
 
-- [ ] `p1` - **ID**: `fdd-todo-app-req-uc-create-task`
+- [ ] `p1` - **ID**: `cpt-examples-todo-app-usecase-create-task`
 
-**Actor**: `fdd-todo-app-actor-user`
+**Actor**: `cpt-examples-todo-app-actor-user`
 
 **Preconditions**:
 - User is authenticated and on the main task list view
@@ -236,9 +246,3 @@ User data **MUST** be persisted locally immediately and synced to cloud storage 
 - How long should completed tasks be retained before archival?
 - Should we support task sharing between users in future phases?
 - What is the maximum number of categories per user?
-
-## 14. Traceability
-
-- **Design**: [DESIGN.md](./DESIGN.md)
-- **ADRs**: [ADR/](./ADR/)
-- **Features**: [features/](./features/)

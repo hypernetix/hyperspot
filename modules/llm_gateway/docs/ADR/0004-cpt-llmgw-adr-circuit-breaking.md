@@ -4,7 +4,7 @@
 
 **Status**: Accepted
 
-**ID**: `fdd-llmgw-adr-circuit-breaking`
+**ID**: `cpt-cf-llm-gateway-adr-circuit-breaking`
 
 ## Context and Problem Statement
 
@@ -63,5 +63,17 @@ Characteristics:
 ## Related Design Elements
 
 **Requirements**:
-* `fdd-llmgw-fr-provider-fallback-v1` - Fallback on provider failure
-* `fdd-model-registry-fr-health-monitoring-v1` - Provider health metrics
+* `cpt-cf-llm-gateway-fr-provider-fallback-v1` - Fallback on provider failure
+* `cpt-model-registry-fr-health-monitoring-v1` - Provider health metrics
+
+**Actors**:
+* `cpt-cf-llm-gateway-actor-consumer` - Triggers fallback behavior via request config
+* `cpt-cf-llm-gateway-actor-provider` - Source of failures and latency degradation
+
+**Constraints**:
+* `cpt-cf-llm-gateway-constraint-provider-rate-limits` - Excessive retries/fallbacks must respect quotas
+* `cpt-cf-llm-gateway-constraint-outbound-dependency` - Circuit breaking is enforced at Outbound API Gateway
+
+**References**:
+* PRD: `cpt-cf-llm-gateway-fr-provider-fallback-v1`, `cpt-cf-llm-gateway-fr-timeout-v1`
+* DESIGN: `cpt-cf-llm-gateway-constraint-outbound-dependency`

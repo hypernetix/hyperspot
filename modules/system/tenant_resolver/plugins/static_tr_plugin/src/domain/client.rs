@@ -5,8 +5,9 @@
 use async_trait::async_trait;
 use modkit_security::SecurityContext;
 use tenant_resolver_sdk::{
-    AccessOptions, TenantFilter, TenantId, TenantInfo, TenantResolverError,
-    TenantResolverPluginClient,
+    GetAncestorsOptions, GetAncestorsResponse, GetDescendantsOptions, GetDescendantsResponse,
+    GetTenantsOptions, IsAncestorOptions, TenantId, TenantInfo, TenantResolverError,
+    TenantResolverPluginClient, matches_status,
 };
 
 use super::service::Service;
@@ -24,64 +25,83 @@ impl TenantResolverPluginClient for Service {
             .ok_or(TenantResolverError::TenantNotFound { tenant_id: id })
     }
 
-    async fn can_access(
+    async fn get_tenants(
         &self,
-        ctx: &SecurityContext,
-        target: TenantId,
-        _options: Option<&AccessOptions>,
-    ) -> Result<bool, TenantResolverError> {
-        let source = ctx.tenant_id();
+        _ctx: &SecurityContext,
+        ids: &[TenantId],
+        options: &GetTenantsOptions,
+    ) -> Result<Vec<TenantInfo>, TenantResolverError> {
+        let mut result = Vec::new();
+        let mut seen = std::collections::HashSet::new();
 
-        // First, check if target tenant exists
-        if !self.tenants.contains_key(&target) {
-            return Err(TenantResolverError::TenantNotFound { tenant_id: target });
+        for id in ids {
+            if !seen.insert(id) {
+                continue; // Skip duplicate IDs
+            }
+            if let Some(tenant) = self.tenants.get(id)
+                && matches_status(tenant, &options.status)
+            {
+                result.push(tenant.clone());
+            }
+            // Missing IDs are silently skipped
         }
 
-        // Self-access is always allowed
-        if source == target {
-            return Ok(true);
-        }
-
-        // Check if access rule exists
-        Ok(self.access_rules.contains(&(source, target)))
+        Ok(result)
     }
 
-    async fn get_accessible_tenants(
+    async fn get_ancestors(
         &self,
-        ctx: &SecurityContext,
-        filter: Option<&TenantFilter>,
-        _options: Option<&AccessOptions>,
-    ) -> Result<Vec<TenantInfo>, TenantResolverError> {
-        let source = ctx.tenant_id();
+        _ctx: &SecurityContext,
+        id: TenantId,
+        options: &GetAncestorsOptions,
+    ) -> Result<GetAncestorsResponse, TenantResolverError> {
+        // Get the tenant first
+        let tenant = self
+            .tenants
+            .get(&id)
+            .ok_or(TenantResolverError::TenantNotFound { tenant_id: id })?;
 
-        let mut items: Vec<TenantInfo> = Vec::new();
+        // Collect ancestors
+        let ancestors = self.collect_ancestors(id, options.barrier_mode);
 
-        // Add self-tenant first if it exists and matches filter
-        if let Some(self_info) = self.tenants.get(&source)
-            && Self::matches_filter(self_info, filter)
-        {
-            items.push(self_info.clone());
-        }
+        Ok(GetAncestorsResponse {
+            tenant: tenant.into(),
+            ancestors,
+        })
+    }
 
-        // Get all targets accessible by this source
-        let accessible_ids = self.accessible_by.get(&source);
+    async fn get_descendants(
+        &self,
+        _ctx: &SecurityContext,
+        id: TenantId,
+        options: &GetDescendantsOptions,
+    ) -> Result<GetDescendantsResponse, TenantResolverError> {
+        // Get the tenant first (filter does NOT apply to the starting tenant)
+        let tenant = self
+            .tenants
+            .get(&id)
+            .ok_or(TenantResolverError::TenantNotFound { tenant_id: id })?;
 
-        // Add accessible tenants (if any) that match the filter
-        if let Some(ids) = accessible_ids {
-            for id in ids {
-                // Skip self (already added)
-                if *id == source {
-                    continue;
-                }
-                if let Some(info) = self.tenants.get(id)
-                    && Self::matches_filter(info, filter)
-                {
-                    items.push(info.clone());
-                }
-            }
-        }
+        // Collect descendants with filter applied during traversal:
+        // - Results are in pre-order (parent before children)
+        // - Nodes that don't pass filter are excluded along with their subtrees
+        let descendants =
+            self.collect_descendants(id, &options.status, options.barrier_mode, options.max_depth);
 
-        Ok(items)
+        Ok(GetDescendantsResponse {
+            tenant: tenant.into(),
+            descendants,
+        })
+    }
+
+    async fn is_ancestor(
+        &self,
+        _ctx: &SecurityContext,
+        ancestor_id: TenantId,
+        descendant_id: TenantId,
+        options: &IsAncestorOptions,
+    ) -> Result<bool, TenantResolverError> {
+        self.is_ancestor_of(ancestor_id, descendant_id, options.barrier_mode)
     }
 }
 
@@ -89,8 +109,8 @@ impl TenantResolverPluginClient for Service {
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
-    use crate::config::{AccessRuleConfig, StaticTrPluginConfig, TenantConfig};
-    use tenant_resolver_sdk::TenantStatus;
+    use crate::config::{StaticTrPluginConfig, TenantConfig};
+    use tenant_resolver_sdk::{BarrierMode, TenantStatus};
     use uuid::Uuid;
 
     // Helper to create a test tenant config
@@ -100,14 +120,30 @@ mod tests {
             name: name.to_owned(),
             status,
             tenant_type: None,
+            parent_id: None,
+            self_managed: false,
         }
     }
 
-    // Helper to create an access rule config
-    fn access_rule(source: &str, target: &str) -> AccessRuleConfig {
-        AccessRuleConfig {
-            source: Uuid::parse_str(source).unwrap(),
-            target: Uuid::parse_str(target).unwrap(),
+    fn tenant_with_parent(id: &str, name: &str, parent: &str) -> TenantConfig {
+        TenantConfig {
+            id: Uuid::parse_str(id).unwrap(),
+            name: name.to_owned(),
+            status: TenantStatus::Active,
+            tenant_type: None,
+            parent_id: Some(Uuid::parse_str(parent).unwrap()),
+            self_managed: false,
+        }
+    }
+
+    fn tenant_barrier(id: &str, name: &str, parent: &str) -> TenantConfig {
+        TenantConfig {
+            id: Uuid::parse_str(id).unwrap(),
+            name: name.to_owned(),
+            status: TenantStatus::Active,
+            tenant_type: None,
+            parent_id: Some(Uuid::parse_str(parent).unwrap()),
+            self_managed: true,
         }
     }
 
@@ -118,18 +154,11 @@ mod tests {
             .build()
     }
 
-    // Filter for active tenants only
-    fn active_filter() -> TenantFilter {
-        TenantFilter {
-            status: vec![TenantStatus::Active],
-            ..Default::default()
-        }
-    }
-
     // Test UUIDs
     const TENANT_A: &str = "11111111-1111-1111-1111-111111111111";
     const TENANT_B: &str = "22222222-2222-2222-2222-222222222222";
     const TENANT_C: &str = "33333333-3333-3333-3333-333333333333";
+    const TENANT_D: &str = "44444444-4444-4444-4444-444444444444";
     const NONEXISTENT: &str = "99999999-9999-9999-9999-999999999999";
 
     // ==================== get_tenant tests ====================
@@ -174,341 +203,603 @@ mod tests {
         }
     }
 
-    #[tokio::test]
-    async fn get_tenant_empty_service() {
-        let cfg = StaticTrPluginConfig::default();
-        let service = Service::from_config(&cfg);
-        let ctx = ctx_for_tenant(TENANT_A);
-        let tenant_a_id = Uuid::parse_str(TENANT_A).unwrap();
-
-        let result = service.get_tenant(&ctx, tenant_a_id).await;
-
-        assert!(result.is_err());
-        match result.unwrap_err() {
-            TenantResolverError::TenantNotFound { tenant_id } => {
-                assert_eq!(tenant_id, tenant_a_id);
-            }
-            other => panic!("Expected TenantNotFound, got: {other:?}"),
-        }
-    }
+    // ==================== get_tenants tests ====================
 
     #[tokio::test]
-    async fn get_tenant_returns_any_status() {
-        // get_tenant now returns tenant regardless of status
-        let cfg = StaticTrPluginConfig {
-            tenants: vec![tenant(TENANT_A, "Tenant A", TenantStatus::Suspended)],
-            ..Default::default()
-        };
-        let service = Service::from_config(&cfg);
-        let ctx = ctx_for_tenant(TENANT_A);
-        let tenant_a_id = Uuid::parse_str(TENANT_A).unwrap();
-
-        // Returns tenant even if suspended
-        let result = service.get_tenant(&ctx, tenant_a_id).await;
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap().status, TenantStatus::Suspended);
-    }
-
-    // ==================== can_access tests ====================
-
-    #[tokio::test]
-    async fn can_access_allowed() {
-        let cfg = StaticTrPluginConfig {
-            tenants: vec![
-                tenant(TENANT_A, "A", TenantStatus::Active),
-                tenant(TENANT_B, "B", TenantStatus::Active),
-            ],
-            access_rules: vec![access_rule(TENANT_A, TENANT_B)],
-            ..Default::default()
-        };
-        let service = Service::from_config(&cfg);
-        let ctx = ctx_for_tenant(TENANT_A);
-
-        let result = service
-            .can_access(&ctx, Uuid::parse_str(TENANT_B).unwrap(), None)
-            .await;
-
-        assert!(result.is_ok());
-        assert!(result.unwrap());
-    }
-
-    #[tokio::test]
-    async fn can_access_denied_no_rule() {
-        let cfg = StaticTrPluginConfig {
-            tenants: vec![
-                tenant(TENANT_A, "A", TenantStatus::Active),
-                tenant(TENANT_B, "B", TenantStatus::Active),
-            ],
-            access_rules: vec![], // No rules
-            ..Default::default()
-        };
-        let service = Service::from_config(&cfg);
-        let ctx = ctx_for_tenant(TENANT_A);
-
-        let result = service
-            .can_access(&ctx, Uuid::parse_str(TENANT_B).unwrap(), None)
-            .await;
-
-        assert!(result.is_ok());
-        assert!(!result.unwrap());
-    }
-
-    #[tokio::test]
-    async fn can_access_error_for_nonexistent_target() {
-        let cfg = StaticTrPluginConfig {
-            tenants: vec![tenant(TENANT_A, "A", TenantStatus::Active)],
-            access_rules: vec![],
-            ..Default::default()
-        };
-        let service = Service::from_config(&cfg);
-        let ctx = ctx_for_tenant(TENANT_A);
-        let nonexistent_id = Uuid::parse_str(NONEXISTENT).unwrap();
-
-        let result = service.can_access(&ctx, nonexistent_id, None).await;
-
-        assert!(result.is_err());
-        match result.unwrap_err() {
-            TenantResolverError::TenantNotFound { tenant_id } => {
-                assert_eq!(tenant_id, nonexistent_id);
-            }
-            other => panic!("Expected TenantNotFound, got: {other:?}"),
-        }
-    }
-
-    #[tokio::test]
-    async fn can_access_not_symmetric() {
-        // A can access B does NOT mean B can access A
-        let cfg = StaticTrPluginConfig {
-            tenants: vec![
-                tenant(TENANT_A, "A", TenantStatus::Active),
-                tenant(TENANT_B, "B", TenantStatus::Active),
-            ],
-            access_rules: vec![access_rule(TENANT_A, TENANT_B)], // Only A -> B
-            ..Default::default()
-        };
-        let service = Service::from_config(&cfg);
-
-        // A can access B
-        let ctx_a = ctx_for_tenant(TENANT_A);
-        let result = service
-            .can_access(&ctx_a, Uuid::parse_str(TENANT_B).unwrap(), None)
-            .await;
-        assert!(result.unwrap());
-
-        // B cannot access A (no reverse rule)
-        let ctx_b = ctx_for_tenant(TENANT_B);
-        let result = service
-            .can_access(&ctx_b, Uuid::parse_str(TENANT_A).unwrap(), None)
-            .await;
-        assert!(!result.unwrap());
-    }
-
-    #[tokio::test]
-    async fn can_access_not_transitive() {
-        // A -> B and B -> C does NOT mean A -> C
-        let cfg = StaticTrPluginConfig {
-            tenants: vec![
-                tenant(TENANT_A, "A", TenantStatus::Active),
-                tenant(TENANT_B, "B", TenantStatus::Active),
-                tenant(TENANT_C, "C", TenantStatus::Active),
-            ],
-            access_rules: vec![
-                access_rule(TENANT_A, TENANT_B), // A -> B
-                access_rule(TENANT_B, TENANT_C), // B -> C
-            ],
-            ..Default::default()
-        };
-        let service = Service::from_config(&cfg);
-        let ctx = ctx_for_tenant(TENANT_A);
-
-        // A can access B
-        let result = service
-            .can_access(&ctx, Uuid::parse_str(TENANT_B).unwrap(), None)
-            .await;
-        assert!(result.unwrap());
-
-        // A cannot access C (no direct rule)
-        let result = service
-            .can_access(&ctx, Uuid::parse_str(TENANT_C).unwrap(), None)
-            .await;
-        assert!(!result.unwrap());
-    }
-
-    #[tokio::test]
-    async fn can_access_self_allowed() {
-        // Plugin handles self-access: always allowed
-        let cfg = StaticTrPluginConfig {
-            tenants: vec![tenant(TENANT_A, "A", TenantStatus::Active)],
-            access_rules: vec![], // No explicit self-access rule needed
-            ..Default::default()
-        };
-        let service = Service::from_config(&cfg);
-        let ctx = ctx_for_tenant(TENANT_A);
-
-        // Plugin returns true for self-access
-        let result = service
-            .can_access(&ctx, Uuid::parse_str(TENANT_A).unwrap(), None)
-            .await;
-        assert!(result.unwrap());
-    }
-
-    #[tokio::test]
-    async fn can_access_allows_any_status() {
-        // can_access no longer filters by status - that's plugin policy
-        let cfg = StaticTrPluginConfig {
-            tenants: vec![
-                tenant(TENANT_A, "A", TenantStatus::Active),
-                tenant(TENANT_B, "B", TenantStatus::Suspended),
-            ],
-            access_rules: vec![access_rule(TENANT_A, TENANT_B)],
-            ..Default::default()
-        };
-        let service = Service::from_config(&cfg);
-        let ctx = ctx_for_tenant(TENANT_A);
-        let tenant_b_id = Uuid::parse_str(TENANT_B).unwrap();
-
-        // Returns true even if target is suspended (access rule exists)
-        let result = service.can_access(&ctx, tenant_b_id, None).await;
-        assert!(result.unwrap());
-    }
-
-    // ==================== get_accessible_tenants tests ====================
-
-    #[tokio::test]
-    async fn get_accessible_tenants_with_rules() {
-        let cfg = StaticTrPluginConfig {
-            tenants: vec![
-                tenant(TENANT_A, "A", TenantStatus::Active),
-                tenant(TENANT_B, "B", TenantStatus::Active),
-                tenant(TENANT_C, "C", TenantStatus::Active),
-            ],
-            access_rules: vec![
-                access_rule(TENANT_A, TENANT_B),
-                access_rule(TENANT_A, TENANT_C),
-            ],
-            ..Default::default()
-        };
-        let service = Service::from_config(&cfg);
-        let ctx = ctx_for_tenant(TENANT_A);
-
-        let result = service.get_accessible_tenants(&ctx, None, None).await;
-
-        assert!(result.is_ok());
-        let items = result.unwrap();
-        // Self-tenant A + accessible B and C
-        assert_eq!(items.len(), 3);
-
-        // Self-tenant should be first
-        assert_eq!(items[0].id, Uuid::parse_str(TENANT_A).unwrap());
-
-        let ids: Vec<_> = items.iter().map(|t| t.id).collect();
-        assert!(ids.contains(&Uuid::parse_str(TENANT_B).unwrap()));
-        assert!(ids.contains(&Uuid::parse_str(TENANT_C).unwrap()));
-    }
-
-    #[tokio::test]
-    async fn get_accessible_tenants_no_rules() {
-        let cfg = StaticTrPluginConfig {
-            tenants: vec![
-                tenant(TENANT_A, "A", TenantStatus::Active),
-                tenant(TENANT_B, "B", TenantStatus::Active),
-            ],
-            access_rules: vec![],
-            ..Default::default()
-        };
-        let service = Service::from_config(&cfg);
-        let ctx = ctx_for_tenant(TENANT_A);
-
-        let result = service.get_accessible_tenants(&ctx, None, None).await;
-
-        assert!(result.is_ok());
-        let items = result.unwrap();
-        // Only self-tenant (no cross-tenant rules)
-        assert_eq!(items.len(), 1);
-        assert_eq!(items[0].id, Uuid::parse_str(TENANT_A).unwrap());
-    }
-
-    #[tokio::test]
-    async fn get_accessible_tenants_missing_tenant_info() {
-        // Access rule references a tenant that doesn't exist in tenants list
-        let cfg = StaticTrPluginConfig {
-            tenants: vec![tenant(TENANT_A, "A", TenantStatus::Active)],
-            access_rules: vec![access_rule(TENANT_A, TENANT_B)], // B not in tenants
-            ..Default::default()
-        };
-        let service = Service::from_config(&cfg);
-        let ctx = ctx_for_tenant(TENANT_A);
-
-        let result = service.get_accessible_tenants(&ctx, None, None).await;
-
-        assert!(result.is_ok());
-        let items = result.unwrap();
-        // B is in access_rules but not in tenants, so it's skipped
-        // Only self-tenant A is returned
-        assert_eq!(items.len(), 1);
-        assert_eq!(items[0].id, Uuid::parse_str(TENANT_A).unwrap());
-    }
-
-    #[tokio::test]
-    async fn get_accessible_tenants_filtered_by_status() {
+    async fn get_tenants_all_found() {
         let cfg = StaticTrPluginConfig {
             tenants: vec![
                 tenant(TENANT_A, "A", TenantStatus::Active),
                 tenant(TENANT_B, "B", TenantStatus::Active),
                 tenant(TENANT_C, "C", TenantStatus::Suspended),
             ],
-            access_rules: vec![
-                access_rule(TENANT_A, TENANT_B),
-                access_rule(TENANT_A, TENANT_C),
-            ],
             ..Default::default()
         };
         let service = Service::from_config(&cfg);
         let ctx = ctx_for_tenant(TENANT_A);
 
-        // Without filter - returns self (A) plus B and C
-        let result = service.get_accessible_tenants(&ctx, None, None).await;
-        assert_eq!(result.unwrap().len(), 3);
+        let ids = vec![
+            Uuid::parse_str(TENANT_A).unwrap(),
+            Uuid::parse_str(TENANT_B).unwrap(),
+        ];
 
-        // With active filter - returns self (A) and B (C is suspended)
-        let filter = active_filter();
         let result = service
-            .get_accessible_tenants(&ctx, Some(&filter), None)
+            .get_tenants(&ctx, &ids, &GetTenantsOptions::default())
             .await;
-        let items = result.unwrap();
-        assert_eq!(items.len(), 2);
-        // Self-tenant should be first
-        assert_eq!(items[0].id, Uuid::parse_str(TENANT_A).unwrap());
-        assert_eq!(items[1].id, Uuid::parse_str(TENANT_B).unwrap());
+        assert!(result.is_ok());
+        let tenants = result.unwrap();
+        assert_eq!(tenants.len(), 2);
     }
 
     #[tokio::test]
-    async fn get_accessible_tenants_filtered_by_id() {
+    async fn get_tenants_some_missing() {
+        let cfg = StaticTrPluginConfig {
+            tenants: vec![tenant(TENANT_A, "A", TenantStatus::Active)],
+            ..Default::default()
+        };
+        let service = Service::from_config(&cfg);
+        let ctx = ctx_for_tenant(TENANT_A);
+
+        let ids = vec![
+            Uuid::parse_str(TENANT_A).unwrap(),
+            Uuid::parse_str(NONEXISTENT).unwrap(), // This one doesn't exist
+        ];
+
+        let result = service
+            .get_tenants(&ctx, &ids, &GetTenantsOptions::default())
+            .await;
+        assert!(result.is_ok());
+        let tenants = result.unwrap();
+        // Only found tenant is returned, missing is silently skipped
+        assert_eq!(tenants.len(), 1);
+        assert_eq!(tenants[0].id, Uuid::parse_str(TENANT_A).unwrap());
+    }
+
+    #[tokio::test]
+    async fn get_tenants_with_filter() {
         let cfg = StaticTrPluginConfig {
             tenants: vec![
                 tenant(TENANT_A, "A", TenantStatus::Active),
-                tenant(TENANT_B, "B", TenantStatus::Active),
-                tenant(TENANT_C, "C", TenantStatus::Active),
-            ],
-            access_rules: vec![
-                access_rule(TENANT_A, TENANT_B),
-                access_rule(TENANT_A, TENANT_C),
+                tenant(TENANT_B, "B", TenantStatus::Suspended),
             ],
             ..Default::default()
         };
         let service = Service::from_config(&cfg);
         let ctx = ctx_for_tenant(TENANT_A);
 
-        // Filter by specific ID
-        let filter = TenantFilter {
-            id: vec![Uuid::parse_str(TENANT_B).unwrap()],
+        let ids = vec![
+            Uuid::parse_str(TENANT_A).unwrap(),
+            Uuid::parse_str(TENANT_B).unwrap(),
+        ];
+
+        let opts = GetTenantsOptions {
+            status: vec![TenantStatus::Active],
+        };
+        let result = service.get_tenants(&ctx, &ids, &opts).await;
+        assert!(result.is_ok());
+        let tenants = result.unwrap();
+        // Only active tenant is returned
+        assert_eq!(tenants.len(), 1);
+        assert_eq!(tenants[0].id, Uuid::parse_str(TENANT_A).unwrap());
+    }
+
+    // ==================== get_ancestors tests ====================
+
+    #[tokio::test]
+    async fn get_ancestors_root_tenant() {
+        let cfg = StaticTrPluginConfig {
+            tenants: vec![tenant(TENANT_A, "Root", TenantStatus::Active)],
+            ..Default::default()
+        };
+        let service = Service::from_config(&cfg);
+        let ctx = ctx_for_tenant(TENANT_A);
+
+        let result = service
+            .get_ancestors(
+                &ctx,
+                Uuid::parse_str(TENANT_A).unwrap(),
+                &GetAncestorsOptions::default(),
+            )
+            .await;
+
+        assert!(result.is_ok());
+        let response = result.unwrap();
+        assert_eq!(response.tenant.id, Uuid::parse_str(TENANT_A).unwrap());
+        assert!(response.ancestors.is_empty());
+    }
+
+    #[tokio::test]
+    async fn get_ancestors_with_hierarchy() {
+        // A -> B -> C
+        let cfg = StaticTrPluginConfig {
+            tenants: vec![
+                tenant(TENANT_A, "Root", TenantStatus::Active),
+                tenant_with_parent(TENANT_B, "Child", TENANT_A),
+                tenant_with_parent(TENANT_C, "Grandchild", TENANT_B),
+            ],
+            ..Default::default()
+        };
+        let service = Service::from_config(&cfg);
+        let ctx = ctx_for_tenant(TENANT_C);
+
+        let result = service
+            .get_ancestors(
+                &ctx,
+                Uuid::parse_str(TENANT_C).unwrap(),
+                &GetAncestorsOptions::default(),
+            )
+            .await;
+
+        assert!(result.is_ok());
+        let response = result.unwrap();
+        assert_eq!(response.tenant.id, Uuid::parse_str(TENANT_C).unwrap());
+        assert_eq!(response.ancestors.len(), 2);
+        assert_eq!(response.ancestors[0].id, Uuid::parse_str(TENANT_B).unwrap());
+        assert_eq!(response.ancestors[1].id, Uuid::parse_str(TENANT_A).unwrap());
+    }
+
+    #[tokio::test]
+    async fn get_ancestors_with_barrier() {
+        // A -> B (barrier) -> C
+        let cfg = StaticTrPluginConfig {
+            tenants: vec![
+                tenant(TENANT_A, "Root", TenantStatus::Active),
+                tenant_barrier(TENANT_B, "Barrier", TENANT_A),
+                tenant_with_parent(TENANT_C, "Grandchild", TENANT_B),
+            ],
+            ..Default::default()
+        };
+        let service = Service::from_config(&cfg);
+        let ctx = ctx_for_tenant(TENANT_C);
+
+        // Default (BarrierMode::Respect) - stops at barrier
+        let result = service
+            .get_ancestors(
+                &ctx,
+                Uuid::parse_str(TENANT_C).unwrap(),
+                &GetAncestorsOptions::default(),
+            )
+            .await;
+
+        assert!(result.is_ok());
+        let response = result.unwrap();
+        assert_eq!(response.ancestors.len(), 1);
+        assert_eq!(response.ancestors[0].id, Uuid::parse_str(TENANT_B).unwrap());
+
+        // BarrierMode::Ignore - traverses through
+        let req = GetAncestorsOptions {
+            barrier_mode: BarrierMode::Ignore,
+        };
+        let result = service
+            .get_ancestors(&ctx, Uuid::parse_str(TENANT_C).unwrap(), &req)
+            .await;
+
+        assert!(result.is_ok());
+        let response = result.unwrap();
+        assert_eq!(response.ancestors.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn get_ancestors_nonexistent() {
+        let cfg = StaticTrPluginConfig::default();
+        let service = Service::from_config(&cfg);
+        let ctx = ctx_for_tenant(TENANT_A);
+
+        let result = service
+            .get_ancestors(
+                &ctx,
+                Uuid::parse_str(NONEXISTENT).unwrap(),
+                &GetAncestorsOptions::default(),
+            )
+            .await;
+
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            TenantResolverError::TenantNotFound { .. } => {}
+            other => panic!("Expected TenantNotFound, got: {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn get_ancestors_starting_tenant_is_barrier() {
+        // A -> B (barrier)
+        // get_ancestors(B) should return empty because B is a barrier
+        let cfg = StaticTrPluginConfig {
+            tenants: vec![
+                tenant(TENANT_A, "Root", TenantStatus::Active),
+                tenant_barrier(TENANT_B, "Barrier", TENANT_A),
+            ],
+            ..Default::default()
+        };
+        let service = Service::from_config(&cfg);
+        let ctx = ctx_for_tenant(TENANT_B);
+
+        // Default (BarrierMode::Respect) - B cannot see its parent chain
+        let result = service
+            .get_ancestors(
+                &ctx,
+                Uuid::parse_str(TENANT_B).unwrap(),
+                &GetAncestorsOptions::default(),
+            )
+            .await;
+
+        assert!(result.is_ok());
+        let response = result.unwrap();
+        assert_eq!(response.tenant.id, Uuid::parse_str(TENANT_B).unwrap());
+        assert!(response.ancestors.is_empty());
+
+        // BarrierMode::Ignore - B can see A
+        let req = GetAncestorsOptions {
+            barrier_mode: BarrierMode::Ignore,
+        };
+        let result = service
+            .get_ancestors(&ctx, Uuid::parse_str(TENANT_B).unwrap(), &req)
+            .await;
+
+        assert!(result.is_ok());
+        let response = result.unwrap();
+        assert_eq!(response.ancestors.len(), 1);
+        assert_eq!(response.ancestors[0].id, Uuid::parse_str(TENANT_A).unwrap());
+    }
+
+    // ==================== get_descendants tests ====================
+
+    #[tokio::test]
+    async fn get_descendants_no_children() {
+        let cfg = StaticTrPluginConfig {
+            tenants: vec![tenant(TENANT_A, "Root", TenantStatus::Active)],
+            ..Default::default()
+        };
+        let service = Service::from_config(&cfg);
+        let ctx = ctx_for_tenant(TENANT_A);
+
+        let result = service
+            .get_descendants(
+                &ctx,
+                Uuid::parse_str(TENANT_A).unwrap(),
+                &GetDescendantsOptions::default(),
+            )
+            .await;
+
+        assert!(result.is_ok());
+        let response = result.unwrap();
+        assert_eq!(response.tenant.id, Uuid::parse_str(TENANT_A).unwrap());
+        assert!(response.descendants.is_empty());
+    }
+
+    #[tokio::test]
+    async fn get_descendants_with_hierarchy() {
+        // A -> B -> C
+        let cfg = StaticTrPluginConfig {
+            tenants: vec![
+                tenant(TENANT_A, "Root", TenantStatus::Active),
+                tenant_with_parent(TENANT_B, "Child", TENANT_A),
+                tenant_with_parent(TENANT_C, "Grandchild", TENANT_B),
+            ],
+            ..Default::default()
+        };
+        let service = Service::from_config(&cfg);
+        let ctx = ctx_for_tenant(TENANT_A);
+
+        // Unlimited depth
+        let result = service
+            .get_descendants(
+                &ctx,
+                Uuid::parse_str(TENANT_A).unwrap(),
+                &GetDescendantsOptions::default(),
+            )
+            .await;
+
+        assert!(result.is_ok());
+        let response = result.unwrap();
+        assert_eq!(response.tenant.id, Uuid::parse_str(TENANT_A).unwrap());
+        assert_eq!(response.descendants.len(), 2);
+
+        // Depth 1 only
+        let req = GetDescendantsOptions {
+            max_depth: Some(1),
             ..Default::default()
         };
         let result = service
-            .get_accessible_tenants(&ctx, Some(&filter), None)
+            .get_descendants(&ctx, Uuid::parse_str(TENANT_A).unwrap(), &req)
             .await;
-        let items = result.unwrap();
-        assert_eq!(items.len(), 1);
-        assert_eq!(items[0].id, Uuid::parse_str(TENANT_B).unwrap());
+
+        assert!(result.is_ok());
+        let response = result.unwrap();
+        assert_eq!(response.descendants.len(), 1);
+        assert_eq!(
+            response.descendants[0].id,
+            Uuid::parse_str(TENANT_B).unwrap()
+        );
+    }
+
+    #[tokio::test]
+    async fn get_descendants_with_barrier() {
+        // A -> B (barrier) -> C
+        //   -> D
+        let cfg = StaticTrPluginConfig {
+            tenants: vec![
+                tenant(TENANT_A, "Root", TenantStatus::Active),
+                tenant_barrier(TENANT_B, "Barrier", TENANT_A),
+                tenant_with_parent(TENANT_C, "Under Barrier", TENANT_B),
+                tenant_with_parent(TENANT_D, "Normal Child", TENANT_A),
+            ],
+            ..Default::default()
+        };
+        let service = Service::from_config(&cfg);
+        let ctx = ctx_for_tenant(TENANT_A);
+
+        // Default (BarrierMode::Respect) - only D is visible
+        let result = service
+            .get_descendants(
+                &ctx,
+                Uuid::parse_str(TENANT_A).unwrap(),
+                &GetDescendantsOptions::default(),
+            )
+            .await;
+
+        assert!(result.is_ok());
+        let response = result.unwrap();
+        assert_eq!(response.descendants.len(), 1);
+        assert_eq!(
+            response.descendants[0].id,
+            Uuid::parse_str(TENANT_D).unwrap()
+        );
+
+        // BarrierMode::Ignore - all descendants visible
+        let req = GetDescendantsOptions {
+            barrier_mode: BarrierMode::Ignore,
+            ..Default::default()
+        };
+        let result = service
+            .get_descendants(&ctx, Uuid::parse_str(TENANT_A).unwrap(), &req)
+            .await;
+
+        assert!(result.is_ok());
+        let response = result.unwrap();
+        assert_eq!(response.descendants.len(), 3);
+    }
+
+    #[tokio::test]
+    async fn get_descendants_nonexistent() {
+        let cfg = StaticTrPluginConfig::default();
+        let service = Service::from_config(&cfg);
+        let ctx = ctx_for_tenant(TENANT_A);
+
+        let result = service
+            .get_descendants(
+                &ctx,
+                Uuid::parse_str(NONEXISTENT).unwrap(),
+                &GetDescendantsOptions::default(),
+            )
+            .await;
+
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            TenantResolverError::TenantNotFound { .. } => {}
+            other => panic!("Expected TenantNotFound, got: {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn get_descendants_filter_stops_traversal() {
+        // A (active) -> B (suspended) -> C (active)
+        //           -> D (active)
+        // Filter for active-only should return D only, NOT C
+        // (because B doesn't pass filter, so its subtree is excluded)
+        let cfg = StaticTrPluginConfig {
+            tenants: vec![
+                tenant(TENANT_A, "Root", TenantStatus::Active),
+                {
+                    let mut t = tenant_with_parent(TENANT_B, "Suspended", TENANT_A);
+                    t.status = TenantStatus::Suspended;
+                    t
+                },
+                tenant_with_parent(TENANT_C, "Child of Suspended", TENANT_B),
+                tenant_with_parent(TENANT_D, "Active Child", TENANT_A),
+            ],
+            ..Default::default()
+        };
+        let service = Service::from_config(&cfg);
+        let ctx = ctx_for_tenant(TENANT_A);
+
+        // Without filter: all 3 descendants (pre-order: B, C, D)
+        let result = service
+            .get_descendants(
+                &ctx,
+                Uuid::parse_str(TENANT_A).unwrap(),
+                &GetDescendantsOptions::default(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(result.descendants.len(), 3);
+
+        // With active-only filter: only D (B filtered out, so C is unreachable)
+        let req = GetDescendantsOptions {
+            status: vec![TenantStatus::Active],
+            ..Default::default()
+        };
+        let result = service
+            .get_descendants(&ctx, Uuid::parse_str(TENANT_A).unwrap(), &req)
+            .await
+            .unwrap();
+
+        assert_eq!(result.descendants.len(), 1);
+        assert_eq!(result.descendants[0].id, Uuid::parse_str(TENANT_D).unwrap());
+    }
+
+    #[tokio::test]
+    async fn get_descendants_pre_order() {
+        // Verify pre-order traversal: parent before children
+        // A -> B -> C
+        // Pre-order from A: B first, then C (B must come before its child C)
+        // Note: Sibling order is not guaranteed (HashMap), so we test a linear chain
+        let cfg = StaticTrPluginConfig {
+            tenants: vec![
+                tenant(TENANT_A, "Root", TenantStatus::Active),
+                tenant_with_parent(TENANT_B, "Child B", TENANT_A),
+                tenant_with_parent(TENANT_C, "Grandchild C", TENANT_B),
+            ],
+            ..Default::default()
+        };
+        let service = Service::from_config(&cfg);
+        let ctx = ctx_for_tenant(TENANT_A);
+
+        let result = service
+            .get_descendants(
+                &ctx,
+                Uuid::parse_str(TENANT_A).unwrap(),
+                &GetDescendantsOptions::default(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(result.descendants.len(), 2);
+        // Pre-order guarantee: B comes before C (parent before child)
+        assert_eq!(result.descendants[0].id, Uuid::parse_str(TENANT_B).unwrap());
+        assert_eq!(result.descendants[1].id, Uuid::parse_str(TENANT_C).unwrap());
+    }
+
+    // ==================== is_ancestor tests ====================
+
+    #[tokio::test]
+    async fn is_ancestor_self_returns_false() {
+        let cfg = StaticTrPluginConfig {
+            tenants: vec![tenant(TENANT_A, "Root", TenantStatus::Active)],
+            ..Default::default()
+        };
+        let service = Service::from_config(&cfg);
+        let ctx = ctx_for_tenant(TENANT_A);
+        let a_id = Uuid::parse_str(TENANT_A).unwrap();
+
+        let result = service
+            .is_ancestor(&ctx, a_id, a_id, &IsAncestorOptions::default())
+            .await;
+        assert!(result.is_ok());
+        assert!(!result.unwrap());
+    }
+
+    #[tokio::test]
+    async fn is_ancestor_direct_parent() {
+        let cfg = StaticTrPluginConfig {
+            tenants: vec![
+                tenant(TENANT_A, "Root", TenantStatus::Active),
+                tenant_with_parent(TENANT_B, "Child", TENANT_A),
+            ],
+            ..Default::default()
+        };
+        let service = Service::from_config(&cfg);
+        let ctx = ctx_for_tenant(TENANT_A);
+
+        let a_id = Uuid::parse_str(TENANT_A).unwrap();
+        let b_id = Uuid::parse_str(TENANT_B).unwrap();
+
+        // A is ancestor of B
+        let result = service
+            .is_ancestor(&ctx, a_id, b_id, &IsAncestorOptions::default())
+            .await;
+        assert!(result.is_ok());
+        assert!(result.unwrap());
+
+        // B is NOT ancestor of A
+        let result = service
+            .is_ancestor(&ctx, b_id, a_id, &IsAncestorOptions::default())
+            .await;
+        assert!(result.is_ok());
+        assert!(!result.unwrap());
+    }
+
+    #[tokio::test]
+    async fn is_ancestor_with_barrier() {
+        // A -> B (barrier) -> C
+        let cfg = StaticTrPluginConfig {
+            tenants: vec![
+                tenant(TENANT_A, "Root", TenantStatus::Active),
+                tenant_barrier(TENANT_B, "Barrier", TENANT_A),
+                tenant_with_parent(TENANT_C, "Grandchild", TENANT_B),
+            ],
+            ..Default::default()
+        };
+        let service = Service::from_config(&cfg);
+        let ctx = ctx_for_tenant(TENANT_A);
+
+        let a_id = Uuid::parse_str(TENANT_A).unwrap();
+        let b_id = Uuid::parse_str(TENANT_B).unwrap();
+        let c_id = Uuid::parse_str(TENANT_C).unwrap();
+
+        // B is direct parent of C - allowed
+        let result = service
+            .is_ancestor(&ctx, b_id, c_id, &IsAncestorOptions::default())
+            .await;
+        assert!(result.unwrap());
+
+        // A blocked by barrier B
+        let result = service
+            .is_ancestor(&ctx, a_id, c_id, &IsAncestorOptions::default())
+            .await;
+        assert!(!result.unwrap());
+
+        // With BarrierMode::Ignore - A is ancestor of C
+        let req = IsAncestorOptions {
+            barrier_mode: BarrierMode::Ignore,
+        };
+        let result = service.is_ancestor(&ctx, a_id, c_id, &req).await;
+        assert!(result.unwrap());
+    }
+
+    #[tokio::test]
+    async fn is_ancestor_direct_barrier_child() {
+        // A -> B (barrier)
+        // is_ancestor(A, B) should return false because B is a barrier
+        let cfg = StaticTrPluginConfig {
+            tenants: vec![
+                tenant(TENANT_A, "Root", TenantStatus::Active),
+                tenant_barrier(TENANT_B, "Barrier", TENANT_A),
+            ],
+            ..Default::default()
+        };
+        let service = Service::from_config(&cfg);
+        let ctx = ctx_for_tenant(TENANT_A);
+
+        let a_id = Uuid::parse_str(TENANT_A).unwrap();
+        let b_id = Uuid::parse_str(TENANT_B).unwrap();
+
+        // A is NOT ancestor of B when B is a barrier (default BarrierMode::Respect)
+        let result = service
+            .is_ancestor(&ctx, a_id, b_id, &IsAncestorOptions::default())
+            .await;
+        assert!(!result.unwrap());
+
+        // With BarrierMode::Ignore, A IS ancestor of B
+        let req = IsAncestorOptions {
+            barrier_mode: BarrierMode::Ignore,
+        };
+        let result = service.is_ancestor(&ctx, a_id, b_id, &req).await;
+        assert!(result.unwrap());
+    }
+
+    #[tokio::test]
+    async fn is_ancestor_nonexistent() {
+        let cfg = StaticTrPluginConfig {
+            tenants: vec![tenant(TENANT_A, "Root", TenantStatus::Active)],
+            ..Default::default()
+        };
+        let service = Service::from_config(&cfg);
+        let ctx = ctx_for_tenant(TENANT_A);
+
+        let a_id = Uuid::parse_str(TENANT_A).unwrap();
+        let nonexistent = Uuid::parse_str(NONEXISTENT).unwrap();
+
+        // Nonexistent ancestor
+        let result = service
+            .is_ancestor(&ctx, nonexistent, a_id, &IsAncestorOptions::default())
+            .await;
+        assert!(result.is_err());
+
+        // Nonexistent descendant
+        let result = service
+            .is_ancestor(&ctx, a_id, nonexistent, &IsAncestorOptions::default())
+            .await;
+        assert!(result.is_err());
     }
 }

@@ -35,103 +35,78 @@ The registry supports automatic model discovery from providers, requiring tenant
 
 #### Tenant Administrator
 
-**ID**: `fdd-model-registry-actor-tenant-admin`
+**ID**: `cpt-cf-model-registry-actor-tenant-admin`
 
-<!-- fdd-id-content -->
 **Role**: Approves or rejects models for tenant access. Configures auto-approval policies per provider.
-<!-- fdd-id-content -->
 
 ### 2.2 System Actors
 
 #### LLM Gateway
 
-**ID**: `fdd-model-registry-actor-llm-gateway`
+**ID**: `cpt-cf-model-registry-actor-llm-gateway`
 
-<!-- fdd-id-content -->
 **Role**: Queries registry to resolve model to provider, check tenant availability, and get model capabilities.
-<!-- fdd-id-content -->
 
 #### Outbound API Gateway
 
-**ID**: `fdd-model-registry-actor-outbound-api-gateway`
+**ID**: `cpt-cf-model-registry-actor-outbound-api-gateway`
 
-<!-- fdd-id-content -->
 **Role**: Executes provider API calls for model discovery and health probes.
-<!-- fdd-id-content -->
 
 #### Provider API
 
-**ID**: `fdd-model-registry-actor-provider-api`
+**ID**: `cpt-cf-model-registry-actor-provider-api`
 
-<!-- fdd-id-content -->
 **Role**: External provider endpoint that returns available models list and responds to health probes.
-<!-- fdd-id-content -->
 
 ## 3. Functional Requirements
 
 #### Get Tenant Model
 
-**ID**: [ ] `p1` `fdd-model-registry-fr-get-tenant-model-v1`
-
-<!-- fdd-id-content -->
+- [ ] `p1` - **ID**: `cpt-cf-model-registry-fr-get-tenant-model-v1`
 
 The system must resolve model availability for a tenant, returning model info and provider details if approved.
 
-**Actors**: `fdd-model-registry-actor-llm-gateway`
-<!-- fdd-id-content -->
+**Actors**: `cpt-cf-model-registry-actor-llm-gateway`
 
 #### List Tenant Models
 
-**ID**: [ ] `p1` `fdd-model-registry-fr-list-tenant-models-v1`
-
-<!-- fdd-id-content -->
+- [ ] `p1` - **ID**: `cpt-cf-model-registry-fr-list-tenant-models-v1`
 
 The system must return all models available for a tenant, supporting filtering by capability and provider.
 
-**Actors**: `fdd-model-registry-actor-llm-gateway`
-<!-- fdd-id-content -->
+**Actors**: `cpt-cf-model-registry-actor-llm-gateway`
 
 #### Model Discovery
 
-**ID**: [ ] `p1` `fdd-model-registry-fr-model-discovery-v1`
-
-<!-- fdd-id-content -->
+- [ ] `p1` - **ID**: `cpt-cf-model-registry-fr-model-discovery-v1`
 
 The system must poll providers for available models via Outbound API Gateway, upserting new models and creating pending approvals.
 
-**Actors**: `fdd-model-registry-actor-outbound-api-gateway`, `fdd-model-registry-actor-provider-api`
-<!-- fdd-id-content -->
+**Actors**: `cpt-cf-model-registry-actor-outbound-api-gateway`, `cpt-cf-model-registry-actor-provider-api`
 
 #### Model Approval
 
-**ID**: [ ] `p1` `fdd-model-registry-fr-model-approval-v1`
-
-<!-- fdd-id-content -->
+- [ ] `p1` - **ID**: `cpt-cf-model-registry-fr-model-approval-v1`
 
 The system must support model approval workflow with statuses: pending, approved, rejected, revoked. Must support auto-approval configuration per tenant/provider.
 
-**Actors**: `fdd-model-registry-actor-tenant-admin`
-<!-- fdd-id-content -->
+**Actors**: `cpt-cf-model-registry-actor-tenant-admin`
 
 #### Provider Health Monitoring
 
-**ID**: [ ] `p1` `fdd-model-registry-fr-health-monitoring-v1`
-
-<!-- fdd-id-content -->
+- [ ] `p1` - **ID**: `cpt-cf-model-registry-fr-health-monitoring-v1`
 
 The system must track provider health metrics (latency, error rate, availability status) via periodic health probes for LLM Gateway routing decisions.
 
-**Actors**: `fdd-model-registry-actor-outbound-api-gateway`, `fdd-model-registry-actor-provider-api`
-<!-- fdd-id-content -->
+**Actors**: `cpt-cf-model-registry-actor-outbound-api-gateway`, `cpt-cf-model-registry-actor-provider-api`
 
 ## 4. Use Cases
 
 #### UC-001: Get Tenant Model
 
-**ID**: [ ] `p1` `fdd-model-registry-usecase-get-tenant-model-v1`
-
-<!-- fdd-id-content -->
-**Actor**: `fdd-model-registry-actor-llm-gateway`
+- [ ] `p1` - **ID**: `cpt-cf-model-registry-usecase-get-tenant-model-v1`
+**Actor**: `cpt-cf-model-registry-actor-llm-gateway`
 
 **Preconditions**: Model exists in catalog.
 
@@ -147,14 +122,11 @@ The system must track provider health metrics (latency, error rate, availability
 - Returns model_not_found if model not in catalog
 - Returns model_not_approved if not approved for tenant
 - Returns model_deprecated if model sunset
-<!-- fdd-id-content -->
 
 #### UC-002: List Tenant Models
 
-**ID**: [ ] `p1` `fdd-model-registry-usecase-list-tenant-models-v1`
-
-<!-- fdd-id-content -->
-**Actor**: `fdd-model-registry-actor-llm-gateway`
+- [ ] `p1` - **ID**: `cpt-cf-model-registry-usecase-list-tenant-models-v1`
+**Actor**: `cpt-cf-model-registry-actor-llm-gateway`
 
 **Preconditions**: Tenant context available.
 
@@ -170,13 +142,10 @@ The system must track provider health metrics (latency, error rate, availability
 - Supports filtering by capability, provider, modality
 - Returns only approved models
 - Includes capabilities, context limits, pricing
-<!-- fdd-id-content -->
 
 #### UC-003: Model Discovery
 
-**ID**: [ ] `p1` `fdd-model-registry-usecase-model-discovery-v1`
-
-<!-- fdd-id-content -->
+- [ ] `p1` - **ID**: `cpt-cf-model-registry-usecase-model-discovery-v1`
 **Actor**: Internal (scheduled job)
 
 **Preconditions**: Provider configured in registry.
@@ -194,14 +163,11 @@ The system must track provider health metrics (latency, error rate, availability
 - New models create pending approvals
 - Existing models updated with latest metadata
 - Removed models marked as deprecated
-<!-- fdd-id-content -->
 
 #### UC-004: Model Approval
 
-**ID**: [ ] `p1` `fdd-model-registry-usecase-model-approval-v1`
-
-<!-- fdd-id-content -->
-**Actor**: `fdd-model-registry-actor-tenant-admin`
+- [ ] `p1` - **ID**: `cpt-cf-model-registry-usecase-model-approval-v1`
+**Actor**: `cpt-cf-model-registry-actor-tenant-admin`
 
 **Preconditions**: Model in pending status for tenant.
 
@@ -236,14 +202,11 @@ stateDiagram-v2
 - **approved**: Model available for tenant use
 - **rejected**: Model explicitly denied for tenant
 - **revoked**: Previously approved model access withdrawn
-<!-- fdd-id-content -->
 
 #### UC-005: Model Revocation
 
-**ID**: [ ] `p1` `fdd-model-registry-usecase-model-revocation-v1`
-
-<!-- fdd-id-content -->
-**Actor**: `fdd-model-registry-actor-tenant-admin`
+- [ ] `p1` - **ID**: `cpt-cf-model-registry-usecase-model-revocation-v1`
+**Actor**: `cpt-cf-model-registry-actor-tenant-admin`
 
 **Preconditions**: Model in approved status for tenant.
 
@@ -260,13 +223,10 @@ stateDiagram-v2
 - Active streaming requests may continue, new requests rejected
 - Revocation is auditable (timestamp, admin who revoked)
 - Model can be reinstated (revoked → approved)
-<!-- fdd-id-content -->
 
 #### UC-006: Provider Health Monitoring
 
-**ID**: [ ] `p1` `fdd-model-registry-usecase-health-monitoring-v1`
-
-<!-- fdd-id-content -->
+- [ ] `p1` - **ID**: `cpt-cf-model-registry-usecase-health-monitoring-v1`
 **Actor**: Internal (scheduled job)
 
 **Preconditions**: Provider configured with health endpoint.
@@ -283,8 +243,11 @@ stateDiagram-v2
 - Metrics: latency, error rate, availability status
 - Health state available for Gateway routing
 - Configurable health check interval
-<!-- fdd-id-content -->
 
 ## 5. Non-functional requirements
+
+#### N/A
+
+- [ ] `p1` - **ID**: `cpt-cf-model-registry-nfr-na`
 
 <!-- NFRs to be defined later -->

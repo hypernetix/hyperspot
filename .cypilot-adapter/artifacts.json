@@ -1,0 +1,101 @@
+{
+  "version": "1.0",
+  "project_root": "..",
+  "kits": {
+    "cf-sdlc": {
+      "format": "Cypilot",
+      "path": ".cypilot-adapter/kits/cf-sdlc"
+    }
+  },
+  "ignore": [
+    {
+      "reason": "Ignore module 'system' (not SDLC-documented yet: missing required PRD/DESIGN).",
+      "patterns": ["modules/system/*"]
+    },
+    {
+      "reason": "Ignore module 'simple_user_settings' (not SDLC-documented yet: missing required PRD/DESIGN).",
+      "patterns": ["modules/simple_user_settings/*"]
+    },
+    {
+      "reason": "Ignore module 'file_storage' (not SDLC-documented yet: missing required PRD/DESIGN).",
+      "patterns": ["modules/file_storage/*"]
+    },
+    {
+      "reason": "Ignore module 'model_registry' (not SDLC-documented yet: missing required PRD/DESIGN).",
+      "patterns": ["modules/model_registry/*"]
+    },
+    {
+      "reason": "Ignore module 'type_registry' (not SDLC-documented yet: missing required PRD/DESIGN).",
+      "patterns": ["modules/type_registry/*"]
+    },
+    {
+      "reason": "Ignore module 'file_parser' (not SDLC-documented yet: missing required PRD/DESIGN).",
+      "patterns": ["modules/file_parser/*"]
+    }
+  ],
+  "systems": [
+    {
+      "name": "cyberfabric",
+      "slug": "cf",
+      "kit": "cf-sdlc",
+      "artifacts": [],
+      "artifacts_dir": "docs",
+      "codebase": [
+        { "name": "Apps", "path": "apps", "extensions": [".rs"] },
+        { "name": "Libraries", "path": "libs", "extensions": [".rs"] },
+        { "name": "Examples", "path": "examples", "extensions": [".rs"] },
+        { "name": "Dylint Lints", "path": "dylint_lints", "extensions": [".rs"] },
+        { "name": "E2E Testing", "path": "testing", "extensions": [".py"] }
+      ],
+      "autodetect": [
+        {
+          "system_root": "{project_root}/modules/$system",
+          "artifacts_root": "{system_root}/docs",
+          "artifacts": {
+            "PRD": { "pattern": "PRD.md", "traceability": "FULL", "required": true },
+            "DESIGN": { "pattern": "DESIGN.md", "traceability": "FULL", "required": true },
+            "ADR": { "pattern": "ADR/*.md", "traceability": "FULL", "required": false },
+            "DECOMPOSITION": { "pattern": "DECOMPOSITION.md", "traceability": "FULL", "required": false },
+            "FEATURE": { "pattern": "features/*.md", "traceability": "FULL", "required": false }
+          },
+          "codebase": [
+            { "name": "Modules", "path": "{system_root}/src", "extensions": [".rs"] },
+            { "name": "Tests", "path": "{system_root}/tests", "extensions": [".rs"] }
+          ],
+          "validation": {
+            "require_kind_registered_in_kit": true,
+            "require_md_extension": true,
+            "fail_on_unmatched_markdown": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "examples",
+      "slug": "examples",
+      "kit": "cf-sdlc",
+      "artifacts_dir": "docs/spec-templates/examples/",
+      "autodetect": [
+        {
+          "system_root": "{project_root}/docs/spec-templates/examples/$system",
+          "artifacts_root": "{system_root}",
+          "artifacts": {
+            "PRD": { "pattern": "PRD.md", "traceability": "DOCS-ONLY", "required": true },
+            "DESIGN": { "pattern": "DESIGN.md", "traceability": "DOCS-ONLY", "required": true },
+            "ADR": { "pattern": "ADR/*.md", "traceability": "DOCS-ONLY", "required": false },
+            "DECOMPOSITION": { "pattern": "DECOMPOSITION.md", "traceability": "DOCS-ONLY", "required": false },
+            "FEATURE": { "pattern": "features/*.md", "traceability": "DOCS-ONLY", "required": false }
+          },
+          "codebase": [],
+          "validation": {
+            "require_kind_registered_in_kit": true,
+            "require_md_extension": true,
+            "fail_on_unmatched_markdown": true
+          }
+        }
+      ],
+      "children": [],
+      "codebase": []
+    }
+  ]
+}

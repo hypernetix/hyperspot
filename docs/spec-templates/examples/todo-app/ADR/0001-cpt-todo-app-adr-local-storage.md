@@ -1,28 +1,14 @@
----
-status: accepted
-date: 2024-01-15
----
+# ADR-0001: Use IndexedDB for Offline Storage
 
-# Use IndexedDB for Offline Storage
+**Date**: 2024-01-15
 
-- [ ] `p1` - **ID**: `fdd-todo-app-adr-local-storage`
+**Status**: Accepted
+
+**ID**: `cpt-examples-todo-app-adr-local-storage`
 
 ## Context and Problem Statement
 
 The application requires offline-first functionality where users can create, edit, and complete tasks without network connectivity. We need to choose a client-side storage solution that can handle structured data with efficient querying.
-
-## Decides For Requirements
-
-This decision directly addresses the following requirements from PRD/DESIGN:
-
-* `fdd-todo-app-req-offline-support` — Enables full offline functionality by providing local storage for tasks
-* `fdd-todo-app-req-response-time` — IndexedDB's indexed queries enable <200ms response times for filtering/search operations
-* `fdd-todo-app-req-filter-tasks` — Indexes on status/category/priority enable efficient filtering without loading all data
-* `fdd-todo-app-design-principle-offline-first` — This is the core technical decision enabling the offline-first design principle
-
-See:
-- **PRD**: [PRD.md](../PRD.md)
-- **DESIGN**: [DESIGN.md](../DESIGN.md)
 
 ## Decision Drivers
 
@@ -52,9 +38,10 @@ Chosen option: "IndexedDB with Dexie.js wrapper", because it provides native bro
 ### Confirmation
 
 Implementation verified via:
-- Unit tests for IndexedDB operations using fake-indexeddb
-- Integration tests with Dexie.js queries
-- Manual testing of offline scenarios in Chrome DevTools
+
+* Unit tests for IndexedDB operations using fake-indexeddb
+* Integration tests with Dexie.js queries
+* Manual testing of offline scenarios in Chrome DevTools
 
 ## Pros and Cons of the Options
 
@@ -92,3 +79,24 @@ Full SQL database compiled to WebAssembly.
 ## More Information
 
 Decision aligns with offline-first architecture principle. Dexie.js chosen over raw IndexedDB for developer productivity.
+
+## Traceability
+
+- **PRD**: [PRD.md](../PRD.md)
+- **DESIGN**: [DESIGN.md](../DESIGN.md)
+
+This decision directly addresses the following requirements or design elements:
+
+* `cpt-examples-todo-app-nfr-offline-support` — Enables full offline functionality by providing local storage for tasks
+* `cpt-examples-todo-app-nfr-response-time` — IndexedDB's indexed queries enable <200ms response times for filtering/search operations
+* `cpt-examples-todo-app-fr-filter-tasks` — Indexes on status/category/priority enable efficient filtering without loading all data
+* `cpt-examples-todo-app-principle-offline-first` — This is the core technical decision enabling the offline-first design principle
+
+**Actors**:
+* `cpt-examples-todo-app-actor-user` - Primary beneficiary of offline functionality
+* `cpt-examples-todo-app-actor-sync-service` - Syncs IndexedDB changes to server
+* `cpt-examples-todo-app-actor-notification-service` - Uses local persistence to schedule notifications reliably
+
+**Additional referenced IDs**:
+* `cpt-examples-todo-app-nfr-data-persistence` - IndexedDB enables immediate local persistence
+* `cpt-examples-todo-app-interface-task-model` - Task schema stored locally and exchanged with sync backend
