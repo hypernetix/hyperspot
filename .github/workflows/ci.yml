@@ -127,6 +127,11 @@ jobs:
       - name: sccache stats
         if: env.SCCACHE_OK == '1'
         run: sccache --show-stats
+
+  cypilot:
+    name: Cypilot
+    uses: ./.github/workflows/cypilot.yml
+
   ui_tests:
     name: UI macro tests (trybuild)
     runs-on: ubuntu-latest

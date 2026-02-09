@@ -1,3 +1,8 @@
+---
+status: accepted
+date: {YYYY-MM-DD}
+decision-makers: {optionally fill decision makers names, accounts or remove that field}
+--- 
 <!--
  =============================================================================
  ARCHITECTURE DECISION RECORD (ADR) — based on MADR format
@@ -30,12 +35,7 @@
   - ISO/IEC 15288 / 12207 (decision analysis process)
  ==============================================================================
  -->
-
 # {Short title describing problem and chosen solution}
-
-**Date**: {YYYY-MM-DD}
-
-**Status**: {Accepted | Deprecated | Superseded by ADR-NNNN}
 
 **ID**: `cpt-{system}-adr-{slug}`
 

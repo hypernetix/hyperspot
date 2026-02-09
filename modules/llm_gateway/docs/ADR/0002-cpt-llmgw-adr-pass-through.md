@@ -4,7 +4,7 @@
 
 **Status**: Accepted
 
-**ID**: `cpt-cyberfabric-llm-gateway-adr-pass-through`
+**ID**: `cpt-cf-llm-gateway-adr-pass-through`
 
 ## Context and Problem Statement
 
@@ -35,4 +35,4 @@ Chosen option: "Pass-through", because tool execution is consumer responsibility
 ## Related Design Elements
 
 **Requirements**:
-* `cpt-cyberfabric-llm-gateway-fr-tool-calling-v1` - Tool calls returned to consumer
+* `cpt-cf-llm-gateway-fr-tool-calling-v1` - Tool calls returned to consumer
