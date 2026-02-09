@@ -150,19 +150,16 @@ External systems, databases, and third-party services this module interacts with
 
 #### {External System / Database / Service Name}
 
-- [ ] `p2` - **ID**: `cpt-{system}-interface-{slug}`
+| Dependency Module | Interface Used | Purpose |
+|-------------------|---------------|---------|----------|
+| {module_name} | {contract / SDK client / plugin} | {Why this module is needed} |
 
-**Type**: {Database | External API | Message Broker | Object Storage | etc.}
-
-**Direction**: {inbound | outbound | bidirectional}
-
-**Protocol / Driver**: {HTTP REST | gRPC | SeaORM/SQL | S3 API | etc.}
-
-**Data Format**: {JSON | Protocol Buffers | SQL | binary | etc.}
-
-**Compatibility**: {Versioning / backward compatibility guarantees}
-
-**References**: Links to PRD or Public Library Interfaces
+**Dependency Rules** (per project conventions):
+- No circular dependencies
+- Always use SDK modules for inter-module communication
+- No cross-category sideways deps except through contracts
+- Only integration/adapter modules talk to external systems
+- `SecurityContext` must be propagated across all in-process calls
 
 ### 3.5 Interactions & Sequences
 
