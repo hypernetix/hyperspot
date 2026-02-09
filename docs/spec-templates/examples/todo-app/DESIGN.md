@@ -126,9 +126,15 @@ No internal module dependencies — Todo App is a standalone module with no plat
 **Type**: External API
 **Direction**: bidirectional
 **Protocol / Driver**: WebSocket + JSON; messages follow format: `{ type: "sync" | "update" | "delete", payload: Task }`
+<<<<<<< HEAD
 **Data Format**: JSON (follows Task model from `cpt-examples-todo-app-interface-task-model`)
 **Compatibility**: Protocol version negotiated on connection; supports fallback to HTTP polling
 **References**: PRD `cpt-examples-todo-app-contract-sync`
+=======
+**Data Format**: JSON (follows Task model from `fdd-todo-app-interface-task-model`)
+**Compatibility**: Protocol version negotiated on connection; supports fallback to HTTP polling
+**References**: PRD `fdd-todo-app-contract-sync`
+>>>>>>> b18ba4bb (docs(spec-templates): update todo-app examples for PRD and DESIGN after recent changes)
 
 #### IndexedDB (Browser Local Storage)
 
@@ -142,7 +148,11 @@ No internal module dependencies — Todo App is a standalone module with no plat
 
 #### PostgreSQL
 
+<<<<<<< HEAD
 - [x] `p1` - **ID**: `cpt-examples-todo-app-design-ext-postgresql`
+=======
+- [x] `p1` - **ID**: `fdd-todo-app-design-ext-postgresql`
+>>>>>>> b18ba4bb (docs(spec-templates): update todo-app examples for PRD and DESIGN after recent changes)
 
 **Type**: Database
 **Direction**: outbound
