@@ -110,9 +110,9 @@ clippy:
 	$(call check_rustup_component,clippy)
 	cargo clippy --workspace --all-targets --all-features -- -D warnings -D clippy::perf
 
-.PHONY: validate-artifacts
+.PHONY: validate-cypilot-artifacts
 
-validate-artifacts:
+validate-cypilot-artifacts:
 	@if git -C .cypilot rev-parse --is-inside-work-tree >/dev/null 2>&1 && git -C .cypilot symbolic-ref -q HEAD >/dev/null 2>&1; then \
 		echo "Skipping .cypilot update (branch checkout detected)"; \
 	else \
@@ -446,5 +446,5 @@ build:
 	cargo +stable build --release
 
 # Run all necessary quality checks and tests and then build the release binary
-all: build check validate-artifacts test-sqlite e2e-local
+all: build check validate-cypilot-artifacts test-sqlite e2e-local
 	@echo "consider to run 'make test-db' as well"

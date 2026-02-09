@@ -42,5 +42,5 @@ PRD MUST NOT reference IDs from prohibited artifact kinds using backticks:
 ## Validation Checklist
 
 - [ ] `python3 {cypilot_path}/skills/cypilot/scripts/cypilot.py validate --artifact <path>`
-- [ ] `make validate-artifacts`
+- [ ] `make validate-cypilot-artifacts`
 - [ ] Review against `docs/checklists/PRD.md`.
