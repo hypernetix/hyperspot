@@ -1,16 +1,17 @@
-# PRD Rules (Hyperspot)
+# PRD Rules (CyberFabric)
 
 
 ## Required References (ALWAYS)
 
 ALWAYS open and follow `../../rules.md`
 
-ALWAYS open and follow `docs/spec-templates/PRD.md` as a template
+ALWAYS open and use `docs/spec-templates/PRD.md` as a template
+ALWAYS open and use `docs/spec-templates/examples/todo-app/PRD.md` as an example
 
 ALWAYS open and follow `docs/checklists/PRD.md` as a quality checklist
 
 
-## Hyperspot Deltas vs Original Cypilot SDLC
+## CyberFabric Deltas vs Original Cypilot SDLC
 
 - This kit enforces constraints.json (allowed/required ID kinds and cross-artifact reference coverage).
 
@@ -41,4 +42,5 @@ PRD MUST NOT reference IDs from prohibited artifact kinds using backticks:
 ## Validation Checklist
 
 - [ ] `python3 {cypilot_path}/skills/cypilot/scripts/cypilot.py validate --artifact <path>`
+- [ ] `make validate-artifacts`
 - [ ] Review against `docs/checklists/PRD.md`.

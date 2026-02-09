@@ -70,7 +70,7 @@ Agent confirms understanding of requirements:
 
 All Cypilot IDs MUST:
 
-- Use format: `cpt-{hierarchy-prefix}-{kind}-{slug}`
+- Use format: `cpt-{system}-{kind}-{slug}`
 - Match regex: `^cpt-[a-z0-9][a-z0-9-]+$`
 - Be wrapped in backticks: `` `cpt-...` ``
 - Use only lowercase `a-z`, digits `0-9`, and `-` (kebab-case)
@@ -339,14 +339,14 @@ For each ID/scope marked as implemented:
 
 **Reference**: `{cypilot_path}/requirements/traceability.md` for validation rules
 
-**Deterministic checks** (per spec):
+**Deterministic checks** (per feature design):
 - [ ] Marker format valid
 - [ ] All begin/end pairs matched
 - [ ] No empty blocks
 - [ ] Phase postfix present on all markers
 
 **Coverage checks**:
-- [ ] All `cpt-{system}-{req|flow|algo|state|test}-*` IDs have markers
+- [ ] All `cpt-{system}-{dod|flow|algo|state|test}-*` IDs have markers
 - [ ] No orphaned markers (marker ID not in design)
 - [ ] No stale markers (design ID changed/deleted)
 - [ ] Design checkboxes synced with code markers

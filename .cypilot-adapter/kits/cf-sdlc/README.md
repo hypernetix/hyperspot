@@ -1,8 +1,8 @@
-# CyberFabric SDLC Weaver (Cypilot-compatible)
+# CyberFabric SDLC Kit (Cypilot-compatible)
 
 **ID**: `cf-sdlc`  
 **Format**: `Cypilot`  
-**Purpose**: Use Hyperspot’s documentation templates (`docs/spec-templates/*`) and expert checklists (`docs/checklists/*`).
+**Purpose**: Use CyberFabric’s documentation templates (`docs/spec-templates/*`) and expert checklists (`docs/checklists/*`).
 
 ## Artifact kinds
 

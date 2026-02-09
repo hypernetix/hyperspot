@@ -1,10 +1,10 @@
-# Cypilot SDLC Code Checklist (Weaver-Specific)
+# Cypilot SDLC Code Checklist (Kit-Specific)
 
 ALWAYS open and follow `docs/checklists/CODING.md` FIRST
 
 **Artifact**: Code Implementation (Cypilot SDLC)
 **Version**: 1.0
-**Purpose**: Weaver-specific checks that require Cypilot SDLC artifacts (PRD/DESIGN/DECOMPOSITION/FEATURE/ADR) and/or Cypilot traceability.
+**Purpose**: Kit-specific checks that require Cypilot SDLC artifacts (PRD/DESIGN/DECOMPOSITION/FEATURE/ADR) and/or Cypilot traceability.
 
 ---
 
@@ -37,14 +37,14 @@ These checks are **Cypilot SDLC-specific** because they require Cypilot artifact
 - [ ] If the user is unsure, search the repository for candidate feature designs and present options for user selection
 - [ ] Resolve Overall Design by following references from the FEATURE (or ask the user for the design path)
 
-### SEM-CODE-002: Spec Context Semantics
+### SEM-CODE-002: FEATURE Context Semantics
 **Severity**: HIGH
 
-- [ ] Confirm code behavior aligns with the Spec Overview, Purpose, and key assumptions
+- [ ] Confirm code behavior aligns with the FEATURE Overview, Purpose, and key assumptions
 - [ ] Verify all referenced actors are represented by actual interfaces, entrypoints, or roles in code
 - [ ] Ensure referenced ADRs and related specs do not conflict with current implementation choices
 
-### SEM-CODE-003: Spec Flows Semantics
+### SEM-CODE-003: FEATURE Flows Semantics
 **Severity**: HIGH
 
 - [ ] Verify each implemented flow follows the ordered steps, triggers, and outcomes in Actor Flows
@@ -54,14 +54,14 @@ These checks are **Cypilot SDLC-specific** because they require Cypilot artifact
 ### SEM-CODE-004: Algorithms Semantics
 **Severity**: HIGH
 
-- [ ] Validate algorithm steps match the Spec Design algorithms (inputs, rules, outputs)
+- [ ] Validate algorithm steps match the Feature Design algorithms (inputs, rules, outputs)
 - [ ] Ensure data transformations and calculations match the described business rules
 - [ ] Confirm loop/iteration behavior and validation rules align with algorithm steps
 
 ### SEM-CODE-005: State Semantics
 **Severity**: HIGH
 
-- [ ] Confirm state transitions match the Spec Design state machine
+- [ ] Confirm state transitions match the Feature Design state machine
 - [ ] Verify triggers and guards for transitions match defined conditions
 - [ ] Ensure invalid transitions are prevented or handled explicitly
 

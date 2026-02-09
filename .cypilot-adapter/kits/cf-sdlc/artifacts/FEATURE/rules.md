@@ -1,15 +1,16 @@
-# FEATURE Rules (Hyperspot)
+# FEATURE Rules (CyberFabric)
 
 ## Required References (ALWAYS)
 
 ALWAYS open and follow `../../rules.md`
 
-ALWAYS open and follow `docs/spec-templates/FEATURE.md` as a template
+ALWAYS open and use `docs/spec-templates/FEATURE.md` as a template
+ALWAYS open and use `docs/spec-templates/examples/todo-app/features/*.md` as examples
 ALWAYS open and follow `docs/checklists/FEATURE.md` as a quality checklist
 
-## Hyperspot Deltas vs Original Cypilot SDLC
+## CyberFabric Deltas vs Original Cypilot SDLC
 
-- Hyperspot uses `FEATURE` artifacts as the implementable unit.
+- CyberFabric uses `FEATURE` artifacts as the implementable unit.
 
 ## Constraints Alignment (REQUIRED)
 
@@ -36,4 +37,5 @@ Optional ID kinds allowed in FEATURE:
 ## Validation Checklist
 
 - [ ] `python3 {cypilot_path}/skills/cypilot/scripts/cypilot.py validate --artifact <path>`
+- [ ] `make validate-artifacts`
 - [ ] Review against `docs/checklists/FEATURE.md`.

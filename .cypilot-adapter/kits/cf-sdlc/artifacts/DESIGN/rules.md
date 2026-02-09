@@ -1,17 +1,14 @@
-# DESIGN Rules (Hyperspot)
+# DESIGN Rules (CyberFabric)
 
 ## Required References (ALWAYS)
 
 ALWAYS open and follow `../../rules.md`
 
-ALWAYS open and follow `docs/spec-templates/DESIGN.md` as a template
+ALWAYS open and use `docs/spec-templates/DESIGN.md` as a template
+
+ALWAYS open and use `docs/spec-templates/examples/todo-app/DESIGN.md` as an example
 
 ALWAYS open and follow `docs/checklists/DESIGN.md` as a quality checklist
-
-## Hyperspot Deltas vs Original Cypilot SDLC
-
-- Downstream chain uses DECOMPOSITION → FEATURE.
-- Prefer decisions aligned with ModKit patterns and the secure ORM (`SecurityCtx` request-scoped).
 
 ## Constraints Alignment (REQUIRED)
 
@@ -38,4 +35,5 @@ ADR IDs MUST be referenced from DESIGN (i.e., DESIGN should include backtick ref
 ## Validation Checklist
 
 - [ ] `python3 {cypilot_path}/skills/cypilot/scripts/cypilot.py validate --artifact <path>`
+- [ ] `make validate-artifacts`
 - [ ] Review against `docs/checklists/DESIGN.md`.

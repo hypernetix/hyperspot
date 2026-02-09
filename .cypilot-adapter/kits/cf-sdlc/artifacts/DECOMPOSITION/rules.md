@@ -1,21 +1,20 @@
-# DECOMPOSITION Rules (Hyperspot)
+# DECOMPOSITION Rules (CyberFabric)
 
 ## Required References (ALWAYS)
 
 ALWAYS open and follow `../../rules.md`
 
 ALWAYS open and follow `docs/spec-templates/DECOMPOSITION.md` as a template
+ALWAYS open and follow `docs/spec-templates/examples/todo-app/DECOMPOSITION.md`
 ALWAYS open and follow `docs/checklists/DECOMPOSITION.md` as a quality checklist
-
-
 
 ## CyberFabric SDLC Chain (this kit)
 
 - PRD → ADR → DESIGN → DECOMPOSITION → FEATURE
 
-## Hyperspot Deltas vs Original Cypilot SDLC
+## CyberFabric Deltas vs Original Cypilot SDLC
 
-- Hyperspot decomposes DESIGN into `FEATURE` entries.
+- CyberFabric decomposes DESIGN into `FEATURE` entries.
 - Each entry MUST link to a corresponding FEATURE artifact and satisfy constraints.json coverage rules.
 
 ## Constraints Alignment (REQUIRED)
@@ -31,8 +30,10 @@ Each `feature` ID is expected to be covered by FEATURE artifacts according to co
 - [ ] Avoid overlap: design elements should not be duplicated across features without an explicit reason.
 - [ ] Assign priorities (`p1`-`p9`) and keep dependencies explicit and acyclic.
 - [ ] Ensure each DECOMPOSITION entry links to a corresponding FEATURE artifact path and that FEATURE is registered (if applicable).
+- [ ] Make all decomposition entries as features in `features/` as `NNNN-cpt-{system}-feature-{slug}.md` with `## 1. Feature Context` header only which includes reference to feature CPT ID, open `docs/spec-templates/FEATURE.md` for details
 
 ## Validation Checklist
 
 - [ ] `python3 {cypilot_path}/skills/cypilot/scripts/cypilot.py validate --artifact <path>`
+- [ ] `make validate-artifacts`
 - [ ] Review against `docs/checklists/DECOMPOSITION.md`.

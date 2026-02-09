@@ -1,4 +1,4 @@
-# Cypilot Adapter: hyperspot
+# Cypilot Adapter: CyberFabric
 
 **Extends**: `../.cypilot/AGENTS.md`
 

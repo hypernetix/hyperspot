@@ -131,3 +131,20 @@
 
 - **Data**:
   - [ ] `p3` - `cpt-{system}-dbtable-{slug}`
+
+---
+
+## 3. Feature Dependencies
+
+```text
+cpt-{system}-feature-{foundation-slug}
+    ↓
+    ├─→ cpt-{system}-feature-{dependent-1-slug}
+    └─→ cpt-{system}-feature-{dependent-2-slug}
+```
+
+**Dependency Rationale**:
+
+- `cpt-{system}-feature-{dependent-1-slug}` requires `cpt-{system}-feature-{foundation-slug}`: {explain why dependent-1 needs foundation}
+- `cpt-{system}-feature-{dependent-2-slug}` requires `cpt-{system}-feature-{foundation-slug}`: {explain why dependent-2 needs foundation}
+- `cpt-{system}-feature-{dependent-1-slug}` and `cpt-{system}-feature-{dependent-2-slug}` are independent of each other and can be developed in parallel
