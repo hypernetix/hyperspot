@@ -124,6 +124,6 @@ The system must validate schema ID format before lookup.
 
 #### N/A
 
-- [ ] `p9` - **ID**: `cpt-cyberfabric-type-registry-nfr-na`
+- [ ] `p1` - **ID**: `cpt-cyberfabric-type-registry-nfr-na`
 
 <!-- NFRs to be defined later -->
