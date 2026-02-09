@@ -37,7 +37,7 @@ REQUIREMENT LANGUAGE:
 
 ### 1.1 Purpose
 
-{1-2 sentences: What is this system/module and what problem does it solve?}
+{1-2 paragraphs: What is this system/module and what problem does it solve? What are the key features?}
 
 ### 1.2 Background / Problem Statement
 

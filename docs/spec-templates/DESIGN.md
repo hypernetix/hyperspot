@@ -116,26 +116,7 @@ This table maps non-functional requirements from PRD to specific design/architec
 **Relationships**:
 - {Entity1} → {Entity2}: {Relationship description}
 
-### 3.2 Component Model
-
-{Add component diagram here: Mermaid or ASCII}
-
-```mermaid
-graph TD
-    A[Component A] --> B[Component B]
-    B --> C[Component C]
-```
-
-**Components**:
-
-| Component | Responsibility | Interface |
-|-----------|---------------|-----------|
-| {Component 1} | {Purpose} | {API/Events/etc.} |
-
-**Interactions**:
-- {Component 1} → {Component 2}: {Protocol, data exchanged}
-
-### 3.3 API Contracts
+### 3.2 API Contracts
 
 **Technology**: {REST/OpenAPI | GraphQL | gRPC | etc.}
 
@@ -147,31 +128,48 @@ graph TD
 |--------|------|-------------|-----------|
 | `{METHOD}` | `{/path}` | {Description} | {stable/unstable} |
 
-### 3.4 External Interfaces & Protocols
 
-Define how this library/module interacts with external systems, including protocols, data formats, and integration points.
+### 3.3 Module Dependencies
 
-#### {Interface/Protocol Name}
+{Internal module dependencies within the platform. All inter-module communication goes through versioned contracts, SDK clients, or plugin interfaces — never through internal types.}
 
-- [ ] `p2` - **ID**: `fdd-{module}-design-interface-{slug}`
+| Dependency Module | Interface Used | Purpose |
+|-------------------|---------------|---------|----------|
+| {module_name} | {contract / SDK client / plugin} | {Why this module is needed} |
 
-**Type**: {Protocol | Data Format | External System | Hardware Interface}
+**Dependency Rules** (per project conventions):
+- No circular dependencies
+- Always use SDK modules for inter-module communication
+- No cross-category sideways deps except through contracts
+- Only integration/adapter modules talk to external systems
+- `SecurityContext` must be propagated across all in-process calls
+
+### 3.4 External Dependencies
+
+External systems, databases, and third-party services this module interacts with. Define protocols, data formats, and integration points.
+
+#### {External System / Database / Service Name}
+
+- [ ] `p2` - **ID**: `fdd-{module}-design-ext-{slug}`
+
+**Type**: {Database | External API | Message Broker | Object Storage | etc.}
 
 **Direction**: {inbound | outbound | bidirectional}
 
-**Specification**: {Protocol spec reference, RFC, standard}
+**Protocol / Driver**: {HTTP REST | gRPC | SeaORM/SQL | S3 API | etc.}
 
-**Data Format**: {JSON Schema, Protocol Buffers, binary format, etc.}
+**Data Format**: {JSON | Protocol Buffers | SQL | binary | etc.}
 
-**Compatibility**: {Versioning/backward compatibility guarantees}
+**Compatibility**: {Versioning / backward compatibility guarantees}
 
-**References**: Links to PRD § Public Library Interfaces
+**References**: Links to PRD or Public Library Interfaces
 
 ### 3.5 Sequences & Interactions
 
 ```mermaid
 sequenceDiagram
     User ->> System: Request
+    System ->> Module B: Call
     System ->> Database: Query
     Database -->> System: Result
     System -->> User: Response
@@ -192,31 +190,6 @@ sequenceDiagram
 **Indexes**: {Index definitions}
 
 **Notes**: {Additional constraints, triggers, etc.}
-
-### 3.7 Deployment Topology
-
-**ID**: `fdd-{module}-design-{slug}`
-
-{Infrastructure view: pods, containers, services, regions, etc.}
-
-```mermaid
-graph LR
-    LB[Load Balancer] --> S1[Service Pod 1]
-    LB --> S2[Service Pod 2]
-    S1 --> DB[(Database)]
-    S2 --> DB
-```
-
-### 3.8 Technology Stack
-
-Optional. Document only deviations from project-wide tech stack (see root DESIGN.md).
-
-| Layer | Technology | Rationale |
-|-------|------------|-----------|
-| Runtime | {e.g., Rust} | {Why chosen} |
-| Framework | {e.g., Axum} | {Why chosen} |
-| Database | {e.g., PostgreSQL} | {Why chosen} |
-| Messaging | {e.g., Kafka} | {Why chosen} |
 
 ## 4. Additional context
 
