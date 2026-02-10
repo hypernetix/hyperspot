@@ -36,7 +36,7 @@ The registry supports both single and batch schema lookups for efficient tool re
 
 #### LLM Gateway
 
-**ID**: `cpt-cf-type-registry-actor-llm-gateway`
+**ID**: `cpt-cf-types-registry-actor-llm-gateway`
 
 **Role**: Resolves tool schema references to full GTS schemas before provider calls.
 
@@ -44,34 +44,34 @@ The registry supports both single and batch schema lookups for efficient tool re
 
 #### Get Schema by ID
 
-- [ ] `p1` - **ID**: `cpt-cf-type-registry-fr-get-schema-v1`
+- [ ] `p1` - **ID**: `cpt-cf-types-registry-fr-get-schema-v1`
 
 The system must resolve a schema ID to full GTS schema for LLM Gateway tool resolution.
 
-**Actors**: `cpt-cf-type-registry-actor-llm-gateway`
+**Actors**: `cpt-cf-types-registry-actor-llm-gateway`
 
 #### Batch Get Schemas
 
-- [ ] `p1` - **ID**: `cpt-cf-type-registry-fr-batch-get-schemas-v1`
+- [ ] `p1` - **ID**: `cpt-cf-types-registry-fr-batch-get-schemas-v1`
 
 The system must resolve multiple schema IDs in a single request for efficient multi-tool resolution.
 
-**Actors**: `cpt-cf-type-registry-actor-llm-gateway`
+**Actors**: `cpt-cf-types-registry-actor-llm-gateway`
 
 #### Schema ID Validation
 
-- [ ] `p1` - **ID**: `cpt-cf-type-registry-fr-validate-schema-id-v1`
+- [ ] `p1` - **ID**: `cpt-cf-types-registry-fr-validate-schema-id-v1`
 
 The system must validate schema ID format before lookup.
 
-**Actors**: `cpt-cf-type-registry-actor-llm-gateway`
+**Actors**: `cpt-cf-types-registry-actor-llm-gateway`
 
 ## 4. Use Cases
 
 #### UC-001: Get Schema by ID
 
-- [ ] `p1` - **ID**: `cpt-cf-type-registry-usecase-get-schema-v1`
-**Actor**: `cpt-cf-type-registry-actor-llm-gateway`
+- [ ] `p1` - **ID**: `cpt-cf-types-registry-usecase-get-schema-v1`
+**Actor**: `cpt-cf-types-registry-actor-llm-gateway`
 
 **Preconditions**: Schema exists in registry.
 
@@ -90,8 +90,8 @@ The system must validate schema ID format before lookup.
 
 #### UC-002: Batch Get Schemas
 
-- [ ] `p1` - **ID**: `cpt-cf-type-registry-usecase-batch-get-schemas-v1`
-**Actor**: `cpt-cf-type-registry-actor-llm-gateway`
+- [ ] `p1` - **ID**: `cpt-cf-types-registry-usecase-batch-get-schemas-v1`
+**Actor**: `cpt-cf-types-registry-actor-llm-gateway`
 
 **Preconditions**: At least one schema ID provided.
 
@@ -112,6 +112,6 @@ The system must validate schema ID format before lookup.
 
 #### N/A
 
-- [ ] `p1` - **ID**: `cpt-cf-type-registry-nfr-na`
+- [ ] `p1` - **ID**: `cpt-cf-types-registry-nfr-na`
 
 <!-- NFRs to be defined later -->
