@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use modkit::registry::ModuleRegistrySnapshot;
-use modkit::runtime::{InstanceState, ModuleManager};
+use modkit::runtime::ModuleManager;
 
 use super::model::{DeploymentMode, InstanceInfo, ModuleInfo};
 
@@ -103,13 +103,6 @@ impl ModulesService {
             .instances_of(module_name)
             .into_iter()
             .map(|inst| {
-                let state = match inst.state() {
-                    InstanceState::Registered => "registered",
-                    InstanceState::Ready => "ready",
-                    InstanceState::Healthy => "healthy",
-                    InstanceState::Quarantined => "quarantined",
-                    InstanceState::Draining => "draining",
-                };
                 let grpc_services = inst
                     .grpc_services
                     .iter()
@@ -119,7 +112,7 @@ impl ModulesService {
                 InstanceInfo {
                     instance_id: inst.instance_id,
                     version: inst.version.clone(),
-                    state: state.to_owned(),
+                    state: inst.state(),
                     grpc_services,
                 }
             })
@@ -132,7 +125,7 @@ impl ModulesService {
 mod tests {
     use super::*;
     use modkit::registry::{ModuleRegistrySnapshot, ModuleSnapshot};
-    use modkit::runtime::{Endpoint, ModuleInstance, ModuleManager};
+    use modkit::runtime::{Endpoint, InstanceState, ModuleInstance, ModuleManager};
     use uuid::Uuid;
 
     #[test]
@@ -271,7 +264,7 @@ mod tests {
         let svc = ModulesService::new(snapshot, manager, oop_names);
         let modules = svc.list_modules();
 
-        assert_eq!(modules[0].instances[0].state, "registered");
+        assert_eq!(modules[0].instances[0].state, InstanceState::Registered);
     }
 
     #[test]

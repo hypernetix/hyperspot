@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use uuid::Uuid;
 
+use modkit::runtime::InstanceState;
+
 use crate::domain::model::{DeploymentMode, InstanceInfo, ModuleInfo};
 
 /// Deployment mode of a module
@@ -26,9 +28,6 @@ pub struct ModuleDto {
     pub deployment_mode: DeploymentModeDto,
     /// Running instances of this module
     pub instances: Vec<ModuleInstanceDto>,
-    /// Plugins provided by this module (not yet populated; reserved for follow-up)
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub plugins: Vec<PluginDto>,
 }
 
 /// Response DTO for a running module instance
@@ -45,16 +44,6 @@ pub struct ModuleInstanceDto {
     pub grpc_services: HashMap<String, String>,
 }
 
-/// Response DTO for a plugin (reserved for follow-up implementation)
-#[modkit_macros::api_dto(response)]
-pub struct PluginDto {
-    /// Plugin GTS identifier
-    pub gts_id: String,
-    /// Plugin version
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub version: Option<String>,
-}
-
 impl From<&ModuleInfo> for ModuleDto {
     fn from(info: &ModuleInfo) -> Self {
         Self {
@@ -66,7 +55,6 @@ impl From<&ModuleInfo> for ModuleDto {
                 DeploymentMode::OutOfProcess => DeploymentModeDto::OutOfProcess,
             },
             instances: info.instances.iter().map(ModuleInstanceDto::from).collect(),
-            plugins: vec![],
         }
     }
 }
@@ -76,7 +64,14 @@ impl From<&InstanceInfo> for ModuleInstanceDto {
         Self {
             instance_id: info.instance_id,
             version: info.version.clone(),
-            state: info.state.clone(),
+            state: match info.state {
+                InstanceState::Registered => "registered",
+                InstanceState::Ready => "ready",
+                InstanceState::Healthy => "healthy",
+                InstanceState::Quarantined => "quarantined",
+                InstanceState::Draining => "draining",
+            }
+            .to_owned(),
             grpc_services: info.grpc_services.clone(),
         }
     }
