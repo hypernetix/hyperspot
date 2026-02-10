@@ -1243,15 +1243,21 @@ name = "cf-module-orchestrator"
 version = "0.1.2"
 dependencies = [
  "anyhow",
+ "arc-swap",
  "async-trait",
+ "axum",
  "cf-modkit",
+ "cf-modkit-macros",
  "cf-system-sdks",
  "inventory",
  "parking_lot",
  "serde",
+ "serde_json",
  "tokio",
  "tonic",
  "tracing",
+ "utoipa",
+ "uuid",
 ]
 
 [[package]]

@@ -155,6 +155,24 @@ impl CapabilitySet {
         Self { caps: Vec::new() }
     }
 
+    /// Returns a list of human-readable capability labels.
+    #[must_use]
+    pub fn labels(&self) -> Vec<&'static str> {
+        self.caps
+            .iter()
+            .map(|cap| match cap {
+                #[cfg(feature = "db")]
+                Capability::Database(_) => "db",
+                Capability::RestApi(_) => "rest",
+                Capability::ApiGateway(_) => "rest_host",
+                Capability::Runnable(_) => "stateful",
+                Capability::System(_) => "system",
+                Capability::GrpcHub(_) => "grpc_hub",
+                Capability::GrpcService(_) => "grpc",
+            })
+            .collect()
+    }
+
     /// Add a capability to the set.
     pub fn push(&mut self, cap: Capability) {
         self.caps.push(cap);
@@ -197,6 +215,26 @@ pub struct ModuleEntry {
     pub(crate) deps: &'static [&'static str],
     pub(crate) core: Arc<dyn contracts::Module>,
     pub(crate) caps: CapabilitySet,
+}
+
+impl ModuleEntry {
+    /// Returns the module name.
+    #[must_use]
+    pub fn name(&self) -> &'static str {
+        self.name
+    }
+
+    /// Returns the module dependency names.
+    #[must_use]
+    pub fn deps(&self) -> &'static [&'static str] {
+        self.deps
+    }
+
+    /// Returns the capability set.
+    #[must_use]
+    pub fn caps(&self) -> &CapabilitySet {
+        &self.caps
+    }
 }
 
 impl std::fmt::Debug for ModuleEntry {
@@ -663,6 +701,52 @@ impl RegistryBuilder {
     }
 }
 
+// ============================================================================
+// Registry Snapshot (for introspection APIs)
+// ============================================================================
+
+/// A serializable snapshot of a single module entry from the registry.
+///
+/// This captures the static compile-time info about a module for introspection.
+#[derive(Debug, Clone)]
+pub struct ModuleSnapshot {
+    /// Module name
+    pub name: String,
+    /// Module dependency names
+    pub deps: Vec<String>,
+    /// Human-readable capability labels (e.g., "rest", "db", "system")
+    pub capability_labels: Vec<String>,
+}
+
+/// A snapshot of the entire module registry, suitable for introspection APIs.
+#[derive(Debug, Clone)]
+pub struct ModuleRegistrySnapshot {
+    /// All compiled-in modules in topological order
+    pub modules: Vec<ModuleSnapshot>,
+}
+
+impl ModuleRegistrySnapshot {
+    /// Build a snapshot from the live registry.
+    #[must_use]
+    pub fn from_registry(registry: &ModuleRegistry) -> Self {
+        let modules = registry
+            .modules()
+            .iter()
+            .map(|entry| ModuleSnapshot {
+                name: entry.name().to_owned(),
+                deps: entry.deps().iter().map(|d| (*d).to_owned()).collect(),
+                capability_labels: entry
+                    .caps()
+                    .labels()
+                    .into_iter()
+                    .map(str::to_owned)
+                    .collect(),
+            })
+            .collect();
+        Self { modules }
+    }
+}
+
 /// Structured errors for the module registry.
 #[derive(Debug, Error)]
 pub enum RegistryError {
@@ -968,6 +1052,64 @@ mod tests {
     }
 
     #[test]
+    fn capability_labels_works() {
+        let mut b = RegistryBuilder::default();
+        let module = Arc::new(DummyCore);
+        b.register_core_with_meta("test", &[], module);
+        b.register_db_with_meta("test", Arc::new(DummyDb));
+        b.register_rest_with_meta("test", Arc::new(DummyRest));
+        b.register_system_with_meta("test", Arc::new(DummySystem));
+
+        let reg = b.build_topo_sorted().unwrap();
+        let entry = &reg.modules()[0];
+
+        let labels = entry.caps().labels();
+        assert!(labels.contains(&"db"));
+        assert!(labels.contains(&"rest"));
+        assert!(labels.contains(&"system"));
+        assert!(!labels.contains(&"stateful"));
+    }
+
+    #[test]
+    fn module_entry_getters_work() {
+        let mut b = RegistryBuilder::default();
+        b.register_core_with_meta("alpha", &[], Arc::new(DummyCore));
+        b.register_core_with_meta("beta", &["alpha"], Arc::new(DummyCore));
+        b.register_rest_with_meta("beta", Arc::new(DummyRest));
+
+        let reg = b.build_topo_sorted().unwrap();
+        let beta = reg.modules().iter().find(|e| e.name() == "beta").unwrap();
+
+        assert_eq!(beta.name(), "beta");
+        assert_eq!(beta.deps(), &["alpha"]);
+        assert!(beta.caps().has::<RestApiCap>());
+    }
+
+    #[test]
+    fn registry_snapshot_captures_all_modules() {
+        let mut b = RegistryBuilder::default();
+        b.register_core_with_meta("core_a", &[], Arc::new(DummyCore));
+        b.register_core_with_meta("core_b", &["core_a"], Arc::new(DummyCore));
+        b.register_rest_with_meta("core_a", Arc::new(DummyRest));
+        b.register_db_with_meta("core_b", Arc::new(DummyDb));
+
+        let reg = b.build_topo_sorted().unwrap();
+        let snapshot = ModuleRegistrySnapshot::from_registry(&reg);
+
+        assert_eq!(snapshot.modules.len(), 2);
+
+        let snap_a = &snapshot.modules[0];
+        assert_eq!(snap_a.name, "core_a");
+        assert!(snap_a.deps.is_empty());
+        assert!(snap_a.capability_labels.contains(&"rest".to_owned()));
+
+        let snap_b = &snapshot.modules[1];
+        assert_eq!(snap_b.name, "core_b");
+        assert_eq!(snap_b.deps, vec!["core_a".to_owned()]);
+        assert!(snap_b.capability_labels.contains(&"db".to_owned()));
+    }
+
+    #[test]
     fn test_module_registry_builds() {
         let registry = ModuleRegistry::discover_and_build();
         assert!(registry.is_ok(), "Registry should build successfully");
@@ -1006,6 +1148,11 @@ mod tests {
             Ok(())
         }
     }
+
+    #[derive(Default)]
+    struct DummySystem;
+    #[async_trait::async_trait]
+    impl contracts::SystemCapability for DummySystem {}
 
     #[derive(Default)]
     struct DummyRestHost;

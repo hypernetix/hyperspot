@@ -16,6 +16,7 @@
 use axum::Router;
 use std::collections::HashSet;
 use std::sync::Arc;
+
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
@@ -24,8 +25,8 @@ use crate::client_hub::ClientHub;
 use crate::config::ConfigProvider;
 use crate::context::ModuleContextBuilder;
 use crate::registry::{
-    ApiGatewayCap, GrpcHubCap, ModuleEntry, ModuleRegistry, RegistryError, RestApiCap, RunnableCap,
-    SystemCap,
+    ApiGatewayCap, GrpcHubCap, ModuleEntry, ModuleRegistry, ModuleRegistrySnapshot, RegistryError,
+    RestApiCap, RunnableCap, SystemCap,
 };
 use crate::runtime::{GrpcInstallerStore, ModuleManager, OopSpawnOptions, SystemContext};
 
@@ -73,6 +74,10 @@ pub struct HostRuntime {
     db_options: DbOptions,
     /// `OoP` module spawn configuration and backend
     oop_options: Option<OopSpawnOptions>,
+    /// Static snapshot of compiled-in module registry for introspection
+    registry_snapshot: Arc<ModuleRegistrySnapshot>,
+    /// Names of modules configured as out-of-process
+    oop_module_names: Arc<HashSet<String>>,
 }
 
 impl HostRuntime {
@@ -107,6 +112,22 @@ impl HostRuntime {
             db_manager,
         );
 
+        // Build a snapshot of the registry for introspection APIs
+        let registry_snapshot = Arc::new(ModuleRegistrySnapshot::from_registry(&registry));
+
+        // Collect OoP module names from spawn configuration
+        let oop_module_names = Arc::new(
+            oop_options
+                .as_ref()
+                .map(|opts| {
+                    opts.modules
+                        .iter()
+                        .map(|m| m.module_name.clone())
+                        .collect::<HashSet<_>>()
+                })
+                .unwrap_or_default(),
+        );
+
         Self {
             registry,
             ctx_builder,
@@ -117,6 +138,8 @@ impl HostRuntime {
             cancel,
             db_options,
             oop_options,
+            registry_snapshot,
+            oop_module_names,
         }
     }
 
@@ -133,6 +156,8 @@ impl HostRuntime {
             self.instance_id,
             Arc::clone(&self.module_manager),
             Arc::clone(&self.grpc_installers),
+            Arc::clone(&self.registry_snapshot),
+            Arc::clone(&self.oop_module_names),
         );
 
         for entry in self.registry.modules() {
@@ -329,6 +354,8 @@ impl HostRuntime {
             self.instance_id,
             Arc::clone(&self.module_manager),
             Arc::clone(&self.grpc_installers),
+            Arc::clone(&self.registry_snapshot),
+            Arc::clone(&self.oop_module_names),
         );
 
         for entry in self.registry.modules_by_system_priority() {

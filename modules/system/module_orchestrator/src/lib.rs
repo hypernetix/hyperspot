@@ -9,6 +9,8 @@ pub mod module;
 pub use module::{ModuleOrchestrator, ModuleOrchestratorConfig};
 
 // === INTERNAL MODULES ===
+mod api;
+mod domain;
 mod server;
 
 // === RE-EXPORTS ===

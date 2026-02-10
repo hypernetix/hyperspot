@@ -1,0 +1,302 @@
+use std::collections::HashSet;
+use std::sync::Arc;
+
+use modkit::registry::ModuleRegistrySnapshot;
+use modkit::runtime::{InstanceState, ModuleManager};
+
+use super::model::{DeploymentMode, InstanceInfo, ModuleInfo};
+
+/// Service that assembles module information from registry snapshot and runtime data.
+pub struct ModulesService {
+    registry_snapshot: Arc<ModuleRegistrySnapshot>,
+    module_manager: Arc<ModuleManager>,
+    oop_module_names: Arc<HashSet<String>>,
+}
+
+impl ModulesService {
+    pub fn new(
+        registry_snapshot: Arc<ModuleRegistrySnapshot>,
+        module_manager: Arc<ModuleManager>,
+        oop_module_names: Arc<HashSet<String>>,
+    ) -> Self {
+        Self {
+            registry_snapshot,
+            module_manager,
+            oop_module_names,
+        }
+    }
+
+    /// List all registered modules, merging compile-time registry data with runtime instances.
+    pub fn list_modules(&self) -> Vec<ModuleInfo> {
+        let mut modules = Vec::new();
+        let mut seen_names = HashSet::new();
+
+        // 1. Emit all compiled-in modules from the registry snapshot.
+        //    If a module is also in oop_module_names, it means the config overrides
+        //    it to run out-of-process.
+        for snapshot in &self.registry_snapshot.modules {
+            seen_names.insert(snapshot.name.clone());
+
+            let deployment_mode = if self.oop_module_names.contains(&snapshot.name) {
+                DeploymentMode::OutOfProcess
+            } else {
+                DeploymentMode::CompiledIn
+            };
+
+            let instances = self.instances_for_module(&snapshot.name);
+
+            modules.push(ModuleInfo {
+                name: snapshot.name.clone(),
+                capabilities: snapshot.capability_labels.clone(),
+                dependencies: snapshot.deps.clone(),
+                deployment_mode,
+                instances,
+            });
+        }
+
+        // 2. Add OoP modules from config that haven't been seen yet
+        //    (they may or may not have registered instances)
+        for oop_name in self.oop_module_names.iter() {
+            if seen_names.contains(oop_name) {
+                continue;
+            }
+            seen_names.insert(oop_name.clone());
+
+            let instances = self.instances_for_module(oop_name);
+
+            modules.push(ModuleInfo {
+                name: oop_name.clone(),
+                capabilities: vec![],
+                dependencies: vec![],
+                deployment_mode: DeploymentMode::OutOfProcess,
+                instances,
+            });
+        }
+
+        // 3. Add any dynamically registered modules from ModuleManager
+        //    that are not in the registry or OoP config
+        for instance in self.module_manager.all_instances() {
+            if seen_names.contains(&instance.module) {
+                continue;
+            }
+            seen_names.insert(instance.module.clone());
+
+            let instances = self.instances_for_module(&instance.module);
+
+            modules.push(ModuleInfo {
+                name: instance.module.clone(),
+                capabilities: vec![],
+                dependencies: vec![],
+                deployment_mode: DeploymentMode::OutOfProcess,
+                instances,
+            });
+        }
+
+        // Sort by name for deterministic output
+        modules.sort_by(|a, b| a.name.cmp(&b.name));
+
+        modules
+    }
+
+    fn instances_for_module(&self, module_name: &str) -> Vec<InstanceInfo> {
+        self.module_manager
+            .instances_of(module_name)
+            .into_iter()
+            .map(|inst| {
+                let state = match inst.state() {
+                    InstanceState::Registered => "registered",
+                    InstanceState::Ready => "ready",
+                    InstanceState::Healthy => "healthy",
+                    InstanceState::Quarantined => "quarantined",
+                    InstanceState::Draining => "draining",
+                };
+                let grpc_services = inst
+                    .grpc_services
+                    .iter()
+                    .map(|(name, ep)| (name.clone(), ep.uri.clone()))
+                    .collect();
+
+                InstanceInfo {
+                    instance_id: inst.instance_id,
+                    version: inst.version.clone(),
+                    state: state.to_owned(),
+                    grpc_services,
+                }
+            })
+            .collect()
+    }
+}
+
+#[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
+mod tests {
+    use super::*;
+    use modkit::registry::{ModuleRegistrySnapshot, ModuleSnapshot};
+    use modkit::runtime::{Endpoint, ModuleInstance, ModuleManager};
+    use uuid::Uuid;
+
+    #[test]
+    fn list_compiled_in_modules_from_snapshot() {
+        let snapshot = Arc::new(ModuleRegistrySnapshot {
+            modules: vec![
+                ModuleSnapshot {
+                    name: "api_gateway".to_owned(),
+                    deps: vec![],
+                    capability_labels: vec!["rest".to_owned(), "system".to_owned()],
+                },
+                ModuleSnapshot {
+                    name: "nodes_registry".to_owned(),
+                    deps: vec!["api_gateway".to_owned()],
+                    capability_labels: vec!["rest".to_owned()],
+                },
+            ],
+        });
+        let manager = Arc::new(ModuleManager::new());
+        let oop_names = Arc::new(HashSet::new());
+
+        let svc = ModulesService::new(snapshot, manager, oop_names);
+        let modules = svc.list_modules();
+
+        assert_eq!(modules.len(), 2);
+        // Sorted by name
+        assert_eq!(modules[0].name, "api_gateway");
+        assert_eq!(modules[0].deployment_mode, DeploymentMode::CompiledIn);
+        assert_eq!(modules[0].capabilities, vec!["rest", "system"]);
+        assert!(modules[0].instances.is_empty());
+
+        assert_eq!(modules[1].name, "nodes_registry");
+        assert_eq!(modules[1].dependencies, vec!["api_gateway"]);
+    }
+
+    #[test]
+    fn oop_modules_from_config_appear_even_without_instances() {
+        let snapshot = Arc::new(ModuleRegistrySnapshot { modules: vec![] });
+        let manager = Arc::new(ModuleManager::new());
+        let oop_names = Arc::new(HashSet::from(["calculator".to_owned()]));
+
+        let svc = ModulesService::new(snapshot, manager, oop_names);
+        let modules = svc.list_modules();
+
+        assert_eq!(modules.len(), 1);
+        assert_eq!(modules[0].name, "calculator");
+        assert_eq!(modules[0].deployment_mode, DeploymentMode::OutOfProcess);
+        assert!(modules[0].instances.is_empty());
+    }
+
+    #[test]
+    fn dynamic_oop_instances_appear_as_out_of_process() {
+        let snapshot = Arc::new(ModuleRegistrySnapshot { modules: vec![] });
+        let manager = Arc::new(ModuleManager::new());
+
+        let instance = Arc::new(
+            ModuleInstance::new("external_svc", Uuid::new_v4())
+                .with_version("2.0.0")
+                .with_grpc_service("ext.Service", Endpoint::http("127.0.0.1", 9001)),
+        );
+        manager.register_instance(instance);
+
+        let oop_names = Arc::new(HashSet::new());
+        let svc = ModulesService::new(snapshot, manager, oop_names);
+        let modules = svc.list_modules();
+
+        assert_eq!(modules.len(), 1);
+        assert_eq!(modules[0].name, "external_svc");
+        assert_eq!(modules[0].deployment_mode, DeploymentMode::OutOfProcess);
+        assert_eq!(modules[0].instances.len(), 1);
+        assert_eq!(modules[0].instances[0].version, Some("2.0.0".to_owned()));
+        assert!(
+            modules[0].instances[0]
+                .grpc_services
+                .contains_key("ext.Service")
+        );
+    }
+
+    #[test]
+    fn compiled_in_modules_show_instances_from_manager() {
+        let snapshot = Arc::new(ModuleRegistrySnapshot {
+            modules: vec![ModuleSnapshot {
+                name: "grpc_hub".to_owned(),
+                deps: vec![],
+                capability_labels: vec!["grpc_hub".to_owned(), "system".to_owned()],
+            }],
+        });
+        let manager = Arc::new(ModuleManager::new());
+
+        let instance =
+            Arc::new(ModuleInstance::new("grpc_hub", Uuid::new_v4()).with_version("0.1.0"));
+        manager.register_instance(instance);
+
+        let oop_names = Arc::new(HashSet::new());
+        let svc = ModulesService::new(snapshot, manager, oop_names);
+        let modules = svc.list_modules();
+
+        assert_eq!(modules.len(), 1);
+        assert_eq!(modules[0].name, "grpc_hub");
+        assert_eq!(modules[0].deployment_mode, DeploymentMode::CompiledIn);
+        assert_eq!(modules[0].instances.len(), 1);
+    }
+
+    #[test]
+    fn compiled_in_module_in_oop_config_shows_out_of_process() {
+        let snapshot = Arc::new(ModuleRegistrySnapshot {
+            modules: vec![ModuleSnapshot {
+                name: "calculator".to_owned(),
+                deps: vec![],
+                capability_labels: vec!["grpc".to_owned()],
+            }],
+        });
+        let manager = Arc::new(ModuleManager::new());
+        let oop_names = Arc::new(HashSet::from(["calculator".to_owned()]));
+
+        let svc = ModulesService::new(snapshot, manager, oop_names);
+        let modules = svc.list_modules();
+
+        assert_eq!(modules.len(), 1);
+        assert_eq!(modules[0].name, "calculator");
+        assert_eq!(modules[0].deployment_mode, DeploymentMode::OutOfProcess);
+        // Still has capabilities from compile-time registry
+        assert_eq!(modules[0].capabilities, vec!["grpc"]);
+    }
+
+    #[test]
+    fn instance_state_maps_to_explicit_strings() {
+        let snapshot = Arc::new(ModuleRegistrySnapshot { modules: vec![] });
+        let manager = Arc::new(ModuleManager::new());
+
+        let instance = Arc::new(ModuleInstance::new("svc", Uuid::new_v4()));
+        // Default state is Registered
+        manager.register_instance(instance);
+
+        let oop_names = Arc::new(HashSet::new());
+        let svc = ModulesService::new(snapshot, manager, oop_names);
+        let modules = svc.list_modules();
+
+        assert_eq!(modules[0].instances[0].state, "registered");
+    }
+
+    #[test]
+    fn result_is_sorted_by_name() {
+        let snapshot = Arc::new(ModuleRegistrySnapshot {
+            modules: vec![
+                ModuleSnapshot {
+                    name: "zebra".to_owned(),
+                    deps: vec![],
+                    capability_labels: vec![],
+                },
+                ModuleSnapshot {
+                    name: "alpha".to_owned(),
+                    deps: vec![],
+                    capability_labels: vec![],
+                },
+            ],
+        });
+        let manager = Arc::new(ModuleManager::new());
+        let oop_names = Arc::new(HashSet::new());
+
+        let svc = ModulesService::new(snapshot, manager, oop_names);
+        let modules = svc.list_modules();
+
+        assert_eq!(modules[0].name, "alpha");
+        assert_eq!(modules[1].name, "zebra");
+    }
+}
