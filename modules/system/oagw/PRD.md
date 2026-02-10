@@ -808,7 +808,7 @@ The system **MUST** scope all resources by tenant with isolation at data layer.
 
 | Dependency | Description | Criticality |
 |------------|-------------|-------------|
-| `type-registry` | GTS schema/instance registration and validation | p1 |
+| `types-registry` | GTS schema/instance registration and validation | p1 |
 | `cred_store` | Secure secret retrieval by UUID reference | p1 |
 | `api_ingress` | REST API hosting and routing | p1 |
 | `modkit-db` | Database persistence for upstreams/routes/plugins | p1 |

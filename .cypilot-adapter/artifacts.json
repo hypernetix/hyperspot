@@ -25,12 +25,8 @@
       "patterns": ["modules/model-registry/*"]
     },
     {
-      "reason": "Ignore module 'type-registry' (not SDLC-documented yet: missing required PRD/DESIGN).",
-      "patterns": ["modules/type-registry/*"]
-    },
-    {
-      "reason": "Ignore module 'file-parser' (not SDLC-documented yet: missing required PRD/DESIGN).",
-      "patterns": ["modules/file-parser/*"]
+      "reason": "Ignore module 'types-registry' (not SDLC-documented yet: missing required PRD/DESIGN).",
+      "patterns": ["modules/types-registry/*"]
     }
   ],
   "systems": [

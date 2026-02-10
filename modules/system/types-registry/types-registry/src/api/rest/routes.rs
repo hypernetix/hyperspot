@@ -66,7 +66,7 @@ pub fn register_routes(
 ) -> Router {
     // POST /types-registry/v1/entities - Register GTS entities
     router = OperationBuilder::post("/types-registry/v1/entities")
-        .operation_id("types-registry.register")
+        .operation_id("types_registry.register")
         .summary("Register GTS entities")
         .description(
             "Register one or more GTS entities (types or instances) in batch. Returns per-item results.",
@@ -86,7 +86,7 @@ pub fn register_routes(
 
     // GET /types-registry/v1/entities - List GTS entities
     router = OperationBuilder::get("/types-registry/v1/entities")
-        .operation_id("types-registry.list")
+        .operation_id("types_registry.list")
         .summary("List GTS entities")
         .description(
             "List registered GTS entities with optional filtering by pattern, kind, vendor, package, or namespace.",
@@ -111,7 +111,7 @@ pub fn register_routes(
 
     // GET /types-registry/v1/entities/{gts_id} - Get GTS entity by ID
     router = OperationBuilder::get("/types-registry/v1/entities/{gts_id}")
-        .operation_id("types-registry.get")
+        .operation_id("types_registry.get")
         .summary("Get GTS entity by ID")
         .description("Retrieve a single GTS entity by its identifier.")
         .tag(TAG)

@@ -15,7 +15,7 @@ pub fn register_routes(
 ) -> Router {
     // GET /nodes - List all nodes
     router = OperationBuilder::<Missing, Missing, ()>::get("/nodes-registry/v1/nodes")
-        .operation_id("nodes-registry.list_nodes")
+        .operation_id("nodes_registry.list_nodes")
         .summary("List all nodes")
         .description("Get a list of all nodes in the deployment. Use ?details=true to include sysinfo and syscap. Use ?force_refresh=true to invalidate syscap cache.")
         .tag("nodes")
@@ -29,7 +29,7 @@ pub fn register_routes(
 
     // GET /nodes/{id} - Get a specific node
     router = OperationBuilder::<Missing, Missing, ()>::get("/nodes-registry/v1/nodes/{id}")
-        .operation_id("nodes-registry.get_node")
+        .operation_id("nodes_registry.get_node")
         .summary("Get node by ID")
         .description("Get detailed information about a specific node. Use ?details=true to include sysinfo and syscap. Use ?force_refresh=true to invalidate syscap cache.")
         .tag("nodes")
@@ -45,7 +45,7 @@ pub fn register_routes(
 
     // GET /nodes/{id}/sysinfo - Get system information for a node
     router = OperationBuilder::<Missing, Missing, ()>::get("/nodes-registry/v1/nodes/{id}/sysinfo")
-        .operation_id("nodes-registry.get_node_sysinfo")
+        .operation_id("nodes_registry.get_node_sysinfo")
         .summary("Get node system information")
         .description("Get detailed system information (OS, CPU, memory, etc.) for a specific node")
         .tag("nodes")
@@ -63,7 +63,7 @@ pub fn register_routes(
 
     // GET /nodes/{id}/syscap - Get system capabilities for a node
     router = OperationBuilder::<Missing, Missing, ()>::get("/nodes-registry/v1/nodes/{id}/syscap")
-        .operation_id("nodes-registry.get_node_syscap")
+        .operation_id("nodes_registry.get_node_syscap")
         .summary("Get node system capabilities")
         .description("Get system capabilities (hardware, software features) for a specific node. Use ?force_refresh=true to invalidate cache and refresh all capabilities.")
         .tag("nodes")

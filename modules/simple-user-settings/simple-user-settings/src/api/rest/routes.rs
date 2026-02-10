@@ -56,7 +56,7 @@ pub fn register_routes(
     service: Arc<ConcreteService>,
 ) -> Router {
     router = OperationBuilder::get("/simple-user-settings/v1/settings")
-        .operation_id("simple-user-settings.get_settings")
+        .operation_id("simple_user_settings.get_settings")
         .summary("Get user settings")
         .description("Retrieve settings for the authenticated user")
         .tag("Settings")
@@ -74,7 +74,7 @@ pub fn register_routes(
         .register(router, openapi);
 
     router = OperationBuilder::post("/simple-user-settings/v1/settings")
-        .operation_id("simple-user-settings.update_settings")
+        .operation_id("simple_user_settings.update_settings")
         .summary("Update user settings")
         .description("Full update of user settings (POST semantics)")
         .tag("Settings")
@@ -95,7 +95,7 @@ pub fn register_routes(
         .register(router, openapi);
 
     router = OperationBuilder::patch("/simple-user-settings/v1/settings")
-        .operation_id("simple-user-settings.patch_settings")
+        .operation_id("simple_user_settings.patch_settings")
         .summary("Partially update user settings")
         .description("Partial update of user settings (PATCH semantics)")
         .tag("Settings")

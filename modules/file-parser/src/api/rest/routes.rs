@@ -62,7 +62,7 @@ pub fn register_routes(
 
     // GET /file-parser/v1/info - Get information about available file parsers
     router = OperationBuilder::get("/file-parser/v1/info")
-        .operation_id("file-parser.get_parser_info")
+        .operation_id("file_parser.get_parser_info")
         .summary("Get information about available file parsers")
         .tag("File Parser")
         .require_auth(&Resource::FileParser, &Action::Read)
@@ -78,7 +78,7 @@ pub fn register_routes(
 
     // POST /file-parser/v1/parse-local - Parse a file from a local path
     router = OperationBuilder::post("/file-parser/v1/parse-local")
-        .operation_id("file-parser.parse_local")
+        .operation_id("file_parser.parse_local")
         .summary("Parse a file from a local path")
         .tag("File Parser")
         .require_auth(&Resource::FileParser, &Action::Read)
@@ -103,7 +103,7 @@ pub fn register_routes(
 
     // POST /file-parser/v1/upload - Upload and parse a file
     router = OperationBuilder::post("/file-parser/v1/upload")
-        .operation_id("file-parser.upload")
+        .operation_id("file_parser.upload")
         .summary("Upload and parse a file")
         .tag("File Parser")
         .require_auth(&Resource::FileParser, &Action::Read)
@@ -133,7 +133,7 @@ pub fn register_routes(
 
     // POST /file-parser/v1/parse-url - Parse a file from a URL
     router = OperationBuilder::post("/file-parser/v1/parse-url")
-        .operation_id("file-parser.parse_url")
+        .operation_id("file_parser.parse_url")
         .summary("Parse a file from a URL")
         .tag("File Parser")
         .require_auth(&Resource::FileParser, &Action::Read)
@@ -158,7 +158,7 @@ pub fn register_routes(
 
     // POST /file-parser/v1/parse-local/markdown - Parse a local file and stream Markdown
     router = OperationBuilder::post("/file-parser/v1/parse-local/markdown")
-        .operation_id("file-parser.parse_local_markdown")
+        .operation_id("file_parser.parse_local_markdown")
         .summary("Parse a local file and stream Markdown")
         .tag("File Parser")
         .require_auth(&Resource::FileParser, &Action::Read)
@@ -172,7 +172,7 @@ pub fn register_routes(
 
     // POST /file-parser/v1/upload/markdown - Upload and parse a file, streaming Markdown
     router = OperationBuilder::post("/file-parser/v1/upload/markdown")
-        .operation_id("file-parser.upload_markdown")
+        .operation_id("file_parser.upload_markdown")
         .summary("Upload and parse a file, streaming Markdown")
         .tag("File Parser")
         .require_auth(&Resource::FileParser, &Action::Read)
@@ -186,7 +186,7 @@ pub fn register_routes(
 
     // POST /file-parser/v1/parse-url/markdown - Parse a file from a URL and stream Markdown
     router = OperationBuilder::post("/file-parser/v1/parse-url/markdown")
-        .operation_id("file-parser.parse_url_markdown")
+        .operation_id("file_parser.parse_url_markdown")
         .summary("Parse a file from a URL and stream Markdown")
         .tag("File Parser")
         .require_auth(&Resource::FileParser, &Action::Read)

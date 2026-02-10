@@ -106,7 +106,7 @@ modules:
       # Authentication Configuration
       # For local development, auth is disabled (uses root context)
       auth_disabled: true
-      require_auth_by_default: false
+      require_auth_by_default: true
       
       # JWKS Configuration (uncomment when enabling authentication)
       # jwks_uri: "http://localhost:8080/realms/dev/protocol/openid-connect/certs"

@@ -120,7 +120,7 @@ Key architectural decisions: plugin-based modularity for credential injection an
 
 | Dependency       | Purpose                                     |
 |------------------|---------------------------------------------|
-| `type-registry` | GTS schema/instance registration            |
+| `types-registry` | GTS schema/instance registration            |
 | `cred_store`     | Secret material retrieval by UUID reference |
 | `api_ingress`    | REST API hosting                            |
 | `modkit-db`      | Database persistence                        |
