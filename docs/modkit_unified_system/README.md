@@ -20,6 +20,7 @@ This folder contains the ModKit developer documentation, split by topic for focu
 | Errors, RFC-9457 Problem | `05_errors_rfc9457.md` | |
 | Lifecycle, background tasks, cancellation | `08_lifecycle_stateful_tasks.md` | |
 | Out-of-Process / gRPC / SDK pattern | `09_oop_grpc_sdk_pattern.md` | |
+| Domain model macro, DDD enforcement | `02_module_layout_and_sdk_pattern.md` (§ Domain types) | `dylint_lints/de03_domain_layer/de0309_must_have_domain_model/README.md` |
 | Quick checklists, templates | `10_checklists_and_templates.md` | |
 
 ## Core invariants (apply everywhere)
@@ -31,6 +32,7 @@ This folder contains the ModKit developer documentation, split by topic for focu
 - **OData macros are in `modkit-odata-macros`**: Use `modkit_odata_macros::ODataFilterable`.
 - **ClientHub registration**: `ctx.client_hub().register::<dyn MyModuleApi>(api)`; `ctx.client_hub().get::<dyn MyModuleApi>()?`.
 - **Cancellation**: Pass `CancellationToken` to background tasks for cooperative shutdown.
+- **Domain model enforcement**: All `struct`/`enum` in `domain/` must have `#[domain_model]` (`modkit_macros::domain_model`). CI lint DE0309 enforces this.
 - **GTS schema**: Use `gts_schema_with_refs_as_string()` for faster, correct schema generation.
 
 ## File overview

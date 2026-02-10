@@ -9,6 +9,7 @@ This section provides minimal checklists and code templates for common ModKit ta
 - [ ] Create `<module>-sdk` crate with `api.rs`, `models.rs`, `errors.rs`, `lib.rs`
 - [ ] Create `<module>` crate with `module.rs`, `api/rest/`, `domain/`, `infra/storage/`
 - [ ] Implement SDK trait with `async_trait` and `SecurityContext` first param
+- [ ] Add `#[domain_model]` on all `struct`/`enum` in `domain/` (import `modkit_macros::domain_model`)
 - [ ] Add `#[derive(ODataFilterable)]` on REST DTOs (import `modkit_odata_macros::ODataFilterable`)
 - [ ] Add `#[derive(Scopable)]` on SeaORM entities (import `modkit_db_macros::Scopable`)
 - [ ] Use `SecureConn` + `SecurityContext` for all DB operations
@@ -207,6 +208,9 @@ pub struct UserDto {
 ### Domain error template
 
 ```rust
+use modkit_macros::domain_model;
+
+#[domain_model]
 #[derive(Error, Debug, Clone)]
 pub enum DomainError {
     #[error("User not found: {id}")]
