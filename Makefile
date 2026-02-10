@@ -61,6 +61,14 @@ fmt:
 	$(call check_rustup_component,rustfmt)
 	cargo fmt --all -- --check
 
+# -------- Module naming validation --------
+
+.PHONY: validate-module-names
+
+## Validate module folder names follow kebab-case convention
+validate-module-names:
+	@python3 scripts/validate_module_names.py
+
 # -------- Code safety checks --------
 #
 # Tool Comparison - What Each Tool Checks:
@@ -412,7 +420,7 @@ oop-example:
 	cargo run --bin hyperspot-server --features oop-example,users-info-example,tenant-resolver-example -- --config config/quickstart.yaml run
 
 # Run all quality checks
-check: .setup-stamp ci gts-docs
+check: .setup-stamp validate-module-names fmt clippy lychee security dylint-test dylint gts-docs test
 
 # Run CI pipeline locally, requires docker
 ci: fmt clippy test-no-macros test-macros test-db deny test-users-info-pg lychee dylint dylint-test

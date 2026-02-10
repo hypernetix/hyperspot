@@ -1,0 +1,205 @@
+use crate::api::rest::handlers;
+use crate::domain::service::FileParserService;
+use axum::{Extension, Router};
+use modkit::api::{
+    OpenApiRegistry, OperationBuilder,
+    operation_builder::{AuthReqAction, AuthReqResource, LicenseFeature},
+};
+use std::sync::Arc;
+
+enum Resource {
+    FileParser,
+}
+
+enum Action {
+    Read,
+}
+
+impl AsRef<str> for Resource {
+    fn as_ref(&self) -> &'static str {
+        match self {
+            Resource::FileParser => "file-parser",
+        }
+    }
+}
+
+impl AuthReqResource for Resource {}
+
+impl AsRef<str> for Action {
+    fn as_ref(&self) -> &'static str {
+        match self {
+            Action::Read => "read",
+        }
+    }
+}
+
+impl AuthReqAction for Action {}
+
+struct License;
+
+impl AsRef<str> for License {
+    fn as_ref(&self) -> &'static str {
+        "gts.x.core.lic.feat.v1~x.core.global.base.v1"
+    }
+}
+
+impl LicenseFeature for License {}
+
+#[allow(clippy::needless_pass_by_value)] // Arc is intentionally passed by value for Extension layer
+pub fn register_routes(
+    mut router: Router,
+    openapi: &dyn OpenApiRegistry,
+    service: Arc<FileParserService>,
+) -> Router {
+    // Explicitly register nested schemas that are only transitively referenced
+    // These are used within ParsedBlockDto but not directly in any endpoint
+    use modkit::api::ensure_schema;
+    let _ = ensure_schema::<crate::api::rest::dto::TableBlockDto>(openapi);
+    let _ = ensure_schema::<crate::api::rest::dto::TableRowDto>(openapi);
+    let _ = ensure_schema::<crate::api::rest::dto::TableCellDto>(openapi);
+    let _ = ensure_schema::<crate::api::rest::dto::InlineStyleDto>(openapi);
+    let _ = ensure_schema::<crate::api::rest::dto::InlineDto>(openapi);
+
+    // GET /file-parser/v1/info - Get information about available file parsers
+    router = OperationBuilder::get("/file-parser/v1/info")
+        .operation_id("file-parser.get_parser_info")
+        .summary("Get information about available file parsers")
+        .tag("File Parser")
+        .require_auth(&Resource::FileParser, &Action::Read)
+        .require_license_features::<License>([])
+        .handler(handlers::get_parser_info)
+        .json_response_with_schema::<crate::api::rest::dto::FileParserInfoDto>(
+            openapi,
+            http::StatusCode::OK,
+            "Information about available parsers",
+        )
+        .standard_errors(openapi)
+        .register(router, openapi);
+
+    // POST /file-parser/v1/parse-local - Parse a file from a local path
+    router = OperationBuilder::post("/file-parser/v1/parse-local")
+        .operation_id("file-parser.parse_local")
+        .summary("Parse a file from a local path")
+        .tag("File Parser")
+        .require_auth(&Resource::FileParser, &Action::Read)
+        .require_license_features::<License>([])
+        .query_param_typed(
+            "render_markdown",
+            false,
+            "Render Markdown output if true (optional, default false)",
+            "boolean",
+        )
+        .json_request::<crate::api::rest::dto::ParseLocalFileRequest>(openapi, "Local file path")
+        .allow_content_types(&["application/json"])
+        .handler(handlers::parse_local)
+        .json_response_with_schema::<crate::api::rest::dto::ParsedDocResponseDto>(
+            openapi,
+            http::StatusCode::OK,
+            "Parsed document with optional markdown",
+        )
+        .standard_errors(openapi)
+        .error_415(openapi)
+        .register(router, openapi);
+
+    // POST /file-parser/v1/upload - Upload and parse a file
+    router = OperationBuilder::post("/file-parser/v1/upload")
+        .operation_id("file-parser.upload")
+        .summary("Upload and parse a file")
+        .tag("File Parser")
+        .require_auth(&Resource::FileParser, &Action::Read)
+        .require_license_features::<License>([])
+        .query_param_typed(
+            "render_markdown",
+            false,
+            "Render Markdown output if true (optional, default false)",
+            "boolean",
+        )
+        .query_param_typed(
+            "filename",
+            false,
+            "Optional original filename (used to determine file type if Content-Type is ambiguous)",
+            "string",
+        )
+        .octet_stream_request(Some("Raw file bytes to parse"))
+        .handler(handlers::upload_and_parse)
+        .json_response_with_schema::<crate::api::rest::dto::ParsedDocResponseDto>(
+            openapi,
+            http::StatusCode::OK,
+            "Parsed document with optional markdown",
+        )
+        .standard_errors(openapi)
+        .error_415(openapi)
+        .register(router, openapi);
+
+    // POST /file-parser/v1/parse-url - Parse a file from a URL
+    router = OperationBuilder::post("/file-parser/v1/parse-url")
+        .operation_id("file-parser.parse_url")
+        .summary("Parse a file from a URL")
+        .tag("File Parser")
+        .require_auth(&Resource::FileParser, &Action::Read)
+        .require_license_features::<License>([])
+        .query_param_typed(
+            "render_markdown",
+            false,
+            "Render Markdown output if true (optional, default false)",
+            "boolean",
+        )
+        .json_request::<crate::api::rest::dto::ParseUrlRequest>(openapi, "URL to file")
+        .allow_content_types(&["application/json"])
+        .handler(handlers::parse_url)
+        .json_response_with_schema::<crate::api::rest::dto::ParsedDocResponseDto>(
+            openapi,
+            http::StatusCode::OK,
+            "Parsed document with optional markdown",
+        )
+        .standard_errors(openapi)
+        .error_415(openapi)
+        .register(router, openapi);
+
+    // POST /file-parser/v1/parse-local/markdown - Parse a local file and stream Markdown
+    router = OperationBuilder::post("/file-parser/v1/parse-local/markdown")
+        .operation_id("file-parser.parse_local_markdown")
+        .summary("Parse a local file and stream Markdown")
+        .tag("File Parser")
+        .require_auth(&Resource::FileParser, &Action::Read)
+        .require_license_features::<License>([])
+        .json_request::<crate::api::rest::dto::ParseLocalFileRequest>(openapi, "Local file path")
+        .allow_content_types(&["application/json"])
+        .handler(handlers::parse_local_markdown)
+        .text_response(http::StatusCode::OK, "Markdown stream", "text/markdown")
+        .standard_errors(openapi)
+        .register(router, openapi);
+
+    // POST /file-parser/v1/upload/markdown - Upload and parse a file, streaming Markdown
+    router = OperationBuilder::post("/file-parser/v1/upload/markdown")
+        .operation_id("file-parser.upload_markdown")
+        .summary("Upload and parse a file, streaming Markdown")
+        .tag("File Parser")
+        .require_auth(&Resource::FileParser, &Action::Read)
+        .require_license_features::<License>([])
+        .multipart_file_request("file", Some("File to parse and stream as Markdown"))
+        .handler(handlers::upload_and_parse_markdown)
+        .text_response(http::StatusCode::OK, "Markdown stream", "text/markdown")
+        .standard_errors(openapi)
+        .error_415(openapi)
+        .register(router, openapi);
+
+    // POST /file-parser/v1/parse-url/markdown - Parse a file from a URL and stream Markdown
+    router = OperationBuilder::post("/file-parser/v1/parse-url/markdown")
+        .operation_id("file-parser.parse_url_markdown")
+        .summary("Parse a file from a URL and stream Markdown")
+        .tag("File Parser")
+        .require_auth(&Resource::FileParser, &Action::Read)
+        .require_license_features::<License>([])
+        .json_request::<crate::api::rest::dto::ParseUrlRequest>(openapi, "URL to file")
+        .allow_content_types(&["application/json"])
+        .handler(handlers::parse_url_markdown)
+        .text_response(http::StatusCode::OK, "Markdown stream", "text/markdown")
+        .standard_errors(openapi)
+        .error_415(openapi)
+        .register(router, openapi);
+
+    router = router.layer(Extension(service));
+
+    router
+}

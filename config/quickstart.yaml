@@ -73,7 +73,7 @@ logging:
     console_level: debug
     file: "logs/sql.log"
     file_level: debug
-  api_gateway:
+  api-gateway:
     console_level: debug
     file: "logs/api.log"
     file_level: debug
@@ -84,8 +84,8 @@ logging:
 
 # Per-module configurations using new structure
 modules:
-  api_gateway:
-    # No database needed for api_gateway
+  api-gateway:
+    # No database needed for api-gateway
     config:
       bind_addr: "127.0.0.1:8087"
       enable_docs: true
@@ -104,24 +104,25 @@ modules:
           in_flight: 64
 
       # Authentication Configuration
+      # For local development, auth is disabled (uses root context)
       auth_disabled: true
-      require_auth_by_default: true
+      require_auth_by_default: false
       
-      # JWKS Configuration (replace with your OIDC provider)
-      jwks_uri: "http://localhost:8080/realms/dev/protocol/openid-connect/certs"
-      issuer: "http://localhost:8080/realms/dev"
-      audience: "api-gateway"
+      # JWKS Configuration (uncomment when enabling authentication)
+      # jwks_uri: "http://localhost:8080/realms/dev/protocol/openid-connect/certs"
+      # issuer: "http://localhost:8080/realms/dev"
+      # audience: "api-gateway"
 
-  module_orchestrator:
+  module-orchestrator:
     config: {}
     # No configuration needed for the module orchestrator
 
-  grpc_hub:
+  grpc-hub:
     config:
       # Use ephemeral port; OoP modules receive the actual bound address from master host
       listen_addr: "uds:///tmp/hyperspot-grpc"
 
-  simple_user_settings:
+  simple-user-settings:
     # Module-specific database configuration
     database:
       server: "sqlite_users"
@@ -129,7 +130,7 @@ modules:
     config:
       max_field_length: 100
 
-  users_info:
+  users-info:
     # Module-specific database configuration
     database:
       # Reference to global server template defined above
@@ -161,12 +162,12 @@ modules:
       default_page_size: 5
       max_page_size: 100
 
-  tenant_resolver_gateway:
+  tenant-resolver:
     config:
       vendor: "Fabrikam"
-  contoso_tr_plugin:
+  contoso-tr-plugin:
     config: {}
-  fabrikam_tr_plugin:
+  fabrikam-tr-plugin:
     config:
       vendor: "Fabrikam"
       priority: 20

@@ -1,0 +1,92 @@
+[package]
+name = "users-info"
+version.workspace = true
+publish = false
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[lints]
+workspace = true
+
+[features]
+default = ["odata"]
+odata = []          # enable streaming API with typed queries
+integration = []    # gate integration tests
+
+[dependencies]
+# SDK - public API, models, and errors
+users-info-sdk = { path = "../users-info-sdk", features = ["odata"] }
+
+# Tenant resolver for multi-tenant access
+tenant-resolver-sdk = { package = "cf-tenant-resolver-sdk", path = "../../../../modules/system/tenant-resolver/tenant-resolver-sdk" }
+
+# Core dependencies
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+inventory = { workspace = true }
+
+# Serde and JSON schema
+serde = { workspace = true }
+serde_json = { workspace = true }
+utoipa = { workspace = true, features = ["time"] }
+
+# HTTP and REST
+axum = { workspace = true, features = ["macros"] }
+tower-http = { workspace = true, features = ["timeout"] }
+futures-util = { workspace = true }
+http = { workspace = true }
+
+# Time handling
+time = { workspace = true }
+
+# URL parsing
+url = { workspace = true }
+
+# UUID support
+uuid = { workspace = true }
+
+# Lock-free atomic swaps
+arc-swap = { workspace = true }
+
+# Database - SeaORM
+sea-orm = { workspace = true, features = [
+    "sqlx-sqlite",
+    "runtime-tokio-rustls",
+    "macros",
+    "with-time",
+    "with-uuid",
+] }
+sea-orm-migration = { workspace = true, features = ["sqlx-sqlite"] }
+
+# Error handling
+thiserror = { workspace = true }
+
+# Local dependencies
+modkit = { workspace = true }
+modkit-http = { workspace = true }
+modkit-db = { workspace = true, features = ["sqlite", "pg"] }
+modkit-db-macros = { workspace = true }
+modkit-auth = { workspace = true }
+modkit-security = { workspace = true }
+modkit-errors = { workspace = true }
+modkit-errors-macro = { workspace = true }
+modkit-odata = { workspace = true, features = ["with-utoipa"] }
+modkit-sdk = { workspace = true }
+modkit-macros = { workspace = true }
+
+[dev-dependencies]
+tokio-util = { workspace = true }
+tower = { workspace = true, features = ["util"] }
+api_gateway = { package = "cf-api-gateway", path = "../../../../modules/system/api-gateway" }
+serde_json = { workspace = true }
+testcontainers = { workspace = true }
+testcontainers-modules = { workspace = true, features = ["postgres"] }
+# Testing dependencies for tracing verification
+tracing-test = { workspace = true }
+httpmock = { workspace = true }
+tokio-test = { workspace = true }
+opentelemetry = { workspace = true }
+opentelemetry_sdk = { workspace = true }

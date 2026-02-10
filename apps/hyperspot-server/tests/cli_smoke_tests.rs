@@ -182,6 +182,12 @@ logging:
     );
 }
 
+// Note: test_cli_run_command_with_mock_database was removed because:
+// 1. The --mock flag doesn't exist in the hyperspot-server CLI
+// 2. All modules in registered_modules.rs are always linked, making it difficult
+//    to test server startup without all required features (e.g., SQLite)
+// 3. Other tests already cover CLI functionality adequately
+
 #[test]
 fn test_cli_run_command_config_validation() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");

@@ -12,7 +12,7 @@
           "File Parser"
         ],
         "summary": "Get information about available file parsers",
-        "operationId": "file_parser.get_parser_info",
+        "operationId": "file-parser.get_parser_info",
         "responses": {
           "200": {
             "description": "Information about available parsers",
@@ -118,7 +118,7 @@
           "File Parser"
         ],
         "summary": "Parse a file from a local path",
-        "operationId": "file_parser.parse_local",
+        "operationId": "file-parser.parse_local",
         "parameters": [
           {
             "name": "render_markdown",
@@ -256,7 +256,7 @@
           "File Parser"
         ],
         "summary": "Parse a local file and stream Markdown",
-        "operationId": "file_parser.parse_local_markdown",
+        "operationId": "file-parser.parse_local_markdown",
         "requestBody": {
           "description": "Local file path",
           "content": {
@@ -374,7 +374,7 @@
           "File Parser"
         ],
         "summary": "Parse a file from a URL",
-        "operationId": "file_parser.parse_url",
+        "operationId": "file-parser.parse_url",
         "parameters": [
           {
             "name": "render_markdown",
@@ -512,7 +512,7 @@
           "File Parser"
         ],
         "summary": "Parse a file from a URL and stream Markdown",
-        "operationId": "file_parser.parse_url_markdown",
+        "operationId": "file-parser.parse_url_markdown",
         "requestBody": {
           "description": "URL to file",
           "content": {
@@ -640,7 +640,7 @@
           "File Parser"
         ],
         "summary": "Upload and parse a file",
-        "operationId": "file_parser.upload",
+        "operationId": "file-parser.upload",
         "parameters": [
           {
             "name": "render_markdown",
@@ -788,7 +788,7 @@
           "File Parser"
         ],
         "summary": "Upload and parse a file, streaming Markdown",
-        "operationId": "file_parser.upload_markdown",
+        "operationId": "file-parser.upload_markdown",
         "requestBody": {
           "description": "File to parse and stream as Markdown (expects field 'file' with file data)",
           "content": {
@@ -926,7 +926,7 @@
         ],
         "summary": "List all nodes",
         "description": "Get a list of all nodes in the deployment. Use ?details=true to include sysinfo and syscap. Use ?force_refresh=true to invalidate syscap cache.",
-        "operationId": "nodes_registry.list_nodes",
+        "operationId": "nodes-registry.list_nodes",
         "parameters": [
           {
             "name": "details",
@@ -978,7 +978,7 @@
         ],
         "summary": "Get node by ID",
         "description": "Get detailed information about a specific node. Use ?details=true to include sysinfo and syscap. Use ?force_refresh=true to invalidate syscap cache.",
-        "operationId": "nodes_registry.get_node",
+        "operationId": "nodes-registry.get_node",
         "parameters": [
           {
             "name": "id",
@@ -1049,7 +1049,7 @@
         ],
         "summary": "Get node system capabilities",
         "description": "Get system capabilities (hardware, software features) for a specific node. Use ?force_refresh=true to invalidate cache and refresh all capabilities.",
-        "operationId": "nodes_registry.get_node_syscap",
+        "operationId": "nodes-registry.get_node_syscap",
         "parameters": [
           {
             "name": "id",
@@ -1111,7 +1111,7 @@
         ],
         "summary": "Get node system information",
         "description": "Get detailed system information (OS, CPU, memory, etc.) for a specific node",
-        "operationId": "nodes_registry.get_node_sysinfo",
+        "operationId": "nodes-registry.get_node_sysinfo",
         "parameters": [
           {
             "name": "id",
@@ -1164,7 +1164,7 @@
         ],
         "summary": "Get user settings",
         "description": "Retrieve settings for the authenticated user",
-        "operationId": "settings.get_settings",
+        "operationId": "simple-user-settings.get_settings",
         "responses": {
           "200": {
             "description": "Settings retrieved",
@@ -1219,7 +1219,7 @@
         ],
         "summary": "Update user settings",
         "description": "Full update of user settings (POST semantics)",
-        "operationId": "settings.update_settings",
+        "operationId": "simple-user-settings.update_settings",
         "requestBody": {
           "description": "Settings update data",
           "content": {
@@ -1305,7 +1305,7 @@
         ],
         "summary": "Partially update user settings",
         "description": "Partial update of user settings (PATCH semantics)",
-        "operationId": "settings.patch_settings",
+        "operationId": "simple-user-settings.patch_settings",
         "requestBody": {
           "description": "Settings patch data",
           "content": {
@@ -1393,7 +1393,7 @@
         ],
         "summary": "List GTS entities",
         "description": "List registered GTS entities with optional filtering by pattern, kind, vendor, package, or namespace.",
-        "operationId": "types_registry.list",
+        "operationId": "types-registry.list",
         "parameters": [
           {
             "name": "pattern",
@@ -1554,7 +1554,7 @@
         ],
         "summary": "Register GTS entities",
         "description": "Register one or more GTS entities (types or instances) in batch. Returns per-item results.",
-        "operationId": "types_registry.register",
+        "operationId": "types-registry.register",
         "requestBody": {
           "description": "GTS entities to register",
           "content": {
@@ -1672,7 +1672,7 @@
         ],
         "summary": "Get GTS entity by ID",
         "description": "Retrieve a single GTS entity by its identifier.",
-        "operationId": "types_registry.get",
+        "operationId": "types-registry.get",
         "parameters": [
           {
             "name": "gts_id",

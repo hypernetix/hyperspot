@@ -72,6 +72,22 @@ fn extract_file_path_from_dsn(dsn: &str) -> Option<std::path::PathBuf> {
             return None;
         }
 
+        // On Windows, URL paths like "/C:/path" need the leading "/" stripped
+        #[cfg(windows)]
+        {
+            // Check if this looks like a Windows absolute path: /C:/ or /C:\
+            let normalized_path = if path_str.len() > 3
+                && path_str.starts_with('/')
+                && path_str.chars().nth(2) == Some(':')
+            {
+                &path_str[1..] // Strip leading /
+            } else {
+                path_str
+            };
+            return Some(std::path::PathBuf::from(normalized_path));
+        }
+
+        #[cfg(not(windows))]
         return Some(std::path::PathBuf::from(path_str));
     }
 
@@ -101,6 +117,7 @@ fn extract_file_path_from_dsn(dsn: &str) -> Option<std::path::PathBuf> {
 mod tests {
     use super::*;
     use std::path::PathBuf;
+    use tempfile::TempDir;
 
     #[test]
     fn test_extract_file_path_from_dsn() {
@@ -169,11 +186,22 @@ mod tests {
 
     #[test]
     fn test_prepare_sqlite_path_create_dirs() {
-        // This test would require filesystem operations, so we'll just verify
-        // it doesn't panic and returns the original DSN
-        let dsn = "sqlite:///tmp/test/db.sqlite";
-        let result = prepare_sqlite_path(dsn, true);
-        assert!(result.is_ok());
+        // Use a unique temp directory to avoid collisions during parallel test execution
+        let temp_dir = TempDir::new().unwrap();
+        let test_path = temp_dir.path().join("db.sqlite");
+
+        // Convert to string with forward slashes for cross-platform SQLite DSN
+        let path_str = test_path.to_string_lossy().replace('\\', "/");
+        let dsn = format!("sqlite:///{}", path_str.trim_start_matches('/'));
+
+        let result = prepare_sqlite_path(&dsn, true);
+        assert!(result.is_ok(), "Failed to prepare path: {:?}", result.err());
         assert_eq!(result.unwrap(), dsn);
+
+        // Verify the directory was created
+        let parent = test_path.parent().unwrap();
+        assert!(parent.exists(), "Parent directory should exist");
+
+        // TempDir automatically cleans up when dropped
     }
 }

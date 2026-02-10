@@ -73,14 +73,14 @@ logging:
     console_level: debug
     file: "logs/sql.log"
     file_level: debug
-  api_gateway:
+  api-gateway:
     console_level: debug
     file: "logs/api.log"
     file_level: debug
     max_age_days: 28
     max_backups: 3
     max_size_mb: 100
-  types_registry:
+  types-registry:
     console_level: info
     file: "logs/types_registry.log"
     file_level: debug
@@ -91,8 +91,8 @@ logging:
 
 # Per-module configurations using new structure
 modules:
-  api_gateway:
-    # No database needed for api_gateway
+  api-gateway:
+    # No database needed for api-gateway
     config:
       bind_addr: "127.0.0.1:8086"
       enable_docs: true
@@ -120,15 +120,15 @@ modules:
       audience: "api-gateway"
 
   # --- Tenant Resolver example (gateway + plugins) ---
-  types_registry:
+  types-registry:
     config: {}
 
-  contoso_tr_plugin:
+  contoso-tr-plugin:
     config:
       vendor: "Contoso"
       priority: 10
 
-  fabrikam_tr_plugin:
+  fabrikam-tr-plugin:
     config:
       vendor: "Fabrikam"
       priority: 20
@@ -162,15 +162,15 @@ modules:
           status: ACTIVE
           is_accessible_by_parent: true
 
-  tenant_resolver_gateway:
+  tenant-resolver:
     config:
       vendor: "Fabrikam"
 
-  grpc_hub:
+  grpc-hub:
     config:
       listen_addr: "uds:///tmp/hyperspot-grpc-e2e"
 
-  users_info:
+  users-info:
     # Module-specific database configuration
     database:
       # Reference to global server template defined above
@@ -202,7 +202,7 @@ modules:
       default_page_size: 5
       max_page_size: 100
 
-  simple_user_settings:
+  simple-user-settings:
     # Module-specific database configuration
     database:
       server: "sqlite_users"

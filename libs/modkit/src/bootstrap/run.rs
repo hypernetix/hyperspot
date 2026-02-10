@@ -69,7 +69,7 @@ pub async fn run_server(config: AppConfig) -> anyhow::Result<()> {
 
     // Run the ModKit runtime with the root cancellation token.
     // Shutdown is driven by the signal handler spawned above, not by ShutdownOptions::Signals.
-    // OoP modules are spawned after the start phase (once grpc_hub has bound its port).
+    // OoP modules are spawned after the start phase (once grpc-hub has bound its port).
     let run_options = RunOptions {
         modules_cfg: Arc::new(config),
         db: db_options,

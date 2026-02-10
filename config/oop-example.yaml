@@ -5,7 +5,7 @@ server:
 # Directory endpoint is read from the shared config file.
 
 modules:
-  grpc_hub:
+  grpc-hub:
     config:
       # Ephemeral TCP port for OoP module; actual bound port is registered in Directory by grpc_hub.
       listen_addr: "127.0.0.1:0"

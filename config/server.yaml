@@ -47,7 +47,7 @@ logging:
     max_backups: 3
     max_size_mb: 1000
   # api_gateway section
-  api_gateway:
+  api-gateway:
     console_level: info
     file: "logs/api.log"
     file_level: warn
@@ -57,7 +57,7 @@ logging:
 
 # Per-module configurations moved under modules section
 modules:
-  api_gateway:
+  api-gateway:
     # No database needed for api_gateway
     config:
       bind_addr: "127.0.0.1:8087"
@@ -266,7 +266,7 @@ modules:
         username: "user"
 
   # File parser module configuration (no database needed)
-  file_parser:
+  file-parser:
     config:
       parser_extension_map:
       builtin:
