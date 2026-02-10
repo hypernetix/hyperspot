@@ -306,9 +306,9 @@ test-mysql:
 # Run all database integration tests
 test-db: test-sqlite test-pg test-mysql
 
-## Run users_info module integration tests
+## Run users-info module integration tests
 test-users-info-pg:
-	cargo test -p users_info --features "integration" -- --nocapture
+	cargo test -p users-info --features "integration" -- --nocapture
 
 # -------- E2E tests --------
 
