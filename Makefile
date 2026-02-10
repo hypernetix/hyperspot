@@ -277,7 +277,7 @@ test:
 	cargo test --workspace
 
 test-no-macros:
-	cargo test --workspace --no-fail-fast --exclude cf-modkit-macros-tests --exclude cf-modkit-db-macros
+	cargo test --workspace --exclude cf-modkit-macros-tests --exclude cf-modkit-db-macros
 
 test-macros:
 	cargo test -p cf-modkit-db-macros
@@ -412,9 +412,9 @@ oop-example:
 	cargo run --bin hyperspot-server --features oop-example,users-info-example,tenant-resolver-example -- --config config/quickstart.yaml run
 
 # Run all quality checks
-check: .setup-stamp ci gts-docs test
+check: .setup-stamp ci gts-docs
 
-# Run CI pipeline locally
+# Run CI pipeline locally, requires docker
 ci: fmt clippy test-no-macros test-macros test-db deny test-users-info-pg lychee dylint dylint-test
 
 # Make a release build using stable toolchain
