@@ -7,7 +7,7 @@ server:
 modules:
   grpc-hub:
     config:
-      # Ephemeral TCP port for OoP module; actual bound port is registered in Directory by grpc_hub.
+      # Ephemeral TCP port for OoP module; actual bound port is registered in Directory by grpc-hub.
       listen_addr: "127.0.0.1:0"
 
   calculator:

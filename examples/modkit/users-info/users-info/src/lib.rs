@@ -7,8 +7,8 @@
 //!
 //! This module follows clean architecture with strict layering:
 //!
-//! ### Contract Layer (`user_info-sdk`)
-//! - **Location:** `examples/modkit/users_info/user_info-sdk/`
+//! ### Contract Layer (`users-info-sdk`)
+//! - **Location:** `examples/modkit/users-info/users-info-sdk/`
 //! - **Purpose:** Public API contract for inter-module communication
 //! - **Contains:**
 //!   - `UsersInfoClient` trait
@@ -53,7 +53,7 @@
 //!
 //! ## Public API
 //!
-//! The public API is defined in the `user_info-sdk` crate and re-exported here:
+//! The public API is defined in the `users-info-sdk` crate and re-exported here:
 //! - `UsersInfoClientV1` - trait for inter-module communication
 //! - User, Address and City models and their request/patch types
 //! - `UsersInfoError` - error types
@@ -62,7 +62,7 @@
 //!
 //! ## `OData` Support
 //!
-//! `OData` filter schemas live in `user_info-sdk::odata` (behind `odata` feature):
+//! `OData` filter schemas live in `users-info-sdk::odata` (behind `odata` feature):
 //! - Type-safe filter enums for each resource
 //! - Used by both REST API (`OpenAPI`) and domain pagination
 //! - Mapped to database columns in `infra::storage::odata_mapper`
