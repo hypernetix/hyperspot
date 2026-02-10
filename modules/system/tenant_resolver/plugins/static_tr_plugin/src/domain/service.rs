@@ -2,6 +2,7 @@
 
 use std::collections::{HashMap, HashSet};
 
+use modkit_macros::domain_model;
 use tenant_resolver_sdk::{
     BarrierMode, TenantId, TenantInfo, TenantRef, TenantResolverError, TenantStatus, matches_status,
 };
@@ -12,6 +13,7 @@ use crate::config::StaticTrPluginConfig;
 ///
 /// Stores tenant data in memory, loaded from configuration.
 /// Supports hierarchical tenant model with parent-child relationships.
+#[domain_model]
 pub struct Service {
     /// Tenant info by ID.
     pub(super) tenants: HashMap<TenantId, TenantInfo>,
@@ -222,6 +224,7 @@ impl Service {
 /// Encapsulates traversal state for collecting descendants.
 ///
 /// Eliminates the need for passing many arguments through recursive calls.
+#[domain_model]
 struct DescendantCollector<'a> {
     tenants: &'a HashMap<TenantId, TenantInfo>,
     children: &'a HashMap<TenantId, Vec<TenantId>>,

@@ -10,6 +10,7 @@ use modkit::client_hub::{ClientHub, ClientScope};
 use modkit::gts::BaseModkitPluginV1;
 use modkit::plugins::GtsPluginSelector;
 use modkit::telemetry::ThrottledLog;
+use modkit_macros::domain_model;
 use modkit_security::SecurityContext;
 use tenant_resolver_sdk::{
     GetAncestorsOptions, GetAncestorsResponse, GetDescendantsOptions, GetDescendantsResponse,
@@ -35,6 +36,7 @@ const UNAVAILABLE_LOG_THROTTLE: Duration = Duration::from_secs(10);
 /// which is responsible for deciding how (or whether) to enforce
 /// authorization. This is intentional — different plugins may have
 /// different access-control semantics.
+#[domain_model]
 pub struct Service {
     hub: Arc<ClientHub>,
     vendor: String,

@@ -3,6 +3,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use modkit_macros::domain_model;
 use types_registry_sdk::{
     GtsEntity, ListQuery, RegisterResult, TypesRegistryClient, TypesRegistryError,
 };
@@ -14,6 +15,7 @@ use crate::domain::service::TypesRegistryService;
 /// This client implements the `TypesRegistryApi` trait and delegates
 /// to the domain service. It is registered in the `ClientHub` for
 /// inter-module communication.
+#[domain_model]
 pub struct TypesRegistryLocalClient {
     service: Arc<TypesRegistryService>,
 }

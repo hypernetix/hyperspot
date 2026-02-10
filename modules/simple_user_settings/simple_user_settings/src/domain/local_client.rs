@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use modkit_macros::domain_model;
 use modkit_security::SecurityContext;
 use simple_user_settings_sdk::{
     SettingsError, SimpleUserSettings, SimpleUserSettingsClientV1, SimpleUserSettingsPatch,
@@ -9,6 +10,7 @@ use std::sync::Arc;
 use crate::domain::repo::SettingsRepository;
 use crate::domain::service::Service;
 
+#[domain_model]
 pub struct LocalClient<R: SettingsRepository + 'static> {
     service: Arc<Service<R>>,
 }

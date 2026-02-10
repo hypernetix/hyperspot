@@ -2,6 +2,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 use futures_util::{Stream, StreamExt};
+use modkit_macros::domain_model;
 use modkit_sdk::odata::{QueryBuilder, items_stream_boxed};
 use modkit_security::SecurityContext;
 use user_info_sdk::odata::AddressSchema;
@@ -9,6 +10,7 @@ use user_info_sdk::{Address, AddressesStreamingClientV1, UsersInfoError};
 
 use crate::module::ConcreteAppServices;
 
+#[domain_model]
 pub(crate) struct LocalAddressesStreamingClient {
     services: Arc<ConcreteAppServices>,
 }

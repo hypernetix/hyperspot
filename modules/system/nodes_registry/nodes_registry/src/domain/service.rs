@@ -1,5 +1,6 @@
 use crate::domain::error::DomainError;
 use crate::domain::node_storage::NodeStorage;
+use modkit_macros::domain_model;
 use modkit_node_info::NodeInfoCollector;
 use nodes_registry_sdk::{Node, NodeSysCap, NodeSysInfo, SysCap};
 use std::sync::Arc;
@@ -12,6 +13,7 @@ fn is_fallback_uuid(id: &uuid::Uuid) -> bool {
 }
 
 /// Service for managing nodes and their metadata
+#[domain_model]
 #[derive(Clone)]
 pub struct Service {
     storage: Arc<NodeStorage>,
