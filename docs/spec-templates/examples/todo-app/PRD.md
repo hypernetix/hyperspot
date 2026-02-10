@@ -1,4 +1,4 @@
-# PRD — Todo App
+# PRD - Todo App
 
 ## 1. Overview
 
