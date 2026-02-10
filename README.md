@@ -32,7 +32,7 @@ See the full architecture [MANIFEST](docs/ARCHITECTURE_MANIFEST.md) for more det
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone --recurse-submodules <repository-url>
 cd cyberfabric-core
 
 make ci         # Run full CI pipeline

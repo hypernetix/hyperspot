@@ -9,7 +9,9 @@ use modkit_db::{ConnectOpts, DBProvider, Db, DbError, connect_db};
 use modkit_security::SecurityContext;
 use sea_orm_migration::MigratorTrait;
 use tenant_resolver_sdk::{
-    TenantFilter, TenantResolverError, TenantResolverGatewayClient, TenantStatus,
+    GetAncestorsOptions, GetAncestorsResponse, GetDescendantsOptions, GetDescendantsResponse,
+    GetTenantsOptions, IsAncestorOptions, TenantRef, TenantResolverError,
+    TenantResolverGatewayClient, TenantStatus,
 };
 use time::OffsetDateTime;
 use uuid::Uuid;
@@ -116,37 +118,80 @@ impl TenantResolverGatewayClient for MockTenantResolver {
             name: format!("Tenant {id}"),
             status: TenantStatus::Active,
             tenant_type: None,
+            parent_id: None,
+            self_managed: false,
         })
     }
 
-    async fn can_access(
+    async fn get_tenants(
         &self,
         ctx: &SecurityContext,
-        target: tenant_resolver_sdk::TenantId,
-        _options: Option<&tenant_resolver_sdk::AccessOptions>,
-    ) -> Result<bool, TenantResolverError> {
-        // Allow access if target matches context tenant
-        Ok(ctx.tenant_id() == target)
+        ids: &[tenant_resolver_sdk::TenantId],
+        _options: &GetTenantsOptions,
+    ) -> Result<Vec<tenant_resolver_sdk::TenantInfo>, TenantResolverError> {
+        // Return only tenants that match the context's tenant
+        let tenant_id = ctx.tenant_id();
+        Ok(ids
+            .iter()
+            .filter(|id| **id == tenant_id)
+            .map(|id| tenant_resolver_sdk::TenantInfo {
+                id: *id,
+                name: format!("Tenant {id}"),
+                status: TenantStatus::Active,
+                tenant_type: None,
+                parent_id: None,
+                self_managed: false,
+            })
+            .collect())
     }
 
-    async fn get_accessible_tenants(
+    async fn get_ancestors(
         &self,
-        ctx: &SecurityContext,
-        _filter: Option<&TenantFilter>,
-        _options: Option<&tenant_resolver_sdk::AccessOptions>,
-    ) -> Result<Vec<tenant_resolver_sdk::TenantInfo>, TenantResolverError> {
-        // Return the context's tenant as the only accessible tenant
-        let tenant_id = ctx.tenant_id();
-        if tenant_id == Uuid::default() {
-            // Anonymous context - no accessible tenants
-            return Ok(vec![]);
-        }
-        Ok(vec![tenant_resolver_sdk::TenantInfo {
-            id: tenant_id,
-            name: format!("Tenant {tenant_id}"),
-            status: TenantStatus::Active,
-            tenant_type: None,
-        }])
+        _ctx: &SecurityContext,
+        id: tenant_resolver_sdk::TenantId,
+        _options: &GetAncestorsOptions,
+    ) -> Result<GetAncestorsResponse, TenantResolverError> {
+        // Single-tenant mock: no ancestors
+        Ok(GetAncestorsResponse {
+            tenant: TenantRef {
+                id,
+                status: TenantStatus::Active,
+                tenant_type: None,
+                parent_id: None,
+                self_managed: false,
+            },
+            ancestors: vec![],
+        })
+    }
+
+    async fn get_descendants(
+        &self,
+        _ctx: &SecurityContext,
+        id: tenant_resolver_sdk::TenantId,
+        _options: &GetDescendantsOptions,
+    ) -> Result<GetDescendantsResponse, TenantResolverError> {
+        // Single-tenant mock: no descendants
+        Ok(GetDescendantsResponse {
+            tenant: TenantRef {
+                id,
+                status: TenantStatus::Active,
+                tenant_type: None,
+                parent_id: None,
+                self_managed: false,
+            },
+            descendants: vec![],
+        })
+    }
+
+    async fn is_ancestor(
+        &self,
+        _ctx: &SecurityContext,
+        _ancestor_id: tenant_resolver_sdk::TenantId,
+        _descendant_id: tenant_resolver_sdk::TenantId,
+        _options: &IsAncestorOptions,
+    ) -> Result<bool, TenantResolverError> {
+        // Self is not an ancestor of self
+        Ok(false)
     }
 }
 

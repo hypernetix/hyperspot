@@ -335,7 +335,7 @@ Every HyperSpot module uses the **ModKit** framework, which provides:
 
 ### 6.1. DNA - Development Guidelines
 
-[DNA](https://github.com/hypernetix/DNA) is HyperSpot's collection of development standards and best practices:
+[DNA](https://github.com/cyberfabric/DNA) is HyperSpot's collection of development standards and best practices:
 - **REST API design**: Status codes, pagination, error handling
 
 **Key guidelines:**

@@ -18,6 +18,60 @@ pub struct TenantInfo {
     /// Tenant type classification.
     #[serde(rename = "type", default, skip_serializing_if = "Option::is_none")]
     pub tenant_type: Option<String>,
+    /// Parent tenant ID. `None` for root tenants.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parent_id: Option<TenantId>,
+    /// Whether this tenant is self-managed (barrier).
+    /// When `true`, parent tenants cannot traverse into this subtree
+    /// unless `BarrierMode::Ignore` is used.
+    #[serde(default)]
+    pub self_managed: bool,
+}
+
+/// Tenant reference for hierarchy operations (without name).
+///
+/// Used by `get_ancestors` and `get_descendants` to return tenant metadata
+/// without the display name. If names are needed, use `get_tenants` with
+/// the collected IDs.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TenantRef {
+    /// Unique tenant identifier.
+    pub id: TenantId,
+    /// Current status of the tenant.
+    pub status: TenantStatus,
+    /// Tenant type classification.
+    #[serde(rename = "type", default, skip_serializing_if = "Option::is_none")]
+    pub tenant_type: Option<String>,
+    /// Parent tenant ID. `None` for root tenants.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parent_id: Option<TenantId>,
+    /// Whether this tenant is self-managed (barrier).
+    #[serde(default)]
+    pub self_managed: bool,
+}
+
+impl From<TenantInfo> for TenantRef {
+    fn from(info: TenantInfo) -> Self {
+        Self {
+            id: info.id,
+            status: info.status,
+            tenant_type: info.tenant_type,
+            parent_id: info.parent_id,
+            self_managed: info.self_managed,
+        }
+    }
+}
+
+impl From<&TenantInfo> for TenantRef {
+    fn from(info: &TenantInfo) -> Self {
+        Self {
+            id: info.id,
+            status: info.status,
+            tenant_type: info.tenant_type.clone(),
+            parent_id: info.parent_id,
+            self_managed: info.self_managed,
+        }
+    }
 }
 
 /// Tenant lifecycle status.
@@ -33,84 +87,193 @@ pub enum TenantStatus {
     Deleted,
 }
 
-/// Filter for tenant listing queries.
+/// Trait for types that expose a [`TenantStatus`].
 ///
-/// Used by `get_accessible_tenants` to filter results.
-/// Empty vectors mean "no constraint" (include all).
+/// Used by [`matches_status`] to filter both [`TenantInfo`] and
+/// [`TenantRef`] without duplicating logic.
+pub trait HasStatus {
+    /// Returns the tenant's current status.
+    fn status(&self) -> TenantStatus;
+}
+
+/// Returns `true` if the tenant matches the given status filter.
+///
+/// An empty `statuses` slice means "no constraint" (include all).
+/// Works with any type implementing [`HasStatus`].
+#[must_use]
+pub fn matches_status<T: HasStatus>(tenant: &T, statuses: &[TenantStatus]) -> bool {
+    statuses.is_empty() || statuses.contains(&tenant.status())
+}
+
+impl HasStatus for TenantInfo {
+    fn status(&self) -> TenantStatus {
+        self.status
+    }
+}
+
+impl HasStatus for TenantRef {
+    fn status(&self) -> TenantStatus {
+        self.status
+    }
+}
+
+/// Controls how barriers (self-managed tenants) are handled during hierarchy traversal.
+///
+/// A barrier is a tenant with `self_managed = true`. By default, traversal stops
+/// at barrier boundaries - a parent tenant cannot see into a self-managed subtree.
 ///
 /// # Example
 ///
 /// ```
-/// use tenant_resolver_sdk::{TenantFilter, TenantStatus};
-/// use uuid::Uuid;
+/// use tenant_resolver_sdk::BarrierMode;
 ///
-/// // No filter (all tenants)
-/// let filter = TenantFilter::default();
+/// // Default: respect all barriers
+/// let mode = BarrierMode::default();
+/// assert_eq!(mode, BarrierMode::Respect);
+///
+/// // Ignore barriers (traverse through self-managed tenants)
+/// let mode = BarrierMode::Ignore;
+/// ```
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum BarrierMode {
+    /// Respect all barriers - stop traversal at barrier boundaries (default).
+    #[default]
+    Respect,
+    /// Ignore barriers - traverse through self-managed tenants.
+    Ignore,
+}
+
+/// Request parameters for [`get_ancestors`](crate::TenantResolverGatewayClient::get_ancestors).
+///
+/// # Example
+///
+/// ```
+/// use tenant_resolver_sdk::{BarrierMode, GetAncestorsOptions};
+///
+/// // Default: respect barriers
+/// let req = GetAncestorsOptions::default();
+///
+/// // Ignore barriers during traversal
+/// let req = GetAncestorsOptions {
+///     barrier_mode: BarrierMode::Ignore,
+/// };
+/// ```
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct GetAncestorsOptions {
+    /// How to handle barriers during traversal.
+    pub barrier_mode: BarrierMode,
+}
+
+/// Options for [`get_tenants`](crate::TenantResolverGatewayClient::get_tenants).
+///
+/// # Example
+///
+/// ```
+/// use tenant_resolver_sdk::{GetTenantsOptions, TenantStatus};
+///
+/// // Default: no filter (all statuses)
+/// let opts = GetTenantsOptions::default();
 ///
 /// // Only active tenants
-/// let filter = TenantFilter {
-///     status: vec![TenantStatus::Active],
-///     ..Default::default()
-/// };
-///
-/// // Specific tenant IDs with active status
-/// let tenant_a = Uuid::new_v4();
-/// let tenant_b = Uuid::new_v4();
-/// let filter = TenantFilter {
-///     id: vec![tenant_a, tenant_b],
+/// let opts = GetTenantsOptions {
 ///     status: vec![TenantStatus::Active],
 /// };
 /// ```
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct TenantFilter {
-    /// Filter by tenant IDs. Empty means all IDs are included.
-    pub id: Vec<TenantId>,
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct GetTenantsOptions {
     /// Filter by tenant status. Empty means all statuses are included.
+    #[serde(default)]
     pub status: Vec<TenantStatus>,
 }
 
-impl TenantFilter {
-    /// Returns `true` if no filter criteria are set.
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.id.is_empty() && self.status.is_empty()
-    }
-}
-
-/// Options for access checking.
-///
-/// Used by `can_access` and `get_accessible_tenants` to specify
-/// permission requirements. Empty vectors mean "no constraint".
+/// Options for [`get_descendants`](crate::TenantResolverGatewayClient::get_descendants).
 ///
 /// # Example
 ///
 /// ```
-/// use tenant_resolver_sdk::AccessOptions;
+/// use tenant_resolver_sdk::{BarrierMode, GetDescendantsOptions, TenantStatus};
 ///
-/// // Basic access check (no specific permission required)
-/// let options = AccessOptions::default();
+/// // Default: no filter, respect barriers, unlimited depth
+/// let opts = GetDescendantsOptions::default();
 ///
-/// // Check for specific permission
-/// let options = AccessOptions {
-///     permission: vec!["read".to_string()],
-/// };
-///
-/// // Check for multiple permissions (all required - AND semantics)
-/// let options = AccessOptions {
-///     permission: vec!["read".to_string(), "write".to_string()],
+/// // Active tenants only, ignore barriers, depth 2
+/// let opts = GetDescendantsOptions {
+///     status: vec![TenantStatus::Active],
+///     barrier_mode: BarrierMode::Ignore,
+///     max_depth: Some(2),
 /// };
 /// ```
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct AccessOptions {
-    /// Required permissions (all must be satisfied - AND semantics).
-    /// Empty means no specific permission required.
-    pub permission: Vec<String>,
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct GetDescendantsOptions {
+    /// Filter descendants by status. Empty means all statuses are included.
+    /// Does NOT apply to the starting tenant.
+    #[serde(default)]
+    pub status: Vec<TenantStatus>,
+    /// How to handle barriers during traversal.
+    pub barrier_mode: BarrierMode,
+    /// Maximum depth to traverse (`None` = unlimited, `Some(1)` = direct children only).
+    pub max_depth: Option<u32>,
 }
 
-impl AccessOptions {
-    /// Returns `true` if no access options are set.
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.permission.is_empty()
-    }
+/// Request parameters for [`is_ancestor`](crate::TenantResolverGatewayClient::is_ancestor).
+///
+/// # Example
+///
+/// ```
+/// use tenant_resolver_sdk::{BarrierMode, IsAncestorOptions};
+///
+/// // Default: respect barriers
+/// let req = IsAncestorOptions::default();
+///
+/// // Ignore barriers
+/// let req = IsAncestorOptions {
+///     barrier_mode: BarrierMode::Ignore,
+/// };
+/// ```
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct IsAncestorOptions {
+    /// How to handle barriers during traversal.
+    pub barrier_mode: BarrierMode,
+}
+
+/// Response for `get_ancestors` containing the requested tenant and its ancestor chain.
+///
+/// Uses [`TenantRef`] (without name) for efficiency. If names are needed,
+/// collect the IDs and call `get_tenants`.
+///
+/// # Example
+///
+/// Given hierarchy: `Root -> Parent -> Child`
+///
+/// `get_ancestors(Child)` returns:
+/// - `tenant`: Child ref
+/// - `ancestors`: [Parent, Root] (ordered from direct parent to root)
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct GetAncestorsResponse {
+    /// The requested tenant (without name).
+    pub tenant: TenantRef,
+    /// Parent chain ordered from direct parent to root.
+    /// Empty if the tenant is a root tenant.
+    pub ancestors: Vec<TenantRef>,
+}
+
+/// Response for `get_descendants` containing the requested tenant and its descendants.
+///
+/// Uses [`TenantRef`] (without name) for efficiency. If names are needed,
+/// collect the IDs and call `get_tenants`.
+///
+/// # Example
+///
+/// Given hierarchy: `Root -> [Child1, Child2 -> Grandchild]`
+///
+/// `get_descendants(Root)` returns:
+/// - `tenant`: Root ref
+/// - `descendants`: [Child1, Child2, Grandchild] (pre-order traversal)
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct GetDescendantsResponse {
+    /// The requested tenant (without name).
+    pub tenant: TenantRef,
+    /// All descendants (children, grandchildren, etc.) in pre-order.
+    /// Empty if the tenant has no children.
+    pub descendants: Vec<TenantRef>,
 }

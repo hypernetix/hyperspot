@@ -91,6 +91,11 @@ jobs:
       - name: sccache stats
         if: env.SCCACHE_GHA_ENABLED == 'true'
         run: sccache --show-stats
+
+  cypilot:
+    name: Cypilot
+    uses: ./.github/workflows/cypilot.yml
+
   test_macros:
     name: UI macro tests (trybuild)
     runs-on: ubuntu-latest

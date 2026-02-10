@@ -8,27 +8,27 @@ decision-makers: Cyber Fabric Architects Committee
 
 ## Context and Problem Statement
 
-HyperSpot is a modular platform for building multi-tenant vendor platforms. Each vendor has its own identity provider (IdP), authorization model, tenant service, and policy manager. HyperSpot must integrate with these vendor-specific systems without assuming a particular policy model (RBAC/ABAC/ReBAC).
+Cyber Fabric is a modular platform for building multi-tenant vendor platforms. Each vendor has its own identity provider (IdP), authorization model, tenant service, and policy manager. Cyber Fabric must integrate with these vendor-specific systems without assuming a particular policy model (RBAC/ABAC/ReBAC).
 
 **Key requirements:**
 
-1. **Performance at scale** — Authorization must be efficient for all operations, including mass-management scenarios in multi-tenant environments (bulk updates, cross-tenant queries, hierarchical access). Access check complexity varies by vendor and should not bottleneck HyperSpot.
+1. **Performance at scale** — Authorization must be efficient for all operations, including mass-management scenarios in multi-tenant environments (bulk updates, cross-tenant queries, hierarchical access). Access check complexity varies by vendor and should not bottleneck Cyber Fabric.
 
-2. **Simplicity for module developers** — Authorization enforcement must be hard to get wrong. Authorization logic in modules should be minimal — ideally just "ask PDP, apply response". Complex policy evaluation belongs in vendor's PDP, not in HyperSpot code (even shared libraries are costly to update across deployments).
+2. **Simplicity for module developers** — Authorization enforcement must be hard to get wrong. Authorization logic in modules should be minimal — ideally just "ask PDP, apply response". Complex policy evaluation belongs in vendor's PDP, not in Cyber Fabric code (even shared libraries are costly to update across deployments).
 
-3. **Seamless vendor integration** — HyperSpot must integrate into vendor's existing infrastructure without requiring significant changes on their side:
-   - **No resource sync** — Resources stay in HyperSpot's DB; vendors don't need to replicate millions of resources or all their relationships to their authorization service
-   - **No policy format requirements** — Vendors keep their existing policy storage (RBAC tables, ReBAC tuples, custom DSL); HyperSpot only defines the response contract
+3. **Seamless vendor integration** — Cyber Fabric must integrate into vendor's existing infrastructure without requiring significant changes on their side:
+   - **No resource sync** — Resources stay in Cyber Fabric's DB; vendors don't need to replicate millions of resources or all their relationships to their authorization service
+   - **No policy format requirements** — Vendors keep their existing policy storage (RBAC tables, ReBAC tuples, custom DSL); Cyber Fabric only defines the response contract
    - **Leverage existing infrastructure** — Works with vendor's IdP, tenant service, and policy manager as-is
 
 ### PDP/PEP Architecture Model
 
 Industry best practices (NIST SP 800-162, XACML, AuthZEN) recommend separating authorization into:
 
-- **PDP (Policy Decision Point)** — Evaluates policies and returns access decisions. In HyperSpot, this is the vendor's authorization service accessed via AuthZ Resolver gateway.
-- **PEP (Policy Enforcement Point)** — Enforces PDP decisions at resource access points. In HyperSpot, domain modules act as PEPs, with ModKit providing shared enforcement infrastructure.
-- **PAP (Policy Administration Point)** — Where policies are authored and managed. This is entirely vendor-controlled (their admin UI, policy DSL, etc.). HyperSpot never sees or stores policies.
-- **PIP (Policy Information Point)** — Provides additional attributes for decision-making (user roles, tenant hierarchy, resource metadata). In HyperSpot, Tenant Resolver and Resource Group Resolver serve as PIPs.
+- **PDP (Policy Decision Point)** — Evaluates policies and returns access decisions. In Cyber Fabric, this is the vendor's authorization service accessed via AuthZ Resolver gateway.
+- **PEP (Policy Enforcement Point)** — Enforces PDP decisions at resource access points. In Cyber Fabric, domain modules act as PEPs, with ModKit providing shared enforcement infrastructure.
+- **PAP (Policy Administration Point)** — Where policies are authored and managed. This is entirely vendor-controlled (their admin UI, policy DSL, etc.). Cyber Fabric never sees or stores policies.
+- **PIP (Policy Information Point)** — Provides additional attributes for decision-making (user roles, tenant hierarchy, resource metadata). In Cyber Fabric, Tenant Resolver and Resource Group Resolver serve as PIPs.
 
 Benefits of PDP/PEP separation:
 
@@ -37,7 +37,7 @@ Benefits of PDP/PEP separation:
 - Separation of concerns (business logic vs authorization logic)
 - Easier security audits and compliance
 
-HyperSpot modules act as PEPs; AuthZ Resolver integrates with vendor's PDP; Tenant/RG Resolvers act as PIPs.
+Cyber Fabric modules act as PEPs; AuthZ Resolver integrates with vendor's PDP; Tenant/RG Resolvers act as PIPs.
 
 ## Decision Drivers
 
@@ -100,7 +100,7 @@ Each module implements its own authorization logic: extracts permissions/roles f
 - Bad, because authorization logic scattered across modules — hard to audit, easy to make mistakes
 - Bad, because each module must understand and correctly implement policy evaluation
 - Bad, because inconsistent enforcement across modules, difficult compliance audits
-- Bad, because complex authorization logic lives in HyperSpot (even if in shared library — bugs, versioning, update rollout across deployments)
+- Bad, because complex authorization logic lives in Cyber Fabric (even if in shared library — bugs, versioning, update rollout across deployments)
 
 ### Option B: Google Zanzibar / ReBAC
 
@@ -192,7 +192,7 @@ Option E provides a cleaner contract between PDP and PEP with less implementatio
   - OPA Documentation: https://www.openpolicyagent.org/docs/latest/
 - **Option E** (AuthZEN + Constraints - CHOSEN):
   - OpenID AuthZEN 1.0 (base): https://openid.net/specs/authorization-api-1_0.html
-  - HyperSpot constraint extension: [`DESIGN.md`](../DESIGN.md)
+  - Cyber Fabric constraint extension: [`DESIGN.md`](../DESIGN.md)
 
 **Prior Art (Data Filtering / Query-time Authorization):**
 

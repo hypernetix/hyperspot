@@ -8,7 +8,7 @@ decision-makers: Vasily
 
 ## Context and Problem Statement
 
-HyperSpot requires integration with vendor-specific identity and authorization infrastructure. This integration involves two distinct concerns:
+Cyber Fabric requires integration with vendor-specific identity and authorization infrastructure. This integration involves two distinct concerns:
 
 1. **Authentication (AuthN)** — Token validation (JWT signature verification, introspection), JWKS management, claim extraction, and SecurityContext production
 2. **Authorization (AuthZ)** — Policy Decision Point (PDP) functionality, policy evaluation, and constraint generation for Policy Enforcement Points (PEPs)
@@ -18,7 +18,7 @@ These are conceptually separate responsibilities governed by different standards
 - **AuthN** — OpenID Connect Core 1.0, RFC 7519 (JWT), RFC 7662 (Token Introspection)
 - **AuthZ** — OpenID AuthZEN Authorization API 1.0, NIST SP 800-162 (PDP/PEP model)
 
-**Key architectural question:** Should HyperSpot use a single unified resolver module (Auth Resolver) that handles both AuthN and AuthZ, or should these be split into two independent gateway modules (AuthN Resolver and AuthZ Resolver)?
+**Key architectural question:** Should Cyber Fabric use a single unified resolver module (Auth Resolver) that handles both AuthN and AuthZ, or should these be split into two independent gateway modules (AuthN Resolver and AuthZ Resolver)?
 
 This decision impacts deployment flexibility, vendor integration patterns, security boundaries, caching strategies, and component reusability.
 

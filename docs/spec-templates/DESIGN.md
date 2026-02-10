@@ -37,8 +37,8 @@ ARCHITECTURE VIEWS (per IEEE 42010):
 
 DESIGN LANGUAGE:
   - Be specific and clear; no fluff, bloat, or emoji
-  - Reference PRD requirements using `fdd-{module}-req-{slug}` IDs
-  - Reference ADR documents using `fdd-{module}-adr-{slug}` IDs
+  - Reference PRD requirements using `cpt-{system}-fr-{slug}`, `cpt-{system}-nfr-{slug}`, and `cpt-{system}-usecase-{slug}` IDs
+  - Reference ADR documents using `cpt-{system}-adr-{slug}` IDs
 =============================================================================
 -->
 
@@ -56,7 +56,7 @@ Requirements that significantly influence architecture decisions.
 
 | Requirement | Design Response |
 |-------------|-----------------|
-| `fdd-{module}-req-{slug}` | {How architecture addresses this requirement} |
+| `cpt-{system}-fr-{slug}` | {How architecture addresses this requirement} |
 
 #### NFR Allocation
 
@@ -64,7 +64,7 @@ This table maps non-functional requirements from PRD to specific design/architec
 
 | NFR ID | NFR Summary | Allocated To | Design Response | Verification Approach |
 |--------|-------------|--------------|-----------------|----------------------|
-| `fdd-{module}-req-{nfr-slug}` | {Brief NFR description} | {Component/layer/mechanism} | {How this design element realizes the NFR} | {How compliance is verified} |
+| `cpt-{system}-nfr-{slug}` | {Brief NFR description} | {Component/layer/mechanism} | {How this design element realizes the NFR} | {How compliance is verified} |
 
 ### 1.3 Architecture Layers
 
@@ -83,21 +83,21 @@ This table maps non-functional requirements from PRD to specific design/architec
 
 #### {Principle Name}
 
-- [ ] `p2` - **ID**: `fdd-{module}-design-{slug}`
+- [ ] `p2` - **ID**: `cpt-{system}-principle-{slug}`
 
 {Description of the principle and why it matters for this system.}
 
-**ADRs**: `fdd-{module}-adr-{slug}`
+**ADRs**: `cpt-{system}-adr-{slug}`
 
 ### 2.2 Constraints
 
 #### {Constraint Name}
 
-- [ ] `p2` - **ID**: `fdd-{module}-design-{slug}`
+- [ ] `p2` - **ID**: `cpt-{system}-constraint-{slug}`
 
 {Description of the constraint (technical, regulatory, organizational) and its impact on design.}
 
-**ADRs**: `fdd-{module}-adr-{slug}`
+**ADRs**: `cpt-{system}-adr-{slug}`
 
 ## 3. Technical Architecture
 
@@ -153,7 +153,7 @@ Define how this library/module interacts with external systems, including protoc
 
 #### {Interface/Protocol Name}
 
-- [ ] `p2` - **ID**: `fdd-{module}-design-interface-{slug}`
+- [ ] `p2` - **ID**: `cpt-{system}-interface-{slug}`
 
 **Type**: {Protocol | Data Format | External System | Hardware Interface}
 
@@ -167,35 +167,57 @@ Define how this library/module interacts with external systems, including protoc
 
 **References**: Links to PRD § Public Library Interfaces
 
-### 3.5 Sequences & Interactions
+### 3.5 Interactions & Sequences
+
+Document key interaction sequences and message flows between components.
+
+#### {Sequence Name}
+
+**ID**: `cpt-{system}-seq-{slug}`
+
+**Use cases**: `cpt-{system}-usecase-{slug}` (ID from PRD)
+
+**Actors**: `cpt-{system}-actor-{slug}` (ID from PRD)
 
 ```mermaid
 sequenceDiagram
-    User ->> System: Request
-    System ->> Database: Query
-    Database -->> System: Result
-    System -->> User: Response
+    participant A as Actor
+    participant B as System
+    A->>B: Action
+    B-->>A: Response
 ```
 
-**Key Flows**: Reference use cases from PRD via FDD IDs.
+**Description**: {Brief description of what this sequence accomplishes}
 
-### 3.6 Database Schema
+### 3.6 Database schemas & tables
 
-#### Table: {name}
+Document database tables, schemas, and data models.
 
-**ID**: `fdd-{module}-design-{slug}`
+#### Table: {table_name}
 
-| Column | Type | Constraints | Description |
-|--------|------|-------------|-------------|
-| {col} | {type} | {PK/FK/NOT NULL/etc.} | {description} |
+**ID**: `cpt-{system}-dbtable-{slug}`
 
-**Indexes**: {Index definitions}
+**Schema**:
 
-**Notes**: {Additional constraints, triggers, etc.}
+| Column | Type | Description |
+|--------|------|-------------|
+| {col} | {type} | {description} |
+
+**PK**: {primary key column(s)}
+
+**Constraints**: {NOT NULL, UNIQUE, etc.}
+
+**Additional info**: {Indexes, relationships, triggers, etc.}
+
+**Example**:
+
+| {col1} | {col2} | {col3} |
+|--------|--------|--------|
+| {val1} | {val2} | {val3} |
 
 ### 3.7 Deployment Topology
 
-**ID**: `fdd-{module}-design-{slug}`
+**ID**: `cpt-{system}-topology-{slug}`
 
 {Infrastructure view: pods, containers, services, regions, etc.}
 

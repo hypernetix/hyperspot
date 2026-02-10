@@ -1,6 +1,6 @@
 # Resource Group Model
 
-This document describes HyperSpot's resource group model for authorization: group topology, membership mechanisms, and how groups are used in access control.
+This document describes Cyber Fabric's resource group model for authorization: group topology, membership mechanisms, and how groups are used in access control.
 
 ## Table of Contents
 
@@ -19,7 +19,7 @@ This document describes HyperSpot's resource group model for authorization: grou
 
 ## Overview
 
-HyperSpot uses **resource groups** as an optional organizational layer for grouping resources. The primary purpose is **access control** — granting permissions at the group level rather than per-resource.
+Cyber Fabric uses **resource groups** as an optional organizational layer for grouping resources. The primary purpose is **access control** — granting permissions at the group level rather than per-resource.
 
 Vendors may implement various group types depending on their domain. Examples include:
 
@@ -28,7 +28,7 @@ Vendors may implement various group types depending on their domain. Examples in
 - Folders (document organization with nesting)
 - Teams, Departments, Campaigns, etc.
 
-The specific group types and their semantics are vendor-defined. HyperSpot provides the infrastructure for hierarchical grouping and membership resolution without prescribing what groups represent.
+The specific group types and their semantics are vendor-defined. Cyber Fabric provides the infrastructure for hierarchical grouping and membership resolution without prescribing what groups represent.
 
 ```
 Tenant T1
@@ -80,9 +80,9 @@ Tenant T2:
 
 ## Resource Group Properties
 
-Resource groups are stored on the **vendor side** (in the vendor's Resource Group service). HyperSpot does not store the full group entity — only local projections for authorization (closure and membership tables).
+Resource groups are stored on the **vendor side** (in the vendor's Resource Group service). Cyber Fabric does not store the full group entity — only local projections for authorization (closure and membership tables).
 
-The following properties are the **minimum** HyperSpot expects from the vendor's group model:
+The following properties are the **minimum** Cyber Fabric expects from the vendor's group model:
 
 | Property | Type | Description |
 |----------|------|-------------|
@@ -90,7 +90,7 @@ The following properties are the **minimum** HyperSpot expects from the vendor's
 | `tenant_id` | UUID | Owning tenant (groups are tenant-scoped) |
 | `parent_id` | UUID? | Parent group (NULL for root groups) |
 
-Vendors typically maintain additional fields (name, description, type, status, metadata, etc.) in their own systems. HyperSpot's RG Resolver plugin syncs only the hierarchy structure needed for authorization.
+Vendors typically maintain additional fields (name, description, type, status, metadata, etc.) in their own systems. Cyber Fabric's RG Resolver plugin syncs only the hierarchy structure needed for authorization.
 
 ---
 
