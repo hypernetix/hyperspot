@@ -10,6 +10,7 @@ description = "ModKit security library"
 readme = "README.md"
 keywords = ["cyberfabric", "cyberfabric-modkit"]
 categories = ["authentication"]
+metadata.docs.rs.all-features = true
 
 [lib]
 name = "modkit_security"

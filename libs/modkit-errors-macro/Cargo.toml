@@ -10,6 +10,7 @@ description = "ModKit errors macro"
 readme = "README.md"
 keywords = ["cyberfabric", "cyberfabric-modkit"]
 categories = ["development-tools::procedural-macro-helpers"]
+metadata.docs.rs.all-features = true
 
 [lib]
 proc-macro = true
