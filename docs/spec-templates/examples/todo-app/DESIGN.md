@@ -91,7 +91,83 @@ Application must support latest 2 versions of Chrome, Firefox, Safari, and Edge.
 - Task → User: Many-to-one (task belongs to user)
 - Category → User: Many-to-one (category belongs to user)
 
-### 3.2 API Contracts
+### 3.2 Component Model
+
+```mermaid
+graph TD
+    subgraph Frontend["Frontend (SPA)"]
+        UI[React UI Components]
+        TS[TaskService]
+        SS[SyncService]
+        IDB[(IndexedDB)]
+    end
+
+    subgraph Backend["Backend API"]
+        API[REST API]
+        WS[WebSocket Server]
+        DB[(PostgreSQL)]
+    end
+
+    UI --> TS
+    TS --> IDB
+    TS --> SS
+    SS --> IDB
+    SS <--> WS
+    SS --> API
+    API --> DB
+    WS --> DB
+```
+
+#### React UI
+
+**ID**: `cpt-examples-todo-app-component-react-ui`
+
+User interface rendering and input handling. Interface: React components, event handlers.
+
+#### TaskService
+
+**ID**: `cpt-examples-todo-app-component-task-service`
+
+Business logic orchestration, CRUD operations. Interface: TypeScript async methods.
+
+#### SyncService
+
+**ID**: `cpt-examples-todo-app-component-sync-service`
+
+Background synchronization, conflict resolution. Interface: Event-driven, queue-based.
+
+#### IndexedDB
+
+**ID**: `cpt-examples-todo-app-component-indexeddb`
+
+Local data persistence. Interface: Dexie.js wrapper API.
+
+#### REST API
+
+**ID**: `cpt-examples-todo-app-component-rest-api`
+
+Server-side task management. Interface: HTTP endpoints (see § 3.3).
+
+#### WebSocket Server
+
+**ID**: `cpt-examples-todo-app-component-websocket-server`
+
+Real-time sync notifications. Interface: JSON messages.
+
+#### PostgreSQL
+
+**ID**: `cpt-examples-todo-app-component-postgresql`
+
+Persistent data storage. Interface: SQL via backend.
+
+**Interactions**:
+- React UI → TaskService: Method calls for CRUD operations
+- TaskService → IndexedDB: Local persistence (immediate)
+- TaskService → SyncService: Queue sync operations
+- SyncService ↔ WebSocket: Bidirectional real-time updates
+- SyncService → REST API: HTTP requests for persistence
+
+### 3.3 API Contracts
 
 **Technology**: REST/OpenAPI
 
@@ -109,7 +185,7 @@ Application must support latest 2 versions of Chrome, Firefox, Safari, and Edge.
 | `PATCH` | `/tasks/:id` | Update task fields | stable |
 | `DELETE` | `/tasks/:id` | Delete a task | stable |
 
-### 3.3 Module Dependencies
+### 3.4 Internal Dependencies
 
 No internal module dependencies — Todo App is a standalone module with no platform module consumers or providers.
 
@@ -117,24 +193,18 @@ No internal module dependencies — Todo App is a standalone module with no plat
 |-------------------|---------------|--------|
 | (none) | — | — |
 
-### 3.4 External Dependencies
+### 3.5 External Dependencies
 
 #### WebSocket Sync Backend
 
-- [x] `p1` - **ID**: `cpt-examples-todo-app-design-ext-websocket-sync`
+- [x] `p1` - **ID**: `cpt-examples-todo-app-interface-websocket`
 
 **Type**: External API
 **Direction**: bidirectional
 **Protocol / Driver**: WebSocket + JSON; messages follow format: `{ type: "sync" | "update" | "delete", payload: Task }`
-<<<<<<< HEAD
 **Data Format**: JSON (follows Task model from `cpt-examples-todo-app-interface-task-model`)
 **Compatibility**: Protocol version negotiated on connection; supports fallback to HTTP polling
 **References**: PRD `cpt-examples-todo-app-contract-sync`
-=======
-**Data Format**: JSON (follows Task model from `fdd-todo-app-interface-task-model`)
-**Compatibility**: Protocol version negotiated on connection; supports fallback to HTTP polling
-**References**: PRD `fdd-todo-app-contract-sync`
->>>>>>> b18ba4bb (docs(spec-templates): update todo-app examples for PRD and DESIGN after recent changes)
 
 #### IndexedDB (Browser Local Storage)
 
@@ -148,11 +218,7 @@ No internal module dependencies — Todo App is a standalone module with no plat
 
 #### PostgreSQL
 
-<<<<<<< HEAD
 - [x] `p1` - **ID**: `cpt-examples-todo-app-design-ext-postgresql`
-=======
-- [x] `p1` - **ID**: `fdd-todo-app-design-ext-postgresql`
->>>>>>> b18ba4bb (docs(spec-templates): update todo-app examples for PRD and DESIGN after recent changes)
 
 **Type**: Database
 **Direction**: outbound
@@ -160,7 +226,7 @@ No internal module dependencies — Todo App is a standalone module with no plat
 **Data Format**: SQL (relational schema, see § 3.6)
 **Compatibility**: Schema migrations managed via migration tool
 
-### 3.5 Sequences & Interactions
+### 3.6 Sequences & Interactions
 
 #### Create Task (Optimistic UI + Local Persistence + API Sync)
 
@@ -197,7 +263,7 @@ sequenceDiagram
 
 **Actors**: `cpt-examples-todo-app-actor-user`, `cpt-examples-todo-app-actor-sync-service`
 
-### 3.6 Database Schema
+### 3.7 Database Schema
 
 #### Table: tasks
 

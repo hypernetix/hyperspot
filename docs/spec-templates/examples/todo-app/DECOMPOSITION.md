@@ -23,7 +23,11 @@
 **Purpose**: Implement core CRUD operations for tasks including creation, reading, updating, and deletion.
 
 **Design Coverage**:
-- Components: `cpt-examples-todo-app-component-task-form` (creation/editing UI)
+- Component: `cpt-examples-todo-app-component-react-ui` (task UI rendering)
+- Component: `cpt-examples-todo-app-component-task-service` (CRUD orchestration)
+- Component: `cpt-examples-todo-app-component-indexeddb` (local persistence)
+- Component: `cpt-examples-todo-app-component-rest-api` (server-side CRUD)
+- Component: `cpt-examples-todo-app-component-postgresql` (persistent storage)
 - Database: `cpt-examples-todo-app-db-table-tasks` (task persistence)
 - Principle: `cpt-examples-todo-app-principle-offline-first` (IndexedDB local storage)
 - Sequence: `cpt-examples-todo-app-seq-create-task-v1` (optimistic create flow)
@@ -45,7 +49,6 @@
 **Purpose**: Implement filtering, sorting, and display logic for task lists.
 
 **Design Coverage**:
-- Components: `cpt-examples-todo-app-component-task-list` (display), `cpt-examples-todo-app-component-filter-bar` (controls)
 - Principle: `cpt-examples-todo-app-principle-optimistic-updates` (immediate UI feedback)
 
 **Dependencies**: `cpt-examples-todo-app-feature-core` (requires tasks to exist)
@@ -65,7 +68,9 @@
 **Purpose**: Implement cross-device synchronization via WebSocket with fallback to polling.
 
 **Design Coverage**:
-- Components: `cpt-examples-todo-app-component-sync-indicator` (status display)
+- Component: `cpt-examples-todo-app-component-sync-service` (sync orchestration)
+- Component: `cpt-examples-todo-app-component-websocket-server` (real-time notifications)
+- Interface: `cpt-examples-todo-app-interface-websocket` (WebSocket sync protocol)
 - Constraint: `cpt-examples-todo-app-constraint-browser-compat` (WebSocket availability check)
 - Principle: `cpt-examples-todo-app-principle-offline-first` (sync queue when offline)
 

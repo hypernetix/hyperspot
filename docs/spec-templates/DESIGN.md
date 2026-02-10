@@ -116,22 +116,25 @@ This table maps non-functional requirements from PRD to specific design/architec
 **Relationships**:
 - {Entity1} → {Entity2}: {Relationship description}
 
-### 3.2 API Contracts
+### 3.2 Component Model
+
+{Describe all components covered by this design. For single-component designs, document that component. For multi-component designs, list all components with their responsibilities and interfaces. Include a component diagram (Mermaid or ASCII) showing structure and relationships.}
+
+### 3.3 API Contracts
+
+{For module-level design: Document all public API contracts exposed by this module. For multi-component design: Document the primary API contracts exposed by each component. Add references to module designgs}
 
 **Technology**: {REST/OpenAPI | GraphQL | gRPC | etc.}
-
 **Location**: [{api-spec-file}]({path/to/api-spec})
-
 **Endpoints Overview**:
 
 | Method | Path | Description | Stability |
 |--------|------|-------------|-----------|
 | `{METHOD}` | `{/path}` | {Description} | {stable/unstable} |
 
+### 3.4 Internal Dependencies
 
-### 3.3 Module Dependencies
-
-{Internal module dependencies within the platform. All inter-module communication goes through versioned contracts, SDK clients, or plugin interfaces — never through internal types.}
+{Internal systen/module dependencies within the platform. All inter-module communication goes through versioned contracts, SDK clients, or plugin interfaces — never through internal types.}
 
 | Dependency Module | Interface Used | Purpose |
 |-------------------|---------------|---------|----------|
@@ -144,7 +147,7 @@ This table maps non-functional requirements from PRD to specific design/architec
 - Only integration/adapter modules talk to external systems
 - `SecurityContext` must be propagated across all in-process calls
 
-### 3.4 External Dependencies
+### 3.5 External Dependencies
 
 External systems, databases, and third-party services this module interacts with. Define protocols, data formats, and integration points.
 
@@ -161,9 +164,9 @@ External systems, databases, and third-party services this module interacts with
 - Only integration/adapter modules talk to external systems
 - `SecurityContext` must be propagated across all in-process calls
 
-### 3.5 Interactions & Sequences
+### 3.6 Interactions & Sequences
 
-Document key interaction sequences and message flows between components.
+{Document key interaction sequences and message flows between components.}
 
 #### {Sequence Name}
 
@@ -184,9 +187,9 @@ sequenceDiagram
 
 **Description**: {Brief description of what this sequence accomplishes}
 
-### 3.6 Database schemas & tables
+### 3.7 Database schemas & tables
 
-Document database tables, schemas, and data models.
+{ For module-level design: Document database tables, schemas, and data models. For multi-component design: refer to component-level design documents. }
 
 #### Table: {table_name}
 

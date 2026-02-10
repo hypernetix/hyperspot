@@ -23,7 +23,7 @@ Implement cross-device task synchronization via WebSocket with fallback to HTTP 
 - PRD: [PRD.md](../PRD.md)
 - Decomposition: `cpt-examples-todo-app-feature-sync`
 - Requirements: `cpt-examples-todo-app-nfr-data-persistence`, `cpt-examples-todo-app-contract-sync`
-- Design elements: `cpt-examples-todo-app-component-sync-indicator`, `cpt-examples-todo-app-constraint-browser-compat`, `cpt-examples-todo-app-principle-offline-first`, `cpt-examples-todo-app-interface-websocket`
+- Design elements: `cpt-examples-todo-app-interface-websocket`, `cpt-examples-todo-app-constraint-browser-compat`, `cpt-examples-todo-app-principle-offline-first`
 - Dependencies: `cpt-examples-todo-app-feature-core`
 
 ---
