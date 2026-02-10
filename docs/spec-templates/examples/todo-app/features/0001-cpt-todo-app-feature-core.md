@@ -24,7 +24,7 @@ Provides the fundamental task management capabilities that all other features de
 - PRD: [PRD.md](../PRD.md)
 - Decomposition: `cpt-examples-todo-app-feature-core`
 - Requirements: `cpt-examples-todo-app-fr-create-task`, `cpt-examples-todo-app-fr-complete-task`, `cpt-examples-todo-app-fr-delete-task`, `cpt-examples-todo-app-nfr-offline-support`, `cpt-examples-todo-app-nfr-data-persistence`, `cpt-examples-todo-app-interface-rest-api`, `cpt-examples-todo-app-interface-task-model`
-- Design elements: `cpt-examples-todo-app-interface-websocket`, `cpt-examples-todo-app-db-table-tasks`, `cpt-examples-todo-app-topology-cloud`, `cpt-examples-todo-app-tech-stack`, `cpt-examples-todo-app-design-context-decisions`
+- Design elements: `cpt-examples-todo-app-interface-websocket`, `cpt-examples-todo-app-design-db-tasks`, `cpt-examples-todo-app-design-context-decisions`
 - Dependencies: None
 
 ## 2. Actor Flows (CDSL)
@@ -144,4 +144,3 @@ The system **MUST** provide full Create, Read, Update, Delete operations for tas
 **ID**: `cpt-examples-todo-app-featurecontext-core-performance`
 
 Task list queries should use cursor-based pagination for lists > 100 items. Consider implementing virtual scrolling on the frontend for smooth UX with large datasets.
-
