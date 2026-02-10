@@ -1,10 +1,10 @@
 # DE0301: No Infrastructure in Domain
 
-### What it does
+## What it does
 
 Checks that domain modules do not import infrastructure dependencies.
 
-### Why is this bad?
+## Why is this bad?
 
 Domain modules should contain pure business logic and depend only on abstractions (ports), not concrete implementations:
 - **Violates Dependency Inversion Principle**: Domain depends on low-level details
@@ -12,7 +12,7 @@ Domain modules should contain pure business logic and depend only on abstraction
 - **Tight coupling**: Changes to infrastructure affect domain logic
 - **Prevents portability**: Cannot easily swap infrastructure implementations
 
-### Example
+## Example
 
 ```rust
 // ❌ Bad - infrastructure imports in domain
@@ -43,7 +43,7 @@ pub struct UserService {
 }
 ```
 
-### Configuration
+## Configuration
 
 This lint is configured to **deny** by default.
 
@@ -51,6 +51,6 @@ It checks all imports in `*/domain/*.rs` files for references to:
 - `sea_orm`, `sqlx` (database frameworks)
 - `infra::*` (infrastructure modules)
 
-### See Also
+## See Also
 
 - [DE0308](../de0308_no_http_in_domain) - No HTTP in Domain Layer

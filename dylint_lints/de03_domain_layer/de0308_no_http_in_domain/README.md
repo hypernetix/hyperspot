@@ -1,10 +1,10 @@
 # DE0308: No HTTP in Domain
 
-### What it does
+## What it does
 
 Checks that domain modules do not reference HTTP types or status codes.
 
-### Why is this bad?
+## Why is this bad?
 
 Domain modules should be transport-agnostic:
 - **HTTP is just one transport**: Domain logic should work with any protocol (gRPC, WebSockets, CLI)
@@ -12,7 +12,7 @@ Domain modules should be transport-agnostic:
 - **Harder to reuse**: Cannot use domain logic in non-HTTP contexts
 - **Violates separation of concerns**: HTTP is a delivery detail, not business logic
 
-### Example
+## Example
 
 ```rust
 // ❌ Bad - HTTP types in domain
@@ -81,7 +81,7 @@ impl From<DomainError> for Problem {
 }
 ```
 
-### Configuration
+## Configuration
 
 This lint is configured to **deny** by default.
 

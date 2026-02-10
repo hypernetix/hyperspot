@@ -443,6 +443,8 @@ mime = "0.3"
 tl = "0.7"
 pdf-extract = "0.10"
 docx-rust = "0.1.11"
+calamine = "0.32"
+pptx-to-md = "0.4"
 
 # Additional testing utilities
 tokio-test = "0.4"
