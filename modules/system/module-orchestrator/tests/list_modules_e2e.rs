@@ -5,9 +5,9 @@
 //! These tests build a real axum `Router` with the module orchestrator's routes
 //! registered via `OperationBuilder`, then send HTTP requests using `tower::ServiceExt::oneshot`.
 
+use axum::Router;
 use axum::body::Body;
 use axum::http::{Method, Request, StatusCode};
-use axum::Router;
 use modkit::registry::{ModuleDescriptor, ModuleRegistryCatalog};
 use modkit::runtime::{Endpoint, ModuleInstance, ModuleManager};
 use module_orchestrator::api::rest;
@@ -97,10 +97,7 @@ async fn returns_compiled_in_modules_with_capabilities() {
         modules[0]["capabilities"],
         serde_json::json!(["rest", "system"])
     );
-    assert_eq!(
-        modules[0]["dependencies"],
-        serde_json::json!(["grpc_hub"])
-    );
+    assert_eq!(modules[0]["dependencies"], serde_json::json!(["grpc_hub"]));
 
     assert_eq!(modules[1]["name"], "grpc_hub");
     assert_eq!(modules[1]["deployment_mode"], "compiled_in");
@@ -157,10 +154,12 @@ async fn includes_running_instances_with_grpc_services() {
     assert_eq!(instances[0]["instance_id"], instance_id.to_string());
     assert_eq!(instances[0]["version"], "1.2.3");
     assert_eq!(instances[0]["state"], "registered");
-    assert!(instances[0]["grpc_services"]["my.Service"]
-        .as_str()
-        .unwrap()
-        .contains("127.0.0.1"));
+    assert!(
+        instances[0]["grpc_services"]["my.Service"]
+            .as_str()
+            .unwrap()
+            .contains("127.0.0.1")
+    );
 }
 
 #[tokio::test]
@@ -191,9 +190,8 @@ async fn compiled_in_module_overridden_to_external() {
 #[tokio::test]
 async fn dynamic_instances_without_catalog_entry() {
     let manager = Arc::new(ModuleManager::new());
-    let instance = Arc::new(
-        ModuleInstance::new("dynamic_svc", Uuid::new_v4()).with_version("0.5.0"),
-    );
+    let instance =
+        Arc::new(ModuleInstance::new("dynamic_svc", Uuid::new_v4()).with_version("0.5.0"));
     manager.register_instance(instance);
 
     let router = build_router(

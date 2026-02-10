@@ -120,8 +120,7 @@ impl modkit::Module for ModuleOrchestrator {
                 "ModulesService already initialized (init called twice?)"
             ));
         }
-        let modules_service =
-            ModulesService::new(module_catalog, manager, external_module_names);
+        let modules_service = ModulesService::new(module_catalog, manager, external_module_names);
         self.modules_service.store(Some(Arc::new(modules_service)));
 
         tracing::info!("ModuleOrchestrator initialized");

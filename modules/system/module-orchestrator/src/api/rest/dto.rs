@@ -77,7 +77,11 @@ impl From<&ModuleInfo> for ModuleDto {
                 DeploymentMode::CompiledIn => DeploymentModeDto::CompiledIn,
                 DeploymentMode::OutOfProcess => DeploymentModeDto::OutOfProcess,
             },
-            instances: module.instances.iter().map(ModuleInstanceDto::from).collect(),
+            instances: module
+                .instances
+                .iter()
+                .map(ModuleInstanceDto::from)
+                .collect(),
             plugins: vec![],
         }
     }
