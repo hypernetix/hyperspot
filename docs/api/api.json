@@ -1164,7 +1164,7 @@
         ],
         "summary": "Get user settings",
         "description": "Retrieve settings for the authenticated user",
-        "operationId": "settings.get_settings",
+        "operationId": "simple_user_settings.get_settings",
         "responses": {
           "200": {
             "description": "Settings retrieved",
@@ -1219,7 +1219,7 @@
         ],
         "summary": "Update user settings",
         "description": "Full update of user settings (POST semantics)",
-        "operationId": "settings.update_settings",
+        "operationId": "simple_user_settings.update_settings",
         "requestBody": {
           "description": "Settings update data",
           "content": {
@@ -1305,7 +1305,7 @@
         ],
         "summary": "Partially update user settings",
         "description": "Partial update of user settings (PATCH semantics)",
-        "operationId": "settings.patch_settings",
+        "operationId": "simple_user_settings.patch_settings",
         "requestBody": {
           "description": "Settings patch data",
           "content": {

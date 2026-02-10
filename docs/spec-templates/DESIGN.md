@@ -118,58 +118,55 @@ This table maps non-functional requirements from PRD to specific design/architec
 
 ### 3.2 Component Model
 
-{Add component diagram here: Mermaid or ASCII}
-
-```mermaid
-graph TD
-    A[Component A] --> B[Component B]
-    B --> C[Component C]
-```
-
-**Components**:
-
-| Component | Responsibility | Interface |
-|-----------|---------------|-----------|
-| {Component 1} | {Purpose} | {API/Events/etc.} |
-
-**Interactions**:
-- {Component 1} → {Component 2}: {Protocol, data exchanged}
+{Describe all components covered by this design. For single-component designs, document that component. For multi-component designs, list all components with their responsibilities and interfaces. Include a component diagram (Mermaid or ASCII) showing structure and relationships.}
 
 ### 3.3 API Contracts
 
+{For module-level design: Document all public API contracts exposed by this module. For multi-component design: Document the primary API contracts exposed by each component. Add references to module designs}
+
 **Technology**: {REST/OpenAPI | GraphQL | gRPC | etc.}
-
 **Location**: [{api-spec-file}]({path/to/api-spec})
-
 **Endpoints Overview**:
 
 | Method | Path | Description | Stability |
 |--------|------|-------------|-----------|
 | `{METHOD}` | `{/path}` | {Description} | {stable/unstable} |
 
-### 3.4 External Interfaces & Protocols
+### 3.4 Internal Dependencies
 
-Define how this library/module interacts with external systems, including protocols, data formats, and integration points.
+{Internal system/module dependencies within the platform. All inter-module communication goes through versioned contracts, SDK clients, or plugin interfaces — never through internal types.}
 
-#### {Interface/Protocol Name}
+| Dependency Module | Interface Used | Purpose |
+|-------------------|----------------|---------|
+| {module_name} | {contract / SDK client / plugin} | {Why this module is needed} |
 
-- [ ] `p2` - **ID**: `cpt-{system}-interface-{slug}`
+**Dependency Rules** (per project conventions):
+- No circular dependencies
+- Always use SDK modules for inter-module communication
+- No cross-category sideways deps except through contracts
+- Only integration/adapter modules talk to external systems
+- `SecurityContext` must be propagated across all in-process calls
 
-**Type**: {Protocol | Data Format | External System | Hardware Interface}
+### 3.5 External Dependencies
 
-**Direction**: {inbound | outbound | bidirectional}
+External systems, databases, and third-party services this module interacts with. Define protocols, data formats, and integration points.
 
-**Specification**: {Protocol spec reference, RFC, standard}
+#### {External System / Database / Service Name}
 
-**Data Format**: {JSON Schema, Protocol Buffers, binary format, etc.}
+| Dependency Module | Interface Used | Purpose |
+|-------------------|---------------|---------|----------|
+| {module_name} | {contract / SDK client / plugin} | {Why this module is needed} |
 
-**Compatibility**: {Versioning/backward compatibility guarantees}
+**Dependency Rules** (per project conventions):
+- No circular dependencies
+- Always use SDK modules for inter-module communication
+- No cross-category sideways deps except through contracts
+- Only integration/adapter modules talk to external systems
+- `SecurityContext` must be propagated across all in-process calls
 
-**References**: Links to PRD § Public Library Interfaces
+### 3.6 Interactions & Sequences
 
-### 3.5 Interactions & Sequences
-
-Document key interaction sequences and message flows between components.
+{Document key interaction sequences and message flows between components.}
 
 #### {Sequence Name}
 
@@ -181,17 +178,18 @@ Document key interaction sequences and message flows between components.
 
 ```mermaid
 sequenceDiagram
-    participant A as Actor
-    participant B as System
-    A->>B: Action
-    B-->>A: Response
+    User ->> System: Request
+    System ->> Module B: Call
+    System ->> Database: Query
+    Database -->> System: Result
+    System -->> User: Response
 ```
 
 **Description**: {Brief description of what this sequence accomplishes}
 
-### 3.6 Database schemas & tables
+### 3.7 Database schemas & tables
 
-Document database tables, schemas, and data models.
+{ For module-level design: Document database tables, schemas, and data models. For multi-component design: refer to component-level design documents. }
 
 #### Table: {table_name}
 
@@ -214,31 +212,6 @@ Document database tables, schemas, and data models.
 | {col1} | {col2} | {col3} |
 |--------|--------|--------|
 | {val1} | {val2} | {val3} |
-
-### 3.7 Deployment Topology
-
-**ID**: `cpt-{system}-topology-{slug}`
-
-{Infrastructure view: pods, containers, services, regions, etc.}
-
-```mermaid
-graph LR
-    LB[Load Balancer] --> S1[Service Pod 1]
-    LB --> S2[Service Pod 2]
-    S1 --> DB[(Database)]
-    S2 --> DB
-```
-
-### 3.8 Technology Stack
-
-Optional. Document only deviations from project-wide tech stack (see root DESIGN.md).
-
-| Layer | Technology | Rationale |
-|-------|------------|-----------|
-| Runtime | {e.g., Rust} | {Why chosen} |
-| Framework | {e.g., Axum} | {Why chosen} |
-| Database | {e.g., PostgreSQL} | {Why chosen} |
-| Messaging | {e.g., Kafka} | {Why chosen} |
 
 ## 4. Additional context
 

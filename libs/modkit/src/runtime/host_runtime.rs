@@ -471,7 +471,7 @@ impl HostRuntime {
 
     /// gRPC registration phase: collect services from all grpc modules.
     ///
-    /// Services are stored in the installer store for the `grpc_hub` to consume during start.
+    /// Services are stored in the installer store for the `grpc-hub` to consume during start.
     async fn run_grpc_phase(&self) -> Result<(), RegistryError> {
         tracing::info!("Phase: grpc (registration)");
 
@@ -598,7 +598,7 @@ impl HostRuntime {
 
     /// `OoP` SPAWN phase: spawn out-of-process modules after start phase.
     ///
-    /// This phase runs after `grpc_hub` is already listening, so we can pass
+    /// This phase runs after `grpc-hub` is already listening, so we can pass
     /// the real directory endpoint to `OoP` modules.
     async fn run_oop_spawn_phase(&self) -> Result<(), RegistryError> {
         let oop_opts = match &self.oop_options {
@@ -653,10 +653,10 @@ impl HostRuntime {
         Ok(())
     }
 
-    /// Wait for `grpc_hub` to publish its bound endpoint.
+    /// Wait for `grpc-hub` to publish its bound endpoint.
     ///
     /// Polls the `GrpcHubModule::bound_endpoint()` with a short interval until available or timeout.
-    /// Returns None if no `grpc_hub` is running or if it times out.
+    /// Returns None if no `grpc-hub` is running or if it times out.
     async fn wait_for_grpc_hub_endpoint(&self) -> Option<String> {
         const POLL_INTERVAL: std::time::Duration = std::time::Duration::from_millis(10);
         const MAX_WAIT: std::time::Duration = std::time::Duration::from_secs(5);

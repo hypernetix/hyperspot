@@ -33,4 +33,4 @@ jobs:
           tool: lychee
 
       - name: Check markdown links
-        run: lychee docs examples dylint_lints guidelines
+        run: make lychee

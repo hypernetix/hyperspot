@@ -9,6 +9,8 @@
 - **Extensible at Every Level**: [GTS](https://github.com/globaltypesystem/gts-spec)-powered extension points for custom data types, business logic, and third-party integrations
 - **SaaS Ready**: Multi-tenancy, granular access control, usage tracking, and tenant customization built-in
 - **Cloud Operations Excellence**: Production-grade observability, database agnostic design, API best practices, and resilience patterns via ModKit
+- **Spec-Driven Development**: [Industry-standard specification templates](docs/spec-templates/README.md) (PRD, Design, ADR, Feature, Upstream Reqs) define what gets built *before* code is written, ensuring traceability from requirements to implementation
+- **Shift Left**: Catch issues at the earliest possible stage — custom [dylint](dylint_lints/) architectural lints enforce design rules at compile time, Clippy with denied warnings, integrated [E2E tests](#e2e-tests), fuzzing, and security audits run in CI before code reaches review
 - **Quality First**: 90%+ test coverage target with unit, integration, E2E, performance, and security testing
 - **Universal Deployment**: Single codebase runs on cloud, on-prem Windows/Linux workstation, or mobile
 - **Developer Friendly**: AI-assisted code generation, automatic OpenAPI docs, DDD-light structure, and type-safe APIs
@@ -111,9 +113,20 @@ See [NEW_MODULE.md](guidelines/NEW_MODULE.md), but also [MODKIT UNIFIED SYSTEM](
 ## Documentation
 
 - **[Architecture manifest](docs/ARCHITECTURE_MANIFEST.md)** - High-level overview of the architecture
-- **[Components](docs/COMPONENTS.md)** - List of all components and their roles
+- **[Modules](docs/MODULES.md)** - List of all modules and their roles
 - **[NEW_MODULE.md](guidelines/NEW_MODULE.md), [MODKIT UNIFIED SYSTEM](docs/modkit_unified_system/README.md) and [MODKIT_PLUGINS.md](docs/MODKIT_PLUGINS.md)** - how to add new modules.
 - **[Contributing](CONTRIBUTING.md)** - Development workflow and coding standards
+
+## Specification Templates
+
+Cyber Fabric uses industry-standard specification templates (IEEE, ISO, MADR) to drive development. Specs are written *before* implementation and live alongside the code in version control.
+
+- **[Overview & Guide](docs/spec-templates/README.md)** — Template system overview, governance, FDD ID conventions, and document placement rules
+- **[PRD.md](docs/spec-templates/PRD.md)** — Product Requirements Document: vision, actors, capabilities, use cases, FR/NFR
+- **[DESIGN.md](docs/spec-templates/DESIGN.md)** — Technical Design: architecture, principles, constraints, domain model, API contracts
+- **[ADR.md](docs/spec-templates/ADR.md)** — Architecture Decision Record: decisions, options, trade-offs, consequences
+- **[FEATURE.md](docs/spec-templates/FEATURE.md)** — Feature Specification: flows, algorithms, states, requirements
+- **[UPSTREAM_REQS.md](docs/spec-templates/UPSTREAM_REQS.md)** — Upstream Requirements: technical requirements from other modules to this module
 
 ## Configuration
 
@@ -231,7 +244,7 @@ python scripts/ci.py clippy --fix # Attempt to fix warnings
 python scripts/ci.py dylint       # runs custom project compliance lints on the workspace
 python scripts/ci.py audit        # Security audit
 python scripts/ci.py deny         # License & dependency checks
-````
+```
 
 On Unix/Linux/macOS, the Makefile provides shortcuts:
 

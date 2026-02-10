@@ -1,5 +1,5 @@
 """
-Generate golden Markdown reference files for file_parser E2E tests.
+Generate golden Markdown reference files for file-parser E2E tests.
 
 This script:
 1. Scans e2e/testdata/ for test input files (PDFs, DOCX, etc.)
@@ -131,7 +131,7 @@ def main():
     """Main entry point for the golden markdown generator."""
     # Determine paths
     script_dir = Path(__file__).parent
-    # testdata is at e2e/testdata, script is at e2e/modules/file_parser
+    # testdata is at e2e/testdata, script is at e2e/modules/file-parser
     testdata_dir = script_dir.parent.parent / "testdata"
     md_output_dir = testdata_dir / "md"
 

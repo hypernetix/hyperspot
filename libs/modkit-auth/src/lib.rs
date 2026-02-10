@@ -4,6 +4,7 @@
 // Core modules
 pub mod claims;
 pub mod errors;
+pub mod http_error;
 pub mod traits;
 pub mod types;
 
@@ -21,6 +22,9 @@ pub mod plugins;
 pub mod providers;
 pub mod standard_claims;
 pub mod validation;
+
+// Outbound OAuth2 client credentials
+pub mod oauth2;
 
 #[cfg(feature = "axum-ext")]
 pub mod axum_ext;
@@ -41,3 +45,9 @@ pub use metrics::{AuthEvent, AuthMetricLabels, AuthMetrics, LoggingMetrics, NoOp
 pub use plugin_traits::{ClaimsPlugin, IntrospectionProvider, KeyProvider};
 pub use standard_claims::StandardClaim;
 pub use validation::ValidationConfig;
+
+// Outbound OAuth2 exports
+pub use oauth2::{
+    BearerAuthLayer, ClientAuthMethod, HttpClientBuilderExt, OAuthClientConfig, SecretString,
+    Token, TokenError,
+};

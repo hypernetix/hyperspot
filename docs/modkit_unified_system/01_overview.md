@@ -3,7 +3,7 @@
 ## What ModKit provides
 
 - **Composable modules** discovered via `inventory`, initialized in dependency order.
-- **Gateway as a module** (e.g., `api_gateway`) that owns the Axum router and OpenAPI document.
+- **Gateway as a module** (e.g., `api-gateway`) that owns the Axum router and OpenAPI document.
 - **Type-safe REST** via an operation builder that prevents half-wired routes at compile time.
 - **Server-Sent Events (SSE)** with type-safe broadcasters and domain event integration.
 - **OpenAPI 3.1** generation using `utoipa` with automatic schema registration for DTOs.

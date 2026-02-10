@@ -5,7 +5,7 @@ ModKit provides a type-safe operation builder that prevents half-wired routes at
 ## Core principles
 
 - **Rule**: Strictly follow the API guideline (`guidelines/DNA/REST/API.md`).
-- **Rule**: Do NOT implement a REST host. `api_gateway` owns the Axum server and OpenAPI. Modules only register routes via `register_routes(...)`.
+- **Rule**: Do NOT implement a REST host. `api-gateway` owns the Axum server and OpenAPI. Modules only register routes via `register_routes(...)`.
 - **Rule**: Use `Extension<Arc<Service>>` for dependency injection and attach the service ONCE after all routes are registered: `router = router.layer(Extension(service.clone()));`.
 - **Rule**: Use `Authz(ctx): Authz` extractor for authorization — it extracts `SecurityContext` from the request.
 - **Rule**: Follow the `<crate>.<resource>.<action>` convention for `operation_id` naming.

@@ -1,0 +1,40 @@
+[package]
+name = "cf-module-orchestrator"
+version = "0.1.2"
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Module Orchestrator - system module for service discovery and module management"
+repository.workspace = true
+readme = "README.md"
+keywords = ["cyberfabric", "cyberfabric-system"]
+categories = ["development-tools"]
+
+[lib]
+name = "module_orchestrator"
+
+[lints]
+workspace = true
+
+[dependencies]
+cf-system-sdks = { workspace = true, features = ["directory_grpc"] }
+modkit = { workspace = true }
+modkit-macros = { workspace = true }
+parking_lot = { workspace = true }
+tokio = { workspace = true }
+tonic = { workspace = true, features = ["transport"] }
+async-trait = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+utoipa = { workspace = true }
+axum = { workspace = true }
+arc-swap = { workspace = true }
+uuid = { workspace = true }
+inventory = { workspace = true }
+
+[dev-dependencies]
+tower = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+api_gateway = { path = "../api-gateway", package = "cf-api-gateway" }

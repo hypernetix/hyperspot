@@ -19,16 +19,16 @@ database:
         max_conns: 5
 
 modules:
-  api_gateway:
+  api-gateway:
     config:
       bind_addr: "127.0.0.1:8087"
       enable_docs: true
       auth_disabled: true  # Uses DEFAULT_TENANT_ID from modkit-security
 
-  types_registry:
+  types-registry:
     config: {}
 
-  static_tr_plugin:
+  static-tr-plugin:
     config:
       vendor: "hyperspot"
       priority: 100
@@ -46,11 +46,11 @@ modules:
           type: partner
           parent_id: "00000000-df51-5b42-9538-d2b56b7ee953"
 
-  tenant_resolver:
+  tenant-resolver:
     config:
       vendor: "hyperspot"
 
-  users_info:
+  users-info:
     database:
       server: "sqlite_test"
       file: "users_info_test.db"
