@@ -128,10 +128,9 @@ pub mod errors;
 pub mod result;
 pub use result::ApiResult;
 
-// Domain layer support (DDD patterns)
-#[doc(hidden)]
+// Domain layer marker traits for DDD enforcement
 pub mod domain;
-pub use domain::DomainModel;
+pub use domain::{DomainErrorMarker, DomainModel};
 
 // Directory API for service discovery
 pub mod directory;
@@ -142,10 +141,6 @@ pub use directory::{
 
 // GTS schema support
 pub mod gts;
-
-// Domain layer marker traits for DDD enforcement
-pub mod domain;
-pub use domain::{DomainErrorMarker, DomainModel};
 
 // Security context scoping wrapper (re-exported from modkit-sdk)
 pub use modkit_sdk::{Secured, WithSecurityContext};
