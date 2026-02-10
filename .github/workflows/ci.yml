@@ -50,6 +50,9 @@ jobs:
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Validate module naming conventions
+        run: python3 scripts/validate_module_names.py
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@9bc92bc5598b4f3bec5d910d352094982cb0c3b9 # 1.92.0
 
@@ -183,6 +186,7 @@ jobs:
           RUSTFLAGS: "-C debuginfo=0 --cfg coverage_nightly"
           CARGO_LLVM_COV_TARGET_DIR: llvm-cov-target
           CARGO_LLVM_COV_BUILD_DIR: llvm-cov-build
+          RUSTUP_TOOLCHAIN: nightly-2026-01-20
         run: |
           cargo llvm-cov clean --workspace
           cargo llvm-cov --workspace --lcov --output-path lcov.info
@@ -238,7 +242,7 @@ jobs:
         run: sccache --show-stats
 
   users_info_integration_pg:
-    name: users_info integration (Postgres)
+    name: users-info integration (Postgres)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

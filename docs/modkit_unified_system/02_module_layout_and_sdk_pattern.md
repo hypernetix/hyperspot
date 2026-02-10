@@ -148,7 +148,7 @@ use crate::{
 };
 use modkit_odata::{ODataQuery, Page};
 
-/// Public API trait for users_info module.
+/// Public API trait for users-info module.
 ///
 /// All methods require SecurityContext for authorization.
 /// Obtain via ClientHub: `hub.get::<dyn UsersInfoClientV1>()?`
@@ -218,7 +218,7 @@ pub mod infra;
 ```rust
 #[modkit::module(
     name = "my_module",
-    deps = ["foo", "bar"], // api_gateway dependency will be added automatically for rest module capability
+    deps = ["foo", "bar"], // api-gateway dependency will be added automatically for rest module capability
     capabilities = [db, rest, stateful, /* rest_host if you own the HTTP server */],
     client = my_module_sdk::MyModuleApi,
     ctor = MyModule::new(),

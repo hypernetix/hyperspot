@@ -581,7 +581,7 @@ def parse_bind_addr_port(config_file):
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
 
-    bind_addr = config.get('modules', {}).get('api_gateway', {}).get(
+    bind_addr = config.get('modules', {}).get('api-gateway', {}).get(
         'config', {}).get('bind_addr', '127.0.0.1:8080'
     )
     if ':' not in bind_addr:

@@ -15,7 +15,7 @@ ModKit provides lifecycle management for modules with background tasks, graceful
 
 ```rust
 #[modkit::module(
-    name = "api_gateway",
+    name = "api-gateway",
     capabilities = [rest_host, rest, stateful],
     lifecycle(entry = "serve", stop_timeout = "30s", await_ready)
 )]

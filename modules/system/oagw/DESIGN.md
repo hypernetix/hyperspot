@@ -1,4 +1,4 @@
-# OAGW Outbound API Gateway Design Document
+# Technical Design — Outbound API Gateway (OAGW)
 
 <!-- TOC START -->
 ## Table of Contents
@@ -13,7 +13,6 @@
     - [Routing Flow](#routing-flow)
     - [Route Matching Algorithm](#route-matching-algorithm)
     - [Headers Transformation](#headers-transformation)
-    - [Guard Rules](#guard-rules)
     - [Guard Rules](#guard-rules)
     - [Body Validation Rules](#body-validation-rules)
     - [Transformation Rules](#transformation-rules)
@@ -88,113 +87,193 @@
 
 <!-- TOC END -->
 
-## Context
+## 1. Architecture Overview
 
-CyberFabric needs a reliable way to manage outbound API calls to external services.
-The Outbound API Gateway (OAGW) provides a centralized layer for routing, authentication, rate limiting, and monitoring of those requests.
+### 1.1 Architectural Vision
 
-OAGW provides:
+OAGW provides a centralized proxy layer for all outbound API requests from CyberFabric to external services. The architecture emphasizes security (SSRF protection, credential isolation), hierarchical multi-tenancy (configuration inheritance with shadowing), and extensibility (plugin system for auth, validation, transformation).
 
-- Routing: Directs requests to appropriate external services based on predefined rules and configurations.
-- Authentication: Manages authentication mechanisms for secure communication with external services.
-- Rate Limiting: Controls the rate of outgoing requests to prevent overloading external services.
-- Monitoring and Logging: Tracks outbound requests for auditing and performance analysis.
+Key architectural decisions: plugin-based modularity for credential injection and request mutation, alias-based upstream resolution with tenant hierarchy search, immutable plugin definitions for deterministic behavior, and configuration layering (upstream → route → tenant) for flexible policy enforcement.
 
-## Architecture
+### 1.2 Architecture Drivers
 
-Service Dependencies Map
+#### Functional Drivers
+
+| Requirement | Design Response |
+|-------------|-----------------|
+| `fdd-oagw-fr-proxy-endpoint-v1` | RESTful proxy API with alias-based routing |
+| `fdd-oagw-fr-alias-resolution-v1` | Tenant hierarchy search algorithm for upstream resolution |
+| `fdd-oagw-fr-plugin-types-v1` | Plugin system with Auth, Guard, Transform types |
+| `fdd-oagw-fr-config-merge-v1` | Configuration layering: Upstream < Route < Tenant |
+
+#### NFR Allocation
+
+| NFR ID | NFR Summary | Allocated To | Design Response | Verification Approach |
+|--------|-------------|--------------|-----------------|----------------------|
+| `fdd-oagw-nfr-latency-v1` | <10ms gateway overhead (p95) | Connection pooling, minimal plugin execution | HTTP/2 connection reuse, plugin timeout 100ms | Benchmark tests with Prometheus metrics |
+| `fdd-oagw-nfr-availability-v1` | 99.9% uptime, circuit breaker | Circuit breaker per upstream | Trip at 50% error rate, auto-recovery after 30s | Chaos testing, availability monitoring |
+| `fdd-oagw-nfr-ssrf-protection-v1` | DNS validation, IP pinning | Request routing layer | Allowlist/denylist validation, header stripping | Security scan, penetration testing |
+| `fdd-oagw-nfr-credential-isolation-v1` | Zero credential exposure | Credential store integration | UUID-only references, no logging | Audit log validation, secret scanning |
+| `fdd-oagw-nfr-observability-v1` | Request logging, metrics | Logging middleware, Prometheus | Correlation ID per request, histogram metrics | Log analysis, Grafana dashboards |
+
+### 1.3 Service Dependencies
 
 | Dependency       | Purpose                                     |
 |------------------|---------------------------------------------|
-| `types_registry` | GTS schema/instance registration            |
+| `types-registry` | GTS schema/instance registration            |
 | `cred_store`     | Secret material retrieval by UUID reference |
 | `api_ingress`    | REST API hosting                            |
 | `modkit-db`      | Database persistence                        |
 | `modkit-auth`    | Authorization                               |
 
-### Key Concepts
+## 2. Principles & Constraints
 
-- **Upstream Service**: External services that the OAGW interacts with to fulfill API requests.
-- **Route**: A defined path in the OAGW that maps incoming requests to specific upstream services.
-- **Plugin**: Modular components that can be applied to requests for additional functionality (e.g., logging, transformation, authentication).
+### 2.1 Design Principles
 
-### Out of Scope
+#### Hierarchical Configuration Inheritance
 
-- **DNS Resolution**: IP pinning rules, allowed segments matching are out of scope for this document.
-- **Plugin Versioning**: Plugin versioning and lifecycle management are out of scope for this document.
-- **Response Caching**: OAGW does not cache responses. Caching is client/upstream responsibility.
-- **Automatic Retries**: OAGW does not retry failed requests. Retry logic is client responsibility.
+- [ ] `p1` - **ID**: `fdd-oagw-principle-hierarchical-config-v1`
 
-### Security Considerations
+Configuration defined by ancestor tenants can be inherited, overridden, or enforced by descendants based on sharing modes (`private`, `inherit`, `enforce`). This enables policy control at organizational boundaries while allowing tenant-specific customization.
 
-**Server-Side Request Forgery (SSRF)**:
+**Rationale**: Multi-tenancy requires balancing centralized policy enforcement with tenant autonomy.
 
-- DNS: IP pinning rules, allowed segments matching.
-- Headers: Well-known headers stripping and validation.
-- Request Validation: Path, query parameters validation against route configuration.
+#### Plugin Immutability
 
-**Cross-Origin Resource Sharing (CORS)**:
+- [ ] `p1` - **ID**: `fdd-oagw-principle-plugin-immutability-v1`
 
-CORS support is built-in, configured per upstream/route. Preflight OPTIONS requests handled locally (no upstream round-trip).
+Plugin definitions are immutable after creation. Updates require creating a new plugin version and re-binding upstream/route references.
 
-See [ADR: CORS](./docs/adr-cors.md) for configuration options and security considerations.
+**Rationale**: Immutability guarantees deterministic behavior for attached routes/upstreams, improves auditability, and avoids in-place source mutation risks.
 
-**HTTP Version Negotiation**:
+#### Alias-Based Routing
 
-OAGW uses adaptive per-host HTTP version detection:
+- [ ] `p1` - **ID**: `fdd-oagw-principle-alias-routing-v1`
 
-1. **First request**: Attempt HTTP/2 via ALPN during TLS handshake
-2. **Success**: Cache "HTTP/2 supported" for this host/IP
-3. **Failure**: Fallback to HTTP/1.1, cache "HTTP/1.1 only" for this host/IP
-4. **Subsequent requests**: Use cached protocol version
+Upstreams are identified by human-readable alias in proxy URLs, resolved through tenant hierarchy search with descendant shadowing. Alias defaults to hostname for single-endpoint, common domain suffix for multi-endpoint, or explicit for IP-based upstreams.
 
-Cache entry TTL: 1 hour. OAGW does not retry failed requests.
+**Rationale**: Simplifies client integration, enables tenant-specific overrides, and provides intuitive upstream discovery.
 
-HTTP/3 (QUIC) support is future work.
+#### No Automatic Retries
 
-**Inbound Authentication & Authorization**
+- [ ] `p2` - **ID**: `fdd-oagw-principle-no-retries-v1`
 
-All OAGW API requests require Bearer token authentication.
+OAGW performs at most one upstream attempt per inbound request. Retry logic is client responsibility.
 
-**Management API** (`/api/oagw/v1/upstreams`, `/api/oagw/v1/routes`, `/api/oagw/v1/plugins`):
+**Rationale**: Gateway cannot determine idempotency of operations; client-managed retries prevent duplicate operations and enable request-specific retry strategies.
 
-| Permission Required                                          | Description                            |
-|--------------------------------------------------------------|----------------------------------------|
-| `gts.x.core.oagw.upstream.v1~:{create;override;read;delete}` | Create/Override, read, delete upstream |
-| `gts.x.core.oagw.route.v1~:{create;override;read;delete}`    | Create/Override, read, delete route    |
-| `gts.x.core.oagw.plugin.auth.v1~:{create;read;delete}`       | Create, read, delete auth plugin       |
-| `gts.x.core.oagw.plugin.guard.v1~:{create;read;delete}`      | Create, read, delete guard plugin      |
-| `gts.x.core.oagw.plugin.transform.v1~:{create;read;delete}`  | Create, read, delete transform plugin  |
+### 2.2 Constraints
 
-**Proxy API** (`/api/oagw/v1/proxy/{alias}/*`):
+#### Circuit Breaker Core Policy
 
-| Permission Required                | Description                 |
-|------------------------------------|-----------------------------|
-| `gts.x.core.oagw.proxy.v1~:invoke` | Proxy requests to upstreams |
+- [ ] `p1` - **ID**: `fdd-oagw-constraint-circuit-breaker-core-v1`
 
-Authorization checks:
+Circuit breaker is implemented as core gateway resilience capability, not as a plugin.
 
-1. Token must have `gts.x.core.oagw.proxy.v1~:invoke` permission
-2. Upstream must be owned by token's tenant or shared by ancestor
-3. Route must match request method and path
+**Rationale**: Circuit breaker is fundamental failure handling mechanism; plugin overhead would violate latency requirements.
 
-**Outbound Authentication** (OAGW → Upstream):
+#### HTTP Family Protocol Focus
 
-Handled by auth plugins. Token refresh/caching may occur as part of credential preparation, but OAGW does not re-issue failed upstream requests.
+- [ ] `p1` - **ID**: `fdd-oagw-constraint-http-family-v1`
 
-**Credential Management**:
+Main protocol focus is HTTP family traffic (HTTP, SSE, WebSocket, WebTransport). gRPC support planned for later phase (p4).
 
-API keys, OAuth2 credentials, and secrets stored in `cred_store`. Rotation, revocation, and expiration policies managed by `cred_store`, not OAGW.
+**Rationale**: HTTP family protocols cover majority of external API integrations; gRPC deferred to reduce initial complexity.
 
-**Retry Policy**:
+#### No Response Caching
 
-OAGW does not retry failed requests. Clients responsible for retry logic. Auth plugins handle token refresh on 401, but do not retry the original request.
+- [ ] `p2` - **ID**: `fdd-oagw-constraint-no-caching-v1`
 
-## Core Subsystems
+OAGW does not cache responses. Caching is client or upstream responsibility.
 
-### Request Routing
+**Rationale**: Gateway layer caching introduces complexity (cache invalidation, multi-tenancy, staleness policies); better handled at application or CDN layer.
 
-#### Routing Flow
+#### IP Pinning and DNS Security
+
+- [ ] `p1` - **ID**: `fdd-oagw-constraint-ip-pinning-v1`
+
+DNS resolution uses IP pinning rules and allowed segment matching for SSRF protection.
+
+**Rationale**: Prevents DNS rebinding attacks targeting internal infrastructure.
+
+**ADRs**: See [ADR: SSRF Protection](./docs/adr-ssrf-protection.md)
+
+#### CORS Preflight Local Handling
+
+- [ ] `p1` - **ID**: `fdd-oagw-constraint-cors-local-v1`
+
+CORS preflight OPTIONS requests are handled locally without upstream round-trip, configured per upstream/route.
+
+**Rationale**: Reduces latency and upstream load for CORS preflight checks.
+
+**ADRs**: See [ADR: CORS](./docs/adr-cors.md)
+
+## 3. Technical Architecture
+
+### 3.1 Component Model
+
+#### Request Routing Component
+
+- [ ] `p1` - **ID**: `fdd-oagw-component-routing-v1`
+
+**Responsibility**: Resolves inbound proxy requests to upstream services through alias resolution, route matching, configuration merging, and plugin chain execution.
+
+**Interface**: HTTP endpoints (`{METHOD} /api/oagw/v1/proxy/{alias}/{path}`), internal routing APIs
+
+**Interactions**:
+- Alias Resolution → finds upstream by alias from tenant hierarchy
+- Route Matching → matches route by (upstream_id, method, path)
+- Config Layering → merges upstream/route/tenant configurations
+- Plugin Chain → executes Auth → Guards → Transform pipeline
+
+#### Alias Resolution Component
+
+- [ ] `p1` - **ID**: `fdd-oagw-component-alias-resolution-v1`
+
+**Responsibility**: Maps human-readable upstream alias to upstream configuration, supporting tenant hierarchy search and descendant shadowing.
+
+**Interface**: `resolve_upstream_by_alias(tenant_id, alias) → (upstream, enforced_ancestors)`
+
+**Interactions**:
+- Searches tenant hierarchy from descendant to root
+- Returns closest match (shadowing winner) plus enforced ancestors
+- Validates multi-endpoint Host header requirements
+
+#### Plugin System Component
+
+- [ ] `p1` - **ID**: `fdd-oagw-component-plugin-system-v1`
+
+**Responsibility**: Executes modular Auth, Guard, and Transform plugins in deterministic order with Starlark sandbox isolation.
+
+**Interface**: Plugin execution API, Starlark context API for request/response mutation
+
+**Interactions**:
+- Auth plugins → credential injection from `cred_store`
+- Guard plugins → request validation, CORS checks, timeout enforcement
+- Transform plugins → header/body mutation, logging, metrics
+- Execution order: Auth → Guards → Transform(request) → Upstream → Transform(response/error)
+
+#### Hierarchical Configuration Component
+
+- [ ] `p1` - **ID**: `fdd-oagw-component-hierarchical-config-v1`
+
+**Responsibility**: Manages configuration inheritance across tenant hierarchy with sharing modes (private, inherit, enforce) and merge strategies.
+
+**Interface**: `resolve_effective_config(tenant_id, route_id, upstream_id) → final_config`
+
+**Interactions**:
+- Merges upstream < route < tenant configurations
+- Enforces ancestor constraints (rate limits, enforced plugins)
+- Resolves auth override permissions
+- Computes effective limits: `min(selected, route, all_enforced_ancestors)`
+
+### 3.2 Core Subsystems
+
+The following sections detail implementation algorithms and data flows for key architectural components.
+
+#### Request Routing
+
+**Routing Flow**:
 
 Routing resolves an inbound proxy request to an upstream service through configuration layering and request transformation.
 
@@ -3026,3 +3105,14 @@ Structured JSON logs sent to stdout, ingested by centralized logging system (e.g
 | p3    | 14            |
 | p4    | 8             |
 | Total | 51            |
+
+---
+
+## Traceability
+
+- **PRD**: [PRD.md](./PRD.md)
+- **ADRs**: 
+  - [ADR: Resource Identification and Discovery](./docs/adr-resource-identification.md)
+  - [ADR: CORS](./docs/adr-cors.md)
+  - [ADR: SSRF Protection](./docs/adr-ssrf-protection.md)
+  - [ADR: Rate Limiting](./docs/adr-rate-limiting.md)

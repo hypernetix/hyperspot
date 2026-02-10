@@ -1,0 +1,205 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
+use std::collections::HashMap;
+use std::sync::Arc;
+
+use modkit::config::ConfigProvider;
+use modkit::{ClientHub, DatabaseCapability, Module, ModuleCtx};
+use modkit_db::migration_runner::run_migrations_for_module;
+use modkit_db::{ConnectOpts, DBProvider, Db, DbError, connect_db};
+use modkit_security::SecurityContext;
+use serde_json::json;
+use tenant_resolver_sdk::{
+    GetAncestorsOptions, GetAncestorsResponse, GetDescendantsOptions, GetDescendantsResponse,
+    GetTenantsOptions, IsAncestorOptions, TenantRef, TenantResolverError,
+    TenantResolverGatewayClient, TenantStatus,
+};
+use tokio_util::sync::CancellationToken;
+use uuid::Uuid;
+
+use users_info::UsersInfo;
+use users_info_sdk::{NewUser, UsersInfoClientV1};
+
+/// Mock tenant resolver for tests.
+struct MockTenantResolver;
+
+#[async_trait::async_trait]
+impl TenantResolverGatewayClient for MockTenantResolver {
+    async fn get_tenant(
+        &self,
+        _ctx: &SecurityContext,
+        id: tenant_resolver_sdk::TenantId,
+    ) -> Result<tenant_resolver_sdk::TenantInfo, TenantResolverError> {
+        Ok(tenant_resolver_sdk::TenantInfo {
+            id,
+            name: format!("Tenant {id}"),
+            status: TenantStatus::Active,
+            tenant_type: None,
+            parent_id: None,
+            self_managed: false,
+        })
+    }
+
+    async fn get_tenants(
+        &self,
+        ctx: &SecurityContext,
+        ids: &[tenant_resolver_sdk::TenantId],
+        _options: &GetTenantsOptions,
+    ) -> Result<Vec<tenant_resolver_sdk::TenantInfo>, TenantResolverError> {
+        let tenant_id = ctx.tenant_id();
+        Ok(ids
+            .iter()
+            .filter(|id| **id == tenant_id)
+            .map(|id| tenant_resolver_sdk::TenantInfo {
+                id: *id,
+                name: format!("Tenant {id}"),
+                status: TenantStatus::Active,
+                tenant_type: None,
+                parent_id: None,
+                self_managed: false,
+            })
+            .collect())
+    }
+
+    async fn get_ancestors(
+        &self,
+        _ctx: &SecurityContext,
+        id: tenant_resolver_sdk::TenantId,
+        _options: &GetAncestorsOptions,
+    ) -> Result<GetAncestorsResponse, TenantResolverError> {
+        Ok(GetAncestorsResponse {
+            tenant: TenantRef {
+                id,
+                status: TenantStatus::Active,
+                tenant_type: None,
+                parent_id: None,
+                self_managed: false,
+            },
+            ancestors: vec![],
+        })
+    }
+
+    async fn get_descendants(
+        &self,
+        _ctx: &SecurityContext,
+        id: tenant_resolver_sdk::TenantId,
+        _options: &GetDescendantsOptions,
+    ) -> Result<GetDescendantsResponse, TenantResolverError> {
+        Ok(GetDescendantsResponse {
+            tenant: TenantRef {
+                id,
+                status: TenantStatus::Active,
+                tenant_type: None,
+                parent_id: None,
+                self_managed: false,
+            },
+            descendants: vec![],
+        })
+    }
+
+    async fn is_ancestor(
+        &self,
+        _ctx: &SecurityContext,
+        _ancestor_id: tenant_resolver_sdk::TenantId,
+        _descendant_id: tenant_resolver_sdk::TenantId,
+        _options: &IsAncestorOptions,
+    ) -> Result<bool, TenantResolverError> {
+        Ok(false)
+    }
+}
+
+struct MockConfigProvider {
+    modules: HashMap<String, serde_json::Value>,
+}
+
+impl MockConfigProvider {
+    fn new_users_info_default() -> Self {
+        let mut modules = HashMap::new();
+        // ModuleCtx::raw_config expects: modules.<name> = { database: ..., config: ... }
+        // For this test we supply config only; DB handle is injected directly.
+        modules.insert(
+            "users_info".to_owned(),
+            json!({
+                "config": {
+                    "default_page_size": 50,
+                    "max_page_size": 1000,
+                    "audit_base_url": "http://audit.local",
+                    "notifications_base_url": "http://notifications.local",
+                }
+            }),
+        );
+        Self { modules }
+    }
+}
+
+impl ConfigProvider for MockConfigProvider {
+    fn get_module_config(&self, module_name: &str) -> Option<&serde_json::Value> {
+        self.modules.get(module_name)
+    }
+}
+
+#[tokio::test]
+async fn users_info_registers_sdk_client_and_handles_basic_crud() {
+    // Arrange: build a real Db for sqlite in-memory, run module migrations, then init module.
+    let db: Db = connect_db(
+        "sqlite::memory:",
+        ConnectOpts {
+            max_conns: Some(1),
+            ..Default::default()
+        },
+    )
+    .await
+    .expect("db connect");
+    let dbp: DBProvider<DbError> = DBProvider::new(db.clone());
+
+    let hub = Arc::new(ClientHub::new());
+
+    // Register mock tenant resolver before initializing the module
+    hub.register::<dyn TenantResolverGatewayClient>(Arc::new(MockTenantResolver));
+
+    let ctx = ModuleCtx::new(
+        "users_info",
+        Uuid::new_v4(),
+        Arc::new(MockConfigProvider::new_users_info_default()),
+        hub.clone(),
+        CancellationToken::new(),
+        Some(dbp),
+    );
+
+    let module = UsersInfo::default();
+    run_migrations_for_module(&db, "users_info", module.migrations())
+        .await
+        .expect("migrate");
+    module.init(&ctx).await.expect("init");
+
+    // Act: resolve SDK client from hub and do basic CRUD.
+    let client = ctx
+        .client_hub()
+        .get::<dyn UsersInfoClientV1>()
+        .expect("UsersInfoClientV1 must be registered");
+
+    // Create a security context with tenant access
+    let tenant_id = Uuid::new_v4();
+    let sec = SecurityContext::builder()
+        .tenant_id(tenant_id)
+        .subject_id(Uuid::new_v4())
+        .build();
+
+    let created = client
+        .create_user(
+            sec.clone(),
+            NewUser {
+                id: None,
+                tenant_id,
+                email: "test@example.com".to_owned(),
+                display_name: "Test".to_owned(),
+            },
+        )
+        .await
+        .unwrap();
+
+    let fetched = client.get_user(sec.clone(), created.id).await.unwrap();
+    assert_eq!(fetched.email, "test@example.com");
+
+    client.delete_user(sec, created.id).await.unwrap();
+}

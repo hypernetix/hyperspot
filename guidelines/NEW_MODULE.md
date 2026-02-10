@@ -140,6 +140,23 @@ This SDK pattern provides:
       module1 x--x module2
   ```
 
+### Module Naming Convention
+
+**IMPORTANT**: All module names MUST use **kebab-case** (lowercase with hyphens).
+
+- ✅ **Correct**: `file-parser`, `simple-user-settings`, `api-gateway`, `types-registry`
+- ❌ **Incorrect**: `file_parser` (snake_case), `FileParser` (PascalCase), `fileParser` (camelCase)
+
+This naming convention is **enforced at multiple levels**:
+1. **Folder names**: Validated by `make validate-module-names` (runs in CI, blocks compilation)
+2. **Module attribute**: Enforced by the `#[modkit::module]` macro at compile time
+
+Module names:
+- Must contain only lowercase letters (a-z), digits (0-9), and hyphens (-)
+- Must start with a lowercase letter
+- Must not end with a hyphen
+- Must not contain consecutive hyphens or underscores
+
 All modules MUST adhere to the following directory structure:
 
 ```text
@@ -241,7 +258,7 @@ The main [QUICKSTART_GUIDE.md](../docs/QUICKSTART_GUIDE.md) references all modul
 
 ## Step-by-Step Generation Guide
 
-> **Note:** Strictly mirror the style, naming, and structure of the `examples/modkit/users_info/` reference when
+> **Note:** Strictly mirror the style, naming, and structure of the `examples/modkit/users-info/` reference when
 > generating
 > code. This example uses the **SDK pattern** with:
 > - `user_info-sdk/` — SDK crate containing the public API trait, models, and error types
@@ -2830,7 +2847,7 @@ It contains:
 
 There is also a smaller example copy under:
 
-- `examples/plugin-modules/tenant_resolver/`
+- `examples/plugin-modules/tenant-resolver/`
 
 
 
@@ -2896,13 +2913,13 @@ errors (add explicit types), missing `time::OffsetDateTime`, handler/service nam
 - `docs/modkit_unified_system/06_secure_orm_db_access.md` — Secure ORM layer with tenant isolation
 - [TRACING_SETUP.md](../docs/TRACING_SETUP.md) — Distributed tracing with OpenTelemetry
 - [DNA/REST/API.md](./DNA/REST/API.md) — REST API design principles
-- [examples/modkit/users_info/](../examples/modkit/users_info/) — Reference implementation of a local module with SDK
+- [examples/modkit/users-info/](../examples/modkit/users-info/) — Reference implementation of a local module with SDK
   pattern
     - `user_info-sdk/` — SDK crate with public API trait, models, and errors
     - `users_info/` — Module implementation with local client, domain, and REST handlers
-    - [examples/oop-modules/calculator_gateway/](../examples/oop-modules/calculator_gateway/) — Reference implementation of an OoP
+    - [examples/oop-modules/calculator-gateway/](../examples/oop-modules/calculator-gateway/) — Reference implementation of an OoP
   module 
-- [examples/plugin-modules/tenant_resolver/](../examples/plugin-modules/tenant_resolver/) — Reference implementation of
+- [examples/plugin-modules/tenant-resolver/](../examples/plugin-modules/tenant-resolver/) — Reference implementation of
   a Gateway + Plugins module
     - `tenant_resolver-sdk/` — SDK with public and plugin API traits
     - `tenant_resolver-gw/` — Gateway module with plugin discovery

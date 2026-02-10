@@ -73,7 +73,7 @@ logging:
     console_level: debug
     file: "logs/sql.log"
     file_level: debug
-  api_gateway:
+  api-gateway:
     console_level: info
     file: "logs/api.log"
     file_level: debug
@@ -91,7 +91,7 @@ logging:
 
 # Per-module configurations using new structure
 modules:
-  api_gateway:
+  api-gateway:
     config:
       bind_addr: "0.0.0.0:8087"
       enable_docs: true
@@ -112,11 +112,11 @@ modules:
       issuer: "http://localhost:8080/realms/dev"
       audience: "api-gateway"
 
-  module_orchestrator:
+  module-orchestrator:
     config: {}
     # No configuration needed for the module orchestrator
 
-  grpc_hub:
+  grpc-hub:
     config:
       # Use ephemeral port; OoP modules receive the actual bound address from master host
       listen_addr: "127.0.0.1:0"
@@ -139,7 +139,7 @@ modules:
       some_setting: "value"
 
 
-  users_info:
+  users-info:
     # Module-specific database configuration
     database:
       # Reference to global server template defined above
@@ -171,12 +171,12 @@ modules:
       default_page_size: 5
       max_page_size: 100
 
-  tenant_resolver_gateway:
+  tenant-resolver:
     config:
       vendor: "Fabrikam"
-  contoso_tr_plugin:
+  contoso-tr-plugin:
     config: {}
-  fabrikam_tr_plugin:
+  fabrikam-tr-plugin:
     config:
       vendor: "Fabrikam"
       priority: 20

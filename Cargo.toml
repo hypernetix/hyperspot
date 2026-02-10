@@ -41,32 +41,32 @@ members = [
     "libs/modkit-utils",
     "libs/system-sdks",
     "libs/system-sdks/sdks/directory",
-    "modules/file_parser",
-    "modules/system/api_gateway",
-    "modules/system/grpc_hub",
-    "modules/system/nodes_registry/nodes_registry",
-    "modules/system/nodes_registry/nodes_registry-sdk",
-    "modules/system/module_orchestrator",
-    "examples/modkit/users_info/user_info-sdk",
-    "examples/modkit/users_info/users_info",
-    "examples/oop-modules/calculator_gateway/calculator_gateway-sdk",
-    "examples/oop-modules/calculator_gateway/calculator_gateway",
+    "modules/file-parser",
+    "modules/system/api-gateway",
+    "modules/system/grpc-hub",
+    "modules/system/nodes-registry/nodes-registry",
+    "modules/system/nodes-registry/nodes-registry-sdk",
+    "modules/system/module-orchestrator",
+    "examples/modkit/users-info/users-info-sdk",
+    "examples/modkit/users-info/users-info",
+    "examples/oop-modules/calculator-gateway/calculator-gateway-sdk",
+    "examples/oop-modules/calculator-gateway/calculator-gateway",
     "examples/oop-modules/calculator/calculator-sdk",
     "examples/oop-modules/calculator/calculator",
-    "modules/system/types_registry/types_registry-sdk",
-    "modules/system/types_registry/types_registry",
+    "modules/system/types-registry/types-registry-sdk",
+    "modules/system/types-registry/types-registry",
     "modules/system/types-sdk",
     "modules/system/types",
-    "modules/simple_user_settings/simple_user_settings_sdk",
-    "modules/simple_user_settings/simple_user_settings",
-    "examples/plugin-modules/tenant_resolver/tenant_resolver-sdk",
-    "examples/plugin-modules/tenant_resolver/tenant_resolver-gw",
-    "examples/plugin-modules/tenant_resolver/plugins/contoso_tr_plugin",
-    "examples/plugin-modules/tenant_resolver/plugins/fabrikam_tr_plugin",
-    "modules/system/tenant_resolver/tenant_resolver-sdk",
-    "modules/system/tenant_resolver/tenant_resolver-gw",
-    "modules/system/tenant_resolver/plugins/static_tr_plugin",
-    "modules/system/tenant_resolver/plugins/single_tenant_tr_plugin",
+    "modules/simple-user-settings/simple-user-settings-sdk",
+    "modules/simple-user-settings/simple-user-settings",
+    "examples/plugin-modules/tenant-resolver/tenant-resolver-sdk",
+    "examples/plugin-modules/tenant-resolver/tenant-resolver-gw",
+    "examples/plugin-modules/tenant-resolver/plugins/contoso-tr-plugin",
+    "examples/plugin-modules/tenant-resolver/plugins/fabrikam-tr-plugin",
+    "modules/system/tenant-resolver/tenant-resolver-sdk",
+    "modules/system/tenant-resolver/tenant-resolver-gw",
+    "modules/system/tenant-resolver/plugins/static-tr-plugin",
+    "modules/system/tenant-resolver/plugins/single-tenant-tr-plugin",
 ]
 exclude = ["fuzz"]
 resolver = "3"
@@ -219,10 +219,10 @@ cf-system-sdks = { version = "0.1.7", path = "libs/system-sdks" }
 cf-system-sdk-directory = { version = "0.1.7", path = "libs/system-sdks/sdks/directory" }
 
 # system modules SDKs
-types-registry-sdk = { package = "cf-types-registry-sdk", version = "0.1.2", path = "modules/system/types_registry/types_registry-sdk" }
+types-registry-sdk = { package = "cf-types-registry-sdk", version = "0.1.2", path = "modules/system/types-registry/types-registry-sdk" }
 
 # system modules
-grpc_hub = { package = "cf-grpc-hub", version = "0.1.2", path = "modules/system/grpc_hub" }
+grpc_hub = { package = "cf-grpc-hub", version = "0.1.2", path = "modules/system/grpc-hub" }
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
@@ -266,7 +266,7 @@ opentelemetry-otlp = { version = "0.31", features = [
     "http-proto",
 ] }
 
-# Web framework (only for api_gateway)
+# Web framework (only for api-gateway)
 axum = "0.8"
 tower = "0.5"
 tower-http = { version = "0.6", features = [
@@ -284,7 +284,7 @@ tower-http = { version = "0.6", features = [
 uuid = { version = "1.19", features = ["serde"] }
 governor = "0.10"
 
-# OpenAPI documentation (only for api_gateway)
+# OpenAPI documentation (only for api-gateway)
 utoipa = { version = "5.4", features = [
     "macros",
     "openapi_extensions",

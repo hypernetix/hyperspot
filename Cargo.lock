@@ -160,9 +160,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.100"
+version = "1.0.101"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a23eb6b1614318a8071c9b2521f36b424b2c83db5eb3a0fead4a6c0809af6e61"
+checksum = "5f0e0fee31ef5ed1ba1316088939cea399010ed7731dba877ed44aeb407a75ea"
 
 [[package]]
 name = "arbitrary"
@@ -222,9 +222,9 @@ dependencies = [
 
 [[package]]
 name = "async-compression"
-version = "0.4.37"
+version = "0.4.39"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d10e4f991a553474232bc0a31799f6d24b034a84c0971d80d2e2f78b2e576e40"
+checksum = "68650b7df54f0293fd061972a0fb05aaf4fc0879d3b3d21a638a182c5c543b9f"
 dependencies = [
  "compression-codecs",
  "compression-core",
@@ -581,7 +581,7 @@ dependencies = [
  "prost-types",
  "tonic",
  "tonic-prost",
- "ureq 3.1.4",
+ "ureq 3.2.0",
 ]
 
 [[package]]
@@ -756,26 +756,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "calculator-sdk"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "cf-modkit",
- "cf-modkit-security",
- "cf-modkit-transport-grpc",
- "cf-system-sdks",
- "prost",
- "thiserror 2.0.18",
- "tokio",
- "tonic",
- "tonic-prost",
- "tonic-prost-build",
- "tracing",
-]
-
-[[package]]
-name = "calculator_gateway"
+name = "calculator-gateway"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -795,12 +776,31 @@ dependencies = [
 ]
 
 [[package]]
-name = "calculator_gateway-sdk"
+name = "calculator-sdk"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
- "calculator_gateway",
+ "cf-modkit",
+ "cf-modkit-security",
+ "cf-modkit-transport-grpc",
+ "cf-system-sdks",
+ "prost",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-prost",
+ "tonic-prost-build",
+ "tracing",
+]
+
+[[package]]
+name = "calculator_gateway_sdk"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "calculator-gateway",
  "cf-modkit",
  "cf-modkit-security",
  "thiserror 2.0.18",
@@ -1660,7 +1660,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7c74b8349d32d297c9134b8c88677813a227df8f779daa29bfc29c183fe3dca6"
 
 [[package]]
-name = "contoso_tr_plugin"
+name = "contoso-tr-plugin"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -2319,7 +2319,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "fabrikam_tr_plugin"
+name = "fabrikam-tr-plugin"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -3172,7 +3172,7 @@ version = "0.2.2"
 dependencies = [
  "anyhow",
  "calculator",
- "calculator_gateway",
+ "calculator-gateway",
  "cf-api-gateway",
  "cf-file-parser",
  "cf-grpc-hub",
@@ -3185,17 +3185,17 @@ dependencies = [
  "cf-tenant-resolver-gw",
  "cf-types-registry",
  "clap",
- "contoso_tr_plugin",
- "fabrikam_tr_plugin",
+ "contoso-tr-plugin",
+ "fabrikam-tr-plugin",
  "mimalloc",
  "serde-saphyr",
  "serde_json",
  "tempfile",
- "tenant_resolver-gw",
+ "tenant-resolver-gw",
  "tokio",
  "tracing",
  "types",
- "users_info",
+ "users-info",
 ]
 
 [[package]]
@@ -6312,24 +6312,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "tenant-resolver-sdk"
-version = "0.2.2"
-dependencies = [
- "async-trait",
- "cf-modkit",
- "cf-modkit-odata",
- "cf-modkit-security",
- "gts",
- "gts-macros",
- "schemars 0.8.22",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "uuid",
-]
-
-[[package]]
-name = "tenant_resolver-gw"
+name = "tenant-resolver-gw"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -6351,6 +6334,23 @@ dependencies = [
  "tracing",
  "types",
  "utoipa",
+]
+
+[[package]]
+name = "tenant-resolver-sdk"
+version = "0.2.2"
+dependencies = [
+ "async-trait",
+ "cf-modkit",
+ "cf-modkit-odata",
+ "cf-modkit-security",
+ "gts",
+ "gts-macros",
+ "schemars 0.8.22",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "uuid",
 ]
 
 [[package]]
@@ -7064,9 +7064,9 @@ dependencies = [
 
 [[package]]
 name = "ureq"
-version = "3.1.4"
+version = "3.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d39cb1dbab692d82a977c0392ffac19e188bd9186a9f32806f0aaa859d75585a"
+checksum = "fdc97a28575b85cfedf2a7e7d3cc64b3e11bd8ac766666318003abbacc7a21fc"
 dependencies = [
  "base64 0.22.1",
  "log",
@@ -7075,7 +7075,6 @@ dependencies = [
  "rustls-pki-types",
  "ureq-proto",
  "utf-8",
- "webpki-roots 1.0.6",
 ]
 
 [[package]]
@@ -7110,24 +7109,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "daf8dba3b7eb870caf1ddeed7bc9d2a049f3cfdfae7cb521b087cc33ae4c49da"
 
 [[package]]
-name = "user_info-sdk"
-version = "0.2.2"
-dependencies = [
- "async-trait",
- "cf-modkit-odata",
- "cf-modkit-odata-macros",
- "cf-modkit-sdk",
- "cf-modkit-security",
- "futures",
- "futures-core",
- "thiserror 2.0.18",
- "time",
- "tokio",
- "uuid",
-]
-
-[[package]]
-name = "users_info"
+name = "users-info"
 version = "0.2.2"
 dependencies = [
  "anyhow",
@@ -7169,8 +7151,25 @@ dependencies = [
  "tracing",
  "tracing-test",
  "url",
- "user_info-sdk",
+ "users-info-sdk",
  "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "users-info-sdk"
+version = "0.2.2"
+dependencies = [
+ "async-trait",
+ "cf-modkit-odata",
+ "cf-modkit-odata-macros",
+ "cf-modkit-sdk",
+ "cf-modkit-security",
+ "futures",
+ "futures-core",
+ "thiserror 2.0.18",
+ "time",
+ "tokio",
  "uuid",
 ]
 
@@ -7878,18 +7877,18 @@ dependencies = [
 
 [[package]]
 name = "zerocopy"
-version = "0.8.38"
+version = "0.8.39"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "57cf3aa6855b23711ee9852dfc97dfaa51c45feaba5b645d0c777414d494a961"
+checksum = "db6d35d663eadb6c932438e763b262fe1a70987f9ae936e60158176d710cae4a"
 dependencies = [
  "zerocopy-derive",
 ]
 
 [[package]]
 name = "zerocopy-derive"
-version = "0.8.38"
+version = "0.8.39"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a616990af1a287837c4fe6596ad77ef57948f787e46ce28e166facc0cc1cb75"
+checksum = "4122cd3169e94605190e77839c9a40d40ed048d305bfdc146e7df40ab0f3e517"
 dependencies = [
  "proc-macro2",
  "quote",

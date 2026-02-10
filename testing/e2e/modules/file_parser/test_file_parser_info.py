@@ -1,4 +1,4 @@
-"""E2E tests for file_parser API module."""
+"""E2E tests for file-parser API module."""
 import httpx
 import pytest
 

@@ -571,15 +571,16 @@ mod tests {
 
     #[test]
     fn test_migration_table_name() {
-        let a = migration_table_name("users_info");
-        let b = migration_table_name("users_info");
-        assert_eq!(a, b, "deterministic");
-        assert!(a.starts_with("modkit_migrations__"));
-        assert!(a.len() <= 63);
+        let users_info_table_1 = migration_table_name("users-info");
+        let users_info_table_2 = migration_table_name("users-info");
+        assert_eq!(users_info_table_1, users_info_table_2, "deterministic");
+        assert!(users_info_table_1.starts_with("modkit_migrations__"));
+        assert!(users_info_table_1.len() <= 63);
 
-        let c = migration_table_name("simple-user-settings");
-        assert!(c.contains("simple_user_settings"));
-        assert!(c.len() <= 63);
+        let simple_settings_table = migration_table_name("simple-user-settings");
+        // Hyphens are sanitized to underscores
+        assert!(simple_settings_table.contains("simple_user_settings"));
+        assert!(simple_settings_table.len() <= 63);
     }
 
     // Mock migration for testing

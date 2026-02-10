@@ -93,7 +93,7 @@ A **Module** is a logical component that provides a specific set of functionalit
 - Modules can run either **in-process** (linked into the main binary) or **out-of-process** (as separate binaries communicating via gRPC) — see [MODKIT UNIFIED SYSTEM](modkit_unified_system/README.md) for OoP details
 
 **Example modules:**
-- `file_parser` - Document parsing and extraction
+- `file-parser` - Document parsing and extraction
 - `chat` - Chat module
 - `web_search` - Web search module
 
@@ -111,7 +111,7 @@ A **Module** is a logical component that provides a specific set of functionalit
 | Business logic layer @ domain/ | Yes | Yes (contract, router) | Yes, main logic |
 | Infrastructure layer @ infrastructure/ | Likely | Rare | Likely |
 | Gateway layer @ gateways/ | Yes, if depends on other modules | Yes, workers connectors | Yes, clients to some service |
-| Examples | Any CRUD module (TODO) | file_parser, (TODO) | file_parser_tika, (TODO) |
+| Examples | Any CRUD module (TODO) | file-parser, (TODO) | file-parser-tika, (TODO) |
 
 See below typical modules categories, internal layout and typical modules relationship:
 
@@ -234,8 +234,8 @@ hyperspot/
 ├── guidelines/        # Coding standards and best practices for LLMs
 ├── libs/              # Shared libraries (modkit, modkit-db, modkit-auth, etc.)
 ├── modules/           # Business logic modules
-│   ├── system/        # Core system modules (api_gateway, grpc_hub, module_orchestrator, nodes_registry, types-registry)
-│   └── ...            # User modules (file_parser, etc.)
+│   ├── system/        # Core system modules (api-gateway, grpc-hub, module-orchestrator, nodes-registry, types-registry)
+│   └── ...            # User modules (file-parser, etc.)
 ├── scripts/           # Custom scripts for build, testing, etc.
 └── testing/           # E2E and integration tests (pytest)
 ```

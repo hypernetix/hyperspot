@@ -112,7 +112,7 @@ The types-registry module has comprehensive E2E test coverage for GTS entity man
 
 ## File Parser Test Suite
 
-The file_parser module has comprehensive E2E test coverage including golden-reference Markdown comparison:
+The file-parser module has comprehensive E2E test coverage including golden-reference Markdown comparison:
 
 ### Test Files
 
@@ -125,7 +125,7 @@ The file_parser module has comprehensive E2E test coverage including golden-refe
 
 ### Golden Markdown Generation
 
-Before running file_parser tests, you need to generate golden Markdown reference files:
+Before running file-parser tests, you need to generate golden Markdown reference files:
 
 ```bash
 # Make sure the server is running first
@@ -193,7 +193,7 @@ If you see "Server not responding" when running local tests:
 
 ### Tenant Resolver Gateway example (local)
 
-If you run the server with `[config/e2e-local.yaml](config/e2e-local.yaml)`, note that it binds `api_gateway` to **8086**.
+If you run the server with `[config/e2e-local.yaml](config/e2e-local.yaml)`, note that it binds `api-gateway` to **8086**.
 
 Example:
 

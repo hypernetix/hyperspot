@@ -1,0 +1,12 @@
+error: module name must use kebab-case, not snake_case
+              = help: use 'file-parser' instead of 'file_parser'
+ --> tests/ui/fail/module_name_snake_case.rs:6:12
+  |
+6 |     name = "file_parser",  // Should fail: uses snake_case instead of kebab-case
+  |            ^^^^^^^^^^^^^
+
+error[E0425]: cannot find type `TestModule` in this scope
+  --> tests/ui/fail/module_name_snake_case.rs:11:17
+   |
+11 | impl Module for TestModule {
+   |                 ^^^^^^^^^^ not found in this scope
