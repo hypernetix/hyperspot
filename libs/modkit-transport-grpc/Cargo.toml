@@ -10,6 +10,7 @@ description = "ModKit gRPC transport library"
 readme = "README.md"
 keywords = ["cyberfabric", "cyberfabric-modkit"]
 categories = ["network-programming"]
+metadata.docs.rs.all-features = true
 
 [lib]
 name = "modkit_transport_grpc"

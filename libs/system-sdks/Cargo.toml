@@ -10,6 +10,7 @@ readme = "README.md"
 rust-version.workspace = true
 keywords = ["cyberfabric", "cyberfabric-system"]
 categories = ["development-tools"]
+metadata.docs.rs.all-features = true
 
 [lib]
 name = "cf_system_sdks"
@@ -24,4 +25,3 @@ directory_grpc = ["directory", "cf-system-sdk-directory?/grpc"]
 
 [dependencies]
 cf-system-sdk-directory = { workspace = true, optional = true }
-

@@ -10,6 +10,7 @@ description = "ModKit errors library"
 readme = "README.md"
 keywords = ["cyberfabric", "cyberfabric-modkit"]
 categories = ["web-programming"]
+metadata.docs.rs.all-features = true
 
 [lib]
 name = "modkit_errors"

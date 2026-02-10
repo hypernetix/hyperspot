@@ -9,6 +9,7 @@ repository.workspace = true
 readme = "README.md"
 keywords = ["cyberfabric", "cyberfabric-system"]
 categories = ["web-programming"]
+metadata.docs.rs.all-features = true
 
 [lib]
 name = "single_tenant_tr_plugin"

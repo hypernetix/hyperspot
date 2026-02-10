@@ -9,6 +9,7 @@ repository.workspace = true
 readme = "README.md"
 keywords = ["cyberfabric", "cyberfabric-system"]
 categories = ["development-tools"]
+metadata.docs.rs.all-features = true
 
 [lib]
 name = "nodes_registry"

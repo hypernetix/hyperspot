@@ -10,6 +10,7 @@ description = "ModKit SDK"
 readme = "README.md"
 keywords = ["cyberfabric", "cyberfabric-modkit"]
 categories = ["development-tools"]
+metadata.docs.rs.all-features = true
 
 [lib]
 name = "modkit_sdk"

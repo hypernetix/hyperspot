@@ -12,6 +12,7 @@ keywords = ["cyberfabric", "cyberfabric-system"]
 categories = ["web-programming"]
 build = "build.rs"
 include = ["proto/", "src/", "build.rs", "Cargo.toml"]
+metadata.docs.rs.all-features = true
 
 [lib]
 name = "cf_system_sdk_directory"
