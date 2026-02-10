@@ -69,6 +69,79 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "250f629c0161ad8107cf89319e990051fae62832fd343083bea452d93e2205fd"
 
 [[package]]
+name = "aliri"
+version = "0.6.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "96607b3bbf9454cd1043e5c110e4f578dba8a4829a6e82f1cbce951cb98ff8dd"
+dependencies = [
+ "aliri_base64",
+ "aliri_braid",
+ "aliri_clock",
+ "once_cell",
+ "regex",
+ "ring",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+]
+
+[[package]]
+name = "aliri_base64"
+version = "0.1.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d9d87771969112cbfb21574d11935c2cc37b961b7b1e8e0f146bc1f327d175f4"
+dependencies = [
+ "base64 0.22.1",
+ "serde",
+]
+
+[[package]]
+name = "aliri_braid"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "df233d014e7a9ad9693f08f17eb198251fb75d94c345dcfa4bdedfecc67f24fb"
+dependencies = [
+ "aliri_braid_impl",
+]
+
+[[package]]
+name = "aliri_braid_impl"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d1eb7c4fcde1858a6796c18a729b661346d38e05a207e2d9028bce822fc20283"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.114",
+]
+
+[[package]]
+name = "aliri_clock"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8c5710b7d6bf6988872bcd82a3e44d89859fe8338f7cd8120913093147cce034"
+dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "aliri_tokens"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d352b7b80e4881473a66a50e4ee1e9563fa1ff9ea242ef0afcabbb8c3db5e66c"
+dependencies = [
+ "aliri",
+ "aliri_braid",
+ "aliri_clock",
+ "async-trait",
+ "rand 0.8.5",
+ "serde",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "alloc-no-stdlib"
 version = "2.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -985,12 +1058,18 @@ dependencies = [
 name = "cf-modkit-auth"
 version = "0.2.2"
 dependencies = [
+ "aliri_clock",
+ "aliri_tokens",
  "arc-swap",
  "async-trait",
  "axum",
+ "base64 0.22.1",
+ "bytes",
  "cf-modkit-http",
  "cf-modkit-security",
+ "cf-modkit-utils",
  "http",
+ "http-body-util",
  "httpmock",
  "jsonwebtoken",
  "serde",
@@ -1001,7 +1080,9 @@ dependencies = [
  "tokio-util",
  "tower",
  "tracing",
+ "url",
  "uuid",
+ "zeroize",
 ]
 
 [[package]]
@@ -1237,6 +1318,7 @@ dependencies = [
  "humantime",
  "serde",
  "serde_json",
+ "zeroize",
 ]
 
 [[package]]

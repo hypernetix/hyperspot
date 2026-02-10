@@ -133,10 +133,10 @@ impl JwksKeyProvider {
             .get(&self.jwks_uri)
             .send()
             .await
-            .map_err(map_http_error)?
+            .map_err(|e| map_http_error(&e))?
             .json()
             .await
-            .map_err(map_http_error)?;
+            .map_err(|e| map_http_error(&e))?;
 
         let mut keys = HashMap::new();
         for jwk in jwks.keys {
@@ -414,62 +414,8 @@ pub async fn run_jwks_refresh_task(
 }
 
 /// Map `HttpError` variants to appropriate `ClaimsError` messages
-fn map_http_error(e: modkit_http::HttpError) -> ClaimsError {
-    use modkit_http::HttpError;
-
-    match e {
-        HttpError::HttpStatus {
-            status,
-            body_preview,
-            ..
-        } => {
-            if body_preview.is_empty() {
-                ClaimsError::JwksFetchFailed(format!("JWKS HTTP {status}"))
-            } else {
-                ClaimsError::JwksFetchFailed(format!("JWKS HTTP {status}: {body_preview}"))
-            }
-        }
-        HttpError::Json(err) => {
-            ClaimsError::JwksFetchFailed(format!("JWKS JSON parse failed: {err}"))
-        }
-        HttpError::Timeout(duration) => {
-            ClaimsError::JwksFetchFailed(format!("JWKS request timed out after {duration:?}"))
-        }
-        HttpError::DeadlineExceeded(duration) => {
-            ClaimsError::JwksFetchFailed(format!("JWKS total deadline exceeded after {duration:?}"))
-        }
-        HttpError::Transport(err) => {
-            ClaimsError::JwksFetchFailed(format!("JWKS transport error: {err}"))
-        }
-        HttpError::BodyTooLarge { limit, actual } => ClaimsError::JwksFetchFailed(format!(
-            "JWKS response too large: limit {limit} bytes, got {actual} bytes"
-        )),
-        HttpError::Tls(err) => ClaimsError::JwksFetchFailed(format!("JWKS TLS error: {err}")),
-        HttpError::RequestBuild(err) => {
-            ClaimsError::JwksFetchFailed(format!("JWKS request build failed: {err}"))
-        }
-        HttpError::InvalidHeaderName(err) => {
-            ClaimsError::JwksFetchFailed(format!("JWKS invalid header name: {err}"))
-        }
-        HttpError::InvalidHeaderValue(err) => {
-            ClaimsError::JwksFetchFailed(format!("JWKS invalid header value: {err}"))
-        }
-        HttpError::FormEncode(err) => {
-            ClaimsError::JwksFetchFailed(format!("JWKS form encode error: {err}"))
-        }
-        HttpError::Overloaded => {
-            ClaimsError::JwksFetchFailed("JWKS request rejected: service overloaded".into())
-        }
-        HttpError::ServiceClosed => ClaimsError::JwksFetchFailed("JWKS service unavailable".into()),
-        HttpError::InvalidUri { url, reason, .. } => {
-            ClaimsError::JwksFetchFailed(format!("JWKS invalid URL '{url}': {reason}"))
-        }
-        HttpError::InvalidScheme { scheme, reason } => {
-            ClaimsError::JwksFetchFailed(format!("JWKS invalid scheme '{scheme}': {reason}"))
-        }
-        // Handle future variants (HttpError is #[non_exhaustive])
-        _ => ClaimsError::JwksFetchFailed(format!("JWKS fetch failed: {e}")),
-    }
+fn map_http_error(e: &modkit_http::HttpError) -> ClaimsError {
+    ClaimsError::JwksFetchFailed(crate::http_error::format_http_error(e, "JWKS"))
 }
 
 #[cfg(test)]

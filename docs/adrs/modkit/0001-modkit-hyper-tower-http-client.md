@@ -124,6 +124,7 @@ Prefer gRPC for inter-service calls and avoid building a REST HTTP client.
 
   * Transparent response decompression (gzip, brotli, deflate) via tower-http `DecompressionLayer`.
   * Secure redirect following with SSRF protection (same-origin default, header stripping, HTTPS downgrade blocking) via custom `SecureRedirectPolicy`.
+  * Generic auth layer hook via `HttpClientBuilder::with_auth_layer()` — accepts any `FnOnce(BoxCloneService) -> BoxCloneService` transform inserted between retry and timeout in the tower stack. This enables `modkit-auth` to inject `BearerAuthLayer` via an extension trait (`HttpClientBuilderExt::with_bearer_auth(token)`) without creating a circular dependency between the two crates.
 * Revisit criteria:
 
   * If requirements expand to general outbound HTTP client for external integrations, reassess whether a feature-gated reqwest-based crate is warranted (separate from `modkit-auth`), while keeping `modkit-auth` on `modkit-http`.
