@@ -122,7 +122,7 @@ This table maps non-functional requirements from PRD to specific design/architec
 
 ### 3.3 API Contracts
 
-{For module-level design: Document all public API contracts exposed by this module. For multi-component design: Document the primary API contracts exposed by each component. Add references to module designgs}
+{For module-level design: Document all public API contracts exposed by this module. For multi-component design: Document the primary API contracts exposed by each component. Add references to module designs}
 
 **Technology**: {REST/OpenAPI | GraphQL | gRPC | etc.}
 **Location**: [{api-spec-file}]({path/to/api-spec})
@@ -134,10 +134,10 @@ This table maps non-functional requirements from PRD to specific design/architec
 
 ### 3.4 Internal Dependencies
 
-{Internal systen/module dependencies within the platform. All inter-module communication goes through versioned contracts, SDK clients, or plugin interfaces — never through internal types.}
+{Internal system/module dependencies within the platform. All inter-module communication goes through versioned contracts, SDK clients, or plugin interfaces — never through internal types.}
 
 | Dependency Module | Interface Used | Purpose |
-|-------------------|---------------|---------|----------|
+|-------------------|----------------|---------|
 | {module_name} | {contract / SDK client / plugin} | {Why this module is needed} |
 
 **Dependency Rules** (per project conventions):

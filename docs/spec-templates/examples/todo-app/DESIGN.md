@@ -223,7 +223,7 @@ No internal module dependencies — Todo App is a standalone module with no plat
 **Type**: Database
 **Direction**: outbound
 **Protocol / Driver**: PostgreSQL driver via Express backend
-**Data Format**: SQL (relational schema, see § 3.6)
+**Data Format**: SQL (relational schema, see 3.7)
 **Compatibility**: Schema migrations managed via migration tool
 
 ### 3.6 Sequences & Interactions
@@ -267,7 +267,7 @@ sequenceDiagram
 
 #### Table: tasks
 
-**ID**: `cpt-examples-todo-app-db-table-tasks`
+**ID**: `cpt-examples-todo-app-design-db-tasks`
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|

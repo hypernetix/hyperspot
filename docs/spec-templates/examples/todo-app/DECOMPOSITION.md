@@ -28,7 +28,7 @@
 - Component: `cpt-examples-todo-app-component-indexeddb` (local persistence)
 - Component: `cpt-examples-todo-app-component-rest-api` (server-side CRUD)
 - Component: `cpt-examples-todo-app-component-postgresql` (persistent storage)
-- Database: `cpt-examples-todo-app-db-table-tasks` (task persistence)
+- Database: `cpt-examples-todo-app-design-db-tasks` (task persistence)
 - Principle: `cpt-examples-todo-app-principle-offline-first` (IndexedDB local storage)
 - Sequence: `cpt-examples-todo-app-seq-create-task-v1` (optimistic create flow)
 
