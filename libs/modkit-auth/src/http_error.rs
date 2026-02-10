@@ -12,7 +12,8 @@
 ///
 /// `HttpStatus` errors include only the status code — the response body is
 /// deliberately excluded to prevent server-side diagnostics from leaking
-/// into logs or error messages.
+/// into logs or error messages. The catch-all arm falls back to the
+/// variant's `Display` impl so that new variants are not silently hidden.
 #[must_use]
 pub fn format_http_error(e: &modkit_http::HttpError, prefix: &str) -> String {
     use modkit_http::HttpError;
@@ -45,9 +46,9 @@ pub fn format_http_error(e: &modkit_http::HttpError, prefix: &str) -> String {
         HttpError::InvalidScheme { scheme, reason } => {
             format!("{prefix} invalid scheme '{scheme}': {reason}")
         }
-        // Future variants (HttpError is #[non_exhaustive]) — omit detail
-        // to avoid leaking sensitive data from unknown Display impls.
-        _ => format!("{prefix} request failed"),
+        // Catch-all required because HttpError is #[non_exhaustive].
+        // Include the Display output so new variants surface in logs.
+        other => format!("{prefix} request failed: {other}"),
     }
 }
 
