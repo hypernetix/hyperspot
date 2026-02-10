@@ -2,8 +2,10 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 use modkit::runtime::InstanceState;
+use modkit_macros::domain_model;
 
 /// Deployment mode of a module.
+#[domain_model]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DeploymentMode {
     CompiledIn,
@@ -11,6 +13,7 @@ pub enum DeploymentMode {
 }
 
 /// Domain model for a registered module.
+#[domain_model]
 #[derive(Debug, Clone)]
 pub struct ModuleInfo {
     pub name: String,
@@ -21,6 +24,7 @@ pub struct ModuleInfo {
 }
 
 /// Domain model for a running module instance.
+#[domain_model]
 #[derive(Debug, Clone)]
 pub struct InstanceInfo {
     pub instance_id: Uuid,

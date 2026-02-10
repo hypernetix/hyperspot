@@ -3,10 +3,12 @@ use std::sync::Arc;
 
 use modkit::registry::ModuleRegistryCatalog;
 use modkit::runtime::ModuleManager;
+use modkit_macros::domain_model;
 
 use super::model::{DeploymentMode, InstanceInfo, ModuleInfo};
 
 /// Service that assembles module information from catalog and runtime data.
+#[domain_model]
 pub struct ModulesService {
     module_catalog: Arc<ModuleRegistryCatalog>,
     module_manager: Arc<ModuleManager>,
