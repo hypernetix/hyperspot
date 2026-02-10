@@ -18,7 +18,7 @@ pub struct GrpcInstallerData {
 /// Runtime-owned store for gRPC service installers.
 ///
 /// This replaces the previous global static storage with a proper
-/// runtime-scoped type that gets injected into the `grpc_hub` module.
+/// runtime-scoped type that gets injected into the `grpc-hub` module.
 pub struct GrpcInstallerStore {
     inner: Mutex<Option<GrpcInstallerData>>,
 }

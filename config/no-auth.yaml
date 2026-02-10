@@ -44,7 +44,7 @@ api_gateway:
     max_age_seconds: 600
 
 # Example module with database access - will use root context
-users_info:
+users-info:
   # Module-specific configuration
   log_level: "info"
 

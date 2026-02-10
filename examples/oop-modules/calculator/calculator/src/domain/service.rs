@@ -2,6 +2,7 @@
 //!
 //! Contains the core business logic for accumulator operations.
 
+use modkit_macros::domain_model;
 use tracing::debug;
 
 /// Domain service that performs accumulator operations.
@@ -9,6 +10,7 @@ use tracing::debug;
 /// This is a simple stateless service that implements the core
 /// addition logic. It's registered in ClientHub and used by
 /// the gRPC server.
+#[domain_model]
 #[derive(Clone, Default)]
 pub struct Service;
 

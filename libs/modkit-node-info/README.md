@@ -139,7 +139,7 @@ for cap in syscap.capabilities {
 
 ## Usage in Modules
 
-This library is designed to be used by the `nodes_registry` module and any other module that needs to collect information about the current execution environment.
+This library is designed to be used by the `nodes-registry` module and any other module that needs to collect information about the current execution environment.
 
 ```toml
 [dependencies]

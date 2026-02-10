@@ -71,7 +71,7 @@ impl Module for BasicModule {
 }
 
 #[derive(Default)]
-#[module(name = "full_featured", capabilities = [db, rest, stateful])]
+#[module(name = "full-featured", capabilities = [db, rest, stateful])]
 struct FullFeaturedModule;
 
 #[async_trait]
@@ -106,7 +106,7 @@ impl RunnableCapability for FullFeaturedModule {
 }
 
 #[derive(Default)]
-#[module(name = "dependent", deps = ["basic", "full_featured"])]
+#[module(name = "dependent", deps = ["basic", "full-featured"])]
 struct DependentModule;
 
 #[async_trait]
@@ -117,7 +117,7 @@ impl Module for DependentModule {
 }
 
 #[derive(Default)]
-#[module(name = "custom_ctor", ctor = CustomCtorModule::create())]
+#[module(name = "custom-ctor", ctor = CustomCtorModule::create())]
 struct CustomCtorModule {
     value: i32,
 }
@@ -136,7 +136,7 @@ impl Module for CustomCtorModule {
 }
 
 #[derive(Default)]
-#[module(name = "db_only", capabilities = [db])]
+#[module(name = "db-only", capabilities = [db])]
 struct DbOnlyModule;
 #[async_trait]
 impl Module for DbOnlyModule {
@@ -151,7 +151,7 @@ impl DatabaseCapability for DbOnlyModule {
 }
 
 #[derive(Default)]
-#[module(name = "rest_only", capabilities = [rest])]
+#[module(name = "rest-only", capabilities = [rest])]
 struct RestOnlyModule;
 #[async_trait]
 impl Module for RestOnlyModule {
@@ -171,7 +171,7 @@ impl RestApiCapability for RestOnlyModule {
 }
 
 #[derive(Default)]
-#[module(name = "rest_host", capabilities = [rest_host])]
+#[module(name = "rest-host", capabilities = [rest_host])]
 struct TestApiGatewayModule {
     registry: TestOpenApiRegistry,
 }
@@ -206,7 +206,7 @@ impl ApiGatewayCapability for TestApiGatewayModule {
 }
 
 #[derive(Default)]
-#[module(name = "stateful_only", capabilities = [stateful])]
+#[module(name = "stateful-only", capabilities = [stateful])]
 struct StatefulOnlyModule;
 #[async_trait]
 impl Module for StatefulOnlyModule {
@@ -235,14 +235,14 @@ async fn test_basic_macro_and_init() {
 
 #[tokio::test]
 async fn test_custom_ctor_name_and_value() {
-    assert_eq!(CustomCtorModule::MODULE_NAME, "custom_ctor");
+    assert_eq!(CustomCtorModule::MODULE_NAME, "custom-ctor");
     let m = CustomCtorModule::create();
     assert_eq!(m.value, 42);
 }
 
 #[tokio::test]
 async fn test_full_capabilities() {
-    assert_eq!(FullFeaturedModule::MODULE_NAME, "full_featured");
+    assert_eq!(FullFeaturedModule::MODULE_NAME, "full-featured");
 
     let ctx = test_module_ctx(CancellationToken::new());
     FullFeaturedModule.init(&ctx).await.unwrap();

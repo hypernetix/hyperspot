@@ -1,0 +1,11 @@
+error: module name must start with a lowercase letter, found '-'
+ --> tests/ui/fail/module_name_starts_hyphen.rs:6:12
+  |
+6 |     name = "-parser",  // Should fail: starts with hyphen
+  |            ^^^^^^^^^
+
+error[E0425]: cannot find type `TestModule` in this scope
+  --> tests/ui/fail/module_name_starts_hyphen.rs:11:17
+   |
+11 | impl Module for TestModule {
+   |                 ^^^^^^^^^^ not found in this scope

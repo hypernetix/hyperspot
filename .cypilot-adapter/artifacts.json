@@ -13,24 +13,24 @@
       "patterns": ["modules/system/*"]
     },
     {
-      "reason": "Ignore module 'simple_user_settings' (not SDLC-documented yet: missing required PRD/DESIGN).",
-      "patterns": ["modules/simple_user_settings/*"]
+      "reason": "Ignore module 'simple-user-settings' (not SDLC-documented yet: missing required PRD/DESIGN).",
+      "patterns": ["modules/simple-user-settings/*"]
     },
     {
-      "reason": "Ignore module 'file_storage' (not SDLC-documented yet: missing required PRD/DESIGN).",
-      "patterns": ["modules/file_storage/*"]
+      "reason": "Ignore module 'file-storage' (not SDLC-documented yet: missing required PRD/DESIGN).",
+      "patterns": ["modules/file-storage/*"]
     },
     {
-      "reason": "Ignore module 'model_registry' (not SDLC-documented yet: missing required PRD/DESIGN).",
-      "patterns": ["modules/model_registry/*"]
+      "reason": "Ignore module 'model-registry' (not SDLC-documented yet: missing required PRD/DESIGN).",
+      "patterns": ["modules/model-registry/*"]
     },
     {
-      "reason": "Ignore module 'type_registry' (not SDLC-documented yet: missing required PRD/DESIGN).",
-      "patterns": ["modules/type_registry/*"]
+      "reason": "Ignore module 'types-registry' (not SDLC-documented yet: missing required PRD/DESIGN).",
+      "patterns": ["modules/types-registry/*"]
     },
     {
-      "reason": "Ignore module 'file_parser' (not SDLC-documented yet: missing required PRD/DESIGN).",
-      "patterns": ["modules/file_parser/*"]
+      "reason": "Ignore module 'file-parser' (not SDLC-documented yet: missing required PRD/DESIGN).",
+      "patterns": ["modules/file-parser/*"]
     }
   ],
   "systems": [

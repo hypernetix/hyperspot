@@ -97,7 +97,7 @@ fn test_non_system_modules_require_versioning() {
 #[test]
 fn test_examples_require_versioning() {
     let output = Command::new("cargo")
-        .args(&["check", "-p", "user_info-sdk", "--message-format=json"])
+        .args(&["check", "-p", "users-info-sdk", "--message-format=json"])
         .current_dir(workspace_root())
         .output()
         .expect("Failed to run cargo check on example");
@@ -107,7 +107,7 @@ fn test_examples_require_versioning() {
 
     assert!(
         output.status.success(),
-        "Example user_info-sdk should compile successfully.\n\
+        "Example users-info-sdk should compile successfully.\n\
          If this fails, the V1 refactoring is incomplete.\n\
          Stderr: {}\nStdout: {}",
         stderr,

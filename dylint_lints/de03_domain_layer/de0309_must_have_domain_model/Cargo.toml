@@ -1,0 +1,31 @@
+[package]
+name = "de0309_must_have_domain_model"
+version = "0.1.0"
+authors = ["Hypernetix"]
+description = "Domain structs must have #[domain_model] attribute (DE0309)"
+edition.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[[example]]
+name = "missing_domain_model"
+path = "ui/missing_domain_model.rs"
+
+[[example]]
+name = "has_domain_model"
+path = "ui/has_domain_model.rs"
+
+[dependencies]
+clippy_utils.workspace = true
+dylint_linting.workspace = true
+lint_utils.workspace = true
+
+[dev-dependencies]
+dylint_testing.workspace = true
+modkit.workspace = true
+modkit-macros.workspace = true
+
+[package.metadata.rust-analyzer]
+rustc_private = true
