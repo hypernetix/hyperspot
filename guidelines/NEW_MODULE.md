@@ -478,6 +478,9 @@ Error design rules:
 
 ```rust
 // src/domain/error.rs
+use modkit_macros::domain_model;
+
+#[domain_model]
 #[derive(Debug, thiserror::Error)]
 pub enum DomainError {
     #[error("User not found: {id}")]
@@ -864,9 +867,11 @@ All service methods receive `&SecurityContext` for authorization and access cont
 
    ```rust
    // Example from users_info
+   use modkit_macros::domain_model;
    use time::OffsetDateTime;
    use uuid::Uuid;
 
+   #[domain_model]
    #[derive(Debug, Clone)]
    pub enum UserDomainEvent {
        Created { id: Uuid, at: OffsetDateTime },
@@ -953,6 +958,7 @@ All service methods receive `&SecurityContext` for authorization and access cont
    ```rust
    // Example from users_info
    use std::sync::Arc;
+   use modkit_macros::domain_model;
    use modkit_security::SecurityContext;
    use uuid::Uuid;
 
@@ -964,12 +970,14 @@ All service methods receive `&SecurityContext` for authorization and access cont
    use user_info_sdk::models::{NewUser, User, UserPatch};
    use modkit_odata::{ODataQuery, Page};
 
+   #[domain_model]
    pub struct ServiceConfig {
        pub max_display_name_length: usize,
        pub default_page_size: u64,
        pub max_page_size: u64,
    }
 
+   #[domain_model]
    pub struct Service {
        repo: Arc<dyn UsersRepository>,
        events: Arc<dyn EventPublisher<UserDomainEvent>>,
@@ -1854,6 +1862,7 @@ The local client implements the SDK trait and forwards calls to domain service m
 
 ```rust
 // Example: users_info/src/domain/local_client.rs
+use modkit_macros::domain_model;
 use async_trait::async_trait;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -1871,6 +1880,7 @@ use modkit_security::SecurityContext;
 
 /// Local client adapter implementing the SDK API trait.
 /// Registered in ClientHub during module init().
+#[domain_model]
 pub struct UsersInfoLocalClient {
     service: Arc<Service>,
 }
@@ -2724,8 +2734,10 @@ use std::sync::Arc;
 
 use modkit::client_hub::{ClientHub, ClientScope};
 use modkit::plugins::GtsPluginSelector;
+use modkit_macros::domain_model;
 use types_registry_sdk::{ListQuery, TypesRegistryClient};
 
+#[domain_model]
 pub struct Service {
     hub: Arc<ClientHub>,
     vendor: String,

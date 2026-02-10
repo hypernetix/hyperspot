@@ -231,11 +231,23 @@ pub struct MyModule {
 
 Clients must be registered explicitly in `init()`: `ctx.client_hub().register::<dyn my_module_sdk::MyModuleApi>(api)`.
 
-### Module `src/domain/service.rs` (domain types)
+### Domain types and `#[domain_model]` macro
 
-All `struct` and `enum` types in `domain/` **must** have the `#[domain_model]` attribute.
-This macro enforces DDD boundaries at compile time by rejecting infrastructure types
-(e.g. `sqlx`, `http`, `axum`, `reqwest`) in domain model fields.
+All `struct` and `enum` types in `domain/` **must** have the `#[domain_model]` attribute from `modkit_macros`.
+
+#### What it does
+
+The `#[domain_model]` proc-macro attribute enforces Domain-Driven Design (DDD) boundaries at compile time:
+
+1. **Validates field types** — scans all fields (including nested generics like `Option<T>`, `Vec<T>`, `Box<dyn Trait<T>>`) and rejects infrastructure types.
+2. **Implements `DomainModel` trait** — marks the type as `impl modkit::domain::DomainModel`, which can be used for downstream type constraints.
+3. **Works on structs and enums** — supports named fields, tuple fields, unit variants, and generics.
+
+#### Why it exists
+
+Without compile-time enforcement, infrastructure types (database connections, HTTP extractors, file handles) can leak into the domain layer, coupling business logic to specific frameworks. The macro catches these violations immediately during `cargo check` / `cargo build`, before code reaches CI.
+
+#### Usage
 
 ```rust
 use modkit_macros::domain_model;
@@ -252,7 +264,49 @@ pub enum DomainError {
 }
 ```
 
-See also: lint [DE0309](../../dylint_lints/de03_domain_layer/de0309_must_have_domain_model/README.md) — CI enforces that no domain type is missing the attribute.
+#### Forbidden types
+
+The macro rejects the following infrastructure types in field positions:
+
+| Category | Forbidden crates / paths | Examples |
+|----------|-------------------------|----------|
+| Database frameworks | `sqlx`, `sea_orm` | `sqlx::PgPool`, `sea_orm::DatabaseConnection` |
+| HTTP / Web frameworks | `http`, `axum`, `hyper` | `http::StatusCode`, `axum::extract::Request` |
+| External service clients | `reqwest`, `tonic` | `reqwest::Client`, `tonic::Request` |
+| File system | `std::fs`, `tokio::fs` | `std::fs::File`, `tokio::fs::File` |
+| DB-specific type names | — | `PgPool`, `MySqlPool`, `SqlitePool`, `DatabaseConnection` (any path) |
+
+Forbidden types are also caught inside generics: `Option<http::StatusCode>`, `Vec<sea_orm::Value>`, `Box<dyn Iterator<Item = http::StatusCode>>` are all rejected.
+
+#### Allowed types
+
+Standard library types, domain types, and SDK types are allowed:
+
+- `String`, `i32`, `bool`, `Uuid`, `DateTime<Utc>`
+- `Vec<T>`, `Option<T>`, `HashMap<K, V>`, `Arc<T>`, `Box<T>`
+- `std::collections::*`, `std::sync::*` (only `std::fs` is forbidden)
+- SDK trait objects: `Box<dyn UserRepository>`, `Arc<dyn MyClient>`
+- Your own domain types: `domain::Request`, `domain::StatusCode`
+
+#### Compile-time error example
+
+If a forbidden type is used, the compiler produces a clear, actionable error:
+
+```text
+error: field 'pool' has type 'sqlx::PgPool' which is forbidden (crate 'sqlx').
+       Domain models must be free of infrastructure dependencies like
+       database types (sqlx, sea_orm) or HTTP types (http, axum, hyper).
+       Move infrastructure types to the infra/ or api/ layers.
+```
+
+#### Where it applies
+
+- **Required on**: all `struct` and `enum` types in files under `*/domain/` paths.
+- **Not needed on**: SDK models (`<module>-sdk/src/models.rs`), REST DTOs (`api/rest/dto.rs`), SeaORM entities (`infra/storage/entity.rs`).
+
+#### CI enforcement
+
+The [DE0309 lint](../../dylint_lints/de03_domain_layer/de0309_must_have_domain_model/README.md) runs in CI and **denies** any `struct` or `enum` in `domain/` that is missing the `#[domain_model]` attribute. This ensures the macro cannot be accidentally omitted.
 
 ### Module `src/api/rest/dto.rs` (REST DTOs, OData)
 

@@ -31,8 +31,10 @@ ApiResult<T> = Result<T, Problem>  (handler return type)
 ## Domain Error (`<module>/src/domain/error.rs`)
 
 ```rust
+use modkit_macros::domain_model;
 use thiserror::Error;
 
+#[domain_model]
 #[derive(Error, Debug, Clone)]
 pub enum DomainError {
     #[error("User not found: {id}")]
