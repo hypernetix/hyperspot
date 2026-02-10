@@ -20,6 +20,9 @@ pub enum DeploymentModeDto {
 pub struct ModuleDto {
     /// Module name
     pub name: String,
+    /// Module version (if reported by a running instance)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub version: Option<String>,
     /// Declared capabilities (e.g., "rest", "grpc", "system", "db")
     pub capabilities: Vec<String>,
     /// Module dependencies (other module names)
@@ -28,6 +31,9 @@ pub struct ModuleDto {
     pub deployment_mode: DeploymentModeDto,
     /// Running instances of this module
     pub instances: Vec<ModuleInstanceDto>,
+    /// Plugins provided by this module (reserved for follow-up implementation)
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub plugins: Vec<PluginDto>,
 }
 
 /// Response DTO for a running module instance
@@ -44,27 +50,45 @@ pub struct ModuleInstanceDto {
     pub grpc_services: HashMap<String, String>,
 }
 
+/// Response DTO for a plugin (reserved for follow-up implementation)
+#[modkit_macros::api_dto(response)]
+pub struct PluginDto {
+    /// Plugin GTS identifier
+    pub gts_id: String,
+    /// Plugin version
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub version: Option<String>,
+}
+
 impl From<&ModuleInfo> for ModuleDto {
-    fn from(info: &ModuleInfo) -> Self {
+    fn from(module: &ModuleInfo) -> Self {
+        // Derive module-level version from the first instance that reports one
+        let version = module
+            .instances
+            .iter()
+            .find_map(|inst| inst.version.clone());
+
         Self {
-            name: info.name.clone(),
-            capabilities: info.capabilities.clone(),
-            dependencies: info.dependencies.clone(),
-            deployment_mode: match info.deployment_mode {
+            name: module.name.clone(),
+            version,
+            capabilities: module.capabilities.clone(),
+            dependencies: module.dependencies.clone(),
+            deployment_mode: match module.deployment_mode {
                 DeploymentMode::CompiledIn => DeploymentModeDto::CompiledIn,
                 DeploymentMode::OutOfProcess => DeploymentModeDto::OutOfProcess,
             },
-            instances: info.instances.iter().map(ModuleInstanceDto::from).collect(),
+            instances: module.instances.iter().map(ModuleInstanceDto::from).collect(),
+            plugins: vec![],
         }
     }
 }
 
 impl From<&InstanceInfo> for ModuleInstanceDto {
-    fn from(info: &InstanceInfo) -> Self {
+    fn from(instance: &InstanceInfo) -> Self {
         Self {
-            instance_id: info.instance_id,
-            version: info.version.clone(),
-            state: match info.state {
+            instance_id: instance.instance_id,
+            version: instance.version.clone(),
+            state: match instance.state {
                 InstanceState::Registered => "registered",
                 InstanceState::Ready => "ready",
                 InstanceState::Healthy => "healthy",
@@ -72,7 +96,7 @@ impl From<&InstanceInfo> for ModuleInstanceDto {
                 InstanceState::Draining => "draining",
             }
             .to_owned(),
-            grpc_services: info.grpc_services.clone(),
+            grpc_services: instance.grpc_services.clone(),
         }
     }
 }

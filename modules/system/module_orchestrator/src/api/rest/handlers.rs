@@ -5,7 +5,11 @@ use std::sync::Arc;
 use super::dto::ModuleDto;
 use crate::domain::service::ModulesService;
 
-/// List all registered modules with their capabilities, instances, and deployment mode
+/// List all registered modules with their capabilities, instances, and deployment mode.
+///
+/// # Errors
+///
+/// Returns `ApiError` if the response cannot be constructed.
 pub async fn list_modules(
     Extension(svc): Extension<Arc<ModulesService>>,
 ) -> ApiResult<Json<Vec<ModuleDto>>> {

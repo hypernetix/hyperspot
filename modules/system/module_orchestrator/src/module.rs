@@ -13,7 +13,7 @@ use modkit::contracts::{
     SystemCapability,
 };
 use modkit::directory::LocalDirectoryClient;
-use modkit::registry::ModuleRegistrySnapshot;
+use modkit::registry::ModuleRegistryCatalog;
 use modkit::runtime::ModuleManager;
 
 use cf_system_sdks::directory::DIRECTORY_SERVICE_NAME;
@@ -41,8 +41,8 @@ pub struct ModuleOrchestrator {
     config: RwLock<ModuleOrchestratorConfig>,
     directory_api: OnceLock<Arc<dyn DirectoryClient>>,
     module_manager: OnceLock<Arc<ModuleManager>>,
-    registry_snapshot: OnceLock<Arc<ModuleRegistrySnapshot>>,
-    oop_module_names: OnceLock<Arc<HashSet<String>>>,
+    module_catalog: OnceLock<Arc<ModuleRegistryCatalog>>,
+    external_module_names: OnceLock<Arc<HashSet<String>>>,
     modules_service: arc_swap::ArcSwapOption<ModulesService>,
 }
 
@@ -52,8 +52,8 @@ impl Default for ModuleOrchestrator {
             config: RwLock::new(ModuleOrchestratorConfig),
             directory_api: OnceLock::new(),
             module_manager: OnceLock::new(),
-            registry_snapshot: OnceLock::new(),
-            oop_module_names: OnceLock::new(),
+            module_catalog: OnceLock::new(),
+            external_module_names: OnceLock::new(),
             modules_service: arc_swap::ArcSwapOption::empty(),
         }
     }
@@ -65,15 +65,15 @@ impl SystemCapability for ModuleOrchestrator {
         self.module_manager
             .set(Arc::clone(&sys.module_manager))
             .map_err(|_| anyhow::anyhow!("ModuleManager already set (pre_init called twice?)"))?;
-        self.registry_snapshot
-            .set(Arc::clone(&sys.registry_snapshot))
+        self.module_catalog
+            .set(Arc::clone(&sys.module_catalog))
             .map_err(|_| {
-                anyhow::anyhow!("RegistrySnapshot already set (pre_init called twice?)")
+                anyhow::anyhow!("ModuleRegistryCatalog already set (pre_init called twice?)")
             })?;
-        self.oop_module_names
-            .set(Arc::clone(&sys.oop_module_names))
+        self.external_module_names
+            .set(Arc::clone(&sys.external_module_names))
             .map_err(|_| {
-                anyhow::anyhow!("OoP module names already set (pre_init called twice?)")
+                anyhow::anyhow!("External module names already set (pre_init called twice?)")
             })?;
         Ok(())
     }
@@ -104,23 +104,24 @@ impl modkit::Module for ModuleOrchestrator {
             .map_err(|_| anyhow::anyhow!("DirectoryClient already set (init called twice?)"))?;
 
         // Create the ModulesService for the REST endpoint
-        let registry_snapshot = self
-            .registry_snapshot
+        let module_catalog = self
+            .module_catalog
             .get()
             .cloned()
-            .ok_or_else(|| anyhow::anyhow!("RegistrySnapshot not wired"))?;
-        let oop_module_names = self
-            .oop_module_names
+            .ok_or_else(|| anyhow::anyhow!("ModuleRegistryCatalog not wired"))?;
+        let external_module_names = self
+            .external_module_names
             .get()
             .cloned()
-            .ok_or_else(|| anyhow::anyhow!("OoP module names not wired"))?;
+            .ok_or_else(|| anyhow::anyhow!("External module names not wired"))?;
 
         if self.modules_service.load().is_some() {
             return Err(anyhow::anyhow!(
                 "ModulesService already initialized (init called twice?)"
             ));
         }
-        let modules_service = ModulesService::new(registry_snapshot, manager, oop_module_names);
+        let modules_service =
+            ModulesService::new(module_catalog, manager, external_module_names);
         self.modules_service.store(Some(Arc::new(modules_service)));
 
         tracing::info!("ModuleOrchestrator initialized");

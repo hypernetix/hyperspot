@@ -702,14 +702,14 @@ impl RegistryBuilder {
 }
 
 // ============================================================================
-// Registry Snapshot (for introspection APIs)
+// Module Catalog (for introspection APIs)
 // ============================================================================
 
-/// A serializable snapshot of a single module entry from the registry.
+/// A descriptor of a single module entry from the registry.
 ///
 /// This captures the static compile-time info about a module for introspection.
 #[derive(Debug, Clone)]
-pub struct ModuleSnapshot {
+pub struct ModuleDescriptor {
     /// Module name
     pub name: String,
     /// Module dependency names
@@ -718,21 +718,21 @@ pub struct ModuleSnapshot {
     pub capability_labels: Vec<String>,
 }
 
-/// A snapshot of the entire module registry, suitable for introspection APIs.
+/// A catalog of all compiled-in modules, suitable for introspection APIs.
 #[derive(Debug, Clone)]
-pub struct ModuleRegistrySnapshot {
+pub struct ModuleRegistryCatalog {
     /// All compiled-in modules in topological order
-    pub modules: Vec<ModuleSnapshot>,
+    pub modules: Vec<ModuleDescriptor>,
 }
 
-impl ModuleRegistrySnapshot {
-    /// Build a snapshot from the live registry.
+impl ModuleRegistryCatalog {
+    /// Build a catalog from the live registry.
     #[must_use]
     pub fn from_registry(registry: &ModuleRegistry) -> Self {
         let modules = registry
             .modules()
             .iter()
-            .map(|entry| ModuleSnapshot {
+            .map(|entry| ModuleDescriptor {
                 name: entry.name().to_owned(),
                 deps: entry.deps().iter().map(|d| (*d).to_owned()).collect(),
                 capability_labels: entry
@@ -1086,7 +1086,7 @@ mod tests {
     }
 
     #[test]
-    fn registry_snapshot_captures_all_modules() {
+    fn registry_catalog_captures_all_modules() {
         let mut b = RegistryBuilder::default();
         b.register_core_with_meta("core_a", &[], Arc::new(DummyCore));
         b.register_core_with_meta("core_b", &["core_a"], Arc::new(DummyCore));
@@ -1094,19 +1094,19 @@ mod tests {
         b.register_db_with_meta("core_b", Arc::new(DummyDb));
 
         let reg = b.build_topo_sorted().unwrap();
-        let snapshot = ModuleRegistrySnapshot::from_registry(&reg);
+        let catalog = ModuleRegistryCatalog::from_registry(&reg);
 
-        assert_eq!(snapshot.modules.len(), 2);
+        assert_eq!(catalog.modules.len(), 2);
 
-        let snap_a = &snapshot.modules[0];
-        assert_eq!(snap_a.name, "core_a");
-        assert!(snap_a.deps.is_empty());
-        assert!(snap_a.capability_labels.contains(&"rest".to_owned()));
+        let desc_a = &catalog.modules[0];
+        assert_eq!(desc_a.name, "core_a");
+        assert!(desc_a.deps.is_empty());
+        assert!(desc_a.capability_labels.contains(&"rest".to_owned()));
 
-        let snap_b = &snapshot.modules[1];
-        assert_eq!(snap_b.name, "core_b");
-        assert_eq!(snap_b.deps, vec!["core_a".to_owned()]);
-        assert!(snap_b.capability_labels.contains(&"db".to_owned()));
+        let desc_b = &catalog.modules[1];
+        assert_eq!(desc_b.name, "core_b");
+        assert_eq!(desc_b.deps, vec!["core_a".to_owned()]);
+        assert!(desc_b.capability_labels.contains(&"db".to_owned()));
     }
 
     #[test]

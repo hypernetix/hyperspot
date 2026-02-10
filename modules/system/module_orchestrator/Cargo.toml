@@ -33,3 +33,8 @@ axum = { workspace = true }
 arc-swap = { workspace = true }
 uuid = { workspace = true }
 inventory = { workspace = true }
+
+[dev-dependencies]
+tower = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+api_gateway = { path = "../api_gateway", package = "cf-api-gateway" }
