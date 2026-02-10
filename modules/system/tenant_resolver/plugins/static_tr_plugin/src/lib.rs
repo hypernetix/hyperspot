@@ -1,6 +1,6 @@
 //! Static Tenant Resolver Plugin
 //!
-//! This plugin provides tenant data and access rules from configuration.
+//! This plugin provides tenant data and hierarchy from configuration.
 //! Useful for testing, development, and simple deployments.
 //!
 //! ## Configuration
@@ -12,11 +12,12 @@
 //!     priority: 100
 //!     tenants:
 //!       - id: "550e8400-e29b-41d4-a716-446655440001"
-//!         name: "Tenant A"
+//!         name: "Root Tenant"
 //!         status: active
-//!     access_rules:
-//!       - source: "550e8400-e29b-41d4-a716-446655440001"
-//!         target: "550e8400-e29b-41d4-a716-446655440002"
+//!       - id: "550e8400-e29b-41d4-a716-446655440002"
+//!         name: "Child Tenant"
+//!         status: active
+//!         parent_id: "550e8400-e29b-41d4-a716-446655440001"
 //! ```
 
 #![cfg_attr(coverage_nightly, feature(coverage_attribute))]

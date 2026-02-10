@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use modkit_db::DBProvider;
+use modkit_macros::domain_model;
 use modkit_security::{AccessScope, SecurityContext};
 use simple_user_settings_sdk::models::{
     SimpleUserSettings, SimpleUserSettingsPatch, SimpleUserSettingsUpdate,
@@ -16,6 +17,7 @@ pub(crate) type DbProvider = DBProvider<modkit_db::DbError>;
 // Service Configuration
 // ============================================================================
 
+#[domain_model]
 pub struct ServiceConfig {
     pub max_field_length: usize,
 }
@@ -32,6 +34,7 @@ impl Default for ServiceConfig {
 // Service Implementation
 // ============================================================================
 
+#[domain_model]
 pub struct Service<R: SettingsRepository> {
     db: Arc<DbProvider>,
     repo: Arc<R>,

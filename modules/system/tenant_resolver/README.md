@@ -1,164 +1,178 @@
 # Tenant Resolver
 
-Tenant information and access resolution for CyberFabric's security layer.
+Tenant hierarchy and information resolution for CyberFabric's multi-tenancy layer.
 
 ## Overview
 
-The **tenant_resolver** module answers two fundamental questions:
+The tenant model that CyberFabric operates on is described in [TENANT_MODEL.md](../../../docs/arch/authorization/TENANT_MODEL.md).
 
-1. **What is this tenant?** — Retrieve tenant metadata (name, status)
-2. **Can I access this tenant's data?** — Resolve access relationships from the current security context
+The **tenant_resolver** module provides a hierarchical tenant model with:
 
-The module is **topology-agnostic** — it makes no assumptions about tenant hierarchy structure. Whether the integrating system uses flat tenants, tree hierarchies, DAGs (directed acyclic graph) with multiple parents, or arbitrary graphs, the API remains the same.
+1. **Tenant information** — Retrieve tenant metadata (name, status, parent, type)
+2. **Hierarchy traversal** — Navigate parent chains (ancestors) and children subtrees (descendants)
+3. **Ancestry verification** — Check if one tenant is an ancestor of another
+
+The module supports **barrier semantics** where self-managed tenants act as boundaries that
+block hierarchy traversal from parent tenants (unless explicitly ignored).
 
 ## Public API
 
 The gateway registers [`TenantResolverGatewayClient`](tenant_resolver-sdk/src/api.rs) in ClientHub:
 
-- `get_tenant(ctx, id)` — Retrieve tenant by ID
-- `can_access(ctx, target, options)` — Check if current tenant can access target
-- `get_accessible_tenants(ctx, filter, options)` — List accessible tenants
+- `get_tenant(ctx, id)` — Retrieve single tenant by ID
+- `get_tenants(ctx, ids, options)` — Retrieve multiple tenants by IDs (batch)
+- `get_ancestors(ctx, id, options)` — Get parent chain from tenant to root
+- `get_descendants(ctx, id, options)` — Get children subtree; `response.tenant` contains the starting tenant, `response.descendants` contains the subtree
+- `is_ancestor(ctx, ancestor_id, descendant_id, options)` — Check ancestry relationship
 
-Source tenant is always taken from `ctx.tenant_id()`.
+The `SecurityContext` is passed to the plugin for use in access control decisions. Each plugin
+implements its own logic for using (or ignoring) the context.
 
-> [!IMPORTANT]
-> All API methods require a valid tenant in the security context. Calls with an
-> empty/anonymous context (nil tenant ID) will return `Unauthorized` error.
+### Hierarchy Model
 
-### Access Rules
+```
+T1 (root)
+├── T2 (self_managed=true) ← BARRIER
+│   └── T3
+└── T4
+```
 
-- **Non-transitive**: A→B and B→C does NOT imply A→C
-- **Non-symmetric**: A→B does NOT imply B→A
+- **`parent_id`**: Links a tenant to its parent (None for root tenants)
+- **`self_managed`**: When true, this tenant is a barrier that blocks parent traversal into its subtree
 
-> [!NOTE]
-> Self-access behavior is plugin-determined. The built-in plugins allow full self-access,
-> but custom plugins can implement restrictions (e.g., a tenant cannot delete itself,
-> or a suspended tenant may have restricted functionality).
+### Status Filtering
 
-### TenantFilter
-
-`TenantFilter` is used only in `get_accessible_tenants` to filter the returned list:
+Filter tenants by status via options structs:
 
 ```rust
 // No filter (all tenants)
-let tenants = resolver.get_accessible_tenants(&ctx, None, None).await?;
+let tenants = resolver.get_tenants(&ctx, &ids, &GetTenantsOptions::default()).await?;
 
 // Only active tenants
-let filter = TenantFilter {
+let opts = GetTenantsOptions {
+    status: vec![TenantStatus::Active],
+};
+let tenants = resolver.get_tenants(&ctx, &ids, &opts).await?;
+```
+
+An empty `status` vector means "no constraint" (include all statuses).
+`GetDescendantsOptions` has the same `status` field for filtering descendants.
+
+### `BarrierMode`
+
+Control barrier behavior during hierarchy traversal via request structs:
+
+```rust
+// Default: respect barriers
+let ancestors = resolver.get_ancestors(&ctx, id, &GetAncestorsOptions::default()).await?;
+
+// Ignore barriers: traverse through self_managed tenants
+let opts = GetAncestorsOptions {
+    barrier_mode: BarrierMode::Ignore,
+};
+let ancestors = resolver.get_ancestors(&ctx, id, &opts).await?;
+```
+
+### Barrier Semantics
+
+When `self_managed = true` (barrier exists):
+- Parent cannot traverse into this subtree (with `BarrierMode::Respect`, the default)
+- Using `BarrierMode::Ignore` ignores barriers and traverses through
+- **Barriers never produce errors** — traversal stops silently and returns truncated results
+
+**`get_ancestors`** — if the starting tenant is a barrier, ancestors are **empty**; if a barrier is encountered in the chain, it **is included** but traversal stops after it:
+- `get_ancestors(T2, barrier_mode=Respect)` → tenant=T2, ancestors=[] (T2 is a barrier, cannot see parent chain)
+- `get_ancestors(T3, barrier_mode=Respect)` → tenant=T3, ancestors=[T2] (T2 is the barrier, included; T1 is not reached)
+- `get_ancestors(T3, barrier_mode=Ignore)` → tenant=T3, ancestors=[T2, T1]
+
+**`get_descendants`** — barrier tenant **is excluded** along with its subtree; but a barrier can see its own subtree:
+- `get_descendants(T1, barrier_mode=Respect)` → tenant=T1, descendants=[T4] (T2 is a barrier, excluded along with T3)
+- `get_descendants(T2, barrier_mode=Respect)` → tenant=T2, descendants=[T3] (T2 can see its own subtree)
+- `get_descendants(T1, barrier_mode=Ignore)` → tenant=T1, descendants=[T2, T3, T4]
+
+**`is_ancestor`** — returns `false` if a barrier blocks the path:
+- `is_ancestor(T1, T3, barrier_mode=Respect)` → false (blocked by T2)
+- `is_ancestor(T1, T3, barrier_mode=Ignore)` → true
+
+### Filter Semantics
+
+Filter is supported only for methods where it provides significant value:
+
+| Method | `TenantNotFound` error | Filter support |
+|--------|------------------------|----------------|
+| `get_tenant(id)` | `id` doesn't exist | — (no filter) |
+| `get_tenants(ids, options)` | — (skip missing) | filters results |
+| `get_ancestors(id)` | `id` doesn't exist | — (no filter) |
+| `get_descendants(id, options)` | `id` doesn't exist | filters descendants |
+| `is_ancestor(a, d)` | `a` or `d` doesn't exist | — (no filter) |
+
+**Design rationale:**
+
+- **`get_ancestors`** returns the full chain — caller can filter the typically small result
+- **`is_ancestor`** answers "is A ancestor of D?" — filtering the path is a rare use case
+- **`get_descendants`** supports filter because descendants can be many and "all active descendants" is a common access control pattern
+
+**Principles:**
+
+1. **`TenantNotFound`** — Only raised when tenant **physically** doesn't exist
+2. **Filter does NOT affect** existence check of the starting tenant
+3. **Filter applies only to** results (descendants list), not to the starting tenant
+
+### `get_descendants` Traversal Semantics
+
+`get_descendants` uses **pre-order traversal**: each node is visited before its children.
+
+**Filter as traversal barrier:** If a node doesn't pass the filter, it is excluded **along with its entire subtree**. This is intentional — if a parent tenant is suspended, its children should not be reachable.
+
+**Example:**
+
+```
+A (active) → B (suspended) → C (active)
+          → D (active)
+```
+
+```rust
+// Without filter: returns [B, C, D] (pre-order)
+resolver.get_descendants(&ctx, A, &GetDescendantsOptions::default()).await?;
+
+// With filter={status: Active}: returns [D] only
+// B is excluded (suspended), so C is unreachable
+let opts = GetDescendantsOptions {
     status: vec![TenantStatus::Active],
     ..Default::default()
 };
-let tenants = resolver.get_accessible_tenants(&ctx, Some(&filter), None).await?;
-
-// Specific tenant IDs that are active
-let filter = TenantFilter {
-    id: vec![tenant_a, tenant_b],
-    status: vec![TenantStatus::Active],
-};
-let tenants = resolver.get_accessible_tenants(&ctx, Some(&filter), None).await?;
+resolver.get_descendants(&ctx, A, &opts).await?;
 ```
 
-Empty vectors mean "no constraint" (include all). This avoids `Option<Vec<T>>` ambiguity.
-
-### AccessOptions
-
-`AccessOptions` specifies permission requirements for access checks:
-
-```rust
-// Basic access check (no specific permission required)
-let can = resolver.can_access(&ctx, target_id, None).await?;
-
-// Check for specific permission
-let options = AccessOptions {
-    permission: vec!["read".to_string()],
-};
-let can = resolver.can_access(&ctx, target_id, Some(&options)).await?;
-
-// Multiple permissions (all required - AND semantics)
-let options = AccessOptions {
-    permission: vec!["read".to_string(), "write".to_string()],
-};
-```
+Note: Sibling order within the same parent is not guaranteed.
 
 ### Models
 
-See [`models.rs`](tenant_resolver-sdk/src/models.rs): `TenantId`, `TenantInfo`, `TenantStatus`, `TenantFilter`, `AccessOptions`
+See [`models.rs`](tenant_resolver-sdk/src/models.rs): `TenantId`, `TenantInfo`, `TenantRef`, `TenantStatus`, `BarrierMode`, `GetTenantsOptions`, `GetAncestorsOptions`, `GetAncestorsResponse`, `GetDescendantsOptions`, `GetDescendantsResponse`, `IsAncestorOptions`
 
-`TenantInfo` fields:
+**`TenantInfo`** — Full tenant information (for `get_tenant`, `get_tenants`):
 - `id` — Unique tenant identifier
 - `name` — Human-readable tenant name
-- `status` — Lifecycle status (`active`, `suspended`, `deleted`)
-- `type` — Optional classification string (e.g., `"enterprise"`, `"trial"`)
+- `status` — Lifecycle status (`Active`, `Suspended`, `Deleted`)
+- `tenant_type` — Optional classification string (e.g., `"enterprise"`, `"trial"`)
+- `parent_id` — Parent tenant ID (None for root tenants)
+- `self_managed` — True if this tenant is a barrier
+
+**`TenantRef`** — Tenant reference without name (for `get_ancestors`, `get_descendants`):
+- All fields except `name`
+- Use `get_tenants(ids)` if display names are needed
 
 ### Errors
 
-See [`error.rs`](tenant_resolver-sdk/src/error.rs): `NotFound`, `AccessDenied`, `Unauthorized`, `NoPluginAvailable`, `Internal`
+See [`error.rs`](tenant_resolver-sdk/src/error.rs): `TenantNotFound`, `Unauthorized`, `NoPluginAvailable`, `ServiceUnavailable`, `Internal`
 
 ## Plugin API
 
-Plugins implement [`TenantResolverPluginClient`](tenant_resolver-sdk/src/plugin_api.rs) and register via GTS. The gateway handles self-access before delegating to plugins.
+Plugins implement [`TenantResolverPluginClient`](tenant_resolver-sdk/src/plugin_api.rs) and register via GTS.
 
 CyberFabric includes two plugins out of the box:
-- [`static_tr_plugin`](plugins/static_tr_plugin/) — Config-based plugin for testing multi-tenant deployments
+- [`static_tr_plugin`](plugins/static_tr_plugin/) — Config-based plugin with hierarchical tenant support
 - [`single_tenant_tr_plugin`](plugins/single_tenant_tr_plugin/) — Zero-config plugin for single-tenant deployments
-
-## Integration with External Systems
-
-The plugin architecture enables CyberFabric to integrate with existing multi-tenant systems where tenant data and access rules are managed externally.
-
-**Example: Integration with [Zanzibar](https://research.google/pubs/zanzibar-googles-consistent-global-authorization-system/)-style authorization**
-
-Systems like [SpiceDB](https://authzed.com/spicedb), [OpenFGA](https://openfga.dev/), or [Ory Keto](https://www.ory.sh/keto/) provide relationship-based access control.
-A plugin can bridge CyberFabric to these systems:
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                      CyberFabric                          │
-│                                                         │
-│  ┌─────────────────┐      ┌─────────────────────────┐   │
-│  │ tenant_resolver │      │  zanzibar_tr_plugin     │   │
-│  │    gateway      │─────▶│  (adapter)              │   │
-│  └─────────────────┘      └────────┬────────────────┘   │
-│                                    │                    │
-└────────────────────────────────────┼────────────────────┘
-                                     │
-                   ┌─────────────────┴─────────────────┐
-                   ▼                                   ▼
-          ┌──────────────┐                    ┌──────────────┐
-          │  Tenant DB   │                    │   Zanzibar   │
-          │  (external)  │                    │  (external)  │
-          └──────────────┘                    └──────────────┘
-```
-
-In this scenario:
-- **Tenant DB** — External database storing tenant metadata (name, status)
-- **Zanzibar** — External authorization service storing access relationships
-- **Plugin** — Adapter that bridges CyberFabric to both external systems
-
-| Method | Data Source |
-|--------|-------------|
-| `get_tenant` | Tenant DB |
-| `can_access` | Zanzibar `Check` API |
-| `get_accessible_tenants` | Zanzibar `LookupResources` + Tenant DB |
-
-**Example Zanzibar schema:**
-
-```
-definition tenant {
-    relation accessor: tenant    // direct access grant
-    relation parent: tenant      // optional hierarchy
-
-    permission access = accessor + parent + parent->access
-}
-
-// Example relationships:
-// tenant:acme#accessor@tenant:partner    → partner can access acme
-// tenant:acme#parent@tenant:corp         → corp (and its accessors) can access acme
-```
-
-This pattern allows CyberFabric to operate as a component within a larger system without owning the tenant or authorization data.
-
-Similar plugins can integrate with other authorization systems (LDAP, custom APIs, etc.) — the gateway remains agnostic to the backend.
 
 ## Configuration
 
@@ -183,12 +197,14 @@ modules:
     priority: 100           # Lower = higher priority
     tenants:
       - id: "550e8400-e29b-41d4-a716-446655440001"
-        name: "Tenant A"
+        name: "Root Tenant"
         status: active
-        type: enterprise  # optional
-    access_rules:
-      - source: "550e8400-e29b-41d4-a716-446655440001"
-        target: "550e8400-e29b-41d4-a716-446655440002"
+        type: enterprise
+      - id: "550e8400-e29b-41d4-a716-446655440002"
+        name: "Child Tenant"
+        status: active
+        parent_id: "550e8400-e29b-41d4-a716-446655440001"
+        self_managed: false
 ```
 
 ## Usage
@@ -196,21 +212,29 @@ modules:
 ```rust
 let resolver = hub.get::<dyn TenantResolverGatewayClient>()?;
 
-// Get tenant info (returns any status)
+// Get tenant info
 let tenant = resolver.get_tenant(&ctx, tenant_id).await?;
 
-// Check basic access
-let can_access = resolver.can_access(&ctx, target_id, None).await?;
+// Get multiple tenants (batch)
+let tenants = resolver.get_tenants(&ctx, &[id1, id2], &GetTenantsOptions::default()).await?;
 
-// Get all accessible tenants
-let accessible = resolver.get_accessible_tenants(&ctx, None, None).await?;
+// Get ancestor chain
+let response = resolver.get_ancestors(&ctx, tenant_id, &GetAncestorsOptions::default()).await?;
+println!("Tenant: {:?}, Ancestors: {:?}", response.tenant, response.ancestors);
 
-// Get only active accessible tenants
-let filter = TenantFilter {
+// Get descendants (max_depth=None means unlimited)
+let response = resolver.get_descendants(&ctx, tenant_id, &GetDescendantsOptions::default()).await?;
+println!("Tenant: {:?}, Descendants: {:?}", response.tenant, response.descendants);
+
+// Get only active descendants
+let opts = GetDescendantsOptions {
     status: vec![TenantStatus::Active],
     ..Default::default()
 };
-let active_tenants = resolver.get_accessible_tenants(&ctx, Some(&filter), None).await?;
+let response = resolver.get_descendants(&ctx, tenant_id, &opts).await?;
+
+// Check ancestry
+let is_parent = resolver.is_ancestor(&ctx, parent_id, child_id, &IsAncestorOptions::default()).await?;
 ```
 
 ## Technical Decisions
@@ -219,67 +243,31 @@ let active_tenants = resolver.get_accessible_tenants(&ctx, Some(&filter), None).
 
 Multiple backends are planned (config-based, DB-driven, external API). The gateway handles cross-cutting concerns consistently while plugins can be developed independently.
 
-### Source Tenant from security_context
+### Barrier Semantics
 
-Using `security_context.tenant_id()` as the source tenant reduces API surface, prevents misuse, and aligns with existing patterns.
+The `self_managed` field on tenants creates traversal barriers. This enables:
+- Delegated administration: self-managed tenants control their own subtrees
+- Privacy boundaries: parent organizations cannot see into self-managed subsidiaries
+- Flexible traversal: callers can opt to ignore barriers when needed (e.g., system operations)
 
-### Self-Access Enforcement
+### Batch Semantics
 
-Self-access is plugin-determined, not gateway-enforced. This allows plugins to implement
-nuanced access policies (e.g., restricting certain operations on the tenant itself, or
-limiting functionality for suspended tenants). The built-in plugins (`static_tr_plugin`,
-`single_tenant_tr_plugin`) allow full self-access.
+The `get_tenants` method returns only found tenants — missing IDs are silently skipped.
+This simplifies callers who want to fetch multiple tenants without handling per-item errors.
 
-## API Rationale
-
-### Why `get_tenant` Has No Filter
-
-The `get_tenant` method returns tenant info regardless of status. Rationale:
-
-1. **Information preservation**: Consumers can decide how to handle different statuses (active, suspended, deleted) based on their business logic
-2. **Better error messages**: Consumers can show "Tenant is suspended" vs "Tenant not found"
-3. **Flexibility**: Some consumers may need to access deleted tenants for audit purposes
-
-### Why `can_access` Has No Filter
-
-Access rules (including status-based restrictions) are **plugin-determined**. Rationale:
-
-1. **Plugin autonomy**: A plugin may allow read-only access to suspended tenants
-2. **Consumer flexibility**: If consumers need status-specific logic, they can call `get_tenant` separately
-3. **Cleaner semantics**: `can_access` answers "can I access?" — not "can I access if active?"
-
-### Why Filter Only in `get_accessible_tenants`
-
-Filtering makes sense for list operations:
-
-1. **Performance**: Filter at source, not after fetching potentially large lists
-2. **Common pattern**: "Give me all active tenants I can access" is a frequent use case
-3. **No information loss**: Single-item operations (`get_tenant`, `can_access`) benefit from returning full info
-
-### Why `AccessOptions` Uses AND Semantics
-
-Multiple permissions in `AccessOptions` require **all** to be satisfied:
-
-```rust
-// Must have BOTH read AND write permission
-let options = AccessOptions {
-    permission: vec!["read".to_string(), "write".to_string()],
-};
-```
-
-Rationale:
-- AND is the safer, more restrictive default
-- OR can be achieved client-side with multiple calls
-- Most permission systems use AND for "must have these capabilities"
+- **Order**: Output order is not guaranteed (may differ from input order)
+- **Duplicates**: Duplicate IDs in the input are deduplicated
+- **Empty input**: Returns an empty list when `ids` is empty
 
 ## Implementation Phases
 
 ### Phase 1: Core (Current)
 
-- `get_tenant`, `can_access`, `get_accessible_tenants` APIs
-- `TenantFilter` for id/status-based filtering
-- `AccessOptions` for permission-based access checks
-- Static plugin with config-driven access rules
+- `get_tenant`, `get_tenants` APIs
+- `get_ancestors`, `get_descendants`, `is_ancestor` for hierarchy traversal
+- Status filtering via `GetTenantsOptions` and `GetDescendantsOptions`
+- `BarrierMode` for traversal control via options structs
+- Static plugin with config-driven hierarchy
 - Single-tenant plugin for simple deployments
 - ClientHub registration for in-process consumption
 

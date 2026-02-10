@@ -231,6 +231,29 @@ pub struct MyModule {
 
 Clients must be registered explicitly in `init()`: `ctx.client_hub().register::<dyn my_module_sdk::MyModuleApi>(api)`.
 
+### Module `src/domain/service.rs` (domain types)
+
+All `struct` and `enum` types in `domain/` **must** have the `#[domain_model]` attribute.
+This macro enforces DDD boundaries at compile time by rejecting infrastructure types
+(e.g. `sqlx`, `http`, `axum`, `reqwest`) in domain model fields.
+
+```rust
+use modkit_macros::domain_model;
+
+#[domain_model]
+pub struct Service {
+    pub(super) repo: Box<dyn UserRepository>,
+}
+
+#[domain_model]
+pub enum DomainError {
+    NotFound { id: Uuid },
+    Validation { message: String },
+}
+```
+
+See also: lint [DE0309](../../dylint_lints/de03_domain_layer/de0309_must_have_domain_model/README.md) — CI enforces that no domain type is missing the attribute.
+
 ### Module `src/api/rest/dto.rs` (REST DTOs, OData)
 
 ```rust
@@ -287,6 +310,7 @@ pub struct Model {
 - [ ] Create `<module>-sdk` crate with `api.rs`, `models.rs`, `errors.rs`, `lib.rs`.
 - [ ] Create `<module>` crate with `module.rs`, `api/rest/`, `domain/`, `infra/storage/`.
 - [ ] Implement SDK trait with `async_trait` and `SecurityContext` first param.
+- [ ] Add `#[domain_model]` on all `struct`/`enum` types in `domain/` (import `modkit_macros::domain_model`).
 - [ ] Add `#[derive(ODataFilterable)]` on REST DTOs (import `modkit_odata_macros::ODataFilterable`).
 - [ ] Add `#[derive(Scopable)]` on SeaORM entities (import `modkit_db_macros::Scopable`).
 - [ ] Use `SecureConn` + `SecurityContext` for all DB operations.

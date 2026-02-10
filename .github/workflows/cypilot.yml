@@ -1,0 +1,39 @@
+name: Cypilot
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - '**/*.md'
+      - 'docs/**'
+      - 'modules/**/docs/**'
+      - '.cypilot-adapter/**'
+      - 'Makefile'
+  workflow_call:
+  workflow_dispatch:
+
+concurrency:
+  group: cypilot-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate_artifacts:
+    name: Validate Cypilot Artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          clean: 'true'
+          submodules: recursive
+
+      - name: Setup Python
+        uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d # v5.1.1
+        with:
+          python-version: '3.11'
+
+      - name: Validate artifacts
+        run: make validate-cypilot-artifacts

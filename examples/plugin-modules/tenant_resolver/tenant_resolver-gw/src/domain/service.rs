@@ -10,6 +10,7 @@ use modkit::client_hub::{ClientHub, ClientScope};
 use modkit::gts::BaseModkitPluginV1;
 use modkit::plugins::GtsPluginSelector;
 use modkit::telemetry::ThrottledLog;
+use modkit_macros::domain_model;
 use modkit_odata::{ODataQuery, Page};
 use modkit_security::SecurityContext;
 use tenant_resolver_example_sdk::{
@@ -31,6 +32,7 @@ const UNAVAILABLE_LOG_THROTTLE: Duration = Duration::from_secs(10);
 ///
 /// Holds a reference to `ClientHub` and the configured vendor.
 /// Plugin discovery is lazy and cached via `GtsPluginSelector`.
+#[domain_model]
 pub struct Service {
     hub: Arc<ClientHub>,
     vendor: String,

@@ -21,7 +21,7 @@ Different IdPs use different protocols and token formats:
 
 ## Decision Drivers
 
-- **Vendor Neutrality** — HyperSpot must integrate with any vendor's IdP without assuming specific protocols
+- **Vendor Neutrality** — Cyber Fabric must integrate with any vendor's IdP without assuming specific protocols
 - **Plugin Flexibility** — Plugins should choose validation strategies based on their IdP's capabilities
 - **Separation of Concerns** — Gateway defines *what* authentication produces, plugins define *how* tokens are validated
 - **Caching Autonomy** — Different validation methods have different caching strategies (JWKS caching vs introspection result caching)

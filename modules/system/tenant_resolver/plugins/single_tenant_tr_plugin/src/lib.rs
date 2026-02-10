@@ -1,13 +1,15 @@
 //! Single-Tenant Resolver Plugin
 //!
 //! Zero-configuration plugin for single-tenant deployments.
-//! Always returns the tenant from the security context as the only accessible tenant.
+//! Implements flat (single-tenant) semantics where only the security context's tenant exists.
 //!
 //! ## Behavior
 //!
 //! - `get_tenant`: Returns tenant info (name: "Default") only if ID matches security context
-//! - `can_access`: Always returns `false` (cross-tenant access not allowed; self-access handled by gateway)
-//! - `get_accessible_tenants`: Returns empty list (gateway adds self-tenant automatically)
+//! - `get_tenants`: Returns tenant info only for IDs matching the security context
+//! - `get_ancestors`: Returns empty ancestors (tenant is root, no parent)
+//! - `get_descendants`: Returns empty list (no children in flat model)
+//! - `is_ancestor`: Returns `false` for self-check; errors for any other IDs (only one tenant exists)
 //!
 //! ## Configuration
 //!

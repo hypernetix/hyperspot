@@ -10,7 +10,9 @@ use modkit_db::{ConnectOpts, DBProvider, Db, DbError, connect_db};
 use modkit_security::SecurityContext;
 use serde_json::json;
 use tenant_resolver_sdk::{
-    TenantFilter, TenantResolverError, TenantResolverGatewayClient, TenantStatus,
+    GetAncestorsOptions, GetAncestorsResponse, GetDescendantsOptions, GetDescendantsResponse,
+    GetTenantsOptions, IsAncestorOptions, TenantRef, TenantResolverError,
+    TenantResolverGatewayClient, TenantStatus,
 };
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
@@ -33,34 +35,76 @@ impl TenantResolverGatewayClient for MockTenantResolver {
             name: format!("Tenant {id}"),
             status: TenantStatus::Active,
             tenant_type: None,
+            parent_id: None,
+            self_managed: false,
         })
     }
 
-    async fn can_access(
+    async fn get_tenants(
         &self,
         ctx: &SecurityContext,
-        target: tenant_resolver_sdk::TenantId,
-        _options: Option<&tenant_resolver_sdk::AccessOptions>,
-    ) -> Result<bool, TenantResolverError> {
-        Ok(ctx.tenant_id() == target)
-    }
-
-    async fn get_accessible_tenants(
-        &self,
-        ctx: &SecurityContext,
-        _filter: Option<&TenantFilter>,
-        _options: Option<&tenant_resolver_sdk::AccessOptions>,
+        ids: &[tenant_resolver_sdk::TenantId],
+        _options: &GetTenantsOptions,
     ) -> Result<Vec<tenant_resolver_sdk::TenantInfo>, TenantResolverError> {
         let tenant_id = ctx.tenant_id();
-        if tenant_id == Uuid::default() {
-            return Ok(vec![]);
-        }
-        Ok(vec![tenant_resolver_sdk::TenantInfo {
-            id: tenant_id,
-            name: format!("Tenant {tenant_id}"),
-            status: TenantStatus::Active,
-            tenant_type: None,
-        }])
+        Ok(ids
+            .iter()
+            .filter(|id| **id == tenant_id)
+            .map(|id| tenant_resolver_sdk::TenantInfo {
+                id: *id,
+                name: format!("Tenant {id}"),
+                status: TenantStatus::Active,
+                tenant_type: None,
+                parent_id: None,
+                self_managed: false,
+            })
+            .collect())
+    }
+
+    async fn get_ancestors(
+        &self,
+        _ctx: &SecurityContext,
+        id: tenant_resolver_sdk::TenantId,
+        _options: &GetAncestorsOptions,
+    ) -> Result<GetAncestorsResponse, TenantResolverError> {
+        Ok(GetAncestorsResponse {
+            tenant: TenantRef {
+                id,
+                status: TenantStatus::Active,
+                tenant_type: None,
+                parent_id: None,
+                self_managed: false,
+            },
+            ancestors: vec![],
+        })
+    }
+
+    async fn get_descendants(
+        &self,
+        _ctx: &SecurityContext,
+        id: tenant_resolver_sdk::TenantId,
+        _options: &GetDescendantsOptions,
+    ) -> Result<GetDescendantsResponse, TenantResolverError> {
+        Ok(GetDescendantsResponse {
+            tenant: TenantRef {
+                id,
+                status: TenantStatus::Active,
+                tenant_type: None,
+                parent_id: None,
+                self_managed: false,
+            },
+            descendants: vec![],
+        })
+    }
+
+    async fn is_ancestor(
+        &self,
+        _ctx: &SecurityContext,
+        _ancestor_id: tenant_resolver_sdk::TenantId,
+        _descendant_id: tenant_resolver_sdk::TenantId,
+        _options: &IsAncestorOptions,
+    ) -> Result<bool, TenantResolverError> {
+        Ok(false)
     }
 }
 

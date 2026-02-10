@@ -41,6 +41,8 @@
 
 use std::sync::Arc;
 
+use modkit_macros::domain_model;
+
 use crate::domain::error::DomainError;
 use crate::domain::events::UserDomainEvent;
 use crate::domain::ports::{AuditPort, EventPublisher};
@@ -48,7 +50,7 @@ use crate::domain::repos::{AddressesRepository, CitiesRepository, UsersRepositor
 use modkit_db::DBProvider;
 use modkit_db::odata::LimitCfg;
 use modkit_security::{PolicyEngineRef, SecurityContext};
-use tenant_resolver_sdk::{TenantFilter, TenantResolverGatewayClient, TenantStatus};
+use tenant_resolver_sdk::{GetDescendantsOptions, TenantResolverGatewayClient, TenantStatus};
 use uuid::Uuid;
 
 mod addresses;
@@ -62,26 +64,44 @@ pub(crate) use users::UsersService;
 pub(crate) type DbProvider = DBProvider<modkit_db::DbError>;
 
 /// Resolve accessible tenants for the current security context.
-/// Only returns active tenants.
+/// Returns the context's tenant and all its active descendants.
 pub(crate) async fn resolve_accessible_tenants(
     resolver: &dyn TenantResolverGatewayClient,
     ctx: &SecurityContext,
 ) -> Result<Vec<Uuid>, DomainError> {
-    let filter = TenantFilter {
+    let tenant_id = ctx.tenant_id();
+    if tenant_id == Uuid::nil() {
+        // Anonymous context - no accessible tenants
+        return Ok(vec![]);
+    }
+
+    // Get tenant and all active descendants (max_depth=None means unlimited)
+    let opts = GetDescendantsOptions {
         status: vec![TenantStatus::Active],
         ..Default::default()
     };
-    let accessible = resolver
-        .get_accessible_tenants(ctx, Some(&filter), None)
+    let response = resolver
+        .get_descendants(ctx, tenant_id, &opts)
         .await
         .map_err(|e| {
-            tracing::error!(error = %e, "Failed to resolve accessible tenants");
+            tracing::error!(error = %e, "Failed to get descendants");
             DomainError::InternalError
         })?;
-    Ok(accessible.iter().map(|t| t.id).collect())
+
+    // Check if the starting tenant is active (filter doesn't apply to it)
+    if response.tenant.status != TenantStatus::Active {
+        return Ok(vec![]);
+    }
+
+    // Return tenant + all active descendants
+    let mut result = Vec::with_capacity(1 + response.descendants.len());
+    result.push(response.tenant.id);
+    result.extend(response.descendants.iter().map(|t| t.id));
+    Ok(result)
 }
 
 /// Configuration for the domain service
+#[domain_model]
 #[derive(Debug, Clone)]
 pub struct ServiceConfig {
     pub max_display_name_length: usize,
@@ -119,6 +139,7 @@ impl ServiceConfig {
 //
 // **Security**: A task-local guard prevents `Db::conn()` from being called
 // inside transaction closures, eliminating the factory bypass vulnerability.
+#[domain_model]
 pub(crate) struct AppServices<UR, CR, AR>
 where
     UR: UsersRepository + 'static,

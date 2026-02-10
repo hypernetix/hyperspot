@@ -1,3 +1,4 @@
+use modkit_macros::domain_model;
 use nodes_registry_sdk::{Node, NodeSysCap, NodeSysInfo, SysCap};
 use std::collections::HashMap;
 use std::sync::RwLock;
@@ -5,6 +6,7 @@ use tracing::warn;
 use uuid::Uuid;
 
 /// Cached node data with timestamps
+#[domain_model]
 #[derive(Debug, Clone)]
 struct CachedNodeData {
     node: Node,
@@ -16,6 +18,7 @@ struct CachedNodeData {
 }
 
 /// In-memory storage for nodes and their metadata
+#[domain_model]
 pub struct NodeStorage {
     nodes: RwLock<HashMap<Uuid, CachedNodeData>>,
 }

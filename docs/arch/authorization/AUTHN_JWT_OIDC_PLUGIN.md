@@ -10,7 +10,7 @@ This document describes the **reference implementation** of an AuthN Resolver pl
 
 **Scope:** This is ONE possible implementation of the `AuthNResolverPluginClient` trait. Vendors may implement different authentication strategies (mTLS, API keys, custom protocols) without following this design.
 
-**Use case:** This plugin is suitable for vendors with standard OIDC-compliant Identity Providers that issue JWTs and support token introspection. It ships as part of HyperSpot's standard distribution and can be configured for most OAuth 2.0 / OIDC providers.
+**Use case:** This plugin is suitable for vendors with standard OIDC-compliant Identity Providers that issue JWTs and support token introspection. It ships as part of Cyber Fabric's standard distribution and can be configured for most OAuth 2.0 / OIDC providers.
 
 **Standards:**
 - [RFC 7519: JSON Web Token (JWT)](https://datatracker.ietf.org/doc/html/rfc7519)
@@ -381,7 +381,7 @@ Discovered introspection endpoint URLs caching (per-issuer).
 
 ## OpenID Connect Integration
 
-HyperSpot leverages OpenID Connect standards for authentication:
+Cyber Fabric leverages OpenID Connect standards for authentication:
 
 - **JWT validation** per OpenID Connect Core 1.0 — signature verification, claim validation
 - **Discovery** via `.well-known/openid-configuration` (OpenID Connect Discovery 1.0) — automatic endpoint configuration
@@ -392,7 +392,7 @@ HyperSpot leverages OpenID Connect standards for authentication:
 
 The `trusted_issuers` map is required for JWT validation. This separation exists because:
 
-1. **Trust anchor** — HyperSpot must know which issuers to trust before receiving tokens
+1. **Trust anchor** — Cyber Fabric must know which issuers to trust before receiving tokens
 2. **Flexible mapping** — `iss` claim may differ from discovery URL (e.g., custom identifiers)
 3. **Bootstrap problem** — to validate JWT, we need JWKS; to get JWKS, we need discovery URL
 
@@ -421,7 +421,7 @@ jwt:
 
 ### Discovery
 
-Discovery is performed lazily on the first authenticated request (not at startup). HyperSpot fetches the OpenID configuration from `{issuer}/.well-known/openid-configuration` and extracts:
+Discovery is performed lazily on the first authenticated request (not at startup). Cyber Fabric fetches the OpenID configuration from `{issuer}/.well-known/openid-configuration` and extracts:
 
 - `jwks_uri` — for fetching signing keys
 - `introspection_endpoint` — for opaque token validation (optional)

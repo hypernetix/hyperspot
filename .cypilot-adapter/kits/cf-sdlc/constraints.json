@@ -1,0 +1,260 @@
+{
+  "PRD": {
+    "name": "PRD constraints (cf-sdlc)",
+    "description": "Allowed ID kinds in PRD and required/optional downstream references",
+    "identifiers": {
+      "actor": {
+        "name": "Actor",
+        "required": false,
+        "task": "prohibited",
+        "priority": "prohibited"
+      },
+      "fr": {
+        "name": "Functional Requirement",
+        "required": true,
+        "task": "required",
+        "priority": "required",
+        "to_code": false,
+        "references": {
+          "DESIGN": {"coverage": "required"},
+          "DECOMPOSITION": {"coverage": "optional"},
+          "FEATURE": {"coverage": "optional"}
+        }
+      },
+      "nfr": {
+        "name": "Non-functional Requirement",
+        "required": true,
+        "task": "required",
+        "priority": "required",
+        "to_code": false,
+        "references": {
+          "DESIGN": {"coverage": "required"},
+          "DECOMPOSITION": {"coverage": "optional"},
+          "FEATURE": {"coverage": "optional"}
+        }
+      },
+      "usecase": {
+        "name": "Use Case",
+        "required": true,
+        "task": "allowed",
+        "priority": "allowed",
+        "references": {
+          "DESIGN": {"coverage": "optional"},
+          "FEATURE": {"coverage": "optional"}
+        }
+      },
+      "interface": {
+        "name": "Public Interface",
+        "required": false,
+        "task": "allowed",
+        "priority": "allowed",
+        "references": {
+          "DESIGN": {"coverage": "required"}
+        }
+      },
+      "contract": {
+        "name": "Integration Contract",
+        "required": false,
+        "task": "allowed",
+        "priority": "allowed",
+        "references": {
+          "DESIGN": {"coverage": "required"}
+        }
+      }
+    }
+  },
+  "ADR": {
+    "name": "ADR constraints (cf-sdlc)",
+    "description": "Allowed ID kinds in ADR and required references from DESIGN",
+    "identifiers": {
+      "adr": {
+        "name": "Architecture Decision Record",
+        "task": "prohibited",
+        "priority": "prohibited",
+        "references": {
+          "PRD": {"coverage": "prohibited"},
+          "DESIGN": {"coverage": "required"}
+        }
+      }
+    }
+  },
+  "DESIGN": {
+    "name": "DESIGN constraints (cf-sdlc)",
+    "description": "Allowed ID kinds in DESIGN",
+    "identifiers": {
+      "design": {
+        "name": "Design Element (legacy prefix)",
+        "required": false,
+        "task": "allowed",
+        "priority": "allowed",
+        "references": {
+          "PRD": {"coverage": "prohibited"}
+        }
+      },
+      "principle": {
+        "name": "Design Principle",
+        "required": true,
+        "task": "allowed",
+        "priority": "allowed",
+        "references": {
+          "PRD": {"coverage": "prohibited"},
+          "DECOMPOSITION": {"coverage": "required"},
+          "FEATURE": {"coverage": "optional"}
+        }
+      },
+      "constraint": {
+        "name": "Design Constraint",
+        "required": true,
+        "task": "allowed",
+        "priority": "allowed",
+        "references": {
+          "PRD": {"coverage": "prohibited"},
+          "DECOMPOSITION": {"coverage": "required"},
+          "FEATURE": {"coverage": "optional"}
+        }
+      },
+      "component": {
+        "name": "Component",
+        "required": true,
+        "task": "allowed",
+        "priority": "allowed",
+        "references": {
+          "DECOMPOSITION": {"coverage": "required"},
+          "PRD": {"coverage": "prohibited"}
+        }
+      },
+      "interface": {
+        "name": "External Interface / Protocol",
+        "required": false,
+        "task": "allowed",
+        "priority": "allowed",
+        "references": {
+          "PRD": {"coverage": "prohibited"}
+        }
+      },
+      "seq": {
+        "name": "Sequence",
+        "required": true,
+        "task": "allowed",
+        "priority": "allowed",
+        "references": {
+          "PRD": {"coverage": "prohibited"}
+        }
+      },
+      "db": {
+        "name": "Database (legacy db-table prefix)",
+        "required": false,
+        "task": "allowed",
+        "priority": "allowed",
+        "references": {
+          "PRD": {"coverage": "prohibited"},
+          "DECOMPOSITION": {"coverage": "required"}
+        }
+      },
+      "dbtable": {
+        "name": "Database Table",
+        "required": false,
+        "task": "allowed",
+        "priority": "allowed",
+        "references": {
+          "PRD": {"coverage": "prohibited"},
+          "DECOMPOSITION": {"coverage": "required"}
+        }
+      },
+      "topology": {
+        "name": "Topology",
+        "required": false,
+        "task": "allowed",
+        "priority": "allowed",
+        "references": {
+          "PRD": {"coverage": "prohibited"}
+        }
+      },
+      "tech": {
+        "name": "Tech Stack",
+        "required": false,
+        "task": "allowed",
+        "priority": "allowed",
+        "references": {
+          "PRD": {"coverage": "prohibited"}
+        }
+      }
+    }
+  },
+  "DECOMPOSITION": {
+    "name": "DECOMPOSITION constraints (cf-sdlc)",
+    "description": "Allowed ID kinds in DECOMPOSITION",
+    "identifiers": {
+      "status": {
+        "name": "Overall Status",
+        "required": false,
+        "task": "allowed",
+        "priority": "allowed"
+      },
+      "feature": {
+        "name": "Feature Entry",
+        "required": true,
+        "task": "allowed",
+        "priority": "allowed",
+        "references": {
+          "FEATURE": {"coverage": "required"}
+        }
+      }
+    }
+  },
+  "FEATURE": {
+    "name": "FEATURE constraints (cf-sdlc)",
+    "description": "Allowed ID kinds in FEATURE",
+    "identifiers": {
+      "flow": {
+        "name": "Flow",
+        "required": false,
+        "task": "allowed",
+        "priority": "allowed",
+        "to_code": true,
+        "references": {
+          "PRD": {"coverage": "prohibited"}
+        }
+      },
+      "algo": {
+        "name": "Algorithm",
+        "required": false,
+        "task": "allowed",
+        "priority": "allowed",
+        "to_code": true,
+        "references": {
+          "PRD": {"coverage": "prohibited"}
+        }
+      },
+      "state": {
+        "name": "State Machine",
+        "required": false,
+        "task": "allowed",
+        "priority": "allowed",
+        "to_code": true,
+        "references": {
+          "PRD": {"coverage": "prohibited"}
+        }
+      },
+      "dod": {
+        "name": "Definition of Done",
+        "required": true,
+        "task": "required",
+        "priority": "required",
+        "to_code": true,
+        "references": {
+          "PRD": {"coverage": "prohibited"}
+        }
+      },
+      "featurecontext": {
+        "name": "Feature Context",
+        "required": false,
+        "task": "allowed",
+        "priority": "allowed",
+        "references": {
+          "PRD": {"coverage": "prohibited"}
+        }
+      }
+    }
+  }
+}
