@@ -267,7 +267,7 @@ sequenceDiagram
 
 #### Table: tasks
 
-**ID**: `cpt-examples-todo-app-design-db-tasks`
+**ID**: `cpt-examples-todo-app-db-table-tasks`
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
