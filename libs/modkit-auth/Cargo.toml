@@ -17,14 +17,6 @@ name = "modkit_auth"
 [lints]
 workspace = true
 
-[[example]]
-name = "dispatcher_usage"
-path = "examples/dispatcher_usage.rs"
-
-[[example]]
-name = "oauth2_client_usage"
-path = "examples/oauth2_client_usage.rs"
-
 [dependencies]
 # Core dependencies
 uuid = { workspace = true }
