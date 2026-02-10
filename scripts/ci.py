@@ -144,9 +144,59 @@ def cmd_gts_docs(args):
         sys.exit(result.returncode)
 
 
+def cmd_cypilot_validate(_args):
+    step("Validating cypilot artifacts")
+    cypilot_dir = os.path.join(PROJECT_ROOT, ".cypilot")
+    git_dir = os.path.join(cypilot_dir, ".git")
+    submodule_initialized = (
+        os.path.isdir(git_dir) or os.path.isfile(git_dir)
+    )
+    if not submodule_initialized:
+        print("Initializing .cypilot submodule (first run)")
+        run_cmd(
+            [
+                "git", "submodule", "update",
+                "--init", "--recursive",
+                "--", ".cypilot",
+            ],
+            cwd=PROJECT_ROOT,
+        )
+    else:
+        # Skip update if on a branch checkout
+        result = run_cmd_allow_fail(
+            ["git", "-C", cypilot_dir,
+             "symbolic-ref", "-q", "HEAD"]
+        )
+        if result.returncode == 0:
+            print("Skipping .cypilot update "
+                  "(branch checkout detected)")
+        else:
+            print("Updating .cypilot via git "
+                  "submodule update (detached HEAD)")
+            run_cmd(
+                [
+                    "git", "submodule", "update",
+                    "--init", "--recursive",
+                    "--", ".cypilot",
+                ],
+                cwd=PROJECT_ROOT,
+            )
+    script = os.path.join(
+        cypilot_dir, "skills", "cypilot",
+        "scripts", "cypilot.py",
+    )
+    result = run_cmd_allow_fail([PYTHON, script, "validate"])
+    if result.returncode == 0:
+        print("OK. cypilot validation PASSED")
+    else:
+        print("ERROR: cypilot validation FAILED")
+        sys.exit(result.returncode)
+
+
 def cmd_check(args):
     step("Running full check suite")
     cmd_fmt(args)
+    cmd_cypilot_validate(args)
     cmd_clippy(args)
     cmd_test(args)
     cmd_dylint_test(args)
@@ -271,11 +321,11 @@ def cmd_e2e(args):
             "-t",
             "hyperspot-api:e2e",
         ]
-        
+
         # Add build args for cargo features if specified
         if args.features:
             build_cmd.extend(["--build-arg", f"CARGO_FEATURES={args.features}"])
-        
+
         build_cmd.append(".")
         run_cmd(build_cmd)
 
@@ -769,6 +819,10 @@ def build_parser():
     # fuzz-clean
     p_fuzz_clean = subparsers.add_parser("fuzz-clean", help="Clean fuzzing artifacts")
     p_fuzz_clean.set_defaults(func=cmd_fuzz_clean)
+
+    # cypilot-validate
+    p_cypilot = subparsers.add_parser("cypilot-validate", help="Validate cypilot artifacts (specs, code, templates)")
+    p_cypilot.set_defaults(func=cmd_cypilot_validate)
 
     # gts-docs
     p_gts_docs = subparsers.add_parser("gts-docs", help="Validate GTS identifiers in .md and .json files (DE0903)")

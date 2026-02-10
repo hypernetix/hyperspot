@@ -35,5 +35,5 @@ ADR IDs MUST be referenced from DESIGN (i.e., DESIGN should include backtick ref
 ## Validation Checklist
 
 - [ ] `python3 {cypilot_path}/skills/cypilot/scripts/cypilot.py validate --artifact <path>`
-- [ ] `make validate-artifacts`
+- [ ] `make cypilot-validate`
 - [ ] Review against `docs/checklists/DESIGN.md`.
