@@ -9,6 +9,197 @@ release-plz updates this file in the Release PR.
 
 ## [Unreleased]
 
+## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/compare/cf-types-registry-v0.1.1...cf-types-registry-v0.1.2) - 2026-02-11
+
+### Fixed
+
+- update module names to use kebab-case convention (by @yoskini) - #459
+
+### Other
+
+- update operation IDs and module names to kebab-case convention (by @yoskini) - #459
+
+### Contributors
+
+* @yoskini
+
+## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/compare/cf-tenant-resolver-gw-v0.1.1...cf-tenant-resolver-gw-v0.1.2) - 2026-02-11
+
+### Fixed
+
+- update module names to use kebab-case convention (by @yoskini) - #459
+
+### Contributors
+
+* @yoskini
+
+## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/compare/cf-static-tr-plugin-v0.1.1...cf-static-tr-plugin-v0.1.2) - 2026-02-11
+
+### Fixed
+
+- update module names to use kebab-case convention (by @yoskini) - #459
+
+### Contributors
+
+* @yoskini
+
+## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/compare/cf-single-tenant-tr-plugin-v0.1.1...cf-single-tenant-tr-plugin-v0.1.2) - 2026-02-11
+
+### Fixed
+
+- update module names to use kebab-case convention (by @yoskini) - #459
+
+### Contributors
+
+* @yoskini
+
+## [0.1.3](https://github.com/cyberfabric/cyberfabric-core/compare/cf-tenant-resolver-sdk-v0.1.2...cf-tenant-resolver-sdk-v0.1.3) - 2026-02-11
+
+### Fixed
+
+- update module names to use kebab-case convention (by @yoskini) - #459
+
+### Contributors
+
+* @yoskini
+
+## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/compare/cf-nodes-registry-v0.1.1...cf-nodes-registry-v0.1.2) - 2026-02-11
+
+### Fixed
+
+- update module names to use kebab-case convention (by @yoskini) - #459
+
+### Other
+
+- update operation IDs and module names to kebab-case convention (by @yoskini) - #459
+
+### Contributors
+
+* @yoskini
+
+## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/compare/cf-nodes-registry-sdk-v0.1.1...cf-nodes-registry-sdk-v0.1.2) - 2026-02-11
+
+### Fixed
+
+- update module names to use kebab-case convention (by @yoskini) - #459
+
+### Contributors
+
+* @yoskini
+
+## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/compare/cf-module-orchestrator-v0.1.1...cf-module-orchestrator-v0.1.2) - 2026-02-11
+
+### Fixed
+
+- update module names to use kebab-case convention (by @yoskini) - #459
+
+### Contributors
+
+* @yoskini
+
+## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/compare/cf-file-parser-v0.1.1...cf-file-parser-v0.1.2) - 2026-02-11
+
+### Fixed
+
+- update module names to use kebab-case convention (by @yoskini) - #459
+
+### Other
+
+- update operation IDs and module names to kebab-case convention (by @yoskini) - #459
+
+### Contributors
+
+* @yoskini
+
+## [0.2.5](https://github.com/cyberfabric/cyberfabric-core/compare/types-sdk-v0.2.4...types-sdk-v0.2.5) - 2026-02-11
+
+### Other
+
+- update Cargo.toml dependencies
+
+## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/compare/cf-types-registry-sdk-v0.1.1...cf-types-registry-sdk-v0.1.2) - 2026-02-11
+
+### Fixed
+
+- update module names to use kebab-case convention (by @yoskini) - #459
+
+### Contributors
+
+* @yoskini
+
+## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/compare/cf-grpc-hub-v0.1.1...cf-grpc-hub-v0.1.2) - 2026-02-11
+
+### Fixed
+
+- update module names to use kebab-case convention (by @yoskini) - #459
+
+### Contributors
+
+* @yoskini
+
+## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/compare/cf-api-gateway-v0.1.1...cf-api-gateway-v0.1.2) - 2026-02-11
+
+### Fixed
+
+- update module names to use kebab-case convention (by @yoskini) - #459
+
+### Contributors
+
+* @yoskini
+
+## [0.2.5](https://github.com/cyberfabric/cyberfabric-core/compare/cf-modkit-http-v0.2.4...cf-modkit-http-v0.2.5) - 2026-02-11
+
+### Added
+
+- *(modkit-auth)* add outbound OAuth2 client-credentials token + bearer auth layer (by @MikeFalcon77)
+- *(modkit-http)* introduce HttpClient (hyper+tower), replace reqwest and harden JWKS handling (by @MikeFalcon77)
+
+### Contributors
+
+* @MikeFalcon77
+
+## [0.2.5](https://github.com/cyberfabric/cyberfabric-core/compare/cf-modkit-v0.2.1...cf-modkit-v0.2.5) - 2026-02-11
+
+### Added
+
+- *(modkit-http)* introduce HttpClient (hyper+tower), replace reqwest and harden JWKS handling (by @MikeFalcon77)
+
+### Fixed
+
+- update module names to use kebab-case convention (by @yoskini) - #459
+- *(dylint/de1301)* allow proc-macro impl methods via visit_assoc_item (by @Artifizer)
+
+### Other
+
+- Merge branch 'main' into shutdown-nl (by @Artifizer) - #475
+- Merge branch 'main' into rescue-docs-standards (by @Artifizer) - #478
+
+### Contributors
+
+* @yoskini
+* @MikeFalcon77
+* @Artifizer
+
+## [0.1.8](https://github.com/cyberfabric/cyberfabric-core/compare/cf-system-sdks-v0.1.7...cf-system-sdks-v0.1.8) - 2026-02-11
+
+### Other
+
+- release (by @github-actions[bot]) - #546
+
+### Contributors
+
+* @github-actions[bot]
+
+## [0.1.8](https://github.com/cyberfabric/cyberfabric-core/compare/cf-system-sdk-directory-v0.1.7...cf-system-sdk-directory-v0.1.8) - 2026-02-11
+
+### Other
+
+- release (by @github-actions[bot]) - #546
+
+### Contributors
+
+* @github-actions[bot]
+
 ## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-types-registry-v0.1.2) - 2026-02-11
 
 ### Fixed
