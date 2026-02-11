@@ -4,3 +4,4 @@
 [submodule ".cypilot"]
 	path = .cypilot
 	url = https://github.com/cyberfabric/cyber-pilot
+	branch = main

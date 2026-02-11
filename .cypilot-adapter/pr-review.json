@@ -1,0 +1,40 @@
+{
+  "scriptPath": ".cypilot/skills/scripts/pr.py",
+  "dataDir": ".prs",
+  "templatesDir": ".cypilot/templates/pr",
+  "prompts": [
+    {
+      "name": "Code Review",
+      "description": "Review for PRs that change source code. Covers correctness, style, performance, security, and test coverage.",
+      "promptFile": ".cypilot/prompts/pr/code-review.md",
+      "checklist": "docs/checklists/CODING.md",
+      "coding_guidelines": "guidelines/DNA/languages/RUST.md",
+      "security_guidelines": "guidelines/SECURITY.md"
+    },
+    {
+      "name": "Design Review",
+      "description": "Review for PRs that add or change design documents (DESIGN.md). Evaluates architecture, trade-offs, API contracts, industry alignment, and antipatterns.",
+      "promptFile": ".cypilot/prompts/pr/design-review.md",
+      "checklist": "docs/checklists/DESIGN.md",
+      "template": "docs/spec-templates/DESIGN.md",
+      "architecture": "docs/ARCHITECTURE_MANIFEST.md"
+    },
+    {
+      "name": "ADR Review",
+      "description": "Review for PRs that add or change Architecture Decision Records. Checks problem scoping, template compliance, and overlap with existing ADRs.",
+      "promptFile": ".cypilot/prompts/pr/adr-review.md",
+      "checklist": "docs/checklists/ADR.md",
+      "template": "docs/spec-templates/ADR.md",
+      "existing_artifacts": "docs/adrs/"
+    },
+    {
+      "name": "PRD Review",
+      "description": "Review for PRs that add or change PRD/requirements documents. Evaluates completeness, testability, traceability, and industry alignment.",
+      "promptFile": ".cypilot/prompts/pr/prd-review.md",
+      "checklist": "docs/checklists/PRD.md",
+      "template": "docs/spec-templates/PRD.md",
+      "project_domain": "docs/ARCHITECTURE_MANIFEST.md",
+      "existing_artifacts": "docs/prds/"
+    }
+  ]
+}

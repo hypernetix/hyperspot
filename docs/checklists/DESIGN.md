@@ -1039,3 +1039,20 @@ For quick reviews, use this condensed table format:
 - [ ] I did not hide or omit known problems
 - [ ] I verified explicit handling for all major checklist categories
 - [ ] I am ready to iterate on the proposals and re-review after changes
+
+---
+
+## PR Review Focus (Design)
+
+When reviewing PRs that add or change design documents, additionally focus on:
+
+- [ ] Alignment with existing architecture (`docs/ARCHITECTURE_MANIFEST.md`)
+- [ ] Trade-off analysis — are alternatives considered and justified?
+- [ ] API contract consistency with existing endpoints and conventions
+- [ ] Security considerations — authentication, authorization, data protection
+- [ ] Compliance with `docs/spec-templates/DESIGN.md` template structure
+- [ ] Identify antipatterns — god objects, leaky abstractions, tight coupling
+- [ ] Compare proposed design with existing industry patterns in SaaS platforms
+- [ ] Compare proposed design with IEEE, ISO, and other industry standards where applicable
+- [ ] Critical assessment of design decisions — challenge assumptions and gaps
+- [ ] Split findings by checklist category and rate each 1-10

@@ -170,6 +170,36 @@
               "",
               "ALWAYS open and follow `{target_path}`"
             ]
+          },
+          {
+            "path": ".claude/skills/cypilot-pr-review/SKILL.md",
+            "target": "workflows/pr-review.md",
+            "template": [
+              "---",
+              "name: cypilot-pr-review",
+              "description: {description}",
+              "disable-model-invocation: false",
+              "user-invocable: true",
+              "allowed-tools: Bash, Read, Write, Edit, Glob, Grep",
+              "---",
+              "",
+              "ALWAYS open and follow `{target_path}`"
+            ]
+          },
+          {
+            "path": ".claude/skills/cypilot-pr-status/SKILL.md",
+            "target": "workflows/pr-status.md",
+            "template": [
+              "---",
+              "name: cypilot-pr-status",
+              "description: {description}",
+              "disable-model-invocation: false",
+              "user-invocable: true",
+              "allowed-tools: Bash, Read, Write, Edit, Glob, Grep",
+              "---",
+              "",
+              "ALWAYS open and follow `{target_path}`"
+            ]
           }
         ]
       }

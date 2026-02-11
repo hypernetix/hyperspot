@@ -967,3 +967,18 @@ Recommended output format for chat:
 - [ ] I did not hide or omit known problems
 - [ ] I verified explicit handling for all major checklist categories
 - [ ] I am ready to iterate on the proposals and re-review after changes
+
+---
+
+## PR Review Focus (Requirements)
+
+When reviewing PRs that add or change PRD/requirements documents, additionally focus on:
+
+- [ ] Completeness and clarity of requirements
+- [ ] Testability and acceptance criteria for every requirement
+- [ ] Traceability to business goals and stated problems
+- [ ] Compliance with `docs/spec-templates/PRD.md` template structure
+- [ ] Alignment with best industry standard practices for large SaaS systems and platforms
+- [ ] Critical assessment of requirements quality — challenge vague, overlapping, or untestable items
+- [ ] Split findings by checklist category and rate each 1-10
+- [ ] Ensure requirements are aligned with the project's existing architecture (`docs/ARCHITECTURE_MANIFEST.md`)
