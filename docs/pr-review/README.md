@@ -17,8 +17,9 @@ You can use the following prompts in your IDE to review PRs or get status:
 > cypilot get status for PR 300
 > /cypilot-pr-status 300
 
-See the .prs/{PR}/ folder for the review results.
-```text
+See the `.prs/{ID}/` folder for the review results:
+
+```bash
 review.md
 status.md
 meta.json
