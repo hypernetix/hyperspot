@@ -1,0 +1,118 @@
+name: Cache Cleanup
+
+on:
+  schedule:
+    - cron: "0 3 * * 0" # every week Sunday
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  cleanup:
+    name: Prune PR shared caches
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete old PR caches
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            const keyPrefix = 'pr-';
+            const keepNewestPerKey = 3;
+            const retentionDays = 7;
+            const maxDeletes = 200;
+
+            const nowMs = Date.now();
+            const msPerDay = 1000 * 60 * 60 * 24;
+            const ageDays = (iso) => (nowMs - new Date(iso).getTime()) / msPerDay;
+
+            let page = 1;
+            const perPage = 100;
+            const allCaches = [];
+
+            while (true) {
+              let res;
+              try {
+                res = await github.rest.actions.getActionsCacheList({
+                  owner,
+                  repo,
+                  per_page: perPage,
+                  page,
+                });
+              } catch (err) {
+                core.error(`Failed to fetch cache list page ${page}: ${err.message}`);
+                throw new Error(`getActionsCacheList failed on page ${page}: ${err.message}`);
+              }
+
+              const batch = res.data.actions_caches ?? [];
+              allCaches.push(...batch);
+
+              if (batch.length < perPage) break;
+              page += 1;
+              if (page > 50) break;
+            }
+
+            const prCaches = allCaches.filter((c) => (c.key ?? '').startsWith(keyPrefix));
+
+            const groups = new Map();
+            for (const c of prCaches) {
+              const key = c.key ?? '';
+              if (!groups.has(key)) groups.set(key, []);
+              groups.get(key).push(c);
+            }
+
+            const toDelete = [];
+
+            for (const [key, caches] of groups.entries()) {
+              caches.sort((a, b) => {
+                const aTs = new Date(a.last_accessed_at ?? a.created_at).getTime();
+                const bTs = new Date(b.last_accessed_at ?? b.created_at).getTime();
+                return bTs - aTs;
+              });
+
+              const keep = new Set(caches.slice(0, keepNewestPerKey).map((c) => c.id));
+
+              for (const c of caches.slice(keepNewestPerKey)) {
+                const ts = c.last_accessed_at ?? c.created_at;
+                if (ts && ageDays(ts) > retentionDays) {
+                  toDelete.push({
+                    id: c.id,
+                    key,
+                    created_at: c.created_at,
+                    last_accessed_at: c.last_accessed_at,
+                    size_in_bytes: c.size_in_bytes,
+                  });
+                }
+              }
+            }
+
+            toDelete.sort((a, b) => {
+              const aTs = new Date(a.last_accessed_at ?? a.created_at).getTime();
+              const bTs = new Date(b.last_accessed_at ?? b.created_at).getTime();
+              return aTs - bTs;
+            });
+
+            const limited = toDelete.slice(0, maxDeletes);
+
+            core.info(`Found ${allCaches.length} total caches; ${prCaches.length} pr-* caches.`);
+            core.info(`Deleting ${limited.length} caches (max ${maxDeletes}) older than ${retentionDays} days, keeping newest ${keepNewestPerKey} per key.`);
+
+            for (const c of limited) {
+              core.info(`Deleting cache id=${c.id} key=${c.key} size=${c.size_in_bytes} created_at=${c.created_at} last_accessed_at=${c.last_accessed_at}`);
+              try {
+                await github.rest.actions.deleteActionsCacheById({
+                  owner,
+                  repo,
+                  cache_id: c.id,
+                });
+              } catch (err) {
+                core.error(`Failed to delete cache id=${c.id} key=${c.key}: ${err.message}`);
+                throw new Error(`deleteActionsCacheById failed for cache id=${c.id} key=${c.key}: ${err.message}`);
+              }
+            }
+
+            core.info('Cache cleanup complete.');
