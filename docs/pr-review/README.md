@@ -70,7 +70,7 @@ The `pr.py` script uses the [GitHub CLI (`gh`)](https://cli.github.com/) to fetc
    gh auth status
    ```
 
-   You should see `Logged in to github.com as <your-username>`.
+   You should see `Logged in to GitHub.com as <your-username>`.
 
 5. **(Optional) Use a personal access token directly**
 
@@ -118,7 +118,7 @@ Each review type has a dedicated prompt file and checklist:
 
 | Review type | Prompt | Checklist |
 |-------------|--------|-----------|
-| Code Review | `.cypilot/prompts/pr/code-review.md` | `docs/checklists/CODE.md` |
+| Code Review | `.cypilot/prompts/pr/code-review.md` | `docs/checklists/CODING.md` |
 | Design Review | `.cypilot/prompts/pr/design-review.md` | `docs/checklists/DESIGN.md` |
 | ADR Review | `.cypilot/prompts/pr/adr-review.md` | `docs/checklists/ADR.md` |
 | PRD Review | `.cypilot/prompts/pr/prd-review.md` | `docs/checklists/PRD.md` |
