@@ -6,9 +6,11 @@
 
 ## Context and Problem Statement
 
-OAGW proxies requests to upstream services. When web browsers make requests from one origin (e.g., `https://app.example.com`) to OAGW proxy endpoint on another origin (e.g., `https://api.example.com`), browsers enforce CORS policies. Without proper CORS support, browser-based clients cannot use OAGW.
+OAGW proxies requests to upstream services. When web browsers make requests from one origin (e.g., `https://app.example.com`) to OAGW proxy endpoint on another origin (e.g.,
+`https://api.example.com`), browsers enforce CORS policies. Without proper CORS support, browser-based clients cannot use OAGW.
 
 **Key challenges**:
+
 - CORS is browser-specific (non-browser clients ignore it)
 - Preflight OPTIONS requests must be handled locally (not proxied)
 - CORS headers vary by upstream service requirements
@@ -32,11 +34,13 @@ Forward all requests (including OPTIONS preflight) to upstream. Let upstream han
 **Configuration**: None (passthrough)
 
 **Pros**:
+
 - Simple (no OAGW logic)
 - Upstream controls CORS policy
 - No configuration needed
 
 **Cons**:
+
 - Preflight adds round-trip latency (OPTIONS → upstream → client)
 - Upstream may not support CORS
 - Cannot enforce OAGW-level origin restrictions
@@ -47,6 +51,7 @@ Forward all requests (including OPTIONS preflight) to upstream. Let upstream han
 Implement CORS as a guard plugin. Configurable per upstream/route.
 
 **Configuration**:
+
 ```json
 {
   "plugins": {
@@ -54,10 +59,10 @@ Implement CORS as a guard plugin. Configurable per upstream/route.
       {
         "type": "gts.x.core.oagw.plugin.guard.v1~x.core.oagw.cors.v1",
         "config": {
-          "allowed_origins": ["https://app.example.com", "https://admin.example.com"],
-          "allowed_methods": ["GET", "POST", "PUT", "DELETE"],
-          "allowed_headers": ["Content-Type", "Authorization"],
-          "expose_headers": ["X-Request-ID"],
+          "allowed_origins": [ "https://app.example.com", "https://admin.example.com" ],
+          "allowed_methods": [ "GET", "POST", "PUT", "DELETE" ],
+          "allowed_headers": [ "Content-Type", "Authorization" ],
+          "expose_headers": [ "X-Request-ID" ],
           "max_age": 86400,
           "allow_credentials": true
         }
@@ -68,12 +73,14 @@ Implement CORS as a guard plugin. Configurable per upstream/route.
 ```
 
 **Pros**:
+
 - Flexible per-upstream/route configuration
 - Local preflight handling (no upstream round-trip)
 - Can enforce stricter CORS than upstream
 - Works even if upstream is down
 
 **Cons**:
+
 - Requires explicit configuration
 - Plugin must run before all other plugins (order matters)
 - Complexity in plugin chain management
@@ -83,17 +90,18 @@ Implement CORS as a guard plugin. Configurable per upstream/route.
 CORS as first-class feature in upstream/route configuration. Handled before plugin chain.
 
 **Configuration**:
+
 ```json
 {
   "server": {
-    "endpoints": [{"scheme": "https", "host": "api.service.com", "port": 443}]
+    "endpoints": [ { "scheme": "https", "host": "api.service.com", "port": 443 } ]
   },
   "cors": {
     "enabled": true,
-    "allowed_origins": ["https://app.example.com"],
-    "allowed_methods": ["GET", "POST"],
-    "allowed_headers": ["Content-Type", "Authorization"],
-    "expose_headers": ["X-Request-ID"],
+    "allowed_origins": [ "https://app.example.com" ],
+    "allowed_methods": [ "GET", "POST" ],
+    "allowed_headers": [ "Content-Type", "Authorization" ],
+    "expose_headers": [ "X-Request-ID" ],
     "max_age": 86400,
     "allow_credentials": true
   }
@@ -101,25 +109,27 @@ CORS as first-class feature in upstream/route configuration. Handled before plug
 ```
 
 **Pros**:
+
 - First-class feature (no plugin ordering issues)
 - Preflight handled before routing/auth/plugins (fast path)
 - Clear configuration model
 - Standards-compliant default behavior
 
 **Cons**:
+
 - Adds built-in logic to OAGW core
 - Not extensible via plugins (but can be overridden)
 
 ## Comparison Matrix
 
-| Criteria                  | Option 1 (Proxy) | Option 2 (Plugin) | Option 3 (Built-in) |
-|---------------------------|:----------------:|:-----------------:|:-------------------:|
-| Preflight latency         |       High       |        Low        |         Low         |
-| Configuration complexity  |       None       |      Medium       |        Low          |
-| Upstream independence     |        No        |        Yes        |         Yes         |
-| Plugin ordering issues    |       N/A        |        Yes        |         No          |
-| Standards compliance      |     Depends      |        Yes        |         Yes         |
-| Works when upstream down  |        No        |        Yes        |         Yes         |
+| Criteria                 | Option 1 (Proxy) | Option 2 (Plugin) | Option 3 (Built-in) |
+|--------------------------|:----------------:|:-----------------:|:-------------------:|
+| Preflight latency        |       High       |        Low        |         Low         |
+| Configuration complexity |       None       |      Medium       |         Low         |
+| Upstream independence    |        No        |        Yes        |         Yes         |
+| Plugin ordering issues   |       N/A        |        Yes        |         No          |
+| Standards compliance     |     Depends      |        Yes        |         Yes         |
+| Works when upstream down |        No        |        Yes        |         Yes         |
 
 ## Decision Outcome
 
@@ -134,6 +144,7 @@ CORS as first-class feature in upstream/route configuration. Handled before plug
 5. **Standards**: Proper CORS implementation per WHATWG Fetch spec
 
 Options 1 and 2 rejected:
+
 - Option 1: Adds latency, fails if upstream unavailable
 - Option 2: Plugin ordering issues, more complex configuration
 
@@ -153,25 +164,25 @@ Options 1 and 2 rejected:
       },
       "allowed_origins": {
         "type": "array",
-        "items": {"type": "string", "format": "uri"},
+        "items": { "type": "string", "format": "uri" },
         "description": "Allowed origins. Use ['*'] for any origin (not recommended with credentials)."
       },
       "allowed_methods": {
         "type": "array",
-        "items": {"type": "string", "enum": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]},
-        "default": ["GET", "POST"],
+        "items": { "type": "string", "enum": [ "GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS" ] },
+        "default": [ "GET", "POST" ],
         "description": "Allowed HTTP methods"
       },
       "allowed_headers": {
         "type": "array",
-        "items": {"type": "string"},
-        "default": ["Content-Type", "Authorization"],
+        "items": { "type": "string" },
+        "default": [ "Content-Type", "Authorization" ],
         "description": "Allowed request headers (case-insensitive)"
       },
       "expose_headers": {
         "type": "array",
-        "items": {"type": "string"},
-        "default": [],
+        "items": { "type": "string" },
+        "default": [ ],
         "description": "Headers exposed to browser (beyond CORS-safelisted headers)"
       },
       "max_age": {
@@ -187,7 +198,7 @@ Options 1 and 2 rejected:
         "description": "Allow credentials (cookies, auth headers). Requires specific origins (not '*')."
       }
     },
-    "required": ["enabled"]
+    "required": [ "enabled" ]
   }
 }
 ```
@@ -195,19 +206,21 @@ Options 1 and 2 rejected:
 ### Configuration Examples
 
 **Public API (no credentials)**:
+
 ```json
 {
   "cors": {
     "enabled": true,
-    "allowed_origins": ["*"],
-    "allowed_methods": ["GET", "POST"],
-    "allowed_headers": ["Content-Type"],
+    "allowed_origins": [ "*" ],
+    "allowed_methods": [ "GET", "POST" ],
+    "allowed_headers": [ "Content-Type" ],
     "max_age": 86400
   }
 }
 ```
 
 **Authenticated API (with credentials)**:
+
 ```json
 {
   "cors": {
@@ -216,9 +229,9 @@ Options 1 and 2 rejected:
       "https://app.example.com",
       "https://admin.example.com"
     ],
-    "allowed_methods": ["GET", "POST", "PUT", "DELETE"],
-    "allowed_headers": ["Content-Type", "Authorization", "X-API-Key"],
-    "expose_headers": ["X-Request-ID", "X-RateLimit-Remaining"],
+    "allowed_methods": [ "GET", "POST", "PUT", "DELETE" ],
+    "allowed_headers": [ "Content-Type", "Authorization", "X-API-Key" ],
+    "expose_headers": [ "X-Request-ID", "X-RateLimit-Remaining" ],
     "max_age": 3600,
     "allow_credentials": true
   }
@@ -226,6 +239,7 @@ Options 1 and 2 rejected:
 ```
 
 **Development (localhost)**:
+
 ```json
 {
   "cors": {
@@ -234,7 +248,7 @@ Options 1 and 2 rejected:
       "http://localhost:3000",
       "http://localhost:5173"
     ],
-    "allowed_methods": ["GET", "POST", "PUT", "DELETE"],
+    "allowed_methods": [ "GET", "POST", "PUT", "DELETE" ],
     "allow_credentials": true
   }
 }
@@ -260,6 +274,7 @@ Access-Control-Request-Headers: Content-Type, Authorization
 ```
 
 **Response headers** (preflight):
+
 ```http
 HTTP/1.1 204 No Content
 Access-Control-Allow-Origin: https://app.example.com
@@ -285,6 +300,7 @@ Content-Type: application/json
 ```
 
 **Response headers** (actual request):
+
 ```http
 HTTP/1.1 200 OK
 Access-Control-Allow-Origin: https://app.example.com
@@ -296,24 +312,29 @@ Vary: Origin
 ### Origin Matching
 
 **Exact match**:
+
 ```json
-"allowed_origins": ["https://app.example.com"]
+"allowed_origins": [ "https://app.example.com" ]
 ```
+
 Matches: `https://app.example.com`
 Rejects: `https://evil.com`, `https://app.example.com:8080`, `http://app.example.com`
 
 **Wildcard** (discouraged with credentials):
+
 ```json
-"allowed_origins": ["*"]
+"allowed_origins": [ "*" ]
 ```
+
 Matches: Any origin
 Note: Cannot use with `allow_credentials: true`
 
 **Multiple origins**:
+
 ```json
 "allowed_origins": [
-  "https://app.example.com",
-  "https://admin.example.com"
+"https://app.example.com",
+"https://admin.example.com"
 ]
 ```
 
@@ -322,18 +343,21 @@ Note: Cannot use with `allow_credentials: true`
 **Deny by default**: CORS disabled unless explicitly enabled.
 
 **Strict origin validation**:
+
 - No regex patterns (prevents bypasses like `https://evil.com.example.com`)
 - Port-sensitive matching (`:443` ≠ `:8443`)
 - Protocol-sensitive (HTTP ≠ HTTPS)
 
 **Credentials restriction**:
+
 ```rust
-if config.allow_credentials && config.allowed_origins.contains("*") {
-    return Err("Cannot use allow_credentials with wildcard origin");
+if config.allow_credentials & & config.allowed_origins.contains("*") {
+return Err("Cannot use allow_credentials with wildcard origin");
 }
 ```
 
 **Preflight optimization**:
+
 - Cache preflight responses (client-side via `max_age`)
 - Return 204 No Content (no body)
 - Skip auth/rate-limit checks for preflight
@@ -350,12 +374,13 @@ CORS configuration follows sharing modes:
   "cors": {
     "sharing": "inherit",
     "enabled": true,
-    "allowed_origins": ["https://app.example.com"]
+    "allowed_origins": [ "https://app.example.com" ]
   }
 }
 ```
 
 **Merge behavior**:
+
 - Parent: `allowed_origins: ["https://app.example.com"]`
 - Child: `allowed_origins: ["https://admin.example.com"]`
 - Effective: `["https://app.example.com", "https://admin.example.com"]` (union)
@@ -365,6 +390,7 @@ With `sharing: enforce`, child cannot add origins.
 ## Error Responses
 
 **Preflight rejected** (origin not allowed):
+
 ```http
 HTTP/1.1 403 Forbidden
 Content-Type: application/problem+json
@@ -378,6 +404,7 @@ Content-Type: application/problem+json
 ```
 
 **Method not allowed**:
+
 ```http
 HTTP/1.1 403 Forbidden
 
@@ -393,17 +420,17 @@ HTTP/1.1 403 Forbidden
 
 ### Positive
 
-- ✅ Browser-based clients can use OAGW
-- ✅ Fast preflight handling (no upstream round-trip)
-- ✅ Works when upstream unavailable
-- ✅ Secure by default (disabled unless configured)
-- ✅ Standards-compliant implementation
+- Browser-based clients can use OAGW
+- Fast preflight handling (no upstream round-trip)
+- Works when upstream unavailable
+- Secure by default (disabled unless configured)
+- Standards-compliant implementation
 
 ### Negative
 
-- ❌ Adds built-in logic to OAGW core
-- ❌ Requires CORS configuration for each upstream/route
-- ❌ Not extensible via plugins (but can be disabled if needed)
+- No Adds built-in logic to OAGW core
+- No Requires CORS configuration for each upstream/route
+- No Not extensible via plugins (but can be disabled if needed)
 
 ### Neutral
 

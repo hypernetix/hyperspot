@@ -6,7 +6,8 @@
 
 ## Context and Problem Statement
 
-OAGW needs a circuit breaker mechanism to prevent cascading failures when upstream services become unhealthy. When an upstream experiences persistent failures (timeouts, 5xx errors, connection issues), continuing to send requests:
+OAGW needs a circuit breaker mechanism to prevent cascading failures when upstream services become unhealthy. When an upstream experiences persistent failures (timeouts, 5xx
+errors, connection issues), continuing to send requests:
 
 1. Wastes resources (connections, threads, time)
 2. Increases latency for end users
@@ -14,6 +15,7 @@ OAGW needs a circuit breaker mechanism to prevent cascading failures when upstre
 4. Lacks fast-fail behavior for better UX
 
 Circuit breaker should be **core functionality** (not a plugin) because:
+
 - Requires distributed state coordination across OAGW nodes
 - Needs atomic transitions and coordination with rate limiting
 - Should work consistently for all upstreams without configuration overhead
@@ -92,8 +94,8 @@ Circuit breaker configuration is a **first-class field** in upstream and route d
         "properties": {
           "status_codes": {
             "type": "array",
-            "items": {"type": "integer"},
-            "default": [500, 502, 503, 504],
+            "items": { "type": "integer" },
+            "default": [ 500, 502, 503, 504 ],
             "description": "HTTP status codes counted as failures"
           },
           "timeout": {
@@ -110,13 +112,13 @@ Circuit breaker configuration is a **first-class field** in upstream and route d
       },
       "scope": {
         "type": "string",
-        "enum": ["global", "per_endpoint"],
+        "enum": [ "global", "per_endpoint" ],
         "default": "global",
         "description": "Circuit breaker scope: global for entire upstream or per individual endpoint"
       },
       "fallback_strategy": {
         "type": "string",
-        "enum": ["fail_fast", "fallback_endpoint", "cached_response"],
+        "enum": [ "fail_fast", "fallback_endpoint", "cached_response" ],
         "default": "fail_fast",
         "description": "Behavior when circuit is open"
       },
@@ -136,7 +138,7 @@ Circuit breaker configuration is a **first-class field** in upstream and route d
 {
   "server": {
     "endpoints": [
-      {"scheme": "https", "host": "api.openai.com", "port": 443}
+      { "scheme": "https", "host": "api.openai.com", "port": 443 }
     ]
   },
   "protocol": "gts.x.core.oagw.protocol.v1~x.core.http.v1",
@@ -147,7 +149,7 @@ Circuit breaker configuration is a **first-class field** in upstream and route d
     "timeout_seconds": 30,
     "half_open_max_requests": 3,
     "failure_conditions": {
-      "status_codes": [500, 502, 503, 504],
+      "status_codes": [ 500, 502, 503, 504 ],
       "timeout": true,
       "connection_error": true
     },
@@ -183,9 +185,9 @@ When circuit is **OPEN**, OAGW can respond in different ways:
 ```
 
 - **Behavior**: Route request to alternative upstream when primary circuit is open
-- **Use case**: 
-  - Multi-region deployments (primary: us-east, fallback: us-west)
-  - Backup service providers (primary: OpenAI, fallback: Azure OpenAI)
+- **Use case**:
+    - Multi-region deployments (primary: us-east, fallback: us-west)
+    - Backup service providers (primary: OpenAI, fallback: Azure OpenAI)
 - **Requirements**: Fallback upstream must be API-compatible
 - **Latency**: Normal request latency + routing overhead
 
@@ -210,6 +212,7 @@ Circuit breaker state must be shared across OAGW instances. Two approaches:
 ### Option A: Redis-based Shared State (Recommended)
 
 **State keys**:
+
 ```
 oagw:cb:{tenant_id}:{upstream_id}:state        → "CLOSED" | "OPEN" | "HALF_OPEN"
 oagw:cb:{tenant_id}:{upstream_id}:failures     → counter (TTL: rolling window)
@@ -218,6 +221,7 @@ oagw:cb:{tenant_id}:{upstream_id}:half_open_count → counter for concurrent hal
 ```
 
 **Operations**:
+
 ```lua
 -- Check circuit state (fast path)
 local state = redis.call('GET', state_key)
@@ -236,12 +240,14 @@ return state or 'CLOSED'
 ```
 
 **Pros**:
+
 - Strong consistency across nodes
 - Atomic operations via Lua scripts
 - Fast (<1ms latency)
 - Supports distributed counters
 
 **Cons**:
+
 - Dependency on Redis
 - Single point of failure (mitigated by Redis HA)
 
@@ -250,7 +256,8 @@ return state or 'CLOSED'
 Each OAGW node maintains local circuit state. Nodes gossip state changes via pub/sub or multicast.
 
 **Pros**: No external dependency
-**Cons**: 
+**Cons**:
+
 - State divergence possible
 - Delayed failure detection
 - Complex coordination logic
@@ -316,6 +323,7 @@ When circuit is open:
 ```
 
 Headers:
+
 ```
 Retry-After: 15
 X-Circuit-State: OPEN
@@ -328,7 +336,7 @@ Circuit breaker configuration follows same inheritance rules as rate limits:
 ```json
 {
   "circuit_breaker": {
-    "sharing": "inherit",  // or "enforce" or "private"
+    "sharing": "inherit", // or "enforce" or "private"
     "enabled": true,
     "failure_threshold": 10,
     "timeout_seconds": 60
@@ -352,18 +360,18 @@ Circuit breaker configuration follows same inheritance rules as rate limits:
 
 ### Positive
 
-- ✅ Fast failure detection and automatic recovery
-- ✅ Prevents cascading failures
-- ✅ Reduces wasted resources on unhealthy upstreams
-- ✅ Better user experience (fast 503 vs long timeout)
-- ✅ Core functionality with consistent behavior
+- Fast failure detection and automatic recovery
+- Prevents cascading failures
+- Reduces wasted resources on unhealthy upstreams
+- Better user experience (fast 503 vs long timeout)
+- Core functionality with consistent behavior
 
 ### Negative
 
-- ❌ Adds complexity to request handling path
-- ❌ Dependency on Redis for distributed state
-- ❌ False positives possible during upstream maintenance
-- ❌ Additional monitoring/alerting needed
+- No Adds complexity to request handling path
+- No Dependency on Redis for distributed state
+- No False positives possible during upstream maintenance
+- No Additional monitoring/alerting needed
 
 ### Neutral
 

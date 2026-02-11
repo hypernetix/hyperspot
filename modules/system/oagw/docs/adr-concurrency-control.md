@@ -13,6 +13,7 @@ OAGW needs concurrency control to limit the number of simultaneous in-flight req
 3. **Tenant isolation** ensuring one tenant cannot monopolize upstream capacity
 
 Concurrency control differs from rate limiting:
+
 - **Rate limiting**: Controls requests per time window (e.g., 1000 req/min)
 - **Concurrency limiting**: Controls simultaneous active requests (e.g., max 50 concurrent)
 
@@ -101,12 +102,12 @@ Configured at tenant level (not per-upstream):
 
 When descendant tenant binds to ancestor's upstream:
 
-| Ancestor Sharing | Descendant Specifies | Effective Limit                              |
-|------------------|----------------------|----------------------------------------------|
-| `private`        | —                    | Descendant must provide limit                |
-| `inherit`        | No                   | Use ancestor's limit                         |
-| `inherit`        | Yes                  | `min(ancestor, descendant)` (stricter)       |
-| `enforce`        | Any                  | `min(ancestor, descendant)` (stricter)       |
+| Ancestor Sharing | Descendant Specifies | Effective Limit                        |
+|------------------|----------------------|----------------------------------------|
+| `private`        | —                    | Descendant must provide limit          |
+| `inherit`        | No                   | Use ancestor's limit                   |
+| `inherit`        | Yes                  | `min(ancestor, descendant)` (stricter) |
+| `enforce`        | Any                  | `min(ancestor, descendant)` (stricter) |
 
 **Rationale**: Always enforce the stricter limit (same as rate limiting) to prevent descendants from bypassing parent's capacity constraints.
 
@@ -161,11 +162,13 @@ impl Drop for Permit<'_> {
 ### Distributed Coordination
 
 **Local-Only Limiting** (Phase 1):
+
 - Each OAGW node tracks in-flight independently
 - Effective limit = `max_concurrent / node_count` (configured)
 - Simple, low latency, no distributed state
 
 **Distributed Limiting** (Phase 2):
+
 - Use Redis or shared counter for accurate global limiting
 - Increased latency (~1-5ms for distributed check)
 - Required for strict enforcement
@@ -255,6 +258,7 @@ Concurrency limits should align with HTTP client connection pool size:
 ```
 
 **Guidelines**:
+
 - `max_connections` ≥ `max_concurrent` (to avoid blocking on pool exhaustion)
 - `max_idle_connections` = 20-30% of `max_concurrent` (balance latency vs resources)
 - Monitor `oagw_upstream_connections{state="waiting"}` for pool contention
@@ -275,16 +279,19 @@ Request → [Rate Limiter] → [Concurrency Limiter] → Execute
 ### Circuit Breaker
 
 When circuit breaker is **OPEN**:
+
 - Requests rejected immediately (no concurrency permit acquired)
 - In-flight counter not affected
 
 When circuit breaker is **HALF-OPEN**:
+
 - Limited probe requests still count against concurrency limit
 - Ensures probes don't overwhelm recovering upstream
 
 ### Backpressure/Queueing
 
 When `strategy: "queue"` is set:
+
 - Failed `try_acquire()` adds request to queue (see ADR: Backpressure)
 - When permit released, queue consumer acquires it
 
@@ -294,7 +301,7 @@ When `strategy: "queue"` is set:
 
 ```sql
 ALTER TABLE oagw_upstream
-ADD COLUMN concurrency_limit JSONB;
+    ADD COLUMN concurrency_limit JSONB;
 
 -- Example value:
 -- {
@@ -309,7 +316,7 @@ ADD COLUMN concurrency_limit JSONB;
 
 ```sql
 ALTER TABLE oagw_route
-ADD COLUMN concurrency_limit JSONB;
+    ADD COLUMN concurrency_limit JSONB;
 
 -- Example value:
 -- {
@@ -321,7 +328,7 @@ ADD COLUMN concurrency_limit JSONB;
 
 ```sql
 ALTER TABLE tenant
-ADD COLUMN oagw_global_concurrency_limit INTEGER;
+    ADD COLUMN oagw_global_concurrency_limit INTEGER;
 
 -- Default: NULL (no limit)
 ```
@@ -348,17 +355,20 @@ If not specified:
 ## Testing Strategy
 
 **Unit Tests**:
+
 - Semaphore acquire/release correctness
 - RAII permit drop behavior
 - Concurrent access from multiple threads
 
 **Integration Tests**:
+
 - Reject requests when limit reached
 - Release permit on timeout/error/completion
 - Streaming request lifecycle
 - Hierarchical limit enforcement
 
 **Load Tests**:
+
 - Sustain max_concurrent requests without leaks
 - Verify metrics accuracy
 - Connection pool alignment
@@ -366,25 +376,29 @@ If not specified:
 ## Implementation Phases
 
 **Phase 1: Local Limiting**
-- ✅ In-memory semaphores
-- ✅ Upstream and route-level limits
-- ✅ Error handling and metrics
-- ✅ Configuration schema
+
+- In-memory semaphores
+- Upstream and route-level limits
+- Error handling and metrics
+- Configuration schema
 
 **Phase 2: Tenant Isolation**
-- ✅ Per-tenant-max enforcement
-- ✅ Tenant global limit
-- ✅ Fairness across tenants
+
+- Per-tenant-max enforcement
+- Tenant global limit
+- Fairness across tenants
 
 **Phase 3: Distributed Coordination** (Optional)
-- ⏸ Redis-based global counters
-- ⏸ Cross-node synchronization
+
+- Redis-based global counters
+- Cross-node synchronization
 
 ## Decision
 
 **Accepted**: Implement concurrency control with local-only limiting (Phase 1-2).
 
 **Rationale**:
+
 - Protects OAGW and upstreams from overload
 - Low overhead (atomic operations only)
 - Simple to implement and reason about
@@ -396,17 +410,20 @@ If not specified:
 ## Consequences
 
 **Positive**:
-- ✅ Prevents resource exhaustion
-- ✅ Improves stability under load
-- ✅ Fair capacity sharing
-- ✅ Clear observability
+
+- Prevents resource exhaustion
+- Improves stability under load
+- Fair capacity sharing
+- Clear observability
 
 **Negative**:
-- ❌ Additional configuration complexity
-- ❌ Potential false rejections during traffic spikes (mitigated by backpressure/queueing)
-- ❌ Local-only limiting means limit is approximation across nodes
+
+- No Additional configuration complexity
+- No Potential false rejections during traffic spikes (mitigated by backpressure/queueing)
+- No Local-only limiting means limit is approximation across nodes
 
 **Mitigations**:
+
 - Provide sensible defaults (no limit unless specified)
 - Use `strategy: "queue"` for smoother degradation (see ADR: Backpressure)
 - Monitor metrics to tune limits appropriately
