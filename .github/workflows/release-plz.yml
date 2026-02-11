@@ -42,10 +42,10 @@ jobs:
           persist-credentials: false
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@4be9e76fd7c4901c61fb841f559994984270fce7 # stable
+        uses: dtolnay/rust-toolchain@9bc92bc5598b4f3bec5d910d352094982cb0c3b9 # 1.92.0
 
       - name: release-plz release-pr
-        uses: release-plz/action@5ab144c9d67d4346240190d0f95ed08668677928
+        uses: release-plz/action@52440b50d383aa252927de395c8b2c1e0a9cf8e9 # v0.3.155
         with:
           command: release-pr
         env:
@@ -81,16 +81,13 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@4be9e76fd7c4901c61fb841f559994984270fce7 # stable
-
-      - name: Cache Cargo/target
-        uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
+        uses: dtolnay/rust-toolchain@9bc92bc5598b4f3bec5d910d352094982cb0c3b9 # 1.92.0
 
       - name: cargo test (workspace)
-        run: cargo test --workspace --no-fail-fast --exclude cf-modkit-macros-tests --exclude cf-modkit-db-macros
+        run: make test-no-macros
 
       - name: release-plz release
-        uses: release-plz/action@5ab144c9d67d4346240190d0f95ed08668677928
+        uses: release-plz/action@52440b50d383aa252927de395c8b2c1e0a9cf8e9 # v0.3.155
         with:
           command: release
         env:

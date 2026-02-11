@@ -59,6 +59,8 @@ jobs:
       # Cache Cargo registry/git + target/ across platforms.
       - name: Cache Cargo/target
         uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
+        with:
+          cache-bin: false
 
       # Install sccache (cross-platform)
       - name: Install sccache
@@ -80,12 +82,12 @@ jobs:
 
       - name: cargo clippy
         env:
-          RUSTFLAGS: "-C debuginfo=0 -C codegen-units=1"
+          RUSTFLAGS: "-C debuginfo=0"
         run: make clippy
 
       - name: cargo test (no macros)
         env:
-          RUSTFLAGS: "-C debuginfo=0 -C codegen-units=1"
+          RUSTFLAGS: "-C debuginfo=0"
         run: make test-no-macros
 
       # Print sccache stats when active
@@ -114,6 +116,8 @@ jobs:
 
       - name: Cache Cargo/target
         uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
+        with:
+          cache-bin: false
 
       # Install sccache (cross-platform)
       - name: Install sccache
@@ -132,7 +136,7 @@ jobs:
 
       - name: UI tests for modkit macros libraries
         env:
-          RUSTFLAGS: "-C debuginfo=0 -C codegen-units=1"
+          RUSTFLAGS: "-C debuginfo=0"
         run: make test-macros
   security:
     name: Security (cargo-deny & cargo-audit on Ubuntu)
@@ -176,6 +180,8 @@ jobs:
 
       - name: Cache Cargo/target
         uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
+        with:
+          cache-bin: false
 
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@30eab0fabba9ea3f522099957e668b21876aa39e # v2.66.6
@@ -188,7 +194,6 @@ jobs:
           RUSTFLAGS: "-C debuginfo=0 --cfg coverage_nightly"
           CARGO_LLVM_COV_TARGET_DIR: llvm-cov-target
           CARGO_LLVM_COV_BUILD_DIR: llvm-cov-build
-          RUSTUP_TOOLCHAIN: nightly-2026-01-20
         run: |
           cargo llvm-cov clean --workspace
           cargo llvm-cov --workspace --lcov --output-path lcov.info
@@ -222,6 +227,8 @@ jobs:
 
       - name: Cache Cargo/target
         uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
+        with:
+          cache-bin: false
 
       - name: Install sccache
         uses: mozilla-actions/sccache-action@7d986dd989559c6ecdb630a3fd2557667be217ad # v0.0.9
@@ -237,6 +244,8 @@ jobs:
           fi
 
       - name: Test modkit-db (integration)
+        env:
+          RUSTFLAGS: "-C debuginfo=0"
         run: make test-${{ matrix.backend }}
 
       - name: sccache stats
@@ -260,6 +269,8 @@ jobs:
 
       - name: Cache Cargo/target
         uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
+        with:
+          cache-bin: false
 
       - name: Install sccache
         uses: mozilla-actions/sccache-action@7d986dd989559c6ecdb630a3fd2557667be217ad # v0.0.9
@@ -308,9 +319,13 @@ jobs:
 
       - name: Cache Cargo/target
         uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
+        with:
+          cache-bin: false
 
       - name: Run dylint tests
         working-directory: dylint_lints
+        env:
+          RUSTFLAGS: "-C debuginfo=0"
         run: cargo test
 
       - name: Run dylint on all crates
