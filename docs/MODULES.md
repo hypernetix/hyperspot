@@ -441,7 +441,7 @@ GTS schema-storage service for tool definitions and contracts.
 - [ ] p2 - distribute GTS instances and schemas updates across modules safely via events generation
 - [ ] p3 - schemas and instances import/export in different formats (YAML, RAML)
 #### More details
-- [PRD](../modules/types-registry/docs/PRD.md)
+- [PRD](../modules/system/types-registry/docs/PRD.md)
 - TODO: Scenarios link
 - TODO: API link
 - TODO: SDK link
