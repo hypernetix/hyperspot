@@ -61,6 +61,7 @@ jobs:
         uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
         with:
           cache-bin: false
+          shared-key: pr-${{ runner.os }}-stable-1.92
 
       # Install sccache (cross-platform)
       - name: Install sccache
@@ -118,6 +119,7 @@ jobs:
         uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
         with:
           cache-bin: false
+          shared-key: pr-${{ runner.os }}-macros-stable-1.92
 
       # Install sccache (cross-platform)
       - name: Install sccache
@@ -182,6 +184,7 @@ jobs:
         uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
         with:
           cache-bin: false
+          shared-key: pr-${{ runner.os }}-nightly-${{ env.RUSTUP_TOOLCHAIN }}-llvm-cov
 
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@30eab0fabba9ea3f522099957e668b21876aa39e # v2.66.6
@@ -229,6 +232,7 @@ jobs:
         uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
         with:
           cache-bin: false
+          shared-key: pr-${{ runner.os }}-db-${{ matrix.backend }}-stable-1.92
 
       - name: Install sccache
         uses: mozilla-actions/sccache-action@7d986dd989559c6ecdb630a3fd2557667be217ad # v0.0.9
@@ -271,6 +275,7 @@ jobs:
         uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
         with:
           cache-bin: false
+          shared-key: pr-${{ runner.os }}-users-info-pg-stable-1.92
 
       - name: Install sccache
         uses: mozilla-actions/sccache-action@7d986dd989559c6ecdb630a3fd2557667be217ad # v0.0.9
@@ -321,6 +326,7 @@ jobs:
         uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
         with:
           cache-bin: false
+          shared-key: pr-${{ runner.os }}-nightly-${{ env.RUSTUP_TOOLCHAIN }}-dylint
 
       - name: Run dylint tests
         working-directory: dylint_lints
