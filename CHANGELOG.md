@@ -9,7 +9,7 @@ release-plz updates this file in the Release PR.
 
 ## [Unreleased]
 
-## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-types-registry-v0.1.2) - 2026-02-10
+## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-types-registry-v0.1.2) - 2026-02-11
 
 ### Fixed
 
@@ -23,7 +23,7 @@ release-plz updates this file in the Release PR.
 
 * @yoskini
 
-## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-tenant-resolver-gw-v0.1.2) - 2026-02-10
+## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-tenant-resolver-gw-v0.1.2) - 2026-02-11
 
 ### Fixed
 
@@ -33,7 +33,7 @@ release-plz updates this file in the Release PR.
 
 * @yoskini
 
-## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-static-tr-plugin-v0.1.2) - 2026-02-10
+## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-static-tr-plugin-v0.1.2) - 2026-02-11
 
 ### Fixed
 
@@ -43,7 +43,7 @@ release-plz updates this file in the Release PR.
 
 * @yoskini
 
-## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-single-tenant-tr-plugin-v0.1.2) - 2026-02-10
+## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-single-tenant-tr-plugin-v0.1.2) - 2026-02-11
 
 ### Fixed
 
@@ -53,7 +53,7 @@ release-plz updates this file in the Release PR.
 
 * @yoskini
 
-## [0.1.3](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-tenant-resolver-sdk-v0.1.3) - 2026-02-10
+## [0.1.3](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-tenant-resolver-sdk-v0.1.3) - 2026-02-11
 
 ### Fixed
 
@@ -63,41 +63,7 @@ release-plz updates this file in the Release PR.
 
 * @yoskini
 
-## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-nodes-registry-v0.1.2) - 2026-02-10
-
-### Fixed
-
-- update module names to use kebab-case convention (by @yoskini) - #459
-
-### Other
-
-- update operation IDs and module names to kebab-case convention (by @yoskini) - #459
-
-### Contributors
-
-* @yoskini
-
-## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-nodes-registry-sdk-v0.1.2) - 2026-02-10
-
-### Fixed
-
-- update module names to use kebab-case convention (by @yoskini) - #459
-
-### Contributors
-
-* @yoskini
-
-## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-module-orchestrator-v0.1.2) - 2026-02-10
-
-### Fixed
-
-- update module names to use kebab-case convention (by @yoskini) - #459
-
-### Contributors
-
-* @yoskini
-
-## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-file-parser-v0.1.2) - 2026-02-10
+## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-nodes-registry-v0.1.2) - 2026-02-11
 
 ### Fixed
 
@@ -111,13 +77,47 @@ release-plz updates this file in the Release PR.
 
 * @yoskini
 
-## [0.2.4](https://github.com/cyberfabric/cyberfabric-core/compare/types-sdk-v0.2.3...types-sdk-v0.2.4) - 2026-02-10
+## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-nodes-registry-sdk-v0.1.2) - 2026-02-11
+
+### Fixed
+
+- update module names to use kebab-case convention (by @yoskini) - #459
+
+### Contributors
+
+* @yoskini
+
+## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-module-orchestrator-v0.1.2) - 2026-02-11
+
+### Fixed
+
+- update module names to use kebab-case convention (by @yoskini) - #459
+
+### Contributors
+
+* @yoskini
+
+## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-file-parser-v0.1.2) - 2026-02-11
+
+### Fixed
+
+- update module names to use kebab-case convention (by @yoskini) - #459
+
+### Other
+
+- update operation IDs and module names to kebab-case convention (by @yoskini) - #459
+
+### Contributors
+
+* @yoskini
+
+## [0.2.4](https://github.com/cyberfabric/cyberfabric-core/compare/types-sdk-v0.2.3...types-sdk-v0.2.4) - 2026-02-11
 
 ### Other
 
 - update Cargo.toml dependencies
 
-## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-types-registry-sdk-v0.1.2) - 2026-02-10
+## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-types-registry-sdk-v0.1.2) - 2026-02-11
 
 ### Fixed
 
@@ -127,7 +127,7 @@ release-plz updates this file in the Release PR.
 
 * @yoskini
 
-## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-grpc-hub-v0.1.2) - 2026-02-10
+## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-grpc-hub-v0.1.2) - 2026-02-11
 
 ### Fixed
 
@@ -137,7 +137,7 @@ release-plz updates this file in the Release PR.
 
 * @yoskini
 
-## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-api-gateway-v0.1.2) - 2026-02-10
+## [0.1.2](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-api-gateway-v0.1.2) - 2026-02-11
 
 ### Fixed
 
@@ -147,7 +147,7 @@ release-plz updates this file in the Release PR.
 
 * @yoskini
 
-## [0.2.4](https://github.com/cyberfabric/cyberfabric-core/compare/cf-modkit-http-v0.2.3...cf-modkit-http-v0.2.4) - 2026-02-10
+## [0.2.4](https://github.com/cyberfabric/cyberfabric-core/compare/cf-modkit-http-v0.2.3...cf-modkit-http-v0.2.4) - 2026-02-11
 
 ### Added
 
@@ -158,7 +158,7 @@ release-plz updates this file in the Release PR.
 
 * @MikeFalcon77
 
-## [0.2.4](https://github.com/cyberfabric/cyberfabric-core/compare/cf-modkit-v0.2.3...cf-modkit-v0.2.4) - 2026-02-10
+## [0.2.4](https://github.com/cyberfabric/cyberfabric-core/compare/cf-modkit-v0.2.3...cf-modkit-v0.2.4) - 2026-02-11
 
 ### Added
 
@@ -180,7 +180,7 @@ release-plz updates this file in the Release PR.
 * @MikeFalcon77
 * @Artifizer
 
-## [0.1.8](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-system-sdks-v0.1.8) - 2026-02-10
+## [0.1.8](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-system-sdks-v0.1.8) - 2026-02-11
 
 ### Other
 
@@ -190,7 +190,7 @@ release-plz updates this file in the Release PR.
 
 * @github-actions[bot]
 
-## [0.1.8](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-system-sdk-directory-v0.1.8) - 2026-02-10
+## [0.1.8](https://github.com/cyberfabric/cyberfabric-core/releases/tag/cf-system-sdk-directory-v0.1.8) - 2026-02-11
 
 ### Other
 
