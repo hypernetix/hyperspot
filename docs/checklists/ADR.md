@@ -882,3 +882,15 @@ Full output format:
 - [ ] I did not hide or omit known problems
 - [ ] I verified explicit handling for all major checklist categories
 - [ ] I am ready to iterate on the proposals and re-review after changes
+
+---
+
+## PR Review Focus (ADR)
+
+When reviewing PRs that add or change Architecture Decision Records, additionally focus on:
+
+- [ ] Ensure the problem is module/system scoped, not generic and repeatable
+- [ ] Compliance with `docs/spec-templates/ADR.md` template structure
+- [ ] Ensure the problem is not already solved by other existing ADRs in `docs/adrs/`
+- [ ] Alternatives are genuinely different approaches (not straw men)
+- [ ] Decision rationale is concrete and traceable to project constraints

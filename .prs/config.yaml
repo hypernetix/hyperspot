@@ -1,0 +1,10 @@
+# PR review local configuration.
+# All review settings (prompts, templates, data dir) live in
+# .cypilot/.cypilot-config.json → "pr" section.
+# This file holds only local/per-repo overrides that should NOT be in cypilot config.
+
+# PRs to skip when running `pr.py fetch ALL`, `pr.py status ALL`, or `pr.py list`.
+# Add PR numbers as strings. These PRs will still be fetchable individually.
+exclude_prs:
+  # - "42"
+  # - "99"

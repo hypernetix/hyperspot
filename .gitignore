@@ -46,3 +46,6 @@ logs
 
 CLAUDE.local.md
 .setup-stamp
+
+# PR review runtime data (fetched from GitHub, numeric PR folders)
+.prs/[0-9]*/
