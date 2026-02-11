@@ -130,7 +130,7 @@ cypilot-validate:
 		echo "Updating .cypilot via git submodule update (detached HEAD)"; \
 		git submodule update --init --recursive -- .cypilot; \
 	fi
-	@python3 .cypilot/skills/cypilot/scripts/cypilot.py validate && echo "OK. cypilot validation PASSED" || (echo "ERROR: cypilot validation FAILED"; exit -1)
+	@python3 .cypilot/skills/cypilot/scripts/cypilot.py validate && echo "OK. cypilot validation PASSED" || (echo "ERROR: cypilot validation FAILED"; exit 1)
 
 # Run markdown checks with 'lychee'
 lychee:
