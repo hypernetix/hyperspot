@@ -37,5 +37,5 @@ Optional ID kinds allowed in FEATURE:
 ## Validation Checklist
 
 - [ ] `python3 {cypilot_path}/skills/cypilot/scripts/cypilot.py validate --artifact <path>`
-- [ ] `make validate-cypilot-artifacts`
+- [ ] `make cypilot-validate`
 - [ ] Review against `docs/checklists/FEATURE.md`.

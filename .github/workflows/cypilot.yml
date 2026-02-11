@@ -36,4 +36,4 @@ jobs:
           python-version: '3.11'
 
       - name: Validate artifacts
-        run: make validate-cypilot-artifacts
+        run: make cypilot-validate

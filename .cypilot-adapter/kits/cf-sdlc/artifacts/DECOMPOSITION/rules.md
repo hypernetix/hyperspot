@@ -35,5 +35,5 @@ Each `feature` ID is expected to be covered by FEATURE artifacts according to co
 ## Validation Checklist
 
 - [ ] `python3 {cypilot_path}/skills/cypilot/scripts/cypilot.py validate --artifact <path>`
-- [ ] `make validate-cypilot-artifacts`
+- [ ] `make cypilot-validate`
 - [ ] Review against `docs/checklists/DECOMPOSITION.md`.

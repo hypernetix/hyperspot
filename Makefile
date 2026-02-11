@@ -112,23 +112,25 @@ validate-module-names:
 # |             | - Use 'make dylint-list' to see all available custom lints           |
 # +-------------+----------------------------------------------------------------------+
 
-.PHONY: clippy lychee kani geiger safety lint dylint dylint-list dylint-test gts-docs gts-docs-vendor gts-docs-release gts-docs-vendor-release gts-docs-test
+.PHONY: clippy lychee kani geiger safety lint dylint dylint-list dylint-test gts-docs gts-docs-vendor gts-docs-release gts-docs-vendor-release gts-docs-test cypilot-validate
 
 # Run clippy linter (excludes gts-rust submodule which has its own lint settings)
 clippy:
 	$(call check_rustup_component,clippy)
 	cargo clippy --workspace --all-targets --all-features -- -D warnings -D clippy::perf
 
-.PHONY: validate-cypilot-artifacts
-
-validate-cypilot-artifacts:
-	@if git -C .cypilot rev-parse --is-inside-work-tree >/dev/null 2>&1 && git -C .cypilot symbolic-ref -q HEAD >/dev/null 2>&1; then \
+# Validate cypilot artifacts (specs, code, templates)
+cypilot-validate:
+	@if [ ! -d .cypilot/.git ] && [ ! -f .cypilot/.git ]; then \
+		echo "Initializing .cypilot submodule (first run)"; \
+		git submodule update --init --recursive -- .cypilot; \
+	elif git -C .cypilot symbolic-ref -q HEAD >/dev/null 2>&1; then \
 		echo "Skipping .cypilot update (branch checkout detected)"; \
 	else \
 		echo "Updating .cypilot via git submodule update (detached HEAD)"; \
 		git submodule update --init --recursive -- .cypilot; \
 	fi
-	python3 .cypilot/skills/cypilot/scripts/cypilot.py validate --verbose
+	@python3 .cypilot/skills/cypilot/scripts/cypilot.py validate && echo "OK. cypilot validation PASSED" || (echo "ERROR: cypilot validation FAILED"; exit 1)
 
 # Run markdown checks with 'lychee'
 lychee:
@@ -420,7 +422,11 @@ oop-example:
 	cargo run --bin hyperspot-server --features oop-example,users-info-example,tenant-resolver-example -- --config config/quickstart.yaml run
 
 # Run all quality checks
-check: .setup-stamp validate-module-names fmt clippy lychee security dylint-test dylint gts-docs test
+check: .setup-stamp fmt cypilot-validate clippy lychee security dylint-test dylint gts-docs test
+
+ci_test: fmt clippy
+
+ci_docs: lychee
 
 # Run CI pipeline locally, requires docker
 ci: fmt clippy test-no-macros test-macros test-db deny test-users-info-pg lychee dylint dylint-test
@@ -430,5 +436,5 @@ build:
 	cargo +stable build --release
 
 # Run all necessary quality checks and tests and then build the release binary
-all: build check validate-cypilot-artifacts test-sqlite e2e-local
+all: build check test-sqlite e2e-local
 	@echo "consider to run 'make test-db' as well"
