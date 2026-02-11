@@ -193,9 +193,13 @@ modules/<your-module>/
       │      
       └─ infra/                 # Infrastructure adapters
          └─ storage/            # Database layer
-            ├─ entity.rs        # SeaORM entities
-            ├─ mapper.rs        # From/Into Model<->Entity
-            ├─ sea_orm_repo.rs  # SeaORM repository implementation
+            ├─ entity/          # SeaORM entities (one file per entity)
+            │  ├─ mod.rs        # Re-exports all entities
+            │  ├─ user.rs       # User entity definition
+            │  └─ address.rs    # Address entity definition (example)
+            ├─ mapper.rs        # From/Into Model<->Entity conversions
+            ├─ repo.rs          # Single repository implementation (all aggregates)
+            ├─ odata_mapper.rs  # OData filter → SeaORM column mappings
             └─ migrations/      # SeaORM migrations
 ```
 
@@ -423,14 +427,14 @@ pub mod infra;
 
 ### Rules / Invariants
 - **Rule**: Keep transport-agnostic types in the SDK crate (`<module>-sdk/src/models.rs`).
-- **Rule**: SeaORM entities live in `src/infra/storage/entity.rs` with `#[derive(Scopable)]`.
+- **Rule**: SeaORM entities live in `src/infra/storage/entity/` folder (one file per entity) with `#[derive(Scopable)]`.
 - **Rule**: REST DTOs live in `src/api/rest/dto.rs` with `#[derive(ODataFilterable)]`.
 - **Rule**: Use `time::OffsetDateTime` for timestamps.
 - **Rule**: Conversions go in `dto.rs` or optional `mapper.rs`.
 
 **Rule:** Use the following naming matrix for your data types:
 
-| Operation              | DB Layer (sqlx/SeaORM)<br/>`src/infra/storage/entity.rs` | Domain Layer (SDK / domain types)<br/>`<module>-sdk/src/models.rs` | API Request (in)<br/>`src/api/rest/dto.rs`      | API Response (out)<br/>`src/api/rest/dto.rs`                                                    |
+| Operation              | DB Layer (sqlx/SeaORM)<br/>`src/infra/storage/entity/` | Domain Layer (SDK / domain types)<br/>`<module>-sdk/src/models.rs` | API Request (in)<br/>`src/api/rest/dto.rs`      | API Response (out)<br/>`src/api/rest/dto.rs`                                                    |
 |------------------------|----------------------------------------------------------|-----------------------------------------------------------|-------------------------------------------------|-------------------------------------------------------------------------------------------------|
 | Create                 | ActiveModel                                              | NewUser                                                   | CreateUserRequest                               | UserResponse                                                                                    |
 | Read/Get by id         | UserEntity                                               | User                                                      | Path params (id)<br/>`routes.rs` registers path | UserResponse                                                                                    |
@@ -444,7 +448,7 @@ pub mod infra;
 Notes:
 
 - Keep all transport-agnostic types in the SDK crate (e.g. `<module>-sdk/src/models.rs`). Handlers and DTOs must not leak into the SDK.
-- SeaORM entities live in `src/infra/storage/entity.rs` (or submodules). Repository queries go in `src/infra/storage/sea_orm_repo.rs` or per-aggregate repo files.
+- SeaORM entities live in `src/infra/storage/entity/` folder (one file per entity). Repository implementation goes in `src/infra/storage/repo.rs` (single file for all aggregates in the module).
 - All REST DTOs (requests/responses/views) live in `src/api/rest/dto.rs`; provide `From` conversions in `dto.rs` or an optional `mapper.rs`.
 
 ### Step 3: Errors Management
@@ -1196,7 +1200,7 @@ use crate::config::UsersInfoConfig;
 use crate::domain::events::UserDomainEvent;
 use crate::domain::ports::EventPublisher;
 use crate::domain::service::{Service, ServiceConfig};
-use crate::infra::storage::sea_orm_repo::SeaOrmUsersRepository;
+use crate::infra::storage::repo::OrmUsersRepository;
 
 // Import API trait from SDK (not local contract module)
 use user_info_sdk::api::UsersInfoClientV1;
@@ -1235,7 +1239,7 @@ impl Module for UsersInfo {
         let sec_conn = db.sea_secure();
 
         // Wire repository with SecureConn
-        let repo = SeaOrmUsersRepository::new(sec_conn);
+        let repo = OrmUsersRepository::new(sec_conn);
 
         // Create event publisher adapter for SSE
         let publisher: Arc<dyn EventPublisher<UserDomainEvent>> =
@@ -1365,7 +1369,7 @@ This layer adapts HTTP requests to domain calls. It is required only for modules
 
 2. **`src/api/rest/dto.rs`:**
    **Rule:** Create Data Transfer Objects (DTOs) for the REST API. These structs derive `serde` and `utoipa::ToSchema`.
-   **Rule:** For OData filtering, add `#[derive(ODataFilterable)]` with `#[odata(filter(kind = "..."))]` on fields.
+   **Rule:** For OData filtering, add `#[derive(ODataFilterable)]` with `#[odata(filter(kind = "..."))]` on fields. The macro automatically generates a `<TypeName>FilterField` enum used for column mapping (e.g., `UserDto` → `UserDtoFilterField`).
    **Rule:** Only fields annotated with `#[odata(filter(kind = "..."))]` become available for `$filter` / `$orderby` (unannotated fields are not filterable/orderable).
    **Rule:** Map OpenAPI types correctly: `string: uuid` -> `uuid::Uuid`, `string: date-time` ->
    `time::OffsetDateTime`.
@@ -1640,12 +1644,41 @@ SeaORM
 Database
 ```
 
-1. **`src/infra/storage/entity.rs`:**
-   **Rule:** Use `#[derive(Scopable)]` to enable secure queries on your entities.
+### Rules / Invariants
+- **Rule**: Create an `entity/` folder with one file per SeaORM entity.
+- **Rule**: Use `#[derive(Scopable)]` on all entities for secure queries.
+- **Rule**: Have a single `repo.rs` (or `*_repo.rs` per aggregate) to simplify DB backend changes and transaction management.
+- **Rule**: Use `SecureConn` for all database operations.
+- **Rule**: Pass `AccessScope` to all repository methods.
+
+#### Entity Folder Structure
+
+**Why a folder instead of a single file?**
+- **Separation of concerns**: Each entity has its own file, making it easier to find and modify.
+- **Better collaboration**: Multiple developers can work on different entities without merge conflicts.
+- **Cleaner organization**: Related types (Model, ActiveModel, Column, Relation) are grouped per entity.
+- **Simpler DB support**: When switching database backends, entity definitions are isolated and easier to adapt.
+
+1. **`src/infra/storage/entity/mod.rs`:**
+   **Rule:** Re-export all entities. For modules with a single primary entity, optionally re-export its types for convenience.
+
+   ```rust
+   pub mod address;
+   pub mod user;
+
+   // With multiple entities, use qualified imports for clarity:
+   //   use crate::infra::storage::entity::user::{Entity as UserEntity, Model as User};
+   //   use crate::infra::storage::entity::address::{Entity as AddressEntity, Model as Address};
+   ```
+
+2. **`src/infra/storage/entity/user.rs`:**
+   **Rule:** One file per entity. Use `#[derive(Scopable)]` to enable secure queries.
 
    ```rust
    use modkit_db_macros::Scopable;
    use sea_orm::entity::prelude::*;
+   use time::OffsetDateTime;
+   use uuid::Uuid;
 
    #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Scopable)]
    #[sea_orm(table_name = "users")]
@@ -1656,17 +1689,32 @@ Database
        no_type
    )]
    pub struct Model {
-       #[sea_orm(primary_key)]
+       #[sea_orm(primary_key, auto_increment = false)]
        pub id: Uuid,
        pub tenant_id: Uuid,
        pub email: String,
        pub display_name: String,
-       pub created_at: time::OffsetDateTime,
-       pub updated_at: time::OffsetDateTime,
+       pub created_at: OffsetDateTime,
+       pub updated_at: OffsetDateTime,
+   }
+
+   #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+   pub enum Relation {
+       #[sea_orm(has_one = "super::address::Entity")]
+       Address,
+   }
+
+   impl ActiveModelBehavior for ActiveModel {}
+
+   impl Related<super::address::Entity> for Entity {
+       fn to() -> RelationDef {
+           Relation::Address.def()
+       }
    }
    ```
 
-2. **`src/infra/storage/sea_orm_repo.rs` (or per-aggregate repos):**
+3. **`src/infra/storage/repo.rs`:**
+   > See `examples/modkit/users-info/` for a per-aggregate repository pattern alternative.
    **Rule:** Use `SecureConn` for all database operations. Pass `AccessScope` to all methods.
 
    ```rust
@@ -1681,18 +1729,18 @@ Database
    use super::entity;
    use modkit_odata::{ODataQuery, Page};
 
-   pub struct SeaOrmUsersRepository {
+   pub struct OrmUsersRepository {
        conn: SecureConn,
    }
 
-   impl SeaOrmUsersRepository {
+   impl OrmUsersRepository {
        pub fn new(conn: SecureConn) -> Self {
            Self { conn }
        }
    }
 
    #[async_trait]
-   impl UsersRepository for SeaOrmUsersRepository {
+   impl UsersRepository for OrmUsersRepository {
        async fn find_by_id(
            &self,
            scope: &AccessScope,
@@ -1793,6 +1841,220 @@ Database
 
 4. **`src/infra/storage/migrations/`:**
    **Rule:** Create a SeaORM migrator. This is mandatory for any module with the `db` capability.
+
+#### Working Example: Entity Folder Structure
+
+This section shows a complete working example of the `entity/` folder pattern used in this guide.
+
+**Step-by-step to create the entity folder:**
+
+```bash
+# From your module's root directory
+mkdir -p src/infra/storage/entity
+touch src/infra/storage/entity/mod.rs
+touch src/infra/storage/entity/user.rs
+touch src/infra/storage/entity/address.rs
+```
+
+**Complete file contents:**
+
+**`src/infra/storage/entity/mod.rs`:**
+```rust
+//! SeaORM entity definitions.
+//!
+//! Each entity is defined in its own file for better organization:
+//! - Easier to find and modify specific entities
+//! - Reduces merge conflicts when multiple developers work on different entities
+//! - Simplifies database backend migrations
+
+pub mod address;
+pub mod user;
+
+// With multiple entities, use qualified imports for clarity:
+//   use crate::infra::storage::entity::user::{Entity as UserEntity, Model as User};
+//   use crate::infra::storage::entity::address::{Entity as AddressEntity, Model as Address};
+```
+
+**`src/infra/storage/entity/user.rs`:**
+```rust
+use modkit_db_macros::Scopable;
+use sea_orm::entity::prelude::*;
+use time::OffsetDateTime;
+use uuid::Uuid;
+
+/// User entity with multi-tenant security scoping.
+///
+/// The `#[secure(...)]` attribute enables automatic tenant isolation:
+/// - `tenant_col`: Column used for tenant filtering
+/// - `resource_col`: Column used for resource-level access control
+/// - `no_owner`: This entity doesn't have owner-based filtering
+/// - `no_type`: This entity doesn't have type-based filtering
+#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Scopable)]
+#[sea_orm(table_name = "users")]
+#[secure(tenant_col = "tenant_id", resource_col = "id", no_owner, no_type)]
+pub struct Model {
+    #[sea_orm(primary_key, auto_increment = false)]
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub email: String,
+    pub display_name: String,
+    pub created_at: OffsetDateTime,
+    pub updated_at: OffsetDateTime,
+}
+
+#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+pub enum Relation {
+    #[sea_orm(has_one = "super::address::Entity")]
+    Address,
+}
+
+impl ActiveModelBehavior for ActiveModel {}
+
+impl Related<super::address::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Address.def()
+    }
+}
+```
+
+**`src/infra/storage/entity/address.rs`:**
+```rust
+use modkit_db_macros::Scopable;
+use sea_orm::entity::prelude::*;
+use time::OffsetDateTime;
+use uuid::Uuid;
+
+/// Address entity linked to a user.
+#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Scopable)]
+#[sea_orm(table_name = "addresses")]
+#[secure(tenant_col = "tenant_id", resource_col = "id", no_owner, no_type)]
+pub struct Model {
+    #[sea_orm(primary_key, auto_increment = false)]
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub user_id: Uuid,
+    pub street: String,
+    pub postal_code: String,
+    pub created_at: OffsetDateTime,
+    pub updated_at: OffsetDateTime,
+}
+
+#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+pub enum Relation {
+    #[sea_orm(
+        belongs_to = "super::user::Entity",
+        from = "Column::UserId",
+        to = "super::user::Column::Id"
+    )]
+    User,
+}
+
+impl ActiveModelBehavior for ActiveModel {}
+
+impl Related<super::user::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::User.def()
+    }
+}
+```
+
+**`src/infra/storage/mod.rs`:**
+```rust
+//! Infrastructure storage layer.
+
+pub mod entity;
+pub mod mapper;
+pub mod migrations;
+pub mod odata_mapper;
+
+mod repo;
+
+pub use repo::OrmUsersRepository;
+```
+
+#### Verifying Your Setup
+
+**1. Compile check:**
+```bash
+# From workspace root
+cargo check -p your_module
+```
+
+**2. Run the example module tests:**
+```bash
+cargo test -p users_info
+```
+
+**3. Run the full server with the example:**
+```bash
+# Start the server (runs in foreground)
+make example
+```
+
+**4. Test the API (in another terminal):**
+
+The database starts empty. Use the default tenant ID for `auth_disabled` mode:
+
+```bash
+# Default tenant ID (from modkit-security/constants.rs)
+TENANT_ID="00000000-df51-5b42-9538-d2b56b7ee953"
+
+# Create a user
+curl -s -X POST http://127.0.0.1:8087/users-info/v1/users \
+  -H "Content-Type: application/json" \
+  -d "{\"tenant_id\": \"$TENANT_ID\", \"email\": \"alice@example.com\", \"display_name\": \"Alice Smith\"}"
+
+# Expected response:
+# {"id":"...","tenant_id":"00000000-df51-5b42-9538-d2b56b7ee953","email":"alice@example.com",...}
+
+# List users
+curl -s http://127.0.0.1:8087/users-info/v1/users | jq .
+
+# Expected response:
+# {"items":[{"id":"...","email":"alice@example.com","display_name":"Alice Smith",...}],"page_info":{...}}
+
+# Get a specific user (replace <id> with actual UUID from create response)
+curl -s http://127.0.0.1:8087/users-info/v1/users/<id> | jq .
+
+# Update a user
+curl -s -X PATCH http://127.0.0.1:8087/users-info/v1/users/<id> \
+  -H "Content-Type: application/json" \
+  -d '{"display_name": "Alice Johnson"}'
+
+# Delete a user
+curl -s -X DELETE http://127.0.0.1:8087/users-info/v1/users/<id>
+```
+
+**5. View OpenAPI docs:**
+```bash
+# Open in browser while server is running
+# macOS:
+open http://127.0.0.1:8087/docs
+# Linux:
+xdg-open http://127.0.0.1:8087/docs
+# Windows (PowerShell):
+# Start-Process http://127.0.0.1:8087/docs
+```
+
+**6. View the reference implementation:**
+```bash
+ls -la examples/modkit/users_info/users_info/src/infra/storage/entity/
+```
+
+#### Checklist
+
+Before considering the infra/storage layer complete:
+
+- [ ] Created `entity/` folder with `mod.rs`
+- [ ] One `.rs` file per SeaORM entity
+- [ ] All entities have `#[derive(Scopable)]` with appropriate `#[secure(...)]` attributes
+- [ ] Entity relations defined with `#[sea_orm(...)]` attributes
+- [ ] `mod.rs` re-exports all entity modules
+- [ ] Repository implementation uses `SecureConn` or secure extension traits
+- [ ] All repository methods accept `&AccessScope`
+- [ ] Migrations created in `migrations/` folder
+- [ ] Code compiles: `cargo check -p your_module`
+- [ ] Tests pass: `cargo test -p your_module`
 
 ### Step 9: SSE Integration (Optional)
 

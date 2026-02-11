@@ -310,4 +310,3 @@ tracing:
 #     # No database section - module won't get database access
 #     config:
 #       static_dir: "/var/www/static"
-
