@@ -203,6 +203,10 @@ impl ApiGatewayCapability for TestApiGatewayModule {
     fn as_registry(&self) -> &dyn OpenApiRegistry {
         &self.registry
     }
+
+    fn prefix(&self) -> String {
+        "/chat".to_owned()
+    }
 }
 
 #[derive(Default)]

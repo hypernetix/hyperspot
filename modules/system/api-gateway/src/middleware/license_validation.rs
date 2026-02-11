@@ -49,10 +49,11 @@ pub async fn license_validation_middleware(
     next: Next,
 ) -> Response {
     let method = req.method().clone();
-    let path = req
-        .extensions()
-        .get::<axum::extract::MatchedPath>()
-        .map_or_else(|| req.uri().path().to_owned(), |p| p.as_str().to_owned());
+    // Use req.uri().path() rather than MatchedPath because MatchedPath includes
+    // the nest prefix (e.g. "/chat"), while the specs store un-prefixed paths.
+    // Since this middleware is applied before nesting, req.uri().path() is already
+    // prefix-stripped by Axum.
+    let path = req.uri().path().to_owned();
 
     let Some(required) = map.get(&method, &path) else {
         return next.run(req).await;

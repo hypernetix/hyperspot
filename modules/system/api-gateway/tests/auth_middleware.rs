@@ -229,7 +229,7 @@ async fn test_auth_disabled_mode() {
         .clone()
         .oneshot(
             Request::builder()
-                .uri("/tests/v1/api/protected")
+                .uri("/chat/tests/v1/api/protected")
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -246,7 +246,7 @@ async fn test_auth_disabled_mode() {
     let response = router
         .oneshot(
             Request::builder()
-                .uri("/tests/v1/api/public")
+                .uri("/chat/tests/v1/api/public")
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -281,21 +281,25 @@ async fn test_public_routes_accessible() {
     api_gateway.init(&api_ctx).await.expect("Failed to init");
 
     // First call rest_prepare to add built-in routes
-    let router = Router::new();
-    let router = api_gateway
+    let mut router = Router::new();
+    router = api_gateway
         .rest_prepare(&api_ctx, router)
         .expect("Failed to prepare");
 
+    let mut base_router = Router::new();
+
     // Then register test module routes
     let test_module = TestAuthModule;
-    let router = test_module
-        .register_rest(&test_ctx, router, &api_gateway)
+    base_router = test_module
+        .register_rest(&test_ctx, base_router, &api_gateway)
         .expect("Failed to register routes");
 
     // Finally finalize
-    let router = api_gateway
-        .rest_finalize(&api_ctx, router)
+    base_router = api_gateway
+        .rest_finalize(&api_ctx, base_router)
         .expect("Failed to finalize");
+
+    router = router.merge(base_router);
 
     // Test built-in health endpoints
     let response = router
@@ -319,7 +323,7 @@ async fn test_public_routes_accessible() {
     let response = router
         .oneshot(
             Request::builder()
-                .uri("/openapi.json")
+                .uri("/chat/openapi.json")
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -367,7 +371,7 @@ async fn test_middleware_always_inserts_security_ctx() {
     let response = router
         .oneshot(
             Request::builder()
-                .uri("/tests/v1/api/protected")
+                .uri("/chat/tests/v1/api/protected")
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -479,7 +483,7 @@ async fn test_route_pattern_matching_with_path_params() {
         .clone()
         .oneshot(
             Request::builder()
-                .uri("/tests/v1/api/users/123")
+                .uri("/chat/tests/v1/api/users/123")
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -496,7 +500,7 @@ async fn test_route_pattern_matching_with_path_params() {
     let response = router
         .oneshot(
             Request::builder()
-                .uri("/tests/v1/api/users/abc-def-456")
+                .uri("/chat/tests/v1/api/users/abc-def-456")
                 .body(Body::empty())
                 .unwrap(),
         )

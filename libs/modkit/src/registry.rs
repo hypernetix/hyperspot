@@ -1027,5 +1027,8 @@ mod tests {
         fn as_registry(&self) -> &dyn crate::contracts::OpenApiRegistry {
             panic!("DummyRestHost::as_registry should not be called in tests")
         }
+        fn prefix(&self) -> String {
+            "/chat".to_owned()
+        }
     }
 }

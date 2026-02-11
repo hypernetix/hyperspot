@@ -192,7 +192,7 @@ async fn rejects_non_base_feature_requirement() {
     let response = router
         .oneshot(
             Request::builder()
-                .uri("/tests/v1/license/bad")
+                .uri("/chat/tests/v1/license/bad")
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -234,7 +234,7 @@ async fn allows_base_feature_requirement() {
     let response = router
         .oneshot(
             Request::builder()
-                .uri("/tests/v1/license/good")
+                .uri("/chat/tests/v1/license/good")
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -276,7 +276,7 @@ async fn allows_no_license_requirement() {
     let response = router
         .oneshot(
             Request::builder()
-                .uri("/tests/v1/license/none")
+                .uri("/chat/tests/v1/license/none")
                 .body(Body::empty())
                 .unwrap(),
         )

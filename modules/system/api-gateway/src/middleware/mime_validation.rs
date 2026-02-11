@@ -90,10 +90,7 @@ pub async fn mime_validation_middleware(
 ) -> Response {
     let method = req.method().clone();
     // Use MatchedPath extension (set by Axum router) for accurate route matching
-    let path = req
-        .extensions()
-        .get::<axum::extract::MatchedPath>()
-        .map_or_else(|| req.uri().path().to_owned(), |p| p.as_str().to_owned());
+    let path = req.uri().path().to_owned();
 
     // Check if this operation has MIME validation configured
     let Some(allowed_types) = validation_map.get(&(method.clone(), path.clone())) else {

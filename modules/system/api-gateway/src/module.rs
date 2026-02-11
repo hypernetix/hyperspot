@@ -419,7 +419,7 @@ impl ApiGateway {
     ) -> anyhow::Result<()> {
         let cfg = self.get_cached_config();
         let addr = Self::parse_bind_address(&cfg.bind_addr)?;
-        let router = self.get_or_build_router()?;
+        let router: Router = self.get_or_build_router()?;
 
         // Bind the socket, only now consider the service "ready"
         let listener = tokio::net::TcpListener::bind(addr).await?;
@@ -594,6 +594,12 @@ impl modkit::contracts::ApiGatewayCapability for ApiGateway {
         tracing::debug!("Applying middleware stack to finalized router");
         router = self.apply_middleware_stack(router)?;
 
+        // Nest all routes under the configured prefix (e.g. "/chat")
+        let prefix = self.prefix();
+        if !prefix.is_empty() {
+            router = axum::Router::new().nest(&prefix, router);
+        }
+
         // Keep the finalized router to be used by `serve()`
         *self.final_router.lock() = Some(router.clone());
 
@@ -603,6 +609,10 @@ impl modkit::contracts::ApiGatewayCapability for ApiGateway {
 
     fn as_registry(&self) -> &dyn modkit::contracts::OpenApiRegistry {
         self
+    }
+
+    fn prefix(&self) -> String {
+        self.get_cached_config().prefix
     }
 }
 

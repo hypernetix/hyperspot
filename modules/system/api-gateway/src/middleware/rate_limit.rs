@@ -87,10 +87,7 @@ impl RateLimiterMap {
 pub async fn rate_limit_middleware(map: RateLimiterMap, mut req: Request, next: Next) -> Response {
     let method = req.method().clone();
     // Use MatchedPath extension (set by Axum router) for accurate route matching
-    let path = req
-        .extensions()
-        .get::<axum::extract::MatchedPath>()
-        .map_or_else(|| req.uri().path().to_owned(), |p| p.as_str().to_owned());
+    let path = req.uri().path().to_owned();
     let key = (method, path);
 
     if let Some(bucker_map_entry) = map.buckets.get(&key) {

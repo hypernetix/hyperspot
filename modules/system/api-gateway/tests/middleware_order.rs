@@ -102,7 +102,7 @@ async fn real_middlewares_observe_documented_order() -> Result<()> {
         .oneshot(
             Request::builder()
                 .method("POST")
-                .uri("/tests/v1/middleware-order")
+                .uri("/chat/tests/v1/middleware-order")
                 .header("origin", "https://example.com")
                 .header("x-request-id", "fixed-req-1")
                 .header("content-type", "text/plain")
@@ -130,7 +130,7 @@ async fn real_middlewares_observe_documented_order() -> Result<()> {
         .oneshot(
             Request::builder()
                 .method("POST")
-                .uri("/tests/v1/middleware-order")
+                .uri("/chat/tests/v1/middleware-order")
                 .header("origin", "https://example.com")
                 .header("content-type", "application/json")
                 .body(Body::from(r#"{"ok":true}"#))?,
@@ -159,7 +159,7 @@ async fn real_middlewares_observe_documented_order() -> Result<()> {
         .oneshot(
             Request::builder()
                 .method("POST")
-                .uri("/tests/v1/middleware-order")
+                .uri("/chat/tests/v1/middleware-order")
                 .header("origin", "https://example.com")
                 .header("content-type", "application/json")
                 .body(Body::from(r#"{"ok":true}"#))?,

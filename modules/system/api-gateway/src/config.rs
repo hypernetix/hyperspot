@@ -8,6 +8,10 @@ fn default_body_limit_bytes() -> usize {
     16 * 1024 * 1024
 }
 
+fn default_prefix() -> String {
+    "/chat".to_owned()
+}
+
 /// API gateway configuration - reused from `api_gateway` module
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 #[serde(deny_unknown_fields)]
@@ -18,6 +22,8 @@ pub struct ApiGatewayConfig {
     pub enable_docs: bool,
     #[serde(default)]
     pub cors_enabled: bool,
+    #[serde(default = "default_prefix")]
+    pub prefix: String,
     /// Optional detailed CORS configuration
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cors: Option<CorsConfig>,

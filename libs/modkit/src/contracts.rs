@@ -90,6 +90,9 @@ pub trait ApiGatewayCapability: Send + Sync + 'static {
 
     // Return OpenAPI registry of the module, e.g., to register endpoints
     fn as_registry(&self) -> &dyn OpenApiRegistry;
+
+    /// Return the URL prefix for nesting REST routes (e.g. "/chat").
+    fn prefix(&self) -> String;
 }
 
 #[async_trait]
