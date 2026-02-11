@@ -4,7 +4,7 @@ This project uses **Cypilot** for AI-powered PR reviews and status reports.
 
 ## Quick Start
 
-Cyber Fabric has intergrated Cypilot autonation for PR review assistance. Use any supported agent
+Cyber Fabric has integrated Cypilot automation for PR review assistance. Use any supported agent
 (Windsurf, Cursor, Claude, Copilot) — each has thin stubs that redirect to
 the canonical workflows in `.cypilot/workflows/`.
 
