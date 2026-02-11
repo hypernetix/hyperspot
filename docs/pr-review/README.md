@@ -95,12 +95,9 @@ The `pr.py` script uses the [GitHub CLI (`gh`)](https://cli.github.com/) to fetc
 3. Analyze changes against the corresponding checklist
 4. Write a structured review to `.prs/{ID}/review.md` or status report to `.prs/{ID}/status.md`
 
-## Configuration
+### Excluding PRs
 
-| Setting | Location | Purpose |
-|---------|----------|---------|
-| Review prompts, templates, data dir | `.cypilot-adapter/pr-review.json` | Main review configuration |
-| PR exclude list | `.prs/config.yaml` → `exclude_prs` | Skip specific PRs during bulk operations |
+Edit `.prs/config.yaml` → `exclude_prs` to skip specific PRs during bulk operations, like review ALL
 
 ## Templates
 
