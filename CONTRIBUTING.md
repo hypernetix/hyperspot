@@ -27,6 +27,9 @@ We welcome contributions in:
 git clone <repository-url>
 cd hyperspot
 
+# Initialize submodules (includes Cypilot for PR reviews)
+git submodule update --init --recursive
+
 # Install Rust (if not already installed)
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
@@ -269,6 +272,27 @@ Merge Strategy:
 - **Squash and merge** for feature branches
 - **Rebase and merge** for simple fixes
 - **Merge commit** for release branches
+
+### 2.9. Local PR Review with Cypilot
+
+After pushing your PR and waiting for the cloud AI bots (CodeRabbit, Qodo, etc.) to complete their reviews, run a local Cypilot review to catch additional issues
+before requesting human review:
+
+```text
+cypilot review PR <number>
+```
+
+Use any supported IDE agent (Windsurf, Cursor, Claude, Copilot) — each redirects to the canonical workflows in `.cypilot/workflows/`.
+
+You can also check the PR status (unreplied comments, severity, etc.):
+
+```text
+cypilot get status for PR <number>
+```
+
+See the results in `.prs/{ID}/` folder.
+
+See [docs/pr-review/README.md](./docs/pr-review/README.md) for full setup (GitHub CLI authentication, configuration, available review prompts) and usage details.
 
 
 ## Getting Help
