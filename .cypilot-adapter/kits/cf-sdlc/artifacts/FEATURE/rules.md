@@ -39,3 +39,11 @@ Optional ID kinds allowed in FEATURE:
 - [ ] `python3 {cypilot_path}/skills/cypilot/scripts/cypilot.py validate --artifact <path>`
 - [ ] `make cypilot-validate`
 - [ ] Review against `docs/checklists/FEATURE.md`.
+
+## Review Checklist
+
+- [ ] Flows cover happy path, errors, edge cases; algorithms testable
+- [ ] No type redefinitions, new API endpoints, code snippets, or decision debates
+- [ ] DoD criteria testable and map to `make test`/integration/E2E
+- [ ] ModKit patterns, secure ORM, security checks in flows
+- [ ] Run `docs/checklists/FEATURE.md` for full validation

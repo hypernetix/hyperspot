@@ -37,3 +37,11 @@ Each `feature` ID is expected to be covered by FEATURE artifacts according to co
 - [ ] `python3 {cypilot_path}/skills/cypilot/scripts/cypilot.py validate --artifact <path>`
 - [ ] `make cypilot-validate`
 - [ ] Review against `docs/checklists/DECOMPOSITION.md`.
+
+## Review Checklist
+
+- [ ] At least one `feature` ID; each with Purpose, Scope, Dependencies, covered IDs
+- [ ] 100% DESIGN coverage; no overlap without explicit reason
+- [ ] No circular dependencies — valid DAG; consistent granularity
+- [ ] No implementation details, requirements defs, or decision debates
+- [ ] Run `docs/checklists/DECOMPOSITION.md` for full validation

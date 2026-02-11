@@ -37,3 +37,11 @@ ADR IDs MUST be referenced from DESIGN (i.e., DESIGN should include backtick ref
 - [ ] `python3 {cypilot_path}/skills/cypilot/scripts/cypilot.py validate --artifact <path>`
 - [ ] `make cypilot-validate`
 - [ ] Review against `docs/checklists/DESIGN.md`.
+
+## Review Checklist
+
+- [ ] References PRD FR/NFR IDs; ADR IDs where decisions are material
+- [ ] No spec-level details or decision debates — defer to FEATURE/ADR
+- [ ] Architecture alignment, antipatterns, security, API consistency
+- [ ] ModKit module structure and secure ORM constraints respected
+- [ ] Run `docs/checklists/DESIGN.md` § "PR Review Focus (Design)"

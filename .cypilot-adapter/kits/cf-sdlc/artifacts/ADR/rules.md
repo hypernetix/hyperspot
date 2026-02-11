@@ -29,3 +29,10 @@ ADR IDs MUST be referenced from DESIGN (ensure the DESIGN includes backtick refe
 - [ ] `python3 {cypilot_path}/skills/cypilot/scripts/cypilot.py validate --artifact <path>`
 - [ ] `make cypilot-validate`
 - [ ] Review against `docs/checklists/ADR.md`
+
+## Review Checklist
+
+- [ ] Not already solved by existing ADRs in `docs/adrs/`
+- [ ] ≥2 genuinely viable alternatives; rationale traceable to constraints
+- [ ] Traceability to PRD/DESIGN IDs; PRD must NOT reference ADR IDs
+- [ ] Run `docs/checklists/ADR.md` § "PR Review Focus (ADR)"
