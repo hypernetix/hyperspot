@@ -18,7 +18,7 @@ You can use the following prompts in your IDE to review PRs or get status:
 > /cypilot-pr-status 300
 
 See the .prs/{PR}/ folder for the review results.
-```
+```text
 review.md
 status.md
 meta.json
