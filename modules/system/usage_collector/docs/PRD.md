@@ -52,21 +52,21 @@ Notable systems that influenced this design: Amberflo (client-side SDK batching 
 
 #### Platform Operator
 
-**ID**: `fdd-uc-actor-platform-operator`
+**ID**: `cpt-cf-uc-actor-platform-operator`
 
 **Role**: Configures storage adapters, retention policies, custom measuring units, and monitors system health.
 **Needs**: Ability to manage storage backends, define retention policies, register custom units, and monitor system health without code changes.
 
 #### Tenant Administrator
 
-**ID**: `fdd-uc-actor-tenant-admin`
+**ID**: `cpt-cf-uc-actor-tenant-admin`
 
 **Role**: Views usage reports and consumption data for their tenant.
 **Needs**: Access to usage breakdowns by type and resource for their tenant only, with time-range filtering.
 
 #### Platform Developer
 
-**ID**: `fdd-uc-actor-platform-developer`
+**ID**: `cpt-cf-uc-actor-platform-developer`
 
 **Role**: Integrates services with UC using SDKs or APIs to emit usage data.
 **Needs**: Well-documented SDKs and APIs for emitting usage data with minimal integration effort.
@@ -75,37 +75,37 @@ Notable systems that influenced this design: Amberflo (client-side SDK batching 
 
 #### Usage Source
 
-**ID**: `fdd-uc-actor-usage-source`
+**ID**: `cpt-cf-uc-actor-usage-source`
 
 **Role**: Any platform service, infrastructure adapter, or gateway that emits usage records (e.g., LLM Gateway, Compute Service, API Gateway).
 
 #### Billing System
 
-**ID**: `fdd-uc-actor-billing-system`
+**ID**: `cpt-cf-uc-actor-billing-system`
 
 **Role**: Consumes aggregated usage data for rating, pricing, and invoice generation.
 
 #### Quota Enforcement System
 
-**ID**: `fdd-uc-actor-quota-enforcement`
+**ID**: `cpt-cf-uc-actor-quota-enforcement`
 
 **Role**: Consumes real-time usage data to enforce tenant resource limits and quotas.
 
 #### Monitoring System
 
-**ID**: `fdd-uc-actor-monitoring-system`
+**ID**: `cpt-cf-uc-actor-monitoring-system`
 
 **Role**: Consumes usage metrics for dashboards, alerting, and operational visibility.
 
 #### Types Registry
 
-**ID**: `fdd-uc-actor-types-registry`
+**ID**: `cpt-cf-uc-actor-types-registry`
 
 **Role**: Provides schema validation for usage types and custom measuring units.
 
 #### Storage Backend
 
-**ID**: `fdd-uc-actor-storage-backend`
+**ID**: `cpt-cf-uc-actor-storage-backend`
 
 **Role**: Persists usage records (ClickHouse, PostgreSQL, or external system via adapter).
 
@@ -150,145 +150,145 @@ No module-specific environment constraints beyond project defaults.
 
 #### Usage Record Ingestion
 
-- [ ] `p1` - **ID**: `fdd-uc-req-usage-ingestion`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-usage-ingestion`
 
 The system **MUST** accept usage records via SDK (with batching), collector agent, and REST API, supporting high-throughput scenarios (10,000+ events per second).
 
 **Rationale**: Different usage sources have different throughput needs; providing multiple ingestion paths ensures all sources can efficiently emit data.
-**Actors**: `fdd-uc-actor-usage-source`, `fdd-uc-actor-platform-developer`
+**Actors**: `cpt-cf-uc-actor-usage-source`, `cpt-cf-uc-actor-platform-developer`
 
 #### Pull-Based Collection
 
-- [ ] `p2` - **ID**: `fdd-uc-req-pull-collection`
+- [ ] `p2` - **ID**: `cpt-cf-uc-req-pull-collection`
 
 The system **MUST** support polling usage data from sources that cannot push, with configurable intervals and transformation to standard format. Pull adapters will be implemented as needed when specific integration requirements arise for systems that cannot emit usage data via push patterns.
 
 Initial implementation focuses on push patterns (SDK, collector agent, REST API). Pull-based collection will be added when concrete use cases are identified for sources that cannot integrate via push.
 
 **Rationale**: Some usage sources cannot integrate via push patterns and require polling.
-**Actors**: `fdd-uc-actor-usage-source`
+**Actors**: `cpt-cf-uc-actor-usage-source`
 
 #### Idempotency and Deduplication
 
-- [ ] `p1` - **ID**: `fdd-uc-req-idempotency`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-idempotency`
 
 The system **MUST** support idempotency keys to ensure exactly-once processing, preventing duplicate records and incorrect aggregations.
 
 **Rationale**: Network retries and batching can produce duplicate submissions; deduplication ensures billing accuracy.
-**Actors**: `fdd-uc-actor-usage-source`
+**Actors**: `cpt-cf-uc-actor-usage-source`
 
 ### 5.2 Metric Semantics
 
 #### Counter Metric Semantics
 
-- [ ] `p1` - **ID**: `fdd-uc-req-counter-semantics`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-counter-semantics`
 
 The system **MUST** enforce counter semantics (monotonically increasing values), validate increments, compute deltas, and detect/reject counter violations.
 
 **Rationale**: Counters represent cumulative totals (e.g., total API calls); violations indicate data corruption or misconfigured sources.
-**Actors**: `fdd-uc-actor-usage-source`
+**Actors**: `cpt-cf-uc-actor-usage-source`
 
 #### Gauge Metric Semantics
 
-- [ ] `p1` - **ID**: `fdd-uc-req-gauge-semantics`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-gauge-semantics`
 
 The system **MUST** support gauge metrics (point-in-time values) without monotonicity validation, storing values as-is.
 
 **Rationale**: Gauges represent instantaneous measurements (e.g., current memory usage) that naturally fluctuate.
-**Actors**: `fdd-uc-actor-usage-source`
+**Actors**: `cpt-cf-uc-actor-usage-source`
 
 ### 5.3 Attribution & Isolation
 
 #### Tenant Attribution
 
-- [ ] `p1` - **ID**: `fdd-uc-req-tenant-attribution`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-tenant-attribution`
 
 The system **MUST** attribute all usage records to a tenant derived from security context, ensuring attribution is immutable and used for isolation.
 
 **Rationale**: Accurate tenant attribution is the foundation for billing, quota enforcement, and data isolation.
-**Actors**: `fdd-uc-actor-usage-source`
+**Actors**: `cpt-cf-uc-actor-usage-source`
 
 #### Resource Attribution
 
-- [ ] `p1` - **ID**: `fdd-uc-req-resource-attribution`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-resource-attribution`
 
 The system **MUST** support attributing usage to specific resource instances within a tenant, including resource ID, type, and lineage.
 
 **Rationale**: Granular resource attribution enables per-resource billing and usage analysis.
-**Actors**: `fdd-uc-actor-usage-source`
+**Actors**: `cpt-cf-uc-actor-usage-source`
 
 #### Tenant Isolation
 
-- [ ] `p1` - **ID**: `fdd-uc-req-tenant-isolation`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-tenant-isolation`
 
 The system **MUST** enforce strict tenant isolation ensuring usage data is never accessible across tenants, failing closed on authorization failures.
 
 **Rationale**: Tenant data isolation is a security and compliance requirement.
-**Actors**: `fdd-uc-actor-platform-operator`, `fdd-uc-actor-tenant-admin`, `fdd-uc-actor-platform-developer`, `fdd-uc-actor-usage-source`, `fdd-uc-actor-billing-system`, `fdd-uc-actor-quota-enforcement`, `fdd-uc-actor-monitoring-system`, `fdd-uc-actor-types-registry`, `fdd-uc-actor-storage-backend`
+**Actors**: `cpt-cf-uc-actor-platform-operator`, `cpt-cf-uc-actor-tenant-admin`, `cpt-cf-uc-actor-platform-developer`, `cpt-cf-uc-actor-usage-source`, `cpt-cf-uc-actor-billing-system`, `cpt-cf-uc-actor-quota-enforcement`, `cpt-cf-uc-actor-monitoring-system`, `cpt-cf-uc-actor-types-registry`, `cpt-cf-uc-actor-storage-backend`
 
 ### 5.4 Storage & Retention
 
 #### Pluggable Storage Framework
 
-- [ ] `p1` - **ID**: `fdd-uc-req-pluggable-storage`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-pluggable-storage`
 
 The system **MUST** support multiple storage backends (ClickHouse, PostgreSQL, custom adapters) with configurable routing by usage type.
 
 **Rationale**: Different usage types have different retention and performance needs; pluggable storage avoids lock-in.
-**Actors**: `fdd-uc-actor-platform-operator`, `fdd-uc-actor-storage-backend`
+**Actors**: `cpt-cf-uc-actor-platform-operator`, `cpt-cf-uc-actor-storage-backend`
 
 #### Retention Policy Management
 
-- [ ] `p1` - **ID**: `fdd-uc-req-retention-policies`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-retention-policies`
 
 The system **MUST** support configurable retention policies (global, per-tenant, per-usage-type) with automated enforcement.
 
 **Rationale**: Retention policies balance storage costs with compliance and operational needs.
-**Actors**: `fdd-uc-actor-platform-operator`
+**Actors**: `cpt-cf-uc-actor-platform-operator`
 
 #### Storage Health Monitoring
 
-- [ ] `p1` - **ID**: `fdd-uc-req-storage-health`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-storage-health`
 
 The system **MUST** monitor storage adapter health, buffer records during failures, retry with backoff, and alert on persistent issues.
 
 **Rationale**: Storage failures must not result in data loss; buffering and retry ensure durability.
-**Actors**: `fdd-uc-actor-platform-operator`, `fdd-uc-actor-storage-backend`
+**Actors**: `cpt-cf-uc-actor-platform-operator`, `cpt-cf-uc-actor-storage-backend`
 
 ### 5.5 Querying & Aggregation
 
 #### Multi-Dimensional Aggregation
 
-- [ ] `p1` - **ID**: `fdd-uc-req-aggregation`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-aggregation`
 
 The system **MUST** aggregate usage data by tenant, resource, usage type, and configurable time windows (minute, hour, day).
 
 **Rationale**: Billing, quota enforcement, and monitoring require pre-aggregated data at different granularities.
-**Actors**: `fdd-uc-actor-billing-system`, `fdd-uc-actor-quota-enforcement`, `fdd-uc-actor-monitoring-system`
+**Actors**: `cpt-cf-uc-actor-billing-system`, `cpt-cf-uc-actor-quota-enforcement`, `cpt-cf-uc-actor-monitoring-system`
 
 #### Usage Query API
 
-- [ ] `p1` - **ID**: `fdd-uc-req-query-api`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-query-api`
 
 The system **MUST** provide an API for querying usage data with filtering by time range, tenant, resource, and usage type with pagination.
 
 **Rationale**: Downstream consumers need flexible access to usage data for billing, monitoring, and reporting.
-**Actors**: `fdd-uc-actor-billing-system`, `fdd-uc-actor-monitoring-system`, `fdd-uc-actor-tenant-admin`
+**Actors**: `cpt-cf-uc-actor-billing-system`, `cpt-cf-uc-actor-monitoring-system`, `cpt-cf-uc-actor-tenant-admin`
 
 ### 5.6 Backfill & Reconciliation
 
 #### Late-Arriving Event Handling
 
-- [ ] `p1` - **ID**: `fdd-uc-req-late-events`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-late-events`
 
 The system **MUST** accept usage events with timestamps within a configurable grace period (default 24 hours, configurable per tenant and per usage type) via the standard ingestion path, applying normal deduplication and schema validation.
 
 **Rationale**: In distributed systems, clock skew, batch processing delays, and asynchronous architectures cause events to routinely arrive after their actual timestamp. A grace period allows these events to be processed without requiring explicit backfill operations.
-**Actors**: `fdd-uc-actor-usage-source`, `fdd-uc-actor-platform-operator`
+**Actors**: `cpt-cf-uc-actor-usage-source`, `cpt-cf-uc-actor-platform-operator`
 
 #### Backfill API
 
-- [ ] `p2` - **ID**: `fdd-uc-req-backfill-api`
+- [ ] `p2` - **ID**: `cpt-cf-uc-req-backfill-api`
 
 The system **MUST** provide a dedicated backfill API that accepts a time range (scoped to a single tenant and usage type) and a set of replacement events, atomically archiving existing events in that range and inserting the new events.
 
@@ -296,122 +296,122 @@ The backfill API **MUST** be separate from the real-time ingestion path with ind
 
 **Concurrent-write strategy — Reject and Retry**: During an active backfill, the system **MUST** use range-level locking to enforce exclusive write access to the affected `(tenant, usage_type, time_range)` partition. The backfill operation acquires a lock before beginning the archive-and-insert transaction and holds it until the transaction commits or rolls back. While the lock is held:
 
-1. **Real-time ingestion behavior**: Any real-time event (via SDK, collector agent, or REST API as defined in `fdd-uc-req-usage-ingestion`) whose `(tenant_id, usage_type, timestamp)` falls within a currently locked backfill range **MUST** be rejected with HTTP status `409 Conflict` and error code `BACKFILL_IN_PROGRESS`. The response body **MUST** include the fields `retry_after_ms` (estimated remaining backfill duration, minimum 1000) and `locked_range` (the `[start, end)` interval that is locked).
+1. **Real-time ingestion behavior**: Any real-time event (via SDK, collector agent, or REST API as defined in `cpt-cf-uc-req-usage-ingestion`) whose `(tenant_id, usage_type, timestamp)` falls within a currently locked backfill range **MUST** be rejected with HTTP status `409 Conflict` and error code `BACKFILL_IN_PROGRESS`. The response body **MUST** include the fields `retry_after_ms` (estimated remaining backfill duration, minimum 1000) and `locked_range` (the `[start, end)` interval that is locked).
 2. **Lock scope and overlap**: The system **MUST** reject a backfill request with HTTP `409 Conflict` and error code `BACKFILL_RANGE_OVERLAP` if its requested range overlaps with any currently locked backfill range for the same tenant and usage type. Only one backfill operation per `(tenant, usage_type)` overlapping range is permitted at a time. Non-overlapping ranges for the same tenant and usage type, or any ranges for different tenants or usage types, **MAY** execute concurrently.
 
 **Rationale**: When usage data is lost due to outages, pipeline failures, or misconfigured sources, operators need a mechanism to retroactively submit corrected data for an entire time range. The reject-and-retry strategy is chosen over queue-and-replay or snapshot isolation alternatives because it is the simplest model to implement correctly, avoids unbounded buffering on the server, keeps real-time ingestion latency deterministic (a fast 409 vs. an indeterminate queue wait), and pushes retry responsibility to the SDK where backpressure is already handled. Backfill operations are expected to be infrequent (operator-initiated corrections), so brief real-time rejection windows are an acceptable trade-off for strong atomicity guarantees. Timeframe-based replacement (as opposed to individual event insertion) ensures atomicity and prevents partial amendment states.
-**Actors**: `fdd-uc-actor-platform-operator`, `fdd-uc-actor-usage-source`
+**Actors**: `cpt-cf-uc-actor-platform-operator`, `cpt-cf-uc-actor-usage-source`
 
 #### Individual Event Amendment
 
-- [ ] `p2` - **ID**: `fdd-uc-req-event-amendment`
+- [ ] `p2` - **ID**: `cpt-cf-uc-req-event-amendment`
 
 The system **MUST** support amending individual usage events (updating properties except tenant ID and timestamp) and deprecating individual events (marking them as excluded from billing and aggregation while retaining them for audit).
 
 **Interaction with backfill**: If a backfill operation targets a time range that contains previously amended events, the backfill **MUST** archive the amended events along with all other events in that range. Amendment history is not preserved — the backfill's replacement events become the sole active record. This means backfill unconditionally supersedes any prior amendments within its range, keeping the correction model simple: amendments are for surgical fixes to individual events, while backfill is a wholesale replacement that starts from a clean slate.
 
 **Rationale**: Not all corrections require full timeframe backfill. Individual event amendments handle cases like incorrect resource attribution or value errors on specific events.
-**Actors**: `fdd-uc-actor-platform-operator`
+**Actors**: `cpt-cf-uc-actor-platform-operator`
 
 #### Backfill Time Boundaries
 
-- [ ] `p2` - **ID**: `fdd-uc-req-backfill-boundaries`
+- [ ] `p2` - **ID**: `cpt-cf-uc-req-backfill-boundaries`
 
 The system **MUST** enforce configurable time boundaries for backfill operations: a maximum backfill window (default 90 days) beyond which backfill requests are rejected, and a future timestamp tolerance (default 5 minutes) to account for clock drift. Backfill requests exceeding the maximum window **MUST** require elevated authorization.
 
 **Rationale**: Unbounded backfill creates risks for data integrity and billing accuracy. Time boundaries constrain the blast radius of backfill operations while allowing legitimate corrections. Different limits for automated retry (grace period) vs. operator-initiated backfill (90 days) match different use cases. The 5-minute future tolerance follows Stripe's pattern for handling clock drift in distributed systems.
-**Actors**: `fdd-uc-actor-platform-operator`
+**Actors**: `cpt-cf-uc-actor-platform-operator`
 
 #### Backfill Event Archival
 
-- [ ] `p2` - **ID**: `fdd-uc-req-backfill-archival`
+- [ ] `p2` - **ID**: `cpt-cf-uc-req-backfill-archival`
 
 When a backfill operation replaces events in a time range, the system **MUST** archive (not delete) the replaced events. Archived events **MUST** remain queryable for audit purposes but **MUST** be excluded from billing and aggregation.
 
 **Rationale**: Permanent deletion of replaced events destroys audit trail and makes it impossible to investigate billing disputes or reconstruct historical state.
-**Actors**: `fdd-uc-actor-platform-operator`
+**Actors**: `cpt-cf-uc-actor-platform-operator`
 
 #### Backfill Audit Trail
 
-- [ ] `p2` - **ID**: `fdd-uc-req-backfill-audit`
+- [ ] `p2` - **ID**: `cpt-cf-uc-req-backfill-audit`
 
 Every backfill operation **MUST** produce an immutable audit record containing: operator identity, initiation timestamp, affected time range, affected tenant(s), number of events added/replaced/deprecated, reason or justification, and whether the operation affected an already-invoiced period.
 
 **Rationale**: Backfill operations are high-risk changes to billing-critical data. Comprehensive audit records are essential for dispute resolution, compliance, and operational visibility.
-**Actors**: `fdd-uc-actor-platform-operator`
+**Actors**: `cpt-cf-uc-actor-platform-operator`
 
 #### Reconciliation and Gap Detection
 
-- [ ] `p2` - **ID**: `fdd-uc-req-reconciliation`
+- [ ] `p2` - **ID**: `cpt-cf-uc-req-reconciliation`
 
 The system **MUST** support gap detection through: (1) heartbeat monitoring — tracking periodic signals from known usage sources and alerting when expected heartbeats are missing; (2) watermark tracking — monitoring the latest event timestamp per source, tenant, and meter combination, and flagging sources whose watermark stops advancing; (3) scheduled count reconciliation — comparing event counts across pipeline stages (ingestion vs. storage) to detect data loss.
 
 **Rationale**: Proactive gap detection enables timely backfill before billing periods close, reducing the need for post-invoice corrections. Heartbeat monitoring detects source-level outages, watermark tracking detects partial failures, and count reconciliation detects pipeline-level data loss.
-**Actors**: `fdd-uc-actor-platform-operator`, `fdd-uc-actor-usage-source`
+**Actors**: `cpt-cf-uc-actor-platform-operator`, `cpt-cf-uc-actor-usage-source`
 
 ### 5.7 Type System
 
 #### Usage Type Validation
 
-- [ ] `p1` - **ID**: `fdd-uc-req-type-validation`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-type-validation`
 
 The system **MUST** validate all usage records against registered type schemas, rejecting invalid records with actionable error messages.
 
 **Rationale**: Schema validation prevents corrupt or malformed data from entering the system.
-**Actors**: `fdd-uc-actor-usage-source`, `fdd-uc-actor-types-registry`
+**Actors**: `cpt-cf-uc-actor-usage-source`, `cpt-cf-uc-actor-types-registry`
 
 #### Custom Unit Registration
 
-- [ ] `p1` - **ID**: `fdd-uc-req-custom-units`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-custom-units`
 
 The system **MUST** allow registration of custom measuring units via API without code changes.
 
 Primary use cases: AI/LLM token metering (input/output tokens, custom credit units), compute metering (vCPU-hours, memory-GB-hours, GPU-hours), API request metering (calls by tenant and endpoint), storage metering (GB-hours across tiers), network transfer (bytes ingress/egress).
 
 **Rationale**: New resource types (AI tokens, GPU-hours) must be meterable without service redeployment.
-**Actors**: `fdd-uc-actor-platform-operator`, `fdd-uc-actor-types-registry`
+**Actors**: `cpt-cf-uc-actor-platform-operator`, `cpt-cf-uc-actor-types-registry`
 
 ### 5.8 Rate Limiting
 
 #### Per-Tenant Ingestion Rate Limiting
 
-- [ ] `p1` - **ID**: `fdd-uc-req-tenant-rate-limit`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-tenant-rate-limit`
 
 The system **MUST** enforce per-tenant ingestion rate limits with independently configurable sustained rate (events per second) and burst size parameters. Requests exceeding the rate limit **MUST** be rejected with HTTP 429 status.
 
 **Rationale**: Without per-tenant rate limiting, a single misbehaving or high-volume tenant can exhaust ingestion capacity and degrade service for all other tenants. Burst tolerance is required because usage event emission is inherently bursty (e.g., a batch job completing and emitting thousands of records at once).
-**Actors**: `fdd-uc-actor-usage-source`, `fdd-uc-actor-platform-operator`
+**Actors**: `cpt-cf-uc-actor-usage-source`, `cpt-cf-uc-actor-platform-operator`
 
 #### Per-Source Rate Limiting
 
-- [ ] `p1` - **ID**: `fdd-uc-req-source-rate-limit`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-source-rate-limit`
 
 The system **MUST** enforce per-source rate limits within each tenant, preventing a single usage source (e.g., a misconfigured LLM Gateway) from consuming the tenant's entire ingestion quota. Per-source limits **MUST** be configurable independently of the tenant-level limit.
 
 **Rationale**: Tenant-level rate limits alone do not prevent a single noisy source from starving other sources within the same tenant. Per-source limits provide fault isolation within a tenant's service portfolio.
-**Actors**: `fdd-uc-actor-usage-source`, `fdd-uc-actor-platform-operator`
+**Actors**: `cpt-cf-uc-actor-usage-source`, `cpt-cf-uc-actor-platform-operator`
 
 #### Multi-Dimensional Rate Limits
 
-- [ ] `p1` - **ID**: `fdd-uc-req-multi-dimensional-limits`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-multi-dimensional-limits`
 
 The system **MUST** enforce rate limits across multiple dimensions simultaneously: events per second, bytes per second, maximum batch size (events per request), and maximum record size (bytes per event). All dimensions **MUST** pass for a request to be accepted.
 
 **Rationale**: Single-dimension rate limits are insufficient; a tenant could comply with events/sec limits while submitting oversized payloads that exhaust network or storage bandwidth. Multi-dimensional limits protect all resource types (CPU for event processing, network for payload transfer, storage for persistence).
-**Actors**: `fdd-uc-actor-usage-source`, `fdd-uc-actor-platform-operator`
+**Actors**: `cpt-cf-uc-actor-usage-source`, `cpt-cf-uc-actor-platform-operator`
 
 #### Rate Limit Configuration and Overrides
 
-- [ ] `p1` - **ID**: `fdd-uc-req-rate-limit-config`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-rate-limit-config`
 
 The system **MUST** support rate limit configuration with system-wide defaults and per-tenant overrides. Per-tenant overrides **MUST** be hot-reloadable without service restart. Unspecified fields in overrides **MUST** inherit from the system defaults.
 
 **Rationale**: Different tenants have different throughput needs based on their workload profile. Hot-reloadable overrides enable operators to respond to capacity issues or tenant requests without service disruption.
-**Actors**: `fdd-uc-actor-platform-operator`
+**Actors**: `cpt-cf-uc-actor-platform-operator`
 
 #### Rate Limit Response Format
 
-- [ ] `p1` - **ID**: `fdd-uc-req-rate-limit-response`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-rate-limit-response`
 
 When rate limits are exceeded, the system **MUST** respond with HTTP 429 (Too Many Requests) and include a `Retry-After` header indicating when the client can retry. The system **MUST** include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset` headers on all API responses to enable clients to monitor their quota consumption. Header formats are defined as follows:
 
@@ -423,34 +423,34 @@ When rate limits are exceeded, the system **MUST** respond with HTTP 429 (Too Ma
 All time-related header values are in UTC. Clients **SHOULD** parse these header values as integers and **SHOULD** treat missing or unparseable values conservatively (i.e., assume the limit is exhausted and apply a default backoff).
 
 **Rationale**: Standard rate limit headers (used by Stripe, GitHub, Datadog) enable clients to track quota consumption and schedule retries, reducing wasted requests against an already-exhausted quota. Explicit format definitions prevent ambiguity between delay-seconds and HTTP-date for `Retry-After`, and between epoch timestamps and other representations for `X-RateLimit-Reset`.
-**Actors**: `fdd-uc-actor-usage-source`, `fdd-uc-actor-platform-developer`
+**Actors**: `cpt-cf-uc-actor-usage-source`, `cpt-cf-uc-actor-platform-developer`
 
 #### SDK Retry and Buffering on Rate Limit
 
-- [ ] `p1` - **ID**: `fdd-uc-req-sdk-retry`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-sdk-retry`
 
 The SDK **MUST** buffer usage events in a bounded in-memory queue and retry with exponential backoff and jitter on rate limit responses (HTTP 429), honoring the `Retry-After` header when present. When the buffer is full, the SDK **MUST** drop oldest events and report the loss via metrics. The SDK **MUST NOT** block the calling service due to rate limiting.
 
 **Rationale**: Usage sources generate events regardless of collector availability. The SDK must absorb temporary rate limiting transparently, retrying without burdening the caller. Exponential backoff with jitter prevents synchronized retry bursts across sources. Non-blocking behavior is critical because usage emission must not degrade the source service's primary function.
-**Actors**: `fdd-uc-actor-usage-source`, `fdd-uc-actor-platform-developer`
+**Actors**: `cpt-cf-uc-actor-usage-source`, `cpt-cf-uc-actor-platform-developer`
 
 #### Priority-Based Load Shedding
 
-- [ ] `p2` - **ID**: `fdd-uc-req-load-shedding`
+- [ ] `p2` - **ID**: `cpt-cf-uc-req-load-shedding`
 
 The system **MUST** support priority classification of usage event types (e.g., billing-critical counters vs. analytics metrics) and, when operating under sustained overload beyond rate limits, **MUST** preferentially accept higher-priority events while shedding lower-priority ones. The priority classification **MUST** be configurable per usage type.
 
 **Rationale**: Under extreme load, indiscriminate rejection causes billing-critical data loss. Priority-based load shedding ensures that the most business-critical usage data (which affects revenue accuracy) is preserved even when the system cannot accept all traffic.
-**Actors**: `fdd-uc-actor-platform-operator`, `fdd-uc-actor-usage-source`
+**Actors**: `cpt-cf-uc-actor-platform-operator`, `cpt-cf-uc-actor-usage-source`
 
 #### Rate Limit Observability
 
-- [ ] `p1` - **ID**: `fdd-uc-req-rate-limit-observability`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-rate-limit-observability`
 
 The system **MUST** expose per-tenant and per-source rate limit consumption as metrics (current usage vs. limit, rejection counts, throttle duration) for operator dashboards. The system **MUST** emit alerts when tenants approach configured warning thresholds (e.g., 75%, 90% of capacity).
 
 **Rationale**: Operators need visibility into rate limit utilization to proactively adjust limits before tenants experience rejections. Approaching-limit alerts enable capacity planning.
-**Actors**: `fdd-uc-actor-platform-operator`, `fdd-uc-actor-monitoring-system`
+**Actors**: `cpt-cf-uc-actor-platform-operator`, `cpt-cf-uc-actor-monitoring-system`
 
 ## 6. Non-Functional Requirements
 
@@ -458,7 +458,7 @@ The system **MUST** expose per-tenant and per-source rate limit consumption as m
 
 #### High Availability
 
-- [ ] `p1` - **ID**: `fdd-uc-req-availability`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-availability`
 
 The system **MUST** maintain 99.95% monthly availability for usage collection endpoints.
 
@@ -467,7 +467,7 @@ The system **MUST** maintain 99.95% monthly availability for usage collection en
 
 #### Ingestion Throughput
 
-- [ ] `p1` - **ID**: `fdd-uc-req-throughput`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-throughput`
 
 The system **MUST** support sustained ingestion of at least 600,000 usage records per minute (10,000 events per second) under normal operation.
 
@@ -476,7 +476,7 @@ The system **MUST** support sustained ingestion of at least 600,000 usage record
 
 #### Ingestion Latency
 
-- [ ] `p1` - **ID**: `fdd-uc-req-ingestion-latency`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-ingestion-latency`
 
 The system **MUST** complete usage record ingestion within 200ms (p95) under normal load.
 
@@ -485,7 +485,7 @@ The system **MUST** complete usage record ingestion within 200ms (p95) under nor
 
 #### Query Latency
 
-- [ ] `p1` - **ID**: `fdd-uc-req-query-latency`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-query-latency`
 
 The system **MUST** complete usage queries for 30-day ranges within 500ms (p95) under normal load.
 
@@ -494,7 +494,7 @@ The system **MUST** complete usage queries for 30-day ranges within 500ms (p95) 
 
 #### Exactly-Once Semantics
 
-- [ ] `p1` - **ID**: `fdd-uc-req-exactly-once`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-exactly-once`
 
 The system **MUST** guarantee exactly-once processing; zero usage records lost or duplicated under normal operation.
 
@@ -503,7 +503,7 @@ The system **MUST** guarantee exactly-once processing; zero usage records lost o
 
 #### Audit Trail
 
-- [ ] `p1` - **ID**: `fdd-uc-req-audit-trail`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-audit-trail`
 
 The system **MUST** preserve immutable audit records for all usage data including source, timestamps, and any corrections.
 
@@ -512,7 +512,7 @@ The system **MUST** preserve immutable audit records for all usage data includin
 
 #### Authentication Required
 
-- [ ] `p1` - **ID**: `fdd-uc-req-authentication`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-authentication`
 
 The system **MUST** require authentication (OAuth 2.0, mTLS, or API key) for all API operations.
 
@@ -521,7 +521,7 @@ The system **MUST** require authentication (OAuth 2.0, mTLS, or API key) for all
 
 #### Authorization Enforcement
 
-- [ ] `p1` - **ID**: `fdd-uc-req-authorization`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-authorization`
 
 The system **MUST** enforce authorization for read/write operations based on tenant context and usage type permissions.
 
@@ -530,7 +530,7 @@ The system **MUST** enforce authorization for read/write operations based on ten
 
 #### Horizontal Scalability
 
-- [ ] `p1` - **ID**: `fdd-uc-req-scalability`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-scalability`
 
 The system **MUST** scale horizontally to handle increased load without architectural changes.
 
@@ -539,7 +539,7 @@ The system **MUST** scale horizontally to handle increased load without architec
 
 #### Storage Fault Tolerance
 
-- [ ] `p1` - **ID**: `fdd-uc-req-fault-tolerance`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-fault-tolerance`
 
 The system **MUST** buffer usage records during storage backend failures and recover without data loss.
 
@@ -548,7 +548,7 @@ The system **MUST** buffer usage records during storage backend failures and rec
 
 #### Configurable Retention
 
-- [ ] `p1` - **ID**: `fdd-uc-req-retention`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-retention`
 
 The system **MUST** support retention periods from 7 days to 7 years depending on usage type and compliance requirements.
 
@@ -557,7 +557,7 @@ The system **MUST** support retention periods from 7 days to 7 years depending o
 
 #### Graceful Degradation
 
-- [ ] `p1` - **ID**: `fdd-uc-req-graceful-degradation`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-graceful-degradation`
 
 The system **MUST** continue accepting usage records even if downstream consumers (billing, monitoring) are unavailable.
 
@@ -570,7 +570,7 @@ The system **MUST** continue accepting usage records even if downstream consumer
 
 #### Usage Ingestion SDK
 
-- [ ] `p1` - **ID**: `fdd-uc-interface-sdk`
+- [ ] `p1` - **ID**: `cpt-cf-uc-interface-sdk`
 
 **Type**: Client library
 **Stability**: stable
@@ -579,7 +579,7 @@ The system **MUST** continue accepting usage records even if downstream consumer
 
 #### Usage REST API
 
-- [ ] `p1` - **ID**: `fdd-uc-interface-rest-api`
+- [ ] `p1` - **ID**: `cpt-cf-uc-interface-rest-api`
 
 **Type**: REST API
 **Stability**: stable
@@ -588,7 +588,7 @@ The system **MUST** continue accepting usage records even if downstream consumer
 
 #### Collector Agent
 
-- [ ] `p2` - **ID**: `fdd-uc-interface-collector-agent`
+- [ ] `p2` - **ID**: `cpt-cf-uc-interface-collector-agent`
 
 **Type**: Sidecar/agent process
 **Stability**: stable
@@ -599,7 +599,7 @@ The system **MUST** continue accepting usage records even if downstream consumer
 
 #### Storage Adapter Contract
 
-- [ ] `p1` - **ID**: `fdd-uc-contract-storage-adapter`
+- [ ] `p1` - **ID**: `cpt-cf-uc-contract-storage-adapter`
 
 **Direction**: required from client
 **Protocol/Format**: Rust trait / plugin interface
@@ -607,7 +607,7 @@ The system **MUST** continue accepting usage records even if downstream consumer
 
 #### Types Registry Contract
 
-- [ ] `p1` - **ID**: `fdd-uc-contract-types-registry`
+- [ ] `p1` - **ID**: `cpt-cf-uc-contract-types-registry`
 
 **Direction**: required from client
 **Protocol/Format**: Internal API
@@ -617,9 +617,9 @@ The system **MUST** continue accepting usage records even if downstream consumer
 
 ### UC: High-Volume Usage Emission via SDK
 
-- [ ] `p1` - **ID**: `fdd-uc-req-sdk-emission`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-sdk-emission`
 
-**Actor**: `fdd-uc-actor-usage-source`, `fdd-uc-actor-platform-developer`
+**Actor**: `cpt-cf-uc-actor-usage-source`, `cpt-cf-uc-actor-platform-developer`
 
 **Preconditions**:
 - Usage type registered in Types Registry
@@ -638,9 +638,9 @@ The system **MUST** continue accepting usage records even if downstream consumer
 
 ### UC: Configure Custom Measuring Unit
 
-- [ ] `p1` - **ID**: `fdd-uc-req-custom-unit`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-custom-unit`
 
-**Actor**: `fdd-uc-actor-platform-operator`
+**Actor**: `cpt-cf-uc-actor-platform-operator`
 
 **Preconditions**:
 - Unit name is unique
@@ -657,9 +657,9 @@ The system **MUST** continue accepting usage records even if downstream consumer
 
 ### UC: Query Tenant Usage for Billing
 
-- [ ] `p1` - **ID**: `fdd-uc-req-billing-query`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-billing-query`
 
-**Actor**: `fdd-uc-actor-billing-system`
+**Actor**: `cpt-cf-uc-actor-billing-system`
 
 **Preconditions**:
 - Aggregation window closed
@@ -675,9 +675,9 @@ The system **MUST** continue accepting usage records even if downstream consumer
 
 ### UC: Real-Time Quota Enforcement
 
-- [ ] `p1` - **ID**: `fdd-uc-req-quota-enforcement`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-quota-enforcement`
 
-**Actor**: `fdd-uc-actor-quota-enforcement`
+**Actor**: `cpt-cf-uc-actor-quota-enforcement`
 
 **Main Flow**:
 1. Quota Enforcement System queries UC API for current usage
@@ -690,9 +690,9 @@ The system **MUST** continue accepting usage records even if downstream consumer
 
 ### UC: Add New Storage Backend
 
-- [ ] `p1` - **ID**: `fdd-uc-req-add-storage`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-add-storage`
 
-**Actor**: `fdd-uc-actor-platform-operator`
+**Actor**: `cpt-cf-uc-actor-platform-operator`
 
 **Preconditions**:
 - Storage adapter plugin implemented
@@ -710,9 +710,9 @@ The system **MUST** continue accepting usage records even if downstream consumer
 
 ### UC: Backfill Usage After Outage
 
-- [ ] `p2` - **ID**: `fdd-uc-req-backfill-after-outage`
+- [ ] `p2` - **ID**: `cpt-cf-uc-req-backfill-after-outage`
 
-**Actor**: `fdd-uc-actor-platform-operator`
+**Actor**: `cpt-cf-uc-actor-platform-operator`
 
 **Preconditions**:
 - Gap detected via reconciliation (missing heartbeats, stalled watermarks, or count mismatch)
@@ -733,9 +733,9 @@ The system **MUST** continue accepting usage records even if downstream consumer
 
 ### UC: View Tenant Usage Report
 
-- [ ] `p1` - **ID**: `fdd-uc-req-usage-report`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-usage-report`
 
-**Actor**: `fdd-uc-actor-tenant-admin`
+**Actor**: `cpt-cf-uc-actor-tenant-admin`
 
 **Main Flow**:
 1. Administrator requests usage for time period
