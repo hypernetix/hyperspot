@@ -181,18 +181,19 @@ async fn rejects_non_base_feature_requirement() {
 
     let router = Router::new();
     let test_module = TestLicenseModule;
-    let router = test_module
-        .register_rest(&test_ctx, router, &api_gateway)
+    let module_router = Router::new();
+    let module_router = test_module
+        .register_rest(&test_ctx, module_router, &api_gateway)
         .expect("Failed to register routes");
 
     let router = api_gateway
-        .rest_finalize(&api_ctx, router)
+        .rest_finalize(&api_ctx, router, module_router)
         .expect("Failed to finalize");
 
     let response = router
         .oneshot(
             Request::builder()
-                .uri("/tests/v1/license/bad")
+                .uri("/chat/tests/v1/license/bad")
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -223,18 +224,19 @@ async fn allows_base_feature_requirement() {
 
     let router = Router::new();
     let test_module = TestLicenseModule;
-    let router = test_module
-        .register_rest(&test_ctx, router, &api_gateway)
+    let module_router = Router::new();
+    let module_router = test_module
+        .register_rest(&test_ctx, module_router, &api_gateway)
         .expect("Failed to register routes");
 
     let router = api_gateway
-        .rest_finalize(&api_ctx, router)
+        .rest_finalize(&api_ctx, router, module_router)
         .expect("Failed to finalize");
 
     let response = router
         .oneshot(
             Request::builder()
-                .uri("/tests/v1/license/good")
+                .uri("/chat/tests/v1/license/good")
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -265,18 +267,19 @@ async fn allows_no_license_requirement() {
 
     let router = Router::new();
     let test_module = TestLicenseModule;
-    let router = test_module
-        .register_rest(&test_ctx, router, &api_gateway)
+    let module_router = Router::new();
+    let module_router = test_module
+        .register_rest(&test_ctx, module_router, &api_gateway)
         .expect("Failed to register routes");
 
     let router = api_gateway
-        .rest_finalize(&api_ctx, router)
+        .rest_finalize(&api_ctx, router, module_router)
         .expect("Failed to finalize");
 
     let response = router
         .oneshot(
             Request::builder()
-                .uri("/tests/v1/license/none")
+                .uri("/chat/tests/v1/license/none")
                 .body(Body::empty())
                 .unwrap(),
         )

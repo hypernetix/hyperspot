@@ -96,17 +96,28 @@ pub async fn mime_validation_middleware(
         .map_or_else(|| req.uri().path().to_owned(), |p| p.as_str().to_owned());
 
     // Check if this operation has MIME validation configured
-    let Some(allowed_types) = validation_map.get(&(method.clone(), path.clone())) else {
+    // Match if request path ends with a registered path (suffix match)
+    let matching_entry = validation_map
+        .iter()
+        .filter(|entry| {
+            let (ref map_method, ref map_path) = *entry.key();
+            *map_method == method && path.ends_with(map_path)
+        })
+        .max_by_key(|entry| entry.key().1.len());
+
+    let Some(allowed_types) = matching_entry else {
         // No validation configured - proceed
         return next.run(req).await;
     };
+
+    let allowed_types = allowed_types.value().clone();
 
     // Extract and validate Content-Type header
     let Some(content_type) = extract_content_type(&req) else {
         tracing::warn!(
             method = %method,
             path = %path,
-            allowed_types = ?allowed_types.value(),
+            allowed_types = ?allowed_types,
             "Missing Content-Type header for endpoint with MIME validation"
         );
 

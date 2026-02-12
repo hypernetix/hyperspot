@@ -7,6 +7,7 @@ import sys
 import time
 from urllib.request import urlopen
 from urllib.error import URLError, HTTPError
+from urllib.parse import urlparse
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PYTHON = sys.executable or "python"
@@ -287,12 +288,14 @@ def kill_existing_server(port):
 
 
 def cmd_e2e(args):
-    base_url = os.environ.get("E2E_BASE_URL", "http://localhost:8086")
+    base_url = os.environ.get("E2E_BASE_URL", "http://localhost:8086/chat")
     check_pytest()
 
     # Kill any existing server on the port before starting
-    port = base_url.split(":")[-1]
-    kill_existing_server(port)
+    parsed = urlparse(base_url)
+    port = parsed.port
+    if port is not None:
+        kill_existing_server(str(port))
 
     docker_env_started = False
     server_process = None

@@ -35,12 +35,6 @@ impl LicenseRequirementMap {
             requirements: Arc::new(requirements),
         }
     }
-
-    fn get(&self, method: &Method, path: &str) -> Option<Vec<String>> {
-        self.requirements
-            .get(&(method.clone(), path.to_owned()))
-            .map(|v| v.value().clone())
-    }
 }
 
 pub async fn license_validation_middleware(
@@ -54,9 +48,20 @@ pub async fn license_validation_middleware(
         .get::<axum::extract::MatchedPath>()
         .map_or_else(|| req.uri().path().to_owned(), |p| p.as_str().to_owned());
 
-    let Some(required) = map.get(&method, &path) else {
+    // Match if request path ends with a registered path (suffix match)
+    let matching_entry = map
+        .requirements
+        .iter()
+        .filter(|entry| {
+            let (ref map_method, ref map_path) = *entry.key();
+            *map_method == method && path.ends_with(map_path)
+        })
+        .max_by_key(|entry| entry.key().1.len());
+
+    let Some(entry) = matching_entry else {
         return next.run(req).await;
     };
+    let required = entry.value().clone();
 
     // TODO: this is a stub implementation
     // We need first to implement plugin and get its client from client_hub

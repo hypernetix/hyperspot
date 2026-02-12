@@ -91,9 +91,15 @@ pub async fn rate_limit_middleware(map: RateLimiterMap, mut req: Request, next: 
         .extensions()
         .get::<axum::extract::MatchedPath>()
         .map_or_else(|| req.uri().path().to_owned(), |p| p.as_str().to_owned());
-    let key = (method, path);
 
-    if let Some(bucker_map_entry) = map.buckets.get(&key) {
+    // Match if request path ends with a registered path (suffix match)
+    let matching_bucket = map
+        .buckets
+        .iter()
+        .filter(|(key, _)| key.0 == method && path.ends_with(&key.1))
+        .max_by_key(|(key, _)| key.1.len());
+
+    if let Some((_key, bucker_map_entry)) = matching_bucket {
         let headers = req.headers_mut();
         headers.insert("RateLimit-Policy", bucker_map_entry.policy.clone());
         match bucker_map_entry.bucket.check() {
@@ -115,16 +121,24 @@ pub async fn rate_limit_middleware(map: RateLimiterMap, mut req: Request, next: 
                 return StatusCode::TOO_MANY_REQUESTS.into_response();
             }
         }
-    }
 
-    if let Some(sem) = map.inflight.get(&key) {
-        match sem.clone().try_acquire_owned() {
-            Ok(_permit) => {
-                // Allow request; permit is dropped when response future completes
-                return next.run(req).await;
-            }
-            Err(_) => {
-                return StatusCode::SERVICE_UNAVAILABLE.into_response();
+        // Check inflight limit independently
+        let matching_inflight = map
+            .inflight
+            .iter()
+            .filter(|(key, _)| key.0 == method && path.ends_with(&key.1))
+            .max_by_key(|(key, _)| key.1.len());
+
+        if let Some((_, sem)) = matching_inflight {
+            match sem.clone().try_acquire_owned() {
+                Ok(permit) => {
+                    let response = next.run(req).await;
+                    drop(permit);
+                    return response;
+                }
+                Err(_) => {
+                    return StatusCode::SERVICE_UNAVAILABLE.into_response();
+                }
             }
         }
     }

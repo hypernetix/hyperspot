@@ -583,16 +583,21 @@ impl modkit::contracts::ApiGatewayCapability for ApiGateway {
         &self,
         _ctx: &modkit::context::ModuleCtx,
         mut router: axum::Router,
+        mut module_router: axum::Router,
     ) -> anyhow::Result<axum::Router> {
         let config = self.get_cached_config();
 
         if config.enable_docs {
-            router = self.add_openapi_routes(router)?;
+            module_router = self.add_openapi_routes(module_router)?;
         }
+
+        let mut prefix_router = Router::new().nest("/chat", module_router);
 
         // Apply middleware stack (including auth) to the final router
         tracing::debug!("Applying middleware stack to finalized router");
-        router = self.apply_middleware_stack(router)?;
+        prefix_router = self.apply_middleware_stack(prefix_router)?;
+
+        router = router.merge(prefix_router);
 
         // Keep the finalized router to be used by `serve()`
         *self.final_router.lock() = Some(router.clone());
