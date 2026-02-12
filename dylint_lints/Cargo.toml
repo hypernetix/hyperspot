@@ -10,7 +10,10 @@ members = [
     "de02_api_layer/de0202_dtos_not_referenced_outside_api",
     "de02_api_layer/de0203_dtos_must_use_api_dto",
     "de02_api_layer/de0204_dtos_must_have_toschema_derive",
+    "de03_domain_layer/de0301_no_infra_in_domain",
+    "de03_domain_layer/de0308_no_http_in_domain",
     "de05_client_layer/de0503_plugin_client_suffix",
+    "de07_security/de0706_no_direct_sqlx",
     "de08_rest_api_conventions/de0801_api_endpoint_version",
     "de08_rest_api_conventions/de0802_use_odata_ext",
     "de08_rest_api_conventions/de0803_api_snake_case",
@@ -55,6 +58,15 @@ modkit-macros = { package = "cf-modkit-macros", version = "0.2.0", path = "../li
 modkit = { package = "cf-modkit", version = "0.2.0", path = "../libs/modkit" }
 gts = "0.7.8"
 gts-macros = "0.7.8"
+
+# Dev dependencies for lint tests
+sea-orm = "1.0"
+sqlx = "0.8"
+axum = "0.7"
+uuid = "1.0"
+anyhow = "1.0"
+thiserror = "2.0"
+http = "1.0"
 
 [workspace.lints.clippy]
 all = "warn"

@@ -35,8 +35,7 @@ pub fn define_endpoints() {
 
     // Missing service name (looks like version but list is not valid version)
     // Should trigger DE0801 - API endpoint version
-    OperationBuilder::get("/users/list")
-        .handler(dummy_handler);
+    OperationBuilder::get("/users/list").handler(dummy_handler);
 
     // Second segment not a valid version
     // Should trigger DE0801 - API endpoint version
@@ -50,8 +49,7 @@ pub fn define_endpoints() {
 
     // Missing service name (version first)
     // Should trigger DE0801 - API endpoint version
-    OperationBuilder::delete("/v1/products")
-        .handler(dummy_handler);
+    OperationBuilder::delete("/v1/products").handler(dummy_handler);
 
     // Service name with underscore (not kebab-case)
     // Should trigger DE0801 - API endpoint version
@@ -69,8 +67,7 @@ pub fn define_endpoints() {
 
     // Capital letter in resource name
     // Should trigger DE0801 - API endpoint version
-    OperationBuilder::put("/some-service/v1/Products")
-        .handler(dummy_handler);
+    OperationBuilder::put("/some-service/v1/Products").handler(dummy_handler);
 
     // Leading dash in service name
     // Should trigger DE0801 - API endpoint version
@@ -78,8 +75,7 @@ pub fn define_endpoints() {
 
     // Leading dash in resource name
     // Should trigger DE0801 - API endpoint version
-    OperationBuilder::delete("/some-service/v1/-products")
-        .handler(dummy_handler);
+    OperationBuilder::delete("/some-service/v1/-products").handler(dummy_handler);
 
     // Leading dash in sub-resource
     // Should trigger DE0801 - API endpoint version

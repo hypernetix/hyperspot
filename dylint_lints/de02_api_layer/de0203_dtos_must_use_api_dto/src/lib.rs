@@ -89,6 +89,10 @@ mod tests {
     #[test]
     fn test_comment_annotations_match_stderr() {
         let ui_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("ui");
-        lint_utils::test_comment_annotations_match_stderr(&ui_dir, "DE0203", "DTOs must use api_dto");
+        lint_utils::test_comment_annotations_match_stderr(
+            &ui_dir,
+            "DE0203",
+            "DTOs must use api_dto",
+        );
     }
 }

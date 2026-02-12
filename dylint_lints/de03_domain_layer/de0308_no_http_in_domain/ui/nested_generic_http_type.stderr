@@ -1,0 +1,27 @@
+error: domain module uses HTTP type `http::StatusCode` (DE0308)
+  --> $DIR/nested_generic_http_type.rs:8:20
+   |
+LL |     status: Option<http::StatusCode>,
+   |                    ^^^^^^^^^^^^^^^^
+   |
+   = help: domain should be transport-agnostic; handle HTTP in api/ layer
+   = note: `#[deny(de0308_no_http_in_domain)]` on by default
+
+error: domain module uses HTTP type `http::HeaderMap` (DE0308)
+  --> $DIR/nested_generic_http_type.rs:10:18
+   |
+LL |     headers: Vec<http::HeaderMap>,
+   |                  ^^^^^^^^^^^^^^^
+   |
+   = help: domain should be transport-agnostic; handle HTTP in api/ layer
+
+error: domain module uses HTTP type `http::Response` (DE0308)
+  --> $DIR/nested_generic_http_type.rs:12:24
+   |
+LL |     response: &'static http::Response<String>,
+   |                        ^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: domain should be transport-agnostic; handle HTTP in api/ layer
+
+error: aborting due to 3 previous errors
+

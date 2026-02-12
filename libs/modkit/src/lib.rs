@@ -128,10 +128,9 @@ pub mod errors;
 pub mod result;
 pub use result::ApiResult;
 
-// Domain layer support (DDD patterns)
-#[doc(hidden)]
+// Domain layer marker traits for DDD enforcement
 pub mod domain;
-pub use domain::DomainModel;
+pub use domain::{DomainErrorMarker, DomainModel};
 
 // Directory API for service discovery
 pub mod directory;

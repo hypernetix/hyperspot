@@ -34,6 +34,7 @@ use crate::domain::TypesLocalClient;
     deps = ["types-registry"],
     capabilities = [system]
 )]
+#[derive(Clone)]
 pub struct Types {
     ready: Arc<AtomicBool>,
 }
@@ -42,14 +43,6 @@ impl Default for Types {
     fn default() -> Self {
         Self {
             ready: Arc::new(AtomicBool::new(false)),
-        }
-    }
-}
-
-impl Clone for Types {
-    fn clone(&self) -> Self {
-        Self {
-            ready: Arc::clone(&self.ready),
         }
     }
 }

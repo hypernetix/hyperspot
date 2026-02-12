@@ -3,7 +3,7 @@ name = "de0104_no_api_dto_in_contract"
 version = "0.1.0"
 authors = ["Cyber Fabric"]
 description = "Prevents use of api_dto macro in contract layer"
-edition = "2024"
+edition.workspace = true
 publish = false
 
 [lib]

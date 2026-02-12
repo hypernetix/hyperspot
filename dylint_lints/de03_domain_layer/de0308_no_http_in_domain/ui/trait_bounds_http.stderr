@@ -1,0 +1,19 @@
+error: domain module uses HTTP trait `axum::http::header::IntoHeaderName` (DE0308)
+  --> $DIR/trait_bounds_http.rs:9:25
+   |
+LL | pub fn make_status() -> impl Display + axum::http::header::IntoHeaderName {
+   |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: domain should be transport-agnostic; handle HTTP in api/ layer
+   = note: `#[deny(de0308_no_http_in_domain)]` on by default
+
+error: domain module uses HTTP trait `axum::http::header::IntoHeaderName` (DE0308)
+  --> $DIR/trait_bounds_http.rs:14:25
+   |
+LL | pub fn make_header() -> impl axum::http::header::IntoHeaderName {
+   |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: domain should be transport-agnostic; handle HTTP in api/ layer
+
+error: aborting due to 2 previous errors
+
