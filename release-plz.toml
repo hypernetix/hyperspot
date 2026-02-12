@@ -141,3 +141,89 @@ git_release_enable = false
 name = "cf-modkit-utils"
 changelog_update = false
 git_release_enable = false
+
+# System SDK libraries - published to crates.io but without separate changelog/releases
+[[package]]
+name = "cf-system-sdks"
+changelog_update = false
+git_release_enable = false
+
+[[package]]
+name = "cf-system-sdk-directory"
+changelog_update = false
+git_release_enable = false
+
+# System modules and their SDKs - published to crates.io but without separate changelog/releases
+[[package]]
+name = "cf-api-gateway"
+changelog_update = false
+git_release_enable = false
+
+[[package]]
+name = "cf-grpc-hub"
+changelog_update = false
+git_release_enable = false
+
+[[package]]
+name = "cf-file-parser"
+changelog_update = false
+git_release_enable = false
+
+[[package]]
+name = "cf-nodes-registry"
+changelog_update = false
+git_release_enable = false
+
+[[package]]
+name = "cf-nodes-registry-sdk"
+changelog_update = false
+git_release_enable = false
+
+[[package]]
+name = "cf-module-orchestrator"
+changelog_update = false
+git_release_enable = false
+
+[[package]]
+name = "cf-types-registry"
+changelog_update = false
+git_release_enable = false
+
+[[package]]
+name = "cf-types-registry-sdk"
+changelog_update = false
+git_release_enable = false
+
+[[package]]
+name = "cf-simple-user-settings"
+publish = false
+changelog_update = false
+git_release_enable = false
+
+[[package]]
+name = "cf-simple-user-settings-sdk"
+publish = false
+changelog_update = false
+git_release_enable = false
+
+[[package]]
+name = "cf-tenant-resolver-sdk"
+changelog_update = false
+git_release_enable = false
+
+[[package]]
+name = "cf-tenant-resolver-gw"
+changelog_update = false
+git_release_enable = false
+
+[[package]]
+name = "cf-static-tr-plugin"
+publish = false
+changelog_update = false
+git_release_enable = false
+
+[[package]]
+name = "cf-single-tenant-tr-plugin"
+publish = false
+changelog_update = false
+git_release_enable = false

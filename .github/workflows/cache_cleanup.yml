@@ -21,7 +21,7 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
 
-            const keyPrefix = 'pr-';
+            const rustCachePrPrefix = 'v0-rust-pr-';
             const keepNewestPerKey = 3;
             const retentionDays = 7;
             const maxDeletes = 200;
@@ -29,6 +29,16 @@ jobs:
             const nowMs = Date.now();
             const msPerDay = 1000 * 60 * 60 * 24;
             const ageDays = (iso) => (nowMs - new Date(iso).getTime()) / msPerDay;
+
+            // Extract stable bucket from a rust-cache key by dropping
+            // the two trailing hex-hash segments.
+            // e.g. "v0-rust-pr-Linux-stable-1.92-Linux-x64-aaaa-bbbb"
+            //   -> "v0-rust-pr-Linux-stable-1.92-Linux-x64"
+            const bucketOf = (key) => {
+              const parts = key.split('-');
+              if (parts.length >= 3) return parts.slice(0, -2).join('-');
+              return key;
+            };
 
             let page = 1;
             const perPage = 100;
@@ -56,32 +66,31 @@ jobs:
               if (page > 50) break;
             }
 
-            const prCaches = allCaches.filter((c) => (c.key ?? '').startsWith(keyPrefix));
+            const prCaches = allCaches.filter((c) => (c.key ?? '').startsWith(rustCachePrPrefix));
 
-            const groups = new Map();
+            const buckets = new Map();
             for (const c of prCaches) {
-              const key = c.key ?? '';
-              if (!groups.has(key)) groups.set(key, []);
-              groups.get(key).push(c);
+              const bucket = bucketOf(c.key ?? '');
+              if (!buckets.has(bucket)) buckets.set(bucket, []);
+              buckets.get(bucket).push(c);
             }
 
             const toDelete = [];
 
-            for (const [key, caches] of groups.entries()) {
+            for (const [bucket, caches] of buckets.entries()) {
               caches.sort((a, b) => {
                 const aTs = new Date(a.last_accessed_at ?? a.created_at).getTime();
                 const bTs = new Date(b.last_accessed_at ?? b.created_at).getTime();
                 return bTs - aTs;
               });
 
-              const keep = new Set(caches.slice(0, keepNewestPerKey).map((c) => c.id));
-
               for (const c of caches.slice(keepNewestPerKey)) {
                 const ts = c.last_accessed_at ?? c.created_at;
                 if (ts && ageDays(ts) > retentionDays) {
                   toDelete.push({
                     id: c.id,
-                    key,
+                    key: c.key,
+                    bucket,
                     created_at: c.created_at,
                     last_accessed_at: c.last_accessed_at,
                     size_in_bytes: c.size_in_bytes,
@@ -98,11 +107,11 @@ jobs:
 
             const limited = toDelete.slice(0, maxDeletes);
 
-            core.info(`Found ${allCaches.length} total caches; ${prCaches.length} pr-* caches.`);
-            core.info(`Deleting ${limited.length} caches (max ${maxDeletes}) older than ${retentionDays} days, keeping newest ${keepNewestPerKey} per key.`);
+            core.info(`Found ${allCaches.length} total caches; ${prCaches.length} rust-cache PR caches in ${buckets.size} bucket(s).`);
+            core.info(`Deleting ${limited.length} caches (max ${maxDeletes}) older than ${retentionDays} days, keeping newest ${keepNewestPerKey} per bucket.`);
 
             for (const c of limited) {
-              core.info(`Deleting cache id=${c.id} key=${c.key} size=${c.size_in_bytes} created_at=${c.created_at} last_accessed_at=${c.last_accessed_at}`);
+              core.info(`Deleting cache id=${c.id} key=${c.key} bucket=${c.bucket} size=${c.size_in_bytes} last_accessed_at=${c.last_accessed_at ?? c.created_at}`);
               try {
                 await github.rest.actions.deleteActionsCacheById({
                   owner,
