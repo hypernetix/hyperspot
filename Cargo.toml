@@ -215,8 +215,8 @@ modkit-security = { package = "cf-modkit-security", version = "0.2.6", path = "l
 modkit-transport-grpc = { package = "cf-modkit-transport-grpc", version = "0.2.6", path = "libs/modkit-transport-grpc" }
 modkit-utils = { package = "cf-modkit-utils", version = "0.2.6", path = "libs/modkit-utils" }
 
-cf-system-sdks = { version = "0.1.8", path = "libs/system-sdks" }
-cf-system-sdk-directory = { version = "0.1.8", path = "libs/system-sdks/sdks/directory" }
+cf-system-sdks = { version = "0.1.9", path = "libs/system-sdks" }
+cf-system-sdk-directory = { version = "0.1.9", path = "libs/system-sdks/sdks/directory" }
 
 # system modules SDKs
 types-registry-sdk = { package = "cf-types-registry-sdk", version = "0.1.2", path = "modules/system/types-registry/types-registry-sdk" }
