@@ -9,6 +9,12 @@ release-plz updates this file in the Release PR.
 
 ## [Unreleased]
 
+## [0.2.8](https://github.com/cyberfabric/cyberfabric-core/compare/types-sdk-v0.2.7...types-sdk-v0.2.8) - 2026-02-12
+
+### Other
+
+- update Cargo.toml dependencies
+
 ## [0.2.7](https://github.com/cyberfabric/cyberfabric-core/compare/cf-modkit-v0.2.1...cf-modkit-v0.2.7) - 2026-02-12
 
 ### Added
