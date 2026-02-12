@@ -14,6 +14,10 @@ name = "bad_direct_sqlx"
 path = "ui/bad_direct_sqlx.rs"
 
 [[example]]
+name = "bad_sqlx_types"
+path = "ui/bad_sqlx_types.rs"
+
+[[example]]
 name = "good_sea_orm"
 path = "ui/good_sea_orm.rs"
 

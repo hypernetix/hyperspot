@@ -16,7 +16,6 @@ use modkit_macros::domain_model;
 
 #[test]
 #[cfg(not(coverage_nightly))]
-#[ignore = "TODO: Enable after generating .stderr files"]
 fn domain_model_compile_fail_tests() {
     // On MinGW (windows-gnu), native deps like `ring` may fail to build in trybuild sandboxes.
     if cfg!(all(target_os = "windows", target_env = "gnu")) {

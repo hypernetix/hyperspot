@@ -7,7 +7,7 @@ use lint_utils::{
     is_in_contract_module_ast, is_in_hyperspot_server_path, is_in_modkit_db_path,
     use_tree_to_strings,
 };
-use rustc_ast::{Item, ItemKind};
+use rustc_ast::{Item, ItemKind, Ty, TyKind};
 use rustc_lint::{EarlyLintPass, LintContext};
 
 dylint_linting::declare_early_lint! {
@@ -52,11 +52,103 @@ dylint_linting::declare_early_lint! {
 /// Sqlx crate pattern to detect
 const SQLX_PATTERN: &str = "sqlx";
 
+/// Check if a path string matches the sqlx crate pattern.
+/// Matches "sqlx" exactly or any qualified path starting with "sqlx::" (e.g., "sqlx::PgPool").
+fn is_sqlx_path(path: &str) -> bool {
+    path == SQLX_PATTERN || path.starts_with("sqlx::")
+}
+
 /// Find any sqlx path in the use tree (handles grouped imports like `use {sqlx::PgPool, other};`)
 fn find_sqlx_path(tree: &rustc_ast::UseTree) -> Option<String> {
     use_tree_to_strings(tree)
         .into_iter()
-        .find(|path| path.split("::").next() == Some(SQLX_PATTERN))
+        .find(|path| is_sqlx_path(path))
+}
+
+/// Recursively check a type AST node for sqlx usage.
+/// Handles qualified paths like `sqlx::pool::Pool<sqlx::Any>` in struct fields,
+/// function parameters, return types, and type aliases.
+fn check_type_for_sqlx(cx: &rustc_lint::EarlyContext<'_>, ty: &Ty) {
+    match &ty.kind {
+        TyKind::Path(_, path) => {
+            let path_str = path
+                .segments
+                .iter()
+                .map(|seg| seg.ident.name.as_str())
+                .collect::<Vec<_>>()
+                .join("::");
+
+            if is_sqlx_path(&path_str) {
+                cx.span_lint(DE0706_NO_DIRECT_SQLX, ty.span, |diag| {
+                    diag.primary_message(format!(
+                        "direct sqlx type usage detected: `{path_str}` (DE0706)"
+                    ));
+                    diag.help("use Sea-ORM EntityTrait or SecORM abstractions instead");
+                    diag.note("sqlx bypasses security enforcement and architectural patterns");
+                });
+                return;
+            }
+
+            // Recursively check generic arguments (e.g., Option<sqlx::PgPool>)
+            for segment in &path.segments {
+                if let Some(args) = &segment.args {
+                    if let rustc_ast::GenericArgs::AngleBracketed(ref angle_args) = **args {
+                        for arg in &angle_args.args {
+                            if let rustc_ast::AngleBracketedArg::Arg(
+                                rustc_ast::GenericArg::Type(inner_ty),
+                            ) = arg
+                            {
+                                check_type_for_sqlx(cx, inner_ty);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        TyKind::Ref(_, mut_ty) => {
+            check_type_for_sqlx(cx, &mut_ty.ty);
+        }
+        TyKind::Slice(inner_ty) | TyKind::Array(inner_ty, _) => {
+            check_type_for_sqlx(cx, inner_ty);
+        }
+        TyKind::Ptr(mut_ty) => {
+            check_type_for_sqlx(cx, &mut_ty.ty);
+        }
+        TyKind::Tup(types) => {
+            for inner_ty in types {
+                check_type_for_sqlx(cx, inner_ty);
+            }
+        }
+        TyKind::TraitObject(bounds, _) | TyKind::ImplTrait(_, bounds) => {
+            for bound in bounds {
+                if let rustc_ast::GenericBound::Trait(trait_ref) = bound {
+                    let path = &trait_ref.trait_ref.path;
+                    let path_str = path
+                        .segments
+                        .iter()
+                        .map(|seg| seg.ident.name.as_str())
+                        .collect::<Vec<_>>()
+                        .join("::");
+
+                    if is_sqlx_path(&path_str) {
+                        cx.span_lint(DE0706_NO_DIRECT_SQLX, ty.span, |diag| {
+                            diag.primary_message(format!(
+                                "direct sqlx trait usage detected: `{path_str}` (DE0706)"
+                            ));
+                            diag.help(
+                                "use Sea-ORM EntityTrait or SecORM abstractions instead",
+                            );
+                            diag.note(
+                                "sqlx bypasses security enforcement and architectural patterns",
+                            );
+                        });
+                        return;
+                    }
+                }
+            }
+        }
+        _ => {}
+    }
 }
 
 fn check_use_for_sqlx(cx: &rustc_lint::EarlyContext<'_>, item: &Item) {
@@ -94,27 +186,58 @@ impl EarlyLintPass for De0706NoDirectSqlx {
             return;
         }
 
-        // Check use statements for sqlx imports
-        if matches!(item.kind, ItemKind::Use(_)) {
-            check_use_for_sqlx(cx, item);
-        }
-
-        // Check extern crate declarations
-        // ExternCrate(rename, ident): rename is Some for `extern crate foo as bar`
-        // For plain `extern crate sqlx;`, rename is None and we check ident
-        if let ItemKind::ExternCrate(rename, ident) = &item.kind {
-            let is_sqlx = match rename {
-                Some(sym) => sym.as_str() == SQLX_PATTERN,
-                None => ident.name.as_str() == SQLX_PATTERN,
-            };
-
-            if is_sqlx {
-                cx.span_lint(DE0706_NO_DIRECT_SQLX, item.span, |diag| {
-                    diag.primary_message("extern crate sqlx is prohibited (DE0706)");
-                    diag.help("use Sea-ORM EntityTrait or SecORM abstractions instead");
-                    diag.note("sqlx bypasses security enforcement and architectural patterns");
-                });
+        match &item.kind {
+            // Check use statements for sqlx imports
+            ItemKind::Use(_) => {
+                check_use_for_sqlx(cx, item);
             }
+            // Check extern crate declarations
+            ItemKind::ExternCrate(rename, ident) => {
+                let is_sqlx = match rename {
+                    Some(sym) => sym.as_str() == SQLX_PATTERN,
+                    None => ident.name.as_str() == SQLX_PATTERN,
+                };
+
+                if is_sqlx {
+                    cx.span_lint(DE0706_NO_DIRECT_SQLX, item.span, |diag| {
+                        diag.primary_message("extern crate sqlx is prohibited (DE0706)");
+                        diag.help("use Sea-ORM EntityTrait or SecORM abstractions instead");
+                        diag.note(
+                            "sqlx bypasses security enforcement and architectural patterns",
+                        );
+                    });
+                }
+            }
+            // Check struct fields for sqlx types
+            ItemKind::Struct(_, _, variant_data) => {
+                for field in variant_data.fields() {
+                    check_type_for_sqlx(cx, &field.ty);
+                }
+            }
+            // Check enum variant fields for sqlx types
+            ItemKind::Enum(_, _, enum_def) => {
+                for variant in &enum_def.variants {
+                    for field in variant.data.fields() {
+                        check_type_for_sqlx(cx, &field.ty);
+                    }
+                }
+            }
+            // Check function parameter and return types
+            ItemKind::Fn(fn_item) => {
+                for param in &fn_item.sig.decl.inputs {
+                    check_type_for_sqlx(cx, &param.ty);
+                }
+                if let rustc_ast::FnRetTy::Ty(ret_ty) = &fn_item.sig.decl.output {
+                    check_type_for_sqlx(cx, ret_ty);
+                }
+            }
+            // Check type alias targets
+            ItemKind::TyAlias(ty_alias) => {
+                if let Some(ty) = &ty_alias.ty {
+                    check_type_for_sqlx(cx, ty);
+                }
+            }
+            _ => {}
         }
     }
 }
