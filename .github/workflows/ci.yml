@@ -33,7 +33,8 @@ jobs:
       fail-fast: false
       matrix:
         os: [ ubuntu-latest, windows-latest, macos-latest ]
-
+    env:
+      RUSTFLAGS: "-C debuginfo=0"
     steps:
       - name: Force LF in working tree (w/a for Windows)
         if: runner.os == 'Windows'
@@ -82,27 +83,16 @@ jobs:
         run: make fmt
 
       - name: cargo clippy
-        env:
-          RUSTFLAGS: "-C debuginfo=0"
         run: make clippy
 
       - name: cargo test (no macros)
-        env:
-          RUSTFLAGS: "-C debuginfo=0"
         run: make test-no-macros
 
-      # Print sccache stats when active
-      - name: sccache stats
-        if: env.SCCACHE_GHA_ENABLED == 'true'
-        run: sccache --show-stats
-
-  cypilot:
-    name: Cypilot
-    uses: ./.github/workflows/cypilot.yml
-
-  test_macros:
-    name: UI macro tests (trybuild)
+  integration:
+    name: Integration tests
     runs-on: ubuntu-latest
+    env:
+      RUSTFLAGS: "-C debuginfo=0"
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -119,7 +109,7 @@ jobs:
         uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
         with:
           cache-bin: false
-          shared-key: pr-${{ runner.os }}-macros-stable-1.92
+          shared-key: pr-${{ runner.os }}-integration-stable-1.92
 
       # Install sccache (cross-platform)
       - name: Install sccache
@@ -137,9 +127,24 @@ jobs:
           fi
 
       - name: UI tests for modkit macros libraries
-        env:
-          RUSTFLAGS: "-C debuginfo=0"
         run: make test-macros
+
+      - name: Test users_info with Postgres (integration)
+        run: make test-users-info-pg
+
+      - name: Test modkit-db (sqlite integration)
+        run: make test-sqlite
+
+      - name: Test modkit-db (pg integration)
+        run: make test-pg
+
+      - name: Test modkit-db (mysql integration)
+        run: make test-mysql
+
+  cypilot:
+    name: Cypilot
+    uses: ./.github/workflows/cypilot.yml
+
   security:
     name: Security (cargo-deny & cargo-audit on Ubuntu)
     runs-on: ubuntu-latest
@@ -209,94 +214,6 @@ jobs:
           fail_ci_if_error: false
           # token: ${{ secrets.CODECOV_TOKEN }}  # Uncomment if required for private repos
 
-  modkit_db_integration:
-    name: modkit-db integration (backend=${{ matrix.backend }})
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        backend: [ sqlite, pg, mysql ]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - name: Install protoc
-        uses: arduino/setup-protoc@c65c819552d16ad3c9b72d9dfd5ba5237b9c906b # v3.0.0
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@9bc92bc5598b4f3bec5d910d352094982cb0c3b9 # 1.92.0
-
-      - name: Cache Cargo/target
-        uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
-        with:
-          cache-bin: false
-          shared-key: pr-${{ runner.os }}-db-${{ matrix.backend }}-stable-1.92
-
-      - name: Install sccache
-        uses: mozilla-actions/sccache-action@7d986dd989559c6ecdb630a3fd2557667be217ad # v0.0.9
-
-      - name: Probe sccache & set RUSTC_WRAPPER
-        shell: bash
-        run: |
-          if sccache --start-server >/dev/null 2>&1; then
-            echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
-            echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
-          else
-            echo "sccache failed, falling back to plain rustc"
-          fi
-
-      - name: Test modkit-db (integration)
-        env:
-          RUSTFLAGS: "-C debuginfo=0"
-        run: make test-${{ matrix.backend }}
-
-      - name: sccache stats
-        if: env.SCCACHE_GHA_ENABLED == 'true'
-        run: sccache --show-stats
-
-  users_info_integration_pg:
-    name: users-info integration (Postgres)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - name: Install protoc
-        uses: arduino/setup-protoc@c65c819552d16ad3c9b72d9dfd5ba5237b9c906b # v3.0.0
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@9bc92bc5598b4f3bec5d910d352094982cb0c3b9 # 1.92.0
-
-      - name: Cache Cargo/target
-        uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
-        with:
-          cache-bin: false
-          shared-key: pr-${{ runner.os }}-users-info-pg-stable-1.92
-
-      - name: Install sccache
-        uses: mozilla-actions/sccache-action@7d986dd989559c6ecdb630a3fd2557667be217ad # v0.0.9
-
-      - name: Probe sccache & set RUSTC_WRAPPER
-        shell: bash
-        run: |
-          if sccache --start-server >/dev/null 2>&1; then
-            echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
-            echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
-          else
-            echo "sccache failed, falling back to plain rustc"
-          fi
-
-      - name: Test users_info with Postgres (integration)
-        run: make test-users-info-pg
-
-      - name: sccache stats
-        if: env.SCCACHE_GHA_ENABLED == 'true'
-        run: sccache --show-stats
-
   dylint:
     name: Dylint Tests
     runs-on: ubuntu-latest
@@ -321,12 +238,6 @@ jobs:
         uses: taiki-e/install-action@30eab0fabba9ea3f522099957e668b21876aa39e # v2.66.6
         with:
           tool: cargo-dylint,dylint-link
-
-      - name: Cache Cargo/target
-        uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
-        with:
-          cache-bin: false
-          shared-key: pr-${{ runner.os }}-nightly-${{ env.RUSTUP_TOOLCHAIN }}-dylint
 
       - name: Run dylint tests
         working-directory: dylint_lints
