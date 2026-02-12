@@ -11,7 +11,7 @@
 /// Result of normalizing a raw candidate string.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NormalizedCandidate {
-    /// The canonical GTS identifier string (ready for GtsID::new())
+    /// The canonical GTS identifier string (ready for `GtsID::new()`)
     pub gts_id: String,
     /// Whether the original had a gts:// prefix
     pub had_uri_prefix: bool,
@@ -19,7 +19,7 @@ pub struct NormalizedCandidate {
     pub original: String,
 }
 
-/// Normalize a raw candidate string into a form suitable for GtsID::new().
+/// Normalize a raw candidate string into a form suitable for `GtsID::new()`.
 ///
 /// Steps:
 /// 1. Trim whitespace
@@ -83,6 +83,8 @@ pub fn normalize_candidate(raw: &str) -> Result<NormalizedCandidate, String> {
 }
 
 #[cfg(test)]
+#[allow(unknown_lints)]
+#[allow(de0901_gts_string_pattern)]
 mod tests {
     use super::*;
 
@@ -143,8 +145,12 @@ mod tests {
 
     #[test]
     fn test_normalize_chained_id() {
-        let result = normalize_candidate("gts.x.core.events.type.v1~ven.app._.custom_event.v1~").unwrap();
-        assert_eq!(result.gts_id, "gts.x.core.events.type.v1~ven.app._.custom_event.v1~");
+        let result =
+            normalize_candidate("gts.x.core.events.type.v1~ven.app._.custom_event.v1~").unwrap();
+        assert_eq!(
+            result.gts_id,
+            "gts.x.core.events.type.v1~ven.app._.custom_event.v1~"
+        );
         assert!(!result.had_uri_prefix);
     }
 

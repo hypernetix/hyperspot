@@ -63,6 +63,8 @@ impl DocValidationError {
 }
 
 #[cfg(test)]
+#[allow(unknown_lints)]
+#[allow(de0901_gts_string_pattern)]
 mod tests {
     use super::*;
     use std::path::PathBuf;
@@ -74,10 +76,10 @@ mod tests {
             line: 42,
             column: 10,
             json_path: String::new(),
-            raw_value: "gts.invalid".to_string(),
-            normalized_id: "gts.invalid".to_string(),
-            error: "Invalid GTS ID".to_string(),
-            context: "Some context".to_string(),
+            raw_value: "gts.invalid".to_owned(),
+            normalized_id: "gts.invalid".to_owned(),
+            error: "Invalid GTS ID".to_owned(),
+            context: "Some context".to_owned(),
         };
 
         let formatted = err.format_human_readable();
@@ -93,11 +95,11 @@ mod tests {
             file: PathBuf::from("config/test.json"),
             line: 0,
             column: 0,
-            json_path: "$.properties.type.x-gts-ref".to_string(),
-            raw_value: "gts.invalid".to_string(),
-            normalized_id: "gts.invalid".to_string(),
-            error: "Invalid GTS ID".to_string(),
-            context: "x-gts-ref".to_string(),
+            json_path: "$.properties.type.x-gts-ref".to_owned(),
+            raw_value: "gts.invalid".to_owned(),
+            normalized_id: "gts.invalid".to_owned(),
+            error: "Invalid GTS ID".to_owned(),
+            context: "x-gts-ref".to_owned(),
         };
 
         let formatted = err.format_human_readable();

@@ -26,12 +26,12 @@ pub const WILDCARD_ALLOWED_CONTEXTS: &[&str] = &[
 /// Tightened from original: removed overly generic tokens like "error", "fail", "bad".
 /// These must appear on the same line as the candidate, before it (proximity constraint).
 pub const SKIP_VALIDATION_CONTEXTS: &[&str] = &[
-    "❌",
-    "✗",
-    "invalid:",     // colon required to avoid matching "invalid" in prose
+    "\u{274c}",
+    "\u{2717}",
+    "invalid:", // colon required to avoid matching "invalid" in prose
     "wrong:",
     "bad:",
-    "// invalid",   // code comment prefix
+    "// invalid", // code comment prefix
     "not allowed:",
 ];
 
@@ -97,7 +97,6 @@ pub fn is_bad_example_context(line: &str, match_start: usize) -> bool {
     false
 }
 
-
 /// Validate a GTS identifier candidate.
 ///
 /// This function delegates all validation to `gts::GtsID::new()` and `gts::GtsWildcard::new()`.
@@ -106,7 +105,7 @@ pub fn is_bad_example_context(line: &str, match_start: usize) -> bool {
 /// # Arguments
 ///
 /// * `candidate` - A normalized candidate (after stripping gts://, quotes, etc.)
-/// * `expected_vendor` - Optional vendor to check against (with EXAMPLE_VENDORS tolerance)
+/// * `expected_vendor` - Optional vendor to check against (with `EXAMPLE_VENDORS` tolerance)
 /// * `allow_wildcards` - Whether wildcard patterns are allowed in this context
 ///
 /// # Returns
@@ -136,17 +135,15 @@ pub fn validate_candidate(
         // Vendor check for wildcards (if vendor is not wildcarded)
         if let Some(expected) = expected_vendor {
             let rest = &gts_id[4..]; // Remove 'gts.' prefix
-            if let Some(first_seg) = rest.split('~').next() {
-                if let Some(vendor) = first_seg.split('.').next() {
-                    if !vendor.contains('*')
-                        && vendor != expected
-                        && !is_example_vendor(vendor)
-                    {
-                        errors.push(format!(
-                            "Vendor mismatch: expected '{expected}', found '{vendor}'"
-                        ));
-                    }
-                }
+            if let Some(first_seg) = rest.split('~').next()
+                && let Some(vendor) = first_seg.split('.').next()
+                && !vendor.contains('*')
+                && vendor != expected
+                && !is_example_vendor(vendor)
+            {
+                errors.push(format!(
+                    "Vendor mismatch: expected '{expected}', found '{vendor}'"
+                ));
             }
         }
     } else {
@@ -154,17 +151,15 @@ pub fn validate_candidate(
         match gts::GtsID::new(gts_id) {
             Ok(parsed) => {
                 // Vendor check
-                if let Some(expected) = expected_vendor {
-                    if let Some(first_seg) = parsed.gts_id_segments.first() {
-                        if first_seg.vendor != expected
-                            && !is_example_vendor(&first_seg.vendor)
-                        {
-                            errors.push(format!(
-                                "Vendor mismatch: expected '{}', found '{}'",
-                                expected, first_seg.vendor
-                            ));
-                        }
-                    }
+                if let Some(expected) = expected_vendor
+                    && let Some(first_seg) = parsed.gts_id_segments.first()
+                    && first_seg.vendor != expected
+                    && !is_example_vendor(&first_seg.vendor)
+                {
+                    errors.push(format!(
+                        "Vendor mismatch: expected '{expected}', found '{}'",
+                        first_seg.vendor
+                    ));
                 }
             }
             Err(e) => {
@@ -177,6 +172,8 @@ pub fn validate_candidate(
 }
 
 #[cfg(test)]
+#[allow(unknown_lints)]
+#[allow(de0901_gts_string_pattern)]
 mod tests {
     use super::*;
     use crate::normalize::normalize_candidate;
@@ -190,7 +187,8 @@ mod tests {
 
     #[test]
     fn test_validate_candidate_valid_chained() {
-        let candidate = normalize_candidate("gts.x.core.events.type.v1~ven.app._.custom_event.v1~").unwrap();
+        let candidate =
+            normalize_candidate("gts.x.core.events.type.v1~ven.app._.custom_event.v1~").unwrap();
         let errors = validate_candidate(&candidate, None, false);
         assert!(errors.is_empty(), "Unexpected errors: {errors:?}");
     }
@@ -294,15 +292,18 @@ mod tests {
     #[test]
     fn test_is_bad_example_context_same_line_only() {
         // Skip token before the match
-        assert!(is_bad_example_context("invalid: gts.bad.id", "invalid: ".len()));
-        assert!(is_bad_example_context("❌ gts.x.y.z.a.v1~", "❌ ".len()));
-        
-        // Skip token after the match should NOT skip
-        assert!(!is_bad_example_context(
-            "gts.x.core.type.v1~ is invalid",
-            0
+        assert!(is_bad_example_context(
+            "invalid: gts.bad.id",
+            "invalid: ".len()
         ));
-        
+        assert!(is_bad_example_context(
+            "\u{274c} gts.x.y.z.a.v1~",
+            "\u{274c} ".len()
+        ));
+
+        // Skip token after the match should NOT skip
+        assert!(!is_bad_example_context("gts.x.core.type.v1~ is invalid", 0));
+
         // Generic "error" in unrelated context should NOT skip (removed from list)
         assert!(!is_bad_example_context(
             "The error handling uses gts.x.core.type.v1~",

@@ -50,6 +50,7 @@ use crate::scanner::{find_files, scan_file};
 #[derive(Parser, Debug)]
 #[command(name = "gts-docs-validator")]
 #[command(author, version, about, long_about = None)]
+#[allow(clippy::struct_excessive_bools)]
 struct Cli {
     /// Paths to scan (files or directories)
     /// Defaults to: docs, modules, libs, examples
@@ -188,7 +189,7 @@ fn print_results(errors: &[DocValidationError], files_scanned: usize, verbose: b
     println!("  {}", "GTS DOCUMENTATION VALIDATOR (DE0903)".bold());
     println!("{}", "=".repeat(80));
     println!();
-    println!("  Files scanned: {}", files_scanned);
+    println!("  Files scanned: {files_scanned}");
     println!("  Errors found:  {}", errors.len());
     println!();
 
@@ -212,12 +213,12 @@ fn print_results(errors: &[DocValidationError], files_scanned: usize, verbose: b
     if errors.is_empty() {
         println!(
             "{}",
-            format!("✓ All {} files passed validation", files_scanned).green()
+            format!("\u{2713} All {files_scanned} files passed validation").green()
         );
     } else {
         println!(
             "{}",
-            format!("✗ {} invalid GTS identifiers found", errors.len()).red()
+            format!("\u{2717} {} invalid GTS identifiers found", errors.len()).red()
         );
         println!();
         println!("  To fix:");

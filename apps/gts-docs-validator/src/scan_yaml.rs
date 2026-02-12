@@ -19,18 +19,18 @@ pub fn scan_yaml_file(
     scan_keys: bool,
 ) -> Vec<DocValidationError> {
     // Check file size
-    if let Ok(metadata) = fs::metadata(path) {
-        if metadata.len() > max_file_size {
-            if verbose {
-                eprintln!(
-                    "  Skipping {} (size {} exceeds limit {})",
-                    path.display(),
-                    metadata.len(),
-                    max_file_size
-                );
-            }
-            return vec![];
+    if let Ok(metadata) = fs::metadata(path)
+        && metadata.len() > max_file_size
+    {
+        if verbose {
+            eprintln!(
+                "  Skipping {} (size {} exceeds limit {})",
+                path.display(),
+                metadata.len(),
+                max_file_size
+            );
         }
+        return vec![];
     }
 
     // Read as UTF-8; skip file with warning on encoding error
@@ -62,6 +62,8 @@ pub fn scan_yaml_file(
 }
 
 #[cfg(test)]
+#[allow(unknown_lints)]
+#[allow(de0901_gts_string_pattern)]
 mod tests {
     use super::*;
     use std::io::Write;
@@ -75,9 +77,9 @@ mod tests {
 
     #[test]
     fn test_scan_yaml_valid_id() {
-        let content = r#"
+        let content = r"
 $id: gts://gts.x.core.events.type.v1~
-"#;
+";
         let file = create_temp_yaml(content);
         let errors = scan_yaml_file(file.path(), None, false, 10_485_760, false);
         assert!(errors.is_empty(), "Unexpected errors: {errors:?}");
@@ -85,9 +87,9 @@ $id: gts://gts.x.core.events.type.v1~
 
     #[test]
     fn test_scan_yaml_invalid_id() {
-        let content = r#"
+        let content = r"
 $id: gts.invalid
-"#;
+";
         let file = create_temp_yaml(content);
         let errors = scan_yaml_file(file.path(), None, false, 10_485_760, false);
         assert!(!errors.is_empty());
@@ -95,12 +97,15 @@ $id: gts.invalid
 
     #[test]
     fn test_scan_yaml_xgts_ref_wildcard() {
-        let content = r#"
+        let content = r"
 x-gts-ref: gts.x.core.*
-"#;
+";
         let file = create_temp_yaml(content);
         let errors = scan_yaml_file(file.path(), None, false, 10_485_760, false);
-        assert!(errors.is_empty(), "Wildcards in x-gts-ref should be allowed");
+        assert!(
+            errors.is_empty(),
+            "Wildcards in x-gts-ref should be allowed"
+        );
     }
 
     #[test]
@@ -110,40 +115,52 @@ x-gts-ref: "*"
 "#;
         let file = create_temp_yaml(content);
         let errors = scan_yaml_file(file.path(), None, false, 10_485_760, false);
-        assert!(errors.is_empty(), "Bare wildcard in x-gts-ref should be skipped");
+        assert!(
+            errors.is_empty(),
+            "Bare wildcard in x-gts-ref should be skipped"
+        );
     }
 
     #[test]
     fn test_scan_yaml_nested_values() {
-        let content = r#"
+        let content = r"
 properties:
   type:
     x-gts-ref: gts.x.core.events.type.v1~
-"#;
+";
         let file = create_temp_yaml(content);
         let errors = scan_yaml_file(file.path(), None, false, 10_485_760, false);
-        assert!(errors.is_empty(), "Nested values should be found and validated");
+        assert!(
+            errors.is_empty(),
+            "Nested values should be found and validated"
+        );
     }
 
     #[test]
     fn test_scan_yaml_array_values() {
-        let content = r#"
+        let content = r"
 capabilities:
   - gts.x.core.events.type.v1~
   - gts.x.core.events.topic.v1~
-"#;
+";
         let file = create_temp_yaml(content);
         let errors = scan_yaml_file(file.path(), None, false, 10_485_760, false);
-        assert!(errors.is_empty(), "Array values should be found and validated");
+        assert!(
+            errors.is_empty(),
+            "Array values should be found and validated"
+        );
     }
 
     #[test]
     fn test_scan_yaml_invalid_yaml() {
-        let content = r#"
+        let content = r"
 invalid: yaml: syntax:
-"#;
+";
         let file = create_temp_yaml(content);
         let errors = scan_yaml_file(file.path(), None, false, 10_485_760, false);
-        assert!(errors.is_empty(), "Invalid YAML should be skipped with warning");
+        assert!(
+            errors.is_empty(),
+            "Invalid YAML should be skipped with warning"
+        );
     }
 }

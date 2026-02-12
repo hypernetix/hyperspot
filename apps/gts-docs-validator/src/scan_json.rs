@@ -20,18 +20,18 @@ pub fn scan_json_file(
     scan_keys: bool,
 ) -> Vec<DocValidationError> {
     // Check file size
-    if let Ok(metadata) = fs::metadata(path) {
-        if metadata.len() > max_file_size {
-            if verbose {
-                eprintln!(
-                    "  Skipping {} (size {} exceeds limit {})",
-                    path.display(),
-                    metadata.len(),
-                    max_file_size
-                );
-            }
-            return vec![];
+    if let Ok(metadata) = fs::metadata(path)
+        && metadata.len() > max_file_size
+    {
+        if verbose {
+            eprintln!(
+                "  Skipping {} (size {} exceeds limit {})",
+                path.display(),
+                metadata.len(),
+                max_file_size
+            );
         }
+        return vec![];
     }
 
     // Read as UTF-8; skip file with warning on encoding error
@@ -62,7 +62,7 @@ pub fn scan_json_file(
 
 /// Walk a JSON value tree and validate GTS identifiers in string values.
 /// This is shared by both JSON and YAML scanners.
-pub(crate) fn walk_json_value(
+pub fn walk_json_value(
     value: &Value,
     path: &Path,
     vendor: Option<&str>,
@@ -82,25 +82,26 @@ pub(crate) fn walk_json_value(
             //   - Wildcard pattern (gts.*)
             //   - Bare wildcard (*)
             //   - Relative JSON pointer (/$id, /properties/id, etc.)
-            if is_xgts_ref {
-                if candidate_str.starts_with('/') || candidate_str == "*" {
-                    return; // valid x-gts-ref value, not a GTS ID to validate
-                }
+            if is_xgts_ref && (candidate_str.starts_with('/') || candidate_str == "*") {
+                return; // valid x-gts-ref value, not a GTS ID to validate
             }
 
             // Only consider strings that look like GTS identifiers
             // Skip filenames that contain GTS IDs (e.g., "gts.x.core.type.v1~.schema.json")
             // A string is likely a filename if it contains a tilde followed by a dot and extension
-            let looks_like_filename = candidate_str.contains("~.") && 
-                candidate_str.rfind('.').map_or(false, |pos| pos > candidate_str.rfind('~').unwrap_or(0));
-            
+            let looks_like_filename = candidate_str.contains("~.")
+                && candidate_str
+                    .rfind('.')
+                    .is_some_and(|pos| pos > candidate_str.rfind('~').unwrap_or(0));
+
             if (candidate_str.starts_with("gts://gts.") || candidate_str.starts_with("gts."))
                 && !looks_like_filename
             {
                 match normalize_candidate(candidate_str) {
                     Ok(candidate) => {
                         let allow_wildcards = is_xgts_ref;
-                        let validation_errors = validate_candidate(&candidate, vendor, allow_wildcards);
+                        let validation_errors =
+                            validate_candidate(&candidate, vendor, allow_wildcards);
                         for err in validation_errors {
                             errors.push(DocValidationError {
                                 file: path.to_owned(),
@@ -163,12 +164,26 @@ pub(crate) fn walk_json_value(
                         }
                     }
                 }
-                walk_json_value(val, path, vendor, errors, &format!("{json_path}.{key}"), scan_keys);
+                walk_json_value(
+                    val,
+                    path,
+                    vendor,
+                    errors,
+                    &format!("{json_path}.{key}"),
+                    scan_keys,
+                );
             }
         }
         Value::Array(arr) => {
             for (i, val) in arr.iter().enumerate() {
-                walk_json_value(val, path, vendor, errors, &format!("{json_path}[{i}]"), scan_keys);
+                walk_json_value(
+                    val,
+                    path,
+                    vendor,
+                    errors,
+                    &format!("{json_path}[{i}]"),
+                    scan_keys,
+                );
             }
         }
         _ => {}
@@ -208,7 +223,10 @@ mod tests {
         let content = r#"{"x-gts-ref": "gts.x.core.*"}"#;
         let file = create_temp_json(content);
         let errors = scan_json_file(file.path(), None, false, 10_485_760, false);
-        assert!(errors.is_empty(), "Wildcards in x-gts-ref should be allowed");
+        assert!(
+            errors.is_empty(),
+            "Wildcards in x-gts-ref should be allowed"
+        );
     }
 
     #[test]
@@ -216,7 +234,10 @@ mod tests {
         let content = r#"{"x-gts-ref": "*"}"#;
         let file = create_temp_json(content);
         let errors = scan_json_file(file.path(), None, false, 10_485_760, false);
-        assert!(errors.is_empty(), "Bare wildcard in x-gts-ref should be skipped");
+        assert!(
+            errors.is_empty(),
+            "Bare wildcard in x-gts-ref should be skipped"
+        );
     }
 
     #[test]
@@ -224,7 +245,10 @@ mod tests {
         let content = r#"{"x-gts-ref": "/$id"}"#;
         let file = create_temp_json(content);
         let errors = scan_json_file(file.path(), None, false, 10_485_760, false);
-        assert!(errors.is_empty(), "Relative pointers in x-gts-ref should be skipped");
+        assert!(
+            errors.is_empty(),
+            "Relative pointers in x-gts-ref should be skipped"
+        );
     }
 
     #[test]
@@ -238,7 +262,10 @@ mod tests {
         }"#;
         let file = create_temp_json(content);
         let errors = scan_json_file(file.path(), None, false, 10_485_760, false);
-        assert!(errors.is_empty(), "Nested values should be found and validated");
+        assert!(
+            errors.is_empty(),
+            "Nested values should be found and validated"
+        );
     }
 
     #[test]
@@ -251,7 +278,10 @@ mod tests {
         }"#;
         let file = create_temp_json(content);
         let errors = scan_json_file(file.path(), None, false, 10_485_760, false);
-        assert!(errors.is_empty(), "Array values should be found and validated");
+        assert!(
+            errors.is_empty(),
+            "Array values should be found and validated"
+        );
     }
 
     #[test]
@@ -259,7 +289,10 @@ mod tests {
         let content = r#"{"invalid": json}"#;
         let file = create_temp_json(content);
         let errors = scan_json_file(file.path(), None, false, 10_485_760, false);
-        assert!(errors.is_empty(), "Invalid JSON should be skipped with warning");
+        assert!(
+            errors.is_empty(),
+            "Invalid JSON should be skipped with warning"
+        );
     }
 
     #[test]
@@ -293,7 +326,10 @@ mod tests {
         let content = r#"{"gts.x.core.events.type.v1~": "value"}"#;
         let file = create_temp_json(content);
         let errors = scan_json_file(file.path(), None, false, 10_485_760, true);
-        assert!(errors.is_empty(), "Valid GTS ID keys should pass validation");
+        assert!(
+            errors.is_empty(),
+            "Valid GTS ID keys should pass validation"
+        );
     }
 
     #[test]
@@ -301,6 +337,9 @@ mod tests {
         let content = r#"{"gts.invalid": "value"}"#;
         let file = create_temp_json(content);
         let errors = scan_json_file(file.path(), None, false, 10_485_760, true);
-        assert!(!errors.is_empty(), "Invalid GTS ID keys should be caught when key scanning is enabled");
+        assert!(
+            !errors.is_empty(),
+            "Invalid GTS ID keys should be caught when key scanning is enabled"
+        );
     }
 }

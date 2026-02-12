@@ -147,7 +147,7 @@ pub fn scan_file(
     match path.extension().and_then(|e| e.to_str()) {
         Some("md") => scan_markdown_file(path, vendor, verbose, max_file_size, strict),
         Some("json") => scan_json_file(path, vendor, verbose, max_file_size, scan_keys),
-        Some("yaml") | Some("yml") => scan_yaml_file(path, vendor, verbose, max_file_size, scan_keys),
+        Some("yaml" | "yml") => scan_yaml_file(path, vendor, verbose, max_file_size, scan_keys),
         _ => {
             if verbose {
                 eprintln!("  Skipping {} (unsupported extension)", path.display());
