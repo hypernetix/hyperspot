@@ -39,7 +39,7 @@ pub fn scan_json_file(
         Ok(c) => c,
         Err(e) => {
             if verbose {
-                eprintln!("  Skipping {}: {e}", path.display());
+                eprintln!("  Skipping {} (read error): {}", path.display(), e);
             }
             return vec![];
         }
@@ -60,7 +60,9 @@ pub fn scan_json_file(
     errors
 }
 
-pub fn walk_json_value(
+/// Walk a JSON value tree and validate GTS identifiers in string values.
+/// This is shared by both JSON and YAML scanners.
+pub(crate) fn walk_json_value(
     value: &Value,
     path: &Path,
     vendor: Option<&str>,
@@ -87,7 +89,14 @@ pub fn walk_json_value(
             }
 
             // Only consider strings that look like GTS identifiers
-            if candidate_str.starts_with("gts://gts.") || candidate_str.starts_with("gts.") {
+            // Skip filenames that contain GTS IDs (e.g., "gts.x.core.type.v1~.schema.json")
+            // A string is likely a filename if it contains a tilde followed by a dot and extension
+            let looks_like_filename = candidate_str.contains("~.") && 
+                candidate_str.rfind('.').map_or(false, |pos| pos > candidate_str.rfind('~').unwrap_or(0));
+            
+            if (candidate_str.starts_with("gts://gts.") || candidate_str.starts_with("gts."))
+                && !looks_like_filename
+            {
                 match normalize_candidate(candidate_str) {
                     Ok(candidate) => {
                         let allow_wildcards = is_xgts_ref;

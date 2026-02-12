@@ -83,6 +83,14 @@ struct Cli {
     /// Scan JSON/YAML object keys for GTS identifiers (default: off)
     #[arg(long)]
     scan_keys: bool,
+
+    /// Strict mode: require all GTS identifiers to be perfectly formatted
+    /// (default: off, uses stricter discovery regex that catches malformed IDs)
+    ///
+    /// When enabled, uses permissive regex to catch and report ALL malformed GTS IDs.
+    /// When disabled (default), only validates well-formed patterns (fewer false positives).
+    #[arg(long)]
+    strict: bool,
 }
 
 /// Default directories to scan if none specified
@@ -144,6 +152,7 @@ fn main() -> ExitCode {
             cli.verbose,
             cli.max_file_size,
             cli.scan_keys,
+            cli.strict,
         );
         errors.extend(file_errors);
     }

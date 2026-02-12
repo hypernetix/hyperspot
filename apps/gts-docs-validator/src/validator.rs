@@ -33,7 +33,6 @@ pub const SKIP_VALIDATION_CONTEXTS: &[&str] = &[
     "bad:",
     "// invalid",   // code comment prefix
     "not allowed:",
-    "**given**",
 ];
 
 /// Example vendors used in documentation that are tolerated during vendor validation.

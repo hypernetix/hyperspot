@@ -157,6 +157,7 @@ lint:
 
 gts-docs:
 	cargo run -p gts-docs-validator -- \
+		--strict \
 		--exclude "target/*" \
 		--exclude "docs/api/*" \
 		docs modules libs examples

@@ -131,21 +131,21 @@ pub fn find_files(paths: &[PathBuf], exclude: &[String], verbose: bool) -> Vec<P
     files
 }
 
-/// Scan a single file for GTS identifiers.
+/// Scan a single file for GTS identifiers
 pub fn scan_file(
     path: &Path,
     vendor: Option<&str>,
     verbose: bool,
     max_file_size: u64,
     scan_keys: bool,
+    strict: bool,
 ) -> Vec<DocValidationError> {
     if verbose {
         eprintln!("  Scanning: {}", path.display());
     }
 
-    let ext = path.extension().and_then(|e| e.to_str());
-    match ext {
-        Some("md") => scan_markdown_file(path, vendor, verbose, max_file_size),
+    match path.extension().and_then(|e| e.to_str()) {
+        Some("md") => scan_markdown_file(path, vendor, verbose, max_file_size, strict),
         Some("json") => scan_json_file(path, vendor, verbose, max_file_size, scan_keys),
         Some("yaml") | Some("yml") => scan_yaml_file(path, vendor, verbose, max_file_size, scan_keys),
         _ => {

@@ -38,7 +38,7 @@ pub fn scan_yaml_file(
         Ok(c) => c,
         Err(e) => {
             if verbose {
-                eprintln!("  Skipping {}: {e}", path.display());
+                eprintln!("  Skipping {} (read error): {}", path.display(), e);
             }
             return vec![];
         }
