@@ -8,7 +8,7 @@ use crate::domain::repos::{AddressesRepository, UsersRepository};
 use crate::domain::service::DbProvider;
 use modkit_odata::{ODataQuery, Page};
 use modkit_security::{PolicyEngineRef, SecurityContext};
-use tenant_resolver_sdk::TenantResolverGatewayClient;
+use tenant_resolver_sdk::TenantResolverClient;
 use time::OffsetDateTime;
 use users_info_sdk::{Address, AddressPatch, NewAddress};
 use uuid::Uuid;
@@ -19,7 +19,7 @@ pub struct AddressesService<R: AddressesRepository, U: UsersRepository> {
     policy_engine: PolicyEngineRef,
     repo: Arc<R>,
     users_repo: Arc<U>,
-    resolver: Arc<dyn TenantResolverGatewayClient>,
+    resolver: Arc<dyn TenantResolverClient>,
 }
 
 impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
@@ -28,7 +28,7 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
         repo: Arc<R>,
         users_repo: Arc<U>,
         policy_engine: PolicyEngineRef,
-        resolver: Arc<dyn TenantResolverGatewayClient>,
+        resolver: Arc<dyn TenantResolverClient>,
     ) -> Self {
         Self {
             db,

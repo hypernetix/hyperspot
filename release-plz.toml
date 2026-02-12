@@ -212,7 +212,7 @@ changelog_update = false
 git_release_enable = false
 
 [[package]]
-name = "cf-tenant-resolver-gw"
+name = "cf-tenant-resolver"
 changelog_update = false
 git_release_enable = false
 

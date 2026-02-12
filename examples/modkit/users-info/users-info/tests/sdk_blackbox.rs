@@ -11,8 +11,8 @@ use modkit_security::SecurityContext;
 use serde_json::json;
 use tenant_resolver_sdk::{
     GetAncestorsOptions, GetAncestorsResponse, GetDescendantsOptions, GetDescendantsResponse,
-    GetTenantsOptions, IsAncestorOptions, TenantRef, TenantResolverError,
-    TenantResolverGatewayClient, TenantStatus,
+    GetTenantsOptions, IsAncestorOptions, TenantRef, TenantResolverClient, TenantResolverError,
+    TenantStatus,
 };
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
@@ -24,7 +24,7 @@ use users_info_sdk::{NewUser, UsersInfoClientV1};
 struct MockTenantResolver;
 
 #[async_trait::async_trait]
-impl TenantResolverGatewayClient for MockTenantResolver {
+impl TenantResolverClient for MockTenantResolver {
     async fn get_tenant(
         &self,
         _ctx: &SecurityContext,
@@ -155,7 +155,7 @@ async fn users_info_registers_sdk_client_and_handles_basic_crud() {
     let hub = Arc::new(ClientHub::new());
 
     // Register mock tenant resolver before initializing the module
-    hub.register::<dyn TenantResolverGatewayClient>(Arc::new(MockTenantResolver));
+    hub.register::<dyn TenantResolverClient>(Arc::new(MockTenantResolver));
 
     let ctx = ModuleCtx::new(
         "users_info",

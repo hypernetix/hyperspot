@@ -31,7 +31,7 @@ use modkit::{
 use modkit_auth::axum_ext::Authz;
 use serde_json::json;
 use std::sync::Arc;
-use tenant_resolver_sdk::TenantResolverGatewayClient;
+use tenant_resolver_sdk::TenantResolverClient;
 use tower::ServiceExt;
 use uuid::Uuid;
 
@@ -51,7 +51,7 @@ fn create_api_gateway_ctx(config: serde_json::Value) -> ModuleCtx {
     let hub = Arc::new(ClientHub::new());
 
     // Register mock tenant resolver for auth_disabled mode
-    hub.register::<dyn TenantResolverGatewayClient>(Arc::new(MockTenantResolver));
+    hub.register::<dyn TenantResolverClient>(Arc::new(MockTenantResolver));
 
     ModuleCtx::new(
         "api-gateway",

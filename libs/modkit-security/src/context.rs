@@ -70,7 +70,7 @@ impl AccessScopeResolver {
     /// Include a list of accessible tenant IDs in the scope.
     ///
     /// Use this method when the caller has already resolved which tenants
-    /// the current security context can access (typically via `TenantResolverGatewayClient`).
+    /// the current security context can access (typically via `TenantResolverClient`).
     ///
     /// # Example
     ///

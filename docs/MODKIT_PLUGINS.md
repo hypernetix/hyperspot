@@ -1,15 +1,15 @@
 # ModKit Plugin Architecture
 
-This guide explains how to create **plugin-based modules** in HyperSpot/ModKit. Plugins allow multiple implementations of the same interface to coexist, with the gateway selecting the appropriate plugin at runtime based on configuration or
+This guide explains how to create **plugin-based modules** in HyperSpot/ModKit. Plugins allow multiple implementations of the same interface to coexist, with the main module selecting the appropriate plugin at runtime based on configuration or
 context.
 
 ---
 
 ## Overview
 
-ModKit supports a **Gateway + Plugin** pattern where:
+ModKit supports a **Module + Plugin** pattern where:
 
-- **Gateway module** — exposes a public API (REST and/or ClientHub) and routes calls to the selected plugin
+- **Main public module** — exposes a public API (REST and/or ClientHub) and routes calls to the selected plugin
 - **Plugin modules** — implement a plugin API trait and register themselves for discovery
 - **SDK crate** — defines both the public client API and the internal plugin API (separate traits)
 
@@ -17,25 +17,25 @@ This pattern enables:
 
 - **Vendor-specific implementations** — e.g., different authentication providers, search engines, or parsers
 - **Runtime selection** — choose which plugin to use based on configuration, tenant, or other context
-- **Hot-pluggable extensions** — add new plugins without modifying the gateway code (but the plugin module must be included in the server build/registration)
+- **Hot-pluggable extensions** — add new plugins without modifying the main module code (but the plugin module must be included in the server build/registration)
 
 > [!IMPORTANT]
-> **Plugin Isolation Rule:** Regular modules **cannot** depend on or consume plugin modules directly. All plugin functionality must be accessed through the Gateway Module's public API (`hub.get::<dyn GatewayClient>()`). This ensures plugin implementations remain swappable, isolated, and decoupled from consumers.
+> **Plugin Isolation Rule:** Regular modules **cannot** depend on or consume plugin modules directly. All plugin functionality must be accessed through the main Module's public API (`hub.get::<dyn ModuleClient>()`). This ensures plugin implementations remain swappable, isolated, and decoupled from consumers.
 
 ---
 
 ## Architecture Diagram
 
 ```
-                            ┌─────────────────────────────┐
-                            │      Other Modules          │
-                            │   (consumers of gateway)    │
-                            └─────────────┬───────────────┘
+                            ┌─────────────────────────────────────────┐
+                            │              Other Modules              │
+                            │   (consumers of module with plugins)    │
+                            └─────────────┬───────────────────────────┘
                                           │
                                           │ ctx.client_hub().get::<dyn PublicApi>()
                                           ▼
 ┌───────────────────────────────────────────────────────────────────────────────────┐
-│                                   GATEWAY MODULE                                  │
+│                                   MAIN MODULE                                     │
 │                                                                                   │
 │   ┌───────────────────────────────────────────────────────────────────────────┐   │
 │   │   REST API (optional)                                                     │   │
@@ -80,14 +80,14 @@ This pattern enables:
 The SDK defines **two separate traits**:
 
 ```rust
-/// Public API — exposed by the gateway to other modules
+/// Public API — exposed by the module to other modules
 /// Registered WITHOUT a scope in ClientHub
 #[async_trait]
-pub trait MyModuleGatewayClient: Send + Sync {
+pub trait MyModuleClient: Send + Sync {
     async fn do_something(&self, ctx: &SecurityContext, input: Input) -> Result<Output, MyError>;
 }
 
-/// Plugin API — implemented by plugins, called by the gateway
+/// Plugin API — implemented by plugins, called by the module
 /// Registered WITH a scope (GTS instance ID) in ClientHub
 #[async_trait]
 pub trait MyModulePluginClient: Send + Sync {
@@ -98,8 +98,8 @@ pub trait MyModulePluginClient: Send + Sync {
 **Why two traits?**
 
 - The public trait is the stable contract for consumers — they don't know or care which plugin is used
-- The plugin trait may have different method signatures or additional methods only the gateway uses
-- Consumers call `hub.get::<dyn MyModuleGatewayClient>()` — gateway handles plugin routing internally
+- The plugin trait may have different method signatures or additional methods only the module uses
+- Consumers call `hub.get::<dyn MyModuleClient>()` — module handles plugin routing internally
 
 ### 2. GTS Instance IDs for Plugin Discovery
 
@@ -134,7 +134,7 @@ The `ClientHub` supports **scoped clients** for plugin-like scenarios:
 let scope = ClientScope::gts_id(&instance_id);
 ctx.client_hub().register_scoped::<dyn MyModulePluginClient>(scope, plugin_impl);
 
-// Gateway resolves the selected plugin's client
+// Module resolves the selected plugin's client
 let scope = ClientScope::gts_id(&selected_instance_id);
 let plugin = hub.get_scoped::<dyn MyModulePluginClient>(&scope)?;
 ```
@@ -151,22 +151,22 @@ The `types-registry` module provides:
 
 **Registration responsibility:**
 
-| What | Who registers | When |
-|------|--------------|------|
+| What | Who registers             | When                             |
+|------|---------------------------|----------------------------------|
 | Core GTS types (e.g., `gts.x.core.modkit.plugin.v1~`) | **types_registry module** | Automatically during module init |
-| Plugin **schema** (GTS type definition) | **Gateway module** | During gateway `init()` |
-| Plugin **instance** (specific implementation) | **Each plugin** | During plugin `init()` |
+| Plugin **schema** (GTS type definition) | **Main module**           | During module `init()`           |
+| Plugin **instance** (specific implementation) | **Each plugin**           | During plugin `init()`           |
 
 This separation ensures:
 - Core framework types are always available for all modules
-- Schema is registered once by the authoritative owner (the gateway)
+- Schema is registered once by the authoritative owner (the main module)
 - Plugins only declare their own existence via instance registration
 - Clear ownership and simpler plugin implementations
 
-**Gateway registers schema:**
+**Main module registers schema:**
 
 ```rust
-// In gateway module init()
+// In main module init()
 let registry = ctx.client_hub().get::<dyn TypesRegistryClient>()?;
 
 // Register schema using GTS-provided method for proper $id and $ref handling
@@ -181,7 +181,7 @@ registry.register(vec![schema_json]).await?;
 // In plugin module init()
 let registry = ctx.client_hub().get::<dyn TypesRegistryClient>()?;
 
-// Register instance only (schema is already registered by gateway)
+// Register instance only (schema is already registered by main module)
 let instance = BaseModkitPluginV1::<MyModulePluginSpecV1> {
     id: instance_id.clone(),
     vendor: "Contoso".into(),
@@ -204,8 +204,8 @@ let _ = registry
 A plugin-based module has this structure:
 
 ```
-modules/<gateway-name>/
-├── <gateway>-sdk/              # SDK crate: API traits, models, errors, GTS types
+modules/<module-name>/
+├── <module>-sdk/              # SDK crate: API traits, models, errors, GTS types
 │   ├── Cargo.toml
 │   └── src/
 │       ├── lib.rs              # Re-exports: PublicClient, PluginClient, models, errors
@@ -214,12 +214,12 @@ modules/<gateway-name>/
 │       ├── error.rs            # Transport-agnostic errors
 │       └── gts.rs              # GTS schema types for plugin instances
 │
-├── <gateway>-gw/               # Gateway module implementation
+├── <module>/               # The module implementation
 │   ├── Cargo.toml
 │   └── src/
 │       ├── lib.rs              # Re-exports SDK + module struct
 │       ├── module.rs           # Module declaration, init, REST registration
-│       ├── config.rs           # Gateway config (e.g., vendor selection)
+│       ├── config.rs           # Module config (e.g., vendor selection)
 │       ├── api/rest/           # REST handlers, DTOs, routes
 │       └── domain/
 │           ├── service.rs      # Plugin resolution and delegation
@@ -246,17 +246,17 @@ modules/<gateway-name>/
 
 ### Step 1: Define the SDK
 
-Create `<gateway>-sdk/` with both API traits:
+Create `<module>-sdk/` with both API traits:
 
 ```rust
-// <gateway>-sdk/src/api.rs
+// <module>-sdk/src/api.rs
 
 use async_trait::async_trait;
 use modkit_security::SecurityContext;
 
-/// Public API for consumers (registered without scope by gateway)
+/// Public API for consumers (registered without scope by main module)
 #[async_trait]
-pub trait MyModuleGatewayClient: Send + Sync {
+pub trait MyModuleClient: Send + Sync {
     async fn get_data(&self, ctx: &SecurityContext, id: &str) -> Result<Data, MyError>;
     async fn list_data(&self, ctx: &SecurityContext, query: Query) -> Result<Page<Data>, MyError>;
 }
@@ -272,7 +272,7 @@ pub trait MyModulePluginClient: Send + Sync {
 Define the GTS schema for plugin instances:
 
 ```rust
-// <gateway>-sdk/src/gts.rs
+// <module>-sdk/src/gts.rs
 
 use gts_macros::struct_to_gts_schema;
 use modkit::gts::BaseModkitPluginV1;
@@ -295,9 +295,9 @@ use serde::{Deserialize, Serialize};
 pub struct MyModulePluginSpecV1;
 ```
 
-### Step 2: Implement the Gateway
+### Step 2: Implement the Main Module
 
-The gateway module:
+The main module:
 
 1. Registers the plugin **schema** in types-registry (once, for all plugins)
 2. Loads configuration (e.g., which vendor to use)
@@ -306,31 +306,31 @@ The gateway module:
 5. Registers a public client in ClientHub
 
 ```rust
-// <gateway>-gw/src/module.rs
+// <module with plugins>/src/module.rs
 
 use std::sync::Arc;
 use async_trait::async_trait;
 use modkit::{Module, ModuleCtx};
 use modkit_security::SecurityContext;
-use my_sdk::{MyModuleGatewayClient, MyModulePluginSpecV1};
+use my_sdk::{MyModuleClient, MyModulePluginSpecV1};
 use types_registry_sdk::TypesRegistryClient;
 
 #[modkit::module(
-    name = "my_gateway",
-    deps = ["types_registry"],  // Gateway depends on types_registry; plugins are resolved dynamically via GTS, not hard dependencies.
+    name = "my_module",
+    deps = ["types_registry"],  // Module depends on types_registry; plugins are resolved dynamically via GTS, not hard dependencies.
     capabilities = [rest]
 )]
-pub struct MyGateway {
+pub struct MyModule {
     service: arc_swap::ArcSwapOption<Service>,
 }
 
 #[async_trait]
-impl Module for MyGateway {
+impl Module for MyModule {
     async fn init(&self, ctx: &ModuleCtx) -> anyhow::Result<()> {
-        let cfg: GatewayConfig = ctx.config()?;
+        let cfg: ModuleConfig = ctx.config()?;
 
         // === SCHEMA REGISTRATION ===
-        // Gateway is responsible for registering the plugin SCHEMA.
+        // The main module is responsible for registering the plugin SCHEMA.
         // Plugins only register their INSTANCES.
         let registry = ctx.client_hub().get::<dyn TypesRegistryClient>()?;
         let schema_str = MyModulePluginSpecV1::gts_schema_with_refs_as_string();
@@ -345,8 +345,8 @@ impl Module for MyGateway {
         let svc = Arc::new(Service::new(ctx.client_hub(), cfg.vendor));
 
         // Register PUBLIC client (no scope) for other modules
-        let api: Arc<dyn MyModuleGatewayClient> = Arc::new(LocalClient::new(svc.clone()));
-        ctx.client_hub().register::<dyn MyModuleGatewayClient>(api);
+        let api: Arc<dyn MyModuleClient> = Arc::new(LocalClient::new(svc.clone()));
+        ctx.client_hub().register::<dyn MyModuleClient>(api);
 
         self.service.store(Some(svc));
         Ok(())
@@ -354,9 +354,9 @@ impl Module for MyGateway {
 }
 ```
 
-### Gateway REST requirements (access control, licensing, OData)
+### REST requirements (access control, licensing, OData)
 
-When the gateway exposes REST endpoints, route definitions follow the same ModKit conventions as regular modules:
+When the module exposes REST endpoints, route definitions follow the same ModKit conventions as regular modules:
 
 - **Access control**: use `.require_auth(&Resource::X, &Action::Y)` for protected operations.
 - **License check**: for authenticated operations, calling `.require_license_features::<F>(...)` is mandatory (use `[]` to explicitly declare no license feature requirement).
@@ -365,14 +365,14 @@ When the gateway exposes REST endpoints, route definitions follow the same ModKi
 
 > **Note:** These are general ModKit REST conventions. For guidance, see `docs/modkit_unified_system/04_rest_operation_builder.md`.
 
-Example (gateway `routes.rs`):
+Example (`routes.rs`):
 
 ```rust
 use modkit::api::operation_builder::{LicenseFeature, OperationBuilderODataExt};
 use modkit::api::{OpenApiRegistry, OperationBuilder};
 
-router = OperationBuilder::get("/my-gateway/v1/items")
-    .operation_id("my_gateway.list_items")
+router = OperationBuilder::get("/my-module/v1/items")
+    .operation_id("my_module.list_items")
     .require_auth(&Resource::Items, &Action::Read)
     .require_license_features::<License>([])
     .with_odata_filter::<dto::ItemDtoFilterField>()
@@ -390,7 +390,7 @@ router = OperationBuilder::get("/my-gateway/v1/items")
 The domain service handles plugin resolution:
 
 ```rust
-// <gateway>-gw/src/domain/service.rs
+// <module>/src/domain/service.rs
 
 use modkit::client_hub::{ClientHub, ClientScope};
 use my_sdk::{MyModulePluginClient, MyModulePluginSpec};
@@ -445,7 +445,7 @@ impl Service {
 Each plugin module:
 
 1. Generates a stable GTS instance ID
-2. Registers the plugin **instance** in types-registry (schema is registered by gateway)
+2. Registers the plugin **instance** in types-registry (schema is registered by main module)
 3. Registers a scoped client in ClientHub
 
 ```rust
@@ -477,7 +477,7 @@ impl Module for VendorAPlugin {
         let instance_id = MyModulePluginSpecV1::gts_make_instance_id("vendor_a.pkg_b.my_module.plugin.v1");
 
         // 2. Register plugin INSTANCE in types-registry
-        //    Note: The plugin SCHEMA is registered by the gateway module
+        //    Note: The plugin SCHEMA is registered by the main module
         let registry = ctx.client_hub().get::<dyn TypesRegistryClient>()?;
         let instance = BaseModkitPluginV1::<MyModulePluginSpecV1> {
             id: instance_id.clone(),
@@ -533,14 +533,14 @@ impl MyModulePluginClient for Service {
 
 ## Plugin Selection Strategies
 
-The gateway can select plugins based on various criteria:
+The module can select plugins based on various criteria:
 
 ### By Vendor (Configuration-Based)
 
 ```yaml
 # config/quickstart.yaml
 modules:
-  my_gateway:
+  my_module:
     config:
       vendor: "Contoso"  # Select Contoso plugin
 ```
@@ -617,7 +617,7 @@ pub async fn handle_request(
     ctx: &SecurityContext,
     provider: &str,  // e.g., "openai", "anthropic"
 ) -> Result<Response, DomainError> {
-    let plugin_id = format!("gts.x.core.modkit.plugin.v1~x.llm_gateway.llm_gateway.plugin.v1~{}.llm_gateway._.plugin.v1", provider);
+    let plugin_id = format!("gts.x.core.modkit.plugin.v1~x.llm_provider.llm_provider.plugin.v1~{}.llm_provider._.plugin.v1", provider);
     let scope = ClientScope::gts_id(&plugin_id);
     let plugin = self.hub.get_scoped::<dyn LlmPluginClient>(&scope)?;
     plugin.complete(ctx, request).await
@@ -628,27 +628,27 @@ pub async fn handle_request(
 
 ## Configuration
 
-### Gateway Configuration
+### Module Configuration
 
 ```yaml
 # config/quickstart.yaml
 modules:
-  my_gateway:
+  my_module:
     config:
       vendor: "Contoso"
       fallback_vendor: "Default"
 ```
 
 ```rust
-// <gateway>-gw/src/config.rs
+// <module>/src/config.rs
 #[derive(Debug, Clone, Deserialize)]
 #[serde(default, deny_unknown_fields)]
-pub struct GatewayConfig {
+pub struct ModuleConfig {
     pub vendor: String,
     pub fallback_vendor: Option<String>,
 }
 
-impl Default for GatewayConfig {
+impl Default for ModuleConfig {
     fn default() -> Self {
         Self {
             vendor: "Default".to_owned(),
@@ -696,10 +696,10 @@ impl Default for PluginConfig {
 
 ## Error Handling
 
-### Domain Errors (Gateway)
+### Domain Errors (Main Module)
 
 ```rust
-// <gateway>-gw/src/domain/error.rs
+// <module>/src/domain/error.rs
 #[derive(thiserror::Error, Debug)]
 pub enum DomainError {
     #[error("types registry unavailable: {0}")]
@@ -722,7 +722,7 @@ pub enum DomainError {
 ### SDK Errors (Shared)
 
 ```rust
-// <gateway>-sdk/src/error.rs
+// <module>-sdk/src/error.rs
 #[derive(thiserror::Error, Debug, Clone)]
 pub enum MyError {
     #[error("not found: {0}")]
@@ -743,13 +743,13 @@ pub enum MyError {
 Ensure proper initialization order by declaring dependencies:
 
 ```rust
-// Gateway depends on the types_registry and any other required modules, but not on plugins. Plugins are resolved indirectly via GTS.
+// Module depends on the types_registry and any other required modules, but not on plugins. Plugins are resolved indirectly via GTS.
 #[modkit::module(
-    name = "my_gateway",
+    name = "my_module",
     deps = ["types_registry"],
     capabilities = [rest]
 )]
-pub struct MyGateway { /* ... */ }
+pub struct MyModule { /* ... */ }
 
 #[modkit::module(
     name = "plugin_a",
@@ -762,7 +762,7 @@ This ensures:
 
 1. `types_registry` initializes first
 2. All plugins initialize and register their instances
-3. Gateway initializes last and can discover all available plugins
+3. Main module initializes last and can discover all available plugins
 
 ---
 
@@ -788,7 +788,7 @@ async fn test_plugin_implementation() {
 
 ```rust
 #[tokio::test]
-async fn test_gateway_plugin_resolution() {
+async fn test_module_plugin_resolution() {
     let hub = Arc::new(ClientHub::new());
 
     // Register mock types-registry
@@ -800,7 +800,7 @@ async fn test_gateway_plugin_resolution() {
     let mock_plugin: Arc<dyn MyModulePluginClient> = Arc::new(MockPlugin::new());
     hub.register_scoped::<dyn MyModulePluginClient>(ClientScope::gts_id(instance_id), mock_plugin);
 
-    // Test gateway service
+    // Test module service
     let svc = Service::new(hub, "Test".to_owned());
     let ctx = SecurityContext::builder()
         .tenant_id(Uuid::new_v4())
@@ -870,45 +870,19 @@ Err(DomainError::PluginNotFound {
 })
 ```
 
-### 6. Gateway Registers Schema, Plugins Register Instances
+### 6. Main Module Registers Schema, Plugins Register Instances
 
-Keep schema registration in the gateway module for clear ownership:
+Keep schema registration in the main module for clear ownership:
 
 | Component | Registers |
 |-----------|-----------|
-| Gateway | Plugin **schema** (GTS type definition) |
+| Main Module | Plugin **schema** (GTS type definition) |
 | Each Plugin | Its **instance** (metadata + scoped client) |
 
 This ensures:
 - Schema is registered once by the authoritative owner
 - Plugins are simpler — they only declare their own existence
 - No race conditions or duplicate registration attempts
-
----
-
-## Example: Tenant Resolver
-
-See `examples/plugin-modules/tenant_resolver/` for a complete working example:
-
-- **`tenant_resolver-sdk/`** — SDK with `TenantResolverClient` (public) and `TenantResolverPluginClient` (plugin) traits
-- **`tenant_resolver-gw/`** — Gateway module that registers schema and selects plugin by vendor config
-- **`plugins/contoso_tr_plugin/`** — Contoso vendor implementation (registers instance only)
-- **`plugins/fabrikam_tr_plugin/`** — Fabrikam vendor implementation (registers instance only)
-
-### Running the Example
-
-```bash
-# Build with feature flag
-cargo check -p hyperspot-server --features tenant-resolver-example
-
-# Run
-cargo run -p hyperspot-server --features tenant-resolver-example -- \
-    --config config/quickstart.yaml run
-
-# Test endpoints
-curl http://127.0.0.1:8087/tenant-resolver/v1/root
-curl http://127.0.0.1:8087/tenant-resolver/v1/tenants?limit=50
-```
 
 ---
 

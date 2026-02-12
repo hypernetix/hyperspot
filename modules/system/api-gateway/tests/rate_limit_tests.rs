@@ -16,7 +16,7 @@ use modkit::{
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tenant_resolver_sdk::TenantResolverGatewayClient;
+use tenant_resolver_sdk::TenantResolverClient;
 use tokio::time::{Duration, sleep};
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -45,7 +45,7 @@ fn wrap_config(config: &serde_json::Value) -> serde_json::Value {
 fn create_test_module_ctx_with_config(config: &serde_json::Value) -> ModuleCtx {
     let wrapped_config = wrap_config(config);
     let hub = Arc::new(modkit::ClientHub::new());
-    hub.register::<dyn TenantResolverGatewayClient>(Arc::new(MockTenantResolver));
+    hub.register::<dyn TenantResolverClient>(Arc::new(MockTenantResolver));
 
     ModuleCtx::new(
         "api-gateway",

@@ -61,7 +61,7 @@ use modkit::client_hub::ClientScope;
 let scope = ClientScope::gts_id("gts.x.core.modkit.plugin.v1~vendor.pkg.my_module.plugin.v1~acme.test._.plugin.v1");
 ctx.client_hub().register_scoped::<dyn MyPluginClient>(scope, plugin_impl);
 
-// Gateway resolves the selected plugin
+// Main module resolves the selected plugin
 let scope = ClientScope::gts_id(&selected_instance_id);
 let plugin = ctx.client_hub().get_scoped::<dyn MyPluginClient>(&scope)?;
 ```
@@ -74,17 +74,17 @@ let plugin = ctx.client_hub().get_scoped::<dyn MyPluginClient>(&scope)?;
 
 ## Plugin Architecture Overview
 
-ModKit’s plugin system enables **gateway + plugins** patterns where:
+ModKit’s plugin system enables **module + plugins** patterns where:
 
-- **Gateway** registers plugin **schemas** (GTS type definitions)
+- **Main module** registers plugin **schemas** (GTS type definitions)
 - **Plugins** register their **instances** (metadata + scoped client)
 - Consumers resolve plugins via **scoped ClientHub** using GTS instance IDs
 
 ### Flow
 
-1. **Gateway** registers plugin schema with GTS
+1. **Main module** registers plugin schema with GTS
 2. **Plugin** starts, registers scoped client under `ClientScope::gts_id(instance_id)`
-3. **Gateway** resolves plugin by instance ID via `ClientHub::get_scoped()`
+3. **Main module** resolves plugin by instance ID via `ClientHub::get_scoped()`
 4. **Requests** flow through the scoped client to the plugin implementation
 
 ### Example: Plugin registration
@@ -96,10 +96,10 @@ let client = Arc::new(MyPluginClient::new(config));
 ctx.client_hub().register_scoped::<dyn MyPluginClient>(scope, client);
 ```
 
-### Example: Gateway resolves plugin
+### Example: Main module resolves plugin
 
 ```rust
-// In gateway handler
+// In main module handler
 let scope = ClientScope::gts_id(&selected_instance_id);
 let plugin = ctx.client_hub().get_scoped::<dyn MyPluginClient>(&scope)?;
 let result = plugin.process(&ctx, input).await?;

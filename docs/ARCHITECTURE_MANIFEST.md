@@ -11,7 +11,7 @@ HyperSpot is a modular Rust-based foundation for building SaaS products where Ge
 HyperSpot is a **modular, high-performance AI services platform** built in Rust. It provides a framework for building scalable and highly-customizable AI applications with automatic REST API generation, OpenAPI documentation, and a flexible modular architecture.
 
 **Key Philosophy:**
-- **Modular by Design**: Everything is a Module - composable, independent units with gateway patterns for pluggable workers
+- **Modular by Design**: Everything is a Module - composable, independent units with plugin patterns for pluggable workers
 - **Extensible at Every Level**: [GTS](https://github.com/globaltypesystem/gts-spec)-powered extension points for custom data types, business logic, and third-party integrations
 - **SaaS Ready**: Multi-tenancy, granular access control, usage tracking, and tenant customization built-in
 - **Cloud Operations Excellence**: Production-grade observability, database agnostic design, API best practices, and resilience patterns via ModKit
@@ -99,13 +99,13 @@ A **Module** is a logical component that provides a specific set of functionalit
 
 **Module categories**
 
-- **Regular Module** — Regular modules are typically independent, expose their own versioned public API, and are responsible for their own domain end-to-end, including module business logic, data storage, migrations, and module API documentation. Regular modules **cannot** depend on or consume plugin modules directly—all plugin functionality must be accessed through a Gateway Module's public API.
-- **Gateway Module** — Gateway modules are Regular Modules that define a **plugin contract** and route requests to one or more Plugin Modules at runtime. They expose a public API and delegate execution to the selected plugin based on configuration or context. See [MODKIT_PLUGINS.md](MODKIT_PLUGINS.md) for the Gateway + Plugin pattern.
-- **Plugin Module** — Plugins are special modules identified by a **GTS instance ID** that implement a gateway-defined contract. They do not expose their own **public API** and act as pluggable workers. Plugins register themselves in the types-registry for runtime discovery — see [MODKIT_PLUGINS.md](MODKIT_PLUGINS.md) for details.
+- **Regular Module** — Regular modules are typically independent, expose their own versioned public API, and are responsible for their own domain end-to-end, including module business logic, data storage, migrations, and module API documentation. Regular modules **cannot** depend on or consume plugin modules directly—all plugin functionality must be accessed through the main module's public API.
+- **Module with plugins** — Modules with plugins are Regular Modules that define a **plugin contract** and route requests to one or more Plugin Modules at runtime. They expose a public API and delegate execution to the selected plugin based on configuration or context. See [MODKIT_PLUGINS.md](MODKIT_PLUGINS.md) for the Module + Plugin pattern.
+- **Plugin Module** — Plugins are special modules identified by a **GTS instance ID** that implement a module-defined contract. They do not expose their own **public API** and act as pluggable workers. Plugins register themselves in the types-registry for runtime discovery — see [MODKIT_PLUGINS.md](MODKIT_PLUGINS.md) for details.
 
 **Module structure:**
 
-| Module layer | Regular module | Gateway module | Plugin module |
+| Module layer | Regular module | Module with plugins | Plugin module |
 | --- | --- | --- | --- |
 | API layer @ api/ | Yes | Yes | No |
 | Business logic layer @ domain/ | Yes | Yes (contract, router) | Yes, main logic |
@@ -284,8 +284,8 @@ modules/<module-dir>/
 
 Additional common patterns (see `examples/`):
 
-- **Gateway + plugins pattern** (pluggable workers via `ClientHub` scopes):
-  - Gateway crate: `<module>-gw/`
+- **Module + plugins pattern** (pluggable workers via `ClientHub` scopes):
+  - Module crate: `<module>/`
   - SDK crate: `<module>-sdk/`
   - Plugin crates: `plugins/<vendor>_<plugin>/`
 

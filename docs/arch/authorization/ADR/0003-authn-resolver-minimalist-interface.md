@@ -8,9 +8,9 @@ decision-makers: Vasily
 
 ## Context and Problem Statement
 
-AuthN Resolver is a gateway module that validates bearer tokens and produces `SecurityContext` for downstream modules (PEPs). The gateway needs to define an interface for vendor-specific plugins that integrate with various Identity Providers (IdPs).
+AuthN Resolver is a module that validates bearer tokens and produces `SecurityContext` for downstream modules (PEPs). The module needs to define an interface for vendor-specific plugins that integrate with various Identity Providers (IdPs).
 
-**Key question:** How prescriptive should the gateway interface be? Should it define separate methods for different authentication mechanisms, or provide a minimal abstraction that leaves implementation details to plugins?
+**Key question:** How prescriptive should the module interface be? Should it define separate methods for different authentication mechanisms, or provide a minimal abstraction that leaves implementation details to plugins?
 
 Different IdPs use different protocols and token formats:
 
@@ -23,9 +23,9 @@ Different IdPs use different protocols and token formats:
 
 - **Vendor Neutrality** — Cyber Fabric must integrate with any vendor's IdP without assuming specific protocols
 - **Plugin Flexibility** — Plugins should choose validation strategies based on their IdP's capabilities
-- **Separation of Concerns** — Gateway defines *what* authentication produces, plugins define *how* tokens are validated
+- **Separation of Concerns** — Module defines *what* authentication produces, plugins define *how* tokens are validated
 - **Caching Autonomy** — Different validation methods have different caching strategies (JWKS caching vs introspection result caching)
-- **Future-Proofing** — New authentication methods should be addable without changing the gateway interface
+- **Future-Proofing** — New authentication methods should be addable without changing the main module interface
 
 ## Considered Options
 
@@ -45,13 +45,13 @@ pub trait AuthNResolverPluginClient: Send + Sync {
 }
 ```
 
-**What the gateway specifies:**
+**What the module specifies:**
 
 - Output format: `AuthenticationResult` containing `SecurityContext`
 - Error semantics: `AuthNResolverError` (invalid token, unauthorized, service unavailable, no plugin available)
 - Security boundaries: token is a credential, must be handled securely
 
-**What the gateway does NOT specify:**
+**What the module does NOT specify:**
 
 - Token format (JWT, opaque, custom)
 - Validation method (local, introspection, hybrid)
@@ -63,15 +63,15 @@ pub trait AuthNResolverPluginClient: Send + Sync {
 
 **Good:**
 
-- **Vendor neutrality** — Any IdP can be integrated without gateway changes
+- **Vendor neutrality** — Any IdP can be integrated without module changes
 - **Plugin flexibility** — Plugins implement exactly the validation logic their IdP requires
 - **Caching autonomy** — Plugins implement caching strategies appropriate to their validation method
 - **Future-proof** — New authentication methods (e.g., PASETO, WebAuthn) can be added as new plugins
-- **Simple gateway** — Gateway code is minimal and stable
+- **Simple module** — Module code is minimal and stable
 
 **Bad:**
 
-- **Less guidance** — Plugin developers must understand their IdP's requirements without gateway-level hints
+- **Less guidance** — Plugin developers must understand their IdP's requirements without module-level hints
 - **Potential inconsistency** — Different plugins might handle edge cases differently
 
 **Mitigations:**
@@ -84,7 +84,7 @@ pub trait AuthNResolverPluginClient: Send + Sync {
 
 ### Option A: Prescriptive Interface
 
-Gateway defines separate methods for different authentication mechanisms:
+Module defines separate methods for different authentication mechanisms:
 
 ```rust
 trait AuthNResolverPluginClient {
@@ -95,15 +95,15 @@ trait AuthNResolverPluginClient {
 ```
 
 - Good, because provides clear guidance for common patterns
-- Good, because gateway can optimize for specific mechanisms
+- Good, because module can optimize for specific mechanisms
 - Bad, because **assumes specific protocols** — what about mTLS, API keys, PASETO?
 - Bad, because plugins for non-standard IdPs must shoehorn into predefined methods
-- Bad, because adding new authentication methods requires gateway interface changes
+- Bad, because adding new authentication methods requires module interface changes
 - Bad, because caching logic would need to be duplicated or abstracted separately
 
 ### Option B: Minimalist Interface
 
-Gateway defines single method, plugins handle all details:
+Module defines single method, plugins handle all details:
 
 ```rust
 trait AuthNResolverPluginClient {
@@ -113,7 +113,7 @@ trait AuthNResolverPluginClient {
 
 - Good, because **maximum flexibility** — plugins implement exactly what their IdP needs
 - Good, because **vendor neutral** — no assumption about protocols or token formats
-- Good, because **stable interface** — new auth methods don't require gateway changes
+- Good, because **stable interface** — new auth methods don't require module changes
 - Good, because **caching is plugin's decision** — optimal strategies per validation method
 - Bad, because less guidance for plugin developers (mitigated by reference implementation)
 

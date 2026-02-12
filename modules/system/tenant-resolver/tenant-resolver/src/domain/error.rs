@@ -1,4 +1,4 @@
-//! Domain errors for the tenant resolver gateway.
+//! Domain errors for the tenant resolver module.
 
 use modkit_macros::domain_model;
 use tenant_resolver_sdk::TenantResolverError;

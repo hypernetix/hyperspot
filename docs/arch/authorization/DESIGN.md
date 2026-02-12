@@ -88,12 +88,12 @@ sequenceDiagram
 2. **Module Handler (PEP)** — receives SecurityContext, builds AuthZ request, compiles constraints to SQL
 3. **AuthZ Resolver (PDP)** — evaluates policies, returns decision + constraints
 
-### AuthN Resolver and AuthZ Resolver: Gateway + Plugin Architecture
+### AuthN Resolver and AuthZ Resolver: Module + Plugin Architecture
 
-Since IdP and PDP are vendor-specific, Cyber Fabric cannot implement authentication and authorization directly. Instead, we use the **gateway + plugin** pattern with two separate resolvers:
+Since IdP and PDP are vendor-specific, Cyber Fabric cannot implement authentication and authorization directly. Instead, we use the **module + plugin** pattern with two separate resolvers:
 
-- **AuthN Resolver** — a Cyber Fabric gateway module that defines a unified interface for authentication operations (token validation, introspection, SecurityContext production)
-- **AuthZ Resolver** — a Cyber Fabric gateway module that defines a unified interface for authorization operations (PDP functionality, policy evaluation, constraint generation)
+- **AuthN Resolver** — a Cyber Fabric module with plugins that defines a unified interface for authentication operations (token validation, introspection, SecurityContext production)
+- **AuthZ Resolver** — a Cyber Fabric module with plugins that defines a unified interface for authorization operations (PDP functionality, policy evaluation, constraint generation)
 - **Vendor Plugins** — implement the AuthN and/or AuthZ interfaces, integrating with vendor's IdP and Authorization API
 
 This separation provides:
@@ -157,22 +157,22 @@ flowchart TB
 
     subgraph Cyber Fabric
         subgraph TenantResolver["Tenant Resolver"]
-            TenantGW["Gateway"]
+            TenantGW["Module"]
             TenantPlugin["Plugin"]
         end
 
         subgraph RGResolver["RG Resolver"]
-            RGGW["Gateway"]
+            RGGW["Module"]
             RGPlugin["Plugin"]
         end
 
         subgraph AuthNResolver["AuthN Resolver"]
-            AuthNGW["Gateway"]
+            AuthNGW["Module"]
             AuthNPlugin["Plugin<br/>(Token Validation)"]
         end
 
         subgraph AuthZResolver["AuthZ Resolver"]
-            AuthZGW["Gateway"]
+            AuthZGW["Module"]
             AuthZPlugin["Plugin<br/>(PDP)"]
         end
 
@@ -212,16 +212,16 @@ flowchart TB
 ```
 
 **Communication flow:**
-1. **AuthN Middleware → AuthN Resolver (Gateway)** — Middleware calls `authenticate(bearer_token)` to validate token and get `AuthenticationResult`
-2. **AuthN Resolver (Gateway) → AuthN Resolver (Plugin)** — Gateway delegates to vendor plugin
+1. **AuthN Middleware → AuthN Resolver (Module)** — Middleware calls `authenticate(bearer_token)` to validate token and get `AuthenticationResult`
+2. **AuthN Resolver (Module) → AuthN Resolver (Plugin)** — Module delegates to vendor plugin
 3. **AuthN Resolver (Plugin) → IdP** — Token validation (JWT signature verification or introspection)
 4. **AuthN Middleware → Handler** — Middleware extracts `SecurityContext` from `AuthenticationResult` and passes to handler
-5. **Handler → AuthZ Resolver (Gateway)** — PEP calls `/access/v1/evaluation` for authorization decisions with `SecurityContext`
-6. **AuthZ Resolver (Gateway) → AuthZ Resolver (Plugin)** — Gateway delegates to vendor plugin (PDP)
+5. **Handler → AuthZ Resolver (Module)** — PEP calls `/access/v1/evaluation` for authorization decisions with `SecurityContext`
+6. **AuthZ Resolver (Module) → AuthZ Resolver (Plugin)** — Module delegates to vendor plugin (PDP)
 7. **AuthZ Resolver (Plugin) → Authz Svc** — Policy evaluation
-8. **AuthZ Resolver (Plugin) → Tenant Resolver (Gateway)** — Tenant hierarchy queries
-9. **AuthZ Resolver (Plugin) → RG Resolver (Gateway)** — Group hierarchy and membership queries
-10. **Tenant/RG Resolver (Gateway) → Plugin → Vendor Service** — Gateway delegates to plugin, plugin syncs from vendor
+8. **AuthZ Resolver (Plugin) → Tenant Resolver (Module)** — Tenant hierarchy queries
+9. **AuthZ Resolver (Plugin) → RG Resolver (Module)** — Group hierarchy and membership queries
+10. **Tenant/RG Resolver (Module) → Plugin → Vendor Service** — Module delegates to plugin, plugin syncs from vendor
 
 ### Deployment Modes and Trust Model
 
@@ -241,11 +241,11 @@ Both AuthN Resolver and AuthZ Resolver can run in two deployment configurations:
 
 **Trust Boundaries:**
 
-In both modes, AuthZ Resolver (PDP) trusts subject identity data from PEP. The mTLS in out-of-process mode authenticates *which service* is calling, not the validity of subject claims. Subject identity originates from AuthN Resolver (Gateway) and flows through PEP to AuthZ Resolver.
+In both modes, AuthZ Resolver (PDP) trusts subject identity data from PEP. The mTLS in out-of-process mode authenticates *which service* is calling, not the validity of subject claims. Subject identity originates from AuthN Resolver (Module) and flows through PEP to AuthZ Resolver.
 
 | Aspect | In-Process | Out-of-Process |
 |--------|------------|----------------|
-| Gateway → Resolver | implicit | mTLS |
+| Module → Plugin | implicit | mTLS |
 | Subject identity trust | Same process | Authenticated caller |
 | Network exposure | none | internal network only |
 
@@ -346,26 +346,26 @@ Authentication is performed by **AuthN middleware** within the module that accep
 3. Receives `AuthenticationResult` containing validated subject identity
 4. Passes the `SecurityContext` from `AuthenticationResult` to the module's handler (PEP)
 
-Authentication is handled by the **AuthN Resolver** — a gateway module with a minimalist interface that validates bearer tokens and produces `AuthenticationResult`.
+Authentication is handled by the **AuthN Resolver** — a module with plugins and a minimalist interface that validates bearer tokens and produces `AuthenticationResult`.
 
 **Module Structure:**
 
 - **authn-resolver-sdk** — SDK package containing:
-  - `AuthNResolverGatewayClient` trait (public API for other modules)
+  - `AuthNResolverClient` trait (public API for other modules)
   - `AuthNResolverPluginClient` trait (API for plugins)
   - `AuthenticationResult`, `SecurityContext` models
   - `AuthNResolverError` error types
 
-- **authn-resolver-gw** — Gateway module that:
-  - Implements `AuthNResolverGatewayClient` trait
+- **authn-resolver** — Main module that:
+  - Implements `AuthNResolverClient` trait
   - Discovers and delegates to vendor-specific plugins via GTS types-registry
-  - Registers gateway client in `ClientHub` for consumption by other modules
+  - Registers client in `ClientHub` for consumption by other modules
 
-**Gateway Client Interface:**
+**Public Client Interface:**
 
 ```rust
 #[async_trait]
-pub trait AuthNResolverGatewayClient: Send + Sync {
+pub trait AuthNResolverClient: Send + Sync {
     /// Authenticate a bearer token and return the authentication result.
     ///
     /// # Errors
@@ -400,7 +400,7 @@ pub trait AuthNResolverPluginClient: Send + Sync {
 
 **Architecture:**
 - **AuthN Middleware** — Extracts bearer token from request headers
-- **AuthN Resolver Gateway** — Delegates to vendor-specific plugin
+- **AuthN Resolver (Module)** — Delegates to vendor-specific plugin
 - **AuthN Resolver Plugin** — Implements token validation logic (JWT, introspection, custom protocols, etc.)
 - **Output** — `AuthenticationResult` containing `SecurityContext`
 
@@ -410,20 +410,20 @@ pub trait AuthNResolverPluginClient: Send + Sync {
 sequenceDiagram
     participant Client
     participant Middleware as AuthN Middleware
-    participant Gateway as AuthN Resolver<br/>(Gateway)
+    participant Resolver as AuthN Resolver<br/>(Module)
     participant Plugin as AuthN Resolver<br/>(Plugin)
     participant IdP as Vendor's IdP
     participant Handler as Module Handler (PEP)
 
     Client->>Middleware: Request + Bearer Token
     Middleware->>Middleware: Extract bearer_token from Authorization header
-    Middleware->>Gateway: authenticate(bearer_token)
-    Gateway->>Plugin: authenticate(bearer_token)
+    Middleware->>Resolver: authenticate(bearer_token)
+    Resolver->>Plugin: authenticate(bearer_token)
     Plugin->>IdP: Validate token (implementation-specific)
     IdP-->>Plugin: Token valid + claims
     Plugin->>Plugin: Map to AuthenticationResult
-    Plugin-->>Gateway: AuthenticationResult
-    Gateway-->>Middleware: AuthenticationResult
+    Plugin-->>Resolver: AuthenticationResult
+    Resolver-->>Middleware: AuthenticationResult
     Middleware->>Handler: Request + SecurityContext
     Handler-->>Middleware: Response
     Middleware-->>Client: Response
@@ -1215,7 +1215,7 @@ Capabilities declare what predicate types the PEP can enforce locally:
 
 ### Table Schemas (Local Projections)
 
-These tables are maintained locally by Cyber Fabric gateway modules (Tenant Resolver, Resource Group Resolver) and used by PEPs to execute constraint queries efficiently without calling back to the vendor platform.
+These tables are maintained locally by Cyber Fabric modules (Tenant Resolver, Resource Group Resolver) and used by PEPs to execute constraint queries efficiently without calling back to the vendor platform.
 
 #### `tenant_closure`
 
@@ -1303,7 +1303,7 @@ These questions require further design work.
 
 3. **Local projections sync** - How to keep projection tables (tenant_closure, resource_group_closure, resource_group_membership) in sync with vendor's source of truth? Possible approaches: event-based sync (requires event broker), CDC-based (Debezium-like), or periodic polling via Resolver APIs. Each has trade-offs in consistency, latency, and infrastructure complexity.
 
-4. **Resource Group Service** - Should Cyber Fabric have its own Resource Group Service, or is Resource Group Resolver (gateway to vendor's service) sufficient? Having a Cyber Fabric-native service has pros and cons. Needs design.
+4. **Resource Group Service** - Should Cyber Fabric have its own Resource Group Service, or is Resource Group Resolver (module bridging to vendor's service) sufficient? Having a Cyber Fabric-native service has pros and cons. Needs design.
 
 5. **Authorization decision caching** - See [Authorization Decision Caching](#authorization-decision-caching) section for detailed open questions: cache key structure, cache-control protocol, invalidation strategy, token expiration handling.
 

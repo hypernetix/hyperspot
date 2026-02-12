@@ -1,19 +1,19 @@
-//! Configuration for the tenant resolver gateway.
+//! Configuration for the tenant resolver module.
 
 use serde::Deserialize;
 
-/// Gateway configuration.
+/// Module configuration.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(default, deny_unknown_fields)]
-pub struct TenantResolverGwConfig {
+pub struct TenantResolverConfig {
     /// Vendor selector used to pick a plugin implementation.
     ///
-    /// The gateway queries types-registry for plugin instances matching
+    /// The module queries types-registry for plugin instances matching
     /// this vendor and selects the one with lowest priority.
     pub vendor: String,
 }
 
-impl Default for TenantResolverGwConfig {
+impl Default for TenantResolverConfig {
     fn default() -> Self {
         Self {
             vendor: "hyperspot".to_owned(),

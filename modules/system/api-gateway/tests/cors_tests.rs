@@ -15,7 +15,7 @@ use modkit::{
     contracts::{ApiGatewayCapability, OpenApiRegistry},
 };
 use std::sync::Arc;
-use tenant_resolver_sdk::TenantResolverGatewayClient;
+use tenant_resolver_sdk::TenantResolverClient;
 use uuid::Uuid;
 
 /// Helper to create a test `ModuleCtx` with CORS config
@@ -54,7 +54,7 @@ fn create_test_module_ctx_with_cors() -> ModuleCtx {
     }));
 
     let hub = Arc::new(modkit::ClientHub::new());
-    hub.register::<dyn TenantResolverGatewayClient>(Arc::new(MockTenantResolver));
+    hub.register::<dyn TenantResolverClient>(Arc::new(MockTenantResolver));
 
     ModuleCtx::new(
         "api-gateway",
@@ -74,7 +74,7 @@ fn create_test_module_ctx_permissive_cors() -> ModuleCtx {
     }));
 
     let hub = Arc::new(modkit::ClientHub::new());
-    hub.register::<dyn TenantResolverGatewayClient>(Arc::new(MockTenantResolver));
+    hub.register::<dyn TenantResolverClient>(Arc::new(MockTenantResolver));
 
     ModuleCtx::new(
         "api-gateway",
@@ -188,7 +188,7 @@ async fn test_cors_disabled() {
     }));
 
     let hub = Arc::new(modkit::ClientHub::new());
-    hub.register::<dyn TenantResolverGatewayClient>(Arc::new(MockTenantResolver));
+    hub.register::<dyn TenantResolverClient>(Arc::new(MockTenantResolver));
 
     let ctx = ModuleCtx::new(
         "api-gateway",
@@ -232,7 +232,7 @@ async fn test_cors_config_validation() {
     }));
 
     let hub = Arc::new(modkit::ClientHub::new());
-    hub.register::<dyn TenantResolverGatewayClient>(Arc::new(MockTenantResolver));
+    hub.register::<dyn TenantResolverClient>(Arc::new(MockTenantResolver));
 
     let ctx = ModuleCtx::new(
         "api-gateway",

@@ -48,7 +48,7 @@ modules/llm-gateway/
 │   └── ADR/
 ├── llm-gateway-sdk/         # Public API traits, models, errors
 │   └── schemas/             # GTS domain model schemas
-├── llm-gateway-gw/          # Gateway implementation (planned)
+├── llm-gateway/             # Core module implementation (planned)
 └── plugins/                 # (planned)
     ├── providers/
     │   ├── openai_plugin/       # OpenAI-compatible providers

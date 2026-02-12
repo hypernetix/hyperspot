@@ -15,7 +15,7 @@ use url::Url;
 use users_info_sdk::UsersInfoClientV1;
 
 // Import tenant resolver for multi-tenant access
-use tenant_resolver_sdk::TenantResolverGatewayClient;
+use tenant_resolver_sdk::TenantResolverClient;
 
 use crate::api::rest::dto::UserEvent;
 use crate::api::rest::routes;
@@ -104,7 +104,7 @@ impl Module for UsersInfo {
         // Fetch tenant resolver from ClientHub
         let resolver = ctx
             .client_hub()
-            .get::<dyn TenantResolverGatewayClient>()
+            .get::<dyn TenantResolverClient>()
             .map_err(|e| anyhow::anyhow!("failed to get tenant resolver: {e}"))?;
 
         let service_config = ServiceConfig {

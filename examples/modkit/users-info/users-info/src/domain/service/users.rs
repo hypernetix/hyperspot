@@ -11,7 +11,7 @@ use crate::domain::service::DbProvider;
 use crate::domain::service::{AddressesService, CitiesService, ServiceConfig};
 use modkit_odata::{ODataQuery, Page};
 use modkit_security::{PolicyEngineRef, SecurityContext};
-use tenant_resolver_sdk::TenantResolverGatewayClient;
+use tenant_resolver_sdk::TenantResolverClient;
 use time::OffsetDateTime;
 use users_info_sdk::{NewUser, User, UserFull, UserPatch};
 use uuid::Uuid;
@@ -35,7 +35,7 @@ pub struct UsersService<R: UsersRepository + 'static, CR: CitiesRepository, AR: 
     repo: Arc<R>,
     events: Arc<dyn EventPublisher<UserDomainEvent>>,
     audit: Arc<dyn AuditPort>,
-    resolver: Arc<dyn TenantResolverGatewayClient>,
+    resolver: Arc<dyn TenantResolverClient>,
     config: ServiceConfig,
     cities: Arc<CitiesService<CR>>,
     addresses: Arc<AddressesService<AR, R>>,
@@ -51,7 +51,7 @@ impl<R: UsersRepository + 'static, CR: CitiesRepository, AR: AddressesRepository
         events: Arc<dyn EventPublisher<UserDomainEvent>>,
         audit: Arc<dyn AuditPort>,
         policy_engine: PolicyEngineRef,
-        resolver: Arc<dyn TenantResolverGatewayClient>,
+        resolver: Arc<dyn TenantResolverClient>,
         config: ServiceConfig,
         cities: Arc<CitiesService<CR>>,
         addresses: Arc<AddressesService<AR, R>>,

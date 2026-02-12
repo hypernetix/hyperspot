@@ -2,14 +2,14 @@ use async_trait::async_trait;
 use modkit_security::SecurityContext;
 use tenant_resolver_sdk::{
     GetAncestorsOptions, GetAncestorsResponse, GetDescendantsOptions, GetDescendantsResponse,
-    GetTenantsOptions, IsAncestorOptions, TenantId, TenantInfo, TenantRef, TenantResolverError,
-    TenantResolverGatewayClient, TenantStatus,
+    GetTenantsOptions, IsAncestorOptions, TenantId, TenantInfo, TenantRef, TenantResolverClient,
+    TenantResolverError, TenantStatus,
 };
 
 pub struct MockTenantResolver;
 
 #[async_trait]
-impl TenantResolverGatewayClient for MockTenantResolver {
+impl TenantResolverClient for MockTenantResolver {
     async fn get_tenant(
         &self,
         _ctx: &SecurityContext,

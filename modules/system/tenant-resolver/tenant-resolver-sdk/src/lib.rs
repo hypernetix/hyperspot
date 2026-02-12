@@ -2,7 +2,7 @@
 //!
 //! This crate provides the public API for the `tenant-resolver` module:
 //!
-//! - [`TenantResolverGatewayClient`] - Public API trait for consumers
+//! - [`TenantResolverClient`] - Public API trait for consumers
 //! - [`TenantResolverPluginClient`] - Plugin API trait for implementations
 //! - [`TenantInfo`], [`TenantStatus`] - Domain models
 //! - [`TenantResolverError`] - Error types
@@ -14,12 +14,12 @@
 //!
 //! ```ignore
 //! use tenant_resolver_sdk::{
-//!     TenantResolverGatewayClient, GetAncestorsOptions, GetDescendantsOptions,
+//!     TenantResolverClient, GetAncestorsOptions, GetDescendantsOptions,
 //!     GetTenantsOptions, IsAncestorOptions,
 //! };
 //!
 //! // Get the client from ClientHub
-//! let resolver = hub.get::<dyn TenantResolverGatewayClient>()?;
+//! let resolver = hub.get::<dyn TenantResolverClient>()?;
 //!
 //! // Get tenant info
 //! let tenant = resolver.get_tenant(&ctx, tenant_id).await?;
@@ -44,7 +44,7 @@ pub mod models;
 pub mod plugin_api;
 
 // Re-export main types at crate root
-pub use api::TenantResolverGatewayClient;
+pub use api::TenantResolverClient;
 pub use error::TenantResolverError;
 pub use gts::TenantResolverPluginSpecV1;
 pub use models::{

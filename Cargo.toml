@@ -59,12 +59,8 @@ members = [
     "modules/system/types",
     "modules/simple-user-settings/simple-user-settings-sdk",
     "modules/simple-user-settings/simple-user-settings",
-    "examples/plugin-modules/tenant-resolver/tenant-resolver-sdk",
-    "examples/plugin-modules/tenant-resolver/tenant-resolver-gw",
-    "examples/plugin-modules/tenant-resolver/plugins/contoso-tr-plugin",
-    "examples/plugin-modules/tenant-resolver/plugins/fabrikam-tr-plugin",
     "modules/system/tenant-resolver/tenant-resolver-sdk",
-    "modules/system/tenant-resolver/tenant-resolver-gw",
+    "modules/system/tenant-resolver/tenant-resolver",
     "modules/system/tenant-resolver/plugins/static-tr-plugin",
     "modules/system/tenant-resolver/plugins/single-tenant-tr-plugin",
 ]
