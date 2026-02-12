@@ -458,7 +458,7 @@ The system **MUST** support rate limit configuration with system-wide defaults a
 
 When rate limits are exceeded, the system **MUST** respond with HTTP 429 (Too Many Requests) and include a `Retry-After` header indicating when the client can retry. The system **MUST** include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset` headers on all API responses to enable clients to monitor their quota consumption. Header formats are defined as follows:
 
-- **`Retry-After`**: **MUST** be provided as `delay-seconds` — an integer representing the number of seconds the client should wait before retrying. **MAY** additionally include an `HTTP-date` value for backward compatibility with older HTTP clients.
+- **`Retry-After`**: **MUST** be provided as either `delay-seconds` (an integer representing the number of seconds the client should wait before retrying) **OR** an `HTTP-date` value (an absolute timestamp in HTTP-date format).
 - **`X-RateLimit-Limit`**: **MUST** be an integer representing the total request allowance for the current rate limit window.
 - **`X-RateLimit-Remaining`**: **MUST** be an integer representing the number of requests remaining in the current rate limit window.
 - **`X-RateLimit-Reset`**: **MUST** be an integer Unix epoch timestamp (seconds since 1970-01-01T00:00:00Z) in UTC indicating when the current rate limit window resets.
