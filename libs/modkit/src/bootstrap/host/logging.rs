@@ -2,7 +2,7 @@ use super::super::config::{LoggingConfig, Section};
 use anyhow::Context;
 use std::collections::HashMap;
 use std::io;
-use std::io::{IsTerminal, Write};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use tracing_subscriber::{Layer, fmt, util::SubscriberInitExt};
@@ -383,6 +383,15 @@ fn create_crate_file_writer(
     }
 }
 
+// ================= ANSI color support =================
+
+/// Returns `true` if stderr supports ANSI color escape codes.
+/// On Windows, also attempts to enable virtual-terminal color processing.
+fn stderr_supports_ansi() -> bool {
+    let _ = enable_ansi_support::enable_ansi_support();
+    supports_color::on(supports_color::Stream::Stderr).is_some_and(|level| level.has_basic)
+}
+
 // ================= registry & layers =================
 
 fn install_subscriber(
@@ -404,7 +413,7 @@ fn install_subscriber(
     // Console fmt layer (human-friendly)
     let console_layer = fmt::layer()
         .with_writer(nb_stderr)
-        .with_ansi(std::io::stderr().is_terminal())
+        .with_ansi(stderr_supports_ansi())
         .with_target(true)
         .with_level(true)
         .with_timer(fmt::time::UtcTime::rfc_3339())
@@ -458,6 +467,7 @@ fn init_minimal(
     let env = EnvFilter::try_from_default_env().ok();
 
     let fmt_layer = fmt::layer()
+        .with_ansi(stderr_supports_ansi())
         .with_target(true)
         .with_timer(fmt::time::UtcTime::rfc_3339());
 
