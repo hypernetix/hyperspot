@@ -228,6 +228,15 @@ The system **MUST** enforce strict tenant isolation ensuring usage data is never
 **Rationale**: Tenant data isolation is a security and compliance requirement.
 **Actors**: `cpt-cf-uc-actor-platform-operator`, `cpt-cf-uc-actor-tenant-admin`, `cpt-cf-uc-actor-platform-developer`, `cpt-cf-uc-actor-usage-source`, `cpt-cf-uc-actor-billing-system`, `cpt-cf-uc-actor-quota-enforcement`, `cpt-cf-uc-actor-monitoring-system`, `cpt-cf-uc-actor-types-registry`, `cpt-cf-uc-actor-storage-backend`
 
+#### Source Authorization
+
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-source-authorization`
+
+The system **MUST** identify the source of each usage record through the platform's authentication infrastructure and **MUST** validate that the source is authorized to report usage for the specific usage type being submitted. Source-to-usage-type bindings **MUST** be defined through the GTS type system, with permitted usage types registered in the Types Registry as part of the source's type definition. The system **MUST** reject usage records from sources that are not authorized for the given usage type.
+
+**Rationale**: Without source-level authorization, any module or integration could report usage for resource types it does not own (e.g., a File Parser reporting LLM token usage), leading to inaccurate metering and potential billing manipulation.
+**Actors**: `cpt-cf-uc-actor-usage-source`, `cpt-cf-uc-actor-types-registry`, `cpt-cf-uc-actor-platform-operator`
+
 ### 5.4 Storage & Retention
 
 #### Pluggable Storage Framework
@@ -361,7 +370,9 @@ The system **MUST** allow registration of custom measuring units via API without
 
 Primary use cases: AI/LLM token metering (input/output tokens, custom credit units), compute metering (vCPU-hours, memory-GB-hours, GPU-hours), API request metering (calls by tenant and endpoint), storage metering (GB-hours across tiers), network transfer (bytes ingress/egress).
 
-**Rationale**: New resource types (AI tokens, GPU-hours) must be meterable without service redeployment.
+When a custom measuring unit is registered, the platform operator **MUST** also register the source-to-usage-type binding in the Types Registry, declaring which sources are permitted to emit records of this type. The system **MUST NOT** accept usage records for a type that has no registered source bindings.
+
+**Rationale**: New resource types (AI tokens, GPU-hours) must be meterable without service redeployment. Source-to-usage-type bindings ensure that only authorized sources can emit records for each unit.
 **Actors**: `cpt-cf-uc-actor-platform-operator`, `cpt-cf-uc-actor-types-registry`
 
 ### 5.8 Rate Limiting
@@ -756,7 +767,7 @@ The system **MUST** continue accepting usage records even if downstream consumer
 | Dependency | Description | Criticality |
 |------------|-------------|-------------|
 | Storage Backend (PostgreSQL or ClickHouse) | At least one storage backend available in the platform | p1 |
-| Types Registry | Schema validation for usage types and custom measuring units | p1 |
+| Types Registry | Schema validation for usage types, custom measuring units, and source-to-usage-type authorization bindings | p1 |
 | Platform Auth Infrastructure | Authentication and authorization infrastructure (OAuth 2.0, mTLS) | p1 |
 
 ## 11. Assumptions
