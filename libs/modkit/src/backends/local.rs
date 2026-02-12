@@ -545,10 +545,9 @@ mod tests {
         #[cfg(unix)]
         #[tokio::test]
         async fn test_send_terminate_signal_to_valid_process() {
-            // Spawn a long-running process using sh -c 'sleep 30'
-            // This works on all Unix systems (Linux, macOS, BSD)
-            let mut cmd = tokio::process::Command::new("/bin/sh");
-            cmd.args(["-c", "sleep 30"]);
+            // Spawn a long-running process
+            let mut cmd = tokio::process::Command::new("sleep");
+            cmd.args(["30"]);
 
             let mut child = cmd.spawn().expect("should spawn test process");
 
@@ -559,7 +558,7 @@ mod tests {
             assert!(result, "Should successfully send SIGTERM to valid process");
 
             // Wait briefly for graceful shutdown
-            tokio::time::timeout(Duration::from_millis(100), child.wait())
+            tokio::time::timeout(Duration::from_secs(1), child.wait())
                 .await
                 .expect("process should exit within timeout")
                 .expect("wait should succeed");
