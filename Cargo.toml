@@ -38,6 +38,7 @@ members = [
     "libs/modkit-odata",
     "libs/modkit-node-info",
     "libs/modkit-transport-grpc",
+    "libs/modkit-build",
     "libs/modkit-utils",
     "libs/system-sdks",
     "libs/system-sdks/sdks/directory",
@@ -458,6 +459,10 @@ nanoid = "0.4"
 jsonschema = "0.40"
 walkdir = "2.5"
 shellexpand = "3.1"
+
+# Build metadata
+shadow-rs = "1"
+cf-modkit-build = { version = "0.2.8", path = "libs/modkit-build", default-features = false }
 
 # GTS library
 gts = "0.7.8"

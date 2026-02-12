@@ -1,0 +1,15 @@
+[package]
+name = "cf-modkit-build"
+version.workspace = true
+publish = false
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Build metadata types and build-script helper for binary crates"
+
+[features]
+default = ["shadow-rs"]
+
+[dependencies]
+tracing = { workspace = true }
+shadow-rs = { workspace = true, optional = true }

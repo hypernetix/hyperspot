@@ -36,6 +36,7 @@
 //!         verbose: 0,
 //!         print_config: false,
 //!         heartbeat_interval_secs: 5,
+//!         build_metadata: None,
 //!     };
 //!
 //!     run_oop_with_options(opts).await
@@ -61,6 +62,7 @@ use crate::runtime::{
     ClientRegistration, DbOptions, MODKIT_DIRECTORY_ENDPOINT_ENV, RunOptions, ShutdownOptions, run,
     shutdown,
 };
+use cf_modkit_build::{BuildMetadata, log_build_metadata};
 use cf_system_sdks::directory::{DirectoryClient, DirectoryGrpcClient};
 
 /// Configuration options for `OoP` module bootstrap
@@ -86,6 +88,9 @@ pub struct OopRunOptions {
 
     /// Heartbeat interval in seconds (default: 5)
     pub heartbeat_interval_secs: u64,
+
+    /// Optional build metadata logged right after the tracing subscriber is installed.
+    pub build_metadata: Option<BuildMetadata<'static>>,
 }
 
 impl Default for OopRunOptions {
@@ -106,6 +111,7 @@ impl Default for OopRunOptions {
             verbose: 0,
             print_config: false,
             heartbeat_interval_secs: 5,
+            build_metadata: None,
         }
     }
 }
@@ -392,6 +398,7 @@ fn merge_json_objects(target: &mut serde_json::Value, source: &serde_json::Value
 ///         verbose: 1,
 ///         print_config: false,
 ///         heartbeat_interval_secs: 5,
+///         build_metadata: None,
 ///     };
 ///
 ///     run_oop_with_options(opts).await
@@ -479,6 +486,11 @@ pub async fn run_oop_with_options(opts: OopRunOptions) -> Result<()> {
 
     // Initialize logging with MERGED config (master base + local override)
     init_logging_unified(&merged_logging, &config.server.home_dir, otel_layer);
+
+    // Log build metadata right after the tracing subscriber is installed
+    if let Some(ref meta) = opts.build_metadata {
+        log_build_metadata(meta);
+    }
 
     // Now we can log - report what we received from master
     if let Some(ref rc) = rendered_config {

@@ -1,6 +1,7 @@
 mod registered_modules;
 
 use anyhow::Result;
+use cf_modkit_build::log_build_metadata;
 use clap::{Parser, Subcommand};
 use mimalloc::MiMalloc;
 use modkit::bootstrap::{
@@ -9,6 +10,8 @@ use modkit::bootstrap::{
 };
 
 use std::path::PathBuf;
+
+shadow_rs::shadow!(shadow);
 
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
@@ -94,6 +97,9 @@ async fn main() -> Result<()> {
     // Initialize logging + otel in one Registry
     let logging_config = config.logging.clone().unwrap_or_default();
     init_logging_unified(&logging_config, &config.server.home_dir, otel_layer);
+
+    // Log build metadata for production investigations
+    log_build_metadata(&cf_modkit_build::build_metadata!());
 
     // One-time connectivity probe
     #[cfg(feature = "otel")]

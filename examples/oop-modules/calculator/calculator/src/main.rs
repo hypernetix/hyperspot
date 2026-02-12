@@ -9,6 +9,8 @@
 
 mod registered_modules;
 
+shadow_rs::shadow!(shadow);
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     use clap::Parser;
@@ -34,6 +36,7 @@ async fn main() -> anyhow::Result<()> {
         module_name: "calculator".to_string(),
         verbose: cli.verbose,
         config_path: cli.config,
+        build_metadata: Some(cf_modkit_build::build_metadata!()),
         ..Default::default()
     };
 
