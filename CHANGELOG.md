@@ -9,6 +9,22 @@ release-plz updates this file in the Release PR.
 
 ## [Unreleased]
 
+## [0.2.9](https://github.com/cyberfabric/cyberfabric-core/compare/cf-modkit-v0.2.8...cf-modkit-v0.2.9) - 2026-02-13
+
+### Fixed
+
+- show colors on supported windows terminal (by @lansfy) - #590
+
+### Other
+
+- enable let_underscore_must_use because coderabbitai check it (by @lansfy) - #616
+- Merge pull request #594 from lansfy/fix_random_fail_in_test (by @MikeFalcon77) - #594
+
+### Contributors
+
+* @lansfy
+* @MikeFalcon77
+
 ## [0.2.8](https://github.com/cyberfabric/cyberfabric-core/compare/types-sdk-v0.2.7...types-sdk-v0.2.8) - 2026-02-12
 
 ### Other
