@@ -4,13 +4,13 @@
 
 ### 1.1 Purpose
 
-A centralized platform service for collecting, storing, and distributing usage data from all sources, enabling accurate metering for billing, quota enforcement, monitoring, and analytics with tenant isolation and type-safe usage definitions.
+A centralized usage ledger (metering system) for reliably collecting, persisting, and exposing raw usage records from all platform sources, with exactly-once semantics, tenant isolation, and type-safe usage definitions. The Usage Collector acts as the authoritative record of resource consumption — it does not aggregate, interpret, or act on the data. Downstream systems (billing, quota enforcement, monitoring, analytics) consume raw usage records and apply their own aggregation rules, policies, and business logic.
 
 ### 1.2 Background / Problem Statement
 
-The Usage Collector (UC) serves as the single source of truth for all platform usage data. UC focuses purely on usage capture and storage; pricing, rating, and invoicing are handled by downstream consumers. It supports diverse collection patterns optimized for different throughput needs, multiple storage backends, and provides type-safe usage definitions through a schema-based type system.
+The Usage Collector (UC) serves as the single source of truth for all platform usage data. UC focuses purely on usage capture, storage, and raw data exposure; aggregation, pricing, rating, reconciliation, report generation, and invoicing are handled by downstream consumers. It supports diverse collection patterns optimized for different throughput needs, multiple storage backends, and provides type-safe usage definitions through a schema-based type system.
 
-The service addresses the fragmentation problem where different consumers (billing, monitoring, quota enforcement) implement their own collection logic, leading to inconsistent data and duplicated effort. By centralizing usage collection, the platform ensures that all consumers operate on the same accurate, deduplicated data.
+The service addresses the fragmentation problem where different consumers (billing, monitoring, quota enforcement) implement their own collection logic, leading to inconsistent data and duplicated effort. By centralizing usage collection into a single metering ledger, the platform ensures that all consumers operate on the same accurate, deduplicated raw data and apply their own domain-specific logic independently.
 
 Key problems:
 
@@ -24,7 +24,7 @@ Notable systems that influenced this design: Amberflo (client-side SDK batching 
 ### 1.3 Goals (Business Outcomes)
 
 - All billable platform services emit usage through UC
-- Zero discrepancies between billing and monitoring usage data
+- Single source of truth: all downstream consumers (billing, monitoring, quota enforcement) operate on the same raw usage records from UC
 - Custom unit registration in less than 5 minutes without code changes
 - High-volume services can emit 10,000+ events per second without blocking
 - 99.95%+ monthly availability
@@ -41,7 +41,7 @@ Notable systems that influenced this design: Amberflo (client-side SDK batching 
 | Idempotency Key | A client-provided identifier ensuring exactly-once processing of a usage record |
 | Backfill | The process of retroactively submitting historical usage data to fill gaps caused by outages, pipeline failures, or corrections |
 | Grace Period | A configurable time window during which late-arriving events are accepted via normal ingestion without requiring explicit backfill |
-| Reconciliation | The process of comparing usage data across pipeline stages or external sources to detect gaps and inconsistencies |
+| Reconciliation | The process of comparing usage data across pipeline stages or external sources to detect gaps and inconsistencies (performed by external systems; UC exposes metadata to support this) |
 | Amendment | A correction to previously recorded usage data, either by replacing events in a time range or deprecating individual events |
 | Rate Limit | A constraint on the volume of requests or data a tenant or source can submit within a time window |
 | Load Shedding | The deliberate dropping or deferral of low-priority work to preserve system stability under overload |
@@ -61,8 +61,8 @@ Notable systems that influenced this design: Amberflo (client-side SDK batching 
 
 **ID**: `cpt-cf-uc-actor-tenant-admin`
 
-**Role**: Views usage reports and consumption data for their tenant.
-**Needs**: Access to usage breakdowns by type and resource for their tenant only, with time-range filtering.
+**Role**: Queries raw usage data for their tenant.
+**Needs**: Access to raw usage records filtered by type and resource for their tenant only, with time-range filtering.
 
 #### Platform Developer
 
@@ -83,7 +83,7 @@ Notable systems that influenced this design: Amberflo (client-side SDK batching 
 
 **ID**: `cpt-cf-uc-actor-billing-system`
 
-**Role**: Consumes aggregated usage data for rating, pricing, and invoice generation.
+**Role**: Consumes raw usage records from UC for aggregation, rating, pricing, and invoice generation.
 
 #### Quota Enforcement System
 
@@ -124,23 +124,25 @@ No module-specific environment constraints beyond project defaults.
 - Per-tenant and per-resource usage attribution
 - Pluggable storage adapter framework (ClickHouse, PostgreSQL, custom)
 - Custom measuring unit registration via API
-- Multi-dimensional aggregation (tenant, resource, type, time window)
+- Usage query API for raw record retrieval with filtering and pagination
 - Configurable retention policies
 - Idempotency and deduplication for exactly-once semantics
 - Backfill API for retroactive submission of historical usage data
 - Late-arriving event handling with configurable grace period
-- Reconciliation and gap detection for proactive data integrity
 - Per-tenant and per-source ingestion rate limiting with configurable overrides
 - Priority-based load shedding under sustained overload
 
 ### 4.2 Out of Scope
 
-- **Billing/Rating Logic**: Pricing calculation handled by downstream Billing System
-- **Invoice Generation**: Handled by Billing System
-- **Quota Enforcement Decisions**: Handled by Quota Enforcement System; UC provides data only
-- **Usage Dashboards**: Handled by Monitoring/Analytics; UC provides data API
-- **Usage Prediction/Forecasting**: Deferred to future phase
-- **Multi-Region Replication**: Deferred to future phase
+- **Data Aggregation**: Multi-dimensional aggregation (by time windows, rollups, grouping) is the responsibility of downstream consumers. UC exposes raw usage records; consumers apply their own aggregation logic.
+- **Reconciliation & Gap Detection**: Monitoring for data gaps, heartbeat tracking, watermark analysis, and cross-stage count reconciliation are handled by external observability/reconciliation systems. UC exposes metadata (event counts, timestamps per source) that external systems can consume for this purpose.
+- **Report Generation**: Usage reports, dashboards, and visualizations are handled by Monitoring/Analytics systems; UC provides raw data access.
+- **Rules & Exceptions**: Business rules, usage policies, threshold-based actions, and exception handling are the responsibility of downstream consumers.
+- **Billing/Rating Logic**: Pricing calculation handled by downstream Billing System.
+- **Invoice Generation**: Handled by Billing System.
+- **Quota Enforcement Decisions**: Handled by Quota Enforcement System; UC provides data only.
+- **Usage Prediction/Forecasting**: Deferred to future phase.
+- **Multi-Region Replication**: Deferred to future phase.
 
 ## 5. Functional Requirements
 
@@ -255,27 +257,18 @@ The system **MUST** monitor storage adapter health, buffer records during failur
 **Rationale**: Storage failures must not result in data loss; buffering and retry ensure durability.
 **Actors**: `cpt-cf-uc-actor-platform-operator`, `cpt-cf-uc-actor-storage-backend`
 
-### 5.5 Querying & Aggregation
-
-#### Multi-Dimensional Aggregation
-
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-aggregation`
-
-The system **MUST** aggregate usage data by tenant, resource, usage type, and configurable time windows (minute, hour, day).
-
-**Rationale**: Billing, quota enforcement, and monitoring require pre-aggregated data at different granularities.
-**Actors**: `cpt-cf-uc-actor-billing-system`, `cpt-cf-uc-actor-quota-enforcement`, `cpt-cf-uc-actor-monitoring-system`
+### 5.5 Querying
 
 #### Usage Query API
 
 - [ ] `p1` - **ID**: `cpt-cf-uc-req-query-api`
 
-The system **MUST** provide an API for querying usage data with filtering by time range, tenant, resource, and usage type with pagination.
+The system **MUST** provide an API for querying raw usage records with filtering by time range, tenant, resource, and usage type with pagination. The API returns raw records; aggregation is the responsibility of downstream consumers.
 
-**Rationale**: Downstream consumers need flexible access to usage data for billing, monitoring, and reporting.
+**Rationale**: Downstream consumers need flexible access to raw usage data to apply their own aggregation, rating, and analysis logic.
 **Actors**: `cpt-cf-uc-actor-billing-system`, `cpt-cf-uc-actor-monitoring-system`, `cpt-cf-uc-actor-tenant-admin`
 
-### 5.6 Backfill & Reconciliation
+### 5.6 Backfill & Amendment
 
 #### Late-Arriving Event Handling
 
@@ -306,7 +299,7 @@ The backfill API **MUST** be separate from the real-time ingestion path with ind
 
 - [ ] `p2` - **ID**: `cpt-cf-uc-req-event-amendment`
 
-The system **MUST** support amending individual usage events (updating properties except tenant ID and timestamp) and deprecating individual events (marking them as excluded from billing and aggregation while retaining them for audit).
+The system **MUST** support amending individual usage events (updating properties except tenant ID and timestamp) and deprecating individual events (marking them as inactive while retaining them for audit). Downstream consumers **MUST** be able to distinguish active from deprecated records when querying.
 
 **Interaction with backfill**: If a backfill operation targets a time range that contains previously amended events, the backfill **MUST** archive the amended events along with all other events in that range. Amendment history is not preserved — the backfill's replacement events become the sole active record. This means backfill unconditionally supersedes any prior amendments within its range, keeping the correction model simple: amendments are for surgical fixes to individual events, while backfill is a wholesale replacement that starts from a clean slate.
 
@@ -326,7 +319,7 @@ The system **MUST** enforce configurable time boundaries for backfill operations
 
 - [ ] `p2` - **ID**: `cpt-cf-uc-req-backfill-archival`
 
-When a backfill operation replaces events in a time range, the system **MUST** archive (not delete) the replaced events. Archived events **MUST** remain queryable for audit purposes but **MUST** be excluded from billing and aggregation.
+When a backfill operation replaces events in a time range, the system **MUST** archive (not delete) the replaced events. Archived events **MUST** remain queryable for audit purposes but **MUST** be clearly distinguishable from active records so that downstream consumers can exclude them from their processing.
 
 **Rationale**: Permanent deletion of replaced events destroys audit trail and makes it impossible to investigate billing disputes or reconstruct historical state.
 **Actors**: `cpt-cf-uc-actor-platform-operator`
@@ -340,14 +333,14 @@ Every backfill operation **MUST** produce an immutable audit record containing: 
 **Rationale**: Backfill operations are high-risk changes to billing-critical data. Comprehensive audit records are essential for dispute resolution, compliance, and operational visibility.
 **Actors**: `cpt-cf-uc-actor-platform-operator`
 
-#### Reconciliation and Gap Detection
+#### Ledger Metadata Exposure
 
-- [ ] `p2` - **ID**: `cpt-cf-uc-req-reconciliation`
+- [ ] `p2` - **ID**: `cpt-cf-uc-req-ledger-metadata`
 
-The system **MUST** support gap detection through: (1) heartbeat monitoring — tracking periodic signals from known usage sources and alerting when expected heartbeats are missing; (2) watermark tracking — monitoring the latest event timestamp per source, tenant, and meter combination, and flagging sources whose watermark stops advancing; (3) scheduled count reconciliation — comparing event counts across pipeline stages (ingestion vs. storage) to detect data loss.
+The system **MUST** expose per-source and per-tenant metadata — including event counts, latest event timestamps (watermarks), and ingestion statistics — via API, enabling external reconciliation and observability systems to detect gaps and perform integrity checks.
 
-**Rationale**: Proactive gap detection enables timely backfill before billing periods close, reducing the need for post-invoice corrections. Heartbeat monitoring detects source-level outages, watermark tracking detects partial failures, and count reconciliation detects pipeline-level data loss.
-**Actors**: `cpt-cf-uc-actor-platform-operator`, `cpt-cf-uc-actor-usage-source`
+**Rationale**: While reconciliation logic is out of scope for the usage ledger, exposing the raw metadata needed for gap detection enables external systems to build reconciliation workflows. This keeps the ledger focused while not blocking operational integrity monitoring.
+**Actors**: `cpt-cf-uc-actor-platform-operator`, `cpt-cf-uc-actor-monitoring-system`
 
 ### 5.7 Type System
 
@@ -634,7 +627,7 @@ The system **MUST** continue accepting usage records even if downstream consumer
 7. SDK receives acknowledgment
 
 **Postconditions**:
-- Usage records persisted with tenant/resource attribution; available for query and aggregation
+- Usage records persisted with tenant/resource attribution; available for query by downstream consumers
 
 ### UC: Configure Custom Measuring Unit
 
@@ -662,16 +655,16 @@ The system **MUST** continue accepting usage records even if downstream consumer
 **Actor**: `cpt-cf-uc-actor-billing-system`
 
 **Preconditions**:
-- Aggregation window closed
+- Billing period defined by Billing System
 
 **Main Flow**:
-1. Billing System queries usage API for billing period
-2. UC retrieves aggregated usage for tenant and time window
-3. UC returns usage grouped by usage type
-4. Billing System processes for rating
+1. Billing System queries usage API for billing period (time range, tenant, usage types)
+2. UC retrieves raw usage records matching the filter criteria
+3. UC returns paginated raw records
+4. Billing System aggregates and processes records for rating
 
 **Postconditions**:
-- Billing System has accurate, deduplicated usage data for invoice generation
+- Billing System has accurate, deduplicated raw usage records for its own aggregation and invoice generation
 
 ### UC: Real-Time Quota Enforcement
 
@@ -680,9 +673,9 @@ The system **MUST** continue accepting usage records even if downstream consumer
 **Actor**: `cpt-cf-uc-actor-quota-enforcement`
 
 **Main Flow**:
-1. Quota Enforcement System queries UC API for current usage
-2. UC returns aggregated usage for tenant and usage type
-3. Quota Enforcement System compares against tenant limits
+1. Quota Enforcement System queries UC API for current usage (tenant, usage type, time range)
+2. UC returns raw usage records matching the filter criteria
+3. Quota Enforcement System aggregates records and compares against tenant limits
 4. Quota Enforcement System triggers enforcement if threshold exceeded
 
 **Postconditions**:
@@ -715,47 +708,46 @@ The system **MUST** continue accepting usage records even if downstream consumer
 **Actor**: `cpt-cf-uc-actor-platform-operator`
 
 **Preconditions**:
-- Gap detected via reconciliation (missing heartbeats, stalled watermarks, or count mismatch)
+- Gap detected (by external reconciliation system or operator investigation)
 - Replacement usage data available from secondary source (infrastructure metrics, API gateway logs, or source service replay)
 
 **Main Flow**:
-1. Reconciliation system detects gap and alerts operator with affected time range, tenant(s), and usage type(s)
+1. Operator identifies gap (via external reconciliation system alerts or manual investigation)
 2. Operator prepares replacement events from secondary source
 3. Operator submits backfill request specifying time range, tenant, and replacement events
 4. UC validates time range is within backfill window
 5. UC archives existing events in the time range (if any)
 6. UC validates and persists replacement events with backfill idempotency namespace
 7. UC creates audit record for the backfill operation
-8. UC re-aggregates affected time windows
 
 **Postconditions**:
-- Gap filled with corrected data; archived events retained for audit; aggregations updated; downstream consumers can query corrected data
+- Gap filled with corrected data; archived events retained for audit; downstream consumers can query corrected raw records
 
-### UC: View Tenant Usage Report
+### UC: Query Tenant Usage Data
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-usage-report`
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-usage-query`
 
 **Actor**: `cpt-cf-uc-actor-tenant-admin`
 
 **Main Flow**:
-1. Administrator requests usage for time period
-2. UC queries aggregated usage for tenant only
-3. UC returns usage breakdown by type and resource
-4. Administrator reviews consumption
+1. Administrator queries usage API for a time period
+2. UC retrieves raw usage records scoped to the tenant only
+3. UC returns paginated raw records filtered by type and resource
+4. Administrator (or downstream reporting system) processes the data
 
 **Postconditions**:
-- Administrator sees only their tenant's usage; no cross-tenant data exposure
+- Administrator receives only their tenant's raw usage records; no cross-tenant data exposure
 
 ## 9. Acceptance Criteria
 
 - [ ] All billable platform services emit usage through UC
-- [ ] Zero discrepancies between billing and monitoring usage data
+- [ ] Downstream consumers (billing, monitoring) querying the same time range receive identical raw records
 - [ ] Custom unit registration completes in less than 5 minutes without code changes
 - [ ] High-volume services can emit 10,000+ events per second without blocking
 - [ ] 99.95%+ monthly availability maintained
 - [ ] Backfill API can restore missing usage data for any time range within the backfill window
-- [ ] Reconciliation detects usage data gaps within one heartbeat interval
 - [ ] Zero data permanently deleted during backfill operations (archive-only)
+- [ ] Ledger metadata (event counts, watermarks) is available via API for external reconciliation systems
 - [ ] A single tenant exceeding its rate limit does not degrade ingestion latency for other tenants
 - [ ] Rate limit configuration changes take effect without service restart
 
@@ -782,7 +774,7 @@ The system **MUST** continue accepting usage records even if downstream consumer
 | High ingestion volume exceeds capacity | Usage sources rejected; delayed billing data | Horizontal scaling; SDK-side batching and buffering; per-tenant rate limiting |
 | Schema evolution breaks existing sources | Usage sources fail validation after type changes | Backward-compatible schema evolution; versioned type schemas |
 | Cross-tenant data leakage | Security and compliance violation | Fail-closed authorization; tenant isolation at all layers |
-| Reconciliation false positives | Unnecessary backfill operations triggered by transient delays | Configurable thresholds and cooldown periods; require multiple consecutive missed heartbeats before alerting |
+| Insufficient ledger metadata | External reconciliation systems cannot detect gaps if UC does not expose adequate metadata | Expose per-source event counts, watermarks, and ingestion statistics via dedicated API |
 | Backfill data quality | Incorrect replacement data worsens the gap instead of fixing it | Full schema validation on backfill events; archive-not-delete allows rollback; audit trail enables investigation |
 | Noisy-neighbor ingestion | A single tenant or source exhausts ingestion capacity, degrading service for all tenants | Hierarchical rate limiting (global, per-tenant, per-source); priority-based load shedding |
 | Rate limit misconfiguration | Limits set too low cause legitimate data loss; too high provide no protection | System defaults with per-tenant hot-reloadable overrides; rate limit observability and approaching-limit alerts |
@@ -793,6 +785,6 @@ The system **MUST** continue accepting usage records even if downstream consumer
 - Specific CloudEvents format adoption for usage record schema
 - Retention policy enforcement mechanism (TTL vs. scheduled cleanup)
 - Exact SDK batching defaults (count threshold, time threshold)
-- Secondary data sources for automated reconciliation (infrastructure metrics, API gateway logs)
 - Default rate limit values for system-wide defaults and per-source defaults
 - Priority classification of existing usage types for load shedding (which types are billing-critical P0 vs. analytics P2)
+- Specific metadata fields and API shape for ledger metadata exposure (to support external reconciliation)
