@@ -153,7 +153,7 @@ No module-specific environment constraints beyond project defaults.
 
 #### Usage Record Ingestion
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-usage-ingestion`
+- [ ] `p1` - **ID**: `cpt-cf-uc-fr-usage-ingestion`
 
 The system **MUST** accept usage records via SDK (with batching), collector agent, and REST API, supporting high-throughput scenarios (10,000+ events per second).
 
@@ -162,7 +162,7 @@ The system **MUST** accept usage records via SDK (with batching), collector agen
 
 #### Pull-Based Collection
 
-- [ ] `p2` - **ID**: `cpt-cf-uc-req-pull-collection`
+- [ ] `p2` - **ID**: `cpt-cf-uc-fr-pull-collection`
 
 The system **MUST** support polling usage data from sources that cannot push, with configurable intervals and transformation to standard format. Pull adapters will be implemented as needed when specific integration requirements arise for systems that cannot emit usage data via push patterns.
 
@@ -173,7 +173,7 @@ Initial implementation focuses on push patterns (SDK, collector agent, REST API)
 
 #### Idempotency and Deduplication
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-idempotency`
+- [ ] `p1` - **ID**: `cpt-cf-uc-fr-idempotency`
 
 The system **MUST** support idempotency keys to ensure exactly-once processing, preventing duplicate records and incorrect aggregations.
 
@@ -184,7 +184,7 @@ The system **MUST** support idempotency keys to ensure exactly-once processing, 
 
 #### Counter Metric Semantics
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-counter-semantics`
+- [ ] `p1` - **ID**: `cpt-cf-uc-fr-counter-semantics`
 
 The system **MUST** enforce counter semantics (monotonically increasing values), validate increments, compute deltas, and detect/reject counter violations.
 
@@ -193,7 +193,7 @@ The system **MUST** enforce counter semantics (monotonically increasing values),
 
 #### Gauge Metric Semantics
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-gauge-semantics`
+- [ ] `p1` - **ID**: `cpt-cf-uc-fr-gauge-semantics`
 
 The system **MUST** support gauge metrics (point-in-time values) without monotonicity validation, storing values as-is.
 
@@ -204,7 +204,7 @@ The system **MUST** support gauge metrics (point-in-time values) without monoton
 
 #### Tenant Attribution
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-tenant-attribution`
+- [ ] `p1` - **ID**: `cpt-cf-uc-fr-tenant-attribution`
 
 The system **MUST** attribute all usage records to a tenant derived from security context, ensuring attribution is immutable and used for isolation.
 
@@ -213,7 +213,7 @@ The system **MUST** attribute all usage records to a tenant derived from securit
 
 #### Resource Attribution
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-resource-attribution`
+- [ ] `p1` - **ID**: `cpt-cf-uc-fr-resource-attribution`
 
 The system **MUST** support attributing usage to specific resource instances within a tenant, including resource ID, type, and lineage.
 
@@ -222,7 +222,7 @@ The system **MUST** support attributing usage to specific resource instances wit
 
 #### User Attribution
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-user-attribution`
+- [ ] `p1` - **ID**: `cpt-cf-uc-fr-user-attribution`
 
 The system **MUST** support attributing usage to specific users within a tenant, including user ID and optional user metadata. User attribution **MUST** be derived from the authenticated security context when available, or explicitly provided by the usage source when reporting usage for batch operations or background jobs.
 
@@ -233,7 +233,7 @@ The system **MUST** support both direct user attribution (user X consumed resour
 
 #### Tenant Isolation
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-tenant-isolation`
+- [ ] `p1` - **ID**: `cpt-cf-uc-fr-tenant-isolation`
 
 The system **MUST** enforce strict tenant isolation ensuring usage data is never accessible across tenants, failing closed on authorization failures.
 
@@ -242,7 +242,7 @@ The system **MUST** enforce strict tenant isolation ensuring usage data is never
 
 #### Source Authorization
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-source-authorization`
+- [ ] `p1` - **ID**: `cpt-cf-uc-fr-source-authorization`
 
 The system **MUST** identify the source of each usage record through the platform's authentication infrastructure and **MUST** validate that the source is authorized to report usage for the specific usage type being submitted. Source-to-usage-type bindings **MUST** be defined through the GTS type system, with permitted usage types registered in the Types Registry as part of the source's type definition. The system **MUST** reject usage records from sources that are not authorized for the given usage type.
 
@@ -253,7 +253,7 @@ The system **MUST** identify the source of each usage record through the platfor
 
 #### Pluggable Storage Framework
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-pluggable-storage`
+- [ ] `p1` - **ID**: `cpt-cf-uc-fr-pluggable-storage`
 
 The system **MUST** support multiple storage backends (ClickHouse, PostgreSQL, custom adapters) with configurable routing by usage type.
 
@@ -262,7 +262,7 @@ The system **MUST** support multiple storage backends (ClickHouse, PostgreSQL, c
 
 #### Retention Policy Management
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-retention-policies`
+- [ ] `p1` - **ID**: `cpt-cf-uc-fr-retention-policies`
 
 The system **MUST** support configurable retention policies (global, per-tenant, per-usage-type) with automated enforcement.
 
@@ -271,7 +271,7 @@ The system **MUST** support configurable retention policies (global, per-tenant,
 
 #### Storage Health Monitoring
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-storage-health`
+- [ ] `p1` - **ID**: `cpt-cf-uc-fr-storage-health`
 
 The system **MUST** monitor storage adapter health, buffer records during failures, retry with backoff, and alert on persistent issues.
 
@@ -282,7 +282,7 @@ The system **MUST** monitor storage adapter health, buffer records during failur
 
 #### Usage Query API
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-query-api`
+- [ ] `p1` - **ID**: `cpt-cf-uc-fr-query-api`
 
 The system **MUST** provide an API for querying raw usage records with filtering by time range, tenant, user, resource, and usage type with cursor-based pagination. The API returns raw records; aggregation is the responsibility of downstream consumers.
 
@@ -291,7 +291,7 @@ The system **MUST** provide an API for querying raw usage records with filtering
 
 #### Stable Query Result Ordering
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-stable-ordering`
+- [ ] `p1` - **ID**: `cpt-cf-uc-fr-stable-ordering`
 
 The system **MUST** return query results in a stable, deterministic order across all API endpoints. The ordering **MUST** be consistent across pagination requests to prevent records from being missed or duplicated when combined with cursor-based pagination.
 
@@ -300,7 +300,7 @@ The system **MUST** return query results in a stable, deterministic order across
 
 #### Cursor-Based Pagination
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-cursor-pagination`
+- [ ] `p1` - **ID**: `cpt-cf-uc-fr-cursor-pagination`
 
 The system **MUST** implement cursor-based pagination for all query APIs. Each page response **MUST** include an opaque cursor token that marks the position after the last record in the current page. Clients **MUST** pass this cursor in subsequent requests to retrieve the next page. Cursors **MUST** remain valid for at least 24 hours after issuance.
 
@@ -309,7 +309,7 @@ The system **MUST** implement cursor-based pagination for all query APIs. Each p
 
 #### Snapshot Read Consistency
 
-- [ ] `p3` - **ID**: `cpt-cf-uc-req-snapshot-reads`
+- [ ] `p3` - **ID**: `cpt-cf-uc-fr-snapshot-reads`
 
 The system **SHOULD** support snapshot reads, allowing clients to query data with a consistent point-in-time view. When a query is initiated with snapshot isolation, all subsequent pagination requests in that query session **MUST** see the dataset as it existed at the snapshot timestamp, regardless of concurrent insertions, updates, or backfill operations.
 
@@ -320,7 +320,7 @@ The system **SHOULD** support snapshot reads, allowing clients to query data wit
 
 #### Late-Arriving Event Handling
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-late-events`
+- [ ] `p1` - **ID**: `cpt-cf-uc-fr-late-events`
 
 The system **MUST** accept usage events with timestamps within a configurable grace period (default 24 hours, configurable per tenant and per usage type) via the standard ingestion path, applying normal deduplication and schema validation.
 
@@ -329,7 +329,7 @@ The system **MUST** accept usage events with timestamps within a configurable gr
 
 #### Backfill API
 
-- [ ] `p2` - **ID**: `cpt-cf-uc-req-backfill-api`
+- [ ] `p2` - **ID**: `cpt-cf-uc-fr-backfill-api`
 
 The system **MUST** provide a dedicated backfill API that accepts a time range (scoped to a single tenant and usage type) and a set of replacement events, atomically archiving existing events in that range and inserting the new events.
 
@@ -337,7 +337,7 @@ The backfill API **MUST** be separate from the real-time ingestion path with ind
 
 **Concurrent-write strategy — Reject and Retry**: During an active backfill, the system **MUST** use range-level locking to enforce exclusive write access to the affected `(tenant, usage_type, time_range)` partition. The backfill operation acquires a lock before beginning the archive-and-insert transaction and holds it until the transaction commits or rolls back. While the lock is held:
 
-1. **Real-time ingestion behavior**: Any real-time event (via SDK, collector agent, or REST API as defined in `cpt-cf-uc-req-usage-ingestion`) whose `(tenant_id, usage_type, timestamp)` falls within a currently locked backfill range **MUST** be rejected with HTTP status `409 Conflict` and error code `BACKFILL_IN_PROGRESS`. The response body **MUST** include the fields `retry_after_ms` (estimated remaining backfill duration, minimum 1000) and `locked_range` (the `[start, end)` interval that is locked).
+1. **Real-time ingestion behavior**: Any real-time event (via SDK, collector agent, or REST API as defined in `cpt-cf-uc-fr-usage-ingestion`) whose `(tenant_id, usage_type, timestamp)` falls within a currently locked backfill range **MUST** be rejected with HTTP status `409 Conflict` and error code `BACKFILL_IN_PROGRESS`. The response body **MUST** include the fields `retry_after_ms` (estimated remaining backfill duration, minimum 1000) and `locked_range` (the `[start, end)` interval that is locked).
 2. **Lock scope and overlap**: The system **MUST** reject a backfill request with HTTP `409 Conflict` and error code `BACKFILL_RANGE_OVERLAP` if its requested range overlaps with any currently locked backfill range for the same tenant and usage type. Only one backfill operation per `(tenant, usage_type)` overlapping range is permitted at a time. Non-overlapping ranges for the same tenant and usage type, or any ranges for different tenants or usage types, **MAY** execute concurrently.
 
 **Rationale**: When usage data is lost due to outages, pipeline failures, or misconfigured sources, operators need a mechanism to retroactively submit corrected data for an entire time range. The reject-and-retry strategy is chosen over queue-and-replay or snapshot isolation alternatives because it is the simplest model to implement correctly, avoids unbounded buffering on the server, keeps real-time ingestion latency deterministic (a fast 409 vs. an indeterminate queue wait), and pushes retry responsibility to the SDK where backpressure is already handled. Backfill operations are expected to be infrequent (operator-initiated corrections), so brief real-time rejection windows are an acceptable trade-off for strong atomicity guarantees. Timeframe-based replacement (as opposed to individual event insertion) ensures atomicity and prevents partial amendment states.
@@ -345,7 +345,7 @@ The backfill API **MUST** be separate from the real-time ingestion path with ind
 
 #### Individual Event Amendment
 
-- [ ] `p2` - **ID**: `cpt-cf-uc-req-event-amendment`
+- [ ] `p2` - **ID**: `cpt-cf-uc-fr-event-amendment`
 
 The system **MUST** support amending individual usage events (updating properties except tenant ID and timestamp) and deprecating individual events (marking them as inactive while retaining them for audit). Downstream consumers **MUST** be able to distinguish active from deprecated records when querying.
 
@@ -356,7 +356,7 @@ The system **MUST** support amending individual usage events (updating propertie
 
 #### Backfill Time Boundaries
 
-- [ ] `p2` - **ID**: `cpt-cf-uc-req-backfill-boundaries`
+- [ ] `p2` - **ID**: `cpt-cf-uc-fr-backfill-boundaries`
 
 The system **MUST** enforce configurable time boundaries for backfill operations: a maximum backfill window (default 90 days) beyond which backfill requests are rejected, and a future timestamp tolerance (default 5 minutes) to account for clock drift. Backfill requests exceeding the maximum window **MUST** require elevated authorization.
 
@@ -365,7 +365,7 @@ The system **MUST** enforce configurable time boundaries for backfill operations
 
 #### Backfill Event Archival
 
-- [ ] `p2` - **ID**: `cpt-cf-uc-req-backfill-archival`
+- [ ] `p2` - **ID**: `cpt-cf-uc-fr-backfill-archival`
 
 When a backfill operation replaces events in a time range, the system **MUST** archive (not delete) the replaced events. Archived events **MUST** remain queryable for audit purposes but **MUST** be clearly distinguishable from active records so that downstream consumers can exclude them from their processing.
 
@@ -374,7 +374,7 @@ When a backfill operation replaces events in a time range, the system **MUST** a
 
 #### Backfill Audit Trail
 
-- [ ] `p2` - **ID**: `cpt-cf-uc-req-backfill-audit`
+- [ ] `p2` - **ID**: `cpt-cf-uc-fr-backfill-audit`
 
 Every backfill operation **MUST** produce an immutable audit record containing: operator identity, initiation timestamp, affected time range, affected tenant(s), number of events added/replaced/deprecated, reason or justification, and whether the operation affected an already-invoiced period.
 
@@ -383,7 +383,7 @@ Every backfill operation **MUST** produce an immutable audit record containing: 
 
 #### Ledger Metadata Exposure
 
-- [ ] `p2` - **ID**: `cpt-cf-uc-req-ledger-metadata`
+- [ ] `p2` - **ID**: `cpt-cf-uc-fr-ledger-metadata`
 
 The system **MUST** expose per-source and per-tenant metadata — including event counts, latest event timestamps (watermarks), and ingestion statistics — via API, enabling external reconciliation and observability systems to detect gaps and perform integrity checks.
 
@@ -394,7 +394,7 @@ The system **MUST** expose per-source and per-tenant metadata — including even
 
 #### Usage Type Validation
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-type-validation`
+- [ ] `p1` - **ID**: `cpt-cf-uc-fr-type-validation`
 
 The system **MUST** validate all usage records against registered type schemas, rejecting invalid records with actionable error messages.
 
@@ -403,7 +403,7 @@ The system **MUST** validate all usage records against registered type schemas, 
 
 #### Custom Unit Registration
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-custom-units`
+- [ ] `p1` - **ID**: `cpt-cf-uc-fr-custom-units`
 
 The system **MUST** allow registration of custom measuring units via API without code changes.
 
@@ -418,7 +418,7 @@ When a custom measuring unit is registered, the platform operator **MUST** also 
 
 #### Per-Tenant Ingestion Rate Limiting
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-tenant-rate-limit`
+- [ ] `p1` - **ID**: `cpt-cf-uc-fr-tenant-rate-limit`
 
 The system **MUST** enforce per-tenant ingestion rate limits with independently configurable sustained rate (events per second) and burst size parameters. Requests exceeding the rate limit **MUST** be rejected with HTTP 429 status.
 
@@ -427,7 +427,7 @@ The system **MUST** enforce per-tenant ingestion rate limits with independently 
 
 #### Per-Source Rate Limiting
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-source-rate-limit`
+- [ ] `p1` - **ID**: `cpt-cf-uc-fr-source-rate-limit`
 
 The system **MUST** enforce per-source rate limits within each tenant, preventing a single usage source (e.g., a misconfigured LLM Gateway) from consuming the tenant's entire ingestion quota. Per-source limits **MUST** be configurable independently of the tenant-level limit.
 
@@ -436,7 +436,7 @@ The system **MUST** enforce per-source rate limits within each tenant, preventin
 
 #### Multi-Dimensional Rate Limits
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-multi-dimensional-limits`
+- [ ] `p1` - **ID**: `cpt-cf-uc-fr-multi-dimensional-limits`
 
 The system **MUST** enforce rate limits across multiple dimensions simultaneously: events per second, bytes per second, maximum batch size (events per request), and maximum record size (bytes per event). All dimensions **MUST** pass for a request to be accepted.
 
@@ -445,7 +445,7 @@ The system **MUST** enforce rate limits across multiple dimensions simultaneousl
 
 #### Rate Limit Configuration and Overrides
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-rate-limit-config`
+- [ ] `p1` - **ID**: `cpt-cf-uc-fr-rate-limit-config`
 
 The system **MUST** support rate limit configuration with system-wide defaults and per-tenant overrides. Per-tenant overrides **MUST** be hot-reloadable without service restart. Unspecified fields in overrides **MUST** inherit from the system defaults.
 
@@ -454,7 +454,7 @@ The system **MUST** support rate limit configuration with system-wide defaults a
 
 #### Rate Limit Response Format
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-rate-limit-response`
+- [ ] `p1` - **ID**: `cpt-cf-uc-fr-rate-limit-response`
 
 When rate limits are exceeded, the system **MUST** respond with HTTP 429 (Too Many Requests) and include a `Retry-After` header indicating when the client can retry. The system **MUST** include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset` headers on all API responses to enable clients to monitor their quota consumption. Header formats are defined as follows:
 
@@ -470,7 +470,7 @@ All time-related header values are in UTC. Clients **SHOULD** parse these header
 
 #### SDK Retry and Buffering on Rate Limit
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-sdk-retry`
+- [ ] `p1` - **ID**: `cpt-cf-uc-fr-sdk-retry`
 
 The SDK **MUST** buffer usage events in a bounded in-memory queue and retry with exponential backoff and jitter on rate limit responses (HTTP 429) and backfill conflict responses (HTTP 409), honoring the `Retry-After` header or `retry_after_ms` field when present. When the buffer is full, the SDK **MUST** drop oldest events and report the loss via metrics. The SDK **MUST NOT** block the calling service due to rate limiting.
 
@@ -479,7 +479,7 @@ The SDK **MUST** buffer usage events in a bounded in-memory queue and retry with
 
 #### Priority-Based Load Shedding
 
-- [ ] `p2` - **ID**: `cpt-cf-uc-req-load-shedding`
+- [ ] `p2` - **ID**: `cpt-cf-uc-fr-load-shedding`
 
 The system **MUST** support priority classification of usage event types (e.g., billing-critical counters vs. analytics metrics) and, when operating under sustained overload beyond rate limits, **MUST** preferentially accept higher-priority events while shedding lower-priority ones. The priority classification **MUST** be configurable per usage type.
 
@@ -488,7 +488,7 @@ The system **MUST** support priority classification of usage event types (e.g., 
 
 #### Rate Limit Observability
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-rate-limit-observability`
+- [ ] `p1` - **ID**: `cpt-cf-uc-fr-rate-limit-observability`
 
 The system **MUST** expose per-tenant and per-source rate limit consumption as metrics (current usage vs. limit, rejection counts, throttle duration) for operator dashboards. The system **MUST** emit alerts when tenants approach configured warning thresholds (e.g., 75%, 90% of capacity).
 
@@ -501,7 +501,7 @@ The system **MUST** expose per-tenant and per-source rate limit consumption as m
 
 #### High Availability
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-availability`
+- [ ] `p1` - **ID**: `cpt-cf-uc-nfr-availability`
 
 The system **MUST** maintain 99.95% monthly availability for usage collection endpoints.
 
@@ -510,7 +510,7 @@ The system **MUST** maintain 99.95% monthly availability for usage collection en
 
 #### Ingestion Throughput
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-throughput`
+- [ ] `p1` - **ID**: `cpt-cf-uc-nfr-throughput`
 
 The system **MUST** support sustained ingestion of at least 600,000 usage records per minute (10,000 events per second) under normal operation.
 
@@ -519,7 +519,7 @@ The system **MUST** support sustained ingestion of at least 600,000 usage record
 
 #### Ingestion Latency
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-ingestion-latency`
+- [ ] `p1` - **ID**: `cpt-cf-uc-nfr-ingestion-latency`
 
 The system **MUST** complete usage record ingestion within 200ms (p95) under normal load.
 
@@ -528,7 +528,7 @@ The system **MUST** complete usage record ingestion within 200ms (p95) under nor
 
 #### Query Latency
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-query-latency`
+- [ ] `p1` - **ID**: `cpt-cf-uc-nfr-query-latency`
 
 The system **MUST** complete usage queries for 30-day ranges within 500ms (p95) under normal load.
 
@@ -537,7 +537,7 @@ The system **MUST** complete usage queries for 30-day ranges within 500ms (p95) 
 
 #### Exactly-Once Semantics
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-exactly-once`
+- [ ] `p1` - **ID**: `cpt-cf-uc-nfr-exactly-once`
 
 The system **MUST** guarantee exactly-once processing; zero usage records lost or duplicated under normal operation.
 
@@ -546,7 +546,7 @@ The system **MUST** guarantee exactly-once processing; zero usage records lost o
 
 #### Audit Trail
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-audit-trail`
+- [ ] `p1` - **ID**: `cpt-cf-uc-nfr-audit-trail`
 
 The system **MUST** preserve immutable audit records for all usage data including source, timestamps, and any corrections.
 
@@ -555,7 +555,7 @@ The system **MUST** preserve immutable audit records for all usage data includin
 
 #### Authentication Required
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-authentication`
+- [ ] `p1` - **ID**: `cpt-cf-uc-nfr-authentication`
 
 The system **MUST** require authentication (OAuth 2.0, mTLS, or API key) for all API operations.
 
@@ -564,7 +564,7 @@ The system **MUST** require authentication (OAuth 2.0, mTLS, or API key) for all
 
 #### Authorization Enforcement
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-authorization`
+- [ ] `p1` - **ID**: `cpt-cf-uc-nfr-authorization`
 
 The system **MUST** enforce authorization for read/write operations based on tenant context and usage type permissions.
 
@@ -573,7 +573,7 @@ The system **MUST** enforce authorization for read/write operations based on ten
 
 #### Horizontal Scalability
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-scalability`
+- [ ] `p1` - **ID**: `cpt-cf-uc-nfr-scalability`
 
 The system **MUST** scale horizontally to handle increased load without architectural changes.
 
@@ -582,7 +582,7 @@ The system **MUST** scale horizontally to handle increased load without architec
 
 #### Storage Fault Tolerance
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-fault-tolerance`
+- [ ] `p1` - **ID**: `cpt-cf-uc-nfr-fault-tolerance`
 
 The system **MUST** buffer usage records during storage backend failures and recover without data loss.
 
@@ -591,7 +591,7 @@ The system **MUST** buffer usage records during storage backend failures and rec
 
 #### Configurable Retention
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-retention`
+- [ ] `p1` - **ID**: `cpt-cf-uc-nfr-retention`
 
 The system **MUST** support retention periods from 7 days to 7 years depending on usage type and compliance requirements.
 
@@ -600,7 +600,7 @@ The system **MUST** support retention periods from 7 days to 7 years depending o
 
 #### Graceful Degradation
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-graceful-degradation`
+- [ ] `p1` - **ID**: `cpt-cf-uc-nfr-graceful-degradation`
 
 The system **MUST** continue accepting usage records even if downstream consumers (billing, monitoring) are unavailable.
 
@@ -660,7 +660,7 @@ The system **MUST** continue accepting usage records even if downstream consumer
 
 ### UC: High-Volume Usage Emission via SDK
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-sdk-emission`
+- [ ] `p1` - **ID**: `cpt-cf-uc-usecase-sdk-emission`
 
 **Actor**: `cpt-cf-uc-actor-usage-source`, `cpt-cf-uc-actor-platform-developer`
 
@@ -681,7 +681,7 @@ The system **MUST** continue accepting usage records even if downstream consumer
 
 ### UC: Configure Custom Measuring Unit
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-custom-unit`
+- [ ] `p1` - **ID**: `cpt-cf-uc-usecase-custom-unit`
 
 **Actor**: `cpt-cf-uc-actor-platform-operator`
 
@@ -700,7 +700,7 @@ The system **MUST** continue accepting usage records even if downstream consumer
 
 ### UC: Query Tenant Usage for Billing
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-billing-query`
+- [ ] `p1` - **ID**: `cpt-cf-uc-usecase-billing-query`
 
 **Actor**: `cpt-cf-uc-actor-billing-system`
 
@@ -722,7 +722,7 @@ The system **MUST** continue accepting usage records even if downstream consumer
 
 ### UC: Real-Time Quota Enforcement
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-quota-enforcement`
+- [ ] `p1` - **ID**: `cpt-cf-uc-usecase-quota-enforcement`
 
 **Actor**: `cpt-cf-uc-actor-quota-enforcement`
 
@@ -739,7 +739,7 @@ The system **MUST** continue accepting usage records even if downstream consumer
 
 ### UC: Add New Storage Backend
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-add-storage`
+- [ ] `p1` - **ID**: `cpt-cf-uc-usecase-add-storage`
 
 **Actor**: `cpt-cf-uc-actor-platform-operator`
 
@@ -759,7 +759,7 @@ The system **MUST** continue accepting usage records even if downstream consumer
 
 ### UC: Backfill Usage After Outage
 
-- [ ] `p2` - **ID**: `cpt-cf-uc-req-backfill-after-outage`
+- [ ] `p2` - **ID**: `cpt-cf-uc-usecase-backfill-after-outage`
 
 **Actor**: `cpt-cf-uc-actor-platform-operator`
 
@@ -781,7 +781,7 @@ The system **MUST** continue accepting usage records even if downstream consumer
 
 ### UC: Query Tenant Usage Data
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-req-usage-query`
+- [ ] `p1` - **ID**: `cpt-cf-uc-usecase-usage-query`
 
 **Actor**: `cpt-cf-uc-actor-tenant-admin`
 
