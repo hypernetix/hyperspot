@@ -86,7 +86,7 @@ async fn test_anonymous_entity_rejected_in_ready_mode() {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object"
     });
-    let _ = service.register(vec![valid_entity]);
+    _ = service.register(vec![valid_entity]);
     service.switch_to_ready().unwrap();
     assert!(service.is_ready());
 

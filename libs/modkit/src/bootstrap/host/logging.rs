@@ -388,7 +388,7 @@ fn create_crate_file_writer(
 /// Returns `true` if stderr supports ANSI color escape codes.
 /// On Windows, also attempts to enable virtual-terminal color processing.
 fn stderr_supports_ansi() -> bool {
-    let _ = enable_ansi_support::enable_ansi_support();
+    _ = enable_ansi_support::enable_ansi_support();
     supports_color::on(supports_color::Stream::Stderr).is_some_and(|level| level.has_basic)
 }
 
@@ -408,7 +408,7 @@ fn install_subscriber(
 
     // Console writer (non-blocking stderr)
     let (nb_stderr, guard) = tracing_appender::non_blocking(std::io::stderr());
-    let _ = CONSOLE_GUARD.set(guard);
+    _ = CONSOLE_GUARD.set(guard);
 
     // Console fmt layer (human-friendly)
     let console_layer = fmt::layer()
@@ -455,7 +455,7 @@ fn install_subscriber(
         base.with(console_layer).with(file_layer_opt)
     };
 
-    let _ = subscriber.try_init();
+    _ = subscriber.try_init();
 }
 
 fn init_minimal(
@@ -483,5 +483,5 @@ fn init_minimal(
         base.with(env).with(fmt_layer)
     };
 
-    let _ = subscriber.try_init();
+    _ = subscriber.try_init();
 }

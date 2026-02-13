@@ -105,7 +105,7 @@ async fn connect_with_stack_applies_timeouts() {
     // The function should complete (either Ok or Err) - we don't assert
     // specific outcome since it depends on network configuration.
     // Just verify that we got a result (no panic, no hang).
-    let _ = result;
+    _ = result;
 }
 
 #[tokio::test]

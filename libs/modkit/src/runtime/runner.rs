@@ -150,7 +150,7 @@ pub async fn run(opts: RunOptions) -> anyhow::Result<()> {
                             error = %e,
                             "shutdown: primary waiter failed; falling back to ctrl_c()"
                         );
-                        let _ = tokio::signal::ctrl_c().await;
+                        _ = tokio::signal::ctrl_c().await;
                     }
                 }
                 c.cancel();

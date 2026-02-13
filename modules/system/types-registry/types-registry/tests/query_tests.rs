@@ -26,7 +26,7 @@ async fn test_list_entities_with_vendor_filter() {
         json!({ "$id": "gts://gts.initech.core.events.type4.v1~", "$schema": "http://json-schema.org/draft-07/schema#", "type": "object" }),
     ];
 
-    let _ = service.register(entities);
+    _ = service.register(entities);
     service.switch_to_ready().unwrap();
 
     // Filter by vendor "acme"
@@ -52,7 +52,7 @@ async fn test_list_entities_with_package_filter() {
         json!({ "$id": "gts://gts.acme.core.events.type3.v1~", "$schema": "http://json-schema.org/draft-07/schema#", "type": "object" }),
     ];
 
-    let _ = service.register(entities);
+    _ = service.register(entities);
     service.switch_to_ready().unwrap();
 
     let query = ListQuery::default().with_package("core");
@@ -75,7 +75,7 @@ async fn test_list_entities_with_namespace_filter() {
         json!({ "$id": "gts://gts.acme.core.events.type3.v1~", "$schema": "http://json-schema.org/draft-07/schema#", "type": "object" }),
     ];
 
-    let _ = service.register(entities);
+    _ = service.register(entities);
     service.switch_to_ready().unwrap();
 
     let query = ListQuery::default().with_namespace("events");
@@ -97,7 +97,7 @@ async fn test_list_entities_with_combined_filters() {
         json!({ "$id": "gts://gts.globex.core.events.type3.v1~", "$schema": "http://json-schema.org/draft-07/schema#", "type": "object" }),
     ];
 
-    let _ = service.register(entities);
+    _ = service.register(entities);
     service.switch_to_ready().unwrap();
 
     // Combined filter: vendor=acme AND package=core
@@ -120,7 +120,7 @@ async fn test_list_with_pattern_filter() {
         json!({ "$id": "gts://gts.acme.core.commands.create_user.v1~", "$schema": "http://json-schema.org/draft-07/schema#", "type": "object" }),
     ];
 
-    let _ = service.register(entities);
+    _ = service.register(entities);
     service.switch_to_ready().unwrap();
 
     // Pattern matching for "user" in the name
@@ -145,7 +145,7 @@ async fn test_list_with_is_type_filter() {
         "properties": { "name": { "type": "string" } }
     });
 
-    let _ = service.register(vec![type_schema]);
+    _ = service.register(vec![type_schema]);
     service.switch_to_ready().unwrap();
 
     // Register instances
@@ -160,7 +160,7 @@ async fn test_list_with_is_type_filter() {
         }),
     ];
 
-    let _ = service.register(instances);
+    _ = service.register(instances);
 
     // Filter for types only
     let types = service
@@ -193,7 +193,7 @@ async fn test_multiple_vendors_isolation() {
         json!({ "$id": "gts://gts.vendor_c.pkg.ns.type1.v1~", "$schema": "http://json-schema.org/draft-07/schema#", "type": "object" }),
     ];
 
-    let _ = service.register(entities);
+    _ = service.register(entities);
     service.switch_to_ready().unwrap();
 
     // Each vendor filter should return correct count
@@ -238,7 +238,7 @@ async fn test_combined_vendor_package_namespace_filter() {
         json!({ "$id": "gts://gts.globex.billing.invoices.invoice.v1~", "$schema": "http://json-schema.org/draft-07/schema#", "type": "object" }),
     ];
 
-    let _ = service.register(entities);
+    _ = service.register(entities);
     service.switch_to_ready().unwrap();
 
     // Triple filter: vendor + package + namespace
@@ -263,7 +263,7 @@ async fn test_rest_list_handler_integration() {
     let service = create_service();
 
     // Register entities via internal API (before ready)
-    let _ = service.register(vec![
+    _ = service.register(vec![
         json!({ "$id": "gts://gts.acme.core.events.list_test1.v1~", "$schema": "http://json-schema.org/draft-07/schema#", "type": "object" }),
         json!({ "$id": "gts://gts.acme.core.events.list_test2.v1~", "$schema": "http://json-schema.org/draft-07/schema#", "type": "object" }),
     ]);
@@ -316,7 +316,7 @@ async fn test_rest_get_handler_integration() {
     let service = create_service();
 
     // Register entity via internal API (before ready)
-    let _ = service.register(vec![json!({
+    _ = service.register(vec![json!({
         "$id": "gts://gts.acme.core.events.get_test.v1~",
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",

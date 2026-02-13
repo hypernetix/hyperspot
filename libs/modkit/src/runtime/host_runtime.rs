@@ -199,7 +199,7 @@ impl HostRuntime {
             }
         };
 
-        let _ = ctx; // ctx is kept for parity/error context; DB is resolved from manager above.
+        _ = ctx; // ctx is kept for parity/error context; DB is resolved from manager above.
         Ok(db.map(|db| (db, dbm)))
     }
 

@@ -802,7 +802,7 @@ pub fn redact_credentials_in_dsn(dsn: Option<&str>) -> String {
         Some(dsn) if dsn.contains('@') => {
             if let Ok(mut parsed) = url::Url::parse(dsn) {
                 if parsed.password().is_some() {
-                    let _ = parsed.set_password(Some("***"));
+                    _ = parsed.set_password(Some("***"));
                 }
                 parsed.to_string()
             } else {

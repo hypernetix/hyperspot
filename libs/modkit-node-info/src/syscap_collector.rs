@@ -225,11 +225,11 @@ impl SysCapCollector {
             let mut details = format!("Model: {}", gpu.model);
             if let Some(vram) = gpu.total_memory_mb {
                 use std::fmt::Write;
-                let _ = write!(details, ", VRAM: {vram:.0} MB");
+                _ = write!(details, ", VRAM: {vram:.0} MB");
             }
             if let Some(cores) = gpu.cores {
                 use std::fmt::Write;
-                let _ = write!(details, ", Cores: {cores}");
+                _ = write!(details, ", Cores: {cores}");
             }
 
             caps.push(

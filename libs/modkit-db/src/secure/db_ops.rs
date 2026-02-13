@@ -1045,6 +1045,6 @@ mod tests {
 
         // The OnConflict should be usable (we can't easily test its internals,
         // but we can verify it doesn't panic)
-        let _ = format!("{on_conflict:?}");
+        _ = format!("{on_conflict:?}");
     }
 }

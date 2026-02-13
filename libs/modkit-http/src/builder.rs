@@ -879,7 +879,7 @@ mod tests {
 
         // Build with `AllowInsecureHttp` under the capturing subscriber
         tracing::subscriber::with_default(subscriber, || {
-            let _ = HttpClientBuilder::new().allow_insecure_http().build();
+            _ = HttpClientBuilder::new().allow_insecure_http().build();
         });
 
         let captured = warnings.lock().unwrap();
@@ -941,7 +941,7 @@ mod tests {
 
         // Build with `TlsOnly`
         tracing::subscriber::with_default(subscriber, || {
-            let _ = HttpClientBuilder::new()
+            _ = HttpClientBuilder::new()
                 .transport(TransportSecurity::TlsOnly)
                 .build();
         });

@@ -416,7 +416,7 @@ mod database_merge {
     fn test_rendered_db_config_master_only() {
         // When only master has database config
         let home_dir = std::env::temp_dir().join("modkit_test_master_only");
-        let _ = std::fs::create_dir_all(&home_dir);
+        _ = std::fs::create_dir_all(&home_dir);
 
         let rendered_db = RenderedDbConfig::new(
             Some(create_global_db_config()),
@@ -436,7 +436,7 @@ mod database_merge {
     fn test_rendered_db_config_local_only() {
         // When only local has database config (standalone mode)
         let home_dir = std::env::temp_dir().join("modkit_test_local_only");
-        let _ = std::fs::create_dir_all(&home_dir);
+        _ = std::fs::create_dir_all(&home_dir);
 
         let mut local_config = minimal_app_config();
         local_config.database = Some(create_global_db_config());
@@ -460,7 +460,7 @@ mod database_merge {
     fn test_rendered_db_config_local_overrides_pool() {
         // Local config should override pool settings from master
         let home_dir = std::env::temp_dir().join("modkit_test_pool_override");
-        let _ = std::fs::create_dir_all(&home_dir);
+        _ = std::fs::create_dir_all(&home_dir);
 
         let rendered_db = RenderedDbConfig::new(
             Some(create_global_db_config()),
@@ -491,7 +491,7 @@ mod database_merge {
     fn test_rendered_db_config_local_overrides_file() {
         // Local config should override file path from master
         let home_dir = std::env::temp_dir().join("modkit_test_file_override");
-        let _ = std::fs::create_dir_all(&home_dir);
+        _ = std::fs::create_dir_all(&home_dir);
 
         let rendered_db = RenderedDbConfig::new(
             Some(create_global_db_config()),
@@ -520,7 +520,7 @@ mod database_merge {
     fn test_rendered_db_config_local_adds_params() {
         // Local config can add new params to master's params
         let home_dir = std::env::temp_dir().join("modkit_test_params_add");
-        let _ = std::fs::create_dir_all(&home_dir);
+        _ = std::fs::create_dir_all(&home_dir);
 
         let rendered_db = RenderedDbConfig::new(
             Some(create_global_db_config()),
@@ -551,7 +551,7 @@ mod database_merge {
     fn test_rendered_db_config_local_global_merges_with_master() {
         // Local global database config merges with master's global config
         let home_dir = std::env::temp_dir().join("modkit_test_global_merge");
-        let _ = std::fs::create_dir_all(&home_dir);
+        _ = std::fs::create_dir_all(&home_dir);
 
         let rendered_db = RenderedDbConfig::new(
             Some(create_global_db_config()),

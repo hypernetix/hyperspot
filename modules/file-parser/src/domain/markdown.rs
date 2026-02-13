@@ -67,13 +67,13 @@ impl MarkdownRenderIter {
             use std::fmt::Write;
             header.push_str("---\n");
             if let Some(ref lang) = doc.language {
-                let _ = writeln!(header, "language: {lang}");
+                _ = writeln!(header, "language: {lang}");
             }
             if let Some(ref filename) = doc.meta.original_filename {
-                let _ = writeln!(header, "filename: {filename}");
+                _ = writeln!(header, "filename: {filename}");
             }
             if let Some(ref content_type) = doc.meta.content_type {
-                let _ = writeln!(header, "content-type: {content_type}");
+                _ = writeln!(header, "content-type: {content_type}");
             }
             header.push_str("---\n\n");
         }

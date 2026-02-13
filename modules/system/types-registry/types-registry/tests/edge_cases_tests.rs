@@ -98,7 +98,7 @@ async fn test_entity_content_preserved() {
         "description": "Test entity with custom content"
     });
 
-    let _ = service.register(vec![original_content]);
+    _ = service.register(vec![original_content]);
     service.switch_to_ready().unwrap();
 
     let retrieved = service
@@ -126,7 +126,7 @@ async fn test_entity_segments_parsed_correctly() {
         "type": "object"
     });
 
-    let _ = service.register(vec![entity]);
+    _ = service.register(vec![entity]);
     service.switch_to_ready().unwrap();
 
     let retrieved = service
