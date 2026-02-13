@@ -143,7 +143,7 @@ pub enum BarrierMode {
     Ignore,
 }
 
-/// Request parameters for [`get_ancestors`](crate::TenantResolverGatewayClient::get_ancestors).
+/// Request parameters for [`get_ancestors`](crate::TenantResolverClient::get_ancestors).
 ///
 /// # Example
 ///
@@ -164,7 +164,7 @@ pub struct GetAncestorsOptions {
     pub barrier_mode: BarrierMode,
 }
 
-/// Options for [`get_tenants`](crate::TenantResolverGatewayClient::get_tenants).
+/// Options for [`get_tenants`](crate::TenantResolverClient::get_tenants).
 ///
 /// # Example
 ///
@@ -186,7 +186,7 @@ pub struct GetTenantsOptions {
     pub status: Vec<TenantStatus>,
 }
 
-/// Options for [`get_descendants`](crate::TenantResolverGatewayClient::get_descendants).
+/// Options for [`get_descendants`](crate::TenantResolverClient::get_descendants).
 ///
 /// # Example
 ///
@@ -215,7 +215,7 @@ pub struct GetDescendantsOptions {
     pub max_depth: Option<u32>,
 }
 
-/// Request parameters for [`is_ancestor`](crate::TenantResolverGatewayClient::is_ancestor).
+/// Request parameters for [`is_ancestor`](crate::TenantResolverClient::is_ancestor).
 ///
 /// # Example
 ///

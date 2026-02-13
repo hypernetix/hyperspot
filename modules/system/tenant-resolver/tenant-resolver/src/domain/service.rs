@@ -1,4 +1,4 @@
-//! Domain service for the tenant resolver gateway.
+//! Domain service for the tenant resolver module.
 //!
 //! Plugin discovery is lazy: resolved on first API call after
 //! types-registry is ready.
@@ -25,13 +25,13 @@ use super::error::DomainError;
 /// Throttle interval for unavailable plugin warnings.
 const UNAVAILABLE_LOG_THROTTLE: Duration = Duration::from_secs(10);
 
-/// Tenant resolver gateway service.
+/// Tenant resolver service.
 ///
 /// Discovers plugins via types-registry and delegates API calls.
 ///
 /// # Security Context
 ///
-/// The gateway does **not** perform its own access-control checks on the
+/// The module itself does **not** perform its own access-control checks on the
 /// `SecurityContext`. It passes the context through to the selected plugin,
 /// which is responsible for deciding how (or whether) to enforce
 /// authorization. This is intentional — different plugins may have

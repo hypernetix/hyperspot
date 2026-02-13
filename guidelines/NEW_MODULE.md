@@ -2841,7 +2841,7 @@ modules/<gateway-name>/
 │       ├── error.rs            # Errors
 │       └── gts.rs              # GTS schema for plugin instances
 │
-├── <gateway>-gw/               # Gateway module
+├── <module>/                   # Module with plugins
 │   └── src/
 │       ├── module.rs           # Module with plugin discovery
 │       ├── config.rs           # Gateway config (e.g., vendor selector)
@@ -2913,7 +2913,7 @@ The gateway is responsible for registering the plugin **schema** (GTS type defin
 Plugins only register their **instances**.
 
 ```rust
-// <gateway>-gw/src/module.rs
+// <module>/src/module.rs
 use types_registry_sdk::TypesRegistryClient;
 
 #[async_trait]
@@ -3000,7 +3000,7 @@ impl Module for VendorPlugin {
 
 **5. Gateway Service Resolves Plugin**
 
-**Rule:** Mirror `modules/system/tenant_resolver/tenant_resolver-gw/src/domain/service.rs`:
+**Rule:** Mirror `modules/system/tenant_resolver/tenant_resolver/src/domain/service.rs`:
 
 - Resolve plugin instance lazily (on first use)
 - Query types-registry for instances of `<Module>PluginSpecV1`
@@ -3008,7 +3008,7 @@ impl Module for VendorPlugin {
 - Get scoped client via `ClientScope::gts_id(instance_id)`
 
 ```rust
-// <gateway>-gw/src/domain/service.rs
+// <module>/src/domain/service.rs
 use std::sync::Arc;
 
 use modkit::client_hub::{ClientHub, ClientScope};
@@ -3114,8 +3114,8 @@ For a complete reference, study the real, production-style implementation:
 
 It contains:
 
-- `tenant_resolver-sdk/` — SDK with `TenantResolverGatewayClient`, `TenantResolverPluginClient`, and `TenantResolverPluginSpecV1`
-- `tenant_resolver-gw/` — Gateway that registers schema and selects plugin by vendor config
+- `tenant_resolver-sdk/` — SDK with `TenantResolverClient`, `TenantResolverPluginClient`, and `TenantResolverPluginSpecV1`
+- `tenant_resolver/` — Module that registers schema and selects plugin by vendor config
 - `plugins/static_tr_plugin/` — Config-based plugin (registers instance + scoped client)
 - `plugins/single_tenant_tr_plugin/` — Zero-config plugin (registers instance + scoped client)
 
@@ -3183,7 +3183,7 @@ errors (add explicit types), missing `time::OffsetDateTime`, handler/service nam
 ## Further Reading
 
 - [MODKIT UNIFIED SYSTEM](../docs/modkit_unified_system/README.md) — Complete ModKit architecture and developer guide
-- [MODKIT_PLUGINS.md](../docs/MODKIT_PLUGINS.md) — Plugin architecture with Gateway + Plugins pattern
+- [MODKIT_PLUGINS.md](../docs/MODKIT_PLUGINS.md) — Plugin architecture with Module + Plugins pattern
 - `docs/modkit_unified_system/06_secure_orm_db_access.md` — Secure ORM layer with tenant isolation
 - [TRACING_SETUP.md](../docs/TRACING_SETUP.md) — Distributed tracing with OpenTelemetry
 - [DNA/REST/API.md](./DNA/REST/API.md) — REST API design principles
@@ -3193,8 +3193,3 @@ errors (add explicit types), missing `time::OffsetDateTime`, handler/service nam
     - `users_info/` — Module implementation with local client, domain, and REST handlers
     - [examples/oop-modules/calculator-gateway/](../examples/oop-modules/calculator-gateway/) — Reference implementation of an OoP
   module 
-- [examples/plugin-modules/tenant-resolver/](../examples/plugin-modules/tenant-resolver/) — Reference implementation of
-  a Gateway + Plugins module
-    - `tenant_resolver-sdk/` — SDK with public and plugin API traits
-    - `tenant_resolver-gw/` — Gateway module with plugin discovery
-    - `plugins/` — Plugin implementations (Contoso, Fabrikam)

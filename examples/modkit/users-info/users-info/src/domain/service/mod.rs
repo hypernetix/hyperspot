@@ -50,7 +50,7 @@ use crate::domain::repos::{AddressesRepository, CitiesRepository, UsersRepositor
 use modkit_db::DBProvider;
 use modkit_db::odata::LimitCfg;
 use modkit_security::{PolicyEngineRef, SecurityContext};
-use tenant_resolver_sdk::{GetDescendantsOptions, TenantResolverGatewayClient, TenantStatus};
+use tenant_resolver_sdk::{GetDescendantsOptions, TenantResolverClient, TenantStatus};
 use uuid::Uuid;
 
 mod addresses;
@@ -66,7 +66,7 @@ pub(crate) type DbProvider = DBProvider<modkit_db::DbError>;
 /// Resolve accessible tenants for the current security context.
 /// Returns the context's tenant and all its active descendants.
 pub(crate) async fn resolve_accessible_tenants(
-    resolver: &dyn TenantResolverGatewayClient,
+    resolver: &dyn TenantResolverClient,
     ctx: &SecurityContext,
 ) -> Result<Vec<Uuid>, DomainError> {
     let tenant_id = ctx.tenant_id();
@@ -174,7 +174,7 @@ where
         db: Arc<DbProvider>,
         events: Arc<dyn EventPublisher<UserDomainEvent>>,
         audit: Arc<dyn AuditPort>,
-        resolver: Arc<dyn TenantResolverGatewayClient>,
+        resolver: Arc<dyn TenantResolverClient>,
         config: ServiceConfig,
     ) -> Self {
         let policy_engine: PolicyEngineRef = Arc::new(modkit_security::NoopPolicyEngine);

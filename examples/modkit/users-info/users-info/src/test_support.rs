@@ -10,8 +10,8 @@ use modkit_security::SecurityContext;
 use sea_orm_migration::MigratorTrait;
 use tenant_resolver_sdk::{
     GetAncestorsOptions, GetAncestorsResponse, GetDescendantsOptions, GetDescendantsResponse,
-    GetTenantsOptions, IsAncestorOptions, TenantRef, TenantResolverError,
-    TenantResolverGatewayClient, TenantStatus,
+    GetTenantsOptions, IsAncestorOptions, TenantRef, TenantResolverClient, TenantResolverError,
+    TenantStatus,
 };
 use time::OffsetDateTime;
 use uuid::Uuid;
@@ -107,7 +107,7 @@ impl AuditPort for MockAuditPort {
 pub struct MockTenantResolver;
 
 #[async_trait::async_trait]
-impl TenantResolverGatewayClient for MockTenantResolver {
+impl TenantResolverClient for MockTenantResolver {
     async fn get_tenant(
         &self,
         _ctx: &SecurityContext,

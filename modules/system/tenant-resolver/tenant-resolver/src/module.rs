@@ -1,18 +1,18 @@
-//! Tenant resolver gateway module.
+//! Tenant resolver module.
 
 use std::sync::{Arc, OnceLock};
 
 use async_trait::async_trait;
 use modkit::Module;
 use modkit::context::ModuleCtx;
-use tenant_resolver_sdk::{TenantResolverGatewayClient, TenantResolverPluginSpecV1};
+use tenant_resolver_sdk::{TenantResolverClient, TenantResolverPluginSpecV1};
 use tracing::info;
 use types_registry_sdk::TypesRegistryClient;
 
-use crate::config::TenantResolverGwConfig;
-use crate::domain::{Service, TenantResolverGwLocalClient};
+use crate::config::TenantResolverConfig;
+use crate::domain::{Service, TenantResolverLocalClient};
 
-/// Tenant Resolver Gateway module.
+/// Tenant Resolver module.
 ///
 /// This module:
 /// 1. Registers the plugin schema in types-registry
@@ -26,11 +26,11 @@ use crate::domain::{Service, TenantResolverGwLocalClient};
     deps = ["types-registry"],
     capabilities = []
 )]
-pub(crate) struct TenantResolverGateway {
+pub(crate) struct TenantResolver {
     service: OnceLock<Arc<Service>>,
 }
 
-impl Default for TenantResolverGateway {
+impl Default for TenantResolver {
     fn default() -> Self {
         Self {
             service: OnceLock::new(),
@@ -39,12 +39,12 @@ impl Default for TenantResolverGateway {
 }
 
 #[async_trait]
-impl Module for TenantResolverGateway {
+impl Module for TenantResolver {
     #[tracing::instrument(skip_all, fields(vendor))]
     async fn init(&self, ctx: &ModuleCtx) -> anyhow::Result<()> {
-        let cfg: TenantResolverGwConfig = ctx.config()?;
+        let cfg: TenantResolverConfig = ctx.config()?;
         tracing::Span::current().record("vendor", cfg.vendor.as_str());
-        info!(vendor = %cfg.vendor, "Initializing tenant_resolver gateway");
+        info!(vendor = %cfg.vendor, "Initializing tenant_resolver module");
 
         // Register plugin schema in types-registry
         let registry = ctx.client_hub().get::<dyn TypesRegistryClient>()?;
@@ -60,11 +60,10 @@ impl Module for TenantResolverGateway {
         let hub = ctx.client_hub();
         let svc = Arc::new(Service::new(hub, cfg.vendor));
 
-        // Register gateway client in ClientHub
-        let api: Arc<dyn TenantResolverGatewayClient> =
-            Arc::new(TenantResolverGwLocalClient::new(svc.clone()));
-        ctx.client_hub()
-            .register::<dyn TenantResolverGatewayClient>(api);
+        // Register local client in ClientHub
+        let api: Arc<dyn TenantResolverClient> =
+            Arc::new(TenantResolverLocalClient::new(svc.clone()));
+        ctx.client_hub().register::<dyn TenantResolverClient>(api);
 
         self.service
             .set(svc)

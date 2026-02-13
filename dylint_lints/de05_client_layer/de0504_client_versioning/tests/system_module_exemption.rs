@@ -48,7 +48,7 @@ fn test_system_modules_are_exempt() {
 
     assert!(
         !has_de0504_error,
-        "System module tenant_resolver-sdk should NOT trigger DE0504 for TenantResolverGatewayClient\n\
+        "System module tenant_resolver-sdk should NOT trigger DE0504 for TenantResolverClient\n\
          System modules (modules/system/*) are exempt from versioning requirements.\n\
          Stderr: {}\nStdout: {}",
         stderr,

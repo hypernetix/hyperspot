@@ -21,7 +21,7 @@ use modkit::{
 };
 use serde_json::json;
 use std::sync::Arc;
-use tenant_resolver_sdk::TenantResolverGatewayClient;
+use tenant_resolver_sdk::TenantResolverClient;
 use tower::ServiceExt;
 use uuid::Uuid;
 
@@ -37,7 +37,7 @@ impl ConfigProvider for TestConfigProvider {
 
 fn create_api_gateway_ctx(config: serde_json::Value) -> ModuleCtx {
     let hub = Arc::new(ClientHub::new());
-    hub.register::<dyn TenantResolverGatewayClient>(Arc::new(MockTenantResolver));
+    hub.register::<dyn TenantResolverClient>(Arc::new(MockTenantResolver));
 
     ModuleCtx::new(
         "api-gateway",

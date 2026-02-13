@@ -17,7 +17,7 @@ block hierarchy traversal from parent tenants (unless explicitly ignored).
 
 ## Public API
 
-The gateway registers [`TenantResolverGatewayClient`](tenant_resolver-sdk/src/api.rs) in ClientHub:
+The module registers [`TenantResolverClient`](tenant_resolver-sdk/src/api.rs) in ClientHub:
 
 - `get_tenant(ctx, id)` — Retrieve single tenant by ID
 - `get_tenants(ctx, ids, options)` — Retrieve multiple tenants by IDs (batch)
@@ -176,9 +176,9 @@ CyberFabric includes two plugins out of the box:
 
 ## Configuration
 
-### Gateway
+### Tenant Resolver Module
 
-See [`config.rs`](tenant_resolver-gw/src/config.rs)
+See [`config.rs`](tenant_resolver/src/config.rs)
 
 ```yaml
 modules:
@@ -210,7 +210,7 @@ modules:
 ## Usage
 
 ```rust
-let resolver = hub.get::<dyn TenantResolverGatewayClient>()?;
+let resolver = hub.get::<dyn TenantResolverClient>()?;
 
 // Get tenant info
 let tenant = resolver.get_tenant(&ctx, tenant_id).await?;
@@ -239,9 +239,9 @@ let is_parent = resolver.is_ancestor(&ctx, parent_id, child_id, &IsAncestorOptio
 
 ## Technical Decisions
 
-### Gateway + Plugin Pattern
+### Tenant ResolverModule + Plugin Pattern
 
-Multiple backends are planned (config-based, DB-driven, external API). The gateway handles cross-cutting concerns consistently while plugins can be developed independently.
+Multiple backends are planned (config-based, DB-driven, external API). The Tenant Resolver module handles cross-cutting concerns consistently while plugins can be developed independently.
 
 ### Barrier Semantics
 

@@ -9,7 +9,8 @@ use grpc_hub as _;
 use module_orchestrator as _;
 use nodes_registry as _;
 use simple_user_settings as _;
-use tenant_resolver_gw as _;
+use tenant_resolver as _;
+use types as _;
 use types_registry as _;
 
 #[cfg(feature = "single-tenant")]
@@ -28,10 +29,3 @@ use calculator_gateway as _;
 
 #[cfg(feature = "oop-example")]
 use calculator as _;
-
-#[cfg(feature = "tenant-resolver-example")]
-use contoso_tr_plugin as _;
-#[cfg(feature = "tenant-resolver-example")]
-use fabrikam_tr_plugin as _;
-#[cfg(feature = "tenant-resolver-example")]
-use tenant_resolver_gw_example as _;

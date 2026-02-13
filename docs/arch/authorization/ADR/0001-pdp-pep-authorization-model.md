@@ -25,7 +25,7 @@ Cyber Fabric is a modular platform for building multi-tenant vendor platforms. E
 
 Industry best practices (NIST SP 800-162, XACML, AuthZEN) recommend separating authorization into:
 
-- **PDP (Policy Decision Point)** — Evaluates policies and returns access decisions. In Cyber Fabric, this is the vendor's authorization service accessed via AuthZ Resolver gateway.
+- **PDP (Policy Decision Point)** — Evaluates policies and returns access decisions. In Cyber Fabric, this is the vendor's authorization service accessed via AuthZ Resolver module.
 - **PEP (Policy Enforcement Point)** — Enforces PDP decisions at resource access points. In Cyber Fabric, domain modules act as PEPs, with ModKit providing shared enforcement infrastructure.
 - **PAP (Policy Administration Point)** — Where policies are authored and managed. This is entirely vendor-controlled (their admin UI, policy DSL, etc.). Cyber Fabric never sees or stores policies.
 - **PIP (Policy Information Point)** — Provides additional attributes for decision-making (user roles, tenant hierarchy, resource metadata). In Cyber Fabric, Tenant Resolver and Resource Group Resolver serve as PIPs.

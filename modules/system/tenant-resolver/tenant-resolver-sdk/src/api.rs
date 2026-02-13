@@ -1,7 +1,7 @@
-//! Public API trait for the tenant resolver gateway.
+//! Public API trait for the tenant resolver.
 //!
 //! This trait defines the interface that consumers use to interact with
-//! the tenant resolver. The gateway implements this trait and delegates
+//! the tenant resolver. The module implements this trait and delegates
 //! to the appropriate plugin.
 
 use async_trait::async_trait;
@@ -13,13 +13,10 @@ use crate::models::{
     GetTenantsOptions, IsAncestorOptions, TenantId, TenantInfo,
 };
 
-/// Public API trait for the tenant resolver gateway.
-///
-/// This trait is registered in `ClientHub` by the gateway module and
-/// can be consumed by other modules:
+/// Public API trait for the tenant resolver module.
 ///
 /// ```ignore
-/// let resolver = hub.get::<dyn TenantResolverGatewayClient>()?;
+/// let resolver = hub.get::<dyn TenantResolverClient>()?;
 ///
 /// // Get single tenant info
 /// let tenant = resolver.get_tenant(&ctx, tenant_id).await?;
@@ -39,12 +36,12 @@ use crate::models::{
 ///
 /// # Security Context
 ///
-/// The gateway does **not** perform its own access-control checks.
+/// The module  does **not** perform its own access-control checks.
 /// The `SecurityContext` is passed through to the plugin, which decides
 /// how (or whether) to enforce authorization. This is intentional —
 /// different plugins may have different access-control semantics.
 #[async_trait]
-pub trait TenantResolverGatewayClient: Send + Sync {
+pub trait TenantResolverClient: Send + Sync {
     /// Get tenant information by ID.
     ///
     /// Returns tenant info regardless of status - the consumer can decide

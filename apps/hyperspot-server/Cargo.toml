@@ -13,11 +13,6 @@ workspace = true
 default = []
 users-info-example = ["dep:users-info"]
 oop-example = ["dep:calculator-gateway", "dep:calculator"]
-tenant-resolver-example = [
-    "dep:tenant-resolver-gw-example",
-    "dep:contoso-tr-plugin",
-    "dep:fabrikam-tr-plugin",
-]
 single-tenant = ["dep:single-tenant-tr-plugin"]
 static-tenants = ["dep:static-tr-plugin"]
 otel = ["modkit/otel"]
@@ -33,7 +28,7 @@ grpc_hub = { package = "cf-grpc-hub", path = "../../modules/system/grpc-hub" }
 module_orchestrator = { package = "cf-module-orchestrator", path = "../../modules/system/module-orchestrator" }
 types = { path = "../../modules/system/types" }
 types_registry = { package = "cf-types-registry", path = "../../modules/system/types-registry/types-registry" }
-tenant-resolver-gw = { package = "cf-tenant-resolver-gw", path = "../../modules/system/tenant-resolver/tenant-resolver-gw" }
+tenant-resolver = { package = "cf-tenant-resolver", path = "../../modules/system/tenant-resolver/tenant-resolver" }
 
 # Optional tenant resolver plugins
 single-tenant-tr-plugin = { package = "cf-single-tenant-tr-plugin", path = "../../modules/system/tenant-resolver/plugins/single-tenant-tr-plugin", optional = true }
@@ -54,11 +49,6 @@ serde_json = { workspace = true }
 users-info = { path = "../../examples/modkit/users-info/users-info", optional = true }
 calculator-gateway = { path = "../../examples/oop-modules/calculator-gateway/calculator-gateway", optional = true }
 calculator = { path = "../../examples/oop-modules/calculator/calculator", optional = true }
-
-# tenant-resolver plugin example
-tenant-resolver-gw-example = { package = "tenant-resolver-gw", path = "../../examples/plugin-modules/tenant-resolver/tenant-resolver-gw", optional = true }
-contoso-tr-plugin = { path = "../../examples/plugin-modules/tenant-resolver/plugins/contoso-tr-plugin", optional = true }
-fabrikam-tr-plugin = { path = "../../examples/plugin-modules/tenant-resolver/plugins/fabrikam-tr-plugin", optional = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }

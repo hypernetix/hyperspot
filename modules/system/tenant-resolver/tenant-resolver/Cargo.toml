@@ -1,17 +1,17 @@
 [package]
-name = "cf-tenant-resolver-gw"
+name = "cf-tenant-resolver"
 version = "0.1.2"
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
-description = "Tenant resolver gateway module - discovers and routes to plugins"
+description = "Tenant resolver module - discovers and routes to plugins"
 repository.workspace = true
 readme = "README.md"
 keywords = ["cyberfabric", "cyberfabric-system"]
 categories = ["web-programming"]
 
 [lib]
-name = "tenant_resolver_gw"
+name = "tenant_resolver"
 
 [lints]
 workspace = true

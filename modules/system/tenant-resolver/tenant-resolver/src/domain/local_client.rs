@@ -1,4 +1,4 @@
-//! Local (in-process) client for the tenant resolver gateway.
+//! Local (in-process) client for the tenant resolver module.
 
 use std::sync::Arc;
 
@@ -7,21 +7,21 @@ use modkit_macros::domain_model;
 use modkit_security::SecurityContext;
 use tenant_resolver_sdk::{
     GetAncestorsOptions, GetAncestorsResponse, GetDescendantsOptions, GetDescendantsResponse,
-    GetTenantsOptions, IsAncestorOptions, TenantId, TenantInfo, TenantResolverError,
-    TenantResolverGatewayClient,
+    GetTenantsOptions, IsAncestorOptions, TenantId, TenantInfo, TenantResolverClient,
+    TenantResolverError,
 };
 
 use super::{DomainError, Service};
 
-/// Local client wrapping the gateway service.
+/// Local client wrapping the TR service.
 ///
-/// Registered in `ClientHub` by the gateway module during `init()`.
+/// Registered in `ClientHub` by the TR module during `init()`.
 #[domain_model]
-pub struct TenantResolverGwLocalClient {
+pub struct TenantResolverLocalClient {
     svc: Arc<Service>,
 }
 
-impl TenantResolverGwLocalClient {
+impl TenantResolverLocalClient {
     #[must_use]
     pub fn new(svc: Arc<Service>) -> Self {
         Self { svc }
@@ -29,12 +29,12 @@ impl TenantResolverGwLocalClient {
 }
 
 fn log_and_convert(op: &str, e: DomainError) -> TenantResolverError {
-    tracing::error!(operation = op, error = ?e, "tenant_resolver gateway call failed");
+    tracing::error!(operation = op, error = ?e, "tenant-resolver call failed");
     e.into()
 }
 
 #[async_trait]
-impl TenantResolverGatewayClient for TenantResolverGwLocalClient {
+impl TenantResolverClient for TenantResolverLocalClient {
     async fn get_tenant(
         &self,
         ctx: &SecurityContext,

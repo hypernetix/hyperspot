@@ -292,7 +292,7 @@ pub fn spawn_background_task(cancel: CancellationToken) {
 - [ ] Define `.proto` file and generate gRPC stubs in SDK
 - [ ] Implement gRPC server in module crate
 - [ ] Use `modkit_transport_grpc::client` utilities for connections
-- [ ] Register both local and remote clients in gateway
+- [ ] Register both local and remote clients in module
 - [ ] Use `CancellationToken` for coordinated shutdown
 - [ ] Test with mock gRPC servers
 

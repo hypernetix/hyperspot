@@ -18,7 +18,7 @@ These are conceptually separate responsibilities governed by different standards
 - **AuthN** — OpenID Connect Core 1.0, RFC 7519 (JWT), RFC 7662 (Token Introspection)
 - **AuthZ** — OpenID AuthZEN Authorization API 1.0, NIST SP 800-162 (PDP/PEP model)
 
-**Key architectural question:** Should Cyber Fabric use a single unified resolver module (Auth Resolver) that handles both AuthN and AuthZ, or should these be split into two independent gateway modules (AuthN Resolver and AuthZ Resolver)?
+**Key architectural question:** Should Cyber Fabric use a single unified resolver module (Auth Resolver) that handles both AuthN and AuthZ, or should these be split into two independent modules with plugins (AuthN Resolver and AuthZ Resolver)?
 
 This decision impacts deployment flexibility, vendor integration patterns, security boundaries, caching strategies, and component reusability.
 
@@ -45,13 +45,13 @@ Chosen option: **Option B - Separate AuthN Resolver and AuthZ Resolver**, becaus
 
 **Implementation:**
 
-1. **AuthN Resolver** (gateway + plugin):
+1. **AuthN Resolver** (module + plugin):
    - Responsibilities: token validation, JWT signature verification, JWKS management, token introspection (RFC 7662), claim extraction
    - Output: `SecurityContext` (subject_id, subject_type, subject_tenant_id, token_scopes, bearer_token)
    - Used by: AuthN middleware in modules accepting requests (API Gateway module, Domain Module, gRPC Gateway module, WebSocket handlers, etc.)
    - Standards: OpenID Connect Core 1.0, RFC 7519 (JWT), RFC 7662 (Token Introspection)
 
-2. **AuthZ Resolver** (gateway + plugin):
+2. **AuthZ Resolver** (module + plugin):
    - Responsibilities: PDP functionality, policy evaluation, constraint generation
    - Input: `SecurityContext` + evaluation request (subject, action, resource, context)
    - Output: decision + constraints
@@ -104,7 +104,7 @@ Chosen option: **Option B - Separate AuthN Resolver and AuthZ Resolver**, becaus
 
 ### Option A: Unified Auth Resolver
 
-Single gateway module (Auth Resolver) that handles both AuthN and AuthZ concerns.
+Single module (Auth Resolver) that handles both AuthN and AuthZ concerns.
 
 **Pros:**
 
@@ -126,7 +126,7 @@ Single gateway module (Auth Resolver) that handles both AuthN and AuthZ concerns
 
 ### Option B: Separate AuthN Resolver and AuthZ Resolver
 
-Two independent gateway modules with separate plugin interfaces.
+Two independent modules with separate plugin interfaces.
 
 **Pros:**
 
