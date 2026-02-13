@@ -15,11 +15,9 @@ The service addresses the fragmentation problem where different consumers (billi
 Key problems:
 
 - **Fragmented tracking**: Each consumer implements own collection leading to inconsistent data
-- **High-volume ingestion**: Per-event synchronous REST calls are inefficient at high throughput due to HTTP overhead and blocking behavior
+- **High-volume ingestion**: Per-event synchronous calls are inefficient at high throughput due to protocol overhead and blocking behavior
 - **No custom units**: Cannot meter new resource types (AI tokens) without code changes
 - **Storage lock-in**: No flexibility for different retention and performance needs
-
-Notable systems that influenced this design: Amberflo (client-side SDK batching pattern, accuracy guarantees), OpenMeter (stream processing architecture, CloudEvents format, ClickHouse for time-series storage), Stripe Meters (meter configuration pattern, aggregation over billing periods), OpenTelemetry Collector (sidecar/agent deployment pattern for high-throughput telemetry).
 
 ### 1.3 Goals (Business Outcomes)
 
@@ -43,7 +41,7 @@ Notable systems that influenced this design: Amberflo (client-side SDK batching 
 | Grace Period | A configurable time window during which late-arriving events are accepted via normal ingestion without requiring explicit backfill |
 | Reconciliation | The process of comparing usage data across pipeline stages or external sources to detect gaps and inconsistencies (performed by external systems; UC exposes metadata to support this) |
 | Amendment | A correction to previously recorded usage data, either by replacing events in a time range or deprecating individual events |
-| Rate Limit | A constraint on the volume of requests or data a tenant or source can submit within a time window |
+| Rate Limit | A constraint on the volume of requests a source can submit within a time window |
 | Load Shedding | The deliberate dropping or deferral of low-priority work to preserve system stability under overload |
 | Snapshot Read | A query that sees data as it existed at a specific point in time, providing consistency across paginated requests despite concurrent data modifications |
 
@@ -119,8 +117,7 @@ No module-specific environment constraints beyond project defaults.
 ### 4.1 In Scope
 
 - Client-side SDK with batching (primary ingestion path)
-- Collector/agent pattern for sidecar deployment
-- REST API for simple/low-volume cases and external integrations
+- API for usage ingestion and querying (Rust API, gRPC, HTTP)
 - Counter and gauge metric semantics
 - Per-tenant, per-user, and per-resource usage attribution
 - Pluggable storage adapter framework (ClickHouse, PostgreSQL, custom)
@@ -147,29 +144,16 @@ No module-specific environment constraints beyond project defaults.
 
 ## 5. Functional Requirements
 
-> **Testing strategy**: All requirements verified via automated tests (unit, integration, e2e) targeting 90%+ code coverage unless otherwise specified. Document verification method only for non-test approaches (analysis, inspection, demonstration).
-
 ### 5.1 Usage Ingestion
 
 #### Usage Record Ingestion
 
 - [ ] `p1` - **ID**: `cpt-cf-uc-fr-usage-ingestion`
 
-The system **MUST** accept usage records via SDK (with batching), collector agent, and REST API, supporting high-throughput scenarios (10,000+ events per second).
+The system **MUST** accept usage records via multiple transport mechanisms (Rust API, gRPC, HTTP), with SDK providing automatic batching for high-throughput scenarios (10,000+ events per second).
 
-**Rationale**: Different usage sources have different throughput needs; providing multiple ingestion paths ensures all sources can efficiently emit data.
+**Rationale**: Different usage sources have different integration and throughput needs; providing multiple transport options ensures all sources can efficiently emit data.
 **Actors**: `cpt-cf-uc-actor-usage-source`, `cpt-cf-uc-actor-platform-developer`
-
-#### Pull-Based Collection
-
-- [ ] `p2` - **ID**: `cpt-cf-uc-fr-pull-collection`
-
-The system **MUST** support polling usage data from sources that cannot push, with configurable intervals and transformation to standard format. Pull adapters will be implemented as needed when specific integration requirements arise for systems that cannot emit usage data via push patterns.
-
-Initial implementation focuses on push patterns (SDK, collector agent, REST API). Pull-based collection will be added when concrete use cases are identified for sources that cannot integrate via push.
-
-**Rationale**: Some usage sources cannot integrate via push patterns and require polling.
-**Actors**: `cpt-cf-uc-actor-usage-source`
 
 #### Idempotency and Deduplication
 
@@ -249,6 +233,17 @@ The system **MUST** identify the source of each usage record through the platfor
 **Rationale**: Without source-level authorization, any module or integration could report usage for resource types it does not own (e.g., a File Parser reporting LLM token usage), leading to inaccurate metering and potential billing manipulation.
 **Actors**: `cpt-cf-uc-actor-usage-source`, `cpt-cf-uc-actor-types-registry`, `cpt-cf-uc-actor-platform-operator`
 
+#### Attribution Authorization
+
+- [ ] `p1` - **ID**: `cpt-cf-uc-fr-attribution-authorization`
+
+The system **MUST** verify that the resource and user referenced in a usage record are within the caller's SecurityContext reach. When a usage source attributes usage to a specific resource ID or user ID, the system **MUST** validate that the authenticated caller is authorized to attribute usage to those entities. The system **MUST** reject usage records that reference resources or users outside the caller's SecurityContext scope, failing closed on authorization failures.
+
+This requirement complements source authorization (`cpt-cf-uc-fr-source-authorization`): source authorization validates *what type* of usage a source may report, while attribution authorization validates *on whose behalf* (which users and resources) the usage is reported.
+
+**Rationale**: Source authorization alone ensures a source can report a given usage type, but does not prevent a source from attributing usage to arbitrary users or resources beyond its organizational reach. Without attribution authorization, a compromised or misconfigured source could attribute usage to users or resources it does not manage, leading to incorrect billing, quota manipulation, and potential cross-boundary data pollution.
+**Actors**: `cpt-cf-uc-actor-usage-source`, `cpt-cf-uc-actor-platform-operator`
+
 ### 5.4 Storage & Retention
 
 #### Pluggable Storage Framework
@@ -271,7 +266,7 @@ The system **MUST** support configurable retention policies (global, per-tenant,
 
 #### Storage Health Monitoring
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-fr-storage-health`
+- [ ] `p2` - **ID**: `cpt-cf-uc-fr-storage-health`
 
 The system **MUST** monitor storage adapter health, buffer records during failures, retry with backoff, and alert on persistent issues.
 
@@ -320,7 +315,7 @@ The system **SHOULD** support snapshot reads, allowing clients to query data wit
 
 #### Late-Arriving Event Handling
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-fr-late-events`
+- [ ] `p2` - **ID**: `cpt-cf-uc-fr-late-events`
 
 The system **MUST** accept usage events with timestamps within a configurable grace period (default 24 hours, configurable per tenant and per usage type) via the standard ingestion path, applying normal deduplication and schema validation.
 
@@ -331,16 +326,18 @@ The system **MUST** accept usage events with timestamps within a configurable gr
 
 - [ ] `p2` - **ID**: `cpt-cf-uc-fr-backfill-api`
 
-The system **MUST** provide a dedicated backfill API that accepts a time range (scoped to a single tenant and usage type) and a set of replacement events, atomically archiving existing events in that range and inserting the new events.
+The system **MUST** provide a backfill API that allows operators to retroactively submit historical usage data for a specific time range (scoped to a single tenant and usage type). The backfill operation **MUST** replace all existing events in the specified time range with the provided replacement events, ensuring atomic replacement to prevent partial or inconsistent states.
 
-The backfill API **MUST** be separate from the real-time ingestion path with independent rate limits and lower processing priority to prevent backfill operations from starving real-time ingestion.
+The backfill API **MUST** be isolated from the real-time ingestion path with independent rate limits and lower processing priority to prevent backfill operations from degrading real-time ingestion performance.
 
-**Concurrent-write strategy — Reject and Retry**: During an active backfill, the system **MUST** use range-level locking to enforce exclusive write access to the affected `(tenant, usage_type, time_range)` partition. The backfill operation acquires a lock before beginning the archive-and-insert transaction and holds it until the transaction commits or rolls back. While the lock is held:
+The system **MUST** support both blocking and non-blocking backfill modes:
 
-1. **Real-time ingestion behavior**: Any real-time event (via SDK, collector agent, or REST API as defined in `cpt-cf-uc-fr-usage-ingestion`) whose `(tenant_id, usage_type, timestamp)` falls within a currently locked backfill range **MUST** be rejected with HTTP status `409 Conflict` and error code `BACKFILL_IN_PROGRESS`. The response body **MUST** include the fields `retry_after_ms` (estimated remaining backfill duration, minimum 1000) and `locked_range` (the `[start, end)` interval that is locked).
-2. **Lock scope and overlap**: The system **MUST** reject a backfill request with HTTP `409 Conflict` and error code `BACKFILL_RANGE_OVERLAP` if its requested range overlaps with any currently locked backfill range for the same tenant and usage type. Only one backfill operation per `(tenant, usage_type)` overlapping range is permitted at a time. Non-overlapping ranges for the same tenant and usage type, or any ranges for different tenants or usage types, **MAY** execute concurrently.
+- **Blocking mode**: Real-time ingestion for the affected time range is temporarily unavailable during the backfill operation. Real-time events that fall within the backfill range are rejected with conflict errors, allowing clients to retry after the backfill completes. This mode provides the strongest consistency guarantees and ensures the backfilled data precisely replaces the target range.
+- **Non-blocking mode**: Real-time ingestion continues uninterrupted during the backfill operation. The system resolves conflicts between concurrent real-time events and backfill operations according to a configurable conflict resolution policy. This mode prioritizes availability of real-time ingestion over strict replacement semantics.
 
-**Rationale**: When usage data is lost due to outages, pipeline failures, or misconfigured sources, operators need a mechanism to retroactively submit corrected data for an entire time range. The reject-and-retry strategy is chosen over queue-and-replay or snapshot isolation alternatives because it is the simplest model to implement correctly, avoids unbounded buffering on the server, keeps real-time ingestion latency deterministic (a fast 409 vs. an indeterminate queue wait), and pushes retry responsibility to the SDK where backpressure is already handled. Backfill operations are expected to be infrequent (operator-initiated corrections), so brief real-time rejection windows are an acceptable trade-off for strong atomicity guarantees. Timeframe-based replacement (as opposed to individual event insertion) ensures atomicity and prevents partial amendment states.
+The choice of mode **MUST** be configurable per backfill operation, allowing operators to select the appropriate trade-off based on the severity and business impact of the gap being corrected.
+
+**Rationale**: When usage data is lost due to outages, pipeline failures, or misconfigured sources, operators need a mechanism to retroactively submit corrected data for an entire time range. Different scenarios have different criticality: correcting a minor analytics gap may tolerate concurrent real-time events and should not block critical usage reporting, while correcting billing-critical data may require strict replacement semantics with temporary ingestion blocking. Supporting both modes ensures backfill operations never prevent critical real-time usage reporting when that is the priority, while still providing strong consistency guarantees when needed.
 **Actors**: `cpt-cf-uc-actor-platform-operator`, `cpt-cf-uc-actor-usage-source`
 
 #### Individual Event Amendment
@@ -356,7 +353,7 @@ The system **MUST** support amending individual usage events (updating propertie
 
 #### Backfill Time Boundaries
 
-- [ ] `p2` - **ID**: `cpt-cf-uc-fr-backfill-boundaries`
+- [ ] `p3` - **ID**: `cpt-cf-uc-fr-backfill-boundaries`
 
 The system **MUST** enforce configurable time boundaries for backfill operations: a maximum backfill window (default 90 days) beyond which backfill requests are rejected, and a future timestamp tolerance (default 5 minutes) to account for clock drift. Backfill requests exceeding the maximum window **MUST** require elevated authorization.
 
@@ -383,7 +380,7 @@ Every backfill operation **MUST** produce an immutable audit record containing: 
 
 #### Ledger Metadata Exposure
 
-- [ ] `p2` - **ID**: `cpt-cf-uc-fr-ledger-metadata`
+- [ ] `p3` - **ID**: `cpt-cf-uc-fr-ledger-metadata`
 
 The system **MUST** expose per-source and per-tenant metadata — including event counts, latest event timestamps (watermarks), and ingestion statistics — via API, enabling external reconciliation and observability systems to detect gaps and perform integrity checks.
 
@@ -418,16 +415,16 @@ When a custom measuring unit is registered, the platform operator **MUST** also 
 
 #### Per-Tenant Ingestion Rate Limiting
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-fr-tenant-rate-limit`
+- [ ] `p2` - **ID**: `cpt-cf-uc-fr-tenant-rate-limit`
 
-The system **MUST** enforce per-tenant ingestion rate limits with independently configurable sustained rate (events per second) and burst size parameters. Requests exceeding the rate limit **MUST** be rejected with HTTP 429 status.
+The system **MUST** enforce per-tenant ingestion rate limits with independently configurable sustained rate (events per second) and burst size parameters. Requests exceeding the rate limit **MUST** be rejected with an appropriate rate limit error.
 
 **Rationale**: Without per-tenant rate limiting, a single misbehaving or high-volume tenant can exhaust ingestion capacity and degrade service for all other tenants. Burst tolerance is required because usage event emission is inherently bursty (e.g., a batch job completing and emitting thousands of records at once).
 **Actors**: `cpt-cf-uc-actor-usage-source`, `cpt-cf-uc-actor-platform-operator`
 
 #### Per-Source Rate Limiting
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-fr-source-rate-limit`
+- [ ] `p2` - **ID**: `cpt-cf-uc-fr-source-rate-limit`
 
 The system **MUST** enforce per-source rate limits within each tenant, preventing a single usage source (e.g., a misconfigured LLM Gateway) from consuming the tenant's entire ingestion quota. Per-source limits **MUST** be configurable independently of the tenant-level limit.
 
@@ -436,7 +433,7 @@ The system **MUST** enforce per-source rate limits within each tenant, preventin
 
 #### Multi-Dimensional Rate Limits
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-fr-multi-dimensional-limits`
+- [ ] `p3` - **ID**: `cpt-cf-uc-fr-multi-dimensional-limits`
 
 The system **MUST** enforce rate limits across multiple dimensions simultaneously: events per second, bytes per second, maximum batch size (events per request), and maximum record size (bytes per event). All dimensions **MUST** pass for a request to be accepted.
 
@@ -445,7 +442,7 @@ The system **MUST** enforce rate limits across multiple dimensions simultaneousl
 
 #### Rate Limit Configuration and Overrides
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-fr-rate-limit-config`
+- [ ] `p2` - **ID**: `cpt-cf-uc-fr-rate-limit-config`
 
 The system **MUST** support rate limit configuration with system-wide defaults and per-tenant overrides. Per-tenant overrides **MUST** be hot-reloadable without service restart. Unspecified fields in overrides **MUST** inherit from the system defaults.
 
@@ -454,25 +451,27 @@ The system **MUST** support rate limit configuration with system-wide defaults a
 
 #### Rate Limit Response Format
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-fr-rate-limit-response`
+- [ ] `p2` - **ID**: `cpt-cf-uc-fr-rate-limit-response`
 
-When rate limits are exceeded, the system **MUST** respond with HTTP 429 (Too Many Requests) and include a `Retry-After` header indicating when the client can retry. The system **MUST** include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset` headers on all API responses to enable clients to monitor their quota consumption. Header formats are defined as follows:
+When rate limits are exceeded, the system **MUST** respond with a rate limit error and include metadata indicating when the client can retry. The system **MUST** provide rate limit status information on all API responses to enable clients to monitor their quota consumption. Response metadata **MUST** include:
 
-- **`Retry-After`**: **MUST** be provided as either `delay-seconds` (an integer representing the number of seconds the client should wait before retrying) **OR** an `HTTP-date` value (an absolute timestamp in HTTP-date format).
-- **`X-RateLimit-Limit`**: **MUST** be an integer representing the total request allowance for the current rate limit window.
-- **`X-RateLimit-Remaining`**: **MUST** be an integer representing the number of requests remaining in the current rate limit window.
-- **`X-RateLimit-Reset`**: **MUST** be an integer Unix epoch timestamp (seconds since 1970-01-01T00:00:00Z) in UTC indicating when the current rate limit window resets.
+- **`retry_after_ms`**: Integer milliseconds the client should wait before retrying (provided on rate limit errors).
+- **`rate_limit_limit`**: Integer representing the total request allowance for the current rate limit window.
+- **`rate_limit_remaining`**: Integer representing the number of requests remaining in the current rate limit window.
+- **`rate_limit_reset`**: Unix epoch timestamp (seconds since 1970-01-01T00:00:00Z) in UTC indicating when the current rate limit window resets.
 
-All time-related header values are in UTC. Clients **SHOULD** parse these header values as integers and **SHOULD** treat missing or unparseable values conservatively (i.e., assume the limit is exhausted and apply a default backoff).
+For HTTP transport specifically, these **MUST** be provided as response headers: `Retry-After` (in seconds), `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset`, with HTTP 429 status. For gRPC transport, these **MUST** be provided in response metadata. For Rust API, these **MUST** be provided in error/response structures.
 
-**Rationale**: Standard rate limit headers (used by Stripe, GitHub, Datadog) enable clients to track quota consumption and schedule retries, reducing wasted requests against an already-exhausted quota. Explicit format definitions prevent ambiguity between delay-seconds and HTTP-date for `Retry-After`, and between epoch timestamps and other representations for `X-RateLimit-Reset`.
+All time-related values are in UTC. Clients **SHOULD** treat missing or unparseable values conservatively (i.e., assume the limit is exhausted and apply a default backoff).
+
+**Rationale**: Rate limit metadata enables clients to track quota consumption and schedule retries, reducing wasted requests against an already-exhausted quota. Transport-specific encoding ensures the same information is available regardless of how clients integrate.
 **Actors**: `cpt-cf-uc-actor-usage-source`, `cpt-cf-uc-actor-platform-developer`
 
 #### SDK Retry and Buffering on Rate Limit
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-fr-sdk-retry`
+- [ ] `p2` - **ID**: `cpt-cf-uc-fr-sdk-retry`
 
-The SDK **MUST** buffer usage events in a bounded in-memory queue and retry with exponential backoff and jitter on rate limit responses (HTTP 429) and backfill conflict responses (HTTP 409), honoring the `Retry-After` header or `retry_after_ms` field when present. When the buffer is full, the SDK **MUST** drop oldest events and report the loss via metrics. The SDK **MUST NOT** block the calling service due to rate limiting.
+The SDK **MUST** buffer usage events in a bounded in-memory queue and retry with exponential backoff and jitter on rate limit errors and backfill conflict errors, honoring the `retry_after_ms` field when present. When the buffer is full, the SDK **MUST** drop oldest events and report the loss via metrics. The SDK **MUST NOT** block the calling service due to rate limiting.
 
 **Rationale**: Usage sources generate events regardless of collector availability. The SDK must absorb temporary rate limiting transparently, retrying without burdening the caller. Exponential backoff with jitter prevents synchronized retry bursts across sources. Non-blocking behavior is critical because usage emission must not degrade the source service's primary function.
 **Actors**: `cpt-cf-uc-actor-usage-source`, `cpt-cf-uc-actor-platform-developer`
@@ -488,7 +487,7 @@ The system **MUST** support priority classification of usage event types (e.g., 
 
 #### Rate Limit Observability
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-fr-rate-limit-observability`
+- [ ] `p2` - **ID**: `cpt-cf-uc-fr-rate-limit-observability`
 
 The system **MUST** expose per-tenant and per-source rate limit consumption as metrics (current usage vs. limit, rejection counts, throttle duration) for operator dashboards. The system **MUST** emit alerts when tenants approach configured warning thresholds (e.g., 75%, 90% of capacity).
 
@@ -573,7 +572,7 @@ The system **MUST** enforce authorization for read/write operations based on ten
 
 #### Horizontal Scalability
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-nfr-scalability`
+- [ ] `p2` - **ID**: `cpt-cf-uc-nfr-scalability`
 
 The system **MUST** scale horizontally to handle increased load without architectural changes.
 
@@ -582,7 +581,7 @@ The system **MUST** scale horizontally to handle increased load without architec
 
 #### Storage Fault Tolerance
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-nfr-fault-tolerance`
+- [ ] `p2` - **ID**: `cpt-cf-uc-nfr-fault-tolerance`
 
 The system **MUST** buffer usage records during storage backend failures and recover without data loss.
 
@@ -617,25 +616,16 @@ The system **MUST** continue accepting usage records even if downstream consumer
 
 **Type**: Client library
 **Stability**: stable
-**Description**: Client-side SDK with automatic batching for high-throughput usage emission. Primary ingestion path for platform services.
+**Description**: Client-side SDK with automatic batching for high-throughput usage emission. Primary ingestion path for platform services. Provides Rust API (in-process) and gRPC transports.
 **Breaking Change Policy**: Major version bump required
 
-#### Usage REST API
+#### HTTP API
 
-- [ ] `p1` - **ID**: `cpt-cf-uc-interface-rest-api`
+- [ ] `p1` - **ID**: `cpt-cf-uc-interface-http-api`
 
-**Type**: REST API
+**Type**: HTTP/REST API
 **Stability**: stable
-**Description**: HTTP API for usage record ingestion (low-volume/external), querying, and administration (unit registration, retention configuration).
-**Breaking Change Policy**: Major version bump required
-
-#### Collector Agent
-
-- [ ] `p2` - **ID**: `cpt-cf-uc-interface-collector-agent`
-
-**Type**: Sidecar/agent process
-**Stability**: stable
-**Description**: Sidecar deployment pattern for collecting usage from co-located services without SDK integration.
+**Description**: HTTP API for usage record ingestion, querying, and administration. Supports external integrations and simple client scenarios.
 **Breaking Change Policy**: Major version bump required
 
 ### 7.2 External Integration Contracts
