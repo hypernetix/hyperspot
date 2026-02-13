@@ -1,6 +1,5 @@
 use std::path::Path;
 use std::sync::Arc;
-use std::time::Duration;
 
 use bytes::Bytes;
 use modkit_http::HttpClient;
@@ -64,25 +63,18 @@ pub struct FileParserInfo {
 }
 
 impl FileParserService {
-    /// Create a new service with the given parsers
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the HTTP client cannot be built.
+    /// Create a new service with the given parsers and a pre-built HTTP client.
+    #[must_use]
     pub fn new(
         parsers: Vec<Arc<dyn FileParserBackend>>,
         config: ServiceConfig,
-    ) -> Result<Self, modkit_http::HttpError> {
-        let http_client = HttpClient::builder()
-            .timeout(Duration::from_secs(config.download_timeout_secs))
-            .max_body_size(config.max_file_size_bytes)
-            .build()?;
-
-        Ok(Self {
+        http_client: HttpClient,
+    ) -> Self {
+        Self {
             parsers,
             config,
             http_client,
-        })
+        }
     }
 
     /// Get information about available parsers

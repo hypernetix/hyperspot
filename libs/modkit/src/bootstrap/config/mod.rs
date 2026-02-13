@@ -96,18 +96,26 @@ impl ConfigProvider for AppConfig {
     fn get_module_config(&self, module_name: &str) -> Option<&serde_json::Value> {
         self.modules.get(module_name)
     }
+
+    fn allow_insecure_http(&self) -> bool {
+        self.server.allow_insecure_http
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct ServerConfig {
     pub home_dir: PathBuf, // will be normalized to absolute path
+
+    #[serde(default)]
+    pub allow_insecure_http: bool,
 }
 
 impl Default for ServerConfig {
     fn default() -> Self {
         Self {
             home_dir: super::host::paths::default_home_dir().join(".hyperspot"),
+            allow_insecure_http: false,
         }
     }
 }
@@ -250,8 +258,43 @@ impl AppConfig {
         let figment = Figment::new()
             .merge(Serialized::defaults(base))
             .merge(Yaml::file(config_path))
-            // Example: APP__SERVER__PORT=8087 maps to server.port
-            .merge(Env::prefixed("APP__").split("__"));
+            // Env vars use "__" as the nesting separator, e.g.
+            //   APP__SERVER__PORT=8087  →  server.port
+            //
+            // Module names in YAML may be hyphenated (e.g. "api-gateway") or
+            // underscored (e.g. "api_gateway"), but env vars cannot contain
+            // hyphens. We merge env vars twice:
+            //  1. Plain — matches underscored YAML keys as-is.
+            //  2. With .map() — converts underscores to hyphens in the
+            //     module-name segment to match hyphenated YAML keys.
+            // This lets APP__MODULES__api_gateway__CONFIG__X override both
+            // modules.api_gateway.config.x and modules.api-gateway.config.x.
+            .merge(Env::prefixed("APP__").split("__"))
+            .merge(
+                Env::prefixed("APP__")
+                    .map(|key| {
+                        // Lowercase for matching; .map() runs before figment lowercases.
+                        let low = key.as_str().to_ascii_lowercase();
+                        if let Some(rest) = low
+                            .strip_prefix("modules__")
+                            .or_else(|| low.strip_prefix("logging__"))
+                        {
+                            let prefix_len = low.len() - rest.len();
+                            let prefix = &low[..prefix_len];
+                            // Module name = segment before the next "__".
+                            let (mod_name, suffix) = match rest.find("__") {
+                                Some(pos) => (&rest[..pos], &rest[pos..]),
+                                None => (rest, ""),
+                            };
+                            // api_gateway → api-gateway
+                            let normalized = mod_name.replace('_', "-");
+                            format!("{prefix}{normalized}{suffix}").into()
+                        } else {
+                            key.into()
+                        }
+                    })
+                    .split("__"),
+            );
 
         let mut config: AppConfig = figment
             .extract()

@@ -11,12 +11,19 @@ workspace = true
 
 [features]
 default = []
+
+# Database driver selection - propagates to all modules
+db-sqlite = ["modkit-db/sqlite", "simple_user_settings/db-sqlite", "users-info?/db-sqlite"]
+db-pg = ["modkit-db/pg", "simple_user_settings/db-pg", "users-info?/db-pg"]
+db-mysql = ["modkit-db/mysql", "simple_user_settings/db-mysql", "users-info?/db-mysql"]
+
 users-info-example = ["dep:users-info"]
 oop-example = ["dep:calculator-gateway", "dep:calculator"]
 tenant-resolver-example = [
     "dep:tenant-resolver-gw-example",
     "dep:contoso-tr-plugin",
     "dep:fabrikam-tr-plugin",
+    "dep:types",
 ]
 single-tenant = ["dep:single-tenant-tr-plugin"]
 static-tenants = ["dep:static-tr-plugin"]
@@ -26,12 +33,13 @@ otel = ["modkit/otel"]
 mimalloc = { version = "0.1" }
 # Local crates
 modkit = { workspace = true, features = ["bootstrap"] }
+modkit-db = { workspace = true }
 
 # System modules
 api_gateway = { package = "cf-api-gateway", path = "../../modules/system/api-gateway" }
 grpc_hub = { package = "cf-grpc-hub", path = "../../modules/system/grpc-hub" }
 module_orchestrator = { package = "cf-module-orchestrator", path = "../../modules/system/module-orchestrator" }
-types = { path = "../../modules/system/types" }
+types = { path = "../../modules/system/types", optional = true }
 types_registry = { package = "cf-types-registry", path = "../../modules/system/types-registry/types-registry" }
 tenant-resolver-gw = { package = "cf-tenant-resolver-gw", path = "../../modules/system/tenant-resolver/tenant-resolver-gw" }
 
