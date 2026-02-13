@@ -431,7 +431,7 @@ pub async fn run_oop_with_options(opts: OopRunOptions) -> Result<()> {
                     error = %e,
                     "shutdown: primary waiter failed in OoP bootstrap, falling back to ctrl_c()"
                 );
-                let _ = tokio::signal::ctrl_c().await;
+                _ = tokio::signal::ctrl_c().await;
             }
         }
         cancel_for_signals.cancel();

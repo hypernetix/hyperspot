@@ -141,7 +141,7 @@ async fn stop_child_with_grace(
 /// Wait for a log forwarder task to finish with timeout.
 async fn wait_forwarder(handle: Option<JoinHandle<()>>) {
     if let Some(h) = handle {
-        let _ = tokio::time::timeout(FORWARDER_DRAIN_TIMEOUT, h).await;
+        _ = tokio::time::timeout(FORWARDER_DRAIN_TIMEOUT, h).await;
     }
 }
 

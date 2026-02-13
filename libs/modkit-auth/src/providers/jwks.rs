@@ -733,7 +733,7 @@ mod tests {
         }
 
         // This will fail
-        let _ = provider.perform_refresh().await;
+        _ = provider.perform_refresh().await;
 
         // Check that consecutive_failures increased
         let state = provider.refresh_state.read().await;

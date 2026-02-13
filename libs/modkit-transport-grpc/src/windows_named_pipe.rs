@@ -95,7 +95,7 @@ pub fn create_named_pipe_incoming(
                         error = %e,
                         "Failed to create named pipe server"
                     );
-                    let _ = tx.send(Err(e)).await;
+                    _ = tx.send(Err(e)).await;
                     break;
                 }
             };
@@ -118,7 +118,7 @@ pub fn create_named_pipe_incoming(
                         error = %e,
                         "Failed to connect to named pipe client"
                     );
-                    let _ = tx.send(Err(e)).await;
+                    _ = tx.send(Err(e)).await;
                     break;
                 }
             }

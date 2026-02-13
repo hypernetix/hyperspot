@@ -101,7 +101,7 @@ async fn test_type_with_invalid_instance_missing_required_field() {
         "description": "Order entity type"
     });
 
-    let _ = service.register(vec![order_type]);
+    _ = service.register(vec![order_type]);
     service.switch_to_ready().unwrap();
 
     // Try to register an instance missing required "total" field
@@ -142,7 +142,7 @@ async fn test_type_with_invalid_instance_wrong_field_type() {
         "description": "Product entity type"
     });
 
-    let _ = service.register(vec![product_type]);
+    _ = service.register(vec![product_type]);
     service.switch_to_ready().unwrap();
 
     // Try to register an instance with wrong type for "price" (string instead of number)
@@ -184,7 +184,7 @@ async fn test_multiple_instances_of_same_type() {
         "description": "User action event"
     });
 
-    let _ = service.register(vec![event_type]);
+    _ = service.register(vec![event_type]);
     service.switch_to_ready().unwrap();
 
     // Register multiple instances of the same type (parent~instance format)
@@ -263,7 +263,7 @@ async fn test_nested_object_type_with_instance() {
         "description": "Customer with nested address"
     });
 
-    let _ = service.register(vec![customer_type]);
+    _ = service.register(vec![customer_type]);
     service.switch_to_ready().unwrap();
 
     // Register a valid customer instance with nested address
@@ -319,7 +319,7 @@ async fn test_array_type_with_instance() {
         "description": "Shopping cart with array of items"
     });
 
-    let _ = service.register(vec![cart_type]);
+    _ = service.register(vec![cart_type]);
     service.switch_to_ready().unwrap();
 
     // Register a valid cart instance with array items
@@ -370,7 +370,7 @@ async fn test_instance_with_mismatched_type_field_is_ignored_for_well_known_inst
         "description": "Product type"
     });
 
-    let _ = service.register(vec![user_type, product_type]);
+    _ = service.register(vec![user_type, product_type]);
     service.switch_to_ready().unwrap();
 
     // Register an instance where:

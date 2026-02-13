@@ -389,7 +389,7 @@ where
                     })?;
             }
             Err(err) => {
-                let _ = txn.rollback().await;
+                _ = txn.rollback().await;
                 return Err(err);
             }
         }

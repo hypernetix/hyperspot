@@ -110,7 +110,7 @@ async fn unlock_inner(inner: GuardInner) {
         GuardInner::File { path, file } => {
             // Close file first, then try to remove marker. Ignore errors.
             drop(file);
-            let _ = tokio::fs::remove_file(&path).await;
+            _ = tokio::fs::remove_file(&path).await;
         }
     }
 }
@@ -235,7 +235,7 @@ impl LockManager {
         {
             use tokio::io::AsyncWriteExt;
             let mut f = file.try_clone().await?;
-            let _ = f
+            _ = f
                 .write_all(
                     format!(
                         "PID: {}\nKey: {}\nTimestamp: {}\n",
@@ -274,7 +274,7 @@ impl LockManager {
                 {
                     use tokio::io::AsyncWriteExt;
                     let mut f = file.try_clone().await?;
-                    let _ = f
+                    _ = f
                         .write_all(
                             format!(
                                 "PID: {}\nKey: {}\nTimestamp: {}\n",

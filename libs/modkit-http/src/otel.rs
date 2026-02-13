@@ -81,7 +81,7 @@ mod imp {
         });
 
         // Set as parent of current span
-        let _ = span.set_parent(parent_cx);
+        _ = span.set_parent(parent_cx);
 
         // Also record trace IDs for log correlation
         if let Some(traceparent) = get_traceparent(headers)

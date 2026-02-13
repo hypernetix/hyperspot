@@ -407,7 +407,7 @@ mod tests {
         );
 
         let start = Instant::now();
-        let _ = call_with_retry(
+        _ = call_with_retry(
             &mut client,
             cfg,
             (),

@@ -26,7 +26,7 @@ impl<T: Clone + Send + 'static> SseBroadcaster<T> {
     /// Broadcast a single message to current subscribers.
     /// Errors are ignored to keep the hot path cheap (e.g., no active subscribers).
     pub fn send(&self, value: T) {
-        let _ = self.tx.send(value);
+        _ = self.tx.send(value);
     }
 
     /// Subscribe to a typed stream of messages; lag/drop errors are filtered out.

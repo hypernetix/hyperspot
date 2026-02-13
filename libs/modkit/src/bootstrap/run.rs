@@ -29,7 +29,7 @@ fn spawn_signal_handler(cancel: CancellationToken, context: &str) {
                     "{}: signal handler failed, falling back to ctrl_c()",
                     context_owned
                 );
-                let _ = tokio::signal::ctrl_c().await;
+                _ = tokio::signal::ctrl_c().await;
             }
         }
         cancel.cancel();

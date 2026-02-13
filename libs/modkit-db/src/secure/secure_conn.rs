@@ -510,7 +510,7 @@ impl SecureConn {
                 Err(e) => (self, Err(e.into())),
             },
             Err(e) => {
-                let _ = txn.rollback().await;
+                _ = txn.rollback().await;
                 (self, Err(e))
             }
         }
@@ -575,7 +575,7 @@ impl SecureConn {
                 Err(e) => (self, Err(e.into())),
             },
             Err(e) => {
-                let _ = txn.rollback().await;
+                _ = txn.rollback().await;
                 (self, Err(e))
             }
         }
@@ -680,7 +680,7 @@ impl SecureConn {
                 Err(e) => (self, Err(e.into())),
             },
             Err(e) => {
-                let _ = txn.rollback().await;
+                _ = txn.rollback().await;
                 (self, Err(e))
             }
         }
@@ -755,7 +755,7 @@ impl SecureConn {
                 Err(e) => (self, Err(TxError::Infra(InfraError::new(e.to_string())))),
             },
             Err(e) => {
-                let _ = txn.rollback().await;
+                _ = txn.rollback().await;
                 (self, Err(TxError::Domain(e)))
             }
         }

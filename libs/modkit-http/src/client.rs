@@ -642,7 +642,7 @@ mod tests {
         }
 
         // Let first request complete
-        let _ = handle1.await;
+        _ = handle1.await;
     }
 
     /// Test that large body reading doesn't cause deadlock

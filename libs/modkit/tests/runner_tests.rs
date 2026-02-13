@@ -454,7 +454,7 @@ async fn test_shutdown_options_future() {
         modules_cfg: Arc::new(MockConfigProvider::new()),
         db: DbOptions::None,
         shutdown: ShutdownOptions::Future(Box::pin(async move {
-            let _ = rx.await;
+            _ = rx.await;
         })),
         clients: vec![],
         oop: None,
@@ -467,7 +467,7 @@ async fn test_shutdown_options_future() {
     tokio::time::sleep(Duration::from_millis(10)).await;
 
     // Trigger shutdown via the future
-    let _ = tx.send(());
+    _ = tx.send(());
 
     // Should complete quickly
     let result = timeout(Duration::from_millis(100), runner_handle).await;

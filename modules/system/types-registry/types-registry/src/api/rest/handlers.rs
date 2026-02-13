@@ -170,7 +170,7 @@ mod tests {
         let service = create_service();
 
         // Register entities via internal API (before ready)
-        let _ = service.register(vec![
+        _ = service.register(vec![
             json!({
                 "$id": "gts://gts.acme.core.events.user_created.v1~",
                 "$schema": JSON_SCHEMA_DRAFT_07,
@@ -197,7 +197,7 @@ mod tests {
         let service = create_service();
 
         // Register entity via internal API (before ready)
-        let _ = service.register(vec![json!({
+        _ = service.register(vec![json!({
             "$id": "gts://gts.acme.core.events.user_created.v1~",
             "$schema": JSON_SCHEMA_DRAFT_07,
             "type": "object"

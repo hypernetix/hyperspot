@@ -17,7 +17,7 @@ async fn test_ready_mode_validates_immediately_with_correct_order() {
     let service = create_service();
 
     // First, switch to ready mode
-    let _ = service.switch_to_ready();
+    _ = service.switch_to_ready();
 
     // Register parent type FIRST, then instances in a single call
     // In ready mode, validation happens immediately so order matters
@@ -83,7 +83,7 @@ async fn test_ready_mode_fails_when_instance_before_parent() {
     let service = create_service();
 
     // Switch to ready mode
-    let _ = service.switch_to_ready();
+    _ = service.switch_to_ready();
 
     // Try to register instance BEFORE parent type - should fail
     // In ready mode, validation is immediate so parent must exist
@@ -129,7 +129,7 @@ async fn test_ready_mode_validates_invalid_instance_immediately() {
     let service = create_service();
 
     // Switch to ready mode first
-    let _ = service.switch_to_ready();
+    _ = service.switch_to_ready();
 
     // Register parent type and an INVALID instance in one call
     // The instance is missing required "age" field
@@ -178,7 +178,7 @@ async fn test_ready_mode_batch_with_valid_and_invalid_instances() {
     let service = create_service();
 
     // Switch to ready mode
-    let _ = service.switch_to_ready();
+    _ = service.switch_to_ready();
 
     // Register type with mix of valid and invalid instances
     let entities = vec![
@@ -253,7 +253,7 @@ async fn test_configuration_mode_defers_validation() {
         "required": ["requiredField"]
     });
 
-    let _ = service.register(vec![type_schema]);
+    _ = service.register(vec![type_schema]);
 
     // Register an instance that would fail validation (missing required field)
     // In configuration mode, this should succeed (deferred validation)
@@ -289,7 +289,7 @@ async fn test_switch_to_production_validates_all_entities() {
         }),
     ];
 
-    let _ = service.register(entities);
+    _ = service.register(entities);
 
     // Switch to ready should succeed with valid entities
     let result = service.switch_to_ready();
@@ -309,7 +309,7 @@ async fn test_switch_to_ready_is_idempotent() {
     let service = create_service();
 
     // Register something first
-    let _ = service.register(vec![json!({
+    _ = service.register(vec![json!({
         "$id": "gts://gts.acme.core.events.state_test.v1~",
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object"
@@ -331,7 +331,7 @@ async fn test_list_before_ready_returns_empty() {
     let service = create_service();
 
     // Register entities in configuration mode
-    let _ = service.register(vec![json!({
+    _ = service.register(vec![json!({
         "$id": "gts://gts.acme.core.events.not_visible.v1~",
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object"
@@ -347,7 +347,7 @@ async fn test_get_before_ready_fails() {
     let service = create_service();
 
     // Register entity in configuration mode
-    let _ = service.register(vec![json!({
+    _ = service.register(vec![json!({
         "$id": "gts://gts.acme.core.events.not_accessible.v1~",
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object"
@@ -379,7 +379,7 @@ async fn test_switch_to_ready_returns_errors_as_list() {
         "required": ["productId", "name", "price"]
     });
 
-    let _ = service.register(vec![parent_type]);
+    _ = service.register(vec![parent_type]);
 
     // Register multiple invalid child instances in configuration mode
     // Child 1: Missing all required fields
@@ -477,7 +477,7 @@ async fn test_switch_to_ready_error_contains_gts_ids() {
         "required": ["name"]
     });
 
-    let _ = service.register(vec![type_schema]);
+    _ = service.register(vec![type_schema]);
 
     // Register an invalid instance
     let invalid_instance = json!({
@@ -485,7 +485,7 @@ async fn test_switch_to_ready_error_contains_gts_ids() {
         // Missing required "name" field
     });
 
-    let _ = service.register(vec![invalid_instance]);
+    _ = service.register(vec![invalid_instance]);
 
     // Switch to ready should fail
     let switch_result = service.switch_to_ready();
@@ -536,7 +536,7 @@ async fn test_switch_to_ready_success_with_valid_types_only() {
         }
     });
 
-    let _ = service.register(vec![type_schema1, type_schema2]);
+    _ = service.register(vec![type_schema1, type_schema2]);
 
     // Switch to ready should succeed with valid type schemas
     let switch_result = service.switch_to_ready();
@@ -584,7 +584,7 @@ async fn test_concurrent_registrations() {
     }
 
     // Switch to ready and verify all entities
-    let _ = service.switch_to_ready();
+    _ = service.switch_to_ready();
 
     let all = service.list(&ListQuery::default()).unwrap();
     assert_eq!(all.len(), 10);
