@@ -380,7 +380,10 @@ async fn test_wal_pragma_validation() {
                 // Valid WAL value - connection should succeed
             }
             Err(err) => {
-                panic!("Expected successful connection with WAL value '{wal_value}', got: {err:?}");
+                panic!(
+                    "Expected successful connection with WAL value '{wal_value}', error type: {}",
+                    std::any::type_name_of_val(&err)
+                );
             }
         }
     }
@@ -449,7 +452,8 @@ async fn test_busy_timeout_pragma_validation() {
             }
             Err(err) => {
                 panic!(
-                    "Expected successful connection with timeout '{timeout_value}', got: {err:?}"
+                    "Expected successful connection with timeout '{timeout_value}', got: error type: {}",
+                    std::any::type_name_of_val(&err)
                 );
             }
         }
