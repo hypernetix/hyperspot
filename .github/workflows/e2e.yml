@@ -1,0 +1,133 @@
+name: e2e
+
+on:
+  push:
+    branches: ["main"]
+  schedule:
+    - cron: "0 2 * * *" # nightly full E2E at 02:00 UTC
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Test suite to run"
+        required: false
+        default: "smoke"
+        type: choice
+        options:
+          - smoke
+          - full
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Python
+        uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d # v5.1.1
+        with:
+          python-version: "3.11"
+
+      - name: Install Python dependencies
+        run: pip install -r testing/e2e/requirements.txt
+
+      - name: Run E2E tests
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            make e2e-smoke
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.mode }}" = "smoke" ]; then
+            make e2e-smoke
+          else
+            make e2e
+          fi
+
+      - name: Create or update issue on smoke failure
+        if: failure() && github.event_name == 'push'
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const sha = context.sha;
+
+            let assignee = context.actor;
+            try {
+              const commit = await github.rest.repos.getCommit({
+                owner,
+                repo,
+                ref: sha,
+              });
+              assignee =
+                commit.data.author?.login ||
+                commit.data.committer?.login ||
+                context.actor;
+            } catch (e) {
+              core.info(`Could not fetch commit author, falling back to actor: ${e.message}`);
+            }
+
+            async function tryAssign(issueNumber) {
+              try {
+                await github.rest.issues.update({
+                  owner,
+                  repo,
+                  issue_number: issueNumber,
+                  assignees: [assignee],
+                });
+              } catch (e) {
+                core.warning(`Could not assign to ${assignee}: ${e.message}`);
+              }
+            }
+
+            const title = "E2E smoke failed on main";
+            const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+            const body = [
+              "Smoke E2E tests failed on `main`.",
+              "",
+              `- Commit: ${sha}`,
+              `- Assigned to (latest commit author): @${assignee}`,
+              `- Workflow run: ${runUrl}`,
+            ].join("\n");
+
+            const search = await github.rest.search.issuesAndPullRequests({
+              q: `repo:${owner}/${repo} is:issue is:open in:title "${title}" label:e2e-smoke`,
+              per_page: 1,
+            });
+
+            if (search.data.items.length > 0) {
+              const issue = search.data.items[0];
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: issue.number,
+                body: `New failure detected.\n\n- Commit: ${sha}\n- Run: ${runUrl}`,
+              });
+              await tryAssign(issue.number);
+            } else {
+              const created = await github.rest.issues.create({
+                owner,
+                repo,
+                title,
+                body,
+                labels: ["bug", "e2e-smoke", "ci"],
+              });
+              await tryAssign(created.data.number);
+            }
+
+      # cleans up stopped containers, dangling build cache, and unused networks.
+      - name: Docker cleanup
+        if: always()
+        run: docker system prune --force

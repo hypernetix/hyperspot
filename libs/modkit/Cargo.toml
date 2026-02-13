@@ -45,6 +45,8 @@ bootstrap = [
     "dep:regex",
     "dep:url",
     "dep:dsn",
+    "dep:supports-color",
+    "dep:enable-ansi-support",
 ]
 
 [dependencies]
@@ -106,6 +108,8 @@ tracing-opentelemetry = { workspace = true, optional = true }
 tracing-subscriber = { workspace = true, optional = true }
 tracing-log = { workspace = true, optional = true }
 tracing-appender = { workspace = true, optional = true }
+supports-color = { workspace = true, optional = true }
+enable-ansi-support = { workspace = true, optional = true }
 opentelemetry-otlp = { workspace = true, optional = true }
 
 # gRPC support only for otel (optional)

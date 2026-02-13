@@ -353,6 +353,8 @@ regex = "1.10"
 # CLI and terminal output
 glob = "0.3"
 colored = "3.1"
+supports-color = "3"
+enable-ansi-support = "0.2"
 
 # gRPC support
 tonic = { version = "0.14", features = ["transport"] }

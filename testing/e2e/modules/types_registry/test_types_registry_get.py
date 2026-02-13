@@ -18,9 +18,11 @@ def unique_id(name: str) -> str:
 
 
 def make_schema_id(gts_id: str) -> str:
+    """Build a ``gts://`` schema ``$id`` from a GTS ID."""
     return "gts://" + gts_id
 
 
+@pytest.mark.smoke
 @pytest.mark.asyncio
 async def test_get_entity_by_id(base_url, auth_headers):
     """

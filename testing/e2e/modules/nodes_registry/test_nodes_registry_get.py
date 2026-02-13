@@ -4,6 +4,7 @@ import pytest
 import uuid
 
 
+@pytest.mark.smoke
 @pytest.mark.asyncio
 async def test_get_node_by_id(base_url, auth_headers):
     """
