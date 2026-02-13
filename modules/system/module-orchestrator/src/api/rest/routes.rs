@@ -2,7 +2,7 @@ use axum::http;
 use axum::{Extension, Router};
 use modkit::api::{
     OpenApiRegistry, OperationBuilder,
-    operation_builder::{AuthReqAction, AuthReqResource, LicenseFeature},
+    operation_builder::{AuthReqAction, AuthReqResource},
 };
 use std::sync::Arc;
 
@@ -38,16 +38,6 @@ impl AsRef<str> for Action {
 
 impl AuthReqAction for Action {}
 
-struct License;
-
-impl AsRef<str> for License {
-    fn as_ref(&self) -> &'static str {
-        "gts.x.core.lic.feat.v1~x.core.global.base.v1"
-    }
-}
-
-impl LicenseFeature for License {}
-
 /// Register all REST routes for the module orchestrator
 #[allow(clippy::needless_pass_by_value)]
 pub fn register_routes(
@@ -55,22 +45,22 @@ pub fn register_routes(
     openapi: &dyn OpenApiRegistry,
     service: Arc<ModulesService>,
 ) -> Router {
-    // GET /modules/v1/modules/active - List all active registered modules
-    router = OperationBuilder::get("/modules/v1/modules/active")
-        .operation_id("modules.list_active")
-        .summary("List all active registered modules")
+    // GET /module-orchestrator/v1/modules - List all registered modules
+    router = OperationBuilder::get("/module-orchestrator/v1/modules")
+        .operation_id("module_orchestrator.list_modules")
+        .summary("List all registered modules")
         .description(
             "Returns a list of all compiled-in and out-of-process modules with their \
          capabilities, dependencies, running instances, and deployment mode.",
         )
-        .tag("modules")
+        .tag("module-orchestrator")
         .require_auth(&Resource::Modules, &Action::Read)
-        .require_license_features::<License>([])
+        .no_license_required()
         .handler(handlers::list_modules)
         .json_response_with_schema::<Vec<ModuleDto>>(
             openapi,
             http::StatusCode::OK,
-            "List of active registered modules",
+            "List of registered modules",
         )
         .standard_errors(openapi)
         .register(router, openapi);

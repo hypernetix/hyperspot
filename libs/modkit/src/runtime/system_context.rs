@@ -1,10 +1,8 @@
 //! System Context - runtime internals exposed to system modules
 
-use std::collections::HashSet;
 use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::registry::ModuleRegistryCatalog;
 use crate::runtime::{GrpcInstallerStore, ModuleManager};
 
 /// System-level context provided to system modules during the wiring phase.
@@ -22,12 +20,6 @@ pub struct SystemContext {
 
     /// gRPC service installer store
     pub grpc_installers: Arc<GrpcInstallerStore>,
-
-    /// Catalog of compiled-in modules for introspection
-    pub module_catalog: Arc<ModuleRegistryCatalog>,
-
-    /// Names of external (out-of-process or remote) modules
-    pub external_module_names: Arc<HashSet<String>>,
 }
 
 impl SystemContext {
@@ -36,15 +28,11 @@ impl SystemContext {
         instance_id: Uuid,
         module_manager: Arc<ModuleManager>,
         grpc_installers: Arc<GrpcInstallerStore>,
-        module_catalog: Arc<ModuleRegistryCatalog>,
-        external_module_names: Arc<HashSet<String>>,
     ) -> Self {
         Self {
             instance_id,
             module_manager,
             grpc_installers,
-            module_catalog,
-            external_module_names,
         }
     }
 

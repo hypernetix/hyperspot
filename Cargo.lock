@@ -1326,7 +1326,6 @@ name = "cf-module-orchestrator"
 version = "0.1.2"
 dependencies = [
  "anyhow",
- "arc-swap",
  "async-trait",
  "axum",
  "cf-api-gateway",

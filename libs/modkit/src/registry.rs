@@ -155,24 +155,6 @@ impl CapabilitySet {
         Self { caps: Vec::new() }
     }
 
-    /// Returns a list of human-readable capability labels.
-    #[must_use]
-    pub fn labels(&self) -> Vec<&'static str> {
-        self.caps
-            .iter()
-            .map(|cap| match cap {
-                #[cfg(feature = "db")]
-                Capability::Database(_) => "db",
-                Capability::RestApi(_) => "rest",
-                Capability::ApiGateway(_) => "rest_host",
-                Capability::Runnable(_) => "stateful",
-                Capability::System(_) => "system",
-                Capability::GrpcHub(_) => "grpc_hub",
-                Capability::GrpcService(_) => "grpc",
-            })
-            .collect()
-    }
-
     /// Add a capability to the set.
     pub fn push(&mut self, cap: Capability) {
         self.caps.push(cap);
@@ -701,52 +683,6 @@ impl RegistryBuilder {
     }
 }
 
-// ============================================================================
-// Module Catalog (for introspection APIs)
-// ============================================================================
-
-/// A descriptor of a single module entry from the registry.
-///
-/// This captures the static compile-time info about a module for introspection.
-#[derive(Debug, Clone)]
-pub struct ModuleDescriptor {
-    /// Module name
-    pub name: String,
-    /// Module dependency names
-    pub deps: Vec<String>,
-    /// Human-readable capability labels (e.g., "rest", "db", "system")
-    pub capability_labels: Vec<String>,
-}
-
-/// A catalog of all compiled-in modules, suitable for introspection APIs.
-#[derive(Debug, Clone)]
-pub struct ModuleRegistryCatalog {
-    /// All compiled-in modules in topological order
-    pub modules: Vec<ModuleDescriptor>,
-}
-
-impl ModuleRegistryCatalog {
-    /// Build a catalog from the live registry.
-    #[must_use]
-    pub fn from_registry(registry: &ModuleRegistry) -> Self {
-        let modules = registry
-            .modules()
-            .iter()
-            .map(|entry| ModuleDescriptor {
-                name: entry.name().to_owned(),
-                deps: entry.deps().iter().map(|d| (*d).to_owned()).collect(),
-                capability_labels: entry
-                    .caps()
-                    .labels()
-                    .into_iter()
-                    .map(str::to_owned)
-                    .collect(),
-            })
-            .collect();
-        Self { modules }
-    }
-}
-
 /// Structured errors for the module registry.
 #[derive(Debug, Error)]
 pub enum RegistryError {
@@ -1052,25 +988,6 @@ mod tests {
     }
 
     #[test]
-    fn capability_labels_works() {
-        let mut b = RegistryBuilder::default();
-        let module = Arc::new(DummyCore);
-        b.register_core_with_meta("test", &[], module);
-        b.register_db_with_meta("test", Arc::new(DummyDb));
-        b.register_rest_with_meta("test", Arc::new(DummyRest));
-        b.register_system_with_meta("test", Arc::new(DummySystem));
-
-        let reg = b.build_topo_sorted().unwrap();
-        let entry = &reg.modules()[0];
-
-        let labels = entry.caps().labels();
-        assert!(labels.contains(&"db"));
-        assert!(labels.contains(&"rest"));
-        assert!(labels.contains(&"system"));
-        assert!(!labels.contains(&"stateful"));
-    }
-
-    #[test]
     fn module_entry_getters_work() {
         let mut b = RegistryBuilder::default();
         b.register_core_with_meta("alpha", &[], Arc::new(DummyCore));
@@ -1083,30 +1000,6 @@ mod tests {
         assert_eq!(beta.name(), "beta");
         assert_eq!(beta.deps(), &["alpha"]);
         assert!(beta.caps().has::<RestApiCap>());
-    }
-
-    #[test]
-    fn registry_catalog_captures_all_modules() {
-        let mut b = RegistryBuilder::default();
-        b.register_core_with_meta("core_a", &[], Arc::new(DummyCore));
-        b.register_core_with_meta("core_b", &["core_a"], Arc::new(DummyCore));
-        b.register_rest_with_meta("core_a", Arc::new(DummyRest));
-        b.register_db_with_meta("core_b", Arc::new(DummyDb));
-
-        let reg = b.build_topo_sorted().unwrap();
-        let catalog = ModuleRegistryCatalog::from_registry(&reg);
-
-        assert_eq!(catalog.modules.len(), 2);
-
-        let desc_a = &catalog.modules[0];
-        assert_eq!(desc_a.name, "core_a");
-        assert!(desc_a.deps.is_empty());
-        assert!(desc_a.capability_labels.contains(&"rest".to_owned()));
-
-        let desc_b = &catalog.modules[1];
-        assert_eq!(desc_b.name, "core_b");
-        assert_eq!(desc_b.deps, vec!["core_a".to_owned()]);
-        assert!(desc_b.capability_labels.contains(&"db".to_owned()));
     }
 
     #[test]
@@ -1148,11 +1041,6 @@ mod tests {
             Ok(())
         }
     }
-
-    #[derive(Default)]
-    struct DummySystem;
-    #[async_trait::async_trait]
-    impl contracts::SystemCapability for DummySystem {}
 
     #[derive(Default)]
     struct DummyRestHost;

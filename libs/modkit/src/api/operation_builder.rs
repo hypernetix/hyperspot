@@ -855,6 +855,25 @@ where
             _license_state: PhantomData,
         }
     }
+
+    /// Explicitly declare that this operation does not require any license.
+    ///
+    /// Use this for system/infrastructure endpoints that need authentication
+    /// but are not gated behind application-level license features.
+    ///
+    /// This transitions from `LicenseNotSet` to `LicenseSet` without
+    /// attaching any license requirement.
+    pub fn no_license_required(self) -> OperationBuilder<H, R, S, AuthSet, LicenseSet> {
+        OperationBuilder {
+            spec: self.spec,
+            method_router: self.method_router,
+            _has_handler: self._has_handler,
+            _has_response: self._has_response,
+            _state: self._state,
+            _auth_state: self._auth_state,
+            _license_state: PhantomData,
+        }
+    }
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -1892,6 +1911,18 @@ mod tests {
             .json_response(http::StatusCode::OK, "OK");
 
         assert!(builder.spec.license_requirement.is_none());
+    }
+
+    #[test]
+    fn no_license_required_transitions_and_allows_register() {
+        let builder = OperationBuilder::<Missing, Missing, ()>::get("/tests/v1/test")
+            .require_auth(&TestResource::Users, &TestAction::Read)
+            .no_license_required()
+            .handler(|| async {})
+            .json_response(http::StatusCode::OK, "OK");
+
+        assert!(builder.spec.license_requirement.is_none());
+        assert!(!builder.spec.is_public);
     }
 
     #[test]

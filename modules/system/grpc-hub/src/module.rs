@@ -708,8 +708,6 @@ mod tests {
             Uuid::new_v4(),
             module_manager,
             Arc::clone(&installer_store),
-            std::sync::Arc::new(modkit::ModuleRegistryCatalog { modules: vec![] }),
-            std::sync::Arc::new(std::collections::HashSet::new()),
         );
 
         hub.pre_init(&sys_ctx)

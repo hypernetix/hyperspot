@@ -1,6 +1,6 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-//! End-to-end tests for the `GET /modules/v1/modules/active` REST endpoint.
+//! End-to-end tests for the `GET /module-orchestrator/v1/modules` REST endpoint.
 //!
 //! These tests build a real axum `Router` with the module orchestrator's routes
 //! registered via `OperationBuilder`, then send HTTP requests using `tower::ServiceExt::oneshot`.
@@ -8,26 +8,61 @@
 use axum::Router;
 use axum::body::Body;
 use axum::http::{Method, Request, StatusCode};
-use modkit::registry::{ModuleDescriptor, ModuleRegistryCatalog};
+use modkit::registry::RegistryBuilder;
 use modkit::runtime::{Endpoint, ModuleInstance, ModuleManager};
 use module_orchestrator::api::rest;
-use std::collections::HashSet;
 use std::sync::Arc;
 use tower::ServiceExt;
 use uuid::Uuid;
 
 use module_orchestrator::domain::service::ModulesService;
 
-fn build_router(
-    catalog: ModuleRegistryCatalog,
-    manager: Arc<ModuleManager>,
-    external_names: HashSet<String>,
-) -> Router {
-    let svc = Arc::new(ModulesService::new(
-        Arc::new(catalog),
-        manager,
-        Arc::new(external_names),
-    ));
+// ---- Test helpers ----
+
+#[derive(Default)]
+struct DummyCore;
+#[async_trait::async_trait]
+impl modkit::Module for DummyCore {
+    async fn init(&self, _ctx: &modkit::context::ModuleCtx) -> anyhow::Result<()> {
+        Ok(())
+    }
+}
+
+#[derive(Default, Clone)]
+struct DummyRest;
+impl modkit::contracts::RestApiCapability for DummyRest {
+    fn register_rest(
+        &self,
+        _ctx: &modkit::context::ModuleCtx,
+        _router: axum::Router,
+        _openapi: &dyn modkit::api::OpenApiRegistry,
+    ) -> anyhow::Result<axum::Router> {
+        Ok(axum::Router::new())
+    }
+}
+
+#[derive(Default)]
+struct DummySystem;
+#[async_trait::async_trait]
+impl modkit::contracts::SystemCapability for DummySystem {}
+
+// (name, deps, has_rest, has_system)
+type ModuleSpec = (&'static str, &'static [&'static str], bool, bool);
+
+fn build_router_with(modules: &[ModuleSpec], manager: Arc<ModuleManager>) -> Router {
+    let mut b = RegistryBuilder::default();
+    for &(name, deps, has_rest, has_system) in modules {
+        b.register_core_with_meta(name, deps, Arc::new(DummyCore));
+        if has_rest {
+            b.register_rest_with_meta(name, Arc::new(DummyRest));
+        }
+        if has_system {
+            b.register_system_with_meta(name, Arc::new(DummySystem));
+        }
+    }
+    let registry = b.build_topo_sorted().unwrap();
+
+    let svc = Arc::new(ModulesService::new(&registry, manager));
     let openapi = api_gateway::ApiGateway::default();
     rest::routes::register_routes(Router::new(), &openapi, svc)
 }
@@ -37,7 +72,7 @@ async fn get_modules(router: Router) -> (StatusCode, serde_json::Value) {
         .oneshot(
             Request::builder()
                 .method(Method::GET)
-                .uri("/modules/v1/modules/active")
+                .uri("/module-orchestrator/v1/modules")
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -54,11 +89,7 @@ async fn get_modules(router: Router) -> (StatusCode, serde_json::Value) {
 
 #[tokio::test]
 async fn returns_200_with_empty_catalog() {
-    let router = build_router(
-        ModuleRegistryCatalog { modules: vec![] },
-        Arc::new(ModuleManager::new()),
-        HashSet::new(),
-    );
+    let router = build_router_with(&[], Arc::new(ModuleManager::new()));
 
     let (status, json) = get_modules(router).await;
 
@@ -68,21 +99,13 @@ async fn returns_200_with_empty_catalog() {
 
 #[tokio::test]
 async fn returns_compiled_in_modules_with_capabilities() {
-    let catalog = ModuleRegistryCatalog {
-        modules: vec![
-            ModuleDescriptor {
-                name: "api_gateway".to_owned(),
-                deps: vec!["grpc_hub".to_owned()],
-                capability_labels: vec!["rest".to_owned(), "system".to_owned()],
-            },
-            ModuleDescriptor {
-                name: "grpc_hub".to_owned(),
-                deps: vec![],
-                capability_labels: vec!["grpc_hub".to_owned()],
-            },
+    let router = build_router_with(
+        &[
+            ("api_gateway", &[], true, true),
+            ("grpc_hub", &[], false, false),
         ],
-    };
-    let router = build_router(catalog, Arc::new(ModuleManager::new()), HashSet::new());
+        Arc::new(ModuleManager::new()),
+    );
 
     let (status, json) = get_modules(router).await;
 
@@ -93,43 +116,44 @@ async fn returns_compiled_in_modules_with_capabilities() {
     // Sorted by name
     assert_eq!(modules[0]["name"], "api_gateway");
     assert_eq!(modules[0]["deployment_mode"], "compiled_in");
-    assert_eq!(
-        modules[0]["capabilities"],
-        serde_json::json!(["rest", "system"])
+    assert!(
+        modules[0]["capabilities"]
+            .as_array()
+            .unwrap()
+            .contains(&serde_json::json!("rest"))
     );
-    assert_eq!(modules[0]["dependencies"], serde_json::json!(["grpc_hub"]));
+    assert!(
+        modules[0]["capabilities"]
+            .as_array()
+            .unwrap()
+            .contains(&serde_json::json!("system"))
+    );
 
     assert_eq!(modules[1]["name"], "grpc_hub");
     assert_eq!(modules[1]["deployment_mode"], "compiled_in");
 }
 
 #[tokio::test]
-async fn returns_external_modules_as_out_of_process() {
-    let router = build_router(
-        ModuleRegistryCatalog { modules: vec![] },
-        Arc::new(ModuleManager::new()),
-        HashSet::from(["calculator".to_owned()]),
-    );
+async fn dynamic_instances_without_catalog_entry_appear_as_out_of_process() {
+    let manager = Arc::new(ModuleManager::new());
+    let instance =
+        Arc::new(ModuleInstance::new("dynamic_svc", Uuid::new_v4()).with_version("0.5.0"));
+    manager.register_instance(instance);
+
+    let router = build_router_with(&[], manager);
 
     let (status, json) = get_modules(router).await;
 
     assert_eq!(status, StatusCode::OK);
-    let modules = json.as_array().unwrap();
-    assert_eq!(modules.len(), 1);
-    assert_eq!(modules[0]["name"], "calculator");
-    assert_eq!(modules[0]["deployment_mode"], "out_of_process");
-    assert!(modules[0]["instances"].as_array().unwrap().is_empty());
+    let module = &json.as_array().unwrap()[0];
+    assert_eq!(module["name"], "dynamic_svc");
+    assert_eq!(module["deployment_mode"], "out_of_process");
+    assert_eq!(module["version"], "0.5.0");
+    assert!(module["capabilities"].as_array().unwrap().is_empty());
 }
 
 #[tokio::test]
 async fn includes_running_instances_with_grpc_services() {
-    let catalog = ModuleRegistryCatalog {
-        modules: vec![ModuleDescriptor {
-            name: "my_module".to_owned(),
-            deps: vec![],
-            capability_labels: vec!["grpc".to_owned()],
-        }],
-    };
     let manager = Arc::new(ModuleManager::new());
     let instance_id = Uuid::new_v4();
     let instance = Arc::new(
@@ -139,7 +163,7 @@ async fn includes_running_instances_with_grpc_services() {
     );
     manager.register_instance(instance);
 
-    let router = build_router(catalog, manager, HashSet::new());
+    let router = build_router_with(&[("my_module", &[], false, false)], manager);
 
     let (status, json) = get_modules(router).await;
 
@@ -163,63 +187,11 @@ async fn includes_running_instances_with_grpc_services() {
 }
 
 #[tokio::test]
-async fn compiled_in_module_overridden_to_external() {
-    let catalog = ModuleRegistryCatalog {
-        modules: vec![ModuleDescriptor {
-            name: "calculator".to_owned(),
-            deps: vec![],
-            capability_labels: vec!["grpc".to_owned()],
-        }],
-    };
-    let router = build_router(
-        catalog,
-        Arc::new(ModuleManager::new()),
-        HashSet::from(["calculator".to_owned()]),
-    );
-
-    let (status, json) = get_modules(router).await;
-
-    assert_eq!(status, StatusCode::OK);
-    let module = &json.as_array().unwrap()[0];
-    assert_eq!(module["name"], "calculator");
-    assert_eq!(module["deployment_mode"], "out_of_process");
-    // Still retains capabilities from catalog
-    assert_eq!(module["capabilities"], serde_json::json!(["grpc"]));
-}
-
-#[tokio::test]
-async fn dynamic_instances_without_catalog_entry() {
-    let manager = Arc::new(ModuleManager::new());
-    let instance =
-        Arc::new(ModuleInstance::new("dynamic_svc", Uuid::new_v4()).with_version("0.5.0"));
-    manager.register_instance(instance);
-
-    let router = build_router(
-        ModuleRegistryCatalog { modules: vec![] },
-        manager,
-        HashSet::new(),
-    );
-
-    let (status, json) = get_modules(router).await;
-
-    assert_eq!(status, StatusCode::OK);
-    let module = &json.as_array().unwrap()[0];
-    assert_eq!(module["name"], "dynamic_svc");
-    assert_eq!(module["deployment_mode"], "out_of_process");
-    assert_eq!(module["version"], "0.5.0");
-    assert!(module["capabilities"].as_array().unwrap().is_empty());
-}
-
-#[tokio::test]
 async fn plugins_field_omitted_when_empty() {
-    let catalog = ModuleRegistryCatalog {
-        modules: vec![ModuleDescriptor {
-            name: "test".to_owned(),
-            deps: vec![],
-            capability_labels: vec![],
-        }],
-    };
-    let router = build_router(catalog, Arc::new(ModuleManager::new()), HashSet::new());
+    let router = build_router_with(
+        &[("test", &[], false, false)],
+        Arc::new(ModuleManager::new()),
+    );
 
     let (status, json) = get_modules(router).await;
 
@@ -231,14 +203,10 @@ async fn plugins_field_omitted_when_empty() {
 
 #[tokio::test]
 async fn version_omitted_when_no_instances() {
-    let catalog = ModuleRegistryCatalog {
-        modules: vec![ModuleDescriptor {
-            name: "no_instances".to_owned(),
-            deps: vec![],
-            capability_labels: vec![],
-        }],
-    };
-    let router = build_router(catalog, Arc::new(ModuleManager::new()), HashSet::new());
+    let router = build_router_with(
+        &[("no_instances", &[], false, false)],
+        Arc::new(ModuleManager::new()),
+    );
 
     let (status, json) = get_modules(router).await;
 
@@ -250,26 +218,14 @@ async fn version_omitted_when_no_instances() {
 
 #[tokio::test]
 async fn modules_are_sorted_alphabetically() {
-    let catalog = ModuleRegistryCatalog {
-        modules: vec![
-            ModuleDescriptor {
-                name: "zebra".to_owned(),
-                deps: vec![],
-                capability_labels: vec![],
-            },
-            ModuleDescriptor {
-                name: "alpha".to_owned(),
-                deps: vec![],
-                capability_labels: vec![],
-            },
-            ModuleDescriptor {
-                name: "middle".to_owned(),
-                deps: vec![],
-                capability_labels: vec![],
-            },
+    let router = build_router_with(
+        &[
+            ("zebra", &[], false, false),
+            ("alpha", &[], false, false),
+            ("middle", &[], false, false),
         ],
-    };
-    let router = build_router(catalog, Arc::new(ModuleManager::new()), HashSet::new());
+        Arc::new(ModuleManager::new()),
+    );
 
     let (status, json) = get_modules(router).await;
 

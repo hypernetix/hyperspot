@@ -91,7 +91,7 @@ pub mod registry;
 
 // Re-export main types
 pub use client_hub::ClientHub;
-pub use registry::{ModuleDescriptor, ModuleRegistry, ModuleRegistryCatalog};
+pub use registry::ModuleRegistry;
 
 // Re-export the macros from the proc-macro crate
 pub use modkit_macros::{lifecycle, module};

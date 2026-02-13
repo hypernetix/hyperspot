@@ -2,7 +2,6 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use std::collections::HashSet;
 use std::sync::{Arc, OnceLock};
 use tokio::sync::RwLock;
 
@@ -13,7 +12,7 @@ use modkit::contracts::{
     SystemCapability,
 };
 use modkit::directory::LocalDirectoryClient;
-use modkit::registry::ModuleRegistryCatalog;
+use modkit::registry::ModuleRegistry;
 use modkit::runtime::ModuleManager;
 
 use cf_system_sdks::directory::DIRECTORY_SERVICE_NAME;
@@ -41,9 +40,7 @@ pub struct ModuleOrchestrator {
     config: RwLock<ModuleOrchestratorConfig>,
     directory_api: OnceLock<Arc<dyn DirectoryClient>>,
     module_manager: OnceLock<Arc<ModuleManager>>,
-    module_catalog: OnceLock<Arc<ModuleRegistryCatalog>>,
-    external_module_names: OnceLock<Arc<HashSet<String>>>,
-    modules_service: arc_swap::ArcSwapOption<ModulesService>,
+    modules_service: OnceLock<Arc<ModulesService>>,
 }
 
 impl Default for ModuleOrchestrator {
@@ -52,9 +49,7 @@ impl Default for ModuleOrchestrator {
             config: RwLock::new(ModuleOrchestratorConfig),
             directory_api: OnceLock::new(),
             module_manager: OnceLock::new(),
-            module_catalog: OnceLock::new(),
-            external_module_names: OnceLock::new(),
-            modules_service: arc_swap::ArcSwapOption::empty(),
+            modules_service: OnceLock::new(),
         }
     }
 }
@@ -65,16 +60,6 @@ impl SystemCapability for ModuleOrchestrator {
         self.module_manager
             .set(Arc::clone(&sys.module_manager))
             .map_err(|_| anyhow::anyhow!("ModuleManager already set (pre_init called twice?)"))?;
-        self.module_catalog
-            .set(Arc::clone(&sys.module_catalog))
-            .map_err(|_| {
-                anyhow::anyhow!("ModuleRegistryCatalog already set (pre_init called twice?)")
-            })?;
-        self.external_module_names
-            .set(Arc::clone(&sys.external_module_names))
-            .map_err(|_| {
-                anyhow::anyhow!("External module names already set (pre_init called twice?)")
-            })?;
         Ok(())
     }
 }
@@ -103,25 +88,13 @@ impl modkit::Module for ModuleOrchestrator {
             .set(api_impl)
             .map_err(|_| anyhow::anyhow!("DirectoryClient already set (init called twice?)"))?;
 
-        // Create the ModulesService for the REST endpoint
-        let module_catalog = self
-            .module_catalog
-            .get()
-            .cloned()
-            .ok_or_else(|| anyhow::anyhow!("ModuleRegistryCatalog not wired"))?;
-        let external_module_names = self
-            .external_module_names
-            .get()
-            .cloned()
-            .ok_or_else(|| anyhow::anyhow!("External module names not wired"))?;
-
-        if self.modules_service.load().is_some() {
-            return Err(anyhow::anyhow!(
-                "ModulesService already initialized (init called twice?)"
-            ));
-        }
-        let modules_service = ModulesService::new(module_catalog, manager, external_module_names);
-        self.modules_service.store(Some(Arc::new(modules_service)));
+        // Build compiled-module catalog from inventory and create the ModulesService
+        let registry = ModuleRegistry::discover_and_build()
+            .map_err(|e| anyhow::anyhow!("Failed to build module registry: {e}"))?;
+        let modules_service = Arc::new(ModulesService::new(&registry, manager));
+        self.modules_service
+            .set(modules_service)
+            .map_err(|_| anyhow::anyhow!("ModulesService already set (init called twice?)"))?;
 
         tracing::info!("ModuleOrchestrator initialized");
 
@@ -136,12 +109,11 @@ impl RestApiCapability for ModuleOrchestrator {
         router: axum::Router,
         openapi: &dyn OpenApiRegistry,
     ) -> Result<axum::Router> {
-        let service = self
-            .modules_service
-            .load()
-            .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("ModulesService not initialized"))?
-            .clone();
+        let service = Arc::clone(
+            self.modules_service
+                .get()
+                .ok_or_else(|| anyhow::anyhow!("ModulesService not initialized"))?,
+        );
 
         let router = crate::api::rest::routes::register_routes(router, openapi, service);
 
