@@ -45,6 +45,7 @@ bootstrap = [
     "dep:regex",
     "dep:url",
     "dep:dsn",
+    "dep:cf-modkit-build",
 ]
 
 [dependencies]
@@ -56,6 +57,7 @@ sea-orm-migration = { workspace = true, optional = true }
 modkit-odata = { workspace = true, features = ["with-odata-params"] }
 modkit-sdk = { workspace = true }
 cf-system-sdks = { workspace = true, features = ["directory"] }
+cf-modkit-build = { workspace = true, optional = true }
 
 # Core deps
 anyhow = { workspace = true }

@@ -36,6 +36,11 @@ anyhow = { workspace = true }
 tracing = { workspace = true }
 clap = { workspace = true }
 inventory = { workspace = true }
+shadow-rs = { workspace = true }
+cf-modkit-build = { workspace = true }
+
+[build-dependencies]
+cf-modkit-build = { workspace = true, features = ["shadow-rs"] }
 
 [dev-dependencies]
 tokio = { workspace = true }

@@ -49,6 +49,8 @@ tokio = { workspace = true }
 tracing = { workspace = true }
 clap = { workspace = true }
 serde_json = { workspace = true }
+shadow-rs = { workspace = true }
+cf-modkit-build = { workspace = true }
 
 # Optional example module
 users-info = { path = "../../examples/modkit/users-info/users-info", optional = true }
@@ -59,6 +61,9 @@ calculator = { path = "../../examples/oop-modules/calculator/calculator", option
 tenant-resolver-gw-example = { package = "tenant-resolver-gw", path = "../../examples/plugin-modules/tenant-resolver/tenant-resolver-gw", optional = true }
 contoso-tr-plugin = { path = "../../examples/plugin-modules/tenant-resolver/plugins/contoso-tr-plugin", optional = true }
 fabrikam-tr-plugin = { path = "../../examples/plugin-modules/tenant-resolver/plugins/fabrikam-tr-plugin", optional = true }
+
+[build-dependencies]
+cf-modkit-build = { workspace = true, features = ["shadow-rs"] }
 
 [dev-dependencies]
 tempfile = { workspace = true }
