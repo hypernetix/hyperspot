@@ -122,7 +122,7 @@ No module-specific environment constraints beyond project defaults.
 - Collector/agent pattern for sidecar deployment
 - REST API for simple/low-volume cases and external integrations
 - Counter and gauge metric semantics
-- Per-tenant and per-resource usage attribution
+- Per-tenant, per-user, and per-resource usage attribution
 - Pluggable storage adapter framework (ClickHouse, PostgreSQL, custom)
 - Custom measuring unit registration via API
 - Usage query API for raw record retrieval with filtering and pagination
@@ -220,6 +220,17 @@ The system **MUST** support attributing usage to specific resource instances wit
 **Rationale**: Granular resource attribution enables per-resource billing and usage analysis.
 **Actors**: `cpt-cf-uc-actor-usage-source`
 
+#### User Attribution
+
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-user-attribution`
+
+The system **MUST** support attributing usage to specific users within a tenant, including user ID and optional user metadata. User attribution **MUST** be derived from the authenticated security context when available, or explicitly provided by the usage source when reporting usage for batch operations or background jobs.
+
+The system **MUST** support both direct user attribution (user X consumed resource Y) and indirect attribution (background job initiated by user X consumed resource Y). User attribution is optional on a per-usage-record basis to accommodate system-level resource consumption that is not attributable to a specific user.
+
+**Rationale**: Per-user attribution enables chargeback, detailed usage analytics, per-user quota enforcement, and helps organizations understand which users are driving consumption. This is essential for multi-user tenants who need to allocate costs or enforce limits at the user level.
+**Actors**: `cpt-cf-uc-actor-usage-source`, `cpt-cf-uc-actor-tenant-admin`, `cpt-cf-uc-actor-billing-system`
+
 #### Tenant Isolation
 
 - [ ] `p1` - **ID**: `cpt-cf-uc-req-tenant-isolation`
@@ -273,9 +284,9 @@ The system **MUST** monitor storage adapter health, buffer records during failur
 
 - [ ] `p1` - **ID**: `cpt-cf-uc-req-query-api`
 
-The system **MUST** provide an API for querying raw usage records with filtering by time range, tenant, resource, and usage type with cursor-based pagination. The API returns raw records; aggregation is the responsibility of downstream consumers.
+The system **MUST** provide an API for querying raw usage records with filtering by time range, tenant, user, resource, and usage type with cursor-based pagination. The API returns raw records; aggregation is the responsibility of downstream consumers.
 
-**Rationale**: Downstream consumers need flexible access to raw usage data to apply their own aggregation, rating, and analysis logic.
+**Rationale**: Downstream consumers need flexible access to raw usage data to apply their own aggregation, rating, and analysis logic. Per-user filtering enables chargeback scenarios and per-user usage analytics.
 **Actors**: `cpt-cf-uc-actor-billing-system`, `cpt-cf-uc-actor-monitoring-system`, `cpt-cf-uc-actor-tenant-admin`
 
 #### Stable Query Result Ordering
@@ -697,16 +708,17 @@ The system **MUST** continue accepting usage records even if downstream consumer
 - Billing period defined by Billing System
 
 **Main Flow**:
-1. Billing System queries usage API for billing period (time range, tenant, usage types)
+1. Billing System queries usage API for billing period (time range, tenant, optional user filter, usage types)
 2. UC retrieves raw usage records matching the filter criteria in stable order
 3. UC returns first page with cursor token
 4. Billing System processes page and requests next page using cursor
 5. Steps 3-4 repeat until all pages retrieved
-6. Billing System aggregates and processes complete record set for rating
+6. Billing System aggregates and processes complete record set for rating (with optional per-user breakdown)
 
 **Postconditions**:
 - Billing System has accurate, deduplicated raw usage records for its own aggregation and invoice generation
 - No records missed or duplicated due to concurrent insertions during pagination
+- If user filtering was applied, billing can generate per-user chargeback reports
 
 ### UC: Real-Time Quota Enforcement
 
@@ -774,20 +786,22 @@ The system **MUST** continue accepting usage records even if downstream consumer
 **Actor**: `cpt-cf-uc-actor-tenant-admin`
 
 **Main Flow**:
-1. Administrator queries usage API for a time period
+1. Administrator queries usage API for a time period with optional user and resource filters
 2. UC retrieves raw usage records scoped to the tenant only in stable order
-3. UC returns paginated raw records with cursor tokens, filtered by type and resource
+3. UC returns paginated raw records with cursor tokens, filtered by type, user, and resource
 4. Administrator retrieves all pages using cursors
 5. Administrator (or downstream reporting system) processes the complete data
 
 **Postconditions**:
 - Administrator receives only their tenant's raw usage records; no cross-tenant data exposure
 - Paginated results are consistent without gaps or duplicates
+- Administrator can analyze usage by specific users within their tenant
 
 ## 9. Acceptance Criteria
 
 - [ ] All billable platform services emit usage through UC
 - [ ] Downstream consumers (billing, monitoring) querying the same time range receive identical raw records
+- [ ] Usage records can be attributed to specific users within a tenant and queried by user ID
 - [ ] Custom unit registration completes in less than 5 minutes without code changes
 - [ ] High-volume services can emit 10,000+ events per second without blocking
 - [ ] 99.95%+ monthly availability maintained
