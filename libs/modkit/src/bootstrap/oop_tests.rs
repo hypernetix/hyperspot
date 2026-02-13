@@ -20,6 +20,7 @@ fn minimal_app_config() -> AppConfig {
     AppConfig {
         server: ServerConfig {
             home_dir: std::env::temp_dir().join("modkit_test"),
+            allow_insecure_http: false,
         },
         database: None,
         logging: None,

@@ -145,6 +145,11 @@ impl ModuleCtx {
         &*self.config_provider
     }
 
+    #[must_use]
+    pub fn allow_insecure_http(&self) -> bool {
+        self.config_provider.allow_insecure_http()
+    }
+
     /// Get the `ClientHub` for dependency resolution.
     #[inline]
     #[must_use]

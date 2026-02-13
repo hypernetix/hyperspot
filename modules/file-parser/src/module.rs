@@ -1,8 +1,10 @@
 use std::sync::Arc;
+use std::time::Duration;
 
 use async_trait::async_trait;
 use modkit::api::OpenApiRegistry;
 use modkit::{Module, ModuleCtx, RestApiCapability};
+use modkit_http::HttpClient;
 use tracing::{debug, info};
 
 use crate::config::FileParserConfig;
@@ -74,11 +76,20 @@ impl Module for FileParserModule {
             download_timeout_secs: cfg.download_timeout_secs,
         };
 
+        // Build HTTP client
+        let mut builder = HttpClient::builder()
+            .timeout(Duration::from_secs(cfg.download_timeout_secs))
+            .max_body_size(service_config.max_file_size_bytes);
+
+        builder = modkit::maybe_allow_insecure_http!(builder, ctx.allow_insecure_http());
+
+        let http_client = builder.build().map_err(|e| {
+            anyhow::anyhow!("failed to build HTTP client for FileParserService: {e}")
+        })?;
+
         // Create file parser service
-        let file_parser_service = Arc::new(
-            FileParserService::new(parsers, service_config)
-                .map_err(|e| anyhow::anyhow!("failed to create FileParserService: {e}"))?,
-        );
+        let file_parser_service =
+            Arc::new(FileParserService::new(parsers, service_config, http_client));
 
         // Store service for REST usage
         self.service.store(Some(file_parser_service));
