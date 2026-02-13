@@ -525,6 +525,15 @@ The system **MUST** complete usage record ingestion within 200ms (p95) under nor
 **Threshold**: p95 <= 200ms
 **Rationale**: Low ingestion latency prevents blocking in usage source services.
 
+#### Query/Retention Isolation
+
+- [ ] `p2` - **ID**: `cpt-cf-uc-nfr-query-isolation`
+
+The system **MUST** ensure that query operations and retention enforcement jobs do not degrade ingestion latency. Query and retention workloads **MUST** be isolated from the ingestion path such that heavy query load or retention job execution maintains ingestion p95 latency within the `cpt-cf-uc-nfr-ingestion-latency` threshold (200ms).
+
+**Threshold**: Ingestion p95 latency remains ≤200ms during concurrent query/retention operations
+**Rationale**: Query and retention are read-heavy and batch-processing workloads that can compete for storage resources with the latency-sensitive ingestion path. Without isolation, billing report generation or retention cleanup could degrade ingestion performance, blocking usage sources.
+
 #### Query Latency
 
 - [ ] `p1` - **ID**: `cpt-cf-uc-nfr-query-latency`
