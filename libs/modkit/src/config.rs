@@ -33,6 +33,11 @@ pub enum ConfigError {
 pub trait ConfigProvider: Send + Sync {
     /// Returns raw JSON section for the module, if any.
     fn get_module_config(&self, module_name: &str) -> Option<&serde_json::Value>;
+
+    #[must_use]
+    fn allow_insecure_http(&self) -> bool {
+        false
+    }
 }
 
 /// Lenient configuration loader that falls back to defaults.
