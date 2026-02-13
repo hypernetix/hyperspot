@@ -3,6 +3,7 @@ import httpx
 import pytest
 
 
+@pytest.mark.smoke
 @pytest.mark.asyncio
 async def test_settings_full_workflow(base_url, auth_headers):
     """

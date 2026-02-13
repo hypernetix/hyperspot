@@ -3,6 +3,7 @@ import httpx
 import pytest
 
 
+@pytest.mark.smoke
 @pytest.mark.asyncio
 async def test_get_settings_returns_defaults(base_url, auth_headers):
     """

@@ -314,10 +314,14 @@ test-users-info-pg:
 
 # -------- E2E tests --------
 
-.PHONY: e2e e2e-local e2e-docker
+.PHONY: e2e e2e-local e2e-docker e2e-smoke
 
 # Run E2E tests in Docker (default)
 e2e: e2e-docker
+
+## Run E2E smoke tests in Docker (only tests marked @pytest.mark.smoke)
+e2e-smoke:
+	python3 scripts/ci.py e2e --docker $(E2E_ARGS) -- -m smoke
 
 # Run E2E tests locally
 e2e-local:
