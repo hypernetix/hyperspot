@@ -45,6 +45,7 @@ Notable systems that influenced this design: Amberflo (client-side SDK batching 
 | Amendment | A correction to previously recorded usage data, either by replacing events in a time range or deprecating individual events |
 | Rate Limit | A constraint on the volume of requests or data a tenant or source can submit within a time window |
 | Load Shedding | The deliberate dropping or deferral of low-priority work to preserve system stability under overload |
+| Snapshot Read | A query that sees data as it existed at a specific point in time, providing consistency across paginated requests despite concurrent data modifications |
 
 ## 2. Actors
 
@@ -272,9 +273,36 @@ The system **MUST** monitor storage adapter health, buffer records during failur
 
 - [ ] `p1` - **ID**: `cpt-cf-uc-req-query-api`
 
-The system **MUST** provide an API for querying raw usage records with filtering by time range, tenant, resource, and usage type with pagination. The API returns raw records; aggregation is the responsibility of downstream consumers.
+The system **MUST** provide an API for querying raw usage records with filtering by time range, tenant, resource, and usage type with cursor-based pagination. The API returns raw records; aggregation is the responsibility of downstream consumers.
 
 **Rationale**: Downstream consumers need flexible access to raw usage data to apply their own aggregation, rating, and analysis logic.
+**Actors**: `cpt-cf-uc-actor-billing-system`, `cpt-cf-uc-actor-monitoring-system`, `cpt-cf-uc-actor-tenant-admin`
+
+#### Stable Query Result Ordering
+
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-stable-ordering`
+
+The system **MUST** return query results in a stable, deterministic order across all API endpoints. The ordering **MUST** be consistent across pagination requests to prevent records from being missed or duplicated when combined with cursor-based pagination.
+
+**Rationale**: Stable ordering is essential for cursor-based pagination to work correctly. Without deterministic ordering, cursors cannot reliably mark positions in the result set, leading to missing or duplicate records across pages. This is critical for billing accuracy where downstream consumers must process complete, non-duplicated datasets.
+**Actors**: `cpt-cf-uc-actor-billing-system`, `cpt-cf-uc-actor-monitoring-system`, `cpt-cf-uc-actor-tenant-admin`
+
+#### Cursor-Based Pagination
+
+- [ ] `p1` - **ID**: `cpt-cf-uc-req-cursor-pagination`
+
+The system **MUST** implement cursor-based pagination for all query APIs. Each page response **MUST** include an opaque cursor token that marks the position after the last record in the current page. Clients **MUST** pass this cursor in subsequent requests to retrieve the next page. Cursors **MUST** remain valid for at least 24 hours after issuance.
+
+**Rationale**: Offset-based pagination (`LIMIT/OFFSET`) is unreliable when data is being inserted concurrently — new insertions shift offsets, causing records to be skipped or duplicated across pages. Cursor-based pagination provides stable position markers that are unaffected by concurrent writes. This is essential for billing systems that must process complete usage datasets without gaps or duplicates.
+**Actors**: `cpt-cf-uc-actor-billing-system`, `cpt-cf-uc-actor-monitoring-system`, `cpt-cf-uc-actor-tenant-admin`, `cpt-cf-uc-actor-platform-developer`
+
+#### Snapshot Read Consistency
+
+- [ ] `p3` - **ID**: `cpt-cf-uc-req-snapshot-reads`
+
+The system **SHOULD** support snapshot reads, allowing clients to query data with a consistent point-in-time view. When a query is initiated with snapshot isolation, all subsequent pagination requests in that query session **MUST** see the dataset as it existed at the snapshot timestamp, regardless of concurrent insertions, updates, or backfill operations.
+
+**Rationale**: Even with cursor-based pagination, concurrent data modifications (late-arriving events, backfill operations) can cause inconsistencies across paginated queries. Snapshot reads provide the strongest consistency guarantee: a billing system paginating through a month of data sees the exact same records on every page, as they existed when the query started. This is marked p3 because cursor-based pagination with stable ordering provides sufficient consistency for most use cases, but snapshot isolation is valuable when absolute consistency is required for auditing or financial reconciliation.
 **Actors**: `cpt-cf-uc-actor-billing-system`, `cpt-cf-uc-actor-monitoring-system`, `cpt-cf-uc-actor-tenant-admin`
 
 ### 5.6 Backfill & Amendment
@@ -670,12 +698,15 @@ The system **MUST** continue accepting usage records even if downstream consumer
 
 **Main Flow**:
 1. Billing System queries usage API for billing period (time range, tenant, usage types)
-2. UC retrieves raw usage records matching the filter criteria
-3. UC returns paginated raw records
-4. Billing System aggregates and processes records for rating
+2. UC retrieves raw usage records matching the filter criteria in stable order
+3. UC returns first page with cursor token
+4. Billing System processes page and requests next page using cursor
+5. Steps 3-4 repeat until all pages retrieved
+6. Billing System aggregates and processes complete record set for rating
 
 **Postconditions**:
 - Billing System has accurate, deduplicated raw usage records for its own aggregation and invoice generation
+- No records missed or duplicated due to concurrent insertions during pagination
 
 ### UC: Real-Time Quota Enforcement
 
@@ -685,12 +716,14 @@ The system **MUST** continue accepting usage records even if downstream consumer
 
 **Main Flow**:
 1. Quota Enforcement System queries UC API for current usage (tenant, usage type, time range)
-2. UC returns raw usage records matching the filter criteria
-3. Quota Enforcement System aggregates records and compares against tenant limits
-4. Quota Enforcement System triggers enforcement if threshold exceeded
+2. UC returns raw usage records in stable order with cursor-based pagination
+3. Quota Enforcement System retrieves all pages using cursors
+4. Quota Enforcement System aggregates records and compares against tenant limits
+5. Quota Enforcement System triggers enforcement if threshold exceeded
 
 **Postconditions**:
 - Tenant usage enforced before exceeding quota; no over-consumption
+- Quota calculations based on complete, consistent dataset
 
 ### UC: Add New Storage Backend
 
@@ -742,12 +775,14 @@ The system **MUST** continue accepting usage records even if downstream consumer
 
 **Main Flow**:
 1. Administrator queries usage API for a time period
-2. UC retrieves raw usage records scoped to the tenant only
-3. UC returns paginated raw records filtered by type and resource
-4. Administrator (or downstream reporting system) processes the data
+2. UC retrieves raw usage records scoped to the tenant only in stable order
+3. UC returns paginated raw records with cursor tokens, filtered by type and resource
+4. Administrator retrieves all pages using cursors
+5. Administrator (or downstream reporting system) processes the complete data
 
 **Postconditions**:
 - Administrator receives only their tenant's raw usage records; no cross-tenant data exposure
+- Paginated results are consistent without gaps or duplicates
 
 ## 9. Acceptance Criteria
 
@@ -761,6 +796,9 @@ The system **MUST** continue accepting usage records even if downstream consumer
 - [ ] Ledger metadata (event counts, watermarks) is available via API for external reconciliation systems
 - [ ] A single tenant exceeding its rate limit does not degrade ingestion latency for other tenants
 - [ ] Rate limit configuration changes take effect without service restart
+- [ ] Query results are returned in stable, deterministic order across all pagination requests
+- [ ] Cursor-based pagination prevents record gaps or duplicates during concurrent insertions
+- [ ] Cursors remain valid for at least 24 hours after issuance
 
 ## 10. Dependencies
 
@@ -799,3 +837,6 @@ The system **MUST** continue accepting usage records even if downstream consumer
 - Default rate limit values for system-wide defaults and per-source defaults
 - Priority classification of existing usage types for load shedding (which types are billing-critical P0 vs. analytics P2)
 - Specific metadata fields and API shape for ledger metadata exposure (to support external reconciliation)
+- Cursor encoding format (opaque token vs. base64-encoded position metadata)
+- Snapshot read implementation strategy (storage-native isolation vs. versioning metadata)
+- Cursor and snapshot expiration handling (graceful error responses when expired)
