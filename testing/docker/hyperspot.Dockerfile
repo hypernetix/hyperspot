@@ -16,8 +16,9 @@ WORKDIR /build
 COPY Cargo.toml Cargo.lock ./
 COPY rust-toolchain.toml ./
 
-# Copy all workspace members
+# Copy all workspace members (gts-docs-validator needed for workspace resolution)
 COPY apps/hyperspot-server ./apps/hyperspot-server
+COPY apps/gts-docs-validator ./apps/gts-docs-validator
 COPY libs ./libs
 COPY modules ./modules
 COPY examples ./examples
@@ -48,5 +49,5 @@ EXPOSE 8086
 
 # Run the binary with minimal config suitable for E2E tests
 # Using --mock flag to use in-memory SQLite for any modules that need DB
-CMD ["/app/hyperspot-server", "--config", "/app/config/quickstart.yaml"]
+CMD ["/app/hyperspot-server", "--config", "/app/config/e2e-docker.yaml"]
 

@@ -1,0 +1,275 @@
+# HyperSpot Server Configuration
+#
+# Database Architecture Overview:
+# ===============================
+#
+# HyperSpot uses a centralized DbManager that:
+# 1. Loads global database server templates from `database.servers`
+# 2. For each module, merges server template with module-specific overrides
+# 3. Creates isolated database connections per module
+# 4. Caches DbHandle instances for reuse within the same module
+#
+# Key principles:
+# - Each module gets its own database connection (no sharing)
+# - SQLite modules automatically get their own database file
+# - Configuration follows a clear precedence hierarchy
+# - Environment variables are expanded (${VAR_NAME})
+# - All paths are resolved relative to server.home_dir
+
+# Core server configuration (global section)
+server:
+  home_dir: "~/.hyperspot"
+
+# Database configuration (DbManager architecture)
+#
+# The database config has two levels:
+# 1. Global "servers" - shared connection templates that modules can reference
+# 2. Per-module configs - specific database settings for each module
+#
+# Configuration precedence (highest to lowest):
+# - Module `params` map (highest priority)
+# - Module DSN query params
+# - Module fields (host, port, user, etc.)
+# - Module DSN base
+# - Server `params` map
+# - Server DSN query params
+# - Server fields
+# - Server DSN base (lowest priority)
+#
+database:
+  # Global database servers - reusable connection templates
+  # These define shared settings that multiple modules can inherit
+  servers:
+    # SQLite server template for user data modules
+    # Note: No DSN or file specified here - modules specify their own database files
+    # This prevents accidental sharing of SQLite databases between modules
+    sqlite_users:
+      engine: "sqlite"
+      # SQLite PRAGMA parameters applied to all connections using this server
+      params:
+        WAL: "true"              # Enable Write-Ahead Logging for better concurrency
+        synchronous: "NORMAL"    # Balance between safety and performance
+        busy_timeout: "5000"     # Wait 5 seconds for locked database
+      # Connection pool settings shared by all modules using this server
+      pool:
+        max_conns: 5             # Maximum 5 concurrent connections
+        acquire_timeout: "30s"   # Timeout when acquiring connection from pool
+
+  # Global database options
+  # auto_provision: true       # (default) Create directories automatically for SQLite files
+  # auto_provision: false      # Fail if directories don't exist
+
+# Logging configuration (global section)
+logging:
+  # global section
+  default:
+    console_level: info
+    file: "logs/hyperspot-e2e.log"
+    file_level: info
+    max_age_days: 28
+    max_backups: 3
+    max_size_mb: 10
+  sqlx:
+    console_level: debug
+    file: "logs/sql.log"
+    file_level: debug
+  api-gateway:
+    console_level: debug
+    file: "logs/api.log"
+    file_level: debug
+    max_age_days: 28
+    max_backups: 3
+    max_size_mb: 100
+  types-registry:
+    console_level: info
+    file: "logs/types_registry.log"
+    file_level: debug
+    max_age_days: 7
+    max_backups: 3
+    max_size_mb: 50
+
+
+# Per-module configurations using new structure
+modules:
+  api-gateway:
+    # No database needed for api-gateway
+    config:
+      bind_addr: "0.0.0.0:8086"
+      enable_docs: true
+      cors_enabled: false
+
+      # OpenAPI Documentation Configuration
+      openapi:
+        title: "HyperSpot API"
+        version: "0.1.0"
+        description: "HyperSpot Server API Documentation"
+      defaults:
+        body_limit_bytes: 64000000
+        rate_limit:
+          rps: 1000
+          burst: 200
+          in_flight: 64
+
+      # Authentication Configuration
+      auth_disabled: true
+      require_auth_by_default: true
+
+      # JWKS Configuration (replace with your OIDC provider)
+      jwks_uri: "http://localhost:8080/realms/dev/protocol/openid-connect/certs"
+      issuer: "http://localhost:8080/realms/dev"
+      audience: "api-gateway"
+
+  types:
+    config: {}
+
+  types-registry:
+    config: {}
+
+  tenant-resolver:
+    config: {}
+
+  grpc-hub:
+    config:
+      listen_addr: "uds:///tmp/hyperspot-grpc-e2e"
+
+  users-info:
+    # Module-specific database configuration
+    database:
+      # Reference to global server template defined above
+      server: "sqlite_users"               # Inherits params and pool settings from sqlite_users
+
+      # Module-specific database file (required for SQLite modules)
+      file: "users_info.db"                # Creates: ~/.hyperspot/users_info/users_info.db
+
+      # Module can override server settings:
+      # params:
+      #   synchronous: "FULL"              # Would override server's "NORMAL" setting
+      #   custom_pragma: "value"           # Would add new PRAGMA setting
+      # pool:
+      #   max_conns: 10                    # Would override server's max_conns: 5
+
+      # Alternative ways to specify database location:
+      # path: "/absolute/path/to/db.sqlite" # Use absolute path instead of file
+      # dsn: "sqlite://custom.db?WAL=false" # Complete DSN override (ignores server)
+
+      # For other database types (PostgreSQL, MySQL):
+      # host: "localhost"                  # Override server host
+      # port: 5432                         # Override server port
+      # user: "app_user"                   # Override server user
+      # password: "${DB_PASSWORD}"         # Environment variable expansion
+      # dbname: "users_db"                 # Override server database name
+
+    # Module-specific application configuration
+    config:
+      default_page_size: 5
+      max_page_size: 100
+
+  simple-user-settings:
+    # Module-specific database configuration
+    database:
+      server: "sqlite_users"
+      file: "settings.db"
+    config: {}
+
+# OpenTelemetry tracing configuration
+tracing:
+  enabled: false
+  service_name: "hyperspot-api"
+
+  # OTLP exporter configuration
+  exporter:
+    kind: "otlp_grpc"  # or "otlp_http"
+    endpoint: "http://127.0.0.1:14317"  # Jaeger OTLP gRPC endpoint
+    # For HTTP: endpoint: "http://127.0.0.1:4318/v1/traces"
+    headers:
+      # Add any required headers, e.g., for authentication
+      # authorization: "Bearer your-token"
+      # uptrace-dsn: "${UPTRACE_DSN}"
+    timeout_ms: 5000
+
+  # Sampling configuration
+  sampler:
+    parent_based_ratio: # parent_based_always_on | parent_based_ratio | always_on | always_off
+      ratio: 1.0  # Sample 100% of traces (only used with ratio strategies)
+
+  # Propagation configuration
+  propagation:
+    w3c_trace_context: true  # Enable W3C Trace Context propagation
+
+  # Resource attributes (added to all spans)
+  resource:
+    service.version: "1.3.7"
+    deployment.environment: "dev"
+    service.namespace: "hyperspot"
+
+  # HTTP-specific options
+  http:
+    inject_request_id_header: "x-request-id"
+    # Note: authorization header excluded to avoid capturing bearer tokens in traces
+    record_headers: [ "user-agent", "x-forwarded-for" ]
+
+  # Log correlation (future feature)
+  logs_correlation:
+    inject_trace_ids_into_logs: true
+
+# Example configurations for different database scenarios:
+#
+# Example 1: PostgreSQL server with multiple modules
+# ==================================================
+# database:
+#   servers:
+#     main_postgres:
+#       host: "localhost"
+#       port: 5432
+#       user: "hyperspot"
+#       password: "${POSTGRES_PASSWORD}"  # From environment variable
+#       params:
+#         sslmode: "require"
+#         application_name: "hyperspot"
+#       pool:
+#         max_conns: 20
+#         acquire_timeout: "30s"
+# modules:
+#   users_module:
+#     database:
+#       server: "main_postgres"
+#       dbname: "users_db"              # Each module gets its own database
+#   orders_module:
+#     database:
+#       server: "main_postgres"
+#       dbname: "orders_db"             # Separate database for orders
+#       pool:
+#         max_conns: 10                 # Module-specific pool override
+#
+# Example 2: Mixed database types
+# ===============================
+# database:
+#   servers:
+#     postgres_main:
+#       dsn: "postgres://user:${PG_PASS}@localhost:5432/main"
+#     redis_cache:
+#       dsn: "redis://localhost:6379/0"
+# modules:
+#   user_service:
+#     database:
+#       server: "postgres_main"
+#       dbname: "users"
+#   cache_service:
+#     database:
+#       server: "redis_cache"
+#
+# Example 3: Complete DSN override
+# ================================
+# modules:
+#   analytics:
+#     database:
+#       dsn: "postgres://analytics:${ANALYTICS_PASSWORD}@analytics-db:5432/metrics?sslmode=require"
+#       # When DSN is specified, server reference is ignored
+#
+# Example 4: No database module
+# =============================
+# modules:
+#   static_files:
+#     # No database section - module won't get database access
+#     config:
+#       static_dir: "/var/www/static"

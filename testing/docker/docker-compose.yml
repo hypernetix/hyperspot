@@ -25,9 +25,6 @@ services:
     environment:
       # No external dependencies needed for file-parser module
       - RUST_LOG=info
-      - APP__MODULES__api_gateway__CONFIG__BIND_ADDR=0.0.0.0:8086
-      - APP__MODULES__api_gateway__CONFIG__ENABLE_DOCS=true
-      - APP__MODULES__api_gateway__CONFIG__CORS_ENABLED=true
     depends_on:
       mock:
         condition: service_healthy
