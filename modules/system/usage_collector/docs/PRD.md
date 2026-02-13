@@ -472,7 +472,7 @@ All time-related header values are in UTC. Clients **SHOULD** parse these header
 
 - [ ] `p1` - **ID**: `cpt-cf-uc-req-sdk-retry`
 
-The SDK **MUST** buffer usage events in a bounded in-memory queue and retry with exponential backoff and jitter on rate limit responses (HTTP 429), honoring the `Retry-After` header when present. When the buffer is full, the SDK **MUST** drop oldest events and report the loss via metrics. The SDK **MUST NOT** block the calling service due to rate limiting.
+The SDK **MUST** buffer usage events in a bounded in-memory queue and retry with exponential backoff and jitter on rate limit responses (HTTP 429) and backfill conflict responses (HTTP 409), honoring the `Retry-After` header or `retry_after_ms` field when present. When the buffer is full, the SDK **MUST** drop oldest events and report the loss via metrics. The SDK **MUST NOT** block the calling service due to rate limiting.
 
 **Rationale**: Usage sources generate events regardless of collector availability. The SDK must absorb temporary rate limiting transparently, retrying without burdening the caller. Exponential backoff with jitter prevents synchronized retry bursts across sources. Non-blocking behavior is critical because usage emission must not degrade the source service's primary function.
 **Actors**: `cpt-cf-uc-actor-usage-source`, `cpt-cf-uc-actor-platform-developer`
