@@ -120,12 +120,44 @@ impl ApiGateway {
         // Always mark built-in health check routes as public
         public_routes.insert((Method::GET, "/health".to_owned()));
         public_routes.insert((Method::GET, "/healthz".to_owned()));
-        public_routes.insert((Method::GET, "/docs".to_owned()));
-        public_routes.insert((Method::GET, "/openapi.json".to_owned()));
+
+        // Normalize prefix_path: trim, ensure leading "/", remove trailing "/"
+        let binding = self.get_cached_config();
+        let raw_prefix = binding.prefix_path.trim();
+        let trimmed = raw_prefix.trim_end_matches('/');
+        let prefix = if trimmed.is_empty() {
+            None
+        } else if trimmed.starts_with('/') {
+            Some(trimmed.to_owned())
+        } else {
+            Some(format!("/{trimmed}"))
+        };
+        let prefix = prefix.as_deref().unwrap_or("");
+
+        let docs_path = if prefix.is_empty() {
+            "/docs".to_owned()
+        } else {
+            format!("{prefix}/docs")
+        };
+        let openapi_path = if prefix.is_empty() {
+            "/openapi.json".to_owned()
+        } else {
+            format!("{prefix}/openapi.json")
+        };
+
+        public_routes.insert((Method::GET, docs_path));
+        public_routes.insert((Method::GET, openapi_path));
 
         for spec in &self.openapi_registry.operation_specs {
             let spec = spec.value();
-            let route_key = (spec.method.clone(), spec.path.clone());
+
+            let path = if prefix.is_empty() {
+                spec.path.clone()
+            } else {
+                format!("{}{}", prefix, spec.path)
+            };
+
+            let route_key = (spec.method.clone(), path);
 
             if let Some(ref sec) = spec.sec_requirement {
                 req_map.insert(
@@ -185,7 +217,10 @@ impl ApiGateway {
             .collect();
 
         // 12) License validation
-        let license_map = middleware::license_validation::LicenseRequirementMap::from_specs(&specs);
+        let license_map = middleware::license_validation::LicenseRequirementMap::from_specs(
+            &specs,
+            &config.prefix_path,
+        );
         router = router.layer(from_fn(
             move |req: axum::extract::Request, next: axum::middleware::Next| {
                 let map = license_map.clone();
@@ -250,7 +285,8 @@ impl ApiGateway {
         ));
 
         // 7) MIME type validation
-        let mime_map = middleware::mime_validation::build_mime_validation_map(&specs);
+        let mime_map =
+            middleware::mime_validation::build_mime_validation_map(&specs, &config.prefix_path);
         router = router.layer(from_fn(
             move |req: axum::extract::Request, next: axum::middleware::Next| {
                 let map = mime_map.clone();
@@ -583,16 +619,33 @@ impl modkit::contracts::ApiGatewayCapability for ApiGateway {
         &self,
         _ctx: &modkit::context::ModuleCtx,
         mut router: axum::Router,
+        mut module_router: axum::Router,
     ) -> anyhow::Result<axum::Router> {
         let config = self.get_cached_config();
 
         if config.enable_docs {
-            router = self.add_openapi_routes(router)?;
+            module_router = self.add_openapi_routes(module_router)?;
         }
 
         // Apply middleware stack (including auth) to the final router
         tracing::debug!("Applying middleware stack to finalized router");
-        router = self.apply_middleware_stack(router)?;
+        module_router = self.apply_middleware_stack(module_router)?;
+
+        let raw_prefix = config.prefix_path.trim();
+        let trimmed = raw_prefix.trim_end_matches('/');
+        let prefix = if trimmed.is_empty() {
+            None
+        } else if trimmed.starts_with('/') {
+            Some(trimmed.to_owned())
+        } else {
+            Some(format!("/{trimmed}"))
+        };
+
+        router = if let Some(prefix) = prefix {
+            router.merge(Router::new().nest(&prefix, module_router))
+        } else {
+            router.merge(module_router)
+        };
 
         // Keep the finalized router to be used by `serve()`
         *self.final_router.lock() = Some(router.clone());

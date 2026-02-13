@@ -66,7 +66,15 @@ impl RateLimiterMap {
                 ),
                 |r| (r.rps, r.burst, r.in_flight),
             );
-            let key = (spec.method.clone(), spec.path.clone());
+
+            let prefix = cfg.prefix_path.trim_end_matches('/');
+            let path = if prefix.is_empty() {
+                spec.path.clone()
+            } else {
+                format!("{}{}", prefix, spec.path)
+            };
+
+            let key = (spec.method.clone(), path.clone());
             buckets.insert(
                 key.clone(),
                 Arc::new(
