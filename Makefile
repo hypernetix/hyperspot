@@ -3,6 +3,8 @@ CI := 1
 OPENAPI_URL ?= http://127.0.0.1:8087/openapi.json
 OPENAPI_OUT ?= docs/api/api.json
 
+DEFAULT_FEATURES ?= users-info-example,tenant-resolver-example
+
 # -------- Utility macros --------
 
 define check_tool
@@ -316,9 +318,9 @@ test-users-info-pg:
 # Run E2E tests in Docker (default)
 e2e: e2e-docker
 
-## Run E2E smoke tests in Docker (only tests marked @pytest.mark.smoke)
+## Run E2E smoke tests in Docker with sqlite (only tests marked @pytest.mark.smoke)
 e2e-smoke:
-	python3 scripts/ci.py e2e --docker $(E2E_ARGS) -- -m smoke
+	python3 scripts/ci.py e2e --docker --cargo-build-args="--features $(DEFAULT_FEATURES)" $(E2E_ARGS) -- -m smoke
 
 # Run E2E tests locally
 e2e-local:
@@ -326,13 +328,15 @@ e2e-local:
 
 ## Run E2E tests in Docker environment (default: sqlite)
 e2e-docker:
-	python3 scripts/ci.py e2e --docker --cargo-build-args="--features users-info-example,tenant-resolver-example" $(E2E_ARGS)
+	python3 scripts/ci.py e2e --docker --cargo-build-args="--features $(DEFAULT_FEATURES)" $(E2E_ARGS)
 
+## Run E2E tests in Docker environment with PostgreSQL
 e2e-docker-pg:
-	python3 scripts/ci.py e2e --docker --cargo-build-args="--features db-pg,users-info-example,tenant-resolver-example" --profile postgres $(E2E_ARGS)
+	python3 scripts/ci.py e2e --docker --cargo-build-args="--features db-pg,$(DEFAULT_FEATURES)" --profile postgres $(E2E_ARGS)
 
+## Run E2E tests in Docker environment with MariaDB
 e2e-docker-mysql:
-	python3 scripts/ci.py e2e --docker --cargo-build-args="--features db-mysql,users-info-example,tenant-resolver-example" --profile mariadb $(E2E_ARGS)
+	python3 scripts/ci.py e2e --docker --cargo-build-args="--features db-mysql,$(DEFAULT_FEATURES)" --profile mariadb $(E2E_ARGS)
 
 # -------- Code coverage --------
 
