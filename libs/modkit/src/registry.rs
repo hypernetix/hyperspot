@@ -199,6 +199,26 @@ pub struct ModuleEntry {
     pub(crate) caps: CapabilitySet,
 }
 
+impl ModuleEntry {
+    /// Returns the module name.
+    #[must_use]
+    pub fn name(&self) -> &'static str {
+        self.name
+    }
+
+    /// Returns the module dependency names.
+    #[must_use]
+    pub fn deps(&self) -> &'static [&'static str] {
+        self.deps
+    }
+
+    /// Returns the capability set.
+    #[must_use]
+    pub fn caps(&self) -> &CapabilitySet {
+        &self.caps
+    }
+}
+
 impl std::fmt::Debug for ModuleEntry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ModuleEntry")
@@ -965,6 +985,21 @@ mod tests {
             }
             other => panic!("expected UnknownModule, got: {other:?}"),
         }
+    }
+
+    #[test]
+    fn module_entry_getters_work() {
+        let mut b = RegistryBuilder::default();
+        b.register_core_with_meta("alpha", &[], Arc::new(DummyCore));
+        b.register_core_with_meta("beta", &["alpha"], Arc::new(DummyCore));
+        b.register_rest_with_meta("beta", Arc::new(DummyRest));
+
+        let reg = b.build_topo_sorted().unwrap();
+        let beta = reg.modules().iter().find(|e| e.name() == "beta").unwrap();
+
+        assert_eq!(beta.name(), "beta");
+        assert_eq!(beta.deps(), &["alpha"]);
+        assert!(beta.caps().has::<RestApiCap>());
     }
 
     #[test]

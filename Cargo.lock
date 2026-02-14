@@ -1329,14 +1329,21 @@ version = "0.1.2"
 dependencies = [
  "anyhow",
  "async-trait",
+ "axum",
+ "cf-api-gateway",
  "cf-modkit",
+ "cf-modkit-macros",
  "cf-system-sdks",
  "inventory",
  "parking_lot",
  "serde",
+ "serde_json",
  "tokio",
  "tonic",
+ "tower",
  "tracing",
+ "utoipa",
+ "uuid",
 ]
 
 [[package]]

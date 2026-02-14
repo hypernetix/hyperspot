@@ -19,6 +19,7 @@ workspace = true
 [dependencies]
 cf-system-sdks = { workspace = true, features = ["directory_grpc"] }
 modkit = { workspace = true }
+modkit-macros = { workspace = true }
 parking_lot = { workspace = true }
 tokio = { workspace = true }
 tonic = { workspace = true, features = ["transport"] }
@@ -26,4 +27,13 @@ async-trait = { workspace = true }
 anyhow = { workspace = true }
 tracing = { workspace = true }
 serde = { workspace = true }
+serde_json = { workspace = true }
+utoipa = { workspace = true }
+axum = { workspace = true }
+uuid = { workspace = true }
 inventory = { workspace = true }
+
+[dev-dependencies]
+tower = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+api_gateway = { path = "../api-gateway", package = "cf-api-gateway" }

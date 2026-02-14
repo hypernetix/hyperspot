@@ -7,12 +7,17 @@ use tokio::sync::RwLock;
 
 use modkit::DirectoryClient;
 use modkit::context::ModuleCtx;
-use modkit::contracts::{GrpcServiceCapability, RegisterGrpcServiceFn, SystemCapability};
+use modkit::contracts::{
+    GrpcServiceCapability, OpenApiRegistry, RegisterGrpcServiceFn, RestApiCapability,
+    SystemCapability,
+};
 use modkit::directory::LocalDirectoryClient;
+use modkit::registry::ModuleRegistry;
 use modkit::runtime::ModuleManager;
 
 use cf_system_sdks::directory::DIRECTORY_SERVICE_NAME;
 
+use crate::domain::service::ModulesService;
 use crate::server;
 
 /// Configuration for the module orchestrator
@@ -25,15 +30,17 @@ pub struct ModuleOrchestratorConfig;
 /// - Provides `DirectoryClient` to the `ClientHub` for in-process modules
 /// - Exposes `DirectoryService` gRPC service via `grpc-hub`
 /// - Tracks module instances and provides service resolution
+/// - Exposes REST API to list all registered modules
 #[modkit::module(
     name = "module-orchestrator",
-    capabilities = [grpc, system],
+    capabilities = [grpc, system, rest],
     client = cf_system_sdks::directory::DirectoryClient
 )]
 pub struct ModuleOrchestrator {
     config: RwLock<ModuleOrchestratorConfig>,
     directory_api: OnceLock<Arc<dyn DirectoryClient>>,
     module_manager: OnceLock<Arc<ModuleManager>>,
+    modules_service: OnceLock<Arc<ModulesService>>,
 }
 
 impl Default for ModuleOrchestrator {
@@ -42,6 +49,7 @@ impl Default for ModuleOrchestrator {
             config: RwLock::new(ModuleOrchestratorConfig),
             directory_api: OnceLock::new(),
             module_manager: OnceLock::new(),
+            modules_service: OnceLock::new(),
         }
     }
 }
@@ -69,7 +77,8 @@ impl modkit::Module for ModuleOrchestrator {
                 anyhow::anyhow!("ModuleManager not wired into ModuleOrchestrator")
             })?;
 
-        let api_impl: Arc<dyn DirectoryClient> = Arc::new(LocalDirectoryClient::new(manager));
+        let api_impl: Arc<dyn DirectoryClient> =
+            Arc::new(LocalDirectoryClient::new(manager.clone()));
 
         // Register in ClientHub directly
         ctx.client_hub()
@@ -79,9 +88,37 @@ impl modkit::Module for ModuleOrchestrator {
             .set(api_impl)
             .map_err(|_| anyhow::anyhow!("DirectoryClient already set (init called twice?)"))?;
 
+        // Build compiled-module catalog from inventory and create the ModulesService
+        let registry = ModuleRegistry::discover_and_build()
+            .map_err(|e| anyhow::anyhow!("Failed to build module registry: {e}"))?;
+        let modules_service = Arc::new(ModulesService::new(&registry, manager));
+        self.modules_service
+            .set(modules_service)
+            .map_err(|_| anyhow::anyhow!("ModulesService already set (init called twice?)"))?;
+
         tracing::info!("ModuleOrchestrator initialized");
 
         Ok(())
+    }
+}
+
+impl RestApiCapability for ModuleOrchestrator {
+    fn register_rest(
+        &self,
+        _ctx: &ModuleCtx,
+        router: axum::Router,
+        openapi: &dyn OpenApiRegistry,
+    ) -> Result<axum::Router> {
+        let service = Arc::clone(
+            self.modules_service
+                .get()
+                .ok_or_else(|| anyhow::anyhow!("ModulesService not initialized"))?,
+        );
+
+        let router = crate::api::rest::routes::register_routes(router, openapi, service);
+
+        tracing::info!("ModuleOrchestrator REST routes registered");
+        Ok(router)
     }
 }
 
