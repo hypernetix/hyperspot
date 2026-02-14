@@ -263,8 +263,8 @@ Legend (used in checks):
 - Why it matters:
   - Mix builtin and custom plugins in the same chain.
 - What to check:
-  - Attaching builtin plugin id works without DB row.
-  - Attaching UUID plugin id requires DB row; missing DB row yields `503 PLUGIN_NOT_FOUND` (`PD`, `ESrc=gateway`).
+  - Attaching builtin plugin id resolves to a deterministic UUID and requires a seeded `oagw_plugin` row (seeded on startup/migration).
+  - Attaching UUID plugin id (custom plugin) requires a DB row; missing DB row yields `503 PLUGIN_NOT_FOUND` (`PD`, `ESrc=gateway`).
 
 ### [x] 4.6 Justification: Plugin sharing modes merge correctly across tenant hierarchy
 - Scenario: [`positive-4.6-plugin-sharing-modes-merge-correctly-across-tenant-hierarchy.md`](management-api/plugins/positive-4.6-plugin-sharing-modes-merge-correctly-across-tenant-hierarchy.md)
