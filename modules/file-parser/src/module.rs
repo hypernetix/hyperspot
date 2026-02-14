@@ -49,8 +49,8 @@ impl Module for FileParserModule {
         // Load module configuration
         let cfg: FileParserConfig = ctx.config()?;
         debug!(
-            "Loaded file-parser config: max_file_size_mb={}, download_timeout_secs={}",
-            cfg.max_file_size_mb, cfg.download_timeout_secs
+            "Loaded file-parser config: max_file_size_mb={}, download_timeout_secs={}, allow_insecure_http={}",
+            cfg.max_file_size_mb, cfg.download_timeout_secs, cfg.allow_insecure_http,
         );
 
         // Build parser backends
@@ -72,6 +72,7 @@ impl Module for FileParserModule {
             max_file_size_bytes: usize::try_from(cfg.max_file_size_mb * BYTES_IN_MB)
                 .unwrap_or(usize::MAX),
             download_timeout_secs: cfg.download_timeout_secs,
+            allow_insecure_http: cfg.allow_insecure_http,
         };
 
         // Create file parser service
