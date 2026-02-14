@@ -19,15 +19,28 @@ pub struct LicenseRequirementMap {
 
 impl LicenseRequirementMap {
     #[must_use]
-    pub fn from_specs(specs: &[OperationSpec]) -> Self {
+    pub fn from_specs(specs: &[OperationSpec], prefix_path: &str) -> Self {
         let requirements = DashMap::new();
 
         for spec in specs {
             if let Some(req) = spec.license_requirement.as_ref() {
-                requirements.insert(
-                    (spec.method.clone(), spec.path.clone()),
-                    req.license_names.clone(),
-                );
+                let raw_prefix = prefix_path.trim_end_matches('/');
+                let prefix = if raw_prefix.is_empty() {
+                    String::new()
+                } else if raw_prefix.starts_with('/') {
+                    raw_prefix.to_owned()
+                } else {
+                    // Prepend leading slash if missing
+                    format!("/{raw_prefix}")
+                };
+
+                let path = if prefix.is_empty() {
+                    spec.path.clone()
+                } else {
+                    format!("{}{}", prefix, spec.path)
+                };
+
+                requirements.insert((spec.method.clone(), path), req.license_names.clone());
             }
         }
 

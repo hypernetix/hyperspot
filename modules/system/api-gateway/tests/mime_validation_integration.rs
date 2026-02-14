@@ -57,7 +57,7 @@ async fn test_middleware_allows_configured_content_type() {
         vendor_extensions: VendorExtensions::default(),
     }];
 
-    let validation_map = build_mime_validation_map(&specs);
+    let validation_map = build_mime_validation_map(&specs, "");
 
     let app =
         Router::new()
@@ -102,7 +102,7 @@ async fn test_middleware_strips_content_type_parameters() {
         vendor_extensions: VendorExtensions::default(),
     }];
 
-    let validation_map = build_mime_validation_map(&specs);
+    let validation_map = build_mime_validation_map(&specs, "");
 
     let app =
         Router::new()
@@ -147,7 +147,7 @@ async fn test_middleware_rejects_disallowed_content_type() {
         vendor_extensions: VendorExtensions::default(),
     }];
 
-    let validation_map = build_mime_validation_map(&specs);
+    let validation_map = build_mime_validation_map(&specs, "");
 
     let app =
         Router::new()
@@ -198,7 +198,7 @@ async fn test_middleware_rejects_missing_content_type() {
         vendor_extensions: VendorExtensions::default(),
     }];
 
-    let validation_map = build_mime_validation_map(&specs);
+    let validation_map = build_mime_validation_map(&specs, "");
 
     let app = Router::new()
         .route("/files/v1/upload", post(test_handler))
@@ -228,7 +228,7 @@ async fn test_middleware_passes_through_unconfigured_routes() {
     // Setup: No MIME validation configured for this route
     let specs = vec![]; // Empty specs, no validation
 
-    let validation_map = build_mime_validation_map(&specs);
+    let validation_map = build_mime_validation_map(&specs, "");
 
     // Apply middleware AFTER routing (like in real usage)
     let app = Router::new()
@@ -277,7 +277,7 @@ async fn test_middleware_allows_multiple_content_types() {
         vendor_extensions: VendorExtensions::default(),
     }];
 
-    let validation_map = build_mime_validation_map(&specs);
+    let validation_map = build_mime_validation_map(&specs, "");
 
     let app = Router::new()
         .route("/tests/v1/flexible", post(test_handler))

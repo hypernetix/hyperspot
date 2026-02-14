@@ -14,12 +14,27 @@ pub type MimeValidationMap = Arc<DashMap<(Method, String), Vec<&'static str>>>;
 
 /// Build MIME validation map from operation specs
 #[must_use]
-pub fn build_mime_validation_map(specs: &[OperationSpec]) -> MimeValidationMap {
+pub fn build_mime_validation_map(specs: &[OperationSpec], prefix_path: &str) -> MimeValidationMap {
     let map = DashMap::new();
 
     for spec in specs {
         if let Some(ref allowed) = spec.allowed_request_content_types {
-            let key = (spec.method.clone(), spec.path.clone());
+            let raw_prefix = prefix_path.trim_end_matches('/');
+            let prefix = if raw_prefix.is_empty() {
+                String::new()
+            } else if raw_prefix.starts_with('/') {
+                raw_prefix.to_owned()
+            } else {
+                format!("/{raw_prefix}")
+            };
+
+            let path = if prefix.is_empty() {
+                spec.path.clone()
+            } else {
+                format!("{}{}", prefix, spec.path)
+            };
+
+            let key = (spec.method.clone(), path.clone());
             map.insert(key, allowed.clone());
         }
     }
@@ -164,7 +179,7 @@ mod tests {
             vendor_extensions: VendorExtensions::default(),
         }];
 
-        let map = build_mime_validation_map(&specs);
+        let map = build_mime_validation_map(&specs, "");
 
         assert!(map.contains_key(&(Method::POST, "/files/v1/upload".to_owned())));
         let allowed = map

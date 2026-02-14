@@ -78,19 +78,20 @@ async fn real_middlewares_observe_documented_order() -> Result<()> {
 
     // Register an endpoint that enables both MIME validation and rate limiting.
     let router = Router::new();
+    let module_router = Router::new();
     let mut builder = OperationBuilder::post("/tests/v1/middleware-order");
     builder.require_rate_limit(1, 1, 64);
-    let router = builder
+    let module_router = builder
         .operation_id("test:middleware-order")
         .summary("Middleware order test endpoint")
         .public()
         .allow_content_types(&["application/json"]) // turns on MIME validation
         .json_response(StatusCode::OK, "OK")
         .handler(axum::routing::post(handler))
-        .register(router, &api);
+        .register(module_router, &api);
 
     // Apply the real gateway middleware stack.
-    let app = api.rest_finalize(&ctx, router)?;
+    let app = api.rest_finalize(&ctx, router, module_router)?;
 
     // --------------------
     // Req1: invalid Content-Type -> should be rejected by MIME validation (415),
@@ -102,7 +103,7 @@ async fn real_middlewares_observe_documented_order() -> Result<()> {
         .oneshot(
             Request::builder()
                 .method("POST")
-                .uri("/tests/v1/middleware-order")
+                .uri("/chat/tests/v1/middleware-order")
                 .header("origin", "https://example.com")
                 .header("x-request-id", "fixed-req-1")
                 .header("content-type", "text/plain")
@@ -130,7 +131,7 @@ async fn real_middlewares_observe_documented_order() -> Result<()> {
         .oneshot(
             Request::builder()
                 .method("POST")
-                .uri("/tests/v1/middleware-order")
+                .uri("/chat/tests/v1/middleware-order")
                 .header("origin", "https://example.com")
                 .header("content-type", "application/json")
                 .body(Body::from(r#"{"ok":true}"#))?,
@@ -159,7 +160,7 @@ async fn real_middlewares_observe_documented_order() -> Result<()> {
         .oneshot(
             Request::builder()
                 .method("POST")
-                .uri("/tests/v1/middleware-order")
+                .uri("/chat/tests/v1/middleware-order")
                 .header("origin", "https://example.com")
                 .header("content-type", "application/json")
                 .body(Body::from(r#"{"ok":true}"#))?,
