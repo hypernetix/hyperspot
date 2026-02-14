@@ -12,76 +12,105 @@ use crate::secure::{
     Unscoped,
 };
 
-/// Controls how `NotSet` `tenant_id` is treated during extraction.
-#[derive(Clone, Copy)]
-enum TenantIdMode {
-    /// `NotSet` → error (for inserts where `tenant_id` is mandatory)
-    Required,
-    /// `NotSet` → `Ok(None)` (for updates where `tenant_id` may be unchanged)
-    Optional,
-}
-
-/// Core implementation for extracting `tenant_id` from an `ActiveModel`.
-fn extract_tenant_id_impl<A>(am: &A, mode: TenantIdMode) -> Result<Option<uuid::Uuid>, ScopeError>
-where
-    A: ActiveModelTrait,
-    A::Entity: ScopableEntity + EntityTrait,
-    <A::Entity as EntityTrait>::Column: ColumnTrait + Copy,
-{
-    let Some(tcol) = <A::Entity as ScopableEntity>::tenant_col() else {
-        // Unrestricted/global table: no tenant dimension.
-        return Ok(None);
-    };
-
-    match am.get(tcol) {
-        sea_orm::ActiveValue::NotSet => match mode {
-            TenantIdMode::Required => Err(ScopeError::Invalid("tenant_id is required")),
-            TenantIdMode::Optional => Ok(None),
-        },
-        sea_orm::ActiveValue::Set(v) | sea_orm::ActiveValue::Unchanged(v) => match v {
-            sea_orm::Value::Uuid(Some(u)) => Ok(Some(*u)),
-            sea_orm::Value::Uuid(None) => Err(ScopeError::Invalid("tenant_id is required")),
-            _ => Err(ScopeError::Invalid("tenant_id has unexpected type")),
-        },
-    }
-}
-
-fn extract_tenant_id<E>(am: &E::ActiveModel) -> Result<Option<uuid::Uuid>, ScopeError>
-where
-    E: ScopableEntity + EntityTrait,
-    E::Column: ColumnTrait + Copy,
-    E::ActiveModel: ActiveModelTrait<Entity = E>,
-{
-    extract_tenant_id_impl(am, TenantIdMode::Required)
-}
-
-fn extract_tenant_id_if_present<E>(am: &E::ActiveModel) -> Result<Option<uuid::Uuid>, ScopeError>
-where
-    E: ScopableEntity + EntityTrait,
-    E::Column: ColumnTrait + Copy,
-    E::ActiveModel: ActiveModelTrait<Entity = E>,
-{
-    extract_tenant_id_impl(am, TenantIdMode::Optional)
-}
-
-/// Extract `tenant_id` from an `ActiveModel` (generic over `ActiveModel` type).
+/// Validate that the values in an `ActiveModel` satisfy at least one constraint
+/// in the provided `AccessScope`.
 ///
-/// This variant works when you have the `ActiveModel` type directly rather than the `Entity` type.
-fn extract_tenant_id_from_am<A>(am: &A) -> Result<Option<uuid::Uuid>, ScopeError>
+/// This is the INSERT-time counterpart of `build_scope_condition`: instead of
+/// adding `WHERE` clauses to a query, it checks the `ActiveModel`'s column
+/// values in-memory against every scope filter.
+///
+/// # Semantics
+///
+/// - Multiple constraints are **OR-ed**: the insert is allowed if ANY constraint
+///   matches entirely.
+/// - Filters within a constraint are **AND-ed**: ALL filters must match for
+///   that constraint to pass.
+/// - A filter whose property resolves to a column where the `ActiveModel` value
+///   is `NotSet` is **skipped** (the column is not being inserted, so there's
+///   nothing to validate).
+/// - A filter whose property does **not** resolve (unknown property) causes
+///   that constraint to fail (fail-closed), consistent with the query-path
+///   behavior in `build_scope_condition`.
+///
+/// # Errors
+///
+/// Returns `ScopeError::Denied` if no constraint matches the `ActiveModel`.
+fn validate_insert_scope<A>(am: &A, scope: &AccessScope) -> Result<(), ScopeError>
 where
     A: ActiveModelTrait,
     A::Entity: ScopableEntity + EntityTrait,
     <A::Entity as EntityTrait>::Column: ColumnTrait + Copy,
 {
-    extract_tenant_id_impl(am, TenantIdMode::Required)
+    use modkit_security::access_scope::FilterOp;
+
+    if scope.is_unconstrained() || A::Entity::IS_UNRESTRICTED {
+        return Ok(());
+    }
+    if scope.is_deny_all() {
+        return Err(ScopeError::Denied(
+            "insert denied: scope has no constraints",
+        ));
+    }
+
+    // OR over constraints: at least one must match entirely.
+    'next_constraint: for constraint in scope.constraints() {
+        // AND over filters within this constraint.
+        for filter in constraint.filters() {
+            let Some(col) = <A::Entity as ScopableEntity>::resolve_property(filter.property())
+            else {
+                // Unknown property → this constraint fails (fail-closed).
+                continue 'next_constraint;
+            };
+
+            // Extract the column value from the ActiveModel.
+            match am.get(col) {
+                sea_orm::ActiveValue::NotSet => {
+                    // Column not being set in this insert — skip this filter.
+                    // (e.g., auto-generated columns, defaults)
+                }
+                sea_orm::ActiveValue::Set(v) | sea_orm::ActiveValue::Unchanged(v) => {
+                    let uuid_val = match v {
+                        sea_orm::Value::Uuid(Some(u)) => *u,
+                        _ => {
+                            // Non-UUID column or NULL — can't match UUID-based filter.
+                            continue 'next_constraint;
+                        }
+                    };
+
+                    let matches = match filter.op() {
+                        FilterOp::Eq => filter.values().first() == Some(&uuid_val),
+                        FilterOp::In => filter.values().contains(&uuid_val),
+                    };
+
+                    if !matches {
+                        continue 'next_constraint;
+                    }
+                }
+            }
+        }
+        // All filters in this constraint matched → insert is allowed.
+        return Ok(());
+    }
+
+    Err(ScopeError::Denied(
+        "insert denied: entity values do not satisfy any scope constraint",
+    ))
 }
 
 /// Secure insert helper for Scopable entities.
 ///
 /// This helper performs a standard `INSERT` through `SeaORM` but wraps database
 /// errors into a unified `ScopeError` type for consistent error handling across
-/// secure data-access code. For tenant-scoped entities it enforces tenant isolation
-/// by validating the `ActiveModel`'s `tenant_id` against the provided `AccessScope`.
+/// secure data-access code.
+///
+/// # Scope Validation
+///
+/// Validates **all** scope constraints against the `ActiveModel`'s column values,
+/// not just `tenant_id`. For each constraint in the scope, every filter's property
+/// is resolved to a column via `ScopableEntity::resolve_property`, and the
+/// `ActiveModel`'s value for that column is checked against the filter's values.
+/// At least one constraint must match entirely (OR semantics) for the insert to
+/// proceed.
 ///
 /// # Responsibilities
 ///
@@ -131,7 +160,8 @@ where
 /// # Errors
 ///
 /// - Returns `ScopeError::Db` if the database insert fails.
-/// - Returns `ScopeError::Denied` / `ScopeError::TenantNotInScope` for tenant isolation violations.
+/// - Returns `ScopeError::Denied` if the `ActiveModel` values do not satisfy any scope constraint.
+/// - Returns `ScopeError::TenantNotInScope` for tenant isolation violations.
 pub async fn secure_insert<E>(
     am: E::ActiveModel,
     scope: &AccessScope,
@@ -143,9 +173,14 @@ where
     E::ActiveModel: ActiveModelTrait<Entity = E> + Send,
     E::Model: sea_orm::IntoActiveModel<E::ActiveModel>,
 {
-    if let Some(tenant_id) = extract_tenant_id::<E>(&am)? {
-        validate_tenant_in_scope(tenant_id, scope)?;
+    // Tenant-scoped entities must have tenant_id set in the ActiveModel.
+    if let Some(tenant_col) = E::tenant_col()
+        && let sea_orm::ActiveValue::NotSet = am.get(tenant_col)
+    {
+        return Err(ScopeError::Invalid("tenant_id is required"));
     }
+
+    validate_insert_scope(&am, scope)?;
 
     match DBRunnerInternal::as_seaorm(runner) {
         SeaOrmRunner::Conn(db) => Ok(am.insert(db).await?),
@@ -193,7 +228,20 @@ where
             _ => return Err(ScopeError::Invalid("tenant_id has unexpected type")),
         };
 
-        if let Some(incoming) = extract_tenant_id_if_present::<E>(&am)?
+        let incoming = match am.get(tcol) {
+            sea_orm::ActiveValue::Set(v) | sea_orm::ActiveValue::Unchanged(v) => match v {
+                sea_orm::Value::Uuid(Some(u)) => Some(*u),
+                sea_orm::Value::Uuid(None) => {
+                    return Err(ScopeError::Invalid("tenant_id is required"));
+                }
+                _ => {
+                    return Err(ScopeError::Invalid("tenant_id has unexpected type"));
+                }
+            },
+            sea_orm::ActiveValue::NotSet => None,
+        };
+
+        if let Some(incoming) = incoming
             && incoming != stored
         {
             return Err(ScopeError::Denied("tenant_id is immutable"));
@@ -211,18 +259,25 @@ where
 /// Use this when manually setting `tenant_id` in `ActiveModels` to ensure
 /// the value matches the security scope.
 ///
+/// For unconstrained scopes (allow-all), this always succeeds.
+///
 /// # Errors
-/// Returns `ScopeError::Invalid` if the tenant ID is not in the scope.
+/// Returns `ScopeError::Denied` if tenant scope is missing.
+/// Returns `ScopeError::TenantNotInScope` if the tenant ID is not in any constraint.
 pub fn validate_tenant_in_scope(
     tenant_id: uuid::Uuid,
     scope: &AccessScope,
 ) -> Result<(), ScopeError> {
-    if !scope.has_tenants() {
+    if scope.is_unconstrained() {
+        return Ok(());
+    }
+    let prop = modkit_security::pep_properties::OWNER_TENANT_ID;
+    if !scope.has_property(prop) {
         return Err(ScopeError::Denied(
             "tenant scope required for tenant-scoped insert",
         ));
     }
-    if scope.tenant_ids().contains(&tenant_id) {
+    if scope.contains_value(prop, tenant_id) {
         return Ok(());
     }
     Err(ScopeError::TenantNotInScope { tenant_id })
@@ -241,7 +296,7 @@ pub fn validate_tenant_in_scope(
 /// use modkit_db::secure::{AccessScope, SecureInsertExt};
 /// use sea_orm::sea_query::OnConflict;
 ///
-/// let scope = AccessScope::tenants_only(vec![tenant_id]);
+/// let scope = AccessScope::for_tenants(vec![tenant_id]);
 /// let am = user::ActiveModel {
 ///     tenant_id: Set(tenant_id),
 ///     email: Set("user@example.com".to_string()),
@@ -316,20 +371,19 @@ where
 
     /// Apply access control scope with explicit `ActiveModel` validation.
     ///
-    /// This method extracts the `tenant_id` from the provided `ActiveModel` and
-    /// validates it against the provided scope before allowing the insert.
+    /// This method validates **all** scope constraints against the `ActiveModel`'s
+    /// column values (not just `tenant_id`). See [`validate_insert_scope`] for
+    /// the full semantics.
     ///
     /// # Errors
-    /// - Returns `ScopeError::Invalid` if `tenant_id` is not set for tenant-scoped entities.
-    /// - Returns `ScopeError::TenantNotInScope` if `tenant_id` is not in the provided scope.
+    /// - Returns `ScopeError::Denied` if the `ActiveModel` values do not satisfy
+    ///   any scope constraint.
     pub fn scope_with_model(
         self,
         scope: &AccessScope,
         am: &A,
     ) -> Result<SecureInsertOne<A, Scoped>, ScopeError> {
-        if let Some(tenant_id) = extract_tenant_id_from_am(am)? {
-            validate_tenant_in_scope(tenant_id, scope)?;
-        }
+        validate_insert_scope(am, scope)?;
         Ok(SecureInsertOne {
             inner: self.inner,
             _state: PhantomData,
@@ -458,7 +512,10 @@ where
 /// use modkit_db::secure::{SecureOnConflict, SecureInsertExt};
 /// use sea_orm::ActiveValue::Set;
 ///
-/// let scope = AccessScope::both(vec![tenant_id], vec![user_id]);
+/// let scope = AccessScope::single(ScopeConstraint::new(vec![
+///     ScopeFilter::new(pep_properties::OWNER_TENANT_ID, FilterOp::In, vec![tenant_id]),
+///     ScopeFilter::new(pep_properties::RESOURCE_ID, FilterOp::In, vec![user_id]),
+/// ]));
 /// let am = settings::ActiveModel {
 ///     tenant_id: Set(tenant_id),
 ///     user_id: Set(user_id),
@@ -588,7 +645,7 @@ where
 /// ```ignore
 /// use modkit_db::secure::{AccessScope, SecureUpdateExt};
 ///
-/// let scope = AccessScope::tenants_only(vec![tenant_id]);
+/// let scope = AccessScope::for_tenants(vec![tenant_id]);
 /// let result = user::Entity::update_many()
 ///     .col_expr(user::Column::Status, Expr::value("active"))
 ///     .secure()           // Returns SecureUpdateMany<E, Unscoped>
@@ -714,7 +771,7 @@ where
 /// ```ignore
 /// use modkit_db::secure::{AccessScope, SecureDeleteExt};
 ///
-/// let scope = AccessScope::tenants_only(vec![tenant_id]);
+/// let scope = AccessScope::for_tenants(vec![tenant_id]);
 /// let result = user::Entity::delete_many()
 ///     .filter(user::Column::Status.eq("inactive"))
 ///     .secure()           // Returns SecureDeleteMany<E, Unscoped>
@@ -816,6 +873,7 @@ mod tests {
     // Test entity with tenant_col for SecureOnConflict tests
     mod test_entity {
         use super::*;
+        use modkit_security::pep_properties;
 
         #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
         #[sea_orm(table_name = "test_table")]
@@ -844,6 +902,13 @@ mod tests {
             }
             fn type_col() -> Option<Column> {
                 None
+            }
+            fn resolve_property(property: &str) -> Option<Column> {
+                match property {
+                    pep_properties::OWNER_TENANT_ID => Self::tenant_col(),
+                    pep_properties::RESOURCE_ID => Self::resource_col(),
+                    _ => None,
+                }
             }
         }
     }
@@ -879,13 +944,19 @@ mod tests {
             fn type_col() -> Option<Column> {
                 None
             }
+            fn resolve_property(property: &str) -> Option<Column> {
+                match property {
+                    "id" => Self::resource_col(),
+                    _ => None,
+                }
+            }
         }
     }
 
     #[test]
     fn test_validate_tenant_in_scope() {
         let tenant_id = uuid::Uuid::new_v4();
-        let scope = crate::secure::AccessScope::tenants_only(vec![tenant_id]);
+        let scope = crate::secure::AccessScope::for_tenants(vec![tenant_id]);
 
         assert!(validate_tenant_in_scope(tenant_id, &scope).is_ok());
 
@@ -910,7 +981,7 @@ mod tests {
         // Verify that validate_tenant_in_scope properly rejects tenant IDs not in scope
         let allowed_tenant = uuid::Uuid::new_v4();
         let disallowed_tenant = uuid::Uuid::new_v4();
-        let scope = crate::secure::AccessScope::tenants_only(vec![allowed_tenant]);
+        let scope = crate::secure::AccessScope::for_tenants(vec![allowed_tenant]);
 
         // Allowed tenant should succeed
         assert!(validate_tenant_in_scope(allowed_tenant, &scope).is_ok());
@@ -1046,5 +1117,311 @@ mod tests {
         // The OnConflict should be usable (we can't easily test its internals,
         // but we can verify it doesn't panic)
         _ = format!("{on_conflict:?}");
+    }
+
+    // ── validate_insert_scope tests ─────────────────────────────────
+
+    // Test entity with owner_col and a custom pep_prop (city_id),
+    // mimicking the Address entity from the users-info example.
+    mod owner_entity {
+        use super::*;
+        use modkit_security::pep_properties;
+
+        #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
+        #[sea_orm(table_name = "addresses")]
+        pub struct Model {
+            #[sea_orm(primary_key)]
+            pub id: Uuid,
+            pub tenant_id: Uuid,
+            pub user_id: Uuid,
+            pub city_id: Uuid,
+        }
+
+        #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+        pub enum Relation {}
+
+        impl ActiveModelBehavior for ActiveModel {}
+
+        impl ScopableEntity for Entity {
+            fn tenant_col() -> Option<Column> {
+                Some(Column::TenantId)
+            }
+            fn resource_col() -> Option<Column> {
+                Some(Column::Id)
+            }
+            fn owner_col() -> Option<Column> {
+                Some(Column::UserId)
+            }
+            fn type_col() -> Option<Column> {
+                None
+            }
+            fn resolve_property(property: &str) -> Option<Column> {
+                match property {
+                    pep_properties::OWNER_TENANT_ID => Some(Column::TenantId),
+                    pep_properties::RESOURCE_ID => Some(Column::Id),
+                    pep_properties::OWNER_ID => Some(Column::UserId),
+                    "city_id" => Some(Column::CityId),
+                    _ => None,
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_validate_insert_scope_allow_all_passes() {
+        use owner_entity::ActiveModel;
+        use sea_orm::Set;
+
+        let scope = crate::secure::AccessScope::allow_all();
+        let am = ActiveModel {
+            id: Set(Uuid::new_v4()),
+            tenant_id: Set(Uuid::new_v4()),
+            user_id: Set(Uuid::new_v4()),
+            city_id: Set(Uuid::new_v4()),
+        };
+        assert!(validate_insert_scope(&am, &scope).is_ok());
+    }
+
+    #[test]
+    fn test_validate_insert_scope_deny_all_rejects() {
+        use owner_entity::ActiveModel;
+        use sea_orm::Set;
+
+        let scope = crate::secure::AccessScope::deny_all();
+        let am = ActiveModel {
+            id: Set(Uuid::new_v4()),
+            tenant_id: Set(Uuid::new_v4()),
+            user_id: Set(Uuid::new_v4()),
+            city_id: Set(Uuid::new_v4()),
+        };
+        assert!(validate_insert_scope(&am, &scope).is_err());
+    }
+
+    #[test]
+    fn test_validate_insert_scope_tenant_only_matches() {
+        use owner_entity::ActiveModel;
+        use sea_orm::Set;
+
+        let tenant_id = Uuid::new_v4();
+        let scope = crate::secure::AccessScope::for_tenant(tenant_id);
+        let am = ActiveModel {
+            id: Set(Uuid::new_v4()),
+            tenant_id: Set(tenant_id),
+            user_id: Set(Uuid::new_v4()),
+            city_id: Set(Uuid::new_v4()),
+        };
+        assert!(validate_insert_scope(&am, &scope).is_ok());
+    }
+
+    #[test]
+    fn test_validate_insert_scope_tenant_mismatch_rejects() {
+        use owner_entity::ActiveModel;
+        use sea_orm::Set;
+
+        let tenant_id = Uuid::new_v4();
+        let other_tenant = Uuid::new_v4();
+        let scope = crate::secure::AccessScope::for_tenant(tenant_id);
+        let am = ActiveModel {
+            id: Set(Uuid::new_v4()),
+            tenant_id: Set(other_tenant),
+            user_id: Set(Uuid::new_v4()),
+            city_id: Set(Uuid::new_v4()),
+        };
+        assert!(validate_insert_scope(&am, &scope).is_err());
+    }
+
+    #[test]
+    fn test_validate_insert_scope_owner_id_matches() {
+        use modkit_security::access_scope::{FilterOp, ScopeConstraint, ScopeFilter};
+        use modkit_security::pep_properties;
+        use owner_entity::ActiveModel;
+        use sea_orm::Set;
+
+        let tenant_id = Uuid::new_v4();
+        let user_id = Uuid::new_v4();
+        let city_id = Uuid::new_v4();
+
+        // Scope: tenant + owner_id + city_id (all must match)
+        let scope = AccessScope::from_constraints(vec![ScopeConstraint::new(vec![
+            ScopeFilter::new(
+                pep_properties::OWNER_TENANT_ID,
+                FilterOp::In,
+                vec![tenant_id],
+            ),
+            ScopeFilter::eq(pep_properties::OWNER_ID, user_id),
+            ScopeFilter::eq("city_id", city_id),
+        ])]);
+
+        let am = ActiveModel {
+            id: Set(Uuid::new_v4()),
+            tenant_id: Set(tenant_id),
+            user_id: Set(user_id),
+            city_id: Set(city_id),
+        };
+        assert!(
+            validate_insert_scope(&am, &scope).is_ok(),
+            "Insert should pass when all properties match"
+        );
+    }
+
+    #[test]
+    fn test_validate_insert_scope_owner_id_mismatch_rejects() {
+        use modkit_security::access_scope::{FilterOp, ScopeConstraint, ScopeFilter};
+        use modkit_security::pep_properties;
+        use owner_entity::ActiveModel;
+        use sea_orm::Set;
+
+        let tenant_id = Uuid::new_v4();
+        let user_a = Uuid::new_v4();
+        let user_b = Uuid::new_v4();
+        let city_id = Uuid::new_v4();
+
+        // Scope says owner_id must be user_a
+        let scope = AccessScope::from_constraints(vec![ScopeConstraint::new(vec![
+            ScopeFilter::new(
+                pep_properties::OWNER_TENANT_ID,
+                FilterOp::In,
+                vec![tenant_id],
+            ),
+            ScopeFilter::eq(pep_properties::OWNER_ID, user_a),
+            ScopeFilter::eq("city_id", city_id),
+        ])]);
+
+        // But ActiveModel has user_id = user_b
+        let am = ActiveModel {
+            id: Set(Uuid::new_v4()),
+            tenant_id: Set(tenant_id),
+            user_id: Set(user_b),
+            city_id: Set(city_id),
+        };
+        assert!(
+            validate_insert_scope(&am, &scope).is_err(),
+            "Insert must be rejected when owner_id doesn't match"
+        );
+    }
+
+    #[test]
+    fn test_validate_insert_scope_city_id_mismatch_rejects() {
+        use modkit_security::access_scope::{FilterOp, ScopeConstraint, ScopeFilter};
+        use modkit_security::pep_properties;
+        use owner_entity::ActiveModel;
+        use sea_orm::Set;
+
+        let tenant_id = Uuid::new_v4();
+        let user_id = Uuid::new_v4();
+        let allowed_city = Uuid::new_v4();
+        let disallowed_city = Uuid::new_v4();
+
+        // Scope says city_id must be allowed_city
+        let scope = AccessScope::from_constraints(vec![ScopeConstraint::new(vec![
+            ScopeFilter::new(
+                pep_properties::OWNER_TENANT_ID,
+                FilterOp::In,
+                vec![tenant_id],
+            ),
+            ScopeFilter::eq(pep_properties::OWNER_ID, user_id),
+            ScopeFilter::eq("city_id", allowed_city),
+        ])]);
+
+        // But ActiveModel has city_id = disallowed_city
+        let am = ActiveModel {
+            id: Set(Uuid::new_v4()),
+            tenant_id: Set(tenant_id),
+            user_id: Set(user_id),
+            city_id: Set(disallowed_city),
+        };
+        assert!(
+            validate_insert_scope(&am, &scope).is_err(),
+            "Insert must be rejected when city_id doesn't match"
+        );
+    }
+
+    #[test]
+    fn test_validate_insert_scope_or_semantics() {
+        use modkit_security::access_scope::{FilterOp, ScopeConstraint, ScopeFilter};
+        use modkit_security::pep_properties;
+        use owner_entity::ActiveModel;
+        use sea_orm::Set;
+
+        let tenant_id = Uuid::new_v4();
+        let user_id = Uuid::new_v4();
+        let city_1 = Uuid::new_v4();
+        let city_2 = Uuid::new_v4();
+
+        // Two constraints (OR-ed): user allowed in city_1 OR city_2
+        let scope = AccessScope::from_constraints(vec![
+            ScopeConstraint::new(vec![
+                ScopeFilter::new(
+                    pep_properties::OWNER_TENANT_ID,
+                    FilterOp::In,
+                    vec![tenant_id],
+                ),
+                ScopeFilter::eq("city_id", city_1),
+            ]),
+            ScopeConstraint::new(vec![
+                ScopeFilter::new(
+                    pep_properties::OWNER_TENANT_ID,
+                    FilterOp::In,
+                    vec![tenant_id],
+                ),
+                ScopeFilter::eq("city_id", city_2),
+            ]),
+        ]);
+
+        // Insert with city_2 — matches second constraint
+        let am = ActiveModel {
+            id: Set(Uuid::new_v4()),
+            tenant_id: Set(tenant_id),
+            user_id: Set(user_id),
+            city_id: Set(city_2),
+        };
+        assert!(
+            validate_insert_scope(&am, &scope).is_ok(),
+            "Insert should pass when matching any constraint (OR semantics)"
+        );
+
+        // Insert with city_3 — matches neither
+        let city_3 = Uuid::new_v4();
+        let am_bad = ActiveModel {
+            id: Set(Uuid::new_v4()),
+            tenant_id: Set(tenant_id),
+            user_id: Set(user_id),
+            city_id: Set(city_3),
+        };
+        assert!(
+            validate_insert_scope(&am_bad, &scope).is_err(),
+            "Insert must be rejected when no constraint matches"
+        );
+    }
+
+    #[test]
+    fn test_validate_insert_scope_unknown_property_fails_closed() {
+        use modkit_security::access_scope::{FilterOp, ScopeConstraint, ScopeFilter};
+        use modkit_security::pep_properties;
+        use owner_entity::ActiveModel;
+        use sea_orm::Set;
+
+        let tenant_id = Uuid::new_v4();
+
+        // Constraint with an unknown property
+        let scope = AccessScope::from_constraints(vec![ScopeConstraint::new(vec![
+            ScopeFilter::new(
+                pep_properties::OWNER_TENANT_ID,
+                FilterOp::In,
+                vec![tenant_id],
+            ),
+            ScopeFilter::eq("nonexistent_prop", Uuid::new_v4()),
+        ])]);
+
+        let am = ActiveModel {
+            id: Set(Uuid::new_v4()),
+            tenant_id: Set(tenant_id),
+            user_id: Set(Uuid::new_v4()),
+            city_id: Set(Uuid::new_v4()),
+        };
+        assert!(
+            validate_insert_scope(&am, &scope).is_err(),
+            "Unknown property must cause constraint to fail (fail-closed)"
+        );
     }
 }

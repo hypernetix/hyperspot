@@ -52,7 +52,7 @@ async fn get_city_respects_tenant_scope() {
         created_at: Set(now),
         updated_at: Set(now),
     };
-    let scope = AccessScope::tenants_only(vec![tenant1]);
+    let scope = AccessScope::for_tenants(vec![tenant1]);
     let conn = db.conn().unwrap();
     let _ = secure_insert::<CityEntity>(city_am, &scope, &conn)
         .await
@@ -89,7 +89,7 @@ async fn update_city_success() {
         created_at: Set(now),
         updated_at: Set(now),
     };
-    let scope = AccessScope::tenants_only(vec![tenant_id]);
+    let scope = AccessScope::for_tenants(vec![tenant_id]);
     let conn = db.conn().unwrap();
     let _ = secure_insert::<CityEntity>(city_am, &scope, &conn)
         .await

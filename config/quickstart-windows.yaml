@@ -106,11 +106,6 @@ modules:
       # Authentication Configuration
       auth_disabled: true
       require_auth_by_default: true
-      
-      # JWKS Configuration (replace with your OIDC provider)
-      jwks_uri: "http://localhost:8080/realms/dev/protocol/openid-connect/certs"
-      issuer: "http://localhost:8080/realms/dev"
-      audience: "api-gateway"
 
   module-orchestrator:
     config: {}

@@ -12,7 +12,8 @@
 use modkit_db::migration_runner::run_migrations_for_testing;
 use modkit_db::secure::{Db, ScopableEntity, SecureEntityExt, secure_insert};
 use modkit_db::{ConnectOpts, DbError, connect_db};
-use modkit_security::AccessScope;
+use modkit_security::access_scope::{FilterOp, ScopeConstraint, ScopeFilter};
+use modkit_security::{AccessScope, pep_properties};
 use sea_orm::Set;
 use sea_orm::entity::prelude::*;
 use sea_orm_migration::prelude as mig;
@@ -52,6 +53,14 @@ impl ScopableEntity for ent::Entity {
 
     fn type_col() -> Option<<Self as EntityTrait>::Column> {
         None
+    }
+
+    fn resolve_property(property: &str) -> Option<<Self as EntityTrait>::Column> {
+        match property {
+            p if p == pep_properties::OWNER_TENANT_ID => Self::tenant_col(),
+            p if p == pep_properties::RESOURCE_ID => Self::resource_col(),
+            _ => None,
+        }
     }
 }
 
@@ -128,7 +137,7 @@ async fn sqlite_with_tx_commit_persists_changes() {
     let db = setup(db).await;
 
     let tenant_id = Uuid::new_v4();
-    let scope = AccessScope::tenants_only(vec![tenant_id]);
+    let scope = AccessScope::for_tenants(vec![tenant_id]);
     let scope_for_tx = scope.clone();
     let resource_id = Uuid::new_v4();
 
@@ -173,7 +182,7 @@ async fn sqlite_with_tx_error_rolls_back() {
     let db = setup(db).await;
 
     let tenant_id = Uuid::new_v4();
-    let scope = AccessScope::tenants_only(vec![tenant_id]);
+    let scope = AccessScope::for_tenants(vec![tenant_id]);
     let scope_for_tx = scope.clone();
     let resource_id = Uuid::new_v4();
 
@@ -218,7 +227,7 @@ async fn sqlite_with_tx_returns_value() {
     let db = setup(db).await;
 
     let tenant_id = Uuid::new_v4();
-    let scope = AccessScope::tenants_only(vec![tenant_id]);
+    let scope = AccessScope::for_tenants(vec![tenant_id]);
     let resource_id = Uuid::new_v4();
 
     let (db, inserted_id) = db
@@ -243,7 +252,14 @@ async fn sqlite_with_tx_returns_value() {
     let conn = db.conn().expect("conn");
     let found = ent::Entity::find()
         .secure()
-        .scope_with(&AccessScope::both(vec![tenant_id], vec![resource_id]))
+        .scope_with(&AccessScope::single(ScopeConstraint::new(vec![
+            ScopeFilter::new(
+                pep_properties::OWNER_TENANT_ID,
+                FilterOp::In,
+                vec![tenant_id],
+            ),
+            ScopeFilter::new(pep_properties::RESOURCE_ID, FilterOp::In, vec![resource_id]),
+        ])))
         .one(&conn)
         .await
         .expect("select")

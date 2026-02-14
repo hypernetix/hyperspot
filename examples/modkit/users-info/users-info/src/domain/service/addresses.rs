@@ -6,9 +6,13 @@ use tracing::{debug, info, instrument};
 use crate::domain::error::DomainError;
 use crate::domain::repos::{AddressesRepository, UsersRepository};
 use crate::domain::service::DbProvider;
+use authz_resolver_sdk::PolicyEnforcer;
+use authz_resolver_sdk::pep::AccessRequest;
+
+use super::{actions, resources};
 use modkit_odata::{ODataQuery, Page};
-use modkit_security::{PolicyEngineRef, SecurityContext};
-use tenant_resolver_sdk::TenantResolverClient;
+use modkit_security::{AccessScope, SecurityContext, pep_properties};
+use resources::properties;
 use time::OffsetDateTime;
 use users_info_sdk::{Address, AddressPatch, NewAddress};
 use uuid::Uuid;
@@ -16,10 +20,9 @@ use uuid::Uuid;
 #[domain_model]
 pub struct AddressesService<R: AddressesRepository, U: UsersRepository> {
     db: Arc<DbProvider>,
-    policy_engine: PolicyEngineRef,
     repo: Arc<R>,
     users_repo: Arc<U>,
-    resolver: Arc<dyn TenantResolverClient>,
+    policy_enforcer: PolicyEnforcer,
 }
 
 impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
@@ -27,15 +30,13 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
         db: Arc<DbProvider>,
         repo: Arc<R>,
         users_repo: Arc<U>,
-        policy_engine: PolicyEngineRef,
-        resolver: Arc<dyn TenantResolverClient>,
+        policy_enforcer: PolicyEnforcer,
     ) -> Self {
         Self {
             db,
-            policy_engine,
             repo,
             users_repo,
-            resolver,
+            policy_enforcer,
         }
     }
 }
@@ -52,16 +53,40 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
 
         let conn = self.db.conn().map_err(DomainError::from)?;
 
-        let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
-        let scope = ctx
-            .scope(self.policy_engine.clone())
-            .include_accessible_tenants(tenant_ids)
-            .prepare()
+        // Prefetch: load address to extract owner properties for PDP.
+        // PDP returns a narrow `eq` constraint instead of expanding the subtree.
+        let prefetch_scope = AccessScope::allow_all();
+        let addr = self
+            .repo
+            .get(&conn, &prefetch_scope, id)
+            .await?
+            .ok_or_else(|| DomainError::not_found("Address", id))?;
+
+        let scope = self
+            .policy_enforcer
+            .access_scope_with(
+                ctx,
+                &resources::ADDRESS,
+                actions::GET,
+                Some(id),
+                &AccessRequest::new()
+                    .resource_property(pep_properties::OWNER_TENANT_ID, addr.tenant_id)
+                    .resource_property(pep_properties::OWNER_ID, addr.user_id)
+                    .resource_property(properties::CITY_ID, addr.city_id)
+                    .require_constraints(false),
+            )
             .await?;
 
-        let found = self.repo.get(&conn, &scope, id).await?;
-
-        found.ok_or_else(|| DomainError::not_found("Address", id))
+        // Unconstrained → PDP said "yes" without row-level filters; return prefetch.
+        // Constrained  → scoped re-read validates against PDP constraints.
+        if scope.is_unconstrained() {
+            Ok(addr)
+        } else {
+            self.repo
+                .get(&conn, &scope, id)
+                .await?
+                .ok_or_else(|| DomainError::not_found("Address", id))
+        }
     }
 
     /// List addresses with cursor-based pagination
@@ -75,11 +100,9 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
 
         let conn = self.db.conn().map_err(DomainError::from)?;
 
-        let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
-        let scope = ctx
-            .scope(self.policy_engine.clone())
-            .include_accessible_tenants(tenant_ids)
-            .prepare()
+        let scope = self
+            .policy_enforcer
+            .access_scope(ctx, &resources::ADDRESS, actions::LIST, None)
             .await?;
 
         let page = self.repo.list_page(&conn, &scope, query).await?;
@@ -98,11 +121,9 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
 
         let conn = self.db.conn().map_err(DomainError::from)?;
 
-        let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
-        let scope = ctx
-            .scope(self.policy_engine.clone())
-            .include_accessible_tenants(tenant_ids)
-            .prepare()
+        let scope = self
+            .policy_enforcer
+            .access_scope(ctx, &resources::ADDRESS, actions::GET, None)
             .await?;
 
         let found = self.repo.get_by_user_id(&conn, &scope, user_id).await?;
@@ -119,7 +140,6 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
         self.get_user_address(ctx, user_id).await
     }
 
-    #[allow(clippy::cognitive_complexity)]
     #[instrument(skip(self, ctx, address), fields(user_id = %user_id))]
     pub async fn put_user_address(
         &self,
@@ -131,24 +151,42 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
 
         let conn = self.db.conn().map_err(DomainError::from)?;
 
-        let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
-        let scope = ctx
-            .scope(self.policy_engine.clone())
-            .include_accessible_tenants(tenant_ids)
-            .prepare()
-            .await?;
+        // Prefetch: load user and existing address without authorization scope.
+        // These internal reads extract tenant_id for the PDP request — no data
+        // is leaked to the caller. Authorization is enforced on the mutation below.
+        let prefetch_scope = AccessScope::allow_all();
 
         let user = self
             .users_repo
-            .get(&conn, &scope, user_id)
+            .get(&conn, &prefetch_scope, user_id)
             .await?
             .ok_or_else(|| DomainError::user_not_found(user_id))?;
 
-        let existing = self.repo.get_by_user_id(&conn, &scope, user_id).await?;
+        let existing = self
+            .repo
+            .get_by_user_id(&conn, &prefetch_scope, user_id)
+            .await?;
 
         let now = OffsetDateTime::now_utc();
 
         if let Some(existing_model) = existing {
+            let scope = self
+                .policy_enforcer
+                .access_scope_with(
+                    ctx,
+                    &resources::ADDRESS,
+                    actions::UPDATE,
+                    Some(existing_model.id),
+                    &AccessRequest::new()
+                        .resource_property(
+                            pep_properties::OWNER_TENANT_ID,
+                            existing_model.tenant_id,
+                        )
+                        .resource_property(pep_properties::OWNER_ID, existing_model.user_id)
+                        .resource_property(properties::CITY_ID, address.city_id),
+                )
+                .await?;
+
             let mut updated: Address = existing_model;
             updated.city_id = address.city_id;
             updated.street = address.street;
@@ -160,6 +198,20 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
             info!("Successfully updated address for user");
             Ok(updated)
         } else {
+            let scope = self
+                .policy_enforcer
+                .access_scope_with(
+                    ctx,
+                    &resources::ADDRESS,
+                    actions::CREATE,
+                    None,
+                    &AccessRequest::new()
+                        .resource_property(pep_properties::OWNER_TENANT_ID, user.tenant_id)
+                        .resource_property(pep_properties::OWNER_ID, user_id)
+                        .resource_property(properties::CITY_ID, address.city_id),
+                )
+                .await?;
+
             let id = address.id.unwrap_or_else(Uuid::now_v7);
 
             let new_address = Address {
@@ -190,11 +242,26 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
 
         let conn = self.db.conn().map_err(DomainError::from)?;
 
-        let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
-        let scope = ctx
-            .scope(self.policy_engine.clone())
-            .include_accessible_tenants(tenant_ids)
-            .prepare()
+        // Prefetch: load existing address to extract owner properties for PDP.
+        let prefetch_scope = AccessScope::allow_all();
+        let existing = self
+            .repo
+            .get_by_user_id(&conn, &prefetch_scope, user_id)
+            .await?;
+        let existing_model = existing.ok_or_else(|| DomainError::not_found("Address", user_id))?;
+
+        let scope = self
+            .policy_enforcer
+            .access_scope_with(
+                ctx,
+                &resources::ADDRESS,
+                actions::DELETE,
+                Some(existing_model.id),
+                &AccessRequest::new()
+                    .resource_property(pep_properties::OWNER_TENANT_ID, existing_model.tenant_id)
+                    .resource_property(pep_properties::OWNER_ID, existing_model.user_id)
+                    .resource_property(properties::CITY_ID, existing_model.city_id),
+            )
             .await?;
 
         let rows_affected = self.repo.delete_by_user_id(&conn, &scope, user_id).await?;
@@ -217,11 +284,32 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
 
         let conn = self.db.conn().map_err(DomainError::from)?;
 
-        let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
-        let scope = ctx
-            .scope(self.policy_engine.clone())
-            .include_accessible_tenants(tenant_ids)
-            .prepare()
+        // Prefetch: load user without authorization scope. This internal read
+        // extracts tenant_id for the PDP request — no data is leaked to the
+        // caller. Authorization is enforced on the CREATE below.
+        let prefetch_scope = AccessScope::allow_all();
+
+        let user = self
+            .users_repo
+            .get(&conn, &prefetch_scope, new_address.user_id)
+            .await?
+            .ok_or_else(|| DomainError::user_not_found(new_address.user_id))?;
+
+        // Force tenant to match user's tenant (defense in depth)
+        let tenant_id = user.tenant_id;
+
+        let scope = self
+            .policy_enforcer
+            .access_scope_with(
+                ctx,
+                &resources::ADDRESS,
+                actions::CREATE,
+                None,
+                &AccessRequest::new()
+                    .resource_property(pep_properties::OWNER_TENANT_ID, tenant_id)
+                    .resource_property(pep_properties::OWNER_ID, new_address.user_id)
+                    .resource_property(properties::CITY_ID, new_address.city_id),
+            )
             .await?;
 
         let now = OffsetDateTime::now_utc();
@@ -229,7 +317,7 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
 
         let address = Address {
             id,
-            tenant_id: new_address.tenant_id,
+            tenant_id,
             user_id: new_address.user_id,
             city_id: new_address.city_id,
             street: new_address.street,
@@ -255,16 +343,28 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
 
         let conn = self.db.conn().map_err(DomainError::from)?;
 
-        let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
-        let scope = ctx
-            .scope(self.policy_engine.clone())
-            .include_accessible_tenants(tenant_ids)
-            .prepare()
+        // Prefetch: load existing address to extract owner properties for PDP.
+        // Authorization is enforced on the mutation below via the narrowed scope.
+        let prefetch_scope = AccessScope::allow_all();
+        let mut current = self
+            .repo
+            .get(&conn, &prefetch_scope, id)
+            .await?
+            .ok_or_else(|| DomainError::not_found("Address", id))?;
+
+        let scope = self
+            .policy_enforcer
+            .access_scope_with(
+                ctx,
+                &resources::ADDRESS,
+                actions::UPDATE,
+                Some(id),
+                &AccessRequest::new()
+                    .resource_property(pep_properties::OWNER_TENANT_ID, current.tenant_id)
+                    .resource_property(pep_properties::OWNER_ID, current.user_id)
+                    .resource_property(properties::CITY_ID, current.city_id),
+            )
             .await?;
-
-        let found = self.repo.get(&conn, &scope, id).await?;
-
-        let mut current: Address = found.ok_or_else(|| DomainError::not_found("Address", id))?;
 
         if let Some(city_id) = patch.city_id {
             current.city_id = city_id;
@@ -277,6 +377,7 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
         }
         current.updated_at = OffsetDateTime::now_utc();
 
+        // repo.update applies scope constraints via WHERE clause (TOCTOU-safe).
         let _ = self.repo.update(&conn, &scope, current.clone()).await?;
 
         info!("Successfully updated address");
@@ -289,11 +390,24 @@ impl<R: AddressesRepository, U: UsersRepository> AddressesService<R, U> {
 
         let conn = self.db.conn().map_err(DomainError::from)?;
 
-        let tenant_ids = super::resolve_accessible_tenants(self.resolver.as_ref(), ctx).await?;
-        let scope = ctx
-            .scope(self.policy_engine.clone())
-            .include_accessible_tenants(tenant_ids)
-            .prepare()
+        // Prefetch: load existing address to extract owner properties for PDP.
+        // Authorization is enforced on the delete below via the narrowed scope.
+        let prefetch_scope = AccessScope::allow_all();
+        let existing = self.repo.get(&conn, &prefetch_scope, id).await?;
+        let existing_model = existing.ok_or_else(|| DomainError::not_found("Address", id))?;
+
+        let scope = self
+            .policy_enforcer
+            .access_scope_with(
+                ctx,
+                &resources::ADDRESS,
+                actions::DELETE,
+                Some(id),
+                &AccessRequest::new()
+                    .resource_property(pep_properties::OWNER_TENANT_ID, existing_model.tenant_id)
+                    .resource_property(pep_properties::OWNER_ID, existing_model.user_id)
+                    .resource_property(properties::CITY_ID, existing_model.city_id),
+            )
             .await?;
 
         let deleted = self.repo.delete(&conn, &scope, id).await?;

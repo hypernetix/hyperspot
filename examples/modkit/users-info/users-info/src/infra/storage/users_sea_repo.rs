@@ -96,19 +96,6 @@ impl UsersRepository for OrmUsersRepository {
         scope: &AccessScope,
         user: User,
     ) -> Result<User, DomainError> {
-        let exists = UserEntity::find()
-            .filter(sea_orm::Condition::all().add(Expr::col(Column::Id).eq(user.id)))
-            .secure()
-            .scope_with(scope)
-            .one(conn)
-            .await
-            .map_err(db_err)?
-            .is_some();
-
-        if !exists {
-            return Err(DomainError::not_found("User", user.id));
-        }
-
         let m = UserAM {
             id: Set(user.id),
             tenant_id: Set(user.tenant_id),

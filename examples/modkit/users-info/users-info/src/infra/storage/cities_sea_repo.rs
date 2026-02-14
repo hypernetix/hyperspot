@@ -99,19 +99,6 @@ impl CitiesRepository for OrmCitiesRepository {
         scope: &AccessScope,
         city: City,
     ) -> Result<City, DomainError> {
-        let exists = CityEntity::find()
-            .filter(sea_orm::Condition::all().add(Expr::col(CityColumn::Id).eq(city.id)))
-            .secure()
-            .scope_with(scope)
-            .one(conn)
-            .await
-            .map_err(db_err)?
-            .is_some();
-
-        if !exists {
-            return Err(DomainError::not_found("City", city.id));
-        }
-
         let m = CityAM {
             id: Set(city.id),
             tenant_id: Set(city.tenant_id),

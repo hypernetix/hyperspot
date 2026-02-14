@@ -10,7 +10,7 @@
 //! use modkit_security::SecurityContext;
 //!
 //! let client = MyClient::new();
-//! let ctx = SecurityContext::builder().tenant_id(TEST_TENANT_ID).build();
+//! let ctx = SecurityContext::builder().subject_tenant_id(TEST_TENANT_ID).build();
 //!
 //! // Bind the security context to the client
 //! let secured = client.security_ctx(&ctx);
@@ -73,7 +73,7 @@ impl<'a, C> Secured<'a, C> {
     ///
     /// ```rust,ignore
     /// let ctx_ref = secured.ctx();
-    /// let tenant_id = ctx_ref.tenant_id();
+    /// let tenant_id = ctx_ref.subject_tenant_id();
     /// ```
     #[must_use]
     pub fn ctx(&self) -> &'a SecurityContext {
@@ -137,7 +137,7 @@ pub trait WithSecurityContext {
     ///
     /// ```rust,ignore
     /// let secured = client.security_ctx(&ctx);
-    /// assert_eq!(secured.ctx().tenant_id(), ctx.tenant_id());
+    /// assert_eq!(secured.ctx().subject_tenant_id(), ctx.subject_tenant_id());
     /// ```
     fn security_ctx<'a>(&'a self, ctx: &'a SecurityContext) -> Secured<'a, Self>
     where
@@ -181,19 +181,23 @@ mod tests {
     #[test]
     fn test_secured_new() {
         let client = MockClient::new("test-client");
-        let ctx = SecurityContext::builder().tenant_id(TEST_TENANT_ID).build();
+        let ctx = SecurityContext::builder()
+            .subject_tenant_id(TEST_TENANT_ID)
+            .build();
 
         let secured = Secured::new(&client, &ctx);
 
         assert_eq!(secured.client().get_name(), "test-client");
-        assert_eq!(secured.ctx().tenant_id(), ctx.tenant_id());
+        assert_eq!(secured.ctx().subject_tenant_id(), ctx.subject_tenant_id());
     }
 
     #[test]
     fn test_secured_getters() {
         let client = MockClient::new("test-client");
         let tenant_id = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap();
-        let ctx = SecurityContext::builder().tenant_id(tenant_id).build();
+        let ctx = SecurityContext::builder()
+            .subject_tenant_id(tenant_id)
+            .build();
 
         let secured = Secured::new(&client, &ctx);
 
@@ -201,42 +205,54 @@ mod tests {
         assert_eq!(client_ref.get_name(), "test-client");
 
         let ctx_ref = secured.ctx();
-        assert_eq!(ctx_ref.tenant_id(), tenant_id);
+        assert_eq!(ctx_ref.subject_tenant_id(), Some(tenant_id));
     }
 
     #[test]
     fn test_with_security_context_trait() {
         let client = MockClient::new("test-client");
-        let ctx = SecurityContext::builder().tenant_id(TEST_TENANT_ID).build();
+        let ctx = SecurityContext::builder()
+            .subject_tenant_id(TEST_TENANT_ID)
+            .build();
 
         let secured = client.security_ctx(&ctx);
 
         assert_eq!(secured.client().get_name(), "test-client");
-        assert_eq!(secured.ctx().tenant_id(), ctx.tenant_id());
+        assert_eq!(secured.ctx().subject_tenant_id(), ctx.subject_tenant_id());
     }
 
     #[test]
     fn test_secured_clone() {
         let client = MockClient::new("test-client");
-        let ctx = SecurityContext::builder().tenant_id(TEST_TENANT_ID).build();
+        let ctx = SecurityContext::builder()
+            .subject_tenant_id(TEST_TENANT_ID)
+            .build();
 
         let secured1 = client.security_ctx(&ctx);
         let secured2 = secured1;
 
         assert_eq!(secured1.client().get_name(), secured2.client().get_name());
-        assert_eq!(secured1.ctx().tenant_id(), secured2.ctx().tenant_id());
+        assert_eq!(
+            secured1.ctx().subject_tenant_id(),
+            secured2.ctx().subject_tenant_id()
+        );
     }
 
     #[test]
     fn test_secured_copy() {
         let client = MockClient::new("test-client");
-        let ctx = SecurityContext::builder().tenant_id(TEST_TENANT_ID).build();
+        let ctx = SecurityContext::builder()
+            .subject_tenant_id(TEST_TENANT_ID)
+            .build();
 
         let secured1 = client.security_ctx(&ctx);
         let secured2 = secured1;
 
         assert_eq!(secured1.client().get_name(), secured2.client().get_name());
-        assert_eq!(secured1.ctx().tenant_id(), secured2.ctx().tenant_id());
+        assert_eq!(
+            secured1.ctx().subject_tenant_id(),
+            secured2.ctx().subject_tenant_id()
+        );
     }
 
     #[test]
@@ -247,7 +263,7 @@ mod tests {
         let secured = client.security_ctx(&ctx);
 
         assert_eq!(secured.client().get_name(), "test-client");
-        assert_eq!(secured.ctx().tenant_id(), Uuid::default());
+        assert_eq!(secured.ctx().subject_tenant_id(), None);
         assert_eq!(secured.ctx().subject_id(), Uuid::default());
     }
 
@@ -258,21 +274,23 @@ mod tests {
         let subject_id = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440001").unwrap();
 
         let ctx = SecurityContext::builder()
-            .tenant_id(tenant_id)
+            .subject_tenant_id(tenant_id)
             .subject_id(subject_id)
             .subject_type("user")
             .build();
 
         let secured = client.security_ctx(&ctx);
 
-        assert_eq!(secured.ctx().tenant_id(), tenant_id);
+        assert_eq!(secured.ctx().subject_tenant_id(), Some(tenant_id));
         assert_eq!(secured.ctx().subject_id(), subject_id);
     }
 
     #[test]
     fn test_secured_zero_allocation() {
         let client = MockClient::new("test-client");
-        let ctx = SecurityContext::builder().tenant_id(TEST_TENANT_ID).build();
+        let ctx = SecurityContext::builder()
+            .subject_tenant_id(TEST_TENANT_ID)
+            .build();
 
         let secured = client.security_ctx(&ctx);
 
@@ -286,25 +304,32 @@ mod tests {
     fn test_multiple_clients_with_same_context() {
         let client1 = MockClient::new("client-1");
         let client2 = MockClient::new("client-2");
-        let ctx = SecurityContext::builder().tenant_id(TEST_TENANT_ID).build();
+        let ctx = SecurityContext::builder()
+            .subject_tenant_id(TEST_TENANT_ID)
+            .build();
 
         let secured1 = client1.security_ctx(&ctx);
         let secured2 = client2.security_ctx(&ctx);
 
         assert_eq!(secured1.client().get_name(), "client-1");
         assert_eq!(secured2.client().get_name(), "client-2");
-        assert_eq!(secured1.ctx().tenant_id(), secured2.ctx().tenant_id());
+        assert_eq!(
+            secured1.ctx().subject_tenant_id(),
+            secured2.ctx().subject_tenant_id()
+        );
     }
 
     #[test]
     fn test_secured_preserves_lifetimes() {
         let client = MockClient::new("test-client");
-        let ctx = SecurityContext::builder().tenant_id(TEST_TENANT_ID).build();
+        let ctx = SecurityContext::builder()
+            .subject_tenant_id(TEST_TENANT_ID)
+            .build();
 
         let secured = client.security_ctx(&ctx);
 
         assert_eq!(secured.client().get_name(), "test-client");
-        assert_eq!(secured.ctx().tenant_id(), ctx.tenant_id());
+        assert_eq!(secured.ctx().subject_tenant_id(), ctx.subject_tenant_id());
     }
 
     #[test]
@@ -330,7 +355,9 @@ mod tests {
         }
 
         let client = MockClient::new("test-client");
-        let ctx = SecurityContext::builder().tenant_id(TEST_TENANT_ID).build();
+        let ctx = SecurityContext::builder()
+            .subject_tenant_id(TEST_TENANT_ID)
+            .build();
 
         let secured = client.security_ctx(&ctx);
         let query_builder = secured.query::<TestSchema>();

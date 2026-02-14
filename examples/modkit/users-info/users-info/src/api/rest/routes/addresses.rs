@@ -1,4 +1,4 @@
-use super::{Action, License, Resource, dto, handlers};
+use super::{License, dto, handlers};
 use axum::Router;
 use modkit::api::OpenApiRegistry;
 use modkit::api::operation_builder::OperationBuilder;
@@ -7,7 +7,7 @@ pub(super) fn register_address_routes(mut router: Router, openapi: &dyn OpenApiR
     // GET /users-info/v1/users/{id}/address - Get user's address
     router = OperationBuilder::get("/users-info/v1/users/{id}/address")
         .operation_id("users_info.get_user_address")
-        .require_auth(&Resource::Addresses, &Action::Read)
+        .authenticated()
         .require_license_features::<License>([])
         .summary("Get user address")
         .description("Retrieve the address for a specific user")
@@ -24,7 +24,7 @@ pub(super) fn register_address_routes(mut router: Router, openapi: &dyn OpenApiR
     // PUT /users-info/v1/users/{id}/address - Upsert user's address
     router = OperationBuilder::put("/users-info/v1/users/{id}/address")
         .operation_id("users_info.put_user_address")
-        .require_auth(&Resource::Addresses, &Action::Update)
+        .authenticated()
         .require_license_features::<License>([])
         .summary("Upsert user address")
         .description("Create or replace the address for a specific user")
@@ -47,7 +47,7 @@ pub(super) fn register_address_routes(mut router: Router, openapi: &dyn OpenApiR
     // DELETE /users-info/v1/users/{id}/address - Delete user's address
     router = OperationBuilder::delete("/users-info/v1/users/{id}/address")
         .operation_id("users_info.delete_user_address")
-        .require_auth(&Resource::Addresses, &Action::Delete)
+        .authenticated()
         .require_license_features::<License>([])
         .summary("Delete user address")
         .description("Delete the address for a specific user")

@@ -1,0 +1,50 @@
+[package]
+name = "cf-static-authn-plugin"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "AuthN resolver plugin with static token-to-identity mapping for development and testing"
+repository.workspace = true
+readme = "README.md"
+keywords = ["cyberfabric", "cyberfabric-system"]
+categories = ["authentication"]
+
+[lib]
+name = "static_authn_plugin"
+
+[lints]
+workspace = true
+
+[dependencies]
+# Local dependencies
+authn-resolver-sdk = { package = "cf-authn-resolver-sdk", version = "0.1.0", path = "../../authn-resolver-sdk" }
+types-registry-sdk = { package = "cf-types-registry-sdk", version = "0.1.2", path = "../../../types-registry/types-registry-sdk" }
+
+# ModKit dependencies
+modkit = { workspace = true }
+modkit-macros = { workspace = true }
+modkit-security = { workspace = true }
+
+# Async runtime
+async-trait = { workspace = true }
+
+# Data structures
+uuid = { workspace = true }
+
+# Error handling
+anyhow = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+
+# Required by modkit::module macro
+inventory = { workspace = true }
+
+[dev-dependencies]
+secrecy = { workspace = true }
+tokio = { workspace = true, features = ["rt", "macros"] }

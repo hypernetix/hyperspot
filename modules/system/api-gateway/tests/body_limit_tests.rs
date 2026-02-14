@@ -2,12 +2,9 @@
 
 //! Integration tests for request body size limits and compatibility with CORS
 
-mod common;
-
 use anyhow::Result;
 use async_trait::async_trait;
 use axum::{Router, extract::Json, routing::post};
-use common::MockTenantResolver;
 use modkit::{
     Module, ModuleCtx, RestApiCapability,
     api::OperationBuilder,
@@ -15,7 +12,6 @@ use modkit::{
     contracts::{ApiGatewayCapability, OpenApiRegistry},
 };
 use std::sync::Arc;
-use tenant_resolver_sdk::TenantResolverClient;
 use uuid::Uuid;
 
 struct TestConfigProvider {
@@ -54,7 +50,6 @@ fn create_test_module_ctx_with_body_limit(limit_bytes: usize) -> ModuleCtx {
     }));
 
     let hub = Arc::new(modkit::ClientHub::new());
-    hub.register::<dyn TenantResolverClient>(Arc::new(MockTenantResolver));
 
     ModuleCtx::new(
         "api-gateway",
@@ -167,7 +162,6 @@ async fn test_default_body_limit() {
     }));
 
     let hub = Arc::new(modkit::ClientHub::new());
-    hub.register::<dyn TenantResolverClient>(Arc::new(MockTenantResolver));
 
     let ctx = ModuleCtx::new(
         "api-gateway",

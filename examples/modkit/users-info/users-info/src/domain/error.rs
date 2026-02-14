@@ -34,6 +34,9 @@ pub enum DomainError {
     #[error("{entity_type} not found: {id}")]
     NotFound { entity_type: String, id: Uuid },
 
+    #[error("Access denied")]
+    Forbidden,
+
     #[error("Internal error")]
     InternalError,
 }
@@ -113,6 +116,7 @@ impl From<DomainError> for UsersInfoError {
             DomainError::UserNotFound { id } | DomainError::NotFound { id, .. } => {
                 UsersInfoError::not_found(id)
             }
+            DomainError::Forbidden => UsersInfoError::forbidden(),
             DomainError::Database { .. } | DomainError::InternalError => UsersInfoError::internal(),
         }
     }
@@ -135,5 +139,19 @@ impl From<DbError> for DomainError {
 impl From<ScopeError> for DomainError {
     fn from(e: ScopeError) -> Self {
         DomainError::database(e.to_string())
+    }
+}
+
+impl From<authz_resolver_sdk::EnforcerError> for DomainError {
+    fn from(e: authz_resolver_sdk::EnforcerError) -> Self {
+        tracing::error!(error = %e, "AuthZ scope resolution failed");
+        match e {
+            authz_resolver_sdk::EnforcerError::EvaluationFailed(
+                authz_resolver_sdk::AuthZResolverError::Denied,
+            )
+            | authz_resolver_sdk::EnforcerError::Denied { .. }
+            | authz_resolver_sdk::EnforcerError::CompileFailed(_) => Self::Forbidden,
+            authz_resolver_sdk::EnforcerError::EvaluationFailed(_) => Self::InternalError,
+        }
     }
 }

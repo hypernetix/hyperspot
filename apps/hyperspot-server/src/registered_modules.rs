@@ -4,6 +4,8 @@
 #![allow(unused_imports)]
 
 use api_gateway as _;
+use authn_resolver as _;
+use authz_resolver as _;
 use file_parser as _;
 use grpc_hub as _;
 use module_orchestrator as _;
@@ -18,6 +20,12 @@ use single_tenant_tr_plugin as _;
 
 #[cfg(feature = "static-tenants")]
 use static_tr_plugin as _;
+
+#[cfg(feature = "static-authn")]
+use static_authn_plugin as _;
+
+#[cfg(feature = "static-authz")]
+use static_authz_plugin as _;
 
 // === Example Features ===
 

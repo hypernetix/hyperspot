@@ -177,7 +177,6 @@ where
 
                     // Build SecurityContext from validated claims
                     let sec_context = SecurityContext::builder()
-                        .tenant_id(claims.tenant_id)
                         .subject_id(claims.subject)
                         .build();
 
@@ -192,7 +191,6 @@ where
                             Ok(claims) => {
                                 // Build SecurityContext from validated claims
                                 let sec_context = SecurityContext::builder()
-                                    .tenant_id(claims.tenant_id)
                                     .subject_id(claims.subject)
                                     .build();
 

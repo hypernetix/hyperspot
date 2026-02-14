@@ -909,12 +909,11 @@ dependencies = [
  "arc-swap",
  "async-trait",
  "axum",
+ "cf-authn-resolver-sdk",
  "cf-modkit",
- "cf-modkit-auth",
  "cf-modkit-http",
  "cf-modkit-macros",
  "cf-modkit-security",
- "cf-tenant-resolver-sdk",
  "chrono",
  "dashmap",
  "futures-core",
@@ -935,6 +934,81 @@ dependencies = [
  "tracing",
  "ureq 2.12.1",
  "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "cf-authn-resolver"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "cf-authn-resolver-sdk",
+ "cf-modkit",
+ "cf-modkit-macros",
+ "cf-modkit-security",
+ "cf-types-registry-sdk",
+ "inventory",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "cf-authn-resolver-sdk"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "cf-modkit",
+ "cf-modkit-security",
+ "gts",
+ "gts-macros",
+ "schemars 0.8.22",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "uuid",
+]
+
+[[package]]
+name = "cf-authz-resolver"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "cf-authz-resolver-sdk",
+ "cf-modkit",
+ "cf-modkit-macros",
+ "cf-modkit-security",
+ "cf-types-registry-sdk",
+ "inventory",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "cf-authz-resolver-sdk"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "cf-modkit",
+ "cf-modkit-security",
+ "gts",
+ "gts-macros",
+ "schemars 0.8.22",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
  "uuid",
 ]
 
@@ -1294,6 +1368,7 @@ version = "0.2.8"
 dependencies = [
  "anyhow",
  "postcard",
+ "secrecy",
  "serde",
  "serde_json",
  "thiserror 2.0.18",
@@ -1378,6 +1453,7 @@ dependencies = [
  "arc-swap",
  "async-trait",
  "axum",
+ "cf-authz-resolver-sdk",
  "cf-modkit",
  "cf-modkit-auth",
  "cf-modkit-db",
@@ -1424,6 +1500,45 @@ dependencies = [
  "cf-modkit-odata",
  "cf-modkit-security",
  "cf-tenant-resolver-sdk",
+ "cf-types-registry-sdk",
+ "inventory",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "cf-static-authn-plugin"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "cf-authn-resolver-sdk",
+ "cf-modkit",
+ "cf-modkit-macros",
+ "cf-modkit-security",
+ "cf-types-registry-sdk",
+ "inventory",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "cf-static-authz-plugin"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "cf-authz-resolver-sdk",
+ "cf-modkit",
+ "cf-modkit-macros",
+ "cf-modkit-security",
  "cf-types-registry-sdk",
  "inventory",
  "serde",
@@ -3238,6 +3353,8 @@ dependencies = [
  "calculator",
  "calculator-gateway",
  "cf-api-gateway",
+ "cf-authn-resolver",
+ "cf-authz-resolver",
  "cf-file-parser",
  "cf-grpc-hub",
  "cf-modkit",
@@ -3245,6 +3362,8 @@ dependencies = [
  "cf-nodes-registry",
  "cf-simple-user-settings",
  "cf-single-tenant-tr-plugin",
+ "cf-static-authn-plugin",
+ "cf-static-authz-plugin",
  "cf-static-tr-plugin",
  "cf-tenant-resolver",
  "cf-types-registry",
@@ -5631,6 +5750,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "secrecy"
+version = "0.10.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e891af845473308773346dc847b2c23ee78fe442e0472ac50e22a18a93d3ae5a"
+dependencies = [
+ "serde",
+ "zeroize",
+]
+
+[[package]]
 name = "security-framework"
 version = "3.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7172,8 +7301,8 @@ dependencies = [
  "async-trait",
  "axum",
  "cf-api-gateway",
+ "cf-authz-resolver-sdk",
  "cf-modkit",
- "cf-modkit-auth",
  "cf-modkit-db",
  "cf-modkit-db-macros",
  "cf-modkit-errors",
@@ -7183,7 +7312,6 @@ dependencies = [
  "cf-modkit-odata",
  "cf-modkit-sdk",
  "cf-modkit-security",
- "cf-tenant-resolver-sdk",
  "futures-util",
  "http",
  "httpmock",

@@ -96,7 +96,7 @@ types-registry/
 **Module Declaration (`module.rs`):**
 ```rust
 #[modkit::module(
-    name = "types_registry",
+    name = "types-registry",
     capabilities = [system, rest]
 )]
 pub struct TypesRegistryModule {

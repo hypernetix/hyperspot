@@ -1,4 +1,4 @@
-use super::{Action, License, Resource, dto, handlers};
+use super::{License, dto, handlers};
 use axum::Router;
 use modkit::api::OpenApiRegistry;
 use modkit::api::operation_builder::OperationBuilder;
@@ -16,7 +16,7 @@ where
     // Register the SSE route
     let router = OperationBuilder::get("/users-info/v1/users/events")
         .operation_id("users_info.events")
-        .require_auth(&Resource::Users, &Action::Read)
+        .authenticated()
         .require_license_features::<License>([])
         .summary("User events stream (SSE)")
         .description("Real-time stream of user events as Server-Sent Events")

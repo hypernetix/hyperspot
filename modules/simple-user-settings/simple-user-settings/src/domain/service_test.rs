@@ -7,9 +7,15 @@
 mod tests {
     use std::sync::Arc;
 
+    use async_trait::async_trait;
+    use authz_resolver_sdk::{
+        AuthZResolverClient, AuthZResolverError, PolicyEnforcer,
+        constraints::{Constraint, InPredicate, Predicate},
+        models::{EvaluationRequest, EvaluationResponse, EvaluationResponseContext},
+    };
     use modkit_db::migration_runner::run_migrations_for_testing;
     use modkit_db::{ConnectOpts, DBProvider, Db, connect_db};
-    use modkit_security::SecurityContext;
+    use modkit_security::{SecurityContext, pep_properties};
     use simple_user_settings_sdk::models::{SimpleUserSettingsPatch, SimpleUserSettingsUpdate};
     use uuid::Uuid;
 
@@ -19,6 +25,62 @@ mod tests {
     use crate::infra::storage::sea_orm_repo::SeaOrmSettingsRepository;
 
     type ConcreteService = Service<SeaOrmSettingsRepository>;
+
+    /// Mock `AuthZ` resolver for personal user settings.
+    ///
+    /// Derives tenant from `context.tenant_context.root_id` if present,
+    /// otherwise falls back to `subject.properties.tenant_id` (like a real PDP).
+    /// Always returns:
+    /// - `OWNER_TENANT_ID` constraint from the resolved tenant
+    /// - `RESOURCE_ID` constraint from `resource.id` (the user whose settings are accessed)
+    struct MockAuthZResolver;
+
+    #[async_trait]
+    impl AuthZResolverClient for MockAuthZResolver {
+        async fn evaluate(
+            &self,
+            request: EvaluationRequest,
+        ) -> Result<EvaluationResponse, AuthZResolverError> {
+            // Resolve tenant: explicit context > subject property (like a real PDP)
+            let root_id = request
+                .context
+                .tenant_context
+                .as_ref()
+                .and_then(|tc| tc.root_id)
+                .or_else(|| {
+                    request
+                        .subject
+                        .properties
+                        .get("tenant_id")
+                        .and_then(|v| v.as_str())
+                        .and_then(|s| Uuid::parse_str(s).ok())
+                })
+                .ok_or_else(|| {
+                    AuthZResolverError::Internal("tenant context is required".to_owned())
+                })?;
+
+            let mut predicates = vec![Predicate::In(InPredicate {
+                property: pep_properties::OWNER_TENANT_ID.to_owned(),
+                values: vec![root_id],
+            })];
+
+            // Use resource.id for RESOURCE_ID constraint
+            if let Some(resource_id) = request.resource.id {
+                predicates.push(Predicate::In(InPredicate {
+                    property: pep_properties::RESOURCE_ID.to_owned(),
+                    values: vec![resource_id],
+                }));
+            }
+
+            Ok(EvaluationResponse {
+                decision: true,
+                context: EvaluationResponseContext {
+                    constraints: vec![Constraint { predicates }],
+                    ..Default::default()
+                },
+            })
+        }
+    }
 
     /// Create an in-memory database with migrations applied.
     async fn inmem_db() -> Db {
@@ -42,15 +104,17 @@ mod tests {
 
     fn create_test_context() -> SecurityContext {
         SecurityContext::builder()
-            .tenant_id(Uuid::new_v4())
             .subject_id(Uuid::new_v4())
+            .subject_tenant_id(Uuid::new_v4())
             .build()
     }
 
     fn build_service(db: Db, config: ServiceConfig) -> ConcreteService {
         let repo = Arc::new(SeaOrmSettingsRepository::new());
         let db: Arc<DBProvider<modkit_db::DbError>> = Arc::new(DBProvider::new(db));
-        Service::new(db, repo, config)
+        let authz: Arc<dyn AuthZResolverClient> = Arc::new(MockAuthZResolver);
+        let policy_enforcer = PolicyEnforcer::new(authz);
+        Service::new(db, repo, policy_enforcer, config)
     }
 
     // =========================================================================
@@ -66,7 +130,7 @@ mod tests {
         let result = service.get_settings(&ctx).await.unwrap();
 
         assert_eq!(result.user_id, ctx.subject_id());
-        assert_eq!(result.tenant_id, ctx.tenant_id());
+        assert_eq!(result.tenant_id, ctx.subject_tenant_id().unwrap());
         assert_eq!(result.theme, None);
         assert_eq!(result.language, None);
     }
@@ -120,7 +184,7 @@ mod tests {
         assert_eq!(result.theme, Some("light".to_owned()));
         assert_eq!(result.language, Some("es".to_owned()));
         assert_eq!(result.user_id, ctx.subject_id());
-        assert_eq!(result.tenant_id, ctx.tenant_id());
+        assert_eq!(result.tenant_id, ctx.subject_tenant_id().unwrap());
     }
 
     #[tokio::test]
@@ -310,12 +374,12 @@ mod tests {
 
         let tenant_id = Uuid::new_v4();
         let user1 = SecurityContext::builder()
-            .tenant_id(tenant_id)
             .subject_id(Uuid::new_v4())
+            .subject_tenant_id(tenant_id)
             .build();
         let user2 = SecurityContext::builder()
-            .tenant_id(tenant_id)
             .subject_id(Uuid::new_v4())
+            .subject_tenant_id(tenant_id)
             .build();
 
         // User 1 creates settings
@@ -344,12 +408,12 @@ mod tests {
 
         let user_id = Uuid::new_v4();
         let tenant1 = SecurityContext::builder()
-            .tenant_id(Uuid::new_v4())
             .subject_id(user_id)
+            .subject_tenant_id(Uuid::new_v4())
             .build();
         let tenant2 = SecurityContext::builder()
-            .tenant_id(Uuid::new_v4())
             .subject_id(user_id)
+            .subject_tenant_id(Uuid::new_v4())
             .build();
 
         // Same user in tenant 1 creates settings
@@ -368,6 +432,6 @@ mod tests {
         let result = service.get_settings(&tenant2).await.unwrap();
         assert_eq!(result.theme, None);
         assert_eq!(result.language, None);
-        assert_eq!(result.tenant_id, tenant2.tenant_id());
+        assert_eq!(result.tenant_id, tenant2.subject_tenant_id().unwrap());
     }
 }

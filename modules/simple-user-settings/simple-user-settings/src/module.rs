@@ -8,6 +8,8 @@ use modkit_db::DBProvider;
 use modkit_db::DbError;
 use tracing::info;
 
+use authz_resolver_sdk::{AuthZResolverClient, PolicyEnforcer};
+
 use simple_user_settings_sdk::SimpleUserSettingsClientV1;
 
 use crate::api::rest::routes;
@@ -21,6 +23,7 @@ type ConcreteService = Service<SeaOrmSettingsRepository>;
 
 #[modkit::module(
     name = "simple-user-settings",
+    deps = ["authz-resolver"],
     capabilities = [rest, db]
 )]
 pub struct SettingsModule {
@@ -63,10 +66,17 @@ impl Module for SettingsModule {
         // Repository no longer stores connection - uses &impl DBRunner per-method
         let repo = Arc::new(SeaOrmSettingsRepository::new());
 
+        // Fetch AuthZ resolver from ClientHub
+        let authz = ctx
+            .client_hub()
+            .get::<dyn AuthZResolverClient>()
+            .map_err(|e| anyhow::anyhow!("failed to get AuthZ resolver: {e}"))?;
+        let policy_enforcer = PolicyEnforcer::new(authz);
+
         let service_config = ServiceConfig {
             max_field_length: cfg.max_field_length,
         };
-        let service = Arc::new(Service::new(db, repo, service_config));
+        let service = Arc::new(Service::new(db, repo, policy_enforcer, service_config));
 
         let local_client: Arc<dyn SimpleUserSettingsClientV1> =
             Arc::new(LocalClient::new(service.clone()));

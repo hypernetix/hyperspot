@@ -90,22 +90,6 @@ pub(crate) async fn create_user(
         display_name,
     } = req_body;
 
-    // Authorization check:
-    // - root scope: allow any tenant_id
-    // - non-root: tenant_id must be present in scope.tenant_ids()
-    // TODO(phase-1): Move tenant_id authorization check to service layer for proper separation of concerns
-    // let scope = ctx.scope();
-    // if !scope.is_root() {
-    //     let allowed = scope.tenant_ids().iter().any(|t| t == &tenant_id);
-    //     if !allowed {
-    //         return Err(DomainError::validation(
-    //             "tenant_id",
-    //             format!("Tenant {tenant_id} is not allowed in current security scope"),
-    //         )
-    //         .into());
-    //     }
-    // }
-
     let new_user = users_info_sdk::NewUser {
         id,
         tenant_id,

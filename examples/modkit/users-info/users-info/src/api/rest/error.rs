@@ -51,6 +51,11 @@ pub fn domain_error_to_problem(e: &DomainError, instance: &str) -> Problem {
                 trace_id,
             )
         }
+        DomainError::Forbidden => Problem::new(
+            http::StatusCode::FORBIDDEN,
+            "Access denied",
+            "You do not have permission to perform this action",
+        ),
         DomainError::InternalError => {
             tracing::error!(error = ?e, "Internal error occurred");
             ErrorCode::example1_user_internal_database_v1().with_context(

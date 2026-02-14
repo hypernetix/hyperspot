@@ -106,7 +106,7 @@ pub async fn find_by_id(
     id: Uuid,
 ) -> Result<Option<user::Model>, DomainError> {
     let secure_conn = self.db.sea_secure();
-    let scope = modkit_db::secure::AccessScope::tenant(ctx.tenant_id());
+    let scope = modkit_db::secure::AccessScope::for_tenant(ctx.tenant_id());
     let user = secure_conn
         .find_by_id::<user::Entity>(&scope, id)?
         .one(&secure_conn)

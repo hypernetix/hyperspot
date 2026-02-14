@@ -8,40 +8,10 @@
 use axum::{Json, Router, response::IntoResponse};
 use modkit::api::{
     Missing, OpenApiRegistry, OperationBuilder, OperationSpec, ParamLocation,
-    operation_builder::{AuthReqAction, AuthReqResource, LicenseFeature},
+    operation_builder::LicenseFeature,
 };
 use serde_json::Value;
 use std::sync::Mutex;
-
-enum TestResource {
-    Users,
-}
-
-impl AsRef<str> for TestResource {
-    fn as_ref(&self) -> &'static str {
-        match self {
-            TestResource::Users => "users",
-        }
-    }
-}
-
-impl AuthReqResource for TestResource {}
-
-enum Action {
-    Read,
-    Write,
-}
-
-impl AsRef<str> for Action {
-    fn as_ref(&self) -> &'static str {
-        match self {
-            Action::Read => "read",
-            Action::Write => "write",
-        }
-    }
-}
-
-impl AuthReqAction for Action {}
 
 #[allow(dead_code)]
 enum TestLicenseFeatures {
@@ -131,7 +101,7 @@ async fn test_complete_api_builder_flow() {
     router = OperationBuilder::<Missing, Missing, ()>::post("/users-info/v1/users")
         .operation_id("users.create")
         .summary("Create a new user")
-        .require_auth(&TestResource::Users, &Action::Write)
+        .authenticated()
         .require_license_features::<TestLicenseFeatures>([])
         .description("Creates a new user in the system")
         .tag("users")
@@ -148,7 +118,7 @@ async fn test_complete_api_builder_flow() {
     let _router = OperationBuilder::<Missing, Missing, ()>::get("/users-info/v1/users/{id}")
         .operation_id("users.get")
         .summary("Get user by ID")
-        .require_auth(&TestResource::Users, &Action::Read)
+        .authenticated()
         .require_license_features::<TestLicenseFeatures>([])
         .description("Retrieves a specific user by their unique identifier")
         .tag("users")
@@ -239,7 +209,7 @@ fn test_response_types() {
     let router = Router::new();
 
     let _router = OperationBuilder::<Missing, Missing, ()>::get("/tests/v1/text")
-        .require_auth(&TestResource::Users, &Action::Read)
+        .authenticated()
         .require_license_features::<TestLicenseFeatures>([])
         .text_response(http::StatusCode::OK, "Plain text response", "text/plain")
         .html_response(http::StatusCode::OK, "HTML response")

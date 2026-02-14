@@ -36,7 +36,7 @@ pub async fn list_users(
     Extension(db): Extension<Arc<DbHandle>>,
 ) -> ApiResult<JsonPage<UserDto>> {
     let secure_conn = db.sea_secure();
-    let scope = AccessScope::tenant(ctx.tenant_id());
+    let scope = AccessScope::for_tenant(ctx.tenant_id());
     let users = secure_conn
         .find::<user::Entity>(&scope)
         .all(&secure_conn)
@@ -135,7 +135,7 @@ Use `#[secure(unrestricted)]` only for truly global tables where the entity has 
 
 ```rust
 let secure_conn = db.sea_secure();
-let scope = AccessScope::tenant(ctx.tenant_id());
+let scope = AccessScope::for_tenant(ctx.tenant_id());
 
 // Automatically adds tenant_id = ? filter
 let users = secure_conn
@@ -219,7 +219,7 @@ impl UserRepository {
 ### Insert (`secure_insert` / `SecureConn::insert`)
 
 - If the entity has a `tenant_col`, the `ActiveModel` MUST include `tenant_id`.
-- The inserted `tenant_id` MUST be inside `scope.tenant_ids()`.
+- The inserted `tenant_id` MUST be inside `scope.all_values_for(pep_properties::OWNER_TENANT_ID)`.
 - Violations are errors (`Denied` / `TenantNotInScope` / `Invalid("tenant_id is required")`).
 
 ### Update one record (`SecureConn::update_with_ctx`)
@@ -246,7 +246,7 @@ pub async fn transfer_user(
     user_id: Uuid,
 ) -> Result<(), DomainError> {
     let secure_conn = self.db.sea_secure();
-    let scope = AccessScope::tenant(ctx.tenant_id());
+    let scope = AccessScope::for_tenant(ctx.tenant_id());
 
     secure_conn
         .in_transaction_mapped(DomainError::database_infra, move |tx| {
@@ -321,7 +321,7 @@ use modkit_security::AccessScope;
 #[tokio::test]
 async fn test_user_repository() {
     let db = setup_test_db().await;
-    let scope = AccessScope::tenant(Uuid::new_v4());
+    let scope = AccessScope::for_tenant(Uuid::new_v4());
     let repo = UserRepository;
     let conn = db.sea_secure();
 
@@ -341,7 +341,7 @@ async fn test_user_repository() {
 - [ ] Use `secure_conn.update_with_ctx::<Entity>(&scope, id, am)` for single-record updates.
 - [ ] Use raw SQL only in `migrations/*.rs` (enforced later via dylint).
 - [ ] Add indexes on security columns (tenant_id, resource_id).
-- [ ] In tests, build scopes explicitly (`AccessScope::tenant(...)`, `AccessScope::tenants_only(...)`, `AccessScope::resources_only(...)`).
+- [ ] In tests, build scopes explicitly (`AccessScope::for_tenant(...)`, `AccessScope::for_tenants(...)`, `AccessScope::for_resources(...)`).
 
 ## Related docs
 

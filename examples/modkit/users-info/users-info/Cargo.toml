@@ -18,8 +18,8 @@ integration = []    # gate integration tests
 # SDK - public API, models, and errors
 users-info-sdk = { path = "../users-info-sdk", features = ["odata"] }
 
-# Tenant resolver for multi-tenant access
-tenant-resolver-sdk = { package = "cf-tenant-resolver-sdk", path = "../../../../modules/system/tenant-resolver/tenant-resolver-sdk" }
+# AuthZ resolver for authorization (PEP flow)
+authz-resolver-sdk = { package = "cf-authz-resolver-sdk", path = "../../../../modules/system/authz-resolver/authz-resolver-sdk" }
 
 # Core dependencies
 anyhow = { workspace = true }
@@ -69,7 +69,6 @@ modkit = { workspace = true }
 modkit-http = { workspace = true }
 modkit-db = { workspace = true, features = ["sqlite", "pg"] }
 modkit-db-macros = { workspace = true }
-modkit-auth = { workspace = true }
 modkit-security = { workspace = true }
 modkit-errors = { workspace = true }
 modkit-errors-macro = { workspace = true }

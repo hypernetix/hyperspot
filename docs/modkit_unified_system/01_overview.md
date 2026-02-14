@@ -38,7 +38,7 @@ pub struct MyModule { /* ... */ }
 
 // Secure DB access
 let secure_conn = db.sea_secure();
-let scope = modkit_db::secure::AccessScope::tenant(ctx.tenant_id());
+let scope = modkit_db::secure::AccessScope::for_tenant(ctx.tenant_id());
 let users = secure_conn
     .find::<user::Entity>(&scope)
     .all(&secure_conn)

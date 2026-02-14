@@ -30,4 +30,16 @@ fn ui() {
     // Error cases: Unrestricted with other flags
     t.compile_fail("tests/ui/err_unrestricted_with_tenant.rs");
     t.compile_fail("tests/ui/err_unrestricted_with_resource.rs");
+
+    // Error cases: pep_prop validation
+    t.compile_fail("tests/ui/err_pep_reserved_owner_tenant_id.rs");
+    t.compile_fail("tests/ui/err_pep_reserved_id.rs");
+    t.compile_fail("tests/ui/err_pep_reserved_owner_id.rs");
+    t.compile_fail("tests/ui/err_pep_duplicate_property.rs");
+    t.compile_fail("tests/ui/err_unrestricted_with_pep.rs");
+
+    // Note: Compile-pass tests (ok_*.rs) exist on disk for documentation but are
+    // not registered here — successful expansion requires the modkit-db crate which
+    // is not available in the trybuild environment. The macro is tested in actual
+    // usage across the main codebase.
 }

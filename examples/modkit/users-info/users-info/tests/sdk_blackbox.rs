@@ -3,108 +3,71 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use authz_resolver_sdk::{
+    AuthZResolverClient, AuthZResolverError,
+    constraints::{Constraint, InPredicate, Predicate},
+    models::{EvaluationRequest, EvaluationResponse, EvaluationResponseContext},
+};
 use modkit::config::ConfigProvider;
 use modkit::{ClientHub, DatabaseCapability, Module, ModuleCtx};
 use modkit_db::migration_runner::run_migrations_for_module;
 use modkit_db::{ConnectOpts, DBProvider, Db, DbError, connect_db};
-use modkit_security::SecurityContext;
+use modkit_security::{SecurityContext, pep_properties};
 use serde_json::json;
-use tenant_resolver_sdk::{
-    GetAncestorsOptions, GetAncestorsResponse, GetDescendantsOptions, GetDescendantsResponse,
-    GetTenantsOptions, IsAncestorOptions, TenantRef, TenantResolverClient, TenantResolverError,
-    TenantStatus,
-};
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
 use users_info::UsersInfo;
 use users_info_sdk::{NewUser, UsersInfoClientV1};
 
-/// Mock tenant resolver for tests.
-struct MockTenantResolver;
+/// Mock `AuthZ` resolver for tests (`allow_all` mode).
+///
+/// Tenant resolution: `context.tenant_context.root_id` if present, otherwise
+/// `subject.properties.tenant_id` (like a real PDP).
+struct MockAuthZResolver;
 
 #[async_trait::async_trait]
-impl TenantResolverClient for MockTenantResolver {
-    async fn get_tenant(
+impl AuthZResolverClient for MockAuthZResolver {
+    async fn evaluate(
         &self,
-        _ctx: &SecurityContext,
-        id: tenant_resolver_sdk::TenantId,
-    ) -> Result<tenant_resolver_sdk::TenantInfo, TenantResolverError> {
-        Ok(tenant_resolver_sdk::TenantInfo {
-            id,
-            name: format!("Tenant {id}"),
-            status: TenantStatus::Active,
-            tenant_type: None,
-            parent_id: None,
-            self_managed: false,
-        })
-    }
+        request: EvaluationRequest,
+    ) -> Result<EvaluationResponse, AuthZResolverError> {
+        // Resolve tenant: explicit context > subject property (like a real PDP)
+        let root_id = request
+            .context
+            .tenant_context
+            .as_ref()
+            .and_then(|tc| tc.root_id)
+            .or_else(|| {
+                request
+                    .subject
+                    .properties
+                    .get("tenant_id")
+                    .and_then(|v| v.as_str())
+                    .and_then(|s| Uuid::parse_str(s).ok())
+            });
 
-    async fn get_tenants(
-        &self,
-        ctx: &SecurityContext,
-        ids: &[tenant_resolver_sdk::TenantId],
-        _options: &GetTenantsOptions,
-    ) -> Result<Vec<tenant_resolver_sdk::TenantInfo>, TenantResolverError> {
-        let tenant_id = ctx.tenant_id();
-        Ok(ids
-            .iter()
-            .filter(|id| **id == tenant_id)
-            .map(|id| tenant_resolver_sdk::TenantInfo {
-                id: *id,
-                name: format!("Tenant {id}"),
-                status: TenantStatus::Active,
-                tenant_type: None,
-                parent_id: None,
-                self_managed: false,
-            })
-            .collect())
-    }
+        let constraints = if request.context.require_constraints {
+            match root_id {
+                Some(id) => vec![Constraint {
+                    predicates: vec![Predicate::In(InPredicate {
+                        property: pep_properties::OWNER_TENANT_ID.to_owned(),
+                        values: vec![id],
+                    })],
+                }],
+                None => vec![],
+            }
+        } else {
+            vec![]
+        };
 
-    async fn get_ancestors(
-        &self,
-        _ctx: &SecurityContext,
-        id: tenant_resolver_sdk::TenantId,
-        _options: &GetAncestorsOptions,
-    ) -> Result<GetAncestorsResponse, TenantResolverError> {
-        Ok(GetAncestorsResponse {
-            tenant: TenantRef {
-                id,
-                status: TenantStatus::Active,
-                tenant_type: None,
-                parent_id: None,
-                self_managed: false,
+        Ok(EvaluationResponse {
+            decision: true,
+            context: EvaluationResponseContext {
+                constraints,
+                ..Default::default()
             },
-            ancestors: vec![],
         })
-    }
-
-    async fn get_descendants(
-        &self,
-        _ctx: &SecurityContext,
-        id: tenant_resolver_sdk::TenantId,
-        _options: &GetDescendantsOptions,
-    ) -> Result<GetDescendantsResponse, TenantResolverError> {
-        Ok(GetDescendantsResponse {
-            tenant: TenantRef {
-                id,
-                status: TenantStatus::Active,
-                tenant_type: None,
-                parent_id: None,
-                self_managed: false,
-            },
-            descendants: vec![],
-        })
-    }
-
-    async fn is_ancestor(
-        &self,
-        _ctx: &SecurityContext,
-        _ancestor_id: tenant_resolver_sdk::TenantId,
-        _descendant_id: tenant_resolver_sdk::TenantId,
-        _options: &IsAncestorOptions,
-    ) -> Result<bool, TenantResolverError> {
-        Ok(false)
     }
 }
 
@@ -154,8 +117,8 @@ async fn users_info_registers_sdk_client_and_handles_basic_crud() {
 
     let hub = Arc::new(ClientHub::new());
 
-    // Register mock tenant resolver before initializing the module
-    hub.register::<dyn TenantResolverClient>(Arc::new(MockTenantResolver));
+    // Register mock AuthZ resolver before initializing the module
+    hub.register::<dyn AuthZResolverClient>(Arc::new(MockAuthZResolver));
 
     let ctx = ModuleCtx::new(
         "users_info",
@@ -181,8 +144,8 @@ async fn users_info_registers_sdk_client_and_handles_basic_crud() {
     // Create a security context with tenant access
     let tenant_id = Uuid::new_v4();
     let sec = SecurityContext::builder()
-        .tenant_id(tenant_id)
         .subject_id(Uuid::new_v4())
+        .subject_tenant_id(tenant_id)
         .build();
 
     let created = client

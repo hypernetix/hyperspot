@@ -1,8 +1,9 @@
 use async_trait::async_trait;
 use modkit_db::secure::{DBRunner, ScopeError, SecureEntityExt, SecureInsertExt, SecureOnConflict};
-use modkit_security::{AccessScope, SecurityContext};
+use modkit_security::AccessScope;
 use sea_orm::{ActiveValue, EntityTrait};
 use simple_user_settings_sdk::models::{SimpleUserSettings, SimpleUserSettingsPatch};
+use uuid::Uuid;
 
 use crate::domain::error::DomainError;
 use crate::domain::repo::SettingsRepository;
@@ -42,7 +43,6 @@ impl SettingsRepository for SeaOrmSettingsRepository {
         &self,
         conn: &C,
         scope: &AccessScope,
-        _ctx: &SecurityContext,
     ) -> Result<Option<SimpleUserSettings>, DomainError> {
         let result = SettingsEntity::find()
             .secure()
@@ -58,13 +58,11 @@ impl SettingsRepository for SeaOrmSettingsRepository {
         &self,
         conn: &C,
         scope: &AccessScope,
-        ctx: &SecurityContext,
+        user_id: Uuid,
+        tenant_id: Uuid,
         theme: Option<String>,
         language: Option<String>,
     ) -> Result<SimpleUserSettings, DomainError> {
-        let user_id = ctx.subject_id();
-        let tenant_id = ctx.tenant_id();
-
         let active_model = entity::ActiveModel {
             tenant_id: ActiveValue::Set(tenant_id),
             user_id: ActiveValue::Set(user_id),
@@ -109,7 +107,8 @@ impl SettingsRepository for SeaOrmSettingsRepository {
         &self,
         conn: &C,
         scope: &AccessScope,
-        ctx: &SecurityContext,
+        user_id: Uuid,
+        tenant_id: Uuid,
         patch: SimpleUserSettingsPatch,
     ) -> Result<SimpleUserSettings, DomainError> {
         // Read existing settings to merge with patch
@@ -135,6 +134,7 @@ impl SettingsRepository for SeaOrmSettingsRepository {
         };
 
         // Use upsert_full with merged values
-        self.upsert_full(conn, scope, ctx, theme, language).await
+        self.upsert_full(conn, scope, user_id, tenant_id, theme, language)
+            .await
     }
 }

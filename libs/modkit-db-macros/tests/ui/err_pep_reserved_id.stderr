@@ -1,0 +1,11 @@
+error: pep_prop: 'id' is a reserved property name; use `resource_col` instead
+  --> tests/ui/err_pep_reserved_id.rs:11:14
+   |
+11 |     pep_prop(id = "id"),
+   |              ^^
+
+error[E0601]: `main` function not found in crate `$CRATE`
+  --> tests/ui/err_pep_reserved_id.rs:13:14
+   |
+13 | struct Model;
+   |              ^ consider adding a `main` function to `$DIR/tests/ui/err_pep_reserved_id.rs`

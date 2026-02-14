@@ -116,7 +116,7 @@ impl UserService {
         query: &ODataQuery,
     ) -> Result<Page<User>, DomainError> {
         let secure_conn = self.db.sea_secure();
-        let scope = modkit_db::secure::AccessScope::tenant(ctx.tenant_id());
+        let scope = modkit_db::secure::AccessScope::for_tenant(ctx.tenant_id());
         
         // Recommended: compose security + OData in one call, without raw connection access.
         use modkit_db::odata::sea_orm_filter::{paginate_odata, LimitCfg};
@@ -209,7 +209,7 @@ impl UserService {
         query: &ODataQuery,
     ) -> Result<Page<User>, DomainError> {
         let secure_conn = self.db.sea_secure();
-        let scope = modkit_db::secure::AccessScope::tenant(ctx.tenant_id());
+        let scope = modkit_db::secure::AccessScope::for_tenant(ctx.tenant_id());
         use modkit_db::odata::sea_orm_filter::{paginate_odata, LimitCfg};
         use modkit_odata::SortDir;
         use crate::infra::storage::odata_mapper::UserODataMapper;

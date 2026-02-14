@@ -26,6 +26,14 @@ use sea_orm::EntityTrait;
 ///     fn type_col() -> Option<Self::Column> {
 ///         None
 ///     }
+///     fn resolve_property(property: &str) -> Option<Self::Column> {
+///         match property {
+///             "owner_tenant_id" => Self::tenant_col(),
+///             "id" => Self::resource_col(),
+///             "owner_id" => Self::owner_col(),
+///             _ => None,
+///         }
+///     }
 /// }
 /// ```
 ///
@@ -47,6 +55,34 @@ use sea_orm::EntityTrait;
 ///     pub tenant_id: Uuid,
 ///     pub email: String,
 /// }
+/// // Macro auto-generates resolve_property:
+/// //   "owner_tenant_id" => Some(Column::TenantId)  (from tenant_col)
+/// //   "id"              => Some(Column::Id)         (from resource_col)
+/// //   _                 => None
+/// ```
+///
+/// # Custom PEP Properties
+/// ```rust,ignore
+/// #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Scopable)]
+/// #[sea_orm(table_name = "resources")]
+/// #[secure(
+///     tenant_col = "tenant_id",
+///     resource_col = "id",
+///     no_owner,
+///     no_type,
+///     pep_prop(department_id = "department_id"),
+/// )]
+/// pub struct Model {
+///     #[sea_orm(primary_key)]
+///     pub id: Uuid,
+///     pub tenant_id: Uuid,
+///     pub department_id: Uuid,
+/// }
+/// // Macro auto-generates resolve_property:
+/// //   "owner_tenant_id" => Some(Column::TenantId)      (from tenant_col)
+/// //   "id"              => Some(Column::Id)             (from resource_col)
+/// //   "department_id"   => Some(Column::DepartmentId)   (from pep_prop)
+/// //   _                 => None
 /// ```
 ///
 /// # Unrestricted Entities
@@ -99,4 +135,21 @@ pub trait ScopableEntity: EntityTrait {
     ///
     /// Must be explicitly specified via `type_col = "..."` or `no_type`.
     fn type_col() -> Option<Self::Column>;
+
+    /// Resolve an authorization property name to a database column.
+    ///
+    /// Maps PEP property names (e.g. `"owner_tenant_id"`) to `SeaORM` columns
+    /// so the scope condition builder can translate `AccessScope` constraints
+    /// into SQL `WHERE` clauses.
+    ///
+    /// When using `#[derive(Scopable)]`, this method is auto-generated from
+    /// dimension columns and `pep_prop(...)` entries:
+    /// - `tenant_col` → `"owner_tenant_id"`
+    /// - `resource_col` → `"id"`
+    /// - `owner_col` → `"owner_id"`
+    /// - `pep_prop(custom = "column")` → `"custom"`
+    ///
+    /// Manual implementors must provide all property arms explicitly.
+    #[must_use]
+    fn resolve_property(property: &str) -> Option<Self::Column>;
 }

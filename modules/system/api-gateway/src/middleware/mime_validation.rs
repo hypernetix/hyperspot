@@ -156,7 +156,7 @@ mod tests {
             }),
             responses: vec![],
             handler_id: "test".to_owned(),
-            sec_requirement: None,
+            authenticated: false,
             is_public: false,
             license_requirement: None,
             rate_limit: None,
