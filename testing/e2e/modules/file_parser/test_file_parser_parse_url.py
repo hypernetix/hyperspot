@@ -1,8 +1,18 @@
 """E2E tests for /file-parser/v1/parse-url and /file-parser/v1/parse-url/markdown endpoints."""
+import os
 import httpx
 import pytest
 from pathlib import Path
 import sys
+
+# Skip all tests in this module when running in Docker mode.
+# The mock server uses HTTP, but the file-parser HttpClient requires HTTPS.
+# These tests work in local mode where the mock server runs on localhost.
+if os.getenv("E2E_DOCKER_MODE") == "1":
+    pytest.skip(
+        "parse_url tests skipped in Docker mode (mock server uses HTTP, HttpClient requires HTTPS)",
+        allow_module_level=True
+    )
 
 # Add helpers to path
 sys.path.insert(0, str(Path(__file__).parent / "helpers"))
